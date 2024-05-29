@@ -3070,7 +3070,7 @@ bool HexagonInstrInfo::addLatencyToSchedule(const MachineInstr &MI1,
 /// Get the base register and byte offset of a load/store instr.
 bool HexagonInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   OffsetIsScalable = false;
   const MachineOperand *BaseOp = getBaseAndOffset(LdSt, Offset, Width);
@@ -3286,9 +3286,9 @@ unsigned HexagonInstrInfo::getAddrMode(const MachineInstr &MI) const {
 // returned in Offset and the access size is returned in AccessSize.
 // If the base operand has a subregister or the offset field does not contain
 // an immediate value, return nullptr.
-MachineOperand *HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI,
-                                                   int64_t &Offset,
-                                                   unsigned &AccessSize) const {
+MachineOperand *
+HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI, int64_t &Offset,
+                                   LocationSize &AccessSize) const {
   // Return if it is not a base+offset type instruction or a MemOp.
   if (getAddrMode(MI) != HexagonII::BaseImmOffset &&
       getAddrMode(MI) != HexagonII::BaseLongOffset &&
@@ -3517,7 +3517,7 @@ unsigned HexagonInstrInfo::getCompoundOpcode(const MachineInstr &GA,
       (GB.getOpcode() != Hexagon::J2_jumptnew))
     return -1u;
   Register DestReg = GA.getOperand(0).getReg();
-  if (!GB.readsRegister(DestReg))
+  if (!GB.readsRegister(DestReg, /*TRI=*/nullptr))
     return -1u;
   if (DestReg != Hexagon::P0 && DestReg != Hexagon::P1)
     return -1u;
@@ -4334,7 +4334,7 @@ std::optional<unsigned> HexagonInstrInfo::getOperandLatency(
   if (DefMO.isReg() && DefMO.getReg().isPhysical()) {
     if (DefMO.isImplicit()) {
       for (MCPhysReg SR : HRI.superregs(DefMO.getReg())) {
-        int Idx = DefMI.findRegisterDefOperandIdx(SR, false, false, &HRI);
+        int Idx = DefMI.findRegisterDefOperandIdx(SR, &HRI, false, false);
         if (Idx != -1) {
           DefIdx = Idx;
           break;
@@ -4345,7 +4345,7 @@ std::optional<unsigned> HexagonInstrInfo::getOperandLatency(
     const MachineOperand &UseMO = UseMI.getOperand(UseIdx);
     if (UseMO.isImplicit()) {
       for (MCPhysReg SR : HRI.superregs(UseMO.getReg())) {
-        int Idx = UseMI.findRegisterUseOperandIdx(SR, false, &HRI);
+        int Idx = UseMI.findRegisterUseOperandIdx(SR, &HRI, false);
         if (Idx != -1) {
           UseIdx = Idx;
           break;

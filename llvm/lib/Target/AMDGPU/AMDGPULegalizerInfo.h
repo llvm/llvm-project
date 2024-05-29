@@ -108,6 +108,8 @@ public:
   bool legalizeMul(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeCTLZ_CTTZ(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
+  bool legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               MachineIRBuilder &B) const;
 
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       const ArgDescriptor *Arg,
@@ -214,6 +216,11 @@ public:
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
 
+  bool legalizeGetFPEnv(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        MachineIRBuilder &B) const;
+  bool legalizeSetFPEnv(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        MachineIRBuilder &B) const;
+
   bool legalizeImageIntrinsic(
       MachineInstr &MI, MachineIRBuilder &B,
       GISelChangeObserver &Observer,
@@ -221,16 +228,16 @@ public:
 
   bool legalizeSBufferLoad(LegalizerHelper &Helper, MachineInstr &MI) const;
 
-  bool legalizeTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                             MachineIRBuilder &B) const;
+  bool legalizeTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &B) const;
   bool legalizeTrapEndpgm(MachineInstr &MI, MachineRegisterInfo &MRI,
                           MachineIRBuilder &B) const;
   bool legalizeTrapHsaQueuePtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
   bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
                        MachineIRBuilder &B) const;
-  bool legalizeDebugTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                  MachineIRBuilder &B) const;
+  bool legalizeDebugTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B) const;
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;

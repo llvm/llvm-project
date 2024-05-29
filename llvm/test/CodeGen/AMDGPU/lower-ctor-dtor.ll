@@ -44,13 +44,13 @@ define internal void @bar() {
 }
 
 ;.
-; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @foo, ptr null }]
-; CHECK: @[[LLVM_GLOBAL_DTORS:[a-zA-Z0-9_$"\\.-]+]] = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @bar, ptr null }]
-; CHECK: @[[__INIT_ARRAY_START:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
-; CHECK: @[[__INIT_ARRAY_END:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
-; CHECK: @[[__FINI_ARRAY_START:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
-; CHECK: @[[__FINI_ARRAY_END:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
-; CHECK: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending addrspace(1) global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini], section "llvm.metadata"
+; CHECK: @llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @foo, ptr null }]
+; CHECK: @llvm.global_dtors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @bar, ptr null }]
+; CHECK: @__init_array_start = external addrspace(1) constant [0 x ptr addrspace(1)]
+; CHECK: @__init_array_end = external addrspace(1) constant [0 x ptr addrspace(1)]
+; CHECK: @__fini_array_start = external addrspace(1) constant [0 x ptr addrspace(1)]
+; CHECK: @__fini_array_end = external addrspace(1) constant [0 x ptr addrspace(1)]
+; CHECK: @llvm.used = appending addrspace(1) global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini], section "llvm.metadata"
 ;.
 ; CHECK-LABEL: define internal void @foo() {
 ; CHECK-NEXT:    ret void

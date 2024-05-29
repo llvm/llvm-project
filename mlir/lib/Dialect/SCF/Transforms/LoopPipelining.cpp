@@ -203,6 +203,17 @@ bool LoopPipelinerInternal::initializeLoopInfo(
   return true;
 }
 
+/// Find operands of all the nested operations within `op`.
+static SetVector<Value> getNestedOperands(Operation *op) {
+  SetVector<Value> operands;
+  op->walk([&](Operation *nestedOp) {
+    for (Value operand : nestedOp->getOperands()) {
+      operands.insert(operand);
+    }
+  });
+  return operands;
+}
+
 /// Compute unrolled cycles of each op (consumer) and verify that each op is
 /// scheduled after its operands (producers) while adjusting for the distance
 /// between producer and consumer.
@@ -219,7 +230,7 @@ bool LoopPipelinerInternal::verifySchedule() {
   }
   for (Operation *consumer : opOrder) {
     int64_t consumerCycle = unrolledCyles[consumer];
-    for (Value operand : consumer->getOperands()) {
+    for (Value operand : getNestedOperands(consumer)) {
       auto [producer, distance] = getDefiningOpAndDistance(operand);
       if (!producer)
         continue;
@@ -245,9 +256,8 @@ static Operation *
 cloneAndUpdateOperands(RewriterBase &rewriter, Operation *op,
                        function_ref<void(OpOperand *newOperand)> callback) {
   Operation *clone = rewriter.clone(*op);
-  for (OpOperand &operand : clone->getOpOperands())
-    callback(&operand);
-  clone->walk([&](Operation *nested) {
+  clone->walk<WalkOrder::PreOrder>([&](Operation *nested) {
+    // 'clone' itself will be visited first.
     for (OpOperand &operand : nested->getOpOperands()) {
       Operation *def = operand.get().getDefiningOp();
       if ((def && !clone->isAncestor(def)) || isa<BlockArgument>(operand.get()))

@@ -98,9 +98,15 @@ def generate_compiler_cmd(is_cpp=True, fuzzer_enabled=True, msan_enabled=False):
     if "windows" in config.available_features:
         extra_cmd = extra_cmd + " -D_DISABLE_VECTOR_ANNOTATION -D_DISABLE_STRING_ANNOTATION"
 
+    if "darwin" in config.available_features and getattr(
+        config, "darwin_linker_version", None
+    ):
+        extra_cmd = extra_cmd + " -mlinker-version=" + config.darwin_linker_version
+
     return " ".join(
         [
             compiler_cmd,
+            config.target_cflags,
             std_cmd,
             "-O2 -gline-tables-only",
             sanitizers_cmd,

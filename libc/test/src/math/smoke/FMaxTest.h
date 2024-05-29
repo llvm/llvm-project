@@ -1,4 +1,4 @@
-//===-- Utility class to test fmin[f|l] -------------------------*- C++ -*-===//
+//===-- Utility class to test fmax[f|l] -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXTEST_H
 
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-template <typename T> class FMaxTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FMaxTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

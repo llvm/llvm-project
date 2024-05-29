@@ -41,7 +41,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIfRemote
     def test_by_pid(self):
         """
         Tests attaching to a process by process ID.
@@ -59,7 +58,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIfRemote
     def test_by_name(self):
         """
         Tests attaching to a process by process name.

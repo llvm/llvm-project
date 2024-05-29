@@ -57,6 +57,13 @@ class LLVMConfig(object):
                 self.lit_config.note("using lit tools: {}".format(path))
                 lit_path_displayed = True
 
+        if platform.system() == "OS/390":
+            self.with_environment("_BPXK_AUTOCVT", "ON")
+            self.with_environment("_TAG_REDIR_IN", "TXT")
+            self.with_environment("_TAG_REDIR_OUT", "TXT")
+            self.with_environment("_TAG_REDIR_ERR", "TXT")
+            self.with_environment("_CEE_RUNOPTS", "FILETAG(AUTOCVT,AUTOTAG) POSIX(ON)")
+
         # Choose between lit's internal shell pipeline runner and a real shell.
         # If LIT_USE_INTERNAL_SHELL is in the environment, we use that as an
         # override.

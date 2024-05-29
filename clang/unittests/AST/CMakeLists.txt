@@ -24,6 +24,7 @@ add_clang_unittest(ASTTests
   CommentLexer.cpp
   CommentParser.cpp
   CommentTextTest.cpp
+  ConceptPrinterTest.cpp
   DataCollectionTest.cpp
   DeclPrinterTest.cpp
   DeclTest.cpp

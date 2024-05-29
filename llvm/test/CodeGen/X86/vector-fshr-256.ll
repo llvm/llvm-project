@@ -486,22 +486,22 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ; XOPAVX2-LABEL: var_funnnel_v16i16:
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpbroadcastw {{.*#+}} ymm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; XOPAVX2-NEXT:    vpand %ymm3, %ymm2, %ymm4
+; XOPAVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm4
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm4, %xmm5
-; XOPAVX2-NEXT:    vpxor %xmm6, %xmm6, %xmm6
-; XOPAVX2-NEXT:    vpsubw %xmm5, %xmm6, %xmm5
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm7
-; XOPAVX2-NEXT:    vpshlw %xmm5, %xmm7, %xmm5
-; XOPAVX2-NEXT:    vpsubw %xmm4, %xmm6, %xmm4
-; XOPAVX2-NEXT:    vpshlw %xmm4, %xmm1, %xmm1
-; XOPAVX2-NEXT:    vinserti128 $1, %xmm5, %ymm1, %ymm1
-; XOPAVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; XOPAVX2-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
-; XOPAVX2-NEXT:    vpshlw %xmm3, %xmm4, %xmm3
-; XOPAVX2-NEXT:    vpshlw %xmm2, %xmm0, %xmm0
-; XOPAVX2-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm6
+; XOPAVX2-NEXT:    vpshlw %xmm5, %xmm6, %xmm5
+; XOPAVX2-NEXT:    vpshlw %xmm4, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; XOPAVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; XOPAVX2-NEXT:    vpsubw %xmm3, %xmm4, %xmm3
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm5
+; XOPAVX2-NEXT:    vpshlw %xmm3, %xmm5, %xmm3
+; XOPAVX2-NEXT:    vpsubw %xmm2, %xmm4, %xmm2
+; XOPAVX2-NEXT:    vpshlw %xmm2, %xmm1, %xmm1
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
 ; XOPAVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
   %res = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %amt)
@@ -2145,17 +2145,15 @@ define <32 x i8> @splatconstant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwi
 ;
 ; XOPAVX1-LABEL: splatconstant_funnnel_v32i8:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; XOPAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; XOPAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
-; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; XOPAVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; XOPAVX1-NEXT:    vpsrlw $4, %xmm1, %xmm2
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; XOPAVX1-NEXT:    vpsrlw $4, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; XOPAVX1-NEXT:    vpsllw $4, %xmm0, %xmm2
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; XOPAVX1-NEXT:    vpsllw $4, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; XOPAVX1-NEXT:    vpcmov {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: splatconstant_funnnel_v32i8:

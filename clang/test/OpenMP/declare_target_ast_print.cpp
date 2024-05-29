@@ -1,19 +1,19 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -I %S/Inputs -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // RUN: %clang_cc1 -verify -fopenmp -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -std=c++11 -include-pch %t -fsyntax-only -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -I %S/Inputs -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -I %S/Inputs -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -360,6 +360,17 @@ int inner_link;
 // CHECK-NEXT: int inner_link;
 // CHECK-NEXT: #pragma omp end declare target
 
+void foo2() { return ;}
+// CHECK: #pragma omp declare target
+// CHECK-NEXT: void foo2() {
+// CHECK-NEXT: return;
+// CHECK-NEXT: }
+
+int x;
+// CHECK: #pragma omp declare target link
+// CHECK-NEXT: int x;
+// CHECK-NEXT: #pragma omp end declare target
+
 int main (int argc, char **argv) {
   foo();
   foo_c();
@@ -367,6 +378,14 @@ int main (int argc, char **argv) {
   test1();
   baz<float>();
   baz<int>();
+
+#if _OPENMP == 202111
+#pragma omp declare target enter(foo2)
+#else
+#pragma omp declare target to (foo2)
+#endif
+
+  #pragma omp declare target link(x)
   return (0);
 }
 

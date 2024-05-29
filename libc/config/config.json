@@ -30,5 +30,15 @@
       "value": false,
       "doc": "Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled."
     }
+  },
+  "codegen": {
+    "LIBC_CONF_KEEP_FRAME_POINTER": {
+      "value": true,
+      "doc": "Keep frame pointer in functions for better debugging experience."
+    },
+    "LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR": {
+      "value": true,
+      "doc": "Enable -fstack-protector-strong to defend against stack smashing attack."
+    }
   }
 }

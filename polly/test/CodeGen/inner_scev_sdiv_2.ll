@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s | FileCheck %s
 ;
 ; The SCEV expression in this test case refers to a sequence of sdiv
 ; instructions, which are part of different bbs in the SCoP. When code

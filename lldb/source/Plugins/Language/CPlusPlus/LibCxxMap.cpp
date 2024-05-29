@@ -177,9 +177,9 @@ public:
 
   ~LibcxxStdMapSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -209,8 +209,8 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     Update();
 }
 
-size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxStdMapSyntheticFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
     return m_count;
 
@@ -295,29 +295,29 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
     bool child_is_base_class;
     bool child_is_deref_of_parent;
     uint64_t language_flags;
-    if (tree_node_type
-            .GetChildCompilerTypeAtIndex(
-                nullptr, 4, true, true, true, child_name, child_byte_size,
-                child_byte_offset, child_bitfield_bit_size,
-                child_bitfield_bit_offset, child_is_base_class,
-                child_is_deref_of_parent, nullptr, language_flags)
-            .IsValid())
+    auto child_type =
+        llvm::expectedToStdOptional(tree_node_type.GetChildCompilerTypeAtIndex(
+            nullptr, 4, true, true, true, child_name, child_byte_size,
+            child_byte_offset, child_bitfield_bit_size,
+            child_bitfield_bit_offset, child_is_base_class,
+            child_is_deref_of_parent, nullptr, language_flags));
+    if (child_type && child_type->IsValid())
       m_skip_size = (uint32_t)child_byte_offset;
   }
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   static ConstString g_cc_("__cc_"), g_cc("__cc");
   static ConstString g_nc("__nc");
-
-  if (idx >= CalculateNumChildren())
+  uint32_t num_children = CalculateNumChildrenIgnoringErrors();
+  if (idx >= num_children)
     return lldb::ValueObjectSP();
   if (m_tree == nullptr || m_root_node == nullptr)
     return lldb::ValueObjectSP();
 
-  MapIterator iterator(m_root_node, CalculateNumChildren());
+  MapIterator iterator(m_root_node, num_children);
 
   const bool need_to_skip = (idx > 0);
   size_t actual_advancde = idx;
@@ -382,7 +382,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
   auto potential_child_sp = iterated_sp->Clone(ConstString(name.GetString()));
   if (potential_child_sp) {
-    switch (potential_child_sp->GetNumChildren()) {
+    switch (potential_child_sp->GetNumChildrenIgnoringErrors()) {
     case 1: {
       auto child0_sp = potential_child_sp->GetChildAtIndex(0);
       if (child0_sp &&

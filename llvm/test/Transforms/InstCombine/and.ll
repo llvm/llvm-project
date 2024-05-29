@@ -752,16 +752,16 @@ define <2 x i64> @test36_uniform(<2 x i32> %X) {
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test36_undef(<2 x i32> %X) {
-; CHECK-LABEL: @test36_undef(
+define <2 x i64> @test36_poison(<2 x i32> %X) {
+; CHECK-LABEL: @test36_poison(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[ZSUB:%.*]] = add <2 x i64> [[ZEXT]], <i64 7, i64 undef>
-; CHECK-NEXT:    [[RES:%.*]] = and <2 x i64> [[ZSUB]], <i64 240, i64 undef>
+; CHECK-NEXT:    [[ZSUB:%.*]] = add nuw nsw <2 x i64> [[ZEXT]], <i64 7, i64 poison>
+; CHECK-NEXT:    [[RES:%.*]] = and <2 x i64> [[ZSUB]], <i64 240, i64 poison>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %zext = zext <2 x i32> %X to <2 x i64>
-  %zsub = add <2 x i64> %zext, <i64 7, i64 undef>
-  %res = and <2 x i64> %zsub, <i64 240, i64 undef>
+  %zsub = add <2 x i64> %zext, <i64 7, i64 poison>
+  %res = and <2 x i64> %zsub, <i64 240, i64 poison>
   ret <2 x i64> %res
 }
 
@@ -1630,16 +1630,16 @@ define <2 x i8> @lowmask_add_splat(<2 x i8> %x, ptr %p) {
   ret <2 x i8> %r
 }
 
-define <2 x i8> @lowmask_add_splat_undef(<2 x i8> %x, ptr %p) {
-; CHECK-LABEL: @lowmask_add_splat_undef(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 undef>
+define <2 x i8> @lowmask_add_splat_poison(<2 x i8> %x, ptr %p) {
+; CHECK-LABEL: @lowmask_add_splat_poison(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 poison>
 ; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A]], <i8 undef, i8 32>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X]], <i8 poison, i8 32>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
-  %a = add <2 x i8> %x, <i8 -64, i8 undef> ; 0xc0
+  %a = add <2 x i8> %x, <i8 -64, i8 poison> ; 0xc0
   store <2 x i8> %a, ptr %p
-  %r = and <2 x i8> %a, <i8 undef, i8 32> ; 0x20
+  %r = and <2 x i8> %a, <i8 poison, i8 32> ; 0x20
   ret <2 x i8> %r
 }
 
@@ -1679,14 +1679,14 @@ define <2 x i8> @flip_masked_bit_uniform(<2 x i8> %A) {
   ret <2 x i8> %C
 }
 
-define <2 x i8> @flip_masked_bit_undef(<2 x i8> %A) {
-; CHECK-LABEL: @flip_masked_bit_undef(
+define <2 x i8> @flip_masked_bit_poison(<2 x i8> %A) {
+; CHECK-LABEL: @flip_masked_bit_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[TMP1]], <i8 16, i8 undef>
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[TMP1]], <i8 16, i8 poison>
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
-  %B = add <2 x i8> %A, <i8 16, i8 undef>
-  %C = and <2 x i8> %B, <i8 16, i8 undef>
+  %B = add <2 x i8> %A, <i8 16, i8 poison>
+  %C = and <2 x i8> %B, <i8 16, i8 poison>
   ret <2 x i8> %C
 }
 
@@ -2004,7 +2004,7 @@ define i16 @invert_signbit_splat_mask_use2(i8 %x, i16 %y) {
   ret i16 %r
 }
 
-; extra use of sext is ok 
+; extra use of sext is ok
 
 define i16 @invert_signbit_splat_mask_use3(i8 %x, i16 %y) {
 ; CHECK-LABEL: @invert_signbit_splat_mask_use3(
@@ -2120,41 +2120,40 @@ define <3 x i16> @shl_lshr_pow2_const_case1_non_uniform_vec_negative(<3 x i16> %
   ret <3 x i16> %r
 }
 
-define <3 x i16> @shl_lshr_pow2_const_case1_undef1_vec(<3 x i16> %x) {
-; CHECK-LABEL: @shl_lshr_pow2_const_case1_undef1_vec(
+define <3 x i16> @shl_lshr_pow2_const_case1_poison1_vec(<3 x i16> %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_case1_poison1_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 8, i16 4, i16 4>
 ; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 8, i16 8, i16 8>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
-  %shl = shl <3 x i16> <i16 undef, i16 16, i16 16>, %x
+  %shl = shl <3 x i16> <i16 poison, i16 16, i16 16>, %x
   %lshr = lshr <3 x i16> %shl, <i16 5, i16 5, i16 5>
   %r = and <3 x i16> %lshr, <i16 8, i16 8, i16 8>
   ret <3 x i16> %r
 }
 
-define <3 x i16> @shl_lshr_pow2_const_case1_undef2_vec(<3 x i16> %x) {
-; CHECK-LABEL: @shl_lshr_pow2_const_case1_undef2_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> <i16 16, i16 16, i16 16>, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> [[SHL]], <i16 undef, i16 5, i16 5>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[LSHR]], <i16 8, i16 8, i16 8>
+define <3 x i16> @shl_lshr_pow2_const_case1_poison2_vec(<3 x i16> %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_case1_poison2_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 poison, i16 4, i16 4>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 8, i16 8, i16 8>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %shl = shl <3 x i16> <i16 16, i16 16, i16 16>, %x
-  %lshr = lshr <3 x i16> %shl, <i16 undef, i16 5, i16 5>
+  %lshr = lshr <3 x i16> %shl, <i16 poison, i16 5, i16 5>
   %r = and <3 x i16> %lshr, <i16 8, i16 8, i16 8>
   ret <3 x i16> %r
 }
 
-define <3 x i16> @shl_lshr_pow2_const_case1_undef3_vec(<3 x i16> %x) {
-; CHECK-LABEL: @shl_lshr_pow2_const_case1_undef3_vec(
+define <3 x i16> @shl_lshr_pow2_const_case1_poison3_vec(<3 x i16> %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_case1_poison3_vec(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> <i16 16, i16 16, i16 16>, [[X:%.*]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> [[SHL]], <i16 5, i16 5, i16 5>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[LSHR]], <i16 undef, i16 8, i16 8>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[LSHR]], <i16 poison, i16 8, i16 8>
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %shl = shl <3 x i16> <i16 16, i16 16, i16 16>, %x
   %lshr = lshr <3 x i16> %shl, <i16 5, i16 5, i16 5>
-  %r = and <3 x i16> %lshr, <i16 undef, i16 8, i16 8>
+  %r = and <3 x i16> %lshr, <i16 poison, i16 8, i16 8>
   ret <3 x i16> %r
 }
 
@@ -2417,40 +2416,41 @@ define <3 x i16> @lshr_shl_pow2_const_case1_non_uniform_vec_negative(<3 x i16> %
   ret <3 x i16> %r
 }
 
-define <3 x i16> @lshr_shl_pow2_const_case1_undef1_vec(<3 x i16> %x) {
-; CHECK-LABEL: @lshr_shl_pow2_const_case1_undef1_vec(
+define <3 x i16> @lshr_shl_pow2_const_case1_poison1_vec(<3 x i16> %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_case1_poison1_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 -1, i16 12, i16 12>
 ; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 128, i16 128, i16 128>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
-  %lshr = lshr <3 x i16> <i16 undef, i16 8192, i16 8192>, %x
+  %lshr = lshr <3 x i16> <i16 poison, i16 8192, i16 8192>, %x
   %shl = shl <3 x i16> %lshr, <i16 6, i16 6, i16 6>
   %r = and <3 x i16> %shl, <i16 128, i16 128, i16 128>
   ret <3 x i16> %r
 }
 
-define <3 x i16> @lshr_shl_pow2_const_case1_undef2_vec(<3 x i16> %x) {
-; CHECK-LABEL: @lshr_shl_pow2_const_case1_undef2_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 undef, i16 12, i16 12>
-; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 128, i16 128, i16 128>, <3 x i16> zeroinitializer
+define <3 x i16> @lshr_shl_pow2_const_case1_poison2_vec(<3 x i16> %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_case1_poison2_vec(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 poison, i16 6, i16 6>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 128, i16 128, i16 128>
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %lshr = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, %x
-  %shl = shl <3 x i16> %lshr, <i16 undef, i16 6, i16 6>
+  %shl = shl <3 x i16> %lshr, <i16 poison, i16 6, i16 6>
   %r = and <3 x i16> %shl, <i16 128, i16 128, i16 128>
   ret <3 x i16> %r
 }
 
-define <3 x i16> @lshr_shl_pow2_const_case1_undef3_vec(<3 x i16> %x) {
-; CHECK-LABEL: @lshr_shl_pow2_const_case1_undef3_vec(
+define <3 x i16> @lshr_shl_pow2_const_case1_poison3_vec(<3 x i16> %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_case1_poison3_vec(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, [[X:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 6, i16 6, i16 6>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 undef, i16 128, i16 128>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 poison, i16 128, i16 128>
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %lshr = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, %x
   %shl = shl <3 x i16> %lshr, <i16 6, i16 6, i16 6>
-  %r = and <3 x i16> %shl, <i16 undef, i16 128, i16 128>
+  %r = and <3 x i16> %shl, <i16 poison, i16 128, i16 128>
   ret <3 x i16> %r
 }
 

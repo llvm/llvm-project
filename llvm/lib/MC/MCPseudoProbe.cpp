@@ -343,7 +343,7 @@ template <typename T> ErrorOr<T> MCPseudoProbeDecoder::readUnencodedNumber() {
   if (Data + sizeof(T) > End) {
     return std::error_code();
   }
-  T Val = endian::readNext<T, llvm::endianness::little, unaligned>(Data);
+  T Val = endian::readNext<T, llvm::endianness::little>(Data);
   return ErrorOr<T>(Val);
 }
 

@@ -33,6 +33,7 @@
 #include <bitset>
 #include <clocale>
 #include <csignal>
+#include <future>
 #include <string>
 #include <thread>
 #include <utility>
@@ -732,8 +733,14 @@ int main(int argc, char const *argv[]) {
   // Setup LLVM signal handlers and make sure we call llvm_shutdown() on
   // destruction.
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
+#if !defined(__APPLE__)
   llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
                         " and include the crash backtrace.\n");
+#else
+  llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
+                        " and include the crash report from "
+                        "~/Library/Logs/DiagnosticReports/.\n");
+#endif
 
   // Parse arguments.
   LLDBOptTable T;
@@ -801,6 +808,18 @@ int main(int argc, char const *argv[]) {
     }
   }
 
-  SBDebugger::Terminate();
+  // When terminating the debugger we have to wait on all the background tasks
+  // to complete, which can take a while. Print a message when this takes longer
+  // than 1 second.
+  {
+    std::future<void> future =
+        std::async(std::launch::async, []() { SBDebugger::Terminate(); });
+
+    if (future.wait_for(std::chrono::seconds(1)) == std::future_status::timeout)
+      fprintf(stderr, "Waiting for background tasks to complete...\n");
+
+    future.wait();
+  }
+
   return exit_code;
 }

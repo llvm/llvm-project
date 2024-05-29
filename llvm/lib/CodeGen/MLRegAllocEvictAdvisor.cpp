@@ -212,7 +212,7 @@ static const std::vector<int64_t> PerLiveRangeShape{1, NumberOfInterferences};
   M(float, mbb_frequencies, MBBFrequencyShape,                                 \
     "A vector of machine basic block frequencies")                             \
   M(int64_t, mbb_mapping, InstructionsShape,                                   \
-    "A vector of indicies mapping instructions to MBBs")
+    "A vector of indices mapping instructions to MBBs")
 #else
 #define RA_EVICT_FIRST_DEVELOPMENT_FEATURE(M)
 #define RA_EVICT_REST_DEVELOPMENT_FEATURES(M)

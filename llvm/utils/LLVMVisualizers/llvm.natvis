@@ -92,11 +92,11 @@ For later versions of Visual Studio, no setup is required.
 
   <Type Name="llvm::PointerIntPair&lt;*&gt;">
     <DisplayString IncludeView="ptr">{($T1)(*(intptr_t *)Value.Data &amp; $T5::PointerBitMask)}</DisplayString>
-    <DisplayString IncludeView="int">{($T3)((*(intptr_t *)Value.Data &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}</DisplayString>
-    <DisplayString>{$T5::IntMask}: {($T1)(*(intptr_t *)Value.Data &amp; $T5::PointerBitMask)} [{($T3)((*(intptr_t *)Value.Data &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}]</DisplayString>
+    <DisplayString IncludeView="int">{((*(intptr_t *)Value.Data &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}</DisplayString>
+    <DisplayString>{$T5::IntMask}: {($T1)(*(intptr_t *)Value.Data &amp; $T5::PointerBitMask)} [{((*(intptr_t *)Value.Data &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}]</DisplayString>
     <Expand>
       <Item Name="[ptr]">($T1)(*(intptr_t *)Value.Data &amp; $T5::PointerBitMask)</Item>
-      <Item Name="[int]">($T3)((*(intptr_t *)Value.Data &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)</Item>
+      <Item Name="[int]">((*(intptr_t *)Value.Data &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)</Item>
     </Expand>
   </Type>
   <!-- PointerUnion types -->

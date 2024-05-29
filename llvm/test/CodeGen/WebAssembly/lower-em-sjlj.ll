@@ -22,15 +22,12 @@ entry:
   call void @longjmp(ptr %buf, i32 1) #1
   unreachable
 ; CHECK: entry:
-; CHECK-NEXT: %[[MALLOCCALL:.*]] = tail call ptr @malloc([[PTR]] 40)
-; CHECK-NEXT: store i32 0, ptr %[[MALLOCCALL]]
-; CHECK-NEXT: %[[SETJMP_TABLE_SIZE:.*]] = add i32 4, 0
+; CHECK-NEXT: %functionInvocationId = alloca i32, align 4
 ; CHECK-NEXT: br label %entry.split
 
 ; CHECK: entry.split
 ; CHECK-NEXT: %[[BUF:.*]] = alloca [1 x %struct.__jmp_buf_tag]
-; CHECK-NEXT: %[[SETJMP_TABLE1:.*]] = call ptr @saveSetjmp(ptr %[[BUF]], i32 1, ptr %[[MALLOCCALL]], i32 %[[SETJMP_TABLE_SIZE]])
-; CHECK-NEXT: %[[SETJMP_TABLE_SIZE1:.*]] = call i32 @getTempRet0()
+; CHECK-NEXT: call void @__wasm_setjmp(ptr %[[BUF]], i32 1, ptr %functionInvocationId)
 ; CHECK-NEXT: br label %entry.split.split
 
 ; CHECK: entry.split.split:
@@ -51,8 +48,7 @@ entry:
 
 ; CHECK: if.then1:
 ; CHECK-NEXT: %[[__THREW__VAL_P:.*]] = inttoptr [[PTR]] %[[__THREW__VAL]] to ptr
-; CHECK-NEXT: %[[__THREW__VAL_P_LOADED:.*]] = load [[PTR]], ptr %[[__THREW__VAL_P]]
-; CHECK-NEXT: %[[LABEL:.*]] = call i32 @testSetjmp([[PTR]] %[[__THREW__VAL_P_LOADED]], ptr %[[SETJMP_TABLE1]], i32 %[[SETJMP_TABLE_SIZE1]])
+; CHECK-NEXT: %[[LABEL:.*]] = call i32 @__wasm_setjmp_test(ptr %[[__THREW__VAL_P]], ptr %functionInvocationId)
 ; CHECK-NEXT: %[[CMP:.*]] = icmp eq i32 %[[LABEL]], 0
 ; CHECK-NEXT: br i1 %[[CMP]], label %call.em.longjmp, label %if.end2
 
@@ -69,7 +65,6 @@ entry:
 ; CHECK: call.em.longjmp:
 ; CHECK-NEXT: %threw.phi = phi [[PTR]] [ %[[__THREW__VAL]], %if.then1 ]
 ; CHECK-NEXT: %threwvalue.phi = phi i32 [ %[[THREWVALUE_VAL]], %if.then1 ]
-; CHECK-NEXT: tail call void @free(ptr %[[SETJMP_TABLE1]])
 ; CHECK-NEXT: call void @emscripten_longjmp([[PTR]] %threw.phi, i32 %threwvalue.phi)
 ; CHECK-NEXT: unreachable
 
@@ -87,13 +82,12 @@ entry:
   call void @foo()
   ret void
 ; CHECK: entry:
-; CHECK: %[[SETJMP_TABLE:.*]] = call ptr @saveSetjmp(
+; CHECK: call void @__wasm_setjmp(
 
 ; CHECK: entry.split.split:
 ; CHECK: @__invoke_void(ptr @foo)
 
 ; CHECK: entry.split.split.split:
-; CHECK-NEXT: tail call void @free(ptr %[[SETJMP_TABLE]])
 ; CHECK-NEXT: ret void
 }
 
@@ -110,9 +104,8 @@ entry:
   call void @foo()
   ret void
 ; CHECK: call.em.longjmp:
-; CHECK-NEXT:  %threw.phi = phi [[PTR]] [ %__THREW__.val, %if.then1 ], [ %__THREW__.val4, %if.then15 ]
-; CHECK-NEXT:  %threwvalue.phi = phi i32 [ %__threwValue.val, %if.then1 ], [ %__threwValue.val8, %if.then15 ]
-; CHECK-NEXT: tail call void @free(ptr %[[SETJMP_TABLE1]])
+; CHECK-NEXT:  %threw.phi = phi [[PTR]] [ %__THREW__.val, %if.then1 ], [ %__THREW__.val2, %if.then13 ]
+; CHECK-NEXT:  %threwvalue.phi = phi i32 [ %__threwValue.val, %if.then1 ], [ %__threwValue.val6, %if.then13 ]
 ; CHECK-NEXT: call void @emscripten_longjmp([[PTR]] %threw.phi, i32 %threwvalue.phi)
 ; CHECK-NEXT: unreachable
 }
@@ -145,7 +138,6 @@ entry:
   %cmp = icmp sgt i32 %n, 5
   br i1 %cmp, label %if.then, label %if.end
 ; CHECK: entry:
-; CHECK: %[[SETJMP_TABLE_SIZE0:.*]] = add i32 4, 0
 
 if.then:                                          ; preds = %entry
   %0 = load i32, ptr @global_var, align 4
@@ -154,13 +146,10 @@ if.then:                                          ; preds = %entry
   br label %if.end
 ; CHECK: if.then:
 ; CHECK: %[[VAR0:.*]] = load i32, ptr @global_var, align 4
-; CHECK: %[[SETJMP_TABLE1:.*]] = call ptr @saveSetjmp(
-; CHECK-NEXT: %[[SETJMP_TABLE_SIZE1:.*]] = call i32 @getTempRet0()
+; CHECK: call void @__wasm_setjmp(
 
 ; CHECK: if.then.split:
-; CHECK: %[[VAR1:.*]] = phi i32 [ %[[VAR2:.*]], %if.end3 ], [ %[[VAR0]], %if.then ]
-; CHECK: %[[SETJMP_TABLE_SIZE2:.*]] = phi i32 [ %[[SETJMP_TABLE_SIZE1]], %if.then ], [ %[[SETJMP_TABLE_SIZE3:.*]], %if.end3 ]
-; CHECK: %[[SETJMP_TABLE2:.*]] = phi ptr [ %[[SETJMP_TABLE1]], %if.then ], [ %[[SETJMP_TABLE3:.*]], %if.end3 ]
+; CHECK: %[[VAR1:.*]] = phi i32 [ %[[VAR2:.*]], %if.end1 ], [ %[[VAR0]], %if.then ]
 ; CHECK: store i32 %[[VAR1]], ptr @global_var, align 4
 
 if.end:                                           ; preds = %if.then, %entry
@@ -168,8 +157,6 @@ if.end:                                           ; preds = %if.then, %entry
   unreachable
 ; CHECK: if.end:
 ; CHECK: %[[VAR2]] = phi i32 [ %[[VAR1]], %if.then.split ], [ undef, %entry.split ]
-; CHECK: %[[SETJMP_TABLE_SIZE3]] = phi i32 [ %[[SETJMP_TABLE_SIZE2]], %if.then.split ], [ %[[SETJMP_TABLE_SIZE0]], %entry.split ]
-; CHECK: %[[SETJMP_TABLE3]] = phi ptr [ %[[SETJMP_TABLE2]], %if.then.split ], [ %setjmpTable, %entry.split ]
 }
 
 ; Test a case when a function only calls other functions that are neither setjmp nor longjmp
@@ -296,8 +283,8 @@ declare void @free(ptr)
 ; JS glue functions and invoke wrappers declaration
 ; CHECK-DAG: declare i32 @getTempRet0()
 ; CHECK-DAG: declare void @setTempRet0(i32)
-; CHECK-DAG: declare ptr @saveSetjmp(ptr, i32, ptr, i32)
-; CHECK-DAG: declare i32 @testSetjmp([[PTR]], ptr, i32)
+; CHECK-DAG: declare void @__wasm_setjmp(ptr, i32, ptr)
+; CHECK-DAG: declare i32 @__wasm_setjmp_test(ptr, ptr)
 ; CHECK-DAG: declare void @emscripten_longjmp([[PTR]], i32)
 ; CHECK-DAG: declare void @__invoke_void(ptr)
 
@@ -308,8 +295,8 @@ attributes #3 = { allocsize(0) }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="getTempRet0" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="setTempRet0" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="saveSetjmp" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="testSetjmp" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__wasm_setjmp" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__wasm_setjmp_test" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { noreturn "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_ptr_i32_ptr" }
 ; CHECK-DAG: attributes #[[ALLOCSIZE_ATTR]] = { allocsize(1) }

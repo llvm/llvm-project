@@ -15,10 +15,8 @@ if echo $tag | grep -e '^[0-9a-f]\+$'; then
   # This is a plain commit.
   # TODO: Don't hardcode this.
   release_version="18"
-  build_dir="$tag"
   upload='false'
   ref="$tag"
-  flags="-git-ref $tag -test-asserts"
 
 else
 
@@ -30,12 +28,7 @@ else
   fi
   release_version=`echo "$tag" | sed 's/llvmorg-//g'`
   release=`echo "$release_version" | sed 's/-.*//g'`
-  build_dir=`echo "$release_version" | sed 's,^[^-]\+,final,' | sed 's,[^-]\+-rc\(.\+\),rc\1,'`
-  rc_flags=`echo "$release_version" | sed 's,^[^-]\+,-final,' | sed 's,[^-]\+-rc\(.\+\),-rc \1 -test-asserts,' | sed 's,--,-,'`
-  flags="-release $release $rc_flags"
 fi
 echo "release-version=$release_version" >> $GITHUB_OUTPUT
-echo "build-dir=$build_dir" >> $GITHUB_OUTPUT
-echo "flags=$flags" >> $GITHUB_OUTPUT
 echo "upload=$upload" >> $GITHUB_OUTPUT
 echo "ref=$tag" >> $GITHUB_OUTPUT

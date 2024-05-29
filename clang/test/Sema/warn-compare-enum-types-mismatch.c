@@ -1,12 +1,21 @@
 // RUN: %clang_cc1 -x c -fsyntax-only -verify -Wenum-compare -Wno-unused-comparison %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -verify -Wenum-compare -Wno-unused-comparison %s
 
+// In C enumerators (i.e enumeration constants) have type int (until C23). In
+// order to support diagnostics such as -Wenum-compare we pretend they have the
+// type of their enumeration.
+
 typedef enum EnumA {
   A
 } EnumA;
 
 enum EnumB {
-  B
+  B,
+  B1 = 1,
+  // In C++ this comparison doesnt warn as enumerators dont have the type of
+  // their enumeration before the closing brace. We mantain the same behavior
+  // in C.
+  B2 = A == B1
 };
 
 enum {

@@ -89,7 +89,7 @@ bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
 
   // Load all symbol files in MergeDir.
   {
-    llvm::ThreadPool Pool;
+    llvm::DefaultThreadPool Pool;
     for (llvm::sys::fs::directory_iterator Dir(MergeDir, EC), DirEnd;
          Dir != DirEnd && !EC; Dir.increment(EC)) {
       // Parse YAML files in parallel.

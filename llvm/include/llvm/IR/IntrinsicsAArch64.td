@@ -1360,6 +1360,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMSubdivide2VectorType<0>,
                  llvm_i32_ty],
                 [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+  
+  class SVE2_1VectorArgIndexed_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 llvm_i32_ty],
+                [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
   class AdvSIMD_SVE_CDOT_LANE_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -1756,6 +1762,7 @@ def int_aarch64_sve_uqsub_x   : AdvSIMD_2VectorArg_Intrinsic;
 def int_aarch64_sve_orqv      : AdvSIMD_SVE_V128_Reduce_Intrinsic;
 def int_aarch64_sve_eorqv     : AdvSIMD_SVE_V128_Reduce_Intrinsic;
 def int_aarch64_sve_andqv     : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_addqv     : AdvSIMD_SVE_V128_Reduce_Intrinsic;
 def int_aarch64_sve_smaxqv    : AdvSIMD_SVE_V128_Reduce_Intrinsic;
 def int_aarch64_sve_umaxqv    : AdvSIMD_SVE_V128_Reduce_Intrinsic;
 def int_aarch64_sve_sminqv    : AdvSIMD_SVE_V128_Reduce_Intrinsic;
@@ -1913,6 +1920,7 @@ def int_aarch64_sve_clastb    : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_clastb_n  : AdvSIMD_SVE_ReduceWithInit_Intrinsic;
 def int_aarch64_sve_compact   : AdvSIMD_Pred1VectorArg_Intrinsic;
 def int_aarch64_sve_dupq_lane : AdvSIMD_SVE_DUPQ_Intrinsic;
+def int_aarch64_sve_dup_laneq : SVE2_1VectorArgIndexed_Intrinsic;
 def int_aarch64_sve_ext       : AdvSIMD_2VectorArgIndexed_Intrinsic;
 def int_aarch64_sve_sel       : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_lasta     : AdvSIMD_SVE_Reduce_Intrinsic;
@@ -2072,11 +2080,12 @@ def int_aarch64_sve_fmaxv   : AdvSIMD_SVE_Reduce_Intrinsic;
 def int_aarch64_sve_fmaxnmv : AdvSIMD_SVE_Reduce_Intrinsic;
 def int_aarch64_sve_fminv   : AdvSIMD_SVE_Reduce_Intrinsic;
 def int_aarch64_sve_fminnmv : AdvSIMD_SVE_Reduce_Intrinsic;
-def int_aarch64_sve_addqv : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+
+def int_aarch64_sve_faddqv   : AdvSIMD_SVE_V128_Reduce_Intrinsic;
 def int_aarch64_sve_fmaxnmqv : AdvSIMD_SVE_V128_Reduce_Intrinsic;
 def int_aarch64_sve_fminnmqv : AdvSIMD_SVE_V128_Reduce_Intrinsic;
-def int_aarch64_sve_fmaxqv : AdvSIMD_SVE_V128_Reduce_Intrinsic;
-def int_aarch64_sve_fminqv : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_fmaxqv   : AdvSIMD_SVE_V128_Reduce_Intrinsic;
+def int_aarch64_sve_fminqv   : AdvSIMD_SVE_V128_Reduce_Intrinsic;
 
 //
 // Floating-point conversions
@@ -3463,16 +3472,18 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sclamp_single_x2 : SME2_VG2_Multi_Single_Single_Intrinsic;
   def int_aarch64_sve_uclamp_single_x2 : SME2_VG2_Multi_Single_Single_Intrinsic;
   def int_aarch64_sve_fclamp_single_x2 : SME2_VG2_Multi_Single_Single_Intrinsic;
+  def int_aarch64_sve_bfclamp_single_x2 : SME2_VG2_Multi_Single_Single_Intrinsic;
 
   def int_aarch64_sve_sclamp_single_x4 : SME2_VG4_Multi_Single_Single_Intrinsic;
   def int_aarch64_sve_uclamp_single_x4 : SME2_VG4_Multi_Single_Single_Intrinsic;
   def int_aarch64_sve_fclamp_single_x4 : SME2_VG4_Multi_Single_Single_Intrinsic;
+  def int_aarch64_sve_bfclamp_single_x4 : SME2_VG4_Multi_Single_Single_Intrinsic;
 
   //
   // Multi-vector add/sub and accumulate into ZA
   //
   foreach intr = ["add", "sub"] in {
-    foreach za = ["za32", "za64"] in {
+    foreach za = ["za16","za32", "za64"] in {
       def int_aarch64_sme_ # intr # _ # za # _vg1x2 : SME2_ZA_Write_VG2_Intrinsic;
       def int_aarch64_sme_ # intr # _ # za # _vg1x4 : SME2_ZA_Write_VG4_Intrinsic;
     }
@@ -3640,3 +3651,6 @@ def int_aarch64_sve_pmov_to_pred_lane_zero : SVE2_1VectorArg_Pred_Intrinsic;
 def int_aarch64_sve_pmov_to_vector_lane_merging : SVE2_Pred_1VectorArgIndexed_Intrinsic;
    
 def int_aarch64_sve_pmov_to_vector_lane_zeroing : SVE2_Pred_1VectorArg_Intrinsic;
+
+def int_aarch64_sme_mopa_nonwide : SME_OuterProduct_Intrinsic;
+def int_aarch64_sme_mops_nonwide : SME_OuterProduct_Intrinsic;

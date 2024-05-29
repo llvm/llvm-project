@@ -71,10 +71,10 @@ entry:
 ; CHECK-LIT-LABEL: define i32 @f1
 ; CHECK-LIT: call i32 @neg.specialized.[[#B:]]
 
-; CHECK-LIT-LABEL: define i32 @g0
+; CHECK-LIT-LABEL: define range(i32 -2147483647, -2147483648) i32 @g0
 ; CHECK-LIT: call i32 @add.specialized.[[#C:]]
 
-; CHECK-LIT-LABEL: define i32 @g1
+; CHECK-LIT-LABEL: define range(i32 -2147483647, -2147483648) i32 @g1
 ; CHECK-LIT: call i32 @add.specialized.[[#D:]]
 
 ; CHECK-LIT-LABEL: define float @h0

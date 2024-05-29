@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s --std=c++11 -triple nvptx -emit-llvm -o - \
+// RUN: %clang_cc1 %s --std=c++11 -triple nvptx -o - \
 // RUN:   -verify -fcuda-is-device -fsyntax-only -verify-ignore-unexpected=note
 
 #include "Inputs/cuda.h"

@@ -5,23 +5,47 @@
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex2-tu1.cpp \
 // RUN:  -o %t/B_Y.pcm
-
+//
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex2-tu2.cpp \
 // RUN:     -fmodule-file=B:Y=%t/B_Y.pcm -o %t/B.pcm
-
+//
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex2-tu3.cpp \
 // RUN:     -o %t/B_X1.pcm -verify
-
+//
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex2-tu4.cpp \
 // RUN:     -fmodule-file=B=%t/B.pcm -fmodule-file=B:Y=%t/B_Y.pcm  -o %t/B_X2.pcm
-
+//
 // RUN: %clang_cc1 -std=c++20 -emit-obj %t/std10-1-ex2-tu5.cpp \
 // RUN:     -fmodule-file=B=%t/B.pcm -fmodule-file=B:Y=%t/B_Y.pcm  -o %t/b_tu5.o
-
+//
 // RUN: %clang_cc1 -std=c++20 -S %t/std10-1-ex2-tu6.cpp \
 // RUN:     -fmodule-file=B=%t/B.pcm -fmodule-file=B:Y=%t/B_Y.pcm  -o %t/b_tu6.s -verify
-
+//
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex2-tu7.cpp \
+// RUN:     -fmodule-file=B:X2=%t/B_X2.pcm -fmodule-file=B=%t/B.pcm \
+// RUN:     -fmodule-file=B:Y=%t/B_Y.pcm   -o %t/B_X3.pcm -verify
+
+// Test again with reduced BMI.
+// RUN: rm %t/B_X2.pcm %t/B.pcm %t/B_Y.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std10-1-ex2-tu1.cpp \
+// RUN:  -o %t/B_Y.pcm
+//
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std10-1-ex2-tu2.cpp \
+// RUN:     -fmodule-file=B:Y=%t/B_Y.pcm -o %t/B.pcm
+//
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std10-1-ex2-tu3.cpp \
+// RUN:     -o %t/B_X1.pcm -verify
+//
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std10-1-ex2-tu4.cpp \
+// RUN:     -fmodule-file=B=%t/B.pcm -fmodule-file=B:Y=%t/B_Y.pcm  -o %t/B_X2.pcm
+//
+// RUN: %clang_cc1 -std=c++20 -emit-obj %t/std10-1-ex2-tu5.cpp \
+// RUN:     -fmodule-file=B=%t/B.pcm -fmodule-file=B:Y=%t/B_Y.pcm  -o %t/b_tu5.o
+//
+// RUN: %clang_cc1 -std=c++20 -S %t/std10-1-ex2-tu6.cpp \
+// RUN:     -fmodule-file=B=%t/B.pcm -fmodule-file=B:Y=%t/B_Y.pcm  -o %t/b_tu6.s -verify
+//
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std10-1-ex2-tu7.cpp \
 // RUN:     -fmodule-file=B:X2=%t/B_X2.pcm -fmodule-file=B=%t/B.pcm \
 // RUN:     -fmodule-file=B:Y=%t/B_Y.pcm   -o %t/B_X3.pcm -verify
 

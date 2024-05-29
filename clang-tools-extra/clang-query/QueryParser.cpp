@@ -11,7 +11,6 @@
 #include "QuerySession.h"
 #include "clang/ASTMatchers/Dynamic/Parser.h"
 #include "clang/Basic/CharInfo.h"
-#include "clang/Tooling/NodeIntrospection.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
@@ -104,19 +103,16 @@ QueryRef QueryParser::parseSetBool(bool QuerySession::*Var) {
 
 template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
   StringRef ValStr;
-  bool HasIntrospection = tooling::NodeIntrospection::hasIntrospectionSupport();
-  unsigned OutKind =
-      LexOrCompleteWord<unsigned>(this, ValStr)
-          .Case("diag", OK_Diag)
-          .Case("print", OK_Print)
-          .Case("detailed-ast", OK_DetailedAST)
-          .Case("srcloc", OK_SrcLoc, /*IsCompletion=*/HasIntrospection)
-          .Case("dump", OK_DetailedAST)
-          .Default(~0u);
+  unsigned OutKind = LexOrCompleteWord<unsigned>(this, ValStr)
+                         .Case("diag", OK_Diag)
+                         .Case("print", OK_Print)
+                         .Case("detailed-ast", OK_DetailedAST)
+                         .Case("dump", OK_DetailedAST)
+                         .Default(~0u);
   if (OutKind == ~0u) {
-    return new InvalidQuery("expected 'diag', 'print', 'detailed-ast'" +
-                            StringRef(HasIntrospection ? ", 'srcloc'" : "") +
-                            " or 'dump', got '" + ValStr + "'");
+    return new InvalidQuery("expected 'diag', 'print', 'detailed-ast' or "
+                            "'dump', got '" +
+                            ValStr + "'");
   }
 
   switch (OutKind) {
@@ -126,10 +122,6 @@ template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
     return new QueryType(&QuerySession::DiagOutput);
   case OK_Print:
     return new QueryType(&QuerySession::PrintOutput);
-  case OK_SrcLoc:
-    if (HasIntrospection)
-      return new QueryType(&QuerySession::SrcLocOutput);
-    return new InvalidQuery("'srcloc' output support is not available.");
   }
 
   llvm_unreachable("Invalid output kind");
@@ -183,7 +175,8 @@ enum ParsedQueryKind {
   PQK_Unlet,
   PQK_Quit,
   PQK_Enable,
-  PQK_Disable
+  PQK_Disable,
+  PQK_File
 };
 
 enum ParsedQueryVariable {
@@ -222,12 +215,14 @@ QueryRef QueryParser::doParse() {
                               .Case("let", PQK_Let)
                               .Case("m", PQK_Match, /*IsCompletion=*/false)
                               .Case("match", PQK_Match)
-                              .Case("q", PQK_Quit,  /*IsCompletion=*/false)
+                              .Case("q", PQK_Quit, /*IsCompletion=*/false)
                               .Case("quit", PQK_Quit)
                               .Case("set", PQK_Set)
                               .Case("enable", PQK_Enable)
                               .Case("disable", PQK_Disable)
                               .Case("unlet", PQK_Unlet)
+                              .Case("f", PQK_File, /*IsCompletion=*/false)
+                              .Case("file", PQK_File)
                               .Default(PQK_Invalid);
 
   switch (QKind) {
@@ -350,6 +345,9 @@ QueryRef QueryParser::doParse() {
 
     return endQuery(new LetQuery(Name, VariantValue()));
   }
+
+  case PQK_File:
+    return new FileQuery(Line);
 
   case PQK_Invalid:
     return new InvalidQuery("unknown command: " + CommandStr);

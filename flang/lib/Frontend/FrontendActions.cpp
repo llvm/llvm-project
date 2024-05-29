@@ -63,10 +63,10 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
@@ -123,12 +123,12 @@ static bool saveMLIRTempFile(const CompilerInvocation &ci,
 bool PrescanAction::beginSourceFileAction() { return runPrescan(); }
 
 bool PrescanAndParseAction::beginSourceFileAction() {
-  return runPrescan() && runParse();
+  return runPrescan() && runParse(/*emitMessages=*/true);
 }
 
 bool PrescanAndSemaAction::beginSourceFileAction() {
-  return runPrescan() && runParse() && runSemanticChecks() &&
-         generateRtTypeTables();
+  return runPrescan() && runParse(/*emitMessages=*/false) &&
+         runSemanticChecks() && generateRtTypeTables();
 }
 
 bool PrescanAndSemaDebugAction::beginSourceFileAction() {
@@ -137,8 +137,8 @@ bool PrescanAndSemaDebugAction::beginSourceFileAction() {
   // from exiting early (i.e. in the presence of semantic errors). We should
   // never do this in actions intended for end-users or otherwise regular
   // compiler workflows!
-  return runPrescan() && runParse() && (runSemanticChecks() || true) &&
-         (generateRtTypeTables() || true);
+  return runPrescan() && runParse(/*emitMessages=*/false) &&
+         (runSemanticChecks() || true) && (generateRtTypeTables() || true);
 }
 
 static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
@@ -275,8 +275,8 @@ bool CodeGenAction::beginSourceFileAction() {
     ci.getDiagnostics().Report(diagID);
     return false;
   }
-  bool res = runPrescan() && runParse() && runSemanticChecks() &&
-             generateRtTypeTables();
+  bool res = runPrescan() && runParse(/*emitMessages=*/false) &&
+             runSemanticChecks() && generateRtTypeTables();
   if (!res)
     return res;
 
@@ -399,7 +399,9 @@ void PrintPreprocessedAction::executeAction() {
 
   // Format or dump the prescanner's output
   CompilerInstance &ci = this->getInstance();
-  if (ci.getInvocation().getPreprocessorOpts().noReformat) {
+  if (ci.getInvocation().getPreprocessorOpts().showMacros) {
+    ci.getParsing().EmitPreprocessorMacros(outForPP);
+  } else if (ci.getInvocation().getPreprocessorOpts().noReformat) {
     ci.getParsing().DumpCookedChars(outForPP);
   } else {
     ci.getParsing().EmitPreprocessedSource(
@@ -472,6 +474,15 @@ void DebugUnparseWithSymbolsAction::executeAction() {
       llvm::outs(), parseTree, /*encoding=*/Fortran::parser::Encoding::UTF_8);
 
   // Report fatal semantic errors
+  reportFatalSemanticErrors();
+}
+
+void DebugUnparseWithModulesAction::executeAction() {
+  auto &parseTree{*getInstance().getParsing().parseTree()};
+  CompilerInstance &ci{getInstance()};
+  Fortran::semantics::UnparseWithModules(
+      llvm::outs(), ci.getSemantics().context(), parseTree,
+      /*encoding=*/Fortran::parser::Encoding::UTF_8);
   reportFatalSemanticErrors();
 }
 
@@ -800,14 +811,18 @@ void CodeGenAction::generateLLVMIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
+  fir::registerDefaultInlinerPass(config);
 
   if (auto vsr = getVScaleRange(ci)) {
     config.VScaleMin = vsr->first;
     config.VScaleMax = vsr->second;
   }
 
+  if (ci.getInvocation().getLoweringOpts().getNSWOnLoopVarInc())
+    config.NSWOnLoopVarInc = true;
+
   // Create the pass pipeline
-  fir::createMLIRToLLVMPassPipeline(pm, config);
+  fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
   (void)mlir::applyPassManagerCLOptions(pm);
 
   // run the pass manager
@@ -859,7 +874,6 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"ll");
   case BackendActionTy::Backend_EmitFIR:
-    LLVM_FALLTHROUGH;
   case BackendActionTy::Backend_EmitHLFIR:
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"mlir");

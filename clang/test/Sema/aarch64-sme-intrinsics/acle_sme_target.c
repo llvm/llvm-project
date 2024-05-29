@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fsyntax-only -verify -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -verify -emit-llvm -o - %s
 // REQUIRES: aarch64-registered-target
 
 // Test that functions with the correct target attributes can use the correct SME intrinsics.

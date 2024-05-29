@@ -13,6 +13,8 @@
 ; RUN: llc < %s -global-isel -global-isel-abort=1 -mtriple=i686-apple-darwin10 -verify-machineinstrs              | FileCheck %s --check-prefix=GISEL-X86
 ; RUN: llc < %s -global-isel -global-isel-abort=1 -mtriple=i686-apple-darwin10 -verify-machineinstrs -mattr=+cmov | FileCheck %s --check-prefix=GISEL-X86-CMOV
 
+; RUN: llc < %s -fast-isel -fast-isel-abort=1 -mtriple=x86_64-apple-darwin10 -verify-machineinstrs -mattr=+ndd    | FileCheck %s --check-prefix=NDD
+
 ; Test conditional move for the supported types (i16, i32, and i32) and
 ; conditon input (argument or cmp).
 ; When cmov is not available (i8 type or X86), the branch is expected.
@@ -114,6 +116,16 @@ define zeroext i8 @select_cmov_i8(i1 zeroext %cond, i8 zeroext %a, i8 zeroext %b
 ; GISEL-X86-CMOV-NEXT:    cmovnew %dx, %ax
 ; GISEL-X86-CMOV-NEXT:    ## kill: def $al killed $al killed $eax
 ; GISEL-X86-CMOV-NEXT:    retl
+;
+; NDD-LABEL: select_cmov_i8:
+; NDD:       ## %bb.0:
+; NDD-NEXT:    testb $1, %dil
+; NDD-NEXT:    jne LBB0_2
+; NDD-NEXT:  ## %bb.1:
+; NDD-NEXT:    movl %edx, %esi
+; NDD-NEXT:  LBB0_2:
+; NDD-NEXT:    movzbl %sil, %eax
+; NDD-NEXT:    retq
   %1 = select i1 %cond, i8 %a, i8 %b
   ret i8 %1
 }
@@ -207,6 +219,13 @@ define zeroext i16 @select_cmov_i16(i1 zeroext %cond, i16 zeroext %a, i16 zeroex
 ; GISEL-X86-CMOV-NEXT:    cmovnew %dx, %ax
 ; GISEL-X86-CMOV-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; GISEL-X86-CMOV-NEXT:    retl
+;
+; NDD-LABEL: select_cmov_i16:
+; NDD:       ## %bb.0:
+; NDD-NEXT:    testb $1, %dil
+; NDD-NEXT:    cmovnew %si, %dx, %ax
+; NDD-NEXT:    movzwl %ax, %eax
+; NDD-NEXT:    retq
   %1 = select i1 %cond, i16 %a, i16 %b
   ret i16 %1
 }
@@ -305,6 +324,13 @@ define zeroext i16 @select_cmp_cmov_i16(i16 zeroext %a, i16 zeroext %b) {
 ; GISEL-X86-CMOV-NEXT:    cmovew %cx, %ax
 ; GISEL-X86-CMOV-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; GISEL-X86-CMOV-NEXT:    retl
+;
+; NDD-LABEL: select_cmp_cmov_i16:
+; NDD:       ## %bb.0:
+; NDD-NEXT:    cmpw %si, %di
+; NDD-NEXT:    cmovbw %di, %si, %ax
+; NDD-NEXT:    movzwl %ax, %eax
+; NDD-NEXT:    retq
   %1 = icmp ult i16 %a, %b
   %2 = select i1 %1, i16 %a, i16 %b
   ret i16 %2
@@ -391,6 +417,12 @@ define i32 @select_cmov_i32(i1 zeroext %cond, i32 %a, i32 %b) {
 ; GISEL-X86-CMOV-NEXT:    testl %ecx, %ecx
 ; GISEL-X86-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-CMOV-NEXT:    retl
+;
+; NDD-LABEL: select_cmov_i32:
+; NDD:       ## %bb.0:
+; NDD-NEXT:    testb $1, %dil
+; NDD-NEXT:    cmovnel %esi, %edx, %eax
+; NDD-NEXT:    retq
   %1 = select i1 %cond, i32 %a, i32 %b
   ret i32 %1
 }
@@ -482,6 +514,12 @@ define i32 @select_cmp_cmov_i32(i32 %a, i32 %b) {
 ; GISEL-X86-CMOV-NEXT:    andl $1, %edx
 ; GISEL-X86-CMOV-NEXT:    cmovel %ecx, %eax
 ; GISEL-X86-CMOV-NEXT:    retl
+;
+; NDD-LABEL: select_cmp_cmov_i32:
+; NDD:       ## %bb.0:
+; NDD-NEXT:    cmpl %esi, %edi
+; NDD-NEXT:    cmovbl %edi, %esi, %eax
+; NDD-NEXT:    retq
   %1 = icmp ult i32 %a, %b
   %2 = select i1 %1, i32 %a, i32 %b
   ret i32 %2
@@ -584,6 +622,12 @@ define i64 @select_cmov_i64(i1 zeroext %cond, i64 %a, i64 %b) {
 ; GISEL-X86-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %edx
 ; GISEL-X86-CMOV-NEXT:    retl
+;
+; NDD-LABEL: select_cmov_i64:
+; NDD:       ## %bb.0:
+; NDD-NEXT:    testb $1, %dil
+; NDD-NEXT:    cmovneq %rsi, %rdx, %rax
+; NDD-NEXT:    retq
   %1 = select i1 %cond, i64 %a, i64 %b
   ret i64 %1
 }
@@ -754,6 +798,12 @@ define i64 @select_cmp_cmov_i64(i64 %a, i64 %b) nounwind {
 ; GISEL-X86-CMOV-NEXT:    popl %ebx
 ; GISEL-X86-CMOV-NEXT:    popl %ebp
 ; GISEL-X86-CMOV-NEXT:    retl
+;
+; NDD-LABEL: select_cmp_cmov_i64:
+; NDD:       ## %bb.0:
+; NDD-NEXT:    cmpq %rsi, %rdi
+; NDD-NEXT:    cmovbq %rdi, %rsi, %rax
+; NDD-NEXT:    retq
   %1 = icmp ult i64 %a, %b
   %2 = select i1 %1, i64 %a, i64 %b
   ret i64 %2

@@ -72,6 +72,22 @@ TEST_F(ExtractVariableTest, Test) {
     )cpp";
   EXPECT_UNAVAILABLE(NoCrashCasesC);
 
+  ExtraArgs = {"-xc"};
+  const char *NoCrashDesignator = R"cpp(
+    struct A {
+      struct {
+        int x;
+      };
+    };
+    struct B {
+      int y;
+    };
+    void foo(struct B *b) {
+      struct A a = {.x=b[[->]]y};
+    }
+  )cpp";
+  EXPECT_AVAILABLE(NoCrashDesignator);
+
   ExtraArgs = {"-xobjective-c"};
   const char *AvailableObjC = R"cpp(
     __attribute__((objc_root_class))

@@ -14,7 +14,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[COPY1]](p0) :: (load (p0))
-    ; CHECK-NEXT: G_STORE [[COPY]](p0), [[LOAD]](p0) :: (store (p0))
+    ; CHECK-NEXT: G_STORE [[LOAD]](p0), [[COPY]](p0) :: (store (p0))
     ; CHECK-NEXT: PseudoRET
     %0:_(p0) = COPY $x10
     %1:_(p0) = COPY $x11

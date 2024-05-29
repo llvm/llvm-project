@@ -208,7 +208,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, unsigned &Width,
+      bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const override;
 
   /// Reverses the branch condition of the specified condition list,
@@ -437,7 +437,7 @@ public:
 
   unsigned getAddrMode(const MachineInstr &MI) const;
   MachineOperand *getBaseAndOffset(const MachineInstr &MI, int64_t &Offset,
-                                   unsigned &AccessSize) const;
+                                   LocationSize &AccessSize) const;
   SmallVector<MachineInstr*,2> getBranchingInstrs(MachineBasicBlock& MBB) const;
   unsigned getCExtOpNum(const MachineInstr &MI) const;
   HexagonII::CompoundGroup

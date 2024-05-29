@@ -84,7 +84,7 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
     @skipUnlessAArch64MTELinuxCompiler
-    def test_qMemTags_packets(self):
+    def test_tag_read_qMemTags_packets(self):
         """Test that qMemTags packets are parsed correctly and/or rejected."""
         buf_address, page_size = self.prep_memtags_test()
 
@@ -154,7 +154,7 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
     @skipUnlessAArch64MTELinuxCompiler
-    def test_QMemTags_packets(self):
+    def test_tag_write_QMemTags_packets(self):
         """Test that QMemTags packets are parsed correctly and/or rejected."""
         buf_address, page_size = self.prep_memtags_test()
 

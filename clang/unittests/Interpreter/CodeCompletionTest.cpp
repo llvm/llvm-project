@@ -4,12 +4,17 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+#if defined(_AIX) || defined(__MVS__)
+#define CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+#endif
 
 using namespace clang;
 namespace {
@@ -50,7 +55,21 @@ static std::vector<std::string> runComp(clang::Interpreter &MainInterp,
   return Comps;
 }
 
+static bool HostSupportsJit() {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (J)
+    return true;
+  LLVMConsumeError(llvm::wrap(J.takeError()));
+  return false;
+}
+
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_Sanity) {
+#else
 TEST(CodeCompletionTest, Sanity) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   cantFail(Interp->Parse("int foo = 12;"));
   auto Err = llvm::Error::success();
@@ -61,7 +80,13 @@ TEST(CodeCompletionTest, Sanity) {
   EXPECT_EQ((bool)Err, false);
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_SanityNoneValid) {
+#else
 TEST(CodeCompletionTest, SanityNoneValid) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   cantFail(Interp->Parse("int foo = 12;"));
   auto Err = llvm::Error::success();
@@ -70,7 +95,13 @@ TEST(CodeCompletionTest, SanityNoneValid) {
   EXPECT_EQ((bool)Err, false);
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_TwoDecls) {
+#else
 TEST(CodeCompletionTest, TwoDecls) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   cantFail(Interp->Parse("int application = 12;"));
   cantFail(Interp->Parse("int apple = 12;"));
@@ -80,14 +111,26 @@ TEST(CodeCompletionTest, TwoDecls) {
   EXPECT_EQ((bool)Err, false);
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_CompFunDeclsNoError) {
+#else
 TEST(CodeCompletionTest, CompFunDeclsNoError) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   auto Err = llvm::Error::success();
   auto comps = runComp(*Interp, "void app(", Err);
   EXPECT_EQ((bool)Err, false);
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_TypedDirected) {
+#else
 TEST(CodeCompletionTest, TypedDirected) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   cantFail(Interp->Parse("int application = 12;"));
   cantFail(Interp->Parse("char apple = '2';"));
@@ -119,7 +162,13 @@ TEST(CodeCompletionTest, TypedDirected) {
   }
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_SanityClasses) {
+#else
 TEST(CodeCompletionTest, SanityClasses) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   cantFail(Interp->Parse("struct Apple{};"));
   cantFail(Interp->Parse("void takeApple(Apple &a1){}"));
@@ -142,7 +191,13 @@ TEST(CodeCompletionTest, SanityClasses) {
   }
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_SubClassing) {
+#else
 TEST(CodeCompletionTest, SubClassing) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   cantFail(Interp->Parse("struct Fruit {};"));
   cantFail(Interp->Parse("struct Apple : Fruit{};"));
@@ -157,7 +212,13 @@ TEST(CodeCompletionTest, SubClassing) {
   EXPECT_EQ((bool)Err, false);
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_MultipleArguments) {
+#else
 TEST(CodeCompletionTest, MultipleArguments) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   cantFail(Interp->Parse("int foo = 42;"));
   cantFail(Interp->Parse("char fowl = 'A';"));
@@ -169,7 +230,13 @@ TEST(CodeCompletionTest, MultipleArguments) {
   EXPECT_EQ((bool)Err, false);
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_Methods) {
+#else
 TEST(CodeCompletionTest, Methods) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   cantFail(Interp->Parse(
       "struct Foo{int add(int a){return 42;} int par(int b){return 42;}};"));
@@ -183,7 +250,13 @@ TEST(CodeCompletionTest, Methods) {
   EXPECT_EQ((bool)Err, false);
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_MethodsInvocations) {
+#else
 TEST(CodeCompletionTest, MethodsInvocations) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   cantFail(Interp->Parse(
       "struct Foo{int add(int a){return 42;} int par(int b){return 42;}};"));
@@ -197,7 +270,13 @@ TEST(CodeCompletionTest, MethodsInvocations) {
   EXPECT_EQ((bool)Err, false);
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_NestedInvocations) {
+#else
 TEST(CodeCompletionTest, NestedInvocations) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   cantFail(Interp->Parse(
       "struct Foo{int add(int a){return 42;} int par(int b){return 42;}};"));
@@ -212,7 +291,13 @@ TEST(CodeCompletionTest, NestedInvocations) {
   EXPECT_EQ((bool)Err, false);
 }
 
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(CodeCompletionTest, DISABLED_TemplateFunctions) {
+#else
 TEST(CodeCompletionTest, TemplateFunctions) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
   auto Interp = createInterpreter();
   cantFail(
       Interp->Parse("template <typename T> T id(T a) { return a;} "));

@@ -46,6 +46,7 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:    "tokLen": 11
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
+// CHECK-NEXT:  "isUsed": true,
 // CHECK-NEXT:  "name": "global_decl",
 // CHECK-NEXT:  "mangledName": "global_decl",
 // CHECK-NEXT:  "type": {

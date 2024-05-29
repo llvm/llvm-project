@@ -49,10 +49,16 @@ endif()
 # avoid an unwanted dependency on libstdc++.so.
 add_definitions(-U_GLIBCXX_ASSERTIONS)
 
-add_flang_library(FortranDecimal INSTALL_WITH_TOOLCHAIN
+set(sources
   binary-to-decimal.cpp
   decimal-to-binary.cpp
 )
+
+include(AddFlangOffloadRuntime)
+enable_cuda_compilation(FortranDecimal "${sources}")
+enable_omp_offload_compilation("${sources}")
+
+add_flang_library(FortranDecimal INSTALL_WITH_TOOLCHAIN ${sources})
 
 if (DEFINED MSVC)
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)

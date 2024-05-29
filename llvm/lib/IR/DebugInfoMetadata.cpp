@@ -34,6 +34,10 @@ cl::opt<bool> EnableFSDiscriminator(
     cl::desc("Enable adding flow sensitive discriminators"));
 } // namespace llvm
 
+uint32_t DIType::getAlignInBits() const {
+  return (getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ? 0 : SubclassData32);
+}
+
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
 
@@ -42,10 +46,10 @@ DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
       Fragment(DII->getExpression()->getFragmentInfo()),
       InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
 
-DebugVariable::DebugVariable(const DPValue *DPV)
-    : Variable(DPV->getVariable()),
-      Fragment(DPV->getExpression()->getFragmentInfo()),
-      InlinedAt(DPV->getDebugLoc().getInlinedAt()) {}
+DebugVariable::DebugVariable(const DbgVariableRecord *DVR)
+    : Variable(DVR->getVariable()),
+      Fragment(DVR->getExpression()->getFragmentInfo()),
+      InlinedAt(DVR->getDebugLoc().getInlinedAt()) {}
 
 DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
     : DebugVariable(DVI->getVariable(), std::nullopt,
@@ -731,24 +735,30 @@ Constant *DIDerivedType::getDiscriminantValue() const {
   return nullptr;
 }
 
-DIDerivedType *
-DIDerivedType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
-                       Metadata *File, unsigned Line, Metadata *Scope,
-                       Metadata *BaseType, uint64_t SizeInBits,
-                       uint32_t AlignInBits, uint64_t OffsetInBits,
-                       std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-                       Metadata *ExtraData, Metadata *Annotations,
-                       StorageType Storage, bool ShouldCreate) {
+DIDerivedType *DIDerivedType::getImpl(
+    LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
+    unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
+    uint32_t AlignInBits, uint64_t OffsetInBits,
+    std::optional<unsigned> DWARFAddressSpace,
+    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData,
+    Metadata *Annotations, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
                         (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                         AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
-                         ExtraData, Annotations));
+                         AlignInBits, OffsetInBits, DWARFAddressSpace,
+                         PtrAuthData, Flags, ExtraData, Annotations));
   Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations};
   DEFINE_GETIMPL_STORE(DIDerivedType,
                        (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
-                        DWARFAddressSpace, Flags),
+                        DWARFAddressSpace, PtrAuthData, Flags),
                        Ops);
+}
+
+std::optional<DIDerivedType::PtrAuthData>
+DIDerivedType::getPtrAuthData() const {
+  return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
+             ? std::optional<PtrAuthData>(PtrAuthData(SubclassData32))
+             : std::nullopt;
 }
 
 DICompositeType *DICompositeType::getImpl(
@@ -1880,11 +1890,12 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
 DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
                                           ArrayRef<uint64_t> Ops) {
   assert(Expr && !Ops.empty() && "Can't append ops to this expression");
-  assert(none_of(Ops,
-                 [](uint64_t Op) {
-                   return Op == dwarf::DW_OP_stack_value ||
-                          Op == dwarf::DW_OP_LLVM_fragment;
-                 }) &&
+  assert(std::none_of(expr_op_iterator(Ops.begin()),
+                      expr_op_iterator(Ops.end()),
+                      [](auto Op) {
+                        return Op.getOp() == dwarf::DW_OP_stack_value ||
+                               Op.getOp() == dwarf::DW_OP_LLVM_fragment;
+                      }) &&
          "Can't append this op");
 
   // Append a DW_OP_deref after Expr's current op list if it's non-empty and

@@ -1,8 +1,8 @@
-! RUN: bbc -polymorphic-type -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL:   func.func @_QPtest1(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.class<none> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest1Ex"} : (!fir.class<none>) -> (!fir.class<none>, !fir.class<none>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest1Ex"} : (!fir.class<none>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
 ! CHECK:           fir.select_type %[[VAL_1]]#1 : !fir.class<none> [#fir.type_is<!fir.char<1,?>>, ^bb1, unit, ^bb2]
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]]#1 : (!fir.class<none>) -> !fir.ref<!fir.char<1,?>>
@@ -44,7 +44,7 @@ end subroutine test1
 
 ! CHECK-LABEL:   func.func @_QPtest2(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.class<!fir.array<10xnone>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest2Ex"} : (!fir.class<!fir.array<10xnone>>) -> (!fir.class<!fir.array<10xnone>>, !fir.class<!fir.array<10xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest2Ex"} : (!fir.class<!fir.array<10xnone>>, !fir.dscope) -> (!fir.class<!fir.array<10xnone>>, !fir.class<!fir.array<10xnone>>)
 ! CHECK:           fir.select_type %[[VAL_1]]#1 : !fir.class<!fir.array<10xnone>> [#fir.type_is<!fir.char<1,?>>, ^bb1, unit, ^bb2]
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#1 : (!fir.class<!fir.array<10xnone>>) -> !fir.box<!fir.array<10x!fir.char<1,?>>>

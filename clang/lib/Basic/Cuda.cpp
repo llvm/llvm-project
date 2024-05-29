@@ -14,7 +14,7 @@ struct CudaVersionMapEntry {
 };
 #define CUDA_ENTRY(major, minor)                                               \
   {                                                                            \
-#major "." #minor, CudaVersion::CUDA_##major##minor,                       \
+    #major "." #minor, CudaVersion::CUDA_##major##minor,                       \
         llvm::VersionTuple(major, minor)                                       \
   }
 
@@ -41,6 +41,7 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(12, 1),
     CUDA_ENTRY(12, 2),
     CUDA_ENTRY(12, 3),
+    CUDA_ENTRY(12, 4),
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
     {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
 };
@@ -86,7 +87,7 @@ static const CudaArchToStringMap arch_names[] = {
     // clang-format off
     {CudaArch::UNUSED, "", ""},
     SM2(20, "compute_20"), SM2(21, "compute_20"), // Fermi
-    SM(30), SM(32), SM(35), SM(37),  // Kepler
+    SM(30), {CudaArch::SM_32_, "sm_32", "compute_32"}, SM(35), SM(37),  // Kepler
     SM(50), SM(52), SM(53),          // Maxwell
     SM(60), SM(61), SM(62),          // Pascal
     SM(70), SM(72),                  // Volta
@@ -186,7 +187,7 @@ CudaVersion MinVersionForCudaArch(CudaArch A) {
   case CudaArch::SM_20:
   case CudaArch::SM_21:
   case CudaArch::SM_30:
-  case CudaArch::SM_32:
+  case CudaArch::SM_32_:
   case CudaArch::SM_35:
   case CudaArch::SM_37:
   case CudaArch::SM_50:
@@ -231,7 +232,7 @@ CudaVersion MaxVersionForCudaArch(CudaArch A) {
   case CudaArch::SM_21:
     return CudaVersion::CUDA_80;
   case CudaArch::SM_30:
-  case CudaArch::SM_32:
+  case CudaArch::SM_32_:
     return CudaVersion::CUDA_102;
   case CudaArch::SM_35:
   case CudaArch::SM_37:
@@ -241,7 +242,7 @@ CudaVersion MaxVersionForCudaArch(CudaArch A) {
   }
 }
 
-bool CudaFeatureEnabled(llvm::VersionTuple  Version, CudaFeature Feature) {
+bool CudaFeatureEnabled(llvm::VersionTuple Version, CudaFeature Feature) {
   return CudaFeatureEnabled(ToCudaVersion(Version), Feature);
 }
 

@@ -1,14 +1,14 @@
 // REQUIRES: x86-registered-target
 
-// RUN: %clang_cc1 -triple x86_64-elf -DCF_BUILDING_CF -DDECL -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DECL
-// RUN: %clang_cc1 -triple x86_64-elf -DCF_BUILDING_CF -DDEFN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DEFN
-// RUN: %clang_cc1 -triple x86_64-elf -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF
-// RUN: %clang_cc1 -triple x86_64-elf -DEXTERN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN
+// RUN: %clang_cc1 -triple x86_64-elf -DCF_BUILDING_CF -DDECL -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DECL
+// RUN: %clang_cc1 -triple x86_64-elf -DCF_BUILDING_CF -DDEFN -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DEFN
+// RUN: %clang_cc1 -triple x86_64-elf -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF
+// RUN: %clang_cc1 -triple x86_64-elf -DEXTERN -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN
 
-// RUN: %clang_cc1 -Os -triple x86_64-elf -DCF_BUILDING_CF -DDECL -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DECL
-// RUN: %clang_cc1 -Os -triple x86_64-elf -DCF_BUILDING_CF -DDEFN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DEFN
-// RUN: %clang_cc1 -Os -triple x86_64-elf -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF
-// RUN: %clang_cc1 -Os -triple x86_64-elf -DEXTERN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN
+// RUN: %clang_cc1 -Os -triple x86_64-elf -DCF_BUILDING_CF -DDECL -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DECL
+// RUN: %clang_cc1 -Os -triple x86_64-elf -DCF_BUILDING_CF -DDEFN -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-IN-CF-DEFN
+// RUN: %clang_cc1 -Os -triple x86_64-elf -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF
+// RUN: %clang_cc1 -Os -triple x86_64-elf -DEXTERN -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-CF-EXTERN
 
 
 #if defined(CF_BUILDING_CF)

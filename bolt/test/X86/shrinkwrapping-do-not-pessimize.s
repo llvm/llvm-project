@@ -53,6 +53,6 @@ end_if_1:
   .size _start, .-_start
 
   .data
-rel:  .quad end_if_1
+rel:  .quad _start
 
 # CHECK:   BOLT-INFO: Shrink wrapping moved 0 spills inserting load/stores and 0 spills inserting push/pops

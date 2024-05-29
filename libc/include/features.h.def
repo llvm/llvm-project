@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_FEATURES_H
 #define LLVM_LIBC_FEATURES_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/features-macros.h>
+#include "__llvm-libc-common.h"
+#include "llvm-libc-macros/features-macros.h"
 
 %%public_api()
 

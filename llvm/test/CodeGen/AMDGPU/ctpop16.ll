@@ -1499,7 +1499,6 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    s_mov_b32 s8, s2
 ; SI-NEXT:    s_mov_b32 s9, s3
 ; SI-NEXT:    buffer_load_ushort v0, off, s[8:11], 0 offset:2
-; SI-NEXT:    s_mov_b64 s[2:3], 0
 ; SI-NEXT:    s_cbranch_execnz .LBB14_3
 ; SI-NEXT:  .LBB14_2: ; %if
 ; SI-NEXT:    s_and_b32 s2, s4, 0xffff
@@ -1513,7 +1512,6 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB14_4:
-; SI-NEXT:    s_mov_b64 s[2:3], -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    s_branch .LBB14_2
 ;
@@ -1531,7 +1529,6 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_mov_b32 s8, s2
 ; VI-NEXT:    s_mov_b32 s9, s3
 ; VI-NEXT:    buffer_load_ushort v0, off, s[8:11], 0 offset:2
-; VI-NEXT:    s_mov_b64 s[2:3], 0
 ; VI-NEXT:    s_cbranch_execnz .LBB14_3
 ; VI-NEXT:  .LBB14_2: ; %if
 ; VI-NEXT:    s_and_b32 s2, s4, 0xffff
@@ -1545,7 +1542,6 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ; VI-NEXT:  .LBB14_4:
-; VI-NEXT:    s_mov_b64 s[2:3], -1
 ; VI-NEXT:    ; implicit-def: $vgpr0
 ; VI-NEXT:    s_branch .LBB14_2
 ;

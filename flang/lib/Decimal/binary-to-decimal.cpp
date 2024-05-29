@@ -336,6 +336,8 @@ template ConversionToDecimalResult ConvertToDecimal<113>(char *, std::size_t,
     BinaryFloatingPointNumber<113>);
 
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
+
 ConversionToDecimalResult ConvertFloatToDecimal(char *buffer, std::size_t size,
     enum DecimalConversionFlags flags, int digits,
     enum FortranRounding rounding, float x) {
@@ -365,7 +367,9 @@ ConversionToDecimalResult ConvertLongDoubleToDecimal(char *buffer,
       rounding, Fortran::decimal::BinaryFloatingPointNumber<113>(x));
 }
 #endif
-}
+
+RT_EXT_API_GROUP_END
+} // extern "C"
 
 template <int PREC, int LOG10RADIX>
 template <typename STREAM>

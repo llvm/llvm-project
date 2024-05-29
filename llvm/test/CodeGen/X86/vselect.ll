@@ -4,6 +4,35 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
 
+; PR66101 - Fold select (sext m), (add X, C), X --> (add X, (and C, (sext m))))
+define <4 x i32> @masked_select_const(<4 x i32> %a, <4 x i32> %x, <4 x i32> %y) {
+; SSE-LABEL: masked_select_const:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm1
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    paddd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: masked_select_const:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: masked_select_const:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [4294967272,4294967272,4294967272,4294967272]
+; AVX2-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %sub.i = add <4 x i32> %a, <i32 -24, i32 -24, i32 -24, i32 -24>
+  %cmp.i = icmp sgt <4 x i32> %x, %y
+  %sel = select <4 x i1> %cmp.i, <4 x i32> %sub.i, <4 x i32> %a
+  ret <4 x i32> %sel
+}
+
 ; Verify that we don't emit packed vector shifts instructions if the
 ; condition used by the vector select is a vector of constants.
 

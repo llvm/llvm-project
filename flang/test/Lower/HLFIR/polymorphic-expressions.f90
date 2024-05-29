@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s -I nowhere | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s -I nowhere | FileCheck %s
 
 module polymorphic_expressions_types
   type t

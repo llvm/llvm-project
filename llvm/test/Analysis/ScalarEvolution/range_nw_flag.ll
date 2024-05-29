@@ -15,10 +15,8 @@ define void @test-add-nuw(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> ((4 * (sext i32 {(1 + %offset)<nuw>,+,1}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 (%offset + %numIterations) to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -51,10 +49,8 @@ define void @test-addrec-nuw(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    --> ((4 * (sext i32 {(1 + (10 smax %offset))<nuw>,+,1}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 ((10 smax %offset) + %numIterations) to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-addrec-nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -89,10 +85,8 @@ define void @test-addrec-nsw-start-neg-strip-neg(ptr %input, i32 %offset, i32 %n
 ; CHECK-NEXT:    --> {(-4 + (4 * (-10 smin (sext i32 %offset to i64)))<nsw> + %input),+,-4}<nw><%loop> U: full-set S: full-set Exits: (-4 + (4 * (-10 smin (sext i32 %offset to i64)))<nsw> + (-4 * (zext i32 (-1 + (-1 * %numIterations)) to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-addrec-nsw-start-neg-strip-neg
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %numIterations))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %numIterations))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %numIterations))
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -127,10 +121,8 @@ define void @test-addrec-nsw-start-pos-strip-neg(ptr %input, i32 %offset, i32 %n
 ; CHECK-NEXT:    --> {(-4 + (4 * (10 smin (sext i32 %offset to i64)))<nsw> + %input),+,-4}<nw><%loop> U: full-set S: full-set Exits: (-4 + (4 * (10 smin (sext i32 %offset to i64)))<nsw> + (-4 * (zext i32 (-1 + (-1 * %numIterations)) to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-addrec-nsw-start-pos-strip-neg
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %numIterations))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %numIterations))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %numIterations))
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -165,10 +157,8 @@ define void @test-addrec-nsw-start-pos-strip-pos(ptr %input, i32 %offset, i32 %n
 ; CHECK-NEXT:    --> {(4 + (4 * (zext i32 (10 smax %offset) to i64))<nuw><nsw> + %input)<nuw>,+,4}<nuw><%loop> U: [44,0) S: [44,0) Exits: (4 + (4 * (zext i32 (-1 + %numIterations) to i64))<nuw><nsw> + (4 * (zext i32 (10 smax %offset) to i64))<nuw><nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-addrec-nsw-start-pos-strip-pos
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -203,10 +193,8 @@ define void @test-addrec-nsw-start-neg-strip-pos(ptr %input, i32 %offset, i32 %n
 ; CHECK-NEXT:    --> {(4 + (4 * (-10 smax (sext i32 %offset to i64)))<nsw> + %input),+,4}<nw><%loop> U: full-set S: full-set Exits: (4 + (4 * (zext i32 (-1 + %numIterations) to i64))<nuw><nsw> + (4 * (-10 smax (sext i32 %offset to i64)))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-addrec-nsw-start-neg-strip-pos
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

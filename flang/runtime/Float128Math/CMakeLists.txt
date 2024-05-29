@@ -16,34 +16,6 @@
 
 include(CheckLibraryExists)
 
-if (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libquadmath")
-  check_include_file(quadmath.h FOUND_QUADMATH_HEADER)
-  if(FOUND_QUADMATH_HEADER)
-    add_compile_definitions(HAS_QUADMATHLIB)
-  else()
-    message(FATAL_ERROR
-      "FLANG_RUNTIME_F128_MATH_LIB setting requires quadmath.h "
-      "to be available: ${FLANG_RUNTIME_F128_MATH_LIB}"
-      )
-  endif()
-elseif (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libm")
-  check_library_exists(m sinl "" FOUND_LIBM)
-  check_library_exists(m sinf128 "" FOUND_LIBMF128)
-  if (FOUND_LIBM)
-    add_compile_definitions(HAS_LIBM)
-  endif()
-  if (FOUND_LIBMF128)
-    add_compile_definitions(HAS_LIBMF128)
-  endif()
-endif()
-
-if (NOT FOUND_QUADMATH_HEADER AND NOT FOUND_LIBM)
-  message(FATAL_ERROR
-    "Unsupported third-party library for Fortran F128 math runtime: "
-    "${FLANG_RUNTIME_F128_MATH_LIB}"
-    )
-endif()
-
 set(sources
   acos.cpp
   acosh.cpp
@@ -52,8 +24,8 @@ set(sources
   atan.cpp
   atan2.cpp
   atanh.cpp
-  cabs.cpp
   ceil.cpp
+  complex-math.c
   cos.cpp
   cosh.cpp
   erf.cpp
@@ -61,6 +33,7 @@ set(sources
   exp.cpp
   exponent.cpp
   floor.cpp
+  fma.cpp
   fraction.cpp
   hypot.cpp
   j0.cpp
@@ -76,6 +49,7 @@ set(sources
   nearest.cpp
   norm2.cpp
   pow.cpp
+  random.cpp
   round.cpp
   rrspacing.cpp
   scale.cpp
@@ -94,18 +68,61 @@ set(sources
   )
 
 include_directories(AFTER "${CMAKE_CURRENT_SOURCE_DIR}/..")
-add_flang_library(FortranFloat128Math STATIC INSTALL_WITH_TOOLCHAIN ${sources})
+add_library(FortranFloat128MathILib INTERFACE)
 
-if (DEFINED MSVC)
-  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
-  add_flang_library(FortranFloat128Math.static STATIC INSTALL_WITH_TOOLCHAIN
-    ${sources}
-    )
-  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
-  add_flang_library(FortranFloat128Math.static_dbg STATIC INSTALL_WITH_TOOLCHAIN
-    ${sources}
-    )
-  add_dependencies(FortranFloat128Math FortranFloat128Math.static
-    FortranFloat128Math.static_dbg
-    )
+if (FLANG_RUNTIME_F128_MATH_LIB)
+  if (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libquadmath")
+    check_include_file(quadmath.h FOUND_QUADMATH_HEADER)
+    if(FOUND_QUADMATH_HEADER)
+      add_compile_definitions(HAS_QUADMATHLIB)
+    else()
+      message(FATAL_ERROR
+        "FLANG_RUNTIME_F128_MATH_LIB setting requires quadmath.h "
+        "to be available: ${FLANG_RUNTIME_F128_MATH_LIB}"
+        )
+    endif()
+  else()
+    message(FATAL_ERROR
+      "Unsupported third-party library for Fortran F128 math runtime: "
+      "${FLANG_RUNTIME_F128_MATH_LIB}"
+      )
+  endif()
+
+  add_flang_library(FortranFloat128Math STATIC INSTALL_WITH_TOOLCHAIN
+    ${sources})
+
+  if (DEFINED MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+    add_flang_library(FortranFloat128Math.static STATIC INSTALL_WITH_TOOLCHAIN
+      ${sources}
+      )
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
+    add_flang_library(FortranFloat128Math.static_dbg STATIC INSTALL_WITH_TOOLCHAIN
+      ${sources}
+      )
+    add_dependencies(FortranFloat128Math FortranFloat128Math.static
+      FortranFloat128Math.static_dbg
+      )
+  endif()
+elseif (HAVE_LDBL_MANT_DIG_113)
+  # We can use 'long double' versions from libc.
+  check_library_exists(m sinl "" FOUND_LIBM)
+  if (FOUND_LIBM)
+    target_compile_definitions(FortranFloat128MathILib INTERFACE
+      HAS_LIBM
+      )
+    target_sources(FortranFloat128MathILib INTERFACE ${sources})
+  else()
+    message(FATAL_ERROR "FortranRuntime cannot build without libm")
+  endif()
+else()
+  # We can use '__float128' version from libc, if it has them.
+  check_library_exists(m sinf128 "" FOUND_LIBMF128)
+  if (FOUND_LIBMF128)
+    target_compile_definitions(FortranFloat128MathILib INTERFACE
+      HAS_LIBMF128
+      )
+    # Enable this, when math-entries.h and complex-math.h is ready.
+    # target_sources(FortranFloat128MathILib INTERFACE ${sources})
+  endif()
 endif()

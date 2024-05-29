@@ -40,6 +40,34 @@ namespace {
 AST_MATCHER(FunctionDecl, isUserDefineLiteral) {
   return Node.getLiteralIdentifier() != nullptr;
 }
+
+AST_MATCHER(TypeLoc, isValidAndNotInMacro) {
+  const SourceLocation Loc = Node.getBeginLoc();
+  return Loc.isValid() && !Loc.isMacroID();
+}
+
+AST_MATCHER(TypeLoc, isBuiltinType) {
+  TypeLoc TL = Node;
+  if (auto QualLoc = Node.getAs<QualifiedTypeLoc>())
+    TL = QualLoc.getUnqualifiedLoc();
+
+  const auto BuiltinLoc = TL.getAs<BuiltinTypeLoc>();
+  if (!BuiltinLoc)
+    return false;
+
+  switch (BuiltinLoc.getTypePtr()->getKind()) {
+  case BuiltinType::Short:
+  case BuiltinType::Long:
+  case BuiltinType::LongLong:
+  case BuiltinType::UShort:
+  case BuiltinType::ULong:
+  case BuiltinType::ULongLong:
+    return true;
+  default:
+    return false;
+  }
+}
+
 } // namespace
 
 namespace tidy::google::runtime {
@@ -63,11 +91,11 @@ void IntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
   // "Where possible, avoid passing arguments of types specified by
   // bitwidth typedefs to printf-based APIs."
   Finder->addMatcher(
-      typeLoc(loc(isInteger()),
-              unless(anyOf(hasAncestor(callExpr(
-                               callee(functionDecl(hasAttr(attr::Format))))),
-                           hasParent(parmVarDecl(hasAncestor(
-                               functionDecl(isUserDefineLiteral())))))))
+      typeLoc(loc(isInteger()), isValidAndNotInMacro(), isBuiltinType(),
+              unless(hasAncestor(
+                  callExpr(callee(functionDecl(hasAttr(attr::Format)))))),
+              unless(hasParent(parmVarDecl(
+                  hasAncestor(functionDecl(isUserDefineLiteral()))))))
           .bind("tl"),
       this);
   IdentTable = std::make_unique<IdentifierTable>(getLangOpts());
@@ -76,9 +104,6 @@ void IntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
 void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   auto TL = *Result.Nodes.getNodeAs<TypeLoc>("tl");
   SourceLocation Loc = TL.getBeginLoc();
-
-  if (Loc.isInvalid() || Loc.isMacroID())
-    return;
 
   // Look through qualification.
   if (auto QualLoc = TL.getAs<QualifiedTypeLoc>())

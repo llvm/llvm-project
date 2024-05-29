@@ -140,12 +140,11 @@ end:
 define i16 @sink_to_unreachable_crash(i1 %a)  {
 ; CHECK-LABEL: @sink_to_unreachable_crash(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[A:%.*]], i16 0, i16 5
 ; CHECK-NEXT:    br label [[INF_LOOP:%.*]]
 ; CHECK:       inf_loop:
 ; CHECK-NEXT:    br label [[INF_LOOP]]
 ; CHECK:       unreachable:
-; CHECK-NEXT:    ret i16 [[S]]
+; CHECK-NEXT:    ret i16 poison
 ;
 entry:
   %s = select i1 %a, i16 0, i16 5

@@ -796,6 +796,14 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
         Diag(IdInfo.IdentifierLoc,
              diag::ext_undeclared_unqual_id_with_dependent_base)
             << IdInfo.Identifier << ContainingClass;
+        // Fake up a nested-name-specifier that starts with the
+        // injected-class-name of the enclosing class.
+        QualType T = Context.getTypeDeclType(ContainingClass);
+        TypeLocBuilder TLB;
+        TLB.pushTrivial(Context, T, IdInfo.IdentifierLoc);
+        SS.Extend(Context, /*TemplateKWLoc=*/SourceLocation(),
+                  TLB.getTypeLocInContext(Context, T), IdInfo.IdentifierLoc);
+        // Add the identifier to form a dependent name.
         SS.Extend(Context, IdInfo.Identifier, IdInfo.IdentifierLoc,
                   IdInfo.CCLoc);
         return false;

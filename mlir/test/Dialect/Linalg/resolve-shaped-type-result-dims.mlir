@@ -199,13 +199,12 @@ func.func @empty_tensor_dim_of_linalg_result(%arg_0 : tensor<?xf32>,
 
 // -----
 
-func.func @dim_reshape_expansion(%arg0 : tensor<6x5x?xf32>) -> (index, index, index)
+func.func @dim_reshape_expansion(%arg0 : tensor<6x5x?xf32>, %sz0: index) -> (index, index, index)
 {
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
   %c4 = arith.constant 4 : index
-  %0 = tensor.expand_shape %arg0 [[0, 1], [2], [3, 4, 5]]
-      : tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
+  %0 = tensor.expand_shape %arg0 [[0, 1], [2], [3, 4, 5]] output_shape [2, 3, 5, 4, %sz0, 7] : tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
   %1 = tensor.dim %0, %c1 : tensor<2x3x5x4x?x7xf32>
   %2 = tensor.dim %0, %c3 : tensor<2x3x5x4x?x7xf32>
   %3 = tensor.dim %0, %c4 : tensor<2x3x5x4x?x7xf32>

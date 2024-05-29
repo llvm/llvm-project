@@ -10,9 +10,9 @@ For benchmarking a patch we want to reduce all possible sources of
 noise as much as possible. How to do that is very OS dependent.
 
 Note that low noise is required, but not sufficient. It does not
-exclude measurement bias. See
-https://www.cis.upenn.edu/~cis501/papers/producing-wrong-data.pdf for
-example.
+exclude measurement bias.
+See `"Producing Wrong Data Without Doing Anything Obviously Wrong!" by Mytkowicz, Diwan, Hauswith and Sweeney (ASPLOS 2009) <https://users.cs.northwestern.edu/~robby/courses/322-2013-spring/mytkowicz-wrong-data.pdf>`_
+for example.
 
 General
 ================================

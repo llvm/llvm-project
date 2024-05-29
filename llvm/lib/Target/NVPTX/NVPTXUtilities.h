@@ -18,6 +18,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Alignment.h"
 #include <cstdarg>
 #include <set>
 #include <string>
@@ -60,8 +61,8 @@ bool getMinCTASm(const Function &, unsigned &);
 bool getMaxNReg(const Function &, unsigned &);
 bool isKernelFunction(const Function &);
 
-bool getAlign(const Function &, unsigned index, unsigned &);
-bool getAlign(const CallInst &, unsigned index, unsigned &);
+MaybeAlign getAlign(const Function &, unsigned);
+MaybeAlign getAlign(const CallInst &, unsigned);
 Function *getMaybeBitcastedCallee(const CallBase *CB);
 
 // PTX ABI requires all scalar argument/return values to have

@@ -311,15 +311,12 @@ for.end:
 ; INTER:     vector.body
 ; INTER:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; INTER:       %[[I0:.+]] = shl i64 %index, 4
+; INTER:       %[[I1:.+]] = or disjoint i64 %[[I0]], 16
+; INTER:       %[[I2:.+]] = or disjoint i64 %[[I0]], 32
+; INTER:       %[[I3:.+]] = or disjoint i64 %[[I0]], 48
 ; INTER:       %next.gep = getelementptr i8, ptr %a, i64 %[[I0]]
-; INTER:       %[[S1:.+]] = shl i64 %index, 4
-; INTER:       %[[I1:.+]] = or disjoint i64 %[[S1]], 16
 ; INTER:       %next.gep2 = getelementptr i8, ptr %a, i64 %[[I1]]
-; INTER:       %[[S2:.+]] = shl i64 %index, 4
-; INTER:       %[[I2:.+]] = or disjoint i64 %[[S2]], 32
 ; INTER:       %next.gep3 = getelementptr i8, ptr %a, i64 %[[I2]]
-; INTER:       %[[S3:.+]] = shl i64 %index, 4
-; INTER:       %[[I3:.+]] = or disjoint i64 %[[S3]], 48
 ; INTER:       %next.gep4 = getelementptr i8, ptr %a, i64 %[[I3]]
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
@@ -361,15 +358,12 @@ for.end:
 ; CHECK:     vector.body
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK:       [[SHL1:%.+]] = shl i64 %index, 4
+; CHECK:       %[[I1:.+]] = or disjoint i64 [[SHL1]], 16
+; CHECK:       %[[I2:.+]] = or disjoint i64 [[SHL1]], 32
+; CHECK:       %[[I3:.+]] = or disjoint i64 [[SHL1]], 48
 ; CHECK:       %next.gep = getelementptr i8, ptr %a, i64 [[SHL1]]
-; CHECK:       [[SHL2:%.+]] = shl i64 %index, 4
-; CHECK:       %[[I1:.+]] = or disjoint i64 [[SHL2]], 16
 ; CHECK:       %next.gep2 = getelementptr i8, ptr %a, i64 %[[I1]]
-; CHECK:       [[SHL3:%.+]] = shl i64 %index, 4
-; CHECK:       %[[I2:.+]] = or disjoint i64 [[SHL3]], 32
 ; CHECK:       %next.gep3 = getelementptr i8, ptr %a, i64 %[[I2]]
-; CHECK:       [[SHL4:%.+]] = shl i64 %index, 4
-; CHECK:       %[[I3:.+]] = or disjoint i64 [[SHL4]], 48
 ; CHECK:       %next.gep4 = getelementptr i8, ptr %a, i64 %[[I3]]
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;

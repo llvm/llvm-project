@@ -13,6 +13,7 @@
 // The various representations are distinguished by their binary precisions
 // (number of explicit significand bits and any implicit MSB in the fraction).
 
+#include "flang/Common/api-attrs.h"
 #include <cinttypes>
 
 namespace Fortran::common {
@@ -107,7 +108,27 @@ static constexpr int PrecisionOfRealKind(int kind) {
   }
 }
 
-template <int BINARY_PRECISION> class RealDetails {
+// RealCharacteristics is constexpr, but also useful when constructed
+// with a non-constant precision argument.
+class RealCharacteristics {
+public:
+  explicit constexpr RealCharacteristics(int p) : binaryPrecision{p} {}
+
+  int binaryPrecision;
+  int bits{BitsForBinaryPrecision(binaryPrecision)};
+  bool isImplicitMSB{binaryPrecision != 64 /*x87*/};
+  int significandBits{binaryPrecision - isImplicitMSB};
+  int exponentBits{bits - significandBits - 1 /*sign*/};
+  int maxExponent{(1 << exponentBits) - 1};
+  int exponentBias{maxExponent / 2};
+  int decimalPrecision{LogBaseTwoToLogBaseTen(binaryPrecision - 1)};
+  int decimalRange{LogBaseTwoToLogBaseTen(exponentBias - 1)};
+  // Number of significant decimal digits in the fraction of the
+  // exact conversion of the least nonzero subnormal.
+  int maxDecimalConversionDigits{MaxDecimalConversionDigits(binaryPrecision)};
+  int maxHexadecimalConversionDigits{
+      MaxHexadecimalConversionDigits(binaryPrecision)};
+
 private:
   // Converts bit widths to whole decimal digits
   static constexpr int LogBaseTwoToLogBaseTen(int logb2) {
@@ -117,31 +138,6 @@ private:
         (logb2 * LogBaseTenOfTwoTimesTenToThe12th) / TenToThe12th};
     return static_cast<int>(logb10);
   }
-
-public:
-  static constexpr int binaryPrecision{BINARY_PRECISION};
-  static constexpr int bits{BitsForBinaryPrecision(binaryPrecision)};
-  static constexpr bool isImplicitMSB{binaryPrecision != 64 /*x87*/};
-  static constexpr int significandBits{binaryPrecision - isImplicitMSB};
-  static constexpr int exponentBits{bits - significandBits - 1 /*sign*/};
-  static constexpr int maxExponent{(1 << exponentBits) - 1};
-  static constexpr int exponentBias{maxExponent / 2};
-
-  static constexpr int decimalPrecision{
-      LogBaseTwoToLogBaseTen(binaryPrecision - 1)};
-  static constexpr int decimalRange{LogBaseTwoToLogBaseTen(exponentBias - 1)};
-
-  // Number of significant decimal digits in the fraction of the
-  // exact conversion of the least nonzero subnormal.
-  static constexpr int maxDecimalConversionDigits{
-      MaxDecimalConversionDigits(binaryPrecision)};
-
-  static constexpr int maxHexadecimalConversionDigits{
-      MaxHexadecimalConversionDigits(binaryPrecision)};
-
-  static_assert(binaryPrecision > 0);
-  static_assert(exponentBits > 1);
-  static_assert(exponentBits <= 15);
 };
 
 } // namespace Fortran::common

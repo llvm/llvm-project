@@ -132,11 +132,21 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info optInfo[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
-  {PREFIX,      NAME,        HELPTEXT,                                         \
-   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
-   PARAM,       FLAGS,       VISIBILITY,                                       \
-   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
+               VALUES)                                                         \
+  {PREFIX,                                                                     \
+   NAME,                                                                       \
+   HELPTEXT,                                                                   \
+   HELPTEXTSFORVARIANTS,                                                       \
+   METAVAR,                                                                    \
+   OPT_##ID,                                                                   \
+   opt::Option::KIND##Class,                                                   \
+   PARAM,                                                                      \
+   FLAGS,                                                                      \
+   VISIBILITY,                                                                 \
+   OPT_##GROUP,                                                                \
+   OPT_##ALIAS,                                                                \
+   ALIASARGS,                                                                  \
    VALUES},
 #include "Options.inc"
 #undef OPTION
@@ -860,13 +870,6 @@ static void createSyntheticSymbols() {
     WasmSym::tableBase = createUndefinedGlobal("__table_base", globalType);
     WasmSym::memoryBase->markLive();
     WasmSym::tableBase->markLive();
-    if (is64) {
-      WasmSym::tableBase32 =
-          createUndefinedGlobal("__table_base32", &globalTypeI32);
-      WasmSym::tableBase32->markLive();
-    } else {
-      WasmSym::tableBase32 = nullptr;
-    }
   } else {
     // For non-PIC code
     WasmSym::stackPointer = createGlobalVariable("__stack_pointer", true);
@@ -913,9 +916,6 @@ static void createOptionalSymbols() {
     WasmSym::heapEnd = symtab->addOptionalDataSymbol("__heap_end");
     WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
     WasmSym::definedTableBase = symtab->addOptionalDataSymbol("__table_base");
-    if (config->is64.value_or(false))
-      WasmSym::definedTableBase32 =
-          symtab->addOptionalDataSymbol("__table_base32");
   }
 
   // For non-shared memory programs we still need to define __tls_base since we

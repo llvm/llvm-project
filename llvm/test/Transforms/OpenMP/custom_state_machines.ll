@@ -8,7 +8,7 @@
 ;; void p1(void);
 ;; int unknown(void);
 ;; void unknown_pure(void) __attribute__((pure));
-;; void unknown_no_openmp(void) __attribute__((assume("omp_no_openmp")));
+;; [[omp::assume("omp_no_openmp")]] void unknown_no_openmp(void);
 ;;
 ;; int G;
 ;; void no_parallel_region_in_here(void) {
@@ -836,78 +836,78 @@ attributes #9 = { convergent nounwind readonly willreturn }
 !18 = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; AMDGPU: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; AMDGPU: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; AMDGPU: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_NEEDED_L14_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_L22_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_L39_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_WITH_FALLBACK_L55_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_NO_OPENMP_ATTR_L66_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_PURE_L77_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_NESTED_RECURSIVE_L92_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_WEAK_CALLEE_L112_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @[[__OMP_OUTLINED__2_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; AMDGPU: @[[__OMP_OUTLINED__3_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; AMDGPU: @[[__OMP_OUTLINED__5_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; AMDGPU: @[[__OMP_OUTLINED__7_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; AMDGPU: @[[__OMP_OUTLINED__8_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; AMDGPU: @[[__OMP_OUTLINED__10_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; AMDGPU: @[[__OMP_OUTLINED__11_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; AMDGPU: @[[__OMP_OUTLINED__13_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; AMDGPU: @[[__OMP_OUTLINED__14_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
+; AMDGPU: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU: @G = external global i32, align 4
+; AMDGPU: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU: @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_outlined__2_wrapper.ID = private constant i8 undef
+; AMDGPU: @__omp_outlined__3_wrapper.ID = private constant i8 undef
+; AMDGPU: @__omp_outlined__5_wrapper.ID = private constant i8 undef
+; AMDGPU: @__omp_outlined__7_wrapper.ID = private constant i8 undef
+; AMDGPU: @__omp_outlined__8_wrapper.ID = private constant i8 undef
+; AMDGPU: @__omp_outlined__10_wrapper.ID = private constant i8 undef
+; AMDGPU: @__omp_outlined__11_wrapper.ID = private constant i8 undef
+; AMDGPU: @__omp_outlined__13_wrapper.ID = private constant i8 undef
+; AMDGPU: @__omp_outlined__14_wrapper.ID = private constant i8 undef
 ;.
 ; NVPTX: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; NVPTX: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; NVPTX: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_NEEDED_L14_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_L22_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_L39_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_WITH_FALLBACK_L55_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_NO_OPENMP_ATTR_L66_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_PURE_L77_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_NESTED_RECURSIVE_L92_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_WEAK_CALLEE_L112_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @[[__OMP_OUTLINED__2_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; NVPTX: @[[__OMP_OUTLINED__3_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; NVPTX: @[[__OMP_OUTLINED__5_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; NVPTX: @[[__OMP_OUTLINED__7_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; NVPTX: @[[__OMP_OUTLINED__8_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; NVPTX: @[[__OMP_OUTLINED__10_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; NVPTX: @[[__OMP_OUTLINED__11_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; NVPTX: @[[__OMP_OUTLINED__13_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
-; NVPTX: @[[__OMP_OUTLINED__14_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
+; NVPTX: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX: @G = external global i32, align 4
+; NVPTX: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX: @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_outlined__2_wrapper.ID = private constant i8 undef
+; NVPTX: @__omp_outlined__3_wrapper.ID = private constant i8 undef
+; NVPTX: @__omp_outlined__5_wrapper.ID = private constant i8 undef
+; NVPTX: @__omp_outlined__7_wrapper.ID = private constant i8 undef
+; NVPTX: @__omp_outlined__8_wrapper.ID = private constant i8 undef
+; NVPTX: @__omp_outlined__10_wrapper.ID = private constant i8 undef
+; NVPTX: @__omp_outlined__11_wrapper.ID = private constant i8 undef
+; NVPTX: @__omp_outlined__13_wrapper.ID = private constant i8 undef
+; NVPTX: @__omp_outlined__14_wrapper.ID = private constant i8 undef
 ;.
 ; AMDGPU-DISABLED: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; AMDGPU-DISABLED: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU-DISABLED: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU-DISABLED: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; AMDGPU-DISABLED: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_NEEDED_L14_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_L22_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_L39_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_WITH_FALLBACK_L55_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_NO_OPENMP_ATTR_L66_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_PURE_L77_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_NESTED_RECURSIVE_L92_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_WEAK_CALLEE_L112_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU-DISABLED: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU-DISABLED: @G = external global i32, align 4
+; AMDGPU-DISABLED: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU-DISABLED: @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED: @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
 ; NVPTX-DISABLED: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; NVPTX-DISABLED: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX-DISABLED: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX-DISABLED: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; NVPTX-DISABLED: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_NEEDED_L14_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_L22_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_L39_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_WITH_FALLBACK_L55_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_NO_OPENMP_ATTR_L66_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_PURE_L77_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_NESTED_RECURSIVE_L92_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_WEAK_CALLEE_L112_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX-DISABLED: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX-DISABLED: @G = external global i32, align 4
+; NVPTX-DISABLED: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX-DISABLED: @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED: @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
 ; AMDGPU: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_needed_l14

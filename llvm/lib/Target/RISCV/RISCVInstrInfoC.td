@@ -841,7 +841,7 @@ def : InstAlias<".insn_cj $opcode, $funct3, $imm11",
 //===----------------------------------------------------------------------===//
 
 // Patterns are defined in the same order the compressed instructions appear
-// on page 82 of the ISA manual.
+// under the "RVC Instruction Set Listings" section of the ISA manual.
 
 // Quadrant 0
 let Predicates = [HasStdExtCOrZca] in {

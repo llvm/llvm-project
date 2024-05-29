@@ -208,9 +208,9 @@ entry:
 define <vscale x 4 x i32> @multiple_use_stepvector_nxv4i32_1(i32 %data) {
 ; CHECK-LABEL: multiple_use_stepvector_nxv4i32_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    index z0.s, w0, #1
 ; CHECK-NEXT:    mov z1.s, w0
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mul z1.s, p0/m, z1.s, z0.s
 ; CHECK-NEXT:    sub z0.s, z1.s, z0.s
 ; CHECK-NEXT:    ret

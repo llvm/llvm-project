@@ -11,7 +11,7 @@
 //
 // Test CUDA NVPTX phases.
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN %s
 //
 // BIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
@@ -34,7 +34,7 @@
 // Test single gpu architecture up to the assemble phase.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s -S 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=ASM %s
 // ASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH:sm_30]])
 // ASM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
@@ -50,7 +50,7 @@
 // Test two gpu architectures with complete compilation.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN2 %s
 // BIN2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
 // BIN2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -79,7 +79,7 @@
 // Test two gpu architecturess up to the assemble phase.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s -S 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=ASM2 %s
 // ASM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH1:sm_30]])
 // ASM2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH1]])
@@ -101,7 +101,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s --cuda-host-only 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s --cuda-host-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=HBIN %s
 // HBIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
 // HBIN-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -115,7 +115,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s --cuda-host-only -S 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s --cuda-host-only -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=HASM %s
 // HASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
 // HASM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -128,7 +128,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-host-only 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-host-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=HBIN2 %s
 // HBIN2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
 // HBIN2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -143,7 +143,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-host-only -S \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-host-only -S \
 // RUN: 2>&1 | FileCheck -check-prefixes=HASM2 %s
 // HASM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
 // HASM2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -156,7 +156,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s --cuda-device-only 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s --cuda-device-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=DBIN %s
 // DBIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH:sm_30]])
 // DBIN-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
@@ -170,7 +170,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s --cuda-device-only -S 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s --cuda-device-only -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=DASM %s
 // DASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH:sm_30]])
 // DASM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
@@ -184,7 +184,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=DBIN2 %s
 // DBIN2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH:sm_30]])
 // DBIN2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
@@ -204,7 +204,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only -S \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only -S \
 // RUN: 2>&1 | FileCheck -check-prefixes=DASM2 %s
 // DASM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH:sm_30]])
 // DASM2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
@@ -244,31 +244,32 @@
 // NEW-DRIVER-RDC-NEXT: 18: assembler, {17}, object, (host-cuda)
 // NEW-DRIVER-RDC-NEXT: 19: clang-linker-wrapper, {18}, image, (host-cuda)
 
-// RUN: %clang -### -target powerpc64le-ibm-linux-gnu -ccc-print-phases --offload-new-driver -fgpu-rdc \
+// RUN: %clang -### -target powerpc64le-ibm-linux-gnu -ccc-print-phases --offload-new-driver \
 // RUN:   --offload-arch=sm_52 --offload-arch=sm_70 %s 2>&1 | FileCheck --check-prefix=NEW-DRIVER %s
-//      NEW-DRIVER: 0: input, "[[INPUT:.+]]", cuda
-// NEW-DRIVER-NEXT: 1: preprocessor, {0}, cuda-cpp-output
-// NEW-DRIVER-NEXT: 2: compiler, {1}, ir
-// NEW-DRIVER-NEXT: 3: input, "[[INPUT]]", cuda, (device-cuda, sm_52)
+//      NEW-DRIVER: 0: input, "[[CUDA:.+]]", cuda, (host-cuda)
+// NEW-DRIVER-NEXT: 1: preprocessor, {0}, cuda-cpp-output, (host-cuda)
+// NEW-DRIVER-NEXT: 2: compiler, {1}, ir, (host-cuda)
+// NEW-DRIVER-NEXT: 3: input, "[[CUDA]]", cuda, (device-cuda, sm_52)
 // NEW-DRIVER-NEXT: 4: preprocessor, {3}, cuda-cpp-output, (device-cuda, sm_52)
 // NEW-DRIVER-NEXT: 5: compiler, {4}, ir, (device-cuda, sm_52)
 // NEW-DRIVER-NEXT: 6: backend, {5}, assembler, (device-cuda, sm_52)
 // NEW-DRIVER-NEXT: 7: assembler, {6}, object, (device-cuda, sm_52)
-// NEW-DRIVER-NEXT: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, object
-// NEW-DRIVER-NEXT: 9: input, "[[INPUT]]", cuda, (device-cuda, sm_70)
+// NEW-DRIVER-NEXT: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {6}, object
+// NEW-DRIVER-NEXT: 9: input, "[[CUDA]]", cuda, (device-cuda, sm_70)
 // NEW-DRIVER-NEXT: 10: preprocessor, {9}, cuda-cpp-output, (device-cuda, sm_70)
 // NEW-DRIVER-NEXT: 11: compiler, {10}, ir, (device-cuda, sm_70)
 // NEW-DRIVER-NEXT: 12: backend, {11}, assembler, (device-cuda, sm_70)
 // NEW-DRIVER-NEXT: 13: assembler, {12}, object, (device-cuda, sm_70)
-// NEW-DRIVER-NEXT: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, object
-// NEW-DRIVER-NEXT: 15: clang-offload-packager, {8, 14}, image
-// NEW-DRIVER-NEXT: 16: offload, "host-cuda (powerpc64le-ibm-linux-gnu)" {2}, "device-cuda (powerpc64le-ibm-linux-gnu)" {15}, ir
+// NEW-DRIVER-NEXT: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {12}, object
+// NEW-DRIVER-NEXT: 15: linker, {8, 14}, cuda-fatbin, (device-cuda)
+// NEW-DRIVER-NEXT: 16: offload, "host-cuda (powerpc64le-ibm-linux-gnu)" {2}, "device-cuda (nvptx64-nvidia-cuda)" {15}, ir
 // NEW-DRIVER-NEXT: 17: backend, {16}, assembler, (host-cuda)
 // NEW-DRIVER-NEXT: 18: assembler, {17}, object, (host-cuda)
 // NEW-DRIVER-NEXT: 19: clang-linker-wrapper, {18}, image, (host-cuda)
 
 // RUN: %clang -### --target=powerpc64le-ibm-linux-gnu -ccc-print-phases --offload-new-driver \
 // RUN:   --offload-arch=sm_52 --offload-arch=sm_70 %s %S/Inputs/empty.cpp 2>&1 | FileCheck --check-prefix=NON-CUDA-INPUT %s
+
 //      NON-CUDA-INPUT: 0: input, "[[CUDA:.+]]", cuda, (host-cuda)
 // NON-CUDA-INPUT-NEXT: 1: preprocessor, {0}, cuda-cpp-output, (host-cuda)
 // NON-CUDA-INPUT-NEXT: 2: compiler, {1}, ir, (host-cuda)
@@ -277,13 +278,13 @@
 // NON-CUDA-INPUT-NEXT: 5: compiler, {4}, ir, (device-cuda, sm_52)
 // NON-CUDA-INPUT-NEXT: 6: backend, {5}, assembler, (device-cuda, sm_52)
 // NON-CUDA-INPUT-NEXT: 7: assembler, {6}, object, (device-cuda, sm_52)
-// NON-CUDA-INPUT-NEXT: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, object
+// NON-CUDA-INPUT-NEXT: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {6}, object
 // NON-CUDA-INPUT-NEXT: 9: input, "[[CUDA]]", cuda, (device-cuda, sm_70)
 // NON-CUDA-INPUT-NEXT: 10: preprocessor, {9}, cuda-cpp-output, (device-cuda, sm_70)
 // NON-CUDA-INPUT-NEXT: 11: compiler, {10}, ir, (device-cuda, sm_70)
 // NON-CUDA-INPUT-NEXT: 12: backend, {11}, assembler, (device-cuda, sm_70)
 // NON-CUDA-INPUT-NEXT: 13: assembler, {12}, object, (device-cuda, sm_70)
-// NON-CUDA-INPUT-NEXT: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, object
+// NON-CUDA-INPUT-NEXT: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {12}, object
 // NON-CUDA-INPUT-NEXT: 15: linker, {8, 14}, cuda-fatbin, (device-cuda)
 // NON-CUDA-INPUT-NEXT: 16: offload, "host-cuda (powerpc64le-ibm-linux-gnu)" {2}, "device-cuda (nvptx64-nvidia-cuda)" {15}, ir
 // NON-CUDA-INPUT-NEXT: 17: backend, {16}, assembler, (host-cuda)

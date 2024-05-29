@@ -123,7 +123,7 @@ def LLVMFunctionType : LLVMType<"LLVMFunction", "func"> {
 
 def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface, [
-      "areCompatible", "verifyEntries"]>]> {
+      "getIndexBitwidth", "areCompatible", "verifyEntries"]>]> {
   let summary = "LLVM pointer type";
   let description = [{
     The `!llvm.ptr` type is an LLVM pointer type. This type typically represents

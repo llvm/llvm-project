@@ -24,6 +24,7 @@ registers:
   - { id: 10, class: sreg_64_xexec, preferred-register: '$vcc' }
 frameInfo:
   maxAlignment:    1
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo:
   maxKernArgAlign: 1

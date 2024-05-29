@@ -332,10 +332,6 @@ define void @cannot_sink_reduction(i32 %x, ptr %ptr, i64 %tc) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
-
-
-
-; CHECK-NET:     ret void
 entry:
   br label %preheader
 

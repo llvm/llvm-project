@@ -11,6 +11,7 @@
 #include <cassert>
 
 #include <algorithm>
+#include <limits>
 #include <optional>
 
 #include "llvm/Support/LEB128.h"
@@ -41,13 +42,23 @@ extern int g_verbose;
 // Extract a debug info entry for a given DWARFUnit from the data
 // starting at the offset in offset_ptr
 bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
-                                  const DWARFUnit *cu,
+                                  const DWARFUnit &unit,
                                   lldb::offset_t *offset_ptr) {
   m_offset = *offset_ptr;
+  auto report_error = [&](const char *fmt, const auto &...vals) {
+    unit.GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+        "[{0:x16}]: {1}, please file a bug and "
+        "attach the file at the start of this error message",
+        static_cast<uint64_t>(m_offset), llvm::formatv(fmt, vals...));
+    *offset_ptr = std::numeric_limits<lldb::offset_t>::max();
+    return false;
+  };
+
   m_parent_idx = 0;
   m_sibling_idx = 0;
   const uint64_t abbr_idx = data.GetULEB128(offset_ptr);
-  lldbassert(abbr_idx <= UINT16_MAX);
+  if (abbr_idx > std::numeric_limits<uint16_t>::max())
+    return report_error("abbreviation code {0} too big", abbr_idx);
   m_abbr_idx = abbr_idx;
 
   if (m_abbr_idx == 0) {
@@ -56,31 +67,18 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
     return true; // NULL debug tag entry
   }
 
-  const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
-  if (abbrevDecl == nullptr) {
-    cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "[{0:x16}]: invalid abbreviation code {1}, "
-        "please file a bug and "
-        "attach the file at the start of this error message",
-        (uint64_t)m_offset, (unsigned)abbr_idx);
-    // WE can't parse anymore if the DWARF is borked...
-    *offset_ptr = UINT32_MAX;
-    return false;
-  }
+  const auto *abbrevDecl = GetAbbreviationDeclarationPtr(&unit);
+  if (abbrevDecl == nullptr)
+    return report_error("invalid abbreviation code {0}", abbr_idx);
+
   m_tag = abbrevDecl->getTag();
   m_has_children = abbrevDecl->hasChildren();
   // Skip all data in the .debug_info or .debug_types for the attributes
   for (const auto &attribute : abbrevDecl->attributes()) {
-    if (DWARFFormValue::SkipValue(attribute.Form, data, offset_ptr, cu))
+    if (DWARFFormValue::SkipValue(attribute.Form, data, offset_ptr, &unit))
       continue;
 
-    cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "[{0:x16}]: Unsupported DW_FORM_{1:x}, please file a bug "
-        "and "
-        "attach the file at the start of this error message",
-        (uint64_t)m_offset, (unsigned)attribute.Form);
-    *offset_ptr = m_offset;
-    return false;
+    return report_error("Unsupported DW_FORM_{1:x}", attribute.Form);
   }
   return true;
 }

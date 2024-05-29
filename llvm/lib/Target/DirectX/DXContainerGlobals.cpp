@@ -18,18 +18,25 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
+using namespace llvm::mcdxbc;
 
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
 
-  GlobalVariable *getShaderFlags(Module &M);
+  GlobalVariable *buildContainerGlobal(Module &M, Constant *Content,
+                                       StringRef Name, StringRef SectionName);
+  GlobalVariable *getFeatureFlags(Module &M);
   GlobalVariable *computeShaderHash(Module &M);
+  GlobalVariable *buildSignature(Module &M, Signature &Sig, StringRef Name,
+                                 StringRef SectionName);
+  void addSignature(Module &M, SmallVector<GlobalValue *> &Globals);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -53,24 +60,22 @@ public:
 
 bool DXContainerGlobals::runOnModule(Module &M) {
   llvm::SmallVector<GlobalValue *> Globals;
-  Globals.push_back(getShaderFlags(M));
+  Globals.push_back(getFeatureFlags(M));
   Globals.push_back(computeShaderHash(M));
-
+  addSignature(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
 }
 
-GlobalVariable *DXContainerGlobals::getShaderFlags(Module &M) {
-  const uint64_t Flags =
-      (uint64_t)(getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags());
+GlobalVariable *DXContainerGlobals::getFeatureFlags(Module &M) {
+  const uint64_t FeatureFlags =
+      static_cast<uint64_t>(getAnalysis<ShaderFlagsAnalysisWrapper>()
+                                .getShaderFlags()
+                                .getFeatureFlags());
 
-  Constant *FlagsConstant = ConstantInt::get(M.getContext(), APInt(64, Flags));
-  auto *GV = new llvm::GlobalVariable(M, FlagsConstant->getType(), true,
-                                      GlobalValue::PrivateLinkage,
-                                      FlagsConstant, "dx.sfi0");
-  GV->setSection("SFI0");
-  GV->setAlignment(Align(4));
-  return GV;
+  Constant *FeatureFlagsConstant =
+      ConstantInt::get(M.getContext(), APInt(64, FeatureFlags));
+  return buildContainerGlobal(M, FeatureFlagsConstant, "dx.sfi0", "SFI0");
 }
 
 GlobalVariable *DXContainerGlobals::computeShaderHash(Module &M) {
@@ -93,12 +98,39 @@ GlobalVariable *DXContainerGlobals::computeShaderHash(Module &M) {
 
   Constant *ModuleConstant =
       ConstantDataArray::get(M.getContext(), arrayRefFromStringRef(Data));
-  auto *GV = new llvm::GlobalVariable(M, ModuleConstant->getType(), true,
-                                      GlobalValue::PrivateLinkage,
-                                      ModuleConstant, "dx.hash");
-  GV->setSection("HASH");
+  return buildContainerGlobal(M, ModuleConstant, "dx.hash", "HASH");
+}
+
+GlobalVariable *DXContainerGlobals::buildContainerGlobal(
+    Module &M, Constant *Content, StringRef Name, StringRef SectionName) {
+  auto *GV = new llvm::GlobalVariable(
+      M, Content->getType(), true, GlobalValue::PrivateLinkage, Content, Name);
+  GV->setSection(SectionName);
   GV->setAlignment(Align(4));
   return GV;
+}
+
+GlobalVariable *DXContainerGlobals::buildSignature(Module &M, Signature &Sig,
+                                                   StringRef Name,
+                                                   StringRef SectionName) {
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
+  Sig.write(OS);
+  Constant *Constant =
+      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
+  return buildContainerGlobal(M, Constant, Name, SectionName);
+}
+
+void DXContainerGlobals::addSignature(Module &M,
+                                      SmallVector<GlobalValue *> &Globals) {
+  // FIXME: support graphics shader.
+  //  see issue https://github.com/llvm/llvm-project/issues/90504.
+
+  Signature InputSig;
+  Globals.emplace_back(buildSignature(M, InputSig, "dx.isg1", "ISG1"));
+
+  Signature OutputSig;
+  Globals.emplace_back(buildSignature(M, OutputSig, "dx.osg1", "OSG1"));
 }
 
 char DXContainerGlobals::ID = 0;

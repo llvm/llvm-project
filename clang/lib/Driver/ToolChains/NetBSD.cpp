@@ -240,8 +240,11 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     break;
   }
 
-  if (Triple.isRISCV())
+  if (Triple.isRISCV()) {
     CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -308,7 +311,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_r)) {
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) && !Static;
-    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
+    addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args))

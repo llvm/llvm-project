@@ -266,11 +266,11 @@ Status RemoteAwarePlatform::Unlink(const FileSpec &file_spec) {
   return Platform::Unlink(file_spec);
 }
 
-bool RemoteAwarePlatform::CalculateMD5(const FileSpec &file_spec, uint64_t &low,
-                                       uint64_t &high) {
+llvm::ErrorOr<llvm::MD5::MD5Result>
+RemoteAwarePlatform::CalculateMD5(const FileSpec &file_spec) {
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->CalculateMD5(file_spec, low, high);
-  return Platform::CalculateMD5(file_spec, low, high);
+    return m_remote_platform_sp->CalculateMD5(file_spec);
+  return Platform::CalculateMD5(file_spec);
 }
 
 FileSpec RemoteAwarePlatform::GetRemoteWorkingDirectory() {

@@ -30,7 +30,8 @@ struct NameUniquer;
 
 /// Prerequiste pass for code gen. Perform intermediate rewrites to perform
 /// the code gen (to LLVM-IR dialect) conversion.
-std::unique_ptr<mlir::Pass> createFirCodeGenRewritePass();
+std::unique_ptr<mlir::Pass> createFirCodeGenRewritePass(
+    CodeGenRewriteOptions Options = CodeGenRewriteOptions{});
 
 /// FirTargetRewritePass options.
 struct TargetRewriteOptions {
@@ -86,6 +87,10 @@ std::unique_ptr<mlir::Pass> createBoxedProcedurePass(bool useThunks);
 void populateFIRToLLVMConversionPatterns(fir::LLVMTypeConverter &converter,
                                          mlir::RewritePatternSet &patterns,
                                          fir::FIRToLLVMPassOptions &options);
+
+/// Populate the pattern set with the PreCGRewrite patterns.
+void populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,
+                                  bool preserveDeclare);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

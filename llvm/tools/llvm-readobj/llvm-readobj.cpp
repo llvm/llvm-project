@@ -134,7 +134,6 @@ static bool Memtag;
 static bool NeededLibraries;
 static bool Notes;
 static bool ProgramHeaders;
-bool RawRelr;
 static bool SectionGroups;
 static bool VersionInfo;
 
@@ -273,7 +272,6 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::Notes = Args.hasArg(OPT_notes);
   opts::PrettyPrint = Args.hasArg(OPT_pretty_print);
   opts::ProgramHeaders = Args.hasArg(OPT_program_headers);
-  opts::RawRelr = Args.hasArg(OPT_raw_relr);
   opts::SectionGroups = Args.hasArg(OPT_section_groups);
   if (Arg *A = Args.getLastArg(OPT_sort_symbols_EQ)) {
     std::string SortKeysString = A->getValue();

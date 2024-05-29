@@ -36,7 +36,7 @@ func.func @test_multiple_return() -> (i32, i32) {
 
 // CHECK: test_float
 func.func @test_float() {
-  // CHECK: foo::constant({(float)0.0e+00, (float)1.000000000e+00})
+  // CHECK: foo::constant({0.0e+00f, 1.000000000e+00f})
   %0 = emitc.call_opaque "foo::constant"() {args = [dense<[0.000000e+00, 1.000000e+00]> : tensor<2xf32>]} : () -> f32
   return
 }
@@ -88,4 +88,9 @@ func.func @apply(%arg0: i32) -> !emitc.ptr<i32> {
   // CHECK: int32_t [[V3]] = *[[V2]];
   %1 = emitc.apply "*"(%0) : (!emitc.ptr<i32>) -> (i32)
   return %0 : !emitc.ptr<i32>
+}
+
+// CHECK: void array_type(int32_t v1[3], float v2[10][20])
+func.func @array_type(%arg0: !emitc.array<3xi32>, %arg1: !emitc.array<10x20xf32>) {
+  return
 }

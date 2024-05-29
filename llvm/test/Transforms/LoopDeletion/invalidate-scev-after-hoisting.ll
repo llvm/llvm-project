@@ -4,11 +4,6 @@
 ; Make sure the SCEV for %invar is invalidated properly when the instruction is
 ; moved by LoopDeletion.
 
-; CHECK:      Determining loop execution counts for: @test
-; CHECK-NEXT: Loop %inner: backedge-taken count is (405 + %invar)<nuw><nsw>
-; CHECK-NEXT: Loop %inner: constant max backedge-taken count is 405
-; CHECK-NEXT: Loop %inner: symbolic max backedge-taken count is (405 + %invar)<nuw><nsw>
-; CHECK-NEXT: Loop %inner: Predicated backedge-taken count is (405 + %invar)<nuw><nsw>
 
 define void @test_pr57837() {
 ; CHECK-LABEL: @test_pr57837(

@@ -81,13 +81,18 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
     BindingSize = sizeof(dxbc::PSV::v0::ResourceBindInfo);
     break;
   case 2:
-  default:
     InfoSize = sizeof(dxbc::PSV::v2::RuntimeInfo);
     BindingSize = sizeof(dxbc::PSV::v2::ResourceBindInfo);
+    break;
+  case 3:
+  default:
+    InfoSize = sizeof(dxbc::PSV::v3::RuntimeInfo);
+    BindingSize = sizeof(dxbc::PSV::v2::ResourceBindInfo);
   }
-  // Write the size of the info.
 
+  // Write the size of the info.
   support::endian::write(OS, InfoSize, llvm::endianness::little);
+
   // Write the info itself.
   OS.write(reinterpret_cast<const char *>(&BaseData), InfoSize);
 
@@ -104,32 +109,12 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
   if (Version == 0)
     return;
 
-  StringTableBuilder StrTabBuilder((StringTableBuilder::DXContainer));
-  SmallVector<uint32_t, 64> IndexBuffer;
-  SmallVector<v0::SignatureElement, 32> SignatureElements;
-  SmallVector<StringRef, 32> SemanticNames;
-
-  ProcessElementList(StrTabBuilder, IndexBuffer, SignatureElements,
-                     SemanticNames, InputElements);
-  ProcessElementList(StrTabBuilder, IndexBuffer, SignatureElements,
-                     SemanticNames, OutputElements);
-  ProcessElementList(StrTabBuilder, IndexBuffer, SignatureElements,
-                     SemanticNames, PatchOrPrimElements);
-
-  StrTabBuilder.finalize();
-  for (auto ElAndName : zip(SignatureElements, SemanticNames)) {
-    v0::SignatureElement &El = std::get<0>(ElAndName);
-    StringRef Name = std::get<1>(ElAndName);
-    El.NameOffset = static_cast<uint32_t>(StrTabBuilder.getOffset(Name));
-    if (sys::IsBigEndianHost)
-      El.swapBytes();
-  }
-
-  support::endian::write(OS, static_cast<uint32_t>(StrTabBuilder.getSize()),
+  support::endian::write(OS,
+                         static_cast<uint32_t>(DXConStrTabBuilder.getSize()),
                          llvm::endianness::little);
 
   // Write the string table.
-  StrTabBuilder.write(OS);
+  DXConStrTabBuilder.write(OS);
 
   // Write the index table size, then table.
   support::endian::write(OS, static_cast<uint32_t>(IndexBuffer.size()),
@@ -160,6 +145,46 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
                                llvm::endianness::little);
   support::endian::write_array(OS, ArrayRef<uint32_t>(PatchOutputMap),
                                llvm::endianness::little);
+}
+
+void PSVRuntimeInfo::finalize(Triple::EnvironmentType Stage) {
+  IsFinalized = true;
+  BaseData.SigInputElements = static_cast<uint32_t>(InputElements.size());
+  BaseData.SigOutputElements = static_cast<uint32_t>(OutputElements.size());
+  BaseData.SigPatchOrPrimElements =
+      static_cast<uint32_t>(PatchOrPrimElements.size());
+
+  SmallVector<StringRef, 32> SemanticNames;
+
+  // Build a string table and set associated offsets to be written when
+  // write() is called
+  ProcessElementList(DXConStrTabBuilder, IndexBuffer, SignatureElements,
+                     SemanticNames, InputElements);
+  ProcessElementList(DXConStrTabBuilder, IndexBuffer, SignatureElements,
+                     SemanticNames, OutputElements);
+  ProcessElementList(DXConStrTabBuilder, IndexBuffer, SignatureElements,
+                     SemanticNames, PatchOrPrimElements);
+
+  DXConStrTabBuilder.add(EntryName);
+
+  DXConStrTabBuilder.finalize();
+  for (auto ElAndName : zip(SignatureElements, SemanticNames)) {
+    llvm::dxbc::PSV::v0::SignatureElement &El = std::get<0>(ElAndName);
+    StringRef Name = std::get<1>(ElAndName);
+    El.NameOffset = static_cast<uint32_t>(DXConStrTabBuilder.getOffset(Name));
+    if (sys::IsBigEndianHost)
+      El.swapBytes();
+  }
+
+  BaseData.EntryNameOffset =
+      static_cast<uint32_t>(DXConStrTabBuilder.getOffset(EntryName));
+
+  if (!sys::IsBigEndianHost)
+    return;
+  BaseData.swapBytes();
+  BaseData.swapBytes(Stage);
+  for (auto &Res : Resources)
+    Res.swapBytes();
 }
 
 void Signature::write(raw_ostream &OS) {

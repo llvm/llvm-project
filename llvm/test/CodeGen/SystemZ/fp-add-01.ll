@@ -119,3 +119,15 @@ define float @f7(ptr %ptr0) {
 
   ret float %add10
 }
+
+; Check that reassociation flags do not get in the way of AEB.
+define float @f8(ptr %x) {
+; CHECK-LABEL: f8:
+; CHECK: aeb %f0
+entry:
+  %0 = load float, ptr %x, align 8
+  %arrayidx1 = getelementptr inbounds float, ptr %x, i64 1
+  %1 = load float, ptr %arrayidx1, align 8
+  %add = fadd reassoc nsz arcp contract afn float %1, %0
+  ret float %add
+}

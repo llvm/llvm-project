@@ -9,7 +9,7 @@
 define zeroext i8 @sum() {
 ; CHECK-LABEL: @sum(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <64 x i8>, ptr getelementptr inbounds ([128 x i8], ptr @bytes, i64 0, i64 64), align 1
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <64 x i8>, ptr getelementptr inbounds (i8, ptr @bytes, i64 64), align 1
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <64 x i8>, ptr @bytes, align 1
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <64 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.vector.reduce.add.v64i8(<64 x i8> [[BIN_RDX]])

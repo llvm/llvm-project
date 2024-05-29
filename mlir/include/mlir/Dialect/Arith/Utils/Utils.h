@@ -24,6 +24,29 @@
 
 namespace mlir {
 
+using ReassociationIndices = SmallVector<int64_t, 2>;
+
+/// Infer the output shape for a {memref|tensor}.expand_shape when it is
+/// possible to do so.
+///
+/// Note: This should *only* be used to implement
+/// `ExpandShapeOp::inferOutputShape` in both the memref and tensor namespaces.
+/// If you need to infer the output shape you should use the static method of
+/// `ExpandShapeOp` instead of calling this.
+///
+/// `inputShape` is the shape of the tensor or memref being expanded as a
+/// sequence of SSA values or constants. `expandedType` is the output shape of
+/// the expand_shape operation. `reassociation` is the reassociation denoting
+/// the output dims each input dim is mapped to.
+///
+/// Returns the output shape in `outputShape` and `staticOutputShape`, following
+/// the conventions for the output_shape and static_output_shape inputs to the
+/// expand_shape ops.
+std::optional<SmallVector<OpFoldResult>>
+inferExpandShapeOutputShape(OpBuilder &b, Location loc, ShapedType expandedType,
+                            ArrayRef<ReassociationIndices> reassociation,
+                            ArrayRef<OpFoldResult> inputShape);
+
 /// Matches a ConstantIndexOp.
 detail::op_matcher<arith::ConstantIndexOp> matchConstantIndex();
 

@@ -17,7 +17,6 @@
 #include "CodeGenModule.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -115,6 +114,10 @@ GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
 }
 
 } // namespace
+
+llvm::Triple::ArchType CGHLSLRuntime::getArch() {
+  return CGM.getTarget().getTriple().getArch();
+}
 
 void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
   if (D->getStorageClass() == SC_Static) {
@@ -342,8 +345,9 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
     return B.CreateCall(FunctionCallee(DxGroupIndex));
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
-    llvm::Function *DxThreadID = CGM.getIntrinsic(Intrinsic::dx_thread_id);
-    return buildVectorInput(B, DxThreadID, Ty);
+    llvm::Function *ThreadIDIntrinsic =
+        CGM.getIntrinsic(getThreadIdIntrinsic());
+    return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }
   assert(false && "Unhandled parameter attribute");
   return nullptr;

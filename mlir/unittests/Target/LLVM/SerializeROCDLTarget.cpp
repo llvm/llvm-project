@@ -31,10 +31,10 @@
 using namespace mlir;
 
 // Skip the test if the AMDGPU target was not built.
-#if MLIR_ROCM_CONVERSIONS_ENABLED == 0
-#define SKIP_WITHOUT_AMDGPU(x) DISABLED_##x
-#else
+#if MLIR_ENABLE_ROCM_CONVERSIONS
 #define SKIP_WITHOUT_AMDGPU(x) x
+#else
+#define SKIP_WITHOUT_AMDGPU(x) DISABLED_##x
 #endif
 
 class MLIRTargetLLVMROCDL : public ::testing::Test {

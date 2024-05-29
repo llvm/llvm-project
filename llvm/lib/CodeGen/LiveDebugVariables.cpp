@@ -18,7 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LiveDebugVariables.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"

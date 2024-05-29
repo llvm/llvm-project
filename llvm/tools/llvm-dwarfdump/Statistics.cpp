@@ -229,7 +229,7 @@ static std::string constructDieID(DWARFDie Die,
      << Die.getName(DINameKind::LinkageName);
 
   // Prefix + Name is enough for local variables and parameters.
-  if (!Prefix.empty() && !Prefix.equals("g"))
+  if (!Prefix.empty() && Prefix != "g")
     return ID.str();
 
   auto DeclFile = Die.findRecursively(dwarf::DW_AT_decl_file);

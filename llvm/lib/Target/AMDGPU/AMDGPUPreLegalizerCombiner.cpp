@@ -182,8 +182,6 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
          LLT::scalar(64));
   const LLT S32 = LLT::scalar(32);
 
-  B.setInstrAndDebugLoc(MI);
-
   auto Unmerge = B.buildUnmerge(S32, Src);
 
   assert(MI.getOpcode() != AMDGPU::G_AMDGPU_CVT_PK_I16_I32);

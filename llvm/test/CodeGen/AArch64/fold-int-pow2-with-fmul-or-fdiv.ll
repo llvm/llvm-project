@@ -604,8 +604,8 @@ define fastcc i1 @quantum_hadamard(i32 %0) {
 define <vscale x 4 x float> @fdiv_pow2_nx4xfloat(<vscale x 4 x i32> %i) "target-features"="+sve" {
 ; CHECK-LABEL: fdiv_pow2_nx4xfloat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    lslr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    fmov z1.s, #9.00000000
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux -ffp-exception-behavior=maytrap -w -S -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -ffp-exception-behavior=maytrap -w -o - -emit-llvm %s | FileCheck %s
 
 // Test codegen of constrained math builtins.
 //

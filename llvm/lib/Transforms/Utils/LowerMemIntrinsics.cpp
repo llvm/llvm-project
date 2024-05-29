@@ -384,10 +384,10 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   // SplitBlockAndInsertIfThenElse conveniently creates the basic if-then-else
   // structure. Its block terminators (unconditional branches) are replaced by
   // the appropriate conditional branches when the loop is built.
-  ICmpInst *PtrCompare = new ICmpInst(InsertBefore, ICmpInst::ICMP_ULT,
+  ICmpInst *PtrCompare = new ICmpInst(InsertBefore->getIterator(), ICmpInst::ICMP_ULT,
                                       SrcAddr, DstAddr, "compare_src_dst");
   Instruction *ThenTerm, *ElseTerm;
-  SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore, &ThenTerm,
+  SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore->getIterator(), &ThenTerm,
                                 &ElseTerm);
 
   // Each part of the function consists of two blocks:
@@ -409,7 +409,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   // Initial comparison of n == 0 that lets us skip the loops altogether. Shared
   // between both backwards and forward copy clauses.
   ICmpInst *CompareN =
-      new ICmpInst(OrigBB->getTerminator(), ICmpInst::ICMP_EQ, CopyLen,
+      new ICmpInst(OrigBB->getTerminator()->getIterator(), ICmpInst::ICMP_EQ, CopyLen,
                    ConstantInt::get(TypeOfCopyLen, 0), "compare_n_to_0");
 
   // Copying backwards.
@@ -431,7 +431,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
       ExitBB, LoopBB);
   LoopPhi->addIncoming(IndexPtr, LoopBB);
   LoopPhi->addIncoming(CopyLen, CopyBackwardsBB);
-  BranchInst::Create(ExitBB, LoopBB, CompareN, ThenTerm);
+  BranchInst::Create(ExitBB, LoopBB, CompareN, ThenTerm->getIterator());
   ThenTerm->eraseFromParent();
 
   // Copying forward.
@@ -451,7 +451,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   FwdCopyPhi->addIncoming(FwdIndexPtr, FwdLoopBB);
   FwdCopyPhi->addIncoming(ConstantInt::get(TypeOfCopyLen, 0), CopyForwardBB);
 
-  BranchInst::Create(ExitBB, FwdLoopBB, CompareN, ElseTerm);
+  BranchInst::Create(ExitBB, FwdLoopBB, CompareN, ElseTerm->getIterator());
   ElseTerm->eraseFromParent();
 }
 

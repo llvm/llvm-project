@@ -22,6 +22,7 @@
 #include "X86RegisterInfo.h"
 #include "X86ShuffleDecodeConstantPool.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -506,7 +507,8 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     // recognize as TZCNT, which has better performance than BSF.
     // BSF and TZCNT have different interpretations on ZF bit. So make sure
     // it won't be used later.
-    const MachineOperand *FlagDef = MI->findRegisterDefOperand(X86::EFLAGS);
+    const MachineOperand *FlagDef =
+        MI->findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
     if (!MF.getFunction().hasOptSize() && FlagDef && FlagDef->isDead())
       OutMI.setFlags(X86::IP_HAS_REPEAT);
     break;
@@ -519,10 +521,8 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
 void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                                  const MachineInstr &MI) {
   NoAutoPaddingScope NoPadScope(*OutStreamer);
-  bool Is64Bits = MI.getOpcode() != X86::TLS_addr32 &&
-                  MI.getOpcode() != X86::TLS_base_addr32;
-  bool Is64BitsLP64 = MI.getOpcode() == X86::TLS_addr64 ||
-                      MI.getOpcode() == X86::TLS_base_addr64;
+  bool Is64Bits = getSubtarget().is64Bit();
+  bool Is64BitsLP64 = getSubtarget().isTarget64BitLP64();
   MCContext &Ctx = OutStreamer->getContext();
 
   MCSymbolRefExpr::VariantKind SRVK;
@@ -539,6 +539,10 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   case X86::TLS_base_addrX32:
     SRVK = MCSymbolRefExpr::VK_TLSLD;
     break;
+  case X86::TLS_desc32:
+  case X86::TLS_desc64:
+    SRVK = MCSymbolRefExpr::VK_TLSDESC;
+    break;
   default:
     llvm_unreachable("unexpected opcode");
   }
@@ -546,15 +550,34 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   const MCSymbolRefExpr *Sym = MCSymbolRefExpr::create(
       MCInstLowering.GetSymbolFromOperand(MI.getOperand(3)), SRVK, Ctx);
 
-  // As of binutils 2.32, ld has a bogus TLS relaxation error when the GD/LD
+  // Before binutils 2.41, ld has a bogus TLS relaxation error when the GD/LD
   // code sequence using R_X86_64_GOTPCREL (instead of R_X86_64_GOTPCRELX) is
   // attempted to be relaxed to IE/LE (binutils PR24784). Work around the bug by
   // only using GOT when GOTPCRELX is enabled.
-  // TODO Delete the workaround when GOTPCRELX becomes commonplace.
+  // TODO Delete the workaround when rustc no longer relies on the hack
   bool UseGot = MMI->getModule()->getRtLibUseGOT() &&
-                Ctx.getAsmInfo()->canRelaxRelocations();
+                Ctx.getTargetOptions()->X86RelaxRelocations;
 
-  if (Is64Bits) {
+  if (SRVK == MCSymbolRefExpr::VK_TLSDESC) {
+    const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(
+        MCInstLowering.GetSymbolFromOperand(MI.getOperand(3)),
+        MCSymbolRefExpr::VK_TLSCALL, Ctx);
+    EmitAndCountInstruction(
+        MCInstBuilder(Is64BitsLP64 ? X86::LEA64r : X86::LEA32r)
+            .addReg(Is64BitsLP64 ? X86::RAX : X86::EAX)
+            .addReg(Is64Bits ? X86::RIP : X86::EBX)
+            .addImm(1)
+            .addReg(0)
+            .addExpr(Sym)
+            .addReg(0));
+    EmitAndCountInstruction(
+        MCInstBuilder(Is64Bits ? X86::CALL64m : X86::CALL32m)
+            .addReg(Is64BitsLP64 ? X86::RAX : X86::EAX)
+            .addImm(1)
+            .addReg(0)
+            .addExpr(Expr)
+            .addReg(0));
+  } else if (Is64Bits) {
     bool NeedsPadding = SRVK == MCSymbolRefExpr::VK_TLSGD;
     if (NeedsPadding && Is64BitsLP64)
       EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
@@ -959,8 +982,10 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
   SmallString<256> Code;
   unsigned MinSize = MI.getOperand(0).getImm();
 
-  if (NextMI != MI.getParent()->end()) {
+  if (NextMI != MI.getParent()->end() && !NextMI->isInlineAsm()) {
     // Lower the next MachineInstr to find its byte size.
+    // If the next instruction is inline assembly, we skip lowering it for now,
+    // and assume we should always generate NOPs.
     MCInst MCI;
     MCIL.Lower(&*NextMI, MCI);
 
@@ -1338,6 +1363,35 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
 
 void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
                                              X86MCInstLower &MCIL) {
+  MCInst TC;
+  TC.setOpcode(convertTailJumpOpcode(MI.getOperand(0).getImm()));
+  // Drop the tail jump opcode.
+  auto TCOperands = drop_begin(MI.operands());
+  bool IsConditional = TC.getOpcode() == X86::JCC_1;
+  MCSymbol *FallthroughLabel;
+  if (IsConditional) {
+    // Rewrite:
+    //   je target
+    //
+    // To:
+    //   jne .fallthrough
+    //   .p2align 1, ...
+    // .Lxray_sled_N:
+    //   SLED_CODE
+    //   jmp target
+    // .fallthrough:
+    FallthroughLabel = OutContext.createTempSymbol();
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(X86::JCC_1)
+            .addExpr(MCSymbolRefExpr::create(FallthroughLabel, OutContext))
+            .addImm(X86::GetOppositeBranchCondition(
+                static_cast<X86::CondCode>(MI.getOperand(2).getImm()))));
+    TC.setOpcode(X86::JMP_1);
+    // Drop the condition code.
+    TCOperands = drop_end(TCOperands);
+  }
+
   NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   // Like PATCHABLE_RET, we have the actual instruction in the operands to this
@@ -1359,18 +1413,16 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, SledKind::TAIL_CALL, 2);
 
-  unsigned OpCode = MI.getOperand(0).getImm();
-  OpCode = convertTailJumpOpcode(OpCode);
-  MCInst TC;
-  TC.setOpcode(OpCode);
-
   // Before emitting the instruction, add a comment to indicate that this is
   // indeed a tail call.
   OutStreamer->AddComment("TAILCALL");
-  for (auto &MO : drop_begin(MI.operands()))
+  for (auto &MO : TCOperands)
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
       TC.addOperand(*MaybeOperand);
   OutStreamer->emitInstruction(TC, getSubtargetInfo());
+
+  if (IsConditional)
+    OutStreamer->emitLabel(FallthroughLabel);
 }
 
 // Returns instruction preceding MBBI in MachineFunction.
@@ -2164,6 +2216,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::TLS_base_addr32:
   case X86::TLS_base_addr64:
   case X86::TLS_base_addrX32:
+  case X86::TLS_desc32:
+  case X86::TLS_desc64:
     return LowerTlsAddr(MCInstLowering, *MI);
 
   case X86::MOVPC32r: {

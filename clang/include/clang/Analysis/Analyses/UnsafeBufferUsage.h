@@ -106,6 +106,11 @@ public:
   virtual void handleUnsafeOperation(const Stmt *Operation,
                                      bool IsRelatedToDecl, ASTContext &Ctx) = 0;
 
+  /// Invoked when an unsafe operation with a std container is found.
+  virtual void handleUnsafeOperationInContainer(const Stmt *Operation,
+                                                bool IsRelatedToDecl,
+                                                ASTContext &Ctx) = 0;
+
   /// Invoked when a fix is suggested against a variable. This function groups
   /// all variables that must be fixed together (i.e their types must be changed
   /// to the same target type to prevent type mismatches) into a single fixit.

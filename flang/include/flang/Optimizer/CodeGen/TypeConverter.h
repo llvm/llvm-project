@@ -94,8 +94,8 @@ public:
   // to LLVM IR dialect here.
   //
   // fir.complex<T> | std.complex<T>    --> llvm<"{t,t}">
-  template <typename C> mlir::Type convertComplexType(C cmplx) const {
-    LLVM_DEBUG(llvm::dbgs() << "type convert: " << cmplx << '\n');
+  template <typename C>
+  mlir::Type convertComplexType(C cmplx) const {
     auto eleTy = cmplx.getElementType();
     return convertType(specifics->complexMemoryType(eleTy));
   }

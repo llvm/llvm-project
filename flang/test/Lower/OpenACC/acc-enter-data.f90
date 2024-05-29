@@ -234,11 +234,13 @@ subroutine acc_enter_data_dummy(a, b, n, m)
   !$acc enter data create(b(n:m))
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[DECLB]]#0, %c0{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 !CHECK: %[[LOAD_N:.*]] = fir.load %[[DECLN]]#0 : !fir.ref<i32>
-!CHECK: %[[N_CONV:.*]] = fir.convert %[[LOAD_N]] : (i32) -> index
-!CHECK: %[[LB:.*]] = arith.subi %[[N_CONV]], %[[N_IDX]] : index
+!CHECK: %[[N_CONV1:.*]] = fir.convert %[[LOAD_N]] : (i32) -> i64
+!CHECK: %[[N_CONV2:.*]] = fir.convert %[[N_CONV1]] : (i64) -> index
+!CHECK: %[[LB:.*]] = arith.subi %[[N_CONV2]], %[[N_IDX]] : index
 !CHECK: %[[LOAD_M:.*]] = fir.load %[[DECLM]]#0 : !fir.ref<i32>
-!CHECK: %[[M_CONV:.*]] = fir.convert %[[LOAD_M]] : (i32) -> index
-!CHECK: %[[UB:.*]] = arith.subi %[[M_CONV]], %[[N_IDX]] : index
+!CHECK: %[[M_CONV1:.*]] = fir.convert %[[LOAD_M]] : (i32) -> i64
+!CHECK: %[[M_CONV2:.*]] = fir.convert %[[M_CONV1]] : (i64) -> index
+!CHECK: %[[UB:.*]] = arith.subi %[[M_CONV2]], %[[N_IDX]] : index
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXT_B]] : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[N_IDX]] : index) {strideInBytes = true}
 !CHECK: %[[ADDR:.*]] = fir.box_addr %[[DECLB]]#0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 !CHECK: %[[CREATE1:.*]] = acc.create varPtr(%[[ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND1]]) -> !fir.ref<!fir.array<?xf32>> {name = "b(n:m)", structured = false}
@@ -248,8 +250,9 @@ subroutine acc_enter_data_dummy(a, b, n, m)
 !CHECK: %[[ONE:.*]] = arith.constant 1 : index
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[DECLB]]#0, %c0_8 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 !CHECK: %[[LOAD_N:.*]] = fir.load %[[DECLN]]#0 : !fir.ref<i32>
-!CHECK: %[[CONVERT_N:.*]] = fir.convert %[[LOAD_N]] : (i32) -> index
-!CHECK: %[[LB:.*]] = arith.subi %[[CONVERT_N]], %[[N_IDX]] : index
+!CHECK: %[[CONVERT1_N:.*]] = fir.convert %[[LOAD_N]] : (i32) -> i64
+!CHECK: %[[CONVERT2_N:.*]] = fir.convert %[[CONVERT1_N]] : (i64) -> index
+!CHECK: %[[LB:.*]] = arith.subi %[[CONVERT2_N]], %[[N_IDX]] : index
 !CHECK: %[[UB:.*]] = arith.subi %[[EXT_B]], %c1{{.*}} : index
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXT_B]] : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[N_IDX]] : index) {strideInBytes = true}
 !CHECK: %[[ADDR:.*]] = fir.box_addr %[[DECLB]]#0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
@@ -424,8 +427,9 @@ subroutine acc_enter_data_assumed(a, b, n, m)
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[DECLA]]#0, %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 
 !CHECK: %[[LOAD_N:.*]] = fir.load %[[DECLN]]#0 : !fir.ref<i32>
-!CHECK: %[[CONVERT_N:.*]] = fir.convert %[[LOAD_N]] : (i32) -> index
-!CHECK: %[[LB:.*]] = arith.subi %[[CONVERT_N]], %[[ONE]] : index
+!CHECK: %[[CONVERT1_N:.*]] = fir.convert %[[LOAD_N]] : (i32) -> i64
+!CHECK: %[[CONVERT2_N:.*]] = fir.convert %[[CONVERT1_N]] : (i64) -> index
+!CHECK: %[[LB:.*]] = arith.subi %[[CONVERT2_N]], %[[ONE]] : index
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 
 !CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[DECLA]]#1, %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
@@ -444,8 +448,9 @@ subroutine acc_enter_data_assumed(a, b, n, m)
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[DECLA]]#0, %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 
 !CHECK: %[[LOAD_M:.*]] = fir.load %[[DECLM]]#0 : !fir.ref<i32>
-!CHECK: %[[CONVERT_M:.*]] = fir.convert %[[LOAD_M]] : (i32) -> index
-!CHECK: %[[UB:.*]] = arith.subi %[[CONVERT_M]], %[[ONE]] : index
+!CHECK: %[[CONVERT1_M:.*]] = fir.convert %[[LOAD_M]] : (i32) -> i64
+!CHECK: %[[CONVERT2_M:.*]] = fir.convert %[[CONVERT1_M]] : (i64) -> index
+!CHECK: %[[UB:.*]] = arith.subi %[[CONVERT2_M]], %[[ONE]] : index
 !CHECK: %[[DIMS1:.*]]:3 = fir.box_dims %[[DECLA]]#1, %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 !CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[BASELB]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[ONE]] : index) {strideInBytes = true}
 
@@ -460,12 +465,14 @@ subroutine acc_enter_data_assumed(a, b, n, m)
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[DECLA]]#0, %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 
 !CHECK: %[[LOAD_N:.*]] = fir.load %[[DECLN]]#0 : !fir.ref<i32>
-!CHECK: %[[CONVERT_N:.*]] = fir.convert %[[LOAD_N]] : (i32) -> index
-!CHECK: %[[LB:.*]] = arith.subi %[[CONVERT_N]], %[[ONE]] : index
+!CHECK: %[[CONVERT1_N:.*]] = fir.convert %[[LOAD_N]] : (i32) -> i64
+!CHECK: %[[CONVERT2_N:.*]] = fir.convert %[[CONVERT1_N]] : (i64) -> index
+!CHECK: %[[LB:.*]] = arith.subi %[[CONVERT2_N]], %[[ONE]] : index
 
 !CHECK: %[[LOAD_M:.*]] = fir.load %[[DECLM]]#0 : !fir.ref<i32>
-!CHECK: %[[CONVERT_M:.*]] = fir.convert %[[LOAD_M]] : (i32) -> index
-!CHECK: %[[UB:.*]] = arith.subi %[[CONVERT_M]], %[[ONE]] : index
+!CHECK: %[[CONVERT1_M:.*]] = fir.convert %[[LOAD_M]] : (i32) -> i64
+!CHECK: %[[CONVERT2_M:.*]] = fir.convert %[[CONVERT1_M]] : (i64) -> index
+!CHECK: %[[UB:.*]] = arith.subi %[[CONVERT2_M]], %[[ONE]] : index
 !CHECK: %[[DIMS1:.*]]:3 = fir.box_dims %[[DECLA]]#1, %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 !CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[ONE]] : index) {strideInBytes = true}
 
@@ -480,8 +487,9 @@ subroutine acc_enter_data_assumed(a, b, n, m)
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[DECLB]]#0, %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 
 !CHECK: %[[LOAD_M:.*]] = fir.load %[[DECLM]]#0 : !fir.ref<i32>
-!CHECK: %[[CONVERT_M:.*]] = fir.convert %[[LOAD_M]] : (i32) -> index
-!CHECK: %[[UB:.*]] = arith.subi %[[CONVERT_M]], %[[LB_C10_IDX]] : index
+!CHECK: %[[CONVERT1_M:.*]] = fir.convert %[[LOAD_M]] : (i32) -> i64
+!CHECK: %[[CONVERT2_M:.*]] = fir.convert %[[CONVERT1_M]] : (i64) -> index
+!CHECK: %[[UB:.*]] = arith.subi %[[CONVERT2_M]], %[[LB_C10_IDX]] : index
 !CHECK: %[[DIMS1:.*]]:3 = fir.box_dims %[[DECLB]]#1, %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 !CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[ZERO]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[LB_C10_IDX]] : index) {strideInBytes = true}
 

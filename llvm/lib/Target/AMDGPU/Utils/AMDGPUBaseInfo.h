@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 
+#include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
@@ -34,12 +35,9 @@ class StringRef;
 class Triple;
 class raw_ostream;
 
-namespace amdhsa {
-struct kernel_descriptor_t;
-}
-
 namespace AMDGPU {
 
+struct AMDGPUMCKernelCodeT;
 struct IsaVersion;
 
 /// Generic target versions emitted by this version of LLVM.
@@ -315,14 +313,32 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
                                       unsigned NumVGPRs);
 
+/// \returns Number of waves reachable for a given \p NumVGPRs usage, \p Granule
+/// size, \p MaxWaves possible, and \p TotalNumVGPRs available.
+unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
+                                      unsigned MaxWaves,
+                                      unsigned TotalNumVGPRs);
+
+/// \returns Occupancy for a given \p SGPRs usage, \p MaxWaves possible, and \p
+/// Gen.
+unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
+                                  AMDGPUSubtarget::Generation Gen);
+
 /// \returns Number of VGPR blocks needed for given subtarget \p STI when
-/// \p NumVGPRs are used.
+/// \p NumVGPRs are used. We actually return the number of blocks -1, since
+/// that's what we encode.
 ///
 /// For subtargets which support it, \p EnableWavefrontSize32 should match the
 /// ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
-unsigned
-getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs,
-                 std::optional<bool> EnableWavefrontSize32 = std::nullopt);
+unsigned getEncodedNumVGPRBlocks(
+    const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
+
+/// \returns Number of VGPR blocks that need to be allocated for the given
+/// subtarget \p STI when \p NumVGPRs are used.
+unsigned getAllocatedNumVGPRBlocks(
+    const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 } // end namespace IsaInfo
 
@@ -517,6 +533,9 @@ bool getMUBUFHasSoffset(unsigned Opc);
 
 LLVM_READONLY
 bool getMUBUFIsBufferInv(unsigned Opc);
+
+LLVM_READONLY
+bool getMUBUFTfe(unsigned Opc);
 
 LLVM_READONLY
 bool getSMEMIsBuffer(unsigned Opc);
@@ -842,11 +861,8 @@ unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 LLVM_READONLY
 unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
 
-void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
+void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &Header,
                                const MCSubtargetInfo *STI);
-
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
-    const MCSubtargetInfo *STI);
 
 bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
@@ -855,6 +871,14 @@ bool isReadOnlySegment(const GlobalValue *GV);
 /// \returns True if constants should be emitted to .text section for given
 /// target triple \p TT, false otherwise.
 bool shouldEmitConstantsToTextSection(const Triple &TT);
+
+/// \returns Integer value requested using \p F's \p Name attribute.
+///
+/// \returns \p Default if attribute is not present.
+///
+/// \returns \p Default and emits error if requested value cannot be converted
+/// to integer.
+int getIntegerAttribute(const Function &F, StringRef Name, int Default);
 
 /// \returns A pair of integer values requested using \p F's \p Name attribute
 /// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired
@@ -869,6 +893,16 @@ std::pair<unsigned, unsigned>
 getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
                         bool OnlyFirstRequired = false);
+
+/// \returns Generate a vector of integer values requested using \p F's \p Name
+/// attribute.
+///
+/// \returns true if exactly Size (>2) number of integers are found in the
+/// attribute.
+///
+/// \returns false if any error occurs.
+SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
+                                             unsigned Size);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
@@ -1057,12 +1091,6 @@ struct HwregSize : EncodingField<15, 11, 32> {
 
 using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;
 
-LLVM_READONLY
-int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI);
-
-LLVM_READNONE
-StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI);
-
 } // namespace Hwreg
 
 namespace DepCtr {
@@ -1151,18 +1179,6 @@ unsigned getDefaultFormatEncoding(const MCSubtargetInfo &STI);
 } // namespace MTBUFFormat
 
 namespace SendMsg {
-
-LLVM_READONLY
-int64_t getMsgId(const StringRef Name, const MCSubtargetInfo &STI);
-
-LLVM_READONLY
-int64_t getMsgOpId(int64_t MsgId, const StringRef Name);
-
-LLVM_READNONE
-StringRef getMsgName(int64_t MsgId, const MCSubtargetInfo &STI);
-
-LLVM_READNONE
-StringRef getMsgOpName(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
 bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI);
@@ -1255,6 +1271,7 @@ bool isGFX9_GFX10_GFX11(const MCSubtargetInfo &STI);
 bool isGFX8_GFX9_GFX10(const MCSubtargetInfo &STI);
 bool isGFX8Plus(const MCSubtargetInfo &STI);
 bool isGFX9Plus(const MCSubtargetInfo &STI);
+bool isNotGFX9Plus(const MCSubtargetInfo &STI);
 bool isGFX10(const MCSubtargetInfo &STI);
 bool isGFX10_GFX11(const MCSubtargetInfo &STI);
 bool isGFX10Plus(const MCSubtargetInfo &STI);
@@ -1397,7 +1414,13 @@ LLVM_READNONE
 bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
+bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi);
+
+LLVM_READNONE
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
+
+LLVM_READNONE
+bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
 std::optional<unsigned> getInlineEncodingV2I16(uint32_t Literal);
@@ -1481,6 +1504,11 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// \returns lds block size in terms of dwords. \p
+/// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
+/// must be defined in terms of bytes.
+unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
 
 } // end namespace AMDGPU
 

@@ -94,13 +94,12 @@ function(add_flang_library name)
     add_custom_target(${name})
   endif()
 
-  set_target_properties(${name} PROPERTIES FOLDER "Flang libraries")
+  set_target_properties(${name} PROPERTIES FOLDER "Flang/Libraries")
   set_flang_windows_version_resource_properties(${name})
 endfunction(add_flang_library)
 
 macro(add_flang_executable name)
   add_llvm_executable(${name} ${ARGN})
-  set_target_properties(${name} PROPERTIES FOLDER "Flang executables")
   set_flang_windows_version_resource_properties(${name})
 endmacro(add_flang_executable)
 

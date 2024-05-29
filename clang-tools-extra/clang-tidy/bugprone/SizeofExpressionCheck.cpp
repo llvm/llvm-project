@@ -144,16 +144,13 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
         unaryOperator(hasUnaryOperand(ArrayExpr), unless(hasOperatorName("*"))),
         binaryOperator(hasEitherOperand(ArrayExpr)),
         castExpr(hasSourceExpression(ArrayExpr))));
-    const auto PointerToArrayExpr = ignoringParenImpCasts(
-        hasType(hasCanonicalType(pointerType(pointee(arrayType())))));
+    const auto PointerToArrayExpr =
+        hasType(hasCanonicalType(pointerType(pointee(arrayType()))));
 
-    const auto StructAddrOfExpr = unaryOperator(
-        hasOperatorName("&"), hasUnaryOperand(ignoringParenImpCasts(
-                                  hasType(hasCanonicalType(recordType())))));
     const auto PointerToStructType =
         hasUnqualifiedDesugaredType(pointerType(pointee(recordType())));
-    const auto PointerToStructExpr = ignoringParenImpCasts(expr(
-        hasType(hasCanonicalType(PointerToStructType)), unless(cxxThisExpr())));
+    const auto PointerToStructExpr = expr(
+        hasType(hasCanonicalType(PointerToStructType)), unless(cxxThisExpr()));
 
     const auto ArrayOfPointersExpr = ignoringParenImpCasts(
         hasType(hasCanonicalType(arrayType(hasElementType(pointerType()))
@@ -166,18 +163,19 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
         ignoringParenImpCasts(arraySubscriptExpr(
             hasBase(ArrayOfSamePointersExpr), hasIndex(ZeroLiteral)));
     const auto ArrayLengthExprDenom =
-        expr(hasParent(expr(ignoringParenImpCasts(binaryOperator(
-                 hasOperatorName("/"), hasLHS(ignoringParenImpCasts(sizeOfExpr(
-                                           has(ArrayOfPointersExpr)))))))),
+        expr(hasParent(binaryOperator(hasOperatorName("/"),
+                                      hasLHS(ignoringParenImpCasts(sizeOfExpr(
+                                          has(ArrayOfPointersExpr)))))),
              sizeOfExpr(has(ArrayOfSamePointersZeroSubscriptExpr)));
 
-    Finder->addMatcher(expr(anyOf(sizeOfExpr(has(ignoringParenImpCasts(anyOf(
-                                      ArrayCastExpr, PointerToArrayExpr,
-                                      StructAddrOfExpr, PointerToStructExpr)))),
-                                  sizeOfExpr(has(PointerToStructType))),
-                            unless(ArrayLengthExprDenom))
-                           .bind("sizeof-pointer-to-aggregate"),
-                       this);
+    Finder->addMatcher(
+        expr(sizeOfExpr(anyOf(
+                 has(ignoringParenImpCasts(anyOf(
+                     ArrayCastExpr, PointerToArrayExpr, PointerToStructExpr))),
+                 has(PointerToStructType))),
+             unless(ArrayLengthExprDenom))
+            .bind("sizeof-pointer-to-aggregate"),
+        this);
   }
 
   // Detect expression like: sizeof(expr) <= k for a suspicious constant 'k'.

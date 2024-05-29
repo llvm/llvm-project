@@ -1,0 +1,120 @@
+; REQUIRES: webassembly-registered-target
+
+; Test case 1 - General options.
+
+; test.cpp
+;  1  using INTPTR = const int *;
+;  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+;  3    if (ParamBool) {
+;  4      typedef int INTEGER;
+;  5      const INTEGER CONSTANT = 7;
+;  6      return CONSTANT;
+;  7    }
+;  8    return ParamUnsigned;
+;  9  }
+
+; Print basic details.
+; The following command prints basic details for all the logical elements
+; sorted by the debug information internal offset; it includes its lexical
+; level and debug info format.
+
+; RUN: llvm-mc -arch=wasm32 -filetype=obj \
+; RUN:         %p/Inputs/test-clang.s -o %t.test-clang.o
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=offset \
+; RUN:                         --print=scopes,symbols,types,lines,instructions \
+; RUN:                         %t.test-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=offset \
+; RUN:                         --print=elements \
+; RUN:                         %t.test-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Logical View:
+; ONE-NEXT: [000]           {File} '{{.*}}test-clang.o' -> WASM
+; ONE-EMPTY:
+; ONE-NEXT: [001]             {CompileUnit} 'test.cpp'
+; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo' -> 'int'
+; ONE-NEXT: [003]     2           {Parameter} 'ParamPtr' -> 'INTPTR'
+; ONE-NEXT: [003]     2           {Parameter} 'ParamUnsigned' -> 'unsigned int'
+; ONE-NEXT: [003]     2           {Parameter} 'ParamBool' -> 'bool'
+; ONE-NEXT: [003]                 {Block}
+; ONE-NEXT: [004]     5             {Variable} 'CONSTANT' -> 'const INTEGER'
+; ONE-NEXT: [004]     5             {Line}
+; ONE-NEXT: [004]                   {Code} 'i32.const	7'
+; ONE-NEXT: [004]                   {Code} 'local.set	10'
+; ONE-NEXT: [004]                   {Code} 'local.get	5'
+; ONE-NEXT: [004]                   {Code} 'local.get	10'
+; ONE-NEXT: [004]                   {Code} 'i32.store	12'
+; ONE-NEXT: [004]     6             {Line}
+; ONE-NEXT: [004]                   {Code} 'i32.const	7'
+; ONE-NEXT: [004]                   {Code} 'local.set	11'
+; ONE-NEXT: [004]                   {Code} 'local.get	5'
+; ONE-NEXT: [004]                   {Code} 'local.get	11'
+; ONE-NEXT: [004]                   {Code} 'i32.store	28'
+; ONE-NEXT: [004]                   {Code} 'br      	1'
+; ONE-NEXT: [004]     -             {Line}
+; ONE-NEXT: [004]                   {Code} 'end'
+; ONE-NEXT: [003]     4           {TypeAlias} 'INTEGER' -> 'int'
+; ONE-NEXT: [003]     2           {Line}
+; ONE-NEXT: [003]                 {Code} 'nop'
+; ONE-NEXT: [003]                 {Code} 'end'
+; ONE-NEXT: [003]                 {Code} 'i64.div_s'
+; ONE-NEXT: [003]                 {Code} 'global.get	0'
+; ONE-NEXT: [003]                 {Code} 'local.set	3'
+; ONE-NEXT: [003]                 {Code} 'i32.const	32'
+; ONE-NEXT: [003]                 {Code} 'local.set	4'
+; ONE-NEXT: [003]                 {Code} 'local.get	3'
+; ONE-NEXT: [003]                 {Code} 'local.get	4'
+; ONE-NEXT: [003]                 {Code} 'i32.sub'
+; ONE-NEXT: [003]                 {Code} 'local.set	5'
+; ONE-NEXT: [003]                 {Code} 'local.get	5'
+; ONE-NEXT: [003]                 {Code} 'local.get	0'
+; ONE-NEXT: [003]                 {Code} 'i32.store	24'
+; ONE-NEXT: [003]                 {Code} 'local.get	5'
+; ONE-NEXT: [003]                 {Code} 'local.get	1'
+; ONE-NEXT: [003]                 {Code} 'i32.store	20'
+; ONE-NEXT: [003]                 {Code} 'local.get	2'
+; ONE-NEXT: [003]                 {Code} 'local.set	6'
+; ONE-NEXT: [003]                 {Code} 'local.get	5'
+; ONE-NEXT: [003]                 {Code} 'local.get	6'
+; ONE-NEXT: [003]                 {Code} 'i32.store8	19'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'local.get	5'
+; ONE-NEXT: [003]                 {Code} 'i32.load8_u	19'
+; ONE-NEXT: [003]                 {Code} 'local.set	7'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'i32.const	1'
+; ONE-NEXT: [003]                 {Code} 'local.set	8'
+; ONE-NEXT: [003]                 {Code} 'local.get	7'
+; ONE-NEXT: [003]                 {Code} 'local.get	8'
+; ONE-NEXT: [003]                 {Code} 'i32.and'
+; ONE-NEXT: [003]                 {Code} 'local.set	9'
+; ONE-NEXT: [003]                 {Code} 'block'
+; ONE-NEXT: [003]                 {Code} 'block'
+; ONE-NEXT: [003]                 {Code} 'local.get	9'
+; ONE-NEXT: [003]                 {Code} 'i32.eqz'
+; ONE-NEXT: [003]                 {Code} 'br_if   	0'
+; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} 'local.get	5'
+; ONE-NEXT: [003]                 {Code} 'i32.load	20'
+; ONE-NEXT: [003]                 {Code} 'local.set	12'
+; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} 'local.get	5'
+; ONE-NEXT: [003]                 {Code} 'local.get	12'
+; ONE-NEXT: [003]                 {Code} 'i32.store	28'
+; ONE-NEXT: [003]     -           {Line}
+; ONE-NEXT: [003]                 {Code} 'end'
+; ONE-NEXT: [003]     9           {Line}
+; ONE-NEXT: [003]                 {Code} 'local.get	5'
+; ONE-NEXT: [003]                 {Code} 'i32.load	28'
+; ONE-NEXT: [003]                 {Code} 'local.set	13'
+; ONE-NEXT: [003]                 {Code} 'local.get	13'
+; ONE-NEXT: [003]                 {Code} 'return'
+; ONE-NEXT: [003]                 {Code} 'end'
+; ONE-NEXT: [003]     9           {Line}
+; ONE-NEXT: [003]                 {Code} 'unreachable'
+; ONE-NEXT: [002]     1         {TypeAlias} 'INTPTR' -> '* const int'

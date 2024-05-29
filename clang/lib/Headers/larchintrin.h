@@ -156,7 +156,7 @@ extern __inline unsigned char
   return (unsigned char)__builtin_loongarch_iocsrrd_b((unsigned int)_1);
 }
 
-extern __inline unsigned char
+extern __inline unsigned short
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     __iocsrrd_h(unsigned int _1) {
   return (unsigned short)__builtin_loongarch_iocsrrd_h((unsigned int)_1);

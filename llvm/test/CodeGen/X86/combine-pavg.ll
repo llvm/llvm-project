@@ -18,6 +18,22 @@ define <16 x i8> @combine_pavgb_self(<16 x i8> %a0) {
   ret <16 x i8> %1
 }
 
+define <16 x i8> @combine_pavgb_zero(<16 x i8> %a0) {
+; SSE-LABEL: combine_pavgb_zero:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pavgb %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pavgb_zero:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpavgb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> zeroinitializer, <16 x i8> %a0)
+  ret <16 x i8> %1
+}
+
 define <16 x i8> @combine_pavgw_knownbits(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2, <8 x i16> %a3) {
 ; SSE-LABEL: combine_pavgw_knownbits:
 ; SSE:       # %bb.0:
@@ -64,3 +80,30 @@ define <16 x i8> @combine_pavgw_knownbits(<8 x i16> %a0, <8 x i16> %a1, <8 x i16
   %trunc = trunc <16 x i16> %shuffle to <16 x i8>
   ret <16 x i8> %trunc
 }
+
+define <8 x i16> @combine_pavgw_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: combine_pavgw_demandedelts:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pavgw %xmm1, %xmm0
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_pavgw_demandedelts:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpavgw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pavgw_demandedelts:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpavgw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastw %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %s0 = shufflevector <8 x i16> %a0, <8 x i16> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
+  %avg = tail call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %s0, <8 x i16> %a1)
+  %shuffle = shufflevector <8 x i16> %avg, <8 x i16> poison, <8 x i32> zeroinitializer
+  ret <8 x i16> %shuffle
+}
+

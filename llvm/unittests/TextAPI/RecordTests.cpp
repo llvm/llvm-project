@@ -19,7 +19,7 @@ TEST(TAPIRecord, Simple) {
   GlobalRecord API{"_sym", RecordLinkage::Rexported,
                    SymbolFlags::Rexported | SymbolFlags::Text |
                        SymbolFlags::ThreadLocalValue,
-                   GlobalRecord::Kind::Function};
+                   GlobalRecord::Kind::Function, /*Inlined=*/false};
   EXPECT_TRUE(API.isExported());
   EXPECT_TRUE(API.isText());
   EXPECT_TRUE(API.isRexported());
@@ -30,6 +30,7 @@ TEST(TAPIRecord, Simple) {
   EXPECT_FALSE(API.isWeakDefined());
   EXPECT_FALSE(API.isWeakReferenced());
   EXPECT_FALSE(API.isVariable());
+  EXPECT_FALSE(API.isInlined());
 }
 
 TEST(TAPIRecord, SimpleObjC) {

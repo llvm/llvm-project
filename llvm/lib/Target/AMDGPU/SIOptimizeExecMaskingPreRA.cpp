@@ -456,7 +456,8 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
       Register SavedExec = I->getOperand(0).getReg();
       if (SavedExec.isVirtual() && MRI->hasOneNonDBGUse(SavedExec)) {
         MachineInstr *SingleExecUser = &*MRI->use_instr_nodbg_begin(SavedExec);
-        int Idx = SingleExecUser->findRegisterUseOperandIdx(SavedExec);
+        int Idx = SingleExecUser->findRegisterUseOperandIdx(SavedExec,
+                                                            /*TRI=*/nullptr);
         assert(Idx != -1);
         if (SingleExecUser->getParent() == I->getParent() &&
             !SingleExecUser->getOperand(Idx).isImplicit() &&

@@ -183,7 +183,6 @@ define noalias ptr @call_realloc(ptr nocapture %0, i64 %1) local_unnamed_addr #0
 
 
 ; CHECK: Function Attrs:  nofree noinline nounwind memory(none) uwtable
-; CHECK-NEXT: declare void @nofree_function()
 declare void @nofree_function() nofree readnone #0
 
 define void @call_nofree_function() #0 {
@@ -206,7 +205,6 @@ define void @call_nofree_function() #0 {
 
 
 ; CHECK: Function Attrs: noinline nounwind uwtable
-; CHECK-NEXT: declare void @maybe_free()
 declare void @maybe_free() #0
 
 
@@ -241,7 +239,6 @@ define void @call_both() #0 {
 ; TEST 10 (positive case)
 ; Call intrinsic function
 ; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-; CHECK-NEXT: declare float @llvm.floor.f32(float)
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {

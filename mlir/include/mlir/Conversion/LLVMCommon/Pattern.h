@@ -11,6 +11,7 @@
 
 #include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
@@ -18,13 +19,16 @@ class CallOpInterface;
 
 namespace LLVM {
 namespace detail {
+/// Handle generically setting flags as native properties on LLVM operations.
+void setNativeProperties(Operation *op, IntegerOverflowFlags overflowFlags);
+
 /// Replaces the given operation "op" with a new operation of type "targetOp"
 /// and given operands.
-LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
-                              ValueRange operands,
-                              ArrayRef<NamedAttribute> targetAttrs,
-                              const LLVMTypeConverter &typeConverter,
-                              ConversionPatternRewriter &rewriter);
+LogicalResult oneToOneRewrite(
+    Operation *op, StringRef targetOp, ValueRange operands,
+    ArrayRef<NamedAttribute> targetAttrs,
+    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
+    IntegerOverflowFlags overflowFlags = IntegerOverflowFlags::none);
 
 } // namespace detail
 } // namespace LLVM

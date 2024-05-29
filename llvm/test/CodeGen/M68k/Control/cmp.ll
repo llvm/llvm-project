@@ -8,10 +8,10 @@ define i32 @test1(ptr %y) nounwind {
 ; CHECK-NEXT:    cmpi.l #0, (%a0)
 ; CHECK-NEXT:    beq .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %cond_false
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB0_2: ; %cond_true
-; CHECK-NEXT:    move.l #1, %d0
+; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    rts
  %tmp = load i32, ptr %y  ; <i32> [#uses=1]
  %tmp.upgrd.1 = icmp eq i32 %tmp, 0  ; <i1> [#uses=1]
@@ -33,10 +33,10 @@ define i32 @test2(ptr %y) nounwind {
 ; CHECK-NEXT:    cmpi.l #0, %d0
 ; CHECK-NEXT:    beq .LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %cond_false
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB1_2: ; %cond_true
-; CHECK-NEXT:    move.l #1, %d0
+; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    rts
  %tmp = load i32, ptr %y  ; <i32> [#uses=1]
  %tmp1 = shl i32 %tmp, 3  ; <i32> [#uses=1]
@@ -59,10 +59,10 @@ define i8 @test2b(ptr %y) nounwind {
 ; CHECK-NEXT:    cmpi.b #0, %d0
 ; CHECK-NEXT:    beq .LBB2_2
 ; CHECK-NEXT:  ; %bb.1: ; %cond_false
-; CHECK-NEXT:    move.b #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB2_2: ; %cond_true
-; CHECK-NEXT:    move.b #1, %d0
+; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    rts
  %tmp = load i8, ptr %y  ; <i8> [#uses=1]
  %tmp1 = shl i8 %tmp, 3  ; <i8> [#uses=1]
@@ -84,7 +84,7 @@ define i64 @test3(i64 %x) nounwind {
 ; CHECK-NEXT:    seq %d0
 ; CHECK-NEXT:    move.l %d0, %d1
 ; CHECK-NEXT:    and.l #255, %d1
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    rts
   %t = icmp eq i64 %x, 0
   %r = zext i1 %t to i64
@@ -97,7 +97,7 @@ define i64 @test4(i64 %x) nounwind {
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l (8,%sp), %d1
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    move.l (12,%sp), %d2
 ; CHECK-NEXT:    sub.l #1, %d2
 ; CHECK-NEXT:    subx.l %d0, %d1
@@ -119,11 +119,11 @@ define i32 @test6() nounwind align 2 {
 ; CHECK-NEXT:    or.l (8,%sp), %d0
 ; CHECK-NEXT:    beq .LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %F
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB5_1: ; %T
-; CHECK-NEXT:    move.l #1, %d0
+; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
   %A = alloca {i64, i64}, align 8
@@ -229,7 +229,7 @@ define zeroext i1 @test15(i32 %bf.load, i32 %n) {
 ; CHECK-LABEL: test15:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
-; CHECK-NEXT:    move.l #16, %d0
+; CHECK-NEXT:    moveq #16, %d0
 ; CHECK-NEXT:    move.l (4,%sp), %d1
 ; CHECK-NEXT:    lsr.l %d0, %d1
 ; CHECK-NEXT:    move.l %d1, %d0
@@ -252,7 +252,7 @@ define i8 @test16(i16 signext %L) {
 ; CHECK-LABEL: test16:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
-; CHECK-NEXT:    move.w #15, %d1
+; CHECK-NEXT:    moveq #15, %d1
 ; CHECK-NEXT:    move.w (6,%sp), %d0
 ; CHECK-NEXT:    lsr.w %d1, %d0
 ; CHECK-NEXT:    eori.b #1, %d0
@@ -268,7 +268,7 @@ define i8 @test18(i64 %L) {
 ; CHECK-LABEL: test18:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
-; CHECK-NEXT:    move.l #31, %d1
+; CHECK-NEXT:    moveq #31, %d1
 ; CHECK-NEXT:    move.l (4,%sp), %d0
 ; CHECK-NEXT:    lsr.l %d1, %d0
 ; CHECK-NEXT:    eori.b #1, %d0

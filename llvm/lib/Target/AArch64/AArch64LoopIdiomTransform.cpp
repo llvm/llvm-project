@@ -190,17 +190,23 @@ AArch64LoopIdiomTransformPass::run(Loop &L, LoopAnalysisManager &AM,
 bool AArch64LoopIdiomTransform::run(Loop *L) {
   CurLoop = L;
 
-  if (DisableAll || L->getHeader()->getParent()->hasOptSize())
+  Function &F = *L->getHeader()->getParent();
+  if (DisableAll || F.hasOptSize())
     return false;
+
+  if (F.hasFnAttribute(Attribute::NoImplicitFloat)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << " is disabled on " << F.getName()
+                      << " due to its NoImplicitFloat attribute");
+    return false;
+  }
 
   // If the loop could not be converted to canonical form, it must have an
   // indirectbr in it, just give up.
   if (!L->getLoopPreheader())
     return false;
 
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE " Scanning: F["
-                    << CurLoop->getHeader()->getParent()->getName()
-                    << "] Loop %" << CurLoop->getHeader()->getName() << "\n");
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " Scanning: F[" << F.getName() << "] Loop %"
+                    << CurLoop->getHeader()->getName() << "\n");
 
   return recognizeByteCompare();
 }

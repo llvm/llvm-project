@@ -68,6 +68,8 @@ public:
 
   uint64_t GetValueAsUnsigned(uint64_t fail_value = 0);
 
+  lldb::addr_t GetValueAsAddress();
+
   ValueType GetValueType();
 
   // If you call this on a newly created ValueObject, it will always return
@@ -426,6 +428,7 @@ protected:
   friend class SBModule;
   friend class SBTarget;
   friend class SBThread;
+  friend class SBTypeStaticField;
   friend class SBTypeSummary;
   friend class SBValueList;
 

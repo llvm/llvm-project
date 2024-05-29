@@ -40,12 +40,12 @@
 namespace LIBC_NAMESPACE::x86 {
 
 // A set of constants to check compile time features.
-LIBC_INLINE_VAR constexpr bool kSse2 = LLVM_LIBC_IS_DEFINED(__SSE2__);
-LIBC_INLINE_VAR constexpr bool kSse41 = LLVM_LIBC_IS_DEFINED(__SSE4_1__);
-LIBC_INLINE_VAR constexpr bool kAvx = LLVM_LIBC_IS_DEFINED(__AVX__);
-LIBC_INLINE_VAR constexpr bool kAvx2 = LLVM_LIBC_IS_DEFINED(__AVX2__);
-LIBC_INLINE_VAR constexpr bool kAvx512F = LLVM_LIBC_IS_DEFINED(__AVX512F__);
-LIBC_INLINE_VAR constexpr bool kAvx512BW = LLVM_LIBC_IS_DEFINED(__AVX512BW__);
+LIBC_INLINE_VAR constexpr bool K_SSE2 = LLVM_LIBC_IS_DEFINED(__SSE2__);
+LIBC_INLINE_VAR constexpr bool K_SSE41 = LLVM_LIBC_IS_DEFINED(__SSE4_1__);
+LIBC_INLINE_VAR constexpr bool K_AVX = LLVM_LIBC_IS_DEFINED(__AVX__);
+LIBC_INLINE_VAR constexpr bool K_AVX2 = LLVM_LIBC_IS_DEFINED(__AVX2__);
+LIBC_INLINE_VAR constexpr bool K_AVX512_F = LLVM_LIBC_IS_DEFINED(__AVX512F__);
+LIBC_INLINE_VAR constexpr bool K_AVX512_BW = LLVM_LIBC_IS_DEFINED(__AVX512BW__);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Memcpy repmovsb implementation

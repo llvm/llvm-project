@@ -599,8 +599,8 @@ static bool hasSameValue(const MachineRegisterInfo &MRI,
     return false;
 
   // Further, check that the two defs come from corresponding operands.
-  int TIdx = TDef->findRegisterDefOperandIdx(TReg);
-  int FIdx = FDef->findRegisterDefOperandIdx(FReg);
+  int TIdx = TDef->findRegisterDefOperandIdx(TReg, /*TRI=*/nullptr);
+  int FIdx = FDef->findRegisterDefOperandIdx(FReg, /*TRI=*/nullptr);
   if (TIdx == -1 || FIdx == -1)
     return false;
 

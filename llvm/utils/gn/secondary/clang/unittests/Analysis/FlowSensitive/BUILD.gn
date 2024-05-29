@@ -33,7 +33,6 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "SignAnalysisTest.cpp",
     "SimplifyConstraintsTest.cpp",
     "SingleVarConstantPropagationTest.cpp",
-    "SolverTest.cpp",
     "TestingSupport.cpp",
     "TestingSupportTest.cpp",
     "TransferBranchTest.cpp",
@@ -41,5 +40,6 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "TypeErasedDataflowAnalysisTest.cpp",
     "UncheckedOptionalAccessModelTest.cpp",
     "ValueTest.cpp",
+    "WatchedLiteralsSolverTest.cpp",
   ]
 }

@@ -35,7 +35,7 @@ public:
   virtual void ReaderInitialized(ASTReader *Reader) { }
 
   /// An identifier was deserialized from the AST file.
-  virtual void IdentifierRead(serialization::IdentID ID,
+  virtual void IdentifierRead(serialization::IdentifierID ID,
                               IdentifierInfo *II) { }
   /// A macro was read from the AST file.
   virtual void MacroRead(serialization::MacroID ID, MacroInfo *MI) { }
@@ -44,7 +44,7 @@ public:
   ///        unqualified.
   virtual void TypeRead(serialization::TypeIdx Idx, QualType T) { }
   /// A decl was deserialized from the AST file.
-  virtual void DeclRead(serialization::DeclID ID, const Decl *D) { }
+  virtual void DeclRead(GlobalDeclID ID, const Decl *D) {}
   /// A selector was read from the AST file.
   virtual void SelectorRead(serialization::SelectorID iD, Selector Sel) {}
   /// A macro definition was read from the AST file.

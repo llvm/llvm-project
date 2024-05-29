@@ -90,6 +90,9 @@ add_clang_library(clangDriver
 
   DEPENDS
   ClangDriverOptions
+  # These generated headers are included transitively.
+  ARMTargetParserTableGen
+  AArch64TargetParserTableGen
 
   LINK_LIBS
   clangBasic

@@ -304,6 +304,28 @@ static void calculateTileOffsetsAndSizes(
   }
 }
 
+/// Returns a vector of bools representing if, for each axis, `op` can be tiled
+/// without incurring in a race condition and thus it is thread-safe to do the
+/// tiling. This is checked by iterating over numThreads and ensuring that the
+/// corresponding iterator type is "parallel". If it is not, then we know that
+/// such dimension is unsafe to tile.
+SmallVector<bool> safeToTileToForall(mlir::MLIRContext *ctx, LinalgOp linalgOp,
+                                     ArrayRef<OpFoldResult> numThreads) {
+  auto iterators = linalgOp.getIteratorTypesArray();
+  SmallVector<bool> safeToTile(numThreads.size(), true);
+
+  for (unsigned i = 0, e = numThreads.size(); i != e; i++) {
+    if (auto attr = llvm::dyn_cast_if_present<Attribute>(numThreads[i])) {
+      if (cast<IntegerAttr>(attr).getValue().getSExtValue() > 1) {
+        safeToTile[i] = iterators[i] == utils::IteratorType::parallel;
+      }
+    } else {
+      safeToTile[i] = iterators[i] == utils::IteratorType::parallel;
+    }
+  }
+  return safeToTile;
+}
+
 /// Rewrite a TilingInterface `op` to a tiled `scf.forall`. The
 /// tiling is specified by the number of tiles/threads `numThreads` and the
 /// optional nominal tile size `nominalTileSizes`. If `nominalTilSizes` is
@@ -314,8 +336,10 @@ static void calculateTileOffsetsAndSizes(
 /// size of data.
 /// It is the user's responsibility to ensure that `numThreads` is a valid
 /// tiling specification (i.e. that only tiles parallel dimensions, e.g. in the
-/// Linalg case). If `omitTileOffsetBoundsCheck` is true, then the function will
-/// assume that `tileSize[i] * (numThread[i] -1) <= dimSize[i]` holds.
+/// Linalg case). If the dimension is not parallelizable, a warning is issued to
+/// notify the user that the generated code is not safe to parallelize. If
+/// `omitTileOffsetBoundsCheck` is true, then the function will assume that
+/// `tileSize[i] * (numThread[i] -1) <= dimSize[i]` holds.
 static FailureOr<ForallTilingResult> tileToForallOpImpl(
     RewriterBase &b, TilingInterface op, ArrayRef<OpFoldResult> numThreads,
     std::optional<ArrayRef<OpFoldResult>> nominalTileSizes,
@@ -344,6 +368,16 @@ static FailureOr<ForallTilingResult> tileToForallOpImpl(
         return getValueOrCreateConstantIndexOp(b, loc, ofr);
       }));
 
+  LinalgOp linalgOp = dyn_cast<LinalgOp>(op.getOperation());
+  if (linalgOp) {
+    // Check if tiling is thread safe and print a warning if not.
+    SmallVector<bool> tilingSafety =
+        safeToTileToForall(b.getContext(), linalgOp, numThreads);
+    for (size_t i = 0; i < tilingSafety.size(); i++)
+      if (!tilingSafety[i])
+        op.emitWarning() << "tiling is not thread safe at axis #" << i;
+  }
+
   // 1. Create the ForallOp. We don't use the lambda body-builder
   // version because we require the use of RewriterBase in the body, so we
   // manually move the insertion point to the body below.
@@ -371,7 +405,7 @@ static FailureOr<ForallTilingResult> tileToForallOpImpl(
       for (OpOperand &outOperand : destinationStyleOp.getDpsInitsMutable()) {
         // Swap tensor inits with the corresponding block argument of the
         // scf.forall op. Memref inits remain as is.
-        if (outOperand.get().getType().isa<TensorType>()) {
+        if (isa<TensorType>(outOperand.get().getType())) {
           auto *it = llvm::find(dest, outOperand.get());
           assert(it != dest.end() && "could not find destination tensor");
           unsigned destNum = std::distance(dest.begin(), it);
@@ -658,12 +692,13 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
         op, "reduction dimension must be mapped to threads");
 
   // 1. Create the inital tensor value.
-  FailureOr<Operation *> identityTensor =
+  FailureOr<SmallVector<Value>> maybeInitTensors =
       op.generateInitialTensorForPartialReduction(b, loc, numThreads,
                                                   reductionDim);
-  if (failed(identityTensor))
-    return b.notifyMatchFailure(op,
-                                "cannot create a tensor of identity value.");
+  if (failed(maybeInitTensors))
+    return b.notifyMatchFailure(
+        op, "Failed to create inital tensors for partial reduction");
+  SmallVector<Value> &initTensors = maybeInitTensors.value();
 
   // Gather destination tensors.
   SmallVector<Value> dest;
@@ -681,8 +716,8 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
 
   // 2. Create the ForallOp with an empty region.
   scf::ForallOp forallOp = b.create<scf::ForallOp>(
-      loc, getAsOpFoldResult(materializedNonZeroNumThreads),
-      (*identityTensor)->getResults(), mapping);
+      loc, getAsOpFoldResult(materializedNonZeroNumThreads), initTensors,
+      mapping);
 
   // 3. Calculate the tile offsets and sizes for the subsequent loop that will
   // be nested under `forallOp`.
@@ -692,7 +727,7 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
                                /*nominalTileSizes=*/std::nullopt, tiledOffsets,
                                tiledSizes);
 
-  // 4. Clone the tileable op and update its destination operands to use the
+  // 4b. Clone the tileable op and update its destination operands to use the
   // output bbArgs of the ForallOp.
   SmallVector<Value> tilingResults;
   ArrayRef<BlockArgument> destBbArgs = forallOp.getRegionIterArgs();
@@ -804,7 +839,7 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
 
   // 8. Return.
   ForallReductionTilingResult results;
-  results.initialOp = *identityTensor;
+  results.initialValues = initTensors;
   results.loops = forallOp;
   results.parallelTiledOp = tiledOp;
   results.mergeOp = mergeOp;

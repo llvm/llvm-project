@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -triple x86_64-gnu-linux -x c -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,ATOMICS
-// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -triple aarch64-gnu-linux -x c -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,ATOMICS
+// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -triple x86_64-gnu-linux -x c -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,ATOMICS
+// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -triple aarch64-gnu-linux -x c -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,ATOMICS
 
 // CHECK: @__start_sanmd_atomics = extern_weak hidden global ptr
 // CHECK: @__stop_sanmd_atomics = extern_weak hidden global ptr

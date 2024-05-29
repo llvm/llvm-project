@@ -14,10 +14,10 @@ declare ptr @llvm.eh.recoverfp(ptr, ptr)
 declare ptr @llvm.localrecover(ptr, ptr, i32)
 declare void @llvm.localescape(...) #1
 
-declare i32 @_except_handler3(...)
+declare i32 @__gcc_personality_v0(...)
 declare void @may_throw(ptr %r)
 
-define i32 @main() sanitize_address personality ptr @_except_handler3 {
+define i32 @main() sanitize_address personality ptr @__gcc_personality_v0 {
 entry:
   %r = alloca i32, align 4
   %__exception_code = alloca i32, align 4

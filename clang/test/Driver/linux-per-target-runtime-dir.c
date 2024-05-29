@@ -3,7 +3,6 @@
 // RUN:     -stdlib=libc++ \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxx_tree/usr/bin \
-// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-PER-TARGET-RUNTIME %s
 // CHECK-PER-TARGET-RUNTIME: "-cc1"

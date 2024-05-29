@@ -271,31 +271,49 @@ define i32 @mul288(i32 %a) {
 }
 
 define i32 @mul258(i32 %a) {
-; CHECK-LABEL: mul258:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 258
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: mul258:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 258
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul258:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    slli a1, a0, 8
+; RV32ZBA-NEXT:    sh1add a0, a0, a1
+; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 258
   ret i32 %c
 }
 
 define i32 @mul260(i32 %a) {
-; CHECK-LABEL: mul260:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 260
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: mul260:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 260
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul260:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    slli a1, a0, 8
+; RV32ZBA-NEXT:    sh2add a0, a0, a1
+; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 260
   ret i32 %c
 }
 
 define i32 @mul264(i32 %a) {
-; CHECK-LABEL: mul264:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 264
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: mul264:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 264
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul264:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    slli a1, a0, 8
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 264
   ret i32 %c
 }
@@ -389,8 +407,8 @@ define i32 @mul25(i32 %a) {
 ;
 ; RV32ZBA-LABEL: mul25:
 ; RV32ZBA:       # %bb.0:
-; RV32ZBA-NEXT:    sh1add a1, a0, a0
-; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
 ; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 25
   ret i32 %c
@@ -437,8 +455,8 @@ define i32 @mul27(i32 %a) {
 ;
 ; RV32ZBA-LABEL: mul27:
 ; RV32ZBA:       # %bb.0:
-; RV32ZBA-NEXT:    sh3add a0, a0, a0
 ; RV32ZBA-NEXT:    sh1add a0, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
 ; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 27
   ret i32 %c
@@ -453,8 +471,8 @@ define i32 @mul45(i32 %a) {
 ;
 ; RV32ZBA-LABEL: mul45:
 ; RV32ZBA:       # %bb.0:
-; RV32ZBA-NEXT:    sh3add a0, a0, a0
 ; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
 ; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 45
   ret i32 %c
@@ -626,4 +644,97 @@ define i32 @addshl_5_8(i32 %a, i32 %b) {
   %d = shl i32 %b, 8
   %e = add i32 %c, %d
   ret i32 %e
+}
+
+define i32 @mul_neg1(i32 %a) {
+; CHECK-LABEL: mul_neg1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %c = mul i32 %a, -1
+  ret i32 %c
+}
+
+define i32 @mul_neg2(i32 %a) {
+; CHECK-LABEL: mul_neg2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %c = mul i32 %a, -2
+  ret i32 %c
+}
+
+define i32 @mul_neg3(i32 %a) {
+; RV32I-LABEL: mul_neg3:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a0, 1
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul_neg3:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a0, a0, a0
+; RV32ZBA-NEXT:    neg a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, -3
+  ret i32 %c
+}
+
+define i32 @mul_neg4(i32 %a) {
+; CHECK-LABEL: mul_neg4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %c = mul i32 %a, -4
+  ret i32 %c
+}
+
+define i32 @mul_neg5(i32 %a) {
+; RV32I-LABEL: mul_neg5:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a0, 2
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul_neg5:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    neg a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, -5
+  ret i32 %c
+}
+
+define i32 @mul_neg6(i32 %a) {
+; CHECK-LABEL: mul_neg6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, -6
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i32 %a, -6
+  ret i32 %c
+}
+
+define i32 @mul_neg7(i32 %a) {
+; CHECK-LABEL: mul_neg7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a0, 3
+; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i32 %a, -7
+  ret i32 %c
+}
+
+define i32 @mul_neg8(i32 %a) {
+; CHECK-LABEL: mul_neg8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %c = mul i32 %a, -8
+  ret i32 %c
 }

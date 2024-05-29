@@ -168,33 +168,41 @@ def brtarget   : Operand<OtherVT>;
 
 class HasOneUseUnaryOp<SDPatternOperator op> : PatFrag<
   (ops node:$src0),
-  (op $src0),
-  [{ return N->hasOneUse(); }]> {
-
-  let GISelPredicateCode = [{
-    return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
-  }];
+  (op $src0)> {
+  let HasOneUse = 1;
 }
 
 class HasOneUseBinOp<SDPatternOperator op> : PatFrag<
   (ops node:$src0, node:$src1),
-  (op $src0, $src1),
-  [{ return N->hasOneUse(); }]> {
-  let GISelPredicateCode = [{
-    return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
-  }];
+  (op $src0, $src1)> {
+  let HasOneUse = 1;
 }
 
 class HasOneUseTernaryOp<SDPatternOperator op> : PatFrag<
   (ops node:$src0, node:$src1, node:$src2),
-  (op $src0, $src1, $src2),
-  [{ return N->hasOneUse(); }]> {
+  (op $src0, $src1, $src2)> {
+  let HasOneUse = 1;
+}
+
+class is_canonicalized_1<SDPatternOperator op> : PatFrag<
+  (ops node:$src0),
+  (op $src0),
+  [{
+    const SITargetLowering &Lowering =
+              *static_cast<const SITargetLowering *>(getTargetLowering());
+
+    return Lowering.isCanonicalized(*CurDAG, N->getOperand(0));
+   }]> {
+
   let GISelPredicateCode = [{
-    return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
+    const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
+      MF.getSubtarget().getTargetLowering());
+
+    return TLI->isCanonicalized(MI.getOperand(1).getReg(), MF);
   }];
 }
 
-class is_canonicalized<SDPatternOperator op> : PatFrag<
+class is_canonicalized_2<SDPatternOperator op> : PatFrag<
   (ops node:$src0, node:$src1),
   (op $src0, $src1),
   [{
@@ -210,8 +218,8 @@ class is_canonicalized<SDPatternOperator op> : PatFrag<
     const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
       MF.getSubtarget().getTargetLowering());
 
-    return TLI->isCanonicalized(MI.getOperand(1).getReg(), const_cast<MachineFunction&>(MF)) &&
-      TLI->isCanonicalized(MI.getOperand(2).getReg(), const_cast<MachineFunction&>(MF));
+    return TLI->isCanonicalized(MI.getOperand(1).getReg(), MF) &&
+      TLI->isCanonicalized(MI.getOperand(2).getReg(), MF);
   }];
 }
 

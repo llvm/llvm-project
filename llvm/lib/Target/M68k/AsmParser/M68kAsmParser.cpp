@@ -157,7 +157,7 @@ public:
   bool isDReg() const;
   bool isFPDReg() const;
   bool isFPCReg() const;
-  unsigned getReg() const override;
+  MCRegister getReg() const override;
   void addRegOperands(MCInst &Inst, unsigned N) const;
 
   static std::unique_ptr<M68kOperand> createMemOp(M68kMemOp MemOp, SMLoc Start,
@@ -312,7 +312,7 @@ bool M68kOperand::isReg() const {
   return Kind == KindTy::MemOp && MemOp.Op == M68kMemOp::Kind::Reg;
 }
 
-unsigned M68kOperand::getReg() const {
+MCRegister M68kOperand::getReg() const {
   assert(isReg());
   return MemOp.OuterReg;
 }

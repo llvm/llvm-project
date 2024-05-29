@@ -38,7 +38,7 @@ for.end:                                          ; preds = %for.cond
 
 ; CHECK: Loop 'for.cond' has cost = 100000000
 ; CHECK: Loop 'for.cond1' has cost = 1000000
-; CHECK: Loop 'for.cond5' has cost = 30000
+; CHECK: Loop 'for.cond5' has cost = 40000
 
 @data = external dso_local global [2 x [4 x [18 x i32]]], align 1
 
@@ -118,7 +118,7 @@ for.neg.end:                                          ; preds = %for.neg.cond
 ; access functions. When this is fixed this testcase should have a cost
 ; approximately 2x higher.
 
-; CHECK: Loop 'for.cond2' has cost = 2560
+; CHECK: Loop 'for.cond2' has cost = 2561
 define void @Test2(ptr %B) {
 entry:
   br label %for.cond2
@@ -148,7 +148,7 @@ for.end:                                          ; preds = %for.cond
 ;   for (i = 40960; i > 0; i--)
 ;     C[i] = C[i];
 
-; CHECK: Loop 'for.cond3' has cost = 2560
+; CHECK: Loop 'for.cond3' has cost = 2561
 define void @Test3(ptr %C) {
 entry:
   br label %for.cond3
@@ -177,7 +177,7 @@ for.end:                                          ; preds = %for.cond
 ;  for (i = 0; i < 40960; i++)
 ;     D[i] = D[i];
 
-; CHECK: Loop 'for.cond4' has cost = 2560
+; CHECK: Loop 'for.cond4' has cost = 2561
 define void @Test4(ptr %D) {
 entry:
   br label %for.cond4

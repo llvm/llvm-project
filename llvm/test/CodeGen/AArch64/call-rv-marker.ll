@@ -201,17 +201,27 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    bl _objc_object
 ; GISEL-NEXT:  Ltmp1:
 ; GISEL-NEXT:  ; %bb.1: ; %invoke.cont
-; GISEL-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; GISEL-NEXT:  Lloh0:
+; GISEL-NEXT:    adrp x1, _objc_release@GOTPAGE
 ; GISEL-NEXT:    mov x0, x19
+; GISEL-NEXT:  Lloh1:
+; GISEL-NEXT:    ldr x1, [x1, _objc_release@GOTPAGEOFF]
+; GISEL-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; GISEL-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
-; GISEL-NEXT:    b _objc_release
+; GISEL-NEXT:    br x1
 ; GISEL-NEXT:  LBB3_2: ; %lpad
 ; GISEL-NEXT:  Ltmp2:
+; GISEL-NEXT:  Lloh2:
+; GISEL-NEXT:    adrp x8, _objc_release@GOTPAGE
 ; GISEL-NEXT:    mov x20, x0
 ; GISEL-NEXT:    mov x0, x19
-; GISEL-NEXT:    bl _objc_release
+; GISEL-NEXT:  Lloh3:
+; GISEL-NEXT:    ldr x8, [x8, _objc_release@GOTPAGEOFF]
+; GISEL-NEXT:    blr x8
 ; GISEL-NEXT:    mov x0, x20
 ; GISEL-NEXT:    bl __Unwind_Resume
+; GISEL-NEXT:    .loh AdrpLdrGot Lloh0, Lloh1
+; GISEL-NEXT:    .loh AdrpLdrGot Lloh2, Lloh3
 ; GISEL-NEXT:  Lfunc_end0:
 ; GISEL-NEXT:    .cfi_endproc
 ; GISEL-NEXT:    .section __TEXT,__gcc_except_tab
@@ -352,8 +362,12 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    bl _objc_object
 ; GISEL-NEXT:  Ltmp7:
 ; GISEL-NEXT:  ; %bb.2: ; %invoke.cont2
+; GISEL-NEXT:  Lloh4:
+; GISEL-NEXT:    adrp x8, _objc_release@GOTPAGE
 ; GISEL-NEXT:    mov x0, x19
-; GISEL-NEXT:    bl _objc_release
+; GISEL-NEXT:  Lloh5:
+; GISEL-NEXT:    ldr x8, [x8, _objc_release@GOTPAGEOFF]
+; GISEL-NEXT:    blr x8
 ; GISEL-NEXT:    add x0, sp, #15
 ; GISEL-NEXT:    bl __ZN1SD1Ev
 ; GISEL-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
@@ -362,9 +376,13 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:  LBB4_3: ; %lpad1
 ; GISEL-NEXT:  Ltmp8:
+; GISEL-NEXT:  Lloh6:
+; GISEL-NEXT:    adrp x8, _objc_release@GOTPAGE
 ; GISEL-NEXT:    mov x20, x0
 ; GISEL-NEXT:    mov x0, x19
-; GISEL-NEXT:    bl _objc_release
+; GISEL-NEXT:  Lloh7:
+; GISEL-NEXT:    ldr x8, [x8, _objc_release@GOTPAGEOFF]
+; GISEL-NEXT:    blr x8
 ; GISEL-NEXT:    b LBB4_5
 ; GISEL-NEXT:  LBB4_4: ; %lpad
 ; GISEL-NEXT:  Ltmp5:
@@ -374,6 +392,8 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    bl __ZN1SD1Ev
 ; GISEL-NEXT:    mov x0, x20
 ; GISEL-NEXT:    bl __Unwind_Resume
+; GISEL-NEXT:    .loh AdrpLdrGot Lloh4, Lloh5
+; GISEL-NEXT:    .loh AdrpLdrGot Lloh6, Lloh7
 ; GISEL-NEXT:  Lfunc_end1:
 ; GISEL-NEXT:    .cfi_endproc
 ; GISEL-NEXT:    .section __TEXT,__gcc_except_tab
@@ -467,9 +487,9 @@ define dso_local ptr @rv_marker_5_indirect_call() {
 ; GISEL-NEXT:    .cfi_offset w29, -16
 ; GISEL-NEXT:    .cfi_offset w19, -24
 ; GISEL-NEXT:    .cfi_offset w20, -32
-; GISEL-NEXT:  Lloh0:
+; GISEL-NEXT:  Lloh8:
 ; GISEL-NEXT:    adrp x8, _fptr@PAGE
-; GISEL-NEXT:  Lloh1:
+; GISEL-NEXT:  Lloh9:
 ; GISEL-NEXT:    ldr x8, [x8, _fptr@PAGEOFF]
 ; GISEL-NEXT:    blr x8
 ; GISEL-NEXT:    mov x29, x29
@@ -480,7 +500,7 @@ define dso_local ptr @rv_marker_5_indirect_call() {
 ; GISEL-NEXT:    mov x0, x19
 ; GISEL-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; GISEL-NEXT:    ret
-; GISEL-NEXT:    .loh AdrpLdr Lloh0, Lloh1
+; GISEL-NEXT:    .loh AdrpLdr Lloh8, Lloh9
 entry:
   %0 = load ptr, ptr @fptr, align 8
   %call = call ptr %0() [ "clang.arc.attachedcall"(ptr @objc_retainAutoreleasedReturnValue) ]

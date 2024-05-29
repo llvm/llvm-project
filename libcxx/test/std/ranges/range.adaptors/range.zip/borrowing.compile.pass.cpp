@@ -13,7 +13,6 @@
 //      (enable_borrowed_range<Views> && ...);
 
 #include <ranges>
-#include <tuple>
 
 struct Borrowed : std::ranges::view_base {
   int* begin() const;

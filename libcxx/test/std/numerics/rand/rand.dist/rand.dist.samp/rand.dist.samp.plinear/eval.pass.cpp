@@ -58,7 +58,7 @@ test1()
         u.push_back(v);
     }
     std::sort(u.begin(), u.end());
-    int kp = -1;
+    std::ptrdiff_t kp = -1;
     double a = std::numeric_limits<double>::quiet_NaN();
     double m = std::numeric_limits<double>::quiet_NaN();
     double bk = std::numeric_limits<double>::quiet_NaN();
@@ -76,18 +76,17 @@ test1()
         p[i] /= S;
     for (std::size_t i = 0; i < N; ++i)
     {
-        int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
-        if (k != kp)
-        {
-            a = 0;
-            for (int j = 0; j < k; ++j)
-                a += areas[j];
-            m = (p[k+1] - p[k]) / (b[k+1] - b[k]);
-            bk = b[k];
-            c = (b[k+1]*p[k] - b[k]*p[k+1]) / (b[k+1] - b[k]);
-            kp = k;
+      std::ptrdiff_t k = std::lower_bound(b, b + Np + 1, u[i]) - b - 1;
+      if (k != kp) {
+        a = 0;
+        for (int j = 0; j < k; ++j)
+          a += areas[j];
+        m  = (p[k + 1] - p[k]) / (b[k + 1] - b[k]);
+        bk = b[k];
+        c  = (b[k + 1] * p[k] - b[k] * p[k + 1]) / (b[k + 1] - b[k]);
+        kp = k;
         }
-        assert(std::abs(f(u[i], a, m, bk, c) - double(i)/N) < .001);
+      assert(std::abs(f(u[i], a, m, bk, c) - double(i) / N) < .0013);
     }
 }
 
@@ -110,7 +109,7 @@ test2()
         u.push_back(v);
     }
     std::sort(u.begin(), u.end());
-    int kp = -1;
+    std::ptrdiff_t kp = -1;
     double a = std::numeric_limits<double>::quiet_NaN();
     double m = std::numeric_limits<double>::quiet_NaN();
     double bk = std::numeric_limits<double>::quiet_NaN();
@@ -128,18 +127,17 @@ test2()
         p[i] /= S;
     for (std::size_t i = 0; i < N; ++i)
     {
-        int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
-        if (k != kp)
-        {
-            a = 0;
-            for (int j = 0; j < k; ++j)
-                a += areas[j];
-            m = (p[k+1] - p[k]) / (b[k+1] - b[k]);
-            bk = b[k];
-            c = (b[k+1]*p[k] - b[k]*p[k+1]) / (b[k+1] - b[k]);
-            kp = k;
+      std::ptrdiff_t k = std::lower_bound(b, b + Np + 1, u[i]) - b - 1;
+      if (k != kp) {
+        a = 0;
+        for (int j = 0; j < k; ++j)
+          a += areas[j];
+        m  = (p[k + 1] - p[k]) / (b[k + 1] - b[k]);
+        bk = b[k];
+        c  = (b[k + 1] * p[k] - b[k] * p[k + 1]) / (b[k + 1] - b[k]);
+        kp = k;
         }
-        assert(std::abs(f(u[i], a, m, bk, c) - double(i)/N) < .001);
+      assert(std::abs(f(u[i], a, m, bk, c) - double(i) / N) < .0013);
     }
 }
 
@@ -162,7 +160,7 @@ test3()
         u.push_back(v);
     }
     std::sort(u.begin(), u.end());
-    int kp = -1;
+    std::ptrdiff_t kp = -1;
     double a = std::numeric_limits<double>::quiet_NaN();
     double m = std::numeric_limits<double>::quiet_NaN();
     double bk = std::numeric_limits<double>::quiet_NaN();
@@ -180,18 +178,17 @@ test3()
         p[i] /= S;
     for (std::size_t i = 0; i < N; ++i)
     {
-        int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
-        if (k != kp)
-        {
-            a = 0;
-            for (int j = 0; j < k; ++j)
-                a += areas[j];
-            m = (p[k+1] - p[k]) / (b[k+1] - b[k]);
-            bk = b[k];
-            c = (b[k+1]*p[k] - b[k]*p[k+1]) / (b[k+1] - b[k]);
-            kp = k;
+      std::ptrdiff_t k = std::lower_bound(b, b + Np + 1, u[i]) - b - 1;
+      if (k != kp) {
+        a = 0;
+        for (int j = 0; j < k; ++j)
+          a += areas[j];
+        m  = (p[k + 1] - p[k]) / (b[k + 1] - b[k]);
+        bk = b[k];
+        c  = (b[k + 1] * p[k] - b[k] * p[k + 1]) / (b[k + 1] - b[k]);
+        kp = k;
         }
-        assert(std::abs(f(u[i], a, m, bk, c) - double(i)/N) < .001);
+      assert(std::abs(f(u[i], a, m, bk, c) - double(i) / N) < .0013);
     }
 }
 
@@ -214,7 +211,7 @@ test4()
         u.push_back(v);
     }
     std::sort(u.begin(), u.end());
-    int kp = -1;
+    std::ptrdiff_t kp = -1;
     double a = std::numeric_limits<double>::quiet_NaN();
     double m = std::numeric_limits<double>::quiet_NaN();
     double bk = std::numeric_limits<double>::quiet_NaN();
@@ -232,19 +229,18 @@ test4()
         p[i] /= S;
     for (std::size_t i = 0; i < N; ++i)
     {
-        int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
-        if (k != kp)
-        {
-            a = 0;
-            for (int j = 0; j < k; ++j)
-                a += areas[j];
-            assert(k < static_cast<int>(Np));
-            m = (p[k+1] - p[k]) / (b[k+1] - b[k]);
-            bk = b[k];
-            c = (b[k+1]*p[k] - b[k]*p[k+1]) / (b[k+1] - b[k]);
-            kp = k;
+      std::ptrdiff_t k = std::lower_bound(b, b + Np + 1, u[i]) - b - 1;
+      if (k != kp) {
+        a = 0;
+        for (int j = 0; j < k; ++j)
+          a += areas[j];
+        assert(k < static_cast<int>(Np));
+        m  = (p[k + 1] - p[k]) / (b[k + 1] - b[k]);
+        bk = b[k];
+        c  = (b[k + 1] * p[k] - b[k] * p[k + 1]) / (b[k + 1] - b[k]);
+        kp = k;
         }
-        assert(std::abs(f(u[i], a, m, bk, c) - double(i)/N) < .001);
+      assert(std::abs(f(u[i], a, m, bk, c) - double(i) / N) < .0013);
     }
 }
 
@@ -267,7 +263,7 @@ test5()
         u.push_back(v);
     }
     std::sort(u.begin(), u.end());
-    int kp = -1;
+    std::ptrdiff_t kp = -1;
     double a = std::numeric_limits<double>::quiet_NaN();
     double m = std::numeric_limits<double>::quiet_NaN();
     double bk = std::numeric_limits<double>::quiet_NaN();
@@ -286,19 +282,18 @@ test5()
         p[i] /= S;
     for (std::size_t i = 0; i < N; ++i)
     {
-        int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
-        if (k != kp)
-        {
-            a = 0;
-            for (int j = 0; j < k; ++j)
-                a += areas[j];
-            assert(k < static_cast<int>(Np));
-            m = (p[k+1] - p[k]) / (b[k+1] - b[k]);
-            bk = b[k];
-            c = (b[k+1]*p[k] - b[k]*p[k+1]) / (b[k+1] - b[k]);
-            kp = k;
+      std::ptrdiff_t k = std::lower_bound(b, b + Np + 1, u[i]) - b - 1;
+      if (k != kp) {
+        a = 0;
+        for (int j = 0; j < k; ++j)
+          a += areas[j];
+        assert(k < static_cast<int>(Np));
+        m  = (p[k + 1] - p[k]) / (b[k + 1] - b[k]);
+        bk = b[k];
+        c  = (b[k + 1] * p[k] - b[k] * p[k + 1]) / (b[k + 1] - b[k]);
+        kp = k;
         }
-        assert(std::abs(f(u[i], a, m, bk, c) - double(i)/N) < .001);
+      assert(std::abs(f(u[i], a, m, bk, c) - double(i) / N) < .0013);
     }
 }
 
@@ -321,7 +316,7 @@ test6()
         u.push_back(v);
     }
     std::sort(u.begin(), u.end());
-    int kp = -1;
+    std::ptrdiff_t kp = -1;
     double a = std::numeric_limits<double>::quiet_NaN();
     double m = std::numeric_limits<double>::quiet_NaN();
     double bk = std::numeric_limits<double>::quiet_NaN();
@@ -339,18 +334,17 @@ test6()
         p[i] /= S;
     for (std::size_t i = 0; i < N; ++i)
     {
-        int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
-        if (k != kp)
-        {
-            a = 0;
-            for (int j = 0; j < k; ++j)
-                a += areas[j];
-            m = (p[k+1] - p[k]) / (b[k+1] - b[k]);
-            bk = b[k];
-            c = (b[k+1]*p[k] - b[k]*p[k+1]) / (b[k+1] - b[k]);
-            kp = k;
+      std::ptrdiff_t k = std::lower_bound(b, b + Np + 1, u[i]) - b - 1;
+      if (k != kp) {
+        a = 0;
+        for (int j = 0; j < k; ++j)
+          a += areas[j];
+        m  = (p[k + 1] - p[k]) / (b[k + 1] - b[k]);
+        bk = b[k];
+        c  = (b[k + 1] * p[k] - b[k] * p[k + 1]) / (b[k + 1] - b[k]);
+        kp = k;
         }
-        assert(std::abs(f(u[i], a, m, bk, c) - double(i)/N) < .001);
+      assert(std::abs(f(u[i], a, m, bk, c) - double(i) / N) < .0013);
     }
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 
 ; PR25241 (https://llvm.org/bugs/show_bug.cgi?id=25241)
 ; Ensure that synthesized values of a PHI node argument are generated in the

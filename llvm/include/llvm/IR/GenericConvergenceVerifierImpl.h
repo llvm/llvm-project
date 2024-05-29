@@ -76,7 +76,7 @@ void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
           "Entry intrinsic cannot be preceded by a convergent operation in the "
           "same basic block.",
           {Context.print(&I)});
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CONV_ANCHOR:
     Check(!TokenDef,
           "Entry or anchor intrinsic cannot have a convergencectrl token "
@@ -145,8 +145,8 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
   auto checkToken = [&](const InstructionT *Token, const InstructionT *User,
                         SmallVectorImpl<const InstructionT *> &LiveTokens) {
     Check(DT.dominates(Token->getParent(), User->getParent()),
-                "Convergence control token must dominate all its uses.",
-                {Context.print(Token), Context.print(User)});
+          "Convergence control token must dominate all its uses.",
+          {Context.print(Token), Context.print(User)});
 
     Check(llvm::is_contained(LiveTokens, Token),
           "Convergence region is not well-nested.",

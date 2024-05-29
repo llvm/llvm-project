@@ -4570,7 +4570,7 @@ define amdgpu_kernel void @atomic_xchg_f64_offset(ptr addrspace(1) %out, double 
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    global_atomic_swap_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr double, ptr addrspace(1) %out, i64 4
@@ -4625,7 +4625,7 @@ define amdgpu_kernel void @atomic_xchg_pointer_offset(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    global_atomic_swap_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr ptr, ptr addrspace(1) %out, i64 4

@@ -19,10 +19,7 @@ class RepeatedExprsCase(BenchBase):
         self.count = 100
 
     @benchmarks_test
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows",
-    )
+    @add_test_categories(["pexpect"])
     def test_compare_lldb_to_gdb(self):
         """Test repeated expressions with lldb vs. gdb."""
         self.build()

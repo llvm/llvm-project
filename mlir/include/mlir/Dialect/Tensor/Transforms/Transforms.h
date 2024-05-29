@@ -59,8 +59,8 @@ void populateDropRedundantInsertSliceRankExpansionPatterns(
 /// `tensor.collapse_shape` into other ops.
 void populateReassociativeReshapeFoldingPatterns(RewritePatternSet &patterns);
 
-/// Populates `patterns` with patterns that fold tensor.empty with
-/// tensor.[extract_slice|expand_shape|collapse_shape].
+/// Populates `patterns` with patterns that fold tensor.empty with its
+/// consumers.
 ///
 /// If `singleUseOnly` is set to "true", only tensor.empty ops with a single
 /// use are folded.

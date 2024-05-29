@@ -20,7 +20,6 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
     @skipIfWindows
-    @skipIfRemote
     def test_source_map(self):
         """
         This test simulates building two files in a folder, and then moving
@@ -99,7 +98,6 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(frames[1]["source"]["path"], new_main_path)
 
     @skipIfWindows
-    @skipIfRemote
     def test_set_and_clear(self):
         """Tests setting and clearing source file and line breakpoints.
         This packet is a bit tricky on the debug adaptor side since there
@@ -261,7 +259,6 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
                 )
 
     @skipIfWindows
-    @skipIfRemote
     def test_clear_breakpoints_unset_breakpoints(self):
         """Test clearing breakpoints like test_set_and_clear, but clear
         breakpoints by omitting the breakpoints array instead of sending an
@@ -305,7 +302,6 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(len(breakpoints), 0, "expect no source breakpoints")
 
     @skipIfWindows
-    @skipIfRemote
     def test_functionality(self):
         """Tests hitting breakpoints and the functionality of a single
         breakpoint, like 'conditions' and 'hitCondition' settings."""

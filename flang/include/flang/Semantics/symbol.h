@@ -91,12 +91,15 @@ public:
     return moduleFileHash_;
   }
   void set_moduleFileHash(ModuleCheckSumType x) { moduleFileHash_ = x; }
+  const Symbol *previous() const { return previous_; }
+  void set_previous(const Symbol *p) { previous_ = p; }
 
 private:
   bool isSubmodule_;
   bool isDefaultPrivate_{false};
   const Scope *scope_{nullptr};
   std::optional<ModuleCheckSumType> moduleFileHash_;
+  const Symbol *previous_{nullptr}; // same name, different module file hash
 };
 
 class MainProgramDetails : public WithOmpDeclarative {
@@ -417,8 +420,12 @@ public:
   ProcEntityDetails(ProcEntityDetails &&) = default;
   ProcEntityDetails &operator=(const ProcEntityDetails &) = default;
 
+  const Symbol *rawProcInterface() const { return rawProcInterface_; }
   const Symbol *procInterface() const { return procInterface_; }
-  void set_procInterface(const Symbol &sym) { procInterface_ = &sym; }
+  void set_procInterfaces(const Symbol &raw, const Symbol &resolved) {
+    rawProcInterface_ = &raw;
+    procInterface_ = &resolved;
+  }
   inline bool HasExplicitInterface() const;
 
   // Be advised: !init().has_value() => uninitialized pointer,
@@ -428,11 +435,17 @@ public:
   void set_init(std::nullptr_t) { init_ = nullptr; }
   bool isCUDAKernel() const { return isCUDAKernel_; }
   void set_isCUDAKernel(bool yes = true) { isCUDAKernel_ = yes; }
+  std::optional<SourceName> usedAsProcedureHere() const {
+    return usedAsProcedureHere_;
+  }
+  void set_usedAsProcedureHere(SourceName here) { usedAsProcedureHere_ = here; }
 
 private:
+  const Symbol *rawProcInterface_{nullptr};
   const Symbol *procInterface_{nullptr};
   std::optional<const Symbol *> init_;
   bool isCUDAKernel_{false};
+  std::optional<SourceName> usedAsProcedureHere_;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const ProcEntityDetails &);
 };
@@ -732,7 +745,8 @@ public:
       OmpCommonBlock, OmpReduction, OmpAligned, OmpNontemporal, OmpAllocate,
       OmpDeclarativeAllocateDirective, OmpExecutableAllocateDirective,
       OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction,
-      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined);
+      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined,
+      OmpImplicit);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
@@ -801,6 +815,7 @@ public:
   void SetIsExplicitBindName(bool);
   bool IsFuncResult() const;
   bool IsObjectArray() const;
+  const ArraySpec *GetShape() const;
   bool IsSubprogram() const;
   bool IsFromModFile() const;
   bool HasExplicitInterface() const {

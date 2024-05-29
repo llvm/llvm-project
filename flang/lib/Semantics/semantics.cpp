@@ -443,8 +443,10 @@ void SemanticsContext::CheckIndexVarRedefine(const parser::CharBlock &location,
 
 void SemanticsContext::WarnIndexVarRedefine(
     const parser::CharBlock &location, const Symbol &variable) {
-  CheckIndexVarRedefine(location, variable,
-      "Possible redefinition of %s variable '%s'"_warn_en_US);
+  if (ShouldWarn(common::UsageWarning::IndexVarRedefinition)) {
+    CheckIndexVarRedefine(location, variable,
+        "Possible redefinition of %s variable '%s'"_warn_en_US);
+  }
 }
 
 void SemanticsContext::CheckIndexVarRedefine(
@@ -541,6 +543,14 @@ const Scope &SemanticsContext::GetCUDABuiltinsScope() {
   return **cudaBuiltinsScope_;
 }
 
+const Scope &SemanticsContext::GetCUDADeviceScope() {
+  if (!cudaDeviceScope_) {
+    cudaDeviceScope_ = GetBuiltinModule("cudadevice");
+    CHECK(cudaDeviceScope_.value() != nullptr);
+  }
+  return **cudaDeviceScope_;
+}
+
 void SemanticsContext::UsePPCBuiltinsModule() {
   if (ppcBuiltinsScope_ == nullptr) {
     ppcBuiltinsScope_ = GetBuiltinModule("__ppc_intrinsics");
@@ -593,7 +603,10 @@ bool Semantics::Perform() {
       ModFileWriter{context_}.WriteAll();
 }
 
-void Semantics::EmitMessages(llvm::raw_ostream &os) const {
+void Semantics::EmitMessages(llvm::raw_ostream &os) {
+  // Resolve the CharBlock locations of the Messages to ProvenanceRanges
+  // so messages from parsing and semantics are intermixed in source order.
+  context_.messages().ResolveProvenances(context_.allCookedSources());
   context_.messages().Emit(os, context_.allCookedSources());
 }
 

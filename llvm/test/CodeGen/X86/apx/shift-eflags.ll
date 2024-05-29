@@ -7,9 +7,8 @@
 define i32 @ashr_const(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: ashr_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    sarl $14, %edi, %edx
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    sarl $14, %edi, %eax
+; CHECK-NEXT:    cmovel %edx, %ecx, %eax
 ; CHECK-NEXT:    retq
   %s = ashr i32 %a0, 14
   %c = icmp eq i32 %s, 0
@@ -21,9 +20,8 @@ define i32 @ashr_const(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 define i32 @lshr_const(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: lshr_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    testl $-16384, %edi # imm = 0xC000
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    cmovel %edx, %ecx, %eax
 ; CHECK-NEXT:    retq
   %s = lshr i32 %a0, 14
   %c = icmp eq i32 %s, 0
@@ -35,9 +33,8 @@ define i32 @lshr_const(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 define i32 @shl_const(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: shl_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    testl $262143, %edi # imm = 0x3FFFF
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    cmovel %edx, %ecx, %eax
 ; CHECK-NEXT:    retq
   %s = shl i32 %a0, 14
   %c = icmp eq i32 %s, 0
@@ -88,9 +85,8 @@ define i32 @shl_const_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 define i32 @ashr_const1(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: ashr_const1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    sarl %edi, %edx
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    sarl %edi, %eax
+; CHECK-NEXT:    cmovel %edx, %ecx, %eax
 ; CHECK-NEXT:    retq
   %s = ashr i32 %a0, 1
   %c = icmp eq i32 %s, 0
@@ -102,9 +98,8 @@ define i32 @ashr_const1(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 define i32 @lshr_const1(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: lshr_const1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    testl $-2, %edi
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    cmovel %edx, %ecx, %eax
 ; CHECK-NEXT:    retq
   %s = lshr i32 %a0, 1
   %c = icmp eq i32 %s, 0
@@ -116,9 +111,8 @@ define i32 @lshr_const1(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 define i32 @shl_const1(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: shl_const1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    testl $2147483647, %edi # imm = 0x7FFFFFFF
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    cmovel %edx, %ecx, %eax
 ; CHECK-NEXT:    retq
   %s = shl i32 %a0, 1
   %c = icmp eq i32 %s, 0

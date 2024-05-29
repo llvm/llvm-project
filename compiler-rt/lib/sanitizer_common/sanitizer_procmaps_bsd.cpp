@@ -42,6 +42,19 @@ void GetMemoryProfile(fill_profile_f cb, uptr *stats) {
   cb(0, InfoProc->ki_rssize * GetPageSizeCached(), false, stats);
   UnmapOrDie(InfoProc, Size, true);
 }
+#elif SANITIZER_NETBSD
+void GetMemoryProfile(fill_profile_f cb, uptr *stats) {
+  struct kinfo_proc2 *InfoProc;
+  uptr Len = sizeof(*InfoProc);
+  uptr Size = Len;
+  const int Mib[] = {CTL_KERN, KERN_PROC2, KERN_PROC_PID, getpid(), Size, 1};
+  InfoProc = (struct kinfo_proc2 *)MmapOrDie(Size, "GetMemoryProfile()");
+  CHECK_EQ(
+      internal_sysctl(Mib, ARRAY_SIZE(Mib), nullptr, (uptr *)InfoProc, &Len, 0),
+      0);
+  cb(0, InfoProc->p_vm_rssize * GetPageSizeCached(), false, stats);
+  UnmapOrDie(InfoProc, Size, true);
+}
 #endif
 
 void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {

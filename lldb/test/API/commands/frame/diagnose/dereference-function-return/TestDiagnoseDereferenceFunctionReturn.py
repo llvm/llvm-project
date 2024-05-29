@@ -19,6 +19,9 @@ class TestDiagnoseDereferenceFunctionReturn(TestBase):
         TestBase.setUp(self)
         self.build()
         exe = self.getBuildArtifact("a.out")
+        # FIXME: This default changed in lldbtest.py and this test
+        # seems to rely on having it turned off.
+        self.runCmd("settings set target.disable-aslr true")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
         self.runCmd("run", RUN_SUCCEEDED)
         self.expect("thread list", "Thread should be stopped", substrs=["stopped"])

@@ -11,20 +11,22 @@
 
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
 #define TEST_SPECIAL(x, y, expected, dom_err, expected_exception)              \
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                         \
   EXPECT_FP_EQ(expected, f(x, y));                                             \
   EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                     \
-  EXPECT_FP_EXCEPTION(expected_exception);                                     \
-  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
+  EXPECT_FP_EXCEPTION(expected_exception)
 
 #define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, false, 0)
 
-template <typename T> class FmodTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FmodTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

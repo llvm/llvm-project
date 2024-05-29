@@ -13,6 +13,11 @@
 ; -file and -list options should be merged, the apifile contains foo and j
 ; RUN: opt < %s -passes=internalize -internalize-public-api-list bar -internalize-public-api-file %S/apifile -S | FileCheck --check-prefix=FOO_J_AND_BAR %s
 
+; specifying through pass builder option
+; RUN: opt < %s -passes='internalize<preserve-gv=foo;preserve-gv=j>' -S | FileCheck --check-prefix=FOO_AND_J %s
+; RUN: opt < %s -passes='internalize<preserve-gv=foo;preserve-gv=bar>' -S | FileCheck --check-prefix=FOO_AND_BAR %s
+; RUN: opt < %s -passes='internalize<preserve-gv=foo;preserve-gv=j;preserve-gv=bar>' -S | FileCheck --check-prefix=FOO_J_AND_BAR %s
+
 ; ALL: @i = internal global
 ; FOO_AND_J: @i = internal global
 ; FOO_AND_BAR: @i = internal global

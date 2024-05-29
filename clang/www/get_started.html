@@ -86,13 +86,16 @@ follows:</p>
   </ul>
   </li>
 
-  <li>If you intend to use Clang's C++ support, you may need to tell it how
-      to find your C++ standard library headers. In general, Clang will detect
-      the best version of libstdc++ headers available and use them - it will
-      look both for system installations of libstdc++ as well as installations
-      adjacent to Clang itself. If your configuration fits neither of these
-      scenarios, you can use the <tt>-DGCC_INSTALL_PREFIX</tt> cmake option
-      to tell Clang where the gcc containing the desired libstdc++ is installed.
+  <li>On Linux, you may need GCC runtime libraries (e.g. <tt>crtbeginS.o,
+    libstdc++.so</tt>) and libstdc++ headers. In general, Clang will detect
+    well-known GCC installation paths matching the target triple (configured at
+    build time (see <tt>clang --version</tt>); overriden by
+    <tt>--target=</tt>) and use the largest version. If your configuration fits
+    none of the standard scenarios, you can set <tt>--gcc-install-dir=</tt> to
+    the GCC installation directory (something like
+    <tt>/usr/lib/gcc/$triple/$major</tt>). If your GCC installation is under
+    <tt>/usr/lib/gcc</tt> but uses a different triple, you can set
+    <tt>--gcc-triple=$triple</tt>.
   </li>
   <li>Try it out (assuming you add llvm/build/bin to your path):
   <ul>

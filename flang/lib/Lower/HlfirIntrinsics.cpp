@@ -265,7 +265,7 @@ HlfirTransformationalIntrinsic::computeResultType(mlir::Value argArray,
                                                   mlir::Type stmtResultType) {
   mlir::Type normalisedResult =
       hlfir::getFortranElementOrSequenceType(stmtResultType);
-  if (auto array = normalisedResult.dyn_cast<fir::SequenceType>()) {
+  if (auto array = mlir::dyn_cast<fir::SequenceType>(normalisedResult)) {
     hlfir::ExprType::Shape resultShape =
         hlfir::ExprType::Shape{array.getShape()};
     mlir::Type elementType = array.getEleTy();
@@ -341,7 +341,7 @@ mlir::Value HlfirTransposeLowering::lowerImpl(
   hlfir::ExprType::Shape resultShape;
   mlir::Type normalisedResult =
       hlfir::getFortranElementOrSequenceType(stmtResultType);
-  auto array = normalisedResult.cast<fir::SequenceType>();
+  auto array = mlir::cast<fir::SequenceType>(normalisedResult);
   llvm::ArrayRef<int64_t> arrayShape = array.getShape();
   assert(arrayShape.size() == 2 && "arguments to transpose have a rank of 2");
   mlir::Type elementType = array.getEleTy();

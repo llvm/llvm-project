@@ -77,3 +77,14 @@ body: |
     %0:externref = COPY %1:externref
     RETURN implicit-def $arguments
 ...
+---
+name: copy_exnref
+# CHECK-LABEL: copy_exnref
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %0:exnref = COPY_EXNREF %1:exnref
+  ; CHECK-NEXT: RETURN
+  bb.0:
+    %0:exnref = COPY %1:exnref
+    RETURN implicit-def $arguments
+...

@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; REMARK:      remark: <unknown>:0:0: SCoP begins here.
 ; REMARK-NEXT: remark: <unknown>:0:0: Use user assumption: [n] -> {  : n <= 100 }

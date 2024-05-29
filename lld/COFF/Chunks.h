@@ -18,6 +18,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/WindowsMachineFlag.h"
 #include <utility>
 #include <vector>
 
@@ -116,6 +117,7 @@ public:
   bool isHotPatchable() const;
 
   MachineTypes getMachine() const;
+  llvm::Triple::ArchType getArch() const;
   std::optional<chpe_range_type> getArm64ECRangeType() const;
 
 protected:
@@ -435,6 +437,10 @@ inline MachineTypes Chunk::getMachine() const {
   if (isa<SectionChunk>(this))
     return static_cast<const SectionChunk *>(this)->getMachine();
   return static_cast<const NonSectionChunk *>(this)->getMachine();
+}
+
+inline llvm::Triple::ArchType Chunk::getArch() const {
+  return llvm::getMachineArchType(getMachine());
 }
 
 inline std::optional<chpe_range_type> Chunk::getArm64ECRangeType() const {

@@ -43,18 +43,18 @@ spirv.func @composite_insert_vector(%arg0: vector<3xf32>, %arg1: f32) "None" {
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @select_scalar
-spirv.func @select_scalar(%arg0: i1, %arg1: vector<3xi32>, %arg2: f32) "None" {
+spirv.func @select_scalar(%arg0: i1, %arg1: vector<3xi32>, %arg2: vector<3xi32>, %arg3: f32, %arg4: f32) "None" {
   // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : i1, vector<3xi32>
-  %0 = spirv.Select %arg0, %arg1, %arg1 : i1, vector<3xi32>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : i1, vector<3xi32>
   // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : i1, f32
-  %1 = spirv.Select %arg0, %arg2, %arg2 : i1, f32
+  %1 = spirv.Select %arg0, %arg3, %arg4 : i1, f32
   spirv.Return
 }
 
 // CHECK-LABEL: @select_vector
-spirv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>) "None" {
+spirv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>, %arg2: vector<2xi32>) "None" {
   // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : vector<2xi1>, vector<2xi32>
-  %0 = spirv.Select %arg0, %arg1, %arg1 : vector<2xi1>, vector<2xi32>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : vector<2xi1>, vector<2xi32>
   spirv.Return
 }
 

@@ -3,7 +3,10 @@
 ! that the block arguments are added in the proper order (reductions first and
 ! then delayed privatization.
 
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN:   -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %s 2>&1 \
+! RUN:   | FileCheck %s
 
 subroutine red_and_delayed_private
     integer :: red
@@ -21,7 +24,7 @@ end subroutine
 ! CHECK-LABEL: omp.private {type = private}
 ! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : !fir.ref<i32> alloc {
 
-! CHECK-LABEL: omp.reduction.declare
+! CHECK-LABEL: omp.declare_reduction
 ! CHECK-SAME: @[[REDUCTION_SYM:.*]] : i32 init
 
 ! CHECK-LABEL: _QPred_and_delayed_private

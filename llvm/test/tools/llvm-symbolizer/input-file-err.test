@@ -1,5 +1,3 @@
-Failing on AIX due to D153595. The test expects a different error message from the one given on AIX.
-XFAIL: target={{.*}}-aix{{.*}}
 RUN: not llvm-addr2line -e %p/Inputs/nonexistent 0x12 2>&1 | FileCheck %s --check-prefix=CHECK-NONEXISTENT-A2L -DMSG=%errc_ENOENT
 RUN: not llvm-addr2line -e %p/Inputs/nonexistent 2>&1 | FileCheck %s --check-prefix=CHECK-NONEXISTENT-A2L -DMSG=%errc_ENOENT
 CHECK-NONEXISTENT-A2L: llvm-addr2line{{.*}}: error: '{{.*}}Inputs/nonexistent': [[MSG]]

@@ -54,11 +54,6 @@ set(XRAY_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_CXX_LINK_LIBS})
 
 if (NOT APPLE)
-  # Needed by LLVMSupport.
-  append_list_if(
-    LLVM_ENABLE_TERMINFO
-    -l${COMPILER_RT_TERMINFO_LIB} XRAY_UNITTEST_LINK_FLAGS)
-
   # We add the library directories one at a time in our CFLAGS.
   foreach (DIR ${LLVM_LIBRARY_DIR})
     list(APPEND XRAY_UNITTEST_LINK_FLAGS -L${DIR})
@@ -109,7 +104,7 @@ macro(add_xray_unittest testname)
         ${XRAY_HEADERS} ${XRAY_ALL_SOURCE_FILES_ABS_PATHS}
         "test_helpers.h"
         RUNTIME "${XRAY_RUNTIME_LIBS}"
-        DEPS llvm_gtest xray llvm-xray LLVMXRay LLVMTestingSupport
+        DEPS xray llvm-xray LLVMXRay LLVMTestingSupport
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
         LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS}
         )

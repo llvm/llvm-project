@@ -9,10 +9,10 @@ tablegen(LLVM AutomataTables.inc -gen-searchable-tables)
 tablegen(LLVM AutomataAutomata.inc -gen-automata)
 add_public_tablegen_target(AutomataTestTableGen)
 
-add_llvm_unittest(TableGenTests DISABLE_LLVM_LINK_LLVM_DYLIB
+add_llvm_unittest(TableGenTests
   AutomataTest.cpp
   CodeExpanderTest.cpp
   ParserEntryPointTest.cpp
   )
 
-target_link_libraries(TableGenTests PRIVATE LLVMTableGenGlobalISel LLVMTableGen)
+target_link_libraries(TableGenTests PRIVATE LLVMTableGenCommon LLVMTableGen)

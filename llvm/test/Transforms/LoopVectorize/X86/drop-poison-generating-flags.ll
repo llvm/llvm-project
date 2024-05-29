@@ -579,7 +579,6 @@ define void @Bgep_inbounds_unconditionally_due_to_store(ptr noalias %B, ptr read
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 20, i32 20, i32 20, i32 20>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr %B, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP3]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[WIDE_LOAD2]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>

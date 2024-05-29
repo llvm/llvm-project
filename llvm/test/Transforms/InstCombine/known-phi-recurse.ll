@@ -16,8 +16,8 @@ define i32 @single_entry_phi(i64 %x, i1 %c) {
 ; CHECK:       body:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[END:%.*]], label [[BODY]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[Y:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X:%.*]]), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[Y]] to i32
+; CHECK-NEXT:    [[Y:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[X:%.*]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i64 [[Y]] to i32
 ; CHECK-NEXT:    ret i32 [[TRUNC]]
 ;
 entry:
@@ -36,8 +36,8 @@ end:
 define i32 @two_entry_phi_with_constant(i64 %x, i1 %c) {
 ; CHECK-LABEL: @two_entry_phi_with_constant(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[Y]] to i32
+; CHECK-NEXT:    [[Y:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[X:%.*]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i64 [[Y]] to i32
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[END:%.*]], label [[BODY:%.*]]
 ; CHECK:       body:
 ; CHECK-NEXT:    br label [[END]]
@@ -61,12 +61,12 @@ end:
 define i32 @two_entry_phi_non_constant(i64 %x, i64 %x2, i1 %c) {
 ; CHECK-LABEL: @two_entry_phi_non_constant(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[Y]] to i32
+; CHECK-NEXT:    [[Y:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[X:%.*]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i64 [[Y]] to i32
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[END:%.*]], label [[BODY:%.*]]
 ; CHECK:       body:
-; CHECK-NEXT:    [[Y2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X2:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc i64 [[Y2]] to i32
+; CHECK-NEXT:    [[Y2:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[X2:%.*]])
+; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc nuw nsw i64 [[Y2]] to i32
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TRUNC]], [[ENTRY:%.*]] ], [ [[TRUNC2]], [[BODY]] ]
@@ -90,13 +90,13 @@ end:
 define i32 @neg_many_branches(i64 %x) {
 ; CHECK-LABEL: @neg_many_branches(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[Y]] to i32
+; CHECK-NEXT:    [[Y:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[X:%.*]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i64 [[Y]] to i32
 ; CHECK-NEXT:    switch i32 [[TRUNC]], label [[END:%.*]] [
-; CHECK-NEXT:    i32 1, label [[ONE:%.*]]
-; CHECK-NEXT:    i32 2, label [[TWO:%.*]]
-; CHECK-NEXT:    i32 3, label [[THREE:%.*]]
-; CHECK-NEXT:    i32 4, label [[FOUR:%.*]]
+; CHECK-NEXT:      i32 1, label [[ONE:%.*]]
+; CHECK-NEXT:      i32 2, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 3, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 4, label [[FOUR:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       one:
 ; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 [[TRUNC]], 1

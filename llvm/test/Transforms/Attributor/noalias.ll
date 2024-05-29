@@ -14,8 +14,8 @@
 @G = external global ptr
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global ptr
-; CHECK: @[[ALIAS_OF_P:[a-zA-Z0-9_$"\\.-]+]] = external global ptr
+; CHECK: @G = external global ptr
+; CHECK: @alias_of_p = external global ptr
 ;.
 define ptr @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo() {

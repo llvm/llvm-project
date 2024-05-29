@@ -5,6 +5,9 @@
 // RUN: %clang_cc1  -std=c++20 %t/foo.cppm -I%t -emit-module-interface -o %t/foo.pcm
 // RUN: %clang_cc1  -fprebuilt-module-path=%t -std=c++20 %t/use.cpp -I%t/. -fsyntax-only -verify
 
+// RUN: %clang_cc1  -std=c++20 %t/foo.cppm -I%t -emit-reduced-module-interface -o %t/foo.pcm
+// RUN: %clang_cc1  -fprebuilt-module-path=%t -std=c++20 %t/use.cpp -I%t/. -fsyntax-only -verify
+
 //--- foo.h
 template <typename T = int>
 T v;
@@ -88,6 +91,16 @@ int v9;
 module;
 #include "foo.h"
 export module foo;
+export using ::v;
+export using ::v2;
+export using ::my_array;
+export using ::v3;
+export using ::v4;
+export using ::v5;
+export using ::v6;
+export using ::v7;
+export using ::v8;
+export using ::v9;
 
 //--- use.cpp
 import foo;

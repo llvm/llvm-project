@@ -24,9 +24,6 @@ namespace arith {
 class WideIntEmulationConverter;
 class NarrowTypeEmulationConverter;
 
-/// Create a pass to bufferize arith.constant ops.
-std::unique_ptr<Pass> createConstantBufferizePass(uint64_t alignment = 0);
-
 /// Adds patterns to emulate wide Arith and Function ops over integer
 /// types into supported ones. This is done by splitting original power-of-two
 /// i2N integer types into two iN halves.

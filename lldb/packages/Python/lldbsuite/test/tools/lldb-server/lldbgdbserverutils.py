@@ -50,7 +50,7 @@ def get_debugserver_exe():
 
 
 _LOG_LINE_REGEX = re.compile(
-    r"^(lldb-server|debugserver)\s+<\s*(\d+)>" + "\s+(read|send)\s+packet:\s+(.+)$"
+    r"^(lldb-server|debugserver)\s+<\s*(\d+)>\s+(read|send)\s+packet:\s+(.+)$"
 )
 
 

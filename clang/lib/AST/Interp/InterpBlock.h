@@ -51,11 +51,15 @@ public:
   /// Creates a new block.
   Block(const std::optional<unsigned> &DeclID, const Descriptor *Desc,
         bool IsStatic = false, bool IsExtern = false)
-      : DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern), Desc(Desc) {}
+      : DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern), Desc(Desc) {
+        assert(Desc);
+      }
 
   Block(const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
       : DeclID((unsigned)-1), IsStatic(IsStatic), IsExtern(IsExtern),
-        Desc(Desc) {}
+        Desc(Desc) {
+          assert(Desc);
+        }
 
   /// Returns the block's descriptor.
   const Descriptor *getDescriptor() const { return Desc; }
@@ -117,6 +121,9 @@ public:
       Desc->DtorFn(this, data(), Desc);
     IsInitialized = false;
   }
+
+  void dump() const { dump(llvm::errs()); }
+  void dump(llvm::raw_ostream &OS) const;
 
 protected:
   friend class Pointer;

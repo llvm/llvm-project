@@ -142,6 +142,7 @@ def hasLDU : Predicate<"Subtarget->hasLDU()">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
+def doRsqrtOpt : Predicate<"doRsqrtOpt()">;
 
 def doMulWide      : Predicate<"doMulWide">;
 
@@ -160,6 +161,7 @@ def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 
 def True : Predicate<"true">;
+def False : Predicate<"false">;
 
 class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>;
 class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
@@ -171,7 +173,10 @@ def hasSM90a : Predicate<"Subtarget->getFullSmVersion() == 901">;
 def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70"
                           "&& Subtarget->getPTXVersion() >= 64)">;
 
-def useShortPtr : Predicate<"useShortPointers()">;
+def useShortPtrLocal : Predicate<"TM.is64Bit() && TM.getPointerSizeInBits(ADDRESS_SPACE_LOCAL) == 32">;
+def useShortPtrShared : Predicate<"TM.is64Bit() && TM.getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32">;
+def useShortPtrConst : Predicate<"TM.is64Bit() && TM.getPointerSizeInBits(ADDRESS_SPACE_CONST) == 32">;
+
 def useFP16Math: Predicate<"Subtarget->allowFP16Math()">;
 def hasBF16Math: Predicate<"Subtarget->hasBF16Math()">;
 
@@ -838,7 +843,6 @@ defm ADD : I3<"add.s", add>;
 defm SUB : I3<"sub.s", sub>;
 
 def ADD16x2 : I16x2<"add.s", add>;
-def SUB16x2 : I16x2<"sub.s", sub>;
 
 // in32 and int64 addition and subtraction with carry-out.
 defm ADDCC : ADD_SUB_INT_CARRY<"add.cc", addc>;
@@ -1748,8 +1752,9 @@ def ROTL64reg_sw :
             ".reg .b64 %lhs;\n\t"
             ".reg .b64 %rhs;\n\t"
             ".reg .u32 %amt2;\n\t"
-            "shl.b64 \t%lhs, $src, $amt;\n\t"
-            "sub.u32 \t%amt2, 64, $amt;\n\t"
+            "and.b32 \t%amt2, $amt, 63;\n\t"
+            "shl.b64 \t%lhs, $src, %amt2;\n\t"
+            "sub.u32 \t%amt2, 64, %amt2;\n\t"
             "shr.b64 \t%rhs, $src, %amt2;\n\t"
             "add.u64 \t$dst, %lhs, %rhs;\n\t"
             "}}",
@@ -1761,8 +1766,9 @@ def ROTR64reg_sw :
             ".reg .b64 %lhs;\n\t"
             ".reg .b64 %rhs;\n\t"
             ".reg .u32 %amt2;\n\t"
-            "shr.b64 \t%lhs, $src, $amt;\n\t"
-            "sub.u32 \t%amt2, 64, $amt;\n\t"
+            "and.b32 \t%amt2, $amt, 63;\n\t"
+            "shr.b64 \t%lhs, $src, %amt2;\n\t"
+            "sub.u32 \t%amt2, 64, %amt2;\n\t"
             "shl.b64 \t%rhs, $src, %amt2;\n\t"
             "add.u64 \t$dst, %lhs, %rhs;\n\t"
             "}}",
@@ -2491,10 +2497,6 @@ defm FSetNE : FSET_FORMAT<setne, CmpNE, CmpNE_FTZ>;
 defm FSetNUM : FSET_FORMAT<seto, CmpNUM, CmpNUM_FTZ>;
 defm FSetNAN : FSET_FORMAT<setuo, CmpNAN, CmpNAN_FTZ>;
 
-// FIXME: What is this doing here?  Can it be deleted?
-// def ld_param         : SDNode<"NVPTXISD::LOAD_PARAM", SDTLoad,
-//                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-
 def SDTDeclareParamProfile :
   SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>;
 def SDTDeclareScalarParamProfile :
@@ -2635,25 +2637,46 @@ class LoadParamRegInst<NVPTXRegClass regclass, string opstr> :
                 [(set regclass:$dst, (LoadParam (i32 0), (i32 imm:$b)))]>;
 
 let mayStore = true in {
-  class StoreParamInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, i32imm:$a, i32imm:$b),
-                  !strconcat("st.param", opstr, " \t[param$a+$b], $val;"),
-                  []>;
 
-  class StoreParamV2Inst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, regclass:$val2,
+  multiclass StoreParamInst<NVPTXRegClass regclass, Operand IMMType, string opstr, bit support_imm = true> {
+    foreach op = [IMMType, regclass] in
+      if !or(support_imm, !isa<NVPTXRegClass>(op)) then
+        def _ # !if(!isa<NVPTXRegClass>(op), "r", "i")
+          : NVPTXInst<(outs),
+                      (ins op:$val, i32imm:$a, i32imm:$b),
+                      "st.param" # opstr # " \t[param$a+$b], $val;",
+                      []>;
+  }
+
+  multiclass StoreParamV2Inst<NVPTXRegClass regclass, Operand IMMType, string opstr> {
+    foreach op1 = [IMMType, regclass] in
+      foreach op2 = [IMMType, regclass] in
+        def _ # !if(!isa<NVPTXRegClass>(op1), "r", "i")
+              # !if(!isa<NVPTXRegClass>(op2), "r", "i")
+          : NVPTXInst<(outs),
+                      (ins op1:$val1, op2:$val2,
+                           i32imm:$a, i32imm:$b),
+                      "st.param.v2" # opstr # " \t[param$a+$b], {{$val1, $val2}};",
+                      []>;
+  }
+
+  multiclass StoreParamV4Inst<NVPTXRegClass regclass, Operand IMMType, string opstr> {
+    foreach op1 = [IMMType, regclass] in
+      foreach op2 = [IMMType, regclass] in
+        foreach op3 = [IMMType, regclass] in
+          foreach op4 = [IMMType, regclass] in
+            def _ # !if(!isa<NVPTXRegClass>(op1), "r", "i")
+                  # !if(!isa<NVPTXRegClass>(op2), "r", "i")
+                  # !if(!isa<NVPTXRegClass>(op3), "r", "i")
+                  # !if(!isa<NVPTXRegClass>(op4), "r", "i")
+
+              : NVPTXInst<(outs),
+                          (ins op1:$val1, op2:$val2, op3:$val3, op4:$val4,
                                i32imm:$a, i32imm:$b),
-                  !strconcat("st.param.v2", opstr,
-                             " \t[param$a+$b], {{$val, $val2}};"),
-                  []>;
-
-  class StoreParamV4Inst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, regclass:$val2, regclass:$val3,
-                               regclass:$val4, i32imm:$a,
-                               i32imm:$b),
-                  !strconcat("st.param.v4", opstr,
-                             " \t[param$a+$b], {{$val, $val2, $val3, $val4}};"),
-                  []>;
+                          "st.param.v4" # opstr #
+                          " \t[param$a+$b], {{$val1, $val2, $val3, $val4}};",
+                          []>;
+  }
 
   class StoreRetvalInst<NVPTXRegClass regclass, string opstr> :
         NVPTXInst<(outs), (ins regclass:$val, i32imm:$a),
@@ -2733,27 +2756,30 @@ def LoadParamMemV2F32  : LoadParamV2MemInst<Float32Regs, ".f32">;
 def LoadParamMemV2F64  : LoadParamV2MemInst<Float64Regs, ".f64">;
 def LoadParamMemV4F32  : LoadParamV4MemInst<Float32Regs, ".f32">;
 
-def StoreParamI64    : StoreParamInst<Int64Regs, ".b64">;
-def StoreParamI32    : StoreParamInst<Int32Regs, ".b32">;
+defm StoreParamI64    : StoreParamInst<Int64Regs, i64imm, ".b64">;
+defm StoreParamI32    : StoreParamInst<Int32Regs, i32imm, ".b32">;
+defm StoreParamI16    : StoreParamInst<Int16Regs, i16imm, ".b16">;
+defm StoreParamI8     : StoreParamInst<Int16Regs, i8imm,  ".b8">;
 
-def StoreParamI16    : StoreParamInst<Int16Regs, ".b16">;
-def StoreParamI8     : StoreParamInst<Int16Regs, ".b8">;
-def StoreParamI8TruncI32 : StoreParamInst<Int32Regs, ".b8">;
-def StoreParamI8TruncI64 : StoreParamInst<Int64Regs, ".b8">;
-def StoreParamV2I64  : StoreParamV2Inst<Int64Regs, ".b64">;
-def StoreParamV2I32  : StoreParamV2Inst<Int32Regs, ".b32">;
-def StoreParamV2I16  : StoreParamV2Inst<Int16Regs, ".b16">;
-def StoreParamV2I8   : StoreParamV2Inst<Int16Regs, ".b8">;
+defm StoreParamI8TruncI32 : StoreParamInst<Int32Regs, i8imm, ".b8", /* support_imm */ false>;
+defm StoreParamI8TruncI64 : StoreParamInst<Int64Regs, i8imm, ".b8", /* support_imm */ false>;
 
-def StoreParamV4I32  : StoreParamV4Inst<Int32Regs, ".b32">;
-def StoreParamV4I16  : StoreParamV4Inst<Int16Regs, ".b16">;
-def StoreParamV4I8   : StoreParamV4Inst<Int16Regs, ".b8">;
+defm StoreParamV2I64  : StoreParamV2Inst<Int64Regs, i64imm, ".b64">;
+defm StoreParamV2I32  : StoreParamV2Inst<Int32Regs, i32imm, ".b32">;
+defm StoreParamV2I16  : StoreParamV2Inst<Int16Regs, i16imm, ".b16">;
+defm StoreParamV2I8   : StoreParamV2Inst<Int16Regs, i8imm,  ".b8">;
 
-def StoreParamF32      : StoreParamInst<Float32Regs, ".f32">;
-def StoreParamF64      : StoreParamInst<Float64Regs, ".f64">;
-def StoreParamV2F32    : StoreParamV2Inst<Float32Regs, ".f32">;
-def StoreParamV2F64    : StoreParamV2Inst<Float64Regs, ".f64">;
-def StoreParamV4F32    : StoreParamV4Inst<Float32Regs, ".f32">;
+defm StoreParamV4I32  : StoreParamV4Inst<Int32Regs, i32imm, ".b32">;
+defm StoreParamV4I16  : StoreParamV4Inst<Int16Regs, i16imm, ".b16">;
+defm StoreParamV4I8   : StoreParamV4Inst<Int16Regs, i8imm,  ".b8">;
+
+defm StoreParamF32    : StoreParamInst<Float32Regs, f32imm, ".f32">;
+defm StoreParamF64    : StoreParamInst<Float64Regs, f64imm, ".f64">;
+
+defm StoreParamV2F32  : StoreParamV2Inst<Float32Regs, f32imm, ".f32">;
+defm StoreParamV2F64  : StoreParamV2Inst<Float64Regs, f64imm, ".f64">;
+
+defm StoreParamV4F32  : StoreParamV4Inst<Float32Regs, f32imm, ".f32">;
 
 def StoreRetvalI64    : StoreRetvalInst<Int64Regs, ".b64">;
 def StoreRetvalI32    : StoreRetvalInst<Int32Regs, ".b32">;
@@ -3550,6 +3576,11 @@ let hasSideEffects = false in {
                              (ins Int64Regs:$s),
                              "{{ .reg .b32 tmp; mov.b64 {tmp, $high}, $s; }}",
                              []>;
+  def I64toI32L  : NVPTXInst<(outs Int32Regs:$low),
+                             (ins Int64Regs:$s),
+                             "{{ .reg .b32 tmp; mov.b64 {$low, tmp}, $s; }}",
+                             []>;
+
 }
 
 // Using partial vectorized move produces better SASS code for extraction of
@@ -3781,8 +3812,7 @@ class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
 
 def Callseq_Start :
   NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-            "\\{ // callseq $amt1, $amt2\n"
-            "\t.reg .b32 temp_param_reg;",
+            "\\{ // callseq $amt1, $amt2",
             [(callseq_start timm:$amt1, timm:$amt2)]>;
 def Callseq_End :
   NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
@@ -3806,6 +3836,28 @@ def CALL_PROTOTYPE :
   NVPTXInst<(outs), (ins ProtoIdent:$ident),
             "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
 
+def SDTDynAllocaOp :
+  SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisInt<2>]>;
+
+def dyn_alloca :
+  SDNode<"NVPTXISD::DYNAMIC_STACKALLOC", SDTDynAllocaOp,
+         [SDNPHasChain, SDNPSideEffect]>;
+
+def DYNAMIC_STACKALLOC32 :
+  NVPTXInst<(outs Int32Regs:$ptr),
+            (ins Int32Regs:$size, i32imm:$align),
+            "alloca.u32 \t$ptr, $size, $align;\n\t"
+            "cvta.local.u32 \t$ptr, $ptr;",
+            [(set (i32 Int32Regs:$ptr), (dyn_alloca Int32Regs:$size, (i32 timm:$align)))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
+
+def DYNAMIC_STACKALLOC64 :
+  NVPTXInst<(outs Int64Regs:$ptr),
+            (ins Int64Regs:$size, i32imm:$align),
+            "alloca.u64 \t$ptr, $size, $align;\n\t"
+            "cvta.local.u64 \t$ptr, $ptr;",
+            [(set Int64Regs:$ptr, (dyn_alloca Int64Regs:$size, (i32 timm:$align)))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
 
 include "NVPTXIntrinsics.td"
 
@@ -3817,3 +3869,17 @@ include "NVPTXIntrinsics.td"
 // - for sm_20, use pmpt (use vector scalar mov to get the pack and
 //   unpack). sm_20 supports native 32-bit register, but not native 16-bit
 // register.
+
+def : Pat <
+  (i32 (bswap i32:$a)),
+  (INT_NVVM_PRMT Int32Regs:$a, (i32 0), (i32 0x0123))>;
+
+def : Pat <
+  (v2i16 (bswap v2i16:$a)),
+  (INT_NVVM_PRMT Int32Regs:$a, (i32 0), (i32 0x2301))>;
+
+def : Pat <
+  (i64 (bswap i64:$a)),
+  (V2I32toI64
+    (INT_NVVM_PRMT (I64toI32H Int64Regs:$a), (i32 0), (i32 0x0123)),
+    (INT_NVVM_PRMT (I64toI32L Int64Regs:$a), (i32 0), (i32 0x0123)))>;

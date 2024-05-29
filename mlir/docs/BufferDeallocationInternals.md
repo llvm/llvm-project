@@ -1,5 +1,8 @@
 # Buffer Deallocation - Internals
 
+**Note:** This pass is deprecated. Please use the ownership-based buffer
+deallocation pass instead.
+
 This section covers the internal functionality of the BufferDeallocation
 transformation. The transformation consists of several passes. The main pass
 called BufferDeallocation can be applied via “-buffer-deallocation” on MLIR

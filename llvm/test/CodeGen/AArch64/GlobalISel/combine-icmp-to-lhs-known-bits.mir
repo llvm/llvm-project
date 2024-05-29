@@ -129,25 +129,28 @@ body:             |
 
     ; CHECK-LABEL: name: dont_apply_vector
     ; CHECK: liveins: $x0
-    ; CHECK: %x:_(<2 x s32>) = COPY $x0
-    ; CHECK: %one:_(s32) = G_CONSTANT i32 1
-    ; CHECK: %one_vec:_(<2 x s32>) = G_BUILD_VECTOR %one(s32), %one(s32)
-    ; CHECK: %vec_and:_(<2 x s32>) = G_AND %x, %one_vec
-    ; CHECK: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK: %zero_vec:_(<2 x s32>) = G_BUILD_VECTOR %zero(s32), %zero(s32)
-    ; CHECK: %cmp:_(<2 x s1>) = G_ICMP intpred(ne), %vec_and(<2 x s32>), %zero_vec
-    ; CHECK: %elt:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %zero(s32)
-    ; CHECK: %ext:_(s32) = G_ZEXT %elt(s1)
-    ; CHECK: $w0 = COPY %ext(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(<2 x s32>) = COPY $x0
+    ; CHECK-NEXT: %one:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %one_vec:_(<2 x s32>) = G_BUILD_VECTOR %one(s32), %one(s32)
+    ; CHECK-NEXT: %vec_and:_(<2 x s32>) = G_AND %x, %one_vec
+    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %zero64:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s32>) = G_BUILD_VECTOR %zero(s32), %zero(s32)
+    ; CHECK-NEXT: %cmp:_(<2 x s1>) = G_ICMP intpred(ne), %vec_and(<2 x s32>), %zero_vec
+    ; CHECK-NEXT: %elt:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %zero64(s64)
+    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %elt(s1)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(<2 x s32>) = COPY $x0
     %one:_(s32) = G_CONSTANT i32 1
     %one_vec:_(<2 x s32>) = G_BUILD_VECTOR %one, %one
     %vec_and:_(<2 x s32>) = G_AND %x, %one_vec
     %zero:_(s32) = G_CONSTANT i32 0
+    %zero64:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s32>) = G_BUILD_VECTOR %zero, %zero
     %cmp:_(<2 x s1>) = G_ICMP intpred(ne), %vec_and(<2 x s32>), %zero_vec
-    %elt:_(s1) = G_EXTRACT_VECTOR_ELT %cmp, %zero
+    %elt:_(s1) = G_EXTRACT_VECTOR_ELT %cmp, %zero64
     %ext:_(s32) = G_ZEXT %elt(s1)
     $w0 = COPY %ext(s32)
     RET_ReallyLR implicit $w0

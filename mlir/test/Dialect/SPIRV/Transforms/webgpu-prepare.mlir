@@ -182,4 +182,36 @@ spirv.func @iaddcarry_i16(%a : i16, %b : i16) -> !spirv.struct<(i16, i16)> "None
   spirv.ReturnValue %0 : !spirv.struct<(i16, i16)>
 }
 
+// CHECK-LABEL: func @is_inf_f32
+// CHECK-NEXT:       [[FALSE:%.+]] = spirv.Constant false
+// CHECK-NEXT:       spirv.ReturnValue [[FALSE]] : i1
+spirv.func @is_inf_f32(%a : f32) -> i1 "None" {
+  %0 = spirv.IsInf %a : f32
+  spirv.ReturnValue %0 : i1
+}
+
+// CHECK-LABEL: func @is_inf_4xf32
+// CHECK-NEXT:       [[FALSE:%.+]] = spirv.Constant dense<false> : vector<4xi1>
+// CHECK-NEXT:       spirv.ReturnValue [[FALSE]] : vector<4xi1>
+spirv.func @is_inf_4xf32(%a : vector<4xf32>) -> vector<4xi1> "None" {
+  %0 = spirv.IsInf %a : vector<4xf32>
+  spirv.ReturnValue %0 : vector<4xi1>
+}
+
+// CHECK-LABEL: func @is_nan_f32
+// CHECK-NEXT:       [[FALSE:%.+]] = spirv.Constant false
+// CHECK-NEXT:       spirv.ReturnValue [[FALSE]] : i1
+spirv.func @is_nan_f32(%a : f32) -> i1 "None" {
+  %0 = spirv.IsNan %a : f32
+  spirv.ReturnValue %0 : i1
+}
+
+// CHECK-LABEL: func @is_nan_4xf32
+// CHECK-NEXT:       [[FALSE:%.+]] = spirv.Constant dense<false> : vector<4xi1>
+// CHECK-NEXT:       spirv.ReturnValue [[FALSE]] : vector<4xi1>
+spirv.func @is_nan_4xf32(%a : vector<4xf32>) -> vector<4xi1> "None" {
+  %0 = spirv.IsNan %a : vector<4xf32>
+  spirv.ReturnValue %0 : vector<4xi1>
+}
+
 } // end module

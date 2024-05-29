@@ -245,6 +245,12 @@ public:
     else if (!UseNewFormat && IsNewDbgInfoFormat)
       convertFromNewDbgValues();
   }
+  void setNewDbgInfoFormatFlag(bool NewFlag) {
+    for (auto &F : *this) {
+      F.setNewDbgInfoFormatFlag(NewFlag);
+    }
+    IsNewDbgInfoFormat = NewFlag;
+  }
 
   /// The Module constructor. Note that there is no default constructor. You
   /// must provide a name for the module upon construction.

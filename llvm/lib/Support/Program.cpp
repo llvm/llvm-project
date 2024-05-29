@@ -27,7 +27,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
                     std::optional<ArrayRef<StringRef>> Env,
                     ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
-                    BitVector *AffinityMask);
+                    BitVector *AffinityMask, bool DetachProcess);
 
 int sys::ExecuteAndWait(StringRef Program, ArrayRef<StringRef> Args,
                         std::optional<ArrayRef<StringRef>> Env,
@@ -39,7 +39,7 @@ int sys::ExecuteAndWait(StringRef Program, ArrayRef<StringRef> Args,
   assert(Redirects.empty() || Redirects.size() == 3);
   ProcessInfo PI;
   if (Execute(PI, Program, Args, Env, Redirects, MemoryLimit, ErrMsg,
-              AffinityMask)) {
+              AffinityMask, /*DetachProcess=*/false)) {
     if (ExecutionFailed)
       *ExecutionFailed = false;
     ProcessInfo Result = Wait(
@@ -58,13 +58,14 @@ ProcessInfo sys::ExecuteNoWait(StringRef Program, ArrayRef<StringRef> Args,
                                std::optional<ArrayRef<StringRef>> Env,
                                ArrayRef<std::optional<StringRef>> Redirects,
                                unsigned MemoryLimit, std::string *ErrMsg,
-                               bool *ExecutionFailed, BitVector *AffinityMask) {
+                               bool *ExecutionFailed, BitVector *AffinityMask,
+                               bool DetachProcess) {
   assert(Redirects.empty() || Redirects.size() == 3);
   ProcessInfo PI;
   if (ExecutionFailed)
     *ExecutionFailed = false;
   if (!Execute(PI, Program, Args, Env, Redirects, MemoryLimit, ErrMsg,
-               AffinityMask))
+               AffinityMask, DetachProcess))
     if (ExecutionFailed)
       *ExecutionFailed = true;
 

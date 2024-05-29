@@ -363,6 +363,19 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
   llvm.return %source5 : i32
 }
 
+llvm.func @rocdl.waitcnt() {
+  // CHECK-LABEL: rocdl.waitcnt
+  // CHECK: rocdl.waitcnt 0
+  rocdl.waitcnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier() {
+  // CHECK-LABEL: rocdl.s.barrier
+  // CHECK: rocdl.s.barrier
+  rocdl.s.barrier
+  llvm.return
+}
 // -----
 
 // expected-error@below {{attribute attached to unexpected op}}

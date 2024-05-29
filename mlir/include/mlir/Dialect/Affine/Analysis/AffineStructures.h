@@ -154,6 +154,14 @@ public:
 /// represented as a FlatAffineValueConstraints with separation of dimension
 /// variables into domain and  range. The variables are stored as:
 /// [domainVars, rangeVars, symbolVars, localVars, constant].
+///
+/// Deprecated: use IntegerRelation and store SSA Values in the PresburgerSpace
+/// of the relation using PresburgerSpace::identifiers. Note that
+/// FlatAffineRelation::numDomainDims and FlatAffineRelation::numRangeDims are
+/// independent of numDomain and numRange of the relation's space. In
+/// particular, operations such as FlatAffineRelation::compose do not ensure
+/// consistency between numDomainDims/numRangeDims and numDomain/numRange which
+/// may lead to unexpected behaviour.
 class FlatAffineRelation : public FlatAffineValueConstraints {
 public:
   FlatAffineRelation(unsigned numReservedInequalities,
@@ -251,9 +259,10 @@ protected:
 /// For AffineValueMap, the domain and symbols have Value set corresponding to
 /// the Value in `map`. Returns failure if the AffineMap could not be flattened
 /// (i.e., semi-affine is not yet handled).
-LogicalResult getRelationFromMap(AffineMap &map, FlatAffineRelation &rel);
+LogicalResult getRelationFromMap(AffineMap &map,
+                                 presburger::IntegerRelation &rel);
 LogicalResult getRelationFromMap(const AffineValueMap &map,
-                                 FlatAffineRelation &rel);
+                                 presburger::IntegerRelation &rel);
 
 } // namespace affine
 } // namespace mlir

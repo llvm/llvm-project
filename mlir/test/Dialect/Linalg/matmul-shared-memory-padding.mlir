@@ -52,7 +52,7 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     // Tile linalg.matmul a second time.
-    %tiled_linalg_op, %loops = transform.structured.tile_using_for %tiled_matmul_op[0, 0, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %tiled_linalg_op, %loops = transform.structured.tile_using_for %tiled_matmul_op tile_sizes [0, 0, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     // Pad linalg.matmul.
     %padded, %pad, %copy_back = transform.structured.pad %tiled_linalg_op
@@ -171,7 +171,7 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     // Tile linalg.matmul a second time.
-    %tiled_linalg_op, %loops = transform.structured.tile_using_for %tiled_matmul_op[0, 0, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %tiled_linalg_op, %loops = transform.structured.tile_using_for %tiled_matmul_op tile_sizes [0, 0, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     // Pad linalg.matmul.
     %padded, %pad, %copy_back = transform.structured.pad %tiled_linalg_op

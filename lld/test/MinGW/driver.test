@@ -422,6 +422,9 @@ LTO_EMIT_ASM: -lldemit:asm
 RUN: ld.lld -### foo.o -m i386pe -plugin-opt=emit-llvm 2>&1 | FileCheck -check-prefix=LTO_EMIT_LLVM %s
 LTO_EMIT_LLVM: -lldemit:llvm
 
+RUN: ld.lld -### foo.o -m i386pep --lto-sample-profile=foo 2>&1 | FileCheck -check-prefix=LTO_SAMPLE_PROFILE %s
+LTO_SAMPLE_PROFILE: -lto-sample-profile:foo
+
 Test GCC specific LTO options that GCC passes unconditionally, that we ignore.
 
 RUN: ld.lld -### foo.o -m i386pep -plugin /usr/lib/gcc/x86_64-w64-mingw32/10-posix/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-w64-mingw32/10-posix/lto-wrapper -plugin-opt=-fresolution=/tmp/ccM9d4fP.res -plugin-opt=-pass-through=-lmingw32 2> /dev/null

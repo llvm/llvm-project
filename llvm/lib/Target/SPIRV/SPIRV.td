@@ -20,19 +20,6 @@ class Proc<string Name, list<SubtargetFeature> Features>
 
 def : Proc<"generic", []>;
 
-def SPIRV10 : SubtargetFeature<"spirv1.0", "SPIRVVersion", "10",
-                             "Use SPIR-V version 1.0">;
-def SPIRV11 : SubtargetFeature<"spirv1.1", "SPIRVVersion", "11",
-                             "Use SPIR-V version 1.1">;
-def SPIRV12 : SubtargetFeature<"spirv1.2", "SPIRVVersion", "12",
-                             "Use SPIR-V version 1.2">;
-def SPIRV13 : SubtargetFeature<"spirv1.3", "SPIRVVersion", "13",
-                             "Use SPIR-V version 1.3">;
-def SPIRV14 : SubtargetFeature<"spirv1.4", "SPIRVVersion", "14",
-                             "Use SPIR-V version 1.4">;
-def SPIRV15 : SubtargetFeature<"spirv1.5", "SPIRVVersion", "15",
-                             "Use SPIR-V version 1.5">;
-
 def SPIRVInstPrinter : AsmWriter {
   string AsmWriterClassName  = "InstPrinter";
   bit isMCAsmWriter = 1;

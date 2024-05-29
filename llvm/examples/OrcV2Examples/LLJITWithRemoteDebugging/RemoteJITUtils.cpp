@@ -129,7 +129,7 @@ launchLocalExecutor(StringRef ExecutablePath) {
   close(FromExecutor[WriteEnd]);
 
   auto EPC = SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(),
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
       SimpleRemoteEPC::Setup(),
       FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
   if (!EPC)
@@ -201,7 +201,7 @@ connectTCPSocket(StringRef NetworkAddress) {
     return CreateErr(toString(SockFD.takeError()));
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(),
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
       SimpleRemoteEPC::Setup(), *SockFD);
 }
 

@@ -230,7 +230,6 @@
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm64-linux-ohos -pthread \
-// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-OHOS-PTHREAD %s

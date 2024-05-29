@@ -32,7 +32,7 @@
 // {addi} followed by one of these {lxvd2x, lxvw4x, lxvdsx, lvebx, lvehx,
 // lvewx, lvx, lxsdx}
 FUSION_FEATURE(AddiLoad, hasAddiLoadFusion, 2, \
-               FUSION_OP_SET(ADDI, ADDI8, ADDItocL), \
+               FUSION_OP_SET(ADDI, ADDI8, ADDItocL, ADDItocL8), \
                FUSION_OP_SET(LXVD2X, LXVW4X, LXVDSX, LVEBX, LVEHX, LVEWX, \
                              LVX, LXSDX))
 
@@ -134,13 +134,13 @@ FUSION_FEATURE(XorisXori, hasWideImmFusion, 1, FUSION_OP_SET(XORIS, XORIS8),
 
 // addis rx,ra,si - addi rt,rx,SI, SI >= 0
 FUSION_FEATURE(AddisAddi, hasWideImmFusion, 1,
-               FUSION_OP_SET(ADDIS, ADDIS8, ADDIStocHA8),
-               FUSION_OP_SET(ADDI, ADDI8, ADDItocL))
+               FUSION_OP_SET(ADDIS, ADDIS8, ADDIStocHA8, ADDIStocHA),
+               FUSION_OP_SET(ADDI, ADDI8, ADDItocL8, ADDItocL))
 
 // addi rx,ra,si - addis rt,rx,SI, ra > 0, SI >= 2
 FUSION_FEATURE(AddiAddis, hasWideImmFusion, 1,
-               FUSION_OP_SET(ADDI, ADDI8, ADDItocL),
-               FUSION_OP_SET(ADDIS, ADDIS8, ADDIStocHA8))
+               FUSION_OP_SET(ADDI, ADDI8, ADDItocL8, ADDItocL),
+               FUSION_OP_SET(ADDIS, ADDIS8, ADDIStocHA8, ADDIStocHA))
 
 // mtctr - { bcctr,bcctrl }
 FUSION_FEATURE(ZeroMoveCTR, hasZeroMoveFusion, -1,

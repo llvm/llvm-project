@@ -112,7 +112,7 @@ gpu.module @test_module_3 {
 
 gpu.module @test_module_4 {
   // CHECK-LABEL: func @gpu_shuffle()
-  func.func @gpu_shuffle() -> (f32, f32, f32, f32) {
+  func.func @gpu_shuffle() -> (f32, f32, f32, f32, i1, i1, i1, i1) {
     // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
     %arg0 = arith.constant 1.0 : f32
     // CHECK: %[[#OFFSET:]] = llvm.mlir.constant(4 : i32) : i32
@@ -143,11 +143,41 @@ gpu.module @test_module_4 {
     // CHECK: nvvm.shfl.sync idx {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
     %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
 
+    func.return %shfl, %shflu, %shfld, %shfli, %pred, %predu, %predd, %predi
+      : f32, f32,f32, f32, i1, i1, i1, i1
+  }
+
+  // CHECK-LABEL: func @gpu_shuffle_unused_pred()
+  func.func @gpu_shuffle_unused_pred() -> (f32, f32, f32, f32) {
+    // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %arg0 = arith.constant 1.0 : f32
+    // CHECK: %[[#OFFSET:]] = llvm.mlir.constant(4 : i32) : i32
+    %arg1 = arith.constant 4 : i32
+    // CHECK: %[[#WIDTH:]] = llvm.mlir.constant(23 : i32) : i32
+    %arg2 = arith.constant 23 : i32
+    // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: %[[#MINUS_ONE:]] = llvm.mlir.constant(-1 : i32) : i32
+    // CHECK: %[[#THIRTY_TWO:]] = llvm.mlir.constant(32 : i32) : i32
+    // CHECK: %[[#NUM_LANES:]] = llvm.sub %[[#THIRTY_TWO]], %[[#WIDTH]] : i32
+    // CHECK: %[[#MASK:]] = llvm.lshr %[[#MINUS_ONE]], %[[#NUM_LANES]] : i32
+    // CHECK: %[[#CLAMP:]] = llvm.sub %[[#WIDTH]], %[[#ONE]] : i32
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] : f32 -> f32
+    %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : f32
+    // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: %[[#MINUS_ONE:]] = llvm.mlir.constant(-1 : i32) : i32
+    // CHECK: %[[#THIRTY_TWO:]] = llvm.mlir.constant(32 : i32) : i32
+    // CHECK: %[[#NUM_LANES:]] = llvm.sub %[[#THIRTY_TWO]], %[[#WIDTH]] : i32
+    // CHECK: %[[#MASK:]] = llvm.lshr %[[#MINUS_ONE]], %[[#NUM_LANES]] : i32
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync up %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#NUM_LANES]] : f32 -> f32
+    %shflu, %predu = gpu.shuffle up %arg0, %arg1, %arg2 : f32
+    // CHECK: nvvm.shfl.sync down {{.*}} : f32 -> f32
+    %shfld, %predd = gpu.shuffle down %arg0, %arg1, %arg2 : f32
+    // CHECK: nvvm.shfl.sync idx {{.*}} : f32 -> f32
+    %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
+
     func.return %shfl, %shflu, %shfld, %shfli : f32, f32,f32, f32
   }
 }
-
-
 
 gpu.module @test_module_5 {
   // CHECK-LABEL: func @gpu_sync()

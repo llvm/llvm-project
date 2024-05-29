@@ -67,16 +67,16 @@ define <2 x i1> @smin_commute_vec(<2 x i32> %x, <2 x i32> %other) {
   ret <2 x i1> %test
 }
 
-define <2 x i1> @smin_commute_vec_undef_elts(<2 x i32> %x, <2 x i32> %other) {
-; CHECK-LABEL: @smin_commute_vec_undef_elts(
-; CHECK-NEXT:    [[TEST:%.*]] = icmp sgt <2 x i32> [[OTHER:%.*]], <i32 0, i32 undef>
+define <2 x i1> @smin_commute_vec_poison_elts(<2 x i32> %x, <2 x i32> %other) {
+; CHECK-LABEL: @smin_commute_vec_poison_elts(
+; CHECK-NEXT:    [[TEST:%.*]] = icmp sgt <2 x i32> [[OTHER:%.*]], <i32 0, i32 poison>
 ; CHECK-NEXT:    ret <2 x i1> [[TEST]]
 ;
   %notneg = and <2 x i32> %x, <i32 7, i32 7>
   %positive = or <2 x i32> %notneg, <i32 1, i32 1>
   %cmp = icmp slt <2 x i32> %other, %positive
   %sel = select <2 x i1> %cmp, <2 x i32> %other, <2 x i32> %positive
-  %test = icmp sgt <2 x i32> %sel, <i32 0, i32 undef>
+  %test = icmp sgt <2 x i32> %sel, <i32 0, i32 poison>
   ret <2 x i1> %test
 }
 ; %positive might be zero

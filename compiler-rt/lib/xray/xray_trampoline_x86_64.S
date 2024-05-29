@@ -40,7 +40,7 @@
 	CFI_ADJUST_CFA_OFFSET(-8)
 .endm
 
-// This macro should keep the stack aligned to 16 bytes.
+// This macro should lower the stack pointer by an odd multiple of 8.
 .macro SAVE_REGISTERS
 	pushfq
 	CFI_ADJUST_CFA_OFFSET(8)
@@ -70,7 +70,6 @@
 	movq  %r15, 0(%rsp)
 .endm
 
-// This macro should keep the stack aligned to 16 bytes.
 .macro RESTORE_REGISTERS
 	movq  232(%rsp), %rbp
 	movupd	216(%rsp), %xmm0
@@ -117,8 +116,8 @@
 # LLVM-MCA-BEGIN __xray_FunctionEntry
 ASM_SYMBOL(__xray_FunctionEntry):
 	CFI_STARTPROC
-	ALIGN_STACK_16B
 	SAVE_REGISTERS
+	ALIGN_STACK_16B
 
 	// This load has to be atomic, it's concurrent with __xray_patch().
 	// On x86/amd64, a simple (type-aligned) MOV instruction is enough.
@@ -132,8 +131,8 @@ ASM_SYMBOL(__xray_FunctionEntry):
 	callq	*%rax
 
 LOCAL_LABEL(tmp0):
-	RESTORE_REGISTERS
 	RESTORE_STACK_ALIGNMENT
+	RESTORE_REGISTERS
 	retq
 # LLVM-MCA-END
 	ASM_SIZE(__xray_FunctionEntry)
@@ -193,8 +192,8 @@ LOCAL_LABEL(tmp2):
 # LLVM-MCA-BEGIN __xray_FunctionTailExit
 ASM_SYMBOL(__xray_FunctionTailExit):
 	CFI_STARTPROC
-	ALIGN_STACK_16B
 	SAVE_REGISTERS
+	ALIGN_STACK_16B
 
 	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
 	testq %rax,%rax
@@ -205,8 +204,8 @@ ASM_SYMBOL(__xray_FunctionTailExit):
 	callq	*%rax
 
 LOCAL_LABEL(tmp4):
-	RESTORE_REGISTERS
 	RESTORE_STACK_ALIGNMENT
+	RESTORE_REGISTERS
 	retq
 # LLVM-MCA-END
 	ASM_SIZE(__xray_FunctionTailExit)
@@ -221,8 +220,8 @@ LOCAL_LABEL(tmp4):
 # LLVM-MCA-BEGIN __xray_ArgLoggerEntry
 ASM_SYMBOL(__xray_ArgLoggerEntry):
 	CFI_STARTPROC
-	ALIGN_STACK_16B
 	SAVE_REGISTERS
+	ALIGN_STACK_16B
 
 	// Again, these function pointer loads must be atomic; MOV is fine.
 	movq	ASM_SYMBOL(_ZN6__xray13XRayArgLoggerE)(%rip), %rax
@@ -248,8 +247,8 @@ LOCAL_LABEL(arg1entryLog):
 	callq	*%rax
 
 LOCAL_LABEL(arg1entryFail):
-	RESTORE_REGISTERS
 	RESTORE_STACK_ALIGNMENT
+	RESTORE_REGISTERS
 	retq
 # LLVM-MCA-END
 	ASM_SIZE(__xray_ArgLoggerEntry)
@@ -257,8 +256,9 @@ LOCAL_LABEL(arg1entryFail):
 
 //===----------------------------------------------------------------------===//
 
+// __xray_*Event have default visibility so that they can be referenced by user
+// DSOs that do not link against the runtime.
 	.global ASM_SYMBOL(__xray_CustomEvent)
-	ASM_HIDDEN(__xray_CustomEvent)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_CustomEvent)
 # LLVM-MCA-BEGIN __xray_CustomEvent
@@ -284,7 +284,6 @@ LOCAL_LABEL(customEventCleanup):
 //===----------------------------------------------------------------------===//
 
 	.global ASM_SYMBOL(__xray_TypedEvent)
-	ASM_HIDDEN(__xray_TypedEvent)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_TypedEvent)
 # LLVM-MCA-BEGIN __xray_TypedEvent

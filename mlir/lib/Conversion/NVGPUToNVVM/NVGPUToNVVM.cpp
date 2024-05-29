@@ -1579,7 +1579,7 @@ struct NVGPUWarpgroupMmaStoreOpLowering
     if (offset)
       ti = makeAdd(ti, makeConst(offset));
 
-    auto structType = matrixD.getType().cast<LLVM::LLVMStructType>();
+    auto structType = cast<LLVM::LLVMStructType>(matrixD.getType());
 
     // Number of 32-bit registers owns per thread
     constexpr unsigned numAdjacentRegisters = 2;
@@ -1606,9 +1606,9 @@ struct NVGPUWarpgroupMmaStoreOpLowering
     int offset = 0;
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
     Value matriDValue = adaptor.getMatrixD();
-    auto stype = matriDValue.getType().cast<LLVM::LLVMStructType>();
+    auto stype = cast<LLVM::LLVMStructType>(matriDValue.getType());
     for (auto [idx, matrixD] : llvm::enumerate(stype.getBody())) {
-      auto structType = matrixD.cast<LLVM::LLVMStructType>();
+      auto structType = cast<LLVM::LLVMStructType>(matrixD);
       Value innerStructValue = b.create<LLVM::ExtractValueOp>(matriDValue, idx);
       storeFragmentedMatrix(b, innerStructValue, op.getDstMemref(), offset);
       offset += structType.getBody().size();
@@ -1626,13 +1626,9 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
   matchAndRewrite(nvgpu::WarpgroupMmaInitAccumulatorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
-    LLVM::LLVMStructType packStructType =
-        getTypeConverter()
-            ->convertType(op.getMatrixC().getType())
-            .cast<LLVM::LLVMStructType>();
-    Type elemType = packStructType.getBody()
-                        .front()
-                        .cast<LLVM::LLVMStructType>()
+    LLVM::LLVMStructType packStructType = cast<LLVM::LLVMStructType>(
+        getTypeConverter()->convertType(op.getMatrixC().getType()));
+    Type elemType = cast<LLVM::LLVMStructType>(packStructType.getBody().front())
                         .getBody()
                         .front();
     Value zero = b.create<LLVM::ConstantOp>(elemType, b.getZeroAttr(elemType));
@@ -1640,7 +1636,7 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
     SmallVector<Value> innerStructs;
     // Unpack the structs and set all values to zero
     for (auto [idx, s] : llvm::enumerate(packStructType.getBody())) {
-      auto structType = s.cast<LLVM::LLVMStructType>();
+      auto structType = cast<LLVM::LLVMStructType>(s);
       Value structValue = b.create<LLVM::ExtractValueOp>(packStruct, idx);
       for (unsigned i = 0; i < structType.getBody().size(); ++i) {
         structValue = b.create<LLVM::InsertValueOp>(

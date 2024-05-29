@@ -16,6 +16,7 @@ add_clang_library(clangTidyModernizeModule
   MakeSharedCheck.cpp
   MakeSmartPtrCheck.cpp
   MakeUniqueCheck.cpp
+  MinMaxUseInitializerListCheck.cpp
   ModernizeTidyModule.cpp
   PassByValueCheck.cpp
   RawStringLiteralCheck.cpp
@@ -40,6 +41,7 @@ add_clang_library(clangTidyModernizeModule
   UseNullptrCheck.cpp
   UseOverrideCheck.cpp
   UseStartsEndsWithCheck.cpp
+  UseStdFormatCheck.cpp
   UseStdNumbersCheck.cpp
   UseStdPrintCheck.cpp
   UseTrailingReturnTypeCheck.cpp

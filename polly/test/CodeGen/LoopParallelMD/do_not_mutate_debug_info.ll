@@ -1,6 +1,6 @@
 ; This test checks that we do not accidently mutate the debug info when
 ; inserting loop parallel metadata.
-; RUN: opt %loadPolly < %s  -S -polly -polly-codegen -polly-ast-detect-parallel | FileCheck %s
+; RUN: opt %loadNPMPolly < %s  -S -polly -passes=polly-codegen -polly-ast-detect-parallel | FileCheck %s
 ; CHECK-NOT: !7 = !{!7}
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

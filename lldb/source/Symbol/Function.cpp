@@ -289,7 +289,7 @@ void Function::GetStartLineSourceInfo(FileSpec &source_file,
     if (line_table->FindLineEntryByAddress(GetAddressRange().GetBaseAddress(),
                                            line_entry, nullptr)) {
       line_no = line_entry.line;
-      source_file = line_entry.file;
+      source_file = line_entry.GetFile();
     }
   }
 }
@@ -311,7 +311,7 @@ void Function::GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no) {
   LineEntry line_entry;
   if (line_table->FindLineEntryByAddress(scratch_addr, line_entry, nullptr)) {
     line_no = line_entry.line;
-    source_file = line_entry.file;
+    source_file = line_entry.GetFile();
   }
 }
 

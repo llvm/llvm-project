@@ -12,7 +12,7 @@
 namespace Fortran::runtime {
 extern "C" {
 
-#if LDBL_MANT_DIG != 113 && HAS_FLOAT128
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 // SPACING (16.9.180)
 F128Type RTDEF(Spacing16)(F128Type x) { return Spacing<113>(x); }
 #endif

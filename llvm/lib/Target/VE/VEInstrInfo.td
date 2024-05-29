@@ -1785,14 +1785,14 @@ defm : TRUNC64m<truncstorei8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRUNC64m<truncstorei16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
 defm : TRUNC64m<truncstorei32, STLrri, STLrii, STLzri, ST1Bzii>;
 
-// Atomic loads
+// Atomic loads (FIXME: replace iAny with the correct integer VT:)
 multiclass ATMLDm<SDPatternOperator from,
                   RM torri, RM torii,
                   RM tozri, RM tozii> {
-  def : Pat<(from ADDRrri:$addr), (torri MEMrri:$addr)>;
-  def : Pat<(from ADDRrii:$addr), (torii MEMrii:$addr)>;
-  def : Pat<(from ADDRzri:$addr), (tozri MEMzri:$addr)>;
-  def : Pat<(from ADDRzii:$addr), (tozii MEMzii:$addr)>;
+  def : Pat<(iAny (from ADDRrri:$addr)), (torri MEMrri:$addr)>;
+  def : Pat<(iAny (from ADDRrii:$addr)), (torii MEMrii:$addr)>;
+  def : Pat<(iAny (from ADDRzri:$addr)), (tozri MEMzri:$addr)>;
+  def : Pat<(iAny (from ADDRzii:$addr)), (tozii MEMzii:$addr)>;
 }
 defm : ATMLDm<atomic_load_8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
 defm : ATMLDm<atomic_load_16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;

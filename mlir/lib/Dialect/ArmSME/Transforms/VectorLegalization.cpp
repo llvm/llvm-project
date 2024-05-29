@@ -46,6 +46,8 @@ static constexpr StringLiteral kMatchFailureUnsupportedMaskOp(
     "op mask is unsupported for legalization/decomposition");
 static constexpr StringLiteral
     kMatchFailureNonPermutationMap("op affine map is not a permutation");
+static constexpr StringLiteral kMatchFailureNotIllegalToLegal(
+    "expected transpose from illegal type to legal type");
 
 /// An SMESubTile represents a single SME-sized sub-tile from decomposing a
 /// larger vector type. The (`row`, `col`) are the position of the tile in the
@@ -162,6 +164,35 @@ int getNumberOfSMETilesForVectorType(VectorType type) {
   unsigned minNumElts = getSMETileSliceMinNumElts(elementType);
   return (vectorRows * vectorCols) / (minNumElts * minNumElts);
 }
+
+/// Legalize `arith.constant dense<value>` splat operations to fit within SME
+/// tiles by decomposing them into tile-sized operations.
+struct LegalizeArithConstantOpsByDecomposition
+    : public OneToNOpConversionPattern<arith::ConstantOp> {
+  using OneToNOpConversionPattern::OneToNOpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ConstantOp constantOp, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
+    auto vectorType = dyn_cast<VectorType>(constantOp.getType());
+    auto denseAttr = dyn_cast<DenseElementsAttr>(constantOp.getValueAttr());
+    if (!vectorType || !denseAttr || !denseAttr.isSplat())
+      return failure();
+
+    if (!isMultipleOfSMETileVectorType(vectorType))
+      return rewriter.notifyMatchFailure(constantOp,
+                                         kMatchFailureNotSMETileTypeMultiple);
+
+    auto smeTileType = getSMETileTypeForElement(vectorType.getElementType());
+    auto tileCount = getNumberOfSMETilesForVectorType(vectorType);
+    auto tileSplat = rewriter.create<arith::ConstantOp>(
+        constantOp.getLoc(), denseAttr.resizeSplat(smeTileType));
+    rewriter.replaceOp(constantOp, SmallVector<Value>(tileCount, tileSplat),
+                       adaptor.getResultMapping());
+
+    return success();
+  }
+};
 
 /// Legalize `vector.outerproduct` operations to fit within SME tiles by
 /// decomposing them into tile-sized operations.
@@ -416,6 +447,17 @@ struct FoldExtractFromVectorOfSMELikeCreateMasks
   }
 };
 
+/// A vector type where no fixed dimension comes after a scalable dimension.
+bool isLegalVectorType(VectorType vType) {
+  bool seenFixedDim = false;
+  for (bool scalableFlag : llvm::reverse(vType.getScalableDims())) {
+    seenFixedDim |= !scalableFlag;
+    if (seenFixedDim && scalableFlag)
+      return false;
+  }
+  return true;
+}
+
 /// Lifts an illegal vector.transpose and vector.transfer_read to a
 /// memref.subview + memref.transpose, followed by a legal read.
 ///
@@ -448,16 +490,6 @@ struct LiftIllegalVectorTransposeToMemory
     : public OpRewritePattern<vector::TransposeOp> {
   using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
 
-  static bool isIllegalVectorType(VectorType vType) {
-    bool seenFixedDim = false;
-    for (bool scalableFlag : llvm::reverse(vType.getScalableDims())) {
-      seenFixedDim |= !scalableFlag;
-      if (seenFixedDim && scalableFlag)
-        return true;
-    }
-    return false;
-  }
-
   static Value getExtensionSource(Operation *op) {
     if (isa_and_present<arith::ExtSIOp, arith::ExtUIOp, arith::ExtFOp>(op))
       return op->getOperand(0);
@@ -468,9 +500,9 @@ struct LiftIllegalVectorTransposeToMemory
                                 PatternRewriter &rewriter) const override {
     auto sourceType = transposeOp.getSourceVectorType();
     auto resultType = transposeOp.getResultVectorType();
-    if (!isIllegalVectorType(sourceType) || isIllegalVectorType(resultType))
-      return rewriter.notifyMatchFailure(
-          transposeOp, "expected transpose from illegal type to legal type");
+    if (isLegalVectorType(sourceType) || !isLegalVectorType(resultType))
+      return rewriter.notifyMatchFailure(transposeOp,
+                                         kMatchFailureNotIllegalToLegal);
 
     // Look through extend for transfer_read.
     Value maybeRead = transposeOp.getVector();
@@ -556,6 +588,59 @@ struct LiftIllegalVectorTransposeToMemory
   }
 };
 
+/// A rewrite to turn unit dim transpose-like vector.shape_casts into
+/// vector.transposes. The shape_cast has to be from an illegal vector type to a
+/// legal one (as defined by isLegalVectorType).
+///
+/// The reasoning for this is if we've got to this pass and we still have
+/// shape_casts of illegal types, then they likely will not cancel out. Turning
+/// them into transposes gives LiftIllegalVectorTransposeToMemory a chance to
+/// eliminate them.
+///
+/// Example:
+///
+///  BEFORE:
+///  ```mlir
+///  %0 = vector.shape_cast %a : vector<[4]x1xf32> to vector<1x[4]xf32>
+///  ```
+///
+///  AFTER:
+///  ```mlir
+///  %0 = vector.transpose %0, [1, 0] : vector<[4]x1xf32> to vector<1x[4]xf32>
+///  ```
+struct ConvertIllegalShapeCastOpsToTransposes
+    : public OpRewritePattern<vector::ShapeCastOp> {
+  using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto sourceType = shapeCastOp.getSourceVectorType();
+    auto resultType = shapeCastOp.getResultVectorType();
+    if (isLegalVectorType(sourceType) || !isLegalVectorType(resultType))
+      return rewriter.notifyMatchFailure(shapeCastOp,
+                                         kMatchFailureNotIllegalToLegal);
+
+    // Note: If we know that `sourceType` is an illegal vector type (and 2D)
+    // then dim 0 is scalable and dim 1 is fixed.
+    if (sourceType.getRank() != 2 || sourceType.getDimSize(1) != 1)
+      return rewriter.notifyMatchFailure(
+          shapeCastOp, "expected source to be a 2D scalable vector with a "
+                       "trailing unit dim");
+
+    auto loc = shapeCastOp.getLoc();
+    auto transpose = rewriter.create<vector::TransposeOp>(
+        loc, shapeCastOp.getSource(), ArrayRef<int64_t>{1, 0});
+
+    if (resultType.getRank() == 1)
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(shapeCastOp, resultType,
+                                                       transpose);
+    else
+      rewriter.replaceOp(shapeCastOp, transpose);
+
+    return success();
+  }
+};
+
 struct VectorLegalizationPass
     : public arm_sme::impl::VectorLegalizationBase<VectorLegalizationPass> {
   void runOnOperation() override {
@@ -576,11 +661,13 @@ struct VectorLegalizationPass
         });
 
     patterns.add<FoldExtractFromVectorOfSMELikeCreateMasks,
-                 LiftIllegalVectorTransposeToMemory>(context);
+                 LiftIllegalVectorTransposeToMemory,
+                 ConvertIllegalShapeCastOpsToTransposes>(context);
     // Note: High benefit to ensure masked outer products are lowered first.
     patterns.add<LegalizeMaskedVectorOuterProductOpsByDecomposition>(
         converter, context, 1024);
-    patterns.add<LegalizeVectorOuterProductOpsByDecomposition,
+    patterns.add<LegalizeArithConstantOpsByDecomposition,
+                 LegalizeVectorOuterProductOpsByDecomposition,
                  LegalizeTransferReadOpsByDecomposition,
                  LegalizeTransferWriteOpsByDecomposition>(converter, context);
     populateFuncTypeConversionPatterns(converter, patterns);

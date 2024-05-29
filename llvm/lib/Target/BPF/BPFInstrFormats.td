@@ -73,6 +73,7 @@ def BPF_JLT  : BPFJumpOp<0xa>;
 def BPF_JLE  : BPFJumpOp<0xb>;
 def BPF_JSLT : BPFJumpOp<0xc>;
 def BPF_JSLE : BPFJumpOp<0xd>;
+def BPF_JCOND : BPFJumpOp<0xe>;
 
 class BPFWidthModifer<bits<2> val> {
   bits<2> Value = val;

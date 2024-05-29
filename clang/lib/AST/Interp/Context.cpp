@@ -9,7 +9,6 @@
 #include "Context.h"
 #include "ByteCodeEmitter.h"
 #include "ByteCodeExprGen.h"
-#include "ByteCodeGenError.h"
 #include "ByteCodeStmtGen.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
@@ -121,7 +120,8 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isBooleanType())
     return PT_Bool;
 
-  if (T->isAnyComplexType())
+  // We map these to primitive arrays.
+  if (T->isAnyComplexType() || T->isVectorType())
     return std::nullopt;
 
   if (T->isSignedIntegerOrEnumerationType()) {
@@ -164,7 +164,8 @@ std::optional<PrimType> Context::classify(QualType T) const {
       T->isFunctionType() || T->isSpecificBuiltinType(BuiltinType::BoundMember))
     return PT_FnPtr;
 
-  if (T->isReferenceType() || T->isPointerType())
+  if (T->isReferenceType() || T->isPointerType() ||
+      T->isObjCObjectPointerType())
     return PT_Ptr;
 
   if (const auto *AT = T->getAs<AtomicType>())
@@ -205,17 +206,6 @@ bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
   }
 
   Stk.clear();
-  return false;
-}
-
-bool Context::Check(State &Parent, llvm::Expected<bool> &&Flag) {
-  if (Flag)
-    return *Flag;
-  handleAllErrors(Flag.takeError(), [&Parent](ByteCodeGenError &Err) {
-    Parent.FFDiag(Err.getRange().getBegin(),
-                  diag::err_experimental_clang_interp_failed)
-        << Err.getRange();
-  });
   return false;
 }
 
@@ -272,4 +262,37 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
   }
 
   return Func;
+}
+
+unsigned Context::collectBaseOffset(const RecordDecl *BaseDecl,
+                                    const RecordDecl *DerivedDecl) const {
+  assert(BaseDecl);
+  assert(DerivedDecl);
+  const auto *FinalDecl = cast<CXXRecordDecl>(BaseDecl);
+  const RecordDecl *CurDecl = DerivedDecl;
+  const Record *CurRecord = P->getOrCreateRecord(CurDecl);
+  assert(CurDecl && FinalDecl);
+
+  unsigned OffsetSum = 0;
+  for (;;) {
+    assert(CurRecord->getNumBases() > 0);
+    // One level up
+    for (const Record::Base &B : CurRecord->bases()) {
+      const auto *BaseDecl = cast<CXXRecordDecl>(B.Decl);
+
+      if (BaseDecl == FinalDecl || BaseDecl->isDerivedFrom(FinalDecl)) {
+        OffsetSum += B.Offset;
+        CurRecord = B.R;
+        CurDecl = BaseDecl;
+        break;
+      }
+    }
+    if (CurDecl == FinalDecl)
+      break;
+
+    // break;
+  }
+
+  assert(OffsetSum > 0);
+  return OffsetSum;
 }

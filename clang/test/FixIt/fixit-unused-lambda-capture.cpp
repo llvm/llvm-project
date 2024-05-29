@@ -1,5 +1,5 @@
 // RUN: cp %s %t
-// RUN: %clang_cc1 -x c++ -fsyntax-only -Wunused-lambda-capture -Wno-unused-value -std=c++1z -fixit %t
+// RUN: %clang_cc1 -x c++ -Wunused-lambda-capture -Wno-unused-value -std=c++1z -fixit %t
 // RUN: grep -v CHECK %t | FileCheck %s
 
 void test() {

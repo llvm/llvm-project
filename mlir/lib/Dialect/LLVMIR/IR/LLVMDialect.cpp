@@ -47,6 +47,74 @@ using mlir::LLVM::linkage::getMaxEnumValForLinkage;
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc"
 
+//===----------------------------------------------------------------------===//
+// Property Helpers
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// IntegerOverflowFlags
+
+namespace mlir {
+static Attribute convertToAttribute(MLIRContext *ctx,
+                                    IntegerOverflowFlags flags) {
+  return IntegerOverflowFlagsAttr::get(ctx, flags);
+}
+
+static LogicalResult
+convertFromAttribute(IntegerOverflowFlags &flags, Attribute attr,
+                     function_ref<InFlightDiagnostic()> emitError) {
+  auto flagsAttr = dyn_cast<IntegerOverflowFlagsAttr>(attr);
+  if (!flagsAttr) {
+    return emitError() << "expected 'overflowFlags' attribute to be an "
+                          "IntegerOverflowFlagsAttr, but got "
+                       << attr;
+  }
+  flags = flagsAttr.getValue();
+  return success();
+}
+} // namespace mlir
+
+static ParseResult parseOverflowFlags(AsmParser &p,
+                                      IntegerOverflowFlags &flags) {
+  if (failed(p.parseOptionalKeyword("overflow"))) {
+    flags = IntegerOverflowFlags::none;
+    return success();
+  }
+  if (p.parseLess())
+    return failure();
+  do {
+    StringRef kw;
+    SMLoc loc = p.getCurrentLocation();
+    if (p.parseKeyword(&kw))
+      return failure();
+    std::optional<IntegerOverflowFlags> flag =
+        symbolizeIntegerOverflowFlags(kw);
+    if (!flag)
+      return p.emitError(loc,
+                         "invalid overflow flag: expected nsw, nuw, or none");
+    flags = flags | *flag;
+  } while (succeeded(p.parseOptionalComma()));
+  return p.parseGreater();
+}
+
+static void printOverflowFlags(AsmPrinter &p, Operation *op,
+                               IntegerOverflowFlags flags) {
+  if (flags == IntegerOverflowFlags::none)
+    return;
+  p << " overflow<";
+  SmallVector<StringRef, 2> strs;
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nsw))
+    strs.push_back("nsw");
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nuw))
+    strs.push_back("nuw");
+  llvm::interleaveComma(strs, p);
+  p << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// Attribute Helpers
+//===----------------------------------------------------------------------===//
+
 static constexpr const char kElemTypeAttrName[] = "elem_type";
 
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
@@ -70,12 +138,12 @@ static ParseResult parseLLVMOpAttrs(OpAsmParser &parser,
 static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
                              DictionaryAttr attrs) {
   auto filteredAttrs = processFMFAttr(attrs.getValue());
-  if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op))
+  if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op)) {
     printer.printOptionalAttrDict(
-        filteredAttrs,
-        /*elidedAttrs=*/{iface.getIntegerOverflowAttrName()});
-  else
+        filteredAttrs, /*elidedAttrs=*/{iface.getOverflowFlagsAttrName()});
+  } else {
     printer.printOptionalAttrDict(filteredAttrs);
+  }
 }
 
 /// Verifies `symbol`'s use in `op` to ensure the symbol is a valid and
@@ -559,7 +627,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
     // we don't do anything here. The verifier will catch it and emit a proper
     // error. All other canonicalization is done in the fold method.
     bool requiresConst = !rawConstantIndices.empty() &&
-                         currType.isa_and_nonnull<LLVMStructType>();
+                         isa_and_nonnull<LLVMStructType>(currType);
     if (Value val = llvm::dyn_cast_if_present<Value>(iter)) {
       APInt intC;
       if (requiresConst && matchPattern(val, m_ConstantInt(&intC)) &&
@@ -771,25 +839,19 @@ void LoadOp::getEffects(
 }
 
 /// Returns true if the given type is supported by atomic operations. All
-/// integer and float types with limited bit width are supported. Additionally,
-/// depending on the operation pointers may be supported as well.
-static bool isTypeCompatibleWithAtomicOp(Type type, bool isPointerTypeAllowed) {
-  if (llvm::isa<LLVMPointerType>(type))
-    return isPointerTypeAllowed;
-
-  std::optional<unsigned> bitWidth;
-  if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
+/// integer, float, and pointer types with a power-of-two bitsize and a minimal
+/// size of 8 bits are supported.
+static bool isTypeCompatibleWithAtomicOp(Type type,
+                                         const DataLayout &dataLayout) {
+  if (!isa<IntegerType, LLVMPointerType>(type))
     if (!isCompatibleFloatingPointType(type))
       return false;
-    bitWidth = floatType.getWidth();
-  }
-  if (auto integerType = llvm::dyn_cast<IntegerType>(type))
-    bitWidth = integerType.getWidth();
-  // The type is neither an integer, float, or pointer type.
-  if (!bitWidth)
+
+  llvm::TypeSize bitWidth = dataLayout.getTypeSizeInBits(type);
+  if (bitWidth.isScalable())
     return false;
-  return *bitWidth == 8 || *bitWidth == 16 || *bitWidth == 32 ||
-         *bitWidth == 64;
+  // Needs to be at least 8 bits and a power of two.
+  return bitWidth >= 8 && (bitWidth & (bitWidth - 1)) == 0;
 }
 
 /// Verifies the attributes and the type of atomic memory access operations.
@@ -797,8 +859,8 @@ template <typename OpTy>
 LogicalResult verifyAtomicMemOp(OpTy memOp, Type valueType,
                                 ArrayRef<AtomicOrdering> unsupportedOrderings) {
   if (memOp.getOrdering() != AtomicOrdering::not_atomic) {
-    if (!isTypeCompatibleWithAtomicOp(valueType,
-                                      /*isPointerTypeAllowed=*/true))
+    DataLayout dataLayout = DataLayout::closest(memOp);
+    if (!isTypeCompatibleWithAtomicOp(valueType, dataLayout))
       return memOp.emitOpError("unsupported type ")
              << valueType << " for atomic access";
     if (llvm::is_contained(unsupportedOrderings, memOp.getOrdering()))
@@ -1717,7 +1779,7 @@ LogicalResult ReturnOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Verifier for LLVM::AddressOfOp.
+// LLVM::AddressOfOp.
 //===----------------------------------------------------------------------===//
 
 static Operation *parentLLVMModule(Operation *op) {
@@ -1756,6 +1818,11 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                        "referenced global");
 
   return success();
+}
+
+// AddressOfOp constant-folds to the global symbol name.
+OpFoldResult LLVM::AddressOfOp::fold(FoldAdaptor) {
+  return getGlobalNameAttr();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2564,14 +2631,14 @@ LogicalResult LLVM::ConstantOp::verify() {
     }
     // See the comment for getLLVMConstant for more details about why 8-bit
     // floats can be represented by integers.
-    if (getType().isa<IntegerType>() && !getType().isInteger(floatWidth)) {
+    if (isa<IntegerType>(getType()) && !getType().isInteger(floatWidth)) {
       return emitOpError() << "expected integer type of width " << floatWidth;
     }
   }
   if (auto splatAttr = dyn_cast<SplatElementsAttr>(getValue())) {
-    if (!getType().isa<VectorType>() && !getType().isa<LLVM::LLVMArrayType>() &&
-        !getType().isa<LLVM::LLVMFixedVectorType>() &&
-        !getType().isa<LLVM::LLVMScalableVectorType>())
+    if (!isa<VectorType>(getType()) && !isa<LLVM::LLVMArrayType>(getType()) &&
+        !isa<LLVM::LLVMFixedVectorType>(getType()) &&
+        !isa<LLVM::LLVMScalableVectorType>(getType()))
       return emitOpError() << "expected vector or array type";
   }
   return success();
@@ -2621,7 +2688,8 @@ LogicalResult AtomicRMWOp::verify() {
     if (!mlir::LLVM::isCompatibleFloatingPointType(valType))
       return emitOpError("expected LLVM IR floating point type");
   } else if (getBinOp() == AtomicBinOp::xchg) {
-    if (!isTypeCompatibleWithAtomicOp(valType, /*isPointerTypeAllowed=*/true))
+    DataLayout dataLayout = DataLayout::closest(*this);
+    if (!isTypeCompatibleWithAtomicOp(valType, dataLayout))
       return emitOpError("unexpected LLVM IR type for 'xchg' bin_op");
   } else {
     auto intType = llvm::dyn_cast<IntegerType>(valType);
@@ -2668,8 +2736,8 @@ LogicalResult AtomicCmpXchgOp::verify() {
   if (!ptrType)
     return emitOpError("expected LLVM IR pointer type for operand #0");
   auto valType = getVal().getType();
-  if (!isTypeCompatibleWithAtomicOp(valType,
-                                    /*isPointerTypeAllowed=*/true))
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!isTypeCompatibleWithAtomicOp(valType, dataLayout))
     return emitOpError("unexpected LLVM IR type");
   if (getSuccessOrdering() < AtomicOrdering::monotonic ||
       getFailureOrdering() < AtomicOrdering::monotonic)
@@ -2761,15 +2829,26 @@ LogicalResult SExtOp::verify() { return verifyExtOp<SExtOp>(*this); }
 // Folder and verifier for LLVM::BitcastOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
-  // bitcast(x : T0, T0) -> x
-  if (getArg().getType() == getType())
-    return getArg();
-  // bitcast(bitcast(x : T0, T1), T0) -> x
-  if (auto prev = getArg().getDefiningOp<BitcastOp>())
-    if (prev.getArg().getType() == getType())
+/// Folds a cast op that can be chained.
+template <typename T>
+static OpFoldResult foldChainableCast(T castOp,
+                                      typename T::FoldAdaptor adaptor) {
+  // cast(x : T0, T0) -> x
+  if (castOp.getArg().getType() == castOp.getType())
+    return castOp.getArg();
+  if (auto prev = castOp.getArg().template getDefiningOp<T>()) {
+    // cast(cast(x : T0, T1), T0) -> x
+    if (prev.getArg().getType() == castOp.getType())
       return prev.getArg();
+    // cast(cast(x : T0, T1), T2) -> cast(x: T0, T2)
+    castOp.getArgMutable().set(prev.getArg());
+    return Value{castOp};
+  }
   return {};
+}
+
+OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
+  return foldChainableCast(*this, adaptor);
 }
 
 LogicalResult LLVM::BitcastOp::verify() {
@@ -2786,10 +2865,8 @@ LogicalResult LLVM::BitcastOp::verify() {
   if (!resultType)
     return success();
 
-  auto isVector = [](Type type) {
-    return llvm::isa<VectorType, LLVMScalableVectorType, LLVMFixedVectorType>(
-        type);
-  };
+  auto isVector =
+      llvm::IsaPred<VectorType, LLVMScalableVectorType, LLVMFixedVectorType>;
 
   // Due to bitcast requiring both operands to be of the same size, it is not
   // possible for only one of the two to be a pointer of vectors.
@@ -2813,14 +2890,7 @@ LogicalResult LLVM::BitcastOp::verify() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult LLVM::AddrSpaceCastOp::fold(FoldAdaptor adaptor) {
-  // addrcast(x : T0, T0) -> x
-  if (getArg().getType() == getType())
-    return getArg();
-  // addrcast(addrcast(x : T0, T1), T0) -> x
-  if (auto prev = getArg().getDefiningOp<AddrSpaceCastOp>())
-    if (prev.getArg().getType() == getType())
-      return prev.getArg();
-  return {};
+  return foldChainableCast(*this, adaptor);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2957,6 +3027,19 @@ LogicalResult LinkerOptionsOp::verify() {
       parentOp && !satisfiesLLVMModule(parentOp))
     return emitOpError("must appear at the module level");
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// InlineAsmOp
+//===----------------------------------------------------------------------===//
+
+void InlineAsmOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (getHasSideEffects()) {
+    effects.emplace_back(MemoryEffects::Write::get());
+    effects.emplace_back(MemoryEffects::Read::get());
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -3188,6 +3271,12 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
 
 Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
+  // If this was folded from an llvm.mlir.addressof operation, it should be
+  // materialized as such.
+  if (auto symbol = dyn_cast<FlatSymbolRefAttr>(value))
+    if (isa<LLVM::LLVMPointerType>(type))
+      return builder.create<LLVM::AddressOfOp>(loc, type, symbol);
+  // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }
 

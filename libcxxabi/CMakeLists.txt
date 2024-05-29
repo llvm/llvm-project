@@ -5,6 +5,7 @@
 #===============================================================================
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "libc++abi")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
@@ -441,6 +442,9 @@ endif()
 if (NOT "${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}" STREQUAL "")
   include_directories("${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}")
 endif()
+
+add_custom_target(cxxabi-test-depends
+  COMMENT "Build dependencies required to run the libc++abi test suite.")
 
 # Add source code. This also contains all of the logic for deciding linker flags
 # soname, etc...

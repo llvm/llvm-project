@@ -1403,3 +1403,12 @@ func.func @arm_sme_usmops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vect
   %reuslt = arm_sme.usmops_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
   return %reuslt : vector<[2]x[2]xi64>
 }
+
+//===----------------------------------------------------------------------===//
+// arm_sme.copy_tile
+//===----------------------------------------------------------------------===//
+
+func.func @arm_sme_copy_tile(%vec: vector<[4]x[4]xf32>) -> vector<[4]x[4]xf32> {
+  %result = arm_sme.copy_tile %vec : vector<[4]x[4]xf32>
+  return %result : vector<[4]x[4]xf32>
+}

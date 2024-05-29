@@ -19,6 +19,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
+#include <dlfcn.h>
 #include <inttypes.h>
 #include <iostream>
 #include <list>
@@ -29,7 +30,6 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
-#include <dlfcn.h>
 
 #include "omp-tools.h"
 
@@ -146,18 +146,28 @@ void __attribute__((weak)) __tsan_flush_memory() {}
 static ArcherFlags *archer_flags;
 
 #ifndef TsanHappensBefore
+
+template <typename... Args> static void __ompt_tsan_func(Args...) {}
+
+#define DECLARE_TSAN_FUNCTION(name, ...)                                       \
+  static void (*name)(__VA_ARGS__) = __ompt_tsan_func<__VA_ARGS__>;
+
 // Thread Sanitizer is a tool that finds races in code.
 // See http://code.google.com/p/data-race-test/wiki/DynamicAnnotations .
 // tsan detects these exact functions by name.
 extern "C" {
-static void (*AnnotateHappensAfter)(const char *, int, const volatile void *);
-static void (*AnnotateHappensBefore)(const char *, int, const volatile void *);
-static void (*AnnotateIgnoreWritesBegin)(const char *, int);
-static void (*AnnotateIgnoreWritesEnd)(const char *, int);
-static void (*AnnotateNewMemory)(const char *, int, const volatile void *,
-                                 size_t);
-static void (*__tsan_func_entry)(const void *);
-static void (*__tsan_func_exit)(void);
+DECLARE_TSAN_FUNCTION(AnnotateHappensAfter, const char *, int,
+                      const volatile void *)
+DECLARE_TSAN_FUNCTION(AnnotateHappensBefore, const char *, int,
+                      const volatile void *)
+DECLARE_TSAN_FUNCTION(AnnotateIgnoreWritesBegin, const char *, int)
+DECLARE_TSAN_FUNCTION(AnnotateIgnoreWritesEnd, const char *, int)
+DECLARE_TSAN_FUNCTION(AnnotateNewMemory, const char *, int,
+                      const volatile void *, size_t)
+DECLARE_TSAN_FUNCTION(__tsan_func_entry, const void *)
+DECLARE_TSAN_FUNCTION(__tsan_func_exit)
+
+// RunningOnValgrind is used to detect absence of TSan and must intentionally be a nullptr.
 static int (*RunningOnValgrind)(void);
 }
 
@@ -1142,7 +1152,10 @@ static void ompt_tsan_mutex_released(ompt_mutex_t kind, ompt_wait_id_t wait_id,
 
 #define findTsanFunction(f, fSig)                                              \
   do {                                                                         \
-    if (NULL == (f = fSig dlsym(RTLD_DEFAULT, #f)))                            \
+    void *fp = dlsym(RTLD_DEFAULT, #f);                                        \
+    if (fp)                                                                    \
+      f = fSig fp;                                                             \
+    else                                                                       \
       printf("Unable to find TSan function " #f ".\n");                        \
   } while (0)
 
@@ -1248,7 +1261,7 @@ ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
                           // tool the chance to be loaded
   {
     if (archer_flags->verbose)
-      std::cout << "Archer detected OpenMP application without TSan "
+      std::cout << "Archer detected OpenMP application without TSan; "
                    "stopping operation"
                 << std::endl;
     delete archer_flags;

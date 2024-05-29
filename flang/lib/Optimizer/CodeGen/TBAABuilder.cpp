@@ -102,7 +102,8 @@ void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
     return;
 
   mlir::LLVM::LLVMFuncOp func = op->getParentOfType<mlir::LLVM::LLVMFuncOp>();
-  assert(func && "func.func should have already been converted to llvm.func");
+  if (!func)
+    return;
 
   ++tagAttachmentCounter;
   if (tagAttachmentLimit != kTagAttachmentUnlimited &&
@@ -119,7 +120,7 @@ void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
     // with both data and descriptor accesses.
     // Conservatively set any-access tag if there is any descriptor member.
     tbaaTagSym = getAnyAccessTag(func);
-  } else if (baseFIRType.isa<fir::BaseBoxType>()) {
+  } else if (mlir::isa<fir::BaseBoxType>(baseFIRType)) {
     tbaaTagSym = getBoxAccessTag(baseFIRType, accessFIRType, gep, func);
   } else {
     tbaaTagSym = getDataAccessTag(baseFIRType, accessFIRType, gep, func);

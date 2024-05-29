@@ -161,7 +161,7 @@ define i8 @test_atomicrmw_and_i8_global_system(ptr addrspace(1) %ptr, i8 %value)
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[INV_MASK]], [[VALOPERAND_SHIFTED]]
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] seq_cst, align 4
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i8

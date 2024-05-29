@@ -36,6 +36,7 @@ WARNING_GADGET(Decrement)
 WARNING_GADGET(ArraySubscript)
 WARNING_GADGET(PointerArithmetic)
 WARNING_GADGET(UnsafeBufferUsageAttr)
+WARNING_GADGET(UnsafeBufferUsageCtorAttr)
 WARNING_GADGET(DataInvocation)
 WARNING_CONTAINER_GADGET(SpanTwoParamConstructor) // Uses of `std::span(arg0, arg1)`
 FIXABLE_GADGET(ULCArraySubscript)          // `DRE[any]` in an Unspecified Lvalue Context

@@ -1,6 +1,6 @@
 ! Test lowering of user defined elemental procedure reference to HLFIR
 ! With polymorphic arguments.
-! RUN: bbc -emit-hlfir -I nw -polymorphic-type -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -I nw -o - %s 2>&1 | FileCheck %s
 module def_some_types
   type :: t
     integer :: i

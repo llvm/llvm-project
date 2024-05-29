@@ -110,7 +110,6 @@ if(MLIR_ENABLE_ROCM_CONVERSIONS)
   target_compile_definitions(obj.MLIRGPUTransforms
     PRIVATE
     __DEFAULT_ROCM_PATH__="${DEFAULT_ROCM_PATH}"
-    MLIR_GPU_TO_HSACO_PASS_ENABLE=1
   )
 
   target_link_libraries(MLIRGPUTransforms

@@ -336,7 +336,7 @@ void Path::Root::printErrorContext(const Value &R, raw_ostream &OS) const {
       JOS.object([&] {
         for (const auto *KV : sortedElements(*O)) {
           JOS.attributeBegin(KV->first);
-          if (FieldName.equals(KV->first))
+          if (FieldName == StringRef(KV->first))
             Recurse(KV->second, Path.drop_back(), Recurse);
           else
             abbreviate(KV->second, JOS);

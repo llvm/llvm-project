@@ -26,10 +26,10 @@ int buzz();
 const int inner_loop = 100;
 const int outer_loop = 2000;
 
-int bar() { // imprecise-warning-re {{Potential performance regression from use of __builtin_expect(): Annotation was correct on {{.+}}% ({{[0-9]+ / [0-9]+}}) of profiled executions.}}
+int bar() { // imprecise-warning-re {{potential performance regression from use of __builtin_expect(): annotation was correct on {{.+}}% ({{[0-9]+ / [0-9]+}}) of profiled executions}}
   int rando = buzz();
   int x = 0;
-  if (likely(rando % (outer_loop * inner_loop) == 0)) { // exact-warning-re {{Potential performance regression from use of __builtin_expect(): Annotation was correct on {{.+}}% ({{[0-9]+ / [0-9]+}}) of profiled executions.}}
+  if (likely(rando % (outer_loop * inner_loop) == 0)) { // exact-warning-re {{potential performance regression from use of __builtin_expect(): annotation was correct on {{.+}}% ({{[0-9]+ / [0-9]+}}) of profiled executions}}
     x = baz(rando);
   } else {
     x = foo(50);
@@ -37,10 +37,10 @@ int bar() { // imprecise-warning-re {{Potential performance regression from use 
   return x;
 }
 
-int fizz() { // imprecise-warning-re {{Potential performance regression from use of __builtin_expect(): Annotation was correct on {{.+}}% ({{[0-9]+ / [0-9]+}}) of profiled executions.}}
+int fizz() { // imprecise-warning-re {{potential performance regression from use of __builtin_expect(): annotation was correct on {{.+}}% ({{[0-9]+ / [0-9]+}}) of profiled executions}}
   int rando = buzz();
   int x = 0;
-  if (unlikely(rando % (outer_loop * inner_loop) == 0)) { // exact-warning-re {{Potential performance regression from use of __builtin_expect(): Annotation was correct on {{.+}}% ({{[0-9]+ / [0-9]+}}) of profiled executions.}}
+  if (unlikely(rando % (outer_loop * inner_loop) == 0)) { // exact-warning-re {{potential performance regression from use of __builtin_expect(): annotation was correct on {{.+}}% ({{[0-9]+ / [0-9]+}}) of profiled executions}}
     x = baz(rando);
   } else {
     x = foo(50);

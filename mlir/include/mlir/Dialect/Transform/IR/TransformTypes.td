@@ -10,7 +10,7 @@
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMTYPES
 
 include "mlir/IR/AttrTypeBase.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 
 def Transform_AffineMapParamType : TypeDef<Transform_Dialect, "AffineMapParam",

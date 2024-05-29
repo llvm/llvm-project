@@ -20,18 +20,18 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 "
 ) lldb::SBProcess;
 
-%feature("autodoc", "
+%feature("docstring", "
     Writes data into the current process's stdin. API client specifies a Python
     string as the only argument."
 ) lldb::SBProcess::PutSTDIN;
 
-%feature("autodoc", "
+%feature("docstring", "
     Reads data from the current process's stdout stream. API client specifies
     the size of the buffer to read data into. It returns the byte buffer in a
     Python string."
 ) lldb::SBProcess::GetSTDOUT;
 
-%feature("autodoc", "
+%feature("docstring", "
     Reads data from the current process's stderr stream. API client specifies
     the size of the buffer to read data into. It returns the byte buffer in a
     Python string."
@@ -47,34 +47,34 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 "See SBTarget.Launch for argument description and usage."
 ) lldb::SBProcess::RemoteLaunch;
 
-%feature("autodoc", "
+%feature("docstring", "
     Returns the INDEX'th thread from the list of current threads.  The index
     of a thread is only valid for the current stop.  For a persistent thread
     identifier use either the thread ID or the IndexID.  See help on SBThread
     for more details."
 ) lldb::SBProcess::GetThreadAtIndex;
 
-%feature("autodoc", "
+%feature("docstring", "
     Returns the thread with the given thread ID."
 ) lldb::SBProcess::GetThreadByID;
 
-%feature("autodoc", "
+%feature("docstring", "
     Returns the thread with the given thread IndexID."
 ) lldb::SBProcess::GetThreadByIndexID;
 
-%feature("autodoc", "
+%feature("docstring", "
     Returns the currently selected thread."
 ) lldb::SBProcess::GetSelectedThread;
 
-%feature("autodoc", "
+%feature("docstring", "
     Lazily create a thread on demand through the current OperatingSystem plug-in, if the current OperatingSystem plug-in supports it."
 ) lldb::SBProcess::CreateOSPluginThread;
 
-%feature("autodoc", "
+%feature("docstring", "
     Returns the process ID of the process."
 ) lldb::SBProcess::GetProcessID;
 
-%feature("autodoc", "
+%feature("docstring", "
     Returns an integer ID that is guaranteed to be unique across all process instances. This is not the process ID, just a unique integer for comparison and caching purposes."
 ) lldb::SBProcess::GetUniqueID;
 
@@ -95,7 +95,7 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
     will always increase, but may increase by more than one per stop."
 ) lldb::SBProcess::GetStopID;
 
-%feature("autodoc", "
+%feature("docstring", "
     Reads memory from the current process's address space and removes any
     traps that may have been inserted into the memory. It returns the byte
     buffer in a Python string. Example: ::
@@ -105,7 +105,7 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
         new_bytes = bytearray(content)"
 ) lldb::SBProcess::ReadMemory;
 
-%feature("autodoc", "
+%feature("docstring", "
     Writes memory to the current process's address space and maintains any
     traps that might be present due to software breakpoints. Example: ::
 
@@ -116,8 +116,8 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
             print('SBProcess.WriteMemory() failed!')"
 ) lldb::SBProcess::WriteMemory;
 
-%feature("autodoc", "
-    Reads a NULL terminated C string from the current process's address space.
+%feature("docstring", "
+    Reads a NUL terminated C string from the current process's address space.
     It returns a python string of the exact length, or truncates the string if
     the maximum character limit is reached. Example: ::
 
@@ -131,7 +131,7 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 ) lldb::SBProcess::ReadCStringFromMemory;
 
 
-%feature("autodoc", "
+%feature("docstring", "
     Reads an unsigned integer from memory given a byte size and an address.
     Returns the unsigned integer that was read. Example: ::
 
@@ -145,7 +145,7 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 ) lldb::SBProcess::ReadUnsignedFromMemory;
 
 
-%feature("autodoc", "
+%feature("docstring", "
     Reads a pointer from memory from an address and returns the value. Example: ::
 
         # Read a pointer from address 0x1000
@@ -158,16 +158,16 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 ) lldb::SBProcess::ReadPointerFromMemory;
 
 
-%feature("autodoc", "
+%feature("docstring", "
     Returns the implementation object of the process plugin if available. None
     otherwise."
 ) lldb::SBProcess::GetScriptedImplementation;
 
-%feature("autodoc", "
+%feature("docstring", "
     Returns the process' extended crash information."
 ) lldb::SBProcess::GetExtendedCrashInformation;
 
-%feature("autodoc", "
+%feature("docstring", "
     Load the library whose filename is given by image_spec looking in all the
     paths supplied in the paths argument.  If successful, return a token that
     can be passed to UnloadImage and fill loaded_path with the path that was
@@ -175,7 +175,7 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
     lldb.LLDB_INVALID_IMAGE_TOKEN."
 ) lldb::SBProcess::LoadImageUsingPaths;
 
-%feature("autodoc", "
+%feature("docstring", "
     Return the number of different thread-origin extended backtraces
     this process can support as a uint32_t.
     When the process is stopped and you have an SBThread, lldb may be
@@ -184,12 +184,12 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
     queue)."
 ) lldb::SBProcess::GetNumExtendedBacktraceTypes;
 
-%feature("autodoc", "
+%feature("docstring", "
     Takes an index argument, returns the name of one of the thread-origin
     extended backtrace methods as a str."
 ) lldb::SBProcess::GetExtendedBacktraceTypeAtIndex;
 
-%feature("autodoc", "
+%feature("docstring", "
     Get information about the process.
     Valid process info will only be returned when the process is alive,
     use IsValid() to check if the info returned is valid. ::
@@ -199,7 +199,48 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
             process_info.GetProcessID()"
 ) lldb::SBProcess::GetProcessInfo;
 
-%feature("autodoc", "
+%feature("docstring", "
+    Get the current address mask in this Process of a given type.
+    There are lldb.eAddressMaskTypeCode and lldb.eAddressMaskTypeData address
+    masks, and on most Targets, the the Data address mask is more general
+    because there are no alignment restrictions, as there can be with Code
+    addresses.
+    lldb.eAddressMaskTypeAny may be used to get the most general mask.
+    The bits which are not used for addressing are set to 1 in the returned
+    mask.
+    In an unusual environment with different address masks for high and low
+    memory, this may also be specified.  This is uncommon, default is
+    lldb.eAddressMaskRangeLow."
+) lldb::SBProcess::GetAddressMask;
+
+%feature("docstring", "
+    Set the current address mask in this Process for a given type,
+    lldb.eAddressMaskTypeCode or lldb.eAddressMaskTypeData.  Bits that are not
+    used for addressing should be set to 1 in the mask.
+    When setting all masks, lldb.eAddressMaskTypeAll may be specified.
+    In an unusual environment with different address masks for high and low
+    memory, this may also be specified.  This is uncommon, default is
+    lldb.eAddressMaskRangeLow."
+) lldb::SBProcess::SetAddressMask;
+
+%feature("docstring", "
+    Set the number of low bits relevant for addressing in this Process 
+    for a given type, lldb.eAddressMaskTypeCode or lldb.eAddressMaskTypeData.
+    When setting all masks, lldb.eAddressMaskTypeAll may be specified.
+    In an unusual environment with different address masks for high and low
+    memory, the address range  may also be specified.  This is uncommon, 
+    default is lldb.eAddressMaskRangeLow."
+) lldb::SBProcess::SetAddressableBits;
+
+%feature("docstring", "
+    Given a virtual address, clear the bits that are not used for addressing
+    (and may be used for metadata, memory tagging, point authentication, etc).
+    By default the most general mask, lldb.eAddressMaskTypeAny is used to 
+    process the address, but lldb.eAddressMaskTypeData and 
+    lldb.eAddressMaskTypeCode may be specified if the type of address is known."
+) lldb::SBProcess::FixAddress;
+
+%feature("docstring", "
     Allocates a block of memory within the process, with size and
     access permissions specified in the arguments. The permissions
     argument is an or-combination of zero or more of
@@ -209,11 +250,11 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
     lldb.LLDB_INVALID_ADDRESS if the allocation failed."
 ) lldb::SBProcess::AllocateMemory;
 
-%feature("autodoc", "Get default process broadcaster class name (lldb.process)."
+%feature("docstring", "Get default process broadcaster class name (lldb.process)."
 ) lldb::SBProcess::GetBroadcasterClass;
 
 
-%feature("autodoc", "
+%feature("docstring", "
     Deallocates the block of memory (previously allocated using
     AllocateMemory) given in the argument."
 ) lldb::SBProcess::DeallocateMemory;

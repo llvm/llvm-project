@@ -185,16 +185,16 @@ UnwindInfoSection::UnwindInfoSection()
 // function symbols for each unique address regardless of whether they have
 // associated unwind info.
 void UnwindInfoSection::addSymbol(const Defined *d) {
-  if (d->unwindEntry)
+  if (d->unwindEntry())
     allEntriesAreOmitted = false;
   // We don't yet know the final output address of this symbol, but we know that
   // they are uniquely determined by a combination of the isec and value, so
   // we use that as the key here.
-  auto p = symbols.insert({{d->isec, d->value}, d});
+  auto p = symbols.insert({{d->isec(), d->value}, d});
   // If we have multiple symbols at the same address, only one of them can have
   // an associated unwind entry.
-  if (!p.second && d->unwindEntry) {
-    assert(p.first->second == d || !p.first->second->unwindEntry);
+  if (!p.second && d->unwindEntry()) {
+    assert(p.first->second == d || !p.first->second->unwindEntry());
     p.first->second = d;
   }
 }
@@ -204,16 +204,16 @@ void UnwindInfoSectionImpl::prepare() {
   // entries to the GOT. Hence the use of a MapVector for
   // UnwindInfoSection::symbols.
   for (const Defined *d : make_second_range(symbols))
-    if (d->unwindEntry) {
-      if (d->unwindEntry->getName() == section_names::compactUnwind) {
-        prepareRelocations(d->unwindEntry);
+    if (d->unwindEntry()) {
+      if (d->unwindEntry()->getName() == section_names::compactUnwind) {
+        prepareRelocations(d->unwindEntry());
       } else {
         // We don't have to add entries to the GOT here because FDEs have
         // explicit GOT relocations, so Writer::scanRelocations() will add those
         // GOT entries. However, we still need to canonicalize the personality
         // pointers (like prepareRelocations() does for CU entries) in order
         // to avoid overflowing the 3-personality limit.
-        FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry];
+        FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry()];
         fde.personality = canonicalizePersonality(fde.personality);
       }
     }
@@ -279,7 +279,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       if (auto *defined = dyn_cast<Defined>(s)) {
         // Check if we have created a synthetic symbol at the same address.
         Symbol *&personality =
-            personalityTable[{defined->isec, defined->value}];
+            personalityTable[{defined->isec(), defined->value}];
         if (personality == nullptr) {
           personality = defined;
           in.got->addEntry(defined);
@@ -321,7 +321,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
 Symbol *UnwindInfoSectionImpl::canonicalizePersonality(Symbol *personality) {
   if (auto *defined = dyn_cast_or_null<Defined>(personality)) {
     // Check if we have created a synthetic symbol at the same address.
-    Symbol *&synth = personalityTable[{defined->isec, defined->value}];
+    Symbol *&synth = personalityTable[{defined->isec(), defined->value}];
     if (synth == nullptr)
       synth = defined;
     else if (synth != defined)
@@ -340,12 +340,12 @@ void UnwindInfoSectionImpl::relocateCompactUnwind(
     CompactUnwindEntry &cu = cuEntries[i];
     const Defined *d = symbolsVec[i].second;
     cu.functionAddress = d->getVA();
-    if (!d->unwindEntry)
+    if (!d->unwindEntry())
       return;
 
     // If we have DWARF unwind info, create a slimmed-down CU entry that points
     // to it.
-    if (d->unwindEntry->getName() == section_names::ehFrame) {
+    if (d->unwindEntry()->getName() == section_names::ehFrame) {
       // The unwinder will look for the DWARF entry starting at the hint,
       // assuming the hint points to a valid CFI record start. If it
       // fails to find the record, it proceeds in a linear search through the
@@ -355,11 +355,11 @@ void UnwindInfoSectionImpl::relocateCompactUnwind(
       // but since we don't keep track of that, just encode zero -- the start of
       // the section is always the start of a CFI record.
       uint64_t dwarfOffsetHint =
-          d->unwindEntry->outSecOff <= DWARF_SECTION_OFFSET
-              ? d->unwindEntry->outSecOff
+          d->unwindEntry()->outSecOff <= DWARF_SECTION_OFFSET
+              ? d->unwindEntry()->outSecOff
               : 0;
       cu.encoding = target->modeDwarfEncoding | dwarfOffsetHint;
-      const FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry];
+      const FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry()];
       cu.functionLength = fde.funcLength;
       // Omit the DWARF personality from compact-unwind entry so that we
       // don't need to encode it.
@@ -368,14 +368,15 @@ void UnwindInfoSectionImpl::relocateCompactUnwind(
       return;
     }
 
-    assert(d->unwindEntry->getName() == section_names::compactUnwind);
+    assert(d->unwindEntry()->getName() == section_names::compactUnwind);
 
-    auto buf = reinterpret_cast<const uint8_t *>(d->unwindEntry->data.data()) -
-               target->wordSize;
+    auto buf =
+        reinterpret_cast<const uint8_t *>(d->unwindEntry()->data.data()) -
+        target->wordSize;
     cu.functionLength =
         support::endian::read32le(buf + cuLayout.functionLengthOffset);
     cu.encoding = support::endian::read32le(buf + cuLayout.encodingOffset);
-    for (const Reloc &r : d->unwindEntry->relocs) {
+    for (const Reloc &r : d->unwindEntry()->relocs) {
       if (r.offset == cuLayout.personalityOffset)
         cu.personality = r.referent.get<Symbol *>();
       else if (r.offset == cuLayout.lsdaOffset)

@@ -22,6 +22,7 @@
 namespace llvm {
 
 class AssumptionCache;
+class AAResults;
 class BasicBlock;
 class BlockFrequencyInfo;
 class DependenceInfo;
@@ -79,7 +80,8 @@ LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                             AssumptionCache *AC,
                             const llvm::TargetTransformInfo *TTI,
                             OptimizationRemarkEmitter *ORE, bool PreserveLCSSA,
-                            Loop **RemainderLoop = nullptr);
+                            Loop **RemainderLoop = nullptr,
+                            AAResults *AA = nullptr);
 
 bool UnrollRuntimeLoopRemainder(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
@@ -102,7 +104,8 @@ bool isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
 void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                              ScalarEvolution *SE, DominatorTree *DT,
                              AssumptionCache *AC,
-                             const TargetTransformInfo *TTI);
+                             const TargetTransformInfo *TTI,
+                             AAResults *AA = nullptr);
 
 MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
 

@@ -14,10 +14,10 @@
 ; GCN-NEXT:         .entry_point:    amdpal_psenable
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
-; GCN-NEXT:       0x2c0a (SPI_SHADER_PGM_RSRC1_PS):
-; GCN-NEXT:       0x2c0b (SPI_SHADER_PGM_RSRC2_PS):
-; GCN-NEXT:       0xa1b3 (SPI_PS_INPUT_ENA): 0x2
-; GCN-NEXT:       0xa1b4 (SPI_PS_INPUT_ADDR): 0x2
+; GCN-NEXT:       '0x2c0a (SPI_SHADER_PGM_RSRC1_PS)':
+; GCN-NEXT:       '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)':
+; GCN-NEXT:       '0xa1b3 (SPI_PS_INPUT_ENA)': 0x2
+; GCN-NEXT:       '0xa1b4 (SPI_PS_INPUT_ADDR)': 0x2
 ; GCN-NEXT: ...
 ; GCN-NEXT:         .end_amdgpu_pal_metadata
 define amdgpu_ps void @amdpal_psenable(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <2 x float> %pos) #6 {

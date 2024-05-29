@@ -280,11 +280,12 @@ def untyped   : ValueType<8,    193> { // Produces an untyped value
 }
 def funcref   : ValueType<0,    194>;  // WebAssembly's funcref type
 def externref : ValueType<0,    195>;  // WebAssembly's externref type
-def x86amx    : ValueType<8192, 196>;  // X86 AMX value
-def i64x8     : ValueType<512,  197>;  // 8 Consecutive GPRs (AArch64)
+def exnref    : ValueType<0,    196>;  // WebAssembly's exnref type
+def x86amx    : ValueType<8192, 197>;  // X86 AMX value
+def i64x8     : ValueType<512,  198>;  // 8 Consecutive GPRs (AArch64)
 def aarch64svcount
-              : ValueType<16,  198>;  // AArch64 predicate-as-counter
-def spirvbuiltin : ValueType<0, 199>; // SPIR-V's builtin type
+              : ValueType<16,  199>;  // AArch64 predicate-as-counter
+def spirvbuiltin : ValueType<0, 200>; // SPIR-V's builtin type
 
 def token      : ValueType<0, 248>;  // TokenTy
 def MetadataVT : ValueType<0, 249> { // Metadata
@@ -296,18 +297,23 @@ def MetadataVT : ValueType<0, 249> { // Metadata
 def iPTRAny    : VTAny<250>;
 
 // Pseudo valuetype to represent "vector of any size"
+// Should only be used in TableGen.
 def vAny       : VTAny<251>;
 
 // Pseudo valuetype to represent "float of any format"
+// Should only be used in TableGen.
 def fAny       : VTAny<252>;
 
 // Pseudo valuetype to represent "integer of any bit width"
+// Should only be used in TableGen.
 def iAny       : VTAny<253>;
 
 // Pseudo valuetype mapped to the current pointer size.
+// Should only be used in TableGen.
 def iPTR       : ValueType<0, 254>;
 
 // Pseudo valuetype to represent "any type of any size".
+// Should only be used in TableGen.
 def Any        : VTAny<255>;
 
 } // end defset ValueTypes

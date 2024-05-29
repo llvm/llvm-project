@@ -147,7 +147,7 @@ SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
 const char *SBTarget::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return Target::GetStaticBroadcasterClass().AsCString();
+  return ConstString(Target::GetStaticBroadcasterClass()).AsCString();
 }
 
 bool SBTarget::IsValid() const {
@@ -2008,6 +2008,30 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
     }
   }
 
+  return sb_instructions;
+}
+
+lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress start_addr,
+                                                   lldb::SBAddress end_addr,
+                                                   const char *flavor_string) {
+  LLDB_INSTRUMENT_VA(this, start_addr, end_addr, flavor_string);
+
+  SBInstructionList sb_instructions;
+
+  TargetSP target_sp(GetSP());
+  if (target_sp) {
+    lldb::addr_t start_load_addr = start_addr.GetLoadAddress(*this);
+    lldb::addr_t end_load_addr = end_addr.GetLoadAddress(*this);
+    if (end_load_addr > start_load_addr) {
+      lldb::addr_t size = end_load_addr - start_load_addr;
+
+      AddressRange range(start_load_addr, size);
+      const bool force_live_memory = true;
+      sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
+          target_sp->GetArchitecture(), nullptr, flavor_string, *target_sp,
+          range, force_live_memory));
+    }
+  }
   return sb_instructions;
 }
 

@@ -6,7 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This checker evaluates clang builtin functions.
+// This checker evaluates "standalone" clang builtin functions that are not
+// just special-cased variants of well-known non-builtin functions.
+// Builtin functions like __builtin_memcpy and __builtin_alloca should be
+// evaluated by the same checker that handles their non-builtin variant to
+// ensure that the two variants are handled consistently.
 //
 //===----------------------------------------------------------------------===//
 
@@ -77,25 +81,6 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     assert (Call.getNumArgs() > 0);
     SVal Arg = Call.getArgSVal(0);
     C.addTransition(state->BindExpr(CE, LCtx, Arg));
-    return true;
-  }
-
-  case Builtin::BI__builtin_alloca_with_align:
-  case Builtin::BI__builtin_alloca: {
-    SValBuilder &SVB = C.getSValBuilder();
-    const loc::MemRegionVal R =
-        SVB.getAllocaRegionVal(CE, C.getLocationContext(), C.blockCount());
-
-    // Set the extent of the region in bytes. This enables us to use the SVal
-    // of the argument directly. If we saved the extent in bits, it'd be more
-    // difficult to reason about values like symbol*8.
-    auto Size = Call.getArgSVal(0);
-    if (auto DefSize = Size.getAs<DefinedOrUnknownSVal>()) {
-      // This `getAs()` is mostly paranoia, because core.CallAndMessage reports
-      // undefined function arguments (unless it's disabled somehow).
-      state = setDynamicExtent(state, R.getRegion(), *DefSize, SVB);
-    }
-    C.addTransition(state->BindExpr(CE, LCtx, R));
     return true;
   }
 

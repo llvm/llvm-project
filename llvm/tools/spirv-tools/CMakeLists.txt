@@ -49,7 +49,7 @@ if (SPIRV_DIS)
     COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${SPIRV_DIS}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-dis")
 else ()
   add_custom_target(spirv-dis
-    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${BINARY_DIR}/tools/spirv-dis" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-dis"
+    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${BINARY_DIR}/tools/spirv-dis${CMAKE_EXECUTABLE_SUFFIX}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-dis${CMAKE_EXECUTABLE_SUFFIX}"
     DEPENDS SPIRVTools
     )
 endif ()
@@ -59,7 +59,7 @@ if (SPIRV_VAL)
     COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${SPIRV_VAL}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-val")
 else ()
   add_custom_target(spirv-val
-    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${BINARY_DIR}/tools/spirv-val" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-val"
+    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${BINARY_DIR}/tools/spirv-val${CMAKE_EXECUTABLE_SUFFIX}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-val${CMAKE_EXECUTABLE_SUFFIX}"
     DEPENDS SPIRVTools
     )
 endif ()

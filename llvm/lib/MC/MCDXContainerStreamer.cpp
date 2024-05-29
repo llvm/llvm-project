@@ -21,11 +21,8 @@ void MCDXContainerStreamer::emitInstToData(const MCInst &,
 
 MCStreamer *llvm::createDXContainerStreamer(
     MCContext &Context, std::unique_ptr<MCAsmBackend> &&MAB,
-    std::unique_ptr<MCObjectWriter> &&OW, std::unique_ptr<MCCodeEmitter> &&CE,
-    bool RelaxAll) {
+    std::unique_ptr<MCObjectWriter> &&OW, std::unique_ptr<MCCodeEmitter> &&CE) {
   auto *S = new MCDXContainerStreamer(Context, std::move(MAB), std::move(OW),
                                       std::move(CE));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }

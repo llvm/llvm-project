@@ -900,3 +900,15 @@ fir.global @t1 {keep_my_attr = "data"} : i32 {
 }
 
 // CHECK-LABEL: fir.global @t1 {keep_my_attr = "data"} : i32
+
+func.func @test_rebox_assumed_rank(%arg0: !fir.box<!fir.array<*:f32>> ) {
+  %1 = fir.rebox_assumed_rank %arg0 lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  %2 = fir.rebox_assumed_rank %arg0 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  %3 = fir.rebox_assumed_rank %arg0 lbs preserve : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  return
+}
+// CHECK-LABEL: func.func @test_rebox_assumed_rank(
+// CHECK-SAME: %[[A:.*]]: !fir.box<!fir.array<*:f32>>)
+  // CHECK: fir.rebox_assumed_rank %[[A]] lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  // CHECK: fir.rebox_assumed_rank %[[A]] lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  // CHECK: fir.rebox_assumed_rank %[[A]] lbs preserve : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>

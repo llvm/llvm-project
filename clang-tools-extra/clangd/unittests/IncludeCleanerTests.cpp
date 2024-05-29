@@ -252,7 +252,7 @@ $insert_f[[]]$insert_vector[[]]
   auto Findings = computeIncludeCleanerFindings(AST);
   Findings.UnusedIncludes.clear();
   std::vector<clangd::Diag> Diags = issueIncludeCleanerDiagnostics(
-      AST, TU.Code, Findings,
+      AST, TU.Code, Findings, MockFS(),
       {[](llvm::StringRef Header) { return Header.ends_with("buzz.h"); }});
   EXPECT_THAT(
       Diags,
@@ -505,8 +505,8 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   auto AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code,
-                                     computeIncludeCleanerFindings(AST)),
+      issueIncludeCleanerDiagnostics(
+          AST, TU.Code, computeIncludeCleanerFindings(AST), MockFS()),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("fix all includes")}),
                            withFix({FixMessage("remove #include directive"),
@@ -520,8 +520,8 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code,
-                                     computeIncludeCleanerFindings(AST)),
+      issueIncludeCleanerDiagnostics(
+          AST, TU.Code, computeIncludeCleanerFindings(AST), MockFS()),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("fix all includes")}),
                            withFix({FixMessage("remove #include directive"),
@@ -539,8 +539,8 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code,
-                                     computeIncludeCleanerFindings(AST)),
+      issueIncludeCleanerDiagnostics(
+          AST, TU.Code, computeIncludeCleanerFindings(AST), MockFS()),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("add all missing includes"),
                                     FixMessage("fix all includes")}),

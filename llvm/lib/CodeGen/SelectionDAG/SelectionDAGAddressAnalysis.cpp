@@ -106,8 +106,6 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
   int64_t PtrDiff;
   if (BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff)) {
     // If the size of memory access is unknown, do not use it to analysis.
-    // One example of unknown size memory access is to load/store scalable
-    // vector objects on the stack.
     // BasePtr1 is PtrDiff away from BasePtr0. They alias if none of the
     // following situations arise:
     if (PtrDiff >= 0 && NumBytes0.hasValue() && !NumBytes0.isScalable()) {

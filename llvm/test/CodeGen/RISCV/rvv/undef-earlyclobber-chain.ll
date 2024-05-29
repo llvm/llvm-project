@@ -161,8 +161,8 @@ declare <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i
 define void @repeat_shuffle(<2 x double> %v, ptr noalias %q) {
 ; CHECK-LABEL: repeat_shuffle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv2r.v v10, v8
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-NEXT:    vse64.v v10, (a0)
 ; CHECK-NEXT:    ret

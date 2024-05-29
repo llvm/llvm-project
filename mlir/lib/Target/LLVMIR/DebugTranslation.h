@@ -88,9 +88,24 @@ private:
   llvm::DISubroutineType *translateImpl(DISubroutineTypeAttr attr);
   llvm::DIType *translateImpl(DITypeAttr attr);
 
+  /// Attributes that support self recursion need to implement an additional
+  /// method to hook into `translateRecursive`.
+  /// - `<temp llvm type> translateTemporaryImpl(<mlir type>)`:
+  ///   Create a temporary translation of the DI attr without recursively
+  ///   translating any nested DI attrs.
+  llvm::DIType *translateRecursive(DIRecursiveTypeAttrInterface attr);
+
+  /// Translate the given attribute to a temporary llvm debug metadata of the
+  /// corresponding type.
+  llvm::TempDICompositeType translateTemporaryImpl(DICompositeTypeAttr attr);
+
   /// Constructs a string metadata node from the string attribute. Returns
   /// nullptr if `stringAttr` is null or contains and empty string.
   llvm::MDString *getMDStringOrNull(StringAttr stringAttr);
+
+  /// Constructs a DIExpression metadata node from the DIExpressionAttr. Returns
+  /// nullptr if `DIExpressionAttr` is null.
+  llvm::DIExpression *getExpressionAttrOrNull(DIExpressionAttr attr);
 
   /// A mapping between mlir location+scope and the corresponding llvm debug
   /// metadata.
@@ -101,6 +116,14 @@ private:
   /// A mapping between debug attribute and the corresponding llvm debug
   /// metadata.
   DenseMap<Attribute, llvm::DINode *> attrToNode;
+
+  /// A mapping between recursive ID and the translated DIType.
+  llvm::MapVector<DistinctAttr, llvm::DIType *> recursiveTypeMap;
+
+  /// A mapping between a distinct ID and the translated LLVM metadata node.
+  /// This helps identify attrs that should translate into the same LLVM debug
+  /// node.
+  DenseMap<DistinctAttr, llvm::DINode *> distinctAttrToNode;
 
   /// A mapping between filename and llvm debug file.
   /// TODO: Change this to DenseMap<Identifier, ...> when we can

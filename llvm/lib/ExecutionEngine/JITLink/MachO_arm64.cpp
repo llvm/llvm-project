@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 
+#include "DefineExternalSectionStartAndEndSymbols.h"
 #include "MachOLinkGraphBuilder.h"
 
 #define DEBUG_TYPE "jitlink"
@@ -592,6 +593,11 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     // we support compact-unwind registration with libunwind.
     Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_arm64());
     Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_arm64());
+
+    // Resolve any external section start / end symbols.
+    Config.PostAllocationPasses.push_back(
+        createDefineExternalSectionStartAndEndSymbolsPass(
+            identifyMachOSectionStartAndEndSymbols));
 
     // Add an in-place GOT/Stubs pass.
     Config.PostPrunePasses.push_back(buildTables_MachO_arm64);

@@ -106,7 +106,7 @@ void mlir::arith::populateEmulateUnsupportedFloatsConversions(
                            targetType](Type type) -> std::optional<Type> {
     if (llvm::is_contained(sourceTypes, type))
       return targetType;
-    if (auto shaped = type.dyn_cast<ShapedType>())
+    if (auto shaped = dyn_cast<ShapedType>(type))
       if (llvm::is_contained(sourceTypes, shaped.getElementType()))
         return shaped.clone(targetType);
     // All other types legal

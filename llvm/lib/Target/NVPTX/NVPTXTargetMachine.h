@@ -24,8 +24,6 @@ namespace llvm {
 ///
 class NVPTXTargetMachine : public LLVMTargetMachine {
   bool is64bit;
-  // Use 32-bit pointers for accessing const/local/short AS.
-  bool UseShortPointers;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   NVPTX::DrvInterface drvInterface;
   NVPTXSubtarget Subtarget;
@@ -46,7 +44,6 @@ public:
   }
   const NVPTXSubtarget *getSubtargetImpl() const { return &Subtarget; }
   bool is64Bit() const { return is64bit; }
-  bool useShortPointers() const { return UseShortPointers; }
   NVPTX::DrvInterface getDrvInterface() const { return drvInterface; }
   UniqueStringSaver &getStrPool() const {
     return const_cast<UniqueStringSaver &>(StrPool);

@@ -233,7 +233,7 @@
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
 // CHECK: "-cc1" "-triple" "nvptx64-nvidia-cuda" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "sm_52"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
-// CHECK: clang-linker-wrapper{{.*}}"--"{{.*}} "-o" "a.out"
+// CHECK: clang-linker-wrapper{{.*}} "-o" "a.out"
 
 // RUN:   %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PHASES %s
@@ -304,8 +304,7 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR-BC
 // CHECK-EMIT-LLVM-IR-BC: "-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"{{.*}}"-emit-llvm-bc"
 
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvida-cuda -march=sm_70 \
-// RUN:          --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-new-nvptx-test.bc \
+// RUN:   %clang -### -fopenmp=libomp --offload-arch=sm_89 \
 // RUN:          -nogpulib %s -o openmp-offload-gpu 2>&1 \
 // RUN:   | FileCheck -check-prefix=DRIVER_EMBEDDING %s
 

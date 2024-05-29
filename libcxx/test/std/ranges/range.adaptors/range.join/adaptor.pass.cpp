@@ -15,6 +15,7 @@
 #include <cassert>
 #include <type_traits>
 
+#include "test_range.h"
 #include "types.h"
 
 struct MoveOnlyOuter : SimpleForwardCommonOuter<ForwardCommonInner> {
@@ -30,11 +31,6 @@ struct MoveOnlyOuter : SimpleForwardCommonOuter<ForwardCommonInner> {
 struct Foo {
   int i;
   constexpr Foo(int ii) : i(ii) {}
-};
-
-template <class View, class T>
-concept CanBePiped = requires(View&& view, T&& t) {
-  { std::forward<View>(view) | std::forward<T>(t) };
 };
 
 constexpr bool test() {

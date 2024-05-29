@@ -35,9 +35,9 @@ define void @v2f64_fcmp_false(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_oeq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_oeq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.ceq.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.ceq.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -51,9 +51,9 @@ define void @v4f32_fcmp_oeq(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_oeq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_oeq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.ceq.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.ceq.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -68,9 +68,9 @@ define void @v2f64_fcmp_oeq(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_ueq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_ueq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cueq.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cueq.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -84,9 +84,9 @@ define void @v4f32_fcmp_ueq(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_ueq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_ueq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cueq.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cueq.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -101,9 +101,9 @@ define void @v2f64_fcmp_ueq(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.ceq.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.ceq.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -117,9 +117,9 @@ define void @v4f32_fcmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.ceq.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.ceq.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -134,9 +134,9 @@ define void @v2f64_fcmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_ole(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_ole:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cle.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cle.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -150,9 +150,9 @@ define void @v4f32_fcmp_ole(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_ole(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_ole:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cle.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cle.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -167,9 +167,9 @@ define void @v2f64_fcmp_ole(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cule.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cule.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -183,9 +183,9 @@ define void @v4f32_fcmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cule.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cule.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -200,9 +200,9 @@ define void @v2f64_fcmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_le(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_le:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cle.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cle.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -216,9 +216,9 @@ define void @v4f32_fcmp_le(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_le(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_le:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cle.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cle.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -233,9 +233,9 @@ define void @v2f64_fcmp_le(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_olt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_olt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.clt.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.clt.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -249,9 +249,9 @@ define void @v4f32_fcmp_olt(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_olt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_olt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.clt.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.clt.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -266,9 +266,9 @@ define void @v2f64_fcmp_olt(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cult.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cult.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -282,9 +282,9 @@ define void @v4f32_fcmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cult.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cult.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -299,9 +299,9 @@ define void @v2f64_fcmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_lt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_lt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.clt.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.clt.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -315,9 +315,9 @@ define void @v4f32_fcmp_lt(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_lt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_lt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.clt.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.clt.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -332,9 +332,9 @@ define void @v2f64_fcmp_lt(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_one(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_one:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cne.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cne.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -348,9 +348,9 @@ define void @v4f32_fcmp_one(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_one(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_one:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cne.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cne.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -365,9 +365,9 @@ define void @v2f64_fcmp_one(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_une(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_une:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cune.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cune.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -381,9 +381,9 @@ define void @v4f32_fcmp_une(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_une(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_une:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cune.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cune.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -398,9 +398,9 @@ define void @v2f64_fcmp_une(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cne.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cne.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -414,9 +414,9 @@ define void @v4f32_fcmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cne.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cne.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -431,9 +431,9 @@ define void @v2f64_fcmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_ord(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_ord:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cor.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cor.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -447,9 +447,9 @@ define void @v4f32_fcmp_ord(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_ord(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_ord:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cor.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cor.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0
@@ -464,9 +464,9 @@ define void @v2f64_fcmp_ord(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4f32_fcmp_uno(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4f32_fcmp_uno:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cun.s $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cun.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %a0
@@ -480,9 +480,9 @@ define void @v4f32_fcmp_uno(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v2f64_fcmp_uno(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v2f64_fcmp_uno:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfcmp.cun.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vfcmp.cun.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <2 x double>, ptr %a0

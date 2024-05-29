@@ -24,4 +24,4 @@ define amdgpu_kernel void @test_sopk_size(i32 %var.mode) {
 declare void @llvm.amdgcn.s.setreg(i32 immarg, i32)
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

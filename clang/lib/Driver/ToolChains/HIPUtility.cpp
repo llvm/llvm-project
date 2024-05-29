@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPUtility.h"
+#include "Clang.h"
 #include "CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
@@ -59,9 +60,9 @@ public:
         Verbose(C.getArgs().hasArg(options::OPT_v)) {
     populateSymbols();
     if (Verbose) {
-      for (auto Name : FatBinSymbols)
+      for (const auto &Name : FatBinSymbols)
         llvm::errs() << "Found undefined HIP fatbin symbol: " << Name << "\n";
-      for (auto Name : GPUBinHandleSymbols)
+      for (const auto &Name : GPUBinHandleSymbols)
         llvm::errs() << "Found undefined HIP gpubin handle symbol: " << Name
                      << "\n";
     }
@@ -105,9 +106,9 @@ private:
         std::string ID = IA->getId().str();
         if (!ID.empty()) {
           ID = llvm::utohexstr(llvm::MD5Hash(ID), /*LowerCase=*/true);
-          FatBinSymbols.insert(Twine(FatBinPrefix + "_" + ID).str());
+          FatBinSymbols.insert((FatBinPrefix + Twine('_') + ID).str());
           GPUBinHandleSymbols.insert(
-              Twine(GPUBinHandlePrefix + "_" + ID).str());
+              (GPUBinHandlePrefix + Twine('_') + ID).str());
           continue;
         }
         if (IA->getInputArg().getNumValues() == 0)
@@ -258,11 +259,7 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
       Args.MakeArgString(std::string("-output=").append(Output));
   BundlerArgs.push_back(BundlerOutputArg);
 
-  if (Args.hasFlag(options::OPT_offload_compress,
-                   options::OPT_no_offload_compress, false))
-    BundlerArgs.push_back("-compress");
-  if (Args.hasArg(options::OPT_v))
-    BundlerArgs.push_back("-verbose");
+  addOffloadCompressArgs(Args, BundlerArgs);
 
   const char *Bundler = Args.MakeArgString(
       T.getToolChain().GetProgramPath("clang-offload-bundler"));

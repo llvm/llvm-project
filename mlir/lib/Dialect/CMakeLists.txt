@@ -28,6 +28,7 @@ add_subdirectory(OpenACCMPCommon)
 add_subdirectory(OpenMP)
 add_subdirectory(PDL)
 add_subdirectory(PDLInterp)
+add_subdirectory(Polynomial)
 add_subdirectory(Quant)
 add_subdirectory(SCF)
 add_subdirectory(Shape)
@@ -40,6 +41,7 @@ add_subdirectory(UB)
 add_subdirectory(Utils)
 add_subdirectory(Vector)
 add_subdirectory(X86Vector)
+add_subdirectory(XeGPU)
 
 set(LLVM_OPTIONAL_SOURCES
   Traits.cpp

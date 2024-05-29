@@ -85,7 +85,7 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
 
   /// Original flags of instructions for which they were modified. Used
   /// by SCEVExpanderCleaner to undo changes.
-  DenseMap<AssertingVH<Instruction>, PoisonFlags> OrigFlags;
+  DenseMap<PoisoningVH<Instruction>, PoisonFlags> OrigFlags;
 
   // The induction variables generated.
   SmallVector<WeakVH, 2> InsertedIVs;

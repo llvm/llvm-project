@@ -348,6 +348,8 @@ private:
   /// yet.
   llvm::DenseMap<StringRef, GlobalDecl> DeferredDecls;
 
+  llvm::StringSet<llvm::BumpPtrAllocator> DeferredResolversToEmit;
+
   /// This is a list of deferred decls which we have seen that *are* actually
   /// referenced. These get code generated when the module is done.
   std::vector<GlobalDecl> DeferredDeclsToEmit;
@@ -1239,6 +1241,9 @@ public:
   /// Return true iff the given type uses 'sret' when used as a return type.
   bool ReturnTypeUsesSRet(const CGFunctionInfo &FI);
 
+  /// Return true iff the given type has `inreg` set.
+  bool ReturnTypeHasInReg(const CGFunctionInfo &FI);
+
   /// Return true iff the given type uses an argument slot when 'sret' is used
   /// as a return type.
   bool ReturnSlotInterferesWithArgs(const CGFunctionInfo &FI);
@@ -1581,12 +1586,23 @@ public:
   void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535,
                      bool IsDtorAttrFunc = false);
 
+  // Return whether structured convergence intrinsics should be generated for
+  // this target.
+  bool shouldEmitConvergenceTokens() const {
+    // TODO: this should probably become unconditional once the controlled
+    // convergence becomes the norm.
+    return getTriple().isSPIRVLogical();
+  }
+
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
       StringRef MangledName, llvm::Type *Ty, GlobalDecl D, bool ForVTable,
       bool DontDefer = false, bool IsThunk = false,
       llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
       ForDefinition_t IsForDefinition = NotForDefinition);
+
+  // Adds a declaration to the list of multi version functions if not present.
+  void AddDeferredMultiVersionResolverToEmit(GlobalDecl GD);
 
   // References to multiversion functions are resolved through an implicitly
   // defined resolver function. This function is responsible for creating

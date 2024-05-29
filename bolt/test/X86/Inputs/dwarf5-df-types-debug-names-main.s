@@ -207,7 +207,7 @@ main:                                   # @main
 .Linfo_string5:
 	.asciz	"f2"                            # string offset=24
 .Linfo_string6:
-	.asciz	"/home/ayermolo/local/tasks/T138552329/typeDedupSplit" # string offset=27
+	.asciz	"." # string offset=27
 .Linfo_string7:
 	.asciz	"main.dwo"                      # string offset=80
 .Linfo_string8:
@@ -234,15 +234,15 @@ main:                                   # @main
 	.long	19
 	.long	24
 	.long	27
-	.long	80
-	.long	89
-	.long	92
-	.long	97
-	.long	100
-	.long	103
-	.long	106
-	.long	112
-	.long	220
+	.long	29
+	.long	38
+	.long	41
+	.long	46
+	.long	49
+	.long	52
+	.long	55
+	.long	61
+	.long	169
 	.section	.debug_info.dwo,"e",@progbits
 	.long	.Ldebug_info_dwo_end2-.Ldebug_info_dwo_start2 # Length of Unit
 .Ldebug_info_dwo_start2:
@@ -474,7 +474,7 @@ main:                                   # @main
 	.byte	1
 	.byte	8
 	.byte	2
-	.ascii	"/home/ayermolo/local/tasks/T138552329/typeDedupSplit"
+	.ascii	"."
 	.byte	0
 	.byte	46
 	.byte	0

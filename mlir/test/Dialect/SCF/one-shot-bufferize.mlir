@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries" -cse -canonicalize -drop-equivalent-buffer-results -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops test-analysis-only analysis-fuzzer-seed=59 bufferize-function-boundaries" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops test-analysis-only analysis-fuzzer-seed=91 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops analysis-heuristic=fuzzer test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops analysis-heuristic=fuzzer test-analysis-only analysis-fuzzer-seed=59 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops analysis-heuristic=fuzzer test-analysis-only analysis-fuzzer-seed=91 bufferize-function-boundaries" -split-input-file -o /dev/null
 
 // Test bufferization using memref types that have no layout map.
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
@@ -499,7 +499,8 @@ func.func @parallel_insert_slice_no_conflict(
         tensor.parallel_insert_slice %8 into %o[5] [%idx] [%c1] :
           tensor<?xf32> into tensor<?xf32>
       }
-  }
+  } {keep_this_attribute}
+  // CHECK: keep_this_attribute
 
   // CHECK: %[[load:.*]] = memref.load %[[arg2]]
   %f = tensor.extract %2[%c0] : tensor<?xf32>

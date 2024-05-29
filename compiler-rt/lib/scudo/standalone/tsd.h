@@ -41,9 +41,9 @@ template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
       return true;
     }
     if (atomic_load_relaxed(&Precedence) == 0)
-      atomic_store_relaxed(&Precedence,
-                           static_cast<uptr>(getMonotonicTimeFast() >>
-                                             FIRST_32_SECOND_64(16, 0)));
+      atomic_store_relaxed(
+          &Precedence,
+          static_cast<uptr>(getMonotonicTime() >> FIRST_32_SECOND_64(16, 0)));
     return false;
   }
   inline void lock() NO_THREAD_SAFETY_ANALYSIS {

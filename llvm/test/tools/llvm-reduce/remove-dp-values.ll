@@ -1,17 +1,21 @@
-; RUN: llvm-reduce --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t --try-experimental-debuginfo-iterators
-; RUN: FileCheck --check-prefixes=CHECK-FINAL --input-file=%t %s --implicit-check-not=dbg.value
+; RUN: llvm-reduce --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: FileCheck --check-prefixes=CHECK-FINAL --input-file=%t %s --implicit-check-not=#dbg_value
 
-; Test that we can, in RemoveDIs mode / DPValues mode (where variable location
+; RUN: opt < %s -S --write-experimental-debuginfo=false > %t.intrinsics.ll
+; RUN: llvm-reduce --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=INTRINSIC-INTERESTINGNESS --test-arg %s --test-arg --input-file %t.intrinsics.ll -o %t
+; RUN: FileCheck --check-prefixes=INTRINSIC-FINAL --input-file=%t %s --implicit-check-not=#dbg_value
+
+; Test that we can, in RemoveDIs mode / DbgVariableRecords mode (where variable location
 ; information isn't an instruction), remove one variable location assignment
 ; but not another.
 
-; CHECK-INTERESTINGNESS:     call void @llvm.dbg.value(metadata i32 %added,
+; CHECK-INTERESTINGNESS:     #dbg_value(i32 %added,
+; INTRINSIC-INTERESTINGNESS: llvm.dbg.value(metadata i32 %added,
 
-; CHECK-FINAL:     declare void @llvm.dbg.value(metadata,
-; CHECK-FINAL:     %added = add
-; CHECK-FINAL-NEXT: call void @llvm.dbg.value(metadata i32 %added,
-
-declare void @llvm.dbg.value(metadata, metadata, metadata)
+; CHECK-FINAL:      %added = add
+; CHECK-FINAL-NEXT: #dbg_value(i32 %added,
+; INTRINSIC-FINAL:      %added = add
+; INTRINSIC-FINAL-NEXT: llvm.dbg.value(metadata i32 %added,
 
 define i32 @main() !dbg !7 {
 entry:
@@ -22,10 +26,10 @@ entry:
   store i32 0, ptr %interesting, align 4
   %0 = load i32, ptr %interesting, align 4
   %added = add nsw i32 %0, 1
-  tail call void @llvm.dbg.value(metadata i32 %added, metadata !13, metadata !DIExpression()), !dbg !14
+    #dbg_value(i32 %added, !13, !DIExpression(), !14)
   store i32 %added, ptr %interesting, align 4
   %alsoloaded = load i32, ptr %interesting, align 4
-  tail call void @llvm.dbg.value(metadata i32 %alsoloaded, metadata !13, metadata !DIExpression()), !dbg !14
+    #dbg_value(i32 %alsoloaded, !13, !DIExpression(), !14)
   store i32 %alsoloaded, ptr %uninteresting2, align 4
   ret i32 0
 }

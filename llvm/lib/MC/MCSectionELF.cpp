@@ -175,8 +175,7 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   else if (Type == ELF::SHT_LLVM_LTO)
     OS << "llvm_lto";
   else
-    report_fatal_error("unsupported type 0x" + Twine::utohexstr(Type) +
-                       " for section " + getName());
+    OS << "0x" << Twine::utohexstr(Type);
 
   if (EntrySize) {
     assert(Flags & ELF::SHF_MERGE);

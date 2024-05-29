@@ -156,6 +156,12 @@ public:
     /// This is the scope of an OpenACC Compute Construct, which restricts
     /// jumping into/out of it.
     OpenACCComputeConstructScope = 0x10000000,
+
+    /// This is a scope of type alias declaration.
+    TypeAliasScope = 0x20000000,
+
+    /// This is a scope of friend declaration.
+    FriendScope = 0x40000000,
   };
 
 private:
@@ -205,6 +211,10 @@ private:
   /// case of nested templates, template parameter scopes can have
   /// other template parameter scopes as parents.
   Scope *TemplateParamParent;
+
+  /// DeclScopeParent - This is a direct link to the immediately containing
+  /// DeclScope, i.e. scope which can contain declarations.
+  Scope *DeclParent;
 
   /// DeclsInScope - This keeps track of all declarations in this scope.  When
   /// the declaration is added to the scope, it is set as the current
@@ -304,6 +314,9 @@ public:
 
   Scope *getTemplateParamParent() { return TemplateParamParent; }
   const Scope *getTemplateParamParent() const { return TemplateParamParent; }
+
+  Scope *getDeclParent() { return DeclParent; }
+  const Scope *getDeclParent() const { return DeclParent; }
 
   /// Returns the depth of this scope. The translation-unit has scope depth 0.
   unsigned getDepth() const { return Depth; }
@@ -572,6 +585,12 @@ public:
   /// Determine whether this scope is a controlling scope in a
   /// if/switch/while/for statement.
   bool isControlScope() const { return getFlags() & Scope::ControlScope; }
+
+  /// Determine whether this scope is a type alias scope.
+  bool isTypeAliasScope() const { return getFlags() & Scope::TypeAliasScope; }
+
+  /// Determine whether this scope is a friend scope.
+  bool isFriendScope() const { return getFlags() & Scope::FriendScope; }
 
   /// Returns if rhs has a higher scope depth than this.
   ///

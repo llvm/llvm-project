@@ -870,7 +870,7 @@ void offsetIndices(RewriterBase &b, LinalgOp linalgOp,
         {getAsOpFoldResult(indexOp.getResult()), offsets[indexOp.getDim()]});
     Value materialized =
         getValueOrCreateConstantIndexOp(b, indexOp.getLoc(), applied);
-    b.replaceOpWithIf(indexOp, materialized, [&](OpOperand &use) {
+    b.replaceUsesWithIf(indexOp, materialized, [&](OpOperand &use) {
       return use.getOwner() != materialized.getDefiningOp();
     });
   }

@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -basic-aa -polly-parallel -polly-parallel-force -polly-invariant-load-hoisting=true -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
-; RUN: opt %loadPolly -basic-aa -polly-parallel -polly-parallel-force -polly-invariant-load-hoisting=true -polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-parallel -polly-parallel-force -polly-invariant-load-hoisting=true '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-parallel -polly-parallel-force -polly-invariant-load-hoisting=true -passes=polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
 ; The interesting part of this test case is the instruction:
 ;   %tmp = bitcast i8* %call to i64**

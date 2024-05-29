@@ -70,6 +70,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -137,6 +138,8 @@ class IndVarSimplify {
   SmallVector<WeakTrackingVH, 16> DeadInsts;
   bool WidenIndVars;
 
+  bool RunUnswitching = false;
+
   bool handleFloatingPointIV(Loop *L, PHINode *PH);
   bool rewriteNonIntegerIVs(Loop *L);
 
@@ -170,6 +173,8 @@ public:
   }
 
   bool run(Loop *L);
+
+  bool runUnswitching() const { return RunUnswitching; }
 };
 
 } // end anonymous namespace
@@ -350,18 +355,22 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   IntegerType *Int32Ty = Type::getInt32Ty(PN->getContext());
 
   // Insert new integer induction variable.
-  PHINode *NewPHI = PHINode::Create(Int32Ty, 2, PN->getName()+".int", PN);
+  PHINode *NewPHI =
+      PHINode::Create(Int32Ty, 2, PN->getName() + ".int", PN->getIterator());
   NewPHI->addIncoming(ConstantInt::get(Int32Ty, InitValue),
                       PN->getIncomingBlock(IncomingEdge));
+  NewPHI->setDebugLoc(PN->getDebugLoc());
 
-  Value *NewAdd =
-    BinaryOperator::CreateAdd(NewPHI, ConstantInt::get(Int32Ty, IncValue),
-                              Incr->getName()+".int", Incr);
+  Instruction *NewAdd =
+      BinaryOperator::CreateAdd(NewPHI, ConstantInt::get(Int32Ty, IncValue),
+                                Incr->getName() + ".int", Incr->getIterator());
+  NewAdd->setDebugLoc(Incr->getDebugLoc());
   NewPHI->addIncoming(NewAdd, PN->getIncomingBlock(BackEdge));
 
-  ICmpInst *NewCompare = new ICmpInst(TheBr, NewPred, NewAdd,
-                                      ConstantInt::get(Int32Ty, ExitValue),
-                                      Compare->getName());
+  ICmpInst *NewCompare =
+      new ICmpInst(TheBr->getIterator(), NewPred, NewAdd,
+                   ConstantInt::get(Int32Ty, ExitValue), Compare->getName());
+  NewCompare->setDebugLoc(Compare->getDebugLoc());
 
   // In the following deletions, PN may become dead and may be deleted.
   // Use a WeakTrackingVH to observe whether this happens.
@@ -385,8 +394,9 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   // We give preference to sitofp over uitofp because it is faster on most
   // platforms.
   if (WeakPH) {
-    Value *Conv = new SIToFPInst(NewPHI, PN->getType(), "indvar.conv",
-                                 &*PN->getParent()->getFirstInsertionPt());
+    Instruction *Conv = new SIToFPInst(NewPHI, PN->getType(), "indvar.conv",
+                                       PN->getParent()->getFirstInsertionPt());
+    Conv->setDebugLoc(PN->getDebugLoc());
     PN->replaceAllUsesWith(Conv);
     RecursivelyDeleteTriviallyDeadInstructions(PN, TLI, MSSAU.get());
   }
@@ -614,9 +624,11 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
       // Information about sign/zero extensions of CurrIV.
       IndVarSimplifyVisitor Visitor(CurrIV, SE, TTI, DT);
 
-      Changed |= simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts, Rewriter,
-                                   &Visitor);
+      const auto &[C, U] = simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts,
+                                             Rewriter, &Visitor);
 
+      Changed |= C;
+      RunUnswitching |= U;
       if (Visitor.WI.WidestNativeType) {
         WideIVs.push_back(Visitor.WI);
       }
@@ -1516,9 +1528,9 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     // loop varying work to loop-invariant work.
     auto doRotateTransform = [&]() {
       assert(ICmp->isUnsigned() && "must have proven unsigned already");
-      auto *NewRHS =
-        CastInst::Create(Instruction::Trunc, RHS, LHSOp->getType(), "",
-                         L->getLoopPreheader()->getTerminator());
+      auto *NewRHS = CastInst::Create(
+          Instruction::Trunc, RHS, LHSOp->getType(), "",
+          L->getLoopPreheader()->getTerminator()->getIterator());
       ICmp->setOperand(Swapped ? 1 : 0, LHSOp);
       ICmp->setOperand(Swapped ? 0 : 1, NewRHS);
       if (LHS->use_empty())
@@ -1873,6 +1885,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (OldCond->use_empty())
       DeadInsts.emplace_back(OldCond);
     Changed = true;
+    RunUnswitching = true;
   }
 
   return Changed;
@@ -2058,6 +2071,11 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
 
   auto PA = getLoopPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
+  if (IVS.runUnswitching()) {
+    AM.getResult<ShouldRunExtraSimpleLoopUnswitch>(L, AR);
+    PA.preserve<ShouldRunExtraSimpleLoopUnswitch>();
+  }
+
   if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;

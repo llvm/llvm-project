@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/UInt128.h"
+#include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h"
 #include "src/stdlib/strtold.h"
 
@@ -15,17 +15,19 @@
 
 #include <stddef.h>
 
-#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 #define SELECT_CONST(val, _, __) val
-#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 #define SELECT_CONST(_, val, __) val
-#else
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 #define SELECT_CONST(_, __, val) val
+#else
+#error "Unknown long double type"
 #endif
 
 class LlvmLibcStrToLDTest : public LIBC_NAMESPACE::testing::Test {
 public:
-#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
                 const uint64_t expectedRawData, const int expectedErrno = 0)
 #else

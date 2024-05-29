@@ -358,7 +358,6 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB7_4:
-; SI-NEXT:    s_mov_b64 s[6:7], -1
 ; SI-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; SI-NEXT:    s_branch .LBB7_2
 ;
@@ -372,7 +371,6 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_cbranch_scc0 .LBB7_4
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x8
-; VI-NEXT:    s_mov_b64 s[6:7], 0
 ; VI-NEXT:    s_cbranch_execnz .LBB7_3
 ; VI-NEXT:  .LBB7_2: ; %if
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -387,7 +385,6 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ; VI-NEXT:  .LBB7_4:
-; VI-NEXT:    s_mov_b64 s[6:7], -1
 ; VI-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; VI-NEXT:    s_branch .LBB7_2
 entry:

@@ -17,11 +17,18 @@
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
 #include <chrono>
+#include <cstring>
 #include <ctime>
 #include <signal.h>
 #include <thread>
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
+#include <synchapi.h>
+
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
     Fortran::runtime::Terminator terminator) {
   int error{ctime_s(buffer, bufsize, &cur_time)};
@@ -42,9 +49,9 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 }
 #endif
 
-#if _REENTRANT || _POSIX_C_SOURCE >= 199506L
-// System is posix-compliant and has getlogin_r
-#include <unistd.h>
+#ifndef _WIN32
+// posix-compliant and has getlogin_r and F_OK
+#include <unistd.h> 
 #endif
 
 extern "C" {
@@ -135,8 +142,84 @@ void RTNAME(Sleep)(std::int64_t seconds) {
   if (seconds < 1) {
     return;
   }
-  std::this_thread::sleep_for(std::chrono::seconds(seconds));
+#if _WIN32
+  Sleep(seconds * 1000);
+#else
+  sleep(seconds);
+#endif
 }
+
+// TODO: not supported on Windows
+#ifndef _WIN32
+std::int64_t FORTRAN_PROCEDURE_NAME(access)(const char *name,
+    std::int64_t nameLength, const char *mode, std::int64_t modeLength) {
+  std::int64_t ret{-1};
+  if (nameLength <= 0 || modeLength <= 0 || !name || !mode) {
+    return ret;
+  }
+
+  // ensure name is null terminated
+  char *newName{nullptr};
+  if (name[nameLength - 1] != '\0') {
+    newName = static_cast<char *>(std::malloc(nameLength + 1));
+    std::memcpy(newName, name, nameLength);
+    newName[nameLength] = '\0';
+    name = newName;
+  }
+
+  // calculate mode
+  bool read{false};
+  bool write{false};
+  bool execute{false};
+  bool exists{false};
+  int imode{0};
+
+  for (std::int64_t i = 0; i < modeLength; ++i) {
+    switch (mode[i]) {
+    case 'r':
+      read = true;
+      break;
+    case 'w':
+      write = true;
+      break;
+    case 'x':
+      execute = true;
+      break;
+    case ' ':
+      exists = true;
+      break;
+    default:
+      // invalid mode
+      goto cleanup;
+    }
+  }
+  if (!read && !write && !execute && !exists) {
+    // invalid mode
+    goto cleanup;
+  }
+
+  if (!read && !write && !execute) {
+    imode = F_OK;
+  } else {
+    if (read) {
+      imode |= R_OK;
+    }
+    if (write) {
+      imode |= W_OK;
+    }
+    if (execute) {
+      imode |= X_OK;
+    }
+  }
+  ret = access(name, imode);
+
+cleanup:
+  if (newName) {
+    free(newName);
+  }
+  return ret;
+}
+#endif
 
 } // namespace Fortran::runtime
 } // extern "C"

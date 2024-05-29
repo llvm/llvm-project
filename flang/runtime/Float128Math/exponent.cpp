@@ -12,7 +12,7 @@
 namespace Fortran::runtime {
 extern "C" {
 
-#if LDBL_MANT_DIG != 113 && HAS_FLOAT128
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 // EXPONENT (16.9.75)
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(Exponent16_4)(F128Type x) {
   return Exponent<CppTypeFor<TypeCategory::Integer, 4>>(x);

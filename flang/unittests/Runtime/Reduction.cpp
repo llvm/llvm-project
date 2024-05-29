@@ -13,6 +13,7 @@
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/reduce.h"
 #include "flang/Runtime/type-code.h"
 #include <cstdint>
 #include <cstring>
@@ -634,3 +635,39 @@ TEST(Reductions, ExtremaReal16) {
   EXPECT_EQ(RTNAME(MaxvalReal16)(*maxArray, __FILE__, __LINE__), -1.0);
 }
 #endif // LDBL_MANT_DIG == 113 || HAS_FLOAT128
+
+static std::int32_t IAdd(const std::int32_t *x, const std::int32_t *y) {
+  return *x + *y;
+}
+
+static std::int32_t IMultiply(const std::int32_t *x, const std::int32_t *y) {
+  return *x * *y;
+}
+
+TEST(Reductions, ReduceInt4) {
+  auto intVector{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{4}, std::vector<std::int32_t>{1, 2, 3, 4})};
+  EXPECT_EQ(RTNAME(ReduceInteger4)(*intVector, IAdd, __FILE__, __LINE__), 10);
+  EXPECT_EQ(
+      RTNAME(ReduceInteger4)(*intVector, IMultiply, __FILE__, __LINE__), 24);
+}
+TEST(Reductions, ReduceInt4Dim) {
+  auto intMatrix{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{2, 2}, std::vector<std::int32_t>{1, 2, 3, 4})};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &sums{statDesc.descriptor()};
+  RTNAME(ReduceInteger4Dim)(sums, *intMatrix, IAdd, __FILE__, __LINE__, 1);
+  EXPECT_EQ(sums.rank(), 1);
+  EXPECT_EQ(sums.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(sums.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(*sums.ZeroBasedIndexedElement<std::int32_t>(0), 3);
+  EXPECT_EQ(*sums.ZeroBasedIndexedElement<std::int32_t>(1), 7);
+  sums.Destroy();
+  RTNAME(ReduceInteger4Dim)(sums, *intMatrix, IAdd, __FILE__, __LINE__, 2);
+  EXPECT_EQ(sums.rank(), 1);
+  EXPECT_EQ(sums.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(sums.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(*sums.ZeroBasedIndexedElement<std::int32_t>(0), 4);
+  EXPECT_EQ(*sums.ZeroBasedIndexedElement<std::int32_t>(1), 6);
+  sums.Destroy();
+}

@@ -71,7 +71,7 @@ define void @test3a() {
 }
 
 define i32 @test3b() {
-; CHECK-LABEL: define i32 @test3b() {
+; CHECK-LABEL: define range(i32 0, 18) i32 @test3b() {
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @G, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[V]], 17
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -105,7 +105,7 @@ define internal {i64,i64} @test4a() {
 }
 
 define i64 @test4b() personality ptr @__gxx_personality_v0 {
-; CHECK-LABEL: define i64 @test4b() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define range(i64 0, 6) i64 @test4b() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[A:%.*]] = invoke { i64, i64 } @test4a()
 ; CHECK-NEXT:    to label [[A:%.*]] unwind label [[B:%.*]]
 ; CHECK:       A:
@@ -149,7 +149,7 @@ define internal {i64,i64} @test5a() {
 }
 
 define i64 @test5b() personality ptr @__gxx_personality_v0 {
-; CHECK-LABEL: define i64 @test5b() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define range(i64 0, 6) i64 @test5b() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[A:%.*]] = invoke { i64, i64 } @test5a()
 ; CHECK-NEXT:    to label [[A:%.*]] unwind label [[B:%.*]]
 ; CHECK:       A:

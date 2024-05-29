@@ -149,7 +149,7 @@ Value genScalarToTensor(OpBuilder &builder, Location loc, Value elem,
 /// Generates a pointer/index load from the sparse storage scheme. Narrower
 /// data types need to be zero extended before casting the value into the
 /// index type used for looping and indexing.
-Value genIndexLoad(OpBuilder &builder, Location loc, Value mem, Value s);
+Value genIndexLoad(OpBuilder &builder, Location loc, Value mem, ValueRange s);
 
 /// Generates a 1-valued attribute of the given type.  This supports
 /// all the same types as `getZeroAttr`; however, unlike `getZeroAttr`,
@@ -399,6 +399,19 @@ inline Value constantLevelTypeEncoding(OpBuilder &builder, Location loc,
   return constantI64(builder, loc, static_cast<uint64_t>(lt));
 }
 
+// Generates a constant from a validated value carrying attribute.
+inline Value genValFromAttr(OpBuilder &builder, Location loc, Attribute attr) {
+  if (auto complexAttr = dyn_cast<complex::NumberAttr>(attr)) {
+    Type tp = cast<ComplexType>(complexAttr.getType()).getElementType();
+    return builder.create<complex::ConstantOp>(
+        loc, complexAttr.getType(),
+        builder.getArrayAttr({FloatAttr::get(tp, complexAttr.getReal()),
+                              FloatAttr::get(tp, complexAttr.getImag())}));
+  }
+  return builder.create<arith::ConstantOp>(loc, cast<TypedAttr>(attr));
+}
+
+// TODO: is this at the right place?
 inline bool isZeroRankedTensorOrScalar(Type type) {
   auto rtp = dyn_cast<RankedTensorType>(type);
   return !rtp || rtp.getRank() == 0;

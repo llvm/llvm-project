@@ -84,3 +84,17 @@ nested_init_list<int>::concept_fail nil_invalid{1, ""};
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate template ignored: substitution failure [with F = const char *]: constraints not satisfied for class template 'concept_fail' [with F = const char *]}}
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 1 argument, but 2 were provided}}
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 0 arguments, but 2 were provided}}
+
+namespace GH88142 {
+
+template <typename, typename...> struct X {
+  template <typename> struct Y {
+    template <typename T> Y(T) {}
+  };
+
+  template <typename T> Y(T) -> Y<T>;
+};
+
+X<int>::Y y(42);
+
+} // namespace PR88142

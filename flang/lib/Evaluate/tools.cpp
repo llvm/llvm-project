@@ -28,11 +28,11 @@ namespace Fortran::evaluate {
 static constexpr bool allowOperandDuplication{false};
 
 std::optional<Expr<SomeType>> AsGenericExpr(DataRef &&ref) {
-  const Symbol &symbol{ref.GetLastSymbol()};
-  if (auto dyType{DynamicType::From(symbol)}) {
+  if (auto dyType{DynamicType::From(ref.GetLastSymbol())}) {
     return TypedWrapper<Designator, DataRef>(*dyType, std::move(ref));
+  } else {
+    return std::nullopt;
   }
-  return std::nullopt;
 }
 
 std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &symbol) {
@@ -995,8 +995,10 @@ template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
 
 // HasVectorSubscript()
-struct HasVectorSubscriptHelper : public AnyTraverse<HasVectorSubscriptHelper> {
-  using Base = AnyTraverse<HasVectorSubscriptHelper>;
+struct HasVectorSubscriptHelper
+    : public AnyTraverse<HasVectorSubscriptHelper, bool,
+          /*TraverseAssocEntityDetails=*/false> {
+  using Base = AnyTraverse<HasVectorSubscriptHelper, bool, false>;
   HasVectorSubscriptHelper() : Base{*this} {}
   using Base::operator();
   bool operator()(const Subscript &ss) const {
@@ -1045,16 +1047,17 @@ parser::Message *AttachDeclaration(
 }
 
 class FindImpureCallHelper
-    : public AnyTraverse<FindImpureCallHelper, std::optional<std::string>> {
+    : public AnyTraverse<FindImpureCallHelper, std::optional<std::string>,
+          /*TraverseAssocEntityDetails=*/false> {
   using Result = std::optional<std::string>;
-  using Base = AnyTraverse<FindImpureCallHelper, Result>;
+  using Base = AnyTraverse<FindImpureCallHelper, Result, false>;
 
 public:
   explicit FindImpureCallHelper(FoldingContext &c) : Base{*this}, context_{c} {}
   using Base::operator();
   Result operator()(const ProcedureRef &call) const {
-    if (auto chars{
-            characteristics::Procedure::Characterize(call.proc(), context_)}) {
+    if (auto chars{characteristics::Procedure::Characterize(
+            call.proc(), context_, /*emitError=*/false)}) {
       if (chars->attrs.test(characteristics::Procedure::Attr::Pure)) {
         return (*this)(call.arguments());
       }

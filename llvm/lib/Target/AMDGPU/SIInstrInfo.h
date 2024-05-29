@@ -240,7 +240,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, unsigned &Width,
+      bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const final;
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
@@ -815,7 +815,7 @@ public:
   }
 
   static bool isMFMAorWMMA(const MachineInstr &MI) {
-    return isMFMA(MI) || isWMMA(MI);
+    return isMFMA(MI) || isWMMA(MI) || isSWMMAC(MI);
   }
 
   static bool isSWMMAC(const MachineInstr &MI) {
@@ -925,6 +925,17 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IsNeverUniform;
   }
 
+  // Check to see if opcode is for a barrier start. Pre gfx12 this is just the
+  // S_BARRIER, but after support for S_BARRIER_SIGNAL* / S_BARRIER_WAIT we want
+  // to check for the barrier start (S_BARRIER_SIGNAL*)
+  bool isBarrierStart(unsigned Opcode) const {
+    return Opcode == AMDGPU::S_BARRIER ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_M0 ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0 ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_IMM ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM;
+  }
+
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::TiedSourceNotRead;
   }
@@ -984,9 +995,7 @@ public:
 
   bool isInlineConstant(const APInt &Imm) const;
 
-  bool isInlineConstant(const APFloat &Imm) const {
-    return isInlineConstant(Imm.bitcastToAPInt());
-  }
+  bool isInlineConstant(const APFloat &Imm) const;
 
   // Returns true if this non-register operand definitely does not need to be
   // encoded as a 32-bit literal. Note that this function handles all kinds of
@@ -1196,6 +1205,15 @@ public:
                    unsigned Quantity) const override;
 
   void insertReturn(MachineBasicBlock &MBB) const;
+
+  /// Build instructions that simulate the behavior of a `s_trap 2` instructions
+  /// for hardware (namely, gfx11) that runs in PRIV=1 mode. There, s_trap is
+  /// interpreted as a nop.
+  MachineBasicBlock *insertSimulatedTrap(MachineRegisterInfo &MRI,
+                                         MachineBasicBlock &MBB,
+                                         MachineInstr &MI,
+                                         const DebugLoc &DL) const;
+
   /// Return the number of wait states that result from executing this
   /// instruction.
   static unsigned getNumWaitStates(const MachineInstr &MI);

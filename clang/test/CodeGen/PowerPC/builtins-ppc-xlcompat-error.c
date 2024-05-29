@@ -30,6 +30,7 @@ void test_builtin_ppc_rldimi() {
   unsigned long long res = __builtin_ppc_rldimi(ull, ull, shift, 7); // expected-error {{argument to '__builtin_ppc_rldimi' must be a constant integer}}
   res = __builtin_ppc_rldimi(ull, ull, 63, mask);                    // expected-error {{argument to '__builtin_ppc_rldimi' must be a constant integer}}
   res = __builtin_ppc_rldimi(ull, ull, 63, 0xFFFF000000000F00);      // expected-error {{argument 3 value should represent a contiguous bit field}}
+  res = __builtin_ppc_rldimi(ull, ull, 64, 0xFFFF000000000000);      // expected-error {{argument value 64 is outside the valid range [0, 63]}}
 }
 
 void test_builtin_ppc_rlwimi() {

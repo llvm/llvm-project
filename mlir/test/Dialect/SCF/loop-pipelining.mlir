@@ -846,3 +846,26 @@ func.func @invalid_schedule2(%A: memref<?xf32>, %result: memref<?xf32>) {
   }  { __test_pipelining_loop__ }
   return
 }
+
+// -----
+
+func.func @invalid_schedule3(%A: memref<?xf32>, %result: memref<?xf32>, %ext: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%idx = %c0) -> (index) {
+    %cnd = arith.cmpi slt, %ext, %c4 { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 0 } : index
+    // expected-error@+1 {{operation scheduled before its operands}}
+    %idx1 = scf.if %cnd -> (index) {
+      %idxinc = arith.addi %idx, %c1 : index
+      scf.yield %idxinc : index
+    } else {
+      scf.yield %idx : index
+    } { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 1 }
+    %A_elem = memref.load %A[%idx1] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    %idx2 = arith.addi %idx1, %c1 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 3 } : index
+    memref.store %A_elem, %result[%idx1] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 4 } : memref<?xf32>
+    scf.yield %idx2 : index
+  }  { __test_pipelining_loop__ }
+  return
+}

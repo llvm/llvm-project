@@ -13,6 +13,9 @@
 import sys, os, re, shutil
 from datetime import date
 
+# Add path for llvm_slug module.
+sys.path.insert(0, os.path.abspath(os.path.join("..", "..", "llvm", "docs")))
+
 building_man_page = tags.has("builder-man")
 
 # For the website we need to setup the path to the generated LLDB module that
@@ -42,6 +45,23 @@ automodapi_toctreedirnm = "python_api"
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ["sphinx.ext.todo", "sphinx.ext.mathjax", "sphinx.ext.intersphinx"]
 
+# When building man pages, we do not use the markdown pages,
+# So, we can continue without the myst_parser dependencies.
+# Doing so reduces dependencies of some packaged llvm distributions.
+try:
+    import myst_parser
+
+    extensions.append("myst_parser")
+except ImportError:
+    if not tags.has("builder-man"):
+        raise
+
+# Automatic anchors for markdown titles
+from llvm_slug import make_slug
+
+myst_heading_anchors = 6
+myst_heading_slug_func = make_slug
+
 autodoc_default_options = {"special-members": True}
 
 # Unless we only generate the basic manpage we need the plugin for generating
@@ -69,6 +89,7 @@ templates_path = ["_templates"]
 # The suffix of source filenames.
 source_suffix = {
     ".rst": "restructuredtext",
+    ".md": "markdown",
 }
 
 # The encoding of source files.

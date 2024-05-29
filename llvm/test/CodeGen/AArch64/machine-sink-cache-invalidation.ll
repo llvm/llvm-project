@@ -9,20 +9,20 @@ target triple = "arm64-apple-macosx13.5.0"
 define i32 @nsis_BZ2_bzDecompress(ptr %pos.i, i1 %cmp661.not3117.i, i1 %exitcond.not.i) {
 ; CHECK-LABEL: nsis_BZ2_bzDecompress:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: // %while.end671.i
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    strb w8, [x0]
+; CHECK-NEXT:    strb w9, [x0]
 ; CHECK-NEXT:    tbnz w2, #0, .LBB0_4
 ; CHECK-NEXT:  .LBB0_2: // %for.body653.i
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    ldrb w9, [x0]
 ; CHECK-NEXT:    tbnz w1, #0, .LBB0_1
 ; CHECK-NEXT:  // %bb.3: // %while.body663.i
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    ldrb w9, [x9]
-; CHECK-NEXT:    strb wzr, [x0, x9]
+; CHECK-NEXT:    ldrb w10, [x8]
+; CHECK-NEXT:    strb wzr, [x0, x10]
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_4: // %for.end677.i
 ; CHECK-NEXT:    mov w0, wzr

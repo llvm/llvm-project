@@ -16,6 +16,7 @@
 // Test the feature test macros defined by <optional>
 
 /*  Constant                           Value
+    __cpp_lib_constrained_equality     202403L [C++26]
     __cpp_lib_freestanding_optional    202311L [C++26]
     __cpp_lib_optional                 201606L [C++17]
                                        202110L [C++23]
@@ -25,6 +26,10 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14
+
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
 
 # ifdef __cpp_lib_freestanding_optional
 #   error "__cpp_lib_freestanding_optional should not be defined before c++26"
@@ -36,6 +41,10 @@
 
 #elif TEST_STD_VER == 14
 
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_freestanding_optional
 #   error "__cpp_lib_freestanding_optional should not be defined before c++26"
 # endif
@@ -45,6 +54,10 @@
 # endif
 
 #elif TEST_STD_VER == 17
+
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
 
 # ifdef __cpp_lib_freestanding_optional
 #   error "__cpp_lib_freestanding_optional should not be defined before c++26"
@@ -59,6 +72,10 @@
 
 #elif TEST_STD_VER == 20
 
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_freestanding_optional
 #   error "__cpp_lib_freestanding_optional should not be defined before c++26"
 # endif
@@ -72,6 +89,10 @@
 
 #elif TEST_STD_VER == 23
 
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_freestanding_optional
 #   error "__cpp_lib_freestanding_optional should not be defined before c++26"
 # endif
@@ -84,6 +105,19 @@
 # endif
 
 #elif TEST_STD_VER > 23
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_constrained_equality
+#     error "__cpp_lib_constrained_equality should be defined in c++26"
+#   endif
+#   if __cpp_lib_constrained_equality != 202403L
+#     error "__cpp_lib_constrained_equality should have the value 202403L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_constrained_equality
+#     error "__cpp_lib_constrained_equality should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_freestanding_optional

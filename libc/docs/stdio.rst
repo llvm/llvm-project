@@ -68,7 +68,7 @@ These functions operate on files on the host's system, without using the
 Function_Name  Available
 =============  =========
 remove         |check|
-rename
+rename         |check|
 tmpnam
 =============  =========
 

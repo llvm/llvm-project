@@ -39,6 +39,10 @@ namespace {
   case (LengthModifier::lm):                                                   \
     tlog << #lm;                                                               \
     break
+#define CASE_LM_BIT_WIDTH(lm, bw)                                              \
+  case (LengthModifier::lm):                                                   \
+    tlog << #lm << "\n\tbit width: :" << bw;                                   \
+    break
 
 static void display(FormatSection form) {
   tlog << "Raw String (len " << form.raw_string.size() << "): \"";
@@ -67,6 +71,8 @@ static void display(FormatSection form) {
       CASE_LM(z);
       CASE_LM(t);
       CASE_LM(L);
+      CASE_LM_BIT_WIDTH(w, form.bit_width);
+      CASE_LM_BIT_WIDTH(wf, form.bit_width);
     }
     tlog << "\n";
     tlog << "\tconversion name: " << form.conv_name << "\n";

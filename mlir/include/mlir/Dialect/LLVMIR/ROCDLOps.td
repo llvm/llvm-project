@@ -158,6 +158,24 @@ Arguments<(ins I32:$index,
    }];
 }
 
+def ROCDL_BallotOp :
+  ROCDL_Op<"ballot">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins I1:$pred)> {
+  let summary = "Vote across thread group";
+
+  let description = [{
+      Ballot provides a bit mask containing the 1-bit predicate value from each lane. 
+      The nth bit of the result contains the 1 bit contributed by the nth warp lane.
+  }];
+
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+            llvm::Intrinsic::amdgcn_ballot, {$pred}, {$_resultType});
+  }];
+
+  let assemblyFormat = "$pred attr-dict `:` type($res)";
+}
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
@@ -193,6 +211,23 @@ def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z",
 
 //===----------------------------------------------------------------------===//
 // Synchronization primitives
+
+// Emits the waintcnt instruction. The bitfield's semantics depend
+// on the target chipset
+def ROCDL_WaitcntOp : ROCDL_Op<"waitcnt">, Arguments<(ins I32Attr:$bitfield)> {
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_waitcnt,
+      {builder.getInt32($bitfield)});
+  }];
+  let assemblyFormat = "attr-dict $bitfield";
+}
+
+def ROCDL_SBarrierOp : ROCDL_Op<"s.barrier"> {
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_barrier);
+  }];
+  let assemblyFormat = "attr-dict";
+}
 
 def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   string llvmBuilder = [{

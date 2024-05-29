@@ -432,8 +432,6 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
                                                        Register Src0,
                                                        Register Src1,
                                                        Register Src2) {
-  Builder.setInstrAndDebugLoc(MI);
-
   // We expect fptrunc (fpext x) to fold out, and to constant fold any constant
   // sources.
   Src0 = Builder.buildFPTrunc(LLT::scalar(16), Src0).getReg(0);

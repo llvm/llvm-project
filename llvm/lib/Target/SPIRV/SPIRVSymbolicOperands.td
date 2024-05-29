@@ -297,6 +297,8 @@ defm SPV_INTEL_fpga_argument_interfaces : ExtensionOperand<102>;
 defm SPV_INTEL_optnone : ExtensionOperand<103>;
 defm SPV_INTEL_function_pointers : ExtensionOperand<104>;
 defm SPV_INTEL_variable_length_array : ExtensionOperand<105>;
+defm SPV_INTEL_bfloat16_conversion : ExtensionOperand<106>;
+defm SPV_INTEL_inline_assembly : ExtensionOperand<107>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -412,6 +414,7 @@ defm ImageGatherBiasLodAMD : CapabilityOperand<5009, 0, 0, [], [Shader]>;
 defm FragmentMaskAMD : CapabilityOperand<5010, 0, 0, [], [Shader]>;
 defm StencilExportEXT : CapabilityOperand<5013, 0, 0, [], [Shader]>;
 defm ImageReadWriteLodAMD : CapabilityOperand<5015, 0, 0, [], [Shader]>;
+defm ShaderClockKHR : CapabilityOperand<5055, 0, 0, [SPV_KHR_shader_clock], []>;
 defm SampleMaskOverrideCoverageNV : CapabilityOperand<5249, 0, 0, [], [SampleRateShading]>;
 defm GeometryShaderPassthroughNV : CapabilityOperand<5251, 0, 0, [], [Geometry]>;
 defm ShaderViewportIndexLayerEXT : CapabilityOperand<5254, 0, 0, [], [MultiViewport]>;
@@ -456,6 +459,7 @@ defm BitInstructions : CapabilityOperand<6025, 0, 0, [SPV_KHR_bit_instructions],
 defm ExpectAssumeKHR : CapabilityOperand<5629, 0, 0, [SPV_KHR_expect_assume], []>;
 defm FunctionPointersINTEL : CapabilityOperand<5603, 0, 0, [SPV_INTEL_function_pointers], []>;
 defm IndirectReferencesINTEL : CapabilityOperand<5604, 0, 0, [SPV_INTEL_function_pointers], []>;
+defm AsmINTEL : CapabilityOperand<5606, 0, 0, [SPV_INTEL_inline_assembly], []>;
 defm GroupNonUniformRotateKHR : CapabilityOperand<6026, 0, 0, [SPV_KHR_subgroup_rotate], [GroupNonUniform]>;
 defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
@@ -466,6 +470,7 @@ defm AtomicFloat64MinMaxEXT : CapabilityOperand<5613, 0, 0, [SPV_EXT_shader_atom
 defm VariableLengthArrayINTEL : CapabilityOperand<5817, 0, 0, [SPV_INTEL_variable_length_array], []>;
 defm GroupUniformArithmeticKHR : CapabilityOperand<6400, 0, 0, [SPV_KHR_uniform_group_instructions], []>;
 defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_storage_classes], [Kernel]>;
+defm BFloat16ConversionINTEL : CapabilityOperand<6115, 0, 0, [SPV_INTEL_bfloat16_conversion], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1198,6 +1203,8 @@ defm UserSemantic : DecorationOperand<5635, 0, 0, [], []>;
 defm RestrictPointerEXT : DecorationOperand<5355, 0, 0, [], [PhysicalStorageBufferAddressesEXT]>;
 defm AliasedPointerEXT : DecorationOperand<5356, 0, 0, [], [PhysicalStorageBufferAddressesEXT]>;
 defm ReferencedIndirectlyINTEL : DecorationOperand<5602, 0, 0, [], [IndirectReferencesINTEL]>;
+defm ClobberINTEL : DecorationOperand<5607, 0, 0, [SPV_INTEL_inline_assembly], [AsmINTEL]>;
+defm SideEffectsINTEL : DecorationOperand<5608, 0, 0, [SPV_INTEL_inline_assembly], [AsmINTEL]>;
 defm ArgumentAttributeINTEL : DecorationOperand<6409, 0, 0, [], [FunctionPointersINTEL]>;
 
 //===----------------------------------------------------------------------===//
@@ -1609,3 +1616,6 @@ multiclass OpcodeOperand<bits<32> value> {
 // TODO: implement other mnemonics.
 defm InBoundsPtrAccessChain : OpcodeOperand<70>;
 defm PtrCastToGeneric : OpcodeOperand<121>;
+defm Bitcast : OpcodeOperand<124>;
+defm ConvertPtrToU : OpcodeOperand<117>;
+defm ConvertUToPtr : OpcodeOperand<120>;

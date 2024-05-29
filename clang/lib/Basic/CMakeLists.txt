@@ -130,6 +130,9 @@ add_clang_library(clangBasic
   DEPENDS
   omp_gen
   ClangDriverOptions
+  # These generated headers are included transitively.
+  ARMTargetParserTableGen
+  AArch64TargetParserTableGen
   )
 
 target_link_libraries(clangBasic

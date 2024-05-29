@@ -13,11 +13,73 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include <numeric>
 
 using namespace mlir;
+
+std::optional<SmallVector<OpFoldResult>>
+mlir::inferExpandShapeOutputShape(OpBuilder &b, Location loc,
+                                  ShapedType expandedType,
+                                  ArrayRef<ReassociationIndices> reassociation,
+                                  ArrayRef<OpFoldResult> inputShape) {
+
+  SmallVector<Value> outputShapeValues;
+  SmallVector<int64_t> outputShapeInts;
+  // For zero-rank inputs, all dims in result shape are unit extent.
+  if (inputShape.empty()) {
+    outputShapeInts.resize(expandedType.getRank(), 1);
+    return getMixedValues(outputShapeInts, outputShapeValues, b);
+  }
+
+  // Check for all static shapes.
+  if (expandedType.hasStaticShape()) {
+    ArrayRef<int64_t> staticShape = expandedType.getShape();
+    outputShapeInts.assign(staticShape.begin(), staticShape.end());
+    return getMixedValues(outputShapeInts, outputShapeValues, b);
+  }
+
+  outputShapeInts.resize(expandedType.getRank(), ShapedType::kDynamic);
+  for (const auto &it : llvm::enumerate(reassociation)) {
+    ReassociationIndices indexGroup = it.value();
+
+    int64_t indexGroupStaticSizesProductInt = 1;
+    bool foundDynamicShape = false;
+    for (int64_t index : indexGroup) {
+      int64_t outputDimSize = expandedType.getDimSize(index);
+      // Cannot infer expanded shape with multiple dynamic dims in the
+      // same reassociation group!
+      if (ShapedType::isDynamic(outputDimSize)) {
+        if (foundDynamicShape)
+          return std::nullopt;
+        foundDynamicShape = true;
+      } else {
+        outputShapeInts[index] = outputDimSize;
+        indexGroupStaticSizesProductInt *= outputDimSize;
+      }
+    }
+    if (!foundDynamicShape)
+      continue;
+
+    int64_t inputIndex = it.index();
+    // Call get<Value>() under the assumption that we're not casting
+    // dynamism.
+    Value indexGroupSize = inputShape[inputIndex].get<Value>();
+    Value indexGroupStaticSizesProduct =
+        b.create<arith::ConstantIndexOp>(loc, indexGroupStaticSizesProductInt);
+    Value dynamicDimSize = b.createOrFold<arith::DivUIOp>(
+        loc, indexGroupSize, indexGroupStaticSizesProduct);
+    outputShapeValues.push_back(dynamicDimSize);
+  }
+
+  if ((int64_t)outputShapeValues.size() !=
+      llvm::count(outputShapeInts, ShapedType::kDynamic))
+    return std::nullopt;
+
+  return getMixedValues(outputShapeInts, outputShapeValues, b);
+}
 
 /// Matches a ConstantIndexOp.
 /// TODO: This should probably just be a general matcher that uses matchConstant

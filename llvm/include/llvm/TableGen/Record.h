@@ -2098,7 +2098,7 @@ private:
 /// Sorting predicate to sort record pointers by name.
 struct LessRecord {
   bool operator()(const Record *Rec1, const Record *Rec2) const {
-    return StringRef(Rec1->getName()).compare_numeric(Rec2->getName()) < 0;
+    return Rec1->getName().compare_numeric(Rec2->getName()) < 0;
   }
 };
 

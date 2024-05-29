@@ -227,14 +227,14 @@ public:
   }
 
   /// Construct a SymbolLookupSet from DenseMap keys.
-  template <typename KeyT>
+  template <typename ValT>
   static SymbolLookupSet
-  fromMapKeys(const DenseMap<SymbolStringPtr, KeyT> &M,
+  fromMapKeys(const DenseMap<SymbolStringPtr, ValT> &M,
               SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
     SymbolLookupSet Result;
     Result.Symbols.reserve(M.size());
-    for (const auto &KV : M)
-      Result.add(KV.first, Flags);
+    for (const auto &[Name, Val] : M)
+      Result.add(Name, Flags);
     return Result;
   }
 
@@ -1237,6 +1237,8 @@ private:
   // * Pending queries holds any not-yet-completed queries that include this
   //   symbol.
   struct MaterializingInfo {
+    friend class ExecutionSession;
+
     std::shared_ptr<EmissionDepUnit> DefiningEDU;
     DenseSet<EmissionDepUnit *> DependantEDUs;
 
@@ -1330,6 +1332,10 @@ private:
   Error resolve(MaterializationResponsibility &MR, const SymbolMap &Resolved);
 
   void unlinkMaterializationResponsibility(MaterializationResponsibility &MR);
+
+  /// Attempt to reduce memory usage from empty \c UnmaterializedInfos and
+  /// \c MaterializingInfos tables.
+  void shrinkMaterializationInfoMemory();
 
   ExecutionSession &ES;
   enum { Open, Closing, Closed } State = Open;
@@ -1436,9 +1442,6 @@ public:
 
   /// Send a result to the remote.
   using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;
-
-  /// For dispatching ORC tasks (typically materialization tasks).
-  using DispatchTaskFunction = unique_function<void(std::unique_ptr<Task> T)>;
 
   /// An asynchronous wrapper-function callable from the executor via
   /// jit-dispatch.
@@ -1562,12 +1565,6 @@ public:
   /// Unhandled errors can be sent here to log them.
   void reportError(Error Err) { ReportError(std::move(Err)); }
 
-  /// Set the task dispatch function.
-  ExecutionSession &setDispatchTask(DispatchTaskFunction DispatchTask) {
-    this->DispatchTask = std::move(DispatchTask);
-    return *this;
-  }
-
   /// Search the given JITDylibs to find the flags associated with each of the
   /// given symbols.
   void lookupFlags(LookupKind K, JITDylibSearchOrder SearchOrder,
@@ -1642,7 +1639,7 @@ public:
   void dispatchTask(std::unique_ptr<Task> T) {
     assert(T && "T must be non-null");
     DEBUG_WITH_TYPE("orc", dumpDispatchInfo(*T));
-    DispatchTask(std::move(T));
+    EPC->getDispatcher().dispatch(std::move(T));
   }
 
   /// Run a wrapper function in the executor.
@@ -1746,12 +1743,15 @@ public:
   /// Dump the state of all the JITDylibs in this session.
   void dump(raw_ostream &OS);
 
+  /// Check the internal consistency of ExecutionSession data structures.
+#ifdef EXPENSIVE_CHECKS
+  bool verifySessionState(Twine Phase);
+#endif
+
 private:
   static void logErrorsToStdErr(Error Err) {
     logAllUnhandledErrors(std::move(Err), errs(), "JIT session error: ");
   }
-
-  static void runOnCurrentThread(std::unique_ptr<Task> T) { T->run(); }
 
   void dispatchOutstandingMUs();
 
@@ -1858,7 +1858,6 @@ private:
   std::unique_ptr<ExecutorProcessControl> EPC;
   std::unique_ptr<Platform> P;
   ErrorReporter ReportError = logErrorsToStdErr;
-  DispatchTaskFunction DispatchTask = runOnCurrentThread;
 
   std::vector<ResourceManager *> ResourceManagers;
 

@@ -207,7 +207,7 @@ static bool runImpl(Module &M) {
       Value *Null = ConstantPointerNull::get(VoidStar);
       Value *Args[] = {CallDtors, Null, DsoHandle};
       Value *Res = CallInst::Create(AtExit, Args, "call", EntryBB);
-      Value *Cmp = new ICmpInst(*EntryBB, ICmpInst::ICMP_NE, Res,
+      Value *Cmp = new ICmpInst(EntryBB, ICmpInst::ICMP_NE, Res,
                                 Constant::getNullValue(Res->getType()));
       BranchInst::Create(FailBB, RetBB, Cmp, EntryBB);
 

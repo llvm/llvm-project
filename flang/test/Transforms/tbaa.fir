@@ -173,3 +173,40 @@
 // CHECK:           fir.store %[[VAL_8]] to %[[VAL_12]] : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
+
+// -----
+
+// Make sure we don't mistake other block arguments as dummy arguments:
+
+omp.declare_reduction @add_reduction_i32 : i32 init {
+^bb0(%arg0: i32):
+  %c0_i32 = arith.constant 0 : i32
+  omp.yield(%c0_i32 : i32)
+} combiner {
+^bb0(%arg0: i32, %arg1: i32):
+  %0 = arith.addi %arg0, %arg1 : i32
+  omp.yield(%0 : i32)
+}
+
+func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {
+  %c10_i32 = arith.constant 10 : i32
+  %c6_i32 = arith.constant 6 : i32
+  %c-1_i32 = arith.constant -1 : i32
+  %0 = fir.address_of(@_QFEi) : !fir.ref<i32>
+  %1 = fir.declare %0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  omp.parallel reduction(@add_reduction_i32 %1 -> %arg0 : !fir.ref<i32>) {
+// CHECK: omp.parallel reduction({{.*}}) {
+    %8 = fir.declare %arg0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK-NEXT: %[[DECL:.*]] = fir.declare
+    fir.store %c-1_i32 to %8 : !fir.ref<i32>
+// CHECK-NOT: fir.store %{{.*}} to %[[DECL]] {tbaa = %{{.*}}} : !fir.ref<i32>
+// CHECK:     fir.store %{{.*}} to %[[DECL]] : !fir.ref<i32>
+    omp.terminator
+  }
+  return
+}
+
+fir.global internal @_QFEi : i32 {
+  %c0_i32 = arith.constant 0 : i32
+  fir.has_value %c0_i32 : i32
+}

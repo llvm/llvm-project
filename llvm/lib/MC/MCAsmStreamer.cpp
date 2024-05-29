@@ -468,7 +468,7 @@ void MCAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
 
 void MCAsmStreamer::addExplicitComment(const Twine &T) {
   StringRef c = T.getSingleStringRef();
-  if (c.equals(StringRef(MAI->getSeparatorString())))
+  if (c == MAI->getSeparatorString())
     return;
   if (c.starts_with(StringRef("//"))) {
     ExplicitCommentToEmit.append("\t");

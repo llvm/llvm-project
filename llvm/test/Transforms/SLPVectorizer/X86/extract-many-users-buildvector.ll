@@ -8,12 +8,10 @@ define i1 @test(float %0, double %1) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[TMP3]] to <4 x double>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> zeroinitializer, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP8]], <4 x double> <double poison, double 0.000000e+00, double poison, double 0.000000e+00>, <4 x i32> <i32 poison, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> <double poison, double 0.000000e+00, double poison, double poison>, <4 x i32> <i32 poison, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> [[TMP9]], double [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> poison, <4 x i32> <i32 1, i32 2, i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> [[TMP11]], double [[TMP7]], i32 3
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> <double poison, double poison, double poison, double 0.000000e+00>, <4 x i32> <i32 1, i32 2, i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul <4 x double> [[TMP10]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = fmul <4 x double> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>

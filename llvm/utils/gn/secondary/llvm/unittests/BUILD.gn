@@ -77,7 +77,7 @@ group("unittests") {
   }
   if (llvm_build_AMDGPU) {
     deps += [
-      "MC/AMDGPU:AMDGPUDwarfTests",
+      "MC/AMDGPU:AMDGPUMCTests",
       "Target/AMDGPU:AMDGPUTests",
     ]
   }

@@ -187,6 +187,16 @@ float4 strict_elementwise_sqrt(float4 a) {
   return __builtin_elementwise_sqrt(a);
 }
 
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z22strict_elementwise_tanDv4_f
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ELT_TAN:%.*]] = tail call <4 x float> @llvm.tan.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_TAN]]
+//
+float4 strict_elementwise_tan(float4 a) {
+  return __builtin_elementwise_tan(a);
+}
+
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z24strict_elementwise_truncDv4_f
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:

@@ -50,21 +50,14 @@ define i64 @combine_psadbw_demandedelt(<16 x i8> %0, <16 x i8> %1) nounwind {
 define <2 x i64> @combine_psadbw_cmp_knownbits(<16 x i8> %a0) nounwind {
 ; X86-SSE-LABEL: combine_psadbw_cmp_knownbits:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    pxor %xmm1, %xmm1
-; X86-SSE-NEXT:    psadbw %xmm0, %xmm1
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,0,2,2]
-; X86-SSE-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: combine_psadbw_cmp_knownbits:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    pxor %xmm1, %xmm1
-; X64-SSE-NEXT:    psadbw %xmm0, %xmm1
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,0,2,2]
-; X64-SSE-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    psadbw %xmm1, %xmm0
 ; X64-SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    retq
 ;
@@ -82,28 +75,15 @@ define <2 x i64> @combine_psadbw_cmp_knownbits(<16 x i8> %a0) nounwind {
   ret <2 x i64> %ext
 }
 
-; TODO: No need to scalarize the sitofp as the PSADBW results are smaller than i32.
+; No need to scalarize the sitofp as the PSADBW results are smaller than i32.
 define <2 x double> @combine_psadbw_sitofp_knownbits(<16 x i8> %a0) nounwind {
 ; X86-SSE-LABEL: combine_psadbw_sitofp_knownbits:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pushl %ebp
-; X86-SSE-NEXT:    movl %esp, %ebp
-; X86-SSE-NEXT:    andl $-8, %esp
-; X86-SSE-NEXT:    subl $32, %esp
 ; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    pxor %xmm1, %xmm1
 ; X86-SSE-NEXT:    psadbw %xmm0, %xmm1
-; X86-SSE-NEXT:    movq %xmm1, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; X86-SSE-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    fstpl (%esp)
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
-; X86-SSE-NEXT:    movl %ebp, %esp
-; X86-SSE-NEXT:    popl %ebp
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; X86-SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: combine_psadbw_sitofp_knownbits:
@@ -111,14 +91,8 @@ define <2 x double> @combine_psadbw_sitofp_knownbits(<16 x i8> %a0) nounwind {
 ; X64-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    pxor %xmm1, %xmm1
 ; X64-SSE-NEXT:    psadbw %xmm0, %xmm1
-; X64-SSE-NEXT:    movd %xmm1, %eax
-; X64-SSE-NEXT:    xorps %xmm0, %xmm0
-; X64-SSE-NEXT:    cvtsi2sd %eax, %xmm0
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
-; X64-SSE-NEXT:    movd %xmm1, %eax
-; X64-SSE-NEXT:    xorps %xmm1, %xmm1
-; X64-SSE-NEXT:    cvtsi2sd %eax, %xmm1
-; X64-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; X64-SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_psadbw_sitofp_knownbits:
@@ -126,10 +100,8 @@ define <2 x double> @combine_psadbw_sitofp_knownbits(<16 x i8> %a0) nounwind {
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vcvtdq2pd %xmm0, %xmm1
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX2-NEXT:    vcvtsi2sd %eax, %xmm2, %xmm0
-; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX2-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %mask = and <16 x i8> %a0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %sad = tail call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %mask, <16 x i8> zeroinitializer)
@@ -137,28 +109,24 @@ define <2 x double> @combine_psadbw_sitofp_knownbits(<16 x i8> %a0) nounwind {
   ret <2 x double> %cvt
 }
 
-; TODO: Convert from uitofp to sitofp as the PSADBW results are zero-extended.
+; Convert from uitofp to sitofp as the PSADBW results are zero-extended.
 define <2 x double> @combine_psadbw_uitofp_knownbits(<16 x i8> %a0) nounwind {
 ; X86-SSE-LABEL: combine_psadbw_uitofp_knownbits:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    pxor %xmm1, %xmm1
-; X86-SSE-NEXT:    psadbw %xmm1, %xmm0
-; X86-SSE-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    movapd {{.*#+}} xmm1 = [0,1160773632,0,1160773632]
-; X86-SSE-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-SSE-NEXT:    addpd %xmm1, %xmm0
+; X86-SSE-NEXT:    psadbw %xmm0, %xmm1
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; X86-SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: combine_psadbw_uitofp_knownbits:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    pxor %xmm1, %xmm1
-; X64-SSE-NEXT:    psadbw %xmm1, %xmm0
-; X64-SSE-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE-NEXT:    movapd {{.*#+}} xmm1 = [4985484787499139072,4985484787499139072]
-; X64-SSE-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-SSE-NEXT:    addpd %xmm1, %xmm0
+; X64-SSE-NEXT:    psadbw %xmm0, %xmm1
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; X64-SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_psadbw_uitofp_knownbits:
@@ -166,12 +134,8 @@ define <2 x double> @combine_psadbw_uitofp_knownbits(<16 x i8> %a0) nounwind {
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; AVX2-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vmovddup {{.*#+}} xmm1 = [4985484787499139072,4985484787499139072]
-; AVX2-NEXT:    # xmm1 = mem[0,0]
-; AVX2-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX2-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %mask = and <16 x i8> %a0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %sad = tail call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %mask, <16 x i8> zeroinitializer)

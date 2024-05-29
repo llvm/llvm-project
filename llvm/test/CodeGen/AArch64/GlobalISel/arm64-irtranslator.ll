@@ -1385,6 +1385,16 @@ define i32 @test_intrinsic_lrint(float %a) {
   ret i32 %res
 }
 
+declare i32 @llvm.llrint.i32.f32(float)
+define i32 @test_intrinsic_llrint(float %a) {
+; CHECK-LABEL: name: test_intrinsic_llrint
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_INTRINSIC_LLRINT [[A]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.llrint.i32.f32(float %a)
+  ret i32 %res
+}
+
 declare i32 @llvm.ctlz.i32(i32, i1)
 define i32 @test_ctlz_intrinsic_zero_not_undef(i32 %a) {
 ; CHECK-LABEL: name: test_ctlz_intrinsic_zero_not_undef
@@ -1538,7 +1548,8 @@ define <2 x i32> @test_insertelement(<2 x i32> %vec, i32 %elt, i32 %idx){
 ; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = COPY $d0
 ; CHECK: [[ELT:%[0-9]+]]:_(s32) = COPY $w0
 ; CHECK: [[IDX:%[0-9]+]]:_(s32) = COPY $w1
-; CHECK: [[RES:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[VEC]], [[ELT]](s32), [[IDX]](s32)
+; CHECK: [[IDX2:%[0-9]+]]:_(s64) = G_ZEXT [[IDX]]
+; CHECK: [[RES:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[VEC]], [[ELT]](s32), [[IDX2]](s64)
 ; CHECK: $d0 = COPY [[RES]](<2 x s32>)
   %res = insertelement <2 x i32> %vec, i32 %elt, i32 %idx
   ret <2 x i32> %res

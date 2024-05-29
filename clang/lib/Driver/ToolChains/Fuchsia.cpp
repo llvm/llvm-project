@@ -119,8 +119,11 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Dyld));
   }
 
-  if (ToolChain.getArch() == llvm::Triple::riscv64)
+  if (Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
