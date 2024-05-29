@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-architected-sgprs -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+architected-sgprs -global-isel=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9ARCH,GFX9ARCH-SDAG %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+architected-sgprs -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9ARCH,GFX9ARCH-GISEL %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -global-isel=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
 define amdgpu_kernel void @workgroup_ids_kernel() {
 ; GFX9-LABEL: workgroup_ids_kernel:
@@ -152,29 +154,21 @@ define amdgpu_kernel void @caller() {
 ; GFX9ARCH-GISEL-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX9ARCH-GISEL-NEXT:    s_endpgm
 ;
-; GFX12-SDAG-LABEL: caller:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, ttmp9
-; GFX12-SDAG-NEXT:    s_mov_b64 s[10:11], s[4:5]
-; GFX12-SDAG-NEXT:    s_mov_b32 s7, callee@abs32@hi
-; GFX12-SDAG-NEXT:    s_mov_b32 s6, callee@abs32@lo
-; GFX12-SDAG-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX12-SDAG-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; GFX12-SDAG-NEXT:    s_mov_b32 s32, 0
-; GFX12-SDAG-NEXT:    s_swappc_b64 s[30:31], s[6:7]
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: caller:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, ttmp9
-; GFX12-GISEL-NEXT:    s_mov_b64 s[10:11], s[4:5]
-; GFX12-GISEL-NEXT:    s_mov_b32 s6, callee@abs32@lo
-; GFX12-GISEL-NEXT:    s_mov_b32 s7, callee@abs32@hi
-; GFX12-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GFX12-GISEL-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; GFX12-GISEL-NEXT:    s_mov_b32 s32, 0
-; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[6:7]
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: caller:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_mov_b64 s[10:11], s[4:5]
+; GFX12-NEXT:    s_getpc_b64 s[4:5]
+; GFX12-NEXT:    s_sext_i32_i16 s5, s5
+; GFX12-NEXT:    s_add_co_u32 s4, s4, callee@gotpcrel32@lo+8
+; GFX12-NEXT:    s_add_co_ci_u32 s5, s5, callee@gotpcrel32@hi+16
+; GFX12-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, ttmp9
+; GFX12-NEXT:    s_load_b64 s[6:7], s[4:5], 0x0
+; GFX12-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX12-NEXT:    s_mov_b64 s[8:9], s[2:3]
+; GFX12-NEXT:    s_mov_b32 s32, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GFX12-NEXT:    s_endpgm
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()
   call void @callee(i32 %idx) #0
   ret void
