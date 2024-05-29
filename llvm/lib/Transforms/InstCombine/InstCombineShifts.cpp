@@ -1174,7 +1174,11 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
         // X & (CC << C)
         Value *M = Builder.CreateAnd(X, ConstantInt::get(Ty, CC->shl(*C)),
                                      X->getName() + ".mask");
-        return BinaryOperator::Create(Op0BO->getOpcode(), M, YS);
+        auto *NewOp = BinaryOperator::Create(Op0BO->getOpcode(), M, YS);
+        if (auto *Disjoint = dyn_cast<PossiblyDisjointInst>(Op0BO);
+            Disjoint && Disjoint->isDisjoint())
+          cast<PossiblyDisjointInst>(NewOp)->setIsDisjoint(true);
+        return NewOp;
       }
     }
 

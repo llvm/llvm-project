@@ -1264,7 +1264,7 @@ bool ASTReader::ReadLexicalDeclContextStorage(ModuleFile &M,
   if (!Lex.first) {
     Lex = std::make_pair(
         &M, llvm::ArrayRef(
-                reinterpret_cast<const unalighed_decl_id_t *>(Blob.data()),
+                reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
                 Blob.size() / sizeof(DeclID)));
   }
   DC->setHasExternalLexicalStorage(true);
@@ -3401,7 +3401,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case TU_UPDATE_LEXICAL: {
       DeclContext *TU = ContextObj->getTranslationUnitDecl();
       LexicalContents Contents(
-          reinterpret_cast<const unalighed_decl_id_t *>(Blob.data()),
+          reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
           static_cast<unsigned int>(Blob.size() / sizeof(DeclID)));
       TULexicalDecls.push_back(std::make_pair(&F, Contents));
       TU->setHasExternalLexicalStorage(true);
@@ -4059,7 +4059,7 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
   RemapBuilder DeclRemap(F.DeclRemap);
   RemapBuilder TypeRemap(F.TypeRemap);
 
-  auto &ImportedModuleVector = F.DependentModules;
+  auto &ImportedModuleVector = F.TransitiveImports;
   assert(ImportedModuleVector.empty());
 
   while (Data < DataEnd) {
@@ -11921,6 +11921,13 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCDeviceTypeClause::Create(getContext(), ClauseKind, BeginLoc,
                                            LParenLoc, Archs, EndLoc);
   }
+  case OpenACCClauseKind::Reduction: {
+    SourceLocation LParenLoc = readSourceLocation();
+    OpenACCReductionOperator Op = readEnum<OpenACCReductionOperator>();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCReductionClause::Create(getContext(), BeginLoc, LParenLoc, Op,
+                                          VarList, EndLoc);
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
@@ -11937,7 +11944,6 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:

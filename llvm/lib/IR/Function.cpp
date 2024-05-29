@@ -79,7 +79,7 @@ using ProfileCount = Function::ProfileCount;
 // are not in the public header file...
 template class llvm::SymbolTableListTraits<BasicBlock>;
 
-static cl::opt<unsigned> NonGlobalValueMaxNameSize(
+static cl::opt<int> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
 

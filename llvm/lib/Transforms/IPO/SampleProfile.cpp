@@ -1391,10 +1391,11 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
       return InlineCost::getAlways("preinliner");
   }
 
-  // For old FDO inliner, we inline the call site as long as cost is not
-  // "Never". The cost-benefit check is done earlier.
+  // For old FDO inliner, we inline the call site if it is below hot threshold,
+  // even if the function is hot based on sample profile data. This is to
+  // prevent huge functions from being inlined.
   if (!CallsitePrioritizedInline) {
-    return InlineCost::get(Cost.getCost(), INT_MAX);
+    return InlineCost::get(Cost.getCost(), SampleHotCallSiteThreshold);
   }
 
   // Otherwise only use the cost from call analyzer, but overwite threshold with
