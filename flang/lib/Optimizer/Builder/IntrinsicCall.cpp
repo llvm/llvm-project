@@ -2487,34 +2487,12 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
     // In both cases, ASSOCIATED should be false if POINTER is NULL.
     return builder.create<mlir::arith::AndIOp>(loc, sameTarget, notNull);
   }
-
-  const fir::ExtendedValue &target = args[1];
-
-  if (!args[0].getBoxOf<fir::MutableBoxValue>()) {
-    // Argument was lowered as a EntityWithAttribute. Try to retrieve the box
-    // reference.
-    if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
-            fir::getBase(args[0]).getDefiningOp())) {
-      if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(
-              declareOp.getMemref().getDefiningOp())) {
-        if (isStaticallyAbsent(target)) {
-          auto mutBox = fir::MutableBoxValue(loadOp.getMemref(), {}, {});
-          return fir::factory::genIsAllocatedOrAssociatedTest(builder, loc,
-                                                              mutBox);
-        }
-        mlir::Value targetBox = builder.createBox(loc, target);
-        return fir::runtime::genAssociated(builder, loc, declareOp.getMemref(),
-                                           targetBox);
-      }
-    }
-  }
-
   auto *pointer =
       args[0].match([&](const fir::MutableBoxValue &x) { return &x; },
                     [&](const auto &) -> const fir::MutableBoxValue * {
                       fir::emitFatalError(loc, "pointer not a MutableBoxValue");
                     });
-
+  const fir::ExtendedValue &target = args[1];
   if (isStaticallyAbsent(target))
     return fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, *pointer);
   mlir::Value targetBox = builder.createBox(loc, target);

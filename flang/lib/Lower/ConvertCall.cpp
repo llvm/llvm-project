@@ -1790,7 +1790,8 @@ static std::optional<hlfir::EntityWithAttributes> genCustomIntrinsicRefCore(
     if (loadArg && fir::conformsWithPassByRef(actual.getType())) {
       return hlfir::loadTrivialScalar(loc, builder, actual);
     }
-    return actual;
+    return Fortran::lower::translateToExtendedValue(loc, builder, actual,
+                                                    callContext.stmtCtx);
   };
   // helper to get the isPresent flag for a particular prepared argument
   auto isPresent = [&](std::size_t i) -> std::optional<mlir::Value> {
@@ -2436,8 +2437,8 @@ genCustomIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
                                          getActualFortranElementType());
       break;
     case fir::LowerIntrinsicArgAs::Inquired:
-      exv = Fortran::lower::convertToBox(loc, converter, actual, stmtCtx,
-                                         getActualFortranElementType());
+      exv = Fortran::lower::translateToExtendedValue(loc, builder, actual,
+                                                     stmtCtx);
       break;
     }
     if (!exv)
