@@ -5614,22 +5614,25 @@ static SDValue TryMULWIDECombine(SDNode *N,
   return DCI.DAG.getNode(Opc, DL, MulType, TruncLHS, TruncRHS);
 }
 
-static SDValue matchMADConstOnePattern(SDValue X, SDValue Add) {
+static SDValue matchMADConstOnePattern(SDValue Add) {
   if (Add->getOpcode() != ISD::ADD)
     return SDValue();
 
-  SDValue Y = Add->getOperand(0);
-  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Add->getOperand(1));
-  if (!Const || Const->getZExtValue() != 1)
-    return SDValue();
+  if (const auto *Const0 = dyn_cast<ConstantSDNode>(Add->getOperand(0)))
+    if (Const0->getZExtValue() == 1)
+      return Add->getOperand(1);
 
-  return Y;
+  if (const auto *Const1 = dyn_cast<ConstantSDNode>(Add->getOperand(1)))
+    if (Const1->getZExtValue() == 1)
+      return Add->getOperand(0);
+
+  return SDValue();
 }
 
 static SDValue combineMADConstOne(SDValue X, SDValue Add, EVT VT, SDLoc DL,
                                   TargetLowering::DAGCombinerInfo &DCI) {
 
-  if (SDValue Y = matchMADConstOnePattern(X, Add))
+  if (SDValue Y = matchMADConstOnePattern(Add))
     return DCI.DAG.getNode(NVPTXISD::IMAD, DL, VT, X, Y, X);
 
   return SDValue();
@@ -5655,7 +5658,7 @@ static SDValue combineMulSelectConstOne(SDValue X, SDValue Select, EVT VT,
   SDValue Y = Select->getOperand((ConstOpNo == 1) ? 2 : 1);
 
   // Do not combine if the resulting sequence is not obviously profitable.
-  if (!matchMADConstOnePattern(X, Y))
+  if (!matchMADConstOnePattern(Y))
     return SDValue();
 
   SDValue NewMul = DCI.DAG.getNode(ISD::MUL, DL, VT, X, Y);
