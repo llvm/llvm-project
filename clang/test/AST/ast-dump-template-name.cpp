@@ -13,7 +13,7 @@ namespace qualified {
 // CHECK-NEXT: TypeAliasDecl
 // CHECK-NEXT: `-ElaboratedType
 // CHECK-NEXT:   `-TemplateSpecializationType
-// CHECK-NEXT:     |-TemplateArgument template 'qualified::foo::A' qualified{{$}}
+// CHECK-NEXT:     |-TemplateArgument template 'foo::A':'qualified::foo::A' qualified{{$}}
 // CHECK-NEXT:     | |-NestedNameSpecifier Namespace 0x{{.+}} 'foo'{{$}}
 // CHECK-NEXT:     | `-ClassTemplateDecl {{.+}} A{{$}}
 
@@ -27,7 +27,7 @@ namespace dependent {
 // CHECK-NEXT: TypeAliasDecl
 // CHECK-NEXT: `-ElaboratedType
 // CHECK-NEXT:   `-TemplateSpecializationType
-// CHECK-NEXT:     |-TemplateArgument template 'template X' dependent{{$}}
+// CHECK-NEXT:     |-TemplateArgument template 'T::template X':'type-parameter-0-0::template X' dependent{{$}}
 // CHECK-NEXT:     | `-NestedNameSpecifier TypeSpec 'T'{{$}}
 
 namespace subst {
