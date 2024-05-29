@@ -35,6 +35,9 @@ void operators() {
   b++;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base', which can result in undefined behavior if the pointee is a different class [bugprone-pointer-arithmetic-on-polymorphic-object]
 
+  --b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pointer arithmetic on polymorphic class 'Base', which can result in undefined behavior if the pointee is a different class [bugprone-pointer-arithmetic-on-polymorphic-object]
+
   b[1];
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base', which can result in undefined behavior if the pointee is a different class [bugprone-pointer-arithmetic-on-polymorphic-object]
 
