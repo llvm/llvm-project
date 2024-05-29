@@ -5420,10 +5420,10 @@ X86:
   operand will get allocated only to RAX -- if two 32-bit operands are needed,
   you're better off splitting it yourself, before passing it to the asm
   statement.
-- ``jr``: An 8, 16, 32, or 64-bit integer GPR. It won't be extended to EGPR
+- ``jr``: An 8, 16, 32, or 64-bit integer gpr16. It won't be extended to gpr32
   When feature `egpr` or `inline-asm-use-gpr32` is on.
-- ``jR``: An 8, 16, 32, or 64-bit integer EGPR when egpr is on. Otherwise, same
-  as ``r``.
+- ``jR``: An 8, 16, 32, or 64-bit integer gpr32 when feature `egpr`` is on.
+  Otherwise, same as ``r``.
 
 XCore:
 
