@@ -45,7 +45,7 @@ bool isIntegerIndexOrOpaqueType(Type type);
 bool isSupportedFloatType(mlir::Type type);
 
 /// Determines whether \p type is a emitc.size_t/ssize_t type.
-bool isAnySizeTType(mlir::Type type);
+bool isPointerWideType(mlir::Type type);
 
 } // namespace emitc
 } // namespace mlir

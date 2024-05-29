@@ -15,7 +15,9 @@ func.func @array_types(
   // CHECK-SAME: !emitc.array<30x!emitc.size_t>
   %arg4: !emitc.array<30x!emitc.size_t>,
   // CHECK-SAME: !emitc.array<30x!emitc.ssize_t>
-  %arg5: !emitc.array<30x!emitc.ssize_t>
+  %arg5: !emitc.array<30x!emitc.ssize_t>,
+  // CHECK-SAME: !emitc.array<30x!emitc.ptrdiff_t>
+  %arg6: !emitc.array<30x!emitc.ptrdiff_t>
 ) {
   return
 }
@@ -64,6 +66,8 @@ func.func @size_types() {
   emitc.call_opaque "f"() {template_args = [!emitc.ssize_t]} : () -> ()
   // CHECK-NEXT: !emitc.size_t
   emitc.call_opaque "f"() {template_args = [!emitc.size_t]} : () -> ()
+  // CHECK-NEXT: !emitc.ptrdiff_t
+  emitc.call_opaque "f"() {template_args = [!emitc.ptrdiff_t]} : () -> ()
 
   return
 }

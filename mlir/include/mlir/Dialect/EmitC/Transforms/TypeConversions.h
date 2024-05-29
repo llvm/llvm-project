@@ -9,9 +9,18 @@
 #ifndef MLIR_DIALECT_EMITC_TRANSFORMS_TYPECONVERSIONS_H
 #define MLIR_DIALECT_EMITC_TRANSFORMS_TYPECONVERSIONS_H
 
+#include <optional>
+
 namespace mlir {
 class TypeConverter;
+class Type;
 void populateEmitCSizeTTypeConversions(TypeConverter &converter);
+
+namespace emitc {
+std::optional<Type> getUnsignedTypeFor(Type ty);
+std::optional<Type> getSignedTypeFor(Type ty);
+} // namespace emitc
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_EMITC_TRANSFORMS_TYPECONVERSIONS_H

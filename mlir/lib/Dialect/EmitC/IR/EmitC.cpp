@@ -68,7 +68,7 @@ bool mlir::emitc::isSupportedEmitCType(Type type) {
     return !llvm::isa<emitc::ArrayType>(elemType) &&
            isSupportedEmitCType(elemType);
   }
-  if (type.isIndex() || emitc::isAnySizeTType(type))
+  if (type.isIndex() || emitc::isPointerWideType(type))
     return true;
   if (llvm::isa<IntegerType>(type))
     return isSupportedIntegerType(type);
@@ -110,7 +110,7 @@ bool mlir::emitc::isSupportedIntegerType(Type type) {
 
 bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
   return llvm::isa<IndexType, emitc::OpaqueType>(type) ||
-         isSupportedIntegerType(type) || isAnySizeTType(type);
+         isSupportedIntegerType(type) || isPointerWideType(type);
 }
 
 bool mlir::emitc::isSupportedFloatType(Type type) {
@@ -126,8 +126,9 @@ bool mlir::emitc::isSupportedFloatType(Type type) {
   return false;
 }
 
-bool mlir::emitc::isAnySizeTType(Type type) {
-  return isa<emitc::SignedSizeTType, emitc::SizeTType>(type);
+bool mlir::emitc::isPointerWideType(Type type) {
+  return isa<emitc::SignedSizeTType, emitc::SizeTType, emitc::PtrDiffTType>(
+      type);
 }
 
 /// Check that the type of the initial value is compatible with the operations
@@ -146,7 +147,7 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
   Type resultType = op->getResult(0).getType();
   Type attrType = cast<TypedAttr>(value).getType();
 
-  if (isAnySizeTType(resultType) && attrType.isIndex())
+  if (isPointerWideType(resultType) && attrType.isIndex())
     return success();
 
   if (resultType != attrType)
