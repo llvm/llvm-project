@@ -74,10 +74,12 @@ extern "C" int __ulock_wake(uint32_t operation, void* addr, uint64_t wake_value)
 
 static void
 __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
+  static_assert(sizeof(__cxx_atomic_contention_t) == 8, "Waiting on 8 bytes value");
   __ulock_wait(UL_COMPARE_AND_WAIT64, const_cast<__cxx_atomic_contention_t*>(__ptr), __val, 0);
 }
 
 static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
+  static_assert(sizeof(__cxx_atomic_contention_t) == 8, "Waking up on 8 bytes value");
   __ulock_wake(
       UL_COMPARE_AND_WAIT64 | (__notify_one ? 0 : ULF_WAKE_ALL), const_cast<__cxx_atomic_contention_t*>(__ptr), 0);
 }
