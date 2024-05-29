@@ -30,7 +30,7 @@ module attributes {
     %idx1 = arith.constant 1 : index
     %idx4 = arith.constant 4 : index
 
-    // Initialize input buffer
+    // Initialize input buffer.
     %buf0_vals = arith.constant dense<[0, 1]> : vector<2xi32>
     %buf1_vals = arith.constant dense<[2, 3]> : vector<2xi32>
     vector.store %buf0_vals, %buf0[%idx0] : memref<2xi32>, vector<2xi32>
