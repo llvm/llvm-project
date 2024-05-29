@@ -83,8 +83,8 @@ bool DebugNamesDWARFIndex::ProcessEntry(
   DWARFDIE die = dwarf.GetDIE(*ref);
   if (!die)
     return true;
-  // Watch out for forward declarations that appear in the .debug_names tables
-  // only due to being there for a DW_IDX_parent.
+  // Clang erroneously emits index entries for declaration DIEs in case when the
+  // definition is in a type unit (llvm.org/pr77696). Weed those out.
   if (die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
     return true;
   return callback(die);
