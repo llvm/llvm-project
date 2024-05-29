@@ -8013,7 +8013,7 @@ LegalizerHelper::lowerBitreverse(MachineInstr &MI) {
         Tmp2 = MIRBuilder.buildLShr(Ty, Src, ShAmt);
       }
 
-      auto Mask = MIRBuilder.buildConstant(Ty, 1U << J);
+      auto Mask = MIRBuilder.buildConstant(Ty, 1ULL << J);
       Tmp2 = MIRBuilder.buildAnd(Ty, Tmp2, Mask);
       if (I == 0)
         Tmp = Tmp2;
