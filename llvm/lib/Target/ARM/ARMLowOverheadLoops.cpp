@@ -251,6 +251,9 @@ namespace {
       SetVector<MachineInstr *> &Predicates = PredicatedInsts[MI];
       if (Exclusive && Predicates.size() != 1)
         return false;
+      // We do not know how to convert an else predicate of a VCTP.
+      if (getVPTInstrPredicate(*MI) == ARMVCC::Else)
+        return false;
       return llvm::any_of(Predicates, isVCTP);
     }
 
@@ -305,8 +308,12 @@ namespace {
       // isn't predicated on entry, check whether the vctp is within the block
       // and that all other instructions are then predicated on it.
       for (auto &Block : Blocks) {
-        if (isEntryPredicatedOnVCTP(Block, false) ||
-            hasImplicitlyValidVPT(Block, RDA))
+        if (isEntryPredicatedOnVCTP(Block, false) &&
+            !any_of(drop_begin(Block.getInsts()), [](const MachineInstr *MI) {
+              return getVPTInstrPredicate(*MI) == ARMVCC::Else;
+            }))
+          continue;
+        if (hasImplicitlyValidVPT(Block, RDA))
           continue;
 
         SmallVectorImpl<MachineInstr *> &Insts = Block.getInsts();
