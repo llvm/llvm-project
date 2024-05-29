@@ -789,12 +789,55 @@ define double @load_double_seq_cst(ptr %fptr) {
 }
 
 define void @store_bfloat(ptr %fptr, bfloat %v) {
-; X86-LABEL: store_bfloat:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movw %cx, (%eax)
-; X86-NEXT:    retl
+; X86-SSE1-LABEL: store_bfloat:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    subl $8, %esp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE1-NEXT:    .cfi_offset %esi, -8
+; X86-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE1-NEXT:    calll __truncsfbf2
+; X86-SSE1-NEXT:    movw %ax, (%esi)
+; X86-SSE1-NEXT:    addl $8, %esp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    popl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE1-NEXT:    retl
+;
+; X86-SSE2-LABEL: store_bfloat:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movw %cx, (%eax)
+; X86-SSE2-NEXT:    retl
+;
+; X86-AVX-LABEL: store_bfloat:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    movw %cx, (%eax)
+; X86-AVX-NEXT:    retl
+;
+; X86-NOSSE-LABEL: store_bfloat:
+; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    pushl %esi
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-NOSSE-NEXT:    subl $8, %esp
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-NOSSE-NEXT:    .cfi_offset %esi, -8
+; X86-NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    fstps (%esp)
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NOSSE-NEXT:    calll __truncsfbf2
+; X86-NOSSE-NEXT:    movw %ax, (%esi)
+; X86-NOSSE-NEXT:    addl $8, %esp
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
+; X86-NOSSE-NEXT:    popl %esi
+; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-NOSSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: store_bfloat:
 ; X64-SSE:       # %bb.0:
