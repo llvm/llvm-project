@@ -62,14 +62,17 @@ struct DirectiveWithTokens {
 struct Scanner {
   Scanner(StringRef Input,
           SmallVectorImpl<dependency_directives_scan::Token> &Tokens,
-          DiagnosticsEngine *Diags, SourceLocation InputSourceLoc)
+          DiagnosticsEngine *Diags, SourceLocation InputSourceLoc,
+          const LangOptions &LangOpts)
       : Input(Input), Tokens(Tokens), Diags(Diags),
-        InputSourceLoc(InputSourceLoc), LangOpts(getLangOptsForDepScanning()),
-        TheLexer(InputSourceLoc, LangOpts, Input.begin(), Input.begin(),
+        InputSourceLoc(InputSourceLoc),
+        LangOpts(getLangOptsForDepScanning(LangOpts)),
+        TheLexer(InputSourceLoc, this->LangOpts, Input.begin(), Input.begin(),
                  Input.end()) {}
 
-  static LangOptions getLangOptsForDepScanning() {
-    LangOptions LangOpts;
+  static LangOptions
+  getLangOptsForDepScanning(const LangOptions &invocationLangOpts) {
+    LangOptions LangOpts(invocationLangOpts);
     // Set the lexer to use 'tok::at' for '@', instead of 'tok::unknown'.
     LangOpts.ObjC = true;
     LangOpts.LineComment = true;
@@ -700,7 +703,7 @@ bool Scanner::lex_Pragma(const char *&First, const char *const End) {
   SmallVector<dependency_directives_scan::Token> DiscardTokens;
   const char *Begin = Buffer.c_str();
   Scanner PragmaScanner{StringRef(Begin, Buffer.size()), DiscardTokens, Diags,
-                        InputSourceLoc};
+                        InputSourceLoc, LangOptions()};
 
   PragmaScanner.TheLexer.setParsingPreprocessorDirective(true);
   if (PragmaScanner.lexPragma(Begin, Buffer.end()))
@@ -950,9 +953,10 @@ bool Scanner::scan(SmallVectorImpl<Directive> &Directives) {
 
 bool clang::scanSourceForDependencyDirectives(
     StringRef Input, SmallVectorImpl<dependency_directives_scan::Token> &Tokens,
-    SmallVectorImpl<Directive> &Directives, DiagnosticsEngine *Diags,
-    SourceLocation InputSourceLoc) {
-  return Scanner(Input, Tokens, Diags, InputSourceLoc).scan(Directives);
+    SmallVectorImpl<Directive> &Directives, const LangOptions &LangOpts,
+    DiagnosticsEngine *Diags, SourceLocation InputSourceLoc) {
+  return Scanner(Input, Tokens, Diags, InputSourceLoc, LangOpts)
+      .scan(Directives);
 }
 
 void clang::printDependencyDirectivesAsSource(
