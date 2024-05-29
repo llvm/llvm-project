@@ -17,6 +17,8 @@
 #include "test_macros.h"
 #include "deleter_types.h"
 
+#include "types.h"
+
 struct A
 {
     static int count;
@@ -28,38 +30,8 @@ struct A
 
 int A::count = 0;
 
-struct bad_ty { };
-
-struct bad_deleter
-{
-    void operator()(bad_ty) { }
-};
-
-struct no_move_deleter
-{
-    no_move_deleter(no_move_deleter const&) = delete;
-    no_move_deleter(no_move_deleter &&) = delete;
-    void operator()(int*) { }
-};
-
-static_assert(!std::is_move_constructible<no_move_deleter>::value, "");
-
-struct Base { };
-struct Derived : Base { };
-
-template<class T>
-class MoveDeleter
-{
-    MoveDeleter();
-    MoveDeleter(MoveDeleter const&);
-public:
-  MoveDeleter(MoveDeleter&&) {}
-
-  explicit MoveDeleter(int) {}
-
-  void operator()(T* ptr) { delete ptr; }
-};
-
+// LWG 3233. Broken requirements for shared_ptr converting constructors
+// https://cplusplus.github.io/LWG/issue3233
 // https://llvm.org/PR60258
 // Invalid constructor SFINAE for std::shared_ptr's array ctors
 static_assert( std::is_constructible<std::shared_ptr<int>,  int*, test_deleter<int> >::value, "");
@@ -68,12 +40,12 @@ static_assert( std::is_constructible<std::shared_ptr<Base>,  Derived*, test_dele
 static_assert(!std::is_constructible<std::shared_ptr<A>,  int*, test_deleter<A> >::value, "");
 
 #if TEST_STD_VER >= 17
-static_assert( std::is_constructible<std::shared_ptr<int[]>,  int*, test_deleter<int>>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[]>,  int*, test_deleter<int> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int*, bad_deleter>::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int(*)[], test_deleter<int>>::value, "");
-static_assert( std::is_constructible<std::shared_ptr<int[5]>, int*, test_deleter<int>>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int(*)[], test_deleter<int> >::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[5]>, int*, test_deleter<int> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int*, bad_deleter>::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int(*)[5], test_deleter<int>>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int(*)[5], test_deleter<int> >::value, "");
 #endif
 
 int main(int, char**)

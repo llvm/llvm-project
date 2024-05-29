@@ -56,7 +56,8 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK);
 
 /// Checks if a pointer is a dummy pointer.
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                AccessKinds AK);
 
 /// Checks if a pointer is null.
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -588,7 +589,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Inc(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
@@ -602,7 +603,7 @@ bool Inc(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool IncPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
@@ -617,7 +618,7 @@ bool IncPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Dec(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
@@ -631,7 +632,7 @@ bool Dec(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool DecPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;

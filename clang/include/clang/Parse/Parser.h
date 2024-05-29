@@ -467,15 +467,18 @@ class Parser : public CodeCompletionHandler {
 
   /// Flags describing a context in which we're parsing a statement.
   enum class ParsedStmtContext {
+    /// This context permits declarations in language modes where declarations
+    /// are not statements.
+    AllowDeclarationsInC = 0x1,
     /// This context permits standalone OpenMP directives.
-    AllowStandaloneOpenMPDirectives = 0x1,
+    AllowStandaloneOpenMPDirectives = 0x2,
     /// This context is at the top level of a GNU statement expression.
-    InStmtExpr = 0x2,
+    InStmtExpr = 0x4,
 
     /// The context of a regular substatement.
     SubStmt = 0,
     /// The context of a compound-statement.
-    Compound = AllowStandaloneOpenMPDirectives,
+    Compound = AllowDeclarationsInC | AllowStandaloneOpenMPDirectives,
 
     LLVM_MARK_AS_BITMASK_ENUM(InStmtExpr)
   };
@@ -1646,8 +1649,12 @@ private:
   void ParseLexedAttributes(ParsingClass &Class);
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
                                bool EnterScope, bool OnDefinition);
+  void ParseLexedCAttributeList(LateParsedAttrList &LA, bool EnterScope,
+                                ParsedAttributes *OutAttrs = nullptr);
   void ParseLexedAttribute(LateParsedAttribute &LA,
                            bool EnterScope, bool OnDefinition);
+  void ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
+                            ParsedAttributes *OutAttrs = nullptr);
   void ParseLexedMethodDeclarations(ParsingClass &Class);
   void ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM);
   void ParseLexedMethodDefs(ParsingClass &Class);
@@ -2534,7 +2541,8 @@ private:
 
   void ParseStructDeclaration(
       ParsingDeclSpec &DS,
-      llvm::function_ref<void(ParsingFieldDeclarator &)> FieldsCallback);
+      llvm::function_ref<Decl *(ParsingFieldDeclarator &)> FieldsCallback,
+      LateParsedAttrList *LateFieldAttrs = nullptr);
 
   DeclGroupPtrTy ParseTopLevelStmtDecl();
 
@@ -3113,6 +3121,8 @@ private:
                                  SourceLocation ScopeLoc,
                                  ParsedAttr::Form Form);
 
+  void DistributeCLateParsedAttrs(Decl *Dcl, LateParsedAttrList *LateAttrs);
+
   void ParseBoundsAttribute(IdentifierInfo &AttrName,
                             SourceLocation AttrNameLoc, ParsedAttributes &Attrs,
                             IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
@@ -3649,6 +3659,7 @@ private:
   struct OpenACCDirectiveParseInfo {
     OpenACCDirectiveKind DirKind;
     SourceLocation StartLoc;
+    SourceLocation DirLoc;
     SourceLocation EndLoc;
     SmallVector<OpenACCClause *> Clauses;
     // TODO OpenACC: As we implement support for the Atomic, Routine, Cache, and

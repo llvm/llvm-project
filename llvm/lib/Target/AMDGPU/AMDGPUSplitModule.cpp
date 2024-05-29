@@ -340,7 +340,7 @@ static void addAllDependencies(SplitModuleLogger &SML, const CallGraph &CG,
         // TODO: Print an ORE as well ?
         addAllIndirectCallDependencies(M, Fns);
         HadIndirectCall = true;
-        return;
+        continue;
       }
 
       if (Callee->isDeclaration())
@@ -438,7 +438,7 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
   // assign X to a partition as usual, but when we get to Y, we check if it's
   // worth also putting it in Y's partition.
   const CostType LargeKernelThreshold =
-      LargeKernelFactor ? ((ModuleCost / NumParts) * LargeKernelFactor)
+      LargeKernelFactor ? CostType(((ModuleCost / NumParts) * LargeKernelFactor))
                         : std::numeric_limits<CostType>::max();
 
   std::vector<DenseSet<const Function *>> Partitions;
