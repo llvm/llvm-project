@@ -334,11 +334,7 @@ add_libc_test(
       quick_exit_test.cpp
     DEPENDS
       libc.include.stdlib
-      libc.src.stdlib._Exit
       libc.src.stdlib.quick_exit
-      libc.src.stdlib.atexit
-      libc.src.__support.CPP.array
-      libc.src.__support.CPP.utility
   )
 
 if(LLVM_LIBC_FULL_BUILD)

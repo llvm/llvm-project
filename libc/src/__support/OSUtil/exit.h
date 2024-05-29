@@ -16,6 +16,6 @@ namespace internal {
 
 }
 
-}
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_QUICK_EXIT_H

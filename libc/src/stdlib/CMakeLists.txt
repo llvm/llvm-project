@@ -2,7 +2,6 @@ add_entrypoint_object(
   atoi
   SRCS
     atoi.cpp
-    quick_exit.cpp
   HDRS
     atoi.h
   DEPENDS
@@ -14,7 +13,8 @@ add_entrypoint_object(
   atof
   SRCS
     atof.cpp
-      atof.h
+  HDRS
+    atof.h
   DEPENDS
     libc.src.errno.errno
     libc.src.__support.str_to_float
@@ -443,7 +443,7 @@ add_entrypoint_object(
     quick_exit.h
   DEPENDS
     libc.src.errno.errno
-    
+    libc.src.__support.OSUtil.osutil
 )
 
 add_entrypoint_object(

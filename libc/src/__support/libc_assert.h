@@ -20,8 +20,8 @@
 
 #else // Not LIBC_COPT_USE_C_ASSERT
 
-#include "src/__support/OSUtil/io.h"
 #include "src/__support/OSUtil/exit.h"
+#include "src/__support/OSUtil/io.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 
@@ -56,6 +56,7 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
 // __builtin_trap as it could potentially be implemented using illegal
 // instructions which can be very misleading when debugging.
 #ifdef NDEBUG
+
 #define LIBC_ASSERT(COND)                                                      \
   do {                                                                         \
   } while (false)
@@ -76,7 +77,7 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
                                                "' in function: '");            \
       LIBC_NAMESPACE::write_to_stderr(__PRETTY_FUNCTION__);                    \
       LIBC_NAMESPACE::write_to_stderr("'\n");                                  \
-      LIBC_NAMESPACE::internal::exit(0xFF);                                        \
+      LIBC_NAMESPACE::internal::exit(0xFF);                                    \
     }                                                                          \
   } while (false)
 #endif // NDEBUG

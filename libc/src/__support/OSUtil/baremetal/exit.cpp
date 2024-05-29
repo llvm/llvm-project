@@ -1,4 +1,4 @@
-//===----- Baremetal implementation of a quick exit function ----*- C++ -*-===//
+//===----- Baremetal implementation of a exit function ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,6 @@ namespace internal {
 
 [[noreturn]] void exit(int status) { __llvm_libc_quick_exit(status); }
 
-
-}
+} // namespace internal
 
 } // namespace LIBC_NAMESPACE
