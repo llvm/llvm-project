@@ -796,16 +796,18 @@ public:
     return CIRBaseBuilderTy::createStore(loc, flag, dst);
   }
 
-  mlir::cir::StoreOp createAlignedStore(mlir::Location loc, mlir::Value val,
-                                        mlir::Value dst,
-                                        [[maybe_unused]] clang::CharUnits align,
-                                        bool _volatile = false,
-                                        ::mlir::cir::MemOrderAttr order = {}) {
-    // TODO: add alignment for LoadOp/StoreOp, right now LowerToLLVM knows
-    // how to figure out for most part, but it's possible the client might want
-    // to enforce a different alignment.
+  mlir::cir::StoreOp
+  createAlignedStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
+                     clang::CharUnits align = clang::CharUnits::One(),
+                     bool _volatile = false,
+                     ::mlir::cir::MemOrderAttr order = {}) {
+    llvm::MaybeAlign mayAlign = align.getAsAlign();
     mlir::IntegerAttr alignAttr;
-    assert(!UnimplementedFeature::alignedStore());
+    if (mayAlign) {
+      uint64_t alignment = mayAlign ? mayAlign->value() : 0;
+      alignAttr = mlir::IntegerAttr::get(
+          mlir::IntegerType::get(dst.getContext(), 64), alignment);
+    }
     return CIRBaseBuilderTy::createStore(loc, val, dst, _volatile, alignAttr,
                                          order);
   }

@@ -10177,12 +10177,15 @@ uint8x16_t test_vld1q_u8(uint8_t const *a) {
 //   return vld4_p16(a);
 // }
 
-// NYI-LABEL: @test_vst1q_u8(
-// NYI:   store <16 x i8> %b, ptr %a
-// NYI:   ret void
-// void test_vst1q_u8(uint8_t *a, uint8x16_t b) {
-//   vst1q_u8(a, b);
-// }
+void test_vst1q_u8(uint8_t *a, uint8x16_t b) {
+  vst1q_u8(a, b);
+  // CIR-LABEL: @test_vst1q_u8
+  // CIR: %[[CAST:.*]] = cir.cast(bitcast, {{.*}} : !cir.ptr<!void>), !cir.ptr<!cir.vector<!u8i x 16>>
+  // CIR: cir.store align(1) %{{.*}}, %[[CAST]] : !cir.vector<!u8i x 16>, !cir.ptr<!cir.vector<!u8i x 16>>
+
+  // LLVM-LABEL: @test_vst1q_u8
+  // LLVM:   store <16 x i8> %{{.*}}, ptr %0, align 1,
+}
 
 // NYI-LABEL: @test_vst1q_u16(
 // NYI:   [[TMP1:%.*]] = bitcast <8 x i16> %b to <16 x i8>
