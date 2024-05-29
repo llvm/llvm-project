@@ -13005,26 +13005,28 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   if (!isLoopInvariant(RHS, L)) {
     const auto *RHSAddRec = dyn_cast<SCEVAddRecExpr>(RHS);
     if (RHSAddRec != nullptr && RHSAddRec->getLoop() == L) {
-      /*
-        The structure of loop we are trying to calculate backedge-count of:
-        left = left_start
-        right = right_start
-        while(left < right){
-          // ... do something here ...
-          left += s1; // stride of left is s1>0
-          right -= s2; // stride of right is -s2 (s2 > 0)
-        }
-        // left and right are converging at the middle
-        // (maybe not exactly at center)
+      // The structure of loop we are trying to calculate backedge count of:
+      //
+      //  left = left_start
+      //  right = right_start
+      //
+      //  while(left < right){
+      //    ... do something here ...
+      //    left += s1; // stride of left is s1>0
+      //    right -= s2; // stride of right is -s2 (s2 > 0)
+      //  }
+      //
+      // Here, left and right are converging somewhere in the middle.
 
-      */
       const SCEV *RHSStart = RHSAddRec->getStart();
       const SCEV *RHSStride = RHSAddRec->getStepRecurrence(*this);
-      // if Stride-RHSStride>0 and does not overflow, we can write
-      //  backedge count as:
-      //  RHSStart >= Start ? (RHSStart - Start)/(Stride - RHSStride) ? 0
 
-      // check if RHSStride<0 and Stride-RHSStride will not overflow
+      // If Stride - RHSStride is positive and does not overflow, we can write
+      // backedge count as ->
+      //    ceil((End - Start) /u (Stride - RHSStride))
+      //    Where, End = max(RHSStart, Start)
+
+      // Check if RHSStride < 0 and Stride - RHSStride will not overflow.
       // FIXME: Can RHSStride be positive?
       if (isKnownNegative(RHSStride) &&
           willNotOverflow(Instruction::Sub, /*Signed=*/true, Stride,
@@ -13033,9 +13035,10 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         const SCEV *Denominator = getMinusSCEV(Stride, RHSStride);
         if (isKnownPositive(Denominator)) {
           End = IsSigned ? getSMaxExpr(RHSStart, Start)
-                         : getUMaxExpr(RHSStart, Start); // max(RHSStart, Start)
+                         : getUMaxExpr(RHSStart, Start);
 
-          const SCEV *Delta = getMinusSCEV(End, Start); // End >= Start
+          // We can do this because End >= Start, as End = max(RHSStart, Start)
+          const SCEV *Delta = getMinusSCEV(End, Start);
 
           BECount = getUDivCeilSCEV(Delta, Denominator);
           BECountIfBackedgeTaken =
