@@ -637,12 +637,24 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
       } else {
         if (llvm::ConstantDataSequential::isElementTypeCompatible(
                 elementType)) {
-          // TODO: Handle all compatible types. This code only handle i32.
+          // TODO: Handle all compatible types. This code only handles integer.
           if (llvm::IntegerType *iTy =
                   dyn_cast<llvm::IntegerType>(elementType)) {
             if (llvm::ConstantInt *ci = dyn_cast<llvm::ConstantInt>(child)) {
-              if (ci->getBitWidth() == 32) {
+              if (ci->getBitWidth() == 8) {
+                SmallVector<int8_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                    constants);
+              } else if (ci->getBitWidth() == 16) {
+                SmallVector<int16_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                    constants);
+              } else if (ci->getBitWidth() == 32) {
                 SmallVector<int32_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                    constants);
+              } else if (ci->getBitWidth() == 64) {
+                SmallVector<int64_t> constants(numElements, ci->getZExtValue());
                 return llvm::ConstantDataArray::get(elementType->getContext(),
                                                     constants);
               }
