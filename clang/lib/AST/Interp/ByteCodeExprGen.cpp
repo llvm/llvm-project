@@ -1053,9 +1053,6 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
       return this->visitInitializer(Inits[0]);
 
-    if (Inits.size() == 0)
-      return this->emitFinishInit(E);
-
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
       if (!this->visit(Init))
@@ -1083,24 +1080,38 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     };
 
     if (R->isUnion()) {
-      assert(Inits.size() == 1);
-      const Expr *Init = Inits[0];
-      const FieldDecl *FToInit = nullptr;
-      if (const auto *ILE = dyn_cast<InitListExpr>(E))
-        FToInit = ILE->getInitializedFieldInUnion();
-      else
-        FToInit = cast<CXXParenListInitExpr>(E)->getInitializedFieldInUnion();
-
-      if (!this->emitDupPtr(E))
-        return false;
-
-      const Record::Field *FieldToInit = R->getField(FToInit);
-      if (std::optional<PrimType> T = classify(Init)) {
-        if (!initPrimitiveField(FieldToInit, Init, *T))
-          return false;
+      if (Inits.size() == 0) {
+        // Zero-initialize the first union field.
+        if (R->getNumFields() == 0)
+          return this->emitFinishInit(E);
+        const Record::Field *FieldToInit = R->getField(0u);
+        QualType FieldType = FieldToInit->Desc->getType();
+        if (std::optional<PrimType> T = classify(FieldType)) {
+          if (!this->visitZeroInitializer(*T, FieldType, E))
+            return false;
+          if (!this->emitInitField(*T, FieldToInit->Offset, E))
+            return false;
+        }
+        // FIXME: Non-primitive case?
       } else {
-        if (!initCompositeField(FieldToInit, Init))
+        const Expr *Init = Inits[0];
+        const FieldDecl *FToInit = nullptr;
+        if (const auto *ILE = dyn_cast<InitListExpr>(E))
+          FToInit = ILE->getInitializedFieldInUnion();
+        else
+          FToInit = cast<CXXParenListInitExpr>(E)->getInitializedFieldInUnion();
+
+        if (!this->emitDupPtr(E))
           return false;
+
+        const Record::Field *FieldToInit = R->getField(FToInit);
+        if (std::optional<PrimType> T = classify(Init)) {
+          if (!initPrimitiveField(FieldToInit, Init, *T))
+            return false;
+        } else {
+          if (!initCompositeField(FieldToInit, Init))
+            return false;
+        }
       }
       return this->emitFinishInit(E);
     }
@@ -1638,6 +1649,12 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
   }
 
   return true;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitObjCStringLiteral(
+    const ObjCStringLiteral *E) {
+  return this->delegate(E->getString());
 }
 
 template <class Emitter>
@@ -2646,6 +2663,14 @@ bool ByteCodeExprGen<Emitter>::VisitShuffleVectorExpr(
   return true;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  if (!E->isExpressibleAsConstantInitializer())
+    return this->emitInvalid(E);
+
+  return this->delegate(E->getSubExpr());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false);
@@ -2661,6 +2686,9 @@ bool ByteCodeExprGen<Emitter>::delegate(const Expr *E) {
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::visit(const Expr *E) {
+  if (E->getType().isNull())
+    return false;
+
   if (E->getType()->isVoidType())
     return this->discard(E);
 
@@ -3327,7 +3355,8 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     // write the result into.
     if (IsVirtual && !HasQualifier) {
       uint32_t VarArgSize = 0;
-      unsigned NumParams = Func->getNumWrittenParams();
+      unsigned NumParams =
+          Func->getNumWrittenParams() + isa<CXXOperatorCallExpr>(E);
       for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I)
         VarArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
 
@@ -3761,13 +3790,13 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(D)) {
     if (IsReference)
-      return this->emitGetGlobalPtr(*GlobalIndex, E);
+      return this->emitGetGlobal(classifyPrim(E), *GlobalIndex, E);
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
   } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
     if (auto It = this->Params.find(PVD); It != this->Params.end()) {
       if (IsReference || !It->second.IsPtr)
-        return this->emitGetParamPtr(It->second.Offset, E);
+        return this->emitGetParam(classifyPrim(E), It->second.Offset, E);
 
       return this->emitGetPtrParam(It->second.Offset, E);
     }
@@ -3798,7 +3827,8 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     }
   } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->getAnyInitializer() && VD->getType().isConstQualified()) {
+        VD && VD->getAnyInitializer() && VD->getType().isConstQualified() &&
+        !VD->isWeak()) {
       if (!this->visitVarDecl(VD))
         return false;
       // Retry.

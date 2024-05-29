@@ -47,6 +47,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_KHR_bit_instructions},
         {"SPV_KHR_linkonce_odr",
          SPIRV::Extension::Extension::SPV_KHR_linkonce_odr},
+        {"SPV_INTEL_inline_assembly",
+         SPIRV::Extension::Extension::SPV_INTEL_inline_assembly},
         {"SPV_INTEL_bfloat16_conversion",
          SPIRV::Extension::Extension::SPV_INTEL_bfloat16_conversion},
         {"SPV_KHR_subgroup_rotate",

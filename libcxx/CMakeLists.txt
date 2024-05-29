@@ -5,6 +5,7 @@
 # Setup Project
 #===============================================================================
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "libc++")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
@@ -121,7 +122,7 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    on definitions in a shared library. By default, we assume that we're not building
    libc++ for any specific vendor, and we disable those annotations. Vendors wishing
    to provide compile-time errors when using features unavailable on some version of
-   the shared library they shipped should turn this on and see `include/__availability`
+   the shared library they shipped should turn this on and see `include/__configuration/availability.h`
    for more details." OFF)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -855,14 +856,13 @@ endfunction()
 #===============================================================================
 # Setup Source Code And Tests
 #===============================================================================
+add_custom_target(cxx-test-depends
+  COMMENT "Build dependencies required to run the libc++ test suite.")
+
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
 add_subdirectory(modules)
-
-set(LIBCXX_TEST_DEPS "cxx_experimental")
-
-list(APPEND LIBCXX_TEST_DEPS generate-cxx-modules)
 
 if (LIBCXX_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)

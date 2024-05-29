@@ -299,3 +299,34 @@ using AFoo = Foo<G<U>>;
 // CHECK-NEXT:   `-ParmVarDecl {{.*}} 'G<int>'
 
 AFoo aa(G<int>{});
+
+namespace TTP {
+  template<typename> struct A {};
+
+  template<class T> struct B {
+    template<template <class> typename TT> B(TT<T>);
+  };
+
+  B b(A<int>{});
+} // namespace TTP
+
+// CHECK-LABEL: Dumping TTP::<deduction guide for B>:
+// CHECK-NEXT:  FunctionTemplateDecl 0x{{.+}} <{{.+}}:[[# @LINE - 7]]:5, col:51>
+// CHECK-NEXT:  |-TemplateTypeParmDecl {{.+}} class depth 0 index 0 T{{$}}
+// CHECK-NEXT:  |-TemplateTemplateParmDecl {{.+}} depth 0 index 1 TT{{$}}
+// CHECK-NEXT:  | `-TemplateTypeParmDecl {{.+}} class depth 1 index 0{{$}}
+// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} 'auto (<T>) -> B<T>'{{$}}
+// CHECK-NEXT:  | `-ParmVarDecl {{.+}} '<T>'{{$}}
+// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} 'auto (A<int>) -> TTP::B<int>'
+// CHECK-NEXT:    |-TemplateArgument type 'int'
+// CHECK-NEXT:    | `-BuiltinType {{.+}} 'int'{{$}}
+// CHECK-NEXT:    |-TemplateArgument template A
+// CHECK-NEXT:    `-ParmVarDecl {{.+}} 'A<int>':'TTP::A<int>'{{$}}
+// CHECK-NEXT:  FunctionProtoType {{.+}} 'auto (<T>) -> B<T>' dependent trailing_return cdecl{{$}}
+// CHECK-NEXT:  |-InjectedClassNameType {{.+}} 'B<T>' dependent{{$}}
+// CHECK-NEXT:  | `-CXXRecord {{.+}} 'B'{{$}}
+// CHECK-NEXT:  `-ElaboratedType {{.+}} '<T>' sugar dependent{{$}}
+// CHECK-NEXT:    `-TemplateSpecializationType {{.+}} '<T>' dependent {{$}}
+// CHECK-NEXT:      `-TemplateArgument type 'T'{{$}}
+// CHECK-NEXT:        `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0{{$}}
+// CHECK-NEXT:          `-TemplateTypeParm {{.+}} 'T'{{$}}

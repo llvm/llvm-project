@@ -1983,20 +1983,25 @@ getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::IndirectUnsafe;
 
   // Check if we can prove that Sink only accesses memory after Src's end or
-  // vice versa.
-  const auto &[SrcStart, SrcEnd] =
-      getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE);
-  const auto &[SinkStart, SinkEnd] =
-      getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE);
+  // vice versa. At the moment this is limited to cases where either source or
+  // sink are loop invariant to avoid compile-time increases. This is not
+  // required for correctness.
+  if (SE.isLoopInvariant(Src, InnermostLoop) ||
+      SE.isLoopInvariant(Sink, InnermostLoop)) {
+    const auto &[SrcStart, SrcEnd] =
+        getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE);
+    const auto &[SinkStart, SinkEnd] =
+        getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE);
 
-  if (!isa<SCEVCouldNotCompute>(SrcStart) &&
-      !isa<SCEVCouldNotCompute>(SrcEnd) &&
-      !isa<SCEVCouldNotCompute>(SinkStart) &&
-      !isa<SCEVCouldNotCompute>(SinkEnd)) {
-    if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
-      return MemoryDepChecker::Dependence::NoDep;
-    if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart))
-      return MemoryDepChecker::Dependence::NoDep;
+    if (!isa<SCEVCouldNotCompute>(SrcStart) &&
+        !isa<SCEVCouldNotCompute>(SrcEnd) &&
+        !isa<SCEVCouldNotCompute>(SinkStart) &&
+        !isa<SCEVCouldNotCompute>(SinkEnd)) {
+      if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
+        return MemoryDepChecker::Dependence::NoDep;
+      if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart))
+        return MemoryDepChecker::Dependence::NoDep;
+    }
   }
 
   // Need accesses with constant strides and the same direction. We don't want
