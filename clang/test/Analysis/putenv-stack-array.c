@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:  -analyzer-checker=alpha.security.PutenvStackArray \
+// RUN:  -analyzer-checker=security.PutenvStackArray \
 // RUN:  -verify %s
 
 #include "Inputs/system-header-simulator.h"
