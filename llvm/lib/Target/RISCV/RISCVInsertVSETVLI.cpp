@@ -908,8 +908,7 @@ private:
   void coalesceVSETVLIs(MachineBasicBlock &MBB) const;
 
   VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) const;
-  VSETVLIInfo computeInfoForInstr(const MachineInstr &MI,
-                                  uint64_t TSFlags) const;
+  VSETVLIInfo computeInfoForInstr(const MachineInstr &MI) const;
 };
 
 } // end anonymous namespace
@@ -957,9 +956,10 @@ static unsigned computeVLMAX(unsigned VLEN, unsigned SEW,
   return VLEN/SEW;
 }
 
-VSETVLIInfo RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI,
-                                                    uint64_t TSFlags) const {
+VSETVLIInfo
+RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
   VSETVLIInfo InstrInfo;
+  const uint64_t TSFlags = MI.getDesc().TSFlags;
 
   bool TailAgnostic = true;
   bool MaskAgnostic = true;
@@ -1198,13 +1198,12 @@ static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
 // legal for MI, but may not be the state requested by MI.
 void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
                                         const MachineInstr &MI) const {
-  uint64_t TSFlags = MI.getDesc().TSFlags;
-  if (!RISCVII::hasSEWOp(TSFlags))
+  if (!RISCVII::hasSEWOp(MI.getDesc().TSFlags))
     return;
 
   DemandedFields Demanded = getDemanded(MI, ST);
 
-  const VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags);
+  const VSETVLIInfo NewInfo = computeInfoForInstr(MI);
   assert(NewInfo.isValid() && !NewInfo.isUnknown());
   if (Info.isValid() && !needVSETVLI(Demanded, NewInfo, Info))
     return;
