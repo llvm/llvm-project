@@ -1522,33 +1522,60 @@ void RISCVInstrInfo::insertSelect(MachineBasicBlock &MBB,
                                   Register TrueReg, Register FalseReg) const {
   MachineFunction &MF = *MI->getParent()->getParent();
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+  const TargetRegisterInfo &TRI = *ST.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   Register CCReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
   unsigned CC = Cond[0].getImm();
   Register LHSReg = Cond[1].getReg();
   Register RHSReg = Cond[2].getReg();
-  if (CC == RISCVCC::COND_GE || CC == RISCVCC::COND_GEU) {
-    CC = (CC == RISCVCC::COND_GE) ? RISCV::SLT : RISCV::SLTU;
-    std::swap(TrueReg, FalseReg);
-  }
 
-  insertICmp(MBB, MI, DL, CCReg, CC, LHSReg, RHSReg);
   unsigned CondZeroEqzOpc =
       ST.hasVendorXVentanaCondOps() ? RISCV::VT_MASKC : RISCV::CZERO_EQZ;
   unsigned CondZeroNezOpc =
       ST.hasVendorXVentanaCondOps() ? RISCV::VT_MASKCN : RISCV::CZERO_NEZ;
+
+  const TargetRegisterClass *DstRC = MRI.getRegClass(DstReg);
+  const TargetRegisterClass *CommonRC =
+      TRI.getCommonSubClass(DstRC, &RISCV::GPRRegClass);
+  bool NeedsRCCopies = (CommonRC != DstRC) && (CommonRC != &RISCV::GPRRegClass);
+
+  Register CondZeroEqzReg = TrueReg;
+  Register CondZeroNezReg = FalseReg;
+  if (NeedsRCCopies) {
+    CondZeroEqzReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, MI, DL, get(TargetOpcode::COPY), CondZeroEqzReg)
+        .addReg(TrueReg);
+    CondZeroNezReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, MI, DL, get(TargetOpcode::COPY), CondZeroNezReg)
+        .addReg(FalseReg);
+  }
+  if (CC == RISCVCC::COND_GE || CC == RISCVCC::COND_GEU) {
+    CC = (CC == RISCVCC::COND_GE) ? RISCVCC::COND_LT : RISCVCC::COND_LTU;
+    std::swap(CondZeroEqzReg, CondZeroNezReg);
+  }
+  insertICmp(MBB, MI, DL, CCReg, CC, LHSReg, RHSReg);
+
   Register TrueValOrZeroReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   Register FalseValOrZeroReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   BuildMI(MBB, MI, DL, get(CondZeroEqzOpc), TrueValOrZeroReg)
-      .addReg(TrueReg)
+      .addReg(CondZeroEqzReg)
       .addReg(CCReg);
   BuildMI(MBB, MI, DL, get(CondZeroNezOpc), FalseValOrZeroReg)
-      .addReg(FalseReg)
+      .addReg(CondZeroNezReg)
       .addReg(CCReg);
-  BuildMI(MBB, MI, DL, get(RISCV::OR), DstReg)
+
+  Register SelectOutReg = DstReg;
+  if (NeedsRCCopies) {
+    SelectOutReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  }
+  BuildMI(MBB, MI, DL, get(RISCV::OR), SelectOutReg)
       .addReg(TrueValOrZeroReg)
       .addReg(FalseValOrZeroReg);
+  if (NeedsRCCopies) {
+    BuildMI(MBB, MI, DL, get(TargetOpcode::COPY), DstReg).addReg(SelectOutReg);
+  }
+
   return;
 }
 
@@ -1557,8 +1584,20 @@ bool RISCVInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                      Register DstReg, Register TrueReg,
                                      Register FalseReg, int &CondCycles,
                                      int &TrueCycles, int &FalseCycles) const {
+  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const TargetRegisterClass *TrueRC = MRI.getRegClass(TrueReg);
+  const TargetRegisterClass *DstRC = MRI.getRegClass(DstReg);
+  const TargetRegisterClass *CommonRC =
+      TRI.getCommonSubClass(DstRC, &RISCV::GPRRegClass);
+  bool NeedsRCCopies = (CommonRC != DstRC) && (CommonRC != &RISCV::GPRRegClass);
+
   TargetSchedModel SchedModel;
   SchedModel.init(&STI);
+
+  // this is used for testing only.
+  if (!SchedModel.hasInstrSchedModelOrItineraries())
+    return true;
 
   CondCycles = getICmpCost(Cond[0].getImm(), SchedModel);
   TrueCycles = SchedModel.computeInstrLatency(RISCV::OR) +
@@ -1570,6 +1609,30 @@ bool RISCVInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                                    ? RISCV::VT_MASKCN
                                                    : RISCV::CZERO_NEZ);
 
+  if (NeedsRCCopies) {
+    unsigned CopyIntoGPROpc = 0;
+    if (TrueRC == &RISCV::FPR32RegClass) {
+      CopyIntoGPROpc = RISCV::FMV_X_W;
+    } else if (TrueRC == &RISCV::FPR64RegClass) {
+      CopyIntoGPROpc = RISCV::FMV_X_D;
+    } else {
+      llvm_unreachable("Unknown register class");
+    }
+    int CopyIntoGPRCycles = SchedModel.computeInstrLatency(CopyIntoGPROpc);
+
+    unsigned CopyFromGPROpc = 0;
+    if (DstRC == &RISCV::FPR32RegClass) {
+      CopyIntoGPROpc = RISCV::FMV_W_X;
+    } else if (DstRC == &RISCV::FPR64RegClass) {
+      CopyIntoGPROpc = RISCV::FMV_D_X;
+    } else {
+      llvm_unreachable("Unknown register class");
+    }
+    int CopyFromGPRCycles = SchedModel.computeInstrLatency(CopyFromGPROpc);
+
+    TrueCycles += (CopyIntoGPRCycles + CopyFromGPRCycles);
+    FalseCycles += (CopyIntoGPRCycles + CopyFromGPRCycles);
+  }
   return true;
 }
 

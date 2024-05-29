@@ -70,6 +70,9 @@ static cl::opt<bool>
                            cl::desc("Disable early if-conversion"),
                            cl::init(true), cl::Hidden);
 
+static cl::opt<bool> RISCVForceEalyIfcvt("riscv-force-early-ifcvt", cl::Hidden,
+                                         cl::desc("Force early if-conversion"),
+                                         cl::init(false), cl::Hidden);
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -212,7 +215,8 @@ unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {
 bool RISCVSubtarget::enableEarlyIfConversion() const {
   TargetSchedModel SchedModel;
   SchedModel.init(this);
-  return !RISCVDisableEarlyIfcvt &&
-         (hasStdExtZicond() || hasVendorXVentanaCondOps()) &&
-         SchedModel.hasInstrSchedModelOrItineraries();
+  return RISCVForceEalyIfcvt ||
+         (!RISCVDisableEarlyIfcvt &&
+          (hasStdExtZicond() || hasVendorXVentanaCondOps()) &&
+          SchedModel.hasInstrSchedModelOrItineraries());
 }
