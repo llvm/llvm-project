@@ -381,6 +381,61 @@ void applyOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+// Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
+bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         Register &SrcReg) {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  if (DstTy != LLT::fixed_vector(2, 64) && DstTy != LLT::fixed_vector(2, 32) &&
+      DstTy != LLT::fixed_vector(4, 32) && DstTy != LLT::fixed_vector(4, 16) &&
+      DstTy != LLT::fixed_vector(8, 16))
+    return false;
+
+  auto AndMI = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  if (AndMI->getOpcode() != TargetOpcode::G_AND)
+    return false;
+  auto LShrMI = getDefIgnoringCopies(AndMI->getOperand(1).getReg(), MRI);
+  if (LShrMI->getOpcode() != TargetOpcode::G_LSHR)
+    return false;
+
+  // Check the constant splat values
+  auto V1 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(MI.getOperand(2).getReg()), MRI);
+  auto V2 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(AndMI->getOperand(2).getReg()), MRI);
+  auto V3 = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(LShrMI->getOperand(2).getReg()), MRI);
+  if (!V1.has_value() || !V2.has_value() || !V3.has_value())
+    return false;
+  unsigned HalfSize = DstTy.getScalarSizeInBits() / 2;
+  if (!V1.value().isMask(HalfSize) || V2.value() != (1ULL | 1ULL << HalfSize) ||
+      V3 != (HalfSize - 1))
+    return false;
+
+  SrcReg = LShrMI->getOperand(1).getReg();
+
+  return true;
+}
+
+void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B, Register &SrcReg) {
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT HalfTy =
+      DstTy.changeElementCount(DstTy.getElementCount().multiplyCoefficientBy(2))
+          .changeElementSize(DstTy.getScalarSizeInBits() / 2);
+
+  Register ZeroVec = B.buildConstant(HalfTy, 0).getReg(0);
+  Register CastReg =
+      B.buildInstr(TargetOpcode::G_BITCAST, {HalfTy}, {SrcReg}).getReg(0);
+  Register CMLTReg =
+      B.buildICmp(CmpInst::Predicate::ICMP_SLT, HalfTy, CastReg, ZeroVec)
+          .getReg(0);
+
+  B.buildInstr(TargetOpcode::G_BITCAST, {DstReg}, {CMLTReg}).getReg(0);
+  MI.eraseFromParent();
+}
+
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
   // TODO: Make CombinerHelper methods const.

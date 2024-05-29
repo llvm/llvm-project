@@ -882,7 +882,7 @@ public:
   StringRef getPassName() const override { return RISCV_INSERT_VSETVLI_NAME; }
 
 private:
-  bool needVSETVLI(const MachineInstr &MI, const VSETVLIInfo &Require,
+  bool needVSETVLI(const DemandedFields &Used, const VSETVLIInfo &Require,
                    const VSETVLIInfo &CurInfo) const;
   bool needVSETVLIPHI(const VSETVLIInfo &Require,
                       const MachineBasicBlock &MBB) const;
@@ -1175,16 +1175,12 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
 }
 
 /// Return true if a VSETVLI is required to transition from CurInfo to Require
-/// before MI.
-bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
+/// given a set of DemandedFields \p Used.
+bool RISCVInsertVSETVLI::needVSETVLI(const DemandedFields &Used,
                                      const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) const {
-  assert(Require == computeInfoForInstr(MI, MI.getDesc().TSFlags, *ST, LIS));
-
   if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
     return true;
-
-  DemandedFields Used = getDemanded(MI, ST);
 
   if (CurInfo.isCompatible(Used, Require, LIS))
     return false;
@@ -1232,16 +1228,17 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   if (!RISCVII::hasSEWOp(TSFlags))
     return;
 
+  DemandedFields Demanded = getDemanded(MI, ST);
+
   const VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, *ST, LIS);
   assert(NewInfo.isValid() && !NewInfo.isUnknown());
-  if (Info.isValid() && !needVSETVLI(MI, NewInfo, Info))
+  if (Info.isValid() && !needVSETVLI(Demanded, NewInfo, Info))
     return;
 
   const VSETVLIInfo PrevInfo = Info;
   if (!Info.isValid() || Info.isUnknown())
     Info = NewInfo;
 
-  DemandedFields Demanded = getDemanded(MI, ST);
   const VSETVLIInfo IncomingInfo = adjustIncoming(PrevInfo, NewInfo, Demanded);
 
   // If MI only demands that VL has the same zeroness, we only need to set the
