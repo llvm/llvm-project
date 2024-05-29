@@ -50829,7 +50829,6 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
                                         const X86Subtarget &Subtarget) {
   auto *Ld = cast<LoadSDNode>(N);
   EVT RegVT = Ld->getValueType(0);
-  EVT MemVT = Ld->getMemoryVT();
   SDValue Ptr = Ld->getBasePtr();
   SDValue Chain = Ld->getChain();
   ISD::LoadExtType Ext = Ld->getExtensionType();
