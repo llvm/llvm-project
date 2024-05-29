@@ -102,7 +102,6 @@ add_fp_unittest(
     FAbsTest.h
   DEPENDS
     libc.src.math.fabsf16
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
