@@ -13,14 +13,10 @@
 
 ## Check --orphan-handling=error or =warn do not report errors if no linker
 ## script is used.
-# RUN: ld.lld -shared -orphan-handling=error -o /dev/null %t.o 2>&1 | \
-# RUN:   FileCheck %s --allow-empty --check-prefix=DEFAULT
-# RUN: ld.lld -shared -orphan-handling=warn -o /dev/null %t.o 2>&1 | \
-# RUN:   FileCheck %s --allow-empty --check-prefix=DEFAULT
-# RUN: ld.lld -r -orphan-handling=error -o /dev/null %t.o 2>&1 | \
-# RUN:   FileCheck %s --allow-empty --check-prefix=DEFAULT
-# RUN: ld.lld -r -orphan-handling=warn -o /dev/null %t.o 2>&1 | \
-# RUN:   FileCheck %s --allow-empty --check-prefix=DEFAULT
+# RUN: ld.lld -shared -orphan-handling=error -o /dev/null %t.o 2>&1 | count 0
+# RUN: ld.lld -shared -orphan-handling=warn -o /dev/null %t.o 2>&1 | count 0
+# RUN: ld.lld -r -orphan-handling=error -o /dev/null %t.o 2>&1 | count 0
+# RUN: ld.lld -r -orphan-handling=warn -o /dev/null %t.o 2>&1 | count 0
 
 ## Check --orphan-handling=error reports errors about orphans.
 # RUN: not ld.lld --orphan-handling=error -o /dev/null -T %t.script \
