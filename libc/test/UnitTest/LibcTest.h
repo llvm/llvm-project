@@ -107,6 +107,7 @@ class Test {
   internal::RunContext *Ctx = nullptr;
 
   void setContext(internal::RunContext *C) { Ctx = C; }
+  static int getNumTests();
 
 public:
   virtual ~Test() {}

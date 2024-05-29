@@ -127,18 +127,34 @@ void Test::addTest(Test *T) {
   End = T;
 }
 
+int Test::getNumTests() {
+  int N = 0;
+  for (Test *T = Start; T; T = T->Next, ++N);
+  return N;
+}
+
 int Test::runTests(const char *TestFilter) {
-  int TestCount = 0;
+  constexpr auto GREEN = "\033[32m";
+  constexpr auto RED = "\033[31m";
+  constexpr auto RESET = "\033[0m";
+
+  int TestCount = getNumTests();
+  if (TestCount) {
+    tlog << GREEN << "[==========] " << RESET << "Running " << TestCount << " test";
+    if (TestCount > 1)
+      tlog << "s";
+    tlog << " from 1 test suite.\n";
+  }
+
   int FailCount = 0;
   for (Test *T = Start; T != nullptr; T = T->Next) {
     const char *TestName = T->getName();
-    cpp::string StrTestName(TestName);
-    constexpr auto GREEN = "\033[32m";
-    constexpr auto RED = "\033[31m";
-    constexpr auto RESET = "\033[0m";
-    if ((TestFilter != nullptr) && (StrTestName != TestFilter)) {
+
+    if (Options.TestFilter && cpp::string{TestName} != Options.TestFilter) {
+      --TestCount;
       continue;
     }
+
     tlog << GREEN << "[ RUN      ] " << RESET << TestName << '\n';
     [[maybe_unused]] const auto start_time = clock();
     RunContext Ctx;
@@ -176,7 +192,6 @@ int Test::runTests(const char *TestFilter) {
 #endif
       break;
     }
-    ++TestCount;
   }
 
   if (TestCount > 0) {
