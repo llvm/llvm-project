@@ -32,14 +32,7 @@ namespace lldb_dap {
 DAP g_dap;
 
 DAP::DAP()
-    : broadcaster("lldb-dap"),
-      exception_breakpoints(
-          {{"cpp_catch", "C++ Catch", lldb::eLanguageTypeC_plus_plus},
-           {"cpp_throw", "C++ Throw", lldb::eLanguageTypeC_plus_plus},
-           {"objc_catch", "Objective-C Catch", lldb::eLanguageTypeObjC},
-           {"objc_throw", "Objective-C Throw", lldb::eLanguageTypeObjC},
-           {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
-           {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
+    : broadcaster("lldb-dap"), exception_breakpoints(),
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
@@ -65,8 +58,32 @@ DAP::DAP()
 
 DAP::~DAP() = default;
 
+void DAP::PopulateExceptionBreakpoints() {
+  exception_breakpoints = {};
+  if (debugger.SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
+    exception_breakpoints->emplace_back("cpp_catch", "C++ Catch",
+                                        lldb::eLanguageTypeC_plus_plus);
+    exception_breakpoints->emplace_back("cpp_throw", "C++ Throw",
+                                        lldb::eLanguageTypeC_plus_plus);
+  }
+  if (debugger.SupportsLanguage(lldb::eLanguageTypeObjC)) {
+    exception_breakpoints->emplace_back("objc_catch", "Objective-C Catch",
+                                        lldb::eLanguageTypeObjC);
+    exception_breakpoints->emplace_back("objc_throw", "Objective-C Throw",
+                                        lldb::eLanguageTypeObjC);
+  }
+  if (debugger.SupportsLanguage(lldb::eLanguageTypeSwift)) {
+    exception_breakpoints->emplace_back("swift_catch", "Swift Catch",
+                                        lldb::eLanguageTypeSwift);
+    exception_breakpoints->emplace_back("swift_throw", "Swift Throw",
+                                        lldb::eLanguageTypeSwift);
+  }
+}
+
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
-  for (auto &bp : exception_breakpoints) {
+  assert(exception_breakpoints.has_value() &&
+         "PopulateExceptionBreakpoints must be called first");
+  for (auto &bp : *exception_breakpoints) {
     if (bp.filter == filter)
       return &bp;
   }
@@ -74,7 +91,9 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
-  for (auto &bp : exception_breakpoints) {
+  assert(exception_breakpoints.has_value() &&
+         "PopulateExceptionBreakpoints must be called first");
+  for (auto &bp : *exception_breakpoints) {
     if (bp.bp.GetID() == bp_id)
       return &bp;
   }
