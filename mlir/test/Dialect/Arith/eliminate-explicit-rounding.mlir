@@ -71,3 +71,22 @@ func.func @bf16_branch_vector(%arg0: vector<32x32x32xbf16>) -> vector<32x32x32xb
 	%3 = arith.addf %1, %2 : vector<32x32x32xbf16>
   return %3 : vector<32x32x32xbf16>
 }
+
+// CHECK-LABEL: @bf16_fma
+// CHECK-SAME: ([[ARG0:%.+]]: vector<32x32x32xbf16>, [[ARG1:%.+]]: vector<32x32x32xbf16>, [[ARG2:%.+]]: vector<32x32x32xbf16>)
+// CHECK: [[EXTF0:%.+]] = arith.extf [[ARG0]]
+// CHECK: [[ABSF:%.+]] = math.absf [[EXTF0]]
+// CHECK-DAG: [[SIN:%.+]] = math.sin [[ABSF]]
+// CHECK: [[TRUNCF0:%.+]] = arith.truncf [[SIN]]
+// CHECK-DAG: [[FMA:%.+]] = math.fma [[TRUNCF0]], [[ARG1]], [[ARG2]]
+// CHECK: [[EXTF1:%.+]] = arith.extf [[FMA]]
+// CHECK: [[ADDF:%.+]] = arith.addf [[EXTF1]], [[SIN]]
+// CHECK: [[TRUNCF1:%.+]] = arith.truncf [[ADDF]]
+// CHECK: return [[TRUNCF1]] : vector<32x32x32xbf16>
+func.func @bf16_fma(%arg0: vector<32x32x32xbf16>, %arg1: vector<32x32x32xbf16>, %arg2: vector<32x32x32xbf16>) -> vector<32x32x32xbf16> {
+  %0 = math.absf %arg0 : vector<32x32x32xbf16>
+	%1 = math.sin %0 : vector<32x32x32xbf16>
+  %2 = math.fma %1, %arg1, %arg2 : vector<32x32x32xbf16>
+	%3 = arith.addf %2, %1 : vector<32x32x32xbf16>
+  return %3 : vector<32x32x32xbf16>
+}
