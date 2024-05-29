@@ -25,7 +25,8 @@ Example:
 
     b += 1;
     // warning: pointer arithmetic on class that declares a virtual function,
-    // undefined behavior if the pointee is a different class
+    //          which can result in undefined behavior if the pointee is a
+    //          different class
 
     delete[] static_cast<Derived*>(b);
   }

@@ -62,7 +62,7 @@ void PointerArithmeticOnPolymorphicObjectCheck::check(
       PointerExpr->getType()->getPointeeType()->getAsCXXRecordDecl();
 
   diag(PointerExpr->getBeginLoc(),
-       "pointer arithmetic on polymorphic class '%0', "
+       "pointer arithmetic on polymorphic class '%0', which can result in "
        "undefined behavior if the pointee is a different class")
       << PointeeType->getName();
 }
