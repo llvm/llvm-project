@@ -1362,10 +1362,15 @@ static mlir::Type GetNeonType(CIRGenFunction *CGF, NeonTypeFlags TypeFlags,
   case NeonTypeFlags::Int8:
   case NeonTypeFlags::Poly8:
     return mlir::cir::VectorType::get(CGF->getBuilder().getContext(),
-                                      CGF->UInt8Ty, V1Ty ? 1 : (8 << IsQuad));
+                                      TypeFlags.isUnsigned() ? CGF->UInt8Ty
+                                                             : CGF->SInt8Ty,
+                                      V1Ty ? 1 : (8 << IsQuad));
   case NeonTypeFlags::Int16:
   case NeonTypeFlags::Poly16:
-    llvm_unreachable("NYI");
+    return mlir::cir::VectorType::get(CGF->getBuilder().getContext(),
+                                      TypeFlags.isUnsigned() ? CGF->UInt16Ty
+                                                             : CGF->SInt16Ty,
+                                      V1Ty ? 1 : (4 << IsQuad));
   case NeonTypeFlags::BFloat16:
     if (AllowBFloatArgsAndRet)
       llvm_unreachable("NYI");
@@ -1377,10 +1382,16 @@ static mlir::Type GetNeonType(CIRGenFunction *CGF, NeonTypeFlags TypeFlags,
     else
       llvm_unreachable("NYI");
   case NeonTypeFlags::Int32:
-    llvm_unreachable("NYI");
+    return mlir::cir::VectorType::get(CGF->getBuilder().getContext(),
+                                      TypeFlags.isUnsigned() ? CGF->UInt32Ty
+                                                             : CGF->SInt32Ty,
+                                      V1Ty ? 1 : (2 << IsQuad));
   case NeonTypeFlags::Int64:
   case NeonTypeFlags::Poly64:
-    llvm_unreachable("NYI");
+    return mlir::cir::VectorType::get(CGF->getBuilder().getContext(),
+                                      TypeFlags.isUnsigned() ? CGF->UInt64Ty
+                                                             : CGF->SInt64Ty,
+                                      V1Ty ? 1 : (1 << IsQuad));
   case NeonTypeFlags::Poly128:
     // FIXME: i128 and f128 doesn't get fully support in Clang and llvm.
     // There is a lot of i128 and f128 API missing.
