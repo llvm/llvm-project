@@ -11,8 +11,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 
 #include "hdr/float_macros.h"                      // LDBL_MANT_DIG
-#include "include/llvm-libc-types/float128.h"      // float128
-#include "include/llvm-libc-types/float16.h"       // LIBC_TYPES_HAS_FLOAT16
+#include "include/llvm-libc-macros/float16-macros.h" // LIBC_TYPES_HAS_FLOAT16
+#include "include/llvm-libc-types/float128.h"        // float128
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/cpu_features.h"
@@ -40,7 +40,8 @@
 #endif // defined(__SIZEOF_INT128__)
 
 // -- float16 support ---------------------------------------------------------
-// LIBC_TYPES_HAS_FLOAT16 is provided by "include/llvm-libc-types/float16.h"
+// LIBC_TYPES_HAS_FLOAT16 is provided by
+// "include/llvm-libc-macros/float16-macros.h"
 #ifdef LIBC_TYPES_HAS_FLOAT16
 // Type alias for internal use.
 using float16 = _Float16;
