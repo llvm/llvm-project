@@ -1647,7 +1647,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
   static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
-                "Please update the reading as needed when a new field is added "
+                "Please update the reader as needed when a new field is added "
                 "or when indexed profile version gets bumped.");
 
   Buffer += sizeof(uint64_t); // Skip Header.Unused field.
