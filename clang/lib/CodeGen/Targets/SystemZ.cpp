@@ -792,8 +792,13 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy) const {
   // Complex LIKE structures are returned by value as per the XPLINK docs.
   // Their members will be placed in FPRs.
   if (RetTy->getAs<RecordType>()) {
-    if (getFPTypeOfComplexLikeType(RetTy))
-      return ABIArgInfo::getDirect();
+    if (auto CompTy = getFPTypeOfComplexLikeType(RetTy)) {
+      llvm::Type *FPTy = CGT.ConvertType(*CompTy);
+      llvm::Type *CoerceTy = llvm::StructType::get(FPTy, FPTy);
+      auto AI = ABIArgInfo::getDirect(CoerceTy);
+      AI.setCanBeFlattened(false);
+      return AI;
+    }
   }
 
   // Aggregates with a size of less than 3 GPRs are returned in GRPs 1, 2 and 3.
@@ -833,7 +838,6 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty,
 
   // Complex types are passed by value as per the XPLINK docs.
   // If place available, their members will be placed in FPRs.
-  auto CompTy = getFPTypeOfComplexLikeType(Ty);
   if (IsNamedArg) {
     if (Ty->isComplexType()) {
       auto AI = ABIArgInfo::getDirect(CGT.ConvertType(Ty));
@@ -841,7 +845,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty,
       return AI;
     }
 
-    if (CompTy.has_value()) {
+    if (auto CompTy = getFPTypeOfComplexLikeType(Ty)) {
       llvm::Type *FPTy = CGT.ConvertType(*CompTy);
       llvm::Type *CoerceTy = llvm::StructType::get(FPTy, FPTy);
       auto AI = ABIArgInfo::getDirect(CoerceTy);
@@ -856,10 +860,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty,
 
   // Handle structures. They are returned by value.
   // If not complex like types, they are passed in GPRs, if possible.
-  // If place available, complex like types will have their members
-  // placed in FPRs.
-  if (isAggregateTypeForABI(Ty) || Ty->isAnyComplexType() ||
-      CompTy.has_value()) {
+  if (isAggregateTypeForABI(Ty) || Ty->isAnyComplexType()) {
     // Since an aggregate may end up in registers, pass the aggregate as
     // array. This is usually beneficial since we avoid forcing the back-end
     // to store the argument to memory.
@@ -881,10 +882,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty,
     return ABIArgInfo::getDirect(CoerceTy);
   }
 
-  // Non-structure compounds are passed indirectly, i.e. arrays.
-  if (isCompoundType(Ty))
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
-
+  // Other types. E,g. pointers.
   return ABIArgInfo::getDirect();
 }
 

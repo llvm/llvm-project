@@ -9,7 +9,7 @@ struct complex_like_agg_nofloat_empty pass_complex_like_agg_nofloat_empty(struct
 struct agg_float_empty { float a; [[no_unique_address]] empty dummy; };
 struct complex_like_agg_float_empty { struct agg_float_empty a; struct agg_float_empty b; };
 struct complex_like_agg_float_empty pass_complex_like_agg_float_empty(struct complex_like_agg_float_empty arg) { return arg; }
-// CHECK-LABEL: define %struct.complex_like_agg_float_empty @_Z33pass_complex_like_agg_float_empty28complex_like_agg_float_empty({ float, float } %{{.*}})
+// CHECK-LABEL: define { float, float } @_Z33pass_complex_like_agg_float_empty28complex_like_agg_float_empty({ float, float } %{{.*}})
 
 struct noemptybase { empty dummy; };
 struct agg_nofloat_emptybase : noemptybase { float a; };
@@ -21,4 +21,4 @@ struct emptybase { [[no_unique_address]] empty dummy; };
 struct agg_float_emptybase : emptybase { float a; };
 struct complex_like_agg_float_emptybase { struct agg_float_emptybase a; struct agg_float_emptybase b; };
 struct complex_like_agg_float_emptybase pass_agg_float_emptybase(struct complex_like_agg_float_emptybase arg) { return arg; }
-// CHECK-LABEL: define %struct.complex_like_agg_float_emptybase @_Z24pass_agg_float_emptybase32complex_like_agg_float_emptybase({ float, float } %{{.*}})
+// CHECK-LABEL: define { float, float } @_Z24pass_agg_float_emptybase32complex_like_agg_float_emptybase({ float, float } %{{.*}})
