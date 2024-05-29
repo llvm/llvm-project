@@ -18,6 +18,7 @@
 #include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Region.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -506,6 +507,90 @@ public:
   }
 };
 
+template <typename ArithOp, typename EmitCOp, bool isUnsignedOp>
+class ShiftOpConversion : public OpConversionPattern<ArithOp> {
+public:
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type type = this->getTypeConverter()->convertType(op.getType());
+    if (type && !(isa_and_nonnull<IntegerType>(type) ||
+                  emitc::isPointerWideType(type))) {
+      return rewriter.notifyMatchFailure(
+          op, "expected integer or size_t/ssize_t type");
+    }
+
+    if (type.isInteger(1)) {
+      return rewriter.notifyMatchFailure(op, "i1 type is not implemented");
+    }
+
+    Type arithmeticType = adaptIntegralTypeSignedness(type, isUnsignedOp);
+
+    Value lhs = adaptValueType(adaptor.getLhs(), rewriter, arithmeticType);
+    // Shift amount interpreted as unsigned per Arith dialect spec.
+    Type rhsType = adaptIntegralTypeSignedness(adaptor.getRhs().getType(),
+                                               /*needsUnsigned=*/true);
+    Value rhs = adaptValueType(adaptor.getRhs(), rewriter, rhsType);
+
+    // Add a runtime check for overflow
+    Value width;
+    if (emitc::isPointerWideType(type)) {
+      Value eight = rewriter.create<emitc::ConstantOp>(
+          op.getLoc(), rhsType, rewriter.getIndexAttr(8));
+      emitc::CallOpaqueOp sizeOfCall = rewriter.create<emitc::CallOpaqueOp>(
+          op.getLoc(), rhsType, "sizeof", SmallVector<Value, 1>({eight}));
+      width = rewriter.create<emitc::MulOp>(op.getLoc(), rhsType, eight,
+                                            sizeOfCall.getResult(0));
+    } else {
+      width = rewriter.create<emitc::ConstantOp>(
+          op.getLoc(), rhsType,
+          rewriter.getIntegerAttr(rhsType, type.getIntOrFloatBitWidth()));
+    }
+
+    Value excessCheck = rewriter.create<emitc::CmpOp>(
+        op.getLoc(), rewriter.getI1Type(), emitc::CmpPredicate::lt, rhs, width);
+
+    // Any concrete value is a valid refinement of poison.
+    Value poison = rewriter.create<emitc::ConstantOp>(
+        op.getLoc(), arithmeticType,
+        (isa<IntegerType>(arithmeticType)
+             ? rewriter.getIntegerAttr(arithmeticType, 0)
+             : rewriter.getIndexAttr(0)));
+
+    emitc::ExpressionOp ternary = rewriter.create<emitc::ExpressionOp>(
+        op.getLoc(), arithmeticType, /*do_not_inline=*/false);
+    Block &bodyBlock = ternary.getBodyRegion().emplaceBlock();
+    auto currentPoint = rewriter.getInsertionPoint();
+    rewriter.setInsertionPointToStart(&bodyBlock);
+    Value arithmeticResult =
+        rewriter.create<EmitCOp>(op.getLoc(), arithmeticType, lhs, rhs);
+    Value resultOrPoison = rewriter.create<emitc::ConditionalOp>(
+        op.getLoc(), arithmeticType, excessCheck, arithmeticResult, poison);
+    rewriter.create<emitc::YieldOp>(op.getLoc(), resultOrPoison);
+    rewriter.setInsertionPoint(op->getBlock(), currentPoint);
+
+    Value result = adaptValueType(ternary, rewriter, type);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+template <typename ArithOp, typename EmitCOp>
+class SignedShiftOpConversion final
+    : public ShiftOpConversion<ArithOp, EmitCOp, false> {
+  using ShiftOpConversion<ArithOp, EmitCOp, false>::ShiftOpConversion;
+};
+
+template <typename ArithOp, typename EmitCOp>
+class UnsignedShiftOpConversion final
+    : public ShiftOpConversion<ArithOp, EmitCOp, true> {
+  using ShiftOpConversion<ArithOp, EmitCOp, true>::ShiftOpConversion;
+};
+
 class SelectOpConversion : public OpConversionPattern<arith::SelectOp> {
 public:
   using OpConversionPattern<arith::SelectOp>::OpConversionPattern;
@@ -647,6 +732,9 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     BitwiseOpConversion<arith::AndIOp, emitc::BitwiseAndOp>,
     BitwiseOpConversion<arith::OrIOp, emitc::BitwiseOrOp>,
     BitwiseOpConversion<arith::XOrIOp, emitc::BitwiseXorOp>,
+    UnsignedShiftOpConversion<arith::ShLIOp, emitc::BitwiseLeftShiftOp>,
+    SignedShiftOpConversion<arith::ShRSIOp, emitc::BitwiseRightShiftOp>,
+    UnsignedShiftOpConversion<arith::ShRUIOp, emitc::BitwiseRightShiftOp>,
     CmpFOpConversion,
     CmpIOpConversion,
     NegFOpConversion,
