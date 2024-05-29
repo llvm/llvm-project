@@ -61,17 +61,19 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
                                  ? static_cast<uint64_t>(LocB.Size.getValue())
                                  : MemoryLocation::UnknownSize);
 
-    // Before calling getMinusSCEV(), we could try the ptrtpoint pointer
-    // operands so that you can handle two pointers with different pointer
-    // bases.
+    // Firstly, try to convert the two pointers into ptrtoint expressions to
+    // handle two pointers with different pointer bases.
+    // Either both pointers are used with ptrtoint or neither, so we can't end
+    // up with a ptr + int mix (not entirely sure whether it's possible for just
+    // one of the conversions to fail).
     const SCEV *AInt =
         SE.getPtrToIntExpr(AS, SE.getEffectiveSCEVType(AS->getType()));
-    if (!isa<SCEVCouldNotCompute>(AInt))
-      AS = AInt;
     const SCEV *BInt =
         SE.getPtrToIntExpr(BS, SE.getEffectiveSCEVType(BS->getType()));
-    if (!isa<SCEVCouldNotCompute>(BInt))
+    if (!isa<SCEVCouldNotCompute>(AInt) && !isa<SCEVCouldNotCompute>(BInt)) {
+      AS = AInt;
       BS = BInt;
+    }
 
     // Compute the difference between the two pointers.
     const SCEV *BA = SE.getMinusSCEV(BS, AS);
