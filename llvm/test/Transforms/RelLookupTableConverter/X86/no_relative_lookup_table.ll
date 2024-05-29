@@ -10,6 +10,20 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @.str.2 = private unnamed_addr constant [4 x i8] c"two\00", align 1
 @.str.3 = private unnamed_addr constant [8 x i8] c"default\00", align 1
 
+;; These globals structurally can be made PIC-friendly, but will not be
+;; transformed because they have a use that could potentially escape the
+;; visibility of this TU. If we want to transform a global, we must be able
+;; to see all uses of it.
+; CHECK-DAG: @escapes_through_call = internal constant [2 x ptr]
+@escapes_through_call = internal constant [2 x ptr] [ ptr @.str, ptr @.str.1 ]
+
+; CHECK-DAG: @escapes_through_ret = internal constant [2 x ptr]
+@escapes_through_ret = internal constant [2 x ptr] [ ptr @.str, ptr @.str.1 ]
+
+;; We allow usage through GEPs, but each GEP must only be used by a load.
+; CHECK-DAG: @escapes_through_gep_call = internal constant [2 x ptr]
+@escapes_through_gep_call = internal constant [2 x ptr] [ ptr @.str, ptr @.str.1 ]
+
 @switch.table.string_table = private unnamed_addr constant [3 x ptr]
                              [
                               ptr @.str,
@@ -49,4 +63,47 @@ switch.lookup:                                    ; preds = %entry
 
 return:                                           ; preds = %entry
   ret ptr @.str.3
+}
+
+
+declare void @extern_func(ptr %p)
+
+define ptr @global_escapes_through_call(i32 %x) {
+entry:
+; CHECK-LABEL: @global_escapes_through_call
+; CHECK:       entry:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x ptr], ptr @escapes_through_call, i32 0, i32 %x
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    call void @extern_func(ptr @escapes_through_call)
+; CHECK-NEXT:    ret ptr [[LOAD]]
+  %0 = getelementptr [2 x ptr], ptr @escapes_through_call, i32 0, i32 %x
+  %1 = load ptr, ptr %0
+  call void @extern_func(ptr @escapes_through_call)
+  ret ptr %1
+}
+
+define ptr @global_escapes_through_ret(i32 %x) {
+entry:
+; CHECK-LABEL: @global_escapes_through_ret
+; CHECK:       entry:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x ptr], ptr @escapes_through_ret, i32 0, i32 %x
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr @escapes_through_ret
+  %0 = getelementptr [2 x ptr], ptr @escapes_through_ret, i32 0, i32 %x
+  %1 = load ptr, ptr %0
+  ret ptr @escapes_through_ret
+}
+
+define ptr @global_escapes_through_gep_call(i32 %x) {
+entry:
+; CHECK-LABEL: @global_escapes_through_gep_call
+; CHECK:       entry:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x ptr], ptr @escapes_through_gep_call, i32 0, i32 %x
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    call void @extern_func(ptr [[GEP]])
+; CHECK-NEXT:    ret ptr [[LOAD]]
+  %0 = getelementptr [2 x ptr], ptr @escapes_through_gep_call, i32 0, i32 %x
+  %1 = load ptr, ptr %0
+  call void @extern_func(ptr %0)
+  ret ptr %1
 }
