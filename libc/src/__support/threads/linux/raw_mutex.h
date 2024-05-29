@@ -45,7 +45,7 @@ protected:
   LIBC_INLINE_VAR static constexpr FutexWordType IN_CONTENTION = 0b10;
 
 private:
-  LIBC_INLINE FutexWordType spin(int spin_count) {
+  LIBC_INLINE FutexWordType spin(unsigned spin_count) {
     FutexWordType result;
     for (;;) {
       result = futex.load(cpp::MemoryOrder::RELAXED);
@@ -53,7 +53,7 @@ private:
       // - the mutex is unlocked
       // - the mutex is in contention
       // - the spin count reaches 0
-      if (result != LOCKED || spin_count == 0)
+      if (result != LOCKED || spin_count == 0u)
         return result;
       // Pause the pipeline to avoid extraneous memory operations due to
       // speculation.
@@ -65,7 +65,7 @@ private:
   // Return true if the lock is acquired. Return false if timeout happens before
   // the lock is acquired.
   LIBC_INLINE bool lock_slow(cpp::optional<Futex::Timeout> timeout,
-                             bool is_pshared, int spin_count) {
+                             bool is_pshared, unsigned spin_count) {
     FutexWordType state = spin(spin_count);
     // Before go into contention state, try to grab the lock.
     if (state == UNLOCKED &&
@@ -105,7 +105,7 @@ public:
   LIBC_INLINE bool
   lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
        bool is_shared = false,
-       int spin_count = LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT) {
+       unsigned spin_count = LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT) {
     // Timeout will not be checked if immediate lock is possible.
     if (LIBC_LIKELY(try_lock()))
       return true;
@@ -122,7 +122,8 @@ public:
   LIBC_INLINE void static destroy([[maybe_unused]] RawMutex *lock) {
     LIBC_ASSERT(lock->futex == UNLOCKED && "Mutex destroyed while used.");
   }
-  friend class CndVar;
+  LIBC_INLINE Futex &get_raw_futex() { return futex; }
+  LIBC_INLINE void reset() { futex = UNLOCKED; }
 };
 } // namespace LIBC_NAMESPACE
 

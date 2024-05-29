@@ -75,11 +75,11 @@ void CndVar::notify_one() {
   if (waitq_front == nullptr)
     waitq_back = nullptr;
 
-  qmtx.futex = RawMutex::UNLOCKED;
+  qmtx.reset();
 
   // this is a special WAKE_OP, so we use syscall directly
   LIBC_NAMESPACE::syscall_impl<long>(
-      FUTEX_SYSCALL_ID, &qmtx.futex.val, FUTEX_WAKE_OP, 1, 1,
+      FUTEX_SYSCALL_ID, &qmtx.get_raw_futex(), FUTEX_WAKE_OP, 1, 1,
       &first->futex_word.val,
       FUTEX_OP(FUTEX_OP_SET, WS_Signalled, FUTEX_OP_CMP_EQ, WS_Waiting));
 }
