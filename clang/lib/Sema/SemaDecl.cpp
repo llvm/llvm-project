@@ -538,8 +538,9 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   } else if (AllowDeducedTemplate) {
     if (auto *TD = getAsTypeTemplateDecl(IIDecl)) {
       assert(!FoundUsingShadow || FoundUsingShadow->getTargetDecl() == TD);
-      TemplateName Template =
-          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD);
+      TemplateName Template = Context.getQualifiedTemplateName(
+          SS ? SS->getScopeRep() : nullptr, /*TemplateKeyword=*/false,
+          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD));
       T = Context.getDeducedTemplateSpecializationType(Template, QualType(),
                                                        false);
       // Don't wrap in a further UsingType.
@@ -1137,12 +1138,10 @@ Corrected:
           dyn_cast<UsingShadowDecl>(*Result.begin());
       assert(!FoundUsingShadow ||
              TD == cast<TemplateDecl>(FoundUsingShadow->getTargetDecl()));
-      Template =
-          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD);
-      if (SS.isNotEmpty())
-        Template = Context.getQualifiedTemplateName(SS.getScopeRep(),
-                                                    /*TemplateKeyword=*/false,
-                                                    Template);
+      Template = Context.getQualifiedTemplateName(
+          SS.getScopeRep(),
+          /*TemplateKeyword=*/false,
+          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD));
     } else {
       // All results were non-template functions. This is a function template
       // name.

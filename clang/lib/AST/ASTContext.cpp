@@ -5006,9 +5006,6 @@ ASTContext::getTemplateSpecializationType(TemplateName Template,
                                           QualType Underlying) const {
   assert(!Template.getAsDependentTemplateName() &&
          "No dependent template names here!");
-  // Look through qualified template names.
-  if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-    Template = QTN->getUnderlyingTemplate();
 
   const auto *TD = Template.getAsTemplateDecl();
   bool IsTypeAlias = TD && TD->isTypeAlias();
@@ -5043,10 +5040,6 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
     TemplateName Template, ArrayRef<TemplateArgument> Args) const {
   assert(!Template.getAsDependentTemplateName() &&
          "No dependent template names here!");
-
-  // Look through qualified template names.
-  if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-    Template = TemplateName(QTN->getUnderlyingTemplate());
 
   // Build the canonical template specialization type.
   TemplateName CanonTemplate = getCanonicalTemplateName(Template);
@@ -5262,10 +5255,12 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
     Arg = TemplateArgument(E);
   } else {
     auto *TTP = cast<TemplateTemplateParmDecl>(Param);
+    TemplateName Name = getQualifiedTemplateName(
+        nullptr, /*TemplateKeyword=*/false, TemplateName(TTP));
     if (TTP->isParameterPack())
-      Arg = TemplateArgument(TemplateName(TTP), std::optional<unsigned>());
+      Arg = TemplateArgument(Name, std::optional<unsigned>());
     else
-      Arg = TemplateArgument(TemplateName(TTP));
+      Arg = TemplateArgument(Name);
   }
 
   if (Param->isTemplateParameterPack())
@@ -9304,7 +9299,8 @@ TemplateName ASTContext::getAssumedTemplateName(DeclarationName Name) const {
 TemplateName ASTContext::getQualifiedTemplateName(NestedNameSpecifier *NNS,
                                                   bool TemplateKeyword,
                                                   TemplateName Template) const {
-  assert(NNS && "Missing nested-name-specifier in qualified template name");
+  assert(Template.getKind() == TemplateName::Template ||
+         Template.getKind() == TemplateName::UsingTemplate);
 
   // FIXME: Canonicalization?
   llvm::FoldingSetNodeID ID;

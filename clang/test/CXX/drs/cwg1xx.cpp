@@ -518,7 +518,7 @@ namespace cwg136 { // cwg136: 3.4
   void q() {
     j(A(), A()); // ok, has default argument
   }
-  extern "C" void k(int, int, int, int); // #cwg136-k 
+  extern "C" void k(int, int, int, int); // #cwg136-k
   namespace NSA {
   struct A {
     friend void cwg136::k(int, int, int, int = 0);
@@ -1048,7 +1048,7 @@ namespace cwg176 { // cwg176: 3.1
     cwg176::X *p4; // #cwg176-p4
     // cxx98-14-error@#cwg176-p4 {{use of class template 'cwg176::X' requires template arguments}}
     //  cxx98-14-note@#cwg176-X {{template is declared here}}
-    // since-cxx17-error@#cwg176-p4 {{use of class template 'X' requires template arguments; argument deduction not allowed in non-static class member}}
+    // since-cxx17-error@#cwg176-p4 {{use of class template 'cwg176::X' requires template arguments; argument deduction not allowed in non-static class member}}
     //  since-cxx17-note@#cwg176-X {{template is declared here}}
   };
 }

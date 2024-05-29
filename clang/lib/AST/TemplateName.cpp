@@ -235,8 +235,8 @@ TemplateNameDependence TemplateName::getDependence() const {
   auto D = TemplateNameDependence::None;
   switch (getKind()) {
   case TemplateName::NameKind::QualifiedTemplate:
-    D |= toTemplateNameDependence(
-        getAsQualifiedTemplateName()->getQualifier()->getDependence());
+    if (NestedNameSpecifier *NNS = getAsQualifiedTemplateName()->getQualifier())
+      D |= toTemplateNameDependence(NNS->getDependence());
     break;
   case TemplateName::NameKind::DependentTemplate:
     D |= toTemplateNameDependence(
@@ -292,9 +292,8 @@ void TemplateName::Profile(llvm::FoldingSetNodeID &ID) {
 
 void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
                          Qualified Qual) const {
-  auto Kind = getKind();
-  TemplateDecl *Template = nullptr;
-  if (Kind == TemplateName::Template || Kind == TemplateName::UsingTemplate) {
+  if (NameKind Kind = getKind();
+      Kind == TemplateName::Template || Kind == TemplateName::UsingTemplate) {
     // After `namespace ns { using std::vector }`, what is the fully-qualified
     // name of the UsingTemplateName `vector` within ns?
     //
@@ -304,46 +303,43 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     // Similar to the UsingType behavior, using declarations are used to import
     // names more often than to export them, thus using the original name is
     // most useful in this case.
-    Template = getAsTemplateDecl();
-  }
-
-  if (Template)
-    if (Policy.CleanUglifiedParameters &&
-        isa<TemplateTemplateParmDecl>(Template) && Template->getIdentifier())
-      OS << Template->getIdentifier()->deuglifiedName();
-    else if (Qual == Qualified::Fully &&
-             getDependence() !=
-                 TemplateNameDependenceScope::DependentInstantiation)
-      Template->printQualifiedName(OS, Policy);
-    else
+    TemplateDecl *Template = getAsTemplateDecl();
+    if (Qual == Qualified::None)
       OS << *Template;
-  else if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName()) {
-    if (Qual == Qualified::Fully &&
-        getDependence() !=
-            TemplateNameDependenceScope::DependentInstantiation) {
-      QTN->getUnderlyingTemplate().getAsTemplateDecl()->printQualifiedName(
-          OS, Policy);
-      return;
-    }
-    if (Qual == Qualified::AsWritten)
-      QTN->getQualifier()->print(OS, Policy);
+    else
+      Template->printQualifiedName(OS, Policy);
+  } else if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName()) {
+    if (NestedNameSpecifier *NNS = QTN->getQualifier();
+        Qual != Qualified::None && NNS)
+      NNS->print(OS, Policy);
     if (QTN->hasTemplateKeyword())
       OS << "template ";
-    OS << *QTN->getUnderlyingTemplate().getAsTemplateDecl();
+
+    TemplateName Underlying = QTN->getUnderlyingTemplate();
+    assert(Underlying.getKind() == TemplateName::Template ||
+           Underlying.getKind() == TemplateName::UsingTemplate);
+
+    TemplateDecl *UTD = Underlying.getAsTemplateDecl();
+    if (IdentifierInfo *II = UTD->getIdentifier();
+        Policy.CleanUglifiedParameters && II &&
+        isa<TemplateTemplateParmDecl>(UTD))
+      OS << II->deuglifiedName();
+    else
+      OS << *UTD;
   } else if (DependentTemplateName *DTN = getAsDependentTemplateName()) {
-    if (Qual == Qualified::AsWritten && DTN->getQualifier())
-      DTN->getQualifier()->print(OS, Policy);
+    if (NestedNameSpecifier *NNS = DTN->getQualifier())
+      NNS->print(OS, Policy);
     OS << "template ";
 
     if (DTN->isIdentifier())
       OS << DTN->getIdentifier()->getName();
     else
       OS << "operator " << getOperatorSpelling(DTN->getOperator());
-  } else if (SubstTemplateTemplateParmStorage *subst
-               = getAsSubstTemplateTemplateParm()) {
+  } else if (SubstTemplateTemplateParmStorage *subst =
+                 getAsSubstTemplateTemplateParm()) {
     subst->getReplacement().print(OS, Policy, Qual);
-  } else if (SubstTemplateTemplateParmPackStorage *SubstPack
-                                        = getAsSubstTemplateTemplateParmPack())
+  } else if (SubstTemplateTemplateParmPackStorage *SubstPack =
+                 getAsSubstTemplateTemplateParmPack())
     OS << *SubstPack->getParameterPack();
   else if (AssumedTemplateStorage *Assumed = getAsAssumedTemplateName()) {
     Assumed->getDeclName().print(OS, Policy);

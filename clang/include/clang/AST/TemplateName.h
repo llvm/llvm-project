@@ -332,7 +332,7 @@ public:
   /// unexpanded parameter pack (for C++0x variadic templates).
   bool containsUnexpandedParameterPack() const;
 
-  enum class Qualified { None, AsWritten, Fully };
+  enum class Qualified { None, AsWritten };
   /// Print the template name.
   ///
   /// \param OS the output stream to which the template name will be
@@ -417,17 +417,18 @@ inline TemplateName TemplateName::getUnderlying() const {
   return *this;
 }
 
-/// Represents a template name that was expressed as a
-/// qualified name.
+/// Represents a template name as written in source code.
 ///
-/// This kind of template name refers to a template name that was
+/// This kind of template name may refer to a template name that was
 /// preceded by a nested name specifier, e.g., \c std::vector. Here,
 /// the nested name specifier is "std::" and the template name is the
-/// declaration for "vector". The QualifiedTemplateName class is only
-/// used to provide "sugar" for template names that were expressed
-/// with a qualified name, and has no semantic meaning. In this
-/// manner, it is to TemplateName what ElaboratedType is to Type,
-/// providing extra syntactic sugar for downstream clients.
+/// declaration for "vector". It may also have been written with the
+/// 'template' keyword. The QualifiedTemplateName class is only
+/// used to provide "sugar" for template names, so that they can
+/// be differentiated from canonical template names. and has no
+/// semantic meaning. In this manner, it is to TemplateName what
+/// ElaboratedType is to Type, providing extra syntactic sugar
+/// for downstream clients.
 class QualifiedTemplateName : public llvm::FoldingSetNode {
   friend class ASTContext;
 

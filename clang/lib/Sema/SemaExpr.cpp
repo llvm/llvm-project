@@ -3284,10 +3284,10 @@ ExprResult Sema::BuildDeclarationNameExpr(
     return CreateRecoveryExpr(NameInfo.getBeginLoc(), NameInfo.getEndLoc(), {});
   }
 
-  if (TemplateDecl *Template = dyn_cast<TemplateDecl>(D)) {
+  if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D)) {
     // Specifically diagnose references to class templates that are missing
     // a template argument list.
-    diagnoseMissingTemplateArguments(TemplateName(Template), Loc);
+    diagnoseMissingTemplateArguments(SS, /*TemplateKeyword=*/false, TD, Loc);
     return ExprError();
   }
 
