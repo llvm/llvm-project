@@ -3,6 +3,7 @@
 
 declare i1 @barrier()
 declare void @llvm.assume(i1)
+declare void @use.i8(i8)
 
 define i1 @icmp_ult_x_y(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_ult_x_y(
@@ -258,6 +259,21 @@ define i1 @icmp_eq_x_invertable_y(i8 %x, i8 %y) {
 ;
   %yy = xor i8 %y, -1
   %and = and i8 %x, %yy
+  %r = icmp eq i8 %x, %and
+  ret i1 %r
+}
+
+define i1 @icmp_eq_x_invertable_y_fail_multiuse(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_x_invertable_y_fail_multiuse(
+; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[YY]], [[X:%.*]]
+; CHECK-NEXT:    call void @use.i8(i8 [[AND]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %yy = xor i8 %y, -1
+  %and = and i8 %x, %yy
+  call void @use.i8(i8 %and)
   %r = icmp eq i8 %x, %and
   ret i1 %r
 }
