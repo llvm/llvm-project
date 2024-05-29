@@ -2270,12 +2270,23 @@ let TargetGuard = "sme2" in {
   def SVCVT_S32_F32_X4 : SInst<"svcvt_{d}[_f32_x4]", "4.d4.M", "i",  MergeNone, "aarch64_sve_fcvtzs_x4", [IsStreaming, IsOverloadWhileOrMultiVecCvt], []>;
 }
 
+let TargetGuard = "sme-f16f16" in {
+  def SVCVT_F32_X2 : SInst<"svcvt_{d}[_f16_x2]", "2h", "f", MergeNone, "aarch64_sve_fcvt_widen_x2", [ IsStreaming],[]>;
+}
+
 //
 // Multi-vector floating-point convert from single-precision to interleaved half-precision/BFloat16
 //
 let TargetGuard = "sme2" in {
   def SVCVTN_F16_X2  : SInst<"svcvtn_f16[_f32_x2]", "e2", "f", MergeNone, "aarch64_sve_fcvtn_x2", [IsStreaming],[]>;
   def SVCVTN_BF16_X2 : SInst<"svcvtn_bf16[_f32_x2]", "$2", "f", MergeNone, "aarch64_sve_bfcvtn_x2", [IsOverloadNone, IsStreaming],[]>;
+}
+
+//
+//Multi-vector floating-point convert from half-precision to deinterleaved single-precision.
+//
+let TargetGuard = "sme-f16f16" in {
+  def SVCVTL_F32_X2 : SInst<"svcvtl_f32[_f16_x2]", "2h", "f", MergeNone, "aarch64_sve_fcvtl_widen_x2", [ IsStreaming],[]>;
 }
 
 //
