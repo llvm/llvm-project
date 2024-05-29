@@ -1,10 +1,16 @@
 // RUN: cir-opt %s -cir-to-mlir --canonicalize | FileCheck %s -check-prefix=MLIR
 // RUN: cir-opt %s -cir-to-mlir --canonicalize -cir-mlir-to-llvm | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
 
+// Note that the following CIR been produced after -cir-mlir-scf-prepare.
+// So the loop invariant in the condition block have been hoisted out of loop.
+
 !s32i = !cir.int<s, 32>
 module {
   cir.global external @a = #cir.zero : !cir.array<!s32i x 100>
 
+  // for (int i = 0; i < 100; ++i)
+  //   a[i] = 3;
+  //
   // MLIR-LABEL: func.func @constantLoopBound()
   // LLVM-LABEL: define void @constantLoopBound()
   cir.func @constantLoopBound() {
@@ -55,6 +61,9 @@ module {
     cir.return
   }
 
+  // for (int i = 0; i <= 100; ++i)
+  //   a[i] = 3;
+  //
   // MLIR-LABEL: func.func @constantLoopBound_LE()
   // LLVM-LABEL: define void @constantLoopBound_LE()
   cir.func @constantLoopBound_LE() {
@@ -105,6 +114,9 @@ module {
     cir.return
   }
 
+  // for (int i = l; i < u; ++i)
+  //   a[i] = 3;
+  //
   // MLIR-LABEL: func.func @variableLoopBound(%arg0: i32, %arg1: i32)
   // LLVM-LABEL: define void @variableLoopBound(i32 %0, i32 %1)
   cir.func @variableLoopBound(%arg0: !s32i, %arg1: !s32i) {
@@ -161,6 +173,9 @@ module {
     cir.return
   }
 
+  // for (int i = l; i <= u; i+=4)
+  //   a[i] = 3;
+  //
   // MLIR-LABEL: func.func @variableLoopBound_LE(%arg0: i32, %arg1: i32)
   // LLVM-LABEL: define void @variableLoopBound_LE(i32 %0, i32 %1)
   cir.func @variableLoopBound_LE(%arg0: !s32i, %arg1: !s32i) {
