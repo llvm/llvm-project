@@ -15,8 +15,6 @@ class AddressRangeTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
 
-        self.dbg.SetAsync(True)
-
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)
         self.launch_info = self.target.GetLaunchInfo()
