@@ -34,9 +34,10 @@ while.end:
   ret void
 }
 
-define dso_local void @overflow(i32 noundef %n) local_unnamed_addr {
-; CHECK-LABEL: 'overflow'
-; CHECK-NEXT:  Classifying expressions for: @overflow
+; Cannot find backedge-count because subtraction of strides is wrapping.
+define dso_local void @stride_overflow(i32 noundef %n) local_unnamed_addr {
+; CHECK-LABEL: 'stride_overflow'
+; CHECK-NEXT:  Classifying expressions for: @stride_overflow
 ; CHECK-NEXT:    %right.06 = phi i32 [ %dec, %while.body ], [ %n, %entry ]
 ; CHECK-NEXT:    --> {%n,+,-1}<nsw><%while.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:    %left.05 = phi i32 [ %inc, %while.body ], [ 2147483647, %entry ]
@@ -45,7 +46,7 @@ define dso_local void @overflow(i32 noundef %n) local_unnamed_addr {
 ; CHECK-NEXT:    --> {-2,+,2147483647}<nuw><nsw><%while.body> U: [-2,-1) S: [-2,0) Exits: <<Unknown>> LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:    %dec = add nsw i32 %right.06, -1
 ; CHECK-NEXT:    --> {(-1 + %n),+,-1}<nsw><%while.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.body: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @overflow
+; CHECK-NEXT:  Determining loop execution counts for: @stride_overflow
 ; CHECK-NEXT:  Loop %while.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %while.body: constant max backedge-taken count is i32 1
 ; CHECK-NEXT:  Loop %while.body: symbolic max backedge-taken count is i32 1
@@ -60,6 +61,41 @@ while.body:
   %inc = add nuw nsw i32 %left.05, 2147483647
   %dec = add nsw i32 %right.06, -1
   %cmp = icmp slt i32 %inc, %dec
+  br i1 %cmp, label %while.body, label %while.end
+
+while.end:
+  ret void
+}
+
+; Cannot find backedge-count because %conv110 is wrapping
+define dso_local void @rhs_wrapping() local_unnamed_addr {
+; CHECK-LABEL: 'rhs_wrapping'
+; CHECK-NEXT:  Classifying expressions for: @rhs_wrapping
+; CHECK-NEXT:    %a = alloca i8, align 1
+; CHECK-NEXT:    --> %a U: full-set S: full-set
+; CHECK-NEXT:    %conv110 = phi i32 [ 0, %entry ], [ %sext8, %while.body ]
+; CHECK-NEXT:    --> {0,+,-1090519040}<%while.body> U: [0,-16777215) S: [-2147483648,2130706433) Exits: <<Unknown>> LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    %conv9 = phi i32 [ -2147483648, %entry ], [ %sext, %while.body ]
+; CHECK-NEXT:    --> {-2147483648,+,16777216}<nsw><%while.body> U: [0,-16777215) S: [-2147483648,2113929217) Exits: <<Unknown>> LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    %sext = add nsw i32 %conv9, 16777216
+; CHECK-NEXT:    --> {-2130706432,+,16777216}<nsw><%while.body> U: [0,-16777215) S: [-2130706432,2130706433) Exits: <<Unknown>> LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    %sext8 = add i32 %conv110, -1090519040
+; CHECK-NEXT:    --> {-1090519040,+,-1090519040}<%while.body> U: [0,-16777215) S: [-2147483648,2130706433) Exits: <<Unknown>> LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @rhs_wrapping
+; CHECK-NEXT:  Loop %while.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %while.body: constant max backedge-taken count is i32 254
+; CHECK-NEXT:  Loop %while.body: symbolic max backedge-taken count is i32 254
+;
+entry:
+  %a = alloca i8, align 1
+  br label %while.body
+
+while.body:
+  %conv110 = phi i32 [ 0, %entry ], [ %sext8, %while.body ]
+  %conv9 = phi i32 [ -2147483648, %entry ], [ %sext, %while.body ]
+  %sext = add nsw i32 %conv9, 16777216
+  %sext8 = add i32 %conv110, -1090519040
+  %cmp = icmp slt i32 %sext, %sext8
   br i1 %cmp, label %while.body, label %while.end
 
 while.end:
