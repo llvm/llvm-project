@@ -1317,7 +1317,7 @@ LogicalResult CppEmitter::emitOperand(Value value) {
     if (failed(precedence))
       return failure();
 
-    // Sub-expressions with equal or lower precedence need to be paranthesized,
+    // Sub-expressions with equal or lower precedence need to be parenthesized,
     // as they might be evaluated in the wrong order depending on the shape of
     // the expression tree.
     bool encloseInParenthesis = precedence.value() <= getExpressionPrecedence();
