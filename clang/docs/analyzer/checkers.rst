@@ -963,14 +963,14 @@ by explicitly marking the ``size`` parameter as sanitized. See the
 
 .. code-block:: c
 
-  void t1(void) {
+  void vulnerable(void) {
     size_t size;
     scanf("%zu", &size);
     int *p = malloc(size); // warn: malloc is called with a tainted (potentially attacker controlled) value
     free(p);
   }
 
-  void t3(void) {
+  void not_vulnerable(void) {
     size_t size = 0;
     scanf("%zu", &size);
     if (1024 < size)
@@ -979,7 +979,7 @@ by explicitly marking the ``size`` parameter as sanitized. See the
     free(p);
   }
 
-  void tcpp(void) {
+  void vulnerable_cpp(void) {
     size_t size = 0;
     scanf("%zu", &size);
     int *ptr = new int[size];// warn: Memory allocation function is called with a tainted (potentially attacker controlled) value

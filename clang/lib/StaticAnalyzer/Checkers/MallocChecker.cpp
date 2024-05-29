@@ -469,7 +469,7 @@ private:
                       llvm::ArrayRef<SymbolRef> TaintedSyms,
                       AllocationFamily Family) const;
 
-  void CheckTaintedness(CheckerContext &C, const CallEvent &Call,
+  void checkTaintedness(CheckerContext &C, const CallEvent &Call,
                         const SVal SizeSVal, ProgramStateRef State,
                         AllocationFamily Family) const;
 
@@ -1710,7 +1710,7 @@ MallocChecker::processNewAllocation(const CXXAllocatorCall &Call,
   if (Call.getOriginExpr()->isArray()) {
     std::optional<const Expr *> SizeEx = NE->getArraySize();
     if (SizeEx)
-      CheckTaintedness(C, Call, C.getSVal(*SizeEx), State, AF_CXXNewArray);
+      checkTaintedness(C, Call, C.getSVal(*SizeEx), State, AF_CXXNewArray);
   }
 
   State = MallocUpdateRefState(C, NE, State, Family, Target);
@@ -1809,10 +1809,6 @@ void MallocChecker::reportTaintBug(StringRef Msg, ProgramStateRef State,
                                    CheckerContext &C,
                                    llvm::ArrayRef<SymbolRef> TaintedSyms,
                                    AllocationFamily Family) const {
-
-  if (!ChecksEnabled[CK_TaintAllocChecker])
-    return;
-
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State, this)) {
     if (!BT_TaintedAlloc)
       BT_TaintedAlloc.reset(new BugType(CheckNames[CK_TaintAllocChecker],
@@ -1826,9 +1822,11 @@ void MallocChecker::reportTaintBug(StringRef Msg, ProgramStateRef State,
   }
 }
 
-void MallocChecker::CheckTaintedness(CheckerContext &C, const CallEvent &Call,
+void MallocChecker::checkTaintedness(CheckerContext &C, const CallEvent &Call,
                                      const SVal SizeSVal, ProgramStateRef State,
                                      AllocationFamily Family) const {
+  if (!ChecksEnabled[CK_TaintAllocChecker])
+    return;
   std::vector<SymbolRef> TaintedSyms =
       taint::getTaintedSymbols(State, SizeSVal);
   if (TaintedSyms.empty())
@@ -1850,7 +1848,7 @@ void MallocChecker::CheckTaintedness(CheckerContext &C, const CallEvent &Call,
     return;
   auto [StateTooLarge, StateNotTooLarge] = State->assume(*Cmp);
   if (!StateTooLarge && StateNotTooLarge) {
-    // we can prove that size is not too large so ok.
+    // We can prove that size is not too large so there is no issue.
     return;
   }
 
@@ -1895,7 +1893,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   if (Size.isUndef())
     Size = UnknownVal();
 
-  CheckTaintedness(C, Call, Size, State, AF_Malloc);
+  checkTaintedness(C, Call, Size, State, AF_Malloc);
 
   // Set the region's extent.
   State = setDynamicExtent(State, RetVal.getAsRegion(),
