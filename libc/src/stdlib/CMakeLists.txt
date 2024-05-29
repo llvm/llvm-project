@@ -50,6 +50,7 @@ add_entrypoint_object(
     quick_exit.h
   DEPENDS
     libc.src.errno.errno
+    libc.src.__support.OSUtil.osutil
 )
 
 add_entrypoint_object(

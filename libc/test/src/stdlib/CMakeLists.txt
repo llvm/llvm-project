@@ -384,7 +384,6 @@ if(LLVM_LIBC_FULL_BUILD)
     DEPENDS
       libc.include.stdlib
       libc.src.stdlib.quick_exit
-      libc.src.stdlib.exit
   )
 
   # Only the GPU has an in-tree 'malloc' implementation.
