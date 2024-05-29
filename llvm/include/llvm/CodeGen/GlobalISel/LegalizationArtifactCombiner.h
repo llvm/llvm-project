@@ -214,8 +214,8 @@ public:
         TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
       // Elide G_SEXT_INREG if possible. This is similar to eliding G_AND in
       // tryCombineZExt. Refer to the comment in tryCombineZExt for rationale.
-      if (KB && KB->computeNumSignBits(TruncSrc) >=
-                    DstTy.getScalarSizeInBits() - SizeInBits + 1)
+      if (KB && KB->computeNumSignBits(TruncSrc) >
+                    DstTy.getScalarSizeInBits() - SizeInBits)
         replaceRegOrBuildCopy(DstReg, TruncSrc, MRI, Builder, UpdatedDefs,
                               Observer);
       else
