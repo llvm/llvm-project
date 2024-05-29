@@ -18,4 +18,3 @@ namespace LIBC_NAMESPACE {
 } // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_QUICK_EXIT_H
-

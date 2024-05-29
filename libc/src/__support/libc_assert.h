@@ -20,8 +20,8 @@
 
 #else // Not LIBC_COPT_USE_C_ASSERT
 
-#include "src/__support/OSUtil/io.h"
 #include "src/__support/OSUtil/exit.h"
+#include "src/__support/OSUtil/io.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 

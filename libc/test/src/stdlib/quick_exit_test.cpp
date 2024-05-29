@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdlib/quick_exit.h"
 #include "src/stdlib/exit.h"
+#include "src/stdlib/quick_exit.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStdlib, quick_exit) {
