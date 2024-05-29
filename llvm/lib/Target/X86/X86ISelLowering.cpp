@@ -57585,6 +57585,7 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
       switch (Constraint[1]) {
       default:
         break;
+      case 'r':
       case 'R':
         return C_RegisterClass;
       }
@@ -57673,6 +57674,7 @@ X86TargetLowering::getSingleConstraintMatchWeight(
     switch (Constraint[1]) {
     default:
       return CW_Invalid;
+    case 'r':
     case 'R':
       if (CallOperandVal->getType()->isIntegerTy())
         Wt = CW_SpecificReg;
@@ -58018,13 +58020,21 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'q':   // GENERAL_REGS in 64-bit mode, Q_REGS in 32-bit mode.
       if (Subtarget.is64Bit()) {
         if (VT == MVT::i8 || VT == MVT::i1)
-          return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
+          return std::make_pair(0U, Subtarget.hasEGPR() && Subtarget.useInlineAsmGPR32()
+                                      ? &X86::GR8RegClass
+                                      : &X86::GR8_NOREX2RegClass);
         if (VT == MVT::i16)
-          return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
+          return std::make_pair(0U, Subtarget.hasEGPR() && Subtarget.useInlineAsmGPR32()
+                                      ? &X86::GR16RegClass
+                                      : &X86::GR16_NOREX2RegClass);
         if (VT == MVT::i32 || VT == MVT::f32)
-          return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
+          return std::make_pair(0U, Subtarget.hasEGPR() && Subtarget.useInlineAsmGPR32()
+                                      ? &X86::GR32RegClass
+                                      : &X86::GR32_NOREX2RegClass);
         if (VT != MVT::f80 && !VT.isVector())
-          return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
+          return std::make_pair(0U, Subtarget.hasEGPR() && Subtarget.useInlineAsmGPR32()
+                                      ? &X86::GR64RegClass
+                                      : &X86::GR64_NOREX2RegClass);
         break;
       }
       [[fallthrough]];
@@ -58043,22 +58053,22 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'r':   // GENERAL_REGS
     case 'l':   // INDEX_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
-        return std::make_pair(0U, Subtarget.useInlineAsmGPR32()
-                                      ? &X86::GR8_NOREX2RegClass
-                                      : &X86::GR8RegClass);
+        return std::make_pair(0U, Subtarget.hasEGPR() && Subtarget.useInlineAsmGPR32()
+                                      ? &X86::GR8RegClass
+                                      : &X86::GR8_NOREX2RegClass);
       if (VT == MVT::i16)
-        return std::make_pair(0U, Subtarget.useInlineAsmGPR32()
-                                      ? &X86::GR16_NOREX2RegClass
-                                      : &X86::GR16RegClass);
+        return std::make_pair(0U, Subtarget.hasEGPR() && Subtarget.useInlineAsmGPR32()
+                                      ? &X86::GR16RegClass
+                                      : &X86::GR16_NOREX2RegClass);
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
-        return std::make_pair(0U, Subtarget.useInlineAsmGPR32()
-                                      ? &X86::GR32_NOREX2RegClass
-                                      : &X86::GR32RegClass);
+        return std::make_pair(0U, Subtarget.hasEGPR() && Subtarget.useInlineAsmGPR32()
+                                      ? &X86::GR32RegClass
+                                      : &X86::GR32_NOREX2RegClass);
       if (VT != MVT::f80 && !VT.isVector())
-        return std::make_pair(0U, Subtarget.useInlineAsmGPR32()
-                                      ? &X86::GR64_NOREX2RegClass
-                                      : &X86::GR64RegClass);
+        return std::make_pair(0U, Subtarget.hasEGPR() && Subtarget.useInlineAsmGPR32()
+                                      ? &X86::GR64RegClass
+                                      : &X86::GR64_NOREX2RegClass);
     case 'R':   // LEGACY_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
         return std::make_pair(0U, &X86::GR8_NOREXRegClass);
@@ -58285,13 +58295,22 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     switch (Constraint[1]) {
     default:
       break;
+    case 'r':
+      if (VT == MVT::i8 || VT == MVT::i1)
+        return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
+      if (VT == MVT::i16)
+        return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
+      if (VT == MVT::i32 || VT == MVT::f32)
+        return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
+      if (VT != MVT::f80 && !VT.isVector())
+        return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
+      break;
     case 'R':
       if (VT == MVT::i8 || VT == MVT::i1)
         return std::make_pair(0U, &X86::GR8RegClass);
       if (VT == MVT::i16)
         return std::make_pair(0U, &X86::GR16RegClass);
-      if (VT == MVT::i32 || VT == MVT::f32 ||
-          (!VT.isVector() && !Subtarget.is64Bit()))
+      if (VT == MVT::i32 || VT == MVT::f32)
         return std::make_pair(0U, &X86::GR32RegClass);
       if (VT != MVT::f80 && !VT.isVector())
         return std::make_pair(0U, &X86::GR64RegClass);

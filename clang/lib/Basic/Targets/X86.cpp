@@ -1487,6 +1487,9 @@ bool X86TargetInfo::validateAsmConstraint(
     switch (*Name) {
     default:
       return false;
+    case 'r':
+      Info.setAllowsRegister();
+      return true;
     case 'R':
       Info.setAllowsRegister();
       return true;
@@ -1769,6 +1772,7 @@ std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
       // continue parsing after copying the current constraint into
       // the return string.
       break;
+    case 'r':
     case 'R':
       // "^" hints llvm that this is a 2 letter constraint.
       // "Constraint++" is used to promote the string iterator

@@ -347,7 +347,7 @@ def FeatureNF : SubtargetFeature<"nf", "HasNF", "true",
 def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureUseGPR32InInlineAsm
-    : SubtargetFeature<"inline-asm-use-gpr32", "UseInlineAsmGPR32", "false",
+    : SubtargetFeature<"inline-asm-use-gpr32", "UseInlineAsmGPR32", "true",
                        "Enable use of GPR32 in inline assembly for APX">;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka

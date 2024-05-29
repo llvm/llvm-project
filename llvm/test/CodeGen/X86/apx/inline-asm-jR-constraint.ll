@@ -5,12 +5,12 @@
 
 ; ERR: error: inline assembly requires more registers than available
 
-define void @constraint_jR_test() nounwind "frame-pointer"="all" {
+define void @constraint_jR_test() nounwind {
 ; CHECK-LABEL: constraint_jR_test:
 ; CHECK:    addq %r16, %rax
 entry:
   %reg = alloca i64, align 8
   %0 = load i64, ptr %reg, align 8
-  call void asm sideeffect "add $0, %rax", "^jR,~{rax},~{rbx},~{rcx},~{rdx},~{rdi},~{rsi},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"(i64 %0)
+  call void asm sideeffect "add $0, %rax", "^jR,~{rax},~{rbx},~{rbp},~{rcx},~{rdx},~{rdi},~{rsi},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"(i64 %0)
   ret void
 }
