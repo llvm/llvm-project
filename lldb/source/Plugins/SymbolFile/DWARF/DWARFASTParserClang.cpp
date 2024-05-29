@@ -307,6 +307,7 @@ void DWARFASTParserClang::PrepareContextToReceiveMembers(
   // gmodules case), we can complete the type by doing a full import.
 
   // If this type was not imported from an external AST, there's nothing to do.
+  ClangASTImporter &ast_importer = GetClangASTImporter();
   if (ast_importer.CanImport(tag_decl_ctx)) {
     CompilerType type = m_ast.GetTypeForDecl(tag_decl_ctx);
     auto qual_type = ClangUtil::GetQualType(type);
@@ -2136,7 +2137,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
           GetClangASTImporter().SetRecordLayout(record_decl, layout);
         }
       }
-    } else if (!TypeSystemClang::UseRedeclCompletion())
+    } else if (!TypeSystemClang::UseRedeclCompletion()) {
       // Start the definition if the class is not objective C since the
       // underlying decls respond to isCompleteDefinition(). Objective
       // C decls don't respond to isCompleteDefinition() so we can't
@@ -2164,7 +2165,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),
         *die.GetDIERef());
 
-    m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
+    if (!TypeSystemClang::UseRedeclCompletion())
+      m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
   }
 
   if (!TypeSystemClang::UseRedeclCompletion())
