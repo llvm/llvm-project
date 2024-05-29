@@ -703,6 +703,15 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
         static_cast<SPIRV::LinkageType::LinkageType>(LinkageOp);
     if (LnkType == SPIRV::LinkageType::LinkOnceODR)
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_linkonce_odr);
+  } else if (Dec == SPIRV::Decoration::CacheControlLoadINTEL ||
+             Dec == SPIRV::Decoration::CacheControlStoreINTEL) {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_cache_controls);
+  } else if (Dec == SPIRV::Decoration::HostAccessINTEL) {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_global_variable_host_access);
+  } else if (Dec == SPIRV::Decoration::InitModeINTEL ||
+             Dec == SPIRV::Decoration::ImplementInRegisterMapINTEL) {
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_INTEL_global_variable_fpga_decorations);
   }
 }
 

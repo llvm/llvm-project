@@ -1488,6 +1488,23 @@ def : IntClampPat<V_QSAD_PK_U16_U8_e64, int_amdgcn_qsad_pk_u16_u8>;
 def : IntClampPat<V_MQSAD_U32_U8_e64, int_amdgcn_mqsad_u32_u8>;
 
 //===----------------------------------------------------------------------===//
+// Floating-point operation Patterns
+//===----------------------------------------------------------------------===//
+
+// Implement fminimum(x, y) by using minimum3(x, y, y)
+class MinimumMaximumByMinimum3Maximum3<SDPatternOperator node, ValueType vt,
+                                       Instruction inst> : GCNPat<
+  (vt (node (VOP3Mods vt:$src0, i32:$src0_mods), (VOP3Mods vt:$src1, i32:$src1_mods))),
+  (inst $src0_mods, $src0, $src1_mods, $src1, $src1_mods, $src1)
+>;
+
+// Prefer the real 2 operand form if legal
+let SubtargetPredicate = HasMinimum3Maximum3F32, AddedComplexity = -1000 in {
+def : MinimumMaximumByMinimum3Maximum3<fminimum, f32, V_MINIMUM3_F32_e64>;
+def : MinimumMaximumByMinimum3Maximum3<fmaximum, f32, V_MAXIMUM3_F32_e64>;
+}
+
+//===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
 

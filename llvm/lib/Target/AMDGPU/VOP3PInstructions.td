@@ -146,8 +146,8 @@ def : VOP3PSatPat<ssubsat, V_PK_SUB_I16>;
 } // End SubtargetPredicate = HasVOP3PInsts
 
 let SubtargetPredicate = HasMinimum3Maximum3PKF16, FPDPRounding = 1 in {
-defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
-defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
+defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfminimum3>;
+defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmaximum3>;
 }
 
 // TODO: Make sure we're doing the right thing with denormals. Note
@@ -254,6 +254,17 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                        DSTCLAMP.NONE,
                        VGPR_32:$elt0))
   >;
+}
+
+class MinimumMaximumByMinimum3Maximum3VOP3P<SDPatternOperator node,
+                                            Instruction inst> : GCNPat<
+  (v2f16 (node (VOP3PMods v2f16:$src0, i32:$src0_mods), (VOP3PMods v2f16:$src1, i32:$src1_mods))),
+  (inst $src0_mods, $src0, $src1_mods, $src1, $src1_mods, $src1)
+>;
+
+let SubtargetPredicate = HasMinimum3Maximum3PKF16 in {
+def : MinimumMaximumByMinimum3Maximum3VOP3P<fminimum, V_PK_MINIMUM3_F16>;
+def : MinimumMaximumByMinimum3Maximum3VOP3P<fmaximum, V_PK_MAXIMUM3_F16>;
 }
 
 let SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals] in {
