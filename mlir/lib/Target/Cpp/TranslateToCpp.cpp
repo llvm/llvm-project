@@ -1339,10 +1339,16 @@ LogicalResult CppEmitter::emitOperand(Value value) {
 
   auto expressionOp = dyn_cast_if_present<ExpressionOp>(value.getDefiningOp());
   if (expressionOp && shouldBeInlined(expressionOp)) {
-    os << "(";
+    Operation *user = *expressionOp->getUsers().begin();
+    const bool safeToSkipParentheses =
+        isa<emitc::AssignOp, emitc::CallOp, emitc::CallOpaqueOp, emitc::ForOp,
+            emitc::IfOp, emitc::ReturnOp, func::CallOp, func::ReturnOp>(user);
+    if (!safeToSkipParentheses)
+      os << "(";
     if (failed(emitExpression(expressionOp)))
       return failure();
-    os << ")";
+    if (!safeToSkipParentheses)
+      os << ")";
     return success();
   }
 
