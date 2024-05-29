@@ -1,4 +1,4 @@
-//=- AArch64SchedOryon.td - Nuvia Inc Oryon CPU 001 ---*- tablegen -*-=//
+//=- AArch64SchedOryon.td - Qualcomm Oryon CPU 001 ---*- tablegen -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the scheduling model for Nuvia Inc Oryon
+// This file defines the scheduling model for Qualcomm Oryon
 // family of processors.
 //
 //===----------------------------------------------------------------------===//
@@ -15,15 +15,10 @@
 // Pipeline Description.
 
 def OryonModel : SchedMachineModel {
-  let IssueWidth            =  14; // 14 micro-ops dispatched at a time. IXU=6, LSU=4, VXU=4
-  let MicroOpBufferSize     = 376; // 192 (48x4) entries in micro-op re-order buffer in VXU.
-                                   // 120 ((20+20)x3) entries in micro-op re-order buffer in IXU
-                                   // 64  (16+16)x2 re-order buffer in LSU
-                                   // total 373
-  let LoadLatency           =   4; // 4 cycle Load-to-use from L1D$
-                                   // LSU=5 NEON load
+  let IssueWidth            =  14;
+  let MicroOpBufferSize     = 376;
+  let LoadLatency           =   4;
   let MispredictPenalty     =  13; // 13 cycles for mispredicted branch.
-  // Determined via a mix of micro-arch details and experimentation.
   let LoopMicroOpBufferSize =   0; // Do not have a LoopMicroOpBuffer
   let PostRAScheduler       =   1; // Using PostRA sched.
   let CompleteModel         =   1;
