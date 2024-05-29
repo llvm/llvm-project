@@ -36,14 +36,6 @@ using namespace clang;
 
 namespace {
 
-static bool HostSupportsJit() {
-  auto J = llvm::orc::LLJITBuilder().create();
-  if (J)
-    return true;
-  LLVMConsumeError(llvm::wrap(J.takeError()));
-  return false;
-}
-
 // Incremental processing produces several modules, all using the same "main
 // file". Make sure CodeGen can cope with that, e.g. for static initializers.
 const char TestProgram1[] = "extern \"C\" int funcForProg1() { return 17; }\n"
@@ -64,11 +56,22 @@ const Function *getGlobalInit(llvm::Module *M) {
   return nullptr;
 }
 
+static bool HostSupportsJit() {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (J)
+    return true;
+  LLVMConsumeError(llvm::wrap(J.takeError()));
+  return false;
+}
+
 #ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
 TEST(IncrementalProcessing, DISABLED_EmitCXXGlobalInitFunc) {
 #else
 TEST(IncrementalProcessing, EmitCXXGlobalInitFunc) {
 #endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
+
   std::vector<const char *> ClangArgv = {"-Xclang", "-emit-llvm-only"};
   auto CB = clang::IncrementalCompilerBuilder();
   CB.SetCompilerArgs(ClangArgv);
