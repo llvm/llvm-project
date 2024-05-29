@@ -67,6 +67,9 @@ namespace {
     const MachineBlockFrequencyInfo *MBFI = nullptr;
     SlotIndexes *Indexes = nullptr;
 
+    // - preserves Analysis passes in case RA may be called afterwards.
+    bool preserveRegAllocNeededAnalysis = false;
+
     // SSIntervals - Spill slot intervals.
     std::vector<LiveInterval*> SSIntervals;
 
@@ -142,7 +145,9 @@ namespace {
   public:
     static char ID; // Pass identification
 
-    StackSlotColoring() : MachineFunctionPass(ID) {
+    StackSlotColoring(bool preserveRegAllocNeededAnalysis_ = false)
+        : MachineFunctionPass(ID),
+          preserveRegAllocNeededAnalysis(preserveRegAllocNeededAnalysis_) {
       initializeStackSlotColoringPass(*PassRegistry::getPassRegistry());
     }
 
@@ -562,4 +567,9 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   Assignments.clear();
 
   return Changed;
+}
+
+FunctionPass *
+llvm::createStackSlotColoring(bool preserveRegAllocNeededAnalysis) {
+  return new StackSlotColoring(preserveRegAllocNeededAnalysis);
 }
