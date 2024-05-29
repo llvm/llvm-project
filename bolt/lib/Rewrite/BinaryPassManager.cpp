@@ -257,11 +257,10 @@ static cl::opt<bool> CMOVConversionFlag("cmov-conversion",
                                         cl::ReallyHidden,
                                         cl::cat(BoltOptCategory));
 
-
-static cl::opt<bool>
-    ShortenInstructions("shorten-instructions",
-                         cl::desc("shorten instructions"), cl::init(true),
-                         cl::cat(BoltOptCategory));
+static cl::opt<bool> ShortenInstructions("shorten-instructions",
+                                         cl::desc("shorten instructions"),
+                                         cl::init(true),
+                                         cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
@@ -375,7 +374,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   else if (opts::Hugify)
     Manager.registerPass(std::make_unique<HugePage>(NeverPrint));
 
-  Manager.registerPass(std::make_unique<ShortenInstructions>(NeverPrint),opts::ShortenInstructions);
+  Manager.registerPass(std::make_unique<ShortenInstructions>(NeverPrint),
+                       opts::ShortenInstructions);
 
   Manager.registerPass(std::make_unique<RemoveNops>(NeverPrint),
                        !opts::KeepNops);
