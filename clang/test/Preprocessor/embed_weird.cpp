@@ -86,3 +86,13 @@ const unsigned char *null_ptr_2 =
 const unsigned char *null_ptr_3 = {
 #embed <null_byte.bin>
 };
+
+#define FILE_NAME <null_byte.bin>
+#define LIMIT 1
+#define OFFSET 0
+#define EMPTY_SUFFIX suffix()
+
+constexpr unsigned char ch =
+#embed FILE_NAME limit(LIMIT) clang::offset(OFFSET) EMPTY_SUFFIX
+;
+static_assert(ch == 0);
