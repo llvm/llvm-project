@@ -15,9 +15,7 @@ define <8 x i8> @trivial(<8 x i8> %a) {
 
 define <4 x i32> @add_same_operands(<4 x i32> %x) {
 ; CHECK-LABEL: @add_same_operands(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF]], [[SHUF]]
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[ADD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = add <4 x i32> [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret <4 x i32> [[REVSHUF]]
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -364,8 +362,7 @@ define <8 x i8> @inner_shuffle(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 define <4 x i32> @extrause_add_same_operands(<4 x i32> %x) {
 ; CHECK-LABEL: @extrause_add_same_operands(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF]], [[SHUF]]
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[ADD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = add <4 x i32> [[X]], [[X]]
 ; CHECK-NEXT:    [[ADD2:%.*]] = add <4 x i32> [[SHUF]], [[REVSHUF]]
 ; CHECK-NEXT:    ret <4 x i32> [[ADD2]]
 ;
@@ -513,9 +510,7 @@ define <8 x half> @fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 
 define <4 x i64> @single_zext(<4 x i32> %x) {
 ; CHECK-LABEL: @single_zext(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[SHUF]] to <4 x i64>
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i64> [[ZEXT]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = zext <4 x i32> [[X:%.*]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[REVSHUF]]
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -695,10 +690,8 @@ define void @trunc(<8 x i64> %a, <8 x i64> %b, ptr %p) {
 
 define <4 x i64> @zext_chain(<4 x i16> %x) {
 ; CHECK-LABEL: @zext_chain(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i16> [[X:%.*]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i16> [[SHUF]] to <4 x i32>
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i32> [[ZEXT]] to <4 x i64>
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i64> [[SEXT]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i16> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = sext <4 x i32> [[TMP1]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[REVSHUF]]
 ;
   %shuf = shufflevector <4 x i16> %x, <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -899,13 +892,11 @@ entry:
 
 define <4 x i8> @singleop(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: @singleop(
-; CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x i8> [[A:%.*]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[B1:%.*]] = shufflevector <4 x i8> [[B:%.*]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[A2:%.*]] = zext <4 x i8> [[A1]] to <4 x i16>
-; CHECK-NEXT:    [[B2:%.*]] = zext <4 x i8> [[B1]] to <4 x i16>
-; CHECK-NEXT:    [[AB:%.*]] = add <4 x i16> [[A2]], [[B2]]
-; CHECK-NEXT:    [[T:%.*]] = trunc <4 x i16> [[AB]] to <4 x i8>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[T]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[B:%.*]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[A:%.*]] to <4 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[R:%.*]] = trunc <4 x i16> [[TMP4]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %a1 = shufflevector <4 x i8> %a, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
