@@ -98,6 +98,8 @@ ABI Changes in This Version
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
+- The text ast-dumper has improved printing of TemplateArguments.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Removed support for constructing on-stack ``TemplateArgumentList``\ s; interfaces should instead
@@ -541,6 +543,9 @@ Improvements to Clang's diagnostics
 - Clang emits a ``-Wparentheses`` warning for expressions with consecutive comparisons like ``x < y < z``.
   Fixes #GH20456.
 
+- Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
+  Fixes #GH93369.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -629,8 +634,13 @@ Bug Fixes in This Version
 - ``__is_array`` and ``__is_bounded_array`` no longer return ``true`` for
   zero-sized arrays. Fixes (#GH54705).
 
+- Correctly reject declarations where a statement is required in C.
+  Fixes #GH92775
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix crash when atomic builtins are called with pointer to zero-size struct (#GH90330)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -734,7 +744,6 @@ Bug Fixes to C++ Support
   from being explicitly specialized for a given implicit instantiation of the class template.
 - Fixed a crash when ``this`` is used in a dependent class scope function template specialization
   that instantiates to a static member function.
-
 - Fix crash when inheriting from a cv-qualified type. Fixes #GH35603
 - Fix a crash when the using enum declaration uses an anonymous enumeration. Fixes (#GH86790).
 - Handled an edge case in ``getFullyPackExpandedSize`` so that we now avoid a false-positive diagnostic. (#GH84220)
@@ -794,6 +803,16 @@ Bug Fixes to C++ Support
   Fixes (#GH87210), (GH89541).
 - Clang no longer tries to check if an expression is immediate-escalating in an unevaluated context.
   Fixes (#GH91308).
+- Fix a crash caused by a regression in the handling of ``source_location``
+  in dependent contexts. Fixes (#GH92680).
+- Fixed a crash when diagnosing failed conversions involving template parameter
+  packs. (#GH93076)
+- Fixed a regression introduced in Clang 18 causing a static function overloading a non-static function
+  with the same parameters not to be diagnosed. (Fixes #GH93456).
+- Clang now diagnoses unexpanded parameter packs in attributes. (Fixes #GH93269).
+- Clang now allows ``@$``` in raw string literals. Fixes (#GH93130).
+- Fix an assertion failure when checking invalid ``this`` usage in the wrong context. (Fixes #GH91536).
+- Clang no longer models dependent NTTP arguments as ``TemplateParamObjectDecl`` s. Fixes (#GH84052).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -956,9 +975,10 @@ clang-format
   ``BreakTemplateDeclarations``.
 - ``AlwaysBreakAfterReturnType`` is deprecated and renamed to
   ``BreakAfterReturnType``.
-- Handles Java ``switch`` expressions.
+- Handles Java switch expressions.
 - Adds ``AllowShortCaseExpressionOnASingleLine`` option.
 - Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
+- Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
 
 libclang
 --------
