@@ -68,10 +68,10 @@ void VTEmitter::run(raw_ostream &OS) {
       continue;
     auto Name = VT->getValueAsString("LLVMName");
     auto Value = VT->getValueAsInt("Value");
-    bool IsInteger = VT->getValueAsInt("isInteger");
-    bool IsFP = VT->getValueAsInt("isFP");
-    bool IsVector = VT->getValueAsInt("isVector");
-    bool IsScalable = VT->getValueAsInt("isScalable");
+    bool IsInteger = VT->getValueAsBit("isInteger");
+    bool IsFP = VT->getValueAsBit("isFP");
+    bool IsVector = VT->getValueAsBit("isVector");
+    bool IsScalable = VT->getValueAsBit("isScalable");
 
     UpdateVTRange("INTEGER_FIXEDLEN_VECTOR_VALUETYPE", Name,
                   IsInteger && IsVector && !IsScalable);
@@ -92,7 +92,7 @@ void VTEmitter::run(raw_ostream &OS) {
        << Name << ", "
        << Value << ", "
        << VT->getValueAsInt("Size") << ", "
-       << VT->getValueAsInt("isOverloaded") << ", "
+       << VT->getValueAsBit("isOverloaded") << ", "
        << (IsInteger ? Name[0] == 'i' ? 3 : 1 : 0) << ", "
        << (IsFP ? Name[0] == 'f' ? 3 : 1 : 0) << ", "
        << IsVector << ", "
@@ -111,14 +111,14 @@ void VTEmitter::run(raw_ostream &OS) {
 
   OS << "#ifdef GET_VT_VECATTR // (Ty, Sc, nElem, ElTy, ElSz)\n";
   for (const auto *VT : VTsByNumber) {
-    if (!VT || !VT->getValueAsInt("isVector"))
+    if (!VT || !VT->getValueAsBit("isVector"))
       continue;
     const auto *ElTy = VT->getValueAsDef("ElementType");
     assert(ElTy);
     // clang-format off
     OS << "  GET_VT_VECATTR("
        << VT->getValueAsString("LLVMName") << ", "
-       << VT->getValueAsInt("isScalable") << ", "
+       << VT->getValueAsBit("isScalable") << ", "
        << VT->getValueAsInt("nElem") << ", "
        << ElTy->getName() << ", "
        << ElTy->getValueAsInt("Size") << ")\n";
