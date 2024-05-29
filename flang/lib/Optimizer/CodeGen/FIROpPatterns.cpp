@@ -251,14 +251,19 @@ mlir::Value ConvertFIRToLLVMPattern::computeBoxSize(
   fir::BaseBoxType firScalarBoxType = firBoxType.getBoxTypeWithNewShape(0);
   mlir::Type llvmScalarBoxType =
       lowerTy().convertBoxTypeAsStruct(firScalarBoxType);
+  llvm::TypeSize scalarBoxSizeCst = dl.getTypeSize(llvmScalarBoxType);
   mlir::Value scalarBoxSize =
-      genConstantOffset(loc, rewriter, dl.getTypeSize(llvmScalarBoxType));
+      genConstantOffset(loc, rewriter, scalarBoxSizeCst);
   mlir::Value rawRank = getRankFromBox(loc, boxTy, box, rewriter);
   mlir::Value rank =
       integerCast(loc, rewriter, scalarBoxSize.getType(), rawRank);
   mlir::Type llvmDimsType = getBoxEleTy(boxTy.llvm, {kDimsPosInBox, 1});
-  mlir::Value sizePerDim =
-      genConstantOffset(loc, rewriter, dl.getTypeSize(llvmDimsType));
+  llvm::TypeSize sizePerDimCst = dl.getTypeSize(llvmDimsType);
+  assert((scalarBoxSizeCst + sizePerDimCst ==
+          dl.getTypeSize(lowerTy().convertBoxTypeAsStruct(
+              firBoxType.getBoxTypeWithNewShape(1)))) &&
+         "descriptor layout requires adding padding for dim field");
+  mlir::Value sizePerDim = genConstantOffset(loc, rewriter, sizePerDimCst);
   mlir::Value dimsSize = rewriter.create<mlir::LLVM::MulOp>(
       loc, sizePerDim.getType(), sizePerDim, rank);
   mlir::Value size = rewriter.create<mlir::LLVM::AddOp>(
