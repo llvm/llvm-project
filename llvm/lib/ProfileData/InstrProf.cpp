@@ -1659,14 +1659,13 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   Buffer += sizeof(uint64_t); // Skip Header.Unused field.
   H.HashType = readNext(Buffer);
   H.HashOffset = readNext(Buffer);
-  const uint64_t ProfileVersion = GET_VERSION(H.Version);
-  if (ProfileVersion >= 8)
+  if (H.getIndexedProfileVersion() >= 8)
     H.MemProfOffset = readNext(Buffer);
-  if (ProfileVersion >= 9)
+  if (H.getIndexedProfileVersion() >= 9)
     H.BinaryIdOffset = readNext(Buffer);
-  if (ProfileVersion >= 10)
+  if (H.getIndexedProfileVersion() >= 10)
     H.TemporalProfTracesOffset = readNext(Buffer);
-  if (ProfileVersion >= 12)
+  if (H.getIndexedProfileVersion() >= 12)
     H.VTableNamesOffset = readNext(Buffer);
   return H;
 }
