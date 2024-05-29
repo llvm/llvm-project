@@ -350,7 +350,7 @@ class DiagnoseHLSLAvailability
     static_assert(HLSLShaderAttr::ShaderTypeMaxValue < 31,
                   "ShaderType is too big for this bitmap");
     assert((((unsigned)1) << (unsigned)ShaderType) != 0 &&
-           (unsigned)ShaderType) != 31 &&
+           ((unsigned)ShaderType) != 31 &&
            "ShaderType is too big for this bitmap");
     CurrentShaderEnvironment = HLSLShaderAttr::getTypeAsEnvironment(ShaderType);
     CurrentShaderStageBit = (1 << ShaderType);
