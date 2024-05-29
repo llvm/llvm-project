@@ -617,6 +617,56 @@ static Error writeMemProfV2(ProfOStream &OS,
   return Error::success();
 }
 
+// Write out MemProf Version3 as follows:
+// uint64_t Version
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Offset for the frame payload
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t CallStackPayloadOffset = Offset for the call stack payload
+// uint64_t CallStackTableOffset = CallStackTableGenerator.Emit
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
+// OnDiskChainedHashTable MemProfCallStackData
+static Error writeMemProfV3(ProfOStream &OS,
+                            memprof::IndexedMemProfData &MemProfData,
+                            bool MemProfFullSchema) {
+  OS.write(memprof::Version3);
+  uint64_t HeaderUpdatePos = OS.tell();
+  OS.write(0ULL); // Reserve space for the memprof record table offset.
+  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
+  OS.write(0ULL); // Reserve space for the memprof frame table offset.
+  OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
+  OS.write(0ULL); // Reserve space for the memprof call stack table offset.
+
+  auto Schema = memprof::getHotColdSchema();
+  if (MemProfFullSchema)
+    Schema = memprof::getFullSchema();
+  writeMemProfSchema(OS, Schema);
+
+  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
+                                                   &Schema, memprof::Version3);
+
+  uint64_t FramePayloadOffset = OS.tell();
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
+
+  uint64_t CallStackPayloadOffset = OS.tell();
+  uint64_t CallStackTableOffset =
+      writeMemProfCallStacks(OS, MemProfData.CallStackData);
+
+  uint64_t Header[] = {
+      RecordTableOffset,      FramePayloadOffset,   FrameTableOffset,
+      CallStackPayloadOffset, CallStackTableOffset,
+  };
+  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
+
+  return Error::success();
+}
+
 // Write out the MemProf data in a requested version.
 static Error writeMemProf(ProfOStream &OS,
                           memprof::IndexedMemProfData &MemProfData,
@@ -629,6 +679,8 @@ static Error writeMemProf(ProfOStream &OS,
     return writeMemProfV1(OS, MemProfData);
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
+  case memprof::Version3:
+    return writeMemProfV3(OS, MemProfData, MemProfFullSchema);
   }
 
   return make_error<InstrProfError>(
