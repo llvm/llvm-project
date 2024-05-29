@@ -3091,7 +3091,7 @@ TEST(Hover, All) {
             HI.NamespaceScope = "";
             HI.Definition =
                 "bool operator==(const Foo &) const noexcept = default";
-            HI.Documentation = "Foo spaceship";
+            HI.Documentation = "";
           }},
   };
 
@@ -3894,7 +3894,7 @@ TEST(Hover, SpaceshipTemplateNoCrash) {
   TU.ExtraArgs.push_back("-std=c++20");
   auto AST = TU.build();
   auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
-  EXPECT_EQ(HI->Documentation, "Foo bar baz");
+  EXPECT_EQ(HI->Documentation, "");
 }
 
 TEST(Hover, ForwardStructNoCrash) {

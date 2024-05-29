@@ -239,7 +239,7 @@ mlir:dlti:
   - mlir/**/DLTI/**
 
 mlir:emitc:
-  - mlir/**/EmitC/**
+  - mlir/**/*EmitC*/**
   - mlir/lib/Target/Cpp/**
 
 mlir:func:
@@ -306,7 +306,7 @@ mlir:tensor:
   - mlir/**/Tensor/**
 
 mlir:tosa:
-  - mlir/**/Tosa/**
+  - mlir/**/*Tosa*/**
 
 mlir:ub:
   - mlir/**/UB/**

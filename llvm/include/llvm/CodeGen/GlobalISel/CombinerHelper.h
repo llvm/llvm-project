@@ -56,9 +56,9 @@ struct IndexedLoadStoreMatchInfo {
   Register Addr;
   Register Base;
   Register Offset;
-  bool RematOffset; // True if Offset is a constant that needs to be
-                    // rematerialized before the new load/store.
-  bool IsPre;
+  bool RematOffset = false; // True if Offset is a constant that needs to be
+                            // rematerialized before the new load/store.
+  bool IsPre = false;
 };
 
 struct PtrAddChain {
@@ -599,10 +599,6 @@ public:
   /// This variant does not erase \p MI after calling the build function.
   void applyBuildFnNoErase(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Use a function which takes in a MachineIRBuilder to perform a combine.
-  /// By default, it erases the instruction \p MI from the function.
-  void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
-
   bool matchOrShiftToFunnelShift(MachineInstr &MI, BuildFnTy &MatchInfo);
   bool matchFunnelShiftToRotate(MachineInstr &MI);
   void applyFunnelShiftToRotate(MachineInstr &MI);
@@ -814,11 +810,20 @@ public:
   /// Match constant LHS ops that should be commuted.
   bool matchCommuteConstantToRHS(MachineInstr &MI);
 
+  /// Combine sext of trunc.
+  bool matchSextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Combine zext of trunc.
+  bool matchZextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   /// Match constant LHS FP ops that should be commuted.
   bool matchCommuteFPConstantToRHS(MachineInstr &MI);
 
   // Given a binop \p MI, commute operands 1 and 2.
   void applyCommuteBinOpOperands(MachineInstr &MI);
+
+  /// Combine select to integer min/max.
+  bool matchSelectIMinMax(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
@@ -857,9 +862,15 @@ public:
   /// register and different indices.
   bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
                                                      BuildFnTy &MatchInfo);
+  /// Use a function which takes in a MachineIRBuilder to perform a combine.
+  /// By default, it erases the instruction def'd on \p MO from the function.
+  void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
   /// Combine insert vector element OOB.
   bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
+                                             BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -956,9 +967,6 @@ private:
   bool tryFoldBoolSelectToLogic(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool tryFoldSelectOfConstants(GSelect *Select, BuildFnTy &MatchInfo);
-
-  /// Try to fold (icmp X, Y) ? X : Y -> integer minmax.
-  bool tryFoldSelectToIntMinMax(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool isOneOrOneSplat(Register Src, bool AllowUndefs);
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);

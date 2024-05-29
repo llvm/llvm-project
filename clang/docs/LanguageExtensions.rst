@@ -656,6 +656,7 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
  T __builtin_elementwise_ceil(T x)           return the smallest integral value greater than or equal to x    floating point types
  T __builtin_elementwise_sin(T x)            return the sine of x interpreted as an angle in radians          floating point types
  T __builtin_elementwise_cos(T x)            return the cosine of x interpreted as an angle in radians        floating point types
+ T __builtin_elementwise_tan(T x)            return the tangent of x interpreted as an angle in radians       floating point types
  T __builtin_elementwise_floor(T x)          return the largest integral value less than or equal to x        floating point types
  T __builtin_elementwise_log(T x)            return the natural logarithm of x                                floating point types
  T __builtin_elementwise_log2(T x)           return the base 2 logarithm of x                                 floating point types
@@ -1661,8 +1662,11 @@ The following type trait primitives are supported by Clang. Those traits marked
   ``T`` from ``U`` is ill-formed.
   Deprecated, use ``__reference_constructs_from_temporary``.
 * ``__reference_constructs_from_temporary(T, U)`` (C++)
-  Returns true if a reference ``T`` can be constructed from a temporary of type
+  Returns true if a reference ``T`` can be direct-initialized from a temporary of type
   a non-cv-qualified ``U``.
+* ``__reference_converts_from_temporary(T, U)`` (C++)
+    Returns true if a reference ``T`` can be copy-initialized from a temporary of type
+    a non-cv-qualified ``U``.
 * ``__underlying_type`` (C++, GNU, Microsoft)
 
 In addition, the following expression traits are supported:
@@ -4399,6 +4403,7 @@ immediately after the name being declared.
 For example, this applies the GNU ``unused`` attribute to ``a`` and ``f``, and
 also applies the GNU ``noreturn`` attribute to ``f``.
 
+Examples:
 .. code-block:: c++
 
   [[gnu::unused]] int a, f [[gnu::noreturn]] ();
@@ -4407,6 +4412,42 @@ Target-Specific Extensions
 ==========================
 
 Clang supports some language features conditionally on some targets.
+
+AMDGPU Language Extensions
+--------------------------
+
+__builtin_amdgcn_fence
+^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_fence`` emits a fence.
+
+* ``unsigned`` atomic ordering, e.g. ``__ATOMIC_ACQUIRE``
+* ``const char *`` synchronization scope, e.g. ``workgroup``
+* Zero or more ``const char *`` address spaces names.
+
+The address spaces arguments must be one of the following string literals:
+
+* ``"local"``
+* ``"global"``
+
+If one or more address space name are provided, the code generator will attempt
+to emit potentially faster instructions that order access to at least those
+address spaces.
+Emitting such instructions may not always be possible and the compiler is free
+to fence more aggressively.
+
+If no address spaces names are provided, all address spaces are fenced.
+
+.. code-block:: c++
+
+  // Fence all address spaces.
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
+  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent");
+
+  // Fence only requested address spaces.
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
+
 
 ARM/AArch64 Language Extensions
 -------------------------------

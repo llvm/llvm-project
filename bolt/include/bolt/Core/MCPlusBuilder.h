@@ -438,8 +438,8 @@ public:
     return false;
   }
 
-  /// Check whether we support inverting this branch
-  virtual bool isUnsupportedBranch(const MCInst &Inst) const { return false; }
+  /// Check whether this conditional branch can be reversed
+  virtual bool isReversibleBranch(const MCInst &Inst) const { return true; }
 
   /// Return true of the instruction is of pseudo kind.
   virtual bool isPseudo(const MCInst &Inst) const {

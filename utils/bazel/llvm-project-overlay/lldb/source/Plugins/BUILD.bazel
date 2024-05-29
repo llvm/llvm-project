@@ -281,7 +281,6 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:HostMacOSXPrivateHeaders",
         "//lldb:InterpreterHeaders",
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
@@ -292,6 +291,7 @@ cc_library(
         "@platforms//os:macos": [
             ":PluginPlatformMacOSXObjCXX",
             ":PluginPlatformMacOSXObjCXXHeaders",
+            "//lldb:HostMacOSXPrivateHeaders",
         ],
         "//conditions:default": [],
     }),

@@ -902,6 +902,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
     int64_t Imm = ConstNode->getSExtValue();
+    // If only the lower 8 bits are used, try to convert this to a simm6 by
+    // sign-extending bit 7. This is neutral without the C extension, and
+    // allows C.LI to be used if C is present.
+    if (isUInt<8>(Imm) && isInt<6>(SignExtend64<8>(Imm)) && hasAllBUsers(Node))
+      Imm = SignExtend64<8>(Imm);
     // If the upper XLen-16 bits are not used, try to convert this to a simm12
     // by sign extending bit 15.
     if (isUInt<16>(Imm) && isInt<12>(SignExtend64<16>(Imm)) &&
@@ -1414,6 +1419,19 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
               RISCV::SLLI, DL, VT, SDValue(SRLIW, 0),
               CurDAG->getTargetConstant(Trailing, DL, VT));
           ReplaceNode(Node, SLLI);
+          return;
+        }
+
+        // If we have 32 bits in the mask, we can use SLLI_UW instead of SLLI.
+        if (C2 < Trailing && Leading + Trailing == 32 && OneUseOrZExtW &&
+            Subtarget->hasStdExtZba()) {
+          SDNode *SRLI = CurDAG->getMachineNode(
+              RISCV::SRLI, DL, VT, X,
+              CurDAG->getTargetConstant(Trailing - C2, DL, VT));
+          SDNode *SLLI_UW = CurDAG->getMachineNode(
+              RISCV::SLLI_UW, DL, VT, SDValue(SRLI, 0),
+              CurDAG->getTargetConstant(Trailing, DL, VT));
+          ReplaceNode(Node, SLLI_UW);
           return;
         }
       }
@@ -3478,8 +3496,15 @@ static bool usesAllOnesMask(SDNode *N, unsigned MaskOpIdx) {
 }
 
 static bool isImplicitDef(SDValue V) {
-  return V.isMachineOpcode() &&
-         V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+  if (!V.isMachineOpcode())
+    return false;
+  if (V.getMachineOpcode() == TargetOpcode::REG_SEQUENCE) {
+    for (unsigned I = 1; I < V.getNumOperands(); I += 2)
+      if (!isImplicitDef(V.getOperand(I)))
+        return false;
+    return true;
+  }
+  return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their

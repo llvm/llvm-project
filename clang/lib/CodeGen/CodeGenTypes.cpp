@@ -561,8 +561,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
           return llvm::StructType::get(getLLVMContext(), EltTys);
         }
         return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
-                                             Info.EC.getKnownMinValue() *
-                                                 Info.NumVectors);
+                                             Info.EC.getKnownMinValue());
       }
 #define WASM_REF_TYPE(Name, MangledName, Id, SingletonId, AS)                  \
   case BuiltinType::Id: {                                                      \

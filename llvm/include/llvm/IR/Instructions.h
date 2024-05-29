@@ -26,6 +26,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/OperandTraits.h"
@@ -1167,12 +1168,25 @@ public:
   /// a constant offset between them.
   bool hasAllConstantIndices() const;
 
+  /// Set nowrap flags for GEP instruction.
+  void setNoWrapFlags(GEPNoWrapFlags NW);
+
   /// Set or clear the inbounds flag on this GEP instruction.
   /// See LangRef.html for the meaning of inbounds on a getelementptr.
+  /// TODO: Remove this method in favor of setNoWrapFlags().
   void setIsInBounds(bool b = true);
+
+  /// Get the nowrap flags for the GEP instruction.
+  GEPNoWrapFlags getNoWrapFlags() const;
 
   /// Determine whether the GEP has the inbounds flag.
   bool isInBounds() const;
+
+  /// Determine whether the GEP has the nusw flag.
+  bool hasNoUnsignedSignedWrap() const;
+
+  /// Determine whether the GEP has the nuw flag.
+  bool hasNoUnsignedWrap() const;
 
   /// Accumulate the constant address offset of this GEP if possible.
   ///
@@ -4369,6 +4383,9 @@ public:
   }
 
   unsigned getNumSuccessors() const { return 2; }
+
+  /// Updates profile metadata by scaling it by \p S / \p T.
+  void updateProfWeight(uint64_t S, uint64_t T);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {

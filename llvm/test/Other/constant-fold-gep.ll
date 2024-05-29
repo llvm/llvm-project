@@ -106,10 +106,10 @@
 
 ; PLAIN: @Y = global ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 2)
 ; PLAIN: @Z = global ptr getelementptr inbounds (i32, ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 0, i64 1, i32 0), i64 1)
-; OPT: @Y = local_unnamed_addr global ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 2)
-; OPT: @Z = local_unnamed_addr global ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 0, i64 1, i32 1)
-; TO: @Y = local_unnamed_addr global ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 2)
-; TO: @Z = local_unnamed_addr global ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 0, i64 1, i32 1)
+; OPT: @Y = local_unnamed_addr global ptr getelementptr inbounds (i8, ptr @ext, i64 48)
+; OPT: @Z = local_unnamed_addr global ptr getelementptr inbounds (i8, ptr @ext, i64 12)
+; TO: @Y = local_unnamed_addr global ptr getelementptr inbounds (i8, ptr @ext, i64 48)
+; TO: @Z = local_unnamed_addr global ptr getelementptr inbounds (i8, ptr @ext, i64 12)
 
 @ext = external global [3 x { i32, i32 }]
 @Y = global ptr getelementptr inbounds ([3 x { i32, i32 }], ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 1), i64 1)
@@ -433,10 +433,10 @@ define ptr @fO() nounwind {
 ; PLAIN:   ret ptr %t
 ; PLAIN: }
 ; OPT: define ptr @fZ() local_unnamed_addr #0 {
-; OPT:   ret ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 0, i64 1, i32 1)
+; OPT:   ret ptr getelementptr inbounds (i8, ptr @ext, i64 12)
 ; OPT: }
 ; TO: define ptr @fZ() local_unnamed_addr #0 {
-; TO:   ret ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 0, i64 1, i32 1)
+; TO:   ret ptr getelementptr inbounds (i8, ptr @ext, i64 12)
 ; TO: }
 ; SCEV: Classifying expressions for: @fZ
 ; SCEV:   %t = bitcast ptr getelementptr inbounds (i32, ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 0, i64 1, i32 0), i64 1) to ptr
@@ -464,7 +464,7 @@ define ptr @same_addrspace() nounwind noinline {
 ; OPT: same_addrspace
   %p = getelementptr inbounds i8, ptr @p0, i32 2
   ret ptr %p
-; OPT: ret ptr getelementptr inbounds ([4 x i8], ptr @p0, i64 0, i64 2)
+; OPT: ret ptr getelementptr inbounds (i8, ptr @p0, i64 2)
 }
 
 @gv1 = internal global i32 1

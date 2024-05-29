@@ -1969,7 +1969,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
     else if (Val == llvm::FunctionReturnThunksKind::Extern &&
-             Args.getLastArgValue(OPT_mcmodel_EQ).equals("large"))
+             Args.getLastArgValue(OPT_mcmodel_EQ) == "large")
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getAsString(Args)
           << Args.getLastArg(OPT_mcmodel_EQ)->getAsString(Args);
@@ -3346,11 +3346,31 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
                                     ArgumentConsumer Consumer) {
   if (Opts.PointerAuthIntrinsics)
     GenerateArg(Consumer, OPT_fptrauth_intrinsics);
+  if (Opts.PointerAuthCalls)
+    GenerateArg(Consumer, OPT_fptrauth_calls);
+  if (Opts.PointerAuthReturns)
+    GenerateArg(Consumer, OPT_fptrauth_returns);
+  if (Opts.PointerAuthAuthTraps)
+    GenerateArg(Consumer, OPT_fptrauth_auth_traps);
+  if (Opts.PointerAuthVTPtrAddressDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_address_discrimination);
+  if (Opts.PointerAuthVTPtrTypeDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_type_discrimination);
+  if (Opts.PointerAuthInitFini)
+    GenerateArg(Consumer, OPT_fptrauth_init_fini);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
                                  DiagnosticsEngine &Diags) {
   Opts.PointerAuthIntrinsics = Args.hasArg(OPT_fptrauth_intrinsics);
+  Opts.PointerAuthCalls = Args.hasArg(OPT_fptrauth_calls);
+  Opts.PointerAuthReturns = Args.hasArg(OPT_fptrauth_returns);
+  Opts.PointerAuthAuthTraps = Args.hasArg(OPT_fptrauth_auth_traps);
+  Opts.PointerAuthVTPtrAddressDiscrimination =
+      Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
+  Opts.PointerAuthVTPtrTypeDiscrimination =
+      Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
+  Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
 }
 
 /// Check if input file kind and language standard are compatible.

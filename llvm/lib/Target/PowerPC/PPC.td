@@ -338,6 +338,12 @@ def FeatureAIXLocalDynamicTLS :
                    "true", "Produce a faster local-dynamic TLS sequence for this "
                    "function for 64-bit AIX">;
 
+def FeatureAIXSharedLibTLSModelOpt :
+  SubtargetFeature<"aix-shared-lib-tls-model-opt",
+                   "HasAIXShLibTLSModelOpt", "true",
+                   "Tune TLS model at function level in shared library loaded "
+                   "with the main program (for 64-bit AIX only)">;
+
 def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",
                    "PredictableSelectIsExpensive",

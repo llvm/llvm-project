@@ -43,7 +43,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 30;
+const unsigned VERSION_MAJOR = 31;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -60,6 +60,9 @@ const unsigned VERSION_MINOR = 1;
 /// The ID numbers of identifiers are consecutive (in order of discovery)
 /// and start at 1. 0 is reserved for NULL.
 using IdentifierID = uint32_t;
+
+/// The number of predefined identifier IDs.
+const unsigned int NUM_PREDEF_IDENT_IDS = 1;
 
 /// An ID number that refers to a declaration in an AST file. See the comments
 /// in DeclIDBase for details.
@@ -122,12 +125,6 @@ struct UnsafeQualTypeDenseMapInfo {
     return (unsigned(v) >> 4) ^ (unsigned(v) >> 9);
   }
 };
-
-/// An ID number that refers to an identifier in an AST file.
-using IdentID = uint32_t;
-
-/// The number of predefined identifier IDs.
-const unsigned int NUM_PREDEF_IDENT_IDS = 1;
 
 /// An ID number that refers to a macro in an AST file.
 using MacroID = uint32_t;

@@ -120,7 +120,7 @@ __attribute__((visibility("protected"), used)) int x;
 
 // HIP: clang{{.*}} -o [[IMG_GFX908:.+]] --target=amdgcn-amd-amdhsa -mcpu=gfx908
 // HIP: clang{{.*}} -o [[IMG_GFX90A:.+]] --target=amdgcn-amd-amdhsa -mcpu=gfx90a
-// HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -compress -compression-level=6 -targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx90a,hipv4-amdgcn-amd-amdhsa--gfx908 -input=/dev/null -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
+// HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -compress -compression-level=6 -targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa--gfx90a,hip-amdgcn-amd-amdhsa--gfx908 -input=/dev/null -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
@@ -210,7 +210,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK-HIP
 
 // RELOCATABLE-LINK-HIP: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa
-// RELOCATABLE-LINK-HIP: clang-offload-bundler{{.*}} -type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx90a -input=/dev/null -input={{.*}} -output={{.*}}
+// RELOCATABLE-LINK-HIP: clang-offload-bundler{{.*}} -type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa--gfx90a -input=/dev/null -input={{.*}} -output={{.*}}
 // RELOCATABLE-LINK-HIP: /usr/bin/ld.lld{{.*}}-r
 // RELOCATABLE-LINK-HIP: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
 
@@ -226,3 +226,10 @@ __attribute__((visibility("protected"), used)) int x;
 // RELOCATABLE-LINK-CUDA: fatbinary{{.*}} -64 --create {{.*}}.fatbin --image=profile=sm_89,file={{.*}}.img
 // RELOCATABLE-LINK-CUDA: /usr/bin/ld.lld{{.*}}-r
 // RELOCATABLE-LINK-CUDA: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
+
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld --override=image=openmp=%t.o %t.o -o a.out 2>&1 \
+// RUN: | FileCheck %s --check-prefix=OVERRIDE
+// OVERRIDE-NOT: clang
+// OVERRIDE: /usr/bin/ld

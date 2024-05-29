@@ -4438,6 +4438,12 @@ bool PPCInstrInfo::isDefMIElgibleForForwarding(MachineInstr &DefMI,
   if (Opc != PPC::ADDItocL8 && Opc != PPC::ADDI && Opc != PPC::ADDI8)
     return false;
 
+  // Skip the optimization of transformTo[NewImm|Imm]FormFedByAdd for ADDItocL8
+  // on AIX which is used for toc-data access. TODO: Follow up to see if it can
+  // apply for AIX toc-data as well.
+  if (Opc == PPC::ADDItocL8 && Subtarget.isAIX())
+    return false;
+
   assert(DefMI.getNumOperands() >= 3 &&
          "Add inst must have at least three operands");
   RegMO = &DefMI.getOperand(1);

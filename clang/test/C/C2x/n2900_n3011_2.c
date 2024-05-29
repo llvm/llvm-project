@@ -76,22 +76,6 @@ void test_zero_size_vla() {
   // CHECK-NEXT: call void @llvm.memset.p0.i64(ptr {{.*}} %[[VLA]], i8 0, i64 %[[BYTES_TO_COPY]], i1 false)
 }
 
-void test_compound_literal_vla() {
-  int num_elts = 12;
-  int *compound_literal_vla = (int[num_elts]){};
-  // CHECK: define {{.*}} void @test_compound_literal_vla
-  // CHECK-NEXT: entry:
-  // CHECK-NEXT: %[[NUM_ELTS_PTR:.+]] = alloca i32
-  // CHECK-NEXT: %[[COMP_LIT_VLA:.+]] = alloca ptr
-  // CHECK-NEXT: %[[COMP_LIT:.+]] = alloca i32
-  // CHECK-NEXT: store i32 12, ptr %[[NUM_ELTS_PTR]]
-  // CHECK-NEXT: %[[NUM_ELTS:.+]] = load i32, ptr %[[NUM_ELTS_PTR]]
-  // CHECK-NEXT: %[[NUM_ELTS_EXT:.+]] = zext i32 %[[NUM_ELTS]] to i64
-  // CHECK-NEXT: %[[BYTES_TO_COPY:.+]] = mul nuw i64 %[[NUM_ELTS_EXT]], 4
-  // CHECK-NEXT: call void @llvm.memset.p0.i64(ptr {{.*}} %[[COMP_LIT]], i8 0, i64 %[[BYTES_TO_COPY]], i1 false)
-  // CHECK-NEXT: store ptr %[[COMP_LIT]], ptr %[[COMP_LIT_VLA]]
-}
-
 void test_nested_structs() {
   struct T t1 = { 1, {} };
   struct T t2 = { 1, { 2, {} } };

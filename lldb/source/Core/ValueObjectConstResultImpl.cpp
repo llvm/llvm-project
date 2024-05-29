@@ -17,6 +17,8 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 
 #include <string>
@@ -66,15 +68,21 @@ ValueObject *ValueObjectConstResultImpl::CreateChildAtIndex(
 
   const bool transparent_pointers = !synthetic_array_member;
   CompilerType compiler_type = m_impl_backend->GetCompilerType();
-  CompilerType child_compiler_type;
 
   ExecutionContext exe_ctx(m_impl_backend->GetExecutionContextRef());
 
-  child_compiler_type = compiler_type.GetChildCompilerTypeAtIndex(
+  auto child_compiler_type_or_err = compiler_type.GetChildCompilerTypeAtIndex(
       &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
       ignore_array_bounds, child_name_str, child_byte_size, child_byte_offset,
       child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
       child_is_deref_of_parent, m_impl_backend, language_flags);
+  CompilerType child_compiler_type;
+  if (!child_compiler_type_or_err)
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
+                   child_compiler_type_or_err.takeError(),
+                   "could not find child: {0}");
+  else
+    child_compiler_type = *child_compiler_type_or_err;
 
   // One might think we should check that the size of the children
   // is always strictly positive, hence we could avoid creating a

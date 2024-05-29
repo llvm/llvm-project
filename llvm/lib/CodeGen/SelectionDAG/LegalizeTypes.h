@@ -275,6 +275,27 @@ private:
     return DAG.getZeroExtendInReg(Op, dl, OldVT);
   }
 
+  /// Get a promoted operand and zero extend it to the final size.
+  SDValue VPSExtPromotedInteger(SDValue Op, SDValue Mask, SDValue EVL) {
+    EVT OldVT = Op.getValueType();
+    SDLoc dl(Op);
+    Op = GetPromotedInteger(Op);
+    // FIXME: Add VP_SIGN_EXTEND_INREG.
+    EVT VT = Op.getValueType();
+    unsigned BitsDiff = VT.getScalarSizeInBits() - OldVT.getScalarSizeInBits();
+    SDValue ShiftCst = DAG.getShiftAmountConstant(BitsDiff, VT, dl);
+    SDValue Shl = DAG.getNode(ISD::VP_SHL, dl, VT, Op, ShiftCst, Mask, EVL);
+    return DAG.getNode(ISD::VP_SRA, dl, VT, Shl, ShiftCst, Mask, EVL);
+  }
+
+  /// Get a promoted operand and zero extend it to the final size.
+  SDValue VPZExtPromotedInteger(SDValue Op, SDValue Mask, SDValue EVL) {
+    EVT OldVT = Op.getValueType();
+    SDLoc dl(Op);
+    Op = GetPromotedInteger(Op);
+    return DAG.getVPZeroExtendInReg(Op, Mask, EVL, dl, OldVT);
+  }
+
   // Promote the given operand V (vector or scalar) according to N's specific
   // reduction kind. N must be an integer VECREDUCE_* or VP_REDUCE_*. Returns
   // the nominal extension opcode (ISD::(ANY|ZERO|SIGN)_EXTEND) and the
@@ -712,6 +733,7 @@ private:
   SDValue PromoteFloatOp_UnaryOp(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_FP_TO_XINT_SAT(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_STORE(SDNode *N, unsigned OpNo);
+  SDValue PromoteFloatOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_SETCC(SDNode *N, unsigned OpNo);
 
@@ -757,6 +779,7 @@ private:
   SDValue SoftPromoteHalfOp_SETCC(SDNode *N);
   SDValue SoftPromoteHalfOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo);
+  SDValue SoftPromoteHalfOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_PATCHPOINT(SDNode *N, unsigned OpNo);
 
