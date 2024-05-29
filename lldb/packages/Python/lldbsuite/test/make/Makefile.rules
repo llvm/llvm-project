@@ -26,6 +26,9 @@
 # SPLIT_DEBUG_SYMBOLS := YES
 # CROSS_COMPILE :=
 # USE_PRIVATE_MODULE_CACHE := YES
+#
+# Specifying USE_LLVM_TOOLS=1 will force usage of the LLVM tools, such as llvm-ar/llvm-objcopy/llvm-strip,
+# instead of the system defaults (ar/objcopy/strip accordingly).
 
 # Uncomment line below for debugging shell commands
 # SHELL = /bin/sh -x
@@ -39,6 +42,11 @@ MAKEFILE_RULES := $(lastword $(MAKEFILE_LIST))
 THIS_FILE_DIR := $(shell dirname $(MAKEFILE_RULES))
 LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 
+STRIP ?= strip
+
+# Empty if not specified.
+LDFLAGS ?=
+
 # The test harness invokes the test Makefiles with an explicit 'all'
 # target, but its handy to be able to recursively call this Makefile
 # without specifying a goal. You almost certainly want to build 'all',
@@ -51,22 +59,24 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 #
 # GNUWin32 uname gives "windows32" or "server version windows32" while
 # some versions of MSYS uname return "MSYS_NT*", but most environments
-# standardize on "Windows_NT", so we'll make it consistent here. 
+# standardize on "Windows_NT", so we'll make it consistent here.
 # When running tests from Visual Studio, the environment variable isn't
 # inherited all the way down to the process spawned for make.
 #----------------------------------------------------------------------
 HOST_OS := $(shell uname -s)
-ifneq (,$(findstring windows32,$(HOST_OS)))
-	HOST_OS := Windows_NT
-endif
-
-ifneq (,$(findstring MSYS_NT,$(HOST_OS)))
-	HOST_OS := Windows_NT
+ifneq (,$(or \
+        $(findstring windows32,$(HOST_OS)),\
+        $(findstring MSYS_NT,$(HOST_OS))))
+    HOST_OS := Windows_NT
 endif
 
 ifeq "$(OS)" ""
 	OS := $(HOST_OS)
 endif
+
+# Retrieve the host arch. We are going to use $HOST_OS/$HOST_ARCH to
+# detect the cross platform testing.
+HOST_ARCH := $(shell uname -m)
 
 #----------------------------------------------------------------------
 # If OS is Windows, force SHELL to be cmd
@@ -77,9 +87,10 @@ endif
 # Also reset BUILDDIR value because "pwd" returns cygwin or msys path
 # which needs to be converted to windows path.
 #----------------------------------------------------------------------
-ifeq "$(OS)" "Windows_NT"
-	SHELL = $(WINDIR)\system32\cmd.exe
-	BUILDDIR := $(shell echo %cd%)
+ifeq "$(HOST_OS)" "Windows_NT"
+    # The latest Windows has the lower-case 'windir' env variable.
+    SHELL := $(or $(windir),$(WINDIR),C:\WINDOWS)\system32\cmd.exe
+    BUILDDIR := $(shell echo %cd%)
 endif
 
 #----------------------------------------------------------------------
@@ -91,16 +102,18 @@ endif
 ifeq "$(HOST_OS)" "Windows_NT"
 	QUOTE = "
 	FIXUP_SYNTAX_HIGHLIGHTING_IN_MY_EDITOR = "
+    EXE_EXT := .exe
 else
 	QUOTE = '
 	FIXUP_SYNTAX_HIGHLIGHTING_IN_MY_EDITOR = '
+    EXE_EXT :=
 endif
 
 #----------------------------------------------------------------------
 # If TRIPLE is not defined try to set the ARCH, CC, CFLAGS, and more
 # from the triple alone
 #----------------------------------------------------------------------
-ARCH_CFLAGS :=
+ARCH_CFLAGS ?=
 ifeq "$(OS)" "Android"
 	include $(THIS_FILE_DIR)/Android.rules
 endif
@@ -231,10 +244,39 @@ DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0
 
+path_wrapper = $(1)
+ifeq "$(HOST_OS)" "Windows_NT"
+  ifeq "$(OS)" "Linux"
+    path_wrapper =  $(subst \,/,$(1))
+    # Normalize base pathes at the same time.
+    override SRCDIR := $(call path_wrapper,$(SRCDIR))
+    override THIS_FILE_DIR := $(call path_wrapper,$(THIS_FILE_DIR))
+  endif
+endif
+
 ifeq "$(OS)" "Darwin"
 	ifneq "$(SDKROOT)" ""
 		CFLAGS += -isysroot "$(SDKROOT)"
 	endif
+endif
+
+# The cross platform build needs some adjustments and requirements.
+ifneq ("$(HOST_OS)-$(HOST_ARCH)", "$(OS)-$(ARCH)")
+    # We need --sysroot for the most cases, but currently do not throw the error.
+    ifeq ("", "$(SDKROOT)")
+        $(warning SDKROOT (sysroot) parameter must be specified for the cross platform builds.)
+    endif
+
+    # Override the target arch options for the compiler.
+    ifeq "$(OS)" "Linux"
+        TOOL_PREFIX := $(subst -unknown,,$(ARCH))
+        # Always specify the target sysroot for the compiler/linker.
+        ARCH_CFLAGS += --sysroot $(SDKROOT)
+        # USE_LIBSTDCPP := 1
+        override MAKEFILE_RULES := $(call path_wrapper,$(MAKEFILE_RULES))
+
+        LDFLAGS += -fuse-ld=lld
+    endif
 endif
 
 ifeq "$(OS)" "Darwin"
@@ -242,12 +284,12 @@ ifeq "$(OS)" "Darwin"
 else
 	CFLAGS += $(ARCHFLAG)$(ARCH)
 endif
-CFLAGS += -I$(LLDB_BASE_DIR)include -I$(LLDB_OBJ_ROOT)/include
+CFLAGS += -I$(call path_wrapper,$(LLDB_BASE_DIR)include) -I$(call path_wrapper,$(LLDB_OBJ_ROOT)/include)
 
-CFLAGS += -I$(SRCDIR) -I$(THIS_FILE_DIR)
+CFLAGS += -I$(call path_wrapper,$(SRCDIR)) -I$(call path_wrapper,$(THIS_FILE_DIR))
 
 ifndef NO_TEST_COMMON_H
-  CFLAGS += -include $(THIS_FILE_DIR)/test_common.h
+  CFLAGS += -include $(call path_wrapper,$(THIS_FILE_DIR))/test_common.h
 endif
 
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS)
@@ -269,7 +311,7 @@ else
 THE_CLANG_MODULE_CACHE_DIR := $(CLANG_MODULE_CACHE_DIR)
 endif
 
-MODULE_BASE_FLAGS := -fmodules -gmodules -fmodules-cache-path=$(THE_CLANG_MODULE_CACHE_DIR)
+MODULE_BASE_FLAGS := -fmodules -gmodules -fmodules-cache-path=$(call path_wrapper,$(THE_CLANG_MODULE_CACHE_DIR))
 MANDATORY_MODULE_BUILD_CFLAGS := $(MODULE_BASE_FLAGS) -gmodules
 # Build flags for building with C++ modules.
 # -glldb is necessary for emitting information about what modules were imported.
@@ -286,14 +328,14 @@ endif
 
 CFLAGS += $(CFLAGS_EXTRAS)
 CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
-LD = $(CC)
-LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
+
 ifeq (,$(filter $(OS), Windows_NT Android Darwin))
 	ifneq (,$(filter YES,$(ENABLE_THREADS)))
-		LDFLAGS += -pthread
+		LDFLAGS += -lpthread
 	endif
 endif
+
 OBJECTS =
 EXE ?= a.out
 
@@ -317,48 +359,81 @@ ifneq "$(DYLIB_NAME)" ""
 	endif
 endif
 
-# Function that returns the counterpart C++ compiler, given $(CC) as arg.
-cxx_compiler_notdir = $(if $(findstring icc,$(1)), \
-			$(subst icc,icpc,$(1)), \
-			$(if $(findstring llvm-gcc,$(1)), \
-				$(subst llvm-gcc,llvm-g++,$(1)), \
-				$(if $(findstring gcc,$(1)), \
-					$(subst gcc,g++,$(1)), \
-					$(subst cc,c++,$(1)))))
-cxx_compiler = $(if $(findstring /,$(1)),$(join $(dir $(1)), $(call cxx_compiler_notdir,$(notdir $(1)))),$(call cxx_compiler_notdir,$(1)))
+# Remove all " and ' characters from the path. Also remove surrounding space chars.
+cstrip = $(strip $(subst ",,$(subst ',,$(1))))
 
-# Function that returns the C++ linker, given $(CC) as arg.
-cxx_linker_notdir = $(if $(findstring icc,$(1)), \
-			$(subst icc,icpc,$(1)), \
-			$(if $(findstring llvm-gcc,$(1)), \
-				$(subst llvm-gcc,llvm-g++,$(1)), \
-				$(if $(findstring gcc,$(1)), \
-					$(subst gcc,g++,$(1)), \
-					$(subst cc,c++,$(1)))))
-cxx_linker = $(if $(findstring /,$(1)),$(join $(dir $(1)), $(call cxx_linker_notdir,$(notdir $(1)))),$(call cxx_linker_notdir,$(1)))
+CC_PATH := $(dir $(call cstrip,$(CC)))
+# Compiler name without extension
+CC_NAME := $(basename $(notdir $(call cstrip,$(CC))))
+# A kind of compiler: clang, gcc, cc & etc.
+CCC := $(or $(lastword $(subst -, ,$(CC_NAME))), $(CC_NAME))
+# A triple prefix of compiler name: <armv7-none-linux-gnu->gcc
+CC_PREFIX := $(if $(findstring -,$(CC_NAME)),$(subst -$(CCC),,$(CC_NAME)),)
+
+# Function returns the tool/compiler name including the triple (or whatnever) prefix
+# if it presents in the original CC.
+cname_with_prefix = $(if $(CC_PREFIX),$(CC_PREFIX)-$(1),$(1))
+
+# A kind of C++ compiler. Get the counterpart C++ compiler based on CC/CCC.
+CXXC = $(strip $(if $(filter $(CCC), icc),icpc,\
+                $(if $(filter $(CCC), llvm-gcc),llvm-g++,\
+                $(if $(filter $(CCC), gcc),g++,\
+                $(if $(filter $(CCC), cc),c++,\
+                $(CCC))))))
+# A name of C++ compiler including the prefix.
+CXX_NAME := $(call cname_with_prefix,$(CXXC))
+
+# These functions return the fully qualified tool name (compiler or whatnevet) based on the previously parsed CC,
+# given a simple tool (clang, gcc, objcopy & etc) name as arg.
+# The first arg is the simplyfied tool name
+# The second arg is a path to the tool (CC_PATH otherwise)
+toolpath_base = $(join $(dir $(or $(2),$(CC_PATH))),$(addsuffix $(EXE_EXT),$(1)))
+# This function assemblies the tool name with the triple prefix.
+toolpath_with_prefix_base = $(join $(dir $(or $(CC_PATH),$(2))),$(addsuffix $(EXE_EXT),$(call cname_with_prefix,$(1))))
+
+TOOLSDIR = $(call path_wrapper,$(call cstrip,$(or $(abspath,$(LLVM_TOOLS_DIR)),$(CC_PATH)))))
+
+ifeq "$(HOST_OS)" "Windows_NT"
+    wrap_quotes = $(QUOTE)$(1)$(QUOTE)
+    # This function enframes the full path with the platform specific quotes. This is necessary to run the c++ executable
+    # properly under 'sh' on Windows host (prevent the path breakage because of Windows style path separators).
+    cxx_compiler = $(if $(CC_PATH),$(call wrap_quotes,$(call toolpath_with_prefix_base,$(1))),$(call toolpath_with_prefix_base,$(1)))
+    # Normalize CC on Windows build host. Wrap it in quotes if CC contains a path to the compiler.
+    override CC := $(call cxx_compiler,$(CCC))
+else
+    cxx_compiler = $(call toolpath_with_prefix_base,$(1))
+endif
+
+# Always override the linker. Assign already normalized CC.
+LD = $(CC)
+# A kind of linker. It always gets retrieved from CC.
+LDC := $(CCC)
+
+# Function that returns the C++ linker, given kind of compiler (CCC or CXXC) as arg.
+cxx_linker = $(call cxx_compiler,$(1))
+
+#Note: LLVM_AR is currently required by API TestBSDArchives.py tests.
+# Assembly a full path to llvm-ar for give  n LLVM_TOOLS_DIR;
+# otherwise assume we have llvm-ar at the same place where is CC specified.
+LLVM_AR = $(call toolpath_base,llvm-ar,$(TOOLSDIR))
 
 ifneq "$(OS)" "Darwin"
-	CLANG_OR_GCC := $(strip $(if $(findstring clang,$(CC)), \
-				$(findstring clang,$(CC)), \
-				$(if $(findstring gcc,$(CC)), \
-					$(findstring gcc,$(CC)), \
-					cc)))
-
-	CC_LASTWORD := $(strip $(lastword $(subst -, ,$(CC))))
-
-	replace_with = $(strip $(if $(findstring $(3),$(CC_LASTWORD)), \
-			$(subst $(3),$(1),$(2)), \
-			$(subst $(3),$(1),$(subst -$(CC_LASTWORD),,$(2)))))
-
-	ifeq "$(notdir $(CC))" "$(CC)"
-		replace_cc_with = $(call replace_with,$(1),$(CC),$(CLANG_OR_GCC))
-	else
-		replace_cc_with = $(join $(dir $(CC)),$(call replace_with,$(1),$(notdir $(CC)),$(CLANG_OR_GCC)))
-	endif
-
-	OBJCOPY ?= $(call replace_cc_with,objcopy)
-	ARCHIVER ?= $(call replace_cc_with,ar)
-	override AR = $(ARCHIVER)
+    # Use the llvm project tool instead of the system defaults.
+    #Note: do not override explicity specified tool from the cmd line.
+    ifdef USE_LLVM_TOOLS
+        OBJCOPY := $(call toolpath_base,llvm-objcopy,$(TOOLSDIR))
+        STRIP := $(call toolpath_base,llvm-strip,$(TOOLSDIR))
+        ARCHIVER := $(call toolpath_base,llvm-ar,$(TOOLSDIR))
+        override AR = $(ARCHIVER)
+        override LLVM_AR = $(ARCHIVER)
+    endif
+    # Assembly a toolchain side tool cmd based on passed CC properties we parsed early.
+    ifneq (,$(filter $(CCC), clang gcc cc))
+        OBJCOPY ?= $(call toolpath_with_prefix_base,objcopy)
+        STRIP ?= $(call toolpath_with_prefix_base,strip)
+        ARCHIVER ?= $(call toolpath_with_prefix_base,ar)
+        override AR = $(ARCHIVER)
+    endif
 endif
 
 ifdef PIE
@@ -369,7 +444,7 @@ endif
 # Windows specific options
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Windows_NT"
-	ifneq (,$(findstring clang,$(CC)))
+	ifeq ($(CCC), clang)
 		# Clang for Windows doesn't support C++ Exceptions
 		CXXFLAGS += -fno-exceptions
 		CXXFLAGS += -D_HAS_EXCEPTIONS=0
@@ -398,11 +473,33 @@ ifeq (1, $(USE_SYSTEM_STDLIB))
 	endif
 endif
 
+ifeq (,$(or $(USE_LIBSTDCPP), $(USE_LIBCPP), $(USE_SYSTEM_STDLIB)))
+	# If no explicit request was made, but we have paths to a custom libcxx, use
+	# them.
+	ifneq ($(and $(LIBCPP_INCLUDE_DIR), $(LIBCPP_LIBRARY_DIR)),)
+		CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(LIBCPP_INCLUDE_DIR)
+		ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
+				CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
+		endif
+		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++ -lc++abi
+	# Otherwise no C++ library has been specified. Use stdc++ by default.
+	else
+		USE_LIBSTDCPP := 1
+	endif
+endif
+
 ifeq (1,$(USE_LIBSTDCPP))
 	# Clang requires an extra flag: -stdlib=libstdc++
-	ifneq (,$(findstring clang,$(CC)))
+	ifeq ($(CCC),clang)
 		CXXFLAGS += -stdlib=libstdc++
 		LDFLAGS += -stdlib=libstdc++
+
+        # A case for the cross platform builds.
+        ifneq ("$(HOST_OS)-$(HOST_ARCH)", "$(OS)-$(ARCH)")
+            # Force clang looking for the gcc's headers at specific rootfs folder.
+            CXXFLAGS += --gcc-toolchain=$(SDKROOT)/usr
+            LDFLAGS += --gcc-toolchain=$(SDKROOT)/usr
+        endif
 	endif
 endif
 
@@ -412,14 +509,14 @@ ifeq (1,$(USE_LIBCPP))
 		ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
 				CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
 		endif
-		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
+		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++ -lc++abi
 	else
 		ifeq "$(OS)" "Android"
 				# Nothing to do, this is already handled in
 				# Android.rules.
 		else
 				CXXFLAGS += -stdlib=libc++
-				LDFLAGS += -stdlib=libc++
+				LDFLAGS += -stdlib=libc++ -lc++abi
 		endif
 		ifneq (,$(filter $(OS), FreeBSD Linux NetBSD))
 				ifneq (,$(LLVM_LIBS_DIR))
@@ -436,19 +533,13 @@ ifeq (1, $(USE_SYSTEM_STDLIB))
         endif
         CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(SDKROOT)/usr/include/c++/v1
         LDFLAGS += -L$(SDKROOT)/usr/lib -Wl,-rpath,$(SDKROOT)/usr/lib -lc++
+    else
+        ifneq ("$(HOST_OS)-$(HOST_ARCH)", "$(OS)-$(ARCH)")
+            # Force clang looking for the gcc's headers at specific rootfs folder.
+            CXXFLAGS += -stdlib=libstdc++ --gcc-toolchain=$(SDKROOT)/usr
+            LDFLAGS += -stdlib=libstdc++ --gcc-toolchain=$(SDKROOT)/usr
+        endif
     endif
-endif
-
-# If no explicit request was made, but we have paths to a custom libcxx, use
-# them.
-ifeq ($(or $(USE_LIBSTDCPP), $(USE_LIBCPP), $(USE_SYSTEM_STDLIB)),)
-	ifneq ($(and $(LIBCPP_INCLUDE_DIR), $(LIBCPP_LIBRARY_DIR)),)
-		CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(LIBCPP_INCLUDE_DIR)
-		ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
-				CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
-		endif
-		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
-	endif
 endif
 
 #----------------------------------------------------------------------
@@ -470,8 +561,8 @@ DYLIB_OBJECTS +=$(strip $(DYLIB_C_SOURCES:.c=.o))
 DYLIB_OBJECTS +=$(strip $(DYLIB_OBJC_SOURCES:.m=.o))
 ifneq "$(strip $(DYLIB_CXX_SOURCES))" ""
 	DYLIB_OBJECTS +=$(strip $(patsubst %.mm, %.o, $(DYLIB_CXX_SOURCES:.cpp=.o)))
-	CXX = $(call cxx_compiler,$(CC))
-	LD = $(call cxx_linker,$(CC))
+	CXX = $(call cxx_compiler,$(CXXC))
+	LD = $(call cxx_linker,$(CXXC))
 endif
 
 #----------------------------------------------------------------------
@@ -494,8 +585,8 @@ endif
 #----------------------------------------------------------------------
 ifneq "$(strip $(CXX_SOURCES))" ""
 	OBJECTS +=$(strip $(CXX_SOURCES:.cpp=.o))
-	CXX = $(call cxx_compiler,$(CC))
-	LD = $(call cxx_linker,$(CC))
+	CXX = $(call cxx_compiler,$(CXXC))
+	LD = $(call cxx_linker,$(CXXC))
 endif
 
 #----------------------------------------------------------------------
@@ -511,19 +602,20 @@ endif
 #----------------------------------------------------------------------
 ifneq "$(strip $(OBJCXX_SOURCES))" ""
 	OBJECTS +=$(strip $(OBJCXX_SOURCES:.mm=.o))
-	CXX = $(call cxx_compiler,$(CC))
-	LD = $(call cxx_linker,$(CC))
+	CXX = $(call cxx_compiler,$(CXXC))
+	LD = $(call cxx_linker,$(CXXC))
 	ifeq "$(findstring lobjc,$(LDFLAGS))" ""
 		LDFLAGS +=-lobjc
 	endif
 endif
 
-ifeq ($(findstring clang, $(CXX)), clang)
+ifeq ($(CCC), clang)
 	CXXFLAGS += --driver-mode=g++
 endif
 
 ifneq "$(CXX)" ""
-	ifeq ($(findstring clang, $(LD)), clang)
+    # Specify the driver mode parameter if we use clang as the linker.
+	ifeq ($(LDC), clang)
 		LDFLAGS += --driver-mode=g++
 	endif
 endif
@@ -622,20 +714,20 @@ endif
 
 ifneq "$(PCH_OUTPUT)" ""
 $(PCH_OUTPUT) : $(PCH_CXX_SOURCE)
-	$(CXX) $(CXXFLAGS) -x c++-header -o $@ $<
+	$(CXX) $(CXXFLAGS) -x c++-header -o $@ $(call path_wrapper,$<)
 endif
 
 %.o: %.c %.d
-	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $(call path_wrapper,$<)
 
 %.o: %.cpp %.d $(PCH_OUTPUT)
-	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $(call path_wrapper,$<)
 
 %.o: %.m %.d
-	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $(call path_wrapper,$<)
 
 %.o: %.mm %.d
-	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $(call path_wrapper,$<)
 
 #----------------------------------------------------------------------
 # Automatic variables based on items already entered. Below we create
