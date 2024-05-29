@@ -645,15 +645,18 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
                 SmallVector<int8_t> constants(numElements, ci->getZExtValue());
                 return llvm::ConstantDataArray::get(elementType->getContext(),
                                                     constants);
-              } else if (ci->getBitWidth() == 16) {
+              }
+              if (ci->getBitWidth() == 16) {
                 SmallVector<int16_t> constants(numElements, ci->getZExtValue());
                 return llvm::ConstantDataArray::get(elementType->getContext(),
                                                     constants);
-              } else if (ci->getBitWidth() == 32) {
+              }
+              if (ci->getBitWidth() == 32) {
                 SmallVector<int32_t> constants(numElements, ci->getZExtValue());
                 return llvm::ConstantDataArray::get(elementType->getContext(),
                                                     constants);
-              } else if (ci->getBitWidth() == 64) {
+              }
+              if (ci->getBitWidth() == 64) {
                 SmallVector<int64_t> constants(numElements, ci->getZExtValue());
                 return llvm::ConstantDataArray::get(elementType->getContext(),
                                                     constants);

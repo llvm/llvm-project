@@ -2399,5 +2399,5 @@ llvm.linker_options ["/DEFAULTLIB:", "libcmtd"]
 
 // -----
 
-//CHECK: @big_ = common global [4294967296 x i8] zeroinitializer
+// CHECK: @big_ = common global [4294967296 x i8] zeroinitializer
 llvm.mlir.global common @big_(dense<0> : vector<4294967296xi8>) {addr_space = 0 : i32} : !llvm.array<4294967296 x i8>
