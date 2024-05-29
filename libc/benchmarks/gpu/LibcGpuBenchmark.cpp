@@ -6,17 +6,15 @@
 namespace LIBC_NAMESPACE {
 namespace benchmarks {
 
-FixedVector<Benchmark *, 64> benchmarks_to_run;
+FixedVector<Benchmark *, 64> benchmarks;
 
 void Benchmark::add_benchmark(Benchmark *benchmark) {
-  benchmarks_to_run.push_back(benchmark);
+  benchmarks.push_back(benchmark);
 }
 
-int Benchmark::run_benchmarks() {
-  for (auto it = benchmarks_to_run.rbegin(), e = benchmarks_to_run.rend();
-       it != e; ++it)
+void Benchmark::run_benchmarks() {
+  for (auto it = benchmarks.rbegin(), e = benchmarks.rend(); it != e; ++it)
     (*it)->run();
-  return 0;
 }
 
 BenchmarkResult benchmark(const BenchmarkOptions &options,
@@ -65,14 +63,11 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
         rep.compute_improvement({iterations, sample_cycles});
     best_guess = rep.current_estimation;
 
-    if (samples >= options.max_samples ||
-        iterations >= options.max_iterations) {
+    if (samples >= options.max_samples || iterations >= options.max_iterations)
       break;
-    } else if (total_time >= options.min_duration &&
-               samples >= options.min_samples &&
-               change_ratio < options.epsilon) {
+    if (total_time >= options.min_duration && samples >= options.min_samples &&
+        change_ratio < options.epsilon)
       break;
-    }
 
     iterations *= options.scaling_factor;
   }

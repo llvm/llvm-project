@@ -87,7 +87,7 @@ public:
     add_benchmark(this);
   }
 
-  static int run_benchmarks();
+  static void run_benchmarks();
 
 protected:
   static void add_benchmark(Benchmark *benchmark);
