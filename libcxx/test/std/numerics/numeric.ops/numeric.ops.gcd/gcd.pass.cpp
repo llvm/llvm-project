@@ -17,6 +17,7 @@
 #include <cassert>
 #include <climits>
 #include <cstdint>
+#include <limits>
 #include <random>
 #include <type_traits>
 
@@ -69,12 +70,14 @@ T basic_gcd(T m, T n) {
 template <typename Input>
 void do_fuzzy_tests() {
   std::mt19937 gen(1938);
-  std::uniform_int_distribution<Input> distrib;
+  using DistIntType         = std::conditional_t<sizeof(Input) == 1, int, Input>; // See N4981 [rand.req.genl]/1.5
+  constexpr Input max_input = std::numeric_limits<Input>::max();
+  std::uniform_int_distribution<DistIntType> distrib(0, max_input);
 
   constexpr int nb_rounds = 10000;
   for (int i = 0; i < nb_rounds; ++i) {
-    Input n = distrib(gen);
-    Input m = distrib(gen);
+    Input n = static_cast<Input>(distrib(gen));
+    Input m = static_cast<Input>(distrib(gen));
     assert(std::gcd(n, m) == basic_gcd(n, m));
   }
 }

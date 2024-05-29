@@ -90,7 +90,7 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 #include <version>
 
 #if _HAS_CXX23
-#  define TEST_STD_VER 99
+#  define TEST_STD_VER 23
 #elif _HAS_CXX20
 #  define TEST_STD_VER 20
 #elif _HAS_CXX17
