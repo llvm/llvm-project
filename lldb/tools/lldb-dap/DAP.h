@@ -156,7 +156,7 @@ struct DAP {
   std::unique_ptr<std::ofstream> log;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
-  std::vector<ExceptionBreakpoint> exception_breakpoints;
+  std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
   std::vector<std::string> init_commands;
   std::vector<std::string> pre_run_commands;
   std::vector<std::string> post_run_commands;
@@ -227,6 +227,8 @@ struct DAP {
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
   llvm::json::Value CreateTopLevelScopes();
+
+  void PopulateExceptionBreakpoints();
 
   /// \return
   ///   Attempt to determine if an expression is a variable expression or
