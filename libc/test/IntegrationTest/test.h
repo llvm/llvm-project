@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
 #define LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
 
-#include "src/__support/OSUtil/io.h"
 #include "src/__support/OSUtil/exit.h"
+#include "src/__support/OSUtil/io.h"
 
 #define __AS_STRING(val) #val
 #define __CHECK_TRUE(file, line, val, should_exit)                             \
