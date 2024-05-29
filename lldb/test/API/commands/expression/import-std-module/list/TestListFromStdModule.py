@@ -20,7 +20,7 @@ class TestBasicList(TestBase):
         self.runCmd("settings set target.import-std-module true")
 
         if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
-            [">", "16.0"]
+            [">", "14.0"]
         ):
             list_type = "std::list<int>"
         else:

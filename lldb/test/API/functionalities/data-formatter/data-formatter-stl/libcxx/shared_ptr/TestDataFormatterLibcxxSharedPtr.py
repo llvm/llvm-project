@@ -58,7 +58,7 @@ class TestCase(TestBase):
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
         if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
-            [">", "16.0"]
+            [">", "14.0"]
         ):
             string_type = "std::string"
         else:

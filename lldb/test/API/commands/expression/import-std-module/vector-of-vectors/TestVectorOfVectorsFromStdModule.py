@@ -18,7 +18,7 @@ class TestVectorOfVectors(TestBase):
         )
 
         if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
-            [">", "16.0"]
+            [">", "14.0"]
         ):
             vector_type = "std::vector<int>"
             vector_of_vector_type = "std::vector<std::vector<int> >"

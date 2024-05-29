@@ -15,7 +15,7 @@ class TestCase(TestBase):
             qualifiers = " " + qualifiers
 
         if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
-            [">", "16.0"]
+            [">", "14.0"]
         ):
             return f"std::unique_ptr<{pointee_type}>{qualifiers}"
         else:
@@ -23,7 +23,7 @@ class TestCase(TestBase):
 
     def make_expected_basic_string_ptr(self) -> str:
         if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
-            [">", "16.0"]
+            [">", "14.0"]
         ):
             return f"std::unique_ptr<std::string>"
         else:

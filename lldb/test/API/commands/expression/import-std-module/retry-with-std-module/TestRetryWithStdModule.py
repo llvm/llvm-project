@@ -14,7 +14,7 @@ class TestCase(TestBase):
         )
 
         if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
-            [">", "16.0"]
+            [">", "14.0"]
         ):
             vec_type = "std::vector<int>"
         else:
