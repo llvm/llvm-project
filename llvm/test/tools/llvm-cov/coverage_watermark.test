@@ -29,7 +29,7 @@ ORIGIN: </tr>
 RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -format html -show-region-summary -show-instantiation-summary -o %t.html.dir -path-equivalence=/tmp,%S -coverage-watermark 80,70 %S/showTemplateInstantiations.cpp
 RUN: FileCheck -check-prefix=DOWNGRADE1 %s -input-file %t.html.dir/index.html
 
-DOWNGRADE:1 Totals
+DOWNGRADE1: Totals
 DOWNGRADE1: <td class='column-entry-green'>
 DOWNGRADE1: 100.00% (2/2)
 DOWNGRADE1: <td class='column-entry-green'>
@@ -45,7 +45,7 @@ DOWNGRADE1: </tr>
 RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -format html -show-region-summary -show-instantiation-summary -o %t.html.dir -path-equivalence=/tmp,%S -coverage-watermark 70,50 %S/showTemplateInstantiations.cpp
 RUN: FileCheck -check-prefix=DOWNGRADE2 %s -input-file %t.html.dir/index.html
 
-DOWNGRADE:1 Totals
+DOWNGRADE2: Totals
 DOWNGRADE2: <td class='column-entry-green'>
 DOWNGRADE2: 100.00% (2/2)
 DOWNGRADE2: <td class='column-entry-green'>
@@ -54,6 +54,6 @@ DOWNGRADE2: <td class='column-entry-green'>
 DOWNGRADE2: 75.00% (9/12)
 DOWNGRADE2: <td class='column-entry-yellow'>
 DOWNGRADE2: 66.67% (4/6)
-DOWNGRADE1: <td class='column-entry-gray'>
-DOWNGRADE1: - (0/0)
-DOWNGRADE1: </tr>
+DOWNGRADE2: <td class='column-entry-gray'>
+DOWNGRADE2: - (0/0)
+DOWNGRADE2: </tr>
