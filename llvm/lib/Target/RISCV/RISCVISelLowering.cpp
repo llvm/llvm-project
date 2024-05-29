@@ -16185,8 +16185,8 @@ static SDValue combineTruncOfSraSext(SDNode *N, SelectionDAG &DAG) {
 
 // Combine (truncate_vector_vl (umin X, C)) -> (vnclipu_vl X) if C is maximum
 // value for the truncated type.
-static SDValue combineTruncToVnclipu(SDNode *N, SelectionDAG &DAG,
-                                     const RISCVSubtarget &Subtarget) {
+static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
+                                    const RISCVSubtarget &Subtarget) {
   assert(N->getOpcode() == RISCVISD::TRUNCATE_VECTOR_VL);
 
   MVT VT = N->getSimpleValueType(0);
@@ -16194,15 +16194,15 @@ static SDValue combineTruncToVnclipu(SDNode *N, SelectionDAG &DAG,
   SDValue Mask = N->getOperand(1);
   SDValue VL = N->getOperand(2);
 
-  SDValue Src = N->getOperand(0);
+  auto MatchMinMax = [&VL, &Mask](SDValue V, unsigned Opc, unsigned OpcVL,
+                                  APInt &SplatVal) {
+    if (V.getOpcode() != Opc &&
+        !(V.getOpcode() == OpcVL && V.getOperand(2).isUndef() &&
+          V.getOperand(3) == Mask && V.getOperand(4) == VL))
+      return SDValue();
 
-  // Src must be a UMIN or UMIN_VL.
-  if (Src.getOpcode() != ISD::UMIN &&
-      !(Src.getOpcode() == RISCVISD::UMIN_VL && Src.getOperand(2).isUndef() &&
-        Src.getOperand(3) == Mask && Src.getOperand(4) == VL))
-    return SDValue();
+    SDValue Op = V.getOperand(1);
 
-  auto IsSplat = [&VL](SDValue Op, APInt &SplatVal) {
     // Peek through conversion between fixed and scalable vectors.
     if (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef() &&
         isNullConstant(Op.getOperand(2)) &&
@@ -16213,32 +16213,45 @@ static SDValue combineTruncToVnclipu(SDNode *N, SelectionDAG &DAG,
       Op = Op.getOperand(1).getOperand(0);
 
     if (ISD::isConstantSplatVector(Op.getNode(), SplatVal))
-      return true;
+      return V.getOperand(0);
 
     if (Op.getOpcode() == RISCVISD::VMV_V_X_VL && Op.getOperand(0).isUndef() &&
         Op.getOperand(2) == VL) {
       if (auto *Op1 = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
         SplatVal =
             Op1->getAPIntValue().sextOrTrunc(Op.getScalarValueSizeInBits());
-        return true;
+        return V.getOperand(0);
       }
     }
 
-    return false;
+    return SDValue();
   };
 
-  APInt C;
-  if (!IsSplat(Src.getOperand(1), C))
-    return SDValue();
+  auto DetectUSatPattern = [&](SDValue V) {
+    // Src must be a UMIN or UMIN_VL.
+    APInt C;
+    SDValue UMin = MatchMinMax(V, ISD::UMIN, RISCVISD::UMIN_VL, C);
+    if (!UMin)
+      return SDValue();
 
-  if (!C.isMask(VT.getScalarSizeInBits()))
+    if (!C.isMask(VT.getScalarSizeInBits()))
+      return SDValue();
+
+    return UMin;
+  };
+
+  SDValue Val;
+  unsigned ClipOpc;
+  if ((Val = DetectUSatPattern(N->getOperand(0))))
+    ClipOpc = RISCVISD::VNCLIPU_VL;
+  else
     return SDValue();
 
   SDLoc DL(N);
   // Rounding mode here is arbitrary since we aren't shifting out any bits.
   return DAG.getNode(
-      RISCVISD::VNCLIPU_VL, DL, VT,
-      {Src.getOperand(0), DAG.getConstant(0, DL, VT), DAG.getUNDEF(VT), Mask,
+      ClipOpc, DL, VT,
+      {Val, DAG.getConstant(0, DL, VT), DAG.getUNDEF(VT), Mask,
        DAG.getTargetConstant(RISCVVXRndMode::RNU, DL, Subtarget.getXLenVT()),
        VL});
 }
@@ -16462,7 +16475,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::TRUNCATE_VECTOR_VL:
     if (SDValue V = combineTruncOfSraSext(N, DAG))
       return V;
-    return combineTruncToVnclipu(N, DAG, Subtarget);
+    return combineTruncToVnclip(N, DAG, Subtarget);
   case ISD::TRUNCATE:
     return performTRUNCATECombine(N, DAG, Subtarget);
   case ISD::SELECT:
