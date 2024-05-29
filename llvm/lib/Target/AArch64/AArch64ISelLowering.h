@@ -1027,8 +1027,10 @@ private:
 
   void addTypeForNEON(MVT VT);
   void addTypeForFixedLengthSVE(MVT VT);
-  void addDRTypeForNEON(MVT VT);
-  void addQRTypeForNEON(MVT VT);
+  void addDRType(MVT VT);
+  void addQRType(MVT VT);
+
+  bool shouldExpandBuildVectorWithShuffles(EVT, unsigned) const override;
 
   unsigned allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
                                   SelectionDAG &DAG) const;

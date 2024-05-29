@@ -27,8 +27,12 @@ define void @subvector_v4i8(ptr %in, ptr %out) {
 ;
 ; NONEON-NOSVE-LABEL: subvector_v4i8:
 ; NONEON-NOSVE:       // %bb.0: // %bb1
-; NONEON-NOSVE-NEXT:    ldr w8, [x0]
-; NONEON-NOSVE-NEXT:    str w8, [x1]
+; NONEON-NOSVE-NEXT:    ldrh w8, [x0, #2]
+; NONEON-NOSVE-NEXT:    ldrb w9, [x0, #1]
+; NONEON-NOSVE-NEXT:    ldrb w10, [x0]
+; NONEON-NOSVE-NEXT:    strh w8, [x1, #2]
+; NONEON-NOSVE-NEXT:    strb w9, [x1, #1]
+; NONEON-NOSVE-NEXT:    strb w10, [x1]
 ; NONEON-NOSVE-NEXT:    ret
   %a = load <4 x i8>, ptr %in
   br label %bb1
