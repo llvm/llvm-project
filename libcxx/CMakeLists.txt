@@ -122,7 +122,7 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    on definitions in a shared library. By default, we assume that we're not building
    libc++ for any specific vendor, and we disable those annotations. Vendors wishing
    to provide compile-time errors when using features unavailable on some version of
-   the shared library they shipped should turn this on and see `include/__availability`
+   the shared library they shipped should turn this on and see `include/__configuration/availability.h`
    for more details." OFF)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
