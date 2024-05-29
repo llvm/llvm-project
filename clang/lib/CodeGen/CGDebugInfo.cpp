@@ -5737,6 +5737,90 @@ void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
   Var->addDebugInfo(GVE);
 }
 
+void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
+                                     llvm::Instruction *Value, QualType Ty) {
+  // Only when -g2 or above is specified, debug info for variables will be
+  // generated.
+  if (CGM.getCodeGenOpts().getDebugInfo() <=
+      llvm::codegenoptions::DebugLineTablesOnly)
+    return;
+
+  llvm::DebugLoc SaveDebugLoc = Builder.getCurrentDebugLocation();
+  if (!SaveDebugLoc.get())
+    return;
+
+  llvm::DIFile *Unit = SaveDebugLoc->getFile();
+  llvm::DIType *Type = getOrCreateType(Ty, Unit);
+
+  // Check if Value is already a declared variable and has debug info, in this
+  // case we have nothing to do. Clang emits declared variable as alloca, and
+  // it is loaded upon use, so we identify such pattern here.
+  if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Value)) {
+    llvm::Value *Var = Load->getPointerOperand();
+    if (llvm::Metadata *MDValue = llvm::ValueAsMetadata::getIfExists(Var)) {
+      if (llvm::Value *DbgValue = llvm::MetadataAsValue::getIfExists(
+              CGM.getLLVMContext(), MDValue)) {
+        for (llvm::User *U : DbgValue->users()) {
+          if (llvm::CallInst *DbgDeclare = dyn_cast<llvm::CallInst>(U)) {
+            if (DbgDeclare->getCalledFunction()->getIntrinsicID() ==
+                    llvm::Intrinsic::dbg_declare &&
+                DbgDeclare->getArgOperand(0) == DbgValue) {
+              // There can be implicit type cast applied on a variable if it is
+              // an opaque ptr, in this case its debug info may not match the
+              // actual type of object being used as in the next instruction, so
+              // we will need to emit a pseudo variable for type-casted value.
+              llvm::DILocalVariable *MDNode = cast<llvm::DILocalVariable>(
+                  cast<llvm::MetadataAsValue>(DbgDeclare->getOperand(1))
+                      ->getMetadata());
+              if (MDNode->getType() == Type)
+                return;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Find the correct location to insert a sequence of instructions to
+  // materialize Value on the stack.
+  auto SaveInsertionPoint = Builder.saveIP();
+  if (llvm::InvokeInst *Invoke = dyn_cast<llvm::InvokeInst>(Value))
+    Builder.SetInsertPoint(Invoke->getNormalDest()->begin());
+  else if (llvm::Instruction *Next = Value->getIterator()->getNextNode())
+    Builder.SetInsertPoint(Next);
+  else
+    Builder.SetInsertPoint(Value->getParent());
+  llvm::DebugLoc DL = Value->getDebugLoc();
+  if (DL.get())
+    Builder.SetCurrentDebugLocation(DL);
+  else if (!Builder.getCurrentDebugLocation().get())
+    Builder.SetCurrentDebugLocation(SaveDebugLoc);
+
+  llvm::AllocaInst *PseudoVar = Builder.CreateAlloca(Value->getType());
+  Address PseudoVarAddr(PseudoVar, Value->getType(),
+                        CharUnits::fromQuantity(PseudoVar->getAlign()));
+  llvm::LoadInst *Load = Builder.CreateLoad(PseudoVarAddr);
+  Value->replaceAllUsesWith(Load);
+  Builder.SetInsertPoint(Load);
+  Builder.CreateStore(Value, PseudoVarAddr);
+
+  // Emit debug info for materialized Value.
+  unsigned Line = Builder.getCurrentDebugLocation().getLine();
+  unsigned Column = Builder.getCurrentDebugLocation().getCol();
+  llvm::DILocalVariable *D = DBuilder.createAutoVariable(
+      LexicalBlockStack.back(), "", nullptr, 0, Type, false,
+      llvm::DINode::FlagArtificial);
+  llvm::DILocation *DIL =
+      llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
+                            LexicalBlockStack.back(), CurInlinedAt);
+  SmallVector<uint64_t> Expr;
+  DBuilder.insertDeclare(PseudoVar, D, DBuilder.createExpression(Expr), DIL,
+                         Load);
+
+  Builder.restoreIP(SaveInsertionPoint);
+  Builder.SetCurrentDebugLocation(SaveDebugLoc);
+}
+
 void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
                                   const GlobalDecl GD) {
 
