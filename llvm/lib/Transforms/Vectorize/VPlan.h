@@ -473,7 +473,7 @@ public:
   /// that are actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPBlockBase objects. They are used for concrete
   /// type identification.
-  using VPBlockTy = enum { VPBasicBlockSC, VPRegionBlockSC, VPIRBasicBlockSC };
+  using VPBlockTy = enum { VPRegionBlockSC, VPBasicBlockSC, VPIRBasicBlockSC };
 
   using VPBlocksTy = SmallVectorImpl<VPBlockBase *>;
 
@@ -2833,11 +2833,10 @@ class VPBasicBlock : public VPBlockBase {
 public:
   using RecipeListTy = iplist<VPRecipeBase>;
 
-private:
+protected:
   /// The VPRecipes held in the order of output instructions to generate.
   RecipeListTy Recipes;
 
-protected:
   VPBasicBlock(const unsigned char BlockSC, const Twine &Name = "")
       : VPBlockBase(BlockSC, Name.str()) {}
 
@@ -2954,6 +2953,7 @@ public:
   }
 
 protected:
+  /// Execute the recipes in the IR basic block \p BB.
   void executeRecipes(VPTransformState *State, BasicBlock *BB);
 
 private:
@@ -2966,14 +2966,13 @@ private:
 /// Recipes of the block get added before the first non-phi instruction in the
 /// wrapped block.
 class VPIRBasicBlock : public VPBasicBlock {
-  BasicBlock *WrappedBlock;
+  BasicBlock *IRBB;
 
 public:
-  VPIRBasicBlock(BasicBlock *WrappedBlock)
-      : VPBasicBlock(
-            VPIRBasicBlockSC,
-            (Twine("ir-bb<") + WrappedBlock->getName() + Twine(">")).str()),
-        WrappedBlock(WrappedBlock) {}
+  VPIRBasicBlock(BasicBlock *IRBB)
+      : VPBasicBlock(VPIRBasicBlockSC,
+                     (Twine("ir-bb<") + IRBB->getName() + Twine(">")).str()),
+        IRBB(IRBB) {}
 
   ~VPIRBasicBlock() override {}
 
@@ -2986,13 +2985,13 @@ public:
   void execute(VPTransformState *State) override;
 
   VPIRBasicBlock *clone() override {
-    auto *NewBlock = new VPIRBasicBlock(WrappedBlock);
-    for (VPRecipeBase &R : *this)
+    auto *NewBlock = new VPIRBasicBlock(IRBB);
+    for (VPRecipeBase &R : Recipes)
       NewBlock->appendRecipe(R.clone());
     return NewBlock;
   }
 
-  BasicBlock *getWrappedBlock() const { return WrappedBlock; }
+  BasicBlock *getIRBasicBlock() const { return IRBB; }
 };
 
 /// VPRegionBlock represents a collection of VPBasicBlocks and VPRegionBlocks
