@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodes.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -28,33 +29,41 @@
 namespace llvm {
 
 class BitstreamWriter {
-  /// Out - The buffer that keeps unflushed bytes.
-  SmallVectorImpl<char> &Out;
+  /// Owned buffer, used to init Buffer if the provided stream doesn't happen to
+  /// be a buffer itself.
+  SmallVector<char, 0> OwnBuffer;
+  /// Internal buffer. The writer backpatches, so it is efficient to buffer.
+  SmallVectorImpl<char> &Buffer;
 
-  /// FS - The file stream that Out flushes to. If FS is nullptr, it does not
-  /// support read or seek, Out cannot be flushed until all data are written.
-  raw_fd_stream *FS;
+  /// FS - The file stream that Buffer flushes to. If FS is a raw_fd_stream, the
+  /// writer will incrementally flush at subblock boundaries. Otherwise flushing
+  /// will happen at the end of BitstreamWriter's lifetime.
+  raw_ostream *const FS;
 
-  /// FlushThreshold - If FS is valid, this is the threshold (unit B) to flush
-  /// FS.
+  /// FlushThreshold - this is the threshold (unit B) to flush to FS, if FS is a
+  /// raw_fd_stream.
   const uint64_t FlushThreshold;
 
   /// CurBit - Always between 0 and 31 inclusive, specifies the next bit to use.
-  unsigned CurBit;
+  unsigned CurBit = 0;
 
   /// CurValue - The current value. Only bits < CurBit are valid.
-  uint32_t CurValue;
+  uint32_t CurValue = 0;
 
   /// CurCodeSize - This is the declared size of code values used for the
   /// current block, in bits.
-  unsigned CurCodeSize;
+  unsigned CurCodeSize = 2;
 
   /// BlockInfoCurBID - When emitting a BLOCKINFO_BLOCK, this is the currently
   /// selected BLOCK ID.
-  unsigned BlockInfoCurBID;
+  unsigned BlockInfoCurBID = 0;
 
   /// CurAbbrevs - Abbrevs installed at in this block.
   std::vector<std::shared_ptr<BitCodeAbbrev>> CurAbbrevs;
+
+  // Support for retrieving a section of the output, for purposes such as
+  // checksumming.
+  std::optional<size_t> BlockFlushingStartPos;
 
   struct Block {
     unsigned PrevCodeSize;
@@ -77,13 +86,17 @@ class BitstreamWriter {
   void WriteWord(unsigned Value) {
     Value =
         support::endian::byte_swap<uint32_t, llvm::endianness::little>(Value);
-    Out.append(reinterpret_cast<const char *>(&Value),
-               reinterpret_cast<const char *>(&Value + 1));
+    Buffer.append(reinterpret_cast<const char *>(&Value),
+                  reinterpret_cast<const char *>(&Value + 1));
   }
 
-  uint64_t GetNumOfFlushedBytes() const { return FS ? FS->tell() : 0; }
+  uint64_t GetNumOfFlushedBytes() const {
+    return fdStream() ? fdStream()->tell() : 0;
+  }
 
-  size_t GetBufferOffset() const { return Out.size() + GetNumOfFlushedBytes(); }
+  size_t GetBufferOffset() const {
+    return Buffer.size() + GetNumOfFlushedBytes();
+  }
 
   size_t GetWordIndex() const {
     size_t Offset = GetBufferOffset();
@@ -91,43 +104,91 @@ class BitstreamWriter {
     return Offset / 4;
   }
 
-  /// If the related file stream supports reading, seeking and writing, flush
-  /// the buffer if its size is above a threshold.
-  /// If \p OnClosing is true, and if a stream is provided, flushing happens
+  void flushAndClear() {
+    assert(FS);
+    assert(!Buffer.empty());
+    assert(!BlockFlushingStartPos &&
+           "a call to markAndBlockFlushing should have been paired with a "
+           "call to getMarkedBufferAndResumeFlushing");
+    FS->write(Buffer.data(), Buffer.size());
+    Buffer.clear();
+  }
+
+  /// If the related file stream is a raw_fd_stream, flush the buffer if its
+  /// size is above a threshold. If \p OnClosing is true, flushing happens
   /// regardless of thresholds.
   void FlushToFile(bool OnClosing = false) {
-    if (!FS || Out.empty())
+    if (!FS || Buffer.empty())
       return;
-    if (!OnClosing && Out.size() < FlushThreshold)
+    if (OnClosing)
+      return flushAndClear();
+    if (BlockFlushingStartPos)
       return;
-    FS->write((char *)&Out.front(), Out.size());
-    Out.clear();
+    if (fdStream() && Buffer.size() > FlushThreshold)
+      flushAndClear();
+  }
+
+  raw_fd_stream *fdStream() { return dyn_cast_or_null<raw_fd_stream>(FS); }
+
+  const raw_fd_stream *fdStream() const {
+    return dyn_cast_or_null<raw_fd_stream>(FS);
+  }
+
+  SmallVectorImpl<char> &getInternalBufferFromStream(raw_ostream &OutStream) {
+    if (auto *SV = dyn_cast<raw_svector_ostream>(&OutStream))
+      return SV->buffer();
+    return OwnBuffer;
   }
 
 public:
-  /// Create a BitstreamWriter that writes to Buffer \p O.
-  /// The buffer is flushed incrementally to a raw_fd_stream \p FS, if provided.
+  /// Create a BitstreamWriter over a raw_ostream \p OutStream.
+  /// If \p OutStream is a raw_svector_ostream, the BitstreamWriter will write
+  /// directly to the latter's buffer. In all other cases, the BitstreamWriter
+  /// will use an internal buffer and flush at the end of its lifetime.
   ///
-  /// Flushing to FS happens:
-  ///  - at \ref ExitBlock, and only if \O.size() >= \p FlushThreshold (MB)
-  ///  - unconditionally at the BitstreamWriter destruction.
+  /// If \p is a raw_fd_stream, the BitstreamWriter will also flush
+  /// incrementally, when a subblock is finished, and if the FlushThreshold is
+  /// passed.
   ///
   /// NOTES:
   ///  - \p FlushThreshold's unit is MB.
-  ///  - The provided buffer will always be resized as needed. Its initial size
-  ///    has no bearing on flushing behavior (if \p FS is provided).
   ///  - \p FS is expected to support seek, tell, and read (besides write).
-  ///   The BitstreamWriter makes no attempt to pre-validate FS, meaning errors
-  ///   stemming from an unsupported \p FS will happen during writing.
-  BitstreamWriter(SmallVectorImpl<char> &O, raw_fd_stream *FS = nullptr,
-                  uint32_t FlushThreshold = 512)
-      : Out(O), FS(FS), FlushThreshold(uint64_t(FlushThreshold) << 20),
-        CurBit(0), CurValue(0), CurCodeSize(2) {}
+
+  BitstreamWriter(raw_ostream &OutStream, uint32_t FlushThreshold = 512)
+      : Buffer(getInternalBufferFromStream(OutStream)),
+        FS(!isa<raw_svector_ostream>(OutStream) ? &OutStream : nullptr),
+        FlushThreshold(uint64_t(FlushThreshold) << 20) {}
+
+  /// Convenience constructor for users that start with a vector - avoids
+  /// needing to wrap it in a raw_svector_ostream.
+  BitstreamWriter(SmallVectorImpl<char> &Buff)
+      : Buffer(Buff), FS(nullptr), FlushThreshold(0) {}
 
   ~BitstreamWriter() {
     FlushToWord();
     assert(BlockScope.empty() && CurAbbrevs.empty() && "Block imbalance");
     FlushToFile(/*OnClosing=*/true);
+  }
+
+  /// For scenarios where the user wants to access a section of the stream to
+  /// (for example) compute some checksum, disable flushing and remember the
+  /// position in the internal buffer where that happened. Must be paired with a
+  /// call to getMarkedBufferAndResumeFlushing.
+  void markAndBlockFlushing() {
+    assert(!BlockFlushingStartPos);
+    BlockFlushingStartPos = Buffer.size();
+  }
+
+  /// resumes flushing, but does not flush, and returns the section in the
+  /// internal buffer starting from the position marked with
+  /// markAndBlockFlushing. The return should be processed before any additional
+  /// calls to this object, because those may cause a flush and invalidate the
+  /// return.
+  StringRef getMarkedBufferAndResumeFlushing() {
+    assert(BlockFlushingStartPos);
+    size_t Start = *BlockFlushingStartPos;
+    BlockFlushingStartPos.reset();
+    return {&Buffer[Start], Buffer.size() - Start};
   }
 
   /// Retrieve the current position in the stream, in bits.
@@ -151,16 +212,16 @@ public:
     if (ByteNo >= NumOfFlushedBytes) {
       assert((!endian::readAtBitAlignment<uint8_t, llvm::endianness::little,
                                           unaligned>(
-                 &Out[ByteNo - NumOfFlushedBytes], StartBit)) &&
+                 &Buffer[ByteNo - NumOfFlushedBytes], StartBit)) &&
              "Expected to be patching over 0-value placeholders");
       endian::writeAtBitAlignment<uint8_t, llvm::endianness::little, unaligned>(
-          &Out[ByteNo - NumOfFlushedBytes], NewByte, StartBit);
+          &Buffer[ByteNo - NumOfFlushedBytes], NewByte, StartBit);
       return;
     }
 
     // If the byte offset to backpatch is flushed, use seek to backfill data.
     // First, save the file position to restore later.
-    uint64_t CurPos = FS->tell();
+    uint64_t CurPos = fdStream()->tell();
 
     // Copy data to update into Bytes from the file FS and the buffer Out.
     char Bytes[3]; // Use one more byte to silence a warning from Visual C++.
@@ -169,19 +230,19 @@ public:
     size_t BytesFromBuffer = BytesNum - BytesFromDisk;
 
     // When unaligned, copy existing data into Bytes from the file FS and the
-    // buffer Out so that it can be updated before writing. For debug builds
+    // buffer Buffer so that it can be updated before writing. For debug builds
     // read bytes unconditionally in order to check that the existing value is 0
     // as expected.
 #ifdef NDEBUG
     if (StartBit)
 #endif
     {
-      FS->seek(ByteNo);
-      ssize_t BytesRead = FS->read(Bytes, BytesFromDisk);
+      fdStream()->seek(ByteNo);
+      ssize_t BytesRead = fdStream()->read(Bytes, BytesFromDisk);
       (void)BytesRead; // silence warning
       assert(BytesRead >= 0 && static_cast<size_t>(BytesRead) == BytesFromDisk);
       for (size_t i = 0; i < BytesFromBuffer; ++i)
-        Bytes[BytesFromDisk + i] = Out[i];
+        Bytes[BytesFromDisk + i] = Buffer[i];
       assert((!endian::readAtBitAlignment<uint8_t, llvm::endianness::little,
                                           unaligned>(Bytes, StartBit)) &&
              "Expected to be patching over 0-value placeholders");
@@ -192,13 +253,13 @@ public:
         Bytes, NewByte, StartBit);
 
     // Copy updated data back to the file FS and the buffer Out.
-    FS->seek(ByteNo);
-    FS->write(Bytes, BytesFromDisk);
+    fdStream()->seek(ByteNo);
+    fdStream()->write(Bytes, BytesFromDisk);
     for (size_t i = 0; i < BytesFromBuffer; ++i)
-      Out[i] = Bytes[BytesFromDisk + i];
+      Buffer[i] = Bytes[BytesFromDisk + i];
 
     // Restore the file position.
-    FS->seek(CurPos);
+    fdStream()->seek(CurPos);
   }
 
   void BackpatchHalfWord(uint64_t BitNo, uint16_t Val) {
@@ -491,11 +552,11 @@ public:
 
     // Emit literal bytes.
     assert(llvm::all_of(Bytes, [](UIntTy B) { return isUInt<8>(B); }));
-    Out.append(Bytes.begin(), Bytes.end());
+    Buffer.append(Bytes.begin(), Bytes.end());
 
     // Align end to 32-bits.
     while (GetBufferOffset() & 3)
-      Out.push_back(0);
+      Buffer.push_back(0);
   }
   void emitBlob(StringRef Bytes, bool ShouldEmitSize = true) {
     emitBlob(ArrayRef((const uint8_t *)Bytes.data(), Bytes.size()),

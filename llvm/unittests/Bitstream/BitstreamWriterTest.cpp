@@ -69,11 +69,10 @@ protected:
 
   void write(StringRef TestFilePath, int FlushThreshold,
              llvm::function_ref<void(BitstreamWriter &)> Action) {
-    SmallString<64> Buffer;
     std::error_code EC;
     raw_fd_stream Out(TestFilePath, EC);
     ASSERT_FALSE(EC);
-    BitstreamWriter W(Buffer, &Out, FlushThreshold);
+    BitstreamWriter W(Out, FlushThreshold);
     Action(W);
   }
 };
