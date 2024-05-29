@@ -7,6 +7,8 @@ public:
 
 class Derived : public Base {};
 
+class FinalDerived final : public Base {};
+
 class AbstractBase {
 public:
   virtual void f() = 0;
@@ -61,6 +63,14 @@ void subclassWarnings() {
   // no-warning
 
   delete[] d;
+
+  // Final classes cannot have a dynamic type.
+  FinalDerived *fd = new FinalDerived[10];
+
+  fd += 1;
+  // no-warning
+
+  delete[] fd;
 }
 
 void abstractWarnings() {
@@ -104,20 +114,29 @@ void functionArgument(Base *b) {
 
 using BaseAlias = Base;
 using DerivedAlias = Derived;
+using FinalDerivedAlias = FinalDerived;
 
 using BasePtr = Base*;
 using DerivedPtr = Derived*;
+using FinalDerivedPtr = FinalDerived*;
 
-void typeAliases(BaseAlias *b, DerivedAlias *d, BasePtr bp, DerivedPtr dp) {
+void typeAliases(BaseAlias *b, DerivedAlias *d, FinalDerivedAlias *fd,
+                 BasePtr bp, DerivedPtr dp, FinalDerivedPtr fdp) {
   b += 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base'
 
   d += 1;
   // no-warning
 
+  fd += 1;
+  // no-warning
+
   bp += 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base'
 
   dp += 1;
+  // no-warning
+
+  fdp += 1;
   // no-warning
 }

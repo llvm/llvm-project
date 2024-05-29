@@ -31,13 +31,15 @@ void PointerArithmeticOnPolymorphicObjectCheck::registerMatchers(
   const auto PolymorphicPointerExpr =
       expr(hasType(hasCanonicalType(
                pointerType(pointee(hasCanonicalType(hasDeclaration(
-                   cxxRecordDecl(cxxRecordDecl(hasMethod(isVirtual()))))))))))
+                   cxxRecordDecl(cxxRecordDecl(hasMethod(isVirtual())),
+                                 unless(isFinal())))))))))
           .bind("pointer");
 
   const auto PointerExprWithVirtualMethod =
       expr(hasType(hasCanonicalType(pointerType(
                pointee(hasCanonicalType(hasDeclaration(cxxRecordDecl(
-                   hasMethod(anyOf(isVirtualAsWritten(), isPure()))))))))))
+                   hasMethod(anyOf(isVirtualAsWritten(), isPure())),
+                   unless(isFinal())))))))))
           .bind("pointer");
 
   const auto SelectedPointerExpr = MatchInheritedVirtualFunctions
