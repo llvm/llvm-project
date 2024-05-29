@@ -40,18 +40,18 @@ struct EliminateExplicitRoundingRewritePattern final
 
   LogicalResult matchAndRewrite(arith::ExtFOp extFOp,
                                 PatternRewriter &rewriter) const final {
-    // check whether match `truncF->extF` pair
+    // Check whether match `truncF->extF` pair.
     auto truncFOp = extFOp.getOperand().getDefiningOp<arith::TruncFOp>();
     if (!truncFOp)
       return failure();
 
-    // check whether need to filter out
+    // Check whether need to filter out.
     if (filterFunc && filterFunc(extFOp))
       return failure();
 
-    // check whether the rounding pair's input and output data type are the
+    // Check whether the rounding pair's input and output data type are the
     // same. Currently only consider to eliminate rounding pairs for (bf16 / f16
-    // <-> f32)
+    // <-> f32).
     auto input = truncFOp.getOperand();
     auto inTy = input.getType();
     auto outTy = extFOp.getType();
@@ -77,10 +77,7 @@ struct EliminateExplicitRounding final
     patterns.insert<EliminateExplicitRoundingRewritePattern>(&getContext());
     FrozenRewritePatternSet patternSet(std::move(patterns));
     SmallVector<Operation *> ops;
-    getOperation()->walk([&](Operation *op) {
-      if (isa<arith::ExtFOp>(op))
-        ops.push_back(op);
-    });
+    getOperation()->walk([&](arith::ExtFOp op) { ops.push_back(op); });
     if (failed(applyOpPatternsAndFold(ops, patternSet)))
       signalPassFailure();
   }
