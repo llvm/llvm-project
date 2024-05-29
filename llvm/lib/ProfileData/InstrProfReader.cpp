@@ -1212,7 +1212,8 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   const uint64_t FirstWord =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
-  if (FirstWord == memprof::Version1 || FirstWord == memprof::Version2) {
+  if (FirstWord == memprof::Version1 || FirstWord == memprof::Version2 ||
+      FirstWord == memprof::Version3) {
     // Everything is good.  We can proceed to deserialize the rest.
     Version = static_cast<memprof::IndexedVersion>(FirstWord);
   } else if (FirstWord >= 24) {
@@ -1327,7 +1328,7 @@ Error IndexedInstrProfReader::readHeader() {
 
   // The MemProfOffset field in the header is only valid when the format
   // version is higher than 8 (when it was introduced).
-  if (GET_VERSION(Header->Version) >= 8 &&
+  if (Header->getIndexedProfileVersion() >= 8 &&
       Header->Version & VARIANT_MASK_MEMPROF) {
     if (Error E = MemProfReader.deserialize(Start, Header->MemProfOffset))
       return E;
@@ -1335,7 +1336,7 @@ Error IndexedInstrProfReader::readHeader() {
 
   // BinaryIdOffset field in the header is only valid when the format version
   // is higher than 9 (when it was introduced).
-  if (GET_VERSION(Header->Version) >= 9) {
+  if (Header->getIndexedProfileVersion() >= 9) {
     const unsigned char *Ptr = Start + Header->BinaryIdOffset;
     // Read binary ids size.
     BinaryIdsSize =
@@ -1349,7 +1350,7 @@ Error IndexedInstrProfReader::readHeader() {
                                         "corrupted binary ids");
   }
 
-  if (GET_VERSION(Header->Version) >= 12) {
+  if (Header->getIndexedProfileVersion() >= 12) {
     const unsigned char *Ptr = Start + Header->VTableNamesOffset;
 
     CompressedVTableNamesLen =
@@ -1362,7 +1363,7 @@ Error IndexedInstrProfReader::readHeader() {
       return make_error<InstrProfError>(instrprof_error::truncated);
   }
 
-  if (GET_VERSION(Header->Version) >= 10 &&
+  if (Header->getIndexedProfileVersion() >= 10 &&
       Header->Version & VARIANT_MASK_TEMPORAL_PROF) {
     const unsigned char *Ptr = Start + Header->TemporalProfTracesOffset;
     const auto *PtrEnd = (const unsigned char *)DataBuffer->getBufferEnd();
@@ -1559,6 +1560,7 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
            "MemProfCallStackTable must not be available");
     return getMemProfRecordV0(IndexedRecord, *MemProfFrameTable);
   case memprof::Version2:
+  case memprof::Version3:
     assert(MemProfFrameTable && "MemProfFrameTable must be available");
     assert(MemProfCallStackTable && "MemProfCallStackTable must be available");
     return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable,
