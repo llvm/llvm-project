@@ -35,7 +35,7 @@ public:
 void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
                                      CheckerContext &C) const {
   // When doing pointer subtraction, if the two pointers do not point to the
-  // same memory chunk, emit a warning.
+  // same array, emit a warning.
   if (B->getOpcode() != BO_Sub)
     return;
 
@@ -44,24 +44,30 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
 
   const MemRegion *LR = LV.getAsRegion();
   const MemRegion *RR = RV.getAsRegion();
-
-  if (!(LR && RR))
+  if (!LR || !RR)
     return;
 
-  const MemRegion *BaseLR = LR->getBaseRegion();
-  const MemRegion *BaseRR = RR->getBaseRegion();
-
-  if (BaseLR == BaseRR)
-    return;
-
-  // Allow arithmetic on different symbolic regions.
-  if (isa<SymbolicRegion>(BaseLR) || isa<SymbolicRegion>(BaseRR))
-    return;
+  const auto *ElemLR = dyn_cast<ElementRegion>(LR);
+  const auto *ElemRR = dyn_cast<ElementRegion>(RR);
+  // FIXME: We want to verify that these are elements of an array.
+  // Because behavior of ElementRegion it may be confused with a cast.
+  // There is not a simple way to distinguish it from array element (check the
+  // types?). Because this missing check a warning is missing in the rare case
+  // when two casted pointers to the same region (variable) are subtracted.
+  if (ElemLR && ElemRR) {
+    const MemRegion *SuperLR = ElemLR->getSuperRegion();
+    const MemRegion *SuperRR = ElemRR->getSuperRegion();
+    if (SuperLR == SuperRR)
+      return;
+    // Allow arithmetic on different symbolic regions.
+    if (isa<SymbolicRegion>(SuperLR) || isa<SymbolicRegion>(SuperRR))
+      return;
+  }
 
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     constexpr llvm::StringLiteral Msg =
-        "Subtraction of two pointers that do not point to the same memory "
-        "chunk may cause incorrect result.";
+        "Subtraction of two pointers that do not point into the same array "
+        "is undefined behavior.";
     auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
     R->addRange(B->getSourceRange());
     C.emitReport(std::move(R));
