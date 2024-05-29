@@ -12,6 +12,8 @@
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/errno/libc_errno.h"
+#include "x86_64/vdso.h"
+#include <cstddef>
 #include <linux/auxvec.h>
 #include <linux/elf.h>
 
@@ -33,6 +35,13 @@ unsigned long getauxval(unsigned long id);
 namespace vdso {
 
 namespace {
+
+// Helper functions to convert between VDSOSym and its index
+constexpr VDSOSym symbolize(size_t index) {
+  return static_cast<VDSOSym>(index);
+}
+constexpr size_t numeralize(VDSOSym sym) { return static_cast<size_t>(sym); }
+
 // See https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/symverdefs.html
 struct Verdaux {
   ElfW(Word) vda_name; /* Version or dependency names */
@@ -82,8 +91,7 @@ cpp::string_view find_version(Verdef *verdef, ElfW(Half) * versym,
   return "";
 }
 
-using VDSOArray =
-    cpp::array<void *, static_cast<size_t>(VDSOSym::VDSOSymCount)>;
+using VDSOArray = cpp::array<void *, numeralize(VDSOSym::VDSOSymCount)>;
 
 VDSOArray symbol_table;
 
@@ -106,8 +114,8 @@ struct VDSOSymbolTable {
   Verdef *verdef;
 
   void populate_symbol_cache(size_t symbol_count, ElfW(Addr) vdso_addr) {
-    for (size_t i = 0; i < symbol_table.size(); ++i) {
-      auto sym = static_cast<VDSOSym>(i);
+    for (size_t i = 0, e = symbol_table.size(); i < e; ++i) {
+      VDSOSym sym = symbolize(i);
       cpp::string_view name = symbol_name(sym);
       cpp::string_view version = symbol_version(sym);
       for (size_t j = 0; j < symbol_count; ++j) {
@@ -237,7 +245,7 @@ void initialize_vdso_global_cache() {
 
 void *get_symbol(VDSOSym sym) {
   // if sym is invalid, return nullptr
-  const auto index = static_cast<size_t>(sym);
+  const size_t index = numeralize(sym);
   if (index >= symbol_table.size())
     return nullptr;
 

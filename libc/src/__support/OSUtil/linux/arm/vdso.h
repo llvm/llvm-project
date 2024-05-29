@@ -11,7 +11,8 @@
 namespace LIBC_NAMESPACE {
 namespace vdso {
 // macro definitions
-// following the order in arch/arm/vdso/vdso.lds.S
+// following the order in
+// https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/arm/vdso/vdso.lds.S
 #define LIBC_VDSO_HAS_CLOCK_GETTIME
 #define LIBC_VDSO_HAS_GETTIMEOFDAY
 #define LIBC_VDSO_HAS_CLOCK_GETRES
