@@ -13,7 +13,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:10:11:12:13"
 declare i64 @julia_steprange_last_4949()
 
 define void @"japi1_align!_9477"(ptr %arg) {
-; LV-LAVEL: L26.lver.check
+; LV-LABEL: L26.lver.check
 ; LV: [[OFMul:%[^ ]*]]  = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[Step:%[^ ]*]])
 ; LV-NEXT: [[OFMulResult:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul]], 0
 ; LV-NEXT: [[OFMulOverflow:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul]], 1

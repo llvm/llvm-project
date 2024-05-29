@@ -227,12 +227,12 @@ local_label:
 # XO32-NEXT: .reloc ($tmp1), R_MIPS_JALR, weak_label
 
 # ELF-XO32:      3c 19 00 00 lui $25, 0
-# ELF-XO32-MEXT:                  R_MIPS_CALL_HI16 weak_label
-# ELF-XO32-MEXT: 03 3c c8 21 addu $25, $25, $gp
-# ELF-XO32-MEXT: 8f 39 00 00 lw $25, 0($25)
-# ELF-XO32-MEXT:                  R_MIPS_CALL_LO16 weak_label
-# ELF-XO32-MEXT: 03 20 f8 09 jalr $25
-# ELF-XO32-MEXT:                  R_MIPS_JALR weak_label
+# ELF-XO32-NEXT:                  R_MIPS_CALL_HI16 weak_label
+# ELF-XO32-NEXT: 03 3c c8 21 addu $25, $25, $gp
+# ELF-XO32-NEXT: 8f 39 00 00 lw $25, 0($25)
+# ELF-XO32-NEXT:                  R_MIPS_CALL_LO16 weak_label
+# ELF-XO32-NEXT: 03 20 f8 09 jalr $25
+# ELF-XO32-NEXT:                  R_MIPS_JALR weak_label
 
 # N32: lw  $25, %call16(weak_label)($gp) # encoding: [0x8f,0x99,A,A]
 # N32:                                   #   fixup A - offset: 0, value: %call16(weak_label), kind:   fixup_Mips_CALL16

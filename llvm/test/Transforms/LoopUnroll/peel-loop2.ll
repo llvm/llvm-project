@@ -32,7 +32,7 @@ for.end:
   ret void
 }
 
-; CHECK_LABEL: @funca
+; CHECK-LABEL: @funca
 
 ; Peeled iteration
 ; CHECK: %[[REG1:[0-9]+]] = load i8, ptr @Comma

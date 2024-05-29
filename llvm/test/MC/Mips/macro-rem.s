@@ -95,7 +95,7 @@
 # CHECK-NOTRAP: bnez $6, $tmp2            # encoding: [A,A,0xc0,0x14]
 # CHECK-NOTRAP: div $zero, $5, $6         # encoding: [0x1a,0x00,0xa6,0x00]
 # CHECK-NOTRAP: break 7                   # encoding: [0x0d,0x00,0x07,0x00]
-# CHECk-NOTRAP: $tmp2
+# CHECK-NOTRAP: $tmp2
 # CHECK-NOTRAP: addiu $1, $zero, -1       # encoding: [0xff,0xff,0x01,0x24]
 # CHECK-NOTRAP: bne $6, $1, $tmp3         # encoding: [A,A,0xc1,0x14]
 # CHECK-NOTRAP: lui $1, 32768             # encoding: [0x00,0x80,0x01,0x3c]

@@ -66,7 +66,7 @@ ret:
 ; CHECK:  invoke void @callee2(
 ; CHECK-NEXT: {{.*}} !prof ![[PROF3:[0-9]+]]
 
-; CHECK-LABL: @callee(
+; CHECK-LABEL: @callee(
 ; CHECK:  invoke void %func(
 ; CHECK-NEXT: {{.*}} !prof ![[PROF4:[0-9]+]]
 ; CHECK:  invoke void @callee1(

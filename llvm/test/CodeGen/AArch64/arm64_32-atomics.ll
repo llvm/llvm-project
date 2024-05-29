@@ -2,70 +2,70 @@
 ; RUN: llc -mtriple=arm64_32-apple-ios7.0 -mattr=+outline-atomics -o - %s | FileCheck %s -check-prefix=OUTLINE-ATOMICS
 
 define i8 @test_load_8(ptr %addr) {
-; CHECK-LABAL: test_load_8:
+; CHECK-LABEL: test_load_8:
 ; CHECK: ldarb w0, [x0]
   %val = load atomic i8, ptr %addr seq_cst, align 1
   ret i8 %val
 }
 
 define i16 @test_load_16(ptr %addr) {
-; CHECK-LABAL: test_load_16:
+; CHECK-LABEL: test_load_16:
 ; CHECK: ldarh w0, [x0]
   %val = load atomic i16, ptr %addr acquire, align 2
   ret i16 %val
 }
 
 define i32 @test_load_32(ptr %addr) {
-; CHECK-LABAL: test_load_32:
+; CHECK-LABEL: test_load_32:
 ; CHECK: ldar w0, [x0]
   %val = load atomic i32, ptr %addr seq_cst, align 4
   ret i32 %val
 }
 
 define i64 @test_load_64(ptr %addr) {
-; CHECK-LABAL: test_load_64:
+; CHECK-LABEL: test_load_64:
 ; CHECK: ldar x0, [x0]
   %val = load atomic i64, ptr %addr seq_cst, align 8
   ret i64 %val
 }
 
 define ptr @test_load_ptr(ptr %addr) {
-; CHECK-LABAL: test_load_ptr:
+; CHECK-LABEL: test_load_ptr:
 ; CHECK: ldar w0, [x0]
   %val = load atomic ptr, ptr %addr seq_cst, align 8
   ret ptr %val
 }
 
 define void @test_store_8(ptr %addr) {
-; CHECK-LABAL: test_store_8:
+; CHECK-LABEL: test_store_8:
 ; CHECK: stlrb wzr, [x0]
   store atomic i8 0, ptr %addr seq_cst, align 1
   ret void
 }
 
 define void @test_store_16(ptr %addr) {
-; CHECK-LABAL: test_store_16:
+; CHECK-LABEL: test_store_16:
 ; CHECK: stlrh wzr, [x0]
   store atomic i16 0, ptr %addr seq_cst, align 2
   ret void
 }
 
 define void @test_store_32(ptr %addr) {
-; CHECK-LABAL: test_store_32:
+; CHECK-LABEL: test_store_32:
 ; CHECK: stlr wzr, [x0]
   store atomic i32 0, ptr %addr seq_cst, align 4
   ret void
 }
 
 define void @test_store_64(ptr %addr) {
-; CHECK-LABAL: test_store_64:
+; CHECK-LABEL: test_store_64:
 ; CHECK: stlr xzr, [x0]
   store atomic i64 0, ptr %addr seq_cst, align 8
   ret void
 }
 
 define void @test_store_ptr(ptr %addr) {
-; CHECK-LABAL: test_store_ptr:
+; CHECK-LABEL: test_store_ptr:
 ; CHECK: stlr wzr, [x0]
   store atomic ptr null, ptr %addr seq_cst, align 8
   ret void

@@ -21,7 +21,7 @@ entry:
 
 define float @f_writeonly(float %val) {
 ; CHECK-LABEL: @f_writeonly(
-; CHECK-NEXt:    [[RES:%.*]] = tail call float @sqrtf(float [[VAL:%.*]]) #[[READNONE]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call float @sqrtf(float [[VAL:%.*]]) #[[READNONE]]
   %res = tail call float @sqrtf(float %val) writeonly
   ret float %res
 }

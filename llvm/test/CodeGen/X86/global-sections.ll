@@ -36,8 +36,8 @@ bb5:
 }
 
 ; LINUX:     .size   F2,
-; LINUX-NEX: .cfi_endproc
-; LINUX-NEX: .section        .rodata,"a",@progbits
+; LINUX-NEXT: .cfi_endproc
+; LINUX-NEXT: .section        .rodata,"a",@progbits
 
 ; LINUX-SECTIONS: .section        .text.F2,"ax",@progbits
 ; LINUX-SECTIONS: .size   F2,
