@@ -14,7 +14,6 @@
 
 #include "DXILConstants.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/VersionTuple.h"
 
 namespace llvm {
 class Module;
@@ -34,15 +33,13 @@ public:
   /// opcode, and call arguments.
   ///
   /// \param OpCode Opcode of the DXIL Op call constructed
-  /// \param SMVer Shader Model Version of DXIL Op call to construct
   /// \param ReturnTy Return type of the DXIL Op call constructed
   /// \param OverloadTy Overload type of the DXIL Op call constructed
+  /// \param Args Arguments for the DXIL Op call constructed
   /// \return DXIL Op call constructed
-  CallInst *createDXILOpCall(dxil::OpCode OpCode, VersionTuple &SMVer,
-                             Type *ReturnTy, Type *OverloadTy,
-                             SmallVector<Value *> Args);
-  Type *getOverloadTy(dxil::OpCode OpCode, VersionTuple &SMVer,
-                      FunctionType *FT);
+  CallInst *createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
+                             Type *OverloadTy, SmallVector<Value *> Args);
+  Type *getOverloadTy(dxil::OpCode OpCode, FunctionType *FT);
   static const char *getOpCodeName(dxil::OpCode DXILOp);
 
 private:

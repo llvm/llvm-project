@@ -24,7 +24,6 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
-#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -46,19 +45,8 @@ struct DXILOperationDesc {
       OpAttributes;     // operation attribute represented as strings
   StringRef Intrinsic;  // The llvm intrinsic map to OpName. Default is "" which
                         // means no map exists
-  bool IsDeriv = false; // whether this is some kind of derivative
-  bool IsGradient = false; // whether this requires a gradient calculation
-  bool IsFeedback = false; // whether this is a sampler feedback op
-  bool IsWave =
-      false; // whether this requires in-wave, cross-lane functionality
-  bool RequiresUniformInputs = false; // whether this operation requires that
-                                      // all of its inputs are uniform across
-                                      // the wave
   SmallVector<StringRef, 4>
       ShaderStages; // shader stages to which this applies, empty for all.
-  DXILShaderModel ShaderModel;           // minimum shader model required
-  DXILShaderModel ShaderModelTranslated; // minimum shader model required with
-                                         // translation by linker
   int OverloadParamIndex;             // Index of parameter with overload type.
                                       //   -1 : no overload types
   SmallVector<StringRef, 4> counters; // counters for this inst.
@@ -172,21 +160,6 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Get valid overload types of the Operation
   std::vector<Record *> OverloadTypeRecs =
       R->getValueAsListOfDefs("OpOverloadTypes");
-  // Sort records in ascending order of Shader Model version
-  std::sort(OverloadTypeRecs.begin(), OverloadTypeRecs.end(),
-            [](Record *RecA, Record *RecB) {
-              unsigned RecAMaj =
-                  RecA->getValueAsDef("ShaderModel")->getValueAsInt("Major");
-              unsigned RecAMin =
-                  RecA->getValueAsDef("ShaderModel")->getValueAsInt("Minor");
-              unsigned RecBMaj =
-                  RecB->getValueAsDef("ShaderModel")->getValueAsInt("Major");
-              unsigned RecBMin =
-                  RecB->getValueAsDef("ShaderModel")->getValueAsInt("Minor");
-
-              return (VersionTuple(RecAMaj, RecAMin) <
-                      VersionTuple(RecBMaj, RecBMin));
-            });
   unsigned OverloadTypeRecsSize = OverloadTypeRecs.size();
   // Populate OpOverloads with
   for (unsigned I = 0; I < OverloadTypeRecsSize; I++) {
@@ -282,32 +255,15 @@ static std::string getOverloadKindStr(const Record *R) {
 }
 /// Return a string representation of OverloadKind enum that maps to
 /// input LLVMType record
-/// \param Recs A vector of records of TableGen class type DXILShaderModel
+/// \param OLTys Overload types list record
 /// \return std::string string representation of OverloadKind
-static std::string getOverloadKindStrs(const SmallVector<Record *> Recs) {
+static std::string getOverloadKindStrs(const SmallVector<Record *> OLTys) {
   std::string OverloadString = "";
   std::string Prefix = "";
-  OverloadString.append("{");
-  for (auto OvRec : Recs) {
-    OverloadString.append(Prefix).append("{");
-    unsigned RecAMaj =
-        OvRec->getValueAsDef("ShaderModel")->getValueAsInt("Major");
-    unsigned RecAMin =
-        OvRec->getValueAsDef("ShaderModel")->getValueAsInt("Minor");
-    OverloadString.append("{")
-        .append(std::to_string(RecAMaj))
-        .append(", ")
-        .append(std::to_string(RecAMin).append("}, "));
-    auto OverloadTys = OvRec->getValueAsListOfDefs("OpOverloads");
-    auto Iter = OverloadTys.begin();
-    OverloadString.append(getOverloadKindStr(*Iter++));
-    for (; Iter != OverloadTys.end(); ++Iter) {
-      OverloadString.append(" | ").append(getOverloadKindStr(*Iter));
-    }
-    OverloadString.append("}");
-    Prefix = ", ";
+  for (auto OLTy : OLTys) {
+    OverloadString.append(Prefix).append(getOverloadKindStr(OLTy));
+    Prefix = " | ";
   }
-  OverloadString.append("}");
   return OverloadString;
 }
 

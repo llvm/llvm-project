@@ -22,10 +22,8 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/VersionTuple.h"
 
 #define DEBUG_TYPE "dxil-op-lower"
 
@@ -74,23 +72,10 @@ static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
   return NewOperands;
 }
 
-static VersionTuple getModuleShaderModelVersion(Module &M) {
-  std::string TTStr = M.getTargetTriple();
-  std::string Error;
-  auto Target = TargetRegistry::lookupTarget(TTStr, Error);
-  if (!Target) {
-    if (TTStr.empty()) {
-      report_fatal_error(StringRef(Error), /*gen_crash_diag*/ false);
-    }
-  }
-  return Triple(TTStr).getOSVersion();
-}
-
 static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
   IRBuilder<> B(M.getContext());
   DXILOpBuilder DXILB(M, B);
-  VersionTuple SMVer = getModuleShaderModelVersion(M);
-  Type *OverloadTy = DXILB.getOverloadTy(DXILOp, SMVer, F.getFunctionType());
+  Type *OverloadTy = DXILB.getOverloadTy(DXILOp, F.getFunctionType());
   for (User *U : make_early_inc_range(F.users())) {
     CallInst *CI = dyn_cast<CallInst>(U);
     if (!CI)
@@ -106,8 +91,8 @@ static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
     } else
       Args.append(CI->arg_begin(), CI->arg_end());
 
-    CallInst *DXILCI = DXILB.createDXILOpCall(DXILOp, SMVer, F.getReturnType(),
-                                              OverloadTy, Args);
+    CallInst *DXILCI =
+        DXILB.createDXILOpCall(DXILOp, F.getReturnType(), OverloadTy, Args);
 
     CI->replaceAllUsesWith(DXILCI);
     CI->eraseFromParent();
