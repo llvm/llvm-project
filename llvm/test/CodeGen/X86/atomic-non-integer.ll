@@ -854,8 +854,7 @@ define void @store_bfloat(ptr %fptr, bfloat %v) {
   ret void
 }
 
-; Work around issue #92899 by casting to float
-define float @load_bfloat(ptr %fptr) {
+define bfloat @load_bfloat(ptr %fptr) {
 ; X86-SSE1-LABEL: load_bfloat:
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    pushl %eax
@@ -871,30 +870,16 @@ define float @load_bfloat(ptr %fptr) {
 ;
 ; X86-SSE2-LABEL: load_bfloat:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pushl %eax
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzwl (%eax), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    movd %xmm0, (%esp)
-; X86-SSE2-NEXT:    flds (%esp)
-; X86-SSE2-NEXT:    popl %eax
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE2-NEXT:    pinsrw $0, %eax, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: load_bfloat:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    pushl %eax
-; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movzwl (%eax), %eax
-; X86-AVX-NEXT:    shll $16, %eax
-; X86-AVX-NEXT:    vmovd %eax, %xmm0
-; X86-AVX-NEXT:    vmovd %xmm0, (%esp)
-; X86-AVX-NEXT:    flds (%esp)
-; X86-AVX-NEXT:    popl %eax
-; X86-AVX-NEXT:    .cfi_def_cfa_offset 4
+; X86-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X86-NOSSE-LABEL: load_bfloat:
@@ -913,17 +898,14 @@ define float @load_bfloat(ptr %fptr) {
 ; X64-SSE-LABEL: load_bfloat:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movzwl (%rdi), %eax
-; X64-SSE-NEXT:    shll $16, %eax
-; X64-SSE-NEXT:    movd %eax, %xmm0
+; X64-SSE-NEXT:    pinsrw $0, %eax, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: load_bfloat:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movzwl (%rdi), %eax
-; X64-AVX-NEXT:    shll $16, %eax
-; X64-AVX-NEXT:    vmovd %eax, %xmm0
+; X64-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %v = load atomic bfloat, ptr %fptr unordered, align 2
-  %ext = fpext bfloat %v to float
-  ret float %ext
+  ret bfloat %v
 }
