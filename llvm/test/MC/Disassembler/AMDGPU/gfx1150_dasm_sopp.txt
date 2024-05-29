@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1150 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX1150 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1150 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX1150 %s
 
 # GFX1150: s_singleuse_vdst 0x0                 ; encoding: [0x00,0x00,0x93,0xbf]
 0x00,0x00,0x93,0xbf

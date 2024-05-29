@@ -50,12 +50,21 @@ typedef struct kmp_depend_info {
      union {
         kmp_uint8 flag; // flag as an unsigned char
         struct { // flag as a set of 8 bits
-            unsigned in : 1;
-            unsigned out : 1;
-            unsigned mtx : 1;
-            unsigned set : 1;
-            unsigned unused : 3;
-            unsigned all : 1;
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+          unsigned all : 1;
+          unsigned unused : 3;
+          unsigned set : 1;
+          unsigned mtx : 1;
+          unsigned out : 1;
+          unsigned in : 1;
+#else
+          unsigned in : 1;
+          unsigned out : 1;
+          unsigned mtx : 1;
+          unsigned set : 1;
+          unsigned unused : 3;
+          unsigned all : 1;
+#endif
         } flags;
      };
 } kmp_depend_info_t;

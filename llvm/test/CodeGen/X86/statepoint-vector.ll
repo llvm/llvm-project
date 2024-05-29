@@ -122,9 +122,9 @@ define void @test5() gc "statepoint-example" {
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $-1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq $-1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $-1, (%rsp)
 ; CHECK-NEXT:    callq do_safepoint@PLT
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    addq $40, %rsp

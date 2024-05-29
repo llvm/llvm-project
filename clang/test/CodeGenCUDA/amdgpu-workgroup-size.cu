@@ -1,10 +1,14 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
-// RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \
+// RUN:     -fcuda-is-device -mcode-object-version=4 -emit-llvm -o - -x hip %s \
 // RUN:     | FileCheck -check-prefix=PRECOV5 %s
 
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
-// RUN:     -fcuda-is-device -mcode-object-version=5 -emit-llvm -o - -x hip %s \
+// RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \
+// RUN:     | FileCheck -check-prefix=COV5 %s
+
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN:     -fcuda-is-device -mcode-object-version=6 -emit-llvm -o - -x hip %s \
 // RUN:     | FileCheck -check-prefix=COV5 %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
@@ -33,7 +37,7 @@
 
 
 // COVNONE-LABEL: test_get_workgroup_size
-// COVNONE: load i32, ptr addrspace(4) @llvm.amdgcn.abi.version
+// COVNONE: load i32, ptr addrspace(4) @__oclc_ABI_version
 // COVNONE: [[ABI5_X:%.*]] = icmp sge i32 %{{.*}}, 500
 // COVNONE: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // COVNONE: [[GEP_5_X:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 12
@@ -42,7 +46,7 @@
 // COVNONE: select i1 [[ABI5_X]], ptr addrspace(4) [[GEP_5_X]], ptr addrspace(4) [[GEP_4_X]]
 // COVNONE: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
 
-// COVNONE: load i32, ptr addrspace(4) @llvm.amdgcn.abi.version
+// COVNONE: load i32, ptr addrspace(4) @__oclc_ABI_version
 // COVNONE: [[ABI5_Y:%.*]] = icmp sge i32 %{{.*}}, 500
 // COVNONE: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // COVNONE: [[GEP_5_Y:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 14
@@ -51,7 +55,7 @@
 // COVNONE: select i1 [[ABI5_Y]], ptr addrspace(4) [[GEP_5_Y]], ptr addrspace(4) [[GEP_4_Y]]
 // COVNONE: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
 
-// COVNONE: load i32, ptr addrspace(4) @llvm.amdgcn.abi.version
+// COVNONE: load i32, ptr addrspace(4) @__oclc_ABI_version
 // COVNONE: [[ABI5_Z:%.*]] = icmp sge i32 %{{.*}}, 500
 // COVNONE: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // COVNONE: [[GEP_5_Z:%.*]] = getelementptr i8, ptr addrspace(4) %{{.*}}, i32 16

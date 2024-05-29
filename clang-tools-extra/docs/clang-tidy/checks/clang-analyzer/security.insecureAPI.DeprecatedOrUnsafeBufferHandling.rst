@@ -5,7 +5,7 @@
 clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
 ====================================================================
 
-Warn on uses of insecure or deprecated buffer manipulating functions.
+Warn on uses of unsecure or deprecated buffer manipulating functions.
 
 The `clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling` check is an alias, please see
 `Clang Static Analyzer Available Checkers

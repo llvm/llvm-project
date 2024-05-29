@@ -18,7 +18,9 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -27,8 +29,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-codegenprepare"
 #define PASS_NAME "RISC-V CodeGenPrepare"
-
-STATISTIC(NumZExtToSExt, "Number of SExt instructions converted to ZExt");
 
 namespace {
 
@@ -52,59 +52,15 @@ public:
   }
 
   bool visitInstruction(Instruction &I) { return false; }
-  bool visitZExtInst(ZExtInst &I);
   bool visitAnd(BinaryOperator &BO);
+  bool visitIntrinsicInst(IntrinsicInst &I);
 };
 
 } // end anonymous namespace
 
-bool RISCVCodeGenPrepare::visitZExtInst(ZExtInst &ZExt) {
-  if (!ST->is64Bit())
-    return false;
-
-  Value *Src = ZExt.getOperand(0);
-
-  // We only care about ZExt from i32 to i64.
-  if (!ZExt.getType()->isIntegerTy(64) || !Src->getType()->isIntegerTy(32))
-    return false;
-
-  // Look for an opportunity to replace (i64 (zext (i32 X))) with a sext if we
-  // can determine that the sign bit of X is zero via a dominating condition.
-  // This often occurs with widened induction variables.
-  if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
-                              Constant::getNullValue(Src->getType()), &ZExt,
-                              *DL).value_or(false)) {
-    auto *SExt = new SExtInst(Src, ZExt.getType(), "", &ZExt);
-    SExt->takeName(&ZExt);
-    SExt->setDebugLoc(ZExt.getDebugLoc());
-
-    ZExt.replaceAllUsesWith(SExt);
-    ZExt.eraseFromParent();
-    ++NumZExtToSExt;
-    return true;
-  }
-
-  // Convert (zext (abs(i32 X, i1 1))) -> (sext (abs(i32 X, i1 1))). If abs of
-  // INT_MIN is poison, the sign bit is zero.
-  using namespace PatternMatch;
-  if (match(Src, m_Intrinsic<Intrinsic::abs>(m_Value(), m_One()))) {
-    auto *SExt = new SExtInst(Src, ZExt.getType(), "", &ZExt);
-    SExt->takeName(&ZExt);
-    SExt->setDebugLoc(ZExt.getDebugLoc());
-
-    ZExt.replaceAllUsesWith(SExt);
-    ZExt.eraseFromParent();
-    ++NumZExtToSExt;
-    return true;
-  }
-
-  return false;
-}
-
 // Try to optimize (i64 (and (zext/sext (i32 X), C1))) if C1 has bit 31 set,
-// but bits 63:32 are zero. If we can prove that bit 31 of X is 0, we can fill
-// the upper 32 bits with ones. A separate transform will turn (zext X) into
-// (sext X) for the same condition.
+// but bits 63:32 are zero. If we know that bit 31 of X is 0, we can fill
+// the upper 32 bits with ones.
 bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
   if (!ST->is64Bit())
     return false;
@@ -112,12 +68,13 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
   if (!BO.getType()->isIntegerTy(64))
     return false;
 
-  // Left hand side should be sext or zext.
-  Instruction *LHS = dyn_cast<Instruction>(BO.getOperand(0));
-  if (!LHS || (!isa<SExtInst>(LHS) && !isa<ZExtInst>(LHS)))
+  using namespace PatternMatch;
+
+  // Left hand side should be a zext nneg.
+  Value *LHSSrc;
+  if (!match(BO.getOperand(0), m_NNegZExt(m_Value(LHSSrc))))
     return false;
 
-  Value *LHSSrc = LHS->getOperand(0);
   if (!LHSSrc->getType()->isIntegerTy(32))
     return false;
 
@@ -135,16 +92,65 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
   if (!isUInt<32>(C) || isInt<12>(C) || !isInt<12>(SignExtend64<32>(C)))
     return false;
 
-  // If we can determine the sign bit of the input is 0, we can replace the
-  // And mask constant.
-  if (!isImpliedByDomCondition(ICmpInst::ICMP_SGE, LHSSrc,
-                               Constant::getNullValue(LHSSrc->getType()),
-                               LHS, *DL).value_or(false))
-    return false;
-
   // Sign extend the constant and replace the And operand.
   C = SignExtend64<32>(C);
-  BO.setOperand(1, ConstantInt::get(LHS->getType(), C));
+  BO.setOperand(1, ConstantInt::get(RHS->getType(), C));
+
+  return true;
+}
+
+// LLVM vector reduction intrinsics return a scalar result, but on RISC-V vector
+// reduction instructions write the result in the first element of a vector
+// register. So when a reduction in a loop uses a scalar phi, we end up with
+// unnecessary scalar moves:
+//
+// loop:
+// vfmv.s.f v10, fa0
+// vfredosum.vs v8, v8, v10
+// vfmv.f.s fa0, v8
+//
+// This mainly affects ordered fadd reductions, since other types of reduction
+// typically use element-wise vectorisation in the loop body. This tries to
+// vectorize any scalar phis that feed into a fadd reduction:
+//
+// loop:
+// %phi = phi <float> [ ..., %entry ], [ %acc, %loop ]
+// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %phi, <vscale x 2 x float> %vec)
+//
+// ->
+//
+// loop:
+// %phi = phi <vscale x 2 x float> [ ..., %entry ], [ %acc.vec, %loop ]
+// %phi.scalar = extractelement <vscale x 2 x float> %phi, i64 0
+// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %x, <vscale x 2 x float> %vec)
+// %acc.vec = insertelement <vscale x 2 x float> poison, float %acc.next, i64 0
+//
+// Which eliminates the scalar -> vector -> scalar crossing during instruction
+// selection.
+bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
+  if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd)
+    return false;
+
+  auto *PHI = dyn_cast<PHINode>(I.getOperand(0));
+  if (!PHI || !PHI->hasOneUse() ||
+      !llvm::is_contained(PHI->incoming_values(), &I))
+    return false;
+
+  Type *VecTy = I.getOperand(1)->getType();
+  IRBuilder<> Builder(PHI);
+  auto *VecPHI = Builder.CreatePHI(VecTy, PHI->getNumIncomingValues());
+
+  for (auto *BB : PHI->blocks()) {
+    Builder.SetInsertPoint(BB->getTerminator());
+    Value *InsertElt = Builder.CreateInsertElement(
+        VecTy, PHI->getIncomingValueForBlock(BB), (uint64_t)0);
+    VecPHI->addIncoming(InsertElt, BB);
+  }
+
+  Builder.SetInsertPoint(&I);
+  I.setOperand(0, Builder.CreateExtractElement(VecPHI, (uint64_t)0));
+
+  PHI->eraseFromParent();
 
   return true;
 }

@@ -62,7 +62,7 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
 
   mf = &fn;
 
-  // Check that the list contains only the sentinal.
+  // Check that the list contains only the sentinel.
   assert(indexList.empty() && "Index list non-empty at initial numbering?");
   assert(idx2MBBMap.empty() &&
          "Index -> MBB mapping non-empty at initial numbering?");

@@ -23,6 +23,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -182,26 +183,30 @@ public:
 };
 
 /// GetElementPtrConstantExpr - This class is private to Constants.cpp, and is
-/// used behind the scenes to implement getelementpr constant exprs.
-class GetElementPtrConstantExpr final : public ConstantExpr {
+/// used behind the scenes to implement getelementptr constant exprs.
+class GetElementPtrConstantExpr : public ConstantExpr {
   Type *SrcElementTy;
   Type *ResElementTy;
+  std::optional<ConstantRange> InRange;
 
   GetElementPtrConstantExpr(Type *SrcElementTy, Constant *C,
-                            ArrayRef<Constant *> IdxList, Type *DestTy);
+                            ArrayRef<Constant *> IdxList, Type *DestTy,
+                            std::optional<ConstantRange> InRange);
 
 public:
-  static GetElementPtrConstantExpr *Create(Type *SrcElementTy, Constant *C,
-                                           ArrayRef<Constant *> IdxList,
-                                           Type *DestTy, unsigned Flags) {
+  static GetElementPtrConstantExpr *
+  Create(Type *SrcElementTy, Constant *C, ArrayRef<Constant *> IdxList,
+         Type *DestTy, unsigned Flags, std::optional<ConstantRange> InRange) {
     GetElementPtrConstantExpr *Result = new (IdxList.size() + 1)
-        GetElementPtrConstantExpr(SrcElementTy, C, IdxList, DestTy);
+        GetElementPtrConstantExpr(SrcElementTy, C, IdxList, DestTy,
+                                  std::move(InRange));
     Result->SubclassOptionalData = Flags;
     return Result;
   }
 
   Type *getSourceElementType() const;
   Type *getResultElementType() const;
+  std::optional<ConstantRange> getInRange() const;
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -282,6 +287,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CompareConstantExpr, Value)
 template <class ConstantClass> struct ConstantAggrKeyType;
 struct InlineAsmKeyType;
 struct ConstantExprKeyType;
+struct ConstantPtrAuthKeyType;
 
 template <class ConstantClass> struct ConstantInfo;
 template <> struct ConstantInfo<ConstantExpr> {
@@ -303,6 +309,10 @@ template <> struct ConstantInfo<ConstantStruct> {
 template <> struct ConstantInfo<ConstantVector> {
   using ValType = ConstantAggrKeyType<ConstantVector>;
   using TypeClass = VectorType;
+};
+template <> struct ConstantInfo<ConstantPtrAuth> {
+  using ValType = ConstantPtrAuthKeyType;
+  using TypeClass = Type;
 };
 
 template <class ConstantClass> struct ConstantAggrKeyType {
@@ -405,6 +415,7 @@ private:
   ArrayRef<Constant *> Ops;
   ArrayRef<int> ShuffleMask;
   Type *ExplicitTy;
+  std::optional<ConstantRange> InRange;
 
   static ArrayRef<int> getShuffleMaskIfValid(const ConstantExpr *CE) {
     if (CE->getOpcode() == Instruction::ShuffleVector)
@@ -418,22 +429,31 @@ private:
     return nullptr;
   }
 
+  static std::optional<ConstantRange>
+  getInRangeIfValid(const ConstantExpr *CE) {
+    if (auto *GEPCE = dyn_cast<GetElementPtrConstantExpr>(CE))
+      return GEPCE->getInRange();
+    return std::nullopt;
+  }
+
 public:
   ConstantExprKeyType(unsigned Opcode, ArrayRef<Constant *> Ops,
                       unsigned short SubclassData = 0,
                       unsigned short SubclassOptionalData = 0,
                       ArrayRef<int> ShuffleMask = std::nullopt,
-                      Type *ExplicitTy = nullptr)
+                      Type *ExplicitTy = nullptr,
+                      std::optional<ConstantRange> InRange = std::nullopt)
       : Opcode(Opcode), SubclassOptionalData(SubclassOptionalData),
         SubclassData(SubclassData), Ops(Ops), ShuffleMask(ShuffleMask),
-        ExplicitTy(ExplicitTy) {}
+        ExplicitTy(ExplicitTy), InRange(std::move(InRange)) {}
 
   ConstantExprKeyType(ArrayRef<Constant *> Operands, const ConstantExpr *CE)
       : Opcode(CE->getOpcode()),
         SubclassOptionalData(CE->getRawSubclassOptionalData()),
         SubclassData(CE->isCompare() ? CE->getPredicate() : 0), Ops(Operands),
         ShuffleMask(getShuffleMaskIfValid(CE)),
-        ExplicitTy(getSourceElementTypeIfValid(CE)) {}
+        ExplicitTy(getSourceElementTypeIfValid(CE)),
+        InRange(getInRangeIfValid(CE)) {}
 
   ConstantExprKeyType(const ConstantExpr *CE,
                       SmallVectorImpl<Constant *> &Storage)
@@ -441,17 +461,26 @@ public:
         SubclassOptionalData(CE->getRawSubclassOptionalData()),
         SubclassData(CE->isCompare() ? CE->getPredicate() : 0),
         ShuffleMask(getShuffleMaskIfValid(CE)),
-        ExplicitTy(getSourceElementTypeIfValid(CE)) {
+        ExplicitTy(getSourceElementTypeIfValid(CE)),
+        InRange(getInRangeIfValid(CE)) {
     assert(Storage.empty() && "Expected empty storage");
     for (unsigned I = 0, E = CE->getNumOperands(); I != E; ++I)
       Storage.push_back(CE->getOperand(I));
     Ops = Storage;
   }
 
+  static bool rangesEqual(const std::optional<ConstantRange> &A,
+                          const std::optional<ConstantRange> &B) {
+    if (!A.has_value() || !B.has_value())
+      return A.has_value() == B.has_value();
+    return A->getBitWidth() == B->getBitWidth() && A == B;
+  }
+
   bool operator==(const ConstantExprKeyType &X) const {
     return Opcode == X.Opcode && SubclassData == X.SubclassData &&
            SubclassOptionalData == X.SubclassOptionalData && Ops == X.Ops &&
-           ShuffleMask == X.ShuffleMask && ExplicitTy == X.ExplicitTy;
+           ShuffleMask == X.ShuffleMask && ExplicitTy == X.ExplicitTy &&
+           rangesEqual(InRange, X.InRange);
   }
 
   bool operator==(const ConstantExpr *CE) const {
@@ -469,6 +498,8 @@ public:
     if (ShuffleMask != getShuffleMaskIfValid(CE))
       return false;
     if (ExplicitTy != getSourceElementTypeIfValid(CE))
+      return false;
+    if (!rangesEqual(InRange, getInRangeIfValid(CE)))
       return false;
     return true;
   }
@@ -499,8 +530,8 @@ public:
     case Instruction::ShuffleVector:
       return new ShuffleVectorConstantExpr(Ops[0], Ops[1], ShuffleMask);
     case Instruction::GetElementPtr:
-      return GetElementPtrConstantExpr::Create(ExplicitTy, Ops[0], Ops.slice(1),
-                                               Ty, SubclassOptionalData);
+      return GetElementPtrConstantExpr::Create(
+          ExplicitTy, Ops[0], Ops.slice(1), Ty, SubclassOptionalData, InRange);
     case Instruction::ICmp:
       return new CompareConstantExpr(Ty, Instruction::ICmp, SubclassData,
                                      Ops[0], Ops[1]);
@@ -508,6 +539,47 @@ public:
       return new CompareConstantExpr(Ty, Instruction::FCmp, SubclassData,
                                      Ops[0], Ops[1]);
     }
+  }
+};
+
+struct ConstantPtrAuthKeyType {
+  ArrayRef<Constant *> Operands;
+
+  ConstantPtrAuthKeyType(ArrayRef<Constant *> Operands) : Operands(Operands) {}
+
+  ConstantPtrAuthKeyType(ArrayRef<Constant *> Operands, const ConstantPtrAuth *)
+      : Operands(Operands) {}
+
+  ConstantPtrAuthKeyType(const ConstantPtrAuth *C,
+                         SmallVectorImpl<Constant *> &Storage) {
+    assert(Storage.empty() && "Expected empty storage");
+    for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I)
+      Storage.push_back(cast<Constant>(C->getOperand(I)));
+    Operands = Storage;
+  }
+
+  bool operator==(const ConstantPtrAuthKeyType &X) const {
+    return Operands == X.Operands;
+  }
+
+  bool operator==(const ConstantPtrAuth *C) const {
+    if (Operands.size() != C->getNumOperands())
+      return false;
+    for (unsigned I = 0, E = Operands.size(); I != E; ++I)
+      if (Operands[I] != C->getOperand(I))
+        return false;
+    return true;
+  }
+
+  unsigned getHash() const {
+    return hash_combine_range(Operands.begin(), Operands.end());
+  }
+
+  using TypeClass = typename ConstantInfo<ConstantPtrAuth>::TypeClass;
+
+  ConstantPtrAuth *create(TypeClass *Ty) const {
+    return new ConstantPtrAuth(Operands[0], cast<ConstantInt>(Operands[1]),
+                               cast<ConstantInt>(Operands[2]), Operands[3]);
   }
 };
 

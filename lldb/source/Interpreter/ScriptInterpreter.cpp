@@ -27,12 +27,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ScriptInterpreter::ScriptInterpreter(
-    Debugger &debugger, lldb::ScriptLanguage script_lang,
-    lldb::ScriptedPlatformInterfaceUP scripted_platform_interface_up)
-    : m_debugger(debugger), m_script_lang(script_lang),
-      m_scripted_platform_interface_up(
-          std::move(scripted_platform_interface_up)) {}
+ScriptInterpreter::ScriptInterpreter(Debugger &debugger,
+                                     lldb::ScriptLanguage script_lang)
+    : m_debugger(debugger), m_script_lang(script_lang) {}
 
 void ScriptInterpreter::CollectDataForBreakpointCommandCallback(
     std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,

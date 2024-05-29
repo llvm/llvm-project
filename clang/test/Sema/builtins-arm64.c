@@ -29,3 +29,12 @@ void test_prefetch(void) {
   __builtin_arm_prefetch(0, 0, 0, 2, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_arm_prefetch(0, 0, 0, 0, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
+
+void test_trap(short s, unsigned short us) {
+  __builtin_arm_trap(42);
+  __builtin_arm_trap(65535);
+  __builtin_arm_trap(-1);
+  __builtin_arm_trap(65536); // expected-warning {{implicit conversion from 'int' to 'unsigned short' changes value from 65536 to 0}}
+  __builtin_arm_trap(s); // expected-error {{argument to '__builtin_arm_trap' must be a constant integer}}
+  __builtin_arm_trap(us); // expected-error {{argument to '__builtin_arm_trap' must be a constant integer}}
+}

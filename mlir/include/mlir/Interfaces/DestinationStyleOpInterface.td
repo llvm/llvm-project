@@ -17,24 +17,24 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     as initial tensor values for the results of the operation or the init
     buffers to which the results of the op will be written.
 
-    Init operands must be ranked tensors or ranked memrefs. Input operands can
-    have any type. All non-init operands are DPS inputs.
+    Init operands must be tensors or memrefs. Input operands can have any type.
+    All non-init operands are DPS inputs.
 
     The init operands of this op are specified by the MutableOperandRange that
     the `getDpsInitsMutable` interface methods returns. This implies that the
     init operands must be a consecutive range of operands.
 
-    If the op has "tensor semantics", then the input operands are either ranked
-    tensors or other non-tensor/memref types ("scalars"). The init operands are
-    ranked tensors and every tensor init is tied to a corresponding tensor
-    OpResult in a 1-to-1 fashion. The i-th init tensor is tied to the i-th
-    OpResult. The op may not have any additional OpResults. Init operands and
-    their tied OpResults have the same type. Dynamic dimension sizes also match
-    at runtime.
+    Each tensor init operand is tied to a corresponding tensor OpResult in a
+    1-to-1 fashion. The i-th init tensor is tied to the i-th OpResult. The op
+    may not have any additional OpResults. Init operands and their tied
+    OpResults have the same type. Dynamic dimension sizes also match at runtime.
 
-    If the op has "buffer semantics", then the input operands are either ranked
-    memrefs or other non-tensor/memref types ("scalar" types). Furthermore, the
-    init operands are ranked memrefs and the op has no results.
+    Note: This implies that a destination style op without any tensor inits must
+    not have any OpResults.
+
+    An op has "pure tensor semantics" if it has at least one tensor operand and
+    no buffer (memref) operands. It has "pure buffer semantics" if it has at
+    least one buffer (memref) operand and no tensor operands.
 
     Destination-passing style abstraction makes certain transformations easier.
     For example, tiling implementation can extract/insert slices from/into the
@@ -148,7 +148,8 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     /// neither a MemRef nor a tensor value.
     bool isScalar(::mlir::OpOperand *opOperand) {
       assert(opOperand->getOwner() == $_op && "invalid operand");
-      return !::llvm::isa<MemRefType, TensorType>(opOperand->get().getType());
+      return !::llvm::isa<BaseMemRefType, TensorType>(
+          opOperand->get().getType());
     }
 
     /// Return the OpResult that is tied to the given OpOperand.
@@ -169,37 +170,36 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       return $_op.getDpsInitOperand(opResult.getResultNumber());
     }
 
-    /// Return whether the op has buffer semantics. That is the case if the op
-    /// has no ranked tensor operands and at least one memref operand.
-    bool hasBufferSemantics() {
+    /// Return whether the op has pure buffer semantics. That is the case if the
+    /// op has no tensor operands and at least one memref operand.
+    bool hasPureBufferSemantics() {
       // No tensors.
       auto isTensor = [](Value v){
-        return ::llvm::isa<::mlir::RankedTensorType>(v.getType());
+        return ::llvm::isa<::mlir::TensorType>(v.getType());
       };
       if (::llvm::any_of($_op->getOperands(), isTensor))
         return false;
       // At least one memref.
       auto isMemref = [](Value v){
-        return ::llvm::isa<::mlir::MemRefType>(v.getType());
+        return ::llvm::isa<::mlir::BaseMemRefType>(v.getType());
       };
       return llvm::any_of($_op->getOperands(), isMemref);
     }
 
-    /// Return whether the op has tensor semantics. That is the case if the op
-    /// has no memref operands and at least one ranked tensor operand.
-    bool hasTensorSemantics() {
+    /// Return whether the op has pure tensor semantics. That is the case if the
+    /// op has no memref operands and at least one tensor operand.
+    bool hasPureTensorSemantics() {
       // No memrefs.
       auto isMemref = [](Value v){
-        return ::llvm::isa<::mlir::MemRefType>(v.getType());
+        return ::llvm::isa<::mlir::BaseMemRefType>(v.getType());
       };
       if (::llvm::any_of($_op->getOperands(), isMemref))
         return false;
       // At least one tensor.
       auto isTensor = [](Value v){
-        return ::llvm::isa<::mlir::RankedTensorType>(v.getType());
+        return ::llvm::isa<::mlir::TensorType>(v.getType());
       };
-      return llvm::any_of($_op->getOperands(), isTensor);
-    }
+      return llvm::any_of($_op->getOperands(), isTensor);    }
   }];
 
   let verify = [{ return detail::verifyDestinationStyleOpInterface($_op); }];

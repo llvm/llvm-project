@@ -5,7 +5,7 @@
 define float @ldexp_f32(i8 zeroext %x) {
 ; X64-LABEL: ldexp_f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-NEXT:    jmp ldexpf@PLT # TAILCALL
 ;
 ; WIN32-LABEL: ldexp_f32:
@@ -86,15 +86,16 @@ define float @ldexp_f32(i8 zeroext %x) {
 define double @ldexp_f64(i8 zeroext %x) {
 ; X64-LABEL: ldexp_f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; X64-NEXT:    jmp ldexp@PLT # TAILCALL
 ;
 ; WIN32-LABEL: ldexp_f64:
 ; WIN32:       # %bb.0:
+; WIN32-NEXT:    subl $12, %esp
 ; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    pushl %eax
-; WIN32-NEXT:    pushl $1072693248 # imm = 0x3FF00000
-; WIN32-NEXT:    pushl $0
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fld1
+; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _ldexp
 ; WIN32-NEXT:    addl $12, %esp
 ; WIN32-NEXT:    retl

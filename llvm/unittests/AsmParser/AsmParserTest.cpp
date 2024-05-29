@@ -57,8 +57,8 @@ TEST(AsmParserTest, SlotMappingTest) {
   EXPECT_TRUE(Mod != nullptr);
   EXPECT_TRUE(Error.getMessage().empty());
 
-  ASSERT_EQ(Mapping.GlobalValues.size(), 1u);
-  EXPECT_TRUE(isa<GlobalVariable>(Mapping.GlobalValues[0]));
+  ASSERT_EQ(Mapping.GlobalValues.getNext(), 1u);
+  EXPECT_TRUE(isa<GlobalVariable>(Mapping.GlobalValues.get(0)));
 
   EXPECT_EQ(Mapping.MetadataNodes.size(), 2u);
   EXPECT_EQ(Mapping.MetadataNodes.count(0), 1u);

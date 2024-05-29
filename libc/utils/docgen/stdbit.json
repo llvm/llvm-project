@@ -1,0 +1,270 @@
+{
+  "macros": {
+    "__STDC_VERSION_STDBIT_H__": {
+      "c-definition": "7.18.1.2"
+    },
+    "__STDC_ENDIAN_LITTLE__": {
+      "c-definition": "7.18.2.2"
+    },
+    "__STDC_ENDIAN_BIG__": {
+      "c-definition": "7.18.2.2"
+    },
+    "__STDC_ENDIAN_NATIVE__": {
+      "c-definition": "7.18.2.2"
+    },
+    "stdc_leading_zeros": {
+      "c-definition": "7.18.3.1"
+    },
+    "stdc_leading_ones": {
+      "c-definition": "7.18.4.1"
+    },
+    "stdc_trailing_zeros": {
+      "c-definition": "7.18.5.1"
+    },
+    "stdc_trailing_ones": {
+      "c-definition": "7.18.6.1"
+    },
+    "stdc_first_leading_zero": {
+      "c-definition": "7.18.7.1"
+    },
+    "stdc_first_leading_one": {
+      "c-definition": "7.18.8.1"
+    },
+    "stdc_first_trailing_zero": {
+      "c-definition": "7.18.9.1"
+    },
+    "stdc_first_trailing_one": {
+      "c-definition": "7.18.10.1"
+    },
+    "stdc_count_zeros": {
+      "c-definition": "7.18.11.1"
+    },
+    "stdc_count_ones": {
+      "c-definition": "7.18.12.1"
+    },
+    "stdc_has_single_bit": {
+      "c-definition": "7.18.13.1"
+    },
+    "stdc_bit_width": {
+      "c-definition": "7.18.14.1"
+    },
+    "stdc_bit_floor": {
+      "c-definition": "7.18.15.1"
+    },
+    "stdc_bit_ceil": {
+      "c-definition": "7.18.16.1"
+    }
+  },
+  "functions": {
+    "stdc_leading_zeros_uc": {
+      "c-definition": "7.18.3"
+    },
+    "stdc_leading_zeros_us": {
+      "c-definition": "7.18.3"
+    },
+    "stdc_leading_zeros_ui": {
+      "c-definition": "7.18.3"
+    },
+    "stdc_leading_zeros_ul": {
+      "c-definition": "7.18.3"
+    },
+    "stdc_leading_zeros_ull": {
+      "c-definition": "7.18.3"
+    },
+    "stdc_leading_ones_uc": {
+      "c-definition": "7.18.4"
+    },
+    "stdc_leading_ones_us": {
+      "c-definition": "7.18.4"
+    },
+    "stdc_leading_ones_ui": {
+      "c-definition": "7.18.4"
+    },
+    "stdc_leading_ones_ul": {
+      "c-definition": "7.18.4"
+    },
+    "stdc_leading_ones_ull": {
+      "c-definition": "7.18.4"
+    },
+    "stdc_trailing_zeros_uc": {
+      "c-definition": "7.18.5"
+    },
+    "stdc_trailing_zeros_us": {
+      "c-definition": "7.18.5"
+    },
+    "stdc_trailing_zeros_ui": {
+      "c-definition": "7.18.5"
+    },
+    "stdc_trailing_zeros_ul": {
+      "c-definition": "7.18.5"
+    },
+    "stdc_trailing_zeros_ull": {
+      "c-definition": "7.18.5"
+    },
+    "stdc_trailing_ones_uc": {
+      "c-definition": "7.18.6"
+    },
+    "stdc_trailing_ones_us": {
+      "c-definition": "7.18.6"
+    },
+    "stdc_trailing_ones_ui": {
+      "c-definition": "7.18.6"
+    },
+    "stdc_trailing_ones_ul": {
+      "c-definition": "7.18.6"
+    },
+    "stdc_trailing_ones_ull": {
+      "c-definition": "7.18.6"
+    },
+    "stdc_first_leading_zero_uc": {
+      "c-definition": "7.18.7"
+    },
+    "stdc_first_leading_zero_us": {
+      "c-definition": "7.18.7"
+    },
+    "stdc_first_leading_zero_ui": {
+      "c-definition": "7.18.7"
+    },
+    "stdc_first_leading_zero_ul": {
+      "c-definition": "7.18.7"
+    },
+    "stdc_first_leading_zero_ull": {
+      "c-definition": "7.18.7"
+    },
+    "stdc_first_leading_one_uc": {
+      "c-definition": "7.18.8"
+    },
+    "stdc_first_leading_one_us": {
+      "c-definition": "7.18.8"
+    },
+    "stdc_first_leading_one_ui": {
+      "c-definition": "7.18.8"
+    },
+    "stdc_first_leading_one_ul": {
+      "c-definition": "7.18.8"
+    },
+    "stdc_first_leading_one_ull": {
+      "c-definition": "7.18.8"
+    },
+    "stdc_first_trailing_zero_uc": {
+      "c-definition": "7.18.9"
+    },
+    "stdc_first_trailing_zero_us": {
+      "c-definition": "7.18.9"
+    },
+    "stdc_first_trailing_zero_ui": {
+      "c-definition": "7.18.9"
+    },
+    "stdc_first_trailing_zero_ul": {
+      "c-definition": "7.18.9"
+    },
+    "stdc_first_trailing_zero_ull": {
+      "c-definition": "7.18.9"
+    },
+    "stdc_first_trailing_one_uc": {
+      "c-definition": "7.18.10"
+    },
+    "stdc_first_trailing_one_us": {
+      "c-definition": "7.18.10"
+    },
+    "stdc_first_trailing_one_ui": {
+      "c-definition": "7.18.10"
+    },
+    "stdc_first_trailing_one_ul": {
+      "c-definition": "7.18.10"
+    },
+    "stdc_first_trailing_one_ull": {
+      "c-definition": "7.18.10"
+    },
+    "stdc_count_zeros_uc": {
+      "c-definition": "7.18.11"
+    },
+    "stdc_count_zeros_us": {
+      "c-definition": "7.18.11"
+    },
+    "stdc_count_zeros_ui": {
+      "c-definition": "7.18.11"
+    },
+    "stdc_count_zeros_ul": {
+      "c-definition": "7.18.11"
+    },
+    "stdc_count_zeros_ull": {
+      "c-definition": "7.18.11"
+    },
+    "stdc_count_ones_uc": {
+      "c-definition": "7.18.12"
+    },
+    "stdc_count_ones_us": {
+      "c-definition": "7.18.12"
+    },
+    "stdc_count_ones_ui": {
+      "c-definition": "7.18.12"
+    },
+    "stdc_count_ones_ul": {
+      "c-definition": "7.18.12"
+    },
+    "stdc_count_ones_ull": {
+      "c-definition": "7.18.12"
+    },
+    "stdc_has_single_bit_uc": {
+      "c-definition": "7.18.13"
+    },
+    "stdc_has_single_bit_us": {
+      "c-definition": "7.18.13"
+    },
+    "stdc_has_single_bit_ui": {
+      "c-definition": "7.18.13"
+    },
+    "stdc_has_single_bit_ul": {
+      "c-definition": "7.18.13"
+    },
+    "stdc_has_single_bit_ull": {
+      "c-definition": "7.18.13"
+    },
+    "stdc_bit_width_uc": {
+      "c-definition": "7.18.14"
+    },
+    "stdc_bit_width_us": {
+      "c-definition": "7.18.14"
+    },
+    "stdc_bit_width_ui": {
+      "c-definition": "7.18.14"
+    },
+    "stdc_bit_width_ul": {
+      "c-definition": "7.18.14"
+    },
+    "stdc_bit_width_ull": {
+      "c-definition": "7.18.14"
+    },
+    "stdc_bit_floor_uc": {
+      "c-definition": "7.18.15"
+    },
+    "stdc_bit_floor_us": {
+      "c-definition": "7.18.15"
+    },
+    "stdc_bit_floor_ui": {
+      "c-definition": "7.18.15"
+    },
+    "stdc_bit_floor_ul": {
+      "c-definition": "7.18.15"
+    },
+    "stdc_bit_floor_ull": {
+      "c-definition": "7.18.15"
+    },
+    "stdc_bit_ceil_uc": {
+      "c-definition": "7.18.16"
+    },
+    "stdc_bit_ceil_us": {
+      "c-definition": "7.18.16"
+    },
+    "stdc_bit_ceil_ui": {
+      "c-definition": "7.18.16"
+    },
+    "stdc_bit_ceil_ul": {
+      "c-definition": "7.18.16"
+    },
+    "stdc_bit_ceil_ull": {
+      "c-definition": "7.18.16"
+    }
+  }
+}

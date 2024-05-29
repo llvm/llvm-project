@@ -13,22 +13,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
 
-// LIBC_HAS_BUILTIN()
-//
-// Checks whether the compiler supports a Clang Feature Checking Macro, and if
-// so, checks whether it supports the provided builtin function "x" where x
-// is one of the functions noted in
-// https://clang.llvm.org/docs/LanguageExtensions.html
-//
-// Note: Use this macro to avoid an extra level of #ifdef __has_builtin check.
-// http://releases.llvm.org/3.3/tools/clang/docs/LanguageExtensions.html
-
-// Compiler builtin-detection.
-// clang.llvm.org/docs/LanguageExtensions.html#has-builtin
-#ifdef __has_builtin
-#define LIBC_HAS_BUILTIN(x) __has_builtin(x)
-#else
-#define LIBC_HAS_BUILTIN(x) 0
+// Workaround for compilers that do not support builtin detection.
+// FIXME: This is only required for the GPU portion which should be moved.
+#ifndef __has_builtin
+#define __has_builtin(b) 0
 #endif
 
 // Compiler feature-detection.
@@ -37,14 +25,6 @@
 #define LIBC_HAS_FEATURE(f) __has_feature(f)
 #else
 #define LIBC_HAS_FEATURE(f) 0
-#endif
-
-// Compiler attribute-detection.
-// https://clang.llvm.org/docs/LanguageExtensions.html#has-attribute
-#ifdef __has_attribute
-#define LIBC_HAS_ATTRIBUTE(f) __has_attribute(f)
-#else
-#define LIBC_HAS_ATTRIBUTE(f) 0
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H

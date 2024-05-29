@@ -1,4 +1,6 @@
 ; RUN: opt %s -passes='sroa,verify' -S -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes='sroa,verify' -S -o - | FileCheck %s
+
 ; From:
 ; struct prog_src_register {
 ;   unsigned : 4;

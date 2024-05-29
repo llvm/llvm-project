@@ -145,6 +145,7 @@ TEST(Unicode, nameToCodepointStrict) {
   EXPECT_EQ(0x2F800u, map("CJK COMPATIBILITY IDEOGRAPH-2F800"));
   EXPECT_EQ(0x2FA1Du, map("CJK COMPATIBILITY IDEOGRAPH-2FA1D"));
   EXPECT_EQ(0x31350u, map("CJK UNIFIED IDEOGRAPH-31350")); // Unicode 15.0
+  EXPECT_EQ(0x2EBF0u, map("CJK UNIFIED IDEOGRAPH-2EBF0")); // Unicode 15.1
 
   EXPECT_EQ(0xAC00u, map("HANGUL SYLLABLE GA"));
   EXPECT_EQ(0xAC14u, map("HANGUL SYLLABLE GASS"));
@@ -168,6 +169,8 @@ TEST(Unicode, nameToCodepointStrict) {
                           "ABOVE WITH ALEF MAKSURA ISOLATED FORM"));
   EXPECT_EQ(0x11F04u, map("KAWI LETTER A")); // Unicode 15.0
   EXPECT_EQ(0x1FA77u, map("PINK HEART")); // Unicode 15.0
+  EXPECT_EQ(0x2FFFu,
+            map("IDEOGRAPHIC DESCRIPTION CHARACTER ROTATION")); // Unicode 15.1
 
   // Aliases
   EXPECT_EQ(0x0000u, map("NULL"));

@@ -47,16 +47,6 @@ TEST_CONSTEXPR_CXX23 bool test_to_string() {
     std::vector<std::bitset<N> > const cases = get_test_cases<N>();
     for (std::size_t c = 0; c != cases.size(); ++c) {
         std::bitset<N> const v = cases[c];
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-        {
-            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >();
-            check_equal(s, v, L'0', L'1');
-        }
-        {
-            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t> >();
-            check_equal(s, v, L'0', L'1');
-        }
-#endif
         {
             std::string s = v.template to_string<char>();
             check_equal(s, v, '0', '1');
@@ -65,16 +55,6 @@ TEST_CONSTEXPR_CXX23 bool test_to_string() {
             std::string s = v.to_string();
             check_equal(s, v, '0', '1');
         }
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-        {
-            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >('0');
-            check_equal(s, v, L'0', L'1');
-        }
-        {
-            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t> >('0');
-            check_equal(s, v, L'0', L'1');
-        }
-#endif
         {
             std::string s = v.template to_string<char>('0');
             check_equal(s, v, '0', '1');
@@ -83,16 +63,6 @@ TEST_CONSTEXPR_CXX23 bool test_to_string() {
             std::string s = v.to_string('0');
             check_equal(s, v, '0', '1');
         }
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-        {
-            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >('0', '1');
-            check_equal(s, v, L'0', L'1');
-        }
-        {
-            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t> >('0', '1');
-            check_equal(s, v, L'0', L'1');
-        }
-#endif
         {
             std::string s = v.template to_string<char>('0', '1');
             check_equal(s, v, '0', '1');
@@ -108,6 +78,41 @@ TEST_CONSTEXPR_CXX23 bool test_to_string() {
     }
     return true;
 }
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+template <std::size_t N>
+TEST_CONSTEXPR_CXX23 bool test_to_string_wchar() {
+    std::vector<std::bitset<N> > const cases = get_test_cases<N>();
+    for (std::size_t c = 0; c != cases.size(); ++c) {
+        std::bitset<N> const v = cases[c];
+        {
+            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >();
+            check_equal(s, v, L'0', L'1');
+        }
+        {
+            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t> >();
+            check_equal(s, v, L'0', L'1');
+        }
+        {
+            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >('0');
+            check_equal(s, v, L'0', L'1');
+        }
+        {
+            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t> >('0');
+            check_equal(s, v, L'0', L'1');
+        }
+        {
+            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >('0', '1');
+            check_equal(s, v, L'0', L'1');
+        }
+        {
+            std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t> >('0', '1');
+            check_equal(s, v, L'0', L'1');
+        }
+    }
+    return true;
+}
+#endif
 
 int main(int, char**) {
   test_to_string<0>();
@@ -130,5 +135,24 @@ int main(int, char**) {
   static_assert(test_to_string<65>());
 #endif
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  test_to_string_wchar<0>();
+  test_to_string_wchar<1>();
+  test_to_string_wchar<31>();
+  test_to_string_wchar<32>();
+  test_to_string_wchar<33>();
+  test_to_string_wchar<63>();
+  test_to_string_wchar<64>();
+  test_to_string_wchar<65>();
+  test_to_string_wchar<1000>(); // not in constexpr because of constexpr evaluation step limits
+#if TEST_STD_VER > 20
+  static_assert(test_to_string_wchar<0>());
+  static_assert(test_to_string_wchar<1>());
+  static_assert(test_to_string_wchar<31>());
+  static_assert(test_to_string_wchar<32>());
+  static_assert(test_to_string_wchar<33>());
+  static_assert(test_to_string_wchar<63>());
+#endif
+#endif
   return 0;
 }

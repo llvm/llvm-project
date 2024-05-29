@@ -9,7 +9,7 @@ module asm "asm:"
 module asm "bx lr"
 
 ; NotEligibleToImport
-; CHECK: <PERMODULE {{.*}} op1=16
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=16
 define void @f() {
   call void asm sideeffect "bl asm\0A", ""()
   ret void

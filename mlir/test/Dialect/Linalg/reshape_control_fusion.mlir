@@ -48,7 +48,7 @@ func.func @control_consumer_reshape_fusion(%arg0 : tensor<1x?x?xf32>, %arg1 : te
       ^bb0(%arg2: f32):
         linalg.yield %cst : f32
       } -> tensor<?x?xf32>
-  %0 = tensor.expand_shape %fill [[0, 1], [2]] : tensor<?x?xf32> into tensor<1x?x?xf32>
+  %0 = tensor.expand_shape %fill [[0, 1], [2]] output_shape [1, %d0, %d1] : tensor<?x?xf32> into tensor<1x?x?xf32>
   %1 = linalg.batch_matmul ins(%arg0, %arg1 : tensor<1x?x?xf32>, tensor<1x?x?xf32>)
       outs(%0 : tensor<1x?x?xf32>) -> tensor<1x?x?xf32>
   return %1 : tensor<1x?x?xf32>

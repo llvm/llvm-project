@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
@@ -15,7 +15,7 @@
 // path temp_directory_path();
 // path temp_directory_path(error_code& ec);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <memory>
 #include <cstdlib>
 #include <cstring>
@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 void PutEnv(std::string var, fs::path value) {
@@ -95,7 +95,7 @@ static void basic_tests()
         PutEnv(TC.name, dne);
         ec = GetTestEC();
         ret = temp_directory_path(ec);
-        LIBCPP_ONLY(assert(ErrorIs(ec, expect_errc)));
+        LIBCPP_ASSERT(ErrorIs(ec, expect_errc));
         assert(ec != GetTestEC());
         assert(ec);
         assert(ret == "");
@@ -104,7 +104,7 @@ static void basic_tests()
         PutEnv(TC.name, file);
         ec = GetTestEC();
         ret = temp_directory_path(ec);
-        LIBCPP_ONLY(assert(ErrorIs(ec, expect_errc)));
+        LIBCPP_ASSERT(ErrorIs(ec, expect_errc));
         assert(ec != GetTestEC());
         assert(ec);
         assert(ret == "");

@@ -378,39 +378,39 @@ static void diagnoseInvalidOperandDominance(Operation &op, unsigned operandNo) {
 LogicalResult
 OperationVerifier::verifyDominanceOfContainedRegions(Operation &op,
                                                      DominanceInfo &domInfo) {
-  for (Region &region : op.getRegions()) {
-    // Verify the dominance of each of the held operations.
-    for (Block &block : region) {
-      // Dominance is only meaningful inside reachable blocks.
-      bool isReachable = domInfo.isReachableFromEntry(&block);
+  llvm::SmallVector<Operation *, 8> worklist{&op};
+  while (!worklist.empty()) {
+    auto *op = worklist.pop_back_val();
+    for (auto &region : op->getRegions())
+      for (auto &block : region.getBlocks()) {
+        // Dominance is only meaningful inside reachable blocks.
+        bool isReachable = domInfo.isReachableFromEntry(&block);
+        for (auto &op : block) {
+          if (isReachable) {
+            // Check that operands properly dominate this use.
+            for (const auto &operand : llvm::enumerate(op.getOperands())) {
+              if (domInfo.properlyDominates(operand.value(), &op))
+                continue;
 
-      for (Operation &op : block) {
-        if (isReachable) {
-          // Check that operands properly dominate this use.
-          for (const auto &operand : llvm::enumerate(op.getOperands())) {
-            if (domInfo.properlyDominates(operand.value(), &op))
+              diagnoseInvalidOperandDominance(op, operand.index());
+              return failure();
+            }
+          }
+
+          // Recursively verify dominance within each operation in the block,
+          // even if the block itself is not reachable, or we are in a region
+          // which doesn't respect dominance.
+          if (verifyRecursively && op.getNumRegions() != 0) {
+            // If this operation is IsolatedFromAbove, then we'll handle it in
+            // the outer verification loop.
+            if (op.hasTrait<OpTrait::IsIsolatedFromAbove>())
               continue;
-
-            diagnoseInvalidOperandDominance(op, operand.index());
-            return failure();
+            worklist.push_back(&op);
           }
         }
-
-        // Recursively verify dominance within each operation in the block, even
-        // if the block itself is not reachable, or we are in a region which
-        // doesn't respect dominance.
-        if (verifyRecursively && op.getNumRegions() != 0) {
-          // If this operation is IsolatedFromAbove, then we'll handle it in the
-          // outer verification loop.
-          if (op.hasTrait<OpTrait::IsIsolatedFromAbove>())
-            continue;
-
-          if (failed(verifyDominanceOfContainedRegions(op, domInfo)))
-            return failure();
-        }
       }
-    }
   }
+
   return success();
 }
 

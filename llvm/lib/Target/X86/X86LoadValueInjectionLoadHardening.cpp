@@ -41,7 +41,6 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -771,16 +770,13 @@ bool X86LoadValueInjectionLoadHardeningPass::instrUsesRegToAccessMemory(
       MI.getOpcode() == X86::SFENCE || MI.getOpcode() == X86::LFENCE)
     return false;
 
-  // FIXME: This does not handle pseudo loading instruction like TCRETURN*
-  const MCInstrDesc &Desc = MI.getDesc();
-  int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+  const int MemRefBeginIdx = X86::getFirstAddrOperandIdx(MI);
   if (MemRefBeginIdx < 0) {
     LLVM_DEBUG(dbgs() << "Warning: unable to obtain memory operand for loading "
                          "instruction:\n";
                MI.print(dbgs()); dbgs() << '\n';);
     return false;
   }
-  MemRefBeginIdx += X86II::getOperandBias(Desc);
 
   const MachineOperand &BaseMO =
       MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);

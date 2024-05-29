@@ -15,10 +15,19 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+PreservedAnalyses PrintMIRPreparePass::run(Module &M, ModuleAnalysisManager &) {
+  printMIR(OS, M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &) {
+  printMIR(OS, MF);
+  return PreservedAnalyses::all();
+}
 
 namespace {
 

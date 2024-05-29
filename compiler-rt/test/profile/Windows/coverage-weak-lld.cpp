@@ -14,7 +14,7 @@
 // RUN: llvm-profdata show %t.profraw --all-functions | FileCheck %s --check-prefix=PROFILE1
 
 /// link.exe does not support weak overridding weak.
-// RUN: %clang_profgen -fcoverage-mapping -fuse-ld=lld -Wl,-lldmingw,-opt:ref %t0.o %t2.o -o %t2
+// RUN: %clang_profgen -fcoverage-mapping -fuse-ld=lld -Wl,-lld-allow-duplicate-weak,-opt:ref %t0.o %t2.o -o %t2
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t2 | FileCheck %s --check-prefix=CHECK2
 // RUN: llvm-profdata show %t.profraw --all-functions | FileCheck %s --check-prefix=PROFILE2
 
@@ -30,7 +30,7 @@
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t1 | FileCheck %s --check-prefix=CHECK1
 // RUN: llvm-profdata show %t.profraw --all-functions | FileCheck %s --check-prefix=PROFILE1
 
-// RUN: %clang_profgen -fcoverage-mapping -fuse-ld=lld -Wl,-lldmingw,-opt:ref %t0.o %t2.o -o %t2
+// RUN: %clang_profgen -fcoverage-mapping -fuse-ld=lld -Wl,-lld-allow-duplicate-weak,-opt:ref %t0.o %t2.o -o %t2
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t2 | FileCheck %s --check-prefix=CHECK2
 // RUN: llvm-profdata show %t.profraw --all-functions | FileCheck %s --check-prefix=PROFILE2
 

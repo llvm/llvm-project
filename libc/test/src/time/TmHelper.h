@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TEST_SRC_TIME_TM_HELPER_H
-#define LLVM_LIBC_TEST_SRC_TIME_TM_HELPER_H
+#ifndef LLVM_LIBC_TEST_SRC_TIME_TMHELPER_H
+#define LLVM_LIBC_TEST_SRC_TIME_TMHELPER_H
 
 #include <time.h>
 
@@ -31,7 +31,8 @@ static inline void initialize_tm_data(struct tm *tm_data, int year, int month,
                     // years since 1900
                     .tm_year = year - TimeConstants::TIME_YEAR_BASE,
                     .tm_wday = wday,
-                    .tm_yday = yday};
+                    .tm_yday = yday,
+                    .tm_isdst = 0};
   *tm_data = temp;
 }
 
@@ -39,4 +40,4 @@ static inline void initialize_tm_data(struct tm *tm_data, int year, int month,
 } // namespace tmhelper
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_TEST_SRC_TIME_TM_HELPER_H
+#endif // LLVM_LIBC_TEST_SRC_TIME_TMHELPER_H

@@ -56,14 +56,18 @@ ScriptedThread::Create(ScriptedProcess &process,
   }
 
   ExecutionContext exe_ctx(process);
-  StructuredData::GenericSP owned_script_object_sp =
-      scripted_thread_interface->CreatePluginObject(
-          thread_class_name, exe_ctx, process.m_scripted_metadata.GetArgsSP(),
-          script_object);
+  auto obj_or_err = scripted_thread_interface->CreatePluginObject(
+      thread_class_name, exe_ctx, process.m_scripted_metadata.GetArgsSP(),
+      script_object);
 
-  if (!owned_script_object_sp)
+  if (!obj_or_err) {
+    llvm::consumeError(obj_or_err.takeError());
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Failed to create script object.");
+  }
+
+  StructuredData::GenericSP owned_script_object_sp = *obj_or_err;
+
   if (!owned_script_object_sp->IsValid())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Created script object is invalid.");
@@ -172,8 +176,9 @@ bool ScriptedThread::LoadArtificialStackFrames() {
   StackFrameListSP frames = GetStackFrameList();
 
   for (size_t idx = 0; idx < arr_size; idx++) {
-    StructuredData::Dictionary *dict;
-    if (!arr_sp->GetItemAtIndexAsDictionary(idx, dict) || !dict)
+    std::optional<StructuredData::Dictionary *> maybe_dict =
+        arr_sp->GetItemAtIndexAsDictionary(idx);
+    if (!maybe_dict)
       return ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
           llvm::Twine(
@@ -181,6 +186,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
               llvm::Twine(idx) + llvm::Twine(") from stackframe array."))
               .str(),
           error, LLDBLog::Thread);
+    StructuredData::Dictionary *dict = *maybe_dict;
 
     lldb::addr_t pc;
     if (!dict->GetValueForKeyAsInteger("pc", pc))

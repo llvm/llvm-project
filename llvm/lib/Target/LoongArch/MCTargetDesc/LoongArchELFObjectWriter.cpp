@@ -20,19 +20,27 @@ using namespace llvm;
 namespace {
 class LoongArchELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit);
+  LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit, bool EnableRelax);
 
   ~LoongArchELFObjectWriter() override;
+
+  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+                               unsigned Type) const override {
+    return EnableRelax;
+  }
 
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
+  bool EnableRelax;
 };
 } // end namespace
 
-LoongArchELFObjectWriter::LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit)
+LoongArchELFObjectWriter::LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit,
+                                                   bool EnableRelax)
     : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_LOONGARCH,
-                              /*HasRelocationAddend*/ true) {}
+                              /*HasRelocationAddend=*/true),
+      EnableRelax(EnableRelax) {}
 
 LoongArchELFObjectWriter::~LoongArchELFObjectWriter() {}
 
@@ -82,11 +90,13 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_LARCH_TLS_LE64_LO20;
   case LoongArch::fixup_loongarch_tls_le64_hi12:
     return ELF::R_LARCH_TLS_LE64_HI12;
+  case LoongArch::fixup_loongarch_call36:
+    return ELF::R_LARCH_CALL36;
     // TODO: Handle more fixup-kinds.
   }
 }
 
 std::unique_ptr<MCObjectTargetWriter>
-llvm::createLoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit) {
-  return std::make_unique<LoongArchELFObjectWriter>(OSABI, Is64Bit);
+llvm::createLoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit, bool Relax) {
+  return std::make_unique<LoongArchELFObjectWriter>(OSABI, Is64Bit, Relax);
 }

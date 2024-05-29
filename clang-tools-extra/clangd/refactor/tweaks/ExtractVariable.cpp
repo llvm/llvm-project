@@ -176,7 +176,8 @@ bool ExtractionContext::exprIsValidOutside(const clang::Stmt *Scope) const {
   SourceLocation ScopeBegin = Scope->getBeginLoc();
   SourceLocation ScopeEnd = Scope->getEndLoc();
   for (const Decl *ReferencedDecl : ReferencedDecls) {
-    if (SM.isPointWithin(ReferencedDecl->getBeginLoc(), ScopeBegin, ScopeEnd) &&
+    if (ReferencedDecl->getBeginLoc().isValid() &&
+        SM.isPointWithin(ReferencedDecl->getBeginLoc(), ScopeBegin, ScopeEnd) &&
         SM.isPointWithin(ReferencedDecl->getEndLoc(), ScopeBegin, ScopeEnd))
       return false;
   }
@@ -467,7 +468,8 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
   // Extracting Exprs like a = 1 gives placeholder = a = 1 which isn't useful.
   // FIXME: we could still hoist the assignment, and leave the variable there?
   ParsedBinaryOperator BinOp;
-  if (BinOp.parse(*N) && BinaryOperator::isAssignmentOp(BinOp.Kind))
+  bool IsBinOp = BinOp.parse(*N);
+  if (IsBinOp && BinaryOperator::isAssignmentOp(BinOp.Kind))
     return false;
 
   const SelectionTree::Node &OuterImplicit = N->outerImplicit();
@@ -482,13 +484,48 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
                       OuterImplicit.ASTNode.get<Expr>()))
     return false;
 
+  std::function<bool(const SelectionTree::Node *)> IsFullySelected =
+      [&](const SelectionTree::Node *N) {
+        if (N->ASTNode.getSourceRange().isValid() &&
+            N->Selected != SelectionTree::Complete)
+          return false;
+        for (const auto *Child : N->Children) {
+          if (!IsFullySelected(Child))
+            return false;
+        }
+        return true;
+      };
+  auto ExprIsFullySelectedTargetNode = [&](const Expr *E) {
+    if (E != OuterImplicit.ASTNode.get<Expr>())
+      return false;
+
+    // The above condition is the only relevant one except for binary operators.
+    // Without the following code, we would fail to offer extraction for e.g.:
+    //   int x = 1 + 2 + [[3 + 4 + 5]];
+    // See the documentation of ParsedBinaryOperator for further details.
+    if (!IsBinOp)
+      return true;
+    return IsFullySelected(N);
+  };
+
   // Disable extraction of full RHS on assignment operations, e.g:
-  // auto x = [[RHS_EXPR]];
+  // x = [[RHS_EXPR]];
   // This would just result in duplicating the code.
   if (const auto *BO = Parent->ASTNode.get<BinaryOperator>()) {
-    if (BO->isAssignmentOp() &&
-        BO->getRHS() == OuterImplicit.ASTNode.get<Expr>())
+    if (BO->isAssignmentOp() && ExprIsFullySelectedTargetNode(BO->getRHS()))
       return false;
+  }
+
+  // The same logic as for assignments applies to initializations.
+  // However, we do allow extracting the RHS of an init capture, as it is
+  // a valid use case to move non-trivial expressions out of the capture clause.
+  // FIXME: In that case, the extracted variable should be captured directly,
+  //        rather than an explicit copy.
+  if (const auto *Decl = Parent->ASTNode.get<VarDecl>()) {
+    if (!Decl->isInitCapture() &&
+        ExprIsFullySelectedTargetNode(Decl->getInit())) {
+      return false;
+    }
   }
 
   return true;

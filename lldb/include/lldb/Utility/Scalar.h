@@ -71,6 +71,7 @@ public:
       : m_type(e_int), m_integer(std::move(v), false), m_float(0.0f) {}
   Scalar(llvm::APSInt v)
       : m_type(e_int), m_integer(std::move(v)), m_float(0.0f) {}
+  Scalar(llvm::APFloat v) : m_type(e_float), m_integer(0), m_float(v) {}
 
   bool SignExtend(uint32_t bit_pos);
 
@@ -101,7 +102,7 @@ public:
 
   const char *GetTypeAsCString() const { return GetValueTypeAsCString(m_type); }
 
-  void GetValue(Stream *s, bool show_type) const;
+  void GetValue(Stream &s, bool show_type) const;
 
   bool IsValid() const { return (m_type >= e_int) && (m_type <= e_float); }
 
@@ -185,6 +186,10 @@ public:
 
   Status SetValueFromData(const DataExtractor &data, lldb::Encoding encoding,
                           size_t byte_size);
+
+  llvm::APFloat CreateAPFloatFromAPSInt(lldb::BasicType basic_type);
+
+  llvm::APFloat CreateAPFloatFromAPFloat(lldb::BasicType basic_type);
 
 protected:
   Scalar::Type m_type = e_void;

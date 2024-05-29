@@ -157,3 +157,62 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 // what-error {{huh?}}
 // CHECK9: error: 'what-error' diagnostics expected but not seen:
 #endif
+
+#ifdef TEST_WIDE_DELIM
+// RUN: not %clang_cc1 -DTEST_WIDE_DELIM -verify %s 2>&1 | FileCheck -check-prefix=CHECK-WIDE-DELIM %s
+
+// expected-error {{{some message with {{}} in it}}}
+// expected-error {{{some message with  {}} in it}}}
+// expected-error {{{some message with {{}  in it}}}
+
+// expected-error-re {{{some {{.*}} regex with double braces}}}
+// expected-error-re {{{some message with {{}  in it}}}
+
+// expected-error {{{mismatched delim}}
+// expected-error-re {{{mismatched re {{.*} }}}
+// expected-error-re {{{no regex}}}
+
+#if 0
+//      CHECK-WIDE-DELIM: error: 'expected-error' diagnostics expected but not seen:
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 164: some message with {{[{]{}[}]}} in it
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 165: some message with  {}} in it
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 166: some message with {{[{]{[}]}}  in it
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 168: {some {{.*}} regex with double braces
+// CHECK-WIDE-DELIM-NEXT: error: 'expected-error' diagnostics seen but not expected:
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 169: cannot find end ('}}') of expected regex
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 171: cannot find end ('}}}') of expected string
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 172: cannot find end ('}}') of expected regex
+// CHECK-WIDE-DELIM-NEXT:   verify.c Line 173: cannot find start of regex ('{{[{][{]}}') in {no regex
+// CHECK-WIDE-DELIM-NEXT: 8 errors generated.
+#endif
+
+#endif
+
+#ifdef TEST10
+// RUN: not %clang_cc1 -DTEST10 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK10 %s
+
+// CHECK10: error: no expected directives found: consider use of 'foo-no-diagnostics'
+#endif
+
+#ifdef TEST11
+// RUN: not %clang_cc1 -DTEST11 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK11 %s
+
+// foo-no-diagnostics
+// foo-note {{}}
+
+//      CHECK11: error: 'foo-error' diagnostics seen but not expected:
+// CHECK11-NEXT:   Line 201: expected directive cannot follow 'foo-no-diagnostics' directive
+// CHECK11-NEXT: 1 error generated.
+#endif
+
+#ifdef TEST12
+// RUN: not %clang_cc1 -DTEST12 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK12 %s
+
+#warning X
+// foo-warning@-1 {{X}}
+// foo-no-diagnostics
+
+//      CHECK12: error: 'foo-error' diagnostics seen but not expected:
+// CHECK12-NEXT:   Line 213: 'foo-no-diagnostics' directive cannot follow other expected directives
+// CHECK12-NEXT: 1 error generated.
+#endif

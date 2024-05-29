@@ -245,9 +245,7 @@ define i32 @umin_of_smin_umax_wrong_pattern(i32 %x, i32 %y) {
 
 define i32 @smin_of_umin_umax_wrong_pattern2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @smin_of_umin_umax_wrong_pattern2(
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.smin.i32(i32 [[MAX]], i32 [[MIN]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp1 = icmp ult i32 %x, %y

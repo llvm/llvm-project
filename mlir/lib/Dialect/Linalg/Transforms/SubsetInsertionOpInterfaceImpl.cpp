@@ -8,14 +8,37 @@
 
 #include "mlir/Dialect/Linalg/Transforms/SubsetInsertionOpInterfaceImpl.h"
 
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
 
 using namespace mlir;
-using namespace mlir::bufferization;
 using namespace mlir::linalg;
 
 namespace {
+struct LinalgCopyOpSubsetOpInterface
+    : public SubsetOpInterface::ExternalModel<LinalgCopyOpSubsetOpInterface,
+                                              linalg::CopyOp> {
+  bool operatesOnEquivalentSubset(
+      Operation *op, SubsetOpInterface candidate,
+      function_ref<bool(Value, Value)> equivalenceFn) const {
+    // linalg.copy operates on the entire destination tensor.
+    if (auto otherCopyOp = dyn_cast<linalg::CopyOp>(candidate.getOperation()))
+      return equivalenceFn(cast<linalg::CopyOp>(op).getOutputs()[0],
+                           otherCopyOp.getOutputs()[0]);
+    // In the absence of an analysis, "false" is a conservative way to implement
+    // this interface.
+    return false;
+  }
+
+  bool operatesOnDisjointSubset(
+      Operation *op, SubsetOpInterface candidate,
+      function_ref<bool(Value, Value)> equivalenceFn) const {
+    // In the absence of an analysis, "false" is a conservative way to implement
+    // this interface.
+    return false;
+  }
+};
+
 struct LinalgCopyOpInterface
     : public SubsetInsertionOpInterface::ExternalModel<LinalgCopyOpInterface,
                                                        linalg::CopyOp> {
@@ -49,9 +72,10 @@ struct LinalgCopyOpInterface
 };
 } // namespace
 
-void mlir::linalg::registerSubsetInsertionOpInterfaceExternalModels(
+void mlir::linalg::registerSubsetOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, linalg::LinalgDialect *dialect) {
+    linalg::CopyOp::attachInterface<LinalgCopyOpSubsetOpInterface>(*ctx);
     linalg::CopyOp::attachInterface<LinalgCopyOpInterface>(*ctx);
   });
 }

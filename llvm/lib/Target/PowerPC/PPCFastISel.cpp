@@ -350,7 +350,7 @@ bool PPCFastISel::PPCComputeAddress(const Value *Obj, Address &Addr) {
           unsigned Idx = cast<ConstantInt>(Op)->getZExtValue();
           TmpOffset += SL->getElementOffset(Idx);
         } else {
-          uint64_t S = DL.getTypeAllocSize(GTI.getIndexedType());
+          uint64_t S = GTI.getSequentialElementStride(DL);
           for (;;) {
             if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
               // Constant-offset addressing.
@@ -2074,16 +2074,15 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
   if (GV->isThreadLocal())
     return 0;
 
-  // If the global has the toc-data attribute then fallback to DAG-ISEL.
-  if (TM.getTargetTriple().isOSAIX())
-    if (const GlobalVariable *Var = dyn_cast_or_null<GlobalVariable>(GV))
-      if (Var->hasAttribute("toc-data"))
-        return false;
-
   PPCFuncInfo->setUsesTOCBasePtr();
+  bool IsAIXTocData = TM.getTargetTriple().isOSAIX() &&
+                      isa<GlobalVariable>(GV) &&
+                      cast<GlobalVariable>(GV)->hasAttribute("toc-data");
+
   // For small code model, generate a simple TOC load.
   if (CModel == CodeModel::Small)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::LDtoc),
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+            IsAIXTocData ? TII.get(PPC::ADDItoc8) : TII.get(PPC::LDtoc),
             DestReg)
         .addGlobalAddress(GV)
         .addReg(PPC::X2);
@@ -2094,19 +2093,22 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
     // for large code model, we generate:
     //       LDtocL(GV, ADDIStocHA8(%x2, GV))
     // Otherwise we generate:
-    //       ADDItocL(ADDIStocHA8(%x2, GV), GV)
+    //       ADDItocL8(ADDIStocHA8(%x2, GV), GV)
     // Either way, start with the ADDIStocHA8:
     Register HighPartReg = createResultReg(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::ADDIStocHA8),
             HighPartReg).addReg(PPC::X2).addGlobalAddress(GV);
 
     if (Subtarget->isGVIndirectSymbol(GV)) {
+      assert(!IsAIXTocData && "TOC data should always be direct.");
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::LDtocL),
               DestReg).addGlobalAddress(GV).addReg(HighPartReg);
     } else {
-      // Otherwise generate the ADDItocL.
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::ADDItocL),
-              DestReg).addReg(HighPartReg).addGlobalAddress(GV);
+      // Otherwise generate the ADDItocL8.
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::ADDItocL8),
+              DestReg)
+          .addReg(HighPartReg)
+          .addGlobalAddress(GV);
     }
   }
 

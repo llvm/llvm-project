@@ -40,55 +40,11 @@ public:
       return failure();
 
     // Create new CallOp.
-    auto newOp = rewriter.create<CallOp>(loc, resultMapping.getConvertedTypes(),
-                                         adaptor.getFlatOperands());
-    newOp->setAttrs(op->getAttrs());
+    auto newOp =
+        rewriter.create<CallOp>(loc, resultMapping.getConvertedTypes(),
+                                adaptor.getFlatOperands(), op->getAttrs());
 
     rewriter.replaceOp(op, newOp->getResults(), resultMapping);
-    return success();
-  }
-};
-
-class ConvertTypesInFuncFuncOp : public OneToNOpConversionPattern<FuncOp> {
-public:
-  using OneToNOpConversionPattern<FuncOp>::OneToNOpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(FuncOp op, OpAdaptor adaptor,
-                  OneToNPatternRewriter &rewriter) const override {
-    auto *typeConverter = getTypeConverter<OneToNTypeConverter>();
-
-    // Construct mapping for function arguments.
-    OneToNTypeMapping argumentMapping(op.getArgumentTypes());
-    if (failed(typeConverter->computeTypeMapping(op.getArgumentTypes(),
-                                                 argumentMapping)))
-      return failure();
-
-    // Construct mapping for function results.
-    OneToNTypeMapping funcResultMapping(op.getResultTypes());
-    if (failed(typeConverter->computeTypeMapping(op.getResultTypes(),
-                                                 funcResultMapping)))
-      return failure();
-
-    // Nothing to do if the op doesn't have any non-identity conversions for its
-    // operands or results.
-    if (!argumentMapping.hasNonIdentityConversion() &&
-        !funcResultMapping.hasNonIdentityConversion())
-      return failure();
-
-    // Update the function signature in-place.
-    auto newType = FunctionType::get(rewriter.getContext(),
-                                     argumentMapping.getConvertedTypes(),
-                                     funcResultMapping.getConvertedTypes());
-    rewriter.updateRootInPlace(op, [&] { op.setType(newType); });
-
-    // Update block signatures.
-    if (!op.isExternal()) {
-      Region *region = &op.getBody();
-      Block *block = &region->front();
-      rewriter.applySignatureConversion(block, argumentMapping);
-    }
-
     return success();
   }
 };
@@ -105,7 +61,7 @@ public:
       return failure();
 
     // Convert operands.
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         op, [&] { op->setOperands(adaptor.getFlatOperands()); });
 
     return success();
@@ -121,10 +77,11 @@ void populateFuncTypeConversionPatterns(TypeConverter &typeConverter,
   patterns.add<
       // clang-format off
       ConvertTypesInFuncCallOp,
-      ConvertTypesInFuncFuncOp,
       ConvertTypesInFuncReturnOp
       // clang-format on
       >(typeConverter, patterns.getContext());
+  populateOneToNFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
+      typeConverter, patterns);
 }
 
 } // namespace mlir

@@ -14,15 +14,14 @@
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
-#include "src/__support/threads/linux/futex_word.h" // For FutexWordType
-#include "src/errno/libc_errno.h"                   // For error macros
+#include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
+#include "src/errno/libc_errno.h"                    // For error macros
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include <arm_acle.h>
 #endif
 
 #include <fcntl.h>
-#include <linux/futex.h>
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <linux/prctl.h> // For PR_SET_NAME
 #include <linux/sched.h> // For CLONE_* flags.
@@ -176,7 +175,7 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
 #endif
 }
 
-[[gnu::noinline]] LIBC_INLINE void start_thread() {
+[[gnu::noinline]] void start_thread() {
   auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
   auto *attrib = start_args->thread_attrib;
   self.attrib = attrib;
@@ -247,8 +246,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   // stack memory.
 
   static constexpr size_t INTERNAL_STACK_DATA_SIZE =
-      sizeof(StartArgs) + sizeof(ThreadAttributes) +
-      sizeof(cpp::Atomic<FutexWordType>);
+      sizeof(StartArgs) + sizeof(ThreadAttributes) + sizeof(Futex);
 
   // This is pretty arbitrary, but at the moment we don't adjust user provided
   // stacksize (or default) to account for this data as its assumed minimal. If
@@ -288,9 +286,9 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   start_args->runner = runner;
   start_args->arg = arg;
 
-  auto clear_tid = reinterpret_cast<cpp::Atomic<FutexWordType> *>(
+  auto clear_tid = reinterpret_cast<Futex *>(
       adjusted_stack + sizeof(StartArgs) + sizeof(ThreadAttributes));
-  clear_tid->val = CLEAR_TID_VALUE;
+  clear_tid->set(CLEAR_TID_VALUE);
   attrib->platform_data = clear_tid;
 
   // The clone syscall takes arguments in an architecture specific order.
@@ -374,14 +372,11 @@ void Thread::wait() {
   // The kernel should set the value at the clear tid address to zero.
   // If not, it is a spurious wake and we should continue to wait on
   // the futex.
-  auto *clear_tid =
-      reinterpret_cast<cpp::Atomic<FutexWordType> *>(attrib->platform_data);
-  while (clear_tid->load() != 0) {
-    // We cannot do a FUTEX_WAIT_PRIVATE here as the kernel does a
-    // FUTEX_WAKE and not a FUTEX_WAKE_PRIVATE.
-    LIBC_NAMESPACE::syscall_impl<long>(FUTEX_SYSCALL_ID, &clear_tid->val,
-                                       FUTEX_WAIT, CLEAR_TID_VALUE, nullptr);
-  }
+  auto *clear_tid = reinterpret_cast<Futex *>(attrib->platform_data);
+  // We cannot do a FUTEX_WAIT_PRIVATE here as the kernel does a
+  // FUTEX_WAKE and not a FUTEX_WAKE_PRIVATE.
+  while (clear_tid->load() != 0)
+    clear_tid->wait(CLEAR_TID_VALUE, cpp::nullopt, true);
 }
 
 bool Thread::operator==(const Thread &thread) const {

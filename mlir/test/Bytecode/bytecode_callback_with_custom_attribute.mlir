@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file --test-bytecode-callback="callback-test=3" | FileCheck %s --check-prefix=TEST_3
-// RUN: mlir-opt %s -split-input-file --test-bytecode-callback="callback-test=4" | FileCheck %s --check-prefix=TEST_4
+// RUN: mlir-opt %s -split-input-file --test-bytecode-roundtrip="test-kind=3" | FileCheck %s --check-prefix=TEST_3
+// RUN: mlir-opt %s -split-input-file --test-bytecode-roundtrip="test-kind=4" | FileCheck %s --check-prefix=TEST_4
 
 "test.versionedC"() <{attribute = #test.attr_params<42, 24>}> : () -> ()
 

@@ -12,6 +12,9 @@
 // RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
 
+// RUN: %clang -x c++ -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr7 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -fsyntax-only
+
 #include <x86gprintrin.h>
 
 unsigned short us;

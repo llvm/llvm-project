@@ -1,0 +1,59 @@
+# REQUIRES: x86
+## Test SHF_LINK_ORDER when the linked-to section has a larger index.
+# RUN: yaml2obj %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t.ro
+# RUN: llvm-readelf -x asan_globals %t.ro | FileCheck %s
+
+# CHECK:      Hex dump of section 'asan_globals':
+# CHECK-NEXT: 0x00000000 00                                  .
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC, SHF_GROUP ]
+    Size:            0x1
+  - Name:            asan_globals
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_LINK_ORDER, SHF_GROUP ]
+    Link:            .bss
+    Content:         '00'
+  - Name:            .group
+    Type:            SHT_GROUP
+    Link:            .symtab
+    Info:            foo
+    AddressAlign:    4
+    Members:
+      - SectionOrType:   GRP_COMDAT
+      - SectionOrType:   .bss
+      - SectionOrType:   asan_globals
+      - SectionOrType:   .relaasan_globals
+  - Name:            .relaasan_globals
+    Type:            SHT_RELA
+    Flags:           [ SHF_GROUP ]
+    Link:            .symtab
+    Info:            asan_globals
+    Relocations:
+      - Type:            R_X86_64_NONE
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .group
+      - Name:            asan_globals
+      - Name:            .relaasan_globals
+      - Name:            .bss
+      - Name:            .symtab
+Symbols:
+  - Name:            foo
+    Section:         .bss
+    Binding:         STB_WEAK

@@ -78,4 +78,4 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 @D.cb. = external local_unnamed_addr constant { i32, %struct.B, half, %struct.C, double }
 
 !hlsl.cbufs = !{!0}
-!0 = !{ptr @D.cb., !"D.cb.ty", i32 13, i32 1, i32 0}
+!0 = !{ptr @D.cb., !"D.cb.ty", i32 13, i1 false, i32 1, i32 0}

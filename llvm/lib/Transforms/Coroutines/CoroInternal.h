@@ -12,6 +12,7 @@
 #define LLVM_LIB_TRANSFORMS_COROUTINES_COROINTERNAL_H
 
 #include "CoroInstr.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -32,7 +33,10 @@ void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
 /// OptimizeFrame is false.
 void salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
-    DbgVariableIntrinsic *DVI, bool OptimizeFrame, bool IsEntryPoint);
+    DbgVariableIntrinsic &DVI, bool OptimizeFrame, bool IsEntryPoint);
+void salvageDebugInfo(
+    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
+    DbgVariableRecord &DVR, bool OptimizeFrame, bool UseEntryValue);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
@@ -43,7 +47,7 @@ struct LowererBase {
   ConstantPointerNull *const NullPtr;
 
   LowererBase(Module &M);
-  Value *makeSubFnCall(Value *Arg, int Index, Instruction *InsertPt);
+  CallInst *makeSubFnCall(Value *Arg, int Index, Instruction *InsertPt);
 };
 
 enum class ABI {
@@ -80,6 +84,8 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   SmallVector<CoroAlignInst *, 2> CoroAligns;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
   SmallVector<CallInst*, 2> SwiftErrorOps;
+  SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
+  SmallVector<CallInst *, 2> SymmetricTransfers;
 
   // Field indexes for special fields in the switch lowering.
   struct SwitchFieldIndex {
@@ -185,7 +191,8 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     switch (ABI) {
     case coro::ABI::Switch:
       return FunctionType::get(Type::getVoidTy(FrameTy->getContext()),
-                               FrameTy->getPointerTo(), /*IsVarArg*/false);
+                               PointerType::getUnqual(FrameTy->getContext()),
+                               /*IsVarArg=*/false);
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getFunctionType();
@@ -239,10 +246,13 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     return nullptr;
   }
 
-  Instruction *getInsertPtAfterFramePtr() const {
-    if (auto *I = dyn_cast<Instruction>(FramePtr))
-      return I->getNextNode();
-    return &cast<Argument>(FramePtr)->getParent()->getEntryBlock().front();
+  BasicBlock::iterator getInsertPtAfterFramePtr() const {
+    if (auto *I = dyn_cast<Instruction>(FramePtr)) {
+      BasicBlock::iterator It = std::next(I->getIterator());
+      It.setHeadBit(true); // Copy pre-RemoveDIs behaviour.
+      return It;
+    }
+    return cast<Argument>(FramePtr)->getParent()->getEntryBlock().begin();
   }
 
   /// Allocate memory according to the rules of the active lowering.
@@ -265,9 +275,10 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
 
 bool defaultMaterializable(Instruction &V);
 void buildCoroutineFrame(
-    Function &F, Shape &Shape,
+    Function &F, Shape &Shape, TargetTransformInfo &TTI,
     const std::function<bool(Instruction &)> &MaterializableCallback);
 CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
+                             TargetTransformInfo &TTI,
                              ArrayRef<Value *> Arguments, IRBuilder<> &);
 } // End namespace coro.
 } // End namespace llvm

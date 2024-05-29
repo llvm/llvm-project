@@ -52,7 +52,7 @@ public:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3FooIcED2Ev(ptr noundef nonnull align 1 dereferenceable(1) [[THIS1]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    call void @_ZN3FooIcED2Ev(ptr noundef nonnull align 1 dereferenceable(1) [[THIS1]]) #[[ATTR1:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3FooIcE3getEv(
@@ -94,7 +94,7 @@ template struct Foo<char>;
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3FooIsED2Ev(ptr noundef nonnull align 2 dereferenceable(2) [[THIS1]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @_ZN3FooIsED2Ev(ptr noundef nonnull align 2 dereferenceable(2) [[THIS1]]) #[[ATTR1]]
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3FooIsE3getEv(
@@ -139,7 +139,7 @@ template struct Foo<short>;
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3BarIiED2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @_ZN3BarIiED2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR1]]
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3BarIiE3getEv(
@@ -184,7 +184,7 @@ template struct Bar<int>;
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3BazIlED2Ev(ptr noundef nonnull align 8 dereferenceable(8) [[THIS1]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @_ZN3BazIlED2Ev(ptr noundef nonnull align 8 dereferenceable(8) [[THIS1]]) #[[ATTR1]]
 // CHECK-NEXT:    ret void
 //
 template struct Baz<long>;

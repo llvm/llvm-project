@@ -384,7 +384,7 @@ Affine dialects in particular, Linalg takes the following decisions.
   multi-for loops with induction variables independent of each other (referred
   to as hyper-rectangular iteration domains in the literature) such as the
   proposed
-  [affine.parallel]((https://llvm.discourse.group/t/rfc-add-affine-parallel/350)
+  [affine.parallel](https://llvm.discourse.group/t/rfc-add-affine-parallel/350)
   are sufficient in the majority of cases.
 - **Declarative Tiling**: the *tiling* transformation is ubiquitous in HPC code
   generation. It can be seen as a decomposition of either the iteration space or

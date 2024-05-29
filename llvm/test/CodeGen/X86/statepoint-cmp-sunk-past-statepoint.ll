@@ -5,9 +5,9 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 declare void @foo() gc "statepoint-example"
-declare void @bar(i8 addrspace(1)*) gc "statepoint-example"
+declare void @bar(ptr addrspace(1)) gc "statepoint-example"
 
-declare i32* @fake_personality_function()
+declare ptr @fake_personality_function()
 
 ; Simplest possible test demonstrating the problem
 
@@ -29,15 +29,15 @@ declare i32* @fake_personality_function()
 ; CHECK:        RET 0
 ; CHECK:      bb.2
 ; CHECK:        RET 0
-define void @test(i8 addrspace(1)* %a)  gc "statepoint-example" {
+define void @test(ptr addrspace(1) %a)  gc "statepoint-example" {
 entry:
-  %not7 = icmp eq i8 addrspace(1)* %a, null
-  %statepoint_token1745 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2, i32 5, void ()* nonnull elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %a) ]
+  %not7 = icmp eq ptr addrspace(1) %a, null
+  %statepoint_token1745 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 5, ptr nonnull elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) %a) ]
   br i1 %not7, label %zero, label %not_zero
 
 not_zero:
-  %a.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token1745, i32 0, i32 0) ; (%a, %a)
-  %statepoint_token1752 = call token (i64, i32, void (i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8f(i64 2, i32 5, void (i8 addrspace(1)*)* nonnull elementtype(void (i8 addrspace(1)*)) @bar, i32 1, i32 0, i8 addrspace(1)* %a.relocated, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
+  %a.relocated = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %statepoint_token1745, i32 0, i32 0) ; (%a, %a)
+  %statepoint_token1752 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 5, ptr nonnull elementtype(void (ptr addrspace(1))) @bar, i32 1, i32 0, ptr addrspace(1) %a.relocated, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
   ret void
 
 zero:
@@ -66,31 +66,31 @@ zero:
 ; CHECK:        TEST64rr killed %1, %1, implicit-def $eflags
 ; CHECK:        JCC_1 %bb.1, 5, implicit killed $eflags
 ; CHECK:        JMP_1 %bb.6
-define void @test2(i8 addrspace(1)* %this, i32 %0, i32 addrspace(1)* %p0, i8 addrspace(1)* %p1) gc "statepoint-example" personality i32* ()* @fake_personality_function {
+define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr addrspace(1) %p1) gc "statepoint-example" personality ptr @fake_personality_function {
 preheader:
   br label %loop.head
 
 loop.head:
-  %phi1 = phi i32 addrspace(1)* [ %p0, %preheader ], [ %addr.i.i46797.remat64523, %tail ]
-  %v1 = phi i8 addrspace(1)* [ %p1, %preheader ], [ %v3, %tail ]
-  %not3= icmp ne i32 addrspace(1)* %phi1, null
+  %phi1 = phi ptr addrspace(1) [ %p0, %preheader ], [ %addr.i.i46797.remat64523, %tail ]
+  %v1 = phi ptr addrspace(1) [ %p1, %preheader ], [ %v3, %tail ]
+  %not3= icmp ne ptr addrspace(1) %phi1, null
   br i1 %not3, label %BB1, label %BB3
 
 BB3:
-  %token1 = call token (i64, i32, i8 addrspace(1)* ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8f(i64 2882400000, i32 0, i8 addrspace(1)* ()* elementtype(i8 addrspace(1)* ()) undef, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %v1) ]
-  %v2 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token1, i32 0, i32 0) ; (%v1, %v1)
-  %cond = icmp eq i8 addrspace(1)* null, %v2
-  %token2 = invoke token (i64, i32, i8 addrspace(1)* ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8f(i64 2882400000, i32 0, i8 addrspace(1)* ()* elementtype(i8 addrspace(1)* ()) undef, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %v2, i32 addrspace(1)* %phi1) ]
+  %token1 = call token (i64, i32, ptr addrspace(1) ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr addrspace(1) ()* elementtype(ptr addrspace(1) ()) undef, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) %v1) ]
+  %v2 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token1, i32 0, i32 0) ; (%v1, %v1)
+  %cond = icmp eq ptr addrspace(1) null, %v2
+  %token2 = invoke token (i64, i32, ptr addrspace(1) ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr addrspace(1) ()* elementtype(ptr addrspace(1) ()) undef, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) %v2, ptr addrspace(1) %phi1) ]
           to label %BB2 unwind label %BB6
 
 BB2:
-  %v3 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token2, i32 0, i32 0) ; (%v2, %v2)
-  %.remat64522 = getelementptr inbounds i8, i8 addrspace(1)* %v3, i64 8
-  %addr.i.i46797.remat64523 = bitcast i8 addrspace(1)* %.remat64522 to i32 addrspace(1)*
+  %v3 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token2, i32 0, i32 0) ; (%v2, %v2)
+  %.remat64522 = getelementptr inbounds i8, ptr addrspace(1) %v3, i64 8
+  %addr.i.i46797.remat64523 = bitcast ptr addrspace(1) %.remat64522 to ptr addrspace(1)
   br i1 undef, label %BB4, label %tail
 
 BB4:
-  %dummy = ptrtoint i64* undef to i64
+  %dummy = ptrtoint ptr undef to i64
   br label %tail
 
 tail:
@@ -107,7 +107,5 @@ BB6:
 }
 
 
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32 immarg, i32 immarg) #5
-declare token @llvm.experimental.gc.statepoint.p0f_p1i8f(i64 immarg, i32 immarg, i8 addrspace(1)* ()*, i32 immarg, i32 immarg, ...)
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 immarg, i32 immarg, void ()*, i32 immarg, i32 immarg, ...)
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidp1i8f(i64 immarg, i32 immarg, void (i8 addrspace(1)*)*, i32 immarg, i32 immarg, ...)
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32 immarg, i32 immarg) #5
+declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr addrspace(1) ()*, i32 immarg, i32 immarg, ...)

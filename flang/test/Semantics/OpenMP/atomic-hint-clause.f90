@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp 
+! REQUIRES: openmp_runtime
+
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags 
 ! Semantic checks on hint clauses, as they appear on atomic constructs
 
 program sample
@@ -19,7 +21,7 @@ program sample
         y = y + 10
     
     !$omp atomic update hint(5)
-        y = x
+        y = x + y
     
     !ERROR: Hint clause value is not a valid OpenMP synchronization value
     !$omp atomic hint(7) capture

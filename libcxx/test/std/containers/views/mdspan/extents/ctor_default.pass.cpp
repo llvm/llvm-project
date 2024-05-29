@@ -14,7 +14,7 @@
 // constexpr extents() noexcept = default;
 //
 // Remarks: since the standard uses an exposition only array member, dynamic extents
-// need to be zero intialized!
+// need to be zero initialized!
 
 #include <mdspan>
 #include <cassert>

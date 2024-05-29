@@ -11,8 +11,8 @@ define i32 @freeze(i32 %t) {
 ;
 ; FAST-LABEL: freeze:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    movl $10, %eax
-; FAST-NEXT:    xorl %edi, %eax
+; FAST-NEXT:    movl %edi, %eax
+; FAST-NEXT:    xorl $10, %eax
 ; FAST-NEXT:    retq
   %1 = freeze i32 %t
   %2 = freeze i32 10

@@ -9,9 +9,9 @@
 #ifndef __LLVM_LIBC_TYPES_STRUCT_TERMIOS_H__
 #define __LLVM_LIBC_TYPES_STRUCT_TERMIOS_H__
 
-#include <llvm-libc-types/cc_t.h>
-#include <llvm-libc-types/speed_t.h>
-#include <llvm-libc-types/tcflag_t.h>
+#include "llvm-libc-types/cc_t.h"
+#include "llvm-libc-types/speed_t.h"
+#include "llvm-libc-types/tcflag_t.h"
 
 struct termios {
   tcflag_t c_iflag; // Input mode flags

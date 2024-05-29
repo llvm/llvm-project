@@ -170,7 +170,7 @@ bool ARCDAGToDAGISel::SelectFrameADDR_ri(SDValue Addr, SDValue &Base,
 void ARCDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   case ISD::Constant: {
-    uint64_t CVal = cast<ConstantSDNode>(N)->getZExtValue();
+    uint64_t CVal = N->getAsZExtVal();
     ReplaceNode(N, CurDAG->getMachineNode(
                        isInt<12>(CVal) ? ARC::MOV_rs12 : ARC::MOV_rlimm,
                        SDLoc(N), MVT::i32,

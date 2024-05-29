@@ -18,12 +18,13 @@
 #include "test_macros.h"
 
 void test() {
+  int i = 1;
   // Note the Standard way to create a format-arg-store is by using make_format_args.
-  static_assert(std::same_as<decltype(std::basic_format_args(std::make_format_args(42))),
+  static_assert(std::same_as<decltype(std::basic_format_args(std::make_format_args(i))),
                              std::basic_format_args<std::format_context>>);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  static_assert(std::same_as<decltype(std::basic_format_args(std::make_wformat_args(42))),
+  static_assert(std::same_as<decltype(std::basic_format_args(std::make_wformat_args(i))),
                              std::basic_format_args<std::wformat_context>>);
 
 #endif

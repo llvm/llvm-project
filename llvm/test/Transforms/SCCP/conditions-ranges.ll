@@ -178,7 +178,7 @@ define i32 @f5(i64 %sz) {
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[DIV]], [[COND_TRUE]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[COND]] to i32
+; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw nsw i64 [[COND]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
 entry:
@@ -759,7 +759,7 @@ define i32 @udiv_1(i64 %sz) {
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[DIV]], [[COND_TRUE]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[COND]] to i32
+; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw nsw i64 [[COND]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
 entry:
@@ -786,7 +786,7 @@ define i32 @udiv_2(i64 %sz) {
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ 0, [[COND_TRUE]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[COND]] to i32
+; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw nsw i64 [[COND]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
 entry:

@@ -38,7 +38,7 @@ define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK-NEXT:    addi a1, s1, 48
 ; CHECK-NEXT:    sd t1, 0(sp)
 ; CHECK-NEXT:    mv a0, t0
-; CHECK-NEXT:    call gfunc@plt
+; CHECK-NEXT:    call gfunc
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    addi sp, s0, -96

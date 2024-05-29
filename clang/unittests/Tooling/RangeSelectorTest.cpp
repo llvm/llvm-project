@@ -28,7 +28,6 @@ using ::llvm::HasValue;
 using ::llvm::StringError;
 using ::testing::AllOf;
 using ::testing::HasSubstr;
-using ::testing::Property;
 
 using MatchResult = MatchFinder::MatchResult;
 

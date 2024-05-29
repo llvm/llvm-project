@@ -42,25 +42,20 @@ coro::LowererBase::LowererBase(Module &M)
                                      /*isVarArg=*/false)),
       NullPtr(ConstantPointerNull::get(Int8Ptr)) {}
 
-// Creates a sequence of instructions to obtain a resume function address using
-// llvm.coro.subfn.addr. It generates the following sequence:
+// Creates a call to llvm.coro.subfn.addr to obtain a resume function address.
+// It generates the following:
 //
-//    call i8* @llvm.coro.subfn.addr(i8* %Arg, i8 %index)
-//    bitcast i8* %2 to void(i8*)*
+//    call ptr @llvm.coro.subfn.addr(ptr %Arg, i8 %index)
 
-Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
-                                        Instruction *InsertPt) {
+CallInst *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
+                                           Instruction *InsertPt) {
   auto *IndexVal = ConstantInt::get(Type::getInt8Ty(Context), Index);
   auto *Fn = Intrinsic::getDeclaration(&TheModule, Intrinsic::coro_subfn_addr);
 
   assert(Index >= CoroSubFnInst::IndexFirst &&
          Index < CoroSubFnInst::IndexLast &&
          "makeSubFnCall: Index value out of range");
-  auto *Call = CallInst::Create(Fn, {Arg, IndexVal}, "", InsertPt);
-
-  auto *Bitcast =
-      new BitCastInst(Call, ResumeFnType->getPointerTo(), "", InsertPt);
-  return Bitcast;
+  return CallInst::Create(Fn, {Arg, IndexVal}, "", InsertPt->getIterator());
 }
 
 // NOTE: Must be sorted!
@@ -72,6 +67,9 @@ static const char *const CoroIntrinsics[] = {
     "llvm.coro.async.resume",
     "llvm.coro.async.size.replace",
     "llvm.coro.async.store_resume",
+    "llvm.coro.await.suspend.bool",
+    "llvm.coro.await.suspend.handle",
+    "llvm.coro.await.suspend.void",
     "llvm.coro.begin",
     "llvm.coro.destroy",
     "llvm.coro.done",
@@ -162,8 +160,8 @@ static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
                                     CoroSuspendInst *SuspendInst) {
   Module *M = SuspendInst->getModule();
   auto *Fn = Intrinsic::getDeclaration(M, Intrinsic::coro_save);
-  auto *SaveInst =
-      cast<CoroSaveInst>(CallInst::Create(Fn, CoroBegin, "", SuspendInst));
+  auto *SaveInst = cast<CoroSaveInst>(
+      CallInst::Create(Fn, CoroBegin, "", SuspendInst->getIterator()));
   assert(!SuspendInst->getCoroSave());
   SuspendInst->setArgOperand(0, SaveInst);
   return SaveInst;
@@ -179,7 +177,11 @@ void coro::Shape::buildFrom(Function &F) {
   SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
 
   for (Instruction &I : instructions(F)) {
-    if (auto II = dyn_cast<IntrinsicInst>(&I)) {
+    // FIXME: coro_await_suspend_* are not proper `IntrinisicInst`s
+    // because they might be invoked
+    if (auto AWS = dyn_cast<CoroAwaitSuspendInst>(&I)) {
+      CoroAwaitSuspends.push_back(AWS);
+    } else if (auto II = dyn_cast<IntrinsicInst>(&I)) {
       switch (II->getIntrinsicID()) {
       default:
         continue;
@@ -367,7 +369,7 @@ void coro::Shape::buildFrom(Function &F) {
           // calls, but that messes with our invariants.  Re-insert the
           // bitcast and ignore this type mismatch.
           if (CastInst::isBitCastable(SrcTy, *RI)) {
-            auto BCI = new BitCastInst(*SI, *RI, "", Suspend);
+            auto BCI = new BitCastInst(*SI, *RI, "", Suspend->getIterator());
             SI->set(BCI);
             continue;
           }

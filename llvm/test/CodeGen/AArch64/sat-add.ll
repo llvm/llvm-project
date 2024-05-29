@@ -346,9 +346,9 @@ define <16 x i8> @unsigned_sat_constant_v16i8_using_min(<16 x i8> %x) {
 ; CHECK-LABEL: unsigned_sat_constant_v16i8_using_min:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.16b, #213
+; CHECK-NEXT:    movi v2.16b, #42
 ; CHECK-NEXT:    umin v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    movi v1.16b, #42
-; CHECK-NEXT:    add v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    add v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %c = icmp ult <16 x i8> %x, <i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43>
   %s = select <16 x i1> %c, <16 x i8> %x, <16 x i8> <i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43, i8 -43>
@@ -384,9 +384,9 @@ define <8 x i16> @unsigned_sat_constant_v8i16_using_min(<8 x i16> %x) {
 ; CHECK-LABEL: unsigned_sat_constant_v8i16_using_min:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvni v1.8h, #42
+; CHECK-NEXT:    movi v2.8h, #42
 ; CHECK-NEXT:    umin v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    movi v1.8h, #42
-; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
 ; CHECK-NEXT:    ret
   %c = icmp ult <8 x i16> %x, <i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43>
   %s = select <8 x i1> %c, <8 x i16> %x, <8 x i16> <i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43, i16 -43>

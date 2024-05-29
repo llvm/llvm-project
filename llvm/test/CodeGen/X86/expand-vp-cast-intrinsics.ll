@@ -532,7 +532,7 @@ define <2 x half> @vfptrunc_v2f16_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroex
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    vpbroadcastw %xmm0, %xmm1
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4,0,0,0]
+; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = [4,0,0,0]
 ; AVX512-NEXT:    vpermi2ps (%rsp), %xmm1, %xmm0 # 16-byte Folded Reload
 ; AVX512-NEXT:    addq $40, %rsp
 ; AVX512-NEXT:    .cfi_def_cfa_offset 8

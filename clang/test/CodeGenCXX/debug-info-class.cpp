@@ -116,11 +116,12 @@ int main(int argc, char **argv) {
 // CHECK-SAME:                             DIFlagFwdDecl
 // CHECK-NOT:                             identifier:
 // CHECK-SAME:                            ){{$}}
+
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "I"
 // CHECK-NOT:              DIFlagFwdDecl
 // CHECK-SAME:             ){{$}}
 
-// CHECK: ![[INT:[0-9]+]] = !DIBasicType(name: "int"
+// CHECK:      ![[INT:[0-9]+]] = !DIBasicType(name: "int"
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "bar"
 // CHECK: !DICompositeType(tag: DW_TAG_union_type, name: "baz"
@@ -188,6 +189,6 @@ int main(int argc, char **argv) {
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "A"
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "HdrSize"
-//
+
 // CHECK: ![[EXCEPTLOC]] = !DILocation(line: 100,
 // CHECK: ![[RETLOC]] = !DILocation(line: 99,

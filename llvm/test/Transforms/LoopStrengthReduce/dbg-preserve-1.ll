@@ -1,4 +1,5 @@
 ; RUN: opt < %s -loop-reduce -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -loop-reduce -S | FileCheck %s
 ;
 ; Test that LSR avoids crashing on very large integer inputs. It should
 ; discard the variable location by creating an undef dbg.value.

@@ -52,47 +52,27 @@ define i32 @vector_length_i16_fixed(i16 zeroext %tc) {
 }
 
 define i32 @vector_length_i32_fixed(i32 zeroext %tc) {
-; RV32-LABEL: vector_length_i32_fixed:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 2
-; RV32-NEXT:    bltu a0, a1, .LBB4_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a0, 2
-; RV32-NEXT:  .LBB4_2:
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vector_length_i32_fixed:
-; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    li a1, 2
-; RV64-NEXT:    bltu a0, a1, .LBB4_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    li a0, 2
-; RV64-NEXT:  .LBB4_2:
-; RV64-NEXT:    ret
+; CHECK-LABEL: vector_length_i32_fixed:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 2
+; CHECK-NEXT:    bltu a0, a1, .LBB4_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    li a0, 2
+; CHECK-NEXT:  .LBB4_2:
+; CHECK-NEXT:    ret
   %a = call i32 @llvm.experimental.get.vector.length.i32(i32 %tc, i32 2, i1 false)
   ret i32 %a
 }
 
 define i32 @vector_length_XLen_fixed(iXLen zeroext %tc) {
-; RV32-LABEL: vector_length_XLen_fixed:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 2
-; RV32-NEXT:    bltu a0, a1, .LBB5_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a0, 2
-; RV32-NEXT:  .LBB5_2:
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vector_length_XLen_fixed:
-; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    li a1, 2
-; RV64-NEXT:    bltu a0, a1, .LBB5_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    li a0, 2
-; RV64-NEXT:  .LBB5_2:
-; RV64-NEXT:    ret
+; CHECK-LABEL: vector_length_XLen_fixed:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 2
+; CHECK-NEXT:    bltu a0, a1, .LBB5_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    li a0, 2
+; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:    ret
   %a = call i32 @llvm.experimental.get.vector.length.iXLen(iXLen %tc, i32 2, i1 false)
   ret i32 %a
 }

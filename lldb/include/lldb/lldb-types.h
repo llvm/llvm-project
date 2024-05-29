@@ -68,6 +68,7 @@ typedef int pipe_t;                     // Host pipe type
 #define LLDB_INVALID_PROCESS ((lldb::process_t)-1)
 #define LLDB_INVALID_HOST_THREAD ((lldb::thread_t)NULL)
 #define LLDB_INVALID_PIPE ((lldb::pipe_t)-1)
+#define LLDB_INVALID_CALLBACK_TOKEN ((lldb::callback_token_t) - 1)
 
 typedef void (*LogOutputCallback)(const char *, void *baton);
 typedef bool (*CommandOverrideCallback)(void *baton, const char **argv);
@@ -77,12 +78,14 @@ typedef bool (*ExpressionCancelCallback)(ExpressionEvaluationPhase phase,
 typedef void *ScriptObjectPtr;
 
 typedef uint64_t addr_t;
+typedef int32_t callback_token_t;
 typedef uint64_t user_id_t;
 typedef uint64_t pid_t;
 typedef uint64_t tid_t;
 typedef uint64_t offset_t;
 typedef int32_t break_id_t;
 typedef int32_t watch_id_t;
+typedef uint32_t wp_resource_id_t;
 typedef void *opaque_compiler_type_t;
 typedef uint64_t queue_id_t;
 typedef uint32_t cpu_id_t; // CPU core id

@@ -22,6 +22,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> WriteNewDbgInfoFormat;
+
 PrintModulePass::PrintModulePass() : OS(dbgs()) {}
 PrintModulePass::PrintModulePass(raw_ostream &OS, const std::string &Banner,
                                  bool ShouldPreserveUseListOrder,
@@ -31,6 +33,15 @@ PrintModulePass::PrintModulePass(raw_ostream &OS, const std::string &Banner,
       EmitSummaryIndex(EmitSummaryIndex) {}
 
 PreservedAnalyses PrintModulePass::run(Module &M, ModuleAnalysisManager &AM) {
+  // RemoveDIs: Regardless of the format we've processed this module in, use
+  // `WriteNewDbgInfoFormat` to determine which format we use to write it.
+  ScopedDbgInfoFormatSetter FormatSetter(M, WriteNewDbgInfoFormat);
+  // Remove intrinsic declarations when printing in the new format.
+  // TODO: Move this into Module::setIsNewDbgInfoFormat when we're ready to
+  // update test output.
+  if (WriteNewDbgInfoFormat)
+    M.removeDebugIntrinsicDeclarations();
+
   if (llvm::isFunctionInPrintList("*")) {
     if (!Banner.empty())
       OS << Banner << "\n";
@@ -66,11 +77,16 @@ PrintFunctionPass::PrintFunctionPass(raw_ostream &OS, const std::string &Banner)
 
 PreservedAnalyses PrintFunctionPass::run(Function &F,
                                          FunctionAnalysisManager &) {
+  // RemoveDIs: Regardless of the format we've processed this function in, use
+  // `WriteNewDbgInfoFormat` to determine which format we use to write it.
+  ScopedDbgInfoFormatSetter FormatSetter(F, WriteNewDbgInfoFormat);
+
   if (isFunctionInPrintList(F.getName())) {
     if (forcePrintModuleIR())
       OS << Banner << " (function: " << F.getName() << ")\n" << *F.getParent();
     else
       OS << Banner << '\n' << static_cast<Value &>(F);
   }
+
   return PreservedAnalyses::all();
 }

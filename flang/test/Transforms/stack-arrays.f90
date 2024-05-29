@@ -1,9 +1,9 @@
-! RUN: %flang_fc1 -emit-fir %s -o - | fir-opt --array-value-copy | fir-opt --stack-arrays | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | fir-opt --array-value-copy | fir-opt --stack-arrays | FileCheck %s
 
 ! In order to verify the whole MLIR pipeline, make the driver generate LLVM IR.
 ! This is only to check that -fstack-arrays enables the stack-arrays pass so
 ! only check the first example
-! RUN: %flang_fc1 -emit-llvm -o - -fstack-arrays %s | FileCheck --check-prefix=LLVM-IR %s
+! RUN: %flang_fc1 -emit-llvm -flang-deprecated-no-hlfir -o - -fstack-arrays %s | FileCheck --check-prefix=LLVM-IR %s
 
 ! check simple array value copy case
 subroutine array_value_copy_simple(arr)

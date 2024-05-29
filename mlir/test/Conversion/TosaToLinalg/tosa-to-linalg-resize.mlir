@@ -1,7 +1,7 @@
 // RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" %s -o -| FileCheck %s
 
-// CHECK-LABEL: @unary_resize_nearest_fp
-func.func @unary_resize_nearest_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
+// CHECK-LABEL: @unary_resize_nearest_fp32
+func.func @unary_resize_nearest_fp32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
   %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32>
   // CHECK: return %arg0
   return %resize : tensor<3x1x1x7xf32>
@@ -9,11 +9,29 @@ func.func @unary_resize_nearest_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x
 
 // -----
 
-// CHECK-LABEL: @unary_resize_bilinear_fp
-func.func @unary_resize_bilinear_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
+// CHECK-LABEL: @unary_resize_nearest_fp16
+func.func @unary_resize_nearest_fp16(%arg0 : tensor<3x1x1x7xf16>) -> tensor<3x1x1x7xf16> {
+  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xf16>) -> tensor<3x1x1x7xf16>
+  // CHECK: return %arg0
+  return %resize : tensor<3x1x1x7xf16>
+}
+
+// -----
+
+// CHECK-LABEL: @unary_resize_bilinear_fp32
+func.func @unary_resize_bilinear_fp32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
   %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32>
   // CHECK: return %arg0
   return %resize : tensor<3x1x1x7xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @unary_resize_bilinear_fp16
+func.func @unary_resize_bilinear_fp16(%arg0 : tensor<3x1x1x7xf16>) -> tensor<3x1x1x7xf16> {
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xf16>) -> tensor<3x1x1x7xf16>
+  // CHECK: return %arg0
+  return %resize : tensor<3x1x1x7xf16>
 }
 
 // -----
@@ -149,22 +167,18 @@ func.func @resize_nearest_int(%arg0: tensor<1x15x13x1xi8>) -> () {
   // CHECK: %[[PRED_Y:.*]] = arith.cmpi sge, %[[D_Y_DOUBLE]], %[[SCALE_Y_N]]
   // CHECK: %[[VAL_37:.*]] = arith.select %[[PRED_Y]], %[[ONE]], %[[ZERO]]
   // CHECK: %[[VAL_39:.*]] = arith.addi %[[I_Y]], %[[VAL_37]]
-  // CHECK: %[[VAL_41:.*]] = arith.cmpi slt, %[[VAL_39]], %[[ZERO]]
-  // CHECK: %[[VAL_42:.*]] = arith.select %[[VAL_41]], %[[ZERO]], %[[VAL_39]]
-  // CHECK: %[[VAL_43:.*]] = arith.cmpi slt, %[[Y_MAX]], %[[VAL_39]]
-  // CHECK: %[[VAL_44:.*]] = arith.select %[[VAL_43]], %[[Y_MAX]], %[[VAL_42]]
-  // CHECK: %[[IDY:.+]] = arith.index_cast %[[VAL_44]]
+  // CHECK: %[[LOWER:.*]] = arith.maxsi %[[ZERO]], %[[VAL_39]]
+  // CHECK: %[[CLAMPED:.*]] = arith.minsi %[[Y_MAX]], %[[LOWER]]
+  // CHECK: %[[IDY:.+]] = arith.index_cast %[[CLAMPED]]
 
   // Compute the offset and bound for the X position.
   // CHECK: %[[D_X_DOUBLE:.*]] = arith.shli %[[D_X]], %[[ONE]]
   // CHECK: %[[PRED_X:.*]] = arith.cmpi sge, %[[D_X_DOUBLE]], %[[SCALE_X_N]]
   // CHECK: %[[VAL_38:.*]] = arith.select %[[PRED_X]], %[[ONE]], %[[ZERO]]
   // CHECK: %[[VAL_40:.*]] = arith.addi %[[I_X]], %[[VAL_38]]
-  // CHECK: %[[VAL_45:.*]] = arith.cmpi slt, %[[VAL_40]], %[[ZERO]]
-  // CHECK: %[[VAL_46:.*]] = arith.select %[[VAL_45]], %[[ZERO]], %[[VAL_40]]
-  // CHECK: %[[VAL_47:.*]] = arith.cmpi slt, %[[X_MAX]], %[[VAL_40]]
-  // CHECK: %[[VAL_48:.*]] = arith.select %[[VAL_47]], %[[X_MAX]], %[[VAL_46]]
-  // CHECK: %[[IDX:.+]] = arith.index_cast %[[VAL_48]]
+  // CHECK: %[[LOWER:.*]] = arith.maxsi %[[ZERO]], %[[VAL_40]]
+  // CHECK: %[[CLAMPED:.*]] = arith.minsi %[[X_MAX]], %[[LOWER]]
+  // CHECK: %[[IDX:.+]] = arith.index_cast %[[CLAMPED]]
 
   // CHECK: %[[EXTRACT:.+]] = tensor.extract %arg0[%[[IDX_0]], %[[IDY]], %[[IDX]], %[[IDX_3]]]
   // CHECK: linalg.yield %[[EXTRACT]]
@@ -218,29 +232,21 @@ func.func @resize_bilinear_int(%arg0: tensor<1x19x20x1xi8>) {
 
   // Bound check each dimension.
 
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[I_Y]], %[[ZERO]]
-  // CHECK: %[[BOUND:.*]] = arith.select %[[PRED]], %[[ZERO]], %[[I_Y]]
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[Y_MAX]], %[[I_Y]]
-  // CHECK: %[[YLO:.*]] = arith.select %[[PRED]], %[[Y_MAX]], %[[BOUND]]
+  // CHECK: %[[BOUND:.*]] = arith.maxsi %[[ZERO]], %[[I_Y]]
+  // CHECK: %[[YLO:.*]] = arith.minsi %[[Y_MAX]], %[[BOUND]]
 
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[Y1]], %[[ZERO]]
-  // CHECK: %[[BOUND:.*]] = arith.select %[[PRED]], %[[ZERO]], %[[Y1]]
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[Y_MAX]], %[[Y1]]
-  // CHECK: %[[YHI:.*]] = arith.select %[[PRED]], %[[Y_MAX]], %[[BOUND]]
+  // CHECK: %[[BOUND:.*]] = arith.maxsi %[[ZERO]], %[[Y1]]
+  // CHECK: %[[YHI:.*]] = arith.minsi %[[Y_MAX]], %[[BOUND]]
 
   // CHECK: %[[YLOI:.+]] = arith.index_cast %[[YLO]]
   // CHECK: %[[YHII:.+]] = arith.index_cast %[[YHI]]
 
   // CHECK: %[[X1:.*]] = arith.addi %[[I_X]], %[[ONE]]
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[I_X]], %[[ZERO]]
-  // CHECK: %[[BOUND:.*]] = arith.select %[[PRED]], %[[ZERO]], %[[I_X]]
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[X_MAX]], %[[I_X]]
-  // CHECK: %[[XLO:.*]] = arith.select %[[PRED]], %[[X_MAX]], %[[BOUND]]
+  // CHECK: %[[BOUND:.*]] = arith.maxsi %[[ZERO]], %[[I_X]]
+  // CHECK: %[[XLO:.*]] = arith.minsi %[[X_MAX]], %[[BOUND]]
 
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[X1]], %[[ZERO]]
-  // CHECK: %[[BOUND:.*]] = arith.select %[[PRED]], %[[ZERO]], %[[X1]]
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[X_MAX]], %[[X1]]
-  // CHECK: %[[XHI:.*]] = arith.select %[[PRED]], %[[X_MAX]], %[[BOUND]]
+  // CHECK: %[[BOUND:.*]] = arith.maxsi %[[ZERO]], %[[X1]]
+  // CHECK: %[[XHI:.*]] = arith.minsi %[[X_MAX]], %[[BOUND]]
 
   // CHECK: %[[XLOI:.+]] = arith.index_cast %[[XLO]]
   // CHECK: %[[XHII:.+]] = arith.index_cast %[[XHI]]
@@ -285,8 +291,8 @@ func.func @resize_bilinear_int(%arg0: tensor<1x19x20x1xi8>) {
 
 // -----
 
-// CHECK-LABEL: @resize_nearest_fp
-func.func @resize_nearest_fp(%input: tensor<1x50x48x1xf32>) -> () {
+// CHECK-LABEL: @resize_nearest_fp32
+func.func @resize_nearest_fp32(%input: tensor<1x50x48x1xf32>) -> () {
   // CHECK: %[[INIT:.+]] = tensor.empty() : tensor<1x1600x1536x1xf32>
   // CHECK: %[[GENERIC:.+]] = linalg.generic
   // CHECK: %[[IDX0:.+]] = linalg.index 0
@@ -298,57 +304,47 @@ func.func @resize_nearest_fp(%input: tensor<1x50x48x1xf32>) -> () {
   // CHECK-DAG: %[[XMAX:.*]] = arith.constant 47
   // CHECK: %[[Y:.+]] = arith.index_cast %[[IDX1]]
   // CHECK: %[[X:.+]] = arith.index_cast %[[IDX2]]
-  // CHECK-DAG: %[[ISCALE_Y_N:.*]] = arith.constant 64
-  // CHECK-DAG: %[[ISCALE_Y_D:.*]] = arith.constant 2
-  // CHECK-DAG: %[[ISCALE_X_N:.*]] = arith.constant 64
-  // CHECK-DAG: %[[ISCALE_X_D:.*]] = arith.constant 2
-  // CHECK-DAG: %[[IOFFSET_Y:.*]] = arith.constant -31
-  // CHECK-DAG: %[[IOFFSET_X:.*]] = arith.constant -31
-  // CHECK-DAG: %[[IBORDER_Y:.*]] = arith.constant 31
-  // CHECK-DAG: %[[IBORDER_X:.*]] = arith.constant 31
+  // CHECK-DAG: %[[SCALE_Y_N:.*]] = arith.constant 64
+  // CHECK-DAG: %[[SCALE_Y_D:.*]] = arith.constant 2
+  // CHECK-DAG: %[[SCALE_X_N:.*]] = arith.constant 64
+  // CHECK-DAG: %[[SCALE_X_D:.*]] = arith.constant 2
+  // CHECK-DAG: %[[OFFSET_Y:.*]] = arith.constant -31
+  // CHECK-DAG: %[[OFFSET_X:.*]] = arith.constant -31
+  // CHECK-DAG: %[[BORDER_Y:.*]] = arith.constant 31
+  // CHECK-DAG: %[[BORDER_X:.*]] = arith.constant 31
 
-  // CHECK: %[[Y0:.+]] = arith.uitofp %[[Y]]
-  // CHECK: %[[SCALE_Y_N:.*]] = arith.uitofp %[[ISCALE_Y_N]]
-  // CHECK: %[[SCALE_Y_D:.*]] = arith.uitofp %[[ISCALE_Y_D]]
-  // CHECK: %[[OFFSET_Y:.*]] = arith.sitofp %[[IOFFSET_Y]]
-  // CHECK: %[[VAL_29:.*]] = arith.mulf %[[Y0]], %[[SCALE_Y_D]]
-  // CHECK: %[[VAL_31:.*]] = arith.addf %[[VAL_29]], %[[OFFSET_Y]]
-  // CHECK: %[[VAL_33:.*]] = arith.divf %[[VAL_31]], %[[SCALE_Y_N]]
-  // CHECK: %[[VAL_35:.*]] = math.floor %[[VAL_33]]
-  // CHECK: %[[D_Y:.*]] = arith.subf %[[VAL_33]], %[[VAL_35]]
-  // CHECK: %[[VAL_39:.*]] = arith.fptosi %[[VAL_35]]
+  // CHECK: %[[VAL_29:.*]] = arith.muli %[[Y]], %[[SCALE_Y_D]]
+  // CHECK: %[[Y_TEMP:.*]] = arith.addi %[[VAL_29]], %[[OFFSET_Y]]
+  // CHECK: %[[IY_TEMP:.*]] = arith.floordivsi %[[Y_TEMP]], %[[SCALE_Y_N]]
+  // CHECK: %[[RY:.*]] = arith.remsi %[[Y_TEMP]], %[[SCALE_Y_N]]
+  // CHECK: %[[RY_FP:.*]] = arith.sitofp %[[RY]]
+  // CHECK: %[[SCALE_Y_N_FP:.*]] = arith.uitofp %[[SCALE_Y_N]]
+  // CHECK: %[[D_Y:.*]] = arith.divf %[[RY_FP]], %[[SCALE_Y_N_FP]]
 
-  // CHECK: %[[X0:.+]] = arith.uitofp %[[X]]
-  // CHECK: %[[SCALE_X_N:.*]] = arith.uitofp %[[ISCALE_X_N]]
-  // CHECK: %[[SCALE_X_D:.*]] = arith.uitofp %[[ISCALE_X_D]]
-  // CHECK: %[[OFFSET_X:.*]] = arith.sitofp %[[IOFFSET_X]]
-  // CHECK: %[[VAL_30:.*]] = arith.mulf %[[X0]], %[[SCALE_X_D]]
-  // CHECK: %[[VAL_32:.*]] = arith.addf %[[VAL_30]], %[[OFFSET_X]]
-  // CHECK: %[[VAL_34:.*]] = arith.divf %[[VAL_32]], %[[SCALE_X_N]]
-  // CHECK: %[[VAL_36:.*]] = math.floor %[[VAL_34]]
-  // CHECK: %[[D_X:.*]] = arith.subf %[[VAL_34]], %[[VAL_36]]
-  // CHECK: %[[VAL_40:.*]] = arith.fptosi %[[VAL_36]]
+  // CHECK: %[[VAL_30:.*]] = arith.muli %[[X]], %[[SCALE_X_D]]
+  // CHECK: %[[X_TEMP:.*]] = arith.addi %[[VAL_30]], %[[OFFSET_X]]
+  // CHECK: %[[IX_TEMP:.*]] = arith.floordivsi %[[X_TEMP]], %[[SCALE_X_N]]
+  // CHECK: %[[RX:.*]] = arith.remsi %[[X_TEMP]], %[[SCALE_X_N]]
+  // CHECK: %[[RX_FP:.*]] = arith.sitofp %[[RX]]
+  // CHECK: %[[SCALE_X_N_FP:.*]] = arith.uitofp %[[SCALE_X_N]]
+  // CHECK: %[[D_X:.*]] = arith.divf %[[RX_FP]], %[[SCALE_X_N_FP]]
 
   // CHECK-DAG: %[[ONE:.*]] = arith.constant 1
   // CHECK-DAG: %[[HALF:.*]] = arith.constant 5.000000e-01
   // CHECK: %[[PRED_Y:.*]] = arith.cmpf oge, %[[D_Y]], %[[HALF]]
   // CHECK: %[[ROUND_Y:.*]] = arith.select %[[PRED_Y]], %[[ONE]], %[[ZERO]]
-  // CHECK: %[[VAL_48:.*]] = arith.addi %[[VAL_39]], %[[ROUND_Y]]
-  // CHECK: %[[VAL_50:.*]] = arith.cmpi slt, %[[VAL_48]], %[[ZERO]]
-  // CHECK: %[[VAL_51:.*]] = arith.select %[[VAL_50]], %[[ZERO]], %[[VAL_48]]
-  // CHECK: %[[VAL_52:.*]] = arith.cmpi slt, %[[YMAX]], %[[VAL_48]]
-  // CHECK: %[[VAL_53:.*]] = arith.select %[[VAL_52]], %[[YMAX]], %[[VAL_51]]
-  // CHECK: %[[IDY:.*]] = arith.index_cast %[[VAL_53]]
+  // CHECK: %[[VAL_48:.*]] = arith.addi %[[IY_TEMP]], %[[ROUND_Y]]
+  // CHECK: %[[LOWER:.*]] = arith.maxsi %[[ZERO]], %[[VAL_48]]
+  // CHECK: %[[CLAMPED:.*]] = arith.minsi %[[YMAX]], %[[LOWER]]
+  // CHECK: %[[IDY:.*]] = arith.index_cast %[[CLAMPED]]
 
   // CHECK-DAG: %[[HALF:.*]] = arith.constant 5.000000e-01
   // CHECK: %[[PRED_X:.*]] = arith.cmpf oge, %[[D_X]], %[[HALF]]
   // CHECK: %[[ROUND_X:.*]] = arith.select %[[PRED_X]], %[[ONE]], %[[ZERO]]
-  // CHECK: %[[VAL_49:.*]] = arith.addi %[[VAL_40]], %[[ROUND_X]]
-  // CHECK: %[[VAL_54:.*]] = arith.cmpi slt, %[[VAL_49]], %[[ZERO]]
-  // CHECK: %[[VAL_55:.*]] = arith.select %[[VAL_54]], %[[ZERO]], %[[VAL_49]]
-  // CHECK: %[[VAL_56:.*]] = arith.cmpi slt, %[[XMAX]], %[[VAL_49]]
-  // CHECK: %[[VAL_57:.*]] = arith.select %[[VAL_56]], %[[XMAX]], %[[VAL_55]]
-  // CHECK: %[[IDX:.*]] = arith.index_cast %[[VAL_57]]
+  // CHECK: %[[VAL_49:.*]] = arith.addi %[[IX_TEMP]], %[[ROUND_X]]
+  // CHECK: %[[LOWER:.*]] = arith.maxsi %[[ZERO]], %[[VAL_49]]
+  // CHECK: %[[CLAMPED:.*]] = arith.minsi %[[XMAX]], %[[LOWER]]
+  // CHECK: %[[IDX:.*]] = arith.index_cast %[[CLAMPED]]
 
   // CHECK: %[[EXTRACT:.+]] = tensor.extract %arg0[%[[IDX0]], %[[IDY]], %[[IDX]], %[[IDX3]]]
   // CHECK: linalg.yield %[[EXTRACT]]
@@ -372,36 +368,30 @@ func.func @resize_bilinear_fp(%input: tensor<1x23x24x1xf32>) -> () {
   // CHECK-DAG: %[[X_MAX:.*]] = arith.constant 23
   // CHECK: %[[Y:.+]] = arith.index_cast %[[IDX_1]]
   // CHECK: %[[X:.+]] = arith.index_cast %[[IDX_2]]
-  // CHECK-DAG: %[[ISCALE_Y_N:.*]] = arith.constant 4
-  // CHECK-DAG: %[[ISCALE_Y_D:.*]] = arith.constant 1
-  // CHECK-DAG: %[[ISCALE_X_N:.*]] = arith.constant 4
-  // CHECK-DAG: %[[ISCALE_X_D:.*]] = arith.constant 1
-  // CHECK-DAG: %[[IOFFSET_Y:.*]] = arith.constant 0
-  // CHECK-DAG: %[[IOFFSET_X:.*]] = arith.constant 0
-  // CHECK-DAG: %[[IBORDER_Y:.*]] = arith.constant 0
-  // CHECK-DAG: %[[IBORDER_X:.*]] = arith.constant 0
+  // CHECK-DAG: %[[SCALE_Y_N:.*]] = arith.constant 4
+  // CHECK-DAG: %[[SCALE_Y_D:.*]] = arith.constant 1
+  // CHECK-DAG: %[[SCALE_X_N:.*]] = arith.constant 4
+  // CHECK-DAG: %[[SCALE_X_D:.*]] = arith.constant 1
+  // CHECK-DAG: %[[OFFSET_Y:.*]] = arith.constant 0
+  // CHECK-DAG: %[[OFFSET_X:.*]] = arith.constant 0
+  // CHECK-DAG: %[[BORDER_Y:.*]] = arith.constant 0
+  // CHECK-DAG: %[[BORDER_X:.*]] = arith.constant 0
 
-  // CHECK: %[[Y0:.+]] = arith.uitofp %[[Y]]
-  // CHECK: %[[SCALE_Y_N:.*]] = arith.uitofp %[[ISCALE_Y_N]]
-  // CHECK: %[[SCALE_Y_D:.*]] = arith.uitofp %[[ISCALE_Y_D]]
-  // CHECK: %[[OFFSET_Y:.*]] = arith.sitofp %[[IOFFSET_Y]]
-  // CHECK: %[[VAL_29:.*]] = arith.mulf %[[Y0]], %[[SCALE_Y_D]]
-  // CHECK: %[[VAL_31:.*]] = arith.addf %[[VAL_29]], %[[OFFSET_Y]]
-  // CHECK: %[[VAL_33:.*]] = arith.divf %[[VAL_31]], %[[SCALE_Y_N]]
-  // CHECK: %[[VAL_35:.*]] = math.floor %[[VAL_33]]
-  // CHECK: %[[D_Y:.*]] = arith.subf %[[VAL_33]], %[[VAL_35]]
-  // CHECK: %[[I_Y:.*]] = arith.fptosi %[[VAL_35]]
+  // CHECK: %[[VAL_29:.*]] = arith.muli %[[Y]], %[[SCALE_Y_D]]
+  // CHECK: %[[Y_TEMP:.*]] = arith.addi %[[VAL_29]], %[[OFFSET_Y]]
+  // CHECK: %[[I_Y:.*]] = arith.floordivsi %[[Y_TEMP]], %[[SCALE_Y_N]]
+  // CHECK: %[[RY:.*]] = arith.remsi %[[Y_TEMP]], %[[SCALE_Y_N]]
+  // CHECK: %[[RY_FP:.*]] = arith.sitofp %[[RY]]
+  // CHECK: %[[SCALE_Y_N_FP:.*]] = arith.uitofp %[[SCALE_Y_N]]
+  // CHECK: %[[D_Y:.*]] = arith.divf %[[RY_FP]], %[[SCALE_Y_N_FP]]
 
-  // CHECK: %[[X0:.+]] = arith.uitofp %[[X]]
-  // CHECK: %[[SCALE_X_N:.*]] = arith.uitofp %[[ISCALE_X_N]]
-  // CHECK: %[[SCALE_X_D:.*]] = arith.uitofp %[[ISCALE_X_D]]
-  // CHECK: %[[OFFSET_X:.*]] = arith.sitofp %[[IOFFSET_X]]
-  // CHECK: %[[VAL_30:.*]] = arith.mulf %[[X0]], %[[SCALE_X_D]]
-  // CHECK: %[[VAL_32:.*]] = arith.addf %[[VAL_30]], %[[OFFSET_X]]
-  // CHECK: %[[VAL_34:.*]] = arith.divf %[[VAL_32]], %[[SCALE_X_N]]
-  // CHECK: %[[VAL_36:.*]] = math.floor %[[VAL_34]]
-  // CHECK: %[[D_X:.*]] = arith.subf %[[VAL_34]], %[[VAL_36]]
-  // CHECK: %[[I_X:.*]] = arith.fptosi %[[VAL_36]]
+  // CHECK: %[[VAL_30:.*]] = arith.muli %[[X]], %[[SCALE_X_D]]
+  // CHECK: %[[X_TEMP:.*]] = arith.addi %[[VAL_30]], %[[OFFSET_X]]
+  // CHECK: %[[I_X:.*]] = arith.floordivsi %[[X_TEMP]], %[[SCALE_X_N]]
+  // CHECK: %[[RX:.*]] = arith.remsi %[[X_TEMP]], %[[SCALE_X_N]]
+  // CHECK: %[[RX_FP:.*]] = arith.sitofp %[[RX]]
+  // CHECK: %[[SCALE_X_N_FP:.*]] = arith.uitofp %[[SCALE_X_N]]
+  // CHECK: %[[D_X:.*]] = arith.divf %[[RX_FP]], %[[SCALE_X_N_FP]]
 
   // Compute the left, right, and top indices for the bilinear interpolation.
 
@@ -411,28 +401,21 @@ func.func @resize_bilinear_fp(%input: tensor<1x23x24x1xf32>) -> () {
 
   // CHECK: %[[Y1:.*]] = arith.addi %[[I_Y]], %[[ONE]]
 
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[I_Y]], %[[ZERO]]
-  // CHECK: %[[BOUND:.*]] = arith.select %[[PRED]], %[[ZERO]], %[[I_Y]]
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[Y_MAX]], %[[I_Y]]
-  // CHECK: %[[YLO:.*]] = arith.select %[[PRED]], %[[Y_MAX]], %[[BOUND]]
+  // CHECK: %[[BOUND:.*]] = arith.maxsi %[[ZERO]], %[[I_Y]]
+  // CHECK: %[[YLO:.*]] = arith.minsi %[[Y_MAX]], %[[BOUND]]
 
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[Y1]], %[[ZERO]]
-  // CHECK: %[[BOUND:.*]] = arith.select %[[PRED]], %[[ZERO]], %[[Y1]]
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[Y_MAX]], %[[Y1]]
-  // CHECK: %[[YHI:.*]] = arith.select %[[PRED]], %[[Y_MAX]], %[[BOUND]]
+  // CHECK: %[[BOUND:.*]] = arith.maxsi %[[ZERO]], %[[Y1]]
+  // CHECK: %[[YHI:.*]] = arith.minsi %[[Y_MAX]], %[[BOUND]]
+
   // CHECK: %[[YLOI:.+]] = arith.index_cast %[[YLO]]
   // CHECK: %[[YHII:.+]] = arith.index_cast %[[YHI]]
 
   // CHECK: %[[X1:.*]] = arith.addi %[[I_X]], %[[ONE]]
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[I_X]], %[[ZERO]]
-  // CHECK: %[[BOUND:.*]] = arith.select %[[PRED]], %[[ZERO]], %[[I_X]]
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[X_MAX]], %[[I_X]]
-  // CHECK: %[[XLO:.*]] = arith.select %[[PRED]], %[[X_MAX]], %[[BOUND]]
+  // CHECK: %[[BOUND:.*]] = arith.maxsi %[[ZERO]], %[[I_X]]
+  // CHECK: %[[XLO:.*]] = arith.minsi %[[X_MAX]], %[[BOUND]]
 
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[X1]], %[[ZERO]]
-  // CHECK: %[[BOUND:.*]] = arith.select %[[PRED]], %[[ZERO]], %[[X1]]
-  // CHECK: %[[PRED:.*]] = arith.cmpi slt, %[[X_MAX]], %[[X1]]
-  // CHECK: %[[XHI:.*]] = arith.select %[[PRED]], %[[X_MAX]], %[[BOUND]]
+  // CHECK: %[[BOUND:.*]] = arith.maxsi %[[ZERO]], %[[X1]]
+  // CHECK: %[[XHI:.*]] = arith.minsi %[[X_MAX]], %[[BOUND]]
 
   // CHECK: %[[XLOI:.+]] = arith.index_cast %[[XLO]]
   // CHECK: %[[XHII:.+]] = arith.index_cast %[[XHI]]

@@ -88,17 +88,18 @@ class BuilderDarwin(Builder):
                 args["FRAMEWORK_INCLUDES"] = "-F{}".format(private_frameworks)
 
         operating_system, env = get_os_and_env()
-        if operating_system and operating_system != "macosx":
-            builder_dir = os.path.dirname(os.path.abspath(__file__))
-            test_dir = os.path.dirname(builder_dir)
+
+        builder_dir = os.path.dirname(os.path.abspath(__file__))
+        test_dir = os.path.dirname(builder_dir)
+        if not operating_system:
+            entitlements_file = "entitlements-macos.plist"
+        else:
             if env == "simulator":
                 entitlements_file = "entitlements-simulator.plist"
             else:
                 entitlements_file = "entitlements.plist"
-            entitlements = os.path.join(test_dir, "make", entitlements_file)
-            args["CODESIGN"] = "codesign --entitlements {}".format(entitlements)
-        else:
-            args["CODESIGN"] = "codesign"
+        entitlements = os.path.join(test_dir, "make", entitlements_file)
+        args["CODESIGN"] = "codesign --entitlements {}".format(entitlements)
 
         # Return extra args as a formatted string.
         return ["{}={}".format(key, value) for key, value in args.items()]

@@ -281,7 +281,7 @@ define <vscale x 4 x i32> @andnot_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 4 x i32> %z, zeroinitializer
-  %y1 = xor <vscale x 4 x i32> %y, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %y1 = xor <vscale x 4 x i32> %y, splat (i32 -1)
   %a = and <vscale x 4 x i32> %x, %y1
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %z
   ret <vscale x 4 x i32> %b
@@ -297,7 +297,7 @@ define <vscale x 8 x i16> @andnot_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 8 x i16> %z, zeroinitializer
-  %y1 = xor <vscale x 8 x i16> %y, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %y1 = xor <vscale x 8 x i16> %y, splat (i16 -1)
   %a = and <vscale x 8 x i16> %x, %y1
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %z
   ret <vscale x 8 x i16> %b
@@ -313,7 +313,7 @@ define <vscale x 16 x i8> @andnot_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 16 x i8> %z, zeroinitializer
-  %y1 = xor <vscale x 16 x i8> %y, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %y1 = xor <vscale x 16 x i8> %y, splat (i8 -1)
   %a = and <vscale x 16 x i8> %x, %y1
   %b = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %z
   ret <vscale x 16 x i8> %b
@@ -322,16 +322,16 @@ entry:
 define <vscale x 4 x i32> @ornot_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
 ; CHECK-LABEL: ornot_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z3.s, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z2.d, z2.d, z3.d
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    eor z2.d, z2.d, z3.d
 ; CHECK-NEXT:    orr z1.d, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 4 x i32> %z, zeroinitializer
-  %y1 = xor <vscale x 4 x i32> %y, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %y1 = xor <vscale x 4 x i32> %y, splat (i32 -1)
   %a = or <vscale x 4 x i32> %x, %y1
   %b = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %z
   ret <vscale x 4 x i32> %b
@@ -340,16 +340,16 @@ entry:
 define <vscale x 8 x i16> @ornot_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16> %x, <vscale x 8 x i16> %y) {
 ; CHECK-LABEL: ornot_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z3.h, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z2.d, z2.d, z3.d
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    eor z2.d, z2.d, z3.d
 ; CHECK-NEXT:    orr z1.d, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 8 x i16> %z, zeroinitializer
-  %y1 = xor <vscale x 8 x i16> %y, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %y1 = xor <vscale x 8 x i16> %y, splat (i16 -1)
   %a = or <vscale x 8 x i16> %x, %y1
   %b = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %z
   ret <vscale x 8 x i16> %b
@@ -358,16 +358,16 @@ entry:
 define <vscale x 16 x i8> @ornot_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8> %x, <vscale x 16 x i8> %y) {
 ; CHECK-LABEL: ornot_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z3.b, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z2.d, z2.d, z3.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    eor z2.d, z2.d, z3.d
 ; CHECK-NEXT:    orr z1.d, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq <vscale x 16 x i8> %z, zeroinitializer
-  %y1 = xor <vscale x 16 x i8> %y, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %y1 = xor <vscale x 16 x i8> %y, splat (i8 -1)
   %a = or <vscale x 16 x i8> %x, %y1
   %b = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %z
   ret <vscale x 16 x i8> %b
@@ -904,8 +904,8 @@ define <vscale x 4 x i32> @addqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32>
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w0
-; CHECK-NEXT:    add z1.s, z1.s, z2.s
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    add z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -922,8 +922,8 @@ define <vscale x 8 x i16> @addqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16>
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w0
-; CHECK-NEXT:    add z1.h, z1.h, z2.h
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    add z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -940,8 +940,8 @@ define <vscale x 16 x i8> @addqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8>
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w0
-; CHECK-NEXT:    add z1.b, z1.b, z2.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    add z1.b, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
 entry:
@@ -958,8 +958,8 @@ define <vscale x 4 x i32> @subqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32>
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w0
-; CHECK-NEXT:    sub z1.s, z1.s, z2.s
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    sub z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -976,8 +976,8 @@ define <vscale x 8 x i16> @subqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16>
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w0
-; CHECK-NEXT:    sub z1.h, z1.h, z2.h
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    sub z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -994,8 +994,8 @@ define <vscale x 16 x i8> @subqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8>
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w0
-; CHECK-NEXT:    sub z1.b, z1.b, z2.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    sub z1.b, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
 entry:
@@ -1010,10 +1010,10 @@ entry:
 define <vscale x 4 x i32> @mulqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32> %x, i32 %y) {
 ; CHECK-LABEL: mulqr_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w0
-; CHECK-NEXT:    mul z1.s, z1.s, z2.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    mul z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -1028,10 +1028,10 @@ entry:
 define <vscale x 8 x i16> @mulqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: mulqr_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w0
-; CHECK-NEXT:    mul z1.h, z1.h, z2.h
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    mul z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -1046,10 +1046,10 @@ entry:
 define <vscale x 16 x i8> @mulqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8> %x, i8 %y) {
 ; CHECK-LABEL: mulqr_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w0
-; CHECK-NEXT:    mul z1.b, z1.b, z2.b
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    mul z1.b, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
 entry:
@@ -1064,11 +1064,11 @@ entry:
 define <vscale x 4 x float> @faddqr_v4f32(<vscale x 4 x float> %z, <vscale x 4 x float> %x, float %y) {
 ; CHECK-LABEL: faddqr_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $s2 killed $s2 def $z2
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, s2
-; CHECK-NEXT:    fadd z1.s, z1.s, z2.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fadd z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -1083,11 +1083,11 @@ entry:
 define <vscale x 8 x half> @faddqr_v8f16(<vscale x 8 x half> %z, <vscale x 8 x half> %x, half %y) {
 ; CHECK-LABEL: faddqr_v8f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, h2
-; CHECK-NEXT:    fadd z1.h, z1.h, z2.h
 ; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    fadd z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -1102,11 +1102,11 @@ entry:
 define <vscale x 4 x float> @fsubqr_v4f32(<vscale x 4 x float> %z, <vscale x 4 x float> %x, float %y) {
 ; CHECK-LABEL: fsubqr_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $s2 killed $s2 def $z2
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, s2
-; CHECK-NEXT:    fsub z1.s, z1.s, z2.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fsub z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -1121,11 +1121,11 @@ entry:
 define <vscale x 8 x half> @fsubqr_v8f16(<vscale x 8 x half> %z, <vscale x 8 x half> %x, half %y) {
 ; CHECK-LABEL: fsubqr_v8f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, h2
-; CHECK-NEXT:    fsub z1.h, z1.h, z2.h
 ; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    fsub z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -1140,11 +1140,11 @@ entry:
 define <vscale x 4 x float> @fmulqr_v4f32(<vscale x 4 x float> %z, <vscale x 4 x float> %x, float %y) {
 ; CHECK-LABEL: fmulqr_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $s2 killed $s2 def $z2
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, s2
-; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -1159,11 +1159,11 @@ entry:
 define <vscale x 8 x half> @fmulqr_v8f16(<vscale x 8 x half> %z, <vscale x 8 x half> %x, half %y) {
 ; CHECK-LABEL: fmulqr_v8f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, h2
-; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
 ; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -1178,10 +1178,10 @@ entry:
 define <vscale x 4 x i32> @sadd_satqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32> %x, i32 %y) {
 ; CHECK-LABEL: sadd_satqr_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w0
-; CHECK-NEXT:    sqadd z1.s, z1.s, z2.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    sqadd z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -1196,10 +1196,10 @@ entry:
 define <vscale x 8 x i16> @sadd_satqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: sadd_satqr_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w0
-; CHECK-NEXT:    sqadd z1.h, z1.h, z2.h
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    sqadd z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -1214,10 +1214,10 @@ entry:
 define <vscale x 16 x i8> @sadd_satqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8> %x, i8 %y) {
 ; CHECK-LABEL: sadd_satqr_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w0
-; CHECK-NEXT:    sqadd z1.b, z1.b, z2.b
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    sqadd z1.b, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
 entry:
@@ -1232,10 +1232,10 @@ entry:
 define <vscale x 4 x i32> @uadd_satqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32> %x, i32 %y) {
 ; CHECK-LABEL: uadd_satqr_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w0
-; CHECK-NEXT:    uqadd z1.s, z1.s, z2.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    uqadd z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -1250,10 +1250,10 @@ entry:
 define <vscale x 8 x i16> @uadd_satqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: uadd_satqr_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w0
-; CHECK-NEXT:    uqadd z1.h, z1.h, z2.h
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    uqadd z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -1268,10 +1268,10 @@ entry:
 define <vscale x 16 x i8> @uadd_satqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8> %x, i8 %y) {
 ; CHECK-LABEL: uadd_satqr_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w0
-; CHECK-NEXT:    uqadd z1.b, z1.b, z2.b
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    uqadd z1.b, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
 entry:
@@ -1286,10 +1286,10 @@ entry:
 define <vscale x 4 x i32> @ssub_satqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32> %x, i32 %y) {
 ; CHECK-LABEL: ssub_satqr_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w0
-; CHECK-NEXT:    sqsub z1.s, z1.s, z2.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    sqsub z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -1304,10 +1304,10 @@ entry:
 define <vscale x 8 x i16> @ssub_satqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: ssub_satqr_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w0
-; CHECK-NEXT:    sqsub z1.h, z1.h, z2.h
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    sqsub z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -1322,10 +1322,10 @@ entry:
 define <vscale x 16 x i8> @ssub_satqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8> %x, i8 %y) {
 ; CHECK-LABEL: ssub_satqr_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w0
-; CHECK-NEXT:    sqsub z1.b, z1.b, z2.b
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    sqsub z1.b, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
 entry:
@@ -1340,10 +1340,10 @@ entry:
 define <vscale x 4 x i32> @usub_satqr_v4i32(<vscale x 4 x i32> %z, <vscale x 4 x i32> %x, i32 %y) {
 ; CHECK-LABEL: usub_satqr_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w0
-; CHECK-NEXT:    uqsub z1.s, z1.s, z2.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    uqsub z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
@@ -1358,10 +1358,10 @@ entry:
 define <vscale x 8 x i16> @usub_satqr_v8i16(<vscale x 8 x i16> %z, <vscale x 8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: usub_satqr_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w0
-; CHECK-NEXT:    uqsub z1.h, z1.h, z2.h
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    uqsub z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
@@ -1376,10 +1376,10 @@ entry:
 define <vscale x 16 x i8> @usub_satqr_v16i8(<vscale x 16 x i8> %z, <vscale x 16 x i8> %x, i8 %y) {
 ; CHECK-LABEL: usub_satqr_v16i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w0
-; CHECK-NEXT:    uqsub z1.b, z1.b, z2.b
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    uqsub z1.b, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p0/m, z1.b
 ; CHECK-NEXT:    ret
 entry:

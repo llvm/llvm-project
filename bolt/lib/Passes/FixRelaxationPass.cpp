@@ -1,3 +1,11 @@
+//===- bolt/Passes/FixRelaxationPass.cpp ------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "bolt/Passes/FixRelaxationPass.h"
 #include "bolt/Core/ParallelUtilities.h"
 
@@ -47,9 +55,9 @@ void FixRelaxations::runOnFunction(BinaryFunction &BF) {
   }
 }
 
-void FixRelaxations::runOnFunctions(BinaryContext &BC) {
+Error FixRelaxations::runOnFunctions(BinaryContext &BC) {
   if (!BC.isAArch64() || !BC.HasRelocations)
-    return;
+    return Error::success();
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     runOnFunction(BF);
@@ -58,6 +66,7 @@ void FixRelaxations::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun, nullptr,
       "FixRelaxations");
+  return Error::success();
 }
 
 } // namespace bolt

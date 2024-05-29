@@ -369,11 +369,11 @@ define amdgpu_kernel void @vector_bitcast_from_alloca_array(ptr addrspace(1) %ou
 ; OPT-LABEL: @vector_bitcast_to_array_from_alloca_array(
 ; OPT-NOT:   alloca
 ; OPT-NEXT: store i32 1, ptr addrspace(1) %out, align 4
-; OPT-NEXT: %out.repack1 = getelementptr inbounds [4 x i32], ptr addrspace(1) %out, i64 0, i64 1
+; OPT-NEXT: %out.repack1 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 4
 ; OPT-NEXT: store i32 2, ptr addrspace(1) %out.repack1, align 4
-; OPT-NEXT: %out.repack2 = getelementptr inbounds [4 x i32], ptr addrspace(1) %out, i64 0, i64 2
+; OPT-NEXT: %out.repack2 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 8
 ; OPT-NEXT: store i32 3, ptr addrspace(1) %out.repack2, align 4
-; OPT-NEXT: %out.repack3 = getelementptr inbounds [4 x i32], ptr addrspace(1) %out, i64 0, i64 3
+; OPT-NEXT: %out.repack3 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 12
 ; OPT-NEXT: store i32 4, ptr addrspace(1) %out.repack3, align 4
 
 ; GCN-LABEL: {{^}}vector_bitcast_to_array_from_alloca_array:
@@ -395,11 +395,11 @@ define amdgpu_kernel void @vector_bitcast_to_array_from_alloca_array(ptr addrspa
 ; OPT-LABEL: @vector_bitcast_to_struct_from_alloca_array(
 ; OPT-NOT:   alloca
 ; OPT-NEXT: store i32 1, ptr addrspace(1) %out, align 4
-; OPT-NEXT: %out.repack1 = getelementptr inbounds %struct.v4, ptr addrspace(1) %out, i64 0, i32 1
+; OPT-NEXT: %out.repack1 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 4
 ; OPT-NEXT: store i32 2, ptr addrspace(1) %out.repack1, align 4
-; OPT-NEXT: %out.repack2 = getelementptr inbounds %struct.v4, ptr addrspace(1) %out, i64 0, i32 2
+; OPT-NEXT: %out.repack2 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 8
 ; OPT-NEXT: store i32 3, ptr addrspace(1) %out.repack2, align 4
-; OPT-NEXT: %out.repack3 = getelementptr inbounds %struct.v4, ptr addrspace(1) %out, i64 0, i32 3
+; OPT-NEXT: %out.repack3 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 12
 ; OPT-NEXT: store i32 4, ptr addrspace(1) %out.repack3, align 4
 
 ; GCN-LABEL: {{^}}vector_bitcast_to_struct_from_alloca_array:

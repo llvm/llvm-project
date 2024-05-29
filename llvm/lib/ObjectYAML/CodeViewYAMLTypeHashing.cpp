@@ -49,7 +49,7 @@ DebugHSection llvm::CodeViewYAML::fromDebugH(ArrayRef<uint8_t> DebugH) {
   assert(DebugH.size() >= 8);
   assert((DebugH.size() - 8) % 8 == 0);
 
-  BinaryStreamReader Reader(DebugH, llvm::support::little);
+  BinaryStreamReader Reader(DebugH, llvm::endianness::little);
   DebugHSection DHS;
   cantFail(Reader.readInteger(DHS.Magic));
   cantFail(Reader.readInteger(DHS.Version));
@@ -69,7 +69,7 @@ ArrayRef<uint8_t> llvm::CodeViewYAML::toDebugH(const DebugHSection &DebugH,
   uint32_t Size = 8 + 8 * DebugH.Hashes.size();
   uint8_t *Data = Alloc.Allocate<uint8_t>(Size);
   MutableArrayRef<uint8_t> Buffer(Data, Size);
-  BinaryStreamWriter Writer(Buffer, llvm::support::little);
+  BinaryStreamWriter Writer(Buffer, llvm::endianness::little);
 
   cantFail(Writer.writeInteger(DebugH.Magic));
   cantFail(Writer.writeInteger(DebugH.Version));

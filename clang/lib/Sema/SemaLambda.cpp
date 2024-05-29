@@ -9,17 +9,20 @@
 //  This file implements semantic analysis for C++ lambda expressions.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/SemaLambda.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
-#include "clang/Sema/SemaLambda.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
@@ -377,6 +380,76 @@ buildTypeForLambdaCallOperator(Sema &S, clang::CXXRecordDecl *Class,
     }
   }
   return MethodType;
+}
+
+// [C++2b] [expr.prim.lambda.closure] p4
+//  Given a lambda with a lambda-capture, the type of the explicit object
+//  parameter, if any, of the lambda's function call operator (possibly
+//  instantiated from a function call operator template) shall be either:
+//  - the closure type,
+//  - class type publicly and unambiguously derived from the closure type, or
+//  - a reference to a possibly cv-qualified such type.
+bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
+    CXXMethodDecl *Method, SourceLocation CallLoc) {
+  if (!isLambdaCallWithExplicitObjectParameter(Method))
+    return false;
+  CXXRecordDecl *RD = Method->getParent();
+  if (Method->getType()->isDependentType())
+    return false;
+  if (RD->isCapturelessLambda())
+    return false;
+
+  ParmVarDecl *Param = Method->getParamDecl(0);
+  QualType ExplicitObjectParameterType = Param->getType()
+                                             .getNonReferenceType()
+                                             .getUnqualifiedType()
+                                             .getDesugaredType(getASTContext());
+  QualType LambdaType = getASTContext().getRecordType(RD);
+  if (LambdaType == ExplicitObjectParameterType)
+    return false;
+
+  // Don't check the same instantiation twice.
+  //
+  // If this call operator is ill-formed, there is no point in issuing
+  // a diagnostic every time it is called because the problem is in the
+  // definition of the derived type, not at the call site.
+  //
+  // FIXME: Move this check to where we instantiate the method? This should
+  // be possible, but the naive approach of just marking the method as invalid
+  // leads to us emitting more diagnostics than we should have to for this case
+  // (1 error here *and* 1 error about there being no matching overload at the
+  // call site). It might be possible to avoid that by also checking if there
+  // is an empty cast path for the method stored in the context (signalling that
+  // we've already diagnosed it) and then just not building the call, but that
+  // doesn't really seem any simpler than diagnosing it at the call site...
+  if (auto It = Context.LambdaCastPaths.find(Method);
+      It != Context.LambdaCastPaths.end())
+    return It->second.empty();
+
+  CXXCastPath &Path = Context.LambdaCastPaths[Method];
+  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
+                     /*DetectVirtual=*/false);
+  if (!IsDerivedFrom(RD->getLocation(), ExplicitObjectParameterType, LambdaType,
+                     Paths)) {
+    Diag(Param->getLocation(), diag::err_invalid_explicit_object_type_in_lambda)
+        << ExplicitObjectParameterType;
+    return true;
+  }
+
+  if (Paths.isAmbiguous(LambdaType->getCanonicalTypeUnqualified())) {
+    std::string PathsDisplay = getAmbiguousPathsDisplayString(Paths);
+    Diag(CallLoc, diag::err_explicit_object_lambda_ambiguous_base)
+        << LambdaType << PathsDisplay;
+    return true;
+  }
+
+  if (CheckBaseClassAccess(CallLoc, LambdaType, ExplicitObjectParameterType,
+                           Paths.front(),
+                           diag::err_explicit_object_lambda_inaccessible_base))
+    return true;
+
+  BuildBasePathArray(Paths, Path);
+  return false;
 }
 
 void Sema::handleLambdaNumbering(
@@ -860,9 +933,17 @@ static TypeSourceInfo *getLambdaType(Sema &S, LambdaIntroducer &Intro,
   if (ParamInfo.getNumTypeObjects() == 0) {
     MethodTyInfo = getDummyLambdaType(S, Loc);
   } else {
+    // Check explicit parameters
+    S.CheckExplicitObjectLambda(ParamInfo);
+
     DeclaratorChunk::FunctionTypeInfo &FTI = ParamInfo.getFunctionTypeInfo();
+
+    bool HasExplicitObjectParameter =
+        ParamInfo.isExplicitObjectMemberFunction();
+
     ExplicitResultType = FTI.hasTrailingReturnType();
-    if (!FTI.hasMutableQualifier() && !IsLambdaStatic)
+    if (!FTI.hasMutableQualifier() && !IsLambdaStatic &&
+        !HasExplicitObjectParameter)
       FTI.getOrCreateMethodQualifiers().SetTypeQual(DeclSpec::TQ_const, Loc);
 
     if (ExplicitResultType && S.getLangOpts().HLSL) {
@@ -877,7 +958,7 @@ static TypeSourceInfo *getLambdaType(Sema &S, LambdaIntroducer &Intro,
       }
     }
 
-    MethodTyInfo = S.GetTypeForDeclarator(ParamInfo, CurScope);
+    MethodTyInfo = S.GetTypeForDeclarator(ParamInfo);
     assert(MethodTyInfo && "no type from lambda-declarator");
 
     // Check for unexpanded parameter packs in the method type.
@@ -1354,11 +1435,11 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // CUDA lambdas get implicit host and device attributes.
   if (getLangOpts().CUDA)
-    CUDASetLambdaAttrs(Method);
+    CUDA().SetLambdaAttrs(Method);
 
   // OpenMP lambdas might get assumumption attributes.
   if (LangOpts.OpenMP)
-    ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Method);
+    OpenMP().ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Method);
 
   handleLambdaNumbering(Class, Method);
 
@@ -1405,7 +1486,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
       for (const auto &Capture : Intro.Captures) {
         if (Capture.Id == TP->getIdentifier()) {
           Diag(Capture.Loc, diag::err_template_param_shadow) << Capture.Id;
-          Diag(TP->getLocation(), diag::note_template_param_here);
+          NoteTemplateParameterLocation(*TP);
         }
       }
     }
@@ -1686,7 +1767,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   // function that will be the result of the conversion with a
   // certain unique ID.
   // When it is static we just return the static call operator instead.
-  if (CallOperator->isInstance()) {
+  if (CallOperator->isImplicitObjectMemberFunction()) {
     DeclarationName InvokerName =
         &S.Context.Idents.get(getLambdaStaticInvokerName());
     // FIXME: Instead of passing in the CallOperator->getTypeSourceInfo()
@@ -1846,8 +1927,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
   return InitSeq.Perform(*this, Entity, InitKind, InitExpr);
 }
 
-ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
-                                 Scope *CurScope) {
+ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
@@ -2098,7 +2178,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       CaptureInits.push_back(Init.get());
 
       if (LangOpts.CUDA)
-        CUDACheckLambdaCapture(CallOperator, From);
+        CUDA().CheckLambdaCapture(CallOperator, From);
     }
 
     Class->setCaptures(Context, Captures);
@@ -2256,33 +2336,55 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   return BuildBlock;
 }
 
+static FunctionDecl *getPatternFunctionDecl(FunctionDecl *FD) {
+  if (FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization) {
+    while (FD->getInstantiatedFromMemberFunction())
+      FD = FD->getInstantiatedFromMemberFunction();
+    return FD;
+  }
+
+  if (FD->getTemplatedKind() == FunctionDecl::TK_DependentNonTemplate)
+    return FD->getInstantiatedFromDecl();
+
+  FunctionTemplateDecl *FTD = FD->getPrimaryTemplate();
+  if (!FTD)
+    return nullptr;
+
+  while (FTD->getInstantiatedFromMemberTemplate())
+    FTD = FTD->getInstantiatedFromMemberTemplate();
+
+  return FTD->getTemplatedDecl();
+}
+
 Sema::LambdaScopeForCallOperatorInstantiationRAII::
     LambdaScopeForCallOperatorInstantiationRAII(
-        Sema &SemasRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,
-        LocalInstantiationScope &Scope)
-    : FunctionScopeRAII(SemasRef) {
+        Sema &SemaRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,
+        LocalInstantiationScope &Scope, bool ShouldAddDeclsFromParentScope)
+    : FunctionScopeRAII(SemaRef) {
   if (!isLambdaCallOperator(FD)) {
     FunctionScopeRAII::disable();
     return;
   }
 
-  if (FD->isTemplateInstantiation() && FD->getPrimaryTemplate()) {
-    FunctionTemplateDecl *PrimaryTemplate = FD->getPrimaryTemplate();
-    if (const auto *FromMemTempl =
-            PrimaryTemplate->getInstantiatedFromMemberTemplate()) {
-      SemasRef.addInstantiatedCapturesToScope(
-          FD, FromMemTempl->getTemplatedDecl(), Scope, MLTAL);
+  SemaRef.RebuildLambdaScopeInfo(cast<CXXMethodDecl>(FD));
+
+  FunctionDecl *Pattern = getPatternFunctionDecl(FD);
+  if (Pattern) {
+    SemaRef.addInstantiatedCapturesToScope(FD, Pattern, Scope, MLTAL);
+
+    FunctionDecl *ParentFD = FD;
+    while (ShouldAddDeclsFromParentScope) {
+
+      ParentFD =
+          dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(ParentFD));
+      Pattern =
+          dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(Pattern));
+
+      if (!FD || !Pattern)
+        break;
+
+      SemaRef.addInstantiatedParametersToScope(ParentFD, Pattern, Scope, MLTAL);
+      SemaRef.addInstantiatedLocalVarsToScope(ParentFD, Pattern, Scope);
     }
   }
-
-  else if (FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization ||
-           FD->getTemplatedKind() == FunctionDecl::TK_DependentNonTemplate) {
-    FunctionDecl *InstantiatedFrom =
-        FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization
-            ? FD->getInstantiatedFromMemberFunction()
-            : FD->getInstantiatedFromDecl();
-    SemasRef.addInstantiatedCapturesToScope(FD, InstantiatedFrom, Scope, MLTAL);
-  }
-
-  SemasRef.RebuildLambdaScopeInfo(cast<CXXMethodDecl>(FD));
 }

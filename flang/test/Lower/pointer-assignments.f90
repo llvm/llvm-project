@@ -1,5 +1,5 @@
 ! Test lowering of pointer assignments
-! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 
 ! Note that p => NULL() are tested in pointer-disassociate.f90

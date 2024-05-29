@@ -280,7 +280,7 @@ due to C721 and C723.
 Initially the current plan is to implement pointers to internal procedures
 using the LLVM Trampoline intrinsics. This has the drawback of requiring the
 stack to be executable, which is a security hole. To avoid this, we will need
-improve the implementation to use heap-resident thunks.
+[improve the implementation](InternalProcedureTrampolines.md) to use heap-resident thunks.
 
 ### Procedure pointer assignment `p => proc`
 
@@ -422,7 +422,7 @@ func.func @proc_pointer_component(%arg0 : !fir.boxproc<(!fir.ref<i32>) -> f32>, 
 
 ---
 
-# Testing
+## Testing
 
 The lowering part is tested with LIT tests in tree, but the execution tests are
 useful for full testing.
@@ -452,7 +452,7 @@ The tests should include the following
 
 ---
 
-# Current TODOs
+## Current TODOs
 Current list of TODOs in lowering:
 - `flang/lib/Lower/CallInterface.cpp:708`: not yet implemented: procedure pointer result not yet handled
 - `flang/lib/Lower/CallInterface.cpp:961`: not yet implemented: procedure pointer arguments

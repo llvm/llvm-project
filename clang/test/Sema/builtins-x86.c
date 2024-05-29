@@ -22,19 +22,19 @@ void call_x86_32_builtins(void) {
 }
 
 __m128 test__builtin_ia32_cmpps(__m128 __a, __m128 __b) {
-  return __builtin_ia32_cmpps(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 7]}}
+  return __builtin_ia32_cmpps(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
 }
 
 __m128d test__builtin_ia32_cmppd(__m128d __a, __m128d __b) {
-  return __builtin_ia32_cmppd(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 7]}}
+  return __builtin_ia32_cmppd(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
 }
 
 __m128 test__builtin_ia32_cmpss(__m128 __a, __m128 __b) {
-  return __builtin_ia32_cmpss(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 7]}}
+  return __builtin_ia32_cmpss(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
 }
 
 __m128d test__builtin_ia32_cmpsd(__m128d __a, __m128d __b) {
-  return __builtin_ia32_cmpsd(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 7]}}
+  return __builtin_ia32_cmpsd(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
 }
 
 __mmask16 test__builtin_ia32_cmpps512_mask(__m512 __a, __m512 __b) {
@@ -104,14 +104,6 @@ __m128 test__builtin_ia32_getmantss_round_mask(__m128 a, __m128 b, __m128 c) {
 
 __m128i test_mm_mask_i32gather_epi32(__m128i a, int const *b, __m128i c, __m128i mask) {
   return __builtin_ia32_gatherd_d(a, b, c, mask, 5); // expected-error {{scale argument must be 1, 2, 4, or 8}}
-}
-
-void _mm512_mask_prefetch_i32gather_ps(__m512i index, __mmask16 mask, int const *addr) {
-  __builtin_ia32_gatherpfdps(mask, index, addr, 5, 1); // expected-error {{scale argument must be 1, 2, 4, or 8}}
-}
-
-void _mm512_mask_prefetch_i32gather_ps_2(__m512i index, __mmask16 mask, int const *addr) {
-  __builtin_ia32_gatherpfdps(mask, index, addr, 1, 1); // expected-error {{argument value 1 is outside the valid range [2, 3]}}
 }
 
 __m512i test_mm512_shldi_epi64(__m512i __A, __m512i __B) {

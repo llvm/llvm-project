@@ -1,8 +1,10 @@
 add_flang_library(FIRTransforms
   AbstractResult.cpp
+  AddAliasTags.cpp
   AffinePromotion.cpp
   AffineDemotion.cpp
   AnnotateConstant.cpp
+  AssumedRankOpConversion.cpp
   CharacterConversion.cpp
   ControlFlowConverter.cpp
   ArrayValueCopy.cpp
@@ -13,12 +15,15 @@ add_flang_library(FIRTransforms
   SimplifyRegionLite.cpp
   AlgebraicSimplification.cpp
   SimplifyIntrinsics.cpp
-  AddDebugFoundation.cpp
+  AddDebugInfo.cpp
   PolymorphicOpConversion.cpp
   LoopVersioning.cpp
-  OMPEarlyOutlining.cpp
   OMPFunctionFiltering.cpp
+  OMPMapInfoFinalization.cpp
   OMPMarkDeclareTarget.cpp
+  VScaleAttr.cpp
+  FunctionAttr.cpp
+  DebugTypeGenerator.cpp
 
   DEPENDS
   FIRDialect
@@ -26,11 +31,13 @@ add_flang_library(FIRTransforms
   HLFIROpsIncGen
 
   LINK_LIBS
+  FIRAnalysis
   FIRBuilder
   FIRCodeGen
   FIRDialect
   FIRDialectSupport
   FIRSupport
+  FortranCommon
   HLFIRDialect
   MLIRAffineUtils
   MLIRFuncDialect

@@ -21,8 +21,10 @@
  */
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
-    const char *CountersBegin, const char *CountersEnd, const char *NamesBegin,
-    const char *NamesEnd);
+    const char *CountersBegin, const char *CountersEnd, const char *BitmapBegin,
+    const char *BitmapEnd, const char *NamesBegin, const char *NamesEnd,
+    const VTableProfData *VTableBegin, const VTableProfData *VTableEnd,
+    const char *VNamesBegin, const char *VNamesEnd);
 
 /*!
  * \brief Write instrumentation data to the given buffer, given explicit
@@ -36,7 +38,8 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
 int __llvm_profile_write_buffer_internal(
     char *Buffer, const __llvm_profile_data *DataBegin,
     const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd);
+    const char *CountersEnd, const char *BitmapBegin, const char *BitmapEnd,
+    const char *NamesBegin, const char *NamesEnd);
 
 /*!
  * The data structure describing the data to be written by the
@@ -153,8 +156,11 @@ int lprofWriteDataImpl(ProfDataWriter *Writer,
                        const __llvm_profile_data *DataBegin,
                        const __llvm_profile_data *DataEnd,
                        const char *CountersBegin, const char *CountersEnd,
+                       const char *BitmapBegin, const char *BitmapEnd,
                        VPDataReaderType *VPDataReader, const char *NamesBegin,
-                       const char *NamesEnd, int SkipNameDataWrite);
+                       const char *NamesEnd, const VTableProfData *VTableBegin,
+                       const VTableProfData *VTableEnd, const char *VNamesBegin,
+                       const char *VNamesEnd, int SkipNameDataWrite);
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */

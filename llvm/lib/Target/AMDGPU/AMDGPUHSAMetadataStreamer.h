@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -30,7 +31,6 @@ class MDNode;
 class Module;
 struct SIProgramInfo;
 class Type;
-class GCNSubtarget;
 
 namespace AMDGPU {
 
@@ -62,7 +62,8 @@ protected:
                                msgpack::MapDocNode Kern) = 0;
 };
 
-class MetadataStreamerMsgPackV3 : public MetadataStreamer {
+class LLVM_EXTERNAL_VISIBILITY MetadataStreamerMsgPackV4
+    : public MetadataStreamer {
 protected:
   std::unique_ptr<msgpack::Document> HSAMetadataDoc =
       std::make_unique<msgpack::Document>();
@@ -88,6 +89,8 @@ protected:
                                         unsigned CodeObjectVersion) const;
 
   void emitVersion() override;
+
+  void emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID);
 
   void emitPrintf(const Module &Mod);
 
@@ -120,8 +123,8 @@ protected:
   }
 
 public:
-  MetadataStreamerMsgPackV3() = default;
-  ~MetadataStreamerMsgPackV3() = default;
+  MetadataStreamerMsgPackV4() = default;
+  ~MetadataStreamerMsgPackV4() = default;
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
@@ -134,20 +137,7 @@ public:
                   const SIProgramInfo &ProgramInfo) override;
 };
 
-class MetadataStreamerMsgPackV4 : public MetadataStreamerMsgPackV3 {
-protected:
-  void emitVersion() override;
-  void emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID);
-
-public:
-  MetadataStreamerMsgPackV4() = default;
-  ~MetadataStreamerMsgPackV4() = default;
-
-  void begin(const Module &Mod,
-             const IsaInfo::AMDGPUTargetID &TargetID) override;
-};
-
-class MetadataStreamerMsgPackV5 final : public MetadataStreamerMsgPackV4 {
+class MetadataStreamerMsgPackV5 : public MetadataStreamerMsgPackV4 {
 protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
@@ -157,6 +147,15 @@ protected:
 public:
   MetadataStreamerMsgPackV5() = default;
   ~MetadataStreamerMsgPackV5() = default;
+};
+
+class MetadataStreamerMsgPackV6 final : public MetadataStreamerMsgPackV5 {
+protected:
+  void emitVersion() override;
+
+public:
+  MetadataStreamerMsgPackV6() = default;
+  ~MetadataStreamerMsgPackV6() = default;
 };
 
 } // end namespace HSAMD

@@ -10,6 +10,6 @@ target triple = "lanai"
 ; CHECK-LABEL: setandhi:
 ; CHECK: mov 0xfffffe4a, %r{{[0-9]+}}
 define void @setandhi() #0 {
-  store volatile i32 -438, i32* @x, align 4
+  store volatile i32 -438, ptr @x, align 4
   ret void
 }

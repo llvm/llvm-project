@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -o - -emit-llvm %s \
 // RUN:   -fmath-errno | FileCheck %s -check-prefix=F80
-// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -w -S -o - -emit-llvm %s \
+// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -w -o - -emit-llvm %s \
 // RUN:   -fmath-errno | FileCheck %s -check-prefix=PPC
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -mlong-double-128 -w -S \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -mlong-double-128 -w \
 // RUN:   -o - -emit-llvm %s -fmath-errno | FileCheck %s -check-prefix=X86F128
-// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -mabi=ieeelongdouble -w -S \
+// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -mabi=ieeelongdouble -w \
 // RUN:   -o - -emit-llvm %s -fmath-errno | FileCheck %s -check-prefix=PPCF128
 
 void bar(long double);
@@ -35,7 +35,7 @@ void foo(long double f, long double *l, int *i, const char *c) {
   __builtin_fabsl(f);
 
   // F80: call { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80 %{{.+}})
-  // PPC: call { ppc_fp128, i32 } @llvm.frexp.ppcf128.i32(ppc_fp128 %{{.+}})
+  // PPC: call ppc_fp128 @frexpl(ppc_fp128 noundef %{{.+}}, ptr noundef %{{.+}})
   // X86F128: call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %{{.+}})
   // PPCF128: call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %{{.+}})
   __builtin_frexpl(f,i);

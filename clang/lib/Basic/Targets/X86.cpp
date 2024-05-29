@@ -64,6 +64,8 @@ static const char *const GCCRegNames[] = {
     "dr0",   "dr1",   "dr2",   "dr3",   "dr6",     "dr7",
     "bnd0",  "bnd1",  "bnd2",  "bnd3",
     "tmm0",  "tmm1",  "tmm2",  "tmm3",  "tmm4",    "tmm5",  "tmm6",  "tmm7",
+    "r16",   "r17",   "r18",   "r19",   "r20",     "r21",   "r22",   "r23",
+    "r24",   "r25",   "r26",   "r27",   "r28",     "r29",   "r30",   "r31",
 };
 
 const TargetInfo::AddlRegName AddlRegNames[] = {
@@ -83,8 +85,23 @@ const TargetInfo::AddlRegName AddlRegNames[] = {
     {{"r13d", "r13w", "r13b"}, 43},
     {{"r14d", "r14w", "r14b"}, 44},
     {{"r15d", "r15w", "r15b"}, 45},
+    {{"r16d", "r16w", "r16b"}, 165},
+    {{"r17d", "r17w", "r17b"}, 166},
+    {{"r18d", "r18w", "r18b"}, 167},
+    {{"r19d", "r19w", "r19b"}, 168},
+    {{"r20d", "r20w", "r20b"}, 169},
+    {{"r21d", "r21w", "r21b"}, 170},
+    {{"r22d", "r22w", "r22b"}, 171},
+    {{"r23d", "r23w", "r23b"}, 172},
+    {{"r24d", "r24w", "r24b"}, 173},
+    {{"r25d", "r25w", "r25b"}, 174},
+    {{"r26d", "r26w", "r26b"}, 175},
+    {{"r27d", "r27w", "r27b"}, 176},
+    {{"r28d", "r28w", "r28b"}, 177},
+    {{"r29d", "r29w", "r29b"}, 178},
+    {{"r30d", "r30w", "r30b"}, 179},
+    {{"r31d", "r31w", "r31b"}, 180},
 };
-
 } // namespace targets
 } // namespace clang
 
@@ -119,8 +136,14 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabled(Features, F, true);
 
   std::vector<std::string> UpdatedFeaturesVec;
-  bool HasEVEX512 = true;
-  bool HasAVX512F = false;
+  std::vector<std::string> UpdatedAVX10FeaturesVec;
+  enum { FE_NOSET = -1, FE_FALSE, FE_TRUE };
+  int HasEVEX512 = FE_NOSET;
+  bool HasAVX512F = Features.lookup("avx512f");
+  bool HasAVX10 = Features.lookup("avx10.1-256");
+  bool HasAVX10_512 = Features.lookup("avx10.1-512");
+  std::string LastAVX10;
+  std::string LastAVX512;
   for (const auto &Feature : FeaturesVec) {
     // Expand general-regs-only to -x86, -mmx and -sse
     if (Feature == "+general-regs-only") {
@@ -130,17 +153,51 @@ bool X86TargetInfo::initFeatureMap(
       continue;
     }
 
-    if (!HasAVX512F && Feature.substr(0, 7) == "+avx512")
+    if (Feature.substr(1, 6) == "avx10.") {
+      if (Feature[0] == '+') {
+        HasAVX10 = true;
+        if (StringRef(Feature).ends_with("512"))
+          HasAVX10_512 = true;
+        LastAVX10 = Feature;
+      } else if (HasAVX10 && Feature == "-avx10.1-256") {
+        HasAVX10 = false;
+        HasAVX10_512 = false;
+      } else if (HasAVX10_512 && Feature == "-avx10.1-512") {
+        HasAVX10_512 = false;
+      }
+      // Postpone AVX10 features handling after AVX512 settled.
+      UpdatedAVX10FeaturesVec.push_back(Feature);
+      continue;
+    } else if (!HasAVX512F && StringRef(Feature).starts_with("+avx512")) {
       HasAVX512F = true;
-    if (HasAVX512F && Feature == "-avx512f")
+      LastAVX512 = Feature;
+    } else if (HasAVX512F && Feature == "-avx512f") {
       HasAVX512F = false;
-    if (HasEVEX512 && Feature == "-evex512")
-      HasEVEX512 = false;
+    } else if (HasEVEX512 != FE_TRUE && Feature == "+evex512") {
+      HasEVEX512 = FE_TRUE;
+      continue;
+    } else if (HasEVEX512 != FE_FALSE && Feature == "-evex512") {
+      HasEVEX512 = FE_FALSE;
+      continue;
+    }
 
     UpdatedFeaturesVec.push_back(Feature);
   }
-  if (HasAVX512F && HasEVEX512)
-    UpdatedFeaturesVec.push_back("+evex512");
+  llvm::append_range(UpdatedFeaturesVec, UpdatedAVX10FeaturesVec);
+  // HasEVEX512 is a three-states flag. We need to turn it into [+-]evex512
+  // according to other features.
+  if (HasAVX512F) {
+    UpdatedFeaturesVec.push_back(HasEVEX512 == FE_FALSE ? "-evex512"
+                                                        : "+evex512");
+    if (HasAVX10 && !HasAVX10_512 && HasEVEX512 != FE_FALSE)
+      Diags.Report(diag::warn_invalid_feature_combination)
+          << LastAVX512 + " " + LastAVX10 + "; will be promoted to avx10.1-512";
+  } else if (HasAVX10) {
+    if (HasEVEX512 != FE_NOSET)
+      Diags.Report(diag::warn_invalid_feature_combination)
+          << LastAVX10 + (HasEVEX512 == FE_TRUE ? " +evex512" : " -evex512");
+    UpdatedFeaturesVec.push_back(HasAVX10_512 ? "+evex512" : "-evex512");
+  }
 
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec))
     return false;
@@ -241,6 +298,10 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasGFNI = true;
     } else if (Feature == "+evex512") {
       HasEVEX512 = true;
+    } else if (Feature == "+avx10.1-256") {
+      HasAVX10_1 = true;
+    } else if (Feature == "+avx10.1-512") {
+      HasAVX10_1_512 = true;
     } else if (Feature == "+avx512cd") {
       HasAVX512CD = true;
     } else if (Feature == "+avx512vpopcntdq") {
@@ -249,13 +310,9 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512VNNI = true;
     } else if (Feature == "+avx512bf16") {
       HasAVX512BF16 = true;
-    } else if (Feature == "+avx512er") {
-      HasAVX512ER = true;
     } else if (Feature == "+avx512fp16") {
       HasAVX512FP16 = true;
       HasLegalHalfType = true;
-    } else if (Feature == "+avx512pf") {
-      HasAVX512PF = true;
     } else if (Feature == "+avx512dq") {
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
@@ -312,8 +369,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasWBNOINVD = true;
     } else if (Feature == "+prefetchi") {
       HasPREFETCHI = true;
-    } else if (Feature == "+prefetchwt1") {
-      HasPREFETCHWT1 = true;
     } else if (Feature == "+clzero") {
       HasCLZERO = true;
     } else if (Feature == "+cldemote") {
@@ -376,12 +431,28 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasTSXLDTRK = true;
     } else if (Feature == "+uintr") {
       HasUINTR = true;
+    } else if (Feature == "+usermsr") {
+      HasUSERMSR = true;
     } else if (Feature == "+crc32") {
       HasCRC32 = true;
     } else if (Feature == "+x87") {
       HasX87 = true;
     } else if (Feature == "+fullbf16") {
       HasFullBFloat16 = true;
+    } else if (Feature == "+egpr") {
+      HasEGPR = true;
+    } else if (Feature == "+push2pop2") {
+      HasPush2Pop2 = true;
+    } else if (Feature == "+ppx") {
+      HasPPX = true;
+    } else if (Feature == "+ndd") {
+      HasNDD = true;
+    } else if (Feature == "+ccmp") {
+      HasCCMP = true;
+    } else if (Feature == "+nf") {
+      HasNF = true;
+    } else if (Feature == "+cf") {
+      HasCF = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -563,11 +634,13 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Arrowlake:
   case CK_ArrowlakeS:
   case CK_Lunarlake:
+  case CK_Pantherlake:
   case CK_Sierraforest:
   case CK_Grandridge:
   case CK_Graniterapids:
   case CK_GraniterapidsD:
   case CK_Emeraldrapids:
+  case CK_Clearwaterforest:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
@@ -746,6 +819,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasEVEX512)
     Builder.defineMacro("__EVEX512__");
+  if (HasAVX10_1)
+    Builder.defineMacro("__AVX10_1__");
+  if (HasAVX10_1_512)
+    Builder.defineMacro("__AVX10_1_512__");
   if (HasAVX512CD)
     Builder.defineMacro("__AVX512CD__");
   if (HasAVX512VPOPCNTDQ)
@@ -754,20 +831,18 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512VNNI__");
   if (HasAVX512BF16)
     Builder.defineMacro("__AVX512BF16__");
-  if (HasAVX512ER)
-    Builder.defineMacro("__AVX512ER__");
   if (HasAVX512FP16)
     Builder.defineMacro("__AVX512FP16__");
-  if (HasAVX512PF)
-    Builder.defineMacro("__AVX512PF__");
   if (HasAVX512DQ)
     Builder.defineMacro("__AVX512DQ__");
   if (HasAVX512BITALG)
     Builder.defineMacro("__AVX512BITALG__");
   if (HasAVX512BW)
     Builder.defineMacro("__AVX512BW__");
-  if (HasAVX512VL)
+  if (HasAVX512VL) {
     Builder.defineMacro("__AVX512VL__");
+    Builder.defineMacro("__EVEX256__");
+  }
   if (HasAVX512VBMI)
     Builder.defineMacro("__AVX512VBMI__");
   if (HasAVX512VBMI2)
@@ -809,8 +884,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__SM4__");
   if (HasPREFETCHI)
     Builder.defineMacro("__PREFETCHI__");
-  if (HasPREFETCHWT1)
-    Builder.defineMacro("__PREFETCHWT1__");
   if (HasCLZERO)
     Builder.defineMacro("__CLZERO__");
   if (HasKL)
@@ -869,8 +942,27 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__TSXLDTRK__");
   if (HasUINTR)
     Builder.defineMacro("__UINTR__");
+  if (HasUSERMSR)
+    Builder.defineMacro("__USERMSR__");
   if (HasCRC32)
     Builder.defineMacro("__CRC32__");
+  if (HasEGPR)
+    Builder.defineMacro("__EGPR__");
+  if (HasPush2Pop2)
+    Builder.defineMacro("__PUSH2POP2__");
+  if (HasPPX)
+    Builder.defineMacro("__PPX__");
+  if (HasNDD)
+    Builder.defineMacro("__NDD__");
+  if (HasCCMP)
+    Builder.defineMacro("__CCMP__");
+  if (HasNF)
+    Builder.defineMacro("__NF__");
+  if (HasCF)
+    Builder.defineMacro("__CF__");
+  // Condition here is aligned with the feature set of mapxf in Options.td
+  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD)
+    Builder.defineMacro("__APX_F__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -969,15 +1061,15 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("amx-int8", true)
       .Case("amx-tile", true)
       .Case("avx", true)
+      .Case("avx10.1-256", true)
+      .Case("avx10.1-512", true)
       .Case("avx2", true)
       .Case("avx512f", true)
       .Case("avx512cd", true)
       .Case("avx512vpopcntdq", true)
       .Case("avx512vnni", true)
       .Case("avx512bf16", true)
-      .Case("avx512er", true)
       .Case("avx512fp16", true)
-      .Case("avx512pf", true)
       .Case("avx512dq", true)
       .Case("avx512bitalg", true)
       .Case("avx512bw", true)
@@ -1025,7 +1117,6 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("pku", true)
       .Case("popcnt", true)
       .Case("prefetchi", true)
-      .Case("prefetchwt1", true)
       .Case("prfchw", true)
       .Case("ptwrite", true)
       .Case("raoint", true)
@@ -1053,6 +1144,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("tbm", true)
       .Case("tsxldtrk", true)
       .Case("uintr", true)
+      .Case("usermsr", true)
       .Case("vaes", true)
       .Case("vpclmulqdq", true)
       .Case("wbnoinvd", true)
@@ -1063,6 +1155,13 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("xsavec", true)
       .Case("xsaves", true)
       .Case("xsaveopt", true)
+      .Case("egpr", true)
+      .Case("push2pop2", true)
+      .Case("ppx", true)
+      .Case("ndd", true)
+      .Case("ccmp", true)
+      .Case("nf", true)
+      .Case("cf", true)
       .Default(false);
 }
 
@@ -1076,15 +1175,15 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("amx-int8", HasAMXINT8)
       .Case("amx-tile", HasAMXTILE)
       .Case("avx", SSELevel >= AVX)
+      .Case("avx10.1-256", HasAVX10_1)
+      .Case("avx10.1-512", HasAVX10_1_512)
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)
       .Case("avx512cd", HasAVX512CD)
       .Case("avx512vpopcntdq", HasAVX512VPOPCNTDQ)
       .Case("avx512vnni", HasAVX512VNNI)
       .Case("avx512bf16", HasAVX512BF16)
-      .Case("avx512er", HasAVX512ER)
       .Case("avx512fp16", HasAVX512FP16)
-      .Case("avx512pf", HasAVX512PF)
       .Case("avx512dq", HasAVX512DQ)
       .Case("avx512bitalg", HasAVX512BITALG)
       .Case("avx512bw", HasAVX512BW)
@@ -1134,7 +1233,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("pku", HasPKU)
       .Case("popcnt", HasPOPCNT)
       .Case("prefetchi", HasPREFETCHI)
-      .Case("prefetchwt1", HasPREFETCHWT1)
       .Case("prfchw", HasPRFCHW)
       .Case("ptwrite", HasPTWRITE)
       .Case("raoint", HasRAOINT)
@@ -1162,6 +1260,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("tbm", HasTBM)
       .Case("tsxldtrk", HasTSXLDTRK)
       .Case("uintr", HasUINTR)
+      .Case("usermsr", HasUSERMSR)
       .Case("vaes", HasVAES)
       .Case("vpclmulqdq", HasVPCLMULQDQ)
       .Case("wbnoinvd", HasWBNOINVD)
@@ -1176,6 +1275,13 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("xsaves", HasXSAVES)
       .Case("xsaveopt", HasXSAVEOPT)
       .Case("fullbf16", HasFullBFloat16)
+      .Case("egpr", HasEGPR)
+      .Case("push2pop2", HasPush2Pop2)
+      .Case("ppx", HasPPX)
+      .Case("ndd", HasNDD)
+      .Case("ccmp", HasCCMP)
+      .Case("nf", HasNF)
+      .Case("cf", HasCF)
       .Default(false);
 }
 
@@ -1317,6 +1423,14 @@ bool X86TargetInfo::validateAsmConstraint(
   case 'O':
     Info.setRequiresImmediate(0, 127);
     return true;
+  case 'W':
+    switch (*++Name) {
+    default:
+      return false;
+    case 's':
+      Info.setAllowsRegister();
+      return true;
+    }
   // Register constraints.
   case 'Y': // 'Y' is the first character for several 2-character constraints.
     // Shift the pointer to the second character of the constraint.
@@ -1464,11 +1578,13 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Arrowlake:
     case CK_ArrowlakeS:
     case CK_Lunarlake:
+    case CK_Pantherlake:
     case CK_Sierraforest:
     case CK_Grandridge:
     case CK_Graniterapids:
     case CK_GraniterapidsD:
     case CK_Emeraldrapids:
+    case CK_Clearwaterforest:
     case CK_KNL:
     case CK_KNM:
     // K7
@@ -1513,8 +1629,7 @@ bool X86TargetInfo::validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
                                        StringRef Constraint,
                                        unsigned Size) const {
   // Strip off constraint modifiers.
-  while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
-    Constraint = Constraint.substr(1);
+  Constraint = Constraint.ltrim("=+&");
 
   return validateOperandSize(FeatureMap, Constraint, Size);
 }
@@ -1613,6 +1728,9 @@ std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
     return std::string("{st}");
   case 'u':                        // second from top of floating point stack.
     return std::string("{st(1)}"); // second from top of floating point stack.
+  case 'W':
+    assert(Constraint[1] == 's');
+    return '^' + std::string(Constraint++, 2);
   case 'Y':
     switch (Constraint[1]) {
     default:

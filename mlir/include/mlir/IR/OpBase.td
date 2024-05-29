@@ -568,6 +568,14 @@ class TypesMatchWith<string summary, string lhsArg, string rhsArg,
   string transformer = transform;
 }
 
+// The same as TypesMatchWith but if either `lhsArg` or `rhsArg` are optional
+// and not present returns success.
+class OptionalTypesMatchWith<string summary, string lhsArg, string rhsArg,
+                     string transform, string comparator = "std::equal_to<>()">
+  : TypesMatchWith<summary, lhsArg, rhsArg, transform,
+     "!get" # snakeCaseToCamelCase<lhsArg>.ret # "()"
+     # " || !get" # snakeCaseToCamelCase<rhsArg>.ret # "() || " # comparator>;
+
 // Special variant of `TypesMatchWith` that provides a comparator suitable for
 // ranged arguments.
 class RangedTypesMatchWith<string summary, string lhsArg, string rhsArg,
@@ -661,17 +669,5 @@ class TCopVTEtAreSameAt<list<int> indices> : CPred<
       "::mlir::ArrayRef<unsigned>({" # !interleave(indices, ", ") # "}), "
       "[this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); "
       "}))">;
-
-class AnyScalarTypeMatch<list<string> names> :
-    AnyMatchOperatorTrait<names, "$_self.getType().isSignlessInteger(1)",
-                          "scalar type">;
-
-class ScalarConditionOrMatchingShape<list<string> names> :
-    PredOpTrait<
-        !head(names) # " is scalar or has matching shape",
-        Or<[AnyScalarTypeMatch<[!head(names)]>.predicate,
-            AllShapesMatch<names>.predicate]>> {
-  list<string> values = names;
-}
 
 #endif // OP_BASE

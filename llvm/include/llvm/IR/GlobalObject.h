@@ -51,6 +51,7 @@ protected:
   Comdat *ObjComdat = nullptr;
   enum {
     LastAlignmentBit = 5,
+    LastCodeModelBit = 8,
     HasSectionHashEntryBit,
 
     GlobalObjectBits,
@@ -132,6 +133,7 @@ public:
   using Value::addMetadata;
   using Value::clearMetadata;
   using Value::eraseMetadata;
+  using Value::eraseMetadataIf;
   using Value::getAllMetadata;
   using Value::getMetadata;
   using Value::hasMetadata;

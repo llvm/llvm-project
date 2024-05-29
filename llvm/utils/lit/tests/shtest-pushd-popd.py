@@ -19,6 +19,7 @@
 # CHECK: pushd a b
 # CHECK: # | 'pushd' supports only one argument
 
-# CHECK: Passed:  1
-# CHECK: Failed:  3
+# CHECK: Total Discovered Tests: 4
+# CHECK: Passed:  1 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Failed:  3 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK-NOT: {{.}}

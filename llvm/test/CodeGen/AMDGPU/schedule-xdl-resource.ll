@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx908 -debug-only=machine-scheduler -verify-machineinstrs < %s 2>&1 | FileCheck -enable-var-scope %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -debug-only=machine-scheduler -verify-machineinstrs < %s 2>&1 | FileCheck -enable-var-scope %s
 ; REQUIRES: asserts
 
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x4f16(<4 x half>, <4 x half>, <32 x float>, i32, i32, i32)

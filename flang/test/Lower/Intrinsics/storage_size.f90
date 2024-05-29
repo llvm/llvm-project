@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -polymorphic-type %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module storage_size_test
   type :: p1

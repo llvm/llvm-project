@@ -41,8 +41,8 @@
 # NORVC-LABEL: <_start>:
 # NORVC-NEXT:    10000:  jal    zero, {{.*}} <a>
 # NORVC-NEXT:            jal    zero, {{.*}} <a>
-# NORVC-NEXT:            addi   zero, zero, 0
-# NORVC-NEXT:            addi   zero, zero, 0
+# NORVC-NEXT:            addi   zero, zero, 0x0
+# NORVC-NEXT:            addi   zero, zero, 0x0
 # NORVC-NEXT:    10010:  jal    ra, {{.*}} <a>
 # NORVC-NEXT:            jal    ra, 0x10420
 # NORVC-EMPTY:
@@ -57,10 +57,10 @@
 # NORVC-EMPTY:
 
 # NORVC-LABEL: <.high>:
-# NORVC-NEXT:   110006:  auipc  ra, 1048320
-# NORVC-NEXT:            jalr   ra, -6(ra)
-# NORVC-NEXT:            auipc  ra, 1048320
-# NORVC-NEXT:            jalr   ra, -14(ra)
+# NORVC-NEXT:   110006:  auipc  ra, 0xfff00
+# NORVC-NEXT:            jalr   ra, -0x6(ra)
+# NORVC-NEXT:            auipc  ra, 0xfff00
+# NORVC-NEXT:            jalr   ra, -0xe(ra)
 # NORVC-EMPTY:
 
 # RVC32:       00010000 g       .text  00000016 _start
@@ -75,9 +75,9 @@
 # RVC-LABEL:   <_start>:
 # RVC-NEXT:      10000:  c.j    {{.*}} <a>
 # RVC-NEXT:              c.j    {{.*}} <a>
-# RVC-NEXT:              addi   zero, zero, 0
-# RVC-NEXT:              addi   zero, zero, 0
-# RVC-NEXT:              addi   zero, zero, 0
+# RVC-NEXT:              addi   zero, zero, 0x0
+# RVC-NEXT:              addi   zero, zero, 0x0
+# RVC-NEXT:              addi   zero, zero, 0x0
 # RVC32-NEXT:    10010:  c.jal  {{.*}} <a>
 # RVC32-NEXT:            c.jal  0x10420
 # RVC64-NEXT:    10010:  jal    ra, {{.*}} <a>
@@ -100,23 +100,23 @@
 
 # RVC-LABEL:   <.high>:
 # RVC32-NEXT:   110000:  jal    ra, 0x10000 <_start>
-# RVC32-NEXT:            auipc  ra, 1048320
-# RVC32-NEXT:            jalr   ra, -4(ra)
-# RVC64-NEXT:   110004:  auipc  ra, 1048320
-# RVC64-NEXT:            jalr   ra, -4(ra)
-# RVC64-NEXT:            auipc  ra, 1048320
-# RVC64-NEXT:            jalr   ra, -12(ra)
+# RVC32-NEXT:            auipc  ra, 0xfff00
+# RVC32-NEXT:            jalr   ra, -0x4(ra)
+# RVC64-NEXT:   110004:  auipc  ra, 0xfff00
+# RVC64-NEXT:            jalr   ra, -0x4(ra)
+# RVC64-NEXT:            auipc  ra, 0xfff00
+# RVC64-NEXT:            jalr   ra, -0xc(ra)
 # RVC-EMPTY:
 
 # NORELAX-LABEL: <_start>:
-# NORELAX-NEXT:    10000:  auipc  t1, 0
-# NORELAX-NEXT:            jalr   zero, 32(t1)
-# NORELAX-NEXT:            auipc  t0, 0
-# NORELAX-NEXT:            jalr   zero, 24(t0)
-# NORELAX-NEXT:    10010:  auipc  ra, 0
-# NORELAX-NEXT:            jalr   ra, 16(ra)
-# NORELAX-NEXT:            auipc  ra, 0
-# NORELAX-NEXT:            jalr   ra, 1032(ra)
+# NORELAX-NEXT:    10000:  auipc  t1, 0x0
+# NORELAX-NEXT:            jalr   zero, 0x20(t1)
+# NORELAX-NEXT:            auipc  t0, 0x0
+# NORELAX-NEXT:            jalr   zero, 0x18(t0)
+# NORELAX-NEXT:    10010:  auipc  ra, 0x0
+# NORELAX-NEXT:            jalr   ra, 0x10(ra)
+# NORELAX-NEXT:            auipc  ra, 0x0
+# NORELAX-NEXT:            jalr   ra, 0x408(ra)
 # NORELAX-EMPTY:
 
 #--- a.s

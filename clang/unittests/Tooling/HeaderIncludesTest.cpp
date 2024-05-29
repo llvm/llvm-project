@@ -23,9 +23,9 @@ protected:
   std::string insert(llvm::StringRef Code, llvm::StringRef Header,
                      IncludeDirective Directive = IncludeDirective::Include) {
     HeaderIncludes Includes(FileName, Code, Style);
-    assert(Header.startswith("\"") || Header.startswith("<"));
-    auto R =
-        Includes.insert(Header.trim("\"<>"), Header.startswith("<"), Directive);
+    assert(Header.starts_with("\"") || Header.starts_with("<"));
+    auto R = Includes.insert(Header.trim("\"<>"), Header.starts_with("<"),
+                             Directive);
     if (!R)
       return std::string(Code);
     auto Result = applyAllReplacements(Code, Replacements(*R));
@@ -35,8 +35,9 @@ protected:
 
   std::string remove(llvm::StringRef Code, llvm::StringRef Header) {
     HeaderIncludes Includes(FileName, Code, Style);
-    assert(Header.startswith("\"") || Header.startswith("<"));
-    auto Replaces = Includes.remove(Header.trim("\"<>"), Header.startswith("<"));
+    assert(Header.starts_with("\"") || Header.starts_with("<"));
+    auto Replaces =
+        Includes.remove(Header.trim("\"<>"), Header.starts_with("<"));
     auto Result = applyAllReplacements(Code, Replaces);
     EXPECT_TRUE(static_cast<bool>(Result));
     return *Result;

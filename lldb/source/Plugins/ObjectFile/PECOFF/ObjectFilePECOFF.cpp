@@ -791,11 +791,10 @@ void ObjectFilePECOFF::AppendFromCOFFSymbolTable(
   for (const auto &sym_ref : m_binary->symbols()) {
     const auto coff_sym_ref = m_binary->getCOFFSymbol(sym_ref);
     auto name_or_error = sym_ref.getName();
-    if (auto err = name_or_error.takeError()) {
-      LLDB_LOG(log,
-               "ObjectFilePECOFF::AppendFromCOFFSymbolTable - failed to get "
-               "symbol table entry name: {0}",
-               llvm::fmt_consume(std::move(err)));
+    if (!name_or_error) {
+      LLDB_LOG_ERROR(log, name_or_error.takeError(),
+                     "ObjectFilePECOFF::AppendFromCOFFSymbolTable - failed to "
+                     "get symbol table entry name: {0}");
       continue;
     }
     const llvm::StringRef sym_name = *name_or_error;

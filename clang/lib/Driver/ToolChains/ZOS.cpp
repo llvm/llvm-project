@@ -36,6 +36,12 @@ void ZOS::addClangTargetOptions(const ArgList &DriverArgs,
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,
                                 options::OPT_fno_aligned_allocation))
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
+  // or disabled sized deallocations.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,
+                                options::OPT_fno_sized_deallocation))
+    CC1Args.push_back("-fno-sized-deallocation");
 }
 
 void zos::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
@@ -143,7 +149,7 @@ void zos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef OutputName = Output.getFilename();
     // Strip away the last file suffix in presence from output name and add
     // a new .x suffix.
-    size_t Suffix = OutputName.find_last_of(".");
+    size_t Suffix = OutputName.find_last_of('.');
     const char *SideDeckName =
         Args.MakeArgString(OutputName.substr(0, Suffix) + ".x");
     CmdArgs.push_back("-x");
@@ -156,10 +162,9 @@ void zos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("/dev/null");
   }
 
-  Args.AddAllArgs(CmdArgs, options::OPT_u);
-
   // Add archive library search paths.
-  Args.AddAllArgs(CmdArgs, options::OPT_L);
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
+
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   // Specify linker input file(s)
@@ -326,8 +331,7 @@ void ZOS::AddClangCXXStdlibIncludeArgs(
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
     // <install>/bin/../include/c++/v1
-    llvm::SmallString<128> InstallBin =
-        llvm::StringRef(getDriver().getInstalledDir());
+    llvm::SmallString<128> InstallBin(getDriver().Dir);
     llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
     TryAddIncludeFromPath(InstallBin, DriverArgs, CC1Args);
     break;

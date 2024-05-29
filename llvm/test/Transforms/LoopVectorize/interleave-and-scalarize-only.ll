@@ -5,6 +5,7 @@
 
 ; DBG-LABEL: 'test_scalarize_call'
 ; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
+; DBG-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; DBG-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
@@ -23,7 +24,7 @@
 ; DBG-NEXT:     CLONE ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
 ; DBG-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%dst>, vp<[[IV_STEPS]]>
 ; DBG-NEXT:     CLONE store ir<%min>, ir<%arrayidx>
-; DBG-NEXT:     EMIT vp<[[INC:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; DBG-NEXT:     EMIT vp<[[INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; DBG-NEXT:     EMIT branch-on-count vp<[[INC]]>, vp<[[VEC_TC]]>
 ; DBG-NEXT:   No successors
 ; DBG-NEXT: }
@@ -67,7 +68,8 @@ declare i32 @llvm.smin.i32(i32, i32)
 
 ; DBG-LABEL: 'test_scalarize_with_branch_cond'
 
-; DBG:       Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; DBG:       Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; DBG-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT:  Live-in ir<1000> = original trip-count
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
@@ -100,7 +102,7 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:   Successor(s): cond.false.1
 ; DBG-EMPTY:
 ; DBG-NEXT:   cond.false.1:
-; DBG-NEXT:     EMIT vp<[[CAN_IV_INC:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; DBG-NEXT:     EMIT vp<[[CAN_IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; DBG-NEXT:     EMIT branch-on-count vp<[[CAN_IV_INC]]>, vp<[[VEC_TC]]>
 ; DBG-NEXT:   No successors
 ; DBG-NEXT: }
@@ -173,6 +175,7 @@ exit:
 
 ; DBG-LABEL: 'first_order_recurrence_using_induction'
 ; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
+; DBG-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; DBG-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
@@ -181,17 +184,18 @@ exit:
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
+; DBG-NEXT:   SCALAR-CAST vp<[[CAST:%.+]]> = trunc ir<1> to i32
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
-; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<1> (truncated to i32)
-; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
+; DBG-NEXT:     SCALAR-CAST vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
+; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, vp<[[CAST]]>
 ; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
-; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; DBG-NEXT:     EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VTC]]>
 ; DBG-NEXT:   No successors
 ; DBG-NEXT: }
@@ -232,3 +236,123 @@ loop:
 exit:
   ret void
 }
+
+define i16 @reduction_with_casts() {
+; CHECK-LABEL: define i16 @reduction_with_casts() {
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH:%.+]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY:%.+]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[VEC_PHI]], 65535
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[VEC_PHI1]], 65535
+; CHECK-NEXT:    [[TMP2]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP3]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 9998
+; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label %scalar.ph
+;
+entry:
+  br label %loop
+
+loop:
+  %count.0.in1 = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %iv = phi i16 [ 1, %entry ], [ %iv.next, %loop ]
+  %conv1 = and i32 %count.0.in1, 65535
+  %add = add nuw nsw i32 %conv1, 1
+  %iv.next = add i16 %iv, 1
+  %cmp = icmp eq i16 %iv.next, 10000
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  %add.lcssa = phi i32 [ %add, %loop ]
+  %count.0 = trunc i32 %add.lcssa to i16
+  ret i16 %count.0
+}
+
+define void @scalarize_ptrtoint(ptr %src, ptr %dst) {
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr %src, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr %src, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP6]], 10
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP7]], 10
+; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP8]] to ptr
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP9]] to ptr
+; CHECK-NEXT:    store ptr [[TMP10]], ptr %dst, align 8
+; CHECK-NEXT:    store ptr [[TMP11]], ptr %dst, align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP12]], label %middle.block, label %vector.body
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr ptr, ptr %src, i64 %iv
+  %l = load ptr, ptr %gep, align 8
+  %cast = ptrtoint ptr %l to i64
+  %add = add i64 %cast, 10
+  %cast.2 = inttoptr i64 %add to ptr
+  store ptr %cast.2, ptr %dst, align 8
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 0
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, ptr noalias %dst) {
+; CHECK-LABEL: define void @pr76986_trunc_sext_interleaving_only(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = sext i8 [[TMP5]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP6]] to i16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP7]] to i16
+; CHECK-NEXT:    [[TMP10:%.*]] = sdiv i16 [[TMP8]], %arg
+; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i16 [[TMP9]], %arg
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP1]]
+; CHECK-NEXT:    store i16 [[TMP10]], ptr [[TMP12]], align 2
+; CHECK-NEXT:    store i16 [[TMP11]], ptr [[TMP13]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 14934
+; CHECK-NEXT:    br i1 [[TMP14]], label %middle.block, label %vector.body
+;
+bb:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %bb ], [ %iv.next, %loop ]
+  %gep.src = getelementptr inbounds i8, ptr %src, i64 %iv
+  %l = load i8, ptr %gep.src
+  %sext = sext i8 %l to i32
+  %trunc = trunc i32 %sext to i16
+  %sdiv = sdiv i16 %trunc, %arg
+  %gep.dst = getelementptr inbounds i16, ptr %dst, i64 %iv
+  store i16 %sdiv, ptr %gep.dst
+  %iv.next = add i64 %iv, 1
+  %icmp = icmp ult i64 %iv, 14933
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+

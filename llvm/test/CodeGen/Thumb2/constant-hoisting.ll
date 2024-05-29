@@ -7,27 +7,27 @@ define i32 @test_values(i32 %a, i32 %b) minsize optsize {
 ; CHECK-V6M:         mov r2, r0
 ; CHECK-V6M-NEXT:    ldr r0, .LCPI0_0
 ; CHECK-V6M-NEXT:    cmp r2, #50
-; CHECK-V6M-NEXT:    beq .LBB0_5
-; CHECK-V6M-NEXT:    cmp r2, #1
 ; CHECK-V6M-NEXT:    beq .LBB0_7
+; CHECK-V6M-NEXT:    cmp r2, #1
+; CHECK-V6M-NEXT:    beq .LBB0_5
 ; CHECK-V6M-NEXT:    cmp r2, #30
-; CHECK-V6M-NEXT:    beq .LBB0_8
+; CHECK-V6M-NEXT:    beq .LBB0_6
 ; CHECK-V6M-NEXT:    cmp r2, #0
-; CHECK-V6M-NEXT:    bne .LBB0_6
+; CHECK-V6M-NEXT:    bne .LBB0_8
 ; CHECK-V6M-NEXT:    adds r0, r1, r0
 ; CHECK-V6M-NEXT:    bx lr
 ; CHECK-V6M-NEXT:  .LBB0_5:
 ; CHECK-V6M-NEXT:    adds r0, r0, r1
-; CHECK-V6M-NEXT:    adds r0, r0, #4
+; CHECK-V6M-NEXT:    adds r0, r0, #1
+; CHECK-V6M-NEXT:    bx lr
 ; CHECK-V6M-NEXT:  .LBB0_6:
+; CHECK-V6M-NEXT:    adds r0, r0, r1
+; CHECK-V6M-NEXT:    adds r0, r0, #2
 ; CHECK-V6M-NEXT:    bx lr
 ; CHECK-V6M-NEXT:  .LBB0_7:
 ; CHECK-V6M-NEXT:    adds r0, r0, r1
-; CHECK-V6M-NEXT:    adds r0, r0, #1
-; CHECK-V6M-NEXT:    bx lr
+; CHECK-V6M-NEXT:    adds r0, r0, #4
 ; CHECK-V6M-NEXT:  .LBB0_8:
-; CHECK-V6M-NEXT:    adds r0, r0, r1
-; CHECK-V6M-NEXT:    adds r0, r0, #2
 ; CHECK-V6M-NEXT:    bx lr
 ; CHECK-V6M-NEXT:    .p2align 2
 ; CHECK-V6M-NEXT:  .LCPI0_0:

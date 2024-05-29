@@ -251,7 +251,7 @@ define i1 @pr51551_2(i32 %x, i32 %y) {
 define i1 @pr51551_neg1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pr51551_neg1(
 ; CHECK-NEXT:    [[T0:%.*]] = and i32 [[Y:%.*]], 4
-; CHECK-NEXT:    [[T1:%.*]] = or i32 [[T0]], 1
+; CHECK-NEXT:    [[T1:%.*]] = or disjoint i32 [[T0]], 1
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[MUL]], 7
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
@@ -267,10 +267,10 @@ define i1 @pr51551_neg1(i32 %x, i32 %y) {
 
 define i1 @pr51551_neg2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pr51551_neg2(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y:%.*]] to i1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[DOTNOT:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[DOTNOT]], i1 true, i1 [[CMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

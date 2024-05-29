@@ -726,4 +726,3 @@ define <vscale x 8 x i1> @trunc_nxv8i64_nxv8i1(<vscale x 8 x i64> %v) {
   %r = trunc <vscale x 8 x i64> %v to <vscale x 8 x i1>
   ret <vscale x 8 x i1> %r
 }
-

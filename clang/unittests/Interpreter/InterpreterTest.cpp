@@ -54,11 +54,30 @@ createInterpreter(const Args &ExtraArgs = {},
   return cantFail(clang::Interpreter::create(std::move(CI)));
 }
 
+static bool HostSupportsJit() {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (J)
+    return true;
+  LLVMConsumeError(llvm::wrap(J.takeError()));
+  return false;
+}
+
+struct LLVMInitRAII {
+  LLVMInitRAII() {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+  }
+  ~LLVMInitRAII() { llvm::llvm_shutdown(); }
+} LLVMInit;
+
 static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
   return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
 }
 
 TEST(InterpreterTest, Sanity) {
+  if (!HostSupportsJit())
+    GTEST_SKIP();
+
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
   using PTU = PartialTranslationUnit;
@@ -74,7 +93,14 @@ static std::string DeclToString(Decl *D) {
   return llvm::cast<NamedDecl>(D)->getQualifiedNameAsString();
 }
 
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
+TEST(InterpreterTest, DISABLED_IncrementalInputTopLevelDecls) {
+#else
 TEST(InterpreterTest, IncrementalInputTopLevelDecls) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
+
   std::unique_ptr<Interpreter> Interp = createInterpreter();
   auto R1 = Interp->Parse("int var1 = 42; int f() { return var1; }");
   // gtest doesn't expand into explicit bool conversions.
@@ -91,7 +117,14 @@ TEST(InterpreterTest, IncrementalInputTopLevelDecls) {
   EXPECT_EQ("var2", DeclToString(*R2DeclRange.begin()));
 }
 
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
+TEST(InterpreterTest, DISABLED_Errors) {
+#else
 TEST(InterpreterTest, Errors) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
+
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.
@@ -114,7 +147,14 @@ TEST(InterpreterTest, Errors) {
 // Here we test whether the user can mix declarations and statements. The
 // interpreter should be smart enough to recognize the declarations from the
 // statements and wrap the latter into a declaration, producing valid code.
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
+TEST(InterpreterTest, DISABLED_DeclsAndStatements) {
+#else
 TEST(InterpreterTest, DeclsAndStatements) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
+
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.
@@ -136,7 +176,14 @@ TEST(InterpreterTest, DeclsAndStatements) {
   EXPECT_TRUE(!!R2);
 }
 
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
+TEST(InterpreterTest, DISABLED_UndoCommand) {
+#else
 TEST(InterpreterTest, UndoCommand) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
+
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.
@@ -190,38 +237,19 @@ static std::string MangleName(NamedDecl *ND) {
   return RawStr.str();
 }
 
-static bool HostSupportsJit() {
-  auto J = llvm::orc::LLJITBuilder().create();
-  if (J)
-    return true;
-  LLVMConsumeError(llvm::wrap(J.takeError()));
-  return false;
-}
-
-struct LLVMInitRAII {
-  LLVMInitRAII() {
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-  }
-  ~LLVMInitRAII() { llvm::llvm_shutdown(); }
-} LLVMInit;
-
 #ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(IncrementalProcessing, DISABLED_FindMangledNameSymbol) {
+TEST(InterpreterTest, DISABLED_FindMangledNameSymbol) {
 #else
-TEST(IncrementalProcessing, FindMangledNameSymbol) {
+TEST(InterpreterTest, FindMangledNameSymbol) {
 #endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
 
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
   auto &PTU(cantFail(Interp->Parse("int f(const char*) {return 0;}")));
   EXPECT_EQ(1U, DeclsSize(PTU.TUPart));
   auto R1DeclRange = PTU.TUPart->decls();
-
-  // We cannot execute on the platform.
-  if (!HostSupportsJit()) {
-    return;
-  }
 
   NamedDecl *FD = cast<FunctionDecl>(*R1DeclRange.begin());
   // Lower the PTU
@@ -248,28 +276,15 @@ TEST(IncrementalProcessing, FindMangledNameSymbol) {
 #endif // _WIN32
 }
 
-static void *AllocateObject(TypeDecl *TD, Interpreter &Interp) {
+static Value AllocateObject(TypeDecl *TD, Interpreter &Interp) {
   std::string Name = TD->getQualifiedNameAsString();
-  const clang::Type *RDTy = TD->getTypeForDecl();
-  clang::ASTContext &C = Interp.getCompilerInstance()->getASTContext();
-  size_t Size = C.getTypeSize(RDTy);
-  void *Addr = malloc(Size);
+  Value Addr;
+  // FIXME: Consider providing an option in clang::Value to take ownership of
+  // the memory created from the interpreter.
+  // cantFail(Interp.ParseAndExecute("new " + Name + "()", &Addr));
 
-  // Tell the interpreter to call the default ctor with this memory. Synthesize:
-  // new (loc) ClassName;
-  static unsigned Counter = 0;
-  std::stringstream SS;
-  SS << "auto _v" << Counter++ << " = "
-     << "new ((void*)"
-     // Windows needs us to prefix the hexadecimal value of a pointer with '0x'.
-     << std::hex << std::showbase << (size_t)Addr << ")" << Name << "();";
-
-  auto R = Interp.ParseAndExecute(SS.str());
-  if (!R) {
-    free(Addr);
-    return nullptr;
-  }
-
+  // The lifetime of the temporary is extended by the clang::Value.
+  cantFail(Interp.ParseAndExecute(Name + "()", &Addr));
   return Addr;
 }
 
@@ -284,10 +299,13 @@ static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
 }
 
 #ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(IncrementalProcessing, DISABLED_InstantiateTemplate) {
+TEST(InterpreterTest, DISABLED_InstantiateTemplate) {
 #else
-TEST(IncrementalProcessing, InstantiateTemplate) {
+TEST(InterpreterTest, InstantiateTemplate) {
 #endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
+
   // FIXME: We cannot yet handle delayed template parsing. If we run with
   // -fdelayed-template-parsing we try adding the newly created decl to the
   // active PTU which causes an assert.
@@ -304,11 +322,6 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   auto PTUDeclRange = PTU.TUPart->decls();
   EXPECT_EQ(1, std::distance(PTUDeclRange.begin(), PTUDeclRange.end()));
 
-  // We cannot execute on the platform.
-  if (!HostSupportsJit()) {
-    return;
-  }
-
   // Lower the PTU
   if (llvm::Error Err = Interp->Execute(PTU)) {
     // We cannot execute on the platform.
@@ -317,7 +330,7 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   }
 
   TypeDecl *TD = cast<TypeDecl>(LookupSingleName(*Interp, "A"));
-  void *NewA = AllocateObject(TD, *Interp);
+  Value NewA = AllocateObject(TD, *Interp);
 
   // Find back the template specialization
   VarDecl *VD = static_cast<VarDecl *>(*PTUDeclRange.begin());
@@ -328,8 +341,7 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   typedef int (*TemplateSpecFn)(void *);
   auto fn =
       cantFail(Interp->getSymbolAddress(MangledName)).toPtr<TemplateSpecFn>();
-  EXPECT_EQ(42, fn(NewA));
-  free(NewA);
+  EXPECT_EQ(42, fn(NewA.getPtr()));
 }
 
 #ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
@@ -339,7 +351,7 @@ TEST(InterpreterTest, Value) {
 #endif
   // We cannot execute on the platform.
   if (!HostSupportsJit())
-    return;
+    GTEST_SKIP();
 
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
@@ -353,6 +365,12 @@ TEST(InterpreterTest, Value) {
   EXPECT_TRUE(V1.getType()->isIntegerType());
   EXPECT_EQ(V1.getKind(), Value::K_Int);
   EXPECT_FALSE(V1.isManuallyAlloc());
+
+  Value V1b;
+  llvm::cantFail(Interp->ParseAndExecute("char c = 42;"));
+  llvm::cantFail(Interp->ParseAndExecute("c", &V1b));
+  EXPECT_TRUE(V1b.getKind() == Value::K_Char_S ||
+              V1b.getKind() == Value::K_Char_U);
 
   Value V2;
   llvm::cantFail(Interp->ParseAndExecute("double y = 3.14;"));

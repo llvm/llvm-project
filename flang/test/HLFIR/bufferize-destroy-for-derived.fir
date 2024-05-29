@@ -52,7 +52,7 @@ func.func @_QPtest2(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.bo
 // CHECK:             hlfir.assign %{{.*}}#0 to %{{.*}} temporary_lhs : !fir.ref<!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>, !fir.ref<!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>
 // CHECK:           hlfir.assign %[[VAL_7:.*]]#0 to %{{.*}}#0 : !fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>>
 // CHECK-NEXT:      %[[VAL_18:.*]] = fir.box_addr %[[VAL_7]]#0 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>>) -> !fir.heap<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>>
-// CHECK-NEXT:      %[[VAL_19:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
+// CHECK-NEXT:      %[[VAL_19:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
 // CHECK-NEXT:      %[[VAL_20:.*]] = arith.constant {{[0-9]*}} : index
 // CHECK-NEXT:      %[[VAL_21:.*]] = arith.constant {{[0-9]*}} : i32
 // CHECK-NEXT:      %[[VAL_22:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>>) -> !fir.box<none>
@@ -86,7 +86,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>>
 // CHECK:             hlfir.assign %{{.*}}#0 to %{{.*}} temporary_lhs : !fir.ref<!fir.type<_QMtypesTt3{x:f32}>>, !fir.ref<!fir.type<_QMtypesTt3{x:f32}>>
 // CHECK:           hlfir.assign %[[VAL_7:.*]]#0 to %{{.*}}#0 : !fir.box<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>>
 // CHECK-NEXT:      %[[VAL_18:.*]] = fir.box_addr %[[VAL_7]]#0 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>>) -> !fir.heap<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>>
-// CHECK-NEXT:      %[[VAL_19:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
+// CHECK-NEXT:      %[[VAL_19:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
 // CHECK-NEXT:      %[[VAL_20:.*]] = arith.constant {{[0-9]*}} : index
 // CHECK-NEXT:      %[[VAL_21:.*]] = arith.constant {{[0-9]*}} : i32
 // CHECK-NEXT:      %[[VAL_22:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>>) -> !fir.box<none>

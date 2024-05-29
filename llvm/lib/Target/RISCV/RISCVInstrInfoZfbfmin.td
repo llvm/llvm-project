@@ -62,7 +62,7 @@ def : Pat<(riscv_fmv_x_anyexth (bf16 FPR16:$src)), (FMV_X_H FPR16:$src)>;
 def : Pat<(riscv_fmv_x_signexth (bf16 FPR16:$src)), (FMV_X_H FPR16:$src)>;
 } // Predicates = [HasStdExtZfbfmin]
 
-let Predicates = [HasStdExtZfbfmin, IsRV32] in {
+let Predicates = [HasStdExtZfbfmin] in {
 // bf16->[u]int. Round-to-zero must be used for the f32->int step, the
 // rounding mode has no effect for bf16->f32.
 def : Pat<(i32 (any_fp_to_sint (bf16 FPR16:$rs1))), (FCVT_W_S (FCVT_S_BF16 $rs1, FRM_RNE), FRM_RTZ)>;

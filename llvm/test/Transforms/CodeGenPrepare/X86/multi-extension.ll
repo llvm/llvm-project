@@ -10,8 +10,8 @@ declare void @bar(i64)
 ; %or is reachable by both a sext and zext that are going to be promoted.
 ; It ensures correct operation on PromotedInsts.
 
-; CHECK:       %promoted = trunc i32 %or to i16
-; CHECK-NEXT:  %c = sext i16 %promoted to i64
+; CHECK:       %promoted3 = trunc i32 %or to i16
+; CHECK-NEXT:  %c = sext i16 %promoted3 to i64
 define i32 @foo(i16 %kkk) {
 entry:
   %t4 = load i16, ptr @b, align 2

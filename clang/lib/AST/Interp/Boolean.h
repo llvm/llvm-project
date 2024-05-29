@@ -42,6 +42,7 @@ class Boolean final {
   bool operator>(unsigned RHS) const { return static_cast<unsigned>(V) > RHS; }
 
   Boolean operator-() const { return Boolean(V); }
+  Boolean operator-(const Boolean &Other) const { return Boolean(V - Other.V); }
   Boolean operator~() const { return Boolean(true); }
 
   explicit operator int8_t() const { return V; }

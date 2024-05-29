@@ -1,0 +1,152 @@
+{
+  "macros": {
+    "SIG_DFL": {
+      "c-definition": "7.14.3",
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIG_ERR": {
+      "c-definition": "7.14.3",
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIG_HOLD": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIG_IGN": {
+      "c-definition": "7.14.3",
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGRTMIN": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGRTMAX": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGABRT": {
+      "c-definition": "7.14.3",
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGALRM": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGBUS": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGCHLD": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGCONT": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGFPE": {
+      "c-definition": "7.14.3",
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGHUP": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGILL": {
+      "c-definition": "7.14.3",
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGINT": {
+      "c-definition": "7.14.3",
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGKILL": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGPIPE": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGPIPE": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGQUIT": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGSEGV": {
+      "c-definition": "7.14.3",
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGSTOP": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGTERM": {
+      "c-definition": "7.14.3",
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGTSTP": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGTTIN": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGTTOU": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGUSR1": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGUSR2": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGPOLL": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGPROF": {
+    "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGSYS": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGTRAP": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGURG": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGVTALRM": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGXCPU": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    },
+    "SIGXFSZ": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/signal.h.html"
+    }
+  },
+  "functions": {
+    "signal": {
+      "c-definition": "7.14.1.1",
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/functions/signal.html"
+    },
+    "raise": {
+      "c-definition": "7.14.2.1",
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/functions/raise.html"
+    },
+    "kill": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/functions/kill.html"
+    },
+    "sigaction": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/functions/sigaction.html"
+    },
+    "sigaddset": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/functions/sigaddset.html"
+    },
+    "sigaltstack": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/functions/sigaltstack.html"
+    },
+    "sigdelset": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/functions/sigdelset.html"
+    },
+    "sigemptyset": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/functions/sigemptyset.html"
+    },
+    "sigfillset": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/functions/sigfillset.html"
+    },
+    "sigprocmask": {
+      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9699919799/functions/sigprocmask.html"
+    }
+  }
+}

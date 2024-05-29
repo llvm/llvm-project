@@ -41,9 +41,9 @@
   define dso_local i32 @main() local_unnamed_addr !dbg !7 {
   entry:
     %foo = alloca i32, align 4
-    store volatile i32 4, i32* %foo, align 4
-    %foo.0.foo.0. = load volatile i32, i32* %foo, align 4
-    %foo.0.foo.0.6 = load volatile i32, i32* %foo, align 4
+    store volatile i32 4, ptr %foo, align 4
+    %foo.0.foo.0. = load volatile i32, ptr %foo, align 4
+    %foo.0.foo.0.6 = load volatile i32, ptr %foo, align 4
     %cmp = icmp eq i32 %foo.0.foo.0., 4
     br i1 %cmp, label %sw.bb1, label %sw.bb
   

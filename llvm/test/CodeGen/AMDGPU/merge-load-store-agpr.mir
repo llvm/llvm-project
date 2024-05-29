@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 # GCN-LABEL: name: ds_read_b32_v_v
 # GCN: vreg_64_align2 = DS_READ2_B32

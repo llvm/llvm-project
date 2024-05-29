@@ -121,6 +121,17 @@ namespace llvm {
     Never,
   };
 
+  /// \brief Enumeration value for AMDGPU code object version, which is the
+  /// code object version times 100.
+  enum CodeObjectVersionKind {
+    COV_None,
+    COV_2 = 200, // Unsupported.
+    COV_3 = 300, // Unsupported.
+    COV_4 = 400,
+    COV_5 = 500,
+    COV_6 = 600,
+  };
+
   class TargetOptions {
   public:
     TargetOptions()
@@ -130,18 +141,18 @@ namespace llvm {
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-          DisableIntegratedAS(false), RelaxELFRelocations(true),
-          FunctionSections(false), DataSections(false),
-          IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
-          UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
+          DisableIntegratedAS(false), FunctionSections(false),
+          DataSections(false), IgnoreXCOFFVisibility(false),
+          XCOFFTracebackTable(true), UniqueSectionNames(true),
+          UniqueBasicBlockSectionNames(false), SeparateNamedSections(false),
           TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
-          EmulatedTLS(false), EnableIPRA(false), EmitStackSizeSection(false),
-          EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
-          SupportsDefaultOutlining(false), EmitAddrsig(false),
-          EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
-          EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
-          ForceDwarfFrameSection(false), XRayFunctionIndex(true),
-          DebugStrictDwarf(false), Hotpatch(false),
+          EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
+          EmitStackSizeSection(false), EnableMachineOutliner(false),
+          EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
+          EmitAddrsig(false), BBAddrMap(false), EmitCallSiteInfo(false),
+          SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+          ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
+          XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
           PPCGenScalarMASSEntries(false), JMCInstrument(false),
           EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
@@ -249,11 +260,6 @@ namespace llvm {
     /// Disable the integrated assembler.
     unsigned DisableIntegratedAS : 1;
 
-    /// Compress DWARF debug sections.
-    DebugCompressionType CompressDebugSections = DebugCompressionType::None;
-
-    unsigned RelaxELFRelocations : 1;
-
     /// Emit functions into separate sections.
     unsigned FunctionSections : 1;
 
@@ -271,6 +277,9 @@ namespace llvm {
     /// Use unique names for basic block sections.
     unsigned UniqueBasicBlockSectionNames : 1;
 
+    /// Emit named sections with the same name into different sections.
+    unsigned SeparateNamedSections : 1;
+
     /// Emit target-specific trap instruction for 'unreachable' IR instructions.
     unsigned TrapUnreachable : 1;
 
@@ -284,6 +293,9 @@ namespace llvm {
     /// EmulatedTLS - This flag enables emulated TLS model, using emutls
     /// function in the runtime library..
     unsigned EmulatedTLS : 1;
+
+    /// EnableTLSDESC - This flag enables TLS Descriptors.
+    unsigned EnableTLSDESC : 1;
 
     /// This flag enables InterProcedural Register Allocation (IPRA).
     unsigned EnableIPRA : 1;
@@ -302,6 +314,10 @@ namespace llvm {
 
     /// Emit address-significance table.
     unsigned EmitAddrsig : 1;
+
+    // Emit the SHT_LLVM_BB_ADDR_MAP section containing basic block address
+    // which can be used to map virtual addresses to machine basic blocks.
+    unsigned BBAddrMap : 1;
 
     /// Emit basic blocks into separate sections.
     BasicBlockSection BBSections = BasicBlockSection::None;

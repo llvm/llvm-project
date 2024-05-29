@@ -319,22 +319,25 @@ public:
   }
 
   /// Render only the last argument match \p Id0, if present.
-  template<typename ...OptSpecifiers>
-  void AddLastArg(ArgStringList &Output, OptSpecifiers ...Ids) const {
+  template <typename... OptSpecifiers>
+  void addLastArg(ArgStringList &Output, OptSpecifiers... Ids) const {
     if (Arg *A = getLastArg(Ids...)) // Calls claim() on all Ids's Args.
       A->render(*this, Output);
+  }
+  template <typename... OptSpecifiers>
+  void AddLastArg(ArgStringList &Output, OptSpecifiers... Ids) const {
+    addLastArg(Output, Ids...);
   }
 
   /// AddAllArgsExcept - Render all arguments matching any of the given ids
   /// and not matching any of the excluded ids.
   void AddAllArgsExcept(ArgStringList &Output, ArrayRef<OptSpecifier> Ids,
                         ArrayRef<OptSpecifier> ExcludeIds) const;
-  /// AddAllArgs - Render all arguments matching any of the given ids.
-  void AddAllArgs(ArgStringList &Output, ArrayRef<OptSpecifier> Ids) const;
+  /// Render all arguments matching any of the given ids.
+  void addAllArgs(ArgStringList &Output, ArrayRef<OptSpecifier> Ids) const;
 
   /// AddAllArgs - Render all arguments matching the given ids.
-  void AddAllArgs(ArgStringList &Output, OptSpecifier Id0,
-                  OptSpecifier Id1 = 0U, OptSpecifier Id2 = 0U) const;
+  void AddAllArgs(ArgStringList &Output, OptSpecifier Id0) const;
 
   /// AddAllArgValues - Render the argument values of all arguments
   /// matching the given ids.

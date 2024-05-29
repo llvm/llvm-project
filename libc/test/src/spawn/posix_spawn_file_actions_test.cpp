@@ -40,12 +40,15 @@ TEST(LlvmLibcPosixSpawnFileActionsTest, AddActions) {
   int action_count = 0;
   while (act != nullptr) {
     ++action_count;
-    if (action_count == 1)
+    if (action_count == 1) {
       ASSERT_EQ(act->type, LIBC_NAMESPACE::BaseSpawnFileAction::CLOSE);
-    if (action_count == 2)
+    }
+    if (action_count == 2) {
       ASSERT_EQ(act->type, LIBC_NAMESPACE::BaseSpawnFileAction::DUP2);
-    if (action_count == 3)
+    }
+    if (action_count == 3) {
       ASSERT_EQ(act->type, LIBC_NAMESPACE::BaseSpawnFileAction::OPEN);
+    }
     act = act->next;
   }
   ASSERT_EQ(action_count, 3);

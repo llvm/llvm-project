@@ -45,13 +45,17 @@ We define two kinds of macros:
        e.g., ``LIBC_TARGET_ARCH_IS_ARM``.
      * ``compiler.h`` - Host compiler properties.
        e.g., ``LIBC_COMPILER_IS_CLANG``.
-     * ``cpu_features.h`` - Target cpu apu feature availability.
+     * ``cpu_features.h`` - Target cpu feature availability.
        e.g., ``LIBC_TARGET_CPU_HAS_AVX2``.
+     * ``types.h`` - Type properties and availability.
+       e.g., ``LIBC_TYPES_HAS_FLOAT128``.
+     * ``os.h`` - Target os properties.
+       e.g., ``LIBC_TARGET_OS_IS_LINUX``.
 
    * ``src/__support/macros/config.h`` - Important compiler and platform
      features. Such macros can be used to produce portable code by
      parameterizing compilation based on the presence or lack of a given
-     feature. e.g., ``LIBC_HAS_BUILTIN``
+     feature. e.g., ``LIBC_HAS_FEATURE``
    * ``src/__support/macros/attributes.h`` - Attributes for functions, types,
      and variables. e.g., ``LIBC_UNUSED``
    * ``src/__support/macros/optimization.h`` - Portable macros for performance
@@ -174,3 +178,85 @@ these functions do not call the constructors and destructors of the
 allocated/deallocated objects. So, use these functions carefully and only
 when it is absolutely clear that constructor and destructor invocation is
 not required.
+
+Warnings in sources
+===================
+
+We expect contributions to be free of warnings from the `minimum supported
+compiler versions`__ (and newer).
+
+.. __: https://libc.llvm.org/compiler_support.html#minimum-supported-versions
+
+Header Inclusion Policy
+=======================
+
+Because llvm-libc supports
+`Overlay Mode <https://libc.llvm.org/overlay_mode.html>`__ and
+`Fullbuild Mode <https://libc.llvm.org/fullbuild_mode.html>`__ care must be
+taken when ``#include``'ing certain headers.
+
+The ``include/`` directory contains public facing headers that users must
+consume for fullbuild mode. As such, types defined here will have ABI
+implications as these definitions may differ from the underlying system for
+overlay mode and are NEVER appropriate to include in ``libc/src/`` without
+preprocessor guards for ``LLVM_LIBC_FULL_BUILD``.
+
+Consider the case where an implementation in ``libc/src/`` may wish to refer to
+a ``sigset_t``, what header should be included? ``<signal.h>``, ``<spawn.h>``,
+``<sys/select.h>``?
+
+None of the above. Instead, code under ``src/`` should ``#include
+"hdr/types/sigset_t.h"`` which contains preprocessor guards on
+``LLVM_LIBC_FULL_BUILD`` to either include the public type (fullbuild mode) or
+the underlying system header (overlay mode).
+
+Implementations in ``libc/src/`` should NOT be ``#include``'ing using ``<>`` or
+``"include/*``, except for these "proxy" headers that first check for
+``LLVM_LIBC_FULL_BUILD``.
+
+These "proxy" headers are similarly used when referring to preprocessor
+defines. Code under ``libc/src/`` should ``#include`` a proxy header from
+``hdr/``, which contains a guard on ``LLVM_LIBC_FULL_BUILD`` to either include
+our header from ``libc/include/`` (fullbuild) or the corresponding underlying
+system header (overlay).
+
+Policy on Assembly sources
+==========================
+
+Coding in high level languages such as C++ provides benefits relative to low
+level languages like Assembly, such as:
+
+* Improved safety
+* Compile time diagnostics
+* Instrumentation
+
+  * Code coverage
+  * Profile collection
+* Sanitization
+* Automatic generation of debug info
+
+While it's not impossible to have Assembly code that correctly provides all of
+the above, we do not wish to maintain such Assembly sources in llvm-libc.
+
+That said, there are a few functions provided by llvm-libc that are impossible
+to reliably implement in C++ for all compilers supported for building
+llvm-libc.
+
+We do use inline or out-of-line Assembly in an intentionally minimal set of
+places; typically places where the stack or individual register state must be
+manipulated very carefully for correctness, or instances where a specific
+instruction sequence does not have a corresponding compiler builtin function
+today.
+
+Contributions adding functions implemented purely in Assembly for performance
+are not welcome.
+
+Contributors should strive to stick with C++ for as long as it remains
+reasonable to do so. Ideally, bugs should be filed against compiler vendors,
+and links to those bug reports should appear in commit messages or comments
+that seek to add Assembly to llvm-libc.
+
+Patches containing any amount of Assembly ideally should be approved by 2
+maintainers. llvm-libc maintainers reserve the right to reject Assembly
+contributions that they feel could be better maintained if rewritten in C++,
+and to revisit this policy in the future.

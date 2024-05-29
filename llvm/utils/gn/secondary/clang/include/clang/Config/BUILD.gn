@@ -27,6 +27,7 @@ write_cmake_config("Config") {
     "ENABLE_LINKER_BUILD_ID=",
     "ENABLE_X86_RELAX_RELOCATIONS=1",
     "CLANG_ENABLE_OBJC_REWRITER=1",  # FIXME: flag?
+    "CLANG_ENABLE_CIR=",
     "CLANG_SYSTEMZ_DEFAULT_ARCH=z10",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=",
   ]
@@ -44,9 +45,17 @@ write_cmake_config("Config") {
   }
 
   if (host_os != "win") {
-    values += [ "CLANG_HAVE_RLIMITS=1" ]
+    values += [
+      "CLANG_HAVE_DLADDR=1",
+      "CLANG_HAVE_DLFCN_H=1",
+      "CLANG_HAVE_RLIMITS=1",
+    ]
   } else {
-    values += [ "CLANG_HAVE_RLIMITS=" ]
+    values += [
+      "CLANG_HAVE_DLADDR=",
+      "CLANG_HAVE_DLFCN_H=",
+      "CLANG_HAVE_RLIMITS=",
+    ]
   }
 
   if (llvm_enable_libxml2) {

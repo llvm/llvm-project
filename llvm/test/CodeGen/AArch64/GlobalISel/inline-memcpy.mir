@@ -4,54 +4,54 @@
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "arm64-apple-darwin"
 
-  define void @test_memcpy1(i32* nocapture %dst, i32* nocapture readonly %src, i64 %len) local_unnamed_addr #0 {
+  define void @test_memcpy1(ptr nocapture %dst, ptr nocapture readonly %src, i64 %len) local_unnamed_addr #0 {
   entry:
-    %0 = bitcast i32* %dst to i8*
-    %1 = bitcast i32* %src to i8*
-    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 %len, i1 false)
+    %0 = bitcast ptr %dst to ptr
+    %1 = bitcast ptr %src to ptr
+    tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 %1, i64 %len, i1 false)
     ret void
   }
 
-  declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1 immarg) #1
-  declare void @llvm.memcpy.p1i8.p2i8.i64(i8 addrspace(1)* nocapture writeonly, i8 addrspace(2)* nocapture readonly, i64, i1 immarg) #1
+  declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #1
+  declare void @llvm.memcpy.p1.p2.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(2) nocapture readonly, i64, i1 immarg) #1
 
-  define void @test_memcpy2_const(i32* nocapture %dst, i32* nocapture readonly %src) local_unnamed_addr #0 {
+  define void @test_memcpy2_const(ptr nocapture %dst, ptr nocapture readonly %src) local_unnamed_addr #0 {
   entry:
-    %0 = bitcast i32* %dst to i8*
-    %1 = bitcast i32* %src to i8*
-    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 72, i1 false)
+    %0 = bitcast ptr %dst to ptr
+    %1 = bitcast ptr %src to ptr
+    tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 %1, i64 72, i1 false)
     ret void
   }
 
-  define void @test_memcpy2_const_optsize(i32* nocapture %dst, i32* nocapture readonly %src) local_unnamed_addr #2 {
+  define void @test_memcpy2_const_optsize(ptr nocapture %dst, ptr nocapture readonly %src) local_unnamed_addr #2 {
   entry:
-    %0 = bitcast i32* %dst to i8*
-    %1 = bitcast i32* %src to i8*
-    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 72, i1 false)
+    %0 = bitcast ptr %dst to ptr
+    %1 = bitcast ptr %src to ptr
+    tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 %1, i64 72, i1 false)
     ret void
   }
 
-  define void @test_memcpy2_const_minsize(i32* nocapture %dst, i32* nocapture readonly %src) local_unnamed_addr #3 {
+  define void @test_memcpy2_const_minsize(ptr nocapture %dst, ptr nocapture readonly %src) local_unnamed_addr #3 {
   entry:
-    %0 = bitcast i32* %dst to i8*
-    %1 = bitcast i32* %src to i8*
-    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 72, i1 false)
+    %0 = bitcast ptr %dst to ptr
+    %1 = bitcast ptr %src to ptr
+    tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 %1, i64 72, i1 false)
     ret void
   }
 
-  define void @test_memcpy3_const_arrays_unaligned(i32* nocapture %dst, i32* nocapture readonly %src) local_unnamed_addr #0 {
+  define void @test_memcpy3_const_arrays_unaligned(ptr nocapture %dst, ptr nocapture readonly %src) local_unnamed_addr #0 {
   entry:
-    %0 = bitcast i32* %dst to i8*
-    %1 = bitcast i32* %src to i8*
-    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 143, i1 false)
+    %0 = bitcast ptr %dst to ptr
+    %1 = bitcast ptr %src to ptr
+    tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 %1, i64 143, i1 false)
     ret void
   }
 
-  define void @test_memcpy_addrspace(i32 addrspace(1)* nocapture %dst, i32 addrspace(2)* nocapture readonly %src) local_unnamed_addr #0 {
+  define void @test_memcpy_addrspace(ptr addrspace(1) nocapture %dst, ptr addrspace(2) nocapture readonly %src) local_unnamed_addr #0 {
   entry:
-    %0 = bitcast i32 addrspace(1)* %dst to i8 addrspace(1)*
-    %1 = bitcast i32 addrspace(2)* %src to i8 addrspace(2)*
-    tail call void @llvm.memcpy.p1i8.p2i8.i64(i8 addrspace(1)* align 4 %0, i8 addrspace(2)* align 4 %1, i64 72, i1 false)
+    %0 = bitcast ptr addrspace(1) %dst to ptr addrspace(1)
+    %1 = bitcast ptr addrspace(2) %src to ptr addrspace(2)
+    tail call void @llvm.memcpy.p1.p2.i64(ptr addrspace(1) align 4 %0, ptr addrspace(2) align 4 %1, i64 72, i1 false)
     ret void
   }
 

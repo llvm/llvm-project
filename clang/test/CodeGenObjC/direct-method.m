@@ -111,7 +111,7 @@ __attribute__((objc_root_class))
 
 // CHECK-LABEL: define hidden void @"\01-[Root getAggregate]"(
 - (struct my_aggregate_struct)getAggregate __attribute__((objc_direct)) {
-  // CHECK: ptr noalias sret(%struct.my_aggregate_struct) align 4 [[RETVAL:%[^,]*]],
+  // CHECK: ptr dead_on_unwind noalias writable sret(%struct.my_aggregate_struct) align 4 [[RETVAL:%[^,]*]],
 
   // loading parameters
   // CHECK-LABEL: entry:

@@ -122,6 +122,15 @@ def int_loongarch_lddir_d : BaseInt<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
                                     [ImmArg<ArgIndex<1>>]>;
 def int_loongarch_ldpte_d : BaseInt<[], [llvm_i64_ty, llvm_i64_ty],
                                     [ImmArg<ArgIndex<1>>]>;
+
+def int_loongarch_frecipe_s : BaseInt<[llvm_float_ty], [llvm_float_ty],
+                                      [IntrNoMem]>;
+def int_loongarch_frecipe_d : BaseInt<[llvm_double_ty], [llvm_double_ty],
+                                      [IntrNoMem]>;
+def int_loongarch_frsqrte_s : BaseInt<[llvm_float_ty], [llvm_float_ty],
+                                      [IntrNoMem]>;
+def int_loongarch_frsqrte_d : BaseInt<[llvm_double_ty], [llvm_double_ty],
+                                      [IntrNoMem]>;
 } // TargetPrefix = "loongarch"
 
 /// Vector intrinsic
@@ -527,10 +536,12 @@ foreach inst = ["vfmadd_d", "vfmsub_d", "vfnmadd_d", "vfnmsub_d"] in
              [IntrNoMem]>;
 
 foreach inst = ["vflogb_s", "vfsqrt_s", "vfrecip_s", "vfrsqrt_s", "vfrint_s",
+                "vfrecipe_s", "vfrsqrte_s",
                 "vfrintrne_s", "vfrintrz_s", "vfrintrp_s", "vfrintrm_s"] in
   def int_loongarch_lsx_#inst : VecInt<[llvm_v4f32_ty], [llvm_v4f32_ty],
                                        [IntrNoMem]>;
 foreach inst = ["vflogb_d", "vfsqrt_d", "vfrecip_d", "vfrsqrt_d", "vfrint_d",
+                "vfrecipe_d", "vfrsqrte_d",
                 "vfrintrne_d", "vfrintrz_d", "vfrintrp_d", "vfrintrm_d"] in
   def int_loongarch_lsx_#inst : VecInt<[llvm_v2f64_ty], [llvm_v2f64_ty],
                                        [IntrNoMem]>;
@@ -1044,10 +1055,12 @@ foreach inst = ["xvfmadd_d", "xvfmsub_d", "xvfnmadd_d", "xvfnmsub_d"] in
              [IntrNoMem]>;
 
 foreach inst = ["xvflogb_s", "xvfsqrt_s", "xvfrecip_s", "xvfrsqrt_s", "xvfrint_s",
+                "xvfrecipe_s", "xvfrsqrte_s",
                 "xvfrintrne_s", "xvfrintrz_s", "xvfrintrp_s", "xvfrintrm_s"] in
   def int_loongarch_lasx_#inst : VecInt<[llvm_v8f32_ty], [llvm_v8f32_ty],
                                         [IntrNoMem]>;
 foreach inst = ["xvflogb_d", "xvfsqrt_d", "xvfrecip_d", "xvfrsqrt_d", "xvfrint_d",
+                "xvfrecipe_d", "xvfrsqrte_d",
                 "xvfrintrne_d", "xvfrintrz_d", "xvfrintrp_d", "xvfrintrm_d"] in
   def int_loongarch_lasx_#inst : VecInt<[llvm_v4f64_ty], [llvm_v4f64_ty],
                                         [IntrNoMem]>;

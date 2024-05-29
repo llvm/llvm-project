@@ -59,6 +59,19 @@ llvm::object::computeSymbolSizes(const ObjectFile &O) {
     return Ret;
   }
 
+  if (const auto *E = dyn_cast<XCOFFObjectFile>(&O)) {
+    for (XCOFFSymbolRef Sym : E->symbols())
+      Ret.push_back({Sym, Sym.getSize()});
+    return Ret;
+  }
+
+  if (const auto *E = dyn_cast<WasmObjectFile>(&O)) {
+    for (SymbolRef Sym : E->symbols()) {
+      Ret.push_back({Sym, E->getSymbolSize(Sym)});
+    }
+    return Ret;
+  }
+
   // Collect sorted symbol addresses. Include dummy addresses for the end
   // of each section.
   std::vector<SymEntry> Addresses;

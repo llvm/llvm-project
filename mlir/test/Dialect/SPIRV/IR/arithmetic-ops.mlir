@@ -255,6 +255,42 @@ func.func @isub_borrow(%arg: i64) -> !spirv.struct<(i32, i32)> {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.Dot
+//===----------------------------------------------------------------------===//
+
+func.func @dot(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> f32 {
+  %0 = spirv.Dot %arg0, %arg1 : vector<4xf32> -> f32
+  return %0 : f32
+}
+
+// -----
+
+// expected-note @+1 {{prior use here}}
+func.func @dot(%arg0: vector<4xf32>, %arg1: vector<3xf32>) -> f32 {
+  // expected-error @+1 {{use of value '%arg1' expects different type than prior uses}}
+  %0 = spirv.Dot %arg0, %arg1 : vector<4xf32> -> f32
+  return %0 : f32
+}
+
+// -----
+
+func.func @dot(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> f16 {
+  // expected-error @+1 {{'spirv.Dot' op failed to verify that all of {vector1, result} have same element type}}
+  %0 = spirv.Dot %arg0, %arg1 : vector<4xf32> -> f16
+  return %0 : f16
+}
+
+// -----
+
+func.func @dot(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> i32 {
+  // expected-error @+1 {{'spirv.Dot' op operand #0 must be vector of 16/32/64-bit float values of length 2/3/4/8/16}}
+  %0 = spirv.Dot %arg0, %arg1 : vector<4xi32> -> i32
+  return %0 : i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.SMulExtended
 //===----------------------------------------------------------------------===//
 

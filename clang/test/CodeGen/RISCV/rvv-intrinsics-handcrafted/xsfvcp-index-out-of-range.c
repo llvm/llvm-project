@@ -22,17 +22,17 @@
 // sf_vc_x_se
 
 void test_sf_vc_x_se_u8mf8_p27_26_not_constant(uint8_t rs1, size_t vl, int index) {
-  // expected-error@+1 {{argument to '__riscv_sf_vc_x_se_u8mf8' must be a constant integer}}
+  // expected-error@+1 {{argument to '__riscv_sf_vc_x_se' must be a constant integer}}
   __riscv_sf_vc_x_se_u8mf8(index, p24_20, p11_7, rs1, vl);
 }
 
 void test_sf_vc_x_se_u8mf8_24_20_not_constant(uint8_t rs1, size_t vl, int index) {
-  // expected-error@+1 {{argument to '__riscv_sf_vc_x_se_u8mf8' must be a constant integer}}
+  // expected-error@+1 {{argument to '__riscv_sf_vc_x_se' must be a constant integer}}
   __riscv_sf_vc_x_se_u8mf8(p27_26, index, p11_7, rs1, vl);
 }
 
 void test_sf_vc_x_se_u8mf8_11_7_not_constant(uint8_t rs1, size_t vl, int index) {
-  // expected-error@+1 {{argument to '__riscv_sf_vc_x_se_u8mf8' must be a constant integer}}
+  // expected-error@+1 {{argument to '__riscv_sf_vc_x_se' must be a constant integer}}
   __riscv_sf_vc_x_se_u8mf8(p27_26, p24_20, index, rs1, vl);
 }
 
@@ -54,22 +54,22 @@ void test_sf_vc_x_se_u8mf8_p11_7_overflow(uint8_t rs1, size_t vl) {
 // sf_vc_i_se
 
 void test_sf_vc_i_se_u8mf8_p27_26_not_constant(size_t vl, int index) {
-  // expected-error@+1 {{argument to '__riscv_sf_vc_i_se_u8mf8' must be a constant integer}}
+  // expected-error@+1 {{argument to '__riscv_sf_vc_i_se' must be a constant integer}}
   __riscv_sf_vc_i_se_u8mf8(index, p24_20, p11_7, simm5, vl);
 }
 
 void test_sf_vc_i_se_u8mf8_24_20_not_constant(size_t vl, int index) {
-  // expected-error@+1 {{argument to '__riscv_sf_vc_i_se_u8mf8' must be a constant integer}}
+  // expected-error@+1 {{argument to '__riscv_sf_vc_i_se' must be a constant integer}}
   __riscv_sf_vc_i_se_u8mf8(p27_26, index, p11_7, simm5, vl);
 }
 
 void test_sf_vc_i_se_u8mf8_11_7_not_constant(size_t vl, int index) {
-  // expected-error@+1 {{argument to '__riscv_sf_vc_i_se_u8mf8' must be a constant integer}}
+  // expected-error@+1 {{argument to '__riscv_sf_vc_i_se' must be a constant integer}}
   __riscv_sf_vc_i_se_u8mf8(p27_26, p24_20, index, simm5, vl);
 }
 
 void test_sf_vc_i_se_u8mf8_simm5_not_constant(size_t vl, int index) {
-  // expected-error@+1 {{argument to '__riscv_sf_vc_i_se_u8mf8' must be a constant integer}}
+  // expected-error@+1 {{argument to '__riscv_sf_vc_i_se' must be a constant integer}}
   __riscv_sf_vc_i_se_u8mf8(p27_26, p24_20, p11_7, index, vl);
 }
 

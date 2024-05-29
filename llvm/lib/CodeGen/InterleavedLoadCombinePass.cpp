@@ -23,6 +23,7 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -63,10 +64,10 @@ struct VectorInfo;
 struct InterleavedLoadCombineImpl {
 public:
   InterleavedLoadCombineImpl(Function &F, DominatorTree &DT, MemorySSA &MSSA,
-                             TargetMachine &TM)
+                             const TargetTransformInfo &TTI,
+                             const TargetMachine &TM)
       : F(F), DT(DT), MSSA(MSSA),
-        TLI(*TM.getSubtargetImpl(F)->getTargetLowering()),
-        TTI(TM.getTargetTransformInfo(F)) {}
+        TLI(*TM.getSubtargetImpl(F)->getTargetLowering()), TTI(TTI) {}
 
   /// Scan the function for interleaved load candidates and execute the
   /// replacement if applicable.
@@ -86,7 +87,7 @@ private:
   const TargetLowering &TLI;
 
   /// Target Transform Information
-  const TargetTransformInfo TTI;
+  const TargetTransformInfo &TTI;
 
   /// Find the instruction in sets LIs that dominates all others, return nullptr
   /// if there is none.
@@ -876,6 +877,9 @@ public:
     if (LI->isAtomic())
       return false;
 
+    if (!DL.typeSizeEqualsStoreSize(Result.VTy->getElementType()))
+      return false;
+
     // Get the base polynomial
     computePolynomialFromPointer(*LI->getPointerOperand(), Offset, BasePtr, DL);
 
@@ -889,7 +893,7 @@ public:
           ConstantInt::get(Type::getInt32Ty(LI->getContext()), 0),
           ConstantInt::get(Type::getInt32Ty(LI->getContext()), i),
       };
-      int64_t Ofs = DL.getIndexedOffsetInType(Result.VTy, ArrayRef(Idx, 2));
+      int64_t Ofs = DL.getIndexedOffsetInType(Result.VTy, Idx);
       Result.EI[i] = ElementInfo(Offset + Ofs, i == 0 ? LI : nullptr);
     }
 
@@ -1215,13 +1219,9 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
     return false;
   }
 
-  // Create a pointer cast for the wide load.
-  auto CI = Builder.CreatePointerCast(InsertionPoint->getOperand(0),
-                                      ILTy->getPointerTo(),
-                                      "interleaved.wide.ptrcast");
-
   // Create the wide load and update the MemorySSA.
-  auto LI = Builder.CreateAlignedLoad(ILTy, CI, InsertionPoint->getAlign(),
+  auto Ptr = InsertionPoint->getPointerOperand();
+  auto LI = Builder.CreateAlignedLoad(ILTy, Ptr, InsertionPoint->getAlign(),
                                       "interleaved.wide.load");
   auto MSSAU = MemorySSAUpdater(&MSSA);
   MemoryUse *MSSALoad = cast<MemoryUse>(MSSAU.createMemoryAccessBefore(
@@ -1329,6 +1329,7 @@ struct InterleavedLoadCombine : public FunctionPass {
     return InterleavedLoadCombineImpl(
                F, getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
                getAnalysis<MemorySSAWrapperPass>().getMSSA(),
+               getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
                TPC->getTM<TargetMachine>())
         .run();
   }
@@ -1336,12 +1337,23 @@ struct InterleavedLoadCombine : public FunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MemorySSAWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
 private:
 };
 } // anonymous namespace
+
+PreservedAnalyses
+InterleavedLoadCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
+
+  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  auto &MemSSA = FAM.getResult<MemorySSAAnalysis>(F).getMSSA();
+  auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  bool Changed = InterleavedLoadCombineImpl(F, DT, MemSSA, TTI, *TM).run();
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}
 
 char InterleavedLoadCombine::ID = 0;
 
@@ -1351,6 +1363,7 @@ INITIALIZE_PASS_BEGIN(
     false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(
     InterleavedLoadCombine, DEBUG_TYPE,
     "Combine interleaved loads into wide loads and shufflevector instructions",

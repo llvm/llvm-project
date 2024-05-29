@@ -73,7 +73,7 @@ void checkElementPropertiesClangCodeview(LVReader *Reader) {
   EXPECT_EQ(Root->getName(), CodeViewClang);
 
   EXPECT_EQ(CompileUnit->getBaseAddress(), 0u);
-  EXPECT_TRUE(CompileUnit->getProducer().startswith("clang"));
+  EXPECT_TRUE(CompileUnit->getProducer().starts_with("clang"));
   EXPECT_EQ(CompileUnit->getName(), "test.cpp");
 
   EXPECT_EQ(Function->lineCount(), 16u);
@@ -139,7 +139,7 @@ void checkElementPropertiesMsvcCodeview(LVReader *Reader) {
   EXPECT_EQ(Root->getName(), CodeViewMsvc);
 
   EXPECT_EQ(CompileUnit->getBaseAddress(), 0u);
-  EXPECT_TRUE(CompileUnit->getProducer().startswith("Microsoft"));
+  EXPECT_TRUE(CompileUnit->getProducer().starts_with("Microsoft"));
   EXPECT_EQ(CompileUnit->getName(), "test.cpp");
 
   EXPECT_EQ(Function->lineCount(), 14u);
@@ -205,7 +205,7 @@ void checkElementPropertiesMsvcCodeviewPdb(LVReader *Reader) {
   EXPECT_EQ(Root->getName(), CodeViewPdbMsvc);
 
   EXPECT_EQ(CompileUnit->getBaseAddress(), 0u);
-  EXPECT_TRUE(CompileUnit->getProducer().startswith("Microsoft"));
+  EXPECT_TRUE(CompileUnit->getProducer().starts_with("Microsoft"));
   EXPECT_EQ(CompileUnit->getName(), "test.cpp");
 
   EXPECT_EQ(Function->lineCount(), 14u);

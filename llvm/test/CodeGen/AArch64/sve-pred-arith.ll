@@ -54,24 +54,24 @@ define aarch64_sve_vector_pcs <vscale x 64 x i1> @add_nxv64i1(<vscale x 64 x i1>
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    ptrue p4.b
 ; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ptrue p6.b
 ; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    ldr p5, [x0]
-; CHECK-NEXT:    ldr p6, [x1]
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ldr p4, [x0]
+; CHECK-NEXT:    ldr p5, [x1]
 ; CHECK-NEXT:    ldr p7, [x2]
 ; CHECK-NEXT:    ldr p8, [x3]
-; CHECK-NEXT:    eor p0.b, p4/z, p0.b, p5.b
-; CHECK-NEXT:    eor p1.b, p4/z, p1.b, p6.b
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    eor p2.b, p4/z, p2.b, p7.b
-; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    eor p3.b, p4/z, p3.b, p8.b
-; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    eor p0.b, p6/z, p0.b, p4.b
+; CHECK-NEXT:    eor p1.b, p6/z, p1.b, p5.b
 ; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    eor p2.b, p6/z, p2.b, p7.b
+; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    eor p3.b, p6/z, p3.b, p8.b
+; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
@@ -138,24 +138,24 @@ define aarch64_sve_vector_pcs <vscale x 64 x i1> @sub_nxv64i1(<vscale x 64 x i1>
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    ptrue p4.b
 ; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ptrue p6.b
 ; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    ldr p5, [x0]
-; CHECK-NEXT:    ldr p6, [x1]
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ldr p4, [x0]
+; CHECK-NEXT:    ldr p5, [x1]
 ; CHECK-NEXT:    ldr p7, [x2]
 ; CHECK-NEXT:    ldr p8, [x3]
-; CHECK-NEXT:    eor p0.b, p4/z, p0.b, p5.b
-; CHECK-NEXT:    eor p1.b, p4/z, p1.b, p6.b
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    eor p2.b, p4/z, p2.b, p7.b
-; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    eor p3.b, p4/z, p3.b, p8.b
-; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    eor p0.b, p6/z, p0.b, p4.b
+; CHECK-NEXT:    eor p1.b, p6/z, p1.b, p5.b
 ; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    eor p2.b, p6/z, p2.b, p7.b
+; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    eor p3.b, p6/z, p3.b, p8.b
+; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16

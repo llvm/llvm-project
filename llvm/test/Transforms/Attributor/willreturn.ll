@@ -212,7 +212,6 @@ define void @mutual_recursion2(i1 %c) #0 {
 ; TEST 5 (negative case)
 ; call exit/abort (has noreturn attribute)
 ; CHECK: Function Attrs: noreturn
-; CHECK-NEXT: declare void @exit(i32) local_unnamed_add
 declare void @exit(i32 %0) local_unnamed_addr noreturn
 
 define void @only_exit() local_unnamed_addr #0 {
@@ -278,7 +277,6 @@ define void @conditional_exit(i32 %0, ptr nocapture readonly %1) local_unnamed_a
 ; TEST 6 (positive case)
 ; Call intrinsic function
 ; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-; CHECK-NEXT: declare float @llvm.floor.f32(float)
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {
@@ -294,8 +292,8 @@ define void @call_floor(float %a) #0 {
 define float @call_floor2(float %a) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@call_floor2
-; CHECK-SAME: (float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float [[A]]) #[[ATTR30:[0-9]+]]
+; CHECK-SAME: (float nofpclass(sub) [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float nofpclass(sub) [[A]]) #[[ATTR30:[0-9]+]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %c = tail call float @llvm.floor.f32(float %a)
@@ -308,7 +306,6 @@ define float @call_floor2(float %a) #0 {
 
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-NOT: willreturn
-; CHECK-NEXT: declare void @maybe_noreturn()
 declare void @maybe_noreturn() #0
 
 define void @call_maybe_noreturn() #0 {
@@ -327,7 +324,6 @@ define void @call_maybe_noreturn() #0 {
 ; Check propagation.
 
 ; CHECK: Function Attrs: norecurse willreturn
-; CHECK-NEXT: declare void @will_return()
 declare void @will_return() willreturn norecurse
 
 define void @f1() #0 {
@@ -380,7 +376,6 @@ label2:
 ; invoke a function with willreturn
 
 ; CHECK: Function Attrs: noinline willreturn uwtable
-; CHECK-NEXT: declare i1 @maybe_raise_exception()
 declare i1 @maybe_raise_exception() #1 willreturn
 
 define void @invoke_test() personality ptr @__gxx_personality_v0 {
@@ -388,12 +383,12 @@ define void @invoke_test() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define {{[^@]+}}@invoke_test
 ; CHECK-SAME: () #[[ATTR12:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR32]]
-; CHECK-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
+; CHECK-NEXT:            to label [[N:%.*]] unwind label [[F:%.*]]
 ; CHECK:       N:
 ; CHECK-NEXT:    ret void
 ; CHECK:       F:
 ; CHECK-NEXT:    [[VAL:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    ret void
 ;
   invoke i1 @maybe_raise_exception()
@@ -685,7 +680,6 @@ unreachable_label:
 }
 
 ; CHECK: Function Attrs: noreturn nounwind
-; CHECK-NEXT: declare void @llvm.eh.sjlj.longjmp(ptr)
 declare void @llvm.eh.sjlj.longjmp(ptr)
 
 define void @call_longjmp(ptr nocapture readnone %0) local_unnamed_addr #0 {
@@ -855,7 +849,7 @@ define i32 @bounded_loop_inside_unbounded_loop(i32 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:
-; CHECK-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TRUETMP2:%.*]], [[FOR_END:%.*]] ]
+; CHECK-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[FOR_END:%.*]] ]
 ; CHECK-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[INC:%.*]], [[FOR_END]] ]
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[N_ADDR_0]], -1
 ; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP]], i32 [[N_ADDR_0]], i32 -1
@@ -863,12 +857,12 @@ define i32 @bounded_loop_inside_unbounded_loop(i32 %n) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[TRUETMP1:%.*]] = add i32 [[ANS_0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ANS_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[TRUETMP2]] = add i32 [[TRUETMP1]], [[SMAX]]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[SMAX]]
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    unreachable
@@ -939,7 +933,7 @@ define i32 @nested_unbounded_loops(i32 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:
-; CHECK-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TRUETMP1:%.*]], [[WHILE_END10:%.*]] ]
+; CHECK-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[WHILE_END10:%.*]] ]
 ; CHECK-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[WHILE_END10]] ]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END11:%.*]], label [[WHILE_BODY:%.*]]
@@ -957,7 +951,7 @@ define i32 @nested_unbounded_loops(i32 %n) {
 ; CHECK:       while.body8:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       while.end10:
-; CHECK-NEXT:    [[TRUETMP1]] = add i32 [[TMP]], [[ANS_0]]
+; CHECK-NEXT:    [[TMP1]] = add i32 [[TMP]], [[ANS_0]]
 ; CHECK-NEXT:    br label [[WHILE_COND]]
 ; CHECK:       while.end11:
 ; CHECK-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]

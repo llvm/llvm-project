@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/float128.h"
 #include <memory>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
@@ -354,6 +355,9 @@ public:
   Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const;
   double convertToDouble() const;
+#ifdef HAS_IEE754_FLOAT128
+  float128 convertToQuad() const;
+#endif
   float convertToFloat() const;
 
   /// @}
@@ -770,6 +774,8 @@ public:
 };
 
 hash_code hash_value(const DoubleAPFloat &Arg);
+DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp, IEEEFloat::roundingMode RM);
+DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, IEEEFloat::roundingMode);
 
 } // End detail namespace
 
@@ -1219,6 +1225,15 @@ public:
   /// Converts this APFloat to host float value.
   ///
   /// \pre The APFloat must be built using semantics, that can be represented by
+  /// the host float type without loss of precision. It can be IEEEquad and
+  /// shorter semantics, like IEEEdouble and others.
+#ifdef HAS_IEE754_FLOAT128
+  float128 convertToQuad() const;
+#endif
+
+  /// Converts this APFloat to host float value.
+  ///
+  /// \pre The APFloat must be built using semantics, that can be represented by
   /// the host float type without loss of precision. It can be IEEEsingle and
   /// shorter semantics, like IEEEhalf.
   float convertToFloat() const;
@@ -1387,29 +1402,35 @@ inline APFloat neg(APFloat X) {
   return X;
 }
 
-/// Implements IEEE minNum semantics. Returns the smaller of the 2 arguments if
-/// both are not NaN. If either argument is a NaN, returns the other argument.
+/// Implements IEEE-754 2019 minimumNumber semantics. Returns the smaller of the
+/// 2 arguments if both are not NaN. If either argument is a NaN, returns the
+/// other argument. -0 is treated as ordered less than +0.
 LLVM_READONLY
 inline APFloat minnum(const APFloat &A, const APFloat &B) {
   if (A.isNaN())
     return B;
   if (B.isNaN())
     return A;
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? A : B;
   return B < A ? B : A;
 }
 
-/// Implements IEEE maxNum semantics. Returns the larger of the 2 arguments if
-/// both are not NaN. If either argument is a NaN, returns the other argument.
+/// Implements IEEE-754 2019 maximumNumber semantics. Returns the larger of the
+/// 2 arguments if both are not NaN. If either argument is a NaN, returns the
+/// other argument. +0 is treated as ordered greater than -0.
 LLVM_READONLY
 inline APFloat maxnum(const APFloat &A, const APFloat &B) {
   if (A.isNaN())
     return B;
   if (B.isNaN())
     return A;
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
 
-/// Implements IEEE 754-2018 minimum semantics. Returns the smaller of 2
+/// Implements IEEE 754-2019 minimum semantics. Returns the smaller of 2
 /// arguments, propagating NaNs and treating -0 as less than +0.
 LLVM_READONLY
 inline APFloat minimum(const APFloat &A, const APFloat &B) {
@@ -1422,7 +1443,7 @@ inline APFloat minimum(const APFloat &A, const APFloat &B) {
   return B < A ? B : A;
 }
 
-/// Implements IEEE 754-2018 maximum semantics. Returns the larger of 2
+/// Implements IEEE 754-2019 maximum semantics. Returns the larger of 2
 /// arguments, propagating NaNs and treating -0 as less than +0.
 LLVM_READONLY
 inline APFloat maximum(const APFloat &A, const APFloat &B) {

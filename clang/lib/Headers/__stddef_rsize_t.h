@@ -7,10 +7,14 @@
  *===-----------------------------------------------------------------------===
  */
 
-#if !defined(_RSIZE_T) || __has_feature(modules)
-/* Always define rsize_t when modules are available. */
-#if !__has_feature(modules)
+/*
+ * When -fbuiltin-headers-in-system-modules is set this is a non-modular header
+ * and needs to behave as if it was textual.
+ */
+#if !defined(_RSIZE_T) ||                                                      \
+    (__has_feature(modules) && !__building_module(_Builtin_stddef))
 #define _RSIZE_T
-#endif
+
 typedef __SIZE_TYPE__ rsize_t;
+
 #endif

@@ -824,42 +824,7 @@ TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle_Pointers) {
 TEST(ValueTracking, propagatesPoison) {
   std::string AsmHead =
       "declare i32 @g(i32)\n"
-      "declare {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare {i32, i1} @llvm.smul.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)\n"
-      "declare float @llvm.sqrt.f32(float)\n"
-      "declare float @llvm.powi.f32.i32(float, i32)\n"
-      "declare float @llvm.sin.f32(float)\n"
-      "declare float @llvm.cos.f32(float)\n"
-      "declare float @llvm.pow.f32(float, float)\n"
-      "declare float @llvm.exp.f32(float)\n"
-      "declare float @llvm.exp2.f32(float)\n"
-      "declare float @llvm.log.f32(float)\n"
-      "declare float @llvm.log10.f32(float)\n"
-      "declare float @llvm.log2.f32(float)\n"
-      "declare float @llvm.fma.f32(float, float, float)\n"
-      "declare float @llvm.fabs.f32(float)\n"
-      "declare float @llvm.minnum.f32(float, float)\n"
-      "declare float @llvm.maxnum.f32(float, float)\n"
-      "declare float @llvm.minimum.f32(float, float)\n"
-      "declare float @llvm.maximum.f32(float, float)\n"
-      "declare float @llvm.copysign.f32(float, float)\n"
-      "declare float @llvm.floor.f32(float)\n"
-      "declare float @llvm.ceil.f32(float)\n"
-      "declare float @llvm.trunc.f32(float)\n"
-      "declare float @llvm.rint.f32(float)\n"
-      "declare float @llvm.nearbyint.f32(float)\n"
-      "declare float @llvm.round.f32(float)\n"
-      "declare float @llvm.roundeven.f32(float)\n"
-      "declare i32 @llvm.lround.f32(float)\n"
-      "declare i64 @llvm.llround.f32(float)\n"
-      "declare i32 @llvm.lrint.f32(float)\n"
-      "declare i64 @llvm.llrint.f32(float)\n"
-      "declare float @llvm.fmuladd.f32(float, float, float)\n"
-      "define void @f(i32 %x, i32 %y, float %fx, float %fy, "
+      "define void @f(i32 %x, i32 %y, i32 %shamt, float %fx, float %fy, "
       "i1 %cond, ptr %p) {\n";
   std::string AsmTail = "  ret void\n}";
   // (propagates poison?, IR instruction)
@@ -912,6 +877,28 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)", 0},
       {true, "call {i32, i1} @llvm.usub.with.overflow.i32(i32 %x, i32 %y)", 0},
       {true, "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.ssub.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.sshl.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.uadd.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.usub.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.ushl.sat.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.ctpop.i32(i32 %x)", 0},
+      {true, "call i32 @llvm.ctlz.i32(i32 %x, i1 true)", 0},
+      {true, "call i32 @llvm.cttz.i32(i32 %x, i1 true)", 0},
+      {true, "call i32 @llvm.abs.i32(i32 %x, i1 true)", 0},
+      {true, "call i32 @llvm.smax.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.smin.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.umax.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.umin.i32(i32 %x, i32 %y)", 0},
+      {true, "call i32 @llvm.bitreverse.i32(i32 %x)", 0},
+      {true, "call i32 @llvm.bswap.i32(i32 %x)", 0},
+      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 0},
+      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 1},
+      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 2},
+      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 0},
+      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 1},
+      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 2},
       {false, "call float @llvm.sqrt.f32(float %fx)", 0},
       {false, "call float @llvm.powi.f32.i32(float %fx, i32 %x)", 0},
       {false, "call float @llvm.sin.f32(float %fx)", 0},
@@ -1177,12 +1164,12 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false},
        "shufflevector <4 x i32> %vx, <4 x i32> %vx2, "
        "<4 x i32> <i32 0, i32 1, i32 2, i32 3>"},
-      {{false, true},
+      {{true, false},
        "shufflevector <4 x i32> %vx, <4 x i32> %vx2, "
-       "<4 x i32> <i32 0, i32 1, i32 2, i32 undef>"},
-      {{false, true},
+       "<4 x i32> <i32 0, i32 1, i32 2, i32 poison>"},
+      {{true, false},
        "shufflevector <vscale x 4 x i32> %svx, "
-       "<vscale x 4 x i32> %svx, <vscale x 4 x i32> undef"},
+       "<vscale x 4 x i32> %svx, <vscale x 4 x i32> poison"},
       {{true, false}, "call i32 @g(i32 %x)"},
       {{false, false}, "call noundef i32 @g(i32 %x)"},
       {{true, false}, "fcmp nnan oeq float %fx, %fy"},
@@ -1830,6 +1817,8 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_NInf) {
                 "  %A2 = fcmp uge double %arg, 0xFFF0000000000000"
                 "  %A3 = fcmp ogt double %arg, 0xFFF0000000000000"
                 "  %A4 = fcmp ule double %arg, 0xFFF0000000000000"
+                "  %A5 = fcmp oge double %arg, 0xFFF0000000000000"
+                "  %A6 = fcmp ult double %arg, 0xFFF0000000000000"
                 "  ret i1 %A\n"
                 "}\n");
 
@@ -1847,14 +1836,77 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_NInf) {
   auto [OgtVal, OgtClass] =
       fcmpToClassTest(CmpInst::FCMP_OGT, *A3->getFunction(), A3->getOperand(0),
                       A3->getOperand(1));
-  EXPECT_EQ(nullptr, OgtVal);
-  EXPECT_EQ(fcNone, OgtClass);
+  EXPECT_EQ(A3->getOperand(0), OgtVal);
+  EXPECT_EQ(~(fcNegInf | fcNan), OgtClass);
 
   auto [UleVal, UleClass] =
       fcmpToClassTest(CmpInst::FCMP_ULE, *A4->getFunction(), A4->getOperand(0),
                       A4->getOperand(1));
-  EXPECT_EQ(nullptr, UleVal);
-  EXPECT_EQ(fcNone, UleClass);
+  EXPECT_EQ(A4->getOperand(0), UleVal);
+  EXPECT_EQ(fcNegInf | fcNan, UleClass);
+
+  auto [OgeVal, OgeClass] =
+      fcmpToClassTest(CmpInst::FCMP_OGE, *A5->getFunction(), A5->getOperand(0),
+                      A5->getOperand(1));
+  EXPECT_EQ(A5->getOperand(0), OgeVal);
+  EXPECT_EQ(~fcNan, OgeClass);
+
+  auto [UltVal, UltClass] =
+      fcmpToClassTest(CmpInst::FCMP_ULT, *A6->getFunction(), A6->getOperand(0),
+                      A6->getOperand(1));
+  EXPECT_EQ(A6->getOperand(0), UltVal);
+  EXPECT_EQ(fcNan, UltClass);
+}
+
+TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_FabsNInf) {
+  parseAssembly("declare double @llvm.fabs.f64(double)\n"
+                "define i1 @test(double %arg) {\n"
+                "  %fabs.arg = call double @llvm.fabs.f64(double %arg)\n"
+                "  %A = fcmp olt double %fabs.arg, 0xFFF0000000000000"
+                "  %A2 = fcmp uge double %fabs.arg, 0xFFF0000000000000"
+                "  %A3 = fcmp ogt double %fabs.arg, 0xFFF0000000000000"
+                "  %A4 = fcmp ule double %fabs.arg, 0xFFF0000000000000"
+                "  %A5 = fcmp oge double %fabs.arg, 0xFFF0000000000000"
+                "  %A6 = fcmp ult double %fabs.arg, 0xFFF0000000000000"
+                "  ret i1 %A\n"
+                "}\n");
+
+  Value *ArgVal = F->getArg(0);
+
+  auto [OltVal, OltClass] = fcmpToClassTest(
+      CmpInst::FCMP_OLT, *A->getFunction(), A->getOperand(0), A->getOperand(1));
+  EXPECT_EQ(ArgVal, OltVal);
+  EXPECT_EQ(fcNone, OltClass);
+
+  auto [UgeVal, UgeClass] =
+      fcmpToClassTest(CmpInst::FCMP_UGE, *A2->getFunction(), A2->getOperand(0),
+                      A2->getOperand(1));
+  EXPECT_EQ(ArgVal, UgeVal);
+  EXPECT_EQ(fcAllFlags, UgeClass);
+
+  auto [OgtVal, OgtClass] =
+      fcmpToClassTest(CmpInst::FCMP_OGT, *A3->getFunction(), A3->getOperand(0),
+                      A3->getOperand(1));
+  EXPECT_EQ(ArgVal, OgtVal);
+  EXPECT_EQ(~fcNan, OgtClass);
+
+  auto [UleVal, UleClass] =
+      fcmpToClassTest(CmpInst::FCMP_ULE, *A4->getFunction(), A4->getOperand(0),
+                      A4->getOperand(1));
+  EXPECT_EQ(ArgVal, UleVal);
+  EXPECT_EQ(fcNan, UleClass);
+
+  auto [OgeVal, OgeClass] =
+      fcmpToClassTest(CmpInst::FCMP_OGE, *A5->getFunction(), A5->getOperand(0),
+                      A5->getOperand(1));
+  EXPECT_EQ(ArgVal, OgeVal);
+  EXPECT_EQ(~fcNan, OgeClass);
+
+  auto [UltVal, UltClass] =
+      fcmpToClassTest(CmpInst::FCMP_ULT, *A6->getFunction(), A6->getOperand(0),
+                      A6->getOperand(1));
+  EXPECT_EQ(ArgVal, UltVal);
+  EXPECT_EQ(fcNan, UltClass);
 }
 
 TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
@@ -1880,14 +1932,14 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
   auto [OleVal, OleClass] =
       fcmpToClassTest(CmpInst::FCMP_OLE, *A3->getFunction(), A3->getOperand(0),
                       A3->getOperand(1));
-  EXPECT_EQ(nullptr, OleVal);
-  EXPECT_EQ(fcNone, OleClass);
+  EXPECT_EQ(A->getOperand(0), OleVal);
+  EXPECT_EQ(~fcNan, OleClass);
 
   auto [UgtVal, UgtClass] =
       fcmpToClassTest(CmpInst::FCMP_UGT, *A4->getFunction(), A4->getOperand(0),
                       A4->getOperand(1));
-  EXPECT_EQ(nullptr, UgtVal);
-  EXPECT_EQ(fcNone, UgtClass);
+  EXPECT_EQ(A4->getOperand(0), UgtVal);
+  EXPECT_EQ(fcNan, UgtClass);
 }
 
 TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
@@ -1953,7 +2005,7 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, 0, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(fcPositive | fcQNan, UseInstrInfoNSZNoNan.KnownFPClasses);
-    EXPECT_EQ(false, UseInstrInfoNSZNoNan.SignBit);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNSZNoNan.SignBit);
 
     KnownFPClass NoUseInstrInfoNSZNoNan =
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, 0, nullptr,
@@ -1961,6 +2013,82 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
     EXPECT_EQ(fcPositive | fcNegZero | fcQNan,
               NoUseInstrInfoNSZNoNan.KnownFPClasses);
     EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZNoNan.SignBit);
+  }
+}
+
+TEST_F(ComputeKnownFPClassTest, Constants) {
+  parseAssembly("declare float @func()\n"
+                "define float @test() {\n"
+                "  %A = call float @func()\n"
+                "  ret float %A\n"
+                "}\n");
+
+  Type *F32 = Type::getFloatTy(Context);
+  Type *V4F32 = FixedVectorType::get(F32, 4);
+
+  {
+    KnownFPClass ConstAggZero = computeKnownFPClass(
+        ConstantAggregateZero::get(V4F32), M->getDataLayout(), fcAllFlags, 0,
+        nullptr, nullptr, nullptr, nullptr);
+
+    EXPECT_EQ(fcPosZero, ConstAggZero.KnownFPClasses);
+    ASSERT_TRUE(ConstAggZero.SignBit);
+    EXPECT_FALSE(*ConstAggZero.SignBit);
+  }
+
+  {
+    KnownFPClass Undef =
+        computeKnownFPClass(UndefValue::get(F32), M->getDataLayout(),
+                            fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcAllFlags, Undef.KnownFPClasses);
+    EXPECT_FALSE(Undef.SignBit);
+  }
+
+  {
+    KnownFPClass Poison =
+        computeKnownFPClass(PoisonValue::get(F32), M->getDataLayout(),
+                            fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcNone, Poison.KnownFPClasses);
+    ASSERT_TRUE(Poison.SignBit);
+    EXPECT_FALSE(*Poison.SignBit);
+  }
+
+  {
+    // Assume the poison element should be 0.
+    Constant *ZeroF32 = ConstantFP::getZero(F32);
+    Constant *PoisonF32 = PoisonValue::get(F32);
+
+    KnownFPClass PartiallyPoison = computeKnownFPClass(
+        ConstantVector::get({ZeroF32, PoisonF32}), M->getDataLayout(),
+        fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcPosZero, PartiallyPoison.KnownFPClasses);
+    ASSERT_TRUE(PartiallyPoison.SignBit);
+    EXPECT_FALSE(*PartiallyPoison.SignBit);
+  }
+
+  {
+    // Assume the poison element should be 1.
+    Constant *NegZeroF32 = ConstantFP::getZero(F32, true);
+    Constant *PoisonF32 = PoisonValue::get(F32);
+
+    KnownFPClass PartiallyPoison = computeKnownFPClass(
+        ConstantVector::get({NegZeroF32, PoisonF32}), M->getDataLayout(),
+        fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
+    ASSERT_TRUE(PartiallyPoison.SignBit);
+    EXPECT_TRUE(*PartiallyPoison.SignBit);
+  }
+
+  {
+    // Assume the poison element should be 1.
+    Constant *NegZeroF32 = ConstantFP::getZero(F32, true);
+    Constant *PoisonF32 = PoisonValue::get(F32);
+
+    KnownFPClass PartiallyPoison = computeKnownFPClass(
+        ConstantVector::get({PoisonF32, NegZeroF32}), M->getDataLayout(),
+        fcAllFlags, 0, nullptr, nullptr, nullptr, nullptr);
+    EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
+    EXPECT_TRUE(PartiallyPoison.SignBit);
   }
 }
 
@@ -1982,7 +2110,7 @@ TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
   )");
   const DataLayout &DL = M->getDataLayout();
   AssumptionCache AC(*F);
-  EXPECT_TRUE(isKnownNonZero(A, DL, 0, &AC, CxtI));
+  EXPECT_TRUE(isKnownNonZero(A, SimplifyQuery(DL, /*DT=*/nullptr, &AC, CxtI)));
 }
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
@@ -2005,8 +2133,9 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
   AssumptionCache AC(*F);
   DominatorTree DT(*F);
   const DataLayout &DL = M->getDataLayout();
-  EXPECT_EQ(isKnownNonZero(A, DL, 0, &AC, CxtI, &DT), true);
-  EXPECT_EQ(isKnownNonZero(A, DL, 0, &AC, CxtI2, &DT), false);
+  const SimplifyQuery SQ(DL, &DT, &AC);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI)), true);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI2)), false);
 }
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
@@ -2029,8 +2158,9 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
   AssumptionCache AC(*F);
   DominatorTree DT(*F);
   const DataLayout &DL = M->getDataLayout();
-  EXPECT_EQ(isKnownNonZero(A, DL, 0, &AC, CxtI, &DT), true);
-  EXPECT_EQ(isKnownNonZero(A, DL, 0, &AC, CxtI2, &DT), false);
+  const SimplifyQuery SQ(DL, &DT, &AC);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI)), true);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI2)), false);
 }
 
 TEST_F(ValueTrackingTest, IsImpliedConditionAnd) {
@@ -2307,6 +2437,20 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFreeze) {
   EXPECT_EQ(Known.One.getZExtValue(), 0u);
 }
 
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsReturnedRangeConflict) {
+  parseAssembly(
+      "declare i16 @foo(i16 returned)\n"
+      "\n"
+      "define i16 @test() {\n"
+      "  %A = call i16 @foo(i16 4095), !range !{i16 32, i16 33}\n"
+      "  ret i16 %A\n"
+      "}\n");
+  // The call returns 32 according to range metadata, but 4095 according to the
+  // returned arg operand. Given the conflicting information we expect that the
+  // known bits information simply is cleared.
+  expectKnownBits(/*zero*/ 0u, /*one*/ 0u);
+}
+
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {
   parseAssembly("define void @test(ptr %p) {\n"
                 "  %A = load i64, ptr %p, !range !{i64 64, i64 65536}\n"
@@ -2539,7 +2683,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for an inverted mask: (X & ~M) op (Y & M).
     auto M = parseModule(R"(
-  define i32 @test(i32 %X, i32 %Y, i32 %M) {
+  define i32 @test(i32 %X, i32 %Y, i32 noundef %M) {
     %1 = xor i32 %M, -1
     %LHS = and i32 %1, %X
     %RHS = and i32 %Y, %M
@@ -2558,7 +2702,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for (A & B) and ~(A | B)
     auto M = parseModule(R"(
-  define void @test(i32 %A, i32 %B) {
+  define void @test(i32 noundef %A, i32 noundef %B) {
     %LHS = and i32 %A, %B
     %or = or i32 %A, %B
     %RHS = xor i32 %or, -1
@@ -2586,7 +2730,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for (A & B) and ~(A | B) in vector version
     auto M = parseModule(R"(
-  define void @test(<2 x i32> %A, <2 x i32> %B) {
+  define void @test(<2 x i32> noundef %A, <2 x i32> noundef %B) {
     %LHS = and <2 x i32> %A, %B
     %or = or <2 x i32> %A, %B
     %RHS = xor <2 x i32> %or, <i32 -1, i32 -1>

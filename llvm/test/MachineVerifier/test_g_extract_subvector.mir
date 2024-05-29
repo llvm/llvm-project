@@ -1,0 +1,31 @@
+# RUN: not --crash llc -o - -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+---
+name:            g_extract_subvector
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    %0:_(s32) = G_CONSTANT i32 0
+    %1:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
+
+    ; CHECK: G_EXTRACT_SUBVECTOR first source must be a register
+    %3:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR 1, 0
+
+    ; CHECK: G_EXTRACT_SUBVECTOR index must be an immediate
+    %4:_(<vscale x 1 x s32>) = G_EXTRACT_SUBVECTOR %2, %0
+
+    ; CHECK: Destination type must be a vector
+    %5:_(s32) = G_EXTRACT_SUBVECTOR %2, 0
+
+    ; CHECK: First source must be a vector
+    %6:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR %0, 0
+
+    %7:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
+
+    ; CHECK: Element type of vectors must be the same
+    %8:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR %7, 0
+
+    ; CHECK: Index must be a multiple of the source vector's minimum vector length
+    %9:_(<vscale x 4 x s32>) = G_EXTRACT_SUBVECTOR  %1, 3
+...

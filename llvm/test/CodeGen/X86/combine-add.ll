@@ -16,14 +16,14 @@ define <4 x i32> @combine_vec_add_to_zero(<4 x i32> %a) {
 define <4 x i32> @combine_vec_add_constant_sub(<4 x i32> %a) {
 ; SSE-LABEL: combine_vec_add_constant_sub:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,2,4,6]
+; SSE-NEXT:    pmovsxbd {{.*#+}} xmm1 = [0,2,4,6]
 ; SSE-NEXT:    psubd %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_constant_sub:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,2,4,6]
+; AVX-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,2,4,6]
 ; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %a
@@ -230,7 +230,7 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqu (%rdi), %xmm0
 ; SSE-NEXT:    movdqu 16(%rdi), %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [10,10,10,10]
+; SSE-NEXT:    pmovsxbd {{.*#+}} xmm2 = [10,10,10,10]
 ; SSE-NEXT:    movdqa %xmm2, %xmm3
 ; SSE-NEXT:    psubd %xmm1, %xmm3
 ; SSE-NEXT:    psubd %xmm0, %xmm2

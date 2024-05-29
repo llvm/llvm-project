@@ -19,8 +19,8 @@ endfunction()
 
 function(get_debugserver_codesign_identity result)
   string(CONCAT not_found_help
-    "This will cause failures in the test suite."
-    "Pass '-DLLDB_USE_SYSTEM_DEBUGSERVER=ON' to use the system one instead."
+    "This will cause failures in the test suite. "
+    "Pass '-DLLDB_USE_SYSTEM_DEBUGSERVER=ON' to use the system one instead. "
     "See 'Code Signing on macOS' in the documentation."
   )
 
@@ -116,10 +116,6 @@ get_debugserver_codesign_identity(debugserver_codesign_identity)
 
 # Override locally, so the identity is used for targets created in this scope.
 set(LLVM_CODESIGNING_IDENTITY ${debugserver_codesign_identity})
-
-# Use the same identity later in the test suite.
-set_property(GLOBAL PROPERTY
-  LLDB_DEBUGSERVER_CODESIGN_IDENTITY ${debugserver_codesign_identity})
 
 if(APPLE)
   set(LIBCOMPRESSION compression)

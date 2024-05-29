@@ -18,7 +18,7 @@ def UImmLog2XLenNonZeroAsmOperand : AsmOperandClass {
   let DiagnosticType = "InvalidUImmLog2XLenNonZero";
 }
 
-def uimmlog2xlennonzero : Operand<XLenVT>, ImmLeaf<XLenVT, [{
+def uimmlog2xlennonzero : RISCVOp, ImmLeaf<XLenVT, [{
   if (Subtarget->is64Bit())
     return isUInt<6>(Imm) && (Imm != 0);
   return isUInt<5>(Imm) && (Imm != 0);
@@ -27,7 +27,6 @@ def uimmlog2xlennonzero : Operand<XLenVT>, ImmLeaf<XLenVT, [{
   // TODO: should ensure invalid shamt is rejected when decoding.
   let DecoderMethod = "decodeUImmNonZeroOperand<6>";
   let OperandType = "OPERAND_UIMMLOG2XLEN_NONZERO";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -38,12 +37,7 @@ def uimmlog2xlennonzero : Operand<XLenVT>, ImmLeaf<XLenVT, [{
   }];
 }
 
-def simm6 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<6>(Imm);}]> {
-  let ParserMatchClass = SImmAsmOperand<6>;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeSImmOperand<6>";
-  let OperandType = "OPERAND_SIMM6";
-  let OperandNamespace = "RISCVOp";
+def simm6 : RISCVSImmLeafOp<6> {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -52,13 +46,12 @@ def simm6 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<6>(Imm);}]> {
   }];
 }
 
-def simm6nonzero : Operand<XLenVT>,
+def simm6nonzero : RISCVOp,
                    ImmLeaf<XLenVT, [{return (Imm != 0) && isInt<6>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<6, "NonZero">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmNonZeroOperand<6>";
   let OperandType = "OPERAND_SIMM6_NONZERO";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -67,11 +60,10 @@ def simm6nonzero : Operand<XLenVT>,
   }];
 }
 
-def immzero : Operand<XLenVT>,
+def immzero : RISCVOp,
               ImmLeaf<XLenVT, [{return (Imm == 0);}]> {
   let ParserMatchClass = ImmZeroAsmOperand;
   let OperandType = "OPERAND_ZERO";
-  let OperandNamespace = "RISCVOp";
 }
 
 def CLUIImmAsmOperand : AsmOperandClass {
@@ -86,7 +78,7 @@ def CLUIImmAsmOperand : AsmOperandClass {
 // loaded in to bits 17-12 of the destination register and sign extended from
 // bit 17. Therefore, this 6-bit immediate can represent values in the ranges
 // [1, 31] and [0xfffe0, 0xfffff].
-def c_lui_imm : Operand<XLenVT>,
+def c_lui_imm : RISCVOp,
                 ImmLeaf<XLenVT, [{return (Imm != 0) &&
                                  (isUInt<5>(Imm) ||
                                   (Imm >= 0xfffe0 && Imm <= 0xfffff));}]> {
@@ -94,7 +86,6 @@ def c_lui_imm : Operand<XLenVT>,
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeCLUIImmOperand";
   let OperandType = "OPERAND_CLUI_IMM";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -105,13 +96,12 @@ def c_lui_imm : Operand<XLenVT>,
 }
 
 // A 7-bit unsigned immediate where the least significant two bits are zero.
-def uimm7_lsb00 : Operand<XLenVT>,
+def uimm7_lsb00 : RISCVOp,
                   ImmLeaf<XLenVT, [{return isShiftedUInt<5, 2>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<7, "Lsb00">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<7>";
   let OperandType = "OPERAND_UIMM7_LSB00";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -121,13 +111,12 @@ def uimm7_lsb00 : Operand<XLenVT>,
 }
 
 // A 8-bit unsigned immediate where the least significant two bits are zero.
-def uimm8_lsb00 : Operand<XLenVT>,
+def uimm8_lsb00 : RISCVOp,
                   ImmLeaf<XLenVT, [{return isShiftedUInt<6, 2>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<8, "Lsb00">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<8>";
   let OperandType = "OPERAND_UIMM8_LSB00";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -137,13 +126,12 @@ def uimm8_lsb00 : Operand<XLenVT>,
 }
 
 // A 8-bit unsigned immediate where the least significant three bits are zero.
-def uimm8_lsb000 : Operand<XLenVT>,
+def uimm8_lsb000 : RISCVOp,
                    ImmLeaf<XLenVT, [{return isShiftedUInt<5, 3>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<8, "Lsb000">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<8>";
   let OperandType = "OPERAND_UIMM8_LSB000";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -170,13 +158,12 @@ def simm9_lsb0 : Operand<OtherVT>,
 }
 
 // A 9-bit unsigned immediate where the least significant three bits are zero.
-def uimm9_lsb000 : Operand<XLenVT>,
+def uimm9_lsb000 : RISCVOp,
                    ImmLeaf<XLenVT, [{return isShiftedUInt<6, 3>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<9, "Lsb000">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<9>";
   let OperandType = "OPERAND_UIMM9_LSB000";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -187,14 +174,13 @@ def uimm9_lsb000 : Operand<XLenVT>,
 
 // A 10-bit unsigned immediate where the least significant two bits are zero
 // and the immediate can't be zero.
-def uimm10_lsb00nonzero : Operand<XLenVT>,
+def uimm10_lsb00nonzero : RISCVOp,
                           ImmLeaf<XLenVT,
                           [{return isShiftedUInt<8, 2>(Imm) && (Imm != 0);}]> {
   let ParserMatchClass = UImmAsmOperand<10, "Lsb00NonZero">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmNonZeroOperand<10>";
   let OperandType = "OPERAND_UIMM10_LSB00_NONZERO";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -204,14 +190,13 @@ def uimm10_lsb00nonzero : Operand<XLenVT>,
 }
 
 // A 10-bit signed immediate where the least significant four bits are zero.
-def simm10_lsb0000nonzero : Operand<XLenVT>,
+def simm10_lsb0000nonzero : RISCVOp,
                             ImmLeaf<XLenVT,
                             [{return (Imm != 0) && isShiftedInt<6, 4>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<10, "Lsb0000NonZero">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmNonZeroOperand<10>";
   let OperandType = "OPERAND_SIMM10_LSB0000_NONZERO";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -243,11 +228,10 @@ def InsnCDirectiveOpcode : AsmOperandClass {
   let PredicateMethod = "isImm";
 }
 
-def uimm2_opcode : Operand<XLenVT> {
+def uimm2_opcode : RISCVOp {
   let ParserMatchClass = InsnCDirectiveOpcode;
   let DecoderMethod = "decodeUImmOperand<2>";
   let OperandType = "OPERAND_UIMM2";
-  let OperandNamespace = "RISCVOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -333,7 +317,7 @@ def C_ADDI4SPN : RVInst16CIW<0b000, 0b00, (outs GPRC:$rd),
 
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FLD  : CLoad_ri<0b001, "c.fld", FPR64C, uimm8_lsb000>,
-             Sched<[WriteFLD64, ReadMemBase]> {
+             Sched<[WriteFLD64, ReadFMemBase]> {
   bits<8> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6-5} = imm{7-6};
@@ -350,7 +334,7 @@ def C_LW : CLoad_ri<0b010, "c.lw", GPRC, uimm7_lsb00>,
 let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FLW  : CLoad_ri<0b011, "c.flw", FPR32C, uimm7_lsb00>,
-             Sched<[WriteFLD32, ReadMemBase]> {
+             Sched<[WriteFLD32, ReadFMemBase]> {
   bits<7> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6} = imm{2};
@@ -367,7 +351,7 @@ def C_LD : CLoad_ri<0b011, "c.ld", GPRC, uimm8_lsb000>,
 
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FSD  : CStore_rri<0b101, "c.fsd", FPR64C, uimm8_lsb000>,
-             Sched<[WriteFST64, ReadStoreData, ReadMemBase]> {
+             Sched<[WriteFST64, ReadFStoreData, ReadFMemBase]> {
   bits<8> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6-5} = imm{7-6};
@@ -384,7 +368,7 @@ def C_SW : CStore_rri<0b110, "c.sw", GPRC, uimm7_lsb00>,
 let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32]  in
 def C_FSW  : CStore_rri<0b111, "c.fsw", FPR32C, uimm7_lsb00>,
-             Sched<[WriteFST32, ReadStoreData, ReadMemBase]> {
+             Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]> {
   bits<7> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6} = imm{2};
@@ -522,7 +506,7 @@ def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
 
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FLDSP  : CStackLoad<0b001, "c.fldsp", FPR64, uimm9_lsb000>,
-               Sched<[WriteFLD64, ReadMemBase]> {
+               Sched<[WriteFLD64, ReadFMemBase]> {
   let Inst{6-5} = imm{4-3};
   let Inst{4-2} = imm{8-6};
 }
@@ -536,7 +520,7 @@ def C_LWSP : CStackLoad<0b010, "c.lwsp", GPRNoX0, uimm8_lsb00>,
 let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FLWSP  : CStackLoad<0b011, "c.flwsp", FPR32, uimm8_lsb00>,
-               Sched<[WriteFLD32, ReadMemBase]> {
+               Sched<[WriteFLD32, ReadFMemBase]> {
   let Inst{6-4} = imm{4-2};
   let Inst{3-2} = imm{7-6};
 }
@@ -580,7 +564,7 @@ def C_ADD : RVInst16CR<0b1001, 0b10, (outs GPRNoX0:$rs1_wb),
 
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FSDSP  : CStackStore<0b101, "c.fsdsp", FPR64, uimm9_lsb000>,
-               Sched<[WriteFST64, ReadStoreData, ReadMemBase]> {
+               Sched<[WriteFST64, ReadFStoreData, ReadFMemBase]> {
   let Inst{12-10} = imm{5-3};
   let Inst{9-7}   = imm{8-6};
 }
@@ -594,7 +578,7 @@ def C_SWSP : CStackStore<0b110, "c.swsp", GPR, uimm8_lsb00>,
 let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FSWSP  : CStackStore<0b111, "c.fswsp", FPR32, uimm8_lsb00>,
-               Sched<[WriteFST32, ReadStoreData, ReadMemBase]> {
+               Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]> {
   let Inst{12-9} = imm{5-2};
   let Inst{8-7}  = imm{7-6};
 }
@@ -857,7 +841,7 @@ def : InstAlias<".insn_cj $opcode, $funct3, $imm11",
 //===----------------------------------------------------------------------===//
 
 // Patterns are defined in the same order the compressed instructions appear
-// on page 82 of the ISA manual.
+// under the "RVC Instruction Set Listings" section of the ISA manual.
 
 // Quadrant 0
 let Predicates = [HasStdExtCOrZca] in {
@@ -972,7 +956,13 @@ def : CompressPat<(JAL X0, simm12_lsb0:$offset),
                   (C_J simm12_lsb0:$offset)>;
 def : CompressPat<(BEQ GPRC:$rs1, X0, simm9_lsb0:$imm),
                   (C_BEQZ GPRC:$rs1, simm9_lsb0:$imm)>;
+let isCompressOnly = true in
+def : CompressPat<(BEQ X0, GPRC:$rs1, simm9_lsb0:$imm),
+                  (C_BEQZ GPRC:$rs1, simm9_lsb0:$imm)>;
 def : CompressPat<(BNE GPRC:$rs1, X0, simm9_lsb0:$imm),
+                  (C_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
+let isCompressOnly = true in
+def : CompressPat<(BNE X0, GPRC:$rs1, simm9_lsb0:$imm),
                   (C_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
 } // Predicates = [HasStdExtCOrZca]
 

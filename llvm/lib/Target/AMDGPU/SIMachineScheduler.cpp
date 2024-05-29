@@ -904,10 +904,8 @@ void SIScheduleBlockCreator::colorEndsAccordingToDependencies() {
          CurrentTopDownReservedDependencyColoring.size() == DAGSize);
   // If there is no reserved block at all, do nothing. We don't want
   // everything in one block.
-  if (*std::max_element(CurrentBottomUpReservedDependencyColoring.begin(),
-                        CurrentBottomUpReservedDependencyColoring.end()) == 0 &&
-      *std::max_element(CurrentTopDownReservedDependencyColoring.begin(),
-                        CurrentTopDownReservedDependencyColoring.end()) == 0)
+  if (*llvm::max_element(CurrentBottomUpReservedDependencyColoring) == 0 &&
+      *llvm::max_element(CurrentTopDownReservedDependencyColoring) == 0)
     return;
 
   for (unsigned SUNum : DAG->BottomUpIndex2SU) {

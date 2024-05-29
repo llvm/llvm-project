@@ -1,7 +1,7 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -verify -S -emit-llvm -o - %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -verify -S -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -verify -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -verify -emit-llvm -o - %s
 
 typedef unsigned int uint;
 typedef half __attribute__((ext_vector_type(2))) half2;
@@ -49,4 +49,9 @@ kernel void builtins_amdgcn_dl_insts_err(
 
   iOut[3] = __builtin_amdgcn_sudot8(false, A, true, B, C, false);    // expected-error {{'__builtin_amdgcn_sudot8' needs target feature dot8-insts}}
   iOut[4] = __builtin_amdgcn_sudot8(true, A, false, B, C, true);     // expected-error {{'__builtin_amdgcn_sudot8' needs target feature dot8-insts}}
+
+  fOut[5] = __builtin_amdgcn_dot4_f32_fp8_bf8(uiA, uiB, fC);        // expected-error {{'__builtin_amdgcn_dot4_f32_fp8_bf8' needs target feature dot11-insts}}
+  fOut[6] = __builtin_amdgcn_dot4_f32_bf8_fp8(uiA, uiB, fC);        // expected-error {{'__builtin_amdgcn_dot4_f32_bf8_fp8' needs target feature dot11-insts}}
+  fOut[7] = __builtin_amdgcn_dot4_f32_fp8_fp8(uiA, uiB, fC);        // expected-error {{'__builtin_amdgcn_dot4_f32_fp8_fp8' needs target feature dot11-insts}}
+  fOut[8] = __builtin_amdgcn_dot4_f32_bf8_bf8(uiA, uiB, fC);        // expected-error {{'__builtin_amdgcn_dot4_f32_bf8_bf8' needs target feature dot11-insts}}
 }

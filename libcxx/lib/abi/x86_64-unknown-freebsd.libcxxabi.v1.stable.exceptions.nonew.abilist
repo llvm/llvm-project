@@ -56,6 +56,7 @@
 {'is_defined': False, 'name': '__cxa_guard_acquire', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_guard_release', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_increment_exception_refcount', 'type': 'FUNC'}
+{'is_defined': False, 'name': '__cxa_init_primary_exception', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_pure_virtual', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_rethrow', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_rethrow_primary_exception', 'type': 'FUNC'}
@@ -265,6 +266,7 @@
 {'is_defined': True, 'name': '_ZNKSt3__118__time_get_storageIcE15__do_date_orderEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__118__time_get_storageIwE15__do_date_orderEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__119__shared_weak_count13__get_deleterERKSt9type_info', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt3__119bad_expected_accessIvE4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__120__codecvt_utf8_utf16IDiE10do_unshiftER11__mbstate_tPcS4_RS4_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__120__codecvt_utf8_utf16IDiE11do_encodingEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__120__codecvt_utf8_utf16IDiE13do_max_lengthEv', 'type': 'FUNC'}
@@ -523,6 +525,7 @@
 {'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt13exception_ptr31__from_native_exception_pointerEPv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt13exception_ptrC1ERKS_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt13exception_ptrC2ERKS_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt13exception_ptrD1Ev', 'type': 'FUNC'}
@@ -1160,6 +1163,7 @@
 {'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIcLb1EE4initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIwLb0EE4initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIwLb1EE4initEPKc', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__118__get_ostream_fileERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__118__time_get_storageIcE4initERKNS_5ctypeIcEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__118__time_get_storageIcE9__analyzeEcRKNS_5ctypeIcEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__118__time_get_storageIcEC1EPKc', 'type': 'FUNC'}
@@ -1187,6 +1191,7 @@
 {'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutex8try_lockEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutexC1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutexC2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__119__is_posix_terminalEP7__sFILE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base11lock_sharedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base13unlock_sharedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base15try_lock_sharedEv', 'type': 'FUNC'}
@@ -1691,6 +1696,7 @@
 {'is_defined': True, 'name': '_ZTINSt3__118__time_get_storageIwEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__119__shared_weak_countE', 'size': 40, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTINSt3__119bad_expected_accessIvEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__120__codecvt_utf8_utf16IDiEE', 'size': 24, 'type': 'OBJECT'}
@@ -1825,6 +1831,7 @@
 {'is_defined': True, 'name': '_ZTSNSt3__118__time_get_storageIwEE', 'size': 32, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 69, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__119__shared_weak_countE', 'size': 30, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTSNSt3__119bad_expected_accessIvEE', 'size': 33, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 70, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 70, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__120__codecvt_utf8_utf16IDiEE', 'size': 35, 'type': 'OBJECT'}
@@ -1958,6 +1965,7 @@
 {'is_defined': True, 'name': '_ZTVNSt3__117moneypunct_bynameIwLb1EEE', 'size': 112, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 120, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__119__shared_weak_countE', 'size': 56, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTVNSt3__119bad_expected_accessIvEE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 80, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 80, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDiEE', 'size': 96, 'type': 'OBJECT'}

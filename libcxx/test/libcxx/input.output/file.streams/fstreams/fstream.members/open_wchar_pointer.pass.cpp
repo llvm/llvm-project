@@ -17,6 +17,9 @@
 // REQUIRES: windows
 // UNSUPPORTED: no-wide-characters
 
+// TODO: This should not be necessary
+// ADDITIONAL_COMPILE_FLAGS:-D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT -D_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT
+
 #include <fstream>
 #include <cassert>
 #include "test_macros.h"

@@ -51,9 +51,14 @@ void ComputedShaderFlags::print(raw_ostream &OS) const {
   if (FlagVal == 0)
     return;
   OS << "; Note: shader requires additional functionality:\n";
-#define SHADER_FLAG(bit, FlagName, Str)                                        \
+#define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleNum, FlagName, Str)          \
   if (FlagName)                                                                \
-    OS << ";       " Str "\n";
+    (OS << ";").indent(7) << Str << "\n";
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  OS << "; Note: extra DXIL module flags:\n";
+#define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str)                         \
+  if (FlagName)                                                                \
+    (OS << ";").indent(7) << Str << "\n";
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   OS << ";\n";
 }

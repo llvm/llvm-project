@@ -146,17 +146,17 @@ struct C { char a[16]; };
 // CHECK: ClassTemplateSpecializationDecl {{.*}} struct my_union
 // CHECK: CXXRecordDecl {{.*}} implicit struct my_union
 // CHECK: FieldDecl {{.*}} buffer 'char[1024]'
-// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::A':'TestAligns::A'
-// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::B':'TestAligns::B'
-// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::C':'TestAligns::C'
+// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::A'
+// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::B'
+// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::C'
 my_union<A, B, C> my_union_val;
 
 // CHECK: ClassTemplateSpecializationDecl {{.*}} struct my_union2
 // CHECK: CXXRecordDecl {{.*}} implicit struct my_union2
 // CHECK: FieldDecl {{.*}} buffer 'char[1024]'
-// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::A':'TestAligns::A'
-// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::B':'TestAligns::B'
-// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::C':'TestAligns::C'
+// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::A'
+// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::B'
+// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::C'
 my_union2<A, B, C> my_union2_val;
 
 } // namespace TestAligns

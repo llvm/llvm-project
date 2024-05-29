@@ -1,6 +1,7 @@
 ## Test failing to write output file on non-windows platforms.
 
 # UNSUPPORTED: system-windows
+# REQUIRES: non-root-user
 # RUN: rm -rf %t.TestDir
 # RUN: mkdir %t.TestDir
 # RUN: touch %t.TestDir/Output.TestFile

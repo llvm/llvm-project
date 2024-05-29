@@ -7,23 +7,40 @@
  *===-----------------------------------------------------------------------===
  */
 
-#if !defined(__STDDEF_H) || defined(__need_ptrdiff_t) ||                       \
-    defined(__need_size_t) || defined(__need_rsize_t) ||                       \
-    defined(__need_wchar_t) || defined(__need_NULL) ||                         \
-    defined(__need_nullptr_t) || defined(__need_unreachable) ||                \
-    defined(__need_max_align_t) || defined(__need_offsetof) ||                 \
-    defined(__need_wint_t) ||                                                  \
-    (defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ >= 1)
+/*
+ * This header is designed to be included multiple times. If any of the __need_
+ * macros are defined, then only that subset of interfaces are provided. This
+ * can be useful for POSIX headers that need to not expose all of stddef.h, but
+ * need to use some of its interfaces. Otherwise this header provides all of
+ * the expected interfaces.
+ *
+ * When clang modules are enabled, this header is a textual header to support
+ * the multiple include behavior. As such, it doesn't directly declare anything
+ * so that it doesn't add duplicate declarations to all of its includers'
+ * modules.
+ */
+#if defined(__MVS__) && __has_include_next(<stddef.h>)
+#include <__stddef_header_macro.h>
+#undef __need_ptrdiff_t
+#undef __need_size_t
+#undef __need_rsize_t
+#undef __need_wchar_t
+#undef __need_NULL
+#undef __need_nullptr_t
+#undef __need_unreachable
+#undef __need_max_align_t
+#undef __need_offsetof
+#undef __need_wint_t
+#include_next <stddef.h>
+
+#else
 
 #if !defined(__need_ptrdiff_t) && !defined(__need_size_t) &&                   \
     !defined(__need_rsize_t) && !defined(__need_wchar_t) &&                    \
     !defined(__need_NULL) && !defined(__need_nullptr_t) &&                     \
     !defined(__need_unreachable) && !defined(__need_max_align_t) &&            \
     !defined(__need_offsetof) && !defined(__need_wint_t)
-/* Always define miscellaneous pieces when modules are available. */
-#if !__has_feature(modules)
-#define __STDDEF_H
-#endif
+#include <__stddef_header_macro.h>
 #define __need_ptrdiff_t
 #define __need_size_t
 /* ISO9899:2011 7.20 (C11 Annex K): Define rsize_t if __STDC_WANT_LIB_EXT1__ is
@@ -102,4 +119,4 @@ __WINT_TYPE__ directly; accommodate both by requiring __need_wint_t */
 #undef __need_wint_t
 #endif /* __need_wint_t */
 
-#endif
+#endif /* __MVS__ */

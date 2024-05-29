@@ -278,7 +278,7 @@ entry:
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pow_half
 ; GCN-POSTLINK: call fast float @_Z3powff(float %tmp, float 5.000000e-01)
-; GCN-PRELINK: %__pow2sqrt = tail call fast float @_Z4sqrtf(float %tmp)
+; GCN-PRELINK: %__pow2sqrt = tail call fast float @llvm.sqrt.f32(float %tmp)
 define amdgpu_kernel void @test_pow_half(ptr addrspace(1) nocapture %a) {
 entry:
   %arrayidx = getelementptr inbounds float, ptr addrspace(1) %a, i64 1
@@ -360,7 +360,7 @@ declare half @_Z4pownDhi(half, i32)
 ; GCN-NATIVE: %0 = bitcast half %x to i16
 ; GCN-NATIVE: %__pow_sign = and i16 %__yeven, %0
 ; GCN-NATIVE: %1 = bitcast half %__exp2 to i16
-; GCN-NATIVE: %2 = or i16 %__pow_sign, %1
+; GCN-NATIVE: %2 = or disjoint i16 %__pow_sign, %1
 ; GCN-NATIVE: %3 = bitcast i16 %2 to half
 define half @test_pown_f16(half %x, i32 %y) {
 entry:
@@ -378,7 +378,7 @@ declare float @_Z4pownfi(float, i32)
 ; GCN: %[[r0:.*]] = bitcast float %tmp to i32
 ; GCN: %__pow_sign = and i32 %[[r0]], -2147483648
 ; GCN: %[[r1:.*]] = bitcast float %__exp2 to i32
-; GCN: %[[r2:.*]] = or i32 %__pow_sign, %[[r1]]
+; GCN: %[[r2:.*]] = or disjoint i32 %__pow_sign, %[[r1]]
 ; GCN: store i32 %[[r2]], ptr addrspace(1) %a, align 4
 define amdgpu_kernel void @test_pow(ptr addrspace(1) nocapture %a) {
 entry:
@@ -414,7 +414,7 @@ entry:
 ; GCN: %[[r0:.*]] = bitcast float %tmp to i32
 ; GCN: %__pow_sign = and i32 %__yeven, %[[r0]]
 ; GCN: %[[r1:.*]] = bitcast float %__exp2 to i32
-; GCN: %[[r2:.*]] = or i32 %__pow_sign, %[[r1]]
+; GCN: %[[r2:.*]] = or disjoint i32 %__pow_sign, %[[r1]]
 ; GCN: store i32 %[[r2]], ptr addrspace(1) %a, align 4
 define amdgpu_kernel void @test_pown(ptr addrspace(1) nocapture %a) {
 entry:
@@ -438,7 +438,7 @@ declare <2 x half> @_Z3powDv2_DhS_(<2 x half>, <2 x half>)
 ; GCN: %1 = bitcast half %x to i16
 ; GCN: %__pow_sign = and i16 %1, -32768
 ; GCN: %2 = bitcast half %__exp2 to i16
-; GCN: %3 = or i16 %__pow_sign, %2
+; GCN: %3 = or disjoint i16 %__pow_sign, %2
 ; GCN: %4 = bitcast i16 %3 to half
 define half @test_pow_fast_f16__y_13(half %x) {
   %powr = tail call fast half @_Z3powDhDh(half %x, half 13.0)
@@ -453,7 +453,7 @@ define half @test_pow_fast_f16__y_13(half %x) {
 ; GCN: %1 = bitcast <2 x half> %x to <2 x i16>
 ; GCN: %__pow_sign = and <2 x i16> %1, <i16 -32768, i16 -32768>
 ; GCN: %2 = bitcast <2 x half> %__exp2 to <2 x i16>
-; GCN: %3 = or <2 x i16> %__pow_sign, %2
+; GCN: %3 = or disjoint <2 x i16> %__pow_sign, %2
 ; GCN: %4 = bitcast <2 x i16> %3 to <2 x half>
 define <2 x half> @test_pow_fast_v2f16__y_13(<2 x half> %x) {
   %powr = tail call fast <2 x half> @_Z3powDv2_DhS_(<2 x half> %x, <2 x half> <half 13.0, half 13.0>)
@@ -475,8 +475,7 @@ entry:
 declare float @_Z5rootnfi(float, i32)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_rootn_2
-; GCN-POSTLINK: call fast float @_Z5rootnfi(float %tmp, i32 2)
-; GCN-PRELINK: %__rootn2sqrt = tail call fast float @_Z4sqrtf(float %tmp)
+; GCN: call fast float @llvm.sqrt.f32(float %tmp)
 define amdgpu_kernel void @test_rootn_2(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -507,8 +506,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_rootn_m2
-; GCN-POSTLINK: call fast float @_Z5rootnfi(float %tmp, i32 -2)
-; GCN-PRELINK: %__rootn2rsqrt = tail call fast float @_Z5rsqrtf(float %tmp)
+; GCN: [[SQRT:%.+]] = tail call fast float @llvm.sqrt.f32(float %tmp)
+; GCN-NEXT: fdiv fast float 1.000000e+00, [[SQRT]]
 define amdgpu_kernel void @test_rootn_m2(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -694,7 +693,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_use_native_sqrt
-; GCN-NATIVE: call fast float @_Z11native_sqrtf(float %tmp)
+; GCN-NATIVE: call fast float @llvm.sqrt.f32(float %tmp)
 define amdgpu_kernel void @test_use_native_sqrt(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -704,7 +703,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_dont_use_native_sqrt_fast_f64
-; GCN: call fast double @_Z4sqrtd(double %tmp)
+; GCN: call fast double @llvm.sqrt.f64(double %tmp)
 define amdgpu_kernel void @test_dont_use_native_sqrt_fast_f64(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load double, ptr addrspace(1) %a, align 8
@@ -836,8 +835,7 @@ entry:
 }
 
 ; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
-; GCN-PRELINK: declare float @_Z11native_sqrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY]]
 
 ; GCN-PRELINK-DAG: attributes #[[$NOUNWIND]] = { nounwind }
-; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nofree nounwind memory(read) }
+; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nounwind memory(read) }
 attributes #0 = { nounwind }

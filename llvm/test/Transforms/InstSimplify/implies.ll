@@ -155,11 +155,30 @@ define i1 @test9(i32 %length.i, i32 %i) {
 
 define i1 @test10(i32 %length.i, i32 %x.full) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[X_FULL:%.*]], -65536
+; CHECK-NEXT:    [[LARGE:%.*]] = or i32 [[X]], 100
+; CHECK-NEXT:    [[SMALL:%.*]] = or i32 [[X]], 90
+; CHECK-NEXT:    [[KNOWN:%.*]] = icmp ult i32 [[LARGE]], [[LENGTH_I:%.*]]
+; CHECK-NEXT:    [[TO_PROVE:%.*]] = icmp ult i32 [[SMALL]], [[LENGTH_I]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[KNOWN]], [[TO_PROVE]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %x = and i32 %x.full, 4294901760  ;; 4294901760 == 0xffff0000
   %large = or i32 %x, 100
   %small = or i32 %x, 90
+  %known = icmp ult i32 %large, %length.i
+  %to.prove = icmp ult i32 %small, %length.i
+  %res = icmp ule i1 %known, %to.prove
+  ret i1 %res
+}
+
+define i1 @test10_with_disjoint(i32 %length.i, i32 %x.full) {
+; CHECK-LABEL: @test10_with_disjoint(
+; CHECK-NEXT:    ret i1 true
+;
+  %x = and i32 %x.full, 4294901760  ;; 4294901760 == 0xffff0000
+  %large = or disjoint i32 %x, 100
+  %small = or disjoint i32 %x, 90
   %known = icmp ult i32 %large, %length.i
   %to.prove = icmp ult i32 %small, %length.i
   %res = icmp ule i1 %known, %to.prove
@@ -216,11 +235,30 @@ define i1 @test13(i32 %length.i, i32 %x) {
 
 define i1 @test14(i32 %length.i, i32 %x.full) {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[X_FULL:%.*]], -61681
+; CHECK-NEXT:    [[LARGE:%.*]] = or i32 [[X]], 8224
+; CHECK-NEXT:    [[SMALL:%.*]] = or i32 [[X]], 4112
+; CHECK-NEXT:    [[KNOWN:%.*]] = icmp ult i32 [[LARGE]], [[LENGTH_I:%.*]]
+; CHECK-NEXT:    [[TO_PROVE:%.*]] = icmp ult i32 [[SMALL]], [[LENGTH_I]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[KNOWN]], [[TO_PROVE]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %x = and i32 %x.full, 4294905615  ;; 4294905615 == 0xffff0f0f
   %large = or i32 %x, 8224 ;; == 0x2020
   %small = or i32 %x, 4112 ;; == 0x1010
+  %known = icmp ult i32 %large, %length.i
+  %to.prove = icmp ult i32 %small, %length.i
+  %res = icmp ule i1 %known, %to.prove
+  ret i1 %res
+}
+
+define i1 @test14_with_disjoint(i32 %length.i, i32 %x.full) {
+; CHECK-LABEL: @test14_with_disjoint(
+; CHECK-NEXT:    ret i1 true
+;
+  %x = and i32 %x.full, 4294905615  ;; 4294905615 == 0xffff0f0f
+  %large = or disjoint i32 %x, 8224 ;; == 0x2020
+  %small = or disjoint i32 %x, 4112 ;; == 0x1010
   %known = icmp ult i32 %large, %length.i
   %to.prove = icmp ult i32 %small, %length.i
   %res = icmp ule i1 %known, %to.prove
@@ -312,6 +350,44 @@ define i1 @test_uge_icmp(i32 %length.i, i32 %i) {
   %iplus1 = add nuw i32 %i, 1
   %var29 = icmp uge i32 %length.i, %i
   %var30 = icmp uge i32 %length.i, %iplus1
+  %res = icmp ule i1 %var30, %var29
+  ret i1 %res
+}
+
+; Test from PR70374
+define i1 @pr70374(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @pr70374(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[ADD]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %add = add nuw i32 %y, %z
+  %cmp1 = icmp ule i32 %add, %x
+  %cmp2 = icmp uge i32 %x, %y
+  %res = and i1 %cmp2, %cmp1
+  ret i1 %res
+}
+
+define i1 @pr70374_commuted_add(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @pr70374_commuted_add(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[ADD]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %add = add nuw i32 %z, %y
+  %cmp1 = icmp ule i32 %add, %x
+  %cmp2 = icmp uge i32 %x, %y
+  %res = and i1 %cmp2, %cmp1
+  ret i1 %res
+}
+
+define i1 @test_uge_icmp_value(i32 %length.i, i32 %i, i32 %j) {
+; CHECK-LABEL: @test_uge_icmp_value(
+; CHECK-NEXT:    ret i1 true
+;
+  %iplusj = add nuw i32 %i, %j
+  %var29 = icmp uge i32 %length.i, %i
+  %var30 = icmp uge i32 %length.i, %iplusj
   %res = icmp ule i1 %var30, %var29
   ret i1 %res
 }
@@ -496,6 +572,29 @@ define i1 @lshr_value(i32 %length.i, i32 %i, i32 %v) {
   %var29 = icmp ult i32 %i, %length.i
   %var30 = icmp ult i32 %shl, %length.i
   %res = icmp ule i1 %var29, %var30
+  ret i1 %res
+}
+
+define i1 @same_ops_with_constant(i8 %x) {
+; CHECK-LABEL: @same_ops_with_constant(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp sgt i8 %x, 5
+  %cmp2 = icmp ugt i8 %x, 5
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @same_ops_with_constant_wrong_sign(i8 %x) {
+; CHECK-LABEL: @same_ops_with_constant_wrong_sign(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X:%.*]], -5
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i8 [[X]], -5
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cmp1 = icmp sgt i8 %x, -5
+  %cmp2 = icmp ugt i8 %x, -5
+  %res = icmp ule i1 %cmp1, %cmp2
   ret i1 %res
 }
 

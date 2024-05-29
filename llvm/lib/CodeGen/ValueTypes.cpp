@@ -79,35 +79,43 @@ bool EVT::isExtendedVector() const {
 }
 
 bool EVT::isExtended16BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 16;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(16);
 }
 
 bool EVT::isExtended32BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 32;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(32);
 }
 
 bool EVT::isExtended64BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 64;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(64);
 }
 
 bool EVT::isExtended128BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 128;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(128);
 }
 
 bool EVT::isExtended256BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 256;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(256);
 }
 
 bool EVT::isExtended512BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 512;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(512);
 }
 
 bool EVT::isExtended1024BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 1024;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(1024);
 }
 
 bool EVT::isExtended2048BitVector() const {
-  return isExtendedVector() && getExtendedSizeInBits() == 2048;
+  return isExtendedVector() &&
+         getExtendedSizeInBits() == TypeSize::getFixed(2048);
 }
 
 bool EVT::isExtendedFixedLengthVector() const {
@@ -143,7 +151,7 @@ ElementCount EVT::getExtendedVectorElementCount() const {
 TypeSize EVT::getExtendedSizeInBits() const {
   assert(isExtended() && "Type is not extended!");
   if (IntegerType *ITy = dyn_cast<IntegerType>(LLVMTy))
-    return TypeSize::Fixed(ITy->getBitWidth());
+    return TypeSize::getFixed(ITy->getBitWidth());
   if (VectorType *VTy = dyn_cast<VectorType>(LLVMTy))
     return VTy->getPrimitiveSizeInBits();
   llvm_unreachable("Unrecognized extended type!");
@@ -173,6 +181,7 @@ std::string EVT::getEVTString() const {
   case MVT::Metadata:  return "Metadata";
   case MVT::Untyped:   return "Untyped";
   case MVT::funcref:   return "funcref";
+  case MVT::exnref:    return "exnref";
   case MVT::externref: return "externref";
   case MVT::aarch64svcount:
     return "aarch64svcount";
@@ -224,6 +233,8 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getInt1Ty(Context), 1);
   case MVT::v2i1:
     return FixedVectorType::get(Type::getInt1Ty(Context), 2);
+  case MVT::v3i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 3);
   case MVT::v4i1:
     return FixedVectorType::get(Type::getInt1Ty(Context), 4);
   case MVT::v8i1:
@@ -256,6 +267,8 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getInt8Ty(Context), 1);
   case MVT::v2i8:
     return FixedVectorType::get(Type::getInt8Ty(Context), 2);
+  case MVT::v3i8:
+    return FixedVectorType::get(Type::getInt8Ty(Context), 3);
   case MVT::v4i8:
     return FixedVectorType::get(Type::getInt8Ty(Context), 4);
   case MVT::v8i8:
@@ -567,9 +580,11 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   // clang-format on
 }
 
-/// Return the value type corresponding to the specified type.  This returns all
-/// pointers as MVT::iPTR.  If HandleUnknown is true, unknown types are returned
-/// as Other, otherwise they are invalid.
+/// Return the value type corresponding to the specified type.
+/// If HandleUnknown is true, unknown types are returned as Other, otherwise
+/// they are invalid.
+/// NB: This includes pointer types, which require a DataLayout to convert
+/// to a concrete value type.
 MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   assert(Ty != nullptr && "Invalid type");
   switch (Ty->getTypeID()) {
@@ -599,7 +614,6 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::X86_AMXTyID:   return MVT(MVT::x86amx);
   case Type::FP128TyID:     return MVT(MVT::f128);
   case Type::PPC_FP128TyID: return MVT(MVT::ppcf128);
-  case Type::PointerTyID:   return MVT(MVT::iPTR);
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
@@ -610,13 +624,17 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   }
 }
 
-/// getEVT - Return the value type corresponding to the specified type.  This
-/// returns all pointers as MVT::iPTR.  If HandleUnknown is true, unknown types
-/// are returned as Other, otherwise they are invalid.
+/// getEVT - Return the value type corresponding to the specified type.
+/// If HandleUnknown is true, unknown types are returned as Other, otherwise
+/// they are invalid.
+/// NB: This includes pointer types, which require a DataLayout to convert
+/// to a concrete value type.
 EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
   switch (Ty->getTypeID()) {
   default:
     return MVT::getVT(Ty, HandleUnknown);
+  case Type::TokenTyID:
+    return MVT::Untyped;
   case Type::IntegerTyID:
     return getIntegerVT(Ty->getContext(), cast<IntegerType>(Ty)->getBitWidth());
   case Type::FixedVectorTyID:

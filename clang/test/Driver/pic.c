@@ -128,15 +128,15 @@
 // Make sure -pie is passed to along to ld and that the right *crt* files
 // are linked in.
 // RUN: %clang %s -target i386-unknown-freebsd -fPIE -pie -### \
-// RUN: --gcc-toolchain="" -rtlib=platform \
+// RUN: -rtlib=platform \
 // RUN: --sysroot=%S/Inputs/basic_freebsd_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE-LD
 // RUN: %clang %s -target i386-linux-gnu -fPIE -pie -### \
-// RUN: --gcc-toolchain="" -rtlib=platform --unwindlib=platform \
+// RUN: -rtlib=platform --unwindlib=platform \
 // RUN: --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE-LD
 // RUN: %clang %s -target i386-linux-gnu -fPIC -pie -### \
-// RUN: --gcc-toolchain="" -rtlib=platform --unwindlib=platform \
+// RUN: -rtlib=platform --unwindlib=platform \
 // RUN: --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE-LD
 //
@@ -149,7 +149,6 @@
 // RUN: %clang -c %s -target i386-unknown-unknown -static -fPIC -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
 // RUN: %clang %s -target i386-linux-gnu -static -fPIC -### \
-// RUN: --gcc-toolchain="" \
 // RUN: --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-STATIC
 //
@@ -166,11 +165,11 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 // RUN: %clang -c %s -target armv7-linux-musleabihf -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
-// RUN: %clang %s -target x86_64-linux-musl -nopie -### 2>&1 \
+// RUN: %clang %s --target=x86_64-linux-musl -no-pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIE
-// RUN: %clang %s -target x86_64-linux-musl -pie -nopie -### 2>&1 \
+// RUN: %clang %s --target=x86_64-linux-musl -pie -no-pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIE
-// RUN: %clang %s -target x86_64-linux-musl -nopie -pie -### 2>&1 \
+// RUN: %clang %s --target=x86_64-linux-musl -no-pie -pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 //
 // Darwin is a beautiful and unique snowflake when it comes to these flags.

@@ -35,6 +35,9 @@ module m1
       character(len=*) :: z
       character(len=*) :: w
     end
+    module subroutine s10(x, y, z, w)
+      real x(0:), y(:), z(0:*), w(*)
+    end
   end interface
 end
 
@@ -51,9 +54,9 @@ contains
     real :: y
   end
   module subroutine s6(x, y)
-    !ERROR: Dummy argument 'x' has type INTEGER(4); the corresponding argument in the interface body has type REAL(4)
+    !ERROR: Dummy argument 'x' has type INTEGER(4); the corresponding argument in the interface body has distinct type REAL(4)
     integer :: x
-    !ERROR: Dummy argument 'y' has type REAL(8); the corresponding argument in the interface body has type REAL(4)
+    !ERROR: Dummy argument 'y' has type REAL(8); the corresponding argument in the interface body has distinct type REAL(4)
     real(8) :: y
   end
   module subroutine s7(x, y, z)
@@ -72,11 +75,14 @@ contains
   end
   module subroutine s9(x, y, z, w)
     character(len=4) :: x
-    !ERROR: Dummy argument 'y' has type CHARACTER(KIND=1,LEN=5_8); the corresponding argument in the interface body has type CHARACTER(KIND=1,LEN=4_8)
+    !ERROR: Dummy argument 'y' has type CHARACTER(KIND=1,LEN=5_8); the corresponding argument in the interface body has distinct type CHARACTER(KIND=1,LEN=4_8)
     character(len=5) :: y
     character(len=*) :: z
-    !ERROR: Dummy argument 'w' has type CHARACTER(KIND=1,LEN=4_8); the corresponding argument in the interface body has type CHARACTER(KIND=1,LEN=*)
+    !ERROR: Dummy argument 'w' has type CHARACTER(KIND=1,LEN=4_8); the corresponding argument in the interface body has distinct type CHARACTER(KIND=1,LEN=*)
     character(len=4) :: w
+  end
+  module subroutine s10(x, y, z, w)
+    real x(:), y(0:), z(*), w(0:*) ! all ok, lower bounds don't matter
   end
 end
 
@@ -142,6 +148,8 @@ module m2b
     end
     module subroutine s6() bind(c)
     end
+    module subroutine s7() bind(c, name="s7")
+    end
   end interface
 end
 
@@ -165,6 +173,8 @@ contains
   end
   !ERROR: Module subprogram 's6' has binding label 'not_s6' but the corresponding interface body has 's6'
   module subroutine s6() bind(c, name="not_s6")
+  end
+  module procedure s7
   end
 end
 
@@ -272,10 +282,10 @@ contains
   !OK
   real module function f1()
   end
-  !ERROR: Return type of function 'f2' does not match return type of the corresponding interface body
+  !ERROR: Result of function 'f2' is not compatible with the result of the corresponding interface body: function results have distinct types: INTEGER(4) vs REAL(4)
   integer module function f2()
   end
-  !ERROR: Return type of function 'f3' does not match return type of the corresponding interface body
+  !ERROR: Result of function 'f3' is not compatible with the result of the corresponding interface body: function results have incompatible attributes
   module function f3()
     real :: f3
     pointer :: f3
@@ -330,7 +340,20 @@ submodule(m9) sm1
     character(len=-1) s ! ok
   end subroutine
   module subroutine sub2(s)
-    !ERROR: Dummy argument 's' has type CHARACTER(KIND=1,LEN=1_8); the corresponding argument in the interface body has type CHARACTER(KIND=1,LEN=0_8)
+    !ERROR: Dummy argument 's' has type CHARACTER(KIND=1,LEN=1_8); the corresponding argument in the interface body has distinct type CHARACTER(KIND=1,LEN=0_8)
     character(len=1) s
   end subroutine
+end submodule
+
+module m10
+  interface
+    module character(2) function f()
+    end function
+  end interface
+end module
+submodule(m10) sm10
+ contains
+  !ERROR: Result of function 'f' is not compatible with the result of the corresponding interface body: function results have distinct types: CHARACTER(KIND=1,LEN=3_8) vs CHARACTER(KIND=1,LEN=2_8)
+  module character(3) function f()
+  end function
 end submodule

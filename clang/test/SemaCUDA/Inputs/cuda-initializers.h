@@ -143,3 +143,14 @@ struct T_F_NED {
 struct T_FA_NED {
   NED ned[2];
 };
+
+// contexpr empty ctor -- allowed
+struct CEEC {
+  constexpr CEEC() {}
+};
+
+// Compiler generated trivial ctor -- allowed
+struct CGTC {
+  CEEC ceec;
+  int a;
+};

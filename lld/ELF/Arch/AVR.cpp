@@ -231,7 +231,7 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   // Since every jump destination is word aligned we gain an extra bit
   case R_AVR_7_PCREL: {
-    checkInt(loc, val, 7, rel);
+    checkInt(loc, val - 2, 8, rel);
     checkAlignment(loc, val, 2, rel);
     const uint16_t target = (val - 2) >> 1;
     write16le(loc, (read16le(loc) & 0xfc07) | ((target & 0x7f) << 3));
@@ -255,6 +255,7 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
 
   case R_AVR_CALL: {
+    checkAlignment(loc, val, 2, rel);
     uint16_t hi = val >> 17;
     uint16_t lo = val >> 1;
     write16le(loc, read16le(loc) | ((hi >> 1) << 4) | (hi & 1));

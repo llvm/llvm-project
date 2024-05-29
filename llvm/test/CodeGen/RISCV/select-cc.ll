@@ -230,7 +230,7 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV32I-NEXT:    beqz a1, .LBB1_4
 ; RV32I-NEXT:  # %bb.3:
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call bar@plt
+; RV32I-NEXT:    call bar
 ; RV32I-NEXT:  .LBB1_4:
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -251,7 +251,7 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64I-NEXT:    beqz a1, .LBB1_4
 ; RV64I-NEXT:  # %bb.3:
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call bar@plt
+; RV64I-NEXT:    call bar
 ; RV64I-NEXT:  .LBB1_4:
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload

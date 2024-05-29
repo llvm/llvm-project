@@ -10,7 +10,6 @@
 
 using namespace mlir;
 
-// Map arithmetic fastmath enum values to LLVMIR enum values.
 LLVM::FastmathFlags
 mlir::arith::convertArithFastMathFlagsToLLVM(arith::FastMathFlags arithFMF) {
   LLVM::FastmathFlags llvmFMF{};
@@ -22,17 +21,61 @@ mlir::arith::convertArithFastMathFlagsToLLVM(arith::FastMathFlags arithFMF) {
       {arith::FastMathFlags::contract, LLVM::FastmathFlags::contract},
       {arith::FastMathFlags::afn, LLVM::FastmathFlags::afn},
       {arith::FastMathFlags::reassoc, LLVM::FastmathFlags::reassoc}};
-  for (auto fmfMap : flags) {
-    if (bitEnumContainsAny(arithFMF, fmfMap.first))
-      llvmFMF = llvmFMF | fmfMap.second;
+  for (auto [arithFlag, llvmFlag] : flags) {
+    if (bitEnumContainsAny(arithFMF, arithFlag))
+      llvmFMF = llvmFMF | llvmFlag;
   }
   return llvmFMF;
 }
 
-// Create an LLVM fastmath attribute from a given arithmetic fastmath attribute.
 LLVM::FastmathFlagsAttr
 mlir::arith::convertArithFastMathAttrToLLVM(arith::FastMathFlagsAttr fmfAttr) {
   arith::FastMathFlags arithFMF = fmfAttr.getValue();
   return LLVM::FastmathFlagsAttr::get(
       fmfAttr.getContext(), convertArithFastMathFlagsToLLVM(arithFMF));
+}
+
+LLVM::IntegerOverflowFlags mlir::arith::convertArithOverflowFlagsToLLVM(
+    arith::IntegerOverflowFlags arithFlags) {
+  LLVM::IntegerOverflowFlags llvmFlags{};
+  const std::pair<arith::IntegerOverflowFlags, LLVM::IntegerOverflowFlags>
+      flags[] = {
+          {arith::IntegerOverflowFlags::nsw, LLVM::IntegerOverflowFlags::nsw},
+          {arith::IntegerOverflowFlags::nuw, LLVM::IntegerOverflowFlags::nuw}};
+  for (auto [arithFlag, llvmFlag] : flags) {
+    if (bitEnumContainsAny(arithFlags, arithFlag))
+      llvmFlags = llvmFlags | llvmFlag;
+  }
+  return llvmFlags;
+}
+
+LLVM::RoundingMode
+mlir::arith::convertArithRoundingModeToLLVM(arith::RoundingMode roundingMode) {
+  switch (roundingMode) {
+  case arith::RoundingMode::downward:
+    return LLVM::RoundingMode::TowardNegative;
+  case arith::RoundingMode::to_nearest_away:
+    return LLVM::RoundingMode::NearestTiesToAway;
+  case arith::RoundingMode::to_nearest_even:
+    return LLVM::RoundingMode::NearestTiesToEven;
+  case arith::RoundingMode::toward_zero:
+    return LLVM::RoundingMode::TowardZero;
+  case arith::RoundingMode::upward:
+    return LLVM::RoundingMode::TowardPositive;
+  }
+  llvm_unreachable("Unhandled rounding mode");
+}
+
+LLVM::RoundingModeAttr mlir::arith::convertArithRoundingModeAttrToLLVM(
+    arith::RoundingModeAttr roundingModeAttr) {
+  assert(roundingModeAttr && "Expecting valid attribute");
+  return LLVM::RoundingModeAttr::get(
+      roundingModeAttr.getContext(),
+      convertArithRoundingModeToLLVM(roundingModeAttr.getValue()));
+}
+
+LLVM::FPExceptionBehaviorAttr
+mlir::arith::getLLVMDefaultFPExceptionBehavior(MLIRContext &context) {
+  return LLVM::FPExceptionBehaviorAttr::get(&context,
+                                            LLVM::FPExceptionBehavior::Ignore);
 }

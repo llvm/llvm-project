@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_80 -mattr=+ptx70 | FileCheck --check-prefixes=CHECK,SM80 %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_80 -mattr=+ptx71 | FileCheck --check-prefixes=CHECK,SM80 %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | FileCheck --check-prefixes=CHECK,SM90 %s
 ; RUN: %if ptxas-11.8 %{ llc < %s -march=nvptx64 -mcpu=sm_80 -mattr=+ptx71 | %ptxas-verify -arch=sm_80 %}
 ; RUN: %if ptxas-11.8 %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | %ptxas-verify -arch=sm_90 %}
@@ -205,5 +205,140 @@ define bfloat @test_fadd_imm_1(bfloat %a) #0 {
 define bfloat @test_select_cc_bf16_f64(double %a, double %b, bfloat %c, bfloat %d) #0 {
   %cc = fcmp olt double %a, %b
   %r = select i1 %cc, bfloat %c, bfloat %d
+  ret bfloat %r
+}
+
+; CHECK-LABEL: test_extload_bf16x8
+; CHECK: ld.shared.v4.b32 {%r
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+; SM80: cvt.f32.bf16 %f{{.*}}, %rs
+define <8 x float> @test_extload_bf16x8(ptr addrspace(3) noundef %arg) #0 {
+  %load = load <8 x bfloat>, ptr addrspace(3) %arg, align 16
+  %res = fpext <8 x bfloat> %load to <8 x float>
+  ret <8 x float> %res
+}
+
+; CHECK-LABEL: test_fptosi_i16(
+; CHECK:      ld.param.b16     [[A:%rs[0-9]+]], [test_fptosi_i16_param_0];
+; SM80:       cvt.f32.bf16     [[B:%f[0-9]+]], [[A]];
+; SM80:       cvt.rzi.s16.f32  [[C:%rs[0-9]+]], [[B]];
+; SM80:       cvt.u32.u16      [[R:%r[0-9]+]], [[C]];
+; SM90:       cvt.rzi.s16.bf16 [[B:%rs[0-9]+]], [[A]];
+; SM90:       cvt.u32.u16      [[R:%r[0-9]+]], [[B]];
+; CHECK:      st.param.b32     [func_retval0+0], [[R]];
+; CHECK:      ret;
+define i16 @test_fptosi_i16(bfloat %a) {
+  %r = fptosi bfloat %a to i16
+  ret i16 %r
+}
+
+; CHECK-LABEL: test_fptoui_i16(
+; CHECK:      ld.param.b16     [[A:%rs[0-9]+]], [test_fptoui_i16_param_0];
+; SM80:       cvt.f32.bf16     [[B:%f[0-9]+]], [[A]];
+; SM80:       cvt.rzi.u16.f32  [[C:%rs[0-9]+]], [[B]];
+; SM80:       cvt.u32.u16      [[R:%r[0-9]+]], [[C]];
+; SM90:       cvt.rzi.u16.bf16 [[B:%rs[0-9]+]], [[A]];
+; SM90:       cvt.u32.u16      [[R:%r[0-9]+]], [[B]];
+; CHECK:      st.param.b32     [func_retval0+0], [[R]];
+; CHECK:      ret;
+define i16 @test_fptoui_i16(bfloat %a) {
+  %r = fptoui bfloat %a to i16
+  ret i16 %r
+}
+
+; CHECK-LABEL: test_sitofp_i16(
+; CHECK:      ld.param.u16    [[A:%rs[0-9]+]], [test_sitofp_i16_param_0];
+; SM80:       cvt.rn.f32.s16  [[B:%f[0-9]+]], [[A]];
+; SM80:       cvt.rn.bf16.f32 [[R:%rs[0-9]+]], [[B]];
+; SM90:       cvt.rn.bf16.s16 [[R:%rs[0-9]+]], [[A]];
+; CHECK:      st.param.b16    [func_retval0+0], [[R]];
+; CHECK:      ret;
+define bfloat @test_sitofp_i16(i16 %a) {
+  %r = sitofp i16 %a to bfloat
+  ret bfloat %r
+}
+
+; CHECK-LABEL: test_uitofp_i8(
+; CHECK:      ld.param.u8 %rs1, [test_uitofp_i8_param_0];
+; SM80:       cvt.rn.f32.u16  [[B:%f[0-9]+]], [[A]];
+; SM80:       cvt.rn.bf16.f32 [[R:%rs[0-9]+]], [[B]];
+; SM90:       cvt.rn.bf16.u16 [[R:%rs[0-9]+]], [[A]];
+; CHECK:      st.param.b16    [func_retval0+0], [[R]];
+; CHECK:      ret;
+define bfloat @test_uitofp_i8(i8 %a) {
+  %r = uitofp i8 %a to bfloat
+  ret bfloat %r
+}
+
+; CHECK-LABEL: test_uitofp_i1(
+; CHECK:      ld.param.u8     [[A:%rs[0-9]+]], [test_uitofp_i1_param_0];
+; CHECK:      and.b16         [[B:%rs[0-9]+]], [[A]], 1;
+; CHECK:      setp.eq.b16     [[C:%p[0-9]+]], [[B]], 1;
+; CHECK:      selp.u32        [[D:%r[0-9]+]], 1, 0, [[C]];
+; SM80:       cvt.rn.f32.u32  [[E:%f[0-9]+]], [[D]];
+; SM80:       cvt.rn.bf16.f32 [[R:%rs[0-9]+]], [[E]];
+; SM90:       cvt.rn.bf16.u32 [[R:%rs[0-9]+]], [[D]];
+; CHECK:      st.param.b16    [func_retval0+0], [[R]];
+; CHECK:      ret;
+define bfloat @test_uitofp_i1(i1 %a) {
+  %r = uitofp i1 %a to bfloat
+  ret bfloat %r
+}
+
+; CHECK-LABEL: test_uitofp_i16(
+; CHECK:      ld.param.u16    [[A:%rs[0-9]+]], [test_uitofp_i16_param_0];
+; SM80:       cvt.rn.f32.u16  [[B:%f[0-9]+]], [[A]];
+; SM80:       cvt.rn.bf16.f32 [[R:%rs[0-9]+]], [[B]];
+; SM90:       cvt.rn.bf16.u16 [[R:%rs[0-9]+]], [[A]];
+; CHECK:      st.param.b16    [func_retval0+0], [[R]];
+; CHECK:      ret;
+define bfloat @test_uitofp_i16(i16 %a) {
+  %r = uitofp i16 %a to bfloat
+  ret bfloat %r
+}
+
+; CHECK-LABEL: test_uitofp_i32(
+; CHECK:      ld.param.u32    [[A:%r[0-9]+]], [test_uitofp_i32_param_0];
+; SM80:       cvt.rn.f32.u32  [[B:%f[0-9]+]], [[A]];
+; SM80:       cvt.rn.bf16.f32 [[R:%rs[0-9]+]], [[B]];
+; SM90:       cvt.rn.bf16.u32 [[R:%rs[0-9]+]], [[A]];
+; CHECK:      st.param.b16    [func_retval0+0], [[R]];
+; CHECK:      ret;
+define bfloat @test_uitofp_i32(i32 %a) {
+  %r = uitofp i32 %a to bfloat
+  ret bfloat %r
+}
+
+; CHECK-LABEL: test_uitofp_i64(
+; CHECK:      ld.param.u64    [[A:%rd[0-9]+]], [test_uitofp_i64_param_0];
+; SM80:       cvt.rn.f32.u64  [[B:%f[0-9]+]], [[A]];
+; SM80:       cvt.rn.bf16.f32 [[R:%rs[0-9]+]], [[B]];
+; SM90:       cvt.rn.bf16.u64 [[R:%rs[0-9]+]], [[A]];
+; CHECK:      st.param.b16    [func_retval0+0], [[R]];
+; CHECK:      ret;
+define bfloat @test_uitofp_i64(i64 %a) {
+  %r = uitofp i64 %a to bfloat
+  ret bfloat %r
+}
+
+; CHECK-LABEL: test_roundeven(
+; CHECK:      ld.param.b16      [[A:%rs[0-9]+]], [test_roundeven_param_0];
+; SM80:       cvt.rni.f32.f32   [[F:%f[0-9]+]]
+; SM80:       cvt.rn.bf16.f32   [[R:%rs[0-9]+]], [[F]];
+; SM90:       cvt.rni.bf16.bf16 [[R:%rs[0-9]+]], [[A]];
+; CHECK:      st.param.b16      [func_retval0+0], [[R]];
+; CHECK:      ret;
+define bfloat @test_roundeven(bfloat %a) {
+  %r = call bfloat @llvm.roundeven.bf16(bfloat %a)
   ret bfloat %r
 }

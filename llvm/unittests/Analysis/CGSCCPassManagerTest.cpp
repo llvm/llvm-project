@@ -1202,9 +1202,9 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
         assert(H3F.getName() == "h3" && "Wrong called function!");
         H2F.begin()->begin()->eraseFromParent();
         // Insert a bitcast of `h3` so that we retain a ref edge to it.
-        (void)CastInst::CreatePointerCast(&H3F,
-                                          Type::getInt8PtrTy(H2F.getContext()),
-                                          "dummy", &*H2F.begin()->begin());
+        (void)CastInst::CreatePointerCast(
+            &H3F, PointerType::getUnqual(H2F.getContext()), "dummy",
+            &*H2F.begin()->begin());
 
         // Now update the call graph.
         auto &NewC =
@@ -1631,9 +1631,9 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses8) {
           FnF->getEntryBlock().front().moveBefore(RI);
         ASSERT_NE(FnF, nullptr);
 
-        // Create an unsused constant that is referencing the old (=replaced)
+        // Create an unused constant that is referencing the old (=replaced)
         // function.
-        ConstantExpr::getBitCast(FnF, Type::getInt8PtrTy(FnF->getContext()));
+        ConstantExpr::getPtrToInt(FnF, Type::getInt64Ty(FnF->getContext()));
 
         // Use the CallGraphUpdater to update the call graph.
         CallGraphUpdater CGU;
@@ -1763,11 +1763,11 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions1) {
           F.getEntryBlock().front().eraseFromParent();
           // 2. Insert a ref edge from 'f' to 'f'.
           (void)CastInst::CreatePointerCast(
-              &F, Type::getInt8PtrTy(F.getContext()), "f.ref",
+              &F, PointerType::getUnqual(F.getContext()), "f.ref",
               &F.getEntryBlock().front());
           // 3. Insert a ref edge from 'f' to 'g'.
           (void)CastInst::CreatePointerCast(
-              G, Type::getInt8PtrTy(F.getContext()), "g.ref",
+              G, PointerType::getUnqual(F.getContext()), "g.ref",
               &F.getEntryBlock().front());
 
           CG.addSplitFunction(F, *G);
@@ -1844,18 +1844,20 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions2) {
           BasicBlock::Create(F.getParent()->getContext(), "entry", H1);
       BasicBlock *H2BB =
           BasicBlock::Create(F.getParent()->getContext(), "entry", H2);
-      (void)CastInst::CreatePointerCast(H2, Type::getInt8PtrTy(F.getContext()),
-                                        "h2.ref", H1BB);
+      (void)CastInst::CreatePointerCast(
+          H2, PointerType::getUnqual(F.getContext()), "h2.ref", H1BB);
       (void)ReturnInst::Create(H1->getContext(), H1BB);
-      (void)CastInst::CreatePointerCast(H1, Type::getInt8PtrTy(F.getContext()),
-                                        "h1.ref", H2BB);
+      (void)CastInst::CreatePointerCast(
+          H1, PointerType::getUnqual(F.getContext()), "h1.ref", H2BB);
       (void)ReturnInst::Create(H2->getContext(), H2BB);
 
       // Add 'f -> h1' ref edge.
-      (void)CastInst::CreatePointerCast(H1, Type::getInt8PtrTy(F.getContext()),
+      (void)CastInst::CreatePointerCast(H1,
+                                        PointerType::getUnqual(F.getContext()),
                                         "h1.ref", &F.getEntryBlock().front());
       // Add 'f -> h2' ref edge.
-      (void)CastInst::CreatePointerCast(H2, Type::getInt8PtrTy(F.getContext()),
+      (void)CastInst::CreatePointerCast(H2,
+                                        PointerType::getUnqual(F.getContext()),
                                         "h2.ref", &F.getEntryBlock().front());
 
       CG.addSplitRefRecursiveFunctions(F, SmallVector<Function *, 2>({H1, H2}));

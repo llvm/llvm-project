@@ -19,6 +19,9 @@ struct LeafType;
 
 struct MiddleType : Type::TypeBase<MiddleType, Type, TypeStorage> {
   using Base::Base;
+
+  static constexpr StringLiteral name = "test.middle";
+
   static bool classof(Type ty) {
     return ty.getTypeID() == TypeID::get<LeafType>() || Base::classof(ty);
   }
@@ -26,6 +29,8 @@ struct MiddleType : Type::TypeBase<MiddleType, Type, TypeStorage> {
 
 struct LeafType : Type::TypeBase<LeafType, MiddleType, TypeStorage> {
   using Base::Base;
+
+  static constexpr StringLiteral name = "test.leaf";
 };
 
 struct FakeDialect : Dialect {

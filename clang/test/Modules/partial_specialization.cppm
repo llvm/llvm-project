@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/A.cppm -o %t/A.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -fsyntax-only -verify
 //
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/A.cppm -o %t/A.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -fsyntax-only -verify
+//
 //--- foo.h
 template<typename T, typename U>
 inline constexpr bool IsSame = false;

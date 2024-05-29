@@ -27,13 +27,10 @@ body:             |
     %2:vr = COPY $v2
     %3:vr = COPY $v3
     %4:vmv0 = COPY %0
-    %pt1:vrnov0 = IMPLICIT_DEF
-    %5:vrnov0 = PseudoVMERGE_VIM_M1 %pt2, killed %2, 1, %4, 1, 3
+    %5:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, killed %2, 1, %4, 1, 3
     %6:vmv0 = COPY %1
-    %pt2:vrnov0 = IMPLICIT_DEF
-    %7:vrnov0 = PseudoVMERGE_VIM_M1 %pt2, killed %3, 1, %6, 1, 3
-    %pt:vr = IMPLICIT_DEF
-    %8:vr = PseudoVADD_VV_M1 %pt, killed %5, killed %7, 1, 3, 0
+    %7:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, killed %3, 1, %6, 1, 3
+    %8:vr = PseudoVADD_VV_M1 undef $noreg, killed %5, killed %7, 1, 3, 0
     $v0 = COPY %8
     PseudoRET implicit $v0
 ...

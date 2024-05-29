@@ -20,23 +20,23 @@
 # CHECK-INST: vfncvtbf16.f.f.w v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x4e,0x48]
 # CHECK-ERROR: instruction requires the following: 'Zvfbfmin' (Vector BF16 Converts){{$}}
-# CHECK-UNKNOWN: 57 94 4e 48 <unknown>
+# CHECK-UNKNOWN: 484e9457 <unknown>
 vfncvtbf16.f.f.w v8, v4, v0.t
 
 # CHECK-INST: vfncvtbf16.f.f.w v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x4e,0x4a]
 # CHECK-ERROR: instruction requires the following: 'Zvfbfmin' (Vector BF16 Converts){{$}}
-# CHECK-UNKNOWN: 57 94 4e 4a <unknown>
+# CHECK-UNKNOWN: 4a4e9457 <unknown>
 vfncvtbf16.f.f.w v8, v4
 
 # CHECK-INST: vfwcvtbf16.f.f.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x46,0x48]
 # CHECK-ERROR: instruction requires the following: 'Zvfbfmin' (Vector BF16 Converts){{$}}
-# CHECK-UNKNOWN: 57 94 46 48 <unknown>
+# CHECK-UNKNOWN: 48469457 <unknown>
 vfwcvtbf16.f.f.v v8, v4, v0.t
 
 # CHECK-INST: vfwcvtbf16.f.f.v v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x46,0x4a]
 # CHECK-ERROR: instruction requires the following: 'Zvfbfmin' (Vector BF16 Converts){{$}}
-# CHECK-UNKNOWN: 57 94 46 4a <unknown>
+# CHECK-UNKNOWN: 4a469457 <unknown>
 vfwcvtbf16.f.f.v v8, v4

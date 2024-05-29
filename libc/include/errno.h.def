@@ -9,42 +9,32 @@
 #ifndef LLVM_LIBC_ERRNO_H
 #define LLVM_LIBC_ERRNO_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
 #ifdef __linux__
 
 #include <linux/errno.h>
 
-#ifndef ERFKILL
-#define ERFKILL 132
-#endif // ERFKILL
-
-#ifndef EOWNERDEAD
-#define EOWNERDEAD 130
-#endif // EOWNERDEAD
-
-#ifndef EHWPOISON
-#define EHWPOISON 133
-#endif // EHWPOISON
-
-#ifndef ECANCELED
-#define ECANCELED 125
-#endif // ECANCELED
-
 #ifndef ENOTSUP
 #define ENOTSUP EOPNOTSUPP
 #endif // ENOTSUP
 
-#ifndef ENOTRECOVERABLE
-#define ENOTRECOVERABLE 131
-#endif // ENOTRECOVERABLE
+#include "llvm-libc-macros/linux/error-number-macros.h"
 
 #else // __linux__
-#include <llvm-libc-macros/generic-error-number-macros.h>
+#include "llvm-libc-macros/generic-error-number-macros.h"
 #endif
 
 #if !defined(__AMDGPU__) && !defined(__NVPTX__)
+
+#ifdef __cplusplus
+extern "C" {
+extern thread_local int __llvmlibc_errno;
+}
+#else
 extern _Thread_local int __llvmlibc_errno;
+#endif // __cplusplus
+
 #define errno __llvmlibc_errno
 #endif
 

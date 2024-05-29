@@ -1,4 +1,4 @@
-; RUN: opt -passes=lowerswitch -S < %s | FileCheck %s
+; RUN: opt -passes=lower-switch -S < %s | FileCheck %s
 
 ; Test that we don't crash and have a different basic block for each incoming edge.
 define void @test0(i32 %mode) {
@@ -31,7 +31,7 @@ BB3:
   br label %BB2
 }
 
-; Test switch cases that are merged into a single case during lowerswitch
+; Test switch cases that are merged into a single case during lower-switch
 ; (take 84 and 85 below) - check that the number of incoming phi values match
 ; the number of branches.
 define void @test1(i32 %mode) {
@@ -198,7 +198,7 @@ define void @test2(i32 %mode, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5, i1 %c6) {
 }
 
 ; Test that the PHI node in for.cond should have one entry for each predecessor
-; of its parent basic block after lowerswitch merged several cases into a new
+; of its parent basic block after lower-switch merged several cases into a new
 ; default block.
 define void @test3(i32 %mode, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @test3

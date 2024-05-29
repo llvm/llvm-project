@@ -19,9 +19,11 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/raw_ostream.h"
@@ -49,9 +51,9 @@ namespace llvm {
 class ProfOStream {
 public:
   ProfOStream(raw_fd_ostream &FD)
-      : IsFDOStream(true), OS(FD), LE(FD, support::little) {}
+      : IsFDOStream(true), OS(FD), LE(FD, llvm::endianness::little) {}
   ProfOStream(raw_string_ostream &STR)
-      : IsFDOStream(false), OS(STR), LE(STR, support::little) {}
+      : IsFDOStream(false), OS(STR), LE(STR, llvm::endianness::little) {}
 
   uint64_t tell() { return OS.tell(); }
   void write(uint64_t V) { LE.write<uint64_t>(V); }
@@ -60,16 +62,16 @@ public:
   // \c patch can only be called when all data is written and flushed.
   // For raw_string_ostream, the patch is done on the target string
   // directly and it won't be reflected in the stream's internal buffer.
-  void patch(PatchItem *P, int NItems) {
+  void patch(ArrayRef<PatchItem> P) {
     using namespace support;
 
     if (IsFDOStream) {
       raw_fd_ostream &FDOStream = static_cast<raw_fd_ostream &>(OS);
       const uint64_t LastPos = FDOStream.tell();
-      for (int K = 0; K < NItems; K++) {
-        FDOStream.seek(P[K].Pos);
-        for (int I = 0; I < P[K].N; I++)
-          write(P[K].D[I]);
+      for (const auto &K : P) {
+        FDOStream.seek(K.Pos);
+        for (int I = 0; I < K.N; I++)
+          write(K.D[I]);
       }
       // Reset the stream to the last position after patching so that users
       // don't accidentally overwrite data. This makes it consistent with
@@ -78,10 +80,11 @@ public:
     } else {
       raw_string_ostream &SOStream = static_cast<raw_string_ostream &>(OS);
       std::string &Data = SOStream.str(); // with flush
-      for (int K = 0; K < NItems; K++) {
-        for (int I = 0; I < P[K].N; I++) {
-          uint64_t Bytes = endian::byte_swap<uint64_t, little>(P[K].D[I]);
-          Data.replace(P[K].Pos + I * sizeof(uint64_t), sizeof(uint64_t),
+      for (const auto &K : P) {
+        for (int I = 0; I < K.N; I++) {
+          uint64_t Bytes =
+              endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
+          Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
                        (const char *)&Bytes, sizeof(uint64_t));
         }
       }
@@ -106,7 +109,7 @@ public:
   using hash_value_type = uint64_t;
   using offset_type = uint64_t;
 
-  support::endianness ValueProfDataEndianness = support::little;
+  llvm::endianness ValueProfDataEndianness = llvm::endianness::little;
   InstrProfSummaryBuilder *SummaryBuilder;
   InstrProfSummaryBuilder *CSSummaryBuilder;
 
@@ -120,7 +123,7 @@ public:
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     using namespace support;
 
-    endian::Writer LE(Out, little);
+    endian::Writer LE(Out, llvm::endianness::little);
 
     offset_type N = K.size();
     LE.write<offset_type>(N);
@@ -131,6 +134,8 @@ public:
       M += sizeof(uint64_t); // The function hash
       M += sizeof(uint64_t); // The size of the Counts vector
       M += ProfRecord.Counts.size() * sizeof(uint64_t);
+      M += sizeof(uint64_t); // The size of the Bitmap vector
+      M += ProfRecord.BitmapBytes.size() * sizeof(uint64_t);
 
       // Value data
       M += ValueProfData::getSize(ProfileData.second);
@@ -147,7 +152,7 @@ public:
   void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V, offset_type) {
     using namespace support;
 
-    endian::Writer LE(Out, little);
+    endian::Writer LE(Out, llvm::endianness::little);
     for (const auto &ProfileData : *V) {
       const InstrProfRecord &ProfRecord = ProfileData.second;
       if (NamedInstrProfRecord::hasCSFlagInHash(ProfileData.first))
@@ -158,6 +163,10 @@ public:
       LE.write<uint64_t>(ProfileData.first); // Function hash
       LE.write<uint64_t>(ProfRecord.Counts.size());
       for (uint64_t I : ProfRecord.Counts)
+        LE.write<uint64_t>(I);
+
+      LE.write<uint64_t>(ProfRecord.BitmapBytes.size());
+      for (uint64_t I : ProfRecord.BitmapBytes)
         LE.write<uint64_t>(I);
 
       // Write value data
@@ -172,18 +181,21 @@ public:
 
 } // end namespace llvm
 
-InstrProfWriter::InstrProfWriter(bool Sparse,
-                                 uint64_t TemporalProfTraceReservoirSize,
-                                 uint64_t MaxTemporalProfTraceLength)
+InstrProfWriter::InstrProfWriter(
+    bool Sparse, uint64_t TemporalProfTraceReservoirSize,
+    uint64_t MaxTemporalProfTraceLength, bool WritePrevVersion,
+    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema)
     : Sparse(Sparse), MaxTemporalProfTraceLength(MaxTemporalProfTraceLength),
       TemporalProfTraceReservoirSize(TemporalProfTraceReservoirSize),
-      InfoObj(new InstrProfRecordWriterTrait()) {}
+      InfoObj(new InstrProfRecordWriterTrait()),
+      WritePrevVersion(WritePrevVersion),
+      MemProfVersionRequested(MemProfVersionRequested),
+      MemProfFullSchema(MemProfFullSchema) {}
 
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
 
 // Internal interface for testing purpose only.
-void InstrProfWriter::setValueProfDataEndianness(
-    support::endianness Endianness) {
+void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
   InfoObj->ValueProfDataEndianness = Endianness;
 }
 
@@ -261,26 +273,43 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
 
 void InstrProfWriter::addMemProfRecord(
     const Function::GUID Id, const memprof::IndexedMemProfRecord &Record) {
-  auto Result = MemProfRecordData.insert({Id, Record});
+  auto [Iter, Inserted] = MemProfData.RecordData.insert({Id, Record});
   // If we inserted a new record then we are done.
-  if (Result.second) {
+  if (Inserted) {
     return;
   }
-  memprof::IndexedMemProfRecord &Existing = Result.first->second;
+  memprof::IndexedMemProfRecord &Existing = Iter->second;
   Existing.merge(Record);
 }
 
 bool InstrProfWriter::addMemProfFrame(const memprof::FrameId Id,
                                       const memprof::Frame &Frame,
                                       function_ref<void(Error)> Warn) {
-  auto Result = MemProfFrameData.insert({Id, Frame});
+  auto [Iter, Inserted] = MemProfData.FrameData.insert({Id, Frame});
   // If a mapping already exists for the current frame id and it does not
   // match the new mapping provided then reset the existing contents and bail
   // out. We don't support the merging of memprof data whose Frame -> Id
   // mapping across profiles is inconsistent.
-  if (!Result.second && Result.first->second != Frame) {
+  if (!Inserted && Iter->second != Frame) {
     Warn(make_error<InstrProfError>(instrprof_error::malformed,
                                     "frame to id mapping mismatch"));
+    return false;
+  }
+  return true;
+}
+
+bool InstrProfWriter::addMemProfCallStack(
+    const memprof::CallStackId CSId,
+    const llvm::SmallVector<memprof::FrameId> &CallStack,
+    function_ref<void(Error)> Warn) {
+  auto [Iter, Inserted] = MemProfData.CallStackData.insert({CSId, CallStack});
+  // If a mapping already exists for the current call stack id and it does not
+  // match the new mapping provided then reset the existing contents and bail
+  // out. We don't support the merging of memprof data whose CallStack -> Id
+  // mapping across profiles is inconsistent.
+  if (!Inserted && Iter->second != CallStack) {
+    Warn(make_error<InstrProfError>(instrprof_error::malformed,
+                                    "call stack to id mapping mismatch"));
     return false;
   }
   return true;
@@ -291,11 +320,8 @@ void InstrProfWriter::addBinaryIds(ArrayRef<llvm::object::BuildID> BIs) {
 }
 
 void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
-  if (Trace.FunctionNameRefs.size() > MaxTemporalProfTraceLength)
-    Trace.FunctionNameRefs.resize(MaxTemporalProfTraceLength);
-  if (Trace.FunctionNameRefs.empty())
-    return;
-
+  assert(Trace.FunctionNameRefs.size() <= MaxTemporalProfTraceLength);
+  assert(!Trace.FunctionNameRefs.empty());
   if (TemporalProfTraceStreamSize < TemporalProfTraceReservoirSize) {
     // Simply append the trace if we have not yet hit our reservoir size limit.
     TemporalProfTraces.push_back(std::move(Trace));
@@ -312,6 +338,10 @@ void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
 
 void InstrProfWriter::addTemporalProfileTraces(
     SmallVectorImpl<TemporalProfTraceTy> &SrcTraces, uint64_t SrcStreamSize) {
+  for (auto &Trace : SrcTraces)
+    if (Trace.FunctionNameRefs.size() > MaxTemporalProfTraceLength)
+      Trace.FunctionNameRefs.resize(MaxTemporalProfTraceLength);
+  llvm::erase_if(SrcTraces, [](auto &T) { return T.FunctionNameRefs.empty(); });
   // Assume that the source has the same reservoir size as the destination to
   // avoid needing to record it in the indexed profile format.
   bool IsDestSampled =
@@ -359,17 +389,23 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
   addTemporalProfileTraces(IPW.TemporalProfTraces,
                            IPW.TemporalProfTraceStreamSize);
 
-  MemProfFrameData.reserve(IPW.MemProfFrameData.size());
-  for (auto &I : IPW.MemProfFrameData) {
+  MemProfData.FrameData.reserve(IPW.MemProfData.FrameData.size());
+  for (auto &[FrameId, Frame] : IPW.MemProfData.FrameData) {
     // If we weren't able to add the frame mappings then it doesn't make sense
     // to try to merge the records from this profile.
-    if (!addMemProfFrame(I.first, I.second, Warn))
+    if (!addMemProfFrame(FrameId, Frame, Warn))
       return;
   }
 
-  MemProfRecordData.reserve(IPW.MemProfRecordData.size());
-  for (auto &I : IPW.MemProfRecordData) {
-    addMemProfRecord(I.first, I.second);
+  MemProfData.CallStackData.reserve(IPW.MemProfData.CallStackData.size());
+  for (auto &[CSId, CallStack] : IPW.MemProfData.CallStackData) {
+    if (!addMemProfCallStack(CSId, CallStack, Warn))
+      return;
+  }
+
+  MemProfData.RecordData.reserve(IPW.MemProfData.RecordData.size());
+  for (auto &[GUID, Record] : IPW.MemProfData.RecordData) {
+    addMemProfRecord(GUID, Record);
   }
 }
 
@@ -379,6 +415,8 @@ bool InstrProfWriter::shouldEncodeData(const ProfilingData &PD) {
   for (const auto &Func : PD) {
     const InstrProfRecord &IPR = Func.second;
     if (llvm::any_of(IPR.Counts, [](uint64_t Count) { return Count > 0; }))
+      return true;
+    if (llvm::any_of(IPR.BitmapBytes, [](uint8_t Byte) { return Byte > 0; }))
       return true;
   }
   return false;
@@ -401,6 +439,310 @@ static void setSummary(IndexedInstrProf::Summary *TheSummary,
     TheSummary->setEntry(I, Res[I]);
 }
 
+// Serialize Schema.
+static void writeMemProfSchema(ProfOStream &OS,
+                               const memprof::MemProfSchema &Schema) {
+  OS.write(static_cast<uint64_t>(Schema.size()));
+  for (const auto Id : Schema)
+    OS.write(static_cast<uint64_t>(Id));
+}
+
+// Serialize MemProfRecordData.  Return RecordTableOffset.
+static uint64_t writeMemProfRecords(
+    ProfOStream &OS,
+    llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
+        &MemProfRecordData,
+    memprof::MemProfSchema *Schema, memprof::IndexedVersion Version) {
+  memprof::RecordWriterTrait RecordWriter(Schema, Version);
+  OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
+      RecordTableGenerator;
+  for (auto &[GUID, Record] : MemProfRecordData) {
+    // Insert the key (func hash) and value (memprof record).
+    RecordTableGenerator.insert(GUID, Record, RecordWriter);
+  }
+  // Release the memory of this MapVector as it is no longer needed.
+  MemProfRecordData.clear();
+
+  // The call to Emit invokes RecordWriterTrait::EmitData which destructs
+  // the memprof record copies owned by the RecordTableGenerator. This works
+  // because the RecordTableGenerator is not used after this point.
+  return RecordTableGenerator.Emit(OS.OS, RecordWriter);
+}
+
+// Serialize MemProfFrameData.  Return FrameTableOffset.
+static uint64_t writeMemProfFrames(
+    ProfOStream &OS,
+    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
+  OnDiskChainedHashTableGenerator<memprof::FrameWriterTrait>
+      FrameTableGenerator;
+  for (auto &[FrameId, Frame] : MemProfFrameData) {
+    // Insert the key (frame id) and value (frame contents).
+    FrameTableGenerator.insert(FrameId, Frame);
+  }
+  // Release the memory of this MapVector as it is no longer needed.
+  MemProfFrameData.clear();
+
+  return FrameTableGenerator.Emit(OS.OS);
+}
+
+static uint64_t writeMemProfCallStacks(
+    ProfOStream &OS,
+    llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
+        &MemProfCallStackData) {
+  OnDiskChainedHashTableGenerator<memprof::CallStackWriterTrait>
+      CallStackTableGenerator;
+  for (auto &[CSId, CallStack] : MemProfCallStackData)
+    CallStackTableGenerator.insert(CSId, CallStack);
+  // Release the memory of this vector as it is no longer needed.
+  MemProfCallStackData.clear();
+
+  return CallStackTableGenerator.Emit(OS.OS);
+}
+
+// Write out MemProf Version0 as follows:
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Offset for the frame payload
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
+static Error writeMemProfV0(ProfOStream &OS,
+                            memprof::IndexedMemProfData &MemProfData) {
+  uint64_t HeaderUpdatePos = OS.tell();
+  OS.write(0ULL); // Reserve space for the memprof record table offset.
+  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
+  OS.write(0ULL); // Reserve space for the memprof frame table offset.
+
+  auto Schema = memprof::getFullSchema();
+  writeMemProfSchema(OS, Schema);
+
+  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
+                                                   &Schema, memprof::Version0);
+
+  uint64_t FramePayloadOffset = OS.tell();
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
+
+  uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
+  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
+
+  return Error::success();
+}
+
+// Write out MemProf Version1 as follows:
+// uint64_t Version (NEW in V1)
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Offset for the frame payload
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
+static Error writeMemProfV1(ProfOStream &OS,
+                            memprof::IndexedMemProfData &MemProfData) {
+  OS.write(memprof::Version1);
+  uint64_t HeaderUpdatePos = OS.tell();
+  OS.write(0ULL); // Reserve space for the memprof record table offset.
+  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
+  OS.write(0ULL); // Reserve space for the memprof frame table offset.
+
+  auto Schema = memprof::getFullSchema();
+  writeMemProfSchema(OS, Schema);
+
+  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
+                                                   &Schema, memprof::Version1);
+
+  uint64_t FramePayloadOffset = OS.tell();
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
+
+  uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
+  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
+
+  return Error::success();
+}
+
+// Write out MemProf Version2 as follows:
+// uint64_t Version
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Offset for the frame payload
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t CallStackPayloadOffset = Offset for the call stack payload (NEW V2)
+// uint64_t CallStackTableOffset = CallStackTableGenerator.Emit (NEW in V2)
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
+// OnDiskChainedHashTable MemProfCallStackData (NEW in V2)
+static Error writeMemProfV2(ProfOStream &OS,
+                            memprof::IndexedMemProfData &MemProfData,
+                            bool MemProfFullSchema) {
+  OS.write(memprof::Version2);
+  uint64_t HeaderUpdatePos = OS.tell();
+  OS.write(0ULL); // Reserve space for the memprof record table offset.
+  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
+  OS.write(0ULL); // Reserve space for the memprof frame table offset.
+  OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
+  OS.write(0ULL); // Reserve space for the memprof call stack table offset.
+
+  auto Schema = memprof::getHotColdSchema();
+  if (MemProfFullSchema)
+    Schema = memprof::getFullSchema();
+  writeMemProfSchema(OS, Schema);
+
+  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
+                                                   &Schema, memprof::Version2);
+
+  uint64_t FramePayloadOffset = OS.tell();
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
+
+  uint64_t CallStackPayloadOffset = OS.tell();
+  uint64_t CallStackTableOffset =
+      writeMemProfCallStacks(OS, MemProfData.CallStackData);
+
+  uint64_t Header[] = {
+      RecordTableOffset,      FramePayloadOffset,   FrameTableOffset,
+      CallStackPayloadOffset, CallStackTableOffset,
+  };
+  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
+
+  return Error::success();
+}
+
+// Write out MemProf Version3 as follows:
+// uint64_t Version
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Offset for the frame payload
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t CallStackPayloadOffset = Offset for the call stack payload
+// uint64_t CallStackTableOffset = CallStackTableGenerator.Emit
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
+// OnDiskChainedHashTable MemProfCallStackData
+static Error writeMemProfV3(ProfOStream &OS,
+                            memprof::IndexedMemProfData &MemProfData,
+                            bool MemProfFullSchema) {
+  OS.write(memprof::Version3);
+  uint64_t HeaderUpdatePos = OS.tell();
+  OS.write(0ULL); // Reserve space for the memprof record table offset.
+  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
+  OS.write(0ULL); // Reserve space for the memprof frame table offset.
+  OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
+  OS.write(0ULL); // Reserve space for the memprof call stack table offset.
+
+  auto Schema = memprof::getHotColdSchema();
+  if (MemProfFullSchema)
+    Schema = memprof::getFullSchema();
+  writeMemProfSchema(OS, Schema);
+
+  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
+                                                   &Schema, memprof::Version3);
+
+  uint64_t FramePayloadOffset = OS.tell();
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
+
+  uint64_t CallStackPayloadOffset = OS.tell();
+  uint64_t CallStackTableOffset =
+      writeMemProfCallStacks(OS, MemProfData.CallStackData);
+
+  uint64_t Header[] = {
+      RecordTableOffset,      FramePayloadOffset,   FrameTableOffset,
+      CallStackPayloadOffset, CallStackTableOffset,
+  };
+  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
+
+  return Error::success();
+}
+
+// Write out the MemProf data in a requested version.
+static Error writeMemProf(ProfOStream &OS,
+                          memprof::IndexedMemProfData &MemProfData,
+                          memprof::IndexedVersion MemProfVersionRequested,
+                          bool MemProfFullSchema) {
+  switch (MemProfVersionRequested) {
+  case memprof::Version0:
+    return writeMemProfV0(OS, MemProfData);
+  case memprof::Version1:
+    return writeMemProfV1(OS, MemProfData);
+  case memprof::Version2:
+    return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
+  case memprof::Version3:
+    return writeMemProfV3(OS, MemProfData, MemProfFullSchema);
+  }
+
+  return make_error<InstrProfError>(
+      instrprof_error::unsupported_version,
+      formatv("MemProf version {} not supported; "
+              "requires version between {} and {}, inclusive",
+              MemProfVersionRequested, memprof::MinimumSupportedVersion,
+              memprof::MaximumSupportedVersion));
+}
+
+uint64_t InstrProfWriter::writeHeader(const IndexedInstrProf::Header &Header,
+                                      const bool WritePrevVersion,
+                                      ProfOStream &OS) {
+  // Only write out the first four fields.
+  for (int I = 0; I < 4; I++)
+    OS.write(reinterpret_cast<const uint64_t *>(&Header)[I]);
+
+  // Remember the offset of the remaining fields to allow back patching later.
+  auto BackPatchStartOffset = OS.tell();
+
+  // Reserve the space for back patching later.
+  OS.write(0); // HashOffset
+  OS.write(0); // MemProfOffset
+  OS.write(0); // BinaryIdOffset
+  OS.write(0); // TemporalProfTracesOffset
+  if (!WritePrevVersion)
+    OS.write(0); // VTableNamesOffset
+
+  return BackPatchStartOffset;
+}
+
+Error InstrProfWriter::writeVTableNames(ProfOStream &OS) {
+  std::vector<std::string> VTableNameStrs;
+  for (StringRef VTableName : VTableNames.keys())
+    VTableNameStrs.push_back(VTableName.str());
+
+  std::string CompressedVTableNames;
+  if (!VTableNameStrs.empty())
+    if (Error E = collectGlobalObjectNameStrings(
+            VTableNameStrs, compression::zlib::isAvailable(),
+            CompressedVTableNames))
+      return E;
+
+  const uint64_t CompressedStringLen = CompressedVTableNames.length();
+
+  // Record the length of compressed string.
+  OS.write(CompressedStringLen);
+
+  // Write the chars in compressed strings.
+  for (auto &c : CompressedVTableNames)
+    OS.writeByte(static_cast<uint8_t>(c));
+
+  // Pad up to a multiple of 8.
+  // InstrProfReader could read bytes according to 'CompressedStringLen'.
+  const uint64_t PaddedLength = alignTo(CompressedStringLen, 8);
+
+  for (uint64_t K = CompressedStringLen; K < PaddedLength; K++)
+    OS.writeByte(0);
+
+  return Error::success();
+}
+
 Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   using namespace IndexedInstrProf;
   using namespace support;
@@ -413,7 +755,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   InfoObj->CSSummaryBuilder = &CSISB;
 
   // Populate the hash table generator.
-  SmallVector<std::pair<StringRef, const ProfilingData *>, 0> OrderedData;
+  SmallVector<std::pair<StringRef, const ProfilingData *>> OrderedData;
   for (const auto &I : FunctionData)
     if (shouldEncodeData(I.getValue()))
       OrderedData.emplace_back((I.getKey()), &I.getValue());
@@ -423,8 +765,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // Write the header.
   IndexedInstrProf::Header Header;
-  Header.Magic = IndexedInstrProf::Magic;
-  Header.Version = IndexedInstrProf::ProfVersion::CurrentVersion;
+  Header.Version = WritePrevVersion
+                       ? IndexedInstrProf::ProfVersion::Version11
+                       : IndexedInstrProf::ProfVersion::CurrentVersion;
+  // The WritePrevVersion handling will either need to be removed or updated
+  // if the version is advanced beyond 12.
+  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
+                IndexedInstrProf::ProfVersion::Version12);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))
@@ -441,40 +788,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile))
     Header.Version |= VARIANT_MASK_TEMPORAL_PROF;
 
-  Header.Unused = 0;
-  Header.HashType = static_cast<uint64_t>(IndexedInstrProf::HashType);
-  Header.HashOffset = 0;
-  Header.MemProfOffset = 0;
-  Header.BinaryIdOffset = 0;
-  Header.TemporalProfTracesOffset = 0;
-  int N = sizeof(IndexedInstrProf::Header) / sizeof(uint64_t);
-
-  // Only write out all the fields except 'HashOffset', 'MemProfOffset',
-  // 'BinaryIdOffset' and `TemporalProfTracesOffset`. We need to remember the
-  // offset of these fields to allow back patching later.
-  for (int I = 0; I < N - 4; I++)
-    OS.write(reinterpret_cast<uint64_t *>(&Header)[I]);
-
-  // Save the location of Header.HashOffset field in \c OS.
-  uint64_t HashTableStartFieldOffset = OS.tell();
-  // Reserve the space for HashOffset field.
-  OS.write(0);
-
-  // Save the location of MemProf profile data. This is stored in two parts as
-  // the schema and as a separate on-disk chained hashtable.
-  uint64_t MemProfSectionOffset = OS.tell();
-  // Reserve space for the MemProf table field to be patched later if this
-  // profile contains memory profile information.
-  OS.write(0);
-
-  // Save the location of binary ids section.
-  uint64_t BinaryIdSectionOffset = OS.tell();
-  // Reserve space for the BinaryIdOffset field to be patched later if this
-  // profile contains binary ids.
-  OS.write(0);
-
-  uint64_t TemporalProfTracesOffset = OS.tell();
-  OS.write(0);
+  const uint64_t BackPatchStartOffset =
+      writeHeader(Header, WritePrevVersion, OS);
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();
@@ -495,61 +810,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // Write the hash table.
   uint64_t HashTableStart = Generator.Emit(OS.OS, *InfoObj);
 
-  // Write the MemProf profile data if we have it. This includes a simple schema
-  // with the format described below followed by the hashtable:
-  // uint64_t RecordTableOffset = RecordTableGenerator.Emit
-  // uint64_t FramePayloadOffset = Stream offset before emitting the frame table
-  // uint64_t FrameTableOffset = FrameTableGenerator.Emit
-  // uint64_t Num schema entries
-  // uint64_t Schema entry 0
-  // uint64_t Schema entry 1
-  // ....
-  // uint64_t Schema entry N - 1
-  // OnDiskChainedHashTable MemProfRecordData
-  // OnDiskChainedHashTable MemProfFrameData
+  // Write the MemProf profile data if we have it.
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
-    OS.write(0ULL); // Reserve space for the memprof record table offset.
-    OS.write(0ULL); // Reserve space for the memprof frame payload offset.
-    OS.write(0ULL); // Reserve space for the memprof frame table offset.
-
-    auto Schema = memprof::PortableMemInfoBlock::getSchema();
-    OS.write(static_cast<uint64_t>(Schema.size()));
-    for (const auto Id : Schema) {
-      OS.write(static_cast<uint64_t>(Id));
-    }
-
-    auto RecordWriter = std::make_unique<memprof::RecordWriterTrait>();
-    RecordWriter->Schema = &Schema;
-    OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
-        RecordTableGenerator;
-    for (auto &I : MemProfRecordData) {
-      // Insert the key (func hash) and value (memprof record).
-      RecordTableGenerator.insert(I.first, I.second);
-    }
-
-    uint64_t RecordTableOffset =
-        RecordTableGenerator.Emit(OS.OS, *RecordWriter);
-
-    uint64_t FramePayloadOffset = OS.tell();
-
-    auto FrameWriter = std::make_unique<memprof::FrameWriterTrait>();
-    OnDiskChainedHashTableGenerator<memprof::FrameWriterTrait>
-        FrameTableGenerator;
-    for (auto &I : MemProfFrameData) {
-      // Insert the key (frame id) and value (frame contents).
-      FrameTableGenerator.insert(I.first, I.second);
-    }
-
-    uint64_t FrameTableOffset = FrameTableGenerator.Emit(OS.OS, *FrameWriter);
-
-    PatchItem PatchItems[] = {
-        {MemProfSectionStart, &RecordTableOffset, 1},
-        {MemProfSectionStart + sizeof(uint64_t), &FramePayloadOffset, 1},
-        {MemProfSectionStart + 2 * sizeof(uint64_t), &FrameTableOffset, 1},
-    };
-    OS.patch(PatchItems, 3);
+    if (auto E = writeMemProf(OS, MemProfData, MemProfVersionRequested,
+                              MemProfFullSchema))
+      return E;
   }
 
   // BinaryIdSection has two parts:
@@ -589,6 +856,12 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       OS.writeByte(0);
   }
 
+  uint64_t VTableNamesSectionStart = OS.tell();
+
+  if (!WritePrevVersion)
+    if (Error E = writeVTableNames(OS))
+      return E;
+
   uint64_t TemporalProfTracesSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile)) {
     TemporalProfTracesSectionStart = OS.tell();
@@ -620,25 +893,52 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   }
   InfoObj->CSSummaryBuilder = nullptr;
 
-  // Now do the final patch:
-  PatchItem PatchItems[] = {
-      // Patch the Header.HashOffset field.
-      {HashTableStartFieldOffset, &HashTableStart, 1},
-      // Patch the Header.MemProfOffset (=0 for profiles without MemProf
-      // data).
-      {MemProfSectionOffset, &MemProfSectionStart, 1},
-      // Patch the Header.BinaryIdSectionOffset.
-      {BinaryIdSectionOffset, &BinaryIdSectionStart, 1},
-      // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
-      // traces).
-      {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
-      // Patch the summary data.
-      {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
-       (int)(SummarySize / sizeof(uint64_t))},
-      {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
-       (int)CSSummarySize}};
+  const size_t MemProfOffset = BackPatchStartOffset + sizeof(uint64_t);
+  const size_t BinaryIdOffset = MemProfOffset + sizeof(uint64_t);
+  const size_t TemporalProfTracesOffset = BinaryIdOffset + sizeof(uint64_t);
+  const size_t VTableNamesOffset = TemporalProfTracesOffset + sizeof(uint64_t);
+  if (!WritePrevVersion) {
+    // Now do the final patch:
+    PatchItem PatchItems[] = {
+        // Patch the Header.HashOffset field.
+        {BackPatchStartOffset, &HashTableStart, 1},
+        // Patch the Header.MemProfOffset (=0 for profiles without MemProf
+        // data).
+        {MemProfOffset, &MemProfSectionStart, 1},
+        // Patch the Header.BinaryIdSectionOffset.
+        {BinaryIdOffset, &BinaryIdSectionStart, 1},
+        // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
+        // traces).
+        {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
+        {VTableNamesOffset, &VTableNamesSectionStart, 1},
+        // Patch the summary data.
+        {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
+         (int)(SummarySize / sizeof(uint64_t))},
+        {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
+         (int)CSSummarySize}};
 
-  OS.patch(PatchItems, std::size(PatchItems));
+    OS.patch(PatchItems);
+  } else {
+    // Now do the final patch:
+    PatchItem PatchItems[] = {
+        // Patch the Header.HashOffset field.
+        {BackPatchStartOffset, &HashTableStart, 1},
+        // Patch the Header.MemProfOffset (=0 for profiles without MemProf
+        // data).
+        {MemProfOffset, &MemProfSectionStart, 1},
+        // Patch the Header.BinaryIdSectionOffset.
+        {BinaryIdOffset, &BinaryIdSectionStart, 1},
+        // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
+        // traces).
+        {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
+        // Patch the summary data.
+        {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
+         (int)(SummarySize / sizeof(uint64_t))},
+        {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
+         (int)CSSummarySize}};
+
+    OS.patch(PatchItems);
+  }
 
   for (const auto &I : FunctionData)
     for (const auto &F : I.getValue())
@@ -684,7 +984,8 @@ Error InstrProfWriter::validateRecord(const InstrProfRecord &Func) {
       std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
       DenseSet<uint64_t> SeenValues;
       for (uint32_t I = 0; I < ND; I++)
-        if ((VK != IPVK_IndirectCallTarget) && !SeenValues.insert(VD[I].Value).second)
+        if ((VK != IPVK_IndirectCallTarget && VK != IPVK_VTableTarget) &&
+            !SeenValues.insert(VD[I].Value).second)
           return make_error<InstrProfError>(instrprof_error::invalid_prof);
     }
   }
@@ -702,6 +1003,17 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
   OS << "# Counter Values:\n";
   for (uint64_t Count : Func.Counts)
     OS << Count << "\n";
+
+  if (Func.BitmapBytes.size() > 0) {
+    OS << "# Num Bitmap Bytes:\n$" << Func.BitmapBytes.size() << "\n";
+    OS << "# Bitmap Byte Values:\n";
+    for (uint8_t Byte : Func.BitmapBytes) {
+      OS << "0x";
+      OS.write_hex(Byte);
+      OS << "\n";
+    }
+    OS << "\n";
+  }
 
   uint32_t NumValueKinds = Func.getNumValueKinds();
   if (!NumValueKinds) {
@@ -721,8 +1033,8 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
       OS << ND << "\n";
       std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
       for (uint32_t I = 0; I < ND; I++) {
-        if (VK == IPVK_IndirectCallTarget)
-          OS << Symtab.getFuncNameOrExternalSymbol(VD[I].Value) << ":"
+        if (VK == IPVK_IndirectCallTarget || VK == IPVK_VTableTarget)
+          OS << Symtab.getFuncOrVarNameIfDefined(VD[I].Value) << ":"
              << VD[I].Count << "\n";
         else
           OS << VD[I].Value << ":" << VD[I].Count << "\n";
@@ -743,6 +1055,8 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
   if (static_cast<bool>(ProfileKind &
                         InstrProfKind::FunctionEntryInstrumentation))
     OS << "# Always instrument the function entry block\n:entry_first\n";
+  if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
+    OS << "# Instrument block coverage\n:single_byte_coverage\n";
   InstrProfSymtab Symtab;
 
   using FuncPair = detail::DenseMapPair<uint64_t, InstrProfRecord>;
@@ -757,6 +1071,10 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
         OrderedFuncData.push_back(std::make_pair(I.getKey(), Func));
     }
   }
+
+  for (const auto &VTableName : VTableNames)
+    if (Error E = Symtab.addVTableName(VTableName.getKey()))
+      return E;
 
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile))
     writeTextTemporalProfTraceData(OS, Symtab);
@@ -790,7 +1108,7 @@ void InstrProfWriter::writeTextTemporalProfTraceData(raw_fd_ostream &OS,
   for (auto &Trace : TemporalProfTraces) {
     OS << "# Weight:\n" << Trace.Weight << "\n";
     for (auto &NameRef : Trace.FunctionNameRefs)
-      OS << Symtab.getFuncName(NameRef) << ",";
+      OS << Symtab.getFuncOrVarName(NameRef) << ",";
     OS << "\n";
   }
   OS << "\n";

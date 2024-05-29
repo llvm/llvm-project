@@ -5,23 +5,23 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true enable-index-reduction=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true enable-index-reduction=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
 // RUN: %{compile} | %{run} | FileCheck %s
 
 #CCCC = #sparse_tensor.encoding<{  map = (d0, d1, d2, d3) -> (d0 : compressed, d1 : compressed, d2 : compressed, d3 : compressed), posWidth = 32, crdWidth = 32 }>
@@ -47,7 +47,7 @@ func.func @pooling_nhwc_sum(%input: tensor<1x4x4x1xf32>, %filter: tensor<2x2xf32
 }
 
 
-func.func @entry() {
+func.func @main() {
   %c0 = arith.constant 0 : index
   %zero = arith.constant 0.00000e+00 : f32
 
@@ -76,12 +76,22 @@ func.func @entry() {
   //
   // Sparse pooling should have the same output.
   //
-
-  // CHECK-NEXT: ( ( ( ( 6 ), ( 6 ), ( 6 ) ), ( ( 6 ), ( 6 ), ( 6 ) ), ( ( 6 ), ( 6 ), ( 6 ) ) ) )
-  %s1 = sparse_tensor.convert %CCCC_ret : tensor<1x3x3x1xf32, #CCCC> to tensor<1x3x3x1xf32>
-  %v1 = vector.transfer_read %s1[%c0, %c0, %c0, %c0], %zero
-      : tensor<1x3x3x1xf32>, vector<1x3x3x1xf32>
-  vector.print %v1 : vector<1x3x3x1xf32>
+  // CHECK:      ---- Sparse Tensor ----
+  // CHECK-NEXT: nse = 9
+  // CHECK-NEXT: dim = ( 1, 3, 3, 1 )
+  // CHECK-NEXT: lvl = ( 1, 3, 3, 1 )
+  // CHECK-NEXT: pos[0] : ( 0, 1 )
+  // CHECK-NEXT: crd[0] : ( 0 )
+  // CHECK-NEXT: pos[1] : ( 0, 3 )
+  // CHECK-NEXT: crd[1] : ( 0, 1, 2 )
+  // CHECK-NEXT: pos[2] : ( 0, 3, 6, 9 )
+  // CHECK-NEXT: crd[2] : ( 0, 1, 2, 0, 1, 2, 0, 1, 2 )
+  // CHECK-NEXT: pos[3] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 )
+  // CHECK-NEXT: crd[3] : ( 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+  // CHECK-NEXT: values : ( 6, 6, 6, 6, 6, 6, 6, 6, 6 )
+  // CHECK-NEXT: ----
+  //
+  sparse_tensor.print %CCCC_ret : tensor<1x3x3x1xf32, #CCCC>
 
   // Releases resources.
   bufferization.dealloc_tensor %in_CCCC : tensor<1x4x4x1xf32, #CCCC>

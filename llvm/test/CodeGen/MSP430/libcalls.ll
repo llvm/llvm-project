@@ -14,7 +14,7 @@ entry:
 ; CHECK: d2f:
 
 ; CHECK: call #__mspabi_cvtdf
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fptrunc double %0 to float
 
   ret float %1
@@ -25,7 +25,7 @@ entry:
 ; CHECK: f2d:
 
 ; CHECK: call #__mspabi_cvtfd
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fpext float %0 to double
 
   ret double %1
@@ -36,7 +36,7 @@ entry:
 ; CHECK: d2l:
 
 ; CHECK: call #__mspabi_fixdli
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fptosi double %0 to i32
 
   ret i32 %1
@@ -47,7 +47,7 @@ entry:
 ; CHECK: d2ll:
 
 ; CHECK: call #__mspabi_fixdlli
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fptosi double %0 to i64
 
   ret i64 %1
@@ -58,7 +58,7 @@ entry:
 ; CHECK: d2ul:
 
 ; CHECK: call #__mspabi_fixdul
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fptoui double %0 to i32
 
   ret i32 %1
@@ -69,7 +69,7 @@ entry:
 ; CHECK: d2ull:
 
 ; CHECK: call #__mspabi_fixdull
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fptoui double %0 to i64
 
   ret i64 %1
@@ -80,7 +80,7 @@ entry:
 ; CHECK: f2l:
 
 ; CHECK: call #__mspabi_fixfli
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fptosi float %0 to i32
 
   ret i32 %1
@@ -91,7 +91,7 @@ entry:
 ; CHECK: f2ll:
 
 ; CHECK: call #__mspabi_fixflli
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fptosi float %0 to i64
 
   ret i64 %1
@@ -102,7 +102,7 @@ entry:
 ; CHECK: f2ul:
 
 ; CHECK: call #__mspabi_fixful
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fptoui float %0 to i32
 
   ret i32 %1
@@ -113,7 +113,7 @@ entry:
 ; CHECK: f2ull:
 
 ; CHECK: call #__mspabi_fixfull
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fptoui float %0 to i64
 
   ret i64 %1
@@ -124,7 +124,7 @@ entry:
 ; CHECK: l2d:
 
 ; CHECK: call #__mspabi_fltlid
-  %0 = load volatile i32, i32* @g_i32, align 8
+  %0 = load volatile i32, ptr @g_i32, align 8
   %1 = sitofp i32 %0 to double
 
   ret double %1
@@ -135,7 +135,7 @@ entry:
 ; CHECK: ll2d:
 
 ; CHECK: call #__mspabi_fltllid
-  %0 = load volatile i64, i64* @g_i64, align 8
+  %0 = load volatile i64, ptr @g_i64, align 8
   %1 = sitofp i64 %0 to double
 
   ret double %1
@@ -146,7 +146,7 @@ entry:
 ; CHECK: ul2d:
 
 ; CHECK: call #__mspabi_fltuld
-  %0 = load volatile i32, i32* @g_i32, align 8
+  %0 = load volatile i32, ptr @g_i32, align 8
   %1 = uitofp i32 %0 to double
 
   ret double %1
@@ -157,7 +157,7 @@ entry:
 ; CHECK: ull2d:
 
 ; CHECK: call #__mspabi_fltulld
-  %0 = load volatile i64, i64* @g_i64, align 8
+  %0 = load volatile i64, ptr @g_i64, align 8
   %1 = uitofp i64 %0 to double
 
   ret double %1
@@ -168,7 +168,7 @@ entry:
 ; CHECK: l2f:
 
 ; CHECK: call #__mspabi_fltlif
-  %0 = load volatile i32, i32* @g_i32, align 8
+  %0 = load volatile i32, ptr @g_i32, align 8
   %1 = sitofp i32 %0 to float
 
   ret float %1
@@ -179,7 +179,7 @@ entry:
 ; CHECK: ll2f:
 
 ; CHECK: call #__mspabi_fltllif
-  %0 = load volatile i64, i64* @g_i64, align 8
+  %0 = load volatile i64, ptr @g_i64, align 8
   %1 = sitofp i64 %0 to float
 
   ret float %1
@@ -190,7 +190,7 @@ entry:
 ; CHECK: ul2f:
 
 ; CHECK: call #__mspabi_fltulf
-  %0 = load volatile i32, i32* @g_i32, align 8
+  %0 = load volatile i32, ptr @g_i32, align 8
   %1 = uitofp i32 %0 to float
 
   ret float %1
@@ -201,7 +201,7 @@ entry:
 ; CHECK: ull2f:
 
 ; CHECK: call #__mspabi_fltullf
-  %0 = load volatile i64, i64* @g_i64, align 8
+  %0 = load volatile i64, ptr @g_i64, align 8
   %1 = uitofp i64 %0 to float
 
   ret float %1
@@ -212,7 +212,7 @@ entry:
 ; CHECK: cmpd_oeq:
 
 ; CHECK: call #__mspabi_cmpd
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp oeq double %0, 123.0
 
   ret i1 %1
@@ -223,7 +223,7 @@ entry:
 ; CHECK: cmpd_une:
 
 ; CHECK: call #__mspabi_cmpd
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp une double %0, 123.0
 
   ret i1 %1
@@ -234,7 +234,7 @@ entry:
 ; CHECK: cmpd_oge:
 
 ; CHECK: call #__mspabi_cmpd
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp oge double %0, 123.0
 
   ret i1 %1
@@ -245,7 +245,7 @@ entry:
 ; CHECK: cmpd_olt:
 
 ; CHECK: call #__mspabi_cmpd
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp olt double %0, 123.0
 
   ret i1 %1
@@ -256,7 +256,7 @@ entry:
 ; CHECK: cmpd_ole:
 
 ; CHECK: call #__mspabi_cmpd
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp ole double %0, 123.0
 
   ret i1 %1
@@ -267,7 +267,7 @@ entry:
 ; CHECK: cmpd_ogt:
 
 ; CHECK: call #__mspabi_cmpd
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp ogt double %0, 123.0
 
   ret i1 %1
@@ -278,7 +278,7 @@ entry:
 ; CHECK: cmpf_oeq:
 
 ; CHECK: call #__mspabi_cmpf
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp oeq float %0, 123.0
 
   ret i1 %1
@@ -289,7 +289,7 @@ entry:
 ; CHECK: cmpf_une:
 
 ; CHECK: call #__mspabi_cmpf
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp une float %0, 123.0
 
   ret i1 %1
@@ -300,7 +300,7 @@ entry:
 ; CHECK: cmpf_oge:
 
 ; CHECK: call #__mspabi_cmpf
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp oge float %0, 123.0
 
   ret i1 %1
@@ -311,7 +311,7 @@ entry:
 ; CHECK: cmpf_olt:
 
 ; CHECK: call #__mspabi_cmpf
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp olt float %0, 123.0
 
   ret i1 %1
@@ -322,7 +322,7 @@ entry:
 ; CHECK: cmpf_ole:
 
 ; CHECK: call #__mspabi_cmpf
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp ole float %0, 123.0
 
   ret i1 %1
@@ -333,7 +333,7 @@ entry:
 ; CHECK: cmpf_ogt:
 
 ; CHECK: call #__mspabi_cmpf
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp ogt float %0, 123.0
 
   ret i1 %1
@@ -344,7 +344,7 @@ entry:
 ; CHECK: addd:
 
 ; CHECK: call #__mspabi_addd
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fadd double %0, 123.0
 
   ret double %1
@@ -355,7 +355,7 @@ entry:
 ; CHECK: addf:
 
 ; CHECK: call #__mspabi_addf
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fadd float %0, 123.0
 
   ret float %1
@@ -366,7 +366,7 @@ entry:
 ; CHECK: divd:
 
 ; CHECK: call #__mspabi_divd
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fdiv double %0, 123.0
 
   ret double %1
@@ -377,7 +377,7 @@ entry:
 ; CHECK: divf:
 
 ; CHECK: call #__mspabi_divf
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fdiv float %0, 123.0
 
   ret float %1
@@ -388,7 +388,7 @@ entry:
 ; CHECK: mpyd:
 
 ; CHECK: call #__mspabi_mpyd
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fmul double %0, 123.0
 
   ret double %1
@@ -399,7 +399,7 @@ entry:
 ; CHECK: mpyf:
 
 ; CHECK: call #__mspabi_mpyf
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fmul float %0, 123.0
 
   ret float %1
@@ -410,7 +410,7 @@ entry:
 ; CHECK: subd:
 
 ; CHECK: call #__mspabi_subd
-  %0 = load volatile double, double* @g_double, align 8
+  %0 = load volatile double, ptr @g_double, align 8
   %1 = fsub double %0, %0
 
   ret double %1
@@ -421,7 +421,7 @@ entry:
 ; CHECK: subf:
 
 ; CHECK: call #__mspabi_subf
-  %0 = load volatile float, float* @g_float, align 8
+  %0 = load volatile float, ptr @g_float, align 8
   %1 = fsub float %0, %0
 
   ret float %1
@@ -432,8 +432,8 @@ entry:
 ; CHECK: divi:
 
 ; CHECK: call #__mspabi_divi
-  %0 = load volatile i16, i16* @g_i16, align 8
-  %1 = load volatile i16, i16* @g_i16, align 8
+  %0 = load volatile i16, ptr @g_i16, align 8
+  %1 = load volatile i16, ptr @g_i16, align 8
   %2 = sdiv i16 %0, %1
 
   ret i16 %2
@@ -444,8 +444,8 @@ entry:
 ; CHECK: divli:
 
 ; CHECK: call #__mspabi_divli
-  %0 = load volatile i32, i32* @g_i32, align 8
-  %1 = load volatile i32, i32* @g_i32, align 8
+  %0 = load volatile i32, ptr @g_i32, align 8
+  %1 = load volatile i32, ptr @g_i32, align 8
   %2 = sdiv i32 %0, %1
 
   ret i32 %2
@@ -456,8 +456,8 @@ entry:
 ; CHECK: divlli:
 
 ; CHECK: call #__mspabi_divlli
-  %0 = load volatile i64, i64* @g_i64, align 8
-  %1 = load volatile i64, i64* @g_i64, align 8
+  %0 = load volatile i64, ptr @g_i64, align 8
+  %1 = load volatile i64, ptr @g_i64, align 8
   %2 = sdiv i64 %0, %1
 
   ret i64 %2
@@ -468,8 +468,8 @@ entry:
 ; CHECK: divu:
 
 ; CHECK: call #__mspabi_divu
-  %0 = load volatile i16, i16* @g_i16, align 8
-  %1 = load volatile i16, i16* @g_i16, align 8
+  %0 = load volatile i16, ptr @g_i16, align 8
+  %1 = load volatile i16, ptr @g_i16, align 8
   %2 = udiv i16 %0, %1
 
   ret i16 %2
@@ -480,8 +480,8 @@ entry:
 ; CHECK: divul:
 
 ; CHECK: call #__mspabi_divul
-  %0 = load volatile i32, i32* @g_i32, align 8
-  %1 = load volatile i32, i32* @g_i32, align 8
+  %0 = load volatile i32, ptr @g_i32, align 8
+  %1 = load volatile i32, ptr @g_i32, align 8
   %2 = udiv i32 %0, %1
 
   ret i32 %2
@@ -492,8 +492,8 @@ entry:
 ; CHECK: divull:
 
 ; CHECK: call #__mspabi_divull
-  %0 = load volatile i64, i64* @g_i64, align 8
-  %1 = load volatile i64, i64* @g_i64, align 8
+  %0 = load volatile i64, ptr @g_i64, align 8
+  %1 = load volatile i64, ptr @g_i64, align 8
   %2 = udiv i64 %0, %1
 
   ret i64 %2
@@ -504,8 +504,8 @@ entry:
 ; CHECK: remi:
 
 ; CHECK: call #__mspabi_remi
-  %0 = load volatile i16, i16* @g_i16, align 8
-  %1 = load volatile i16, i16* @g_i16, align 8
+  %0 = load volatile i16, ptr @g_i16, align 8
+  %1 = load volatile i16, ptr @g_i16, align 8
   %2 = srem i16 %0, %1
 
   ret i16 %2
@@ -516,8 +516,8 @@ entry:
 ; CHECK: remli:
 
 ; CHECK: call #__mspabi_remli
-  %0 = load volatile i32, i32* @g_i32, align 8
-  %1 = load volatile i32, i32* @g_i32, align 8
+  %0 = load volatile i32, ptr @g_i32, align 8
+  %1 = load volatile i32, ptr @g_i32, align 8
   %2 = srem i32 %0, %1
 
   ret i32 %2
@@ -528,8 +528,8 @@ entry:
 ; CHECK: remlli:
 
 ; CHECK: call #__mspabi_remlli
-  %0 = load volatile i64, i64* @g_i64, align 8
-  %1 = load volatile i64, i64* @g_i64, align 8
+  %0 = load volatile i64, ptr @g_i64, align 8
+  %1 = load volatile i64, ptr @g_i64, align 8
   %2 = srem i64 %0, %1
 
   ret i64 %2
@@ -540,8 +540,8 @@ entry:
 ; CHECK: remu:
 
 ; CHECK: call #__mspabi_remu
-  %0 = load volatile i16, i16* @g_i16, align 8
-  %1 = load volatile i16, i16* @g_i16, align 8
+  %0 = load volatile i16, ptr @g_i16, align 8
+  %1 = load volatile i16, ptr @g_i16, align 8
   %2 = urem i16 %0, %1
 
   ret i16 %2
@@ -552,8 +552,8 @@ entry:
 ; CHECK: remul:
 
 ; CHECK: call #__mspabi_remul
-  %0 = load volatile i32, i32* @g_i32, align 8
-  %1 = load volatile i32, i32* @g_i32, align 8
+  %0 = load volatile i32, ptr @g_i32, align 8
+  %1 = load volatile i32, ptr @g_i32, align 8
   %2 = urem i32 %0, %1
 
   ret i32 %2
@@ -564,8 +564,8 @@ entry:
 ; CHECK: remull:
 
 ; CHECK: call #__mspabi_remull
-  %0 = load volatile i64, i64* @g_i64, align 8
-  %1 = load volatile i64, i64* @g_i64, align 8
+  %0 = load volatile i64, ptr @g_i64, align 8
+  %1 = load volatile i64, ptr @g_i64, align 8
   %2 = urem i64 %0, %1
 
   ret i64 %2
@@ -576,7 +576,7 @@ entry:
 ; CHECK: mpyi:
 
 ; CHECK: call #__mspabi_mpyi
-  %0 = load volatile i16, i16* @g_i16, align 8
+  %0 = load volatile i16, ptr @g_i16, align 8
   %1 = mul i16 %0, %0
 
   ret i16 %1
@@ -587,7 +587,7 @@ entry:
 ; CHECK: mpyli:
 
 ; CHECK: call #__mspabi_mpyl
-  %0 = load volatile i32, i32* @g_i32, align 8
+  %0 = load volatile i32, ptr @g_i32, align 8
   %1 = mul i32 %0, %0
 
   ret i32 %1
@@ -598,7 +598,7 @@ entry:
 ; CHECK: mpylli:
 
 ; CHECK: call #__mspabi_mpyll
-  %0 = load volatile i64, i64* @g_i64, align 8
+  %0 = load volatile i64, ptr @g_i64, align 8
   %1 = mul i64 %0, %0
 
   ret i64 %1
@@ -610,8 +610,8 @@ define i32 @srll() #0 {
 entry:
 ; CHECK-LABEL: srll:
 ; CHECK: call #__mspabi_srll
-  %0 = load volatile i32, i32* @g_i32, align 2
-  %1 = load volatile i32, i32* @i, align 2
+  %0 = load volatile i32, ptr @g_i32, align 2
+  %1 = load volatile i32, ptr @i, align 2
   %shr = lshr i32 %0, %1
 
   ret i32 %shr
@@ -621,8 +621,8 @@ define i32 @sral() #0 {
 entry:
 ; CHECK-LABEL: sral:
 ; CHECK: call #__mspabi_sral
-  %0 = load volatile i32, i32* @g_i32, align 2
-  %1 = load volatile i32, i32* @i, align 2
+  %0 = load volatile i32, ptr @g_i32, align 2
+  %1 = load volatile i32, ptr @i, align 2
   %shr = ashr i32 %0, %1
 
   ret i32 %shr
@@ -632,8 +632,8 @@ define i32 @slll() #0 {
 entry:
 ; CHECK-LABEL: slll:
 ; CHECK: call #__mspabi_slll
-  %0 = load volatile i32, i32* @g_i32, align 2
-  %1 = load volatile i32, i32* @i, align 2
+  %0 = load volatile i32, ptr @g_i32, align 2
+  %1 = load volatile i32, ptr @i, align 2
   %shr = shl i32 %0, %1
 
   ret i32 %shr

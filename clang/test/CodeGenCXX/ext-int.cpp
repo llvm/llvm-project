@@ -98,19 +98,6 @@ void BitfieldAssignment() {
   // CHECK: %[[SETC:.+]] = or i8 %[[CLEARC]], 64
 }
 
-enum AsEnumUnderlyingType : _BitInt(9) {
-  A,B,C
-};
-
-void UnderlyingTypeUsage(AsEnumUnderlyingType Param) {
-  // LIN: define{{.*}} void @_Z19UnderlyingTypeUsage20AsEnumUnderlyingType(i9 signext %
-  // WIN64: define dso_local void @"?UnderlyingTypeUsage@@YAXW4AsEnumUnderlyingType@@@Z"(i9 %
-  // WIN32: define dso_local void @"?UnderlyingTypeUsage@@YAXW4AsEnumUnderlyingType@@@Z"(i9 signext %
-  AsEnumUnderlyingType Var;
-  // CHECK: alloca i9, align 2
-  // CHECK: store i9 %{{.*}}, align 2
-}
-
 unsigned _BitInt(33) ManglingTestRetParam(unsigned _BitInt(33) Param) {
 // LIN64: define{{.*}} i64 @_Z20ManglingTestRetParamDU33_(i64 %
 // LIN32: define{{.*}} i33 @_Z20ManglingTestRetParamDU33_(i33 %
@@ -172,9 +159,9 @@ void TakesVarargs(int i, ...) {
   // WIN: %[[ARGS:.+]] = alloca ptr
   __builtin_va_start(args, i);
   // LIN64: %[[STARTAD:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[ARGS]]
-  // LIN64: call void @llvm.va_start(ptr %[[STARTAD]])
-  // LIN32: call void @llvm.va_start(ptr %[[ARGS]])
-  // WIN: call void @llvm.va_start(ptr %[[ARGS]])
+  // LIN64: call void @llvm.va_start.p0(ptr %[[STARTAD]])
+  // LIN32: call void @llvm.va_start.p0(ptr %[[ARGS]])
+  // WIN: call void @llvm.va_start.p0(ptr %[[ARGS]])
 
   _BitInt(92) A = __builtin_va_arg(args, _BitInt(92));
   // LIN64: %[[AD1:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[ARGS]]
@@ -315,9 +302,9 @@ void TakesVarargs(int i, ...) {
 
   __builtin_va_end(args);
   // LIN64: %[[ENDAD:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[ARGS]]
-  // LIN64: call void @llvm.va_end(ptr %[[ENDAD]])
-  // LIN32: call void @llvm.va_end(ptr %[[ARGS]])
-  // WIN: call void @llvm.va_end(ptr %[[ARGS]])
+  // LIN64: call void @llvm.va_end.p0(ptr %[[ENDAD]])
+  // LIN32: call void @llvm.va_end.p0(ptr %[[ARGS]])
+  // WIN: call void @llvm.va_end.p0(ptr %[[ARGS]])
 }
 void typeid_tests() {
   // LIN: define{{.*}} void @_Z12typeid_testsv()

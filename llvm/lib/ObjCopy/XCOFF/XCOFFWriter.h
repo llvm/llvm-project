@@ -13,7 +13,6 @@
 #include "XCOFFObject.h"
 
 #include <cstdint>
-#include <vector>
 
 namespace llvm {
 namespace objcopy {

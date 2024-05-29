@@ -30,6 +30,8 @@
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Timer.h"
+#include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 
 #include <queue>
@@ -41,6 +43,7 @@ using namespace llvm;
 
 namespace opts {
 
+extern cl::opt<bool> TimeRewrite;
 extern cl::OptionCategory BoltOptCategory;
 
 cl::opt<bool>
@@ -224,7 +227,7 @@ private:
   std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
 };
 
-void BinaryFunction::computeBlockHashes() const {
+void BinaryFunction::computeBlockHashes(HashFunction HashFunction) const {
   if (size() == 0)
     return;
 
@@ -240,12 +243,26 @@ void BinaryFunction::computeBlockHashes() const {
     // Hashing complete instructions.
     std::string InstrHashStr = hashBlock(
         BC, *BB, [&](const MCOperand &Op) { return hashInstOperand(BC, Op); });
-    uint64_t InstrHash = std::hash<std::string>{}(InstrHashStr);
-    BlendedHashes[I].InstrHash = (uint16_t)hash_value(InstrHash);
+    if (HashFunction == HashFunction::StdHash) {
+      uint64_t InstrHash = std::hash<std::string>{}(InstrHashStr);
+      BlendedHashes[I].InstrHash = (uint16_t)hash_value(InstrHash);
+    } else if (HashFunction == HashFunction::XXH3) {
+      uint64_t InstrHash = llvm::xxh3_64bits(InstrHashStr);
+      BlendedHashes[I].InstrHash = (uint16_t)InstrHash;
+    } else {
+      llvm_unreachable("Unhandled HashFunction");
+    }
     // Hashing opcodes.
     std::string OpcodeHashStr = hashBlockLoose(BC, *BB);
-    OpcodeHashes[I] = std::hash<std::string>{}(OpcodeHashStr);
-    BlendedHashes[I].OpcodeHash = (uint16_t)hash_value(OpcodeHashes[I]);
+    if (HashFunction == HashFunction::StdHash) {
+      OpcodeHashes[I] = std::hash<std::string>{}(OpcodeHashStr);
+      BlendedHashes[I].OpcodeHash = (uint16_t)hash_value(OpcodeHashes[I]);
+    } else if (HashFunction == HashFunction::XXH3) {
+      OpcodeHashes[I] = llvm::xxh3_64bits(OpcodeHashStr);
+      BlendedHashes[I].OpcodeHash = (uint16_t)OpcodeHashes[I];
+    } else {
+      llvm_unreachable("Unhandled HashFunction");
+    }
   }
 
   // Initialize neighbor hash.
@@ -257,7 +274,12 @@ void BinaryFunction::computeBlockHashes() const {
       uint64_t SuccHash = OpcodeHashes[SuccBB->getIndex()];
       Hash = hashing::detail::hash_16_bytes(Hash, SuccHash);
     }
-    BlendedHashes[I].SuccHash = (uint8_t)hash_value(Hash);
+    if (HashFunction == HashFunction::StdHash) {
+      // Compatibility with old behavior.
+      BlendedHashes[I].SuccHash = (uint8_t)hash_value(Hash);
+    } else {
+      BlendedHashes[I].SuccHash = (uint8_t)Hash;
+    }
 
     // Append hashes of predecessors.
     Hash = 0;
@@ -265,7 +287,12 @@ void BinaryFunction::computeBlockHashes() const {
       uint64_t PredHash = OpcodeHashes[PredBB->getIndex()];
       Hash = hashing::detail::hash_16_bytes(Hash, PredHash);
     }
-    BlendedHashes[I].PredHash = (uint8_t)hash_value(Hash);
+    if (HashFunction == HashFunction::StdHash) {
+      // Compatibility with old behavior.
+      BlendedHashes[I].PredHash = (uint8_t)hash_value(Hash);
+    } else {
+      BlendedHashes[I].PredHash = (uint8_t)Hash;
+    }
   }
 
   //  Assign hashes.
@@ -347,8 +374,10 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 
   // Create necessary metadata for the flow function
   for (FlowJump &Jump : Func.Jumps) {
-    Func.Blocks.at(Jump.Source).SuccJumps.push_back(&Jump);
-    Func.Blocks.at(Jump.Target).PredJumps.push_back(&Jump);
+    assert(Jump.Source < Func.Blocks.size());
+    Func.Blocks[Jump.Source].SuccJumps.push_back(&Jump);
+    assert(Jump.Target < Func.Blocks.size());
+    Func.Blocks[Jump.Target].PredJumps.push_back(&Jump);
   }
   return Func;
 }
@@ -393,6 +422,7 @@ void matchWeightsByHashes(BinaryContext &BC,
     if (MatchedBlock == nullptr && YamlBB.Index == 0)
       MatchedBlock = Blocks[0];
     if (MatchedBlock != nullptr) {
+      const BinaryBasicBlock *BB = BlockOrder[MatchedBlock->Index - 1];
       MatchedBlocks[YamlBB.Index] = MatchedBlock;
       BlendedBlockHash BinHash = BlendedHashes[MatchedBlock->Index - 1];
       LLVM_DEBUG(dbgs() << "Matched yaml block (bid = " << YamlBB.Index << ")"
@@ -405,7 +435,11 @@ void matchWeightsByHashes(BinaryContext &BC,
         ++BC.Stats.NumMatchedBlocks;
         BC.Stats.MatchedSampleCount += YamlBB.ExecCount;
         LLVM_DEBUG(dbgs() << "  exact match\n");
+      } else {
+        LLVM_DEBUG(dbgs() << "  loose match\n");
       }
+      if (YamlBB.NumInstructions == BB->size())
+        ++BC.Stats.NumStaleBlocksWithEqualIcount;
     } else {
       LLVM_DEBUG(
           dbgs() << "Couldn't match yaml block (bid = " << YamlBB.Index << ")"
@@ -675,11 +709,18 @@ void assignProfile(BinaryFunction &BF,
 
 bool YAMLProfileReader::inferStaleProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
+
+  NamedRegionTimer T("inferStaleProfile", "stale profile inference", "rewrite",
+                     "Rewrite passes", opts::TimeRewrite);
+
+  if (!BF.hasCFG())
+    return false;
+
   LLVM_DEBUG(dbgs() << "BOLT-INFO: applying profile inference for "
                     << "\"" << BF.getPrintName() << "\"\n");
 
   // Make sure that block hashes are up to date.
-  BF.computeBlockHashes();
+  BF.computeBlockHashes(YamlBP.Header.HashFunction);
 
   const BinaryFunction::BasicBlockOrderType BlockOrder(
       BF.getLayout().block_begin(), BF.getLayout().block_end());

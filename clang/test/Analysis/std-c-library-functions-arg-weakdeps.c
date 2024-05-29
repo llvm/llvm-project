@@ -3,9 +3,9 @@
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.Stream \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-checker=unix.Stream \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -triple x86_64-unknown-linux-gnu \
 // RUN:   -verify
 
@@ -14,9 +14,9 @@
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -triple x86_64-unknown-linux 2>&1 | FileCheck %s
 
 // CHECK: Loaded summary for: int isalnum(int)
@@ -57,5 +57,5 @@ void test_notnull_arg(FILE *F) {
 
 void test_notnull_stream_arg(void) {
   fileno(0); // \
-  // expected-warning{{Stream pointer might be NULL [alpha.unix.Stream]}}
+  // expected-warning{{Stream pointer might be NULL [unix.Stream]}}
 }

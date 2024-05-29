@@ -55,8 +55,7 @@ public:
 
   /// Loads the bitcode files in `fileList`.
   virtual std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
-  loadBitcodeFiles(llvm::Module &module,
-                   llvm::TargetMachine &targetMachine) override;
+  loadBitcodeFiles(llvm::Module &module) override;
 
 protected:
   /// NVVM target attribute.

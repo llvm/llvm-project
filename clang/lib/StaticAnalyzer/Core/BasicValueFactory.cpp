@@ -272,7 +272,7 @@ BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op,
       // FIXME: This logic should probably go higher up, where we can
       // test these conditions symbolically.
 
-      if (V2.isSigned() && V2.isNegative())
+      if (V2.isNegative() || V2.getBitWidth() > 64)
         return nullptr;
 
       uint64_t Amt = V2.getZExtValue();
@@ -287,7 +287,7 @@ BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op,
       // FIXME: This logic should probably go higher up, where we can
       // test these conditions symbolically.
 
-      if (V2.isSigned() && V2.isNegative())
+      if (V2.isNegative() || V2.getBitWidth() > 64)
         return nullptr;
 
       uint64_t Amt = V2.getZExtValue();

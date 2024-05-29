@@ -40,21 +40,22 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
-#include <random>
 #include <optional>
+#include <random>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/Iterators.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 
@@ -279,7 +280,7 @@ static bool isReachable(Block *from, Block *to, ArrayRef<Block *> except) {
     worklist.push_back(succ);
   while (!worklist.empty()) {
     Block *next = worklist.pop_back_val();
-    if (llvm::find(except, next) != except.end())
+    if (llvm::is_contained(except, next))
       continue;
     if (next == to)
       return true;
@@ -1030,13 +1031,6 @@ OneShotAnalysisState::analyzeSingleOp(Operation *op,
   return success();
 }
 
-/// Return true if the given op has a tensor result or a tensor operand.
-static bool hasTensorSemantics(Operation *op) {
-  bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
-  bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
-  return hasTensorResult || hasTensorOperand;
-}
-
 /// Analyze equivalence of tied OpResult/OpOperand pairs of the given ops.
 static void equivalenceAnalysis(SmallVector<Operation *> &ops,
                                 OneShotAnalysisState &state) {
@@ -1101,40 +1095,103 @@ static void equivalenceAnalysis(Operation *op, OneShotAnalysisState &state) {
   equivalenceAnalysis(ops, state);
 }
 
-LogicalResult OneShotAnalysisState::analyzeOp(Operation *op,
-                                              const DominanceInfo &domInfo) {
-  // Collect ops so we can build our own reverse traversal.
-  SmallVector<Operation *> ops;
-  op->walk([&](Operation *op) {
-    // No tensors => no buffers.
-    if (!hasTensorSemantics(op))
+/// "Bottom-up from terminators" heuristic.
+static SmallVector<Operation *>
+bottomUpFromTerminatorsHeuristic(Operation *op,
+                                 const OneShotAnalysisState &state) {
+  SetVector<Operation *> traversedOps;
+
+  // Find region terminators.
+  op->walk<WalkOrder::PostOrder>([&](RegionBranchTerminatorOpInterface term) {
+    if (!traversedOps.insert(term))
       return;
-    ops.push_back(op);
+    // Follow the reverse SSA use-def chain from each yielded value as long as
+    // we stay within the same region.
+    SmallVector<OpResult> worklist;
+    for (Value v : term->getOperands()) {
+      if (!isa<TensorType>(v.getType()))
+        continue;
+      auto opResult = dyn_cast<OpResult>(v);
+      if (!opResult)
+        continue;
+      worklist.push_back(opResult);
+    }
+    while (!worklist.empty()) {
+      OpResult opResult = worklist.pop_back_val();
+      Operation *defOp = opResult.getDefiningOp();
+      if (!traversedOps.insert(defOp))
+        continue;
+      if (!term->getParentRegion()->findAncestorOpInRegion(*defOp))
+        continue;
+      AliasingOpOperandList aliases = state.getAliasingOpOperands(opResult);
+      for (auto alias : aliases) {
+        Value v = alias.opOperand->get();
+        if (!isa<TensorType>(v.getType()))
+          continue;
+        auto opResult = dyn_cast<OpResult>(v);
+        if (!opResult)
+          continue;
+        worklist.push_back(opResult);
+      }
+    }
   });
 
-  if (getOptions().analysisFuzzerSeed) {
-    // This is a fuzzer. For testing purposes only. Randomize the order in which
-    // operations are analyzed. The bufferization quality is likely worse, but
-    // we want to make sure that no assertions are triggered anywhere.
-    std::mt19937 g(getOptions().analysisFuzzerSeed);
-    llvm::shuffle(ops.begin(), ops.end(), g);
-  }
+  // Analyze traversed ops, then all remaining ops.
+  SmallVector<Operation *> result(traversedOps.begin(), traversedOps.end());
+  op->walk<WalkOrder::PostOrder, ReverseIterator>([&](Operation *op) {
+    if (!traversedOps.contains(op) && hasTensorSemantics(op))
+      result.push_back(op);
+  });
+  return result;
+}
 
+LogicalResult OneShotAnalysisState::analyzeOp(Operation *op,
+                                              const DominanceInfo &domInfo) {
   OneShotBufferizationOptions::AnalysisHeuristic heuristic =
       getOptions().analysisHeuristic;
-  if (heuristic == OneShotBufferizationOptions::AnalysisHeuristic::BottomUp) {
-    // Default: Walk ops in reverse for better interference analysis.
-    for (Operation *op : reverse(ops))
-      if (failed(analyzeSingleOp(op, domInfo)))
-        return failure();
-  } else if (heuristic ==
-             OneShotBufferizationOptions::AnalysisHeuristic::TopDown) {
-    for (Operation *op : ops)
-      if (failed(analyzeSingleOp(op, domInfo)))
-        return failure();
+
+  SmallVector<Operation *> orderedOps;
+  if (heuristic ==
+      OneShotBufferizationOptions::AnalysisHeuristic::BottomUpFromTerminators) {
+    orderedOps = bottomUpFromTerminatorsHeuristic(op, *this);
   } else {
-    llvm_unreachable("unsupported heuristic");
+    op->walk([&](Operation *op) {
+      // No tensors => no buffers.
+      if (!hasTensorSemantics(op))
+        return;
+      orderedOps.push_back(op);
+    });
+    switch (heuristic) {
+    case OneShotBufferizationOptions::AnalysisHeuristic::BottomUp: {
+      // Default: Walk ops in reverse for better interference analysis.
+      std::reverse(orderedOps.begin(), orderedOps.end());
+      break;
+    }
+    case OneShotBufferizationOptions::AnalysisHeuristic::TopDown: {
+      // Ops are already sorted top-down in `orderedOps`.
+      break;
+    }
+    case OneShotBufferizationOptions::AnalysisHeuristic::Fuzzer: {
+      assert(getOptions().analysisFuzzerSeed &&
+             "expected that fuzzer seed it set");
+      // This is a fuzzer. For testing purposes only. Randomize the order in
+      // which operations are analyzed. The bufferization quality is likely
+      // worse, but we want to make sure that no assertions are triggered
+      // anywhere.
+      std::mt19937 g(getOptions().analysisFuzzerSeed);
+      llvm::shuffle(orderedOps.begin(), orderedOps.end(), g);
+      break;
+    }
+    default: {
+      llvm_unreachable("unsupported heuristic");
+    }
+    }
   }
+
+  // Analyze ops in the computed order.
+  for (Operation *op : orderedOps)
+    if (failed(analyzeSingleOp(op, domInfo)))
+      return failure();
 
   equivalenceAnalysis(op, *this);
   return success();
@@ -1182,8 +1239,8 @@ checkPreBufferizationAssumptions(Operation *op, const DominanceInfo &domInfo,
     // not handled in the analysis.
     if (auto toTensorOp = dyn_cast<ToTensorOp>(op.getOperation())) {
       if (!toTensorOp.getRestrict() && !toTensorOp->getUses().empty()) {
-        op->emitError("to_tensor ops without `restrict` are not supported by "
-                      "One-Shot Analysis");
+        op->emitOpError("to_tensor ops without `restrict` are not supported by "
+                        "One-Shot Analysis");
         return WalkResult::interrupt();
       }
     }
@@ -1195,8 +1252,19 @@ checkPreBufferizationAssumptions(Operation *op, const DominanceInfo &domInfo,
                 /*checkConsistencyOnly=*/true)) {
           // This error can happen if certain "mustBufferizeInPlace" interface
           // methods are implemented incorrectly, such that the IR already has
-          // a RaW conflict before making any bufferization decisions.
-          op->emitError("input IR has RaW conflict");
+          // a RaW conflict before making any bufferization decisions. It can
+          // also happen if the bufferization.materialize_in_destination is used
+          // in such a way that a RaW conflict is not avoidable.
+          op->emitOpError("not bufferizable under the given constraints: "
+                          "cannot avoid RaW conflict");
+          return WalkResult::interrupt();
+        }
+
+        if (state.isInPlace(opOperand) &&
+            wouldCreateWriteToNonWritableBuffer(
+                opOperand, state, /*checkConsistencyOnly=*/true)) {
+          op->emitOpError("not bufferizable under the given constraints: would "
+                          "write to read-only buffer");
           return WalkResult::interrupt();
         }
       }
@@ -1314,15 +1382,27 @@ LogicalResult
 bufferization::runOneShotBufferize(Operation *op,
                                    const OneShotBufferizationOptions &options,
                                    BufferizationStatistics *statistics) {
+  // copy-before-write deactivates the analysis. It cannot be used together with
+  // test-analysis-only.
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
          "invalid combination of bufferization flags");
-  if (!options.copyBeforeWrite) {
-    // If a buffer is copied before every write, no analysis is needed.
+
+  if (options.copyBeforeWrite) {
+    // Copy buffer before each write. No analysis is needed.
+  } else {
+    // Run One-Shot Analysis and insert buffer copies (on the tensor level)
+    // only where needed. This is the default and much more efficient than
+    // copy-before-write.
     if (failed(insertTensorCopies(op, options, statistics)))
       return failure();
+
+    // If test-analysis-only is set, the IR was annotated with RaW conflict
+    // markers (attributes) during One-Shot Analysis.
+    if (options.testAnalysisOnly)
+      return success();
   }
-  if (options.testAnalysisOnly)
-    return success();
-  return bufferizeOp(op, options, /*copyBeforeWrite=*/options.copyBeforeWrite,
-                     /*opFilter=*/nullptr, statistics);
+
+  // Bufferize the op and its nested ops. If options.copyBeforeWrite is set,
+  // a new buffer copy is allocated every time a buffer is written to.
+  return bufferizeOp(op, options, statistics);
 }

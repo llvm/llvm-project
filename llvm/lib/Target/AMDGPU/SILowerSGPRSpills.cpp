@@ -278,7 +278,8 @@ void SILowerSGPRSpills::extendWWMVirtRegLiveness(MachineFunction &MF,
   for (auto Reg : MFI->getSGPRSpillVGPRs()) {
     for (MachineBasicBlock *SaveBlock : SaveBlocks) {
       MachineBasicBlock::iterator InsertBefore = SaveBlock->begin();
-      auto MIB = BuildMI(*SaveBlock, *InsertBefore, InsertBefore->getDebugLoc(),
+      DebugLoc DL = SaveBlock->findDebugLoc(InsertBefore);
+      auto MIB = BuildMI(*SaveBlock, InsertBefore, DL,
                          TII->get(AMDGPU::IMPLICIT_DEF), Reg);
       MFI->setFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG);
       // Set SGPR_SPILL asm printer flag
@@ -294,10 +295,10 @@ void SILowerSGPRSpills::extendWWMVirtRegLiveness(MachineFunction &MF,
   for (MachineBasicBlock *RestoreBlock : RestoreBlocks) {
     MachineBasicBlock::iterator InsertBefore =
         RestoreBlock->getFirstTerminator();
+    DebugLoc DL = RestoreBlock->findDebugLoc(InsertBefore);
     for (auto Reg : MFI->getSGPRSpillVGPRs()) {
-      auto MIB =
-          BuildMI(*RestoreBlock, *InsertBefore, InsertBefore->getDebugLoc(),
-                  TII->get(TargetOpcode::KILL));
+      auto MIB = BuildMI(*RestoreBlock, InsertBefore, DL,
+                         TII->get(TargetOpcode::KILL));
       MIB.addReg(Reg);
       if (LIS)
         LIS->InsertMachineInstrInMaps(*MIB);
@@ -332,7 +333,6 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
   }
 
   bool MadeChange = false;
-  bool NewReservedRegs = false;
   bool SpilledToVirtVGPRLanes = false;
 
   // TODO: CSR VGPRs will never be spilled to AGPRs. These can probably be
@@ -369,8 +369,8 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
           // regalloc aware CFI generation to insert new CFIs along with the
           // intermediate spills is implemented. There is no such support
           // currently exist in the LLVM compiler.
-          if (FuncInfo->allocateSGPRSpillToVGPRLane(MF, FI, true)) {
-            NewReservedRegs = true;
+          if (FuncInfo->allocateSGPRSpillToVGPRLane(
+                  MF, FI, /*SpillToPhysVGPRLane=*/true)) {
             bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(
                 MI, FI, nullptr, Indexes, LIS, true);
             if (!Spilled)
@@ -441,13 +441,6 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
 
   SaveBlocks.clear();
   RestoreBlocks.clear();
-
-  // Updated the reserved registers with any physical VGPRs added for SGPR
-  // spills.
-  if (NewReservedRegs) {
-    for (Register Reg : FuncInfo->getWWMReservedRegs())
-      MRI.reserveReg(Reg, TRI);
-  }
 
   return MadeChange;
 }

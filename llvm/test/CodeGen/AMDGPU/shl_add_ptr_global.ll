@@ -7,7 +7,6 @@ define void @shl_base_atomicrmw_global_ptr(ptr addrspace(1) %out, ptr addrspace(
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_lshlrev_b64 v[0:1], 2, v[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v6, 3
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_atomic_and v[0:1], v6, off offset:512
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1_vol

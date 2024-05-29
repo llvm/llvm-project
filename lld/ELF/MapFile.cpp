@@ -121,7 +121,7 @@ static void printEhFrame(raw_ostream &os, const EhFrameSection *sec) {
     if (!pieces.empty()) {
       EhSectionPiece &last = pieces.back();
       if (last.sec == p.sec && last.inputOff + last.size == p.inputOff &&
-          last.outputOff + last.size == p.outputOff) {
+          last.outputOff + last.size == (unsigned)p.outputOff) {
         last.size += p.size;
         return;
       }
@@ -229,7 +229,7 @@ static void writeCref(raw_fd_ostream &os) {
       if (isa<SharedSymbol>(sym))
         map[sym].insert(file);
       if (auto *d = dyn_cast<Defined>(sym))
-        if (!d->isLocal() && (!d->section || d->section->isLive()))
+        if (!d->isLocal())
           map[d].insert(file);
     }
   }

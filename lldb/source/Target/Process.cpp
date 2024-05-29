@@ -63,6 +63,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -407,8 +408,8 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
   return process_sp;
 }
 
-ConstString &Process::GetStaticBroadcasterClass() {
-  static ConstString class_name("lldb.process");
+llvm::StringRef Process::GetStaticBroadcasterClass() {
+  static constexpr llvm::StringLiteral class_name("lldb.process");
   return class_name;
 }
 
@@ -422,7 +423,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
                  const UnixSignalsSP &unix_signals_sp)
     : ProcessProperties(this),
       Broadcaster((target_sp->GetDebugger().GetBroadcasterManager()),
-                  Process::GetStaticBroadcasterClass().AsCString()),
+                  Process::GetStaticBroadcasterClass().str()),
       m_target_wp(target_sp), m_public_state(eStateUnloaded),
       m_private_state(eStateUnloaded),
       m_private_state_broadcaster(nullptr,
@@ -436,7 +437,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_exit_status_mutex(), m_thread_mutex(), m_thread_list_real(this),
       m_thread_list(this), m_thread_plans(*this), m_extended_thread_list(this),
       m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
-      m_notifications(), m_image_tokens(),
+      m_watchpoint_resource_list(), m_notifications(), m_image_tokens(),
       m_breakpoint_site_list(), m_dynamic_checkers_up(),
       m_unix_signals_sp(unix_signals_sp), m_abi_sp(), m_process_input_reader(),
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
@@ -445,7 +446,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_memory_cache(*this), m_allocated_memory_cache(*this),
       m_should_detach(false), m_next_event_action_up(), m_public_run_lock(),
       m_private_run_lock(), m_currently_handling_do_on_removals(false),
-      m_resume_requested(false), m_finalizing(false),
+      m_resume_requested(false), m_finalizing(false), m_destructing(false),
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
       m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
@@ -518,9 +519,11 @@ ProcessProperties &Process::GetGlobalProperties() {
   return *g_settings_ptr;
 }
 
-void Process::Finalize() {
+void Process::Finalize(bool destructing) {
   if (m_finalizing.exchange(true))
     return;
+  if (destructing)
+    m_destructing.exchange(true);
 
   // Destroy the process. This will call the virtual function DoDestroy under
   // the hood, giving our derived class a chance to do the ncessary tear down.
@@ -547,6 +550,7 @@ void Process::Finalize() {
   m_extended_thread_list.Destroy();
   m_queue_list.Clear();
   m_queue_list_stop_id = 0;
+  m_watchpoint_resource_list.Clear();
   std::vector<Notifications> empty_notifications;
   m_notifications.swap(empty_notifications);
   m_image_tokens.clear();
@@ -1414,7 +1418,13 @@ bool Process::StateChangedIsHijackedForSynchronousResume() {
 StateType Process::GetPrivateState() { return m_private_state.GetValue(); }
 
 void Process::SetPrivateState(StateType new_state) {
-  if (m_finalizing)
+  // Use m_destructing not m_finalizing here.  If we are finalizing a process
+  // that we haven't started tearing down, we'd like to be able to nicely
+  // detach if asked, but that requires the event system be live.  That will
+  // not be true for an in-the-middle-of-being-destructed Process, since the
+  // event system relies on Process::shared_from_this, which may have already
+  // been destroyed.
+  if (m_destructing)
     return;
 
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process | LLDBLog::Unwind));
@@ -1563,11 +1573,12 @@ void Process::SetDynamicCheckers(DynamicCheckerFunctions *dynamic_checkers) {
   m_dynamic_checkers_up.reset(dynamic_checkers);
 }
 
-BreakpointSiteList &Process::GetBreakpointSiteList() {
+StopPointSiteList<BreakpointSite> &Process::GetBreakpointSiteList() {
   return m_breakpoint_site_list;
 }
 
-const BreakpointSiteList &Process::GetBreakpointSiteList() const {
+const StopPointSiteList<BreakpointSite> &
+Process::GetBreakpointSiteList() const {
   return m_breakpoint_site_list;
 }
 
@@ -1615,7 +1626,7 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
 }
 
 lldb::break_id_t
-Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
+Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
                               bool use_hardware) {
   addr_t load_addr = LLDB_INVALID_ADDRESS;
 
@@ -1642,10 +1653,10 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
 
   // Reset the IsIndirect flag here, in case the location changes from pointing
   // to a indirect symbol to a regular symbol.
-  owner->SetIsIndirect(false);
+  constituent->SetIsIndirect(false);
 
-  if (owner->ShouldResolveIndirectFunctions()) {
-    Symbol *symbol = owner->GetAddress().CalculateSymbolContextSymbol();
+  if (constituent->ShouldResolveIndirectFunctions()) {
+    Symbol *symbol = constituent->GetAddress().CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
       Status error;
       Address symbol_address = symbol->GetAddress();
@@ -1655,37 +1666,37 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
             "warning: failed to resolve indirect function at 0x%" PRIx64
             " for breakpoint %i.%i: %s\n",
             symbol->GetLoadAddress(&GetTarget()),
-            owner->GetBreakpoint().GetID(), owner->GetID(),
+            constituent->GetBreakpoint().GetID(), constituent->GetID(),
             error.AsCString() ? error.AsCString() : "unknown error");
         return LLDB_INVALID_BREAK_ID;
       }
       Address resolved_address(load_addr);
       load_addr = resolved_address.GetOpcodeLoadAddress(&GetTarget());
-      owner->SetIsIndirect(true);
+      constituent->SetIsIndirect(true);
     } else
-      load_addr = owner->GetAddress().GetOpcodeLoadAddress(&GetTarget());
+      load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
   } else
-    load_addr = owner->GetAddress().GetOpcodeLoadAddress(&GetTarget());
+    load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
 
   if (load_addr != LLDB_INVALID_ADDRESS) {
     BreakpointSiteSP bp_site_sp;
 
-    // Look up this breakpoint site.  If it exists, then add this new owner,
-    // otherwise create a new breakpoint site and add it.
+    // Look up this breakpoint site.  If it exists, then add this new
+    // constituent, otherwise create a new breakpoint site and add it.
 
     bp_site_sp = m_breakpoint_site_list.FindByAddress(load_addr);
 
     if (bp_site_sp) {
-      bp_site_sp->AddOwner(owner);
-      owner->SetBreakpointSite(bp_site_sp);
+      bp_site_sp->AddConstituent(constituent);
+      constituent->SetBreakpointSite(bp_site_sp);
       return bp_site_sp->GetID();
     } else {
-      bp_site_sp.reset(new BreakpointSite(&m_breakpoint_site_list, owner,
-                                          load_addr, use_hardware));
+      bp_site_sp.reset(
+          new BreakpointSite(constituent, load_addr, use_hardware));
       if (bp_site_sp) {
         Status error = EnableBreakpointSite(bp_site_sp.get());
         if (error.Success()) {
-          owner->SetBreakpointSite(bp_site_sp);
+          constituent->SetBreakpointSite(bp_site_sp);
           return m_breakpoint_site_list.Add(bp_site_sp);
         } else {
           if (show_error || use_hardware) {
@@ -1693,7 +1704,8 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
             GetTarget().GetDebugger().GetErrorStream().Printf(
                 "warning: failed to set breakpoint site at 0x%" PRIx64
                 " for breakpoint %i.%i: %s\n",
-                load_addr, owner->GetBreakpoint().GetID(), owner->GetID(),
+                load_addr, constituent->GetBreakpoint().GetID(),
+                constituent->GetID(),
                 error.AsCString() ? error.AsCString() : "unknown error");
           }
         }
@@ -1704,11 +1716,12 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
   return LLDB_INVALID_BREAK_ID;
 }
 
-void Process::RemoveOwnerFromBreakpointSite(lldb::user_id_t owner_id,
-                                            lldb::user_id_t owner_loc_id,
-                                            BreakpointSiteSP &bp_site_sp) {
-  uint32_t num_owners = bp_site_sp->RemoveOwner(owner_id, owner_loc_id);
-  if (num_owners == 0) {
+void Process::RemoveConstituentFromBreakpointSite(
+    lldb::user_id_t constituent_id, lldb::user_id_t constituent_loc_id,
+    BreakpointSiteSP &bp_site_sp) {
+  uint32_t num_constituents =
+      bp_site_sp->RemoveConstituent(constituent_id, constituent_loc_id);
+  if (num_constituents == 0) {
     // Don't try to disable the site if we don't have a live process anymore.
     if (IsAlive())
       DisableBreakpointSite(bp_site_sp.get());
@@ -1719,7 +1732,7 @@ void Process::RemoveOwnerFromBreakpointSite(lldb::user_id_t owner_id,
 size_t Process::RemoveBreakpointOpcodesFromBuffer(addr_t bp_addr, size_t size,
                                                   uint8_t *buf) const {
   size_t bytes_removed = 0;
-  BreakpointSiteList bp_sites_in_range;
+  StopPointSiteList<BreakpointSite> bp_sites_in_range;
 
   if (m_breakpoint_site_list.FindInRange(bp_addr, bp_addr + size,
                                          bp_sites_in_range)) {
@@ -2140,7 +2153,7 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
   // (enabled software breakpoints) any software traps (breakpoints) that we
   // may have placed in our tasks memory.
 
-  BreakpointSiteList bp_sites_in_range;
+  StopPointSiteList<BreakpointSite> bp_sites_in_range;
   if (!m_breakpoint_site_list.FindInRange(addr, addr + size, bp_sites_in_range))
     return WriteMemoryPrivate(addr, buf, size, error);
 
@@ -2404,26 +2417,17 @@ bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,
       range_info.GetExecutable() == MemoryRegionInfo::eDontKnow) {
     return false;
   }
-
-  if (range_info.GetReadable() == MemoryRegionInfo::eYes)
-    permissions |= lldb::ePermissionsReadable;
-
-  if (range_info.GetWritable() == MemoryRegionInfo::eYes)
-    permissions |= lldb::ePermissionsWritable;
-
-  if (range_info.GetExecutable() == MemoryRegionInfo::eYes)
-    permissions |= lldb::ePermissionsExecutable;
-
+  permissions = range_info.GetLLDBPermissions();
   return true;
 }
 
-Status Process::EnableWatchpoint(Watchpoint *watchpoint, bool notify) {
+Status Process::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   Status error;
   error.SetErrorString("watchpoints are not supported");
   return error;
 }
 
-Status Process::DisableWatchpoint(Watchpoint *watchpoint, bool notify) {
+Status Process::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   Status error;
   error.SetErrorString("watchpoints are not supported");
   return error;
@@ -2934,14 +2938,11 @@ void Process::CompleteAttach() {
   DidAttach(process_arch);
 
   if (process_arch.IsValid()) {
+    LLDB_LOG(log,
+             "Process::{0} replacing process architecture with DidAttach() "
+             "architecture: \"{1}\"",
+             __FUNCTION__, process_arch.GetTriple().getTriple());
     GetTarget().SetArchitecture(process_arch);
-    if (log) {
-      const char *triple_str = process_arch.GetTriple().getTriple().c_str();
-      LLDB_LOGF(log,
-                "Process::%s replacing process architecture with DidAttach() "
-                "architecture: %s",
-                __FUNCTION__, triple_str ? triple_str : "<null>");
-    }
   }
 
   // We just attached.  If we have a platform, ask it for the process
@@ -3165,8 +3166,8 @@ Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
     // Don't hijack and eat the eStateExited as the code that was doing the
     // attach will be waiting for this event...
     RestoreProcessEvents();
-    SetExitStatus(SIGKILL, "Cancelled async attach.");
     Destroy(false);
+    SetExitStatus(SIGKILL, "Cancelled async attach.");
     return Status();
   }
 
@@ -3852,6 +3853,13 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
                   ") woke up with an interrupt while attaching - "
                   "forwarding interrupt.",
                   __FUNCTION__, static_cast<void *>(this), GetID());
+        // The server may be spinning waiting for a process to appear, in which
+        // case we should tell it to stop doing that.  Normally, we don't NEED
+        // to do that because we will next close the communication to the stub
+        // and that will get it to shut down.  But there are remote debugging
+        // cases where relying on that side-effect causes the shutdown to be
+        // flakey, so we should send a positive signal to interrupt the wait.
+        Status error = HaltPrivate();
         BroadcastEvent(eBroadcastBitInterrupt, nullptr);
       } else if (StateIsRunningState(m_last_broadcast_state)) {
         LLDB_LOGF(log,
@@ -4271,32 +4279,38 @@ void Process::CalculateExecutionContext(ExecutionContext &exe_ctx) {
 //    return Host::GetArchSpecForExistingProcess (process_name);
 //}
 
+EventSP Process::CreateEventFromProcessState(uint32_t event_type) {
+  auto event_data_sp =
+      std::make_shared<ProcessEventData>(shared_from_this(), GetState());
+  return std::make_shared<Event>(event_type, event_data_sp);
+}
+
 void Process::AppendSTDOUT(const char *s, size_t len) {
   std::lock_guard<std::recursive_mutex> guard(m_stdio_communication_mutex);
   m_stdout_data.append(s, len);
-  BroadcastEventIfUnique(eBroadcastBitSTDOUT,
-                         new ProcessEventData(shared_from_this(), GetState()));
+  auto event_sp = CreateEventFromProcessState(eBroadcastBitSTDOUT);
+  BroadcastEventIfUnique(event_sp);
 }
 
 void Process::AppendSTDERR(const char *s, size_t len) {
   std::lock_guard<std::recursive_mutex> guard(m_stdio_communication_mutex);
   m_stderr_data.append(s, len);
-  BroadcastEventIfUnique(eBroadcastBitSTDERR,
-                         new ProcessEventData(shared_from_this(), GetState()));
+  auto event_sp = CreateEventFromProcessState(eBroadcastBitSTDERR);
+  BroadcastEventIfUnique(event_sp);
 }
 
 void Process::BroadcastAsyncProfileData(const std::string &one_profile_data) {
   std::lock_guard<std::recursive_mutex> guard(m_profile_data_comm_mutex);
   m_profile_data.push_back(one_profile_data);
-  BroadcastEventIfUnique(eBroadcastBitProfileData,
-                         new ProcessEventData(shared_from_this(), GetState()));
+  auto event_sp = CreateEventFromProcessState(eBroadcastBitProfileData);
+  BroadcastEventIfUnique(event_sp);
 }
 
 void Process::BroadcastStructuredData(const StructuredData::ObjectSP &object_sp,
                                       const StructuredDataPluginSP &plugin_sp) {
-  BroadcastEvent(
-      eBroadcastBitStructuredData,
-      new EventDataStructuredData(shared_from_this(), object_sp, plugin_sp));
+  auto data_sp = std::make_shared<EventDataStructuredData>(
+      shared_from_this(), object_sp, plugin_sp);
+  BroadcastEvent(eBroadcastBitStructuredData, data_sp);
 }
 
 StructuredDataPluginSP
@@ -4724,27 +4738,26 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
   if (!thread_plan_sp) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
-        "RunThreadPlan called with empty thread plan.");
+        lldb::eSeverityError, "RunThreadPlan called with empty thread plan.");
     return eExpressionSetupError;
   }
 
   if (!thread_plan_sp->ValidatePlan(nullptr)) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "RunThreadPlan called with an invalid thread plan.");
     return eExpressionSetupError;
   }
 
   if (exe_ctx.GetProcessPtr() != this) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "RunThreadPlan called on wrong process.");
     return eExpressionSetupError;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
   if (thread == nullptr) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "RunThreadPlan called with invalid thread.");
     return eExpressionSetupError;
   }
@@ -4779,7 +4792,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
   if (m_private_state.GetValue() != eStateStopped) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "RunThreadPlan called while the private state was not stopped.");
     return eExpressionSetupError;
   }
@@ -4793,7 +4806,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     selected_frame_sp = thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
     if (!selected_frame_sp) {
       diagnostic_manager.Printf(
-          eDiagnosticSeverityError,
+          lldb::eSeverityError,
           "RunThreadPlan called without a selected frame on thread %d",
           thread_idx_id);
       return eExpressionSetupError;
@@ -4804,7 +4817,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   // be smaller than the overall timeout.
   if (options.GetOneThreadTimeout() && options.GetTimeout() &&
       *options.GetTimeout() < *options.GetOneThreadTimeout()) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "RunThreadPlan called with one thread "
                                  "timeout greater than total timeout");
     return eExpressionSetupError;
@@ -4932,7 +4945,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     Event *other_events = listener_sp->PeekAtNextEvent();
     if (other_events != nullptr) {
       diagnostic_manager.PutString(
-          eDiagnosticSeverityError,
+          lldb::eSeverityError,
           "RunThreadPlan called with pending events on the queue.");
       return eExpressionSetupError;
     }
@@ -4975,7 +4988,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           Status resume_error = PrivateResume();
           if (!resume_error.Success()) {
             diagnostic_manager.Printf(
-                eDiagnosticSeverityError,
+                lldb::eSeverityError,
                 "couldn't resume inferior the %d time: \"%s\".", num_resumes,
                 resume_error.AsCString());
             return_value = eExpressionSetupError;
@@ -4991,7 +5004,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                     "resume %" PRIu32 ", exiting.",
                     num_resumes);
 
-          diagnostic_manager.Printf(eDiagnosticSeverityError,
+          diagnostic_manager.Printf(lldb::eSeverityError,
                                     "didn't get any event after resume %" PRIu32
                                     ", exiting.",
                                     num_resumes);
@@ -5027,7 +5040,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           }
 
           diagnostic_manager.Printf(
-              eDiagnosticSeverityError,
+              lldb::eSeverityError,
               "didn't get running event after initial resume, got %s instead.",
               StateAsCString(stop_state));
           return_value = eExpressionSetupError;
@@ -5085,7 +5098,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             const bool use_run_lock = false;
             Halt(clear_thread_plans, use_run_lock);
             return_value = eExpressionInterrupted;
-            diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+            diagnostic_manager.PutString(lldb::eSeverityInfo,
                                          "execution halted by user interrupt.");
             LLDB_LOGF(log, "Process::RunThreadPlan(): Got  interrupted by "
                            "eBroadcastBitInterrupted, exiting.");
@@ -5138,7 +5151,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                 event_to_broadcast_sp = event_sp;
 
               diagnostic_manager.PutString(
-                  eDiagnosticSeverityError,
+                  lldb::eSeverityError,
                   "execution stopped with unexpected state.");
               return_value = eExpressionInterrupted;
               break;
@@ -5669,27 +5682,33 @@ void Process::Flush() {
 
 lldb::addr_t Process::GetCodeAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_code_address_mask;
 }
 
 lldb::addr_t Process::GetDataAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_data_address_mask;
 }
 
 lldb::addr_t Process::GetHighmemCodeAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
+
+  if (m_highmem_code_address_mask != LLDB_INVALID_ADDRESS_MASK)
+    return m_highmem_code_address_mask;
   return GetCodeAddressMask();
 }
 
 lldb::addr_t Process::GetHighmemDataAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
+
+  if (m_highmem_data_address_mask != LLDB_INVALID_ADDRESS_MASK)
+    return m_highmem_data_address_mask;
   return GetDataAddressMask();
 }
 
@@ -6251,4 +6270,226 @@ Status Process::WriteMemoryTags(lldb::addr_t addr, size_t len,
 
   return DoWriteMemoryTags(addr, len, tag_manager->GetAllocationTagType(),
                            *packed_tags);
+}
+
+// Create a CoreFileMemoryRange from a MemoryRegionInfo
+static Process::CoreFileMemoryRange
+CreateCoreFileMemoryRange(const MemoryRegionInfo &region) {
+  const addr_t addr = region.GetRange().GetRangeBase();
+  llvm::AddressRange range(addr, addr + region.GetRange().GetByteSize());
+  return {range, region.GetLLDBPermissions()};
+}
+
+// Add dirty pages to the core file ranges and return true if dirty pages
+// were added. Return false if the dirty page information is not valid or in
+// the region.
+static bool AddDirtyPages(const MemoryRegionInfo &region,
+                          Process::CoreFileMemoryRanges &ranges) {
+  const auto &dirty_page_list = region.GetDirtyPageList();
+  if (!dirty_page_list)
+    return false;
+  const uint32_t lldb_permissions = region.GetLLDBPermissions();
+  const addr_t page_size = region.GetPageSize();
+  if (page_size == 0)
+    return false;
+  llvm::AddressRange range(0, 0);
+  for (addr_t page_addr : *dirty_page_list) {
+    if (range.empty()) {
+      // No range yet, initialize the range with the current dirty page.
+      range = llvm::AddressRange(page_addr, page_addr + page_size);
+    } else {
+      if (range.end() == page_addr) {
+        // Combine consective ranges.
+        range = llvm::AddressRange(range.start(), page_addr + page_size);
+      } else {
+        // Add previous contiguous range and init the new range with the
+        // current dirty page.
+        ranges.push_back({range, lldb_permissions});
+        range = llvm::AddressRange(page_addr, page_addr + page_size);
+      }
+    }
+  }
+  // The last range
+  if (!range.empty())
+    ranges.push_back({range, lldb_permissions});
+  return true;
+}
+
+// Given a region, add the region to \a ranges.
+//
+// Only add the region if it isn't empty and if it has some permissions.
+// If \a try_dirty_pages is true, then try to add only the dirty pages for a
+// given region. If the region has dirty page information, only dirty pages
+// will be added to \a ranges, else the entire range will be added to \a
+// ranges.
+static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
+                      Process::CoreFileMemoryRanges &ranges) {
+  // Don't add empty ranges.
+  if (region.GetRange().GetByteSize() == 0)
+    return;
+  // Don't add ranges with no read permissions.
+  if ((region.GetLLDBPermissions() & lldb::ePermissionsReadable) == 0)
+    return;
+  if (try_dirty_pages && AddDirtyPages(region, ranges))
+    return;
+  ranges.push_back(CreateCoreFileMemoryRange(region));
+}
+
+static void SaveOffRegionsWithStackPointers(
+    Process &process, const MemoryRegionInfos &regions,
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+  const bool try_dirty_pages = true;
+
+  // Before we take any dump, we want to save off the used portions of the
+  // stacks and mark those memory regions as saved. This prevents us from saving
+  // the unused portion of the stack below the stack pointer. Saving space on
+  // the dump.
+  for (lldb::ThreadSP thread_sp : process.GetThreadList().Threads()) {
+    if (!thread_sp)
+      continue;
+    StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
+    if (!frame_sp)
+      continue;
+    RegisterContextSP reg_ctx_sp = frame_sp->GetRegisterContext();
+    if (!reg_ctx_sp)
+      continue;
+    const addr_t sp = reg_ctx_sp->GetSP();
+    const size_t red_zone = process.GetABI()->GetRedZoneSize();
+    lldb_private::MemoryRegionInfo sp_region;
+    if (process.GetMemoryRegionInfo(sp, sp_region).Success()) {
+      const size_t stack_head = (sp - red_zone);
+      const size_t stack_size = sp_region.GetRange().GetRangeEnd() - stack_head;
+      sp_region.GetRange().SetRangeBase(stack_head);
+      sp_region.GetRange().SetByteSize(stack_size);
+      stack_ends.insert(sp_region.GetRange().GetRangeEnd());
+      AddRegion(sp_region, try_dirty_pages, ranges);
+    }
+  }
+}
+
+// Save all memory regions that are not empty or have at least some permissions
+// for a full core file style.
+static void GetCoreFileSaveRangesFull(Process &process,
+                                      const MemoryRegionInfos &regions,
+                                      Process::CoreFileMemoryRanges &ranges,
+                                      std::set<addr_t> &stack_ends) {
+
+  // Don't add only dirty pages, add full regions.
+const bool try_dirty_pages = false;
+  for (const auto &region : regions)
+    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0)
+      AddRegion(region, try_dirty_pages, ranges);
+}
+
+// Save only the dirty pages to the core file. Make sure the process has at
+// least some dirty pages, as some OS versions don't support reporting what
+// pages are dirty within an memory region. If no memory regions have dirty
+// page information fall back to saving out all ranges with write permissions.
+static void GetCoreFileSaveRangesDirtyOnly(
+    Process &process, const MemoryRegionInfos &regions,
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+
+  // Iterate over the regions and find all dirty pages.
+  bool have_dirty_page_info = false;
+  for (const auto &region : regions) {
+    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
+        AddDirtyPages(region, ranges))
+      have_dirty_page_info = true;
+  }
+
+  if (!have_dirty_page_info) {
+    // We didn't find support for reporting dirty pages from the process
+    // plug-in so fall back to any region with write access permissions.
+    const bool try_dirty_pages = false;
+    for (const auto &region : regions)
+      if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
+          region.GetWritable() == MemoryRegionInfo::eYes)
+        AddRegion(region, try_dirty_pages, ranges);
+  }
+}
+
+// Save all thread stacks to the core file. Some OS versions support reporting
+// when a memory region is stack related. We check on this information, but we
+// also use the stack pointers of each thread and add those in case the OS
+// doesn't support reporting stack memory. This function also attempts to only
+// emit dirty pages from the stack if the memory regions support reporting
+// dirty regions as this will make the core file smaller. If the process
+// doesn't support dirty regions, then it will fall back to adding the full
+// stack region.
+static void GetCoreFileSaveRangesStackOnly(
+    Process &process, const MemoryRegionInfos &regions,
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+  const bool try_dirty_pages = true;
+  // Some platforms support annotating the region information that tell us that
+  // it comes from a thread stack. So look for those regions first.
+
+  for (const auto &region : regions) {
+    // Save all the stack memory ranges not associated with a stack pointer.
+    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
+        region.IsStackMemory() == MemoryRegionInfo::eYes)
+      AddRegion(region, try_dirty_pages, ranges);
+  }
+}
+
+Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
+                                            CoreFileMemoryRanges &ranges) {
+  lldb_private::MemoryRegionInfos regions;
+  Status err = GetMemoryRegions(regions);
+  if (err.Fail())
+    return err;
+  if (regions.empty())
+    return Status("failed to get any valid memory regions from the process");
+  if (core_style == eSaveCoreUnspecified)
+    return Status("callers must set the core_style to something other than "
+                  "eSaveCoreUnspecified");
+
+  std::set<addr_t> stack_ends;
+  SaveOffRegionsWithStackPointers(*this, regions, ranges, stack_ends);
+
+  switch (core_style) {
+  case eSaveCoreUnspecified:
+    break;
+
+  case eSaveCoreFull:
+    GetCoreFileSaveRangesFull(*this, regions, ranges, stack_ends);
+    break;
+
+  case eSaveCoreDirtyOnly:
+    GetCoreFileSaveRangesDirtyOnly(*this, regions, ranges, stack_ends);
+    break;
+
+  case eSaveCoreStackOnly:
+    GetCoreFileSaveRangesStackOnly(*this, regions, ranges, stack_ends);
+    break;
+  }
+
+  if (err.Fail())
+    return err;
+
+  if (ranges.empty())
+    return Status("no valid address ranges found for core style");
+
+  return Status(); // Success!
+}
+
+void Process::SetAddressableBitMasks(AddressableBits bit_masks) {
+  uint32_t low_memory_addr_bits = bit_masks.GetLowmemAddressableBits();
+  uint32_t high_memory_addr_bits = bit_masks.GetHighmemAddressableBits();
+
+  if (low_memory_addr_bits == 0 && high_memory_addr_bits == 0)
+    return;
+
+  if (low_memory_addr_bits != 0) {
+    addr_t low_addr_mask =
+        AddressableBits::AddressableBitToMask(low_memory_addr_bits);
+    SetCodeAddressMask(low_addr_mask);
+    SetDataAddressMask(low_addr_mask);
+  }
+
+  if (high_memory_addr_bits != 0) {
+    addr_t high_addr_mask =
+        AddressableBits::AddressableBitToMask(high_memory_addr_bits);
+    SetHighmemCodeAddressMask(high_addr_mask);
+    SetHighmemDataAddressMask(high_addr_mask);
+  }
 }

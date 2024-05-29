@@ -687,8 +687,7 @@ auto AlignVectors::createAdjustedPointer(IRBuilderBase &Builder, Value *Ptr,
   if (auto *I = dyn_cast<Instruction>(Ptr))
     if (Instruction *New = CloneMap.lookup(I))
       Ptr = New;
-  return Builder.CreateGEP(Type::getInt8Ty(HVC.F.getContext()), Ptr,
-                           HVC.getConstInt(Adjust), "gep");
+  return Builder.CreatePtrAdd(Ptr, HVC.getConstInt(Adjust), "gep");
 }
 
 auto AlignVectors::createAlignedPointer(IRBuilderBase &Builder, Value *Ptr,
@@ -1412,9 +1411,9 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
   // Return the element with the maximum alignment from Range,
   // where GetValue obtains the value to compare from an element.
   auto getMaxOf = [](auto Range, auto GetValue) {
-    return *std::max_element(
-        Range.begin(), Range.end(),
-        [&GetValue](auto &A, auto &B) { return GetValue(A) < GetValue(B); });
+    return *llvm::max_element(Range, [&GetValue](auto &A, auto &B) {
+      return GetValue(A) < GetValue(B);
+    });
   };
 
   const AddrList &BaseInfos = AddrGroups.at(Move.Base);

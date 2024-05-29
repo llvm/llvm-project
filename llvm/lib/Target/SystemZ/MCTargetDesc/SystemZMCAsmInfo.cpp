@@ -38,6 +38,7 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
   DotIsPC = false;
   EmitGNUAsmStartIndentationMarker = false;
   EmitLabelsInUpperCase = true;
+  ExceptionsType = ExceptionHandling::ZOS;
   IsLittleEndian = false;
   MaxInstLength = 6;
   RestrictCommentStringToStartOfStatement = true;

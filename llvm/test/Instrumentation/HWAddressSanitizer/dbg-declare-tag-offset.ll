@@ -1,5 +1,10 @@
 ; RUN: opt -passes=hwasan -S -o - %s | FileCheck %s
 
+;; Also test with RemoveDIs to verify that debug intrinsics immediately
+;; preceding an alloca (or other instruction of interest to stack tagging) will
+;; be correctly processed.
+; RUN: opt --try-experimental-debuginfo-iterators -passes=hwasan -S -o - %s | FileCheck %s
+
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
 
@@ -12,11 +17,11 @@ entry:
   %nodebug2 = alloca ptr
   %nodebug3 = alloca ptr
   %a = alloca ptr
+  ; CHECK: @llvm.dbg.declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 32)
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !12, metadata !DIExpression()), !dbg !14
+  ; CHECK: @llvm.dbg.declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 32)
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !12, metadata !DIExpression()), !dbg !14
   %b = alloca ptr
-  ; CHECK: @llvm.dbg.declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 32)
-  call void @llvm.dbg.declare(metadata ptr %a, metadata !12, metadata !DIExpression()), !dbg !14
-  ; CHECK: @llvm.dbg.declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 32)
-  call void @llvm.dbg.declare(metadata ptr %a, metadata !12, metadata !DIExpression()), !dbg !14
   ; CHECK: @llvm.dbg.declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 96)
   call void @llvm.dbg.declare(metadata ptr %b, metadata !13, metadata !DIExpression()), !dbg !14
   ; CHECK: @llvm.dbg.declare{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 96)

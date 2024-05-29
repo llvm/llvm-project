@@ -22,7 +22,6 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<bool> ShouldPreserveAllAttributes;
-extern cl::opt<bool> EnableKnowledgeRetention;
 } // namespace llvm
 
 static void RunTest(
@@ -408,7 +407,6 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
   LLVMContext C;
   SMDiagnostic Err;
 
-  std::random_device dev;
   std::mt19937 Rng(Seed);
   std::uniform_int_distribution<int> DistCount(MinCount, MaxCount);
   std::uniform_int_distribution<unsigned> DistValue(0, MaxValue);

@@ -578,6 +578,24 @@ static std::optional<bool> foldCmpOfMaxOrMin(Operation *lhsOp,
                                 lhsRange, ConstantIntRanges::constant(cstB));
 }
 
+/// Return the result of `cmp(pred, x, x)`
+static bool compareSameArgs(IndexCmpPredicate pred) {
+  switch (pred) {
+  case IndexCmpPredicate::EQ:
+  case IndexCmpPredicate::SGE:
+  case IndexCmpPredicate::SLE:
+  case IndexCmpPredicate::UGE:
+  case IndexCmpPredicate::ULE:
+    return true;
+  case IndexCmpPredicate::NE:
+  case IndexCmpPredicate::SGT:
+  case IndexCmpPredicate::SLT:
+  case IndexCmpPredicate::UGT:
+  case IndexCmpPredicate::ULT:
+    return false;
+  }
+}
+
 OpFoldResult CmpOp::fold(FoldAdaptor adaptor) {
   // Attempt to fold if both inputs are constant.
   auto lhs = dyn_cast_if_present<IntegerAttr>(adaptor.getLhs());
@@ -605,6 +623,10 @@ OpFoldResult CmpOp::fold(FoldAdaptor adaptor) {
     if (result64 && result32 && *result64 == *result32)
       return BoolAttr::get(getContext(), *result64);
   }
+
+  // Fold `cmp(x, x)`
+  if (getLhs() == getRhs())
+    return BoolAttr::get(getContext(), compareSameArgs(getPred()));
 
   return {};
 }

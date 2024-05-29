@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! !DIR$ IGNORE_TKR tests
 
 !ERROR: !DIR$ IGNORE_TKR directive must appear in a subroutine or function
@@ -136,12 +136,6 @@ module m
 !ERROR: 'x' must be local to this subprogram
 !dir$ ignore_tkr x
     end block
-  end
-
-  subroutine t21(x)
-!dir$ ignore_tkr(c) x
-!ERROR: !DIR$ IGNORE_TKR(C) may apply only to an assumed-shape array
-    real x(1)
   end
 
   subroutine t22(x)

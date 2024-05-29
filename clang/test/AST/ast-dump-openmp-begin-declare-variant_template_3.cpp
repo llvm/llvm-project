@@ -97,14 +97,14 @@ int test() {
 // CHECK-NEXT: | |-FunctionDecl [[ADDR_32:0x[a-z0-9]*]] <line:10:1, line:12:1> line:10:5 used also_before 'int (int)'
 // CHECK-NEXT: | | |-TemplateArgument type 'int'
 // CHECK-NEXT: | | | `-BuiltinType [[ADDR_9]] 'int'
-// CHECK-NEXT: | | |-ParmVarDecl [[ADDR_33:0x[a-z0-9]*]] <col:17, col:19> col:19 s 'int':'int'
+// CHECK-NEXT: | | |-ParmVarDecl [[ADDR_33:0x[a-z0-9]*]] <col:17, col:19> col:19 s 'int'
 // CHECK-NEXT: | | `-CompoundStmt [[ADDR_34:0x[a-z0-9]*]] <col:22, line:12:1>
 // CHECK-NEXT: | |   `-ReturnStmt [[ADDR_35:0x[a-z0-9]*]] <line:11:3, col:10>
 // CHECK-NEXT: | |     `-IntegerLiteral [[ADDR_28]] <col:10> 'int' 0
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_36:0x[a-z0-9]*]] <line:10:1, line:12:1> line:10:5 used also_before 'int (double)'
 // CHECK-NEXT: |   |-TemplateArgument type 'double'
 // CHECK-NEXT: |   | `-BuiltinType [[ADDR_21]] 'double'
-// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_37:0x[a-z0-9]*]] <col:17, col:19> col:19 s 'double':'double'
+// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_37:0x[a-z0-9]*]] <col:17, col:19> col:19 s 'double'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_38:0x[a-z0-9]*]] <col:22, line:12:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_39:0x[a-z0-9]*]] <line:11:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_28]] <col:10> 'int' 0
@@ -116,7 +116,7 @@ int test() {
 // CHECK-NEXT: | |   |-DeclStmt [[ADDR_44:0x[a-z0-9]*]] <line:18:3, col:11>
 // CHECK-NEXT: | |   | `-VarDecl [[ADDR_45:0x[a-z0-9]*]] <col:3, col:10> col:10 referenced t 'double'
 // CHECK-NEXT: | |   |-DeclStmt [[ADDR_46:0x[a-z0-9]*]] <line:19:3, col:16>
-// CHECK-NEXT: | |   | `-VarDecl [[ADDR_47:0x[a-z0-9]*]] <col:3, col:15> col:8 q 'S<T>':'S<T>' callinit
+// CHECK-NEXT: | |   | `-VarDecl [[ADDR_47:0x[a-z0-9]*]] <col:3, col:15> col:8 q 'S<T>' callinit
 // CHECK-NEXT: | |   |   `-ParenListExpr [[ADDR_48:0x[a-z0-9]*]] <col:9, col:15> 'NULL TYPE'
 // CHECK-NEXT: | |   |     |-IntegerLiteral [[ADDR_49:0x[a-z0-9]*]] <col:10> 'int' 1
 // CHECK-NEXT: | |   |     `-UnaryOperator [[ADDR_50:0x[a-z0-9]*]] <col:13, col:14> 'double *' prefix '&' cannot overflow
@@ -126,11 +126,11 @@ int test() {
 // CHECK-NEXT: | |-FunctionDecl [[ADDR_54:0x[a-z0-9]*]] <line:16:1, line:21:1> line:16:1 also_before[implementation={extension(allow_templates)}] 'int (S<int>)'
 // CHECK-NEXT: | | |-TemplateArgument type 'int'
 // CHECK-NEXT: | | | `-BuiltinType [[ADDR_9]] 'int'
-// CHECK-NEXT: | | `-ParmVarDecl [[ADDR_55:0x[a-z0-9]*]] <col:17, col:22> col:22 s 'S<int>':'S<int>'
+// CHECK-NEXT: | | `-ParmVarDecl [[ADDR_55:0x[a-z0-9]*]] <col:17, col:22> col:22 s 'S<int>'
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_56:0x[a-z0-9]*]] <col:1, line:21:1> line:16:1 also_before[implementation={extension(allow_templates)}] 'int (S<double>)'
 // CHECK-NEXT: |   |-TemplateArgument type 'double'
 // CHECK-NEXT: |   | `-BuiltinType [[ADDR_21]] 'double'
-// CHECK-NEXT: |   `-ParmVarDecl [[ADDR_57:0x[a-z0-9]*]] <col:17, col:22> col:22 s 'S<double>':'S<double>'
+// CHECK-NEXT: |   `-ParmVarDecl [[ADDR_57:0x[a-z0-9]*]] <col:17, col:22> col:22 s 'S<double>'
 // CHECK-NEXT: |-FunctionTemplateDecl [[ADDR_58:0x[a-z0-9]*]] <line:22:1, line:23:19> col:5 implicit special
 // CHECK-NEXT: | |-TemplateTypeParmDecl [[ADDR_59:0x[a-z0-9]*]] <line:22:11, col:20> col:20 referenced typename depth 0 index 0 T
 // CHECK-NEXT: | |-FunctionDecl [[ADDR_60:0x[a-z0-9]*]] <line:23:1, col:19> col:5 special 'int (S<T>)'
@@ -140,7 +140,7 @@ int test() {
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_65:0x[a-z0-9]*]] <col:1, col:19> col:5 used special 'int (S<int>)'
 // CHECK-NEXT: |   |-TemplateArgument type 'int'
 // CHECK-NEXT: |   | `-BuiltinType [[ADDR_9]] 'int'
-// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_66:0x[a-z0-9]*]] <col:13, col:18> col:18 s 'S<int>':'S<int>'
+// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_66:0x[a-z0-9]*]] <col:13, col:18> col:18 s 'S<int>'
 // CHECK-NEXT: |   `-OMPDeclareVariantAttr [[ADDR_67:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(allow_templates)}
 // CHECK-NEXT: |     `-DeclRefExpr [[ADDR_68:0x[a-z0-9]*]] <col:1> 'int (S<int>)' {{.*}}Function [[ADDR_69:0x[a-z0-9]*]] 'special[implementation={extension(allow_templates)}]' 'int (S<int>)'
 // CHECK-NEXT: |-FunctionTemplateDecl [[ADDR_70:0x[a-z0-9]*]] <line:22:1, line:27:1> line:23:1 special[implementation={extension(allow_templates)}]
@@ -151,7 +151,7 @@ int test() {
 // CHECK-NEXT: | |   |-DeclStmt [[ADDR_72:0x[a-z0-9]*]] <line:24:3, col:6>
 // CHECK-NEXT: | |   | `-VarDecl [[ADDR_73:0x[a-z0-9]*]] <col:3, col:5> col:5 referenced t 'T'
 // CHECK-NEXT: | |   |-DeclStmt [[ADDR_74:0x[a-z0-9]*]] <line:25:3, col:16>
-// CHECK-NEXT: | |   | `-VarDecl [[ADDR_75:0x[a-z0-9]*]] <col:3, col:15> col:8 q 'S<T>':'S<T>' callinit
+// CHECK-NEXT: | |   | `-VarDecl [[ADDR_75:0x[a-z0-9]*]] <col:3, col:15> col:8 q 'S<T>' callinit
 // CHECK-NEXT: | |   |   `-ParenListExpr [[ADDR_76:0x[a-z0-9]*]] <col:9, col:15> 'NULL TYPE'
 // CHECK-NEXT: | |   |     |-IntegerLiteral [[ADDR_77:0x[a-z0-9]*]] <col:10> 'int' 0
 // CHECK-NEXT: | |   |     `-UnaryOperator [[ADDR_78:0x[a-z0-9]*]] <col:13, col:14> '<dependent type>' prefix '&' cannot overflow
@@ -161,16 +161,16 @@ int test() {
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_69]] <line:23:1, line:27:1> line:23:1 special[implementation={extension(allow_templates)}] 'int (S<int>)'
 // CHECK-NEXT: |   |-TemplateArgument type 'int'
 // CHECK-NEXT: |   | `-BuiltinType [[ADDR_9]] 'int'
-// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_82:0x[a-z0-9]*]] <col:13, col:18> col:18 s 'S<int>':'S<int>'
+// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_82:0x[a-z0-9]*]] <col:13, col:18> col:18 s 'S<int>'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_83:0x[a-z0-9]*]] <col:21, line:27:1>
 // CHECK-NEXT: |     |-DeclStmt [[ADDR_84:0x[a-z0-9]*]] <line:24:3, col:6>
-// CHECK-NEXT: |     | `-VarDecl [[ADDR_85:0x[a-z0-9]*]] <col:3, col:5> col:5 used t 'int':'int'
+// CHECK-NEXT: |     | `-VarDecl [[ADDR_85:0x[a-z0-9]*]] <col:3, col:5> col:5 used t 'int'
 // CHECK-NEXT: |     |-DeclStmt [[ADDR_86:0x[a-z0-9]*]] <line:25:3, col:16>
-// CHECK-NEXT: |     | `-VarDecl [[ADDR_87:0x[a-z0-9]*]] <col:3, col:15> col:8 q 'S<int>':'S<int>' callinit
-// CHECK-NEXT: |     |   `-CXXConstructExpr [[ADDR_88:0x[a-z0-9]*]] <col:8, col:15> 'S<int>':'S<int>' 'void (int, int *)'
+// CHECK-NEXT: |     | `-VarDecl [[ADDR_87:0x[a-z0-9]*]] <col:3, col:15> col:8 q 'S<int>' callinit
+// CHECK-NEXT: |     |   `-CXXConstructExpr [[ADDR_88:0x[a-z0-9]*]] <col:8, col:15> 'S<int>' 'void (int, int *)'
 // CHECK-NEXT: |     |     |-IntegerLiteral [[ADDR_77]] <col:10> 'int' 0
 // CHECK-NEXT: |     |     `-UnaryOperator [[ADDR_89:0x[a-z0-9]*]] <col:13, col:14> 'int *' prefix '&' cannot overflow
-// CHECK-NEXT: |     |       `-DeclRefExpr [[ADDR_90:0x[a-z0-9]*]] <col:14> 'int':'int' {{.*}}Var [[ADDR_85]] 't' 'int':'int'
+// CHECK-NEXT: |     |       `-DeclRefExpr [[ADDR_90:0x[a-z0-9]*]] <col:14> 'int' {{.*}}Var [[ADDR_85]] 't' 'int'
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_91:0x[a-z0-9]*]] <line:26:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_81]] <col:10> 'int' 0
 // CHECK-NEXT: |-FunctionTemplateDecl [[ADDR_92:0x[a-z0-9]*]] <line:28:1, line:29:22> col:5 implicit also_after
@@ -187,7 +187,7 @@ int test() {
 // CHECK-NEXT: |     |-DeclStmt [[ADDR_101:0x[a-z0-9]*]] <line:31:3, col:11>
 // CHECK-NEXT: |     | `-VarDecl [[ADDR_102:0x[a-z0-9]*]] <col:3, col:10> col:10 referenced t 'double'
 // CHECK-NEXT: |     |-DeclStmt [[ADDR_103:0x[a-z0-9]*]] <line:32:3, col:18>
-// CHECK-NEXT: |     | `-VarDecl [[ADDR_104:0x[a-z0-9]*]] <col:3, col:17> col:8 q 'S<T>':'S<T>' callinit
+// CHECK-NEXT: |     | `-VarDecl [[ADDR_104:0x[a-z0-9]*]] <col:3, col:17> col:8 q 'S<T>' callinit
 // CHECK-NEXT: |     |   `-ParenListExpr [[ADDR_105:0x[a-z0-9]*]] <col:9, col:17> 'NULL TYPE'
 // CHECK-NEXT: |     |     |-FloatingLiteral [[ADDR_106:0x[a-z0-9]*]] <col:10> 'double' 2.000000e+00
 // CHECK-NEXT: |     |     `-UnaryOperator [[ADDR_107:0x[a-z0-9]*]] <col:15, col:16> 'double *' prefix '&' cannot overflow
@@ -204,14 +204,14 @@ int test() {
 // CHECK-NEXT: | |-FunctionDecl [[ADDR_118:0x[a-z0-9]*]] <line:38:1, line:40:1> line:38:5 used also_after 'int (int)'
 // CHECK-NEXT: | | |-TemplateArgument type 'int'
 // CHECK-NEXT: | | | `-BuiltinType [[ADDR_9]] 'int'
-// CHECK-NEXT: | | |-ParmVarDecl [[ADDR_119:0x[a-z0-9]*]] <col:16, col:18> col:18 s 'int':'int'
+// CHECK-NEXT: | | |-ParmVarDecl [[ADDR_119:0x[a-z0-9]*]] <col:16, col:18> col:18 s 'int'
 // CHECK-NEXT: | | `-CompoundStmt [[ADDR_120:0x[a-z0-9]*]] <col:21, line:40:1>
 // CHECK-NEXT: | |   `-ReturnStmt [[ADDR_121:0x[a-z0-9]*]] <line:39:3, col:10>
 // CHECK-NEXT: | |     `-IntegerLiteral [[ADDR_117]] <col:10> 'int' 0
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_122:0x[a-z0-9]*]] <line:38:1, line:40:1> line:38:5 used also_after 'int (double)'
 // CHECK-NEXT: |   |-TemplateArgument type 'double'
 // CHECK-NEXT: |   | `-BuiltinType [[ADDR_21]] 'double'
-// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_123:0x[a-z0-9]*]] <col:16, col:18> col:18 s 'double':'double'
+// CHECK-NEXT: |   |-ParmVarDecl [[ADDR_123:0x[a-z0-9]*]] <col:16, col:18> col:18 s 'double'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_124:0x[a-z0-9]*]] <col:21, line:40:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_125:0x[a-z0-9]*]] <line:39:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_117]] <col:10> 'int' 0
@@ -243,19 +243,19 @@ int test() {
 // CHECK-NEXT:             |-CallExpr [[ADDR_151:0x[a-z0-9]*]] <col:78, col:98> 'int'
 // CHECK-NEXT:             | |-ImplicitCastExpr [[ADDR_152:0x[a-z0-9]*]] <col:78> 'int (*)(S<int>)' <FunctionToPointerDecay>
 // CHECK-NEXT:             | | `-DeclRefExpr [[ADDR_153:0x[a-z0-9]*]] <col:78> 'int (S<int>)' {{.*}}Function [[ADDR_65]] 'special' 'int (S<int>)' (FunctionTemplate [[ADDR_58]] 'special')
-// CXX11-NEXT:             | `-CXXConstructExpr [[ADDR_154:0x[a-z0-9]*]] <col:86, col:97> 'S<int>':'S<int>' 'void (S<int> &&) noexcept' elidable
-// CXX11-NEXT:             |   `-MaterializeTemporaryExpr [[ADDR_155:0x[a-z0-9]*]] <col:86, col:97> 'S<int>':'S<int>' xvalue
-// CHECK-NEXT:             |     `-CXXTemporaryObjectExpr [[ADDR_156:0x[a-z0-9]*]] <col:86, col:97> 'S<int>':'S<int>' 'void (int, int *)'
+// CXX11-NEXT:             | `-CXXConstructExpr [[ADDR_154:0x[a-z0-9]*]] <col:86, col:97> 'S<int>' 'void (S<int> &&) noexcept' elidable
+// CXX11-NEXT:             |   `-MaterializeTemporaryExpr [[ADDR_155:0x[a-z0-9]*]] <col:86, col:97> 'S<int>' xvalue
+// CHECK-NEXT:             |     `-CXXTemporaryObjectExpr [[ADDR_156:0x[a-z0-9]*]] <col:86, col:97> 'S<int>' 'void (int, int *)'
 // CHECK-NEXT:             |       |-IntegerLiteral [[ADDR_157:0x[a-z0-9]*]] <col:93> 'int' 0
 // CHECK-NEXT:             |       `-ImplicitCastExpr [[ADDR_158:0x[a-z0-9]*]] <col:96> 'int *' <NullToPointer>
 // CHECK-NEXT:             |         `-IntegerLiteral [[ADDR_159:0x[a-z0-9]*]] <col:96> 'int' 0
 // CHECK-NEXT:             `-CallExpr [[ADDR_160:0x[a-z0-9]*]] <line:23:1, line:44:98> 'int'
 // CHECK-NEXT:               |-ImplicitCastExpr [[ADDR_161:0x[a-z0-9]*]] <line:23:1> 'int (*)(S<int>)' <FunctionToPointerDecay>
 // CHECK-NEXT:               | `-DeclRefExpr [[ADDR_68]] <col:1> 'int (S<int>)' {{.*}}Function [[ADDR_69]] 'special[implementation={extension(allow_templates)}]' 'int (S<int>)'
-// CXX11-NEXT:               `-CXXConstructExpr [[ADDR_162:0x[a-z0-9]*]] <line:44:86, col:97> 'S<int>':'S<int>' 'void (S<int> &&) noexcept' elidable
-// CXX11-NEXT:                 `-MaterializeTemporaryExpr [[ADDR_163:0x[a-z0-9]*]] <col:86, col:97> 'S<int>':'S<int>' xvalue
-// CXX11-NEXT:                   `-CXXTemporaryObjectExpr [[ADDR_156]] <col:86, col:97> 'S<int>':'S<int>' 'void (int, int *)'
-// CXX17-NEXT:                   `-CXXTemporaryObjectExpr [[ADDR_156]] <line:[[#]]:86, col:97> 'S<int>':'S<int>' 'void (int, int *)'
+// CXX11-NEXT:               `-CXXConstructExpr [[ADDR_162:0x[a-z0-9]*]] <line:44:86, col:97> 'S<int>' 'void (S<int> &&) noexcept' elidable
+// CXX11-NEXT:                 `-MaterializeTemporaryExpr [[ADDR_163:0x[a-z0-9]*]] <col:86, col:97> 'S<int>' xvalue
+// CXX11-NEXT:                   `-CXXTemporaryObjectExpr [[ADDR_156]] <col:86, col:97> 'S<int>' 'void (int, int *)'
+// CXX17-NEXT:                   `-CXXTemporaryObjectExpr [[ADDR_156]] <line:[[#]]:86, col:97> 'S<int>' 'void (int, int *)'
 // CHECK-NEXT:                     |-IntegerLiteral [[ADDR_157]] <col:93> 'int' 0
 // CHECK-NEXT:                     `-ImplicitCastExpr [[ADDR_158]] <col:96> 'int *' <NullToPointer>
 // CHECK-NEXT:                       `-IntegerLiteral [[ADDR_159]] <col:96> 'int' 0

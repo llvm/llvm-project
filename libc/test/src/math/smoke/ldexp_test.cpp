@@ -10,4 +10,4 @@
 
 #include "src/math/ldexp.h"
 
-LIST_LDEXP_TESTS(double, LIBC_NAMESPACE::ldexp)
+LIST_LDEXP_TESTS(double, LIBC_NAMESPACE::ldexp);

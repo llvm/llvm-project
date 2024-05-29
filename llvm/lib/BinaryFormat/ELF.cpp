@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace llvm;
@@ -566,5 +565,84 @@ StringRef ELF::convertEMachineToArchName(uint16_t EMachine) {
     return "loongarch";
   default:
     return "None";
+  }
+}
+
+uint8_t ELF::convertNameToOSABI(StringRef Name) {
+  return StringSwitch<uint16_t>(Name)
+      .StartsWith("hpux", ELFOSABI_HPUX)
+      .StartsWith("netbsd", ELFOSABI_NETBSD)
+      .StartsWith("gnu", ELFOSABI_GNU)
+      .StartsWith("hurd", ELFOSABI_HURD)
+      .StartsWith("solaris", ELFOSABI_SOLARIS)
+      .StartsWith("aix", ELFOSABI_AIX)
+      .StartsWith("irix", ELFOSABI_IRIX)
+      .StartsWith("freebsd", ELFOSABI_FREEBSD)
+      .StartsWith("tru64", ELFOSABI_TRU64)
+      .StartsWith("modesto", ELFOSABI_MODESTO)
+      .StartsWith("openbsd", ELFOSABI_OPENBSD)
+      .StartsWith("openvms", ELFOSABI_OPENVMS)
+      .StartsWith("nsk", ELFOSABI_NSK)
+      .StartsWith("aros", ELFOSABI_AROS)
+      .StartsWith("fenixos", ELFOSABI_FENIXOS)
+      .StartsWith("cloudabi", ELFOSABI_CLOUDABI)
+      .StartsWith("cuda", ELFOSABI_CUDA)
+      .StartsWith("amdhsa", ELFOSABI_AMDGPU_HSA)
+      .StartsWith("amdpal", ELFOSABI_AMDGPU_PAL)
+      .StartsWith("mesa3d", ELFOSABI_AMDGPU_MESA3D)
+      .StartsWith("arm", ELFOSABI_ARM)
+      .StartsWith("standalone", ELFOSABI_STANDALONE)
+      .StartsWith("none", ELFOSABI_NONE)
+      .Default(ELFOSABI_NONE);
+}
+
+StringRef ELF::convertOSABIToName(uint8_t OSABI) {
+  switch (OSABI) {
+  case ELFOSABI_HPUX:
+    return "hpux";
+  case ELFOSABI_NETBSD:
+    return "netbsd";
+  case ELFOSABI_GNU:
+    return "gnu";
+  case ELFOSABI_HURD:
+    return "hurd";
+  case ELFOSABI_SOLARIS:
+    return "solaris";
+  case ELFOSABI_AIX:
+    return "aix";
+  case ELFOSABI_IRIX:
+    return "irix";
+  case ELFOSABI_FREEBSD:
+    return "freebsd";
+  case ELFOSABI_TRU64:
+    return "tru64";
+  case ELFOSABI_MODESTO:
+    return "modesto";
+  case ELFOSABI_OPENBSD:
+    return "openbsd";
+  case ELFOSABI_OPENVMS:
+    return "openvms";
+  case ELFOSABI_NSK:
+    return "nsk";
+  case ELFOSABI_AROS:
+    return "aros";
+  case ELFOSABI_FENIXOS:
+    return "fenixos";
+  case ELFOSABI_CLOUDABI:
+    return "cloudabi";
+  case ELFOSABI_CUDA:
+    return "cuda";
+  case ELFOSABI_AMDGPU_HSA:
+    return "amdhsa";
+  case ELFOSABI_AMDGPU_PAL:
+    return "amdpal";
+  case ELFOSABI_AMDGPU_MESA3D:
+    return "mesa3d";
+  case ELFOSABI_ARM:
+    return "arm";
+  case ELFOSABI_STANDALONE:
+    return "standalone";
+  default:
+    return "none";
   }
 }

@@ -150,7 +150,7 @@ StringRef CSKY::getArchExtName(uint64_t ArchExtKind) {
 }
 
 static bool stripNegationPrefix(StringRef &Name) {
-  if (Name.startswith("no")) {
+  if (Name.starts_with("no")) {
     Name = Name.substr(2);
     return true;
   }

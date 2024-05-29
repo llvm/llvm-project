@@ -104,6 +104,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   void emitARM64WinCFITrapFrame() override { OS << "\t.seh_trap_frame\n"; }
   void emitARM64WinCFIMachineFrame() override { OS << "\t.seh_pushframe\n"; }
   void emitARM64WinCFIContext() override { OS << "\t.seh_context\n"; }
+  void emitARM64WinCFIECContext() override { OS << "\t.seh_ec_context\n"; }
   void emitARM64WinCFIClearUnwoundToCall() override {
     OS << "\t.seh_clear_unwound_to_call\n";
   }
@@ -305,13 +306,12 @@ llvm::createAArch64AsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
   return new AArch64TargetAsmStreamer(S, OS);
 }
 
-MCELFStreamer *llvm::createAArch64ELFStreamer(
-    MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
-    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
-    bool RelaxAll) {
+MCELFStreamer *
+llvm::createAArch64ELFStreamer(MCContext &Context,
+                               std::unique_ptr<MCAsmBackend> TAB,
+                               std::unique_ptr<MCObjectWriter> OW,
+                               std::unique_ptr<MCCodeEmitter> Emitter) {
   AArch64ELFStreamer *S = new AArch64ELFStreamer(
       Context, std::move(TAB), std::move(OW), std::move(Emitter));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }

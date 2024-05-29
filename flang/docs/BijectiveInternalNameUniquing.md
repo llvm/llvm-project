@@ -236,3 +236,14 @@ The uniqued name of `yourtype` where `k1=4` and `k2=-6` (at compile-time):
 Compiler generated names do not have to be mapped back to Fortran. This
 includes names prefixed with `_QQ`, tag `D` for a type bound procedure
 dispatch table, and tags `Y` and `YI` for runtime type descriptors.
+Combinations of internal names are separated with the `X` tag.
+
+Given:
+```
+    _QQcl, 9a37c0
+```
+
+The uniqued name of `_QQcl` and `9a37c0`:
+```
+    _QQclX9a37c0
+```

@@ -121,7 +121,7 @@ Hence we have the following bound on `s`:
 In order for `s` to exist, we need that:
 
 .. math::
-  \frac{C - (k + 1) 2^{-M}}{1 + (k + 1) 2^{-M}} > 
+  \frac{C - (k + 1) 2^{-M}}{1 + (k + 1) 2^{-M}} >
   \frac{-C - k 2^{-M}}{1 + k 2^{-M}}
 
 which is equivalent to:
@@ -135,7 +135,7 @@ side of `\text{(C1)}` is bounded by:
 
 .. math::
   2^{-M - 1} > \frac{2^{-M - 1}}{1 + (2k + 1) 2^{-M - 1}} \geq
-  \frac{2^{-M - 1}}{1 + (2^{M + 1} - 1) 2^{-M - 1}} > 2^{-M - 2}. 
+  \frac{2^{-M - 1}}{1 + (2^{M + 1} - 1) 2^{-M - 1}} > 2^{-M - 2}.
 
 Hence, from `\text{(C1)}`, being an exact power of 2, `C = 2^{-N}` is bounded below
 by:
@@ -427,7 +427,7 @@ to look-up for the reduction constant `s_{i, k}`.  In other word, `k` is given
 by the formula:
 
 .. math::
-  k = \left\lfloor 2^{N_i + M_i} u_i \right\rfloor 
+  k = \left\lfloor 2^{N_i + M_i} u_i \right\rfloor
 
 Notice that our reduction constant `s_{i, k}` must work for all `u_i` in the
 interval `I = \{ v: k 2^{-N_i - M_i} \leq v < (k + 1) 2^{-N_i - M_i} \}`,

@@ -27,14 +27,14 @@ func.func @swappy(%cond1 : i1, %cond2 : i1, %t1 : tensor<f32>, %t2 : tensor<f32>
 
 // expected-error @-3 {{expected callgraph to be free of circular dependencies}}
 
-func.func @foo() {
-  call @bar() : () -> ()
-  return
+func.func @foo(%t: tensor<5xf32>) -> tensor<5xf32> {
+  %0 = call @bar(%t) : (tensor<5xf32>) -> (tensor<5xf32>)
+  return %0 : tensor<5xf32>
 }
 
-func.func @bar() {
-  call @foo() : () -> ()
-  return
+func.func @bar(%t: tensor<5xf32>) -> tensor<5xf32>{
+  %0 = call @foo(%t) : (tensor<5xf32>) -> (tensor<5xf32>)
+  return %0 : tensor<5xf32>
 }
 
 // -----
@@ -153,7 +153,7 @@ func.func @yield_alloc_dominance_test_2(%cst : f32, %idx : index,
 func.func @copy_of_unranked_tensor(%t: tensor<*xf32>) -> tensor<*xf32> {
   // Unranked tensor OpOperands always bufferize in-place. With this limitation,
   // there is no way to bufferize this IR correctly.
-  // expected-error @+1 {{input IR has RaW conflict}}
+  // expected-error @+1 {{not bufferizable under the given constraints: cannot avoid RaW conflict}}
   func.call @maybe_writing_func(%t) : (tensor<*xf32>) -> ()
   return %t : tensor<*xf32>
 }

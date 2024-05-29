@@ -43,8 +43,8 @@ using namespace llvm;
 GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
                                                   const Twine &Name,
                                                   unsigned AddressSpace,
-                                                  Module *M) {
-  Constant *StrConstant = ConstantDataArray::getString(Context, Str);
+                                                  Module *M, bool AddNull) {
+  Constant *StrConstant = ConstantDataArray::getString(Context, Str, AddNull);
   if (!M)
     M = BB->getParent()->getParent();
   auto *GV = new GlobalVariable(
@@ -536,19 +536,8 @@ static MaybeAlign getAlign(Value *Ptr) {
 }
 
 CallInst *IRBuilderBase::CreateThreadLocalAddress(Value *Ptr) {
-#ifndef NDEBUG
-  // Handle specially for constexpr cast. This is possible when
-  // opaque pointers not enabled since constant could be sinked
-  // directly by the design of llvm. This could be eliminated
-  // after we eliminate the abuse of constexpr.
-  auto *V = Ptr;
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->isCast())
-      V = CE->getOperand(0);
-
-  assert(isa<GlobalValue>(V) && cast<GlobalValue>(V)->isThreadLocal() &&
+  assert(isa<GlobalValue>(Ptr) && cast<GlobalValue>(Ptr)->isThreadLocal() &&
          "threadlocal_address only applies to thread local variables.");
-#endif
   CallInst *CI = CreateIntrinsic(llvm::Intrinsic::threadlocal_address,
                                  {Ptr->getType()}, {Ptr});
   if (MaybeAlign A = getAlign(Ptr)) {
@@ -929,12 +918,14 @@ CallInst *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
   return createCallHelper(Fn, {V}, Name, FMFSource);
 }
 
-CallInst *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
-                                               Value *RHS,
-                                               Instruction *FMFSource,
-                                               const Twine &Name) {
+Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
+                                            Value *RHS, Instruction *FMFSource,
+                                            const Twine &Name) {
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getDeclaration(M, ID, { LHS->getType() });
+  if (Value *V = Folder.FoldBinaryIntrinsic(ID, LHS, RHS, Fn->getReturnType(),
+                                            FMFSource))
+    return V;
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);
 }
 
@@ -1038,17 +1029,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCast(
     UseFMF = FMFSource->getFastMathFlags();
 
   CallInst *C;
-  bool HasRoundingMD = false;
-  switch (ID) {
-  default:
-    break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
-  case Intrinsic::INTRINSIC:                                \
-    HasRoundingMD = ROUND_MODE;                             \
-    break;
-#include "llvm/IR/ConstrainedOps.def"
-  }
-  if (HasRoundingMD) {
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(ID)) {
     Value *RoundingV = getConstrainedFPRounding(Rounding);
     C = CreateIntrinsic(ID, {DestTy, V->getType()}, {V, RoundingV, ExceptV},
                         nullptr, Name);
@@ -1072,9 +1053,8 @@ Value *IRBuilderBase::CreateFCmpHelper(
     return CreateConstrainedFPCmp(ID, P, LHS, RHS, Name);
   }
 
-  if (auto *LC = dyn_cast<Constant>(LHS))
-    if (auto *RC = dyn_cast<Constant>(RHS))
-      return Insert(Folder.CreateFCmp(P, LC, RC), Name);
+  if (auto *V = Folder.FoldCmp(P, LHS, RHS))
+    return V;
   return Insert(setFPAttrs(new FCmpInst(P, LHS, RHS), FPMathTag, FMF), Name);
 }
 
@@ -1097,17 +1077,8 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
   llvm::SmallVector<Value *, 6> UseArgs;
 
   append_range(UseArgs, Args);
-  bool HasRoundingMD = false;
-  switch (Callee->getIntrinsicID()) {
-  default:
-    break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
-  case Intrinsic::INTRINSIC:                                \
-    HasRoundingMD = ROUND_MODE;                             \
-    break;
-#include "llvm/IR/ConstrainedOps.def"
-  }
-  if (HasRoundingMD)
+
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(Callee->getIntrinsicID()))
     UseArgs.push_back(getConstrainedFPRounding(Rounding));
   UseArgs.push_back(getConstrainedFPExcept(Except));
 
@@ -1180,8 +1151,7 @@ Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {
   auto *Ty = cast<VectorType>(V->getType());
   if (isa<ScalableVectorType>(Ty)) {
     Module *M = BB->getParent()->getParent();
-    Function *F = Intrinsic::getDeclaration(
-        M, Intrinsic::experimental_vector_reverse, Ty);
+    Function *F = Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, Ty);
     return Insert(CallInst::Create(F, V), Name);
   }
   // Keep the original behaviour for fixed vector
@@ -1200,8 +1170,7 @@ Value *IRBuilderBase::CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
 
   if (auto *VTy = dyn_cast<ScalableVectorType>(V1->getType())) {
     Module *M = BB->getParent()->getParent();
-    Function *F = Intrinsic::getDeclaration(
-        M, Intrinsic::experimental_vector_splice, VTy);
+    Function *F = Intrinsic::getDeclaration(M, Intrinsic::vector_splice, VTy);
 
     Value *Ops[] = {V1, V2, getInt32(Imm)};
     return Insert(CallInst::Create(F, Ops), Name);

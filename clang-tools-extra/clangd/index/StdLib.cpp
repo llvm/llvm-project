@@ -167,7 +167,7 @@ SymbolSlab filter(SymbolSlab Slab, const StdLibLocation &Loc) {
         R.first->second = llvm::any_of(
             StdLibURIPrefixes,
             [&, URIStr(llvm::StringRef(URI))](const std::string &Prefix) {
-              return URIStr.startswith(Prefix);
+              return URIStr.starts_with(Prefix);
             });
       }
     }

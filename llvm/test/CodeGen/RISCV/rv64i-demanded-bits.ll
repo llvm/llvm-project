@@ -9,10 +9,10 @@ define i32 @foo(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mul a0, a0, a0
-; CHECK-NEXT:    addiw a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    mul a0, a0, a0
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    addiw a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    sllw a0, a0, a1
 ; CHECK-NEXT:    ret
   %b = mul i32 %x, %x
@@ -191,4 +191,18 @@ entry:
   %and = and i32 %x, 65280
   %or = or i32 %and, 255
   ret i32 %or
+}
+
+define i64 @and_allones(i32 signext %x) {
+; CHECK-LABEL: and_allones:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    sll a0, a1, a0
+; CHECK-NEXT:    ret
+entry:
+  %y = zext i32 %x to i64
+  %shamt = add nsw i64 %y, -1
+  %ret = shl i64 1, %shamt
+  ret i64 %ret
 }

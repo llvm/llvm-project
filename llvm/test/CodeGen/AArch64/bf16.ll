@@ -1,5 +1,5 @@
 ; RUN: llc < %s -asm-verbose=0 -mtriple=arm64-eabi -mattr=+bf16 | FileCheck %s
-; RUN: llc < %s -asm-verbose=0 -mtriple=aarch64-eabi -mattr=+bf16 | FileCheck %s
+; RUN: llc < %s -asm-verbose=0 -mtriple=aarch64 -mattr=+bf16 | FileCheck %s
 
 ; test argument passing and simple load/store
 
@@ -42,6 +42,16 @@ define void @test_store(ptr %a, bfloat %b) nounwind {
 ; CHECK-NEXT: str h0, [x0]
 ; CHECK-NEXT: ret
   store bfloat %b, ptr %a, align 16
+  ret void
+}
+
+define void @test_store_negative_offset(ptr %a, bfloat %b) nounwind {
+; CHECK-LABEL: test_store_negative_offset:
+; CHECK-NEXT: stur    h0, [x0, #-4]
+; CHECK-NEXT: ret
+entry:
+  %0 = getelementptr inbounds bfloat, ptr %a, i64 -2
+  store bfloat %b, ptr %0, align 2
   ret void
 }
 

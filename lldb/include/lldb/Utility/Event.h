@@ -60,11 +60,7 @@ public:
   // Constructors
   EventDataBytes();
 
-  EventDataBytes(const char *cstr);
-
   EventDataBytes(llvm::StringRef str);
-
-  EventDataBytes(const void *src, size_t src_len);
 
   ~EventDataBytes() override;
 
@@ -76,12 +72,6 @@ public:
   const void *GetBytes() const;
 
   size_t GetByteSize() const;
-
-  void SetBytes(const void *src, size_t src_len);
-
-  void SwapBytes(std::string &new_bytes);
-
-  void SetBytesFromCString(const char *cstr);
 
   // Static functions
   static const EventDataBytes *GetEventDataFromEvent(const Event *event_ptr);

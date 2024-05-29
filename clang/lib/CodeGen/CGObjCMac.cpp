@@ -1310,7 +1310,7 @@ private:
   /// EmitSelector - Return a Value*, of type ObjCTypes.SelectorPtrTy,
   /// for the given selector.
   llvm::Value *EmitSelector(CodeGenFunction &CGF, Selector Sel);
-  Address EmitSelectorAddr(Selector Sel);
+  ConstantAddress EmitSelectorAddr(Selector Sel);
 
 public:
   CGObjCMac(CodeGen::CodeGenModule &cgm);
@@ -1538,7 +1538,7 @@ private:
   /// EmitSelector - Return a Value*, of type ObjCTypes.SelectorPtrTy,
   /// for the given selector.
   llvm::Value *EmitSelector(CodeGenFunction &CGF, Selector Sel);
-  Address EmitSelectorAddr(Selector Sel);
+  ConstantAddress EmitSelectorAddr(Selector Sel);
 
   /// GetInterfaceEHType - Get the cached ehtype for the given Objective-C
   /// interface. The return value has type EHTypePtrTy.
@@ -1555,12 +1555,12 @@ private:
 
   // Shamelessly stolen from Analysis/CFRefCount.cpp
   Selector GetNullarySelector(const char* name) const {
-    IdentifierInfo* II = &CGM.getContext().Idents.get(name);
+    const IdentifierInfo *II = &CGM.getContext().Idents.get(name);
     return CGM.getContext().Selectors.getSelector(0, &II);
   }
 
   Selector GetUnarySelector(const char* name) const {
-    IdentifierInfo* II = &CGM.getContext().Idents.get(name);
+    const IdentifierInfo *II = &CGM.getContext().Idents.get(name);
     return CGM.getContext().Selectors.getSelector(1, &II);
   }
 
@@ -1593,12 +1593,20 @@ private:
   }
 
   bool isClassLayoutKnownStatically(const ObjCInterfaceDecl *ID) {
-    // NSObject is a fixed size. If we can see the @implementation of a class
-    // which inherits from NSObject then we know that all it's offsets also must
-    // be fixed. FIXME: Can we do this if see a chain of super classes with
-    // implementations leading to NSObject?
-    return ID->getImplementation() && ID->getSuperClass() &&
-           ID->getSuperClass()->getName() == "NSObject";
+    // Test a class by checking its superclasses up to
+    // its base class if it has one.
+    for (; ID; ID = ID->getSuperClass()) {
+      // The layout of base class NSObject
+      // is guaranteed to be statically known
+      if (ID->getIdentifier()->getName() == "NSObject")
+        return true;
+
+      // If we cannot see the @implementation of a class,
+      // we cannot statically know the class layout.
+      if (!ID->getImplementation())
+        return false;
+    }
+    return false;
   }
 
 public:
@@ -1850,7 +1858,7 @@ static bool hasObjCExceptionAttribute(ASTContext &Context,
 static llvm::GlobalValue::LinkageTypes
 getLinkageTypeForObjCMetadata(CodeGenModule &CGM, StringRef Section) {
   if (CGM.getTriple().isOSBinFormatMachO() &&
-      (Section.empty() || Section.startswith("__DATA")))
+      (Section.empty() || Section.starts_with("__DATA")))
     return llvm::GlobalValue::InternalLinkage;
   return llvm::GlobalValue::PrivateLinkage;
 }
@@ -2014,7 +2022,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   // Don't enforce the target's minimum global alignment, since the only use
   // of the string is via this class initializer.
   GV->setAlignment(llvm::Align(1));
-  Fields.addBitCast(GV, CGM.Int8PtrTy);
+  Fields.add(GV);
 
   // String length.
   Fields.addInt(CGM.IntTy, StringLength);
@@ -2056,9 +2064,8 @@ CGObjCMac::GenerateMessageSendSuper(CodeGen::CodeGenFunction &CGF,
                                     const ObjCMethodDecl *Method) {
   // Create and init a super structure; this is a (receiver, class)
   // pair we will pass to objc_msgSendSuper.
-  Address ObjCSuper =
-    CGF.CreateTempAlloca(ObjCTypes.SuperTy, CGF.getPointerAlign(),
-                         "objc_super");
+  RawAddress ObjCSuper = CGF.CreateTempAlloca(
+      ObjCTypes.SuperTy, CGF.getPointerAlign(), "objc_super");
   llvm::Value *ReceiverAsObject =
     CGF.Builder.CreateBitCast(Receiver, ObjCTypes.ObjectPtrTy);
   CGF.Builder.CreateStore(ReceiverAsObject,
@@ -2493,12 +2500,12 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
 
     if (const ArrayType *Array = CGM.getContext().getAsArrayType(FQT)) {
       auto *CArray = cast<ConstantArrayType>(Array);
-      uint64_t ElCount = CArray->getSize().getZExtValue();
+      uint64_t ElCount = CArray->getZExtSize();
       assert(CArray && "only array with known element size is supported");
       FQT = CArray->getElementType();
       while (const ArrayType *Array = CGM.getContext().getAsArrayType(FQT)) {
         auto *CArray = cast<ConstantArrayType>(Array);
-        ElCount *= CArray->getSize().getZExtValue();
+        ElCount *= CArray->getZExtSize();
         FQT = CArray->getElementType();
       }
       if (FQT->isRecordType() && ElCount) {
@@ -2961,8 +2968,7 @@ llvm::Value *CGObjCMac::GenerateProtocolRef(CodeGenFunction &CGF,
   // resolved. Investigate. Its also wasteful to look this up over and over.
   LazySymbols.insert(&CGM.getContext().Idents.get("Protocol"));
 
-  return llvm::ConstantExpr::getBitCast(GetProtocolRef(PD),
-                                        ObjCTypes.getExternalProtocolPtrTy());
+  return GetProtocolRef(PD);
 }
 
 void CGObjCCommonMac::GenerateProtocol(const ObjCProtocolDecl *PD) {
@@ -3182,7 +3188,7 @@ CGObjCMac::EmitProtocolList(Twine name,
 
   llvm::GlobalVariable *GV =
       CreateMetadataVar(name, values, section, CGM.getPointerAlign(), false);
-  return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.ProtocolListPtrTy);
+  return GV;
 }
 
 static void
@@ -3290,7 +3296,7 @@ llvm::Constant *CGObjCCommonMac::EmitPropertyList(Twine Name,
 
   llvm::GlobalVariable *GV =
       CreateMetadataVar(Name, values, Section, CGM.getPointerAlign(), true);
-  return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.PropertyListPtrTy);
+  return GV;
 }
 
 llvm::Constant *
@@ -3311,7 +3317,7 @@ CGObjCCommonMac::EmitProtocolMethodTypes(Twine Name,
 
   llvm::GlobalVariable *GV =
       CreateMetadataVar(Name, Init, Section, CGM.getPointerAlign(), true);
-  return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.Int8PtrPtrTy);
+  return GV;
 }
 
 /*
@@ -3558,8 +3564,7 @@ void CGObjCMac::GenerateClass(const ObjCImplementationDecl *ID) {
     // Record a reference to the super class.
     LazySymbols.insert(Super->getIdentifier());
 
-    values.addBitCast(GetClassName(Super->getObjCRuntimeNameAsString()),
-                      ObjCTypes.ClassPtrTy);
+    values.add(GetClassName(Super->getObjCRuntimeNameAsString()));
   } else {
     values.addNullPointer(ObjCTypes.ClassPtrTy);
   }
@@ -3613,14 +3618,12 @@ llvm::Constant *CGObjCMac::EmitMetaClass(const ObjCImplementationDecl *ID,
   const ObjCInterfaceDecl *Root = ID->getClassInterface();
   while (const ObjCInterfaceDecl *Super = Root->getSuperClass())
     Root = Super;
-  values.addBitCast(GetClassName(Root->getObjCRuntimeNameAsString()),
-                    ObjCTypes.ClassPtrTy);
+  values.add(GetClassName(Root->getObjCRuntimeNameAsString()));
   // The super class for the metaclass is emitted as the name of the
   // super class. The runtime fixes this up to point to the
   // *metaclass* for the super class.
   if (ObjCInterfaceDecl *Super = ID->getClassInterface()->getSuperClass()) {
-    values.addBitCast(GetClassName(Super->getObjCRuntimeNameAsString()),
-                      ObjCTypes.ClassPtrTy);
+    values.add(GetClassName(Super->getObjCRuntimeNameAsString()));
   } else {
     values.addNullPointer(ObjCTypes.ClassPtrTy);
   }
@@ -3804,7 +3807,7 @@ llvm::Constant *CGObjCMac::EmitIvarList(const ObjCImplementationDecl *ID,
   GV = CreateMetadataVar("OBJC_INSTANCE_VARIABLES_" + ID->getName(), ivarList,
                          "__OBJC,__instance_vars,regular,no_dead_strip",
                          CGM.getPointerAlign(), true);
-  return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.IvarListPtrTy);
+  return GV;
 }
 
 /// Build a struct objc_method_description constant for the given method.
@@ -3816,8 +3819,7 @@ llvm::Constant *CGObjCMac::EmitIvarList(const ObjCImplementationDecl *ID,
 void CGObjCMac::emitMethodDescriptionConstant(ConstantArrayBuilder &builder,
                                               const ObjCMethodDecl *MD) {
   auto description = builder.beginStruct(ObjCTypes.MethodDescriptionTy);
-  description.addBitCast(GetMethodVarName(MD->getSelector()),
-                         ObjCTypes.SelectorPtrTy);
+  description.add(GetMethodVarName(MD->getSelector()));
   description.add(GetMethodVarType(MD));
   description.finishAndAddTo(builder);
 }
@@ -3835,10 +3837,9 @@ void CGObjCMac::emitMethodConstant(ConstantArrayBuilder &builder,
   assert(fn && "no definition registered for method");
 
   auto method = builder.beginStruct(ObjCTypes.MethodTy);
-  method.addBitCast(GetMethodVarName(MD->getSelector()),
-                    ObjCTypes.SelectorPtrTy);
+  method.add(GetMethodVarName(MD->getSelector()));
   method.add(GetMethodVarType(MD));
-  method.addBitCast(fn, ObjCTypes.Int8PtrTy);
+  method.add(fn);
   method.finishAndAddTo(builder);
 }
 
@@ -3923,8 +3924,7 @@ llvm::Constant *CGObjCMac::emitMethodList(Twine name, MethodListType MLT,
 
     llvm::GlobalVariable *GV = CreateMetadataVar(prefix + name, values, section,
                                                  CGM.getPointerAlign(), true);
-    return llvm::ConstantExpr::getBitCast(GV,
-                                          ObjCTypes.MethodDescriptionListPtrTy);
+    return GV;
   }
 
   // Otherwise, it's an objc_method_list.
@@ -3941,7 +3941,7 @@ llvm::Constant *CGObjCMac::emitMethodList(Twine name, MethodListType MLT,
 
   llvm::GlobalVariable *GV = CreateMetadataVar(prefix + name, values, section,
                                                CGM.getPointerAlign(), true);
-  return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.MethodListPtrTy);
+  return GV;
 }
 
 llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
@@ -3996,8 +3996,7 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
     Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
                                 "", &CGM.getModule());
     Fn->takeName(OldFn);
-    OldFn->replaceAllUsesWith(
-        llvm::ConstantExpr::getBitCast(Fn, OldFn->getType()));
+    OldFn->replaceAllUsesWith(Fn);
     OldFn->eraseFromParent();
 
     // Replace the cached function in the map.
@@ -4259,7 +4258,7 @@ namespace {
 
       CGF.EmitBlock(FinallyCallExit);
       CGF.EmitNounwindRuntimeCall(ObjCTypes.getExceptionTryExitFn(),
-                                  ExceptionData.getPointer());
+                                  ExceptionData.emitRawPointer(CGF));
 
       CGF.EmitBlock(FinallyNoCallExit);
 
@@ -4425,7 +4424,9 @@ void FragileHazards::emitHazardsInNewBlocks() {
 }
 
 static void addIfPresent(llvm::DenseSet<llvm::Value*> &S, Address V) {
-  if (V.isValid()) S.insert(V.getPointer());
+  if (V.isValid())
+    if (llvm::Value *Ptr = V.getBasePointer())
+      S.insert(Ptr);
 }
 
 void FragileHazards::collectLocals() {
@@ -4628,13 +4629,13 @@ void CGObjCMac::EmitTryOrSynchronizedStmt(CodeGen::CodeGenFunction &CGF,
   //  - Call objc_exception_try_enter to push ExceptionData on top of
   //    the EH stack.
   CGF.EmitNounwindRuntimeCall(ObjCTypes.getExceptionTryEnterFn(),
-                              ExceptionData.getPointer());
+                              ExceptionData.emitRawPointer(CGF));
 
   //  - Call setjmp on the exception data buffer.
   llvm::Constant *Zero = llvm::ConstantInt::get(CGF.Builder.getInt32Ty(), 0);
   llvm::Value *GEPIndexes[] = { Zero, Zero, Zero };
   llvm::Value *SetJmpBuffer = CGF.Builder.CreateGEP(
-      ObjCTypes.ExceptionDataTy, ExceptionData.getPointer(), GEPIndexes,
+      ObjCTypes.ExceptionDataTy, ExceptionData.emitRawPointer(CGF), GEPIndexes,
       "setjmp_buffer");
   llvm::CallInst *SetJmpResult = CGF.EmitNounwindRuntimeCall(
       ObjCTypes.getSetJmpFn(), SetJmpBuffer, "setjmp_result");
@@ -4673,9 +4674,9 @@ void CGObjCMac::EmitTryOrSynchronizedStmt(CodeGen::CodeGenFunction &CGF,
   } else {
     // Retrieve the exception object.  We may emit multiple blocks but
     // nothing can cross this so the value is already in SSA form.
-    llvm::CallInst *Caught =
-      CGF.EmitNounwindRuntimeCall(ObjCTypes.getExceptionExtractFn(),
-                                  ExceptionData.getPointer(), "caught");
+    llvm::CallInst *Caught = CGF.EmitNounwindRuntimeCall(
+        ObjCTypes.getExceptionExtractFn(), ExceptionData.emitRawPointer(CGF),
+        "caught");
 
     // Push the exception to rethrow onto the EH value stack for the
     // benefit of any @throws in the handlers.
@@ -4698,7 +4699,7 @@ void CGObjCMac::EmitTryOrSynchronizedStmt(CodeGen::CodeGenFunction &CGF,
       // Enter a new exception try block (in case a @catch block
       // throws an exception).
       CGF.EmitNounwindRuntimeCall(ObjCTypes.getExceptionTryEnterFn(),
-                                  ExceptionData.getPointer());
+                                  ExceptionData.emitRawPointer(CGF));
 
       llvm::CallInst *SetJmpResult =
         CGF.EmitNounwindRuntimeCall(ObjCTypes.getSetJmpFn(),
@@ -4829,9 +4830,9 @@ void CGObjCMac::EmitTryOrSynchronizedStmt(CodeGen::CodeGenFunction &CGF,
       // Extract the new exception and save it to the
       // propagating-exception slot.
       assert(PropagatingExnVar.isValid());
-      llvm::CallInst *NewCaught =
-        CGF.EmitNounwindRuntimeCall(ObjCTypes.getExceptionExtractFn(),
-                                    ExceptionData.getPointer(), "caught");
+      llvm::CallInst *NewCaught = CGF.EmitNounwindRuntimeCall(
+          ObjCTypes.getExceptionExtractFn(), ExceptionData.emitRawPointer(CGF),
+          "caught");
       CGF.Builder.CreateStore(NewCaught, PropagatingExnVar);
 
       // Don't pop the catch handler; the throw already did.
@@ -4861,9 +4862,8 @@ void CGObjCMac::EmitTryOrSynchronizedStmt(CodeGen::CodeGenFunction &CGF,
 
     // Otherwise, just look in the buffer for the exception to throw.
     } else {
-      llvm::CallInst *Caught =
-        CGF.EmitNounwindRuntimeCall(ObjCTypes.getExceptionExtractFn(),
-                                    ExceptionData.getPointer());
+      llvm::CallInst *Caught = CGF.EmitNounwindRuntimeCall(
+          ObjCTypes.getExceptionExtractFn(), ExceptionData.emitRawPointer(CGF));
       PropagatingExn = Caught;
     }
 
@@ -4906,7 +4906,7 @@ llvm::Value * CGObjCMac::EmitObjCWeakRead(CodeGen::CodeGenFunction &CGF,
                                           Address AddrWeakObj) {
   llvm::Type* DestTy = AddrWeakObj.getElementType();
   llvm::Value *AddrWeakObjVal = CGF.Builder.CreateBitCast(
-      AddrWeakObj.getPointer(), ObjCTypes.PtrObjectPtrTy);
+      AddrWeakObj.emitRawPointer(CGF), ObjCTypes.PtrObjectPtrTy);
   llvm::Value *read_weak =
     CGF.EmitNounwindRuntimeCall(ObjCTypes.getGcReadWeakFn(),
                                 AddrWeakObjVal, "weakread");
@@ -4928,8 +4928,8 @@ void CGObjCMac::EmitObjCWeakAssign(CodeGen::CodeGenFunction &CGF,
     src = CGF.Builder.CreateIntToPtr(src, ObjCTypes.Int8PtrTy);
   }
   src = CGF.Builder.CreateBitCast(src, ObjCTypes.ObjectPtrTy);
-  llvm::Value *dstVal =
-      CGF.Builder.CreateBitCast(dst.getPointer(), ObjCTypes.PtrObjectPtrTy);
+  llvm::Value *dstVal = CGF.Builder.CreateBitCast(dst.emitRawPointer(CGF),
+                                                  ObjCTypes.PtrObjectPtrTy);
   llvm::Value *args[] = { src, dstVal };
   CGF.EmitNounwindRuntimeCall(ObjCTypes.getGcAssignWeakFn(),
                               args, "weakassign");
@@ -4950,8 +4950,8 @@ void CGObjCMac::EmitObjCGlobalAssign(CodeGen::CodeGenFunction &CGF,
     src = CGF.Builder.CreateIntToPtr(src, ObjCTypes.Int8PtrTy);
   }
   src = CGF.Builder.CreateBitCast(src, ObjCTypes.ObjectPtrTy);
-  llvm::Value *dstVal =
-      CGF.Builder.CreateBitCast(dst.getPointer(), ObjCTypes.PtrObjectPtrTy);
+  llvm::Value *dstVal = CGF.Builder.CreateBitCast(dst.emitRawPointer(CGF),
+                                                  ObjCTypes.PtrObjectPtrTy);
   llvm::Value *args[] = {src, dstVal};
   if (!threadlocal)
     CGF.EmitNounwindRuntimeCall(ObjCTypes.getGcAssignGlobalFn(),
@@ -4977,8 +4977,8 @@ void CGObjCMac::EmitObjCIvarAssign(CodeGen::CodeGenFunction &CGF,
     src = CGF.Builder.CreateIntToPtr(src, ObjCTypes.Int8PtrTy);
   }
   src = CGF.Builder.CreateBitCast(src, ObjCTypes.ObjectPtrTy);
-  llvm::Value *dstVal =
-      CGF.Builder.CreateBitCast(dst.getPointer(), ObjCTypes.PtrObjectPtrTy);
+  llvm::Value *dstVal = CGF.Builder.CreateBitCast(dst.emitRawPointer(CGF),
+                                                  ObjCTypes.PtrObjectPtrTy);
   llvm::Value *args[] = {src, dstVal, ivarOffset};
   CGF.EmitNounwindRuntimeCall(ObjCTypes.getGcAssignIvarFn(), args);
 }
@@ -4997,8 +4997,8 @@ void CGObjCMac::EmitObjCStrongCastAssign(CodeGen::CodeGenFunction &CGF,
     src = CGF.Builder.CreateIntToPtr(src, ObjCTypes.Int8PtrTy);
   }
   src = CGF.Builder.CreateBitCast(src, ObjCTypes.ObjectPtrTy);
-  llvm::Value *dstVal =
-      CGF.Builder.CreateBitCast(dst.getPointer(), ObjCTypes.PtrObjectPtrTy);
+  llvm::Value *dstVal = CGF.Builder.CreateBitCast(dst.emitRawPointer(CGF),
+                                                  ObjCTypes.PtrObjectPtrTy);
   llvm::Value *args[] = {src, dstVal};
   CGF.EmitNounwindRuntimeCall(ObjCTypes.getGcAssignStrongCastFn(),
                               args, "strongassign");
@@ -5007,7 +5007,8 @@ void CGObjCMac::EmitObjCStrongCastAssign(CodeGen::CodeGenFunction &CGF,
 void CGObjCMac::EmitGCMemmoveCollectable(CodeGen::CodeGenFunction &CGF,
                                          Address DestPtr, Address SrcPtr,
                                          llvm::Value *size) {
-  llvm::Value *args[] = { DestPtr.getPointer(), SrcPtr.getPointer(), size };
+  llvm::Value *args[] = {DestPtr.emitRawPointer(CGF),
+                         SrcPtr.emitRawPointer(CGF), size};
   CGF.EmitNounwindRuntimeCall(ObjCTypes.GcMemmoveCollectableFn(), args);
 }
 
@@ -5046,12 +5047,10 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
     return ("__DATA," + Section + "," + MachOAttributes).str();
   }
   case llvm::Triple::ELF:
-    assert(Section.substr(0, 2) == "__" &&
-           "expected the name to begin with __");
+    assert(Section.starts_with("__") && "expected the name to begin with __");
     return Section.substr(2).str();
   case llvm::Triple::COFF:
-    assert(Section.substr(0, 2) == "__" &&
-           "expected the name to begin with __");
+    assert(Section.starts_with("__") && "expected the name to begin with __");
     return ("." + Section.substr(2) + "$B").str();
   case llvm::Triple::Wasm:
   case llvm::Triple::GOFF:
@@ -5194,17 +5193,17 @@ llvm::Constant *CGObjCMac::EmitModuleSymbols() {
       if (ID->isWeakImported() && !IMP->isWeakImported())
         DefinedClasses[i]->setLinkage(llvm::GlobalVariable::ExternalLinkage);
 
-    array.addBitCast(DefinedClasses[i], ObjCTypes.Int8PtrTy);
+    array.add(DefinedClasses[i]);
   }
   for (unsigned i=0; i<NumCategories; i++)
-    array.addBitCast(DefinedCategories[i], ObjCTypes.Int8PtrTy);
+    array.add(DefinedCategories[i]);
 
   array.finishAndAddTo(values);
 
   llvm::GlobalVariable *GV = CreateMetadataVar(
       "OBJC_SYMBOLS", values, "__OBJC,__symbols,regular,no_dead_strip",
       CGM.getPointerAlign(), true);
-  return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.SymtabPtrTy);
+  return GV;
 }
 
 llvm::Value *CGObjCMac::EmitClassRefFromId(CodeGenFunction &CGF,
@@ -5214,13 +5213,10 @@ llvm::Value *CGObjCMac::EmitClassRefFromId(CodeGenFunction &CGF,
   llvm::GlobalVariable *&Entry = ClassReferences[II];
 
   if (!Entry) {
-    llvm::Constant *Casted =
-    llvm::ConstantExpr::getBitCast(GetClassName(II->getName()),
-                                   ObjCTypes.ClassPtrTy);
-    Entry = CreateMetadataVar(
-        "OBJC_CLASS_REFERENCES_", Casted,
-        "__OBJC,__cls_refs,literal_pointers,no_dead_strip",
-        CGM.getPointerAlign(), true);
+    Entry =
+        CreateMetadataVar("OBJC_CLASS_REFERENCES_", GetClassName(II->getName()),
+                          "__OBJC,__cls_refs,literal_pointers,no_dead_strip",
+                          CGM.getPointerAlign(), true);
   }
 
   return CGF.Builder.CreateAlignedLoad(Entry->getValueType(), Entry,
@@ -5248,21 +5244,18 @@ llvm::Value *CGObjCMac::EmitSelector(CodeGenFunction &CGF, Selector Sel) {
   return CGF.Builder.CreateLoad(EmitSelectorAddr(Sel));
 }
 
-Address CGObjCMac::EmitSelectorAddr(Selector Sel) {
+ConstantAddress CGObjCMac::EmitSelectorAddr(Selector Sel) {
   CharUnits Align = CGM.getPointerAlign();
 
   llvm::GlobalVariable *&Entry = SelectorReferences[Sel];
   if (!Entry) {
-    llvm::Constant *Casted =
-      llvm::ConstantExpr::getBitCast(GetMethodVarName(Sel),
-                                     ObjCTypes.SelectorPtrTy);
     Entry = CreateMetadataVar(
-        "OBJC_SELECTOR_REFERENCES_", Casted,
+        "OBJC_SELECTOR_REFERENCES_", GetMethodVarName(Sel),
         "__OBJC,__message_refs,literal_pointers,no_dead_strip", Align, true);
     Entry->setExternallyInitialized(true);
   }
 
-  return Address(Entry, ObjCTypes.SelectorPtrTy, Align);
+  return ConstantAddress(Entry, ObjCTypes.SelectorPtrTy, Align);
 }
 
 llvm::Constant *CGObjCCommonMac::GetClassName(StringRef RuntimeName) {
@@ -5334,7 +5327,7 @@ void IvarLayoutBuilder::visitField(const FieldDecl *field,
   }
   // Unlike incomplete arrays, constant arrays can be nested.
   while (auto arrayType = CGM.getContext().getAsConstantArrayType(fieldType)) {
-    numElts *= arrayType->getSize().getZExtValue();
+    numElts *= arrayType->getZExtSize();
     fieldType = arrayType->getElementType();
   }
 
@@ -5757,10 +5750,9 @@ ObjCCommonTypesHelper::ObjCCommonTypesHelper(CodeGen::CodeGenModule &cgm)
   //   id self;
   //   Class cls;
   // }
-  RecordDecl *RD = RecordDecl::Create(Ctx, TTK_Struct,
-                                      Ctx.getTranslationUnitDecl(),
-                                      SourceLocation(), SourceLocation(),
-                                      &Ctx.Idents.get("_objc_super"));
+  RecordDecl *RD = RecordDecl::Create(
+      Ctx, TagTypeKind::Struct, Ctx.getTranslationUnitDecl(), SourceLocation(),
+      SourceLocation(), &Ctx.Idents.get("_objc_super"));
   RD->addDecl(FieldDecl::Create(Ctx, RD, SourceLocation(), SourceLocation(),
                                 nullptr, Ctx.getObjCIdType(), nullptr, nullptr,
                                 false, ICIS_NoInit));
@@ -6110,10 +6102,9 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(CodeGen::CodeGenModul
   // };
 
   // First the clang type for struct _message_ref_t
-  RecordDecl *RD = RecordDecl::Create(Ctx, TTK_Struct,
-                                      Ctx.getTranslationUnitDecl(),
-                                      SourceLocation(), SourceLocation(),
-                                      &Ctx.Idents.get("_message_ref_t"));
+  RecordDecl *RD = RecordDecl::Create(
+      Ctx, TagTypeKind::Struct, Ctx.getTranslationUnitDecl(), SourceLocation(),
+      SourceLocation(), &Ctx.Idents.get("_message_ref_t"));
   RD->addDecl(FieldDecl::Create(Ctx, RD, SourceLocation(), SourceLocation(),
                                 nullptr, Ctx.VoidPtrTy, nullptr, nullptr, false,
                                 ICIS_NoInit));
@@ -6168,8 +6159,8 @@ void CGObjCNonFragileABIMac::AddModuleClassList(
 
   SmallVector<llvm::Constant*, 8> Symbols(NumClasses);
   for (unsigned i=0; i<NumClasses; i++)
-    Symbols[i] = llvm::ConstantExpr::getBitCast(Container[i],
-                                                ObjCTypes.Int8PtrTy);
+    Symbols[i] = Container[i];
+
   llvm::Constant *Init =
     llvm::ConstantArray::get(llvm::ArrayType::get(ObjCTypes.Int8PtrTy,
                                                   Symbols.size()),
@@ -6178,7 +6169,7 @@ void CGObjCNonFragileABIMac::AddModuleClassList(
   // Section name is obtained by calling GetSectionName, which returns
   // sections in the __DATA segment on MachO.
   assert((!CGM.getTriple().isOSBinFormatMachO() ||
-          SectionName.startswith("__DATA")) &&
+          SectionName.starts_with("__DATA")) &&
          "SectionName expected to start with __DATA on MachO");
   llvm::GlobalVariable *GV = new llvm::GlobalVariable(
       CGM.getModule(), Init->getType(), false,
@@ -6277,11 +6268,10 @@ bool CGObjCNonFragileABIMac::isVTableDispatchedSelector(Selector Sel) {
       VTableDispatchMethods.insert(GetUnarySelector("addObject"));
 
       // "countByEnumeratingWithState:objects:count"
-      IdentifierInfo *KeyIdents[] = {
-        &CGM.getContext().Idents.get("countByEnumeratingWithState"),
-        &CGM.getContext().Idents.get("objects"),
-        &CGM.getContext().Idents.get("count")
-      };
+      const IdentifierInfo *KeyIdents[] = {
+          &CGM.getContext().Idents.get("countByEnumeratingWithState"),
+          &CGM.getContext().Idents.get("objects"),
+          &CGM.getContext().Idents.get("count")};
       VTableDispatchMethods.insert(
         CGM.getContext().Selectors.getSelector(3, KeyIdents));
     }
@@ -6605,9 +6595,7 @@ llvm::Value *CGObjCNonFragileABIMac::GenerateProtocolRef(CodeGenFunction &CGF,
   // of protocol's meta-data (not a reference to it!)
   assert(!PD->isNonRuntimeProtocol() &&
          "attempting to get a protocol ref to a static protocol.");
-  llvm::Constant *Init =
-    llvm::ConstantExpr::getBitCast(GetOrEmitProtocol(PD),
-                                   ObjCTypes.getExternalProtocolPtrTy());
+  llvm::Constant *Init = GetOrEmitProtocol(PD);
 
   std::string ProtocolName("_OBJC_PROTOCOL_REFERENCE_$_");
   ProtocolName += PD->getObjCRuntimeNameAsString();
@@ -6748,8 +6736,7 @@ void CGObjCNonFragileABIMac::emitMethodConstant(ConstantArrayBuilder &builder,
                                                 const ObjCMethodDecl *MD,
                                                 bool forProtocol) {
   auto method = builder.beginStruct(ObjCTypes.MethodTy);
-  method.addBitCast(GetMethodVarName(MD->getSelector()),
-                    ObjCTypes.SelectorPtrTy);
+  method.add(GetMethodVarName(MD->getSelector()));
   method.add(GetMethodVarType(MD));
 
   if (forProtocol) {
@@ -6758,7 +6745,7 @@ void CGObjCNonFragileABIMac::emitMethodConstant(ConstantArrayBuilder &builder,
   } else {
     llvm::Function *fn = GetMethodDefinition(MD);
     assert(fn && "no definition for method?");
-    method.addBitCast(fn, ObjCTypes.Int8PtrProgramASTy);
+    method.add(fn);
   }
 
   method.finishAndAddTo(builder);
@@ -6832,7 +6819,7 @@ CGObjCNonFragileABIMac::emitMethodList(Twine name, MethodListType kind,
 
   llvm::GlobalVariable *GV = finishAndCreateGlobal(values, prefix + name, CGM);
   CGM.addCompilerUsedGlobal(GV);
-  return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.MethodListnfABIPtrTy);
+  return GV;
 }
 
 /// ObjCIvarOffsetVariable - Returns the ivar offset variable for
@@ -6974,7 +6961,7 @@ llvm::Constant *CGObjCNonFragileABIMac::EmitIvarList(
   llvm::GlobalVariable *GV = finishAndCreateGlobal(
       ivarList, Prefix + OID->getObjCRuntimeNameAsString(), CGM);
   CGM.addCompilerUsedGlobal(GV);
-  return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.IvarListnfABIPtrTy);
+  return GV;
 }
 
 llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocolRef(
@@ -7148,7 +7135,7 @@ CGObjCNonFragileABIMac::EmitProtocolList(Twine Name,
   llvm::GlobalVariable *GV =
     CGM.getModule().getGlobalVariable(TmpName.str(), true);
   if (GV)
-    return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.ProtocolListnfABIPtrTy);
+    return GV;
 
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct();
@@ -7166,8 +7153,7 @@ CGObjCNonFragileABIMac::EmitProtocolList(Twine Name,
 
   GV = finishAndCreateGlobal(values, Name, CGM);
   CGM.addCompilerUsedGlobal(GV);
-  return llvm::ConstantExpr::getBitCast(GV,
-                                        ObjCTypes.ProtocolListnfABIPtrTy);
+  return GV;
 }
 
 /// EmitObjCValueForIvar - Code Gen for nonfragile ivar reference.
@@ -7337,7 +7323,7 @@ CGObjCNonFragileABIMac::EmitVTableMessageSend(CodeGenFunction &CGF,
             ObjCTypes.MessageRefTy, CGF.getPointerAlign());
 
   // Update the message ref argument.
-  args[1].setRValue(RValue::get(mref.getPointer()));
+  args[1].setRValue(RValue::get(mref, CGF));
 
   // Load the function to call from the message ref table.
   Address calleeAddr = CGF.Builder.CreateStructGEP(mref, 0);
@@ -7401,8 +7387,7 @@ CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
       NewGV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
 
     if (GV) {
-      GV->replaceAllUsesWith(
-          llvm::ConstantExpr::getBitCast(NewGV, GV->getType()));
+      GV->replaceAllUsesWith(NewGV);
       GV->eraseFromParent();
     }
     GV = NewGV;
@@ -7567,9 +7552,8 @@ CGObjCNonFragileABIMac::GenerateMessageSendSuper(CodeGen::CodeGenFunction &CGF,
   // ...
   // Create and init a super structure; this is a (receiver, class)
   // pair we will pass to objc_msgSendSuper.
-  Address ObjCSuper =
-    CGF.CreateTempAlloca(ObjCTypes.SuperTy, CGF.getPointerAlign(),
-                         "objc_super");
+  RawAddress ObjCSuper = CGF.CreateTempAlloca(
+      ObjCTypes.SuperTy, CGF.getPointerAlign(), "objc_super");
 
   llvm::Value *ReceiverAsObject =
     CGF.Builder.CreateBitCast(Receiver, ObjCTypes.ObjectPtrTy);
@@ -7609,18 +7593,15 @@ llvm::Value *CGObjCNonFragileABIMac::EmitSelector(CodeGenFunction &CGF,
   return LI;
 }
 
-Address CGObjCNonFragileABIMac::EmitSelectorAddr(Selector Sel) {
+ConstantAddress CGObjCNonFragileABIMac::EmitSelectorAddr(Selector Sel) {
   llvm::GlobalVariable *&Entry = SelectorReferences[Sel];
   CharUnits Align = CGM.getPointerAlign();
   if (!Entry) {
-    llvm::Constant *Casted =
-      llvm::ConstantExpr::getBitCast(GetMethodVarName(Sel),
-                                     ObjCTypes.SelectorPtrTy);
     std::string SectionName =
         GetSectionName("__objc_selrefs", "literal_pointers,no_dead_strip");
     Entry = new llvm::GlobalVariable(
         CGM.getModule(), ObjCTypes.SelectorPtrTy, false,
-        getLinkageTypeForObjCMetadata(CGM, SectionName), Casted,
+        getLinkageTypeForObjCMetadata(CGM, SectionName), GetMethodVarName(Sel),
         "OBJC_SELECTOR_REFERENCES_");
     Entry->setExternallyInitialized(true);
     Entry->setSection(SectionName);
@@ -7628,7 +7609,7 @@ Address CGObjCNonFragileABIMac::EmitSelectorAddr(Selector Sel) {
     CGM.addCompilerUsedGlobal(Entry);
   }
 
-  return Address(Entry, ObjCTypes.SelectorPtrTy, Align);
+  return ConstantAddress(Entry, ObjCTypes.SelectorPtrTy, Align);
 }
 
 /// EmitObjCIvarAssign - Code gen for assigning to a __strong object.
@@ -7647,8 +7628,8 @@ void CGObjCNonFragileABIMac::EmitObjCIvarAssign(CodeGen::CodeGenFunction &CGF,
     src = CGF.Builder.CreateIntToPtr(src, ObjCTypes.Int8PtrTy);
   }
   src = CGF.Builder.CreateBitCast(src, ObjCTypes.ObjectPtrTy);
-  llvm::Value *dstVal =
-      CGF.Builder.CreateBitCast(dst.getPointer(), ObjCTypes.PtrObjectPtrTy);
+  llvm::Value *dstVal = CGF.Builder.CreateBitCast(dst.emitRawPointer(CGF),
+                                                  ObjCTypes.PtrObjectPtrTy);
   llvm::Value *args[] = {src, dstVal, ivarOffset};
   CGF.EmitNounwindRuntimeCall(ObjCTypes.getGcAssignIvarFn(), args);
 }
@@ -7668,8 +7649,8 @@ void CGObjCNonFragileABIMac::EmitObjCStrongCastAssign(
     src = CGF.Builder.CreateIntToPtr(src, ObjCTypes.Int8PtrTy);
   }
   src = CGF.Builder.CreateBitCast(src, ObjCTypes.ObjectPtrTy);
-  llvm::Value *dstVal =
-      CGF.Builder.CreateBitCast(dst.getPointer(), ObjCTypes.PtrObjectPtrTy);
+  llvm::Value *dstVal = CGF.Builder.CreateBitCast(dst.emitRawPointer(CGF),
+                                                  ObjCTypes.PtrObjectPtrTy);
   llvm::Value *args[] = {src, dstVal};
   CGF.EmitNounwindRuntimeCall(ObjCTypes.getGcAssignStrongCastFn(),
                               args, "weakassign");
@@ -7678,7 +7659,8 @@ void CGObjCNonFragileABIMac::EmitObjCStrongCastAssign(
 void CGObjCNonFragileABIMac::EmitGCMemmoveCollectable(
     CodeGen::CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
     llvm::Value *Size) {
-  llvm::Value *args[] = { DestPtr.getPointer(), SrcPtr.getPointer(), Size };
+  llvm::Value *args[] = {DestPtr.emitRawPointer(CGF),
+                         SrcPtr.emitRawPointer(CGF), Size};
   CGF.EmitNounwindRuntimeCall(ObjCTypes.GcMemmoveCollectableFn(), args);
 }
 
@@ -7690,7 +7672,7 @@ llvm::Value * CGObjCNonFragileABIMac::EmitObjCWeakRead(
   Address AddrWeakObj) {
   llvm::Type *DestTy = AddrWeakObj.getElementType();
   llvm::Value *AddrWeakObjVal = CGF.Builder.CreateBitCast(
-      AddrWeakObj.getPointer(), ObjCTypes.PtrObjectPtrTy);
+      AddrWeakObj.emitRawPointer(CGF), ObjCTypes.PtrObjectPtrTy);
   llvm::Value *read_weak =
     CGF.EmitNounwindRuntimeCall(ObjCTypes.getGcReadWeakFn(),
                                 AddrWeakObjVal, "weakread");
@@ -7712,8 +7694,8 @@ void CGObjCNonFragileABIMac::EmitObjCWeakAssign(CodeGen::CodeGenFunction &CGF,
     src = CGF.Builder.CreateIntToPtr(src, ObjCTypes.Int8PtrTy);
   }
   src = CGF.Builder.CreateBitCast(src, ObjCTypes.ObjectPtrTy);
-  llvm::Value *dstVal =
-      CGF.Builder.CreateBitCast(dst.getPointer(), ObjCTypes.PtrObjectPtrTy);
+  llvm::Value *dstVal = CGF.Builder.CreateBitCast(dst.emitRawPointer(CGF),
+                                                  ObjCTypes.PtrObjectPtrTy);
   llvm::Value *args[] = {src, dstVal};
   CGF.EmitNounwindRuntimeCall(ObjCTypes.getGcAssignWeakFn(),
                               args, "weakassign");
@@ -7734,8 +7716,8 @@ void CGObjCNonFragileABIMac::EmitObjCGlobalAssign(CodeGen::CodeGenFunction &CGF,
     src = CGF.Builder.CreateIntToPtr(src, ObjCTypes.Int8PtrTy);
   }
   src = CGF.Builder.CreateBitCast(src, ObjCTypes.ObjectPtrTy);
-  llvm::Value *dstVal =
-      CGF.Builder.CreateBitCast(dst.getPointer(), ObjCTypes.PtrObjectPtrTy);
+  llvm::Value *dstVal = CGF.Builder.CreateBitCast(dst.emitRawPointer(CGF),
+                                                  ObjCTypes.PtrObjectPtrTy);
   llvm::Value *args[] = {src, dstVal};
   if (!threadlocal)
     CGF.EmitNounwindRuntimeCall(ObjCTypes.getGcAssignGlobalFn(),

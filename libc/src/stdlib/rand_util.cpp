@@ -11,8 +11,14 @@
 
 namespace LIBC_NAMESPACE {
 
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+// FIXME: Local GPU memory cannot be initialized so we cannot currently provide
+// a standard compliant default value.
+ThreadLocal<unsigned long> rand_next;
+#else
 // C standard 7.10p2: If 'rand' is called before 'srand' it is to proceed as if
 // the 'srand' function was called with a value of '1'.
 LIBC_THREAD_LOCAL unsigned long rand_next = 1;
+#endif
 
 } // namespace LIBC_NAMESPACE

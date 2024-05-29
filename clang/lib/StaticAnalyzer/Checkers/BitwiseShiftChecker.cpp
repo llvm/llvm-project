@@ -172,18 +172,24 @@ BugReportPtr BitwiseShiftValidator::checkOvershift() {
 
   const SVal Right = Ctx.getSVal(operandExpr(OperandSide::Right));
 
-  std::string RightOpStr = "";
+  std::string RightOpStr = "", LowerBoundStr = "";
   if (auto ConcreteRight = Right.getAs<nonloc::ConcreteInt>())
     RightOpStr = formatv(" '{0}'", ConcreteRight->getValue());
+  else {
+    SValBuilder &SVB = Ctx.getSValBuilder();
+    if (const llvm::APSInt *MinRight = SVB.getMinValue(FoldedState, Right)) {
+      LowerBoundStr = formatv(" >= {0},", MinRight->getExtValue());
+    }
+  }
 
   std::string ShortMsg = formatv(
       "{0} shift{1}{2} overflows the capacity of '{3}'",
       isLeftShift() ? "Left" : "Right", RightOpStr.empty() ? "" : " by",
       RightOpStr, LHSTy.getAsString());
-  std::string Msg =
-      formatv("The result of {0} shift is undefined because the right "
-              "operand{1} is not smaller than {2}, the capacity of '{3}'",
-              shiftDir(), RightOpStr, LHSBitWidth, LHSTy.getAsString());
+  std::string Msg = formatv(
+      "The result of {0} shift is undefined because the right "
+      "operand{1} is{2} not smaller than {3}, the capacity of '{4}'",
+      shiftDir(), RightOpStr, LowerBoundStr, LHSBitWidth, LHSTy.getAsString());
   return createBugReport(ShortMsg, Msg);
 }
 
@@ -338,7 +344,7 @@ BitwiseShiftValidator::createBugReport(StringRef ShortMsg, StringRef Msg) const 
 } // anonymous namespace
 
 class BitwiseShiftChecker : public Checker<check::PreStmt<BinaryOperator>> {
-  mutable std::unique_ptr<BugType> BTPtr;
+  BugType BT{this, "Bitwise shift", "Suspicious operation"};
 
 public:
   void checkPreStmt(const BinaryOperator *B, CheckerContext &Ctx) const {
@@ -347,11 +353,7 @@ public:
     if (Op != BO_Shl && Op != BO_Shr)
       return;
 
-    if (!BTPtr)
-      BTPtr = std::make_unique<BugType>(this, "Bitwise shift",
-                                        "Suspicious operation");
-
-    BitwiseShiftValidator(B, Ctx, *BTPtr, Pedantic).run();
+    BitwiseShiftValidator(B, Ctx, BT, Pedantic).run();
   }
 
   bool Pedantic = false;

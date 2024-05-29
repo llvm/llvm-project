@@ -172,7 +172,7 @@ int __kmp_ncores = 0;
 int __kmp_chunk = 0;
 int __kmp_force_monotonic = 0;
 int __kmp_abort_delay = 0;
-#if KMP_OS_LINUX && defined(KMP_TDATA_GTID)
+#if (KMP_OS_LINUX || KMP_OS_AIX) && defined(KMP_TDATA_GTID)
 int __kmp_gtid_mode = 3; /* use __declspec(thread) TLS to store gtid */
 int __kmp_adjust_gtid_mode = FALSE;
 #elif KMP_OS_WINDOWS
@@ -282,6 +282,9 @@ kmp_affinity_t __kmp_hh_affinity =
 kmp_affinity_t *__kmp_affinities[] = {&__kmp_affinity, &__kmp_hh_affinity};
 
 char *__kmp_cpuinfo_file = NULL;
+#if KMP_WEIGHTED_ITERATIONS_SUPPORTED
+int __kmp_first_osid_with_ecore = -1;
+#endif
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 

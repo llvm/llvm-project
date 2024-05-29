@@ -1,5 +1,5 @@
 ; RUN: opt -S -passes=openmp-opt < %s
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
 target triple = "amdgcn-amd-amdhsa"
 
 %"struct.ompx::state::TeamStateTy" = type { %"struct.ompx::state::ICVStateTy", i32, i32, ptr }
@@ -7,8 +7,8 @@ target triple = "amdgcn-amd-amdhsa"
 
 @_ZN4ompx5state9TeamStateE = internal addrspace(3) global %"struct.ompx::state::TeamStateTy" undef
 
-define amdgpu_kernel void @__omp_offloading_32_70c2e76c_main_l24() {
-  %1 = tail call i32 @__kmpc_target_init(ptr null)
+define amdgpu_kernel void @__omp_offloading_32_70c2e76c_main_l24(ptr %dyn) {
+  %1 = tail call i32 @__kmpc_target_init(ptr null, ptr %dyn)
   call void @__kmpc_parallel_51(ptr null, i32 0, i32 0, i32 0, i32 0, ptr @__omp_offloading_32_70c2e76c_main_l24_omp_outlined, ptr null, ptr null, i64 0)
   ret void
 }
@@ -24,7 +24,7 @@ define void @__omp_offloading_32_70c2e76c_main_l24_omp_outlined(ptr %0) {
   br label %2
 }
 
-define internal i32 @__kmpc_target_init(ptr %0) {
+define internal i32 @__kmpc_target_init(ptr %0, ptr) {
   store i32 0, ptr addrspace(3) @_ZN4ompx5state9TeamStateE, align 16
   ret i32 0
 }

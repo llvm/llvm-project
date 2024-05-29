@@ -55,14 +55,45 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   // CHECK: relaxed_precision
   spirv.GlobalVariable @var {location = 0 : i32, relaxed_precision} : !spirv.ptr<vector<4xf32>, Output>
 }
+
 // -----
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
-  // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = outSideGlobalVar1, linkage_type = <Import>>
+  // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = "outSideGlobalVar1", linkage_type = <Import>>
   spirv.GlobalVariable @var1 {
     linkage_attributes=#spirv.linkage_attributes<
       linkage_name="outSideGlobalVar1", 
       linkage_type=<Import>
     >
   } : !spirv.ptr<f32, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Kernel], []> {
+spirv.func @iadd_decorations(%arg: i32) -> i32 "None" {
+  // CHECK: spirv.IAdd %{{.*}}, %{{.*}} {no_signed_wrap, no_unsigned_wrap}
+  %0 = spirv.IAdd %arg, %arg {no_signed_wrap, no_unsigned_wrap} : i32
+  spirv.ReturnValue %0 : i32
+}
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Kernel], []> {
+spirv.func @fadd_decorations(%arg: f32) -> f32 "None" {
+  // CHECK: spirv.FAdd %{{.*}}, %{{.*}} {fp_fast_math_mode = #spirv.fastmath_mode<NotNaN|NotInf|NSZ>}
+  %0 = spirv.FAdd %arg, %arg {fp_fast_math_mode = #spirv.fastmath_mode<NotNaN|NotInf|NSZ>} : f32
+  spirv.ReturnValue %0 : f32
+}
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Kernel], []> {
+spirv.func @fmul_decorations(%arg: f32) -> f32 "None" {
+  // CHECK: spirv.FMul %{{.*}}, %{{.*}} {no_contraction}
+  %0 = spirv.FMul %arg, %arg {no_contraction} : f32
+  spirv.ReturnValue %0 : f32
+}
 }

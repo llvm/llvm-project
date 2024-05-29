@@ -9,7 +9,7 @@
 
 declare void @use(i8)
 ;.
-; CHECK: @[[MYSTR:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_MYSTR:%.*]] zeroinitializer
+; CHECK: @mystr = internal global %struct.MYstr zeroinitializer
 ;.
 define internal void @vfu1(ptr byval(%struct.MYstr) align 4 %u) nounwind {
 ; CHECK: Function Attrs: nounwind memory(readwrite, argmem: none)
@@ -18,8 +18,8 @@ define internal void @vfu1(ptr byval(%struct.MYstr) align 4 %u) nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U_PRIV:%.*]] = alloca [[STRUCT_MYSTR:%.*]], align 8
 ; CHECK-NEXT:    store i8 [[TMP0]], ptr [[U_PRIV]], align 1
-; CHECK-NEXT:    [[U_PRIV_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i64 0, i32 1
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[U_PRIV_0_1]], align 4
+; CHECK-NEXT:    [[U_PRIV_B4:%.*]] = getelementptr i8, ptr [[U_PRIV]], i64 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[U_PRIV_B4]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 99, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i8 97, ptr [[U_PRIV]], align 8
@@ -49,8 +49,8 @@ define internal i32 @vfu2(ptr byval(%struct.MYstr) align 4 %u) nounwind readonly
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U_PRIV:%.*]] = alloca [[STRUCT_MYSTR:%.*]], align 8
 ; CHECK-NEXT:    store i8 [[TMP0]], ptr [[U_PRIV]], align 1
-; CHECK-NEXT:    [[U_PRIV_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i64 0, i32 1
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[U_PRIV_0_1]], align 4
+; CHECK-NEXT:    [[U_PRIV_B4:%.*]] = getelementptr i8, ptr [[U_PRIV]], i64 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[U_PRIV_B4]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[U_PRIV]], align 8
@@ -74,12 +74,12 @@ define i32 @unions() nounwind {
 ; TUNIT-SAME: () #[[ATTR2:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr @mystr, i64 0, i32 1
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_0_1]], align 8
+; TUNIT-NEXT:    [[MYSTR_B41:%.*]] = getelementptr i8, ptr @mystr, i64 4
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_B41]], align 8
 ; TUNIT-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR2]]
 ; TUNIT-NEXT:    [[TMP2:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_0_11:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr @mystr, i64 0, i32 1
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_0_11]], align 8
+; TUNIT-NEXT:    [[MYSTR_B4:%.*]] = getelementptr i8, ptr @mystr, i64 4
+; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_B4]], align 8
 ; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR3:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[RESULT]]
 ;
@@ -88,12 +88,12 @@ define i32 @unions() nounwind {
 ; CGSCC-SAME: () #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load i8, ptr @mystr, align 8
-; CGSCC-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr @mystr, i64 0, i32 1
-; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_0_1]], align 8
+; CGSCC-NEXT:    [[MYSTR_B4:%.*]] = getelementptr i8, ptr @mystr, i64 4
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_B4]], align 8
 ; CGSCC-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[TMP2:%.*]] = load i8, ptr @mystr, align 8
-; CGSCC-NEXT:    [[MYSTR_0_11:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr @mystr, i64 0, i32 1
-; CGSCC-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_0_11]], align 8
+; CGSCC-NEXT:    [[MYSTR_B41:%.*]] = getelementptr i8, ptr @mystr, i64 4
+; CGSCC-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_B41]], align 8
 ; CGSCC-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR2]]
 ; CGSCC-NEXT:    ret i32 [[RESULT]]
 ;
@@ -110,8 +110,8 @@ define internal i32 @vfu2_v2(ptr byval(%struct.MYstr) align 4 %u) nounwind reado
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U_PRIV:%.*]] = alloca [[STRUCT_MYSTR:%.*]], align 8
 ; CHECK-NEXT:    store i8 [[TMP0]], ptr [[U_PRIV]], align 1
-; CHECK-NEXT:    [[U_PRIV_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i64 0, i32 1
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[U_PRIV_0_1]], align 4
+; CHECK-NEXT:    [[U_PRIV_B4:%.*]] = getelementptr i8, ptr [[U_PRIV]], i64 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[U_PRIV_B4]], align 4
 ; CHECK-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 99, ptr [[Z]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i32 0, i32 1
@@ -139,12 +139,12 @@ define i32 @unions_v2() nounwind {
 ; TUNIT-SAME: () #[[ATTR2]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_0_11:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr @mystr, i64 0, i32 1
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_0_11]], align 8
+; TUNIT-NEXT:    [[MYSTR_B4:%.*]] = getelementptr i8, ptr @mystr, i64 4
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_B4]], align 8
 ; TUNIT-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR2]]
 ; TUNIT-NEXT:    [[TMP2:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr @mystr, i64 0, i32 1
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_0_1]], align 8
+; TUNIT-NEXT:    [[MYSTR_B41:%.*]] = getelementptr i8, ptr @mystr, i64 4
+; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_B41]], align 8
 ; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR3]]
 ; TUNIT-NEXT:    ret i32 [[RESULT]]
 ;

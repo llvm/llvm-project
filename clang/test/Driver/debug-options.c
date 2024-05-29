@@ -76,10 +76,7 @@
 // RUN:             | FileCheck -check-prefix=G_STANDALONE %s
 
 // FreeBSD.
-// RUN: %clang -### -c -g %s -target x86_64-pc-freebsd11.0 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_GDB \
-// RUN:                         -check-prefix=G_DWARF2 %s
-// RUN: %clang -### -c -g %s -target x86_64-pc-freebsd12.0 2>&1 \
+// RUN: %clang -### -c -g %s -target x86_64-pc-freebsd 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_GDB \
 // RUN:                         -check-prefix=G_DWARF4 %s
 
@@ -188,15 +185,11 @@
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
 // RUN: %clang -### -c -gline-tables-only %s -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-tables-only %s -target x86_64-pc-freebsd10.0 2>&1 \
-// RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-apple-darwin16 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_STANDALONE -check-prefix=G_DWARF4 %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target i686-pc-openbsd 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only -g %s --target=i386-pc-solaris 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY %s
@@ -207,15 +200,11 @@
 // RUN:             | FileCheck -check-prefix=GLIO_ONLY %s
 // RUN: %clang -### -c -gline-directives-only %s -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLIO_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-directives-only %s -target x86_64-pc-freebsd10.0 2>&1 \
-// RUN:             | FileCheck -check-prefix=GLIO_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-directives-only -g %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY %s
 // RUN: %clang -### -c -gline-directives-only -g %s -target x86_64-apple-darwin16 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_STANDALONE -check-prefix=G_DWARF4 %s
 // RUN: %clang -### -c -gline-directives-only -g %s -target i686-pc-openbsd 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-directives-only -g %s -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-directives-only -g %s --target=i386-pc-solaris 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY %s
@@ -421,16 +410,6 @@
 // MACRO: "-debug-info-macro"
 // NOMACRO-NOT: "-debug-info-macro"
 //
-// RUN: %clang -### -gdwarf-5 -gembed-source %s 2>&1 | FileCheck -check-prefix=GEMBED_5 %s
-// RUN: not %clang -### -gdwarf-2 -gembed-source %s 2>&1 | FileCheck -check-prefix=GEMBED_2 %s
-// RUN: %clang -### -gdwarf-5 -gno-embed-source %s 2>&1 | FileCheck -check-prefix=NOGEMBED_5 %s
-// RUN: %clang -### -gdwarf-2 -gno-embed-source %s 2>&1 | FileCheck -check-prefix=NOGEMBED_2 %s
-//
-// GEMBED_5:  "-gembed-source"
-// GEMBED_2:  error: invalid argument '-gembed-source' only allowed with '-gdwarf-5'
-// NOGEMBED_5-NOT:  "-gembed-source"
-// NOGEMBED_2-NOT:  error: invalid argument '-gembed-source' only allowed with '-gdwarf-5'
-//
 // RUN: %clang -### -g -fno-eliminate-unused-debug-types -c %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=DEBUG_UNUSED_TYPES %s
 // DEBUG_UNUSED_TYPES: "-debug-info-kind=unused-types"
@@ -476,3 +455,13 @@
 // MANGLED_TEMP_NAMES: error: unknown argument '-gsimple-template-names=mangled'; did you mean '-Xclang -gsimple-template-names=mangled'
 // RUN: %clang -### -target x86_64 -c -g %s 2>&1 | FileCheck --check-prefix=FULL_TEMP_NAMES --implicit-check-not=debug-forward-template-params %s
 // FULL_TEMP_NAMES-NOT: -gsimple-template-names
+
+//// Test -g[no-]template-alias (enabled by default with SCE debugger tuning and DWARF version >= 4).
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-3 -gsce %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce -gtemplate-alias %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce -gno-template-alias %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gtemplate-alias %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gtemplate-alias -gno-template-alias %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
+// TEMPLATE-ALIAS: "-gtemplate-alias"
+// NO-TEMPLATE-ALIAS-NOT: "-gtemplate-alias"

@@ -9,15 +9,15 @@ define void @"foo"(ptr addrspace(1) %0, ptr addrspace(1) %1) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x ptr addrspace(1)> poison, ptr addrspace(1) [[TMP0:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x ptr addrspace(1)> [[TMP3]], <4 x ptr addrspace(1)> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, <4 x ptr addrspace(1)> [[TMP4]], <4 x i64> <i64 8, i64 12, i64 28, i64 24>
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP1:%.*]], i64 8
-; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p1(<4 x ptr addrspace(1)> [[TMP5]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> poison)
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <8 x i32> <i32 0, i32 3, i32 0, i32 3, i32 2, i32 1, i32 2, i32 1>
-; CHECK-NEXT:    [[TMP9:%.*]] = load <8 x float>, ptr addrspace(1) [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = fmul <8 x float> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <8 x float> [[TMP10]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x float> [[TMP11]], <8 x float> poison, <8 x i32> <i32 0, i32 5, i32 2, i32 7, i32 4, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr addrspace(1)> [[TMP5]], i32 0
-; CHECK-NEXT:    store <8 x float> [[TMP12]], ptr addrspace(1) [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i64 8
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP1:%.*]], i64 8
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p1(<4 x ptr addrspace(1)> [[TMP5]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> poison)
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <8 x i32> <i32 0, i32 3, i32 0, i32 3, i32 2, i32 1, i32 2, i32 1>
+; CHECK-NEXT:    [[TMP10:%.*]] = load <8 x float>, ptr addrspace(1) [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul <8 x float> [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <8 x float> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <8 x float> [[TMP12]], <8 x float> poison, <8 x i32> <i32 0, i32 5, i32 2, i32 7, i32 4, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    store <8 x float> [[TMP13]], ptr addrspace(1) [[TMP6]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %3 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 8

@@ -3,6 +3,7 @@
 
 declare void @use(i32)
 declare void @use_i8(i8)
+declare void @use_i1(i1)
 
 ; a & (a ^ b) --> a & ~b
 
@@ -112,7 +113,7 @@ define i32 @and_xor_not_common_op_extrause(i32 %a, i32 %b, ptr %dst) {
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], ptr [[DST:%.*]]) {
 ; CHECK-NEXT:    [[B2:%.*]] = xor i32 [[B]], -1
 ; CHECK-NEXT:    store i32 [[B2]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[T4:%.*]] = and i32 [[A]], [[B]]
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[B]], [[A]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %b2 = xor i32 %b, -1
@@ -842,7 +843,7 @@ define <2 x i6> @not_or_or_not_2i6(<2 x i6> %a0, <2 x i6> %b, <2 x i6> %c) {
 ;
   %a = sdiv <2 x i6> <i6 3, i6 3>, %a0 ; thwart complexity-based canonicalization
   %not1 = xor <2 x i6> %b, <i6 -1, i6 -1>
-  %not2 = xor <2 x i6> %c, <i6 -1, i6 undef>
+  %not2 = xor <2 x i6> %c, <i6 -1, i6 poison>
   %or1 = or <2 x i6> %a, %not1
   %or2 = or <2 x i6> %or1, %not2
   ret <2 x i6> %or2
@@ -4017,7 +4018,7 @@ define <2 x i4> @and_orn_xor_commute1(<2 x i4> %a, <2 x i4> %b) {
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %xor = xor <2 x i4> %a, %b
-  %nota = xor <2 x i4> %a, <i4 -1, i4 undef>
+  %nota = xor <2 x i4> %a, <i4 -1, i4 poison>
   %or = or <2 x i4> %nota, %b
   %r = and <2 x i4> %xor, %or
   ret <2 x i4> %r
@@ -4207,7 +4208,7 @@ define i16 @and_zext_zext(i8 %x, i4 %y) {
 ; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
+; CHECK-NEXT:    [[R:%.*]] = zext nneg i8 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %zx = zext i8 %x to i16
@@ -4779,4 +4780,33 @@ define i32 @canonicalize_logic_first_constexpr_nuw(i32 %x) {
   %a = add nuw i32 ptrtoint (ptr @g to i32), 48
   %r = and i32 %a, -10
   ret i32 %r
+}
+
+define i1 @test_and_xor_freely_invertable(i32 %x, i32 %y, i1 %z) {
+; CHECK-LABEL: define {{[^@]+}}@test_and_xor_freely_invertable
+; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i1 [[Z:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[Z]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp = icmp sgt i32 %x, %y
+  %xor = xor i1 %cmp, %z
+  %and = and i1 %xor, %z
+  ret i1 %and
+}
+
+define i1 @test_and_xor_freely_invertable_multiuse(i32 %x, i32 %y, i1 %z) {
+; CHECK-LABEL: define {{[^@]+}}@test_and_xor_freely_invertable_multiuse
+; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i1 [[Z:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[TMP1]], [[Z]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp = icmp sgt i32 %x, %y
+  call void @use_i1(i1 %cmp)
+  %xor = xor i1 %cmp, %z
+  %and = and i1 %xor, %z
+  ret i1 %and
 }

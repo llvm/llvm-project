@@ -13,7 +13,6 @@
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "ASTReaderInternals.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Lex/HeaderSearch.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -89,8 +88,8 @@ public:
   static std::pair<unsigned, unsigned>
   ReadKeyDataLength(const unsigned char*& d) {
     using namespace llvm::support;
-    unsigned KeyLen = endian::readNext<uint16_t, little, unaligned>(d);
-    unsigned DataLen = endian::readNext<uint16_t, little, unaligned>(d);
+    unsigned KeyLen = endian::readNext<uint16_t, llvm::endianness::little>(d);
+    unsigned DataLen = endian::readNext<uint16_t, llvm::endianness::little>(d);
     return std::make_pair(KeyLen, DataLen);
   }
 
@@ -111,7 +110,7 @@ public:
 
     data_type Result;
     while (DataLen > 0) {
-      unsigned ID = endian::readNext<uint32_t, little, unaligned>(d);
+      unsigned ID = endian::readNext<uint32_t, llvm::endianness::little>(d);
       Result.push_back(ID);
       DataLen -= 4;
     }
@@ -339,8 +338,8 @@ bool GlobalModuleIndex::loadedModuleFile(ModuleFile *File) {
   //  If the size and modification time match what we expected, record this
   // module file.
   bool Failed = true;
-  if (File->File->getSize() == Info.Size &&
-      File->File->getModificationTime() == Info.ModTime) {
+  if (File->File.getSize() == Info.Size &&
+      File->File.getModificationTime() == Info.ModTime) {
     Info.File = File;
     ModulesByFile[File] = Known->second;
 
@@ -511,7 +510,7 @@ namespace {
       // The first bit indicates whether this identifier is interesting.
       // That's all we care about.
       using namespace llvm::support;
-      unsigned RawID = endian::readNext<uint32_t, little, unaligned>(d);
+      unsigned RawID = endian::readNext<uint32_t, llvm::endianness::little>(d);
       bool IsInteresting = RawID & 0x01;
       return std::make_pair(k, IsInteresting);
     }
@@ -729,7 +728,7 @@ public:
   std::pair<unsigned,unsigned>
   EmitKeyDataLength(raw_ostream& Out, key_type_ref Key, data_type_ref Data) {
     using namespace llvm::support;
-    endian::Writer LE(Out, little);
+    endian::Writer LE(Out, llvm::endianness::little);
     unsigned KeyLen = Key.size();
     unsigned DataLen = Data.size() * 4;
     LE.write<uint16_t>(KeyLen);
@@ -745,7 +744,7 @@ public:
                 unsigned DataLen) {
     using namespace llvm::support;
     for (unsigned I = 0, N = Data.size(); I != N; ++I)
-      endian::write<uint32_t>(Out, Data[I], little);
+      endian::write<uint32_t>(Out, Data[I], llvm::endianness::little);
   }
 };
 
@@ -824,7 +823,7 @@ bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
       using namespace llvm::support;
       llvm::raw_svector_ostream Out(IdentifierTable);
       // Make sure that no bucket is at offset 0
-      endian::write<uint32_t>(Out, 0, little);
+      endian::write<uint32_t>(Out, 0, llvm::endianness::little);
       BucketOffset = Generator.Emit(Out, Trait);
     }
 

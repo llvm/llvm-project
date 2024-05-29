@@ -12,24 +12,24 @@
 struct IntType {
   int val;
   constexpr IntType() = default;
-  constexpr IntType(int v) noexcept : val(v){};
+  constexpr IntType(int v) noexcept : val(v) {}
 
   constexpr bool operator==(const IntType& rhs) const { return val == rhs.val; }
   constexpr operator int() const noexcept { return val; }
-  constexpr operator unsigned char() const { return val; }
-  constexpr operator char() const noexcept { return val; }
+  constexpr operator unsigned char() const { return static_cast<unsigned char>(val); }
+  constexpr operator signed char() const noexcept { return static_cast<signed char>(val); }
 };
 
 // only non-const convertible
 struct IntTypeNC {
   int val;
   constexpr IntTypeNC() = default;
-  constexpr IntTypeNC(int v) noexcept : val(v){};
+  constexpr IntTypeNC(int v) noexcept : val(v) {}
 
   constexpr bool operator==(const IntType& rhs) const { return val == rhs.val; }
   constexpr operator int() noexcept { return val; }
-  constexpr operator unsigned() { return val; }
-  constexpr operator char() noexcept { return val; }
+  constexpr operator unsigned() { return static_cast<unsigned>(val); }
+  constexpr operator char() noexcept { return static_cast<char>(val); }
 };
 
 // weird configurability of convertibility to int

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification -cse -sparse-vectorization="vl=8" -cse | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification -cse -sparse-vectorization="vl=8" -cse | \
 // RUN:   FileCheck %s
 
 #DenseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : dense) }>
@@ -84,4 +84,3 @@ func.func @vops(%arga: tensor<1024xf32, #DenseVector>,
   } -> tensor<1024xf32>
   return %0 : tensor<1024xf32>
 }
-

@@ -144,8 +144,6 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s21
 ; CHECK-NEXT:  ; %bb.2: ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_or_saveexec_b32 s21, -1
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s21
@@ -163,6 +161,9 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    v_readlane_b32 s17, v2, 1
 ; CHECK-NEXT:    v_readlane_b32 s18, v2, 2
 ; CHECK-NEXT:    v_readlane_b32 s19, v2, 3
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    image_sample v0, v[0:1], s[8:15], s[16:19] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill

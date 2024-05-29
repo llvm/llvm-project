@@ -16,7 +16,7 @@
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "mlir/IR/EnumAttr.td"
 
-class fir_Attr<string name> : AttrDef<fir_Dialect, name>;
+class fir_Attr<string name> : AttrDef<FIROpsDialect, name>;
 
 def FIRnoAttributes  : I32BitEnumAttrCaseNone<"None">;
 def FIRallocatable  : I32BitEnumAttrCaseBit<"allocatable", 0>;
@@ -55,10 +55,30 @@ def fir_FortranVariableFlagsAttr : fir_Attr<"FortranVariableFlags"> {
   let returnType = "::fir::FortranVariableFlagsEnum";
   let convertFromStorage = "$_self.getFlags()";
   let constBuilderCall =
-          "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
+        "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
+}
+
+def fir_BoxFieldAttr : I32EnumAttr<
+    "BoxFieldAttr", "",
+    [
+      I32EnumAttrCase<"base_addr", 0>,
+      I32EnumAttrCase<"derived_type", 1>
+    ]> {
+  let cppNamespace = "fir";
 }
 
 // mlir::SideEffects::Resource for modelling operations which add debugging information
 def DebuggingResource : Resource<"::fir::DebuggingResource">;
+
+def fir_LowerBoundModifierAttribute : I32EnumAttr<
+    "LowerBoundModifierAttribute",
+    "Describes how to modify lower bounds",
+    [
+      I32EnumAttrCase<"Preserve", 0, "preserve">,
+      I32EnumAttrCase<"SetToOnes", 1, "ones">,
+      I32EnumAttrCase<"SetToZeroes", 2, "zeroes">,
+    ]> {
+  let cppNamespace = "::fir";
+}
 
 #endif // FIR_DIALECT_FIR_ATTRS

@@ -18,7 +18,7 @@
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "WasmAddressSpaces.h"
 #include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSymbolWasm.h"
 
@@ -28,19 +28,27 @@ namespace WebAssembly {
 
 /// Return true if this is a WebAssembly Externref Type.
 inline bool isWebAssemblyExternrefType(const Type *Ty) {
-  return Ty->getPointerAddressSpace() ==
-         WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF;
+  return Ty->isPointerTy() &&
+         Ty->getPointerAddressSpace() ==
+             WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF;
 }
 
 /// Return true if this is a WebAssembly Funcref Type.
 inline bool isWebAssemblyFuncrefType(const Type *Ty) {
-  return Ty->getPointerAddressSpace() ==
-         WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF;
+  return Ty->isPointerTy() &&
+         Ty->getPointerAddressSpace() ==
+             WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF;
 }
 
 /// Return true if this is a WebAssembly Reference Type.
 inline bool isWebAssemblyReferenceType(const Type *Ty) {
   return isWebAssemblyExternrefType(Ty) || isWebAssemblyFuncrefType(Ty);
+}
+
+/// Return true if the table represents a WebAssembly table type.
+inline bool isWebAssemblyTableType(const Type *Ty) {
+  return Ty->isArrayTy() &&
+         isWebAssemblyReferenceType(Ty->getArrayElementType());
 }
 
 // Convert StringRef to ValType / HealType / BlockType
@@ -52,7 +60,7 @@ wasm::ValType toValType(MVT Type);
 
 /// Sets a Wasm Symbol Type.
 void wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
-                       const ArrayRef<MVT> &VTs);
+                       ArrayRef<MVT> VTs);
 
 } // end namespace WebAssembly
 } // end namespace llvm

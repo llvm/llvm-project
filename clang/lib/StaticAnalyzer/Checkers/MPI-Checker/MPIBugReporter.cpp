@@ -31,7 +31,7 @@ void MPIBugReporter::reportDoubleNonblocking(
               RequestRegion->getDescriptiveName() + ". ";
 
   auto Report = std::make_unique<PathSensitiveBugReport>(
-      *DoubleNonblockingBugType, ErrorText, ExplNode);
+      DoubleNonblockingBugType, ErrorText, ExplNode);
 
   Report->addRange(MPICallEvent.getSourceRange());
   SourceRange Range = RequestRegion->sourceRange();
@@ -53,7 +53,7 @@ void MPIBugReporter::reportMissingWait(
   std::string ErrorText{"Request " + RequestRegion->getDescriptiveName() +
                         " has no matching wait. "};
 
-  auto Report = std::make_unique<PathSensitiveBugReport>(*MissingWaitBugType,
+  auto Report = std::make_unique<PathSensitiveBugReport>(MissingWaitBugType,
                                                          ErrorText, ExplNode);
 
   SourceRange Range = RequestRegion->sourceRange();
@@ -73,7 +73,7 @@ void MPIBugReporter::reportUnmatchedWait(
   std::string ErrorText{"Request " + RequestRegion->getDescriptiveName() +
                         " has no matching nonblocking call. "};
 
-  auto Report = std::make_unique<PathSensitiveBugReport>(*UnmatchedWaitBugType,
+  auto Report = std::make_unique<PathSensitiveBugReport>(UnmatchedWaitBugType,
                                                          ErrorText, ExplNode);
 
   Report->addRange(CE.getSourceRange());

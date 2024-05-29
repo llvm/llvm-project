@@ -284,40 +284,33 @@ define half @fadd_select_fneg_posk_f16(i32 %arg0, half %x, half %y) {
 define <8 x half> @fadd_vselect_fneg_posk_v8f16(<8 x i32> %arg0, <8 x half> %x, <8 x half> %y) {
 ; CHECK-LABEL: fadd_vselect_fneg_posk_v8f16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    vmov d0, r0, r1
-; CHECK-NEXT:    vmov.i8 q1, #0xff
-; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vmov d1, r2, r3
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
 ; CHECK-NEXT:    vcmp.i32 eq, q0, zr
 ; CHECK-NEXT:    vmov.i8 q0, #0x0
+; CHECK-NEXT:    vmov.i8 q1, #0xff
+; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vpsel q2, q1, q0
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vmov r2, r1, d4
-; CHECK-NEXT:    add r12, sp, #32
-; CHECK-NEXT:    vmov r4, r5, d5
-; CHECK-NEXT:    vmov.16 q2[0], r2
-; CHECK-NEXT:    vmov.16 q2[1], r1
 ; CHECK-NEXT:    vcmp.i32 eq, q3, zr
-; CHECK-NEXT:    vpsel q1, q1, q0
-; CHECK-NEXT:    vmov.16 q2[2], r4
-; CHECK-NEXT:    vmov r3, r0, d2
-; CHECK-NEXT:    vmov.16 q2[3], r5
-; CHECK-NEXT:    vmov.16 q2[4], r3
-; CHECK-NEXT:    vmov r6, lr, d3
-; CHECK-NEXT:    vmov.16 q2[5], r0
-; CHECK-NEXT:    vldrw.u32 q1, [r12]
-; CHECK-NEXT:    vmov.16 q2[6], r6
-; CHECK-NEXT:    vmov.i16 q0, #0xc400
-; CHECK-NEXT:    vmov.16 q2[7], lr
+; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vstrh.32 q2, [r0]
+; CHECK-NEXT:    vstrh.32 q0, [r0, #8]
+; CHECK-NEXT:    add r1, sp, #32
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vmov.i16 q1, #0xc400
 ; CHECK-NEXT:    add r0, sp, #48
 ; CHECK-NEXT:    vcmp.i16 ne, q2, zr
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vsub.f16 q0, q1, q0
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    bx lr
   %cmp = icmp eq <8 x i32> %arg0, zeroinitializer
   %neg.x = fneg <8 x half> %x
   %select = select <8 x i1> %cmp, <8 x half> %neg.x, <8 x half> <half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0>

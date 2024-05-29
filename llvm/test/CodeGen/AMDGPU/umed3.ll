@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN  -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN  -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
@@ -43,8 +43,7 @@ define amdgpu_kernel void @v_test_umed3_multi_use_r_i_i_i32(ptr addrspace(1) %ou
 }
 
 ; GCN-LABEL: {{^}}v_test_umed3_r_i_i_sign_mismatch_i32:
-; GCN: v_max_i32_e32 v{{[0-9]+}}, 12, v{{[0-9]+}}
-; GCN: v_min_u32_e32 v{{[0-9]+}}, 17, v{{[0-9]+}}
+; GCN: v_med3_i32 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
 define amdgpu_kernel void @v_test_umed3_r_i_i_sign_mismatch_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i32, ptr addrspace(1) %aptr, i32 %tid

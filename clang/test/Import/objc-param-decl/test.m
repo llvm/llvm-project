@@ -5,7 +5,7 @@
 // CHECK-SAME: FirstParam
 // CHECK-SAME: 'id<NSString>'
 // CHECK-NEXT: ObjCTypeParamDecl
-// CHECK-SAME: 'id':'id'
+// CHECK-SAME: 'id'
 
 void expr() {
   Dictionary *d;

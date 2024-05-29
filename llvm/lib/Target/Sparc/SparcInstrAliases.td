@@ -413,9 +413,12 @@ defm : reg_cond_alias<"gez",  0b111>;
 // non-alias form, except for the most obvious and clarifying aliases: cmp, jmp,
 // call, tst, ret, retl.
 
-// Note: cmp is handled in SparcInstrInfo.
-//       jmp/call/ret/retl have special case handling for output in
+// Note: jmp/call/ret/retl have special case handling for output in
 //       SparcInstPrinter.cpp
+
+// cmp rs1, reg_or_imm -> subcc rs1, reg_or_imm, %g0
+def : InstAlias<"cmp $rs1, $rs2", (SUBCCrr G0, IntRegs:$rs1, IntRegs:$rs2)>;
+def : InstAlias<"cmp $rs1, $imm", (SUBCCri G0, IntRegs:$rs1, simm13Op:$imm)>;
 
 // jmp addr -> jmpl addr, %g0
 def : InstAlias<"jmp $addr", (JMPLrr G0, MEMrr:$addr), 0>;

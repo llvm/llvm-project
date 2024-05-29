@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,CHECK-O0
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,PATTERN,PATTERN-O1
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=PATTERN,PATTERN-O1
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,ZERO,ZERO-O0
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,ZERO,ZERO-O1
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=ZERO,ZERO-O1
 // RUN: %clang_cc1 -std=c++14 -triple i386-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
 
 #pragma clang diagnostic ignored "-Winaccessible-base"
@@ -89,22 +89,14 @@ struct padded { char c; int i; };
 // PATTERN-O1-NOT: @__const.test_paddednullinit_custom.custom
 struct paddednullinit { char c = 0; int i = 0; };
 // PATTERN-O0: @__const.test_paddedpacked_uninit.uninit = private unnamed_addr constant %struct.paddedpacked <{ i8 [[I8]], i32 [[I32]] }>, align 1
-// PATTERN: @__const.test_paddedpacked_custom.custom = private unnamed_addr constant %struct.paddedpacked <{ i8 42, i32 13371337 }>, align 1
-// ZERO: @__const.test_paddedpacked_custom.custom = private unnamed_addr constant %struct.paddedpacked <{ i8 42, i32 13371337 }>, align 1
 struct paddedpacked { char c; int i; } __attribute__((packed));
 // PATTERN-O0: @__const.test_paddedpackedarray_uninit.uninit = private unnamed_addr constant %struct.paddedpackedarray { [2 x %struct.paddedpacked] [%struct.paddedpacked <{ i8 [[I8]], i32 [[I32]] }>, %struct.paddedpacked <{ i8 [[I8]], i32 [[I32]] }>] }, align 1
-// PATTERN: @__const.test_paddedpackedarray_custom.custom = private unnamed_addr constant %struct.paddedpackedarray { [2 x %struct.paddedpacked] [%struct.paddedpacked <{ i8 42, i32 13371337 }>, %struct.paddedpacked <{ i8 43, i32 13371338 }>] }, align 1
-// ZERO: @__const.test_paddedpackedarray_custom.custom = private unnamed_addr constant %struct.paddedpackedarray { [2 x %struct.paddedpacked] [%struct.paddedpacked <{ i8 42, i32 13371337 }>, %struct.paddedpacked <{ i8 43, i32 13371338 }>] }, align 1
 struct paddedpackedarray { struct paddedpacked p[2]; };
 // PATTERN-O0: @__const.test_unpackedinpacked_uninit.uninit = private unnamed_addr constant <{ { i8, [3 x i8], i32 }, i8 }> <{ { i8, [3 x i8], i32 } { i8 [[I8]], [3 x i8] c"\[[IC]]\[[IC]]\[[IC]]", i32 [[I32]] }, i8 [[I8]] }>, align 1
 struct unpackedinpacked { padded a; char b; } __attribute__((packed));
 // PATTERN-O0: @__const.test_paddednested_uninit.uninit = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 [[I8]], [3 x i8] c"\[[IC]]\[[IC]]\[[IC]]", i32 [[I32]] }, { i8, [3 x i8], i32 } { i8 [[I8]], [3 x i8] c"\[[IC]]\[[IC]]\[[IC]]", i32 [[I32]] } }, align 4
-// PATTERN: @__const.test_paddednested_custom.custom = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, { i8, [3 x i8], i32 } { i8 43, [3 x i8] zeroinitializer, i32 13371338 } }, align 4
-// ZERO: @__const.test_paddednested_custom.custom = private unnamed_addr constant { { i8, [3 x i8], i32 }, { i8, [3 x i8], i32 } } { { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, { i8, [3 x i8], i32 } { i8 43, [3 x i8] zeroinitializer, i32 13371338 } }, align 4
 struct paddednested { struct padded p1, p2; };
 // PATTERN-O0: @__const.test_paddedpackednested_uninit.uninit = private unnamed_addr constant %struct.paddedpackednested { %struct.paddedpacked <{ i8 [[I8]], i32 [[I32]] }>, %struct.paddedpacked <{ i8 [[I8]], i32 [[I32]] }> }, align 1
-// PATTERN: @__const.test_paddedpackednested_custom.custom = private unnamed_addr constant %struct.paddedpackednested { %struct.paddedpacked <{ i8 42, i32 13371337 }>, %struct.paddedpacked <{ i8 43, i32 13371338 }> }, align 1
-// ZERO: @__const.test_paddedpackednested_custom.custom = private unnamed_addr constant %struct.paddedpackednested { %struct.paddedpacked <{ i8 42, i32 13371337 }>, %struct.paddedpacked <{ i8 43, i32 13371338 }> }, align 1
 struct paddedpackednested { struct paddedpacked p1, p2; };
 // PATTERN-O0: @__const.test_bitfield_uninit.uninit = private unnamed_addr constant %struct.bitfield { i8 [[I8]], [3 x i8] c"\[[IC]]\[[IC]]\[[IC]]" }, align 4
 // PATTERN-O0: @__const.test_bitfield_custom.custom = private unnamed_addr constant %struct.bitfield { i8 20, [3 x i8] c"\[[IC]]\[[IC]]\[[IC]]" }, align 4
@@ -142,12 +134,8 @@ struct arraytail { int i; int arr[]; };
 // PATTERN-O1-NOT: @__const.test_bool4_custom.custom
 // ZERO-O1-NOT: @__const.test_bool4_custom.custom
 
-// PATTERN: @__const.test_intptr4_custom.custom = private unnamed_addr constant [4 x ptr] [ptr inttoptr ([[IPTRT]] 572662306 to ptr), ptr inttoptr ([[IPTRT]] 572662306 to ptr), ptr inttoptr ([[IPTRT]] 572662306 to ptr), ptr inttoptr ([[IPTRT]] 572662306 to ptr)], align
-// ZERO: @__const.test_intptr4_custom.custom = private unnamed_addr constant [4 x ptr] [ptr inttoptr (i64 572662306 to ptr), ptr inttoptr (i64 572662306 to ptr), ptr inttoptr (i64 572662306 to ptr), ptr inttoptr (i64 572662306 to ptr)], align 16
 // PATTERN-O0: @__const.test_tailpad4_uninit.uninit = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 [[I16]], i8 [[I8]], [1 x i8] c"\[[IC]]" }, { i16, i8, [1 x i8] } { i16 [[I16]], i8 [[I8]], [1 x i8] c"\[[IC]]" }, { i16, i8, [1 x i8] } { i16 [[I16]], i8 [[I8]], [1 x i8] c"\[[IC]]" }, { i16, i8, [1 x i8] } { i16 [[I16]], i8 [[I8]], [1 x i8] c"\[[IC]]" }], align
 // PATTERN-O1-NOT: @__const.test_tailpad4_uninit.uninit
-// PATTERN:   @__const.test_tailpad4_custom.custom = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }], align
-// ZERO: @__const.test_tailpad4_custom.custom = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }, { i16, i8, [1 x i8] } { i16 257, i8 1, [1 x i8] zeroinitializer }], align 16
 struct tailpad { short s; char c; };
 // PATTERN-O0: @__const.test_atomicnotlockfree_uninit.uninit = private unnamed_addr constant %struct.notlockfree { [4 x i64] {{\[}}i64 [[I64]], i64 [[I64]], i64 [[I64]], i64 [[I64]]] }, align
 // PATTERN-O1-NOT: @__const.test_atomicnotlockfree_uninit.uninit
@@ -714,7 +702,8 @@ TEST_UNINIT(padded, padded);
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_padded_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_padded_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
-// PATTERN-O1: store i64 [[I64]], ptr %uninit, align 8, !annotation [[AUTO_INIT]]
+// PATTERN-O1: store i64 [[I64]], ptr %uninit, align 8
+// PATTERN-O1-NOT:   !annotation
 // ZERO-LABEL: @test_padded_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-O1: store i64 0, ptr %uninit, align 8, !annotation [[AUTO_INIT]]
@@ -740,7 +729,8 @@ TEST_UNINIT(paddednullinit, paddednullinit);
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_paddednullinit_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_paddednullinit_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
-// PATTERN-O1: store i64 [[I64]], ptr %uninit, align 8, !annotation [[AUTO_INIT]]
+// PATTERN-O1: store i64 [[I64]], ptr %uninit, align 8
+// PATTERN-O1-NOT:   !annotation
 // ZERO-LABEL: @test_paddednullinit_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.*}}, !annotation [[AUTO_INIT]]
 // ZERO-O1: store i64 0, ptr %uninit, align 8
@@ -778,9 +768,8 @@ TEST_UNINIT(paddedpacked, paddedpacked);
 // PATTERN-LABEL: @test_paddedpacked_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_paddedpacked_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // PATTERN-O1:  store i8 [[I8]], ptr %uninit, align {{.+}}, !annotation [[AUTO_INIT]]
-// PATTERN-O1:  %[[I:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 0, i32 1
+// PATTERN-O1:  %[[I:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 1
 // PATTERN-O1: store i32 [[I32]], ptr %[[I]], align {{.+}}, !annotation [[AUTO_INIT]]
-
 // ZERO-LABEL: @test_paddedpacked_uninit()
 // ZERO: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
 
@@ -1192,7 +1181,8 @@ TEST_UNINIT(atomicpadded, _Atomic(padded));
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_atomicpadded_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_atomicpadded_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
-// PATTERN-O1: store i64 [[IPTR]], ptr %uninit, align 8, !annotation [[AUTO_INIT]]
+// PATTERN-O1: store i64 [[IPTR]], ptr %uninit, align 8
+// PATTERN-O1-NOT: !annotation
 // ZERO-LABEL: @test_atomicpadded_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-O1: store i64 0, ptr %uninit, align 8, !annotation [[AUTO_INIT]]
@@ -1214,8 +1204,7 @@ TEST_UNINIT(complexfloat, _Complex float);
 // PATTERN-LABEL: @test_complexfloat_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_complexfloat_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // PATTERN-O1: store float 0xFFFFFFFFE0000000, ptr %uninit, align {{.+}}, !annotation [[AUTO_INIT]]
-
-// PATTERN-O1:  %[[F2:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 0, i32 1
+// PATTERN-O1:  %[[F2:[^ ]*]] = getelementptr inbounds {{.*}}%uninit, i64 4
 // PATTERN-O1: store float 0xFFFFFFFFE0000000, ptr %[[F2]], align {{.+}}, !annotation [[AUTO_INIT]]
 
 // ZERO-LABEL: @test_complexfloat_uninit()
@@ -1314,7 +1303,10 @@ TEST_CUSTOM(semivolatile, semivolatile, { 0x44444444, 0x44444444 });
 // CHECK-O0:  call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:  call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:  store i64 4919131752989213764, ptr %custom, align 8
+// PATTERN-O1:       store i32 1145324612, ptr %custom, align 4
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 4
+// PATTERN-O1-NEXT:  store i32 1145324612, ptr %[[I]], align 4
+// ZERO-O1:          store i64 4919131752989213764, ptr %custom, align 8
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(semivolatileinit, semivolatileinit);
@@ -1354,7 +1346,7 @@ TEST_UNINIT(base, base);
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_base_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_base_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV4base, i64 0, inrange i32 0, i64 2), {{.*}}, align 8
+// ZERO-O1: store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV4base, i64 16), {{.*}}, align 8
 // ZERO-O1-NOT: !annotation
 
 TEST_BRACES(base, base);
@@ -1375,7 +1367,7 @@ TEST_UNINIT(derived, derived);
 // ZERO-LABEL: @test_derived_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-O1: store i64 0, {{.*}} align 8, !annotation [[AUTO_INIT]]
-// ZERO-O1: store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7derived, i64 0, inrange i32 0, i64 2), {{.*}} align 8
+// ZERO-O1: store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV7derived, i64 16), {{.*}} align 8
 
 TEST_BRACES(derived, derived);
 // CHECK-LABEL: @test_derived_braces()
@@ -1427,7 +1419,8 @@ TEST_CUSTOM(matching, matching, { .f = 0xf00f });
 // CHECK-O0:  call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:  call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:  store i32 1198526208, ptr {{.*}}, align 4
+// PATTERN-O1:  store float 6.145500e+04, ptr {{.*}}, align 4
+// ZERO-O1:     store i32 1198526208, ptr %custom, align 4
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(matchingreverse, matchingreverse);
@@ -1454,7 +1447,8 @@ TEST_CUSTOM(matchingreverse, matchingreverse, { .i = 0xf00f });
 // CHECK-O0:    call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:    store i32 61455, ptr %custom, align 4
+// PATTERN-O1:  store i32 61455, ptr %custom, align 4
+// ZERO-O1:     store i32 61455, ptr %custom, align 4
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(unmatched, unmatched);
@@ -1480,7 +1474,8 @@ TEST_CUSTOM(unmatched, unmatched, { .i = 0x3badbeef });
 // CHECK-O0:    call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:    store i32 1001242351, ptr {{.*}}, align 4
+// PATTERN-O1:  store i32 1001242351, ptr {{.*}}, align 4
+// ZERO-O1:     store i32 1001242351, ptr {{.*}}, align 4
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(unmatchedreverse, unmatchedreverse);
@@ -1506,7 +1501,13 @@ TEST_CUSTOM(unmatchedreverse, unmatchedreverse, { .c = 42  });
 // CHECK-O0:    call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
-// PATTERN-O1:  store i32 -1431655894, ptr {{.*}}, align 4
+// PATTERN-O1:  store i8 42, ptr {{.*}}, align 4
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 1
+// PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 2
+// PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 3
+// PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
 // ZERO-O1:     store i32 42, ptr {{.*}}, align 4
 
 TEST_UNINIT(unmatchedfp, unmatchedfp);
@@ -1532,7 +1533,8 @@ TEST_CUSTOM(unmatchedfp, unmatchedfp, { .d = 3.1415926535897932384626433 });
 // CHECK-O0:    call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:    store i64 4614256656552045848, ptr %custom, align 8
+// PATTERN-O1:  store double 0x400921FB54442D18, ptr %custom, align 8
+// ZERO-O1:     store i64 4614256656552045848, ptr %custom, align 8
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(emptyenum, emptyenum);

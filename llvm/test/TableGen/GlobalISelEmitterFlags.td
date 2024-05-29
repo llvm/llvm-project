@@ -36,25 +36,25 @@ def : Pat<
 
 // CHECK: GIM_Try
 // CHECK:    GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK:    GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_LSHR
+// CHECK:    GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_LSHR)
 // CHECK:    GIM_RecordInsn, /*DefineMI*/2, /*MI*/1, /*OpIdx*/1, // MIs[2]
-// CHECK:    GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_ADD
+// CHECK:    GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_ADD)
 // CHECK:    GIM_CheckIsSameOperand, /*MI*/2, /*OpIdx*/2, /*OtherMI*/2, /*OtherOpIdx*/1
 // CHECK:    GIM_CheckIsSameOperandIgnoreCopies, /*MI*/0, /*OpIdx*/2, /*OtherMI*/2, /*OtherOpIdx*/1
 // CHECK:    // (srl:{ *:[i32] } (srl:{ *:[i32] } (add:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src0), i32:{ *:[i32] }:$src1), i32:{ *:[i32] }:$src0)
-// CHECK:   GIR_Done
+// CHECK:   GIR_EraseRootFromParent_Done
 // CHECK: GIM_Try
 // CHECK:   GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK:   GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_SHL
+// CHECK:   GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_SHL)
 // CHECK:   GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/1, /*OpIdx*/1, // MIs[2]
-// CHECK:   GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_MUL
+// CHECK:   GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_MUL)
 // CHECK:   GIM_CheckIsSameOperandIgnoreCopies, /*MI*/2, /*OpIdx*/2, /*OtherMI*/2, /*OtherOpIdx*/1
 // CHECK:   GIM_CheckIsSameOperandIgnoreCopies, /*MI*/0, /*OpIdx*/2, /*OtherMI*/2, /*OtherOpIdx*/1
 // CHECK:   // (srl:{ *:[i32] } (shl:{ *:[i32] } (mul:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src0), i32:{ *:[i32] }:$src1), i32:{ *:[i32] }:$src0)
-// CHECK:   GIR_Done
+// CHECK:   GIR_EraseRootFromParent_Done
 // CHECK: GIM_Try
 // CHECK:   GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK:   GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_MUL
+// CHECK:   GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_MUL)
 // CHECK:   GIM_CheckIsSameOperandIgnoreCopies, /*MI*/1, /*OpIdx*/2, /*OtherMI*/1, /*OtherOpIdx*/1
 // CHECK:   // (sub:{ *:[i32] } (mul:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src0), i32:{ *:[i32] }:$src1)  =>  (InstThreeOperands:{ *:[i32] } GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src1)
-// CHECK:   GIR_Done
+// CHECK:   GIR_EraseRootFromParent_Done

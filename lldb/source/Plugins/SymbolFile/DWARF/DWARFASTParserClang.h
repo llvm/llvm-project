@@ -31,13 +31,19 @@
 namespace lldb_private {
 class CompileUnit;
 }
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFDebugInfoEntry;
 class SymbolFileDWARF;
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 struct ParsedDWARFTypeAttributes;
 
-class DWARFASTParserClang : public DWARFASTParser {
+class DWARFASTParserClang : public lldb_private::plugin::dwarf::DWARFASTParser {
 public:
+  typedef lldb_private::plugin::dwarf::DWARFDIE DWARFDIE;
+
   DWARFASTParserClang(lldb_private::TypeSystemClang &ast);
 
   ~DWARFASTParserClang() override;
@@ -85,9 +91,9 @@ public:
   ///         DWARFFormValue with the bit width of the given integer type.
   ///         Returns an error if the value in the DWARFFormValue does not fit
   ///         into the given integer type or the integer type isn't supported.
-  llvm::Expected<llvm::APInt>
-  ExtractIntFromFormValue(const lldb_private::CompilerType &int_type,
-                          const DWARFFormValue &form_value) const;
+  llvm::Expected<llvm::APInt> ExtractIntFromFormValue(
+      const lldb_private::CompilerType &int_type,
+      const lldb_private::plugin::dwarf::DWARFFormValue &form_value) const;
 
   /// Returns the template parameters of a class DWARFDIE as a string.
   ///
@@ -102,20 +108,29 @@ public:
   lldb_private::ConstString
   GetDIEClassTemplateParams(const DWARFDIE &die) override;
 
+  // Searching for definition DIE for the given DIE and return the type
+  // associated with the definition DIE, or nullptr if definition DIE is not
+  // found.
+  lldb_private::Type *FindDefinitionTypeForDIE(const DWARFDIE &die) override;
+
 protected:
   /// Protected typedefs and members.
   /// @{
   class DelayedAddObjCClassProperty;
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::DeclContext *>
+  typedef llvm::DenseMap<
+      const lldb_private::plugin::dwarf::DWARFDebugInfoEntry *,
+      clang::DeclContext *>
       DIEToDeclContextMap;
   typedef std::multimap<const clang::DeclContext *, const DWARFDIE>
       DeclContextToDIEMap;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
-                         lldb_private::OptionalClangModuleID>
+  typedef llvm::DenseMap<
+      const lldb_private::plugin::dwarf::DWARFDebugInfoEntry *,
+      lldb_private::OptionalClangModuleID>
       DIEToModuleMap;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::Decl *>
+  typedef llvm::DenseMap<
+      const lldb_private::plugin::dwarf::DWARFDebugInfoEntry *, clang::Decl *>
       DIEToDeclMap;
 
   lldb_private::TypeSystemClang &m_ast;
@@ -158,6 +173,7 @@ protected:
       const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       std::vector<DWARFDIE> &member_function_dies,
+      std::vector<DWARFDIE> &contained_type_dies,
       DelayedPropertyList &delayed_properties,
       const lldb::AccessType default_accessibility,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
@@ -179,8 +195,6 @@ protected:
   lldb::TypeSP ParseStructureLikeDIE(const lldb_private::SymbolContext &sc,
                                      const DWARFDIE &die,
                                      ParsedDWARFTypeAttributes &attrs);
-
-  lldb_private::Type *GetTypeForDIE(const DWARFDIE &die);
 
   clang::Decl *GetClangDeclForDIE(const DWARFDIE &die);
 
@@ -218,6 +232,15 @@ protected:
   // module.
   lldb::ModuleSP GetModuleForType(const DWARFDIE &die);
 
+  void PrepareContextToReceiveMembers(clang::DeclContext *decl_ctx,
+                                      const DWARFDIE &decl_ctx_die,
+                                      const DWARFDIE &die,
+                                      const char *type_name_cstr);
+
+  static bool classof(const DWARFASTParser *Parser) {
+    return Parser->GetKind() == Kind::DWARFASTParserClang;
+  }
+
 private:
   struct FieldInfo {
     uint64_t bit_size = 0;
@@ -238,6 +261,28 @@ private:
       // bit offset than any previous bitfield + size.
       return (bit_size + bit_offset) <= next_bit_offset;
     }
+  };
+
+  /// Parsed form of all attributes that are relevant for parsing type members.
+  struct MemberAttributes {
+    explicit MemberAttributes(const DWARFDIE &die, const DWARFDIE &parent_die,
+                              lldb::ModuleSP module_sp);
+    const char *name = nullptr;
+    /// Indicates how many bits into the word (according to the host endianness)
+    /// the low-order bit of the field starts. Can be negative.
+    int64_t bit_offset = 0;
+    /// Indicates the size of the field in bits.
+    size_t bit_size = 0;
+    uint64_t data_bit_offset = UINT64_MAX;
+    lldb::AccessType accessibility = lldb::eAccessNone;
+    std::optional<uint64_t> byte_size;
+    std::optional<lldb_private::plugin::dwarf::DWARFFormValue> const_value_form;
+    lldb_private::plugin::dwarf::DWARFFormValue encoding_form;
+    /// Indicates the byte offset of the word from the base address of the
+    /// structure.
+    uint32_t member_byte_offset = UINT32_MAX;
+    bool is_artificial = false;
+    bool is_declaration = false;
   };
 
   /// Returns 'true' if we should create an unnamed bitfield
@@ -279,6 +324,21 @@ private:
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
                     FieldInfo &last_field_info);
 
+  /// If the specified 'die' represents a static data member, creates
+  /// a 'clang::VarDecl' for it and attaches it to specified parent
+  /// 'class_clang_type'.
+  ///
+  /// \param[in] die The member declaration we want to create a
+  ///                clang::VarDecl for.
+  ///
+  /// \param[in] attrs The parsed attributes for the specified 'die'.
+  ///
+  /// \param[in] class_clang_type The parent RecordType of the static
+  ///                             member this function will create.
+  void CreateStaticMemberVariable(
+      const DWARFDIE &die, const MemberAttributes &attrs,
+      const lldb_private::CompilerType &class_clang_type);
+
   bool CompleteRecordType(const DWARFDIE &die, lldb_private::Type *type,
                           lldb_private::CompilerType &clang_type);
   bool CompleteEnumType(const DWARFDIE &die, lldb_private::Type *type,
@@ -290,7 +350,7 @@ private:
   lldb::TypeSP ParseEnum(const lldb_private::SymbolContext &sc,
                          const DWARFDIE &die, ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseSubroutine(const DWARFDIE &die,
-                               ParsedDWARFTypeAttributes &attrs);
+                               const ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseArrayType(const DWARFDIE &die,
                               const ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParsePointerToMemberType(const DWARFDIE &die,
@@ -338,6 +398,8 @@ private:
 /// Some attributes are relevant for all kinds of types (declaration), while
 /// others are only meaningful to a specific type (is_virtual)
 struct ParsedDWARFTypeAttributes {
+  typedef lldb_private::plugin::dwarf::DWARFDIE DWARFDIE;
+
   explicit ParsedDWARFTypeAttributes(const DWARFDIE &die);
 
   lldb::AccessType accessibility = lldb::eAccessNone;
@@ -356,13 +418,14 @@ struct ParsedDWARFTypeAttributes {
   lldb_private::ConstString name;
   lldb_private::Declaration decl;
   DWARFDIE object_pointer;
-  DWARFFormValue abstract_origin;
-  DWARFFormValue containing_type;
-  DWARFFormValue signature;
-  DWARFFormValue specification;
-  DWARFFormValue type;
+  lldb_private::plugin::dwarf::DWARFFormValue abstract_origin;
+  lldb_private::plugin::dwarf::DWARFFormValue containing_type;
+  lldb_private::plugin::dwarf::DWARFFormValue signature;
+  lldb_private::plugin::dwarf::DWARFFormValue specification;
+  lldb_private::plugin::dwarf::DWARFFormValue type;
   lldb::LanguageType class_language = lldb::eLanguageTypeUnknown;
   std::optional<uint64_t> byte_size;
+  std::optional<uint64_t> alignment;
   size_t calling_convention = llvm::dwarf::DW_CC_normal;
   uint32_t bit_stride = 0;
   uint32_t byte_stride = 0;

@@ -311,19 +311,7 @@ Examples:
     expr unsigned int $foo = 5
     expr char c[] = \"foo\"; c[0])");
 
-  CommandArgumentEntry arg;
-  CommandArgumentData expression_arg;
-
-  // Define the first (and only) variant of this arg.
-  expression_arg.arg_type = eArgTypeExpression;
-  expression_arg.arg_repetition = eArgRepeatPlain;
-
-  // There is only one variant this argument could be; put it into the argument
-  // entry.
-  arg.push_back(expression_arg);
-
-  // Push the data for the first argument into the m_arguments vector.
-  m_arguments.push_back(arg);
+  AddSimpleArgumentList(eArgTypeExpression);
 
   // Add the "--format" and "--gdb-format"
   m_option_group.Append(&m_format_options,
@@ -439,11 +427,11 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   ExpressionResults success = target.EvaluateExpression(
       expr, frame, result_valobj_sp, eval_options, &m_fixed_expression);
 
-  // We only tell you about the FixIt if we applied it.  The compiler errors
-  // will suggest the FixIt if it parsed.
+  // Only mention Fix-Its if the expression evaluator applied them.
+  // Compiler errors refer to the final expression after applying Fix-It(s).
   if (!m_fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
-    error_stream.Printf("  Fix-it applied, fixed expression was: \n    %s\n",
-                        m_fixed_expression.c_str());
+    error_stream << "  Evaluated this expression after applying Fix-It(s):\n";
+    error_stream << "    " << m_fixed_expression << "\n";
   }
 
   if (result_valobj_sp) {
@@ -594,7 +582,7 @@ GetExprOptions(ExecutionContext &ctx,
   return expr_options;
 }
 
-bool CommandObjectExpression::DoExecute(llvm::StringRef command,
+void CommandObjectExpression::DoExecute(llvm::StringRef command,
                                         CommandReturnObject &result) {
   m_fixed_expression.clear();
   auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
@@ -602,7 +590,7 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
 
   if (command.empty()) {
     GetMultilineExpression();
-    return result.Succeeded();
+    return;
   }
 
   OptionsWithRaw args(command);
@@ -610,7 +598,7 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
 
   if (args.HasArgs()) {
     if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group, exe_ctx))
-      return false;
+      return;
 
     if (m_repl_option.GetOptionValue().GetCurrentValue()) {
       Target &target = GetSelectedOrDummyTarget();
@@ -642,7 +630,7 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
                                     nullptr, true);
           if (!repl_error.Success()) {
             result.SetError(repl_error);
-            return result.Succeeded();
+            return;
           }
         }
 
@@ -662,14 +650,14 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
               "Couldn't create a REPL for %s",
               Language::GetNameForLanguageType(m_command_options.language));
           result.SetError(repl_error);
-          return result.Succeeded();
+          return;
         }
       }
     }
     // No expression following options
     else if (expr.empty()) {
       GetMultilineExpression();
-      return result.Succeeded();
+      return;
     }
   }
 
@@ -691,8 +679,7 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
         fixed_command.append(m_fixed_expression);
       history.AppendString(fixed_command);
     }
-    return true;
+    return;
   }
   result.SetStatus(eReturnStatusFailed);
-  return false;
 }

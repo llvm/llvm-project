@@ -28,4 +28,5 @@ OPTION(FPEvalMethod, LangOptions::FPEvalMethodKind, 2, AllowApproxFunc)
 OPTION(Float16ExcessPrecision, LangOptions::ExcessPrecisionKind, 2, FPEvalMethod)
 OPTION(BFloat16ExcessPrecision, LangOptions::ExcessPrecisionKind, 2, Float16ExcessPrecision)
 OPTION(MathErrno, bool, 1, BFloat16ExcessPrecision)
+OPTION(ComplexRange, LangOptions::ComplexRangeKind, 2, MathErrno)
 #undef OPTION

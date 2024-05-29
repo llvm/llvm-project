@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_EXPR_H
 #define LLVM_CLANG_AST_EXPR_H
 
+#include "clang/AST/APNumericStorage.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTVector.h"
 #include "clang/AST/ComputeDependence.h"
@@ -81,7 +82,7 @@ struct SubobjectAdjustment {
 
   union {
     struct DTB DerivedToBase;
-    FieldDecl *Field;
+    const FieldDecl *Field;
     struct P Ptr;
   };
 
@@ -92,8 +93,7 @@ struct SubobjectAdjustment {
     DerivedToBase.DerivedClass = DerivedClass;
   }
 
-  SubobjectAdjustment(FieldDecl *Field)
-    : Kind(FieldAdjustment) {
+  SubobjectAdjustment(const FieldDecl *Field) : Kind(FieldAdjustment) {
     this->Field = Field;
   }
 
@@ -152,6 +152,12 @@ public:
 
     TR = t;
   }
+
+  /// If this expression is an enumeration constant, return the
+  /// enumeration type under which said constant was declared.
+  /// Otherwise return the expression's type.
+  /// Note this effectively circumvents the weak typing of C's enum constants
+  QualType getEnumCoercedType(const ASTContext &Ctx) const;
 
   ExprDependence getDependence() const {
     return static_cast<ExprDependence>(ExprBits.Dependent);
@@ -471,6 +477,13 @@ public:
   /// bit-fields, but it will return null for a conditional bit-field.
   FieldDecl *getSourceBitField();
 
+  /// If this expression refers to an enum constant, retrieve its declaration
+  EnumConstantDecl *getEnumConstantDecl();
+
+  const EnumConstantDecl *getEnumConstantDecl() const {
+    return const_cast<Expr *>(this)->getEnumConstantDecl();
+  }
+
   const FieldDecl *getSourceBitField() const {
     return const_cast<Expr*>(this)->getSourceBitField();
   }
@@ -607,6 +620,13 @@ public:
     /// foldable. If the expression is foldable, but not a constant expression,
     /// the notes will describes why it isn't a constant expression. If the
     /// expression *is* a constant expression, no notes will be produced.
+    ///
+    /// FIXME: this causes significant performance concerns and should be
+    /// refactored at some point. Not all evaluations of the constant
+    /// expression interpreter will display the given diagnostics, this means
+    /// those kinds of uses are paying the expense of generating a diagnostic
+    /// (which may include expensive operations like converting APValue objects
+    /// to a string representation).
     SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
 
     EvalStatus() = default;
@@ -1042,6 +1062,9 @@ public:
   }
 };
 
+/// Describes the kind of result that can be tail-allocated.
+enum class ConstantResultStorageKind { None, Int64, APValue };
+
 /// ConstantExpr - An expression that occurs in a constant context and
 /// optionally the result of evaluating the expression.
 class ConstantExpr final
@@ -1054,20 +1077,15 @@ class ConstantExpr final
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
-public:
-  /// Describes the kind of result that can be tail-allocated.
-  enum ResultStorageKind { RSK_None, RSK_Int64, RSK_APValue };
-
-private:
   size_t numTrailingObjects(OverloadToken<APValue>) const {
-    return ConstantExprBits.ResultKind == ConstantExpr::RSK_APValue;
+    return getResultStorageKind() == ConstantResultStorageKind::APValue;
   }
   size_t numTrailingObjects(OverloadToken<uint64_t>) const {
-    return ConstantExprBits.ResultKind == ConstantExpr::RSK_Int64;
+    return getResultStorageKind() == ConstantResultStorageKind::Int64;
   }
 
   uint64_t &Int64Result() {
-    assert(ConstantExprBits.ResultKind == ConstantExpr::RSK_Int64 &&
+    assert(getResultStorageKind() == ConstantResultStorageKind::Int64 &&
            "invalid accessor");
     return *getTrailingObjects<uint64_t>();
   }
@@ -1075,7 +1093,7 @@ private:
     return const_cast<ConstantExpr *>(this)->Int64Result();
   }
   APValue &APValueResult() {
-    assert(ConstantExprBits.ResultKind == ConstantExpr::RSK_APValue &&
+    assert(getResultStorageKind() == ConstantResultStorageKind::APValue &&
            "invalid accessor");
     return *getTrailingObjects<APValue>();
   }
@@ -1083,22 +1101,23 @@ private:
     return const_cast<ConstantExpr *>(this)->APValueResult();
   }
 
-  ConstantExpr(Expr *SubExpr, ResultStorageKind StorageKind,
+  ConstantExpr(Expr *SubExpr, ConstantResultStorageKind StorageKind,
                bool IsImmediateInvocation);
-  ConstantExpr(EmptyShell Empty, ResultStorageKind StorageKind);
+  ConstantExpr(EmptyShell Empty, ConstantResultStorageKind StorageKind);
 
 public:
   static ConstantExpr *Create(const ASTContext &Context, Expr *E,
                               const APValue &Result);
-  static ConstantExpr *Create(const ASTContext &Context, Expr *E,
-                              ResultStorageKind Storage = RSK_None,
-                              bool IsImmediateInvocation = false);
+  static ConstantExpr *
+  Create(const ASTContext &Context, Expr *E,
+         ConstantResultStorageKind Storage = ConstantResultStorageKind::None,
+         bool IsImmediateInvocation = false);
   static ConstantExpr *CreateEmpty(const ASTContext &Context,
-                                   ResultStorageKind StorageKind);
+                                   ConstantResultStorageKind StorageKind);
 
-  static ResultStorageKind getStorageKind(const APValue &Value);
-  static ResultStorageKind getStorageKind(const Type *T,
-                                          const ASTContext &Context);
+  static ConstantResultStorageKind getStorageKind(const APValue &Value);
+  static ConstantResultStorageKind getStorageKind(const Type *T,
+                                                  const ASTContext &Context);
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return SubExpr->getBeginLoc();
@@ -1119,8 +1138,8 @@ public:
   APValue::ValueKind getResultAPValueKind() const {
     return static_cast<APValue::ValueKind>(ConstantExprBits.APValueKind);
   }
-  ResultStorageKind getResultStorageKind() const {
-    return static_cast<ResultStorageKind>(ConstantExprBits.ResultKind);
+  ConstantResultStorageKind getResultStorageKind() const {
+    return static_cast<ConstantResultStorageKind>(ConstantExprBits.ResultKind);
   }
   bool isImmediateInvocation() const {
     return ConstantExprBits.IsImmediateInvocation;
@@ -1129,7 +1148,6 @@ public:
     return ConstantExprBits.APValueKind != APValue::None;
   }
   APValue getAPValueResult() const;
-  APValue &getResultAsAPValue() const { return APValueResult(); }
   llvm::APSInt getResultAsAPSInt() const;
   // Iterators
   child_range children() { return child_range(&SubExpr, &SubExpr+1); }
@@ -1449,6 +1467,16 @@ public:
     DeclRefExprBits.IsImmediateEscalating = Set;
   }
 
+  bool isCapturedByCopyInLambdaWithExplicitObjectParameter() const {
+    return DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter;
+  }
+
+  void setCapturedByCopyInLambdaWithExplicitObjectParameter(
+      bool Set, const ASTContext &Context) {
+    DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = Set;
+    setDependence(computeDependence(this, Context));
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == DeclRefExprClass;
   }
@@ -1460,57 +1488,6 @@ public:
 
   const_child_range children() const {
     return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-};
-
-/// Used by IntegerLiteral/FloatingLiteral to store the numeric without
-/// leaking memory.
-///
-/// For large floats/integers, APFloat/APInt will allocate memory from the heap
-/// to represent these numbers.  Unfortunately, when we use a BumpPtrAllocator
-/// to allocate IntegerLiteral/FloatingLiteral nodes the memory associated with
-/// the APFloat/APInt values will never get freed. APNumericStorage uses
-/// ASTContext's allocator for memory allocation.
-class APNumericStorage {
-  union {
-    uint64_t VAL;    ///< Used to store the <= 64 bits integer value.
-    uint64_t *pVal;  ///< Used to store the >64 bits integer value.
-  };
-  unsigned BitWidth;
-
-  bool hasAllocation() const { return llvm::APInt::getNumWords(BitWidth) > 1; }
-
-  APNumericStorage(const APNumericStorage &) = delete;
-  void operator=(const APNumericStorage &) = delete;
-
-protected:
-  APNumericStorage() : VAL(0), BitWidth(0) { }
-
-  llvm::APInt getIntValue() const {
-    unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
-    if (NumWords > 1)
-      return llvm::APInt(BitWidth, NumWords, pVal);
-    else
-      return llvm::APInt(BitWidth, VAL);
-  }
-  void setIntValue(const ASTContext &C, const llvm::APInt &Val);
-};
-
-class APIntStorage : private APNumericStorage {
-public:
-  llvm::APInt getValue() const { return getIntValue(); }
-  void setValue(const ASTContext &C, const llvm::APInt &Val) {
-    setIntValue(C, Val);
-  }
-};
-
-class APFloatStorage : private APNumericStorage {
-public:
-  llvm::APFloat getValue(const llvm::fltSemantics &Semantics) const {
-    return llvm::APFloat(Semantics, getIntValue());
-  }
-  void setValue(const ASTContext &C, const llvm::APFloat &Val) {
-    setIntValue(C, Val.bitcastToAPInt());
   }
 };
 
@@ -1604,26 +1581,18 @@ class FixedPointLiteral : public Expr, public APIntStorage {
   }
 };
 
-class CharacterLiteral : public Expr {
-public:
-  enum CharacterKind {
-    Ascii,
-    Wide,
-    UTF8,
-    UTF16,
-    UTF32
-  };
+enum class CharacterLiteralKind { Ascii, Wide, UTF8, UTF16, UTF32 };
 
-private:
+class CharacterLiteral : public Expr {
   unsigned Value;
   SourceLocation Loc;
 public:
   // type should be IntTy
-  CharacterLiteral(unsigned value, CharacterKind kind, QualType type,
+  CharacterLiteral(unsigned value, CharacterLiteralKind kind, QualType type,
                    SourceLocation l)
       : Expr(CharacterLiteralClass, type, VK_PRValue, OK_Ordinary),
         Value(value), Loc(l) {
-    CharacterLiteralBits.Kind = kind;
+    CharacterLiteralBits.Kind = llvm::to_underlying(kind);
     setDependence(ExprDependence::None);
   }
 
@@ -1631,8 +1600,8 @@ public:
   CharacterLiteral(EmptyShell Empty) : Expr(CharacterLiteralClass, Empty) { }
 
   SourceLocation getLocation() const { return Loc; }
-  CharacterKind getKind() const {
-    return static_cast<CharacterKind>(CharacterLiteralBits.Kind);
+  CharacterLiteralKind getKind() const {
+    return static_cast<CharacterLiteralKind>(CharacterLiteralBits.Kind);
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
@@ -1641,14 +1610,16 @@ public:
   unsigned getValue() const { return Value; }
 
   void setLocation(SourceLocation Location) { Loc = Location; }
-  void setKind(CharacterKind kind) { CharacterLiteralBits.Kind = kind; }
+  void setKind(CharacterLiteralKind kind) {
+    CharacterLiteralBits.Kind = llvm::to_underlying(kind);
+  }
   void setValue(unsigned Val) { Value = Val; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CharacterLiteralClass;
   }
 
-  static void print(unsigned val, CharacterKind Kind, raw_ostream &OS);
+  static void print(unsigned val, CharacterLiteralKind Kind, raw_ostream &OS);
 
   // Iterators
   child_range children() {
@@ -1770,6 +1741,15 @@ public:
   }
 };
 
+enum class StringLiteralKind {
+  Ordinary,
+  Wide,
+  UTF8,
+  UTF16,
+  UTF32,
+  Unevaluated
+};
+
 /// StringLiteral - This represents a string literal expression, e.g. "foo"
 /// or L"bar" (wide strings). The actual string data can be obtained with
 /// getBytes() and is NOT null-terminated. The length of the string data is
@@ -1808,10 +1788,6 @@ class StringLiteral final
   ///
   /// * An array of getByteLength() char used to store the string data.
 
-public:
-  enum StringKind { Ordinary, Wide, UTF8, UTF16, UTF32, Unevaluated };
-
-private:
   unsigned numTrailingObjects(OverloadToken<unsigned>) const { return 1; }
   unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
     return getNumConcatenated();
@@ -1833,7 +1809,7 @@ private:
   }
 
   /// Build a string literal.
-  StringLiteral(const ASTContext &Ctx, StringRef Str, StringKind Kind,
+  StringLiteral(const ASTContext &Ctx, StringRef Str, StringLiteralKind Kind,
                 bool Pascal, QualType Ty, const SourceLocation *Loc,
                 unsigned NumConcatenated);
 
@@ -1842,7 +1818,8 @@ private:
                 unsigned CharByteWidth);
 
   /// Map a target and string kind to the appropriate character width.
-  static unsigned mapCharByteWidth(TargetInfo const &Target, StringKind SK);
+  static unsigned mapCharByteWidth(TargetInfo const &Target,
+                                   StringLiteralKind SK);
 
   /// Set one of the string literal token.
   void setStrTokenLoc(unsigned TokNum, SourceLocation L) {
@@ -1854,13 +1831,13 @@ public:
   /// This is the "fully general" constructor that allows representation of
   /// strings formed from multiple concatenated tokens.
   static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
-                               StringKind Kind, bool Pascal, QualType Ty,
+                               StringLiteralKind Kind, bool Pascal, QualType Ty,
                                const SourceLocation *Loc,
                                unsigned NumConcatenated);
 
   /// Simple constructor for string literals made from one token.
   static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
-                               StringKind Kind, bool Pascal, QualType Ty,
+                               StringLiteralKind Kind, bool Pascal, QualType Ty,
                                SourceLocation Loc) {
     return Create(Ctx, Str, Kind, Pascal, Ty, &Loc, 1);
   }
@@ -1898,20 +1875,31 @@ public:
     llvm_unreachable("Unsupported character width!");
   }
 
+  // Get code unit but preserve sign info.
+  int64_t getCodeUnitS(size_t I, uint64_t BitWidth) const {
+    int64_t V = getCodeUnit(I);
+    if (isOrdinary() || isWide()) {
+      unsigned Width = getCharByteWidth() * BitWidth;
+      llvm::APInt AInt(Width, (uint64_t)V);
+      V = AInt.getSExtValue();
+    }
+    return V;
+  }
+
   unsigned getByteLength() const { return getCharByteWidth() * getLength(); }
   unsigned getLength() const { return *getTrailingObjects<unsigned>(); }
   unsigned getCharByteWidth() const { return StringLiteralBits.CharByteWidth; }
 
-  StringKind getKind() const {
-    return static_cast<StringKind>(StringLiteralBits.Kind);
+  StringLiteralKind getKind() const {
+    return static_cast<StringLiteralKind>(StringLiteralBits.Kind);
   }
 
-  bool isOrdinary() const { return getKind() == Ordinary; }
-  bool isWide() const { return getKind() == Wide; }
-  bool isUTF8() const { return getKind() == UTF8; }
-  bool isUTF16() const { return getKind() == UTF16; }
-  bool isUTF32() const { return getKind() == UTF32; }
-  bool isUnevaluated() const { return getKind() == Unevaluated; }
+  bool isOrdinary() const { return getKind() == StringLiteralKind::Ordinary; }
+  bool isWide() const { return getKind() == StringLiteralKind::Wide; }
+  bool isUTF8() const { return getKind() == StringLiteralKind::UTF8; }
+  bool isUTF16() const { return getKind() == StringLiteralKind::UTF16; }
+  bool isUTF32() const { return getKind() == StringLiteralKind::UTF32; }
+  bool isUnevaluated() const { return getKind() == StringLiteralKind::Unevaluated; }
   bool isPascal() const { return StringLiteralBits.IsPascal; }
 
   bool containsNonAscii() const {
@@ -1979,6 +1967,19 @@ public:
   }
 };
 
+enum class PredefinedIdentKind {
+  Func,
+  Function,
+  LFunction, // Same as Function, but as wide string.
+  FuncDName,
+  FuncSig,
+  LFuncSig, // Same as FuncSig, but as wide string
+  PrettyFunction,
+  /// The same as PrettyFunction, except that the
+  /// 'virtual' keyword is omitted for virtual member functions.
+  PrettyFunctionNoVirtual
+};
+
 /// [C99 6.4.2.2] - A predefined identifier such as __func__.
 class PredefinedExpr final
     : public Expr,
@@ -1990,22 +1991,7 @@ class PredefinedExpr final
   // "Stmt *" for the predefined identifier. It is present if and only if
   // hasFunctionName() is true and is always a "StringLiteral *".
 
-public:
-  enum IdentKind {
-    Func,
-    Function,
-    LFunction, // Same as Function, but as wide string.
-    FuncDName,
-    FuncSig,
-    LFuncSig, // Same as FuncSig, but as wide string
-    PrettyFunction,
-    /// The same as PrettyFunction, except that the
-    /// 'virtual' keyword is omitted for virtual member functions.
-    PrettyFunctionNoVirtual
-  };
-
-private:
-  PredefinedExpr(SourceLocation L, QualType FNTy, IdentKind IK,
+  PredefinedExpr(SourceLocation L, QualType FNTy, PredefinedIdentKind IK,
                  bool IsTransparent, StringLiteral *SL);
 
   explicit PredefinedExpr(EmptyShell Empty, bool HasFunctionName);
@@ -2025,15 +2011,15 @@ public:
   /// If IsTransparent, the PredefinedExpr is transparently handled as a
   /// StringLiteral.
   static PredefinedExpr *Create(const ASTContext &Ctx, SourceLocation L,
-                                QualType FNTy, IdentKind IK, bool IsTransparent,
-                                StringLiteral *SL);
+                                QualType FNTy, PredefinedIdentKind IK,
+                                bool IsTransparent, StringLiteral *SL);
 
   /// Create an empty PredefinedExpr.
   static PredefinedExpr *CreateEmpty(const ASTContext &Ctx,
                                      bool HasFunctionName);
 
-  IdentKind getIdentKind() const {
-    return static_cast<IdentKind>(PredefinedExprBits.Kind);
+  PredefinedIdentKind getIdentKind() const {
+    return static_cast<PredefinedIdentKind>(PredefinedExprBits.Kind);
   }
 
   bool isTransparent() const { return PredefinedExprBits.IsTransparent; }
@@ -2053,12 +2039,14 @@ public:
                : nullptr;
   }
 
-  static StringRef getIdentKindName(IdentKind IK);
+  static StringRef getIdentKindName(PredefinedIdentKind IK);
   StringRef getIdentKindName() const {
     return getIdentKindName(getIdentKind());
   }
 
-  static std::string ComputeName(IdentKind IK, const Decl *CurrentDecl);
+  static std::string ComputeName(PredefinedIdentKind IK,
+                                 const Decl *CurrentDecl,
+                                 bool ForceElaboratedPrinting = false);
 
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
@@ -3175,23 +3163,12 @@ public:
   }
 };
 
-/// Extra data stored in some MemberExpr objects.
-struct MemberExprNameQualifier {
-  /// The nested-name-specifier that qualifies the name, including
-  /// source-location information.
-  NestedNameSpecifierLoc QualifierLoc;
-
-  /// The DeclAccessPair through which the MemberDecl was found due to
-  /// name qualifiers.
-  DeclAccessPair FoundDecl;
-};
-
 /// MemberExpr - [C99 6.5.2.3] Structure and Union Members.  X->F and X.F.
 ///
 class MemberExpr final
     : public Expr,
-      private llvm::TrailingObjects<MemberExpr, MemberExprNameQualifier,
-                                    ASTTemplateKWAndArgsInfo,
+      private llvm::TrailingObjects<MemberExpr, NestedNameSpecifierLoc,
+                                    DeclAccessPair, ASTTemplateKWAndArgsInfo,
                                     TemplateArgumentLoc> {
   friend class ASTReader;
   friend class ASTStmtReader;
@@ -3213,26 +3190,30 @@ class MemberExpr final
   /// MemberLoc - This is the location of the member name.
   SourceLocation MemberLoc;
 
-  size_t numTrailingObjects(OverloadToken<MemberExprNameQualifier>) const {
-    return hasQualifierOrFoundDecl();
+  size_t numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
+    return hasQualifier();
+  }
+
+  size_t numTrailingObjects(OverloadToken<DeclAccessPair>) const {
+    return hasFoundDecl();
   }
 
   size_t numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
     return hasTemplateKWAndArgsInfo();
   }
 
-  bool hasQualifierOrFoundDecl() const {
-    return MemberExprBits.HasQualifierOrFoundDecl;
-  }
+  bool hasFoundDecl() const { return MemberExprBits.HasFoundDecl; }
 
   bool hasTemplateKWAndArgsInfo() const {
     return MemberExprBits.HasTemplateKWAndArgsInfo;
   }
 
   MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
-             ValueDecl *MemberDecl, const DeclarationNameInfo &NameInfo,
-             QualType T, ExprValueKind VK, ExprObjectKind OK,
-             NonOdrUseReason NOUR);
+             NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
+             ValueDecl *MemberDecl, DeclAccessPair FoundDecl,
+             const DeclarationNameInfo &NameInfo,
+             const TemplateArgumentListInfo *TemplateArgs, QualType T,
+             ExprValueKind VK, ExprObjectKind OK, NonOdrUseReason NOUR);
   MemberExpr(EmptyShell Empty)
       : Expr(MemberExprClass, Empty), Base(), MemberDecl() {}
 
@@ -3276,24 +3257,24 @@ public:
 
   /// Retrieves the declaration found by lookup.
   DeclAccessPair getFoundDecl() const {
-    if (!hasQualifierOrFoundDecl())
+    if (!hasFoundDecl())
       return DeclAccessPair::make(getMemberDecl(),
                                   getMemberDecl()->getAccess());
-    return getTrailingObjects<MemberExprNameQualifier>()->FoundDecl;
+    return *getTrailingObjects<DeclAccessPair>();
   }
 
   /// Determines whether this member expression actually had
   /// a C++ nested-name-specifier prior to the name of the member, e.g.,
   /// x->Base::foo.
-  bool hasQualifier() const { return getQualifier() != nullptr; }
+  bool hasQualifier() const { return MemberExprBits.HasQualifier; }
 
   /// If the member name was qualified, retrieves the
   /// nested-name-specifier that precedes the member name, with source-location
   /// information.
   NestedNameSpecifierLoc getQualifierLoc() const {
-    if (!hasQualifierOrFoundDecl())
+    if (!hasQualifier())
       return NestedNameSpecifierLoc();
-    return getTrailingObjects<MemberExprNameQualifier>()->QualifierLoc;
+    return *getTrailingObjects<NestedNameSpecifierLoc>();
   }
 
   /// If the member name was qualified, retrieves the
@@ -3574,6 +3555,18 @@ public:
   path_const_iterator path_begin() const { return path_buffer(); }
   path_const_iterator path_end() const { return path_buffer() + path_size(); }
 
+  /// Path through the class hierarchy taken by casts between base and derived
+  /// classes (see implementation of `CastConsistency()` for a full list of
+  /// cast kinds that have a path).
+  ///
+  /// For each derived-to-base edge in the path, the path contains a
+  /// `CXXBaseSpecifier` for the base class of that edge; the entries are
+  /// ordered from derived class to base class.
+  ///
+  /// For example, given classes `Base`, `Intermediate : public Base` and
+  /// `Derived : public Intermediate`, the path for a cast from `Derived *` to
+  /// `Base *` contains two entries: One for `Intermediate`, and one for `Base`,
+  /// in that order.
   llvm::iterator_range<path_iterator> path() {
     return llvm::make_range(path_begin(), path_end());
   }
@@ -4718,6 +4711,16 @@ public:
   }
 };
 
+enum class SourceLocIdentKind {
+  Function,
+  FuncSig,
+  File,
+  FileName,
+  Line,
+  Column,
+  SourceLocStruct
+};
+
 /// Represents a function call to one of __builtin_LINE(), __builtin_COLUMN(),
 /// __builtin_FUNCTION(), __builtin_FUNCSIG(), __builtin_FILE(),
 /// __builtin_FILE_NAME() or __builtin_source_location().
@@ -4726,19 +4729,9 @@ class SourceLocExpr final : public Expr {
   DeclContext *ParentContext;
 
 public:
-  enum IdentKind {
-    Function,
-    FuncSig,
-    File,
-    FileName,
-    Line,
-    Column,
-    SourceLocStruct
-  };
-
-  SourceLocExpr(const ASTContext &Ctx, IdentKind Type, QualType ResultTy,
-                SourceLocation BLoc, SourceLocation RParenLoc,
-                DeclContext *Context);
+  SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Type,
+                QualType ResultTy, SourceLocation BLoc,
+                SourceLocation RParenLoc, DeclContext *Context);
 
   /// Build an empty call expression.
   explicit SourceLocExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
@@ -4751,20 +4744,20 @@ public:
   /// Return a string representing the name of the specific builtin function.
   StringRef getBuiltinStr() const;
 
-  IdentKind getIdentKind() const {
-    return static_cast<IdentKind>(SourceLocExprBits.Kind);
+  SourceLocIdentKind getIdentKind() const {
+    return static_cast<SourceLocIdentKind>(SourceLocExprBits.Kind);
   }
 
   bool isIntType() const {
     switch (getIdentKind()) {
-    case File:
-    case FileName:
-    case Function:
-    case FuncSig:
-    case SourceLocStruct:
+    case SourceLocIdentKind::File:
+    case SourceLocIdentKind::FileName:
+    case SourceLocIdentKind::Function:
+    case SourceLocIdentKind::FuncSig:
+    case SourceLocIdentKind::SourceLocStruct:
       return false;
-    case Line:
-    case Column:
+    case SourceLocIdentKind::Line:
+    case SourceLocIdentKind::Column:
       return true;
     }
     llvm_unreachable("unknown source location expression kind");
@@ -4789,6 +4782,17 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == SourceLocExprClass;
+  }
+
+  static bool MayBeDependent(SourceLocIdentKind Kind) {
+    switch (Kind) {
+    case SourceLocIdentKind::Function:
+    case SourceLocIdentKind::FuncSig:
+    case SourceLocIdentKind::SourceLocStruct:
+      return true;
+    default:
+      return false;
+    }
   }
 
 private:
@@ -5097,6 +5101,7 @@ private:
 
   /// Whether this designated initializer used the GNU deprecated
   /// syntax rather than the C99 '=' syntax.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned GNUSyntax : 1;
 
   /// The number of designators in this initializer expression.
@@ -5728,6 +5733,7 @@ class GenericSelectionExpr final
   /// if and only if the generic selection expression is result-dependent.
   unsigned NumAssocs : 15;
   unsigned ResultIndex : 15; // NB: ResultDependentIndex is tied to this width.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExprPredicate : 1;
   enum : unsigned {
     ResultDependentIndex = 0x7FFF
@@ -5843,7 +5849,7 @@ class GenericSelectionExpr final
         std::conditional_t<Const, const Stmt *const *, Stmt **>;
     using TSIPtrPtrTy = std::conditional_t<Const, const TypeSourceInfo *const *,
                                            TypeSourceInfo **>;
-    StmtPtrPtrTy E; // = nullptr; FIXME: Once support for gcc 4.8 is dropped.
+    StmtPtrPtrTy E = nullptr;
     TSIPtrPtrTy TSI; // Kept in sync with E.
     unsigned Offset = 0, SelectedOffset = 0;
     AssociationIteratorTy(StmtPtrPtrTy E, TSIPtrPtrTy TSI, unsigned Offset,
@@ -6433,7 +6439,7 @@ public:
   enum AtomicOp {
 #define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) AO ## ID,
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
     // Avoid trailing comma
     BI_First = 0
   };
@@ -6481,7 +6487,7 @@ public:
     return cast<Expr>(SubExprs[ORDER_FAIL]);
   }
   Expr *getVal2() const {
-    if (Op == AO__atomic_exchange)
+    if (Op == AO__atomic_exchange || Op == AO__scoped_atomic_exchange)
       return cast<Expr>(SubExprs[ORDER_FAIL]);
     assert(NumSubExprs > VAL2);
     return cast<Expr>(SubExprs[VAL2]);
@@ -6499,7 +6505,7 @@ public:
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS)                                        \
   case AO##ID:                                                                 \
     return #ID;
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
     }
     llvm_unreachable("not an atomic operator?");
   }
@@ -6522,12 +6528,14 @@ public:
            getOp() == AO__opencl_atomic_compare_exchange_weak ||
            getOp() == AO__hip_atomic_compare_exchange_weak ||
            getOp() == AO__atomic_compare_exchange ||
-           getOp() == AO__atomic_compare_exchange_n;
+           getOp() == AO__atomic_compare_exchange_n ||
+           getOp() == AO__scoped_atomic_compare_exchange ||
+           getOp() == AO__scoped_atomic_compare_exchange_n;
   }
 
   bool isOpenCL() const {
-    return getOp() >= AO__opencl_atomic_init &&
-           getOp() <= AO__opencl_atomic_fetch_max;
+    return getOp() >= AO__opencl_atomic_compare_exchange_strong &&
+           getOp() <= AO__opencl_atomic_store;
   }
 
   SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
@@ -6552,13 +6560,16 @@ public:
   /// \return empty atomic scope model if the atomic op code does not have
   ///   scope operand.
   static std::unique_ptr<AtomicScopeModel> getScopeModel(AtomicOp Op) {
-    auto Kind =
-        (Op >= AO__opencl_atomic_load && Op <= AO__opencl_atomic_fetch_max)
-            ? AtomicScopeModelKind::OpenCL
-        : (Op >= AO__hip_atomic_load && Op <= AO__hip_atomic_fetch_max)
-            ? AtomicScopeModelKind::HIP
-            : AtomicScopeModelKind::None;
-    return AtomicScopeModel::create(Kind);
+    // FIXME: Allow grouping of builtins to be able to only check >= and <=
+    if (Op >= AO__opencl_atomic_compare_exchange_strong &&
+        Op <= AO__opencl_atomic_store && Op != AO__opencl_atomic_init)
+      return AtomicScopeModel::create(AtomicScopeModelKind::OpenCL);
+    if (Op >= AO__hip_atomic_compare_exchange_strong &&
+        Op <= AO__hip_atomic_store)
+      return AtomicScopeModel::create(AtomicScopeModelKind::HIP);
+    if (Op >= AO__scoped_atomic_add_fetch && Op <= AO__scoped_atomic_xor_fetch)
+      return AtomicScopeModel::create(AtomicScopeModelKind::Generic);
+    return AtomicScopeModel::create(AtomicScopeModelKind::None);
   }
 
   /// Get atomic scope model.
@@ -6597,6 +6608,275 @@ public:
     return T->getStmtClass() == TypoExprClass;
   }
 
+};
+
+/// This class represents BOTH the OpenMP Array Section and OpenACC 'subarray',
+/// with a boolean differentiator.
+/// OpenMP 5.0 [2.1.5, Array Sections].
+/// To specify an array section in an OpenMP construct, array subscript
+/// expressions are extended with the following syntax:
+/// \code
+/// [ lower-bound : length : stride ]
+/// [ lower-bound : length : ]
+/// [ lower-bound : length ]
+/// [ lower-bound : : stride ]
+/// [ lower-bound : : ]
+/// [ lower-bound : ]
+/// [ : length : stride ]
+/// [ : length : ]
+/// [ : length ]
+/// [ : : stride ]
+/// [ : : ]
+/// [ : ]
+/// \endcode
+/// The array section must be a subset of the original array.
+/// Array sections are allowed on multidimensional arrays. Base language array
+/// subscript expressions can be used to specify length-one dimensions of
+/// multidimensional array sections.
+/// Each of the lower-bound, length, and stride expressions if specified must be
+/// an integral type expressions of the base language. When evaluated
+/// they represent a set of integer values as follows:
+/// \code
+/// { lower-bound, lower-bound + stride, lower-bound + 2 * stride,... ,
+/// lower-bound + ((length - 1) * stride) }
+/// \endcode
+/// The lower-bound and length must evaluate to non-negative integers.
+/// The stride must evaluate to a positive integer.
+/// When the size of the array dimension is not known, the length must be
+/// specified explicitly.
+/// When the stride is absent it defaults to 1.
+/// When the length is absent it defaults to ⌈(size − lower-bound)/stride⌉,
+/// where size is the size of the array dimension. When the lower-bound is
+/// absent it defaults to 0.
+///
+///
+/// OpenACC 3.3 [2.7.1 Data Specification in Data Clauses]
+/// In C and C++, a subarray is an array name followed by an extended array
+/// range specification in brackets, with start and length, such as
+///
+/// AA[2:n]
+///
+/// If the lower bound is missing, zero is used. If the length is missing and
+/// the array has known size, the size of the array is used; otherwise the
+/// length is required. The subarray AA[2:n] means elements AA[2], AA[3], . . .
+/// , AA[2+n-1]. In C and C++, a two dimensional array may be declared in at
+/// least four ways:
+///
+/// -Statically-sized array: float AA[100][200];
+/// -Pointer to statically sized rows: typedef float row[200]; row* BB;
+/// -Statically-sized array of pointers: float* CC[200];
+/// -Pointer to pointers: float** DD;
+///
+/// Each dimension may be statically sized, or a pointer to dynamically
+/// allocated memory. Each of these may be included in a data clause using
+/// subarray notation to specify a rectangular array:
+///
+/// -AA[2:n][0:200]
+/// -BB[2:n][0:m]
+/// -CC[2:n][0:m]
+/// -DD[2:n][0:m]
+///
+/// Multidimensional rectangular subarrays in C and C++ may be specified for any
+/// array with any combination of statically-sized or dynamically-allocated
+/// dimensions. For statically sized dimensions, all dimensions except the first
+/// must specify the whole extent to preserve the contiguous data restriction,
+/// discussed below. For dynamically allocated dimensions, the implementation
+/// will allocate pointers in device memory corresponding to the pointers in
+/// local memory and will fill in those pointers as appropriate.
+///
+/// In Fortran, a subarray is an array name followed by a comma-separated list
+/// of range specifications in parentheses, with lower and upper bound
+/// subscripts, such as
+///
+/// arr(1:high,low:100)
+///
+/// If either the lower or upper bounds are missing, the declared or allocated
+/// bounds of the array, if known, are used. All dimensions except the last must
+/// specify the whole extent, to preserve the contiguous data restriction,
+/// discussed below.
+///
+/// Restrictions
+///
+/// -In Fortran, the upper bound for the last dimension of an assumed-size dummy
+/// array must be specified.
+///
+/// -In C and C++, the length for dynamically allocated dimensions of an array
+/// must be explicitly specified.
+///
+/// -In C and C++, modifying pointers in pointer arrays during the data
+/// lifetime, either on the host or on the device, may result in undefined
+/// behavior.
+///
+/// -If a subarray  appears in a data clause, the implementation may choose to
+/// allocate memory for only that subarray on the accelerator.
+///
+/// -In Fortran, array pointers may appear, but pointer association is not
+/// preserved in device memory.
+///
+/// -Any array or subarray in a data clause, including Fortran array pointers,
+/// must be a contiguous section of memory, except for dynamic multidimensional
+/// C arrays.
+///
+/// -In C and C++, if a variable or array of composite type appears, all the
+/// data members of the struct or class are allocated and copied, as
+/// appropriate. If a composite member is a pointer type, the data addressed by
+/// that pointer are not implicitly copied.
+///
+/// -In Fortran, if a variable or array of composite type appears, all the
+/// members of that derived type are allocated and copied, as appropriate. If
+/// any member has the allocatable or pointer attribute, the data accessed
+/// through that member are not copied.
+///
+/// -If an expression is used in a subscript or subarray expression in a clause
+/// on a data construct, the same value is used when copying data at the end of
+/// the data region, even if the values of variables in the expression change
+/// during the data region.
+class ArraySectionExpr : public Expr {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+
+public:
+  enum ArraySectionType { OMPArraySection, OpenACCArraySection };
+
+private:
+  enum {
+    BASE,
+    LOWER_BOUND,
+    LENGTH,
+    STRIDE,
+    END_EXPR,
+    OPENACC_END_EXPR = STRIDE
+  };
+
+  ArraySectionType ASType = OMPArraySection;
+  Stmt *SubExprs[END_EXPR] = {nullptr};
+  SourceLocation ColonLocFirst;
+  SourceLocation ColonLocSecond;
+  SourceLocation RBracketLoc;
+
+public:
+  // Constructor for OMP array sections, which include a 'stride'.
+  ArraySectionExpr(Expr *Base, Expr *LowerBound, Expr *Length, Expr *Stride,
+                   QualType Type, ExprValueKind VK, ExprObjectKind OK,
+                   SourceLocation ColonLocFirst, SourceLocation ColonLocSecond,
+                   SourceLocation RBracketLoc)
+      : Expr(ArraySectionExprClass, Type, VK, OK), ASType(OMPArraySection),
+        ColonLocFirst(ColonLocFirst), ColonLocSecond(ColonLocSecond),
+        RBracketLoc(RBracketLoc) {
+    setBase(Base);
+    setLowerBound(LowerBound);
+    setLength(Length);
+    setStride(Stride);
+    setDependence(computeDependence(this));
+  }
+
+  // Constructor for OpenACC sub-arrays, which do not permit a 'stride'.
+  ArraySectionExpr(Expr *Base, Expr *LowerBound, Expr *Length, QualType Type,
+                   ExprValueKind VK, ExprObjectKind OK, SourceLocation ColonLoc,
+                   SourceLocation RBracketLoc)
+      : Expr(ArraySectionExprClass, Type, VK, OK), ASType(OpenACCArraySection),
+        ColonLocFirst(ColonLoc), RBracketLoc(RBracketLoc) {
+    setBase(Base);
+    setLowerBound(LowerBound);
+    setLength(Length);
+    setDependence(computeDependence(this));
+  }
+
+  /// Create an empty array section expression.
+  explicit ArraySectionExpr(EmptyShell Shell)
+      : Expr(ArraySectionExprClass, Shell) {}
+
+  /// Return original type of the base expression for array section.
+  static QualType getBaseOriginalType(const Expr *Base);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ArraySectionExprClass;
+  }
+
+  bool isOMPArraySection() const { return ASType == OMPArraySection; }
+  bool isOpenACCArraySection() const { return ASType == OpenACCArraySection; }
+
+  /// Get base of the array section.
+  Expr *getBase() { return cast<Expr>(SubExprs[BASE]); }
+  const Expr *getBase() const { return cast<Expr>(SubExprs[BASE]); }
+
+  /// Get lower bound of array section.
+  Expr *getLowerBound() { return cast_or_null<Expr>(SubExprs[LOWER_BOUND]); }
+  const Expr *getLowerBound() const {
+    return cast_or_null<Expr>(SubExprs[LOWER_BOUND]);
+  }
+
+  /// Get length of array section.
+  Expr *getLength() { return cast_or_null<Expr>(SubExprs[LENGTH]); }
+  const Expr *getLength() const { return cast_or_null<Expr>(SubExprs[LENGTH]); }
+
+  /// Get stride of array section.
+  Expr *getStride() {
+    assert(ASType != OpenACCArraySection &&
+           "Stride not valid in OpenACC subarrays");
+    return cast_or_null<Expr>(SubExprs[STRIDE]);
+  }
+
+  const Expr *getStride() const {
+    assert(ASType != OpenACCArraySection &&
+           "Stride not valid in OpenACC subarrays");
+    return cast_or_null<Expr>(SubExprs[STRIDE]);
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getBase()->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return RBracketLoc; }
+
+  SourceLocation getColonLocFirst() const { return ColonLocFirst; }
+  SourceLocation getColonLocSecond() const {
+    assert(ASType != OpenACCArraySection &&
+           "second colon for stride not valid in OpenACC subarrays");
+    return ColonLocSecond;
+  }
+  SourceLocation getRBracketLoc() const { return RBracketLoc; }
+
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    return getBase()->getExprLoc();
+  }
+
+  child_range children() {
+    return child_range(
+        &SubExprs[BASE],
+        &SubExprs[ASType == OMPArraySection ? END_EXPR : OPENACC_END_EXPR]);
+  }
+
+  const_child_range children() const {
+    return const_child_range(
+        &SubExprs[BASE],
+        &SubExprs[ASType == OMPArraySection ? END_EXPR : OPENACC_END_EXPR]);
+  }
+
+private:
+  /// Set base of the array section.
+  void setBase(Expr *E) { SubExprs[BASE] = E; }
+
+  /// Set lower bound of the array section.
+  void setLowerBound(Expr *E) { SubExprs[LOWER_BOUND] = E; }
+
+  /// Set length of the array section.
+  void setLength(Expr *E) { SubExprs[LENGTH] = E; }
+
+  /// Set length of the array section.
+  void setStride(Expr *E) {
+    assert(ASType != OpenACCArraySection &&
+           "Stride not valid in OpenACC subarrays");
+    SubExprs[STRIDE] = E;
+  }
+
+  void setColonLocFirst(SourceLocation L) { ColonLocFirst = L; }
+
+  void setColonLocSecond(SourceLocation L) {
+    assert(ASType != OpenACCArraySection &&
+           "second colon for stride not valid in OpenACC subarrays");
+    ColonLocSecond = L;
+  }
+  void setRBracketLoc(SourceLocation L) { RBracketLoc = L; }
 };
 
 /// Frontend produces RecoveryExprs on semantic errors that prevent creating

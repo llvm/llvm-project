@@ -19,7 +19,7 @@
 ///
 ///  Pseudo:
 ///
-///     MOVSX [x]     MOVZX [x]     MOVX   [x]
+///     MOVI  [x]     MOVSX [x]     MOVZX [x]     MOVX   [x]
 ///
 ///  Map:
 ///
@@ -165,11 +165,12 @@ foreach AM = MxMoveSupportedAMs in {
 } // foreach AM
 
 // R <- I
+// No pattern, as all immediate -> register moves are matched to the MOVI pseudo
 class MxMove_RI<MxType TYPE, string DST_REG, MxMoveEncoding ENC,
                 MxImmOpBundle SRC = !cast<MxImmOpBundle>("MxOp"#TYPE.Size#"AddrMode_i"),
                 MxOpBundle DST = !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#DST_REG)>
     : MxMove<TYPE.Prefix, (outs DST.Op:$dst), (ins SRC.Op:$src),
-              [(set TYPE.VT:$dst, SRC.ImmPat:$src)], ENC>;
+              [(null_frag)], ENC>;
 
 foreach REG = ["r", "a", "d"] in {
   foreach TYPE = !if(!eq(REG, "d"), [MxType8, MxType16, MxType32], [MxType16, MxType32]) in
@@ -241,6 +242,24 @@ def : Pat<(store   MxType32.BPat :$src, MxType32.BPat :$dst),
 
 def : Pat<(store   MxType32.BPat :$src, MxType32.JPat :$dst),
           (MOV32ji MxType32.JOp  :$dst, MxType32.IOp  :$src)>;
+
+//===----------------------------------------------------------------------===//
+// MOVEQ
+//===----------------------------------------------------------------------===//
+
+/// ------------+---------+---+-----------------------
+///  F  E  D  C | B  A  9 | 8 | 7  6  5  4  3  2  1  0
+/// ------------+---------+---+-----------------------
+///  0  1  1  1 |   REG   | 0 |          DATA
+/// ------------+---------+---+-----------------------
+
+// No pattern, as all immediate -> register moves are matched to the MOVI pseudo
+let Defs = [CCR] in
+def MOVQ : MxInst<(outs MxDRD32:$dst), (ins Mxi8imm:$imm),
+                  "moveq\t$imm, $dst",
+                  [(null_frag)]> {
+  let Inst = (descend 0b0111, (operand "$dst", 3), 0b0, (operand "$imm", 8));
+}
 
 //===----------------------------------------------------------------------===//
 // MOVEM
@@ -496,7 +515,23 @@ class MxPseudoMove_RR<MxType DST, MxType SRC, list<dag> PAT = []>
 
 class MxPseudoMove_RM<MxType DST, MxOperand SRCOpd, list<dag> PAT = []>
     : MxPseudo<(outs DST.ROp:$dst), (ins SRCOpd:$src), PAT>;
-}
+
+
+// These Pseudos handle loading immediates to registers.
+// They are expanded post-RA into either move or moveq instructions,
+// depending on size, destination register class, and immediate value.
+// This is done with pseudoinstructions in order to not constrain RA to
+// data registers if moveq matches.
+class MxPseudoMove_DI<MxType TYPE>
+    : MxPseudo<(outs TYPE.ROp:$dst), (ins TYPE.IOp:$src),
+               [(set TYPE.ROp:$dst, imm:$src)]>;
+
+// i8 imm -> reg can always be converted to moveq,
+// but we still emit a pseudo for consistency.
+def MOVI8di  : MxPseudoMove_DI<MxType8d>;
+def MOVI16ri : MxPseudoMove_DI<MxType16r>;
+def MOVI32ri : MxPseudoMove_DI<MxType32r>;
+} // let Defs = [CCR]
 
 /// This group of Pseudos is analogues to the real x86 extending moves, but
 /// since M68k does not have those we need to emulate. These instructions
@@ -554,18 +589,21 @@ def: Pat<(MxSExtLoadi16i8 MxCP_ARID:$src),
           (EXTRACT_SUBREG (MOVSXd32p8 MxARID8:$src), MxSubRegIndex16Lo)>;
 def: Pat<(MxSExtLoadi16i8 MxCP_ARII:$src),
           (EXTRACT_SUBREG (MOVSXd32f8 MxARII8:$src), MxSubRegIndex16Lo)>;
+def: Pat<(MxSExtLoadi16i8 MxCP_PCD:$src), (MOVSXd16q8 MxPCD8:$src)>;
 
 // i32 <- sext i8
 def: Pat<(i32 (sext i8:$src)), (MOVSXd32d8 MxDRD8:$src)>;
 def: Pat<(MxSExtLoadi32i8 MxCP_ARI :$src), (MOVSXd32j8 MxARI8 :$src)>;
 def: Pat<(MxSExtLoadi32i8 MxCP_ARID:$src), (MOVSXd32p8 MxARID8:$src)>;
 def: Pat<(MxSExtLoadi32i8 MxCP_ARII:$src), (MOVSXd32f8 MxARII8:$src)>;
+def: Pat<(MxSExtLoadi32i8 MxCP_PCD:$src),  (MOVSXd32q8 MxPCD8:$src)>;
 
 // i32 <- sext i16
 def: Pat<(i32 (sext i16:$src)), (MOVSXd32d16 MxDRD16:$src)>;
 def: Pat<(MxSExtLoadi32i16 MxCP_ARI :$src), (MOVSXd32j16 MxARI16 :$src)>;
 def: Pat<(MxSExtLoadi32i16 MxCP_ARID:$src), (MOVSXd32p16 MxARID16:$src)>;
 def: Pat<(MxSExtLoadi32i16 MxCP_ARII:$src), (MOVSXd32f16 MxARII16:$src)>;
+def: Pat<(MxSExtLoadi32i16 MxCP_PCD:$src),  (MOVSXd32q16 MxPCD16:$src)>;
 
 // i16 <- zext i8
 def: Pat<(i16 (zext i8:$src)),
@@ -672,3 +710,49 @@ foreach rounding = ["", "s", "d"] in {
   foreach size = [32, 64] in
     def F # !toupper(rounding) # MOV # size # fp_fp : MxFMove_FF<rounding, size>;
 }
+// Direction
+defvar MxFMove_FP_EA = false;
+defvar MxFMove_EA_FP = true;
+
+// Encoding scheme for FPSYS <-> R/M
+class MxEncFSysMove<bit dir, MxEncMemOp EAEnc, string fsys_reg> {
+  dag Value = (ascend
+    (descend 0b1111,
+      /*COPROCESSOR ID*/0b001,
+      0b000,
+      /*MODE + REGISTER*/
+      EAEnc.EA
+    ),
+    (descend 0b10, /*dir*/ dir,
+      /*REGISTER SELECT*/
+      (operand "$"#fsys_reg, 3, (encoder "encodeFPSYSSelect")),
+      0b0000000000
+    )
+  );
+}
+
+// FPSYS <-> R
+class MxFMove_FSYS_R<string src_reg,
+                     MxOpBundle SrcOpnd = !cast<MxOpBundle>("MxOp32AddrMode_"#src_reg),
+                     MxOpBundle DstOpnd = !cond(!eq(src_reg, "d"): MxOp32AddrMode_fpcs,
+                                                !eq(src_reg, "a"): MxOp32AddrMode_fpi),
+                     MxEncMemOp SrcEnc = !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#src_reg)>
+    : MxFMove<"l", (outs DstOpnd.Op:$dst), (ins SrcOpnd.Op:$src),
+              [(null_frag)]> {
+  let Inst = MxEncFSysMove<MxFMove_FP_EA, SrcEnc, "dst">.Value;
+}
+
+class MxFMove_R_FSYS<string dst_reg,
+                     MxOpBundle SrcOpnd = !cond(!eq(dst_reg, "d"): MxOp32AddrMode_fpcs,
+                                                !eq(dst_reg, "a"): MxOp32AddrMode_fpi),
+                     MxOpBundle DstOpnd = !cast<MxOpBundle>("MxOp32AddrMode_"#dst_reg),
+                     MxEncMemOp DstEnc = !cast<MxEncMemOp>("MxMoveDstOpEnc_"#dst_reg)>
+    : MxFMove<"l", (outs DstOpnd.Op:$dst), (ins SrcOpnd.Op:$src),
+              [(null_frag)]> {
+  let Inst = MxEncFSysMove<MxFMove_EA_FP, DstEnc, "src">.Value;
+}
+
+def FMOVE32fpcs_d : MxFMove_FSYS_R<"d">;
+def FMOVE32d_fpcs : MxFMove_R_FSYS<"d">;
+def FMOVE32fpi_a  : MxFMove_FSYS_R<"a">;
+def FMOVE32a_fpi  : MxFMove_R_FSYS<"a">;

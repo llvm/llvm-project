@@ -1,0 +1,87 @@
+{
+  "macros": {
+    "ONCE_FLAG_INIT": {
+      "c-definition": "7.28.1.3"
+    },
+    "TSS_DTOR_ITERATIONS": {
+      "c-definition": "7.28.1.3"
+    }
+  },
+  "functions": {
+    "call_once": {
+      "c-definition": "7.28.2.1"
+    },
+    "cnd_broadcast": {
+      "c-definition": "7.28.3.1"
+    },
+    "cnd_destroy": {
+      "c-definition": "7.28.3.2"
+    },
+    "cnd_init": {
+      "c-definition": "7.28.3.3"
+    },
+    "cnd_signal": {
+      "c-definition": "7.28.3.4"
+    },
+    "cnd_timedwait": {
+      "c-definition": "7.28.3.5"
+    },
+    "cnd_wait": {
+      "c-definition": "7.28.3.6"
+    },
+    "mtx_destroy": {
+      "c-definition": "7.28.4.1"
+    },
+    "mtx_init": {
+      "c-definition": "7.28.4.2"
+    },
+    "mtx_lock": {
+      "c-definition": "7.28.4.3"
+    },
+    "mtx_timedlock": {
+      "c-definition": "7.28.4.4"
+    },
+    "mtx_trylock": {
+      "c-definition": "7.28.4.5"
+    },
+    "mtx_unlock": {
+      "c-definition": "7.28.4.6"
+    },
+    "thrd_create": {
+      "c-definition": "7.28.5.1"
+    },
+    "thrd_current": {
+      "c-definition": "7.28.5.2"
+    },
+    "thrd_detach": {
+      "c-definition": "7.28.5.3"
+    },
+    "thrd_equal": {
+      "c-definition": "7.28.5.4"
+    },
+    "thrd_exit": {
+      "c-definition": "7.28.5.5"
+    },
+    "thrd_join": {
+      "c-definition": "7.28.5.6"
+    },
+    "thrd_sleep": {
+      "c-definition": "7.28.5.7"
+    },
+    "thrd_yield": {
+      "c-definition": "7.28.5.8"
+    },
+    "tss_create": {
+      "c-definition": "7.28.6.1"
+    },
+    "tss_delete": {
+      "c-definition": "7.28.6.2"
+    },
+    "tss_get": {
+      "c-definition": "7.28.6.3"
+    },
+    "tss_set": {
+      "c-definition": "7.28.6.4"
+    }
+  }
+}

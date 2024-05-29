@@ -53,8 +53,8 @@
               wait 4
 
 # CHECK: error: invalid operand for instruction
-# CHECK-NEXT: sync 4
-              sync 4
+# CHECK-NEXT: sync 8
+              sync 8
 
 # Unsigned 3-bit immediate operands
 

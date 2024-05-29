@@ -22,7 +22,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(NOT LIBC_TARGET_OS_IS_GPU)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 endif()
 
@@ -48,18 +48,6 @@ add_entrypoint_object(
     funlockfile.cpp
   HDRS
     funlockfile.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  ungetc
-  SRCS
-    ungetc.cpp
-  HDRS
-    ungetc.h
   DEPENDS
     libc.include.stdio
     libc.src.__support.File.file
@@ -248,6 +236,16 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.vfprintf_internal
 )
 
+add_stdio_entrypoint_object(
+  fileno
+  SRCS
+    fileno.cpp
+  HDRS
+    fileno.h
+  DEPENDS
+    libc.src.stdio.fileno
+)
+
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 
@@ -258,6 +256,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.remove
 )
 
+add_entrypoint_object(
+  rename
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.rename
+)
+
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)
 add_stdio_entrypoint_object(feof_unlocked)
@@ -265,6 +270,8 @@ add_stdio_entrypoint_object(ferror)
 add_stdio_entrypoint_object(ferror_unlocked)
 add_stdio_entrypoint_object(fseek)
 add_stdio_entrypoint_object(ftell)
+add_stdio_entrypoint_object(fseeko)
+add_stdio_entrypoint_object(ftello)
 add_stdio_entrypoint_object(fflush)
 add_stdio_entrypoint_object(clearerr)
 add_stdio_entrypoint_object(clearerr_unlocked)
@@ -286,6 +293,7 @@ add_stdio_entrypoint_object(getc_unlocked)
 add_stdio_entrypoint_object(getchar)
 add_stdio_entrypoint_object(getchar_unlocked)
 add_stdio_entrypoint_object(fgets)
+add_stdio_entrypoint_object(ungetc)
 add_stdio_entrypoint_object(stdin)
 add_stdio_entrypoint_object(stdout)
 add_stdio_entrypoint_object(stderr)

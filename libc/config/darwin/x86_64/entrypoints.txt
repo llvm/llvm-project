@@ -16,7 +16,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toascii
     libc.src.ctype.tolower
     libc.src.ctype.toupper
-    
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bzero
@@ -101,10 +101,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     # libc.src.fenv.fegetround
     # libc.src.fenv.feholdexcept
     # libc.src.fenv.fesetenv
+    # libc.src.fenv.fesetexcept
     # libc.src.fenv.fesetexceptflag
     # libc.src.fenv.fesetround
     # libc.src.fenv.feraiseexcept
     # libc.src.fenv.fetestexcept
+    # libc.src.fenv.fetestexceptflag
     # libc.src.fenv.feupdateenv
 
     ## Currently disabled for failing tests.
@@ -172,12 +174,18 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.modf
     #libc.src.math.modff
     #libc.src.math.modfl
+    #libc.src.math.nan
+    #libc.src.math.nanf
+    #libc.src.math.nanl
     #libc.src.math.nearbyint
     #libc.src.math.nearbyintf
     #libc.src.math.nearbyintl
     #libc.src.math.nextafter
     #libc.src.math.nextafterf
     #libc.src.math.nextafterl
+    #libc.src.math.nexttoward
+    #libc.src.math.nexttowardf
+    #libc.src.math.nexttowardl
     #libc.src.math.remainderf
     #libc.src.math.remainder
     #libc.src.math.remainderl

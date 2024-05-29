@@ -33,7 +33,7 @@ define i8 @bitbir(i8 %a) nounwind {
 ; CHECK: bit.b	#15, r12
 
 define i8 @bitbmi() nounwind {
-	%t1 = load i8, i8* @foo8
+	%t1 = load i8, ptr @foo8
 	%t2 = and i8 %t1, 15
 	%t3 = icmp ne i8 %t2, 0
 	%t4 = zext i1 %t3 to i8
@@ -43,7 +43,7 @@ define i8 @bitbmi() nounwind {
 ; CHECK: bit.b	#15, &foo8
 
 define i8 @bitbim() nounwind {
-	%t1 = load i8, i8* @foo8
+	%t1 = load i8, ptr @foo8
 	%t2 = and i8 15, %t1
 	%t3 = icmp ne i8 %t2, 0
 	%t4 = zext i1 %t3 to i8
@@ -53,7 +53,7 @@ define i8 @bitbim() nounwind {
 ; CHECK: bit.b	#15, &foo8
 
 define i8 @bitbrm(i8 %a) nounwind {
-	%t1 = load i8, i8* @foo8
+	%t1 = load i8, ptr @foo8
 	%t2 = and i8 %a, %t1
 	%t3 = icmp ne i8 %t2, 0
 	%t4 = zext i1 %t3 to i8
@@ -63,7 +63,7 @@ define i8 @bitbrm(i8 %a) nounwind {
 ; CHECK: bit.b	&foo8, r12
 
 define i8 @bitbmr(i8 %a) nounwind {
-	%t1 = load i8, i8* @foo8
+	%t1 = load i8, ptr @foo8
 	%t2 = and i8 %t1, %a
 	%t3 = icmp ne i8 %t2, 0
 	%t4 = zext i1 %t3 to i8
@@ -73,8 +73,8 @@ define i8 @bitbmr(i8 %a) nounwind {
 ; CHECK: bit.b	r12, &foo8
 
 define i8 @bitbmm() nounwind {
-	%t1 = load i8, i8* @foo8
-	%t2 = load i8, i8* @bar8
+	%t1 = load i8, ptr @foo8
+	%t2 = load i8, ptr @bar8
 	%t3 = and i8 %t1, %t2
 	%t4 = icmp ne i8 %t3, 0
 	%t5 = zext i1 %t4 to i8
@@ -114,7 +114,7 @@ define i16 @bitwir(i16 %a) nounwind {
 ; CHECK: bit	#4080, r12
 
 define i16 @bitwmi() nounwind {
-	%t1 = load i16, i16* @foo16
+	%t1 = load i16, ptr @foo16
 	%t2 = and i16 %t1, 4080
 	%t3 = icmp ne i16 %t2, 0
 	%t4 = zext i1 %t3 to i16
@@ -124,7 +124,7 @@ define i16 @bitwmi() nounwind {
 ; CHECK: bit	#4080, &foo16
 
 define i16 @bitwim() nounwind {
-	%t1 = load i16, i16* @foo16
+	%t1 = load i16, ptr @foo16
 	%t2 = and i16 4080, %t1
 	%t3 = icmp ne i16 %t2, 0
 	%t4 = zext i1 %t3 to i16
@@ -134,7 +134,7 @@ define i16 @bitwim() nounwind {
 ; CHECK: bit	#4080, &foo16
 
 define i16 @bitwrm(i16 %a) nounwind {
-	%t1 = load i16, i16* @foo16
+	%t1 = load i16, ptr @foo16
 	%t2 = and i16 %a, %t1
 	%t3 = icmp ne i16 %t2, 0
 	%t4 = zext i1 %t3 to i16
@@ -144,7 +144,7 @@ define i16 @bitwrm(i16 %a) nounwind {
 ; CHECK: bit	&foo16, r12
 
 define i16 @bitwmr(i16 %a) nounwind {
-	%t1 = load i16, i16* @foo16
+	%t1 = load i16, ptr @foo16
 	%t2 = and i16 %t1, %a
 	%t3 = icmp ne i16 %t2, 0
 	%t4 = zext i1 %t3 to i16
@@ -154,8 +154,8 @@ define i16 @bitwmr(i16 %a) nounwind {
 ; CHECK: bit	r12, &foo16
 
 define i16 @bitwmm() nounwind {
-	%t1 = load i16, i16* @foo16
-	%t2 = load i16, i16* @bar16
+	%t1 = load i16, ptr @foo16
+	%t2 = load i16, ptr @bar16
 	%t3 = and i16 %t1, %t2
 	%t4 = icmp ne i16 %t3, 0
 	%t5 = zext i1 %t4 to i16

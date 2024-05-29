@@ -800,9 +800,10 @@ FormatDiagnostic(SmallVectorImpl<char> &OutStr) const {
   FormatDiagnostic(Diag.begin(), Diag.end(), OutStr);
 }
 
-/// pushEscapedString - Append Str to the diagnostic buffer,
+/// EscapeStringForDiagnostic - Append Str to the diagnostic buffer,
 /// escaping non-printable characters and ill-formed code unit sequences.
-static void pushEscapedString(StringRef Str, SmallVectorImpl<char> &OutStr) {
+void clang::EscapeStringForDiagnostic(StringRef Str,
+                                      SmallVectorImpl<char> &OutStr) {
   OutStr.reserve(OutStr.size() + Str.size());
   auto *Begin = reinterpret_cast<const unsigned char *>(Str.data());
   llvm::raw_svector_ostream OutStream(OutStr);
@@ -850,11 +851,10 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
   // When the diagnostic string is only "%0", the entire string is being given
   // by an outside source.  Remove unprintable characters from this string
   // and skip all the other string processing.
-  if (DiagEnd - DiagStr == 2 &&
-      StringRef(DiagStr, DiagEnd - DiagStr).equals("%0") &&
+  if (DiagEnd - DiagStr == 2 && StringRef(DiagStr, DiagEnd - DiagStr) == "%0" &&
       getArgKind(0) == DiagnosticsEngine::ak_std_string) {
     const std::string &S = getArgStdStr(0);
-    pushEscapedString(S, OutStr);
+    EscapeStringForDiagnostic(S, OutStr);
     return;
   }
 
@@ -961,7 +961,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     case DiagnosticsEngine::ak_std_string: {
       const std::string &S = getArgStdStr(ArgNo);
       assert(ModifierLen == 0 && "No modifiers for strings yet");
-      pushEscapedString(S, OutStr);
+      EscapeStringForDiagnostic(S, OutStr);
       break;
     }
     case DiagnosticsEngine::ak_c_string: {
@@ -971,7 +971,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       // Don't crash if get passed a null pointer by accident.
       if (!S)
         S = "(null)";
-      pushEscapedString(S, OutStr);
+      EscapeStringForDiagnostic(S, OutStr);
       break;
     }
     // ---- INTEGERS ----

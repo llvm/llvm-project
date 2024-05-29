@@ -95,14 +95,14 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasLWP = false;
   bool HasFMA = false;
   bool HasF16C = false;
+  bool HasAVX10_1 = false;
+  bool HasAVX10_1_512 = false;
   bool HasEVEX512 = false;
   bool HasAVX512CD = false;
   bool HasAVX512VPOPCNTDQ = false;
   bool HasAVX512VNNI = false;
   bool HasAVX512FP16 = false;
   bool HasAVX512BF16 = false;
-  bool HasAVX512ER = false;
-  bool HasAVX512PF = false;
   bool HasAVX512DQ = false;
   bool HasAVX512BITALG = false;
   bool HasAVX512BW = false;
@@ -134,7 +134,6 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasCLWB = false;
   bool HasMOVBE = false;
   bool HasPREFETCHI = false;
-  bool HasPREFETCHWT1 = false;
   bool HasRDPID = false;
   bool HasRDPRU = false;
   bool HasRetpolineExternalThunk = false;
@@ -162,9 +161,17 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAMXCOMPLEX = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
+  bool HasUSERMSR = false;
   bool HasUINTR = false;
   bool HasCRC32 = false;
   bool HasX87 = false;
+  bool HasEGPR = false;
+  bool HasPush2Pop2 = false;
+  bool HasPPX = false;
+  bool HasNDD = false;
+  bool HasCCMP = false;
+  bool HasNF = false;
+  bool HasCF = false;
 
 protected:
   llvm::X86::CPUKind CPU = llvm::X86::CK_None;
@@ -179,6 +186,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
     AddrSpaceMap = &X86AddrSpaceMap;
     HasStrictFP = true;
+    HasUnalignedAccess = true;
 
     bool IsWinCOFF =
         getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
@@ -208,8 +216,12 @@ public:
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
 
   bool isSPRegName(StringRef RegName) const override {
-    return RegName.equals("esp") || RegName.equals("rsp");
+    return RegName == "esp" || RegName == "rsp";
   }
+
+  bool supportsCpuSupports() const override { return true; }
+  bool supportsCpuIs() const override { return true; }
+  bool supportsCpuInit() const override { return true; }
 
   bool validateCpuSupports(StringRef FeatureStr) const override;
 
@@ -232,7 +244,7 @@ public:
                                       bool &HasSizeMismatch) const override {
     // esp and ebp are the only 32-bit registers the x86 backend can currently
     // handle.
-    if (RegName.equals("esp") || RegName.equals("ebp")) {
+    if (RegName == "esp" || RegName == "ebp") {
       // Check that the register size is 32-bit.
       HasSizeMismatch = RegSize != 32;
       return true;
@@ -431,13 +443,12 @@ public:
     LongDoubleWidth = 96;
     LongDoubleAlign = 32;
     SuitableAlign = 128;
-    resetDataLayout(
-        Triple.isOSBinFormatMachO()
-            ? "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-"
-              "f80:32-n8:16:32-S128"
-            : "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-"
-              "f80:32-n8:16:32-S128",
-        Triple.isOSBinFormatMachO() ? "_" : "");
+    resetDataLayout(Triple.isOSBinFormatMachO()
+                        ? "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:"
+                          "128-f64:32:64-f80:32-n8:16:32-S128"
+                        : "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:"
+                          "128-f64:32:64-f80:32-n8:16:32-S128",
+                    Triple.isOSBinFormatMachO() ? "_" : "");
     SizeType = UnsignedInt;
     PtrDiffType = SignedInt;
     IntPtrType = SignedInt;
@@ -542,8 +553,9 @@ public:
       UseSignedCharForObjCBool = false;
     SizeType = UnsignedLong;
     IntPtrType = SignedLong;
-    resetDataLayout("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-"
-                    "f80:128-n8:16:32-S128", "_");
+    resetDataLayout("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-"
+                    "f64:32:64-f80:128-n8:16:32-S128",
+                    "_");
     HasAlignMac68kSupport = true;
   }
 
@@ -570,7 +582,7 @@ public:
         getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
     bool IsMSVC = getTriple().isWindowsMSVCEnvironment();
     std::string Layout = IsWinCOFF ? "e-m:x" : "e-m:e";
-    Layout += "-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-";
+    Layout += "-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-";
     Layout += IsMSVC ? "f80:128" : "f80:32";
     Layout += "-n8:16:32-a:0:32-S32";
     resetDataLayout(Layout, IsWinCOFF ? "_" : "");
@@ -621,8 +633,8 @@ public:
       : X86_32TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
     DoubleAlign = LongLongAlign = 64;
-    resetDataLayout("e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:"
-                    "32-n8:16:32-a:0:32-S32",
+    resetDataLayout("e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
+                    "i128:128-f80:32-n8:16:32-a:0:32-S32",
                     "_");
   }
 
@@ -659,9 +671,10 @@ public:
   MCUX86_32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_32TargetInfo(Triple, Opts) {
     LongDoubleWidth = 64;
+    DefaultAlignForAttributeAligned = 32;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
-    resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:32-f64:"
-                    "32-f128:32-n8:16:32-a:0:32-S32");
+    resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:32-"
+                    "f64:32-f128:32-n8:16:32-a:0:32-S32");
     WIntType = UnsignedInt;
   }
 
@@ -721,11 +734,11 @@ public:
 
     // Pointers are 32-bit in x32.
     resetDataLayout(IsX32 ? "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
-                            "i64:64-f80:128-n8:16:32:64-S128"
-                          : IsWinCOFF ? "e-m:w-p270:32:32-p271:32:32-p272:64:"
-                                        "64-i64:64-f80:128-n8:16:32:64-S128"
-                                      : "e-m:e-p270:32:32-p271:32:32-p272:64:"
-                                        "64-i64:64-f80:128-n8:16:32:64-S128");
+                            "i64:64-i128:128-f80:128-n8:16:32:64-S128"
+                    : IsWinCOFF ? "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:"
+                                  "64-i128:128-f80:128-n8:16:32:64-S128"
+                                : "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:"
+                                  "64-i128:128-f80:128-n8:16:32:64-S128");
 
     // Use fpret only for long double.
     RealTypeUsesObjCFPRetMask = (unsigned)FloatModeKind::LongDouble;
@@ -763,6 +776,7 @@ public:
     case CC_Win64:
     case CC_PreserveMost:
     case CC_PreserveAll:
+    case CC_PreserveNone:
     case CC_X86RegCall:
     case CC_OpenCLKernel:
       return CCCR_OK;
@@ -786,7 +800,7 @@ public:
                                       bool &HasSizeMismatch) const override {
     // rsp and rbp are the only 64-bit registers the x86 backend can currently
     // handle.
-    if (RegName.equals("rsp") || RegName.equals("rbp")) {
+    if (RegName == "rsp" || RegName == "rbp") {
       // Check that the register size is 64-bit.
       HasSizeMismatch = RegSize != 64;
       return true;
@@ -840,6 +854,7 @@ public:
     case CC_IntelOclBicc:
     case CC_PreserveMost:
     case CC_PreserveAll:
+    case CC_PreserveNone:
     case CC_X86_64SysV:
     case CC_Swift:
     case CC_SwiftAsync:
@@ -922,8 +937,9 @@ public:
     llvm::Triple T = llvm::Triple(Triple);
     if (T.isiOS())
       UseSignedCharForObjCBool = false;
-    resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:"
-                    "16:32:64-S128", "_");
+    resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
+                    "f80:128-n8:16:32:64-S128",
+                    "_");
   }
 
   bool handleTargetFeatures(std::vector<std::string> &Features,

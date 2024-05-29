@@ -9,7 +9,7 @@
 
 // CHECK-LABEL: @test___fadd_rd(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_add_rtn_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_add_rtn_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fadd_rd(float x, float y) {
@@ -18,7 +18,7 @@ extern "C" __device__ float test___fadd_rd(float x, float y) {
 
 // CHECK-LABEL: @test___fadd_rn(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_add_rte_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_add_rte_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fadd_rn(float x, float y) {
@@ -27,7 +27,7 @@ extern "C" __device__ float test___fadd_rn(float x, float y) {
 
 // CHECK-LABEL: @test___fadd_ru(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_add_rtp_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_add_rtp_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fadd_ru(float x, float y) {
@@ -36,7 +36,7 @@ extern "C" __device__ float test___fadd_ru(float x, float y) {
 
 // CHECK-LABEL: @test___fadd_rz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_add_rtz_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_add_rtz_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fadd_rz(float x, float y) {
@@ -45,7 +45,7 @@ extern "C" __device__ float test___fadd_rz(float x, float y) {
 
 // CHECK-LABEL: @test__fmaf_rd(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_fma_rtn_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_fma_rtn_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test__fmaf_rd(float x, float y, float z) {
@@ -54,7 +54,7 @@ extern "C" __device__ float test__fmaf_rd(float x, float y, float z) {
 
 // CHECK-LABEL: @test__fmaf_rn(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_fma_rte_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_fma_rte_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test__fmaf_rn(float x, float y, float z) {
@@ -63,7 +63,7 @@ extern "C" __device__ float test__fmaf_rn(float x, float y, float z) {
 
 // CHECK-LABEL: @test__fmaf_ru(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_fma_rtp_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_fma_rtp_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test__fmaf_ru(float x, float y, float z) {
@@ -72,7 +72,7 @@ extern "C" __device__ float test__fmaf_ru(float x, float y, float z) {
 
 // CHECK-LABEL: @test__fmaf_rz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_fma_rtz_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_fma_rtz_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test__fmaf_rz(float x, float y, float z) {
@@ -81,7 +81,7 @@ extern "C" __device__ float test__fmaf_rz(float x, float y, float z) {
 
 // CHECK-LABEL: @test___fmul_rd(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_mul_rtn_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_mul_rtn_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fmul_rd(float x, float y) {
@@ -90,7 +90,7 @@ extern "C" __device__ float test___fmul_rd(float x, float y) {
 
 // CHECK-LABEL: @test___fmul_rn(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_mul_rte_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_mul_rte_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fmul_rn(float x, float y) {
@@ -99,7 +99,7 @@ extern "C" __device__ float test___fmul_rn(float x, float y) {
 
 // CHECK-LABEL: @test___fmul_ru(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_mul_rtp_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_mul_rtp_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fmul_ru(float x, float y) {
@@ -108,7 +108,7 @@ extern "C" __device__ float test___fmul_ru(float x, float y) {
 
 // CHECK-LABEL: @test___fmul_rz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_mul_rtz_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_mul_rtz_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fmul_rz(float x, float y) {
@@ -117,7 +117,7 @@ extern "C" __device__ float test___fmul_rz(float x, float y) {
 
 // CHECK-LABEL: @test___frcp_rd(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_div_rtn_f32(float noundef 1.000000e+00, float noundef [[X:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_div_rtn_f32(float noundef 1.000000e+00, float noundef [[X:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___frcp_rd(float x) {
@@ -126,7 +126,7 @@ extern "C" __device__ float test___frcp_rd(float x) {
 
 // CHECK-LABEL: @test___frcp_rn(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_div_rte_f32(float noundef 1.000000e+00, float noundef [[X:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_div_rte_f32(float noundef 1.000000e+00, float noundef [[X:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___frcp_rn(float x) {
@@ -135,7 +135,7 @@ extern "C" __device__ float test___frcp_rn(float x) {
 
 // CHECK-LABEL: @test___frcp_ru(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_div_rtp_f32(float noundef 1.000000e+00, float noundef [[X:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_div_rtp_f32(float noundef 1.000000e+00, float noundef [[X:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___frcp_ru(float x) {
@@ -144,7 +144,7 @@ extern "C" __device__ float test___frcp_ru(float x) {
 
 // CHECK-LABEL: @test___frcp_rz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_div_rtz_f32(float noundef 1.000000e+00, float noundef [[X:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_div_rtz_f32(float noundef 1.000000e+00, float noundef [[X:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___frcp_rz(float x) {
@@ -153,7 +153,7 @@ extern "C" __device__ float test___frcp_rz(float x) {
 
 // CHECK-LABEL: @test___fsqrt_rd(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_sqrt_rtn_f32(float noundef [[X:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_sqrt_rtn_f32(float noundef [[X:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fsqrt_rd(float x) {
@@ -162,7 +162,7 @@ extern "C" __device__ float test___fsqrt_rd(float x) {
 
 // CHECK-LABEL: @test___fsqrt_rn(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_sqrt_rte_f32(float noundef [[X:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_sqrt_rte_f32(float noundef [[X:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fsqrt_rn(float x) {
@@ -171,7 +171,7 @@ extern "C" __device__ float test___fsqrt_rn(float x) {
 
 // CHECK-LABEL: @test___fsqrt_ru(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_sqrt_rtp_f32(float noundef [[X:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_sqrt_rtp_f32(float noundef [[X:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fsqrt_ru(float x) {
@@ -180,7 +180,7 @@ extern "C" __device__ float test___fsqrt_ru(float x) {
 
 // CHECK-LABEL: @test___fsqrt_rz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_sqrt_rtz_f32(float noundef [[X:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_sqrt_rtz_f32(float noundef [[X:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fsqrt_rz(float x) {
@@ -189,7 +189,7 @@ extern "C" __device__ float test___fsqrt_rz(float x) {
 
 // CHECK-LABEL: @test___fsub_rd(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_sub_rtn_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_sub_rtn_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fsub_rd(float x, float y) {
@@ -198,7 +198,7 @@ extern "C" __device__ float test___fsub_rd(float x, float y) {
 
 // CHECK-LABEL: @test___fsub_rn(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_sub_rte_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_sub_rte_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fsub_rn(float x, float y) {
@@ -207,7 +207,7 @@ extern "C" __device__ float test___fsub_rn(float x, float y) {
 
 // CHECK-LABEL: @test___fsub_ru(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_sub_rtp_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_sub_rtp_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fsub_ru(float x, float y) {
@@ -216,7 +216,7 @@ extern "C" __device__ float test___fsub_ru(float x, float y) {
 
 // CHECK-LABEL: @test___fsub_rz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_sub_rtz_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_sub_rtz_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fsub_rz(float x, float y) {
@@ -225,7 +225,7 @@ extern "C" __device__ float test___fsub_rz(float x, float y) {
 
 // CHECK-LABEL: @test___dadd_rd(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_add_rtn_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_add_rtn_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test___dadd_rd(double x, double y) {
@@ -234,7 +234,7 @@ extern "C" __device__ double test___dadd_rd(double x, double y) {
 
 // CHECK-LABEL: @test___dadd_rn(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_add_rte_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_add_rte_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test___dadd_rn(double x, double y) {
@@ -243,7 +243,7 @@ extern "C" __device__ double test___dadd_rn(double x, double y) {
 
 // CHECK-LABEL: @test___dadd_ru(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_add_rtp_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_add_rtp_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test___dadd_ru(double x, double y) {
@@ -252,7 +252,7 @@ extern "C" __device__ double test___dadd_ru(double x, double y) {
 
 // CHECK-LABEL: @test___dadd_rz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_add_rtz_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_add_rtz_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test___dadd_rz(double x, double y) {
@@ -261,7 +261,7 @@ extern "C" __device__ double test___dadd_rz(double x, double y) {
 
 // CHECK-LABEL: @test___dmul_rd(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_mul_rtn_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_mul_rtn_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test___dmul_rd(double x, double y) {
@@ -270,7 +270,7 @@ extern "C" __device__ double test___dmul_rd(double x, double y) {
 
 // CHECK-LABEL: @test___dmul_rn(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_mul_rte_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_mul_rte_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test___dmul_rn(double x, double y) {
@@ -279,7 +279,7 @@ extern "C" __device__ double test___dmul_rn(double x, double y) {
 
 // CHECK-LABEL: @test___dmul_ru(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_mul_rtp_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_mul_rtp_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test___dmul_ru(double x, double y) {
@@ -288,7 +288,7 @@ extern "C" __device__ double test___dmul_ru(double x, double y) {
 
 // CHECK-LABEL: @test___dmul_rz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_mul_rtz_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_mul_rtz_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test___dmul_rz(double x, double y) {
@@ -298,7 +298,7 @@ extern "C" __device__ double test___dmul_rz(double x, double y) {
 // CHECK-LABEL: @test___drcp_rd(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_div_rtn_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_div_rtn_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
 // CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
@@ -309,7 +309,7 @@ extern "C" __device__ float test___drcp_rd(float x) {
 // CHECK-LABEL: @test___drcp_rn(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_div_rte_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_div_rte_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
 // CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
@@ -320,7 +320,7 @@ extern "C" __device__ float test___drcp_rn(float x) {
 // CHECK-LABEL: @test___drcp_ru(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_div_rtp_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_div_rtp_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
 // CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
@@ -331,7 +331,7 @@ extern "C" __device__ float test___drcp_ru(float x) {
 // CHECK-LABEL: @test___drcp_rz(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_div_rtz_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_div_rtz_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
 // CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
@@ -342,7 +342,7 @@ extern "C" __device__ float test___drcp_rz(float x) {
 // CHECK-LABEL: @test___dsqrt_rd(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_sqrt_rtn_f64(double noundef [[CONV]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_sqrt_rtn_f64(double noundef [[CONV]]) #[[ATTR3]]
 // CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
@@ -353,7 +353,7 @@ extern "C" __device__ float test___dsqrt_rd(float x) {
 // CHECK-LABEL: @test___dsqrt_rn(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_sqrt_rte_f64(double noundef [[CONV]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_sqrt_rte_f64(double noundef [[CONV]]) #[[ATTR3]]
 // CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
@@ -364,7 +364,7 @@ extern "C" __device__ float test___dsqrt_rn(float x) {
 // CHECK-LABEL: @test___dsqrt_ru(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_sqrt_rtp_f64(double noundef [[CONV]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_sqrt_rtp_f64(double noundef [[CONV]]) #[[ATTR3]]
 // CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
@@ -375,7 +375,7 @@ extern "C" __device__ float test___dsqrt_ru(float x) {
 // CHECK-LABEL: @test___dsqrt_rz(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_sqrt_rtz_f64(double noundef [[CONV]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_sqrt_rtz_f64(double noundef [[CONV]]) #[[ATTR3]]
 // CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
@@ -385,7 +385,7 @@ extern "C" __device__ float test___dsqrt_rz(float x) {
 
 // CHECK-LABEL: @test__fma_rd(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_fma_rtn_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_fma_rtn_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test__fma_rd(double x, double y, double z) {
@@ -394,7 +394,7 @@ extern "C" __device__ double test__fma_rd(double x, double y, double z) {
 
 // CHECK-LABEL: @test__fma_rn(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_fma_rte_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_fma_rte_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test__fma_rn(double x, double y, double z) {
@@ -403,7 +403,7 @@ extern "C" __device__ double test__fma_rn(double x, double y, double z) {
 
 // CHECK-LABEL: @test__fma_ru(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_fma_rtp_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_fma_rtp_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test__fma_ru(double x, double y, double z) {
@@ -412,7 +412,7 @@ extern "C" __device__ double test__fma_ru(double x, double y, double z) {
 
 // CHECK-LABEL: @test__fma_rz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_fma_rtz_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_fma_rtz_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR3]]
 // CHECK-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test__fma_rz(double x, double y, double z) {

@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_ARM_FENVIMPL_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_ARM_FENVIMPL_H
 
+#include "hdr/fenv_macros.h"
+#include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/config.h" // For LIBC_INLINE
-
-#include <fenv.h>
+#include "src/__support/macros/attributes.h" // For LIBC_INLINE
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE {
@@ -50,35 +50,35 @@ struct FEnv {
   }
 
   LIBC_INLINE static int exception_enable_bits_to_macro(uint32_t status) {
-    return (status & INVALID_ENABLE ? FE_INVALID : 0) |
-           (status & DIVBYZERO_ENABLE ? FE_DIVBYZERO : 0) |
-           (status & OVERFLOW_ENABLE ? FE_OVERFLOW : 0) |
-           (status & UNDERFLOW_ENABLE ? FE_UNDERFLOW : 0) |
-           (status & INEXACT_ENABLE ? FE_INEXACT : 0);
+    return ((status & INVALID_ENABLE) ? FE_INVALID : 0) |
+           ((status & DIVBYZERO_ENABLE) ? FE_DIVBYZERO : 0) |
+           ((status & OVERFLOW_ENABLE) ? FE_OVERFLOW : 0) |
+           ((status & UNDERFLOW_ENABLE) ? FE_UNDERFLOW : 0) |
+           ((status & INEXACT_ENABLE) ? FE_INEXACT : 0);
   }
 
   LIBC_INLINE static uint32_t exception_macro_to_enable_bits(int except) {
-    return (except & FE_INVALID ? INVALID_ENABLE : 0) |
-           (except & FE_DIVBYZERO ? DIVBYZERO_ENABLE : 0) |
-           (except & FE_OVERFLOW ? OVERFLOW_ENABLE : 0) |
-           (except & FE_UNDERFLOW ? UNDERFLOW_ENABLE : 0) |
-           (except & FE_INEXACT ? INEXACT_ENABLE : 0);
+    return ((except & FE_INVALID) ? INVALID_ENABLE : 0) |
+           ((except & FE_DIVBYZERO) ? DIVBYZERO_ENABLE : 0) |
+           ((except & FE_OVERFLOW) ? OVERFLOW_ENABLE : 0) |
+           ((except & FE_UNDERFLOW) ? UNDERFLOW_ENABLE : 0) |
+           ((except & FE_INEXACT) ? INEXACT_ENABLE : 0);
   }
 
   LIBC_INLINE static uint32_t exception_macro_to_status_bits(int except) {
-    return (except & FE_INVALID ? INVALID_STATUS : 0) |
-           (except & FE_DIVBYZERO ? DIVBYZERO_STATUS : 0) |
-           (except & FE_OVERFLOW ? OVERFLOW_STATUS : 0) |
-           (except & FE_UNDERFLOW ? UNDERFLOW_STATUS : 0) |
-           (except & FE_INEXACT ? INEXACT_STATUS : 0);
+    return ((except & FE_INVALID) ? INVALID_STATUS : 0) |
+           ((except & FE_DIVBYZERO) ? DIVBYZERO_STATUS : 0) |
+           ((except & FE_OVERFLOW) ? OVERFLOW_STATUS : 0) |
+           ((except & FE_UNDERFLOW) ? UNDERFLOW_STATUS : 0) |
+           ((except & FE_INEXACT) ? INEXACT_STATUS : 0);
   }
 
   LIBC_INLINE static uint32_t exception_status_bits_to_macro(int status) {
-    return (status & INVALID_STATUS ? FE_INVALID : 0) |
-           (status & DIVBYZERO_STATUS ? FE_DIVBYZERO : 0) |
-           (status & OVERFLOW_STATUS ? FE_OVERFLOW : 0) |
-           (status & UNDERFLOW_STATUS ? FE_UNDERFLOW : 0) |
-           (status & INEXACT_STATUS ? FE_INEXACT : 0);
+    return ((status & INVALID_STATUS) ? FE_INVALID : 0) |
+           ((status & DIVBYZERO_STATUS) ? FE_DIVBYZERO : 0) |
+           ((status & OVERFLOW_STATUS) ? FE_OVERFLOW : 0) |
+           ((status & UNDERFLOW_STATUS) ? FE_UNDERFLOW : 0) |
+           ((status & INEXACT_STATUS) ? FE_INEXACT : 0);
   }
 };
 
@@ -135,8 +135,8 @@ LIBC_INLINE int set_except(int excepts) {
 LIBC_INLINE int raise_except(int excepts) {
   float zero = 0.0f;
   float one = 1.0f;
-  float large_value = float(FPBits<float>(FPBits<float>::MAX_NORMAL));
-  float small_value = float(FPBits<float>(FPBits<float>::MIN_NORMAL));
+  float large_value = FPBits<float>::max_normal().get_val();
+  float small_value = FPBits<float>::min_normal().get_val();
   auto divfunc = [](float a, float b) {
     __asm__ __volatile__("flds  s0, %0\n\t"
                          "flds  s1, %1\n\t"

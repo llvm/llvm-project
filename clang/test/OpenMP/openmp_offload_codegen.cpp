@@ -1,9 +1,9 @@
 // Test device for mapping codegen.
 ///==========================================================================///
 
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -S -emit-llvm %s -o - 2>&1 | FileCheck -check-prefix=CK1 %s
+// RUN: %clang_cc1 -DCK1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - 2>&1 | FileCheck -check-prefix=CK1 %s
 
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -S -emit-llvm %s -o - 2>&1 | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - 2>&1 | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 // RUN: %clang_cc1 -DCK1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
@@ -25,7 +25,7 @@ void target_maps_parallel_integer(int a){
   }
 }
 
-// CK1-DEVICE: {{.*}}void @__omp_offloading_{{.*}}(ptr noundef nonnull align 4 dereferenceable(4){{.*}}
+// CK1-DEVICE: {{.*}}void @__omp_offloading_{{.*}}(ptr {{[^,]+}}, ptr noundef nonnull align 4 dereferenceable(4){{.*}}
 
 // CK1: {{.*}}void {{.*}}target_maps_parallel_integer{{.*}} {
 

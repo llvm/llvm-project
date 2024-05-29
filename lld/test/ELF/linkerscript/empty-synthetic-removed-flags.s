@@ -29,7 +29,6 @@
 # EMPTY-NEXT:  Type: SHT_PROGBITS
 # EMPTY-NEXT:  Flags [
 # EMPTY-NEXT:    SHF_ALLOC
-# EMPTY-NEXT:    SHF_EXECINSTR
 # EMPTY-NEXT:  ]
 
 .section .foo,"ax"

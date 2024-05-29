@@ -726,10 +726,12 @@ bool ThreadList::SetSelectedThreadByIndexID(uint32_t index_id, bool notify) {
 void ThreadList::NotifySelectedThreadChanged(lldb::tid_t tid) {
   ThreadSP selected_thread_sp(FindThreadByID(tid));
   if (selected_thread_sp->EventTypeHasListeners(
-          Thread::eBroadcastBitThreadSelected))
-    selected_thread_sp->BroadcastEvent(
-        Thread::eBroadcastBitThreadSelected,
-        new Thread::ThreadEventData(selected_thread_sp));
+          Thread::eBroadcastBitThreadSelected)) {
+    auto data_sp =
+        std::make_shared<Thread::ThreadEventData>(selected_thread_sp);
+    selected_thread_sp->BroadcastEvent(Thread::eBroadcastBitThreadSelected,
+                                       data_sp);
+  }
 }
 
 void ThreadList::Update(ThreadList &rhs) {

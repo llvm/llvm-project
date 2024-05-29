@@ -16,9 +16,10 @@
 #define LLVM_CODEGEN_GLOBALISEL_LEGACYLEGALIZERINFO_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include <unordered_map>
+#include <vector>
 
 namespace llvm {
 struct LegalityQuery;
@@ -238,16 +239,6 @@ public:
     using namespace LegacyLegalizeActions;
     return decreaseToSmallerTypesAndIncreaseToSmallest(v, NarrowScalar,
                                                        Unsupported);
-  }
-
-  static SizeAndActionsVec
-  narrowToSmallerAndWidenToSmallest(const SizeAndActionsVec &v) {
-    using namespace LegacyLegalizeActions;
-    assert(v.size() > 0 &&
-           "At least one size that can be legalized towards is needed"
-           " for this SizeChangeStrategy");
-    return decreaseToSmallerTypesAndIncreaseToSmallest(v, NarrowScalar,
-                                                       WidenScalar);
   }
 
   /// A SizeChangeStrategy for the common case where legalization for a

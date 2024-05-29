@@ -50,13 +50,13 @@ static MCSubtargetInfo *createBPFMCSubtargetInfo(const Triple &TT,
   return createBPFMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
-static MCStreamer *createBPFMCStreamer(const Triple &T, MCContext &Ctx,
-                                       std::unique_ptr<MCAsmBackend> &&MAB,
-                                       std::unique_ptr<MCObjectWriter> &&OW,
-                                       std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                       bool RelaxAll) {
-  return createELFStreamer(Ctx, std::move(MAB), std::move(OW), std::move(Emitter),
-                           RelaxAll);
+static MCStreamer *
+createBPFMCStreamer(const Triple &T, MCContext &Ctx,
+                    std::unique_ptr<MCAsmBackend> &&MAB,
+                    std::unique_ptr<MCObjectWriter> &&OW,
+                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return createELFStreamer(Ctx, std::move(MAB), std::move(OW),
+                           std::move(Emitter));
 }
 
 static MCInstPrinter *createBPFMCInstPrinter(const Triple &T,
@@ -81,7 +81,10 @@ public:
     // The target is the 3rd operand of cond inst and the 1st of uncond inst.
     int32_t Imm;
     if (isConditionalBranch(Inst)) {
-      Imm = (short)Inst.getOperand(2).getImm();
+      if (Inst.getOpcode() == BPF::JCOND)
+        Imm = (short)Inst.getOperand(0).getImm();
+      else
+        Imm = (short)Inst.getOperand(2).getImm();
     } else if (isUnconditionalBranch(Inst)) {
       if (Inst.getOpcode() == BPF::JMP)
         Imm = (short)Inst.getOperand(0).getImm();

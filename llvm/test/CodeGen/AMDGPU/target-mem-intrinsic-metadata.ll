@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=bonaire -stop-before=machine-scheduler < %s | FileCheck -enable-var-scope -check-prefixes=MIR %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=bonaire -stop-before=machine-scheduler < %s | FileCheck -enable-var-scope -check-prefixes=MIR %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire -stop-before=machine-scheduler < %s | FileCheck -enable-var-scope -check-prefixes=MIR %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=bonaire -stop-before=machine-scheduler < %s | FileCheck -enable-var-scope -check-prefixes=MIR %s
 
 ; Make sure !noalias metadata is passed through from target intrinsics
 

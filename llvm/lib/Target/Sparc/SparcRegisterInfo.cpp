@@ -12,10 +12,8 @@
 
 #include "SparcRegisterInfo.h"
 #include "Sparc.h"
-#include "SparcMachineFunctionInfo.h"
 #include "SparcSubtarget.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -98,7 +96,19 @@ BitVector SparcRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   for (unsigned n = 0; n < 31; n++)
     Reserved.set(SP::ASR1 + n);
 
+  for (TargetRegisterClass::iterator i = SP::IntRegsRegClass.begin();
+       i != SP::IntRegsRegClass.end(); ++i) {
+    if (MF.getSubtarget<SparcSubtarget>().isRegisterReserved(*i))
+      markSuperRegs(Reserved, *i);
+  }
+
+  assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
+}
+
+bool SparcRegisterInfo::isReservedReg(const MachineFunction &MF,
+                                      MCRegister Reg) const {
+  return getReservedRegs(MF)[Reg];
 }
 
 const TargetRegisterClass*

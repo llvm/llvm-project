@@ -153,7 +153,7 @@ define internal ptr @callee6(ptr %p) alwaysinline {
 define ptr @test6(ptr %ptr, i64 %x) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[X:%.*]]
-; CHECK-NEXT:    [[R_I:%.*]] = call dereferenceable_or_null(12) ptr @foo(ptr [[GEP]])
+; CHECK-NEXT:    [[R_I:%.*]] = call dereferenceable_or_null(16) ptr @foo(ptr [[GEP]])
 ; CHECK-NEXT:    [[V_I:%.*]] = call ptr @baz(ptr [[GEP]])
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;

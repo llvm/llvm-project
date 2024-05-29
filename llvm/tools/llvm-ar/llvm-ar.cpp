@@ -25,7 +25,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -66,7 +65,7 @@ static void printRanLibHelp(StringRef ToolName) {
          << "USAGE: " + ToolName + " archive...\n\n"
          << "OPTIONS:\n"
          << "  -h --help             - Display available options\n"
-         << "  -v --version          - Display the version of this program\n"
+         << "  -V --version          - Display the version of this program\n"
          << "  -D                    - Use zero for timestamps and uids/gids "
             "(default)\n"
          << "  -U                    - Use actual timestamps and uids/gids\n"
@@ -83,6 +82,7 @@ static void printArHelp(StringRef ToolName) {
     =darwin             -   darwin
     =bsd                -   bsd
     =bigarchive         -   big archive (AIX OS)
+    =coff               -   coff
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
   --output              - the directory to extract archive members to
@@ -194,7 +194,7 @@ static SmallVector<const char *, 256> PositionalArgs;
 static bool MRI;
 
 namespace {
-enum Format { Default, GNU, BSD, DARWIN, BIGARCHIVE, Unknown };
+enum Format { Default, GNU, COFF, BSD, DARWIN, BIGARCHIVE, Unknown };
 }
 
 static Format FormatType = Default;
@@ -671,7 +671,7 @@ Expected<std::unique_ptr<Binary>> getAsBinary(const Archive::Child &C,
 }
 
 template <class A> static bool isValidInBitMode(const A &Member) {
-  if (object::Archive::getDefaultKindForHost() != object::Archive::K_AIXBIG)
+  if (object::Archive::getDefaultKind() != object::Archive::K_AIXBIG)
     return true;
   LLVMContext Context;
   Expected<std::unique_ptr<Binary>> BinOrErr = getAsBinary(Member, &Context);
@@ -1026,24 +1026,34 @@ static void performWriteOperation(ArchiveOperation Operation,
       Kind = object::Archive::K_GNU;
     else if (OldArchive) {
       Kind = OldArchive->kind();
-      if (Kind == object::Archive::K_BSD) {
-        auto InferredKind = object::Archive::K_BSD;
+      std::optional<object::Archive::Kind> AltKind;
+      if (Kind == object::Archive::K_BSD)
+        AltKind = object::Archive::K_DARWIN;
+      else if (Kind == object::Archive::K_GNU && !OldArchive->hasSymbolTable())
+        // If there is no symbol table, we can't tell GNU from COFF format
+        // from the old archive type.
+        AltKind = object::Archive::K_COFF;
+      if (AltKind) {
+        auto InferredKind = Kind;
         if (NewMembersP && !NewMembersP->empty())
           InferredKind = NewMembersP->front().detectKindFromObject();
         else if (!NewMembers.empty())
           InferredKind = NewMembers.front().detectKindFromObject();
-        if (InferredKind == object::Archive::K_DARWIN)
-          Kind = object::Archive::K_DARWIN;
+        if (InferredKind == AltKind)
+          Kind = *AltKind;
       }
     } else if (NewMembersP)
       Kind = !NewMembersP->empty() ? NewMembersP->front().detectKindFromObject()
-                                   : object::Archive::getDefaultKindForHost();
+                                   : object::Archive::getDefaultKind();
     else
       Kind = !NewMembers.empty() ? NewMembers.front().detectKindFromObject()
-                                 : object::Archive::getDefaultKindForHost();
+                                 : object::Archive::getDefaultKind();
     break;
   case GNU:
     Kind = object::Archive::K_GNU;
+    break;
+  case COFF:
+    Kind = object::Archive::K_COFF;
     break;
   case BSD:
     if (Thin)
@@ -1287,8 +1297,7 @@ static const char *matchFlagWithArg(StringRef Expected,
                                     ArrayRef<const char *> Args) {
   StringRef Arg = *ArgIt;
 
-  if (Arg.startswith("--"))
-    Arg = Arg.substr(2);
+  Arg.consume_front("--");
 
   size_t len = Expected.size();
   if (Arg == Expected) {
@@ -1297,7 +1306,7 @@ static const char *matchFlagWithArg(StringRef Expected,
 
     return *ArgIt;
   }
-  if (Arg.startswith(Expected) && Arg.size() > len && Arg[len] == '=')
+  if (Arg.starts_with(Expected) && Arg.size() > len && Arg[len] == '=')
     return Arg.data() + len + 1;
 
   return nullptr;
@@ -1333,7 +1342,7 @@ static int ar_main(int argc, char **argv) {
 
   // Get BitMode from enviorment variable "OBJECT_MODE" for AIX OS, if
   // specified.
-  if (object::Archive::getDefaultKindForHost() == object::Archive::K_AIXBIG) {
+  if (object::Archive::getDefaultKind() == object::Archive::K_AIXBIG) {
     BitMode = getBitMode(getenv("OBJECT_MODE"));
     if (BitMode == BitModeTy::Unknown)
       BitMode = BitModeTy::Bit32;
@@ -1378,6 +1387,7 @@ static int ar_main(int argc, char **argv) {
                        .Case("darwin", DARWIN)
                        .Case("bsd", BSD)
                        .Case("bigarchive", BIGARCHIVE)
+                       .Case("coff", COFF)
                        .Default(Unknown);
       if (FormatType == Unknown)
         fail(std::string("Invalid format ") + Match);
@@ -1394,8 +1404,7 @@ static int ar_main(int argc, char **argv) {
       continue;
 
     if (strncmp(*ArgIt, "-X", 2) == 0) {
-      if (object::Archive::getDefaultKindForHost() ==
-          object::Archive::K_AIXBIG) {
+      if (object::Archive::getDefaultKind() == object::Archive::K_AIXBIG) {
         Match = *(*ArgIt + 2) != '\0' ? *ArgIt + 2 : *(++ArgIt);
         BitMode = getBitMode(Match);
         if (BitMode == BitModeTy::Unknown)
@@ -1430,12 +1439,11 @@ static int ranlib_main(int argc, char **argv) {
         } else if (arg.front() == 'h') {
           printHelpMessage();
           return 0;
-        } else if (arg.front() == 'v') {
+        } else if (arg.front() == 'V') {
           cl::PrintVersionMessage();
           return 0;
         } else if (arg.front() == 'X') {
-          if (object::Archive::getDefaultKindForHost() ==
-              object::Archive::K_AIXBIG) {
+          if (object::Archive::getDefaultKind() == object::Archive::K_AIXBIG) {
             HasAIXXOption = true;
             arg.consume_front("X");
             const char *Xarg = arg.data();
@@ -1466,7 +1474,7 @@ static int ranlib_main(int argc, char **argv) {
     }
   }
 
-  if (object::Archive::getDefaultKindForHost() == object::Archive::K_AIXBIG) {
+  if (object::Archive::getDefaultKind() == object::Archive::K_AIXBIG) {
     // If not specify -X option, get BitMode from enviorment variable
     // "OBJECT_MODE" for AIX OS if specify.
     if (!HasAIXXOption) {
@@ -1501,7 +1509,6 @@ static int ranlib_main(int argc, char **argv) {
 }
 
 int llvm_ar_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   ToolName = argv[0];
 
   llvm::InitializeAllTargetInfos();

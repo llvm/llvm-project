@@ -5,12 +5,12 @@
 define <2 x i64> @test1() nounwind {
 ; X86-LABEL: test1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movaps {{.*#+}} xmm0 = [1,0,0,0]
+; X86-NEXT:    movss {{.*#+}} xmm0 = [1,0,0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = [1,0,0,0]
+; X64-NEXT:    movss {{.*#+}} xmm0 = [1,0,0,0]
 ; X64-NEXT:    retq
   ret <2 x i64> < i64 1, i64 0 >
 }

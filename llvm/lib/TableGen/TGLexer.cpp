@@ -346,31 +346,33 @@ tgtok::TokKind TGLexer::LexIdentifier() {
   StringRef Str(IdentStart, CurPtr-IdentStart);
 
   tgtok::TokKind Kind = StringSwitch<tgtok::TokKind>(Str)
-    .Case("int", tgtok::Int)
-    .Case("bit", tgtok::Bit)
-    .Case("bits", tgtok::Bits)
-    .Case("string", tgtok::String)
-    .Case("list", tgtok::List)
-    .Case("code", tgtok::Code)
-    .Case("dag", tgtok::Dag)
-    .Case("class", tgtok::Class)
-    .Case("def", tgtok::Def)
-    .Case("true", tgtok::TrueVal)
-    .Case("false", tgtok::FalseVal)
-    .Case("foreach", tgtok::Foreach)
-    .Case("defm", tgtok::Defm)
-    .Case("defset", tgtok::Defset)
-    .Case("multiclass", tgtok::MultiClass)
-    .Case("field", tgtok::Field)
-    .Case("let", tgtok::Let)
-    .Case("in", tgtok::In)
-    .Case("defvar", tgtok::Defvar)
-    .Case("include", tgtok::Include)
-    .Case("if", tgtok::If)
-    .Case("then", tgtok::Then)
-    .Case("else", tgtok::ElseKW)
-    .Case("assert", tgtok::Assert)
-    .Default(tgtok::Id);
+                            .Case("int", tgtok::Int)
+                            .Case("bit", tgtok::Bit)
+                            .Case("bits", tgtok::Bits)
+                            .Case("string", tgtok::String)
+                            .Case("list", tgtok::List)
+                            .Case("code", tgtok::Code)
+                            .Case("dag", tgtok::Dag)
+                            .Case("class", tgtok::Class)
+                            .Case("def", tgtok::Def)
+                            .Case("true", tgtok::TrueVal)
+                            .Case("false", tgtok::FalseVal)
+                            .Case("foreach", tgtok::Foreach)
+                            .Case("defm", tgtok::Defm)
+                            .Case("defset", tgtok::Defset)
+                            .Case("deftype", tgtok::Deftype)
+                            .Case("multiclass", tgtok::MultiClass)
+                            .Case("field", tgtok::Field)
+                            .Case("let", tgtok::Let)
+                            .Case("in", tgtok::In)
+                            .Case("defvar", tgtok::Defvar)
+                            .Case("include", tgtok::Include)
+                            .Case("if", tgtok::If)
+                            .Case("then", tgtok::Then)
+                            .Case("else", tgtok::ElseKW)
+                            .Case("assert", tgtok::Assert)
+                            .Case("dump", tgtok::Dump)
+                            .Default(tgtok::Id);
 
   // A couple of tokens require special processing.
   switch (Kind) {
@@ -605,6 +607,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("exists", tgtok::XExists)
           .Case("tolower", tgtok::XToLower)
           .Case("toupper", tgtok::XToUpper)
+          .Case("repr", tgtok::XRepr)
           .Default(tgtok::Error);
 
   return Kind != tgtok::Error ? Kind : ReturnError(Start-1, "Unknown operator");
@@ -846,7 +849,8 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
 
   do {
     // Skip all symbols to the line end.
-    prepSkipToLineEnd();
+    while (*CurPtr != '\n')
+      ++CurPtr;
 
     // Find the first non-whitespace symbol in the next line(s).
     if (!prepSkipLineBegin())
@@ -1027,11 +1031,6 @@ bool TGLexer::prepSkipDirectiveEnd() {
   }
 
   return true;
-}
-
-void TGLexer::prepSkipToLineEnd() {
-  while (*CurPtr != '\n' && *CurPtr != '\r' && CurPtr != CurBuf.end())
-    ++CurPtr;
 }
 
 bool TGLexer::prepIsProcessingEnabled() {

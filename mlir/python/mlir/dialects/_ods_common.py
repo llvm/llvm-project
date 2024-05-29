@@ -2,77 +2,37 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Provide a convenient name for sub-packages to resolve the main C-extension
-# with a relative import.
+from typing import (
+    List as _List,
+    Optional as _Optional,
+    Sequence as _Sequence,
+    Tuple as _Tuple,
+    Type as _Type,
+    Union as _Union,
+)
+
 from .._mlir_libs import _mlir as _cext
-from typing import Sequence as _Sequence, Union as _Union
+from ..ir import (
+    ArrayAttr,
+    Attribute,
+    BoolAttr,
+    DenseI64ArrayAttr,
+    IntegerAttr,
+    IntegerType,
+    OpView,
+    Operation,
+    ShapedType,
+    Value,
+)
 
 __all__ = [
     "equally_sized_accessor",
-    "extend_opview_class",
     "get_default_loc_context",
     "get_op_result_or_value",
     "get_op_results_or_values",
+    "get_op_result_or_op_results",
     "segmented_accessor",
 ]
-
-
-def extend_opview_class(ext_module):
-    """Decorator to extend an OpView class from an extension module.
-
-    Extension modules can expose various entry-points:
-      Stand-alone class with the same name as a parent OpView class (i.e.
-      "ReturnOp"). A name-based match is attempted first before falling back
-      to a below mechanism.
-
-      def select_opview_mixin(parent_opview_cls):
-        If defined, allows an appropriate mixin class to be selected dynamically
-        based on the parent OpView class. Should return NotImplemented if a
-        decision is not made.
-
-    Args:
-      ext_module: A module from which to locate extensions. Can be None if not
-        available.
-
-    Returns:
-      A decorator that takes an OpView subclass and further extends it as
-      needed.
-    """
-
-    def class_decorator(parent_opview_cls: type):
-        if ext_module is None:
-            return parent_opview_cls
-        mixin_cls = NotImplemented
-        # First try to resolve by name.
-        try:
-            mixin_cls = getattr(ext_module, parent_opview_cls.__name__)
-        except AttributeError:
-            # Fall back to a select_opview_mixin hook.
-            try:
-                select_mixin = getattr(ext_module, "select_opview_mixin")
-            except AttributeError:
-                pass
-            else:
-                mixin_cls = select_mixin(parent_opview_cls)
-
-        if mixin_cls is NotImplemented or mixin_cls is None:
-            return parent_opview_cls
-
-        # Have a mixin_cls. Create an appropriate subclass.
-        try:
-
-            class LocalOpView(mixin_cls, parent_opview_cls):
-                pass
-
-        except TypeError as e:
-            raise TypeError(
-                f"Could not mixin {mixin_cls} into {parent_opview_cls}"
-            ) from e
-        LocalOpView.__name__ = parent_opview_cls.__name__
-        LocalOpView.__qualname__ = parent_opview_cls.__qualname__
-        return LocalOpView
-
-    return class_decorator
 
 
 def segmented_accessor(elements, raw_segments, idx):
@@ -167,3 +127,175 @@ def get_op_results_or_values(
         return arg.results
     else:
         return [get_op_result_or_value(element) for element in arg]
+
+
+def get_op_result_or_op_results(
+    op: _Union[_cext.ir.OpView, _cext.ir.Operation],
+) -> _Union[_cext.ir.Operation, _cext.ir.OpResult, _Sequence[_cext.ir.OpResult]]:
+    if isinstance(op, _cext.ir.OpView):
+        op = op.operation
+    return (
+        list(get_op_results_or_values(op))
+        if len(op.results) > 1
+        else get_op_result_or_value(op)
+        if len(op.results) > 0
+        else op
+    )
+
+ResultValueTypeTuple = _cext.ir.Operation, _cext.ir.OpView, _cext.ir.Value
+ResultValueT = _Union[ResultValueTypeTuple]
+VariadicResultValueT = _Union[ResultValueT, _Sequence[ResultValueT]]
+
+StaticIntLike = _Union[int, IntegerAttr]
+ValueLike = _Union[Operation, OpView, Value]
+MixedInt = _Union[StaticIntLike, ValueLike]
+
+IntOrAttrList = _Sequence[_Union[IntegerAttr, int]]
+OptionalIntList = _Optional[_Union[ArrayAttr, IntOrAttrList]]
+
+BoolOrAttrList = _Sequence[_Union[BoolAttr, bool]]
+OptionalBoolList = _Optional[_Union[ArrayAttr, BoolOrAttrList]]
+
+MixedValues = _Union[_Sequence[_Union[StaticIntLike, ValueLike]], ArrayAttr, ValueLike]
+
+DynamicIndexList = _Sequence[_Union[MixedInt, _Sequence[MixedInt]]]
+
+
+def _dispatch_dynamic_index_list(
+    indices: _Union[DynamicIndexList, ArrayAttr],
+) -> _Tuple[_List[ValueLike], _Union[_List[int], ArrayAttr], _List[bool]]:
+    """Dispatches a list of indices to the appropriate form.
+
+    This is similar to the custom `DynamicIndexList` directive upstream:
+    provided indices may be in the form of dynamic SSA values or static values,
+    and they may be scalable (i.e., as a singleton list) or not. This function
+    dispatches each index into its respective form. It also extracts the SSA
+    values and static indices from various similar structures, respectively.
+    """
+    dynamic_indices = []
+    static_indices = [ShapedType.get_dynamic_size()] * len(indices)
+    scalable_indices = [False] * len(indices)
+
+    # ArrayAttr: Extract index values.
+    if isinstance(indices, ArrayAttr):
+        indices = [idx for idx in indices]
+
+    def process_nonscalable_index(i, index):
+        """Processes any form of non-scalable index.
+
+        Returns False if the given index was scalable and thus remains
+        unprocessed; True otherwise.
+        """
+        if isinstance(index, int):
+            static_indices[i] = index
+        elif isinstance(index, IntegerAttr):
+            static_indices[i] = index.value  # pytype: disable=attribute-error
+        elif isinstance(index, (Operation, Value, OpView)):
+            dynamic_indices.append(index)
+        else:
+            return False
+        return True
+
+    # Process each index at a time.
+    for i, index in enumerate(indices):
+        if not process_nonscalable_index(i, index):
+            # If it wasn't processed, it must be a scalable index, which is
+            # provided as a _Sequence of one value, so extract and process that.
+            scalable_indices[i] = True
+            assert len(index) == 1
+            ret = process_nonscalable_index(i, index[0])
+            assert ret
+
+    return dynamic_indices, static_indices, scalable_indices
+
+
+# Dispatches `MixedValues` that all represents integers in various forms into
+# the following three categories:
+#   - `dynamic_values`: a list of `Value`s, potentially from op results;
+#   - `packed_values`: a value handle, potentially from an op result, associated
+#                      to one or more payload operations of integer type;
+#   - `static_values`: an `ArrayAttr` of `i64`s with static values, from Python
+#                      `int`s, from `IntegerAttr`s, or from an `ArrayAttr`.
+# The input is in the form for `packed_values`, only that result is set and the
+# other two are empty. Otherwise, the input can be a mix of the other two forms,
+# and for each dynamic value, a special value is added to the `static_values`.
+def _dispatch_mixed_values(
+    values: MixedValues,
+) -> _Tuple[_List[Value], _Union[Operation, Value, OpView], DenseI64ArrayAttr]:
+    dynamic_values = []
+    packed_values = None
+    static_values = None
+    if isinstance(values, ArrayAttr):
+        static_values = values
+    elif isinstance(values, (Operation, Value, OpView)):
+        packed_values = values
+    else:
+        static_values = []
+        for size in values or []:
+            if isinstance(size, int):
+                static_values.append(size)
+            else:
+                static_values.append(ShapedType.get_dynamic_size())
+                dynamic_values.append(size)
+        static_values = DenseI64ArrayAttr.get(static_values)
+
+    return (dynamic_values, packed_values, static_values)
+
+
+def _get_value_or_attribute_value(
+    value_or_attr: _Union[any, Attribute, ArrayAttr]
+) -> any:
+    if isinstance(value_or_attr, Attribute) and hasattr(value_or_attr, "value"):
+        return value_or_attr.value
+    if isinstance(value_or_attr, ArrayAttr):
+        return _get_value_list(value_or_attr)
+    return value_or_attr
+
+
+def _get_value_list(
+    sequence_or_array_attr: _Union[_Sequence[any], ArrayAttr]
+) -> _Sequence[any]:
+    return [_get_value_or_attribute_value(v) for v in sequence_or_array_attr]
+
+
+def _get_int_array_attr(
+    values: _Optional[_Union[ArrayAttr, IntOrAttrList]]
+) -> ArrayAttr:
+    if values is None:
+        return None
+
+    # Turn into a Python list of Python ints.
+    values = _get_value_list(values)
+
+    # Make an ArrayAttr of IntegerAttrs out of it.
+    return ArrayAttr.get(
+        [IntegerAttr.get(IntegerType.get_signless(64), v) for v in values]
+    )
+
+
+def _get_int_array_array_attr(
+    values: _Optional[_Union[ArrayAttr, _Sequence[_Union[ArrayAttr, IntOrAttrList]]]]
+) -> ArrayAttr:
+    """Creates an ArrayAttr of ArrayAttrs of IntegerAttrs.
+
+    The input has to be a collection of a collection of integers, where any
+    Python _Sequence and ArrayAttr are admissible collections and Python ints and
+    any IntegerAttr are admissible integers. Both levels of collections are
+    turned into ArrayAttr; the inner level is turned into IntegerAttrs of i64s.
+    If the input is None, an empty ArrayAttr is returned.
+    """
+    if values is None:
+        return None
+
+    # Make sure the outer level is a list.
+    values = _get_value_list(values)
+
+    # The inner level is now either invalid or a mixed sequence of ArrayAttrs and
+    # Sequences. Make sure the nested values are all lists.
+    values = [_get_value_list(nested) for nested in values]
+
+    # Turn each nested list into an ArrayAttr.
+    values = [_get_int_array_attr(nested) for nested in values]
+
+    # Turn the outer list into an ArrayAttr.
+    return ArrayAttr.get(values)

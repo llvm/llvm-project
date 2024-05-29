@@ -59,6 +59,18 @@ define i32 @test3(i32 %x, i32 %bit) {
   ret i32 %res
 }
 
+; Test that disjoint allow reassociation.
+define i32 @test4(i32 %a, i32 %b) {
+; CHECK-LABEL: @test4(
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C_PLUS_ONE:%.*]] = add i32 [[C]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[C_PLUS_ONE]]
+;
+  %c = or disjoint i32 %a, %b
+  %c.plus.one = add i32 %c, 1
+  ret i32 %c.plus.one
+}
+
 declare i32 @llvm.ctlz.i32(i32, i1 immarg) #2
 
 !0 = !{i32 0, i32 33}

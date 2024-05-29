@@ -11,7 +11,7 @@
 // namespace regex_constants
 // {
 //
-// emum match_flag_type  // bitmask type
+// enum match_flag_type  // bitmask type
 // {
 //     match_default     = 0,
 //     match_not_bol     = unspecified,

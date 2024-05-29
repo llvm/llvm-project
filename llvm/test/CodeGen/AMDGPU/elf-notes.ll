@@ -7,7 +7,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx802 < %s | FileCheck --check-prefix=OSABI-PAL %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=iceland < %s | FileCheck --check-prefix=OSABI-PAL %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx802 -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-PAL-ELF %s
-; RUN: llc -march=r600 < %s | FileCheck --check-prefix=R600 %s
+; RUN: llc -mtriple=r600 < %s | FileCheck --check-prefix=R600 %s
 
 ; OSABI-UNK-NOT: .hsa_code_object_version
 ; OSABI-UNK-NOT: .hsa_code_object_isa
@@ -85,4 +85,4 @@ define amdgpu_kernel void @elf_notes() {
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

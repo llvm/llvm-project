@@ -83,7 +83,7 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
   StringRef ContainerText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(MatchedDecl->getSourceRange()),
       *Result.SourceManager, getLangOpts());
-  if (ContainerText.startswith("std::"))
+  if (ContainerText.starts_with("std::"))
     NewName = "std::" + NewName;
 
   Diag << FixItHint::CreateRemoval(MatchedDecl->getSourceRange());

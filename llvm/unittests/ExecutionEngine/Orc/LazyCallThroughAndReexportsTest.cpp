@@ -46,7 +46,7 @@ TEST_F(LazyReexportsTest, BasicLocalCallThroughManagerOperation) {
         cantFail(R->notifyResolved({{DummyTarget,
                                      {ExecutorAddr::fromPtr(&dummyTarget),
                                       JITSymbolFlags::Exported}}}));
-        cantFail(R->notifyEmitted());
+        cantFail(R->notifyEmitted({}));
       })));
 
   unsigned NotifyResolvedCount = 0;

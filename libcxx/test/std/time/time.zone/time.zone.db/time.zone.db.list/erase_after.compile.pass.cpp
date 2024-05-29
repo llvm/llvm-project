@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
-// XFAIL: libcpp-has-no-incomplete-tzdb
+// XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
 // <chrono>
@@ -22,7 +22,7 @@
 //   Preconditions: The iterator following p is dereferenceable.
 //
 // Since there is no Standard way to create a second entry it's not
-// possible to fullfill this precondition. This is tested in a libc++
+// possible to fulfill this precondition. This is tested in a libc++
 // specific test.
 
 #include <chrono>

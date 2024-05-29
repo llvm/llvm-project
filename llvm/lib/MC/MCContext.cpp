@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCContext.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -148,6 +147,7 @@ void MCContext::reset() {
   XCOFFAllocator.DestroyAll();
   MCInstAllocator.DestroyAll();
   SPIRVAllocator.DestroyAll();
+  WasmSignatureAllocator.DestroyAll();
 
   MCSubtargetAllocator.DestroyAll();
   InlineAsmUsedLabelNames.clear();
@@ -272,7 +272,7 @@ MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
   // label, if used.
   bool IsTemporary = CanBeUnnamed;
   if (AllowTemporaryLabels && !IsTemporary)
-    IsTemporary = Name.startswith(MAI->getPrivateGlobalPrefix());
+    IsTemporary = Name.starts_with(MAI->getPrivateGlobalPrefix());
 
   SmallString<128> NewName = Name;
   bool AddSuffix = AlwaysAddSuffix;
@@ -376,6 +376,10 @@ void MCContext::registerInlineAsmLabel(MCSymbol *Sym) {
   InlineAsmUsedLabelNames[Sym->getName()] = Sym;
 }
 
+wasm::WasmSignature *MCContext::createWasmSignature() {
+  return new (WasmSignatureAllocator.Allocate()) wasm::WasmSignature;
+}
+
 MCSymbolXCOFF *
 MCContext::createXCOFFSymbolImpl(const StringMapEntry<bool> *Name,
                                  bool IsTemporary) {
@@ -383,8 +387,8 @@ MCContext::createXCOFFSymbolImpl(const StringMapEntry<bool> *Name,
     return new (nullptr, *this) MCSymbolXCOFF(nullptr, IsTemporary);
 
   StringRef OriginalName = Name->first();
-  if (OriginalName.startswith("._Renamed..") ||
-      OriginalName.startswith("_Renamed.."))
+  if (OriginalName.starts_with("._Renamed..") ||
+      OriginalName.starts_with("_Renamed.."))
     reportError(SMLoc(), "invalid symbol name from source");
 
   if (MAI->isValidUnquotedName(OriginalName))
@@ -398,7 +402,7 @@ MCContext::createXCOFFSymbolImpl(const StringMapEntry<bool> *Name,
   // If it's an entry point symbol, we will keep the '.'
   // in front for the convention purpose. Otherwise, add "_Renamed.."
   // as prefix to signal this is an renamed symbol.
-  const bool IsEntryPoint = !InvalidName.empty() && InvalidName[0] == '.';
+  const bool IsEntryPoint = InvalidName.starts_with(".");
   SmallString<128> ValidName =
       StringRef(IsEntryPoint ? "._Renamed.." : "_Renamed..");
 
@@ -616,21 +620,26 @@ void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
                                               unsigned Flags, unsigned UniqueID,
                                               unsigned EntrySize) {
   bool IsMergeable = Flags & ELF::SHF_MERGE;
-  if (UniqueID == GenericSectionID)
+  if (UniqueID == GenericSectionID) {
     ELFSeenGenericMergeableSections.insert(SectionName);
+    // Minor performance optimization: avoid hash map lookup in
+    // isELFGenericMergeableSection, which will return true for SectionName.
+    IsMergeable = true;
+  }
 
   // For mergeable sections or non-mergeable sections with a generic mergeable
   // section name we enter their Unique ID into the ELFEntrySizeMap so that
   // compatible globals can be assigned to the same section.
+
   if (IsMergeable || isELFGenericMergeableSection(SectionName)) {
     ELFEntrySizeMap.insert(std::make_pair(
-        ELFEntrySizeKey{SectionName, Flags, EntrySize}, UniqueID));
+        std::make_tuple(SectionName, Flags, EntrySize), UniqueID));
   }
 }
 
 bool MCContext::isELFImplicitMergeableSectionNamePrefix(StringRef SectionName) {
-  return SectionName.startswith(".rodata.str") ||
-         SectionName.startswith(".rodata.cst");
+  return SectionName.starts_with(".rodata.str") ||
+         SectionName.starts_with(".rodata.cst");
 }
 
 bool MCContext::isELFGenericMergeableSection(StringRef SectionName) {
@@ -641,8 +650,7 @@ bool MCContext::isELFGenericMergeableSection(StringRef SectionName) {
 std::optional<unsigned>
 MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                                     unsigned EntrySize) {
-  auto I = ELFEntrySizeMap.find(
-      MCContext::ELFEntrySizeKey{SectionName, Flags, EntrySize});
+  auto I = ELFEntrySizeMap.find(std::make_tuple(SectionName, Flags, EntrySize));
   return (I != ELFEntrySizeMap.end()) ? std::optional<unsigned>(I->second)
                                       : std::nullopt;
 }
@@ -651,10 +659,16 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
                                          MCSection *Parent,
                                          const MCExpr *SubsectionId) {
   // Do the lookup. If we don't have a hit, return a new section.
-  auto &GOFFSection = GOFFUniquingMap[Section.str()];
-  if (!GOFFSection)
-    GOFFSection = new (GOFFAllocator.Allocate())
-        MCSectionGOFF(Section, Kind, Parent, SubsectionId);
+  auto IterBool =
+      GOFFUniquingMap.insert(std::make_pair(Section.str(), nullptr));
+  auto Iter = IterBool.first;
+  if (!IterBool.second)
+    return Iter->second;
+
+  StringRef CachedName = Iter->first;
+  MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
+      MCSectionGOFF(CachedName, Kind, Parent, SubsectionId);
+  Iter->second = GOFFSection;
 
   return GOFFSection;
 }

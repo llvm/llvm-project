@@ -72,7 +72,8 @@ BinarySection::hash(const BinaryData &BD,
 
 void BinarySection::emitAsData(MCStreamer &Streamer,
                                const Twine &SectionName) const {
-  StringRef SectionContents = getContents();
+  StringRef SectionContents =
+      isFinalized() ? getOutputContents() : getContents();
   MCSectionELF *ELFSection =
       BC.Ctx->getELFSection(SectionName, getELFType(), getELFFlags());
 
@@ -189,18 +190,7 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
   clearList(PendingRelocations);
 }
 
-BinarySection::~BinarySection() {
-  if (isReordered()) {
-    delete[] getData();
-    return;
-  }
-
-  if (!isAllocatable() && !hasValidSectionID() &&
-      (!hasSectionRef() ||
-       OutputContents.data() != getContents(Section).data())) {
-    delete[] getOutputData();
-  }
-}
+BinarySection::~BinarySection() { updateContents(nullptr, 0); }
 
 void BinarySection::clearRelocations() { clearList(Relocations); }
 
@@ -227,7 +217,7 @@ void BinarySection::print(raw_ostream &OS) const {
 BinarySection::RelocationSetType
 BinarySection::reorderRelocations(bool Inplace) const {
   assert(PendingRelocations.empty() &&
-         "reodering pending relocations not supported");
+         "reordering pending relocations not supported");
   RelocationSetType NewRelocations;
   for (const Relocation &Rel : relocations()) {
     uint64_t RelAddr = Rel.Offset + getAddress();

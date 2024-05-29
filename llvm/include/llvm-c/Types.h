@@ -133,6 +133,11 @@ typedef struct LLVMOpaquePassManager *LLVMPassManagerRef;
 typedef struct LLVMOpaqueUse *LLVMUseRef;
 
 /**
+ * @see llvm::OperandBundleDef
+ */
+typedef struct LLVMOpaqueOperandBundle *LLVMOperandBundleRef;
+
+/**
  * Used to represent an attributes.
  *
  * @see llvm::Attribute
@@ -163,6 +168,11 @@ typedef struct LLVMOpaqueJITEventListener *LLVMJITEventListenerRef;
  * @see llvm::object::Binary
  */
 typedef struct LLVMOpaqueBinary *LLVMBinaryRef;
+
+/**
+ * @see llvm::DbgRecord
+ */
+typedef struct LLVMOpaqueDbgRecord *LLVMDbgRecordRef;
 
 /**
  * @}

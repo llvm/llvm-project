@@ -1,6 +1,27 @@
-// RUN: %clang_cc1 -triple loongarch64 -emit-llvm -S -verify %s -o /dev/null
+// RUN: %clang_cc1 -triple loongarch64 -emit-llvm -verify %s -o /dev/null
+// RUN: not %clang_cc1 -triple loongarch64 -DFEATURE_CHECK -emit-llvm %s -o /dev/null 2>&1 \
+// RUN:   | FileCheck %s
 
 #include <larchintrin.h>
+
+#ifdef FEATURE_CHECK
+void test_feature(unsigned long *v_ul, int *v_i, float a, double b) {
+// CHECK: error: '__builtin_loongarch_cacop_w' needs target feature 32bit
+  __builtin_loongarch_cacop_w(1, v_ul[0], 1024);
+// CHECK: error: '__builtin_loongarch_movfcsr2gr' needs target feature f
+  v_i[0] = __builtin_loongarch_movfcsr2gr(1);
+// CHECK: error: '__builtin_loongarch_movgr2fcsr' needs target feature f
+  __builtin_loongarch_movgr2fcsr(1, v_i[1]);
+// CHECK: error: '__builtin_loongarch_frecipe_s' needs target feature f,frecipe
+  float f1 = __builtin_loongarch_frecipe_s(a);
+// CHECK: error: '__builtin_loongarch_frsqrte_s' needs target feature f,frecipe
+  float f2 = __builtin_loongarch_frsqrte_s(a);
+// CHECK: error: '__builtin_loongarch_frecipe_d' needs target feature d,frecipe
+  double d1 = __builtin_loongarch_frecipe_d(b);
+// CHECK: error: '__builtin_loongarch_frsqrte_d' needs target feature d,frecipe
+  double d2 = __builtin_loongarch_frsqrte_d(b);
+}
+#endif
 
 void csrrd_d(int a) {
   __builtin_loongarch_csrrd_d(16384); // expected-error {{argument value 16384 is outside the valid range [0, 16383]}}

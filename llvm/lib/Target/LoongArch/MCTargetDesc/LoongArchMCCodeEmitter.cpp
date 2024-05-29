@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
 
@@ -120,12 +121,15 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const {
   assert(MO.isExpr() && "getExprOpValue expects only expressions");
+  bool RelaxCandidate = false;
+  bool EnableRelax = STI.hasFeature(LoongArch::FeatureRelax);
   const MCExpr *Expr = MO.getExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
   LoongArch::Fixups FixupKind = LoongArch::fixup_loongarch_invalid;
   if (Kind == MCExpr::Target) {
     const LoongArchMCExpr *LAExpr = cast<LoongArchMCExpr>(Expr);
 
+    RelaxCandidate = LAExpr->getRelaxHint();
     switch (LAExpr->getKind()) {
     case LoongArchMCExpr::VK_LoongArch_None:
     case LoongArchMCExpr::VK_LoongArch_Invalid:
@@ -237,6 +241,39 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case LoongArchMCExpr::VK_LoongArch_TLS_GD_HI20:
       FixupKind = LoongArch::fixup_loongarch_tls_gd_hi20;
       break;
+    case LoongArchMCExpr::VK_LoongArch_CALL36:
+      FixupKind = LoongArch::fixup_loongarch_call36;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_pc_hi20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_pc_lo12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_LO20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_pc_lo20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_HI12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_pc_hi12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_HI20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_hi20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_LO12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_lo12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_LO20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_lo20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_HI12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_hi12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_ld;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_call;
+      break;
     }
   } else if (Kind == MCExpr::SymbolRef &&
              cast<MCSymbolRefExpr>(Expr)->getKind() ==
@@ -259,6 +296,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
       FixupKind = LoongArch::fixup_loongarch_b21;
       break;
     case LoongArch::B:
+    case LoongArch::BL:
       FixupKind = LoongArch::fixup_loongarch_b26;
       break;
     }
@@ -269,6 +307,15 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
 
   Fixups.push_back(
       MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
+
+  // Emit an R_LARCH_RELAX if linker relaxation is enabled and LAExpr has relax
+  // hint.
+  if (EnableRelax && RelaxCandidate) {
+    const MCConstantExpr *Dummy = MCConstantExpr::create(0, Ctx);
+    Fixups.push_back(MCFixup::create(
+        0, Dummy, MCFixupKind(LoongArch::fixup_loongarch_relax), MI.getLoc()));
+  }
+
   return 0;
 }
 
@@ -296,7 +343,7 @@ void LoongArchMCCodeEmitter::expandToVectorLDI(
   }
   MCInst TmpInst = MCInstBuilder(Opc).addOperand(MI.getOperand(0)).addImm(Imm);
   uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-  support::endian::write(CB, Binary, support::little);
+  support::endian::write(CB, Binary, llvm::endianness::little);
 }
 
 void LoongArchMCCodeEmitter::encodeInstruction(
@@ -326,7 +373,7 @@ void LoongArchMCCodeEmitter::encodeInstruction(
     llvm_unreachable("Unhandled encodeInstruction length!");
   case 4: {
     uint32_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-    support::endian::write(CB, Bits, support::little);
+    support::endian::write(CB, Bits, llvm::endianness::little);
     break;
   }
   }

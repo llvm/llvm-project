@@ -341,3 +341,39 @@ entry:
   store i32 %i, ptr addrspace(272) %s, align 8
   ret void
 }
+
+define i64 @test_load_sptr32_zext_i64(ptr addrspace(270) %i) {
+; ALL-LABEL: test_load_sptr32_zext_i64:
+; ALL:       # %bb.0: # %entry
+; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ALL-NEXT:    movl (%eax), %eax
+; ALL-NEXT:    xorl %edx, %edx
+; ALL-NEXT:    retl
+entry:
+  %0 = load i32, ptr addrspace(270) %i, align 4
+  %1 = zext i32 %0 to i64
+  ret i64 %1
+}
+
+define void @test_store_sptr32_trunc_i1(ptr addrspace(270) %s, i32 %i) {
+; CHECK-LABEL: test_store_sptr32_trunc_i1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    andl $1, %ecx
+; CHECK-NEXT:    movb %cl, (%eax)
+; CHECK-NEXT:    retl
+;
+; CHECK-O0-LABEL: test_store_sptr32_trunc_i1:
+; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    andl $1, %ecx
+; CHECK-O0-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-O0-NEXT:    movb %cl, (%eax)
+; CHECK-O0-NEXT:    retl
+entry:
+  %0 = trunc i32 %i to i1
+  store i1 %0, ptr addrspace(270) %s
+  ret void
+}

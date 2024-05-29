@@ -20,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+
 using namespace llvm;
 
 namespace {
@@ -149,8 +150,8 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
 
   // Don't add byte count suffixes when '\01' or '?' are in the first
   // character.
-  if (Name.startswith("\01") ||
-      (DL.doNotMangleLeadingQuestionMark() && Name.startswith("?")))
+  if (Name.starts_with("\01") ||
+      (DL.doNotMangleLeadingQuestionMark() && Name.starts_with("?")))
     MSFunc = nullptr;
 
   CallingConv::ID CC =
@@ -192,7 +193,7 @@ void Mangler::getNameWithPrefix(SmallVectorImpl<char> &OutName,
 
 // Check if the name needs quotes to be safe for the linker to interpret.
 static bool canBeUnquotedInDirective(char C) {
-  return isAlnum(C) || C == '_' || C == '@';
+  return isAlnum(C) || C == '_' || C == '@' || C == '#';
 }
 
 static bool canBeUnquotedInDirective(StringRef Name) {
@@ -232,6 +233,16 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
         OS << Flag;
     } else {
       Mangler.getNameWithPrefix(OS, GV, false);
+    }
+    if (TT.isWindowsArm64EC()) {
+      // Use EXPORTAS for mangled ARM64EC symbols.
+      // FIXME: During LTO, we're invoked prior to the EC lowering pass,
+      // so symbols are not yet mangled. Emitting the unmangled name
+      // typically functions correctly; the linker can resolve the export
+      // with the demangled alias.
+      if (std::optional<std::string> demangledName =
+              getArm64ECDemangledFunctionName(GV->getName()))
+        OS << ",EXPORTAS," << *demangledName;
     }
     if (NeedQuotes)
       OS << "\"";
@@ -279,3 +290,42 @@ void llvm::emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
     OS << "\"";
 }
 
+std::optional<std::string> llvm::getArm64ECMangledFunctionName(StringRef Name) {
+  bool IsCppFn = Name[0] == '?';
+  if (IsCppFn && Name.contains("$$h"))
+    return std::nullopt;
+  if (!IsCppFn && Name[0] == '#')
+    return std::nullopt;
+
+  StringRef Prefix = "$$h";
+  size_t InsertIdx = 0;
+  if (IsCppFn) {
+    InsertIdx = Name.find("@@");
+    size_t ThreeAtSignsIdx = Name.find("@@@");
+    if (InsertIdx != std::string::npos && InsertIdx != ThreeAtSignsIdx) {
+      InsertIdx += 2;
+    } else {
+      InsertIdx = Name.find("@");
+      if (InsertIdx != std::string::npos)
+        InsertIdx++;
+    }
+  } else {
+    Prefix = "#";
+  }
+
+  return std::optional<std::string>(
+      (Name.substr(0, InsertIdx) + Prefix + Name.substr(InsertIdx)).str());
+}
+
+std::optional<std::string>
+llvm::getArm64ECDemangledFunctionName(StringRef Name) {
+  if (Name[0] == '#')
+    return std::optional<std::string>(Name.substr(1));
+  if (Name[0] != '?')
+    return std::nullopt;
+
+  std::pair<StringRef, StringRef> Pair = Name.split("$$h");
+  if (Pair.second.empty())
+    return std::nullopt;
+  return std::optional<std::string>((Pair.first + Pair.second).str());
+}

@@ -24,3 +24,19 @@ add_libc_fuzzer(
     libc.src.string.strstr
     libc.src.string.strlen
 )
+
+add_libc_fuzzer(
+  memcmp_fuzz
+  SRCS
+    memcmp_fuzz.cpp
+  DEPENDS
+    libc.src.string.memcmp
+)
+
+add_libc_fuzzer(
+  bcmp_fuzz
+  SRCS
+    bcmp_fuzz.cpp
+  DEPENDS
+    libc.src.string.bcmp
+)

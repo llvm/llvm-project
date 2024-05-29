@@ -478,7 +478,7 @@ def MVE_URSHR : MVE_ScalarShiftSRegImm<"urshr", 0b01>;
 
 class MVE_ScalarShiftSRegReg<string iname, bits<2> op5_4>
   : MVE_ScalarShiftSingleReg<iname, (ins rGPR:$RdaSrc, rGPR:$Rm),
-                     "$RdaSrc, $Rm", "$RdaDest = $RdaSrc",
+                     "$RdaSrc, $Rm", "@earlyclobber $RdaDest,$RdaDest = $RdaSrc",
                      [(set rGPR:$RdaDest,
                          (i32 (!cast<Intrinsic>("int_arm_mve_" # iname)
                                    (i32 rGPR:$RdaSrc), (i32 rGPR:$Rm))))]> {

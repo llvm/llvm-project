@@ -28,17 +28,17 @@ void *worker(void *main) {
 }
 
 void atfork() {
-  barrier_wait(&barrier);
-  barrier_wait(&barrier);
   write(2, "in atfork\n", strlen("in atfork\n"));
+  barrier_wait(&barrier);
+  barrier_wait(&barrier);
   static volatile long a;
   __atomic_fetch_add(&a, 1, __ATOMIC_RELEASE);
 }
 
 void afterfork() {
-  barrier_wait(&barrier);
-  barrier_wait(&barrier);
   write(2, "in afterfork\n", strlen("in afterfork\n"));
+  barrier_wait(&barrier);
+  barrier_wait(&barrier);
   static volatile long a;
   __atomic_fetch_add(&a, 1, __ATOMIC_RELEASE);
 }

@@ -151,7 +151,7 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
   Register InitialRegister =
       MF.getSubtarget().getFrameLowering()->getInitialCFARegister(MF);
   InitialRegister = TRI.getDwarfRegNum(InitialRegister, true);
-  unsigned NumRegs = TRI.getNumRegs();
+  unsigned NumRegs = TRI.getNumSupportedRegs(MF);
 
   // Initialize MBBMap.
   for (MachineBasicBlock &MBB : MF) {
@@ -181,7 +181,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
   MachineFunction *MF = MBBInfo.MBB->getParent();
   const std::vector<MCCFIInstruction> &Instrs = MF->getFrameInstructions();
   const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
-  unsigned NumRegs = TRI.getNumRegs();
+  unsigned NumRegs = TRI.getNumSupportedRegs(*MF);
   BitVector CSRSaved(NumRegs), CSRRestored(NumRegs);
 
   // Determine cfa offset and register set by the block.

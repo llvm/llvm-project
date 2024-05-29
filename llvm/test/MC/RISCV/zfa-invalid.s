@@ -1,5 +1,5 @@
-# RUN: not llvm-mc -triple riscv64 -mattr=+experimental-zfa,+d,+zfh < %s 2>&1 | FileCheck -check-prefixes=CHECK-NO-RV32 %s
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-zfa,+d,+zfh < %s 2>&1 | FileCheck -check-prefixes=CHECK-NO-RV64 %s
+# RUN: not llvm-mc -triple riscv64 -mattr=+zfa,+d,+zfh < %s 2>&1 | FileCheck -check-prefixes=CHECK-NO-RV32 %s
+# RUN: not llvm-mc -triple riscv32 -mattr=+zfa,+d,+zfh < %s 2>&1 | FileCheck -check-prefixes=CHECK-NO-RV64 %s
 
 # Invalid rounding modes
 # CHECK-NO-RV64: error: operand must be 'rtz' floating-point rounding mode

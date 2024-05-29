@@ -114,6 +114,7 @@ def get_unranked_memref_descriptor(nparray):
     d.descriptor = ctypes.cast(ctypes.pointer(x), ctypes.c_void_p)
     return d
 
+
 def move_aligned_ptr_by_offset(aligned_ptr, offset):
     """Moves the supplied ctypes pointer ahead by `offset` elements."""
     aligned_addr = ctypes.addressof(aligned_ptr.contents)
@@ -121,6 +122,7 @@ def move_aligned_ptr_by_offset(aligned_ptr, offset):
     shift = offset * elem_size
     content_ptr = ctypes.cast(aligned_addr + shift, type(aligned_ptr))
     return content_ptr
+
 
 def unranked_memref_to_numpy(unranked_memref, np_dtype):
     """Converts unranked memrefs to numpy arrays."""
@@ -139,10 +141,10 @@ def unranked_memref_to_numpy(unranked_memref, np_dtype):
 
 def ranked_memref_to_numpy(ranked_memref):
     """Converts ranked memrefs to numpy arrays."""
-    content_ptr = move_aligned_ptr_by_offset(ranked_memref[0].aligned, ranked_memref[0].offset)
-    np_arr = np.ctypeslib.as_array(
-        content_ptr, shape=ranked_memref[0].shape
+    content_ptr = move_aligned_ptr_by_offset(
+        ranked_memref[0].aligned, ranked_memref[0].offset
     )
+    np_arr = np.ctypeslib.as_array(content_ptr, shape=ranked_memref[0].shape)
     strided_arr = np.lib.stride_tricks.as_strided(
         np_arr,
         np.ctypeslib.as_array(ranked_memref[0].shape),

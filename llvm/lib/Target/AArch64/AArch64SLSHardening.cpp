@@ -14,8 +14,6 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/IndirectThunks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -214,7 +212,7 @@ bool SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
 void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
   // FIXME: How to better communicate Register number, rather than through
   // name and lookup table?
-  assert(MF.getName().startswith(getThunkPrefix()));
+  assert(MF.getName().starts_with(getThunkPrefix()));
   auto ThunkIt = llvm::find_if(
       SLSBLRThunks, [&MF](auto T) { return T.Name == MF.getName(); });
   assert(ThunkIt != std::end(SLSBLRThunks));
@@ -222,7 +220,20 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
 
   const TargetInstrInfo *TII =
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
-  assert (MF.size() == 1);
+
+  // Depending on whether this pass is in the same FunctionPassManager as the
+  // IR->MIR conversion, the thunk may be completely empty, or contain a single
+  // basic block with a single return instruction. Normalise it to contain a
+  // single empty basic block.
+  if (MF.size() == 1) {
+    assert(MF.front().size() == 1);
+    assert(MF.front().front().getOpcode() == AArch64::RET);
+    MF.front().erase(MF.front().begin());
+  } else {
+    assert(MF.size() == 0);
+    MF.push_back(MF.CreateMachineBasicBlock());
+  }
+
   MachineBasicBlock *Entry = &MF.front();
   Entry->clear();
 
@@ -414,20 +425,15 @@ public:
 private:
   std::tuple<SLSBLRThunkInserter> TIs;
 
-  // FIXME: When LLVM moves to C++17, these can become folds
   template <typename... ThunkInserterT>
   static void initTIs(Module &M,
                       std::tuple<ThunkInserterT...> &ThunkInserters) {
-    (void)std::initializer_list<int>{
-        (std::get<ThunkInserterT>(ThunkInserters).init(M), 0)...};
+    (..., std::get<ThunkInserterT>(ThunkInserters).init(M));
   }
   template <typename... ThunkInserterT>
   static bool runTIs(MachineModuleInfo &MMI, MachineFunction &MF,
                      std::tuple<ThunkInserterT...> &ThunkInserters) {
-    bool Modified = false;
-    (void)std::initializer_list<int>{
-        Modified |= std::get<ThunkInserterT>(ThunkInserters).run(MMI, MF)...};
-    return Modified;
+    return (0 | ... | std::get<ThunkInserterT>(ThunkInserters).run(MMI, MF));
   }
 };
 

@@ -6,13 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
 namespace {
+
+struct DumpNotifications : public OpBuilder::Listener {
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
+    llvm::outs() << "notifyOperationInserted: " << op->getName() << "\n";
+  }
+};
 
 /// This is a test pass which clones the body of a function. Specifically
 /// this pass replaces f(x) to instead return f(f(x)) in which the cloned body
@@ -50,6 +57,8 @@ struct ClonePass
     }
 
     OpBuilder builder(op->getContext());
+    DumpNotifications dumpNotifications;
+    builder.setListener(&dumpNotifications);
     builder.setInsertionPointToEnd(&regionEntry);
     SmallVector<Operation *> toClone;
     for (Operation &inst : regionEntry)

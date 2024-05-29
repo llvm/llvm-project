@@ -1,5 +1,8 @@
 set(LLVM_LINK_COMPONENTS
 Passes
+AllTargetsCodeGens
+AllTargetsDescs
+AllTargetsInfos
 TargetParser
 )
 
@@ -13,6 +16,8 @@ get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
 target_link_libraries(bbc PRIVATE
+CUFAttrs
+CUFDialect
 FIRDialect
 FIRDialectSupport
 FIRSupport

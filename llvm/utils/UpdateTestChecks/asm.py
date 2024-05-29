@@ -51,7 +51,8 @@ ASM_FUNCTION_AARCH64_RE = re.compile(
 )
 
 ASM_FUNCTION_AMDGPU_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*;+[ \t]*@"?(?P=func)"?\n[^:]*?'
+    r"\.type\s+_?(?P<func>[^,\n]+),@function\n"
+    r'^_?(?P=func):(?:[ \t]*;+[ \t]*@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"  # (body of the function)
     # This list is incomplete
     r"^\s*(\.Lfunc_end[0-9]+:\n|\.section)",
@@ -552,6 +553,7 @@ def get_run_handler(triple):
         "arm64e": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "arm64ec": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
         "arm64-apple-ios": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
+        "arm64-apple-macosx": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "armv7-apple-ios": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_IOS_RE),
         "armv7-apple-darwin": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_DARWIN_RE),
         "thumb": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
@@ -604,6 +606,7 @@ def add_checks(
     prefix_list,
     func_dict,
     func_name,
+    ginfo: common.GeneralizerInfo,
     global_vars_seen_dict,
     is_filtered,
 ):
@@ -616,9 +619,7 @@ def add_checks(
         func_dict,
         func_name,
         check_label_format,
-        True,
-        False,
-        1,
+        ginfo,
         global_vars_seen_dict,
         is_filtered=is_filtered,
     )

@@ -1,8 +1,8 @@
-; RUN: not --crash llc -global-isel=0 -march=amdgcn -mcpu=fiji -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=SDAG-ERR %s
-; RUN: not --crash llc -global-isel=0 -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=SDAG-ERR %s
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=SDAG-ERR %s
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=SDAG-ERR %s
 
-; RUN: not --crash llc -global-isel=1 -march=amdgcn -mcpu=fiji -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
-; RUN: not --crash llc -global-isel=1 -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
+; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
+; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
 
 ; Make sure this doesn't assert on targets without the g16 feature, and instead
 ; generates a selection error.

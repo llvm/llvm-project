@@ -35,6 +35,7 @@ add_llvm_unittest(ADTTests
   HashingTest.cpp
   IListBaseTest.cpp
   IListIteratorTest.cpp
+  IListIteratorBitsTest.cpp
   IListNodeBaseTest.cpp
   IListNodeTest.cpp
   IListSentinelTest.cpp
@@ -43,10 +44,12 @@ add_llvm_unittest(ADTTests
   ImmutableMapTest.cpp
   ImmutableSetTest.cpp
   IntEqClassesTest.cpp
+  Interleave.cpp
   IntervalMapTest.cpp
   IntervalTreeTest.cpp
   IntrusiveRefCntPtrTest.cpp
   IteratorTest.cpp
+  LazyAtomicPointerTest.cpp
   MappedIteratorTest.cpp
   MapVectorTest.cpp
   MoveOnly.cpp

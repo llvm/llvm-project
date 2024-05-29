@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRTosaDialect
   MLIRTosaDialectBytecodeIncGen
   MLIRTosaOpsIncGen
   MLIRTosaInterfacesIncGen
+  MLIRShardingInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
@@ -24,6 +25,20 @@ add_mlir_dialect_library(MLIRTosaDialect
   MLIRTensorDialect
   MLIRVectorInterfaces
   MLIRViewLikeInterface
+  )
+
+add_mlir_dialect_library(MLIRTosaShardingInterfaceImpl
+  IR/ShardingInterfaceImpl.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tosa
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRMeshDialect
+  MLIRShardingInterface
+  MLIRSupport
+  MLIRTosaDialect
   )
 
 add_subdirectory(Transforms)

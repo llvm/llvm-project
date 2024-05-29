@@ -73,16 +73,16 @@ csrrw t0, 2, zero
 # CHECK-EXT-F-OFF: csrrw t0, frm, t1
 csrrw t0, 2, t1
 
-# CHECK-INST: csrrwi t0, frm, 31
-# CHECK-ALIAS: fsrmi t0, 31
-# CHECK-EXT-F-ON: fsrmi t0, 31
-# CHECK-EXT-F-OFF: csrrwi t0, frm, 31
+# CHECK-INST: csrrwi t0, frm, 0x1f
+# CHECK-ALIAS: fsrmi t0, 0x1f
+# CHECK-EXT-F-ON: fsrmi t0, 0x1f
+# CHECK-EXT-F-OFF: csrrwi t0, frm, 0x1f
 csrrwi t0, 2, 31
 
-# CHECK-INST: csrrwi zero, frm, 31
-# CHECK-ALIAS: fsrmi 31
-# CHECK-EXT-F-ON: fsrmi 31
-# CHECK-EXT-F-OFF:  csrwi frm, 31
+# CHECK-INST: csrrwi zero, frm, 0x1f
+# CHECK-ALIAS: fsrmi 0x1f
+# CHECK-EXT-F-ON: fsrmi 0x1f
+# CHECK-EXT-F-OFF:  csrwi frm, 0x1f
 csrrwi zero, 2, 31
 
 # CHECK-INST: csrrs t0, fflags, zero
@@ -103,15 +103,15 @@ csrrw t0, 1, t2
 # CHECK-EXT-F-OFF: csrw fflags, t2
 csrrw zero, 1, t2
 
-# CHECK-INST: csrrwi t0, fflags, 31
-# CHECK-ALIAS: fsflagsi t0, 31
-# CHECK-EXT-F: fsflagsi t0, 31
-# CHECK-EXT-F-OFF: csrrwi t0, fflags, 31
+# CHECK-INST: csrrwi t0, fflags, 0x1f
+# CHECK-ALIAS: fsflagsi t0, 0x1f
+# CHECK-EXT-F: fsflagsi t0, 0x1f
+# CHECK-EXT-F-OFF: csrrwi t0, fflags, 0x1f
 csrrwi t0, 1, 31
 
-# CHECK-INST: csrrwi zero, fflags, 31
-# CHECK-ALIAS: fsflagsi 31
-# CHECK-EXT-F: fsflagsi 31
-# CHECK-EXT-F-OFF: csrwi fflags, 31
+# CHECK-INST: csrrwi zero, fflags, 0x1f
+# CHECK-ALIAS: fsflagsi 0x1f
+# CHECK-EXT-F: fsflagsi 0x1f
+# CHECK-EXT-F-OFF: csrwi fflags, 0x1f
 csrrwi zero, 1, 31
 

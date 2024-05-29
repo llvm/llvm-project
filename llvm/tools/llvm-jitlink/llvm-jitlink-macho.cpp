@@ -111,29 +111,13 @@ Error registerMachOGraphInfo(Session &S, LinkGraph &G) {
         FirstSym = Sym;
       if (Sym->getAddress() > LastSym->getAddress())
         LastSym = Sym;
-      if (isGOTSection) {
-        if (Sym->isSymbolZeroFill())
-          return make_error<StringError>("zero-fill atom in GOT section",
-                                         inconvertibleErrorCode());
-
-        if (auto TS = getMachOGOTTarget(G, Sym->getBlock()))
-          FileInfo.GOTEntryInfos[TS->getName()] = {Sym->getSymbolContent(),
-                                                   Sym->getAddress().getValue(),
-                                                   Sym->getTargetFlags()};
-        else
-          return TS.takeError();
-        SectionContainsContent = true;
-      } else if (isStubsSection) {
-        if (Sym->isSymbolZeroFill())
-          return make_error<StringError>("zero-fill atom in Stub section",
-                                         inconvertibleErrorCode());
-
-        if (auto TS = getMachOStubTarget(G, Sym->getBlock()))
-          FileInfo.StubInfos[TS->getName()] = {Sym->getSymbolContent(),
-                                               Sym->getAddress().getValue(),
-                                               Sym->getTargetFlags()};
-        else
-          return TS.takeError();
+      if (isGOTSection || isStubsSection) {
+        Error Err =
+            isGOTSection
+                ? FileInfo.registerGOTEntry(G, *Sym, getMachOGOTTarget)
+                : FileInfo.registerStubEntry(G, *Sym, getMachOStubTarget);
+        if (Err)
+          return Err;
         SectionContainsContent = true;
       } else if (Sym->hasName()) {
         if (Sym->isSymbolZeroFill()) {

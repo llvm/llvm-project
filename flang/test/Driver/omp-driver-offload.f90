@@ -57,14 +57,24 @@
 ! RUN: --target=aarch64-unknown-linux-gnu \
 ! RUN:   | FileCheck %s --check-prefix=OPENMP-OFFLOAD-ARGS
 ! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}}.f90"
-! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fopenmp" {{.*}} "-fopenmp-host-ir-file-path" "{{.*}}.bc" "-fopenmp-is-target-device" {{.*}}.f90"
+! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp"
+! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp-host-ir-file-path" "{{.*}}.bc" "-fopenmp-is-target-device"
+! OPENMP-OFFLOAD-ARGS-SAME:  {{.*}}.f90"
 ! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}clang-offload-packager{{.*}}" {{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
-! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}} "-fembed-offload-object={{.*}}.out" {{.*}}.bc"
+! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp"
+! OPENMP-OFFLOAD-ARGS-SAME:  "-fembed-offload-object={{.*}}.out" {{.*}}.bc"
 
 ! Test -fopenmp with offload for RTL Flag Options
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
 ! RUN: -fopenmp-targets=amdgcn-amd-amdhsa \
+! RUN: -fopenmp-assume-threads-oversubscription \
+! RUN: | FileCheck %s --check-prefixes=CHECK-THREADS-OVS
+! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=sm_70 \
+! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
 ! RUN: -fopenmp-assume-threads-oversubscription \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-THREADS-OVS
 ! CHECK-THREADS-OVS: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-threads-oversubscription" {{.*}}.f90"
@@ -74,11 +84,21 @@
 ! RUN: -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-assume-teams-oversubscription  \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TEAMS-OVS
+! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=sm_70 \
+! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
+! RUN: -fopenmp-assume-teams-oversubscription  \
+! RUN: | FileCheck %s --check-prefixes=CHECK-TEAMS-OVS
 ! CHECK-TEAMS-OVS: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-teams-oversubscription" {{.*}}.f90"
 
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
 ! RUN: -fopenmp-targets=amdgcn-amd-amdhsa \
+! RUN: -fopenmp-assume-no-nested-parallelism  \
+! RUN: | FileCheck %s --check-prefixes=CHECK-NEST-PAR
+! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=sm_70 \
+! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
 ! RUN: -fopenmp-assume-no-nested-parallelism  \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-NEST-PAR
 ! CHECK-NEST-PAR: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-no-nested-parallelism" {{.*}}.f90"
@@ -88,11 +108,21 @@
 ! RUN: -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-assume-no-thread-state \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-THREAD-STATE
+! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=sm_70 \
+! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
+! RUN: -fopenmp-assume-no-thread-state \
+! RUN: | FileCheck %s --check-prefixes=CHECK-THREAD-STATE
 ! CHECK-THREAD-STATE: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-no-thread-state" {{.*}}.f90"
 
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
 ! RUN: -fopenmp-targets=amdgcn-amd-amdhsa \
+! RUN: -fopenmp-target-debug \
+! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
+! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=sm_70 \
+! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
 ! RUN: -fopenmp-target-debug \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
 ! CHECK-TARGET-DEBUG: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug" {{.*}}.f90"
@@ -102,11 +132,23 @@
 ! RUN: -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-target-debug \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
+! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=sm_70 \
+! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
+! RUN: -fopenmp-target-debug \
+! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
 ! CHECK-TARGET-DEBUG-EQ: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug=111" {{.*}}.f90"
 
 ! RUN: %flang -S -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
 ! RUN: -fopenmp-targets=amdgcn-amd-amdhsa \
+! RUN: -fopenmp-target-debug -fopenmp-assume-threads-oversubscription \
+! RUN: -fopenmp-assume-teams-oversubscription -fopenmp-assume-no-nested-parallelism \
+! RUN: -fopenmp-assume-no-thread-state \
+! RUN: | FileCheck %s --check-prefixes=CHECK-RTL-ALL
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=sm_70 \
+! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
 ! RUN: -fopenmp-target-debug -fopenmp-assume-threads-oversubscription \
 ! RUN: -fopenmp-assume-teams-oversubscription -fopenmp-assume-no-nested-parallelism \
 ! RUN: -fopenmp-assume-no-thread-state \
@@ -120,6 +162,11 @@
 ! RUN: -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-version=45 \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-OPENMP-VERSION
+! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=sm_70 \
+! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
+! RUN: -fopenmp-version=45 \
+! RUN: | FileCheck %s --check-prefixes=CHECK-OPENMP-VERSION
 ! CHECK-OPENMP-VERSION: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" "-fopenmp-version=45" {{.*}}.f90"
 
 ! Test diagnostic error when host IR file is non-existent 
@@ -127,3 +174,36 @@
 ! RUN: -fopenmp-host-ir-file-path non-existant-file.bc \
 ! RUN: | FileCheck %s --check-prefix=HOST-IR-MISSING
 ! HOST-IR-MISSING: error: provided host compiler IR file 'non-existant-file.bc' is required to generate code for OpenMP target regions but cannot be found
+
+! Check that `-gpulibc` includes the LLVM C libraries for the GPU.
+! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
+! RUN:      --offload-arch=sm_52 \
+! RUN:      -gpulibc %s 2>&1 \
+! RUN:   | FileCheck --check-prefix=LIBC-GPU-NVPTX %s
+! LIBC-GPU-NVPTX-DAG: "-lcgpu-nvptx"
+! LIBC-GPU-NVPTX-DAG: "-lmgpu-nvptx"
+
+! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
+! RUN:      --offload-arch=sm_52 \
+! RUN:      -nogpulibc %s 2>&1 \
+! RUN:   | FileCheck --check-prefix=NO-LIBC-GPU-NVPTX %s
+! NO-LIBC-GPU-NVPTX-NOT: "-lcgpu-nvptx"
+
+! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
+! RUN:      --offload-arch=gfx90a \
+! RUN:      -gpulibc %s 2>&1 \
+! RUN:   | FileCheck --check-prefix=LIBC-GPU-AMDGPU %s
+! LIBC-GPU-AMDGPU-DAG: "-lcgpu-amdgpu"
+! LIBC-GPU-AMDGPU-DAG: "-lmgpu-amdgpu"
+
+! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
+! RUN:      --offload-arch=gfx90a \
+! RUN:      -nogpulibc %s 2>&1 \
+! RUN:   | FileCheck --check-prefix=NO-LIBC-GPU-AMDGPU %s
+! NO-LIBC-GPU-AMDGPU-NOT: "-lcgpu-amdgpu"
+
+! RUN:   %flang -### -v --target=x86_64-unknown-linux-gnu -fopenmp  \
+! RUN:      --offload-arch=gfx900 \
+! RUN:      --rocm-path=%S/Inputs/rocm %s 2>&1 \
+! RUN:   | FileCheck --check-prefix=ROCM-PATH %s
+! ROCM-PATH: Found HIP installation: {{.*Inputs.*rocm}}, version 3.6.20214-a2917cd

@@ -38,6 +38,7 @@ add_llvm_unittest(SupportTests
   ErrnoTest.cpp
   ErrorOrTest.cpp
   ErrorTest.cpp
+  ExponentialBackoffTest.cpp
   ExtensibleRTTITest.cpp
   FileCollectorTest.cpp
   FileOutputBufferTest.cpp
@@ -70,7 +71,6 @@ add_llvm_unittest(SupportTests
   ReverseIterationTest.cpp
   ReplaceFileTest.cpp
   RISCVAttributeParserTest.cpp
-  RISCVISAInfoTest.cpp
   ScaledNumberTest.cpp
   ScopedPrinterTest.cpp
   SHA256.cpp
@@ -81,6 +81,7 @@ add_llvm_unittest(SupportTests
   SwapByteOrderTest.cpp
   TarWriterTest.cpp
   ThreadPool.cpp
+  ThreadSafeAllocatorTest.cpp
   Threading.cpp
   TimerTest.cpp
   TimeProfilerTest.cpp
@@ -90,6 +91,7 @@ add_llvm_unittest(SupportTests
   TypeTraitsTest.cpp
   TrailingObjectsTest.cpp
   UnicodeTest.cpp
+  UTCTimeTest.cpp
   VersionTupleTest.cpp
   VirtualFileSystemTest.cpp
   WithColorTest.cpp
@@ -101,6 +103,7 @@ add_llvm_unittest(SupportTests
   raw_ostream_test.cpp
   raw_pwrite_stream_test.cpp
   raw_sha1_ostream_test.cpp
+  raw_socket_stream_test.cpp
   xxhashTest.cpp
 
   DEPENDS

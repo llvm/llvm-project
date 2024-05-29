@@ -73,6 +73,9 @@ public:
 
   CompilerDeclContext GetDeclContext() const;
 
+  // If this decl has a type, return it.
+  CompilerType GetType() const;
+
   // If this decl represents a function, return the return type
   CompilerType GetFunctionReturnType() const;
 
@@ -83,6 +86,17 @@ public:
   // If this decl represents a function, return the argument type given a zero
   // based argument index
   CompilerType GetFunctionArgumentType(size_t arg_idx) const;
+
+  /// Populate a valid compiler context from the current declaration.
+  ///
+  /// \returns A valid vector of CompilerContext entries that describes
+  /// this declaration. The first entry in the vector is the parent of
+  /// the subsequent entry, so the topmost entry is the global namespace.
+  std::vector<lldb_private::CompilerContext> GetCompilerContext() const;
+
+  // If decl represents a constant value, return it. Otherwise, return an
+  // invalid/empty Scalar.
+  Scalar GetConstantValue() const;
 
 private:
   TypeSystem *m_type_system = nullptr;

@@ -17,7 +17,7 @@
 ; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on f
 ; CHECK-NEXT: Running analysis: ScalarEvolutionAnalysis on f
 ; CHECK-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
-; CHECK-NEXT: Running pass: LoopRotatePass on bb
+; CHECK-NEXT: Running pass: LoopRotatePass on loop %bb in function f
 ; CHECK-NEXT: Folding loop latch bb4 into bb
 ; CHECK-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on f
 ; CHECK-NEXT: Running pass: ADCEPass on f
@@ -36,7 +36,7 @@
 ; MSSA-NEXT: Running analysis: TargetLibraryAnalysis on f
 ; MSSA-NEXT: Running analysis: ScalarEvolutionAnalysis on f
 ; MSSA-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
-; MSSA-NEXT: Running pass: LoopRotatePass on bb
+; MSSA-NEXT: Running pass: LoopRotatePass on loop %bb in function f
 ; MSSA-NEXT: Folding loop latch bb4 into bb
 ; MSSA-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on f
 ; MSSA-NEXT: Running pass: ADCEPass on f

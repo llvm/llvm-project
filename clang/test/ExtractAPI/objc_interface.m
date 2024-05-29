@@ -1,697 +1,360 @@
 // RUN: rm -rf %t
-// RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
-// RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang -extract-api -x objective-c-header -target arm64-apple-macosx \
-// RUN: %t/input.h -o %t/output.json | FileCheck -allow-empty %s
+// RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
+// RUN:   -x objective-c-header -triple arm64-apple-macosx %s -o %t/output.symbols.json -verify
 
-// Generator version is not consistent across test runs, normalize it.
-// RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
-// RUN: %t/output.json >> %t/output-normalized.json
-// RUN: diff %t/reference.output.json %t/output-normalized.json
+@protocol Protocol
+@end
 
-// CHECK-NOT: error:
-// CHECK-NOT: warning:
-
-//--- input.h
-@protocol Protocol;
-
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix SUPER
 @interface Super <Protocol>
+// SUPER: "!testRelLabel": "conformsTo $ c:objc(cs)Super $ c:objc(pl)Protocol"
+// SUPER-LABEL: "!testLabel": "c:objc(cs)Super"
+// SUPER: "accessLevel": "public",
+// SUPER:      "declarationFragments": [
+// SUPER-NEXT:   {
+// SUPER-NEXT:     "kind": "keyword",
+// SUPER-NEXT:     "spelling": "@interface"
+// SUPER-NEXT:   },
+// SUPER-NEXT:   {
+// SUPER-NEXT:     "kind": "text",
+// SUPER-NEXT:     "spelling": " "
+// SUPER-NEXT:   },
+// SUPER-NEXT:   {
+// SUPER-NEXT:     "kind": "identifier",
+// SUPER-NEXT:     "spelling": "Super"
+// SUPER-NEXT:   }
+// SUPER-NEXT: ],
+// SUPER:      "kind": {
+// SUPER-NEXT:   "displayName": "Class",
+// SUPER-NEXT:   "identifier": "objective-c.class"
+// SUPER-NEXT: },
+// SUPER:   "title": "Super"
+// SUPER:      "pathComponents": [
+// SUPER-NEXT:   "Super"
+// SUPER-NEXT: ]
+
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix PROP
 @property(readonly, getter=getProperty) unsigned Property;
+// PROP: "!testRelLabel": "memberOf $ c:objc(cs)Super(py)Property $ c:objc(cs)Super"
+// PROP: "!testLabel": "c:objc(cs)Super(py)Property"
+// PROP: "accessLevel": "public",
+// PROP:      "declarationFragments": [
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "keyword",
+// PROP-NEXT:     "spelling": "@property"
+// PROP-NEXT:   },
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "text",
+// PROP-NEXT:     "spelling": " ("
+// PROP-NEXT:   },
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "keyword",
+// PROP-NEXT:     "spelling": "readonly"
+// PROP-NEXT:   },
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "text",
+// PROP-NEXT:     "spelling": ", "
+// PROP-NEXT:   },
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "keyword",
+// PROP-NEXT:     "spelling": "getter"
+// PROP-NEXT:   },
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "text",
+// PROP-NEXT:     "spelling": "="
+// PROP-NEXT:   },
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "identifier",
+// PROP-NEXT:     "spelling": "getProperty"
+// PROP-NEXT:   },
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "text",
+// PROP-NEXT:     "spelling": ") "
+// PROP-NEXT:   },
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "typeIdentifier",
+// PROP-NEXT:     "preciseIdentifier": "c:i",
+// PROP-NEXT:     "spelling": "unsigned int"
+// PROP-NEXT:   },
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "text",
+// PROP-NEXT:     "spelling": " "
+// PROP-NEXT:   },
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "identifier",
+// PROP-NEXT:     "spelling": "Property"
+// PROP-NEXT:   },
+// PROP-NEXT:   {
+// PROP-NEXT:     "kind": "text",
+// PROP-NEXT:     "spelling": ";"
+// PROP-NEXT:   }
+// PROP-NEXT: ],
+// PROP:      "kind": {
+// PROP-NEXT:   "displayName": "Instance Property",
+// PROP-NEXT:   "identifier": "objective-c.property"
+// PROP-NEXT: },
+// PROP:   "title": "Property"
+// PROP:      "pathComponents": [
+// PROP-NEXT:   "Super",
+// PROP-NEXT:   "Property"
+// PROP-NEXT: ]
+
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix GET
 + (id)getWithProperty:(unsigned) Property;
+// GET: "!testRelLabel": "memberOf $ c:objc(cs)Super(cm)getWithProperty: $ c:objc(cs)Super"
+// GET-LABEL: "!testLabel": "c:objc(cs)Super(cm)getWithProperty:"
+// GET: "accessLevel": "public",
+// GET:      "declarationFragments": [
+// GET-NEXT:   {
+// GET-NEXT:     "kind": "text",
+// GET-NEXT:     "spelling": "+ ("
+// GET-NEXT:   },
+// GET-NEXT:   {
+// GET-NEXT:     "kind": "keyword",
+// GET-NEXT:     "spelling": "id"
+// GET-NEXT:   },
+// GET-NEXT:   {
+// GET-NEXT:     "kind": "text",
+// GET-NEXT:     "spelling": ") "
+// GET-NEXT:   },
+// GET-NEXT:   {
+// GET-NEXT:     "kind": "identifier",
+// GET-NEXT:     "spelling": "getWithProperty:"
+// GET-NEXT:   },
+// GET-NEXT:   {
+// GET-NEXT:     "kind": "text",
+// GET-NEXT:     "spelling": "("
+// GET-NEXT:   },
+// GET-NEXT:   {
+// GET-NEXT:     "kind": "typeIdentifier",
+// GET-NEXT:     "preciseIdentifier": "c:i",
+// GET-NEXT:     "spelling": "unsigned int"
+// GET-NEXT:   },
+// GET-NEXT:   {
+// GET-NEXT:     "kind": "text",
+// GET-NEXT:     "spelling": ") "
+// GET-NEXT:   },
+// GET-NEXT:   {
+// GET-NEXT:     "kind": "internalParam",
+// GET-NEXT:     "spelling": "Property"
+// GET-NEXT:   },
+// GET-NEXT:   {
+// GET-NEXT:     "kind": "text",
+// GET-NEXT:     "spelling": ";"
+// GET-NEXT:   }
+// GET-NEXT: ],
+// GET:      "functionSignature": {
+// GET-NEXT:   "parameters": [
+// GET-NEXT:     {
+// GET-NEXT:       "declarationFragments": [
+// GET-NEXT:         {
+// GET-NEXT:           "kind": "text",
+// GET-NEXT:           "spelling": "("
+// GET-NEXT:         },
+// GET-NEXT:         {
+// GET-NEXT:           "kind": "typeIdentifier",
+// GET-NEXT:           "preciseIdentifier": "c:i",
+// GET-NEXT:           "spelling": "unsigned int"
+// GET-NEXT:         },
+// GET-NEXT:         {
+// GET-NEXT:           "kind": "text",
+// GET-NEXT:           "spelling": ") "
+// GET-NEXT:         },
+// GET-NEXT:         {
+// GET-NEXT:           "kind": "internalParam",
+// GET-NEXT:           "spelling": "Property"
+// GET-NEXT:         }
+// GET-NEXT:       ],
+// GET-NEXT:       "name": "Property"
+// GET-NEXT:     }
+// GET-NEXT:   ],
+// GET-NEXT:   "returns": [
+// GET-NEXT:     {
+// GET-NEXT:       "kind": "keyword",
+// GET-NEXT:       "spelling": "id"
+// GET-NEXT:     }
+// GET-NEXT:   ]
+// GET-NEXT: },
+// GET:      "kind": {
+// GET-NEXT:   "displayName": "Type Method",
+// GET-NEXT:   "identifier": "objective-c.type.method"
+// GET-NEXT: },
+// GET:   "title": "getWithProperty:"
+// GET:      "pathComponents": [
+// GET-NEXT:   "Super",
+// GET-NEXT:   "getWithProperty:"
+// GET-NEXT: ]
+
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix SET
 - (void)setProperty:(unsigned) Property andOtherThing: (unsigned) Thing;
+// SET: "!testRelLabel": "memberOf $ c:objc(cs)Super(im)setProperty:andOtherThing: $ c:objc(cs)Super"
+// SET-LABEL: "!testLabel": "c:objc(cs)Super(im)setProperty:andOtherThing:"
+// SET: "accessLevel": "public",
+// SET:      "declarationFragments": [
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "text",
+// SET-NEXT:     "spelling": "- ("
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "typeIdentifier",
+// SET-NEXT:     "preciseIdentifier": "c:v",
+// SET-NEXT:     "spelling": "void"
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "text",
+// SET-NEXT:     "spelling": ") "
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "identifier",
+// SET-NEXT:     "spelling": "setProperty:"
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "text",
+// SET-NEXT:     "spelling": "("
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "typeIdentifier",
+// SET-NEXT:     "preciseIdentifier": "c:i",
+// SET-NEXT:     "spelling": "unsigned int"
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "text",
+// SET-NEXT:     "spelling": ") "
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "internalParam",
+// SET-NEXT:     "spelling": "Property"
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "text",
+// SET-NEXT:     "spelling": " "
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "identifier",
+// SET-NEXT:     "spelling": "andOtherThing:"
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "text",
+// SET-NEXT:     "spelling": "("
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "typeIdentifier",
+// SET-NEXT:     "preciseIdentifier": "c:i",
+// SET-NEXT:     "spelling": "unsigned int"
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "text",
+// SET-NEXT:     "spelling": ") "
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "internalParam",
+// SET-NEXT:     "spelling": "Thing"
+// SET-NEXT:   },
+// SET-NEXT:   {
+// SET-NEXT:     "kind": "text",
+// SET-NEXT:     "spelling": ";"
+// SET-NEXT:   }
+// SET-NEXT: ],
+// SET:      "functionSignature": {
+// SET-NEXT:   "parameters": [
+// SET-NEXT:     {
+// SET-NEXT:       "declarationFragments": [
+// SET-NEXT:         {
+// SET-NEXT:           "kind": "text",
+// SET-NEXT:           "spelling": "("
+// SET-NEXT:         },
+// SET-NEXT:         {
+// SET-NEXT:           "kind": "typeIdentifier",
+// SET-NEXT:           "preciseIdentifier": "c:i",
+// SET-NEXT:           "spelling": "unsigned int"
+// SET-NEXT:         },
+// SET-NEXT:         {
+// SET-NEXT:           "kind": "text",
+// SET-NEXT:           "spelling": ") "
+// SET-NEXT:         },
+// SET-NEXT:         {
+// SET-NEXT:           "kind": "internalParam",
+// SET-NEXT:           "spelling": "Property"
+// SET-NEXT:         }
+// SET-NEXT:       ],
+// SET-NEXT:       "name": "Property"
+// SET-NEXT:     },
+// SET-NEXT:     {
+// SET-NEXT:       "declarationFragments": [
+// SET-NEXT:         {
+// SET-NEXT:           "kind": "text",
+// SET-NEXT:           "spelling": "("
+// SET-NEXT:         },
+// SET-NEXT:         {
+// SET-NEXT:           "kind": "typeIdentifier",
+// SET-NEXT:           "preciseIdentifier": "c:i",
+// SET-NEXT:           "spelling": "unsigned int"
+// SET-NEXT:         },
+// SET-NEXT:         {
+// SET-NEXT:           "kind": "text",
+// SET-NEXT:           "spelling": ") "
+// SET-NEXT:         },
+// SET-NEXT:         {
+// SET-NEXT:           "kind": "internalParam",
+// SET-NEXT:           "spelling": "Thing"
+// SET-NEXT:         }
+// SET-NEXT:       ],
+// SET-NEXT:       "name": "Thing"
+// SET-NEXT:     }
+// SET-NEXT:   ],
+// SET-NEXT:   "returns": [
+// SET-NEXT:     {
+// SET-NEXT:       "kind": "typeIdentifier",
+// SET-NEXT:       "preciseIdentifier": "c:v",
+// SET-NEXT:       "spelling": "void"
+// SET-NEXT:     }
+// SET-NEXT:   ]
+// SET-NEXT: },
+// SET:      "kind": {
+// SET-NEXT:   "displayName": "Instance Method",
+// SET-NEXT:   "identifier": "objective-c.method"
+// SET-NEXT: },
+// SET:   "title": "setProperty:andOtherThing:"
 @end
 
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix DERIVED
 @interface Derived : Super {
+// DERIVED: "!testRelLabel": "inheritsFrom $ c:objc(cs)Derived $ c:objc(cs)Super"
+
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix IVAR
   char Ivar;
+// IVAR: "!testRelLabel": "memberOf $ c:objc(cs)Derived@Ivar $ c:objc(cs)Derived"
+// IVAR-LABEL: "!testLabel": "c:objc(cs)Derived@Ivar"
+// IVAR: "accessLevel": "public",
+// IVAR:      "declarationFragments": [
+// IVAR-NEXT:   {
+// IVAR-NEXT:     "kind": "typeIdentifier",
+// IVAR-NEXT:     "preciseIdentifier": "c:C",
+// IVAR-NEXT:     "spelling": "char"
+// IVAR-NEXT:   },
+// IVAR-NEXT:   {
+// IVAR-NEXT:     "kind": "text",
+// IVAR-NEXT:     "spelling": " "
+// IVAR-NEXT:   },
+// IVAR-NEXT:   {
+// IVAR-NEXT:     "kind": "identifier",
+// IVAR-NEXT:     "spelling": "Ivar"
+// IVAR-NEXT:   },
+// IVAR-NEXT:   {
+// IVAR-NEXT:     "kind": "text",
+// IVAR-NEXT:     "spelling": ";"
+// IVAR-NEXT:   }
+// IVAR-NEXT: ],
+// IVAR:      "kind": {
+// IVAR-NEXT:   "displayName": "Instance Variable",
+// IVAR-NEXT:   "identifier": "objective-c.ivar"
+// IVAR-NEXT: },
+// IVAR: "title": "Ivar"
+// IVAR:      "pathComponents": [
+// IVAR-NEXT:   "Derived",
+// IVAR-NEXT:   "Ivar"
+// IVAR-NEXT: ]
 }
-- (char)getIvar;
 @end
 
-//--- reference.output.json.in
-{
-  "metadata": {
-    "formatVersion": {
-      "major": 0,
-      "minor": 5,
-      "patch": 3
-    },
-    "generator": "?"
-  },
-  "module": {
-    "name": "",
-    "platform": {
-      "architecture": "arm64",
-      "operatingSystem": {
-        "minimumVersion": {
-          "major": 11,
-          "minor": 0,
-          "patch": 0
-        },
-        "name": "macosx"
-      },
-      "vendor": "apple"
-    }
-  },
-  "relationships": [
-    {
-      "kind": "memberOf",
-      "source": "c:objc(cs)Super(cm)getWithProperty:",
-      "target": "c:objc(cs)Super",
-      "targetFallback": "Super"
-    },
-    {
-      "kind": "memberOf",
-      "source": "c:objc(cs)Super(im)setProperty:andOtherThing:",
-      "target": "c:objc(cs)Super",
-      "targetFallback": "Super"
-    },
-    {
-      "kind": "memberOf",
-      "source": "c:objc(cs)Super(py)Property",
-      "target": "c:objc(cs)Super",
-      "targetFallback": "Super"
-    },
-    {
-      "kind": "conformsTo",
-      "source": "c:objc(cs)Super",
-      "target": "c:objc(pl)Protocol",
-      "targetFallback": "Protocol"
-    },
-    {
-      "kind": "memberOf",
-      "source": "c:objc(cs)Derived@Ivar",
-      "target": "c:objc(cs)Derived",
-      "targetFallback": "Derived"
-    },
-    {
-      "kind": "memberOf",
-      "source": "c:objc(cs)Derived(im)getIvar",
-      "target": "c:objc(cs)Derived",
-      "targetFallback": "Derived"
-    },
-    {
-      "kind": "inheritsFrom",
-      "source": "c:objc(cs)Derived",
-      "target": "c:objc(cs)Super",
-      "targetFallback": "Super"
-    }
-  ],
-  "symbols": [
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "@interface"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "Super"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Super"
-      },
-      "kind": {
-        "displayName": "Class",
-        "identifier": "objective-c.class"
-      },
-      "location": {
-        "position": {
-          "character": 12,
-          "line": 3
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Super"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "Super"
-          }
-        ],
-        "title": "Super"
-      },
-      "pathComponents": [
-        "Super"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "text",
-          "spelling": "+ ("
-        },
-        {
-          "kind": "keyword",
-          "spelling": "id"
-        },
-        {
-          "kind": "text",
-          "spelling": ") "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "getWithProperty:"
-        },
-        {
-          "kind": "text",
-          "spelling": "("
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:i",
-          "spelling": "unsigned int"
-        },
-        {
-          "kind": "text",
-          "spelling": ") "
-        },
-        {
-          "kind": "internalParam",
-          "spelling": "Property"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "functionSignature": {
-        "parameters": [
-          {
-            "declarationFragments": [
-              {
-                "kind": "text",
-                "spelling": "("
-              },
-              {
-                "kind": "typeIdentifier",
-                "preciseIdentifier": "c:i",
-                "spelling": "unsigned int"
-              },
-              {
-                "kind": "text",
-                "spelling": ") "
-              },
-              {
-                "kind": "internalParam",
-                "spelling": "Property"
-              }
-            ],
-            "name": "Property"
-          }
-        ],
-        "returns": [
-          {
-            "kind": "keyword",
-            "spelling": "id"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Super(cm)getWithProperty:"
-      },
-      "kind": {
-        "displayName": "Type Method",
-        "identifier": "objective-c.type.method"
-      },
-      "location": {
-        "position": {
-          "character": 1,
-          "line": 5
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "getWithProperty:"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "text",
-            "spelling": "+ "
-          },
-          {
-            "kind": "identifier",
-            "spelling": "getWithProperty:"
-          }
-        ],
-        "title": "getWithProperty:"
-      },
-      "pathComponents": [
-        "Super",
-        "getWithProperty:"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "text",
-          "spelling": "- ("
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:v",
-          "spelling": "void"
-        },
-        {
-          "kind": "text",
-          "spelling": ") "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "setProperty:"
-        },
-        {
-          "kind": "text",
-          "spelling": "("
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:i",
-          "spelling": "unsigned int"
-        },
-        {
-          "kind": "text",
-          "spelling": ") "
-        },
-        {
-          "kind": "internalParam",
-          "spelling": "Property"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "andOtherThing:"
-        },
-        {
-          "kind": "text",
-          "spelling": "("
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:i",
-          "spelling": "unsigned int"
-        },
-        {
-          "kind": "text",
-          "spelling": ") "
-        },
-        {
-          "kind": "internalParam",
-          "spelling": "Thing"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "functionSignature": {
-        "parameters": [
-          {
-            "declarationFragments": [
-              {
-                "kind": "text",
-                "spelling": "("
-              },
-              {
-                "kind": "typeIdentifier",
-                "preciseIdentifier": "c:i",
-                "spelling": "unsigned int"
-              },
-              {
-                "kind": "text",
-                "spelling": ") "
-              },
-              {
-                "kind": "internalParam",
-                "spelling": "Property"
-              }
-            ],
-            "name": "Property"
-          },
-          {
-            "declarationFragments": [
-              {
-                "kind": "text",
-                "spelling": "("
-              },
-              {
-                "kind": "typeIdentifier",
-                "preciseIdentifier": "c:i",
-                "spelling": "unsigned int"
-              },
-              {
-                "kind": "text",
-                "spelling": ") "
-              },
-              {
-                "kind": "internalParam",
-                "spelling": "Thing"
-              }
-            ],
-            "name": "Thing"
-          }
-        ],
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:v",
-            "spelling": "void"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Super(im)setProperty:andOtherThing:"
-      },
-      "kind": {
-        "displayName": "Instance Method",
-        "identifier": "objective-c.method"
-      },
-      "location": {
-        "position": {
-          "character": 1,
-          "line": 6
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "setProperty:andOtherThing:"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "text",
-            "spelling": "- "
-          },
-          {
-            "kind": "identifier",
-            "spelling": "setProperty:andOtherThing:"
-          }
-        ],
-        "title": "setProperty:andOtherThing:"
-      },
-      "pathComponents": [
-        "Super",
-        "setProperty:andOtherThing:"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "@property"
-        },
-        {
-          "kind": "text",
-          "spelling": " ("
-        },
-        {
-          "kind": "keyword",
-          "spelling": "readonly"
-        },
-        {
-          "kind": "text",
-          "spelling": ", "
-        },
-        {
-          "kind": "keyword",
-          "spelling": "getter"
-        },
-        {
-          "kind": "text",
-          "spelling": "="
-        },
-        {
-          "kind": "identifier",
-          "spelling": "getProperty"
-        },
-        {
-          "kind": "text",
-          "spelling": ") "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:i",
-          "spelling": "unsigned int"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "Property"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Super(py)Property"
-      },
-      "kind": {
-        "displayName": "Instance Property",
-        "identifier": "objective-c.property"
-      },
-      "location": {
-        "position": {
-          "character": 50,
-          "line": 4
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Property"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "Property"
-          }
-        ],
-        "title": "Property"
-      },
-      "pathComponents": [
-        "Super",
-        "Property"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "@interface"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "Derived"
-        },
-        {
-          "kind": "text",
-          "spelling": " : "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:objc(cs)Super",
-          "spelling": "Super"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Derived"
-      },
-      "kind": {
-        "displayName": "Class",
-        "identifier": "objective-c.class"
-      },
-      "location": {
-        "position": {
-          "character": 12,
-          "line": 9
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Derived"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "Derived"
-          }
-        ],
-        "title": "Derived"
-      },
-      "pathComponents": [
-        "Derived"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:C",
-          "spelling": "char"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "Ivar"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Derived@Ivar"
-      },
-      "kind": {
-        "displayName": "Instance Variable",
-        "identifier": "objective-c.ivar"
-      },
-      "location": {
-        "position": {
-          "character": 8,
-          "line": 10
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Ivar"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "Ivar"
-          }
-        ],
-        "title": "Ivar"
-      },
-      "pathComponents": [
-        "Derived",
-        "Ivar"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "text",
-          "spelling": "- ("
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:C",
-          "spelling": "char"
-        },
-        {
-          "kind": "text",
-          "spelling": ") "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "getIvar"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "functionSignature": {
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:C",
-            "spelling": "char"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Derived(im)getIvar"
-      },
-      "kind": {
-        "displayName": "Instance Method",
-        "identifier": "objective-c.method"
-      },
-      "location": {
-        "position": {
-          "character": 1,
-          "line": 12
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "getIvar"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "text",
-            "spelling": "- "
-          },
-          {
-            "kind": "identifier",
-            "spelling": "getIvar"
-          }
-        ],
-        "title": "getIvar"
-      },
-      "pathComponents": [
-        "Derived",
-        "getIvar"
-      ]
-    }
-  ]
-}
+// expected-no-diagnostics

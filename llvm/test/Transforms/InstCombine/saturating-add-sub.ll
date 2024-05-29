@@ -559,14 +559,14 @@ define <2 x i8> @test_simplify_decrement_vec(<2 x i8> %a) {
   ret <2 x i8> %i2
 }
 
-define <2 x i8> @test_simplify_decrement_vec_undef(<2 x i8> %a) {
-; CHECK-LABEL: @test_simplify_decrement_vec_undef(
+define <2 x i8> @test_simplify_decrement_vec_poison(<2 x i8> %a) {
+; CHECK-LABEL: @test_simplify_decrement_vec_poison(
 ; CHECK-NEXT:    [[I2:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 1, i8 1>)
 ; CHECK-NEXT:    ret <2 x i8> [[I2]]
 ;
   %i = icmp eq <2 x i8> %a, <i8 0, i8 0>
   %i1 = sub <2 x i8> %a, <i8 1, i8 1>
-  %i2 = select <2 x i1> %i, <2 x i8> <i8 0, i8 undef>, <2 x i8> %i1
+  %i2 = select <2 x i1> %i, <2 x i8> <i8 0, i8 poison>, <2 x i8> %i1
   ret <2 x i8> %i2
 }
 
@@ -1052,11 +1052,9 @@ define <2 x i8> @test_vector_usub_add_nuw_no_ov(<2 x i8> %a) {
   ret <2 x i8> %r
 }
 
-; Can be optimized if the usub.sat RHS constant range handles non-splat vectors.
 define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat1(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_add_nuw_no_ov_nonsplat1(
-; CHECK-NEXT:    [[B:%.*]] = add nuw <2 x i8> [[A:%.*]], <i8 10, i8 10>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[B]], <2 x i8> <i8 10, i8 9>)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[A:%.*]], <i8 0, i8 1>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %b = add nuw <2 x i8> %a, <i8 10, i8 10>
@@ -1820,14 +1818,14 @@ define <4 x i32> @uadd_sat_constant_vec_commute(<4 x i32> %x) {
 
 define <4 x i32> @uadd_sat_constant_vec_commute_undefs(<4 x i32> %x) {
 ; CHECK-LABEL: @uadd_sat_constant_vec_commute_undefs(
-; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[X:%.*]], <i32 42, i32 42, i32 42, i32 undef>
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i32> [[X]], <i32 -43, i32 -43, i32 undef, i32 -43>
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[C]], <4 x i32> [[A]], <4 x i32> <i32 -1, i32 undef, i32 -1, i32 -1>
+; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[X:%.*]], <i32 42, i32 42, i32 42, i32 poison>
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i32> [[X]], <i32 -43, i32 -43, i32 poison, i32 -43>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[C]], <4 x i32> [[A]], <4 x i32> <i32 -1, i32 poison, i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
-  %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 undef>
-  %c = icmp ult <4 x i32> %x, <i32 -43, i32 -43, i32 undef, i32 -43>
-  %r = select <4 x i1> %c, <4 x i32> %a, <4 x i32> <i32 -1, i32 undef, i32 -1, i32 -1>
+  %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 poison>
+  %c = icmp ult <4 x i32> %x, <i32 -43, i32 -43, i32 poison, i32 -43>
+  %r = select <4 x i1> %c, <4 x i32> %a, <4 x i32> <i32 -1, i32 poison, i32 -1, i32 -1>
   ret <4 x i32> %r
 }
 

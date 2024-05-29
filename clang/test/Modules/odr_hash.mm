@@ -17,12 +17,12 @@
 // RUN: %clang_cc1 -fsyntax-only -x objective-c++ %t/Inputs/second.h -fblocks -fobjc-arc
 
 // Build module map file
-// RUN: echo "module FirstModule {"     >> %t/Inputs/module.map
-// RUN: echo "    header \"first.h\""   >> %t/Inputs/module.map
-// RUN: echo "}"                        >> %t/Inputs/module.map
-// RUN: echo "module SecondModule {"    >> %t/Inputs/module.map
-// RUN: echo "    header \"second.h\""  >> %t/Inputs/module.map
-// RUN: echo "}"                        >> %t/Inputs/module.map
+// RUN: echo "module FirstModule {"     >> %t/Inputs/module.modulemap
+// RUN: echo "    header \"first.h\""   >> %t/Inputs/module.modulemap
+// RUN: echo "}"                        >> %t/Inputs/module.modulemap
+// RUN: echo "module SecondModule {"    >> %t/Inputs/module.modulemap
+// RUN: echo "    header \"second.h\""  >> %t/Inputs/module.modulemap
+// RUN: echo "}"                        >> %t/Inputs/module.modulemap
 
 // Run test
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -x objective-c++ -I%t/Inputs -verify %s -fblocks -fobjc-arc

@@ -21,7 +21,7 @@ define i32 @constraint_r(i32 %a) nounwind {
 ; CSKY-NEXT:    .p2align 2
 ; CSKY-NEXT:  .LCPI0_0:
 ; CSKY-NEXT:    .long gi
-  %1 = load i32, i32* @gi
+  %1 = load i32, ptr @gi
   %2 = tail call i32 asm "add $0, $1, $2", "=r,r,r"(i32 %a, i32 %1)
   ret i32 %2
 }
@@ -45,7 +45,7 @@ define i64 @constraint_r_i64(i32 %a) nounwind {
 ; CSKY-NEXT:    .p2align 2
 ; CSKY-NEXT:  .LCPI1_0:
 ; CSKY-NEXT:    .long mi
-  %1 = load i64, i64* @mi
+  %1 = load i64, ptr @mi
   %2 = call i64 asm "mula.s32 $0, $1, $2", "=r,r,r,0"(i32 %a, i32 %a, i64 %1)
   ret i64 %2
 }
@@ -66,7 +66,7 @@ define i32 @constraint_a(i32 %a) nounwind {
 ; CSKY-NEXT:    .p2align 2
 ; CSKY-NEXT:  .LCPI2_0:
 ; CSKY-NEXT:    .long gi
-  %1 = load i32, i32* @gi
+  %1 = load i32, ptr @gi
   %2 = tail call i32 asm "add $0, $1, $2", "=a,a,a"(i32 %a, i32 %1)
   ret i32 %2
 }
@@ -87,7 +87,7 @@ define i32 @constraint_b(i32 %a) nounwind {
 ; CSKY-NEXT:    .p2align 2
 ; CSKY-NEXT:  .LCPI3_0:
 ; CSKY-NEXT:    .long gi
-  %1 = load i32, i32* @gi
+  %1 = load i32, ptr @gi
   %2 = tail call i32 asm "add $0, $1, $2", "=b,b,b"(i32 %a, i32 %1)
   ret i32 %2
 }
@@ -109,7 +109,7 @@ define i32 @constraint_z(i32 %a) nounwind {
 ; CSKY-NEXT:    .p2align 2
 ; CSKY-NEXT:  .LCPI4_0:
 ; CSKY-NEXT:    .long gi
-  %1 = load i32, i32* @gi
+  %1 = load i32, ptr @gi
   %2 = tail call i32 asm "add $0, $1, $2", "=r,z,r"(i32 %a, i32 %1)
   ret i32 %2
 }
@@ -130,7 +130,7 @@ define i32 @constraint_c(i32 %a, i32 %b) nounwind {
 ; CSKY-NEXT:    .p2align 2
 ; CSKY-NEXT:  .LCPI5_0:
 ; CSKY-NEXT:    .long gi
-  %1 = load i32, i32* @gi
+  %1 = load i32, ptr @gi
   %2 = tail call i32 asm "addc $0, $1, $2", "=r,r,r,~{c}"(i32 %a, i32 %1)
   ret i32 %2
 }
@@ -145,12 +145,12 @@ define i32 @constraint_i(i32 %a) nounwind {
 ; CSKY-NEXT:    addi16 sp, sp, 4
 ; CSKY-NEXT:    rts16
 
-  %1 = load i32, i32* @gi
+  %1 = load i32, ptr @gi
   %2 = tail call i32 asm "addi $0, $1, $2", "=r,r,i"(i32 %a, i32 113)
   ret i32 %2
 }
 
-define void @constraint_m(i32* %a) nounwind {
+define void @constraint_m(ptr %a) nounwind {
 ; CSKY-LABEL: constraint_m:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -159,11 +159,11 @@ define void @constraint_m(i32* %a) nounwind {
 ; CSKY-NEXT:    addi16 sp, sp, 4
 ; CSKY-NEXT:    rts16
 
-  call void asm sideeffect "", "=*m"(i32* elementtype(i32) %a)
+  call void asm sideeffect "", "=*m"(ptr elementtype(i32) %a)
   ret void
 }
 
-define i32 @constraint_m2(i32* %a) nounwind {
+define i32 @constraint_m2(ptr %a) nounwind {
 ; CSKY-LABEL: constraint_m2:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -173,7 +173,7 @@ define i32 @constraint_m2(i32* %a) nounwind {
 ; CSKY-NEXT:    addi16 sp, sp, 4
 ; CSKY-NEXT:    rts16
 
-  %1 = tail call i32 asm "ld.w $0, $1", "=r,*m"(i32* elementtype(i32) %a)
+  %1 = tail call i32 asm "ld.w $0, $1", "=r,*m"(ptr elementtype(i32) %a)
   ret i32 %1
 }
 
@@ -200,7 +200,7 @@ define void @operand_global() nounwind {
 ; CSKY-NEXT:    addi16 sp, sp, 4
 ; CSKY-NEXT:    rts16
 
-  tail call void asm sideeffect ".4byte $0", "i"(i32* @gi)
+  tail call void asm sideeffect ".4byte $0", "i"(ptr @gi)
   ret void
 }
 
@@ -216,7 +216,7 @@ define void @operand_block_address() nounwind {
 ; CSKY-NEXT:    addi16 sp, sp, 4
 ; CSKY-NEXT:    rts16
 
-  call void asm sideeffect "br32 $0", "i"(i8* blockaddress(@operand_block_address, %bb))
+  call void asm sideeffect "br32 $0", "i"(ptr blockaddress(@operand_block_address, %bb))
   br label %bb
 bb:
   ret void

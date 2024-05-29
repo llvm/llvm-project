@@ -74,14 +74,14 @@ public:
   }
 
   StringSwitch& EndsWith(StringLiteral S, T Value) {
-    if (!Result && Str.endswith(S)) {
+    if (!Result && Str.ends_with(S)) {
       Result = std::move(Value);
     }
     return *this;
   }
 
   StringSwitch& StartsWith(StringLiteral S, T Value) {
-    if (!Result && Str.startswith(S)) {
+    if (!Result && Str.starts_with(S)) {
       Result = std::move(Value);
     }
     return *this;

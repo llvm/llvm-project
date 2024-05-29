@@ -45,7 +45,20 @@ TEST(ValueTest, TopsEquivalent) {
   EXPECT_TRUE(areEquivalentValues(V2, V1));
 }
 
-TEST(ValueTest, EquivalentValuesWithDifferentPropsEquivalent) {
+// The framework does not (currently) consider equivalence for values with
+// properties, leaving such to individual analyses.
+TEST(ValueTest, ValuesWithSamePropsDifferent) {
+  Arena A;
+  TopBoolValue Prop(A.makeAtomRef(Atom(0)));
+  TopBoolValue V1(A.makeAtomRef(Atom(2)));
+  TopBoolValue V2(A.makeAtomRef(Atom(3)));
+  V1.setProperty("foo", Prop);
+  V2.setProperty("foo", Prop);
+  EXPECT_FALSE(areEquivalentValues(V1, V2));
+  EXPECT_FALSE(areEquivalentValues(V2, V1));
+}
+
+TEST(ValueTest, ValuesWithDifferentPropsDifferent) {
   Arena A;
   TopBoolValue Prop1(A.makeAtomRef(Atom(0)));
   TopBoolValue Prop2(A.makeAtomRef(Atom(1)));
@@ -53,8 +66,19 @@ TEST(ValueTest, EquivalentValuesWithDifferentPropsEquivalent) {
   TopBoolValue V2(A.makeAtomRef(Atom(3)));
   V1.setProperty("foo", Prop1);
   V2.setProperty("bar", Prop2);
-  EXPECT_TRUE(areEquivalentValues(V1, V2));
-  EXPECT_TRUE(areEquivalentValues(V2, V1));
+  EXPECT_FALSE(areEquivalentValues(V1, V2));
+  EXPECT_FALSE(areEquivalentValues(V2, V1));
+}
+
+TEST(ValueTest, ValuesWithDifferentNumberPropsDifferent) {
+  Arena A;
+  TopBoolValue Prop(A.makeAtomRef(Atom(0)));
+  TopBoolValue V1(A.makeAtomRef(Atom(2)));
+  TopBoolValue V2(A.makeAtomRef(Atom(3)));
+  // Only set a property on `V1`.
+  V1.setProperty("foo", Prop);
+  EXPECT_FALSE(areEquivalentValues(V1, V2));
+  EXPECT_FALSE(areEquivalentValues(V2, V1));
 }
 
 TEST(ValueTest, DifferentKindsNotEquivalent) {

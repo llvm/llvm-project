@@ -82,11 +82,11 @@ template <typename value_t> value_t swapWord(value_t Val) {
   const unsigned NumWords = sizeof(Val) / 2;
   if (NumWords <= 1)
     return Val;
-  Val = support::endian::byte_swap(Val, support::big);
+  Val = support::endian::byte_swap(Val, llvm::endianness::big);
   value_t NewVal = 0;
   for (unsigned i = 0U; i != NumWords; ++i) {
     uint16_t Part = (Val >> (i * 16)) & 0xFFFF;
-    Part = support::endian::byte_swap(Part, support::big);
+    Part = support::endian::byte_swap(Part, llvm::endianness::big);
     NewVal |= (Part << (i * 16));
   }
   return NewVal;

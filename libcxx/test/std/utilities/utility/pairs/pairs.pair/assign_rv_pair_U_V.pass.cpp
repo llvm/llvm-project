@@ -23,13 +23,13 @@
 
 struct Derived : ConstexprTestTypes::MoveOnly {
   Derived() = default;
-  TEST_CONSTEXPR_CXX20 Derived(ConstexprTestTypes::MoveOnly&&){};
+  TEST_CONSTEXPR_CXX20 Derived(ConstexprTestTypes::MoveOnly&&) {}
 };
 struct CountAssign {
   int copied = 0;
   int moved = 0;
   TEST_CONSTEXPR_CXX20 CountAssign() = default;
-  TEST_CONSTEXPR_CXX20 CountAssign(const int){};
+  TEST_CONSTEXPR_CXX20 CountAssign(const int) {}
   TEST_CONSTEXPR_CXX20 CountAssign& operator=(CountAssign const&) {
     ++copied;
     return *this;

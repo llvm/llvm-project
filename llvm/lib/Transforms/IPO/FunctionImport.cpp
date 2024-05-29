@@ -16,7 +16,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/AutoUpgrade.h"
@@ -38,6 +37,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
@@ -125,7 +125,8 @@ static cl::opt<bool> ComputeDead("compute-dead", cl::init(true), cl::Hidden,
 
 static cl::opt<bool> EnableImportMetadata(
     "enable-import-metadata", cl::init(false), cl::Hidden,
-    cl::desc("Enable import metadata like 'thinlto_src_module'"));
+    cl::desc("Enable import metadata like 'thinlto_src_module' and "
+             "'thinlto_src_file'"));
 
 /// Summary file to use for function importing when using -function-import from
 /// the command line.
@@ -138,6 +139,44 @@ static cl::opt<std::string>
 static cl::opt<bool>
     ImportAllIndex("import-all-index",
                    cl::desc("Import all external functions in index."));
+
+/// This is a test-only option.
+/// If this option is enabled, the ThinLTO indexing step will import each
+/// function declaration as a fallback. In a real build this may increase ram
+/// usage of the indexing step unnecessarily.
+/// TODO: Implement selective import (based on combined summary analysis) to
+/// ensure the imported function has a use case in the postlink pipeline.
+static cl::opt<bool> ImportDeclaration(
+    "import-declaration", cl::init(false), cl::Hidden,
+    cl::desc("If true, import function declaration as fallback if the function "
+             "definition is not imported."));
+
+/// Pass a workload description file - an example of workload would be the
+/// functions executed to satisfy a RPC request. A workload is defined by a root
+/// function and the list of functions that are (frequently) needed to satisfy
+/// it. The module that defines the root will have all those functions imported.
+/// The file contains a JSON dictionary. The keys are root functions, the values
+/// are lists of functions to import in the module defining the root. It is
+/// assumed -funique-internal-linkage-names was used, thus ensuring function
+/// names are unique even for local linkage ones.
+static cl::opt<std::string> WorkloadDefinitions(
+    "thinlto-workload-def",
+    cl::desc("Pass a workload definition. This is a file containing a JSON "
+             "dictionary. The keys are root functions, the values are lists of "
+             "functions to import in the module defining the root. It is "
+             "assumed -funique-internal-linkage-names was used, to ensure "
+             "local linkage functions have unique names. For example: \n"
+             "{\n"
+             "  \"rootFunction_1\": [\"function_to_import_1\", "
+             "\"function_to_import_2\"], \n"
+             "  \"rootFunction_2\": [\"function_to_import_3\", "
+             "\"function_to_import_4\"] \n"
+             "}"),
+    cl::Hidden);
+
+namespace llvm {
+extern cl::opt<bool> EnableMemProfContextDisambiguation;
+}
 
 // Load lazily a module from \p FileName in \p Context.
 static std::unique_ptr<Module> loadFile(const std::string &FileName,
@@ -217,8 +256,12 @@ static auto qualifyCalleeCandidates(
 }
 
 /// Given a list of possible callee implementation for a call site, select one
-/// that fits the \p Threshold. If none are found, the Reason will give the last
-/// reason for the failure (last, in the order of CalleeSummaryList entries).
+/// that fits the \p Threshold for function definition import. If none are
+/// found, the Reason will give the last reason for the failure (last, in the
+/// order of CalleeSummaryList entries). While looking for a callee definition,
+/// sets \p TooLargeOrNoInlineSummary to the last seen too-large or noinline
+/// candidate; other modules may want to know the function summary or
+/// declaration even if a definition is not needed.
 ///
 /// FIXME: select "best" instead of first that fits. But what is "best"?
 /// - The smallest: more likely to be inlined.
@@ -231,24 +274,32 @@ static const GlobalValueSummary *
 selectCallee(const ModuleSummaryIndex &Index,
              ArrayRef<std::unique_ptr<GlobalValueSummary>> CalleeSummaryList,
              unsigned Threshold, StringRef CallerModulePath,
+             const GlobalValueSummary *&TooLargeOrNoInlineSummary,
              FunctionImporter::ImportFailureReason &Reason) {
+  // Records the last summary with reason noinline or too-large.
+  TooLargeOrNoInlineSummary = nullptr;
   auto QualifiedCandidates =
       qualifyCalleeCandidates(Index, CalleeSummaryList, CallerModulePath);
   for (auto QualifiedValue : QualifiedCandidates) {
     Reason = QualifiedValue.first;
+    // Skip a summary if its import is not (proved to be) legal.
     if (Reason != FunctionImporter::ImportFailureReason::None)
       continue;
     auto *Summary =
         cast<FunctionSummary>(QualifiedValue.second->getBaseObject());
 
+    // Don't bother importing the definition if the chance of inlining it is
+    // not high enough (except under `--force-import-all`).
     if ((Summary->instCount() > Threshold) && !Summary->fflags().AlwaysInline &&
         !ForceImportAll) {
+      TooLargeOrNoInlineSummary = Summary;
       Reason = FunctionImporter::ImportFailureReason::TooLarge;
       continue;
     }
 
-    // Don't bother importing if we can't inline it anyway.
+    // Don't bother importing the definition if we can't inline it anyway.
     if (Summary->fflags().NoInline && !ForceImportAll) {
+      TooLargeOrNoInlineSummary = Summary;
       Reason = FunctionImporter::ImportFailureReason::NoInline;
       continue;
     }
@@ -330,17 +381,27 @@ class GlobalsImporter final {
         if (!GVS || !Index.canImportGlobalVar(GVS, /* AnalyzeRefs */ true) ||
             LocalNotInModule(GVS))
           continue;
-        auto ILI = ImportList[RefSummary->modulePath()].insert(VI.getGUID());
+
+        // If there isn't an entry for GUID, insert <GUID, Definition> pair.
+        // Otherwise, definition should take precedence over declaration.
+        auto [Iter, Inserted] =
+            ImportList[RefSummary->modulePath()].try_emplace(
+                VI.getGUID(), GlobalValueSummary::Definition);
         // Only update stat and exports if we haven't already imported this
         // variable.
-        if (!ILI.second)
+        if (!Inserted) {
+          // Set the value to 'std::min(existing-value, new-value)' to make
+          // sure a definition takes precedence over a declaration.
+          Iter->second = std::min(GlobalValueSummary::Definition, Iter->second);
           break;
+        }
         NumImportedGlobalVarsThinLink++;
         // Any references made by this variable will be marked exported
         // later, in ComputeCrossModuleImport, after import decisions are
         // complete, which is more efficient than adding them here.
         if (ExportLists)
-          (*ExportLists)[RefSummary->modulePath()].insert(VI);
+          (*ExportLists)[RefSummary->modulePath()][VI] =
+              GlobalValueSummary::Definition;
 
         // If variable is not writeonly we attempt to recursively analyze
         // its references in order to import referenced constants.
@@ -370,14 +431,16 @@ public:
   }
 };
 
+static const char *getFailureName(FunctionImporter::ImportFailureReason Reason);
+
 /// Determine the list of imports and exports for each module.
-class ModuleImportsManager final {
+class ModuleImportsManager {
+protected:
   function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
       IsPrevailing;
   const ModuleSummaryIndex &Index;
   DenseMap<StringRef, FunctionImporter::ExportSetTy> *const ExportLists;
 
-public:
   ModuleImportsManager(
       function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
           IsPrevailing,
@@ -385,13 +448,247 @@ public:
       DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists = nullptr)
       : IsPrevailing(IsPrevailing), Index(Index), ExportLists(ExportLists) {}
 
+public:
+  virtual ~ModuleImportsManager() = default;
+
   /// Given the list of globals defined in a module, compute the list of imports
   /// as well as the list of "exports", i.e. the list of symbols referenced from
   /// another module (that may require promotion).
-  void computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
-                              StringRef ModName,
-                              FunctionImporter::ImportMapTy &ImportList);
+  virtual void
+  computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
+                         StringRef ModName,
+                         FunctionImporter::ImportMapTy &ImportList);
+
+  static std::unique_ptr<ModuleImportsManager>
+  create(function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+             IsPrevailing,
+         const ModuleSummaryIndex &Index,
+         DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists =
+             nullptr);
 };
+
+/// A ModuleImportsManager that operates based on a workload definition (see
+/// -thinlto-workload-def). For modules that do not define workload roots, it
+/// applies the base ModuleImportsManager import policy.
+class WorkloadImportsManager : public ModuleImportsManager {
+  // Keep a module name -> value infos to import association. We use it to
+  // determine if a module's import list should be done by the base
+  // ModuleImportsManager or by us.
+  StringMap<DenseSet<ValueInfo>> Workloads;
+
+  void
+  computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
+                         StringRef ModName,
+                         FunctionImporter::ImportMapTy &ImportList) override {
+    auto SetIter = Workloads.find(ModName);
+    if (SetIter == Workloads.end()) {
+      LLVM_DEBUG(dbgs() << "[Workload] " << ModName
+                        << " does not contain the root of any context.\n");
+      return ModuleImportsManager::computeImportForModule(DefinedGVSummaries,
+                                                          ModName, ImportList);
+    }
+    LLVM_DEBUG(dbgs() << "[Workload] " << ModName
+                      << " contains the root(s) of context(s).\n");
+
+    GlobalsImporter GVI(Index, DefinedGVSummaries, IsPrevailing, ImportList,
+                        ExportLists);
+    auto &ValueInfos = SetIter->second;
+    SmallVector<EdgeInfo, 128> GlobWorklist;
+    for (auto &VI : llvm::make_early_inc_range(ValueInfos)) {
+      auto It = DefinedGVSummaries.find(VI.getGUID());
+      if (It != DefinedGVSummaries.end() &&
+          IsPrevailing(VI.getGUID(), It->second)) {
+        LLVM_DEBUG(
+            dbgs() << "[Workload] " << VI.name()
+                   << " has the prevailing variant already in the module "
+                   << ModName << ". No need to import\n");
+        continue;
+      }
+      auto Candidates =
+          qualifyCalleeCandidates(Index, VI.getSummaryList(), ModName);
+
+      const GlobalValueSummary *GVS = nullptr;
+      auto PotentialCandidates = llvm::map_range(
+          llvm::make_filter_range(
+              Candidates,
+              [&](const auto &Candidate) {
+                LLVM_DEBUG(dbgs() << "[Workflow] Candidate for " << VI.name()
+                                  << " from " << Candidate.second->modulePath()
+                                  << " ImportFailureReason: "
+                                  << getFailureName(Candidate.first) << "\n");
+                return Candidate.first ==
+                        FunctionImporter::ImportFailureReason::None;
+              }),
+          [](const auto &Candidate) { return Candidate.second; });
+      if (PotentialCandidates.empty()) {
+        LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
+                          << " because can't find eligible Callee. Guid is: "
+                          << Function::getGUID(VI.name()) << "\n");
+        continue;
+      }
+      /// We will prefer importing the prevailing candidate, if not, we'll
+      /// still pick the first available candidate. The reason we want to make
+      /// sure we do import the prevailing candidate is because the goal of
+      /// workload-awareness is to enable optimizations specializing the call
+      /// graph of that workload. Suppose a function is already defined in the
+      /// module, but it's not the prevailing variant. Suppose also we do not
+      /// inline it (in fact, if it were interposable, we can't inline it),
+      /// but we could specialize it to the workload in other ways. However,
+      /// the linker would drop it in the favor of the prevailing copy.
+      /// Instead, by importing the prevailing variant (assuming also the use
+      /// of `-avail-extern-to-local`), we keep the specialization. We could
+      /// alteranatively make the non-prevailing variant local, but the
+      /// prevailing one is also the one for which we would have previously
+      /// collected profiles, making it preferrable.
+      auto PrevailingCandidates = llvm::make_filter_range(
+          PotentialCandidates, [&](const auto *Candidate) {
+            return IsPrevailing(VI.getGUID(), Candidate);
+          });
+      if (PrevailingCandidates.empty()) {
+        GVS = *PotentialCandidates.begin();
+        if (!llvm::hasSingleElement(PotentialCandidates) &&
+            GlobalValue::isLocalLinkage(GVS->linkage()))
+          LLVM_DEBUG(
+              dbgs()
+              << "[Workload] Found multiple non-prevailing candidates for "
+              << VI.name()
+              << ". This is unexpected. Are module paths passed to the "
+                 "compiler unique for the modules passed to the linker?");
+        // We could in theory have multiple (interposable) copies of a symbol
+        // when there is no prevailing candidate, if say the prevailing copy was
+        // in a native object being linked in. However, we should in theory be
+        // marking all of these non-prevailing IR copies dead in that case, in
+        // which case they won't be candidates.
+        assert(GVS->isLive());
+      } else {
+        assert(llvm::hasSingleElement(PrevailingCandidates));
+        GVS = *PrevailingCandidates.begin();
+      }
+
+      auto ExportingModule = GVS->modulePath();
+      // We checked that for the prevailing case, but if we happen to have for
+      // example an internal that's defined in this module, it'd have no
+      // PrevailingCandidates.
+      if (ExportingModule == ModName) {
+        LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
+                          << " because its defining module is the same as the "
+                             "current module\n");
+        continue;
+      }
+      LLVM_DEBUG(dbgs() << "[Workload][Including]" << VI.name() << " from "
+                        << ExportingModule << " : "
+                        << Function::getGUID(VI.name()) << "\n");
+      ImportList[ExportingModule][VI.getGUID()] =
+          GlobalValueSummary::Definition;
+      GVI.onImportingSummary(*GVS);
+      if (ExportLists)
+        (*ExportLists)[ExportingModule][VI] = GlobalValueSummary::Definition;
+    }
+    LLVM_DEBUG(dbgs() << "[Workload] Done\n");
+  }
+
+public:
+  WorkloadImportsManager(
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          IsPrevailing,
+      const ModuleSummaryIndex &Index,
+      DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
+      : ModuleImportsManager(IsPrevailing, Index, ExportLists) {
+    // Since the workload def uses names, we need a quick lookup
+    // name->ValueInfo.
+    StringMap<ValueInfo> NameToValueInfo;
+    StringSet<> AmbiguousNames;
+    for (auto &I : Index) {
+      ValueInfo VI = Index.getValueInfo(I);
+      if (!NameToValueInfo.insert(std::make_pair(VI.name(), VI)).second)
+        LLVM_DEBUG(AmbiguousNames.insert(VI.name()));
+    }
+    auto DbgReportIfAmbiguous = [&](StringRef Name) {
+      LLVM_DEBUG(if (AmbiguousNames.count(Name) > 0) {
+        dbgs() << "[Workload] Function name " << Name
+               << " present in the workload definition is ambiguous. Consider "
+                  "compiling with -funique-internal-linkage-names.";
+      });
+    };
+    std::error_code EC;
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(WorkloadDefinitions);
+    if (std::error_code EC = BufferOrErr.getError()) {
+      report_fatal_error("Failed to open context file");
+      return;
+    }
+    auto Buffer = std::move(BufferOrErr.get());
+    std::map<std::string, std::vector<std::string>> WorkloadDefs;
+    json::Path::Root NullRoot;
+    // The JSON is supposed to contain a dictionary matching the type of
+    // WorkloadDefs. For example:
+    // {
+    //   "rootFunction_1": ["function_to_import_1", "function_to_import_2"],
+    //   "rootFunction_2": ["function_to_import_3", "function_to_import_4"]
+    // }
+    auto Parsed = json::parse(Buffer->getBuffer());
+    if (!Parsed)
+      report_fatal_error(Parsed.takeError());
+    if (!json::fromJSON(*Parsed, WorkloadDefs, NullRoot))
+      report_fatal_error("Invalid thinlto contextual profile format.");
+    for (const auto &Workload : WorkloadDefs) {
+      const auto &Root = Workload.first;
+      DbgReportIfAmbiguous(Root);
+      LLVM_DEBUG(dbgs() << "[Workload] Root: " << Root << "\n");
+      const auto &AllCallees = Workload.second;
+      auto RootIt = NameToValueInfo.find(Root);
+      if (RootIt == NameToValueInfo.end()) {
+        LLVM_DEBUG(dbgs() << "[Workload] Root " << Root
+                          << " not found in this linkage unit.\n");
+        continue;
+      }
+      auto RootVI = RootIt->second;
+      if (RootVI.getSummaryList().size() != 1) {
+        LLVM_DEBUG(dbgs() << "[Workload] Root " << Root
+                          << " should have exactly one summary, but has "
+                          << RootVI.getSummaryList().size() << ". Skipping.\n");
+        continue;
+      }
+      StringRef RootDefiningModule =
+          RootVI.getSummaryList().front()->modulePath();
+      LLVM_DEBUG(dbgs() << "[Workload] Root defining module for " << Root
+                        << " is : " << RootDefiningModule << "\n");
+      auto &Set = Workloads[RootDefiningModule];
+      for (const auto &Callee : AllCallees) {
+        LLVM_DEBUG(dbgs() << "[Workload] " << Callee << "\n");
+        DbgReportIfAmbiguous(Callee);
+        auto ElemIt = NameToValueInfo.find(Callee);
+        if (ElemIt == NameToValueInfo.end()) {
+          LLVM_DEBUG(dbgs() << "[Workload] " << Callee << " not found\n");
+          continue;
+        }
+        Set.insert(ElemIt->second);
+      }
+      LLVM_DEBUG({
+        dbgs() << "[Workload] Root: " << Root << " we have " << Set.size()
+               << " distinct callees.\n";
+        for (const auto &VI : Set) {
+          dbgs() << "[Workload] Root: " << Root
+                 << " Would include: " << VI.getGUID() << "\n";
+        }
+      });
+    }
+  }
+};
+
+std::unique_ptr<ModuleImportsManager> ModuleImportsManager::create(
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        IsPrevailing,
+    const ModuleSummaryIndex &Index,
+    DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists) {
+  if (WorkloadDefinitions.empty()) {
+    LLVM_DEBUG(dbgs() << "[Workload] Using the regular imports manager.\n");
+    return std::unique_ptr<ModuleImportsManager>(
+        new ModuleImportsManager(IsPrevailing, Index, ExportLists));
+  }
+  LLVM_DEBUG(dbgs() << "[Workload] Using the contextual imports manager.\n");
+  return std::make_unique<WorkloadImportsManager>(IsPrevailing, Index,
+                                                  ExportLists);
+}
 
 static const char *
 getFailureName(FunctionImporter::ImportFailureReason Reason) {
@@ -506,9 +803,28 @@ static void computeImportForFunction(
       }
 
       FunctionImporter::ImportFailureReason Reason{};
-      CalleeSummary = selectCallee(Index, VI.getSummaryList(), NewThreshold,
-                                   Summary.modulePath(), Reason);
+
+      // `SummaryForDeclImport` is an summary eligible for declaration import.
+      const GlobalValueSummary *SummaryForDeclImport = nullptr;
+      CalleeSummary =
+          selectCallee(Index, VI.getSummaryList(), NewThreshold,
+                       Summary.modulePath(), SummaryForDeclImport, Reason);
       if (!CalleeSummary) {
+        // There isn't a callee for definition import but one for declaration
+        // import.
+        if (ImportDeclaration && SummaryForDeclImport) {
+          StringRef DeclSourceModule = SummaryForDeclImport->modulePath();
+
+          // Since definition takes precedence over declaration for the same VI,
+          // try emplace <VI, declaration> pair without checking insert result.
+          // If insert doesn't happen, there must be an existing entry keyed by
+          // VI.
+          if (ExportLists)
+            (*ExportLists)[DeclSourceModule].try_emplace(
+                VI, GlobalValueSummary::Declaration);
+          ImportList[DeclSourceModule].try_emplace(
+              VI.getGUID(), GlobalValueSummary::Declaration);
+        }
         // Update with new larger threshold if this was a retry (otherwise
         // we would have already inserted with NewThreshold above). Also
         // update failure info if requested.
@@ -553,11 +869,15 @@ static void computeImportForFunction(
              "selectCallee() didn't honor the threshold");
 
       auto ExportModulePath = ResolvedCalleeSummary->modulePath();
-      auto ILI = ImportList[ExportModulePath].insert(VI.getGUID());
+
+      // Try emplace the definition entry, and update stats based on insertion
+      // status.
+      auto [Iter, Inserted] = ImportList[ExportModulePath].try_emplace(
+          VI.getGUID(), GlobalValueSummary::Definition);
+
       // We previously decided to import this GUID definition if it was already
       // inserted in the set of imports from the exporting module.
-      bool PreviouslyImported = !ILI.second;
-      if (!PreviouslyImported) {
+      if (Inserted || Iter->second == GlobalValueSummary::Declaration) {
         NumImportedFunctionsThinLink++;
         if (IsHotCallsite)
           NumImportedHotFunctionsThinLink++;
@@ -565,11 +885,14 @@ static void computeImportForFunction(
           NumImportedCriticalFunctionsThinLink++;
       }
 
+      if (Iter->second == GlobalValueSummary::Declaration)
+        Iter->second = GlobalValueSummary::Definition;
+
       // Any calls/references made by this function will be marked exported
       // later, in ComputeCrossModuleImport, after import decisions are
       // complete, which is more efficient than adding them here.
       if (ExportLists)
-        (*ExportLists)[ExportModulePath].insert(VI);
+        (*ExportLists)[ExportModulePath][VI] = GlobalValueSummary::Definition;
     }
 
     auto GetAdjustedThreshold = [](unsigned Threshold, bool IsHotCallsite) {
@@ -676,12 +999,20 @@ static bool isGlobalVarSummary(const ModuleSummaryIndex &Index,
 }
 
 template <class T>
-static unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index,
-                                      T &Cont) {
+static unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index, T &Cont,
+                                      unsigned &DefinedGVS,
+                                      unsigned &DefinedFS) {
   unsigned NumGVS = 0;
-  for (auto &V : Cont)
-    if (isGlobalVarSummary(Index, V))
+  DefinedGVS = 0;
+  DefinedFS = 0;
+  for (auto &[GUID, Type] : Cont) {
+    if (isGlobalVarSummary(Index, GUID)) {
+      if (Type == GlobalValueSummary::Definition)
+        ++DefinedGVS;
       ++NumGVS;
+    } else if (Type == GlobalValueSummary::Definition)
+      ++DefinedFS;
+  }
   return NumGVS;
 }
 #endif
@@ -691,13 +1022,12 @@ static bool checkVariableImport(
     const ModuleSummaryIndex &Index,
     DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
-
   DenseSet<GlobalValue::GUID> FlattenedImports;
 
   for (auto &ImportPerModule : ImportLists)
     for (auto &ExportPerModule : ImportPerModule.second)
-      FlattenedImports.insert(ExportPerModule.second.begin(),
-                              ExportPerModule.second.end());
+      for (auto &[GUID, Type] : ExportPerModule.second)
+        FlattenedImports.insert(GUID);
 
   // Checks that all GUIDs of read/writeonly vars we see in export lists
   // are also in the import lists. Otherwise we my face linker undefs,
@@ -716,7 +1046,7 @@ static bool checkVariableImport(
   };
 
   for (auto &ExportPerModule : ExportLists)
-    for (auto &VI : ExportPerModule.second)
+    for (auto &[VI, Unused] : ExportPerModule.second)
       if (!FlattenedImports.count(VI.getGUID()) &&
           IsReadOrWriteOnlyVarNeedingImporting(ExportPerModule.first, VI))
         return false;
@@ -733,14 +1063,14 @@ void llvm::ComputeCrossModuleImport(
         isPrevailing,
     DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
-  ModuleImportsManager MIS(isPrevailing, Index, &ExportLists);
+  auto MIS = ModuleImportsManager::create(isPrevailing, Index, &ExportLists);
   // For each module that has function defined, compute the import/export lists.
   for (const auto &DefinedGVSummaries : ModuleToDefinedGVSummaries) {
     auto &ImportList = ImportLists[DefinedGVSummaries.first];
     LLVM_DEBUG(dbgs() << "Computing import for Module '"
                       << DefinedGVSummaries.first << "'\n");
-    MIS.computeImportForModule(DefinedGVSummaries.second,
-                               DefinedGVSummaries.first, ImportList);
+    MIS->computeImportForModule(DefinedGVSummaries.second,
+                                DefinedGVSummaries.first, ImportList);
   }
 
   // When computing imports we only added the variables and functions being
@@ -752,7 +1082,11 @@ void llvm::ComputeCrossModuleImport(
     FunctionImporter::ExportSetTy NewExports;
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ELI.first);
-    for (auto &EI : ELI.second) {
+    for (auto &[EI, Type] : ELI.second) {
+      // If a variable is exported as a declaration, its 'refs' and 'calls' are
+      // not further exported.
+      if (Type == GlobalValueSummary::Declaration)
+        continue;
       // Find the copy defined in the exporting module so that we can mark the
       // values it references in that specific definition as exported.
       // Below we will add all references and called values, without regard to
@@ -771,22 +1105,31 @@ void llvm::ComputeCrossModuleImport(
         // we convert such variables initializers to "zeroinitializer".
         // See processGlobalForThinLTO.
         if (!Index.isWriteOnly(GVS))
-          for (const auto &VI : GVS->refs())
-            NewExports.insert(VI);
+          for (const auto &VI : GVS->refs()) {
+            // Try to emplace the declaration entry. If a definition entry
+            // already exists for key `VI`, this is a no-op.
+            NewExports.try_emplace(VI, GlobalValueSummary::Declaration);
+          }
       } else {
         auto *FS = cast<FunctionSummary>(S);
-        for (const auto &Edge : FS->calls())
-          NewExports.insert(Edge.first);
-        for (const auto &Ref : FS->refs())
-          NewExports.insert(Ref);
+        for (const auto &Edge : FS->calls()) {
+          // Try to emplace the declaration entry. If a definition entry
+          // already exists for key `VI`, this is a no-op.
+          NewExports.try_emplace(Edge.first, GlobalValueSummary::Declaration);
+        }
+        for (const auto &Ref : FS->refs()) {
+          // Try to emplace the declaration entry. If a definition entry
+          // already exists for key `VI`, this is a no-op.
+          NewExports.try_emplace(Ref, GlobalValueSummary::Declaration);
+        }
       }
     }
-    // Prune list computed above to only include values defined in the exporting
-    // module. We do this after the above insertion since we may hit the same
-    // ref/call target multiple times in above loop, and it is more efficient to
-    // avoid a set lookup each time.
+    // Prune list computed above to only include values defined in the
+    // exporting module. We do this after the above insertion since we may hit
+    // the same ref/call target multiple times in above loop, and it is more
+    // efficient to avoid a set lookup each time.
     for (auto EI = NewExports.begin(); EI != NewExports.end();) {
-      if (!DefinedGVSummaries.count(EI->getGUID()))
+      if (!DefinedGVSummaries.count(EI->first.getGUID()))
         NewExports.erase(EI++);
       else
         ++EI;
@@ -801,18 +1144,29 @@ void llvm::ComputeCrossModuleImport(
   for (auto &ModuleImports : ImportLists) {
     auto ModName = ModuleImports.first;
     auto &Exports = ExportLists[ModName];
-    unsigned NumGVS = numGlobalVarSummaries(Index, Exports);
-    LLVM_DEBUG(dbgs() << "* Module " << ModName << " exports "
-                      << Exports.size() - NumGVS << " functions and " << NumGVS
-                      << " vars. Imports from " << ModuleImports.second.size()
-                      << " modules.\n");
+    unsigned DefinedGVS = 0, DefinedFS = 0;
+    unsigned NumGVS =
+        numGlobalVarSummaries(Index, Exports, DefinedGVS, DefinedFS);
+    LLVM_DEBUG(dbgs() << "* Module " << ModName << " exports " << DefinedFS
+                      << " function as definitions, "
+                      << Exports.size() - NumGVS - DefinedFS
+                      << " functions as declarations, " << DefinedGVS
+                      << " var definitions and " << NumGVS - DefinedGVS
+                      << " var declarations. Imports from "
+                      << ModuleImports.second.size() << " modules.\n");
     for (auto &Src : ModuleImports.second) {
       auto SrcModName = Src.first;
-      unsigned NumGVSPerMod = numGlobalVarSummaries(Index, Src.second);
-      LLVM_DEBUG(dbgs() << " - " << Src.second.size() - NumGVSPerMod
-                        << " functions imported from " << SrcModName << "\n");
-      LLVM_DEBUG(dbgs() << " - " << NumGVSPerMod
-                        << " global vars imported from " << SrcModName << "\n");
+      unsigned DefinedGVS = 0, DefinedFS = 0;
+      unsigned NumGVSPerMod =
+          numGlobalVarSummaries(Index, Src.second, DefinedGVS, DefinedFS);
+      LLVM_DEBUG(dbgs() << " - " << DefinedFS << " function definitions and "
+                        << Src.second.size() - NumGVSPerMod - DefinedFS
+                        << " function declarations imported from " << SrcModName
+                        << "\n");
+      LLVM_DEBUG(dbgs() << " - " << DefinedGVS << " global vars definition and "
+                        << NumGVSPerMod - DefinedGVS
+                        << " global vars declaration imported from "
+                        << SrcModName << "\n");
     }
   }
 #endif
@@ -826,11 +1180,17 @@ static void dumpImportListForModule(const ModuleSummaryIndex &Index,
                     << ImportList.size() << " modules.\n");
   for (auto &Src : ImportList) {
     auto SrcModName = Src.first;
-    unsigned NumGVSPerMod = numGlobalVarSummaries(Index, Src.second);
-    LLVM_DEBUG(dbgs() << " - " << Src.second.size() - NumGVSPerMod
-                      << " functions imported from " << SrcModName << "\n");
-    LLVM_DEBUG(dbgs() << " - " << NumGVSPerMod << " vars imported from "
-                      << SrcModName << "\n");
+    unsigned DefinedGVS = 0, DefinedFS = 0;
+    unsigned NumGVSPerMod =
+        numGlobalVarSummaries(Index, Src.second, DefinedGVS, DefinedFS);
+    LLVM_DEBUG(dbgs() << " - " << DefinedFS << " function definitions and "
+                      << Src.second.size() - DefinedFS - NumGVSPerMod
+                      << " function declarations imported from " << SrcModName
+                      << "\n");
+    LLVM_DEBUG(dbgs() << " - " << DefinedGVS << " var definitions and "
+                      << NumGVSPerMod - DefinedGVS
+                      << " var declarations imported from " << SrcModName
+                      << "\n");
   }
 }
 #endif
@@ -856,8 +1216,8 @@ static void ComputeCrossModuleImportForModuleForTest(
 
   // Compute the import list for this module.
   LLVM_DEBUG(dbgs() << "Computing import for Module '" << ModulePath << "'\n");
-  ModuleImportsManager MIS(isPrevailing, Index);
-  MIS.computeImportForModule(FunctionSummaryMap, ModulePath, ImportList);
+  auto MIS = ModuleImportsManager::create(isPrevailing, Index);
+  MIS->computeImportForModule(FunctionSummaryMap, ModulePath, ImportList);
 
 #ifndef NDEBUG
   dumpImportListForModule(Index, ModulePath, ImportList);
@@ -886,7 +1246,13 @@ static void ComputeCrossModuleImportForModuleFromIndexForTest(
     if (Summary->modulePath() == ModulePath)
       continue;
     // Add an entry to provoke importing by thinBackend.
-    ImportList[Summary->modulePath()].insert(GUID);
+    auto [Iter, Inserted] = ImportList[Summary->modulePath()].try_emplace(
+        GUID, Summary->importType());
+    if (!Inserted) {
+      // Use 'std::min' to make sure definition (with enum value 0) takes
+      // precedence over declaration (with enum value 1).
+      Iter->second = std::min(Iter->second, Summary->importType());
+    }
   }
 #ifndef NDEBUG
   dumpImportListForModule(Index, ModulePath, ImportList);
@@ -1069,20 +1435,25 @@ void llvm::gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
+    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    GVSummaryPtrSet &DecSummaries) {
   // Include all summaries from the importing module.
   ModuleToSummariesForIndex[std::string(ModulePath)] =
       ModuleToDefinedGVSummaries.lookup(ModulePath);
   // Include summaries for imports.
   for (const auto &ILI : ImportList) {
     auto &SummariesForIndex = ModuleToSummariesForIndex[std::string(ILI.first)];
+
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ILI.first);
-    for (const auto &GI : ILI.second) {
-      const auto &DS = DefinedGVSummaries.find(GI);
+    for (const auto &[GUID, Type] : ILI.second) {
+      const auto &DS = DefinedGVSummaries.find(GUID);
       assert(DS != DefinedGVSummaries.end() &&
              "Expected a defined summary for imported global value");
-      SummariesForIndex[GI] = DS->second;
+      if (Type == GlobalValueSummary::Declaration)
+        DecSummaries.insert(DS->second);
+
+      SummariesForIndex[GUID] = DS->second;
     }
   }
 }
@@ -1323,7 +1694,7 @@ static Function *replaceAliasWithAliasee(Module *SrcModule, GlobalAlias *GA) {
   // ensure all uses of alias instead use the new clone (casted if necessary).
   NewFn->setLinkage(GA->getLinkage());
   NewFn->setVisibility(GA->getVisibility());
-  GA->replaceAllUsesWith(ConstantExpr::getBitCast(NewFn, GA->getType()));
+  GA->replaceAllUsesWith(NewFn);
   NewFn->takeName(GA);
   return NewFn;
 }
@@ -1354,6 +1725,16 @@ Expected<bool> FunctionImporter::importFunctions(
   for (const auto &FunctionsToImportPerModule : ImportList) {
     ModuleNameOrderedList.insert(FunctionsToImportPerModule.first);
   }
+
+  auto getImportType = [&](const FunctionsToImportTy &GUIDToImportType,
+                           GlobalValue::GUID GUID)
+      -> std::optional<GlobalValueSummary::ImportKind> {
+    auto Iter = GUIDToImportType.find(GUID);
+    if (Iter == GUIDToImportType.end())
+      return std::nullopt;
+    return Iter->second;
+  };
+
   for (const auto &Name : ModuleNameOrderedList) {
     // Get the module for the import
     const auto &FunctionsToImportPerModule = ImportList.find(Name);
@@ -1371,23 +1752,41 @@ Expected<bool> FunctionImporter::importFunctions(
       return std::move(Err);
 
     auto &ImportGUIDs = FunctionsToImportPerModule->second;
+
     // Find the globals to import
     SetVector<GlobalValue *> GlobalsToImport;
     for (Function &F : *SrcModule) {
       if (!F.hasName())
         continue;
       auto GUID = F.getGUID();
-      auto Import = ImportGUIDs.count(GUID);
-      LLVM_DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing function "
+      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
+
+      bool ImportDefinition =
+          (MaybeImportType &&
+           (*MaybeImportType == GlobalValueSummary::Definition));
+
+      LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
+                        << " importing function"
+                        << (ImportDefinition
+                                ? " definition "
+                                : (MaybeImportType ? " declaration " : " "))
                         << GUID << " " << F.getName() << " from "
                         << SrcModule->getSourceFileName() << "\n");
-      if (Import) {
+      if (ImportDefinition) {
         if (Error Err = F.materialize())
           return std::move(Err);
-        if (EnableImportMetadata) {
-          // Add 'thinlto_src_module' metadata for statistics and debugging.
+        // MemProf should match function's definition and summary,
+        // 'thinlto_src_module' is needed.
+        if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
+          // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
+          // statistics and debugging.
           F.setMetadata(
               "thinlto_src_module",
+              MDNode::get(DestModule.getContext(),
+                          {MDString::get(DestModule.getContext(),
+                                         SrcModule->getModuleIdentifier())}));
+          F.setMetadata(
+              "thinlto_src_file",
               MDNode::get(DestModule.getContext(),
                           {MDString::get(DestModule.getContext(),
                                          SrcModule->getSourceFileName())}));
@@ -1399,11 +1798,20 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!GV.hasName())
         continue;
       auto GUID = GV.getGUID();
-      auto Import = ImportGUIDs.count(GUID);
-      LLVM_DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing global "
+      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
+
+      bool ImportDefinition =
+          (MaybeImportType &&
+           (*MaybeImportType == GlobalValueSummary::Definition));
+
+      LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
+                        << " importing global"
+                        << (ImportDefinition
+                                ? " definition "
+                                : (MaybeImportType ? " declaration " : " "))
                         << GUID << " " << GV.getName() << " from "
                         << SrcModule->getSourceFileName() << "\n");
-      if (Import) {
+      if (ImportDefinition) {
         if (Error Err = GV.materialize())
           return std::move(Err);
         ImportedGVCount += GlobalsToImport.insert(&GV);
@@ -1413,11 +1821,20 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!GA.hasName() || isa<GlobalIFunc>(GA.getAliaseeObject()))
         continue;
       auto GUID = GA.getGUID();
-      auto Import = ImportGUIDs.count(GUID);
-      LLVM_DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing alias "
+      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
+
+      bool ImportDefinition =
+          (MaybeImportType &&
+           (*MaybeImportType == GlobalValueSummary::Definition));
+
+      LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
+                        << " importing alias"
+                        << (ImportDefinition
+                                ? " definition "
+                                : (MaybeImportType ? " declaration " : " "))
                         << GUID << " " << GA.getName() << " from "
                         << SrcModule->getSourceFileName() << "\n");
-      if (Import) {
+      if (ImportDefinition) {
         if (Error Err = GA.materialize())
           return std::move(Err);
         // Import alias as a copy of its aliasee.
@@ -1428,10 +1845,16 @@ Expected<bool> FunctionImporter::importFunctions(
         LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << GO->getGUID() << " "
                           << GO->getName() << " from "
                           << SrcModule->getSourceFileName() << "\n");
-        if (EnableImportMetadata) {
-          // Add 'thinlto_src_module' metadata for statistics and debugging.
+        if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
+          // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
+          // statistics and debugging.
           Fn->setMetadata(
               "thinlto_src_module",
+              MDNode::get(DestModule.getContext(),
+                          {MDString::get(DestModule.getContext(),
+                                         SrcModule->getModuleIdentifier())}));
+          Fn->setMetadata(
+              "thinlto_src_file",
               MDNode::get(DestModule.getContext(),
                           {MDString::get(DestModule.getContext(),
                                          SrcModule->getSourceFileName())}));
@@ -1477,6 +1900,7 @@ Expected<bool> FunctionImporter::importFunctions(
   NumImportedFunctions += (ImportedCount - ImportedGVCount);
   NumImportedGlobalVars += ImportedGVCount;
 
+  // TODO: Print counters for definitions and declarations in the debugging log.
   LLVM_DEBUG(dbgs() << "Imported " << ImportedCount - ImportedGVCount
                     << " functions for Module "
                     << DestModule.getModuleIdentifier() << "\n");

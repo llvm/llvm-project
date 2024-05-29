@@ -10,6 +10,7 @@
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/aarch32.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
+#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -93,15 +94,20 @@ private:
 
     Interface LGI;
 
-    for (auto *Sym : G.defined_symbols()) {
+    auto AddSymbol = [&](Symbol *Sym) {
       // Skip local symbols.
       if (Sym->getScope() == Scope::Local)
-        continue;
+        return;
       assert(Sym->hasName() && "Anonymous non-local symbol?");
 
       LGI.SymbolFlags[ES.intern(Sym->getName())] =
           getJITSymbolFlagsForSymbol(*Sym);
-    }
+    };
+
+    for (auto *Sym : G.defined_symbols())
+      AddSymbol(Sym);
+    for (auto *Sym : G.absolute_symbols())
+      AddSymbol(Sym);
 
     if (hasInitializerSection(G))
       LGI.InitSymbol = makeInitSymbol(ES, G);
@@ -150,7 +156,10 @@ public:
       std::unique_ptr<MaterializationResponsibility> MR,
       std::unique_ptr<MemoryBuffer> ObjBuffer)
       : JITLinkContext(&MR->getTargetJITDylib()), Layer(Layer),
-        MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {}
+        MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {
+    std::lock_guard<std::mutex> Lock(Layer.LayerMutex);
+    Plugins = Layer.Plugins;
+  }
 
   ~ObjectLinkingLayerJITLinkContext() {
     // If there is an object buffer return function then use it to
@@ -162,14 +171,14 @@ public:
   JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
 
   void notifyMaterializing(LinkGraph &G) {
-    for (auto &P : Layer.Plugins)
+    for (auto &P : Plugins)
       P->notifyMaterializing(*MR, G, *this,
                              ObjBuffer ? ObjBuffer->getMemBufferRef()
                              : MemoryBufferRef());
   }
 
   void notifyFailed(Error Err) override {
-    for (auto &P : Layer.Plugins)
+    for (auto &P : Plugins)
       Err = joinErrors(std::move(Err), P->notifyFailed(*MR));
     Layer.getExecutionSession().reportError(std::move(Err));
     MR->failMaterialization();
@@ -211,16 +220,13 @@ public:
       }
     };
 
-    for (auto &KV : InternalNamedSymbolDeps) {
-      SymbolDependenceMap InternalDeps;
-      InternalDeps[&MR->getTargetJITDylib()] = std::move(KV.second);
-      MR->addDependencies(KV.first, InternalDeps);
-    }
-
     ES.lookup(LookupKind::Static, LinkOrder, std::move(LookupSet),
               SymbolState::Resolved, std::move(OnResolve),
               [this](const SymbolDependenceMap &Deps) {
-                registerDependencies(Deps);
+                // Translate LookupDeps map to SymbolSourceJD.
+                for (auto &[DepJD, Deps] : Deps)
+                  for (auto &DepSym : Deps)
+                    SymbolSourceJDs[NonOwningSymbolStringPtr(DepSym)] = DepJD;
               });
   }
 
@@ -314,17 +320,17 @@ public:
     if (auto Err = MR->notifyResolved(InternedResult))
       return Err;
 
-    Layer.notifyLoaded(*MR);
+    notifyLoaded();
     return Error::success();
   }
 
   void notifyFinalized(JITLinkMemoryManager::FinalizedAlloc A) override {
-    if (auto Err = Layer.notifyEmitted(*MR, std::move(A))) {
+    if (auto Err = notifyEmitted(std::move(A))) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR->failMaterialization();
       return;
     }
-    if (auto Err = MR->notifyEmitted()) {
+    if (auto Err = MR->notifyEmitted(SymbolDepGroups)) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR->failMaterialization();
     }
@@ -341,10 +347,34 @@ public:
       return claimOrExternalizeWeakAndCommonSymbols(G);
     });
 
-    Layer.modifyPassConfig(*MR, LG, Config);
+    for (auto &P : Plugins)
+      P->modifyPassConfig(*MR, LG, Config);
 
-    Config.PostPrunePasses.push_back(
-        [this](LinkGraph &G) { return computeNamedSymbolDependencies(G); });
+    Config.PreFixupPasses.push_back(
+        [this](LinkGraph &G) { return registerDependencies(G); });
+
+    return Error::success();
+  }
+
+  void notifyLoaded() {
+    for (auto &P : Plugins)
+      P->notifyLoaded(*MR);
+  }
+
+  Error notifyEmitted(jitlink::JITLinkMemoryManager::FinalizedAlloc FA) {
+    Error Err = Error::success();
+    for (auto &P : Plugins)
+      Err = joinErrors(std::move(Err), P->notifyEmitted(*MR));
+
+    if (Err) {
+      if (FA)
+        Err =
+            joinErrors(std::move(Err), Layer.MemMgr.deallocate(std::move(FA)));
+      return Err;
+    }
+
+    if (FA)
+      return Layer.recordFinalizedAlloc(*MR, std::move(FA));
 
     return Error::success();
   }
@@ -408,9 +438,10 @@ private:
       for (auto &E : B.edges()) {
         auto &Tgt = E.getTarget();
         if (Tgt.getScope() != Scope::Local) {
-          if (Tgt.isExternal())
-            BIDCacheVal.External.insert(getInternedName(Tgt));
-          else
+          if (Tgt.isExternal()) {
+            if (Tgt.getAddress() || !Tgt.isWeaklyReferenced())
+              BIDCacheVal.External.insert(getInternedName(Tgt));
+          } else
             BIDCacheVal.Internal.insert(getInternedName(Tgt));
         }
       }
@@ -451,9 +482,10 @@ private:
       ProcessSymbol(Sym);
 
     // Attempt to claim all weak defs that we're not already responsible for.
-    // This cannot fail -- any clashes will just result in rejection of our
-    // claim, at which point we'll externalize that symbol.
-    cantFail(MR->defineMaterializing(std::move(NewSymbolsToClaim)));
+    // This may fail if the resource tracker has become defunct, but should
+    // always succeed otherwise.
+    if (auto Err = MR->defineMaterializing(std::move(NewSymbolsToClaim)))
+      return Err;
 
     // Walk the list of symbols that we just tried to claim. Symbols that we're
     // responsible for are marked live. Symbols that we're not responsible for
@@ -476,57 +508,91 @@ private:
     return Error::success();
   }
 
-  Error computeNamedSymbolDependencies(LinkGraph &G) {
-    auto &ES = MR->getTargetJITDylib().getExecutionSession();
+  Error registerDependencies(LinkGraph &G) {
+    auto &TargetJD = MR->getTargetJITDylib();
+    auto &ES = TargetJD.getExecutionSession();
     auto BlockDeps = computeBlockNonLocalDeps(G);
+
+    DenseSet<Block *> BlockDepsProcessed;
+    DenseMap<Block *, SymbolDependenceGroup> DepGroupForBlock;
 
     // Compute dependencies for symbols defined in the JITLink graph.
     for (auto *Sym : G.defined_symbols()) {
 
-      // Skip local symbols: we do not track dependencies for these.
+      // Skip local symbols.
       if (Sym->getScope() == Scope::Local)
         continue;
       assert(Sym->hasName() &&
              "Defined non-local jitlink::Symbol should have a name");
 
-      auto &SymDeps = BlockDeps[Sym->getBlock()];
-      if (SymDeps.External.empty() && SymDeps.Internal.empty())
+      auto &BDeps = BlockDeps[Sym->getBlock()];
+
+      // Skip symbols in blocks that don't depend on anything.
+      if (BDeps.Internal.empty() && BDeps.External.empty())
         continue;
 
-      auto SymName = ES.intern(Sym->getName());
-      if (!SymDeps.External.empty())
-        ExternalNamedSymbolDeps[SymName] = SymDeps.External;
-      if (!SymDeps.Internal.empty())
-        InternalNamedSymbolDeps[SymName] = SymDeps.Internal;
+      SymbolDependenceGroup &SDG = DepGroupForBlock[&Sym->getBlock()];
+      SDG.Symbols.insert(ES.intern(Sym->getName()));
+
+      if (!BlockDepsProcessed.count(&Sym->getBlock())) {
+        BlockDepsProcessed.insert(&Sym->getBlock());
+
+        if (!BDeps.Internal.empty())
+          SDG.Dependencies[&TargetJD] = BDeps.Internal;
+        for (auto &Dep : BDeps.External) {
+          auto DepSrcItr = SymbolSourceJDs.find(NonOwningSymbolStringPtr(Dep));
+          if (DepSrcItr != SymbolSourceJDs.end())
+            SDG.Dependencies[DepSrcItr->second].insert(Dep);
+        }
+      }
     }
 
-    for (auto &P : Layer.Plugins) {
+    SymbolDependenceGroup SynthSDG;
+
+    for (auto &P : Plugins) {
       auto SynthDeps = P->getSyntheticSymbolDependencies(*MR);
       if (SynthDeps.empty())
         continue;
 
       DenseSet<Block *> BlockVisited;
-      for (auto &KV : SynthDeps) {
-        auto &Name = KV.first;
-        auto &DepsForName = KV.second;
-        for (auto *Sym : DepsForName) {
+      for (auto &[Name, DepSyms] : SynthDeps) {
+        SynthSDG.Symbols.insert(Name);
+        for (auto *Sym : DepSyms) {
           if (Sym->getScope() == Scope::Local) {
             auto &BDeps = BlockDeps[Sym->getBlock()];
             for (auto &S : BDeps.Internal)
-              InternalNamedSymbolDeps[Name].insert(S);
-            for (auto &S : BDeps.External)
-              ExternalNamedSymbolDeps[Name].insert(S);
+              SynthSDG.Dependencies[&TargetJD].insert(S);
+            for (auto &S : BDeps.External) {
+              auto DepSrcItr =
+                  SymbolSourceJDs.find(NonOwningSymbolStringPtr(S));
+              if (DepSrcItr != SymbolSourceJDs.end())
+                SynthSDG.Dependencies[DepSrcItr->second].insert(S);
+            }
           } else {
-            if (Sym->isExternal())
-              ExternalNamedSymbolDeps[Name].insert(
-                  BlockDeps.getInternedName(*Sym));
-            else
-              InternalNamedSymbolDeps[Name].insert(
-                  BlockDeps.getInternedName(*Sym));
+            auto SymName = ES.intern(Sym->getName());
+            if (Sym->isExternal()) {
+              assert(SymbolSourceJDs.count(NonOwningSymbolStringPtr(SymName)) &&
+                     "External symbol source entry missing");
+              SynthSDG
+                  .Dependencies[SymbolSourceJDs[NonOwningSymbolStringPtr(
+                      SymName)]]
+                  .insert(SymName);
+            } else
+              SynthSDG.Dependencies[&TargetJD].insert(SymName);
           }
         }
       }
     }
+
+    // Transfer SDGs to SymbolDepGroups.
+    DepGroupForBlock.reserve(DepGroupForBlock.size() + 1);
+    for (auto &[B, SDG] : DepGroupForBlock) {
+      assert(!SDG.Symbols.empty() && "SymbolDependenceGroup covers no symbols");
+      if (!SDG.Dependencies.empty())
+        SymbolDepGroups.push_back(std::move(SDG));
+    }
+    if (!SynthSDG.Symbols.empty() && !SynthSDG.Dependencies.empty())
+      SymbolDepGroups.push_back(std::move(SynthSDG));
 
     return Error::success();
   }
@@ -596,34 +662,14 @@ private:
                                 std::move(BlockDeps));
   }
 
-  void registerDependencies(const SymbolDependenceMap &QueryDeps) {
-    for (auto &NamedDepsEntry : ExternalNamedSymbolDeps) {
-      auto &Name = NamedDepsEntry.first;
-      auto &NameDeps = NamedDepsEntry.second;
-      SymbolDependenceMap SymbolDeps;
-
-      for (const auto &QueryDepsEntry : QueryDeps) {
-        JITDylib &SourceJD = *QueryDepsEntry.first;
-        const SymbolNameSet &Symbols = QueryDepsEntry.second;
-        auto &DepsForJD = SymbolDeps[&SourceJD];
-
-        for (const auto &S : Symbols)
-          if (NameDeps.count(S))
-            DepsForJD.insert(S);
-
-        if (DepsForJD.empty())
-          SymbolDeps.erase(&SourceJD);
-      }
-
-      MR->addDependencies(Name, SymbolDeps);
-    }
-  }
-
   ObjectLinkingLayer &Layer;
+  std::vector<std::shared_ptr<ObjectLinkingLayer::Plugin>> Plugins;
   std::unique_ptr<MaterializationResponsibility> MR;
   std::unique_ptr<MemoryBuffer> ObjBuffer;
-  DenseMap<SymbolStringPtr, SymbolNameSet> ExternalNamedSymbolDeps;
-  DenseMap<SymbolStringPtr, SymbolNameSet> InternalNamedSymbolDeps;
+  DenseMap<Block *, SymbolNameSet> ExternalBlockDeps;
+  DenseMap<Block *, SymbolNameSet> InternalBlockDeps;
+  DenseMap<NonOwningSymbolStringPtr, JITDylib *> SymbolSourceJDs;
+  std::vector<SymbolDependenceGroup> SymbolDepGroups;
 };
 
 ObjectLinkingLayer::Plugin::~Plugin() = default;
@@ -684,29 +730,15 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
   link(std::move(G), std::move(Ctx));
 }
 
-void ObjectLinkingLayer::modifyPassConfig(MaterializationResponsibility &MR,
-                                          LinkGraph &G,
-                                          PassConfiguration &PassConfig) {
-  for (auto &P : Plugins)
-    P->modifyPassConfig(MR, G, PassConfig);
-}
-
-void ObjectLinkingLayer::notifyLoaded(MaterializationResponsibility &MR) {
-  for (auto &P : Plugins)
-    P->notifyLoaded(MR);
-}
-
-Error ObjectLinkingLayer::notifyEmitted(MaterializationResponsibility &MR,
-                                        FinalizedAlloc FA) {
-  Error Err = Error::success();
-  for (auto &P : Plugins)
-    Err = joinErrors(std::move(Err), P->notifyEmitted(MR));
+Error ObjectLinkingLayer::recordFinalizedAlloc(
+    MaterializationResponsibility &MR, FinalizedAlloc FA) {
+  auto Err = MR.withResourceKeyDo(
+      [&](ResourceKey K) { Allocs[K].push_back(std::move(FA)); });
 
   if (Err)
-    return Err;
+    Err = joinErrors(std::move(Err), MemMgr.deallocate(std::move(FA)));
 
-  return MR.withResourceKeyDo(
-      [&](ResourceKey K) { Allocs[K].push_back(std::move(FA)); });
+  return Err;
 }
 
 Error ObjectLinkingLayer::handleRemoveResources(JITDylib &JD, ResourceKey K) {

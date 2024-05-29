@@ -6,6 +6,7 @@ copy("include") {
     "orc_rt/c_api.h",
     "profile/InstrProfData.inc",
     "profile/MemProfData.inc",
+    "profile/instr_prof_interface.h",
     "sanitizer/allocator_interface.h",
     "sanitizer/asan_interface.h",
     "sanitizer/common_interface_defs.h",

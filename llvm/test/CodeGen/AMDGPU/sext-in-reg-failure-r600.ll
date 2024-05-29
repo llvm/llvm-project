@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG %s
+; RUN: llc -mtriple=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG %s
 ;
 ; EG-LABEL: {{^}}sext_in_reg_v2i1_in_v2i32_other_amount:
 ; EG: MEM_{{.*}} MSKOR [[RES:T[0-9]+]]{{\.[XYZW][XYZW]}}, [[ADDR:T[0-9]+.[XYZW]]]

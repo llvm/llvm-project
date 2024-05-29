@@ -561,10 +561,17 @@
 
 # FIXME: The output here sucks.
 #
-# CHECK: FAIL: shtest-shell :: error-1.txt
-# CHECK: *** TEST 'shtest-shell :: error-1.txt' FAILED ***
-# CHECK: shell parser error on RUN: at line 3: echo "missing quote
-# CHECK: ***
+#       CHECK: UNRESOLVED: shtest-shell :: error-1.txt
+#  CHECK-NEXT: *** TEST 'shtest-shell :: error-1.txt' FAILED ***
+#  CHECK-NEXT: Exit Code: 1
+# CHECK-EMPTY:
+#  CHECK-NEXT: Command Output (stdout):
+#  CHECK-NEXT: --
+#  CHECK-NEXT: # shell parser error on RUN: at line 3: echo "missing quote
+# CHECK-EMPTY:
+#  CHECK-NEXT: --
+# CHECK-EMPTY:
+#  CHECK-NEXT: ***
 
 # CHECK: FAIL: shtest-shell :: error-2.txt
 # CHECK: *** TEST 'shtest-shell :: error-2.txt' FAILED ***
@@ -643,4 +650,5 @@
 #      CHECK: ***
 
 # CHECK: PASS: shtest-shell :: valid-shell.txt
-# CHECK: Failed Tests (39)
+# CHECK: Unresolved Tests (1)
+# CHECK: Failed Tests (38)

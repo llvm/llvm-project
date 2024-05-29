@@ -517,15 +517,13 @@ define i64 @func8(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    addl %ebp, %edx
 ; X86-NEXT:    adcl $0, %ecx
+; X86-NEXT:    shldl $1, %edx, %ecx
 ; X86-NEXT:    shrdl $31, %edx, %eax
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    shrl $31, %esi
-; X86-NEXT:    xorl %edi, %edi
-; X86-NEXT:    negl %esi
-; X86-NEXT:    sbbl %edi, %edi
-; X86-NEXT:    orl %edi, %eax
-; X86-NEXT:    shrdl $31, %ecx, %edx
-; X86-NEXT:    orl %edi, %edx
+; X86-NEXT:    testl $-2147483648, %edx # imm = 0x80000000
+; X86-NEXT:    movl $-1, %edx
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    cmovnel %edx, %ecx
+; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx

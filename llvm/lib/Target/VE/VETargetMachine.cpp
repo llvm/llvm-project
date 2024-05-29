@@ -134,7 +134,7 @@ TargetPassConfig *VETargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void VEPassConfig::addIRPasses() {
   // VE requires atomic expand pass.
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
   TargetPassConfig::addIRPasses();
 }
 

@@ -23,7 +23,6 @@ define i1 @test_i1_return() gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl return_i1
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    and w0, w0, #0x1
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; This is just checking that a i1 gets lowered normally when there's no extra
@@ -106,7 +105,6 @@ define i1 @test_relocate(ptr addrspace(1) %a) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl return_i1
 ; CHECK-NEXT:  .Ltmp5:
-; CHECK-NEXT:    and w0, w0, #0x1
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; Check that an ununsed relocate has no code-generation impact
@@ -145,7 +143,6 @@ define i1 @test_i1_return_patchable() gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  .Ltmp7:
-; CHECK-NEXT:    and w0, w0, #0x1
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; A patchable variant of test_i1_return

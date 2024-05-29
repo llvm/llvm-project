@@ -127,30 +127,30 @@
 	.rename	H.50._ZTIi{TC},"_ZTIi"
 	.rename	H.54.main{TC},"main"
 
-	.lglobl	H.10.NO_SYMBOL{PR}      
-	.globl	._Z4barfv               
-	.globl	.main                   
-	.lglobl	H.16..__4               
-	.lglobl	H.18..__8               
-	.lglobl	H.20..__3               
-	.lglobl	H.26.NO_SYMBOL{RO}      
-	.lglobl	E.28.__STATIC{RW}       
-	.lglobl	__4{DS}                 
-	.lglobl	__8{DS}                 
-	.lglobl	__3{DS}                 
-	.globl	_Z4barfv{DS}            
-	.extern	_ZTIi{UA}               
-	.globl	main{DS}                
+	.lglobl	H.10.NO_SYMBOL{PR}
+	.globl	._Z4barfv
+	.globl	.main
+	.lglobl	H.16..__4
+	.lglobl	H.18..__8
+	.lglobl	H.20..__3
+	.lglobl	H.26.NO_SYMBOL{RO}
+	.lglobl	E.28.__STATIC{RW}
+	.lglobl	__4{DS}
+	.lglobl	__8{DS}
+	.lglobl	__3{DS}
+	.globl	_Z4barfv{DS}
+	.extern	_ZTIi{UA}
+	.globl	main{DS}
 	.extern	.__cxa_allocate_exception{PR}
-	.extern	.__cxa_throw{PR}        
+	.extern	.__cxa_throw{PR}
 	.extern	.wrap__xlc_exception_handle{PR}
 	.extern	.__xlc_catch_matchv2{PR}
-	.extern	.__cxa_begin_catch{PR}  
-	.extern	.printf{PR}             
-	.extern	.__cxa_end_catch{PR}    
-	.extern	._Unwind_Resume{PR}     
-	.extern	.__cxa_rethrow{PR}      
-	.extern	._ZSt9terminatev{PR}    
+	.extern	.__cxa_begin_catch{PR}
+	.extern	.printf{PR}
+	.extern	.__cxa_end_catch{PR}
+	.extern	._Unwind_Resume{PR}
+	.extern	.__cxa_rethrow{PR}
+	.extern	._ZSt9terminatev{PR}
 
 
 # .text section
@@ -158,7 +158,7 @@
 
 
 
-	.csect	H.10.NO_SYMBOL{PR}, 7   
+	.csect	H.10.NO_SYMBOL{PR}, 7
 ._Z4barfv:                              # 0x00000000 (H.10.NO_SYMBOL)
 	mfspr      r0,LR
 	stu        SP,-80(SP)
@@ -414,61 +414,61 @@ H.20..__3:                              # 0x00000240 (H.10.NO_SYMBOL+0x240)
 # .data section
 
 
-	.toc	                        # 0x00000280 
+	.toc	                        # 0x00000280
 T.46._Z4barfv:
 	.tc	H.46._Z4barfv{TC},_Z4barfv{DS}
 T.50._ZTIi:
 	.tc	H.50._ZTIi{TC},_ZTIi{UA}
 T.54.main:
-	.tc	H.54.main{TC},main{DS}  
+	.tc	H.54.main{TC},main{DS}
 T.30.__STATIC:
 	.tc	H.30.__STATIC{TC},E.28.__STATIC{RW}
 T.24.NO_SYMBOL:
 	.tc	H.24.NO_SYMBOL{TC},H.26.NO_SYMBOL{RO}
 T.34.__4:
-	.tc	H.34.__4{TC},__4{DS}    
+	.tc	H.34.__4{TC},__4{DS}
 T.38.__8:
-	.tc	H.38.__8{TC},__8{DS}    
+	.tc	H.38.__8{TC},__8{DS}
 T.42.__3:
-	.tc	H.42.__3{TC},__3{DS}    
+	.tc	H.42.__3{TC},__3{DS}
 
 
-	.csect	_Z4barfv{DS}            
+	.csect	_Z4barfv{DS}
 	.long	._Z4barfv               # "\0\0\0\0"
 	.long	TOC{TC0}                # "\0\0\002\200"
 	.long	0x00000000              # "\0\0\0\0"
 # End	csect	_Z4barfv{DS}
 
 
-	.csect	main{DS}                
+	.csect	main{DS}
 	.long	.main                   # "\0\0\0\200"
 	.long	TOC{TC0}                # "\0\0\002\200"
 	.long	0x00000000              # "\0\0\0\0"
 # End	csect	main{DS}
 
 
-	.csect	__4{DS}                 
+	.csect	__4{DS}
 	.long	H.16..__4               # "\0\0\002\0"
 	.long	TOC{TC0}                # "\0\0\002\200"
 	.long	0x00000000              # "\0\0\0\0"
 # End	csect	__4{DS}
 
 
-	.csect	__8{DS}                 
+	.csect	__8{DS}
 	.long	H.18..__8               # "\0\0\002 "
 	.long	TOC{TC0}                # "\0\0\002\200"
 	.long	0x00000000              # "\0\0\0\0"
 # End	csect	__8{DS}
 
 
-	.csect	__3{DS}                 
+	.csect	__3{DS}
 	.long	H.20..__3               # "\0\0\002@"
 	.long	TOC{TC0}                # "\0\0\002\200"
 	.long	0x00000000              # "\0\0\0\0"
 # End	csect	__3{DS}
 
 
-	.csect	E.28.__STATIC{RW}, 3    
+	.csect	E.28.__STATIC{RW}, 3
 	.long	0x1cedbeef              # "\034\355\276\357"
 	.long	0x00000003              # "\0\0\0\003"
 	.long	0x00000000              # "\0\0\0\0"
@@ -489,7 +489,7 @@ T.42.__3:
 # End	csect	E.28.__STATIC{RW}
 
 
-	.csect	H.26.NO_SYMBOL{RO}, 3   
+	.csect	H.26.NO_SYMBOL{RO}, 3
 	.long	0x63617567              # "caug"
 	.long	0x68742069              # "ht i"
 	.long	0x6e740a00              # "nt\n\0"
@@ -593,11 +593,11 @@ T.42.__3:
 	.rename	H.18.NO_SYMBOL{RO},""
 	.rename	H.22.wrap__xlc_exception_handle{TC},"wrap__xlc_exception_handle"
 
-	.lglobl	H.10.NO_SYMBOL{PR}      
+	.lglobl	H.10.NO_SYMBOL{PR}
 	.globl	.wrap__xlc_exception_handle
-	.lglobl	H.18.NO_SYMBOL{RO}      
+	.lglobl	H.18.NO_SYMBOL{RO}
 	.globl	wrap__xlc_exception_handle{DS}
-	.extern	.printf{PR}             
+	.extern	.printf{PR}
 	.extern	.__xlc_exception_handle{PR}
 
 
@@ -606,7 +606,7 @@ T.42.__3:
 
 
 
-	.csect	H.10.NO_SYMBOL{PR}, 7   
+	.csect	H.10.NO_SYMBOL{PR}, 7
 .wrap__xlc_exception_handle:            # 0x00000000 (H.10.NO_SYMBOL)
 	mfspr      r0,LR
 	st         r31,-4(SP)
@@ -653,7 +653,7 @@ T.42.__3:
 # .data section
 
 
-	.toc	                        # 0x00000080 
+	.toc	                        # 0x00000080
 T.22.wrap__xlc_exception_handle:
 	.tc	H.22.wrap__xlc_exception_handle{TC},wrap__xlc_exception_handle{DS}
 T.16.NO_SYMBOL:
@@ -667,7 +667,7 @@ T.16.NO_SYMBOL:
 # End	csect	wrap__xlc_exception_handle{DS}
 
 
-	.csect	H.18.NO_SYMBOL{RO}, 3   
+	.csect	H.18.NO_SYMBOL{RO}, 3
 	.long	0x77726170              # "wrap"
 	.long	0x5f5f786c              # "__xl"
 	.long	0x635f6578              # "c_ex"

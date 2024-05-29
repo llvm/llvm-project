@@ -1,5 +1,7 @@
 ; RUN: opt -S -passes=sroa -sroa-skip-mem2reg %s \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -S -passes=sroa -sroa-skip-mem2reg %s \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; NOTE: This is the same as split-pre-fragmented-store.ll except the base
 ;; alloca's dbg.assign has been altered to contain a fragment of the full

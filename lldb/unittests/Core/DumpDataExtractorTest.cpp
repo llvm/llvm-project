@@ -137,7 +137,7 @@ TEST_F(DumpDataExtractorTest, Formats) {
   TestDump('?', lldb::eFormatChar, "'?'");
   TestDump('\x1A', lldb::eFormatCharPrintable, ".");
   TestDump('#', lldb::eFormatCharPrintable, "#");
-  TestDump(std::complex<float>(1.2, 3.4), lldb::eFormatComplex, "1.2 + 3.4i");
+  TestDump(std::complex<float>(1.2f, 3.4f), lldb::eFormatComplex, "1.2 + 3.4i");
   TestDump(std::complex<double>(4.5, 6.7), lldb::eFormatComplex, "4.5 + 6.7i");
 
   // long double is not tested here because for some platforms we treat it as 10

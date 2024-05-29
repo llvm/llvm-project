@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck  %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck  %s
 ; XXX: Merge this test into vselect.ll once SI supports 64-bit select.
 
 ; CHECK-LABEL: {{^}}test_select_v4i64:

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX908 %s
 
 ; GFX908-LABEL: {{^}}max_11_vgprs_used_9a:
 ; GFX908-NOT: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0

@@ -40,6 +40,7 @@ int main(int argc, char **argv) {
 #endif
   DialectRegistry registry;
   fir::support::registerDialects(registry);
+  fir::support::addFIRExtensions(registry);
   return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",
       registry));
 }

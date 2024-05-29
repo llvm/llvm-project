@@ -62,10 +62,10 @@ struct S {
 // language rules right now, but (per personal correspondence between zygoloid
 // and gdr) is the intent.
 #if TEST == 1
-export {
+export { // expected-note {{export block begins here}}
   extern "C++" {
   namespace NestedExport {
-  export { // expected-error {{export declaration can only be used within a module purview}}
+  export { // expected-error {{export declaration appears within another export declaration}}
     int q;
   }
   } // namespace NestedExport

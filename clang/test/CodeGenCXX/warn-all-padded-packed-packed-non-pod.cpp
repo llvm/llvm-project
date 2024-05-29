@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple=x86_64-none-none -Wpadded -Wpacked -verify=expected,top %s -emit-llvm-only
-// RUN: %clang_cc1 -triple=x86_64-none-none -Wpadded -Wpacked -verify=expected,abi15 -fclang-abi-compat=15 %s -emit-llvm-only
+// RUN: %clang_cc1 -triple=x86_64-none-none -Wpadded -Wpacked -Wno-padded-bitfield -verify=expected,top %s -emit-llvm-only
+// RUN: %clang_cc1 -triple=x86_64-none-none -Wpadded -Wpacked -Wno-padded-bitfield -verify=expected,abi15 -fclang-abi-compat=15 %s -emit-llvm-only
 // -Wpacked-non-pod itself should not emit the "packed attribute is unnecessary" warnings.
 // RUN: %clang_cc1 -triple=x86_64-none-none -Wpacked-non-pod -verify=top %s -emit-llvm-only
 // -Wall should not emit the "packed attribute is unnecessary" warnings without -Wpacked.

@@ -39,6 +39,13 @@ struct BytecodeWriterConfig::Impl {
   /// Note: This only differs from kVersion if a specific version is set.
   int64_t bytecodeVersion = bytecode::kVersion;
 
+  /// A flag specifying whether to elide emission of resources into the bytecode
+  /// file.
+  bool shouldElideResourceData = false;
+
+  /// A map containing dialect version information for each dialect to emit.
+  llvm::StringMap<std::unique_ptr<DialectVersion>> dialectVersionMap;
+
   /// The producer of the bytecode.
   StringRef producer;
 
@@ -86,12 +93,30 @@ void BytecodeWriterConfig::attachResourcePrinter(
   impl->externalResourcePrinters.emplace_back(std::move(printer));
 }
 
+void BytecodeWriterConfig::setElideResourceDataFlag(
+    bool shouldElideResourceData) {
+  impl->shouldElideResourceData = shouldElideResourceData;
+}
+
 void BytecodeWriterConfig::setDesiredBytecodeVersion(int64_t bytecodeVersion) {
   impl->bytecodeVersion = bytecodeVersion;
 }
 
 int64_t BytecodeWriterConfig::getDesiredBytecodeVersion() const {
   return impl->bytecodeVersion;
+}
+
+llvm::StringMap<std::unique_ptr<DialectVersion>> &
+BytecodeWriterConfig::getDialectVersionMap() const {
+  return impl->dialectVersionMap;
+}
+
+void BytecodeWriterConfig::setDialectVersion(
+    llvm::StringRef dialectName,
+    std::unique_ptr<DialectVersion> dialectVersion) const {
+  assert(!impl->dialectVersionMap.contains(dialectName) &&
+         "cannot override a previously set dialect version");
+  impl->dialectVersionMap.insert({dialectName, std::move(dialectVersion)});
 }
 
 //===----------------------------------------------------------------------===//
@@ -340,12 +365,16 @@ private:
 } // namespace
 
 class DialectWriter : public DialectBytecodeWriter {
+  using DialectVersionMapT = llvm::StringMap<std::unique_ptr<DialectVersion>>;
+
 public:
   DialectWriter(int64_t bytecodeVersion, EncodingEmitter &emitter,
                 IRNumberingState &numberingState,
-                StringSectionBuilder &stringSection)
+                StringSectionBuilder &stringSection,
+                const DialectVersionMapT &dialectVersionMap)
       : bytecodeVersion(bytecodeVersion), emitter(emitter),
-        numberingState(numberingState), stringSection(stringSection) {}
+        numberingState(numberingState), stringSection(stringSection),
+        dialectVersionMap(dialectVersionMap) {}
 
   //===--------------------------------------------------------------------===//
   // IR
@@ -421,11 +450,20 @@ public:
 
   int64_t getBytecodeVersion() const override { return bytecodeVersion; }
 
+  FailureOr<const DialectVersion *>
+  getDialectVersion(StringRef dialectName) const override {
+    auto dialectEntry = dialectVersionMap.find(dialectName);
+    if (dialectEntry == dialectVersionMap.end())
+      return failure();
+    return dialectEntry->getValue().get();
+  }
+
 private:
   int64_t bytecodeVersion;
   EncodingEmitter &emitter;
   IRNumberingState &numberingState;
   StringSectionBuilder &stringSection;
+  const DialectVersionMapT &dialectVersionMap;
 };
 
 namespace {
@@ -458,7 +496,8 @@ public:
 
     EncodingEmitter emitter;
     DialectWriter propertiesWriter(config.bytecodeVersion, emitter,
-                                   numberingState, stringSection);
+                                   numberingState, stringSection,
+                                   config.dialectVersionMap);
     auto iface = cast<BytecodeOpInterface>(op);
     iface.writeProperties(propertiesWriter);
     scratch.clear();
@@ -751,7 +790,8 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
     if (dialect.interface) {
       // The writer used when emitting using a custom bytecode encoding.
       DialectWriter versionWriter(config.bytecodeVersion, versionEmitter,
-                                  numberingState, stringSection);
+                                  numberingState, stringSection,
+                                  config.dialectVersionMap);
       dialect.interface->writeVersion(versionWriter);
     }
 
@@ -809,7 +849,8 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
       }
 
       DialectWriter dialectWriter(config.bytecodeVersion, attrTypeEmitter,
-                                  numberingState, stringSection);
+                                  numberingState, stringSection,
+                                  config.dialectVersionMap);
       if constexpr (std::is_same_v<std::decay_t<decltype(entryValue)>, Type>) {
         for (const auto &callback : config.typeWriterCallbacks) {
           if (succeeded(callback->write(entryValue, dialectWriter)))
@@ -921,9 +962,12 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
   DictionaryAttr attrs = op->getDiscardableAttrDictionary();
   // Allow deployment to version <kNativePropertiesEncoding by merging inherent
   // attribute with the discardable ones. We should fail if there are any
-  // conflicts.
-  if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding)
+  // conflicts. When properties are not used by the op, also store everything as
+  // attributes.
+  if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding ||
+      !op->getPropertiesStorage()) {
     attrs = op->getAttrDictionary();
+  }
   if (!attrs.empty()) {
     opEncodingMask |= bytecode::OpEncodingMask::kHasAttrs;
     emitter.emitVarInt(numberingState.getNumber(attrs));
@@ -1138,22 +1182,25 @@ public:
   using PostProcessFn = function_ref<void(StringRef, AsmResourceEntryKind)>;
 
   ResourceBuilder(EncodingEmitter &emitter, StringSectionBuilder &stringSection,
-                  PostProcessFn postProcessFn)
+                  PostProcessFn postProcessFn, bool shouldElideData)
       : emitter(emitter), stringSection(stringSection),
-        postProcessFn(postProcessFn) {}
+        postProcessFn(postProcessFn), shouldElideData(shouldElideData) {}
   ~ResourceBuilder() override = default;
 
   void buildBlob(StringRef key, ArrayRef<char> data,
                  uint32_t dataAlignment) final {
-    emitter.emitOwnedBlobAndAlignment(data, dataAlignment);
+    if (!shouldElideData)
+      emitter.emitOwnedBlobAndAlignment(data, dataAlignment);
     postProcessFn(key, AsmResourceEntryKind::Blob);
   }
   void buildBool(StringRef key, bool data) final {
-    emitter.emitByte(data);
+    if (!shouldElideData)
+      emitter.emitByte(data);
     postProcessFn(key, AsmResourceEntryKind::Bool);
   }
   void buildString(StringRef key, StringRef data) final {
-    emitter.emitVarInt(stringSection.insert(data));
+    if (!shouldElideData)
+      emitter.emitVarInt(stringSection.insert(data));
     postProcessFn(key, AsmResourceEntryKind::String);
   }
 
@@ -1161,6 +1208,7 @@ private:
   EncodingEmitter &emitter;
   StringSectionBuilder &stringSection;
   PostProcessFn postProcessFn;
+  bool shouldElideData = false;
 };
 } // namespace
 
@@ -1193,7 +1241,8 @@ void BytecodeWriter::writeResourceSection(Operation *op,
 
   // Builder used to emit resources.
   ResourceBuilder entryBuilder(resourceEmitter, stringSection,
-                               appendResourceOffset);
+                               appendResourceOffset,
+                               config.shouldElideResourceData);
 
   // Emit the external resource entries.
   resourceOffsetEmitter.emitVarInt(config.externalResourcePrinters.size());

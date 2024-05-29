@@ -23,10 +23,7 @@ executable("lli") {
     "//llvm/lib/Transforms/Instrumentation",
     "//llvm/lib/Transforms/Utils",
   ]
-  sources = [
-    "ExecutionUtils.cpp",
-    "lli.cpp",
-  ]
+  sources = [ "lli.cpp" ]
   if (host_os != "mac" && host_os != "win") {
     # Corresponds to export_executable_symbols() in cmake.
     ldflags = [ "-rdynamic" ]

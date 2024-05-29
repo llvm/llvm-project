@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple x86_64-pc-win32 -fms-extensions -fms-compatibility \
 // RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS64
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple x86_64-pc-win32 -fms-extensions -fms-compatibility \
-// RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | grep GCC | count 5
+// RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | grep GCC | count 7
 // CHECK-MS64: #define _INTEGRAL_MAX_BITS 64
 // CHECK-MS64: #define _ISO_VOLATILE 1
 // CHECK-MS64: #define _MSC_EXTENSIONS 1
@@ -26,7 +26,7 @@
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
 // RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
-// RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | grep GCC | count 5
+// RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | grep GCC | count 7
 // CHECK-MS: #define _INTEGRAL_MAX_BITS 64
 // CHECK-MS: #define _ISO_VOLATILE 1
 // CHECK-MS: #define _MSC_EXTENSIONS 1
@@ -39,6 +39,8 @@
 // CHECK-MS-NOT: GNU
 // CHECK-MS-NOT: GXX
 // CHECK-MS: #define __GCC_ASM_FLAG_OUTPUTS__ 1
+// CHECK-MS: #define __GCC_CONSTRUCTIVE_SIZE {{.+}}
+// CHECK-MS: #define __GCC_DESTRUCTIVE_SIZE {{.+}}
 // CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1

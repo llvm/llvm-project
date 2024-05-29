@@ -114,3 +114,45 @@ func.func @unordered() {
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+// "X(VECTOR) = Y" with polymorphic X and Y and user defined assignment.
+func.func @test_mold(%x: !fir.class<!fir.array<?x!fir.type<t>>>, %y: !fir.class<!fir.array<?x!fir.type<t>>>, %vector: !fir.box<!fir.array<?xi64>>) {
+  hlfir.region_assign {
+    hlfir.yield %y : !fir.class<!fir.array<?x!fir.type<t>>>
+  } to {
+    %c0 = arith.constant 0 : index
+    %0:3 = fir.box_dims %vector, %c0 : (!fir.box<!fir.array<?xi64>>, index) -> (index, index, index)
+    %1 = fir.shape %0#1 : (index) -> !fir.shape<1>
+    hlfir.elemental_addr %1 mold %x unordered : !fir.shape<1>, !fir.class<!fir.array<?x!fir.type<t>>> {
+    ^bb0(%arg3: index):
+      %2 = hlfir.designate %vector (%arg3)  : (!fir.box<!fir.array<?xi64>>, index) -> !fir.ref<i64>
+      %3 = fir.load %2 : !fir.ref<i64>
+      %4 = hlfir.designate %x (%3)  : (!fir.class<!fir.array<?x!fir.type<t>>>, i64) -> !fir.class<!fir.type<t>>
+      hlfir.yield %4 : !fir.class<!fir.type<t>>
+    }
+  } user_defined_assign  (%arg3: !fir.class<!fir.type<t>>) to (%arg4: !fir.class<!fir.type<t>>) {
+    fir.call @user_def_assign(%arg4, %arg3) : (!fir.class<!fir.type<t>>, !fir.class<!fir.type<t>>) -> ()
+  }
+  return
+}
+func.func private @user_def_assign(!fir.class<!fir.type<t>>, !fir.class<!fir.type<t>>)
+// CHECK-LABEL: func.func @test_mold(
+// CHECK-SAME:                       %[[VAL_0:[^:]*]]: !fir.class<!fir.array<?x!fir.type<t>>>,
+// CHECK-SAME:                       %[[VAL_1:.*]]: !fir.class<!fir.array<?x!fir.type<t>>>,
+// CHECK-SAME:                       %[[VAL_2:.*]]: !fir.box<!fir.array<?xi64>>) {
+// CHECK:         hlfir.region_assign {
+// CHECK:           hlfir.yield %[[VAL_1]] : !fir.class<!fir.array<?x!fir.type<t>>>
+// CHECK:         } to {
+// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_4:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_3]] : (!fir.box<!fir.array<?xi64>>, index) -> (index, index, index)
+// CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]]#1 : (index) -> !fir.shape<1>
+// CHECK:           hlfir.elemental_addr %[[VAL_5]] mold %[[VAL_0]] unordered : !fir.shape<1>, !fir.class<!fir.array<?x!fir.type<t>>> {
+// CHECK:           ^bb0(%[[VAL_6:.*]]: index):
+// CHECK:             %[[VAL_7:.*]] = hlfir.designate %[[VAL_2]] (%[[VAL_6]])  : (!fir.box<!fir.array<?xi64>>, index) -> !fir.ref<i64>
+// CHECK:             %[[VAL_8:.*]] = fir.load %[[VAL_7]] : !fir.ref<i64>
+// CHECK:             %[[VAL_9:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_8]])  : (!fir.class<!fir.array<?x!fir.type<t>>>, i64) -> !fir.class<!fir.type<t>>
+// CHECK:             hlfir.yield %[[VAL_9]] : !fir.class<!fir.type<t>>
+// CHECK:           }
+// CHECK:         } user_defined_assign  (%[[VAL_10:.*]]: !fir.class<!fir.type<t>>) to (%[[VAL_11:.*]]: !fir.class<!fir.type<t>>) {
+// CHECK:           fir.call @user_def_assign(%[[VAL_11]], %[[VAL_10]]) : (!fir.class<!fir.type<t>>, !fir.class<!fir.type<t>>) -> ()
+// CHECK:         }

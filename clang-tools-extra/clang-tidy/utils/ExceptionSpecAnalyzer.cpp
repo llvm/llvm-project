@@ -99,7 +99,7 @@ ExceptionSpecAnalyzer::analyzeRecord(const CXXRecordDecl *RecordDecl,
   }
 
   for (const auto *FDecl : RecordDecl->fields())
-    if (!FDecl->isInvalidDecl() && !FDecl->isUnnamedBitfield()) {
+    if (!FDecl->isInvalidDecl() && !FDecl->isUnnamedBitField()) {
       State Result = analyzeFieldDecl(FDecl, Kind);
       if (Result == State::Throwing || Result == State::Unknown)
         return Result;
@@ -142,13 +142,22 @@ ExceptionSpecAnalyzer::analyzeFunctionEST(const FunctionDecl *FuncDecl,
     return State::NotThrowing;
   case CT_Dependent: {
     const Expr *NoexceptExpr = FuncProto->getNoexceptExpr();
+    if (!NoexceptExpr)
+      return State::NotThrowing;
+
+    // We can't resolve value dependence so just return unknown
+    if (NoexceptExpr->isValueDependent())
+      return State::Unknown;
+
+    // Try to evaluate the expression to a boolean value
     bool Result = false;
-    return (NoexceptExpr && !NoexceptExpr->isValueDependent() &&
-            NoexceptExpr->EvaluateAsBooleanCondition(
-                Result, FuncDecl->getASTContext(), true) &&
-            Result)
-               ? State::NotThrowing
-               : State::Throwing;
+    if (NoexceptExpr->EvaluateAsBooleanCondition(
+            Result, FuncDecl->getASTContext(), true))
+      return Result ? State::NotThrowing : State::Throwing;
+
+    // The noexcept expression is not value dependent but we can't evaluate it
+    // as a boolean condition so we have no idea if its throwing or not
+    return State::Unknown;
   }
   default:
     return State::Throwing;

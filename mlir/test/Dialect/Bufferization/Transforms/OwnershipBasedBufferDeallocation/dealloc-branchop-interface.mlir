@@ -570,7 +570,7 @@ func.func @select_captured_in_next_block(%arg0: index, %arg1: memref<?xi8>, %arg
 func.func @blocks_not_preordered_by_dominance() {
   cf.br ^bb1
 ^bb2:
-  "test.memref_user"(%alloc) : (memref<2xi32>) -> ()
+  "test.read_buffer"(%alloc) : (memref<2xi32>) -> ()
   return
 ^bb1:
   %alloc = memref.alloc() : memref<2xi32>
@@ -581,7 +581,7 @@ func.func @blocks_not_preordered_by_dominance() {
 //  CHECK-NEXT:   [[TRUE:%.+]] = arith.constant true
 //  CHECK-NEXT:   cf.br [[BB1:\^.+]]
 //  CHECK-NEXT: [[BB2:\^[a-zA-Z0-9_]+]]:
-//  CHECK-NEXT:   "test.memref_user"([[ALLOC:%[a-zA-Z0-9_]+]])
+//  CHECK-NEXT:   "test.read_buffer"([[ALLOC:%[a-zA-Z0-9_]+]])
 //  CHECK-NEXT:   bufferization.dealloc ([[ALLOC]] : {{.*}}) if ([[TRUE]])
 //   CHECK-NOT: retain
 //  CHECK-NEXT:   return

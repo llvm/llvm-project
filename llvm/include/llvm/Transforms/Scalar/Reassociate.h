@@ -63,6 +63,16 @@ struct Factor {
   Factor(Value *Base, unsigned Power) : Base(Base), Power(Power) {}
 };
 
+struct OverflowTracking {
+  bool HasNUW;
+  bool HasNSW;
+  bool AllKnownNonNegative;
+  // Note: AllKnownNonNegative can be true in a case where one of the operands
+  // is negative, but one the operators is not NSW. AllKnownNonNegative should
+  // not be used independently of HasNSW
+  OverflowTracking() : HasNUW(true), HasNSW(true), AllKnownNonNegative(true) {}
+};
+
 class XorOpnd;
 
 } // end namespace reassociate
@@ -102,16 +112,17 @@ private:
   void canonicalizeOperands(Instruction *I);
   void ReassociateExpression(BinaryOperator *I);
   void RewriteExprTree(BinaryOperator *I,
-                       SmallVectorImpl<reassociate::ValueEntry> &Ops);
+                       SmallVectorImpl<reassociate::ValueEntry> &Ops,
+                       reassociate::OverflowTracking Flags);
   Value *OptimizeExpression(BinaryOperator *I,
                             SmallVectorImpl<reassociate::ValueEntry> &Ops);
   Value *OptimizeAdd(Instruction *I,
                      SmallVectorImpl<reassociate::ValueEntry> &Ops);
   Value *OptimizeXor(Instruction *I,
                      SmallVectorImpl<reassociate::ValueEntry> &Ops);
-  bool CombineXorOpnd(Instruction *I, reassociate::XorOpnd *Opnd1,
+  bool CombineXorOpnd(BasicBlock::iterator It, reassociate::XorOpnd *Opnd1,
                       APInt &ConstOpnd, Value *&Res);
-  bool CombineXorOpnd(Instruction *I, reassociate::XorOpnd *Opnd1,
+  bool CombineXorOpnd(BasicBlock::iterator It, reassociate::XorOpnd *Opnd1,
                       reassociate::XorOpnd *Opnd2, APInt &ConstOpnd,
                       Value *&Res);
   Value *buildMinimalMultiplyDAG(IRBuilderBase &Builder,

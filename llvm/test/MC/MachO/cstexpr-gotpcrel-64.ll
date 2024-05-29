@@ -99,3 +99,16 @@ define void @foo() {
 ; X86-NOGOT-EQUIV-LABEL: _c:
 ; X86-NOGOT-EQUIV:   .quad _b
 @c = global ptr @b
+
+; X86-LABEL: table_with_negative_offset:
+; X86-NEXT:    .long   _a@GOTPCREL+4294967292
+@table_with_negative_offset = dso_local unnamed_addr constant [3 x i32] [
+  i32 trunc (
+    i64 sub (
+      i64 ptrtoint (ptr @b to i64),
+      i64 ptrtoint (ptr getelementptr inbounds ([3 x i32], ptr @table_with_negative_offset, i32 0, i32 2) to i64)
+    )
+    to i32),
+  i32 0,
+  i32 0
+], align 4

@@ -1,29 +1,14 @@
-#!/usr/bin/env python
-
 import lldb
 import struct
 
+from lldb.plugins.operating_system import OperatingSystem
 
-class OperatingSystemPlugIn(object):
+
+class OperatingSystemPlugIn(OperatingSystem):
     """Class that provides data for an instance of a LLDB 'OperatingSystemPython' plug-in class"""
 
     def __init__(self, process):
-        """Initialization needs a valid.SBProcess object.
-
-        This plug-in will get created after a live process is valid and has stopped for the
-        first time."""
-        self.process = None
-        self.registers = None
-        self.threads = None
-        if isinstance(process, lldb.SBProcess) and process.IsValid():
-            self.process = process
-            self.threads = None  # Will be an dictionary containing info for each thread
-
-    def get_target(self):
-        # NOTE: Don't use "lldb.target" when trying to get your target as the "lldb.target"
-        # tracks the current target in the LLDB command interpreter which isn't the
-        # correct thing to use for this plug-in.
-        return self.process.target
+        super().__init__(process)
 
     def create_thread(self, tid, context):
         if tid == 0x444444444:
@@ -40,23 +25,6 @@ class OperatingSystemPlugIn(object):
 
     def get_thread_info(self):
         if not self.threads:
-            # The sample dictionary below shows the values that can be returned for a thread
-            # tid => thread ID (mandatory)
-            # name => thread name (optional key/value pair)
-            # queue => thread dispatch queue name (optional key/value pair)
-            # state => thred state (mandatory, set to 'stopped' for now)
-            # stop_reason => thread stop reason. (mandatory, usually set to 'none')
-            #  Possible values include:
-            #   'breakpoint' if the thread is stopped at a breakpoint
-            #   'none' thread is just stopped because the process is stopped
-            #   'trace' the thread just single stepped
-            #   The usual value for this while threads are in memory is 'none'
-            # register_data_addr => the address of the register data in memory (optional key/value pair)
-            #   Specifying this key/value pair for a thread will avoid a call to get_register_data()
-            #   and can be used when your registers are in a thread context structure that is contiguous
-            #   in memory. Don't specify this if your register layout in memory doesn't match the layout
-            # described by the dictionary returned from a call to the
-            # get_register_info() method.
             self.threads = [
                 {
                     "tid": 0x111111111,

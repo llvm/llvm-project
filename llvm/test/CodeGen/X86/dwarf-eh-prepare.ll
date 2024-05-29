@@ -1,4 +1,5 @@
-; RUN: opt -mtriple=x86_64-linux-gnu -dwarfehprepare -simplifycfg-require-and-preserve-domtree=1 -run-twice < %s -S | FileCheck %s
+; RUN: opt -mtriple=x86_64-linux-gnu -dwarf-eh-prepare -simplifycfg-require-and-preserve-domtree=1 -run-twice < %s -S | FileCheck %s
+; RUN: opt -mtriple=x86_64-linux-gnu -passes=dwarf-eh-prepare -codegen-opt-level=2 -simplifycfg-require-and-preserve-domtree=1 -run-twice < %s -S | FileCheck %s
 
 ; Check basic functionality of IR-to-IR DWARF EH preparation. This should
 ; eliminate resumes. This pass requires a TargetMachine, so we put it under X86

@@ -1,10 +1,10 @@
 // RUN: %clang_analyze_cc1 -verify -analyzer-output text %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=apiModeling.Errno \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true
+// RUN:   -analyzer-checker=unix.Errno \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true
 
 #include "Inputs/errno_var.h"
 
@@ -15,7 +15,7 @@ void clang_analyzer_warnIfReached();
 void test1() {
   access("path", 0);
   access("path", 0);
-  // expected-note@-1{{'errno' may be undefined after successful call to 'access'}}
+  // expected-note@-1{{Assuming that 'access' is successful; 'errno' becomes undefined after the call}}
   if (errno != 0) {
     // expected-warning@-1{{An undefined value may be read from 'errno'}}
     // expected-note@-2{{An undefined value may be read from 'errno'}}
@@ -39,7 +39,7 @@ void test2() {
 void test3() {
   if (access("path", 0) != -1) {
     // Success path.
-    // expected-note@-2{{'errno' may be undefined after successful call to 'access'}}
+    // expected-note@-2{{Assuming that 'access' is successful; 'errno' becomes undefined after the call}}
     // expected-note@-3{{Taking true branch}}
     if (errno != 0) {
       // expected-warning@-1{{An undefined value may be read from 'errno'}}

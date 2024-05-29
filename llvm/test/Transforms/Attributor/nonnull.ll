@@ -397,20 +397,20 @@ define internal ptr @f1(ptr %arg) {
 ; TUNIT-NEXT:    [[TMP:%.*]] = icmp eq ptr [[ARG]], null
 ; TUNIT-NEXT:    br i1 [[TMP]], label [[BB9:%.*]], label [[BB1:%.*]]
 ; TUNIT:       bb1:
-; TUNIT-NEXT:    [[TRUETMP2:%.*]] = load i32, ptr [[ARG]], align 4
-; TUNIT-NEXT:    [[TRUETMP3:%.*]] = icmp eq i32 [[TRUETMP2]], 0
-; TUNIT-NEXT:    br i1 [[TRUETMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG]], align 4
+; TUNIT-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
+; TUNIT-NEXT:    br i1 [[TMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
 ; TUNIT:       bb4:
-; TUNIT-NEXT:    [[TRUETMP5:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 1
-; TUNIT-NEXT:    [[TMP5B:%.*]] = tail call ptr @f3(ptr nofree nonnull readonly [[TRUETMP5]]) #[[ATTR16:[0-9]+]]
+; TUNIT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 1
+; TUNIT-NEXT:    [[TMP5B:%.*]] = tail call ptr @f3(ptr nofree nonnull readonly [[TMP5]]) #[[ATTR16:[0-9]+]]
 ; TUNIT-NEXT:    [[TMP5C:%.*]] = getelementptr inbounds i32, ptr [[TMP5B]], i64 -1
 ; TUNIT-NEXT:    br label [[BB9]]
 ; TUNIT:       bb6:
-; TUNIT-NEXT:    [[TRUETMP7:%.*]] = tail call ptr @f2(ptr nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR16]]
-; TUNIT-NEXT:    ret ptr [[TRUETMP7]]
+; TUNIT-NEXT:    [[TMP7:%.*]] = tail call ptr @f2(ptr nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR16]]
+; TUNIT-NEXT:    ret ptr [[TMP7]]
 ; TUNIT:       bb9:
-; TUNIT-NEXT:    [[TRUETMP10:%.*]] = phi ptr [ [[TMP5C]], [[BB4]] ], [ inttoptr (i64 4 to ptr), [[BB:%.*]] ]
-; TUNIT-NEXT:    ret ptr [[TRUETMP10]]
+; TUNIT-NEXT:    [[TMP10:%.*]] = phi ptr [ [[TMP5C]], [[BB4]] ], [ inttoptr (i64 4 to ptr), [[BB:%.*]] ]
+; TUNIT-NEXT:    ret ptr [[TMP10]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@f1
@@ -419,20 +419,20 @@ define internal ptr @f1(ptr %arg) {
 ; CGSCC-NEXT:    [[TMP:%.*]] = icmp eq ptr [[ARG]], null
 ; CGSCC-NEXT:    br i1 [[TMP]], label [[BB9:%.*]], label [[BB1:%.*]]
 ; CGSCC:       bb1:
-; CGSCC-NEXT:    [[TRUETMP2:%.*]] = load i32, ptr [[ARG]], align 4
-; CGSCC-NEXT:    [[TRUETMP3:%.*]] = icmp eq i32 [[TRUETMP2]], 0
-; CGSCC-NEXT:    br i1 [[TRUETMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
+; CGSCC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG]], align 4
+; CGSCC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
+; CGSCC-NEXT:    br i1 [[TMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
 ; CGSCC:       bb4:
-; CGSCC-NEXT:    [[TRUETMP5:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 1
-; CGSCC-NEXT:    [[TMP5B:%.*]] = tail call ptr @f3(ptr nofree nonnull readonly [[TRUETMP5]]) #[[ATTR16:[0-9]+]]
+; CGSCC-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 1
+; CGSCC-NEXT:    [[TMP5B:%.*]] = tail call ptr @f3(ptr nofree nonnull readonly [[TMP5]]) #[[ATTR16:[0-9]+]]
 ; CGSCC-NEXT:    [[TMP5C:%.*]] = getelementptr inbounds i32, ptr [[TMP5B]], i64 -1
 ; CGSCC-NEXT:    br label [[BB9]]
 ; CGSCC:       bb6:
-; CGSCC-NEXT:    [[TRUETMP7:%.*]] = tail call ptr @f2(ptr nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR16]]
-; CGSCC-NEXT:    ret ptr [[TRUETMP7]]
+; CGSCC-NEXT:    [[TMP7:%.*]] = tail call ptr @f2(ptr nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR16]]
+; CGSCC-NEXT:    ret ptr [[TMP7]]
 ; CGSCC:       bb9:
-; CGSCC-NEXT:    [[TRUETMP10:%.*]] = phi ptr [ [[TMP5C]], [[BB4]] ], [ inttoptr (i64 4 to ptr), [[BB:%.*]] ]
-; CGSCC-NEXT:    ret ptr [[TRUETMP10]]
+; CGSCC-NEXT:    [[TMP10:%.*]] = phi ptr [ [[TMP5C]], [[BB4]] ], [ inttoptr (i64 4 to ptr), [[BB:%.*]] ]
+; CGSCC-NEXT:    ret ptr [[TMP10]]
 ;
 
 bb:
@@ -877,12 +877,12 @@ define i1 @parent8(ptr %a, ptr %bogus1, ptr %b) personality ptr @esfp{
 ; TUNIT-SAME: (ptr nonnull [[A:%.*]], ptr nocapture nofree readnone [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR5]] personality ptr @esfp {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    invoke void @use2nonnull(ptr nonnull [[A]], ptr nonnull [[B]])
-; TUNIT-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; TUNIT-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; TUNIT:       cont:
 ; TUNIT-NEXT:    ret i1 false
 ; TUNIT:       exc:
 ; TUNIT-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; TUNIT-NEXT:    filter [0 x ptr] zeroinitializer
+; TUNIT-NEXT:            filter [0 x ptr] zeroinitializer
 ; TUNIT-NEXT:    unreachable
 ;
 ; CGSCC: Function Attrs: nounwind
@@ -890,12 +890,12 @@ define i1 @parent8(ptr %a, ptr %bogus1, ptr %b) personality ptr @esfp{
 ; CGSCC-SAME: (ptr nonnull [[A:%.*]], ptr nocapture nofree readnone [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR4]] personality ptr @esfp {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    invoke void @use2nonnull(ptr nonnull [[A]], ptr nonnull [[B]])
-; CGSCC-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; CGSCC-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; CGSCC:       cont:
 ; CGSCC-NEXT:    ret i1 false
 ; CGSCC:       exc:
 ; CGSCC-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; CGSCC-NEXT:    filter [0 x ptr] zeroinitializer
+; CGSCC-NEXT:            filter [0 x ptr] zeroinitializer
 ; CGSCC-NEXT:    unreachable
 ;
 
@@ -963,7 +963,6 @@ define ptr addrspace(3) @as(ptr addrspace(3) dereferenceable(4) %p) {
   ret ptr addrspace(3) %p
 }
 
-; CHECK-NOT: @g2()
 define internal ptr @g2() {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@g2
@@ -1100,33 +1099,33 @@ define i32 @nonnull_exec_ctx_1(ptr %a, i32 %b) {
 ; TUNIT-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1
 ; TUNIT-SAME: (ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR8]] {
 ; TUNIT-NEXT:  en:
-; TUNIT-NEXT:    [[TRUETMP3:%.*]] = icmp eq i32 [[B]], 0
-; TUNIT-NEXT:    br i1 [[TRUETMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; TUNIT-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; TUNIT-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; TUNIT:       ex:
-; TUNIT-NEXT:    [[TRUETMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR7]]
-; TUNIT-NEXT:    ret i32 [[TRUETMP5]]
+; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR7]]
+; TUNIT-NEXT:    ret i32 [[TMP5]]
 ; TUNIT:       hd:
-; TUNIT-NEXT:    [[TRUETMP7:%.*]] = phi i32 [ [[TRUETMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
+; TUNIT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
 ; TUNIT-NEXT:    tail call void @h(ptr [[A]]) #[[ATTR7]]
-; TUNIT-NEXT:    [[TRUETMP8]] = add nuw i32 [[TRUETMP7]], 1
-; TUNIT-NEXT:    [[TRUETMP9:%.*]] = icmp eq i32 [[TRUETMP8]], [[B]]
-; TUNIT-NEXT:    br i1 [[TRUETMP9]], label [[EX]], label [[HD]]
+; TUNIT-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; TUNIT-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; TUNIT-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 ; CGSCC: Function Attrs: mustprogress nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1
 ; CGSCC-SAME: (ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR7]] {
 ; CGSCC-NEXT:  en:
-; CGSCC-NEXT:    [[TRUETMP3:%.*]] = icmp eq i32 [[B]], 0
-; CGSCC-NEXT:    br i1 [[TRUETMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; CGSCC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; CGSCC-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; CGSCC:       ex:
-; CGSCC-NEXT:    [[TRUETMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR6]]
-; CGSCC-NEXT:    ret i32 [[TRUETMP5]]
+; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR6]]
+; CGSCC-NEXT:    ret i32 [[TMP5]]
 ; CGSCC:       hd:
-; CGSCC-NEXT:    [[TRUETMP7:%.*]] = phi i32 [ [[TRUETMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
+; CGSCC-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
 ; CGSCC-NEXT:    tail call void @h(ptr [[A]]) #[[ATTR6]]
-; CGSCC-NEXT:    [[TRUETMP8]] = add nuw i32 [[TRUETMP7]], 1
-; CGSCC-NEXT:    [[TRUETMP9:%.*]] = icmp eq i32 [[TRUETMP8]], [[B]]
-; CGSCC-NEXT:    br i1 [[TRUETMP9]], label [[EX]], label [[HD]]
+; CGSCC-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; CGSCC-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; CGSCC-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 en:
   %tmp3 = icmp eq i32 %b, 0
@@ -1150,37 +1149,37 @@ define i32 @nonnull_exec_ctx_1b(ptr %a, i32 %b) {
 ; TUNIT-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1b
 ; TUNIT-SAME: (ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR8]] {
 ; TUNIT-NEXT:  en:
-; TUNIT-NEXT:    [[TRUETMP3:%.*]] = icmp eq i32 [[B]], 0
-; TUNIT-NEXT:    br i1 [[TRUETMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; TUNIT-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; TUNIT-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; TUNIT:       ex:
-; TUNIT-NEXT:    [[TRUETMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR7]]
-; TUNIT-NEXT:    ret i32 [[TRUETMP5]]
+; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR7]]
+; TUNIT-NEXT:    ret i32 [[TMP5]]
 ; TUNIT:       hd:
-; TUNIT-NEXT:    [[TRUETMP7:%.*]] = phi i32 [ [[TRUETMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
+; TUNIT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
 ; TUNIT-NEXT:    tail call void @h(ptr [[A]]) #[[ATTR7]]
 ; TUNIT-NEXT:    br label [[HD2]]
 ; TUNIT:       hd2:
-; TUNIT-NEXT:    [[TRUETMP8]] = add nuw i32 [[TRUETMP7]], 1
-; TUNIT-NEXT:    [[TRUETMP9:%.*]] = icmp eq i32 [[TRUETMP8]], [[B]]
-; TUNIT-NEXT:    br i1 [[TRUETMP9]], label [[EX]], label [[HD]]
+; TUNIT-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; TUNIT-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; TUNIT-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 ; CGSCC: Function Attrs: mustprogress nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1b
 ; CGSCC-SAME: (ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR7]] {
 ; CGSCC-NEXT:  en:
-; CGSCC-NEXT:    [[TRUETMP3:%.*]] = icmp eq i32 [[B]], 0
-; CGSCC-NEXT:    br i1 [[TRUETMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; CGSCC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; CGSCC-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; CGSCC:       ex:
-; CGSCC-NEXT:    [[TRUETMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR6]]
-; CGSCC-NEXT:    ret i32 [[TRUETMP5]]
+; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR6]]
+; CGSCC-NEXT:    ret i32 [[TMP5]]
 ; CGSCC:       hd:
-; CGSCC-NEXT:    [[TRUETMP7:%.*]] = phi i32 [ [[TRUETMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
+; CGSCC-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
 ; CGSCC-NEXT:    tail call void @h(ptr [[A]]) #[[ATTR6]]
 ; CGSCC-NEXT:    br label [[HD2]]
 ; CGSCC:       hd2:
-; CGSCC-NEXT:    [[TRUETMP8]] = add nuw i32 [[TRUETMP7]], 1
-; CGSCC-NEXT:    [[TRUETMP9:%.*]] = icmp eq i32 [[TRUETMP8]], [[B]]
-; CGSCC-NEXT:    br i1 [[TRUETMP9]], label [[EX]], label [[HD]]
+; CGSCC-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; CGSCC-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; CGSCC-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 en:
   %tmp3 = icmp eq i32 %b, 0
@@ -1207,33 +1206,33 @@ define i32 @nonnull_exec_ctx_2(ptr %a, i32 %b) willreturn nounwind {
 ; TUNIT-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2
 ; TUNIT-SAME: (ptr nonnull [[A:%.*]], i32 [[B:%.*]]) #[[ATTR8]] {
 ; TUNIT-NEXT:  en:
-; TUNIT-NEXT:    [[TRUETMP3:%.*]] = icmp eq i32 [[B]], 0
-; TUNIT-NEXT:    br i1 [[TRUETMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; TUNIT-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; TUNIT-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; TUNIT:       ex:
-; TUNIT-NEXT:    [[TRUETMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR5]]
-; TUNIT-NEXT:    ret i32 [[TRUETMP5]]
+; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR5]]
+; TUNIT-NEXT:    ret i32 [[TMP5]]
 ; TUNIT:       hd:
-; TUNIT-NEXT:    [[TRUETMP7:%.*]] = phi i32 [ [[TRUETMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
+; TUNIT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
 ; TUNIT-NEXT:    tail call void @h(ptr nonnull [[A]]) #[[ATTR5]]
-; TUNIT-NEXT:    [[TRUETMP8]] = add nuw i32 [[TRUETMP7]], 1
-; TUNIT-NEXT:    [[TRUETMP9:%.*]] = icmp eq i32 [[TRUETMP8]], [[B]]
-; TUNIT-NEXT:    br i1 [[TRUETMP9]], label [[EX]], label [[HD]]
+; TUNIT-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; TUNIT-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; TUNIT-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 ; CGSCC: Function Attrs: mustprogress nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2
 ; CGSCC-SAME: (ptr nonnull [[A:%.*]], i32 [[B:%.*]]) #[[ATTR7]] {
 ; CGSCC-NEXT:  en:
-; CGSCC-NEXT:    [[TRUETMP3:%.*]] = icmp eq i32 [[B]], 0
-; CGSCC-NEXT:    br i1 [[TRUETMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; CGSCC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; CGSCC-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; CGSCC:       ex:
-; CGSCC-NEXT:    [[TRUETMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR4]]
-; CGSCC-NEXT:    ret i32 [[TRUETMP5]]
+; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR4]]
+; CGSCC-NEXT:    ret i32 [[TMP5]]
 ; CGSCC:       hd:
-; CGSCC-NEXT:    [[TRUETMP7:%.*]] = phi i32 [ [[TRUETMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
+; CGSCC-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
 ; CGSCC-NEXT:    tail call void @h(ptr nonnull [[A]]) #[[ATTR4]]
-; CGSCC-NEXT:    [[TRUETMP8]] = add nuw i32 [[TRUETMP7]], 1
-; CGSCC-NEXT:    [[TRUETMP9:%.*]] = icmp eq i32 [[TRUETMP8]], [[B]]
-; CGSCC-NEXT:    br i1 [[TRUETMP9]], label [[EX]], label [[HD]]
+; CGSCC-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; CGSCC-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; CGSCC-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 en:
   %tmp3 = icmp eq i32 %b, 0
@@ -1257,37 +1256,37 @@ define i32 @nonnull_exec_ctx_2b(ptr %a, i32 %b) willreturn nounwind {
 ; TUNIT-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2b
 ; TUNIT-SAME: (ptr nonnull [[A:%.*]], i32 [[B:%.*]]) #[[ATTR8]] {
 ; TUNIT-NEXT:  en:
-; TUNIT-NEXT:    [[TRUETMP3:%.*]] = icmp eq i32 [[B]], 0
-; TUNIT-NEXT:    br i1 [[TRUETMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; TUNIT-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; TUNIT-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; TUNIT:       ex:
-; TUNIT-NEXT:    [[TRUETMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR5]]
-; TUNIT-NEXT:    ret i32 [[TRUETMP5]]
+; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR5]]
+; TUNIT-NEXT:    ret i32 [[TMP5]]
 ; TUNIT:       hd:
-; TUNIT-NEXT:    [[TRUETMP7:%.*]] = phi i32 [ [[TRUETMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
+; TUNIT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
 ; TUNIT-NEXT:    tail call void @h(ptr nonnull [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    br label [[HD2]]
 ; TUNIT:       hd2:
-; TUNIT-NEXT:    [[TRUETMP8]] = add nuw i32 [[TRUETMP7]], 1
-; TUNIT-NEXT:    [[TRUETMP9:%.*]] = icmp eq i32 [[TRUETMP8]], [[B]]
-; TUNIT-NEXT:    br i1 [[TRUETMP9]], label [[EX]], label [[HD]]
+; TUNIT-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; TUNIT-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; TUNIT-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 ; CGSCC: Function Attrs: mustprogress nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2b
 ; CGSCC-SAME: (ptr nonnull [[A:%.*]], i32 [[B:%.*]]) #[[ATTR7]] {
 ; CGSCC-NEXT:  en:
-; CGSCC-NEXT:    [[TRUETMP3:%.*]] = icmp eq i32 [[B]], 0
-; CGSCC-NEXT:    br i1 [[TRUETMP3]], label [[EX:%.*]], label [[HD:%.*]]
+; CGSCC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
+; CGSCC-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; CGSCC:       ex:
-; CGSCC-NEXT:    [[TRUETMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR4]]
-; CGSCC-NEXT:    ret i32 [[TRUETMP5]]
+; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR4]]
+; CGSCC-NEXT:    ret i32 [[TMP5]]
 ; CGSCC:       hd:
-; CGSCC-NEXT:    [[TRUETMP7:%.*]] = phi i32 [ [[TRUETMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
+; CGSCC-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
 ; CGSCC-NEXT:    tail call void @h(ptr nonnull [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    br label [[HD2]]
 ; CGSCC:       hd2:
-; CGSCC-NEXT:    [[TRUETMP8]] = add nuw i32 [[TRUETMP7]], 1
-; CGSCC-NEXT:    [[TRUETMP9:%.*]] = icmp eq i32 [[TRUETMP8]], [[B]]
-; CGSCC-NEXT:    br i1 [[TRUETMP9]], label [[EX]], label [[HD]]
+; CGSCC-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
+; CGSCC-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
+; CGSCC-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
 ;
 en:
   %tmp3 = icmp eq i32 %b, 0

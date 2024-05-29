@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -168,12 +170,12 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 
   // Determine an appropriate location to create the bitcast for the return
   // value. The location depends on if we have a call or invoke instruction.
-  Instruction *InsertBefore = nullptr;
+  BasicBlock::iterator InsertBefore;
   if (auto *Invoke = dyn_cast<InvokeInst>(&CB))
     InsertBefore =
-        &SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->front();
+        SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->begin();
   else
-    InsertBefore = &*std::next(CB.getIterator());
+    InsertBefore = std::next(CB.getIterator());
 
   // Bitcast the return value to the correct type.
   auto *Cast = CastInst::CreateBitOrPointerCast(&CB, RetTy, "", InsertBefore);
@@ -188,10 +190,9 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Predicate and clone the given call site.
 ///
 /// This function creates an if-then-else structure at the location of the call
-/// site. The "if" condition compares the call site's called value to the given
-/// callee. The original call site is moved into the "else" block, and a clone
-/// of the call site is placed in the "then" block. The cloned instruction is
-/// returned.
+/// site. The "if" condition is specified by `Cond`.
+/// The original call site is moved into the "else" block, and a clone of the
+/// call site is placed in the "then" block. The cloned instruction is returned.
 ///
 /// For example, the call instruction below:
 ///
@@ -202,7 +203,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replace by the following:
 ///
 ///   orig_bb:
-///     %cond = icmp eq i32 ()* %ptr, @func
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -232,7 +233,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replace by the following:
 ///
 ///   orig_bb:
-///     %cond = icmp eq i32 ()* %ptr, @func
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -267,7 +268,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replaced by the following:
 ///
 ///   cond_bb:
-///     %cond = icmp eq i32 ()* %ptr, @func
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %orig_bb
 ///
 ///   then_bb:
@@ -280,18 +281,12 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 ///     ; The original call instruction stays in its original block.
 ///     %t0 = musttail call i32 %ptr()
 ///     ret %t0
-CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
-                                MDNode *BranchWeights) {
+static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
+                                         MDNode *BranchWeights) {
 
   IRBuilder<> Builder(&CB);
   CallBase *OrigInst = &CB;
   BasicBlock *OrigBlock = OrigInst->getParent();
-
-  // Create the compare. The called value and callee must have the same type to
-  // be compared.
-  if (CB.getCalledOperand()->getType() != Callee->getType())
-    Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
-  auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
 
   if (OrigInst->isMustTailCall()) {
     // Create an if-then structure. The original instruction stays in its block,
@@ -378,6 +373,22 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
   createRetPHINode(OrigInst, NewInst, MergeBlock, Builder);
 
   return *NewInst;
+}
+
+// Predicate and clone the given call site using condition `CB.callee ==
+// Callee`. See the comment `versionCallSiteWithCond` for the transformation.
+CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
+                                MDNode *BranchWeights) {
+
+  IRBuilder<> Builder(&CB);
+
+  // Create the compare. The called value and callee must have the same type to
+  // be compared.
+  if (CB.getCalledOperand()->getType() != Callee->getType())
+    Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
+  auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
+
+  return versionCallSiteWithCond(CB, Cond, BranchWeights);
 }
 
 bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
@@ -509,7 +520,8 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
     Type *FormalTy = CalleeType->getParamType(ArgNo);
     Type *ActualTy = Arg->getType();
     if (FormalTy != ActualTy) {
-      auto *Cast = CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", &CB);
+      auto *Cast =
+          CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", CB.getIterator());
       CB.setArgOperand(ArgNo, Cast);
 
       // Remove any incompatible attributes for the argument.
@@ -559,6 +571,27 @@ CallBase &llvm::promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
   return promoteCall(NewInst, Callee);
 }
 
+CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
+                                         Function *Callee,
+                                         ArrayRef<Constant *> AddressPoints,
+                                         MDNode *BranchWeights) {
+  assert(!AddressPoints.empty() && "Caller should guarantee");
+  IRBuilder<> Builder(&CB);
+  SmallVector<Value *, 2> ICmps;
+  for (auto &AddressPoint : AddressPoints)
+    ICmps.push_back(Builder.CreateICmpEQ(VPtr, AddressPoint));
+
+  // TODO: Perform tree height reduction if the number of ICmps is high.
+  Value *Cond = Builder.CreateOr(ICmps);
+
+  // Version the indirect call site. If Cond is true, 'NewInst' will be
+  // executed, otherwise the original call site will be executed.
+  CallBase &NewInst = versionCallSiteWithCond(CB, Cond, BranchWeights);
+
+  // Promote 'NewInst' so that it directly calls the desired function.
+  return promoteCall(NewInst, Callee);
+}
+
 bool llvm::tryPromoteCall(CallBase &CB) {
   assert(!CB.getCalledFunction());
   Module *M = CB.getCaller()->getParent();
@@ -597,16 +630,13 @@ bool llvm::tryPromoteCall(CallBase &CB) {
     // Not in the form of a global constant variable with an initializer.
     return false;
 
-  Constant *VTableGVInitializer = GV->getInitializer();
   APInt VTableGVOffset = VTableOffsetGVBase + VTableOffset;
   if (!(VTableGVOffset.getActiveBits() <= 64))
     return false; // Out of range.
-  Constant *Ptr = getPointerAtOffset(VTableGVInitializer,
-                                     VTableGVOffset.getZExtValue(),
-                                     *M);
-  if (!Ptr)
-    return false; // No constant (function) pointer found.
-  Function *DirectCallee = dyn_cast<Function>(Ptr->stripPointerCasts());
+
+  Function *DirectCallee = nullptr;
+  std::tie(DirectCallee, std::ignore) =
+      getFunctionAtVTableOffset(GV, VTableGVOffset.getZExtValue(), *M);
   if (!DirectCallee)
     return false; // No function pointer found.
 

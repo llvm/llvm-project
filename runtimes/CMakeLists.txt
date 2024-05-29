@@ -6,7 +6,11 @@ set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/LLVMVersion.cmake)
+
 project(Runtimes C CXX ASM)
+set(LLVM_SUBPROJECT_TITLE "Runtimes")
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
@@ -19,7 +23,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;offload")
 set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
@@ -151,10 +155,19 @@ endif()
 # Avoid checking whether the compiler is working.
 set(LLVM_COMPILER_CHECKED ON)
 
+# This can be used to detect whether we're targeting a GPU architecture.
+if("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
+   "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
+  set(LLVM_RUNTIMES_GPU_BUILD ON)
+endif()
+
 # Handle common options used by all runtimes.
 include(AddLLVM)
 include(HandleLLVMOptions)
 
+# Loot at the PATH first to avoid a version mismatch between the command-line
+# python and the CMake-found version
+set(Python3_FIND_REGISTRY LAST)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 # Host triple is used by tests to check if they are running natively.
@@ -224,12 +237,14 @@ foreach(entry ${runtimes})
   add_subdirectory(${entry} ${projName})
 endforeach()
 
+# Define runtimes-test-depends so the parent build can use it unconditionally.
+add_custom_target(runtimes-test-depends)
+
 if(LLVM_INCLUDE_TESTS)
   # LLVM_RUNTIMES_LIT_DEPENDS is populated when lit tests are added between
   # umbrella_list_testsuite begin and end. The bootstrap runtimes builds
   # currently assumes this target exists.
   get_property(LLVM_RUNTIMES_LIT_DEPENDS GLOBAL PROPERTY LLVM_RUNTIMES_LIT_DEPENDS)
-  add_custom_target(runtimes-test-depends)
   if(LLVM_RUNTIMES_LIT_DEPENDS)
     # add_dependencies complains if called with no dependencies
     add_dependencies(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})

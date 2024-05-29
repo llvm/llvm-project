@@ -129,3 +129,45 @@ body:             |
     PseudoRET implicit $x10
 
 ...
+---
+name:            sextload_i8
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x10
+
+    ; RV32I-LABEL: name: sextload_i8
+    ; RV32I: liveins: $x10
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
+    ; RV32I-NEXT: [[SEXTLOAD:%[0-9]+]]:gprb(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; RV32I-NEXT: $x10 = COPY [[SEXTLOAD]](s32)
+    ; RV32I-NEXT: PseudoRET implicit $x10
+    %0:_(p0) = COPY $x10
+    %1:_(s32) = G_SEXTLOAD %0(p0) :: (load (s8))
+    $x10 = COPY %1(s32)
+    PseudoRET implicit $x10
+
+...
+---
+name:            sextload_i16
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x10
+
+    ; RV32I-LABEL: name: sextload_i16
+    ; RV32I: liveins: $x10
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
+    ; RV32I-NEXT: [[SEXTLOAD:%[0-9]+]]:gprb(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
+    ; RV32I-NEXT: $x10 = COPY [[SEXTLOAD]](s32)
+    ; RV32I-NEXT: PseudoRET implicit $x10
+    %0:_(p0) = COPY $x10
+    %1:_(s32) = G_SEXTLOAD %0(p0) :: (load (s16))
+    $x10 = COPY %1(s32)
+    PseudoRET implicit $x10
+
+...

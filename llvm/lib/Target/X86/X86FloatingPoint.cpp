@@ -26,12 +26,11 @@
 #include "X86InstrInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/EdgeBundles.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -463,8 +462,7 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
 
     // Check to see if any of the values defined by this instruction are dead
     // after definition.  If so, pop them.
-    for (unsigned i = 0, e = DeadRegs.size(); i != e; ++i) {
-      unsigned Reg = DeadRegs[i];
+    for (unsigned Reg : DeadRegs) {
       // Check if Reg is live on the stack. An inline-asm register operand that
       // is in the clobber list and marked dead might not be live on the stack.
       static_assert(X86::FP7 - X86::FP0 == 7, "sequential FP regnumbers");
@@ -831,7 +829,8 @@ static const TableEntry PopTable[] = {
 };
 
 static bool doesInstructionSetFPSW(MachineInstr &MI) {
-  if (const MachineOperand *MO = MI.findRegisterDefOperand(X86::FPSW))
+  if (const MachineOperand *MO =
+          MI.findRegisterDefOperand(X86::FPSW, /*TRI=*/nullptr))
     if (!MO->isDead())
       return true;
   return false;
@@ -874,7 +873,7 @@ void FPS::popStackAfter(MachineBasicBlock::iterator &I) {
     if (doesInstructionSetFPSW(MI)) {
       MachineBasicBlock &MBB = *MI.getParent();
       MachineBasicBlock::iterator Next = getNextFPInstruction(I);
-      if (Next != MBB.end() && Next->readsRegister(X86::FPSW))
+      if (Next != MBB.end() && Next->readsRegister(X86::FPSW, /*TRI=*/nullptr))
         I = Next;
     }
     I = BuildMI(*MBB, ++I, dl, TII->get(X86::ST_FPrr)).addReg(X86::ST0);
@@ -1084,9 +1083,10 @@ void FPS::handleReturn(MachineBasicBlock::iterator &I) {
     // FP Register uses must be kills unless there are two uses of the same
     // register, in which case only one will be a kill.
     assert(Op.isUse() &&
-           (Op.isKill() ||                    // Marked kill.
-            getFPReg(Op) == FirstFPRegOp ||   // Second instance.
-            MI.killsRegister(Op.getReg())) && // Later use is marked kill.
+           (Op.isKill() ||                  // Marked kill.
+            getFPReg(Op) == FirstFPRegOp || // Second instance.
+            MI.killsRegister(Op.getReg(),
+                             /*TRI=*/nullptr)) && // Later use is marked kill.
            "Ret only defs operands, and values aren't live beyond it");
 
     if (FirstFPRegOp == ~0U)
@@ -1183,7 +1183,7 @@ void FPS::handleOneArgFP(MachineBasicBlock::iterator &I) {
 
   // Is this the last use of the source register?
   unsigned Reg = getFPReg(MI.getOperand(NumOps - 1));
-  bool KillsSrc = MI.killsRegister(X86::FP0 + Reg);
+  bool KillsSrc = MI.killsRegister(X86::FP0 + Reg, /*TRI=*/nullptr);
 
   // FISTP64m is strange because there isn't a non-popping versions.
   // If we have one _and_ we don't want to pop the operand, duplicate the value
@@ -1246,7 +1246,7 @@ void FPS::handleOneArgFPRW(MachineBasicBlock::iterator &I) {
 
   // Is this the last use of the source register?
   unsigned Reg = getFPReg(MI.getOperand(1));
-  bool KillsSrc = MI.killsRegister(X86::FP0 + Reg);
+  bool KillsSrc = MI.killsRegister(X86::FP0 + Reg, /*TRI=*/nullptr);
 
   if (KillsSrc) {
     // If this is the last use of the source register, just make sure it's on
@@ -1357,8 +1357,8 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
   unsigned Dest = getFPReg(MI.getOperand(0));
   unsigned Op0 = getFPReg(MI.getOperand(NumOperands - 2));
   unsigned Op1 = getFPReg(MI.getOperand(NumOperands - 1));
-  bool KillsOp0 = MI.killsRegister(X86::FP0 + Op0);
-  bool KillsOp1 = MI.killsRegister(X86::FP0 + Op1);
+  bool KillsOp0 = MI.killsRegister(X86::FP0 + Op0, /*TRI=*/nullptr);
+  bool KillsOp1 = MI.killsRegister(X86::FP0 + Op1, /*TRI=*/nullptr);
   const DebugLoc &dl = MI.getDebugLoc();
 
   unsigned TOS = getStackEntry(0);
@@ -1455,8 +1455,8 @@ void FPS::handleCompareFP(MachineBasicBlock::iterator &I) {
   assert(NumOperands == 2 && "Illegal FUCOM* instruction!");
   unsigned Op0 = getFPReg(MI.getOperand(NumOperands - 2));
   unsigned Op1 = getFPReg(MI.getOperand(NumOperands - 1));
-  bool KillsOp0 = MI.killsRegister(X86::FP0 + Op0);
-  bool KillsOp1 = MI.killsRegister(X86::FP0 + Op1);
+  bool KillsOp0 = MI.killsRegister(X86::FP0 + Op0, /*TRI=*/nullptr);
+  bool KillsOp1 = MI.killsRegister(X86::FP0 + Op1, /*TRI=*/nullptr);
 
   // Make sure the first operand is on the top of stack, the other one can be
   // anywhere.
@@ -1482,7 +1482,7 @@ void FPS::handleCondMovFP(MachineBasicBlock::iterator &I) {
 
   unsigned Op0 = getFPReg(MI.getOperand(0));
   unsigned Op1 = getFPReg(MI.getOperand(2));
-  bool KillsOp1 = MI.killsRegister(X86::FP0 + Op1);
+  bool KillsOp1 = MI.killsRegister(X86::FP0 + Op1, /*TRI=*/nullptr);
 
   // The first operand *must* be on the top of the stack.
   moveToTop(Op0, I);
@@ -1526,7 +1526,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     // We handle three kinds of copies: FP <- FP, FP <- ST, and ST <- FP.
     const MachineOperand &MO1 = MI.getOperand(1);
     const MachineOperand &MO0 = MI.getOperand(0);
-    bool KillsSrc = MI.killsRegister(MO1.getReg());
+    bool KillsSrc = MI.killsRegister(MO1.getReg(), /*TRI=*/nullptr);
 
     // FP <- FP copy.
     unsigned DstFP = getFPReg(MO0);
@@ -1753,7 +1753,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
 void FPS::setKillFlags(MachineBasicBlock &MBB) const {
   const TargetRegisterInfo &TRI =
       *MBB.getParent()->getSubtarget().getRegisterInfo();
-  LivePhysRegs LPR(TRI);
+  LiveRegUnits LPR(TRI);
 
   LPR.addLiveOuts(MBB);
 
@@ -1775,14 +1775,14 @@ void FPS::setKillFlags(MachineBasicBlock &MBB) const {
 
       if (MO.isDef()) {
         Defs.set(Reg);
-        if (!LPR.contains(MO.getReg()))
+        if (LPR.available(MO.getReg()))
           MO.setIsDead();
       } else
         Uses.push_back(&MO);
     }
 
     for (auto *MO : Uses)
-      if (Defs.test(getFPReg(*MO)) || !LPR.contains(MO->getReg()))
+      if (Defs.test(getFPReg(*MO)) || LPR.available(MO->getReg()))
         MO->setIsKill();
 
     LPR.stepBackward(MI);

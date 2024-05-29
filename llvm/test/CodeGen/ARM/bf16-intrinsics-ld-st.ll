@@ -488,7 +488,7 @@ entry:
 define arm_aapcs_vfpcc [2 x <4 x i32>] @test_vld2q_dup_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld2q_dup_bf16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vld2.16 {d16[], d18[]}, [r0]
+; CHECK-NEXT:    vld2.16 {d0[], d2[]}, [r0]
 ; CHECK-NEXT:    vld2.16 {d1[], d3[]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:

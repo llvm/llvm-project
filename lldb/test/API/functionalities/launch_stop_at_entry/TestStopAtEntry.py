@@ -49,15 +49,15 @@ class TestStopAtEntry(TestBase):
 
     @skipUnlessDarwin
     @skipIfRemote
-    @expectedFailureIfFn(no_debugserver)
-    @expectedFailureIfFn(port_not_available)
+    @skipTestIfFn(no_debugserver)
+    @skipTestIfFn(port_not_available)
     def test_stop_remote_platform_sync(self):
         self.do_test_stop_at_entry(True, True)
 
     @skipUnlessDarwin
     @skipIfRemote
-    @expectedFailureIfFn(no_debugserver)
-    @expectedFailureIfFn(port_not_available)
+    @skipTestIfFn(no_debugserver)
+    @skipTestIfFn(port_not_available)
     def test_stop_remote_platform_async(self):
         self.do_test_stop_at_entry(False, True)
 

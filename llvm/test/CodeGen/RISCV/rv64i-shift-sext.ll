@@ -113,7 +113,7 @@ define signext i32 @test9(ptr %0, i64 %1) {
 ; RV64I-LABEL: test9:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 1
-; RV64I-NEXT:    addiw a2, a2, 1
+; RV64I-NEXT:    addi a2, a2, 1
 ; RV64I-NEXT:    addw a1, a1, a2
 ; RV64I-NEXT:    slli a1, a1, 2
 ; RV64I-NEXT:    add a0, a0, a1
@@ -133,7 +133,7 @@ define signext i32 @test10(ptr %0, i64 %1) {
 ; RV64I-LABEL: test10:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 30141
-; RV64I-NEXT:    addiw a2, a2, -747
+; RV64I-NEXT:    addi a2, a2, -747
 ; RV64I-NEXT:    subw a2, a2, a1
 ; RV64I-NEXT:    slli a2, a2, 2
 ; RV64I-NEXT:    add a0, a0, a2

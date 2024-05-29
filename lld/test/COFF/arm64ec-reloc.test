@@ -1,0 +1,37 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+Link a mix of ARM64EC and x86_64 data and check that relocations work.
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-data-sym.s -o arm64ec-data-sym.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows x86_64-data-sym.s -o x86_64-data-sym.obj
+RUN: lld-link -out:test.dll -machine:arm64ec arm64ec-data-sym.obj x86_64-data-sym.obj -dll -noentry
+
+RUN: llvm-readobj --hex-dump=.data test.dll | FileCheck -check-prefix=ARM64EC-DATA %s
+ARM64EC-DATA: 0x180001000 00100080 01000000 08100080 01000000
+
+RUN: llvm-readobj --coff-basereloc test.dll | FileCheck -check-prefix=RELOCS %s
+RELOCS:      BaseReloc [
+RELOCS-NEXT:   Entry {
+RELOCS-NEXT:     Type: DIR64
+RELOCS-NEXT:     Address: 0x1000
+RELOCS-NEXT:   }
+RELOCS-NEXT:   Entry {
+RELOCS-NEXT:     Type: DIR64
+RELOCS-NEXT:     Address: 0x1008
+RELOCS-NEXT:   }
+RELOCS-NEXT: ]
+
+#--- arm64ec-data-sym.s
+        .data
+        .globl arm64ec_data_sym
+        .p2align 2, 0x0
+arm64ec_data_sym:
+        .xword arm64ec_data_sym
+
+#--- x86_64-data-sym.s
+        .data
+        .globl x86_64_data_sym
+        .p2align 2, 0x0
+x86_64_data_sym:
+        .quad x86_64_data_sym

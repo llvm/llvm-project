@@ -11,7 +11,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Chrono.h"
@@ -46,6 +45,11 @@ DebugMapObject::DebugMapObject(StringRef ObjectFilename,
 bool DebugMapObject::addSymbol(StringRef Name,
                                std::optional<uint64_t> ObjectAddress,
                                uint64_t LinkedAddress, uint32_t Size) {
+  if (Symbols.count(Name)) {
+    // Symbol was previously added.
+    return true;
+  }
+
   auto InsertResult = Symbols.insert(
       std::make_pair(Name, SymbolMapping(ObjectAddress, LinkedAddress, Size)));
 
@@ -53,6 +57,12 @@ bool DebugMapObject::addSymbol(StringRef Name,
     AddressToMapping[*ObjectAddress] = &*InsertResult.first;
   return InsertResult.second;
 }
+
+void DebugMapObject::setRelocationMap(dsymutil::RelocationMap &RM) {
+  RelocMap.emplace(RM);
+}
+
+void DebugMapObject::setInstallName(StringRef IN) { InstallName.emplace(IN); }
 
 void DebugMapObject::print(raw_ostream &OS) const {
   OS << getObjectFilename() << ":\n";
@@ -159,8 +169,8 @@ struct MappingTraits<dsymutil::DebugMapObject>::YamlDMO {
   std::vector<dsymutil::DebugMapObject::YAMLSymbolMapping> Entries;
 };
 
-void MappingTraits<std::pair<std::string, DebugMapObject::SymbolMapping>>::
-    mapping(IO &io, std::pair<std::string, DebugMapObject::SymbolMapping> &s) {
+void MappingTraits<std::pair<std::string, SymbolMapping>>::mapping(
+    IO &io, std::pair<std::string, SymbolMapping> &s) {
   io.mapRequired("sym", s.first);
   io.mapOptional("objAddr", s.second.ObjectAddress);
   io.mapRequired("binAddr", s.second.BinaryAddress);
@@ -276,7 +286,13 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
     }
   }
 
-  dsymutil::DebugMapObject Res(Path, sys::toTimePoint(Timestamp), MachO::N_OSO);
+  uint8_t Type = MachO::N_OSO;
+  if (Path.ends_with(".dylib")) {
+    // FIXME: find a more resilient way
+    Type = MachO::N_LIB;
+  }
+  dsymutil::DebugMapObject Res(Path, sys::toTimePoint(Timestamp), Type);
+
   for (auto &Entry : Entries) {
     auto &Mapping = Entry.second;
     std::optional<uint64_t> ObjAddress;

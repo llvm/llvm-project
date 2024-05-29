@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITE_INT_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITE_INT_CONVERTER_H
 
-#include "src/__support/CPP/limits.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
 
@@ -56,6 +55,8 @@ LIBC_INLINE int convert_write_int(Writer *writer,
     *reinterpret_cast<ptrdiff_t *>(to_conv.conv_val_ptr) = written;
     break;
   case LengthModifier::j:
+  case LengthModifier::w:
+  case LengthModifier::wf:
     *reinterpret_cast<uintmax_t *>(to_conv.conv_val_ptr) = written;
     break;
   }

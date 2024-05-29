@@ -86,9 +86,9 @@ AllocationType llvm::memprof::getMIBAllocType(const MDNode *MIB) {
   // types that can be applied based on the allocation profile data.
   auto *MDS = dyn_cast<MDString>(MIB->getOperand(1));
   assert(MDS);
-  if (MDS->getString().equals("cold")) {
+  if (MDS->getString() == "cold") {
     return AllocationType::Cold;
-  } else if (MDS->getString().equals("hot")) {
+  } else if (MDS->getString() == "hot") {
     return AllocationType::Hot;
   }
   return AllocationType::NotCold;
@@ -244,12 +244,21 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
   MIBCallStack.push_back(AllocStackId);
   std::vector<Metadata *> MIBNodes;
   assert(!Alloc->Callers.empty() && "addCallStack has not been called yet");
-  buildMIBNodes(Alloc, Ctx, MIBCallStack, MIBNodes,
-                /*CalleeHasAmbiguousCallerContext=*/true);
-  assert(MIBCallStack.size() == 1 &&
-         "Should only be left with Alloc's location in stack");
-  CI->setMetadata(LLVMContext::MD_memprof, MDNode::get(Ctx, MIBNodes));
-  return true;
+  // The last parameter is meant to say whether the callee of the given node
+  // has more than one caller. Here the node being passed in is the alloc
+  // and it has no callees. So it's false.
+  if (buildMIBNodes(Alloc, Ctx, MIBCallStack, MIBNodes, false)) {
+    assert(MIBCallStack.size() == 1 &&
+           "Should only be left with Alloc's location in stack");
+    CI->setMetadata(LLVMContext::MD_memprof, MDNode::get(Ctx, MIBNodes));
+    return true;
+  }
+  // If there exists corner case that CallStackTrie has one chain to leaf
+  // and all node in the chain have multi alloc type, conservatively give
+  // it non-cold allocation type.
+  // FIXME: Avoid this case before memory profile created.
+  addAllocTypeAttribute(Ctx, CI, AllocationType::NotCold);
+  return false;
 }
 
 template <>

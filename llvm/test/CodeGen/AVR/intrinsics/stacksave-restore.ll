@@ -9,7 +9,7 @@ entry:
 ; CHECK: in [[SREG1:r[0-9]+]], 61
 ; CHECK-NEXT: in [[SREG2:r[0-9]+]], 62
 save:
-  %saved = call i8* @llvm.stacksave()
+  %saved = call ptr @llvm.stacksave()
   br label %restore
 
 ; CHECK-LABEL: restore
@@ -19,9 +19,9 @@ save:
 ; CHECK-NEXT: out 63, r0
 ; CHECK-NEXT: out 61, [[SREG1]]
 restore:
-  call void @llvm.stackrestore(i8* %saved)
+  call void @llvm.stackrestore(ptr %saved)
   ret void
 }
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8* %ptr)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr %ptr)

@@ -12,14 +12,19 @@ namespace std {
     size_t n;
     initializer_list();
   };
-  // FIXME: This should probably not be necessary.
-  template<typename T> initializer_list(initializer_list<T>) -> initializer_list<T>;
 }
 
 template<typename T> constexpr bool has_type(...) { return false; }
 template<typename T> constexpr bool has_type(T&) { return true; }
 
-std::initializer_list il = {1, 2, 3, 4, 5};
+std::initializer_list il1 = {1, 2, 3, 4, 5};
+auto il2 = std::initializer_list{1, 2, 3, 4};
+auto il3 = std::initializer_list{il1};
+auto il4 = std::initializer_list{il1, il1, il1};
+static_assert(has_type<std::initializer_list<int>>(il1));
+static_assert(has_type<std::initializer_list<int>>(il2));
+static_assert(has_type<std::initializer_list<int>>(il3));
+static_assert(has_type<std::initializer_list<std::initializer_list<int>>>(il4));
 
 template<typename T> struct vector {
   template<typename Iter> vector(Iter, Iter);
@@ -101,13 +106,13 @@ namespace dependent {
   struct B {
     template<typename T> struct X { X(T); };
     X(int) -> X<int>;
-    template<typename T> using Y = X<T>; // expected-note {{template}}
+    template<typename T> using Y = X<T>;
   };
   template<typename T> void f() {
     typename T::X tx = 0;
-    typename T::Y ty = 0; // expected-error {{alias template 'Y' requires template arguments; argument deduction only allowed for class templates}}
+    typename T::Y ty = 0;
   }
-  template void f<B>(); // expected-note {{in instantiation of}}
+  template void f<B>();
 
   template<typename T> struct C { C(T); };
   template<typename T> C(T) -> C<T>;
@@ -645,4 +650,37 @@ namespace undefined_warnings {
     auto test2 = TemplDObj(.0f);
   }
 }
+
+namespace GH51710 {
+template<typename T>
+struct A {
+  A(T f()) {}
+  A(int f(), T) {}
+
+  A(T array[10]) {}
+  A(int array[10], T) {}
+};
+
+template<typename T>
+struct B {
+   B(T array[]) {}
+   B(int array[], T) {}
+};
+
+
+int foo();
+
+void bar() {
+  A test1(foo);
+  A test2(foo, 1);
+
+  int array[10];
+  A test3(array);
+  A test4(array, 1);
+
+  B test5(array);
+  B test6(array, 1);
+}
+} // namespace GH51710
+
 #endif

@@ -42,7 +42,7 @@ define i32 @from_cmpeq_fail_bad_andmask(i32 %xx, i32 %y) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    addi a0, a0, -9
 ; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:    addiw a0, a0, -1
+; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    andi a0, a0, 3
 ; RV64I-NEXT:    ret
@@ -142,7 +142,7 @@ define i32 @from_i1_fail_bad_select1(i1 %x, i32 %y) {
 ;
 ; RV64I-LABEL: from_i1_fail_bad_select1:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, -1
+; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    andi a0, a0, 1
 ; RV64I-NEXT:    ret

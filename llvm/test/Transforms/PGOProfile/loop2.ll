@@ -30,7 +30,8 @@ for.cond.outer:
 
 for.body.outer:
 ; GEN: for.body.outer:
-; GEN-NOT: call void @llvm.instrprof.increment
+; NOTENTRY: call void @llvm.instrprof.increment(ptr @__profn_test_nested_for, i64 798733566382720768, i32 3, i32 1)
+; ENTRY: call void @llvm.instrprof.increment(ptr @__profn_test_nested_for, i64 798733566382720768, i32 3, i32 2)
   br label %for.cond.inner
 
 for.cond.inner:
@@ -62,8 +63,7 @@ for.end.inner:
 
 for.inc.outer:
 ; GEN: for.inc.outer:
-; NOTENTRY: call void @llvm.instrprof.increment(ptr @__profn_test_nested_for, i64 {{[0-9]+}}, i32 3, i32 1)
-; ENTRY: call void @llvm.instrprof.increment(ptr @__profn_test_nested_for, i64 {{[0-9]+}}, i32 3, i32 2)
+; GEN-NOT: call void @llvm.instrprof.increment
   %inc.2 = add nsw i32 %i.0, 1
   br label %for.cond.outer
 

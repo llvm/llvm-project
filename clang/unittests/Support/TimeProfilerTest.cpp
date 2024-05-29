@@ -177,21 +177,29 @@ constexpr int slow_init_list[] = {1, 1, 2, 3, 5, 8, 13, 21}; // 25th line
   std::string TraceGraph = buildTraceGraph(Json);
   ASSERT_TRUE(TraceGraph == R"(
 Frontend
-| EvaluateAsRValue (<test.cc:8:21>)
-| EvaluateForOverflow (<test.cc:8:21, col:25>)
-| EvaluateForOverflow (<test.cc:8:30, col:32>)
-| EvaluateAsRValue (<test.cc:9:14>)
-| EvaluateForOverflow (<test.cc:9:9, col:14>)
-| isPotentialConstantExpr (slow_namespace::slow_func)
-| EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
-| | EvaluateAsRValue (<test.cc:8:21, col:25>)
-| EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
-| | EvaluateAsRValue (<test.cc:8:21, col:25>)
-| EvaluateAsInitializer (slow_value)
-| EvaluateAsConstantExpr (<test.cc:17:33, col:59>)
-| EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
-| EvaluateAsRValue (<test.cc:22:14, line:23:58>)
-| EvaluateAsInitializer (slow_init_list)
+| ParseDeclarationOrFunctionDefinition (test.cc:2:1)
+| ParseDeclarationOrFunctionDefinition (test.cc:6:1)
+| | ParseFunctionDefinition (slow_func)
+| | | EvaluateAsRValue (<test.cc:8:21>)
+| | | EvaluateForOverflow (<test.cc:8:21, col:25>)
+| | | EvaluateForOverflow (<test.cc:8:30, col:32>)
+| | | EvaluateAsRValue (<test.cc:9:14>)
+| | | EvaluateForOverflow (<test.cc:9:9, col:14>)
+| | | isPotentialConstantExpr (slow_namespace::slow_func)
+| | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
+| | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
+| | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
+| | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
+| ParseDeclarationOrFunctionDefinition (test.cc:16:1)
+| | ParseFunctionDefinition (slow_test)
+| | | EvaluateAsInitializer (slow_value)
+| | | EvaluateAsConstantExpr (<test.cc:17:33, col:59>)
+| | | EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
+| ParseDeclarationOrFunctionDefinition (test.cc:22:1)
+| | EvaluateAsConstantExpr (<test.cc:23:31, col:57>)
+| | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
+| ParseDeclarationOrFunctionDefinition (test.cc:25:1)
+| | EvaluateAsInitializer (slow_init_list)
 | PerformPendingInstantiations
 )");
 
@@ -212,8 +220,9 @@ struct {
   std::string TraceGraph = buildTraceGraph(Json);
   ASSERT_TRUE(TraceGraph == R"(
 Frontend
-| isIntegerConstantExpr (<test.c:3:18>)
-| EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)
+| ParseDeclarationOrFunctionDefinition (test.c:2:1)
+| | isIntegerConstantExpr (<test.c:3:18>)
+| | EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)
 | PerformPendingInstantiations
 )");
 

@@ -91,7 +91,7 @@ constexpr bool test() {
         {
             bool was_called = false;
             auto f = [&](NonCopyable) -> int { was_called = true; return 0; };
-            std::invoke_r<int>(f, NonCopyable());
+            (void)std::invoke_r<int>(f, NonCopyable());
             assert(was_called);
         }
         // Forward function object, with void return
@@ -111,7 +111,7 @@ constexpr bool test() {
                 constexpr int operator()() && { was_called = true; return 0; }
             };
             bool was_called = false;
-            std::invoke_r<int>(MoveOnlyIntFunction{was_called});
+            (void)std::invoke_r<int>(MoveOnlyIntFunction{was_called});
             assert(was_called);
         }
     }

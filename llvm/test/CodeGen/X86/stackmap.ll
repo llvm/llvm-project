@@ -9,11 +9,11 @@
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
-; CHECK-NEXT:   .long 17
+; CHECK-NEXT:   .long 16
 ; Num LargeConstants
 ; CHECK-NEXT:   .long 4
 ; Num Callsites
-; CHECK-NEXT:   .long 21
+; CHECK-NEXT:   .long 20
 
 ; Functions and stack size
 ; CHECK-NEXT:   .quad _constantargs
@@ -38,9 +38,6 @@
 ; CHECK-NEXT:   .quad 8
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _spilledValue
-; CHECK-NEXT:   .quad 8
-; CHECK-NEXT:   .quad 1
-; CHECK-NEXT:   .quad _spilledStackMapValue
 ; CHECK-NEXT:   .quad 8
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _spillSubReg
@@ -364,28 +361,6 @@ entry:
 define void @spilledValue(i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16) {
 entry:
   call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 11, i32 15, ptr null, i32 5, i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16)
-  ret void
-}
-
-; Spilled stack map values.
-;
-; Verify 17 stack map entries.
-;
-; CHECK-LABEL:  .long L{{.*}}-_spilledStackMapValue
-; CHECK-NEXT:   .short 0
-; CHECK-NEXT:   .short 17
-;
-; Check that at least one is a spilled entry from RBP.
-; Location: Indirect RBP + ...
-; CHECK:        .byte 3
-; CHECK-NEXT:   .byte   0
-; CHECK-NEXT:   .short 8
-; CHECK-NEXT:   .short 6
-; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .long
-define webkit_jscc void @spilledStackMapValue(i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16) {
-entry:
-  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 12, i32 15, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16)
   ret void
 }
 

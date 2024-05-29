@@ -266,7 +266,7 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   // RegInfo - Information about each register in use in the function.
   MachineRegisterInfo *RegInfo;
 
-  // Used to keep track of target-specific per-machine function information for
+  // Used to keep track of target-specific per-machine-function information for
   // the target implementation.
   MachineFunctionInfo *MFInfo;
 
@@ -463,6 +463,11 @@ public:
     virtual void MF_HandleInsertion(MachineInstr &MI) = 0;
     /// Callback before a removal. This should not modify the MI directly.
     virtual void MF_HandleRemoval(MachineInstr &MI) = 0;
+    /// Callback before changing MCInstrDesc. This should not modify the MI
+    /// directly.
+    virtual void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) {
+      return;
+    }
   };
 
   /// Structure used to represent pair of argument number after call lowering
@@ -476,9 +481,11 @@ public:
       assert(Arg < (1 << 16) && "Arg out of range");
     }
   };
-  /// Vector of call argument and its forwarding register.
-  using CallSiteInfo = SmallVector<ArgRegPair, 1>;
-  using CallSiteInfoImpl = SmallVectorImpl<ArgRegPair>;
+
+  struct CallSiteInfo {
+    /// Vector of call argument and its forwarding register.
+    SmallVector<ArgRegPair, 1> ArgRegPairs;
+  };
 
 private:
   Delegate *TheDelegate = nullptr;
@@ -498,6 +505,9 @@ private:
   friend struct ilist_traits<MachineInstr>;
 
 public:
+  // Need to be accessed from MachineInstr::setDesc.
+  void handleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID);
+
   using VariableDbgInfoMapTy = SmallVector<VariableDbgInfo, 4>;
   VariableDbgInfoMapTy VariableDbgInfos;
 
@@ -1005,8 +1015,11 @@ public:
   void deleteMachineInstr(MachineInstr *MI);
 
   /// CreateMachineBasicBlock - Allocate a new MachineBasicBlock. Use this
-  /// instead of `new MachineBasicBlock'.
-  MachineBasicBlock *CreateMachineBasicBlock(const BasicBlock *bb = nullptr);
+  /// instead of `new MachineBasicBlock'. Sets `MachineBasicBlock::BBID` if
+  /// basic-block-sections is enabled for the function.
+  MachineBasicBlock *
+  CreateMachineBasicBlock(const BasicBlock *BB = nullptr,
+                          std::optional<UniqueBBID> BBID = std::nullopt);
 
   /// DeleteMachineBasicBlock - Delete the given MachineBasicBlock.
   void deleteMachineBasicBlock(MachineBasicBlock *MBB);
@@ -1015,18 +1028,27 @@ public:
   /// MachineMemOperands are owned by the MachineFunction and need not be
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(
-      MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
-      Align base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
-      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
-
-  MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, LLT MemTy,
       Align base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
       const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand *getMachineMemOperand(
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
+      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
+      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand *getMachineMemOperand(
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
+      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
+      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
+    return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
+                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                FailureOrdering);
+  }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
   /// an existing one, adjusting by an offset and using the given size.
@@ -1035,9 +1057,17 @@ public:
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           int64_t Offset, LLT Ty);
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
-                                          int64_t Offset, uint64_t Size) {
+                                          int64_t Offset, LocationSize Size) {
     return getMachineMemOperand(
-        MMO, Offset, Size == ~UINT64_C(0) ? LLT() : LLT::scalar(8 * Size));
+        MMO, Offset,
+        !Size.hasValue() ? LLT()
+        : Size.isScalable()
+            ? LLT::scalable_vector(1, 8 * Size.getValue().getKnownMinValue())
+            : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
+  }
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          int64_t Offset, uint64_t Size) {
+    return getMachineMemOperand(MMO, Offset, LocationSize::precise(Size));
   }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
@@ -1046,10 +1076,15 @@ public:
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
-                                          uint64_t Size);
+                                          LocationSize Size);
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
                                           LLT Ty);
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          const MachinePointerInfo &PtrInfo,
+                                          uint64_t Size) {
+    return getMachineMemOperand(MMO, PtrInfo, LocationSize::precise(Size));
+  }
 
   /// Allocate a new MachineMemOperand by copying an existing one,
   /// replacing only AliasAnalysis information. MachineMemOperands are owned
@@ -1090,7 +1125,8 @@ public:
   MachineInstr::ExtraInfo *createMIExtraInfo(
       ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
       MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr,
-      MDNode *PCSections = nullptr, uint32_t CFIType = 0);
+      MDNode *PCSections = nullptr, uint32_t CFIType = 0,
+      MDNode *MMRAs = nullptr);
 
   /// Allocate a string and populate it with the given external symbol name.
   const char *createExternalSymbolName(StringRef Name);
@@ -1312,8 +1348,7 @@ public:
   }
 
   /// Start tracking the arguments passed to the call \p CallI.
-  void addCallArgsForwardingRegs(const MachineInstr *CallI,
-                                 CallSiteInfoImpl &&CallInfo) {
+  void addCallSiteInfo(const MachineInstr *CallI, CallSiteInfo &&CallInfo) {
     assert(CallI->isCandidateForCallSiteEntry());
     bool Inserted =
         CallSitesInfo.try_emplace(CallI, std::move(CallInfo)).second;
@@ -1412,9 +1447,7 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   }
 };
 
-class MachineFunctionAnalysisManager;
-void verifyMachineFunction(MachineFunctionAnalysisManager *,
-                           const std::string &Banner,
+void verifyMachineFunction(const std::string &Banner,
                            const MachineFunction &MF);
 
 } // end namespace llvm

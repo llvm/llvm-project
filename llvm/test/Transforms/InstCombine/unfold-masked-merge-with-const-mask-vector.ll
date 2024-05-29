@@ -10,7 +10,7 @@ define <2 x i4> @splat (<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @splat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 -2, i4 -2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i4> [[Y:%.*]], <i4 1, i4 1>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i4> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %n0 = xor <2 x i4> %x, %y
@@ -74,7 +74,7 @@ define <2 x i4> @in_constant_varx_14(<2 x i4> %x, <2 x i4> %mask) {
 define <2 x i4> @in_constant_varx_14_nonsplat(<2 x i4> %x, <2 x i4> %mask) {
 ; CHECK-LABEL: @in_constant_varx_14_nonsplat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 1, i4 1>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[TMP1]], <i4 -2, i4 6>
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i4> [[TMP1]], <i4 -2, i4 6>
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %n0 = xor <2 x i4> %x, <i4 14, i4 7> ; %x
@@ -120,7 +120,7 @@ define <2 x i4> @in_constant_14_vary(<2 x i4> %y, <2 x i4> %mask) {
 define <2 x i4> @in_constant_14_vary_nonsplat(<2 x i4> %y, <2 x i4> %mask) {
 ; CHECK-LABEL: @in_constant_14_vary_nonsplat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[Y:%.*]], <i4 -2, i4 -2>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[TMP1]], <i4 0, i4 1>
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i4> [[TMP1]], <i4 0, i4 1>
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %n0 = xor <2 x i4> %y, <i4 14, i4 7> ; %x
@@ -152,7 +152,7 @@ define <2 x i4> @c_1_0_0 (<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @c_1_0_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 -2, i4 -2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i4> [[Y:%.*]], <i4 1, i4 1>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i4> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %n0 = xor <2 x i4> %y, %x ; swapped order
@@ -165,7 +165,7 @@ define <2 x i4> @c_0_1_0 (<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @c_0_1_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[Y:%.*]], <i4 -2, i4 -2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i4> [[X:%.*]], <i4 1, i4 1>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i4> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %n0 = xor <2 x i4> %x, %y
@@ -180,7 +180,7 @@ define <2 x i4> @c_0_0_1 () {
 ; CHECK-NEXT:    [[Y:%.*]] = call <2 x i4> @gen4()
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X]], <i4 -2, i4 -2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i4> [[Y]], <i4 1, i4 1>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i4> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %x  = call <2 x i4> @gen4()
@@ -195,7 +195,7 @@ define <2 x i4> @c_1_1_0 (<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @c_1_1_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[Y:%.*]], <i4 -2, i4 -2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i4> [[X:%.*]], <i4 1, i4 1>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i4> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %n0 = xor <2 x i4> %y, %x ; swapped order
@@ -209,7 +209,7 @@ define <2 x i4> @c_1_0_1 (<2 x i4> %x) {
 ; CHECK-NEXT:    [[Y:%.*]] = call <2 x i4> @gen4()
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], <i4 -2, i4 -2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i4> [[Y]], <i4 1, i4 1>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i4> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %y  = call <2 x i4> @gen4()
@@ -224,7 +224,7 @@ define <2 x i4> @c_0_1_1 (<2 x i4> %y) {
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x i4> @gen4()
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[Y:%.*]], <i4 -2, i4 -2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i4> [[X]], <i4 1, i4 1>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i4> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %x  = call <2 x i4> @gen4()
@@ -240,7 +240,7 @@ define <2 x i4> @c_1_1_1 () {
 ; CHECK-NEXT:    [[Y:%.*]] = call <2 x i4> @gen4()
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[Y]], <i4 -2, i4 -2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i4> [[X]], <i4 1, i4 1>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i4> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %x  = call <2 x i4> @gen4()

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -affine-loop-coalescing %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -affine-loop-coalescing --cse %s | FileCheck %s
 
 // CHECK-LABEL: @one_3d_nest
 func.func @one_3d_nest() {
@@ -239,19 +239,15 @@ func.func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
   }
   return
 }
-// CHECK: %[[T0:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
-// CHECK: %[[T1:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
-// CHECK: %[[T2:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
-// CHECK-DAG: %[[T3:.*]] = affine.apply #[[IDENTITY]]()[%[[T0]]]
-// CHECK-DAG: %[[T4:.*]] = affine.apply #[[IDENTITY]]()[%[[T1]]]
-// CHECK-DAG: %[[T5:.*]] = affine.apply #[[PRODUCT]](%[[T3]])[%[[T4]]]
-// CHECK-DAG: %[[T6:.*]] = affine.apply #[[IDENTITY]]()[%[[T2]]]
-// CHECK-DAG: %[[T7:.*]] = affine.apply #[[PRODUCT]](%[[T5]])[%[[T6]]]
-// CHECK: affine.for %[[IV:.*]] = 0 to %[[T7]]
-// CHECK-DAG:    %[[K:.*]] = affine.apply #[[MOD]](%[[IV]])[%[[T6]]]
-// CHECK-DAG:    %[[T9:.*]] = affine.apply #[[FLOOR]](%[[IV]])[%[[T6]]]
-// CHECK-DAG:    %[[J:.*]] = affine.apply #[[MOD]](%[[T9]])[%[[T4]]]
-// CHECK-DAG:    %[[I:.*]] = affine.apply #[[FLOOR]](%[[T9]])[%[[T4]]]
+// CHECK: %[[DIM:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
+// CHECK-DAG: %[[T0:.*]] = affine.apply #[[IDENTITY]]()[%[[DIM]]]
+// CHECK-DAG: %[[T1:.*]] = affine.apply #[[PRODUCT]](%[[T0]])[%[[T0]]]
+// CHECK-DAG: %[[T2:.*]] = affine.apply #[[PRODUCT]](%[[T1]])[%[[T0]]]
+// CHECK: affine.for %[[IV:.*]] = 0 to %[[T2]]
+// CHECK-DAG:    %[[K:.*]] = affine.apply #[[MOD]](%[[IV]])[%[[T0]]]
+// CHECK-DAG:    %[[T9:.*]] = affine.apply #[[FLOOR]](%[[IV]])[%[[T0]]]
+// CHECK-DAG:    %[[J:.*]] = affine.apply #[[MOD]](%[[T9]])[%[[T0]]]
+// CHECK-DAG:    %[[I:.*]] = affine.apply #[[FLOOR]](%[[T9]])[%[[T0]]]
 // CHECK-NEXT:    "test.foo"(%[[I]], %[[J]], %[[K]])
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return
@@ -277,18 +273,16 @@ func.func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
   }
   return
 }
-// CHECK: %[[T0:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
-// CHECK: %[[T1:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
-// CHECK-DAG: %[[T2:.*]] = affine.apply #[[IDENTITY]]()[%[[T0]]]
-// CHECK-DAG: %[[T3:.*]] = affine.apply #[[IDENTITY]]()[%[[T1]]]
-// CHECK-DAG: %[[T4:.*]] = affine.apply #[[PRODUCT]](%[[T2]])[%[[T3]]]
-// CHECK-DAG: %[[T5:.*]] = affine.apply #[[SIXTY_FOUR]]()
-// CHECK-DAG: %[[T6:.*]] = affine.apply #[[PRODUCT]](%[[T4]])[%[[T5]]]
-// CHECK: affine.for %[[IV:.*]] = 0 to %[[T6]]
-// CHECK-DAG:    %[[K:.*]] = affine.apply #[[MOD]](%[[IV]])[%[[T5]]]
-// CHECK-DAG:    %[[T8:.*]] = affine.apply #[[DIV]](%[[IV]])[%[[T5]]]
-// CHECK-DAG:    %[[J:.*]] = affine.apply #[[MOD]](%[[T8]])[%[[T3]]]
-// CHECK-DAG:    %[[I:.*]] = affine.apply #[[DIV]](%[[T8]])[%[[T3]]]
+// CHECK: %[[DIM:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
+// CHECK-DAG: %[[T0:.*]] = affine.apply #[[IDENTITY]]()[%[[DIM]]]
+// CHECK-DAG: %[[T1:.*]] = affine.apply #[[PRODUCT]](%[[T0]])[%[[T0]]]
+// CHECK-DAG: %[[T2:.*]] = affine.apply #[[SIXTY_FOUR]]()
+// CHECK-DAG: %[[T3:.*]] = affine.apply #[[PRODUCT]](%[[T1]])[%[[T2]]]
+// CHECK: affine.for %[[IV:.*]] = 0 to %[[T3]]
+// CHECK-DAG:    %[[K:.*]] = affine.apply #[[MOD]](%[[IV]])[%[[T2]]]
+// CHECK-DAG:    %[[T5:.*]] = affine.apply #[[DIV]](%[[IV]])[%[[T2]]]
+// CHECK-DAG:    %[[J:.*]] = affine.apply #[[MOD]](%[[T5]])[%[[T0]]]
+// CHECK-DAG:    %[[I:.*]] = affine.apply #[[DIV]](%[[T5]])[%[[T0]]]
 // CHECK-NEXT:    "test.foo"(%[[I]], %[[J]], %[[K]])
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return
@@ -316,19 +310,16 @@ func.func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
  }
  return
 }
-// CHECK: %[[T0:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
-// CHECK: %[[T1:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
-// CHECK: %[[T2:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
-// CHECK-DAG: %[[T3:.*]] = affine.min #[[MAP0]]()[%[[T0]]]
-// CHECK-DAG: %[[T4:.*]] = affine.apply #[[IDENTITY]]()[%[[T1]]]
-// CHECK-DAG: %[[T5:.*]] = affine.apply #[[PRODUCT]](%[[T3]])[%[[T4]]]
-// CHECK-DAG: %[[T6:.*]] = affine.apply #[[IDENTITY]]()[%[[T2]]]
-// CHECK-DAG: %[[T7:.*]] = affine.apply #[[PRODUCT]](%[[T5]])[%[[T6]]]
-// CHECK: affine.for %[[IV:.*]] = 0 to %[[T7]]
-// CHECK-DAG:    %[[K:.*]] = affine.apply #[[MOD]](%[[IV]])[%[[T6]]]
-// CHECK-DAG:    %[[T9:.*]] = affine.apply #[[DIV]](%[[IV]])[%[[T6]]]
-// CHECK-DAG:    %[[J:.*]] = affine.apply #[[MOD]](%[[T9]])[%[[T4]]]
-// CHECK-DAG:    %[[I:.*]] = affine.apply #[[DIV]](%[[T9]])[%[[T4]]]
+// CHECK: %[[DIM:.*]] = memref.dim %arg{{.*}}, %c{{.*}} : memref<?x?xf32>
+// CHECK-DAG: %[[T0:.*]] = affine.min #[[MAP0]]()[%[[DIM]]]
+// CHECK-DAG: %[[T1:.*]] = affine.apply #[[IDENTITY]]()[%[[DIM]]]
+// CHECK-DAG: %[[T2:.*]] = affine.apply #[[PRODUCT]](%[[T0]])[%[[T1]]]
+// CHECK-DAG: %[[T3:.*]] = affine.apply #[[PRODUCT]](%[[T2]])[%[[T1]]]
+// CHECK: affine.for %[[IV:.*]] = 0 to %[[T3]]
+// CHECK-DAG:    %[[K:.*]] = affine.apply #[[MOD]](%[[IV]])[%[[T1]]]
+// CHECK-DAG:    %[[T5:.*]] = affine.apply #[[DIV]](%[[IV]])[%[[T1]]]
+// CHECK-DAG:    %[[J:.*]] = affine.apply #[[MOD]](%[[T5]])[%[[T1]]]
+// CHECK-DAG:    %[[I:.*]] = affine.apply #[[DIV]](%[[T5]])[%[[T1]]]
 // CHECK-NEXT:    "test.foo"(%[[I]], %[[J]], %[[K]])
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return
@@ -342,12 +333,14 @@ func.func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
 func.func @test_loops_do_not_get_coalesced() {
   affine.for %i = 0 to 7 {
     affine.for %j = #map0(%i) to min #map1(%i) {
+      "use"(%i, %j) : (index, index) -> ()
     }
   }
   return
 }
 // CHECK: affine.for %[[IV0:.*]] = 0 to 7
 // CHECK-NEXT: affine.for %[[IV1:.*]] = #[[MAP0]](%[[IV0]]) to min #[[MAP1]](%[[IV0]])
+// CHECK-NEXT:   "use"(%[[IV0]], %[[IV1]])
 // CHECK-NEXT: }
 // CHECK-NEXT: }
 // CHECK-NEXT: return

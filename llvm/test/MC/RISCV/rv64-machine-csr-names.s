@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
-# RUN:     | llvm-objdump -d - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS %s
 
 # These machine mode CSR register names are RV32 only, but RV64

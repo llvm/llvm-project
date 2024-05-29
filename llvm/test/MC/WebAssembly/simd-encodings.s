@@ -1,4 +1,4 @@
-# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128,+relaxed-simd < %s | FileCheck %s
+# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128,+relaxed-simd,+half-precision < %s | FileCheck %s
 
 main:
     .functype main () -> ()
@@ -838,5 +838,41 @@ main:
 
     # CHECK: i32x4.relaxed_dot_i8x16_i7x16_add_s # encoding: [0xfd,0x93,0x02]
     i32x4.relaxed_dot_i8x16_i7x16_add_s
+
+    # CHECK: f32.load_f16 48 # encoding: [0xfc,0x30,0x01,0x30]
+    f32.load_f16 48
+
+    # CHECK: f32.store_f16 32 # encoding: [0xfc,0x31,0x01,0x20]
+    f32.store_f16 32
+
+    # CHECK: f16x8.splat # encoding: [0xfd,0xa0,0x02]
+    f16x8.splat
+
+    # CHECK: f16x8.extract_lane 1 # encoding: [0xfd,0xa1,0x02,0x01]
+    f16x8.extract_lane 1
+
+    # CHECK: f16x8.add # encoding: [0xfd,0xb4,0x02]
+    f16x8.add
+
+    # CHECK: f16x8.sub # encoding: [0xfd,0xb5,0x02]
+    f16x8.sub
+
+    # CHECK: f16x8.mul # encoding: [0xfd,0xb6,0x02]
+    f16x8.mul
+
+    # CHECK: f16x8.div # encoding: [0xfd,0xb7,0x02]
+    f16x8.div
+
+    # CHECK: f16x8.min # encoding: [0xfd,0xb8,0x02]
+    f16x8.min
+
+    # CHECK: f16x8.max # encoding: [0xfd,0xb9,0x02]
+    f16x8.max
+
+    # CHECK: f16x8.pmin # encoding: [0xfd,0xba,0x02]
+    f16x8.pmin
+
+    # CHECK: f16x8.pmax # encoding: [0xfd,0xbb,0x02]
+    f16x8.pmax
 
     end_function

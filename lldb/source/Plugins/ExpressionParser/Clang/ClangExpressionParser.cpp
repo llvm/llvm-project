@@ -207,20 +207,20 @@ public:
     m_passthrough->HandleDiagnostic(DiagLevel, Info);
     m_os->flush();
 
-    lldb_private::DiagnosticSeverity severity;
+    lldb::Severity severity;
     bool make_new_diagnostic = true;
 
     switch (DiagLevel) {
     case DiagnosticsEngine::Level::Fatal:
     case DiagnosticsEngine::Level::Error:
-      severity = eDiagnosticSeverityError;
+      severity = lldb::eSeverityError;
       break;
     case DiagnosticsEngine::Level::Warning:
-      severity = eDiagnosticSeverityWarning;
+      severity = lldb::eSeverityWarning;
       break;
     case DiagnosticsEngine::Level::Remark:
     case DiagnosticsEngine::Level::Ignored:
-      severity = eDiagnosticSeverityRemark;
+      severity = lldb::eSeverityInfo;
       break;
     case DiagnosticsEngine::Level::Note:
       m_manager->AppendMessageToDiagnostic(m_output);
@@ -238,7 +238,7 @@ public:
       if (!clang_diag || clang_diag->HasFixIts())
         break;
       // Ignore all Fix-Its that are not associated with an error.
-      if (clang_diag->GetSeverity() != eDiagnosticSeverityError)
+      if (clang_diag->GetSeverity() != lldb::eSeverityError)
         break;
       AddAllFixIts(clang_diag, Info);
       break;
@@ -256,7 +256,7 @@ public:
       // enough context in an expression for the warning to be useful.
       // FIXME: Should we try to filter out FixIts that apply to our generated
       // code, and not the user's expression?
-      if (severity == eDiagnosticSeverityError)
+      if (severity == lldb::eSeverityError)
         AddAllFixIts(new_diagnostic.get(), Info);
 
       m_manager->AddDiagnostic(std::move(new_diagnostic));
@@ -392,8 +392,8 @@ ClangExpressionParser::ClangExpressionParser(
   // Make sure clang uses the same VFS as LLDB.
   m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
 
-  lldb::LanguageType frame_lang =
-      expr.Language(); // defaults to lldb::eLanguageTypeUnknown
+  // Defaults to lldb::eLanguageTypeUnknown.
+  lldb::LanguageType frame_lang = expr.Language().AsLanguageType();
 
   std::string abi;
   ArchSpec target_arch;
@@ -410,7 +410,7 @@ ClangExpressionParser::ClangExpressionParser(
   // Make sure the user hasn't provided a preferred execution language with
   // `expression --language X -- ...`
   if (frame_sp && frame_lang == lldb::eLanguageTypeUnknown)
-    frame_lang = frame_sp->GetLanguage();
+    frame_lang = frame_sp->GetLanguage().AsLanguageType();
 
   if (process_sp && frame_lang != lldb::eLanguageTypeUnknown) {
     LLDB_LOGF(log, "Frame has language of type %s",
@@ -445,8 +445,8 @@ ClangExpressionParser::ClangExpressionParser(
   // Supported subsets of x86
   if (target_machine == llvm::Triple::x86 ||
       target_machine == llvm::Triple::x86_64) {
-    m_compiler->getTargetOpts().Features.push_back("+sse");
-    m_compiler->getTargetOpts().Features.push_back("+sse2");
+    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse");
+    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse2");
   }
 
   // Set the target CPU to generate code for. This will be empty for any CPU
@@ -479,7 +479,7 @@ ClangExpressionParser::ClangExpressionParser(
   assert(m_compiler->hasTarget());
 
   // 4. Set language options.
-  lldb::LanguageType language = expr.Language();
+  lldb::LanguageType language = expr.Language().AsLanguageType();
   LangOptions &lang_opts = m_compiler->getLangOpts();
 
   switch (language) {
@@ -526,7 +526,10 @@ ClangExpressionParser::ClangExpressionParser(
     [[fallthrough]];
   case lldb::eLanguageTypeC_plus_plus_03:
     lang_opts.CPlusPlus = true;
-    if (process_sp)
+    if (process_sp
+        // We're stopped in a frame without debug-info. The user probably
+        // intends to make global queries (which should include Objective-C).
+        && !(frame_sp && frame_sp->HasDebugInformation()))
       lang_opts.ObjC =
           process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
     break;
@@ -834,13 +837,13 @@ public:
     case CodeCompletionResult::RK_Declaration:
       return !(
           Result.Declaration->getIdentifier() &&
-          Result.Declaration->getIdentifier()->getName().startswith(Filter));
+          Result.Declaration->getIdentifier()->getName().starts_with(Filter));
     case CodeCompletionResult::RK_Keyword:
-      return !StringRef(Result.Keyword).startswith(Filter);
+      return !StringRef(Result.Keyword).starts_with(Filter);
     case CodeCompletionResult::RK_Macro:
-      return !Result.Macro->getName().startswith(Filter);
+      return !Result.Macro->getName().starts_with(Filter);
     case CodeCompletionResult::RK_Pattern:
-      return !StringRef(Result.Pattern->getAsString()).startswith(Filter);
+      return !StringRef(Result.Pattern->getAsString()).starts_with(Filter);
     }
     // If we trigger this assert or the above switch yields a warning, then
     // CodeCompletionResult has been enhanced with more kinds of completion
@@ -904,7 +907,7 @@ private:
     }
     // We also filter some internal lldb identifiers here. The user
     // shouldn't see these.
-    if (llvm::StringRef(ToInsert).startswith("$__lldb_"))
+    if (llvm::StringRef(ToInsert).starts_with("$__lldb_"))
       return std::nullopt;
     if (ToInsert.empty())
       return std::nullopt;
@@ -1161,7 +1164,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
 
   if (m_pp_callbacks && m_pp_callbacks->hasErrors()) {
     num_errors++;
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "while importing modules:");
     diagnostic_manager.AppendMessageToDiagnostic(
         m_pp_callbacks->getErrorString());
@@ -1341,10 +1344,10 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   {
     auto lang = m_expr.Language();
     LLDB_LOGF(log, "%s - Current expression language is %s\n", __FUNCTION__,
-              Language::GetNameForLanguageType(lang));
+              lang.GetDescription().data());
     lldb::ProcessSP process_sp = exe_ctx.GetProcessSP();
     if (process_sp && lang != lldb::eLanguageTypeUnknown) {
-      auto runtime = process_sp->GetLanguageRuntime(lang);
+      auto runtime = process_sp->GetLanguageRuntime(lang.AsLanguageType());
       if (runtime)
         runtime->GetIRPasses(custom_passes);
     }

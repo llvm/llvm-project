@@ -15,6 +15,12 @@ include "llvm/Target/Target.td"
 include "RISCVFeatures.td"
 
 //===----------------------------------------------------------------------===//
+// RISC-V profiles supported.
+//===----------------------------------------------------------------------===//
+
+include "RISCVProfiles.td"
+
+//===----------------------------------------------------------------------===//
 // Named operands for CSR instructions.
 //===----------------------------------------------------------------------===//
 
@@ -24,11 +30,17 @@ include "RISCVSystemOperands.td"
 // Registers, calling conventions, instruction descriptions.
 //===----------------------------------------------------------------------===//
 
-include "RISCVSchedule.td"
 include "RISCVRegisterInfo.td"
+include "RISCVSchedule.td"
 include "RISCVCallingConv.td"
 include "RISCVInstrInfo.td"
 include "GISel/RISCVRegisterBanks.td"
+
+//===----------------------------------------------------------------------===//
+// RISC-V macro fusions.
+//===----------------------------------------------------------------------===//
+
+include "RISCVMacroFusion.td"
 
 //===----------------------------------------------------------------------===//
 // RISC-V Scheduling Models
@@ -36,7 +48,10 @@ include "GISel/RISCVRegisterBanks.td"
 
 include "RISCVSchedRocket.td"
 include "RISCVSchedSiFive7.td"
+include "RISCVSchedSiFiveP400.td"
+include "RISCVSchedSiFiveP600.td"
 include "RISCVSchedSyntacoreSCR1.td"
+include "RISCVSchedXiangShanNanHu.td"
 
 //===----------------------------------------------------------------------===//
 // RISC-V processors supported.

@@ -8,7 +8,7 @@
 
 define i1 @scalar_i8_signbit_lshr_and_eq(i8 %x, i8 %y) {
 ; CHECK-LABEL: @scalar_i8_signbit_lshr_and_eq(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 -128, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i8 -128, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -21,7 +21,7 @@ define i1 @scalar_i8_signbit_lshr_and_eq(i8 %x, i8 %y) {
 
 define i1 @scalar_i16_signbit_lshr_and_eq(i16 %x, i16 %y) {
 ; CHECK-LABEL: @scalar_i16_signbit_lshr_and_eq(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 -32768, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i16 -32768, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -34,7 +34,7 @@ define i1 @scalar_i16_signbit_lshr_and_eq(i16 %x, i16 %y) {
 
 define i1 @scalar_i32_signbit_lshr_and_eq(i32 %x, i32 %y) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_eq(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 -2147483648, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -47,7 +47,7 @@ define i1 @scalar_i32_signbit_lshr_and_eq(i32 %x, i32 %y) {
 
 define i1 @scalar_i64_signbit_lshr_and_eq(i64 %x, i64 %y) {
 ; CHECK-LABEL: @scalar_i64_signbit_lshr_and_eq(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 -9223372036854775808, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i64 -9223372036854775808, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -60,7 +60,7 @@ define i1 @scalar_i64_signbit_lshr_and_eq(i64 %x, i64 %y) {
 
 define i1 @scalar_i32_signbit_lshr_and_ne(i32 %x, i32 %y) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_ne(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 -2147483648, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -75,7 +75,7 @@ define i1 @scalar_i32_signbit_lshr_and_ne(i32 %x, i32 %y) {
 
 define <4 x i1> @vec_4xi32_signbit_lshr_and_eq(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_4xi32_signbit_lshr_and_eq(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i32> [[AND]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
@@ -130,7 +130,7 @@ define <4 x i1> @vec_4xi32_signbit_lshr_and_eq_undef3(<4 x i32> %x, <4 x i32> %y
 ; Fold happened
 define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_lshr(i32 %x, i32 %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_eq_extra_use_lshr(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 -2147483648, [[Y:%.*]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[LSHR]], [[Z:%.*]]
 ; CHECK-NEXT:    store i32 [[XOR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], [[X:%.*]]
@@ -148,7 +148,7 @@ define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_lshr(i32 %x, i32 %y, i32 %z,
 ; Not fold
 define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_and(i32 %x, i32 %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_eq_extra_use_and(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 -2147483648, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[AND]], [[Z:%.*]]
 ; CHECK-NEXT:    store i32 [[MUL]], ptr [[P:%.*]], align 4
@@ -166,7 +166,7 @@ define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_and(i32 %x, i32 %y, i32 %z, 
 ; Not fold
 define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_lshr_and(i32 %x, i32 %y, i32 %z, ptr %p, ptr %q) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_eq_extra_use_lshr_and(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 -2147483648, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    store i32 [[AND]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LSHR]], [[Z:%.*]]
@@ -187,7 +187,7 @@ define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_lshr_and(i32 %x, i32 %y, i32
 
 define i1 @scalar_i32_signbit_lshr_and_eq_X_is_constant1(i32 %y) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_eq_X_is_constant1(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 -2147483648, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], 12345
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -215,7 +215,7 @@ define i1 @scalar_i32_signbit_lshr_and_eq_X_is_constant2(i32 %y) {
 
 define i1 @scalar_i32_signbit_lshr_and_slt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_slt(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 -2147483648, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -230,7 +230,7 @@ define i1 @scalar_i32_signbit_lshr_and_slt(i32 %x, i32 %y) {
 
 define i1 @scalar_i32_signbit_lshr_and_eq_nonzero(i32 %x, i32 %y) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_eq_nonzero(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 -2147483648, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[AND]], 1
 ; CHECK-NEXT:    ret i1 [[R]]

@@ -34,9 +34,9 @@ void var_simple_ref() {
 }
 
 void var_simple_ptr(int *a) {
-  clang_analyzer_dump(a);             // expected-warning {{SymRegion{reg_$0<int * a>}}}
-  clang_analyzer_dumpExtent(a);       // expected-warning {{extent_$1{SymRegion{reg_$0<int * a>}}}}
-  clang_analyzer_dumpElementCount(a); // expected-warning {{(extent_$1{SymRegion{reg_$0<int * a>}}) / 4}}
+  clang_analyzer_dump(a);             // expected-warning {{SymRegion{reg_$1<int * a>}}}
+  clang_analyzer_dumpExtent(a);       // expected-warning {{extent_$2{SymRegion{reg_$1<int * a>}}}}
+  clang_analyzer_dumpElementCount(a); // expected-warning {{(extent_$2{SymRegion{reg_$1<int * a>}}) / 4}}
 }
 
 void var_array() {
@@ -53,9 +53,9 @@ void string() {
 }
 
 void struct_simple_ptr(S *a) {
-  clang_analyzer_dump(a);             // expected-warning {{SymRegion{reg_$0<S * a>}}}
-  clang_analyzer_dumpExtent(a);       // expected-warning {{extent_$1{SymRegion{reg_$0<S * a>}}}}
-  clang_analyzer_dumpElementCount(a); // expected-warning {{(extent_$1{SymRegion{reg_$0<S * a>}}) / 4}}
+  clang_analyzer_dump(a);             // expected-warning {{SymRegion{reg_$1<S * a>}}}
+  clang_analyzer_dumpExtent(a);       // expected-warning {{extent_$2{SymRegion{reg_$1<S * a>}}}}
+  clang_analyzer_dumpElementCount(a); // expected-warning {{(extent_$2{SymRegion{reg_$1<S * a>}}) / 4}}
 }
 
 void field_ref(S a) {
@@ -65,9 +65,9 @@ void field_ref(S a) {
 }
 
 void field_ptr(S *a) {
-  clang_analyzer_dump(&a->f);             // expected-warning {{Element{SymRegion{reg_$0<S * a>},0 S64b,struct S}.f}}
-  clang_analyzer_dumpExtent(&a->f);       // expected-warning {{extent_$1{SymRegion{reg_$0<S * a>}}}}
-  clang_analyzer_dumpElementCount(&a->f); // expected-warning {{(extent_$1{SymRegion{reg_$0<S * a>}}) / 4U}}
+  clang_analyzer_dump(&a->f);             // expected-warning {{Element{SymRegion{reg_$1<S * a>},0 S64b,struct S}.f}}
+  clang_analyzer_dumpExtent(&a->f);       // expected-warning {{extent_$2{SymRegion{reg_$1<S * a>}}}}
+  clang_analyzer_dumpElementCount(&a->f); // expected-warning {{(extent_$2{SymRegion{reg_$1<S * a>}}) / 4U}}
 }
 
 void symbolic_array() {
@@ -97,7 +97,7 @@ void symbolic_malloc() {
 
 void symbolic_alloca() {
   int *a = (int *)alloca(12);
-  clang_analyzer_dump(a);             // expected-warning {{Element{HeapSymRegion{conj}}
+  clang_analyzer_dump(a);             // expected-warning {{Element{alloca{}}
   clang_analyzer_dumpExtent(a);       // expected-warning {{12 S64b}}
   clang_analyzer_dumpElementCount(a); // expected-warning {{3 S64b}}
 }

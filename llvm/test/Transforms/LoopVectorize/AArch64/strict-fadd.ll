@@ -285,8 +285,8 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED: %[[VEC_FADD2]] = fadd <4 x float> %[[STRIDED2:.*]], %[[VEC_PHI2]]
 ; CHECK-UNORDERED-NOT: call float @llvm.vector.reduce.fadd
 ; CHECK-UNORDERED: middle.block
-; CHECK-UNORDERED: %[[RDX1:.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> %[[VEC_FADD1]])
 ; CHECK-UNORDERED: %[[RDX2:.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> %[[VEC_FADD2]])
+; CHECK-UNORDERED: %[[RDX1:.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> %[[VEC_FADD1]])
 ; CHECK-UNORDERED: for.body
 ; CHECK-UNORDERED: %[[LOAD1:.*]] = load float, ptr
 ; CHECK-UNORDERED: %[[FADD1:.*]] = fadd float %[[LOAD1]], {{.*}}
@@ -315,7 +315,7 @@ for.body:
   %arrayidxb1 = getelementptr inbounds float, ptr %b, i64 %iv
   %0 = load float, ptr %arrayidxb1, align 4
   %add1 = fadd float %0, %add.phi2
-  %or = or i64 %iv, 1
+  %or = or disjoint i64 %iv, 1
   %arrayidxb2 = getelementptr inbounds float, ptr %b, i64 %or
   %1 = load float, ptr %arrayidxb2, align 4
   %add2 = fadd float %1, %add.phi1

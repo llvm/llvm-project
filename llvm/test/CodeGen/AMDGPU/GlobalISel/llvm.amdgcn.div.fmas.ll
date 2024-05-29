@@ -5,6 +5,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefix=GFX10_W64 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefix=GFX11_W32 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefix=GFX11_W64 %s
+; REQUIRES: do-not-run-me
 
 define float @v_div_fmas_f32(float %a, float %b, float %c, i1 %d) {
 ; GFX7-LABEL: v_div_fmas_f32:
@@ -748,11 +749,11 @@ define amdgpu_kernel void @test_div_fmas_f64(ptr addrspace(1) %out, double %a, d
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s11
 ; GFX7-NEXT:    v_cmp_ne_u32_e64 vcc, 0, s0
-; GFX7-NEXT:    s_nop 3
+; GFX7-NEXT:    s_mov_b32 s6, -1
+; GFX7-NEXT:    s_mov_b32 s7, 0xf000
+; GFX7-NEXT:    s_nop 1
 ; GFX7-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
-; GFX7-NEXT:    v_mov_b32_e32 v2, s4
-; GFX7-NEXT:    v_mov_b32_e32 v3, s5
-; GFX7-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; GFX7-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: test_div_fmas_f64:

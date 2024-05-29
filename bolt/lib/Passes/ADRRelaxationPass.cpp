@@ -56,9 +56,14 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
           continue;
       }
 
-      BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol);
-      if (TargetBF && TargetBF == &BF)
-        continue;
+      // Don't relax adr if it points to the same function and it is not split
+      // and BF initial size is < 1MB.
+      const unsigned OneMB = 0x100000;
+      if (!BF.isSplit() && BF.getSize() < OneMB) {
+        BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol);
+        if (TargetBF && TargetBF == &BF)
+          continue;
+      }
 
       MCPhysReg Reg;
       BC.MIB->getADRReg(Inst, Reg);
@@ -72,15 +77,19 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
 
       if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {
         It = BB.eraseInstruction(std::prev(It));
-      } else if (opts::StrictMode && !BF.isSimple()) {
+      } else if (std::next(It) != BB.end() && BC.MIB->isNoop(*std::next(It))) {
+        BB.eraseInstruction(std::next(It));
+      } else if (!opts::StrictMode && !BF.isSimple()) {
         // If the function is not simple, it may contain a jump table undetected
         // by us. This jump table may use an offset from the branch instruction
         // to land in the desired place. If we add new instructions, we
         // invalidate this offset, so we have to rely on linker-inserted NOP to
         // replace it with ADRP, and abort if it is not present.
-        errs() << formatv("BOLT-ERROR: Cannot relax adr in non-simple function "
-                          "{0}. Can't proceed in current mode.\n",
-                          BF.getOneName());
+        auto L = BC.scopeLock();
+        BC.errs() << formatv(
+            "BOLT-ERROR: Cannot relax adr in non-simple function "
+            "{0}. Use --strict option to override\n",
+            BF.getOneName());
         PassFailed = true;
         return;
       }
@@ -89,9 +98,9 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
   }
 }
 
-void ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
+Error ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
   if (!opts::AdrPassOpt || !BC.HasRelocations)
-    return;
+    return Error::success();
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     runOnFunction(BF);
@@ -102,7 +111,8 @@ void ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
       "ADRRelaxationPass");
 
   if (PassFailed)
-    exit(1);
+    return createFatalBOLTError("");
+  return Error::success();
 }
 
 } // end namespace bolt

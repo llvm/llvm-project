@@ -338,6 +338,15 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII) {
 }
 
 bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_CVT_F32_FP8_sdwa:
+  case AMDGPU::V_CVT_F32_BF8_sdwa:
+  case AMDGPU::V_CVT_PK_F32_FP8_sdwa:
+  case AMDGPU::V_CVT_PK_F32_BF8_sdwa:
+    // Does not support input modifiers: noabs, noneg, nosext.
+    return false;
+  }
+
   // Find operand in instruction that matches source operand and replace it with
   // target operand. Set corresponding src_sel
   bool IsPreserveSrc = false;
@@ -472,12 +481,11 @@ bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
   }
 
   // Move MI before v_or_b32
-  auto MBB = MI.getParent();
-  MBB->remove(&MI);
-  MBB->insert(getParentInst(), &MI);
+  MI.getParent()->remove(&MI);
+  getParentInst()->getParent()->insert(getParentInst(), &MI);
 
   // Add Implicit use of preserved register
-  MachineInstrBuilder MIB(*MBB->getParent(), MI);
+  MachineInstrBuilder MIB(*MI.getMF(), MI);
   MIB.addReg(getPreservedOperand()->getReg(),
              RegState::ImplicitKill,
              getPreservedOperand()->getSubReg());
@@ -546,7 +554,8 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
 
     MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
     MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
-    if (Src1->getReg().isPhysical() || Dst->getReg().isPhysical())
+    if (!Src1->isReg() || Src1->getReg().isPhysical() ||
+        Dst->getReg().isPhysical())
       break;
 
     if (Opcode == AMDGPU::V_LSHLREV_B32_e32 ||
@@ -584,7 +593,8 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
     MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
     MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 
-    if (Src1->getReg().isPhysical() || Dst->getReg().isPhysical())
+    if (!Src1->isReg() || Src1->getReg().isPhysical() ||
+        Dst->getReg().isPhysical())
       break;
 
     if (Opcode == AMDGPU::V_LSHLREV_B16_e32 ||
@@ -647,7 +657,8 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
     MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
     MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 
-    if (Src0->getReg().isPhysical() || Dst->getReg().isPhysical())
+    if (!Src0->isReg() || Src0->getReg().isPhysical() ||
+        Dst->getReg().isPhysical())
       break;
 
     return std::make_unique<SDWASrcOperand>(
@@ -675,7 +686,8 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
 
     MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 
-    if (ValSrc->getReg().isPhysical() || Dst->getReg().isPhysical())
+    if (!ValSrc->isReg() || ValSrc->getReg().isPhysical() ||
+        Dst->getReg().isPhysical())
       break;
 
     return std::make_unique<SDWASrcOperand>(

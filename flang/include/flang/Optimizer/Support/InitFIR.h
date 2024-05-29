@@ -13,12 +13,14 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_INITFIR_H
 #define FORTRAN_OPTIMIZER_SUPPORT_INITFIR_H
 
+#include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
+#include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -33,7 +35,7 @@ namespace fir::support {
       mlir::scf::SCFDialect, mlir::arith::ArithDialect,                        \
       mlir::cf::ControlFlowDialect, mlir::func::FuncDialect,                   \
       mlir::vector::VectorDialect, mlir::math::MathDialect,                    \
-      mlir::complex::ComplexDialect, mlir::DLTIDialect
+      mlir::complex::ComplexDialect, mlir::DLTIDialect, cuf::CUFDialect
 
 #define FLANG_CODEGEN_DIALECT_LIST FIRCodeGenDialect, mlir::LLVM::LLVMDialect
 
@@ -50,6 +52,14 @@ inline void registerNonCodegenDialects(mlir::DialectRegistry &registry) {
 inline void registerDialects(mlir::DialectRegistry &registry) {
   registerNonCodegenDialects(registry);
   registry.insert<FLANG_CODEGEN_DIALECT_LIST>();
+}
+
+// Register FIR Extensions
+inline void addFIRExtensions(mlir::DialectRegistry &registry,
+                             bool addFIRInlinerInterface = true) {
+  if (addFIRInlinerInterface)
+    addFIRInlinerExtension(registry);
+  addFIRToLLVMIRExtension(registry);
 }
 
 inline void loadNonCodegenDialects(mlir::MLIRContext &context) {
@@ -74,6 +84,7 @@ inline void loadDialects(mlir::MLIRContext &context) {
 /// Register the standard passes we use. This comes from registerAllPasses(),
 /// but is a smaller set since we aren't using many of the passes found there.
 inline void registerMLIRPassesForFortranTools() {
+  mlir::acc::registerOpenACCPasses();
   mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();
   mlir::affine::registerAffineLoopFusionPass();

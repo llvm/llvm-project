@@ -10,7 +10,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Constants.h"
 
 using namespace llvm;
@@ -18,7 +18,7 @@ using namespace MIPatternMatch;
 
 std::pair<Register, unsigned>
 AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
-                                  GISelKnownBits *KnownBits) {
+                                  GISelKnownBits *KnownBits, bool CheckNUW) {
   MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
   if (Def->getOpcode() == TargetOpcode::G_CONSTANT) {
     unsigned Offset;
@@ -33,6 +33,12 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
 
   int64_t Offset;
   if (Def->getOpcode() == TargetOpcode::G_ADD) {
+    // A 32-bit (address + offset) should not cause unsigned 32-bit integer
+    // wraparound, because s_load instructions perform the addition in 64 bits.
+    if (CheckNUW && !Def->getFlag(MachineInstr::NoUWrap)) {
+      assert(MRI.getType(Reg).getScalarSizeInBits() == 32);
+      return std::pair(Reg, 0);
+    }
     // TODO: Handle G_OR used for add case
     if (mi_match(Def->getOperand(2).getReg(), MRI, m_ICst(Offset)))
       return std::pair(Def->getOperand(1).getReg(), Offset);
@@ -62,13 +68,4 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   }
 
   return std::pair(Reg, 0);
-}
-
-bool AMDGPU::hasAtomicFaddRtnForTy(const GCNSubtarget &Subtarget,
-                                   const LLT &Ty) {
-  if (Ty == LLT::scalar(32))
-    return Subtarget.hasAtomicFaddRtnInsts();
-  if (Ty == LLT::fixed_vector(2, 16) || Ty == LLT::scalar(64))
-    return Subtarget.hasGFX90AInsts();
-  return false;
 }

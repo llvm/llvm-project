@@ -95,10 +95,10 @@ Ns::Ns::Fs();
 Ns::Ns::Ns();
 
 struct Attrs1 { Attrs1(); };
-Attrs1::Attrs1() __attribute((pure)) = default;
+Attrs1::Attrs1() __attribute((noreturn)) = default;
 
 struct Attrs2 { Attrs2(); };
-__attribute((pure)) Attrs2::Attrs2() = default;
+__attribute((noreturn)) Attrs2::Attrs2() = default;
 
 // Extra semicolon
 namespace N {};

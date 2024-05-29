@@ -130,6 +130,15 @@ namespace non_ptr_ref_cv_qual {
   int (&test_conv_to_arr_1)[3] = ConvToArr(); // ok
   const int (&test_conv_to_arr_2)[3] = ConvToArr(); // ok, with qualification conversion
 
+  struct ConvToConstArr {
+    template <int N>
+    operator const Arr<int, N> &() { // expected-note {{candidate}}
+      static_assert(N == 3, "");
+    }
+  };
+  Arr<int, 3> &test_conv_to_const_arr_1 = ConvToConstArr(); // expected-error {{no viable}}
+  const Arr<int, 3> &test_conv_to_const_arr_2 = ConvToConstArr(); // ok
+
 #if __cplusplus >= 201702L
   template<bool Noexcept, typename T, typename ...U> using Function = T(U...) noexcept(Noexcept);
   template<bool Noexcept> struct ConvToFunction {

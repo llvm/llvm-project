@@ -6,6 +6,16 @@
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface -I%t %t/module2.cppm -o %t/module2.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/merge.cpp -verify -fsyntax-only
 
+// Test again with reduced BMI.
+// RUN: rm -rf %t
+// RUN: mkdir %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface -I%t %t/module1.cppm -o %t/module1.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface -I%t %t/module2.cppm -o %t/module2.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/merge.cpp -verify -fsyntax-only
+
+
 //--- header.h
 namespace NS {
 template <int I>

@@ -8,11 +8,20 @@ func.func @complex_abs(%arg: complex<f32>) -> f32 {
 }
 // CHECK: %[[REAL:.*]] = llvm.extractvalue %[[ARG]][0] : ![[C_TY]]
 // CHECK: %[[IMAG:.*]] = llvm.extractvalue %[[ARG]][1] : ![[C_TY]]
-// CHECK-DAG: %[[REAL_SQ:.*]] = llvm.fmul %[[REAL]], %[[REAL]]  : f32
-// CHECK-DAG: %[[IMAG_SQ:.*]] = llvm.fmul %[[IMAG]], %[[IMAG]]  : f32
-// CHECK: %[[SQ_NORM:.*]] = llvm.fadd %[[REAL_SQ]], %[[IMAG_SQ]]  : f32
-// CHECK: %[[NORM:.*]] = llvm.intr.sqrt(%[[SQ_NORM]]) : (f32) -> f32
-// CHECK: llvm.return %[[NORM]] : f32
+
+// CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+// CHECK: %[[ABS_REAL:.*]] = llvm.intr.fabs(%[[REAL]]) : (f32) -> f32
+// CHECK: %[[ABS_IMAG:.*]] = llvm.intr.fabs(%[[IMAG]]) : (f32) -> f32
+// CHECK: %[[MAX:.*]] = llvm.intr.maximum(%[[ABS_REAL]], %[[ABS_IMAG]]) : (f32, f32) -> f32
+// CHECK: %[[MIN:.*]] = llvm.intr.minimum(%[[ABS_REAL]], %[[ABS_IMAG]]) : (f32, f32) -> f32
+// CHECK: %[[RATIO:.*]] = llvm.fdiv %[[MIN]], %[[MAX]] : f32
+// CHECK: %[[RATIO_SQ:.*]] = llvm.fmul %[[RATIO]], %[[RATIO]] : f32
+// CHECK: %[[RATIO_SQ_PLUS_ONE:.*]] = llvm.fadd %[[RATIO_SQ]], %[[ONE]] : f32
+// CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%[[RATIO_SQ_PLUS_ONE]]) : (f32) -> f32
+// CHECK: %[[RESULT:.*]] = llvm.fmul %[[MAX]], %[[SQRT]] : f32
+// CHECK: %[[IS_NAN:.*]] = llvm.fcmp "uno" %[[RESULT]], %11 : f32
+// CHECK: %[[RET:.*]] = llvm.select %[[IS_NAN]], %[[MIN]], %[[RESULT]] : i1, f32
+// CHECK: llvm.return %[[RET]] : f32
 
 // CHECK-LABEL: llvm.func @complex_eq
 // CHECK-SAME: %[[LHS:.*]]: ![[C_TY:.*]], %[[RHS:.*]]: ![[C_TY:.*]])

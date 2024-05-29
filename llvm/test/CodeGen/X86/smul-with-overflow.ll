@@ -804,7 +804,7 @@ define { i129, i1 } @smul_ovf(i129 %x, i129 %y) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X86-NEXT:    movl %edx, 12(%eax)
 ; X86-NEXT:    movb %cl, 16(%eax)
-; X86-NEXT:    setne 20(%eax)
+; X86-NEXT:    setne 32(%eax)
 ; X86-NEXT:    addl $188, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -990,7 +990,7 @@ define { i129, i1 } @smul_ovf(i129 %x, i129 %y) nounwind {
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; X64-NEXT:    movq %rcx, (%rax)
 ; X64-NEXT:    movb %sil, 16(%rax)
-; X64-NEXT:    setne 24(%rax)
+; X64-NEXT:    setne 32(%rax)
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    popq %r12
 ; X64-NEXT:    popq %r13

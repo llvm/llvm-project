@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -convert-gpu-to-rocdl='use-opaque-pointers=1 use-bare-ptr-memref-call-conv=0' | FileCheck %s --check-prefixes=CHECK,ROCDL
-// RUN: mlir-opt %s -split-input-file -convert-gpu-to-nvvm='use-opaque-pointers=1 use-bare-ptr-memref-call-conv=0' | FileCheck %s --check-prefixes=CHECK,NVVM
+// RUN: mlir-opt %s -split-input-file -convert-gpu-to-rocdl='use-bare-ptr-memref-call-conv=0' | FileCheck %s --check-prefixes=CHECK,ROCDL
+// RUN: mlir-opt %s -split-input-file -convert-gpu-to-nvvm='use-bare-ptr-memref-call-conv=0' | FileCheck %s --check-prefixes=CHECK,NVVM
 
 gpu.module @kernel {
   gpu.func @test_func_readonly(%arg0 : memref<f32> {llvm.readonly} ) {
@@ -24,6 +24,17 @@ gpu.module @kernel {
 // ROCDL-SAME:  !llvm.ptr {llvm.writeonly}
 //  NVVM-SAME:  !llvm.ptr {llvm.writeonly}
 
+// -----
+
+gpu.module @kernel {
+  gpu.func @test_func_readonly_ptr(%arg0 : !llvm.ptr {llvm.readonly} ) {
+    gpu.return
+  }
+}
+
+// CHECK-LABEL:  llvm.func @test_func_readonly_ptr
+// ROCDL-SAME:  !llvm.ptr {llvm.readonly}
+//  NVVM-SAME:  !llvm.ptr {llvm.readonly}
 
 // -----
 
@@ -62,3 +73,17 @@ gpu.module @kernel {
 // CHECK-LABEL:  llvm.func @test_func_dereferenceable_or_null
 // ROCDL-SAME:  !llvm.ptr {llvm.dereferenceable_or_null = 4 : i64}
 //  NVVM-SAME:  !llvm.ptr {llvm.dereferenceable_or_null = 4 : i64}
+
+// -----
+
+gpu.module @kernel {
+  gpu.func @test_func_noundef(%arg0 : memref<f32> {llvm.noundef} ) {
+    gpu.return
+  }
+}
+
+// CHECK-LABEL:  llvm.func @test_func_noundef
+// ROCDL-SAME:  !llvm.ptr {llvm.noundef}
+// ROCDL-SAME:  i64 {llvm.noundef}
+//  NVVM-SAME:  !llvm.ptr {llvm.noundef}
+//  NVVM-SAME:  i64 {llvm.noundef}

@@ -123,6 +123,6 @@ std::string fetchDebugInfo(object::BuildIDRef BuildID) {
           DebuginfodFetcher(DebugFileDirectory).fetch(BuildID))
     return *Path;
   errs() << "Build ID " << llvm::toHex(BuildID, /*Lowercase=*/true)
-         << " could not be found.";
+         << " could not be found.\n";
   exit(1);
 }

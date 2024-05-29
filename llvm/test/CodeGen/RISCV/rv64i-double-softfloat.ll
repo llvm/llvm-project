@@ -15,7 +15,7 @@ define i32 @strict_fp64_to_ui32(double %a) nounwind strictfp {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __fixunsdfsi@plt
+; RV64I-NEXT:    call __fixunsdfsi
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -24,7 +24,7 @@ define i32 @strict_fp64_to_ui32(double %a) nounwind strictfp {
 ; RV64IF:       # %bb.0: # %entry
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    call __fixunsdfsi@plt
+; RV64IF-NEXT:    call __fixunsdfsi
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
@@ -38,7 +38,7 @@ define i32 @strict_fp64_to_si32(double %a) nounwind strictfp {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call __fixdfsi@plt
+; RV64I-NEXT:    call __fixdfsi
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -47,7 +47,7 @@ define i32 @strict_fp64_to_si32(double %a) nounwind strictfp {
 ; RV64IF:       # %bb.0: # %entry
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    call __fixdfsi@plt
+; RV64IF-NEXT:    call __fixdfsi
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
@@ -55,4 +55,3 @@ entry:
   %conv = tail call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %a, metadata !"fpexcept.strict")
   ret i32 %conv
 }
-

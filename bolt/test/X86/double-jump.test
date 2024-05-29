@@ -1,4 +1,4 @@
-# Test the double jump removqal peephole.
+# Test the double jump removal peephole.
 
 # This test has commands that rely on shell capabilities that won't execute
 # correctly on Windows e.g. subshell execution

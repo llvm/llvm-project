@@ -239,7 +239,7 @@ define i32 @set_shl_mask(i32 %x, i32 %y) {
 ; RV64I-LABEL: set_shl_mask:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a3, a2, 1
+; RV64I-NEXT:    addi a3, a2, 1
 ; RV64I-NEXT:    or a0, a0, a3
 ; RV64I-NEXT:    sllw a0, a0, a1
 ; RV64I-NEXT:    and a0, a0, a2

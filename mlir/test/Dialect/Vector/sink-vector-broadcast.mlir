@@ -105,3 +105,23 @@ func.func @broadcast_not_elementwise() -> vector<2x2xf32> {
 
   return %mm1 : vector<2x2xf32>
 }
+
+// CHECK-LABEL: func.func @dont_sink_cmp(
+//       CHECK:   %[[BROADCAST:.+]] = vector.broadcast
+//       CHECK:   %[[RETURN:.+]] = arith.cmpf uno, %[[BROADCAST]], %[[BROADCAST]]
+//       CHECK:   return %[[RETURN]]
+func.func @dont_sink_cmp(%arg0 : f32, %arg1 : vector<1xf32>) -> vector<1xi1> {
+  %0 = vector.broadcast %arg0 : f32 to vector<1xf32>
+  %1 = arith.cmpf uno, %0, %0 : vector<1xf32>
+  return %1 : vector<1xi1>
+}
+
+// CHECK-LABEL: func.func @dont_sink_fma(
+  //     CHECK:   %[[BROADCAST:.+]] = vector.broadcast
+  //     CHECK:   %[[RESULT:.+]] = vector.fma %[[BROADCAST]]
+  //     CHECK:   return %[[RESULT]]
+func.func @dont_sink_fma(%arg0 : f32) -> vector<1xf32> {
+  %0 = vector.broadcast %arg0 : f32 to vector<1xf32>
+  %1 = vector.fma %0, %0, %0 : vector<1xf32>
+  return %1 : vector<1xf32>
+}

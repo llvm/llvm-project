@@ -531,8 +531,7 @@ define <4 x i64> @blend_splat1_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x 
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOP-NEXT:    vpsllq $63, %xmm3, %xmm3
-; XOP-NEXT:    vmovddup {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
-; XOP-NEXT:    # xmm4 = mem[0,0]
+; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
 ; XOP-NEXT:    vpshaq %xmm4, %xmm3, %xmm3
 ; XOP-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; XOP-NEXT:    vpshaq %xmm4, %xmm0, %xmm0
@@ -861,8 +860,7 @@ define <4 x i64> @blend_splat_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOP-NEXT:    vpsllq $62, %xmm3, %xmm3
-; XOP-NEXT:    vmovddup {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
-; XOP-NEXT:    # xmm4 = mem[0,0]
+; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
 ; XOP-NEXT:    vpshaq %xmm4, %xmm3, %xmm3
 ; XOP-NEXT:    vpsllq $62, %xmm0, %xmm0
 ; XOP-NEXT:    vpshaq %xmm4, %xmm0, %xmm0
@@ -1021,7 +1019,7 @@ define <2 x i64> @blend_mask_cond_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z
 ; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,4]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,4]
 ; AVX512F-NEXT:    vptestnmq %zmm3, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmq %zmm1, %zmm2, %zmm0 {%k1}
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
@@ -1184,7 +1182,7 @@ define <4 x i64> @blend_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z
 ; AVX512F-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [2,4,32768,1]
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} ymm3 = [2,4,32768,1]
 ; AVX512F-NEXT:    vptestnmq %zmm3, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmq %zmm1, %zmm2, %zmm0 {%k1}
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
@@ -1231,7 +1229,7 @@ define <8 x i32> @blend_mask_cond_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ; AVX512F-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,8,4,8,1024,2,4096]
+; AVX512F-NEXT:    vpmovsxwd {{.*#+}} ymm3 = [1,2,8,4,8,1024,2,4096]
 ; AVX512F-NEXT:    vptestnmd %zmm3, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmd %zmm1, %zmm2, %zmm0 {%k1}
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0

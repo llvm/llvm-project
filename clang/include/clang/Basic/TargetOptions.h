@@ -78,17 +78,9 @@ public:
   /// \brief If enabled, allow AMDGPU unsafe floating point atomics.
   bool AllowAMDGPUUnsafeFPAtomics = false;
 
-  /// \brief Enumeration value for AMDGPU code object version, which is the
-  /// code object version times 100.
-  enum CodeObjectVersionKind {
-    COV_None,
-    COV_2 = 200, // Unsupported.
-    COV_3 = 300,
-    COV_4 = 400,
-    COV_5 = 500,
-  };
   /// \brief Code object version for AMDGPU.
-  CodeObjectVersionKind CodeObjectVersion = CodeObjectVersionKind::COV_None;
+  llvm::CodeObjectVersionKind CodeObjectVersion =
+      llvm::CodeObjectVersionKind::COV_None;
 
   /// \brief Enumeration values for AMDGPU printf lowering scheme
   enum class AMDGPUPrintfKind {

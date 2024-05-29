@@ -309,7 +309,7 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
     else
       return emitWrongTokenError("expected attribute name");
 
-    if (nameId->size() == 0)
+    if (nameId->empty())
       return emitError("expected valid attribute name");
 
     if (!seenKeys.insert(*nameId).second)
@@ -660,7 +660,7 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
     const Token &token = signAndToken.second;
 
     // Handle hexadecimal float literals.
-    if (token.is(Token::integer) && token.getSpelling().startswith("0x")) {
+    if (token.is(Token::integer) && token.getSpelling().starts_with("0x")) {
       std::optional<APFloat> result;
       if (failed(p.parseFloatFromIntegerLiteral(result, token, isNegative,
                                                 eltTy.getFloatSemantics(),
@@ -735,8 +735,7 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc, ShapedType type) {
     return nullptr;
   }
 
-  if (llvm::support::endian::system_endianness() ==
-      llvm::support::endianness::big) {
+  if (llvm::endianness::native == llvm::endianness::big) {
     // Convert endianess in big-endian(BE) machines. `rawData` is
     // little-endian(LE) because HEX in raw data of dense element attribute
     // is always LE format. It is converted into BE here to be used in BE
@@ -1226,6 +1225,7 @@ Attribute Parser::parseStridedLayoutAttr() {
 ///                         `[` integer-literal `]<` attribute-value `>`
 ///
 Attribute Parser::parseDistinctAttr(Type type) {
+  SMLoc loc = getToken().getLoc();
   consumeToken(Token::kw_distinct);
   if (parseToken(Token::l_square, "expected '[' after 'distinct'"))
     return {};
@@ -1270,7 +1270,7 @@ Attribute Parser::parseDistinctAttr(Type type) {
     DistinctAttr distinctAttr = DistinctAttr::create(referencedAttr);
     it = distinctAttrs.try_emplace(*value, distinctAttr).first;
   } else if (it->getSecond().getReferencedAttr() != referencedAttr) {
-    emitError("referenced attribute does not match previous definition: ")
+    emitError(loc, "referenced attribute does not match previous definition: ")
         << it->getSecond().getReferencedAttr();
     return {};
   }

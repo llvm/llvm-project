@@ -24,7 +24,10 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 25; // SwiftImportAs
+const uint16_t VERSION_MINOR = 26; // SwiftCopyable
+
+const uint8_t kSwiftCopyable = 1;
+const uint8_t kSwiftNonCopyable = 2;
 
 using IdentifierID = llvm::PointerEmbeddedInt<unsigned, 31>;
 using IdentifierIDField = llvm::BCVBR<16>;
@@ -247,7 +250,7 @@ using EnumConstantDataLayout =
 
 /// A stored Objective-C selector.
 struct StoredObjCSelector {
-  unsigned NumPieces;
+  unsigned NumArgs;
   llvm::SmallVector<IdentifierID, 2> Identifiers;
 };
 
@@ -302,7 +305,7 @@ template <> struct DenseMapInfo<clang::api_notes::StoredObjCSelector> {
 
   static unsigned
   getHashValue(const clang::api_notes::StoredObjCSelector &Selector) {
-    auto hash = llvm::hash_value(Selector.NumPieces);
+    auto hash = llvm::hash_value(Selector.NumArgs);
     hash = hash_combine(hash, Selector.Identifiers.size());
     for (auto piece : Selector.Identifiers)
       hash = hash_combine(hash, static_cast<unsigned>(piece));
@@ -313,7 +316,7 @@ template <> struct DenseMapInfo<clang::api_notes::StoredObjCSelector> {
 
   static bool isEqual(const clang::api_notes::StoredObjCSelector &LHS,
                       const clang::api_notes::StoredObjCSelector &RHS) {
-    return LHS.NumPieces == RHS.NumPieces && LHS.Identifiers == RHS.Identifiers;
+    return LHS.NumArgs == RHS.NumArgs && LHS.Identifiers == RHS.Identifiers;
   }
 };
 

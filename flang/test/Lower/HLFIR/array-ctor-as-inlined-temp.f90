@@ -116,7 +116,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_implied_do(
 ! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "n"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca index
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_implied_doEn"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_implied_doEn"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 2 : i64
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i64>
@@ -161,7 +161,7 @@ end subroutine
 ! CHECK:           }
 ! CHECK:           %[[VAL_38:.*]] = arith.constant true
 ! CHECK:           %[[VAL_39:.*]] = hlfir.as_expr %[[VAL_21]]#0 move %[[VAL_38]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
-! CHECK:           %[[VAL_40:.*]]:3 = hlfir.associate %[[VAL_39]](%[[VAL_20]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:           %[[VAL_40:.*]]:3 = hlfir.associate %[[VAL_39]](%[[VAL_20]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
 ! CHECK:           %[[VAL_41:.*]] = fir.convert %[[VAL_40]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<2xi32>>
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_41]]) fastmath<contract> : (!fir.ref<!fir.array<2xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_40]]#1, %[[VAL_40]]#2 : !fir.ref<!fir.array<?xi32>>, i1
@@ -178,9 +178,9 @@ end subroutine
 ! CHECK-SAME:                                          %[[VAL_1:.*]]: !fir.ref<i64> {fir.bindc_name = "ub"},
 ! CHECK-SAME:                                          %[[VAL_2:.*]]: !fir.ref<i64> {fir.bindc_name = "stride"}) {
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca index
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_strided_implied_doElb"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest_strided_implied_doEstride"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest_strided_implied_doEub"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doElb"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doEstride"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_strided_implied_doEub"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 2 : i64
 ! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i64>
@@ -225,7 +225,7 @@ end subroutine
 ! CHECK:           }
 ! CHECK:           %[[VAL_42:.*]] = arith.constant true
 ! CHECK:           %[[VAL_43:.*]] = hlfir.as_expr %[[VAL_25]]#0 move %[[VAL_42]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
-! CHECK:           %[[VAL_44:.*]]:3 = hlfir.associate %[[VAL_43]](%[[VAL_24]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:           %[[VAL_44:.*]]:3 = hlfir.associate %[[VAL_43]](%[[VAL_24]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
 ! CHECK:           %[[VAL_45:.*]] = fir.convert %[[VAL_44]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<2xi32>>
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_45]]) fastmath<contract> : (!fir.ref<!fir.array<2xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_44]]#1, %[[VAL_44]]#2 : !fir.ref<!fir.array<?xi32>>, i1
@@ -241,8 +241,8 @@ end subroutine
 ! CHECK-SAME:                                         %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "n"},
 ! CHECK-SAME:                                         %[[VAL_1:.*]]: !fir.ref<i64> {fir.bindc_name = "m"}) {
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca index
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest_nested_implied_doEm"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_nested_implied_doEn"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_nested_implied_doEm"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_nested_implied_doEn"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i64>
@@ -303,7 +303,7 @@ end subroutine
 ! CHECK:           }
 ! CHECK:           %[[VAL_57:.*]] = arith.constant true
 ! CHECK:           %[[VAL_58:.*]] = hlfir.as_expr %[[VAL_34]]#0 move %[[VAL_57]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
-! CHECK:           %[[VAL_59:.*]]:3 = hlfir.associate %[[VAL_58]](%[[VAL_33]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:           %[[VAL_59:.*]]:3 = hlfir.associate %[[VAL_58]](%[[VAL_33]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
 ! CHECK:           %[[VAL_60:.*]] = fir.convert %[[VAL_59]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<2xi32>>
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_60]]) fastmath<contract> : (!fir.ref<!fir.array<2xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_59]]#1, %[[VAL_59]]#2 : !fir.ref<!fir.array<?xi32>>, i1

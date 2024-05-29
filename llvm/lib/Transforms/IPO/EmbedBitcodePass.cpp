@@ -16,7 +16,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <memory>
@@ -35,16 +34,13 @@ PreservedAnalyses EmbedBitcodePass::run(Module &M, ModuleAnalysisManager &AM) {
         "EmbedBitcode pass currently only supports ELF object format",
         /*gen_crash_diag=*/false);
 
-  std::unique_ptr<Module> NewModule = CloneModule(M);
-  MPM.run(*NewModule, AM);
-
   std::string Data;
   raw_string_ostream OS(Data);
   if (IsThinLTO)
-    ThinLTOBitcodeWriterPass(OS, /*ThinLinkOS=*/nullptr).run(*NewModule, AM);
+    ThinLTOBitcodeWriterPass(OS, /*ThinLinkOS=*/nullptr).run(M, AM);
   else
     BitcodeWriterPass(OS, /*ShouldPreserveUseListOrder=*/false, EmitLTOSummary)
-        .run(*NewModule, AM);
+        .run(M, AM);
 
   embedBufferInModule(M, MemoryBufferRef(Data, "ModuleData"), ".llvm.lto");
 

@@ -56,7 +56,7 @@ public:
 
   void SetHelpLong(llvm::StringRef str) override;
 
-  bool Execute(const char *args_string, CommandReturnObject &result) override;
+  void Execute(const char *args_string, CommandReturnObject &result) override;
 
   lldb::CommandObjectSP GetUnderlyingCommand() {
     return m_underlying_command_sp;

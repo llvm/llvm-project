@@ -1,9 +1,11 @@
-// RUN: not llvm-tblgen -I %p/../../../include -gen-global-isel-combiner \
+// RUN: not llvm-tblgen -I %S/Inputs -I %p/../../../include -gen-global-isel-combiner \
 // RUN:     -combiners=MyCombiner %s 2>&1| \
 // RUN: FileCheck %s -implicit-check-not=error:
 
 include "llvm/Target/Target.td"
 include "llvm/Target/GlobalISel/Combine.td"
+
+include "test-intrinsics.td"
 
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }
@@ -151,7 +153,7 @@ def bad_imm_too_many_args : GICombineRule<
   (match (COPY $x, (i32 0, 0)):$d),
   (apply (COPY $x, $b):$d)>;
 
-// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: cannot parse immediate '(COPY 0)', 'COPY' is not a ValueType
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: cannot parse immediate '(COPY 0)': unknown type 'COPY'
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(COPY ?:$x, (COPY 0))
 def bad_imm_not_a_valuetype : GICombineRule<
   (defs root:$a),
@@ -186,7 +188,7 @@ def expected_op_name : GICombineRule<
   (match (G_FNEG $x, i32)),
   (apply (COPY $x, (i32 0)))>;
 
-// CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: invalid operand type: 'not_a_type' is not a ValueType
+// CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: cannot parse operand type: unknown type 'not_a_type'
 // CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_FNEG ?:$x, not_a_type:$y)'
 def not_a_type;
 def bad_mo_type_not_a_valuetype : GICombineRule<
@@ -216,6 +218,70 @@ def def_named_imm_apply : GICombineRule<
   (match (G_FNEG $x, $y)),
   (apply (COPY i32:$tmp, $y),
          (COPY $x, (i32 0):$tmp):$foo)>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: MIFlags can only be present once on an instruction
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_ZEXT ?:$dst, ?:$src, (MIFlags FmArcp), (MIFlags FmArcp))'
+def multi_miflags : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src, (MIFlags FmArcp), (MIFlags FmArcp)):$mi),
+  (apply (G_MUL $dst, $src, $src))>;
+
+def NotAMIFlagEnum;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'NotAMIFlagEnum' is not a subclass of 'MIFlagEnum'
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_ZEXT ?:$dst, ?:$src, (MIFlags NotAMIFlagEnum))'
+def not_miflagenum_1 : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src, (MIFlags NotAMIFlagEnum)):$mi),
+  (apply (G_MUL $dst, $src, $src))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'NotAMIFlagEnum' is not a subclass of 'MIFlagEnum'
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_ZEXT ?:$dst, ?:$src, (MIFlags (not NotAMIFlagEnum)))'
+def not_miflagenum_2 : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src, (MIFlags (not NotAMIFlagEnum))):$mi),
+
+  (apply (G_MUL $dst, $src, $src))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: matching/writing MIFlags is only allowed on CodeGenInstruction patterns
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(GIReplaceReg ?:$x, ?:$y, (MIFlags FmArcp))'
+def miflags_in_builtin : GICombineRule<
+  (defs root:$x),
+  (match (COPY $x, $y)),
+  (apply (GIReplaceReg $x, $y, (MIFlags FmArcp)))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: matching/writing MIFlags is only allowed on CodeGenInstruction patterns
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(GIReplaceReg ?:$x, ?:$y, (MIFlags FmArcp))'
+def miflags_in_intrin : GICombineRule<
+  (defs root:$x),
+  (match (int_1in_1out $x, $y)),
+  (apply (GIReplaceReg $x, $y, (MIFlags FmArcp)))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'match' patterns cannot refer to flags from other instructions
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: note: MIFlags in 'mi' refer to: impostor
+def using_flagref_in_match : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src, (MIFlags $impostor)):$mi),
+  (apply (G_MUL $dst, $src, $src))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: unknown instruction '$impostor' referenced in MIFlags of '__badflagref_in_apply_apply_0'
+def badflagref_in_apply : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src):$mi),
+  (apply (G_MUL $dst, $src, $src, (MIFlags $impostor)))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'apply' patterns cannot mix C++ code with other types of patterns
+def mixed_cxx_apply : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src):$mi),
+  (apply (G_MUL $dst, $src, $src), "APPLY")>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: GIDefMatchData can only be used if 'apply' in entirely written in C++
+def dummy_md : GIDefMatchData<"unsigned">;
+def matchdata_without_cxx_apply : GICombineRule<
+  (defs root:$dst, dummy_md:$md),
+  (match (G_ZEXT $dst, $src):$mi),
+  (apply (G_MUL $dst, $src, $src))>;
 
 // CHECK: error: Failed to parse one or more rules
 
@@ -251,5 +317,14 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   bad_mo_type_not_a_valuetype,
   untyped_new_reg_in_apply,
   def_named_imm_match,
-  def_named_imm_apply
+  def_named_imm_apply,
+  multi_miflags,
+  not_miflagenum_1,
+  not_miflagenum_2,
+  miflags_in_builtin,
+  miflags_in_intrin,
+  using_flagref_in_match,
+  badflagref_in_apply,
+  mixed_cxx_apply,
+  matchdata_without_cxx_apply
 ]>;

@@ -13,16 +13,21 @@
 #ifndef LLVM_LIB_TARGET_ARM_ARMBASEINSTRINFO_H
 #define LLVM_LIB_TARGET_ARM_ARMBASEINSTRINFO_H
 
+#include "ARMBaseRegisterInfo.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
+#include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <array>
 #include <cstdint>
 
@@ -186,13 +191,13 @@ public:
   ///
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-  unsigned isLoadFromStackSlotPostFE(const MachineInstr &MI,
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                      int &FrameIndex) const override;
-  unsigned isStoreToStackSlotPostFE(const MachineInstr &MI,
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
                                     int &FrameIndex) const override;
 
   void copyToCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
@@ -308,21 +313,23 @@ public:
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
                                bool) const override;
 
-  /// FoldImmediate - 'Reg' is known to be defined by a move immediate
+  /// foldImmediate - 'Reg' is known to be defined by a move immediate
   /// instruction, try to fold the immediate into the use instruction.
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+  bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
 
   unsigned getNumMicroOps(const InstrItineraryData *ItinData,
                           const MachineInstr &MI) const override;
 
-  int getOperandLatency(const InstrItineraryData *ItinData,
-                        const MachineInstr &DefMI, unsigned DefIdx,
-                        const MachineInstr &UseMI,
-                        unsigned UseIdx) const override;
-  int getOperandLatency(const InstrItineraryData *ItinData,
-                        SDNode *DefNode, unsigned DefIdx,
-                        SDNode *UseNode, unsigned UseIdx) const override;
+  std::optional<unsigned> getOperandLatency(const InstrItineraryData *ItinData,
+                                            const MachineInstr &DefMI,
+                                            unsigned DefIdx,
+                                            const MachineInstr &UseMI,
+                                            unsigned UseIdx) const override;
+  std::optional<unsigned> getOperandLatency(const InstrItineraryData *ItinData,
+                                            SDNode *DefNode, unsigned DefIdx,
+                                            SDNode *UseNode,
+                                            unsigned UseIdx) const override;
 
   /// VFP/NEON execution domains.
   std::pair<uint16_t, uint16_t>
@@ -421,34 +428,34 @@ private:
 
   unsigned getInstBundleLength(const MachineInstr &MI) const;
 
-  int getVLDMDefCycle(const InstrItineraryData *ItinData,
-                      const MCInstrDesc &DefMCID,
-                      unsigned DefClass,
-                      unsigned DefIdx, unsigned DefAlign) const;
-  int getLDMDefCycle(const InstrItineraryData *ItinData,
-                     const MCInstrDesc &DefMCID,
-                     unsigned DefClass,
-                     unsigned DefIdx, unsigned DefAlign) const;
-  int getVSTMUseCycle(const InstrItineraryData *ItinData,
-                      const MCInstrDesc &UseMCID,
-                      unsigned UseClass,
-                      unsigned UseIdx, unsigned UseAlign) const;
-  int getSTMUseCycle(const InstrItineraryData *ItinData,
-                     const MCInstrDesc &UseMCID,
-                     unsigned UseClass,
-                     unsigned UseIdx, unsigned UseAlign) const;
-  int getOperandLatency(const InstrItineraryData *ItinData,
-                        const MCInstrDesc &DefMCID,
-                        unsigned DefIdx, unsigned DefAlign,
-                        const MCInstrDesc &UseMCID,
-                        unsigned UseIdx, unsigned UseAlign) const;
+  std::optional<unsigned> getVLDMDefCycle(const InstrItineraryData *ItinData,
+                                          const MCInstrDesc &DefMCID,
+                                          unsigned DefClass, unsigned DefIdx,
+                                          unsigned DefAlign) const;
+  std::optional<unsigned> getLDMDefCycle(const InstrItineraryData *ItinData,
+                                         const MCInstrDesc &DefMCID,
+                                         unsigned DefClass, unsigned DefIdx,
+                                         unsigned DefAlign) const;
+  std::optional<unsigned> getVSTMUseCycle(const InstrItineraryData *ItinData,
+                                          const MCInstrDesc &UseMCID,
+                                          unsigned UseClass, unsigned UseIdx,
+                                          unsigned UseAlign) const;
+  std::optional<unsigned> getSTMUseCycle(const InstrItineraryData *ItinData,
+                                         const MCInstrDesc &UseMCID,
+                                         unsigned UseClass, unsigned UseIdx,
+                                         unsigned UseAlign) const;
+  std::optional<unsigned> getOperandLatency(const InstrItineraryData *ItinData,
+                                            const MCInstrDesc &DefMCID,
+                                            unsigned DefIdx, unsigned DefAlign,
+                                            const MCInstrDesc &UseMCID,
+                                            unsigned UseIdx,
+                                            unsigned UseAlign) const;
 
-  int getOperandLatencyImpl(const InstrItineraryData *ItinData,
-                            const MachineInstr &DefMI, unsigned DefIdx,
-                            const MCInstrDesc &DefMCID, unsigned DefAdj,
-                            const MachineOperand &DefMO, unsigned Reg,
-                            const MachineInstr &UseMI, unsigned UseIdx,
-                            const MCInstrDesc &UseMCID, unsigned UseAdj) const;
+  std::optional<unsigned> getOperandLatencyImpl(
+      const InstrItineraryData *ItinData, const MachineInstr &DefMI,
+      unsigned DefIdx, const MCInstrDesc &DefMCID, unsigned DefAdj,
+      const MachineOperand &DefMO, unsigned Reg, const MachineInstr &UseMI,
+      unsigned UseIdx, const MCInstrDesc &UseMCID, unsigned UseAdj) const;
 
   unsigned getPredicationCost(const MachineInstr &MI) const override;
 
@@ -456,8 +463,8 @@ private:
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
 
-  int getInstrLatency(const InstrItineraryData *ItinData,
-                      SDNode *Node) const override;
+  unsigned getInstrLatency(const InstrItineraryData *ItinData,
+                           SDNode *Node) const override;
 
   bool hasHighOperandLatency(const TargetSchedModel &SchedModel,
                              const MachineRegisterInfo *MRI,
@@ -534,6 +541,19 @@ public:
 
   std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                            Register Reg) const override;
+
+  unsigned getUndefInitOpcode(unsigned RegClassID) const override {
+    if (RegClassID == ARM::MQPRRegClass.getID())
+      return ARM::PseudoARMInitUndefMQPR;
+    if (RegClassID == ARM::SPRRegClass.getID())
+      return ARM::PseudoARMInitUndefSPR;
+    if (RegClassID == ARM::DPR_VFP2RegClass.getID())
+      return ARM::PseudoARMInitUndefDPR_VFP2;
+    if (RegClassID == ARM::GPRRegClass.getID())
+      return ARM::PseudoARMInitUndefGPR;
+
+    llvm_unreachable("Unexpected register class.");
+  }
 };
 
 /// Get the operands corresponding to the given \p Pred value. By default, the
@@ -663,6 +683,7 @@ static inline bool isIndirectCall(const MachineInstr &MI) {
   case ARM::BX_CALL:
   case ARM::BMOVPCRX_CALL:
   case ARM::TCRETURNri:
+  case ARM::TCRETURNrinotr12:
   case ARM::TAILJMPr:
   case ARM::TAILJMPr4:
   case ARM::tBLXr:

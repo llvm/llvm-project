@@ -1,9 +1,9 @@
-; RUN: not --crash llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefixes=GFX906 %s
-; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX908 %s
-; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX90A %s
-; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX940 %s
-; RUN: not --crash llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefixes=GFX1030 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1100 %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefixes=GFX906 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX90A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX940 %s
+; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefixes=GFX1030 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1100 %s
 
 ; GFX906:       LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.global.atomic.fadd
 

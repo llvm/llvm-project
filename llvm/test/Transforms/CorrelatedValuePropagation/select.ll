@@ -204,7 +204,7 @@ define i1 @test1(ptr %p, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -231,7 +231,7 @@ define i1 @test2(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -258,7 +258,7 @@ define i1 @test3(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -288,7 +288,7 @@ define i1 @test4(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -317,7 +317,7 @@ define i1 @test5(ptr %p, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p, !noundef !0
+  %pval = load i32, ptr %p, !noundef !0
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -344,7 +344,7 @@ define i1 @test6(ptr %p, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p, !noundef !0
+  %pval = load i32, ptr %p, !noundef !0
   %cmp1 = icmp ult i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -370,6 +370,29 @@ define i64 @select_cond_may_undef(i32 %a) {
   %narrow = select i1 %is_a_nonnegative, i32 %a, i32 0
   %max = sext i32 %narrow to i64
   ret i64 %max
+}
+
+define i32 @test_solve_select_at_use(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define i32 @test_solve_select_at_use
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[A]], -1
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i32 [[C]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 [[B]]
+;
+entry:
+  %cmp = icmp slt i32 %a, 0
+  %retval = select i1 %cmp, i32 %b, i32 %c
+  %cond = icmp sgt i32 %a, -1
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  ret i32 %retval
+if.else:
+  ret i32 %retval
 }
 
 !0 = !{}

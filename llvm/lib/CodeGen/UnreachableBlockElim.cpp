@@ -117,7 +117,7 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
       if (MLI) MLI->removeBlock(&BB);
       if (MDT && MDT->getNode(&BB)) MDT->eraseNode(&BB);
 
-      while (BB.succ_begin() != BB.succ_end()) {
+      while (!BB.succ_empty()) {
         MachineBasicBlock* succ = *BB.succ_begin();
 
         for (MachineInstr &Phi : succ->phis()) {

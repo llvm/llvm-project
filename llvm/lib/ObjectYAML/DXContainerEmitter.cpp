@@ -131,8 +131,8 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       if (!P.Program)
         continue;
       dxbc::ProgramHeader Header;
-      Header.MajorVersion = P.Program->MajorVersion;
-      Header.MinorVersion = P.Program->MinorVersion;
+      Header.Version = dxbc::ProgramHeader::getVersion(P.Program->MajorVersion,
+                                                       P.Program->MinorVersion);
       Header.Unused = 0;
       Header.ShaderKind = P.Program->ShaderKind;
       memcpy(Header.Bitcode.Magic, "DXIL", 4);
@@ -198,8 +198,9 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       if (!P.Info.has_value())
         continue;
       mcdxbc::PSVRuntimeInfo PSV;
-      memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v2::RuntimeInfo));
+      memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v3::RuntimeInfo));
       PSV.Resources = P.Info->Resources;
+      PSV.EntryName = P.Info->EntryName;
 
       for (auto El : P.Info->SigInputElements)
         PSV.InputElements.push_back(mcdxbc::PSVSignatureElement{
@@ -242,6 +243,20 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       PSV.finalize(static_cast<Triple::EnvironmentType>(
           Triple::Pixel + P.Info->Info.ShaderStage));
       PSV.write(OS, P.Info->Version);
+      break;
+    }
+    case dxbc::PartType::ISG1:
+    case dxbc::PartType::OSG1:
+    case dxbc::PartType::PSG1: {
+      mcdxbc::Signature Sig;
+      if (P.Signature.has_value()) {
+        for (const auto &Param : P.Signature->Parameters) {
+          Sig.addParam(Param.Stream, Param.Name, Param.Index, Param.SystemValue,
+                       Param.CompType, Param.Register, Param.Mask,
+                       Param.ExclusiveMask, Param.MinPrecision);
+        }
+      }
+      Sig.write(OS);
       break;
     }
     case dxbc::PartType::Unknown:

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-insert-waitcnts  %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass si-insert-waitcnts  %s -o - | FileCheck %s
 
 # Ensure we insert waitcnts after any meta instructions at the start of
 # non-kernel functions. Without this, the inserted waitcnts can affect e.g. the

@@ -178,8 +178,8 @@ public:
   /// or type uniquing.
   /// TODO: Extend this to internal types by generating names that are unique
   /// across translation units so it can be used with LTO.
-  virtual void mangleTypeName(QualType T, raw_ostream &,
-                              bool NormalizeIntegers = false) = 0;
+  virtual void mangleCanonicalTypeName(QualType T, raw_ostream &,
+                                       bool NormalizeIntegers = false) = 0;
 
   /// @}
 };

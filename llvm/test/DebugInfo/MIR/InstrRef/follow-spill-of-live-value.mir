@@ -29,73 +29,73 @@
   source_filename = "/fast/fs/llvm34/lib/Analysis/LoopPass.cpp"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
+
   %"class.std::deque" = type { %"class.std::_Deque_base" }
   %"class.std::_Deque_base" = type { %"struct.std::_Deque_base<llvm::Loop *, std::allocator<llvm::Loop *>>::_Deque_impl" }
-  %"struct.std::_Deque_base<llvm::Loop *, std::allocator<llvm::Loop *>>::_Deque_impl" = type { %"class.llvm::Loop"***, i64, %"struct.std::_Deque_iterator", %"struct.std::_Deque_iterator" }
+  %"struct.std::_Deque_base<llvm::Loop *, std::allocator<llvm::Loop *>>::_Deque_impl" = type { ptr, i64, %"struct.std::_Deque_iterator", %"struct.std::_Deque_iterator" }
   %"class.llvm::Loop" = type opaque
-  %"struct.std::_Deque_iterator" = type { %"class.llvm::Loop"**, %"class.llvm::Loop"**, %"class.llvm::Loop"**, %"class.llvm::Loop"*** }
-  
-  define linkonce_odr void @_ZNSt5dequeIPN4llvm4LoopESaIS2_EE13_M_insert_auxESt15_Deque_iteratorIS2_RS2_PS2_EmRKS2_(%"class.std::deque"* %this, %"struct.std::_Deque_iterator"* %__pos, i64 %__n) local_unnamed_addr align 2 !dbg !3 {
+  %"struct.std::_Deque_iterator" = type { ptr, ptr, ptr, ptr }
+
+  define linkonce_odr void @_ZNSt5dequeIPN4llvm4LoopESaIS2_EE13_M_insert_auxESt15_Deque_iteratorIS2_RS2_PS2_EmRKS2_(ptr %this, ptr %__pos, i64 %__n) local_unnamed_addr align 2 !dbg !3 {
   entry:
-    %0 = load %"class.llvm::Loop"**, %"class.llvm::Loop"*** undef, align 8, !dbg !7
-    %_M_cur6.i = getelementptr inbounds %"class.std::deque", %"class.std::deque"* %this, i64 0, i32 0, i32 0, i32 2, i32 0, !dbg !7
-    %1 = load %"class.llvm::Loop"**, %"class.llvm::Loop"*** %_M_cur6.i, align 8, !dbg !7
-    %2 = load %"class.llvm::Loop"**, %"class.llvm::Loop"*** undef, align 8, !dbg !7
+    %0 = load ptr, ptr undef, align 8, !dbg !7
+    %_M_cur6.i = getelementptr inbounds %"class.std::deque", ptr %this, i64 0, i32 0, i32 0, i32 2, i32 0, !dbg !7
+    %1 = load ptr, ptr %_M_cur6.i, align 8, !dbg !7
+    %2 = load ptr, ptr undef, align 8, !dbg !7
     br i1 undef, label %if.then.i851, label %if.end.i856, !dbg !7
-  
+
   if.then.i851:                                     ; preds = %entry
-    %.pre1038 = load %"class.llvm::Loop"**, %"class.llvm::Loop"*** undef, align 8, !dbg !7
-    %3 = bitcast %"class.std::deque"* %this to i8*, !dbg !7
-    %sunkaddr = getelementptr inbounds i8, i8* %3, i64 40, !dbg !7
-    %4 = bitcast i8* %sunkaddr to %"class.llvm::Loop"****, !dbg !7
-    %.pre1039 = load %"class.llvm::Loop"***, %"class.llvm::Loop"**** %4, align 8, !dbg !7
+    %.pre1038 = load ptr, ptr undef, align 8, !dbg !7
+    %3 = bitcast ptr %this to ptr, !dbg !7
+    %sunkaddr = getelementptr inbounds i8, ptr %3, i64 40, !dbg !7
+    %4 = bitcast ptr %sunkaddr to ptr, !dbg !7
+    %.pre1039 = load ptr, ptr %4, align 8, !dbg !7
     br label %if.end.i856, !dbg !7
-  
+
   if.end.i856:                                      ; preds = %if.then.i851, %entry
-    %5 = phi %"class.llvm::Loop"*** [ %.pre1039, %if.then.i851 ], [ undef, %entry ], !dbg !7
-    %6 = phi %"class.llvm::Loop"** [ %.pre1038, %if.then.i851 ], [ %0, %entry ], !dbg !7
+    %5 = phi ptr [ %.pre1039, %if.then.i851 ], [ undef, %entry ], !dbg !7
+    %6 = phi ptr [ %.pre1038, %if.then.i851 ], [ %0, %entry ], !dbg !7
     %sub.i.i.i853 = sub nsw i64 0, %__n, !dbg !7
-    %add.ptr.i.i.i.i859 = getelementptr inbounds %"class.llvm::Loop"*, %"class.llvm::Loop"** %1, i64 %sub.i.i.i853, !dbg !7
-    store %"class.llvm::Loop"** %6, %"class.llvm::Loop"*** undef, align 8, !dbg !7
-    %7 = bitcast %"struct.std::_Deque_iterator"* %__pos to i8*, !dbg !7
-    %sunkaddr1 = getelementptr inbounds i8, i8* %7, i64 24, !dbg !7
-    %8 = bitcast i8* %sunkaddr1 to %"class.llvm::Loop"****, !dbg !7
-    store %"class.llvm::Loop"*** %5, %"class.llvm::Loop"**** %8, align 8, !dbg !7
-    %9 = bitcast %"class.std::deque"* %this to i8*, !dbg !7
-    %sunkaddr2 = getelementptr inbounds i8, i8* %9, i64 16, !dbg !7
-    %10 = bitcast i8* %sunkaddr2 to %"class.llvm::Loop"***, !dbg !7
-    %11 = load %"class.llvm::Loop"**, %"class.llvm::Loop"*** %10, align 8, !dbg !7
-    %12 = load %"class.llvm::Loop"**, %"class.llvm::Loop"*** undef, align 8, !dbg !7
-    %13 = bitcast %"class.std::deque"* %this to i8*, !dbg !7
-    %sunkaddr3 = getelementptr inbounds i8, i8* %13, i64 40, !dbg !7
-    %14 = bitcast i8* %sunkaddr3 to %"class.llvm::Loop"****, !dbg !7
-    %15 = load %"class.llvm::Loop"***, %"class.llvm::Loop"**** %14, align 8, !dbg !7
+    %add.ptr.i.i.i.i859 = getelementptr inbounds ptr, ptr %1, i64 %sub.i.i.i853, !dbg !7
+    store ptr %6, ptr undef, align 8, !dbg !7
+    %7 = bitcast ptr %__pos to ptr, !dbg !7
+    %sunkaddr1 = getelementptr inbounds i8, ptr %7, i64 24, !dbg !7
+    %8 = bitcast ptr %sunkaddr1 to ptr, !dbg !7
+    store ptr %5, ptr %8, align 8, !dbg !7
+    %9 = bitcast ptr %this to ptr, !dbg !7
+    %sunkaddr2 = getelementptr inbounds i8, ptr %9, i64 16, !dbg !7
+    %10 = bitcast ptr %sunkaddr2 to ptr, !dbg !7
+    %11 = load ptr, ptr %10, align 8, !dbg !7
+    %12 = load ptr, ptr undef, align 8, !dbg !7
+    %13 = bitcast ptr %this to ptr, !dbg !7
+    %sunkaddr3 = getelementptr inbounds i8, ptr %13, i64 40, !dbg !7
+    %14 = bitcast ptr %sunkaddr3 to ptr, !dbg !7
+    %15 = load ptr, ptr %14, align 8, !dbg !7
     br i1 undef, label %if.then.i.i775, label %cond.true.i.i777, !dbg !7
-  
+
   if.then.i.i775:                                   ; preds = %if.end.i856
-    %add.ptr.i.i774 = getelementptr inbounds %"class.llvm::Loop"*, %"class.llvm::Loop"** %11, i64 %__n, !dbg !7
+    %add.ptr.i.i774 = getelementptr inbounds ptr, ptr %11, i64 %__n, !dbg !7
     br label %_ZNKSt15_Deque_iteratorIPN4llvm4LoopERS2_PS2_EplEl.exit796, !dbg !7
-  
+
   cond.true.i.i777:                                 ; preds = %if.end.i856
-    %16 = load %"class.llvm::Loop"**, %"class.llvm::Loop"*** undef, align 8, !dbg !7
-    %.pre1043 = ptrtoint %"class.llvm::Loop"** %16 to i64, !dbg !7
+    %16 = load ptr, ptr undef, align 8, !dbg !7
+    %.pre1043 = ptrtoint ptr %16 to i64, !dbg !7
     br label %_ZNKSt15_Deque_iteratorIPN4llvm4LoopERS2_PS2_EplEl.exit796
-  
+
   _ZNKSt15_Deque_iteratorIPN4llvm4LoopERS2_PS2_EplEl.exit796: ; preds = %cond.true.i.i777, %if.then.i.i775
     %sub.ptr.rhs.cast3.i.i.i.i.i.i.i.i.i690.pre-phi = phi i64 [ undef, %if.then.i.i775 ], [ %.pre1043, %cond.true.i.i777 ], !dbg !7
-    %__tmp.sroa.13.0.i788 = phi %"class.llvm::Loop"*** [ %15, %if.then.i.i775 ], [ undef, %cond.true.i.i777 ], !dbg !7
-    %__tmp.sroa.10.0.i789 = phi %"class.llvm::Loop"** [ %12, %if.then.i.i775 ], [ undef, %cond.true.i.i777 ], !dbg !7
-    %storemerge.i.i791 = phi %"class.llvm::Loop"** [ %add.ptr.i.i774, %if.then.i.i775 ], [ undef, %cond.true.i.i777 ], !dbg !7
-    %17 = ptrtoint %"class.llvm::Loop"** %11 to i64, !dbg !7
-    %sub.ptr.lhs.cast.i.i.i.i.i.i.i.i.i685 = ptrtoint %"class.llvm::Loop"*** %__tmp.sroa.13.0.i788 to i64, !dbg !7
-    %sub.ptr.rhs.cast.i.i.i.i.i.i.i.i.i686 = ptrtoint %"class.llvm::Loop"*** %15 to i64, !dbg !7
+    %__tmp.sroa.13.0.i788 = phi ptr [ %15, %if.then.i.i775 ], [ undef, %cond.true.i.i777 ], !dbg !7
+    %__tmp.sroa.10.0.i789 = phi ptr [ %12, %if.then.i.i775 ], [ undef, %cond.true.i.i777 ], !dbg !7
+    %storemerge.i.i791 = phi ptr [ %add.ptr.i.i774, %if.then.i.i775 ], [ undef, %cond.true.i.i777 ], !dbg !7
+    %17 = ptrtoint ptr %11 to i64, !dbg !7
+    %sub.ptr.lhs.cast.i.i.i.i.i.i.i.i.i685 = ptrtoint ptr %__tmp.sroa.13.0.i788 to i64, !dbg !7
+    %sub.ptr.rhs.cast.i.i.i.i.i.i.i.i.i686 = ptrtoint ptr %15 to i64, !dbg !7
     %sub.ptr.sub.i.i.i.i.i.i.i.i.i687 = sub i64 %sub.ptr.lhs.cast.i.i.i.i.i.i.i.i.i685, %sub.ptr.rhs.cast.i.i.i.i.i.i.i.i.i686, !dbg !7
     %sub.i.i.i.i.i.i.i.i.i688 = shl i64 %sub.ptr.sub.i.i.i.i.i.i.i.i.i687, 3, !dbg !7
-    %sub.ptr.lhs.cast2.i.i.i.i.i.i.i.i.i689 = ptrtoint %"class.llvm::Loop"** %storemerge.i.i791 to i64, !dbg !7
+    %sub.ptr.lhs.cast2.i.i.i.i.i.i.i.i.i689 = ptrtoint ptr %storemerge.i.i791 to i64, !dbg !7
     %sub.ptr.sub4.i.i.i.i.i.i.i.i.i691 = sub i64 %sub.ptr.lhs.cast2.i.i.i.i.i.i.i.i.i689, %sub.ptr.rhs.cast3.i.i.i.i.i.i.i.i.i690.pre-phi, !dbg !7
     %sub.ptr.div5.i.i.i.i.i.i.i.i.i692 = ashr exact i64 %sub.ptr.sub4.i.i.i.i.i.i.i.i.i691, 3, !dbg !7
-    %sub.ptr.lhs.cast7.i.i.i.i.i.i.i.i.i693 = ptrtoint %"class.llvm::Loop"** %12 to i64, !dbg !7
+    %sub.ptr.lhs.cast7.i.i.i.i.i.i.i.i.i693 = ptrtoint ptr %12 to i64, !dbg !7
     %sub.ptr.sub9.i.i.i.i.i.i.i.i.i695 = sub i64 %sub.ptr.lhs.cast7.i.i.i.i.i.i.i.i.i693, %17, !dbg !7
     %sub.ptr.div10.i.i.i.i.i.i.i.i.i696 = ashr exact i64 %sub.ptr.sub9.i.i.i.i.i.i.i.i.i695, 3, !dbg !7
     %mul.i.i.i.i.i.i.i.i.i697 = add nsw i64 %sub.ptr.div10.i.i.i.i.i.i.i.i.i696, -64, !dbg !7
@@ -103,35 +103,35 @@
     %add11.i.i.i.i.i.i.i.i.i699 = add i64 %add.i.i.i.i.i.i.i.i.i698, %sub.ptr.div5.i.i.i.i.i.i.i.i.i692, !dbg !7
     %cmp27.i.i.i.i.i.i.i.i700 = icmp sgt i64 %add11.i.i.i.i.i.i.i.i.i699, 0, !dbg !7
     br i1 %cmp27.i.i.i.i.i.i.i.i700, label %for.body.i.i.i.i.i.i.i.i711.preheader, label %_ZSt22__uninitialized_move_aISt15_Deque_iteratorIPN4llvm4LoopERS3_PS3_ES6_SaIS3_EET0_T_S9_S8_RT1_.exit737, !dbg !7
-  
+
   for.body.i.i.i.i.i.i.i.i711.preheader:            ; preds = %_ZNKSt15_Deque_iteratorIPN4llvm4LoopERS2_PS2_EplEl.exit796
-    %18 = load %"class.llvm::Loop"*, %"class.llvm::Loop"** %11, align 8, !dbg !7
-    store %"class.llvm::Loop"* %18, %"class.llvm::Loop"** %add.ptr.i.i.i.i859, align 8, !dbg !7
+    %18 = load ptr, ptr %11, align 8, !dbg !7
+    store ptr %18, ptr %add.ptr.i.i.i.i859, align 8, !dbg !7
     ret void
-  
+
   _ZSt22__uninitialized_move_aISt15_Deque_iteratorIPN4llvm4LoopERS3_PS3_ES6_SaIS3_EET0_T_S9_S8_RT1_.exit737: ; preds = %_ZNKSt15_Deque_iteratorIPN4llvm4LoopERS2_PS2_EplEl.exit796
-    %19 = ptrtoint %"class.llvm::Loop"** %storemerge.i.i791 to i64, !dbg !7
-    %20 = ptrtoint %"class.llvm::Loop"*** %__tmp.sroa.13.0.i788 to i64, !dbg !7
-    %21 = bitcast %"class.std::deque"* %this to i8*, !dbg !7
-    %sunkaddr4 = getelementptr inbounds i8, i8* %21, i64 16, !dbg !7
-    %22 = bitcast i8* %sunkaddr4 to %"class.llvm::Loop"***, !dbg !7
-    store %"class.llvm::Loop"** %add.ptr.i.i.i.i859, %"class.llvm::Loop"*** %22, align 8, !dbg !7
-    store %"class.llvm::Loop"** %2, %"class.llvm::Loop"*** undef, align 8, !dbg !7
-    store %"class.llvm::Loop"** %6, %"class.llvm::Loop"*** undef, align 8, !dbg !7
-    %23 = bitcast %"class.std::deque"* %this to i8*, !dbg !7
-    %sunkaddr5 = getelementptr inbounds i8, i8* %23, i64 40, !dbg !7
-    %24 = bitcast i8* %sunkaddr5 to %"class.llvm::Loop"****, !dbg !7
-    store %"class.llvm::Loop"*** %5, %"class.llvm::Loop"**** %24, align 8, !dbg !7
-    %25 = bitcast %"struct.std::_Deque_iterator"* %__pos to i8*, !dbg !7
-    %sunkaddr6 = getelementptr inbounds i8, i8* %25, i64 24, !dbg !7
-    %26 = bitcast i8* %sunkaddr6 to %"class.llvm::Loop"****, !dbg !7
-    %27 = load %"class.llvm::Loop"***, %"class.llvm::Loop"**** %26, align 8, !dbg !7
-    call void @llvm.dbg.value(metadata %"class.llvm::Loop"** %2, metadata !8, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !7
-    %sub.ptr.lhs.cast.i.i.i597 = ptrtoint %"class.llvm::Loop"*** %27 to i64, !dbg !7
+    %19 = ptrtoint ptr %storemerge.i.i791 to i64, !dbg !7
+    %20 = ptrtoint ptr %__tmp.sroa.13.0.i788 to i64, !dbg !7
+    %21 = bitcast ptr %this to ptr, !dbg !7
+    %sunkaddr4 = getelementptr inbounds i8, ptr %21, i64 16, !dbg !7
+    %22 = bitcast ptr %sunkaddr4 to ptr, !dbg !7
+    store ptr %add.ptr.i.i.i.i859, ptr %22, align 8, !dbg !7
+    store ptr %2, ptr undef, align 8, !dbg !7
+    store ptr %6, ptr undef, align 8, !dbg !7
+    %23 = bitcast ptr %this to ptr, !dbg !7
+    %sunkaddr5 = getelementptr inbounds i8, ptr %23, i64 40, !dbg !7
+    %24 = bitcast ptr %sunkaddr5 to ptr, !dbg !7
+    store ptr %5, ptr %24, align 8, !dbg !7
+    %25 = bitcast ptr %__pos to ptr, !dbg !7
+    %sunkaddr6 = getelementptr inbounds i8, ptr %25, i64 24, !dbg !7
+    %26 = bitcast ptr %sunkaddr6 to ptr, !dbg !7
+    %27 = load ptr, ptr %26, align 8, !dbg !7
+    call void @llvm.dbg.value(metadata ptr %2, metadata !8, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !7
+    %sub.ptr.lhs.cast.i.i.i597 = ptrtoint ptr %27 to i64, !dbg !7
     %sub.ptr.sub.i.i.i599 = sub i64 %sub.ptr.lhs.cast.i.i.i597, %20, !dbg !7
     %sub.i.i.i600 = shl i64 %sub.ptr.sub.i.i.i599, 3, !dbg !7
     %sub.ptr.div5.i.i.i604 = ashr exact i64 undef, 3, !dbg !7
-    %sub.ptr.lhs.cast7.i.i.i605 = ptrtoint %"class.llvm::Loop"** %__tmp.sroa.10.0.i789 to i64, !dbg !7
+    %sub.ptr.lhs.cast7.i.i.i605 = ptrtoint ptr %__tmp.sroa.10.0.i789 to i64, !dbg !7
     %sub.ptr.sub9.i.i.i607 = sub i64 %sub.ptr.lhs.cast7.i.i.i605, %19, !dbg !7
     %sub.ptr.div10.i.i.i608 = ashr exact i64 %sub.ptr.sub9.i.i.i607, 3, !dbg !7
     %mul.i.i.i609 = add nsw i64 %sub.ptr.div10.i.i.i608, -64, !dbg !7
@@ -139,30 +139,30 @@
     %add11.i.i.i611 = add i64 %add.i.i.i610, %sub.i.i.i600, !dbg !7
     %cmp68.i.i = icmp sgt i64 %add11.i.i.i611, 0, !dbg !7
     br i1 %cmp68.i.i, label %while.body.i.i625, label %_ZSt4moveIPN4llvm4LoopEESt15_Deque_iteratorIT_RS4_PS4_ES7_S7_S7_.exit, !dbg !7
-  
+
   while.body.i.i625:                                ; preds = %_ZSt22__uninitialized_move_aISt15_Deque_iteratorIPN4llvm4LoopERS3_PS3_ES6_SaIS3_EET0_T_S9_S8_RT1_.exit737
     ret void
-  
+
   _ZSt4moveIPN4llvm4LoopEESt15_Deque_iteratorIT_RS4_PS4_ES7_S7_S7_.exit: ; preds = %_ZSt22__uninitialized_move_aISt15_Deque_iteratorIPN4llvm4LoopERS3_PS3_ES6_SaIS3_EET0_T_S9_S8_RT1_.exit737
     %add.i.i.i562 = sub i64 %sub.ptr.div5.i.i.i604, %__n, !dbg !7
     %cmp.i.i.i563 = icmp sgt i64 %add.i.i.i562, -1, !dbg !7
     br i1 %cmp.i.i.i563, label %land.lhs.true.i.i.i565, label %cond.false.i.i.i572, !dbg !7
-  
+
   land.lhs.true.i.i.i565:                           ; preds = %_ZSt4moveIPN4llvm4LoopEESt15_Deque_iteratorIT_RS4_PS4_ES7_S7_S7_.exit
     ret void
-  
+
   cond.false.i.i.i572:                              ; preds = %_ZSt4moveIPN4llvm4LoopEESt15_Deque_iteratorIT_RS4_PS4_ES7_S7_S7_.exit
     ret void
   }
-  
+
   ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata) #0
-  
+
   attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
-  
+
   !llvm.module.flags = !{!0}
   !llvm.dbg.cu = !{!1}
-  
+
   !0 = !{i32 2, !"Debug Info Version", i32 3}
   !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "beards", isOptimized: true, runtimeVersion: 4, emissionKind: FullDebug)
   !2 = !DIFile(filename: "bees.cpp", directory: "")
@@ -203,7 +203,7 @@ body:             |
   bb.0.entry:
     successors: %bb.2, %bb.1
     liveins: $rdi, $rdx, $rsi, $rbp, $r15, $r14, $r13, $r12, $rbx
-  
+
     frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp, debug-location !7
     CFI_INSTRUCTION def_cfa_offset 16
     frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp, debug-location !7
@@ -222,56 +222,56 @@ body:             |
     CFI_INSTRUCTION offset $r14, -32
     CFI_INSTRUCTION offset $r15, -24
     CFI_INSTRUCTION offset $rbp, -16
-    renamable $r10 = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg, debug-instr-number 1, debug-location !7 :: (load 8 from `%"class.llvm::Loop"*** undef`)
+    renamable $r10 = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg, debug-instr-number 1, debug-location !7 :: (load 8 from `ptr undef`)
     renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
     TEST8rr renamable $al, renamable $al, implicit-def $eflags, implicit killed $eax, debug-location !7
     MOV64mr $rsp, 1, $noreg, -8, $noreg, renamable $r10 :: (store 8 into %stack.0)
     JCC_1 %bb.1, 5, implicit $eflags, debug-location !7
-  
+
   bb.2.if.then.i851:
     liveins: $rdi, $rdx, $rsi
-  
-    renamable $r10 = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg, debug-location !7 :: (load 8 from `%"class.llvm::Loop"*** undef`)
+
+    renamable $r10 = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg, debug-location !7 :: (load 8 from `ptr undef`)
     renamable $r9 = MOV64rm renamable $rdi, 1, $noreg, 40, $noreg, debug-location !7 :: (load 8 from %ir.4)
     JMP_1 %bb.3
-  
+
   bb.1:
     liveins: $rdi, $rdx, $rsi, $r10
-  
+
     renamable $r9 = IMPLICIT_DEF debug-location !7
-  
+
   bb.3.if.end.i856:
     successors: %bb.4, %bb.5
     liveins: $rdi, $rdx, $rsi, $r9, $r10
-  
+
     renamable $rax = MOV64rm renamable $rdi, 1, $noreg, 16, $noreg, debug-location !7 :: (load 8 from %ir._M_cur6.i)
     renamable $r15 = LEA64r $noreg, 8, renamable $rdx, 0, $noreg, debug-location !7
-    MOV64mr undef renamable $rax, 1, $noreg, 0, $noreg, renamable $r10, debug-location !7 :: (store 8 into `%"class.llvm::Loop"*** undef`)
+    MOV64mr undef renamable $rax, 1, $noreg, 0, $noreg, renamable $r10, debug-location !7 :: (store 8 into `ptr undef`)
     MOV64mr renamable $rsi, 1, $noreg, 24, $noreg, renamable $r9, debug-location !7 :: (store 8 into %ir.8)
     renamable $r13 = MOV64rm renamable $rdi, 1, $noreg, 16, $noreg, debug-location !7 :: (load 8 from %ir.10)
     renamable $r11 = MOV64rm renamable $rdi, 1, $noreg, 40, $noreg, debug-location !7 :: (load 8 from %ir.14)
-    renamable $r8 = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg, debug-location !7 :: (load 8 from `%"class.llvm::Loop"*** undef`)
+    renamable $r8 = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg, debug-location !7 :: (load 8 from `ptr undef`)
     renamable $ebp = XOR32rr undef $ebp, undef $ebp, implicit-def dead $eflags
     TEST8rr renamable $bpl, renamable $bpl, implicit-def $eflags, implicit killed $ebp, debug-location !7
     JCC_1 %bb.5, 5, implicit killed $eflags, debug-location !7
-  
+
   bb.4.if.then.i.i775:
     liveins: $rax, $rdi, $rdx, $rsi, $r8, $r9, $r10, $r11, $r13, $r15
-  
+
     renamable $r14 = LEA64r renamable $r13, 8, renamable $rdx, 0, $noreg, debug-location !7
     renamable $r12 = IMPLICIT_DEF debug-location !7
     JMP_1 %bb.6
-  
+
   bb.5.cond.true.i.i777:
     liveins: $rax, $rdi, $rdx, $rsi, $r8, $r9, $r10, $r11, $r13, $r15
-  
-    renamable $r12 = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg, debug-location !7 :: (load 8 from `%"class.llvm::Loop"*** undef`)
+
+    renamable $r12 = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg, debug-location !7 :: (load 8 from `ptr undef`)
     renamable $r14 = IMPLICIT_DEF debug-location !7
-  
+
   bb.6._ZNKSt15_Deque_iteratorIPN4llvm4LoopERS2_PS2_EplEl.exit796:
     successors: %bb.7(0x50000000), %bb.8(0x30000000)
     liveins: $rax, $rdi, $rdx, $rsi, $r8, $r9, $r10, $r11, $r12, $r13, $r14, $r15
-  
+
     renamable $rax = SUB64rr killed renamable $rax, killed renamable $r15, implicit-def dead $eflags, debug-location !7
     $rbp = MOV64rr $r11, debug-location !7
     renamable $rbp = SUB64rr killed renamable $rbp, renamable $r11, implicit-def dead $eflags, debug-location !7
@@ -285,22 +285,22 @@ body:             |
     renamable $rcx = LEA64r killed renamable $rbx, 1, killed renamable $rcx, -64, $noreg, debug-location !7
     TEST64rr killed renamable $rcx, renamable $rcx, implicit-def $eflags, debug-location !7
     JCC_1 %bb.8, 14, implicit killed $eflags, debug-location !7
-  
+
   bb.7.for.body.i.i.i.i.i.i.i.i711.preheader:
     liveins: $rax, $r13
-  
+
     renamable $rcx = MOV64rm killed renamable $r13, 1, $noreg, 0, $noreg, debug-location !7 :: (load 8 from %ir.11)
     MOV64mr killed renamable $rax, 1, $noreg, 0, $noreg, killed renamable $rcx, debug-location !7 :: (store 8 into %ir.add.ptr.i.i.i.i859)
     JMP_1 %bb.10
-  
+
   bb.8:
     successors: %bb.10(0x50000000), %bb.9(0x30000000)
     liveins: $rax, $rdi, $rdx, $rsi, $r8, $r9, $r10, $r11, $r14
-  
+
     MOV64mr renamable $rdi, 1, $noreg, 16, $noreg, killed renamable $rax, debug-location !7 :: (store 8 into %ir.22)
     renamable $rax = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load 8 from %stack.0)
-    MOV64mr undef renamable $rax, 1, $noreg, 0, $noreg, killed renamable $rax, debug-location !7 :: (store 8 into `%"class.llvm::Loop"*** undef`)
-    MOV64mr undef renamable $rax, 1, $noreg, 0, $noreg, killed renamable $r10, debug-location !7 :: (store 8 into `%"class.llvm::Loop"*** undef`)
+    MOV64mr undef renamable $rax, 1, $noreg, 0, $noreg, killed renamable $rax, debug-location !7 :: (store 8 into `ptr undef`)
+    MOV64mr undef renamable $rax, 1, $noreg, 0, $noreg, killed renamable $r10, debug-location !7 :: (store 8 into `ptr undef`)
     MOV64mr killed renamable $rdi, 1, $noreg, 40, $noreg, killed renamable $r9, debug-location !7 :: (store 8 into %ir.24)
     renamable $rax = MOV64rm killed renamable $rsi, 1, $noreg, 24, $noreg, debug-location !7 :: (load 8 from %ir.26)
     DBG_INSTR_REF !8, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(1, 0), debug-location !7
@@ -310,12 +310,12 @@ body:             |
     renamable $rax = LEA64r killed renamable $r8, 8, killed renamable $rax, -64, $noreg, debug-location !7
     TEST64rr killed renamable $rax, renamable $rax, implicit-def $eflags, debug-location !7
     JCC_1 %bb.10, 15, implicit $eflags, debug-location !7
-  
+
   bb.9:
     liveins: $rdx
-  
+
     dead renamable $rdx = NEG64r killed renamable $rdx, implicit-def $eflags, debug-location !7
-  
+
   bb.10.while.body.i.i625:
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 48

@@ -16,6 +16,7 @@
 #include "AArch64FrameLowering.h"
 #include "AArch64ISelLowering.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64PointerAuth.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64SelectionDAGInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
@@ -25,7 +26,6 @@
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include <string>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AArch64GenSubtargetInfo.inc"
@@ -39,55 +39,9 @@ class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
   enum ARMProcFamilyEnum : uint8_t {
     Others,
-    A64FX,
-    Ampere1,
-    Ampere1A,
-    AppleA7,
-    AppleA10,
-    AppleA11,
-    AppleA12,
-    AppleA13,
-    AppleA14,
-    AppleA15,
-    AppleA16,
-    Carmel,
-    CortexA35,
-    CortexA53,
-    CortexA55,
-    CortexA510,
-    CortexA57,
-    CortexA65,
-    CortexA72,
-    CortexA73,
-    CortexA75,
-    CortexA76,
-    CortexA77,
-    CortexA78,
-    CortexA78C,
-    CortexA710,
-    CortexA715,
-    CortexR82,
-    CortexX1,
-    CortexX1C,
-    CortexX2,
-    CortexX3,
-    ExynosM3,
-    Falkor,
-    Kryo,
-    NeoverseE1,
-    NeoverseN1,
-    NeoverseN2,
-    Neoverse512TVB,
-    NeoverseV1,
-    NeoverseV2,
-    Saphira,
-    ThunderX2T99,
-    ThunderX,
-    ThunderXT81,
-    ThunderXT83,
-    ThunderXT88,
-    ThunderX3T110,
-    TSV110
+#define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
+#include "llvm/TargetParser/AArch64TargetParserDef.inc"
+#undef ARM_PROCESSOR_FAMILY
   };
 
 protected:
@@ -111,6 +65,7 @@ protected:
   Align PrefFunctionAlignment;
   Align PrefLoopAlignment;
   unsigned MaxBytesForLoopAlignment = 0;
+  unsigned MinimumJumpTableEntries = 4;
   unsigned MaxJumpTableSize = 0;
 
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
@@ -124,8 +79,8 @@ protected:
 
   bool IsLittle;
 
-  bool StreamingSVEMode;
-  bool StreamingCompatibleSVEMode;
+  bool IsStreaming;
+  bool IsStreamingCompatible;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 2;
@@ -152,10 +107,11 @@ private:
   /// subtarget initialization.
   AArch64Subtarget &initializeSubtargetDependencies(StringRef FS,
                                                     StringRef CPUString,
-                                                    StringRef TuneCPUString);
+                                                    StringRef TuneCPUString,
+                                                    bool HasMinSize);
 
   /// Initialize properties based on the selected processor family.
-  void initializeProperties();
+  void initializeProperties(bool HasMinSize);
 
 public:
   /// This constructor initializes the data members to match that
@@ -164,8 +120,8 @@ public:
                    StringRef FS, const TargetMachine &TM, bool LittleEndian,
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
-                   bool StreamingSVEMode = false,
-                   bool StreamingCompatibleSVEMode = false);
+                   bool IsStreaming = false, bool IsStreamingCompatible = false,
+                   bool HasMinSize = false);
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -194,6 +150,9 @@ public:
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
 
+  bool enableMachinePipeliner() const override;
+  bool useDFAforSMS() const override { return false; }
+
   /// Returns ARM processor family.
   /// Avoid this function! CPU specifics should be kept local to this class
   /// and preferably modeled with SubtargetFeatures or properties in
@@ -205,20 +164,26 @@ public:
   bool isXRaySupported() const override { return true; }
 
   /// Returns true if the function has a streaming body.
-  bool isStreaming() const { return StreamingSVEMode; }
+  bool isStreaming() const { return IsStreaming; }
 
   /// Returns true if the function has a streaming-compatible body.
-  bool isStreamingCompatible() const;
+  bool isStreamingCompatible() const { return IsStreamingCompatible; }
 
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
   /// mode, which disables NEON instructions).
-  bool isNeonAvailable() const;
+  bool isNeonAvailable() const {
+    return hasNEON() &&
+           (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
+  }
 
   /// Returns true if the target has SVE and can use the full range of SVE
   /// instructions, for example because it knows the function is known not to be
   /// in streaming-SVE mode or when the target has FEAT_FA64 enabled.
-  bool isSVEAvailable() const;
+  bool isSVEAvailable() const {
+    return hasSVE() &&
+           (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
+  }
 
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
@@ -273,6 +238,9 @@ public:
   }
 
   unsigned getMaximumJumpTableSize() const { return MaxJumpTableSize; }
+  unsigned getMinimumJumpTableEntries() const {
+    return MinimumJumpTableEntries;
+  }
 
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.
@@ -339,6 +307,9 @@ public:
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
+  void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
+                             SDep &Dep,
+                             const TargetSchedModel *SchedModel) const override;
 
   bool enableEarlyIfConversion() const override;
 
@@ -349,6 +320,7 @@ public:
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Swift:
+    case CallingConv::SwiftTail:
       return isTargetWindows();
     case CallingConv::Win64:
       return true;
@@ -384,6 +356,7 @@ public:
   void mirFileLoaded(MachineFunction &MF) const override;
 
   bool hasSVEorSME() const { return hasSVE() || hasSME(); }
+  bool hasSVE2orSME() const { return hasSVE2() || hasSME(); }
 
   // Return the known range for the bit length of SVE data registers. A value
   // of 0 means nothing is known about that particular limit beyong what's
@@ -423,15 +396,41 @@ public:
 
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
-      return "__chkstk_arm64ec";
+      return "#__chkstk_arm64ec";
     return "__chkstk";
   }
 
   const char* getSecurityCheckCookieName() const {
     if (isWindowsArm64EC())
-      return "__security_check_cookie_arm64ec";
+      return "#__security_check_cookie_arm64ec";
     return "__security_check_cookie";
   }
+
+  /// Choose a method of checking LR before performing a tail call.
+  AArch64PAuth::AuthCheckMethod getAuthenticatedLRCheckMethod() const;
+
+  const PseudoSourceValue *getAddressCheckPSV() const {
+    return AddressCheckPSV.get();
+  }
+
+private:
+  /// Pseudo value representing memory load performed to check an address.
+  ///
+  /// This load operation is solely used for its side-effects: if the address
+  /// is not mapped (or not readable), it triggers CPU exception, otherwise
+  /// execution proceeds and the value is not used.
+  class AddressCheckPseudoSourceValue : public PseudoSourceValue {
+  public:
+    AddressCheckPseudoSourceValue(const TargetMachine &TM)
+        : PseudoSourceValue(TargetCustom, TM) {}
+
+    bool isConstant(const MachineFrameInfo *) const override { return false; }
+    bool isAliased(const MachineFrameInfo *) const override { return true; }
+    bool mayAlias(const MachineFrameInfo *) const override { return true; }
+    void printCustom(raw_ostream &OS) const override { OS << "AddressCheck"; }
+  };
+
+  std::unique_ptr<AddressCheckPseudoSourceValue> AddressCheckPSV;
 };
 } // End llvm namespace
 

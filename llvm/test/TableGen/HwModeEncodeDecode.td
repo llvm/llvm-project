@@ -74,9 +74,8 @@ def baz : Instruction {
 // DECODER-DAG: Opcode: fooTypeEncA:foo
 // DECODER-DAG: Opcode: bar
 // DECODER-LABEL: DecoderTable_ModeB32[] =
-// Note that the comment says fooTypeEncA but this is actually fooTypeEncB; plumbing
-// the correct comment text through the decoder is nontrivial.
-// DECODER-DAG: Opcode: fooTypeEncA:foo
+// DECODER-DAG: Opcode: fooTypeEncB:foo
+// DECODER-DAG: Opcode: fooTypeEncA:baz
 // DECODER-DAG: Opcode: bar
 
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeA[] = {

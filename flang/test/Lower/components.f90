@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 module components_test
   type t1
@@ -133,7 +133,7 @@ subroutine lhs_char_section(a)
   ! CHECK: %[[VAL_6:.*]] = fir.field_index c, !fir.type<_QFlhs_char_sectionTt{c:!fir.char<1,5>}>
   ! CHECK: %[[VAL_7:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
   ! CHECK: %[[VAL_8:.*]] = fir.slice %[[VAL_5]], %[[VAL_3]], %[[VAL_5]] path %[[VAL_6]] : (index, index, index, !fir.field) -> !fir.slice<1>
-  ! CHECK: %[[VAL_9:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,5>>
+  ! CHECK: %[[VAL_9:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,5>>
   ! CHECK: br ^bb1(%[[VAL_4]], %[[VAL_3]] : index, index)
   ! CHECK: ^bb1(%[[VAL_10:.*]]: index, %[[VAL_11:.*]]: index):
   ! CHECK: %[[VAL_12:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_4]] : index

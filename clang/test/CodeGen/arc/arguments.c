@@ -22,7 +22,7 @@ void cf1(cs1 i) {}
 typedef struct {
   int cc;
 } s2;
-// CHECK: define{{.*}} void @f2(ptr noalias sret(%struct.s2) align 4 %agg.result)
+// CHECK: define{{.*}} void @f2(ptr dead_on_unwind noalias writable sret(%struct.s2) align 4 %agg.result)
 s2 f2(void) {
   s2 foo;
   return foo;
@@ -32,7 +32,7 @@ typedef struct {
   int cc;
   int dd;
 } s3;
-// CHECK: define{{.*}} void @f3(ptr noalias sret(%struct.s3) align 4 %agg.result)
+// CHECK: define{{.*}} void @f3(ptr dead_on_unwind noalias writable sret(%struct.s3) align 4 %agg.result)
 s3 f3(void) {
   s3 foo;
   return foo;
@@ -128,8 +128,8 @@ void st3(s16 a, s16 b, s16 c) {}
 
 // 1 sret + 1 i32 + 2*(i32 coerce) + 4*(i32 coerce) + 1 byval
 s16 st4(int x, s8 a, s16 b, s16 c) { return b; }
-// CHECK: define{{.*}} void @st4(ptr noalias sret(%struct.s16) align 4 %agg.result, i32 inreg noundef %x, i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg %b.coerce0, i32 inreg %b.coerce1, i32 inreg %b.coerce2, i32 inreg %b.coerce3, { i32, i32, i32, i32 } %c.coerce)
+// CHECK: define{{.*}} void @st4(ptr dead_on_unwind noalias writable sret(%struct.s16) align 4 %agg.result, i32 inreg noundef %x, i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg %b.coerce0, i32 inreg %b.coerce1, i32 inreg %b.coerce2, i32 inreg %b.coerce3, { i32, i32, i32, i32 } %c.coerce)
 
 // 1 sret + 2*(i32 coerce) + 4*(i32 coerce) + 4*(i32 coerce)
 s16 st5(s8 a, s16 b, s16 c) { return b; }
-// CHECK: define{{.*}} void @st5(ptr noalias sret(%struct.s16) align 4 %agg.result, i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg %b.coerce0, i32 inreg %b.coerce1, i32 inreg %b.coerce2, i32 inreg %b.coerce3, { i32, i32, i32, i32 } %c.coerce)
+// CHECK: define{{.*}} void @st5(ptr dead_on_unwind noalias writable sret(%struct.s16) align 4 %agg.result, i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg %b.coerce0, i32 inreg %b.coerce1, i32 inreg %b.coerce2, i32 inreg %b.coerce3, { i32, i32, i32, i32 } %c.coerce)

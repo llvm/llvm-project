@@ -324,7 +324,7 @@ bb14:                                             ; preds = %bb15, %bb.nph3
   %29 = getelementptr i8, ptr %j, i32 %.sum
   store i8 %28, ptr %29, align 1
   %30 = shl i32 %x.12, 2
-  %31 = or i32 %30, 2
+  %31 = or disjoint i32 %30, 2
   %32 = add i32 %31, %21
   %33 = getelementptr i8, ptr %r, i32 %32
   %34 = load i8, ptr %33, align 1
@@ -489,7 +489,6 @@ define void @bar(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    jb LBB1_4
 ; CHECK-NEXT:  ## %bb.5: ## %bb9
 ; CHECK-NEXT:    ## in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    incl %ecx
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    addl %edi, %edx
@@ -761,7 +760,7 @@ bb14:                                             ; preds = %bb15, %bb.nph3
   %29 = getelementptr i8, ptr %j, i32 %.sum
   store i8 %28, ptr %29, align 1
   %30 = shl i32 %x.12, 2
-  %31 = or i32 %30, 2
+  %31 = or disjoint i32 %30, 2
   %32 = add i32 %31, %21
   %33 = getelementptr i8, ptr %r, i32 %32
   %34 = load i8, ptr %33, align 1

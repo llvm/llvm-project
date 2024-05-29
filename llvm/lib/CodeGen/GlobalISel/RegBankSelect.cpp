@@ -420,7 +420,8 @@ void RegBankSelect::tryAvoidingSplit(
       // If the next terminator uses Reg, this means we have
       // to split right after MI and thus we need a way to ask
       // which outgoing edges are affected.
-      assert(!Next->readsRegister(Reg) && "Need to split between terminators");
+      assert(!Next->readsRegister(Reg, /*TRI=*/nullptr) &&
+             "Need to split between terminators");
     // We will split all the edges and repair there.
   } else {
     // This is a virtual register defined by a terminator.
@@ -449,7 +450,8 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
     return MappingCost::ImpossibleCost();
 
   // If mapped with InstrMapping, MI will have the recorded cost.
-  MappingCost Cost(MBFI ? MBFI->getBlockFreq(MI.getParent()) : 1);
+  MappingCost Cost(MBFI ? MBFI->getBlockFreq(MI.getParent())
+                        : BlockFrequency(1));
   bool Saturated = Cost.addLocalCost(InstrMapping.getCost());
   assert(!Saturated && "Possible mapping saturated the cost");
   LLVM_DEBUG(dbgs() << "Evaluating mapping cost for: " << MI);
@@ -971,7 +973,7 @@ bool RegBankSelect::EdgeInsertPoint::canMaterialize() const {
   return Src.canSplitCriticalEdge(DstOrSplit);
 }
 
-RegBankSelect::MappingCost::MappingCost(const BlockFrequency &LocalFreq)
+RegBankSelect::MappingCost::MappingCost(BlockFrequency LocalFreq)
     : LocalFreq(LocalFreq.getFrequency()) {}
 
 bool RegBankSelect::MappingCost::addLocalCost(uint64_t Cost) {

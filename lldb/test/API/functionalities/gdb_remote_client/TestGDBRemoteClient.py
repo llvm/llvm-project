@@ -63,7 +63,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
 
         error = lldb.SBError()
         target.AttachToProcessWithID(lldb.SBListener(), 47, error)
-        self.assertEquals(error_msg, error.GetCString())
+        self.assertEqual(error_msg, error.GetCString())
 
     def test_launch_fail(self):
         class MyResponder(MockGDBServerResponder):
@@ -132,11 +132,11 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         target = self.createTarget("a.yaml")
         process = self.connect(target)
 
-        self.assertEquals(1, self.server.responder.packetLog.count("g"))
+        self.assertEqual(1, self.server.responder.packetLog.count("g"))
         self.server.responder.packetLog = []
         self.read_registers(process)
         # Reading registers should not cause any 'p' packets to be exchanged.
-        self.assertEquals(
+        self.assertEqual(
             0, len([p for p in self.server.responder.packetLog if p.startswith("p")])
         )
 
@@ -162,7 +162,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.write_registers(process)
-        self.assertEquals(
+        self.assertEqual(
             0, len([p for p in self.server.responder.packetLog if p.startswith("G")])
         )
         self.assertGreater(
@@ -182,7 +182,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.write_registers(process)
-        self.assertEquals(
+        self.assertEqual(
             0, len([p for p in self.server.responder.packetLog if p.startswith("P")])
         )
         self.assertGreater(
@@ -191,7 +191,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
 
     def read_registers(self, process):
         self.for_each_gpr(
-            process, lambda r: self.assertEquals("0x0000000000000000", r.GetValue())
+            process, lambda r: self.assertEqual("0x0000000000000000", r.GetValue())
         )
 
     def write_registers(self, process):

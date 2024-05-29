@@ -90,6 +90,7 @@ tools = [
     "clang-offload-packager",
     "clang-tblgen",
     "clang-scan-deps",
+    "clang-installapi",
     "opt",
     "llvm-ifs",
     "yaml2obj",
@@ -97,6 +98,7 @@ tools = [
     "llvm-lto",
     "llvm-lto2",
     "llvm-profdata",
+    "llvm-readtapi",
     ToolSubst(
         "%clang_extdef_map",
         command=FindTool("clang-extdef-mapping"),
@@ -331,43 +333,6 @@ if config.clang_vendor_uti:
 if config.have_llvm_driver:
     config.available_features.add("llvm-driver")
 
-
-def exclude_unsupported_files_for_aix(dirname):
-    for filename in os.listdir(dirname):
-        source_path = os.path.join(dirname, filename)
-        if os.path.isdir(source_path):
-            continue
-        f = open(source_path, "r", encoding="ISO-8859-1")
-        try:
-            data = f.read()
-            # 64-bit object files are not supported on AIX, so exclude the tests.
-            if (
-                any(
-                    option in data
-                    for option in (
-                        "-emit-obj",
-                        "-fmodule-format=obj",
-                        "-fintegrated-as",
-                    )
-                )
-                and "64" in config.target_triple
-            ):
-                config.excludes += [filename]
-        finally:
-            f.close()
-
-
-if "aix" in config.target_triple:
-    for directory in (
-        "/CodeGenCXX",
-        "/Misc",
-        "/Modules",
-        "/PCH",
-        "/Driver",
-        "/ASTMerge/anonymous-fields",
-        "/ASTMerge/injected-class-name-decl",
-    ):
-        exclude_unsupported_files_for_aix(config.test_source_root + directory)
 
 # Some tests perform deep recursion, which requires a larger pthread stack size
 # than the relatively low default of 192 KiB for 64-bit processes on AIX. The

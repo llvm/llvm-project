@@ -133,17 +133,21 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     level-expressions collectively define an affine map from dimension-coordinates to
     level-coordinates. The dimension-expressions collectively define the inverse map,
     which only needs to be provided for elaborate cases where it cannot be inferred
-    automatically. Within the sparse storage format, we refer to indices that are
-    stored explicitly as **coordinates** and offsets into the storage format as
-    **positions**.
+    automatically.
+
+    Each dimension could also have an optional `SparseTensorDimSliceAttr`.
+    Within the sparse storage format, we refer to indices that are stored explicitly
+    as **coordinates** and offsets into the storage format as **positions**.
 
     The supported level-formats are the following:
 
-    - **dense** : all entries along this level are stored
+    - **dense** : all entries along this level are stored and linearized.
+    - **batch** : all entries along this level are stored but not linearized.
     - **compressed** : only nonzeros along this level are stored
     - **loose_compressed** : as compressed, but allows for free space between regions
     - **singleton** : a variant of the compressed format, where coordinates have no siblings
-    - **block2_4** : the compression uses a 2:4 encoding per 1x4 block
+    - **structured[n, m]** : the compression uses a n:m encoding
+      (viz. n out of m consecutive elements are nonzero)
 
     For a compressed level, each position interval is represented in a compact
     way with a lowerbound `pos(i)` and an upperbound `pos(i+1) - 1`, which implies
@@ -154,13 +158,16 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     By default, each level-type has the property of being unique (no duplicate
     coordinates at that level) and ordered (coordinates appear sorted at that
-    level). The following properties can be added to a level-format to change
-    this default behavior:
+    level). For singleton levels, the coordinates are fused with its parents in AoS
+    (array of structures) scheme. The following properties can be added to a level-format
+    to change this default behavior:
 
     - **nonunique** : duplicate coordinates may appear at the level
     - **nonordered** : coordinates may appear in arbribratry order
+    - **soa** : only applicable to singleton levels, fuses the singleton
+      level in SoA (structure of arrays) scheme.
 
-    In addition to the map, the following two fields are optional:
+    In addition to the map, the following fields are optional:
 
     - The required bitwidth for position storage (integral offsets
       into the sparse storage scheme).  A narrow width reduces the memory
@@ -176,8 +183,22 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       coordinate over all levels).  The choices are `8`, `16`, `32`,
       `64`, or, the default, `0` to indicate a native bitwidth.
 
-    - An optional array of `SparseTensorDimSliceAttr`, which specifies
-      how the sparse tensor is partitioned on each dimension.
+    - The explicit value for the sparse tensor. If explicitVal is set,
+      then all the non-zero values in the tensor have the same explicit value.
+      The default value Attribute() indicates that it is not set. This
+      is useful for binary-valued sparse tensors whose values can either
+      be an implicit value (0 by default) or an explicit value (such as 1).
+      In this approach, we don't store explicit/implicit values, and metadata
+      (such as position and coordinate arrays) alone fully defines the original tensor.
+      This yields additional savings for the storage requirements,
+      as well as for the computational time, since we skip operating on
+      implicit values and can constant fold the explicit values where they are used.
+
+    - The implicit value for the sparse tensor. If implicitVal is set,
+      then the "zero" value in the tensor is equal to the implicit value.
+      For now, we only support `0` as the implicit value but it could be
+      extended in the future. The default value Attribute() indicates that
+      the implicit value is `0` (same type as the tensor element type).
 
     Examples:
 
@@ -188,10 +209,18 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     }>
     ... tensor<?xf32, #SparseVector> ...
 
-    // Sorted coordinate scheme.
+    // Sorted coordinate scheme (arranged in AoS format by default).
     #SortedCOO = #sparse_tensor.encoding<{
       map = (i, j) -> (i : compressed(nonunique), j : singleton)
     }>
+    // coordinates = {x_crd, y_crd}[nnz]
+    ... tensor<?x?xf64, #SortedCOO> ...
+
+    // Sorted coordinate scheme (arranged in SoA format).
+    #SortedCOO = #sparse_tensor.encoding<{
+      map = (i, j) -> (i : compressed(nonunique), j : singleton(soa))
+    }>
+    // coordinates = {x_crd[nnz], y_crd[nnz]}
     ... tensor<?x?xf64, #SortedCOO> ...
 
     // Batched sorted coordinate scheme, with high encoding.
@@ -214,6 +243,15 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     }>
     ... tensor<8x8xf64, #DCSC> ...
 
+    // Doubly compressed sparse column storage with specific
+    // explicit and implicit values.
+    #DCSC = #sparse_tensor.encoding<{
+      map = (i, j) -> (j : compressed, i : compressed),
+      explicitVal = 1 : i64,
+      implicitVal = 0 : i64
+    }>
+    ... tensor<8x8xi64, #DCSC> ...
+
     // Block sparse row storage (2x3 blocks).
     #BSR = #sparse_tensor.encoding<{
       map = ( i, j ) ->
@@ -228,7 +266,8 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // Same block sparse row storage (2x3 blocks) but this time
     // also with a redundant reverse mapping, which can be inferred.
     #BSR_explicit = #sparse_tensor.encoding<{
-      map = ( i = ib * 2 + ii,
+      map = { ib, jb, ii, jj }
+            ( i = ib * 2 + ii,
               j = jb * 3 + jj) ->
       ( ib = i floordiv 2 : dense,
         jb = j floordiv 3 : compressed,
@@ -237,10 +276,10 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     }>
     ... tensor<20x30xf32, #BSR_explicit> ...
 
-    // ELL format. 
+    // ELL format.
     // In the simple format for matrix, one array stores values and another
     // array stores column indices. The arrays have the same number of rows
-    // as the original matrix, but only have as many columns as 
+    // as the original matrix, but only have as many columns as
     // the maximum number of nonzeros on a row of the original matrix.
     // There are many variants for ELL such as jagged diagonal scheme.
     // To implement ELL, map provides a notion of "counting a
@@ -265,7 +304,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
              j : #sparse_tensor<slice(0, 8, ?)>) ->
             (i : dense, j : compressed)
     }>
-    ... tensor<?x?xf64, #CSC_SLICE> ...
+    ... tensor<?x?xf64, #CSR_SLICE> ...
 
     ```
   }];
@@ -278,7 +317,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // A level-type for each level of the sparse storage
     // (consists of a level-format combined with level-properties).
     ArrayRefParameter<
-      "::mlir::sparse_tensor::DimLevelType",
+      "::mlir::sparse_tensor::LevelType",
       "level-types"
       >: $lvlTypes,
 
@@ -294,6 +333,12 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // The required bitwidth for coordinate storage.
     "unsigned":$crdWidth,
 
+    // The required explicit value.
+    "::mlir::Attribute":$explicitVal,
+
+    // The required implicit value.
+    "::mlir::Attribute":$implicitVal,
+
     // A slice attribute for each dimension of the tensor type.
     ArrayRefParameter<
       "::mlir::sparse_tensor::SparseTensorDimSliceAttr",
@@ -302,12 +347,21 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   );
 
   let builders = [
-    AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$lvlTypes,
-                     "AffineMap":$dimToLvl,
-                     "AffineMap":$lvlToDim,
-                     "unsigned":$posWidth,
-                     "unsigned":$crdWidth), [{
+    AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::LevelType>":$lvlTypes,
+                     CArg<"AffineMap", "{}">:$dimToLvl,
+                     CArg<"AffineMap", "{}">:$lvlToDim,
+                     CArg<"unsigned", "0">:$posWidth,
+                     CArg<"unsigned", "0">:$crdWidth,
+                     CArg<"::mlir::Attribute", "{}">:$explicitVal,
+                     CArg<"::mlir::Attribute", "{}">:$implicitVal), [{
+      if (!dimToLvl) {
+        dimToLvl = ::mlir::AffineMap::getMultiDimIdentityMap(lvlTypes.size(), $_ctxt);
+      }
+      if (!lvlToDim) {
+        lvlToDim = ::mlir::sparse_tensor::inferLvlToDim(dimToLvl, $_ctxt);
+      }
       return $_get($_ctxt, lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
+        explicitVal, implicitVal,
         ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr>{});
     }]>
   ];
@@ -334,6 +388,22 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// reset to the default, and all other fields inherited from `this`.
     SparseTensorEncodingAttr withoutBitWidths() const;
 
+    /// Constructs a new encoding with the given explicit value
+    /// and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withExplicitVal(Attribute explicitVal) const;
+
+    /// Constructs a new encoding with the explicit value
+    /// reset to the default, and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withoutExplicitVal() const;
+
+    /// Constructs a new encoding with the given implicit value
+    /// and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withImplicitVal(Attribute implicitVal) const;
+
+    /// Constructs a new encoding with the implicit value
+    /// reset to the default, and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withoutImplicitVal() const;
+
     /// Constructs a new encoding with the given dimSlices, and all
     /// other fields inherited from `this`.
     SparseTensorEncodingAttr withDimSlices(ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr> dimSlices) const;
@@ -355,22 +425,24 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// is non-null (since no fixed result is valid for every dense-tensor).
     ::mlir::sparse_tensor::Level getLvlRank() const;
 
+    uint64_t getBatchLvlRank() const;
+
     //
     // lvlTypes methods.
     //
 
     /// Safely looks up the level-type for the requested level.  (Returns
-    /// `DimLevelType::Dense` for the null encoding, since dense-tensors
+    /// `LevelType::Dense` for the null encoding, since dense-tensors
     /// are always all-dense.)
-    ::mlir::sparse_tensor::DimLevelType getLvlType(::mlir::sparse_tensor::Level l) const;
+    ::mlir::sparse_tensor::LevelType getLvlType(::mlir::sparse_tensor::Level l) const;
 
-    bool isDenseLvl(::mlir::sparse_tensor::Level l) const { return isDenseDLT(getLvlType(l)); }
-    bool isTwoOutOfFourLvl(::mlir::sparse_tensor::Level l) const { return isTwoOutOfFourDLT(getLvlType(l)); }
-    bool isCompressedLvl(::mlir::sparse_tensor::Level l) const { return isCompressedDLT(getLvlType(l)); }
-    bool isCompressedWithHiLvl(::mlir::sparse_tensor::Level l) const { return isCompressedWithHiDLT(getLvlType(l)); }
-    bool isSingletonLvl(::mlir::sparse_tensor::Level l) const { return isSingletonDLT(getLvlType(l)); }
-    bool isOrderedLvl(::mlir::sparse_tensor::Level l) const { return isOrderedDLT(getLvlType(l)); }
-    bool isUniqueLvl(::mlir::sparse_tensor::Level l) const { return isUniqueDLT(getLvlType(l)); }
+    bool isDenseLvl(::mlir::sparse_tensor::Level l) const { return isDenseLT(getLvlType(l)); }
+    bool isCompressedLvl(::mlir::sparse_tensor::Level l) const { return isCompressedLT(getLvlType(l)); }
+    bool isSingletonLvl(::mlir::sparse_tensor::Level l) const { return isSingletonLT(getLvlType(l)); }
+    bool isLooseCompressedLvl(::mlir::sparse_tensor::Level l) const { return isLooseCompressedLT(getLvlType(l)); }
+    bool isNOutOfMLvl(::mlir::sparse_tensor::Level l) const { return isNOutOfMLT(getLvlType(l)); }
+    bool isOrderedLvl(::mlir::sparse_tensor::Level l) const { return isOrderedLT(getLvlType(l)); }
+    bool isUniqueLvl(::mlir::sparse_tensor::Level l) const { return isUniqueLT(getLvlType(l)); }
 
     /// Returns true if every level is dense.  Also returns true for
     /// the null encoding (since dense-tensors are always all-dense).
@@ -379,6 +451,26 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// Returns true if every level is ordered.  Also returns true for
     /// the null encoding (since dense-tensors are always all-ordered).
     bool isAllOrdered() const;
+
+    //
+    // Storage type methods.
+    //
+
+    /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
+    Type getCrdElemType() const;
+
+    /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
+    Type getPosElemType() const;
+
+    /// Returns the coordinate-memref MLIR type, an optional tensorDimShape is
+    /// used to refine the leading batch dimensions (if any).
+    MemRefType getCrdMemRefType(
+      std::optional<ArrayRef<int64_t>> tensorDimShape = std::nullopt) const;
+
+    /// Returns the position-memref MLIR type, an optional tensorDimShape is
+    /// used to refine the leading batch dimensions (if any).
+    MemRefType getPosMemRefType(
+      std::optional<ArrayRef<int64_t>> tensorDimShape = std::nullopt) const;
 
     //
     // dimToLvl methods.
@@ -395,20 +487,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     bool isPermutation() const;
 
     //
-    // posWidth/crdWidth methods.
-    //
-
-    /// Returns the type for position storage based on posWidth.
-    /// Asserts that the encoding is non-null (since there's nowhere
-    /// to get the `MLIRContext` from).
-    Type getPosType() const;
-
-    /// Returns the type for coordinate storage based on crdWidth.
-    /// Asserts that the encoding is non-null (since there's nowhere
-    /// to get the `MLIRContext` from).
-    Type getCrdType() const;
-
-    //
     // dimSlices methods.
     //
 
@@ -417,11 +495,38 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     ::mlir::sparse_tensor::SparseTensorDimSliceAttr getDimSlice(::mlir::sparse_tensor::Dimension dim) const;
 
     std::optional<uint64_t> getStaticDimSliceOffset(::mlir::sparse_tensor::Dimension dim) const;
-    std::optional<uint64_t> getStaticDimSliceSize(::mlir::sparse_tensor::Dimension dim) const;
     std::optional<uint64_t> getStaticDimSliceStride(::mlir::sparse_tensor::Dimension dim) const;
     std::optional<uint64_t> getStaticLvlSliceOffset(::mlir::sparse_tensor::Level lvl) const;
-    std::optional<uint64_t> getStaticLvlSliceSize(::mlir::sparse_tensor::Level lvl) const;
     std::optional<uint64_t> getStaticLvlSliceStride(::mlir::sparse_tensor::Level lvl) const;
+
+    //
+    // Helper function to translate between level/dimension space.
+    //
+
+    SmallVector<int64_t> translateShape(::mlir::ArrayRef<int64_t> srcShape, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
+    ValueRange translateCrds(::mlir::OpBuilder &builder, ::mlir::Location loc, ::mlir::ValueRange crds, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
+
+    //
+    // COO methods.
+    //
+
+    /// Returns the starting level of this sparse tensor type for a
+    /// trailing COO region that spans **at least** two levels. If
+    /// no such COO region is found, then returns the level-rank.
+    ///
+    /// DEPRECATED: use getCOOSegment instead;
+    Level getAoSCOOStart() const;
+
+    /// Returns a list of COO segments in the sparse tensor types.
+    SmallVector<COOSegment> getCOOSegments() const;
+
+    //
+    // Printing methods.
+    //
+
+    void printSymbols(AffineMap &map, AsmPrinter &printer) const;
+    void printDimensions(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr> dimSlices) const;
+    void printLevels(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::LevelType> lvlTypes) const;
   }];
 
   let genVerifyDecl = 1;
@@ -464,25 +569,18 @@ def IsSparseTensorSlicePred
   : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self) && "
           "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isSlice()">;
 
-// The following four follow the same idiom as `TensorOf`, `AnyTensor`,
-// `RankedTensorOf`, `AnyRankedTensor`.
-
 class SparseTensorOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
 
 class SparseTensorSliceOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
 
+class ScalarLikeOf<list<Type> allowedTypes>
+  : AnyTypeOf<[0DTensorOf<allowedTypes>, AnyTypeOf<allowedTypes>], "scalar like">;
+
 def AnySparseTensor : SparseTensorOf<[AnyType]>;
 def AnySparseTensorSlice : SparseTensorSliceOf<[AnyType]>;
-
-class RankedSparseTensorOf<list<Type> allowedTypes>
-  : RankedTensorOf<allowedTypes, [IsSparseTensorPred], "ranked sparse tensor">;
-
-def AnyRankedSparseTensor : RankedSparseTensorOf<[AnyType]>;
-
-class ScalarLikeOf<list<Type> allowedTypes>
-  : AnyTypeOf<[0DTensorOf<allowedTypes>, AnyTypeOf<allowedTypes>]>;
+def AnyIndexingScalarLike : ScalarLikeOf<[AnySignlessIntegerOrIndex]>;
 
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Sorting Algorithm Attribute.
@@ -517,6 +615,27 @@ def SparseTensorSortKindEnum
 def SparseTensorSortKindAttr
     : EnumAttr<SparseTensor_Dialect, SparseTensorSortKindEnum,
                "SparseTensorSortAlgorithm"> {
+}
+
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Coordinate Translation Direction Attribute.
+//===----------------------------------------------------------------------===//
+
+// The C++ enum for sparse tensor coordinate translation direction enum.
+def SparseTensorCrdTransDirectionEnum
+    : I32EnumAttr<"CrdTransDirectionKind", "sparse tensor coordinate translation direction", [
+        I32EnumAttrCase<"dim2lvl", 0, "dim_to_lvl">,
+        I32EnumAttrCase<"lvl2dim", 1, "lvl_to_dim">,
+      ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = SparseTensor_Dialect.cppNamespace;
+}
+
+// The C++ enum for sparse tensor coordinate translation direction attribute.
+def SparseTensorCrdTransDirectionAttr
+    : EnumAttr<SparseTensor_Dialect, SparseTensorCrdTransDirectionEnum,
+               "CrdTransDirection"> {
 }
 
 #endif // SPARSETENSOR_ATTRDEFS

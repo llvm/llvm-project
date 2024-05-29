@@ -60,7 +60,7 @@ declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 define linkonce_odr dso_local void @_ZN4ImplC2Ev(ptr %this) unnamed_addr align 2 {
 entry:
   call void @_ZN9InterfaceC2Ev(ptr %this)
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV4Impl, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV4Impl, i64 0, i32 0, i64 2), ptr %this, align 8
   %f = getelementptr inbounds %class.Impl, ptr %this, i64 0, i32 1
   store i32 3, ptr %f, align 8
   ret void
@@ -78,7 +78,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 define linkonce_odr dso_local void @_ZN9InterfaceC2Ev(ptr %this) unnamed_addr align 2 {
 entry:
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV9Interface, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV9Interface, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 
@@ -185,7 +185,7 @@ entry:
 
 define linkonce_odr void @_ZN1AC2Ev(ptr %this) align 2 {
 entry:
-  store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1A, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [4 x ptr] }, ptr @_ZTV1A, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 

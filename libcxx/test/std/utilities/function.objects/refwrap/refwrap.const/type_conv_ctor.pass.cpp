@@ -37,8 +37,9 @@ struct convertible_from_int {
 void meow(std::reference_wrapper<int>) {}
 void meow(convertible_from_int) {}
 
-int main(int, char**)
-{
+std::reference_wrapper<int> purr();
+
+int main(int, char**) {
   {
     convertible_to_int_ref t;
     std::reference_wrapper<convertible_to_int_ref> r(t);
@@ -54,21 +55,18 @@ int main(int, char**)
     ASSERT_NOEXCEPT(Ref(nothrow_convertible<true>()));
     ASSERT_NOT_NOEXCEPT(Ref(nothrow_convertible<false>()));
   }
-  {
-    meow(0);
-  }
-  {
-    extern std::reference_wrapper<int> purr();
-    ASSERT_SAME_TYPE(decltype(true ? purr() : 0), int);
-  }
+  meow(0);
+  ASSERT_SAME_TYPE(decltype(true ? purr() : 0), int);
 #if TEST_STD_VER > 14
   {
     int i = 0;
     std::reference_wrapper ri(i);
-    static_assert((std::is_same<decltype(ri), std::reference_wrapper<int>>::value), "" );
+    static_assert((std::is_same<decltype(ri), std::reference_wrapper<int>>::value), "");
+  }
+  {
     const int j = 0;
     std::reference_wrapper rj(j);
-    static_assert((std::is_same<decltype(rj), std::reference_wrapper<const int>>::value), "" );
+    static_assert((std::is_same<decltype(rj), std::reference_wrapper<const int>>::value), "");
   }
 #endif
 

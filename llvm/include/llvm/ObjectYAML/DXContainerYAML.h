@@ -56,10 +56,10 @@ struct DXILProgram {
   std::optional<std::vector<llvm::yaml::Hex8>> DXIL;
 };
 
-#define SHADER_FLAG(Num, Val, Str) bool Val = false;
-struct ShaderFlags {
-  ShaderFlags() = default;
-  ShaderFlags(uint64_t FlagData);
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str) bool Val = false;
+struct ShaderFeatureFlags {
+  ShaderFeatureFlags() = default;
+  ShaderFeatureFlags(uint64_t FlagData);
   uint64_t getEncodedFlags();
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
@@ -107,7 +107,7 @@ struct PSVInfo {
   // the format.
   uint32_t Version;
 
-  dxbc::PSV::v2::RuntimeInfo Info;
+  dxbc::PSV::v3::RuntimeInfo Info;
   uint32_t ResourceStride;
   SmallVector<ResourceBindInfo> Resources;
   SmallVector<SignatureElement> SigInputElements;
@@ -121,12 +121,31 @@ struct PSVInfo {
   MaskVector InputPatchMap;
   MaskVector PatchOutputMap;
 
+  StringRef EntryName;
+
   void mapInfoForVersion(yaml::IO &IO);
 
   PSVInfo();
   PSVInfo(const dxbc::PSV::v0::RuntimeInfo *P, uint16_t Stage);
   PSVInfo(const dxbc::PSV::v1::RuntimeInfo *P);
   PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P);
+  PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P, StringRef StringTable);
+};
+
+struct SignatureParameter {
+  uint32_t Stream;
+  std::string Name;
+  uint32_t Index;
+  dxbc::D3DSystemValue SystemValue;
+  dxbc::SigComponentType CompType;
+  uint32_t Register;
+  uint8_t Mask;
+  uint8_t ExclusiveMask;
+  dxbc::SigMinPrecision MinPrecision;
+};
+
+struct Signature {
+  llvm::SmallVector<SignatureParameter> Parameters;
 };
 
 struct Part {
@@ -135,9 +154,10 @@ struct Part {
   std::string Name;
   uint32_t Size;
   std::optional<DXILProgram> Program;
-  std::optional<ShaderFlags> Flags;
+  std::optional<ShaderFeatureFlags> Flags;
   std::optional<ShaderHash> Hash;
   std::optional<PSVInfo> Info;
+  std::optional<DXContainerYAML::Signature> Signature;
 };
 
 struct Object {
@@ -152,9 +172,13 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::Part)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::ResourceBindInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
 
 namespace llvm {
 
@@ -174,8 +198,8 @@ template <> struct MappingTraits<DXContainerYAML::DXILProgram> {
   static void mapping(IO &IO, DXContainerYAML::DXILProgram &Program);
 };
 
-template <> struct MappingTraits<DXContainerYAML::ShaderFlags> {
-  static void mapping(IO &IO, DXContainerYAML::ShaderFlags &Flags);
+template <> struct MappingTraits<DXContainerYAML::ShaderFeatureFlags> {
+  static void mapping(IO &IO, DXContainerYAML::ShaderFeatureFlags &Flags);
 };
 
 template <> struct MappingTraits<DXContainerYAML::ShaderHash> {
@@ -200,6 +224,14 @@ template <> struct MappingTraits<DXContainerYAML::ResourceBindInfo> {
 
 template <> struct MappingTraits<DXContainerYAML::SignatureElement> {
   static void mapping(IO &IO, llvm::DXContainerYAML::SignatureElement &El);
+};
+
+template <> struct MappingTraits<DXContainerYAML::SignatureParameter> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::SignatureParameter &El);
+};
+
+template <> struct MappingTraits<DXContainerYAML::Signature> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::Signature &El);
 };
 
 } // namespace yaml

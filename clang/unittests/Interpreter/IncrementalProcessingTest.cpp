@@ -16,6 +16,8 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
+
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -24,6 +26,10 @@
 #include "gtest/gtest.h"
 
 #include <memory>
+
+#if defined(_AIX) || defined(__MVS__)
+#define CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+#endif
 
 using namespace llvm;
 using namespace clang;
@@ -44,13 +50,28 @@ const char TestProgram2[] = "extern \"C\" int funcForProg2() { return 42; }\n"
 
 const Function *getGlobalInit(llvm::Module *M) {
   for (const auto &Func : *M)
-    if (Func.hasName() && Func.getName().startswith("_GLOBAL__sub_I_"))
+    if (Func.hasName() && Func.getName().starts_with("_GLOBAL__sub_I_"))
       return &Func;
 
   return nullptr;
 }
 
+static bool HostSupportsJit() {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (J)
+    return true;
+  LLVMConsumeError(llvm::wrap(J.takeError()));
+  return false;
+}
+
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+TEST(IncrementalProcessing, DISABLED_EmitCXXGlobalInitFunc) {
+#else
 TEST(IncrementalProcessing, EmitCXXGlobalInitFunc) {
+#endif
+  if (!HostSupportsJit())
+    GTEST_SKIP();
+
   std::vector<const char *> ClangArgv = {"-Xclang", "-emit-llvm-only"};
   auto CB = clang::IncrementalCompilerBuilder();
   CB.SetCompilerArgs(ClangArgv);

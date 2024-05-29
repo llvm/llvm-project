@@ -53,7 +53,7 @@ def TestPF: GICombinePatFrag<
     (outs root:$def),
     (ins),
     [(pattern (COPY $def, $src))]>;
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: GIEraseRoot can only be used if the root is a CodeGenInstruction
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: GIEraseRoot can only be used if the root is a CodeGenInstruction or Intrinsic
 def eraseroot_notinstmatch: GICombineRule<
   (defs root:$mi),
   (match (TestPF $dst):$mi),

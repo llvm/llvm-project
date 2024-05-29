@@ -54,4 +54,14 @@ export namespace std {
 
   // [numeric.ops.midpoint], midpoint
   using std::midpoint;
+
+#if _LIBCPP_STD_VER >= 26
+  // [numeric.sat], saturation arithmetic
+  using std::add_sat;
+  using std::div_sat;
+  using std::mul_sat;
+  using std::saturate_cast;
+  using std::sub_sat;
+#endif
+
 } // namespace std

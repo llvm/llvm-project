@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -32,7 +33,8 @@ public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
 
   LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final;
 
   LogicalResult
@@ -43,7 +45,8 @@ public:
 } // namespace
 
 LogicalResult TestDialectLLVMIRTranslationInterface::amendOperation(
-    Operation *op, NamedAttribute attribute,
+    Operation *op, ArrayRef<llvm::Instruction *> instructions,
+    NamedAttribute attribute,
     LLVM::ModuleTranslation &moduleTranslation) const {
   return llvm::StringSwitch<llvm::function_ref<LogicalResult(Attribute)>>(
              attribute.getName())
@@ -59,7 +62,7 @@ LogicalResult TestDialectLLVMIRTranslationInterface::amendOperation(
               }
 
               bool createSymbol = false;
-              if (auto boolAttr = attr.dyn_cast<BoolAttr>())
+              if (auto boolAttr = dyn_cast<BoolAttr>(attr))
                 createSymbol = boolAttr.getValue();
 
               if (createSymbol) {
@@ -70,6 +73,18 @@ LogicalResult TestDialectLLVMIRTranslationInterface::amendOperation(
                     /*sym_visibility=*/nullptr);
               }
 
+              return success();
+            })
+      .Case("test.add_annotation",
+            [&](Attribute attr) {
+              for (llvm::Instruction *instruction : instructions) {
+                if (auto strAttr = dyn_cast<StringAttr>(attr)) {
+                  instruction->addAnnotationMetadata("annotation_from_test: " +
+                                                     strAttr.getValue().str());
+                } else {
+                  instruction->addAnnotationMetadata("annotation_from_test");
+                }
+              }
               return success();
             })
       .Default([](Attribute) {

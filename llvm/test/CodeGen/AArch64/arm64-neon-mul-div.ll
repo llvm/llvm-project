@@ -1486,7 +1486,8 @@ define <2 x float> @frem2f32(<2 x float> %A, <2 x float> %B) {
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    mov s1, v1.s[1]
 ; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    str d0, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    // kill: def $s1 killed $s1 killed $q1
@@ -1513,7 +1514,8 @@ define <4 x float> @frem4f32(<4 x float> %A, <4 x float> %B) {
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    mov s1, v1.s[1]
 ; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    str d0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    // kill: def $s1 killed $s1 killed $q1
@@ -1569,6 +1571,7 @@ define <2 x double> @frem2d64(<2 x double> %A, <2 x double> %B) {
 ; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    bl fmod
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0

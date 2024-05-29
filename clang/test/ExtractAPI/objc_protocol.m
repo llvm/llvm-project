@@ -2,7 +2,7 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
 // RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang -extract-api -x objective-c-header -target arm64-apple-macosx \
+// RUN: %clang -extract-api --pretty-sgf -x objective-c-header -target arm64-apple-macosx \
 // RUN: %t/input.h -o %t/output.json | FileCheck -allow-empty %s
 
 // Generator version is not consistent across test runs, normalize it.
@@ -80,8 +80,8 @@
       },
       "location": {
         "position": {
-          "character": 11,
-          "line": 1
+          "character": 10,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -143,8 +143,8 @@
       },
       "location": {
         "position": {
-          "character": 11,
-          "line": 4
+          "character": 10,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },

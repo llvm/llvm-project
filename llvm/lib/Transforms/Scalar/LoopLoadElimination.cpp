@@ -126,8 +126,10 @@ struct StoreToLoadForwardingCandidate {
 
     // We don't need to check non-wrapping here because forward/backward
     // dependence wouldn't be valid if these weren't monotonic accesses.
-    auto *Dist = cast<SCEVConstant>(
+    auto *Dist = dyn_cast<SCEVConstant>(
         PSE.getSE()->getMinusSCEV(StorePtrSCEV, LoadPtrSCEV));
+    if (!Dist)
+      return false;
     const APInt &Val = Dist->getAPInt();
     return Val == TypeByteSize * StrideLoad;
   }
@@ -181,7 +183,8 @@ public:
   findStoreToLoadDependences(const LoopAccessInfo &LAI) {
     std::forward_list<StoreToLoadForwardingCandidate> Candidates;
 
-    const auto *Deps = LAI.getDepChecker().getDependences();
+    const auto &DepChecker = LAI.getDepChecker();
+    const auto *Deps = DepChecker.getDependences();
     if (!Deps)
       return Candidates;
 
@@ -192,10 +195,11 @@ public:
     SmallPtrSet<Instruction *, 4> LoadsWithUnknownDepedence;
 
     for (const auto &Dep : *Deps) {
-      Instruction *Source = Dep.getSource(LAI);
-      Instruction *Destination = Dep.getDestination(LAI);
+      Instruction *Source = Dep.getSource(DepChecker);
+      Instruction *Destination = Dep.getDestination(DepChecker);
 
-      if (Dep.Type == MemoryDepChecker::Dependence::Unknown) {
+      if (Dep.Type == MemoryDepChecker::Dependence::Unknown ||
+          Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
         if (isa<LoadInst>(Source))
           LoadsWithUnknownDepedence.insert(Source);
         if (isa<LoadInst>(Destination))
@@ -348,19 +352,20 @@ public:
     // ld0.
 
     LoadInst *LastLoad =
-        std::max_element(Candidates.begin(), Candidates.end(),
-                         [&](const StoreToLoadForwardingCandidate &A,
-                             const StoreToLoadForwardingCandidate &B) {
-                           return getInstrIndex(A.Load) < getInstrIndex(B.Load);
-                         })
+        llvm::max_element(Candidates,
+                          [&](const StoreToLoadForwardingCandidate &A,
+                              const StoreToLoadForwardingCandidate &B) {
+                            return getInstrIndex(A.Load) <
+                                   getInstrIndex(B.Load);
+                          })
             ->Load;
     StoreInst *FirstStore =
-        std::min_element(Candidates.begin(), Candidates.end(),
-                         [&](const StoreToLoadForwardingCandidate &A,
-                             const StoreToLoadForwardingCandidate &B) {
-                           return getInstrIndex(A.Store) <
-                                  getInstrIndex(B.Store);
-                         })
+        llvm::min_element(Candidates,
+                          [&](const StoreToLoadForwardingCandidate &A,
+                              const StoreToLoadForwardingCandidate &B) {
+                            return getInstrIndex(A.Store) <
+                                   getInstrIndex(B.Store);
+                          })
             ->Store;
 
     // We're looking for stores after the first forwarding store until the end
@@ -439,9 +444,14 @@ public:
     assert(PH && "Preheader should exist!");
     Value *InitialPtr = SEE.expandCodeFor(PtrSCEV->getStart(), Ptr->getType(),
                                           PH->getTerminator());
-    Value *Initial = new LoadInst(
-        Cand.Load->getType(), InitialPtr, "load_initial",
-        /* isVolatile */ false, Cand.Load->getAlign(), PH->getTerminator());
+    Value *Initial =
+        new LoadInst(Cand.Load->getType(), InitialPtr, "load_initial",
+                     /* isVolatile */ false, Cand.Load->getAlign(),
+                     PH->getTerminator()->getIterator());
+    // We don't give any debug location to Initial, because it is inserted
+    // into the loop's preheader. A debug location inside the loop will cause
+    // a misleading stepping when debugging. The test update-debugloc-store
+    // -forwarded.ll checks this.
 
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded");
     PHI->insertBefore(L->getHeader()->begin());
@@ -456,13 +466,20 @@ public:
            "The type sizes should match!");
 
     Value *StoreValue = Cand.Store->getValueOperand();
-    if (LoadType != StoreType)
-      StoreValue = CastInst::CreateBitOrPointerCast(
-          StoreValue, LoadType, "store_forward_cast", Cand.Store);
+    if (LoadType != StoreType) {
+      StoreValue = CastInst::CreateBitOrPointerCast(StoreValue, LoadType,
+                                                    "store_forward_cast",
+                                                    Cand.Store->getIterator());
+      // Because it casts the old `load` value and is used by the new `phi`
+      // which replaces the old `load`, we give the `load`'s debug location
+      // to it.
+      cast<Instruction>(StoreValue)->setDebugLoc(Cand.Load->getDebugLoc());
+    }
 
     PHI->addIncoming(StoreValue, L->getLoopLatch());
 
     Cand.Load->replaceAllUsesWith(PHI);
+    PHI->setDebugLoc(Cand.Load->getDebugLoc());
   }
 
   /// Top-level driver for each loop: find store->load forwarding

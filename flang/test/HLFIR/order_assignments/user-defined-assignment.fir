@@ -180,3 +180,26 @@ func.func @test_scalar_forall_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:    fir.call @logical_value_to_numeric(%[[VAL_32]], %[[VAL_33]]) : (!fir.ref<i32>, !fir.logical<4>) -> ()
 // CHECK:  }
 // CHECK:  fir.freemem %[[VAL_15]] : !fir.heap<!fir.array<?xi1>>
+
+func.func @test_saved_scalar_box(%arg0: !fir.box<!fir.type<sometype>>, %arg1: !fir.class<!fir.type<sometype>>) {
+  hlfir.region_assign {
+    hlfir.yield %arg0 : !fir.box<!fir.type<sometype>>
+  } to {
+    hlfir.yield %arg1 : !fir.class<!fir.type<sometype>>
+  } user_defined_assign  (%arg2: !fir.box<!fir.type<sometype>>) to (%arg3: !fir.class<!fir.type<sometype>>) {
+    fir.call @user_assign_box(%arg3, %arg2) : (!fir.class<!fir.type<sometype>>, !fir.box<!fir.type<sometype>>) -> ()
+  }
+  return
+}
+func.func private @user_assign_box(!fir.class<!fir.type<sometype>>, !fir.box<!fir.type<sometype>>) -> ()
+
+// CHECK-LABEL:   func.func @test_saved_scalar_box(
+// CHECK-SAME:                    %[[VAL_0:.*]]: !fir.box<!fir.type<sometype>>,
+// CHECK-SAME:                    %[[VAL_1:.*]]: !fir.class<!fir.type<sometype>>) {
+// CHECK:           %[[VAL_2:.*]] = hlfir.as_expr %[[VAL_0]] : (!fir.box<!fir.type<sometype>>) -> !hlfir.expr<!fir.type<sometype>>
+// CHECK:           %[[VAL_3:.*]]:3 = hlfir.associate %[[VAL_2]]
+// CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#1 : (!fir.ref<!fir.type<sometype>>) -> !fir.box<!fir.type<sometype>>
+// CHECK:           fir.call @user_assign_box(%[[VAL_1]], %[[VAL_4]]) : (!fir.class<!fir.type<sometype>>, !fir.box<!fir.type<sometype>>) -> ()
+// CHECK:           hlfir.end_associate %[[VAL_3]]#1, %[[VAL_3]]#2 : !fir.ref<!fir.type<sometype>>, i1
+// CHECK:           return
+// CHECK:         }

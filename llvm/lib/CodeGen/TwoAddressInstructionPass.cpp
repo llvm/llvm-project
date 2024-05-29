@@ -125,6 +125,7 @@ class TwoAddressInstructionPass : public MachineFunctionPass {
   bool isCopyToReg(MachineInstr &MI, Register &SrcReg, Register &DstReg,
                    bool &IsSrcPhys, bool &IsDstPhys) const;
 
+  bool isPlainlyKilled(const MachineInstr *MI, LiveRange &LR) const;
   bool isPlainlyKilled(const MachineInstr *MI, Register Reg) const;
   bool isPlainlyKilled(const MachineOperand &MO) const;
 
@@ -305,30 +306,40 @@ bool TwoAddressInstructionPass::isCopyToReg(MachineInstr &MI, Register &SrcReg,
   return true;
 }
 
+bool TwoAddressInstructionPass::isPlainlyKilled(const MachineInstr *MI,
+                                                LiveRange &LR) const {
+  // This is to match the kill flag version where undefs don't have kill flags.
+  if (!LR.hasAtLeastOneValue())
+    return false;
+
+  SlotIndex useIdx = LIS->getInstructionIndex(*MI);
+  LiveInterval::const_iterator I = LR.find(useIdx);
+  assert(I != LR.end() && "Reg must be live-in to use.");
+  return !I->end.isBlock() && SlotIndex::isSameInstr(I->end, useIdx);
+}
+
 /// Test if the given register value, which is used by the
 /// given instruction, is killed by the given instruction.
 bool TwoAddressInstructionPass::isPlainlyKilled(const MachineInstr *MI,
                                                 Register Reg) const {
-  if (LIS && Reg.isVirtual() && !LIS->isNotInMIMap(*MI)) {
-    // FIXME: Sometimes tryInstructionTransform() will add instructions and
-    // test whether they can be folded before keeping them. In this case it
-    // sets a kill before recursively calling tryInstructionTransform() again.
-    // If there is no interval available, we assume that this instruction is
-    // one of those. A kill flag is manually inserted on the operand so the
-    // check below will handle it.
-    LiveInterval &LI = LIS->getInterval(Reg);
-    // This is to match the kill flag version where undefs don't have kill
-    // flags.
-    if (!LI.hasAtLeastOneValue())
+  // FIXME: Sometimes tryInstructionTransform() will add instructions and
+  // test whether they can be folded before keeping them. In this case it
+  // sets a kill before recursively calling tryInstructionTransform() again.
+  // If there is no interval available, we assume that this instruction is
+  // one of those. A kill flag is manually inserted on the operand so the
+  // check below will handle it.
+  if (LIS && !LIS->isNotInMIMap(*MI)) {
+    if (Reg.isVirtual())
+      return isPlainlyKilled(MI, LIS->getInterval(Reg));
+    // Reserved registers are considered always live.
+    if (MRI->isReserved(Reg))
       return false;
-
-    SlotIndex useIdx = LIS->getInstructionIndex(*MI);
-    LiveInterval::const_iterator I = LI.find(useIdx);
-    assert(I != LI.end() && "Reg must be live-in to use.");
-    return !I->end.isBlock() && SlotIndex::isSameInstr(I->end, useIdx);
+    return all_of(TRI->regunits(Reg), [&](MCRegUnit U) {
+      return isPlainlyKilled(MI, LIS->getRegUnit(U));
+    });
   }
 
-  return MI->killsRegister(Reg);
+  return MI->killsRegister(Reg, /*TRI=*/nullptr);
 }
 
 /// Test if the register used by the given operand is killed by the operand's
@@ -1113,14 +1124,13 @@ bool TwoAddressInstructionPass::rescheduleKillAboveMI(
       }
     }
 
-    for (unsigned i = 0, e = OtherDefs.size(); i != e; ++i) {
-      Register MOReg = OtherDefs[i];
+    for (Register MOReg : OtherDefs) {
       if (regOverlapsSet(Uses, MOReg))
         return false;
       if (MOReg.isPhysical() && regOverlapsSet(LiveDefs, MOReg))
         return false;
       // Physical register def is seen.
-      llvm::erase_value(Defs, MOReg);
+      llvm::erase(Defs, MOReg);
     }
   }
 
@@ -1345,8 +1355,10 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
                           << "2addr:    NEW INST: " << *NewMIs[1]);
 
         // Transform the instruction, now that it no longer has a load.
-        unsigned NewDstIdx = NewMIs[1]->findRegisterDefOperandIdx(regA);
-        unsigned NewSrcIdx = NewMIs[1]->findRegisterUseOperandIdx(regB);
+        unsigned NewDstIdx =
+            NewMIs[1]->findRegisterDefOperandIdx(regA, /*TRI=*/nullptr);
+        unsigned NewSrcIdx =
+            NewMIs[1]->findRegisterUseOperandIdx(regB, /*TRI=*/nullptr);
         MachineBasicBlock::iterator NewMI = NewMIs[1];
         bool TransformResult =
           tryInstructionTransform(NewMI, mi, NewSrcIdx, NewDstIdx, Dist, true);
@@ -1361,19 +1373,22 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
               if (MO.isReg() && MO.getReg().isVirtual()) {
                 if (MO.isUse()) {
                   if (MO.isKill()) {
-                    if (NewMIs[0]->killsRegister(MO.getReg()))
+                    if (NewMIs[0]->killsRegister(MO.getReg(), /*TRI=*/nullptr))
                       LV->replaceKillInstruction(MO.getReg(), MI, *NewMIs[0]);
                     else {
-                      assert(NewMIs[1]->killsRegister(MO.getReg()) &&
+                      assert(NewMIs[1]->killsRegister(MO.getReg(),
+                                                      /*TRI=*/nullptr) &&
                              "Kill missing after load unfold!");
                       LV->replaceKillInstruction(MO.getReg(), MI, *NewMIs[1]);
                     }
                   }
                 } else if (LV->removeVirtualRegisterDead(MO.getReg(), MI)) {
-                  if (NewMIs[1]->registerDefIsDead(MO.getReg()))
+                  if (NewMIs[1]->registerDefIsDead(MO.getReg(),
+                                                   /*TRI=*/nullptr))
                     LV->addVirtualRegisterDead(MO.getReg(), *NewMIs[1]);
                   else {
-                    assert(NewMIs[0]->registerDefIsDead(MO.getReg()) &&
+                    assert(NewMIs[0]->registerDefIsDead(MO.getReg(),
+                                                        /*TRI=*/nullptr) &&
                            "Dead flag missing after load unfold!");
                     LV->addVirtualRegisterDead(MO.getReg(), *NewMIs[0]);
                   }
@@ -1919,20 +1934,29 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
   Register DstReg = MI.getOperand(0).getReg();
 
   SmallVector<Register, 4> OrigRegs;
+  VNInfo *DefVN = nullptr;
   if (LIS) {
     OrigRegs.push_back(MI.getOperand(0).getReg());
     for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2)
       OrigRegs.push_back(MI.getOperand(i).getReg());
+    if (LIS->hasInterval(DstReg)) {
+      DefVN = LIS->getInterval(DstReg)
+                  .Query(LIS->getInstructionIndex(MI))
+                  .valueOut();
+    }
   }
 
+  LaneBitmask UndefLanes = LaneBitmask::getNone();
   bool DefEmitted = false;
   for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2) {
     MachineOperand &UseMO = MI.getOperand(i);
     Register SrcReg = UseMO.getReg();
     unsigned SubIdx = MI.getOperand(i+1).getImm();
     // Nothing needs to be inserted for undef operands.
-    if (UseMO.isUndef())
+    if (UseMO.isUndef()) {
+      UndefLanes |= TRI->getSubRegIndexLaneMask(SubIdx);
       continue;
+    }
 
     // Defer any kill flag to the last operand using SrcReg. Otherwise, we
     // might insert a COPY that uses SrcReg after is was killed.
@@ -1977,8 +2001,28 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
     for (int j = MI.getNumOperands() - 1, ee = 0; j > ee; --j)
       MI.removeOperand(j);
   } else {
-    if (LIS)
+    if (LIS) {
+      // Force live interval recomputation if we moved to a partial definition
+      // of the register.  Undef flags must be propagate to uses of undefined
+      // subregister for accurate interval computation.
+      if (UndefLanes.any() && DefVN && MRI->shouldTrackSubRegLiveness(DstReg)) {
+        auto &LI = LIS->getInterval(DstReg);
+        for (MachineOperand &UseOp : MRI->use_operands(DstReg)) {
+          unsigned SubReg = UseOp.getSubReg();
+          if (UseOp.isUndef() || !SubReg)
+            continue;
+          auto *VN =
+              LI.getVNInfoAt(LIS->getInstructionIndex(*UseOp.getParent()));
+          if (DefVN != VN)
+            continue;
+          LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubReg);
+          if ((UndefLanes & LaneMask).any())
+            UseOp.setIsUndef(true);
+        }
+        LIS->removeInterval(DstReg);
+      }
       LIS->RemoveMachineInstrFromMaps(MI);
+    }
 
     LLVM_DEBUG(dbgs() << "Eliminated: " << MI);
     MI.eraseFromParent();

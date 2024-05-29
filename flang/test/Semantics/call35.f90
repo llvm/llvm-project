@@ -1,11 +1,13 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror
 subroutine s1
   call ext(1, 2)
+  call myerror('abc')
 end
 
 subroutine s2
   !WARNING: Reference to the procedure 'ext' has an implicit interface that is distinct from another reference: distinct numbers of dummy arguments
   call ext(1.)
+  call myerror('abcd') ! don't warn about distinct lengths
 end
 
 subroutine s3

@@ -41,7 +41,7 @@ public:
   /// Answer whether the stack position written by the store represented in
   /// \p StoreFIE is loaded from or consumed in any way. The set of all
   /// relevant expressions reaching this store should be in \p Candidates.
-  /// If \p IncludelocalAccesses is false, we only consider wheter there is
+  /// If \p IncludelocalAccesses is false, we only consider whether there is
   /// a callee that consumes this stack position.
   bool isStoreUsed(const FrameIndexEntry &StoreFIE, ExprIterator Candidates,
                    bool IncludeLocalAccesses = true) const;

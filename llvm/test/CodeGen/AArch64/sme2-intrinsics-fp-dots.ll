@@ -26,16 +26,16 @@ define void @fdot_multi_za32_f16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @fdot_multi_za32_f16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zn3,
 ; CHECK-LABEL: fdot_multi_za32_f16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov z30.d, z3.d
 ; CHECK-NEXT:    mov z24.d, z5.d
 ; CHECK-NEXT:    mov z29.d, z2.d
-; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    fdot za.s[w8, 0, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    fdot za.s[w8, 7, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    ret
@@ -71,16 +71,16 @@ define void @bfdot_multi_za32_bf16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused,
 define void @fdot_multi_za32_bf16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zn3,
 ; CHECK-LABEL: fdot_multi_za32_bf16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov z30.d, z3.d
 ; CHECK-NEXT:    mov z24.d, z5.d
 ; CHECK-NEXT:    mov z29.d, z2.d
-; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    bfdot za.s[w8, 0, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    bfdot za.s[w8, 7, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    ret

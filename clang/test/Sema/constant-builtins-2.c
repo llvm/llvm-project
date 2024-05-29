@@ -124,6 +124,45 @@ char isnormal_inf_neg[!__builtin_isnormal(-__builtin_inf()) ? 1 : -1];
 char isnormal_nan    [!__builtin_isnormal(__builtin_nan("")) ? 1 : -1];
 char isnormal_snan   [!__builtin_isnormal(__builtin_nans("")) ? 1 : -1];
 
+char iszero_inf_pos[!__builtin_iszero(__builtin_inf()) ? 1 : -1];
+char iszero_pos    [!__builtin_iszero(1.0) ? 1 : -1];
+char iszero_normf  [!__builtin_iszero(1e-37f) ? 1 : -1];
+char iszero_denormf[!__builtin_iszero(1e-38f) ? 1 : -1];
+char iszero_norm   [!__builtin_iszero(1e-307) ? 1 : -1];
+char iszero_denorm [!__builtin_iszero(1e-308) ? 1 : -1];
+char iszero_zero   [__builtin_iszero(0.0) ? 1 : -1];
+char iszero_negzero[__builtin_iszero(-0.0) ? 1 : -1];
+char iszero_neg    [!__builtin_iszero(-1.0) ? 1 : -1];
+char iszero_inf_neg[!__builtin_iszero(-__builtin_inf()) ? 1 : -1];
+char iszero_nan    [!__builtin_iszero(__builtin_nan("")) ? 1 : -1];
+char iszero_snan   [!__builtin_iszero(__builtin_nans("")) ? 1 : -1];
+
+char issubnormal_inf_pos[!__builtin_issubnormal(__builtin_inf()) ? 1 : -1];
+char issubnormal_pos    [!__builtin_issubnormal(1.0) ? 1 : -1];
+char issubnormal_normf  [!__builtin_issubnormal(1e-37f) ? 1 : -1];
+char issubnormal_denormf[__builtin_issubnormal(1e-38f) ? 1 : -1];
+char issubnormal_norm   [!__builtin_issubnormal(1e-307) ? 1 : -1];
+char issubnormal_denorm [__builtin_issubnormal(1e-308) ? 1 : -1];
+char issubnormal_zero   [!__builtin_issubnormal(0.0) ? 1 : -1];
+char issubnormal_negzero[!__builtin_issubnormal(-0.0) ? 1 : -1];
+char issubnormal_neg    [!__builtin_issubnormal(-1.0) ? 1 : -1];
+char issubnormal_inf_neg[!__builtin_issubnormal(-__builtin_inf()) ? 1 : -1];
+char issubnormal_nan    [!__builtin_issubnormal(__builtin_nan("")) ? 1 : -1];
+char issubnormal_snan   [!__builtin_issubnormal(__builtin_nans("")) ? 1 : -1];
+
+char issignaling_inf_pos[!__builtin_issignaling(__builtin_inf()) ? 1 : -1];
+char issignaling_pos    [!__builtin_issignaling(1.0) ? 1 : -1];
+char issignaling_normf  [!__builtin_issignaling(1e-37f) ? 1 : -1];
+char issignaling_denormf[!__builtin_issignaling(1e-38f) ? 1 : -1];
+char issignaling_norm   [!__builtin_issignaling(1e-307) ? 1 : -1];
+char issignaling_denorm [!__builtin_issignaling(1e-308) ? 1 : -1];
+char issignaling_zero   [!__builtin_issignaling(0.0) ? 1 : -1];
+char issignaling_negzero[!__builtin_issignaling(-0.0) ? 1 : -1];
+char issignaling_neg    [!__builtin_issignaling(-1.0) ? 1 : -1];
+char issignaling_inf_neg[!__builtin_issignaling(-__builtin_inf()) ? 1 : -1];
+char issignaling_nan    [!__builtin_issignaling(__builtin_nan("")) ? 1 : -1];
+char issignaling_snan   [__builtin_issignaling(__builtin_nans("")) ? 1 : -1];
+
 char isfpclass_inf_pos_0[__builtin_isfpclass(__builtin_inf(), 0x0200) ? 1 : -1]; // fcPosInf
 char isfpclass_inf_pos_1[!__builtin_isfpclass(__builtin_inff(), 0x0004) ? 1 : -1]; // fcNegInf
 char isfpclass_inf_pos_2[__builtin_isfpclass(__builtin_infl(), 0x0207) ? 1 : -1]; // fcSNan|fcQNan|fcNegInf|fcPosInf
@@ -179,6 +218,64 @@ char clz6[__builtin_clzll(0xFFLL) == BITSIZE(long long) - 8 ? 1 : -1];
 char clz7[__builtin_clzs(0x1) == BITSIZE(short) - 1 ? 1 : -1];
 char clz8[__builtin_clzs(0xf) == BITSIZE(short) - 4 ? 1 : -1];
 char clz9[__builtin_clzs(0xfff) == BITSIZE(short) - 12 ? 1 : -1];
+int clz10 = __builtin_clzg((unsigned char)0); // expected-error {{not a compile-time constant}}
+char clz11[__builtin_clzg((unsigned char)0, 42) == 42 ? 1 : -1];
+char clz12[__builtin_clzg((unsigned char)0x1) == BITSIZE(char) - 1 ? 1 : -1];
+char clz13[__builtin_clzg((unsigned char)0x1, 42) == BITSIZE(char) - 1 ? 1 : -1];
+char clz14[__builtin_clzg((unsigned char)0xf) == BITSIZE(char) - 4 ? 1 : -1];
+char clz15[__builtin_clzg((unsigned char)0xf, 42) == BITSIZE(char) - 4 ? 1 : -1];
+char clz16[__builtin_clzg((unsigned char)(1 << (BITSIZE(char) - 1))) == 0 ? 1 : -1];
+char clz17[__builtin_clzg((unsigned char)(1 << (BITSIZE(char) - 1)), 42) == 0 ? 1 : -1];
+int clz18 = __builtin_clzg((unsigned short)0); // expected-error {{not a compile-time constant}}
+char clz19[__builtin_clzg((unsigned short)0, 42) == 42 ? 1 : -1];
+char clz20[__builtin_clzg((unsigned short)0x1) == BITSIZE(short) - 1 ? 1 : -1];
+char clz21[__builtin_clzg((unsigned short)0x1, 42) == BITSIZE(short) - 1 ? 1 : -1];
+char clz22[__builtin_clzg((unsigned short)0xf) == BITSIZE(short) - 4 ? 1 : -1];
+char clz23[__builtin_clzg((unsigned short)0xf, 42) == BITSIZE(short) - 4 ? 1 : -1];
+char clz24[__builtin_clzg((unsigned short)(1 << (BITSIZE(short) - 1))) == 0 ? 1 : -1];
+char clz25[__builtin_clzg((unsigned short)(1 << (BITSIZE(short) - 1)), 42) == 0 ? 1 : -1];
+int clz26 = __builtin_clzg(0U); // expected-error {{not a compile-time constant}}
+char clz27[__builtin_clzg(0U, 42) == 42 ? 1 : -1];
+char clz28[__builtin_clzg(0x1U) == BITSIZE(int) - 1 ? 1 : -1];
+char clz29[__builtin_clzg(0x1U, 42) == BITSIZE(int) - 1 ? 1 : -1];
+char clz30[__builtin_clzg(0xfU) == BITSIZE(int) - 4 ? 1 : -1];
+char clz31[__builtin_clzg(0xfU, 42) == BITSIZE(int) - 4 ? 1 : -1];
+char clz32[__builtin_clzg(1U << (BITSIZE(int) - 1)) == 0 ? 1 : -1];
+char clz33[__builtin_clzg(1U << (BITSIZE(int) - 1), 42) == 0 ? 1 : -1];
+int clz34 = __builtin_clzg(0UL); // expected-error {{not a compile-time constant}}
+char clz35[__builtin_clzg(0UL, 42) == 42 ? 1 : -1];
+char clz36[__builtin_clzg(0x1UL) == BITSIZE(long) - 1 ? 1 : -1];
+char clz37[__builtin_clzg(0x1UL, 42) == BITSIZE(long) - 1 ? 1 : -1];
+char clz38[__builtin_clzg(0xfUL) == BITSIZE(long) - 4 ? 1 : -1];
+char clz39[__builtin_clzg(0xfUL, 42) == BITSIZE(long) - 4 ? 1 : -1];
+char clz40[__builtin_clzg(1UL << (BITSIZE(long) - 1)) == 0 ? 1 : -1];
+char clz41[__builtin_clzg(1UL << (BITSIZE(long) - 1), 42) == 0 ? 1 : -1];
+int clz42 = __builtin_clzg(0ULL); // expected-error {{not a compile-time constant}}
+char clz43[__builtin_clzg(0ULL, 42) == 42 ? 1 : -1];
+char clz44[__builtin_clzg(0x1ULL) == BITSIZE(long long) - 1 ? 1 : -1];
+char clz45[__builtin_clzg(0x1ULL, 42) == BITSIZE(long long) - 1 ? 1 : -1];
+char clz46[__builtin_clzg(0xfULL) == BITSIZE(long long) - 4 ? 1 : -1];
+char clz47[__builtin_clzg(0xfULL, 42) == BITSIZE(long long) - 4 ? 1 : -1];
+char clz48[__builtin_clzg(1ULL << (BITSIZE(long long) - 1)) == 0 ? 1 : -1];
+char clz49[__builtin_clzg(1ULL << (BITSIZE(long long) - 1), 42) == 0 ? 1 : -1];
+#ifdef __SIZEOF_INT128__
+int clz50 = __builtin_clzg((unsigned __int128)0); // expected-error {{not a compile-time constant}}
+char clz51[__builtin_clzg((unsigned __int128)0, 42) == 42 ? 1 : -1];
+char clz52[__builtin_clzg((unsigned __int128)0x1) == BITSIZE(__int128) - 1 ? 1 : -1];
+char clz53[__builtin_clzg((unsigned __int128)0x1, 42) == BITSIZE(__int128) - 1 ? 1 : -1];
+char clz54[__builtin_clzg((unsigned __int128)0xf) == BITSIZE(__int128) - 4 ? 1 : -1];
+char clz55[__builtin_clzg((unsigned __int128)0xf, 42) == BITSIZE(__int128) - 4 ? 1 : -1];
+char clz56[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1))) == 0 ? 1 : -1];
+char clz57[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1)), 42) == 0 ? 1 : -1];
+#endif
+int clz58 = __builtin_clzg((unsigned _BitInt(128))0); // expected-error {{not a compile-time constant}}
+char clz59[__builtin_clzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
+char clz60[__builtin_clzg((unsigned _BitInt(128))0x1) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
+char clz61[__builtin_clzg((unsigned _BitInt(128))0x1, 42) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
+char clz62[__builtin_clzg((unsigned _BitInt(128))0xf) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
+char clz63[__builtin_clzg((unsigned _BitInt(128))0xf, 42) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
+char clz64[__builtin_clzg((unsigned _BitInt(128))(1 << (BITSIZE(_BitInt(128)) - 1))) == 0 ? 1 : -1];
+char clz65[__builtin_clzg((unsigned _BitInt(128))(1 << (BITSIZE(_BitInt(128)) - 1)), 42) == 0 ? 1 : -1];
 
 char ctz1[__builtin_ctz(1) == 0 ? 1 : -1];
 char ctz2[__builtin_ctz(8) == 3 ? 1 : -1];
@@ -187,6 +284,64 @@ int ctz4 = __builtin_ctz(0); // expected-error {{not a compile-time constant}}
 char ctz5[__builtin_ctzl(0x10L) == 4 ? 1 : -1];
 char ctz6[__builtin_ctzll(0x100LL) == 8 ? 1 : -1];
 char ctz7[__builtin_ctzs(1 << (BITSIZE(short) - 1)) == BITSIZE(short) - 1 ? 1 : -1];
+int ctz8 = __builtin_ctzg((unsigned char)0); // expected-error {{not a compile-time constant}}
+char ctz9[__builtin_ctzg((unsigned char)0, 42) == 42 ? 1 : -1];
+char ctz10[__builtin_ctzg((unsigned char)0x1) == 0 ? 1 : -1];
+char ctz11[__builtin_ctzg((unsigned char)0x1, 42) == 0 ? 1 : -1];
+char ctz12[__builtin_ctzg((unsigned char)0x10) == 4 ? 1 : -1];
+char ctz13[__builtin_ctzg((unsigned char)0x10, 42) == 4 ? 1 : -1];
+char ctz14[__builtin_ctzg((unsigned char)(1 << (BITSIZE(char) - 1))) == BITSIZE(char) - 1 ? 1 : -1];
+char ctz15[__builtin_ctzg((unsigned char)(1 << (BITSIZE(char) - 1)), 42) == BITSIZE(char) - 1 ? 1 : -1];
+int ctz16 = __builtin_ctzg((unsigned short)0); // expected-error {{not a compile-time constant}}
+char ctz17[__builtin_ctzg((unsigned short)0, 42) == 42 ? 1 : -1];
+char ctz18[__builtin_ctzg((unsigned short)0x1) == 0 ? 1 : -1];
+char ctz19[__builtin_ctzg((unsigned short)0x1, 42) == 0 ? 1 : -1];
+char ctz20[__builtin_ctzg((unsigned short)0x10) == 4 ? 1 : -1];
+char ctz21[__builtin_ctzg((unsigned short)0x10, 42) == 4 ? 1 : -1];
+char ctz22[__builtin_ctzg((unsigned short)(1 << (BITSIZE(short) - 1))) == BITSIZE(short) - 1 ? 1 : -1];
+char ctz23[__builtin_ctzg((unsigned short)(1 << (BITSIZE(short) - 1)), 42) == BITSIZE(short) - 1 ? 1 : -1];
+int ctz24 = __builtin_ctzg(0U); // expected-error {{not a compile-time constant}}
+char ctz25[__builtin_ctzg(0U, 42) == 42 ? 1 : -1];
+char ctz26[__builtin_ctzg(0x1U) == 0 ? 1 : -1];
+char ctz27[__builtin_ctzg(0x1U, 42) == 0 ? 1 : -1];
+char ctz28[__builtin_ctzg(0x10U) == 4 ? 1 : -1];
+char ctz29[__builtin_ctzg(0x10U, 42) == 4 ? 1 : -1];
+char ctz30[__builtin_ctzg(1U << (BITSIZE(int) - 1)) == BITSIZE(int) - 1 ? 1 : -1];
+char ctz31[__builtin_ctzg(1U << (BITSIZE(int) - 1), 42) == BITSIZE(int) - 1 ? 1 : -1];
+int ctz32 = __builtin_ctzg(0UL); // expected-error {{not a compile-time constant}}
+char ctz33[__builtin_ctzg(0UL, 42) == 42 ? 1 : -1];
+char ctz34[__builtin_ctzg(0x1UL) == 0 ? 1 : -1];
+char ctz35[__builtin_ctzg(0x1UL, 42) == 0 ? 1 : -1];
+char ctz36[__builtin_ctzg(0x10UL) == 4 ? 1 : -1];
+char ctz37[__builtin_ctzg(0x10UL, 42) == 4 ? 1 : -1];
+char ctz38[__builtin_ctzg(1UL << (BITSIZE(long) - 1)) == BITSIZE(long) - 1 ? 1 : -1];
+char ctz39[__builtin_ctzg(1UL << (BITSIZE(long) - 1), 42) == BITSIZE(long) - 1 ? 1 : -1];
+int ctz40 = __builtin_ctzg(0ULL); // expected-error {{not a compile-time constant}}
+char ctz41[__builtin_ctzg(0ULL, 42) == 42 ? 1 : -1];
+char ctz42[__builtin_ctzg(0x1ULL) == 0 ? 1 : -1];
+char ctz43[__builtin_ctzg(0x1ULL, 42) == 0 ? 1 : -1];
+char ctz44[__builtin_ctzg(0x10ULL) == 4 ? 1 : -1];
+char ctz45[__builtin_ctzg(0x10ULL, 42) == 4 ? 1 : -1];
+char ctz46[__builtin_ctzg(1ULL << (BITSIZE(long long) - 1)) == BITSIZE(long long) - 1 ? 1 : -1];
+char ctz47[__builtin_ctzg(1ULL << (BITSIZE(long long) - 1), 42) == BITSIZE(long long) - 1 ? 1 : -1];
+#ifdef __SIZEOF_INT128__
+int ctz48 = __builtin_ctzg((unsigned __int128)0); // expected-error {{not a compile-time constant}}
+char ctz49[__builtin_ctzg((unsigned __int128)0, 42) == 42 ? 1 : -1];
+char ctz50[__builtin_ctzg((unsigned __int128)0x1) == 0 ? 1 : -1];
+char ctz51[__builtin_ctzg((unsigned __int128)0x1, 42) == 0 ? 1 : -1];
+char ctz52[__builtin_ctzg((unsigned __int128)0x10) == 4 ? 1 : -1];
+char ctz53[__builtin_ctzg((unsigned __int128)0x10, 42) == 4 ? 1 : -1];
+char ctz54[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1)) == BITSIZE(__int128) - 1 ? 1 : -1];
+char ctz55[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1), 42) == BITSIZE(__int128) - 1 ? 1 : -1];
+#endif
+int ctz56 = __builtin_ctzg((unsigned _BitInt(128))0); // expected-error {{not a compile-time constant}}
+char ctz57[__builtin_ctzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
+char ctz58[__builtin_ctzg((unsigned _BitInt(128))0x1) == 0 ? 1 : -1];
+char ctz59[__builtin_ctzg((unsigned _BitInt(128))0x1, 42) == 0 ? 1 : -1];
+char ctz60[__builtin_ctzg((unsigned _BitInt(128))0x10) == 4 ? 1 : -1];
+char ctz61[__builtin_ctzg((unsigned _BitInt(128))0x10, 42) == 4 ? 1 : -1];
+char ctz62[__builtin_ctzg((unsigned _BitInt(128))1 << (BITSIZE(_BitInt(128)) - 1)) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
+char ctz63[__builtin_ctzg((unsigned _BitInt(128))1 << (BITSIZE(_BitInt(128)) - 1), 42) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
 
 char popcount1[__builtin_popcount(0) == 0 ? 1 : -1];
 char popcount2[__builtin_popcount(0xF0F0) == 8 ? 1 : -1];
@@ -198,6 +353,15 @@ char popcount7[__builtin_popcountl(~0L) == BITSIZE(long) ? 1 : -1];
 char popcount8[__builtin_popcountll(0LL) == 0 ? 1 : -1];
 char popcount9[__builtin_popcountll(0xF0F0LL) == 8 ? 1 : -1];
 char popcount10[__builtin_popcountll(~0LL) == BITSIZE(long long) ? 1 : -1];
+char popcount11[__builtin_popcountg(0U) == 0 ? 1 : -1];
+char popcount12[__builtin_popcountg(0xF0F0U) == 8 ? 1 : -1];
+char popcount13[__builtin_popcountg(~0U) == BITSIZE(int) ? 1 : -1];
+char popcount14[__builtin_popcountg(~0UL) == BITSIZE(long) ? 1 : -1];
+char popcount15[__builtin_popcountg(~0ULL) == BITSIZE(long long) ? 1 : -1];
+#ifdef __SIZEOF_INT128__
+char popcount16[__builtin_popcountg(~(unsigned __int128)0) == BITSIZE(__int128) ? 1 : -1];
+#endif
+char popcount17[__builtin_popcountg(~(unsigned _BitInt(128))0) == BITSIZE(_BitInt(128)) ? 1 : -1];
 
 char parity1[__builtin_parity(0) == 0 ? 1 : -1];
 char parity2[__builtin_parity(0xb821) == 0 ? 1 : -1];

@@ -35,8 +35,8 @@ declare void @free(ptr nocapture)
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal global ptr undef, align 4
-; CHECK: @[[GTL:[a-zA-Z0-9_$"\\.-]+]] = internal thread_local global ptr undef, align 4
+; CHECK: @G = internal global ptr undef, align 4
+; CHECK: @Gtl = internal thread_local global ptr undef, align 4
 ;.
 define void @nofree_arg_only(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: define {{[^@]+}}@nofree_arg_only
@@ -453,6 +453,7 @@ define i32 @malloc_in_loop(i32 %arg) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[I1:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[I11:%.*]] = alloca i8, i32 0, align 8
 ; CHECK-NEXT:    store i32 [[ARG]], ptr [[I]], align 4
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:

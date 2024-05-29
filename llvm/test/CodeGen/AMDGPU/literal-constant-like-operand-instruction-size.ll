@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs -amdgpu-s-branch-bits=6 -amdgpu-long-branch-factor=0 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs -amdgpu-s-branch-bits=6 -amdgpu-long-branch-factor=0 < %s | FileCheck -check-prefix=GCN %s
 
 
 ; Restrict maximum branch to between +31 and -32 dwords
@@ -11,7 +11,7 @@ declare void @llvm.amdgcn.s.sleep(i32) #0
 ; GCN-LABEL: {{^}}branch_offset_test:
 ; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0
 ; GCN-NEXT: s_cbranch_scc0 [[BB2:.LBB[0-9]+_[0-9]+]]
-; GCN-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}: ; %bb
+; GCN-NEXT: ; %bb.3: ; %bb
 ; GCN-NEXT: s_getpc_b64 s[[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]]
 ; GCN-NEXT: [[POST_GETPC:.Lpost_getpc[0-9]+]]:{{$}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], ([[BB3:.LBB[0-9]+_[0-9]+]]-[[POST_GETPC]])&4294967295

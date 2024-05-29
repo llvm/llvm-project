@@ -39,10 +39,15 @@ namespace {
 // Name of the "errno" variable.
 // FIXME: Is there a system where it is not called "errno" but is a variable?
 const char *ErrnoVarName = "errno";
+
 // Names of functions that return a location of the "errno" value.
 // FIXME: Are there other similar function names?
-const char *ErrnoLocationFuncNames[] = {"__errno_location", "___errno",
-                                        "__errno", "_errno", "__error"};
+CallDescriptionSet ErrnoLocationCalls{
+    {CDM::CLibrary, {"__errno_location"}, 0, 0},
+    {CDM::CLibrary, {"___errno"}, 0, 0},
+    {CDM::CLibrary, {"__errno"}, 0, 0},
+    {CDM::CLibrary, {"_errno"}, 0, 0},
+    {CDM::CLibrary, {"__error"}, 0, 0}};
 
 class ErrnoModeling
     : public Checker<check::ASTDecl<TranslationUnitDecl>, check::BeginFunction,
@@ -54,16 +59,10 @@ public:
   void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SR) const;
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 
-  // The declaration of an "errno" variable or "errno location" function.
-  mutable const Decl *ErrnoDecl = nullptr;
-
 private:
-  // FIXME: Names from `ErrnoLocationFuncNames` are used to build this set.
-  CallDescriptionSet ErrnoLocationCalls{{{"__errno_location"}, 0, 0},
-                                        {{"___errno"}, 0, 0},
-                                        {{"__errno"}, 0, 0},
-                                        {{"_errno"}, 0, 0},
-                                        {{"__error"}, 0, 0}};
+  // The declaration of an "errno" variable on systems where errno is
+  // represented by a variable (and not a function that queries its location).
+  mutable const VarDecl *ErrnoDecl = nullptr;
 };
 
 } // namespace
@@ -74,9 +73,13 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(ErrnoRegion, const MemRegion *)
 
 REGISTER_TRAIT_WITH_PROGRAMSTATE(ErrnoState, errno_modeling::ErrnoCheckState)
 
-/// Search for a variable called "errno" in the AST.
-/// Return nullptr if not found.
-static const VarDecl *getErrnoVar(ASTContext &ACtx) {
+void ErrnoModeling::checkASTDecl(const TranslationUnitDecl *D,
+                                 AnalysisManager &Mgr, BugReporter &BR) const {
+  // Try to find the declaration of the external variable `int errno;`.
+  // There are also C library implementations, where the `errno` location is
+  // accessed via a function that returns its address; in those environments
+  // this callback has no effect.
+  ASTContext &ACtx = Mgr.getASTContext();
   IdentifierInfo &II = ACtx.Idents.get(ErrnoVarName);
   auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
   auto Found = llvm::find_if(LookupRes, [&ACtx](const Decl *D) {
@@ -86,47 +89,8 @@ static const VarDecl *getErrnoVar(ASTContext &ACtx) {
              VD->getType().getCanonicalType() == ACtx.IntTy;
     return false;
   });
-  if (Found == LookupRes.end())
-    return nullptr;
-
-  return cast<VarDecl>(*Found);
-}
-
-/// Search for a function with a specific name that is used to return a pointer
-/// to "errno".
-/// Return nullptr if no such function was found.
-static const FunctionDecl *getErrnoFunc(ASTContext &ACtx) {
-  SmallVector<const Decl *> LookupRes;
-  for (StringRef ErrnoName : ErrnoLocationFuncNames) {
-    IdentifierInfo &II = ACtx.Idents.get(ErrnoName);
-    llvm::append_range(LookupRes, ACtx.getTranslationUnitDecl()->lookup(&II));
-  }
-
-  auto Found = llvm::find_if(LookupRes, [&ACtx](const Decl *D) {
-    if (auto *FD = dyn_cast<FunctionDecl>(D))
-      return ACtx.getSourceManager().isInSystemHeader(FD->getLocation()) &&
-             FD->isExternC() && FD->getNumParams() == 0 &&
-             FD->getReturnType().getCanonicalType() ==
-                 ACtx.getPointerType(ACtx.IntTy);
-    return false;
-  });
-  if (Found == LookupRes.end())
-    return nullptr;
-
-  return cast<FunctionDecl>(*Found);
-}
-
-void ErrnoModeling::checkASTDecl(const TranslationUnitDecl *D,
-                                 AnalysisManager &Mgr, BugReporter &BR) const {
-  // Try to find an usable `errno` value.
-  // It can be an external variable called "errno" or a function that returns a
-  // pointer to the "errno" value. This function can have different names.
-  // The actual case is dependent on the C library implementation, we
-  // can only search for a match in one of these variations.
-  // We assume that exactly one of these cases might be true.
-  ErrnoDecl = getErrnoVar(Mgr.getASTContext());
-  if (!ErrnoDecl)
-    ErrnoDecl = getErrnoFunc(Mgr.getASTContext());
+  if (Found != LookupRes.end())
+    ErrnoDecl = cast<VarDecl>(*Found);
 }
 
 void ErrnoModeling::checkBeginFunction(CheckerContext &C) const {
@@ -136,25 +100,18 @@ void ErrnoModeling::checkBeginFunction(CheckerContext &C) const {
   ASTContext &ACtx = C.getASTContext();
   ProgramStateRef State = C.getState();
 
-  if (const auto *ErrnoVar = dyn_cast_or_null<VarDecl>(ErrnoDecl)) {
-    // There is an external 'errno' variable.
-    // Use its memory region.
-    // The memory region for an 'errno'-like variable is allocated in system
-    // space by MemRegionManager.
-    const MemRegion *ErrnoR =
-        State->getRegion(ErrnoVar, C.getLocationContext());
+  const MemRegion *ErrnoR = nullptr;
+
+  if (ErrnoDecl) {
+    // There is an external 'errno' variable, so we can simply use the memory
+    // region that's associated with it.
+    ErrnoR = State->getRegion(ErrnoDecl, C.getLocationContext());
     assert(ErrnoR && "Memory region should exist for the 'errno' variable.");
-    State = State->set<ErrnoRegion>(ErrnoR);
-    State =
-        errno_modeling::setErrnoValue(State, C, 0, errno_modeling::Irrelevant);
-    C.addTransition(State);
-  } else if (ErrnoDecl) {
-    assert(isa<FunctionDecl>(ErrnoDecl) && "Invalid errno location function.");
-    // There is a function that returns the location of 'errno'.
-    // We must create a memory region for it in system space.
-    // Currently a symbolic region is used with an artifical symbol.
-    // FIXME: It is better to have a custom (new) kind of MemRegion for such
-    // cases.
+  } else {
+    // There is no 'errno' variable, so create a new symbolic memory region
+    // that can be used to model the return value of the "get the location of
+    // errno" internal functions.
+    // NOTE: this `SVal` is created even if errno is not defined or used.
     SValBuilder &SVB = C.getSValBuilder();
     MemRegionManager &RMgr = C.getStateManager().getRegionManager();
 
@@ -162,27 +119,31 @@ void ErrnoModeling::checkBeginFunction(CheckerContext &C) const {
         RMgr.getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
 
     // Create an artifical symbol for the region.
-    // It is not possible to associate a statement or expression in this case.
+    // Note that it is not possible to associate a statement or expression in
+    // this case and the `symbolTag` (opaque pointer tag) is just the address
+    // of the data member `ErrnoDecl` of the singleton `ErrnoModeling` checker
+    // object.
     const SymbolConjured *Sym = SVB.conjureSymbol(
         nullptr, C.getLocationContext(),
         ACtx.getLValueReferenceType(ACtx.IntTy), C.blockCount(), &ErrnoDecl);
 
     // The symbolic region is untyped, create a typed sub-region in it.
     // The ElementRegion is used to make the errno region a typed region.
-    const MemRegion *ErrnoR = RMgr.getElementRegion(
+    ErrnoR = RMgr.getElementRegion(
         ACtx.IntTy, SVB.makeZeroArrayIndex(),
         RMgr.getSymbolicRegion(Sym, GlobalSystemSpace), C.getASTContext());
-    State = State->set<ErrnoRegion>(ErrnoR);
-    State =
-        errno_modeling::setErrnoValue(State, C, 0, errno_modeling::Irrelevant);
-    C.addTransition(State);
   }
+  assert(ErrnoR);
+  State = State->set<ErrnoRegion>(ErrnoR);
+  State =
+      errno_modeling::setErrnoValue(State, C, 0, errno_modeling::Irrelevant);
+  C.addTransition(State);
 }
 
 bool ErrnoModeling::evalCall(const CallEvent &Call, CheckerContext &C) const {
   // Return location of "errno" at a call to an "errno address returning"
   // function.
-  if (ErrnoLocationCalls.contains(Call)) {
+  if (errno_modeling::isErrnoLocationCall(Call)) {
     ProgramStateRef State = C.getState();
 
     const MemRegion *ErrnoR = State->get<ErrnoRegion>();
@@ -260,14 +221,8 @@ ProgramStateRef clearErrnoState(ProgramStateRef State) {
   return setErrnoState(State, Irrelevant);
 }
 
-bool isErrno(const Decl *D) {
-  if (const auto *VD = dyn_cast_or_null<VarDecl>(D))
-    if (const IdentifierInfo *II = VD->getIdentifier())
-      return II->getName() == ErrnoVarName;
-  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
-    if (const IdentifierInfo *II = FD->getIdentifier())
-      return llvm::is_contained(ErrnoLocationFuncNames, II->getName());
-  return false;
+bool isErrnoLocationCall(const CallEvent &CE) {
+  return ErrnoLocationCalls.contains(CE);
 }
 
 const NoteTag *getErrnoNoteTag(CheckerContext &C, const std::string &Message) {
@@ -310,18 +265,6 @@ ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
   if (!State)
     return nullptr;
   return setErrnoState(State, MustBeChecked);
-}
-
-const NoteTag *getNoteTagForStdSuccess(CheckerContext &C, llvm::StringRef Fn) {
-  return getErrnoNoteTag(
-      C, llvm::formatv(
-             "'errno' may be undefined after successful call to '{0}'", Fn));
-}
-
-const NoteTag *getNoteTagForStdMustBeChecked(CheckerContext &C,
-                                             llvm::StringRef Fn) {
-  return getErrnoNoteTag(
-      C, llvm::formatv("'{0}' indicates failure only by setting 'errno'", Fn));
 }
 
 } // namespace errno_modeling

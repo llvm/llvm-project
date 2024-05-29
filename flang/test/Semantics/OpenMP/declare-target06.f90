@@ -15,8 +15,13 @@ module test_0
 !$omp declare target link(no_implicit_materialization_2)
 
 !ERROR: The given DECLARE TARGET directive clause has an invalid argument
+!WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead.
 !ERROR: No explicit type declared for 'no_implicit_materialization_3'
 !$omp declare target to(no_implicit_materialization_3)
+
+!ERROR: The given DECLARE TARGET directive clause has an invalid argument
+!ERROR: No explicit type declared for 'no_implicit_materialization_3'
+!$omp declare target enter(no_implicit_materialization_3)
 
 INTEGER :: data_int = 10
 !$omp declare target(data_int)

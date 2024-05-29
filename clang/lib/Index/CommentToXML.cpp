@@ -12,6 +12,7 @@
 #include "clang/AST/Comment.h"
 #include "clang/AST/CommentVisitor.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Index/USRGeneration.h"
@@ -103,10 +104,10 @@ FullCommentParts::FullCommentParts(const FullComment *C,
     if (!Child)
       continue;
     switch (Child->getCommentKind()) {
-    case Comment::NoCommentKind:
+    case CommentKind::None:
       continue;
 
-    case Comment::ParagraphCommentKind: {
+    case CommentKind::ParagraphComment: {
       const ParagraphComment *PC = cast<ParagraphComment>(Child);
       if (PC->isWhitespace())
         break;
@@ -117,7 +118,7 @@ FullCommentParts::FullCommentParts(const FullComment *C,
       break;
     }
 
-    case Comment::BlockCommandCommentKind: {
+    case CommentKind::BlockCommandComment: {
       const BlockCommandComment *BCC = cast<BlockCommandComment>(Child);
       const CommandInfo *Info = Traits.getCommandInfo(BCC->getCommandID());
       if (!Brief && Info->IsBriefCommand) {
@@ -140,7 +141,7 @@ FullCommentParts::FullCommentParts(const FullComment *C,
       break;
     }
 
-    case Comment::ParamCommandCommentKind: {
+    case CommentKind::ParamCommandComment: {
       const ParamCommandComment *PCC = cast<ParamCommandComment>(Child);
       if (!PCC->hasParamName())
         break;
@@ -152,7 +153,7 @@ FullCommentParts::FullCommentParts(const FullComment *C,
       break;
     }
 
-    case Comment::TParamCommandCommentKind: {
+    case CommentKind::TParamCommandComment: {
       const TParamCommandComment *TPCC = cast<TParamCommandComment>(Child);
       if (!TPCC->hasParamName())
         break;
@@ -164,11 +165,11 @@ FullCommentParts::FullCommentParts(const FullComment *C,
       break;
     }
 
-    case Comment::VerbatimBlockCommentKind:
+    case CommentKind::VerbatimBlockComment:
       MiscBlocks.push_back(cast<BlockCommandComment>(Child));
       break;
 
-    case Comment::VerbatimLineCommentKind: {
+    case CommentKind::VerbatimLineComment: {
       const VerbatimLineComment *VLC = cast<VerbatimLineComment>(Child);
       const CommandInfo *Info = Traits.getCommandInfo(VLC->getCommandID());
       if (!Info->IsDeclarationCommand)
@@ -176,12 +177,12 @@ FullCommentParts::FullCommentParts(const FullComment *C,
       break;
     }
 
-    case Comment::TextCommentKind:
-    case Comment::InlineCommandCommentKind:
-    case Comment::HTMLStartTagCommentKind:
-    case Comment::HTMLEndTagCommentKind:
-    case Comment::VerbatimBlockLineCommentKind:
-    case Comment::FullCommentKind:
+    case CommentKind::TextComment:
+    case CommentKind::InlineCommandComment:
+    case CommentKind::HTMLStartTagComment:
+    case CommentKind::HTMLEndTagComment:
+    case CommentKind::VerbatimBlockLineComment:
+    case CommentKind::FullComment:
       llvm_unreachable("AST node of this kind can't be a child of "
                        "a FullComment");
     }
@@ -274,32 +275,32 @@ void CommentASTToHTMLConverter::visitInlineCommandComment(
     return;
 
   switch (C->getRenderKind()) {
-  case InlineCommandComment::RenderNormal:
+  case InlineCommandRenderKind::Normal:
     for (unsigned i = 0, e = C->getNumArgs(); i != e; ++i) {
       appendToResultWithHTMLEscaping(C->getArgText(i));
       Result << " ";
     }
     return;
 
-  case InlineCommandComment::RenderBold:
+  case InlineCommandRenderKind::Bold:
     assert(C->getNumArgs() == 1);
     Result << "<b>";
     appendToResultWithHTMLEscaping(Arg0);
     Result << "</b>";
     return;
-  case InlineCommandComment::RenderMonospaced:
+  case InlineCommandRenderKind::Monospaced:
     assert(C->getNumArgs() == 1);
     Result << "<tt>";
     appendToResultWithHTMLEscaping(Arg0);
     Result<< "</tt>";
     return;
-  case InlineCommandComment::RenderEmphasized:
+  case InlineCommandRenderKind::Emphasized:
     assert(C->getNumArgs() == 1);
     Result << "<em>";
     appendToResultWithHTMLEscaping(Arg0);
     Result << "</em>";
     return;
-  case InlineCommandComment::RenderAnchor:
+  case InlineCommandRenderKind::Anchor:
     assert(C->getNumArgs() == 1);
     Result << "<span id=\"" << Arg0 << "\"></span>";
     return;
@@ -623,31 +624,31 @@ void CommentASTToXMLConverter::visitInlineCommandComment(
     return;
 
   switch (C->getRenderKind()) {
-  case InlineCommandComment::RenderNormal:
+  case InlineCommandRenderKind::Normal:
     for (unsigned i = 0, e = C->getNumArgs(); i != e; ++i) {
       appendToResultWithXMLEscaping(C->getArgText(i));
       Result << " ";
     }
     return;
-  case InlineCommandComment::RenderBold:
+  case InlineCommandRenderKind::Bold:
     assert(C->getNumArgs() == 1);
     Result << "<bold>";
     appendToResultWithXMLEscaping(Arg0);
     Result << "</bold>";
     return;
-  case InlineCommandComment::RenderMonospaced:
+  case InlineCommandRenderKind::Monospaced:
     assert(C->getNumArgs() == 1);
     Result << "<monospaced>";
     appendToResultWithXMLEscaping(Arg0);
     Result << "</monospaced>";
     return;
-  case InlineCommandComment::RenderEmphasized:
+  case InlineCommandRenderKind::Emphasized:
     assert(C->getNumArgs() == 1);
     Result << "<emphasized>";
     appendToResultWithXMLEscaping(Arg0);
     Result << "</emphasized>";
     return;
-  case InlineCommandComment::RenderAnchor:
+  case InlineCommandRenderKind::Anchor:
     assert(C->getNumArgs() == 1);
     Result << "<anchor id=\"" << Arg0 << "\"></anchor>";
     return;
@@ -751,13 +752,13 @@ void CommentASTToXMLConverter::visitParamCommandComment(
 
   Result << "<Direction isExplicit=\"" << C->isDirectionExplicit() << "\">";
   switch (C->getDirection()) {
-  case ParamCommandComment::In:
+  case ParamCommandPassDirection::In:
     Result << "in";
     break;
-  case ParamCommandComment::Out:
+  case ParamCommandPassDirection::Out:
     Result << "out";
     break;
-  case ParamCommandComment::InOut:
+  case ParamCommandPassDirection::InOut:
     Result << "in,out";
     break;
   }
@@ -1052,6 +1053,11 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
       }
       if (AA->getUnavailable())
         Result << "<Unavailable/>";
+
+      IdentifierInfo *Environment = AA->getEnvironment();
+      if (Environment) {
+        Result << "<Environment>" << Environment->getName() << "</Environment>";
+      }
       Result << "</Availability>";
     }
   }

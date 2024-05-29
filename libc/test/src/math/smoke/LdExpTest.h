@@ -9,30 +9,29 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
 
+#include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/NormalFloat.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
-#include <math.h>
 #include <stdint.h>
 
 template <typename T>
-class LdExpTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class LdExpTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using NormalFloat = LIBC_NAMESPACE::fputil::NormalFloat<T>;
-  using UIntType = typename FPBits::UIntType;
-  static constexpr UIntType MANTISSA_WIDTH =
-      LIBC_NAMESPACE::fputil::MantissaWidth<T>::VALUE;
-  // A normalized mantissa to be used with tests.
-  static constexpr UIntType MANTISSA = NormalFloat::ONE + 0x1234;
+  using StorageType = typename FPBits::StorageType;
 
-  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
-  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
-  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
-  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
-  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
+
+  // A normalized mantissa to be used with tests.
+  static constexpr StorageType MANTISSA = NormalFloat::ONE + 0x1234;
 
 public:
   typedef T (*LdExpFunc)(T, int);
@@ -60,7 +59,8 @@ public:
   }
 
   void testOverflow(LdExpFunc func) {
-    NormalFloat x(FPBits::MAX_EXPONENT - 10, NormalFloat::ONE + 0xF00BA, 0);
+    NormalFloat x(Sign::POS, FPBits::MAX_BIASED_EXPONENT - 10,
+                  NormalFloat::ONE + 0xF00BA);
     for (int32_t exp = 10; exp < 100; ++exp) {
       ASSERT_FP_EQ(inf, func(T(x), exp));
       ASSERT_FP_EQ(neg_inf, func(-T(x), exp));
@@ -70,11 +70,11 @@ public:
   void testUnderflowToZeroOnNormal(LdExpFunc func) {
     // In this test, we pass a normal nubmer to func and expect zero
     // to be returned due to underflow.
-    int32_t base_exponent = FPBits::EXPONENT_BIAS + int32_t(MANTISSA_WIDTH);
+    int32_t base_exponent = FPBits::EXP_BIAS + FPBits::FRACTION_LEN;
     int32_t exp_array[] = {base_exponent + 5, base_exponent + 4,
                            base_exponent + 3, base_exponent + 2,
                            base_exponent + 1};
-    T x = NormalFloat(0, MANTISSA, 0);
+    T x = NormalFloat(Sign::POS, 0, MANTISSA);
     for (int32_t exp : exp_array) {
       ASSERT_FP_EQ(func(x, -exp), x > 0 ? zero : neg_zero);
     }
@@ -83,25 +83,26 @@ public:
   void testUnderflowToZeroOnSubnormal(LdExpFunc func) {
     // In this test, we pass a normal nubmer to func and expect zero
     // to be returned due to underflow.
-    int32_t base_exponent = FPBits::EXPONENT_BIAS + int32_t(MANTISSA_WIDTH);
+    int32_t base_exponent = FPBits::EXP_BIAS + FPBits::FRACTION_LEN;
     int32_t exp_array[] = {base_exponent + 5, base_exponent + 4,
                            base_exponent + 3, base_exponent + 2,
                            base_exponent + 1};
-    T x = NormalFloat(-FPBits::EXPONENT_BIAS, MANTISSA, 0);
+    T x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS, MANTISSA);
     for (int32_t exp : exp_array) {
       ASSERT_FP_EQ(func(x, -exp), x > 0 ? zero : neg_zero);
     }
   }
 
   void testNormalOperation(LdExpFunc func) {
-    T val_array[] = {
-        // Normal numbers
-        NormalFloat(100, MANTISSA, 0), NormalFloat(-100, MANTISSA, 0),
-        NormalFloat(100, MANTISSA, 1), NormalFloat(-100, MANTISSA, 1),
-        // Subnormal numbers
-        NormalFloat(-FPBits::EXPONENT_BIAS, MANTISSA, 0),
-        NormalFloat(-FPBits::EXPONENT_BIAS, MANTISSA, 1)};
-    for (int32_t exp = 0; exp <= static_cast<int32_t>(MANTISSA_WIDTH); ++exp) {
+    T val_array[] = {// Normal numbers
+                     NormalFloat(Sign::POS, 100, MANTISSA),
+                     NormalFloat(Sign::POS, -100, MANTISSA),
+                     NormalFloat(Sign::NEG, 100, MANTISSA),
+                     NormalFloat(Sign::NEG, -100, MANTISSA),
+                     // Subnormal numbers
+                     NormalFloat(Sign::POS, -FPBits::EXP_BIAS, MANTISSA),
+                     NormalFloat(Sign::NEG, -FPBits::EXP_BIAS, MANTISSA)};
+    for (int32_t exp = 0; exp <= FPBits::FRACTION_LEN; ++exp) {
       for (T x : val_array) {
         // We compare the result of ldexp with the result
         // of the native multiplication/division instruction.
@@ -119,33 +120,33 @@ public:
     }
 
     // Normal which trigger mantissa overflow.
-    T x = NormalFloat(-FPBits::EXPONENT_BIAS + 1,
-                      UIntType(2) * NormalFloat::ONE - UIntType(1), 0);
+    T x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS + 1,
+                      StorageType(2) * NormalFloat::ONE - StorageType(1));
     ASSERT_FP_EQ(func(x, -1), x / 2);
     ASSERT_FP_EQ(func(-x, -1), -x / 2);
 
     // Start with a normal number high exponent but pass a very low number for
     // exp. The result should be a subnormal number.
-    x = NormalFloat(FPBits::EXPONENT_BIAS, NormalFloat::ONE, 0);
-    int exp = -FPBits::MAX_EXPONENT - 5;
+    x = NormalFloat(Sign::POS, FPBits::EXP_BIAS, NormalFloat::ONE);
+    int exp = -FPBits::MAX_BIASED_EXPONENT - 5;
     T result = func(x, exp);
     FPBits result_bits(result);
     ASSERT_FALSE(result_bits.is_zero());
     // Verify that the result is indeed subnormal.
-    ASSERT_EQ(result_bits.get_unbiased_exponent(), uint16_t(0));
+    ASSERT_EQ(result_bits.get_biased_exponent(), uint16_t(0));
     // But if the exp is so less that normalization leads to zero, then
     // the result should be zero.
-    result = func(x, -FPBits::MAX_EXPONENT - int(MANTISSA_WIDTH) - 5);
+    result = func(x, -FPBits::MAX_BIASED_EXPONENT - FPBits::FRACTION_LEN - 5);
     ASSERT_TRUE(FPBits(result).is_zero());
 
     // Start with a subnormal number but pass a very high number for exponent.
     // The result should not be infinity.
-    x = NormalFloat(-FPBits::EXPONENT_BIAS + 1, NormalFloat::ONE >> 10, 0);
-    exp = FPBits::MAX_EXPONENT + 5;
+    x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS + 1, NormalFloat::ONE >> 10);
+    exp = FPBits::MAX_BIASED_EXPONENT + 5;
     ASSERT_FALSE(FPBits(func(x, exp)).is_inf());
     // But if the exp is large enough to oversome than the normalization shift,
     // then it should result in infinity.
-    exp = FPBits::MAX_EXPONENT + 15;
+    exp = FPBits::MAX_BIASED_EXPONENT + 15;
     ASSERT_FP_EQ(func(x, exp), inf);
   }
 };
@@ -161,6 +162,7 @@ public:
   TEST_F(LlvmLibcLdExpTest, UnderflowToZeroOnSubnormal) {                      \
     testUnderflowToZeroOnSubnormal(&func);                                     \
   }                                                                            \
-  TEST_F(LlvmLibcLdExpTest, NormalOperation) { testNormalOperation(&func); }
+  TEST_F(LlvmLibcLdExpTest, NormalOperation) { testNormalOperation(&func); }   \
+  static_assert(true)
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H

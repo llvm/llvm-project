@@ -111,7 +111,7 @@ __device__ void test_numeric_type() {
 // instead of fma(_Float16, _Float16, _Float16).
 
 // CXX14-LABEL: define{{.*}}@_Z8test_fma
-// CXX14: call contract half @llvm.fma.f16
+// CXX14: call contract noundef half @llvm.fma.f16
 __device__ double test_fma(_Float16 h, int i) {
   return fma(h, h, i);
 }
@@ -149,12 +149,12 @@ __device__ double test_isnan() {
   double d = 5.0;
   float f = 5.0;
 
-  // AMD_INT_RETURN: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 3)
-  // AMD_BOOL_RETURN: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 3)
+  // AMD_INT_RETURN: call noundef i1 @llvm.is.fpclass.f32(float {{.*}}, i32 3)
+  // AMD_BOOL_RETURN: call noundef i1 @llvm.is.fpclass.f32(float {{.*}}, i32 3)
   r += isnan(f);
 
-  // AMD_INT_RETURN: call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 3)
-  // AMD_BOOL_RETURN: call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 3)
+  // AMD_INT_RETURN: call noundef i1 @llvm.is.fpclass.f64(double {{.*}}, i32 3)
+  // AMD_BOOL_RETURN: call noundef i1 @llvm.is.fpclass.f64(double {{.*}}, i32 3)
   r += isnan(d);
 
   return r ;

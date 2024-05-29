@@ -142,6 +142,7 @@ syn keyword llvmKeyword
       \ nosanitize_bounds
       \ nosanitize_coverage
       \ null_pointer_is_valid
+      \ optdebug
       \ optforfuzzing
       \ optnone
       \ optsize
@@ -149,6 +150,7 @@ syn keyword llvmKeyword
       \ preallocated
       \ private
       \ protected
+      \ ptrauth
       \ ptx_device
       \ ptx_kernel
       \ readnone

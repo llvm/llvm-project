@@ -1,4 +1,5 @@
 ; RUN: opt -passes=sroa -S %s -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa -S %s -o - | FileCheck %s
 
 ;; Check that a dbg.assign for a promoted variable becomes a kill location if
 ;; it used an arglist.

@@ -40,7 +40,7 @@ class RegisterCommandsTestCase(TestBase):
 
         # Write back the current vg to confirm read/write works at all.
         current_vg = self.match("register read vg", ["(0x[0-9]+)"])
-        self.assertTrue(current_vg is not None)
+        self.assertIsNotNone(current_vg)
         self.expect("register write vg {}".format(current_vg.group()))
 
         # Aka 128, 256 and 512 bit.
@@ -108,8 +108,11 @@ class RegisterCommandsTestCase(TestBase):
         if (mode == Mode.SVE) and not self.isAArch64SVE():
             self.skipTest("SVE registers must be supported.")
 
-        if (mode == Mode.SSVE) and not self.isAArch64SME():
-            self.skipTest("Streaming SVE registers must be supported.")
+        if (mode == Mode.SSVE) and not self.isAArch64SMEFA64():
+            self.skipTest(
+                "Streaming SVE registers must be supported and the "
+                "smefa64 extension must be present."
+            )
 
         self.build_for_mode(mode)
 
@@ -201,8 +204,11 @@ class RegisterCommandsTestCase(TestBase):
 
     def setup_svg_test(self, mode):
         # Even when running in SVE mode, we need access to SVG for these tests.
-        if not self.isAArch64SME():
-            self.skipTest("Streaming SVE registers must be present.")
+        if not self.isAArch64SMEFA64():
+            self.skipTest(
+                "Streaming SVE registers must be present and the "
+                "smefa64 extension must be present."
+            )
 
         self.build_for_mode(mode)
 

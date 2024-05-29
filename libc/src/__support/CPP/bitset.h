@@ -65,7 +65,8 @@ template <size_t NumberOfBits> struct bitset {
     }
   }
 
-  LIBC_INLINE constexpr bool operator==(const bitset<NumberOfBits> &other) {
+  LIBC_INLINE constexpr bool
+  operator==(const bitset<NumberOfBits> &other) const {
     for (size_t i = 0; i < NUMBER_OF_UNITS; ++i) {
       if (Data[i] != other.Data[i])
         return false;

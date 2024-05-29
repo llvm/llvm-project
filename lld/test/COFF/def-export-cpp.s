@@ -10,6 +10,7 @@
 
 # IMPLIB: File: foo.dll
 # IMPLIB: Name type: undecorate
+# IMPLIB-NEXT: Export name: GetPathOnDisk
 # IMPLIB-NEXT: Symbol: __imp_?GetPathOnDisk@@YA_NPEA_W@Z
 # IMPLIB-NEXT: Symbol: ?GetPathOnDisk@@YA_NPEA_W@Z
 

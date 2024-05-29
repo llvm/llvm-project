@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries" -cse -canonicalize -drop-equivalent-buffer-results -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops test-analysis-only analysis-fuzzer-seed=59 bufferize-function-boundaries" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops test-analysis-only analysis-fuzzer-seed=91 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops analysis-heuristic=fuzzer test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops analysis-heuristic=fuzzer test-analysis-only analysis-fuzzer-seed=59 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops analysis-heuristic=fuzzer test-analysis-only analysis-fuzzer-seed=91 bufferize-function-boundaries" -split-input-file -o /dev/null
 
 // Test bufferization using memref types that have no layout map.
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs-from-loops unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
@@ -253,11 +253,10 @@ func.func @scf_execute_region_yield_non_equivalent(%i: index, %j: index) -> f32 
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}})
 //       CHECK:   memref.copy %[[t]], %[[alloc]]
-//       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[t]])
+//       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[alloc]])
 //   CHECK-DAG:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
-//       CHECK:     memref.copy %[[alloc]], %[[alloc2]]
-//       CHECK:     %[[alloc2_casted:.*]] = memref.cast %[[alloc2]]
-//       CHECK:     scf.yield %[[alloc2_casted]]
+//       CHECK:     memref.copy %[[t]], %[[alloc2]]
+//       CHECK:     scf.yield %[[alloc2]]
 //       CHECK:   return %[[for]]
 func.func @scf_for_yield_non_equivalent(
     %t: tensor<?xf32>, %lb : index, %ub : index, %step : index) -> tensor<?xf32> {
@@ -270,20 +269,12 @@ func.func @scf_for_yield_non_equivalent(
 
 // -----
 
-// Note: This bufferizes to inefficient code, but bufferization should not see
-// such IR in the first place. The iter_arg would canonicalize away. This test
-// case is just to ensure that the bufferization generates correct code.
-
 // CHECK-LABEL: func @scf_for_yield_allocation(
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32
 //       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[t]])
-// This alloc is for the bufferization.alloc_tensor.
-//   CHECK-DAG:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
-// This alloc is for the scf.yield.
-//       CHECK:     %[[alloc3:.*]] = memref.alloc(%{{.*}})
-//       CHECK:     memref.copy %[[alloc2]], %[[alloc3]]
-//       CHECK:     %[[casted3:.*]] = memref.cast %[[alloc3]]
-//       CHECK:     scf.yield %[[casted3]]
+//   CHECK-DAG:     %[[alloc:.*]] = memref.alloc(%{{.*}})
+//       CHECK:     %[[casted:.*]] = memref.cast %[[alloc]]
+//       CHECK:     scf.yield %[[casted]]
 //       CHECK:   return %[[for]]
 func.func @scf_for_yield_allocation(%t: tensor<?xf32>, %lb : index, %ub : index,
                                %step : index) -> tensor<?xf32> {
@@ -508,7 +499,8 @@ func.func @parallel_insert_slice_no_conflict(
         tensor.parallel_insert_slice %8 into %o[5] [%idx] [%c1] :
           tensor<?xf32> into tensor<?xf32>
       }
-  }
+  } {keep_this_attribute}
+  // CHECK: keep_this_attribute
 
   // CHECK: %[[load:.*]] = memref.load %[[arg2]]
   %f = tensor.extract %2[%c0] : tensor<?xf32>
@@ -606,9 +598,9 @@ func.func @scf_foreach_private_var(%t: tensor<10xf32>) -> f32 {
 
   // CHECK: scf.forall (%{{.*}}) in (2) {
 
-  // Load from the copy and store into the shared output.
-  // CHECK:   %[[subview:.*]] = memref.subview %[[t]]
-  // CHECK:   memref.load %[[t_copy]]
+  // Load from the original and store into the copy.
+  // CHECK:   %[[subview:.*]] = memref.subview %[[t_copy]]
+  // CHECK:   memref.load %[[t]]
   // CHECK:   memref.store %{{.*}}, %[[subview]]
   %0 = scf.forall (%tid) in (%c2) shared_outs(%o = %t) -> tensor<10xf32> {
     %offset = arith.muli %c5, %tid : index
@@ -752,14 +744,16 @@ func.func @scf_for_yield_alias_of_non_equivalent(%sz: index) -> tensor<?xf32> {
   // CHECK: scf.for
   %r = scf.for %iv = %c0 to %sz step %c1 iter_args(%t = %0) -> tensor<?xf32> {
     %iv_sub = arith.subi %iv, %c1 : index
-    // CHECK: memref.subview %[[generate_copy]]
+    // CHECK: memref.subview %[[generate]]
     %ll = tensor.extract_slice %0[%iv_sub][%sz][1] : tensor<?xf32> to tensor<?xf32>
     %l = tensor.extract %ll[%c0] : tensor<?xf32>
     %double = arith.mulf %cst, %l : f32
-    // CHECK: memref.store %{{.*}}, %[[generate]]
+    // CHECK: memref.store %{{.*}}, %[[generate_copy]]
     %s = tensor.insert %double into %t[%iv] : tensor<?xf32>
     scf.yield %s : tensor<?xf32>
   }
+
+  // CHECK: return %[[generate_copy]]
   return %r : tensor<?xf32>
 }
 

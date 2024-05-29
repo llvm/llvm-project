@@ -59,40 +59,40 @@ void f_a2(int b, vector int a);
 vector int v = (vector int)(-1);
 
 // These should have errors on AIX and warnings otherwise.
-__vector long vv_l;                 // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+__vector long vv_l;                 // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
-__vector signed long vv_sl;         // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+__vector signed long vv_sl;         // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
-__vector unsigned long vv_ul;       // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+__vector unsigned long vv_ul;       // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
-__vector long int vv_li;            // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+__vector long int vv_li;            // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
-__vector signed long int vv_sli;    // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+__vector signed long int vv_sli;    // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
-__vector unsigned long int vv_uli;  // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+__vector unsigned long int vv_uli;  // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
-vector long v_l;                    // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+vector long v_l;                    // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
-vector signed long v_sl;            // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+vector signed long v_sl;            // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
-vector unsigned long v_ul;          // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+vector unsigned long v_ul;          // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
-vector long int v_li;               // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+vector long int v_li;               // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
-vector signed long int v_sli;       // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+vector signed long int v_sli;       // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
-vector unsigned long int v_uli;     // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+vector unsigned long int v_uli;     // nonaix-warning {{use of 'long' with '__vector' is deprecated}}
                                     // aix-error@-1 {{cannot use 'long' with '__vector'}}
                                     // novsx-error@-2 {{cannot use 'long' with '__vector'}}
 
@@ -111,6 +111,12 @@ vector __bool long long v_bll4;      // expected-error {{use of 'long long' with
 #endif
 __vector long double  vv_ld3;        // expected-error {{cannot use 'long double' with '__vector'}}
 vector long double  v_ld4;           // expected-error {{cannot use 'long double' with '__vector'}}
+vector float _Complex v_cf;          // expected-error {{cannot use '_Complex' with '__vector'}}
+vector double _Complex v_cd;         // expected-error {{cannot use '_Complex' with '__vector'}}
+vector long double _Complex v_cld;   // expected-error {{cannot use '_Complex' with '__vector'}}
+__vector float _Complex v_cf2;       // expected-error {{cannot use '_Complex' with '__vector'}}
+__vector double _Complex v_cd2;      // expected-error {{cannot use '_Complex' with '__vector'}}
+__vector long double _Complex v_cld2;// expected-error {{cannot use '_Complex' with '__vector'}}
 // FIXME: why is this diagnostic different from the others?
 vector bool v_b;                     // expected-error {{a type specifier is required for all declarations}}
 vector bool float v_bf;              // expected-error {{cannot use 'float' with '__vector bool'}}

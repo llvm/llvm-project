@@ -118,6 +118,12 @@ public:
       NoDep,
       // We couldn't determine the direction or the distance.
       Unknown,
+      // At least one of the memory access instructions may access a loop
+      // varying object, e.g. the address of underlying object is loaded inside
+      // the loop, like A[B[i]]. We cannot determine direction or distance in
+      // those cases, and also are unable to generate any runtime checks.
+      IndirectUnsafe,
+
       // Lexically forward.
       //
       // FIXME: If we only have loop-independent forward dependences (e.g. a
@@ -154,9 +160,9 @@ public:
         : Source(Source), Destination(Destination), Type(Type) {}
 
     /// Return the source instruction of the dependence.
-    Instruction *getSource(const LoopAccessInfo &LAI) const;
+    Instruction *getSource(const MemoryDepChecker &DepChecker) const;
     /// Return the destination instruction of the dependence.
-    Instruction *getDestination(const LoopAccessInfo &LAI) const;
+    Instruction *getDestination(const MemoryDepChecker &DepChecker) const;
 
     /// Dependence types that don't prevent vectorization.
     static VectorizationSafetyStatus isSafeForVectorization(DepType Type);
@@ -175,8 +181,10 @@ public:
                const SmallVectorImpl<Instruction *> &Instrs) const;
   };
 
-  MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L)
-      : PSE(PSE), InnermostLoop(L) {}
+  MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L,
+                   unsigned MaxTargetVectorWidthInBits)
+      : PSE(PSE), InnermostLoop(L),
+        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits) {}
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
@@ -190,7 +198,9 @@ public:
   ///
   /// Only checks sets with elements in \p CheckDeps.
   bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
-                   const DenseMap<Value *, const SCEV *> &Strides);
+                   const DenseMap<Value *, const SCEV *> &Strides,
+                   const DenseMap<Value *, SmallVector<const Value *, 16>>
+                       &UnderlyingObjects);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -306,6 +316,12 @@ private:
   /// RecordDependences is true.
   SmallVector<Dependence, 8> Dependences;
 
+  /// The maximum width of a target's vector registers multiplied by 2 to also
+  /// roughly account for additional interleaving. Is used to decide if a
+  /// backwards dependence with non-constant stride should be classified as
+  /// backwards-vectorizable or unknown (triggering a runtime check).
+  unsigned MaxTargetVectorWidthInBits = 0;
+
   /// Check whether there is a plausible dependence between the two
   /// accesses.
   ///
@@ -318,9 +334,11 @@ private:
   /// element access it records this distance in \p MinDepDistBytes (if this
   /// distance is smaller than any other distance encountered so far).
   /// Otherwise, this function returns true signaling a possible dependence.
-  Dependence::DepType isDependent(const MemAccessInfo &A, unsigned AIdx,
-                                  const MemAccessInfo &B, unsigned BIdx,
-                                  const DenseMap<Value *, const SCEV *> &Strides);
+  Dependence::DepType
+  isDependent(const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
+              unsigned BIdx, const DenseMap<Value *, const SCEV *> &Strides,
+              const DenseMap<Value *, SmallVector<const Value *, 16>>
+                  &UnderlyingObjects);
 
   /// Check whether the data dependence could prevent store-load
   /// forwarding.
@@ -522,7 +540,7 @@ private:
   /// Try to create add a new (pointer-difference, access size) pair to
   /// DiffCheck for checking groups \p CGI and \p CGJ. If pointer-difference
   /// checks cannot be used for the groups, set CanUseDiffCheck to false.
-  void tryToCreateDiffCheck(const RuntimeCheckingPtrGroup &CGI,
+  bool tryToCreateDiffCheck(const RuntimeCheckingPtrGroup &CGI,
                             const RuntimeCheckingPtrGroup &CGJ);
 
   MemoryDepChecker &DC;
@@ -565,11 +583,16 @@ private:
 /// PSE must be emitted in order for the results of this analysis to be valid.
 class LoopAccessInfo {
 public:
-  LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetLibraryInfo *TLI,
-                 AAResults *AA, DominatorTree *DT, LoopInfo *LI);
+  LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetTransformInfo *TTI,
+                 const TargetLibraryInfo *TLI, AAResults *AA, DominatorTree *DT,
+                 LoopInfo *LI);
 
   /// Return true we can analyze the memory accesses in the loop and there are
-  /// no memory dependence cycles.
+  /// no memory dependence cycles. Note that for dependences between loads &
+  /// stores with uniform addresses,
+  /// hasStoreStoreDependenceInvolvingLoopInvariantAddress and
+  /// hasLoadStoreDependenceInvolvingLoopInvariantAddress also need to be
+  /// checked.
   bool canVectorizeMemory() const { return CanVecMem; }
 
   /// Return true if there is a convergent operation in the loop. There may
@@ -622,10 +645,16 @@ public:
   /// Print the information about the memory accesses in the loop.
   void print(raw_ostream &OS, unsigned Depth = 0) const;
 
-  /// If the loop has memory dependence involving an invariant address, i.e. two
-  /// stores or a store and a load, then return true, else return false.
-  bool hasDependenceInvolvingLoopInvariantAddress() const {
-    return HasDependenceInvolvingLoopInvariantAddress;
+  /// Return true if the loop has memory dependence involving two stores to an
+  /// invariant address, else return false.
+  bool hasStoreStoreDependenceInvolvingLoopInvariantAddress() const {
+    return HasStoreStoreDependenceInvolvingLoopInvariantAddress;
+  }
+
+  /// Return true if the loop has memory dependence involving a load and a store
+  /// to an invariant address, else return false.
+  bool hasLoadStoreDependenceInvolvingLoopInvariantAddress() const {
+    return HasLoadStoreDependenceInvolvingLoopInvariantAddress;
   }
 
   /// Return the list of stores to invariant addresses.
@@ -687,8 +716,12 @@ private:
   bool CanVecMem = false;
   bool HasConvergentOp = false;
 
-  /// Indicator that there are non vectorizable stores to a uniform address.
-  bool HasDependenceInvolvingLoopInvariantAddress = false;
+  /// Indicator that there are two non vectorizable stores to the same uniform
+  /// address.
+  bool HasStoreStoreDependenceInvolvingLoopInvariantAddress = false;
+  /// Indicator that there is non vectorizable load and store to the same
+  /// uniform address.
+  bool HasLoadStoreDependenceInvolvingLoopInvariantAddress = false;
 
   /// List of stores to invariant addresses.
   SmallVector<StoreInst *> StoresToInvariantAddresses;
@@ -775,12 +808,14 @@ class LoopAccessInfoManager {
   AAResults &AA;
   DominatorTree &DT;
   LoopInfo &LI;
+  TargetTransformInfo *TTI;
   const TargetLibraryInfo *TLI = nullptr;
 
 public:
   LoopAccessInfoManager(ScalarEvolution &SE, AAResults &AA, DominatorTree &DT,
-                        LoopInfo &LI, const TargetLibraryInfo *TLI)
-      : SE(SE), AA(AA), DT(DT), LI(LI), TLI(TLI) {}
+                        LoopInfo &LI, TargetTransformInfo *TTI,
+                        const TargetLibraryInfo *TLI)
+      : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI) {}
 
   const LoopAccessInfo &getInfo(Loop &L);
 
@@ -809,13 +844,13 @@ public:
 };
 
 inline Instruction *MemoryDepChecker::Dependence::getSource(
-    const LoopAccessInfo &LAI) const {
-  return LAI.getDepChecker().getMemoryInstructions()[Source];
+    const MemoryDepChecker &DepChecker) const {
+  return DepChecker.getMemoryInstructions()[Source];
 }
 
 inline Instruction *MemoryDepChecker::Dependence::getDestination(
-    const LoopAccessInfo &LAI) const {
-  return LAI.getDepChecker().getMemoryInstructions()[Destination];
+    const MemoryDepChecker &DepChecker) const {
+  return DepChecker.getMemoryInstructions()[Destination];
 }
 
 } // End llvm namespace

@@ -1702,6 +1702,8 @@ struct TestScopedLockable {
 
   bool getBool();
 
+  bool lock2Bool(MutexLock);
+
   void foo1() {
     MutexLock mulock(&mu1);
     a = 5;
@@ -1716,6 +1718,12 @@ struct TestScopedLockable {
 
   void temporary() {
     MutexLock{&mu1}, a = 5;
+  }
+
+  void temporary_cfg(int x) {
+    // test the case where a pair of temporary Ctor and Dtor is in different CFG blocks
+    lock2Bool(MutexLock{&mu1}) || x;
+    MutexLock{&mu1};  // no-warn
   }
 
   void lifetime_extension() {
@@ -5333,7 +5341,7 @@ void dispatch_log(const char *msg) __attribute__((requires_capability(!FlightCon
 void dispatch_log2(const char *msg) __attribute__((requires_capability(Logger))) {}
 
 void flight_control_entry(void) __attribute__((requires_capability(FlightControl))) {
-  dispatch_log("wrong"); /* expected-warning {{cannot call function 'dispatch_log' while mutex 'FlightControl' is held}} */
+  dispatch_log("wrong"); /* expected-warning {{cannot call function 'dispatch_log' while role 'FlightControl' is held}} */
   dispatch_log2("also wrong"); /* expected-warning {{calling function 'dispatch_log2' requires holding role 'Logger' exclusively}} */
 }
 
@@ -5580,6 +5588,85 @@ public:
   }
 };
 
+class Return {
+  Mutex mu;
+  Foo foo GUARDED_BY(mu);
+  Foo* foo_ptr PT_GUARDED_BY(mu);
+
+  Foo returns_value_locked() {
+    MutexLock lock(&mu);
+    return foo;
+  }
+
+  Foo returns_value_locks_required() EXCLUSIVE_LOCKS_REQUIRED(mu) {
+    return foo;
+  }
+
+  Foo returns_value_releases_lock_after_return() UNLOCK_FUNCTION(mu) {
+    MutexLock lock(&mu, true);
+    return foo;
+  }
+
+  Foo returns_value_aquires_lock() EXCLUSIVE_LOCK_FUNCTION(mu) {
+    mu.Lock();
+    return foo;
+  }
+  
+  Foo returns_value_not_locked() {
+    return foo;               // expected-warning {{reading variable 'foo' requires holding mutex 'mu'}}
+  }
+  
+  Foo returns_value_releases_lock_before_return() UNLOCK_FUNCTION(mu) {
+    mu.Unlock();
+    return foo;               // expected-warning {{reading variable 'foo' requires holding mutex 'mu'}}
+  }
+
+  Foo &returns_ref_not_locked() {
+    return foo;               // expected-warning {{returning variable 'foo' by reference requires holding mutex 'mu'}}
+  }
+
+  Foo &returns_ref_locked() {
+    MutexLock lock(&mu);
+    return foo;               // expected-warning {{returning variable 'foo' by reference requires holding mutex 'mu'}}
+  }
+
+  Foo &returns_ref_shared_locks_required() SHARED_LOCKS_REQUIRED(mu) {
+    return foo;               // expected-warning {{returning variable 'foo' by reference requires holding mutex 'mu' exclusively}}
+  }
+
+  Foo &returns_ref_exclusive_locks_required() EXCLUSIVE_LOCKS_REQUIRED(mu) {
+    return foo;
+  }
+
+  Foo &returns_ref_releases_lock_after_return() UNLOCK_FUNCTION(mu) {
+    MutexLock lock(&mu, true);
+    return foo;               // expected-warning {{returning variable 'foo' by reference requires holding mutex 'mu' exclusively}}
+  }
+
+  Foo& returns_ref_releases_lock_before_return() UNLOCK_FUNCTION(mu) {
+    mu.Unlock();
+    return foo;               // // expected-warning {{returning variable 'foo' by reference requires holding mutex 'mu' exclusively}}
+  }
+  
+  Foo &returns_ref_aquires_lock() EXCLUSIVE_LOCK_FUNCTION(mu) {
+    mu.Lock();
+    return foo;
+  }
+  
+  const Foo &returns_constref_shared_locks_required() SHARED_LOCKS_REQUIRED(mu) {
+    return foo;
+  }
+  
+  Foo *returns_ptr() {
+    return &foo;              // FIXME -- Do we want to warn on this ?
+  }
+
+  Foo &returns_ref2() {
+    return *foo_ptr;          // expected-warning {{returning the value that 'foo_ptr' points to by reference requires holding mutex 'mu' exclusively}}
+  }
+
+};
+
 
 }  // end namespace PassByRefTest
 
@@ -5751,12 +5838,12 @@ class Foo5 {
 
 
 class Foo6 {
-  Mutex mu1 ACQUIRED_AFTER(mu3);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu1'}}
-  Mutex mu2 ACQUIRED_AFTER(mu1);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu2'}}
-  Mutex mu3 ACQUIRED_AFTER(mu2);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu3'}}
+  Mutex mu1 ACQUIRED_AFTER(mu3);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu1'}}
+  Mutex mu2 ACQUIRED_AFTER(mu1);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu2'}}
+  Mutex mu3 ACQUIRED_AFTER(mu2);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu3'}}
 
-  Mutex mu_b ACQUIRED_BEFORE(mu_b);  // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu_b'}}
-  Mutex mu_a ACQUIRED_AFTER(mu_a);   // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu_a'}}
+  Mutex mu_b ACQUIRED_BEFORE(mu_b);  // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu_b'}}
+  Mutex mu_a ACQUIRED_AFTER(mu_a);   // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu_a'}}
 
   void test0() {
     mu_a.Lock();
