@@ -517,7 +517,8 @@ public:
   static constexpr uint8_t NoCFIOpcode = 252;
   static constexpr uint8_t DSOLocalEquivalentOpcode = 251;
   static constexpr uint8_t BlockAddressOpcode = 250;
-  static constexpr uint8_t FirstSpecialOpcode = BlockAddressOpcode;
+  static constexpr uint8_t ConstantPtrAuthOpcode = 249;
+  static constexpr uint8_t FirstSpecialOpcode = ConstantPtrAuthOpcode;
 
   // Separate struct to make passing different number of parameters to
   // BitcodeConstant::create() more convenient.
@@ -1562,6 +1563,18 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         C = ConstantExpr::get(BC->Opcode, ConstOps[0], ConstOps[1], BC->Flags);
       } else {
         switch (BC->Opcode) {
+        case BitcodeConstant::ConstantPtrAuthOpcode: {
+          auto *Key = dyn_cast<ConstantInt>(ConstOps[1]);
+          if (!Key)
+            return error("ptrauth key operand must be ConstantInt");
+
+          auto *Disc = dyn_cast<ConstantInt>(ConstOps[2]);
+          if (!Disc)
+            return error("ptrauth disc operand must be ConstantInt");
+
+          C = ConstantPtrAuth::get(ConstOps[0], Key, Disc, ConstOps[3]);
+          break;
+        }
         case BitcodeConstant::NoCFIOpcode: {
           auto *GV = dyn_cast<GlobalValue>(ConstOps[0]);
           if (!GV)
@@ -3642,6 +3655,16 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid no_cfi record");
       V = BitcodeConstant::create(Alloc, CurTy, BitcodeConstant::NoCFIOpcode,
                                   Record[1]);
+      break;
+    }
+    case bitc::CST_CODE_PTRAUTH: {
+      if (Record.size() < 4)
+        return error("Invalid ptrauth record");
+      // Ptr, Key, Disc, AddrDisc
+      V = BitcodeConstant::create(Alloc, CurTy,
+                                  BitcodeConstant::ConstantPtrAuthOpcode,
+                                  {(unsigned)Record[0], (unsigned)Record[1],
+                                   (unsigned)Record[2], (unsigned)Record[3]});
       break;
     }
     }
