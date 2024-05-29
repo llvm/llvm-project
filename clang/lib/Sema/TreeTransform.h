@@ -4033,11 +4033,12 @@ public:
 
   StmtResult RebuildOpenACCComputeConstruct(OpenACCDirectiveKind K,
                                             SourceLocation BeginLoc,
+                                            SourceLocation DirLoc,
                                             SourceLocation EndLoc,
                                             ArrayRef<OpenACCClause *> Clauses,
                                             StmtResult StrBlock) {
-    return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, EndLoc,
-                                                     Clauses, StrBlock);
+    return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, DirLoc,
+                                                     EndLoc, Clauses, StrBlock);
   }
 
 private:
@@ -11559,8 +11560,8 @@ StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
       getSema().OpenACC().ActOnAssociatedStmt(C->getDirectiveKind(), StrBlock);
 
   return getDerived().RebuildOpenACCComputeConstruct(
-      C->getDirectiveKind(), C->getBeginLoc(), C->getEndLoc(),
-      TransformedClauses, StrBlock);
+      C->getDirectiveKind(), C->getBeginLoc(), C->getDirectiveLoc(),
+      C->getEndLoc(), TransformedClauses, StrBlock);
 }
 
 //===----------------------------------------------------------------------===//
