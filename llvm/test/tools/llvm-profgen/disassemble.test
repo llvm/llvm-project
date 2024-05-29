@@ -14,13 +14,13 @@
 ; CHECK-NEXT:   20176f:	retq
 
 ; CHECK:      <foo>:
-; CHECK-NEXT  201770:	movl	$1, %ecx
-; CHECK-NEXT  201775:	movl	$2863311531, %r8d
-; CHECK-NEXT  20177b:	jmp	0x78e
-; CHECK-NEXT  20177d:	nopl	(%rax)
-; CHECK-NEXT  201780:	addl	$30, %esi
-; CHECK-NEXT  201783:	addl	$1, %ecx
-; CHECK-NEXT  201786:	cmpl	$16000001, %ecx
+; CHECK-NEXT:  201770:	movl	$1, %ecx
+; CHECK-NEXT:  201775:	movl	$2863311531, %r8d
+; CHECK-NEXT:  20177b:	jmp	0x78e
+; CHECK-NEXT:  20177d:	nopl	(%rax)
+; CHECK-NEXT:  201780:	addl	$30, %esi
+; CHECK-NEXT:  201783:	addl	$1, %ecx
+; CHECK-NEXT:  201786:	cmpl	$16000001, %ecx
   
 
 ; clang -O3 -fuse-ld=lld -fpseudo-probe-for-profiling
