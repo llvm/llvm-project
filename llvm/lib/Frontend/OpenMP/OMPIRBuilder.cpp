@@ -2157,10 +2157,9 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   unsigned NumReductions = ReductionInfos.size();
   Type *RedArrayTy = ArrayType::get(Builder.getPtrTy(), NumReductions);
   Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
-  //  Builder.restoreIP(AllocaIP);
   Value *RedArray = Builder.CreateAlloca(RedArrayTy, nullptr, "red.array");
 
-  Builder.SetInsertPoint(InsertBlock, InsertBlock->end());
+  Builder.SetInsertPoint(InsertBlock, InsertBlock->begin());
 
   for (auto En : enumerate(ReductionInfos)) {
     unsigned Index = En.index();
@@ -2558,8 +2557,6 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
       getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-
-  //  Builder.restoreIP(AllocaIP);
   Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
 
   Type *I32Type = Type::getInt32Ty(M.getContext());
