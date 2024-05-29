@@ -12884,7 +12884,6 @@ ExprResult TreeTransform<Derived>::TransformSourceLocExpr(SourceLocExpr *E) {
 
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformEmbedExpr(EmbedExpr *E) {
-  // TODO: fully implement for tree transformations
   return E;
 }
 

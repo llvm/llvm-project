@@ -1988,21 +1988,22 @@ static bool canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
                                                   QualType InitType,
                                                   ASTContext &Context) {
   // Only one initializer, it's an embed and the types match;
-  EmbedExpr *First =
+  EmbedExpr *EE =
       ExprList.size() == 1
           ? dyn_cast_if_present<EmbedExpr>(ExprList[0]->IgnoreParens())
           : nullptr;
-  if (First) {
-    if (InitType->isArrayType()) {
-      const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
-      QualType InitElementTy = InitArrayType->getElementType();
-      QualType EmbedExprElementTy = First->getType();
-      const bool TypesMatch =
-          Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
-          (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
-      if (TypesMatch)
-        return true;
-    }
+  if (!EE)
+    return false;
+
+  if (InitType->isArrayType()) {
+    const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
+    QualType InitElementTy = InitArrayType->getElementType();
+    QualType EmbedExprElementTy = EE->getType();
+    const bool TypesMatch =
+        Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
+        (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
+    if (TypesMatch)
+      return true;
   }
   return false;
 }

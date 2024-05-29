@@ -1078,7 +1078,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                  Context.UnsignedCharTy, StartLoc);
     if (Data->BinaryData.size() > 1)
       Diag(StartLoc, diag::warn_unused_comma_left_operand);
-  } break;
+    break;
+  }
 
   case tok::kw___super:
   case tok::kw_decltype:
