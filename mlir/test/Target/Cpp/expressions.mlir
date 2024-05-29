@@ -66,11 +66,11 @@ func.func @do_not_inline(%arg0: i32, %arg1: i32, %arg2 : i32) -> i32 {
 }
 
 // CPP-DEFAULT:      float parentheses_for_low_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
-// CPP-DEFAULT-NEXT:   return (float) ([[VAL_1]] + [[VAL_2]] * [[VAL_3]]);
+// CPP-DEFAULT-NEXT:   return ((float) ([[VAL_1]] + [[VAL_2]] * [[VAL_3]]));
 // CPP-DEFAULT-NEXT: }
 
 // CPP-DECLTOP:      float parentheses_for_low_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
-// CPP-DECLTOP-NEXT:   return (float) ([[VAL_1]] + [[VAL_2]] * [[VAL_3]]);
+// CPP-DECLTOP-NEXT:   return ((float) ([[VAL_1]] + [[VAL_2]] * [[VAL_3]]));
 // CPP-DECLTOP-NEXT: }
 
 func.func @parentheses_for_low_precedence(%arg0: i32, %arg1: i32, %arg2: i32) -> f32 {
@@ -84,11 +84,11 @@ func.func @parentheses_for_low_precedence(%arg0: i32, %arg1: i32, %arg2: i32) ->
 }
 
 // CPP-DEFAULT:      int32_t parentheses_for_same_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
-// CPP-DEFAULT-NEXT:   return [[VAL_3]] / ([[VAL_1]] * [[VAL_2]]);
+// CPP-DEFAULT-NEXT:   return ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]]));
 // CPP-DEFAULT-NEXT: }
 
 // CPP-DECLTOP:      int32_t parentheses_for_same_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
-// CPP-DECLTOP-NEXT:   return [[VAL_3]] / ([[VAL_1]] * [[VAL_2]]);
+// CPP-DECLTOP-NEXT:   return ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]]));
 // CPP-DECLTOP-NEXT: }
 func.func @parentheses_for_same_precedence(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
   %e = emitc.expression : i32 {
@@ -98,6 +98,74 @@ func.func @parentheses_for_same_precedence(%arg0: i32, %arg1: i32, %arg2: i32) -
     }
 
   return %e : i32
+}
+
+// CPP-DEFAULT:      int32_t parentheses_for_expression_users(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   int32_t v4 = 0;
+// CPP-DEFAULT-NEXT:   bool v5 = (bool) ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]]));
+// CPP-DEFAULT-NEXT:   int32_t v6 = ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]])) + v4;
+// CPP-DEFAULT-NEXT:   int32_t v7 = bar(([[VAL_3]] / ([[VAL_1]] * [[VAL_2]])), v4);
+// CPP-DEFAULT-NEXT:   int32_t v8 = v5 ? ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]])) : v4;
+// CPP-DEFAULT-NEXT:   int32_t v9;
+// CPP-DEFAULT-NEXT:   v9 = ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]]));
+// CPP-DEFAULT-NEXT:   return ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]]));
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP:      int32_t parentheses_for_expression_users(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   int32_t v4;
+// CPP-DECLTOP-NEXT:   bool v5;
+// CPP-DECLTOP-NEXT:   int32_t v6;
+// CPP-DECLTOP-NEXT:   int32_t v7;
+// CPP-DECLTOP-NEXT:   int32_t v8;
+// CPP-DECLTOP-NEXT:   int32_t v9;
+// CPP-DECLTOP-NEXT:   v4 = 0;
+// CPP-DECLTOP-NEXT:   v5 = (bool) ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]]));
+// CPP-DECLTOP-NEXT:   v6 = ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]])) + v4;
+// CPP-DECLTOP-NEXT:   v7 = bar(([[VAL_3]] / ([[VAL_1]] * [[VAL_2]])), v4);
+// CPP-DECLTOP-NEXT:   v8 = v5 ? ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]])) : v4;
+// CPP-DECLTOP-NEXT:   ;
+// CPP-DECLTOP-NEXT:   v9 = ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]]));
+// CPP-DECLTOP-NEXT:   return ([[VAL_3]] / ([[VAL_1]] * [[VAL_2]]));
+// CPP-DECLTOP-NEXT: }
+func.func @parentheses_for_expression_users(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
+  %c0 = "emitc.constant"() {value = 0 : i32} : () -> i32
+  %e0 = emitc.expression : i32 {
+      %0 = emitc.mul %arg0, %arg1 : (i32, i32) -> i32
+      %1 = emitc.div %arg2, %0 : (i32, i32) -> i32
+      emitc.yield %1 : i32
+    }
+  %e1 = emitc.expression : i32 {
+      %0 = emitc.mul %arg0, %arg1 : (i32, i32) -> i32
+      %1 = emitc.div %arg2, %0 : (i32, i32) -> i32
+      emitc.yield %1 : i32
+    }
+  %e2 = emitc.expression : i32 {
+      %0 = emitc.mul %arg0, %arg1 : (i32, i32) -> i32
+      %1 = emitc.div %arg2, %0 : (i32, i32) -> i32
+      emitc.yield %1 : i32
+    }
+  %e3 = emitc.expression : i32 {
+      %0 = emitc.mul %arg0, %arg1 : (i32, i32) -> i32
+      %1 = emitc.div %arg2, %0 : (i32, i32) -> i32
+      emitc.yield %1 : i32
+    }
+  %e4 = emitc.expression : i32 {
+      %0 = emitc.mul %arg0, %arg1 : (i32, i32) -> i32
+      %1 = emitc.div %arg2, %0 : (i32, i32) -> i32
+      emitc.yield %1 : i32
+    }
+  %e5 = emitc.expression : i32 {
+      %0 = emitc.mul %arg0, %arg1 : (i32, i32) -> i32
+      %1 = emitc.div %arg2, %0 : (i32, i32) -> i32
+      emitc.yield %1 : i32
+    }
+  %cast = emitc.cast %e0 : i32 to i1
+  %add = emitc.add %e1, %c0 : (i32, i32) -> i32
+  %call = emitc.call_opaque "bar" (%e2, %c0) : (i32, i32) -> (i32)
+  %cond = emitc.conditional %cast, %e3, %c0 : i32
+  %var = "emitc.variable"() {value = #emitc.opaque<"">} : () -> i32
+  emitc.assign %e4 : i32 to %var : i32
+  return %e5 : i32
 }
 
 // CPP-DEFAULT:      int32_t multiple_uses(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]], int32_t [[VAL_4:v[0-9]+]]) {
@@ -154,7 +222,7 @@ func.func @multiple_uses(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i32 
 // CPP-DEFAULT-NEXT:   int32_t [[VAL_5:v[0-9]+]] = [[VAL_3]] % [[VAL_4]];
 // CPP-DEFAULT-NEXT:   int32_t [[VAL_6:v[0-9]+]] = bar([[VAL_5]], [[VAL_1]] * [[VAL_2]]);
 // CPP-DEFAULT-NEXT:   int32_t [[VAL_7:v[0-9]+]];
-// CPP-DEFAULT-NEXT:   if ([[VAL_6]] - [[VAL_4]] < [[VAL_2]]) {
+// CPP-DEFAULT-NEXT:   if (([[VAL_6]] - [[VAL_4]] < [[VAL_2]])) {
 // CPP-DEFAULT-NEXT:     [[VAL_7]] = [[VAL_1]];
 // CPP-DEFAULT-NEXT:   } else {
 // CPP-DEFAULT-NEXT:     [[VAL_7]] = [[VAL_1]];
@@ -169,7 +237,7 @@ func.func @multiple_uses(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i32 
 // CPP-DECLTOP-NEXT:   [[VAL_5]] = [[VAL_3]] % [[VAL_4]];
 // CPP-DECLTOP-NEXT:   [[VAL_6]] = bar([[VAL_5]], [[VAL_1]] * [[VAL_2]]);
 // CPP-DECLTOP-NEXT:   ;
-// CPP-DECLTOP-NEXT:   if ([[VAL_6]] - [[VAL_4]] < [[VAL_2]]) {
+// CPP-DECLTOP-NEXT:   if (([[VAL_6]] - [[VAL_4]] < [[VAL_2]])) {
 // CPP-DECLTOP-NEXT:     [[VAL_7]] = [[VAL_1]];
 // CPP-DECLTOP-NEXT:   } else {
 // CPP-DECLTOP-NEXT:     [[VAL_7]] = [[VAL_1]];
@@ -205,13 +273,13 @@ func.func @different_expressions(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32)
 
 // CPP-DEFAULT:      bool expression_with_address_taken(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t* [[VAL_3]]) {
 // CPP-DEFAULT-NEXT:   int32_t [[VAL_4:v[0-9]+]] = [[VAL_1]] % [[VAL_2]];
-// CPP-DEFAULT-NEXT:   return &[[VAL_4]] - [[VAL_2]] < [[VAL_3]];
+// CPP-DEFAULT-NEXT:   return (&[[VAL_4]] - [[VAL_2]] < [[VAL_3]]);
 // CPP-DEFAULT-NEXT: }
 
 // CPP-DECLTOP:      bool expression_with_address_taken(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t* [[VAL_3]]) {
 // CPP-DECLTOP-NEXT:   int32_t [[VAL_4:v[0-9]+]];
 // CPP-DECLTOP-NEXT:   [[VAL_4]] = [[VAL_1]] % [[VAL_2]];
-// CPP-DECLTOP-NEXT:   return &[[VAL_4]] - [[VAL_2]] < [[VAL_3]];
+// CPP-DECLTOP-NEXT:   return (&[[VAL_4]] - [[VAL_2]] < [[VAL_3]]);
 // CPP-DECLTOP-NEXT: }
 
 func.func @expression_with_address_taken(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>) -> i1 {

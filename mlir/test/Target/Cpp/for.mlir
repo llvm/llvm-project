@@ -20,14 +20,14 @@ func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   return
 }
 // CPP-DEFAULT: void test_for(size_t [[V1:[^ ]*]], size_t [[V2:[^ ]*]], size_t [[V3:[^ ]*]]) {
-// CPP-DEFAULT-NEXT: for (size_t [[ITER:[^ ]*]] = [[V1]] + [[V2]]; [[ITER]] < ([[V2]] * [[V3]]); [[ITER]] += [[V1]] / [[V3]]) {
+// CPP-DEFAULT-NEXT: for (size_t [[ITER:[^ ]*]] = ([[V1]] + [[V2]]); [[ITER]] < (([[V2]] * [[V3]])); [[ITER]] += ([[V1]] / [[V3]])) {
 // CPP-DEFAULT-NEXT: int32_t [[V4:[^ ]*]] = f();
 // CPP-DEFAULT-NEXT: }
 // CPP-DEFAULT-NEXT: return;
 
 // CPP-DECLTOP: void test_for(size_t [[V1:[^ ]*]], size_t [[V2:[^ ]*]], size_t [[V3:[^ ]*]]) {
 // CPP-DECLTOP-NEXT: int32_t [[V4:[^ ]*]];
-// CPP-DECLTOP-NEXT: for (size_t [[ITER:[^ ]*]] = [[V1]] + [[V2]]; [[ITER]] < ([[V2]] * [[V3]]); [[ITER]] += [[V1]] / [[V3]]) {
+// CPP-DECLTOP-NEXT: for (size_t [[ITER:[^ ]*]] = ([[V1]] + [[V2]]); [[ITER]] < (([[V2]] * [[V3]])); [[ITER]] += ([[V1]] / [[V3]])) {
 // CPP-DECLTOP-NEXT: [[V4]] = f();
 // CPP-DECLTOP-NEXT: }
 // CPP-DECLTOP-NEXT: return;
