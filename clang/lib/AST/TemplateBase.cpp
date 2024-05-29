@@ -552,7 +552,7 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
       const auto *TTP = cast<TemplateTemplateParmDecl>(TD);
       Out << "template-parameter-" << TTP->getDepth() << "-" << TTP->getIndex();
     } else {
-      TN.print(Out, Policy, TemplateName::Qualified::Fully);
+      TN.print(Out, Policy);
     }
     break;
   }
