@@ -265,6 +265,14 @@ def or_to_bsp: GICombineRule <
   (apply [{ applyOrToBSP(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+// Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
+def combine_mul_cmlt : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_MUL):$root,
+        [{ return matchCombineMulCMLT(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -296,5 +304,6 @@ def AArch64PostLegalizerCombiner
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, combine_concat_vector,
                         commute_constant_to_rhs,
-                        push_freeze_to_prevent_poison_from_propagating]> {
+                        push_freeze_to_prevent_poison_from_propagating,
+                        combine_mul_cmlt]> {
 }
