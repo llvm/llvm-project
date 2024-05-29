@@ -13,7 +13,9 @@
 #   ninja
 #
 
-# Disable ZLIB, and ZSTD for VE since there is no pre-compiled libraries.
+# Disable TERMINFO, ZLIB, and ZSTD for VE since there is no pre-compiled
+# libraries.
+set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
 set(LLVM_ENABLE_ZLIB OFF CACHE BOOL "")
 set(LLVM_ENABLE_ZSTD OFF CACHE BOOL "")
 
