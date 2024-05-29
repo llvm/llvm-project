@@ -1,6 +1,6 @@
 // Test debug info for intermediate value of a chained pointer deferencing
 // expression when the flag -fdebug-info-for-pointer-type is enabled.
-// RUN: %clang_cc1 %s -fdebug-info-for-profiling -debug-info-kind=constructor -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -fdebug-info-for-profiling -debug-info-kind=constructor -emit-llvm -o - | FileCheck %s
 
 class A {
 public:
