@@ -26,7 +26,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
@@ -5752,15 +5751,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (llvm::CallInst *Call = dyn_cast<llvm::CallInst>(CI)) {
     if (TargetDecl && TargetDecl->hasAttr<NotTailCalledAttr>())
       Call->setTailCallKind(llvm::CallInst::TCK_NoTail);
-    else if (IsMustTail) {
-      if (getTarget().getTriple().isPPC()) {
-        if (getTarget().getTriple().isOSAIX())
-          CGM.getDiags().Report(Loc, diag::err_aix_musttail_unsupported);
-        else
-          CGM.getDiags().Report(Loc, diag::warn_ppc_musttail_maybe_ignored);
-      }
+    else if (IsMustTail)
       Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
-    }
   }
 
   // Add metadata for calls to MSAllocator functions

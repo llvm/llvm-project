@@ -3864,9 +3864,12 @@ def note_cannot_use_trivial_abi_reason : Note<
   "it is polymorphic|"
   "it has a base of a non-trivial class type|it has a virtual base|"
   "it has a __weak field|it has a field of a non-trivial class type}1">;
-def warn_ppc_musttail_maybe_ignored: Warning<
-  "'musttail' attribute may be ignored on ppc targets">,
-  InGroup<IgnoredAttributes>;
+def err_ppc_impossible_musttail: Error<
+  "'musttail' attribute for this call is impossible because %select{"
+  "long calls can not be tail called|"
+  "indirect calls can not be tail called|"
+  "external calls can not be tail called}0"
+  >;
 def err_aix_musttail_unsupported: Error<
   "'musttail' attribute is not supported on AIX">;
 
