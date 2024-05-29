@@ -28,10 +28,12 @@ enum IndexedVersion : uint64_t {
   Version1 = 1,
   // Version 2: Added a call stack table.
   Version2 = 2,
+  // Version 3: Under development.
+  Version3 = 3,
 };
 
 constexpr uint64_t MinimumSupportedVersion = Version0;
-constexpr uint64_t MaximumSupportedVersion = Version2;
+constexpr uint64_t MaximumSupportedVersion = Version3;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
 static_assert(MinimumSupportedVersion <= MaximumSupportedVersion);
@@ -426,8 +428,8 @@ struct IndexedMemProfRecord {
   // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
   // translate CallStackId to call stacks with frames inline.
   MemProfRecord toMemProfRecord(
-      llvm::function_ref<const llvm::SmallVector<Frame>(const CallStackId)>
-          Callback) const;
+      llvm::function_ref<llvm::SmallVector<Frame>(const CallStackId)> Callback)
+      const;
 
   // Returns the GUID for the function name after canonicalization. For
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
