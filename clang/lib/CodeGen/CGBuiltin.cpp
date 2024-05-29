@@ -1067,10 +1067,12 @@ namespace {
 
 class ObjectSizeVisitor
     : public ConstStmtVisitor<ObjectSizeVisitor, const Expr *> {
+  ASTContext &Ctx;
   bool SkipASE;
 
 public:
-  ObjectSizeVisitor(bool SkipASE = false) : SkipASE(SkipASE) {}
+  ObjectSizeVisitor(ASTContext &Ctx, bool SkipASE = false)
+      : Ctx(Ctx), SkipASE(SkipASE) {}
 
   const Expr *Visit(const Expr *E) {
     return ConstStmtVisitor<ObjectSizeVisitor, const Expr *>::Visit(E);
@@ -1081,17 +1083,15 @@ public:
   const Expr *VisitDeclRefExpr(const DeclRefExpr *E) { return E; }
   const Expr *VisitMemberExpr(const MemberExpr *E) { return E; }
   const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-    return SkipASE ? Visit(E->getBase()) : E;
+    return SkipASE ? Visit(E->getBase()->IgnoreParenImpCasts()) : E;
   }
 
   const Expr *VisitCastExpr(const CastExpr *E) {
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitParenExpr(const ParenExpr *E) {
-    return Visit(E->getSubExpr());
+    const Expr *NoopE = E->IgnoreParenNoopCasts(Ctx);
+    return NoopE != E ? Visit(NoopE->IgnoreParenImpCasts()) : nullptr;
   }
   const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
-    return Visit(E->getSubExpr());
+    return Visit(E->getSubExpr()->IgnoreParenImpCasts());
   }
 };
 
@@ -1129,7 +1129,8 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
     // Only support sub-object calculation.
     return nullptr;
 
-  const Expr *ObjectRef = ObjectSizeVisitor().Visit(E);
+  ASTContext &Ctx = getContext();
+  const Expr *ObjectRef = ObjectSizeVisitor(Ctx).Visit(E);
   if (!ObjectRef)
     return nullptr;
 
@@ -1152,7 +1153,6 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
     }
   }
 
-  ASTContext &Ctx = getContext();
   if (!ArrayIdx || ArrayIdx->HasSideEffects(Ctx))
     return nullptr;
 
@@ -1161,7 +1161,7 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
   // its size, so return MAX_INT.
   //
   // Rerun the visitor to find the base expr: MemberExpr or DeclRefExpr.
-  ObjectRef = ObjectSizeVisitor(true).Visit(ObjectRef);
+  ObjectRef = ObjectSizeVisitor(Ctx, true).Visit(ObjectRef);
   if (!ObjectRef)
     return nullptr;
 
@@ -1208,7 +1208,8 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
 
   Value *Res = EmitScalarExpr(ArrayIdx);
 
-  Res = Builder.CreateIntCast(Res, ResType, /*isSigned=*/true);
+  Res = Builder.CreateIntCast(Res, ResType,
+                              ArrayIdx->getType()->isSignedIntegerType());
   Res =
       Builder.CreateSub(ArrayRefBaseSize, Builder.CreateMul(ArrayRefSize, Res));
 
