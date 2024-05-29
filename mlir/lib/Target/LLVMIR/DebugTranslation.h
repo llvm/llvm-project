@@ -73,6 +73,7 @@ private:
   llvm::DICompileUnit *translateImpl(DICompileUnitAttr attr);
   llvm::DICompositeType *translateImpl(DICompositeTypeAttr attr);
   llvm::DIDerivedType *translateImpl(DIDerivedTypeAttr attr);
+  llvm::DIStringType *translateImpl(DIStringTypeAttr attr);
   llvm::DIFile *translateImpl(DIFileAttr attr);
   llvm::DILabel *translateImpl(DILabelAttr attr);
   llvm::DILexicalBlock *translateImpl(DILexicalBlockAttr attr);

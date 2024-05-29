@@ -63,6 +63,7 @@ private:
   DICompileUnitAttr translateImpl(llvm::DICompileUnit *node);
   DICompositeTypeAttr translateImpl(llvm::DICompositeType *node);
   DIDerivedTypeAttr translateImpl(llvm::DIDerivedType *node);
+  DIStringTypeAttr translateImpl(llvm::DIStringType *node);
   DIFileAttr translateImpl(llvm::DIFile *node);
   DILabelAttr translateImpl(llvm::DILabel *node);
   DILexicalBlockAttr translateImpl(llvm::DILexicalBlock *node);

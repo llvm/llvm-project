@@ -60,8 +60,8 @@ bool DINodeAttr::classof(Attribute attr) {
                    DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
                    DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
                    DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
-                   DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
-                   DISubroutineTypeAttr>(attr);
+                   DINullTypeAttr, DIStringTypeAttr, DISubprogramAttr,
+                   DISubrangeAttr, DISubroutineTypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -88,7 +88,8 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 
 bool DITypeAttr::classof(Attribute attr) {
   return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
+                   DIDerivedTypeAttr, DIStringTypeAttr, DISubroutineTypeAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
