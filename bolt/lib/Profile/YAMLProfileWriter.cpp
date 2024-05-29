@@ -69,9 +69,15 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),
              std::back_inserter(Order));
 
+  std::unordered_map<const BinaryBasicBlock *, unsigned> LayoutIndices;
+  for (auto It : llvm::enumerate(Order))
+    LayoutIndices[It.value()] = It.index();
+
   for (const BinaryBasicBlock *BB : Order) {
     yaml::bolt::BinaryBasicBlockProfile YamlBB;
-    YamlBB.Index = BB->getLayoutIndex();
+    auto LayoutIndicesIt = LayoutIndices.find(BB);
+    assert(LayoutIndicesIt != LayoutIndices.end());
+    YamlBB.Index = LayoutIndicesIt->second;
     YamlBB.NumInstructions = BB->getNumNonPseudos();
     YamlBB.Hash = BB->getHash();
 
@@ -160,10 +166,11 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
     auto BranchInfo = BB->branch_info_begin();
     for (const BinaryBasicBlock *Successor : BB->successors()) {
       yaml::bolt::SuccessorInfo YamlSI;
-      YamlSI.Index = Successor->getLayoutIndex();
+      LayoutIndicesIt = LayoutIndices.find(Successor);
+      assert(LayoutIndicesIt != LayoutIndices.end());
+      YamlSI.Index = LayoutIndicesIt->second;
       YamlSI.Count = BranchInfo->Count;
       YamlSI.Mispreds = BranchInfo->MispredictedCount;
-
       YamlBB.Successors.emplace_back(YamlSI);
 
       ++BranchInfo;
