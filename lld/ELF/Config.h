@@ -217,6 +217,7 @@ struct Config {
   bool allowMultipleDefinition;
   bool fatLTOObjects;
   bool androidPackDynRelocs = false;
+  bool armThumbPLTs = false;
   bool armHasBlx = false;
   bool armHasMovtMovw = false;
   bool armJ1J2BranchEncoding = false;
