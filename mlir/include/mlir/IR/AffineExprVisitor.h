@@ -418,15 +418,15 @@ protected:
                                              AffineExpr localExpr);
 
 private:
-  /// Adds `expr`, which may be mod, ceildiv, floordiv or mod expression
+  /// Adds `localExpr`, which may be mod, ceildiv, floordiv or mod expression
   /// representing the affine expression corresponding to the quantifier
-  /// introduced as the local variable corresponding to `expr`. If the
+  /// introduced as the local variable corresponding to `localExpr`. If the
   /// quantifier is already present, we put the coefficient in the proper index
   /// of `result`, otherwise we add a new local variable and put the coefficient
   /// there.
-  LogicalResult addLocalVariableSemiAffine(AffineExpr expr,
-                                           ArrayRef<int64_t> lhs,
+  LogicalResult addLocalVariableSemiAffine(ArrayRef<int64_t> lhs,
                                            ArrayRef<int64_t> rhs,
+                                           AffineExpr localExpr,
                                            SmallVectorImpl<int64_t> &result,
                                            unsigned long resultSize);
 

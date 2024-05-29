@@ -1248,7 +1248,7 @@ LogicalResult SimpleAffineExprFlattener::visitMulExpr(AffineBinaryOpExpr expr) {
                                              localExprs, context);
     AffineExpr b = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                              localExprs, context);
-    return addLocalVariableSemiAffine(a * b, mulLhs, rhs, lhs, lhs.size());
+    return addLocalVariableSemiAffine(mulLhs, rhs, a * b, lhs, lhs.size());
   }
 
   // Get the RHS constant.
@@ -1301,7 +1301,7 @@ LogicalResult SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
     AffineExpr divisorExpr = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                                        localExprs, context);
     AffineExpr modExpr = dividendExpr % divisorExpr;
-    return addLocalVariableSemiAffine(modExpr, modLhs, rhs, lhs, lhs.size());
+    return addLocalVariableSemiAffine(modLhs, rhs, modExpr, lhs, lhs.size());
   }
 
   int64_t rhsConst = rhs[getConstantIndex()];
@@ -1386,13 +1386,13 @@ SimpleAffineExprFlattener::visitConstantExpr(AffineConstantExpr expr) {
 }
 
 LogicalResult SimpleAffineExprFlattener::addLocalVariableSemiAffine(
-    AffineExpr expr, ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs,
+    ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs, AffineExpr localExpr,
     SmallVectorImpl<int64_t> &result, unsigned long resultSize) {
   assert(result.size() == resultSize &&
          "`result` vector passed is not of correct size");
   int loc;
-  if ((loc = findLocalId(expr)) == -1) {
-    if (failed(addLocalIdSemiAffine(lhs, rhs, expr)))
+  if ((loc = findLocalId(localExpr)) == -1) {
+    if (failed(addLocalIdSemiAffine(lhs, rhs, localExpr)))
       return failure();
   }
   std::fill(result.begin(), result.end(), 0);
@@ -1435,7 +1435,7 @@ LogicalResult SimpleAffineExprFlattener::visitDivExpr(AffineBinaryOpExpr expr,
     AffineExpr b = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                              localExprs, context);
     AffineExpr divExpr = isCeil ? a.ceilDiv(b) : a.floorDiv(b);
-    return addLocalVariableSemiAffine(divExpr, divLhs, rhs, lhs, lhs.size());
+    return addLocalVariableSemiAffine(divLhs, rhs, divExpr, lhs, lhs.size());
   }
 
   // This is a pure affine expr; the RHS is a positive constant.
