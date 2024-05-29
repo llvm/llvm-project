@@ -630,7 +630,7 @@ enum RankFlags {
   RF_BSS = 1 << 7,
 };
 
-static unsigned getSectionRank(OutputSection &osec) {
+unsigned elf::getSectionRank(OutputSection &osec) {
   unsigned rank = osec.partition * RF_PARTITION;
 
   // We want to put section specified by -T option first, so we
