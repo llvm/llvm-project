@@ -75,15 +75,15 @@ _Complex long double pass_complex_longdouble(_Complex long double arg) { return 
 // Verify that the following are complex-like types
 struct complexlike_float { float re, im; };
 struct complexlike_float pass_complexlike_float(struct complexlike_float arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_float @pass_complexlike_float({ float, float } %{{.*}})
+// CHECK-LABEL: define { float, float } @pass_complexlike_float({ float, float } %{{.*}})
 
 struct complexlike_double { double re, im; };
 struct complexlike_double pass_complexlike_double(struct complexlike_double arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_double @pass_complexlike_double({ double, double } %{{.*}})
+// CHECK-LABEL: define { double, double } @pass_complexlike_double({ double, double } %{{.*}})
 
 struct complexlike_longdouble { long double re, im; };
 struct complexlike_longdouble pass_complexlike_longdouble(struct complexlike_longdouble arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_longdouble @pass_complexlike_longdouble({ fp128, fp128 } %{{.*}})
+// CHECK-LABEL: define { fp128, fp128 } @pass_complexlike_longdouble({ fp128, fp128 } %{{.*}})
 
 struct single_element_float { float f; };
 struct complexlike_struct {
@@ -91,7 +91,7 @@ struct complexlike_struct {
   struct single_element_float y;
 };
 struct complexlike_struct pass_complexlike_struct(struct complexlike_struct arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_struct @pass_complexlike_struct({ float, float } %{{.*}})
+// CHECK-LABEL: define { float, float } @pass_complexlike_struct({ float, float } %{{.*}})
 
 struct single_element_float_arr {
   unsigned int :0;
@@ -102,7 +102,7 @@ struct complexlike_struct2 {
   struct single_element_float_arr y;
 };
 struct complexlike_struct2 pass_complexlike_struct2(struct complexlike_struct2 arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_struct2 @pass_complexlike_struct2({ float, float } %{{.*}})
+// CHECK-LABEL: define { float, float } @pass_complexlike_struct2({ float, float } %{{.*}})
 
 struct float_and_empties {
   struct S {} s;
@@ -114,7 +114,7 @@ struct complexlike_struct3 {
   struct float_and_empties y;
 };
 struct complexlike_struct3 pass_complexlike_struct3(struct complexlike_struct3 arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_struct3 @pass_complexlike_struct3({ float, float } %{{.*}})
+// CHECK-LABEL: define { float, float } @pass_complexlike_struct3({ float, float } %{{.*}})
 
 
 
