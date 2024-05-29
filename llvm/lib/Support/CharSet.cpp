@@ -172,10 +172,34 @@ CharSetConverterICU::convert(StringRef Source,
 
 #elif defined(HAVE_ICONV)
 class CharSetConverterIconv : public details::CharSetConverterImplBase {
-  iconv_t ConvDesc;
+  class UniqueIconvT {
+    iconv_t ConvDesc;
+
+  public:
+    operator iconv_t() const { return ConvDesc; }
+    UniqueIconvT(iconv_t CD) : ConvDesc(CD) {}
+    ~UniqueIconvT() {
+      if (ConvDesc != (iconv_t)-1) {
+        iconv_close(ConvDesc);
+        ConvDesc = (iconv_t)-1;
+      }
+    }
+    UniqueIconvT(UniqueIconvT &&Other) : ConvDesc(Other.ConvDesc) {
+      Other.ConvDesc = (iconv_t)-1;
+    }
+    UniqueIconvT &operator=(UniqueIconvT &&Other) {
+      if (&Other != this) {
+        ConvDesc = Other.ConvDesc;
+        Other.ConvDesc = (iconv_t)-1;
+      }
+      return *this;
+    }
+  };
+  UniqueIconvT ConvDesc;
 
 public:
-  CharSetConverterIconv(iconv_t ConvDesc) : ConvDesc(ConvDesc) {}
+  CharSetConverterIconv(UniqueIconvT ConvDesc)
+      : ConvDesc(std::move(ConvDesc)) {}
 
   std::error_code convert(StringRef Source,
                           SmallVectorImpl<char> &Result) const override;
@@ -184,19 +208,16 @@ public:
 std::error_code
 CharSetConverterIconv::convert(StringRef Source,
                                SmallVectorImpl<char> &Result) const {
-  // Setup the input. Use nullptr to reset iconv state if input length is zero.
-  size_t InputLength = Source.size();
-  char *Input = InputLength ? const_cast<char *>(Source.data()) : nullptr;
   // Setup the output. We directly write into the SmallVector.
-  Result.resize_for_overwrite(Source.size());
   size_t Capacity = Result.capacity();
   char *Output = static_cast<char *>(Result.data());
   size_t OutputLength = Capacity;
+  Result.resize_for_overwrite(Capacity);
 
   size_t Ret;
-
   // Handle errors returned from iconv().
-  auto HandleError = [&Capacity, &Output, &OutputLength, &Result](size_t Ret) {
+  auto HandleError = [&Capacity, &Output, &OutputLength, &Result,
+                      this](size_t Ret) {
     if (Ret == static_cast<size_t>(-1)) {
       // An error occured. Check if we can gracefully handle it.
       if (errno == E2BIG && Capacity < std::numeric_limits<size_t>::max()) {
@@ -217,14 +238,26 @@ CharSetConverterIconv::convert(StringRef Source,
     }
   };
 
-  // Convert the string.
-  while ((Ret = iconv(ConvDesc, &Input, &InputLength, &Output, &OutputLength)))
-    if (auto EC = HandleError(Ret))
-      return EC;
-  // Flush the converter
-  while ((Ret = iconv(ConvDesc, nullptr, nullptr, &Output, &OutputLength)))
-    if (auto EC = HandleError(Ret))
-      return EC;
+  do {
+    // Setup the input. Use nullptr to reset iconv state if input length is
+    // zero.
+    size_t InputLength = Source.size();
+    char *Input = InputLength ? const_cast<char *>(Source.data()) : nullptr;
+    Ret = iconv(ConvDesc, &Input, &InputLength, &Output, &OutputLength);
+    if (Ret != 0) {
+      if (auto EC = HandleError(Ret))
+        return EC;
+      continue;
+    }
+    // Flush the converter
+    Ret = iconv(ConvDesc, nullptr, nullptr, &Output, &OutputLength);
+    if (Ret != 0) {
+      if (auto EC = HandleError(Ret))
+        return EC;
+      continue;
+    }
+    break;
+  } while (true);
 
   // Re-adjust size to actual size.
   Result.resize(Capacity - OutputLength);
