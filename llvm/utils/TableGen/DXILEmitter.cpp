@@ -19,11 +19,8 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/DXILABI.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/VersionTuple.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-
 #include <string>
 #include <vector>
 
