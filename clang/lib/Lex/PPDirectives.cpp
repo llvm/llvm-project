@@ -3957,8 +3957,8 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   std::optional<LexEmbedParametersResult> Params =
       LexEmbedParameters(CurTok, /*ForHasEmbed=*/false);
 
-  assert(Params || CurTok.is(tok::eod) &&
-                       "expected success or to be at the end of the directive");
+  assert((Params || CurTok.is(tok::eod)) &&
+         "expected success or to be at the end of the directive");
   if (!Params)
     return;
 
