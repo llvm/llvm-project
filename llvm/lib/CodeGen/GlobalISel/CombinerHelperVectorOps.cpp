@@ -144,59 +144,6 @@ bool CombinerHelper::matchExtractVectorElementWithDifferentIndices(
   return false;
 }
 
-bool CombinerHelper::matchExtractVectorElementWithFreeze(
-    const MachineOperand &MO, BuildFnTy &MatchInfo) {
-  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
-  GExtractVectorElement *Extract = cast<GExtractVectorElement>(Root);
-
-  Register Vector = Extract->getVectorReg();
-
-  //
-  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
-  //  %freeze:_(<2 x s32>) = G_FREEZE %bv(<2 x s32>)
-  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %opaque(s64)
-  //
-  //  -->
-  //
-  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
-  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %opaque(s64)
-  //  %freeze:_(s32) = G_FREEZE %extract(s32)
-  //
-  //
-
-  // For G_FREEZE, the input and the output types are identical. Moving the
-  // freeze from the Vector into the front of the extract preserves the freeze
-  // semantics. The result is still freeze'd. Furthermore, the Vector register
-  // becomes easier to analyze. A build vector could have been hidden behind the
-  // freeze.
-
-  // We expect a freeze on the Vector register.
-  GFreeze *Freeze = getOpcodeDef<GFreeze>(Vector, MRI);
-  if (!Freeze)
-    return false;
-
-  Register Dst = Extract->getReg(0);
-  LLT DstTy = MRI.getType(Dst);
-
-  // We first have to check for one-use and legality of the freeze.
-  // The type of the extractVectorElement did not change.
-  if (!MRI.hasOneNonDBGUse(Freeze->getReg(0)) ||
-      !isLegalOrBeforeLegalizer({TargetOpcode::G_FREEZE, {DstTy}}))
-    return false;
-
-  Register Index = Extract->getIndexReg();
-
-  // We move the freeze from the Vector register in front of the
-  // extractVectorElement.
-  MatchInfo = [=](MachineIRBuilder &B) {
-    auto Extract =
-        B.buildExtractVectorElement(DstTy, Freeze->getSourceReg(), Index);
-    B.buildFreeze(Dst, Extract);
-  };
-
-  return true;
-}
-
 bool CombinerHelper::matchExtractVectorElementWithBuildVector(
     const MachineOperand &MO, BuildFnTy &MatchInfo) {
   MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
