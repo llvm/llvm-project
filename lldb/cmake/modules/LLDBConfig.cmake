@@ -187,24 +187,18 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/../clang/include")
 # form -W<foo>, and if supported, add the corresponding -Wno-<foo> option.
 
 # Disable GCC warnings
-check_cxx_compiler_flag("-Wdeprecated-declarations" CXX_SUPPORTS_DEPRECATED_DECLARATIONS)
-append_if(CXX_SUPPORTS_DEPRECATED_DECLARATIONS "-Wno-deprecated-declarations" CMAKE_CXX_FLAGS)
-
-check_cxx_compiler_flag("-Wunknown-pragmas" CXX_SUPPORTS_UNKNOWN_PRAGMAS)
-append_if(CXX_SUPPORTS_UNKNOWN_PRAGMAS "-Wno-unknown-pragmas" CMAKE_CXX_FLAGS)
-
-check_cxx_compiler_flag("-Wstrict-aliasing" CXX_SUPPORTS_STRICT_ALIASING)
-append_if(CXX_SUPPORTS_STRICT_ALIASING "-Wno-strict-aliasing" CMAKE_CXX_FLAGS)
+append("-Wno-deprecated-declarations" CMAKE_CXX_FLAGS)
+append("-Wno-unknown-pragmas" CMAKE_CXX_FLAGS)
+append("-Wno-strict-aliasing" CMAKE_CXX_FLAGS)
 
 check_cxx_compiler_flag("-Wstringop-truncation" CXX_SUPPORTS_STRINGOP_TRUNCATION)
 append_if(CXX_SUPPORTS_STRINGOP_TRUNCATION "-Wno-stringop-truncation" CMAKE_CXX_FLAGS)
 
 # Disable Clang warnings
-check_cxx_compiler_flag("-Wdeprecated-register" CXX_SUPPORTS_DEPRECATED_REGISTER)
-append_if(CXX_SUPPORTS_DEPRECATED_REGISTER "-Wno-deprecated-register" CMAKE_CXX_FLAGS)
-
-check_cxx_compiler_flag("-Wvla-extension" CXX_SUPPORTS_VLA_EXTENSION)
-append_if(CXX_SUPPORTS_VLA_EXTENSION "-Wno-vla-extension" CMAKE_CXX_FLAGS)
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  append("-Wno-deprecated-register" CMAKE_CXX_FLAGS)
+  append("-Wno-vla-extension" CMAKE_CXX_FLAGS)
+endif()
 
 # Disable MSVC warnings
 if( MSVC )
@@ -272,7 +266,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 
   add_custom_target(lldb-headers)
-  set_target_properties(lldb-headers PROPERTIES FOLDER "lldb misc")
+  set_target_properties(lldb-headers PROPERTIES FOLDER "LLDB/Resources")
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_llvm_install_targets(install-lldb-headers

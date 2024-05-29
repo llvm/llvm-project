@@ -1549,8 +1549,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     return PoisonValue::get(GEPTy);
 
   if (isa<UndefValue>(C))
-    // If inbounds, we can choose an out-of-bounds pointer as a base pointer.
-    return InBounds ? PoisonValue::get(GEPTy) : UndefValue::get(GEPTy);
+    return UndefValue::get(GEPTy);
 
   auto IsNoOp = [&]() {
     // Avoid losing inrange information.
@@ -1721,8 +1720,9 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     if (auto *GV = dyn_cast<GlobalVariable>(C))
       if (!GV->hasExternalWeakLinkage() && GV->getValueType() == PointeeTy &&
           isInBoundsIndices(Idxs))
-        return ConstantExpr::getGetElementPtr(PointeeTy, C, Idxs,
-                                              /*InBounds=*/true, InRange);
+        // TODO(gep_nowrap): Can also set NUW here.
+        return ConstantExpr::getGetElementPtr(
+            PointeeTy, C, Idxs, GEPNoWrapFlags::inBounds(), InRange);
 
   return nullptr;
 }

@@ -881,17 +881,17 @@ multiclass VPatMultiplyAddSDNode_VV_VX<SDNode op, string instruction_name> {
   }
 }
 
-multiclass VPatAVGADD_VV_VX_RM<SDNode vop, int vxrm> {
+multiclass VPatAVGADD_VV_VX_RM<SDNode vop, int vxrm, string suffix = ""> {
   foreach vti = AllIntegerVectors in {
     let Predicates = GetVTypePredicates<vti>.Predicates in {
       def : Pat<(vop (vti.Vector vti.RegClass:$rs1),
                      (vti.Vector vti.RegClass:$rs2)),
-                (!cast<Instruction>("PseudoVAADDU_VV_"#vti.LMul.MX)
+                (!cast<Instruction>("PseudoVAADD"#suffix#"_VV_"#vti.LMul.MX)
                   (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, vti.RegClass:$rs2,
                   vxrm, vti.AVL, vti.Log2SEW, TA_MA)>;
       def : Pat<(vop (vti.Vector vti.RegClass:$rs1),
                      (vti.Vector (SplatPat (XLenVT GPR:$rs2)))),
-                (!cast<Instruction>("PseudoVAADDU_VX_"#vti.LMul.MX)
+                (!cast<Instruction>("PseudoVAADD"#suffix#"_VX_"#vti.LMul.MX)
                   (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, GPR:$rs2,
                   vxrm, vti.AVL, vti.Log2SEW, TA_MA)>;
     }
@@ -1163,8 +1163,10 @@ defm : VPatBinarySDNode_VV_VX<ssubsat, "PseudoVSSUB">;
 defm : VPatBinarySDNode_VV_VX<usubsat, "PseudoVSSUBU">;
 
 // 12.2. Vector Single-Width Averaging Add and Subtract
-defm : VPatAVGADD_VV_VX_RM<avgflooru, 0b10>;
-defm : VPatAVGADD_VV_VX_RM<avgceilu, 0b00>;
+defm : VPatAVGADD_VV_VX_RM<avgfloors, 0b10>;
+defm : VPatAVGADD_VV_VX_RM<avgflooru, 0b10, suffix = "U">;
+defm : VPatAVGADD_VV_VX_RM<avgceils, 0b00>;
+defm : VPatAVGADD_VV_VX_RM<avgceilu, 0b00, suffix = "U">;
 
 // 12.5. Vector Narrowing Fixed-Point Clip Instructions
 multiclass VPatTruncSatClipSDNode<VTypeInfo vti, VTypeInfo wti> {
@@ -1192,13 +1194,6 @@ multiclass VPatTruncSatClipSDNode<VTypeInfo vti, VTypeInfo wti> {
           (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), smaxval, (XLenVT srcvalue))))),
         (vti.Mask V0), VLOpFrag)),
       (!cast<Instruction>("PseudoVNCLIP_WI_"#vti.LMul.MX#"_MASK")
-        (vti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs1, 0,
-        (vti.Mask V0), 0, GPR:$vl, vti.Log2SEW, TA_MA)>;
-
-    def : Pat<(vti.Vector (riscv_trunc_vector_vl
-        (wti.Vector (umin (wti.Vector wti.RegClass:$rs1),
-          (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), uminval, (XLenVT srcvalue))))), (vti.Mask V0), VLOpFrag)),
-      (!cast<Instruction>("PseudoVNCLIPU_WI_"#vti.LMul.MX#"_MASK")
         (vti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs1, 0,
         (vti.Mask V0), 0, GPR:$vl, vti.Log2SEW, TA_MA)>;
   }

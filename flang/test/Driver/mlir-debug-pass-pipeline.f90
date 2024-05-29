@@ -25,7 +25,14 @@ end program
 ! ALL: Pass statistics report
 
 ! ALL: Fortran::lower::VerifierPass
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: 'fir.global' Pipeline
+! ALL-NEXT:   InlineElementals
 ! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT:   InlineElementals
+! ALL-NEXT: 'omp.declare_reduction' Pipeline
+! ALL-NEXT:   InlineElementals
+! ALL-NEXT: 'omp.private' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT: LowerHLFIROrderedAssignments
 ! ALL-NEXT: LowerHLFIRIntrinsics
@@ -66,6 +73,7 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: PolymorphicOpConversion
+! ALL-NEXT: AssumedRankOpConversion
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
