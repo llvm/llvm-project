@@ -865,7 +865,7 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
 
   if ((II.isModulesDeclaration() || Identifier.is(tok::kw_module)) &&
       !InMacroArgs && !DisableMacroExpansion &&
-      (getLangOpts().Modules || getLangOpts().DebuggerSupport) &&
+      (getLangOpts().CPlusPlusModules || getLangOpts().DebuggerSupport) &&
       CurLexerCallback != CLK_CachingLexer) {
     ModuleDeclarationExpectsIdentifier = true;
     ModuleDeclarationLexingPartitionName = false;
@@ -1415,24 +1415,6 @@ bool Preprocessor::LexAfterModuleDecl(Token &Result) {
     ModuleDeclarationExpectsIdentifier = false;
     Diag(Result, diag::err_unxepected_paren_in_module_decl)
         << ModuleDeclarationLexingPartitionName;
-
-    // Skip until see one of module name separator '.', ':' or ';'.
-    Token Tok;
-    // We already have a '('.
-    unsigned NumParens = 1;
-    while (true) {
-      LexUnexpandedToken(Tok);
-      if (Tok.isOneOf(tok::eod, tok::eof, tok::semi, tok::period, tok::colon)) {
-        EnterTokens(Tok, /*DisableMacroExpansion=*/true);
-        break;
-      }
-      if (Tok.is(tok::l_paren))
-        NumParens++;
-      else if (Tok.is(tok::r_paren) && --NumParens == 0)
-        break;
-    }
-    CurLexerCallback = CLK_LexAfterModuleDecl;
-    return false;
   }
 
   return true;

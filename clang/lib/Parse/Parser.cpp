@@ -2693,8 +2693,17 @@ bool Parser::ParseModuleName(
     Path.push_back(std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
     ConsumeToken();
 
-    if (!TryConsumeToken(tok::period))
+    if (!TryConsumeToken(tok::period)) {
+      // [cpp.module]/p2: where the pp-tokens (if any) shall not begin with a (
+      // preprocessing token [...]
+      //
+      // We already diagnose in preprocessor and just skip to semicolon.
+      if (Tok.is(tok::l_paren)) {
+        SkipUntil(tok::semi, StopBeforeMatch);
+        return true;
+      }
       return false;
+    }
   }
 }
 

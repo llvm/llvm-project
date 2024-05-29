@@ -39,19 +39,17 @@ export module A.B;      // expected-error {{the module name in a module declarat
                         // expected-error {{the module name in a module declaration cannot contain an object-like macro 'B'}}
 
 //--- C.cppm
-module;
+module;                             // expected-error {{missing 'module' declaration at end of global module fragment introduced here}}
 #include "version.h"
 export module A.FUNC_LIKE(foo):C;   // expected-error {{the module name in a module declaration cannot contain an object-like macro 'A'}} \
-                                    // expected-error {{unexpected '(' after the module name in a module declaration}} \
-                                    // expected-error {{the module name in a module partition declaration cannot contain an object-like macro 'C'}}
+                                    // expected-error {{unexpected '(' after the module name in a module declaration}}
 
 //--- D.cppm
-module;
+module;                               // expected-error {{missing 'module' declaration at end of global module fragment introduced here}}
 #include "version.h"
 export module B.A.FUNC_LIKE(bar):C;   // expected-error {{the module name in a module declaration cannot contain an object-like macro 'B'}} \
                                       // expected-error {{the module name in a module declaration cannot contain an object-like macro 'A'}} \
-                                      // expected-error {{unexpected '(' after the module name in a module declaration}} \
-                                      // expected-error {{the module name in a module partition declaration cannot contain an object-like macro 'C'}}
+                                      // expected-error {{unexpected '(' after the module name in a module declaration}}
 
 //--- E.cppm
 module;
@@ -66,29 +64,22 @@ export module a.FUNC_LIKE:c ATTRS; // OK, FUNC_LIKE would not be treated as a ma
 // expected-no-diagnostics
 
 //--- G.cppm
-module;
+module;                               // expected-error {{missing 'module' declaration at end of global module fragment introduced here}}
 #include "version.h"
 export module A.FUNC_LIKE(B c:C ATTRS // expected-error {{the module name in a module declaration cannot contain an object-like macro 'A'}} \
-                                      // expected-error {{unexpected '(' after the module name in a module declaration}} \
-                                      // expected-error {{the module name in a module partition declaration cannot contain an object-like macro 'C'}} \
-                                      // expected-error {{expected ';' after module name}}
+                                      // expected-error {{unexpected '(' after the module name in a module declaration}}
 
 //--- H.cppm
-module;
+module;                                   // expected-error {{missing 'module' declaration at end of global module fragment introduced here}}
 #include "version.h"
 export module A.FUNC_LIKE(B,). c:C ATTRS  // expected-error {{the module name in a module declaration cannot contain an object-like macro 'A'}} \
-                                          // expected-error {{unexpected '(' after the module name in a module declaration}} \
-                                          // expected-error {{the module name in a module partition declaration cannot contain an object-like macro 'C'}} \
-                                          // expected-error {{expected ';' after module name}}
+                                          // expected-error {{unexpected '(' after the module name in a module declaration}}
 
 //--- I.cppm
-module;
+module;                                   // expected-error {{missing 'module' declaration at end of global module fragment introduced here}}
 #include "version.h"
 export module A.FUNC_LIKE(B,) c:C ATTRS   // expected-error {{the module name in a module declaration cannot contain an object-like macro 'A'}} \
-                                          // expected-error {{unexpected '(' after the module name in a module declaration}} \
-                                          // expected-error {{expected ';' after module name}} \
-                                          // expected-error {{unknown type name 'c'}} \
-                                          // expected-error {{expected unqualified-id}}
+                                          // expected-error {{unexpected '(' after the module name in a module declaration}}
 
 //--- J.cppm
 module;
