@@ -4427,7 +4427,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   const PointerType *pointerType = Ptr->getType()->getAs<PointerType>();
   if (!pointerType) {
     Diag(ExprRange.getBegin(), diag::err_atomic_builtin_must_be_pointer)
-        << Ptr->getType() << Ptr->getSourceRange();
+        << Ptr->getType() << 0 << Ptr->getSourceRange();
     return ExprError();
   }
 
@@ -4454,6 +4454,13 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
           << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
+  }
+
+  // Pointer to object of size zero is not allowed.
+  if (Context.getTypeInfoInChars(AtomTy).Width.isZero()) {
+    Diag(ExprRange.getBegin(), diag::err_atomic_builtin_must_be_pointer)
+        << Ptr->getType() << 1 << Ptr->getSourceRange();
+    return ExprError();
   }
 
   // For an arithmetic operation, the implied arithmetic must be well-formed.
@@ -4818,7 +4825,7 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
   const PointerType *pointerType = FirstArg->getType()->getAs<PointerType>();
   if (!pointerType) {
     Diag(DRE->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer)
-        << FirstArg->getType() << FirstArg->getSourceRange();
+        << FirstArg->getType() << 0 << FirstArg->getSourceRange();
     return ExprError();
   }
 
@@ -4826,7 +4833,7 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
   if (!ValType->isIntegerType() && !ValType->isAnyPointerType() &&
       !ValType->isBlockPointerType()) {
     Diag(DRE->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer_intptr)
-        << FirstArg->getType() << FirstArg->getSourceRange();
+        << FirstArg->getType() << 0 << FirstArg->getSourceRange();
     return ExprError();
   }
 
