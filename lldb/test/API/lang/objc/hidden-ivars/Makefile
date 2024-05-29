@@ -14,8 +14,8 @@ endif
 
 stripped: a.out libInternalDefiner.dylib
 	mkdir stripped
-	strip -Sx a.out -o stripped/a.out
-	strip -Sx libInternalDefiner.dylib -o stripped/libInternalDefiner.dylib
+	$(STRIP) -Sx a.out -o stripped/a.out
+	$(STRIP) -Sx libInternalDefiner.dylib -o stripped/libInternalDefiner.dylib
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -fs - stripped/a.out
 endif

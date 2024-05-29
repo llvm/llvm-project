@@ -10,4 +10,4 @@ all: a.out a.out-stripped
 
 a.out-stripped:
 	cp a.out a.out-stripped
-	strip -N a.out-stripped
+	$(STRIP) -N a.out-stripped
