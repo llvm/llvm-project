@@ -2408,9 +2408,11 @@ Expr *VarDecl::getInit() {
     return cast<Expr>(S);
 
   auto *Eval = getEvaluatedStmt();
-  return cast<Expr>(Eval->Value.isOffset()
-                        ? Eval->Value.get(getASTContext().getExternalSource())
-                        : Eval->Value.get(nullptr));
+
+  return cast_or_null<Expr>(
+      Eval->Value.isOffset()
+          ? Eval->Value.get(getASTContext().getExternalSource())
+          : Eval->Value.get(nullptr));
 }
 
 Stmt **VarDecl::getInitAddress() {
