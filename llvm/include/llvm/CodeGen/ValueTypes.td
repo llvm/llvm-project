@@ -18,11 +18,11 @@ class ValueType<int size, int value> {
   int Value = value;
   int nElem = 1;
   ValueType ElementType = ?;
-  int isOverloaded = false;
-  int isInteger = false;
-  int isFP = false;
-  int isVector = false;
-  int isScalable = false;
+  bit isOverloaded = false;
+  bit isInteger = false;
+  bit isFP = false;
+  bit isVector = false;
+  bit isScalable = false;
 }
 
 class VTAny<int value> : ValueType<0, value> {
