@@ -44,12 +44,17 @@ TimeICF("time-icf",
   cl::cat(BoltOptCategory));
 } // namespace opts
 
+using LayoutIndiciesMapTy =
+    std::unordered_map<const BinaryBasicBlock *, unsigned>;
+
 /// Compare two jump tables in 2 functions. The function relies on consistent
 /// ordering of basic blocks in both binary functions (e.g. DFS).
 static bool equalJumpTables(const JumpTable &JumpTableA,
                             const JumpTable &JumpTableB,
                             const BinaryFunction &FunctionA,
-                            const BinaryFunction &FunctionB) {
+                            const BinaryFunction &FunctionB,
+                            const LayoutIndiciesMapTy &LayoutIndiciesA,
+                            const LayoutIndiciesMapTy &LayoutIndiciesB) {
   if (JumpTableA.EntrySize != JumpTableB.EntrySize)
     return false;
 
@@ -80,7 +85,15 @@ static bool equalJumpTables(const JumpTable &JumpTableA,
 
     assert(TargetA && TargetB && "cannot locate target block(s)");
 
-    if (TargetA->getLayoutIndex() != TargetB->getLayoutIndex())
+    auto LayoutIndiciesAIt = LayoutIndiciesA.find(TargetA);
+    assert(LayoutIndiciesAIt != LayoutIndiciesA.end());
+    unsigned TargetALayoutIndex = LayoutIndiciesAIt->second;
+
+    auto LayoutIndiciesBIt = LayoutIndiciesB.find(TargetB);
+    assert(LayoutIndiciesBIt != LayoutIndiciesB.end());
+    unsigned TargetBLayoutIndex = LayoutIndiciesBIt->second;
+
+    if (TargetALayoutIndex != TargetBLayoutIndex)
       return false;
   }
 
@@ -91,10 +104,11 @@ static bool equalJumpTables(const JumpTable &JumpTableA,
 /// given instruction of the given function. The functions should have
 /// identical CFG.
 template <class Compare>
-static bool isInstrEquivalentWith(const MCInst &InstA,
-                                  const BinaryBasicBlock &BBA,
-                                  const MCInst &InstB,
-                                  const BinaryBasicBlock &BBB, Compare Comp) {
+static bool
+isInstrEquivalentWith(const MCInst &InstA, const BinaryBasicBlock &BBA,
+                      const MCInst &InstB, const BinaryBasicBlock &BBB,
+                      Compare Comp, const LayoutIndiciesMapTy &LayoutIndiciesA,
+                      const LayoutIndiciesMapTy &LayoutIndiciesB) {
   if (InstA.getOpcode() != InstB.getOpcode())
     return false;
 
@@ -133,7 +147,15 @@ static bool isInstrEquivalentWith(const MCInst &InstA,
         const BinaryBasicBlock *LPB = BBB.getLandingPad(EHInfoB->first);
         assert(LPA && LPB && "cannot locate landing pad(s)");
 
-        if (LPA->getLayoutIndex() != LPB->getLayoutIndex())
+        auto LayoutIndiciesAIt = LayoutIndiciesA.find(LPA);
+        assert(LayoutIndiciesAIt != LayoutIndiciesA.end());
+        unsigned LPALayoutIndex = LayoutIndiciesAIt->second;
+
+        auto LayoutIndiciesBIt = LayoutIndiciesB.find(LPB);
+        assert(LayoutIndiciesBIt != LayoutIndiciesB.end());
+        unsigned LPBLayoutIndex = LayoutIndiciesBIt->second;
+
+        if (LPALayoutIndex != LPBLayoutIndex)
           return false;
       }
     }
@@ -177,6 +199,14 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
     copy(A.getLayout().blocks(), std::back_inserter(OrderA));
     copy(B.getLayout().blocks(), std::back_inserter(OrderB));
   }
+  std::unordered_map<const BinaryBasicBlock *, unsigned> LayoutIndiciesA(
+      OrderA.size());
+  std::unordered_map<const BinaryBasicBlock *, unsigned> LayoutIndiciesB(
+      OrderB.size());
+  for (auto [Index, BB] : llvm::enumerate(OrderA))
+    LayoutIndiciesA[BB] = Index;
+  for (auto [Index, BB] : llvm::enumerate(OrderB))
+    LayoutIndiciesB[BB] = Index;
 
   const BinaryContext &BC = A.getBinaryContext();
 
@@ -184,7 +214,15 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
   for (const BinaryBasicBlock *BB : OrderA) {
     const BinaryBasicBlock *OtherBB = *BBI;
 
-    if (BB->getLayoutIndex() != OtherBB->getLayoutIndex())
+    auto LayoutIndiciesAIt = LayoutIndiciesA.find(BB);
+    assert(LayoutIndiciesAIt != LayoutIndiciesA.end());
+    unsigned BBLayoutIndex = LayoutIndiciesAIt->second;
+
+    auto LayoutIndiciesBIt = LayoutIndiciesB.find(OtherBB);
+    assert(LayoutIndiciesBIt != LayoutIndiciesB.end());
+    unsigned OtherBBLayoutIndex = LayoutIndiciesBIt->second;
+
+    if (BBLayoutIndex != OtherBBLayoutIndex)
       return false;
 
     // Compare successor basic blocks.
@@ -195,7 +233,16 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
     auto SuccBBI = OtherBB->succ_begin();
     for (const BinaryBasicBlock *SuccBB : BB->successors()) {
       const BinaryBasicBlock *SuccOtherBB = *SuccBBI;
-      if (SuccBB->getLayoutIndex() != SuccOtherBB->getLayoutIndex())
+
+      LayoutIndiciesAIt = LayoutIndiciesA.find(SuccBB);
+      assert(LayoutIndiciesAIt != LayoutIndiciesA.end());
+      unsigned SuccBBLayoutIndex = LayoutIndiciesAIt->second;
+
+      LayoutIndiciesBIt = LayoutIndiciesB.find(SuccOtherBB);
+      assert(LayoutIndiciesBIt != LayoutIndiciesB.end());
+      unsigned SuccOtherBBLayoutIndex = LayoutIndiciesBIt->second;
+
+      if (SuccBBLayoutIndex != SuccOtherBBLayoutIndex)
         return false;
       ++SuccBBI;
     }
@@ -271,11 +318,13 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
             (SIB->getAddress() - JumpTableB->getAddress()))
           return false;
 
-        return equalJumpTables(*JumpTableA, *JumpTableB, A, B);
+        return equalJumpTables(*JumpTableA, *JumpTableB, A, B, LayoutIndiciesA,
+                               LayoutIndiciesB);
       };
 
       if (!isInstrEquivalentWith(*I, *BB, *OtherI, *OtherBB,
-                                 AreSymbolsIdentical))
+                                 AreSymbolsIdentical, LayoutIndiciesA,
+                                 LayoutIndiciesB))
         return false;
 
       ++I;
@@ -356,10 +405,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
                                         "ICF breakdown", opts::TimeICF);
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
       // Make sure indices are in-order.
-      if (opts::ICFUseDFS)
-        BF.getLayout().update(BF.dfs());
-      else
-        BF.getLayout().updateLayoutIndices();
+      BF.getLayout().updateLayoutIndices();
 
       // Pre-compute hash before pushing into hashtable.
       // Hash instruction operands to minimize hash collisions.
@@ -387,8 +433,6 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
       BinaryFunction &BF = BFI.second;
       if (!this->shouldOptimize(BF))
         continue;
-      if (opts::ICFUseDFS)
-        BF.getLayout().update(BF.dfs());
       CongruentBuckets[&BF].emplace(&BF);
     }
   };
@@ -414,8 +458,6 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
       // Identical functions go into the same bucket.
       IdenticalBucketsMap IdenticalBuckets;
       for (BinaryFunction *BF : Candidates) {
-        if (opts::ICFUseDFS)
-          BF->getLayout().update(BF->dfs());
         IdenticalBuckets[BF].emplace_back(BF);
       }
 
