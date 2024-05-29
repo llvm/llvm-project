@@ -10,6 +10,7 @@ The following convention is followed:
     `emitc.call_opaque` operation, C++11 is required.
 *   If floating-point type template arguments are passed to an `emitc.call_opaque`
     operation, C++20 is required.
+*   If `ssize_t` is used, then the code requires the POSIX header `sys/types.h`,
 *   Else the generated code is compatible with C99.
 
 These restrictions are neither inherent to the EmitC dialect itself nor to the
