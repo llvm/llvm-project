@@ -3588,7 +3588,7 @@ static bool isUndefOrZeroOrInRange(ArrayRef<int> Mask, int Low, int Hi) {
 /// undef.
 LLVM_ATTRIBUTE_UNUSED static bool isBlendOrUndef(ArrayRef<int> Mask) {
   unsigned NumElts = Mask.size();
-  for (auto &[I, M] : enumerate(Mask))
+  for (auto &&[I, M] : enumerate(Mask))
     if (!isUndefOrEqual(M, I) && !isUndefOrEqual(M, I + NumElts))
       return false;
   return true;
