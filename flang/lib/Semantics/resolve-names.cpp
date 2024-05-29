@@ -2263,15 +2263,15 @@ void ScopeHandler::SayWithDecl(const parser::Name &name, Symbol &symbol,
     MessageFixedText &&msg, A &&...args) {
   auto &message{
       Say(name.source, std::move(msg), symbol.name(), std::forward<A>(args)...)
-          .Attach(Message{symbol.name(),
+          .Attach(symbol.name(),
               symbol.test(Symbol::Flag::Implicit)
                   ? "Implicit declaration of '%s'"_en_US
                   : "Declaration of '%s'"_en_US,
-              name.source})};
+              name.source)};
   if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
     if (auto usedAsProc{proc->usedAsProcedureHere()}) {
       if (usedAsProc->begin() != symbol.name().begin()) {
-        message.Attach(Message{*usedAsProc, "Referenced as a procedure"_en_US});
+        message.Attach(*usedAsProc, "Referenced as a procedure"_en_US);
       }
     }
   }
@@ -6470,8 +6470,7 @@ bool DeclarationVisitor::PassesLocalityChecks(
   bool isReduce{flag == Symbol::Flag::LocalityReduce};
   if (IsAllocatable(symbol) && !isReduce) { // F'2023 C1130
     SayWithDecl(name, symbol,
-        "ALLOCATABLE variable '%s' not allowed in a "
-        "LOCAL%s locality-spec"_err_en_US,
+        "ALLOCATABLE variable '%s' not allowed in a LOCAL%s locality-spec"_err_en_US,
         flag == Symbol::Flag::LocalityLocalInit ? "_INIT" : "");
     return false;
   }
@@ -6487,15 +6486,13 @@ bool DeclarationVisitor::PassesLocalityChecks(
   }
   if (IsFinalizable(symbol) && !isReduce) { // F'2023 C1130
     SayWithDecl(name, symbol,
-        "Finalizable variable '%s' not allowed in a "
-        "LOCAL%s locality-spec"_err_en_US,
+        "Finalizable variable '%s' not allowed in a LOCAL%s locality-spec"_err_en_US,
         (flag == Symbol::Flag::LocalityLocalInit) ? "_INIT" : "");
     return false;
   }
   if (evaluate::IsCoarray(symbol) && !isReduce) { // F'2023 C1130
     SayWithDecl(name, symbol,
-        "Coarray '%s' not allowed in a "
-        "LOCAL%s locality-spec"_err_en_US,
+        "Coarray '%s' not allowed in a LOCAL%s locality-spec"_err_en_US,
         (flag == Symbol::Flag::LocalityLocalInit) ? "_INIT" : "");
     return false;
   }
@@ -6503,22 +6500,19 @@ bool DeclarationVisitor::PassesLocalityChecks(
     if (type->IsPolymorphic() && IsDummy(symbol) && !IsPointer(symbol) &&
         !isReduce) { // F'2023 C1130
       SayWithDecl(name, symbol,
-          "Nonpointer polymorphic argument '%s' not "
-          "allowed in a LOCAL%s locality-spec"_err_en_US,
+          "Nonpointer polymorphic argument '%s' not allowed in a LOCAL%s locality-spec"_err_en_US,
           (flag == Symbol::Flag::LocalityLocalInit) ? "_INIT" : "");
       return false;
     }
   }
   if (symbol.attrs().test(Attr::ASYNCHRONOUS) && isReduce) { // F'2023 C1131
     SayWithDecl(name, symbol,
-        "ASYNCHRONOUS variable '%s' not allowed in a "
-        "REDUCE locality-spec"_err_en_US);
+        "ASYNCHRONOUS variable '%s' not allowed in a REDUCE locality-spec"_err_en_US);
     return false;
   }
   if (symbol.attrs().test(Attr::VOLATILE) && isReduce) { // F'2023 C1131
     SayWithDecl(name, symbol,
-        "VOLATILE variable '%s' not allowed in a "
-        "REDUCE locality-spec"_err_en_US);
+        "VOLATILE variable '%s' not allowed in a REDUCE locality-spec"_err_en_US);
     return false;
   }
   if (IsAssumedSizeArray(symbol)) { // F'2023 C1130-C1131
@@ -6529,8 +6523,7 @@ bool DeclarationVisitor::PassesLocalityChecks(
   if (std::optional<Message> whyNot{WhyNotDefinable(
           name.source, currScope(), DefinabilityFlags{}, symbol)}) {
     SayWithReason(name, symbol,
-        "'%s' may not appear in a locality-spec because it is not "
-        "definable"_err_en_US,
+        "'%s' may not appear in a locality-spec because it is not definable"_err_en_US,
         std::move(*whyNot));
     return false;
   }

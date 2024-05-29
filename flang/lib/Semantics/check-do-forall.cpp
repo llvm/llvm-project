@@ -688,23 +688,22 @@ private:
         std::get<parser::ReductionOperator>(reduce.t)};
     // F'2023 C1132, reduction variables should have suitable intrinsic type
     for (const parser::Name &x : std::get<std::list<parser::Name>>(reduce.t)) {
-      bool supported_identifier{false};
+      bool supportedIdentifier{false};
       if (x.symbol && x.symbol->GetType()) {
         const auto *type{x.symbol->GetType()};
-        auto type_mismatch{[&](const char *suitable_types) {
+        auto typeMismatch{[&](const char *suitable_types) {
           context_.Say(currentStatementSourcePosition_,
-              "Reduction variable '%s' ('%s') does not have a "
-              "suitable type ('%s')."_err_en_US,
+              "Reduction variable '%s' ('%s') does not have a suitable type ('%s')."_err_en_US,
               x.symbol->name(), type->AsFortran(), suitable_types);
         }};
-        supported_identifier = true;
+        supportedIdentifier = true;
         switch (reductionOperator.v) {
         case parser::ReductionOperator::Operator::Plus:
         case parser::ReductionOperator::Operator::Multiply:
           if (!(type->IsNumeric(TypeCategory::Complex) ||
                   type->IsNumeric(TypeCategory::Integer) ||
                   type->IsNumeric(TypeCategory::Real))) {
-            type_mismatch("COMPLEX', 'INTEGER', or 'REAL");
+            typeMismatch("COMPLEX', 'INTEGER', or 'REAL");
           }
           break;
         case parser::ReductionOperator::Operator::And:
@@ -712,29 +711,29 @@ private:
         case parser::ReductionOperator::Operator::Eqv:
         case parser::ReductionOperator::Operator::Neqv:
           if (type->category() != DeclTypeSpec::Category::Logical) {
-            type_mismatch("LOGICAL");
+            typeMismatch("LOGICAL");
           }
           break;
         case parser::ReductionOperator::Operator::Max:
         case parser::ReductionOperator::Operator::Min:
           if (!(type->IsNumeric(TypeCategory::Integer) ||
                   type->IsNumeric(TypeCategory::Real))) {
-            type_mismatch("INTEGER', or 'REAL");
+            typeMismatch("INTEGER', or 'REAL");
           }
           break;
         case parser::ReductionOperator::Operator::Iand:
         case parser::ReductionOperator::Operator::Ior:
         case parser::ReductionOperator::Operator::Ieor:
           if (!type->IsNumeric(TypeCategory::Integer)) {
-            type_mismatch("INTEGER");
+            typeMismatch("INTEGER");
           }
           break;
         default:
-          supported_identifier = false;
+          supportedIdentifier = false;
           break;
         }
       }
-      if (!supported_identifier) {
+      if (!supportedIdentifier) {
         context_.Say(currentStatementSourcePosition_,
             "Invalid identifier in REDUCE clause."_err_en_US);
       }

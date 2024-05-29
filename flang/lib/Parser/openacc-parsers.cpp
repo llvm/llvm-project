@@ -92,7 +92,7 @@ TYPE_PARSER(
 TYPE_PARSER(construct<AccCollapseArg>(
     "FORCE:"_tok >> pure(true) || pure(false), scalarIntConstantExpr))
 
-// 2.5.15 Reduction
+// 2.5.15 Reduction, F'2023 R1131, and CUF reduction-op
 // Operator for reduction
 TYPE_PARSER(sourced(construct<ReductionOperator>(
     first("+" >> pure(ReductionOperator::Operator::Plus),
