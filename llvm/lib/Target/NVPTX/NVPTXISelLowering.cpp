@@ -5614,17 +5614,20 @@ static SDValue TryMULWIDECombine(SDNode *N,
   return DCI.DAG.getNode(Opc, DL, MulType, TruncLHS, TruncRHS);
 }
 
+static bool isConstOne(const SDValue &Operand) {
+  const auto *Const = dyn_cast<ConstantSDNode>(Operand);
+  return Const && Const->getZExtValue() == 1;
+}
+
 static SDValue matchMADConstOnePattern(SDValue Add) {
   if (Add->getOpcode() != ISD::ADD)
     return SDValue();
 
-  if (const auto *Const0 = dyn_cast<ConstantSDNode>(Add->getOperand(0)))
-    if (Const0->getZExtValue() == 1)
-      return Add->getOperand(1);
+  if (isConstOne(Add->getOperand(0)))
+    return Add->getOperand(1);
 
-  if (const auto *Const1 = dyn_cast<ConstantSDNode>(Add->getOperand(1)))
-    if (Const1->getZExtValue() == 1)
-      return Add->getOperand(0);
+  if (isConstOne(Add->getOperand(1)))
+    return Add->getOperand(0);
 
   return SDValue();
 }
@@ -5646,14 +5649,13 @@ static SDValue combineMulSelectConstOne(SDValue X, SDValue Select, EVT VT,
 
   SDValue Cond = Select->getOperand(0);
 
-  unsigned ConstOpNo = 1;
-  auto *Const = dyn_cast<ConstantSDNode>(Select->getOperand(ConstOpNo));
-  if (!Const || Const->getZExtValue() != 1) {
+  unsigned ConstOpNo;
+  if (isConstOne(Select->getOperand(1)))
+    ConstOpNo = 1;
+  else if (isConstOne(Select->getOperand(2)))
     ConstOpNo = 2;
-    Const = dyn_cast<ConstantSDNode>(Select->getOperand(ConstOpNo));
-    if (!Const || Const->getZExtValue() != 1)
-      return SDValue();
-  }
+  else
+    return SDValue();
 
   SDValue Y = Select->getOperand((ConstOpNo == 1) ? 2 : 1);
 
