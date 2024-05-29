@@ -11,6 +11,17 @@
 # RUN: ld.lld -shared --orphan-handling=place -o %t.out --script %t.script \
 # RUN:   %t.o 2>&1 -verbose  -error-limit=0 | FileCheck %s --check-prefix=DEFAULT
 
+## Check --orphan-handling=error or =warn do not report errors if no linker
+## script is used.
+# RUN: ld.lld -shared -orphan-handling=error -o /dev/null %t.o 2>&1 | \
+# RUN:   FileCheck %s --allow-empty --check-prefix=DEFAULT
+# RUN: ld.lld -shared -orphan-handling=warn -o /dev/null %t.o 2>&1 | \
+# RUN:   FileCheck %s --allow-empty --check-prefix=DEFAULT
+# RUN: ld.lld -r -orphan-handling=error -o /dev/null %t.o 2>&1 | \
+# RUN:   FileCheck %s --allow-empty --check-prefix=DEFAULT
+# RUN: ld.lld -r -orphan-handling=warn -o /dev/null %t.o 2>&1 | \
+# RUN:   FileCheck %s --allow-empty --check-prefix=DEFAULT
+
 ## Check --orphan-handling=error reports errors about orphans.
 # RUN: not ld.lld --orphan-handling=error -o /dev/null -T %t.script \
 # RUN:   %t.o 2>&1 | FileCheck %s --check-prefixes=COMMON,SYMTAB
