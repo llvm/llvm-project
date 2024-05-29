@@ -28,8 +28,8 @@ template <int x, int y, int z> void test_template_expr(void) __cluster_dims__(x 
 //NS-error@+1 {{__cluster_dims__ is not supported for this GPU architecture}}
 __global__ void __cluster_dims__(32, 2, 4) test_too_large_dim_0() {} // common-error {{integer constant expression evaluates to value 32 that cannot be represented in a 4-bit unsigned integer type}}
 
-// cuda-error@+2 {{Only a maximum of 8 thread blocks in a cluster is supported}}
-// amd-error@+1 {{Only a maximum of 16 thread blocks in a cluster is supported}}
+// cuda-error@+2 {{only a maximum of 8 thread blocks in a cluster is supported}}
+// amd-error@+1 {{only a maximum of 16 thread blocks in a cluster is supported}}
 __global__ void __cluster_dims__(4, 4, 4) test_too_large_dim_1() {} // NS-error {{__cluster_dims__ is not supported for this GPU architecture}}
 
 int none_const_int = 4;

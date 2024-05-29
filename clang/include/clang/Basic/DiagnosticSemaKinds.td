@@ -12171,7 +12171,7 @@ def err_cuda_cluster_dims_not_supported : Error<
 >;
 
 def err_cuda_cluster_dims_too_large : Error<
-  "Only a maximum of %0 thread blocks in a cluster is supported."
+  "only a maximum of %0 thread blocks in a cluster is supported"
 >;
 
 def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
