@@ -35,16 +35,16 @@ invoke.cont:
 ; ICALL-PROM:  [[DIRCALL_RET:%[0-9]+]] = invoke ptr @_ZN1D4funcEv(ptr %call)
 ; ICALL-PROM-NEXT:          to label %if.end.icp unwind label %lpad
 ; ICALL-PROM:if.false.orig_indirect:
-; ICAll-PROM:  %call2 = invoke ptr %tmp3(ptr %call)
-; ICAll-PROM:          to label %invoke.cont1 unwind label %lpad
+; ICALL-PROM:  %call2 = invoke ptr %tmp3(ptr %call)
+; ICALL-PROM:          to label %invoke.cont1 unwind label %lpad
 ; ICALL-PROM:if.end.icp:
 ; ICALL-PROM:  br label %invoke.cont1
   %call2 = invoke ptr %tmp3(ptr %call)
           to label %invoke.cont1 unwind label %lpad, !prof !1
 
 invoke.cont1:
-; ICAll-PROM:  [[PHI_RET:%[0-9]+]] = phi ptr [ %call2, %if.false.orig_indirect ], [ [[DIRCALL_RET]], %if.end.icp ]
-; ICAll-PROM:  %isnull = icmp eq ptr [[PHI_RET]], null
+; ICALL-PROM:  [[PHI_RET:%[0-9]+]] = phi ptr [ %call2, %if.false.orig_indirect ], [ [[DIRCALL_RET]], %if.end.icp ]
+; ICALL-PROM:  %isnull = icmp eq ptr [[PHI_RET]], null
   %isnull = icmp eq ptr %call2, null
   br i1 %isnull, label %delete.end, label %delete.notnull
 
