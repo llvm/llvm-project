@@ -45,7 +45,6 @@ jobs:
             check_run_ids = [];
             for (check_run of check_suites.data.check_runs) {
               console.log('Checking check run: ' + check_run.id);
-              console.log(check_run);
               if (check_run.status != 'completed') {
                 console.log('Check run was not completed. Skipping.');
                 continue;
