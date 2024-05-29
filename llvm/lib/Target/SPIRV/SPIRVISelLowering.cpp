@@ -179,8 +179,8 @@ static void validatePtrTypes(const SPIRVSubtarget &STI,
   doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
 }
 
-// Insert a bitcast before OpGroupWaitEvents if the last argument is a pointer,
-// but don't point to OpTypeEvent.
+// Insert a bitcast before OpGroupWaitEvents if the last argument is a pointer
+// that doesn't point to OpTypeEvent.
 static void validateGroupWaitEventsPtr(const SPIRVSubtarget &STI,
                                        MachineRegisterInfo *MRI,
                                        SPIRVGlobalRegistry &GR,
