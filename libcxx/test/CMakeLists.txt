@@ -1,11 +1,5 @@
 include(HandleLitArguments)
 add_subdirectory(tools)
-# When the tools add clang-tidy support, the dependencies need to be updated.
-# This cannot be done in the tools CMakeLists.txt since that does not update
-# the status in this (a parent) directory.
-if(TARGET cxx-tidy)
-  list(APPEND LIBCXX_TEST_DEPS cxx-tidy)
-endif()
 
 # By default, libcxx and libcxxabi share a library directory.
 if (NOT LIBCXX_CXX_ABI_LIBRARY_PATH)
@@ -39,10 +33,6 @@ if (LLVM_USE_SANITIZER)
 endif()
 
 serialize_lit_params_list(SERIALIZED_LIT_PARAMS LIBCXX_TEST_PARAMS)
-
-if (NOT DEFINED LIBCXX_TEST_DEPS)
-  message(FATAL_ERROR "Expected LIBCXX_TEST_DEPS to be defined")
-endif()
 
 if (MSVC)
   # Shared code for initializing some parameters used by all
@@ -80,10 +70,6 @@ if (LIBCXX_INCLUDE_TESTS)
     "${LIBCXX_TEST_CONFIG}"
     ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
     MAIN_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py")
-
-  add_custom_target(cxx-test-depends
-    DEPENDS cxx ${LIBCXX_TEST_DEPS}
-    COMMENT "Builds dependencies required to run the test suite.")
 
   add_lit_testsuite(check-cxx
     "Running libcxx tests"
