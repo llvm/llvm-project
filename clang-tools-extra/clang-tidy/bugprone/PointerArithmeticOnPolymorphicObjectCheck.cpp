@@ -29,13 +29,15 @@ void PointerArithmeticOnPolymorphicObjectCheck::storeOptions(
 void PointerArithmeticOnPolymorphicObjectCheck::registerMatchers(
     MatchFinder *Finder) {
   const auto PolymorphicPointerExpr =
-      expr(hasType(pointerType(
-               pointee(hasDeclaration(cxxRecordDecl(hasMethod(isVirtual())))))))
+      expr(hasType(hasCanonicalType(
+               pointerType(pointee(hasCanonicalType(hasDeclaration(
+                   cxxRecordDecl(cxxRecordDecl(hasMethod(isVirtual()))))))))))
           .bind("pointer");
 
   const auto PointerExprWithVirtualMethod =
-      expr(hasType(pointerType(pointee(hasDeclaration(cxxRecordDecl(
-               hasMethod(anyOf(isVirtualAsWritten(), isPure()))))))))
+      expr(hasType(hasCanonicalType(pointerType(
+               pointee(hasCanonicalType(hasDeclaration(cxxRecordDecl(
+                   hasMethod(anyOf(isVirtualAsWritten(), isPure()))))))))))
           .bind("pointer");
 
   const auto SelectedPointerExpr = MatchInheritedVirtualFunctions

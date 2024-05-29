@@ -100,3 +100,23 @@ void functionArgument(Base *b) {
 
   templateWarning(b);
 }
+
+using BaseAlias = Base;
+using DerivedAlias = Derived;
+
+using BasePtr = Base*;
+using DerivedPtr = Derived*;
+
+void typeAliases(BaseAlias *b, DerivedAlias *d, BasePtr bp, DerivedPtr dp) {
+  b += 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base'
+
+  d += 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Derived'
+
+  bp += 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base'
+
+  dp += 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Derived'
+}
