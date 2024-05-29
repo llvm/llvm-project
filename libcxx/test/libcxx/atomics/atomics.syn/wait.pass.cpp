@@ -15,7 +15,7 @@
 #include <cassert>
 
 void test_85107() {
-  if constexpr (sizeof(std::__cxx_contention_t) == 8) {
+  if constexpr (sizeof(std::__cxx_contention_t) == 8 && sizeof(long) > 4) {
     // https://github.com/llvm/llvm-project/issues/85107
     // [libc++] atomic_wait uses UL_COMPARE_AND_WAIT when it should use UL_COMPARE_AND_WAIT64 on Darwin
     constexpr std::__cxx_contention_t old_val = 0;
