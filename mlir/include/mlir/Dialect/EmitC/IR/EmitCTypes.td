@@ -75,9 +75,9 @@ def EmitC_ArrayType : EmitC_Type<"Array", "array", [ShapedTypeInterface]> {
                         Type elementType) const;
 
     static bool isValidElementType(Type type) {
-      return type.isIntOrIndexOrFloat() ||
-         emitc::isPointerWideType(type) ||
-         llvm::isa<PointerType, OpaqueType>(type);
+      return emitc::isSupportedFloatType(type) ||
+         emitc::isIntegerIndexOrOpaqueType(type) ||
+         llvm::isa<PointerType>(type);
     }
   }];
   let genVerifyDecl = 1;

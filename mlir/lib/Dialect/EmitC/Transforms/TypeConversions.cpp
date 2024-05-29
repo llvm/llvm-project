@@ -43,9 +43,9 @@ std::optional<Type> mlir::emitc::getUnsignedTypeFor(Type ty) {
   if (ty.isInteger())
     return IntegerType::get(ty.getContext(), ty.getIntOrFloatBitWidth(),
                             IntegerType::SignednessSemantics::Unsigned);
-  if (isa<emitc::PtrDiffTType, emitc::SignedSizeTType>(ty))
-    return emitc::SizeTType::get(ty.getContext());
-  if (isSupportedIntegerType(ty))
+  if (isa<PtrDiffTType, SignedSizeTType>(ty))
+    return SizeTType::get(ty.getContext());
+  if (isa<SizeTType>(ty))
     return ty;
   return {};
 }
@@ -56,9 +56,9 @@ std::optional<Type> mlir::emitc::getSignedTypeFor(Type ty) {
   if (ty.isInteger())
     return IntegerType::get(ty.getContext(), ty.getIntOrFloatBitWidth(),
                             IntegerType::SignednessSemantics::Signed);
-  if (isa<emitc::SizeTType>(ty))
-    return emitc::PtrDiffTType::get(ty.getContext());
-  if (isSupportedIntegerType(ty))
+  if (isa<SizeTType, SignedSizeTType>(ty))
+    return PtrDiffTType::get(ty.getContext());
+  if (isa<PtrDiffTType>(ty))
     return ty;
   return {};
 }
