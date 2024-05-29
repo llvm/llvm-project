@@ -133,14 +133,15 @@ int Test::getNumTests() {
   return N;
 }
 
-int Test::runTests(const char *TestFilter) {
-  constexpr auto GREEN = "\033[32m";
-  constexpr auto RED = "\033[31m";
-  constexpr auto RESET = "\033[0m";
+int Test::runTests(const TestOptions &Options) {
+  const char *green = Options.PrintColor ? "\033[32m" : "";
+  const char *red = Options.PrintColor ? "\033[31m" : "";
+  const char *reset = Options.PrintColor ? "\033[0m" : "";
 
   int TestCount = getNumTests();
   if (TestCount) {
-    tlog << GREEN << "[==========] " << RESET << "Running " << TestCount << " test";
+    tlog << green << "[==========] " << reset << "Running " << TestCount
+         << " test";
     if (TestCount > 1)
       tlog << "s";
     tlog << " from 1 test suite.\n";
@@ -155,7 +156,7 @@ int Test::runTests(const char *TestFilter) {
       continue;
     }
 
-    tlog << GREEN << "[ RUN      ] " << RESET << TestName << '\n';
+    tlog << green << "[ RUN      ] " << reset << TestName << '\n';
     [[maybe_unused]] const auto start_time = clock();
     RunContext Ctx;
     T->SetUp();
@@ -165,13 +166,13 @@ int Test::runTests(const char *TestFilter) {
     [[maybe_unused]] const auto end_time = clock();
     switch (Ctx.status()) {
     case RunContext::RunResult::Fail:
-      tlog << RED << "[  FAILED  ] " << RESET << TestName << '\n';
+      tlog << red << "[  FAILED  ] " << reset << TestName << '\n';
       ++FailCount;
       break;
     case RunContext::RunResult::Pass:
-      tlog << GREEN << "[       OK ] " << RESET << TestName;
+      tlog << green << "[       OK ] " << reset << TestName;
 #ifdef LIBC_TEST_USE_CLOCK
-      tlog << " (took ";
+      tlog << " (";
       if (start_time > end_time) {
         tlog << "unknown - try rerunning)\n";
       } else {
@@ -180,7 +181,7 @@ int Test::runTests(const char *TestFilter) {
         const uint64_t duration_us = (duration * 1000 * 1000) / CLOCKS_PER_SEC;
         const uint64_t duration_ns =
             (duration * 1000 * 1000 * 1000) / CLOCKS_PER_SEC;
-        if (duration_ms != 0)
+        if (Options.TimeInMs || duration_ms != 0)
           tlog << duration_ms << " ms)\n";
         else if (duration_us != 0)
           tlog << duration_us << " us)\n";
@@ -200,8 +201,8 @@ int Test::runTests(const char *TestFilter) {
          << '\n';
   } else {
     tlog << "No tests run.\n";
-    if (TestFilter) {
-      tlog << "No matching test for " << TestFilter << '\n';
+    if (Options.TestFilter) {
+      tlog << "No matching test for " << Options.TestFilter << '\n';
     }
   }
 
