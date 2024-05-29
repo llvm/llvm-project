@@ -11,18 +11,16 @@ name: Restart Preempted Libc++ Workflow
 
 on:
   workflow_run:
-    workflows:
-      - Build and Test libc\+\+
+    workflows: [Build and Test libc\+\+]
     types:
-      - failure
-      - canceled
+      - completed
 
 permissions:
   contents: read
 
 jobs:
   restart:
-    if: github.repository_owner == 'llvm'
+    if: github.repository_owner == 'llvm' && (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled')
     name: "Restart Job"
     permissions:
       statuses: read
