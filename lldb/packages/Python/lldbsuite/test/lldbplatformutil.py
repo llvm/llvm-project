@@ -8,8 +8,7 @@ import re
 import subprocess
 import sys
 import os
-from urllib.parse import urlparse
-from pkg_resources import packaging
+from packaging.version import parse
 
 # LLDB modules
 import lldb
@@ -309,8 +308,8 @@ def expectedCompilerVersion(compiler_version):
         # Assume the compiler version is at or near the top of trunk.
         return operator in [">", ">=", "!", "!=", "not"]
 
-    version = packaging.version.parse(version_str)
-    test_compiler_version = packaging.version.parse(test_compiler_version_str)
+    version = parse(version_str)
+    test_compiler_version = parse(test_compiler_version_str)
 
     if operator == ">":
         return test_compiler_version > version

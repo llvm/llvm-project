@@ -1,6 +1,6 @@
 # System modules
 from functools import wraps
-from pkg_resources import packaging
+from packaging.version import parse
 import ctypes
 import locale
 import os
@@ -66,9 +66,7 @@ def _check_expected_version(comparison, expected, actual):
         "<=": fn_leq,
     }
 
-    return op_lookup[comparison](
-        packaging.version.parse(actual), packaging.version.parse(expected)
-    )
+    return op_lookup[comparison](parse(actual), parse(expected))
 
 
 def _match_decorator_property(expected, actual):
