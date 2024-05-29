@@ -98,6 +98,8 @@ ABI Changes in This Version
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
+- The text ast-dumper has improved printing of TemplateArguments.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Removed support for constructing on-stack ``TemplateArgumentList``\ s; interfaces should instead
@@ -817,6 +819,8 @@ Bug Fixes to AST Handling
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
 - The presence of the ``typename`` keyword is now stored in ``TemplateTemplateParmDecl``.
 - Fixed malformed AST generated for anonymous union access in templates. (#GH90842)
+- Improved preservation of qualifiers and sugar in `TemplateNames`, including
+  template keyword.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
