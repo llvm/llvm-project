@@ -632,6 +632,9 @@ Bug Fixes in This Version
 - ``__is_array`` and ``__is_bounded_array`` no longer return ``true`` for
   zero-sized arrays. Fixes (#GH54705).
 
+- Correctly reject declarations where a statement is required in C.
+  Fixes #GH92775
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
