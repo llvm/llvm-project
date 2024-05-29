@@ -52,6 +52,19 @@ def ext_uaddv_to_uaddlv : GICombineRule<
   (apply [{ applyExtUaddvToUaddlv(*${root}, MRI, B, Observer, ${matchinfo}); }])
 >;
 
+class push_opcode_through_ext<Instruction opcode, Instruction extOpcode> : GICombineRule <
+  (defs root:$root),
+  (match (extOpcode $ext1, $src1):$ExtMI,
+         (extOpcode $ext2, $src2),
+         (opcode $dst, $ext1, $ext2):$root,
+         [{ return matchPushAddSubExt(*${root}, MRI, ${dst}.getReg(), ${src1}.getReg(), ${src2}.getReg()); }]),
+  (apply [{ applyPushAddSubExt(*${root}, MRI, B, ${ExtMI}->getOpcode() == TargetOpcode::G_SEXT, ${dst}.getReg(), ${src1}.getReg(), ${src2}.getReg()); }])>;
+
+def push_sub_through_zext : push_opcode_through_ext<G_SUB, G_ZEXT>;
+def push_add_through_zext : push_opcode_through_ext<G_ADD, G_ZEXT>;
+def push_sub_through_sext : push_opcode_through_ext<G_SUB, G_SEXT>;
+def push_add_through_sext : push_opcode_through_ext<G_ADD, G_SEXT>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       fconstant_to_constant,
@@ -59,7 +72,11 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       fold_global_offset,
                                       shuffle_to_extract,
                                       ext_addv_to_udot_addv,
-                                      ext_uaddv_to_uaddlv]> {
+                                      ext_uaddv_to_uaddlv,
+                                      push_sub_through_zext,
+                                      push_add_through_zext,
+                                      push_sub_through_sext,
+                                      push_add_through_sext]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
