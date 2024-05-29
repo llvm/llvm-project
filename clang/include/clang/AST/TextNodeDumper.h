@@ -213,6 +213,8 @@ public:
   void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
   void dumpNestedNameSpecifier(const NestedNameSpecifier *NNS);
   void dumpConceptReference(const ConceptReference *R);
+  void dumpTemplateArgument(const TemplateArgument &TA);
+  void dumpTemplateName(TemplateName TN);
 
   void dumpDeclRef(const Decl *D, StringRef Label = {});
 

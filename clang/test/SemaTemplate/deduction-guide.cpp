@@ -29,9 +29,9 @@ using AT = A<int[3], int, int, short>;
 // CHECK:   | |-TemplateArgument type 'int'
 // CHECK:   | `-TemplateArgument type 'short'
 // CHECK:   |-TemplateArgument pack
-// CHECK:   | |-TemplateArgument integral 3
-// CHECK:   | |-TemplateArgument integral 3
-// CHECK:   | `-TemplateArgument integral 4
+// CHECK:   | |-TemplateArgument integral '3'
+// CHECK:   | |-TemplateArgument integral '3'
+// CHECK:   | `-TemplateArgument integral '(short)4'
 // CHECK:   |-TemplateArgument pack
 // CHECK:   | |-TemplateArgument decl
 // CHECK:   | | `-Var {{.*}} 'arr1' 'int[3]'
@@ -73,7 +73,7 @@ using BT = B<char, 'x'>;
 // CHECK: | `-ParmVarDecl {{.*}} 'X<W, V>'
 // CHECK: `-CXXDeductionGuideDecl {{.*}} 'auto (X<nullptr, 'x'>) -> B<char, 'x'>'
 // CHECK:   |-TemplateArgument type 'char'
-// CHECK:   |-TemplateArgument integral 120
+// CHECK:   |-TemplateArgument integral ''x''
 // CHECK:   |-TemplateArgument type 'std::nullptr_t'
 // CHECK:   |-TemplateArgument nullptr
 // CHECK:   `-ParmVarDecl {{.*}} 'X<nullptr, 'x'>'
@@ -108,9 +108,9 @@ using CT = C<int>;
 // CHECK: | `-ParmVarDecl {{.*}} 'type-parameter-0-2'
 // CHECK: `-CXXDeductionGuideDecl {{.*}} 'auto (int, Y<B>, int) -> C<int>'
 // CHECK:  |-TemplateArgument type 'int'
-// CHECK:  |-TemplateArgument template B
+// CHECK:  |-TemplateArgument template 'B'
 // CHECK:  |-TemplateArgument type 'int'
-// CHECK:  |-TemplateArgument integral 0
+// CHECK:  |-TemplateArgument integral '0'
 // CHECK:  |-ParmVarDecl {{.*}} 'int'
 // CHECK:  |-ParmVarDecl {{.*}} 'Y<B>'
 // CHECK:  `-ParmVarDecl {{.*}} 'int'
@@ -231,7 +231,7 @@ F s(0);
 // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (type-parameter-0-1) -> F<>'
 // CHECK: | `-ParmVarDecl {{.*}} 'type-parameter-0-1'
 // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (int) -> F<>'
-// CHECK:   |-TemplateArgument integral 120
+// CHECK:   |-TemplateArgument integral ''x''
 // CHECK:   |-TemplateArgument type 'int'
 // CHECK:   | `-BuiltinType {{.*}} 'int'
 // CHECK:   `-ParmVarDecl {{.*}} 'int'
@@ -320,13 +320,14 @@ namespace TTP {
 // CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} 'auto (A<int>) -> TTP::B<int>'
 // CHECK-NEXT:    |-TemplateArgument type 'int'
 // CHECK-NEXT:    | `-BuiltinType {{.+}} 'int'{{$}}
-// CHECK-NEXT:    |-TemplateArgument template A
+// CHECK-NEXT:    |-TemplateArgument template 'TTP::A'{{$}}
+// CHECK-NEXT:    | `-ClassTemplateDecl {{.+}} A{{$}}
 // CHECK-NEXT:    `-ParmVarDecl {{.+}} 'A<int>':'TTP::A<int>'{{$}}
 // CHECK-NEXT:  FunctionProtoType {{.+}} 'auto (<T>) -> B<T>' dependent trailing_return cdecl{{$}}
 // CHECK-NEXT:  |-InjectedClassNameType {{.+}} 'B<T>' dependent{{$}}
 // CHECK-NEXT:  | `-CXXRecord {{.+}} 'B'{{$}}
 // CHECK-NEXT:  `-ElaboratedType {{.+}} '<T>' sugar dependent{{$}}
 // CHECK-NEXT:    `-TemplateSpecializationType {{.+}} '<T>' dependent {{$}}
-// CHECK-NEXT:      `-TemplateArgument type 'T'{{$}}
+// CHECK-NEXT:      `-TemplateArgument type 'T':'type-parameter-0-0'{{$}}
 // CHECK-NEXT:        `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0{{$}}
 // CHECK-NEXT:          `-TemplateTypeParm {{.+}} 'T'{{$}}
