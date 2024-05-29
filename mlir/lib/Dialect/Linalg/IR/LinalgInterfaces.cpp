@@ -71,6 +71,99 @@ bool linalg::isaCopyOpInterface(LinalgOp linalgOp) {
 }
 
 //===----------------------------------------------------------------------===//
+// FillOpInterface implementation
+//===----------------------------------------------------------------------===//
+std::optional<Value> linalg::isaFillOpInterface(GenericOp genericOp) {
+  // Structural.
+  if (genericOp.getNumParallelLoops() != genericOp.getNumLoops() ||
+      genericOp.getNumDpsInputs() != 1 || genericOp.getNumDpsInits() != 1)
+    return std::nullopt;
+
+  // Input should be referenced and init should not.
+  if (!genericOp.payloadUsesValueFromOperand(genericOp.getDpsInputOperand(0)) ||
+      genericOp.payloadUsesValueFromOperand(genericOp.getDpsInitOperand(0)))
+    return std::nullopt;
+
+  OpOperand *value = genericOp.getDpsInputOperand(0);
+  if (!genericOp.isScalar(value))
+    return std::nullopt;
+
+  Block *body = genericOp.getBody();
+  if (body->getOperations().size() != 1)
+    return std::nullopt;
+
+  auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
+  if (!yieldOp || yieldOp.getNumOperands() != 1 ||
+      yieldOp->getOperand(0) != body->getArgument(0))
+    return std::nullopt;
+  return value->get();
+}
+
+//===----------------------------------------------------------------------===//
+// Elementwise Single Unary/Binary-OpInterface implementation
+//===----------------------------------------------------------------------===//
+static bool
+isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp genericOp,
+                                          unsigned arity) {
+  // Check all loops are parallel, and have only tensor semantics.
+  if (genericOp.getNumParallelLoops() != genericOp.getNumLoops() ||
+      genericOp.getNumLoops() < 1 || !genericOp.hasPureTensorSemantics())
+    return false;
+
+  // Check there are arity-inputs, 1-output and all are identity-maps.
+  if (genericOp.getNumDpsInputs() != arity || genericOp.getNumDpsInits() != 1 ||
+      !llvm::all_of(genericOp.getIndexingMapsArray(),
+                    [](AffineMap map) { return map.isIdentity(); }))
+    return false;
+
+  // Init should not be referenced for elementwise operations.
+  if (genericOp.payloadUsesValueFromOperand(genericOp.getDpsInitOperand(0)))
+    return false;
+
+  // A linalg.generic could be series of elementwise ops e.g. exp(neg(x)) such
+  // as resulting from producer-consumer fusion. Here, we restrict to two ops in
+  // the body, where the first is the elementwise single op and the second a
+  // yield.
+  Block *body = genericOp.getBody();
+  if (body->getOperations().size() != 2)
+    return false;
+
+  Operation *op = &body->front();
+  if (op->getNumOperands() != arity || op->getNumResults() != 1)
+    return false;
+
+  auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
+  if (!yieldOp || yieldOp.getNumOperands() != 1 ||
+      yieldOp->getOperand(0).getDefiningOp() != op)
+    return false;
+  return true;
+}
+
+bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp genericOp) {
+  // All basic elemwise checks.
+  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(genericOp, 1))
+    return false;
+
+  // Check input is actully used.
+  if (!genericOp.payloadUsesValueFromOperand(genericOp.getDpsInputOperand(0)))
+    return false;
+  return true;
+}
+
+bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp genericOp) {
+  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(genericOp, 2))
+    return false;
+
+  // Check both inputs are used (elementwise).
+  OpOperand *inputOpOperand0 = genericOp.getDpsInputOperand(0);
+  OpOperand *inputOpOperand1 = genericOp.getDpsInputOperand(1);
+  if (!genericOp.payloadUsesValueFromOperand(inputOpOperand0) ||
+      !genericOp.payloadUsesValueFromOperand(inputOpOperand1))
+    return false;
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
 // ContractionOpInterface implementation
 //===----------------------------------------------------------------------===//
 

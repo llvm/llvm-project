@@ -2,7 +2,7 @@
 
 ! Simple test for lowering of OpenMP Threadprivate Directive with HLFIR.
 
-!RUN: %flang_fc1  -emit-hlfir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1  -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 
 !CHECK-LABEL: func.func @_QPsub1() {
 !CHECK:     %[[A:.*]] = fir.address_of(@_QFsub1Ea) : !fir.ref<i32>

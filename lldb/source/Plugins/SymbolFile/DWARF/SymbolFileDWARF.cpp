@@ -481,6 +481,13 @@ static ConstString GetDWARFMachOSegmentName() {
   return g_dwarf_section_name;
 }
 
+llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
+SymbolFileDWARF::GetForwardDeclCompilerTypeToDIE() {
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
+    return debug_map_symfile->GetForwardDeclCompilerTypeToDIE();
+  return m_forward_decl_compiler_type_to_die;
+}
+
 UniqueDWARFASTTypeMap &SymbolFileDWARF::GetUniqueDWARFASTTypeMap() {
   SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
   if (debug_map_symfile)

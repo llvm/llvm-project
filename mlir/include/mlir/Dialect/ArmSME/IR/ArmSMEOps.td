@@ -39,10 +39,10 @@ def ArmSMETileType : I32EnumAttr<"ArmSMETileType", "Arm SME tile type",
 
 def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
   let description = [{
-    An interface for operations that use or allocate Arm SME tiles. These
-    operations need to be assigned a tile ID, an i32 attribute, which specifies
-    which virtual tile within the ZA storage to use. The number of tiles
-    available depends on the type of the tile. This is summarized below:
+    An interface for operations that use Arm SME tiles. These operations need to
+    be assigned a tile ID, an i32 attribute, which specifies which virtual tile
+    within the ZA storage to use. The number of tiles available depends on the
+    type of the tile. This is summarized below:
 
     | Tile Vector Types                                                       | Possible Tile IDs   |
     |-------------------------------------------------------------------------|---------------------|
@@ -51,10 +51,6 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
     | `vector<[4]x[4]xi32>` or `vector<[4]x[4]xf32>`                          | 0 to 3 (inclusive)  |
     | `vector<[2]x[2]xi64>` or `vector<[2]x[2]xf64>`                          | 0 to 7 (inclusive)  |
     | `vector<[1]x[1]xi128>`                                                  | 0 to 15 (inclusive) |
-
-    Operations that allocate a new tile (such as arm_sme.get_tile), are used as
-    the roots for tile allocation, with all operations that (transitively)
-    depend on a root being assigned the same tile ID.
   }];
   let methods = [
     InterfaceMethod<
@@ -85,20 +81,6 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
       }]
     >,
     InterfaceMethod<
-      [{
-        The type of tile this operation allocates. Returns none (std::nullopt)
-        if this operation does not allocate a tile.
-      }],
-      /*returnType=*/"std::optional<::mlir::arm_sme::ArmSMETileType>",
-      /*methodName=*/"getAllocatedTileType",
-      /*arguments=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImpl=*/ [{
-        // This operation does not allocate a tile.
-        return std::nullopt;
-      }]
-    >,
-    InterfaceMethod<
       "Returns the VectorType of the tile used by this operation.",
       /*returnType=*/"VectorType",
       /*methodName=*/"getTileType"
@@ -106,30 +88,13 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
   ];
 
   let extraSharedClassDeclaration = [{
-    // A helper to create a new operation and propagate this operations tile ID.
-    template<typename T, typename... Args>
-    T createOpAndForwardTileId(::mlir::RewriterBase& rewriter, ::mlir::Location loc, Args &&...args) {
-      auto op = rewriter.create<T>(loc, std::forward<Args>(args)...);
-      if (auto tileOp = ::llvm::dyn_cast<ArmSMETileOpInterface>(op.getOperation()))
-        tileOp.setTileId($_op.getTileId());
-      return op;
-    }
-
-    // A helper to replace this operation and forward its tile ID (if present).
-    template<typename T, typename... Args>
-    T replaceWithAndForwardTileId(::mlir::RewriterBase& rewriter, Args &&...args) {
-      auto newOp = createOpAndForwardTileId<T>(rewriter, $_op.getLoc(), std::forward<Args>(args)...);
-      rewriter.replaceOp($_op, newOp);
-      return newOp;
-    }
-
     bool isInMemoryTile() {
       auto tileId = getTileId();
       return tileId && tileId.getInt() >= kInMemoryTileIdBase;
     }
   }];
 
-  let verify = [{ return ::mlir::arm_sme::verifyOperationHasValidTileId($_op); }];
+  let verify = [{ return detail::verifyArmSMETileOpInterface($_op); }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -255,30 +220,30 @@ def ArmSME_TypeSizeAttr : EnumAttr<ArmSME_Dialect, TypeSize,
 class ArmSME_Op<string mnemonic, list<Trait> traits = []> :
   Op<ArmSME_Dialect, mnemonic, traits> {}
 
-def GetTileOp : ArmSME_Op<"get_tile", [ArmSMETileOpInterface]> {
-  let summary = "Returns a SME virtual tile";
+def GetTileOp : ArmSME_Op<"get_tile", [ArmSMETileOpInterface, Pure]> {
+  let summary = "Creates an undefined value of SME virtual tile type";
   let description = [{
-    Allocates a new SME "virtual tile" within a function. The contents of the
-    tile returned from this operation are undefined.
+    Creates a new SME "virtual tile" value within a function. The contents of
+    the tile returned from this operation are undefined.
 
     Example 1:
 
     ```mlir
-    // Allocate an 8-bit element "virtual tile"
+    // Create an 8-bit element "virtual tile" value:
     %za0_b = arm_sme.get_tile: vector<[16]x[16]xi8>
     ```
 
     Example 2:
 
     ```mlir
-    // Allocate two 16-bit element "virtual tiles"
+    // Create two 16-bit element "virtual tiles" values:
     %za0_h = arm_sme.get_tile : vector<[8]x[8]xi16>
     %za1_h = arm_sme.get_tile : vector<[8]x[8]xi16>
     ```
 
     Example 3:
     ```mlir
-    // Allocate an 128-bit element "virtual tile"
+    // Create an 128-bit element "virtual tile" value:
     %za0_q = arm_sme.get_tile : vector<[1]x[1]xi128>
     ```
   }];
@@ -290,37 +255,15 @@ def GetTileOp : ArmSME_Op<"get_tile", [ArmSMETileOpInterface]> {
     VectorType getTileType() {
       return ::llvm::cast<VectorType>(getTile().getType());
     }
-
-    std::optional<arm_sme::ArmSMETileType> getAllocatedTileType() {
-      return arm_sme::getSMETileType(getTileType());
-    }
   }];
 }
 
-def MaterializeSSATileOp : ArmSME_Op<"materialize_ssa_tile", [Pure]> {
-  let summary = "SME tile placeholder";
-  let description = [{
-    A placeholder to preserve dataflow while lowering to SME intrinsics (which
-    do not take or return SME virtual tile values). This operation is intended
-    to be DCE'd once all ArmSME operations have been lowered.
-
-    This operation is not intended to be used outside of the ArmSME -> LLVM
-    conversion.
-  }];
-  let results = (outs SMETile:$tile);
-  let assemblyFormat = "attr-dict `:` type($tile)";
-}
-
-//
-// Tile reset.
-//
-
-def ZeroOp : ArmSME_Op<"zero", [ArmSMETileOpInterface]> {
-  let summary = "Initialize the two-dimensional ZA array with 0s";
+def ZeroOp : ArmSME_Op<"zero", [ArmSMETileOpInterface, Pure]> {
+  let summary = "Creates a zero-initialized value of SME virtual tile type";
   let results = (outs SMETile:$res);
   let description = [{
-    Initialise ZA with 0. This operation is convenient wrapper for the SME
-    `zero` intrinsic and instruction.
+    Creates a new SME "virtual tile" value within a function. The contents of
+    the tile returned from this operation are zero-initialized.
 
     Example 1: Zero an 8-bit element ZA tile.
 
@@ -338,14 +281,37 @@ def ZeroOp : ArmSME_Op<"zero", [ArmSMETileOpInterface]> {
     VectorType getVectorType() {
       return ::llvm::cast<VectorType>(getRes().getType());
     }
-    std::optional<arm_sme::ArmSMETileType> getAllocatedTileType() {
-      return arm_sme::getSMETileType(getVectorType());
-    }
     VectorType getTileType() {
       return getVectorType();
     }
   }];
   let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def CopyTileOp : ArmSME_Op<"copy_tile", [
+  Pure,
+  ArmSMETileOpInterface,
+  AllTypesMatch<["tile", "result"]>
+]> {
+  let summary = "Copies an SME tile value";
+  let arguments = (ins SMETile:$tile);
+  let results = (outs SMETile:$result);
+  let description = [{
+    Copies an SME "virtual tile" value to a new SSA value. This operation is
+    primarily intended to be used to normalize the IR prior to tile allocation.
+
+    Example:
+
+    ```mlir
+    %copy = arm_sme.copy_tile %tile : vector<[4]x[4]xf32>
+    ```
+  }];
+  let extraClassDeclaration = [{
+    VectorType getTileType() {
+      return ::llvm::cast<VectorType>(getResult().getType());
+    }
+  }];
+  let assemblyFormat = "$tile attr-dict `:` type($result)";
 }
 
 def TileLoadOp : ArmSME_Op<"tile_load", [
@@ -416,9 +382,6 @@ def TileLoadOp : ArmSME_Op<"tile_load", [
     }
     VectorType getVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
-    }
-    std::optional<arm_sme::ArmSMETileType> getAllocatedTileType() {
-      return arm_sme::getSMETileType(getVectorType());
     }
     VectorType getTileType() {
       return getVectorType();
@@ -545,7 +508,7 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
     ```
   }];
   let arguments = (ins
-    Arg<AnyMemRef, "the reference to load from">:$base, SVEPredicate:$mask,
+    Arg<AnyMemRef, "the reference to load from", [MemRead]>:$base, SVEPredicate:$mask,
     SMETile:$tile, Variadic<Index>:$indices, Index:$tile_slice_index,
     ArmSME_TileSliceLayoutAttr:$layout
   );
@@ -630,7 +593,7 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice", [
 }
 
 def MoveVectorToTileSliceOp : ArmSME_Op<"move_vector_to_tile_slice", [
-    ArmSMETileOpInterface,
+    ArmSMETileOpInterface, Pure,
     AllTypesMatch<["tile", "result"]>,
     TypesMatchWith<
       "type of 'vector' matches type of 'tile' slice",
@@ -679,7 +642,7 @@ def MoveVectorToTileSliceOp : ArmSME_Op<"move_vector_to_tile_slice", [
 }
 
 def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [
-    ArmSMETileOpInterface,
+    ArmSMETileOpInterface, Pure,
     TypesMatchWith<
       "type of 'result' matches type of 'tile' slice",
       "tile", "result",
@@ -736,6 +699,7 @@ class OuterProductResultTileTypeConstraint<string operand> :
 
 def OuterProductOp :
   ArmSME_Op<"outerproduct", [
+    Pure,
     ArmSMETileOpInterface,
     AttrSizedOperandSegments,
     AllTypesMatch<["lhs", "rhs"]>,
@@ -802,12 +766,6 @@ let arguments = (ins
     VectorType getLhsType() { return llvm::cast<VectorType>(getLhs().getType()); }
     VectorType getRhsType() { return llvm::cast<VectorType>(getRhs().getType()); }
     VectorType getResultType() { return llvm::cast<VectorType>(getResult().getType()); }
-    std::optional<arm_sme::ArmSMETileType> getAllocatedTileType() {
-      // The outerproduct op allocates a new tile if no accumulator is passed.
-      if (!getAcc())
-        return arm_sme::getSMETileType(getResultType());
-      return std::nullopt;
-    }
     VectorType getTileType() {
       return getResultType();
     }
@@ -819,6 +777,7 @@ class OuterProductWideningBase<string mnemonic,
                                list<Type> allowedResultVectorTypes,
                                int numOuterProducts> :
   ArmSME_Op<mnemonic, [
+    Pure,
     ArmSMETileOpInterface,
     AttrSizedOperandSegments,
     AllTypesMatch<["lhs", "rhs"]>,
@@ -857,12 +816,6 @@ class OuterProductWideningBase<string mnemonic,
     VectorType getLhsType() { return llvm::cast<VectorType>(getLhs().getType()); }
     VectorType getRhsType() { return llvm::cast<VectorType>(getRhs().getType()); }
     VectorType getResultType() { return llvm::cast<VectorType>(getResult().getType()); }
-    std::optional<arm_sme::ArmSMETileType> getAllocatedTileType() {
-      // The outerproduct op allocates a new tile if no accumulator is passed.
-      if (!getAcc())
-        return arm_sme::getSMETileType(getResultType());
-      return std::nullopt;
-    }
     VectorType getTileType() {
       return getResultType();
     }

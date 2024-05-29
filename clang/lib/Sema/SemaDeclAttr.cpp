@@ -26,6 +26,7 @@
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/HLSLRuntime.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -42,6 +43,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
@@ -51,6 +53,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 using namespace clang;
@@ -639,7 +642,7 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
 
     if (const auto *StrLit = dyn_cast<StringLiteral>(ArgExp)) {
       if (StrLit->getLength() == 0 ||
-          (StrLit->isOrdinary() && StrLit->getString() == StringRef("*"))) {
+          (StrLit->isOrdinary() && StrLit->getString() == "*")) {
         // Pass empty strings to the analyzer without warnings.
         // Treat "*" as the universal lock.
         Args.push_back(ArgExp);
@@ -2494,7 +2497,7 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
     bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
     VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
     bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
-    int Priority) {
+    int Priority, IdentifierInfo *Environment) {
   VersionTuple MergedIntroduced = Introduced;
   VersionTuple MergedDeprecated = Deprecated;
   VersionTuple MergedObsoleted = Obsoleted;
@@ -2524,6 +2527,12 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
 
       IdentifierInfo *OldPlatform = OldAA->getPlatform();
       if (OldPlatform != Platform) {
+        ++i;
+        continue;
+      }
+
+      IdentifierInfo *OldEnvironment = OldAA->getEnvironment();
+      if (OldEnvironment != Environment) {
         ++i;
         continue;
       }
@@ -2646,7 +2655,7 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
       !OverrideOrImpl) {
     auto *Avail = ::new (Context) AvailabilityAttr(
         Context, CI, Platform, Introduced, Deprecated, Obsoleted, IsUnavailable,
-        Message, IsStrict, Replacement, Priority);
+        Message, IsStrict, Replacement, Priority, Environment);
     Avail->setImplicit(Implicit);
     return Avail;
   }
@@ -2705,13 +2714,34 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
+  if (S.getLangOpts().HLSL && IsStrict)
+    S.Diag(AL.getStrictLoc(), diag::err_availability_unexpected_parameter)
+        << "strict" << /* HLSL */ 0;
+
   int PriorityModifier = AL.isPragmaClangAttribute()
                              ? Sema::AP_PragmaClangAttribute
                              : Sema::AP_Explicit;
+
+  const IdentifierLoc *EnvironmentLoc = AL.getEnvironment();
+  IdentifierInfo *IIEnvironment = nullptr;
+  if (EnvironmentLoc) {
+    if (S.getLangOpts().HLSL) {
+      IIEnvironment = EnvironmentLoc->Ident;
+      if (AvailabilityAttr::getEnvironmentType(
+              EnvironmentLoc->Ident->getName()) ==
+          llvm::Triple::EnvironmentType::UnknownEnvironment)
+        S.Diag(EnvironmentLoc->Loc, diag::warn_availability_unknown_environment)
+            << EnvironmentLoc->Ident;
+    } else {
+      S.Diag(EnvironmentLoc->Loc, diag::err_availability_unexpected_parameter)
+          << "environment" << /* C/C++ */ 1;
+    }
+  }
+
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
       ND, AL, II, false /*Implicit*/, Introduced.Version, Deprecated.Version,
       Obsoleted.Version, IsUnavailable, Str, IsStrict, Replacement,
-      Sema::AMK_None, PriorityModifier);
+      Sema::AMK_None, PriorityModifier, IIEnvironment);
   if (NewAttr)
     D->addAttr(NewAttr);
 
@@ -2767,8 +2797,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
           ND, AL, NewII, true /*Implicit*/, NewIntroduced, NewDeprecated,
           NewObsoleted, IsUnavailable, Str, IsStrict, Replacement,
-          Sema::AMK_None,
-          PriorityModifier + Sema::AP_InferredFromOtherPlatform);
+          Sema::AMK_None, PriorityModifier + Sema::AP_InferredFromOtherPlatform,
+          IIEnvironment);
       if (NewAttr)
         D->addAttr(NewAttr);
     }
@@ -2809,8 +2839,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
           ND, AL, NewII, true /*Implicit*/, NewIntroduced, NewDeprecated,
           NewObsoleted, IsUnavailable, Str, IsStrict, Replacement,
-          Sema::AMK_None,
-          PriorityModifier + Sema::AP_InferredFromOtherPlatform);
+          Sema::AMK_None, PriorityModifier + Sema::AP_InferredFromOtherPlatform,
+          IIEnvironment);
       if (NewAttr)
         D->addAttr(NewAttr);
     }
@@ -2843,7 +2873,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
           MinMacCatalystVersion(Deprecated.Version),
           MinMacCatalystVersion(Obsoleted.Version), IsUnavailable, Str,
           IsStrict, Replacement, Sema::AMK_None,
-          PriorityModifier + Sema::AP_InferredFromOtherPlatform);
+          PriorityModifier + Sema::AP_InferredFromOtherPlatform, IIEnvironment);
       if (NewAttr)
         D->addAttr(NewAttr);
     } else if (II->getName() == "macos" && GetSDKInfo() &&
@@ -2886,7 +2916,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
               VersionOrEmptyVersion(NewObsoleted), /*IsUnavailable=*/false, Str,
               IsStrict, Replacement, Sema::AMK_None,
               PriorityModifier + Sema::AP_InferredFromOtherPlatform +
-                  Sema::AP_InferredFromOtherPlatform);
+                  Sema::AP_InferredFromOtherPlatform,
+              IIEnvironment);
           if (NewAttr)
             D->addAttr(NewAttr);
         }
@@ -3644,7 +3675,7 @@ bool Sema::checkTargetClonesAttrString(
         llvm::sort(CurFeatures);
         SmallString<64> Res;
         for (auto &CurFeat : CurFeatures) {
-          if (!Res.equals(""))
+          if (!Res.empty())
             Res.append("+");
           Res.append(CurFeat);
         }
@@ -6560,13 +6591,13 @@ static bool isErrorParameter(Sema &S, QualType QT) {
   // Check for NSError**.
   if (const auto *OPT = Pointee->getAs<ObjCObjectPointerType>())
     if (const auto *ID = OPT->getInterfaceDecl())
-      if (ID->getIdentifier() == S.getNSErrorIdent())
+      if (ID->getIdentifier() == S.ObjC().getNSErrorIdent())
         return true;
 
   // Check for CFError**.
   if (const auto *PT = Pointee->getAs<PointerType>())
     if (const auto *RT = PT->getPointeeType()->getAs<RecordType>())
-      if (S.isCFError(RT->getDecl()))
+      if (S.ObjC().isCFError(RT->getDecl()))
         return true;
 
   return false;
@@ -6697,7 +6728,7 @@ static void checkSwiftAsyncErrorBlock(Sema &S, Decl *D,
       // Check for NSError *.
       if (const auto *ObjCPtrTy = Param->getAs<ObjCObjectPointerType>()) {
         if (const auto *ID = ObjCPtrTy->getInterfaceDecl()) {
-          if (ID->getIdentifier() == S.getNSErrorIdent()) {
+          if (ID->getIdentifier() == S.ObjC().getNSErrorIdent()) {
             AnyErrorParams = true;
             break;
           }
@@ -6706,7 +6737,7 @@ static void checkSwiftAsyncErrorBlock(Sema &S, Decl *D,
       // Check for CFError *.
       if (const auto *PtrTy = Param->getAs<PointerType>()) {
         if (const auto *RT = PtrTy->getPointeeType()->getAs<RecordType>()) {
-          if (S.isCFError(RT->getDecl())) {
+          if (S.ObjC().isCFError(RT->getDecl())) {
             AnyErrorParams = true;
             break;
           }
@@ -8632,31 +8663,95 @@ static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   return RD;
 }
 
-static bool
-CheckCountExpr(Sema &S, FieldDecl *FD, Expr *E,
-               llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
+enum class CountedByInvalidPointeeTypeKind {
+  INCOMPLETE,
+  SIZELESS,
+  FUNCTION,
+  FLEXIBLE_ARRAY_MEMBER,
+  VALID,
+};
+
+static bool CheckCountedByAttrOnField(
+    Sema &S, FieldDecl *FD, Expr *E,
+    llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
+  // Check the context the attribute is used in
+
   if (FD->getParent()->isUnion()) {
     S.Diag(FD->getBeginLoc(), diag::err_counted_by_attr_in_union)
         << FD->getSourceRange();
     return true;
   }
 
-  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
-    S.Diag(E->getBeginLoc(), diag::err_counted_by_attr_argument_not_integer)
-        << E->getSourceRange();
+  const auto FieldTy = FD->getType();
+  if (!FieldTy->isArrayType() && !FieldTy->isPointerType()) {
+    S.Diag(FD->getBeginLoc(),
+           diag::err_counted_by_attr_not_on_ptr_or_flexible_array_member)
+        << FD->getLocation();
     return true;
   }
 
   LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       LangOptions::StrictFlexArraysLevelKind::IncompleteOnly;
-
-  if (!Decl::isFlexibleArrayMemberLike(S.getASTContext(), FD, FD->getType(),
+  if (FieldTy->isArrayType() &&
+      !Decl::isFlexibleArrayMemberLike(S.getASTContext(), FD, FieldTy,
                                        StrictFlexArraysLevel, true)) {
-    // The "counted_by" attribute must be on a flexible array member.
-    SourceRange SR = FD->getLocation();
-    S.Diag(SR.getBegin(),
-           diag::err_counted_by_attr_not_on_flexible_array_member)
-        << SR;
+    S.Diag(FD->getBeginLoc(),
+           diag::err_counted_by_attr_on_array_not_flexible_array_member)
+        << FD->getLocation();
+    return true;
+  }
+
+  CountedByInvalidPointeeTypeKind InvalidTypeKind =
+      CountedByInvalidPointeeTypeKind::VALID;
+  QualType PointeeTy;
+  int SelectPtrOrArr = 0;
+  if (FieldTy->isPointerType()) {
+    PointeeTy = FieldTy->getPointeeType();
+    SelectPtrOrArr = 0;
+  } else {
+    assert(FieldTy->isArrayType());
+    const ArrayType *AT = S.getASTContext().getAsArrayType(FieldTy);
+    PointeeTy = AT->getElementType();
+    SelectPtrOrArr = 1;
+  }
+  // Note: The `Decl::isFlexibleArrayMemberLike` check earlier on means
+  // only `PointeeTy->isStructureTypeWithFlexibleArrayMember()` is reachable
+  // when `FieldTy->isArrayType()`.
+  bool ShouldWarn = false;
+  if (PointeeTy->isIncompleteType()) {
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
+  } else if (PointeeTy->isSizelessType()) {
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
+  } else if (PointeeTy->isFunctionType()) {
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
+  } else if (PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
+    if (FieldTy->isArrayType()) {
+      // This is a workaround for the Linux kernel that has already adopted
+      // `counted_by` on a FAM where the pointee is a struct with a FAM. This
+      // should be an error because computing the bounds of the array cannot be
+      // done correctly without manually traversing every struct object in the
+      // array at runtime. To allow the code to be built this error is
+      // downgraded to a warning.
+      ShouldWarn = true;
+    }
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
+  }
+
+  if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
+    unsigned DiagID = ShouldWarn
+                          ? diag::warn_counted_by_attr_elt_type_unknown_size
+                          : diag::err_counted_by_attr_pointee_unknown_size;
+    S.Diag(FD->getBeginLoc(), DiagID)
+        << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
+        << (ShouldWarn ? 1 : 0) << FD->getSourceRange();
+    return true;
+  }
+
+  // Check the expression
+
+  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
+    S.Diag(E->getBeginLoc(), diag::err_counted_by_attr_argument_not_integer)
+        << E->getSourceRange();
     return true;
   }
 
@@ -8719,10 +8814,11 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
-  if (CheckCountExpr(S, FD, CountExpr, Decls))
+  if (CheckCountedByAttrOnField(S, FD, CountExpr, Decls))
     return;
 
-  QualType CAT = S.BuildCountAttributedArrayType(FD->getType(), CountExpr);
+  QualType CAT =
+      S.BuildCountAttributedArrayOrPointerType(FD->getType(), CountExpr);
   FD->setType(CAT);
 }
 
@@ -8837,7 +8933,7 @@ static bool tryMakeVariablePseudoStrong(Sema &S, VarDecl *VD,
 
   Qualifiers::ObjCLifetime LifetimeQual = Ty.getQualifiers().getObjCLifetime();
 
-  // Sema::inferObjCARCLifetime must run after processing decl attributes
+  // SemaObjC::inferObjCARCLifetime must run after processing decl attributes
   // (because __block lowers to an attribute), so if the lifetime hasn't been
   // explicitly specified, infer it locally now.
   if (LifetimeQual == Qualifiers::OCL_None)

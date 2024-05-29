@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-14,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
@@ -46,6 +46,50 @@ void g() {
 }
 } // namespace cwg2303
 #endif
+
+namespace cwg2304 { // cwg2304: 2.8
+template<typename T> void foo(T, int);
+template<typename T> void foo(T&, ...);
+struct Q; // #cwg2304-Q
+void fn1(Q &data_vectors) {
+  foo(data_vectors, 0);
+  // expected-error@-1 {{argument type 'cwg2304::Q' is incomplete}}
+  //   expected-note@#cwg2304-Q {{forward declaration of 'cwg2304::Q'}}
+}
+} // namespace cwg2304
+
+namespace cwg2310 { // cwg2310: partial
+#if __cplusplus >= 201103L
+template<typename A, typename B>
+struct check_derived_from {
+  static A a;
+  // FIXME: all 3 examples should be rejected in all language modes.
+  // FIXME: we should test this in 98 mode.
+  // FIXME: we accept this when MSVC triple is used
+  static constexpr B *p = &a;
+#if !defined(_WIN32) || defined(__MINGW32__)
+  // cxx11-14-error@-2 {{cannot initialize a variable of type 'cwg2310::X *const' with an rvalue of type 'cwg2310::Z *'}}
+  //   cxx11-14-note@#cwg2310-X {{in instantiation of template class 'cwg2310::check_derived_from<cwg2310::Z, cwg2310::X>' requested here}}
+  // cxx11-14-error@-4 {{cannot initialize a variable of type 'cwg2310::Y *const' with an rvalue of type 'cwg2310::Z *'}}
+  //   cxx11-14-note@#cwg2310-Y {{in instantiation of template class 'cwg2310::check_derived_from<cwg2310::Z, cwg2310::Y>' requested here}}
+#endif
+};
+
+struct W {};
+struct X {};
+struct Y {};
+struct Z : W,
+  X, check_derived_from<Z, X>, // #cwg2310-X
+  check_derived_from<Z, Y>, Y  // #cwg2310-Y
+{  
+  // FIXME: It was properly rejected before, but we're crashing since Clang 11 in C++11 and C++14 modes.
+  //        See https://github.com/llvm/llvm-project/issues/59920
+#if __cplusplus >= 201703L
+  check_derived_from<Z, W> cdf;
+#endif
+};
+#endif
+} // namespace cwg2310
 
 // cwg2331: na
 // cwg2335 is in cwg2335.cxx

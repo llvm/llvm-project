@@ -4303,12 +4303,23 @@ struct OpenACCConstruct {
 };
 
 // CUF-kernel-do-construct ->
-//     !$CUF KERNEL DO [ (scalar-int-constant-expr) ] <<< grid, block [, stream]
-//     >>> do-construct
+//   !$CUF KERNEL DO [ (scalar-int-constant-expr) ]
+//      <<< grid, block [, stream] >>>
+//      [ cuf-reduction... ]
+//      do-construct
 // star-or-expr -> * | scalar-int-expr
 // grid -> * | scalar-int-expr | ( star-or-expr-list )
 // block -> * | scalar-int-expr | ( star-or-expr-list )
 // stream -> 0, scalar-int-expr | STREAM = scalar-int-expr
+// cuf-reduction -> [ REDUCE | REDUCTION ] (
+//                  acc-reduction-op : scalar-variable-list )
+
+struct CUFReduction {
+  TUPLE_CLASS_BOILERPLATE(CUFReduction);
+  using Operator = AccReductionOperator;
+  std::tuple<Operator, std::list<Scalar<Variable>>> t;
+};
+
 struct CUFKernelDoConstruct {
   TUPLE_CLASS_BOILERPLATE(CUFKernelDoConstruct);
   WRAPPER_CLASS(StarOrExpr, std::optional<ScalarIntExpr>);
@@ -4316,7 +4327,8 @@ struct CUFKernelDoConstruct {
     TUPLE_CLASS_BOILERPLATE(Directive);
     CharBlock source;
     std::tuple<std::optional<ScalarIntConstantExpr>, std::list<StarOrExpr>,
-        std::list<StarOrExpr>, std::optional<ScalarIntExpr>>
+        std::list<StarOrExpr>, std::optional<ScalarIntExpr>,
+        std::list<CUFReduction>>
         t;
   };
   std::tuple<Directive, std::optional<DoConstruct>> t;
