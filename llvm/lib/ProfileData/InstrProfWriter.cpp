@@ -893,52 +893,22 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   }
   InfoObj->CSSummaryBuilder = nullptr;
 
-  const size_t MemProfOffset = BackPatchStartOffset + sizeof(uint64_t);
-  const size_t BinaryIdOffset = MemProfOffset + sizeof(uint64_t);
-  const size_t TemporalProfTracesOffset = BinaryIdOffset + sizeof(uint64_t);
-  const size_t VTableNamesOffset = TemporalProfTracesOffset + sizeof(uint64_t);
-  if (!WritePrevVersion) {
-    // Now do the final patch:
-    PatchItem PatchItems[] = {
-        // Patch the Header.HashOffset field.
-        {BackPatchStartOffset, &HashTableStart, 1},
-        // Patch the Header.MemProfOffset (=0 for profiles without MemProf
-        // data).
-        {MemProfOffset, &MemProfSectionStart, 1},
-        // Patch the Header.BinaryIdSectionOffset.
-        {BinaryIdOffset, &BinaryIdSectionStart, 1},
-        // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
-        // traces).
-        {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
-        {VTableNamesOffset, &VTableNamesSectionStart, 1},
-        // Patch the summary data.
-        {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
-         (int)(SummarySize / sizeof(uint64_t))},
-        {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
-         (int)CSSummarySize}};
+  SmallVector<uint64_t, 8> HeaderOffsets = {HashTableStart, MemProfSectionStart,
+                                            BinaryIdSectionStart,
+                                            TemporalProfTracesSectionStart};
+  if (!WritePrevVersion)
+    HeaderOffsets.push_back(VTableNamesSectionStart);
 
-    OS.patch(PatchItems);
-  } else {
-    // Now do the final patch:
-    PatchItem PatchItems[] = {
-        // Patch the Header.HashOffset field.
-        {BackPatchStartOffset, &HashTableStart, 1},
-        // Patch the Header.MemProfOffset (=0 for profiles without MemProf
-        // data).
-        {MemProfOffset, &MemProfSectionStart, 1},
-        // Patch the Header.BinaryIdSectionOffset.
-        {BinaryIdOffset, &BinaryIdSectionStart, 1},
-        // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
-        // traces).
-        {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
-        // Patch the summary data.
-        {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
-         (int)(SummarySize / sizeof(uint64_t))},
-        {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
-         (int)CSSummarySize}};
+  PatchItem PatchItems[] = {
+      // Patch the Header fields
+      {BackPatchStartOffset, HeaderOffsets.data(), (int)HeaderOffsets.size()},
+      // Patch the summary data.
+      {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
+       (int)(SummarySize / sizeof(uint64_t))},
+      {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
+       (int)CSSummarySize}};
 
-    OS.patch(PatchItems);
-  }
+  OS.patch(PatchItems);
 
   for (const auto &I : FunctionData)
     for (const auto &F : I.getValue())
