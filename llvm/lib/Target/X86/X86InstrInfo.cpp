@@ -3221,6 +3221,14 @@ int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
   }
 }
 
+#define GET_X86_NF_TRANSFORM_TABLE
+#include "X86GenInstrMapping.inc"
+unsigned X86::getNFVariant(unsigned Opc) {
+  ArrayRef<X86TableEntry> Table = ArrayRef(X86NFTransformTable);
+  const auto I = llvm::lower_bound(Table, Opc);
+  return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
+}
+
 /// Return the inverse of the specified condition,
 /// e.g. turning COND_E to COND_NE.
 X86::CondCode X86::GetOppositeBranchCondition(X86::CondCode CC) {
