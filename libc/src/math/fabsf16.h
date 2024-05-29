@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_MATH_FABSF16_H
 #define LLVM_LIBC_SRC_MATH_FABSF16_H
 
-#include "include/llvm-libc-types/float16.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE {
 
