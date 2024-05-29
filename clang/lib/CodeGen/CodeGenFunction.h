@@ -3643,6 +3643,9 @@ public:
   Address GenerateCapturedStmtArgument(const CapturedStmt &S);
   llvm::Function *GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
                                                      SourceLocation Loc);
+  llvm::Function *
+  GenerateOpenMPCapturedStmtFunctionAggregate(const CapturedStmt &S,
+                                              SourceLocation Loc);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,

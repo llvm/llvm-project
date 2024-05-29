@@ -571,46 +571,47 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l44
-// CHECK9-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[B:%.*]], ptr noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK9-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
-// CHECK9-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
-// CHECK9-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
-// CHECK9-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON:%.*]], align 8
+// CHECK9-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca ptr, align 8
+// CHECK9-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_0:%.*]], align 8
 // CHECK9-NEXT:    [[DOTAFFS_ARR_ADDR:%.*]] = alloca [1 x %struct.kmp_task_affinity_info_t], align 8
 // CHECK9-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 // CHECK9-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK9-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
-// CHECK9-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
-// CHECK9-NEXT:    store ptr [[B_ADDR]], ptr [[TMP1]], align 8
-// CHECK9-NEXT:    [[TMP2:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 8, ptr @.omp_task_entry.)
-// CHECK9-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x %struct.kmp_task_affinity_info_t], ptr [[DOTAFFS_ARR_ADDR]], i64 0, i64 0
-// CHECK9-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK9-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 0
-// CHECK9-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK9-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 1023
-// CHECK9-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[ARRAYIDX1]], i32 1
-// CHECK9-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
-// CHECK9-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP6]] to i64
-// CHECK9-NEXT:    [[TMP9:%.*]] = sub nuw i64 [[TMP8]], [[TMP7]]
-// CHECK9-NEXT:    [[TMP10:%.*]] = getelementptr [[STRUCT_KMP_TASK_AFFINITY_INFO_T:%.*]], ptr [[TMP3]], i64 0
-// CHECK9-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_AFFINITY_INFO_T]], ptr [[TMP10]], i32 0, i32 0
-// CHECK9-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
-// CHECK9-NEXT:    store i64 [[TMP12]], ptr [[TMP11]], align 8
-// CHECK9-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_AFFINITY_INFO_T]], ptr [[TMP10]], i32 0, i32 1
-// CHECK9-NEXT:    store i64 [[TMP9]], ptr [[TMP13]], align 8
-// CHECK9-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_omp_reg_task_with_affinity(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP2]], i32 1, ptr [[TMP3]])
-// CHECK9-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP2]], i32 0, i32 0
-// CHECK9-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP15]], i32 0, i32 0
-// CHECK9-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 8
-// CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP17]], ptr align 8 [[AGG_CAPTURED]], i64 8, i1 false)
-// CHECK9-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP2]], i32 0, i32 1
-// CHECK9-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP18]], i32 0, i32 0
-// CHECK9-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK9-NEXT:    store ptr [[TMP20]], ptr [[TMP19]], align 8
-// CHECK9-NEXT:    [[TMP21:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP2]])
-// CHECK9-NEXT:    [[TMP22:%.*]] = call i32 @__kmpc_omp_taskwait(ptr @[[GLOB1]], i32 [[TMP0]])
+// CHECK9-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
+// CHECK9-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
+// CHECK9-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], ptr [[TMP1]], i32 0, i32 0
+// CHECK9-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[TMP1]], i32 0, i32 1
+// CHECK9-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK9-NEXT:    store ptr [[TMP2]], ptr [[TMP4]], align 8
+// CHECK9-NEXT:    [[TMP5:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 8, ptr @.omp_task_entry.)
+// CHECK9-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x %struct.kmp_task_affinity_info_t], ptr [[DOTAFFS_ARR_ADDR]], i64 0, i64 0
+// CHECK9-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP3]], align 8
+// CHECK9-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 0
+// CHECK9-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP3]], align 8
+// CHECK9-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 1023
+// CHECK9-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[ARRAYIDX1]], i32 1
+// CHECK9-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
+// CHECK9-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP9]] to i64
+// CHECK9-NEXT:    [[TMP12:%.*]] = sub nuw i64 [[TMP11]], [[TMP10]]
+// CHECK9-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_KMP_TASK_AFFINITY_INFO_T:%.*]], ptr [[TMP6]], i64 0
+// CHECK9-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_AFFINITY_INFO_T]], ptr [[TMP13]], i32 0, i32 0
+// CHECK9-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
+// CHECK9-NEXT:    store i64 [[TMP15]], ptr [[TMP14]], align 8
+// CHECK9-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_AFFINITY_INFO_T]], ptr [[TMP13]], i32 0, i32 1
+// CHECK9-NEXT:    store i64 [[TMP12]], ptr [[TMP16]], align 8
+// CHECK9-NEXT:    [[TMP17:%.*]] = call i32 @__kmpc_omp_reg_task_with_affinity(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP5]], i32 1, ptr [[TMP6]])
+// CHECK9-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP5]], i32 0, i32 0
+// CHECK9-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP18]], i32 0, i32 0
+// CHECK9-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 8
+// CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP20]], ptr align 8 [[AGG_CAPTURED]], i64 8, i1 false)
+// CHECK9-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP5]], i32 0, i32 1
+// CHECK9-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP21]], i32 0, i32 0
+// CHECK9-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[TMP3]], align 8
+// CHECK9-NEXT:    store ptr [[TMP23]], ptr [[TMP22]], align 8
+// CHECK9-NEXT:    [[TMP24:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP5]])
+// CHECK9-NEXT:    [[TMP25:%.*]] = call i32 @__kmpc_omp_taskwait(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK9-NEXT:    ret void
 //
 //
@@ -693,46 +694,47 @@ int main() {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l44
-// CHECK11-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[B:%.*]], ptr noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK11-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
-// CHECK11-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
-// CHECK11-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK11-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON:%.*]], align 4
+// CHECK11-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK11-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_0:%.*]], align 4
 // CHECK11-NEXT:    [[DOTAFFS_ARR_ADDR:%.*]] = alloca [1 x %struct.kmp_task_affinity_info_t], align 4
 // CHECK11-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 // CHECK11-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
-// CHECK11-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
-// CHECK11-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
-// CHECK11-NEXT:    store ptr [[B_ADDR]], ptr [[TMP1]], align 4
-// CHECK11-NEXT:    [[TMP2:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 24, i32 4, ptr @.omp_task_entry.)
-// CHECK11-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x %struct.kmp_task_affinity_info_t], ptr [[DOTAFFS_ARR_ADDR]], i32 0, i32 0
-// CHECK11-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK11-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
-// CHECK11-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK11-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 1023
-// CHECK11-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[ARRAYIDX1]], i32 1
-// CHECK11-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i32
-// CHECK11-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP6]] to i32
-// CHECK11-NEXT:    [[TMP9:%.*]] = sub nuw i32 [[TMP8]], [[TMP7]]
-// CHECK11-NEXT:    [[TMP10:%.*]] = getelementptr [[STRUCT_KMP_TASK_AFFINITY_INFO_T:%.*]], ptr [[TMP3]], i32 0
-// CHECK11-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_AFFINITY_INFO_T]], ptr [[TMP10]], i32 0, i32 0
-// CHECK11-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i32
-// CHECK11-NEXT:    store i32 [[TMP12]], ptr [[TMP11]], align 4
-// CHECK11-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_AFFINITY_INFO_T]], ptr [[TMP10]], i32 0, i32 1
-// CHECK11-NEXT:    store i32 [[TMP9]], ptr [[TMP13]], align 4
-// CHECK11-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_omp_reg_task_with_affinity(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP2]], i32 1, ptr [[TMP3]])
-// CHECK11-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP2]], i32 0, i32 0
-// CHECK11-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP15]], i32 0, i32 0
-// CHECK11-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 4
-// CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP17]], ptr align 4 [[AGG_CAPTURED]], i32 4, i1 false)
-// CHECK11-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP2]], i32 0, i32 1
-// CHECK11-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP18]], i32 0, i32 0
-// CHECK11-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK11-NEXT:    store ptr [[TMP20]], ptr [[TMP19]], align 4
-// CHECK11-NEXT:    [[TMP21:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP2]])
-// CHECK11-NEXT:    [[TMP22:%.*]] = call i32 @__kmpc_omp_taskwait(ptr @[[GLOB1]], i32 [[TMP0]])
+// CHECK11-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
+// CHECK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
+// CHECK11-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], ptr [[TMP1]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[TMP1]], i32 0, i32 1
+// CHECK11-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK11-NEXT:    store ptr [[TMP2]], ptr [[TMP4]], align 4
+// CHECK11-NEXT:    [[TMP5:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 24, i32 4, ptr @.omp_task_entry.)
+// CHECK11-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1 x %struct.kmp_task_affinity_info_t], ptr [[DOTAFFS_ARR_ADDR]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP3]], align 4
+// CHECK11-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
+// CHECK11-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP3]], align 4
+// CHECK11-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i32 1023
+// CHECK11-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[ARRAYIDX1]], i32 1
+// CHECK11-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i32
+// CHECK11-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP9]] to i32
+// CHECK11-NEXT:    [[TMP12:%.*]] = sub nuw i32 [[TMP11]], [[TMP10]]
+// CHECK11-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_KMP_TASK_AFFINITY_INFO_T:%.*]], ptr [[TMP6]], i32 0
+// CHECK11-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_AFFINITY_INFO_T]], ptr [[TMP13]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i32
+// CHECK11-NEXT:    store i32 [[TMP15]], ptr [[TMP14]], align 4
+// CHECK11-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_AFFINITY_INFO_T]], ptr [[TMP13]], i32 0, i32 1
+// CHECK11-NEXT:    store i32 [[TMP12]], ptr [[TMP16]], align 4
+// CHECK11-NEXT:    [[TMP17:%.*]] = call i32 @__kmpc_omp_reg_task_with_affinity(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP5]], i32 1, ptr [[TMP6]])
+// CHECK11-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP5]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP18]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 4
+// CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP20]], ptr align 4 [[AGG_CAPTURED]], i32 4, i1 false)
+// CHECK11-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP5]], i32 0, i32 1
+// CHECK11-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP21]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[TMP3]], align 4
+// CHECK11-NEXT:    store ptr [[TMP23]], ptr [[TMP22]], align 4
+// CHECK11-NEXT:    [[TMP24:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP5]])
+// CHECK11-NEXT:    [[TMP25:%.*]] = call i32 @__kmpc_omp_taskwait(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK11-NEXT:    ret void
 //
 //

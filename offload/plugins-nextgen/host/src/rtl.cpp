@@ -18,6 +18,7 @@
 
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
+#include "Shared/Utils.h"
 #include "Utils/ELF.h"
 
 #include "GlobalHandler.h"
@@ -62,6 +63,9 @@ struct GenELF64KernelTy : public GenericKernelTy {
   /// Construct the kernel with a name and an execution mode.
   GenELF64KernelTy(const char *Name) : GenericKernelTy(Name), Func(nullptr) {}
 
+  /// This plugin doesn't use the kernel environment.
+  virtual bool shouldSetupKernelEnvironment() const override { return false; };
+
   /// Initialize the kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
     // Functions have zero size.
@@ -77,7 +81,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
       return Plugin::error("Invalid function for kernel %s", getName());
 
     // Save the function pointer.
-    Func = (void (*)())Global.getPtr();
+    Func = (void (*)(void *, void *))Global.getPtr();
 
     KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
     KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
@@ -88,31 +92,61 @@ struct GenELF64KernelTy : public GenericKernelTy {
     return Plugin::success();
   }
 
-  /// Launch the kernel using the libffi.
+  /// Launch the kernel by copying the arguments to a new struct.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
                    uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    // Create a vector of ffi_types, one per argument.
-    SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
-    ffi_type **ArgTypesPtr = (ArgTypes.size()) ? &ArgTypes[0] : nullptr;
+    // The CPU uses a packed struct as its native argument format. We need to
+    // get the appropriate size with alignment according to the OpenMP
+    // interface.
+    void *AllArgs = nullptr;
+    if (KernelArgs.NumArgs) {
+      uint64_t Size = 0;
+      for (int I = 0; I < KernelArgs.NumArgs; ++I) {
+        // The reported size is only accurate if it is a literal being copied,
+        // otherwise it is always an i64 pointer or promoted value.
+        uint64_t Width = KernelArgs.ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL
+                             ? KernelArgs.ArgSizes[I]
+                             : sizeof(void *);
+        if (Size % Width != 0)
+          Size = align_up(Size, Width);
+        Size += Width;
+      }
 
-    // Prepare the cif structure before running the kernel function.
-    ffi_cif Cif;
-    ffi_status Status = ffi_prep_cif(&Cif, FFI_DEFAULT_ABI, KernelArgs.NumArgs,
-                                     &ffi_type_void, ArgTypesPtr);
-    if (Status != FFI_OK)
-      return Plugin::error("Error in ffi_prep_cif: %d", Status);
+      auto AllocOrErr = GenericDevice.dataAlloc(
+          Size, /*HstPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
+      if (!AllocOrErr)
+        return AllocOrErr.takeError();
+      AllArgs = *AllocOrErr;
 
-    // Call the kernel function through libffi.
-    long Return;
-    ffi_call(&Cif, Func, &Return, (void **)Args);
+      uint64_t Offset = 0;
+      for (int I = 0; I < KernelArgs.NumArgs; ++I) {
+        uint64_t Width = KernelArgs.ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL
+                             ? KernelArgs.ArgSizes[I]
+                             : sizeof(void *);
+        Offset = align_up(Offset, Width);
+        std::memcpy(advanceVoidPtr(AllArgs, Offset),
+                    static_cast<void **>(Args)[I], Width);
+        Offset += Width;
+      }
+      AsyncInfoWrapper.freeAllocationAfterSynchronization(AllArgs);
+    }
 
+    // We do not use the kernel environment pointer, but the Clang codegen emits
+    // it anyway. It is easier to simply ignore it here.
+    Func(nullptr, AllArgs);
     return Plugin::success();
   }
 
 private:
-  /// The kernel function to execute.
-  void (*Func)(void);
+  template <typename Ty1, typename Ty2> static Ty1 align_up(Ty1 V, Ty2 Align) {
+    return ((V + Ty1(Align) - 1) / Ty1(Align)) * Ty1(Align);
+  }
+
+  /// The kernel function to execute. The function signature is always expected
+  /// to be the following interface.
+  /// void kernel(void *KernelEnv, void *Args[NumArgs]);
+  void (*Func)(void *, void *);
 };
 
 /// Class implementing the GenELF64 device images properties.
