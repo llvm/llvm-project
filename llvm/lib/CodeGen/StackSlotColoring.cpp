@@ -67,6 +67,9 @@ namespace {
     const MachineBlockFrequencyInfo *MBFI = nullptr;
     SlotIndexes *Indexes = nullptr;
 
+    // - preserves Analysis passes in case RA may be called afterwards.
+    bool preserveRegAllocNeededAnalysis = false;
+
     // SSIntervals - Spill slot intervals.
     std::vector<LiveInterval*> SSIntervals;
 
@@ -142,7 +145,9 @@ namespace {
   public:
     static char ID; // Pass identification
 
-    StackSlotColoring() : MachineFunctionPass(ID) {
+    StackSlotColoring(bool preserveRegAllocNeededAnalysis_ = false)
+        : MachineFunctionPass(ID),
+          preserveRegAllocNeededAnalysis(preserveRegAllocNeededAnalysis_) {
       initializeStackSlotColoringPass(*PassRegistry::getPassRegistry());
     }
 
@@ -155,12 +160,14 @@ namespace {
       AU.addPreserved<MachineBlockFrequencyInfo>();
       AU.addPreservedID(MachineDominatorsID);
 
-      /// NOTE: As in AMDGPU pass pipeline, reg alloc is spillted into 2 phases
-      /// and StackSlotColoring is invoked after each phase, it becomes
-      /// important to preserve additional analyses result to be used by VGPR
-      /// regAlloc, after being done with SGPR regAlloc and its related passes.
-      AU.addPreserved<LiveIntervals>();
-      AU.addPreserved<LiveDebugVariables>();
+      // As in some Target's pipeline, register allocation (RA) might be
+      // splitted into multiple phases based on register class. So, this pass
+      // may be invoked multiple times requiring it to save these analyses to be
+      // used by RA later.
+      if (preserveRegAllocNeededAnalysis) {
+        AU.addPreserved<LiveIntervals>();
+        AU.addPreserved<LiveDebugVariables>();
+      }
 
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -506,9 +513,6 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     ++I;
   }
 
-  /// FIXED: As this pass preserves SlotIndexesAnalysis result, any
-  /// addition/removal of MI needs corresponding update in SlotIndexAnalysis,
-  /// to avoid corruption of SlotIndexesAnalysis result.
   for (MachineInstr *MI : toErase) {
     MI->eraseFromParent();
     Indexes->removeMachineInstrFromMaps(*MI);
@@ -564,4 +568,9 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   Assignments.clear();
 
   return Changed;
+}
+
+FunctionPass *
+llvm::createStackSlotColoring(bool preserveRegAllocNeededAnalysis) {
+  return new StackSlotColoring(preserveRegAllocNeededAnalysis);
 }

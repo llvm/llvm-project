@@ -371,6 +371,8 @@ namespace llvm {
 
   /// StackSlotColoring - This pass performs stack slot coloring.
   extern char &StackSlotColoringID;
+  FunctionPass *
+  createStackSlotColoring(bool preserveRegAllocNeededAnalysis = false);
 
   /// This pass lays out funclets contiguously.
   extern char &FuncletLayoutID;

@@ -52,8 +52,7 @@ public:
   void calculateSaveRestoreBlocks(MachineFunction &MF);
   bool spillCalleeSavedRegs(MachineFunction &MF,
                             SmallVectorImpl<int> &CalleeSavedFIs);
-  void extendWWMVirtRegLiveness(MachineFunction &MF, SlotIndexes *Indexes,
-                                LiveIntervals *LIS);
+  void extendWWMVirtRegLiveness(MachineFunction &MF, LiveIntervals *LIS);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -261,7 +260,6 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 }
 
 void SILowerSGPRSpills::extendWWMVirtRegLiveness(MachineFunction &MF,
-                                                 SlotIndexes *Indexes,
                                                  LiveIntervals *LIS) {
   // TODO: This is a workaround to avoid the unmodelled liveness computed with
   // whole-wave virtual registers when allocated together with the regular VGPR
@@ -280,7 +278,6 @@ void SILowerSGPRSpills::extendWWMVirtRegLiveness(MachineFunction &MF,
   for (auto Reg : MFI->getSGPRSpillVGPRs()) {
     for (MachineBasicBlock *SaveBlock : SaveBlocks) {
       MachineBasicBlock::iterator InsertBefore = SaveBlock->begin();
-      MachineInstrSpan MIS(InsertBefore, SaveBlock);
 
       DebugLoc DL = SaveBlock->findDebugLoc(InsertBefore);
       auto MIB = BuildMI(*SaveBlock, InsertBefore, DL,
@@ -289,13 +286,8 @@ void SILowerSGPRSpills::extendWWMVirtRegLiveness(MachineFunction &MF,
       // Set SGPR_SPILL asm printer flag
       MIB->setAsmPrinterFlag(AMDGPU::SGPR_SPILL);
 
-      if (LIS) {
+      if (LIS)
         LIS->InsertMachineInstrInMaps(*MIB);
-      } else if (Indexes) {
-        assert(std::distance(MIS.begin(), InsertBefore) == 1);
-        MachineInstr &Inst = *std::prev(InsertBefore);
-        Indexes->insertMachineInstrInMaps(Inst);
-      }
     }
   }
 
@@ -310,12 +302,8 @@ void SILowerSGPRSpills::extendWWMVirtRegLiveness(MachineFunction &MF,
                          TII->get(TargetOpcode::KILL));
       MIB.addReg(Reg);
 
-      if (LIS) {
+      if (LIS)
         LIS->InsertMachineInstrInMaps(*MIB);
-      } else if (Indexes) {
-        MachineInstr &Inst = *std::prev(InsertBefore);
-        Indexes->insertMachineInstrInMaps(Inst);
-      }
     }
   }
 }
@@ -406,7 +394,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
     }
 
     if (SpilledToVirtVGPRLanes) {
-      extendWWMVirtRegLiveness(MF, Indexes, LIS);
+      extendWWMVirtRegLiveness(MF, LIS);
       if (LIS) {
         // Compute the LiveInterval for the newly created virtual registers.
         for (auto Reg : FuncInfo->getSGPRSpillVGPRs())
