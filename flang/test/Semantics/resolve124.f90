@@ -51,8 +51,8 @@ subroutine s4()
 !ERROR: Reduction variable 'c1' ('COMPLEX(4)') does not have a suitable type ('INTEGER').
 !ERROR: Reduction variable 'c2' ('COMPLEX(4)') does not have a suitable type ('INTEGER').
 !ERROR: Reduction variable 'c3' ('COMPLEX(4)') does not have a suitable type ('INTEGER').
-!ERROR: Reduction variable 'c4' ('COMPLEX(4)') does not have a suitable type ('INTEGER', 'REAL').
-!ERROR: Reduction variable 'c5' ('COMPLEX(4)') does not have a suitable type ('INTEGER', 'REAL').
+!ERROR: Reduction variable 'c4' ('COMPLEX(4)') does not have a suitable type ('INTEGER', or 'REAL').
+!ERROR: Reduction variable 'c5' ('COMPLEX(4)') does not have a suitable type ('INTEGER', or 'REAL').
 !ERROR: Reduction variable 'c6' ('COMPLEX(4)') does not have a suitable type ('LOGICAL').
 !ERROR: Reduction variable 'c7' ('COMPLEX(4)') does not have a suitable type ('LOGICAL').
 !ERROR: Reduction variable 'c8' ('COMPLEX(4)') does not have a suitable type ('LOGICAL').
@@ -67,13 +67,13 @@ end subroutine s4
 subroutine s5()
 ! Cannot apply integer operations to logical variables
   logical :: l1, l2, l3, l4, l5, l6, l7
-!ERROR: Reduction variable 'l1' ('LOGICAL(4)') does not have a suitable type ('COMPLEX', 'INTEGER', 'REAL').
-!ERROR: Reduction variable 'l2' ('LOGICAL(4)') does not have a suitable type ('COMPLEX', 'INTEGER', 'REAL').
+!ERROR: Reduction variable 'l1' ('LOGICAL(4)') does not have a suitable type ('COMPLEX', 'INTEGER', or 'REAL').
+!ERROR: Reduction variable 'l2' ('LOGICAL(4)') does not have a suitable type ('COMPLEX', 'INTEGER', or 'REAL').
 !ERROR: Reduction variable 'l3' ('LOGICAL(4)') does not have a suitable type ('INTEGER').
 !ERROR: Reduction variable 'l4' ('LOGICAL(4)') does not have a suitable type ('INTEGER').
 !ERROR: Reduction variable 'l5' ('LOGICAL(4)') does not have a suitable type ('INTEGER').
-!ERROR: Reduction variable 'l6' ('LOGICAL(4)') does not have a suitable type ('INTEGER', 'REAL').
-!ERROR: Reduction variable 'l7' ('LOGICAL(4)') does not have a suitable type ('INTEGER', 'REAL').
+!ERROR: Reduction variable 'l6' ('LOGICAL(4)') does not have a suitable type ('INTEGER', or 'REAL').
+!ERROR: Reduction variable 'l7' ('LOGICAL(4)') does not have a suitable type ('INTEGER', or 'REAL').
   do concurrent(i=1:5) &
        & reduce(+:l1) reduce(*:l2) reduce(iand:l3) reduce(ieor:l4) &
        & reduce(ior:l5) reduce(max:l6) reduce(min:l7)
@@ -83,7 +83,7 @@ end subroutine s5
 subroutine s6()
 ! Cannot reduce a character
   character ch
-!ERROR: Reduction variable 'ch' ('CHARACTER(1_8,1)') does not have a suitable type ('COMPLEX', 'INTEGER', 'REAL').
+!ERROR: Reduction variable 'ch' ('CHARACTER(1_8,1)') does not have a suitable type ('COMPLEX', 'INTEGER', or 'REAL').
   do concurrent(i=1:5) reduce(+:ch)
   end do
 end subroutine s6

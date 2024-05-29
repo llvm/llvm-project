@@ -704,7 +704,7 @@ private:
           if (!(type->IsNumeric(TypeCategory::Complex) ||
                   type->IsNumeric(TypeCategory::Integer) ||
                   type->IsNumeric(TypeCategory::Real))) {
-            type_mismatch("COMPLEX', 'INTEGER', 'REAL");
+            type_mismatch("COMPLEX', 'INTEGER', or 'REAL");
           }
           break;
         case parser::ReductionOperator::Operator::And:
@@ -719,7 +719,7 @@ private:
         case parser::ReductionOperator::Operator::Min:
           if (!(type->IsNumeric(TypeCategory::Integer) ||
                   type->IsNumeric(TypeCategory::Real))) {
-            type_mismatch("INTEGER', 'REAL");
+            type_mismatch("INTEGER', or 'REAL");
           }
           break;
         case parser::ReductionOperator::Operator::Iand:
