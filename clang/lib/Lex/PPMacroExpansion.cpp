@@ -129,7 +129,7 @@ void Preprocessor::setLoadedMacroDirective(IdentifierInfo *II,
     II->setHasMacroDefinition(false);
 }
 
-ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, const IdentifierInfo *II,
+ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
                                           MacroInfo *Macro,
                                           ArrayRef<ModuleMacro *> Overrides,
                                           bool &New) {
@@ -162,7 +162,7 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, const IdentifierInfo *II,
   // The new macro is always a leaf macro.
   LeafMacros.push_back(MM);
   // The identifier now has defined macros (that may or may not be visible).
-  const_cast<IdentifierInfo *>(II)->setHasMacroDefinition(true);
+  II->setHasMacroDefinition(true);
 
   New = true;
   return MM;

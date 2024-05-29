@@ -13,9 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Format.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cstdint>
+#include <string>
 
 using namespace llvm;
 
@@ -111,6 +114,68 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   OS << "};\n"
      << "#undef EMIT_EXTENSIONS\n"
      << "#endif // EMIT_EXTENSIONS\n"
+     << "\n";
+
+  // Emit architecture information
+  OS << "#ifdef EMIT_ARCHITECTURES\n";
+
+  auto Architectures = RK.getAllDerivedDefinitionsIfDefined("Architecture64");
+  std::vector<std::string> CppSpellings;
+  for (const Record *Rec : Architectures) {
+    const int Major = Rec->getValueAsInt("Major");
+    const int Minor = Rec->getValueAsInt("Minor");
+    const std::string ProfileLower = Rec->getValueAsString("Profile").str();
+    const std::string ProfileUpper = Rec->getValueAsString("Profile").upper();
+
+    if (ProfileLower != "a" && ProfileLower != "r")
+      PrintFatalError(Rec->getLoc(),
+                      "error: Profile must be one of 'a' or 'r', got '" +
+                          ProfileLower + "'");
+
+    // Name of the object in C++
+    const std::string CppSpelling =
+        Minor == 0 ? "ARMV" + std::to_string(Major) + ProfileUpper.c_str()
+                   : "ARMV" + std::to_string(Major) + "_" +
+                         std::to_string(Minor) + ProfileUpper.c_str();
+    OS << "inline constexpr ArchInfo " << CppSpelling << " = {\n";
+    CppSpellings.push_back(CppSpelling);
+
+    OS << llvm::format("  VersionTuple{%d, %d},\n", Major, Minor);
+    OS << llvm::format("  %sProfile,\n", ProfileUpper.c_str());
+
+    // Name as spelled for -march.
+    if (Minor == 0)
+      OS << llvm::format("  \"armv%d-%s\",\n", Major, ProfileLower.c_str());
+    else
+      OS << llvm::format("  \"armv%d.%d-%s\",\n", Major, Minor,
+                         ProfileLower.c_str());
+
+    // SubtargetFeature::Name, used for -target-feature. Here the "+" is added.
+    const auto TargetFeatureName = Rec->getValueAsString("Name");
+    OS << "  \"+" << TargetFeatureName << "\",\n";
+
+    // Construct the list of default extensions
+    OS << "  (AArch64::ExtensionBitset({";
+    for (auto *E : Rec->getValueAsListOfDefs("DefaultExts")) {
+      // Only process subclasses of Extension
+      OS << "AArch64::" << E->getValueAsString("ArchExtKindSpelling").upper()
+         << ", ";
+    }
+    OS << "}))\n";
+
+    OS << "};\n";
+  }
+
+  OS << "\n"
+     << "/// The set of all architectures\n"
+     << "static constexpr std::array<const ArchInfo *, " << CppSpellings.size()
+     << "> ArchInfos = {\n";
+  for (StringRef CppSpelling : CppSpellings)
+    OS << "  &" << CppSpelling << ",\n";
+  OS << "};\n";
+
+  OS << "#undef EMIT_ARCHITECTURES\n"
+     << "#endif // EMIT_ARCHITECTURES\n"
      << "\n";
 }
 

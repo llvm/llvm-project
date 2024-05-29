@@ -13,11 +13,11 @@
 /// performance (hence the warning).
 func.func @use_too_many_tiles(%a: memref<?x?xi16>, %b:  memref<?x?xi16>, %c: memref<?x?xi16>) {
   %c0 = arith.constant 0 : index
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %tile_a = arith.constant dense<0> : vector<[8]x[8]xi16>
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %tile_b = arith.constant dense<1> : vector<[8]x[8]xi16>
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %tile_c = arm_sme.tile_load %a[%c0, %c0] : memref<?x?xi16>, vector<[8]x[8]xi16>
   %tile_d = arm_sme.tile_load %b[%c0, %c0] : memref<?x?xi16>, vector<[8]x[8]xi16>
   %tile_e = arm_sme.tile_load %c[%c0, %c0] : memref<?x?xi16>, vector<[8]x[8]xi16>
@@ -25,17 +25,17 @@ func.func @use_too_many_tiles(%a: memref<?x?xi16>, %b:  memref<?x?xi16>, %c: mem
   // CHECK-LABEL: tile_a:
   // CHECK-COUNT-8: ( 0, 0, 0, 0, 0, 0, 0, 0
   vector.print str "tile_a:\n"
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   vector.print %tile_a : vector<[8]x[8]xi16>
   // CHECK-LABEL: tile_b:
   // CHECK-COUNT-8: ( 1, 1, 1, 1, 1, 1, 1, 1
   vector.print str "tile_b:\n"
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   vector.print %tile_b : vector<[8]x[8]xi16>
   // CHECK-LABEL: tile_c:
   // CHECK-COUNT-8: ( 2, 2, 2, 2, 2, 2, 2, 2
   vector.print str "tile_c:\n"
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   vector.print %tile_c : vector<[8]x[8]xi16>
   // CHECK-LABEL: tile_d:
   // CHECK-COUNT-8: ( 3, 3, 3, 3, 3, 3, 3, 3

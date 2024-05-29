@@ -47,7 +47,8 @@ void printLine(llvm::raw_ostream &OS, const UnwrappedLine &Line,
       OS << Prefix;
       NewLine = false;
     }
-    OS << I->Tok->Tok.getName() << "[" << "T=" << (unsigned)I->Tok->getType()
+    OS << I->Tok->Tok.getName() << "["
+       << "T=" << (unsigned)I->Tok->getType()
        << ", OC=" << I->Tok->OriginalColumn << ", \"" << I->Tok->TokenText
        << "\"] ";
     for (SmallVectorImpl<UnwrappedLine>::const_iterator
@@ -1188,12 +1189,6 @@ void UnwrappedLineParser::parsePPDefine() {
     return;
   }
 
-  if (FormatTok->is(tok::identifier) &&
-      Tokens->peekNextToken()->is(tok::colon)) {
-    nextToken();
-    nextToken();
-  }
-
   // Errors during a preprocessor directive can only affect the layout of the
   // preprocessor directive, and thus we ignore them. An alternative approach
   // would be to use the same approach we use on the file level (no
@@ -1413,6 +1408,13 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
       isJSDeclOrStmt(Keywords, Next)) {
     return addUnwrappedLine();
   }
+}
+
+static bool isAltOperator(const FormatToken &Tok) {
+  return isalpha(Tok.TokenText[0]) &&
+         Tok.isOneOf(tok::ampamp, tok::ampequal, tok::amp, tok::pipe,
+                     tok::tilde, tok::exclaim, tok::exclaimequal, tok::pipepipe,
+                     tok::pipeequal, tok::caret, tok::caretequal);
 }
 
 void UnwrappedLineParser::parseStructuralElement(
@@ -1680,7 +1682,8 @@ void UnwrappedLineParser::parseStructuralElement(
     if (!Style.isJavaScript() && !Style.isVerilog() && !Style.isTableGen() &&
         Tokens->peekNextToken()->is(tok::colon) && !Line->MustBeDeclaration) {
       nextToken();
-      Line->Tokens.begin()->Tok->MustBreakBefore = true;
+      if (!Line->InMacroBody || CurrentLines->size() > 1)
+        Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
       parseLabel(!Style.IndentGotoLabels);
       if (HasLabel)
@@ -1693,9 +1696,15 @@ void UnwrappedLineParser::parseStructuralElement(
     break;
   }
 
-  const bool InRequiresExpression =
-      OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
-  do {
+  for (const bool InRequiresExpression =
+           OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
+       !eof();) {
+    if (IsCpp && isAltOperator(*FormatTok)) {
+      if (auto *Next = Tokens->peekNextToken(/*SkipComment=*/true);
+          Next && Next->isBinaryOperator()) {
+        FormatTok->Tok.setKind(tok::identifier);
+      }
+    }
     const FormatToken *Previous = FormatTok->Previous;
     switch (FormatTok->Tok.getKind()) {
     case tok::at:
@@ -2126,7 +2135,7 @@ void UnwrappedLineParser::parseStructuralElement(
       nextToken();
       break;
     }
-  } while (!eof());
+  }
 }
 
 bool UnwrappedLineParser::tryToParsePropertyAccessor() {
@@ -4007,8 +4016,6 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   };
 
   if (FormatTok->isOneOf(tok::colon, tok::less)) {
-    if (FormatTok->is(tok::colon))
-      IsDerived = true;
     int AngleNestingLevel = 0;
     do {
       if (FormatTok->is(tok::less))
@@ -4016,9 +4023,13 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       else if (FormatTok->is(tok::greater))
         --AngleNestingLevel;
 
-      if (AngleNestingLevel == 0 && FormatTok->is(tok::l_paren) &&
-          IsNonMacroIdentifier(FormatTok->Previous)) {
-        break;
+      if (AngleNestingLevel == 0) {
+        if (FormatTok->is(tok::colon)) {
+          IsDerived = true;
+        } else if (FormatTok->is(tok::l_paren) &&
+                   IsNonMacroIdentifier(FormatTok->Previous)) {
+          break;
+        }
       }
       if (FormatTok->is(tok::l_brace)) {
         if (AngleNestingLevel == 0 && IsListInitialization())

@@ -1802,7 +1802,7 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
                                            bool &ParseError, SMLoc &End) {
   // A named operator should be either lower or upper case, but not a mix...
   // except in MASM, which uses full case-insensitivity.
-  if (Name.compare(Name.lower()) && Name.compare(Name.upper()) &&
+  if (Name != Name.lower() && Name != Name.upper() &&
       !getParser().isParsingMasm())
     return false;
   if (Name.equals_insensitive("not")) {

@@ -1389,6 +1389,12 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
         if (!Arg)
           continue;
 
+        if (AL.hasParamAttr(I, Attribute::ByVal))
+          // It's unsound to propagate memory attributes to byval arguments.
+          // Even if CalledFunction doesn't e.g. write to the argument,
+          // the call to NewInnerCB may write to its by-value copy.
+          continue;
+
         unsigned ArgNo = Arg->getArgNo();
         // If so, propagate its access attributes.
         AL = AL.addParamAttributes(Context, I, ValidParamAttrs[ArgNo]);

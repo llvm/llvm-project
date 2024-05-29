@@ -1,4 +1,3 @@
-
 // RUN: mlir-opt %s -test-arm-sme-tile-allocation -split-input-file | FileCheck %s
 
 // CHECK-LABEL: @always_spill_larger_or_equal_tile_type

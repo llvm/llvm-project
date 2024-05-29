@@ -1090,11 +1090,10 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return MainFileRenameEdit.takeError();
 
   llvm::DenseSet<Range> RenamedRanges;
-  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
+  if (!isa<ObjCMethodDecl>(RenameDecl)) {
     // TODO: Insert the ranges from the ObjCMethodDecl/ObjCMessageExpr selector
     // pieces which are being renamed. This will require us to make changes to
     // locateDeclAt to preserve this AST node.
-  } else {
     RenamedRanges.insert(CurrentIdentifier);
   }
 

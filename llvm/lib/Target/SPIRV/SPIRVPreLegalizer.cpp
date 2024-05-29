@@ -215,6 +215,8 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
         SpirvTy = GR->getOrCreateSPIRVType(Ty, MIB);
         break;
       }
+      case TargetOpcode::G_ANYEXT:
+      case TargetOpcode::G_SEXT:
       case TargetOpcode::G_ZEXT: {
         if (MI->getOperand(1).isReg()) {
           if (MachineInstr *DefInstr =
@@ -457,12 +459,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           Ty = VectorType::get(ElemTy, NumElts, false);
         }
         insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MRI);
-      } else if (MI.getOpcode() == TargetOpcode::G_TRUNC ||
-                 MI.getOpcode() == TargetOpcode::G_ZEXT ||
-                 MI.getOpcode() == TargetOpcode::G_PTRTOINT ||
-                 MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
-                 MI.getOpcode() == TargetOpcode::COPY ||
-                 MI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST) {
+      } else if (MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
         propagateSPIRVType(&MI, GR, MRI, MIB);
       }
 
@@ -474,6 +471,24 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
   for (MachineInstr *MI : ToErase)
     MI->eraseFromParent();
+
+  // Address the case when IRTranslator introduces instructions with new
+  // registers without SPIRVType associated.
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      switch (MI.getOpcode()) {
+      case TargetOpcode::G_TRUNC:
+      case TargetOpcode::G_ANYEXT:
+      case TargetOpcode::G_SEXT:
+      case TargetOpcode::G_ZEXT:
+      case TargetOpcode::G_PTRTOINT:
+      case TargetOpcode::COPY:
+      case TargetOpcode::G_ADDRSPACE_CAST:
+        propagateSPIRVType(&MI, GR, MRI, MIB);
+        break;
+      }
+    }
+  }
 }
 
 // Defined in SPIRVLegalizerInfo.cpp.
@@ -517,6 +532,128 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
                                    : LLT::scalar(32));
     }
   }
+}
+
+static void
+insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                       const SPIRVSubtarget &ST, MachineIRBuilder MIRBuilder,
+                       const SmallVector<MachineInstr *> &ToProcess) {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  Register AsmTargetReg;
+  for (unsigned i = 0, Sz = ToProcess.size(); i + 1 < Sz; i += 2) {
+    MachineInstr *I1 = ToProcess[i], *I2 = ToProcess[i + 1];
+    assert(isSpvIntrinsic(*I1, Intrinsic::spv_inline_asm) && I2->isInlineAsm());
+    MIRBuilder.setInsertPt(*I1->getParent(), *I1);
+
+    if (!AsmTargetReg.isValid()) {
+      // define vendor specific assembly target or dialect
+      AsmTargetReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      MRI.setRegClass(AsmTargetReg, &SPIRV::IDRegClass);
+      auto AsmTargetMIB =
+          MIRBuilder.buildInstr(SPIRV::OpAsmTargetINTEL).addDef(AsmTargetReg);
+      addStringImm(ST.getTargetTripleAsStr(), AsmTargetMIB);
+      GR->add(AsmTargetMIB.getInstr(), &MF, AsmTargetReg);
+    }
+
+    // create types
+    const MDNode *IAMD = I1->getOperand(1).getMetadata();
+    FunctionType *FTy = cast<FunctionType>(getMDOperandAsType(IAMD, 0));
+    SmallVector<SPIRVType *, 4> ArgTypes;
+    for (const auto &ArgTy : FTy->params())
+      ArgTypes.push_back(GR->getOrCreateSPIRVType(ArgTy, MIRBuilder));
+    SPIRVType *RetType =
+        GR->getOrCreateSPIRVType(FTy->getReturnType(), MIRBuilder);
+    SPIRVType *FuncType = GR->getOrCreateOpTypeFunctionWithArgs(
+        FTy, RetType, ArgTypes, MIRBuilder);
+
+    // define vendor specific assembly instructions string
+    Register AsmReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    MRI.setRegClass(AsmReg, &SPIRV::IDRegClass);
+    auto AsmMIB = MIRBuilder.buildInstr(SPIRV::OpAsmINTEL)
+                      .addDef(AsmReg)
+                      .addUse(GR->getSPIRVTypeID(RetType))
+                      .addUse(GR->getSPIRVTypeID(FuncType))
+                      .addUse(AsmTargetReg);
+    // inline asm string:
+    addStringImm(I2->getOperand(InlineAsm::MIOp_AsmString).getSymbolName(),
+                 AsmMIB);
+    // inline asm constraint string:
+    addStringImm(cast<MDString>(I1->getOperand(2).getMetadata()->getOperand(0))
+                     ->getString(),
+                 AsmMIB);
+    GR->add(AsmMIB.getInstr(), &MF, AsmReg);
+
+    // calls the inline assembly instruction
+    unsigned ExtraInfo = I2->getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+    if (ExtraInfo & InlineAsm::Extra_HasSideEffects)
+      MIRBuilder.buildInstr(SPIRV::OpDecorate)
+          .addUse(AsmReg)
+          .addImm(static_cast<uint32_t>(SPIRV::Decoration::SideEffectsINTEL));
+    Register DefReg;
+    SmallVector<unsigned, 4> Ops;
+    unsigned StartOp = InlineAsm::MIOp_FirstOperand,
+             AsmDescOp = InlineAsm::MIOp_FirstOperand;
+    unsigned I2Sz = I2->getNumOperands();
+    for (unsigned Idx = StartOp; Idx != I2Sz; ++Idx) {
+      const MachineOperand &MO = I2->getOperand(Idx);
+      if (MO.isMetadata())
+        continue;
+      if (Idx == AsmDescOp && MO.isImm()) {
+        // compute the index of the next operand descriptor
+        const InlineAsm::Flag F(MO.getImm());
+        AsmDescOp += 1 + F.getNumOperandRegisters();
+      } else {
+        if (MO.isReg() && MO.isDef())
+          DefReg = MO.getReg();
+        else
+          Ops.push_back(Idx);
+      }
+    }
+    if (!DefReg.isValid()) {
+      DefReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      MRI.setRegClass(DefReg, &SPIRV::IDRegClass);
+      SPIRVType *VoidType = GR->getOrCreateSPIRVType(
+          Type::getVoidTy(MF.getFunction().getContext()), MIRBuilder);
+      GR->assignSPIRVTypeToVReg(VoidType, DefReg, MF);
+    }
+    auto AsmCall = MIRBuilder.buildInstr(SPIRV::OpAsmCallINTEL)
+                       .addDef(DefReg)
+                       .addUse(GR->getSPIRVTypeID(RetType))
+                       .addUse(AsmReg);
+    unsigned IntrIdx = 2;
+    for (unsigned Idx : Ops) {
+      ++IntrIdx;
+      const MachineOperand &MO = I2->getOperand(Idx);
+      if (MO.isReg())
+        AsmCall.addUse(MO.getReg());
+      else
+        AsmCall.addUse(I1->getOperand(IntrIdx).getReg());
+    }
+  }
+  for (MachineInstr *MI : ToProcess)
+    MI->eraseFromParent();
+}
+
+static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                            const SPIRVSubtarget &ST,
+                            MachineIRBuilder MIRBuilder) {
+  SmallVector<MachineInstr *> ToProcess;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (isSpvIntrinsic(MI, Intrinsic::spv_inline_asm) ||
+          MI.getOpcode() == TargetOpcode::INLINEASM)
+        ToProcess.push_back(&MI);
+    }
+  }
+  if (ToProcess.size() == 0)
+    return;
+
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_inline_assembly))
+    report_fatal_error("Inline assembly instructions require the "
+                       "following SPIR-V extension: SPV_INTEL_inline_assembly",
+                       false);
+
+  insertInlineAsmProcess(MF, GR, ST, MIRBuilder, ToProcess);
 }
 
 static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {
@@ -602,8 +739,25 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         ToEraseMI.insert(Next);
     }
   }
-  for (MachineInstr *BlockAddrI : ToEraseMI)
+
+  // If we just delete G_BLOCK_ADDR instructions with BlockAddress operands,
+  // this leaves their BasicBlock counterparts in a "address taken" status. This
+  // would make AsmPrinter to generate a series of unneeded labels of a "Address
+  // of block that was removed by CodeGen" kind. Let's first ensure that we
+  // don't have a dangling BlockAddress constants by zapping the BlockAddress
+  // nodes, and only after that proceed with erasing G_BLOCK_ADDR instructions.
+  Constant *Replacement =
+      ConstantInt::get(Type::getInt32Ty(MF.getFunction().getContext()), 1);
+  for (MachineInstr *BlockAddrI : ToEraseMI) {
+    if (BlockAddrI->getOpcode() == TargetOpcode::G_BLOCK_ADDR) {
+      BlockAddress *BA = const_cast<BlockAddress *>(
+          BlockAddrI->getOperand(1).getBlockAddress());
+      BA->replaceAllUsesWith(
+          ConstantExpr::getIntToPtr(Replacement, BA->getType()));
+      BA->destroyConstant();
+    }
     BlockAddrI->eraseFromParent();
+  }
 }
 
 static bool isImplicitFallthrough(MachineBasicBlock &MBB) {
@@ -656,6 +810,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   processInstrsWithTypeFolding(MF, GR, MIB);
   removeImplicitFallthroughs(MF, MIB);
   insertSpirvDecorations(MF, MIB);
+  insertInlineAsm(MF, GR, ST, MIB);
 
   return true;
 }

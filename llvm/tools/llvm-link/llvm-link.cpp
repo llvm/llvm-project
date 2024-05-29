@@ -377,9 +377,13 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     if (Verbose)
       errs() << "Importing " << FunctionName << " from " << FileName << "\n";
 
+    // `-import` specifies the `<filename,function-name>` pairs to import as
+    // definition, so make the import type definition directly.
+    // FIXME: A follow-up patch should add test coverage for import declaration
+    // in `llvm-link` CLI (e.g., by introducing a new command line option).
     auto &Entry =
         ImportList[FileNameStringCache.insert(FileName).first->getKey()];
-    Entry.insert(F->getGUID());
+    Entry[F->getGUID()] = GlobalValueSummary::Definition;
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
     return ModuleLoaderCache.takeModule(std::string(Identifier));
