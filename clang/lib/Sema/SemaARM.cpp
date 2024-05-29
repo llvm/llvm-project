@@ -561,16 +561,61 @@ SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
 
 static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
                                      const FunctionDecl *FD,
-                                     SemaARM::ArmStreamingType BuiltinType) {
+                                     SemaARM::ArmStreamingType BuiltinType,
+                                     unsigned BuiltinID) {
   SemaARM::ArmStreamingType FnType = getArmStreamingFnType(FD);
-  if (BuiltinType == SemaARM::ArmStreamingOrSVE2p1) {
-    // Check intrinsics that are available in [sve2p1 or sme/sme2].
-    llvm::StringMap<bool> CallerFeatureMap;
-    S.Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-    if (Builtin::evaluateRequiredTargetFeatures("sve2p1", CallerFeatureMap))
+
+  // Check if the intrinsic is available in the right mode, i.e.
+  // * When compiling for SME only, the caller must be in streaming mode.
+  // * When compiling for SVE only, the caller must be in non-streaming mode.
+  // * When compiling for both SVE and SME, the caller can be in either mode.
+  if (BuiltinType == SemaARM::ArmStreamingOrHasSVE) {
+    static const FunctionDecl *CachedFD = nullptr;
+    bool SatisfiesSVE = false, SatisfiesSME = false;
+
+    if (FD != CachedFD) {
+      // We know the builtin requires either some combination of SVE flags, or
+      // some combination of SME flags, but we need to figure out which part
+      // of the required features is satisfied by the target features.
+      //
+      // For a builtin with target guard 'sve2p1|sme2', if we compile with
+      // '+sve2p1,+sme', then we know that it satisfies the 'sve2p1' part if we
+      // evaluate the features for '+sve2p1,+sme,+nosme'.
+      //
+      // Similarly, if we compile with '+sve2,+sme2', then we know it satisfies
+      // the 'sme2' part if we evaluate the features for '+sve2,+sme2,+nosve'.
+      llvm::StringMap<bool> CallerFeatureMap;
+      auto DisableFeatures = [&CallerFeatureMap](StringRef S) {
+        for (StringRef K : CallerFeatureMap.keys())
+          if (K.starts_with(S))
+            CallerFeatureMap[K] = false;
+      };
+
+      StringRef BuiltinTargetGuards(
+          S.Context.BuiltinInfo.getRequiredFeatures(BuiltinID));
+
+      S.Context.getFunctionFeatureMap(CallerFeatureMap, FD);
+      DisableFeatures("sme");
+      SatisfiesSVE = Builtin::evaluateRequiredTargetFeatures(
+          BuiltinTargetGuards, CallerFeatureMap);
+
+      S.Context.getFunctionFeatureMap(CallerFeatureMap, FD);
+      DisableFeatures("sve");
+      SatisfiesSME = Builtin::evaluateRequiredTargetFeatures(
+          BuiltinTargetGuards, CallerFeatureMap);
+
+      CachedFD = FD;
+    }
+
+    if (SatisfiesSVE && SatisfiesSME)
       BuiltinType = SemaARM::ArmStreamingCompatible;
-    else
+    else if (SatisfiesSVE)
+      BuiltinType = SemaARM::ArmNonStreaming;
+    else if (SatisfiesSME)
       BuiltinType = SemaARM::ArmStreaming;
+    else
+      // This should be diagnosed by CodeGen
+      return;
   }
 
   if (FnType == SemaARM::ArmStreaming &&
@@ -622,7 +667,7 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
     }
 
     if (BuiltinType)
-      checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType);
+      checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID);
 
     if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD))
       Diag(TheCall->getBeginLoc(),
@@ -660,7 +705,7 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SVE_STREAMING_ATTRS
     }
     if (BuiltinType)
-      checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType);
+      checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID);
   }
   // Range check SVE intrinsics that take immediate values.
   SmallVector<std::tuple<int, int, int>, 3> ImmChecks;
@@ -688,7 +733,8 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 #define TARGET_BUILTIN(id, ...) case NEON::BI##id:
 #define BUILTIN(id, ...) case NEON::BI##id:
 #include "clang/Basic/arm_neon.inc"
-      checkArmStreamingBuiltin(SemaRef, TheCall, FD, ArmNonStreaming);
+      checkArmStreamingBuiltin(SemaRef, TheCall, FD, ArmNonStreaming,
+                               BuiltinID);
       break;
 #undef TARGET_BUILTIN
 #undef BUILTIN
