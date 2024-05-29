@@ -146,8 +146,8 @@ public:
     if (unordered) {
       auto isUnordered = createCheckIsUnordered(
           rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs());
-      rewriter.replaceOpWithNewOp<emitc::LogicalOrOp>(
-          op, op.getType(), isUnordered.getResult(), cmpResult);
+      rewriter.replaceOpWithNewOp<emitc::LogicalOrOp>(op, op.getType(),
+                                                      isUnordered, cmpResult);
       return success();
     }
 
@@ -159,42 +159,40 @@ public:
   }
 
 private:
-  /// Return an operation that returns true (in i1) when \p operand is NaN.
-  emitc::CmpOp isNan(ConversionPatternRewriter &rewriter, Location loc,
-                     Value operand) const {
+  /// Return a value that is true iff \p operand is NaN.
+  Value isNaN(ConversionPatternRewriter &rewriter, Location loc,
+              Value operand) const {
     // A value is NaN exactly when it compares unequal to itself.
     return rewriter.create<emitc::CmpOp>(
         loc, rewriter.getI1Type(), emitc::CmpPredicate::ne, operand, operand);
   }
 
-  /// Return an operation that returns true (in i1) when \p operand is not NaN.
-  emitc::CmpOp isNotNan(ConversionPatternRewriter &rewriter, Location loc,
-                        Value operand) const {
+  /// Return a value that is true iff \p operand is not NaN.
+  Value isNotNaN(ConversionPatternRewriter &rewriter, Location loc,
+                 Value operand) const {
     // A value is not NaN exactly when it compares equal to itself.
     return rewriter.create<emitc::CmpOp>(
         loc, rewriter.getI1Type(), emitc::CmpPredicate::eq, operand, operand);
   }
 
-  /// Return an op that return true (in i1) if the operands \p first and
-  /// \p second are unordered (i.e., at least one of them is NaN).
-  emitc::LogicalOrOp createCheckIsUnordered(ConversionPatternRewriter &rewriter,
-                                            Location loc, Value first,
-                                            Value second) const {
-    auto firstIsNaN = isNan(rewriter, loc, first);
-    auto secondIsNaN = isNan(rewriter, loc, second);
+  /// Return a value that is true iff the operands \p first and \p second are
+  /// unordered (i.e., at least one of them is NaN).
+  Value createCheckIsUnordered(ConversionPatternRewriter &rewriter,
+                               Location loc, Value first, Value second) const {
+    auto firstIsNaN = isNaN(rewriter, loc, first);
+    auto secondIsNaN = isNaN(rewriter, loc, second);
     return rewriter.create<emitc::LogicalOrOp>(loc, rewriter.getI1Type(),
                                                firstIsNaN, secondIsNaN);
   }
 
-  /// Return an op that return true (in i1) if the operands \p first and
-  /// \p second are both ordered (i.e., none one of them is NaN).
-  emitc::LogicalAndOp createCheckIsOrdered(ConversionPatternRewriter &rewriter,
-                                           Location loc, Value first,
-                                           Value second) const {
-    auto firstIsNaN = isNotNan(rewriter, loc, first);
-    auto secondIsNaN = isNotNan(rewriter, loc, second);
+  /// Return a value that is true iff the operands \p first and \p second are
+  /// both ordered (i.e., none one of them is NaN).
+  Value createCheckIsOrdered(ConversionPatternRewriter &rewriter, Location loc,
+                             Value first, Value second) const {
+    auto firstIsNotNaN = isNotNaN(rewriter, loc, first);
+    auto secondIsNotNaN = isNotNaN(rewriter, loc, second);
     return rewriter.create<emitc::LogicalAndOp>(loc, rewriter.getI1Type(),
-                                                firstIsNaN, secondIsNaN);
+                                                firstIsNotNaN, secondIsNotNaN);
   }
 };
 
