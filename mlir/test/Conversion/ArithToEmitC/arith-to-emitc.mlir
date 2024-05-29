@@ -88,6 +88,44 @@ func.func @arith_index(%arg0: index, %arg1: index) {
 
 // -----
 
+// CHECK-LABEL: arith_bitwise
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
+func.func @arith_bitwise(%arg0: i32, %arg1: i32) {
+  // CHECK: %[[C1:[^ ]*]] = emitc.cast %[[ARG0]] : i32 to ui32
+  // CHECK: %[[C2:[^ ]*]] = emitc.cast %[[ARG1]] : i32 to ui32
+  // CHECK: %[[AND:[^ ]*]] = emitc.bitwise_and %[[C1]], %[[C2]] : (ui32, ui32) -> ui32
+  // CHECK: %[[C3:[^ ]*]] = emitc.cast %[[AND]] : ui32 to i32
+  %5 = arith.andi %arg0, %arg1 : i32
+  // CHECK: %[[C1:[^ ]*]] = emitc.cast %[[ARG0]] : i32 to ui32
+  // CHECK: %[[C2:[^ ]*]] = emitc.cast %[[ARG1]] : i32 to ui32
+  // CHECK: %[[OR:[^ ]*]] = emitc.bitwise_or %[[C1]], %[[C2]] : (ui32, ui32) -> ui32
+  // CHECK: %[[C3:[^ ]*]] = emitc.cast %[[OR]] : ui32 to i32
+  %6 = arith.ori %arg0, %arg1 : i32
+  // CHECK: %[[C1:[^ ]*]] = emitc.cast %[[ARG0]] : i32 to ui32
+  // CHECK: %[[C2:[^ ]*]] = emitc.cast %[[ARG1]] : i32 to ui32
+  // CHECK: %[[XOR:[^ ]*]] = emitc.bitwise_xor %[[C1]], %[[C2]] : (ui32, ui32) -> ui32
+  // CHECK: %[[C3:[^ ]*]] = emitc.cast %[[XOR]] : ui32 to i32
+  %7 = arith.xori %arg0, %arg1 : i32
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: arith_bitwise_bool
+func.func @arith_bitwise_bool(%arg0: i1, %arg1: i1) {
+  // CHECK: %[[AND:[^ ]*]] = emitc.bitwise_and %arg0, %arg1 : (i1, i1) -> i1
+  %5 = arith.andi %arg0, %arg1 : i1
+  // CHECK: %[[OR:[^ ]*]] = emitc.bitwise_or %arg0, %arg1 : (i1, i1) -> i1
+  %6 = arith.ori %arg0, %arg1 : i1
+  // CHECK: %[[xor:[^ ]*]] = emitc.bitwise_xor %arg0, %arg1 : (i1, i1) -> i1
+  %7 = arith.xori %arg0, %arg1 : i1
+  
+  return
+}
+
+// -----
+
 // CHECK-LABEL: arith_signed_integer_div_rem
 func.func @arith_signed_integer_div_rem(%arg0: i32, %arg1: i32) {
   // CHECK: emitc.div %arg0, %arg1 : (i32, i32) -> i32
