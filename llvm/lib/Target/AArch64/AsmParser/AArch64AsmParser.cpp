@@ -5244,132 +5244,6 @@ static inline bool isMatchingOrAlias(unsigned ZReg, unsigned Reg) {
          (ZReg == ((Reg - AArch64::Z0) + AArch64::Z0));
 }
 
-static std::string getArm64ECDisallowedRegName(unsigned Reg) {
-  switch (Reg) {
-  // Disallowed W registers
-  case AArch64::W13:
-    return "w13";
-  case AArch64::W14:
-    return "w14";
-  case AArch64::W23:
-    return "w23";
-  case AArch64::W24:
-    return "w24";
-  case AArch64::W28:
-    return "w28";
-  // Disallowed X registers
-  case AArch64::X13:
-    return "x13";
-  case AArch64::X14:
-    return "x14";
-  case AArch64::X23:
-    return "x23";
-  case AArch64::X24:
-    return "x24";
-  case AArch64::X28:
-    return "x28";
-  // Disallowed vector registers (all forms)
-  case AArch64::Q16:
-  case AArch64::D16:
-  case AArch64::S16:
-  case AArch64::H16:
-  case AArch64::B16:
-    return "v16";
-  case AArch64::Q17:
-  case AArch64::D17:
-  case AArch64::S17:
-  case AArch64::H17:
-  case AArch64::B17:
-    return "v17";
-  case AArch64::Q18:
-  case AArch64::D18:
-  case AArch64::S18:
-  case AArch64::H18:
-  case AArch64::B18:
-    return "v18";
-  case AArch64::Q19:
-  case AArch64::D19:
-  case AArch64::S19:
-  case AArch64::H19:
-  case AArch64::B19:
-    return "v19";
-  case AArch64::Q20:
-  case AArch64::D20:
-  case AArch64::S20:
-  case AArch64::H20:
-  case AArch64::B20:
-    return "v20";
-  case AArch64::Q21:
-  case AArch64::D21:
-  case AArch64::S21:
-  case AArch64::H21:
-  case AArch64::B21:
-    return "v21";
-  case AArch64::Q22:
-  case AArch64::D22:
-  case AArch64::S22:
-  case AArch64::H22:
-  case AArch64::B22:
-    return "v22";
-  case AArch64::Q23:
-  case AArch64::D23:
-  case AArch64::S23:
-  case AArch64::H23:
-  case AArch64::B23:
-    return "v23";
-  case AArch64::Q24:
-  case AArch64::D24:
-  case AArch64::S24:
-  case AArch64::H24:
-  case AArch64::B24:
-    return "v24";
-  case AArch64::Q25:
-  case AArch64::D25:
-  case AArch64::S25:
-  case AArch64::H25:
-  case AArch64::B25:
-    return "v25";
-  case AArch64::Q26:
-  case AArch64::D26:
-  case AArch64::S26:
-  case AArch64::H26:
-  case AArch64::B26:
-    return "v26";
-  case AArch64::Q27:
-  case AArch64::D27:
-  case AArch64::S27:
-  case AArch64::H27:
-  case AArch64::B27:
-    return "v27";
-  case AArch64::Q28:
-  case AArch64::D28:
-  case AArch64::S28:
-  case AArch64::H28:
-  case AArch64::B28:
-    return "v28";
-  case AArch64::Q29:
-  case AArch64::D29:
-  case AArch64::S29:
-  case AArch64::H29:
-  case AArch64::B29:
-    return "v29";
-  case AArch64::Q30:
-  case AArch64::D30:
-  case AArch64::S30:
-  case AArch64::H30:
-  case AArch64::B30:
-    return "v30";
-  case AArch64::Q31:
-  case AArch64::D31:
-  case AArch64::S31:
-  case AArch64::H31:
-  case AArch64::B31:
-    return "v31";
-  default:
-    llvm_unreachable("Unknown disallowed reg?");
-  }
-}
-
 // FIXME: This entire function is a giant hack to provide us with decent
 // operand range validation/diagnostics until TableGen/MC can be extended
 // to support autogeneration of this kind of validation.
@@ -5461,7 +5335,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
             (Reg >= AArch64::S16 && Reg <= AArch64::S31) ||
             (Reg >= AArch64::H16 && Reg <= AArch64::H31) ||
             (Reg >= AArch64::B16 && Reg <= AArch64::B31)) {
-          Warning(IDLoc, "register " + getArm64ECDisallowedRegName(Reg) +
+          Warning(IDLoc, "register " + Twine(RI->getName(Reg)) +
                              " is disallowed on ARM64EC.");
         }
       }
