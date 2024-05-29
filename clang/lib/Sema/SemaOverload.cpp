@@ -7554,11 +7554,16 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
       (Method->isExplicitObjectMemberFunction() &&
        CandidateSet.getKind() ==
            OverloadCandidateSet::CSK_AddressOfOverloadSet);
+  bool ImplicitObjectMethodTreatedAsStatic =
+      CandidateSet.getKind() ==
+          OverloadCandidateSet::CSK_AddressOfOverloadSet &&
+      Method->isImplicitObjectMemberFunction();
+
   unsigned ExplicitOffset =
       !IgnoreExplicitObject && Method->isExplicitObjectMemberFunction() ? 1 : 0;
-  unsigned NumParams = Method->getNumParams() - ExplicitOffset;
-  if (CandidateSet.getKind() == OverloadCandidateSet::CSK_AddressOfOverloadSet)
-    NumParams += int(Method->isImplicitObjectMemberFunction());
+
+  unsigned NumParams = Method->getNumParams() - ExplicitOffset +
+                       int(ImplicitObjectMethodTreatedAsStatic);
 
   // (C++ 13.3.2p2): A candidate function having fewer than m
   // parameters is viable only if it has an ellipsis in its parameter
@@ -7576,11 +7581,9 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
   // (8.3.6). For the purposes of overload resolution, the
   // parameter list is truncated on the right, so that there are
   // exactly m parameters.
-  unsigned MinRequiredArgs = Method->getMinRequiredArguments() - ExplicitOffset;
-  if (CandidateSet.getKind() ==
-          OverloadCandidateSet::CSK_AddressOfOverloadSet &&
-      Method->isImplicitObjectMemberFunction())
-    MinRequiredArgs++;
+  unsigned MinRequiredArgs = Method->getMinRequiredArguments() -
+                             ExplicitOffset +
+                             int(ImplicitObjectMethodTreatedAsStatic);
 
   if (Args.size() < MinRequiredArgs && !PartialOverloading) {
     // Not enough arguments.
@@ -7652,9 +7655,7 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
       // (13.3.3.1) that converts that argument to the corresponding
       // parameter of F.
       QualType ParamType;
-      if (CandidateSet.getKind() ==
-              OverloadCandidateSet::CSK_AddressOfOverloadSet &&
-          Method->isImplicitObjectMemberFunction()) {
+      if (ImplicitObjectMethodTreatedAsStatic) {
         ParamType = ArgIdx == 0
                         ? Method->getFunctionObjectParameterReferenceType()
                         : Proto->getParamType(ArgIdx - 1);
@@ -16402,8 +16403,8 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
            "Can only take the address of an overloaded function");
     if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Fn)) {
       if (!Method->isImplicitObjectMemberFunction()) {
-        // Do nothing: static member functions aren't any different
-        // from non-member functions.
+        // Do nothing: the address of static and
+        // explicit object member functions is a (non-member) function pointer.
       } else {
         // Fix the subexpression, which really has to be an
         // UnresolvedLookupExpr holding an overloaded member function

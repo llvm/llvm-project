@@ -15,4 +15,5 @@ struct A{
 // CXX23-NEXT: UnaryOperator
 // CXX23-NEXT: MemberExpr
 // CXX23-NEXT: CXXThisExpr{{.+}}'cwg2771::A *'
-}
+
+} // namespace cwg2771
