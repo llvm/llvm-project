@@ -63,7 +63,7 @@ function compute-projects-to-test() {
       done
     ;;
     llvm)
-      for p in bolt clang clang-tools-extra flang lld lldb mlir polly; do
+      for p in bolt clang clang-tools-extra lld lldb mlir polly; do
         echo $p
       done
     ;;
@@ -74,9 +74,6 @@ function compute-projects-to-test() {
     ;;
     clang-tools-extra)
       echo libc
-    ;;
-    mlir)
-      echo flang
     ;;
     *)
       # Nothing to do
@@ -144,7 +141,6 @@ function exclude-windows() {
     cross-project-tests) ;; # tests failing
     compiler-rt)         ;; # tests taking too long
     openmp)              ;; # TODO: having trouble with the Perl installation
-    flang)               ;; # https://discourse.llvm.org/t/flang-tests-are-extremely-slow-on-windows/78591/40
     libc)                ;; # no Windows support
     lldb)                ;; # tests failing
     bolt)                ;; # tests are not supported yet
