@@ -1,4 +1,4 @@
-! Test delayed privatization for multiple allocatable variables.
+! Test early privatization for multiple allocatable variables.
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization=false \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
