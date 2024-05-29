@@ -181,7 +181,8 @@ static bool isRedundantNewDataDest(MachineInstr &MI, const X86Subtarget &ST) {
   const MCInstrDesc &Desc = MI.getDesc();
   Register Reg0 = MI.getOperand(0).getReg();
   const MachineOperand &Op1 = MI.getOperand(1);
-  if (!Op1.isReg() || X86::getFirstAddrOperandIdx(MI) == 1)
+  if (!Op1.isReg() || X86::getFirstAddrOperandIdx(MI) == 1 ||
+      X86::isCFCMOVCC(MI.getOpcode()))
     return false;
   Register Reg1 = Op1.getReg();
   if (Reg1 == Reg0)
