@@ -145,6 +145,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTruncStoreAction(T, MVT::f16, Expand);
   }
 
+  if (Subtarget->hasHalfPrecision()) {
+    setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
+  }
+
   // Expand unavailable integer operations.
   for (auto Op :
        {ISD::BSWAP, ISD::SMUL_LOHI, ISD::UMUL_LOHI, ISD::MULHS, ISD::MULHU,
