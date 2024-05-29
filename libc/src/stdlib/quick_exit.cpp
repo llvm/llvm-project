@@ -10,8 +10,7 @@
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/common.h"
 
-//extern "C" void __cxa_finalize(void *);
-
+// extern "C" void __cxa_finalize(void *);
 namespace LIBC_NAMESPACE {
 
 [[noreturn]] LLVM_LIBC_FUNCTION(void, quick_exit, (int status)) {
@@ -19,7 +18,5 @@ namespace LIBC_NAMESPACE {
   exit(status);
 }
 
-
-}
- // namespace LIBC_NAMESPACE
-
+} // namespace LIBC_NAMESPACE
+  // namespace LIBC_NAMESPACE

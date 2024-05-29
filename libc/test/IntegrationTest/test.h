@@ -9,24 +9,25 @@
 #ifndef LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
 #define LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
 
-#include "src/__support/OSUtil/io.h"
 #include "src/__support/OSUtil/exit.h"
+#include "src/__support/OSUtil/io.h"
 
 #define __AS_STRING(val) #val
 #define __CHECK_TRUE(file, line, val, should_exit)                             \
   if (!(val)) {                                                                \
     LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val "' to be true, but is false\n");             \
-    if (should_exit)                                                           \
-      LIBC_NAMESPACE::internal::exit(127);                                         \
-  }
+    if (should_exit)
+
+LIBC_NAMESPACE::internal::exit(127);
+}
 
 #define __CHECK_FALSE(file, line, val, should_exit)                            \
   if (val) {                                                                   \
     LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val "' to be false, but is true\n");             \
     if (should_exit)                                                           \
-      LIBC_NAMESPACE::internal::exit(127);                                         \
+      LIBC_NAMESPACE::internal::exit(127);                                     \
   }
 
 #define __CHECK_EQ(file, line, val1, val2, should_exit)                        \
@@ -34,7 +35,7 @@
     LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val1 "' to be equal to '" #val2 "'\n");          \
     if (should_exit)                                                           \
-      LIBC_NAMESPACE::internal::exit(127);                                         \
+      LIBC_NAMESPACE::internal::exit(127);                                     \
   }
 
 #define __CHECK_NE(file, line, val1, val2, should_exit)                        \
@@ -42,7 +43,7 @@
     LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val1 "' to not be equal to '" #val2 "'\n");      \
     if (should_exit)                                                           \
-      LIBC_NAMESPACE::internal::exit(127);                                         \
+      LIBC_NAMESPACE::internal::exit(127);                                     \
   }
 
 ////////////////////////////////////////////////////////////////////////////////

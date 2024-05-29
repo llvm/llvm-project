@@ -26,6 +26,5 @@ namespace internal {
   gpu::end_program();
 }
 
-
-}
+} // namespace internal
 } // namespace LIBC_NAMESPACE
