@@ -378,10 +378,10 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
 
 /// Return the fields and properties demanded by the provided instruction.
 DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
-  // This function works in RISCVCoalesceVSETVLI too. We can still use the value
-  // of a SEW, VL, or Policy operand even though it might not be the exact value
-  // in the VL or VTYPE, since we only care about what the instruction
-  // originally demanded.
+  // This function works in coalesceVSETVLI too. We can still use the value of a
+  // SEW, VL, or Policy operand even though it might not be the exact value in
+  // the VL or VTYPE, since we only care about what the instruction originally
+  // demanded.
 
   // Most instructions don't use any of these subfeilds.
   DemandedFields Res;
@@ -900,36 +900,7 @@ private:
   void emitVSETVLIs(MachineBasicBlock &MBB);
   void doPRE(MachineBasicBlock &MBB);
   void insertReadVL(MachineBasicBlock &MBB);
-};
-
-class RISCVCoalesceVSETVLI : public MachineFunctionPass {
-public:
-  static char ID;
-  const RISCVSubtarget *ST;
-  const TargetInstrInfo *TII;
-  MachineRegisterInfo *MRI;
-  LiveIntervals *LIS;
-
-  RISCVCoalesceVSETVLI() : MachineFunctionPass(ID) {}
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-
-    AU.addRequired<LiveIntervals>();
-    AU.addPreserved<LiveIntervals>();
-    AU.addRequired<SlotIndexes>();
-    AU.addPreserved<SlotIndexes>();
-    AU.addPreserved<LiveDebugVariables>();
-    AU.addPreserved<LiveStacks>();
-
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  StringRef getPassName() const override { return RISCV_COALESCE_VSETVLI_NAME; }
-
-private:
-  bool coalesceVSETVLIs(MachineBasicBlock &MBB);
+  void coalesceVSETVLIs(MachineBasicBlock &MBB) const;
 };
 
 } // end anonymous namespace
@@ -939,11 +910,6 @@ char &llvm::RISCVInsertVSETVLIID = RISCVInsertVSETVLI::ID;
 
 INITIALIZE_PASS(RISCVInsertVSETVLI, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
                 false, false)
-
-char RISCVCoalesceVSETVLI::ID = 0;
-
-INITIALIZE_PASS(RISCVCoalesceVSETVLI, "riscv-coalesce-vsetvli",
-                RISCV_COALESCE_VSETVLI_NAME, false, false)
 
 // Return a VSETVLIInfo representing the changes made by this VSETVLI or
 // VSETIVLI instruction.
@@ -1650,7 +1616,7 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
   return areCompatibleVTYPEs(PriorVType, VType, Used);
 }
 
-bool RISCVCoalesceVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) {
+void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   MachineInstr *NextMI = nullptr;
   // We can have arbitrary code in successors, so VL and VTYPE
   // must be considered demanded.
@@ -1742,8 +1708,6 @@ bool RISCVCoalesceVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) {
     LIS->RemoveMachineInstrFromMaps(*MI);
     MI->eraseFromParent();
   }
-
-  return !ToDelete.empty();
 }
 
 void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
@@ -1833,6 +1797,15 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
     insertReadVL(MBB);
 
+  // Now that all vsetvlis are explicit, go through and do block local
+  // DSE and peephole based demanded fields based transforms.  Note that
+  // this *must* be done outside the main dataflow so long as we allow
+  // any cross block analysis within the dataflow.  We can't have both
+  // demanded fields based mutation and non-local analysis in the
+  // dataflow at the same time without introducing inconsistencies.
+  for (MachineBasicBlock &MBB : MF)
+    coalesceVSETVLIs(MBB);
+
   BlockInfo.clear();
   return HaveVectorOp;
 }
@@ -1840,30 +1813,4 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
 /// Returns an instance of the Insert VSETVLI pass.
 FunctionPass *llvm::createRISCVInsertVSETVLIPass() {
   return new RISCVInsertVSETVLI();
-}
-
-// Now that all vsetvlis are explicit, go through and do block local
-// DSE and peephole based demanded fields based transforms.  Note that
-// this *must* be done outside the main dataflow so long as we allow
-// any cross block analysis within the dataflow.  We can't have both
-// demanded fields based mutation and non-local analysis in the
-// dataflow at the same time without introducing inconsistencies.
-bool RISCVCoalesceVSETVLI::runOnMachineFunction(MachineFunction &MF) {
-  // Skip if the vector extension is not enabled.
-  ST = &MF.getSubtarget<RISCVSubtarget>();
-  if (!ST->hasVInstructions())
-    return false;
-  TII = ST->getInstrInfo();
-  MRI = &MF.getRegInfo();
-  LIS = &getAnalysis<LiveIntervals>();
-
-  bool Changed = false;
-  for (MachineBasicBlock &MBB : MF)
-    Changed |= coalesceVSETVLIs(MBB);
-
-  return Changed;
-}
-
-FunctionPass *llvm::createRISCVCoalesceVSETVLIPass() {
-  return new RISCVCoalesceVSETVLI();
 }

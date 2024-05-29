@@ -50,7 +50,6 @@
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       RISC-V Insert VSETVLI pass
-; CHECK-NEXT:       RISC-V Coalesce VSETVLI pass
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved
