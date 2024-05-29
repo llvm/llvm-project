@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=aarch64-apple-darwin                             -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-apple-darwin -fast-isel -fast-isel-abort=1 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-apple-darwin -global-isel -verify-machineinstrs < %s | FileCheck %s --check-prefix=GISEL
+; RUN: llc -mtriple=aarch64-apple-darwin                             -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,SISEL
+; RUN: llc -mtriple=aarch64-apple-darwin -fast-isel -fast-isel-abort=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,FISEL
+; RUN: llc -mtriple=aarch64-apple-darwin -global-isel -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GISEL
 
 ; First test the different supported value types for select.
 define zeroext i1 @select_i1(i1 zeroext %c, i1 zeroext %a, i1 zeroext %b) {
@@ -295,22 +295,28 @@ define float @select_icmp_sle(i32 %x, i32 %y, float %a, float %b) {
 ; Test peephole optimizations for select.
 define zeroext i1 @select_opt1(i1 zeroext %c, i1 zeroext %a) {
 ; CHECK-LABEL: select_opt1
-; CHECK:       orr {{w[0-9]+}}, w0, w1
+; SISEL:       orr [[REG:w[0-9]+]], w0, w1
+; SISEL:       and w0, [[REG]], #0x1
+; FISEL:       orr {{w[0-9]+}}, w0, w1
   %1 = select i1 %c, i1 true, i1 %a
   ret i1 %1
 }
 
 define zeroext i1 @select_opt2(i1 zeroext %c, i1 zeroext %a) {
 ; CHECK-LABEL: select_opt2
-; CHECK:       eor [[REG:w[0-9]+]], w0, #0x1
-; CHECK:       orr {{w[0-9]+}}, [[REG]], w1
+; SISEL:       orn [[REG:w[0-9]+]], w1, w0
+; SISEL:       and w0, [[REG]], #0x1
+; FISEL:       eor [[REG:w[0-9]+]], w0, #0x1
+; FISEL:       orr {{w[0-9]+}}, [[REG]], w1
   %1 = select i1 %c, i1 %a, i1 true
   ret i1 %1
 }
 
 define zeroext i1 @select_opt3(i1 zeroext %c, i1 zeroext %a) {
 ; CHECK-LABEL: select_opt3
-; CHECK:       bic {{w[0-9]+}}, w1, w0
+; SISEL:       eor [[REG:w[0-9]+]], w0, #0x1
+; SISEL:       and w0, [[REG]], w1
+; FISEL:       bic {{w[0-9]+}}, w1, w0
   %1 = select i1 %c, i1 false, i1 %a
   ret i1 %1
 }
