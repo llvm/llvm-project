@@ -5855,8 +5855,7 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
   bool AddressOf = isParenthetizedAndQualifiedAddressOfExpr(Fn);
   bool HasExplicitObjectParameter =
       !AddressOf && FDecl && FDecl->hasCXXExplicitFunctionObjectParameter();
-  unsigned ExplicitObjectParameterOffset =
-      HasExplicitObjectParameter && !AddressOf ? 1 : 0;
+  unsigned ExplicitObjectParameterOffset = HasExplicitObjectParameter ? 1 : 0;
   unsigned NumParams = Proto->getNumParams();
   bool Invalid = false;
   unsigned MinArgs = FDecl ? FDecl->getMinRequiredArguments() : NumParams;
