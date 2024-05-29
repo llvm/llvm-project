@@ -174,6 +174,16 @@ static Error unbundleImages() {
     SmallVector<const OffloadBinary *> Extracted;
     for (const OffloadFile &File : Binaries) {
       const auto *Binary = File.getBinary();
+      // If the user lists a .so file on the command line for the program
+      // that invokes this one (probably clang), it may contain offload
+      // binary sections that resemble those in an object file.  However,
+      // there is no late binding/shared object support on the target side
+      // (i.e. you cannot define a target function in a shared object and
+      // call it from a target region in the main program), and we don't want
+      // to *early* bind target regions in a shared object either.  So,
+      // ignore shared objects here.
+      if (identify_magic(Binary->getImage()) == file_magic::elf_shared_object)
+        continue;
       // We handle the 'file' and 'kind' identifiers differently.
       bool Match = llvm::all_of(Args, [&](auto &Arg) {
         const auto [Key, Value] = Arg;
