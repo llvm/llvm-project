@@ -54,6 +54,9 @@ llvm-lit:
   - llvm/utils/lit/**/*
 
 PGO:
+  - llvm/**/ProfileData/**/*
+  - llvm/**/SampleProfile*
+  - llvm/**/CodeGen/MIRSampleProfile*
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
   - llvm/lib/Transforms/Instrumentation/ControlHeightReduction.cpp
   - llvm/lib/Transforms/Instrumentation/IndirectCallPromotion.cpp
@@ -62,9 +65,9 @@ PGO:
   - llvm/lib/Transforms/Instrumentation/ValueProfile*
   - llvm/test/Instrumentation/InstrProfiling/**/*
   - llvm/test/Transforms/PGOProfile/**/*
+  - llvm/test/Transforms/SampleProfile/**/*
   - llvm/**/llvm-profdata/**/*
   - llvm/**/llvm-profgen/**/*
-  - llvm/unittests/ProfileData/**/*
 
 vectorization:
   - llvm/lib/Transforms/Vectorize/**/*
