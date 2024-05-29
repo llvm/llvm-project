@@ -13,17 +13,21 @@
 
 namespace clang::tidy::bugprone {
 
-/// Finds pointer arithmetic on classes that declare a virtual function.
+/// Finds pointer arithmetic performed on classes that declare a
+/// virtual function.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object.html
 class PointerArithmeticOnPolymorphicObjectCheck : public ClangTidyCheck {
 public:
   PointerArithmeticOnPolymorphicObjectCheck(StringRef Name,
-                                            ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+                                            ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  const bool MatchInheritedVirtualFunctions;
 };
 
 } // namespace clang::tidy::bugprone

@@ -14,23 +14,42 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+PointerArithmeticOnPolymorphicObjectCheck::
+    PointerArithmeticOnPolymorphicObjectCheck(StringRef Name,
+                                              ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      MatchInheritedVirtualFunctions(
+          Options.get("MatchInheritedVirtualFunctions", false)) {}
+
+void PointerArithmeticOnPolymorphicObjectCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "MatchInheritedVirtualFunctions", true);
+}
+
 void PointerArithmeticOnPolymorphicObjectCheck::registerMatchers(
     MatchFinder *Finder) {
-  const auto PointerExprWithVirtualMethod =
-      expr(hasType(pointerType(pointee(hasDeclaration(
-               cxxRecordDecl(hasMethod(isVirtualAsWritten())))))))
+  const auto PolymorphicPointerExpr =
+      expr(hasType(pointerType(
+               pointee(hasDeclaration(cxxRecordDecl(hasMethod(isVirtual())))))))
           .bind("pointer");
 
-  const auto ArraySubscript =
-      arraySubscriptExpr(hasBase(PointerExprWithVirtualMethod));
+  const auto PointerExprWithVirtualMethod =
+      expr(hasType(pointerType(pointee(hasDeclaration(cxxRecordDecl(
+               hasMethod(anyOf(isVirtualAsWritten(), isPure()))))))))
+          .bind("pointer");
+
+  const auto SelectedPointerExpr = MatchInheritedVirtualFunctions
+                                       ? PolymorphicPointerExpr
+                                       : PointerExprWithVirtualMethod;
+
+  const auto ArraySubscript = arraySubscriptExpr(hasBase(SelectedPointerExpr));
 
   const auto BinaryOperators =
       binaryOperator(hasAnyOperatorName("+", "-", "+=", "-="),
-                     hasEitherOperand(PointerExprWithVirtualMethod));
+                     hasEitherOperand(SelectedPointerExpr));
 
-  const auto UnaryOperators =
-      unaryOperator(hasAnyOperatorName("++", "--"),
-                    hasUnaryOperand(PointerExprWithVirtualMethod));
+  const auto UnaryOperators = unaryOperator(
+      hasAnyOperatorName("++", "--"), hasUnaryOperand(SelectedPointerExpr));
 
   Finder->addMatcher(
       expr(anyOf(ArraySubscript, BinaryOperators, UnaryOperators)), this);
@@ -43,8 +62,8 @@ void PointerArithmeticOnPolymorphicObjectCheck::check(
       PointerExpr->getType()->getPointeeType()->getAsCXXRecordDecl();
 
   diag(PointerExpr->getBeginLoc(),
-       "pointer arithmetic on polymorphic class '%0' that declares a virtual "
-       "function, undefined behavior if the pointee is a different class")
+       "pointer arithmetic on polymorphic class '%0', "
+       "undefined behavior if the pointee is a different class")
       << PointeeType->getName();
 }
 
