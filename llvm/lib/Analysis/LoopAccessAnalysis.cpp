@@ -1903,37 +1903,13 @@ isLoopVariantIndirectAddress(ArrayRef<const Value *> UnderlyingObjects,
   });
 }
 
-namespace {
-struct DepDistanceStrideAndSizeInfo {
-  const SCEV *Dist;
-  uint64_t StrideA;
-  uint64_t StrideB;
-  uint64_t TypeByteSize;
-  bool AIsWrite;
-  bool BIsWrite;
-
-  DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA,
-                               uint64_t StrideB, uint64_t TypeByteSize,
-                               bool AIsWrite, bool BIsWrite)
-      : Dist(Dist), StrideA(StrideA), StrideB(StrideB),
-        TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
-};
-} // namespace
-
-// Get the dependence distance, strides, type size and whether it is a write for
-// the dependence between A and B. Returns a DepType, if we can prove there's
-// no dependence or the analysis fails. Outlined to lambda to limit he scope
-// of various temporary variables, like A/BPtr, StrideA/BPtr and others.
-// Returns either the dependence result, if it could already be determined, or a
-// struct containing (Distance, Stride, TypeSize, AIsWrite, BIsWrite).
-static std::variant<MemoryDepChecker::Dependence::DepType,
-                    DepDistanceStrideAndSizeInfo>
-getDependenceDistanceStrideAndSize(
+std::variant<MemoryDepChecker::Dependence::DepType,
+             MemoryDepChecker::DepDistanceStrideAndSizeInfo>
+MemoryDepChecker::getDependenceDistanceStrideAndSize(
     const AccessAnalysis::MemAccessInfo &A, Instruction *AInst,
     const AccessAnalysis::MemAccessInfo &B, Instruction *BInst,
-    const DenseMap<Value *, const SCEV *> &Strides,
-    const DenseMap<Value *, SmallVector<const Value *, 16>> &UnderlyingObjects,
-    PredicatedScalarEvolution &PSE, const Loop *InnermostLoop) {
+    const DenseMap<Value *, SmallVector<const Value *, 16>>
+        &UnderlyingObjects) {
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
   auto &SE = *PSE.getSE();
   auto [APtr, AIsWrite] = A;
@@ -1952,9 +1928,11 @@ getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
 
   int64_t StrideAPtr =
-      getPtrStride(PSE, ATy, APtr, InnermostLoop, Strides, true).value_or(0);
+      getPtrStride(PSE, ATy, APtr, InnermostLoop, SymbolicStrides, true)
+          .value_or(0);
   int64_t StrideBPtr =
-      getPtrStride(PSE, BTy, BPtr, InnermostLoop, Strides, true).value_or(0);
+      getPtrStride(PSE, BTy, BPtr, InnermostLoop, SymbolicStrides, true)
+          .value_or(0);
 
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
@@ -2033,8 +2011,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // Get the dependence distance, stride, type size and what access writes for
   // the dependence between A and B.
   auto Res = getDependenceDistanceStrideAndSize(
-      A, InstMap[AIdx], B, InstMap[BIdx], SymbolicStrides, UnderlyingObjects,
-      PSE, InnermostLoop);
+      A, InstMap[AIdx], B, InstMap[BIdx], UnderlyingObjects);
   if (std::holds_alternative<Dependence::DepType>(Res))
     return std::get<Dependence::DepType>(Res);
 

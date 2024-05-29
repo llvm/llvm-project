@@ -355,6 +355,35 @@ private:
   /// either PossiblySafeWithRtChecks or Unsafe and from
   /// PossiblySafeWithRtChecks to Unsafe.
   void mergeInStatus(VectorizationSafetyStatus S);
+
+  struct DepDistanceStrideAndSizeInfo {
+    const SCEV *Dist;
+    uint64_t StrideA;
+    uint64_t StrideB;
+    uint64_t TypeByteSize;
+    bool AIsWrite;
+    bool BIsWrite;
+
+    DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA,
+                                 uint64_t StrideB, uint64_t TypeByteSize,
+                                 bool AIsWrite, bool BIsWrite)
+        : Dist(Dist), StrideA(StrideA), StrideB(StrideB),
+          TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
+  };
+
+  /// Get the dependence distance, strides, type size and whether it is a write
+  /// for the dependence between A and B. Returns a DepType, if we can prove
+  /// there's no dependence or the analysis fails. Outlined to lambda to limit
+  /// he scope of various temporary variables, like A/BPtr, StrideA/BPtr and
+  /// others. Returns either the dependence result, if it could already be
+  /// determined, or a struct containing (Distance, Stride, TypeSize, AIsWrite,
+  /// BIsWrite).
+  std::variant<Dependence::DepType, DepDistanceStrideAndSizeInfo>
+  getDependenceDistanceStrideAndSize(
+      const MemAccessInfo &A, Instruction *AInst, const MemAccessInfo &B,
+      Instruction *BInst,
+      const DenseMap<Value *, SmallVector<const Value *, 16>>
+          &UnderlyingObjects);
 };
 
 class RuntimePointerChecking;
