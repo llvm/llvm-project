@@ -5,4 +5,5 @@ add_lldb_unittest(EditlineTests
     lldbHost
     lldbUtility
     LLVMTestingSupport
+    ${CURSES_LIBRARIES}
   )
