@@ -1746,7 +1746,7 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
     return Builder.CreateCmp(CI->getPredicate(), Ops[0], Ops[1]);
   if (auto *SI = dyn_cast<SelectInst>(I))
     return Builder.CreateSelect(Ops[0], Ops[1], Ops[2], "", SI);
-  if (auto CI = dyn_cast<CastInst>(I))
+  if (auto *CI = dyn_cast<CastInst>(I))
     return Builder.CreateCast((Instruction::CastOps)CI->getOpcode(), Ops[0],
                               DstTy);
   if (II)
@@ -1760,7 +1760,8 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
 // do so.
 bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   auto *Ty = dyn_cast<FixedVectorType>(I.getType());
-  if (!Ty)
+  if (!Ty || !isa<Instruction>(I.getOperand(0)) ||
+      !isa<Instruction>(I.getOperand(1)))
     return false;
 
   SmallVector<InstLane> Start(Ty->getNumElements());
