@@ -186,22 +186,42 @@ private:
   void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
                                const AnchorMap &ProfileAnchors,
                                LocToLocMap &IRToProfileLocationMap);
+  /// Find the function using the profile name. If the function is not found but
+  /// the \p NewIRCallees is provided, try to match the function profile with
+  /// all functions in \p NewIRCallees and return the matched function.
+  ///
+  /// \param ProfCallee The profile name of the callee.
+  /// \param OldProfToNewSymbolMap The map from old profile name to new symbol.
+  /// \param NewIRCallees The new candidate callees in the same scope to match.
+  ///
+  /// \returns The matched function and a bool value indicating whether the
+  /// function is new(matched).
   std::pair<Function *, bool>
   findOrMatchFunction(const FunctionId &ProfCallee,
                       FunctionMap &OldProfToNewSymbolMap,
                       const std::vector<Function *> &NewIRCallees);
   std::vector<FunctionSamples *> sortFuncProfiles(SampleProfileMap &ProfileMap);
   void findNewIRCallees(Function &Caller,
-                        const StringMap<Function *> &newIRFunctions,
+                        const StringMap<Function *> &NewIRFunctions,
                         std::vector<Function *> &NewIRCallees);
   bool functionMatchesProfileHelper(const Function &IRFunc,
                                     const FunctionId &ProfFunc);
+  /// Determine if the function matches profile by computing a similarity ratio
+  /// between two callsite anchors extracted from function and profile. If it's
+  /// above the threshold, the function matches the profile.
+  ///
+  /// \returns True if the function matches profile.
   bool functionMatchesProfile(const Function &IRFunc,
                               const FunctionId &ProfFunc);
-  void matchProfileForNewFunctions(const StringMap<Function *> &newIRFunctions,
+  void matchProfileForNewFunctions(const StringMap<Function *> &NewIRFunctions,
                                    FunctionSamples &FS,
                                    FunctionMap &OldProfToNewSymbolMap);
-  void findNewIRFunctions(StringMap<Function *> &newIRFunctions);
+  /// Find functions that don't show in the profile or profile symbol list,
+  /// which are supposed to be new functions. We use them as the targets for
+  /// renaming matching.
+  ///
+  /// \param NewIRFunctions The map from function name to the IR function.
+  void findNewIRFunctions(StringMap<Function *> &NewIRFunctions);
   void runCallGraphMatching();
   void reportOrPersistProfileStats();
 };
