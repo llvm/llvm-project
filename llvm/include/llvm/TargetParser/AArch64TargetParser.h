@@ -183,55 +183,8 @@ struct ExtensionDependency {
   ArchExtKind Later;
 };
 
-// clang-format off
-// Each entry here is a link in the dependency chain starting from the
-// extension that was added to the architecture first.
-inline constexpr ExtensionDependency ExtensionDependencies[] = {
-  {AEK_FP, AEK_FP16},
-  {AEK_FP, AEK_SIMD},
-  {AEK_FP, AEK_JSCVT},
-  {AEK_FP, AEK_FP8},
-  {AEK_SIMD, AEK_CRYPTO},
-  {AEK_SIMD, AEK_AES},
-  {AEK_SIMD, AEK_SHA2},
-  {AEK_SIMD, AEK_SHA3},
-  {AEK_SIMD, AEK_SM4},
-  {AEK_SIMD, AEK_RDM},
-  {AEK_SIMD, AEK_DOTPROD},
-  {AEK_SIMD, AEK_FCMA},
-  {AEK_FP16, AEK_FP16FML},
-  {AEK_FP16, AEK_SVE},
-  {AEK_BF16, AEK_SME},
-  {AEK_BF16, AEK_B16B16},
-  {AEK_SVE, AEK_SVE2},
-  {AEK_SVE, AEK_F32MM},
-  {AEK_SVE, AEK_F64MM},
-  {AEK_SVE2, AEK_SVE2P1},
-  {AEK_SVE2, AEK_SVE2BITPERM},
-  {AEK_SVE2, AEK_SVE2AES},
-  {AEK_SVE2, AEK_SVE2SHA3},
-  {AEK_SVE2, AEK_SVE2SM4},
-  {AEK_SVE2, AEK_SMEFA64},
-  {AEK_SVE2, AEK_SMEFA64},
-  {AEK_SME, AEK_SME2},
-  {AEK_SME, AEK_SMEF16F16},
-  {AEK_SME, AEK_SMEF64F64},
-  {AEK_SME, AEK_SMEI16I64},
-  {AEK_SME, AEK_SMEFA64},
-  {AEK_SME2, AEK_SME2P1},
-  {AEK_SME2, AEK_SSVE_FP8FMA},
-  {AEK_SME2, AEK_SSVE_FP8DOT2},
-  {AEK_SME2, AEK_SSVE_FP8DOT4},
-  {AEK_SME2, AEK_SMEF8F16},
-  {AEK_SME2, AEK_SMEF8F32},
-  {AEK_FP8, AEK_SMEF8F16},
-  {AEK_FP8, AEK_SMEF8F32},
-  {AEK_LSE, AEK_LSE128},
-  {AEK_PREDRES, AEK_SPECRES2},
-  {AEK_RAS, AEK_RASV2},
-  {AEK_RCPC, AEK_RCPC3},
-};
-// clang-format on
+#define EMIT_EXTENSION_DEPENDENCIES
+#include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
 enum ArchProfile { AProfile = 'A', RProfile = 'R', InvalidProfile = '?' };
 
