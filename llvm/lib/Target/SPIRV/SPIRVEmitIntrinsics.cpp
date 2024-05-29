@@ -1191,7 +1191,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       B.SetInsertPoint(I);
       Value *OpTyVal = Op;
       if (Op->getType()->isTargetExtTy())
-        OpTyVal = UndefValue::get(Op->getType());
+        OpTyVal = PoisonValue::get(Op->getType());
       auto *NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
                                     {Op->getType(), OpTyVal->getType()}, Op,
                                     OpTyVal, {}, B);
