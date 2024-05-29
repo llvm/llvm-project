@@ -57,10 +57,12 @@ T basic_gcd_(T m, T n) {
 template <typename T>
 T basic_gcd(T m, T n) {
   using Tp = std::make_unsigned_t<T>;
-  if (m < 0 && m != std::numeric_limits<T>::min())
-    m = -m;
-  if (n < 0 && n != std::numeric_limits<T>::min())
-    n = -n;
+  if constexpr (std::is_signed_v<T>) {
+    if (m < 0 && m != std::numeric_limits<T>::min())
+      m = -m;
+    if (n < 0 && n != std::numeric_limits<T>::min())
+      n = -n;
+  }
   return basic_gcd_(static_cast<Tp>(m), static_cast<Tp>(n));
 }
 
