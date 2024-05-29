@@ -40,7 +40,7 @@
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/Module.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/Specifiers.h"

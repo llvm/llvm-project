@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/Module.h"
 #include "clang/Index/USRGeneration.h"
 
 using namespace clang;

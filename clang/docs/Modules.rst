@@ -1126,7 +1126,7 @@ The Clang source code provides additional information about modules:
 ``clang/test/Modules/``
   Tests specifically related to modules functionality.
 
-``clang/include/clang/Basic/Module.h``
+``clang/include/clang/Basic/Module/Module.h``
   The ``Module`` class in this header describes a module, and is used throughout the compiler to implement modules.
 
 ``clang/include/clang/Lex/ModuleMap.h``

@@ -16,7 +16,7 @@
 
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"

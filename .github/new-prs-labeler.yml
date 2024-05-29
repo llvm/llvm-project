@@ -345,7 +345,7 @@ clang:modules:
   - clang/include/clang/AST/PropertiesBase.td
   - clang/include/clang/AST/ODRHash.h
   - clang/include/clang/AST/TypeProperties.td
-  - clang/include/clang/Basic/Module.h
+  - clang/include/clang/Basic/Module/**
   - clang/include/clang/Frontend/PrecompiledPreamble.h
   - clang/include/clang/Lex/ModuleLoader.h
   - clang/include/clang/Lex/ModuleMap.h

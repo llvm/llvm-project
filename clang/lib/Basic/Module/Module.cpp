@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/Module.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
@@ -78,7 +78,7 @@ static bool isPlatformEnvironment(const TargetInfo &Target, StringRef Feature) {
     if (Pos == StringRef::npos)
       return false;
     SmallString<128> NewLHS = LHS.slice(0, Pos);
-    NewLHS += LHS.slice(Pos+1, LHS.size());
+    NewLHS += LHS.slice(Pos + 1, LHS.size());
     return NewLHS == RHS;
   };
 
@@ -218,7 +218,7 @@ static StringRef getModuleNameFromComponent(
 
 static StringRef getModuleNameFromComponent(StringRef R) { return R; }
 
-template<typename InputIter>
+template <typename InputIter>
 static void printModuleId(raw_ostream &OS, InputIter Begin, InputIter End,
                           bool AllowStringLiterals = true) {
   for (InputIter It = Begin; It != End; ++It) {
@@ -236,7 +236,7 @@ static void printModuleId(raw_ostream &OS, InputIter Begin, InputIter End,
   }
 }
 
-template<typename Container>
+template <typename Container>
 static void printModuleId(raw_ostream &OS, const Container &C) {
   return printModuleId(OS, C.begin(), C.end());
 }
@@ -325,7 +325,7 @@ void Module::addRequirement(StringRef Feature, bool RequiredState,
   if (hasFeature(Feature, LangOpts, Target) == RequiredState)
     return;
 
-  markUnavailable(/*Unimportable*/true);
+  markUnavailable(/*Unimportable*/ true);
 }
 
 void Module::markUnavailable(bool Unimportable) {
@@ -368,7 +368,8 @@ Module *Module::findOrInferSubmodule(StringRef Name) {
     return SubModules[Pos->getValue()];
   if (!InferSubmodules)
     return nullptr;
-  Module *Result = new Module(Name, SourceLocation(), this, false, InferExplicitSubmodules, 0);
+  Module *Result = new Module(Name, SourceLocation(), this, false,
+                              InferExplicitSubmodules, 0);
   Result->InferExplicitSubmodules = InferExplicitSubmodules;
   Result->InferSubmodules = InferSubmodules;
   Result->InferExportWildcard = InferExportWildcard;
@@ -551,8 +552,8 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
       OS.indent(Indent + 2);
       OS << K.Prefix << "header \"";
       OS.write_escaped(H.NameAsWritten);
-      OS << "\" { size " << H.Entry.getSize()
-         << " mtime " << H.Entry.getModificationTime() << " }\n";
+      OS << "\" { size " << H.Entry.getSize() << " mtime "
+         << H.Entry.getModificationTime() << " }\n";
     }
   }
   for (auto *Unresolved : {&UnresolvedHeaders, &MissingHeaders}) {
@@ -674,9 +675,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
   OS << "}\n";
 }
 
-LLVM_DUMP_METHOD void Module::dump() const {
-  print(llvm::errs(), 0, true);
-}
+LLVM_DUMP_METHOD void Module::dump() const { print(llvm::errs(), 0, true); }
 
 void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
                                   VisibleCallback Vis, ConflictCallback Cb) {
@@ -715,7 +714,7 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
 
     for (auto &C : V.M->Conflicts) {
       if (isVisible(C.Other)) {
-        llvm::SmallVector<Module*, 8> Path;
+        llvm::SmallVector<Module *, 8> Path;
         for (Visiting *I = &V; I; I = I->ExportedBy)
           Path.push_back(I->M);
         Cb(Path, C.Other, C.Message);
@@ -723,19 +722,4 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
     }
   };
   VisitModule({M, nullptr});
-}
-
-ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
-    : Signature(M.Signature), ClangModule(&M) {
-  if (M.Directory)
-    Path = M.Directory->getName();
-  if (auto File = M.getASTFile())
-    ASTFile = File->getName();
-}
-
-std::string ASTSourceDescriptor::getModuleName() const {
-  if (ClangModule)
-    return ClangModule->Name;
-  else
-    return std::string(PCHModuleName);
 }

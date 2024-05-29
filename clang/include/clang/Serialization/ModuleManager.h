@@ -15,7 +15,6 @@
 #define LLVM_CLANG_SERIALIZATION_MODULEMANAGER_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/DenseMap.h"
@@ -100,9 +99,7 @@ class ModuleManager {
   /// State used by the "visit" operation to avoid malloc traffic in
   /// calls to visit().
   struct VisitState {
-    explicit VisitState(unsigned N) : VisitNumber(N, 0) {
-      Stack.reserve(N);
-    }
+    explicit VisitState(unsigned N) : VisitNumber(N, 0) { Stack.reserve(N); }
 
     /// The stack used when marking the imports of a particular module
     /// as not-to-be-visited.
@@ -240,13 +237,12 @@ public:
   /// \return A pointer to the module that corresponds to this file name,
   /// and a value indicating whether the module was loaded.
   AddModuleResult addModule(StringRef FileName, ModuleKind Type,
-                            SourceLocation ImportLoc,
-                            ModuleFile *ImportedBy, unsigned Generation,
-                            off_t ExpectedSize, time_t ExpectedModTime,
+                            SourceLocation ImportLoc, ModuleFile *ImportedBy,
+                            unsigned Generation, off_t ExpectedSize,
+                            time_t ExpectedModTime,
                             ASTFileSignature ExpectedSignature,
                             ASTFileSignatureReader ReadSignature,
-                            ModuleFile *&Module,
-                            std::string &ErrorStr);
+                            ModuleFile *&Module, std::string &ErrorStr);
 
   /// Remove the modules starting from First (to the end).
   void removeModules(ModuleIterator First);

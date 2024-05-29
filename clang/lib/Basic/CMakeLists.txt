@@ -55,11 +55,11 @@ if(CLANG_VENDOR)
 endif()
 
 add_clang_library(clangBasic
-  Attributes.cpp
-  Builtins.cpp
-  CLWarnings.cpp
-  CharInfo.cpp
-  CodeGenOptions.cpp
+Attributes.cpp
+Builtins.cpp
+CLWarnings.cpp
+CharInfo.cpp
+CodeGenOptions.cpp
   Cuda.cpp
   DarwinSDKInfo.cpp
   Diagnostic.cpp
@@ -73,7 +73,8 @@ add_clang_library(clangBasic
   LangOptions.cpp
   LangStandards.cpp
   MakeSupport.cpp
-  Module.cpp
+  Module/ASTSourceDescriptor.cpp
+  Module/Module.cpp
   ObjCRuntime.cpp
   OpenCLOptions.cpp
   OpenMPKinds.cpp

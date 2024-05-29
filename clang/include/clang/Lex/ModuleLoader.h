@@ -15,7 +15,7 @@
 #define LLVM_CLANG_LEX_MODULELOADER_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"

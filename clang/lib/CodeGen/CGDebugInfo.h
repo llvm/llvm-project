@@ -21,7 +21,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/ASTSourceDescriptor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -38,6 +38,7 @@ class MDNode;
 namespace clang {
 class ClassTemplateSpecializationDecl;
 class GlobalDecl;
+class Module;
 class ModuleMap;
 class ObjCInterfaceDecl;
 class UsingDecl;

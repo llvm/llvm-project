@@ -56,7 +56,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Linkage.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/Module.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/ProfileList.h"

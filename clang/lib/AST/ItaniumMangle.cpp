@@ -29,7 +29,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/DiagnosticAST.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Thunk.h"

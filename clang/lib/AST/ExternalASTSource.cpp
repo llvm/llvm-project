@@ -18,7 +18,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/Module/ASTSourceDescriptor.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
