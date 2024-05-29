@@ -919,20 +919,28 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
 }
 
 FailureOr<scf::SCFReductionTilingResult>
-mlir::scf::tileReductionUsingScf(RewriterBase &b,
+mlir::scf::tileReductionUsingScf(RewriterBase &rewriter,
                                  PartialReductionOpInterface op,
-                                 ArrayRef<OpFoldResult> tileSizes) {
+                                 const scf::SCFTilingOptions &options) {
+  if (failed(verifyTileSizeOptions(rewriter, op.getLoc(), options))) {
+    return failure();
+  }
+
   Location loc = op.getLoc();
   // Ops implementing PartialReductionOpInterface are expected to implement
   // TilingInterface.
   auto tilingInterfaceOp = cast<TilingInterface>(op.getOperation());
-  SmallVector<Range> iterationDomain = tilingInterfaceOp.getIterationDomain(b);
-  auto tileSizesVector = llvm::to_vector(tileSizes);
-  if (tileSizesVector.size() < iterationDomain.size()) {
-    auto zero = b.getIndexAttr(0);
-    tileSizesVector.append(iterationDomain.size() - tileSizesVector.size(),
-                           zero);
-  }
+
+  // 1. Get the range of the loops that are represented by the operation.
+  SmallVector<Range> iterationDomain =
+      tilingInterfaceOp.getIterationDomain(rewriter);
+
+  // 2. Materialize the tile sizes and/or number of threads.
+  SmallVector<OpFoldResult> tileSizes, numThreads;
+  std::tie(tileSizes, numThreads) = getUserTileSizesAndNumThreads(
+      rewriter, tilingInterfaceOp, iterationDomain, options);
+
+  // 3. Collect the reduction iterator types.
   SmallVector<utils::IteratorType> iterators =
       tilingInterfaceOp.getLoopIteratorTypes();
 
@@ -943,16 +951,16 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
       reductionDims.push_back(idx);
   }
 
-  // 2. create the inital tensor value.
+  // 4. create the inital tensor value.
   FailureOr<SmallVector<Value>> maybeInitTensors =
-      op.generateInitialTensorForPartialReduction(b, loc, tileSizesVector,
+      op.generateInitialTensorForPartialReduction(rewriter, loc, tileSizes,
                                                   reductionDims);
   if (failed(maybeInitTensors)) {
-    return b.notifyMatchFailure(op, "Failed to create initial tensors.");
+    return rewriter.notifyMatchFailure(op, "Failed to create initial tensors.");
   }
   SmallVector<Value> &initTensors = maybeInitTensors.value();
 
-  // 3. Define the callback to use for generating the inner most tile loop body.
+  // 5. Define the callback to use for generating the inner most tile loop body.
   Operation *parallelOp = nullptr;
   auto innerYieldTiledValuesFn =
       [&](RewriterBase &rewriter, Location loc, ValueRange ivs,
@@ -961,43 +969,31 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
           SmallVector<SmallVector<OpFoldResult>> &resultSizes)
       -> LogicalResult {
     SmallVector<OpFoldResult> offsets, sizes;
-    {
-      int materializedLoopNum = 0;
-      for (auto [tileSize, loopRange] :
-           llvm::zip_equal(tileSizesVector, iterationDomain)) {
-        if (isConstantIntValue(tileSize, 0)) {
-          offsets.push_back(loopRange.offset);
-          sizes.push_back(loopRange.size);
-          continue;
-        }
-        Value iv = ivs[materializedLoopNum++];
-        offsets.push_back(iv);
-        sizes.push_back(
-            getBoundedTileSize(rewriter, loc, loopRange, iv, tileSize));
-      }
-    }
+    std::tie(offsets, sizes) = getTileOffsetAndSizes(
+        rewriter, loc, ivs, iterationDomain, tileSizes, numThreads);
 
-    // 4a. Clone the operation.
+    // 5a. Clone the operation.
     auto clonedOp = cast<PartialReductionOpInterface>(
-        cloneOpAndUpdateDestinationArgs(b, op, regionIterArgs));
+        cloneOpAndUpdateDestinationArgs(rewriter, op, regionIterArgs));
 
-    // 4b. Tile the cloned operation.
-    parallelOp = clonedOp.tileToPartialReduction(b, loc, regionIterArgs,
+    // 5b. Tile the cloned operation.
+    parallelOp = clonedOp.tileToPartialReduction(rewriter, loc, regionIterArgs,
                                                  offsets, sizes, reductionDims);
-    // 4c. Delete the cloned operation.
-    b.eraseOp(clonedOp);
+    // 5c. Delete the cloned operation.
+    rewriter.eraseOp(clonedOp);
 
     tiledResult.append(parallelOp->result_begin(), parallelOp->result_end());
-    // 4d. Compute the offsets and sizes needed to insert the result of the
+    // 5d. Compute the offsets and sizes needed to insert the result of the
     // tiled value back into destination before yielding the destination.
     for (int resultIdx : llvm::seq<int>(0, parallelOp->getNumResults())) {
-      SmallVector<OpFoldResult> outOffsets(offsets.size(), b.getIndexAttr(0));
+      SmallVector<OpFoldResult> outOffsets(offsets.size(),
+                                           rewriter.getIndexAttr(0));
       resultOffsets.emplace_back(std::move(outOffsets));
 
       SmallVector<OpFoldResult> outSizes;
       for (size_t i = 0; i < offsets.size(); i++) {
-        outSizes.push_back(
-            tensor::getMixedSize(b, loc, parallelOp->getResult(resultIdx), i));
+        outSizes.push_back(tensor::getMixedSize(
+            rewriter, loc, parallelOp->getResult(resultIdx), i));
       }
       resultSizes.emplace_back(std::move(outSizes));
     }
@@ -1006,20 +1002,20 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
 
   // 5. Generate the tiled implementation using the destination tensors.
   SmallVector<LoopLikeOpInterface> loops;
-  scf::SCFTilingOptions options;
-  options.setLoopType(scf::SCFTilingOptions::LoopType::ForOp);
-  if (failed(generateLoopNest(b, loc, options, iterationDomain, tileSizesVector,
-                              /*numThreads=*/ArrayRef<OpFoldResult>{},
-                              initTensors, innerYieldTiledValuesFn, loops)))
-    return b.notifyMatchFailure(op, "failed to tile for parallel reduction");
+  if (failed(generateLoopNest(rewriter, loc, options, iterationDomain,
+                              tileSizes, numThreads, initTensors,
+                              innerYieldTiledValuesFn, loops)))
+    return rewriter.notifyMatchFailure(op,
+                                       "failed to tile for parallel reduction");
 
   SmallVector<Value> replacements = llvm::map_to_vector(
       loops.front()->getResults(), [](OpResult r) -> Value { return r; });
 
   // 5. Apply the merge reduction to combine all the partial values.
-  b.setInsertionPointAfter(*loops.begin());
-  Operation *mergeOp = op.mergeReductions(b, loc, replacements, reductionDims);
-  b.replaceOp(op, mergeOp->getResults());
+  rewriter.setInsertionPointAfter(*loops.begin());
+  Operation *mergeOp =
+      op.mergeReductions(rewriter, loc, replacements, reductionDims);
+  rewriter.replaceOp(op, mergeOp->getResults());
 
   SCFReductionTilingResult results;
   results.initialValues = initTensors;

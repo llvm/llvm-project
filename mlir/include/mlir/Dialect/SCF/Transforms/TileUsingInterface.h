@@ -317,7 +317,7 @@ struct SCFReductionTilingResult {
 /// ```
 FailureOr<scf::SCFReductionTilingResult>
 tileReductionUsingScf(RewriterBase &b, PartialReductionOpInterface op,
-                      ArrayRef<OpFoldResult> tileSize);
+                      const SCFTilingOptions &options);
 
 } // namespace scf
 } // namespace mlir

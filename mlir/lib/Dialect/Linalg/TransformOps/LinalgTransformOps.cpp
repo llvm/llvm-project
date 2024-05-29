@@ -2517,9 +2517,13 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
+
+  scf::SCFTilingOptions options;
+  options.setTileSizes(
+      getAsIndexOpFoldResult(rewriter.getContext(), getTileSizes()));
   FailureOr<scf::SCFReductionTilingResult> result = scf::tileReductionUsingScf(
       rewriter, cast<PartialReductionOpInterface>(target.getOperation()),
-      getAsOpFoldResult(rewriter.getI64ArrayAttr(getTileSizes())));
+      options);
 
   if (failed(result))
     return emitDefaultSilenceableFailure(target);
@@ -2565,10 +2569,18 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
       getAsOpFoldResult(rewriter.getI64ArrayAttr(getNumThreads()));
   SmallVector<OpFoldResult> tileSizes =
       getAsOpFoldResult(rewriter.getI64ArrayAttr(getTileSizes()));
-  FailureOr<linalg::ForallReductionTilingResult> result =
-      linalg::tileReductionUsingForall(
-          rewriter, cast<PartialReductionOpInterface>(target.getOperation()),
-          numThreads, tileSizes, getMapping());
+  scf::SCFTilingOptions options;
+  options.setNumThreads(
+      getAsIndexOpFoldResult(rewriter.getContext(), getNumThreads()));
+  options.setTileSizes(
+      getAsIndexOpFoldResult(rewriter.getContext(), getTileSizes()));
+  options.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
+  if (auto mappingAttr = getMapping()) {
+    options.setMapping(mappingAttr->getValue());
+  }
+  FailureOr<scf::SCFReductionTilingResult> result = scf::tileReductionUsingScf(
+      rewriter, cast<PartialReductionOpInterface>(target.getOperation()),
+      options);
 
   if (failed(result)) {
     auto diag = emitSilenceableError() << "could not tile reduction";
@@ -2579,7 +2591,8 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
     results.push_back(initValue.getDefiningOp());
   results.push_back(result->parallelTiledOp);
   results.push_back(result->mergeOp);
-  results.push_back(result->loops);
+  for (auto loop : result->loops)
+    results.push_back(loop);
   return DiagnosedSilenceableFailure::success();
 }
 
