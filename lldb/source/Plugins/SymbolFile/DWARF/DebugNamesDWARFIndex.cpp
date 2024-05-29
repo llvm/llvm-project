@@ -64,27 +64,25 @@ DebugNamesDWARFIndex::GetNonSkeletonUnit(const DebugNames::Entry &entry) const {
   return cu ? &cu->GetNonSkeletonUnit() : nullptr;
 }
 
-std::optional<DIERef>
-DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) const {
+DWARFDIE DebugNamesDWARFIndex::GetDIE(const DebugNames::Entry &entry) const {
   DWARFUnit *unit = GetNonSkeletonUnit(entry);
-  if (!unit)
-    return std::nullopt;
-  if (std::optional<uint64_t> die_offset = entry.getDIEUnitOffset())
-    return DIERef(unit->GetSymbolFileDWARF().GetFileIndex(),
-                  DIERef::Section::DebugInfo, unit->GetOffset() + *die_offset);
+  std::optional<uint64_t> die_offset = entry.getDIEUnitOffset();
+  if (!unit || !die_offset)
+    return DWARFDIE();
+  if (DWARFDIE die = unit->GetDIE(unit->GetOffset() + *die_offset))
+    return die;
 
-  return std::nullopt;
+  m_module.ReportErrorIfModifyDetected(
+      "the DWARF debug information has been modified (bad offset {0:x} in "
+      "debug_names section)\n",
+      *die_offset);
+  return DWARFDIE();
 }
 
 bool DebugNamesDWARFIndex::ProcessEntry(
     const DebugNames::Entry &entry,
     llvm::function_ref<bool(DWARFDIE die)> callback) {
-  std::optional<DIERef> ref = ToDIERef(entry);
-  if (!ref)
-    return true;
-  SymbolFileDWARF &dwarf = *llvm::cast<SymbolFileDWARF>(
-      m_module.GetSymbolFile()->GetBackingSymbolFile());
-  DWARFDIE die = dwarf.GetDIE(*ref);
+  DWARFDIE die = GetDIE(entry);
   if (!die)
     return true;
   // Clang erroneously emits index entries for declaration DIEs in case when the
@@ -187,7 +185,7 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
     llvm::function_ref<bool(DWARFDIE die)> callback) {
   // Keep a list of incomplete types as fallback for when we don't find the
   // complete type.
-  DIEArray incomplete_types;
+  std::vector<DWARFDIE> incomplete_types;
 
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(class_name.GetStringRef())) {
@@ -195,19 +193,14 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
         entry.tag() != DW_TAG_class_type)
       continue;
 
-    std::optional<DIERef> ref = ToDIERef(entry);
-    if (!ref)
-      continue;
-
-    DWARFUnit *cu = m_debug_info.GetUnit(*ref);
-    if (!cu || !cu->Supports_DW_AT_APPLE_objc_complete_type()) {
-      incomplete_types.push_back(*ref);
+    DWARFDIE die = GetDIE(entry);
+    if (!die) {
+      // Report invalid
       continue;
     }
-
-    DWARFDIE die = m_debug_info.GetDIE(*ref);
-    if (!die) {
-      ReportInvalidDIERef(*ref, class_name.GetStringRef());
+    DWARFUnit *cu = die.GetCU();
+    if (!cu->Supports_DW_AT_APPLE_objc_complete_type()) {
+      incomplete_types.push_back(die);
       continue;
     }
 
@@ -216,12 +209,11 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
       callback(die);
       return;
     }
-    incomplete_types.push_back(*ref);
+    incomplete_types.push_back(die);
   }
 
-  auto dierefcallback = DIERefCallback(callback, class_name.GetStringRef());
-  for (DIERef ref : incomplete_types)
-    if (!dierefcallback(ref))
+  for (DWARFDIE die : incomplete_types)
+    if (!callback(die))
       return;
 
   m_fallback.GetCompleteObjCClass(class_name, must_be_implementation, callback);
@@ -383,8 +375,8 @@ void DebugNamesDWARFIndex::GetFunctions(
     if (tag != DW_TAG_subprogram && tag != DW_TAG_inlined_subroutine)
       continue;
 
-    if (std::optional<DIERef> ref = ToDIERef(entry)) {
-      if (!ProcessFunctionDIE(lookup_info, *ref, dwarf, parent_decl_ctx,
+    if (DWARFDIE die = GetDIE(entry)) {
+      if (!ProcessFunctionDIE(lookup_info, die, parent_decl_ctx,
                               [&](DWARFDIE die) {
                                 if (!seen.insert(die.GetDIE()).second)
                                   return true;
