@@ -532,19 +532,20 @@ static Value createVectorLengthValue(ConversionPatternRewriter &rewriter,
   auto vShape = vType.getShape();
   assert(vShape.size() == 1 && "Unexpected multi-dim vector type");
 
-  Value vLen = rewriter.create<LLVM::ConstantOp>(
+  Value baseVecLength = rewriter.create<LLVM::ConstantOp>(
       loc, rewriter.getI32Type(),
       rewriter.getIntegerAttr(rewriter.getI32Type(), vShape[0]));
 
   if (!vType.getScalableDims()[0])
-    return vLen;
+    return baseVecLength;
 
-  // Create VScale*vShape[0] and return it as vector length.
+  // For a scalable vector type, create and return `vScale * baseVecLength`.
   Value vScale = rewriter.create<vector::VectorScaleOp>(loc);
   vScale =
       rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), vScale);
-  vLen = rewriter.create<arith::MulIOp>(loc, vLen, vScale);
-  return vLen;
+  Value scalableVecLength =
+      rewriter.create<arith::MulIOp>(loc, baseVecLength, vScale);
+  return scalableVecLength;
 }
 
 /// Helper method to lower a `vector.reduction` op that performs an arithmetic
