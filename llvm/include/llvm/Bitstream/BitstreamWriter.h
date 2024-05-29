@@ -146,14 +146,11 @@ public:
   /// directly to the latter's buffer. In all other cases, the BitstreamWriter
   /// will use an internal buffer and flush at the end of its lifetime.
   ///
-  /// If \p is a raw_fd_stream, the BitstreamWriter will also flush
-  /// incrementally, when a subblock is finished, and if the FlushThreshold is
-  /// passed.
+  /// In addition, if \p is a raw_fd_stream supporting seek, tell, and read
+  /// (besides write), the BitstreamWriter will also flush incrementally, when a
+  /// subblock is finished, and if the FlushThreshold is passed.
   ///
-  /// NOTES:
-  ///  - \p FlushThreshold's unit is MB.
-  ///  - \p FS is expected to support seek, tell, and read (besides write).
-
+  /// NOTE: \p FlushThreshold's unit is MB.
   BitstreamWriter(raw_ostream &OutStream, uint32_t FlushThreshold = 512)
       : Buffer(getInternalBufferFromStream(OutStream)),
         FS(!isa<raw_svector_ostream>(OutStream) ? &OutStream : nullptr),
