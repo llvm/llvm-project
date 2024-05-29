@@ -100,6 +100,8 @@ public:
   ArrayRef<Comment::Argument>
   parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs);
 
+  /// Parse arguments for \\throws command supported args are in form of class
+  /// or template.
   ArrayRef<Comment::Argument>
   parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs);
 

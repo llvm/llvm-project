@@ -75,25 +75,6 @@ class TextTokenRetokenizer {
     return *Pos.BufferPtr;
   }
 
-  char peekNext(unsigned offset) const {
-    assert(!isEnd());
-    assert(Pos.BufferPtr != Pos.BufferEnd);
-    if (Pos.BufferPtr + offset < Pos.BufferEnd) {
-      return *(Pos.BufferPtr + offset);
-    } else {
-      return '\0';
-    }
-  }
-
-  void peekNextToken(SmallString<32> &WordText) const {
-    unsigned offset = 1;
-    char C = peekNext(offset++);
-    while (!isWhitespace(C) && C != '\0') {
-      WordText.push_back(C);
-      C = peekNext(offset++);
-    }
-  }
-
   void consumeChar() {
     assert(!isEnd());
     assert(Pos.BufferPtr != Pos.BufferEnd);
@@ -106,65 +87,6 @@ class TextTokenRetokenizer {
       assert(!isEnd());
       setupBuffer();
     }
-  }
-
-  bool shouldContinueLexingIntegralType(SmallString<32> &NextToken) {
-    return NextToken.ends_with(StringRef("char")) ||
-           NextToken.ends_with(StringRef("int")) ||
-           NextToken.ends_with(StringRef("char*")) ||
-           NextToken.ends_with(StringRef("int*")) ||
-           NextToken.ends_with(StringRef("char&")) ||
-           NextToken.ends_with(StringRef("int&"));
-  }
-
-  /// Lex an integral type, such as unsigned long long, etc.
-  bool lexIntegral(SmallString<32> &WordText, SmallString<32> &NextToken) {
-    unsigned LongCounter = (WordText.ends_with(StringRef("long"))) ? 1 : 0;
-    bool IsLexingComplete = false;
-
-    while (!isEnd()) {
-      const char C = peek();
-      if (!isWhitespace(C)) {
-        WordText.push_back(C);
-        consumeChar();
-      } else {
-        NextToken.clear();
-        peekNextToken(NextToken);
-
-        if (WordText.ends_with(StringRef("long"))) {
-          LongCounter++;
-          // Use the next token to determine if we should continue parsing
-          if (shouldContinueLexingIntegralType(NextToken)) {
-            WordText.push_back(C);
-            consumeChar();
-            IsLexingComplete = true;
-            continue;
-          }
-          // Maximum number of consecutive "long" is 2, so we can return if
-          // we've hit that.
-          if (LongCounter == 2) {
-            return true;
-          }
-        }
-
-        // If current word doesn't end with long, check if we should exit early
-        else {
-          if (IsLexingComplete || shouldContinueLexingIntegralType(WordText)) {
-            return true;
-          }
-        }
-
-        // If next token ends with long then we consume it and continue parsing
-        if (NextToken.ends_with(StringRef("long"))) {
-          WordText.push_back(C);
-          consumeChar();
-        } else {
-          return true;
-        }
-      }
-    }
-
-    return false;
   }
 
   /// Extract a template type
@@ -190,35 +112,6 @@ class TextTokenRetokenizer {
       }
     }
     return false;
-  }
-
-  bool isTypeQualifier(SmallString<32> &WordText) {
-    return WordText.ends_with(StringRef("const")) ||
-           WordText.ends_with(StringRef("volatile")) ||
-           WordText.ends_with(StringRef("short")) ||
-           WordText.ends_with(StringRef("restrict")) ||
-           WordText.ends_with(StringRef("auto")) ||
-           WordText.ends_with(StringRef("register")) ||
-           WordText.ends_with(StringRef("static")) ||
-           WordText.ends_with(StringRef("extern")) ||
-           WordText.ends_with(StringRef("struct")) ||
-           WordText.ends_with(StringRef("typedef")) ||
-           WordText.ends_with(StringRef("union")) ||
-           WordText.ends_with(StringRef("void"));
-  }
-
-  bool isScopeResolutionOperator(SmallString<32> &WordText) {
-    return WordText.ends_with(StringRef("::"));
-  }
-
-  bool isIntegral(SmallString<32> &WordText) {
-    return WordText.ends_with(StringRef("unsigned")) ||
-           WordText.ends_with(StringRef("long")) ||
-           WordText.ends_with(StringRef("signed"));
-  }
-
-  bool continueParsing(SmallString<32> &WordText) {
-    return isTypeQualifier(WordText) || isScopeResolutionOperator(WordText);
   }
 
   /// Add a token.
@@ -292,14 +185,9 @@ public:
 
     // Consume any leading whitespace.
     consumeWhitespace();
-    SmallString<32> NextToken;
     SmallString<32> WordText;
     const char *WordBegin = Pos.BufferPtr;
     SourceLocation Loc = getSourceLocation();
-    StringRef ConstVal = StringRef("const");
-    StringRef PointerVal = StringRef("*");
-    StringRef ReferenceVal = StringRef("&");
-    bool IsTypeConstPointerOrRef = false;
 
     while (!isEnd()) {
       const char C = peek();
@@ -313,62 +201,9 @@ public:
           WordText.push_back(C);
           consumeChar();
         }
-      }
-      // For whitespace, we start inspecting the constructed word
-      else {
-        // If we encounter a pointer/reference, we can stop parsing since we're
-        // only parsing expressions.
-        if (IsTypeConstPointerOrRef) {
-          consumeChar();
-          break;
-        }
-        // Parse out integral types
-        if (isIntegral(WordText)) {
-          WordText.push_back(C);
-          consumeChar();
-          if (!lexIntegral(WordText, NextToken))
-            return false;
-        }
-        // Certain types, like qualified names or types with CVR to name a few,
-        // may have whitespace inside of the typename, so we need to check and
-        // continue parsing if that's the case
-        if (continueParsing(WordText)) {
-          WordText.push_back(C);
-          consumeChar();
-        }
-        // Handles cases without qualified names or type qualifiers
-        else {
-          NextToken.clear();
-          peekNextToken(NextToken);
-          // Check for pointer/ref vals, and mark the type as a pointer/ref for
-          // the rest of the lex
-          if (WordText.ends_with(PointerVal) ||
-              WordText.ends_with(ReferenceVal)) {
-            if (NextToken.equals(ConstVal)) {
-              IsTypeConstPointerOrRef = true;
-              WordText.push_back(C);
-              consumeChar();
-            } else {
-              consumeChar();
-              break;
-            }
-          } else {
-            // Check if the next token is a pointer/ref
-            if ((NextToken.ends_with(PointerVal) ||
-                 NextToken.ends_with(ReferenceVal))) {
-              WordText.push_back(C);
-              consumeChar();
-            } else {
-              if (continueParsing(NextToken)) {
-                WordText.push_back(C);
-                consumeChar();
-              } else {
-                consumeChar();
-                break;
-              }
-            }
-          }
-        }
+      } else {
+        consumeChar();
+        break;
       }
     }
 
@@ -462,8 +297,7 @@ public:
     memcpy(TextPtr, WordText.c_str(), Length + 1);
     StringRef Text = StringRef(TextPtr, Length);
 
-    formTokenWithChars(Tok, Loc, WordBegin,
-                       Pos.BufferPtr - WordBegin, Text);
+    formTokenWithChars(Tok, Loc, WordBegin, Pos.BufferPtr - WordBegin, Text);
     return true;
   }
 
