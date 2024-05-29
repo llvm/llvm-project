@@ -570,10 +570,6 @@ module std_private_assert            [system] {
   header "__assert"
   export *
 }
-module std_private_availability      [system] {
-  header "__availability"
-  export *
-}
 module std_private_bit_reference     [system] {
   header "__bit_reference"
   export *
@@ -584,7 +580,9 @@ module std_private_fwd_bit_reference [system] {
 module std_private_config            [system] {
   textual header "__config"
   textual header "__configuration/abi.h"
+  textual header "__configuration/availability.h"
   textual header "__configuration/compiler.h"
+  textual header "__configuration/language.h"
   textual header "__configuration/platform.h"
   export *
 }
