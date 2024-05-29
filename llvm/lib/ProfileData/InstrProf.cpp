@@ -1649,7 +1649,8 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 
   // Read the version.
   H.Version = readNext(Buffer);
-  if (H.getIndexedProfileVersion() > IndexedInstrProf::ProfVersion::CurrentVersion)
+  if (H.getIndexedProfileVersion() >
+      IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
   static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
