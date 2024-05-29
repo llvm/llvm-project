@@ -67,7 +67,6 @@ jobs:
                 check_run_id: check_run_id
               })
               
-              console.log(annotations);
               for (annotation of annotations.data) {
                 if (annotation.annotation_level != 'failure') {
                   continue;
