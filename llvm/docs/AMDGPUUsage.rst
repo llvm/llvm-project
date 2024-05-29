@@ -1972,6 +1972,7 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x055      Reserved.
      *reserved*                                 0x056      Reserved.
      *reserved*                                 0x057      Reserved.
+     *reserved*                                 0x058      Reserved.
      ========================================== ========== =============================
 
 Sections
