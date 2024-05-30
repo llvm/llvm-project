@@ -2965,14 +2965,14 @@ private:
 /// A special type of VPBasicBlock that wraps an existing IR basic block.
 /// Recipes of the block get added before the first non-phi instruction in the
 /// wrapped block.
+/// Note: At the moment, VPIRBasicBlock can only be used to wrap VPlan's
+/// preheader block.
 class VPIRBasicBlock : public VPBasicBlock {
   BasicBlock *IRBB;
 
 public:
   VPIRBasicBlock(BasicBlock *IRBB)
-      : VPBasicBlock(VPIRBasicBlockSC,
-                     (Twine("ir-bb<") + IRBB->getName() + Twine(">")).str()),
-        IRBB(IRBB) {}
+      : VPBasicBlock(VPIRBasicBlockSC, "ph"), IRBB(IRBB) {}
 
   ~VPIRBasicBlock() override {}
 

@@ -153,8 +153,15 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   }
 
   auto *IRBB = dyn_cast<VPIRBasicBlock>(VPBB);
-  if (IRBB && !WrappedIRBBs.insert(IRBB->getIRBasicBlock()).second) {
+  if (!IRBB)
+    return true;
+
+  if (!WrappedIRBBs.insert(IRBB->getIRBasicBlock()).second) {
     errs() << "Same IR basic block used by multiple wrapper blocks!\n";
+    return false;
+  }
+  if (IRBB != IRBB->getPlan()->getPreheader()) {
+    errs() << "VPIRBasicBlock can only be used as pre-header at the moment!\n";
     return false;
   }
   return true;
