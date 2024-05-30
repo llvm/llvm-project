@@ -1259,8 +1259,7 @@ Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
 }
 
 Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
-                                          const unsigned char *Ptr,
-                                          memprof::IndexedVersion Version) {
+                                          const unsigned char *Ptr) {
   // The offset in the stream right before invoking
   // CallStackTableGenerator.Emit.
   const uint64_t CallStackPayloadOffset =
@@ -1327,7 +1326,7 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
       return E;
     break;
   case memprof::Version3:
-    if (Error E = deserializeV3(Start, Ptr, Version))
+    if (Error E = deserializeV3(Start, Ptr))
       return E;
     break;
   }
