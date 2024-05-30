@@ -3057,7 +3057,7 @@ multiclass VFLAT_Real_gfx12 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemoni
     let DecoderNamespace = "GFX12";
 
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
-    let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
+    let Inst{63} = cpol{CPolBit.SCAL}; // scale offset
   }
 }
 
@@ -3294,7 +3294,7 @@ multiclass VFLAT_Real_gfx1210<bits<8> op,
     let DecoderNamespace = "GFX12_10";
 
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
-    let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
+    let Inst{63} = cpol{CPolBit.SCAL}; // scale offset
   }
 }
 
