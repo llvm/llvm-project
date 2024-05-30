@@ -459,6 +459,17 @@ def LoopNestOp : OpenMP_Op<"loop_nest", [SameVariadicOperandSize,
   let hasVerifier = 1;
 }
 
+def OMP_OrderModReproducible       : I32EnumAttrCase<"reproducible", 0>;
+def OMP_OrderModUnconstrained      : I32EnumAttrCase<"unconstrained", 1>;
+def OrderModifier
+    : I32EnumAttr<"OrderModifier", "OpenMP Order Modifier",
+                  [OMP_OrderModReproducible, OMP_OrderModUnconstrained]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::omp";
+}
+def OrderModifierAttr : EnumAttr<OpenMP_Dialect, OrderModifier,
+                                    "order_mod">;
+
 //===----------------------------------------------------------------------===//
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
@@ -539,7 +550,8 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              UnitAttr:$simd_modifier,
              UnitAttr:$nowait,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
-             OptionalAttr<OrderKindAttr>:$order_val);
+             OptionalAttr<OrderKindAttr>:$order_val,
+             OptionalAttr<OrderModifierAttr>:$order_mod);
 
   let builders = [
     OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
@@ -563,7 +575,7 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                 $schedule_chunk_var, type($schedule_chunk_var)) `)`
           |`nowait` $nowait
           |`ordered` `(` $ordered_val `)`
-          |`order` `(` custom<ClauseAttr>($order_val) `)`
+          |`order` `(` custom<OrderClause>($order_val, $order_mod) `)`
     ) custom<Wsloop>($region, $reduction_vars, type($reduction_vars),
                      $reduction_vars_byref, $reductions) attr-dict
   }];
@@ -629,6 +641,7 @@ def SimdOp : OpenMP_Op<"simd", [AttrSizedOperandSegments,
              Optional<I1>:$if_expr,
              Variadic<OpenMP_PointerLikeType>:$nontemporal_vars,
              OptionalAttr<OrderKindAttr>:$order_val,
+             OptionalAttr<OrderModifierAttr>:$order_mod,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$simdlen,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$safelen
      );
@@ -645,7 +658,7 @@ def SimdOp : OpenMP_Op<"simd", [AttrSizedOperandSegments,
                                    $alignment_values) `)`
           |`if` `(` $if_expr `)`
           |`nontemporal` `(`  $nontemporal_vars `:` type($nontemporal_vars) `)`
-          |`order` `(` custom<ClauseAttr>($order_val) `)`
+          |`order` `(` custom<OrderClause>($order_val, $order_mod) `)`
           |`simdlen` `(` $simdlen  `)`
           |`safelen` `(` $safelen  `)`
     ) $region attr-dict
@@ -727,7 +740,8 @@ def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
              Optional<IntLikeType>:$chunk_size,
              Variadic<AnyType>:$allocate_vars,
              Variadic<AnyType>:$allocators_vars,
-             OptionalAttr<OrderKindAttr>:$order_val);
+             OptionalAttr<OrderKindAttr>:$order_val,
+             OptionalAttr<OrderModifierAttr>:$order_mod);
 
   let regions = (region AnyRegion:$region);
 
@@ -738,7 +752,7 @@ def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
   let assemblyFormat = [{
     oilist(`dist_schedule_static` $dist_schedule_static
           |`chunk_size` `(` $chunk_size `:` type($chunk_size) `)`
-          |`order` `(` custom<ClauseAttr>($order_val) `)`
+          |`order` `(` custom<OrderClause>($order_val, $order_mod) `)`
           |`allocate` `(`
              custom<AllocateAndAllocator>(
                $allocate_vars, type($allocate_vars),
