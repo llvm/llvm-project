@@ -72,14 +72,15 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
     // instructions are placed at the begin of basic block, so
     //  iterate over instruction sequence and check that
     // save instructions are placed correctly.
-    for (const auto &Info : CSI) {
+    for (unsigned i = 0, e = CSI.size(); i < e; ++i) {
+#ifndef NDEBUG
+      const CalleeSavedInfo &Info = CSI[i];
       int FI = Info.getFrameIdx();
       int StoreFI = 0;
 
-#ifndef NDEBUG
       // Checking that the instruction is exactly as expected
       bool IsStoreInst = false;
-      if ((MBBI->getOpcode() == TargetOpcode::COPY) && Info.isSpilledToReg()) {
+      if (MBBI->getOpcode() == TargetOpcode::COPY && Info.isSpilledToReg()) {
         Register DstReg = MBBI->getOperand(0).getReg();
         Register Reg = MBBI->getOperand(1).getReg();
         IsStoreInst = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
@@ -155,23 +156,24 @@ void XtensaFrameLowering::emitEpilogue(MachineFunction &MF,
 
     // Find the first instruction at the end that restores a callee-saved
     // register.
-    for (const auto &Info : CSI) {
+    for (unsigned i = 0, e = CSI.size(); i < e; ++i) {
+      --I;
+#ifndef NDEBUG
+      const CalleeSavedInfo &Info = CSI[i];
       int FI = Info.getFrameIdx();
       int LoadFI = 0;
 
-      --I;
-#ifndef NDEBUG
       // Checking that the instruction is exactly as expected
-      bool IsRestoreInstr = false;
-      if ((I->getOpcode() == TargetOpcode::COPY) && Info.isSpilledToReg()) {
+      bool IsRestoreInst = false;
+      if (I->getOpcode() == TargetOpcode::COPY && Info.isSpilledToReg()) {
         Register Reg = I->getOperand(0).getReg();
         Register DstReg = I->getOperand(1).getReg();
-        IsRestoreInstr = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
+        IsRestoreInst = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
       } else {
         Register Reg = TII.isLoadFromStackSlot(*I, LoadFI);
         IsRestoreInst = (Info.getReg() == Reg) && (LoadFI == FI);
       }
-      assert(IsRestoreInstr &&
+      assert(IsRestoreInst &&
              "Unexpected callee-saved register restore instruction");
 #endif
     }
