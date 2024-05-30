@@ -3,8 +3,7 @@
 
 define i8 @scmp_lt() {
 ; CHECK-LABEL: define i8 @scmp_lt() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i32(i32 -7, i32 3)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %1 = call i8 @llvm.scmp(i32 -7, i32 3)
   ret i8 %1
@@ -12,8 +11,7 @@ define i8 @scmp_lt() {
 
 define i8 @scmp_eq() {
 ; CHECK-LABEL: define i8 @scmp_eq() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i32(i32 2, i32 2)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 0
 ;
   %1 = call i8 @llvm.scmp(i32 2, i32 2)
   ret i8 %1
@@ -21,8 +19,7 @@ define i8 @scmp_eq() {
 
 define i8 @scmp_gt() {
 ; CHECK-LABEL: define i8 @scmp_gt() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i32(i32 2, i32 -7)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 1
 ;
   %1 = call i8 @llvm.scmp(i32 2, i32 -7)
   ret i8 %1
@@ -30,8 +27,7 @@ define i8 @scmp_gt() {
 
 define i8 @ucmp_lt() {
 ; CHECK-LABEL: define i8 @ucmp_lt() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 7, i32 12)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %1 = call i8 @llvm.ucmp(i32 7, i32 12)
   ret i8 %1
@@ -39,8 +35,7 @@ define i8 @ucmp_lt() {
 
 define i2 @ucmp_eq() {
 ; CHECK-LABEL: define i2 @ucmp_eq() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i2 @llvm.ucmp.i2.i32(i32 12, i32 12)
-; CHECK-NEXT:    ret i2 [[TMP1]]
+; CHECK-NEXT:    ret i2 0
 ;
   %1 = call i2 @llvm.ucmp(i32 12, i32 12)
   ret i2 %1
@@ -48,8 +43,7 @@ define i2 @ucmp_eq() {
 
 define i100 @ucmp_gt() {
 ; CHECK-LABEL: define i100 @ucmp_gt() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i100 @llvm.ucmp.i100.i32(i32 7, i32 3)
-; CHECK-NEXT:    ret i100 [[TMP1]]
+; CHECK-NEXT:    ret i100 1
 ;
   %1 = call i100 @llvm.ucmp(i32 7, i32 3)
   ret i100 %1
@@ -57,8 +51,7 @@ define i100 @ucmp_gt() {
 
 define i8 @ucmp_poison() {
 ; CHECK-LABEL: define i8 @ucmp_poison() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 poison, i32 5)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %1 = call i8 @llvm.ucmp(i32 poison, i32 5)
   ret i8 %1
@@ -66,8 +59,7 @@ define i8 @ucmp_poison() {
 
 define i8 @scmp_poison() {
 ; CHECK-LABEL: define i8 @scmp_poison() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i32(i32 0, i32 poison)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %1 = call i8 @llvm.scmp(i32 0, i32 poison)
   ret i8 %1
@@ -75,8 +67,7 @@ define i8 @scmp_poison() {
 
 define i8 @scmp_undef() {
 ; CHECK-LABEL: define i8 @scmp_undef() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i32(i32 undef, i32 -12)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 0
 ;
   %1 = call i8 @llvm.scmp(i32 undef, i32 -12)
   ret i8 %1
@@ -84,8 +75,7 @@ define i8 @scmp_undef() {
 
 define i8 @ucmp_undef() {
 ; CHECK-LABEL: define i8 @ucmp_undef() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 2, i32 undef)
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 0
 ;
   %1 = call i8 @llvm.ucmp(i32 2, i32 undef)
   ret i8 %1
@@ -93,8 +83,7 @@ define i8 @ucmp_undef() {
 
 define <4 x i8> @ucmp_lt_splat() {
 ; CHECK-LABEL: define <4 x i8> @ucmp_lt_splat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.ucmp.v4i8.v4i32(<4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> <i32 3, i32 3, i32 3, i32 3>)
-; CHECK-NEXT:    ret <4 x i8> [[TMP1]]
+; CHECK-NEXT:    ret <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>
 ;
   %1 = call <4 x i8> @llvm.ucmp(<4 x i32> splat(i32 1), <4 x i32> splat(i32 3))
   ret <4 x i8> %1
@@ -102,8 +91,7 @@ define <4 x i8> @ucmp_lt_splat() {
 
 define <4 x i8> @scmp_nonsplat() {
 ; CHECK-LABEL: define <4 x i8> @scmp_nonsplat() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.scmp.v4i8.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 -1, i32 1, i32 -2, i32 4>)
-; CHECK-NEXT:    ret <4 x i8> [[TMP1]]
+; CHECK-NEXT:    ret <4 x i8> <i8 1, i8 0, i8 1, i8 -1>
 ;
   %1 = call <4 x i8> @llvm.scmp(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 -1, i32 1, i32 -2, i32 4>)
   ret <4 x i8> %1
