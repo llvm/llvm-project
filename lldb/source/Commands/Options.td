@@ -1425,4 +1425,6 @@ let Command = "statistics dump" in {
     Desc<"Dump the total possible debug info statistics. "
     "Force loading all the debug information if not yet loaded, and collect "
     "statistics with those.">;
+  def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
+    Desc<"Include transcript.">;
 }

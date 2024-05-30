@@ -226,6 +226,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
 
   const bool summary_only = options.summary_only;
   const bool load_all_debug_info = options.load_all_debug_info;
+  const bool include_transcript = options.include_transcript;
 
   json::Array json_targets;
   json::Array json_modules;
@@ -363,16 +364,17 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     global_stats.try_emplace("modules", std::move(json_modules));
     global_stats.try_emplace("memory", std::move(json_memory));
     global_stats.try_emplace("commands", std::move(cmd_stats));
+  }
 
+  if (include_transcript) {
     // When transcript is available, add it to the to-be-returned statistics.
     //
     // NOTE:
     // When the statistics is polled by an LLDB command:
     // - The transcript in the returned statistics *will NOT* contain the
-    //   returned statistics itself.
+    //   returned statistics itself (otherwise infinite recursion).
     // - The returned statistics *will* be written to the internal transcript
-    //   buffer as the output of the said LLDB command. It *will* appear in
-    //   the next statistcs or transcript poll.
+    //   buffer. It *will* appear in the next statistcs or transcript poll.
     //
     // For example, let's say the following commands are run in order:
     // - "version"

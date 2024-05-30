@@ -624,7 +624,7 @@ class TestCase(TestBase):
         # modules with debugInfoHadVariableErrors is greater than zero
         self.assertGreater(stats["totalModuleCountWithVariableErrors"], 0)
 
-    def test_transcript(self):
+    def test_transcript_happy_path(self):
         """
         Test "statistics dump" and the transcript information.
         """
@@ -635,24 +635,38 @@ class TestCase(TestBase):
         self.runCmd("version")
 
         # Verify the output of a first "statistics dump"
-        debug_stats = self.get_stats()
+        debug_stats = self.get_stats("--transcript")
         self.assertIn("transcript", debug_stats)
         transcript = debug_stats["transcript"]
         self.assertEqual(len(transcript), 2)
-        self.assertEqual(transcript[0]["resolvedCommand"], "version")
-        self.assertEqual(transcript[1]["resolvedCommand"], "statistics dump")
+        self.assertEqual(transcript[0]["commandName"], "version")
+        self.assertEqual(transcript[1]["commandName"], "statistics dump")
         # The first "statistics dump" in the transcript should have no output
         self.assertNotIn("output", transcript[1])
 
         # Verify the output of a second "statistics dump"
-        debug_stats = self.get_stats()
+        debug_stats = self.get_stats("--transcript")
         self.assertIn("transcript", debug_stats)
         transcript = debug_stats["transcript"]
         self.assertEqual(len(transcript), 3)
-        self.assertEqual(transcript[0]["resolvedCommand"], "version")
-        self.assertEqual(transcript[1]["resolvedCommand"], "statistics dump")
+        self.assertEqual(transcript[0]["commandName"], "version")
+        self.assertEqual(transcript[1]["commandName"], "statistics dump")
         # The first "statistics dump" in the transcript should have output now
         self.assertIn("output", transcript[1])
-        self.assertEqual(transcript[2]["resolvedCommand"], "statistics dump")
+        self.assertEqual(transcript[2]["commandName"], "statistics dump")
         # The second "statistics dump" in the transcript should have no output
         self.assertNotIn("output", transcript[2])
+
+    def test_transcript_should_not_exist_when_not_asked_for(self):
+        """
+        Test "statistics dump" and the transcript information.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        self.runCmd("settings set interpreter.save-transcript true")
+        self.runCmd("version")
+
+        # Verify the output of a first "statistics dump"
+        debug_stats = self.get_stats() # Not with "--transcript"
+        self.assertNotIn("transcript", debug_stats)
