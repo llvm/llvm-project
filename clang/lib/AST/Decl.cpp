@@ -2409,7 +2409,7 @@ Expr *VarDecl::getInit() {
 
   auto *Eval = getEvaluatedStmt();
 
-  return cast_or_null<Expr>(
+  return cast_if_present<Expr>(
       Eval->Value.isOffset()
           ? Eval->Value.get(getASTContext().getExternalSource())
           : Eval->Value.get(nullptr));
