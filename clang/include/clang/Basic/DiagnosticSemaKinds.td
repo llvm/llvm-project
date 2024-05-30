@@ -12398,7 +12398,7 @@ def err_acc_var_not_pointer_type
 def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
 def err_acc_clause_after_device_type
     : Error<"OpenACC clause '%0' may not follow a '%1' clause in a "
-            "compute construct">;
+            "%select{'%3'|compute}2 construct">;
 def err_acc_reduction_num_gangs_conflict
     : Error<
           "OpenACC 'reduction' clause may not appear on a 'parallel' construct "
