@@ -79,6 +79,37 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
     }
   }
+
+#ifndef _WIN32
+  if (exitStatusVal == 1) {
+    if (!cmdstat) {
+      terminator.Crash("General Error with exit status code: 1");
+    } else {
+      StoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg,
+          "General Error: a catch-all exit code for a variety of general "
+          "errors.");
+    }
+  } else if (exitStatusVal == 126) {
+    if (!cmdstat) {
+      terminator.Crash("Command cannot execute with exit status code: 126");
+    } else {
+      StoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg,
+          "Command cannot execute: command was found, but it could not be "
+          "executed.");
+    }
+  } else if (exitStatusVal == 127) {
+    if (!cmdstat) {
+      terminator.Crash("Command not found with exit status code: 127");
+    } else {
+      StoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg,
+          "Command not found: command was not found in the system's PATH");
+    }
+  }
+#endif
+
   if (status == -1) {
     if (!cmdstat) {
       terminator.Crash("Execution error with system status code: %d", status);

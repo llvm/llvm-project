@@ -339,22 +339,64 @@ TEST_F(ZeroArguments, ECLValidCommandStatusSetSync) {
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 
-TEST_F(ZeroArguments, ECLInvalidCommandErrorSync) {
-  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("cat general-error")};
   bool wait{true};
   OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
-  OwningPtr<Descriptor> cmdMsg{CharDescriptor("Message ChangedXXXXXXXXX")};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("cmd msg buffer XXXXXXXX")};
 
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
   CheckDescriptorEqInt(exitStat.get(), 1);
+  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXX");
 #else
-  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
+  CheckDescriptorEqStr(cmdMsg.get(), "General Error: a catch-");
 #endif
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
-  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXX");
+}
+
+TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("cd NotExecutedCommand")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("cmd msg buffer XXXXXXXX")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+#ifdef _WIN32
+  CheckDescriptorEqInt(exitStat.get(), 1);
+  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXX");
+#else
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 126);
+  CheckDescriptorEqStr(cmdMsg.get(), "Command cannot execute:");
+#endif
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
+}
+
+TEST_F(ZeroArguments, ECLNotFoundCommandErrorSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("NotFoundCommand")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor(
+      "cmdmsg will not modify the remaining buffer XXXXXXXXXXXXXXXXXXXX")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+#ifdef _WIN32
+  CheckDescriptorEqInt(exitStat.get(), 1);
+  CheckDescriptorEqStr(cmdMsg.get(),
+      "Invalid command lineXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+#else
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
+  CheckDescriptorEqStr(cmdMsg.get(),
+      "Command not found: command was not found in the system's PATHXXX");
+#endif
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
 }
 
 TEST_F(ZeroArguments, ECLInvalidCommandTerminatedSync) {
