@@ -113,11 +113,15 @@
 // Build with `-g` to enable debug information.
 // RUN: %clangxx -m64 -fprofile-use=test.profdata -fuse-ld=lld -g -flto=thin -fwhole-program-vtables -O2 -mllvm -enable-vtable-value-profiling -mllvm -icp-enable-vtable-cmp -Rpass=pgo-icall-prom -mllvm -print-after=pgo-icall-prom -mllvm -filter-print-funcs=main %s 2>&1 | FileCheck %s --check-prefixes=REMARK,IR --implicit-check-not="!VP"
 
-// REMARK: Promote indirect call to _ZN12_GLOBAL__N_18Derived24funcEii with count 150 out of 200, compare 1 vtables and sink 1 instructions
-// REMARK: Promote indirect call to _ZN8Derived14funcEii with count 50 out of 50, compare 1 vtables and sink 1 instructions
-// REMARK: Promote indirect call to _ZN12_GLOBAL__N_18Derived2D0Ev with count 750 out of 1000, compare 1 vtables and sink 2 instructions
-// REMARK: Promote indirect call to _ZN8Derived1D0Ev with count 250 out of 250, compare 1 vtables and sink 2 instructions
+// For the indirect call site `ptr->func`
+// REMARK: instrprof-vtable-value-prof.cpp:191:19: remark: Promote indirect call to _ZN12_GLOBAL__N_18Derived24funcEii with count 150 out of 200, compare 1 vtables and sink 1 instructions
+// REMARK: instrprof-vtable-value-prof.cpp:191:19: remark: Promote indirect call to _ZN8Derived14funcEii with count 50 out of 50, compare 1 vtables and sink 1 instructions
+//
+// For the indirect call site `delete ptr`
+// REMARK: instrprof-vtable-value-prof.cpp:193:5: remark: Promote indirect call to _ZN12_GLOBAL__N_18Derived2D0Ev with count 750 out of 1000, compare 1 vtables and sink 2 instructions
+// REMARK: instrprof-vtable-value-prof.cpp:193:5: remark: Promote indirect call to _ZN8Derived1D0Ev with count 250 out of 250, compare 1 vtables and sink 2 instructions
 
+// The IR matchers for indirect callsite `ptr->func`.
 // IR-LABEL: @main
 // IR:   [[OBJ:%.*]] = call {{.*}} @_Z10createTypei
 // IR:   [[VTABLE:%.*]] = load ptr, ptr [[OBJ]]

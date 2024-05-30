@@ -182,11 +182,9 @@ static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
 }
 
 // Returns the basic block in which `Inst` by `Use`.
-static BasicBlock *getUserBasicBlock(Instruction *Inst, unsigned int OperandNo,
-                                     Instruction *UserInst) {
+static BasicBlock *getUserBasicBlock(Use &U, Instruction *UserInst) {
   if (PHINode *PN = dyn_cast<PHINode>(UserInst))
-    return PN->getIncomingBlock(
-        PHINode::getIncomingValueNumForOperand(OperandNo));
+    return PN->getIncomingBlock(U);
 
   return UserInst->getParent();
 }
@@ -216,7 +214,7 @@ static bool isDestBBSuitableForSink(Instruction *Inst, BasicBlock *DestBB) {
     // We can sink debug or pseudo instructions together with Inst.
     if (UserInst->isDebugOrPseudoInst())
       continue;
-    UserBB = getUserBasicBlock(Inst, Use.getOperandNo(), UserInst);
+    UserBB = getUserBasicBlock(Use, UserInst);
     // Do not sink if Inst is used in a basic block that is not DestBB.
     // TODO: Sink to the common dominator of all user blocks.
     if (UserBB != DestBB)
@@ -673,8 +671,6 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
     MutableArrayRef<InstrProfValueData> ICallProfDataRef,
     VTableGUIDCountsMap &VTableGUIDCounts) {
   SmallVector<uint64_t, 4> PromotedFuncCount;
-  // TODO: Explain the branch accuracy (-fstrict-vtable-pointer) with a
-  // compiler-rt test.
   for (const auto &Candidate : Candidates) {
     uint64_t IfCount = 0;
     for (auto &[GUID, Count] : Candidate.VTableGUIDAndCounts) {
@@ -682,6 +678,7 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
       VTableGUIDCounts[GUID] -= Count;
     }
 
+    // Use indirect call counters to compute branch weights.
     BasicBlock *OriginalBB = CB.getParent();
     promoteCallWithVTableCmp(
         CB, VPtr, Candidate.TargetFunction, Candidate.AddressPoints,
