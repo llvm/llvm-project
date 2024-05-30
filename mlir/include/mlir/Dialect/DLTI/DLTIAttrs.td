@@ -28,7 +28,7 @@ def DataLayoutEntryTrait
 def DLTI_DataLayoutEntryAttr :
     DLTIAttr<"DataLayoutEntry", [DataLayoutEntryTrait]> {
   let summary = [{
-    An attribute to represent an entry of a data layout specification
+    An attribute to represent an entry of a data layout specification.
   }];
   let description = [{
     A data layout entry attribute is a key-value pair where the key is a type or
@@ -38,7 +38,7 @@ def DLTI_DataLayoutEntryAttr :
   let parameters = (ins
     "DataLayoutEntryKey":$key, "Attribute":$value
   );
-  // We do not generate storage class because llvm::PointerUnion
+  // TODO: We do not generate storage class because llvm::PointerUnion
   // does not work with hash_key method.
   let genStorageClass = 0;
   let mnemonic = "dl_entry";
@@ -62,7 +62,9 @@ def DataLayoutSpecTrait
 
 def DLTI_DataLayoutSpecAttr :
     DLTIAttr<"DataLayoutSpec", [DataLayoutSpecTrait]> {
-  let summary = [{An attribute to represent a data layout specification}];
+  let summary = [{
+    An attribute to represent a data layout specification.
+  }];
   let description = [{
     A data layout specification is a list of entries that specify (partial) data
     layout information. It is expected to be attached to operations that serve
@@ -96,84 +98,57 @@ def DLTI_DataLayoutSpecAttr :
     /// Returns the stack alignment identifier.
     StringAttr getStackAlignmentIdentifier(MLIRContext *context) const;
   }];
-  let extraClassDefinition = [{
-    StringAttr
-    $cppClass::getEndiannessIdentifier(MLIRContext *context) const {
-      return Builder(context).getStringAttr(DLTIDialect::kDataLayoutEndiannessKey);
-    }
-
-    StringAttr
-    $cppClass::getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
-      return Builder(context).getStringAttr(
-          DLTIDialect::kDataLayoutAllocaMemorySpaceKey);
-    }
-
-    StringAttr $cppClass::getProgramMemorySpaceIdentifier(
-        MLIRContext *context) const {
-      return Builder(context).getStringAttr(
-          DLTIDialect::kDataLayoutProgramMemorySpaceKey);
-    }
-
-    StringAttr
-    $cppClass::getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
-      return Builder(context).getStringAttr(
-          DLTIDialect::kDataLayoutGlobalMemorySpaceKey);
-    }
-
-    StringAttr
-    $cppClass::getStackAlignmentIdentifier(MLIRContext *context) const {
-      return Builder(context).getStringAttr(
-          DLTIDialect::kDataLayoutStackAlignmentKey);
-    }
-  }];
 }
 
 //===----------------------------------------------------------------------===//
-// TargetSystemDescSpecAttr
+// TargetSystemSpecAttr
 //===----------------------------------------------------------------------===//
 
-def TargetSystemDescSpecTrait
-    : NativeAttrTrait<"TargetSystemDescSpecInterface::Trait"> {
+def TargetSystemSpecTrait
+    : NativeAttrTrait<"TargetSystemSpecInterface::Trait"> {
   let cppNamespace = "::mlir";
 }
 
-def DLTI_TargetSystemDescSpecAttr :
-    DLTIAttr<"TargetSystemDescSpec", [TargetSystemDescSpecTrait]> {
-  let summary = [{An attribute to represent target system description}];
+def DLTI_TargetSystemSpecAttr :
+    DLTIAttr<"TargetSystemSpec", [TargetSystemSpecTrait]> {
+  let summary = [{
+    An attribute to represent target system specification.
+  }];
   let description = [{
-    A system description specification describes the overall system
-    containing multiple devices, with each device having a unique ID
-    and its corresponding TargetDeviceDescSpec object.
+    A system specification describes the overall system containing
+    multiple devices, with each device having a unique ID
+    and its corresponding TargetDeviceSpec object.
 
     Example:
-          dlti.target_system_desc_spec =
-            #dlti.target_device_desc_spec<
+          dlti.target_system_spec =
+            #dlti.target_device_spec<
               #dlti.dl_entry<"dlti.device_id", 0: ui32>,
               #dlti.dl_entry<"dlti.device_type", "CPU">>,
-            #dlti.target_device_desc_spec <
+            #dlti.target_device_spec<
               #dlti.dl_entry<"dlti.device_id", 1: ui32>,
               #dlti.dl_entry<"dlti.device_type", "GPU">,
               #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>,
-            #dlti.target_device_desc_spec <
+            #dlti.target_device_spec<
               #dlti.dl_entry<"dlti.device_id", 2: ui32>,
               #dlti.dl_entry<"dlti.device_type", "XPU">>>
   }];
   let parameters = (ins
-    ArrayRefParameter<"TargetDeviceDescSpecInterface", "">:$entries
+    ArrayRefParameter<"TargetDeviceSpecInterface", "">:$entries
   );
-  let mnemonic = "target_system_desc_spec";
+  let mnemonic = "target_system_spec";
   let genVerifyDecl = 1;
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` $entries `>`";
   let extraClassDeclaration = [{
-    /// Return the device descriptor that matches the given device ID
-    std::optional<TargetDeviceDescSpecInterface>
-    getDeviceDescForDeviceID(uint32_t deviceID);
+    /// Return the device specification that matches the given device ID
+    std::optional<TargetDeviceSpecInterface>
+    getDeviceSpecForDeviceID(
+      TargetDeviceSpecInterface::DeviceID deviceID);
   }];
   let extraClassDefinition = [{
-    std::optional<TargetDeviceDescSpecInterface>
-    $cppClass::getDeviceDescForDeviceID(
-        TargetDeviceDescSpecInterface::DeviceID deviceID) {
-      for (TargetDeviceDescSpecInterface entry : getEntries()) {
+    std::optional<TargetDeviceSpecInterface>
+    $cppClass::getDeviceSpecForDeviceID(
+        TargetDeviceSpecInterface::DeviceID deviceID) {
+      for (TargetDeviceSpecInterface entry : getEntries()) {
         if (entry.getDeviceID() == deviceID)
           return entry;
       }
@@ -183,35 +158,37 @@ def DLTI_TargetSystemDescSpecAttr :
 }
 
 //===----------------------------------------------------------------------===//
-// TargetDeviceDescSpecAttr
+// TargetDeviceSpecAttr
 //===----------------------------------------------------------------------===//
 
-def TargetDeviceDescSpecTrait
-    : NativeAttrTrait<"TargetDeviceDescSpecInterface::Trait"> {
+def TargetDeviceSpecTrait
+    : NativeAttrTrait<"TargetDeviceSpecInterface::Trait"> {
   let cppNamespace = "::mlir";
 }
 
-def DLTI_TargetDeviceDescSpecAttr :
-    DLTIAttr<"TargetDeviceDescSpec", [TargetDeviceDescSpecTrait]> {
-  let summary = [{An attribute to represent target device description}];
+def DLTI_TargetDeviceSpecAttr :
+    DLTIAttr<"TargetDeviceSpec", [TargetDeviceSpecTrait]> {
+  let summary = [{
+    An attribute to represent target device specification.
+  }];
   let description = [{
-        Each device description specification describes a single device and
-        its hardware properties. Each device description must have a device_id
-        and a device_type. In addition, the description can contain any number
-        of optional hardware properties (e.g., max_vector_op_width below).
+    Each device specification describes a single device and its
+    hardware properties. Each device specification must have a device_id
+    and a device_type. In addition, the specification can contain any number
+    of optional hardware properties (e.g., max_vector_op_width below).
 
-        Example:
-          #dlti.target_device_desc_spec <
-                #dlti.dl_entry<"dlti.device_id", 1: ui32>,
-                #dlti.dl_entry<"dlti.device_type", "GPU">,
-                #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>
-        }];
+    Example:
+      #dlti.target_device_spec<
+            #dlti.dl_entry<"dlti.device_id", 1: ui32>,
+            #dlti.dl_entry<"dlti.device_type", "GPU">,
+            #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>
+  }];
   let parameters = (ins
     ArrayRefParameter<"DataLayoutEntryInterface", "">:$entries
   );
-  let mnemonic = "target_device_desc_spec";
+  let mnemonic = "target_device_spec";
   let genVerifyDecl = 1;
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` $entries `>`";
   let extraClassDeclaration = [{
     /// Returns the device ID identifier.
     StringAttr getDeviceIDIdentifier();
@@ -248,55 +225,7 @@ def DLTI_TargetDeviceDescSpecAttr :
     DataLayoutEntryInterface getSpecForL1CacheSizeInBytes();
 
     /// Return the value of device ID
-    uint32_t getDeviceID();
-  }];
-
-  let extraClassDefinition = [{
-    StringAttr
-    $cppClass::getDeviceIDIdentifier() {
-      return Builder(getContext()).getStringAttr(DLTIDialect::kTargetDeviceIDKey);
-    }
-
-    StringAttr
-    $cppClass::getDeviceTypeIdentifier() {
-      return Builder(getContext()).getStringAttr(DLTIDialect::kTargetDeviceTypeKey);
-    }
-
-    StringAttr
-    $cppClass::getMaxVectorOpWidthIdentifier() {
-      return Builder(getContext()).getStringAttr(
-          DLTIDialect::kTargetDeviceMaxVectorOpWidthKey);
-    }
-
-    StringAttr $cppClass::getL1CacheSizeInBytesIdentifier() {
-      return Builder(getContext()).getStringAttr(
-          DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey);
-    }
-
-    DataLayoutEntryInterface
-    $cppClass::getSpecForDeviceID() {
-      return getSpecForIdentifier(getDeviceIDIdentifier());
-    }
-
-    DataLayoutEntryInterface
-    $cppClass::getSpecForDeviceType() {
-      return getSpecForIdentifier(getDeviceTypeIdentifier());
-    }
-
-    DataLayoutEntryInterface
-    $cppClass::getSpecForMaxVectorOpWidth() {
-      return getSpecForIdentifier(getMaxVectorOpWidthIdentifier());
-    }
-
-    DataLayoutEntryInterface
-    $cppClass::getSpecForL1CacheSizeInBytes() {
-      return getSpecForIdentifier(getL1CacheSizeInBytesIdentifier());
-    }
-
-    uint32_t $cppClass::getDeviceID() {
-      DataLayoutEntryInterface entry = getSpecForDeviceID();
-      return llvm::cast<IntegerAttr>(entry.getValue()).getValue().getZExtValue();
-    }
+    TargetDeviceSpecInterface::DeviceID getDeviceID();
   }];
 }
 

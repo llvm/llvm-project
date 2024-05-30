@@ -346,8 +346,7 @@ static DataLayoutSpecInterface getSpec(Operation *operation) {
       });
 }
 
-static TargetSystemDescSpecInterface
-getTargetSystemDescSpec(Operation *operation) {
+static TargetSystemSpecInterface getTargetSystemSpec(Operation *operation) {
   if (operation) {
     ModuleOp moduleOp;
     if (isa<ModuleOp>(operation)) {
@@ -355,9 +354,9 @@ getTargetSystemDescSpec(Operation *operation) {
     } else {
       moduleOp = operation->getParentOfType<ModuleOp>();
     }
-    return moduleOp.getTargetSystemDescSpec();
+    return moduleOp.getTargetSystemSpec();
   } else
-    return TargetSystemDescSpecInterface();
+    return TargetSystemSpecInterface();
 }
 
 /// Populates `opsWithLayout` with the list of proper ancestors of `leaf` that
@@ -472,7 +471,7 @@ mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
     : originalLayout(getCombinedDataLayout(op)), scope(op),
       allocaMemorySpace(std::nullopt), programMemorySpace(std::nullopt),
       globalMemorySpace(std::nullopt), stackAlignment(std::nullopt),
-      originalTargetSystemDesc(getTargetSystemDescSpec(op)) {
+      originalTargetSystemDesc(getTargetSystemSpec(op)) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
@@ -483,7 +482,7 @@ mlir::DataLayout::DataLayout(ModuleOp op)
     : originalLayout(getCombinedDataLayout(op)), scope(op),
       allocaMemorySpace(std::nullopt), programMemorySpace(std::nullopt),
       globalMemorySpace(std::nullopt), stackAlignment(std::nullopt),
-      originalTargetSystemDesc(getTargetSystemDescSpec(op)) {
+      originalTargetSystemDesc(getTargetSystemSpec(op)) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
@@ -679,12 +678,12 @@ uint64_t mlir::DataLayout::getStackAlignment() const {
 }
 
 std::optional<uint32_t> mlir::DataLayout::getMaxVectorOpWidth(
-    TargetDeviceDescSpecInterface::DeviceID deviceID) const {
+    TargetDeviceSpecInterface::DeviceID deviceID) const {
   checkValid();
   DataLayoutEntryInterface entry;
   if (originalTargetSystemDesc) {
     if (auto device =
-            originalTargetSystemDesc.getDeviceDescForDeviceID(deviceID))
+            originalTargetSystemDesc.getDeviceSpecForDeviceID(deviceID))
       entry = device->getSpecForMaxVectorOpWidth();
   }
   // Currently I am not caching the results because we do not return
@@ -698,12 +697,12 @@ std::optional<uint32_t> mlir::DataLayout::getMaxVectorOpWidth(
 }
 
 std::optional<uint32_t> mlir::DataLayout::getL1CacheSizeInBytes(
-    TargetDeviceDescSpecInterface::DeviceID deviceID) const {
+    TargetDeviceSpecInterface::DeviceID deviceID) const {
   checkValid();
   DataLayoutEntryInterface entry;
   if (originalTargetSystemDesc) {
     if (auto device =
-            originalTargetSystemDesc.getDeviceDescForDeviceID(deviceID))
+            originalTargetSystemDesc.getDeviceSpecForDeviceID(deviceID))
       entry = device->getSpecForL1CacheSizeInBytes();
   }
   // Currently I am not caching the results because we do not return
@@ -821,18 +820,18 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
 }
 
 LogicalResult
-mlir::detail::verifyTargetSystemDescSpec(TargetSystemDescSpecInterface spec,
-                                         Location loc) {
+mlir::detail::verifyTargetSystemSpec(TargetSystemSpecInterface spec,
+                                     Location loc) {
   DenseMap<StringAttr, DataLayoutEntryInterface> device_desc_keys;
-  DenseSet<uint32_t> device_ids;
-  for (TargetDeviceDescSpecInterface tdd_spec : spec.getEntries()) {
+  DenseSet<TargetDeviceSpecInterface::DeviceID> device_ids;
+  for (TargetDeviceSpecInterface tdd_spec : spec.getEntries()) {
     // First, verify individual target device desc specs.
     if (failed(tdd_spec.verifyEntry(loc)))
       return failure();
 
     // Check that device IDs are unique across all entries.
     MLIRContext *context = tdd_spec.getContext();
-    uint32_t device_id = tdd_spec.getDeviceID();
+    TargetDeviceSpecInterface::DeviceID device_id = tdd_spec.getDeviceID();
     if (!device_ids.insert(device_id).second) {
       return failure();
     }

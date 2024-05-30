@@ -29,10 +29,10 @@ def DLTI_Dialect : Dialect {
 
     // Top level attribute name for target system description
     constexpr const static ::llvm::StringLiteral
-    kTargetSystemDescAttrName = "dlti.target_system_desc_spec";
+    kTargetSystemDescAttrName = "dlti.target_system_spec";
 
     constexpr const static ::llvm::StringLiteral
-    kTargetDeviceDescAttrName = "dlti.target_device_desc_spec";
+    kTargetDeviceDescAttrName = "dlti.target_device_spec";
 
     // Constants used in entries.
     constexpr const static ::llvm::StringLiteral
@@ -56,7 +56,7 @@ def DLTI_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
     kDataLayoutStackAlignmentKey = "dlti.stack_alignment";
 
-    // Constants used in target description part of DLTI
+    // Constants used in target description part of DLTI.
     constexpr const static ::llvm::StringLiteral
     kTargetDeviceIDKey = "dlti.device_id";
 

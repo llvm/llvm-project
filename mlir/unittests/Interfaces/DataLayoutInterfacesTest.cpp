@@ -33,7 +33,7 @@ constexpr static llvm::StringLiteral kStackAlignmentKeyName =
     "dltest.stack_alignment";
 
 constexpr static llvm::StringLiteral kTargetSystemDescAttrName =
-    "dl_target_sys_desc_test.target_system_desc_spec";
+    "dl_target_sys_desc_test.target_system_spec";
 
 /// Trivial array storage for the custom data layout spec attribute, just a list
 /// of entries.
@@ -94,62 +94,47 @@ struct CustomDataLayoutSpec
   }
 };
 
-class TargetSystemDescSpecStorage : public AttributeStorage {
+class TargetSystemSpecStorage : public AttributeStorage {
 public:
-  using KeyTy = ArrayRef<TargetDeviceDescSpecInterface>;
+  using KeyTy = ArrayRef<TargetDeviceSpecInterface>;
 
-  TargetSystemDescSpecStorage(ArrayRef<TargetDeviceDescSpecInterface> entries)
+  TargetSystemSpecStorage(ArrayRef<TargetDeviceSpecInterface> entries)
       : entries(entries) {}
 
   bool operator==(const KeyTy &key) const { return key == entries; }
 
-  static TargetSystemDescSpecStorage *
+  static TargetSystemSpecStorage *
   construct(AttributeStorageAllocator &allocator, const KeyTy &key) {
-    return new (allocator.allocate<TargetSystemDescSpecStorage>())
-        TargetSystemDescSpecStorage(allocator.copyInto(key));
+    return new (allocator.allocate<TargetSystemSpecStorage>())
+        TargetSystemSpecStorage(allocator.copyInto(key));
   }
 
-  ArrayRef<TargetDeviceDescSpecInterface> entries;
+  ArrayRef<TargetDeviceSpecInterface> entries;
 };
 
-struct CustomTargetSystemDescSpec
-    : public Attribute::AttrBase<CustomTargetSystemDescSpec, Attribute,
-                                 TargetSystemDescSpecStorage,
-                                 TargetSystemDescSpecInterface::Trait> {
+struct CustomTargetSystemSpec
+    : public Attribute::AttrBase<CustomTargetSystemSpec, Attribute,
+                                 TargetSystemSpecStorage,
+                                 TargetSystemSpecInterface::Trait> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CustomDataLayoutSpec)
 
   using Base::Base;
 
-  static constexpr StringLiteral name = "test.custom_target_system_desc_spec";
+  static constexpr StringLiteral name = "test.custom_target_system_spec";
 
-  static CustomTargetSystemDescSpec
-  get(MLIRContext *ctx, ArrayRef<TargetDeviceDescSpecInterface> entries) {
+  static CustomTargetSystemSpec
+  get(MLIRContext *ctx, ArrayRef<TargetDeviceSpecInterface> entries) {
     return Base::get(ctx, entries);
   }
-  TargetDeviceDescSpecListRef getEntries() const { return getImpl()->entries; }
+  TargetDeviceSpecListRef getEntries() const { return getImpl()->entries; }
   LogicalResult verifySpec(Location loc) { return success(); }
-  std::optional<TargetDeviceDescSpecInterface>
-  getDeviceDescForDeviceID(uint32_t deviceID) {
-    for (TargetDeviceDescSpecInterface entry : getEntries()) {
+  std::optional<TargetDeviceSpecInterface>
+  getDeviceSpecForDeviceID(TargetDeviceSpecInterface::DeviceID deviceID) {
+    for (TargetDeviceSpecInterface entry : getEntries()) {
       if (entry.getDeviceID() == deviceID)
         return entry;
     }
     return std::nullopt;
-  }
-  StringAttr getDeviceIDIdentifier() {
-    return Builder(getContext()).getStringAttr(DLTIDialect::kTargetDeviceIDKey);
-  }
-  StringAttr getDeviceTypeIdentifier() {
-    return Builder(getContext())
-        .getStringAttr(DLTIDialect::kTargetDeviceTypeKey);
-  }
-  StringAttr getMaxVectorOpWidthIdentifier() {
-    return Builder(getContext())
-        .getStringAttr(DLTIDialect::kTargetDeviceMaxVectorOpWidthKey);
-  }
-  StringAttr getL1CacheSizeInBytesIdentifier() {
-    return Builder(getContext())
-        .getStringAttr(DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey);
   }
 };
 
@@ -259,8 +244,8 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
     return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
   }
 
-  TargetSystemDescSpecInterface getTargetSystemDescSpec() {
-    return getOperation()->getAttrOfType<TargetSystemDescSpecInterface>(
+  TargetSystemSpecInterface getTargetSystemSpec() {
+    return getOperation()->getAttrOfType<TargetSystemSpecInterface>(
         kTargetSystemDescAttrName);
   }
 
@@ -311,8 +296,8 @@ struct OpWith7BitByte
     return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
   }
 
-  TargetSystemDescSpecInterface getTargetSystemDescSpec() {
-    return getOperation()->getAttrOfType<TargetSystemDescSpecInterface>(
+  TargetSystemSpecInterface getTargetSystemSpec() {
+    return getOperation()->getAttrOfType<TargetSystemSpecInterface>(
         kTargetSystemDescAttrName);
   }
 
@@ -387,27 +372,27 @@ struct DLTargetSystemDescTestDialect : Dialect {
       : Dialect(getDialectNamespace(), ctx,
                 TypeID::get<DLTargetSystemDescTestDialect>()) {
     ctx->getOrLoadDialect<DLTIDialect>();
-    addAttributes<CustomTargetSystemDescSpec>();
+    addAttributes<CustomTargetSystemSpec>();
   }
   static StringRef getDialectNamespace() { return "dl_target_sys_desc_test"; }
 
   void printAttribute(Attribute attr,
                       DialectAsmPrinter &printer) const override {
-    printer << "target_system_desc_spec<";
-    llvm::interleaveComma(cast<CustomTargetSystemDescSpec>(attr).getEntries(),
+    printer << "target_system_spec<";
+    llvm::interleaveComma(cast<CustomTargetSystemSpec>(attr).getEntries(),
                           printer);
     printer << ">";
   }
 
   Attribute parseAttribute(DialectAsmParser &parser, Type type) const override {
-    bool ok = succeeded(parser.parseKeyword("target_system_desc_spec")) &&
+    bool ok = succeeded(parser.parseKeyword("target_system_spec")) &&
               succeeded(parser.parseLess());
     (void)ok;
     assert(ok);
     if (succeeded(parser.parseOptionalGreater()))
-      return CustomTargetSystemDescSpec::get(parser.getContext(), {});
+      return CustomTargetSystemSpec::get(parser.getContext(), {});
 
-    SmallVector<TargetDeviceDescSpecInterface> entries;
+    SmallVector<TargetDeviceSpecInterface> entries;
     ok = succeeded(parser.parseCommaSeparatedList([&]() {
       entries.emplace_back();
       ok = succeeded(parser.parseAttribute(entries.back()));
@@ -417,7 +402,7 @@ struct DLTargetSystemDescTestDialect : Dialect {
     assert(ok);
     ok = succeeded(parser.parseGreater());
     assert(ok);
-    return CustomTargetSystemDescSpec::get(parser.getContext(), entries);
+    return CustomTargetSystemSpec::get(parser.getContext(), entries);
   }
 };
 
@@ -570,9 +555,9 @@ TEST(DataLayout, SpecWithEntries) {
 
 TEST(DataLayout, SpecWithTargetSystemDescEntries) {
   const char *ir = R"MLIR(
-  module attributes { dl_target_sys_desc_test.target_system_desc_spec =
-    #dl_target_sys_desc_test.target_system_desc_spec<
-      #dlti.target_device_desc_spec<
+  module attributes { dl_target_sys_desc_test.target_system_spec =
+    #dl_target_sys_desc_test.target_system_spec<
+      #dlti.target_device_spec<
         #dlti.dl_entry<"dlti.device_id", 0 : ui32>,
         #dlti.dl_entry<"dlti.device_type", "CPU">,
         #dlti.dl_entry<"dlti.L1_cache_size_in_bytes", 4096 : ui32>,

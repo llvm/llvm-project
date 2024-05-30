@@ -78,7 +78,7 @@ def ModuleOp : Builtin_Op<"module", [
     //===------------------------------------------------------------------===//
 
     DataLayoutSpecInterface getDataLayoutSpec();
-    TargetSystemDescSpecInterface getTargetSystemDescSpec();
+    TargetSystemSpecInterface getTargetSystemSpec();
 
     //===------------------------------------------------------------------===//
     // OpAsmOpInterface Methods

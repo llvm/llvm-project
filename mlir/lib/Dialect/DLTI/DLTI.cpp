@@ -23,6 +23,9 @@ using namespace mlir;
 
 #include "mlir/Dialect/DLTI/DLTIDialect.cpp.inc"
 
+#define GET_ATTRDEF_CLASSES
+#include <mlir/Dialect/DLTI/DLTIAttrs.cpp.inc>
+
 #define DEBUG_TYPE "dlti"
 
 //===----------------------------------------------------------------------===//
@@ -265,12 +268,12 @@ void DataLayoutSpecAttr::print(AsmPrinter &os) const {
 }
 
 //===----------------------------------------------------------------------===//
-// TargetDeviceDescSpecAttr
+// TargetDeviceSpecAttr
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-TargetDeviceDescSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                                 ArrayRef<DataLayoutEntryInterface> entries) {
+TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             ArrayRef<DataLayoutEntryInterface> entries) {
   // Entries in tdd_spec can only have StringAttr as key. It does not support
   // type as a key. Hence not reusing DataLayoutEntryInterface::verify.
   bool targetDeviceIDKeyPresentAndValid = false;
@@ -280,7 +283,7 @@ TargetDeviceDescSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   for (DataLayoutEntryInterface entry : entries) {
     if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
       return emitError()
-             << "dlti.target_device_desc_spec does not allow type as a key: "
+             << "dlti.target_device_spec does not allow type as a key: "
              << type;
     } else {
       auto id = entry.getKey().get<StringAttr>();
@@ -306,18 +309,18 @@ TargetDeviceDescSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
       IntegerAttr value =
           llvm::dyn_cast_if_present<IntegerAttr>(entry.getValue());
       if (!value || !value.getType().isUnsignedInteger(32))
-        return emitError() << "target_device_desc_spec requires value of key: "
+        return emitError() << "target_device_spec requires value of key: "
                            << DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey
                            << " to be of ui32 type";
     } else if (entryName == DLTIDialect::kTargetDeviceMaxVectorOpWidthKey) {
       IntegerAttr value =
           llvm::dyn_cast_if_present<IntegerAttr>(entry.getValue());
       if (!value || !value.getType().isUnsignedInteger(32))
-        return emitError() << "target_device_desc_spec requires value of key: "
+        return emitError() << "target_device_spec requires value of key: "
                            << DLTIDialect::kTargetDeviceMaxVectorOpWidthKey
                            << " to be of ui32 type";
     } else {
-      return emitError() << "unknown target device desc key name: "
+      return emitError() << "unknown target device spec key name: "
                          << entryName;
     }
   }
@@ -325,12 +328,12 @@ TargetDeviceDescSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   // check that both DeviceID and DeviceType are present
   // and are of correct type.
   if (!targetDeviceIDKeyPresentAndValid) {
-    return emitError() << "target_device_desc_spec requires key: "
+    return emitError() << "target_device_spec requires key: "
                        << DLTIDialect::kTargetDeviceIDKey
                        << " and its value of ui32 type";
   }
   if (!targetDeviceTypeKeyPresentAndValid) {
-    return emitError() << "target_device_desc_spec requires key: "
+    return emitError() << "target_device_spec requires key: "
                        << DLTIDialect::kTargetDeviceTypeKey
                        << " and its value of string type";
   }
@@ -338,94 +341,97 @@ TargetDeviceDescSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
-/// Parses an attribute with syntax
-///   target_device_desc_spec_attr ::=
-///      `#target.` `target_device_desc_spec` `<` dl-entry-attr-list? `>`
-///   dl-entry-attr-list ::= dl-entry-attr
-///                         | dl-entry-attr `,` dl-entry-attr-list
-Attribute TargetDeviceDescSpecAttr::parse(AsmParser &parser, Type type) {
-  if (failed(parser.parseLess()))
-    return {};
-
-  // Empty spec.
-  if (succeeded(parser.parseOptionalGreater()))
-    return get(parser.getContext(), {});
-
-  SmallVector<DataLayoutEntryInterface> entries;
-  if (parser.parseCommaSeparatedList(
-          [&]() { return parser.parseAttribute(entries.emplace_back()); }) ||
-      parser.parseGreater())
-    return {};
-
-  return getChecked([&] { return parser.emitError(parser.getNameLoc()); },
-                    parser.getContext(), entries);
+StringAttr TargetDeviceSpecAttr::getDeviceIDIdentifier() {
+  return Builder(getContext()).getStringAttr(DLTIDialect::kTargetDeviceIDKey);
 }
 
-void TargetDeviceDescSpecAttr::print(AsmPrinter &os) const {
-  os << "<";
-  llvm::interleaveComma(getEntries(), os);
-  os << ">";
+StringAttr TargetDeviceSpecAttr::getDeviceTypeIdentifier() {
+  return Builder(getContext()).getStringAttr(DLTIDialect::kTargetDeviceTypeKey);
+}
+
+StringAttr TargetDeviceSpecAttr::getMaxVectorOpWidthIdentifier() {
+  return Builder(getContext())
+      .getStringAttr(DLTIDialect::kTargetDeviceMaxVectorOpWidthKey);
+}
+
+StringAttr TargetDeviceSpecAttr::getL1CacheSizeInBytesIdentifier() {
+  return Builder(getContext())
+      .getStringAttr(DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey);
+}
+
+DataLayoutEntryInterface TargetDeviceSpecAttr::getSpecForDeviceID() {
+  return getSpecForIdentifier(getDeviceIDIdentifier());
+}
+
+DataLayoutEntryInterface TargetDeviceSpecAttr::getSpecForDeviceType() {
+  return getSpecForIdentifier(getDeviceTypeIdentifier());
+}
+
+DataLayoutEntryInterface TargetDeviceSpecAttr::getSpecForMaxVectorOpWidth() {
+  return getSpecForIdentifier(getMaxVectorOpWidthIdentifier());
+}
+
+DataLayoutEntryInterface TargetDeviceSpecAttr::getSpecForL1CacheSizeInBytes() {
+  return getSpecForIdentifier(getL1CacheSizeInBytesIdentifier());
+}
+
+TargetDeviceSpecInterface::DeviceID TargetDeviceSpecAttr::getDeviceID() {
+  DataLayoutEntryInterface entry = getSpecForDeviceID();
+  return llvm::cast<IntegerAttr>(entry.getValue()).getValue().getZExtValue();
 }
 
 //===----------------------------------------------------------------------===//
-// TargetSystemDescSpecAttr
+// TargetSystemSpecAttr
 //===----------------------------------------------------------------------===//
 
-LogicalResult TargetSystemDescSpecAttr::verify(
-    function_ref<InFlightDiagnostic()> emitError,
-    ArrayRef<TargetDeviceDescSpecInterface> entries) {
+LogicalResult
+TargetSystemSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             ArrayRef<TargetDeviceSpecInterface> entries) {
   DenseSet<uint32_t> device_ids;
 
-  for (TargetDeviceDescSpecInterface tdd_spec : entries) {
-    // First verify that a target device desc spec is valid.
-    if (failed(
-            TargetDeviceDescSpecAttr::verify(emitError, tdd_spec.getEntries())))
+  for (TargetDeviceSpecInterface tdd_spec : entries) {
+    // First verify that a target device spec is valid.
+    if (failed(TargetDeviceSpecAttr::verify(emitError, tdd_spec.getEntries())))
       return failure();
 
     // Check that device IDs are unique across all entries.
     uint32_t device_id = tdd_spec.getDeviceID();
     if (!device_ids.insert(device_id).second) {
-      return emitError()
-             << "repeated Device ID in dlti.target_system_desc_spec: "
-             << device_id;
+      return emitError() << "repeated Device ID in dlti.target_system_spec: "
+                         << device_id;
     }
   }
   return success();
 }
 
-/// Parses an attribute with syntax
-///   attr ::=
-///     `#target.` `target_system_desc_spec` `<`
-///     target-device-desc-spec-attr-list? `>`
-///   target-device-desc-spec-attr-list ::= target_device_desc_spec
-///                                     | target_device_desc_spec `,`
-///                                       target-device-desc-spec-attr-list
-Attribute TargetSystemDescSpecAttr::parse(AsmParser &parser, Type type) {
-  if (failed(parser.parseLess()))
-    return {};
-
-  // Empty spec.
-  if (succeeded(parser.parseOptionalGreater()))
-    return get(parser.getContext(), {});
-
-  SmallVector<TargetDeviceDescSpecInterface> entries;
-  if (parser.parseCommaSeparatedList(
-          [&]() { return parser.parseAttribute(entries.emplace_back()); }) ||
-      parser.parseGreater())
-    return {};
-
-  return getChecked([&] { return parser.emitError(parser.getNameLoc()); },
-                    parser.getContext(), entries);
+StringAttr
+DataLayoutSpecAttr::getEndiannessIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(DLTIDialect::kDataLayoutEndiannessKey);
 }
 
-void TargetSystemDescSpecAttr::print(AsmPrinter &os) const {
-  os << "<";
-  llvm::interleaveComma(getEntries(), os);
-  os << ">";
+StringAttr
+DataLayoutSpecAttr::getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutAllocaMemorySpaceKey);
 }
 
-#define GET_ATTRDEF_CLASSES
-#include <mlir/Dialect/DLTI/DLTIAttrs.cpp.inc>
+StringAttr DataLayoutSpecAttr::getProgramMemorySpaceIdentifier(
+    MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutProgramMemorySpaceKey);
+}
+
+StringAttr
+DataLayoutSpecAttr::getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutGlobalMemorySpaceKey);
+}
+
+StringAttr
+DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutStackAlignmentKey);
+}
 
 //===----------------------------------------------------------------------===//
 // DLTIDialect
@@ -470,7 +476,7 @@ class SystemDescSpecInterface : public DataLayoutDialectInterface {
 public:
   using DataLayoutDialectInterface::DataLayoutDialectInterface;
 
-  LogicalResult verifyEntry(TargetDeviceDescSpecInterface entry,
+  LogicalResult verifyEntry(TargetDeviceSpecInterface entry,
                             Location loc) const final {
 
     for (DataLayoutEntryInterface dl_entry : entry.getEntries()) {
@@ -507,10 +513,10 @@ LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
       return detail::verifyDataLayoutOp(op);
     return success();
   } else if (attr.getName() == DLTIDialect::kTargetSystemDescAttrName) {
-    if (!llvm::isa<TargetSystemDescSpecAttr>(attr.getValue())) {
+    if (!llvm::isa<TargetSystemSpecAttr>(attr.getValue())) {
       return op->emitError()
              << "'" << DLTIDialect::kTargetSystemDescAttrName
-             << "' is expected to be a #dlti.target_system_desc_spec attribute";
+             << "' is expected to be a #dlti.target_system_spec attribute";
     }
     return success();
   }

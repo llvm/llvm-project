@@ -23,15 +23,14 @@
 namespace mlir {
 class DataLayout;
 class DataLayoutEntryInterface;
-class TargetDeviceDescSpecInterface;
-class TargetSystemDescSpecInterface;
+class TargetDeviceSpecInterface;
+class TargetSystemSpecInterface;
 using DataLayoutEntryKey = llvm::PointerUnion<Type, StringAttr>;
 // Using explicit SmallVector size because we cannot infer the size from the
 // forward declaration, and we need the typedef in the actual declaration.
 using DataLayoutEntryList = llvm::SmallVector<DataLayoutEntryInterface, 4>;
 using DataLayoutEntryListRef = llvm::ArrayRef<DataLayoutEntryInterface>;
-using TargetDeviceDescSpecListRef =
-    llvm::ArrayRef<TargetDeviceDescSpecInterface>;
+using TargetDeviceSpecListRef = llvm::ArrayRef<TargetDeviceSpecInterface>;
 class DataLayoutOpInterface;
 class DataLayoutSpecInterface;
 class ModuleOp;
@@ -109,8 +108,8 @@ filterEntryForIdentifier(DataLayoutEntryListRef entries, StringAttr id);
 
 /// Given a list of target device entries, returns the entry that has the given
 /// identifier as key, if such an entry exists in the list.
-TargetDeviceDescSpecInterface
-filterEntryForIdentifier(TargetDeviceDescSpecListRef entries, StringAttr id);
+TargetDeviceSpecInterface
+filterEntryForIdentifier(TargetDeviceSpecListRef entries, StringAttr id);
 
 /// Verifies that the operation implementing the data layout interface, or a
 /// module operation, is valid. This calls the verifier of the spec attribute
@@ -126,8 +125,8 @@ LogicalResult verifyDataLayoutSpec(DataLayoutSpecInterface spec, Location loc);
 /// Verifies that a target system desc spec is valid. This dispatches to
 /// individual entry verifiers, and then to the verifiers implemented by the
 /// relevant dialect interfaces for identifier keys.
-LogicalResult verifyTargetSystemDescSpec(TargetSystemDescSpecInterface spec,
-                                         Location loc);
+LogicalResult verifyTargetSystemSpec(TargetSystemSpecInterface spec,
+                                     Location loc);
 
 /// Divides the known min value of the numerator by the denominator and rounds
 /// the result up to the next integer. Preserves the scalable flag.
@@ -162,7 +161,7 @@ public:
 
   /// Checks whether the given data layout entry is valid and reports any errors
   /// at the provided location. Derived classes should override this.
-  virtual LogicalResult verifyEntry(TargetDeviceDescSpecInterface entry,
+  virtual LogicalResult verifyEntry(TargetDeviceSpecInterface entry,
                                     Location loc) const {
     return success();
   }
@@ -247,19 +246,19 @@ public:
   /// Returns for max vector op width if the property is defined for the given
   /// device ID, otherwise return std::nullopt.
   std::optional<uint32_t>
-      getMaxVectorOpWidth(TargetDeviceDescSpecInterface::DeviceID) const;
+      getMaxVectorOpWidth(TargetDeviceSpecInterface::DeviceID) const;
 
   /// Returns for L1 cache size if the property is defined for the given
   /// device ID, otherwise return std::nullopt.
   std::optional<uint32_t>
-      getL1CacheSizeInBytes(TargetDeviceDescSpecInterface::DeviceID) const;
+      getL1CacheSizeInBytes(TargetDeviceSpecInterface::DeviceID) const;
 
 private:
   /// Combined layout spec at the given scope.
   const DataLayoutSpecInterface originalLayout;
 
   /// Combined target system desc spec at the given scope.
-  const TargetSystemDescSpecInterface originalTargetSystemDesc;
+  const TargetSystemSpecInterface originalTargetSystemDesc;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// List of enclosing layout specs.

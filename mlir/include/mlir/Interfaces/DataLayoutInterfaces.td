@@ -194,7 +194,7 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
   }];
 }
 
-def TargetDeviceDescSpecInterface : AttrInterface<"TargetDeviceDescSpecInterface"> {
+def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface"> {
   let cppNamespace = "::mlir";
 
   let description = [{
@@ -239,30 +239,6 @@ def TargetDeviceDescSpecInterface : AttrInterface<"TargetDeviceDescSpecInterface
       /*defaultImplementation=*/[{ return ::mlir::success(); }]
     >,
     InterfaceMethod<
-      /*description=*/"Returns the device ID identifier.",
-      /*retTy=*/"::mlir::StringAttr",
-      /*methodName=*/"getDeviceIDIdentifier",
-      /*args=*/(ins)
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns the device type identifier.",
-      /*retTy=*/"::mlir::StringAttr",
-      /*methodName=*/"getDeviceTypeIdentifier",
-      /*args=*/(ins)
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns the L1 cache size identifier.",
-      /*retTy=*/"::mlir::StringAttr",
-      /*methodName=*/"getL1CacheSizeInBytesIdentifier",
-      /*args=*/(ins)
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns the max vector op width identifier.",
-      /*retTy=*/"::mlir::StringAttr",
-      /*methodName=*/"getMaxVectorOpWidthIdentifier",
-      /*args=*/(ins)
-    >,
-    InterfaceMethod<
       /*description=*/"Returns the entry related to Device ID. The function"
                       "will crash if the entry is missing.",
       /*retTy=*/"::mlir::DataLayoutEntryInterface",
@@ -270,7 +246,7 @@ def TargetDeviceDescSpecInterface : AttrInterface<"TargetDeviceDescSpecInterface
       /*args=*/(ins)
     >,
     InterfaceMethod<
-      /*description=*/"Returns the entry related to the given identifier. "
+      /*description=*/"Returns the entry related to Device Type. "
                       "The function will crash if the entry is missing.",
       /*retTy=*/"::mlir::DataLayoutEntryInterface",
       /*methodName=*/"getSpecForDeviceType",
@@ -304,7 +280,7 @@ def TargetDeviceDescSpecInterface : AttrInterface<"TargetDeviceDescSpecInterface
   }];
 }
 
-def TargetSystemDescSpecInterface : AttrInterface<"TargetSystemDescSpecInterface"> {
+def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface"> {
   let cppNamespace = "::mlir";
 
   let description = [{
@@ -324,27 +300,26 @@ def TargetSystemDescSpecInterface : AttrInterface<"TargetSystemDescSpecInterface
   let methods = [
     InterfaceMethod<
       /*description=*/"Returns the list of layout entries.",
-      /*retTy=*/"llvm::ArrayRef<::mlir::TargetDeviceDescSpecInterface>",
+      /*retTy=*/"llvm::ArrayRef<::mlir::TargetDeviceSpecInterface>",
       /*methodName=*/"getEntries",
       /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the device description spec for given device "
                       "ID",
-      /*retTy=*/"std::optional<::mlir::TargetDeviceDescSpecInterface>",
-      /*methodName=*/"getDeviceDescForDeviceID",
-      /*args=*/(ins "int":$deviceID)
+      /*retTy=*/"std::optional<::mlir::TargetDeviceSpecInterface>",
+      /*methodName=*/"getDeviceSpecForDeviceID",
+      /*args=*/(ins "TargetDeviceSpecInterface::DeviceID":$deviceID)
     >,
     InterfaceMethod<
       /*description=*/"Verifies the validity of the specification and "
-                      "reports "
-                      "any errors at the given location.",
+                      "reports any errors at the given location.",
       /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"verifySpec",
       /*args=*/(ins "::mlir::Location":$loc),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::detail::verifyTargetSystemDescSpec($_attr, loc);
+        return ::mlir::detail::verifyTargetSystemSpec($_attr, loc);
       }]
     >
   ];
@@ -385,10 +360,9 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
     >,
     InterfaceMethod<
       /*description=*/"Returns the target system desc specification for this "
-                      "op, or "
-                      "null if it does not exist.",
-      /*retTy=*/"::mlir::TargetSystemDescSpecInterface",
-      /*methodName=*/"getTargetSystemDescSpec",
+                      "op, or null if it does not exist.",
+      /*retTy=*/"::mlir::TargetSystemSpecInterface",
+      /*methodName=*/"getTargetSystemSpec",
       /*args=*/(ins)
     >,
     StaticInterfaceMethod<

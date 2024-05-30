@@ -155,13 +155,12 @@ DataLayoutSpecInterface ModuleOp::getDataLayoutSpec() {
   return {};
 }
 
-TargetSystemDescSpecInterface ModuleOp::getTargetSystemDescSpec() {
+TargetSystemSpecInterface ModuleOp::getTargetSystemSpec() {
   // Take the first and only (if present) attribute that implements the
   // interface. This needs a linear search, but is called only once per data
   // layout object construction that is used for repeated queries.
   for (NamedAttribute attr : getOperation()->getAttrs())
-    if (auto spec =
-            llvm::dyn_cast<TargetSystemDescSpecInterface>(attr.getValue()))
+    if (auto spec = llvm::dyn_cast<TargetSystemSpecInterface>(attr.getValue()))
       return spec;
   return {};
 }
