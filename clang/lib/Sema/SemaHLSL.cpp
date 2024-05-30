@@ -356,11 +356,11 @@ class DiagnoseHLSLAvailability
   void SetShaderStageContext(llvm::Triple::EnvironmentType ShaderType) {
     static_assert(sizeof(unsigned) >= 4);
     assert(HLSLShaderAttr::isValidShaderType(ShaderType));
-    assert((unsigned)(ShaderType - llvm::Triple::Pixel) < 31 && "ShaderType is too big for this bitmap"); // 31 is reserved for "unknown"
+    assert((unsigned)(ShaderType - llvm::Triple::Pixel) < 31 &&
+           "ShaderType is too big for this bitmap"); // 31 is reserved for
+                                                     // "unknown"
 
     unsigned bitmapIndex = ShaderType - llvm::Triple::Pixel;
-    assert(((unsigned)1) << bitmapIndex != 0 && bitmapIndex != 31 &&
-           "ShaderType is too big for this bitmap");
     CurrentShaderEnvironment = ShaderType;
     CurrentShaderStageBit = (1 << bitmapIndex);
   }
