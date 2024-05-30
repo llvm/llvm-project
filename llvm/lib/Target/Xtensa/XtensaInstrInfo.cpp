@@ -57,7 +57,7 @@ Register XtensaInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
       return MI.getOperand(0).getReg();
     }
   }
-  return 0;
+  return Register();
 }
 
 Register XtensaInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
@@ -69,7 +69,7 @@ Register XtensaInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
       return MI.getOperand(0).getReg();
     }
   }
-  return 0;
+  return Register();
 }
 
 /// Adjust SP by Amount bytes.

@@ -163,7 +163,7 @@ void XtensaFrameLowering::emitEpilogue(MachineFunction &MF,
 #ifndef NDEBUG
       // Checking that the instruction is exactly as expected
       bool IsRestoreInstr = false;
-      if (I->getOpcode() == TargetOpcode::COPY) {
+      if ((I->getOpcode() == TargetOpcode::COPY) && Info.isSpilledToReg()) {
         Register Reg = I->getOperand(0).getReg();
         Register DstReg = I->getOperand(1).getReg();
         IsRestoreInstr = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
