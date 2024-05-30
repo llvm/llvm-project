@@ -11,9 +11,11 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
-#if !defined(LIBC_TARGET_ARCH_IS_X86_64)
-#error "Invalid include"
+#if !(defined(LIBC_TARGET_ARCH_IS_X86_64) &&                                   \
+      defined(LIBC_TARGET_CPU_HAS_SSE2) && defined(LIBC_TARGET_CPU_HAS_FMA))
+#error "Missing FMA and SS2 support"
 #endif
 
 #include <immintrin.h>
