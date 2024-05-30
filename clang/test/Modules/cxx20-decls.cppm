@@ -28,8 +28,8 @@ using xxx = baz::foo;
 // CHECK-NEXT: NamespaceDecl 0x[[BAZ_REDECL_ADDR:[^ ]*]] prev 0x[[BAZ_ADDR:[^ ]*]]
 // CHECK:      TypeAliasDecl 0x[[ALIAS_REDECL_ADDR:[^ ]*]] prev 0x[[ALIAS_ADDR:[^ ]*]]
 // FIXME: UsingShadowDecl should have been merged
-// CHECK:      UsingShadowDecl 0x{{[^ ]*}} <{{.*}}> col:{{.*}} imported in A.<global> hidden implicit TypeAlias 0x[[ALIAS_REDECL_ADDR]] 'foo'
+// CHECK:      UsingShadowDecl 0x{{[^ ]*}} prev 0x[[SHADOW_ADDR:[^ ]*]] {{.*}} imported in A.<global> {{.*}} 'foo'
 
 // CHECK-LABEL: Dumping baz:
 // CHECK-NEXT: NamespaceDecl 0x[[BAZ_ADDR]] <{{.*}}> line:{{.*}} baz
-// CHECK:      UsingShadowDecl 0x[[SHADOW_ADDR:[^ ]*]] <{{.*}}> col:{{.*}} implicit TypeAlias 0x[[ALIAS_ADDR]] 'foo'
+// CHECK:      UsingShadowDecl 0x[[SHADOW_ADDR]] {{.*}} 'foo'
