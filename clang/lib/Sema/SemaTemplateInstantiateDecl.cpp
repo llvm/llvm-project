@@ -26,6 +26,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -563,7 +564,7 @@ static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
     return;
   Expr *MaxExpr = Result.getAs<Expr>();
 
-  S.addAMDGPUFlatWorkGroupSizeAttr(New, Attr, MinExpr, MaxExpr);
+  S.AMDGPU().addAMDGPUFlatWorkGroupSizeAttr(New, Attr, MinExpr, MaxExpr);
 }
 
 ExplicitSpecifier Sema::instantiateExplicitSpecifier(
@@ -607,7 +608,7 @@ static void instantiateDependentAMDGPUWavesPerEUAttr(
     MaxExpr = Result.getAs<Expr>();
   }
 
-  S.addAMDGPUWavesPerEUAttr(New, Attr, MinExpr, MaxExpr);
+  S.AMDGPU().addAMDGPUWavesPerEUAttr(New, Attr, MinExpr, MaxExpr);
 }
 
 static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
@@ -630,7 +631,7 @@ static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
   Expr *YExpr = ResultY.getAs<Expr>();
   Expr *ZExpr = ResultZ.getAs<Expr>();
 
-  S.addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
+  S.AMDGPU().addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
 }
 
 // This doesn't take any template parameters, but we have a custom action that
