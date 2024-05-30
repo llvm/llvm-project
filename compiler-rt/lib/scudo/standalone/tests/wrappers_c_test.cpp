@@ -187,10 +187,18 @@ TEST_F(ScudoWrappersCDeathTest, Malloc) {
   free(P);
 
   errno = 0;
+#if defined(__has_warning)
+#if __has_warning("-Walloc-size-larger-than=")
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Walloc-size-larger-than="
+#endif
+#endif
   EXPECT_EQ(malloc(SIZE_MAX), nullptr);
+#if defined(__has_warning)
+#if __has_warning("-Walloc-size-larger-than=")
 #pragma GCC diagnostic pop
+#endif
+#endif
   EXPECT_EQ(errno, ENOMEM);
 }
 
@@ -212,8 +220,12 @@ TEST_F(ScudoWrappersCTest, Calloc) {
   EXPECT_NE(P, nullptr);
   free(P);
 
+#if defined(__has_warning)
+#if __has_warning("-Walloc-size-larger-than=")
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Walloc-size-larger-than="
+#endif
+#endif
   errno = 0;
   EXPECT_EQ(calloc(SIZE_MAX, 1U), nullptr);
   EXPECT_EQ(errno, ENOMEM);
@@ -225,7 +237,11 @@ TEST_F(ScudoWrappersCTest, Calloc) {
   errno = 0;
   EXPECT_EQ(calloc(SIZE_MAX, SIZE_MAX), nullptr);
   EXPECT_EQ(errno, ENOMEM);
+#if defined(__has_warning)
+#if __has_warning("-Walloc-size-larger-than=")
 #pragma GCC diagnostic pop
+#endif
+#endif
 }
 
 TEST_F(ScudoWrappersCTest, SmallAlign) {
@@ -274,12 +290,16 @@ TEST_F(ScudoWrappersCTest, Memalign) {
     verifyDeallocHookPtr(P);
   }
 
+#if defined(__has_warning)
+#if __has_warning("-Walloc-size-larger-than=")
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Walloc-size-larger-than="
   EXPECT_EQ(memalign(4096U, SIZE_MAX), nullptr);
   EXPECT_EQ(posix_memalign(&P, 15U, Size), EINVAL);
   EXPECT_EQ(posix_memalign(&P, 4096U, SIZE_MAX), ENOMEM);
 #pragma GCC diagnostic pop
+#endif
+#endif
 
   // Android's memalign accepts non power-of-2 alignments, and 0.
   if (SCUDO_ANDROID) {
@@ -369,8 +389,12 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
 
   EXPECT_DEATH(P = realloc(P, Size), "");
 
+#if defined(__has_warning)
+#if __has_warning("-Walloc-size-larger-than=")
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Walloc-size-larger-than="
+#endif
+#endif
   errno = 0;
   EXPECT_EQ(realloc(nullptr, SIZE_MAX), nullptr);
   EXPECT_EQ(errno, ENOMEM);
@@ -380,7 +404,11 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   EXPECT_EQ(realloc(P, SIZE_MAX), nullptr);
   EXPECT_EQ(errno, ENOMEM);
   free(P);
+#if defined(__has_warning)
+#if __has_warning("-Walloc-size-larger-than=")
 #pragma GCC diagnostic pop
+#endif
+#endif
 
   // Android allows realloc of memalign pointers.
   if (SCUDO_ANDROID) {
@@ -445,10 +473,18 @@ TEST_F(ScudoWrappersCTest, OtherAlloc) {
 #endif
 
 #if HAVE_VALLOC
+#if defined(__has_warning)
+#if __has_warning("-Walloc-size-larger-than=")
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Walloc-size-larger-than="
+#endif
+#endif
   EXPECT_EQ(valloc(SIZE_MAX), nullptr);
+#if defined(__has_warning)
+#if __has_warning("-Walloc-size-larger-than=")
 #pragma GCC diagnostic pop
+#endif
+#endif
 #endif
 }
 

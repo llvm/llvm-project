@@ -83,8 +83,12 @@ protected:
 
   template <typename T> void testCxxNew() {
     // Disable warning about writing on a class object.
+#if defined(__has_warning)
+#if __has_warning("-Wclass-memaccess")
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+#endif
     T *P = new T;
     EXPECT_NE(P, nullptr);
     verifyAllocHookPtr(P);
@@ -133,7 +137,11 @@ protected:
     memset(A, 0x42, sizeof(T) * N);
     delete[] A;
     verifyDeallocHookPtr(A);
+#if defined(__has_warning)
+#if __has_warning("-Wclass-memaccess")
 #pragma GCC diagnostic pop
+#endif
+#endif
   }
 };
 using ScudoWrappersCppDeathTest = ScudoWrappersCppTest;
