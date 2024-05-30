@@ -5395,11 +5395,11 @@ X86:
 - ``q``: An 8, 16, 32, or 64-bit register which can be accessed as an 8-bit
   ``l`` integer register. On X86-32, this is the ``a``, ``b``, ``c``, and ``d``
   registers, and on X86-64, it is all of the integer registers. When feature
-  `egpr` and `inline-asm-use-gpr32` are both on, they will be extended to EGPR.
+  `egpr` and `inline-asm-use-gpr32` are both on, it will be extended to gpr32.
 - ``Q``: An 8, 16, 32, or 64-bit register which can be accessed as an 8-bit
   ``h`` integer register. This is the ``a``, ``b``, ``c``, and ``d`` registers.
 - ``r`` or ``l``: An 8, 16, 32, or 64-bit integer register. When feature
-  `egpr` and `inline-asm-use-gpr32` are both on, they will be extended to EGPR.
+  `egpr` and `inline-asm-use-gpr32` are both on, it will be extended to gpr32.
 - ``R``: An 8, 16, 32, or 64-bit "legacy" integer register -- one which has
   existed since i386, and can be accessed without the REX prefix.
 - ``f``: A 32, 64, or 80-bit '387 FPU stack pseudo-register.
@@ -5421,7 +5421,7 @@ X86:
   you're better off splitting it yourself, before passing it to the asm
   statement.
 - ``jr``: An 8, 16, 32, or 64-bit integer gpr16. It won't be extended to gpr32
-  When feature `egpr` or `inline-asm-use-gpr32` is on.
+  when feature `egpr` or `inline-asm-use-gpr32` is on.
 - ``jR``: An 8, 16, 32, or 64-bit integer gpr32 when feature `egpr`` is on.
   Otherwise, same as ``r``.
 
