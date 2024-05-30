@@ -3154,14 +3154,14 @@ Applies to: ``lock, unlock, sleep, getc, fgets, read, recv, pthread_mutex_lock,`
 
 .. code-block:: c
 
-void trylock_example(pthread_mutex_t *m) {
-  if (pthread_mutex_trylock(m) == 0) { // assume trylock always succeeds
-    sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
-    pthread_mutex_unlock(m);
-  } else {
-    sleep(10); // false positive: Incorrect warning about blocking function inside critical section.
-  }
-}
+ void trylock_example(pthread_mutex_t *m) {
+   if (pthread_mutex_trylock(m) == 0) { // assume trylock always succeeds
+     sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
+     pthread_mutex_unlock(m);
+   } else {
+     sleep(10); // false positive: Incorrect warning about blocking function inside critical section.
+   }
+ }
 
 .. _alpha-unix-Chroot:
 
