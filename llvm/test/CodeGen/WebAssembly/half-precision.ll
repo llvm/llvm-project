@@ -103,3 +103,57 @@ define <8 x half> @pmax_intrinsic_v8f16(<8 x half> %a, <8 x half> %b) {
   %v = call <8 x half> @llvm.wasm.pmax.v8f16(<8 x half> %a, <8 x half> %b)
   ret <8 x half> %v
 }
+
+; CHECK-LABEL: compare_oeq_v8f16:
+; CHECK-NEXT: .functype compare_oeq_v8f16 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f16x8.eq $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i1> @compare_oeq_v8f16 (<8 x half> %x, <8 x half> %y) {
+  %res = fcmp oeq <8 x half> %x, %y
+  ret <8 x i1> %res
+}
+
+; CHECK-LABEL: compare_une_v8f16:
+; CHECK-NEXT: .functype compare_une_v8f16 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f16x8.ne $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i1> @compare_une_v8f16 (<8 x half> %x, <8 x half> %y) {
+  %res = fcmp une <8 x half> %x, %y
+  ret <8 x i1> %res
+}
+
+; CHECK-LABEL: compare_olt_v8f16:
+; CHECK-NEXT: .functype compare_olt_v8f16 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f16x8.lt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i1> @compare_olt_v8f16 (<8 x half> %x, <8 x half> %y) {
+  %res = fcmp olt <8 x half> %x, %y
+  ret <8 x i1> %res
+}
+
+; CHECK-LABEL: compare_ogt_v8f16:
+; CHECK-NEXT: .functype compare_ogt_v8f16 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f16x8.gt $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i1> @compare_ogt_v8f16 (<8 x half> %x, <8 x half> %y) {
+  %res = fcmp ogt <8 x half> %x, %y
+  ret <8 x i1> %res
+}
+
+; CHECK-LABEL: compare_ole_v8f16:
+; CHECK-NEXT: .functype compare_ole_v8f16 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f16x8.le $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i1> @compare_ole_v8f16 (<8 x half> %x, <8 x half> %y) {
+  %res = fcmp ole <8 x half> %x, %y
+  ret <8 x i1> %res
+}
+
+; CHECK-LABEL: compare_oge_v8f16:
+; CHECK-NEXT: .functype compare_oge_v8f16 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f16x8.ge $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i1> @compare_oge_v8f16 (<8 x half> %x, <8 x half> %y) {
+  %res = fcmp oge <8 x half> %x, %y
+  ret <8 x i1> %res
+}
