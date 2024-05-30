@@ -783,6 +783,8 @@ void SampleProfileMatcher::matchProfileForNewFunctions(
 
   // Match non-inline callees.
   for (auto &BS : const_cast<BodySampleMap &>(CallerFS.getBodySamples())) {
+    if (NewIRCallees.empty())
+      break;
     // New function to old function pairs used to update the CallTargetMap.
     std::vector<std::pair<FunctionId, FunctionId>> CallTargetsToUpdate;
     SampleRecord::CallTargetMap &CTM =
