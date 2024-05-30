@@ -36,13 +36,13 @@ public:
   }
 
   bool hasPoisonGeneratingFlags() const {
-    return getFlags() & (NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg |
-                         FmNoNans | FmNoInfs);
+    return getFlags() & (NoUWrap | NoSWrap | NoUSWrap | IsExact | Disjoint |
+                         NonNeg | FmNoNans | FmNoInfs);
   }
 
   void dropPoisonGeneratingFlags() {
-    clearFlags(NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg | FmNoNans |
-               FmNoInfs);
+    clearFlags(NoUWrap | NoSWrap | NoUSWrap | IsExact | Disjoint | NonNeg |
+               FmNoNans | FmNoInfs);
     assert(!hasPoisonGeneratingFlags());
   }
 };
