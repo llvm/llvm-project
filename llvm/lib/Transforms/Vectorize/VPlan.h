@@ -923,6 +923,7 @@ public:
     case VPRecipeBase::VPWidenCastSC:
     case VPRecipeBase::VPWidenGEPSC:
     case VPRecipeBase::VPWidenSC:
+    case VPRecipeBase::VPWidenEVLSC:
     case VPRecipeBase::VPWidenSelectSC:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
@@ -1107,6 +1108,7 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
@@ -1408,13 +1410,18 @@ public:
 /// traditional vectorization cases where each recipe transforms into a
 /// vectorized version of itself.
 class VPWidenRecipe : public VPRecipeWithIRFlags {
+protected:
   unsigned Opcode;
+
+  template <typename IterT>
+  VPWidenRecipe(unsigned VPDefOpcode, Instruction &I,
+                iterator_range<IterT> Operands)
+      : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), Opcode(I.getOpcode()) {}
 
 public:
   template <typename IterT>
   VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I),
-        Opcode(I.getOpcode()) {}
+      : VPWidenRecipe(VPDef::VPWidenSC, I, Operands) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -1440,6 +1447,49 @@ public:
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+class VPWidenEVLRecipe : public VPWidenRecipe {
+private:
+  using VPRecipeWithIRFlags::transferFlags;
+
+public:
+  template <typename IterT>
+  VPWidenEVLRecipe(Instruction &I, iterator_range<IterT> Operands, VPValue &EVL)
+      : VPWidenRecipe(VPDef::VPWidenEVLSC, I, Operands) {
+    addOperand(&EVL);
+  }
+
+  ~VPWidenEVLRecipe() override = default;
+
+  VPWidenRecipe *clone() override final {
+    SmallVector<VPValue *> Ops(operands());
+    VPValue *EVL = Ops.pop_back_val();
+    auto *R = new VPWidenEVLRecipe(*getUnderlyingInstr(),
+                                   make_range(Ops.begin(), Ops.end()), *EVL);
+    R->transferFlags(*this);
+    return R;
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenEVLSC);
+
+  VPValue *getEVL() { return getOperand(getNumOperands() - 1); }
+  const VPValue *getEVL() const { return getOperand(getNumOperands() - 1); }
+
+  /// A helper function to create widen EVL recipe from regular widen recipe.
+  static VPWidenEVLRecipe *create(VPWidenRecipe *W, VPValue &EVL);
+
+  /// Produce widened copies of all Ingredients.
+  void execute(VPTransformState &State) override final;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override final;
 #endif
 };
 

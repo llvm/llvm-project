@@ -24,6 +24,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/VectorBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -74,6 +75,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenLoadSC:
   case VPWidenPHISC:
   case VPWidenSC:
+  case VPWidenEVLSC:
   case VPWidenSelectSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
@@ -114,6 +116,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenIntOrFpInductionSC:
   case VPWidenPHISC:
   case VPWidenSC:
+  case VPWidenEVLSC:
   case VPWidenSelectSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
@@ -164,6 +167,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPWidenPHISC:
   case VPWidenPointerInductionSC:
   case VPWidenSC:
+  case VPWidenEVLSC:
   case VPWidenSelectSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
@@ -1262,10 +1266,77 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   }
 }
 
+VPWidenEVLRecipe *VPWidenEVLRecipe::create(VPWidenRecipe *W, VPValue &EVL) {
+  auto *R = new VPWidenEVLRecipe(*W->getUnderlyingInstr(), W->operands(), EVL);
+  R->transferFlags(*W);
+  return R;
+}
+
+void VPWidenEVLRecipe::execute(VPTransformState &State) {
+  assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
+                          "explicit vector length.");
+  VPValue *Op0 = getOperand(0);
+
+  // If it's scalar operation, hand translation over to VPWidenRecipe
+  if (!State.get(Op0, 0)->getType()->isVectorTy())
+    return VPWidenRecipe::execute(State);
+
+  VPValue *EVL = getEVL();
+  Value *EVLArg = State.get(EVL, 0, /*NeedsScalar=*/true);
+  unsigned Opcode = getOpcode();
+  Instruction *I = getUnderlyingInstr();
+  IRBuilderBase &BuilderIR = State.Builder;
+  VectorBuilder Builder(BuilderIR);
+  Value *Mask = BuilderIR.CreateVectorSplat(State.VF, BuilderIR.getTrue());
+  Value *VPInst = nullptr;
+
+  //===------------------- Binary and Unary Ops ---------------------===//
+  if (Instruction::isBinaryOp(Opcode) || Instruction::isUnaryOp(Opcode)) {
+    // Just widen unops and binops.
+
+    SmallVector<Value *, 4> Ops;
+    for (unsigned I = 0, E = getNumOperands() - 1; I < E; ++I) {
+      VPValue *VPOp = getOperand(I);
+      Ops.push_back(State.get(VPOp, 0));
+    }
+
+    Builder.setMask(Mask).setEVL(EVLArg);
+    VPInst = Builder.createVectorInstruction(Opcode, Ops[0]->getType(), Ops,
+                                             "vp.op");
+
+    if (I)
+      if (auto *VecOp = dyn_cast<Instruction>(VPInst))
+        VecOp->copyIRFlags(I);
+  } else {
+    llvm_unreachable("Unsupported opcode in VPWidenEVLRecipe::execute");
+  }
+  State.set(this, VPInst, 0);
+  State.addMetadata(VPInst, I);
+}
+
+bool VPWidenEVLRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  // EVL in that recipe is always the last operand, thus any use before means
+  // the VPValue should be vectorized.
+  for (unsigned I = 0, E = getNumOperands() - 1; I != E; ++I)
+    if (getOperand(I) == Op)
+      return false;
+  return true;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << " = " << Instruction::getOpcodeName(Opcode);
+  printFlags(O);
+  printOperands(O, SlotTracker);
+}
+
+void VPWidenEVLRecipe::print(raw_ostream &O, const Twine &Indent,
+                             VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN vp ";
   printAsOperand(O, SlotTracker);
   O << " = " << Instruction::getOpcodeName(Opcode);
   printFlags(O);
