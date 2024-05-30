@@ -4,8 +4,8 @@
 define float @divf32_2(float %a) nounwind {
 ; CHECK-LABEL: divf32_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, #2.00000000
-; CHECK-NEXT:    fdiv s0, s0, s1
+; CHECK-NEXT:    fmov s1, #0.50000000
+; CHECK-NEXT:    fmul s0, s0, s1
 ; CHECK-NEXT:    ret
   %r = fdiv float %a, 2.0
   ret float %r
@@ -46,8 +46,8 @@ define float @divf32_p75_arcp(float %a) nounwind {
 define half @divf16_2(half %a) nounwind {
 ; CHECK-LABEL: divf16_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov h1, #2.00000000
-; CHECK-NEXT:    fdiv h0, h0, h1
+; CHECK-NEXT:    fmov h1, #0.50000000
+; CHECK-NEXT:    fmul h0, h0, h1
 ; CHECK-NEXT:    ret
   %r = fdiv half %a, 2.0
   ret half %r
@@ -67,9 +67,9 @@ define half @divf16_32768(half %a) nounwind {
 define half @divf16_32768_arcp(half %a) nounwind {
 ; CHECK-LABEL: divf16_32768_arcp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #512 // =0x200
+; CHECK-NEXT:    mov w8, #30720 // =0x7800
 ; CHECK-NEXT:    fmov h1, w8
-; CHECK-NEXT:    fmul h0, h0, h1
+; CHECK-NEXT:    fdiv h0, h0, h1
 ; CHECK-NEXT:    ret
   %r = fdiv arcp half %a, 32768.0
   ret half %r
@@ -78,8 +78,8 @@ define half @divf16_32768_arcp(half %a) nounwind {
 define double @divf64_2(double %a) nounwind {
 ; CHECK-LABEL: divf64_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d1, #2.00000000
-; CHECK-NEXT:    fdiv d0, d0, d1
+; CHECK-NEXT:    fmov d1, #0.50000000
+; CHECK-NEXT:    fmul d0, d0, d1
 ; CHECK-NEXT:    ret
   %r = fdiv double %a, 2.0
   ret double %r

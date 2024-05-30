@@ -5,10 +5,10 @@
 define arm_aapcs_vfpcc <2 x float> @t1(<2 x i32> %vecinit2.i) nounwind {
 ; CHECK-LABEL: t1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s2, #8.000000e+00
+; CHECK-NEXT:    vmov.f32 s2, #1.250000e-01
 ; CHECK-NEXT:    vcvt.f32.s32 d2, d0
-; CHECK-NEXT:    vdiv.f32 s1, s5, s2
-; CHECK-NEXT:    vdiv.f32 s0, s4, s2
+; CHECK-NEXT:    vmul.f32 s1, s5, s2
+; CHECK-NEXT:    vmul.f32 s0, s4, s2
 ; CHECK-NEXT:    bx lr
 entry:
   %vcvt.i = sitofp <2 x i32> %vecinit2.i to <2 x float>
@@ -20,10 +20,10 @@ entry:
 define arm_aapcs_vfpcc <2 x float> @t2(<2 x i32> %vecinit2.i) nounwind {
 ; CHECK-LABEL: t2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s2, #8.000000e+00
+; CHECK-NEXT:    vmov.f32 s2, #1.250000e-01
 ; CHECK-NEXT:    vcvt.f32.u32 d2, d0
-; CHECK-NEXT:    vdiv.f32 s1, s5, s2
-; CHECK-NEXT:    vdiv.f32 s0, s4, s2
+; CHECK-NEXT:    vmul.f32 s1, s5, s2
+; CHECK-NEXT:    vmul.f32 s0, s4, s2
 ; CHECK-NEXT:    bx lr
 entry:
   %vcvt.i = uitofp <2 x i32> %vecinit2.i to <2 x float>
@@ -98,12 +98,12 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @t6(<4 x i32> %vecinit6.i) nounwind {
 ; CHECK-LABEL: t6:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s4, #8.000000e+00
+; CHECK-NEXT:    vmov.f32 s4, #1.250000e-01
 ; CHECK-NEXT:    vcvt.f32.s32 q2, q0
-; CHECK-NEXT:    vdiv.f32 s3, s11, s4
-; CHECK-NEXT:    vdiv.f32 s2, s10, s4
-; CHECK-NEXT:    vdiv.f32 s1, s9, s4
-; CHECK-NEXT:    vdiv.f32 s0, s8, s4
+; CHECK-NEXT:    vmul.f32 s3, s11, s4
+; CHECK-NEXT:    vmul.f32 s2, s10, s4
+; CHECK-NEXT:    vmul.f32 s1, s9, s4
+; CHECK-NEXT:    vmul.f32 s0, s8, s4
 ; CHECK-NEXT:    bx lr
 entry:
   %vcvt.i = sitofp <4 x i32> %vecinit6.i to <4 x float>
@@ -115,12 +115,12 @@ define arm_aapcs_vfpcc <4 x float> @fix_unsigned_i16_to_float(<4 x i16> %in) {
 ; CHECK-LABEL: fix_unsigned_i16_to_float:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmovl.u16 q8, d0
-; CHECK-NEXT:    vmov.f32 s4, #2.000000e+00
+; CHECK-NEXT:    vmov.f32 s4, #5.000000e-01
 ; CHECK-NEXT:    vcvt.f32.u32 q2, q8
-; CHECK-NEXT:    vdiv.f32 s3, s11, s4
-; CHECK-NEXT:    vdiv.f32 s2, s10, s4
-; CHECK-NEXT:    vdiv.f32 s1, s9, s4
-; CHECK-NEXT:    vdiv.f32 s0, s8, s4
+; CHECK-NEXT:    vmul.f32 s3, s11, s4
+; CHECK-NEXT:    vmul.f32 s2, s10, s4
+; CHECK-NEXT:    vmul.f32 s1, s9, s4
+; CHECK-NEXT:    vmul.f32 s0, s8, s4
 ; CHECK-NEXT:    bx lr
   %conv = uitofp <4 x i16> %in to <4 x float>
   %shift = fdiv <4 x float> %conv, <float 2.0, float 2.0, float 2.0, float 2.0>
@@ -131,12 +131,12 @@ define arm_aapcs_vfpcc <4 x float> @fix_signed_i16_to_float(<4 x i16> %in) {
 ; CHECK-LABEL: fix_signed_i16_to_float:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmovl.s16 q8, d0
-; CHECK-NEXT:    vmov.f32 s4, #2.000000e+00
+; CHECK-NEXT:    vmov.f32 s4, #5.000000e-01
 ; CHECK-NEXT:    vcvt.f32.s32 q2, q8
-; CHECK-NEXT:    vdiv.f32 s3, s11, s4
-; CHECK-NEXT:    vdiv.f32 s2, s10, s4
-; CHECK-NEXT:    vdiv.f32 s1, s9, s4
-; CHECK-NEXT:    vdiv.f32 s0, s8, s4
+; CHECK-NEXT:    vmul.f32 s3, s11, s4
+; CHECK-NEXT:    vmul.f32 s2, s10, s4
+; CHECK-NEXT:    vmul.f32 s1, s9, s4
+; CHECK-NEXT:    vmul.f32 s0, s8, s4
 ; CHECK-NEXT:    bx lr
   %conv = sitofp <4 x i16> %in to <4 x float>
   %shift = fdiv <4 x float> %conv, <float 2.0, float 2.0, float 2.0, float 2.0>
@@ -153,12 +153,12 @@ define arm_aapcs_vfpcc <2 x float> @fix_i64_to_float(<2 x i64> %in) {
 ; CHECK-NEXT:    bl ___floatundisf
 ; CHECK-NEXT:    vmov r2, r1, d8
 ; CHECK-NEXT:    vmov s18, r0
-; CHECK-NEXT:    vmov.f32 s16, #2.000000e+00
+; CHECK-NEXT:    vmov.f32 s16, #5.000000e-01
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl ___floatundisf
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vdiv.f32 s1, s18, s16
-; CHECK-NEXT:    vdiv.f32 s0, s2, s16
+; CHECK-NEXT:    vmul.f32 s1, s18, s16
+; CHECK-NEXT:    vmul.f32 s0, s2, s16
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {lr}
 ; CHECK-NEXT:    bx lr
@@ -177,13 +177,13 @@ define arm_aapcs_vfpcc <2 x double> @fix_i64_to_double(<2 x i64> %in) {
 ; CHECK-NEXT:    bl ___floatundidf
 ; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    vmov.f64 d8, #2.000000e+00
+; CHECK-NEXT:    vmov.f64 d8, #5.000000e-01
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bl ___floatundidf
 ; CHECK-NEXT:    vmov d16, r0, r1
-; CHECK-NEXT:    vdiv.f64 d1, d9, d8
-; CHECK-NEXT:    vdiv.f64 d0, d16, d8
+; CHECK-NEXT:    vmul.f64 d1, d9, d8
+; CHECK-NEXT:    vmul.f64 d0, d16, d8
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {lr}
 ; CHECK-NEXT:    bx lr
@@ -197,17 +197,17 @@ define arm_aapcs_vfpcc <8 x float> @test7(<8 x i32> %in) nounwind {
 ; CHECK-LABEL: test7:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vmov.f32 s12, #8.000000e+00
+; CHECK-NEXT:    vmov.f32 s12, #1.250000e-01
 ; CHECK-NEXT:    vcvt.f32.s32 q4, q0
 ; CHECK-NEXT:    vcvt.f32.s32 q2, q1
-; CHECK-NEXT:    vdiv.f32 s3, s19, s12
-; CHECK-NEXT:    vdiv.f32 s7, s11, s12
-; CHECK-NEXT:    vdiv.f32 s2, s18, s12
-; CHECK-NEXT:    vdiv.f32 s6, s10, s12
-; CHECK-NEXT:    vdiv.f32 s1, s17, s12
-; CHECK-NEXT:    vdiv.f32 s5, s9, s12
-; CHECK-NEXT:    vdiv.f32 s0, s16, s12
-; CHECK-NEXT:    vdiv.f32 s4, s8, s12
+; CHECK-NEXT:    vmul.f32 s3, s19, s12
+; CHECK-NEXT:    vmul.f32 s2, s18, s12
+; CHECK-NEXT:    vmul.f32 s7, s11, s12
+; CHECK-NEXT:    vmul.f32 s6, s10, s12
+; CHECK-NEXT:    vmul.f32 s1, s17, s12
+; CHECK-NEXT:    vmul.f32 s5, s9, s12
+; CHECK-NEXT:    vmul.f32 s0, s16, s12
+; CHECK-NEXT:    vmul.f32 s4, s8, s12
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -220,11 +220,11 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @test8(<4 x i32> %in) {
 ; CHECK-LABEL: test8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.f32 s4, #2.000000e+00
+; CHECK-NEXT:    vmov.f32 s4, #5.000000e-01
 ; CHECK-NEXT:    vcvt.f32.s32 q2, q0
-; CHECK-NEXT:    vdiv.f32 s2, s10, s4
-; CHECK-NEXT:    vdiv.f32 s1, s9, s4
-; CHECK-NEXT:    vdiv.f32 s0, s8, s4
+; CHECK-NEXT:    vmul.f32 s2, s10, s4
+; CHECK-NEXT:    vmul.f32 s1, s9, s4
+; CHECK-NEXT:    vmul.f32 s0, s8, s4
 ; CHECK-NEXT:    vldr s3, LCPI11_0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -241,11 +241,11 @@ define arm_aapcs_vfpcc <4 x float> @test8(<4 x i32> %in) {
 define arm_aapcs_vfpcc <3 x float> @test_illegal_int_to_fp(<3 x i32> %in) {
 ; CHECK-LABEL: test_illegal_int_to_fp:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.f32 s4, #4.000000e+00
+; CHECK-NEXT:    vmov.f32 s4, #2.500000e-01
 ; CHECK-NEXT:    vcvt.f32.s32 q2, q0
-; CHECK-NEXT:    vdiv.f32 s2, s10, s4
-; CHECK-NEXT:    vdiv.f32 s1, s9, s4
-; CHECK-NEXT:    vdiv.f32 s0, s8, s4
+; CHECK-NEXT:    vmul.f32 s2, s10, s4
+; CHECK-NEXT:    vmul.f32 s1, s9, s4
+; CHECK-NEXT:    vmul.f32 s0, s8, s4
 ; CHECK-NEXT:    vldr s3, LCPI12_0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
