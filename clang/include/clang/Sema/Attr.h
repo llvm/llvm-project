@@ -14,7 +14,7 @@
 #define LLVM_CLANG_SEMA_ATTR_H
 
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclObjC.h"
 #include "llvm/Support/Casting.h"
 
 namespace clang {
