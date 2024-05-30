@@ -152,7 +152,7 @@ int Test::runTests(const TestOptions &Options) {
   for (Test *T = Start; T != nullptr; T = T->Next) {
     const char *TestName = T->getName();
 
-    if (Options.TestFilter && cpp::string{TestName} != Options.TestFilter) {
+    if (Options.TestFilter && cpp::string(TestName) != Options.TestFilter) {
       --TestCount;
       continue;
     }
