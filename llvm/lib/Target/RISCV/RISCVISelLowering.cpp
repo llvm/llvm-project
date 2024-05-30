@@ -662,6 +662,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
+  if (Subtarget.getTargetTriple().isOSGlibc()) {
+    // Custom lowering of llvm.clear_cache.
+    setOperationAction(ISD::CLEAR_CACHE, MVT::Other, Custom);
+  }
+
   if (Subtarget.hasVInstructions()) {
     setBooleanVectorContents(ZeroOrOneBooleanContent);
 
@@ -7152,7 +7157,48 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPSpliceExperimental(Op, DAG);
   case ISD::EXPERIMENTAL_VP_REVERSE:
     return lowerVPReverseExperimental(Op, DAG);
+  case ISD::CLEAR_CACHE: {
+    assert(Subtarget.getTargetTriple().isOSGlibc() &&
+           "llvm.clear_cache only needs custom lower on glibc targets");
+    SDLoc DL(Op);
+    SDValue Flags = DAG.getConstant(0, DL, Subtarget.getXLenVT());
+    return emitFlushICache(DAG, Op.getOperand(0), Op.getOperand(1),
+                           Op.getOperand(2), Flags, DL);
   }
+  }
+}
+
+SDValue RISCVTargetLowering::emitFlushICache(SelectionDAG &DAG, SDValue InChain,
+                                             SDValue Start, SDValue End,
+                                             SDValue Flags, SDLoc DL) const {
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+
+  // start
+  Entry.Node = Start;
+  Entry.Ty = PointerType::getUnqual(*DAG.getContext());
+  Args.push_back(Entry);
+
+  // end
+  Entry.Node = End;
+  Entry.Ty = PointerType::getUnqual(*DAG.getContext());
+  Args.push_back(Entry);
+
+  // flags
+  Entry.Node = Flags;
+  Entry.Ty = Type::getIntNTy(*DAG.getContext(), Subtarget.getXLen());
+  Args.push_back(Entry);
+
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
+      CallingConv::C, Type::getVoidTy(*DAG.getContext()),
+      DAG.getExternalSymbol("__riscv_flush_icache", Ty), std::move(Args));
+
+  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
+
+  // This function returns void so only the out chain matters.
+  return CallResult.second;
 }
 
 static SDValue getTargetNode(GlobalAddressSDNode *N, const SDLoc &DL, EVT Ty,
