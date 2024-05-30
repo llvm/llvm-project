@@ -28,9 +28,11 @@ using B = X<S>;
 // CHECK:      TypeAliasDecl
 // CHECK-NEXT: `-ElaboratedType {{.*}} 'X<ns::S>' sugar
 // CHECK-NEXT:   `-TemplateSpecializationType {{.*}} 'X<ns::S>' sugar X
-// CHECK-NEXT:     |-TemplateArgument using template S
-// CHECK-NEXT:       `-RecordType {{.*}} 'X<ns::S>'
-// CHECK-NEXT:         `-ClassTemplateSpecialization {{.*}} 'X'
+// CHECK-NEXT:     |-TemplateArgument template 'ns::S'
+// CHECK-NEXT:     | |-UsingShadowDecl {{.*}} implicit ClassTemplate {{.*}} 'S'
+// CHECK-NEXT:     | `-target: ClassTemplateDecl {{.*}} S
+// CHECK-NEXT:     `-RecordType {{.*}} 'X<ns::S>'
+// CHECK-NEXT:       `-ClassTemplateSpecialization {{.*}} 'X'
 
 // TemplateName in DeducedTemplateSpecializationType.
 S DeducedTemplateSpecializationT(123);
