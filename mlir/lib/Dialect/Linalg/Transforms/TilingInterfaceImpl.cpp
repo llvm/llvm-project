@@ -250,6 +250,20 @@ struct LinalgOpTilingInterface
         SmallVector<Value>{tilingResult->tiledValues[resultNumber]}};
   }
 
+  /// Method to generate the tiled implementation of an operation from the tile
+  /// of the operand.
+  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
+      Operation *op, OpBuilder &b, unsigned operandNumber,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
+    SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
+    if (failed(getIterationDomainTileFromOperandTile(
+            op, b, operandNumber, offsets, sizes, mappedOffsets,
+            mappedSizes))) {
+      return failure();
+    }
+    return getTiledImplementation(op, b, mappedOffsets, mappedSizes);
+  }
+
   LogicalResult generateScalarImplementation(Operation *op, OpBuilder &builder,
                                              Location loc,
                                              ValueRange ivs) const {

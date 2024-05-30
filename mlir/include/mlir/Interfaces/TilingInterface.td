@@ -183,13 +183,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           "ArrayRef<OpFoldResult>":$sizes),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          ::llvm::SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
-          auto tilingInterfaceOp = cast<::mlir::TilingInterface>($_op.getOperation());
-          if (failed(tilingInterfaceOp.getIterationDomainTileFromOperandTile(
-                  b, operandNumber, offsets, sizes, mappedOffsets, mappedSizes))) {
-            return failure();
-          }
-          return tilingInterfaceOp.getTiledImplementation(b, mappedOffsets, mappedSizes);
+          return failure();
         }]
       >,
       InterfaceMethod<
