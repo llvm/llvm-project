@@ -619,48 +619,48 @@ static Error writeMemProfV2(ProfOStream &OS,
 
 // Write out MemProf Version3 as follows:
 // uint64_t Version
-// uint64_t RecordTableOffset = RecordTableGenerator.Emit
-// uint64_t FramePayloadOffset = Offset for the frame payload
 // uint64_t FrameTableOffset = FrameTableGenerator.Emit
 // uint64_t CallStackPayloadOffset = Offset for the call stack payload
 // uint64_t CallStackTableOffset = CallStackTableGenerator.Emit
+// uint64_t RecordPayloadOffset = Offset for the record payload
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
 // uint64_t Num schema entries
 // uint64_t Schema entry 0
 // uint64_t Schema entry 1
 // ....
 // uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfRecordData
 // OnDiskChainedHashTable MemProfFrameData
 // OnDiskChainedHashTable MemProfCallStackData
+// OnDiskChainedHashTable MemProfRecordData
 static Error writeMemProfV3(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData,
                             bool MemProfFullSchema) {
   OS.write(memprof::Version3);
   uint64_t HeaderUpdatePos = OS.tell();
-  OS.write(0ULL); // Reserve space for the memprof record table offset.
-  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
   OS.write(0ULL); // Reserve space for the memprof frame table offset.
   OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
   OS.write(0ULL); // Reserve space for the memprof call stack table offset.
+  OS.write(0ULL); // Reserve space for the memprof record payload offset.
+  OS.write(0ULL); // Reserve space for the memprof record table offset.
 
   auto Schema = memprof::getHotColdSchema();
   if (MemProfFullSchema)
     Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
-  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
-                                                   &Schema, memprof::Version3);
-
-  uint64_t FramePayloadOffset = OS.tell();
   uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
 
   uint64_t CallStackPayloadOffset = OS.tell();
   uint64_t CallStackTableOffset =
       writeMemProfCallStacks(OS, MemProfData.CallStackData);
 
+  uint64_t RecordPayloadOffset = OS.tell();
+  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
+                                                   &Schema, memprof::Version3);
+
   uint64_t Header[] = {
-      RecordTableOffset,      FramePayloadOffset,   FrameTableOffset,
-      CallStackPayloadOffset, CallStackTableOffset,
+      FrameTableOffset,    CallStackPayloadOffset, CallStackTableOffset,
+      RecordPayloadOffset, RecordTableOffset,
   };
   OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
 
