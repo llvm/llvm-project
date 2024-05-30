@@ -49,7 +49,6 @@ add_entrypoint_object(
   HDRS
     quick_exit.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.__support.OSUtil.osutil
 )
 

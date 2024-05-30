@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QUICK_EXIT_H
 #define LLVM_LIBC_SRC_STDLIB_QUICK_EXIT_H
 
-#include <stdlib.h>
 
 namespace LIBC_NAMESPACE {
 
