@@ -4978,6 +4978,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_clangir_disable_passes))
     CmdArgs.push_back("-clangir-disable-passes");
 
+  if (Args.hasArg(options::OPT_fclangir_call_conv_lowering))
+    CmdArgs.push_back("-fclangir-call-conv-lowering");
+
   // ClangIR lib opt requires idiom recognizer.
   if (Args.hasArg(options::OPT_fclangir_lib_opt,
                   options::OPT_fclangir_lib_opt_EQ)) {
