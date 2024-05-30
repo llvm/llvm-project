@@ -340,7 +340,7 @@ TEST_F(ZeroArguments, ECLValidCommandStatusSetSync) {
 }
 
 TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
-  OwningPtr<Descriptor> command{CharDescriptor("cat general-error")};
+  OwningPtr<Descriptor> command{CharDescriptor("cat GeneralErrorCommand")};
   bool wait{true};
   OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};

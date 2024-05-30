@@ -69,18 +69,6 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
   int exitStatusVal{status};
 #else
   int exitStatusVal{WEXITSTATUS(status)};
-#endif
-  if (exitStatusVal != 0) {
-    if (!cmdstat) {
-      terminator.Crash(
-          "Invalid command quit with exit status code: %d", exitStatusVal);
-    } else {
-      StoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
-    }
-  }
-
-#ifndef _WIN32
   if (exitStatusVal == 1) {
     if (!cmdstat) {
       terminator.Crash("General Error with exit status code: 1");
@@ -107,8 +95,17 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       CheckAndCopyCharsToDescriptor(cmdmsg,
           "Command not found: command was not found in the system's PATH");
     }
-  }
+  } else
 #endif
+  if (exitStatusVal != 0) {
+    if (!cmdstat) {
+      terminator.Crash(
+          "Invalid command quit with exit status code: %d", exitStatusVal);
+    } else {
+      StoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
+    }
+  }
 
   if (status == -1) {
     if (!cmdstat) {
