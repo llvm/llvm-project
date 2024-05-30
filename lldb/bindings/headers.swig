@@ -8,8 +8,6 @@
 %{
 #include "lldb/lldb-public.h"
 #include "lldb/API/SBAddress.h"
-#include "lldb/API/SBAddressRange.h"
-#include "lldb/API/SBAddressRangeList.h"
 #include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBBlock.h"
 #include "lldb/API/SBBreakpoint.h"
