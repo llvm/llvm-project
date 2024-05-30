@@ -3050,8 +3050,7 @@ SelectionDAG::getValidShiftAmountRange(SDValue V, const APInt &DemandedElts,
 
   // Use computeKnownBits to find a hidden constant/knownbits (usually type
   // legalized). e.g. Hidden behind multiple bitcasts/build_vector/casts etc.
-  KnownBits KnownAmt =
-      computeKnownBits(V.getOperand(1), DemandedElts, Depth + 1);
+  KnownBits KnownAmt = computeKnownBits(V.getOperand(1), DemandedElts, Depth);
   if (KnownAmt.getMaxValue().ult(BitWidth))
     return ConstantRange::fromKnownBits(KnownAmt, /*IsSigned=*/false);
 
@@ -3585,7 +3584,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
     // Minimum shift low bits are known zero.
     if (std::optional<uint64_t> ShMinAmt =
-            getValidMinimumShiftAmount(Op, DemandedElts, Depth))
+            getValidMinimumShiftAmount(Op, DemandedElts, Depth + 1))
       Known.Zero.setLowBits(*ShMinAmt);
     break;
   }
@@ -3597,7 +3596,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
     // Minimum shift high bits are known zero.
     if (std::optional<uint64_t> ShMinAmt =
-            getValidMinimumShiftAmount(Op, DemandedElts, Depth))
+            getValidMinimumShiftAmount(Op, DemandedElts, Depth + 1))
       Known.Zero.setHighBits(*ShMinAmt);
     break;
   case ISD::SRA:
@@ -4603,12 +4602,12 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // SRA X, C -> adds C sign bits.
     if (std::optional<uint64_t> ShAmt =
-            getValidMinimumShiftAmount(Op, DemandedElts, Depth))
+            getValidMinimumShiftAmount(Op, DemandedElts, Depth + 1))
       Tmp = std::min<uint64_t>(Tmp + *ShAmt, VTBits);
     return Tmp;
   case ISD::SHL:
     if (std::optional<uint64_t> ShAmt =
-            getValidMaximumShiftAmount(Op, DemandedElts, Depth)) {
+            getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1)) {
       // shl destroys sign bits, ensure it doesn't shift out all sign bits.
       Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
       if (*ShAmt < Tmp)
@@ -5285,7 +5284,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::SRL:
   case ISD::SRA:
     // If the max shift amount isn't in range, then the shift can create poison.
-    return !getValidMaximumShiftAmount(Op, DemandedElts, Depth);
+    return !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
 
   case ISD::SCALAR_TO_VECTOR:
     // Check if we demand any upper (undef) elements.

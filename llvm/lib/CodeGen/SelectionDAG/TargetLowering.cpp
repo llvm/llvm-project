@@ -797,7 +797,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     // If we are only demanding sign bits then we can use the shift source
     // directly.
     if (std::optional<uint64_t> MaxSA =
-            DAG.getValidMaximumShiftAmount(Op, DemandedElts, Depth)) {
+            DAG.getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1)) {
       SDValue Op0 = Op.getOperand(0);
       unsigned ShAmt = *MaxSA;
       unsigned NumSignBits =
@@ -1737,7 +1737,7 @@ bool TargetLowering::SimplifyDemandedBits(
     EVT ShiftVT = Op1.getValueType();
 
     if (std::optional<uint64_t> KnownSA =
-            TLO.DAG.getValidShiftAmount(Op, DemandedElts, Depth)) {
+            TLO.DAG.getValidShiftAmount(Op, DemandedElts, Depth + 1)) {
       unsigned ShAmt = *KnownSA;
       if (ShAmt == 0)
         return TLO.CombineTo(Op, Op0);
@@ -1749,7 +1749,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if (Op0.getOpcode() == ISD::SRL) {
         if (!DemandedBits.intersects(APInt::getLowBitsSet(BitWidth, ShAmt))) {
           if (std::optional<uint64_t> InnerSA =
-                  TLO.DAG.getValidShiftAmount(Op0, DemandedElts, Depth + 1)) {
+                  TLO.DAG.getValidShiftAmount(Op0, DemandedElts, Depth + 2)) {
             unsigned C1 = *InnerSA;
             unsigned Opc = ISD::SHL;
             int Diff = ShAmt - C1;
@@ -1789,7 +1789,7 @@ bool TargetLowering::SimplifyDemandedBits(
         if (InnerOp.getOpcode() == ISD::SRL && Op0.hasOneUse() &&
             InnerOp.hasOneUse()) {
           if (std::optional<uint64_t> SA2 = TLO.DAG.getValidShiftAmount(
-                  InnerOp, DemandedElts, Depth + 1)) {
+                  InnerOp, DemandedElts, Depth + 2)) {
             unsigned InnerShAmt = *SA2;
             if (InnerShAmt < ShAmt && InnerShAmt < InnerBits &&
                 DemandedBits.getActiveBits() <=
@@ -1918,7 +1918,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // If we are only demanding sign bits then we can use the shift source
     // directly.
     if (std::optional<uint64_t> MaxSA =
-            TLO.DAG.getValidMaximumShiftAmount(Op, DemandedElts, Depth)) {
+            TLO.DAG.getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1)) {
       unsigned ShAmt = *MaxSA;
       unsigned NumSignBits =
           TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
@@ -1934,7 +1934,7 @@ bool TargetLowering::SimplifyDemandedBits(
     EVT ShiftVT = Op1.getValueType();
 
     if (std::optional<uint64_t> KnownSA =
-            TLO.DAG.getValidShiftAmount(Op, DemandedElts, Depth)) {
+            TLO.DAG.getValidShiftAmount(Op, DemandedElts, Depth + 1)) {
       unsigned ShAmt = *KnownSA;
       if (ShAmt == 0)
         return TLO.CombineTo(Op, Op0);
@@ -1946,7 +1946,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if (Op0.getOpcode() == ISD::SHL) {
         if (!DemandedBits.intersects(APInt::getHighBitsSet(BitWidth, ShAmt))) {
           if (std::optional<uint64_t> InnerSA =
-                  TLO.DAG.getValidShiftAmount(Op0, DemandedElts, Depth + 1)) {
+                  TLO.DAG.getValidShiftAmount(Op0, DemandedElts, Depth + 2)) {
             unsigned C1 = *InnerSA;
             unsigned Opc = ISD::SRL;
             int Diff = ShAmt - C1;
@@ -2041,7 +2041,7 @@ bool TargetLowering::SimplifyDemandedBits(
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SRL, dl, VT, Op0, Op1));
 
     if (std::optional<uint64_t> KnownSA =
-            TLO.DAG.getValidShiftAmount(Op, DemandedElts, Depth)) {
+            TLO.DAG.getValidShiftAmount(Op, DemandedElts, Depth + 1)) {
       unsigned ShAmt = *KnownSA;
       if (ShAmt == 0)
         return TLO.CombineTo(Op, Op0);
@@ -2050,7 +2050,7 @@ bool TargetLowering::SimplifyDemandedBits(
       // supports sext_inreg.
       if (Op0.getOpcode() == ISD::SHL) {
         if (std::optional<uint64_t> InnerSA =
-                TLO.DAG.getValidShiftAmount(Op0, DemandedElts, Depth + 1)) {
+                TLO.DAG.getValidShiftAmount(Op0, DemandedElts, Depth + 2)) {
           unsigned LowBits = BitWidth - ShAmt;
           EVT ExtVT = EVT::getIntegerVT(*TLO.DAG.getContext(), LowBits);
           if (VT.isVector())
@@ -2596,7 +2596,7 @@ bool TargetLowering::SimplifyDemandedBits(
 
       if (Src.getNode()->hasOneUse()) {
         std::optional<uint64_t> ShAmtC =
-            TLO.DAG.getValidShiftAmount(Src, DemandedElts, Depth + 1);
+            TLO.DAG.getValidShiftAmount(Src, DemandedElts, Depth + 2);
         if (!ShAmtC || *ShAmtC >= BitWidth)
           break;
         uint64_t ShVal = *ShAmtC;
