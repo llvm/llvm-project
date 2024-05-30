@@ -5428,10 +5428,12 @@ X86:
 - ``Z``: An immediate 32-bit unsigned integer.
 - ``q``: An 8, 16, 32, or 64-bit register which can be accessed as an 8-bit
   ``l`` integer register. On X86-32, this is the ``a``, ``b``, ``c``, and ``d``
-  registers, and on X86-64, it is all of the integer registers.
+  registers, and on X86-64, it is all of the integer registers. When feature
+  `egpr` and `inline-asm-use-gpr32` are both on, it will be extended to gpr32.
 - ``Q``: An 8, 16, 32, or 64-bit register which can be accessed as an 8-bit
   ``h`` integer register. This is the ``a``, ``b``, ``c``, and ``d`` registers.
-- ``r`` or ``l``: An 8, 16, 32, or 64-bit integer register.
+- ``r`` or ``l``: An 8, 16, 32, or 64-bit integer register. When feature
+  `egpr` and `inline-asm-use-gpr32` are both on, it will be extended to gpr32.
 - ``R``: An 8, 16, 32, or 64-bit "legacy" integer register -- one which has
   existed since i386, and can be accessed without the REX prefix.
 - ``f``: A 32, 64, or 80-bit '387 FPU stack pseudo-register.
@@ -5452,6 +5454,10 @@ X86:
   operand will get allocated only to RAX -- if two 32-bit operands are needed,
   you're better off splitting it yourself, before passing it to the asm
   statement.
+- ``jr``: An 8, 16, 32, or 64-bit integer gpr16. It won't be extended to gpr32
+  when feature `egpr` or `inline-asm-use-gpr32` is on.
+- ``jR``: An 8, 16, 32, or 64-bit integer gpr32 when feature `egpr`` is on.
+  Otherwise, same as ``r``.
 
 XCore:
 
