@@ -242,7 +242,8 @@ private:
     return __data;
   }
 
-  _LIBCPP_HIDE_FROM_ABI static __cached_data __create_iter_cached_result(file_type __ft, uintmax_t __size, perms __perm, file_time_type __write_time) {
+  _LIBCPP_HIDE_FROM_ABI static __cached_data
+  __create_iter_cached_result(file_type __ft, uintmax_t __size, perms __perm, file_time_type __write_time) {
     __cached_data __data;
     __data.__type_       = __ft;
     __data.__size_       = __size;
@@ -428,10 +429,10 @@ private:
     case _Empty:
     case _IterNonSymlink:
     case _IterSymlink:
+    case _IterCachedSymlink:
     case _RefreshSymlinkUnresolved:
       return filesystem::__last_write_time(__p_, __ec);
     case _IterCachedNonSymlink:
-    case _IterCachedSymlink:
     case _RefreshSymlink:
     case _RefreshNonSymlink: {
       error_code __m_ec;
