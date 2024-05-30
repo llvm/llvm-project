@@ -21,6 +21,7 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -3757,7 +3758,7 @@ OMPClause *Parser::ParseOpenMPOMPXAttributesClause(bool ParseOnly) {
     case ParsedAttr::AT_AMDGPUFlatWorkGroupSize:
       if (!PA.checkExactlyNumArgs(Actions, 2))
         continue;
-      if (auto *A = Actions.CreateAMDGPUFlatWorkGroupSizeAttr(
+      if (auto *A = Actions.AMDGPU().CreateAMDGPUFlatWorkGroupSizeAttr(
               PA, PA.getArgAsExpr(0), PA.getArgAsExpr(1)))
         Attrs.push_back(A);
       continue;
@@ -3765,7 +3766,7 @@ OMPClause *Parser::ParseOpenMPOMPXAttributesClause(bool ParseOnly) {
       if (!PA.checkAtLeastNumArgs(Actions, 1) ||
           !PA.checkAtMostNumArgs(Actions, 2))
         continue;
-      if (auto *A = Actions.CreateAMDGPUWavesPerEUAttr(
+      if (auto *A = Actions.AMDGPU().CreateAMDGPUWavesPerEUAttr(
               PA, PA.getArgAsExpr(0),
               PA.getNumArgs() > 1 ? PA.getArgAsExpr(1) : nullptr))
         Attrs.push_back(A);
