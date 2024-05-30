@@ -42,8 +42,6 @@ set_target_properties(lldb-sbapi-dwarf-enums PROPERTIES FOLDER "LLDB/Tablegennin
 
 add_lldb_library(liblldb SHARED ${option_framework}
   SBAddress.cpp
-  SBAddressRange.cpp
-  SBAddressRangeList.cpp
   SBAttachInfo.cpp
   SBBlock.cpp
   SBBreakpoint.cpp
