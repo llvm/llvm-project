@@ -72,66 +72,59 @@ static_assert(bf_three_way_comparable<CDependent<long long>>);
 #endif
 
 #if __cplusplus >= 201103L
-template<int W>
-struct D {
-  __int128 i : W;
-};
-
-template<int W>
-std::int64_t f(D<W> d) {
-    return std::int64_t{ d.i }; // #cwg2627-f
-}
-
-template std::int64_t f(D<63>);
-template std::int64_t f(D<64>);
-template std::int64_t f(D<65>);
-// since-cxx11-error-re@#cwg2627-f {{non-constant-expression cannot be narrowed from type '__int128' to 'std::int64_t' (aka '{{.+}}') in initializer list}}
-//   since-cxx11-note@-2 {{in instantiation of function template specialization 'cwg2627::f<65>' requested here}}
-//   since-cxx11-note@#cwg2627-f {{insert an explicit cast to silence this issue}}
-
-template<typename Target, typename Source>
-Target g(Source x) {
-    return Target{ x.i }; // #cwg2627-g
-}
-
 template<typename T, int N>
-struct E {
+struct D {
   T i : N;
 };
 
-template std::int16_t g(E<int, 16>);
-template std::int16_t g(E<unsigned, 15>);
-template std::int16_t g(E<unsigned, 16>);
-// since-cxx11-error-re@#cwg2627-g {{non-constant-expression cannot be narrowed from type 'unsigned int' to '{{.+}}' in initializer list}}
-//   since-cxx11-note-re@-2 {{in instantiation of function template specialization 'cwg2627::g<{{.+}}, cwg2627::E<unsigned int, 16>>' requested here}}
-//   since-cxx11-note@#cwg2627-g {{insert an explicit cast to silence this issue}}
-template std::uint16_t g(E<unsigned, 16>);
-template std::uint16_t g(E<int, 1>);
-// since-cxx11-error-re@#cwg2627-g {{non-constant-expression cannot be narrowed from type 'int' to '{{.+}}' in initializer list}}
-//   since-cxx11-note-re@-2 {{in instantiation of function template specialization 'cwg2627::g<{{.+}}, cwg2627::E<int, 1>>' requested here}}
-//   since-cxx11-note@#cwg2627-g {{insert an explicit cast to silence this issue}}
+template<typename T, int N>
+D<T, N> d();
 
-template bool g(E<unsigned, 1>);
-template bool g(E<int, 1>);
-// since-cxx11-error@#cwg2627-g {{non-constant-expression cannot be narrowed from type 'int' to 'bool' in initializer list}}
-//   since-cxx11-note@-2 {{in instantiation of function template specialization 'cwg2627::g<bool, cwg2627::E<int, 1>>' requested here}}
-//   since-cxx11-note@#cwg2627-g {{insert an explicit cast to silence this issue}}
+#ifdef __SIZEOF_INT128__
+std::int64_t d1{ d<__int128, 63>().i };
+std::int64_t d2{ d<__int128, 64>().i };
+std::int64_t d3{ d<__int128, 65>().i };
+// since-cxx11-error-re@-1 {{non-constant-expression cannot be narrowed from type '__int128' to 'std::int64_t' (aka '{{.+}}') in initializer list}}
+//   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
+#endif
+
+#if __BITINT_MAXWIDTH__ >= 34
+__extension__ _BitInt(33) d4{ d<_BitInt(34), 33>().i };
+__extension__ _BitInt(33) d5{ d<_BitInt(34), 34>().i };
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type '_BitInt(34)' to '_BitInt(33)' in initializer list}}
+//   FIXME-since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
+#endif
+
+std::int16_t d6{ d<int, 16>().i };
+std::int16_t d7{ d<unsigned, 15>().i };
+std::int16_t d8{ d<unsigned, 16>().i };
+// since-cxx11-error-re@-1 {{non-constant-expression cannot be narrowed from type 'unsigned int' to 'std::int16_t' (aka '{{.+}}') in initializer list}}
+//   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
+std::uint16_t d9{ d<unsigned, 16>().i };
+std::uint16_t da{ d<int, 1>().i };
+// since-cxx11-error-re@-1 {{non-constant-expression cannot be narrowed from type 'int' to 'std::uint16_t' (aka '{{.+}}') in initializer list}}
+//   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
+
+bool db{ d<unsigned, 1>().i };
+bool dc{ d<int, 1>().i };
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'int' to 'bool' in initializer list}}
+//   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
 
 template<typename Target, typename Source>
 constexpr decltype(Target{ std::declval<Source>().i }, false) is_narrowing(int) { return false; }
 template<typename Target, typename Source>
 constexpr bool is_narrowing(long) { return true; }
 
-static_assert(!is_narrowing<std::int16_t, E<int, 16>>(0), "");
-static_assert(!is_narrowing<std::int16_t, E<unsigned, 15>>(0), "");
-static_assert(is_narrowing<std::int16_t, E<unsigned, 16>>(0), "");
-static_assert(!is_narrowing<std::uint16_t, E<unsigned, 16>>(0), "");
-static_assert(is_narrowing<std::uint16_t, E<int, 1>>(0), "");
-static_assert(!is_narrowing<bool, E<unsigned, 1>>(0), "");
-static_assert(is_narrowing<bool, E<int, 1>>(0), "");
+static_assert(!is_narrowing<std::int16_t, D<int, 16>>(0), "");
+static_assert(!is_narrowing<std::int16_t, D<unsigned, 15>>(0), "");
+static_assert(is_narrowing<std::int16_t, D<unsigned, 16>>(0), "");
+static_assert(!is_narrowing<std::uint16_t, D<unsigned, 16>>(0), "");
+static_assert(is_narrowing<std::uint16_t, D<int, 1>>(0), "");
+static_assert(!is_narrowing<bool, D<unsigned, 1>>(0), "");
+static_assert(is_narrowing<bool, D<int, 1>>(0), "");
 
 template<int N>
-struct F {
+struct E {
   signed int x : N;
   decltype(std::int16_t{ x }) dependent_narrowing;
   decltype(unsigned{ x }) always_narrowing;
@@ -139,7 +132,7 @@ struct F {
 //   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
 };
 #endif
-}
+} // namespace cwg2627
 
 namespace cwg2628 { // cwg2628: no
                    // this was reverted for the 16.x release
