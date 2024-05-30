@@ -1970,6 +1970,12 @@ private:
   /// requires-clause, or null if no such clause was specified.
   Expr *TrailingRequiresClause;
 
+  /// \brief All pre contracts specified by the function declaration
+  SmallVector<Expr*> PreContracts;
+
+  /// \brief All post contracts specified by the function declaration
+  SmallVector<Expr*> PostContracts;
+
   /// If this declarator declares a template, its template parameter lists.
   ArrayRef<TemplateParameterList *> TemplateParameterLists;
 
@@ -2628,7 +2634,7 @@ public:
 
     SetRangeEnd(TRC->getEndLoc());
   }
-
+  
   /// \brief Sets a trailing requires clause for this declarator.
   Expr *getTrailingRequiresClause() {
     return TrailingRequiresClause;
@@ -2638,6 +2644,26 @@ public:
   /// declarator.
   bool hasTrailingRequiresClause() const {
     return TrailingRequiresClause != nullptr;
+  }
+
+  /// \brief Add a pre contract for this declarator
+  void addPreContract(Expr *TRC) {
+    PreContracts.push_back(TRC);
+  }
+
+  /// \brief Get all pre contracts for this declarator
+  const SmallVector<Expr*>& getPreContracts() {
+    return PreContracts;
+  }
+
+  /// \brief Add a post contract for this declarator
+  void addPostContract(Expr *TRC) {
+    PostContracts.push_back(TRC);
+  }
+
+  /// \brief Get all post contracts for this declarator
+  const SmallVector<Expr*>& getPostContracts() {
+    return PostContracts;
   }
 
   /// Sets the template parameter lists that preceded the declarator.

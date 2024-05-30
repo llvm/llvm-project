@@ -2288,6 +2288,14 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   if (Tok.is(tok::kw_requires))
     ParseTrailingRequiresClause(D);
 
+  while (Tok.is(tok::kw_pre) || Tok.is(tok::kw_post)) {
+    if (Tok.is(tok::kw_pre)) {
+      ParsePreContract(D);
+    } else {
+      ParsePostContract(D);
+    }
+  }
+
   // Save late-parsed attributes for now; they need to be parsed in the
   // appropriate function scope after the function Decl has been constructed.
   // These will be parsed in ParseFunctionDefinition or ParseLexedAttrList.
@@ -2537,6 +2545,14 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       //    init-declarator:
       //	      declarator initializer[opt]
       //        declarator requires-clause
+      while (Tok.is(tok::kw_pre) || Tok.is(tok::kw_post)) {
+        if (Tok.is(tok::kw_pre)) {
+          ParsePreContract(D);
+        } else {
+          ParsePostContract(D);
+        }
+      }
+      
       if (Tok.is(tok::kw_requires))
         ParseTrailingRequiresClause(D);
       Decl *ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);

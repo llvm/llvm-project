@@ -2005,6 +2005,11 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         ConsumeBracket();
         if (!SkipUntil(tok::r_square, StopAtSemi))
           break;
+      } else if ((Tok.is(tok::kw_pre) || Tok.is(tok::kw_post)) && NextToken().is(tok::l_paren)) {
+        ConsumeToken();
+        ConsumeParen();
+        if (!SkipUntil(tok::r_paren, StopAtSemi))
+          break;
       } else if (Tok.is(tok::kw_alignas) && NextToken().is(tok::l_paren)) {
         ConsumeToken();
         ConsumeParen();
@@ -2661,6 +2666,14 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     if (!VS.isUnset())
       MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(DeclaratorInfo,
                                                               VS);
+  }
+
+  while (Tok.is(tok::kw_pre) || Tok.is(tok::kw_post)) {
+    if (Tok.is(tok::kw_pre)) {
+      ParsePreContract(DeclaratorInfo);
+    } else {
+      ParsePostContract(DeclaratorInfo);
+    }
   }
 
   // If a simple-asm-expr is present, parse it.
@@ -4246,6 +4259,113 @@ ExceptionSpecificationType Parser::ParseDynamicExceptionSpecification(
   diagnoseDynamicExceptionSpecification(*this, SpecificationRange,
                                         Exceptions.empty());
   return Exceptions.empty() ? EST_DynamicNone : EST_Dynamic;
+}
+
+void Parser::ParsePostContract(Declarator &DeclaratorInfo) {
+  ConsumeToken();
+
+  ParseScope ParamScope(this, Scope::DeclScope | 
+                                  Scope::FunctionDeclarationScope |
+                                  Scope::FunctionPrototypeScope);
+
+  DeclaratorChunk::FunctionTypeInfo FTI = DeclaratorInfo.getFunctionTypeInfo();
+  for (unsigned i = 0; i != FTI.NumParams; ++i) {
+    ParmVarDecl *Param = cast<ParmVarDecl>(FTI.Params[i].Param);
+    Actions.ActOnReenterCXXMethodParameter(getCurScope(), Param);
+  }
+
+  if (Tok.isNot(tok::l_paren)) {
+    Diag(Tok.getLocation(), diag::err_expected) << tok::l_paren;
+    return;
+  }
+  ConsumeParen();
+
+  // Post contracts start with <identifier> colon <expression>
+  // As we have to support the "auto f() post (r : r > 42) {...}" case, we cannot parse here
+  // the return type is not guaranteed to be known until after the function body parses
+
+/*
+    if (Tok.isNot(tok::identifier)) {
+      Diag(Tok.getLocation(), diag::err_expected) << tok::identifier;
+      return;
+    }
+
+    ParsingDeclSpec DS(*this);
+
+    ParsedTemplateInfo TemplateInfo;
+    DeclSpecContext DSContext = getDeclSpecContextFromDeclaratorContext(DeclaratorContext::Block);
+    ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none, DSContext);
+    
+    ParsedAttributes LocalAttrs(AttrFactory);
+    ParsingDeclarator D(*this, DS, LocalAttrs, DeclaratorContext::Block);
+
+    D.setObjectType(getAsFunction().getReturnType());
+    IdentifierInfo *Id = Tok.getIdentifierInfo();
+    SourceLocation IdLoc = ConsumeToken();
+    D.setIdentifier(Id, IdLoc);
+
+    Decl* ThisDecl = Actions.ActOnDeclarator(getCurScope(), D);
+    Actions.ActOnUninitializedDecl(ThisDecl);
+    Actions.FinalizeDeclaration(ThisDecl);
+    D.complete(ThisDecl);
+    if (Tok.isNot(tok::colon)) {
+      Diag(Tok.getLocation(), diag::err_expected) << tok::colon;
+      return;
+    }
+
+    ExprResult Expr = ParseExpression();
+    if (Expr.isInvalid()) {
+      Diag(Tok.getLocation(), diag::err_invalid_pcs);
+      return;
+    }
+    DeclaratorInfo.addPostContract(Expr.get());
+*/
+  ExprResult Expr = ParseExpression();
+  if (Expr.isInvalid()) {
+    Diag(Tok.getLocation(), diag::err_invalid_pcs);
+    return;
+  }
+  DeclaratorInfo.addPostContract(Expr.get());
+
+  if (Tok.isNot(tok::r_paren)) {
+    Diag(Tok.getLocation(), diag::err_expected) << tok::r_paren;
+    return;
+  }
+  ConsumeParen();
+}
+
+void Parser::ParsePreContract(Declarator &DeclaratorInfo) {
+  ConsumeToken();
+
+  ParseScope ParamScope(this, Scope::DeclScope | 
+                                  Scope::FunctionDeclarationScope |
+                                  Scope::FunctionPrototypeScope);
+
+  DeclaratorChunk::FunctionTypeInfo FTI = DeclaratorInfo.getFunctionTypeInfo();
+  for (unsigned i = 0; i != FTI.NumParams; ++i) {
+    ParmVarDecl *Param = cast<ParmVarDecl>(FTI.Params[i].Param);
+    Actions.ActOnReenterCXXMethodParameter(getCurScope(), Param);
+  }
+
+  if (Tok.isNot(tok::l_paren)) {
+    Diag(Tok.getLocation(), diag::err_expected) << tok::l_paren;
+    return;
+  }
+  ConsumeParen();
+
+  // Pre contracts are just an expression
+  ExprResult Expr = ParseExpression();
+  if (Expr.isInvalid()) {
+    Diag(Tok.getLocation(), diag::err_invalid_pcs);
+    return;
+  }
+  DeclaratorInfo.addPreContract(Expr.get());
+
+  if (Tok.isNot(tok::r_paren)) {
+    Diag(Tok.getLocation(), diag::err_expected) << tok::r_paren;
+    return;
+  }
+  ConsumeParen();
 }
 
 /// ParseTrailingReturnType - Parse a trailing return type on a new-style

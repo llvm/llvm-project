@@ -2104,6 +2104,11 @@ private:
   void ParseTrailingRequiresClause(Declarator &D);
 
   //===--------------------------------------------------------------------===//
+  // C++ Contracts
+  void ParsePreContract(Declarator &DeclaratorInfo);
+  void ParsePostContract(Declarator &DeclaratorInfo);
+
+  //===--------------------------------------------------------------------===//
   // C99 6.7.8: Initialization.
 
   /// ParseInitializer

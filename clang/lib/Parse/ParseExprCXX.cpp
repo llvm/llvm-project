@@ -1487,7 +1487,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                   tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
                   tok::kw___private, tok::kw___global, tok::kw___local,
                   tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
-                  tok::kw_requires, tok::kw_noexcept) ||
+                  tok::kw_requires, tok::kw_pre, tok::kw_post, tok::kw_noexcept) ||
       Tok.isRegularKeywordAttribute() ||
       (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
 
@@ -1585,6 +1585,14 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
     if (HasParentheses && Tok.is(tok::kw_requires))
       ParseTrailingRequiresClause(D);
+
+    while (Tok.is(tok::kw_pre) || Tok.is(tok::kw_post)) {
+      if (Tok.is(tok::kw_pre)) {
+        ParsePreContract(D);
+      } else {
+        ParsePostContract(D);
+      }
+    }
   }
 
   // Emit a warning if we see a CUDA host/device/global attribute
