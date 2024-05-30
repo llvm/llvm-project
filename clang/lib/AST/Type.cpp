@@ -3885,7 +3885,7 @@ TypeOfExprType::TypeOfExprType(const ASTContext &Context, Expr *E,
            // We have to protect against 'Can' being invalid through its
            // default argument.
            Kind == TypeOfKind::Unqualified && !Can.isNull()
-               ? Context.getAtomicUnqualifiedArrayType(Can)
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
                : Can,
            toTypeDependence(E->getDependence()) |
                (E->getType()->getDependence() &
@@ -3902,7 +3902,7 @@ QualType TypeOfExprType::desugar() const {
   if (isSugared()) {
     QualType QT = getUnderlyingExpr()->getType();
     return getKind() == TypeOfKind::Unqualified
-               ? Context.getAtomicUnqualifiedArrayType(QT)
+               ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
                : QT;
   }
   return QualType(this, 0);
@@ -3919,7 +3919,7 @@ TypeOfType::TypeOfType(const ASTContext &Context, QualType T, QualType Can,
                        TypeOfKind Kind)
     : Type(TypeOf,
            Kind == TypeOfKind::Unqualified
-               ? Context.getAtomicUnqualifiedArrayType(Can)
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
                : Can,
            T->getDependence()),
       TOType(T), Context(Context) {
@@ -3929,7 +3929,7 @@ TypeOfType::TypeOfType(const ASTContext &Context, QualType T, QualType Can,
 QualType TypeOfType::desugar() const {
   QualType QT = getUnmodifiedType();
   return getKind() == TypeOfKind::Unqualified
-             ? Context.getAtomicUnqualifiedArrayType(QT)
+             ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
              : QT;
 }
 

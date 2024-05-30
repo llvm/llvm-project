@@ -2626,14 +2626,6 @@ public:
     return getUnqualifiedArrayType(T, Quals);
   }
 
-  QualType getAtomicUnqualifiedArrayType(QualType T, Qualifiers &Quals,
-                                         bool &WasAtomic) const;
-  QualType getAtomicUnqualifiedArrayType(QualType T) const {
-    Qualifiers Quals;
-    bool WasAtomic;
-    return getAtomicUnqualifiedArrayType(T, Quals, WasAtomic);
-  }
-
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.
   bool hasSameUnqualifiedType(QualType T1, QualType T2) const {

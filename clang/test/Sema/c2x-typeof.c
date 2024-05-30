@@ -121,9 +121,16 @@ extern typeof_unqual(arpii) apii;
 extern int _Atomic aAi[2];
 extern int _Atomic aAii[2][2];
 extern typeof(aAi) aAi;
-extern typeof_unqual(aAi) ai;
+extern typeof_unqual(aAi) aAi;
 extern typeof(aAii) aAii;
-extern typeof_unqual(aAii) aii;
+extern typeof_unqual(aAii) aAii;
+
+extern _Atomic(int) aAi[2];
+extern _Atomic(int) aAii[2][2];
+extern typeof(aAi) aAi;
+extern typeof_unqual(aAi) aAi;
+extern typeof(aAii) aAii;
+extern typeof_unqual(aAii) aAii;
 
 const char* const animals[] = { "aardvark", "bluejay", "catte" };
 void GH92667(void) {
