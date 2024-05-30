@@ -11547,12 +11547,12 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
       TemplateName SpecifiedName = RetTST.getTypePtr()->getTemplateName();
       bool TemplateMatches =
           Context.hasSameTemplateName(SpecifiedName, GuidedTemplate);
-      auto TKind = SpecifiedName.getKind();
-      // A Using TemplateName can't actually be valid (either it's qualified, or
-      // we're in the wrong scope). But we have diagnosed these problems
-      // already.
-      bool SimplyWritten = TKind == TemplateName::Template ||
-                           TKind == TemplateName::UsingTemplate;
+
+      const QualifiedTemplateName *Qualifiers =
+          SpecifiedName.getAsQualifiedTemplateName();
+      assert(Qualifiers && "expected QualifiedTemplate");
+      bool SimplyWritten = !Qualifiers->hasTemplateKeyword() &&
+                           Qualifiers->getQualifier() == nullptr;
       if (SimplyWritten && TemplateMatches)
         AcceptableReturnType = true;
       else {

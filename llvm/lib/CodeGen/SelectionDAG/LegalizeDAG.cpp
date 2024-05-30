@@ -4159,7 +4159,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
              "expanded.");
       EVT CCVT = getSetCCResultType(CmpVT);
       SDValue Cond = DAG.getNode(ISD::SETCC, dl, CCVT, Tmp1, Tmp2, CC, Node->getFlags());
-      Results.push_back(DAG.getSelect(dl, VT, Cond, Tmp3, Tmp4));
+      Results.push_back(
+          DAG.getSelect(dl, VT, Cond, Tmp3, Tmp4, Node->getFlags()));
       break;
     }
 

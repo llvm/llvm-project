@@ -443,6 +443,9 @@ if (NOT "${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}" STREQUAL "")
   include_directories("${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}")
 endif()
 
+add_custom_target(cxxabi-test-depends
+  COMMENT "Build dependencies required to run the libc++abi test suite.")
+
 # Add source code. This also contains all of the logic for deciding linker flags
 # soname, etc...
 add_subdirectory(include)
