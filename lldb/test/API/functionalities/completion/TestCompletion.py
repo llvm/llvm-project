@@ -909,8 +909,10 @@ class CommandLineCompletionTestCase(TestBase):
 
     def test_shlib_name(self):
         self.build()
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, VALID_TARGET)
+        error = lldb.SBError()
+        # Create a target, but don't load dependent modules
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"), None, None, False, error)
+        self.assertSuccess(error)
         self.registerSharedLibrariesWithTarget(target, ["shared"])
 
         basenames = []
