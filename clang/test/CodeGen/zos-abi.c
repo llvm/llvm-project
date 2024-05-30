@@ -116,7 +116,13 @@ struct complexlike_struct3 {
 struct complexlike_struct3 pass_complexlike_struct3(struct complexlike_struct3 arg) { return arg; }
 // CHECK-LABEL: define { float, float } @pass_complexlike_struct3({ float, float } %{{.*}})
 
-
+union two_float_union { float a; float b; };
+struct complexlike_struct_with_union {
+  float a;
+  union two_float_union b;
+};
+struct complexlike_struct_with_union pass_complexlike_struct_with_union(struct complexlike_struct_with_union arg) { return arg; }
+// CHECK-LABEL: define inreg i64 @pass_complexlike_struct_with_union(i64 %{{.*}})
 
 // structures with one field as complex type are not considered complex types.
 
@@ -232,3 +238,10 @@ struct agg_nofloat2 pass_agg_nofloat2(struct agg_nofloat2 arg) { return arg; }
 struct agg_nofloat3 { float a; int : 0; };
 struct agg_nofloat3 pass_agg_nofloat3(struct agg_nofloat3 arg) { return arg; }
 // CHECK-LABEL: define inreg i64 @pass_agg_nofloat3(i64 %{{.*}})
+
+char * pass_pointer(char * arg) { return arg; }
+// CHECK-LABEL: define ptr @pass_pointer(ptr %{{.*}})
+
+typedef int vecint __attribute__ ((vector_size(16)));
+vecint pass_vector_type(vecint arg) { return arg; }
+// CHECK-LABEL: define <4 x i32> @pass_vector_type(<4 x i32> %{{.*}})
