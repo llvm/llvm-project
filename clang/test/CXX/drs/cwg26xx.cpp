@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++98 -triple %itanium_abi_triple %s -verify=expected
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple %s -verify=expected,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -triple %itanium_abi_triple %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %s -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -triple %itanium_abi_triple %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -triple %itanium_abi_triple %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 namespace std {
 #if __cplusplus >= 202002L
@@ -84,7 +84,7 @@ D<T, N> d();
 std::int64_t d1{ d<__int128, 63>().i };
 std::int64_t d2{ d<__int128, 64>().i };
 std::int64_t d3{ d<__int128, 65>().i };
-// since-cxx11-error-re@-1 {{non-constant-expression cannot be narrowed from type '__int128' to 'std::int64_t' (aka '{{.+}}') in initializer list}}
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type '__int128' to 'std::int64_t' (aka 'long') in initializer list}}
 //   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
 #endif
 
@@ -98,11 +98,11 @@ __extension__ _BitInt(33) d5{ d<_BitInt(34), 34>().i };
 std::int16_t d6{ d<int, 16>().i };
 std::int16_t d7{ d<unsigned, 15>().i };
 std::int16_t d8{ d<unsigned, 16>().i };
-// since-cxx11-error-re@-1 {{non-constant-expression cannot be narrowed from type 'unsigned int' to 'std::int16_t' (aka '{{.+}}') in initializer list}}
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'unsigned int' to 'std::int16_t' (aka 'short') in initializer list}}
 //   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
 std::uint16_t d9{ d<unsigned, 16>().i };
 std::uint16_t da{ d<int, 1>().i };
-// since-cxx11-error-re@-1 {{non-constant-expression cannot be narrowed from type 'int' to 'std::uint16_t' (aka '{{.+}}') in initializer list}}
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'int' to 'std::uint16_t' (aka 'unsigned short') in initializer list}}
 //   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
 
 bool db{ d<unsigned, 1>().i };
