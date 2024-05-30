@@ -813,6 +813,7 @@ Bug Fixes to C++ Support
 - Clang now allows ``@$``` in raw string literals. Fixes (#GH93130).
 - Fix an assertion failure when checking invalid ``this`` usage in the wrong context. (Fixes #GH91536).
 - Clang no longer models dependent NTTP arguments as ``TemplateParamObjectDecl`` s. Fixes (#GH84052).
+- Fix a crash when a variable is captured by a block nested inside a lambda. (Fixes #GH93625).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
