@@ -3797,9 +3797,6 @@ public:
   void EmitOMPTargetTaskBasedDirective(const OMPExecutableDirective &S,
                                        const RegionCodeGenTy &BodyGen,
                                        OMPTargetDataInfo &InputInfo);
-  void NewEmitOMPTargetTaskBasedDirective(const OMPExecutableDirective &S,
-                                          const RegionCodeGenTy &BodyGen,
-                                          OMPTargetDataInfo &InputInfo);
   void processInReduction(const OMPExecutableDirective &S,
                           OMPTaskDataTy &Data,
                           CodeGenFunction &CGF,

@@ -128,11 +128,6 @@ void Instruction::insertAfter(Instruction *InsertPos) {
 BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
                                              BasicBlock::iterator It) {
   assert(getParent() == nullptr && "Expected detached instruction");
-  if (!(It == ParentBB->end() || It->getParent() == ParentBB)) {
-    llvm::errs() << "ParentBB = " << *ParentBB << "\n";
-    llvm::errs() << "It = " << *It << "\n";
-    llvm::errs() << "It->getParent() = " << *It->getParent() << "\n";
-  }
   assert((It == ParentBB->end() || It->getParent() == ParentBB) &&
          "It not in ParentBB");
   insertBefore(*ParentBB, It);

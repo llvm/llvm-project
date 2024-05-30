@@ -23,10 +23,7 @@ subroutine foo(N, r)
 
   z = 1
   !$omp task depend(out: z) shared(z)
-  ! print*, "N is ", N
-  ! print*, "z is ", z
   z = N
-!  print*, "z is ", z
   !$omp end task
 
   !$omp target map(tofrom: z) depend(in: z)
