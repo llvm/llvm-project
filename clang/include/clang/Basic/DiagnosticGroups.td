@@ -1513,6 +1513,9 @@ def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
 
+// Warning for HLSL API availability
+def HLSLAvailability : DiagGroup<"hlsl-availability">;
+
 // Warnings and notes related to const_var_decl_type attribute checks
 def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 

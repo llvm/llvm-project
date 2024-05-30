@@ -15,8 +15,6 @@ class AddressRangeTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
 
-        self.dbg.SetAsync(True)
-
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)
         self.launch_info = self.target.GetLaunchInfo()
@@ -178,14 +176,22 @@ class AddressRangeTestCase(TestBase):
         self.assertTrue(error.Success(), "Make sure process launched successfully")
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+        script = (
+            "script "
+            + "bp = lldb.target.GetBreakpointAtIndex(0);"
+            + "loc = bp.GetLocationAtIndex(0);"
+            + "loc_addr = loc.GetAddress();"
+            + "func = loc_addr.GetFunction();"
+            + "range = func.GetRanges().GetAddressRangeAtIndex(0);"
+            + "print(range)"
+        )
 
-        loc = self.bp1.GetLocationAtIndex(0)
-        loc_addr = loc.GetAddress()
-        func = loc_addr.GetFunction()
-        range = func.GetRanges().GetAddressRangeAtIndex(0)
-        range_str = str(range)
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand(script, result, False)
+        self.assertTrue(result.Succeeded(), "script command succeeded")
         # [0x1000-0x2000] // Resolved with target or addresses without sections
-        self.assertRegex(range_str, "^\[0x[0-9a-f]+\-0x[0-9a-f]+\)$")
+        self.assertRegex(result.GetOutput(), "^\[0x[0-9a-f]+\-0x[0-9a-f]+\)$")
         process.Kill()
 
     def test_address_range_print_no_section_resolved(self):

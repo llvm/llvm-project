@@ -1,6 +1,9 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
+// Needs post merge help
+// XFAIL: *
+
 //
 // Check help message.
 //

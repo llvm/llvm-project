@@ -17,6 +17,7 @@ add_llvm_component_library(LLVMCore
   DataLayout.cpp
   DebugInfo.cpp
   DebugInfoMetadata.cpp
+  DIExpressionOptimizer.cpp
   DebugProgramInstruction.cpp
   DebugLoc.cpp
   DiagnosticHandler.cpp

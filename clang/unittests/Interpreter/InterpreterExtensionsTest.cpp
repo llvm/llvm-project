@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InterpreterTestFixture.h"
+
 #include "clang/Interpreter/Interpreter.h"
 
 #include "clang/AST/Expr.h"
@@ -20,8 +22,6 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Testing/Support/Error.h"
 
@@ -37,34 +37,33 @@
 using namespace clang;
 namespace {
 
-static bool HostSupportsJit() {
-  auto J = llvm::orc::LLJITBuilder().create();
-  if (J)
-    return true;
-  LLVMConsumeError(llvm::wrap(J.takeError()));
-  return false;
-}
+class InterpreterExtensionsTest : public InterpreterTestBase {
+protected:
+  void SetUp() override {
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+    GTEST_SKIP();
+#endif
+  }
 
-// Some tests require a arm-registered-target
-static bool IsARMTargetRegistered() {
-  llvm::Triple TT;
-  TT.setArch(llvm::Triple::arm);
-  TT.setVendor(llvm::Triple::UnknownVendor);
-  TT.setOS(llvm::Triple::UnknownOS);
-
-  std::string UnusedErr;
-  return llvm::TargetRegistry::lookupTarget(TT.str(), UnusedErr);
-}
-
-struct LLVMInitRAII {
-  LLVMInitRAII() {
+  static void SetUpTestSuite() {
     llvm::InitializeAllTargets();
     llvm::InitializeAllTargetInfos();
     llvm::InitializeAllTargetMCs();
     llvm::InitializeAllAsmPrinters();
   }
-  ~LLVMInitRAII() { llvm::llvm_shutdown(); }
-} LLVMInit;
+
+public:
+  // Some tests require a arm-registered-target
+  static bool IsARMTargetRegistered() {
+    llvm::Triple TT;
+    TT.setArch(llvm::Triple::arm);
+    TT.setVendor(llvm::Triple::UnknownVendor);
+    TT.setOS(llvm::Triple::UnknownOS);
+
+    std::string UnusedErr;
+    return llvm::TargetRegistry::lookupTarget(TT.str(), UnusedErr);
+  }
+};
 
 class RecordRuntimeIBMetrics : public Interpreter {
   struct NoopRuntimeInterfaceBuilder : public RuntimeInterfaceBuilder {
@@ -103,12 +102,8 @@ public:
   NoopRuntimeInterfaceBuilder *RuntimeIBPtr = nullptr;
 };
 
-#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
-TEST(InterpreterExtensionsTest, DISABLED_FindRuntimeInterface) {
-#else
-TEST(InterpreterExtensionsTest, FindRuntimeInterface) {
-#endif
-  if (!HostSupportsJit())
+TEST_F(InterpreterExtensionsTest, FindRuntimeInterface) {
+  if (!HostSupportsJIT())
     GTEST_SKIP();
 
   clang::IncrementalCompilerBuilder CB;
@@ -140,11 +135,7 @@ public:
   llvm::Error CreateExecutor() { return Interpreter::CreateExecutor(); }
 };
 
-#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
-TEST(InterpreterExtensionsTest, DISABLED_DefaultCrossJIT) {
-#else
-TEST(InterpreterExtensionsTest, DefaultCrossJIT) {
-#endif
+TEST_F(InterpreterExtensionsTest, DefaultCrossJIT) {
   if (!IsARMTargetRegistered())
     GTEST_SKIP();
 
@@ -156,11 +147,7 @@ TEST(InterpreterExtensionsTest, DefaultCrossJIT) {
   cantFail(std::move(ErrOut));
 }
 
-#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
-TEST(InterpreterExtensionsTest, DISABLED_CustomCrossJIT) {
-#else
-TEST(InterpreterExtensionsTest, CustomCrossJIT) {
-#endif
+TEST_F(InterpreterExtensionsTest, CustomCrossJIT) {
   if (!IsARMTargetRegistered())
     GTEST_SKIP();
 

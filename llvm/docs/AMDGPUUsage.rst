@@ -65,7 +65,7 @@ to specify the target triple:
      Vendor       Description
      ============ ==============================================================
      ``amd``      Can be used for all AMD GPU usage.
-     ``mesa3d``   Can be used if the OS is ``mesa3d``.
+     ``mesa``     Can be used if the OS is ``mesa3d``.
      ============ ==============================================================
 
   .. table:: AMDGPU Operating Systems
@@ -1973,6 +1973,7 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x055      Reserved.
      *reserved*                                 0x056      Reserved.
      *reserved*                                 0x057      Reserved.
+     *reserved*                                 0x058      Reserved.
      ========================================== ========== =============================
 
 Sections

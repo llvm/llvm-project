@@ -63,4 +63,8 @@ Revert: breaks ipBlender*
 contact: Pierre
 
 ---
+Revert: breaks hipCatch2
+[VectorCombine] Remove requirement for Instructions in shuffleToIdentity (#93543)
 
+contact : RonL
+---

@@ -387,35 +387,35 @@ function(add_compiler_rt_runtime name type)
         set_target_properties(${libname} PROPERTIES IMPORT_SUFFIX ".lib")
       endif()
       if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
-        # Ad-hoc sign the dylibs when using Xcode versions older than 12.
-        # Xcode 12 shipped with ld64-609.
-        # FIXME: Remove whole conditional block once everything uses Xcode 12+.
-        set(LD_V_OUTPUT)
+        # Apple's linker signs the resulting dylib with an ad-hoc code signature in
+        # most situations, except:
+        # 1. Versions of ld64 prior to ld64-609 in Xcode 12 predate this behavior.
+        # 2. Apple's new linker does not when building with `-darwin-target-variant`
+        #    to support macOS Catalyst.
+        #
+        # Explicitly re-signing the dylib works around both of these issues. The
+        # signature is marked as `linker-signed` when that is supported so that it
+        # behaves as expected when processed by subsequent tooling.
+        #
+        # Detect whether `codesign` supports `-o linker-signed` by passing it as an
+        # argument and looking for `invalid argument "linker-signed"` in its output.
+        # FIXME: Remove this once all supported toolchains support `-o linker-signed`.
         execute_process(
-          COMMAND sh -c "${CMAKE_LINKER} -v 2>&1 | head -1"
-          RESULT_VARIABLE HAD_ERROR
-          OUTPUT_VARIABLE LD_V_OUTPUT
+          COMMAND sh -c "codesign -f -s - -o linker-signed this-does-not-exist 2>&1 | grep -q linker-signed"
+          RESULT_VARIABLE CODESIGN_SUPPORTS_LINKER_SIGNED
         )
-        if (HAD_ERROR)
-          message(FATAL_ERROR "${CMAKE_LINKER} failed with status ${HAD_ERROR}")
+
+        set(EXTRA_CODESIGN_ARGUMENTS)
+        if (CODESIGN_SUPPORTS_LINKER_SIGNED)
+          list(APPEND EXTRA_CODESIGN_ARGUMENTS -o linker-signed)
         endif()
-        set(NEED_EXPLICIT_ADHOC_CODESIGN 0)
-        # Apple introduced a new linker by default in Xcode 15. This linker reports itself as ld
-        # rather than ld64 and does not match this version regex. That's ok since it never needs
-        # the explicit ad-hoc code signature.
-        if ("${LD_V_OUTPUT}" MATCHES ".*ld64-([0-9.]+).*")
-          string(REGEX REPLACE ".*ld64-([0-9.]+).*" "\\1" HOST_LINK_VERSION ${LD_V_OUTPUT})
-          if (HOST_LINK_VERSION VERSION_LESS 609)
-            set(NEED_EXPLICIT_ADHOC_CODESIGN 1)
-          endif()
-        endif()
-        if (NEED_EXPLICIT_ADHOC_CODESIGN)
-          add_custom_command(TARGET ${libname}
-            POST_BUILD
-            COMMAND codesign --sign - $<TARGET_FILE:${libname}>
-            WORKING_DIRECTORY ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
-          )
-        endif()
+
+        add_custom_command(TARGET ${libname}
+          POST_BUILD
+          COMMAND codesign --sign - ${EXTRA_CODESIGN_ARGUMENTS} $<TARGET_FILE:${libname}>
+          WORKING_DIRECTORY ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
+          COMMAND_EXPAND_LISTS
+        )
       endif()
     endif()
 

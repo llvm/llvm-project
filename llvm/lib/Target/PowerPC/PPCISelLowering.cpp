@@ -9460,7 +9460,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // double. This is to exploit the XXSPLTIDP instruction.
   // If we lose precision, we use XXSPLTI32DX.
   if (BVNIsConstantSplat && (SplatBitSize == 64) &&
-      Subtarget.hasPrefixInstrs()) {
+      Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
     // Check the type first to short-circuit so we don't modify APSplatBits if
     // this block isn't executed.
     if ((Op->getValueType(0) == MVT::v2f64) &&
@@ -9605,11 +9605,11 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // with 4-byte splats. We replicate the SplatBits in case of 2-byte splat to
   // make a 4-byte splat element. For example: 2-byte splat of 0xABAB can be
   // turned into a 4-byte splat of 0xABABABAB.
-  if (Subtarget.hasPrefixInstrs() && SplatSize == 2)
+  if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector() && SplatSize == 2)
     return getCanonicalConstSplat(SplatBits | (SplatBits << 16), SplatSize * 2,
                                   Op.getValueType(), DAG, dl);
 
-  if (Subtarget.hasPrefixInstrs() && SplatSize == 4)
+  if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector() && SplatSize == 4)
     return getCanonicalConstSplat(SplatBits, SplatSize, Op.getValueType(), DAG,
                                   dl);
 
@@ -10242,7 +10242,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Ins);
   }
 
-  if (Subtarget.hasPrefixInstrs()) {
+  if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
     SDValue SplatInsertNode;
     if ((SplatInsertNode = lowerToXXSPLTI32DX(SVOp, DAG)))
       return SplatInsertNode;
@@ -17730,7 +17730,7 @@ bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return false;
   case MVT::f32:
   case MVT::f64: {
-    if (Subtarget.hasPrefixInstrs()) {
+    if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
       // we can materialize all immediatess via XXSPLTI32DX and XXSPLTIDP.
       return true;
     }
@@ -18314,11 +18314,12 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
   // Compute subtarget flags.
   if (!Subtarget.hasP9Vector())
     FlagSet |= PPC::MOF_SubtargetBeforeP9;
-  else {
+  else
     FlagSet |= PPC::MOF_SubtargetP9;
-    if (Subtarget.hasPrefixInstrs())
-      FlagSet |= PPC::MOF_SubtargetP10;
-  }
+
+  if (Subtarget.hasPrefixInstrs())
+    FlagSet |= PPC::MOF_SubtargetP10;
+
   if (Subtarget.hasSPE())
     FlagSet |= PPC::MOF_SubtargetSPE;
 
