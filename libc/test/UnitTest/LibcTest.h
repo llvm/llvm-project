@@ -101,7 +101,7 @@ bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
 } // namespace internal
 
 struct TestOptions {
-  // A single test name not to run. TODO: does anyone care/use this?
+  // If set, then just this one test from the suite will be runt.
   const char *TestFilter = nullptr;
   // Should the test results print color codes to stdout?
   bool PrintColor = true;
