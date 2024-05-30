@@ -1815,6 +1815,18 @@ private:
 template <typename MulOpType>
 struct ElementwiseToOuterproduct : public OpRewritePattern<MulOpType> {
   using OpRewritePattern<MulOpType>::OpRewritePattern;
+  // Helper function returning the source of the input broadcast if it matches requirements for an outerproduct pattern.
+  Value getValidBroadcastSource(vector::BroadcastOp broadcastOp) const {
+    // Fail if it is not a 1-to-2 dimension to broadcast to avoid generating
+    // shape_casts/broadcasts which does not belong in this pattern.
+    if (!broadcastOp.computeBroadcastedUnitDims().empty())
+      return Value();
+    // Avoid broadcast like f32 or vector<f32> -> ResType
+    auto srcVT = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    if (!srcVT || srcVT.getRank() != 1)
+      return Value();
+    return broadcastOp.getSource();
+  }
 
   LogicalResult matchAndRewrite(MulOpType mulOp,
                                 PatternRewriter &rewriter) const override {
@@ -1835,21 +1847,14 @@ struct ElementwiseToOuterproduct : public OpRewritePattern<MulOpType> {
       if (permutation[0] != 1 || permutation[1] != 0)
         return vector::OuterProductOp();
 
-      // Fail in case it is not a 1-to-2 dimension to broadcast to avoid
-      // generating shape_casts/broadcasts which do not belong in this pattern.
       vector::BroadcastOp broadcastedLhs = dyn_cast<vector::BroadcastOp>(
           transposedLhs.getVector().getDefiningOp());
-      if (!broadcastedLhs ||
-          !broadcastedLhs.computeBroadcastedUnitDims().empty())
-        return vector::OuterProductOp();
-      // Avoid broadcast f32 or vector<f32> -> ResType
-      auto srcVT = dyn_cast<VectorType>(broadcastedLhs.getSourceType());
-      if (!srcVT || srcVT.getRank() != 1)
+      if (!broadcastedLhs || !getValidBroadcastSource(broadcastedLhs))
         return vector::OuterProductOp();
 
       vector::BroadcastOp broadcastedRhs =
           dyn_cast<vector::BroadcastOp>(OperandB.getDefiningOp());
-      if (!broadcastedRhs || broadcastedRhs.getSourceType() != srcVT)
+      if (!broadcastedRhs || !getValidBroadcastSource(broadcastedRhs))
         return vector::OuterProductOp();
 
       return rewriter.replaceOpWithNewOp<vector::OuterProductOp>(

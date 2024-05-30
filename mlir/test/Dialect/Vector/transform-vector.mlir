@@ -121,6 +121,19 @@ func.func @ewise_outerproduct_transposed_rhs(%lhs: vector<16xf32>, %rhs: vector<
   return %mul: vector<16x16xf32>
 }
 
+// CHECK-LABEL: func.func @ewise_outerproduct_different_sizes
+//  CHECK-SAME:   %[[LHS:.*]]: vector<8xf32>,
+//  CHECK-SAME:   %[[RHS:.*]]: vector<4xf32>) -> vector<8x4xf32> {
+//       CHECK:     %[[RES:.*]] = vector.outerproduct %[[LHS]], %[[RHS]] : vector<8xf32>, vector<4xf32>
+//       CHECK:     return %[[RES]] : vector<8x4xf32>
+func.func @ewise_outerproduct_different_sizes(%lhs: vector<8xf32>, %rhs: vector<4xf32>) -> vector<8x4xf32> {
+  %lhsBcast = vector.broadcast %lhs : vector<8xf32> to vector<4x8xf32>
+  %lhsT = vector.transpose %lhsBcast, [1, 0] : vector<4x8xf32> to vector<8x4xf32>
+  %rhsBcast = vector.broadcast %rhs : vector<4xf32> to vector<8x4xf32>
+  %mul = arith.mulf %lhsT, %rhsBcast : vector<8x4xf32>
+  return %mul: vector<8x4xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
