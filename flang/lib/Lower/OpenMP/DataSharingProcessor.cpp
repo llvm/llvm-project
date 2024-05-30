@@ -143,7 +143,7 @@ void DataSharingProcessor::collectOmpObjectListSymbol(
 }
 
 void DataSharingProcessor::collectSymbolsForPrivatization() {
-  bool hasCollapse = false;
+
   for (const omp::Clause &clause : clauses) {
     if (const auto &privateClause =
             std::get_if<omp::clause::Private>(&clause.u)) {
@@ -157,16 +157,11 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
       const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
       collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
       hasLastPrivateOp = true;
-    } else if (std::get_if<omp::clause::Collapse>(&clause.u)) {
-      hasCollapse = true;
     }
   }
 
   for (auto *sym : explicitlyPrivatizedSymbols)
     allPrivatizedSymbols.insert(sym);
-
-  if (hasCollapse && hasLastPrivateOp)
-    TODO(converter.getCurrentLocation(), "Collapse clause with lastprivate");
 }
 
 bool DataSharingProcessor::needBarrier() {

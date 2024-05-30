@@ -94,3 +94,36 @@ program wsloop_collapse
 !CHECK:         return
 !CHECK:       }
 end program wsloop_collapse
+
+subroutine collapse_with_lastprivate
+!CHECK: %[[VAL_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFcollapse_with_lastprivateEi"}
+!CHECK: %[[VAL_I_DECLARE:.*]]:2 = hlfir.declare %[[VAL_I]] {{.*}}
+!CHECK: %[[VAL_J:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFcollapse_with_lastprivateEj"}
+!CHECK: %[[VAL_J_DECLARE:.*]]:2 = hlfir.declare %[[VAL_J]] {{.*}}
+!CHECK: %[[VAL_K:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFcollapse_with_lastprivateEk"}
+!CHECK: %[[VAL_K_DECLARE:.*]]:2 = hlfir.declare %[[VAL_K]] {{.}}
+!CHECK: %[[VAL_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFcollapse_with_lastprivateEx"}
+!CHECK: %[[VAL_X_DECLARE:.*]]:2 = hlfir.declare %[[VAL_X]] {{.*}}
+
+        integer :: x, i, j, k
+
+!CHECK: omp.parallel {
+!CHECK: %[[INNER_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFcollapse_with_lastprivateEx"}
+!CHECK: %[[INNER_X_DECLARE:.*]]:2 = hlfir.declare %[[INNER_X]] {{.*}}
+        !$omp parallel do lastprivate(x) collapse(2)
+!CHECK: omp.wsloop {
+!CHECK: omp.loop_nest (%[[ARG0:.*]], %[[ARG1:.*]]) : i32 = (%[[LB1:.*]], %[[LB2:.*]]) to (%[[UB1:.*]], %[[UB2:.*]]) inclusive step (%[[STEP1:.*]], %[[STEP2:.*]]) {
+           do i = 1, 10
+             do j = 1, 20
+!CHECK: %[[LOOP_CONTROL:.*]]:2 = fir.do_loop %[[ARG2:.*]] = {{.*}}
+               do k = 1, 30
+                 x = x + 1
+               end do
+             end do
+           end do
+!CHECK: fir.if {{.*}} {
+!CHECK: %[[LOADED_X:.*]] = fir.load %[[INNER_X_DECLARE]]#0 : !fir.ref<i32>
+!CHECK: hlfir.assign %[[LOADED_X]] to %[[VAL_X_DECLARE]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: }
+        !$omp end parallel do
+end subroutine
