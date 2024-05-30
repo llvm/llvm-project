@@ -25,7 +25,7 @@ ConstantRangeList::getConstantRangeList(ArrayRef<ConstantRange> RangesRef) {
     auto PreRange = RangesRef[i - 1];
     if (CurRange.getLower().sge(CurRange.getUpper()))
       return std::nullopt;
-    if (CurRange.getLower().sle(PreRange.getUpper()))
+    if (CurRange.getLower().sle(PreRange.getLower()))
       return std::nullopt;
     if (CurRange.getLower().sle(PreRange.getUpper()))
       return std::nullopt;

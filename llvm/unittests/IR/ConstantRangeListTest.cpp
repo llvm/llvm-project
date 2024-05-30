@@ -38,6 +38,35 @@ TEST_F(ConstantRangeListTest, Basics) {
   EXPECT_TRUE(CRL1a != CRL2);
 }
 
+TEST_F(ConstantRangeListTest, getConstantRangeList) {
+  SmallVector<ConstantRange, 2> Empty;
+  EXPECT_TRUE(ConstantRangeList::getConstantRangeList(Empty).has_value());
+
+  SmallVector<ConstantRange, 2> Valid;
+  Valid.push_back(ConstantRange(APInt(64, 0, true), APInt(64, 4, true)));
+  Valid.push_back(ConstantRange(APInt(64, 8, true), APInt(64, 12, true)));
+  EXPECT_TRUE(ConstantRangeList::getConstantRangeList(Valid).has_value());
+
+  SmallVector<ConstantRange, 2> Invalid1;
+  Invalid1.push_back(ConstantRange(APInt(64, 4, true), APInt(64, 0, true)));
+  EXPECT_EQ(ConstantRangeList::getConstantRangeList(Invalid1), std::nullopt);
+
+  SmallVector<ConstantRange, 2> Invalid2;
+  Invalid2.push_back(ConstantRange(APInt(64, 0, true), APInt(64, 4, true)));
+  Invalid2.push_back(ConstantRange(APInt(64, 12, true), APInt(64, 8, true)));
+  EXPECT_EQ(ConstantRangeList::getConstantRangeList(Invalid2), std::nullopt);
+
+  SmallVector<ConstantRange, 2> Invalid3;
+  Invalid3.push_back(ConstantRange(APInt(64, 0, true), APInt(64, 4, true)));
+  Invalid3.push_back(ConstantRange(APInt(64, 4, true), APInt(64, 8, true)));
+  EXPECT_EQ(ConstantRangeList::getConstantRangeList(Invalid3), std::nullopt);
+
+  SmallVector<ConstantRange, 2> Invalid4;
+  Invalid4.push_back(ConstantRange(APInt(64, 0, true), APInt(64, 12, true)));
+  Invalid4.push_back(ConstantRange(APInt(64, 8, true), APInt(64, 16, true)));
+  EXPECT_EQ(ConstantRangeList::getConstantRangeList(Invalid4), std::nullopt);
+}
+
 TEST_F(ConstantRangeListTest, Insert) {
   ConstantRangeList CRL;
   CRL.insert(0, 4);
