@@ -1154,7 +1154,7 @@ CodeGenTypes::ComputeRecordLayout(const RecordDecl *D, llvm::StructType *Ty) {
 
     if (!Context.getLangOpts().DebuggerSupport)
       assert(AlignedNonVirtualTypeSizeInBits ==
-             getDataLayout().getTypeAllocSizeInBits(BaseTy) &&
+                 getDataLayout().getTypeAllocSizeInBits(BaseTy) &&
              "Type size mismatch!");
   }
 
