@@ -283,7 +283,7 @@ namespace llvm {
   /// critical-path and resource depth.
   extern char &MachineCombinerID;
 
-  /// StackSlotColoring - This pass performs stack coloring and merging.
+  /// StackColoring - This pass performs stack coloring and merging.
   /// It merges disjoint allocas to reduce the stack size.
   extern char &StackColoringID;
 
@@ -371,8 +371,6 @@ namespace llvm {
 
   /// StackSlotColoring - This pass performs stack slot coloring.
   extern char &StackSlotColoringID;
-  FunctionPass *
-  createStackSlotColoring(bool preserveRegAllocNeededAnalysis = false);
 
   /// This pass lays out funclets contiguously.
   extern char &FuncletLayoutID;

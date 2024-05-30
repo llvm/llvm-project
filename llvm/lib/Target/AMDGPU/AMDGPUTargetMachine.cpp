@@ -1425,7 +1425,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   // through SGPRAllocPass. So, invoking StackSlotColoring here, may allow these
   // SGPR spills to re-use stack slots, before these spills is further lowered
   // down via SILowerSGPRSpills(i.e. equivalent of PEI for SGPRs).
-  addPass(createStackSlotColoring(/*preserveRegAllocNeededAnalysis*/ true));
+  addPass(&StackSlotColoringID);
 
   // Equivalent of PEI for SGPRs.
   addPass(&SILowerSGPRSpillsID);
