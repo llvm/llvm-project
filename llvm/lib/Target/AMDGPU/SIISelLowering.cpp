@@ -8589,12 +8589,6 @@ SDValue SITargetLowering::lowerRawBufferAtomicIntrin(SDValue Op,
                                  M->getMemOperand());
 }
 
-// Return a value to use for the idxen operand by examining the vindex operand.
-static unsigned getIdxEn(SDValue VIndex) {
-  // No need to set idxen if vindex is known to be zero.
-  return isNullConstant(VIndex) ? 0 : 1;
-}
-
 SDValue
 SITargetLowering::lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
                                                 unsigned NewOpcode) const {
