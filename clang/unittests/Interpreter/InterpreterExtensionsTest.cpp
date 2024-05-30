@@ -22,8 +22,6 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Testing/Support/Error.h"
 
