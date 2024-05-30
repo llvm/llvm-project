@@ -466,14 +466,14 @@ namespace testClassTemplateDecl {
 // CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:{{.*}}:3, col:68> col:68 TestTemplateTemplateDefaultType{{$}}
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:42> col:37 depth 0 index 0 TT{{$}}
 // CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0{{$}}
-// CHECK-NEXT:  | `-TemplateArgument <col:42> template 'testClassTemplateDecl::TestClassTemplate'{{$}}
+// CHECK-NEXT:  | `-TemplateArgument <col:42> template 'TestClassTemplate':'testClassTemplateDecl::TestClassTemplate' qualified{{$}}
 // CHECK-NEXT:  |   `-ClassTemplateDecl 0x{{.+}} <line:{{.+}}:3, line:{{.+}}:3> line:{{.+}}:30 TestClassTemplate{{$}}
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <line:{{.*}}:61, col:68> col:68 struct TestTemplateTemplateDefaultType{{$}}
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:{{.*}}:3, col:82> col:48 TestTemplateTemplateDefaultType{{$}}
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:37> col:37 depth 0 index 0 TT{{$}}
 // CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0{{$}}
-// CHECK-NEXT:  | `-TemplateArgument <line:{{.*}}:42> template 'testClassTemplateDecl::TestClassTemplate'{{$}}
+// CHECK-NEXT:  | `-TemplateArgument <line:{{.*}}:42> template 'TestClassTemplate':'testClassTemplateDecl::TestClassTemplate' qualified{{$}}
 // CHECK-NEXT:  |   |-inherited from TemplateTemplateParm 0x{{.+}} 'TT'{{$}}
 // CHECK-NEXT:  |   `-ClassTemplateDecl 0x{{.+}} <line:{{.+}}:3, line:{{.+}}:3> line:{{.+}}:30 TestClassTemplate
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:{{.*}}:41, col:82> col:48 struct TestTemplateTemplateDefaultType definition{{$}}
@@ -685,7 +685,7 @@ namespace TestTemplateTemplateParmDecl {
 // CHECK:        FunctionTemplateDecl
 // CHECK-NEXT:     TemplateTemplateParmDecl{{.*}} T
 // CHECK-NEXT:       TemplateTypeParmDecl{{.*}} typename
-// CHECK-NEXT:       TemplateArgument{{.*}} template 'TestTemplateTemplateParmDecl::A'
+// CHECK-NEXT:       TemplateArgument{{.*}} template 'A':'TestTemplateTemplateParmDecl::A' qualified{{$}}
 // CHECK-NEXT:         ClassTemplateDecl {{.*}} A
 // CHECK-NEXT:     TemplateTemplateParmDecl{{.*}} ... U
 // CHECK-NEXT:       TemplateTypeParmDecl{{.*}} typename
@@ -718,7 +718,7 @@ namespace TestTemplateArgument {
   template<template<typename> class> class testTemplate { };
   template class testTemplate<A>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testTemplate
-  // CHECK:        TemplateArgument{{.*}} 'TestTemplateArgument::A'
+  // CHECK:        TemplateArgument{{.*}} 'TestTemplateArgument::A'{{$}}
 
   template<template<typename> class ...T> class C {
     B<T...> testTemplateExpansion;

@@ -132,7 +132,7 @@ inline namespace InlineNS {}
 // CHECK: TypedefDecl=OtherType:26:18 (Definition) [type=outer::inner::Bar::OtherType] [typekind=Typedef] [canonicaltype=double] [canonicaltypekind=Double] [isPOD=1]
 // CHECK: TypedefDecl=ArrayType:27:15 (Definition) [type=outer::inner::Bar::ArrayType] [typekind=Typedef] [canonicaltype=int[5]] [canonicaltypekind=ConstantArray] [isPOD=1]
 // CHECK: IntegerLiteral= [type=int] [typekind=Int] [isPOD=1]
-// CHECK: FieldDecl=baz:28:20 (Definition) [type=Baz<int, 1, outer::Foo>] [typekind=Elaborated] [templateargs/3= [type=int] [typekind=Int]] [canonicaltype=outer::Baz<int, 1, outer::Foo>] [canonicaltypekind=Record] [canonicaltemplateargs/3= [type=int] [typekind=Int]] [isPOD=1]
+// CHECK: FieldDecl=baz:28:20 (Definition) [type=Baz<int, 1, Foo>] [typekind=Elaborated] [templateargs/3= [type=int] [typekind=Int]] [canonicaltype=outer::Baz<int, 1, outer::Foo>] [canonicaltypekind=Record] [canonicaltemplateargs/3= [type=int] [typekind=Int]] [isPOD=1]
 // CHECK: TemplateRef=Baz:9:8 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: IntegerLiteral= [type=int] [typekind=Int] [isPOD=1]
 // CHECK: TemplateRef=Foo:4:8 [type=] [typekind=Invalid] [isPOD=0]
