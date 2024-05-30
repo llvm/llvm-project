@@ -101,7 +101,7 @@ bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
 } // namespace internal
 
 struct TestOptions {
-  // If set, then just this one test from the suite will be runt.
+  // If set, then just this one test from the suite will be run.
   const char *TestFilter = nullptr;
   // Should the test results print color codes to stdout?
   bool PrintColor = true;
