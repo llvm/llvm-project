@@ -125,7 +125,7 @@ def ArithIntNarrowing : Pass<"arith-int-narrowing"> {
     illegal ops, these passes will insert `arith.truncf` and `arith.extf` pairs
     between the illegal ops.
     
-    This pass is to eliminate the intermidiate truncf/extf pairs to improve
+    This pass is to eliminate the intermediate truncf/extf pairs to improve
     performance.
 
     However, this pass may introduce numerical difference as the `f32->bf16` rounding
