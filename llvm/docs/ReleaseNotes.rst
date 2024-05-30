@@ -63,6 +63,10 @@ Changes to LLVM infrastructure
 Changes to building LLVM
 ------------------------
 
+- The ``LLVM_ENABLE_TERMINFO`` flag has been removed. LLVM no longer depends on
+  terminfo and now always uses the ``TERM`` environment variable for color
+  support autodetection.
+
 Changes to TableGen
 -------------------
 
