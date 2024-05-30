@@ -5666,18 +5666,6 @@ static void emitTargetCall(
   OpenMPIRBuilder::TargetKernelArgs KArgs(NumTargetItems, RTArgs, NumIterations,
                                           NumTeamsVal, NumThreadsVal,
                                           DynCGGroupMem, HasNoWait);
-  // PDB: here you'll have to break the logic down to do the following
-  // if (!requiresoutertask) {
-  //    Builder.restoreIP(OMPBuilder.emitKernelLaunch(
-  //       Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
-  //       DeviceID, RTLoc, AllocaIP));
-  // else {
-  //   codegen_callback = codegen callback to create task logic which should be
-  //   received from openmptollvmirtranslation + emitkernellaunch
-  //   create_task(codegen_callback)
-  //   make task call
-  // }
-  //
 
   // The presence of certain clauses on the target directive require the
   // explicit generation of the target task.
