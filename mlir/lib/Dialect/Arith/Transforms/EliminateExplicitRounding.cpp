@@ -20,7 +20,7 @@
 
 namespace mlir {
 namespace arith {
-#define GEN_PASS_DEF_ELIMINATEEXPLICITROUNDING
+#define GEN_PASS_DEF_ARITHELIMINATEEXPLICITROUNDING
 #include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
 } // namespace arith
 } // namespace mlir
@@ -34,10 +34,6 @@ struct EliminateExplicitRoundingRewritePattern final
   using OpRewritePattern::OpRewritePattern;
   using FilterFunction = std::function<bool(Operation *)>;
 
-  EliminateExplicitRoundingRewritePattern(MLIRContext *context,
-                                          FilterFunction filterFunc = nullptr)
-      : OpRewritePattern(context), filterFunc(filterFunc) {}
-
   LogicalResult matchAndRewrite(arith::ExtFOp extFOp,
                                 PatternRewriter &rewriter) const final {
     // Check whether match `truncF->extF` pair.
@@ -47,8 +43,9 @@ struct EliminateExplicitRoundingRewritePattern final
 
     // Check whether need to filter out.
     if (filterFunc && filterFunc(extFOp)) {
-      extFOp.emitError("Operation filtered out by filterFunc");
-      return failure();
+      return rewriter.notifyMatchFailure(extFOp, [](Diagnostic &diag) {
+        diag << "Operation filtered out by filterFunc";
+      });
     }
 
     // Check whether the rounding pair's input and output data type are the
@@ -59,7 +56,7 @@ struct EliminateExplicitRoundingRewritePattern final
     Type outTy = getElementTypeOrSelf(extFOp.getType());
     Type shortTy = getElementTypeOrSelf(truncFOp.getType());
     if (isa<Float32Type>(inTy) && isa<Float32Type>(outTy) &&
-        (isa<Float16Type>(shortTy) || isa<BFloat16Type>(shortTy))) {
+        (isa<Float16Type, BFloat16Type>(shortTy))) {
       rewriter.replaceOp(extFOp, {input});
       return success();
     }
@@ -72,8 +69,9 @@ private:
 };
 
 struct EliminateExplicitRounding final
-    : arith::impl::EliminateExplicitRoundingBase<EliminateExplicitRounding> {
-  using EliminateExplicitRoundingBase::EliminateExplicitRoundingBase;
+    : arith::impl::ArithEliminateExplicitRoundingBase<
+          EliminateExplicitRounding> {
+  using ArithEliminateExplicitRoundingBase::ArithEliminateExplicitRoundingBase;
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     patterns.insert<EliminateExplicitRoundingRewritePattern>(&getContext());

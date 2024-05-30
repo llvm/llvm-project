@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --split-input-file --eliminate-explicit-rounding | FileCheck %s
+// RUN: mlir-opt %s --split-input-file --arith-eliminate-explicit-rounding | FileCheck %s
 
 // CHECK-LABEL: @sequences
 // CHECK-SAME: ([[ARG0:%.+]]: bf16)

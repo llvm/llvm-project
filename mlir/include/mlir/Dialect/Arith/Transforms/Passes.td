@@ -117,7 +117,7 @@ def ArithIntNarrowing : Pass<"arith-int-narrowing"> {
   ];
  }
 
- def EliminateExplicitRounding : Pass<"eliminate-explicit-rounding"> {
+ def ArithEliminateExplicitRounding : Pass<"arith-eliminate-explicit-rounding"> {
   let summary = "Eliminate the intermidiate truncf/extf pairs";
   let description = [{
     `legalize-to-f32` and `arith-emulate-unsupported-floats` pass does f32 promotion
