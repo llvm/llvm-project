@@ -3222,9 +3222,18 @@ int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
 }
 
 #define GET_X86_NF_TRANSFORM_TABLE
+#define GET_X86_ND2NONND_TABLE
 #include "X86GenInstrMapping.inc"
 unsigned X86::getNFVariant(unsigned Opc) {
   ArrayRef<X86TableEntry> Table = ArrayRef(X86NFTransformTable);
+  const auto I = llvm::lower_bound(Table, Opc);
+  return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
+}
+
+static unsigned getNonNDVariant(unsigned Opc, const X86Subtarget &STI) {
+  if (!STI.hasNDD())
+    return 0U;
+  ArrayRef<X86TableEntry> Table = ArrayRef(X86ND2NonNDTable);
   const auto I = llvm::lower_bound(Table, Opc);
   return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
 }
@@ -7380,8 +7389,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // Folding a memory location into the two-address part of a two-address
   // instruction is different than folding it other places.  It requires
   // replacing the *two* registers with the memory location.
+  //
+  // Utilize the mapping NonNDD -> RMW for the NDD variant.
+  unsigned NonNDOpc = getNonNDVariant(Opc, Subtarget);
   const X86FoldTableEntry *I =
-      IsTwoAddr ? lookupTwoAddrFoldTable(Opc) : lookupFoldTable(Opc, OpNum);
+      IsTwoAddr ? lookupTwoAddrFoldTable(NonNDOpc ? NonNDOpc : Opc)
+                : lookupFoldTable(Opc, OpNum);
 
   MachineInstr *NewMI = nullptr;
   if (I) {
@@ -7482,12 +7495,20 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (!RI.hasStackRealignment(MF))
     Alignment =
         std::min(Alignment, Subtarget.getFrameLowering()->getStackAlign());
+
+  auto Impl = [&]() {
+    return foldMemoryOperandImpl(MF, MI, Ops[0],
+                                 MachineOperand::CreateFI(FrameIndex), InsertPt,
+                                 Size, Alignment, /*AllowCommute=*/true);
+  };
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
     unsigned NewOpc = 0;
     unsigned RCSize = 0;
-    switch (MI.getOpcode()) {
+    unsigned Opc = MI.getOpcode();
+    switch (Opc) {
     default:
-      return nullptr;
+      // NDD can be folded into RMW though its Op0 and Op1 are not tied.
+      return getNonNDVariant(Opc, Subtarget) ? Impl() : nullptr;
     case X86::TEST8rr:
       NewOpc = X86::CMP8ri;
       RCSize = 1;
@@ -7515,9 +7536,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   } else if (Ops.size() != 1)
     return nullptr;
 
-  return foldMemoryOperandImpl(MF, MI, Ops[0],
-                               MachineOperand::CreateFI(FrameIndex), InsertPt,
-                               Size, Alignment, /*AllowCommute=*/true);
+  return Impl();
 }
 
 /// Check if \p LoadMI is a partial register load that we can't fold into \p MI
