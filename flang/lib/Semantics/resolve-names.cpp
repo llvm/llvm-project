@@ -6468,10 +6468,12 @@ bool DeclarationVisitor::PassesSharedLocalityChecks(
 bool DeclarationVisitor::PassesLocalityChecks(
     const parser::Name &name, Symbol &symbol, Symbol::Flag flag) {
   bool isReduce{flag == Symbol::Flag::LocalityReduce};
+  const char *specName{
+      flag == Symbol::Flag::LocalityLocalInit ? "LOCAL_INIT" : "LOCAL"};
   if (IsAllocatable(symbol) && !isReduce) { // F'2023 C1130
     SayWithDecl(name, symbol,
-        "ALLOCATABLE variable '%s' not allowed in a LOCAL%s locality-spec"_err_en_US,
-        flag == Symbol::Flag::LocalityLocalInit ? "_INIT" : "");
+        "ALLOCATABLE variable '%s' not allowed in a %s locality-spec"_err_en_US,
+        specName);
     return false;
   }
   if (IsOptional(symbol)) { // F'2023 C1130-C1131
@@ -6486,22 +6488,22 @@ bool DeclarationVisitor::PassesLocalityChecks(
   }
   if (IsFinalizable(symbol) && !isReduce) { // F'2023 C1130
     SayWithDecl(name, symbol,
-        "Finalizable variable '%s' not allowed in a LOCAL%s locality-spec"_err_en_US,
-        (flag == Symbol::Flag::LocalityLocalInit) ? "_INIT" : "");
+        "Finalizable variable '%s' not allowed in a %s locality-spec"_err_en_US,
+        specName);
     return false;
   }
   if (evaluate::IsCoarray(symbol) && !isReduce) { // F'2023 C1130
     SayWithDecl(name, symbol,
-        "Coarray '%s' not allowed in a LOCAL%s locality-spec"_err_en_US,
-        (flag == Symbol::Flag::LocalityLocalInit) ? "_INIT" : "");
+        "Coarray '%s' not allowed in a %s locality-spec"_err_en_US,
+        specName);
     return false;
   }
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     if (type->IsPolymorphic() && IsDummy(symbol) && !IsPointer(symbol) &&
         !isReduce) { // F'2023 C1130
       SayWithDecl(name, symbol,
-          "Nonpointer polymorphic argument '%s' not allowed in a LOCAL%s locality-spec"_err_en_US,
-          (flag == Symbol::Flag::LocalityLocalInit) ? "_INIT" : "");
+          "Nonpointer polymorphic argument '%s' not allowed in a %s locality-spec"_err_en_US,
+          specName);
       return false;
     }
   }
@@ -6900,7 +6902,7 @@ bool ConstructVisitor::Pre(const parser::LocalitySpec::LocalInit &x) {
 }
 
 bool ConstructVisitor::Pre(const parser::LocalitySpec::Reduce &x) {
-  for (auto &name : std::get<std::list<parser::Name>>(x.t)) {
+  for (const auto &name : std::get<std::list<parser::Name>>(x.t)) {
     DeclareLocalEntity(name, Symbol::Flag::LocalityReduce);
   }
   return false;
