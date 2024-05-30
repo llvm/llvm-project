@@ -23,6 +23,7 @@ endif()
 add_lldb_library(lldbCore
   Address.cpp
   AddressRange.cpp
+  AddressRangeListImpl.cpp
   AddressResolver.cpp
   AddressResolverFileLine.cpp
   Communication.cpp
