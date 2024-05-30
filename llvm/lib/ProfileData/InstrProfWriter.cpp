@@ -498,21 +498,18 @@ static llvm::DenseMap<memprof::FrameId, uint32_t> writeMemProfFrameArray(
   llvm::DenseMap<memprof::FrameId, uint32_t> MemProfFrameIndexes;
 
   // Sort the FrameIDs for stability.
-  std::vector<memprof::FrameId> FrameIdOrder;
+  std::vector<std::pair<memprof::FrameId, const memprof::Frame *>> FrameIdOrder;
   FrameIdOrder.reserve(MemProfFrameData.size());
-  for (const auto &KV : MemProfFrameData)
-    FrameIdOrder.push_back(KV.first);
+  for (const auto &[Id, Frame] : MemProfFrameData)
+    FrameIdOrder.emplace_back(Id, &Frame);
   assert(MemProfFrameData.size() == FrameIdOrder.size());
   llvm::sort(FrameIdOrder);
 
   // Serialize all frames while creating mappings from linear IDs to FrameIds.
   uint64_t Index = 0;
   MemProfFrameIndexes.reserve(FrameIdOrder.size());
-  for (memprof::FrameId Id : FrameIdOrder) {
-    auto Iter = MemProfFrameData.find(Id);
-    assert(Iter != MemProfFrameData.end());
-    const memprof::Frame &F = Iter->second;
-    F.serialize(OS.OS);
+  for (const auto &[Id, F] : FrameIdOrder) {
+    F->serialize(OS.OS);
     MemProfFrameIndexes.insert({Id, Index});
     ++Index;
   }
