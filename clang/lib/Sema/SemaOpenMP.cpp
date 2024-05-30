@@ -7402,7 +7402,7 @@ void SemaOpenMP::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
 
   // Template specialization is an extension, check if we do it.
   bool IsTemplated = !TemplateParamLists.empty();
-  if (IsTemplated &
+  if (IsTemplated &&
       !DVScope.TI->isExtensionActive(
           llvm::omp::TraitProperty::implementation_extension_allow_templates))
     return;
