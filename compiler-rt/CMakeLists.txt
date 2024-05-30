@@ -378,12 +378,8 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "s390x")
 endif()
 
 if(MSVC)
-
-  # asan on windows only supports the release dll version of the runtimes, in the interest of
-  # only having one asan dll to support/test. Having asan statically linked
-  # with the runtime might be possible, but it multiplies the number of scenerios to test.
-  # the program USING sanitizers can use whatever version of the runtime it wants to.
-  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+  # FIXME: In fact, sanitizers should support both /MT and /MD, see PR20214.
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
   # Remove any /M[DT][d] flags, and strip any definitions of _DEBUG.
   # Since we're using CMAKE_MSVC_RUNTIME_LIBRARY (CMP0091 set to NEW),
