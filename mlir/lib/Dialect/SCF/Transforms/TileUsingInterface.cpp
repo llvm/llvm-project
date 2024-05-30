@@ -99,6 +99,11 @@ static std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>>
 getTileSizes(RewriterBase &rewriter, TilingInterface op,
              ArrayRef<Range> iterationDomain,
              const scf::SCFTilingOptions &options) {
+  assert(
+      llvm::all_of(iterationDomain,
+                   [](Range r) { return isConstantIntValue(r.stride, 1); }) &&
+      "tile size computation assumes that all dimensions of the iteration "
+      "domain have stride 1");
   OpFoldResult zero = rewriter.getIndexAttr(0);
   SmallVector<OpFoldResult> tileSizes, numThreads;
   size_t numLoops = iterationDomain.size();
@@ -119,10 +124,11 @@ getTileSizes(RewriterBase &rewriter, TilingInterface op,
     // of tiles as follows
     // - niters = ceilDiv(ub - lb, step)
     // - tileSize = ceilDiv(niters, numThreads)
-    AffineExpr s0, s1, s2, s3;
-    bindSymbols(rewriter.getContext(), s0, s1, s2, s3);
-    AffineExpr numItersExpr = (s1 - s0).ceilDiv(s2);
-    AffineExpr tileSizeExpr = numItersExpr.ceilDiv(s3);
+    AffineExpr s0, s1, s2;
+    bindSymbols(rewriter.getContext(), s0, s1, s2);
+    // TODO: The step here is assumed to be 1.
+    AffineExpr numItersExpr = (s1 - s0);
+    AffineExpr tileSizeExpr = numItersExpr.ceilDiv(s2);
     tileSizes.resize(numLoops, zero);
     for (auto [index, range, nt] :
          llvm::enumerate(iterationDomain, numThreads)) {
@@ -130,8 +136,7 @@ getTileSizes(RewriterBase &rewriter, TilingInterface op,
         continue;
 
       tileSizes[index] = affine::makeComposedFoldedAffineApply(
-          rewriter, op.getLoc(), tileSizeExpr,
-          {range.offset, range.size, range.stride, nt});
+          rewriter, op.getLoc(), tileSizeExpr, {range.offset, range.size, nt});
     }
     tileSizes.resize(numLoops, zero);
     return {tileSizes, numThreads};
@@ -244,13 +249,19 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
   SmallVector<OpFoldResult> offsets, sizes;
   int materializedLoopNum = 0;
 
+  assert(
+      llvm::all_of(iterationDomain,
+                   [](Range r) { return isConstantIntValue(r.stride, 1); }) &&
+      "the offset and tile size computation assumes stride 1 for all "
+      "dimensions of the iteration domain");
+
   if (!numThreads.empty()) {
-    AffineExpr d0, d1, s0, s1, s2;
+    AffineExpr d0, d1, s0, s1;
     AffineExpr offsetExpr, residualTileSizeExpr;
     bindDims(rewriter.getContext(), d0, d1);
-    bindSymbols(rewriter.getContext(), s0, s1, s2);
-    offsetExpr = d0 + d1 * s0 * s1;
-    residualTileSizeExpr = s2 - (d0 + d1 * s0 * s1);
+    bindSymbols(rewriter.getContext(), s0, s1);
+    offsetExpr = d0 + d1 * s0;
+    residualTileSizeExpr = s1 - (d0 + d1 * s0);
 
     for (auto [nt, tileSize, loopRange] :
          llvm::zip_equal(numThreads, tileSizes, iterationDomain)) {
@@ -264,11 +275,11 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
       Value iv = ivs[materializedLoopNum++];
       OpFoldResult offset = affine::makeComposedFoldedAffineApply(
           rewriter, loc, offsetExpr,
-          ArrayRef<OpFoldResult>{loopRange.offset, iv, loopRange.stride,
-                                 tileSize});
+          ArrayRef<OpFoldResult>{loopRange.offset, iv, tileSize});
       OpFoldResult residualTileSize = affine::makeComposedFoldedAffineApply(
           rewriter, loc, residualTileSizeExpr,
-          {loopRange.offset, nt, loopRange.stride, tileSize, loopRange.size});
+          {loopRange.offset, nt, tileSize, loopRange.size});
+
       OpFoldResult size = tileSize;
       if (!isConstantIntValue(residualTileSize, 0)) {
         OpFoldResult sizeMinusOffsetPerThread =
@@ -776,6 +787,11 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
 
   // 1. Get the range of the loops that are represented by the operation.
   SmallVector<Range> iterationDomain = op.getIterationDomain(rewriter);
+  if (llvm::any_of(iterationDomain,
+                   [](Range r) { return !isConstantIntValue(r.stride, 1); })) {
+    return rewriter.notifyMatchFailure(
+        op, "unhandled tiling of iteration domain with non-unit stride");
+  }
 
   // 2. Materialize the tile sizes and/or number of threads;
   SmallVector<OpFoldResult> tileSizes, numThreads;
