@@ -676,20 +676,20 @@ void SampleProfileMatcher::findNewIRCallees(
 }
 
 std::pair<Function *, bool> SampleProfileMatcher::findOrMatchFunction(
-    const FunctionId &ProfCallee, FunctionMap &OldProfToNewSymbolMap,
+    const FunctionId &ProfFunc, FunctionMap &OldProfToNewSymbolMap,
     const std::vector<Function *> &NewIRCallees = std::vector<Function *>()) {
-  auto F = SymbolMap->find(ProfCallee);
+  auto F = SymbolMap->find(ProfFunc);
   if (F != SymbolMap->end())
     return {F->second, false};
 
   // Existing matched function is found.
-  auto NewF = OldProfToNewSymbolMap.find(ProfCallee);
+  auto NewF = OldProfToNewSymbolMap.find(ProfFunc);
   if (NewF != OldProfToNewSymbolMap.end())
     return {NewF->second, true};
 
   for (auto *IRCallee : NewIRCallees)
-    if (functionMatchesProfile(*IRCallee, ProfCallee)) {
-      OldProfToNewSymbolMap[ProfCallee] = IRCallee;
+    if (functionMatchesProfile(*IRCallee, ProfFunc)) {
+      OldProfToNewSymbolMap[ProfFunc] = IRCallee;
       return {IRCallee, true};
     }
   return {nullptr, false};

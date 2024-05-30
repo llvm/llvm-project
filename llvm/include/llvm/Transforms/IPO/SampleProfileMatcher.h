@@ -190,14 +190,14 @@ private:
   /// the \p NewIRCallees is provided, try to match the function profile with
   /// all functions in \p NewIRCallees and return the matched function.
   ///
-  /// \param ProfCallee The profile name of the callee.
+  /// \param ProfFunc The function profile name.
   /// \param OldProfToNewSymbolMap The map from old profile name to new symbol.
   /// \param NewIRCallees The new candidate callees in the same scope to match.
   ///
   /// \returns The matched function and a bool value indicating whether the
   /// function is new(matched).
   std::pair<Function *, bool>
-  findOrMatchFunction(const FunctionId &ProfCallee,
+  findOrMatchFunction(const FunctionId &ProfFunc,
                       FunctionMap &OldProfToNewSymbolMap,
                       const std::vector<Function *> &NewIRCallees);
   std::vector<FunctionSamples *> sortFuncProfiles(SampleProfileMap &ProfileMap);
