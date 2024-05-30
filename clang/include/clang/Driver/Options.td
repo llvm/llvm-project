@@ -4345,6 +4345,10 @@ defm strict_dwarf : BoolOption<"g", "strict-dwarf",
           "the specified version, avoiding features from later versions.">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>,
   Group<g_flags_Group>;
+defm omit_unreferenced_methods : BoolGOption<"omit-unreferenced-methods",
+  CodeGenOpts<"DebugOmitUnreferencedMethods">, DefaultFalse,
+  NegFlag<SetFalse>,
+  PosFlag<SetTrue, [], [CC1Option]>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>;
 defm column_info : BoolOption<"g", "column-info",
   CodeGenOpts<"DebugColumnInfo">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
@@ -5461,6 +5465,10 @@ def pg : Flag<["-"], "pg">, HelpText<"Enable mcount instrumentation">,
   MarshallingInfoFlag<CodeGenOpts<"InstrumentForProfiling">>;
 def pipe : Flag<["-", "--"], "pipe">,
   HelpText<"Use pipes between commands, when possible">;
+// Facebook T92898286
+def post_link_optimize : Flag<["--"], "post-link-optimize">,
+  HelpText<"Apply post-link optimizations using BOLT">;
+// End Facebook T92898286
 def prebind__all__twolevel__modules : Flag<["-"], "prebind_all_twolevel_modules">;
 def prebind : Flag<["-"], "prebind">;
 def preload : Flag<["-"], "preload">;
@@ -6277,11 +6285,9 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf">;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf">;
-// Features egpr, push2pop2, ppx and ndd are validated with llvm-test-suite && cpu2017 on Intel SDE.
-// For stability, we turn on these features only for -mapxf. After a feature pass the validation,
-// we will add it to -mapxf.
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx", "ndd"]>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd"]>;
+// For stability, we only add a feature to -mapxf after it passes the validation of llvm-test-suite && cpu2017 on Intel SDE.
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
 } // let Flags = [TargetSpecific]
 
 // VE feature flags

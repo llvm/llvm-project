@@ -1668,6 +1668,13 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= 1 << bitc::TIO_NO_SIGNED_WRAP;
     if (TI->hasNoUnsignedWrap())
       Flags |= 1 << bitc::TIO_NO_UNSIGNED_WRAP;
+  } else if (const auto *GEP = dyn_cast<GEPOperator>(V)) {
+    if (GEP->isInBounds())
+      Flags |= 1 << bitc::GEP_INBOUNDS;
+    if (GEP->hasNoUnsignedSignedWrap())
+      Flags |= 1 << bitc::GEP_NUSW;
+    if (GEP->hasNoUnsignedWrap())
+      Flags |= 1 << bitc::GEP_NUW;
   }
 
   return Flags;
@@ -2779,12 +2786,11 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Code = bitc::CST_CODE_CE_GEP;
         const auto *GO = cast<GEPOperator>(C);
         Record.push_back(VE.getTypeID(GO->getSourceElementType()));
+        Record.push_back(getOptimizationFlags(GO));
         if (std::optional<ConstantRange> Range = GO->getInRange()) {
           Code = bitc::CST_CODE_CE_GEP_WITH_INRANGE;
-          Record.push_back(GO->isInBounds());
           emitConstantRange(Record, *Range);
-        } else if (GO->isInBounds())
-          Code = bitc::CST_CODE_CE_INBOUNDS_GEP;
+        }
         for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i) {
           Record.push_back(VE.getTypeID(C->getOperand(i)->getType()));
           Record.push_back(VE.getValueID(C->getOperand(i)));
@@ -2842,6 +2848,12 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       Code = bitc::CST_CODE_NO_CFI_VALUE;
       Record.push_back(VE.getTypeID(NC->getGlobalValue()->getType()));
       Record.push_back(VE.getValueID(NC->getGlobalValue()));
+    } else if (const auto *CPA = dyn_cast<ConstantPtrAuth>(C)) {
+      Code = bitc::CST_CODE_PTRAUTH;
+      Record.push_back(VE.getValueID(CPA->getPointer()));
+      Record.push_back(VE.getValueID(CPA->getKey()));
+      Record.push_back(VE.getValueID(CPA->getDiscriminator()));
+      Record.push_back(VE.getValueID(CPA->getAddrDiscriminator()));
     } else {
 #ifndef NDEBUG
       C->dump();
@@ -2973,7 +2985,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Code = bitc::FUNC_CODE_INST_GEP;
     AbbrevToUse = FUNCTION_INST_GEP_ABBREV;
     auto &GEPInst = cast<GetElementPtrInst>(I);
-    Vals.push_back(GEPInst.isInBounds());
+    Vals.push_back(getOptimizationFlags(&I));
     Vals.push_back(VE.getTypeID(GEPInst.getSourceElementType()));
     for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i)
       pushValueAndType(I.getOperand(i), InstID, Vals);
@@ -3871,7 +3883,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
   {
     auto Abbv = std::make_shared<BitCodeAbbrev>();
     Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_GEP));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, // dest ty
                               Log2_32_Ceil(VE.getTypes().size() + 1)));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
