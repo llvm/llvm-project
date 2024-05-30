@@ -334,6 +334,9 @@ void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
 mlir::Value genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
                           Entity entity);
 
+mlir::Value genRank(mlir::Location loc, fir::FirOpBuilder &builder,
+                    Entity entity, mlir::Type resultType);
+
 /// Return the fir base, shape, and type parameters for a variable. Note that
 /// type parameters are only added if the entity is not a box and the type
 /// parameters is not a constant in the base type. This matches the arguments

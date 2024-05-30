@@ -62,6 +62,12 @@ class fir_SimpleOneResultOp<string mnemonic, list<Trait> traits = []> :
   let builders = [fir_OneResultOpBuilder];
 }
 
+// Whether a type is a BaseBoxType or a reference to a BaseBoxType.
+def IsBoxAddressOrValueTypePred
+        : CPred<"::fir::isBoxAddressOrValue($_self)">;
+def fir_BoxAddressOrValueType : Type<IsBoxAddressOrValueTypePred,
+    "fir.box or fir.class type or reference">;
+
 //===----------------------------------------------------------------------===//
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
@@ -1205,7 +1211,8 @@ def fir_BoxProcHostOp : fir_SimpleOp<"boxproc_host", [NoMemoryEffect]> {
   let results = (outs fir_ReferenceType);
 }
 
-def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoMemoryEffect]> {
+def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank",
+  [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "return the number of dimensions for the boxed value";
 
   let description = [{
@@ -1222,7 +1229,7 @@ def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoMemoryEffect]> {
     descriptor may be either an array or a scalar, so the value is nonnegative.
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins fir_BoxAddressOrValueType:$box);
 
   let results = (outs AnyIntegerType);
 }
