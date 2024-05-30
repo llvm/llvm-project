@@ -27,7 +27,7 @@ namespace std {
   constexpr strong_ordering strong_ordering::less{-1},
       strong_ordering::equal{0}, strong_ordering::greater{1};
 #endif
-}
+} // namespace std
 
 namespace cwg2718 { // cwg2718: 2.7
 struct B {};
