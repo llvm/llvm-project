@@ -203,30 +203,6 @@ void shrink_int() {
   unsigned short usc1 = { c }; // expected-error {{non-constant-expression cannot be narrowed from type 'signed char'}} expected-note {{silence}}
   unsigned short usc2 = { (signed char)'x' }; // OK
   unsigned short usc3 = { (signed char)-1 }; // expected-error {{ -1 which cannot be narrowed}} expected-note {{silence}}
-
-#if __BITINT_MAXWIDTH__ >= 3
-  _BitInt(2) S2 = 0;
-  unsigned _BitInt(2) U2 = 0;
-  _BitInt(3) S3 = 0;
-  unsigned _BitInt(3) U3 = 0;
-
-           _BitInt(2) bi0 = { S2 };
-           _BitInt(2) bi1 = { U2 }; // expected-error {{cannot be narrowed from type 'unsigned _BitInt(2)'}}
-           _BitInt(2) bi2 = { S3 }; // expected-error {{cannot be narrowed from type '_BitInt(3)'}}
-           _BitInt(2) bi3 = { U3 }; // expected-error {{cannot be narrowed from type 'unsigned _BitInt(3)'}}
-  unsigned _BitInt(2) bi4 = { S2 }; // expected-error {{cannot be narrowed from type '_BitInt(2)'}}
-  unsigned _BitInt(2) bi5 = { U2 };
-  unsigned _BitInt(2) bi6 = { S3 }; // expected-error {{cannot be narrowed from type '_BitInt(3)'}}
-  unsigned _BitInt(2) bi7 = { U3 }; // expected-error {{cannot be narrowed from type 'unsigned _BitInt(3)'}}
-           _BitInt(3) bi8 = { S2 };
-           _BitInt(3) bi9 = { U2 };
-           _BitInt(3) bia = { S3 };
-           _BitInt(3) bib = { U3 }; // expected-error {{cannot be narrowed from type 'unsigned _BitInt(3)'}}
-  unsigned _BitInt(3) bic = { S2 }; // expected-error {{cannot be narrowed from type '_BitInt(2)'}}
-  unsigned _BitInt(3) bid = { U2 };
-  unsigned _BitInt(3) bie = { S3 }; // expected-error {{cannot be narrowed from type '_BitInt(3)'}}
-  unsigned _BitInt(3) bif = { U3 };
-#endif
 }
 
 // Be sure that type- and value-dependent expressions in templates get the error

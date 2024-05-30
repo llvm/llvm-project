@@ -17,8 +17,13 @@ namespace std {
       strong_ordering::equal{0}, strong_ordering::greater{1};
 #endif
 
-  typedef __INT16_TYPE__ int16_t;
-  typedef __UINT16_TYPE__ uint16_t;
+  typedef short int16_t;
+  typedef unsigned short uint16_t;
+  typedef int int32_t;
+  typedef unsigned uint32_t;
+  typedef long long int64_t;
+  typedef unsigned long long uint64_t;
+  __extension__ _Static_assert(sizeof(int16_t) == 2 && sizeof(int32_t) == 4 && sizeof(int64_t) == 8, "Some tests rely on these sizes");
 
   template<typename T> T declval();
 }
@@ -76,23 +81,11 @@ struct D {
 template<typename T, int N>
 D<T, N> d();
 
-#ifdef __SIZEOF_INT128__
-using int64_t = long long;
-static_assert(sizeof(long long) == 8, "long long needs to be 64 bit for this test to work");
-
-int64_t d1{ d<__int128, 63>().i };
-int64_t d2{ d<__int128, 64>().i };
-int64_t d3{ d<__int128, 65>().i };
-// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type '__int128' to 'int64_t' (aka 'long long') in initializer list}}
+std::int32_t d1{ d<std::int64_t, 63>().i };
+std::int32_t d2{ d<std::int64_t, 64>().i };
+std::int32_t d3{ d<std::int64_t, 65>().i };
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'std::int32_t' (aka 'int') to 'std::int64_t' (aka 'long long') in initializer list}}
 //   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
-#endif
-
-#if __BITINT_MAXWIDTH__ >= 34
-__extension__ _BitInt(33) d4{ d<_BitInt(34), 33>().i };
-__extension__ _BitInt(33) d5{ d<_BitInt(34), 34>().i };
-// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type '_BitInt(34)' to '_BitInt(33)' in initializer list}}
-//   FIXME-since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
-#endif
 
 std::int16_t d6{ d<int, 16>().i };
 std::int16_t d7{ d<unsigned, 15>().i };
@@ -127,8 +120,8 @@ struct E {
   signed int x : N;
   decltype(std::int16_t{ x }) dependent_narrowing;
   decltype(unsigned{ x }) always_narrowing;
-// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'int' to 'unsigned int' in initializer list}}
-//   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
+  // since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'int' to 'unsigned int' in initializer list}}
+  //   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
 };
 #endif
 } // namespace cwg2627
