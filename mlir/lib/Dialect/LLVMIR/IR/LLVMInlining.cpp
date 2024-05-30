@@ -187,7 +187,7 @@ deepCloneAliasScopes(iterator_range<Region::iterator> inlinedBlocks) {
   };
 
   for (Block &block : inlinedBlocks) {
-    for (Operation &op : block) {
+    block.walk([&](Operation *op) {
       if (auto aliasInterface = dyn_cast<LLVM::AliasAnalysisOpInterface>(op)) {
         aliasInterface.setAliasScopes(
             convertScopeList(aliasInterface.getAliasScopesOrNull()));
@@ -202,7 +202,7 @@ deepCloneAliasScopes(iterator_range<Region::iterator> inlinedBlocks) {
         noAliasScope.setScopeAttr(cast<LLVM::AliasScopeAttr>(
             mapping.lookup(noAliasScope.getScopeAttr())));
       }
-    }
+    });
   }
 }
 
@@ -357,9 +357,7 @@ static void createNewAliasScopesFromNoAliasParameter(
   // Go through every instruction and attempt to find which noalias parameters
   // it is definitely based on and definitely not based on.
   for (Block &inlinedBlock : inlinedBlocks) {
-    for (auto aliasInterface :
-         inlinedBlock.getOps<LLVM::AliasAnalysisOpInterface>()) {
-
+    inlinedBlock.walk([&](LLVM::AliasAnalysisOpInterface aliasInterface) {
       // Collect the pointer arguments affected by the alias scopes.
       SmallVector<Value> pointerArgs = aliasInterface.getAccessedOperands();
 
@@ -395,7 +393,7 @@ static void createNewAliasScopesFromNoAliasParameter(
             }
             return true;
           }))
-        continue;
+        return;
 
       // Add all noalias parameter scopes to the noalias scope list that we are
       // not based on.
@@ -438,7 +436,7 @@ static void createNewAliasScopesFromNoAliasParameter(
       // arguments.
       if (aliasesOtherKnownObject ||
           isa<LLVM::CallOp>(aliasInterface.getOperation()))
-        continue;
+        return;
 
       SmallVector<Attribute> aliasScopes;
       for (LLVM::SSACopyOp noAlias : noAliasParams)
@@ -449,7 +447,7 @@ static void createNewAliasScopesFromNoAliasParameter(
         aliasInterface.setAliasScopes(
             concatArrayAttr(aliasInterface.getAliasScopesOrNull(),
                             ArrayAttr::get(call->getContext(), aliasScopes)));
-    }
+    });
   }
 }
 
@@ -472,7 +470,7 @@ appendCallOpAliasScopes(Operation *call,
   // Simply append the call op's alias and noalias scopes to any operation
   // implementing AliasAnalysisOpInterface.
   for (Block &block : inlinedBlocks) {
-    for (auto aliasInterface : block.getOps<LLVM::AliasAnalysisOpInterface>()) {
+    block.walk([&](LLVM::AliasAnalysisOpInterface aliasInterface) {
       if (aliasScopes)
         aliasInterface.setAliasScopes(concatArrayAttr(
             aliasInterface.getAliasScopesOrNull(), aliasScopes));
@@ -480,7 +478,7 @@ appendCallOpAliasScopes(Operation *call,
       if (noAliasScopes)
         aliasInterface.setNoAliasScopes(concatArrayAttr(
             aliasInterface.getNoAliasScopesOrNull(), noAliasScopes));
-    }
+    });
   }
 }
 
@@ -667,7 +665,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
       LLVM_DEBUG(llvm::dbgs() << "Cannot inline: callable is variadic\n");
       return false;
     }
-    // TODO: Generate aliasing metadata from noalias argument/result attributes.
+    // TODO: Generate aliasing metadata from noalias result attributes.
     if (auto attrs = funcOp.getArgAttrs()) {
       for (DictionaryAttr attrDict : attrs->getAsRange<DictionaryAttr>()) {
         if (attrDict.contains(LLVM::LLVMDialect::getInAllocaAttrName())) {
@@ -755,8 +753,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
       return handleByValArgument(builder, callable, argument, elementType,
                                  requestedAlignment);
     }
-    if ([[maybe_unused]] std::optional<NamedAttribute> attr =
-            argumentAttrs.getNamed(LLVM::LLVMDialect::getNoAliasAttrName())) {
+    if (argumentAttrs.contains(LLVM::LLVMDialect::getNoAliasAttrName())) {
       if (argument.use_empty())
         return argument;
 

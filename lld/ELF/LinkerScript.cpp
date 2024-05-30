@@ -936,7 +936,8 @@ void LinkerScript::addOrphanSections() {
 
 void LinkerScript::diagnoseOrphanHandling() const {
   llvm::TimeTraceScope timeScope("Diagnose orphan sections");
-  if (config->orphanHandling == OrphanHandlingPolicy::Place)
+  if (config->orphanHandling == OrphanHandlingPolicy::Place ||
+      !hasSectionsCommand)
     return;
   for (const InputSectionBase *sec : orphanSections) {
     // .relro_padding is inserted before DATA_SEGMENT_RELRO_END, if present,
@@ -1248,9 +1249,11 @@ void LinkerScript::adjustOutputSections() {
 
     // We do not want to keep any special flags for output section
     // in case it is empty.
-    if (isEmpty)
+    if (isEmpty) {
       sec->flags =
           flags & ((sec->nonAlloc ? 0 : (uint64_t)SHF_ALLOC) | SHF_WRITE);
+      sec->sortRank = getSectionRank(*sec);
+    }
 
     // The code below may remove empty output sections. We should save the
     // specified program headers (if exist) and propagate them to subsequent
