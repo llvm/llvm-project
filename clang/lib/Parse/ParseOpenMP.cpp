@@ -24,10 +24,10 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaOpenMP.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include <bitset>
 #include <optional>
 
 using namespace clang;
@@ -1646,19 +1646,17 @@ bool Parser::parseOMPDeclareVariantMatchClause(SourceLocation Loc,
 void Parser::ParseOpenMPClauses(OpenMPDirectiveKind DKind,
                                 SmallVectorImpl<OMPClause *> &Clauses,
                                 SourceLocation Loc) {
-  SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
-              llvm::omp::Clause_enumSize + 1>
-      FirstClauses(llvm::omp::Clause_enumSize + 1);
+  std::bitset<llvm::omp::Clause_enumSize + 1> SeenClauses;
   while (Tok.isNot(tok::annot_pragma_openmp_end)) {
     OpenMPClauseKind CKind = Tok.isAnnotation()
                                  ? OMPC_unknown
                                  : getOpenMPClauseKind(PP.getSpelling(Tok));
     Actions.OpenMP().StartOpenMPClause(CKind);
-    OMPClause *Clause = ParseOpenMPClause(
-        DKind, CKind, !FirstClauses[unsigned(CKind)].getInt());
+    OMPClause *Clause =
+        ParseOpenMPClause(DKind, CKind, !SeenClauses[unsigned(CKind)]);
     SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
               StopBeforeMatch);
-    FirstClauses[unsigned(CKind)].setInt(true);
+    SeenClauses[unsigned(CKind)] = true;
     if (Clause != nullptr)
       Clauses.push_back(Clause);
     if (Tok.is(tok::annot_pragma_openmp_end)) {
@@ -2114,19 +2112,17 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
                                   /*AllowScopeSpecifier=*/true)) {
       SmallVector<OMPClause *, 1> Clauses;
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
-                    llvm::omp::Clause_enumSize + 1>
-            FirstClauses(llvm::omp::Clause_enumSize + 1);
+        std::bitset<llvm::omp::Clause_enumSize + 1> SeenClauses;
         while (Tok.isNot(tok::annot_pragma_openmp_end)) {
           OpenMPClauseKind CKind =
               Tok.isAnnotation() ? OMPC_unknown
                                  : getOpenMPClauseKind(PP.getSpelling(Tok));
           Actions.OpenMP().StartOpenMPClause(CKind);
-          OMPClause *Clause = ParseOpenMPClause(
-              OMPD_allocate, CKind, !FirstClauses[unsigned(CKind)].getInt());
+          OMPClause *Clause = ParseOpenMPClause(OMPD_allocate, CKind,
+                                                !SeenClauses[unsigned(CKind)]);
           SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
                     StopBeforeMatch);
-          FirstClauses[unsigned(CKind)].setInt(true);
+          SeenClauses[unsigned(CKind)] = true;
           if (Clause != nullptr)
             Clauses.push_back(Clause);
           if (Tok.is(tok::annot_pragma_openmp_end)) {
@@ -2150,9 +2146,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_requires: {
     SourceLocation StartLoc = ConsumeToken();
     SmallVector<OMPClause *, 5> Clauses;
-    SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
-                llvm::omp::Clause_enumSize + 1>
-        FirstClauses(llvm::omp::Clause_enumSize + 1);
+    std::bitset<llvm::omp::Clause_enumSize + 1> SeenClauses;
     if (Tok.is(tok::annot_pragma_openmp_end)) {
       Diag(Tok, diag::err_omp_expected_clause)
           << getOpenMPDirectiveName(OMPD_requires);
@@ -2163,11 +2157,11 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
                                    ? OMPC_unknown
                                    : getOpenMPClauseKind(PP.getSpelling(Tok));
       Actions.OpenMP().StartOpenMPClause(CKind);
-      OMPClause *Clause = ParseOpenMPClause(
-          OMPD_requires, CKind, !FirstClauses[unsigned(CKind)].getInt());
+      OMPClause *Clause = ParseOpenMPClause(OMPD_requires, CKind,
+                                            !SeenClauses[unsigned(CKind)]);
       SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
-      FirstClauses[unsigned(CKind)].setInt(true);
+      SeenClauses[unsigned(CKind)] = true;
       if (Clause != nullptr)
         Clauses.push_back(Clause);
       if (Tok.is(tok::annot_pragma_openmp_end)) {
@@ -2510,9 +2504,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   ParsingOpenMPDirectiveRAII DirScope(*this);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   SmallVector<OMPClause *, 5> Clauses;
-  SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
-              llvm::omp::Clause_enumSize + 1>
-      FirstClauses(llvm::omp::Clause_enumSize + 1);
+  std::bitset<llvm::omp::Clause_enumSize + 1> SeenClauses;
   unsigned ScopeFlags = Scope::FnScope | Scope::DeclScope |
                         Scope::CompoundStmtScope | Scope::OpenMPDirectiveScope;
   SourceLocation Loc = ReadDirectiveWithinMetadirective
@@ -2717,19 +2709,17 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
                                   /*AllowScopeSpecifier=*/false)) {
       SmallVector<OMPClause *, 1> Clauses;
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
-                    llvm::omp::Clause_enumSize + 1>
-            FirstClauses(llvm::omp::Clause_enumSize + 1);
+        std::bitset<llvm::omp::Clause_enumSize + 1> SeenClauses;
         while (Tok.isNot(tok::annot_pragma_openmp_end)) {
           OpenMPClauseKind CKind =
               Tok.isAnnotation() ? OMPC_unknown
                                  : getOpenMPClauseKind(PP.getSpelling(Tok));
           Actions.OpenMP().StartOpenMPClause(CKind);
-          OMPClause *Clause = ParseOpenMPClause(
-              OMPD_allocate, CKind, !FirstClauses[unsigned(CKind)].getInt());
+          OMPClause *Clause = ParseOpenMPClause(OMPD_allocate, CKind,
+                                                !SeenClauses[unsigned(CKind)]);
           SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
                     StopBeforeMatch);
-          FirstClauses[unsigned(CKind)].setInt(true);
+          SeenClauses[unsigned(CKind)] = true;
           if (Clause != nullptr)
             Clauses.push_back(Clause);
           if (Tok.is(tok::annot_pragma_openmp_end)) {
@@ -2926,13 +2916,11 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       ImplicitClauseAllowed = false;
       Actions.OpenMP().StartOpenMPClause(CKind);
       HasImplicitClause = false;
-      OMPClause *Clause = ParseOpenMPClause(
-          DKind, CKind, !FirstClauses[unsigned(CKind)].getInt());
-      FirstClauses[unsigned(CKind)].setInt(true);
-      if (Clause) {
-        FirstClauses[unsigned(CKind)].setPointer(Clause);
+      OMPClause *Clause =
+          ParseOpenMPClause(DKind, CKind, !SeenClauses[unsigned(CKind)]);
+      SeenClauses[unsigned(CKind)] = true;
+      if (Clause)
         Clauses.push_back(Clause);
-      }
 
       // Skip ',' if any.
       if (Tok.is(tok::comma))
@@ -2948,7 +2936,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       // If the depend or doacross clause is specified, the ordered construct
       // is a stand-alone directive.
       for (auto CK : {OMPC_depend, OMPC_doacross}) {
-        if (FirstClauses[unsigned(CK)].getInt()) {
+        if (SeenClauses[unsigned(CK)]) {
           if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
               ParsedStmtContext()) {
             Diag(Loc, diag::err_omp_immediate_directive)
@@ -2960,7 +2948,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       }
     }
 
-    if (DKind == OMPD_tile && !FirstClauses[unsigned(OMPC_sizes)].getInt()) {
+    if (DKind == OMPD_tile && !SeenClauses[unsigned(OMPC_sizes)]) {
       Diag(Loc, diag::err_omp_required_clause)
           << getOpenMPDirectiveName(OMPD_tile) << "sizes";
     }
