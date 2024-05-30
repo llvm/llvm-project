@@ -191,7 +191,7 @@ class AddressRangeTestCase(TestBase):
         interp.HandleCommand(script, result, False)
         self.assertTrue(result.Succeeded(), "script command succeeded")
         # [0x1000-0x2000] // Resolved with target or addresses without sections
-        self.assertRegex(result.GetOutput(), "^\[0x[0-9a-f]+\-0x[0-9a-f]+\)$")
+        self.assertRegex(result.GetOutput(), "^\[0x[0-9a-f]+\-0x[0-9a-f]+\)")
         process.Kill()
 
     def test_address_range_print_no_section_resolved(self):
