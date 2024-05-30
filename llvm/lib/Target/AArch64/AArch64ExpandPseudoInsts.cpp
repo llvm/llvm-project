@@ -791,7 +791,7 @@ static MachineInstr *createCallWithOps(MachineBasicBlock &MBB,
   // operands of the branch as it expects to be B <target> which is only one
   // operand. Instead they are implicit operands used by the branch.
   while (!MBBI->getOperand(RegMaskStartIdx).isRegMask()) {
-    MachineOperand &MOP = MBBI->getOperand(RegMaskStartIdx);
+    const MachineOperand &MOP = MBBI->getOperand(RegMaskStartIdx);
     assert(MOP.isReg() && "can only add register operands");
     Call->addOperand(MachineOperand::CreateReg(
         MOP.getReg(), /*Def=*/false, /*Implicit=*/true, /*isKill=*/false,
@@ -833,11 +833,11 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
   MachineInstr *OriginalCall = nullptr;
 
   if (MI.getOpcode() == AArch64::BLRA_RVMARKER) {
-    // Pointer auth call.
-    MachineOperand &CallTarget = MI.getOperand(1);
-    MachineOperand &Key = MI.getOperand(2);
-    MachineOperand &IntDisc = MI.getOperand(3);
-    MachineOperand &AddrDisc = MI.getOperand(4);
+    // ptrauth call.
+    const MachineOperand &CallTarget = MI.getOperand(1);
+    const MachineOperand &Key = MI.getOperand(2);
+    const MachineOperand &IntDisc = MI.getOperand(3);
+    const MachineOperand &AddrDisc = MI.getOperand(4);
 
     assert((Key.getImm() == AArch64PACKey::IA ||
             Key.getImm() == AArch64PACKey::IB) &&

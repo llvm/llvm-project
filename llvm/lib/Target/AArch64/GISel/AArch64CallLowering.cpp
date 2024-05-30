@@ -1032,18 +1032,22 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
   if (!IsIndirect)
     return AArch64::TCRETURNdi;
 
-  // When BTI is enabled, we need to use TCRETURNriBTI to make sure that we use
-  // x16 or x17.
+  // When BTI or PAuthLR are enabled, there are restrictions on using x16 and
+  // x17 to hold the function pointer.
   if (FuncInfo->branchTargetEnforcement()) {
+    if (FuncInfo->branchProtectionPAuthLR()) {
+      assert(!PAI && "ptrauth tail-calls not yet supported with PAuthLR");
+      return AArch64::TCRETURNrix17;
+    }
     if (PAI)
       return AArch64::AUTH_TCRETURN_BTI;
-    if (FuncInfo->branchProtectionPAuthLR())
-      return AArch64::TCRETURNrix17;
     return AArch64::TCRETURNrix16x17;
   }
 
-  if (FuncInfo->branchProtectionPAuthLR())
+  if (FuncInfo->branchProtectionPAuthLR()) {
+    assert(!PAI && "ptrauth tail-calls not yet supported with PAuthLR");
     return AArch64::TCRETURNrinotx16;
+  }
 
   if (PAI)
     return AArch64::AUTH_TCRETURN;
