@@ -16,9 +16,9 @@
 //   end subroutine test
 // end module m
 
-// A composite with a pointer component does not alias with a dummy pointer
+// A composite with a pointer component may alias with a dummy pointer
 // CHECK-LABEL: Testing : "_QMmPtest
-// CHECK: a#0 <-> func.region0#0: NoAlias
+// CHECK: a#0 <-> func.region0#0: MayAlias
 
 // a's box cannot alias with raw reference to f32 (x)
 // CHECK: a#0 <-> func.region0#1: NoAlias

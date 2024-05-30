@@ -145,7 +145,7 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
         ((lhsSrc.approximateSource && !lhsSrc.isData() && !rhsSrc.approximateSource) ||
          (rhsSrc.approximateSource && !rhsSrc.isData() && !lhsSrc.approximateSource))) {
       LLVM_DEBUG(llvm::dbgs()
-                 << "  aliasing between composite and pointer component\n");
+                 << "  aliasing between composite and non-data component\n");
       return AliasResult::MayAlias;
     }
 
@@ -185,10 +185,47 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     src2->attributes.set(Attribute::Target);
   }
 
-  // Dummy TARGET/POINTER argument may alias with a global TARGET/POINTER.
+  // Two TARGET/POINTERs may alias.
   if (src1->isTargetOrPointer() && src2->isTargetOrPointer() &&
       src1->isData() == src2->isData()) {
     LLVM_DEBUG(llvm::dbgs() << "  aliasing because of target or pointer\n");
+    return AliasResult::MayAlias;
+  }
+
+  // A pointer dummy arg may alias a global composite with a pointer component.
+  //
+  // module m
+  //   type t
+  //      real, pointer :: p
+  //   end type
+  //   type(t) :: a
+  //   type(t) :: b
+  // contains
+  //   subroutine test(p)
+  //     real, pointer :: p
+  //     p = 42
+  //     a = b
+  //     print *, p
+  //   end subroutine
+  // end module
+  // program
+  //   use m
+  //   real, target :: x1 = 1
+  //   real, target :: x2 = 2
+  //   a%p => x1
+  //   b%p => x2
+  //   call test(a%p)
+  // end
+  //
+  // The dummy argument p is an alias for a%p, even for the purposes of pointer
+  // association during the assignment a = b.  Thus, the program should print 2.
+  if (src1->kind == SourceKind::Global &&
+      src1->isRecordWithPointerComponent() &&
+      src2->kind == SourceKind::Argument &&
+      src2->attributes.test(Attribute::Pointer)) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "  aliasing because of pointer arg and global composite with "
+               << "pointer component\n");
     return AliasResult::MayAlias;
   }
 
