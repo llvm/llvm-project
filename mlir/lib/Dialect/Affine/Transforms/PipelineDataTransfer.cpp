@@ -373,7 +373,9 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
     return;
   }
 
-  if (failed(affineForOpBodySkew(forOp, shifts))) {
+  auto &topRegion =
+      forOp->getParentOfType<FunctionOpInterface>().getFunctionBody();
+  if (failed(affineForOpBodySkew(topRegion, forOp, shifts))) {
     LLVM_DEBUG(llvm::dbgs() << "op body skewing failed - unexpected\n";);
     return;
   }

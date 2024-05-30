@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -463,9 +464,12 @@ void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
       // Patch reduction loop - only ones that are sibling-fused with the
       // destination loop - into the parent loop.
       (void)promoteSingleIterReductionLoop(forOp, true);
-    else
+    else {
       // Promote any single iteration slice loops.
-      (void)promoteIfSingleIteration(forOp);
+      auto &topRegion =
+          forOp->getParentOfType<FunctionOpInterface>().getFunctionBody();
+      (void)promoteIfSingleIteration(topRegion, forOp);
+    }
   }
 }
 

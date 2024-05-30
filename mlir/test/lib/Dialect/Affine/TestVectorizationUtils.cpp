@@ -228,7 +228,8 @@ void VectorizerTestPass::testComposeMaps(llvm::raw_ostream &outs) {
 /// Test for 'vectorizeAffineLoopNest' utility.
 void VectorizerTestPass::testVecAffineLoopNest(llvm::raw_ostream &outs) {
   std::vector<SmallVector<AffineForOp, 2>> loops;
-  gatherLoops(getOperation(), loops);
+  auto &topRegion = getOperation().getBody();
+  gatherLoops(topRegion, loops);
 
   // Expected only one loop nest.
   if (loops.empty() || loops[0].size() != 1)
