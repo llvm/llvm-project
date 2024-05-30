@@ -44,24 +44,18 @@ protected:
 #endif
   }
 
-  void TearDown() override {
-  }
+  void TearDown() override {}
 
   static void SetUpTestSuite() {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
   }
 
-  static void TearDownTestSuite() {
-    llvm::llvm_shutdown();
-  }
+  static void TearDownTestSuite() { llvm::llvm_shutdown(); }
 };
-
-class InterpreterTestWithParams : public InterpreterTestBase,
-                                  public ::testing::WithParamInterface<TestClangConfig> {};
 
 } // namespace clang
 
-//#undef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+#undef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
 
 #endif // LLVM_CLANG_UNITTESTS_INTERPRETER_INTERPRETERTESTBASE_H

@@ -35,10 +35,11 @@ public:
   std::unique_ptr<CompilerInstance> CI;
   std::unique_ptr<Interpreter> Interp;
 
-  CodeCompletionTest() : CI(cantFail(CB.CreateCpp())), Interp(cantFail(clang::Interpreter::create(std::move(CI)))) {}
+  CodeCompletionTest()
+      : CI(cantFail(CB.CreateCpp())),
+        Interp(cantFail(clang::Interpreter::create(std::move(CI)))) {}
 
-  std::vector<std::string> runComp(llvm::StringRef Input,
-                                   llvm::Error &ErrR) {
+  std::vector<std::string> runComp(llvm::StringRef Input, llvm::Error &ErrR) {
     auto ComplCI = CB.CreateCpp();
     if (auto Err = ComplCI.takeError()) {
       ErrR = std::move(Err);
@@ -56,8 +57,8 @@ public:
     auto *ParentCI = this->Interp->getCompilerInstance();
     auto *MainCI = (*ComplInterp)->getCompilerInstance();
     auto CC = ReplCodeCompleter();
-    CC.codeComplete(MainCI, Input, /* Lines */ 1, Input.size() + 1,
-                    ParentCI, Results);
+    CC.codeComplete(MainCI, Input, /* Lines */ 1, Input.size() + 1, ParentCI,
+                    Results);
 
     for (auto Res : Results)
       if (Res.find(CC.Prefix) == 0)
