@@ -675,24 +675,37 @@ void SampleProfileMatcher::findNewIRCallees(
   }
 }
 
-std::pair<Function *, bool> SampleProfileMatcher::findOrMatchFunction(
-    const FunctionId &ProfFunc, FunctionMap &OldProfToNewSymbolMap,
-    const std::vector<Function *> &NewIRCallees = std::vector<Function *>()) {
+std::pair<Function *, SampleProfileMatcher::MatchState>
+SampleProfileMatcher::findFunction(
+    const FunctionId &ProfFunc,
+    const FunctionMap &OldProfToNewSymbolMap) const {
   auto F = SymbolMap->find(ProfFunc);
   if (F != SymbolMap->end())
-    return {F->second, false};
+    return {F->second, MatchState::InitialMatch};
 
   // Existing matched function is found.
   auto NewF = OldProfToNewSymbolMap.find(ProfFunc);
   if (NewF != OldProfToNewSymbolMap.end())
-    return {NewF->second, true};
+    return {NewF->second, MatchState::RecoveredMismatch};
+  return {nullptr, MatchState::Unknown};
+}
+
+std::pair<Function *, SampleProfileMatcher::MatchState>
+SampleProfileMatcher::findOrMatchFunction(
+    const FunctionId &ProfFunc, FunctionMap &OldProfToNewSymbolMap,
+    const std::vector<Function *> &NewIRCallees) {
+  auto R = findFunction(ProfFunc, OldProfToNewSymbolMap);
+  // We need to check the match state instead of nullptr function because the
+  // returned function can be nullptr even if it's found in the symbol map.
+  if (R.second != MatchState::Unknown)
+    return R;
 
   for (auto *IRCallee : NewIRCallees)
     if (functionMatchesProfile(*IRCallee, ProfFunc)) {
       OldProfToNewSymbolMap[ProfFunc] = IRCallee;
-      return {IRCallee, true};
+      return {IRCallee, MatchState::RecoveredMismatch};
     }
-  return {nullptr, false};
+  return {nullptr, MatchState::Unknown};
 }
 
 bool SampleProfileMatcher::functionMatchesProfileHelper(
@@ -773,8 +786,7 @@ void SampleProfileMatcher::matchProfileForNewFunctions(
   // Find the new candidate callees from IR in the current caller scope.
   std::vector<Function *> NewIRCallees;
   if (auto *IRCaller =
-          findOrMatchFunction(CallerFS.getFunction(), OldProfToNewSymbolMap)
-              .first) {
+          findFunction(CallerFS.getFunction(), OldProfToNewSymbolMap).first) {
     // No callees for external function, skip the rename matching.
     if (IRCaller->isDeclaration())
       return;
@@ -793,7 +805,7 @@ void SampleProfileMatcher::matchProfileForNewFunctions(
       const FunctionId &ProfCallee = TS.first;
       auto MatchRes =
           findOrMatchFunction(ProfCallee, OldProfToNewSymbolMap, NewIRCallees);
-      if (!MatchRes.second)
+      if (MatchRes.second != MatchState::RecoveredMismatch)
         continue;
       FunctionId NewIRCalleeName(MatchRes.first->getName());
       assert(NewIRCalleeName != ProfCallee &&
@@ -822,7 +834,7 @@ void SampleProfileMatcher::matchProfileForNewFunctions(
       FunctionId ProfCallee = CalleeFS.getFunction();
       auto MatchRes =
           findOrMatchFunction(ProfCallee, OldProfToNewSymbolMap, NewIRCallees);
-      if (MatchRes.second) {
+      if (MatchRes.second == MatchState::RecoveredMismatch) {
         FunctionId NewIRCalleeName(MatchRes.first->getName());
         assert(NewIRCalleeName != ProfCallee &&
                "New callee symbol is not a new function");

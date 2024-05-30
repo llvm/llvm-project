@@ -35,7 +35,7 @@ class SampleProfileMatcher {
   // in the profile.
   StringMap<LocToLocMap> FuncMappings;
 
-  // Match state for an anchor/callsite.
+  // Match state for an anchor/callsite or function.
   enum class MatchState {
     Unknown = 0,
     // Initial match between input profile and current IR.
@@ -186,6 +186,12 @@ private:
   void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
                                const AnchorMap &ProfileAnchors,
                                LocToLocMap &IRToProfileLocationMap);
+  /// Find the existing or new matched function using the profile name.
+  ///
+  /// \returns The function and a match state.
+  std::pair<Function *, MatchState>
+  findFunction(const FunctionId &ProfFunc,
+               const FunctionMap &OldProfToNewSymbolMap) const;
   /// Find the function using the profile name. If the function is not found but
   /// the \p NewIRCallees is provided, try to match the function profile with
   /// all functions in \p NewIRCallees and return the matched function.
@@ -194,9 +200,8 @@ private:
   /// \param OldProfToNewSymbolMap The map from old profile name to new symbol.
   /// \param NewIRCallees The new candidate callees in the same scope to match.
   ///
-  /// \returns The matched function and a bool value indicating whether the
-  /// function is new(matched).
-  std::pair<Function *, bool>
+  /// \returns The matched function and a match state.
+  std::pair<Function *, MatchState>
   findOrMatchFunction(const FunctionId &ProfFunc,
                       FunctionMap &OldProfToNewSymbolMap,
                       const std::vector<Function *> &NewIRCallees);
