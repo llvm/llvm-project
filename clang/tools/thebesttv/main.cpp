@@ -98,11 +98,17 @@ struct VarLocResult {
 };
 
 /**
+ * isStmt: 匹配语句或变量（目前 source、stmt、sink 都当作语句处理）
+ *
  * requireExact: 只对路径有效，表示是否需要精确匹配
+ *
+ * succFirst：在 CFG 中，对于语句 `p = foo()`，`foo()` 会在 pred，`p = foo()`
+ * 会在 succ。如果想进入函数，需要优先访问 pred。对于 input.json 的 stmt
+ * 类型，需要优先进入函数。但 source 和 sink 则不需要。
  */
 VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                             int line, int column, bool isStmt,
-                            bool requireExact = true) {
+                            bool requireExact, bool succFirst) {
     FindVarVisitor visitor;
 
     for (const auto &fi : functionsInFile.at(file)) {
@@ -112,7 +118,10 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
 
         // search all CFG stmts in function for matching variable
         ASTContext *Context = &fi->D->getASTContext();
-        for (const auto &[stmt, block] : fi->stmtBlockPairs) {
+
+        auto locate =
+            [&](const Stmt *stmt,
+                const CFGBlock *block) -> std::optional<VarLocResult> {
             if (isStmt) {
                 // search for stmt
                 auto bLoc =
@@ -121,7 +130,7 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                     Location::fromSourceLocation(*Context, stmt->getEndLoc());
 
                 if (!bLoc || bLoc->file != file)
-                    continue;
+                    return std::nullopt;
 
                 // 精确匹配：要求行号、列号相同
                 bool matchExact = bLoc->line == line && bLoc->column == column;
@@ -150,6 +159,27 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                                 var, fi->signature, id, file, line, column);
                     return VarLocResult(fi, block);
                 }
+            }
+            return std::nullopt;
+        };
+
+        if (succFirst) {
+            // 优先访问 succ，也就是根据 Block ID 从小到大遍历
+            for (auto it = fi->stmtBlockPairs.cbegin();
+                 it != fi->stmtBlockPairs.cend(); it++) {
+                const auto &[stmt, block] = *it;
+                auto result = locate(stmt, block);
+                if (result)
+                    return result.value();
+            }
+        } else {
+            // 优先访问 pred，即从大到小，反向遍历
+            for (auto it = fi->stmtBlockPairs.crbegin();
+                 it != fi->stmtBlockPairs.crend(); it++) {
+                const auto &[stmt, block] = *it;
+                auto result = locate(stmt, block);
+                if (result)
+                    return result.value();
             }
         }
     }
@@ -189,7 +219,7 @@ struct FunctionLocator {
 };
 
 VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
-                            bool isStmt) {
+                            bool succFirst) {
     int fid = locator.getFid(loc);
     if (fid == -1) {
         return VarLocResult();
@@ -206,6 +236,10 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
     if (!TUD->isUnavailable())
         FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
 
+    /*
+    由于精确匹配可能导致对于 p = foo() 这样的语句，
+    匹配不到 foo()，所以全部模糊匹配。
+
     auto exactResult = locateVariable(functionsInFile, loc.file, loc.line,
                                       loc.column, isStmt, true);
     if (exactResult.isValid())
@@ -213,8 +247,9 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
     // 精确匹配失败
     logger.warn("Unable to find exact match! Trying inexact matching...");
     logger.warn("  {}:{}:{}", loc.file, loc.line, loc.column);
+    */
     auto result = locateVariable(functionsInFile, loc.file, loc.line,
-                                 loc.column, isStmt, false);
+                                 loc.column, true, false, succFirst);
     return result;
 }
 
@@ -225,10 +260,6 @@ void dumpICFGNode(int u, ordered_json &jPath) {
     const NamedLocation &loc = Global.functionLocations[fid];
 
     logger.info(">> Node {} is in {} B{}", u, loc.name, bid);
-
-    // FIXME: compile_commands
-    // 中一个文件可能对应多条编译命令，所以这里可能有多个AST
-    // TODO: 想办法记录 function 用的是哪一条命令，然后只用这一条生成的
 
     auto ASTFromFile = getASTOfFile(loc.file);
     auto AST = ASTFromFile->getAST();
@@ -397,8 +428,8 @@ int findPathBetween(const VarLocResult &from, int fromLine, VarLocResult to,
         pointsToAvoid.insert(icfg.getNodeId(loc.fid, loc.bid));
     }
 
-    auto pFinder = DijPathFinder(icfg);
-    pFinder.search(u, v, pointsToPass, pointsToAvoid, 3);
+    auto pFinder = DfsPathFinder(icfg);
+    pFinder.search(u, v, pointsToPass, pointsToAvoid, Global.callDepth);
 
     saveAsJson(fromLine, toLine, pFinder.results, type, jResults);
     return pFinder.results.size();
@@ -500,9 +531,11 @@ void generatePathFromOneEntry(const ordered_json &result,
             continue;
         }
 
-        // 目前把 source 和 sink 都当作 stmt 来处理，
-        // 精确匹配不上的话，就模糊匹配
-        bool isStmt = true; // type == "stmt";
+        // 目前把 source 和 sink 都当作 stmt 来处理
+        // 全部模糊匹配
+
+        // 对于 source 和 sink，优先访问 succ
+        bool succFirst = (type != "stmt");
         Location jsonLoc(loc);
 
         // 跳过项目以外的库函数路径
@@ -511,7 +544,7 @@ void generatePathFromOneEntry(const ordered_json &result,
             continue;
         }
 
-        VarLocResult varLoc = locateVariable(locator, jsonLoc, isStmt);
+        VarLocResult varLoc = locateVariable(locator, jsonLoc, succFirst);
         if (!varLoc.isValid()) {
             logger.error("Error: cannot locate {} at {}", type, loc);
             // 跳过无法定位的中间路径
@@ -578,6 +611,26 @@ void generateFromInput(const ordered_json &input, fs::path outputDir) {
     o.close();
 }
 
+int getArgValue(args::ValueFlag<int> &arg, const int defaultValue,
+                const std::string &name) {
+    int v = defaultValue;
+    if (arg) {
+        v = args::get(arg);
+        requireTrue(v >= 1, name + " must be greater than 0");
+    }
+    logger.info("{}: {}", name, v);
+    return v;
+}
+
+bool getArgValue(args::Flag &arg, const std::string &name) {
+    bool v = false;
+    if (arg) {
+        v = true;
+    }
+    logger.info("{}: {}", name, v);
+    return v;
+}
+
 int main(int argc, const char **argv) {
     spdlog::set_level(spdlog::level::debug);
 
@@ -590,6 +643,15 @@ int main(int argc, const char **argv) {
     args::ValueFlag<int> argPoolSize(
         argParser, "N",
         "AST Pool size (max number of ASTs in memory), default 10", {'p'});
+    args::ValueFlag<int> argCallDepth(
+        argParser, "N", "Max call depth in path-finding, default 6", {'d'});
+    args::ValueFlag<int> argDfsTick(
+        argParser, "N",
+        "DFS tick (timeout checking frequency), default 1'000'000", {"tick"});
+    args::ValueFlag<int> argDfsTimeout(
+        argParser, "N", "DFS timeout in seconds, default 30", {'t'});
+    args::Flag argKeepAST(argParser, "keep-ast", "Keep AST dumps on disk",
+                          {"keep-ast"});
 
     args::Positional<std::string> argIR(argParser, "IR", "Path to input.json",
                                         {args::Options::Required});
@@ -611,16 +673,11 @@ int main(int argc, const char **argv) {
 
     logger.info("AST & ICFG generation method: sequential");
 
-    {
-        int ASTPoolSize = 10;
-        if (argPoolSize) {
-            ASTPoolSize = args::get(argPoolSize);
-            requireTrue(ASTPoolSize >= 1,
-                        "AST pool size must be greater than 0");
-        }
-        logger.info("AST pool size: {}", ASTPoolSize);
-        Global.ASTPoolSize = ASTPoolSize;
-    }
+    Global.ASTPoolSize = getArgValue(argPoolSize, 10, "AST pool size");
+    Global.callDepth = getArgValue(argCallDepth, 6, "Max call depth");
+    Global.dfsTick = getArgValue(argDfsTick, 1'000'000, "DFS tick");
+    Global.dfsTimeout = getArgValue(argDfsTimeout, 30, "DFS timeout");
+    Global.keepAST = getArgValue(argKeepAST, "Keep AST");
 
     setClangPath(argv[0]);
 

@@ -11,11 +11,17 @@ struct ICFG {
             CALL_EDGE, // 同一个调用点，call edge 和 return edge 的 id 必须匹配
             RETURN_EDGE
         };
+
+        Edge(Type type, int callSiteId, int target)
+            : type(type), callSiteId(callSiteId), target(target) {}
+
         Type type;
         int callSiteId;
         int target;
     };
     std::vector<std::vector<Edge>> G;
+    // 反图（不重新弄一个ICFG了，开销太大）
+    std::vector<std::vector<Edge>> G_reverse;
     // 过程内的边 id 默认为 0，call edge 和 return edge 的 id 从 1 开始，
     // 也就是调用点的 id。
     int callSiteId = 0;
@@ -29,6 +35,8 @@ struct ICFG {
     std::map<std::string, std::string> sourceForFile;
 
     int getNodeId(int fid, int bid);
+
+    void addEdge(int u, Edge::Type type, int callSiteId, int v);
 
     void addNormalEdge(int fid, int uBid, int vBid);
 

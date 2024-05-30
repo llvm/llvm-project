@@ -11,12 +11,21 @@ int ICFG::getNodeId(int fid, int bid) {
     return id;
 }
 
+void ICFG::addEdge(int u, Edge::Type type, int callSiteId, int v) {
+    if (type == Edge::Type::INTRA_PROC)
+        requireTrue(callSiteId == 0);
+    else
+        requireTrue(callSiteId > 0);
+    G[u].emplace_back(type, callSiteId, v);
+    G_reverse[v].emplace_back(type, callSiteId, u);
+}
+
 void ICFG::addNormalEdge(int fid, int uBid, int vBid) {
     int u = getNodeId(fid, uBid);
     int v = getNodeId(fid, vBid);
     // llvm::errs() << "In fun: " << Global.functionLocations[fid]->name << " "
     //              << uBid << " -> " << vBid << "\n";
-    G[u].push_back({Edge::Type::INTRA_PROC, 0, v});
+    addEdge(u, Edge::Type::INTRA_PROC, 0, v);
 }
 
 void ICFG::addCallAndReturnEdge(int uEntry, int uExit, int calleeFid) {
@@ -32,8 +41,8 @@ void ICFG::addCallAndReturnEdge(int uEntry, int uExit, int calleeFid) {
     //     Global.functionLocations[functionBlockOfNodeId[uEntry].first]->name
     //     << " -> " << Global.functionLocations[calleeFid]->name << "\n";
 
-    G[uEntry].push_back({Edge::Type::CALL_EDGE, callSiteId, vEntry});
-    G[vExit].push_back({Edge::Type::RETURN_EDGE, callSiteId, uExit});
+    addEdge(uEntry, Edge::Type::CALL_EDGE, callSiteId, vEntry);
+    addEdge(vExit, Edge::Type::RETURN_EDGE, callSiteId, uExit);
 }
 
 void ICFG::tryAndAddCallSite(int fid, const CFGBlock &B) {
@@ -79,6 +88,7 @@ void ICFG::addFunction(int fid, const CFG &cfg) {
 
     n += cfg.size();
     G.resize(n);
+    G_reverse.resize(n);
 
     entryExitOfFunction[fid] = {cfg.getEntry().getBlockID(),
                                 cfg.getExit().getBlockID()};
