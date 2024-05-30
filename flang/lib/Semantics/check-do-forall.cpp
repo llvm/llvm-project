@@ -728,9 +728,6 @@ private:
             typeMismatch("INTEGER");
           }
           break;
-        default:
-          supportedIdentifier = false;
-          break;
         }
       }
       if (!supportedIdentifier) {
