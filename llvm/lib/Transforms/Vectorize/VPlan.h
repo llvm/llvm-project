@@ -1941,15 +1941,16 @@ public:
 
 class VPPartialReductionRecipe : public VPRecipeWithIRFlags {
   unsigned Opcode;
+  unsigned Scale;
 public:
   template <typename IterT>
   VPPartialReductionRecipe(Instruction &I,
-                           iterator_range<IterT> Operands) : VPRecipeWithIRFlags(
-    VPDef::VPPartialReductionSC, Operands, I), Opcode(I.getOpcode())
+                           iterator_range<IterT> Operands, unsigned Scale) : VPRecipeWithIRFlags(
+    VPDef::VPPartialReductionSC, Operands, I), Opcode(I.getOpcode()), Scale(Scale)
   {}
   ~VPPartialReductionRecipe() override = default;
   VPPartialReductionRecipe *clone() override {
-    auto *R = new VPPartialReductionRecipe(*getUnderlyingInstr(), operands());
+    auto *R = new VPPartialReductionRecipe(*getUnderlyingInstr(), operands(), Scale);
     R->transferFlags(*this);
     return R;
   }

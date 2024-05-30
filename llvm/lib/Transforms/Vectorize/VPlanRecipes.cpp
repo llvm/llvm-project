@@ -269,7 +269,8 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
       assert(isa<ScalableVectorType>(Ops[0]->getType()) && "Type must be a scalable vector");
 
       ScalableVectorType *FullTy = cast<ScalableVectorType>(Ops[0]->getType());
-      Type *RetTy = ScalableVectorType::get(FullTy->getScalarType(), 4);
+      auto EC = FullTy->getElementCount();
+      Type *RetTy = ScalableVectorType::get(FullTy->getScalarType(), EC.divideCoefficientBy(Scale).getKnownMinValue());
 
       Intrinsic::ID PartialIntrinsic = Intrinsic::not_intrinsic;
       switch(Opcode) {
@@ -301,7 +302,7 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
 }
 
 void VPPartialReductionRecipe::postInsertionOp() {
-  cast<VPReductionPHIRecipe>(this->getOperand(1))->SetVFScaleFactor(4);
+  cast<VPReductionPHIRecipe>(this->getOperand(1))->SetVFScaleFactor(Scale);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

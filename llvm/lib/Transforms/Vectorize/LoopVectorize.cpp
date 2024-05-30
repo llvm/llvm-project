@@ -8653,7 +8653,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreatePartialReduction(
     auto EC = ElementCount::getScalable(16);
     if(std::find(Range.begin(), Range.end(), EC) == Range.end())
       return nullptr;
-    return new VPPartialReductionRecipe(*Instr, make_range(Operands.begin(), Operands.end()));
+    return new VPPartialReductionRecipe(*Instr, make_range(Operands.begin(), Operands.end()), 4);
   }
   return nullptr;
 }
