@@ -4481,11 +4481,8 @@ def HLSLShader : InheritableAttr {
   let Documentation = [HLSLSV_ShaderTypeAttrDocs];
   let AdditionalMembers =
 [{
-  static const llvm::Triple::EnvironmentType MinShaderTypeValue = llvm::Triple::Pixel;
-  static const llvm::Triple::EnvironmentType MaxShaderTypeValue = llvm::Triple::Amplification;
-
   static bool isValidShaderType(llvm::Triple::EnvironmentType ShaderType) {
-    return ShaderType >= MinShaderTypeValue && ShaderType <= MaxShaderTypeValue;
+    return ShaderType >= llvm::Triple::Pixel && ShaderType <= llvm::Triple::Amplification;
   }
 }];
 }
