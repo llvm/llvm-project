@@ -616,5 +616,8 @@ HANDLE_LIBCALL(DEOPTIMIZE, "__llvm_deoptimize")
 // Return address
 HANDLE_LIBCALL(RETURN_ADDRESS, nullptr)
 
+// Clear cache
+HANDLE_LIBCALL(CLEAR_CACHE, "__clear_cache")
+
 HANDLE_LIBCALL(UNKNOWN_LIBCALL, nullptr)
 
