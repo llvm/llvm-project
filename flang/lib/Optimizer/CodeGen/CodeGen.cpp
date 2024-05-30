@@ -2162,11 +2162,7 @@ struct XArrayCoorOpConversion
         if (normalSlice)
           step = integerCast(loc, rewriter, idxTy, operands[sliceOffset + 2]);
       }
-      // The array_coor indices are always 1-based if slicing
-      // is in effect. The non-default lower bounds only
-      // apply to the indices of the slice itself.
-      auto idx = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, index,
-                                                    isSliced ? one : lb, nsw);
+      auto idx = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, index, lb, nsw);
       mlir::Value diff =
           rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, idx, step, nsw);
       if (normalSlice) {

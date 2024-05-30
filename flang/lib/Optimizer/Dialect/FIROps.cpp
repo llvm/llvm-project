@@ -492,21 +492,7 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
     if (op.getSlice() && boxedSlice && boxedSlice != op.getSlice())
       return mlir::failure();
 
-    // If v is a shape_shift operation:
-    //   fir.shape_shift %l1, %e1, %l2, %e2, ...
-    // create:
-    //   fir.shape %e1, %e2, ...
-    auto getShapeFromShapeShift = [&](mlir::Value v) -> mlir::Value {
-      auto shapeShiftOp =
-          mlir::dyn_cast_or_null<fir::ShapeShiftOp>(v.getDefiningOp());
-      if (!shapeShiftOp)
-        return nullptr;
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointAfter(shapeShiftOp);
-      return rewriter.create<fir::ShapeOp>(shapeShiftOp.getLoc(),
-                                           shapeShiftOp.getExtents());
-    };
-
+    std::optional<IndicesVectorTy> shiftedIndices;
     // The embox/rebox and array_coor either have compatible
     // shape/slice at this point or shape/slice is null
     // in one of them but not in the other.
@@ -533,7 +519,7 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
               // Pull in as:
               // %shape = fir.shape <extents from the %shapeshift>
               // %1 = fir.array_coor %arg(%shape) [%slice] %idx
-              boxedShape = getShapeFromShapeShift(boxedShape);
+              boxedShape = getShapeFromShapeShift(boxedShape, rewriter);
               if (!boxedShape)
                 return mlir::failure();
             } else {
@@ -591,17 +577,43 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
               // Pull in as:
               // %shape = fir.shape <extents from the %shapeshift>
               // %1 = fir.array_coor %arg(%shape) %idx
-              boxedShape = getShapeFromShapeShift(boxedShape);
+              boxedShape = getShapeFromShapeShift(boxedShape, rewriter);
               if (!boxedShape)
                 return mlir::failure();
             } else {
               return mlir::failure();
             }
           } else {
-            // %0 = fir.embox %arg(%shape) [%slice]
-            // %1 = fir.array_coor %0 %idx
-            // Pull in as:
-            // %1 = fir.array_coor %arg(%shape) %[slice] %idx
+            if (boxedShapeIsShift) {
+              // %0 = fir.embox %arg(%shift) [%slice]
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %tmp = arith.addi %idx, %shift.origin
+              // %idx_shifted = arith.subi %tmp, 1
+              // %1 = fir.array_coor %arg(%shift) %[slice] %idx_shifted
+              shiftedIndices =
+                  getShiftedIndices(boxedShape, op.getIndices(), rewriter);
+              if (!shiftedIndices)
+                return mlir::failure();
+            } else if (boxedShapeIsShape) {
+              // %0 = fir.embox %arg(%shape) [%slice]
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %1 = fir.array_coor %arg(%shape) %[slice] %idx
+            } else if (boxedShapeIsShapeShift) {
+              // %0 = fir.embox %arg(%shapeshift) [%slice]
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %tmp = arith.addi %idx, %shapeshift.lb
+              // %idx_shifted = arith.subi %tmp, 1
+              // %1 = fir.array_coor %arg(%shapeshift) %[slice] %idx_shifted
+              shiftedIndices =
+                  getShiftedIndices(boxedShape, op.getIndices(), rewriter);
+              if (!shiftedIndices)
+                return mlir::failure();
+            } else {
+              return mlir::failure();
+            }
           }
         }
       } else { // !boxedShape
@@ -657,8 +669,8 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
           } else {
             // %0 = fir.embox %arg(%shape) [%slice]
             // %1 = fir.array_coor %0(%shape) %idx
-            // Cannot pull in without adjusting the array_coor indices.
-            return mlir::failure();
+            // Pull in as:
+            // %1 = fir.array_coor %arg(%shape) [%slice] %idx
           }
         }
       } else { // !boxedShape
@@ -682,8 +694,7 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
           } else {
             // %0 = fir.rebox %arg [%slice]
             // %1 = fir.array_coor %0(%shape) %idx
-            // Cannot pull in without adjusting the slice and array_coor
-            // indices.
+            // Cannot pull in without adjusting the slice indices.
             return mlir::failure();
           }
         }
@@ -709,8 +720,71 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
         op.getShapeMutable().assign(boxedShape);
       if (boxedSlice)
         op.getSliceMutable().assign(boxedSlice);
+      if (shiftedIndices)
+        op.getIndicesMutable().assign(*shiftedIndices);
     });
     return mlir::success();
+  }
+
+private:
+  using IndicesVectorTy = std::vector<mlir::Value>;
+
+  // If v is a shape_shift operation:
+  //   fir.shape_shift %l1, %e1, %l2, %e2, ...
+  // create:
+  //   fir.shape %e1, %e2, ...
+  static mlir::Value getShapeFromShapeShift(mlir::Value v,
+                                            mlir::PatternRewriter &rewriter) {
+    auto shapeShiftOp =
+        mlir::dyn_cast_or_null<fir::ShapeShiftOp>(v.getDefiningOp());
+    if (!shapeShiftOp)
+      return nullptr;
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(shapeShiftOp);
+    return rewriter.create<fir::ShapeOp>(shapeShiftOp.getLoc(),
+                                         shapeShiftOp.getExtents());
+  }
+
+  static std::optional<IndicesVectorTy>
+  getShiftedIndices(mlir::Value v, mlir::ValueRange indices,
+                    mlir::PatternRewriter &rewriter) {
+    auto insertAdjustments = [&](mlir::Operation *op, mlir::ValueRange lbs) {
+      // Compute the shifted indices using the extended type.
+      // Note that this can probably result in less efficient
+      // MLIR and further LLVM IR due to the extra conversions.
+      mlir::OpBuilder::InsertPoint savedIP = rewriter.saveInsertionPoint();
+      rewriter.setInsertionPoint(op);
+      mlir::Location loc = op->getLoc();
+      mlir::Type idxTy = rewriter.getIndexType();
+      mlir::Value one = rewriter.create<mlir::arith::ConstantOp>(
+          loc, idxTy, rewriter.getIndexAttr(1));
+      rewriter.restoreInsertionPoint(savedIP);
+      auto nsw = mlir::arith::IntegerOverflowFlags::nsw;
+
+      IndicesVectorTy shiftedIndices;
+      for (auto [lb, idx] : llvm::zip(lbs, indices)) {
+        mlir::Value extLb = rewriter.create<fir::ConvertOp>(loc, idxTy, lb);
+        mlir::Value extIdx = rewriter.create<fir::ConvertOp>(loc, idxTy, idx);
+        mlir::Value add =
+            rewriter.create<mlir::arith::AddIOp>(loc, extIdx, extLb, nsw);
+        mlir::Value sub =
+            rewriter.create<mlir::arith::SubIOp>(loc, add, one, nsw);
+        shiftedIndices.push_back(sub);
+      }
+
+      return std::move(shiftedIndices);
+    };
+
+    if (auto shiftOp =
+            mlir::dyn_cast_or_null<fir::ShiftOp>(v.getDefiningOp())) {
+      return insertAdjustments(shiftOp.getOperation(), shiftOp.getOrigins());
+    } else if (auto shapeShiftOp = mlir::dyn_cast_or_null<fir::ShapeShiftOp>(
+                   v.getDefiningOp())) {
+      return insertAdjustments(shapeShiftOp.getOperation(),
+                               shapeShiftOp.getOrigins());
+    }
+
+    return std::nullopt;
   }
 };
 
