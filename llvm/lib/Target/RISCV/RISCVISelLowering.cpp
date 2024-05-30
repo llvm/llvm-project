@@ -16236,25 +16236,27 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
     APInt LoC, HiC;
 
     // Simple case, V is a UMIN.
-    if (SDValue UMin = MatchMinMax(V, ISD::UMIN, RISCVISD::UMIN_VL, HiC))
+    if (SDValue UMinOp = MatchMinMax(V, ISD::UMIN, RISCVISD::UMIN_VL, HiC))
       if (HiC.isMask(VT.getScalarSizeInBits()))
-        return UMin;
+        return UMinOp;
 
     // If we have an SMAX that removes negative numbers first, then we can match
     // SMIN instead of UMIN.
-    if (SDValue SMin = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
-      if (SDValue SMax = MatchMinMax(SMin, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+    if (SDValue SMinOp = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+      if (SDValue SMaxOp =
+              MatchMinMax(SMinOp, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
         if (LoC.isNonNegative() && HiC.isMask(VT.getScalarSizeInBits()))
-          return SMin;
+          return SMinOp;
 
     // If we have an SMIN before an SMAX and the SMAX constant is less than or
     // equal to the SMIN constant, we can use vnclipu if we insert a new SMAX
     // first.
-    if (SDValue SMax = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
-      if (SDValue SMin = MatchMinMax(SMax, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+    if (SDValue SMaxOp = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+      if (SDValue SMinOp =
+              MatchMinMax(SMaxOp, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
         if (LoC.isNonNegative() && HiC.isMask(VT.getScalarSizeInBits()) &&
             HiC.uge(LoC))
-          return DAG.getNode(RISCVISD::SMAX_VL, DL, V.getValueType(), SMin,
+          return DAG.getNode(RISCVISD::SMAX_VL, DL, V.getValueType(), SMinOp,
                              V.getOperand(1), DAG.getUNDEF(V.getValueType()),
                              Mask, VL);
 
@@ -16268,15 +16270,17 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
     APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
 
     APInt HiC, LoC;
-    if (SDValue SMin = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
-      if (SDValue SMax = MatchMinMax(SMin, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+    if (SDValue SMinOp = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+      if (SDValue SMaxOp =
+              MatchMinMax(SMinOp, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
         if (HiC == SignedMax && LoC == SignedMin)
-          return SMax;
+          return SMaxOp;
 
-    if (SDValue SMax = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
-      if (SDValue SMin = MatchMinMax(SMax, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+    if (SDValue SMaxOp = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+      if (SDValue SMinOp =
+              MatchMinMax(SMaxOp, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
         if (HiC == SignedMax && LoC == SignedMin)
-          return SMin;
+          return SMinOp;
 
     return SDValue();
   };

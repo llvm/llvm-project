@@ -98,7 +98,6 @@ define void @trunc_sat_u8u16_notopt(ptr %x, ptr %y) {
   ret void
 }
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u8u16_maxmin(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u16_maxmin:
 ; CHECK:       # %bb.0:
@@ -117,7 +116,6 @@ define void @trunc_sat_u8u16_maxmin(ptr %x, ptr %y) {
   ret void
 }
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u8u16_minmax(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u16_minmax:
 ; CHECK:       # %bb.0:
@@ -225,7 +223,6 @@ define void @trunc_sat_u16u32_min(ptr %x, ptr %y) {
   ret void
 }
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u16u32_maxmin(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u16u32_maxmin:
 ; CHECK:       # %bb.0:
@@ -245,7 +242,6 @@ define void @trunc_sat_u16u32_maxmin(ptr %x, ptr %y) {
   ret void
 }
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u16u32_minmax(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u16u32_minmax:
 ; CHECK:       # %bb.0:
@@ -357,7 +353,6 @@ define void @trunc_sat_u32u64_min(ptr %x, ptr %y) {
 }
 
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u32u64_maxmin(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u32u64_maxmin:
 ; CHECK:       # %bb.0:
@@ -376,7 +371,6 @@ define void @trunc_sat_u32u64_maxmin(ptr %x, ptr %y) {
   ret void
 }
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u32u64_minmax(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u32u64_minmax:
 ; CHECK:       # %bb.0:
@@ -461,7 +455,6 @@ define void @trunc_sat_u8u32_min(ptr %x, ptr %y) {
   ret void
 }
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u8u32_maxmin(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u32_maxmin:
 ; CHECK:       # %bb.0:
@@ -484,7 +477,6 @@ define void @trunc_sat_u8u32_maxmin(ptr %x, ptr %y) {
   ret void
 }
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u8u32_minmax(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u32_minmax:
 ; CHECK:       # %bb.0:
@@ -579,7 +571,6 @@ define void @trunc_sat_u8u64_min(ptr %x, ptr %y) {
   ret void
 }
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u8u64_maxmin(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u64_maxmin:
 ; CHECK:       # %bb.0:
@@ -604,7 +595,6 @@ define void @trunc_sat_u8u64_maxmin(ptr %x, ptr %y) {
   ret void
 }
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u8u64_minmax(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u64_minmax:
 ; CHECK:       # %bb.0:
@@ -698,7 +688,6 @@ define void @trunc_sat_u16u64_min(ptr %x, ptr %y) {
   ret void
 }
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u16u64_maxmin(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u16u64_maxmin:
 ; CHECK:       # %bb.0:
@@ -723,7 +712,6 @@ define void @trunc_sat_u16u64_maxmin(ptr %x, ptr %y) {
   ret void
 }
 
-; FIXME: This can be a signed vmax followed by vnclipu.
 define void @trunc_sat_u16u64_minmax(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u16u64_minmax:
 ; CHECK:       # %bb.0:
