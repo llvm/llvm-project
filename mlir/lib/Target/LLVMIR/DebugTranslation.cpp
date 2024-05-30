@@ -318,20 +318,25 @@ llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
     if (!attr)
       return nullptr;
 
-    if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr)) {
-      return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
-          llvm::Type::getInt64Ty(llvmCtx), intAttr.getInt()));
-    } else if (auto exprAttr = llvm::dyn_cast<LLVM::DIExpressionAttr>(attr)) {
-      return translateExpression(exprAttr);
-    } else if (auto localVar =
-                   llvm::dyn_cast<LLVM::DILocalVariableAttr>(attr)) {
-      return translate(localVar);
-    } else if (auto globalVar =
-                   llvm::dyn_cast<LLVM::DIGlobalVariableAttr>(attr)) {
-      return translate(globalVar);
-    } else {
-      llvm_unreachable("Unexpected Attribute value");
-    }
+    llvm::Metadata *metadata =
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(attr)
+            .Case<IntegerAttr>([&](IntegerAttr intAttr) {
+              return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+                  llvm::Type::getInt64Ty(llvmCtx), intAttr.getInt()));
+            })
+            .Case<LLVM::DIExpressionAttr>([&](LLVM::DIExpressionAttr expr) {
+              return translateExpression(expr);
+            })
+            .Case<LLVM::DILocalVariableAttr>(
+                [&](LLVM::DILocalVariableAttr local) {
+                  return translate(local);
+                })
+            .Case<LLVM::DIGlobalVariableAttr>(
+                [&](LLVM::DIGlobalVariableAttr global) {
+                  return translate(global);
+                })
+            .Default([&](Attribute attr) { return nullptr; });
+    return metadata;
   };
   return llvm::DISubrange::get(llvmCtx, getMetadataOrNull(attr.getCount()),
                                getMetadataOrNull(attr.getLowerBound()),

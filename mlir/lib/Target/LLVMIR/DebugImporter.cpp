@@ -221,23 +221,22 @@ DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {
       [&](llvm::DISubrange::BoundType data) -> mlir::Attribute {
     if (data.isNull())
       return nullptr;
-
-    if (auto *constInt = llvm::dyn_cast<llvm::ConstantInt *>(data)) {
+    if (auto *constInt = llvm::dyn_cast<llvm::ConstantInt *>(data))
       return IntegerAttr::get(IntegerType::get(context, 64),
                               constInt->getSExtValue());
-    } else if (auto *expr = llvm::dyn_cast<llvm::DIExpression *>(data)) {
+    if (auto *expr = llvm::dyn_cast<llvm::DIExpression *>(data))
       return translateExpression(expr);
-    } else if (auto *var = llvm::dyn_cast<llvm::DIVariable *>(data)) {
+    if (auto *var = llvm::dyn_cast<llvm::DIVariable *>(data)) {
       if (auto *local = llvm::dyn_cast<llvm::DILocalVariable>(var))
         return translate(local);
-      else if (auto *global = llvm::dyn_cast<llvm::DIGlobalVariable>(var))
+      if (auto *global = llvm::dyn_cast<llvm::DIGlobalVariable>(var))
         return translate(global);
-      llvm_unreachable("Unknown variable type");
+      return nullptr;
     }
-    llvm_unreachable("Unknown DISubrange::BoundType");
+    return nullptr;
   };
-  auto count = getAttrOrNull(node->getCount());
-  auto upperBound = getAttrOrNull(node->getUpperBound());
+  mlir::Attribute count = getAttrOrNull(node->getCount());
+  mlir::Attribute upperBound = getAttrOrNull(node->getUpperBound());
   // Either count or the upper bound needs to be present. Otherwise, the
   // metadata is invalid. The conversion might fail due to unsupported DI nodes.
   if (!count && !upperBound)

@@ -524,25 +524,34 @@ llvm.func @fn_with_composite() {
 
 // Test that Subrange works with expression and variables.
 
-#di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
-#di_file = #llvm.di_file<"debug-info.ll" in "/">
-#di_compile_unit = #llvm.di_compile_unit<id = distinct[1]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, isOptimized = false, emissionKind = Full>
-#di_composite_type = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "expr_elements", baseType = #di_basic_type, flags = Vector, elements = #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>>>
-#di_subroutine_type = #llvm.di_subroutine_type<types = #di_basic_type, #di_composite_type>
-#di_subprogram = #llvm.di_subprogram<id = distinct[2]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "subranges", file = #di_file, subprogramFlags = Definition, type = #di_subroutine_type>
-#di_local_variable = #llvm.di_local_variable<scope = #di_subprogram, name = "size">
-#gv1 = #llvm.di_global_variable<scope = #di_compile_unit, name = "gv", file = #di_file, line = 3, type = #di_basic_type>
-#gve1 = #llvm.di_global_variable_expression<var = #gv1, expr = <>>
-#di_composite_type1 = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "var_elements", baseType = #di_basic_type, flags = Vector, elements = #llvm.di_subrange<count = #di_local_variable, stride = #gv1>>
-#di_local_variable1 = #llvm.di_local_variable<scope = #di_subprogram, name = "size", type = #di_composite_type1>
+#bt = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
+#file = #llvm.di_file<"debug-info.ll" in "/">
+#cu = #llvm.di_compile_unit<id = distinct[1]<>,
+ sourceLanguage = DW_LANG_Fortran95, file = #file, isOptimized = false,
+ emissionKind = Full>
+#comp_ty1 = #llvm.di_composite_type<tag = DW_TAG_array_type,
+ name = "expr_elements", baseType = #bt, flags = Vector,
+ elements = #llvm.di_subrange<count = #llvm.di_expression<
+ [DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>>>
+#srty = #llvm.di_subroutine_type<types = #bt, #comp_ty1>
+#sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "subranges",
+  file = #file, subprogramFlags = Definition, type = #srty>
+#lvar = #llvm.di_local_variable<scope = #sp, name = "size">
+#gv = #llvm.di_global_variable<scope = #cu, name = "gv", file = #file,
+ line = 3, type = #bt>
+#gve = #llvm.di_global_variable_expression<var = #gv, expr = <>>
+#comp_ty2 = #llvm.di_composite_type<tag = DW_TAG_array_type,
+ name = "var_elements", baseType = #bt, flags = Vector,
+ elements = #llvm.di_subrange<count = #lvar, stride = #gv>>
+#lvar2 = #llvm.di_local_variable<scope = #sp, name = "var", type = #comp_ty2>
 #loc1 = loc("test.f90": 1:1)
-#loc2 = loc(fused<#di_subprogram>[#loc1])
+#loc2 = loc(fused<#sp>[#loc1])
 
 module attributes {} {
-  llvm.mlir.global external @gv() {dbg_expr = #gve1} : i64
+  llvm.mlir.global external @gv() {dbg_expr = #gve} : i64
 
   llvm.func @subranges(%arg: !llvm.ptr) {
-    llvm.intr.dbg.declare #di_local_variable1 = %arg : !llvm.ptr
+    llvm.intr.dbg.declare #lvar2 = %arg : !llvm.ptr
     llvm.return
   } loc(#loc2)
 }
