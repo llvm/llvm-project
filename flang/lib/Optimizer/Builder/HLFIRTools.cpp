@@ -195,6 +195,29 @@ mlir::Value hlfir::Entity::getFirBase() const {
   return getBase();
 }
 
+static bool isShapeWithLowerBounds(mlir::Value shape) {
+  if (!shape)
+    return false;
+  auto shapeTy = shape.getType();
+  return mlir::isa<fir::ShiftType>(shapeTy) ||
+         mlir::isa<fir::ShapeShiftType>(shapeTy);
+}
+
+bool hlfir::Entity::hasNonDefaultLowerBounds() const {
+  if (!isBoxAddressOrValue() || isScalar())
+    return false;
+  if (isMutableBox())
+    return true;
+  if (auto varIface = getIfVariableInterface())
+    return isShapeWithLowerBounds(varIface.getShape());
+  // Go through chain of fir.box converts.
+  if (auto convert = getDefiningOp<fir::ConvertOp>())
+    return hlfir::Entity{convert.getValue()}.hasNonDefaultLowerBounds();
+  // TODO: Embox and Rebox do not have hlfir variable interface, but are
+  // easy to reason about.
+  return true;
+}
+
 fir::FortranVariableOpInterface
 hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   const fir::ExtendedValue &exv, llvm::StringRef name,
@@ -891,7 +914,8 @@ static fir::ExtendedValue translateVariableToExtendedValue(
   llvm::SmallVector<mlir::Value> extents;
   llvm::SmallVector<mlir::Value> nonDefaultLbounds;
   if (mlir::isa<fir::BaseBoxType>(variable.getType()) &&
-      !variable.getIfVariableInterface()) {
+      !variable.getIfVariableInterface() &&
+      variable.hasNonDefaultLowerBounds()) {
     // This special case avoids generating two sets of identical
     // fir.box_dim to get both the lower bounds and extents.
     genLboundsAndExtentsFromBox(loc, builder, variable, nonDefaultLbounds,
