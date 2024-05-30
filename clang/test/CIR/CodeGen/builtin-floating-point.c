@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffast-math -fclangir -emit-cir %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64-apple-darwin-macho -ffast-math -fclangir -emit-cir %s -o - | FileCheck %s --check-prefix=AARCH64
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffast-math -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t1.cir 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-apple-darwin-macho -ffast-math -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t1.cir 2>&1 | FileCheck %s --check-prefix=AARCH64
 
 // ceil
 
@@ -615,4 +615,224 @@ long double call_truncl(long double f) {
   // CHECK: cir.func @call_truncl
   // CHECK: {{.+}} = cir.trunc {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.trunc {{.+}} : !cir.long_double<!cir.double>
+}
+
+// copysign
+
+float my_copysignf(float x, float y) {
+  return __builtin_copysignf(x, y);
+  // CHECK: cir.func @my_copysignf
+  // CHECK:   %{{.+}} = cir.copysign %{{.+}}, %{{.+}} : !cir.float
+}
+
+double my_copysign(double x, double y) {
+  return __builtin_copysign(x, y);
+  // CHECK: cir.func @my_copysign
+  // CHECK:   %{{.+}} = cir.copysign %{{.+}}, %{{.+}} : !cir.double
+}
+
+long double my_copysignl(long double x, long double y) {
+  return __builtin_copysignl(x, y);
+  // CHECK: cir.func @my_copysignl
+  // CHECK:   %{{.+}} = cir.copysign %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.copysign %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+}
+
+float copysignf(float, float);
+double copysign(double, double);
+long double copysignl(long double, long double);
+
+float call_copysignf(float x, float y) {
+  return copysignf(x, y);
+  // CHECK: cir.func @call_copysignf
+  // CHECK:   %{{.+}} = cir.copysign %{{.+}}, %{{.+}} : !cir.float
+}
+
+double call_copysign(double x, double y) {
+  return copysign(x, y);
+  // CHECK: cir.func @call_copysign
+  // CHECK:   %{{.+}} = cir.copysign %{{.+}}, %{{.+}} : !cir.double
+}
+
+long double call_copysignl(long double x, long double y) {
+  return copysignl(x, y);
+  // CHECK: cir.func @call_copysignl
+  // CHECK:   %{{.+}} = cir.copysign %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.copysign %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+}
+
+// fmax
+
+float my_fmaxf(float x, float y) {
+  return __builtin_fmaxf(x, y);
+  // CHECK: cir.func @my_fmaxf
+  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.float
+}
+
+double my_fmax(double x, double y) {
+  return __builtin_fmax(x, y);
+  // CHECK: cir.func @my_fmax
+  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.double
+}
+
+long double my_fmaxl(long double x, long double y) {
+  return __builtin_fmaxl(x, y);
+  // CHECK: cir.func @my_fmaxl
+  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+}
+
+float fmaxf(float, float);
+double fmax(double, double);
+long double fmaxl(long double, long double);
+
+float call_fmaxf(float x, float y) {
+  return fmaxf(x, y);
+  // CHECK: cir.func @call_fmaxf
+  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.float
+}
+
+double call_fmax(double x, double y) {
+  return fmax(x, y);
+  // CHECK: cir.func @call_fmax
+  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.double
+}
+
+long double call_fmaxl(long double x, long double y) {
+  return fmaxl(x, y);
+  // CHECK: cir.func @call_fmaxl
+  // CHECK:   %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.fmax %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+}
+
+// fmin
+
+float my_fminf(float x, float y) {
+  return __builtin_fminf(x, y);
+  // CHECK: cir.func @my_fminf
+  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.float
+}
+
+double my_fmin(double x, double y) {
+  return __builtin_fmin(x, y);
+  // CHECK: cir.func @my_fmin
+  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.double
+}
+
+long double my_fminl(long double x, long double y) {
+  return __builtin_fminl(x, y);
+  // CHECK: cir.func @my_fminl
+  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+}
+
+float fminf(float, float);
+double fmin(double, double);
+long double fminl(long double, long double);
+
+float call_fminf(float x, float y) {
+  return fminf(x, y);
+  // CHECK: cir.func @call_fminf
+  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.float
+}
+
+double call_fmin(double x, double y) {
+  return fmin(x, y);
+  // CHECK: cir.func @call_fmin
+  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.double
+}
+
+long double call_fminl(long double x, long double y) {
+  return fminl(x, y);
+  // CHECK: cir.func @call_fminl
+  // CHECK:   %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.fmin %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+}
+
+// fmod
+
+float my_fmodf(float x, float y) {
+  return __builtin_fmodf(x, y);
+  // CHECK: cir.func @my_fmodf
+  // CHECK:   %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.float
+}
+
+double my_fmod(double x, double y) {
+  return __builtin_fmod(x, y);
+  // CHECK: cir.func @my_fmod
+  // CHECK:   %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.double
+}
+
+long double my_fmodl(long double x, long double y) {
+  return __builtin_fmodl(x, y);
+  // CHECK: cir.func @my_fmodl
+  // CHECK:   %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+}
+
+float fmodf(float, float);
+double fmod(double, double);
+long double fmodl(long double, long double);
+
+float call_fmodf(float x, float y) {
+  return fmodf(x, y);
+  // CHECK: cir.func @call_fmodf
+  // CHECK:   %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.float
+}
+
+double call_fmod(double x, double y) {
+  return fmod(x, y);
+  // CHECK: cir.func @call_fmod
+  // CHECK:   %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.double
+}
+
+long double call_fmodl(long double x, long double y) {
+  return fmodl(x, y);
+  // CHECK: cir.func @call_fmodl
+  // CHECK:   %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+}
+
+// pow
+
+float my_powf(float x, float y) {
+  return __builtin_powf(x, y);
+  // CHECK: cir.func @my_powf
+  // CHECK:   %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.float
+}
+
+double my_pow(double x, double y) {
+  return __builtin_pow(x, y);
+  // CHECK: cir.func @my_pow
+  // CHECK:   %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.double
+}
+
+long double my_powl(long double x, long double y) {
+  return __builtin_powl(x, y);
+  // CHECK: cir.func @my_powl
+  // CHECK:   %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
+}
+
+float powf(float, float);
+double pow(double, double);
+long double powl(long double, long double);
+
+float call_powf(float x, float y) {
+  return powf(x, y);
+  // CHECK: cir.func @call_powf
+  // CHECK:   %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.float
+}
+
+double call_pow(double x, double y) {
+  return pow(x, y);
+  // CHECK: cir.func @call_pow
+  // CHECK:   %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.double
+}
+
+long double call_powl(long double x, long double y) {
+  return powl(x, y);
+  // CHECK: cir.func @call_powl
+  // CHECK:   %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 }

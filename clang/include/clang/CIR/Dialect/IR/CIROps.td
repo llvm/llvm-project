@@ -3324,6 +3324,26 @@ def SinOp : UnaryFPToFPBuiltinOp<"sin">;
 def SqrtOp : UnaryFPToFPBuiltinOp<"sqrt">;
 def TruncOp : UnaryFPToFPBuiltinOp<"trunc">;
 
+class BinaryFPToFPBuiltinOp<string mnemonic>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let summary = [{
+    libc builtin equivalent ignoring floating-point exceptions and errno.
+  }];
+
+  let arguments = (ins CIR_AnyFloat:$lhs, CIR_AnyFloat:$rhs);
+  let results = (outs CIR_AnyFloat:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($lhs)) attr-dict
+  }];
+}
+
+def CopysignOp : BinaryFPToFPBuiltinOp<"copysign">;
+def FMaxOp : BinaryFPToFPBuiltinOp<"fmax">;
+def FMinOp : BinaryFPToFPBuiltinOp<"fmin">;
+def FModOp : BinaryFPToFPBuiltinOp<"fmod">;
+def PowOp : BinaryFPToFPBuiltinOp<"pow">;
+
 //===----------------------------------------------------------------------===//
 // Branch Probability Operations
 //===----------------------------------------------------------------------===//

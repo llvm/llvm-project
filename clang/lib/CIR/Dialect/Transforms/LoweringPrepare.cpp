@@ -80,6 +80,8 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerIterEndOp(IterEndOp op);
   void lowerArrayDtor(ArrayDtor op);
   void lowerArrayCtor(ArrayCtor op);
+  void lowerFModOp(FModOp op);
+  void lowerPowOp(PowOp op);
 
   /// Build the function that initializes the specified global
   FuncOp buildCXXGlobalVarDeclInitFunc(GlobalOp op);
@@ -625,6 +627,49 @@ void LoweringPreparePass::lowerIterEndOp(IterEndOp op) {
   op.erase();
 }
 
+static void lowerBinaryFPToFPBuiltinOp(LoweringPreparePass &pass,
+                                       mlir::Operation *op,
+                                       llvm::StringRef floatRtFuncName,
+                                       llvm::StringRef doubleRtFuncName,
+                                       llvm::StringRef longDoubleRtFuncName) {
+  mlir::Type ty = op->getResult(0).getType();
+
+  llvm::StringRef rtFuncName;
+  if (ty.isa<mlir::cir::SingleType>())
+    rtFuncName = floatRtFuncName;
+  else if (ty.isa<mlir::cir::DoubleType>())
+    rtFuncName = doubleRtFuncName;
+  else if (ty.isa<mlir::cir::LongDoubleType>())
+    rtFuncName = longDoubleRtFuncName;
+  else
+    llvm_unreachable("unknown binary fp2fp builtin operand type");
+
+  CIRBaseBuilderTy builder(*pass.theModule.getContext());
+  builder.setInsertionPointToStart(pass.theModule.getBody());
+
+  auto rtFuncTy = mlir::cir::FuncType::get({ty, ty}, ty);
+  FuncOp rtFunc =
+      pass.buildRuntimeFunction(builder, rtFuncName, op->getLoc(), rtFuncTy);
+
+  auto lhs = op->getOperand(0);
+  auto rhs = op->getOperand(1);
+
+  builder.setInsertionPointAfter(op);
+  auto call = builder.create<mlir::cir::CallOp>(op->getLoc(), rtFunc,
+                                                mlir::ValueRange{lhs, rhs});
+
+  op->replaceAllUsesWith(call);
+  op->erase();
+}
+
+void LoweringPreparePass::lowerFModOp(FModOp op) {
+  lowerBinaryFPToFPBuiltinOp(*this, op, "fmodf", "fmod", "fmodl");
+}
+
+void LoweringPreparePass::lowerPowOp(PowOp op) {
+  lowerBinaryFPToFPBuiltinOp(*this, op, "powf", "pow", "powl");
+}
+
 void LoweringPreparePass::runOnOp(Operation *op) {
   if (auto threeWayCmp = dyn_cast<CmpThreeWayOp>(op)) {
     lowerThreeWayCmpOp(threeWayCmp);
@@ -650,6 +695,10 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     } else if (auto globalDtor = fnOp.getGlobalDtorAttr()) {
       globalDtorList.push_back(globalDtor);
     }
+  } else if (auto fmodOp = dyn_cast<FModOp>(op)) {
+    lowerFModOp(fmodOp);
+  } else if (auto powOp = dyn_cast<PowOp>(op)) {
+    lowerPowOp(powOp);
   }
 }
 
@@ -663,8 +712,8 @@ void LoweringPreparePass::runOnOperation() {
   SmallVector<Operation *> opsToTransform;
   op->walk([&](Operation *op) {
     if (isa<CmpThreeWayOp, VAArgOp, GlobalOp, DynamicCastOp, StdFindOp,
-            IterEndOp, IterBeginOp, ArrayCtor, ArrayDtor, mlir::cir::FuncOp>(
-            op))
+            IterEndOp, IterBeginOp, ArrayCtor, ArrayDtor, mlir::cir::FuncOp,
+            FModOp, PowOp>(op))
       opsToTransform.push_back(op);
   });
 
