@@ -7345,6 +7345,53 @@ where shaders must be compiled into a library and linked at runtime.
   }];
 }
 
+def HLSLLoopHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "#[loop]";
+  let Content = [{
+The ``[loop]`` directive allows loop optimization hints to be
+specified for the subsequent loop. The directive allows unrolling to
+be disabled and is not compatible with [unroll(x)]. 
+
+Specifying the parameter, ``[loop]``, directs the
+unroller to not unroll the loop. 
+
+.. code-block:: hlsl
+
+  [loop]
+  for (...) {
+    ...
+  }
+
+See `hlsl loop extensions
+<https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-for>`_
+for details.
+  }];
+}
+
+def HLSLUnrollHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "[unroll(x)]";
+  let Content = [{
+Loop unrolling optimization hints can be specified with ``[unroll(x)]``
+. The attribute is placed immediately before a for, while,
+or do-while.
+Specifying the parameter, ``[unroll(_value_)]``, directs the
+unroller to unroll the loop ``_value_`` times. Note: [unroll(x)] is not compatible with [loop].
+
+.. code-block:: hlsl
+
+  [unroll(4)]
+  for (...) {
+    ...
+  }
+See
+`hlsl loop extensions
+<https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-for>`_
+for details.
+  }];
+}
+
 def ClangRandomizeLayoutDocs : Documentation {
   let Category = DocCatDecl;
   let Heading = "randomize_layout, no_randomize_layout";
