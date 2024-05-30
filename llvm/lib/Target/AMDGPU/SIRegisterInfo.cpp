@@ -2211,6 +2211,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   assert(SPAdj == 0 && "unhandled SP adjustment in call sequence?");
 
+  assert(MF->getRegInfo().isReserved(MFI->getScratchRSrcReg()) &&
+         "unreserved scratch RSRC register");
+
   MachineOperand &FIOp = MI->getOperand(FIOperandNum);
   int Index = MI->getOperand(FIOperandNum).getIndex();
 
