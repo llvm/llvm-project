@@ -2025,7 +2025,7 @@ getDependenceDistanceStrideAndSize(
 
 MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
-    unsigned BIdx, const DenseMap<Value *, const SCEV *> &Strides,
+    unsigned BIdx,
     const DenseMap<Value *, SmallVector<const Value *, 16>>
         &UnderlyingObjects) {
   assert(AIdx < BIdx && "Must pass arguments in program order");
@@ -2033,8 +2033,8 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // Get the dependence distance, stride, type size and what access writes for
   // the dependence between A and B.
   auto Res = getDependenceDistanceStrideAndSize(
-      A, InstMap[AIdx], B, InstMap[BIdx], Strides, UnderlyingObjects, PSE,
-      InnermostLoop);
+      A, InstMap[AIdx], B, InstMap[BIdx], SymbolicStrides, UnderlyingObjects,
+      PSE, InnermostLoop);
   if (std::holds_alternative<Dependence::DepType>(Res))
     return std::get<Dependence::DepType>(Res);
 
@@ -2269,7 +2269,6 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
 bool MemoryDepChecker::areDepsSafe(
     DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
-    const DenseMap<Value *, const SCEV *> &Strides,
     const DenseMap<Value *, SmallVector<const Value *, 16>>
         &UnderlyingObjects) {
 
@@ -2314,9 +2313,8 @@ bool MemoryDepChecker::areDepsSafe(
             if (*I1 > *I2)
               std::swap(A, B);
 
-            Dependence::DepType Type =
-                isDependent(*A.first, A.second, *B.first, B.second, Strides,
-                            UnderlyingObjects);
+            Dependence::DepType Type = isDependent(*A.first, A.second, *B.first,
+                                                   B.second, UnderlyingObjects);
             mergeInStatus(Dependence::isSafeForVectorization(Type));
 
             // Gather dependences unless we accumulated MaxDependences
@@ -2674,9 +2672,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   CanVecMem = true;
   if (Accesses.isDependencyCheckNeeded()) {
     LLVM_DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
-    CanVecMem = DepChecker->areDepsSafe(
-        DependentAccesses, Accesses.getDependenciesToCheck(), SymbolicStrides,
-        Accesses.getUnderlyingObjects());
+    CanVecMem = DepChecker->areDepsSafe(DependentAccesses,
+                                        Accesses.getDependenciesToCheck(),
+                                        Accesses.getUnderlyingObjects());
 
     if (!CanVecMem && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
@@ -3066,8 +3064,8 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
     if (ScalableWidth.isNonZero())
       MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
   }
-  DepChecker =
-      std::make_unique<MemoryDepChecker>(*PSE, L, MaxTargetVectorWidthInBits);
+  DepChecker = std::make_unique<MemoryDepChecker>(*PSE, L, SymbolicStrides,
+                                                  MaxTargetVectorWidthInBits);
   PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
   if (canAnalyzeLoop())
     analyzeLoop(AA, LI, TLI, DT);
