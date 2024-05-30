@@ -4883,8 +4883,9 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   if (!MaxTripCount)
     return CmpFn(CostA * EstimatedWidthB, CostB * EstimatedWidthA);
 
-  auto GetCost = [MaxTripCount, this](unsigned VF, InstructionCost VectorCost,
-                                      InstructionCost ScalarCost) {
+  auto GetCostForTC = [MaxTripCount, this](unsigned VF,
+                                           InstructionCost VectorCost,
+                                           InstructionCost ScalarCost) {
     // If the trip count is a known (possibly small) constant, the trip count
     // will be rounded up to an integer number of iterations under
     // FoldTailByMasking. The total cost in that case will be
@@ -4898,8 +4899,8 @@ bool LoopVectorizationPlanner::isMoreProfitable(
     return VectorCost * (MaxTripCount / VF) + ScalarCost * (MaxTripCount % VF);
   };
 
-  auto RTCostA = GetCost(EstimatedWidthA, CostA, A.ScalarCost);
-  auto RTCostB = GetCost(EstimatedWidthB, CostB, B.ScalarCost);
+  auto RTCostA = GetCostForTC(EstimatedWidthA, CostA, A.ScalarCost);
+  auto RTCostB = GetCostForTC(EstimatedWidthB, CostB, B.ScalarCost);
   return CmpFn(RTCostA, RTCostB);
 }
 
