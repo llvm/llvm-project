@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
   CodeGenTypes
   Core
   MC
+  MIRParser
   Support
   TargetParser
   )
