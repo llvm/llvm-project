@@ -348,6 +348,23 @@ static inline unsigned long _inpd(unsigned short port) {
   return ret;
 }
 
+static inline int _outp(unsigned short port, int data) {
+  __asm__ volatile("outb %b0, %w1" : : "a"(data), "Nd"(port) : "memory");
+  return data;
+}
+
+static inline unsigned short
+_outpw(unsigned short port, unsigned short data) {
+  __asm__ volatile("outw %w0, %w1" : : "a"(data), "Nd"(port) : "memory");
+  return data;
+}
+
+static inline unsigned long _outpd(unsigned short port,
+                                   unsigned long data) {
+  __asm__ volatile("outl %k0, %w1" : : "a"(data), "Nd"(port) : "memory");
+  return data;
+}
+
 #endif
 
 #if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
