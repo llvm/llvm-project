@@ -39,7 +39,6 @@ inline Error finiteLoop(function_ref<Expected<bool>()> Iteration,
 /// Make a best effort to guess the
 /// Xcode.app/Contents/Developer path from an SDK path.
 inline StringRef guessDeveloperDir(StringRef SysRoot) {
-  SmallString<128> Result;
   // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
   auto it = sys::path::rbegin(SysRoot);
   auto end = sys::path::rend(SysRoot);
@@ -72,6 +71,28 @@ inline StringRef guessDeveloperDir(StringRef SysRoot) {
     ++it;
   }
   return {};
+}
+
+/// Make a best effort to determine whether Path is inside a toolchain.
+inline bool isInToolchainDir(StringRef Path) {
+  // Library/Developer/Toolchains/swift-DEVELOPMENT-SNAPSHOT-2024-05-15-a.xctoolchain/usr/lib/swift/macosx/_StringProcessing.swiftmodule/arm64-apple-macos.private.swiftinterface
+  for (auto it = sys::path::rbegin(Path), end = sys::path::rend(Path);
+       it != end; ++it) {
+    if (it->ends_with(".xctoolchain")) {
+      ++it;
+      if (it == end)
+        return false;
+      if (*it != "Toolchains")
+        return false;
+      ++it;
+      if (it == end)
+        return false;
+      if (*it != "Developer")
+        return false;
+      return true;
+    }
+  }
+  return false;
 }
 
 inline bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
