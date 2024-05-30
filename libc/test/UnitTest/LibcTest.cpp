@@ -129,7 +129,8 @@ void Test::addTest(Test *T) {
 
 int Test::getNumTests() {
   int N = 0;
-  for (Test *T = Start; T; T = T->Next, ++N);
+  for (Test *T = Start; T; T = T->Next, ++N)
+    ;
   return N;
 }
 
