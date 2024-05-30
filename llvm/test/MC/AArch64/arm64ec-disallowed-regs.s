@@ -64,9 +64,9 @@ orn v1.16b, v31.16b, v1.16b     // v31
 // ---- random tests on h, b, d, s registers ----
 orn.16b v1, v16, v2
 // CHECK-ERR: warning: register Q16 is disallowed on ARM64EC.
-mov.4h v17, v8
+str d17, [x0]
 // CHECK-ERR: warning: register D17 is disallowed on ARM64EC.
-fmul.2s v2, v18, v11
+fmul d2, d18, d11
 // CHECK-ERR: warning: register D18 is disallowed on ARM64EC.
 clz.8h v3, v19
 // CHECK-ERR: warning: register Q19 is disallowed on ARM64EC.
@@ -74,5 +74,18 @@ add.4s v0, v20, v1
 // CHECK-ERR: warning: register Q20 is disallowed on ARM64EC.
 add.2d v0, v20, v1
 // CHECK-ERR: warning: register Q20 is disallowed on ARM64EC.
+str b17, [x28]
+// CHECK-ERR: warning: register B17 is disallowed on ARM64EC.
+// CHECK-ERR: warning: register X28 is disallowed on ARM64EC.
+addv h21, v22.4h
+// CHECK-ERR: warning: register H21 is disallowed on ARM64EC.
+// CHECK-ERR: warning: register D22 is disallowed on ARM64EC.
+mov w14, v24.s[0] 
+// CHECK-ERR: warning: register W14 is disallowed on ARM64EC.
+// CHECK-ERR: warning: register Q24 is disallowed on ARM64EC.
+add x13, x14, x28
+// CHECK-ERR: warning: register X13 is disallowed on ARM64EC.
+// CHECK-ERR: warning: register X14 is disallowed on ARM64EC.
+// CHECK-ERR: warning: register X28 is disallowed on ARM64EC.
 
 // CHECK-NOEC-NOT: warning:
