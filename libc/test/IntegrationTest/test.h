@@ -17,10 +17,9 @@
   if (!(val)) {                                                                \
     LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val "' to be true, but is false\n");             \
-    if (should_exit)
-
-LIBC_NAMESPACE::internal::exit(127);
-}
+    if (should_exit)                                                           \
+      LIBC_NAMESPACE::internal::exit(127);                                     \
+  }
 
 #define __CHECK_FALSE(file, line, val, should_exit)                            \
   if (val) {                                                                   \

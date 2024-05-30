@@ -19,4 +19,3 @@ namespace LIBC_NAMESPACE {
 }
 
 } // namespace LIBC_NAMESPACE
-  // namespace LIBC_NAMESPACE
