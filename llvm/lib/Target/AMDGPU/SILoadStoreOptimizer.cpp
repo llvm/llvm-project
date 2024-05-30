@@ -2034,7 +2034,7 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (Src0->isImm())
     std::swap(Src0, Src1);
 
-  if (!Src1->isImm())
+  if (!Src1->isImm() || Src0->isImm())
     return;
 
   uint64_t Offset1 = Src1->getImm();

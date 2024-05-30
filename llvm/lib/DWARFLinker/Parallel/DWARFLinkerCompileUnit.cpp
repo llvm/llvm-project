@@ -273,6 +273,8 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
   StringRef DeveloperDir = guessDeveloperDir(SysRoot);
   if (!DeveloperDir.empty() && Path.starts_with(DeveloperDir))
     return;
+  if (isInToolchainDir(Path))
+    return;
   if (std::optional<DWARFFormValue> Val = find(DieEntry, dwarf::DW_AT_name)) {
     Expected<const char *> Name = Val->getAsCString();
     if (!Name) {

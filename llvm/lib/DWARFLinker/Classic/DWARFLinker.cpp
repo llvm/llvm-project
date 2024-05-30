@@ -204,6 +204,8 @@ static void analyzeImportedModule(
   StringRef DeveloperDir = guessDeveloperDir(SysRoot);
   if (!DeveloperDir.empty() && Path.starts_with(DeveloperDir))
     return;
+  if (isInToolchainDir(Path))
+    return;
   std::optional<const char *> Name =
       dwarf::toString(DIE.find(dwarf::DW_AT_name));
   if (!Name)
