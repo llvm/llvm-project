@@ -2926,8 +2926,9 @@ static void emitUsed(CodeGenModule &CGM, StringRef Name,
   SmallVector<llvm::Constant*, 8> UsedArray;
   UsedArray.resize(List.size());
   for (unsigned i = 0, e = List.size(); i != e; ++i) {
-      llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-          cast<llvm::Constant>(&*List[i]), CGM.Int8PtrTy);
+    UsedArray[i] =
+        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+            cast<llvm::Constant>(&*List[i]), CGM.Int8PtrTy);
   }
 
   if (UsedArray.empty())
