@@ -229,9 +229,7 @@ shouldDiagnoseAvailabilityByDefault(const ASTContext &Context,
     ForceAvailabilityFromVersion = VersionTuple(/*Major=*/10, /*Minor=*/13);
     break;
   case llvm::Triple::ShaderModel:
-    // FIXME: This will be updated when HLSL strict diagnostic mode
-    // is implemented (issue #90096)
-    return false;
+    return Context.getLangOpts().HLSLStrictAvailability;
   default:
     // New targets should always warn about availability.
     return Triple.getVendor() == llvm::Triple::Apple;
@@ -410,13 +408,10 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     const TargetInfo &TI = S.getASTContext().getTargetInfo();
     std::string PlatformName(
         AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
-    llvm::StringRef TargetEnvironment(AvailabilityAttr::getPrettyEnviromentName(
-        TI.getTriple().getEnvironment()));
+    llvm::StringRef TargetEnvironment(
+        llvm::Triple::getEnvironmentTypeName(TI.getTriple().getEnvironment()));
     llvm::StringRef AttrEnvironment =
-        AA->getEnvironment() ? AvailabilityAttr::getPrettyEnviromentName(
-                                   AvailabilityAttr::getEnvironmentType(
-                                       AA->getEnvironment()->getName()))
-                             : "";
+        AA->getEnvironment() ? AA->getEnvironment()->getName() : "";
     bool UseEnvironment =
         (!AttrEnvironment.empty() && !TargetEnvironment.empty());
 
@@ -834,34 +829,55 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
                                              OffendingDecl))
       return;
 
-    // We would like to emit the diagnostic even if -Wunguarded-availability is
-    // not specified for deployment targets >= to iOS 11 or equivalent or
-    // for declarations that were introduced in iOS 11 (macOS 10.13, ...) or
-    // later.
-    bool UseNewDiagKind = shouldDiagnoseAvailabilityByDefault(
-        SemaRef.Context,
-        SemaRef.Context.getTargetInfo().getPlatformMinVersion(), Introduced);
-
     const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
+
+    // In HLSL, emit diagnostic here during parsing only if the diagnostic
+    // mode is set to strict (-fhlsl-strict-availability), and either the decl
+    // availability is not restricted to a specific environment/shader stage,
+    // or the target stage is known (= it is not shader library).
+    const LangOptions &LandOpts = SemaRef.getLangOpts();
+    if (LandOpts.HLSL) {
+      if (!LandOpts.HLSLStrictAvailability ||
+          (AA->getEnvironment() != nullptr &&
+           TI.getTriple().getEnvironment() ==
+               llvm::Triple::EnvironmentType::Library))
+        return;
+    }
+
     std::string PlatformName(
         AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
-    llvm::StringRef TargetEnvironment(AvailabilityAttr::getPrettyEnviromentName(
-        TI.getTriple().getEnvironment()));
+    llvm::StringRef TargetEnvironment(TI.getTriple().getEnvironmentName());
     llvm::StringRef AttrEnvironment =
-        AA->getEnvironment() ? AvailabilityAttr::getPrettyEnviromentName(
-                                   AvailabilityAttr::getEnvironmentType(
-                                       AA->getEnvironment()->getName()))
-                             : "";
+        AA->getEnvironment() ? AA->getEnvironment()->getName() : "";
     bool UseEnvironment =
         (!AttrEnvironment.empty() && !TargetEnvironment.empty());
 
-    unsigned DiagKind =
-        EnvironmentMatchesOrNone
-            ? (UseNewDiagKind ? diag::warn_unguarded_availability_new
-                              : diag::warn_unguarded_availability)
-            : (UseNewDiagKind
-                   ? diag::warn_unguarded_availability_unavailable_new
-                   : diag::warn_unguarded_availability_unavailable);
+    unsigned DiagKind;
+    if (SemaRef.getLangOpts().HLSL) {
+      // For HLSL, use diagnostic from HLSLAvailability group which
+      // are reported as errors in default and in strict diagnostic mode
+      // (-fhlsl-strict-availability) and as warnings in relaxed diagnostic
+      // mode (-Wno-error=hlsl-availability)
+      DiagKind = EnvironmentMatchesOrNone
+                     ? diag::warn_hlsl_availability
+                     : diag::warn_hlsl_availability_unavailable;
+
+    } else {
+      // For iOS, emit the diagnostic even if -Wunguarded-availability is
+      // not specified for deployment targets >= to iOS 11 or equivalent or
+      // for declarations that were introduced in iOS 11 (macOS 10.13, ...) or
+      // later.
+      bool UseNewDiagKind = shouldDiagnoseAvailabilityByDefault(
+          SemaRef.Context,
+          SemaRef.Context.getTargetInfo().getPlatformMinVersion(), Introduced);
+
+      DiagKind = EnvironmentMatchesOrNone
+                     ? (UseNewDiagKind ? diag::warn_unguarded_availability_new
+                                       : diag::warn_unguarded_availability)
+                     : (UseNewDiagKind
+                            ? diag::warn_unguarded_availability_unavailable_new
+                            : diag::warn_unguarded_availability_unavailable);
+    }
 
     SemaRef.Diag(Range.getBegin(), DiagKind)
         << Range << D << PlatformName << Introduced.getAsString()
