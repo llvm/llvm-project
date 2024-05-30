@@ -813,6 +813,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "nneg ";
   if (MI.getFlag(MachineInstr::Disjoint))
     OS << "disjoint ";
+  if (MI.getFlag(MachineInstr::NoUSWrap))
+    OS << "nusw ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)

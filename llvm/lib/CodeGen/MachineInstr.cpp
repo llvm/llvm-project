@@ -578,7 +578,7 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
       MIFlags |= MachineInstr::MIFlag::NoUWrap;
   } else if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     if (GEP->hasNoUnsignedSignedWrap())
-      MIFlags |= MachineInstr::MIFlag::NoSWrap;
+      MIFlags |= MachineInstr::MIFlag::NoUSWrap;
     if (GEP->hasNoUnsignedWrap())
       MIFlags |= MachineInstr::MIFlag::NoUWrap;
   }
