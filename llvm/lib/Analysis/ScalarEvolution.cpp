@@ -13004,8 +13004,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
              *BECountIfBackedgeTaken = nullptr;
   if (!isLoopInvariant(RHS, L)) {
     const auto *RHSAddRec = dyn_cast<SCEVAddRecExpr>(RHS);
-    bool RHSNoWrap = RHSAddRec->getNoWrapFlags();
-    if (RHSAddRec != nullptr && RHSAddRec->getLoop() == L && RHSNoWrap) {
+    if (PositiveStride && RHSAddRec != nullptr && RHSAddRec->getLoop() == L &&
+        RHSAddRec->getNoWrapFlags()) {
       // The structure of loop we are trying to calculate backedge count of:
       //
       //  left = left_start
@@ -13013,11 +13013,10 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       //
       //  while(left < right){
       //    ... do something here ...
-      //    left += s1; // stride of left is s1>0
-      //    right -= s2; // stride of right is -s2 (s2 > 0)
+      //    left += s1; // stride of left is s1 (s1 > 0)
+      //    right += s2; // stride of right is s2 (s2 < 0)
       //  }
       //
-      // Here, left and right are converging somewhere in the middle.
 
       const SCEV *RHSStart = RHSAddRec->getStart();
       const SCEV *RHSStride = RHSAddRec->getStepRecurrence(*this);
@@ -13028,7 +13027,6 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       //    Where, End = max(RHSStart, Start)
 
       // Check if RHSStride < 0 and Stride - RHSStride will not overflow.
-      // FIXME: Can RHSStride be positive?
       if (isKnownNegative(RHSStride) &&
           willNotOverflow(Instruction::Sub, /*Signed=*/true, Stride,
                           RHSStride)) {

@@ -102,4 +102,35 @@ while.end:
   ret void
 }
 
+; abs(left_stride) != abs(right_stride)
+define dso_local void @simple2() local_unnamed_addr {
+; CHECK-LABEL: 'simple2'
+; CHECK-NEXT:  Classifying expressions for: @simple2
+; CHECK-NEXT:    %right.08 = phi i32 [ 50, %entry ], [ %add2, %while.body ]
+; CHECK-NEXT:    --> {50,+,-5}<nsw><%while.body> U: [25,51) S: [25,51) Exits: 25 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    %left.07 = phi i32 [ 0, %entry ], [ %add, %while.body ]
+; CHECK-NEXT:    --> {0,+,4}<nuw><nsw><%while.body> U: [0,21) S: [0,21) Exits: 20 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    %add = add nuw nsw i32 %left.07, 4
+; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%while.body> U: [4,25) S: [4,25) Exits: 24 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    %add2 = add nsw i32 %right.08, -5
+; CHECK-NEXT:    --> {45,+,-5}<nsw><%while.body> U: [20,46) S: [20,46) Exits: 20 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @simple2
+; CHECK-NEXT:  Loop %while.body: backedge-taken count is i32 5
+; CHECK-NEXT:  Loop %while.body: constant max backedge-taken count is i32 5
+; CHECK-NEXT:  Loop %while.body: symbolic max backedge-taken count is i32 5
+; CHECK-NEXT:  Loop %while.body: Trip multiple is 6
+;
+entry:
+  br label %while.body
 
+while.body:
+  %right.08 = phi i32 [ 50, %entry ], [ %add2, %while.body ]
+  %left.07 = phi i32 [ 0, %entry ], [ %add, %while.body ]
+  %add = add nuw nsw i32 %left.07, 4
+  %add2 = add nsw i32 %right.08, -5
+  %cmp = icmp slt i32 %add, %add2
+  br i1 %cmp, label %while.body, label %while.end
+
+while.end:
+  ret void
+}
