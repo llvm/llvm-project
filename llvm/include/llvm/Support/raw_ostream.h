@@ -618,6 +618,35 @@ raw_fd_ostream &errs();
 /// This returns a reference to a raw_ostream which simply discards output.
 raw_ostream &nulls();
 
+/// Scoped thread-local override of `outs` and `errs`.
+///
+/// This can be used by libraries using LLVM that want to control where output
+/// is sent. While some systems explicitly accept a stream in their API, others
+/// directly use these and so we provide a scoped override as a fallback.
+///
+/// Note that these overrides rely on thread-local override, and so much be
+/// carefully instantiated on each thread where the override should be applied.
+class ScopedOutsAndErrsOverride {
+public:
+  // Install overrides for `outs` and `errs`. If the new stream is a null
+  // pointer it will cause that stream to use the system one as if no override
+  // is in place.
+  ScopedOutsAndErrsOverride(raw_fd_ostream *NewOuts, raw_fd_ostream *NewErrs);
+
+  // Restore any previous overrides when destroyed so that these overrides can
+  // be nested.
+  ~ScopedOutsAndErrsOverride();
+
+  // Extract any current overrides. This is mostly useful for propagating one
+  // thread's overrides to another thread. The `outs` override is first and the
+  // `errs` second.
+  static std::pair<raw_fd_ostream *, raw_fd_ostream *> getActiveOverrides();
+
+private:
+  raw_fd_ostream *PrevOuts;
+  raw_fd_ostream *PrevErrs;
+};
+
 //===----------------------------------------------------------------------===//
 // File Streams
 //===----------------------------------------------------------------------===//

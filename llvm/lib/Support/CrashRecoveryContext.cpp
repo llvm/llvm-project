@@ -11,6 +11,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ExitCodes.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/thread.h"
 #include <cassert>
 #include <mutex>
@@ -495,6 +496,8 @@ namespace {
 struct RunSafelyOnThreadInfo {
   function_ref<void()> Fn;
   CrashRecoveryContext *CRC;
+  raw_fd_ostream *OutsOverride;
+  raw_fd_ostream *ErrsOverride;
   bool UseBackgroundPriority;
   bool Result;
 };
@@ -507,12 +510,18 @@ static void RunSafelyOnThread_Dispatch(void *UserData) {
   if (Info->UseBackgroundPriority)
     setThreadBackgroundPriority();
 
+  ScopedOutsAndErrsOverride StreamOverrides(Info->OutsOverride,
+                                            Info->ErrsOverride);
+
   Info->Result = Info->CRC->RunSafely(Info->Fn);
 }
 bool CrashRecoveryContext::RunSafelyOnThread(function_ref<void()> Fn,
                                              unsigned RequestedStackSize) {
   bool UseBackgroundPriority = hasThreadBackgroundPriority();
-  RunSafelyOnThreadInfo Info = { Fn, this, UseBackgroundPriority, false };
+  auto [OutsOverride, ErrsOverride] =
+      ScopedOutsAndErrsOverride::getActiveOverrides();
+  RunSafelyOnThreadInfo Info = {
+      Fn, this, OutsOverride, ErrsOverride, UseBackgroundPriority, false};
   llvm::thread Thread(RequestedStackSize == 0
                           ? std::nullopt
                           : std::optional<unsigned>(RequestedStackSize),
