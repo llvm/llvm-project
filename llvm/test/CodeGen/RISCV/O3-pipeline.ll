@@ -142,7 +142,6 @@
 ; CHECK-NEXT:       Greedy Register Allocator
 ; CHECK-NEXT:       Virtual Register Rewriter
 ; CHECK-NEXT:       RISC-V Insert VSETVLI pass
-; CHECK-NEXT:       RISC-V Coalesce VSETVLI pass
 ; CHECK-NEXT:       RISC-V Dead register definitions
 ; CHECK-NEXT:       Virtual Register Map
 ; CHECK-NEXT:       Live Register Matrix

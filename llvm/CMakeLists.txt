@@ -547,6 +547,8 @@ set(FFI_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should sear
 set(LLVM_TARGET_ARCH "host"
   CACHE STRING "Set target to use for LLVM JIT or use \"host\" for automatic detection.")
 
+option(LLVM_ENABLE_TERMINFO "Use terminfo database if available." ON)
+
 set(LLVM_ENABLE_LIBXML2 "ON" CACHE STRING "Use libxml2 if available. Can be ON, OFF, or FORCE_ON")
 
 option(LLVM_ENABLE_LIBEDIT "Use libedit if available." ON)
@@ -567,6 +569,8 @@ set(LLVM_ENABLE_ZSTD "ON" CACHE STRING "Use zstd for compression/decompression i
 set(LLVM_USE_STATIC_ZSTD FALSE CACHE BOOL "Use static version of zstd. Can be TRUE, FALSE")
 
 set(LLVM_ENABLE_CURL "OFF" CACHE STRING "Use libcurl for the HTTP client if available. Can be ON, OFF, or FORCE_ON")
+
+set(LLVM_HAS_LOGF128 "OFF" CACHE STRING "Use logf128 to constant fold fp128 logarithm calls. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_ENABLE_HTTPLIB "OFF" CACHE STRING "Use cpp-httplib HTTP server library if available. Can be ON, OFF, or FORCE_ON")
 

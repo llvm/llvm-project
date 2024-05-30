@@ -388,7 +388,7 @@ class ObjcCategoryMerger {
         : categoryPrefix(_categoryPrefix),
           pointersPerStruct(_pointersPerStruct) {}
 
-    inline bool operator==(const PointerListInfo &cmp) {
+    inline bool operator==(const PointerListInfo &cmp) const {
       return pointersPerStruct == cmp.pointersPerStruct &&
              structSize == cmp.structSize && structCount == cmp.structCount &&
              allPtrs == cmp.allPtrs;

@@ -802,6 +802,7 @@ enum : unsigned {
 #endif /* LLPC_BUILD_GFX12 */
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56 = 0x056,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57 = 0x057,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X58 = 0x058,
   // clang-format on
 
   // First/last AMDGCN-based processors.
