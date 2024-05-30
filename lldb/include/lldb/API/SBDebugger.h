@@ -57,8 +57,6 @@ public:
 
   static const char *GetBroadcasterClass();
 
-  static bool SupportsLanguage(lldb::LanguageType language);
-
   lldb::SBBroadcaster GetBroadcaster();
 
   /// Get progress data from a SBEvent whose type is eBroadcastBitProgress.

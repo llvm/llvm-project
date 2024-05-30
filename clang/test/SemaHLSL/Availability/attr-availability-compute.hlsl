@@ -38,33 +38,28 @@ unsigned f8();
 
 [numthreads(4,1,1)]
 int main() {
-    // expected-warning@#f1_call {{'f1' is only available on Shader Model 6.0 or newer}}
+    // expected-error@#f1_call {{'f1' is only available on Shader Model 6.0 or newer}}
     // expected-note@#f1 {{'f1' has been marked as being introduced in Shader Model 6.0 here, but the deployment target is Shader Model 5.0}}
-    // expected-note@#f1_call {{enclose 'f1' in a __builtin_available check to silence this warning}}
     unsigned A = f1(); // #f1_call
 
-    // expected-warning@#f2_call {{'f2' is only available on Shader Model 5.1 or newer}}
+    // expected-error@#f2_call {{'f2' is only available on Shader Model 5.1 or newer}}
     // expected-note@#f2 {{'f2' has been marked as being introduced in Shader Model 5.1 here, but the deployment target is Shader Model 5.0}}
-    // expected-note@#f2_call {{enclose 'f2' in a __builtin_available check to silence this warning}}
     unsigned B = f2(); // #f2_call
 
     unsigned C = f3();
 
-    // expected-warning@#f4_call {{'f4' is only available on Shader Model 6.0 or newer}}
+    // expected-error@#f4_call {{'f4' is only available on Shader Model 6.0 or newer}}
     // expected-note@#f4 {{'f4' has been marked as being introduced in Shader Model 6.0 here, but the deployment target is Shader Model 5.0}}
-    // expected-note@#f4_call {{enclose 'f4' in a __builtin_available check to silence this warning}}
     unsigned D = f4(); // #f4_call
 
     unsigned E = f5();
 
-    // expected-warning@#f6_call {{'f6' is only available in compute shader environment on Shader Model 6.0 or newer}}
-    // expected-note@#f6 {{'f6' has been marked as being introduced in Shader Model 6.0 in compute shader environment here, but the deployment target is Shader Model 5.0}}
-    // expected-note@#f6_call {{enclose 'f6' in a __builtin_available check to silence this warning}}
+    // expected-error@#f6_call {{'f6' is only available in compute environment on Shader Model 6.0 or newer}}
+    // expected-note@#f6 {{'f6' has been marked as being introduced in Shader Model 6.0 in compute environment here, but the deployment target is Shader Model 5.0}}
     unsigned F = f6(); // #f6_call
 
-    // expected-warning@#f7_call {{'f7' is unavailable}}
-    // expected-note@#f7 {{'f7' has been marked as being introduced in Shader Model 6.0 in mesh shader environment here, but the deployment target is Shader Model 5.0 compute shader environment}}
-    // expected-note@#f7_call {{enclose 'f7' in a __builtin_available check to silence this warning}}
+    // expected-error@#f7_call {{'f7' is unavailable}}
+    // expected-note@#f7 {{'f7' has been marked as being introduced in Shader Model 6.0 in mesh environment here, but the deployment target is Shader Model 5.0 compute environment}}
     unsigned G = f7(); // #f7_call
 
     unsigned H = f8();

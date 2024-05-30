@@ -1901,8 +1901,6 @@ void Fortran::lower::mapSymbolAttributes(
   // First deal with pointers and allocatables, because their handling here
   // is the same regardless of their rank.
   if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
-    if (isAssumedRank)
-      TODO(loc, "assumed-rank pointer or allocatable");
     // Get address of fir.box describing the entity.
     // global
     mlir::Value boxAlloc = preAlloc;
@@ -1910,6 +1908,7 @@ void Fortran::lower::mapSymbolAttributes(
     if (!boxAlloc)
       if (Fortran::lower::SymbolBox symbox = symMap.lookupSymbol(sym))
         boxAlloc = symbox.getAddr();
+    assert((boxAlloc || !isAssumedRank) && "assumed-ranks cannot be local");
     // local
     if (!boxAlloc)
       boxAlloc = createNewLocal(converter, loc, var, preAlloc);
