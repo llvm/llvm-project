@@ -51,6 +51,7 @@ Changes to the LLVM IR
 ----------------------
 
 * Added Memory Model Relaxation Annotations (MMRAs).
+* Added ``nusw`` and ``nuw`` flags to ``getelementptr`` instruction.
 * Renamed ``llvm.experimental.vector.reverse`` intrinsic to ``llvm.vector.reverse``.
 * Renamed ``llvm.experimental.vector.splice`` intrinsic to ``llvm.vector.splice``.
 * Renamed ``llvm.experimental.vector.interleave2`` intrinsic to ``llvm.vector.interleave2``.
@@ -61,10 +62,6 @@ Changes to LLVM infrastructure
 
 Changes to building LLVM
 ------------------------
-
-- The ``LLVM_ENABLE_TERMINFO`` flag has been removed. LLVM no longer depends on
-  terminfo and now always uses the ``TERM`` environment variable for color
-  support autodetection.
 
 Changes to TableGen
 -------------------

@@ -351,7 +351,8 @@ static UnitExtentReplacementInfo dropUnitExtentFromOperandMetadata(
   auto isUnitDim = [&](unsigned dim) {
     if (auto dimExpr = dyn_cast<AffineDimExpr>(exprs[dim])) {
       unsigned oldPosition = dimExpr.getPosition();
-      return !oldDimsToNewDimsMap.count(oldPosition);
+      return !oldDimsToNewDimsMap.count(oldPosition) &&
+             (operandShape[dim] == 1);
     }
     // Handle the other case where the shape is 1, and is accessed using a
     // constant 0.
