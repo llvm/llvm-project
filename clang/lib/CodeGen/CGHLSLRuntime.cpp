@@ -313,7 +313,7 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
   assert(ShaderAttr && "All entry functions must have a HLSLShaderAttr");
   const StringRef ShaderAttrKindStr = "hlsl.shader";
   Fn->addFnAttr(ShaderAttrKindStr,
-                ShaderAttr->ConvertShaderTypeToStr(ShaderAttr->getType()));
+                llvm::Triple::getEnvironmentTypeName(ShaderAttr->getType()));
   if (HLSLNumThreadsAttr *NumThreadsAttr = FD->getAttr<HLSLNumThreadsAttr>()) {
     const StringRef NumThreadsKindStr = "hlsl.numthreads";
     std::string NumThreadsStr =
