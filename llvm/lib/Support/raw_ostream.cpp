@@ -977,6 +977,10 @@ void raw_svector_ostream::pwrite_impl(const char *Ptr, size_t Size,
   memcpy(OS.data() + Offset, Ptr, Size);
 }
 
+bool raw_svector_ostream::classof(const raw_ostream *OS) {
+  return OS->get_kind() == OStreamKind::OK_SVecStream;
+}
+
 //===----------------------------------------------------------------------===//
 //  raw_null_ostream
 //===----------------------------------------------------------------------===//
