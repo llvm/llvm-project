@@ -350,10 +350,9 @@ TEST(TestRadsanInterceptors, PthreadCondSignalDiesWhenRealtime) {
 }
 
 TEST(TestRadsanInterceptors, PthreadCondBroadcastDiesWhenRealtime) {
-  pthread_cond_t cond;
+  pthread_cond_t cond{};
   pthread_cond_init(&cond, NULL);
-  auto Func = []() {
-    pthread_cond_t cond;
+  auto Func = [&cond]() {
     pthread_cond_broadcast(&cond);
   };
   ExpectRealtimeDeath(Func, "pthread_cond_broadcast");
