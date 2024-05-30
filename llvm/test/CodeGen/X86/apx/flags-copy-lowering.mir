@@ -352,6 +352,46 @@ body:             |
     RET 0, $al
 ...
 ---
+name:            test_evitable_clobber_multiple_uses
+body:             |
+  bb.0:
+    liveins: $edi
+
+    ; NDD-LABEL: name: test_evitable_clobber_multiple_uses
+    ; NDD: liveins: $edi
+    ; NDD-NEXT: {{  $}}
+    ; NDD-NEXT: MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+    ; NDD-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
+    ; NDD-NEXT: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 9, implicit $eflags
+    ; NDD-NEXT: [[ADD32rr_ND:%[0-9]+]]:gr32 = ADD32rr_ND $edi, $edi, implicit-def dead $eflags
+    ; NDD-NEXT: TEST8rr [[SETCCr]], [[SETCCr]], implicit-def $eflags
+    ; NDD-NEXT: $eax = CMOV32rr_ND $edi, [[ADD32rr_ND]], 5, implicit killed $eflags
+    ; NDD-NEXT: [[ADD32rr_ND1:%[0-9]+]]:gr32 = ADD32rr_ND $edi, $eax, implicit-def dead $eflags
+    ; NDD-NEXT: TEST8rr [[SETCCr1]], [[SETCCr1]], implicit-def $eflags
+    ; NDD-NEXT: $eax = CMOV32rr_ND $edi, [[ADD32rr_ND1]], 5, implicit killed $eflags
+    ; NDD-NEXT: RET 0, $al
+    ;
+    ; NDD-NF-LABEL: name: test_evitable_clobber_multiple_uses
+    ; NDD-NF: liveins: $edi
+    ; NDD-NF-NEXT: {{  $}}
+    ; NDD-NF-NEXT: MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+    ; NDD-NF-NEXT: [[ADD32rr_NF_ND:%[0-9]+]]:gr32 = ADD32rr_NF_ND $edi, $edi
+    ; NDD-NF-NEXT: $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND]], 7, implicit $eflags
+    ; NDD-NF-NEXT: [[ADD32rr_NF_ND1:%[0-9]+]]:gr32 = ADD32rr_NF_ND $edi, $eax
+    ; NDD-NF-NEXT: $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND1]], 9, implicit $eflags
+    ; NDD-NF-NEXT: RET 0, $al
+    MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+    %1:gr64 = COPY $eflags
+    %2:gr32 = ADD32rr_ND $edi, $edi, implicit-def dead $eflags
+    $eflags = COPY %1
+    $eax = CMOV32rr_ND $edi, %2, 7, implicit $eflags
+    %3:gr32 = ADD32rr_ND $edi, $eax, implicit-def dead $eflags
+    $eflags = COPY %1
+    $eax = CMOV32rr_ND $edi, %3, 9, implicit $eflags
+    RET 0, $al
+
+...
+---
 name:            test_mixed_clobber
 body:             |
   bb.0:

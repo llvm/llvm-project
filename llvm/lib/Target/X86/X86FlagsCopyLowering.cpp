@@ -328,9 +328,11 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
       }
       // Covert evitable clobbers into NF variants and remove the copyies.
       RemovedCopies.insert(CopyI);
-      RemovedCopies.insert(CopyDefI);
       CopyI->eraseFromParent();
-      CopyDefI->eraseFromParent();
+      if (MRI->use_nodbg_empty(CopyDefI->getOperand(0).getReg())) {
+        RemovedCopies.insert(CopyDefI);
+        CopyDefI->eraseFromParent();
+      }
       ++NumCopiesEliminated;
       for (auto *Clobber : EvitableClobbers) {
         unsigned NewOpc = X86::getNFVariant(Clobber->getOpcode());
