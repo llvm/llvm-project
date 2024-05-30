@@ -19030,6 +19030,34 @@ will be on any later loop iteration.
 This intrinsic will only return 0 if the input count is also 0. A non-zero input
 count will produce a non-zero result.
 
+'``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v2i32.v8i32(<8 x i32> %in)
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<16 x i32> %in)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv2i32.nxv8i32(<vscale x 8 x i32> %in)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 16 x i32> %in)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics do an integer
+``ADD`` reduction of subvectors within a vector, returning each scalar result as
+a lane within a vector. The return type is a vector type with an
+element-type of the vector input and a width a factor of the vector input
+(typically either half or quarter).
+
+Arguments:
+""""""""""
+
+The argument to this intrinsic must be a vector of integer values.
+
 Matrix Intrinsics
 -----------------
 
