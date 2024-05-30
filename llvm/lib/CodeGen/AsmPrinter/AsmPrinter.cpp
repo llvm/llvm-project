@@ -766,7 +766,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     auto arch = T.getArch();
 
     bool supportMemtagGlobals = false;
-    
+
     if (arch == Triple::wasm32 || arch == Triple::wasm64) {
       supportMemtagGlobals = true;
     }
