@@ -98,8 +98,8 @@ def TilingInterface : OpInterface<"TilingInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Method to return the the tile of the iteration domain where
-          values from the given tile of the operand are used
+          Method to return the tile of the iteration domain where
+          values from the given tile of the operand are used.
         }],
         /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"getIterationDomainTileFromOperandTile",
@@ -154,6 +154,9 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*desc=*/[{
           Method to generate the tiled implementation of an operation from
           operand tile position.
+
+          NOTE: For most operations, this should be a trivial composition of
+          getIterationDomainTileFromOperandTile and getTiledImplementation.
 
           Generates the IR that computes the tiled implementation of an
           operation from operand tile.  The `offsets` and `sizes`
