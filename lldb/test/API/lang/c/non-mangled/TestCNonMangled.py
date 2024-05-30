@@ -3,7 +3,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestCase(TestBase):
-
     def test_functions_having_dlang_mangling_prefix(self):
         """
         Ensure C functions with a '_D' prefix alone are not mistakenly treated
