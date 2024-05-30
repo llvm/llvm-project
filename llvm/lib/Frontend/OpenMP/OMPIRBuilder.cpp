@@ -2159,7 +2159,7 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
   Value *RedArray = Builder.CreateAlloca(RedArrayTy, nullptr, "red.array");
 
-  Builder.SetInsertPoint(InsertBlock, InsertBlock->begin());
+  Builder.SetInsertPoint(InsertBlock, InsertBlock->end());
 
   for (auto En : enumerate(ReductionInfos)) {
     unsigned Index = En.index();
@@ -3120,7 +3120,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyDynamicWorkshareLoop(
   FunctionCallee DynamicNext = getKmpcForDynamicNextForType(IVTy, M, *this);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.restoreIP(AllocaIP);
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");

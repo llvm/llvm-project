@@ -770,7 +770,7 @@ static void allocByValReductionVars(
     DenseMap<Value, llvm::Value *> &reductionVariableMap,
     llvm::ArrayRef<bool> isByRefs) {
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
-  builder.restoreIP(allocaIP);
+  builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
   auto args =
       loop.getRegion().getArguments().take_back(loop.getNumReductionVars());
 
@@ -1155,7 +1155,10 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
         opInst.getRegion().getArguments().take_back(
             opInst.getNumReductionVars());
 
-    llvm::BasicBlock *initBlock = nullptr;
+    llvm::BasicBlock *initBlock = splitBB(builder, true, "omp.reduction.init");
+    allocaIP =
+        InsertPointTy(allocaIP.getBlock(),
+                      allocaIP.getBlock()->getTerminator()->getIterator());
     SmallVector<llvm::Value *> byRefVars;
     if (isByRef) {
       for (unsigned i = 0; i < opInst.getNumReductionVars(); ++i) {
@@ -1165,8 +1168,6 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
             moduleTranslation.convertType(reductionDecls[i].getType())));
       }
 
-      initBlock = splitBB(builder, true, "omp.reduction.init");
-      allocaIP = InsertPointTy(allocaIP.getBlock(), allocaIP.getBlock()->end());
     }
 
     for (unsigned i = 0; i < opInst.getNumReductionVars(); ++i) {
@@ -1181,10 +1182,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       assert(phis.size() == 1 &&
              "expected one value to be yielded from the "
              "reduction neutral element declaration region");
-      if (initBlock)
-        builder.SetInsertPoint(initBlock->getTerminator());
-      else
-        builder.restoreIP(allocaIP);
+      builder.SetInsertPoint(initBlock->getTerminator());
+
       if (isByRef) {
         // Store the result of the inlined region to the allocated reduction var
         // ptr
