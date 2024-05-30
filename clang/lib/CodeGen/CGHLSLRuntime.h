@@ -95,8 +95,14 @@ public:
     // IsCBuffer - Whether the buffer is a cbuffer (and not a tbuffer).
     bool IsCBuffer;
     BufferResBinding Binding;
+    struct Constant {
+      llvm::GlobalVariable *GV;
+      unsigned Offset;
+      unsigned Size;
+      unsigned ElementIndex;
+    };
     // Global variable and offset for each constant.
-    std::vector<std::pair<llvm::GlobalVariable *, unsigned>> Constants;
+    std::vector<Constant> Constants;
     llvm::StructType *LayoutStruct = nullptr;
   };
 

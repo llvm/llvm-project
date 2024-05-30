@@ -30,6 +30,7 @@ add_clang_unittest(ASTTests
   DeclTest.cpp
   EvaluateAsRValueTest.cpp
   ExternalASTSourceTest.cpp
+  HLSLLegacyCbufferTypeSizeTest.cpp
   NamedDeclPrinterTest.cpp
   RandstructTest.cpp
   RecursiveASTVisitorTest.cpp
