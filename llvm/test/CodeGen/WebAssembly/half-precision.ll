@@ -35,3 +35,71 @@ define float @extract_lane_v8f16(<8 x half> %v) {
   %r = call float @llvm.wasm.extract.lane.f16x8(<8 x half> %v, i32 1)
   ret float %r
 }
+
+; CHECK-LABEL: add_v8f16:
+; CHECK:       f16x8.add $push0=, $0, $1
+; CHECK-NEXT:  return $pop0
+define <8 x half> @add_v8f16(<8 x half> %a, <8 x half> %b) {
+  %r = fadd <8 x half> %a, %b
+  ret <8 x half> %r
+}
+
+; CHECK-LABEL: sub_v8f16:
+; CHECK:       f16x8.sub $push0=, $0, $1
+; CHECK-NEXT:  return $pop0
+define <8 x half> @sub_v8f16(<8 x half> %a, <8 x half> %b) {
+  %r = fsub <8 x half> %a, %b
+  ret <8 x half> %r
+}
+
+; CHECK-LABEL: mul_v8f16:
+; CHECK:       f16x8.mul $push0=, $0, $1
+; CHECK-NEXT:  return $pop0
+define <8 x half> @mul_v8f16(<8 x half> %a, <8 x half> %b) {
+  %r = fmul <8 x half> %a, %b
+  ret <8 x half> %r
+}
+
+; CHECK-LABEL: div_v8f16:
+; CHECK:       f16x8.div $push0=, $0, $1
+; CHECK-NEXT:  return $pop0
+define <8 x half> @div_v8f16(<8 x half> %a, <8 x half> %b) {
+  %r = fdiv <8 x half> %a, %b
+  ret <8 x half> %r
+}
+
+; CHECK-LABEL: min_intrinsic_v8f16:
+; CHECK:       f16x8.min $push0=, $0, $1
+; CHECK-NEXT:  return $pop0
+declare <8 x half> @llvm.minimum.v8f16(<8 x half>, <8 x half>)
+define <8 x half> @min_intrinsic_v8f16(<8 x half> %x, <8 x half> %y) {
+  %a = call <8 x half> @llvm.minimum.v8f16(<8 x half> %x, <8 x half> %y)
+  ret <8 x half> %a
+}
+
+; CHECK-LABEL: max_intrinsic_v8f16:
+; CHECK:       f16x8.max $push0=, $0, $1
+; CHECK-NEXT:  return $pop0
+declare <8 x half> @llvm.maximum.v8f16(<8 x half>, <8 x half>)
+define <8 x half> @max_intrinsic_v8f16(<8 x half> %x, <8 x half> %y) {
+  %a = call <8 x half> @llvm.maximum.v8f16(<8 x half> %x, <8 x half> %y)
+  ret <8 x half> %a
+}
+
+; CHECK-LABEL: pmin_intrinsic_v8f16:
+; CHECK:       f16x8.pmin $push0=, $0, $1
+; CHECK-NEXT:  return $pop0
+declare <8 x half> @llvm.wasm.pmin.v8f16(<8 x half>, <8 x half>)
+define <8 x half> @pmin_intrinsic_v8f16(<8 x half> %a, <8 x half> %b) {
+  %v = call <8 x half> @llvm.wasm.pmin.v8f16(<8 x half> %a, <8 x half> %b)
+  ret <8 x half> %v
+}
+
+; CHECK-LABEL: pmax_intrinsic_v8f16:
+; CHECK:       f16x8.pmax $push0=, $0, $1
+; CHECK-NEXT:  return $pop0
+declare <8 x half> @llvm.wasm.pmax.v8f16(<8 x half>, <8 x half>)
+define <8 x half> @pmax_intrinsic_v8f16(<8 x half> %a, <8 x half> %b) {
+  %v = call <8 x half> @llvm.wasm.pmax.v8f16(<8 x half> %a, <8 x half> %b)
+  ret <8 x half> %v
+}

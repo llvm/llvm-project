@@ -129,6 +129,8 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     LLVM_DEBUG(dbgs() << " Cold part\n");
     for (const FunctionFragment &FF :
          Function.getLayout().getSplitFragments()) {
+      if (FF.empty())
+        continue;
       ColdPartSource.emplace(FF.getAddress(), Function.getOutputAddress());
       Map.clear();
       for (const BinaryBasicBlock *const BB : FF)

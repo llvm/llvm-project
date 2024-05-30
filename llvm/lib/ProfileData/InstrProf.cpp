@@ -1656,10 +1656,11 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 
   // Read the version.
   H.Version = read(Buffer, offsetOf(&Header::Version));
-  if (GET_VERSION(H.Version) > IndexedInstrProf::ProfVersion::CurrentVersion)
+  if (H.getIndexedProfileVersion() >
+      IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  switch (GET_VERSION(H.Version)) {
+  switch (H.getIndexedProfileVersion()) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
@@ -1689,8 +1690,12 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   return H;
 }
 
+uint64_t Header::getIndexedProfileVersion() const {
+  return GET_VERSION(Version);
+}
+
 size_t Header::size() const {
-  switch (GET_VERSION(Version)) {
+  switch (getIndexedProfileVersion()) {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.

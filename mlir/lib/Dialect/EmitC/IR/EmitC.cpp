@@ -233,7 +233,7 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 //===----------------------------------------------------------------------===//
-// CallOp
+// CallOpaqueOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult emitc::CallOpaqueOp::verify() {

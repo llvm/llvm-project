@@ -480,15 +480,21 @@ struct FormatStyle {
     ENAS_DontAlign,
     /// Align escaped newlines as far left as possible.
     /// \code
-    ///   true:
     ///   #define A   \
     ///     int aaaa; \
     ///     int b;    \
     ///     int dddddddddd;
-    ///
-    ///   false:
     /// \endcode
     ENAS_Left,
+    /// Align escaped newlines as far left as possible, using the last line of
+    /// the preprocessor directive as the reference if it's the longest.
+    /// \code
+    ///   #define A         \
+    ///     int aaaa;       \
+    ///     int b;          \
+    ///     int dddddddddd;
+    /// \endcode
+    ENAS_LeftWithLastLine,
     /// Align escaped newlines in the right-most column.
     /// \code
     ///   #define A                                                                      \
