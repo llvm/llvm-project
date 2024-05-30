@@ -6337,6 +6337,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   OpenMPBindClauseKind BindKind = OMPC_BIND_unknown;
   llvm::SmallVector<OMPClause *> ClausesWithoutBind;
   bool UseClausesWithoutBind = false;
+
   if (const OMPBindClause *BC =
           OMPExecutableDirective::getSingleClause<OMPBindClause>(Clauses))
     BindKind = BC->getBindKind();

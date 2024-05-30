@@ -74,6 +74,7 @@
 
 using namespace llvm;
 using ProfileCount = Function::ProfileCount;
+
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file...
 template class llvm::SymbolTableListTraits<BasicBlock>;
@@ -572,6 +573,7 @@ void Function::deleteBodyImpl(bool ShouldDrop) {
     }
     setValueSubclassData(getSubclassDataFromValue() & ~0xe);
   }
+
   // Metadata is stored in a side-table.
   clearMetadata();
 }
