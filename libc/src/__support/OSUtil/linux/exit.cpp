@@ -17,7 +17,8 @@ namespace LIBC_NAMESPACE::internal {
 #ifdef LIBC_TARGET_ARCH_IS_X86
 [[clang::no_stack_protector]]
 #endif
-[[noreturn]] void exit(int status) {
+[[noreturn]] void
+exit(int status) {
   for (;;) {
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit_group, status);
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, status);
