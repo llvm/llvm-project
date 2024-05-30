@@ -98,12 +98,12 @@ private:
     auto result = benchmark(options, func);
     constexpr auto GREEN = "\033[32m";
     constexpr auto RESET = "\033[0m";
-    blog << GREEN << "[ RUN      ] " << RESET << name << '\n';
-    blog << GREEN << "[       OK ] " << RESET << name << ": " << result.cycles
-         << " cycles, " << result.min << " min, " << result.max << " max, "
-         << result.total_iterations << " iterations, " << result.total_time
-         << " ns, " << static_cast<long>(result.standard_deviation)
-         << " stddev\n";
+    log << GREEN << "[ RUN      ] " << RESET << name << '\n';
+    log << GREEN << "[       OK ] " << RESET << name << ": " << result.cycles
+        << " cycles, " << result.min << " min, " << result.max << " max, "
+        << result.total_iterations << " iterations, " << result.total_time
+        << " ns, " << static_cast<long>(result.standard_deviation)
+        << " stddev\n";
   }
   const cpp::string_view get_name() const { return name; }
 };

@@ -19,7 +19,7 @@ struct BenchmarkLogger {
 };
 
 // A global TestLogger instance to be used in tests.
-extern BenchmarkLogger blog;
+extern BenchmarkLogger log;
 
 } // namespace benchmarks
 } // namespace LIBC_NAMESPACE

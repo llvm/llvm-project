@@ -91,7 +91,7 @@ template BenchmarkLogger &BenchmarkLogger::operator<< <UInt<320>>(UInt<320>);
 
 // TODO: Add floating point formatting once it's supported by StringStream.
 
-BenchmarkLogger blog;
+BenchmarkLogger log;
 
 } // namespace benchmarks
 } // namespace LIBC_NAMESPACE
