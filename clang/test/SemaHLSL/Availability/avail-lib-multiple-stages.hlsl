@@ -19,12 +19,12 @@ void F(float f) {
   // expected-note@#fx {{fx' has been marked as being introduced in Shader Model 6.5 here, but the deployment target is Shader Model 6.0}}
   float A = fx(f); // #fx_call
   
-  // expected-error@#fy_call {{'fy' is only available in compute shader environment on Shader Model 6.5 or newer}}
-  // expected-note@#fy {{'fy' has been marked as being introduced in Shader Model 6.5 in compute shader environment here, but the deployment target is Shader Model 6.0 compute shader environment}}
+  // expected-error@#fy_call {{'fy' is only available in compute environment on Shader Model 6.5 or newer}}
+  // expected-note@#fy {{'fy' has been marked as being introduced in Shader Model 6.5 in compute environment here, but the deployment target is Shader Model 6.0 compute environment}}
   float B = fy(f); // #fy_call
 
   // expected-error@#fz_call {{'fz' is unavailable}}
-  // expected-note@#fz {{'fz' has been marked as being introduced in Shader Model 5.0 in compute shader environment here, but the deployment target is Shader Model 6.0 pixel shader environment}}
+  // expected-note@#fz {{'fz' has been marked as being introduced in Shader Model 5.0 in compute environment here, but the deployment target is Shader Model 6.0 pixel environment}}
   float X = fz(f); // #fz_call
 }
 

@@ -56,12 +56,12 @@ int main() {
 
     unsigned F = f6(); // #f6_call
 
-    // expected-error@#f7_call {{'f7' is only available in mesh shader environment on Shader Model 6.0 or newer}}
-    // expected-note@#f7 {{'f7' has been marked as being introduced in Shader Model 6.0 in mesh shader environment here, but the deployment target is Shader Model 5.0 mesh shader environment}}
+    // expected-error@#f7_call {{'f7' is only available in mesh environment on Shader Model 6.0 or newer}}
+    // expected-note@#f7 {{'f7' has been marked as being introduced in Shader Model 6.0 in mesh environment here, but the deployment target is Shader Model 5.0 mesh environment}}
     unsigned G = f7(); // #f7_call
 
-    // expected-error@#f8_call {{'f8' is only available in mesh shader environment on Shader Model 6.0 or newer}}
-    // expected-note@#f8 {{'f8' has been marked as being introduced in Shader Model 6.0 in mesh shader environment here, but the deployment target is Shader Model 5.0 mesh shader environment}}
+    // expected-error@#f8_call {{'f8' is only available in mesh environment on Shader Model 6.0 or newer}}
+    // expected-note@#f8 {{'f8' has been marked as being introduced in Shader Model 6.0 in mesh environment here, but the deployment target is Shader Model 5.0 mesh environment}}
     unsigned H = f8(); // #f8_call
 
     return 0;

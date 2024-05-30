@@ -1061,24 +1061,9 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Default(Platform);
 }
 static llvm::StringRef getPrettyEnviromentName(llvm::Triple::EnvironmentType EnvironmentType) {
-  switch (EnvironmentType) {
-    case llvm::Triple::Pixel: return "pixel shader";
-    case llvm::Triple::Vertex: return "vertex shader";
-    case llvm::Triple::Geometry: return "geometry shader";
-    case llvm::Triple::Hull: return "hull shader";
-    case llvm::Triple::Domain: return "domain shader";
-    case llvm::Triple::Compute: return "compute shader";
-    case llvm::Triple::RayGeneration: return "raygeneration shader";
-    case llvm::Triple::Intersection: return "intersection shader";
-    case llvm::Triple::AnyHit: return "anyhit shader";
-    case llvm::Triple::ClosestHit: return "closesthit shader";
-    case llvm::Triple::Miss: return "miss shader";
-    case llvm::Triple::Callable: return "callable shader";
-    case llvm::Triple::Mesh: return "mesh shader";
-    case llvm::Triple::Amplification: return "amplification shader";
-    case llvm::Triple::Library: return "shader library";
-    default: return "";
-  }
+  if (EnvironmentType >= llvm::Triple::Pixel && EnvironmentType <= llvm::Triple::Amplification)
+    return llvm::Triple::getEnvironmentTypeName(EnvironmentType);
+  return "";
 }
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
     return llvm::StringSwitch<llvm::Triple::EnvironmentType>(Environment)
