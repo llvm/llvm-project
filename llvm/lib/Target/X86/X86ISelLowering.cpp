@@ -136,6 +136,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // X86-SSE is even stranger. It uses -1 or 0 for vector masks.
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
+  // X86 instruction cache is coherent with its data cache so we can use the
+  // default expansion to a no-op.
+  setOperationAction(ISD::CLEAR_CACHE, MVT::Other, Expand);
+
   // For 64-bit, since we have so many registers, use the ILP scheduler.
   // For 32-bit, use the register pressure specific scheduling.
   // For Atom, always use ILP scheduling.
