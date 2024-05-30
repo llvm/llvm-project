@@ -1225,7 +1225,7 @@ void RewriteInstance::discoverFileObjects() {
     }
 
     // Check if it's a cold function fragment.
-    if (ColdFragment.match(SymName)) {
+    if (FunctionFragmentTemplate.match(SymName)) {
       static bool PrintedWarning = false;
       if (!PrintedWarning) {
         PrintedWarning = true;
@@ -1457,7 +1457,7 @@ void RewriteInstance::registerFragments() {
       StringRef BaseName = NR.restore(Name);
       const bool IsGlobal = BaseName == Name;
       SmallVector<StringRef> Matches;
-      if (!ColdFragment.match(BaseName, &Matches))
+      if (!FunctionFragmentTemplate.match(BaseName, &Matches))
         continue;
       StringRef ParentName = Matches[1];
       const BinaryData *BD = BC->getBinaryDataByName(ParentName);
