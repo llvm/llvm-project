@@ -1765,6 +1765,7 @@ std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
       // to the next constraint.
       return std::string("^") + std::string(Constraint++, 2);
     }
+    [[fallthrough]];
   case 'j':
     switch (Constraint[1]) {
     default:
