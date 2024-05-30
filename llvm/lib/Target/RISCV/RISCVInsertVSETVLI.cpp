@@ -504,7 +504,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
 class VSETVLIInfo {
   struct AVLDef {
     // Every AVLDef should have a VNInfo.
-    const VNInfo *ValNo;
+    unsigned ValNo;
     Register DefReg;
   };
   union {
@@ -543,9 +543,9 @@ public:
   void setUnknown() { State = Unknown; }
   bool isUnknown() const { return State == Unknown; }
 
-  void setAVLRegDef(const VNInfo *VNInfo, Register AVLReg) {
-    assert(VNInfo && AVLReg.isVirtual());
-    AVLRegDef.ValNo = VNInfo;
+  void setAVLRegDef(unsigned ValNo, Register AVLReg) {
+    assert(AVLReg.isVirtual());
+    AVLRegDef.ValNo = ValNo;
     AVLRegDef.DefReg = AVLReg;
     State = AVLIsReg;
   }
@@ -571,7 +571,7 @@ public:
     assert(hasAVLImm());
     return AVLImm;
   }
-  const VNInfo *getAVLVNInfo() const {
+  unsigned getAVLValNo() const {
     assert(hasAVLReg());
     return AVLRegDef.ValNo;
   }
@@ -580,8 +580,10 @@ public:
   // boundary slot.
   const MachineInstr *getAVLDefMI(const LiveIntervals *LIS) const {
     assert(hasAVLReg());
-    auto *MI = LIS->getInstructionFromIndex(getAVLVNInfo()->def);
-    assert(!(getAVLVNInfo()->isPHIDef() && MI));
+    const VNInfo *VNI =
+        LIS->getInterval(getAVLReg()).getValNumInfo(getAVLValNo());
+    auto *MI = LIS->getInstructionFromIndex(VNI->def);
+    assert(!(VNI->isPHIDef() && MI));
     return MI;
   }
 
@@ -590,7 +592,7 @@ public:
     if (Info.isUnknown())
       setUnknown();
     else if (Info.hasAVLReg())
-      setAVLRegDef(Info.getAVLVNInfo(), Info.getAVLReg());
+      setAVLRegDef(Info.getAVLValNo(), Info.getAVLReg());
     else if (Info.hasAVLVLMAX())
       setAVLVLMAX();
     else if (Info.hasAVLIgnored())
@@ -629,7 +631,7 @@ public:
 
   bool hasSameAVL(const VSETVLIInfo &Other) const {
     if (hasAVLReg() && Other.hasAVLReg())
-      return getAVLVNInfo()->id == Other.getAVLVNInfo()->id &&
+      return getAVLValNo() == Other.getAVLValNo() &&
              getAVLReg() == Other.getAVLReg();
 
     if (hasAVLImm() && Other.hasAVLImm())
@@ -927,7 +929,7 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI,
     if (AVLReg == RISCV::X0)
       NewInfo.setAVLVLMAX();
     else if (VNInfo *VNI = getVNInfoFromReg(AVLReg, MI, LIS))
-      NewInfo.setAVLRegDef(VNI, AVLReg);
+      NewInfo.setAVLRegDef(VNI->id, AVLReg);
     else {
       assert(MI.getOperand(1).isUndef());
       NewInfo.setAVLIgnored();
@@ -1003,7 +1005,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
       else
         InstrInfo.setAVLImm(Imm);
     } else if (VNInfo *VNI = getVNInfoFromReg(VLOp.getReg(), MI, LIS)) {
-      InstrInfo.setAVLRegDef(VNI, VLOp.getReg());
+      InstrInfo.setAVLRegDef(VNI->id, VLOp.getReg());
     } else {
       assert(VLOp.isUndef());
       InstrInfo.setAVLIgnored();
@@ -1255,7 +1257,7 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
     auto &LI = LIS->getInterval(MI.getOperand(1).getReg());
     SlotIndex SI = LIS->getSlotIndexes()->getInstructionIndex(MI).getRegSlot();
     VNInfo *VNI = LI.getVNInfoAt(SI);
-    Info.setAVLRegDef(VNI, MI.getOperand(1).getReg());
+    Info.setAVLRegDef(VNI->id, MI.getOperand(1).getReg());
     return;
   }
 
@@ -1350,7 +1352,8 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     return true;
 
   // We need the AVL to have been produced by a PHI node in this basic block.
-  const VNInfo *Valno = Require.getAVLVNInfo();
+  const VNInfo *Valno = LIS->getInterval(Require.getAVLReg())
+                            .getValNumInfo(Require.getAVLValNo());
   if (!Valno->isPHIDef() || LIS->getMBBFromIndex(Valno->def) != &MBB)
     return true;
 
@@ -1514,7 +1517,8 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   // we need to prove the value is available at the point we're going
   // to insert the vsetvli at.
   if (AvailableInfo.hasAVLReg()) {
-    SlotIndex SI = AvailableInfo.getAVLVNInfo()->def;
+    const LiveInterval &LI = LIS->getInterval(AvailableInfo.getAVLReg());
+    SlotIndex SI = LI.getValNumInfo(AvailableInfo.getAVLValNo())->def;
     // This is an inline dominance check which covers the case of
     // UnavailablePred being the preheader of a loop.
     if (LIS->getMBBFromIndex(SI) != UnavailablePred)
