@@ -57,6 +57,7 @@ public:
 
   uint64_t tell() { return OS.tell(); }
   void write(uint64_t V) { LE.write<uint64_t>(V); }
+  void write32(uint32_t V) { LE.write<uint32_t>(V); }
   void writeByte(uint8_t V) { LE.write<uint8_t>(V); }
 
   // \c patch can only be called when all data is written and flushed.
@@ -452,8 +453,11 @@ static uint64_t writeMemProfRecords(
     ProfOStream &OS,
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
-    memprof::MemProfSchema *Schema, memprof::IndexedVersion Version) {
-  memprof::RecordWriterTrait RecordWriter(Schema, Version);
+    memprof::MemProfSchema *Schema, memprof::IndexedVersion Version,
+    llvm::DenseMap<memprof::CallStackId, uint32_t> *MemProfCallStackIndexes =
+        nullptr) {
+  memprof::RecordWriterTrait RecordWriter(Schema, Version,
+                                          MemProfCallStackIndexes);
   OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
       RecordTableGenerator;
   for (auto &[GUID, Record] : MemProfRecordData) {
@@ -485,6 +489,39 @@ static uint64_t writeMemProfFrames(
   return FrameTableGenerator.Emit(OS.OS);
 }
 
+// Serialize MemProfFrameData.  Return the mapping from FrameIds to their
+// indexes within the frame array.
+static llvm::DenseMap<memprof::FrameId, uint32_t> writeMemProfFrameArray(
+    ProfOStream &OS,
+    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
+  // Mappings from FrameIds to array indexes.
+  llvm::DenseMap<memprof::FrameId, uint32_t> MemProfFrameIndexes;
+
+  // Sort the FrameIDs for stability.
+  std::vector<std::pair<memprof::FrameId, const memprof::Frame *>> FrameIdOrder;
+  FrameIdOrder.reserve(MemProfFrameData.size());
+  for (const auto &[Id, Frame] : MemProfFrameData)
+    FrameIdOrder.emplace_back(Id, &Frame);
+  assert(MemProfFrameData.size() == FrameIdOrder.size());
+  llvm::sort(FrameIdOrder);
+
+  // Serialize all frames while creating mappings from linear IDs to FrameIds.
+  uint64_t Index = 0;
+  MemProfFrameIndexes.reserve(FrameIdOrder.size());
+  for (const auto &[Id, F] : FrameIdOrder) {
+    F->serialize(OS.OS);
+    MemProfFrameIndexes.insert({Id, Index});
+    ++Index;
+  }
+  assert(MemProfFrameData.size() == Index);
+  assert(MemProfFrameData.size() == MemProfFrameIndexes.size());
+
+  // Release the memory of this MapVector as it is no longer needed.
+  MemProfFrameData.clear();
+
+  return MemProfFrameIndexes;
+}
+
 static uint64_t writeMemProfCallStacks(
     ProfOStream &OS,
     llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
@@ -497,6 +534,33 @@ static uint64_t writeMemProfCallStacks(
   MemProfCallStackData.clear();
 
   return CallStackTableGenerator.Emit(OS.OS);
+}
+
+static llvm::DenseMap<memprof::CallStackId, uint32_t>
+writeMemProfCallStackArray(
+    ProfOStream &OS,
+    llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
+        &MemProfCallStackData,
+    llvm::DenseMap<memprof::FrameId, uint32_t> &MemProfFrameIndexes) {
+  llvm::DenseMap<memprof::CallStackId, uint32_t> MemProfCallStackIndexes;
+
+  MemProfCallStackIndexes.reserve(MemProfCallStackData.size());
+  uint64_t CallStackBase = OS.tell();
+  for (const auto &[CSId, CallStack] : MemProfCallStackData) {
+    uint64_t CallStackIndex = (OS.tell() - CallStackBase) / sizeof(uint32_t);
+    MemProfCallStackIndexes.insert({CSId, CallStackIndex});
+    const llvm::SmallVector<memprof::FrameId> CS = CallStack;
+    OS.write32(CS.size());
+    for (const auto F : CS) {
+      assert(MemProfFrameIndexes.contains(F));
+      OS.write32(MemProfFrameIndexes[F]);
+    }
+  }
+
+  // Release the memory of this vector as it is no longer needed.
+  MemProfCallStackData.clear();
+
+  return MemProfCallStackIndexes;
 }
 
 // Write out MemProf Version0 as follows:
@@ -619,9 +683,7 @@ static Error writeMemProfV2(ProfOStream &OS,
 
 // Write out MemProf Version3 as follows:
 // uint64_t Version
-// uint64_t FrameTableOffset = FrameTableGenerator.Emit
 // uint64_t CallStackPayloadOffset = Offset for the call stack payload
-// uint64_t CallStackTableOffset = CallStackTableGenerator.Emit
 // uint64_t RecordPayloadOffset = Offset for the record payload
 // uint64_t RecordTableOffset = RecordTableGenerator.Emit
 // uint64_t Num schema entries
@@ -637,9 +699,7 @@ static Error writeMemProfV3(ProfOStream &OS,
                             bool MemProfFullSchema) {
   OS.write(memprof::Version3);
   uint64_t HeaderUpdatePos = OS.tell();
-  OS.write(0ULL); // Reserve space for the memprof frame table offset.
   OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
-  OS.write(0ULL); // Reserve space for the memprof call stack table offset.
   OS.write(0ULL); // Reserve space for the memprof record payload offset.
   OS.write(0ULL); // Reserve space for the memprof record table offset.
 
@@ -648,19 +708,23 @@ static Error writeMemProfV3(ProfOStream &OS,
     Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
+  llvm::DenseMap<memprof::FrameId, uint32_t> MemProfFrameIndexes =
+      writeMemProfFrameArray(OS, MemProfData.FrameData);
 
   uint64_t CallStackPayloadOffset = OS.tell();
-  uint64_t CallStackTableOffset =
-      writeMemProfCallStacks(OS, MemProfData.CallStackData);
+  llvm::DenseMap<memprof::CallStackId, uint32_t> MemProfCallStackIndexes =
+      writeMemProfCallStackArray(OS, MemProfData.CallStackData,
+                                 MemProfFrameIndexes);
 
   uint64_t RecordPayloadOffset = OS.tell();
-  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
-                                                   &Schema, memprof::Version3);
+  uint64_t RecordTableOffset =
+      writeMemProfRecords(OS, MemProfData.RecordData, &Schema,
+                          memprof::Version3, &MemProfCallStackIndexes);
 
   uint64_t Header[] = {
-      FrameTableOffset,    CallStackPayloadOffset, CallStackTableOffset,
-      RecordPayloadOffset, RecordTableOffset,
+      CallStackPayloadOffset,
+      RecordPayloadOffset,
+      RecordTableOffset,
   };
   OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
 
