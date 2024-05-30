@@ -3346,7 +3346,7 @@ def ADDIStocHA : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentr
                        "#ADDIStocHA",
                        [(set i32:$rD,
                          (PPCtoc_entry i32:$reg, tglobaladdr:$disp))]>;
-// TOC Data Transform AIX
+// TOC Data Transform on AIX
 def ADDItoc : PPCEmitTimePseudo<(outs gprc:$rD), (ins tocentry32:$disp, gprc:$reg),
                    "#ADDItoc",
                    [(set i32:$rD,

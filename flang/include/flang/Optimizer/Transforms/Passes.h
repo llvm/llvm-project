@@ -36,6 +36,7 @@ namespace fir {
 #define GEN_PASS_DECL_AFFINEDIALECTDEMOTION
 #define GEN_PASS_DECL_ANNOTATECONSTANTOPERANDS
 #define GEN_PASS_DECL_ARRAYVALUECOPY
+#define GEN_PASS_DECL_ASSUMEDRANKOPCONVERSION
 #define GEN_PASS_DECL_CHARACTERCONVERSION
 #define GEN_PASS_DECL_CFGCONVERSION
 #define GEN_PASS_DECL_EXTERNALNAMECONVERSION
@@ -50,6 +51,7 @@ namespace fir {
 #define GEN_PASS_DECL_STACKARRAYS
 #define GEN_PASS_DECL_LOOPVERSIONING
 #define GEN_PASS_DECL_ADDALIASTAGS
+#define GEN_PASS_DECL_OMPMAPINFOFINALIZATIONPASS
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
@@ -69,7 +71,6 @@ std::unique_ptr<mlir::Pass> createAlgebraicSimplificationPass();
 std::unique_ptr<mlir::Pass>
 createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
 
-std::unique_ptr<mlir::Pass> createOMPMapInfoFinalizationPass();
 std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 createOMPMarkDeclareTargetPass();

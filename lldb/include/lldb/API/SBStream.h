@@ -62,6 +62,8 @@ public:
 
 protected:
   friend class SBAddress;
+  friend class SBAddressRange;
+  friend class SBAddressRangeList;
   friend class SBBlock;
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;

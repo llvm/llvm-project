@@ -275,7 +275,8 @@ private:
   // Handle 8 bit and 16 bit buffer loads
   SDValue handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT, SDLoc DL,
                                      ArrayRef<SDValue> Ops,
-                                     MachineMemOperand *MMO) const;
+                                     MachineMemOperand *MMO,
+                                     bool IsTFE = false) const;
 
   // Handle 8 bit and 16 bit buffer stores
   SDValue handleByteShortBufferStores(SelectionDAG &DAG, EVT VDataType,
@@ -286,6 +287,8 @@ public:
   SITargetLowering(const TargetMachine &tm, const GCNSubtarget &STI);
 
   const GCNSubtarget *getSubtarget() const;
+
+  ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 
   bool isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode, EVT DestVT,
                        EVT SrcVT) const override;
