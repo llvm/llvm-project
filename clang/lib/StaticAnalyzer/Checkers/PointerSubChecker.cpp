@@ -47,13 +47,16 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
   if (!LR || !RR)
     return;
 
+  // Allow subtraction of identical pointers.
+  if (LR == RR)
+    return;
+
+  // No warning if one operand is unknown.
+  if (isa<SymbolicRegion>(LR) || isa<SymbolicRegion>(RR))
+    return;
+
   const auto *ElemLR = dyn_cast<ElementRegion>(LR);
   const auto *ElemRR = dyn_cast<ElementRegion>(RR);
-  // FIXME: We want to verify that these are elements of an array.
-  // Because behavior of ElementRegion it may be confused with a cast.
-  // There is not a simple way to distinguish it from array element (check the
-  // types?). Because this missing check a warning is missing in the rare case
-  // when two casted pointers to the same region (variable) are subtracted.
   if (ElemLR && ElemRR) {
     const MemRegion *SuperLR = ElemLR->getSuperRegion();
     const MemRegion *SuperRR = ElemRR->getSuperRegion();
