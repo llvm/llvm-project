@@ -349,7 +349,7 @@ TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
-  CheckDescriptorEqInt(exitStat.get(), 1);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
   CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXX");
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
@@ -359,7 +359,9 @@ TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
 }
 
 TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
-  OwningPtr<Descriptor> command{CharDescriptor("cd NotExecutedCommand")};
+  OwningPtr<Descriptor> command{CharDescriptor(
+      "touch NotExecutedCommandFile && chmod -x NotExecutedCommandFile && "
+      "./NotExecutedCommandFile")};
   bool wait{true};
   OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
@@ -368,13 +370,28 @@ TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
-  CheckDescriptorEqInt(exitStat.get(), 1);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
   CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXX");
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 126);
   CheckDescriptorEqStr(cmdMsg.get(), "Command cannot execute:");
 #endif
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
+
+  // removing the file should have no error on Linux, have error on Windows
+  OwningPtr<Descriptor> commandClean{CharDescriptor("rm -f NotExecutedCommandFile")};
+  OwningPtr<Descriptor> cmdMsgNoErr{CharDescriptor("No Error")};
+  RTNAME(ExecuteCommandLine)
+  (*commandClean.get(), wait, exitStat.get(), cmdStat.get(), cmdMsgNoErr.get());
+#ifdef _WIN32
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
+  CheckDescriptorEqStr(cmdMsgNoErr.get(), "Invalid ");
+    CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
+#else
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsgNoErr.get(), "No Error");
+    CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
+#endif
 }
 
 TEST_F(ZeroArguments, ECLNotFoundCommandErrorSync) {
@@ -388,9 +405,9 @@ TEST_F(ZeroArguments, ECLNotFoundCommandErrorSync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
-  CheckDescriptorEqInt(exitStat.get(), 1);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
   CheckDescriptorEqStr(cmdMsg.get(),
-      "Invalid command lineXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+      "Invalid command linefy the remaining buffer XXXXXXXXXXXXXXXXXXXX");
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
   CheckDescriptorEqStr(cmdMsg.get(),
@@ -402,19 +419,17 @@ TEST_F(ZeroArguments, ECLNotFoundCommandErrorSync) {
 TEST_F(ZeroArguments, ECLInvalidCommandTerminatedSync) {
   OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
   bool wait{true};
-  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdMsg{CharDescriptor("No Change")};
 
 #ifdef _WIN32
   EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
-                   *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
+                   *command.get(), wait, nullptr, nullptr, cmdMsg.get()),
       "Invalid command quit with exit status code: 1");
 #else
   EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
-                   *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
-      "Invalid command quit with exit status code: 127");
+                   *command.get(), wait, nullptr, nullptr, cmdMsg.get()),
+      "Command not found with exit status code: 127");
 #endif
-  CheckDescriptorEqInt(exitStat.get(), 404);
   CheckDescriptorEqStr(cmdMsg.get(), "No Change");
 }
 
@@ -428,7 +443,7 @@ TEST_F(ZeroArguments, ECLValidCommandAndExitStatNoChangeAndCMDStatusSetAsync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
-  CheckDescriptorEqInt(exitStat.get(), 404);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 404);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
@@ -436,13 +451,10 @@ TEST_F(ZeroArguments, ECLValidCommandAndExitStatNoChangeAndCMDStatusSetAsync) {
 TEST_F(ZeroArguments, ECLInvalidCommandParentNotTerminatedAsync) {
   OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
   bool wait{false};
-  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
 
   EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
-      *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()));
-
-  CheckDescriptorEqInt(exitStat.get(), 404);
+      *command.get(), wait, nullptr, nullptr, cmdMsg.get()));
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 

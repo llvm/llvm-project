@@ -62,13 +62,13 @@ void CheckAndStoreIntToDescriptor(
 
 // If a condition occurs that would assign a nonzero value to CMDSTAT but
 // the CMDSTAT variable is not present, error termination is initiated.
-int TerminationCheck(int status, const Descriptor *cmdstat,
+std::int64_t  TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, Terminator &terminator) {
 #ifdef _WIN32
   // On WIN32 API std::system returns exit status directly
-  int exitStatusVal{status};
+  std::int64_t exitStatusVal{status};
 #else
-  int exitStatusVal{WEXITSTATUS(status)};
+  std::int64_t exitStatusVal{WEXITSTATUS(status)};
   if (exitStatusVal == 1) {
     if (!cmdstat) {
       terminator.Crash("General Error with exit status code: 1");
@@ -163,8 +163,8 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
 
   if (wait) {
     // either wait is not specified or wait is true: synchronous mode
-    int status{std::system(newCmd)};
-    int exitStatusVal{TerminationCheck(status, cmdstat, cmdmsg, terminator)};
+    std::int64_t status{std::system(newCmd)};
+    std::int64_t exitStatusVal{TerminationCheck(status, cmdstat, cmdmsg, terminator)};
     // If sync, assigned processor-dependent exit status. Otherwise unchanged
     CheckAndStoreIntToDescriptor(exitstat, exitStatusVal, terminator);
   } else {
@@ -202,7 +202,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
         terminator.Crash(
             "CreateProcess failed with error code: %lu.", GetLastError());
       } else {
-        StoreIntToDescriptor(cmdstat, (uint32_t)GetLastError(), terminator);
+        StoreIntToDescriptor(cmdstat, (std::int64_t)GetLastError(), terminator);
         CheckAndCopyCharsToDescriptor(cmdmsg, "CreateProcess failed.");
       }
     }
@@ -230,7 +230,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
         }
         exit(EXIT_FAILURE);
       }
-      int status{std::system(newCmd)};
+      std::int64_t status{std::system(newCmd)};
       TerminationCheck(status, cmdstat, cmdmsg, terminator);
       exit(status);
     }
