@@ -1349,7 +1349,10 @@ module std_private_functional_invoke                     [system] {
 module std_private_functional_is_transparent             [system] { header "__functional/is_transparent.h" }
 module std_private_functional_mem_fn                     [system] { header "__functional/mem_fn.h" }
 module std_private_functional_mem_fun_ref                [system] { header "__functional/mem_fun_ref.h" }
-module std_private_functional_not_fn                     [system] { header "__functional/not_fn.h" }
+module std_private_functional_not_fn                     [system] {
+  header "__functional/not_fn.h"
+  export std_private_functional_perfect_forward
+}
 module std_private_functional_operations                 [system] { header "__functional/operations.h" }
 module std_private_functional_perfect_forward            [system] {
   header "__functional/perfect_forward.h"
