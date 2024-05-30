@@ -2756,6 +2756,31 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
       llvm_unreachable("Unsupported size for inverse ballot mask.");
     }
     break;
+  case Intrinsic::amdgcn_permlane16_swap:
+  case Intrinsic::amdgcn_permlane32_swap: {
+    if ((IntrID == Intrinsic::amdgcn_permlane16_swap &&
+         !Subtarget->hasPermlane16Swap()) ||
+        (IntrID == Intrinsic::amdgcn_permlane32_swap &&
+         !Subtarget->hasPermlane32Swap())) {
+      SelectCode(N); // Hit the default error
+      return;
+    }
+
+    Opcode = IntrID == Intrinsic::amdgcn_permlane16_swap
+                 ? AMDGPU::V_PERMLANE16_SWAP_B32_e64
+                 : AMDGPU::V_PERMLANE32_SWAP_B32_e64;
+
+    SmallVector<SDValue, 4> NewOps(N->op_begin() + 1, N->op_end());
+    if (ConvGlueNode)
+      NewOps.push_back(SDValue(ConvGlueNode, 0));
+
+    bool FI = N->getConstantOperandVal(3);
+    NewOps[2] = CurDAG->getTargetConstant(
+        FI ? AMDGPU::DPP::DPP_FI_1 : AMDGPU::DPP::DPP_FI_0, SDLoc(), MVT::i32);
+
+    CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), NewOps);
+    return;
+  }
   default:
     SelectCode(N);
     break;

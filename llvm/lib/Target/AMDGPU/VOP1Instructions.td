@@ -368,6 +368,9 @@ def VOP_MOVRELS : VOPProfile<[i32, i32, untyped, untyped]> {
 }
 
 def VOP_PERMLANE_SWAP : VOPProfile<[i32, i32, untyped, untyped]> {
+  let Outs32 = (outs DstRC:$vdst, VRegSrc_32:$src0_out);
+  let Outs64 = (outs DstRC64:$vdst, VRegSrc_32:$src0_out);
+
   let Src0RC32 = VRegSrc_32;
   let Src0RC64 = VRegSrc_32;
   let HasClamp = 0;
@@ -375,9 +378,9 @@ def VOP_PERMLANE_SWAP : VOPProfile<[i32, i32, untyped, untyped]> {
   let HasExtDPP = 0;
   let HasExtSDWA = 0;
 
-  let Ins32 = (ins Src0RC64:$vdst_in, Src0RC64:$src0);
-  let Ins64 = (ins Src0RC64:$vdst_in, Src0RC64:$src0, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
-  let InsVOP3OpSel = (ins Src0RC64:$vdst_in, Src0RC64:$src0, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
+  let Ins32 = (ins Src0RC64:$vdst_in, Src0RC32:$src0);
+  let Ins64 = (ins Src0RC64:$vdst_in, Src0RC64:$src0, Dpp16FI:$fi, DppBoundCtrl:$bound_ctrl);
+  let InsVOP3OpSel = (ins Src0RC64:$vdst_in, Src0RC64:$src0, Dpp16FI:$fi, DppBoundCtrl:$bound_ctrl);
   let Asm64 = "$vdst, $src0$bound_ctrl$fi";
   let AsmVOP3OpSel = "$vdst, $src0$bound_ctrl$fi";
 }
@@ -748,7 +751,9 @@ let SubtargetPredicate = isGFX11Plus in {
 let SubtargetPredicate = HasPrngInst in
 defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
 
-let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+let Constraints = "$vdst = $vdst_in, $src0_out = $src0",
+     DisableEncoding="$vdst_in,$src0_out",
+     SchedRW = [Write32Bit, Write32Bit] in {
 let SubtargetPredicate = HasPermlane16Swap in {
 defm V_PERMLANE16_SWAP_B32 : VOP1Inst<"v_permlane16_swap_b32", VOP_PERMLANE_SWAP>;
 }
@@ -756,30 +761,6 @@ defm V_PERMLANE16_SWAP_B32 : VOP1Inst<"v_permlane16_swap_b32", VOP_PERMLANE_SWAP
 let SubtargetPredicate = HasPermlane32Swap in {
 defm V_PERMLANE32_SWAP_B32 : VOP1Inst<"v_permlane32_swap_b32", VOP_PERMLANE_SWAP>;
 }
-}
-
-multiclass PermlaneSwapPat<SDPatternOperator node,
-                           string InstName> {
-  // Can use vop1 form without bound_ctrl/fi
-  // TODO: Can we avoid using standard SIShrinkInstructions handling?
-  def : GCNPat<
-    (i32 (node i32:$vdst_in, i32:$src0, 0, 0)),
-    (!cast<Instruction>(InstName#"_e32") $vdst_in, $src0)
-  >;
-
-  def : GCNPat<
-    (i32 (node i32:$vdst_in, i32:$src0,
-               timm:$fi, timm:$bound_ctrl)),
-    (!cast<Instruction>(InstName#"_e64") $vdst_in, $src0,
-      (as_i1timm $bound_ctrl), (as_i1timm_zext $fi))
-  >;
-}
-
-let SubtargetPredicate = HasGFX950Insts in {
-defm : PermlaneSwapPat<int_amdgcn_permlane16_swap,
-                       "V_PERMLANE16_SWAP_B32">;
-defm : PermlaneSwapPat<int_amdgcn_permlane32_swap,
-                       "V_PERMLANE32_SWAP_B32">;
 }
 
 //===----------------------------------------------------------------------===//

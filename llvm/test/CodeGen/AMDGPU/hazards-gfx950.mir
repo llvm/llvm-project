@@ -10,7 +10,7 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
     V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
-    renamable $vgpr0 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
 ...
 
 ---
@@ -23,7 +23,7 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
     $exec = V_CMPX_EQ_I32_e64 $vgpr0, $vgpr1, implicit $exec
-    renamable $vgpr0 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
 ...
 
 ---
@@ -36,7 +36,7 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
     V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
-    renamable $vgpr0 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
 ...
 
 ---
@@ -49,7 +49,7 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
     $exec = V_CMPX_EQ_I32_e64 $vgpr0, $vgpr1, implicit $exec
-    renamable $vgpr0 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
 ...
 
 ---
@@ -62,7 +62,7 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
     V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
-    renamable $vgpr0 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
 ...
 
 ---
@@ -75,7 +75,7 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
     $exec = V_CMPX_EQ_I32_e64 $vgpr0, $vgpr1, implicit $exec
-    renamable $vgpr0 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
 ...
 
 ---
@@ -88,7 +88,7 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
     V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
-    renamable $vgpr0 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
 ...
 
 ---
@@ -101,7 +101,7 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
     $exec = V_CMPX_EQ_I32_e64 $vgpr0, $vgpr1, implicit $exec
-    renamable $vgpr0 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
 ...
 
 ---
@@ -121,7 +121,7 @@ body:             |
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     $vgpr4 = V_MOV_B32_e32 0, implicit $exec
     $vgpr5 = V_MOV_B32_e32 0, implicit $exec
-    renamable $vgpr0 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
 ...
 
 ---
@@ -140,7 +140,7 @@ body:             |
     $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     $vgpr4 = V_MOV_B32_e32 0, implicit $exec
-    renamable $vgpr0 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
 ...
 
 ---
@@ -153,7 +153,7 @@ body:             |
   bb.0:
     liveins: $vgpr1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    renamable $vgpr0 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
 ...
 
 ---
@@ -166,7 +166,7 @@ body:             |
   bb.0:
     liveins: $vgpr0
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-    renamable $vgpr0 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
 ...
 
 ---
@@ -179,7 +179,7 @@ body:             |
   bb.0:
     liveins: $vgpr1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    renamable $vgpr0 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
 ...
 
 ---
@@ -192,7 +192,7 @@ body:             |
   bb.0:
     liveins: $vgpr0
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-    renamable $vgpr0 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
 ...
 
 ---
@@ -205,7 +205,7 @@ body:             |
   bb.0:
     liveins: $vgpr1
     $vgpr2 = V_MOV_B32_e32 0, implicit $exec
-    renamable $vgpr0 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
 ...
 
 ---
@@ -221,7 +221,7 @@ body:             |
     liveins: $vgpr0, $vgpr2, $vgpr3
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     $exec = V_CMPX_EQ_I32_e64 $vgpr2, $vgpr3, implicit $exec
-    renamable $vgpr0 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
 ...
 
 ---
@@ -236,7 +236,7 @@ body:             |
     liveins: $vgpr0, $vgpr2, $vgpr3
     $exec = V_CMPX_EQ_I32_e64 $vgpr2, $vgpr3, implicit $exec
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-    renamable $vgpr0 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
 ...
 
 ---
@@ -253,5 +253,5 @@ body:             |
     $exec = V_CMPX_EQ_I32_e64 $vgpr2, $vgpr3, implicit $exec
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    renamable $vgpr0 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
 ...
