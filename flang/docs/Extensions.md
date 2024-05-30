@@ -124,6 +124,16 @@ end
   This enables atomic memory operations to be naturally represented
   as `PURE` functions, which allows their use in parallel constructs
   and `DO CONCURRENT`.
+* A non-definable actual argument, including the case of a vector
+  subscript, may be associated with an `ASYNCHRONOUS` or `VOLATILE`
+  dummy argument, F'2023 15.5.2.5 p31 notwithstanding.
+  The effects of these attributes are scoped over the lifetime of
+  the procedure reference, and they can by added by internal subprograms
+  and `BLOCK` constructs within the procedure.
+  Further, a dummy argument can acquire the `ASYNCHRONOUS` attribute
+  implicitly simply appearing in an asynchronous data transfer statement,
+  without the attribute being visible in the procedure's explicit
+  interface.
 
 ## Extensions, deletions, and legacy features supported by default
 
