@@ -50,7 +50,6 @@ void OpenACCComputeConstruct::findAndSetChildLoops() {
     LoopConstructFinder(OpenACCComputeConstruct *Construct)
         : Construct(Construct) {}
 
-
     bool TraverseOpenACCComputeConstruct(OpenACCComputeConstruct *C) {
       // Stop searching if we find a compute construct.
       return true;
