@@ -1,5 +1,4 @@
 ; Check r16-r31 can not be used with 'q','r','l' constraint for backward compatibility.
-; RUN: not llc < %s -mtriple=x86_64-unknown-unknown -mattr=+egpr 2>&1 | FileCheck %s --check-prefix=ERR
 ; RUN: not llc -mtriple=x86_64 < %s 2>&1 | FileCheck %s --check-prefix=ERR
 ; RUN: not llc -mtriple=x86_64 -mattr=+egpr < %s 2>&1 | FileCheck %s --check-prefix=ERR
 ; RUN: llc -mtriple=x86_64 -mattr=+egpr,+inline-asm-use-gpr32 < %s | FileCheck %s
