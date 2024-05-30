@@ -839,12 +839,12 @@ Error RISCVISAInfo::checkDependency() {
     return createStringError(errc::invalid_argument,
                              "'zcf' is only supported for 'rv32'");
 
-  if (Exts.count("zacas") && !(Exts.count("a") || Exts.count("zamo")))
+  if (Exts.count("zacas") && !(Exts.count("a") || Exts.count("zaamo")))
     return createStringError(
         errc::invalid_argument,
         "'zacas' requires 'a' or 'zaamo' extension to also be specified");
 
-  if (Exts.count("zabha") && !(Exts.count("a") || Exts.count("zamo")))
+  if (Exts.count("zabha") && !(Exts.count("a") || Exts.count("zaamo")))
     return createStringError(
         errc::invalid_argument,
         "'zabha' requires 'a' or 'zaamo' extension to also be specified");
