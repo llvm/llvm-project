@@ -1404,11 +1404,7 @@ namespace cwg95 { // cwg95: 3.3
   //   expected-note@#cwg95-C-f {{implicitly declared private here}}
 }
 
-<<<<<<< HEAD:clang/test/CXX/drs/cwg0xx.cpp
-namespace cwg96 { // cwg96: no
-=======
-namespace dr96 { // dr96: sup P1787
->>>>>>> c639768eef90 (change error to pedenatic warn, regen DR html):clang/test/CXX/drs/dr0xx.cpp
+namespace cwg96 { // cwg96: sup P1787
   struct A {
     void f(int);
     template<typename T> int f(T);
