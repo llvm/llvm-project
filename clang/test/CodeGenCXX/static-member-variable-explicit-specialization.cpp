@@ -14,7 +14,7 @@ int f();
 
 // ELF-SELECTANY: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @selectany }]
 // ELF-SELECTANY: @llvm.used = appending global [1 x ptr] [ptr @selectany]
-// GLOBALAS-ELF-SELECTANY: @llvm.used = appending addrspace(1) global [1 x ptr addrspace(1)] [ptr addrspace(1) @selectany]
+// GLOBALAS-ELF-SELECTANY: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @selectany }]
 int __declspec(selectany) selectany = f();
 
 #else
@@ -33,6 +33,7 @@ template<> int A<char>::a;
 template<> int A<bool>::a = 10;
 
 // ALL: @llvm.global_ctors = appending global [16 x { i32, ptr, ptr }]
+// GLOBALAS-ELF: @llvm.global_ctors = appending global [16 x { i32, ptr, ptr }]
 
 // ELF:  [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered:[^,]*]], ptr @_ZN1AIsE1aE },
 // MACHO: [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered:[^,]*]], ptr null },
@@ -82,7 +83,6 @@ template<> int A<bool>::a = 10;
 
 /// llvm.used ensures SHT_INIT_ARRAY in a section group cannot be GCed.
 // ELF: @llvm.used = appending global [14 x ptr] [ptr @_ZN1AIsE1aE, ptr @_Z1xIsE, ptr @_ZN2ns1aIiE1iE, ptr @_ZN2ns1b1iIiEE, ptr @_ZN1AIvE1aE, ptr @_Z1xIcE, ptr @_ZN3FibILi5EE1aE, ptr @_ZN3FibILi3EE1aE, ptr @_ZN3FibILi2EE1aE, ptr @_ZN3FibILi4EE1aE, ptr @_ZN4Fib2ILi5EE1aE, ptr @_ZN4Fib2ILi4EE1aE, ptr @_ZN4Fib2ILi2EE1aE, ptr @_ZN4Fib2ILi3EE1aE]
-// GLOBALAS-ELF: @llvm.used = appending addrspace(1) global [14 x ptr addrspace(1)] [ptr addrspace(1) @_ZN1AIsE1aE, ptr addrspace(1) @_Z1xIsE, ptr addrspace(1) @_ZN2ns1aIiE1iE, ptr addrspace(1) @_ZN2ns1b1iIiEE, ptr addrspace(1) @_ZN1AIvE1aE, ptr addrspace(1) @_Z1xIcE, ptr addrspace(1) @_ZN3FibILi5EE1aE, ptr addrspace(1) @_ZN3FibILi3EE1aE, ptr addrspace(1) @_ZN3FibILi2EE1aE, ptr addrspace(1) @_ZN3FibILi4EE1aE, ptr addrspace(1) @_ZN4Fib2ILi5EE1aE, ptr addrspace(1) @_ZN4Fib2ILi4EE1aE, ptr addrspace(1) @_ZN4Fib2ILi2EE1aE, ptr addrspace(1) @_ZN4Fib2ILi3EE1aE], section "llvm.metadata"
 
 template int A<short>::a;  // Unordered
 int b = foo();
