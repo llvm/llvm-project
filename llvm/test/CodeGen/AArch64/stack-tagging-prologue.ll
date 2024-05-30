@@ -6,15 +6,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android10000"
 
-declare void @use8(ptr)
 declare void @use32(ptr)
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
-
-define dso_local void @noUse32(ptr) sanitize_memtag {
-entry:
-  ret void
-}
 
 define void @OneVar() sanitize_memtag {
 entry:
@@ -33,7 +25,7 @@ entry:
 ; INSTR:  [[BASE:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; INSTR:  [[TLS:%.*]] = call ptr @llvm.thread.pointer()
 ; INSTR:  [[TLS_SLOT:%.*]] = getelementptr i8, ptr [[TLS]], i32 -24
-; INSTR:  [[TLS_VALUE:%.*]] = load i64, ptr %1, align 8
+; INSTR:  [[TLS_VALUE:%.*]] = load i64, ptr [[TLS_SLOT]], align 8
 ; INSTR:  [[FP:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; INSTR:  [[FP_INT:%.*]] = ptrtoint ptr [[FP]] to i64
 ; INSTR:  [[BASE_INT:%.*]] = ptrtoint ptr [[BASE]] to i64

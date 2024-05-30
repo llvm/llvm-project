@@ -93,7 +93,7 @@ Nomination process
 
 Anyone who feels they meet these criteria can nominate themselves, or may be nominated by a third party such as an existing LLVM Security Group member. The nomination should state whether the nominee is nominated as an individual, researcher, or as a vendor contact. It should clearly describe the grounds for nomination.
 
-For the moment, nominations are generally proposed, discussed, and voted on using Phabricator. An `example nomination is available here`_. The use of Phabricator helps keep membership discussions open, transparent, and easily accessible to LLVM developers in many ways. If, for any reason, a fully-world-readable nomination seems inappropriate, you may `open a new issue`_, and a discussion can be had about the best way to approach nomination, given the constraints that individuals are under.
+For the moment, nominations are generally proposed, discussed, and voted on using a github pull request. An `example nomination is available here`_. The use of pull requests helps keep membership discussions open, transparent, and easily accessible to LLVM developers in many ways. If, for any reason, a fully-world-readable nomination seems inappropriate, you may `open a new issue`_, and a discussion can be had about the best way to approach nomination, given the constraints that individuals are under.
 
 Our recommended method of nomination may change as our `Discussion Medium`_ story evolves over time.
 
@@ -257,4 +257,4 @@ sensitive are the following. Note that this list can change over time.
 .. _GitHub security: https://help.github.com/en/articles/about-maintainer-security-advisories
 .. _Discourse forums: https://discourse.llvm.org
 .. _MITRE: https://cve.mitre.org
-.. _example nomination is available here: https://reviews.llvm.org/D99232
+.. _example nomination is available here: https://github.com/llvm/llvm-project/pull/92174

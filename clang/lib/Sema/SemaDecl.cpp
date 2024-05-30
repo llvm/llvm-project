@@ -50,7 +50,9 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
@@ -2929,9 +2931,9 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if (const auto *UA = dyn_cast<UuidAttr>(Attr))
     NewAttr = S.mergeUuidAttr(D, *UA, UA->getGuid(), UA->getGuidDecl());
   else if (const auto *IMA = dyn_cast<WebAssemblyImportModuleAttr>(Attr))
-    NewAttr = S.mergeImportModuleAttr(D, *IMA);
+    NewAttr = S.Wasm().mergeImportModuleAttr(D, *IMA);
   else if (const auto *INA = dyn_cast<WebAssemblyImportNameAttr>(Attr))
-    NewAttr = S.mergeImportNameAttr(D, *INA);
+    NewAttr = S.Wasm().mergeImportNameAttr(D, *INA);
   else if (const auto *TCBA = dyn_cast<EnforceTCBAttr>(Attr))
     NewAttr = S.mergeEnforceTCBAttr(D, *TCBA);
   else if (const auto *TCBLA = dyn_cast<EnforceTCBLeafAttr>(Attr))
@@ -8895,7 +8897,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   // PPC MMA non-pointer types are not allowed as non-local variable types.
   if (Context.getTargetInfo().getTriple().isPPC64() &&
       !NewVD->isLocalVarDecl() &&
-      CheckPPCMMAType(T, NewVD->getLocation())) {
+      PPC().CheckPPCMMAType(T, NewVD->getLocation())) {
     NewVD->setInvalidDecl();
     return;
   }
@@ -12056,7 +12058,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
   // PPC MMA non-pointer types are not allowed as function return types.
   if (Context.getTargetInfo().getTriple().isPPC64() &&
-      CheckPPCMMAType(NewFD->getReturnType(), NewFD->getLocation())) {
+      PPC().CheckPPCMMAType(NewFD->getReturnType(), NewFD->getLocation())) {
     NewFD->setInvalidDecl();
   }
 
@@ -15348,7 +15350,7 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
 
   // PPC MMA non-pointer types are not allowed as function argument types.
   if (Context.getTargetInfo().getTriple().isPPC64() &&
-      CheckPPCMMAType(New->getOriginalType(), New->getLocation())) {
+      PPC().CheckPPCMMAType(New->getOriginalType(), New->getLocation())) {
     New->setInvalidDecl();
   }
 
@@ -18763,7 +18765,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
 
   // PPC MMA non-pointer types are not allowed as field types.
   if (Context.getTargetInfo().getTriple().isPPC64() &&
-      CheckPPCMMAType(T, NewFD->getLocation()))
+      PPC().CheckPPCMMAType(T, NewFD->getLocation()))
     NewFD->setInvalidDecl();
 
   NewFD->setAccess(AS);
