@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -triple %itanium_abi_triple %s -verify=expected
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple %s -verify=expected,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -triple %itanium_abi_triple %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %s -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 -triple %itanium_abi_triple %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c -triple %itanium_abi_triple %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 namespace std {
 #if __cplusplus >= 202002L
@@ -19,10 +19,6 @@ namespace std {
 
   typedef __INT16_TYPE__ int16_t;
   typedef __UINT16_TYPE__ uint16_t;
-  typedef __INT32_TYPE__ int32_t;
-  typedef __UINT32_TYPE__ uint32_t;
-  typedef __INT64_TYPE__ int64_t;
-  typedef __UINT64_TYPE__ uint64_t;
 
   template<typename T> T declval();
 }
@@ -81,10 +77,13 @@ template<typename T, int N>
 D<T, N> d();
 
 #ifdef __SIZEOF_INT128__
-std::int64_t d1{ d<__int128, 63>().i };
-std::int64_t d2{ d<__int128, 64>().i };
-std::int64_t d3{ d<__int128, 65>().i };
-// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type '__int128' to 'std::int64_t' (aka 'long') in initializer list}}
+using int64_t = long long;
+static_assert(sizeof(long long) == 8, "long long needs to be 64 bit for this test to work");
+
+int64_t d1{ d<__int128, 63>().i };
+int64_t d2{ d<__int128, 64>().i };
+int64_t d3{ d<__int128, 65>().i };
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type '__int128' to 'int64_t' (aka 'long long') in initializer list}}
 //   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
 #endif
 
