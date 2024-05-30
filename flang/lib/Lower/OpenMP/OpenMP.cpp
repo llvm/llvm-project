@@ -1007,10 +1007,9 @@ static void genSimdClauses(lower::AbstractConverter &converter,
   cp.processSafelen(clauseOps);
   cp.processSimdlen(clauseOps);
   // TODO Support delayed privatization.
-
+  cp.processOrder(clauseOps);
   cp.processTODO<clause::Aligned, clause::Allocate, clause::Linear,
-                 clause::Nontemporal, clause::Order>(
-      loc, llvm::omp::Directive::OMPD_simd);
+                 clause::Nontemporal>(loc, llvm::omp::Directive::OMPD_simd);
 }
 
 static void genSingleClauses(lower::AbstractConverter &converter,
@@ -1176,8 +1175,8 @@ static void genWsloopClauses(
   cp.processReduction(loc, clauseOps, &reductionTypes, &reductionSyms);
   cp.processSchedule(stmtCtx, clauseOps);
   // TODO Support delayed privatization.
-
-  cp.processTODO<clause::Allocate, clause::Linear, clause::Order>(
+  cp.processOrder(clauseOps);
+  cp.processTODO<clause::Allocate, clause::Linear>(
       loc, llvm::omp::Directive::OMPD_do);
 }
 
@@ -1855,8 +1854,8 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
                                ConstructQueue::iterator item) {
   ClauseProcessor cp(converter, semaCtx, item->clauses);
   cp.processTODO<clause::Aligned, clause::Allocate, clause::Linear,
-                 clause::Order, clause::Safelen, clause::Simdlen>(
-      loc, llvm::omp::OMPD_do_simd);
+                 clause::Safelen, clause::Simdlen>(loc,
+                                                   llvm::omp::OMPD_do_simd);
   // TODO: Add support for vectorization - add vectorization hints inside loop
   // body.
   // OpenMP standard does not specify the length of vector instructions.
