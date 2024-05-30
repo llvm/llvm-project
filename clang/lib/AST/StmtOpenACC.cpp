@@ -50,15 +50,16 @@ void OpenACCComputeConstruct::findAndSetChildLoops() {
     LoopConstructFinder(OpenACCComputeConstruct *Construct)
         : Construct(Construct) {}
 
-    bool VisitOpenACCComputeConstruct(OpenACCComputeConstruct *C) {
+
+    bool TraverseOpenACCComputeConstruct(OpenACCComputeConstruct *C) {
       // Stop searching if we find a compute construct.
-      return false;
+      return true;
     }
-    bool VisitOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
+    bool TraverseOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
       // Stop searching if we find a loop construct, after taking ownership of
       // it.
       C->setParentComputeConstruct(Construct);
-      return false;
+      return true;
     }
   };
 

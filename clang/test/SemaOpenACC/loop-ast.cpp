@@ -96,6 +96,16 @@ void TemplFunc() {
     // CHECK-NEXT: <<<NULL>>>
     // CHECK-NEXT: NullStmt
       for(;;);
+
+#pragma acc loop
+    // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR_UNINST]]
+    // CHECK-NEXT: ForStmt
+    // CHECK-NEXT: <<<NULL>>>
+    // CHECK-NEXT: <<<NULL>>>
+    // CHECK-NEXT: <<<NULL>>>
+    // CHECK-NEXT: <<<NULL>>>
+    // CHECK-NEXT: NullStmt
+      for(;;);
     }
   }
 
@@ -137,6 +147,14 @@ void TemplFunc() {
   //
   // CHECK-NEXT: OpenACCComputeConstruct [[PAR_ADDR_INST:[0-9a-fx]+]] {{.*}}parallel
   // CHECK-NEXT: CompoundStmt
+
+  // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR_INST]]
+  // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: NullStmt
 
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: [[PAR_ADDR_INST]]
   // CHECK-NEXT: ForStmt
