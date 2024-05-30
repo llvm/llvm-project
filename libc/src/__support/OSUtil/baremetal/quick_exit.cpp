@@ -9,7 +9,9 @@
 #include "src/__support/OSUtil/quick_exit.h"
 
 // This is intended to be provided by the vendor.
-extern "C" [[noreturn]] void __llvm_libc_quick_exit(int status);
+extern "C" [[gnu::weak]] [[noreturn]] void __llvm_libc_quick_exit(int) {
+  __builtin_trap();
+}
 
 namespace LIBC_NAMESPACE {
 

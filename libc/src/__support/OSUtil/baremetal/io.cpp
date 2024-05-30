@@ -11,7 +11,7 @@
 #include "src/__support/CPP/string_view.h"
 
 // This is intended to be provided by the vendor.
-extern "C" void __llvm_libc_log_write(const char *msg, size_t len);
+extern "C" [[gnu::weak]] void __llvm_libc_log_write(const char *, size_t) {}
 
 namespace LIBC_NAMESPACE {
 
