@@ -111,10 +111,10 @@ add_gen_header(
   GEN_HDR math.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.float16_macros
     .llvm-libc-macros.math_macros
     .llvm-libc-types.double_t
     .llvm-libc-types.float_t
-    .llvm-libc-types.float16
     .llvm-libc-types.float128
 )
 
