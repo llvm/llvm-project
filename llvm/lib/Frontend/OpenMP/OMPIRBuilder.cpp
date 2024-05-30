@@ -389,42 +389,6 @@ Value *createFakeIntVal(IRBuilderBase &Builder,
   ToBeDeleted.push(UseFakeVal);
   return FakeVal;
 }
-// // This function creates a fake integer value and a fake use for the integer
-// // value. It returns the fake value created. This is useful in modeling the
-// // extra arguments to the outlined functions.
-// Value *createFakeIntVal(IRBuilder<> &Builder,
-//                         OpenMPIRBuilder::InsertPointTy OuterAllocaIP,
-//                         std::stack<Instruction *> &ToBeDeleted,
-//                         OpenMPIRBuilder::InsertPointTy InnerAllocaIP,
-//                         const Twine &Name = "", bool AsPtr = true) {
-//   Builder.restoreIP(OuterAllocaIP);
-//   Instruction *FakeVal;
-//   AllocaInst *FakeValAddr =
-//       Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, Name + ".addr");
-//   ToBeDeleted.push(FakeValAddr);
-
-//   if (AsPtr) {
-//     FakeVal = FakeValAddr;
-//   } else {
-//     FakeVal =
-//         Builder.CreateLoad(Builder.getInt32Ty(), FakeValAddr, Name + ".val");
-//     ToBeDeleted.push(FakeVal);
-//   }
-
-//   // Generate a fake use of this value
-//   Builder.restoreIP(InnerAllocaIP);
-//   Instruction *UseFakeVal;
-//   if (AsPtr) {
-//     UseFakeVal =
-//         Builder.CreateLoad(Builder.getInt32Ty(), FakeVal, Name + ".use");
-//   } else {
-//     UseFakeVal =
-//         cast<BinaryOperator>(Builder.CreateAdd(FakeVal,
-//         Builder.getInt32(10)));
-//   }
-//   ToBeDeleted.push(UseFakeVal);
-//   return FakeVal;
-// }
 
 //===----------------------------------------------------------------------===//
 // OpenMPIRBuilderConfig
