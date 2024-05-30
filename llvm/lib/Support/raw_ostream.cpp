@@ -906,7 +906,7 @@ raw_fd_ostream &llvm::outs() {
 }
 
 raw_fd_ostream &llvm::errs() {
-  // Set standard error to be unbuffered and tied to outs() by default.
+  // Set standard error to be unbuffered.
 #ifdef __MVS__
   std::error_code EC = enableAutoConversion(STDERR_FILENO);
   assert(!EC);
