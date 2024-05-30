@@ -15,7 +15,7 @@ namespace LIBC_NAMESPACE {
 
 [[noreturn]] LLVM_LIBC_FUNCTION(void, quick_exit, (int status)) {
   //__cxa_finalize(nullptr);
-  exit(status);
+  internal::exit(status);
 }
 
 } // namespace LIBC_NAMESPACE
