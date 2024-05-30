@@ -813,6 +813,9 @@ Bug Fixes to C++ Support
 - Clang now allows ``@$``` in raw string literals. Fixes (#GH93130).
 - Fix an assertion failure when checking invalid ``this`` usage in the wrong context. (Fixes #GH91536).
 - Clang no longer models dependent NTTP arguments as ``TemplateParamObjectDecl`` s. Fixes (#GH84052).
+- Fix incorrect merging of modules which contain using declarations which shadow
+  other declarations. This could manifest as ODR checker false positives.
+  Fixes (`#80252 <https://github.com/llvm/llvm-project/issues/80252>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
