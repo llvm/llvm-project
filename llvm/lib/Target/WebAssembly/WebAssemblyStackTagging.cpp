@@ -154,6 +154,9 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     TrackingVH<Instruction> OldAI = Info.AI;
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     uint64_t Tag = NextTag;
+    if (iswasm32) {
+      Tag = static_cast<uint32_t>(Tag);
+    }
     ++NextTag;
     AllocaInst *AI = Info.AI;
     IRBuilder<> IRB(Info.AI->getNextNode());
