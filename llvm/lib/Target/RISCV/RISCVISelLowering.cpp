@@ -16286,7 +16286,7 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
 
   do {
     MVT ValEltVT = MVT::getIntegerVT(ValVT.getScalarSizeInBits() / 2);
-    ValVT = MVT::getVectorVT(ValEltVT, ValVT.getVectorElementCount());
+    ValVT = ValVT.changeVectorElementType(ValEltVT);
     // Rounding mode here is arbitrary since we aren't shifting out any bits.
     Val = DAG.getNode(
         ClipOpc, DL, ValVT,
