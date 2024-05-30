@@ -448,6 +448,9 @@ public:
   // Enable Clang IR library optimizations
   unsigned ClangIRLibOpt : 1;
 
+  // Enable Clang IR call conv lowering pass.
+  unsigned ClangIREnableCallConvLowering : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.

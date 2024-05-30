@@ -3079,6 +3079,10 @@ def fclangir_lib_opt : Flag<["-"], "fclangir-lib-opt">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
   Alias<fclangir_lib_opt_EQ>,
   HelpText<"Enable C/C++ library based optimizations">;
+def fclangir_call_conv_lowering : Flag<["-"], "fclangir-call-conv-lowering">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
+  HelpText<"Enable ClangIR calling convention lowering">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIREnableCallConvLowering">>;
 
 def clangir_disable_passes : Flag<["-"], "clangir-disable-passes">,
   Visibility<[ClangOption, CC1Option]>,
