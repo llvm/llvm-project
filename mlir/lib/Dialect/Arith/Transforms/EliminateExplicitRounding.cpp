@@ -32,7 +32,6 @@ namespace {
 struct EliminateExplicitRoundingRewritePattern final
     : OpRewritePattern<arith::ExtFOp> {
   using OpRewritePattern::OpRewritePattern;
-  using FilterFunction = std::function<bool(Operation *)>;
 
   LogicalResult matchAndRewrite(arith::ExtFOp extFOp,
                                 PatternRewriter &rewriter) const final {
@@ -40,13 +39,6 @@ struct EliminateExplicitRoundingRewritePattern final
     auto truncFOp = extFOp.getOperand().getDefiningOp<arith::TruncFOp>();
     if (!truncFOp)
       return failure();
-
-    // Check whether need to filter out.
-    if (filterFunc && filterFunc(extFOp)) {
-      return rewriter.notifyMatchFailure(extFOp, [](Diagnostic &diag) {
-        diag << "Operation filtered out by filterFunc";
-      });
-    }
 
     // Check whether the rounding pair's input and output data type are the
     // same. Currently only consider to eliminate rounding pairs for (bf16 / f16
@@ -63,9 +55,6 @@ struct EliminateExplicitRoundingRewritePattern final
 
     return failure();
   }
-
-private:
-  FilterFunction filterFunc;
 };
 
 struct EliminateExplicitRounding final
