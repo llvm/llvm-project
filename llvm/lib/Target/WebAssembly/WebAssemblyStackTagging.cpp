@@ -19,6 +19,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 
@@ -102,6 +103,9 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
     return false;
 
+  Triple triplet(Fn.getParent()->getTargetTriple());
+  bool iswasm32 = triplet.getArch() == ::llvm::Triple::wasm32;
+
   F = &Fn;
   DL = &Fn.getParent()->getDataLayout();
 
@@ -155,8 +159,9 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     IRBuilder<> IRB(Info.AI->getNextNode());
     Type *Int32Type = IRB.getInt32Ty();
     Type *Int64Type = IRB.getInt64Ty();
+    Type *IntPtrType = iswasm32 ? Int32Type : Int64Type;
     Function *StoreTagDecl = Intrinsic::getDeclaration(
-        F->getParent(), Intrinsic::wasm_memory_storetag, {Int64Type});
+        F->getParent(), Intrinsic::wasm_memory_storetag, {IntPtrType});
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
@@ -168,10 +173,10 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
         !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
       auto *HintTagDecl = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_memory_hinttag, {Int64Type});
-      auto *TagPCall =
-          IRB.CreateCall(HintTagDecl, {ConstantInt::get(Int32Type, 0), Info.AI,
-                                       Base, ConstantInt::get(Int64Type, Tag)});
+          F->getParent(), Intrinsic::wasm_memory_hinttag, {IntPtrType});
+      auto *TagPCall = IRB.CreateCall(
+          HintTagDecl, {ConstantInt::get(Int32Type, 0), Info.AI, Base,
+                        ConstantInt::get(IntPtrType, Tag)});
       if (Info.AI->hasName())
         TagPCall->setName(Info.AI->getName() + ".tag");
       Info.AI->replaceAllUsesWith(TagPCall);
@@ -183,10 +188,10 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
 
       IRBuilder<> IRB2(Start->getNextNode());
       IRB2.CreateCall(StoreTagDecl, {ConstantInt::get(Int32Type, 0), TagPCall,
-                                     ConstantInt::get(Int64Type, Size)});
+                                     ConstantInt::get(IntPtrType, Size)});
 
       auto TagEnd = [&](Instruction *Node) {
-        untagAlloca(AI, Node, Size, StoreTagDecl, Int64Type);
+        untagAlloca(AI, Node, Size, StoreTagDecl, IntPtrType);
       };
       if (!DT || !PDT ||
           !memtag::forAllReachableExits(*DT, *PDT, *LI, Start, Info.LifetimeEnd,
@@ -198,17 +203,17 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       auto *HintStoreTagDecl = Intrinsic::getDeclaration(
           F->getParent(), Intrinsic::wasm_memory_hintstoretag,
-          {Int64Type, Int64Type});
+          {IntPtrType, IntPtrType});
       auto *TagPCall = IRB.CreateCall(HintStoreTagDecl,
                                       {ConstantInt::get(Int32Type, 0), Info.AI,
-                                       ConstantInt::get(Int64Type, Size), Base,
-                                       ConstantInt::get(Int64Type, Tag)});
+                                       ConstantInt::get(IntPtrType, Size), Base,
+                                       ConstantInt::get(IntPtrType, Tag)});
       if (Info.AI->hasName())
         TagPCall->setName(Info.AI->getName() + ".tag");
       Info.AI->replaceAllUsesWith(TagPCall);
       TagPCall->setOperand(1, Info.AI);
       for (auto *RI : SInfo.RetVec) {
-        untagAlloca(AI, RI, Size, StoreTagDecl, Int64Type);
+        untagAlloca(AI, RI, Size, StoreTagDecl, IntPtrType);
       }
       // We may have inserted tag/untag outside of any lifetime interval.
       // Remove all lifetime intrinsics for this alloca.
