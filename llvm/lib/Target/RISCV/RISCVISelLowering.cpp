@@ -16302,8 +16302,6 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
   else
     return SDValue();
 
-  SDLoc DL(N);
-
   MVT ValVT = Val.getSimpleValueType();
 
   do {
