@@ -49,6 +49,7 @@ check_include_file(malloc/malloc.h HAVE_MALLOC_MALLOC_H)
 if( NOT PURE_WINDOWS )
   check_include_file(pthread.h HAVE_PTHREAD_H)
 endif()
+check_include_file(pwd.h HAVE_PWD_H)
 check_include_file(signal.h HAVE_SIGNAL_H)
 check_include_file(sys/ioctl.h HAVE_SYS_IOCTL_H)
 check_include_file(sys/mman.h HAVE_SYS_MMAN_H)
@@ -57,6 +58,7 @@ check_include_file(sys/resource.h HAVE_SYS_RESOURCE_H)
 check_include_file(sys/stat.h HAVE_SYS_STAT_H)
 check_include_file(sys/time.h HAVE_SYS_TIME_H)
 check_include_file(sys/types.h HAVE_SYS_TYPES_H)
+check_include_file(sys/wait.h HAVE_SYS_WAIT_H)
 check_include_file(sysexits.h HAVE_SYSEXITS_H)
 check_include_file(termios.h HAVE_TERMIOS_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
@@ -287,11 +289,15 @@ check_symbol_exists(__deregister_frame "${CMAKE_CURRENT_LIST_DIR}/unwind.h" HAVE
 check_symbol_exists(__unw_add_dynamic_fde "${CMAKE_CURRENT_LIST_DIR}/unwind.h" HAVE_UNW_ADD_DYNAMIC_FDE)
 
 check_symbol_exists(_Unwind_Backtrace "unwind.h" HAVE__UNWIND_BACKTRACE)
+check_symbol_exists(alarm unistd.h HAVE_ALARM)
+check_symbol_exists(gethostname unistd.h HAVE_GETHOSTNAME)
 check_symbol_exists(getpagesize unistd.h HAVE_GETPAGESIZE)
+check_symbol_exists(getpid unistd.h HAVE_GETPID)
 check_symbol_exists(sysconf unistd.h HAVE_SYSCONF)
 check_symbol_exists(getrusage sys/resource.h HAVE_GETRUSAGE)
 check_symbol_exists(setrlimit sys/resource.h HAVE_SETRLIMIT)
 check_symbol_exists(isatty unistd.h HAVE_ISATTY)
+check_symbol_exists(fchown unistd.h HAVE_FCHOWN)
 check_symbol_exists(futimens sys/stat.h HAVE_FUTIMENS)
 check_symbol_exists(futimes sys/time.h HAVE_FUTIMES)
 # AddressSanitizer conflicts with lib/Support/Unix/Signals.inc
@@ -309,10 +315,14 @@ check_symbol_exists(malloc_zone_statistics malloc/malloc.h
 check_symbol_exists(getrlimit "sys/types.h;sys/time.h;sys/resource.h" HAVE_GETRLIMIT)
 check_symbol_exists(posix_spawn spawn.h HAVE_POSIX_SPAWN)
 check_symbol_exists(pread unistd.h HAVE_PREAD)
+check_symbol_exists(raise signal.h HAVE_RAISE)
 check_symbol_exists(sbrk unistd.h HAVE_SBRK)
+check_symbol_exists(setjmp setjmp.h HAVE_SETJMP)
+check_symbol_exists(socket sys/socket.h HAVE_SOCKET)
 check_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
 check_symbol_exists(strerror_s string.h HAVE_DECL_STRERROR_S)
 check_symbol_exists(setenv stdlib.h HAVE_SETENV)
+check_symbol_exists(umask sys/stat.h HAVE_UMASK)
 if( PURE_WINDOWS )
   check_symbol_exists(_chsize_s io.h HAVE__CHSIZE_S)
 
@@ -337,6 +347,12 @@ if( PURE_WINDOWS )
   check_function_exists(__main HAVE___MAIN)
   check_function_exists(__cmpdi2 HAVE___CMPDI2)
 endif()
+
+check_c_source_compiles("
+        #include <sys/file.h>
+        struct flock lk;
+        int main(void) { return 0; }"
+        HAVE_FLOCK)
 
 CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtimespec.tv_nsec
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC)

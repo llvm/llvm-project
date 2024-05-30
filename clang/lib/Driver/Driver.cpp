@@ -99,8 +99,8 @@
 #include <optional>
 #include <set>
 #include <utility>
-#if LLVM_ON_UNIX
-#include <unistd.h> // getpid
+#if HAVE_GETPID
+#include <unistd.h>
 #endif
 
 using namespace clang::driver;
@@ -1577,7 +1577,7 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
     CrashDiagDir = "/";
   path::append(CrashDiagDir, "Library/Logs/DiagnosticReports");
   int PID =
-#if LLVM_ON_UNIX
+#if HAVE_GETPID
       getpid();
 #else
       0;

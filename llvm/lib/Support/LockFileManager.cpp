@@ -94,7 +94,7 @@ static std::error_code getHostID(SmallVectorImpl<char> &HostID) {
   StringRef UUIDRef(UUIDStr);
   HostID.append(UUIDRef.begin(), UUIDRef.end());
 
-#elif LLVM_ON_UNIX
+#elif HAVE_GETHOSTNAME
   char HostName[256];
   HostName[255] = 0;
   HostName[0] = 0;

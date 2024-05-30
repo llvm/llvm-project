@@ -72,7 +72,11 @@ getRUsageTimes() {
 Process::Pid Process::getProcessId() {
   static_assert(sizeof(Pid) >= sizeof(pid_t),
                 "Process::Pid should be big enough to store pid_t");
+#if HAVE_GETPID
   return Pid(::getpid());
+#else
+  return Pid(0);
+#endif
 }
 
 // On Cygwin, getpagesize() returns 64k(AllocationGranularity) and

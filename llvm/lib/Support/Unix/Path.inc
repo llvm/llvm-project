@@ -32,7 +32,9 @@
 #endif
 
 #include <dirent.h>
+#ifdef HAVE_PWD_H
 #include <pwd.h>
+#endif
 #include <sys/file.h>
 
 #ifdef __APPLE__
@@ -673,6 +675,11 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
     return;
   }
 
+#if !defined(HAVE_PWD_H)
+  // No access to password database, return back the original path.
+  (void)Remainder;
+  return;
+#else
   // This is a string of the form ~username/, look up this user's entry in the
   // password database.
   std::unique_ptr<char[]> Buf;
@@ -694,6 +701,7 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
   Path.clear();
   Path.append(Entry->pw_dir, Entry->pw_dir + strlen(Entry->pw_dir));
   llvm::sys::path::append(Path, Storage);
+#endif
 }
 
 void expand_tilde(const Twine &path, SmallVectorImpl<char> &dest) {
@@ -770,11 +778,15 @@ std::error_code status(int FD, file_status &Result) {
 }
 
 unsigned getUmask() {
+#if HAVE_UMASK
   // Chose arbitary new mask and reset the umask to the old mask.
   // umask(2) never fails so ignore the return of the second call.
   unsigned Mask = ::umask(0);
   (void)::umask(Mask);
   return Mask;
+#else
+  return 0022;
+#endif
 }
 
 std::error_code setPermissions(const Twine &Path, perms Permissions) {
@@ -1224,6 +1236,7 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
 }
 
 std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
+#if HAVE_FLOCK
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
@@ -1241,9 +1254,13 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
     usleep(1000);
   } while (std::chrono::steady_clock::now() < End);
   return make_error_code(errc::no_lock_available);
+#else
+  return std::error_code(ENOSYS, std::generic_category());
+#endif
 }
 
 std::error_code lockFile(int FD) {
+#if HAVE_FLOCK
   struct flock Lock;
   memset(&Lock, 0, sizeof(Lock));
   Lock.l_type = F_WRLCK;
@@ -1253,9 +1270,13 @@ std::error_code lockFile(int FD) {
   if (::fcntl(FD, F_SETLKW, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
+#else
+  return std::error_code(ENOSYS, std::generic_category());
+#endif
 }
 
 std::error_code unlockFile(int FD) {
+#if HAVE_FLOCK
   struct flock Lock;
   Lock.l_type = F_UNLCK;
   Lock.l_whence = SEEK_SET;
@@ -1264,6 +1285,9 @@ std::error_code unlockFile(int FD) {
   if (::fcntl(FD, F_SETLK, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
+#else
+  return std::error_code(ENOSYS, std::generic_category());
+#endif
 }
 
 std::error_code closeFile(file_t &F) {
@@ -1335,11 +1359,15 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
 }
 
 std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group) {
+#if HAVE_FCHOWN
   auto FChown = [&]() { return ::fchown(FD, Owner, Group); };
   // Retry if fchown call fails due to interruption.
   if ((sys::RetryAfterSignal(-1, FChown)) < 0)
     return errnoAsErrorCode();
   return std::error_code();
+#else
+  return std::error_code(ENOSYS, std::generic_category());
+#endif
 }
 
 } // end namespace fs
@@ -1349,6 +1377,7 @@ namespace path {
 bool home_directory(SmallVectorImpl<char> &result) {
   std::unique_ptr<char[]> Buf;
   char *RequestedDir = getenv("HOME");
+#if HAVE_PWD_H
   if (!RequestedDir) {
     long BufSize = sysconf(_SC_GETPW_R_SIZE_MAX);
     if (BufSize <= 0)
@@ -1360,6 +1389,7 @@ bool home_directory(SmallVectorImpl<char> &result) {
     if (pw && pw->pw_dir)
       RequestedDir = pw->pw_dir;
   }
+#endif
   if (!RequestedDir)
     return false;
 

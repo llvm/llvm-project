@@ -13,8 +13,13 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/thread.h"
 #include <cassert>
+#if HAVE_RAISE
+#include <csignal>
+#endif
 #include <mutex>
+#if HAVE_SETJMP
 #include <setjmp.h>
+#endif
 
 using namespace llvm;
 
@@ -31,7 +36,9 @@ struct CrashRecoveryContextImpl {
   const CrashRecoveryContextImpl *Next;
 
   CrashRecoveryContext *CRC;
+#ifdef HAVE_SETJMP
   ::jmp_buf JumpBuffer;
+#endif
   volatile unsigned Failed : 1;
   unsigned SwitchedThread : 1;
   unsigned ValidJumpBuffer : 1;
@@ -72,9 +79,11 @@ public:
 
     CRC->RetCode = RetCode;
 
+#if HAVE_SETJMP
     // Jump back to the RunSafely we were called under.
     if (ValidJumpBuffer)
       longjmp(JumpBuffer, 1);
+#endif
 
     // Otherwise let the caller decide of the outcome of the crash. Currently
     // this occurs when using SEH on Windows with MSVC or clang-cl.
@@ -417,10 +426,12 @@ bool CrashRecoveryContext::RunSafely(function_ref<void()> Fn) {
     CrashRecoveryContextImpl *CRCI = new CrashRecoveryContextImpl(this);
     Impl = CRCI;
 
+#if HAVE_SETJMP
     CRCI->ValidJumpBuffer = true;
     if (setjmp(CRCI->JumpBuffer) != 0) {
       return false;
     }
+#endif
   }
 
   Fn();
@@ -469,9 +480,11 @@ bool CrashRecoveryContext::throwIfCrash(int RetCode) {
     return false;
 #if defined(_WIN32)
   ::RaiseException(RetCode, 0, 0, NULL);
-#else
+#elif HAVE_RAISE
   llvm::sys::unregisterHandlers();
   raise(RetCode - 128);
+#else
+  abort();
 #endif
   return true;
 }

@@ -23,6 +23,9 @@
    backslashes. */
 #cmakedefine01 LLVM_WINDOWS_PREFER_FORWARD_SLASH
 
+/* Define to 1 if you have the `alarm' function. */
+#cmakedefine HAVE_ALARM ${HAVE_ALARM}
+
 /* Define to 1 if you have the `backtrace' function. */
 #cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}
 
@@ -71,6 +74,12 @@
 /* Define to 1 if you have the <errno.h> header file. */
 #cmakedefine HAVE_ERRNO_H ${HAVE_ERRNO_H}
 
+/* Define to 1 if you have the `flock' structure. */
+#cmakedefine HAVE_FLOCK ${HAVE_FLOCK}
+
+/* Define to 1 if you have the `fchown' function. */
+#cmakedefine HAVE_FCHOWN ${HAVE_FCHOWN}
+
 /* Define to 1 if you have the <fcntl.h> header file. */
 #cmakedefine HAVE_FCNTL_H ${HAVE_FCNTL_H}
 
@@ -92,8 +101,14 @@
 /* Define to 1 if you have the `futimes' function. */
 #cmakedefine HAVE_FUTIMES ${HAVE_FUTIMES}
 
+/* Define to 1 if you have the `gethostname' function. */
+#cmakedefine HAVE_GETHOSTNAME ${HAVE_GETHOSTNAME}
+
 /* Define to 1 if you have the `getpagesize' function. */
 #cmakedefine HAVE_GETPAGESIZE ${HAVE_GETPAGESIZE}
+
+/* Define to 1 if you have the `getpid' function. */
+#cmakedefine HAVE_GETPID ${HAVE_GETPID}
 
 /* Define to 1 if you have the `getrlimit' function. */
 #cmakedefine HAVE_GETRLIMIT ${HAVE_GETRLIMIT}
@@ -161,8 +176,20 @@
 /* Have pthread_rwlock_init */
 #cmakedefine HAVE_PTHREAD_RWLOCK_INIT ${HAVE_PTHREAD_RWLOCK_INIT}
 
+/* Define to 1 if you have the <pwd.h> header file. */
+#cmakedefine HAVE_PWD_H ${HAVE_PWD_H}
+
+/* Define to 1 if you have the `raise' function. */
+#cmakedefine HAVE_RAISE ${HAVE_RAISE}
+
 /* Define to 1 if you have the `sbrk' function. */
 #cmakedefine HAVE_SBRK ${HAVE_SBRK}
+
+/* Define to 1 if you have the `setjmp' function. */
+#cmakedefine HAVE_SETJMP ${HAVE_SETJMP}
+
+/* Define to 1 if you have the `socket' function. */
+#cmakedefine HAVE_SOCKET ${HAVE_SOCKET}
 
 /* Define to 1 if you have the `setenv' function. */
 #cmakedefine HAVE_SETENV ${HAVE_SETENV}
@@ -209,11 +236,17 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #cmakedefine HAVE_SYS_TYPES_H ${HAVE_SYS_TYPES_H}
 
+/* Define to 1 if you have the <sys/wait.h> header file. */
+#cmakedefine HAVE_SYS_WAIT_H ${HAVE_SYS_WAIT_H}
+
 /* Define if the setupterm() function is supported this platform. */
 #cmakedefine LLVM_ENABLE_TERMINFO ${LLVM_ENABLE_TERMINFO}
 
 /* Define to 1 if you have the <termios.h> header file. */
 #cmakedefine HAVE_TERMIOS_H ${HAVE_TERMIOS_H}
+
+/* Define to 1 if you have the `umask' function. */
+#cmakedefine HAVE_UMASK ${HAVE_UMASK}
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H ${HAVE_UNISTD_H}
