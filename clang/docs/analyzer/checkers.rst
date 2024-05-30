@@ -3149,6 +3149,7 @@ Applies to: ``lock, unlock, sleep, getc, fgets, read, recv, pthread_mutex_lock,`
  }
 
 **Limitations**
+
 * The ``trylock`` and ``timedlock`` versions of acquiring locks are currently assumed to always succeed.
   This can lead to false positives.
 
