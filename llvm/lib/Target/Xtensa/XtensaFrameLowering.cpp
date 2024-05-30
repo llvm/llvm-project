@@ -33,70 +33,6 @@ bool XtensaFrameLowering::hasFP(const MachineFunction &MF) const {
          MFI.hasVarSizedObjects();
 }
 
-#ifndef NDEBUG
-/* Check whether instruction I stores some callee-saved register from CSI
- */
-static bool checkStoreInstruction(MachineBasicBlock::iterator I,
-                                  const std::vector<CalleeSavedInfo> &CSI) {
-  bool IsStoreInstruction = false;
-
-  if (I->getOpcode() == TargetOpcode::COPY) {
-    Register DstReg = I->getOperand(0).getReg();
-    Register Reg = I->getOperand(1).getReg();
-    for (const auto &Info : CSI) {
-      if (Info.isSpilledToReg()) {
-        IsStoreInstruction =
-            (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
-      }
-      if (IsStoreInstruction)
-        break;
-    }
-  } else if (I->getOpcode() == Xtensa::S32I) {
-    Register Reg = I->getOperand(0).getReg();
-    for (const auto &Info : CSI) {
-      if (!Info.isSpilledToReg()) {
-        IsStoreInstruction = (Info.getReg() == Reg);
-      }
-      if (IsStoreInstruction)
-        break;
-    }
-  }
-
-  return IsStoreInstruction;
-}
-
-/* Check whether instruction I restores some callee-saved register from CSI
- */
-static bool checkRestoreInstruction(MachineBasicBlock::iterator I,
-                                    const std::vector<CalleeSavedInfo> &CSI) {
-  bool IsRestoreInstruction = false;
-
-  if (I->getOpcode() == TargetOpcode::COPY) {
-    Register Reg = I->getOperand(0).getReg();
-    Register DstReg = I->getOperand(1).getReg();
-    for (const auto &Info : CSI) {
-      if (Info.isSpilledToReg()) {
-        IsRestoreInstruction =
-            (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
-      }
-      if (IsRestoreInstruction)
-        break;
-    }
-  } else if (I->getOpcode() == Xtensa::L32I) {
-    Register Reg = I->getOperand(0).getReg();
-    for (const auto &Info : CSI) {
-      if (!Info.isSpilledToReg()) {
-        IsRestoreInstruction = (Info.getReg() == Reg);
-      }
-      if (IsRestoreInstruction)
-        break;
-    }
-  }
-
-  return IsRestoreInstruction;
-}
-#endif
-
 void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   assert(&MBB == &MF.front() && "Shrink-wrapping not yet implemented");
@@ -136,9 +72,24 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
     // instructions are placed at the begin of basic block, so
     //  iterate over instruction sequence and check that
     // save instructions are placed correctly.
-    for (unsigned i = 0; i < CSI.size(); ++i) {
-      assert(checkStoreInstruction(MBBI, CSI) &&
+    for (const auto &Info : CSI) {
+      int FI = Info.getFrameIdx();
+      int StoreFI = 0;
+
+#ifndef NDEBUG
+      // Checking that the instruction is exactly as expected
+      bool IsStoreInst = false;
+      if ((MBBI->getOpcode() == TargetOpcode::COPY) && Info.isSpilledToReg()) {
+        Register DstReg = MBBI->getOperand(0).getReg();
+        Register Reg = MBBI->getOperand(1).getReg();
+        IsStoreInst = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
+      } else {
+        Register Reg = TII.isStoreToStackSlot(*MBBI, StoreFI);
+        IsStoreInst = (Reg == Info.getReg()) && (StoreFI == FI);
+      }
+      assert(IsStoreInst &&
              "Unexpected callee-saved register store instruction");
+#endif
       ++MBBI;
     }
 
@@ -204,10 +155,25 @@ void XtensaFrameLowering::emitEpilogue(MachineFunction &MF,
 
     // Find the first instruction at the end that restores a callee-saved
     // register.
-    for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
+    for (const auto &Info : CSI) {
+      int FI = Info.getFrameIdx();
+      int LoadFI = 0;
+
       --I;
-      assert(checkRestoreInstruction(I, CSI) &&
+#ifndef NDEBUG
+      // Checking that the instruction is exactly as expected
+      bool IsRestoreInstr = false;
+      if (I->getOpcode() == TargetOpcode::COPY) {
+        Register Reg = I->getOperand(0).getReg();
+        Register DstReg = I->getOperand(1).getReg();
+        IsRestoreInstr = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
+      } else {
+        Register Reg = TII.isLoadFromStackSlot(*I, LoadFI);
+        IsRestoreInst = (Info.getReg() == Reg) && (LoadFI == FI);
+      }
+      assert(IsRestoreInstr &&
              "Unexpected callee-saved register restore instruction");
+#endif
     }
 
     BuildMI(MBB, I, DL, TII.get(Xtensa::OR), SP).addReg(FP).addReg(FP);
