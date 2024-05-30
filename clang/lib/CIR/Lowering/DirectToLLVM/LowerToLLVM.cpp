@@ -3161,6 +3161,31 @@ private:
   }
 };
 
+template <typename CIROp, typename LLVMOp>
+class CIRBinaryFPToFPBuiltinOpLowering
+    : public mlir::OpConversionPattern<CIROp> {
+public:
+  using mlir::OpConversionPattern<CIROp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(CIROp op,
+                  typename mlir::OpConversionPattern<CIROp>::OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto resTy = this->getTypeConverter()->convertType(op.getType());
+    rewriter.replaceOpWithNewOp<LLVMOp>(op, resTy, adaptor.getLhs(),
+                                        adaptor.getRhs());
+    return mlir::success();
+  }
+};
+
+using CIRCopysignOpLowering =
+    CIRBinaryFPToFPBuiltinOpLowering<mlir::cir::CopysignOp,
+                                     mlir::LLVM::CopySignOp>;
+using CIRFMaxOpLowering =
+    CIRBinaryFPToFPBuiltinOpLowering<mlir::cir::FMaxOp, mlir::LLVM::MaxNumOp>;
+using CIRFMinOpLowering =
+    CIRBinaryFPToFPBuiltinOpLowering<mlir::cir::FMinOp, mlir::LLVM::MinNumOp>;
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
@@ -3185,7 +3210,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRStackRestoreLowering, CIRUnreachableLowering, CIRTrapLowering,
       CIRInlineAsmOpLowering, CIRSetBitfieldLowering, CIRGetBitfieldLowering,
       CIRPrefetchLowering, CIRObjSizeOpLowering, CIRIsConstantOpLowering,
-      CIRCmpThreeWayOpLowering>(converter, patterns.getContext());
+      CIRCmpThreeWayOpLowering, CIRCopysignOpLowering, CIRFMaxOpLowering,
+      CIRFMinOpLowering>(converter, patterns.getContext());
 }
 
 namespace {
