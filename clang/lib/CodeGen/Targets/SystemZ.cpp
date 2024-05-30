@@ -547,11 +547,9 @@ public:
   ZOSXPLinkABIInfo(CodeGenTypes &CGT, bool HV) : ABIInfo(CGT), HasVector(HV) {}
 
   bool isPromotableIntegerType(QualType Ty) const;
-  bool isCompoundType(QualType Ty) const;
   bool isVectorArgumentType(QualType Ty) const;
   bool isFPArgumentType(QualType Ty) const;
   QualType getSingleElementType(QualType Ty) const;
-  unsigned getMaxAlignFromTypeDefs(QualType Ty) const;
   std::optional<QualType> getFPTypeOfComplexLikeType(QualType Ty) const;
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
@@ -613,11 +611,6 @@ bool ZOSXPLinkABIInfo::isPromotableIntegerType(QualType Ty) const {
     }
 
   return false;
-}
-
-bool ZOSXPLinkABIInfo::isCompoundType(QualType Ty) const {
-  return (Ty->isAnyComplexType() || Ty->isVectorType() ||
-          isAggregateTypeForABI(Ty));
 }
 
 bool ZOSXPLinkABIInfo::isVectorArgumentType(QualType Ty) const {
@@ -689,21 +682,6 @@ QualType ZOSXPLinkABIInfo::getSingleElementType(QualType Ty) const {
   }
 
   return Ty;
-}
-
-unsigned ZOSXPLinkABIInfo::getMaxAlignFromTypeDefs(QualType Ty) const {
-  unsigned MaxAlign = 0;
-  while (Ty != Ty.getSingleStepDesugaredType(getContext())) {
-    auto *DesugaredType =
-        Ty.getSingleStepDesugaredType(getContext()).getTypePtr();
-    if (auto *TypedefTy = dyn_cast<TypedefType>(DesugaredType)) {
-      auto *TyDecl = TypedefTy->getDecl();
-      unsigned CurrAlign = TyDecl->getMaxAlignment();
-      MaxAlign = std::max(CurrAlign, MaxAlign);
-    }
-    Ty = Ty.getSingleStepDesugaredType(getContext());
-  }
-  return MaxAlign;
 }
 
 std::optional<QualType>
