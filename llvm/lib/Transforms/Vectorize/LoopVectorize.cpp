@@ -8608,7 +8608,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // loop region contains a header and latch basic blocks.
   VPlanPtr Plan = VPlan::createInitialVPlan(
       createTripCountSCEV(Legal->getWidestInductionType(), PSE, OrigLoop),
-      *PSE.getSE());
+      *PSE.getSE(), OrigLoop->getLoopPreheader());
   VPBasicBlock *HeaderVPBB = new VPBasicBlock("vector.body");
   VPBasicBlock *LatchVPBB = new VPBasicBlock("vector.latch");
   VPBlockUtils::insertBlockAfter(LatchVPBB, HeaderVPBB);
@@ -8856,7 +8856,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   // Create new empty VPlan
   auto Plan = VPlan::createInitialVPlan(
       createTripCountSCEV(Legal->getWidestInductionType(), PSE, OrigLoop),
-      *PSE.getSE());
+      *PSE.getSE(), OrigLoop->getLoopPreheader());
 
   // Build hierarchical CFG
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
