@@ -48,7 +48,6 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Constant.h"
-#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -3009,26 +3008,66 @@ SDValue SelectionDAG::getSplatValue(SDValue V, bool LegalTypes) {
   return SDValue();
 }
 
+std::optional<ConstantRange>
+SelectionDAG::getValidShiftAmountRange(SDValue V, const APInt &DemandedElts,
+                                       unsigned Depth) const {
+  assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
+          V.getOpcode() == ISD::SRA) &&
+         "Unknown shift node");
+  // Shifting more than the bitwidth is not valid.
+  unsigned BitWidth = V.getScalarValueSizeInBits();
+
+  if (auto *Cst = dyn_cast<ConstantSDNode>(V.getOperand(1))) {
+    const APInt &ShAmt = Cst->getAPIntValue();
+    if (ShAmt.uge(BitWidth))
+      return std::nullopt;
+    return ConstantRange(ShAmt);
+  }
+
+  if (auto *BV = dyn_cast<BuildVectorSDNode>(V.getOperand(1))) {
+    const APInt *MinAmt = nullptr, *MaxAmt = nullptr;
+    for (unsigned i = 0, e = BV->getNumOperands(); i != e; ++i) {
+      if (!DemandedElts[i])
+        continue;
+      auto *SA = dyn_cast<ConstantSDNode>(BV->getOperand(i));
+      if (!SA) {
+        MinAmt = MaxAmt = nullptr;
+        break;
+      }
+      const APInt &ShAmt = SA->getAPIntValue();
+      if (ShAmt.uge(BitWidth))
+        return std::nullopt;
+      if (!MinAmt || MinAmt->ugt(ShAmt))
+        MinAmt = &ShAmt;
+      if (!MaxAmt || MaxAmt->ult(ShAmt))
+        MaxAmt = &ShAmt;
+    }
+    assert(((!MinAmt && !MaxAmt) || (MinAmt && MaxAmt)) &&
+           "Failed to find matching min/max shift amounts");
+    if (MinAmt && MaxAmt)
+      return ConstantRange(*MinAmt, *MaxAmt);
+  }
+
+  // Use computeKnownBits to find a hidden constant/knownbits (usually type
+  // legalized). e.g. Hidden behind multiple bitcasts/build_vector/casts etc.
+  KnownBits KnownAmt =
+      computeKnownBits(V.getOperand(1), DemandedElts, Depth + 1);
+  if (KnownAmt.getMaxValue().ult(BitWidth))
+    return ConstantRange::fromKnownBits(KnownAmt, /*IsSigned=*/false);
+
+  return std::nullopt;
+}
+
 std::optional<uint64_t>
 SelectionDAG::getValidShiftAmount(SDValue V, const APInt &DemandedElts,
                                   unsigned Depth) const {
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
           V.getOpcode() == ISD::SRA) &&
          "Unknown shift node");
-  unsigned BitWidth = V.getScalarValueSizeInBits();
-  if (ConstantSDNode *SA = isConstOrConstSplat(V.getOperand(1), DemandedElts)) {
-    // Shifting more than the bitwidth is not valid.
-    const APInt &ShAmt = SA->getAPIntValue();
-    if (ShAmt.ult(BitWidth))
-      return ShAmt.getZExtValue();
-  } else {
-    // Use computeKnownBits to find a hidden constant (usually type legalized).
-    // e.g. Hidden behind multiple bitcasts/build_vector/casts etc.
-    KnownBits KnownAmt =
-        computeKnownBits(V.getOperand(1), DemandedElts, Depth + 1);
-    if (KnownAmt.isConstant() && KnownAmt.getConstant().ult(BitWidth))
-      return KnownAmt.getConstant().getZExtValue();
-  }
+  if (std::optional<ConstantRange> AmtRange =
+          getValidShiftAmountRange(V, DemandedElts, Depth))
+    if (const APInt *ShAmt = AmtRange->getSingleElement())
+      return ShAmt->getZExtValue();
   return std::nullopt;
 }
 
@@ -3047,32 +3086,9 @@ SelectionDAG::getValidMinimumShiftAmount(SDValue V, const APInt &DemandedElts,
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
           V.getOpcode() == ISD::SRA) &&
          "Unknown shift node");
-  unsigned BitWidth = V.getScalarValueSizeInBits();
-  if (auto *BV = dyn_cast<BuildVectorSDNode>(V.getOperand(1))) {
-    const APInt *MinShAmt = nullptr;
-    for (unsigned i = 0, e = BV->getNumOperands(); i != e; ++i) {
-      if (!DemandedElts[i])
-        continue;
-      auto *SA = dyn_cast<ConstantSDNode>(BV->getOperand(i));
-      if (!SA) {
-        MinShAmt = nullptr;
-        break;
-      }
-      // Shifting more than the bitwidth is not valid.
-      const APInt &ShAmt = SA->getAPIntValue();
-      if (ShAmt.uge(BitWidth))
-        return std::nullopt;
-      if (MinShAmt && MinShAmt->ule(ShAmt))
-        continue;
-      MinShAmt = &ShAmt;
-    }
-    if (MinShAmt)
-      return MinShAmt->getZExtValue();
-  }
-  KnownBits KnownAmt =
-      computeKnownBits(V.getOperand(1), DemandedElts, Depth + 1);
-  if (KnownAmt.getMaxValue().ult(BitWidth))
-    return KnownAmt.getMinValue().getZExtValue();
+  if (std::optional<ConstantRange> AmtRange =
+          getValidShiftAmountRange(V, DemandedElts, Depth))
+    return AmtRange->getUnsignedMin().getZExtValue();
   return std::nullopt;
 }
 
@@ -3091,32 +3107,9 @@ SelectionDAG::getValidMaximumShiftAmount(SDValue V, const APInt &DemandedElts,
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
           V.getOpcode() == ISD::SRA) &&
          "Unknown shift node");
-  unsigned BitWidth = V.getScalarValueSizeInBits();
-  if (auto *BV = dyn_cast<BuildVectorSDNode>(V.getOperand(1))) {
-    const APInt *MaxShAmt = nullptr;
-    for (unsigned i = 0, e = BV->getNumOperands(); i != e; ++i) {
-      if (!DemandedElts[i])
-        continue;
-      auto *SA = dyn_cast<ConstantSDNode>(BV->getOperand(i));
-      if (!SA) {
-        MaxShAmt = nullptr;
-        break;
-      }
-      // Shifting more than the bitwidth is not valid.
-      const APInt &ShAmt = SA->getAPIntValue();
-      if (ShAmt.uge(BitWidth))
-        return std::nullopt;
-      if (MaxShAmt && MaxShAmt->uge(ShAmt))
-        continue;
-      MaxShAmt = &ShAmt;
-    }
-    if (MaxShAmt)
-      return MaxShAmt->getZExtValue();
-  }
-  KnownBits KnownAmt =
-      computeKnownBits(V.getOperand(1), DemandedElts, Depth + 1);
-  if (KnownAmt.getMaxValue().ult(BitWidth))
-    return KnownAmt.getMaxValue().getZExtValue();
+  if (std::optional<ConstantRange> AmtRange =
+          getValidShiftAmountRange(V, DemandedElts, Depth))
+    return AmtRange->getUnsignedMax().getZExtValue();
   return std::nullopt;
 }
 
