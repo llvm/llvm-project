@@ -1633,8 +1633,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
                 "Use standard layout for Header for simplicity");
   Header H;
 
-  H.Magic =
-      endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  H.Magic = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   // Check the magic number.
   if (H.Magic != IndexedInstrProf::Magic)
     return make_error<InstrProfError>(instrprof_error::bad_magic);
