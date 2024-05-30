@@ -224,6 +224,8 @@ public:
   // an error.
   virtual Status IsCompatible();
 
+  static bool SupportsLanguageStatic(lldb::LanguageType language);
+
   // Type Completion
 
   virtual bool GetCompleteType(lldb::opaque_compiler_type_t type) = 0;
