@@ -3160,15 +3160,17 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   }
   case TargetOpcode::G_TRUNC: {
     // Match: logic (trunc X), (trunc Y) -> trunc (logic X, Y)
-    MachineFunction *MF = MI.getMF();
-    EVT DstEVT = getApproximateEVTForLLT(MRI.getType(Dst), MF->getDataLayout(),
-                                         MF->getFunction().getContext());
-    EVT XEVT = getApproximateEVTForLLT(XTy, MF->getDataLayout(),
-                                       MF->getFunction().getContext());
+    const MachineFunction *MF = MI.getMF();
+    const DataLayout &DL = MF->getDataLayout();
+    LLVMContext &Ctx = MF->getFunction().getContext();
+
+    LLT DstTy = MRI.getType(Dst);
     const TargetLowering &TLI = getTargetLowering();
+
     // Be extra careful sinking truncate. If it's free, there's no benefit in
     // widening a binop.
-    if (TLI.isZExtFree(DstEVT, XEVT) && TLI.isTruncateFree(XEVT, DstEVT))
+    if (TLI.isZExtFree(DstTy, XTy, DL, Ctx) &&
+        TLI.isTruncateFree(XTy, DstTy, DL, Ctx))
       return false;
     break;
   }
