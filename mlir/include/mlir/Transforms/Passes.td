@@ -377,6 +377,12 @@ def Mem2Reg : Pass<"mem2reg"> {
   ];
 }
 
+def NormalizeLoopBounds : Pass<"normalize-loop-bounds"> {
+  let summary = "Normalize the loop bounds of loop-like operations with "
+                "induction variables.";
+  let constructor = "mlir::createNormalizeLoopBoundsPass()";
+}
+
 def PrintOpStats : Pass<"print-op-stats"> {
   let summary = "Print statistics of operations";
   let constructor = "mlir::createPrintOpStatsPass()";

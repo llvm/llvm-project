@@ -140,6 +140,7 @@ def ForOp : SCF_Op<"for",
         "getSingleUpperBound", "getYieldedValuesMutable",
         "promoteIfSingleIteration", "replaceWithAdditionalYields",
         "yieldTiledValuesAndReplace"]>,
+       LoopLikeWithInductionVarsOpInterface,
        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
        ConditionallySpeculatable,
        DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -267,6 +268,74 @@ def ForOp : SCF_Op<"for",
       return getBody()->getArguments().drop_front(getNumInductionVars())[index];
     }
 
+    /// Return the induction variables.
+    ::mlir::ValueRange getInductionVars() {
+      return getBody()->getArguments().take_front(getNumInductionVars());
+    }
+
+    /// Get lower bounds as `OpFoldResult`.
+    SmallVector<OpFoldResult> getMixedLowerBound() {
+      return {getAsOpFoldResult(getLowerBound())};
+    }
+
+    /// Get upper bounds as `OpFoldResult`.
+    SmallVector<OpFoldResult> getMixedUpperBound() {
+      return {getAsOpFoldResult(getUpperBound())};
+    }
+
+    // Get steps as `OpFoldResult`.
+    SmallVector<OpFoldResult> getMixedStep() {
+      return {getAsOpFoldResult(getStep())};
+    }
+
+    /// Get lower bounds as values.
+    SmallVector<Value> getLowerBound(OpBuilder &b) {
+      return ValueRange{getLowerBound()};
+    }
+
+    /// Get upper bounds as values.
+    SmallVector<Value> getUpperBound(OpBuilder &b) {
+      return ValueRange{getUpperBound()};
+    }
+
+    /// Get steps as values.
+    SmallVector<Value> getStep(OpBuilder &b) {
+      return ValueRange{getStep()};
+    }
+
+    /// Set the lower bounds from `OpFoldResult`.
+    void setMixedLowerBounds(OpBuilder &b, ArrayRef<OpFoldResult> lbs) {
+      setLowerBound(getValueOrCreateConstantIndexOp(b, getLoc(), lbs[0]));
+    }
+
+    /// Set the upper bounds from `OpFoldResult`.
+    void setMixedUpperBounds(OpBuilder &b, ArrayRef<OpFoldResult> ubs) {
+      setUpperBound(getValueOrCreateConstantIndexOp(b, getLoc(), ubs[0]));
+    }
+
+    /// Set the steps from `OpFoldResult`.
+    void setMixedSteps(OpBuilder &b, ArrayRef<OpFoldResult> steps) {
+      setStep(getValueOrCreateConstantIndexOp(b, getLoc(), steps[0]));
+    }
+
+    /// Set the lower bounds from values.
+    void setLowerBounds(ArrayRef<Value> lbs) {
+      assert(lbs.size() == 1 && "expected a single lower bound");
+      setLowerBound(lbs[0]);
+    }
+
+    /// Set the upper bounds from values.
+    void setUpperBounds(ArrayRef<Value> ubs) {
+      assert(ubs.size() == 1 && "expected a single upper bound");
+      setUpperBound(ubs[0]);
+    }
+
+    /// Set the steps from values.
+    void setSteps(ArrayRef<Value> steps) {
+      assert(steps.size() == 1 && "expected a single step");
+      setStep(steps[0]);
+    }
+
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
@@ -304,6 +373,7 @@ def ForallOp : SCF_Op<"forall", [
           ["getInitsMutable", "getRegionIterArgs", "getSingleInductionVar", 
            "getSingleLowerBound", "getSingleUpperBound", "getSingleStep",
            "promoteIfSingleIteration", "yieldTiledValuesAndReplace"]>,
+       LoopLikeWithInductionVarsOpInterface,
        RecursiveMemoryEffects,
        SingleBlockImplicitTerminator<"scf::InParallelOp">,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
@@ -541,6 +611,33 @@ def ForallOp : SCF_Op<"forall", [
     /// Get steps as values.
     SmallVector<Value> getStep(OpBuilder &b) {
       return getValueOrCreateConstantIndexOp(b, getLoc(), getMixedStep());
+    }
+
+    /// Set the lower bounds from `OpFoldResult`.
+    void setMixedLowerBounds(OpBuilder &b, ArrayRef<OpFoldResult> lbs);
+
+    /// Set the upper bounds from `OpFoldResult`.
+    void setMixedUpperBounds(OpBuilder &b, ArrayRef<OpFoldResult> ubs);
+
+    /// Set the steps from `OpFoldResult`.
+    void setMixedSteps(OpBuilder &b, ArrayRef<OpFoldResult> steps);
+
+    /// Set the lower bounds from values.
+    void setLowerBounds(ArrayRef<Value> lbs) {
+      OpBuilder b(getOperation()->getContext());
+      return setMixedLowerBounds(b, getAsOpFoldResult(lbs));
+    }
+
+    /// Set the upper bounds from values.
+    void setUpperBounds(ArrayRef<Value> ubs) {
+      OpBuilder b(getOperation()->getContext());
+      return setMixedUpperBounds(b, getAsOpFoldResult(ubs));
+    }
+
+    /// Set the steps from values.
+    void setSteps(ArrayRef<Value> steps) {
+      OpBuilder b(getOperation()->getContext());
+      return setMixedSteps(b, getAsOpFoldResult(steps));
     }
 
     int64_t getRank() { return getStaticLowerBound().size(); }

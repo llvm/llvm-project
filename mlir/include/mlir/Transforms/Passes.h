@@ -82,6 +82,10 @@ std::unique_ptr<Pass> createLoopInvariantCodeMotionPass();
 /// Creates a pass that hoists loop-invariant subset ops.
 std::unique_ptr<Pass> createLoopInvariantSubsetHoistingPass();
 
+/// Create a pass that normalizes the loop bounds of loop-like operations with
+/// induction variables.
+std::unique_ptr<Pass> createNormalizeLoopBoundsPass();
+
 /// Creates a pass to strip debug information from a function.
 std::unique_ptr<Pass> createStripDebugInfoPass();
 

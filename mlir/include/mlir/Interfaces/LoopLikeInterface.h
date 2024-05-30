@@ -13,6 +13,7 @@
 #ifndef MLIR_INTERFACES_LOOPLIKEINTERFACE_H_
 #define MLIR_INTERFACES_LOOPLIKEINTERFACE_H_
 
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/OpDefinition.h"
 
 namespace mlir {
@@ -28,6 +29,9 @@ using NewYieldValuesFn = std::function<SmallVector<Value>(
 namespace detail {
 /// Verify invariants of the LoopLikeOpInterface.
 LogicalResult verifyLoopLikeOpInterface(Operation *op);
+
+/// Verify invariants of the LoopLikeWithInductionVarsOpInterface.
+LogicalResult verifyLoopLikeWithInductionVarsOpInterface(Operation *op);
 } // namespace detail
 
 //===----------------------------------------------------------------------===//

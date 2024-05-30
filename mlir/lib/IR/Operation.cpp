@@ -245,8 +245,6 @@ void Operation::setOperands(ValueRange operands) {
 /// than the range pointed to by 'start'+'length'.
 void Operation::setOperands(unsigned start, unsigned length,
                             ValueRange operands) {
-  assert((start + length) <= getNumOperands() &&
-         "invalid operand range specified");
   if (LLVM_LIKELY(hasOperandStorage))
     return getOperandStorage().setOperands(this, start, length, operands);
   assert(operands.empty() && "setting operands without an operand storage");

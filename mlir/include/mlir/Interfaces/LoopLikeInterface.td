@@ -375,6 +375,132 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
   }];
 }
 
+def LoopLikeWithInductionVarsOpInterface 
+    : OpInterface<"LoopLikeWithInductionVarsOpInterface", [LoopLikeOpInterface]> {
+  let description = [{
+    Interface for loop-like operations with one or more induction variables.
+    This interface contains helper functions for retrieving and updating the
+    lower bound, upper bound and step size for each induction variable and
+    provides a utility function to check whether the loop is normalized., i.e.
+    all lower bounds are equal to zero and steps are equal to one.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Return the induction variables if they exist, otherwise return
+        std::nullopt.
+      }],
+      /*retTy=*/"::mlir::ValueRange",
+      /*methodName=*/"getInductionVars"
+    >,
+    InterfaceMethod<[{
+        Return the lower bound values or attributes as OpFoldResult.
+      }],
+      /*retTy=*/"SmallVector<::mlir::OpFoldResult>",
+      /*methodName=*/"getMixedLowerBound"
+    >,
+    InterfaceMethod<[{
+        Return the step values or attributes if they exist as OpFoldResult.
+      }],
+      /*retTy=*/"SmallVector<::mlir::OpFoldResult>",
+      /*methodName=*/"getMixedStep"
+    >,
+    InterfaceMethod<[{
+        Return the upper bound values or attributes as OpFoldResult.
+      }],
+      /*retTy=*/"SmallVector<::mlir::OpFoldResult>",
+      /*methodName=*/"getMixedUpperBound"
+    >,
+    InterfaceMethod<[{
+        Return the lower bounds as values.
+      }],
+      /*retTy=*/"SmallVector<Value>",
+      /*methodName=*/"getLowerBound",
+      /*args=*/(ins "OpBuilder &":$b)
+    >,
+    InterfaceMethod<[{
+        Return the steps as values.
+      }],
+      /*retTy=*/"SmallVector<Value>",
+      /*methodName=*/"getStep",
+      /*args=*/(ins "OpBuilder &":$b)
+    >,
+    InterfaceMethod<[{
+        Return the upper bounds as values.
+      }],
+      /*retTy=*/"SmallVector<Value>",
+      /*methodName=*/"getUpperBound",
+      /*args=*/(ins "OpBuilder &":$b)
+    >,
+    InterfaceMethod<[{
+        Set the lower bounds from an array of `OpFoldResult`.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setMixedLowerBounds",
+      /*args=*/(ins "OpBuilder &":$b, "ArrayRef<OpFoldResult>":$lbs)
+    >,
+    InterfaceMethod<[{
+        Set the steps from an array of `OpFoldResult`.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setMixedSteps",
+      /*args=*/(ins "OpBuilder &":$b, "ArrayRef<OpFoldResult>":$lbs)
+    >,
+    InterfaceMethod<[{
+        Set the upper bounds from an array of `OpFoldResult`.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setMixedUpperBounds",
+      /*args=*/(ins "OpBuilder &":$b, "ArrayRef<OpFoldResult>":$lbs)
+    >,
+    InterfaceMethod<[{
+        Set the lower bounds from an array of values.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setLowerBounds",
+      /*args=*/(ins "ArrayRef<Value>":$lbs)
+    >,
+    InterfaceMethod<[{
+        Set the steps from an array of values.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setSteps",
+      /*args=*/(ins "ArrayRef<Value>":$lbs)
+    >,
+    InterfaceMethod<[{
+        Set the upper bounds from an array of values.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setUpperBounds",
+      /*args=*/(ins "ArrayRef<Value>":$lbs)
+    >,
+    InterfaceMethod<[{
+        Checks if the lower bounds are zeros and steps are ones.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isNormalized",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        auto allEqual = [](ArrayRef<OpFoldResult> results, int64_t val) {
+          return llvm::all_of(results, [&](OpFoldResult ofr) {
+            auto intValue = getConstantIntValue(ofr);
+            return intValue.has_value() && intValue == val;
+          });
+        };
+        SmallVector<::mlir::OpFoldResult> lbs = $_op.getMixedLowerBound();
+        SmallVector<::mlir::OpFoldResult> steps = $_op.getMixedStep();
+        return allEqual(lbs, 0) && allEqual(steps, 1);
+      }]
+    >
+  ];
+
+  let verify = [{
+    return detail::verifyLoopLikeWithInductionVarsOpInterface($_op);
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Traits
 //===----------------------------------------------------------------------===//

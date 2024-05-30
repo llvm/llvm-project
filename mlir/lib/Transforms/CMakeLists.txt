@@ -10,6 +10,7 @@ add_mlir_library(MLIRTransforms
   LocationSnapshot.cpp
   LoopInvariantCodeMotion.cpp
   Mem2Reg.cpp
+  NormalizeLoopBounds.cpp
   OpStats.cpp
   PrintIR.cpp
   RemoveDeadValues.cpp
@@ -30,6 +31,7 @@ add_mlir_library(MLIRTransforms
   LINK_LIBS PUBLIC
   MLIRAnalysis
   MLIRCopyOpInterface
+  MLIRDialectUtils
   MLIRFunctionInterfaces
   MLIRLoopLikeInterface
   MLIRMemorySlotInterfaces

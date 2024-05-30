@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Utils/LoopUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
@@ -28,16 +29,6 @@
 #include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
-
-namespace {
-// This structure is to pass and return sets of loop parameters without
-// confusing the order.
-struct LoopParams {
-  Value lowerBound;
-  Value upperBound;
-  Value step;
-};
-} // namespace
 
 SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
     RewriterBase &rewriter, MutableArrayRef<scf::ForOp> loopNest,
@@ -471,50 +462,6 @@ LogicalResult mlir::loopUnrollByFactor(
   // Promote the loop body up if this has turned into a single iteration loop.
   (void)forOp.promoteIfSingleIteration(rewriter);
   return success();
-}
-
-/// Transform a loop with a strictly positive step
-///   for %i = %lb to %ub step %s
-/// into a 0-based loop with step 1
-///   for %ii = 0 to ceildiv(%ub - %lb, %s) step 1 {
-///     %i = %ii * %s + %lb
-/// Insert the induction variable remapping in the body of `inner`, which is
-/// expected to be either `loop` or another loop perfectly nested under `loop`.
-/// Insert the definition of new bounds immediate before `outer`, which is
-/// expected to be either `loop` or its parent in the loop nest.
-static LoopParams emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
-                                           Value lb, Value ub, Value step) {
-  // For non-index types, generate `arith` instructions
-  // Check if the loop is already known to have a constant zero lower bound or
-  // a constant one step.
-  bool isZeroBased = false;
-  if (auto lbCst = getConstantIntValue(lb))
-    isZeroBased = lbCst.value() == 0;
-
-  bool isStepOne = false;
-  if (auto stepCst = getConstantIntValue(step))
-    isStepOne = stepCst.value() == 1;
-
-  // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)
-  // assuming the step is strictly positive.  Update the bounds and the step
-  // of the loop to go from 0 to the number of iterations, if necessary.
-  if (isZeroBased && isStepOne)
-    return {lb, ub, step};
-
-  Value diff = isZeroBased ? ub : rewriter.create<arith::SubIOp>(loc, ub, lb);
-  Value newUpperBound =
-      isStepOne ? diff : rewriter.create<arith::CeilDivSIOp>(loc, diff, step);
-
-  Value newLowerBound = isZeroBased
-                            ? lb
-                            : rewriter.create<arith::ConstantOp>(
-                                  loc, rewriter.getZeroAttr(lb.getType()));
-  Value newStep = isStepOne
-                      ? step
-                      : rewriter.create<arith::ConstantOp>(
-                            loc, rewriter.getIntegerAttr(step.getType(), 1));
-
-  return {newLowerBound, newUpperBound, newStep};
 }
 
 /// Get back the original induction variable values after loop normalization

@@ -1387,6 +1387,66 @@ void ForallOp::build(
   build(b, result, lbs, ubs, steps, outputs, mapping, bodyBuilderFn);
 }
 
+/// Set the lower bounds from `OpFoldResult`.
+void ForallOp::setMixedLowerBounds(OpBuilder &b, ArrayRef<OpFoldResult> lbs) {
+  SmallVector<int64_t> staticLbs;
+  SmallVector<Value> dynamicLbs;
+  dispatchIndexOpFoldResults(lbs, dynamicLbs, staticLbs);
+  getOperation()->setOperands(0, getDynamicLowerBound().size(), dynamicLbs);
+  (*this)->setAttr(getStaticLowerBoundAttrName(),
+                   b.getDenseI64ArrayAttr(staticLbs));
+  ArrayRef<int32_t> segmentSizes =
+      (*this)
+          ->getAttrOfType<DenseI32ArrayAttr>("operandSegmentSizes")
+          .asArrayRef();
+  SmallVector<int32_t> newSegmentSizes(segmentSizes.begin(),
+                                       segmentSizes.end());
+  newSegmentSizes[0] = dynamicLbs.size();
+  (*this)->setAttr("operandSegmentSizes",
+                   b.getDenseI32ArrayAttr(newSegmentSizes));
+}
+
+/// Set the upper bounds from `OpFoldResult`.
+void ForallOp::setMixedUpperBounds(OpBuilder &b, ArrayRef<OpFoldResult> ubs) {
+  SmallVector<int64_t> staticUbs;
+  SmallVector<Value> dynamicUbs;
+  dispatchIndexOpFoldResults(ubs, dynamicUbs, staticUbs);
+  size_t offset = getDynamicLowerBound().size();
+  getOperation()->setOperands(offset, getDynamicUpperBound().size(),
+                              dynamicUbs);
+  (*this)->setAttr(getStaticUpperBoundAttrName(),
+                   b.getDenseI64ArrayAttr(staticUbs));
+  ArrayRef<int32_t> segmentSizes =
+      (*this)
+          ->getAttrOfType<DenseI32ArrayAttr>("operandSegmentSizes")
+          .asArrayRef();
+  SmallVector<int32_t> newSegmentSizes(segmentSizes.begin(),
+                                       segmentSizes.end());
+  newSegmentSizes[1] = dynamicUbs.size();
+  (*this)->setAttr("operandSegmentSizes",
+                   b.getDenseI32ArrayAttr(newSegmentSizes));
+}
+
+/// Set the steps from `OpFoldResult`.
+void ForallOp::setMixedSteps(OpBuilder &b, ArrayRef<OpFoldResult> steps) {
+  SmallVector<int64_t> staticSteps;
+  SmallVector<Value> dynamicSteps;
+  dispatchIndexOpFoldResults(steps, dynamicSteps, staticSteps);
+  size_t offset = getDynamicLowerBound().size() + getDynamicUpperBound().size();
+  getOperation()->setOperands(offset, getDynamicStep().size(), dynamicSteps);
+  (*this)->setAttr(getStaticStepAttrName(),
+                   b.getDenseI64ArrayAttr(staticSteps));
+  ArrayRef<int32_t> segmentSizes =
+      (*this)
+          ->getAttrOfType<DenseI32ArrayAttr>("operandSegmentSizes")
+          .asArrayRef();
+  SmallVector<int32_t> newSegmentSizes(segmentSizes.begin(),
+                                       segmentSizes.end());
+  newSegmentSizes[2] = dynamicSteps.size();
+  (*this)->setAttr("operandSegmentSizes",
+                   b.getDenseI32ArrayAttr(newSegmentSizes));
+}
+
 // Checks if the lbs are zeros and steps are ones.
 bool ForallOp::isNormalized() {
   auto allEqual = [](ArrayRef<OpFoldResult> results, int64_t val) {

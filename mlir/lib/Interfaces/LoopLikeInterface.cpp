@@ -113,3 +113,28 @@ LogicalResult detail::verifyLoopLikeOpInterface(Operation *op) {
 
   return success();
 }
+
+LogicalResult
+detail::verifyLoopLikeWithInductionVarsOpInterface(Operation *op) {
+  auto loopLikeOp = cast<LoopLikeWithInductionVarsOpInterface>(op);
+
+  // Verify number of induction variables, lower bounds, upper bounds and steps.
+  if (loopLikeOp.getInductionVars().size() !=
+      loopLikeOp.getMixedLowerBound().size())
+    return op->emitOpError(
+               "different number of induction variables and lower bounds: ")
+           << loopLikeOp.getInductionVars().size()
+           << " != " << loopLikeOp.getMixedLowerBound().size();
+  if (loopLikeOp.getInductionVars().size() != loopLikeOp.getMixedStep().size())
+    return op->emitOpError(
+               "different number of induction variables and steps: ")
+           << loopLikeOp.getInductionVars().size()
+           << " != " << loopLikeOp.getMixedStep().size();
+  if (loopLikeOp.getInductionVars().size() !=
+      loopLikeOp.getMixedUpperBound().size())
+    return op->emitOpError(
+               "different number of induction variables and upper bounds: ")
+           << loopLikeOp.getInductionVars().size()
+           << " != " << loopLikeOp.getMixedUpperBound().size();
+  return success();
+}

@@ -72,19 +72,16 @@ func.func @multi_use() {
   return
 }
 
-func.func @unnormalized_loops() {
+// CHECK: %[[orig_ub_i:.*]]: index, %[[orig_ub_j:.*]]: index
+func.func @unnormalized_loops(%ubi: index, %ubj: index) {
   // CHECK: %[[orig_step_i:.*]] = arith.constant 2
   // CHECK: %[[orig_step_j:.*]] = arith.constant 3
   // CHECK: %[[orig_lb_i:.*]] = arith.constant 5
   // CHECK: %[[orig_lb_j:.*]] = arith.constant 7
-  // CHECK: %[[orig_ub_i:.*]] = arith.constant 10
-  // CHECK: %[[orig_ub_j:.*]] = arith.constant 17
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
   %c5 = arith.constant 5 : index
   %c7 = arith.constant 7 : index
-  %c10 = arith.constant 10 : index
-  %c17 = arith.constant 17 : index
 
   // Number of iterations in the outer scf.
   // CHECK: %[[diff_i:.*]] = arith.subi %[[orig_ub_i]], %[[orig_lb_i]]
@@ -101,10 +98,10 @@ func.func @unnormalized_loops() {
   // New bounds of the outer scf.
   // CHECK: %[[range:.*]] = arith.muli %[[numiter_i]], %[[numiter_j]]
   // CHECK: scf.for %[[i:.*]] = %[[lb_i]] to %[[range]] step %[[step_i]]
-  scf.for %i = %c5 to %c10 step %c2 {
+  scf.for %i = %c5 to %ubi step %c2 {
     // The inner loop has been removed.
     // CHECK-NOT: scf.for
-    scf.for %j = %c7 to %c17 step %c3 {
+    scf.for %j = %c7 to %ubj step %c3 {
       // The IVs are rewritten.
       // CHECK: %[[normalized_j:.*]] = arith.remsi %[[i]], %[[numiter_j]]
       // CHECK: %[[normalized_i:.*]] = arith.divsi %[[i]], %[[numiter_j]]
