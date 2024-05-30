@@ -1989,7 +1989,7 @@ void TextNodeDumper::VisitAutoType(const AutoType *T) {
 
 void TextNodeDumper::VisitDeducedTemplateSpecializationType(
     const DeducedTemplateSpecializationType *T) {
-  if (T->getTemplateName().getKind() == TemplateName::UsingTemplate)
+  if (T->getTemplateName().getAsUsingShadowDecl())
     OS << " using";
 }
 
@@ -1997,7 +1997,7 @@ void TextNodeDumper::VisitTemplateSpecializationType(
     const TemplateSpecializationType *T) {
   if (T->isTypeAlias())
     OS << " alias";
-  if (T->getTemplateName().getKind() == TemplateName::UsingTemplate)
+  if (T->getTemplateName().getAsUsingShadowDecl())
     OS << " using";
   OS << " ";
   T->getTemplateName().dump(OS);
