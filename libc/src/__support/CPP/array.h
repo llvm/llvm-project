@@ -22,10 +22,12 @@ template <class T, size_t N> struct array {
 
   T Data[N];
   using value_type = T;
-  using iterator = T *;
-  using const_iterator = const T *;
-  using reverse_iterator = cpp::reverse_iterator<iterator>;
-  using const_reverse_iterator = cpp::reverse_iterator<const_iterator>;
+  using pointer_type = T *;
+  using iterator = cpp::iterator<pointer_type>;
+  using const_pointer_type = const T *;
+  using const_iterator = cpp::iterator<const_pointer_type>;
+  using reverse_iterator = cpp::reverse_iterator<pointer_type>;
+  using const_reverse_iterator = cpp::reverse_iterator<const_pointer_type>;
 
   LIBC_INLINE constexpr T *data() { return Data; }
   LIBC_INLINE constexpr const T *data() const { return Data; }
@@ -46,12 +48,16 @@ template <class T, size_t N> struct array {
 
   LIBC_INLINE constexpr bool empty() const { return N == 0; }
 
-  LIBC_INLINE constexpr iterator begin() { return Data; }
-  LIBC_INLINE constexpr const_iterator begin() const { return Data; }
+  LIBC_INLINE constexpr iterator begin() { return iterator{Data}; }
+  LIBC_INLINE constexpr const_iterator begin() const {
+    return const_iterator{Data};
+  }
   LIBC_INLINE constexpr const_iterator cbegin() const { return begin(); }
 
-  LIBC_INLINE constexpr iterator end() { return Data + N; }
-  LIBC_INLINE constexpr const_iterator end() const { return Data + N; }
+  LIBC_INLINE constexpr iterator end() { return iterator{Data + N}; }
+  LIBC_INLINE constexpr const_iterator end() const {
+    return const_iterator{Data + N};
+  }
   LIBC_INLINE constexpr const_iterator cend() const { return end(); }
 
   LIBC_INLINE constexpr reverse_iterator rbegin() {
@@ -65,10 +71,10 @@ template <class T, size_t N> struct array {
   }
 
   LIBC_INLINE constexpr reverse_iterator rend() {
-    return reverse_iterator{begin()};
+    return reverse_iterator{Data};
   }
   LIBC_INLINE constexpr const_reverse_iterator rend() const {
-    return const_reverse_iterator{begin()};
+    return const_reverse_iterator{Data};
   }
   LIBC_INLINE constexpr const_reverse_iterator crend() const { return rend(); }
 };

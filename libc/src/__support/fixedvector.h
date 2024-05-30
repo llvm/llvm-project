@@ -82,6 +82,10 @@ public:
   // can easily swap one data structure for the other.
   static void destroy(FixedVector<T, CAPACITY> *store) { store->reset(); }
 
+  using iterator = typename cpp::array<T, CAPACITY>::iterator;
+  LIBC_INLINE constexpr iterator begin() { return iterator{&store[0]}; }
+  LIBC_INLINE constexpr iterator end() { return iterator{&store[item_count]}; }
+
   using reverse_iterator = typename cpp::array<T, CAPACITY>::reverse_iterator;
   LIBC_INLINE constexpr reverse_iterator rbegin() {
     return reverse_iterator{&store[item_count]};

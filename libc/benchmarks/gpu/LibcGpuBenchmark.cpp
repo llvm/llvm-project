@@ -13,8 +13,8 @@ void Benchmark::add_benchmark(Benchmark *benchmark) {
 }
 
 void Benchmark::run_benchmarks() {
-  for (auto it = benchmarks.rbegin(), e = benchmarks.rend(); it != e; ++it)
-    (*it)->run();
+  for (Benchmark *benchmark : benchmarks)
+    benchmark->run();
 }
 
 BenchmarkResult benchmark(const BenchmarkOptions &options,

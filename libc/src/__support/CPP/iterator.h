@@ -92,6 +92,74 @@ public:
   }
 };
 
+template <typename Iter> class iterator {
+  Iter current;
+
+public:
+  using reference = typename iterator_traits<Iter>::reference;
+  using value_type = typename iterator_traits<Iter>::value_type;
+  using iterator_type = Iter;
+
+  LIBC_INLINE iterator() : current() {}
+  LIBC_INLINE constexpr explicit iterator(Iter it) : current(it) {}
+
+  template <typename Other,
+            cpp::enable_if_t<!cpp::is_same_v<Iter, Other> &&
+                                 cpp::is_convertible_v<const Other &, Iter>,
+                             int> = 0>
+  LIBC_INLINE constexpr explicit iterator(const Other &it) : current(it) {}
+
+  LIBC_INLINE friend constexpr bool operator==(const iterator &lhs,
+                                               const iterator &rhs) {
+    return lhs.base() == rhs.base();
+  }
+
+  LIBC_INLINE friend constexpr bool operator!=(const iterator &lhs,
+                                               const iterator &rhs) {
+    return lhs.base() != rhs.base();
+  }
+
+  LIBC_INLINE friend constexpr bool operator<(const iterator &lhs,
+                                              const iterator &rhs) {
+    return lhs.base() < rhs.base();
+  }
+
+  LIBC_INLINE friend constexpr bool operator<=(const iterator &lhs,
+                                               const iterator &rhs) {
+    return lhs.base() <= rhs.base();
+  }
+
+  LIBC_INLINE friend constexpr bool operator>(const iterator &lhs,
+                                              const iterator &rhs) {
+    return lhs.base() > rhs.base();
+  }
+
+  LIBC_INLINE friend constexpr bool operator>=(const iterator &lhs,
+                                               const iterator &rhs) {
+    return lhs.base() >= rhs.base();
+  }
+
+  LIBC_INLINE constexpr iterator_type base() const { return current; }
+
+  LIBC_INLINE constexpr reference operator*() const {
+    Iter tmp = current;
+    return *tmp;
+  }
+  LIBC_INLINE constexpr iterator operator--() {
+    --current;
+    return *this;
+  }
+  LIBC_INLINE constexpr iterator &operator++() {
+    ++current;
+    return *this;
+  }
+  LIBC_INLINE constexpr iterator operator++(int) {
+    iterator tmp(*this);
+    ++current;
+    return tmp;
+  }
+};
+
 } // namespace cpp
 } // namespace LIBC_NAMESPACE
 
