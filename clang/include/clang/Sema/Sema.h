@@ -8988,6 +8988,9 @@ public:
                          const TemplateArgumentListInfo *TemplateArgs);
 
   void diagnoseMissingTemplateArguments(TemplateName Name, SourceLocation Loc);
+  void diagnoseMissingTemplateArguments(const CXXScopeSpec &SS,
+                                        bool TemplateKeyword, TemplateDecl *TD,
+                                        SourceLocation Loc);
 
   ExprResult BuildTemplateIdExpr(const CXXScopeSpec &SS,
                                  SourceLocation TemplateKWLoc, LookupResult &R,
