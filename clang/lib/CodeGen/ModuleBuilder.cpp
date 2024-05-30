@@ -138,6 +138,8 @@ namespace {
       assert(!M && "Replacing existing Module?");
       M.reset(new llvm::Module(ExpandModuleName(ModuleName, CodeGenOpts), C));
 
+      IRGenFinished = false;
+
       std::unique_ptr<CodeGenModule> OldBuilder = std::move(Builder);
 
       Initialize(*Ctx);
@@ -179,6 +181,10 @@ namespace {
     }
 
     bool HandleTopLevelDecl(DeclGroupRef DG) override {
+      // Ignore interesting decls from the AST reader after IRGen is finished.
+      if (IRGenFinished)
+        return true; // We can't CodeGen more but pass to other consumers.
+
       // FIXME: Why not return false and abort parsing?
       if (Diags.hasUnrecoverableErrorOccurred())
         return true;
@@ -282,6 +288,8 @@ namespace {
     }
 
     void HandleTranslationUnit(ASTContext &Ctx) override {
+      IRGenFinished = true;
+
       // Release the Builder when there is no error.
       if (!Diags.hasUnrecoverableErrorOccurred() && Builder)
         Builder->Release();
