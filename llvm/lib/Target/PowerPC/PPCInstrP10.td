@@ -2156,144 +2156,145 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, HasVSX] in {
 class xxevalPattern <dag pattern, bits<8> imm> :
   Pat<(v4i32 pattern), (XXEVAL $vA, $vB, $vC, imm)> {}
 
-let AddedComplexity = 400, Predicates = [PrefixInstrs, HasP10Vector] in {
- def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
-                                i32immNonAllOneNonZero:$A,
+let Predicates = [PrefixInstrs, HasP10Vector] in {
+  let AddedComplexity = 400 in {
+	def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
+								i32immNonAllOneNonZero:$A,
                                 i32immNonAllOneNonZero:$A,
                                 i32immNonAllOneNonZero:$A)),
-           (v4i32 (XXSPLTIW imm:$A))>;
- def : Pat<(f32 nzFPImmAsi32:$A),
-           (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
-                             VSFRC)>;
- def : Pat<(f64 nzFPImmAsi32:$A),
-           (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
-                             VSFRC)>;
+              (v4i32 (XXSPLTIW imm:$A))>;
+	def : Pat<(f32 nzFPImmAsi32:$A),
+              (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
+                              VSFRC)>;
+	def : Pat<(f64 nzFPImmAsi32:$A),
+              (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
+                              VSFRC)>;
 
-// To replace constant pool with XXSPLTI32DX for scalars.
-def : Pat<(f32 nzFPImmAsi64:$A),
-          (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX(IMPLICIT_DEF), 0,
-                                        (getFPAs64BitIntHi $A)),
-                                        1, (getFPAs64BitIntLo $A)),
-                            VSSRC)>;
+    // To replace constant pool with XXSPLTI32DX for scalars.
+    def : Pat<(f32 nzFPImmAsi64:$A),
+              (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX(IMPLICIT_DEF), 0,
+                                             (getFPAs64BitIntHi $A)),
+                                             1, (getFPAs64BitIntLo $A)),
+                                VSSRC)>;
 
-def : Pat<(f64 nzFPImmAsi64:$A),
-          (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX (IMPLICIT_DEF), 0,
-                                        (getFPAs64BitIntHi $A)),
-                                        1, (getFPAs64BitIntLo $A)),
-                            VSFRC)>;
+    def : Pat<(f64 nzFPImmAsi64:$A),
+              (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX (IMPLICIT_DEF), 0,
+                                             (getFPAs64BitIntHi $A)),
+                                             1, (getFPAs64BitIntLo $A)),
+                                 VSFRC)>;
 
-  // Anonymous patterns for XXEVAL
-  // AND
-  // and(A, B, C)
-  def : xxevalPattern<(and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 1>;
-  // and(A, xor(B, C))
-  def : xxevalPattern<(and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 6>;
-  // and(A, or(B, C))
-  def : xxevalPattern<(and v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 7>;
-  // and(A, nor(B, C))
-  def : xxevalPattern<(and v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 8>;
-  // and(A, eqv(B, C))
-  def : xxevalPattern<(and v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 9>;
-  // and(A, nand(B, C))
-  def : xxevalPattern<(and v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 14>;
+    // Anonymous patterns for XXEVAL
+    // AND
+    // and(A, B, C)
+    def : xxevalPattern<(and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 1>;
+    // and(A, xor(B, C))
+    def : xxevalPattern<(and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 6>;
+    // and(A, or(B, C))
+    def : xxevalPattern<(and v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 7>;
+    // and(A, nor(B, C))
+    def : xxevalPattern<(and v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 8>;
+    // and(A, eqv(B, C))
+    def : xxevalPattern<(and v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 9>;
+    // and(A, nand(B, C))
+    def : xxevalPattern<(and v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 14>;
 
-  // NAND
-  // nand(A, B, C)
-  def : xxevalPattern<(vnot (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC))),
-                       !sub(255, 1)>;
-  // nand(A, xor(B, C))
-  def : xxevalPattern<(vnot (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))),
-                       !sub(255, 6)>;
-  // nand(A, or(B, C))
-  def : xxevalPattern<(vnot (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC))),
-                       !sub(255, 7)>;
-  // nand(A, nor(B, C))
-  def : xxevalPattern<(or (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)),
-                       !sub(255, 8)>;
-  // nand(A, eqv(B, C))
-  def : xxevalPattern<(or (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)),
-                       !sub(255, 9)>;
-  // nand(A, nand(B, C))
-  def : xxevalPattern<(or (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
-                       !sub(255, 14)>;
+    // NAND
+    // nand(A, B, C)
+    def : xxevalPattern<(vnot (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC))),
+                         !sub(255, 1)>;
+    // nand(A, xor(B, C))
+    def : xxevalPattern<(vnot (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))),
+                         !sub(255, 6)>;
+    // nand(A, or(B, C))
+    def : xxevalPattern<(vnot (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC))),
+                         !sub(255, 7)>;
+    // nand(A, nor(B, C))
+    def : xxevalPattern<(or (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)),
+                         !sub(255, 8)>;
+    // nand(A, eqv(B, C))
+    def : xxevalPattern<(or (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)),
+                         !sub(255, 9)>;
+    // nand(A, nand(B, C))
+    def : xxevalPattern<(or (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
+                         !sub(255, 14)>;
 
-  // EQV
-  // (eqv A, B, C)
-  def : xxevalPattern<(or (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)),
-                          (vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)))),
-                       150>;
-  // (eqv A, (and B, C))
-  def : xxevalPattern<(vnot (xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 225>;
-  // (eqv A, (or B, C))
-  def : xxevalPattern<(vnot (xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 135>;
+    // EQV
+    // (eqv A, B, C)
+    def : xxevalPattern<(or (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)),
+                            (vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)))),
+                         150>;
+    // (eqv A, (and B, C))
+    def : xxevalPattern<(vnot (xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 225>;
+    // (eqv A, (or B, C))
+    def : xxevalPattern<(vnot (xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 135>;
 
-  // NOR
-  // (nor A, B, C)
-  def : xxevalPattern<(vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 128>;
-  // (nor A, (and B, C))
-  def : xxevalPattern<(vnot (or v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 224>;
-  // (nor A, (eqv B, C))
-  def : xxevalPattern<(and (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)), 96>;
-  // (nor A, (nand B, C))
-  def : xxevalPattern<(and (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)), 16>;
-  // (nor A, (nor B, C))
-  def : xxevalPattern<(and (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)), 112>;
-  // (nor A, (xor B, C))
-  def : xxevalPattern<(vnot (or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))), 144>;
+    // NOR
+    // (nor A, B, C)
+    def : xxevalPattern<(vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 128>;
+    // (nor A, (and B, C))
+    def : xxevalPattern<(vnot (or v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 224>;
+    // (nor A, (eqv B, C))
+    def : xxevalPattern<(and (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)), 96>;
+    // (nor A, (nand B, C))
+    def : xxevalPattern<(and (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)), 16>;
+    // (nor A, (nor B, C))
+    def : xxevalPattern<(and (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)), 112>;
+    // (nor A, (xor B, C))
+    def : xxevalPattern<(vnot (or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))), 144>;
 
-  // OR
-  // (or A, B, C)
-  def : xxevalPattern<(or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 127>;
-  // (or A, (and B, C))
-  def : xxevalPattern<(or v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 31>;
-  // (or A, (eqv B, C))
-  def : xxevalPattern<(or v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 159>;
-  // (or A, (nand B, C))
-  def : xxevalPattern<(or v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 239>;
-  // (or A, (nor B, C))
-  def : xxevalPattern<(or v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 143>;
-  // (or A, (xor B, C))
-  def : xxevalPattern<(or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 111>;
+    // OR
+    // (or A, B, C)
+    def : xxevalPattern<(or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 127>;
+    // (or A, (and B, C))
+    def : xxevalPattern<(or v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 31>;
+    // (or A, (eqv B, C))
+    def : xxevalPattern<(or v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 159>;
+    // (or A, (nand B, C))
+    def : xxevalPattern<(or v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 239>;
+    // (or A, (nor B, C))
+    def : xxevalPattern<(or v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 143>;
+    // (or A, (xor B, C))
+    def : xxevalPattern<(or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 111>;
 
-  // XOR
-  // (xor A, B, C)
-  def : xxevalPattern<(xor v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 105>;
-  // (xor A, (and B, C))
-  def : xxevalPattern<(xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 30>;
-  // (xor A, (or B, C))
-  def : xxevalPattern<(xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 120>;
+    // XOR
+    // (xor A, B, C)
+    def : xxevalPattern<(xor v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 105>;
+    // (xor A, (and B, C))
+    def : xxevalPattern<(xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 30>;
+    // (xor A, (or B, C))
+    def : xxevalPattern<(xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 120>;
 
-  // Anonymous patterns to select prefixed VSX loads and stores.
-  // Load / Store f128
-  def : Pat<(f128 (load PDForm:$src)),
-            (COPY_TO_REGCLASS (PLXV memri34:$src), VRRC)>;
-  def : Pat<(store f128:$XS, PDForm:$dst),
-            (PSTXV (COPY_TO_REGCLASS $XS, VSRC), memri34:$dst)>;
+    // Anonymous patterns to select prefixed VSX loads and stores.
+    // Load / Store f128
+    def : Pat<(f128 (load PDForm:$src)),
+              (COPY_TO_REGCLASS (PLXV memri34:$src), VRRC)>;
+    def : Pat<(store f128:$XS, PDForm:$dst),
+              (PSTXV (COPY_TO_REGCLASS $XS, VSRC), memri34:$dst)>;
 
-  // Load / Store v4i32
-  def : Pat<(v4i32 (load PDForm:$src)), (PLXV memri34:$src)>;
-  def : Pat<(store v4i32:$XS, PDForm:$dst), (PSTXV $XS, memri34:$dst)>;
+    // Load / Store v4i32
+    def : Pat<(v4i32 (load PDForm:$src)), (PLXV memri34:$src)>;
+    def : Pat<(store v4i32:$XS, PDForm:$dst), (PSTXV $XS, memri34:$dst)>;
 
-  // Load / Store v2i64
-  def : Pat<(v2i64 (load PDForm:$src)), (PLXV memri34:$src)>;
-  def : Pat<(store v2i64:$XS, PDForm:$dst), (PSTXV $XS, memri34:$dst)>;
+    // Load / Store v2i64
+    def : Pat<(v2i64 (load PDForm:$src)), (PLXV memri34:$src)>;
+    def : Pat<(store v2i64:$XS, PDForm:$dst), (PSTXV $XS, memri34:$dst)>;
 
-  // Load / Store v4f32
-  def : Pat<(v4f32 (load PDForm:$src)), (PLXV memri34:$src)>;
-  def : Pat<(store v4f32:$XS, PDForm:$dst), (PSTXV $XS, memri34:$dst)>;
+    // Load / Store v4f32
+    def : Pat<(v4f32 (load PDForm:$src)), (PLXV memri34:$src)>;
+    def : Pat<(store v4f32:$XS, PDForm:$dst), (PSTXV $XS, memri34:$dst)>;
 
-  // Load / Store v2f64
-  def : Pat<(v2f64 (load PDForm:$src)), (PLXV memri34:$src)>;
-  def : Pat<(store v2f64:$XS, PDForm:$dst), (PSTXV $XS, memri34:$dst)>;
+    // Load / Store v2f64
+    def : Pat<(v2f64 (load PDForm:$src)), (PLXV memri34:$src)>;
+    def : Pat<(store v2f64:$XS, PDForm:$dst), (PSTXV $XS, memri34:$dst)>;
 
-  // Cases For PPCstore_scal_int_from_vsr
-  def : Pat<(PPCstore_scal_int_from_vsr f64:$src, PDForm:$dst, 8),
-            (PSTXSD $src, PDForm:$dst)>;
-  def : Pat<(PPCstore_scal_int_from_vsr f128:$src, PDForm:$dst, 8),
-            (PSTXSD (COPY_TO_REGCLASS $src, VFRC), PDForm:$dst)>;
-}
+    // Cases For PPCstore_scal_int_from_vsr
+    def : Pat<(PPCstore_scal_int_from_vsr f64:$src, PDForm:$dst, 8),
+              (PSTXSD $src, PDForm:$dst)>;
+    def : Pat<(PPCstore_scal_int_from_vsr f128:$src, PDForm:$dst, 8),
+              (PSTXSD (COPY_TO_REGCLASS $src, VFRC), PDForm:$dst)>;
+    }
 
-let Predicates = [PrefixInstrs, HasP10Vector] in {
+
   def : Pat<(i32 imm34:$imm), (PLI (getImmAs64BitInt imm:$imm))>;
   def : Pat<(i64 imm34:$imm), (PLI8 (getImmAs64BitInt imm:$imm))>;
   def : Pat<(v16i8 (int_ppc_vsx_xxpermx v16i8:$A, v16i8:$B, v16i8:$C, timm:$D)),
