@@ -1504,10 +1504,7 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("--export-dynamic-symbol=__cfi_check");
 
   if (SanArgs.hasMemTag()) {
-    if (TC.getTriple().getArch() == ::llvm::Triple::wasm32
-      || TC.getTriple().getArch() == ::llvm::Triple::wasm64)
-    {
-      
+    if (TC.getTriple().isWasm()) {
     }
     else if (TC.getTriple().isAndroid()) {
       CmdArgs.push_back(
