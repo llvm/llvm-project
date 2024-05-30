@@ -16261,6 +16261,84 @@ of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
 IEEE 754-2019.
 
+.. _i_minimumnum:
+
+'``llvm.minimumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.minimumnum`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.minimumnum.f32(float %Val0, float %Val1)
+      declare double    @llvm.minimumnum.f64(double %Val0, double %Val1)
+      declare x86_fp80  @llvm.minimumnum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
+      declare fp128     @llvm.minimumnum.f128(fp128 %Val0, fp128 %Val1)
+      declare ppc_fp128 @llvm.minimumnum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
+
+Overview:
+"""""""""
+
+The '``llvm.minimumnum.*``' intrinsics return the minimum of the two
+arguments, not propagating NaNs and treating -0.0 as less than +0.0.
+
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same
+type.
+
+Semantics:
+""""""""""
+If both operands are NaNs, returns qNaN. Otherwise returns the lesser
+of the two arguments. -0.0 is considered to be less than +0.0 for this
+intrinsic. Note that these are the semantics specified in IEEE 754-2019.
+
+.. _i_maximumnum:
+
+'``llvm.maximumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.maximumnum`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.maximumnum.f32(float %Val0, float %Val1)
+      declare double    @llvm.maximumnum.f64(double %Val0, double %Val1)
+      declare x86_fp80  @llvm.maximumnum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
+      declare fp128     @llvm.maximumnum.f128(fp128 %Val0, fp128 %Val1)
+      declare ppc_fp128 @llvm.maximumnum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
+
+Overview:
+"""""""""
+
+The '``llvm.maximumnum.*``' intrinsics return the maximum of the two
+arguments, not propagating NaNs and treating -0.0 as less than +0.0.
+
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same
+type.
+
+Semantics:
+""""""""""
+If both operands are NaNs, returns qNaN. Otherwise returns the greater
+of the two arguments. -0.0 is considered to be less than +0.0 for this
+intrinsic. Note that these are the semantics specified in IEEE 754-2019.
+
 .. _int_copysign:
 
 '``llvm.copysign.*``' Intrinsic

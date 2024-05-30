@@ -79,6 +79,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
   case Intrinsic::copysign:
   case Intrinsic::floor:
   case Intrinsic::ceil:

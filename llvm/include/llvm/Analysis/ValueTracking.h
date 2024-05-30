@@ -1066,14 +1066,16 @@ bool mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
 /// Specific patterns of select instructions we can match.
 enum SelectPatternFlavor {
   SPF_UNKNOWN = 0,
-  SPF_SMIN,    /// Signed minimum
-  SPF_UMIN,    /// Unsigned minimum
-  SPF_SMAX,    /// Signed maximum
-  SPF_UMAX,    /// Unsigned maximum
-  SPF_FMINNUM, /// Floating point minnum
-  SPF_FMAXNUM, /// Floating point maxnum
-  SPF_ABS,     /// Absolute value
-  SPF_NABS     /// Negated absolute value
+  SPF_SMIN,        /// Signed minimum
+  SPF_UMIN,        /// Unsigned minimum
+  SPF_SMAX,        /// Signed maximum
+  SPF_UMAX,        /// Unsigned maximum
+  SPF_FMINNUM,     /// Floating point minnum
+  SPF_FMAXNUM,     /// Floating point maxnum
+  SPF_FMINIMUMNUM, /// Floating point minnum
+  SPF_FMAXIMUMNUM, /// Floating point maxnum
+  SPF_ABS,         /// Absolute value
+  SPF_NABS         /// Negated absolute value
 };
 
 /// Behavior when a floating point min/max is given one NaN and one

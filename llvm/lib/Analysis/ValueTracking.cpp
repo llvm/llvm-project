@@ -4989,7 +4989,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::maxnum:
     case Intrinsic::minnum:
     case Intrinsic::minimum:
-    case Intrinsic::maximum: {
+    case Intrinsic::maximum:
+    case Intrinsic::minimumnum:
+    case Intrinsic::maximumnum: {
       KnownFPClass KnownLHS, KnownRHS;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownLHS, Depth + 1, Q);
@@ -5002,8 +5004,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // If either operand is not NaN, the result is not NaN.
       if (NeverNaN && (IID == Intrinsic::minnum || IID == Intrinsic::maxnum))
         Known.knownNot(fcNan);
+      if (NeverNaN &&
+          (IID == Intrinsic::minimumnum || IID == Intrinsic::maximumnum))
+        Known.knownNot(fcNan);
 
-      if (IID == Intrinsic::maxnum) {
+      if (IID == Intrinsic::maxnum || IID == Intrinsic::maximumnum) {
         // If at least one operand is known to be positive, the result must be
         // positive.
         if ((KnownLHS.cannotBeOrderedLessThanZero() &&
@@ -5017,7 +5022,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (KnownLHS.cannotBeOrderedLessThanZero() ||
             KnownRHS.cannotBeOrderedLessThanZero())
           Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-      } else if (IID == Intrinsic::minnum) {
+      } else if (IID == Intrinsic::minnum || IID == Intrinsic::minimumnum) {
         // If at least one operand is known to be negative, the result must be
         // negative.
         if ((KnownLHS.cannotBeOrderedGreaterThanZero() &&
@@ -5059,15 +5064,19 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             Known.signBitMustBeOne();
           else
             Known.signBitMustBeZero();
-        } else if ((IID == Intrinsic::maximum || IID == Intrinsic::minimum) ||
+        } else if ((IID == Intrinsic::maximum || IID == Intrinsic::minimum ||
+                    IID == Intrinsic::maximumnum ||
+                    IID == Intrinsic::minimumnum) ||
                    ((KnownLHS.isKnownNeverNegZero() ||
                      KnownRHS.isKnownNeverPosZero()) &&
                     (KnownLHS.isKnownNeverPosZero() ||
                      KnownRHS.isKnownNeverNegZero()))) {
-          if ((IID == Intrinsic::maximum || IID == Intrinsic::maxnum) &&
+          if ((IID == Intrinsic::maximum || IID == Intrinsic::maximumnum ||
+               IID == Intrinsic::maxnum) &&
               (KnownLHS.SignBit == false || KnownRHS.SignBit == false))
             Known.signBitMustBeZero();
-          else if ((IID == Intrinsic::minimum || IID == Intrinsic::minnum) &&
+          else if ((IID == Intrinsic::minimum || IID == Intrinsic::minimumnum ||
+                    IID == Intrinsic::minnum) &&
                    (KnownLHS.SignBit == true || KnownRHS.SignBit == true))
             Known.signBitMustBeOne();
         }
@@ -5124,7 +5133,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::vector_reduce_fmax:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
-    case Intrinsic::vector_reduce_fminimum: {
+    case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum: {
       // reduce min/max will choose an element from one of the vector elements,
       // so we can infer and class information that is common to all elements.
       Known = computeKnownFPClass(II->getArgOperand(0), II->getFastMathFlags(),
@@ -7132,6 +7143,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::maxnum:
       case Intrinsic::minimum:
       case Intrinsic::maximum:
+      case Intrinsic::minimumnum:
+      case Intrinsic::maximumnum:
       case Intrinsic::is_fpclass:
       case Intrinsic::ldexp:
       case Intrinsic::frexp:
@@ -8585,6 +8598,10 @@ Intrinsic::ID llvm::getInverseMinMaxIntrinsic(Intrinsic::ID MinMaxID) {
   case Intrinsic::umin: return Intrinsic::umax;
   // Please note that next four intrinsics may produce the same result for
   // original and inverted case even if X != Y due to NaN is handled specially.
+  case Intrinsic::maximumnum:
+    return Intrinsic::minimumnum;
+  case Intrinsic::minimumnum:
+    return Intrinsic::maximumnum;
   case Intrinsic::maximum: return Intrinsic::minimum;
   case Intrinsic::minimum: return Intrinsic::maximum;
   case Intrinsic::maxnum: return Intrinsic::minnum;

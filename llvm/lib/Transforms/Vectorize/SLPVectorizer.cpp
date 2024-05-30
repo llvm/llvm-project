@@ -17627,6 +17627,8 @@ private:
     case RecurKind::FMin:
     case RecurKind::FMaximum:
     case RecurKind::FMinimum:
+    case RecurKind::FMaximumnum:
+    case RecurKind::FMinimumnum:
       // res = vv
       return VectorizedValue;
     case RecurKind::Mul:
@@ -17689,6 +17691,8 @@ private:
     case RecurKind::FMin:
     case RecurKind::FMaximum:
     case RecurKind::FMinimum:
+    case RecurKind::FMaximumnum:
+    case RecurKind::FMinimumnum:
       // No need for multiple min/max(s) of the same value.
       LLVM_DEBUG(dbgs() << "SLP: Max/min of same " << VectorizedValue
                         << ". (HorRdx)\n");

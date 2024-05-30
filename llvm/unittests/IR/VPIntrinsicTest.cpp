@@ -27,8 +27,9 @@ namespace {
 static const char *ReductionIntOpcodes[] = {
     "add", "mul", "and", "or", "xor", "smin", "smax", "umin", "umax"};
 
-static const char *ReductionFPOpcodes[] = {"fadd", "fmul",     "fmin",
-                                           "fmax", "fminimum", "fmaximum"};
+static const char *ReductionFPOpcodes[] = {
+    "fadd",     "fmul",     "fmin",        "fmax",
+    "fminimum", "fmaximum", "fminimumnum", "fmaximumnum"};
 
 class VPIntrinsicTest : public testing::Test {
 protected:
@@ -49,9 +50,9 @@ protected:
       Str << " declare <8 x i32> @llvm.vp." << BinaryIntOpcode
           << ".v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) ";
 
-    const char *BinaryFPOpcodes[] = {"fadd",    "fsub",    "fmul",   "fdiv",
-                                     "frem",    "minnum",  "maxnum", "minimum",
-                                     "maximum", "copysign"};
+    const char *BinaryFPOpcodes[] = {
+        "fadd",   "fsub",    "fmul",    "fdiv",       "frem",       "minnum",
+        "maxnum", "minimum", "maximum", "minimumnum", "maximumnum", "copysign"};
     for (const char *BinaryFPOpcode : BinaryFPOpcodes)
       Str << " declare <8 x float> @llvm.vp." << BinaryFPOpcode
           << ".v8f32(<8 x float>, <8 x float>, <8 x i1>, i32) ";

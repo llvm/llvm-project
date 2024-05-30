@@ -372,6 +372,31 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_MAYTRAP: declare float @llvm.experimental.constrained.minnum.f32(
 // HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.minnum.f80(
 
+  fmaximum_num(f,f);       fmaximum_numf(f,f);      fmaximum_numl(f,f);
+
+// NO__ERRNO: declare double @llvm.maximumnum.f64(double, double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.maximumnum.f32(float, float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.maximumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare double @llvm.maximumnum.f64(double, double) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare float @llvm.maximumnum.f32(float, float) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare x86_fp80 @llvm.maximumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_MAYTRAP: declare double @llvm.experimental.constrained.maximumnum.f64(
+// HAS_MAYTRAP: declare float @llvm.experimental.constrained.maximumnum.f32(
+// HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.maximumnum.f80(
+
+  fminimum_num(f,f);       fminimum_numf(f,f);      fminimum_numl(f,f);
+
+// NO__ERRNO: declare double @llvm.minimumnum.f64(double, double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.minimumnum.f32(float, float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.minimumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare double @llvm.minimumnum.f64(double, double) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare float @llvm.minimumnum.f32(float, float) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare x86_fp80 @llvm.minimumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_MAYTRAP: declare double @llvm.experimental.constrained.minimumnum.f64(
+// HAS_MAYTRAP: declare float @llvm.experimental.constrained.minimumnum.f32(
+// HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.minimumnum.f80(
+
+
   hypot(f,f);      hypotf(f,f);     hypotl(f,f);
 
 // NO__ERRNO: declare double @hypot(double noundef, double noundef) [[READNONE]]
