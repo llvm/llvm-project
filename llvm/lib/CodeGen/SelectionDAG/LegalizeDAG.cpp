@@ -1105,6 +1105,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     if (Action == TargetLowering::Legal)
       Action = TargetLowering::Custom;
     break;
+  case ISD::CLEAR_CACHE:
+    // This operation is typically going to be LibCall unless the target wants
+    // something differrent.
+    Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
+    break;
   case ISD::READCYCLECOUNTER:
   case ISD::READSTEADYCOUNTER:
     // READCYCLECOUNTER and READSTEADYCOUNTER return a i64, even if type
@@ -4453,6 +4458,17 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
 
     Results.push_back(CallResult.second);
+    break;
+  }
+  case ISD::CLEAR_CACHE: {
+    TargetLowering::MakeLibCallOptions CallOptions;
+    SDValue InputChain = Node->getOperand(0);
+    SDValue StartVal = Node->getOperand(1);
+    SDValue EndVal = Node->getOperand(2);
+    std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(
+        DAG, RTLIB::CLEAR_CACHE, MVT::isVoid, {StartVal, EndVal},
+        CallOptions, SDLoc(Node), InputChain);
+    Results.push_back(Tmp.second);
     break;
   }
   case ISD::FMINNUM:
