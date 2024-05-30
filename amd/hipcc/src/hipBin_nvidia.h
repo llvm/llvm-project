@@ -69,7 +69,10 @@ HipBinNvidia::HipBinNvidia() {
   platformInfo.runtime = cuda;
   platformInfo.compiler = nvcc;
   platformInfoNV_ = platformInfo;
+  constructHipPath();
+  constructRoccmPath();
   constructCompilerPath();
+  readHipVersion();
 }
 
 // detects if cuda is installed
