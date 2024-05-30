@@ -44,6 +44,19 @@ static bool isLessThanTargetBitWidth(Operation *op, unsigned targetBitWidth) {
   return true;
 }
 
+static bool isLessThanOrEqualTargetBitWidth(Type t, unsigned targetBitWidth) {
+  VectorType vecType = dyn_cast<VectorType>(t);
+  // Reject index since getElementTypeBitWidth will abort for Index types.
+  if (!vecType || vecType.getElementType().isIndex())
+    return false;
+  // There are no dimension to fold if it is a 0-D vector.
+  if (vecType.getRank() == 0)
+    return false;
+  unsigned trailingVecDimBitWidth =
+      vecType.getShape().back() * vecType.getElementTypeBitWidth();
+  return trailingVecDimBitWidth <= targetBitWidth;
+}
+
 namespace {
 struct LinearizeConstant final : OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -358,6 +371,88 @@ struct LinearizeVectorExtract final
 private:
   unsigned targetVectorBitWidth;
 };
+
+/// This pattern converts the InsertOp to a ShuffleOp that works on a
+/// linearized vector.
+/// Following,
+///   vector.insert %source %destination [ position ]
+/// is converted to :
+///   %source_1d = vector.shape_cast %source
+///   %destination_1d = vector.shape_cast %destination
+///   %out_1d = vector.shuffle %destination_1d, %source_1d [ shuffle_indices_1d
+///   ] %out_nd = vector.shape_cast %out_1d
+/// `shuffle_indices_1d` is computed using the position of the original insert.
+struct LinearizeVectorInsert final
+    : public OpConversionPattern<vector::InsertOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LinearizeVectorInsert(
+      const TypeConverter &typeConverter, MLIRContext *context,
+      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit),
+        targetVectorBitWidth(targetVectBitWidth) {}
+  LogicalResult
+  matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstTy = getTypeConverter()->convertType(insertOp.getDestVectorType());
+    assert(!(insertOp.getDestVectorType().isScalable() ||
+             cast<VectorType>(dstTy).isScalable()) &&
+           "scalable vectors are not supported.");
+
+    if (!isLessThanOrEqualTargetBitWidth(insertOp.getSourceType(),
+                                         targetVectorBitWidth))
+      return rewriter.notifyMatchFailure(
+          insertOp, "Can't flatten since targetBitWidth < OpSize");
+
+    // dynamic position is not supported
+    if (insertOp.hasDynamicPosition())
+      return rewriter.notifyMatchFailure(insertOp,
+                                         "dynamic position is not supported.");
+    auto srcTy = insertOp.getSourceType();
+    auto srcAsVec = dyn_cast<VectorType>(srcTy);
+    uint64_t srcSize = 0;
+    if (srcAsVec) {
+      srcSize = srcAsVec.getNumElements();
+    } else {
+      return rewriter.notifyMatchFailure(insertOp,
+                                         "scalars are not supported.");
+    }
+
+    auto dstShape = insertOp.getDestVectorType().getShape();
+    const auto dstSize = insertOp.getDestVectorType().getNumElements();
+    auto dstSizeForOffsets = dstSize;
+
+    // compute linearized offset
+    int64_t linearizedOffset = 0;
+    auto offsetsNd = insertOp.getStaticPosition();
+    for (auto [dim, offset] : llvm::enumerate(offsetsNd)) {
+      dstSizeForOffsets /= dstShape[dim];
+      linearizedOffset += offset * dstSizeForOffsets;
+    }
+
+    llvm::SmallVector<int64_t, 2> indices(dstSize);
+    auto origValsUntil = indices.begin();
+    std::advance(origValsUntil, linearizedOffset);
+    std::iota(indices.begin(), origValsUntil,
+              0); // original values that remain [0, offset)
+    auto newValsUntil = origValsUntil;
+    std::advance(newValsUntil, srcSize);
+    std::iota(origValsUntil, newValsUntil,
+              dstSize); // new values [offset, offset+srcNumElements)
+    std::iota(newValsUntil, indices.end(),
+              linearizedOffset + srcSize); // the rest of original values
+                                           // [offset+srcNumElements, end)
+
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
+        insertOp, dstTy, adaptor.getDest(), adaptor.getSource(),
+        rewriter.getI64ArrayAttr(indices));
+
+    return success();
+  }
+
+private:
+  unsigned targetVectorBitWidth;
+};
 } // namespace
 
 void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
@@ -410,6 +505,6 @@ void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
                    : true;
       });
   patterns.add<LinearizeVectorShuffle, LinearizeVectorExtract,
-               LinearizeVectorExtractStridedSlice>(
+               LinearizeVectorInsert, LinearizeVectorExtractStridedSlice>(
       typeConverter, patterns.getContext(), targetBitWidth);
 }

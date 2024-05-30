@@ -242,6 +242,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fabsf16
+  SRCS
+    fabsf16.cpp
+  HDRS
+    ../fabsf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fabsf128
   SRCS
     fabsf128.cpp
@@ -2933,6 +2946,7 @@ add_entrypoint_object(
   HDRS
     ../scalbn.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -2945,6 +2959,7 @@ add_entrypoint_object(
   HDRS
     ../scalbnf.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -2957,6 +2972,7 @@ add_entrypoint_object(
   HDRS
     ../scalbnl.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -2969,6 +2985,7 @@ add_entrypoint_object(
   HDRS
     ../scalbnf128.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS

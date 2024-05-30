@@ -84,7 +84,7 @@ private:
   ManualDWARFIndex m_fallback;
 
   DWARFUnit *GetNonSkeletonUnit(const DebugNames::Entry &entry) const;
-  std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry) const;
+  DWARFDIE GetDIE(const DebugNames::Entry &entry) const;
   bool ProcessEntry(const DebugNames::Entry &entry,
                     llvm::function_ref<bool(DWARFDIE die)> callback);
 

@@ -552,13 +552,13 @@ private:
                       const DenseSet<uint32_t> &AllocContextIds);
 
   /// Map from each context ID to the AllocationType assigned to that context.
-  std::map<uint32_t, AllocationType> ContextIdToAllocationType;
+  DenseMap<uint32_t, AllocationType> ContextIdToAllocationType;
 
   /// Identifies the context node created for a stack id when adding the MIB
   /// contexts to the graph. This is used to locate the context nodes when
   /// trying to assign the corresponding callsites with those stack ids to these
   /// nodes.
-  std::map<uint64_t, ContextNode *> StackEntryIdToContextNodeMap;
+  DenseMap<uint64_t, ContextNode *> StackEntryIdToContextNodeMap;
 
   /// Maps to track the calls to their corresponding nodes in the graph.
   MapVector<CallInfo, ContextNode *> AllocationCallToContextNodeMap;
@@ -1889,15 +1889,17 @@ bool ModuleCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
       } else if (findProfiledCalleeThroughTailCalls(
                      ProfiledCallee, CalledFunction, Depth + 1,
                      FoundCalleeChain, FoundMultipleCalleeChains)) {
-        if (FoundMultipleCalleeChains)
-          return false;
+        // findProfiledCalleeThroughTailCalls should not have returned
+        // true if FoundMultipleCalleeChains.
+        assert(!FoundMultipleCalleeChains);
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
           return false;
         }
         FoundSingleCalleeChain = true;
         SaveCallsiteInfo(&I, CalleeFunc);
-      }
+      } else if (FoundMultipleCalleeChains)
+        return false;
     }
   }
 
@@ -2004,8 +2006,9 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
       } else if (findProfiledCalleeThroughTailCalls(
                      ProfiledCallee, CallEdge.first, Depth + 1,
                      FoundCalleeChain, FoundMultipleCalleeChains)) {
-        if (FoundMultipleCalleeChains)
-          return false;
+        // findProfiledCalleeThroughTailCalls should not have returned
+        // true if FoundMultipleCalleeChains.
+        assert(!FoundMultipleCalleeChains);
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
           return false;
@@ -2015,7 +2018,8 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
         FSToVIMap[FS] = FSVI;
-      }
+      } else if (FoundMultipleCalleeChains)
+        return false;
     }
   }
 

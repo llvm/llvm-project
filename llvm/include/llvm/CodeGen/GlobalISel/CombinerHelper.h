@@ -840,10 +840,6 @@ public:
   /// Combine extract vector element.
   bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine extract vector element with freeze on the vector register.
-  bool matchExtractVectorElementWithFreeze(const MachineOperand &MO,
-                                           BuildFnTy &MatchInfo);
-
   /// Combine extract vector element with a build vector on the vector register.
   bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
                                                 BuildFnTy &MatchInfo);
@@ -868,6 +864,9 @@ public:
 
   /// Combine insert vector element OOB.
   bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
+                                             BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

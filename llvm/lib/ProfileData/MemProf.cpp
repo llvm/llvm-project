@@ -52,6 +52,7 @@ size_t IndexedAllocationInfo::serializedSize(const MemProfSchema &Schema,
   case Version1:
     return serializedSizeV0(*this, Schema);
   case Version2:
+  case Version3:
     return serializedSizeV2(*this, Schema);
   }
   llvm_unreachable("unsupported MemProf version");
@@ -95,6 +96,7 @@ size_t IndexedMemProfRecord::serializedSize(const MemProfSchema &Schema,
   case Version1:
     return serializedSizeV0(*this, Schema);
   case Version2:
+  case Version3:
     return serializedSizeV2(*this, Schema);
   }
   llvm_unreachable("unsupported MemProf version");
@@ -141,8 +143,32 @@ static void serializeV2(const IndexedMemProfRecord &Record,
     LE.write<CallStackId>(CSId);
 }
 
-void IndexedMemProfRecord::serialize(const MemProfSchema &Schema,
-                                     raw_ostream &OS, IndexedVersion Version) {
+static void
+serializeV3(const IndexedMemProfRecord &Record, const MemProfSchema &Schema,
+            raw_ostream &OS,
+            llvm::DenseMap<CallStackId, uint32_t> &MemProfCallStackIndexes) {
+  using namespace support;
+
+  endian::Writer LE(OS, llvm::endianness::little);
+
+  LE.write<uint64_t>(Record.AllocSites.size());
+  for (const IndexedAllocationInfo &N : Record.AllocSites) {
+    assert(MemProfCallStackIndexes.contains(N.CSId));
+    LE.write<uint64_t>(MemProfCallStackIndexes[N.CSId]);
+    N.Info.serialize(Schema, OS);
+  }
+
+  // Related contexts.
+  LE.write<uint64_t>(Record.CallSiteIds.size());
+  for (const auto &CSId : Record.CallSiteIds) {
+    assert(MemProfCallStackIndexes.contains(CSId));
+    LE.write<uint64_t>(MemProfCallStackIndexes[CSId]);
+  }
+}
+
+void IndexedMemProfRecord::serialize(
+    const MemProfSchema &Schema, raw_ostream &OS, IndexedVersion Version,
+    llvm::DenseMap<CallStackId, uint32_t> *MemProfCallStackIndexes) {
   switch (Version) {
   case Version0:
   case Version1:
@@ -150,6 +176,9 @@ void IndexedMemProfRecord::serialize(const MemProfSchema &Schema,
     return;
   case Version2:
     serializeV2(*this, Schema, OS);
+    return;
+  case Version3:
+    serializeV3(*this, Schema, OS, *MemProfCallStackIndexes);
     return;
   }
   llvm_unreachable("unsupported MemProf version");
@@ -208,6 +237,7 @@ static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
   // Read the meminfo nodes.
   const uint64_t NumNodes =
       endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+  Record.AllocSites.reserve(NumNodes);
   for (uint64_t I = 0; I < NumNodes; I++) {
     IndexedAllocationInfo Node;
     Node.CSId = endian::readNext<CallStackId, llvm::endianness::little>(Ptr);
@@ -219,6 +249,7 @@ static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
   // Read the callsite information.
   const uint64_t NumCtxs =
       endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+  Record.CallSiteIds.reserve(NumCtxs);
   for (uint64_t J = 0; J < NumCtxs; J++) {
     CallStackId CSId =
         endian::readNext<CallStackId, llvm::endianness::little>(Ptr);
@@ -237,23 +268,26 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
   case Version1:
     return deserializeV0(Schema, Ptr);
   case Version2:
+  case Version3:
     return deserializeV2(Schema, Ptr);
   }
   llvm_unreachable("unsupported MemProf version");
 }
 
 MemProfRecord IndexedMemProfRecord::toMemProfRecord(
-    llvm::function_ref<const llvm::SmallVector<Frame>(const CallStackId)>
-        Callback) const {
+    llvm::function_ref<llvm::SmallVector<Frame>(const CallStackId)> Callback)
+    const {
   MemProfRecord Record;
 
+  Record.AllocSites.reserve(AllocSites.size());
   for (const memprof::IndexedAllocationInfo &IndexedAI : AllocSites) {
     memprof::AllocationInfo AI;
     AI.Info = IndexedAI.Info;
     AI.CallStack = Callback(IndexedAI.CSId);
-    Record.AllocSites.push_back(AI);
+    Record.AllocSites.push_back(std::move(AI));
   }
 
+  Record.CallSites.reserve(CallSiteIds.size());
   for (memprof::CallStackId CSId : CallSiteIds)
     Record.CallSites.push_back(Callback(CSId));
 
