@@ -70,6 +70,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_macros_float16_macros",
+    hdrs = ["include/llvm-libc-macros/float16-macros.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_stdint_macros",
     hdrs = ["include/llvm-libc-macros/stdint-macros.h"],
 )
@@ -195,6 +200,7 @@ libc_support_library(
         ":__support_macros_properties_cpu_features",
         ":__support_macros_properties_os",
         ":hdr_float_macros",
+        ":llvm_libc_macros_float16_macros",
         ":llvm_libc_types_float128",
     ],
 )
