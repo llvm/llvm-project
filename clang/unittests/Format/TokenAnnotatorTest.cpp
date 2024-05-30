@@ -2914,6 +2914,11 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[5], BK_Block);
   EXPECT_BRACE_KIND(Tokens[6], BK_Block);
 
+  Tokens = annotate("struct Foo<int>::Bar {};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[7], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+
   Tokens = annotate("struct Foo<int> : Base {};");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[7], BK_Block);
