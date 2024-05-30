@@ -15,10 +15,12 @@ using LIBC_NAMESPACE::testing::TestOptions;
 namespace {
 
 // A poor-man's getopt_long.
-// Run unit tests with --gtest_color=no to disable printing colors. Other
-// command line flags starting with --gtest_ are ignored. Otherwise, the last
-// command line arg is used as a test filter, if command line args are
-// specified.
+// Run unit tests with --gtest_color=no to disable printing colors, or
+// --gtest_print_time to print timings in milliseconds only (as GTest does, so
+// external tools such as Android's atest may expect that format to parse the
+// output). Other command line flags starting with --gtest_ are ignored.
+// Otherwise, the last command line arg is used as a test filter, if command
+// line args are specified.
 TestOptions parseOptions(int argc, char **argv) {
   TestOptions Options;
 
