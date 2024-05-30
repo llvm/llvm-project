@@ -3032,7 +3032,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
       TemplateNameKind TNK =
           Actions.ActOnTemplateName(getCurScope(), SS, *TemplateKWLoc, Result,
                                     ObjectType, EnteringContext, Template,
-                                    /*AllowInjectedClassName*/ true);
+                                    /*AllowInjectedClassName=*/true);
       if (TNK == TNK_Non_template)
         return true;
 
