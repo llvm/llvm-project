@@ -3097,7 +3097,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     buildDependData(targetOp.getDepends(), targetOp.getDependVars(),
                     moduleTranslation, dds);
 
-  builder.restoreIP(moduleTranslation.getOpenMPBuilder()->newCreateTarget(
+  builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(
       ompLoc, allocaIP, builder.saveIP(), entryInfo, defaultValTeams,
       defaultValThreads, kernelInput, genMapInfoCB, bodyCB, argAccessorCB,
       dds));

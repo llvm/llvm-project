@@ -2249,15 +2249,8 @@ public:
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param ArgAccessorFuncCB Callback that will generate accessors
   /// instructions for passed in target arguments where neccessary
-
-  InsertPointTy newCreateTarget(
-      const LocationDescription &Loc, OpenMPIRBuilder::InsertPointTy AllocaIP,
-      OpenMPIRBuilder::InsertPointTy CodeGenIP,
-      TargetRegionEntryInfo &EntryInfo, int32_t NumTeams, int32_t NumThreads,
-      SmallVectorImpl<Value *> &Inputs, GenMapInfoCallbackTy GenMapInfoCB,
-      TargetBodyGenCallbackTy BodyGenCB,
-      TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
-      SmallVector<DependData> Dependencies = {});
+  /// \param Dependencies A vector of DependData objects that carry
+  // dependency information as passed in the depend clause
   InsertPointTy createTarget(const LocationDescription &Loc,
                              OpenMPIRBuilder::InsertPointTy AllocaIP,
                              OpenMPIRBuilder::InsertPointTy CodeGenIP,
@@ -2266,7 +2259,8 @@ public:
                              SmallVectorImpl<Value *> &Inputs,
                              GenMapInfoCallbackTy GenMapInfoCB,
                              TargetBodyGenCallbackTy BodyGenCB,
-                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB);
+                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+                             SmallVector<DependData> Dependencies = {});
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
