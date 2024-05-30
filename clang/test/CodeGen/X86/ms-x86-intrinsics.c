@@ -63,6 +63,82 @@ unsigned __int64 test__emulu(unsigned int a, unsigned int b) {
 // CHECK: [[RES:%[0-9]+]] = mul nuw i64 [[Y]], [[X]]
 // CHECK: ret i64 [[RES]]
 
+
+int test_inp(unsigned short port) {
+  return _inp(port);
+}
+// CHECK-I386-LABEL: define dso_local i32 @test_inp(
+// CHECK-I386-SAME: i16 noundef zeroext [[PORT:%.*]])
+// CHECK-I386-NEXT:  entry:
+// CHECK-I386-NEXT:    [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:b}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-I386-NEXT:    ret i32 [[TMP0]]
+//
+// CHECK-X64-LABEL: define dso_local i32 @test_inp(
+// CHECK-X64-SAME: i16 noundef [[PORT:%.*]])
+// CHECK-X64-NEXT:  entry:
+// CHECK-X64-NEXT:    [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:b}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-X64-NEXT:    ret i32 [[TMP0]]
+
+unsigned short test_inpw(unsigned short port) {
+  return _inpw(port);
+}
+// CHECK-I386-LABEL: define dso_local zeroext i16 @test_inpw(
+// CHECK-I386-SAME: i16 noundef zeroext [[PORT:%.*]])
+// CHECK-I386-NEXT:  entry:
+// CHECK-I386-NEXT:    [[TMP0:%.*]] = tail call i16 asm sideeffect "inb ${1:w}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-I386-NEXT:    ret i16 [[TMP0]]
+//
+// CHECK-X64-LABEL: define dso_local i16 @test_inpw(
+// CHECK-X64-SAME: i16 noundef [[PORT:%.*]])
+// CHECK-X64-NEXT:  entry:
+// CHECK-X64-NEXT:    [[TMP0:%.*]] = tail call i16 asm sideeffect "inb ${1:w}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-X64-NEXT:    ret i16 [[TMP0]]
+
+unsigned long test_inpd(unsigned short port) {
+  return _inpd(port);
+}
+// CHECK-I386-LABEL: define dso_local i32 @test_inpd(
+// CHECK-I386-SAME: i16 noundef zeroext [[PORT:%.*]])
+// CHECK-I386-NEXT:  entry:
+// CHECK-I386-NEXT:    [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:k}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-I386-NEXT:    ret i32 [[TMP0]]
+//
+// CHECK-X64-LABEL: define dso_local i32 @test_inpd(
+// CHECK-X64-SAME: i16 noundef [[PORT:%.*]])
+// CHECK-X64-NEXT:  entry:
+// CHECK-X64-NEXT:    [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:k}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-X64-NEXT:    ret i32 [[TMP0]]
+
+int test_inp2(unsigned short port) {
+  return inp(port);
+}
+// CHECK-I386-LABEL: define dso_local i32 @test_inp2(
+// CHECK-I386-SAME: i16 noundef zeroext [[PORT:%.*]])
+// CHECK-I386-NEXT:  entry:
+// CHECK-I386-NEXT:    [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:b}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-I386-NEXT:    ret i32 [[TMP0]]
+//
+// CHECK-X64-LABEL: define dso_local i32 @test_inp2(
+// CHECK-X64-SAME: i16 noundef [[PORT:%.*]])
+// CHECK-X64-NEXT:  entry:
+// CHECK-X64-NEXT:    [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:b}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-X64-NEXT:    ret i32 [[TMP0]]
+
+unsigned short test_inpw2(unsigned short port) {
+  return inpw(port);
+}
+// CHECK-I386-LABEL: define dso_local zeroext i16 @test_inpw2(
+// CHECK-I386-SAME: i16 noundef zeroext [[PORT:%.*]])
+// CHECK-I386-NEXT:  entry:
+// CHECK-I386-NEXT:    [[TMP0:%.*]] = tail call i16 asm sideeffect "inb ${1:w}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-I386-NEXT:    ret i16 [[TMP0]]
+//
+// CHECK-X64-LABEL: define dso_local i16 @test_inpw2(
+// CHECK-X64-SAME: i16 noundef [[PORT:%.*]])
+// CHECK-X64-NEXT:  entry:
+// CHECK-X64-NEXT:    [[TMP0:%.*]] = tail call i16 asm sideeffect "inb ${1:w}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-X64-NEXT:    ret i16 [[TMP0]]
+
 #if defined(__x86_64__)
 
 char test__readgsbyte(unsigned long Offset) {
