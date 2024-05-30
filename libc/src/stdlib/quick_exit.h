@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QUICK_EXIT_H
 #define LLVM_LIBC_SRC_STDLIB_QUICK_EXIT_H
 
-
 namespace LIBC_NAMESPACE {
 
 [[noreturn]] void quick_exit(int status);
