@@ -77,6 +77,12 @@ def any_fma_nsz : PatFrag<(ops node:$rs1, node:$rs2, node:$rs3),
                           (any_fma node:$rs1, node:$rs2, node:$rs3), [{
   return N->getFlags().hasNoSignedZeros();
 }]>;
+
+def fma_mode_nsz : PatFrag<(ops node:$rs1, node:$rs2, node:$rs3, node:$rm),
+                           (fma_mode node:$rs1, node:$rs2, node:$rs3, node:$rm), [{
+  return N->getFlags().hasNoSignedZeros();
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -513,6 +519,18 @@ multiclass PatFprFprDynFrm_m<SDPatternOperator OpNode, RVInstRFrm Inst,
                                    Ext.PrimaryTy, Ext.PrimaryVT>;
 }
 
+class PatFprFprModeFrm<SDPatternOperator OpNode, RVInstRFrm Inst,
+                       DAGOperand RegTy, ValueType vt>
+    : Pat<(OpNode (vt RegTy:$rs1), (vt RegTy:$rs2), (XLenVT timm:$rm)),
+          (Inst $rs1, $rs2, $rm)>;
+multiclass PatFprFprModeFrm_m<SDPatternOperator OpNode, RVInstRFrm Inst,
+                             ExtInfo Ext> {
+  let Predicates = Ext.Predicates in
+  def Ext.Suffix : PatFprFprModeFrm<OpNode,
+                                    !cast<RVInstRFrm>(Inst#Ext.Suffix),
+                                    Ext.PrimaryTy, Ext.PrimaryVT>;
+}
+
 /// Float conversion operations
 
 // [u]int32<->float conversion patterns must be gated on IsRV32 or IsRV64, so
@@ -526,8 +544,17 @@ foreach Ext = FExts in {
   defm : PatFprFprDynFrm_m<any_fdiv, FDIV_S, Ext>;
 }
 
+foreach Ext = FExts in {
+  defm : PatFprFprModeFrm_m<fadd_mode, FADD_S, Ext>;
+  defm : PatFprFprModeFrm_m<fsub_mode, FSUB_S, Ext>;
+  defm : PatFprFprModeFrm_m<fmul_mode, FMUL_S, Ext>;
+  defm : PatFprFprModeFrm_m<fdiv_mode, FDIV_S, Ext>;
+}
+
 let Predicates = [HasStdExtF] in {
 def : Pat<(any_fsqrt FPR32:$rs1), (FSQRT_S FPR32:$rs1, FRM_DYN)>;
+def : Pat<(fsqrt_mode FPR32:$rs1, (XLenVT timm:$rm)),
+          (FSQRT_S FPR32:$rs1, frmarg:$rm)>;
 
 def : Pat<(fneg FPR32:$rs1), (FSGNJN_S $rs1, $rs1)>;
 def : Pat<(fabs FPR32:$rs1), (FSGNJX_S $rs1, $rs1)>;
@@ -537,6 +564,8 @@ def : Pat<(riscv_fclass FPR32:$rs1), (FCLASS_S $rs1)>;
 
 let Predicates = [HasStdExtZfinx] in {
 def : Pat<(any_fsqrt FPR32INX:$rs1), (FSQRT_S_INX FPR32INX:$rs1, FRM_DYN)>;
+def : Pat<(fsqrt_mode FPR32INX:$rs1, (XLenVT timm:$rm)),
+          (FSQRT_S_INX FPR32INX:$rs1, frmarg:$rm)>;
 
 def : Pat<(fneg FPR32INX:$rs1), (FSGNJN_S_INX $rs1, $rs1)>;
 def : Pat<(fabs FPR32INX:$rs1), (FSGNJX_S_INX $rs1, $rs1)>;
@@ -555,22 +584,33 @@ def : Pat<(fcopysign FPR32:$rs1, (fneg FPR32:$rs2)), (FSGNJN_S $rs1, $rs2)>;
 // fmadd: rs1 * rs2 + rs3
 def : Pat<(any_fma FPR32:$rs1, FPR32:$rs2, FPR32:$rs3),
           (FMADD_S $rs1, $rs2, $rs3, FRM_DYN)>;
+def : Pat<(fma_mode FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, (XLenVT timm:$rm)),
+          (FMADD_S $rs1, $rs2, $rs3, frmarg:$rm)>;
 
 // fmsub: rs1 * rs2 - rs3
 def : Pat<(any_fma FPR32:$rs1, FPR32:$rs2, (fneg FPR32:$rs3)),
           (FMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, FRM_DYN)>;
+def : Pat<(fma_mode FPR32:$rs1, FPR32:$rs2, (fneg FPR32:$rs3),
+                    (XLenVT timm:$rm)),
+          (FMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, frmarg:$rm)>;
 
 // fnmsub: -rs1 * rs2 + rs3
 def : Pat<(any_fma (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3),
           (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, FRM_DYN)>;
+def : Pat<(fma_mode (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3, (XLenVT timm:$rm)),
+          (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, frmarg:$rm)>;
 
 // fnmadd: -rs1 * rs2 - rs3
 def : Pat<(any_fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
           (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, FRM_DYN)>;
+def : Pat<(fma_mode (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3), (XLenVT timm:$rm)),
+          (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, frmarg:$rm)>;
 
 // fnmadd: -(rs1 * rs2 + rs3) (the nsz flag on the FMA)
 def : Pat<(fneg (any_fma_nsz FPR32:$rs1, FPR32:$rs2, FPR32:$rs3)),
           (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, FRM_DYN)>;
+def : Pat<(fneg (fma_mode_nsz FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, (XLenVT timm:$rm))),
+          (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, frmarg:$rm)>;
 } // Predicates = [HasStdExtF]
 
 let Predicates = [HasStdExtZfinx] in {
@@ -579,22 +619,32 @@ def : Pat<(fcopysign FPR32INX:$rs1, (fneg FPR32INX:$rs2)), (FSGNJN_S_INX $rs1, $
 // fmadd: rs1 * rs2 + rs3
 def : Pat<(any_fma FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3),
           (FMADD_S_INX $rs1, $rs2, $rs3, FRM_DYN)>;
+def : Pat<(fma_mode FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3, (XLenVT timm:$rm)),
+          (FMADD_S_INX $rs1, $rs2, $rs3, frmarg:$rm)>;
 
 // fmsub: rs1 * rs2 - rs3
 def : Pat<(any_fma FPR32INX:$rs1, FPR32INX:$rs2, (fneg FPR32INX:$rs3)),
           (FMSUB_S_INX FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3, FRM_DYN)>;
+def : Pat<(fma_mode FPR32INX:$rs1, FPR32INX:$rs2, (fneg FPR32INX:$rs3), (XLenVT timm:$rm)),
+          (FMSUB_S_INX FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3, frmarg:$rm)>;
 
 // fnmsub: -rs1 * rs2 + rs3
 def : Pat<(any_fma (fneg FPR32INX:$rs1), FPR32INX:$rs2, FPR32INX:$rs3),
           (FNMSUB_S_INX FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3, FRM_DYN)>;
+def : Pat<(fma_mode (fneg FPR32INX:$rs1), FPR32INX:$rs2, FPR32INX:$rs3, (XLenVT timm:$rm)),
+          (FNMSUB_S_INX FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3, frmarg:$rm)>;
 
 // fnmadd: -rs1 * rs2 - rs3
 def : Pat<(any_fma (fneg FPR32INX:$rs1), FPR32INX:$rs2, (fneg FPR32INX:$rs3)),
           (FNMADD_S_INX FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3, FRM_DYN)>;
+def : Pat<(fma_mode (fneg FPR32INX:$rs1), FPR32INX:$rs2, (fneg FPR32INX:$rs3), (XLenVT timm:$rm)),
+          (FNMADD_S_INX FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3, frmarg:$rm)>;
 
 // fnmadd: -(rs1 * rs2 + rs3) (the nsz flag on the FMA)
 def : Pat<(fneg (any_fma_nsz FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3)),
           (FNMADD_S_INX FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3, FRM_DYN)>;
+def : Pat<(fneg (fma_mode_nsz FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3, (XLenVT timm:$rm))),
+          (FNMADD_S_INX FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3, frmarg:$rm)>;
 } // Predicates = [HasStdExtZfinx]
 
 // The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
@@ -717,6 +767,12 @@ def : Pat<(i32 (any_lround FPR32:$rs1)), (FCVT_W_S $rs1, FRM_RMM)>;
 // [u]int->float. Match GCC and default to using dynamic rounding mode.
 def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_S_W $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_S_WU $rs1, FRM_DYN)>;
+
+// [u]int->float using static rounding mode.
+def : Pat<(sint_to_fp_mode (i32 GPR:$rs1), (XLenVT timm:$rm)),
+          (FCVT_S_W $rs1, frmarg:$rm)>;
+def : Pat<(uint_to_fp_mode (i32 GPR:$rs1), (XLenVT timm:$rm)),
+          (FCVT_S_WU $rs1, frmarg:$rm)>;
 } // Predicates = [HasStdExtF]
 
 let Predicates = [HasStdExtZfinx] in {
@@ -737,6 +793,12 @@ def : Pat<(i32 (any_lround FPR32INX:$rs1)), (FCVT_W_S_INX $rs1, FRM_RMM)>;
 // [u]int->float. Match GCC and default to using dynamic rounding mode.
 def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_S_W_INX $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_S_WU_INX $rs1, FRM_DYN)>;
+
+// [u]int->float using static rounding mode.
+def : Pat<(sint_to_fp_mode (i32 GPR:$rs1), (XLenVT timm:$rm)),
+          (FCVT_S_W_INX $rs1, frmarg:$rm)>;
+def : Pat<(uint_to_fp_mode (i32 GPR:$rs1), (XLenVT timm:$rm)),
+          (FCVT_S_WU_INX $rs1, frmarg:$rm)>;
 } // Predicates = [HasStdExtZfinx]
 
 let Predicates = [HasStdExtF, IsRV64] in {
@@ -771,6 +833,16 @@ def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_S_W $rs1, FRM_D
 def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_S_WU $rs1, FRM_DYN)>;
 def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_S_L $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_S_LU $rs1, FRM_DYN)>;
+
+// [u]int->fp using static rounding mode.
+def : Pat<(sint_to_fp_mode (i64 (sexti32 (i64 GPR:$rs1))), (i64 timm:$rm)),
+          (FCVT_S_W $rs1, frmarg:$rm)>;
+def : Pat<(uint_to_fp_mode (i64 (zexti32 (i64 GPR:$rs1))), (i64 timm:$rm)),
+          (FCVT_S_WU $rs1, frmarg:$rm)>;
+def : Pat<(sint_to_fp_mode (i64 GPR:$rs1), (i64 timm:$rm)),
+          (FCVT_S_L $rs1, frmarg:$rm)>;
+def : Pat<(uint_to_fp_mode (i64 GPR:$rs1), (i64 timm:$rm)),
+          (FCVT_S_LU $rs1, frmarg:$rm)>;
 } // Predicates = [HasStdExtF, IsRV64]
 
 let Predicates = [HasStdExtZfinx, IsRV64] in {
@@ -805,4 +877,14 @@ def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_S_W_INX $rs1, F
 def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_S_WU_INX $rs1, FRM_DYN)>;
 def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_S_L_INX $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_S_LU_INX $rs1, FRM_DYN)>;
+
+// [u]int->fp using static rounding mode.
+def : Pat<(sint_to_fp_mode (i64 (sexti32 (i64 GPR:$rs1))), (i64 timm:$rm)),
+          (FCVT_S_W_INX $rs1, frmarg:$rm)>;
+def : Pat<(uint_to_fp_mode (i64 (zexti32 (i64 GPR:$rs1))), (i64 timm:$rm)),
+          (FCVT_S_WU_INX $rs1, frmarg:$rm)>;
+def : Pat<(sint_to_fp_mode (i64 GPR:$rs1), (i64 timm:$rm)),
+          (FCVT_S_L_INX $rs1, frmarg:$rm)>;
+def : Pat<(uint_to_fp_mode (i64 GPR:$rs1), (i64 timm:$rm)),
+          (FCVT_S_LU_INX $rs1, frmarg:$rm)>;
 } // Predicates = [HasStdExtZfinx, IsRV64]

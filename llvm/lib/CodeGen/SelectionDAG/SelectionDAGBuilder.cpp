@@ -8131,15 +8131,73 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     const ConstrainedFPIntrinsic &FPI) {
   SDLoc sdl = getCurSDLoc();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), FPI.getType());
+  fp::ExceptionBehavior EB = *FPI.getExceptionBehavior();
+  std::optional<RoundingMode> RM = FPI.getRoundingMode();
+
+  SDNodeFlags Flags;
+  if (EB == fp::ExceptionBehavior::ebIgnore)
+    Flags.setNoFPExcept(true);
+
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&FPI))
+    Flags.copyFMF(*FPOp);
+
+  bool UseStaticRounding = EB == fp::ExceptionBehavior::ebIgnore && RM &&
+                           *RM != RoundingMode::Dynamic &&
+                           TLI.isStaticRoundingSupportedFor(FPI);
+  unsigned Opcode = 0;
+  SmallVector<SDValue, 4> Opers;
+  for (unsigned I = 0, E = FPI.getNonMetadataArgCount(); I != E; ++I)
+    Opers.push_back(getValue(FPI.getArgOperand(I)));
+
+  if (UseStaticRounding) {
+    switch (FPI.getIntrinsicID()) {
+    case Intrinsic::experimental_constrained_fadd:
+      Opcode = ISD::FADD_MODE;
+      break;
+    case Intrinsic::experimental_constrained_fsub:
+      Opcode = ISD::FSUB_MODE;
+      break;
+    case Intrinsic::experimental_constrained_fmul:
+      Opcode = ISD::FMUL_MODE;
+      break;
+    case Intrinsic::experimental_constrained_fdiv:
+      Opcode = ISD::FDIV_MODE;
+      break;
+    case Intrinsic::experimental_constrained_sqrt:
+      Opcode = ISD::FSQRT_MODE;
+      break;
+    case Intrinsic::experimental_constrained_fma:
+      Opcode = ISD::FMA_MODE;
+      break;
+    case Intrinsic::experimental_constrained_sitofp:
+      Opcode = ISD::SINT_TO_FP_MODE;
+      break;
+    case Intrinsic::experimental_constrained_uitofp:
+      Opcode = ISD::UINT_TO_FP_MODE;
+      break;
+    case Intrinsic::experimental_constrained_fptrunc:
+      Opcode = ISD::FP_ROUND_MODE;
+      break;
+    }
+    if (Opcode) {
+      int MachineRM = TLI.getMachineRoundingMode(*RM);
+      assert(MachineRM >= 0 && "Unsupported rounding mode");
+      EVT RMType = TLI.getTypeToTransformTo(*DAG.getContext(), MVT::i32);
+      Opers.push_back(DAG.getConstant(static_cast<uint64_t>(MachineRM), sdl,
+                                      RMType, true));
+      SDValue Result = DAG.getNode(Opcode, sdl, VT, Opers, Flags);
+      setValue(&FPI, Result);
+      return;
+    }
+  }
 
   // We do not need to serialize constrained FP intrinsics against
   // each other or against (nonvolatile) loads, so they can be
   // chained like loads.
   SDValue Chain = DAG.getRoot();
-  SmallVector<SDValue, 4> Opers;
-  Opers.push_back(Chain);
-  for (unsigned I = 0, E = FPI.getNonMetadataArgCount(); I != E; ++I)
-    Opers.push_back(getValue(FPI.getArgOperand(I)));
+  Opers.insert(Opers.begin(), Chain);
 
   auto pushOutChain = [this](SDValue Result, fp::ExceptionBehavior EB) {
     assert(Result.getNode()->getNumValues() == 2);
@@ -8167,19 +8225,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     }
   };
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT VT = TLI.getValueType(DAG.getDataLayout(), FPI.getType());
   SDVTList VTs = DAG.getVTList(VT, MVT::Other);
-  fp::ExceptionBehavior EB = *FPI.getExceptionBehavior();
-
-  SDNodeFlags Flags;
-  if (EB == fp::ExceptionBehavior::ebIgnore)
-    Flags.setNoFPExcept(true);
-
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&FPI))
-    Flags.copyFMF(*FPOp);
-
-  unsigned Opcode;
   switch (FPI.getIntrinsicID()) {
   default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \

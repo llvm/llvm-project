@@ -206,6 +206,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FNEG:                       return "fneg";
   case ISD::FSQRT:                      return "fsqrt";
   case ISD::STRICT_FSQRT:               return "strict_fsqrt";
+  case ISD::FSQRT_MODE:                 return "fsqrt_mode";
   case ISD::FCBRT:                      return "fcbrt";
   case ISD::FSIN:                       return "fsin";
   case ISD::STRICT_FSIN:                return "strict_fsin";
@@ -284,14 +285,19 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FSHR:                       return "fshr";
   case ISD::FADD:                       return "fadd";
   case ISD::STRICT_FADD:                return "strict_fadd";
+  case ISD::FADD_MODE:                  return "fadd_mode";
   case ISD::FSUB:                       return "fsub";
   case ISD::STRICT_FSUB:                return "strict_fsub";
+  case ISD::FSUB_MODE:                  return "fsub_mode";
   case ISD::FMUL:                       return "fmul";
   case ISD::STRICT_FMUL:                return "strict_fmul";
+  case ISD::FMUL_MODE:                  return "fmul_mode";
   case ISD::FDIV:                       return "fdiv";
   case ISD::STRICT_FDIV:                return "strict_fdiv";
+  case ISD::FDIV_MODE:                  return "fdiv_mode";
   case ISD::FMA:                        return "fma";
   case ISD::STRICT_FMA:                 return "strict_fma";
+  case ISD::FMA_MODE:                   return "fma_mode";
   case ISD::FMAD:                       return "fmad";
   case ISD::FREM:                       return "frem";
   case ISD::STRICT_FREM:                return "strict_frem";
@@ -382,13 +388,16 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::TRUNCATE:                   return "truncate";
   case ISD::FP_ROUND:                   return "fp_round";
   case ISD::STRICT_FP_ROUND:            return "strict_fp_round";
+  case ISD::FP_ROUND_MODE:              return "fp_round_mode";
   case ISD::FP_EXTEND:                  return "fp_extend";
   case ISD::STRICT_FP_EXTEND:           return "strict_fp_extend";
 
   case ISD::SINT_TO_FP:                 return "sint_to_fp";
   case ISD::STRICT_SINT_TO_FP:          return "strict_sint_to_fp";
+  case ISD::SINT_TO_FP_MODE:            return "sint_to_fp_mode";
   case ISD::UINT_TO_FP:                 return "uint_to_fp";
   case ISD::STRICT_UINT_TO_FP:          return "strict_uint_to_fp";
+  case ISD::UINT_TO_FP_MODE:            return "uint_to_fp_mode";
   case ISD::FP_TO_SINT:                 return "fp_to_sint";
   case ISD::STRICT_FP_TO_SINT:          return "strict_fp_to_sint";
   case ISD::FP_TO_UINT:                 return "fp_to_uint";

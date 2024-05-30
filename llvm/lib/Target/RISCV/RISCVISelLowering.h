@@ -535,6 +535,11 @@ public:
 
   bool softPromoteHalfType() const override { return true; }
 
+  bool isStaticRoundingSupportedFor(const Instruction &I) const override {
+    return true;
+  }
+  int getMachineRoundingMode(RoundingMode RM) const override;
+
   /// Return the register type for a given MVT, ensuring vectors are treated
   /// as a series of gpr sized integers.
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,

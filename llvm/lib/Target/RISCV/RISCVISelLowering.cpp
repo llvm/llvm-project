@@ -434,6 +434,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::STRICT_FSUB,    ISD::STRICT_FMUL,   ISD::STRICT_FDIV,
       ISD::STRICT_FSQRT,   ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS};
 
+  static const unsigned FPStaticRoundNodes[] = {ISD::FADD_MODE, ISD::FSUB_MODE,
+                                                ISD::FMUL_MODE, ISD::FDIV_MODE,
+                                                ISD::FSQRT,     ISD::FMA_MODE};
+
   static const ISD::CondCode FPCCToExpand[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,
       ISD::SETUGE, ISD::SETULT, ISD::SETULE, ISD::SETUNE, ISD::SETGT,
@@ -526,6 +530,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtFOrZfinx()) {
     setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
+    setOperationAction(FPStaticRoundNodes, MVT::f32, Legal);
     setOperationAction(FPRndMode, MVT::f32,
                        Subtarget.hasStdExtZfa() ? Legal : Custom);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
@@ -21425,6 +21430,23 @@ bool RISCVTargetLowering::preferScalarizeSplat(SDNode *N) const {
   if (Opc == ISD::ZERO_EXTEND || Opc == ISD::SIGN_EXTEND)
     return false;
   return true;
+}
+
+int RISCVTargetLowering::getMachineRoundingMode(RoundingMode RM) const {
+  switch (RM) {
+  case RoundingMode::TowardZero:
+    return RISCVFPRndMode::RTZ;
+  case RoundingMode::NearestTiesToEven:
+    return RISCVFPRndMode::RNE;
+  case RoundingMode::TowardNegative:
+    return RISCVFPRndMode::RDN;
+  case RoundingMode::TowardPositive:
+    return RISCVFPRndMode::RUP;
+  case RoundingMode::NearestTiesToAway:
+    return RISCVFPRndMode::RMM;
+  default:
+    return -1;
+  }
 }
 
 static Value *useTpOffset(IRBuilderBase &IRB, unsigned Offset) {
