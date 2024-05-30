@@ -381,4 +381,111 @@ t4:                                                ; preds = %1
   ret void
 }
 
+define ptr @loop_repeated_scev_icmp_zero(ptr %first, ptr %end, i8 %data, i64 %num) {
+; CHECK-LABEL: @loop_repeated_scev_icmp_zero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[FIRST:%.*]], i64 3
+; CHECK-NEXT:    br label [[T1:%.*]]
+; CHECK:       t1:
+; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[T17:%.*]] ], [ [[NUM:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP1:%.*]], [[T17]] ], [ [[SCEVGEP]], [[ENTRY]] ]
+; CHECK-NEXT:    [[T2:%.*]] = phi ptr [ [[T18:%.*]], [[T17]] ], [ [[FIRST]], [[ENTRY]] ]
+; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 -3
+; CHECK-NEXT:    [[T3:%.*]] = load i8, ptr [[SCEVGEP9]], align 1
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i8 [[T3]], [[DATA:%.*]]
+; CHECK-NEXT:    br i1 [[T4]], label [[T20:%.*]], label [[T5:%.*]]
+; CHECK:       t5:
+; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 -2
+; CHECK-NEXT:    [[T7:%.*]] = load i8, ptr [[SCEVGEP8]], align 1
+; CHECK-NEXT:    [[T8:%.*]] = icmp eq i8 [[T7]], [[DATA]]
+; CHECK-NEXT:    br i1 [[T8]], label [[T21:%.*]], label [[T9:%.*]]
+; CHECK:       t9:
+; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 -1
+; CHECK-NEXT:    [[T11:%.*]] = load i8, ptr [[SCEVGEP10]], align 1
+; CHECK-NEXT:    [[T12:%.*]] = icmp eq i8 [[T11]], [[DATA]]
+; CHECK-NEXT:    br i1 [[T12]], label [[T23:%.*]], label [[T13:%.*]]
+; CHECK:       t13:
+; CHECK-NEXT:    [[T15:%.*]] = load i8, ptr [[LSR_IV]], align 1
+; CHECK-NEXT:    [[T16:%.*]] = icmp eq i8 [[T15]], [[DATA]]
+; CHECK-NEXT:    br i1 [[T16]], label [[T25:%.*]], label [[T17]]
+; CHECK:       t17:
+; CHECK-NEXT:    [[T18]] = getelementptr inbounds i8, ptr [[T2]], i64 4
+; CHECK-NEXT:    [[SCEVGEP1]] = getelementptr i8, ptr [[LSR_IV]], i64 4
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV3]], -4
+; CHECK-NEXT:    [[LSR_IV_NEXT4:%.*]] = inttoptr i64 [[LSR_IV_NEXT]] to ptr
+; CHECK-NEXT:    [[T19:%.*]] = icmp eq ptr [[LSR_IV_NEXT4]], null
+; CHECK-NEXT:    br i1 [[T19]], label [[T20]], label [[T1]]
+; CHECK:       t20:
+; CHECK-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi ptr [ [[LSR_IV]], [[T17]] ], [ [[LSR_IV]], [[T1]] ]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[LSR_IV_LCSSA]], i64 -3
+; CHECK-NEXT:    br label [[T27:%.*]]
+; CHECK:       t21:
+; CHECK-NEXT:    [[T22:%.*]] = getelementptr inbounds i8, ptr [[T2]], i64 1
+; CHECK-NEXT:    [[SCEVGEP12:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 -2
+; CHECK-NEXT:    br label [[T27]]
+; CHECK:       t23:
+; CHECK-NEXT:    [[T24:%.*]] = getelementptr inbounds i8, ptr [[T2]], i64 2
+; CHECK-NEXT:    [[SCEVGEP11:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 -1
+; CHECK-NEXT:    br label [[T27]]
+; CHECK:       t25:
+; CHECK-NEXT:    [[LSR_IV_LCSSA7:%.*]] = phi ptr [ [[LSR_IV]], [[T13]] ]
+; CHECK-NEXT:    [[T26:%.*]] = getelementptr inbounds i8, ptr [[T2]], i64 3
+; CHECK-NEXT:    br label [[T27]]
+; CHECK:       t27:
+; CHECK-NEXT:    [[T28:%.*]] = phi ptr [ [[SCEVGEP2]], [[T20]] ], [ [[SCEVGEP12]], [[T21]] ], [ [[SCEVGEP11]], [[T23]] ], [ [[LSR_IV_LCSSA7]], [[T25]] ]
+; CHECK-NEXT:    ret ptr [[T28]]
+;
+entry:
+  %cmp = getelementptr i8, ptr %first, i64 %num
+  br label %t1
+
+t1:
+  %t2 = phi ptr [ %t18, %t17 ], [ %first, %entry ]
+  %t3 = load i8, ptr %t2, align 1
+  %t4 = icmp eq i8 %t3, %data
+  br i1 %t4, label %t20, label %t5
+
+t5:                                               ; preds = %t1
+  %t6 = getelementptr inbounds i8, ptr %t2, i64 1
+  %t7 = load i8, ptr %t6, align 1
+  %t8 = icmp eq i8 %t7, %data
+  br i1 %t8, label %t21, label %t9
+
+t9:                                               ; preds = %t5
+  %t10 = getelementptr inbounds i8, ptr %t2, i64 2
+  %t11 = load i8, ptr %t10, align 1
+  %t12 = icmp eq i8 %t11, %data
+  br i1 %t12, label %t23, label %t13
+
+t13:                                               ; preds = %t9
+  %t14 = getelementptr inbounds i8, ptr %t2, i64 3
+  %t15 = load i8, ptr %t14, align 1
+  %t16 = icmp eq i8 %t15, %data
+  br i1 %t16, label %t25, label %t17
+
+t17:                                               ; preds = %t13
+  %t18 = getelementptr inbounds i8, ptr %t2, i64 4
+  %t19 = icmp eq ptr %t18, %cmp
+  br i1 %t19, label %t20, label %t1
+
+t20:
+  br label %t27
+
+t21:
+  %t22 = getelementptr inbounds i8, ptr %t2, i64 1
+  br label %t27
+
+t23:
+  %t24 = getelementptr inbounds i8, ptr %t2, i64 2
+  br label %t27
+
+t25:
+  %t26 = getelementptr inbounds i8, ptr %t2, i64 3
+  br label %t27
+
+t27:
+  %t28 = phi ptr [ %t2, %t20 ], [ %t6, %t21 ], [ %t10, %t23 ], [ %t14, %t25 ]
+  ret ptr %t28
+}
+
 declare i64 @llvm.vscale.i64()
