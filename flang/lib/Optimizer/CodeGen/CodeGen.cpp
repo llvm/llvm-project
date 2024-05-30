@@ -428,7 +428,8 @@ struct BoxRankOpConversion : public fir::FIROpConversion<fir::BoxRankOp> {
     mlir::Value a = adaptor.getOperands()[0];
     auto loc = boxrank.getLoc();
     mlir::Type ty = convertType(boxrank.getType());
-    TypePair boxTyPair = getBoxTypePair(boxrank.getVal().getType());
+    TypePair boxTyPair =
+        getBoxTypePair(fir::unwrapRefType(boxrank.getBox().getType()));
     mlir::Value rank = getRankFromBox(loc, boxTyPair, a, rewriter);
     mlir::Value result = integerCast(loc, rewriter, ty, rank);
     rewriter.replaceOp(boxrank, result);
