@@ -19,13 +19,13 @@ program main
         real(4) :: array_y(10)
         real(4) :: break_3
     end type scalar_array
-  
+
     type(scalar_array) :: scalar_arr1
     type(scalar_array) :: scalar_arr2
-    
+
   do i = 1, 10
     scalar_arr1%array_x(i) = i
-  end do 
+  end do
 
   !$omp target map(tofrom:scalar_arr2%array_x(3:6))
     do i = 3, 6

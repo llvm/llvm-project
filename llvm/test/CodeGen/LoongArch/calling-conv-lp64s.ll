@@ -10,7 +10,7 @@ define i64 @callee_float_in_regs(i64 %a, float %b) nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
 ; CHECK-NEXT:    move $fp, $a0
-; CHECK-NEXT:    bstrpick.d $a0, $a1, 31, 0
+; CHECK-NEXT:    move $a0, $a1
 ; CHECK-NEXT:    bl %plt(__fixsfdi)
 ; CHECK-NEXT:    add.d $a0, $fp, $a0
 ; CHECK-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload

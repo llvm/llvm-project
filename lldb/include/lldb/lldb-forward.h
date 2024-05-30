@@ -19,6 +19,8 @@ class ASTResultSynthesizer;
 class ASTStructExtractor;
 class Address;
 class AddressRange;
+class AddressRanges;
+class AddressRangeList;
 class AddressResolver;
 class ArchSpec;
 class Architecture;
@@ -308,6 +310,7 @@ template <unsigned N> class StreamBuffer;
 namespace lldb {
 
 typedef std::shared_ptr<lldb_private::ABI> ABISP;
+typedef std::unique_ptr<lldb_private::AddressRange> AddressRangeUP;
 typedef std::shared_ptr<lldb_private::Baton> BatonSP;
 typedef std::shared_ptr<lldb_private::Block> BlockSP;
 typedef std::shared_ptr<lldb_private::Breakpoint> BreakpointSP;

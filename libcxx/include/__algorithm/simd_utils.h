@@ -74,7 +74,7 @@ using __get_as_integer_type_t = typename __get_as_integer_type_impl<sizeof(_Tp)>
 // This isn't specialized for 64 byte vectors on purpose. They have the potential to significantly reduce performance
 // in mixed simd/non-simd workloads and don't provide any performance improvement for currently vectorized algorithms
 // as far as benchmarks are concerned.
-#  if defined(__AVX__)
+#  if defined(__AVX__) || defined(__MVS__)
 template <class _Tp>
 inline constexpr size_t __native_vector_size = 32 / sizeof(_Tp);
 #  elif defined(__SSE__) || defined(__ARM_NEON__)

@@ -2177,6 +2177,7 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
   E->TransformedExpressions = Record.readInt();
+  E->ExpandedToEmptyPack = Record.readInt();
   E->EllipsisLoc = readSourceLocation();
   E->RSquareLoc = readSourceLocation();
   E->SubExprs[0] = Record.readStmt();
@@ -2796,6 +2797,7 @@ void ASTStmtReader::VisitOpenACCConstructStmt(OpenACCConstructStmt *S) {
   (void)Record.readInt();
   S->Kind = Record.readEnum<OpenACCDirectiveKind>();
   S->Range = Record.readSourceRange();
+  S->DirectiveLoc = Record.readSourceLocation();
   Record.readOpenACCClauseList(S->Clauses);
 }
 

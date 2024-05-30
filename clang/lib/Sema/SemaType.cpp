@@ -3099,7 +3099,8 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
       // The 'auto' appears in the decl-specifiers; we've not finished forming
       // TypeSourceInfo for it yet.
       TemplateIdAnnotation *TemplateId = D.getDeclSpec().getRepAsTemplateId();
-      TemplateArgumentListInfo TemplateArgsInfo;
+      TemplateArgumentListInfo TemplateArgsInfo(TemplateId->LAngleLoc,
+                                                TemplateId->RAngleLoc);
       bool Invalid = false;
       if (TemplateId->LAngleLoc.isValid()) {
         ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
@@ -3256,9 +3257,13 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         Info = &SemaRef.InventedParameterInfos.back();
       } else {
         // In C++14, generic lambdas allow 'auto' in their parameters.
-        if (!SemaRef.getLangOpts().CPlusPlus14 || !Auto ||
-            Auto->getKeyword() != AutoTypeKeyword::Auto) {
-          Error = 16;
+        if (!SemaRef.getLangOpts().CPlusPlus14 && Auto &&
+            Auto->getKeyword() == AutoTypeKeyword::Auto) {
+          Error = 25; // auto not allowed in lambda parameter (before C++14)
+          break;
+        } else if (!Auto || Auto->getKeyword() != AutoTypeKeyword::Auto) {
+          Error = 16; // __auto_type or decltype(auto) not allowed in lambda
+                      // parameter
           break;
         }
         Info = SemaRef.getCurLambda();
@@ -6000,12 +6005,16 @@ namespace {
       DeclarationNameInfo DNI = DeclarationNameInfo(
           TL.getTypePtr()->getTypeConstraintConcept()->getDeclName(),
           TemplateId->TemplateNameLoc);
-      auto TN = TemplateId->Template.get();
+
+      NamedDecl *FoundDecl;
+      if (auto TN = TemplateId->Template.get();
+          UsingShadowDecl *USD = TN.getAsUsingShadowDecl())
+        FoundDecl = cast<NamedDecl>(USD);
+      else
+        FoundDecl = cast_if_present<NamedDecl>(TN.getAsTemplateDecl());
+
       auto *CR = ConceptReference::Create(
-          Context, NNS, TemplateId->TemplateKWLoc, DNI,
-          /*FoundDecl=*/TN.getKind() == TemplateName::NameKind::UsingTemplate
-              ? cast<NamedDecl>(TN.getAsUsingShadowDecl())
-              : cast_if_present<NamedDecl>(TN.getAsTemplateDecl()),
+          Context, NNS, TemplateId->TemplateKWLoc, DNI, FoundDecl,
           /*NamedDecl=*/TL.getTypePtr()->getTypeConstraintConcept(),
           ASTTemplateArgumentListInfo::Create(Context, TemplateArgsInfo));
       TL.setConceptReference(CR);
@@ -6386,6 +6395,11 @@ TypeResult Sema::ActOnTypeName(Declarator &D) {
     // Check that there are no default arguments (C++ only).
     CheckExtraCXXDefaultArguments(D);
   }
+
+  if (const AutoType *AutoT = T->getAs<AutoType>())
+    CheckConstrainedAuto(
+        AutoT,
+        TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
 
   return CreateParsedType(T, TInfo);
 }
@@ -9335,9 +9349,9 @@ BuildTypeCoupledDecls(Expr *E,
   Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
 }
 
-QualType Sema::BuildCountAttributedArrayType(QualType WrappedTy,
-                                             Expr *CountExpr) {
-  assert(WrappedTy->isIncompleteArrayType());
+QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
+                                                      Expr *CountExpr) {
+  assert(WrappedTy->isIncompleteArrayType() || WrappedTy->isPointerType());
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
   BuildTypeCoupledDecls(CountExpr, Decls);
@@ -9351,15 +9365,20 @@ QualType Sema::BuildCountAttributedArrayType(QualType WrappedTy,
 /// that expression, according to the rules in C++11
 /// [dcl.type.simple]p4 and C++11 [expr.lambda.prim]p18.
 QualType Sema::getDecltypeForExpr(Expr *E) {
-  if (E->isTypeDependent())
-    return Context.DependentTy;
 
   Expr *IDExpr = E;
   if (auto *ImplCastExpr = dyn_cast<ImplicitCastExpr>(E))
     IDExpr = ImplCastExpr->getSubExpr();
 
-  if (auto *PackExpr = dyn_cast<PackIndexingExpr>(E))
-    IDExpr = PackExpr->getSelectedExpr();
+  if (auto *PackExpr = dyn_cast<PackIndexingExpr>(E)) {
+    if (E->isInstantiationDependent())
+      IDExpr = PackExpr->getPackIdExpression();
+    else
+      IDExpr = PackExpr->getSelectedExpr();
+  }
+
+  if (E->isTypeDependent())
+    return Context.DependentTy;
 
   // C++11 [dcl.type.simple]p4:
   //   The type denoted by decltype(e) is defined as follows:

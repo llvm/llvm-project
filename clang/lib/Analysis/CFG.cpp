@@ -556,6 +556,10 @@ public:
 
 private:
   // Visitors to walk an AST and construct the CFG.
+  CFGBlock *VisitCXXDefaultArgExpr(CXXDefaultArgExpr *Default,
+                                   AddStmtChoice asc);
+  CFGBlock *VisitCXXDefaultInitExpr(CXXDefaultInitExpr *Default,
+                                    AddStmtChoice asc);
   CFGBlock *VisitInitListExpr(InitListExpr *ILE, AddStmtChoice asc);
   CFGBlock *VisitAddrLabelExpr(AddrLabelExpr *A, AddStmtChoice asc);
   CFGBlock *VisitAttributedStmt(AttributedStmt *A, AddStmtChoice asc);
@@ -2254,16 +2258,10 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
                                    asc, ExternallyDestructed);
 
     case Stmt::CXXDefaultArgExprClass:
+      return VisitCXXDefaultArgExpr(cast<CXXDefaultArgExpr>(S), asc);
+
     case Stmt::CXXDefaultInitExprClass:
-      // FIXME: The expression inside a CXXDefaultArgExpr is owned by the
-      // called function's declaration, not by the caller. If we simply add
-      // this expression to the CFG, we could end up with the same Expr
-      // appearing multiple times (PR13385).
-      //
-      // It's likewise possible for multiple CXXDefaultInitExprs for the same
-      // expression to be used in the same function (through aggregate
-      // initialization).
-      return VisitStmt(S, asc);
+      return VisitCXXDefaultInitExpr(cast<CXXDefaultInitExpr>(S), asc);
 
     case Stmt::CXXBindTemporaryExprClass:
       return VisitCXXBindTemporaryExpr(cast<CXXBindTemporaryExpr>(S), asc);
@@ -2431,6 +2429,40 @@ CFGBlock *CFGBuilder::VisitChildren(Stmt *S) {
         B = R;
   }
   return B;
+}
+
+CFGBlock *CFGBuilder::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *Arg,
+                                             AddStmtChoice asc) {
+  if (Arg->hasRewrittenInit()) {
+    if (asc.alwaysAdd(*this, Arg)) {
+      autoCreateBlock();
+      appendStmt(Block, Arg);
+    }
+    return VisitStmt(Arg->getExpr(), asc);
+  }
+
+  // We can't add the default argument if it's not rewritten because the
+  // expression inside a CXXDefaultArgExpr is owned by the called function's
+  // declaration, not by the caller, we could end up with the same expression
+  // appearing multiple times.
+  return VisitStmt(Arg, asc);
+}
+
+CFGBlock *CFGBuilder::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *Init,
+                                              AddStmtChoice asc) {
+  if (Init->hasRewrittenInit()) {
+    if (asc.alwaysAdd(*this, Init)) {
+      autoCreateBlock();
+      appendStmt(Block, Init);
+    }
+    return VisitStmt(Init->getExpr(), asc);
+  }
+
+  // We can't add the default initializer if it's not rewritten because multiple
+  // CXXDefaultInitExprs for the same sub-expression to be used in the same
+  // function (through aggregate initialization). we could end up with the same
+  // expression appearing multiple times.
+  return VisitStmt(Init, asc);
 }
 
 CFGBlock *CFGBuilder::VisitInitListExpr(InitListExpr *ILE, AddStmtChoice asc) {

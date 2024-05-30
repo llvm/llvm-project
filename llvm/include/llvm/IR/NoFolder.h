@@ -70,7 +70,7 @@ public:
     return nullptr;
   }
 
-  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+  Value *FoldCmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     return nullptr;
   }
 
@@ -128,15 +128,6 @@ public:
   Instruction *CreatePointerBitCastOrAddrSpaceCast(
       Constant *C, Type *DestTy) const override {
     return CastInst::CreatePointerBitCastOrAddrSpaceCast(C, DestTy);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Compare Instructions
-  //===--------------------------------------------------------------------===//
-
-  Instruction *CreateFCmp(CmpInst::Predicate P,
-                          Constant *LHS, Constant *RHS) const override {
-    return new FCmpInst(P, LHS, RHS);
   }
 };
 

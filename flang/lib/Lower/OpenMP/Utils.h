@@ -42,8 +42,7 @@ class AbstractConverter;
 namespace omp {
 
 using DeclareTargetCapturePair =
-    std::pair<mlir::omp::DeclareTargetCaptureClause,
-              const Fortran::semantics::Symbol &>;
+    std::pair<mlir::omp::DeclareTargetCaptureClause, const semantics::Symbol &>;
 
 // A small helper structure for keeping track of a component members MapInfoOp
 // and index data when lowering OpenMP map clauses. Keeps track of the
@@ -69,24 +68,24 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
 void addChildIndexAndMapToParent(
     const omp::Object &object,
-    std::map<const Fortran::semantics::Symbol *,
+    std::map<const semantics::Symbol *,
              llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
-    mlir::omp::MapInfoOp &mapOp, Fortran::semantics::SemanticsContext &semaCtx);
+    mlir::omp::MapInfoOp &mapOp, semantics::SemanticsContext &semaCtx);
 
 void insertChildMapInfoIntoParent(
-    Fortran::lower::AbstractConverter &converter,
-    std::map<const Fortran::semantics::Symbol *,
+    lower::AbstractConverter &converter,
+    std::map<const semantics::Symbol *,
              llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &mapSyms,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
     llvm::SmallVectorImpl<mlir::Location> *mapSymLocs);
 
-mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
+mlir::Type getLoopVarType(lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize);
 
-Fortran::semantics::Symbol *
-getIterationVariableSymbol(const Fortran::lower::pft::Evaluation &eval);
+semantics::Symbol *
+getIterationVariableSymbol(const lower::pft::Evaluation &eval);
 
 void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
@@ -94,11 +93,10 @@ void gatherFuncAndVarSyms(
 
 int64_t getCollapseValue(const List<Clause> &clauses);
 
-Fortran::semantics::Symbol *
-getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject);
+semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject);
 
 void genObjectList(const ObjectList &objects,
-                   Fortran::lower::AbstractConverter &converter,
+                   lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands);
 
 } // namespace omp

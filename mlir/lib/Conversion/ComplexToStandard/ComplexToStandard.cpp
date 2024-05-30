@@ -956,27 +956,12 @@ struct SignOpConversion : public OpConversionPattern<complex::SignOp> {
   }
 };
 
-struct TanOpConversion : public OpConversionPattern<complex::TanOp> {
-  using OpConversionPattern<complex::TanOp>::OpConversionPattern;
+template <typename Op>
+struct TanTanhOpConversion : public OpConversionPattern<Op> {
+  using OpConversionPattern<Op>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(complex::TanOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto loc = op.getLoc();
-    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
-
-    Value cos = rewriter.create<complex::CosOp>(loc, adaptor.getComplex(), fmf);
-    Value sin = rewriter.create<complex::SinOp>(loc, adaptor.getComplex(), fmf);
-    rewriter.replaceOpWithNewOp<complex::DivOp>(op, sin, cos, fmf);
-    return success();
-  }
-};
-
-struct TanhOpConversion : public OpConversionPattern<complex::TanhOp> {
-  using OpConversionPattern<complex::TanhOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(complex::TanhOp op, OpAdaptor adaptor,
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     auto loc = op.getLoc();
@@ -989,14 +974,20 @@ struct TanhOpConversion : public OpConversionPattern<complex::TanhOp> {
         b.create<complex::ReOp>(loc, elementType, adaptor.getComplex());
     Value imag =
         b.create<complex::ImOp>(loc, elementType, adaptor.getComplex());
+    Value negOne = b.create<arith::ConstantOp>(
+        elementType, b.getFloatAttr(elementType, -1.0));
+
+    if constexpr (std::is_same_v<Op, complex::TanOp>) {
+      // tan(x+yi) = -i*tanh(-y + xi)
+      std::swap(real, imag);
+      real = b.create<arith::MulFOp>(real, negOne, fmf);
+    }
 
     auto cst = [&](APFloat v) {
       return b.create<arith::ConstantOp>(elementType,
                                          b.getFloatAttr(elementType, v));
     };
     Value inf = cst(APFloat::getInf(floatSemantics));
-    Value negOne = b.create<arith::ConstantOp>(
-        elementType, b.getFloatAttr(elementType, -1.0));
     Value four = b.create<arith::ConstantOp>(elementType,
                                              b.getFloatAttr(elementType, 4.0));
     Value twoReal = b.create<arith::AddFOp>(real, real, fmf);
@@ -1052,6 +1043,12 @@ struct TanhOpConversion : public OpConversionPattern<complex::TanhOp> {
       resultReal = b.create<arith::SelectOp>(resultRealIsNaN, nan, resultReal);
       resultImag =
           b.create<arith::SelectOp>(resultImagIsZero, zero, resultImag);
+    }
+
+    if constexpr (std::is_same_v<Op, complex::TanOp>) {
+      // tan(x+yi) = -i*tanh(-y + xi)
+      std::swap(resultReal, resultImag);
+      resultImag = b.create<arith::MulFOp>(resultImag, negOne, fmf);
     }
 
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
@@ -1327,8 +1324,8 @@ void mlir::populateComplexToStandardConversionPatterns(
       SignOpConversion,
       SinOpConversion,
       SqrtOpConversion,
-      TanOpConversion,
-      TanhOpConversion,
+      TanTanhOpConversion<complex::TanOp>,
+      TanTanhOpConversion<complex::TanhOp>,
       PowOpConversion,
       RsqrtOpConversion
   >(patterns.getContext());

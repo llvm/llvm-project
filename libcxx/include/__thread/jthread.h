@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___THREAD_JTHREAD_H
 #define _LIBCPP___THREAD_JTHREAD_H
 
-#include <__availability>
 #include <__config>
 #include <__functional/invoke.h>
 #include <__stop_token/stop_source.h>

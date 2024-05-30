@@ -618,7 +618,6 @@ enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 27,
   RF_NOT_ALLOC = 1 << 26,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
-  RF_NOT_SPECIAL = 1 << 17,
   RF_LARGE_ALT = 1 << 15,
   RF_WRITE = 1 << 14,
   RF_EXEC_WRITE = 1 << 13,
@@ -630,7 +629,7 @@ enum RankFlags {
   RF_BSS = 1 << 7,
 };
 
-static unsigned getSectionRank(OutputSection &osec) {
+unsigned elf::getSectionRank(OutputSection &osec) {
   unsigned rank = osec.partition * RF_PARTITION;
 
   // We want to put section specified by -T option first, so we
@@ -643,24 +642,6 @@ static unsigned getSectionRank(OutputSection &osec) {
   // so debug info doesn't change addresses in actual code.
   if (!(osec.flags & SHF_ALLOC))
     return rank | RF_NOT_ALLOC;
-
-  if (osec.type == SHT_LLVM_PART_EHDR)
-    return rank;
-  if (osec.type == SHT_LLVM_PART_PHDR)
-    return rank | 1;
-
-  // Put .interp first because some loaders want to see that section
-  // on the first page of the executable file when loaded into memory.
-  if (osec.name == ".interp")
-    return rank | 2;
-
-  // Put .note sections at the beginning so that they are likely to be included
-  // in a truncate core file. In particular, .note.gnu.build-id, if available,
-  // can identify the object file.
-  if (osec.type == SHT_NOTE)
-    return rank | 3;
-
-  rank |= RF_NOT_SPECIAL;
 
   // Sort sections based on their access permission in the following
   // order: R, RX, RXW, RW(RELRO), RW(non-RELRO).
@@ -677,11 +658,6 @@ static unsigned getSectionRank(OutputSection &osec) {
   bool isWrite = osec.flags & SHF_WRITE;
 
   if (!isWrite && !isExec) {
-    // Make PROGBITS sections (e.g .rodata .eh_frame) closer to .text to
-    // alleviate relocation overflow pressure. Large special sections such as
-    // .dynstr and .dynsym can be away from .text.
-    if (osec.type == SHT_PROGBITS)
-      rank |= RF_RODATA;
     // Among PROGBITS sections, place .lrodata further from .text.
     // For -z lrodata-after-bss, place .lrodata after .lbss like GNU ld. This
     // layout has one extra PT_LOAD, but alleviates relocation overflow
@@ -691,6 +667,25 @@ static unsigned getSectionRank(OutputSection &osec) {
       rank |= config->zLrodataAfterBss ? RF_LARGE_ALT : 0;
     else
       rank |= config->zLrodataAfterBss ? 0 : RF_LARGE;
+
+    if (osec.type == SHT_LLVM_PART_EHDR)
+      ;
+    else if (osec.type == SHT_LLVM_PART_PHDR)
+      rank |= 1;
+    else if (osec.name == ".interp")
+      rank |= 2;
+    // Put .note sections at the beginning so that they are likely to be
+    // included in a truncate core file. In particular, .note.gnu.build-id, if
+    // available, can identify the object file.
+    else if (osec.type == SHT_NOTE)
+      rank |= 3;
+    // Make PROGBITS sections (e.g .rodata .eh_frame) closer to .text to
+    // alleviate relocation overflow pressure. Large special sections such as
+    // .dynstr and .dynsym can be away from .text.
+    else if (osec.type != SHT_PROGBITS)
+      rank |= 4;
+    else
+      rank |= RF_RODATA;
   } else if (isExec) {
     rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
   } else {
@@ -1338,9 +1333,11 @@ static bool compareByFilePosition(InputSection *a, InputSection *b) {
   OutputSection *aOut = la->getParent();
   OutputSection *bOut = lb->getParent();
 
-  if (aOut != bOut)
-    return aOut->addr < bOut->addr;
-  return la->outSecOff < lb->outSecOff;
+  if (aOut == bOut)
+    return la->outSecOff < lb->outSecOff;
+  if (aOut->addr == bOut->addr)
+    return aOut->sectionIndex < bOut->sectionIndex;
+  return aOut->addr < bOut->addr;
 }
 
 template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
@@ -1452,9 +1449,32 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       in.mipsGot->updateAllocSize();
 
     for (Partition &part : partitions) {
+      // The R_AARCH64_AUTH_RELATIVE has a smaller addend field as bits [63:32]
+      // encode the signing schema. We've put relocations in .relr.auth.dyn
+      // during RelocationScanner::processAux, but the target VA for some of
+      // them might be wider than 32 bits. We can only know the final VA at this
+      // point, so move relocations with large values from .relr.auth.dyn to
+      // .rela.dyn. See also AArch64::relocate.
+      if (part.relrAuthDyn) {
+        auto it = llvm::remove_if(
+            part.relrAuthDyn->relocs, [&part](const RelativeReloc &elem) {
+              const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
+              if (isInt<32>(reloc.sym->getVA(reloc.addend)))
+                return false;
+              part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
+                                      reloc.offset,
+                                      DynamicReloc::AddendOnlyWithTargetVA,
+                                      *reloc.sym, reloc.addend, R_ABS});
+              return true;
+            });
+        changed |= (it != part.relrAuthDyn->relocs.end());
+        part.relrAuthDyn->relocs.erase(it, part.relrAuthDyn->relocs.end());
+      }
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
+      if (part.relrAuthDyn)
+        changed |= part.relrAuthDyn->updateAllocSize();
       if (part.memtagGlobalDescriptors)
         changed |= part.memtagGlobalDescriptors->updateAllocSize();
     }
@@ -1612,6 +1632,14 @@ static void removeUnusedSyntheticSections() {
         auto *sec = cast<SyntheticSection>(s);
         if (sec->getParent() && sec->isNeeded())
           return false;
+        // .relr.auth.dyn relocations may be moved to .rela.dyn in
+        // finalizeAddressDependentContent, making .rela.dyn no longer empty.
+        // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
+        // we would fail to remove it here.
+        if (config->emachine == EM_AARCH64 && config->relrPackDynRelocs)
+          if (auto *relSec = dyn_cast<RelocationBaseSection>(sec))
+            if (relSec == mainPart->relaDyn.get())
+              return false;
         unused.insert(sec);
         return true;
       });
@@ -1923,6 +1951,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (part.relrDyn) {
         part.relrDyn->mergeRels();
         finalizeSynthetic(part.relrDyn.get());
+      }
+      if (part.relrAuthDyn) {
+        part.relrAuthDyn->mergeRels();
+        finalizeSynthetic(part.relrAuthDyn.get());
       }
 
       finalizeSynthetic(part.dynSymTab.get());

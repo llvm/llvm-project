@@ -47,7 +47,7 @@ struct LowererBase {
   ConstantPointerNull *const NullPtr;
 
   LowererBase(Module &M);
-  Value *makeSubFnCall(Value *Arg, int Index, Instruction *InsertPt);
+  CallInst *makeSubFnCall(Value *Arg, int Index, Instruction *InsertPt);
 };
 
 enum class ABI {
@@ -85,6 +85,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
   SmallVector<CallInst*, 2> SwiftErrorOps;
   SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
+  SmallVector<CallInst *, 2> SymmetricTransfers;
 
   // Field indexes for special fields in the switch lowering.
   struct SwitchFieldIndex {
