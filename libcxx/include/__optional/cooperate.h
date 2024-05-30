@@ -40,15 +40,15 @@ struct __cooperate {
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __do_cooperate() { return false; }
 
   // Return if __v is not in a disengaged state
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_engaged(const _Tp& /*__v*/) { return false; }
+  // _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_engaged(const _Tp& __v);
 
   // Given a __v where !__is_engaged(__v), act as if destroy_at(addressof(__v)); construct_at(addressof(__v), __args...)
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI static constexpr void __construct_over(_Tp& /*__v*/, _Args&&... /*__args*/) {}
+  // template <class... _Args>
+  // _LIBCPP_HIDE_FROM_ABI static constexpr void __construct_over(_Tp& __v, _Args&&... __args);
 
   // Given a __v, make it so !__is_engaged(__v). __v may already be disengaged
-  template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI static constexpr void __disengage(_Tp& /*__v*/) {}
+  // template <class _Up>
+  // _LIBCPP_HIDE_FROM_ABI static constexpr void __disengage(_Tp& __v);
 };
 
 } // namespace __optional
