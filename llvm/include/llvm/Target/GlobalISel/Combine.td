@@ -1780,6 +1780,8 @@ def fma_combines : GICombineGroup<[combine_fadd_fmul_to_fmad_or_fma,
 def constant_fold_binops : GICombineGroup<[constant_fold_binop,
                                            constant_fold_fp_binop]>;
 
+def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
+
 def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     vector_ops_combines, freeze_combines,
     insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
@@ -1803,7 +1805,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     combine_concat_vector, double_icmp_zero_and_or_combine, match_addos,
-    sext_trunc, zext_trunc, nneg_zext, combine_shuffle_concat]>;
+    sext_trunc, zext_trunc, prefer_sign_combines, combine_shuffle_concat]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

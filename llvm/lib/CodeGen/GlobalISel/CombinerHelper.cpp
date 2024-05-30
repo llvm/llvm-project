@@ -7410,7 +7410,7 @@ bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
 
 bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
                                      BuildFnTy &MatchInfo) {
-  GZext *Zext = cast<GZext>(getDefIgnoringCopies(MO.getReg(), MRI));
+  GZext *Zext = cast<GZext>(MRI.getVRegDef(MO.getReg()));
 
   Register Dst = Zext->getReg(0);
   Register Src = Zext->getSrcReg();
