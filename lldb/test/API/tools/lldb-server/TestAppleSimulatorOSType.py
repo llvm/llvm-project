@@ -61,9 +61,9 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # Older versions of watchOS (<7.0) only support i386
         if platform_name == "watchos":
-            from packaging.version import parse
+            from packaging import version
 
-            if parse(vers) < parse("7.0"):
+            if version.parse(vers) < version.parse("7.0"):
                 arch = "i386"
 
         triple = "-".join([arch, "apple", platform_name + vers, "simulator"])

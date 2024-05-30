@@ -8,7 +8,7 @@ import re
 import subprocess
 import sys
 import os
-from packaging.version import parse
+from packaging import version
 
 # LLDB modules
 import lldb
@@ -308,17 +308,17 @@ def expectedCompilerVersion(compiler_version):
         # Assume the compiler version is at or near the top of trunk.
         return operator in [">", ">=", "!", "!=", "not"]
 
-    version = parse(version_str)
-    test_compiler_version = parse(test_compiler_version_str)
+    actual_version = version.parse(version_str)
+    test_compiler_version = version.parse(test_compiler_version_str)
 
     if operator == ">":
-        return test_compiler_version > version
+        return test_compiler_version > actual_version
     if operator == ">=" or operator == "=>":
-        return test_compiler_version >= version
+        return test_compiler_version >= actual_version
     if operator == "<":
-        return test_compiler_version < version
+        return test_compiler_version < actual_version
     if operator == "<=" or operator == "=<":
-        return test_compiler_version <= version
+        return test_compiler_version <= actual_version
     if operator == "!=" or operator == "!" or operator == "not":
         return version_str not in test_compiler_version_str
     return version_str in test_compiler_version_str
