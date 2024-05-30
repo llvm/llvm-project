@@ -22,7 +22,7 @@ public:
   A arr[10];
 };
 
-// CHECK-LABEL: define dso_local noundef i32 @{{.*}}func1{{.*}}(
+// CHECK-LABEL: define dso_local noundef{{.*}}i32 @{{.*}}func1{{.*}}(
 // CHECK:         [[A_ADDR:%.*]] = getelementptr inbounds %class.B, ptr {{%.*}}, i32 0, i32 0, !dbg [[DBG1:![0-9]+]]
 // CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[A_ADDR]], align {{.*}}, !dbg [[DBG1]]
 // CHECK-NEXT:    [[PSEUDO1:%.*]] = alloca ptr, align {{.*}}, !dbg [[DBG1]]
@@ -48,7 +48,7 @@ A* func2(void *b) {
 }
 
 // Should not generate pseudo variable in this case.
-// CHECK-LABEL: define dso_local noundef i32 @{{.*}}func3{{.*}}(
+// CHECK-LABEL: define dso_local noundef{{.*}}i32 @{{.*}}func3{{.*}}(
 // CHECK:    call void @llvm.dbg.declare(metadata ptr [[B_ADDR:%.*]], metadata [[META4:![0-9]+]], metadata !DIExpression())
 // CHECK:    call void @llvm.dbg.declare(metadata ptr [[LOCAL1:%.*]], metadata [[META5:![0-9]+]], metadata !DIExpression())
 // CHECK-NOT: call void @llvm.dbg.declare(metadata ptr
@@ -89,7 +89,7 @@ char func5(void *arr, int n) {
   return ((A*)arr)[n].c;
 }
 
-// CHECK-LABEL: define dso_local noundef i32 @{{.*}}func6{{.*}}(
+// CHECK-LABEL: define dso_local noundef{{.*}}i32 @{{.*}}func6{{.*}}(
 // CHECK:         call void @llvm.dbg.declare(metadata ptr {{%.*}}, metadata [[META10:![0-9]+]], metadata !DIExpression())
 // CHECK:         call void @llvm.dbg.declare(metadata ptr {{%.*}}, metadata [[META11:![0-9]+]], metadata !DIExpression())
 int func6(B &b) {
