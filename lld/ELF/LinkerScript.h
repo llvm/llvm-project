@@ -300,7 +300,7 @@ class LinkerScript final {
   std::pair<MemoryRegion *, MemoryRegion *>
   findMemoryRegion(OutputSection *sec, MemoryRegion *hint);
 
-  void assignOffsets(OutputSection *sec);
+  bool assignOffsets(OutputSection *sec);
 
   // This captures the local AddressState and makes it accessible
   // deliberately. This is needed as there are some cases where we cannot just
@@ -334,7 +334,7 @@ public:
   bool needsInterpSection();
 
   bool shouldKeep(InputSectionBase *s);
-  const Defined *assignAddresses();
+  std::pair<const OutputSection *, const Defined *> assignAddresses();
   bool spillSections();
   void erasePotentialSpillSections();
   void allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs);
