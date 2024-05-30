@@ -1071,7 +1071,7 @@ bool AArch64TargetInfo::initFeatureMap(
   // add target '+/-'features that can later disable some of features added on
   // the first loop. Function Multi Versioning features begin with '?'.
   for (const auto &Feature : FeaturesVec)
-    if (((Feature[0] == '?' || Feature[0] == '+')) &&
+    if (Feature[0] == '?' &&
         AArch64TargetInfo::doesFeatureAffectCodeGen(Feature.substr(1))) {
       StringRef DepFeatures =
           AArch64TargetInfo::getFeatureDependencies(Feature.substr(1));
