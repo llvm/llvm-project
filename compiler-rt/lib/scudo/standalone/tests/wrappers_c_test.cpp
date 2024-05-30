@@ -120,16 +120,19 @@ protected:
     }
   }
   void verifyAllocHookPtr(UNUSED void *Ptr) {
-    if (SCUDO_ENABLE_HOOKS_TESTS)
+    if (SCUDO_ENABLE_HOOKS_TESTS) {
       EXPECT_EQ(Ptr, AC.Ptr);
+    }
   }
   void verifyAllocHookSize(UNUSED size_t Size) {
-    if (SCUDO_ENABLE_HOOKS_TESTS)
+    if (SCUDO_ENABLE_HOOKS_TESTS) {
       EXPECT_EQ(Size, AC.Size);
+    }
   }
   void verifyDeallocHookPtr(UNUSED void *Ptr) {
-    if (SCUDO_ENABLE_HOOKS_TESTS)
+    if (SCUDO_ENABLE_HOOKS_TESTS) {
       EXPECT_EQ(Ptr, DC.Ptr);
+    }
   }
   void verifyReallocHookPtrs(UNUSED void *OldPtr, void *NewPtr, size_t Size) {
     if (SCUDO_ENABLE_HOOKS_TESTS) {
@@ -161,16 +164,18 @@ TEST_F(ScudoWrappersCDeathTest, Malloc) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  // An update to this warning in Clang now triggers in this line, but it's ok
-  // because the check is expecting a bad pointer and should fail.
-#if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
+#if defined(__has_warning)
+#if __has_warning("-Wfree-nonheap-object")
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wfree-nonheap-object"
 #endif
+#endif
   EXPECT_DEATH(
       free(reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(P) | 1U)), "");
-#if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
+#if defined(__has_warning)
+#if __has_warning("-Wfree-nonheap-object")
 #pragma GCC diagnostic pop
+#endif
 #endif
 
   free(P);
@@ -182,7 +187,10 @@ TEST_F(ScudoWrappersCDeathTest, Malloc) {
   free(P);
 
   errno = 0;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Walloc-size-larger-than="
   EXPECT_EQ(malloc(SIZE_MAX), nullptr);
+#pragma GCC diagnostic pop
   EXPECT_EQ(errno, ENOMEM);
 }
 
@@ -204,16 +212,20 @@ TEST_F(ScudoWrappersCTest, Calloc) {
   EXPECT_NE(P, nullptr);
   free(P);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Walloc-size-larger-than="
   errno = 0;
   EXPECT_EQ(calloc(SIZE_MAX, 1U), nullptr);
   EXPECT_EQ(errno, ENOMEM);
   errno = 0;
   EXPECT_EQ(calloc(static_cast<size_t>(LONG_MAX) + 1U, 2U), nullptr);
-  if (SCUDO_ANDROID)
+  if (SCUDO_ANDROID) {
     EXPECT_EQ(errno, ENOMEM);
+  }
   errno = 0;
   EXPECT_EQ(calloc(SIZE_MAX, SIZE_MAX), nullptr);
   EXPECT_EQ(errno, ENOMEM);
+#pragma GCC diagnostic pop
 }
 
 TEST_F(ScudoWrappersCTest, SmallAlign) {
@@ -262,9 +274,12 @@ TEST_F(ScudoWrappersCTest, Memalign) {
     verifyDeallocHookPtr(P);
   }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Walloc-size-larger-than="
   EXPECT_EQ(memalign(4096U, SIZE_MAX), nullptr);
   EXPECT_EQ(posix_memalign(&P, 15U, Size), EINVAL);
   EXPECT_EQ(posix_memalign(&P, 4096U, SIZE_MAX), ENOMEM);
+#pragma GCC diagnostic pop
 
   // Android's memalign accepts non power-of-2 alignments, and 0.
   if (SCUDO_ANDROID) {
@@ -354,6 +369,8 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
 
   EXPECT_DEATH(P = realloc(P, Size), "");
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Walloc-size-larger-than="
   errno = 0;
   EXPECT_EQ(realloc(nullptr, SIZE_MAX), nullptr);
   EXPECT_EQ(errno, ENOMEM);
@@ -363,6 +380,7 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   EXPECT_EQ(realloc(P, SIZE_MAX), nullptr);
   EXPECT_EQ(errno, ENOMEM);
   free(P);
+#pragma GCC diagnostic pop
 
   // Android allows realloc of memalign pointers.
   if (SCUDO_ANDROID) {
@@ -427,15 +445,18 @@ TEST_F(ScudoWrappersCTest, OtherAlloc) {
 #endif
 
 #if HAVE_VALLOC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Walloc-size-larger-than="
   EXPECT_EQ(valloc(SIZE_MAX), nullptr);
+#pragma GCC diagnostic pop
 #endif
 }
 
 template<typename FieldType>
 void MallInfoTest() {
   // mallinfo is deprecated.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   const FieldType BypassQuarantineSize = 1024U;
   struct mallinfo MI = mallinfo();
   FieldType Allocated = MI.uordblks;
@@ -448,7 +469,7 @@ void MallInfoTest() {
   free(P);
   MI = mallinfo();
   EXPECT_GE(MI.fordblks, Free + BypassQuarantineSize);
-#pragma clang diagnostic pop
+#pragma GCC diagnostic pop
 }
 
 #if !SCUDO_FUCHSIA

@@ -16,7 +16,7 @@
 template <typename T> void testMap(T &Map, scudo::uptr Size) {
   Map.init();
   for (scudo::uptr I = 0; I < Size; I += 7)
-    Map.set(I, (I % 100) + 1);
+    Map.set(I, static_cast<scudo::u8>((I % 100) + 1));
   for (scudo::uptr J = 0; J < Size; J++) {
     if (J % 7)
       EXPECT_EQ(Map[J], 0);

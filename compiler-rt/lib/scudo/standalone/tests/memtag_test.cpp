@@ -103,11 +103,15 @@ TEST_F(MemtagDeathTest, AddFixedTag) {
 }
 
 TEST_F(MemtagTest, UntagPointer) {
+// The test is already skipped on anything other than 64 bit. But
+// compiling on 32 bit leads to warnings/errors, so skip compiling the test.
+#if defined(__LP64__)
   uptr UnTagMask = untagPointer(~uptr(0));
   for (u64 Top = 0; Top < 0x100; ++Top) {
     uptr Ptr = (Addr | (Top << 56)) & UnTagMask;
     EXPECT_EQ(addFixedTag(Ptr, 0), untagPointer(Ptr));
   }
+#endif
 }
 
 TEST_F(MemtagDeathTest, ScopedDisableMemoryTagChecks) {

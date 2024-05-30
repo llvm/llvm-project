@@ -91,8 +91,9 @@ public:
     From >>= PageSizeScaledLog;
     To >>= PageSizeScaledLog;
     EXPECT_LT(From, To);
-    if (!ReportedPages.empty())
+    if (!ReportedPages.empty()) {
       EXPECT_LT(LastPageReported, From);
+    }
     ReportedPages.append(From - LastPageReported, '.');
     ReportedPages.append(To - From, 'x');
     LastPageReported = To;

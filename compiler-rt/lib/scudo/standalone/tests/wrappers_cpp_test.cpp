@@ -66,19 +66,25 @@ protected:
   }
 
   void verifyAllocHookPtr(UNUSED void *Ptr) {
-    if (SCUDO_ENABLE_HOOKS_TESTS)
+    if (SCUDO_ENABLE_HOOKS_TESTS) {
       EXPECT_EQ(Ptr, AC.Ptr);
+    }
   }
   void verifyAllocHookSize(UNUSED size_t Size) {
-    if (SCUDO_ENABLE_HOOKS_TESTS)
+    if (SCUDO_ENABLE_HOOKS_TESTS) {
       EXPECT_EQ(Size, AC.Size);
+    }
   }
   void verifyDeallocHookPtr(UNUSED void *Ptr) {
-    if (SCUDO_ENABLE_HOOKS_TESTS)
+    if (SCUDO_ENABLE_HOOKS_TESTS) {
       EXPECT_EQ(Ptr, DC.Ptr);
+    }
   }
 
   template <typename T> void testCxxNew() {
+    // Disable warning about writing on a class object.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
     T *P = new T;
     EXPECT_NE(P, nullptr);
     verifyAllocHookPtr(P);
@@ -127,6 +133,7 @@ protected:
     memset(A, 0x42, sizeof(T) * N);
     delete[] A;
     verifyDeallocHookPtr(A);
+#pragma GCC diagnostic pop
   }
 };
 using ScudoWrappersCppDeathTest = ScudoWrappersCppTest;

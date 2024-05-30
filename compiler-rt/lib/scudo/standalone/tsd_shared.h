@@ -196,7 +196,7 @@ private:
   }
 
   void setDisableMemInit(bool B) {
-    *getTlsPtr() &= ~1ULL;
+    *getTlsPtr() &= ~static_cast<uptr>(1);
     *getTlsPtr() |= B;
   }
 
