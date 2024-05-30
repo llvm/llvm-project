@@ -816,6 +816,8 @@ Bug Fixes to C++ Support
 - Fix incorrect merging of modules which contain using declarations which shadow
   other declarations. This could manifest as ODR checker false positives.
   Fixes (`#80252 <https://github.com/llvm/llvm-project/issues/80252>`_)
+- Fix a regression introduced in Clang 18 causing incorrect overload resolution in the presence of functions only
+  differering by their constraints when only one of these function was variadic.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
