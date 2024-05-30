@@ -1126,7 +1126,32 @@ void TextNodeDumper::VisitIntegralTemplateArgument(const TemplateArgument &TA) {
   dumpTemplateArgument(TA);
 }
 
-void TextNodeDumper::dumpTemplateName(TemplateName TN) {
+void TextNodeDumper::dumpTemplateName(TemplateName TN, StringRef Label) {
+  AddChild(Label, [=] {
+    {
+      llvm::SmallString<128> Str;
+      {
+        llvm::raw_svector_ostream SS(Str);
+        TN.print(SS, PrintPolicy);
+      }
+      OS << " '" << Str << "'";
+
+      if (TemplateName CanonTN = Context->getCanonicalTemplateName(TN);
+          CanonTN != TN) {
+        llvm::SmallString<128> CanonStr;
+        {
+          llvm::raw_svector_ostream SS(CanonStr);
+          CanonTN.print(SS, PrintPolicy);
+        }
+        if (CanonStr != Str)
+          OS << ":'" << CanonStr << "'";
+      }
+    }
+    dumpBareTemplateName(TN);
+  });
+}
+
+void TextNodeDumper::dumpBareTemplateName(TemplateName TN) {
   switch (TN.getKind()) {
   case TemplateName::Template:
     AddChild([=] { Visit(TN.getAsTemplateDecl()); });
@@ -1143,7 +1168,7 @@ void TextNodeDumper::dumpTemplateName(TemplateName TN) {
     if (QTN->hasTemplateKeyword())
       OS << " keyword";
     dumpNestedNameSpecifier(QTN->getQualifier());
-    dumpTemplateName(QTN->getUnderlyingTemplate());
+    dumpBareTemplateName(QTN->getUnderlyingTemplate());
     return;
   }
   case TemplateName::DependentTemplate: {
@@ -1162,7 +1187,7 @@ void TextNodeDumper::dumpTemplateName(TemplateName TN) {
     if (const TemplateTemplateParmDecl *P = STS->getParameter())
       AddChild("parameter", [=] { Visit(P); });
     dumpDeclRef(STS->getAssociatedDecl(), "associated");
-    AddChild("replacement", [=] { dumpTemplateName(STS->getReplacement()); });
+    dumpTemplateName(STS->getReplacement(), "replacement");
     return;
   }
   // FIXME: Implement these.
@@ -1182,14 +1207,14 @@ void TextNodeDumper::dumpTemplateName(TemplateName TN) {
 void TextNodeDumper::VisitTemplateTemplateArgument(const TemplateArgument &TA) {
   OS << " template";
   dumpTemplateArgument(TA);
-  dumpTemplateName(TA.getAsTemplate());
+  dumpBareTemplateName(TA.getAsTemplate());
 }
 
 void TextNodeDumper::VisitTemplateExpansionTemplateArgument(
     const TemplateArgument &TA) {
   OS << " template expansion";
   dumpTemplateArgument(TA);
-  dumpTemplateName(TA.getAsTemplateOrTemplatePattern());
+  dumpBareTemplateName(TA.getAsTemplateOrTemplatePattern());
 }
 
 void TextNodeDumper::VisitExpressionTemplateArgument(
@@ -1989,18 +2014,14 @@ void TextNodeDumper::VisitAutoType(const AutoType *T) {
 
 void TextNodeDumper::VisitDeducedTemplateSpecializationType(
     const DeducedTemplateSpecializationType *T) {
-  if (T->getTemplateName().getAsUsingShadowDecl())
-    OS << " using";
+  dumpTemplateName(T->getTemplateName(), "name");
 }
 
 void TextNodeDumper::VisitTemplateSpecializationType(
     const TemplateSpecializationType *T) {
   if (T->isTypeAlias())
     OS << " alias";
-  if (T->getTemplateName().getAsUsingShadowDecl())
-    OS << " using";
-  OS << " ";
-  T->getTemplateName().dump(OS);
+  dumpTemplateName(T->getTemplateName(), "name");
 }
 
 void TextNodeDumper::VisitInjectedClassNameType(
