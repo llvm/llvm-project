@@ -4,9 +4,7 @@
 declare void @use.i8(i8)
 define i8 @fold_add_zext_eq_0(i8 %x) {
 ; CHECK-LABEL: @fold_add_zext_eq_0(
-; CHECK-NEXT:    [[X_EQ:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[X_EQ_EXT:%.*]] = zext i1 [[X_EQ]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X_EQ_EXT]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 1)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x_eq = icmp eq i8 %x, 0
@@ -19,8 +17,7 @@ define <2 x i8> @fold_add_sext_eq_4_6(<2 x i6> %xx) {
 ; CHECK-LABEL: @fold_add_sext_eq_4_6(
 ; CHECK-NEXT:    [[X:%.*]] = zext <2 x i6> [[XX:%.*]] to <2 x i8>
 ; CHECK-NEXT:    [[X_EQ:%.*]] = icmp eq <2 x i8> [[X]], <i8 4, i8 -127>
-; CHECK-NEXT:    [[X_EQ_EXT:%.*]] = sext <2 x i1> [[X_EQ]] to <2 x i8>
-; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[X_EQ_EXT]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[X_EQ]], <2 x i8> <i8 3, i8 -128>, <2 x i8> [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %x = zext <2 x i6> %xx to <2 x i8>
