@@ -2235,7 +2235,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     } else {
       assert(
           clang_type.IsBeingDefined() &&
-          "The clang type should already start its definition at this point.");
+          "Trying to complete a definition without a prior call to StartTagDeclarationDefinition.");
     }
 
     AccessType default_accessibility = eAccessNone;
