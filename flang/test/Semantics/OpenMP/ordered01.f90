@@ -7,6 +7,15 @@ program main
   integer :: i, N = 10
   real :: a, arrayA(10), arrayB(10), arrayC(10)
   real, external :: foo, bar, baz
+ 
+  !ERROR: DEFAULT clause is not allowed on the DO directive
+  !$omp do ordered default(private)
+  do i = 1, N
+     !$omp ordered
+       arrayA(i) = arrayA(i) + 1
+     !$omp end ordered
+  end do
+  !$omp end do
 
   !$omp do ordered
   do i = 1, N

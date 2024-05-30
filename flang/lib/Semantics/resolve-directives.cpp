@@ -2108,9 +2108,11 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
           dirContext.defaultDSA == Symbol::Flag::OmpFirstPrivate ||
           dirContext.defaultDSA == Symbol::Flag::OmpShared) {
         // 1) default
-        // Allowed only with parallel, teams and task generating constructs.
-        assert(parallelDir || taskGenDir ||
-            llvm::omp::allTeamsSet.test(dirContext.directive));
+        // Allowed only with parallel, teams and task generating constructs,
+        // skip creating symbols thus.
+        if (!(parallelDir || taskGenDir ||
+                llvm::omp::allTeamsSet.test(dirContext.directive)))
+          return;
         if (dirContext.defaultDSA != Symbol::Flag::OmpShared)
           declNewSymbol(dirContext.defaultDSA);
         else
