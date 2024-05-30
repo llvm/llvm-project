@@ -6128,19 +6128,52 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     return IsFloat ? DAG.getBitcast(VT, Trunc) : Trunc;
   }
 
-  if ((ValSize % 32) == 0) {
-    MVT VecVT = MVT::getVectorVT(MVT::i32, ValSize / 32);
-    Src0 = DAG.getBitcast(VecVT, Src0);
+  if (ValSize % 32 != 0)
+    return SDValue();
 
-    if (Src2.getNode())
-      Src2 = DAG.getBitcast(VecVT, Src2);
+  if (VT.isVector()) {
+    switch (MVT::SimpleValueType EltTy =
+                VT.getVectorElementType().getSimpleVT().SimpleTy) {
+    case MVT::i32:
+    case MVT::f32: {
+      SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VT.getSimpleVT());
+      return DAG.UnrollVectorOp(LaneOp.getNode());
+    }
+    case MVT::i16:
+    case MVT::f16:
+    case MVT::bf16: {
+      MVT SubVecVT = MVT::getVectorVT(EltTy, 2);
+      SmallVector<SDValue, 4> Pieces;
+      for (unsigned i = 0, EltIdx = 0; i < ValSize / 32; i++) {
+        SDValue Src0SubVec =
+            DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src0,
+                        DAG.getConstant(EltIdx, SL, MVT::i32));
 
-    SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VecVT);
-    SDValue UnrolledLaneOp = DAG.UnrollVectorOp(LaneOp.getNode());
-    return DAG.getBitcast(VT, UnrolledLaneOp);
+        SDValue Src2SubVec;
+        if (Src2)
+          Src2SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src2,
+                                   DAG.getConstant(EltIdx, SL, MVT::i32));
+
+        Pieces.push_back(createLaneOp(Src0SubVec, Src1, Src2SubVec, SubVecVT));
+        EltIdx += 2;
+      }
+      return DAG.getNode(ISD::CONCAT_VECTORS, SL, VT, Pieces);
+    }
+    default:
+      // Handle all other cases by bitcasting to i32 vectors
+      break;
+    }
   }
 
-  return SDValue();
+  MVT VecVT = MVT::getVectorVT(MVT::i32, ValSize / 32);
+  Src0 = DAG.getBitcast(VecVT, Src0);
+
+  if (Src2)
+    Src2 = DAG.getBitcast(VecVT, Src2);
+
+  SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VecVT);
+  SDValue UnrolledLaneOp = DAG.UnrollVectorOp(LaneOp.getNode());
+  return DAG.getBitcast(VT, UnrolledLaneOp);
 }
 
 void SITargetLowering::ReplaceNodeResults(SDNode *N,

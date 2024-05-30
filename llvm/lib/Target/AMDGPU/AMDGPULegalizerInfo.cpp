@@ -5441,27 +5441,44 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     return true;
   }
 
-  if ((Size % 32) == 0) {
-    SmallVector<Register, 2> PartialRes;
-    unsigned NumParts = Size / 32;
-    LLT PartialResTy =
-        Ty.isVector() && Ty.getElementType() == S16 ? V2S16 : S32;
-    MachineInstrBuilder Src0Parts;
+  if (Size % 32 != 0)
+    return false;
 
-    Src0Parts = B.buildUnmerge(PartialResTy, Src0);
+  SmallVector<Register, 2> PartialRes;
+  unsigned NumParts = Size / 32;
+  LLT PartialResTy = S32;
 
-    switch (IID) {
-    case Intrinsic::amdgcn_readlane: {
-      Register Src1 = MI.getOperand(3).getReg();
-      for (unsigned i = 0; i < NumParts; ++i) {
-        Src0 = Src0Parts.getReg(i);
-        PartialRes.push_back(
-            (B.buildIntrinsic(Intrinsic::amdgcn_readlane, {PartialResTy})
-                 .addUse(Src0)
-                 .addUse(Src1))
-                .getReg(0));
-      }
+  if (Ty.isVector()) {
+    LLT EltTy = Ty.getElementType();
+    switch (EltTy.getSizeInBits()) {
+    case 16:
+      PartialResTy = Ty.changeElementCount(ElementCount::getFixed(2));
       break;
+    case 32:
+      PartialResTy = EltTy;
+      break;
+    default:
+      // Handle all other cases via S32 pieces;
+      break;
+    }
+  }
+
+  MachineInstrBuilder Src0Parts;
+
+  Src0Parts = B.buildUnmerge(PartialResTy, Src0);
+
+  switch (IID) {
+  case Intrinsic::amdgcn_readlane: {
+    Register Src1 = MI.getOperand(3).getReg();
+    for (unsigned i = 0; i < NumParts; ++i) {
+      Src0 = Src0Parts.getReg(i);
+      PartialRes.push_back(
+          (B.buildIntrinsic(Intrinsic::amdgcn_readlane, {PartialResTy})
+               .addUse(Src0)
+               .addUse(Src1))
+              .getReg(0));
+    }
+    break;
     }
     case Intrinsic::amdgcn_readfirstlane: {
       for (unsigned i = 0; i < NumParts; ++i) {
@@ -5500,9 +5517,6 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
 
     MI.eraseFromParent();
     return true;
-  }
-
-  return false;
 }
 
 bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,

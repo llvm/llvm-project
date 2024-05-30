@@ -1170,22 +1170,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specifies state.
 
-  llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
-                                                   the lowest active lane of the input operand. Currently 
-                                                   implemented for i16, i32, float, half, bf16, v2i16, v2f16 and types 
-                                                   whose sizes are multiples of 32-bit.
-
-  llvm.amdgcn.readlane                             Provides direct access to v_readlane_b32. Returns the value in the 
-                                                   specified lane of the first input operand. The second operand 
-                                                   specifies the lane to read from. Currently implemented
-                                                   for i16, i32, float, half, bf16, v2i16, v2f16 and types whose sizes
-                                                   are multiples of 32-bit.
-
-  llvm.amdgcn.writelane                            Provides direct access to v_writelane_b32. Writes value 
-                                                   in the first input operand to the specified lane of divergent 
-                                                   output. The second operand Specifies the lane to write. Currently 
-                                                   implemented for i16, i32, float, half, bf16, v2i16, v2f16 and types 
-                                                   whose sizes are multiples of 32-bit.
+  llvm.amdgcn.readfirstlane                        These intrinsics provide direct access to v_readfirstlane_b32, 
+  llvm.amdgcn.readlane                             v_readlane_b32 and v_writelane_b32 respectively.
+  llvm.amdgcn.writelane                             - `llvm.amdgcn.readfirstlane` Returns the value in the lowest active 
+                                                       lane of the input operand
+                                                    - `llvm.amdgcn.readlane` Returns the value in the specified lane of 
+                                                       the first input operand. The second operand specifies the lane to 
+                                                       read from.
+                                                    - `llvm.amdgcn.writelane` Writes value in the first input operand to 
+                                                       the specified lane of divergent output. The second operand specifies
+                                                       the lane to write.
+                                                   These are currently implemented for i16, i32, float, half, bf16, <2 x i16>, 
+                                                   <2 x half>, <2 x bfloat>, i64, double, pointers, multiples of the 32-bit 
+                                                   vectors.
 
   llvm.amdgcn.wave.reduce.umin                     Performs an arithmetic unsigned min reduction on the unsigned values
                                                    provided by each lane in the wavefront.
@@ -1225,7 +1222,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    the output.
 
   llvm.amdgcn.sdot2                                Provides direct access to v_dot2_i32_i16 across targets which
-                                                   support such instructions. This performs signed dot product
+                                                   upport such instructions. This performs signed dot product
                                                    with two v2i16 operands, summed with the third i32 operand. The
                                                    i1 fourth operand is used to clamp the output.
                                                    When applicable (e.g. no clamping), this is lowered into
