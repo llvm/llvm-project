@@ -1,10 +1,21 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -Wgnu-folding-constant -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -verify=expected,since-cxx23 %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -verify=expected,since-cxx23,since-cxx26 %s
+
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
+#if __cplusplus == 199711L
+#define __enable_constant_folding(x) (__builtin_constant_p(x) ? (x) : (x))
+#else
+#define __enable_constant_folding
+#endif
 
 namespace std {
 #if __cplusplus >= 202002L
@@ -39,23 +50,12 @@ struct Y {
 };
 extern Y y[2];
 
-#if __cplusplus >= 201103L
-static_assert(static_cast<void*>(x + 0) < static_cast<void*>(x + 1), "");
-static_assert(static_cast<void*>(&y[0].i) < static_cast<void*>(&y[0].j), "");
-static_assert(static_cast<void*>(&y[0].j) < static_cast<void*>(&y[1].i), "");
-#else
-enum X {
-  a = static_cast<void*>(x + 0) < static_cast<void*>(x + 1),
-// expected-warning@-1 {{expression is not an integral constant expression; folding it to a constant is a GNU extension}}
-  b = static_cast<void*>(&y[0].i) < static_cast<void*>(&y[0].j),
-// expected-warning@-1 {{expression is not an integral constant expression; folding it to a constant is a GNU extension}}
-  c = static_cast<void*>(&y[0].j) < static_cast<void*>(&y[1].i)
-// expected-warning@-1 {{expression is not an integral constant expression; folding it to a constant is a GNU extension}}
-};
-#endif
+static_assert(__enable_constant_folding(static_cast<void*>(&x[0]) < static_cast<void*>(&x[1])), "");
+static_assert(__enable_constant_folding(static_cast<void*>(&y[0].i) < static_cast<void*>(&y[0].j)), "");
+static_assert(__enable_constant_folding(static_cast<void*>(&y[0].j) < static_cast<void*>(&y[1].i)), "");
 
 #if __cplusplus >= 202002L
-static_assert((static_cast<void*>(x + 0) <=> static_cast<void*>(x + 1)) == std::strong_ordering::less);
+static_assert((static_cast<void*>(&x[0]) <=> static_cast<void*>(&x[1])) == std::strong_ordering::less);
 static_assert((static_cast<void*>(&y[0].i) <=> static_cast<void*>(&y[0].j)) == std::strong_ordering::less);
 static_assert((static_cast<void*>(&y[0].j) <=> static_cast<void*>(&y[1].i)) == std::strong_ordering::less);
 #endif
