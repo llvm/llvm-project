@@ -111,7 +111,7 @@ The various kinds of debug intrinsic (value, declare, assign, label) are all sto
 Any existing code that interacts with debug intrinsics in some way will need to be updated to interact with debug records in the same way. A few quick rules to keep in mind when updating code:
 
 - Debug records will not be seen when iterating over instructions; to find the debug records that appear immediately before an instruction, you'll need to iterate over `Instruction::getDbgRecordRange()`.
-- Debug records have interfaces that are identical to those of debug intrinsics, meaning that any code that operates on debug intrinsics can be trivially applied to debug records as well. The exceptions for this are Instruction or CallInst methods that don't logically apply to debug records, and `isa/cast/dyn_cast` methods, are replaced by methods on the `DbgRecord` class itself.
+- Debug records have interfaces that are identical to those of debug intrinsics, meaning that any code that operates on debug intrinsics can be trivially applied to debug records as well. The exceptions for this are `Instruction` or `CallInst` methods that don't logically apply to debug records, and `isa`/`cast`/`dyn_cast` methods, are replaced by methods on the `DbgRecord` class itself.
 - Debug records cannot appear in a module that also contains debug intrinsics; the two are mutually exclusive. As debug records are the future format, handling records correctly should be prioritized in new code.
 - Until support for intrinsics is no longer present, a valid hotfix for code that only handles debug intrinsics and is non-trivial to update is to convert the module to the intrinsic format using `Module::setIsNewDbgInfoFormat`, and convert it back afterwards.
   - This can also be performed within a lexical scope for a module or an individual function using the class `ScopedDbgInfoFormatSetter`:
@@ -131,7 +131,7 @@ Below is a rough guide on how existing code that currently supports debug intrin
 
 Debug records will automatically be created by the `DIBuilder` class when the new format is enabled. As with instructions, it is also possible to call `DbgRecord::clone` to create an unattached copy of an existing record.
 
-## Skipping debug records, ignoring debug-uses of Values, stably counting instructions...
+## Skipping debug records, ignoring debug-uses of `Values`, stably counting instructions, etc.
 
 This will all happen transparently without needing to think about it!
 
@@ -219,7 +219,7 @@ for (Instruction &I : BB) {
 
 ## Processing individual debug records
 
-In most cases, any code that operates on debug intrinsics can be extracted to a template function or auto lambda (if it is not already in one) that can be applied to both debug intrinsics and debug records - though keep in mind the main exception that isa/cast/dyn_cast do not apply to DbgVariableRecord types.
+In most cases, any code that operates on debug intrinsics can be extracted to a template function or auto lambda (if it is not already in one) that can be applied to both debug intrinsics and debug records - though keep in mind the main exception that `isa`/`cast`/`dyn_cast` do not apply to `DbgVariableRecord` types.
 
 ```
 // Old: Function that operates on debug variable intrinsics in a BasicBlock, and
