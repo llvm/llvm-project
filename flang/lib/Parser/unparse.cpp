@@ -1038,6 +1038,10 @@ public:
   void Unparse(const LocalitySpec::LocalInit &x) {
     Word("LOCAL_INIT("), Walk(x.v, ", "), Put(')');
   }
+  void Unparse(const LocalitySpec::Reduce &x) {
+    Word("REDUCE("), Walk(std::get<parser::ReductionOperator>(x.t));
+    Walk(":", std::get<std::list<parser::Name>>(x.t), ",", ")");
+  }
   void Unparse(const LocalitySpec::Shared &x) {
     Word("SHARED("), Walk(x.v, ", "), Put(')');
   }
@@ -2018,7 +2022,7 @@ public:
   }
   void Unparse(const AccObjectList &x) { Walk(x.v, ","); }
   void Unparse(const AccObjectListWithReduction &x) {
-    Walk(std::get<AccReductionOperator>(x.t));
+    Walk(std::get<ReductionOperator>(x.t));
     Put(":");
     Walk(std::get<AccObjectList>(x.t));
   }
@@ -2753,28 +2757,28 @@ public:
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
   WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
 #undef WALK_NESTED_ENUM
-  void Unparse(const AccReductionOperator::Operator x) {
+  void Unparse(const ReductionOperator::Operator x) {
     switch (x) {
-    case AccReductionOperator::Operator::Plus:
+    case ReductionOperator::Operator::Plus:
       Word("+");
       break;
-    case AccReductionOperator::Operator::Multiply:
+    case ReductionOperator::Operator::Multiply:
       Word("*");
       break;
-    case AccReductionOperator::Operator::And:
+    case ReductionOperator::Operator::And:
       Word(".AND.");
       break;
-    case AccReductionOperator::Operator::Or:
+    case ReductionOperator::Operator::Or:
       Word(".OR.");
       break;
-    case AccReductionOperator::Operator::Eqv:
+    case ReductionOperator::Operator::Eqv:
       Word(".EQV.");
       break;
-    case AccReductionOperator::Operator::Neqv:
+    case ReductionOperator::Operator::Neqv:
       Word(".NEQV.");
       break;
     default:
-      Word(AccReductionOperator::EnumToString(x));
+      Word(ReductionOperator::EnumToString(x));
       break;
     }
   }
