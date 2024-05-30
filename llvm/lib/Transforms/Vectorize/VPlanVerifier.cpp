@@ -17,6 +17,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "loop-vectorize"
@@ -26,6 +27,8 @@ using namespace llvm;
 namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
+
+  SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
   // Verify that phi-like recipes are at the beginning of \p VPBB, with no
   // other recipes in between. Also check that only header blocks contain
@@ -147,6 +150,12 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         }
       }
     }
+  }
+
+  auto *IRBB = dyn_cast<VPIRBasicBlock>(VPBB);
+  if (IRBB && !WrappedIRBBs.insert(IRBB->getIRBasicBlock()).second) {
+    errs() << "Same IR basic block used by multiple wrapper blocks!\n";
+    return false;
   }
   return true;
 }
