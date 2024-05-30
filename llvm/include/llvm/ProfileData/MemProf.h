@@ -418,7 +418,9 @@ struct IndexedMemProfRecord {
   // Serializes the memprof records in \p Records to the ostream \p OS based
   // on the schema provided in \p Schema.
   void serialize(const MemProfSchema &Schema, raw_ostream &OS,
-                 IndexedVersion Version);
+                 IndexedVersion Version,
+                 llvm::DenseMap<memprof::CallStackId, uint32_t>
+                     *MemProfCallStackIndexes = nullptr);
 
   // Deserializes memprof records from the Buffer.
   static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
@@ -557,11 +559,17 @@ private:
   // The MemProf version to use for the serialization.
   IndexedVersion Version;
 
+  // Mappings from CallStackId to the indexes into the call stack array.
+  llvm::DenseMap<memprof::CallStackId, uint32_t> *MemProfCallStackIndexes;
+
 public:
   // We do not support the default constructor, which does not set Version.
   RecordWriterTrait() = delete;
-  RecordWriterTrait(const MemProfSchema *Schema, IndexedVersion V)
-      : Schema(Schema), Version(V) {}
+  RecordWriterTrait(
+      const MemProfSchema *Schema, IndexedVersion V,
+      llvm::DenseMap<memprof::CallStackId, uint32_t> *MemProfCallStackIndexes)
+      : Schema(Schema), Version(V),
+        MemProfCallStackIndexes(MemProfCallStackIndexes) {}
 
   static hash_value_type ComputeHash(key_type_ref K) { return K; }
 
@@ -586,7 +594,7 @@ public:
   void EmitData(raw_ostream &Out, key_type_ref /*Unused*/, data_type_ref V,
                 offset_type /*Unused*/) {
     assert(Schema != nullptr && "MemProf schema is not initialized!");
-    V.serialize(*Schema, Out, Version);
+    V.serialize(*Schema, Out, Version, MemProfCallStackIndexes);
     // Clear the IndexedMemProfRecord which results in clearing/freeing its
     // vectors of allocs and callsites. This is owned by the associated on-disk
     // hash table, but unused after this point. See also the comment added to
@@ -831,6 +839,50 @@ template <typename MapTy> struct CallStackIdConverter {
       for (FrameId Id : CS)
         Frames.push_back(FrameIdToFrame(Id));
     }
+    return Frames;
+  }
+};
+
+// A function object that returns a Frame stored at a given index into the Frame
+// array in the profile.
+struct LinearFrameIdConverter {
+  const unsigned char *FrameBase;
+
+  LinearFrameIdConverter() = delete;
+  LinearFrameIdConverter(const unsigned char *FrameBase)
+      : FrameBase(FrameBase) {}
+
+  Frame operator()(uint32_t LinearId) {
+    uint64_t Offset = static_cast<uint64_t>(LinearId) * Frame::serializedSize();
+    return Frame::deserialize(FrameBase + Offset);
+  }
+};
+
+// A function object that returns a call stack stored at a given index into the
+// call stack array in the profile.
+struct LinearCallStackIdConverter {
+  const unsigned char *CallStackBase;
+  std::function<Frame(uint32_t)> FrameIdToFrame;
+
+  LinearCallStackIdConverter() = delete;
+  LinearCallStackIdConverter(const unsigned char *CallStackBase,
+                             std::function<Frame(uint32_t)> FrameIdToFrame)
+      : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
+
+  llvm::SmallVector<Frame> operator()(uint32_t LinearCSId) {
+    llvm::SmallVector<Frame> Frames;
+
+    const unsigned char *Ptr =
+        CallStackBase + static_cast<uint64_t>(LinearCSId) * sizeof(uint32_t);
+    uint32_t NumFrames =
+        support::endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
+    Frames.reserve(NumFrames);
+    for (; NumFrames; --NumFrames) {
+      uint32_t Elem =
+          support::endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
+      Frames.push_back(FrameIdToFrame(Elem));
+    }
+
     return Frames;
   }
 };
