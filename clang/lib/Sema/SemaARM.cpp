@@ -574,23 +574,16 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   }
 
   if (FnType == SemaARM::ArmStreaming &&
-      BuiltinType == SemaARM::ArmNonStreaming) {
+      BuiltinType == SemaARM::ArmNonStreaming)
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming";
-  }
-
-  if (FnType == SemaARM::ArmStreamingCompatible &&
-      BuiltinType != SemaARM::ArmStreamingCompatible) {
-    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
-        << TheCall->getSourceRange() << "streaming compatible";
-    return;
-  }
-
-  if (FnType == SemaARM::ArmNonStreaming &&
-      BuiltinType == SemaARM::ArmStreaming) {
+  else if (FnType == SemaARM::ArmNonStreaming && BuiltinType == SemaARM::ArmStreaming)
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "non-streaming";
-  }
+  else if (FnType == SemaARM::ArmStreamingCompatible &&
+           BuiltinType != SemaARM::ArmStreamingCompatible)
+    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
+        << TheCall->getSourceRange() << "streaming compatible";
 }
 
 static bool hasArmZAState(const FunctionDecl *FD) {
@@ -859,7 +852,7 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
   const PointerType *pointerType = PointerArg->getType()->getAs<PointerType>();
   if (!pointerType) {
     Diag(DRE->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer)
-        << PointerArg->getType() << PointerArg->getSourceRange();
+        << PointerArg->getType() << 0 << PointerArg->getSourceRange();
     return true;
   }
 
@@ -893,7 +886,7 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
   if (!ValType->isIntegerType() && !ValType->isAnyPointerType() &&
       !ValType->isBlockPointerType() && !ValType->isFloatingType()) {
     Diag(DRE->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer_intfltptr)
-        << PointerArg->getType() << PointerArg->getSourceRange();
+        << PointerArg->getType() << 0 << PointerArg->getSourceRange();
     return true;
   }
 
