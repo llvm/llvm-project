@@ -56,7 +56,6 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD
-    @skipIfRemote
     def test_by_port(self):
         """
         Tests attaching to a process by port.
@@ -73,7 +72,6 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD
-    @skipIfRemote
     def test_by_port_and_pid(self):
         """
         Tests attaching to a process by process ID and port number.
@@ -99,7 +97,6 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD
-    @skipIfRemote
     def test_by_invalid_port(self):
         """
         Tests attaching to a process by invalid port number 0.
@@ -121,7 +118,6 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD
-    @skipIfRemote
     def test_by_illegal_port(self):
         """
         Tests attaching to a process by illegal/greater port number 65536

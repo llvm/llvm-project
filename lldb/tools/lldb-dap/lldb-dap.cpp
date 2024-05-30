@@ -762,12 +762,7 @@ void request_attach(const llvm::json::Object &request) {
 
         // If the user hasn't provided the hostname property, default localhost
         // being used.
-        std::string connect_url("connect://localhost:");
-
-        // If the user has provided hostname other than localhost.
-        if (!hostname.empty() && !hostname.starts_with("localhost")) {
-          connect_url = llvm::formatv("connect://{0}:", hostname.data());
-        }
+        std::string connect_url = llvm::formatv("connect://{0}:", hostname.data());
         connect_url += std::to_string(port);
         g_dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
                                    error);
