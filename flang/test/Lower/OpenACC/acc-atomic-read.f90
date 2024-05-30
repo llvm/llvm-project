@@ -55,5 +55,9 @@ end
 ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFatomic_read_with_convertEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[Y:.*]] = fir.alloca i64 {bindc_name = "y", uniq_name = "_QFatomic_read_with_convertEy"}
 ! CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFatomic_read_with_convertEy"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK: %[[CONV:.*]] = fir.convert %[[X_DECL]]#1 : (!fir.ref<i32>) -> !fir.ref<i64>
-! CHECK: acc.atomic.read %[[Y_DECL]]#1 = %[[CONV]] : !fir.ref<i64>, i32
+! CHECK: %[[TEMP:.*]] = fir.alloca i32
+! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP]] {uniq_name = ".atomic.read.temp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: acc.atomic.read %[[TEMP_DECL]]#0 = %1#1 : !fir.ref<i32>, i32
+! CHECK: %[[TEMP_LD:.*]] = fir.load %[[TEMP_DECL]]#0 : !fir.ref<i32>
+! CHECK: %[[TEMP_CVT:.*]] = fir.convert %[[TEMP_LD]] : (i32) -> i64
+! CHECK: fir.store %[[TEMP_CVT]] to %[[Y_DECL]]#1 : !fir.ref<i64>

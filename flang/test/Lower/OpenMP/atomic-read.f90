@@ -89,3 +89,40 @@ subroutine atomic_read_pointer()
   x = y
 end
 
+! CHECK-LABEL:   func.func @_QPread_with_convert() {
+! CHECK:           %[[VAL_0:.*]] = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFread_with_convertEa"}
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFread_with_convertEa"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFread_with_convertEb"}
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFread_with_convertEb"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_4:.*]] = fir.alloca i32
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = ".atomic.read.temp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           omp.atomic.read %[[VAL_5]]#0 = %[[VAL_3]]#1 : !fir.ref<i32>, i32
+! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
+! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (i32) -> f32
+! CHECK:           fir.store %[[VAL_7]] to %[[VAL_1]]#1 : !fir.ref<f32>
+subroutine read_with_convert()
+   real :: a
+   integer :: b
+   !$omp atomic read
+   a = b
+end
+
+! CHECK-LABEL:   func.func @_QPread_complex_with_convert() {
+! CHECK:           %[[VAL_0:.*]] = fir.alloca f32 {bindc_name = "s_v_r2", uniq_name = "_QFread_complex_with_convertEs_v_r2"}
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFread_complex_with_convertEs_v_r2"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.complex<4> {bindc_name = "s_x_c2", uniq_name = "_QFread_complex_with_convertEs_x_c2"}
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFread_complex_with_convertEs_x_c2"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+! CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.complex<4>
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = ".atomic.read.temp"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+! CHECK:           omp.atomic.read %[[VAL_5]]#0 = %[[VAL_3]]#1 : !fir.ref<!fir.complex<4>>, !fir.complex<4>
+! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.complex<4>>
+! CHECK:           %[[VAL_7:.*]] = fir.extract_value %[[VAL_6]], [0 : index] : (!fir.complex<4>) -> f32
+! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (f32) -> f32
+! CHECK:           fir.store %[[VAL_8]] to %[[VAL_1]]#1 : !fir.ref<f32>
+subroutine read_complex_with_convert()
+   real(kind=4)    :: s_v_r2
+   complex(kind=4) :: s_x_c2
+ !$omp atomic read
+    s_v_r2 = s_x_c2
+ !$omp end atomic
+end

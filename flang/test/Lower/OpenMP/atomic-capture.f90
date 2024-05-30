@@ -97,3 +97,33 @@ subroutine pointers_in_atomic_capture()
         b = a
     !$omp end atomic
 end subroutine
+
+! CHECK-LABEL:   func.func @_QPcapture_with_convert() {
+! CHECK:           %[[VAL_0:.*]] = fir.alloca f32 {bindc_name = "c", uniq_name = "_QFcapture_with_convertEc"}
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFcapture_with_convertEc"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_2:.*]] = fir.alloca f64 {bindc_name = "c2", uniq_name = "_QFcapture_with_convertEc2"}
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFcapture_with_convertEc2"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK:           %[[VAL_4:.*]] = fir.alloca f32
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = ".atomic.read.temp"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_6:.*]] = arith.constant 2.000000e+00 : f32
+! CHECK:           omp.atomic.capture {
+! CHECK:             omp.atomic.read %[[VAL_5]]#0 = %[[VAL_1]]#1 : !fir.ref<f32>, f32
+! CHECK:             omp.atomic.update %[[VAL_1]]#1 : !fir.ref<f32> {
+! CHECK:             ^bb0(%[[VAL_7:.*]]: f32):
+! CHECK:               %[[VAL_8:.*]] = arith.mulf %[[VAL_6]], %[[VAL_7]] fastmath<contract> : f32
+! CHECK:               omp.yield(%[[VAL_8]] : f32)
+! CHECK:             }
+! CHECK:           }
+! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<f32>
+! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (f32) -> f64
+! CHECK:           fir.store %[[VAL_10]] to %[[VAL_3]]#1 : !fir.ref<f64>
+! CHECK:           return
+! CHECK:         }
+subroutine capture_with_convert()
+    real :: c
+    double precision :: c2
+!$omp atomic capture
+    c2 = c
+    c = 2.0 * c
+!$omp end atomic
+end
