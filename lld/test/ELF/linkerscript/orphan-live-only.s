@@ -20,14 +20,14 @@
 
 # CHECK: Section Headers
 # CHECK: .pad
+# CHECK-NEXT: .orphan1
 # CHECK-NEXT: .text
 # CHECK-NEXT: .orphan2
 # CHECK-NEXT: .ro
-# CHECK-NEXT: .orphan1
 
 # CHECK: Segment Sections
-# CHECK-NEXT: .pad .text .orphan2
-# CHECK-NEXT: .ro .orphan1
+# CHECK-NEXT: .pad .orphan1 .text .orphan2
+# CHECK-NEXT: .ro
 
 .section .text,"ax"
  ret

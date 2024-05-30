@@ -890,9 +890,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 // countLeadingZeros.
 static int getRankProximity(OutputSection *a, SectionCommand *b) {
   auto *osd = dyn_cast<OutputDesc>(b);
-  return (osd && osd->osec.hasInputSections)
-             ? llvm::countl_zero(a->sortRank ^ osd->osec.sortRank)
-             : -1;
+  return osd ? llvm::countl_zero(a->sortRank ^ osd->osec.sortRank) : -1;
 }
 
 // When placing orphan sections, we want to place them after symbol assignments
@@ -958,20 +956,16 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
     sortRank = std::max(sortRank, foundSec->sortRank);
   for (; i != e; ++i) {
     auto *curSecDesc = dyn_cast<OutputDesc>(*i);
-    if (!curSecDesc || !curSecDesc->osec.hasInputSections)
+    if (!curSecDesc)
       continue;
     if (getRankProximity(sec, curSecDesc) != proximity ||
         sortRank < curSecDesc->osec.sortRank)
       break;
   }
 
-  auto isOutputSecWithInputSections = [](SectionCommand *cmd) {
-    auto *osd = dyn_cast<OutputDesc>(cmd);
-    return osd && osd->osec.hasInputSections;
-  };
-  auto j =
-      std::find_if(std::make_reverse_iterator(i), std::make_reverse_iterator(b),
-                   isOutputSecWithInputSections);
+  auto isOutputSec = [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); };
+  auto j = std::find_if(std::make_reverse_iterator(i),
+                        std::make_reverse_iterator(b), isOutputSec);
   i = j.base();
 
   // As a special case, if the orphan section is the last section, put
@@ -979,7 +973,7 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  auto nextSec = std::find_if(i, e, isOutputSecWithInputSections);
+  auto nextSec = std::find_if(i, e, isOutputSec);
   if (nextSec == e)
     return e;
 
