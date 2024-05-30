@@ -727,7 +727,7 @@ public:
     return isOneOf(tok::star, tok::amp, tok::ampamp);
   }
 
-  bool isAltOperator() const {
+  bool isCppAlternativeOperatorKeyword() const {
     assert(!TokenText.empty());
     if (!isalpha(TokenText[0]))
       return false;
