@@ -3551,22 +3551,16 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
       BuiltinType = ArmStreaming;
   }
 
-  if (FnType == ArmStreaming && BuiltinType == ArmNonStreaming) {
+  if (FnType == ArmStreaming && BuiltinType == ArmNonStreaming)
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming";
-  }
-
-  if (FnType == ArmStreamingCompatible &&
-      BuiltinType != ArmStreamingCompatible) {
-    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
-        << TheCall->getSourceRange() << "streaming compatible";
-    return;
-  }
-
-  if (FnType == ArmNonStreaming && BuiltinType == ArmStreaming) {
+  else if (FnType == ArmNonStreaming && BuiltinType == ArmStreaming)
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "non-streaming";
-  }
+  else if (FnType == ArmStreamingCompatible &&
+           BuiltinType != ArmStreamingCompatible)
+    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
+        << TheCall->getSourceRange() << "streaming compatible";
 }
 
 static bool hasArmZAState(const FunctionDecl *FD) {
