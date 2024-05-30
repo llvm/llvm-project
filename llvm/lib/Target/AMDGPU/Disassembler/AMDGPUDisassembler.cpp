@@ -1979,12 +1979,14 @@ bool AMDGPUDisassembler::isGFX12Plus() const {
   return AMDGPU::isGFX12Plus(STI);
 }
 
-bool AMDGPUDisassembler::isGFX12_10() const {
-  return AMDGPU::isGFX12_10(STI);
-}
+bool AMDGPUDisassembler::isGFX12_10() const { return AMDGPU::isGFX12_10(STI); }
 
 bool AMDGPUDisassembler::isGFX13() const {
   return STI.hasFeature(AMDGPU::FeatureGFX13);
+}
+
+bool AMDGPUDisassembler::isGFX13Plus() const {
+  return AMDGPU::isGFX13Plus(STI);
 }
 
 bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
@@ -2061,8 +2063,15 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // value of GRANULATED_WORKITEM_VGPR_COUNT in the reassembled binary. So we
   // simply calculate the inverse of what the assembler does.
 
-  uint32_t GranulatedWorkitemVGPRCount =
-      GET_FIELD(COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT);
+  uint32_t GranulatedWorkitemVGPRCount;
+
+  if (isGFX13Plus()) {
+    GranulatedWorkitemVGPRCount =
+        GET_FIELD(COMPUTE_PGM_RSRC1_GFX13_PLUS_GRANULATED_WORKITEM_VGPR_COUNT);
+  } else {
+    GranulatedWorkitemVGPRCount =
+        GET_FIELD(COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WORKITEM_VGPR_COUNT);
+  }
 
   uint32_t NextFreeVGPR =
       (GranulatedWorkitemVGPRCount + 1) *
@@ -2089,21 +2098,23 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   //
   // The disassembler cannot recover the original values of those 3 directives.
 
-  uint32_t GranulatedWavefrontSGPRCount =
-      GET_FIELD(COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT);
-
-  if (isGFX10Plus())
-    CHECK_RESERVED_BITS_MSG(COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT,
-                            "must be zero on gfx10+");
-
-  uint32_t NextFreeSGPR = (GranulatedWavefrontSGPRCount + 1) *
-                          AMDGPU::IsaInfo::getSGPREncodingGranule(&STI);
-
   KdStream << Indent << ".amdhsa_reserve_vcc " << 0 << '\n';
   if (!hasArchitectedFlatScratch())
     KdStream << Indent << ".amdhsa_reserve_flat_scratch " << 0 << '\n';
   KdStream << Indent << ".amdhsa_reserve_xnack_mask " << 0 << '\n';
-  KdStream << Indent << ".amdhsa_next_free_sgpr " << NextFreeSGPR << "\n";
+
+  if (!isGFX13Plus()) {
+    uint32_t GranulatedWavefrontSGPRCount =
+        GET_FIELD(COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WAVEFRONT_SGPR_COUNT);
+
+    if (isGFX10Plus())
+      CHECK_RESERVED_BITS_MSG(
+          COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WAVEFRONT_SGPR_COUNT,
+          "must be zero on gfx10+");
+    uint32_t NextFreeSGPR = (GranulatedWavefrontSGPRCount + 1) *
+                            AMDGPU::IsaInfo::getSGPREncodingGranule(&STI);
+    KdStream << Indent << ".amdhsa_next_free_sgpr " << NextFreeSGPR << "\n";
+  }
 
   CHECK_RESERVED_BITS(COMPUTE_PGM_RSRC1_PRIORITY);
 

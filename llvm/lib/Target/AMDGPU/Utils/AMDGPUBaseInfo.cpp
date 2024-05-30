@@ -1308,11 +1308,11 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
-  bool IsWave32 = EnableWavefrontSize32 ?
-      *EnableWavefrontSize32 :
-      STI->getFeatureBits().test(FeatureWavefrontSize32);
+  bool IsWave32 = EnableWavefrontSize32
+                      ? *EnableWavefrontSize32
+                      : STI->getFeatureBits().test(FeatureWavefrontSize32);
 
-  if (STI->getFeatureBits().test(Feature1024AddressableVGPRs))
+  if (isGFX12(*STI) && STI->getFeatureBits().test(Feature1024AddressableVGPRs))
     return IsWave32 ? 16 : 8;
 
   return IsWave32 ? 8 : 4;
