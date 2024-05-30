@@ -1815,7 +1815,8 @@ private:
 template <typename MulOpType>
 struct ElementwiseToOuterproduct : public OpRewritePattern<MulOpType> {
   using OpRewritePattern<MulOpType>::OpRewritePattern;
-  // Helper function returning the source of the input broadcast if it matches requirements for an outerproduct pattern.
+  // Helper function returning the source of the input broadcast if it matches
+  // requirements for an outerproduct pattern.
   Value getValidBroadcastSource(vector::BroadcastOp broadcastOp) const {
     // Fail if it is not a 1-to-2 dimension to broadcast to avoid generating
     // shape_casts/broadcasts which does not belong in this pattern.
