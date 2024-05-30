@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include "../cpu_model/aarch64.h"
-#include <arm_sme.h>
 
 __attribute__((visibility("hidden"), nocommon))
 _Bool __aarch64_has_sme_and_tpidr2_el0;
@@ -62,15 +61,22 @@ __attribute__((constructor(90))) static void get_aarch64_cpu_features(void) {
     __init_cpu_features();
 }
 
-extern bool __arm_in_streaming_mode(void) __arm_streaming_compatible;
+struct SME_STATE {
+  long PSTATE;
+  long TPIDR2_EL0;
+};
+
+extern struct SME_STATE __arm_sme_state(void) __arm_streaming_compatible;
 
 __attribute__((target("sve"))) long
 __arm_get_current_vg(void) __arm_streaming_compatible {
+  struct SME_STATE State = __arm_sme_state();
   bool HasSVE = get_features() & (1ULL << FEAT_SVE);
+
   if (!HasSVE && !has_sme())
     return 0;
 
-  if (HasSVE || __arm_in_streaming_mode()) {
+  if (HasSVE || (State.PSTATE & 1)) {
     long vl;
     __asm__ __volatile__("cntd %0" : "=r"(vl));
     return vl;
