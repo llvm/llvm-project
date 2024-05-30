@@ -10,7 +10,6 @@ import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/curl/enable.gni")
 import("//llvm/utils/gn/build/libs/edit/enable.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
-import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
 import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
@@ -292,12 +291,6 @@ write_cmake_config("config") {
     values += [ "HAVE_LIBEDIT=1" ]
   } else {
     values += [ "HAVE_LIBEDIT=" ]
-  }
-
-  if (llvm_enable_terminfo) {
-    values += [ "LLVM_ENABLE_TERMINFO=1" ]
-  } else {
-    values += [ "LLVM_ENABLE_TERMINFO=" ]
   }
 
   if (llvm_enable_libxml2) {
