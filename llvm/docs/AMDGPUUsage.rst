@@ -1172,19 +1172,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
                                                    the lowest active lane of the input operand. Currently implemented
-                                                   for i16, i32, float, half, bf16, <2 x i16>, <2 x half>, <2 x bfloat>,
+                                                   for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,
                                                    i64, double, pointers, multiples of the 32-bit vectors.
 
   llvm.amdgcn.readlane                             Provides direct access to v_readlane_b32. Returns the value in the
                                                    specified lane of the first input operand. The second operand specifies
                                                    the lane to read from. Currently implemented for i16, i32, float, half,
-                                                   bf16, <2 x i16>, <2 x half>, <2 x bfloat>, i64, double, pointers,
+                                                   bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, i64, double, pointers,
                                                    multiples of the 32-bit vectors.
 
   llvm.amdgcn.writelane                            Provides direct access to v_writelane_b32. Writes value in the first input
                                                    operand to the specified lane of divergent output. The second operand
                                                    specifies the lane to write. Currently implemented for i16, i32, float,
-                                                   half, bf16, <2 x i16>, <2 x half>, <2 x bfloat>, i64, double, pointers,
+                                                   half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, i64, double, pointers,
                                                    multiples of the 32-bit vectors.
 
   llvm.amdgcn.wave.reduce.umin                     Performs an arithmetic unsigned min reduction on the unsigned values
@@ -1225,7 +1225,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    the output.
 
   llvm.amdgcn.sdot2                                Provides direct access to v_dot2_i32_i16 across targets which
-                                                   upport such instructions. This performs signed dot product
+                                                   support such instructions. This performs signed dot product
                                                    with two v2i16 operands, summed with the third i32 operand. The
                                                    i1 fourth operand is used to clamp the output.
                                                    When applicable (e.g. no clamping), this is lowered into
