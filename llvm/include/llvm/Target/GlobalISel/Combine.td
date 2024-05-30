@@ -182,6 +182,7 @@ def FmReassoc   : MIFlagEnum<"FmReassoc">;
 def IsExact     : MIFlagEnum<"IsExact">;
 def NoSWrap     : MIFlagEnum<"NoSWrap">;
 def NoUWrap     : MIFlagEnum<"NoUWrap">;
+def NonNeg      : MIFlagEnum<"NonNeg">;
 
 def MIFlags;
 // def not; -> Already defined as a SDNode
@@ -1553,6 +1554,12 @@ def zext_trunc : GICombineRule<
    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
+def nneg_zext : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_ZEXT $root, $x, (MIFlags NonNeg)),
+   [{ return Helper.matchNonNegZext(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
 def extract_vector_element_shuffle_vector : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
    (match (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask),
@@ -1793,7 +1800,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     combine_concat_vector, double_icmp_zero_and_or_combine, match_addos,
-    sext_trunc, zext_trunc, combine_shuffle_concat,
+    sext_trunc, zext_trunc, nneg_zext, combine_shuffle_concat,
     push_freeze_to_prevent_poison_from_propagating]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
