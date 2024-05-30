@@ -767,7 +767,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
     bool supportMemtagGlobals = false;
     
-    if (arch == Triple::wasm64) {
+    if (arch == Triple::wasm32 || arch == Triple::wasm64) {
       supportMemtagGlobals = true;
     }
     else if (arch == Triple::aarch64 && T.isAndroid()) {
@@ -777,7 +777,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     if (!supportMemtagGlobals)
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
-                             "only supported on AArch64 Android or Wasm64");
+                             "only supported on AArch64 Android or WebAssembly");
     OutStreamer->emitSymbolAttribute(EmittedSym, MAI->getMemtagAttr());
   }
 
