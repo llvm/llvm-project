@@ -250,8 +250,8 @@ struct SCFReductionTilingResult {
   Operation *parallelTiledOp;
   /// The final reduction operation merging all the partial reductions.
   Operation *mergeOp;
-  /// Initial op
-  Operation *initialOp;
+  /// Initial values used for reduction.
+  SmallVector<Value> initialValues;
   /// The loop operations that iterate over the tiles.
   SmallVector<LoopLikeOpInterface> loops;
 };

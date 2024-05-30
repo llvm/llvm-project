@@ -199,7 +199,7 @@ fir::FortranVariableOpInterface
 hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   const fir::ExtendedValue &exv, llvm::StringRef name,
                   fir::FortranVariableFlagsAttr flags, mlir::Value dummyScope,
-                  fir::CUDADataAttributeAttr cudaAttr) {
+                  cuf::DataAttributeAttr dataAttr) {
 
   mlir::Value base = fir::getBase(exv);
   assert(fir::conformsWithPassByRef(base.getType()) &&
@@ -229,7 +229,7 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
       },
       [](const auto &) {});
   auto declareOp = builder.create<hlfir::DeclareOp>(
-      loc, base, name, shapeOrShift, lenParams, dummyScope, flags, cudaAttr);
+      loc, base, name, shapeOrShift, lenParams, dummyScope, flags, dataAttr);
   return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
 }
 
@@ -640,6 +640,15 @@ mlir::Value hlfir::genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
   genLengthParameters(loc, builder, entity, lenParams);
   assert(lenParams.size() == 1 && "characters must have one length parameters");
   return lenParams[0];
+}
+
+mlir::Value hlfir::genRank(mlir::Location loc, fir::FirOpBuilder &builder,
+                           hlfir::Entity entity, mlir::Type resultType) {
+  if (!entity.isAssumedRank())
+    return builder.createIntegerConstant(loc, resultType, entity.getRank());
+  assert(entity.isBoxAddressOrValue() &&
+         "assumed-ranks are box addresses or values");
+  return builder.create<fir::BoxRankOp>(loc, resultType, entity);
 }
 
 // Return a "shape" that can be used in fir.embox/fir.rebox with \p exv base.

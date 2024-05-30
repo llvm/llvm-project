@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Polynomial/IR/PolynomialOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Polynomial/IR/Polynomial.h"
 #include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.h"
 #include "mlir/Dialect/Polynomial/IR/PolynomialTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APInt.h"
 
@@ -106,14 +108,15 @@ LogicalResult MulScalarOp::verify() {
 }
 
 /// Test if a value is a primitive nth root of unity modulo cmod.
-bool isPrimitiveNthRootOfUnity(const APInt &root, const unsigned n,
+bool isPrimitiveNthRootOfUnity(const APInt &root, const APInt &n,
                                const APInt &cmod) {
   // Root bitwidth may be 1 less then cmod.
   APInt r = APInt(root).zext(cmod.getBitWidth());
   assert(r.ule(cmod) && "root must be less than cmod");
+  unsigned upperBound = n.getZExtValue();
 
   APInt a = r;
-  for (size_t k = 1; k < n; k++) {
+  for (size_t k = 1; k < upperBound; k++) {
     if (a.isOne())
       return false;
     a = (a * r).urem(cmod);
@@ -124,7 +127,8 @@ bool isPrimitiveNthRootOfUnity(const APInt &root, const unsigned n,
 /// Verify that the types involved in an NTT or INTT operation are
 /// compatible.
 static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
-                                 RankedTensorType tensorType) {
+                                 RankedTensorType tensorType,
+                                 std::optional<PrimitiveRootAttr> root) {
   Attribute encoding = tensorType.getEncoding();
   if (!encoding) {
     return op->emitOpError()
@@ -155,31 +159,133 @@ static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
     return diag;
   }
 
-  if (!ring.getPrimitiveRoot()) {
-    return op->emitOpError()
-           << "ring type " << ring << " does not provide a primitive root "
-           << "of unity, which is required to express an NTT";
-  }
-
-  if (!isPrimitiveNthRootOfUnity(ring.getPrimitiveRoot().getValue(), polyDegree,
-                                 ring.getCoefficientModulus().getValue())) {
-    return op->emitOpError()
-           << "ring type " << ring << " has a primitiveRoot attribute '"
-           << ring.getPrimitiveRoot()
-           << "' that is not a primitive root of the coefficient ring";
+  if (root.has_value()) {
+    APInt rootValue = root.value().getValue().getValue();
+    APInt rootDegree = root.value().getDegree().getValue();
+    APInt cmod = ring.getCoefficientModulus().getValue();
+    if (!isPrimitiveNthRootOfUnity(rootValue, rootDegree, cmod)) {
+      return op->emitOpError()
+             << "provided root " << rootValue.getZExtValue()
+             << " is not a primitive root "
+             << "of unity mod " << cmod.getZExtValue()
+             << ", with the specified degree " << rootDegree.getZExtValue();
+    }
   }
 
   return success();
 }
 
 LogicalResult NTTOp::verify() {
-  auto ring = getInput().getType().getRing();
-  auto tensorType = getOutput().getType();
-  return verifyNTTOp(this->getOperation(), ring, tensorType);
+  return verifyNTTOp(this->getOperation(), getInput().getType().getRing(),
+                     getOutput().getType(), getRoot());
 }
 
 LogicalResult INTTOp::verify() {
-  auto tensorType = getInput().getType();
-  auto ring = getOutput().getType().getRing();
-  return verifyNTTOp(this->getOperation(), ring, tensorType);
+  return verifyNTTOp(this->getOperation(), getOutput().getType().getRing(),
+                     getInput().getType(), getRoot());
+}
+
+ParseResult ConstantOp::parse(OpAsmParser &parser, OperationState &result) {
+  // Using the built-in parser.parseAttribute requires the full
+  // #polynomial.typed_int_polynomial syntax, which is excessive.
+  // Instead we parse a keyword int to signal it's an integer polynomial
+  Type type;
+  if (succeeded(parser.parseOptionalKeyword("float"))) {
+    Attribute floatPolyAttr = FloatPolynomialAttr::parse(parser, nullptr);
+    if (floatPolyAttr) {
+      if (parser.parseColon() || parser.parseType(type))
+        return failure();
+      result.addAttribute("value",
+                          TypedFloatPolynomialAttr::get(type, floatPolyAttr));
+      result.addTypes(type);
+      return success();
+    }
+  }
+
+  if (succeeded(parser.parseOptionalKeyword("int"))) {
+    Attribute intPolyAttr = IntPolynomialAttr::parse(parser, nullptr);
+    if (intPolyAttr) {
+      if (parser.parseColon() || parser.parseType(type))
+        return failure();
+
+      result.addAttribute("value",
+                          TypedIntPolynomialAttr::get(type, intPolyAttr));
+      result.addTypes(type);
+      return success();
+    }
+  }
+
+  // In the worst case, still accept the verbose versions.
+  TypedIntPolynomialAttr typedIntPolyAttr;
+  OptionalParseResult res =
+      parser.parseOptionalAttribute<TypedIntPolynomialAttr>(
+          typedIntPolyAttr, "value", result.attributes);
+  if (res.has_value() && succeeded(res.value())) {
+    result.addTypes(typedIntPolyAttr.getType());
+    return success();
+  }
+
+  TypedFloatPolynomialAttr typedFloatPolyAttr;
+  res = parser.parseAttribute<TypedFloatPolynomialAttr>(
+      typedFloatPolyAttr, "value", result.attributes);
+  if (res.has_value() && succeeded(res.value())) {
+    result.addTypes(typedFloatPolyAttr.getType());
+    return success();
+  }
+
+  return failure();
+}
+
+void ConstantOp::print(OpAsmPrinter &p) {
+  p << " ";
+  if (auto intPoly = dyn_cast<TypedIntPolynomialAttr>(getValue())) {
+    p << "int";
+    intPoly.getValue().print(p);
+  } else if (auto floatPoly = dyn_cast<TypedFloatPolynomialAttr>(getValue())) {
+    p << "float";
+    floatPoly.getValue().print(p);
+  } else {
+    assert(false && "unexpected attribute type");
+  }
+  p << " : ";
+  p.printType(getOutput().getType());
+}
+
+LogicalResult ConstantOp::inferReturnTypes(
+    MLIRContext *context, std::optional<mlir::Location> location,
+    ConstantOp::Adaptor adaptor,
+    llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
+  Attribute operand = adaptor.getValue();
+  if (auto intPoly = dyn_cast<TypedIntPolynomialAttr>(operand)) {
+    inferredReturnTypes.push_back(intPoly.getType());
+  } else if (auto floatPoly = dyn_cast<TypedFloatPolynomialAttr>(operand)) {
+    inferredReturnTypes.push_back(floatPoly.getType());
+  } else {
+    assert(false && "unexpected attribute type");
+    return failure();
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TableGen'd canonicalization patterns
+//===----------------------------------------------------------------------===//
+
+namespace {
+#include "PolynomialCanonicalization.inc"
+} // namespace
+
+void SubOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                        MLIRContext *context) {
+  results.add<SubAsAdd>(context);
+}
+
+void NTTOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                        MLIRContext *context) {
+  results.add<NTTAfterINTT, NTTOfAdd, NTTOfSub>(context);
+}
+
+void INTTOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<INTTAfterNTT, INTTOfAdd, INTTOfSub>(context);
 }

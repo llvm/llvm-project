@@ -1,16 +1,8 @@
-##===----------------------------------------------------------------------===##
-#
-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-# See https://llvm.org/LICENSE.txt for license information.
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-##===----------------------------------------------------------------------===##
-#
-# Build offloading library and related plugins.
-#
-##===----------------------------------------------------------------------===##
+# See for https://openmp.llvm.org/SupportAndFAQ.html for instructions on how
+# to build offload with CMake.
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "liboffload")
 
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OPENMP_STANDALONE_BUILD TRUE)
@@ -127,9 +119,6 @@ else()
   set(LIBOMPTARGET_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 endif()
 
-# Message utilities.
-include(LibomptargetUtils)
-
 # Get dependencies for the different components of the project.
 include(LibomptargetGetDependencies)
 
@@ -143,7 +132,7 @@ if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
   message(FATAL_ERROR "Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
 endif()
 
-if(DEFINED LIBOMPTARGET_BUILD_CUDA_PLUGIN OR 
+if(DEFINED LIBOMPTARGET_BUILD_CUDA_PLUGIN OR
    DEFINED LIBOMPTARGET_BUILD_AMDGPU_PLUGIN)
   message(WARNING "Option removed, use 'LIBOMPTARGET_PLUGINS_TO_BUILD' instead")
 endif()
@@ -155,7 +144,30 @@ set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
 if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
   set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
 endif()
-message("Building with support for ${LIBOMPTARGET_PLUGINS_TO_BUILD} plugins")
+
+if(NOT CMAKE_SYSTEM_NAME MATCHES "Linux" AND
+   "host" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+  message(STATUS "Not building host plugin: only Linux systems are supported")
+  list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "host")
+endif()
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
+        AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
+  if("amdgpu" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+    message(STATUS "Not building AMDGPU plugin: only support AMDGPU in "
+                   "Linux x86_64, ppc64le, or aarch64 hosts")
+    list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "amdgpu")
+  endif()
+  if("nvptx" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+    message(STATUS "Not building CUDA plugin: only support AMDGPU in "
+                   "Linux x86_64, ppc64le, or aarch64 hosts")
+    list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "cuda")
+  endif()
+endif()
+message(STATUS "Building the offload library with support for "
+               "the \"${LIBOMPTARGET_PLUGINS_TO_BUILD}\" plugins")
+
+set(LIBOMPTARGET_DLOPEN_PLUGINS "${LIBOMPTARGET_PLUGINS_TO_BUILD}" CACHE STRING
+    "Semicolon-separated list of plugins to use 'dlopen' for runtime linking")
 
 set(LIBOMPTARGET_ENUM_PLUGIN_TARGETS "")
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)

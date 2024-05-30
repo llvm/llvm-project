@@ -207,7 +207,7 @@ static Error isTrivialOperatorNode(const TreePatternNode &N) {
     if (Predicate.isImmediatePattern())
       continue;
 
-    if (Predicate.hasNoUse())
+    if (Predicate.hasNoUse() || Predicate.hasOneUse())
       continue;
 
     if (Predicate.isNonExtLoad() || Predicate.isAnyExtLoad() ||
@@ -780,6 +780,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     // after the addPredicate<>() calls.
     if (Predicate.hasNoUse()) {
       InsnMatcher.addPredicate<NoUsePredicateMatcher>();
+      HasAddedBuiltinMatcher = true;
+    }
+    if (Predicate.hasOneUse()) {
+      InsnMatcher.addPredicate<OneUsePredicateMatcher>();
       HasAddedBuiltinMatcher = true;
     }
 

@@ -562,6 +562,8 @@ set(LLVM_USE_STATIC_ZSTD FALSE CACHE BOOL "Use static version of zstd. Can be TR
 
 set(LLVM_ENABLE_CURL "OFF" CACHE STRING "Use libcurl for the HTTP client if available. Can be ON, OFF, or FORCE_ON")
 
+set(LLVM_HAS_LOGF128 "OFF" CACHE STRING "Use logf128 to constant fold fp128 logarithm calls. Can be ON, OFF, or FORCE_ON")
+
 set(LLVM_ENABLE_HTTPLIB "OFF" CACHE STRING "Use cpp-httplib HTTP server library if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
@@ -1124,7 +1126,7 @@ configure_file(
 add_custom_target(srpm
   COMMAND cpack -G TGZ --config CPackSourceConfig.cmake -B ${LLVM_SRPM_DIR}/SOURCES
   COMMAND rpmbuild -bs --define '_topdir ${LLVM_SRPM_DIR}' ${LLVM_SRPM_BINARY_SPECFILE})
-set_target_properties(srpm PROPERTIES FOLDER "Misc")
+set_target_properties(srpm PROPERTIES FOLDER "LLVM/Misc")
 
 if(APPLE AND DARWIN_LTO_LIBRARY)
   set(CMAKE_EXE_LINKER_FLAGS
@@ -1227,7 +1229,9 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/split-file)
   add_subdirectory(utils/mlgo-utils)
   if( LLVM_INCLUDE_TESTS )
+    set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
+    set(LLVM_SUBPROJECT_TITLE) 
   endif()
 else()
   if ( LLVM_INCLUDE_TESTS )
@@ -1291,7 +1295,7 @@ if( LLVM_INCLUDE_TESTS )
   if(LLVM_ALL_LIT_DEPENDS OR LLVM_ALL_ADDITIONAL_TEST_DEPENDS)
     add_dependencies(test-depends ${LLVM_ALL_LIT_DEPENDS} ${LLVM_ALL_ADDITIONAL_TEST_DEPENDS})
   endif()
-  set_target_properties(test-depends PROPERTIES FOLDER "Tests")
+  set_target_properties(test-depends PROPERTIES FOLDER "LLVM/Tests")
   add_dependencies(check-all test-depends)
 endif()
 
@@ -1348,7 +1352,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   # Installing the headers needs to depend on generating any public
   # tablegen'd headers.
   add_custom_target(llvm-headers DEPENDS intrinsics_gen omp_gen)
-  set_target_properties(llvm-headers PROPERTIES FOLDER "Misc")
+  set_target_properties(llvm-headers PROPERTIES FOLDER "LLVM/Resources")
 
   if (NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-llvm-headers
@@ -1358,7 +1362,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   # Custom target to install all libraries.
   add_custom_target(llvm-libraries)
-  set_target_properties(llvm-libraries PROPERTIES FOLDER "Misc")
+  set_target_properties(llvm-libraries PROPERTIES FOLDER "LLVM/Resources")
 
   if (NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-llvm-libraries
@@ -1404,6 +1408,8 @@ if (LLVM_INCLUDE_BENCHMARKS)
   set(HAVE_STD_REGEX ON CACHE BOOL "OK" FORCE)
   add_subdirectory(${LLVM_THIRD_PARTY_DIR}/benchmark
     ${CMAKE_CURRENT_BINARY_DIR}/third-party/benchmark)
+  set_target_properties(benchmark PROPERTIES FOLDER "Third-Party/Google Benchmark")
+  set_target_properties(benchmark_main PROPERTIES FOLDER "Third-Party/Google Benchmark")
   add_subdirectory(benchmarks)
 endif()
 

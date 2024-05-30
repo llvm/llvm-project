@@ -1,16 +1,4 @@
-##===----------------------------------------------------------------------===##
-#
-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-# See https://llvm.org/LICENSE.txt for license information.
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-##===----------------------------------------------------------------------===##
-#
-# Build offloading library libomptarget.so.
-#
-##===----------------------------------------------------------------------===##
-
-libomptarget_say("Building offloading runtime library libomptarget.")
+message(STATUS "Building offloading runtime library libomptarget.")
 
 if(LIBOMP_STANDALONE)
   set(LIBOMP ${LIBOMP_STANDALONE})
@@ -50,7 +38,7 @@ add_llvm_library(omptarget
   NO_INSTALL_RPATH
   BUILDTREE_ONLY
 )
-target_include_directories(omptarget PRIVATE 
+target_include_directories(omptarget PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
 )
 

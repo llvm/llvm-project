@@ -900,18 +900,6 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         }
       }
     }
-#if 0 // TODO: check if this is handled by MUBUF code above.
-  } else if (Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORD ||
-       Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORDX2 ||
-       Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORDX4) {
-    MachineOperand *MO = TII->getNamedOperand(Inst, AMDGPU::OpName::data);
-    unsigned OpNo;//TODO: find the OpNo for this operand;
-    RegInterval Interval = getRegInterval(&Inst, MRI, TRI, OpNo);
-    for (int RegNo = Interval.first; RegNo < Interval.second;
-    ++RegNo) {
-      setRegScore(RegNo + NUM_ALL_VGPRS, t, CurrScore);
-    }
-#endif
   } else /* LGKM_CNT || EXP_CNT || VS_CNT || NUM_INST_CNTS */ {
     // Match the score to the destination registers.
     for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
@@ -1673,59 +1661,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
             AMDGPU::SendMsg::ID_GS_DONE_PreGFX11)) {
     Wait.LoadCnt = 0;
   }
-#if 0 // TODO: the following blocks of logic when we have fence.
-  else if (MI.getOpcode() == SC_FENCE) {
-    const unsigned int group_size =
-      context->shader_info->GetMaxThreadGroupSize();
-    // group_size == 0 means thread group size is unknown at compile time
-    const bool group_is_multi_wave =
-      (group_size == 0 || group_size > target_info->GetWaveFrontSize());
-    const bool fence_is_global = !((SCInstInternalMisc*)Inst)->IsGroupFence();
-
-    for (unsigned int i = 0; i < Inst->NumSrcOperands(); i++) {
-      SCRegType src_type = Inst->GetSrcType(i);
-      switch (src_type) {
-        case SCMEM_LDS:
-          if (group_is_multi_wave ||
-            context->OptFlagIsOn(OPT_R1100_LDSMEM_FENCE_CHICKEN_BIT)) {
-            EmitWaitcnt |= ScoreBrackets->updateByWait(DS_CNT,
-                               ScoreBrackets->getScoreUB(DS_CNT));
-            // LDS may have to wait for VMcnt after buffer load to LDS
-            if (target_info->HasBufferLoadToLDS()) {
-              EmitWaitcnt |= ScoreBrackets->updateByWait(LOAD_CNT,
-                                 ScoreBrackets->getScoreUB(LOAD_CNT));
-            }
-          }
-          break;
-
-        case SCMEM_GDS:
-          if (group_is_multi_wave || fence_is_global) {
-            EmitWaitcnt |= ScoreBrackets->updateByWait(EXP_CNT,
-              ScoreBrackets->getScoreUB(EXP_CNT));
-            EmitWaitcnt |= ScoreBrackets->updateByWait(DS_CNT,
-              ScoreBrackets->getScoreUB(DS_CNT));
-          }
-          break;
-
-        case SCMEM_UAV:
-        case SCMEM_TFBUF:
-        case SCMEM_RING:
-        case SCMEM_SCATTER:
-          if (group_is_multi_wave || fence_is_global) {
-            EmitWaitcnt |= ScoreBrackets->updateByWait(EXP_CNT,
-              ScoreBrackets->getScoreUB(EXP_CNT));
-            EmitWaitcnt |= ScoreBrackets->updateByWait(LOAD_CNT,
-              ScoreBrackets->getScoreUB(LOAD_CNT));
-          }
-          break;
-
-        case SCMEM_SCRATCH:
-        default:
-          break;
-      }
-    }
-  }
-#endif
 
   // Export & GDS instructions do not read the EXEC mask until after the export
   // is granted (which can occur well after the instruction is issued).
@@ -2308,17 +2243,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     }
 
     updateEventWaitcntAfter(Inst, &ScoreBrackets);
-
-#if 0 // TODO: implement resource type check controlled by options with ub = LB.
-    // If this instruction generates a S_SETVSKIP because it is an
-    // indexed resource, and we are on Tahiti, then it will also force
-    // an S_WAITCNT vmcnt(0)
-    if (RequireCheckResourceType(Inst, context)) {
-      // Force the score to as if an S_WAITCNT vmcnt(0) is emitted.
-      ScoreBrackets->setScoreLB(LOAD_CNT,
-      ScoreBrackets->getScoreUB(LOAD_CNT));
-    }
-#endif
 
     if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore()) {
       AMDGPU::Waitcnt Wait = WCG->getAllZeroWaitcnt(

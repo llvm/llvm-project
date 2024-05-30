@@ -11,52 +11,52 @@
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 module test
     contains
-  subroutine func_arg(arg_alloc) 
+  subroutine func_arg(arg_alloc)
     integer,  pointer, intent (inout) :: arg_alloc(:)
-    
+
   !$omp target enter data map(alloc: arg_alloc)
-    
-  !$omp target 
+
+  !$omp target
     do index = 1, 10
       arg_alloc(index) = arg_alloc(index) + index
     end do
   !$omp end target
-    
+
   !$omp target exit data map(from: arg_alloc)
-  
+
   !$omp target exit data map(delete: arg_alloc)
-    
+
     print *, arg_alloc
   end subroutine func_arg
-end module 
-  
-subroutine func 
-  integer,  pointer :: local_alloc(:) 
+end module
+
+subroutine func
+  integer,  pointer :: local_alloc(:)
   allocate(local_alloc(10))
 
   !$omp target enter data map(alloc: local_alloc)
 
-  !$omp target 
+  !$omp target
     do index = 1, 10
       local_alloc(index) = index
     end do
   !$omp end target
-  
+
   !$omp target exit data map(from: local_alloc)
 
   !$omp target exit data map(delete: local_alloc)
 
   print *, local_alloc
-    
+
   deallocate(local_alloc)
-end subroutine func 
-  
-  
-program main 
-  use test 
-  integer,  pointer :: map_ptr(:) 
+end subroutine func
+
+
+program main
+  use test
+  integer,  pointer :: map_ptr(:)
   allocate(map_ptr(10))
-  
+
   !$omp target enter data map(alloc: map_ptr)
 
   !$omp target
@@ -64,12 +64,12 @@ program main
       map_ptr(index) = index
     end do
   !$omp end target
-  
+
   !$omp target exit data map(from: map_ptr)
 
   !$omp target exit data map(delete: map_ptr)
 
-  call func 
+  call func
 
   print *, map_ptr
 
