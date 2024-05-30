@@ -6514,8 +6514,7 @@ bool DeclarationVisitor::PassesLocalityChecks(
   }
   if (evaluate::IsCoarray(symbol) && !isReduce) { // F'2023 C1130
     SayWithDecl(name, symbol,
-        "Coarray '%s' not allowed in a %s locality-spec"_err_en_US,
-        specName);
+        "Coarray '%s' not allowed in a %s locality-spec"_err_en_US, specName);
     return false;
   }
   if (const DeclTypeSpec * type{symbol.GetType()}) {

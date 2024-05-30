@@ -1356,8 +1356,7 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
               llvm::SmallVector<mlir::Attribute> &reductionRecipes) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const auto &objects = std::get<Fortran::parser::AccObjectList>(objectList.t);
-  const auto &op =
-      std::get<Fortran::parser::ReductionOperator>(objectList.t);
+  const auto &op = std::get<Fortran::parser::ReductionOperator>(objectList.t);
   mlir::acc::ReductionOperator mlirOp = getReductionOperator(op);
   Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objects.v) {
