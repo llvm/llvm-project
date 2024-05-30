@@ -338,13 +338,13 @@ static inline int _inp(unsigned short port) {
 
 static inline unsigned short _inpw(unsigned short port) {
   unsigned short ret;
-  __asm__ volatile("inb %w1, %b0" : "=a"(ret) : "Nd"(port));
+  __asm__ volatile("inw %w1, %b0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 
 static inline unsigned long _inpd(unsigned short port) {
   unsigned long ret;
-  __asm__ volatile("inb %k1, %b0" : "=a"(ret) : "Nd"(port));
+  __asm__ volatile("inl %k1, %b0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 
