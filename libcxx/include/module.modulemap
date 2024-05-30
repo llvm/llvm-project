@@ -1576,10 +1576,22 @@ module std_private_numeric_transform_inclusive_scan [system] { header "__numeric
 module std_private_numeric_transform_reduce         [system] { header "__numeric/transform_reduce.h" }
 
 module std_private_pstl_backend_fwd                [system] { header "__pstl/backend_fwd.h" }
-module std_private_pstl_backends_default           [system] { header "__pstl/backends/default.h" }
-module std_private_pstl_backends_libdispatch       [system] { header "__pstl/backends/libdispatch.h" }
-module std_private_pstl_backends_serial            [system] { header "__pstl/backends/serial.h" }
-module std_private_pstl_backends_std_thread        [system] { header "__pstl/backends/std_thread.h" }
+module std_private_pstl_backends_default           [system] {
+  header "__pstl/backends/default.h"
+  export *
+}
+module std_private_pstl_backends_libdispatch       [system] {
+  header "__pstl/backends/libdispatch.h"
+  export *
+}
+module std_private_pstl_backends_serial            [system] {
+  header "__pstl/backends/serial.h"
+  export *
+}
+module std_private_pstl_backends_std_thread        [system] {
+  header "__pstl/backends/std_thread.h"
+  export *
+}
 module std_private_pstl_cpu_algos_any_of           [system] { header "__pstl/cpu_algos/any_of.h" }
 module std_private_pstl_cpu_algos_cpu_traits       [system] { header "__pstl/cpu_algos/cpu_traits.h" }
 module std_private_pstl_cpu_algos_fill             [system] { header "__pstl/cpu_algos/fill.h" }
