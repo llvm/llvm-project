@@ -767,7 +767,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
     bool supportMemtagGlobals = false;
 
-    if (arch == Triple::wasm32 || arch == Triple::wasm64) {
+    if (T.isWasm()) {
       supportMemtagGlobals = true;
     }
     else if (arch == Triple::aarch64 && T.isAndroid()) {
