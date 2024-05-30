@@ -2,6 +2,7 @@
 #define LLVM_PROFILEDATA_MEMPROF_H_
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/GlobalValue.h"
@@ -10,6 +11,7 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <bitset>
 #include <cstdint>
 #include <optional>
 
@@ -24,12 +26,14 @@ enum IndexedVersion : uint64_t {
   Version0 = 0,
   // Version 1: Added a version field to the header.
   Version1 = 1,
-  // Version 2: Added a call stack table.  Under development.
+  // Version 2: Added a call stack table.
   Version2 = 2,
+  // Version 3: Under development.
+  Version3 = 3,
 };
 
 constexpr uint64_t MinimumSupportedVersion = Version0;
-constexpr uint64_t MaximumSupportedVersion = Version2;
+constexpr uint64_t MaximumSupportedVersion = Version3;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
 static_assert(MinimumSupportedVersion <= MaximumSupportedVersion);
@@ -44,12 +48,21 @@ enum class Meta : uint64_t {
 
 using MemProfSchema = llvm::SmallVector<Meta, static_cast<int>(Meta::Size)>;
 
+// Returns the full schema currently in use.
+MemProfSchema getFullSchema();
+
+// Returns the schema consisting of the fields used for hot cold memory hinting.
+MemProfSchema getHotColdSchema();
+
 // Holds the actual MemInfoBlock data with all fields. Contents may be read or
 // written partially by providing an appropriate schema to the serialize and
 // deserialize methods.
 struct PortableMemInfoBlock {
   PortableMemInfoBlock() = default;
-  explicit PortableMemInfoBlock(const MemInfoBlock &Block) {
+  explicit PortableMemInfoBlock(const MemInfoBlock &Block,
+                                const MemProfSchema &IncomingSchema) {
+    for (const Meta Id : IncomingSchema)
+      Schema.set(llvm::to_underlying(Id));
 #define MIBEntryDef(NameTag, Name, Type) Name = Block.Name;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -61,10 +74,12 @@ struct PortableMemInfoBlock {
 
   // Read the contents of \p Ptr based on the \p Schema to populate the
   // MemInfoBlock member.
-  void deserialize(const MemProfSchema &Schema, const unsigned char *Ptr) {
+  void deserialize(const MemProfSchema &IncomingSchema,
+                   const unsigned char *Ptr) {
     using namespace support;
 
-    for (const Meta Id : Schema) {
+    Schema.reset();
+    for (const Meta Id : IncomingSchema) {
       switch (Id) {
 #define MIBEntryDef(NameTag, Name, Type)                                       \
   case Meta::Name: {                                                           \
@@ -76,6 +91,8 @@ struct PortableMemInfoBlock {
         llvm_unreachable("Unknown meta type id, is the profile collected from "
                          "a newer version of the runtime?");
       }
+
+      Schema.set(llvm::to_underlying(Id));
     }
   }
 
@@ -108,26 +125,29 @@ struct PortableMemInfoBlock {
 #undef MIBEntryDef
   }
 
+  // Return the schema, only for unit tests.
+  std::bitset<llvm::to_underlying(Meta::Size)> getSchema() const {
+    return Schema;
+  }
+
   // Define getters for each type which can be called by analyses.
 #define MIBEntryDef(NameTag, Name, Type)                                       \
-  Type get##Name() const { return Name; }
+  Type get##Name() const {                                                     \
+    assert(Schema[llvm::to_underlying(Meta::Name)]);                           \
+    return Name;                                                               \
+  }
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
 
   void clear() { *this = PortableMemInfoBlock(); }
 
-  // Returns the full schema currently in use.
-  static MemProfSchema getSchema() {
-    MemProfSchema List;
-#define MIBEntryDef(NameTag, Name, Type) List.push_back(Meta::Name);
-#include "llvm/ProfileData/MIBEntryDef.inc"
-#undef MIBEntryDef
-    return List;
-  }
-
   bool operator==(const PortableMemInfoBlock &Other) const {
+    if (Other.Schema != Schema)
+      return false;
+
 #define MIBEntryDef(NameTag, Name, Type)                                       \
-  if (Other.get##Name() != get##Name())                                        \
+  if (Schema[llvm::to_underlying(Meta::Name)] &&                               \
+      Other.get##Name() != get##Name())                                        \
     return false;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -138,15 +158,29 @@ struct PortableMemInfoBlock {
     return !operator==(Other);
   }
 
-  static constexpr size_t serializedSize() {
+  static size_t serializedSize(const MemProfSchema &Schema) {
     size_t Result = 0;
-#define MIBEntryDef(NameTag, Name, Type) Result += sizeof(Type);
+
+    for (const Meta Id : Schema) {
+      switch (Id) {
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  case Meta::Name: {                                                           \
+    Result += sizeof(Type);                                                    \
+  } break;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
+      default:
+        llvm_unreachable("Unknown meta type id, invalid input?");
+      }
+    }
+
     return Result;
   }
 
 private:
+  // The set of available fields, indexed by Meta::Name.
+  std::bitset<llvm::to_underlying(Meta::Size)> Schema;
+
 #define MIBEntryDef(NameTag, Name, Type) Type Name = Type();
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -288,11 +322,13 @@ struct IndexedAllocationInfo {
 
   IndexedAllocationInfo() = default;
   IndexedAllocationInfo(ArrayRef<FrameId> CS, CallStackId CSId,
-                        const MemInfoBlock &MB)
-      : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB) {}
+                        const MemInfoBlock &MB,
+                        const MemProfSchema &Schema = getFullSchema())
+      : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB, Schema) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
-  size_t serializedSize(IndexedVersion Version) const;
+  size_t serializedSize(const MemProfSchema &Schema,
+                        IndexedVersion Version) const;
 
   bool operator==(const IndexedAllocationInfo &Other) const {
     if (Other.Info != Info)
@@ -367,7 +403,8 @@ struct IndexedMemProfRecord {
     CallSites.append(Other.CallSites);
   }
 
-  size_t serializedSize(IndexedVersion Version) const;
+  size_t serializedSize(const MemProfSchema &Schema,
+                        IndexedVersion Version) const;
 
   bool operator==(const IndexedMemProfRecord &Other) const {
     if (Other.AllocSites != AllocSites)
@@ -391,7 +428,7 @@ struct IndexedMemProfRecord {
   // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
   // translate CallStackId to call stacks with frames inline.
   MemProfRecord toMemProfRecord(
-      std::function<const llvm::SmallVector<Frame>(const CallStackId)> Callback)
+      llvm::function_ref<llvm::SmallVector<Frame>(const CallStackId)> Callback)
       const;
 
   // Returns the GUID for the function name after canonicalization. For
@@ -535,7 +572,7 @@ public:
     endian::Writer LE(Out, llvm::endianness::little);
     offset_type N = sizeof(K);
     LE.write<offset_type>(N);
-    offset_type M = V.serializedSize(Version);
+    offset_type M = V.serializedSize(*Schema, Version);
     LE.write<offset_type>(M);
     return std::make_pair(N, M);
   }
@@ -726,6 +763,91 @@ public:
 
 // Compute a CallStackId for a given call stack.
 CallStackId hashCallStack(ArrayRef<FrameId> CS);
+
+namespace detail {
+// "Dereference" the iterator from DenseMap or OnDiskChainedHashTable.  We have
+// to do so in one of two different ways depending on the type of the hash
+// table.
+template <typename value_type, typename IterTy>
+value_type DerefIterator(IterTy Iter) {
+  using deref_type = llvm::remove_cvref_t<decltype(*Iter)>;
+  if constexpr (std::is_same_v<deref_type, value_type>)
+    return *Iter;
+  else
+    return Iter->second;
+}
+} // namespace detail
+
+// A function object that returns a frame for a given FrameId.
+template <typename MapTy> struct FrameIdConverter {
+  std::optional<FrameId> LastUnmappedId;
+  MapTy &Map;
+
+  FrameIdConverter() = delete;
+  FrameIdConverter(MapTy &Map) : Map(Map) {}
+
+  // Delete the copy constructor and copy assignment operator to avoid a
+  // situation where a copy of FrameIdConverter gets an error in LastUnmappedId
+  // while the original instance doesn't.
+  FrameIdConverter(const FrameIdConverter &) = delete;
+  FrameIdConverter &operator=(const FrameIdConverter &) = delete;
+
+  Frame operator()(FrameId Id) {
+    auto Iter = Map.find(Id);
+    if (Iter == Map.end()) {
+      LastUnmappedId = Id;
+      return Frame(0, 0, 0, false);
+    }
+    return detail::DerefIterator<Frame>(Iter);
+  }
+};
+
+// A function object that returns a call stack for a given CallStackId.
+template <typename MapTy> struct CallStackIdConverter {
+  std::optional<CallStackId> LastUnmappedId;
+  MapTy &Map;
+  llvm::function_ref<Frame(FrameId)> FrameIdToFrame;
+
+  CallStackIdConverter() = delete;
+  CallStackIdConverter(MapTy &Map,
+                       llvm::function_ref<Frame(FrameId)> FrameIdToFrame)
+      : Map(Map), FrameIdToFrame(FrameIdToFrame) {}
+
+  // Delete the copy constructor and copy assignment operator to avoid a
+  // situation where a copy of CallStackIdConverter gets an error in
+  // LastUnmappedId while the original instance doesn't.
+  CallStackIdConverter(const CallStackIdConverter &) = delete;
+  CallStackIdConverter &operator=(const CallStackIdConverter &) = delete;
+
+  llvm::SmallVector<Frame> operator()(CallStackId CSId) {
+    llvm::SmallVector<Frame> Frames;
+    auto CSIter = Map.find(CSId);
+    if (CSIter == Map.end()) {
+      LastUnmappedId = CSId;
+    } else {
+      llvm::SmallVector<FrameId> CS =
+          detail::DerefIterator<llvm::SmallVector<FrameId>>(CSIter);
+      Frames.reserve(CS.size());
+      for (FrameId Id : CS)
+        Frames.push_back(FrameIdToFrame(Id));
+    }
+    return Frames;
+  }
+};
+
+struct IndexedMemProfData {
+  // A map to hold memprof data per function. The lower 64 bits obtained from
+  // the md5 hash of the function name is used to index into the map.
+  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> RecordData;
+
+  // A map to hold frame id to frame mappings. The mappings are used to
+  // convert IndexedMemProfRecord to MemProfRecords with frame information
+  // inline.
+  llvm::MapVector<FrameId, Frame> FrameData;
+
+  // A map to hold call stack id to call stacks.
+  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStackData;
+};
 
 // Verify that each CallStackId is computed with hashCallStack.  This function
 // is intended to help transition from CallStack to CSId in

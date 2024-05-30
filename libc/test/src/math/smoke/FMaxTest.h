@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXTEST_H
 
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-template <typename T> class FMaxTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FMaxTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

@@ -3954,12 +3954,14 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
           // LHS >s RHS.
           case ICmpInst::ICMP_SGT:
           case ICmpInst::ICMP_SGE:
-            return ConstantExpr::getICmp(ICmpInst::ICMP_SLT, C,
-                                         Constant::getNullValue(C->getType()));
+            return ConstantFoldCompareInstOperands(
+                ICmpInst::ICMP_SLT, C, Constant::getNullValue(C->getType()),
+                Q.DL);
           case ICmpInst::ICMP_SLT:
           case ICmpInst::ICMP_SLE:
-            return ConstantExpr::getICmp(ICmpInst::ICMP_SGE, C,
-                                         Constant::getNullValue(C->getType()));
+            return ConstantFoldCompareInstOperands(
+                ICmpInst::ICMP_SGE, C, Constant::getNullValue(C->getType()),
+                Q.DL);
 
           // If LHS is non-negative then LHS <u RHS.  If LHS is negative then
           // LHS >u RHS.
@@ -4310,6 +4312,10 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
 
   // Don't fold away llvm.is.constant checks based on assumptions.
   if (match(I, m_Intrinsic<Intrinsic::is_constant>()))
+    return nullptr;
+
+  // Don't simplify freeze.
+  if (isa<FreezeInst>(I))
     return nullptr;
 
   // Replace Op with RepOp in instruction operands.
@@ -5342,9 +5348,6 @@ static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
         SourceShuf->getMaskValue(RootElt), RootVec, MaxRecurse);
   }
 
-  // TODO: Look through bitcasts? What if the bitcast changes the vector element
-  // size?
-
   // The source operand is not a shuffle. Initialize the root vector value for
   // this shuffle if that has not been done yet.
   if (!RootVec)
@@ -6281,11 +6284,11 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X)))))
       return X;
     break;
-  case Intrinsic::experimental_vector_reverse:
-    // experimental.vector.reverse(experimental.vector.reverse(x)) -> x
+  case Intrinsic::vector_reverse:
+    // vector.reverse(vector.reverse(x)) -> x
     if (match(Op0, m_VecReverse(m_Value(X))))
       return X;
-    // experimental.vector.reverse(splat(X)) -> splat(X)
+    // vector.reverse(splat(X)) -> splat(X)
     if (isSplatValue(Op0))
       return Op0;
     break;
@@ -7238,6 +7241,14 @@ const SimplifyQuery getBestSimplifyQuery(AnalysisManager<T, TArgs...> &AM,
 }
 template const SimplifyQuery getBestSimplifyQuery(AnalysisManager<Function> &,
                                                   Function &);
+
+bool SimplifyQuery::isUndefValue(Value *V) const {
+  if (!CanUseUndef)
+    return false;
+
+  return match(V, m_Undef());
+}
+
 } // namespace llvm
 
 void InstSimplifyFolder::anchor() {}

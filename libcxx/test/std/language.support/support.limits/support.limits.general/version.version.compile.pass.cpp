@@ -73,6 +73,7 @@
     __cpp_lib_constexpr_utility                             201811L [C++20]
     __cpp_lib_constexpr_vector                              201907L [C++20]
     __cpp_lib_constrained_equality                          202403L [C++26]
+    __cpp_lib_containers_ranges                             202202L [C++23]
     __cpp_lib_copyable_function                             202306L [C++26]
     __cpp_lib_coroutine                                     201902L [C++20]
     __cpp_lib_debugging                                     202311L [C++26]
@@ -87,7 +88,7 @@
     __cpp_lib_expected                                      202211L [C++23]
     __cpp_lib_filesystem                                    201703L [C++17]
     __cpp_lib_format                                        202106L [C++20]
-    __cpp_lib_format_path                                   202403L [C++23]
+    __cpp_lib_format_path                                   202403L [C++26]
     __cpp_lib_format_ranges                                 202207L [C++23]
     __cpp_lib_format_uchar                                  202311L [C++20]
     __cpp_lib_formatters                                    202302L [C++23]
@@ -129,6 +130,7 @@
     __cpp_lib_is_pointer_interconvertible                   201907L [C++20]
     __cpp_lib_is_scoped_enum                                202011L [C++23]
     __cpp_lib_is_swappable                                  201603L [C++17]
+    __cpp_lib_is_within_lifetime                            202306L [C++26]
     __cpp_lib_jthread                                       201911L [C++20]
     __cpp_lib_latch                                         201907L [C++20]
     __cpp_lib_launder                                       201606L [C++17]
@@ -214,7 +216,7 @@
     __cpp_lib_to_array                                      201907L [C++20]
     __cpp_lib_to_chars                                      201611L [C++17]
                                                             202306L [C++26]
-    __cpp_lib_to_string                                     202306L [C++23]
+    __cpp_lib_to_string                                     202306L [C++26]
     __cpp_lib_to_underlying                                 202102L [C++23]
     __cpp_lib_transformation_trait_aliases                  201304L [C++14]
     __cpp_lib_transparent_operators                         201210L [C++14]
@@ -231,7 +233,6 @@
     __cpp_lib_unwrap_ref                                    201811L [C++20]
     __cpp_lib_variant                                       202102L [C++17]
     __cpp_lib_void_t                                        201411L [C++17]
-    __cpp_lib_within_lifetime                               202306L [C++26]
 */
 
 #include <version>
@@ -455,6 +456,10 @@
 #   error "__cpp_lib_constrained_equality should not be defined before c++26"
 # endif
 
+# ifdef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_copyable_function
 #   error "__cpp_lib_copyable_function should not be defined before c++26"
 # endif
@@ -508,7 +513,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_format_ranges
@@ -673,6 +678,10 @@
 
 # ifdef __cpp_lib_is_swappable
 #   error "__cpp_lib_is_swappable should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_is_within_lifetime
+#   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_jthread
@@ -996,7 +1005,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_underlying
@@ -1053,10 +1062,6 @@
 
 # ifdef __cpp_lib_void_t
 #   error "__cpp_lib_void_t should not be defined before c++17"
-# endif
-
-# ifdef __cpp_lib_within_lifetime
-#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 14
@@ -1283,6 +1288,10 @@
 #   error "__cpp_lib_constrained_equality should not be defined before c++26"
 # endif
 
+# ifdef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_copyable_function
 #   error "__cpp_lib_copyable_function should not be defined before c++26"
 # endif
@@ -1339,7 +1348,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_format_ranges
@@ -1519,6 +1528,10 @@
 
 # ifdef __cpp_lib_is_swappable
 #   error "__cpp_lib_is_swappable should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_is_within_lifetime
+#   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_jthread
@@ -1878,7 +1891,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_underlying
@@ -1947,10 +1960,6 @@
 
 # ifdef __cpp_lib_void_t
 #   error "__cpp_lib_void_t should not be defined before c++17"
-# endif
-
-# ifdef __cpp_lib_within_lifetime
-#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -2213,6 +2222,10 @@
 #   error "__cpp_lib_constrained_equality should not be defined before c++26"
 # endif
 
+# ifdef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_copyable_function
 #   error "__cpp_lib_copyable_function should not be defined before c++26"
 # endif
@@ -2290,7 +2303,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_format_ranges
@@ -2503,6 +2516,10 @@
 # endif
 # if __cpp_lib_is_swappable != 201603L
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++17"
+# endif
+
+# ifdef __cpp_lib_is_within_lifetime
+#   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_jthread
@@ -2955,7 +2972,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_underlying
@@ -3039,10 +3056,6 @@
 # endif
 # if __cpp_lib_void_t != 201411L
 #   error "__cpp_lib_void_t should have the value 201411L in c++17"
-# endif
-
-# ifdef __cpp_lib_within_lifetime
-#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -3422,6 +3435,10 @@
 #   error "__cpp_lib_constrained_equality should not be defined before c++26"
 # endif
 
+# ifdef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_copyable_function
 #   error "__cpp_lib_copyable_function should not be defined before c++26"
 # endif
@@ -3526,7 +3543,7 @@
 # endif
 
 # ifdef __cpp_lib_format_path
-#   error "__cpp_lib_format_path should not be defined before c++23"
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_format_ranges
@@ -3778,6 +3795,10 @@
 # endif
 # if __cpp_lib_is_swappable != 201603L
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++20"
+# endif
+
+# ifdef __cpp_lib_is_within_lifetime
+#   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
 
 # if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
@@ -4329,7 +4350,7 @@
 # endif
 
 # ifdef __cpp_lib_to_string
-#   error "__cpp_lib_to_string should not be defined before c++23"
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_underlying
@@ -4419,10 +4440,6 @@
 # endif
 # if __cpp_lib_void_t != 201411L
 #   error "__cpp_lib_void_t should have the value 201411L in c++20"
-# endif
-
-# ifdef __cpp_lib_within_lifetime
-#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 23
@@ -4841,6 +4858,13 @@
 #   error "__cpp_lib_constrained_equality should not be defined before c++26"
 # endif
 
+# ifndef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should be defined in c++23"
+# endif
+# if __cpp_lib_containers_ranges != 202202L
+#   error "__cpp_lib_containers_ranges should have the value 202202L in c++23"
+# endif
+
 # ifdef __cpp_lib_copyable_function
 #   error "__cpp_lib_copyable_function should not be defined before c++26"
 # endif
@@ -4947,17 +4971,8 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_format_path
-#     error "__cpp_lib_format_path should be defined in c++23"
-#   endif
-#   if __cpp_lib_format_path != 202403L
-#     error "__cpp_lib_format_path should have the value 202403L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_format_path
-#     error "__cpp_lib_format_path should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifdef __cpp_lib_format_path
+#   error "__cpp_lib_format_path should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_format_ranges
@@ -5233,6 +5248,10 @@
 # endif
 # if __cpp_lib_is_swappable != 201603L
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++23"
+# endif
+
+# ifdef __cpp_lib_is_within_lifetime
+#   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
 
 # if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
@@ -5915,17 +5934,8 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_to_string
-#     error "__cpp_lib_to_string should be defined in c++23"
-#   endif
-#   if __cpp_lib_to_string != 202306L
-#     error "__cpp_lib_to_string should have the value 202306L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_to_string
-#     error "__cpp_lib_to_string should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifdef __cpp_lib_to_string
+#   error "__cpp_lib_to_string should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_to_underlying
@@ -6030,10 +6040,6 @@
 # endif
 # if __cpp_lib_void_t != 201411L
 #   error "__cpp_lib_void_t should have the value 201411L in c++23"
-# endif
-
-# ifdef __cpp_lib_within_lifetime
-#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER > 23
@@ -6480,6 +6486,13 @@
 #   ifdef __cpp_lib_constrained_equality
 #     error "__cpp_lib_constrained_equality should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should be defined in c++26"
+# endif
+# if __cpp_lib_containers_ranges != 202202L
+#   error "__cpp_lib_containers_ranges should have the value 202202L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7011,6 +7024,19 @@
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++26"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_is_within_lifetime
+#     error "__cpp_lib_is_within_lifetime should be defined in c++26"
+#   endif
+#   if __cpp_lib_is_within_lifetime != 202306L
+#     error "__cpp_lib_is_within_lifetime should have the value 202306L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_is_within_lifetime
+#     error "__cpp_lib_is_within_lifetime should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_jthread
 #     error "__cpp_lib_jthread should be defined in c++26"
@@ -7433,17 +7459,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_reference_wrapper
-#     error "__cpp_lib_reference_wrapper should be defined in c++26"
-#   endif
-#   if __cpp_lib_reference_wrapper != 202403L
-#     error "__cpp_lib_reference_wrapper should have the value 202403L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_reference_wrapper
-#     error "__cpp_lib_reference_wrapper should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_reference_wrapper
+#   error "__cpp_lib_reference_wrapper should be defined in c++26"
+# endif
+# if __cpp_lib_reference_wrapper != 202403L
+#   error "__cpp_lib_reference_wrapper should have the value 202403L in c++26"
 # endif
 
 # ifndef __cpp_lib_remove_cvref
@@ -7884,19 +7904,6 @@
 # endif
 # if __cpp_lib_void_t != 201411L
 #   error "__cpp_lib_void_t should have the value 201411L in c++26"
-# endif
-
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_within_lifetime
-#     error "__cpp_lib_within_lifetime should be defined in c++26"
-#   endif
-#   if __cpp_lib_within_lifetime != 202306L
-#     error "__cpp_lib_within_lifetime should have the value 202306L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_within_lifetime
-#     error "__cpp_lib_within_lifetime should not be defined because it is unimplemented in libc++!"
-#   endif
 # endif
 
 #endif // TEST_STD_VER > 23

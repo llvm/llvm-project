@@ -406,6 +406,28 @@ LogicalResult StoreScatterOp::verify() {
 
   return success();
 }
+//===----------------------------------------------------------------------===//
+// XeGPU_DpasOp
+//===----------------------------------------------------------------------===//
+LogicalResult DpasOp::verify() {
+  int64_t lhsRank = getLhsType().getRank();
+  int64_t rhsRank = getRhsType().getRank();
+
+  if (lhsRank != rhsRank || lhsRank != 3)
+    return emitOpError(
+        "lhs and rhs rank does not match for dpas op, or their rank is not 3.");
+
+  if (getAcc() && getAccType() != getResultType())
+    return emitOpError("Accumulator and Result for dpas op should have the "
+                       "same type (both shape and element type).");
+
+  auto lhsShape = getLhsType().getShape();
+  auto rhsShape = getRhsType().getShape();
+  if (lhsShape[1] != rhsShape[0] || lhsShape[2] != rhsShape[2])
+    return emitOpError("K-dimension or vnni-factor mismatch.");
+
+  return success();
+}
 
 } // namespace xegpu
 } // namespace mlir

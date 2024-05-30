@@ -41,6 +41,19 @@ using Level = uint64_t;
 /// including the value `ShapedType::kDynamic` (for shapes).
 using Size = int64_t;
 
+/// A simple structure that encodes a range of levels in the sparse tensors
+/// that forms a COO segment.
+struct COOSegment {
+  std::pair<Level, Level> lvlRange; // [low, high)
+  bool isSoA;
+
+  bool isAoS() const { return !isSoA; }
+  bool isSegmentStart(Level l) const { return l == lvlRange.first; }
+  bool inSegment(Level l) const {
+    return l >= lvlRange.first && l < lvlRange.second;
+  }
+};
+
 } // namespace sparse_tensor
 } // namespace mlir
 
@@ -89,18 +102,21 @@ inline MemRefType getMemRefType(T &&t) {
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 
+/// Returns true iff the type range has any sparse tensor type.
+inline bool hasAnySparseType(TypeRange types) {
+  return llvm::any_of(types, [](Type type) {
+    return getSparseTensorEncoding(type) != nullptr;
+  });
+}
+
 /// Returns true iff MLIR operand has any sparse operand.
 inline bool hasAnySparseOperand(Operation *op) {
-  return llvm::any_of(op->getOperands().getTypes(), [](Type t) {
-    return getSparseTensorEncoding(t) != nullptr;
-  });
+  return hasAnySparseType(op->getOperands().getTypes());
 }
 
 /// Returns true iff MLIR operand has any sparse result.
 inline bool hasAnySparseResult(Operation *op) {
-  return llvm::any_of(op->getResults().getTypes(), [](Type t) {
-    return getSparseTensorEncoding(t) != nullptr;
-  });
+  return hasAnySparseType(op->getResults().getTypes());
 }
 
 /// Returns true iff MLIR operand has any sparse operand or result.

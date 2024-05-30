@@ -14,7 +14,7 @@
 # CHECK:       <__AArch64ADRPThunk_>:
 # CHECK-NEXT:   8010708:       adrp    x16, 0x10000
 # CHECK-NEXT:                  add     x16, x16, #1792
-# CHECk-NEXT:                  br      x16
+# CHECK-NEXT:                  br      x16
 # CHECK-LABEL: <high>:
 # CHECK-NEXT:   8010714:       bl      0x8010708 <__AArch64ADRPThunk_>
 # CHECK-NEXT:                  b       0x8010708 <__AArch64ADRPThunk_>

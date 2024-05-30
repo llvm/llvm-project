@@ -1685,10 +1685,10 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
 
   // Pass through the requested lowering if any.  The default is live-through.
   StringRef DeoptLowering = getDeoptLowering(Call);
-  if (DeoptLowering.equals("live-in"))
+  if (DeoptLowering == "live-in")
     Flags |= uint32_t(StatepointFlags::DeoptLiveIn);
   else {
-    assert(DeoptLowering.equals("live-through") && "Unsupported value!");
+    assert(DeoptLowering == "live-through" && "Unsupported value!");
   }
 
   FunctionCallee CallTarget(Call->getFunctionType(), Call->getCalledOperand());
@@ -3046,8 +3046,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
       // which doesn't know how to produce a proper deopt state. So if we see a
       // non-leaf memcpy/memmove without deopt state just treat it as a leaf
       // copy and don't produce a statepoint.
-      if (!AllowStatepointWithNoDeoptInfo &&
-          !Call->getOperandBundle(LLVMContext::OB_deopt)) {
+      if (!AllowStatepointWithNoDeoptInfo && !Call->hasDeoptState()) {
         assert((isa<AtomicMemCpyInst>(Call) || isa<AtomicMemMoveInst>(Call)) &&
                "Don't expect any other calls here!");
         return false;

@@ -1122,7 +1122,22 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
   //   No base classes
   //   No virtual functions
   // Additionally, we need to ensure that there is a trivial copy assignment
-  // operator, a trivial destructor and no user-provided constructors.
+  // operator, a trivial destructor, no user-provided constructors and no
+  // deleted copy assignment operator.
+
+  // We need to cover two cases when checking for a deleted copy assignment
+  // operator.
+  //
+  // struct S { int& r; };
+  // The above will have an implicit copy assignment operator that is deleted
+  // and there will not be a `CXXMethodDecl` for the copy assignment operator.
+  // This is handled by the `needsImplicitCopyAssignment()` check below.
+  //
+  // struct S { S& operator=(const S&) = delete; int i; };
+  // The above will not have an implicit copy assignment operator that is
+  // deleted but there is a deleted `CXXMethodDecl` for the declared copy
+  // assignment operator. This is handled by the `isDeleted()` check below.
+
   if (RD->hasProtectedFields() || RD->hasPrivateFields())
     return false;
   if (RD->getNumBases() > 0)
@@ -1131,9 +1146,20 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
     return false;
   if (RD->hasNonTrivialCopyAssignment())
     return false;
-  for (const CXXConstructorDecl *Ctor : RD->ctors())
-    if (Ctor->isUserProvided())
-      return false;
+  if (RD->needsImplicitCopyAssignment() && !RD->hasSimpleCopyAssignment())
+    return false;
+  for (const Decl *D : RD->decls()) {
+    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
+      if (Ctor->isUserProvided())
+        return false;
+    } else if (auto *Template = dyn_cast<FunctionTemplateDecl>(D)) {
+      if (isa<CXXConstructorDecl>(Template->getTemplatedDecl()))
+        return false;
+    } else if (auto *MethodDecl = dyn_cast<CXXMethodDecl>(D)) {
+      if (MethodDecl->isCopyAssignmentOperator() && MethodDecl->isDeleted())
+        return false;
+    }
+  }
   if (RD->hasNonTrivialDestructor())
     return false;
   return true;

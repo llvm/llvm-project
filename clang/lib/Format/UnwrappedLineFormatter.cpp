@@ -515,6 +515,12 @@ private:
       }
     }
 
+    if (TheLine->First->is(TT_SwitchExpressionLabel)) {
+      return Style.AllowShortCaseExpressionOnASingleLine
+                 ? tryMergeShortCaseLabels(I, E, Limit)
+                 : 0;
+    }
+
     if (TheLine->Last->is(tok::l_brace)) {
       bool ShouldMerge = false;
       // Try to merge records.

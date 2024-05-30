@@ -56,4 +56,19 @@ add_libc_unittest(
     libc.src.pthread.pthread_condattr_init
     libc.src.pthread.pthread_condattr_setclock
     libc.src.pthread.pthread_condattr_setpshared
-  )
+)
+
+add_libc_unittest(
+  pthread_rwlockattr_test
+  SUITE
+    libc_pthread_unittests
+  SRCS
+    pthread_rwlockattr_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.src.pthread.pthread_rwlockattr_destroy
+    libc.src.pthread.pthread_rwlockattr_getpshared
+    libc.src.pthread.pthread_rwlockattr_init
+    libc.src.pthread.pthread_rwlockattr_setpshared
+)

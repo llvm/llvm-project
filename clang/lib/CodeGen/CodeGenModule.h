@@ -1241,6 +1241,9 @@ public:
   /// Return true iff the given type uses 'sret' when used as a return type.
   bool ReturnTypeUsesSRet(const CGFunctionInfo &FI);
 
+  /// Return true iff the given type has `inreg` set.
+  bool ReturnTypeHasInReg(const CGFunctionInfo &FI);
+
   /// Return true iff the given type uses an argument slot when 'sret' is used
   /// as a return type.
   bool ReturnSlotInterferesWithArgs(const CGFunctionInfo &FI);
@@ -1582,6 +1585,14 @@ public:
                      llvm::Constant *AssociatedData = nullptr);
   void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535,
                      bool IsDtorAttrFunc = false);
+
+  // Return whether structured convergence intrinsics should be generated for
+  // this target.
+  bool shouldEmitConvergenceTokens() const {
+    // TODO: this should probably become unconditional once the controlled
+    // convergence becomes the norm.
+    return getTriple().isSPIRVLogical();
+  }
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(

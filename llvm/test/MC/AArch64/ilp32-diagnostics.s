@@ -10,6 +10,14 @@
 // CHECK-ERROR: error: ILP32 8 byte absolute data relocation not supported (LP64 eqv: ABS64)
 // CHECK-ERROR: ^
 
+        .xword sym@AUTH(da,42)
+// CHECK-ERROR: error: ILP32 8 byte absolute data relocation not supported (LP64 eqv: AUTH_ABS64)
+// CHECK-ERROR: ^
+
+        .xword sym@AUTH(da,42,addr)
+// CHECK-ERROR: error: ILP32 8 byte absolute data relocation not supported (LP64 eqv: AUTH_ABS64)
+// CHECK-ERROR: ^
+
         movz x7, #:abs_g3:some_label
 // CHECK-ERROR: error: ILP32 absolute MOV relocation not supported (LP64 eqv: MOVW_UABS_G3)
 // CHECK-ERROR:        movz x7, #:abs_g3:some_label

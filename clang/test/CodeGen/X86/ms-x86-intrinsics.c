@@ -48,7 +48,7 @@ long long test__readfsqword(unsigned long Offset) {
 __int64 test__emul(int a, int b) {
   return __emul(a, b);
 }
-// CHECK-LABEL: define dso_local i64 @test__emul(i32 noundef %a, i32 noundef %b)
+// CHECK-LABEL: define dso_local range(i64 -4611686016279904256, 4611686018427387905) i64 @test__emul(i32 noundef %a, i32 noundef %b)
 // CHECK: [[X:%[0-9]+]] = sext i32 %a to i64
 // CHECK: [[Y:%[0-9]+]] = sext i32 %b to i64
 // CHECK: [[RES:%[0-9]+]] = mul nsw i64 [[Y]], [[X]]
@@ -57,7 +57,7 @@ __int64 test__emul(int a, int b) {
 unsigned __int64 test__emulu(unsigned int a, unsigned int b) {
   return __emulu(a, b);
 }
-// CHECK-LABEL: define dso_local i64 @test__emulu(i32 noundef %a, i32 noundef %b)
+// CHECK-LABEL: define dso_local range(i64 0, -8589934590) i64 @test__emulu(i32 noundef %a, i32 noundef %b)
 // CHECK: [[X:%[0-9]+]] = zext i32 %a to i64
 // CHECK: [[Y:%[0-9]+]] = zext i32 %b to i64
 // CHECK: [[RES:%[0-9]+]] = mul nuw i64 [[Y]], [[X]]
@@ -108,13 +108,13 @@ long long test__readgsqword(unsigned long Offset) {
 __int64 test__mulh(__int64 a, __int64 b) {
   return __mulh(a, b);
 }
-// CHECK-X64-LABEL: define dso_local i64 @test__mulh(i64 noundef %a, i64 noundef %b)
+// CHECK-X64-LABEL: define dso_local range(i64 -4611686018427387904, 4611686018427387905) i64 @test__mulh(i64 noundef %a, i64 noundef %b)
 // CHECK-X64: = mul nsw i128 %
 
 unsigned __int64 test__umulh(unsigned __int64 a, unsigned __int64 b) {
   return __umulh(a, b);
 }
-// CHECK-X64-LABEL: define dso_local i64 @test__umulh(i64 noundef %a, i64 noundef %b)
+// CHECK-X64-LABEL: define dso_local range(i64 0, -1) i64 @test__umulh(i64 noundef %a, i64 noundef %b)
 // CHECK-X64: = mul nuw i128 %
 
 __int64 test_mul128(__int64 Multiplier,

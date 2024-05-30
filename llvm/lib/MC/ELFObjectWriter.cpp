@@ -725,7 +725,13 @@ void ELFWriter::computeSymbolTable(
         HasLargeSectionIndex = true;
     }
 
+    // Temporary symbols generated for certain assembler features (.eh_frame,
+    // .debug_line) of an empty name may be referenced by relocations due to
+    // linker relaxation. Rename them to ".L0 " to match the gas fake label name
+    // and allow ld/objcopy --discard-locals to discard such symbols.
     StringRef Name = Symbol.getName();
+    if (Name.empty())
+      Name = ".L0 ";
 
     // Sections have their own string table
     if (Symbol.getType() != ELF::STT_SECTION) {

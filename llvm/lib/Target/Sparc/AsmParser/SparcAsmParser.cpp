@@ -1377,7 +1377,7 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
     return IntRegs[RegNo];
   }
 
-  if (Name.equals("xcc")) {
+  if (Name == "xcc") {
     // FIXME:: check 64bit.
     RegKind = SparcOperand::rk_Special;
     return SP::ICC;
@@ -1385,36 +1385,36 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
 
   // JPS1 extension - aliases for ASRs
   // Section A.51 - Read State Register
-  if (Name.equals("pcr")) {
+  if (Name == "pcr") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR16;
   }
 
-  if (Name.equals("pic")) {
+  if (Name == "pic") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR17;
   }
-  if (Name.equals("dcr")) {
+  if (Name == "dcr") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR18;
   }
-  if (Name.equals("gsr")) {
+  if (Name == "gsr") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR19;
   }
-  if (Name.equals("softint")) {
+  if (Name == "softint") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR22;
   }
-  if (Name.equals("tick_cmpr")) {
+  if (Name == "tick_cmpr") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR23;
   }
-  if (Name.equals("stick") || Name.equals("sys_tick")) {
+  if (Name == "stick" || Name == "sys_tick") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR24;
   }
-  if (Name.equals("stick_cmpr") || Name.equals("sys_tick_cmpr")) {
+  if (Name == "stick_cmpr" || Name == "sys_tick_cmpr") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR25;
   }

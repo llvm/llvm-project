@@ -33,12 +33,20 @@ namespace clang::dataflow {
 
 const Expr &ignoreCFGOmittedNodes(const Expr &E) {
   const Expr *Current = &E;
-  if (auto *EWC = dyn_cast<ExprWithCleanups>(Current)) {
-    Current = EWC->getSubExpr();
+  const Expr *Last = nullptr;
+  while (Current != Last) {
+    Last = Current;
+    if (auto *EWC = dyn_cast<ExprWithCleanups>(Current)) {
+      Current = EWC->getSubExpr();
+      assert(Current != nullptr);
+    }
+    if (auto *CE = dyn_cast<ConstantExpr>(Current)) {
+      Current = CE->getSubExpr();
+      assert(Current != nullptr);
+    }
+    Current = Current->IgnoreParens();
     assert(Current != nullptr);
   }
-  Current = Current->IgnoreParens();
-  assert(Current != nullptr);
   return *Current;
 }
 

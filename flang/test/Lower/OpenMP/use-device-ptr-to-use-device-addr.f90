@@ -1,5 +1,6 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
-!RUN: bbc -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! The "use_device_addr" was added to the "target data" directive in OpenMP 5.0.
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
 
 ! This tests primary goal is to check the promotion of 
 ! non-CPTR arguments from use_device_ptr to 

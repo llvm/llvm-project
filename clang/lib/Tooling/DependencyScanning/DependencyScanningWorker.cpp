@@ -439,6 +439,9 @@ public:
     if (Result)
       setLastCC1Arguments(std::move(OriginalInvocation));
 
+    // Propagate the statistics to the parent FileManager.
+    DriverFileMgr->AddStats(ScanInstance.getFileManager());
+
     return Result;
   }
 

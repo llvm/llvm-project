@@ -630,8 +630,8 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
       if (!CmpLHSConst)
         continue;
       // Now constant-evaluate the compare
-      Constant *Result = ConstantExpr::getCompare(CI->getPredicate(),
-                                                  CmpLHSConst, CmpConst, true);
+      Constant *Result = ConstantFoldCompareInstOperands(
+          CI->getPredicate(), CmpLHSConst, CmpConst, DL);
       // If the result means we don't branch to the block then that block is
       // unlikely.
       if (Result &&
@@ -1273,9 +1273,8 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
   EstimatedBlockWeight.clear();
   SccI.reset();
 
-  if (PrintBranchProb &&
-      (PrintBranchProbFuncName.empty() ||
-       F.getName().equals(PrintBranchProbFuncName))) {
+  if (PrintBranchProb && (PrintBranchProbFuncName.empty() ||
+                          F.getName() == PrintBranchProbFuncName)) {
     print(dbgs());
   }
 }

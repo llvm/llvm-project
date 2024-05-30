@@ -110,6 +110,7 @@ cc_test(
         "//clang:ast",
         "//clang:ast_matchers",
         "//clang:basic",
+        "//clang:frontend",
         "//clang:lex",
         "//clang:parse",
         "//clang:tooling",

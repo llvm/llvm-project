@@ -158,4 +158,4 @@ Additions:
 
   * mbrtoc8
   * c8rtomb
-  * char*_t
+  * char*_t |check|

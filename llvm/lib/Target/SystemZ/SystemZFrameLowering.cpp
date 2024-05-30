@@ -56,14 +56,17 @@ static const TargetFrameLowering::SpillSlot XPLINKSpillOffsetTable[] = {
 
 SystemZFrameLowering::SystemZFrameLowering(StackDirection D, Align StackAl,
                                            int LAO, Align TransAl,
-                                           bool StackReal)
-    : TargetFrameLowering(D, StackAl, LAO, TransAl, StackReal) {}
+                                           bool StackReal, unsigned PointerSize)
+    : TargetFrameLowering(D, StackAl, LAO, TransAl, StackReal),
+      PointerSize(PointerSize) {}
 
 std::unique_ptr<SystemZFrameLowering>
 SystemZFrameLowering::create(const SystemZSubtarget &STI) {
+  unsigned PtrSz =
+      STI.getTargetLowering()->getTargetMachine().getPointerSize(0);
   if (STI.isTargetXPLINK64())
-    return std::make_unique<SystemZXPLINKFrameLowering>();
-  return std::make_unique<SystemZELFFrameLowering>();
+    return std::make_unique<SystemZXPLINKFrameLowering>(PtrSz);
+  return std::make_unique<SystemZELFFrameLowering>(PtrSz);
 }
 
 namespace {
@@ -178,7 +181,8 @@ bool SystemZELFFrameLowering::assignCalleeSavedSpillSlots(
         StartSPOffset = Offset;
       }
       Offset -= SystemZMC::ELFCallFrameSize;
-      int FrameIdx = MFFrame.CreateFixedSpillStackObject(8, Offset);
+      int FrameIdx =
+          MFFrame.CreateFixedSpillStackObject(getPointerSize(), Offset);
       CS.setFrameIdx(FrameIdx);
     } else
       CS.setFrameIdx(INT32_MAX);
@@ -272,9 +276,9 @@ void SystemZELFFrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 }
 
-SystemZELFFrameLowering::SystemZELFFrameLowering()
+SystemZELFFrameLowering::SystemZELFFrameLowering(unsigned PointerSize)
     : SystemZFrameLowering(TargetFrameLowering::StackGrowsDown, Align(8), 0,
-                           Align(8), /* StackRealignable */ false),
+                           Align(8), /* StackRealignable */ false, PointerSize),
       RegSpillOffsets(0) {
 
   // Due to the SystemZ ABI, the DWARF CFA (Canonical Frame Address) is not
@@ -453,8 +457,10 @@ void SystemZELFFrameLowering::processFunctionBeforeFrameFinalized(
     // are outside the reach of an unsigned 12-bit displacement.
     // Create 2 for the case where both addresses in an MVC are
     // out of range.
-    RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, Align(8), false));
-    RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, Align(8), false));
+    RS->addScavengingFrameIndex(
+        MFFrame.CreateStackObject(getPointerSize(), Align(8), false));
+    RS->addScavengingFrameIndex(
+        MFFrame.CreateStackObject(getPointerSize(), Align(8), false));
   }
 
   // If R6 is used as an argument register it is still callee saved. If it in
@@ -867,7 +873,7 @@ int SystemZELFFrameLowering::getOrCreateFramePointerSaveIndex(
   if (!FI) {
     MachineFrameInfo &MFFrame = MF.getFrameInfo();
     int Offset = getBackchainOffset(MF) - SystemZMC::ELFCallFrameSize;
-    FI = MFFrame.CreateFixedObject(8, Offset, false);
+    FI = MFFrame.CreateFixedObject(getPointerSize(), Offset, false);
     ZFI->setFramePointerSaveIndex(FI);
   }
   return FI;
@@ -884,9 +890,10 @@ bool SystemZELFFrameLowering::usePackedStack(MachineFunction &MF) const {
   return HasPackedStackAttr && CallConv;
 }
 
-SystemZXPLINKFrameLowering::SystemZXPLINKFrameLowering()
+SystemZXPLINKFrameLowering::SystemZXPLINKFrameLowering(unsigned PointerSize)
     : SystemZFrameLowering(TargetFrameLowering::StackGrowsDown, Align(32), 0,
-                           Align(32), /* StackRealignable */ false),
+                           Align(32), /* StackRealignable */ false,
+                           PointerSize),
       RegSpillOffsets(-1) {
 
   // Create a mapping from register number to save slot offset.
@@ -902,7 +909,7 @@ int SystemZXPLINKFrameLowering::getOrCreateFramePointerSaveIndex(
   int FI = ZFI->getFramePointerSaveIndex();
   if (!FI) {
     MachineFrameInfo &MFFrame = MF.getFrameInfo();
-    FI = MFFrame.CreateFixedObject(8, 0, false);
+    FI = MFFrame.CreateFixedObject(getPointerSize(), 0, false);
     MFFrame.setStackID(FI, TargetStackID::NoAlloc);
     ZFI->setFramePointerSaveIndex(FI);
   }
@@ -1028,7 +1035,7 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
         // Non-volatile GPRs are saved in the dedicated register save area at
         // the bottom of the stack and are not truly part of the "normal" stack
         // frame. Mark the frame index as NoAlloc to indicate it as such.
-        unsigned RegSize = 8;
+        unsigned RegSize = getPointerSize();
         int FrameIdx =
             (FPSI && Offset == 0)
                 ? FPSI
@@ -1298,7 +1305,7 @@ void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
     for (unsigned I = FixedRegs; I < SystemZ::XPLINK64NumArgGPRs; I++) {
       uint64_t StartOffset = MFFrame.getOffsetAdjustment() +
                              MFFrame.getStackSize() + Regs.getCallFrameSize() +
-                             getOffsetOfLocalArea() + I * 8;
+                             getOffsetOfLocalArea() + I * getPointerSize();
       unsigned Reg = GPRs[I];
       BuildMI(MBB, MBBI, DL, TII->get(SystemZ::STG))
           .addReg(Reg)

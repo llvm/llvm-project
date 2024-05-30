@@ -802,9 +802,23 @@
 // RUN:     --target=i686-pc-windows \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-WIN32 %s
+// RUN: not %clang -fsanitize=cfi -fsanitize-stats -### %s 2>&1 \
+// RUN:     --target=i686-pc-windows \
+// RUN:     -fno-rtlib-defaultlib \
+// RUN:     -frtlib-defaultlib \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-WIN32 %s
 // CHECK-CFI-STATS-WIN32: "--dependent-lib=clang_rt.stats_client{{(-i386)?}}.lib"
 // CHECK-CFI-STATS-WIN32: "--dependent-lib=clang_rt.stats{{(-i386)?}}.lib"
 // CHECK-CFI-STATS-WIN32: "--linker-option=/include:___sanitizer_stats_register"
+
+// RUN: not %clang -fsanitize=cfi -fsanitize-stats -### %s 2>&1 \
+// RUN:     --target=i686-pc-windows \
+// RUN:     -fno-rtlib-defaultlib \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-WIN32-NODEF %s
+// CHECK-CFI-STATS-WIN32-NODEF-NOT: "--dependent-lib=clang_rt.stats_client{{(-i386)?}}.lib"
+// CHECK-CFI-STATS-WIN32-NODEF-NOT: "--dependent-lib=clang_rt.stats{{(-i386)?}}.lib"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=safe-stack \

@@ -53,19 +53,19 @@ struct FEnv {
   static constexpr uint32_t ExceptionControlFlagsBitPosition = 8;
 
   LIBC_INLINE static uint32_t getStatusValueForExcept(int excepts) {
-    return (excepts & FE_INVALID ? INVALID : 0) |
-           (excepts & FE_DIVBYZERO ? DIVBYZERO : 0) |
-           (excepts & FE_OVERFLOW ? OVERFLOW : 0) |
-           (excepts & FE_UNDERFLOW ? UNDERFLOW : 0) |
-           (excepts & FE_INEXACT ? INEXACT : 0);
+    return ((excepts & FE_INVALID) ? INVALID : 0) |
+           ((excepts & FE_DIVBYZERO) ? DIVBYZERO : 0) |
+           ((excepts & FE_OVERFLOW) ? OVERFLOW : 0) |
+           ((excepts & FE_UNDERFLOW) ? UNDERFLOW : 0) |
+           ((excepts & FE_INEXACT) ? INEXACT : 0);
   }
 
   LIBC_INLINE static int exceptionStatusToMacro(uint32_t status) {
-    return (status & INVALID ? FE_INVALID : 0) |
-           (status & DIVBYZERO ? FE_DIVBYZERO : 0) |
-           (status & OVERFLOW ? FE_OVERFLOW : 0) |
-           (status & UNDERFLOW ? FE_UNDERFLOW : 0) |
-           (status & INEXACT ? FE_INEXACT : 0);
+    return ((status & INVALID) ? FE_INVALID : 0) |
+           ((status & DIVBYZERO) ? FE_DIVBYZERO : 0) |
+           ((status & OVERFLOW) ? FE_OVERFLOW : 0) |
+           ((status & UNDERFLOW) ? FE_UNDERFLOW : 0) |
+           ((status & INEXACT) ? FE_INEXACT : 0);
   }
 
   static uint32_t getControlWord() {

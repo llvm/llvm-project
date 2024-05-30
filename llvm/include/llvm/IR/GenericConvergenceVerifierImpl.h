@@ -76,7 +76,7 @@ void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
           "Entry intrinsic cannot be preceded by a convergent operation in the "
           "same basic block.",
           {Context.print(&I)});
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CONV_ANCHOR:
     Check(!TokenDef,
           "Entry or anchor intrinsic cannot have a convergencectrl token "

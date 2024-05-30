@@ -1307,19 +1307,35 @@ void ToolChain::AddCCKextLibArgs(const ArgList &Args,
 
 bool ToolChain::isFastMathRuntimeAvailable(const ArgList &Args,
                                            std::string &Path) const {
+  // Don't implicitly link in mode-changing libraries in a shared library, since
+  // this can have very deleterious effects. See the various links from
+  // https://github.com/llvm/llvm-project/issues/57589 for more information.
+  bool Default = !Args.hasArgNoClaim(options::OPT_shared);
+
   // Do not check for -fno-fast-math or -fno-unsafe-math when -Ofast passed
   // (to keep the linker options consistent with gcc and clang itself).
-  if (!isOptimizationLevelFast(Args)) {
+  if (Default && !isOptimizationLevelFast(Args)) {
     // Check if -ffast-math or -funsafe-math.
-    Arg *A =
-      Args.getLastArg(options::OPT_ffast_math, options::OPT_fno_fast_math,
-                      options::OPT_funsafe_math_optimizations,
-                      options::OPT_fno_unsafe_math_optimizations);
+    Arg *A = Args.getLastArg(
+        options::OPT_ffast_math, options::OPT_fno_fast_math,
+        options::OPT_funsafe_math_optimizations,
+        options::OPT_fno_unsafe_math_optimizations, options::OPT_ffp_model_EQ);
 
     if (!A || A->getOption().getID() == options::OPT_fno_fast_math ||
         A->getOption().getID() == options::OPT_fno_unsafe_math_optimizations)
-      return false;
+      Default = false;
+    if (A && A->getOption().getID() == options::OPT_ffp_model_EQ) {
+      StringRef Model = A->getValue();
+      if (Model != "fast")
+        Default = false;
+    }
   }
+
+  // Whatever decision came as a result of the above implicit settings, either
+  // -mdaz-ftz or -mno-daz-ftz is capable of overriding it.
+  if (!Args.hasFlag(options::OPT_mdaz_ftz, options::OPT_mno_daz_ftz, Default))
+    return false;
+
   // If crtfastmath.o exists add it to the arguments.
   Path = GetFilePath("crtfastmath.o");
   return (Path != "crtfastmath.o"); // Not found.

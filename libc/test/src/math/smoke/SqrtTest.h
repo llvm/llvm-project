@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/bit.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"
 
-template <typename T> class SqrtTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class SqrtTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

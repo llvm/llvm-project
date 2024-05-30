@@ -293,13 +293,11 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA78C:
   case CortexA710:
   case CortexR4:
-  case CortexR4F:
   case CortexR5:
   case CortexR7:
   case CortexM3:
   case CortexM7:
   case CortexR52:
-  case CortexM52:
   case CortexX1:
   case CortexX1C:
     break;
@@ -314,8 +312,6 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case Krait:
     PreISelOperandLatencyAdjustment = 1;
     break;
-  case NeoverseN1:
-  case NeoverseN2:
   case NeoverseV1:
     break;
   case Swift:

@@ -419,6 +419,7 @@ struct Tag {
   std::optional<EnumExtensibilityKind> EnumExtensibility;
   std::optional<bool> FlagEnum;
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
+  std::optional<bool> SwiftCopyable;
 };
 
 typedef std::vector<Tag> TagsSeq;
@@ -452,6 +453,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
+    IO.mapOptional("SwiftCopyable", T.SwiftCopyable);
   }
 };
 } // namespace yaml
@@ -1008,6 +1010,9 @@ public:
         TI.SwiftRetainOp = Tag.SwiftRetainOp;
       if (Tag.SwiftReleaseOp)
         TI.SwiftReleaseOp = Tag.SwiftReleaseOp;
+
+      if (Tag.SwiftCopyable)
+        TI.setSwiftCopyable(Tag.SwiftCopyable);
 
       if (Tag.EnumConvenienceKind) {
         if (Tag.EnumExtensibility) {

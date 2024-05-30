@@ -219,3 +219,44 @@ defines. Code under ``libc/src/`` should ``#include`` a proxy header from
 ``hdr/``, which contains a guard on ``LLVM_LIBC_FULL_BUILD`` to either include
 our header from ``libc/include/`` (fullbuild) or the corresponding underlying
 system header (overlay).
+
+Policy on Assembly sources
+==========================
+
+Coding in high level languages such as C++ provides benefits relative to low
+level languages like Assembly, such as:
+
+* Improved safety
+* Compile time diagnostics
+* Instrumentation
+
+  * Code coverage
+  * Profile collection
+* Sanitization
+* Automatic generation of debug info
+
+While it's not impossible to have Assembly code that correctly provides all of
+the above, we do not wish to maintain such Assembly sources in llvm-libc.
+
+That said, there are a few functions provided by llvm-libc that are impossible
+to reliably implement in C++ for all compilers supported for building
+llvm-libc.
+
+We do use inline or out-of-line Assembly in an intentionally minimal set of
+places; typically places where the stack or individual register state must be
+manipulated very carefully for correctness, or instances where a specific
+instruction sequence does not have a corresponding compiler builtin function
+today.
+
+Contributions adding functions implemented purely in Assembly for performance
+are not welcome.
+
+Contributors should strive to stick with C++ for as long as it remains
+reasonable to do so. Ideally, bugs should be filed against compiler vendors,
+and links to those bug reports should appear in commit messages or comments
+that seek to add Assembly to llvm-libc.
+
+Patches containing any amount of Assembly ideally should be approved by 2
+maintainers. llvm-libc maintainers reserve the right to reject Assembly
+contributions that they feel could be better maintained if rewritten in C++,
+and to revisit this policy in the future.

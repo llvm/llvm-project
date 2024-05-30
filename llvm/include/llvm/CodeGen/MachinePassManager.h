@@ -108,6 +108,15 @@ bool MachineFunctionAnalysisManagerModuleProxy::Result::invalidate(
     ModuleAnalysisManager::Invalidator &Inv);
 extern template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
                                                 Module>;
+using MachineFunctionAnalysisManagerFunctionProxy =
+    InnerAnalysisManagerProxy<MachineFunctionAnalysisManager, Function>;
+
+template <>
+bool MachineFunctionAnalysisManagerFunctionProxy::Result::invalidate(
+    Function &F, const PreservedAnalyses &PA,
+    FunctionAnalysisManager::Invalidator &Inv);
+extern template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
+                                                Function>;
 
 extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
                                                 MachineFunction>;
@@ -127,16 +136,6 @@ public:
       // because we are taking ownership of the responsibilty to clear the
       // analysis state.
       Arg.FAM = nullptr;
-    }
-
-    ~Result() {
-      // FAM is cleared in a moved from state where there is nothing to do.
-      if (!FAM)
-        return;
-
-      // Clear out the analysis manager if we're being destroyed -- it means we
-      // didn't even see an invalidate call when we got invalidated.
-      FAM->clear();
     }
 
     Result &operator=(Result &&RHS) {
@@ -187,18 +186,18 @@ private:
   FunctionAnalysisManager *FAM;
 };
 
-class ModuleToMachineFunctionPassAdaptor
-    : public PassInfoMixin<ModuleToMachineFunctionPassAdaptor> {
+class FunctionToMachineFunctionPassAdaptor
+    : public PassInfoMixin<FunctionToMachineFunctionPassAdaptor> {
 public:
   using PassConceptT =
       detail::PassConcept<MachineFunction, MachineFunctionAnalysisManager>;
 
-  explicit ModuleToMachineFunctionPassAdaptor(
+  explicit FunctionToMachineFunctionPassAdaptor(
       std::unique_ptr<PassConceptT> Pass)
       : Pass(std::move(Pass)) {}
 
-  /// Runs the function pass across every function in the module.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  /// Runs the function pass across every function in the function.
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
@@ -209,14 +208,14 @@ private:
 };
 
 template <typename MachineFunctionPassT>
-ModuleToMachineFunctionPassAdaptor
-createModuleToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
+FunctionToMachineFunctionPassAdaptor
+createFunctionToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
   using PassModelT = detail::PassModel<MachineFunction, MachineFunctionPassT,
                                        MachineFunctionAnalysisManager>;
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
-  return ModuleToMachineFunctionPassAdaptor(
-      std::unique_ptr<ModuleToMachineFunctionPassAdaptor::PassConceptT>(
+  return FunctionToMachineFunctionPassAdaptor(
+      std::unique_ptr<FunctionToMachineFunctionPassAdaptor::PassConceptT>(
           new PassModelT(std::forward<MachineFunctionPassT>(Pass))));
 }
 
@@ -243,6 +242,10 @@ extern template class PassManager<MachineFunction>;
 
 /// Convenience typedef for a pass manager over functions.
 using MachineFunctionPassManager = PassManager<MachineFunction>;
+
+/// Returns the minimum set of Analyses that all machine function passes must
+/// preserve.
+PreservedAnalyses getMachineFunctionPassPreservedAnalyses();
 
 } // end namespace llvm
 

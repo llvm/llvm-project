@@ -75,8 +75,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           NewRecipe = new VPWidenCallRecipe(
-              *CI, drop_end(Ingredient.operands()),
-              getVectorIntrinsicIDForCall(CI, &TLI), CI->getDebugLoc());
+              CI, Ingredient.operands(), getVectorIntrinsicIDForCall(CI, &TLI),
+              CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
@@ -452,8 +452,7 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
 
-    if (!WidenOriginalIV || !WidenOriginalIV->isCanonical() ||
-        WidenOriginalIV->getScalarType() != WidenNewIV->getScalarType())
+    if (!WidenOriginalIV || !WidenOriginalIV->isCanonical())
       continue;
 
     // Replace WidenNewIV with WidenOriginalIV if WidenOriginalIV provides
@@ -506,13 +505,12 @@ static void removeDeadRecipes(VPlan &Plan) {
   }
 }
 
-static VPValue *createScalarIVSteps(VPlan &Plan,
-                                    InductionDescriptor::InductionKind Kind,
-                                    Instruction::BinaryOps InductionOpcode,
-                                    FPMathOperator *FPBinOp,
-                                    ScalarEvolution &SE, Instruction *TruncI,
-                                    VPValue *StartV, VPValue *Step,
-                                    VPBasicBlock::iterator IP) {
+static VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, ScalarEvolution &SE,
+                    Instruction *TruncI, VPValue *StartV, VPValue *Step,
+                    VPBasicBlock::iterator IP) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   VPSingleDefRecipe *BaseIV = CanonicalIV;
@@ -579,16 +577,13 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       VPValue *StartV =
           Plan.getOrAddLiveIn(ConstantInt::get(ID.getStep()->getType(), 0));
       VPValue *StepV = PtrIV->getOperand(1);
-      VPRecipeBase *Steps =
-          createScalarIVSteps(Plan, InductionDescriptor::IK_IntInduction,
-                              Instruction::Add, nullptr, SE, nullptr, StartV,
-                              StepV, InsertPt)
-              ->getDefiningRecipe();
+      VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
+          Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
+          SE, nullptr, StartV, StepV, InsertPt);
 
-      auto *Recipe =
-          new VPInstruction(VPInstruction::PtrAdd,
-                            {PtrIV->getStartValue(), Steps->getVPSingleValue()},
-                            PtrIV->getDebugLoc(), "next.gep");
+      auto *Recipe = new VPInstruction(VPInstruction::PtrAdd,
+                                       {PtrIV->getStartValue(), Steps},
+                                       PtrIV->getDebugLoc(), "next.gep");
 
       Recipe->insertAfter(Steps);
       PtrIV->replaceAllUsesWith(Recipe);
@@ -606,7 +601,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       continue;
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Steps = createScalarIVSteps(
+    VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()), SE,
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
@@ -884,18 +879,19 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+  using namespace llvm::VPlanPatternMatch;
   // Try to remove redundant blend recipes.
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
     VPValue *Inc0 = Blend->getIncomingValue(0);
     for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
-      if (Inc0 != Blend->getIncomingValue(I))
+      if (Inc0 != Blend->getIncomingValue(I) &&
+          !match(Blend->getMask(I), m_False()))
         return;
     Blend->replaceAllUsesWith(Inc0);
     Blend->eraseFromParent();
     return;
   }
 
-  using namespace llvm::VPlanPatternMatch;
   VPValue *A;
   if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     VPValue *Trunc = R.getVPSingleValue();
@@ -937,6 +933,19 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         assert(TypeInfo.inferScalarType(VPV) == TypeInfo2.inferScalarType(VPV));
     }
 #endif
+  }
+
+  // Simplify (X && Y) || (X && !Y) -> X.
+  // TODO: Split up into simpler, modular combines: (X && Y) || (X && Z) into X
+  // && (Y || Z) and (X || !X) into true. This requires queuing newly created
+  // recipes to be visited during simplification.
+  VPValue *X, *Y, *X1, *Y1;
+  if (match(&R,
+            m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                         m_LogicalAnd(m_VPValue(X1), m_Not(m_VPValue(Y1))))) &&
+      X == X1 && Y == Y1) {
+    R.getVPSingleValue()->replaceAllUsesWith(X);
+    return;
   }
 
   if (match(&R, m_CombineOr(m_Mul(m_VPValue(A), m_SpecificInt(1)),
@@ -1031,7 +1040,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
         VPW->dropPoisonGeneratingFlags();
 
-      if (OldResSizeInBits != NewResSizeInBits) {
+      using namespace llvm::VPlanPatternMatch;
+      if (OldResSizeInBits != NewResSizeInBits &&
+          !match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue()))) {
         // Extend result to original width.
         auto *Ext =
             new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
@@ -1040,8 +1051,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         Ext->setOperand(0, ResultVPV);
         assert(OldResSizeInBits > NewResSizeInBits && "Nothing to shrink?");
       } else
-        assert(cast<VPWidenRecipe>(&R)->getOpcode() == Instruction::ICmp &&
-               "Only ICmps should not need extending the result.");
+        assert(
+            match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) &&
+            "Only ICmps should not need extending the result.");
 
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
       if (isa<VPWidenLoadRecipe>(&R))
@@ -1306,8 +1318,16 @@ void VPlanTransforms::addActiveLaneMask(
 /// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
 /// ...
 ///
-void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
+bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  // The transform updates all users of inductions to work based on EVL, instead
+  // of the VF directly. At the moment, widened inductions cannot be updated, so
+  // bail out if the plan contains any.
+  if (any_of(Header->phis(), [](VPRecipeBase &Phi) {
+        return (isa<VPWidenIntOrFpInductionRecipe>(&Phi) ||
+                isa<VPWidenPointerInductionRecipe>(&Phi));
+      }))
+    return false;
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
@@ -1341,8 +1361,6 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
       auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U);
       if (!MemR)
         continue;
-      assert(!MemR->isReverse() &&
-             "Reversed memory operations not supported yet.");
       VPValue *OrigMask = MemR->getMask();
       assert(OrigMask && "Unmasked widen memory recipe when folding tail");
       VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
@@ -1367,6 +1385,7 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
+  return true;
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
@@ -1405,7 +1424,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
         // for dependence analysis). Instead, replace it with an equivalent Add.
         // This is possible as all users of the disjoint OR only access lanes
         // where the operands are disjoint or poison otherwise.
-        if (match(RecWithFlags, m_Or(m_VPValue(A), m_VPValue(B))) &&
+        if (match(RecWithFlags, m_BinaryOr(m_VPValue(A), m_VPValue(B))) &&
             RecWithFlags->isDisjoint()) {
           VPBuilder Builder(RecWithFlags);
           VPInstruction *New = Builder.createOverflowingOp(

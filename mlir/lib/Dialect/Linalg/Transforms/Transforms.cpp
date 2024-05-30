@@ -329,11 +329,13 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
                              /*transposeOp=*/nullptr};
     }
   }
+
   // 5. Expand from the padded result to the stripMinedShape.
+  auto expandShapeResultType =
+      RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
   auto reshapeOp = rewriter.create<tensor::ExpandShapeOp>(
-      loc,
-      RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape),
-      padOp.getResult(), packingMetadata.reassociations);
+      loc, expandShapeResultType, padOp.getResult(),
+      packingMetadata.reassociations);
 
   // 6. Transpose stripMinedShape to packedShape.
   SmallVector<int64_t> transpPerm =

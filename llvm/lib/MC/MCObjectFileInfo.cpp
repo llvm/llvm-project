@@ -343,7 +343,9 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   case Triple::mips64el:
     // We cannot use DW_EH_PE_sdata8 for the large PositionIndependent case
     // since there is no R_MIPS_PC64 relocation (only a 32-bit version).
-    if (PositionIndependent && !Large)
+    // In fact DW_EH_PE_sdata4 is enough for us now, and GNU ld doesn't
+    // support pcrel|sdata8 well. Let's use sdata4 for now.
+    if (PositionIndependent)
       FDECFIEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
     else
       FDECFIEncoding = Ctx->getAsmInfo()->getCodePointerSize() == 4
