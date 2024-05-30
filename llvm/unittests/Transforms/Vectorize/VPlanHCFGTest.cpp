@@ -106,7 +106,7 @@ node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
-    "ir-bb\<entry\>:\l" +
+    "ph:\l" +
     "  EMIT vp\<%1\> = EXPAND SCEV (-1 + %N)\l" +
     "No successors\l"
   ]
