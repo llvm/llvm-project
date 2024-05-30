@@ -4509,8 +4509,7 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
       continue;
 
     if (&Use == Src2) {
-      int Op32Src2Idx = AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::src2);
-      if (Op32Src2Idx == -1) {
+      if (AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::src2) == -1) {
         // In the case of V_CNDMASK_B32_e32, the explicit operand src2 is
         // replaced with an implicit read of vcc or vcc_lo. The implicit read
         // of vcc was already added during the initial BuildMI, but we
