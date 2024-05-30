@@ -3284,10 +3284,10 @@ ExprResult Sema::BuildDeclarationNameExpr(
     return CreateRecoveryExpr(NameInfo.getBeginLoc(), NameInfo.getEndLoc(), {});
   }
 
-  if (TemplateDecl *Template = dyn_cast<TemplateDecl>(D)) {
+  if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D)) {
     // Specifically diagnose references to class templates that are missing
     // a template argument list.
-    diagnoseMissingTemplateArguments(TemplateName(Template), Loc);
+    diagnoseMissingTemplateArguments(SS, /*TemplateKeyword=*/false, TD, Loc);
     return ExprError();
   }
 
@@ -5506,6 +5506,15 @@ struct EnsureImmediateInvocationInDefaultArgs
   // cause it to incorrectly point it to the outermost class
   // in the case of nested struct initialization.
   ExprResult TransformCXXThisExpr(CXXThisExpr *E) { return E; }
+
+  // Rewrite to source location to refer to the context in which they are used.
+  ExprResult TransformSourceLocExpr(SourceLocExpr *E) {
+    if (E->getParentContext() == SemaRef.CurContext)
+      return E;
+    return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getType(),
+                                             E->getBeginLoc(), E->getEndLoc(),
+                                             SemaRef.CurContext);
+  }
 };
 
 ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
@@ -17223,8 +17232,7 @@ ExprResult Sema::TransformToPotentiallyEvaluated(Expr *E) {
 TypeSourceInfo *Sema::TransformToPotentiallyEvaluated(TypeSourceInfo *TInfo) {
   assert(isUnevaluatedContext() &&
          "Should only transform unevaluated expressions");
-  ExprEvalContexts.back().Context =
-      ExprEvalContexts[ExprEvalContexts.size() - 2].Context;
+  ExprEvalContexts.back().Context = parentEvaluationContext().Context;
   if (isUnevaluatedContext())
     return TInfo;
   return TransformToPE(*this).TransformType(TInfo);
@@ -17241,14 +17249,13 @@ Sema::PushExpressionEvaluationContext(
   // discarded statements or immediate context are themselves
   // a discarded statement or an immediate context, respectively.
   ExprEvalContexts.back().InDiscardedStatement =
-      ExprEvalContexts[ExprEvalContexts.size() - 2]
-          .isDiscardedStatementContext();
+      parentEvaluationContext().isDiscardedStatementContext();
 
   // C++23 [expr.const]/p15
   // An expression or conversion is in an immediate function context if [...]
   // it is a subexpression of a manifestly constant-evaluated expression or
   // conversion.
-  const auto &Prev = ExprEvalContexts[ExprEvalContexts.size() - 2];
+  const auto &Prev = parentEvaluationContext();
   ExprEvalContexts.back().InImmediateFunctionContext =
       Prev.isImmediateFunctionContext() || Prev.isConstantEvaluated();
 
@@ -17693,7 +17700,7 @@ void Sema::PopExpressionEvaluationContext() {
 
   // Append the collected materialized temporaries into previous context before
   // exit if the previous also is a lifetime extending context.
-  auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+  auto &PrevRecord = parentEvaluationContext();
   if (getLangOpts().CPlusPlus23 && Rec.InLifetimeExtendingContext &&
       PrevRecord.InLifetimeExtendingContext &&
       !Rec.ForRangeLifetimeExtendTemps.empty()) {

@@ -660,6 +660,11 @@ private:
   /// MemProf call stack data on-disk indexed via call stack id.
   std::unique_ptr<MemProfCallStackHashTable> MemProfCallStackTable;
 
+  Error deserializeV012(const unsigned char *Start, const unsigned char *Ptr,
+                        uint64_t FirstWord, memprof::IndexedVersion Version);
+  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr,
+                      memprof::IndexedVersion Version);
+
 public:
   IndexedMemProfReader() = default;
 

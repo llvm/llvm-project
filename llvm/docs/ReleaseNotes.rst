@@ -51,6 +51,7 @@ Changes to the LLVM IR
 ----------------------
 
 * Added Memory Model Relaxation Annotations (MMRAs).
+* Added ``nusw`` and ``nuw`` flags to ``getelementptr`` instruction.
 * Renamed ``llvm.experimental.vector.reverse`` intrinsic to ``llvm.vector.reverse``.
 * Renamed ``llvm.experimental.vector.splice`` intrinsic to ``llvm.vector.splice``.
 * Renamed ``llvm.experimental.vector.interleave2`` intrinsic to ``llvm.vector.interleave2``.
@@ -130,6 +131,7 @@ Changes to the RISC-V Backend
   match GNU objdump. The bytes within the groups are in big endian order.
 * Added smstateen extension to -march. CSR names for smstateen were already supported.
 * Zaamo and Zalrsc are no longer experimental.
+* Processors that enable post reg-alloc scheduling (PostMachineScheduler) by default should use the `UsePostRAScheduler` subtarget feature. Setting `PostRAScheduler = 1` in the scheduler model will have no effect on the enabling of the PostMachineScheduler.
 
 Changes to the WebAssembly Backend
 ----------------------------------

@@ -67,8 +67,8 @@ endif()
 
 llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
+  LLVM_HAS_NVPTX_TARGET
   MLIR_ENABLE_BINDINGS_PYTHON
-  MLIR_ENABLE_CUDA_CONVERSIONS
   MLIR_ENABLE_CUDA_RUNNER
   MLIR_ENABLE_ROCM_CONVERSIONS
   MLIR_ENABLE_ROCM_RUNNER
@@ -217,12 +217,12 @@ endif()
 add_custom_target(check-mlir-build-only
   DEPENDS ${MLIR_TEST_DEPENDS}
 )
+set_target_properties(check-mlir-build-only PROPERTIES FOLDER "MLIR/Tests")
 
 add_lit_testsuite(check-mlir "Running the MLIR regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
   )
-set_target_properties(check-mlir PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}

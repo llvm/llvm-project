@@ -52,6 +52,7 @@ size_t IndexedAllocationInfo::serializedSize(const MemProfSchema &Schema,
   case Version1:
     return serializedSizeV0(*this, Schema);
   case Version2:
+  case Version3:
     return serializedSizeV2(*this, Schema);
   }
   llvm_unreachable("unsupported MemProf version");
@@ -95,6 +96,7 @@ size_t IndexedMemProfRecord::serializedSize(const MemProfSchema &Schema,
   case Version1:
     return serializedSizeV0(*this, Schema);
   case Version2:
+  case Version3:
     return serializedSizeV2(*this, Schema);
   }
   llvm_unreachable("unsupported MemProf version");
@@ -149,6 +151,7 @@ void IndexedMemProfRecord::serialize(const MemProfSchema &Schema,
     serializeV0(*this, Schema, OS);
     return;
   case Version2:
+  case Version3:
     serializeV2(*this, Schema, OS);
     return;
   }
@@ -208,6 +211,7 @@ static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
   // Read the meminfo nodes.
   const uint64_t NumNodes =
       endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+  Record.AllocSites.reserve(NumNodes);
   for (uint64_t I = 0; I < NumNodes; I++) {
     IndexedAllocationInfo Node;
     Node.CSId = endian::readNext<CallStackId, llvm::endianness::little>(Ptr);
@@ -219,6 +223,7 @@ static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
   // Read the callsite information.
   const uint64_t NumCtxs =
       endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+  Record.CallSiteIds.reserve(NumCtxs);
   for (uint64_t J = 0; J < NumCtxs; J++) {
     CallStackId CSId =
         endian::readNext<CallStackId, llvm::endianness::little>(Ptr);
@@ -237,14 +242,15 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
   case Version1:
     return deserializeV0(Schema, Ptr);
   case Version2:
+  case Version3:
     return deserializeV2(Schema, Ptr);
   }
   llvm_unreachable("unsupported MemProf version");
 }
 
 MemProfRecord IndexedMemProfRecord::toMemProfRecord(
-    llvm::function_ref<const llvm::SmallVector<Frame>(const CallStackId)>
-        Callback) const {
+    llvm::function_ref<llvm::SmallVector<Frame>(const CallStackId)> Callback)
+    const {
   MemProfRecord Record;
 
   Record.AllocSites.reserve(AllocSites.size());

@@ -385,7 +385,11 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint64_t">:$alignInBits,
-    OptionalArrayRefParameter<"DINodeAttr">:$elements
+    OptionalArrayRefParameter<"DINodeAttr">:$elements,
+    OptionalParameter<"DIExpressionAttr">:$dataLocation,
+    OptionalParameter<"DIExpressionAttr">:$rank,
+    OptionalParameter<"DIExpressionAttr">:$allocated,
+    OptionalParameter<"DIExpressionAttr">:$associated
   );
   let assemblyFormat = "`<` struct(params) `>`";
   let extraClassDeclaration = [{

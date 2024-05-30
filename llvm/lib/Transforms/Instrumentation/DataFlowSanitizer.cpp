@@ -1804,8 +1804,8 @@ Value *DFSanFunction::getRetvalTLS(Type *T, IRBuilder<> &IRB) {
 Value *DFSanFunction::getRetvalOriginTLS() { return DFS.RetvalOriginTLS; }
 
 Value *DFSanFunction::getArgOriginTLS(unsigned ArgNo, IRBuilder<> &IRB) {
-  return IRB.CreateConstGEP2_64(DFS.ArgOriginTLSTy, DFS.ArgOriginTLS, 0, ArgNo,
-                                "_dfsarg_o");
+  return IRB.CreateConstInBoundsGEP2_64(DFS.ArgOriginTLSTy, DFS.ArgOriginTLS, 0,
+                                        ArgNo, "_dfsarg_o");
 }
 
 Value *DFSanFunction::getOrigin(Value *V) {
