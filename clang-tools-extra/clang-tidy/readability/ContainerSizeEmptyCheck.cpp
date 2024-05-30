@@ -150,6 +150,7 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       cxxMemberCallExpr(
+          argumentCountIs(0),
           on(expr(anyOf(hasType(ValidContainer),
                         hasType(pointsTo(ValidContainer)),
                         hasType(references(ValidContainer))))
@@ -163,7 +164,8 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   Finder->addMatcher(
-      callExpr(has(cxxDependentScopeMemberExpr(
+      callExpr(argumentCountIs(0),
+               has(cxxDependentScopeMemberExpr(
                        hasObjectExpression(
                            expr(anyOf(hasType(ValidContainer),
                                       hasType(pointsTo(ValidContainer)),
