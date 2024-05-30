@@ -1571,14 +1571,14 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U,
   Register Res = getOrCreateVReg(U);
 
   // Convert zext nneg to sext if it is preferred form for the target.
-  // if (Opcode == TargetOpcode::G_ZEXT && (Flags & MachineInstr::NonNeg)) {
-  //   EVT SrcVT = TLI->getValueType(*DL, U.getOperand(0)->getType());
-  //   EVT DstVT = TLI->getValueType(*DL, U.getType());
-  //   if (TLI->isSExtCheaperThanZExt(SrcVT, DstVT)) {
-  //     Opcode = TargetOpcode::G_SEXT;
-  //     Flags = 0;
-  //   }
-  // }
+  if (Opcode == TargetOpcode::G_ZEXT && (Flags & MachineInstr::NonNeg)) {
+    EVT SrcVT = TLI->getValueType(*DL, U.getOperand(0)->getType());
+    EVT DstVT = TLI->getValueType(*DL, U.getType());
+    if (TLI->isSExtCheaperThanZExt(SrcVT, DstVT)) {
+      Opcode = TargetOpcode::G_SEXT;
+      Flags = 0;
+    }
+  }
 
   MIRBuilder.buildInstr(Opcode, {Res}, {Op}, Flags);
   return true;

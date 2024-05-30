@@ -9,8 +9,8 @@ define i64 @zext_nneg_i32_i64(i32 %a) {
   ; RV64I-NEXT: {{  $}}
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-  ; RV64I-NEXT:   %2:_(s64) = nneg G_ZEXT [[TRUNC]](s32)
-  ; RV64I-NEXT:   $x10 = COPY %2(s64)
+  ; RV64I-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s32)
+  ; RV64I-NEXT:   $x10 = COPY [[SEXT]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
 entry:
   %b = zext nneg i32 %a to i64
