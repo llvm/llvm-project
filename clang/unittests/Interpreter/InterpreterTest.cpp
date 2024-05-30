@@ -74,7 +74,11 @@ static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
   return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
 }
 
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
+TEST(InterpreterTest, DISABLED_Sanity) {
+#else
 TEST(InterpreterTest, Sanity) {
+#endif
   if (!HostSupportsJit())
     GTEST_SKIP();
 
