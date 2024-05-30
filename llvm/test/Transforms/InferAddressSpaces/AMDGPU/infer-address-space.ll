@@ -93,7 +93,7 @@ bb:
 define amdgpu_kernel void @nested_const_expr() #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @nested_const_expr(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    store i32 1, ptr addrspace(3) getelementptr inbounds ([10 x float], ptr addrspace(3) @array, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i32 1, ptr addrspace(3) getelementptr ([10 x float], ptr addrspace(3) @array, i64 0, i64 1), align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, ptr bitcast (ptr getelementptr ([10 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i64 0, i64 1) to ptr), align 4
