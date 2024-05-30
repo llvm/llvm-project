@@ -167,7 +167,6 @@ struct __transform_reduce_binary<__serial_backend_tag, _ExecutionPolicy> {
         std::move(__first1),
         std::move(__last1),
         std::move(__first2),
-        std::move(__last2),
         __init,
         std::forward<_BinaryOperation1>(__reduce),
         std::forward<_BinaryOperation2>(__transform));
