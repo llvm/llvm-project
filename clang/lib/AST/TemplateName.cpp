@@ -292,6 +292,14 @@ void TemplateName::Profile(llvm::FoldingSetNodeID &ID) {
 
 void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
                          Qualified Qual) const {
+  auto handleAnonymousTTP = [](TemplateDecl *TD, raw_ostream &OS) {
+    if (TemplateTemplateParmDecl *TTP = dyn_cast<TemplateTemplateParmDecl>(TD);
+        TTP && TTP->getIdentifier() == nullptr) {
+      OS << "template-parameter-" << TTP->getDepth() << "-" << TTP->getIndex();
+      return true;
+    }
+    return false;
+  };
   if (NameKind Kind = getKind();
       Kind == TemplateName::Template || Kind == TemplateName::UsingTemplate) {
     // After `namespace ns { using std::vector }`, what is the fully-qualified
@@ -304,6 +312,8 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     // names more often than to export them, thus using the original name is
     // most useful in this case.
     TemplateDecl *Template = getAsTemplateDecl();
+    if (handleAnonymousTTP(Template, OS))
+      return;
     if (Qual == Qualified::None)
       OS << *Template;
     else
@@ -320,6 +330,10 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
            Underlying.getKind() == TemplateName::UsingTemplate);
 
     TemplateDecl *UTD = Underlying.getAsTemplateDecl();
+
+    if (handleAnonymousTTP(UTD, OS))
+      return;
+
     if (IdentifierInfo *II = UTD->getIdentifier();
         Policy.CleanUglifiedParameters && II &&
         isa<TemplateTemplateParmDecl>(UTD))
