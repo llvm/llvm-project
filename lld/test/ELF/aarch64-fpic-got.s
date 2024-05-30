@@ -14,15 +14,14 @@
 #--- small.s
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux small.s -o small.o
-# RUN: ld.lld lib.so small.o -o small.exe
-# RUN: llvm-readobj -r small.exe | FileCheck --check-prefix=RELOC %s
-# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn small.exe | FileCheck --check-prefix=DIS-SMALL %s
+# RUN: ld.lld lib.so small.o -o small
+# RUN: llvm-readobj -r small | FileCheck --check-prefix=RELOC %s
+# RUN: llvm-objdump -d --no-show-raw-insn small | FileCheck --check-prefix=DIS-SMALL %s
 
-## page(0x220318) - page(0x210000) = 65536
-## page(0x220318) & 0xff8 = 792
+## page(0x220318) & 0xff8 = 0x318
 # DIS-SMALL:      <_start>:
-# DIS-SMALL-NEXT: 210250: adrp x0, 0x220000
-# DIS-SMALL-NEXT: 210254: ldr x0, [x0, #792]
+# DIS-SMALL-NEXT: adrp x0, 0x220000
+# DIS-SMALL-NEXT: ldr x0, [x0, #0x318]
 
 .globl _start
 _start:
@@ -32,12 +31,12 @@ _start:
 #--- tiny.s
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux tiny.s -o tiny.o
-# RUN: ld.lld lib.so tiny.o -o tiny.exe
-# RUN: llvm-readobj -r tiny.exe | FileCheck --check-prefix=RELOC %s
-# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn tiny.exe | FileCheck --check-prefix=DIS-TINY %s
+# RUN: ld.lld lib.so tiny.o -o tiny
+# RUN: llvm-readobj -r tiny | FileCheck --check-prefix=RELOC %s
+# RUN: llvm-objdump -d --no-show-raw-insn tiny | FileCheck --check-prefix=DIS-TINY %s
 
 # DIS-TINY:      <_start>:
-# DIS-TINY-NEXT: 210250: ldr x0, 0x220318
+# DIS-TINY-NEXT: ldr x0, 0x220318
 
 .globl _start
 _start:
