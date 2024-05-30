@@ -38,7 +38,8 @@ public:
       Ranges.push_back(R);
     }
   }
-  ArrayRef<ConstantRange> rangesRef() const { return Ranges; }
+  static std::optional<ConstantRangeList>
+  getConstantRangeList(ArrayRef<ConstantRange> RangesRef);
   SmallVectorImpl<ConstantRange>::iterator begin() { return Ranges.begin(); }
   SmallVectorImpl<ConstantRange>::iterator end() { return Ranges.end(); }
   SmallVectorImpl<ConstantRange>::const_iterator begin() const {

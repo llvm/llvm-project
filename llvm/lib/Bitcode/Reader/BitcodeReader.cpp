@@ -2357,26 +2357,33 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           B.addConstantRangeAttr(Kind, MaybeCR.get());
         } else if (Record[i] == 8) {
           Attribute::AttrKind Kind;
-          if (Error Err = parseAttrKind(Record[++i], &Kind))
+
+          i++;
+          if (Error Err = parseAttrKind(Record[i++], &Kind))
             return Err;
           if (!Attribute::isConstantRangeListAttrKind(Kind))
             return error("Not a constant range list attribute");
 
           SmallVector<ConstantRange, 2> Val;
-          unsigned RangeSize = Record[++i];
-          unsigned BitWidth = Record[++i];
-          if (i + 2 * RangeSize >= e)
+          if (i + 2 > e)
+            return error("Too few records for constant range list");
+          unsigned RangeSize = Record[i++];
+          unsigned BitWidth = Record[i++];
+          if (i + 2 * RangeSize > e)
             return error("Incomplete constant range list");
           for (unsigned Idx = 0; Idx < RangeSize; ++Idx) {
-            i++;
             Expected<ConstantRange> MaybeCR =
                 readConstantRange(Record, i, BitWidth);
             if (!MaybeCR)
               return MaybeCR.takeError();
-            i--;
             Val.push_back(MaybeCR.get());
           }
-          B.addConstantRangeListAttr(Kind, Val);
+          i--;
+
+          auto CRLOrNull = ConstantRangeList::getConstantRangeList(Val);
+          if (!CRLOrNull.has_value())
+            return error("Invalid (unordered or overlapping) range list");
+          B.addConstantRangeListAttr(Kind, *CRLOrNull);
         } else {
           return error("Invalid attribute group entry");
         }

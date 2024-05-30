@@ -966,12 +966,11 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         assert(Attr.isConstantRangeListAttribute());
         Record.push_back(8);
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
-        ArrayRef<ConstantRange> Val = Attr.getValueAsConstantRangeList();
-        Record.push_back(Val.size());
-        Record.push_back(Val[0].getBitWidth());
-        for (auto &CR : Val) {
+        ConstantRangeList CRL = Attr.getValueAsConstantRangeList();
+        Record.push_back(CRL.size());
+        Record.push_back(CRL.getBitWidth());
+        for (auto &CR : CRL)
           emitConstantRange(Record, CR, /*EmitBitWidth=*/false);
-        }
       }
     }
 

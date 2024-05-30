@@ -3141,7 +3141,10 @@ bool LLParser::parseInitializesAttr(AttrBuilder &B) {
   if (parseToken(lltok::rparen, "expected ')'"))
     return true;
 
-  B.addInitializesAttr(ConstantRangeList(RangeList));
+  auto CRLOrNull = ConstantRangeList::getConstantRangeList(RangeList);
+  if (!CRLOrNull.has_value())
+    return tokError("Invalid (unordered or overlapping) range list");
+  B.addInitializesAttr(*CRLOrNull);
   return false;
 }
 

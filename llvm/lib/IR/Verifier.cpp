@@ -2063,11 +2063,11 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     Check(!Inits.empty(), "Attribute 'initializes' does not support empty list",
           V);
 
-    Check(Inits[0].getLower().slt(Inits[0].getUpper()),
+    Check(Inits.getRange(0).getLower().slt(Inits.getRange(0).getUpper()),
           "Attribute 'initializes' requires interval lower less than upper", V);
     for (size_t i = 1; i < Inits.size(); i++) {
-      auto Previous = Inits[i - 1];
-      auto Current = Inits[i];
+      auto Previous = Inits.getRange(i - 1);
+      auto Current = Inits.getRange(i);
       Check(Current.getLower().slt(Current.getUpper()),
             "Attribute 'initializes' requires interval lower less than upper",
             V);

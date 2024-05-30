@@ -84,7 +84,7 @@ public:
 
   const ConstantRange &getValueAsConstantRange() const;
 
-  ArrayRef<ConstantRange> getValueAsConstantRangeList() const;
+  ConstantRangeList getValueAsConstantRangeList() const;
 
   /// Used when sorting the attributes.
   bool operator<(const AttributeImpl &AI) const;
@@ -135,10 +135,10 @@ public:
   }
 
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
-                      ArrayRef<ConstantRange> Val) {
+                      const ConstantRangeList &CRL) {
     ID.AddInteger(Kind);
-    ID.AddInteger(Val.size());
-    for (auto &CR : Val) {
+    ID.AddInteger(CRL.size());
+    for (auto &CR : CRL) {
       CR.getLower().Profile(ID);
       CR.getUpper().Profile(ID);
     }
@@ -241,35 +241,14 @@ public:
   const ConstantRange &getConstantRangeValue() const { return CR; }
 };
 
-class ConstantRangeListAttributeImpl final
-    : public EnumAttributeImpl,
-      private TrailingObjects<ConstantRangeListAttributeImpl, ConstantRange> {
-  friend TrailingObjects;
-
-  unsigned Size;
-  size_t numTrailingObjects(OverloadToken<ConstantRange>) const { return Size; }
+class ConstantRangeListAttributeImpl : public EnumAttributeImpl {
+  ConstantRangeList CRL;
 
 public:
   ConstantRangeListAttributeImpl(Attribute::AttrKind Kind,
-                                 ArrayRef<ConstantRange> Val)
-      : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), Size(Val.size()) {
-    ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
-    assert(Size > 0);
-    unsigned BitWidth = Val.front().getLower().getBitWidth();
-    for (unsigned I = 0; I != Size; ++I) {
-      assert(BitWidth == Val[I].getLower().getBitWidth());
-      new (&TrailingCR[I]) ConstantRange(BitWidth, false);
-    }
-    llvm::copy(Val, TrailingCR);
-  }
-
-  ArrayRef<ConstantRange> getConstantRangeListValue() const {
-    return ArrayRef(getTrailingObjects<ConstantRange>(), Size);
-  }
-
-  static size_t totalSizeToAlloc(ArrayRef<ConstantRange> Val) {
-    return TrailingObjects::totalSizeToAlloc<ConstantRange>(Val.size());
-  }
+                                 const ConstantRangeList &CRL)
+      : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), CRL(CRL) {}
+  ConstantRangeList getConstantRangeListValue() const { return CRL; }
 };
 
 class AttributeBitSet {

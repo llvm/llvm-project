@@ -137,7 +137,7 @@ public:
   static Attribute get(LLVMContext &Context, AttrKind Kind,
                        const ConstantRange &CR);
   static Attribute get(LLVMContext &Context, AttrKind Kind,
-                       ArrayRef<ConstantRange> Val);
+                       const ConstantRangeList &CRL);
 
   /// Return a uniquified Attribute object that has the specific
   /// alignment set.
@@ -236,9 +236,9 @@ public:
   /// attribute to be a ConstantRange attribute.
   const ConstantRange &getValueAsConstantRange() const;
 
-  /// Return the attribute's value as a ConstantRange array. This requires the
+  /// Return the attribute's value as a ConstantRangeList. This requires the
   /// attribute to be a ConstantRangeList attribute.
-  ArrayRef<ConstantRange> getValueAsConstantRangeList() const;
+  ConstantRangeList getValueAsConstantRangeList() const;
 
   /// Returns the alignment field of an attribute as a byte alignment
   /// value.
@@ -282,7 +282,7 @@ public:
   const ConstantRange &getRange() const;
 
   /// Returns the value of the initializes attribute.
-  ArrayRef<ConstantRange> getInitializes() const;
+  ConstantRangeList getInitializes() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -1241,7 +1241,7 @@ public:
 
   /// Add a ConstantRangeList attribute with the given ranges.
   AttrBuilder &addConstantRangeListAttr(Attribute::AttrKind Kind,
-                                        ArrayRef<ConstantRange> Val);
+                                        const ConstantRangeList &CRL);
 
   /// Add initializes attribute.
   AttrBuilder &addInitializesAttr(const ConstantRangeList &CRL);
