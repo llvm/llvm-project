@@ -316,7 +316,6 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__algorithm/rotate.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__assert>
-#include <__availability>
 #include <__bit_reference>
 #include <__concepts/same_as.h>
 #include <__config>

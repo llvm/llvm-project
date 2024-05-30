@@ -14087,7 +14087,7 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
   // Grab the appropriate field from __cpu_model.
   llvm::Value *Idxs[] = {ConstantInt::get(Int32Ty, 0),
                          ConstantInt::get(Int32Ty, Index)};
-  llvm::Value *CpuValue = Builder.CreateGEP(STy, CpuModel, Idxs);
+  llvm::Value *CpuValue = Builder.CreateInBoundsGEP(STy, CpuModel, Idxs);
   CpuValue = Builder.CreateAlignedLoad(Int32Ty, CpuValue,
                                        CharUnits::fromQuantity(4));
 
@@ -14129,7 +14129,7 @@ CodeGenFunction::EmitX86CpuSupports(std::array<uint32_t, 4> FeatureMask) {
     // global in the struct STy.
     Value *Idxs[] = {Builder.getInt32(0), Builder.getInt32(3),
                      Builder.getInt32(0)};
-    Value *CpuFeatures = Builder.CreateGEP(STy, CpuModel, Idxs);
+    Value *CpuFeatures = Builder.CreateInBoundsGEP(STy, CpuModel, Idxs);
     Value *Features = Builder.CreateAlignedLoad(Int32Ty, CpuFeatures,
                                                 CharUnits::fromQuantity(4));
 
@@ -14150,7 +14150,7 @@ CodeGenFunction::EmitX86CpuSupports(std::array<uint32_t, 4> FeatureMask) {
       continue;
     Value *Idxs[] = {Builder.getInt32(0), Builder.getInt32(i - 1)};
     Value *Features = Builder.CreateAlignedLoad(
-        Int32Ty, Builder.CreateGEP(ATy, CpuFeatures2, Idxs),
+        Int32Ty, Builder.CreateInBoundsGEP(ATy, CpuFeatures2, Idxs),
         CharUnits::fromQuantity(4));
     // Check the value of the bit corresponding to the feature requested.
     Value *Mask = Builder.getInt32(M);
@@ -16737,7 +16737,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       llvm::Value *Idxs[] = {ConstantInt::get(Int32Ty, 0),
                              ConstantInt::get(Int32Ty, FieldIdx)};
 
-      FieldValue = Builder.CreateGEP(STy, SysConf, Idxs);
+      FieldValue = Builder.CreateInBoundsGEP(STy, SysConf, Idxs);
       FieldValue = Builder.CreateAlignedLoad(Int32Ty, FieldValue,
                                              CharUnits::fromQuantity(4));
     } else if (SupportMethod == SYS_CALL) {
@@ -21200,6 +21200,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_min_f32:
   case WebAssembly::BI__builtin_wasm_min_f64:
+  case WebAssembly::BI__builtin_wasm_min_f16x8:
   case WebAssembly::BI__builtin_wasm_min_f32x4:
   case WebAssembly::BI__builtin_wasm_min_f64x2: {
     Value *LHS = EmitScalarExpr(E->getArg(0));
@@ -21210,6 +21211,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_max_f32:
   case WebAssembly::BI__builtin_wasm_max_f64:
+  case WebAssembly::BI__builtin_wasm_max_f16x8:
   case WebAssembly::BI__builtin_wasm_max_f32x4:
   case WebAssembly::BI__builtin_wasm_max_f64x2: {
     Value *LHS = EmitScalarExpr(E->getArg(0));
@@ -21218,6 +21220,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::maximum, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
   }
+  case WebAssembly::BI__builtin_wasm_pmin_f16x8:
   case WebAssembly::BI__builtin_wasm_pmin_f32x4:
   case WebAssembly::BI__builtin_wasm_pmin_f64x2: {
     Value *LHS = EmitScalarExpr(E->getArg(0));
@@ -21226,6 +21229,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::wasm_pmin, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
   }
+  case WebAssembly::BI__builtin_wasm_pmax_f16x8:
   case WebAssembly::BI__builtin_wasm_pmax_f32x4:
   case WebAssembly::BI__builtin_wasm_pmax_f64x2: {
     Value *LHS = EmitScalarExpr(E->getArg(0));

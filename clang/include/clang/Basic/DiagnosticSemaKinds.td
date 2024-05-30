@@ -12171,7 +12171,7 @@ def err_cuda_cluster_dims_not_supported : Error<
 >;
 
 def err_cuda_cluster_dims_too_large : Error<
-  "Only a maximum of %0 thread blocks in a cluster is supported."
+  "only a maximum of %0 thread blocks in a cluster is supported"
 >;
 
 def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
@@ -12246,6 +12246,13 @@ def err_hlsl_param_qualifier_mismatch :
 
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;
+
+def warn_hlsl_availability : Warning<
+  "%0 is only available %select{|in %4 environment }3on %1 %2 or newer">,
+  InGroup<HLSLAvailability>, DefaultError;
+def warn_hlsl_availability_unavailable :
+  Warning<err_unavailable.Summary>,
+  InGroup<HLSLAvailability>, DefaultError;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

@@ -1903,37 +1903,13 @@ isLoopVariantIndirectAddress(ArrayRef<const Value *> UnderlyingObjects,
   });
 }
 
-namespace {
-struct DepDistanceStrideAndSizeInfo {
-  const SCEV *Dist;
-  uint64_t StrideA;
-  uint64_t StrideB;
-  uint64_t TypeByteSize;
-  bool AIsWrite;
-  bool BIsWrite;
-
-  DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA,
-                               uint64_t StrideB, uint64_t TypeByteSize,
-                               bool AIsWrite, bool BIsWrite)
-      : Dist(Dist), StrideA(StrideA), StrideB(StrideB),
-        TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
-};
-} // namespace
-
-// Get the dependence distance, strides, type size and whether it is a write for
-// the dependence between A and B. Returns a DepType, if we can prove there's
-// no dependence or the analysis fails. Outlined to lambda to limit he scope
-// of various temporary variables, like A/BPtr, StrideA/BPtr and others.
-// Returns either the dependence result, if it could already be determined, or a
-// struct containing (Distance, Stride, TypeSize, AIsWrite, BIsWrite).
-static std::variant<MemoryDepChecker::Dependence::DepType,
-                    DepDistanceStrideAndSizeInfo>
-getDependenceDistanceStrideAndSize(
+std::variant<MemoryDepChecker::Dependence::DepType,
+             MemoryDepChecker::DepDistanceStrideAndSizeInfo>
+MemoryDepChecker::getDependenceDistanceStrideAndSize(
     const AccessAnalysis::MemAccessInfo &A, Instruction *AInst,
     const AccessAnalysis::MemAccessInfo &B, Instruction *BInst,
-    const DenseMap<Value *, const SCEV *> &Strides,
-    const DenseMap<Value *, SmallVector<const Value *, 16>> &UnderlyingObjects,
-    PredicatedScalarEvolution &PSE, const Loop *InnermostLoop) {
+    const DenseMap<Value *, SmallVector<const Value *, 16>>
+        &UnderlyingObjects) {
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
   auto &SE = *PSE.getSE();
   auto [APtr, AIsWrite] = A;
@@ -1952,9 +1928,11 @@ getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
 
   int64_t StrideAPtr =
-      getPtrStride(PSE, ATy, APtr, InnermostLoop, Strides, true).value_or(0);
+      getPtrStride(PSE, ATy, APtr, InnermostLoop, SymbolicStrides, true)
+          .value_or(0);
   int64_t StrideBPtr =
-      getPtrStride(PSE, BTy, BPtr, InnermostLoop, Strides, true).value_or(0);
+      getPtrStride(PSE, BTy, BPtr, InnermostLoop, SymbolicStrides, true)
+          .value_or(0);
 
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
@@ -1983,20 +1961,25 @@ getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::IndirectUnsafe;
 
   // Check if we can prove that Sink only accesses memory after Src's end or
-  // vice versa.
-  const auto &[SrcStart, SrcEnd] =
-      getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE);
-  const auto &[SinkStart, SinkEnd] =
-      getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE);
+  // vice versa. At the moment this is limited to cases where either source or
+  // sink are loop invariant to avoid compile-time increases. This is not
+  // required for correctness.
+  if (SE.isLoopInvariant(Src, InnermostLoop) ||
+      SE.isLoopInvariant(Sink, InnermostLoop)) {
+    const auto &[SrcStart, SrcEnd] =
+        getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE);
+    const auto &[SinkStart, SinkEnd] =
+        getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE);
 
-  if (!isa<SCEVCouldNotCompute>(SrcStart) &&
-      !isa<SCEVCouldNotCompute>(SrcEnd) &&
-      !isa<SCEVCouldNotCompute>(SinkStart) &&
-      !isa<SCEVCouldNotCompute>(SinkEnd)) {
-    if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
-      return MemoryDepChecker::Dependence::NoDep;
-    if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart))
-      return MemoryDepChecker::Dependence::NoDep;
+    if (!isa<SCEVCouldNotCompute>(SrcStart) &&
+        !isa<SCEVCouldNotCompute>(SrcEnd) &&
+        !isa<SCEVCouldNotCompute>(SinkStart) &&
+        !isa<SCEVCouldNotCompute>(SinkEnd)) {
+      if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
+        return MemoryDepChecker::Dependence::NoDep;
+      if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart))
+        return MemoryDepChecker::Dependence::NoDep;
+    }
   }
 
   // Need accesses with constant strides and the same direction. We don't want
@@ -2020,7 +2003,7 @@ getDependenceDistanceStrideAndSize(
 
 MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
-    unsigned BIdx, const DenseMap<Value *, const SCEV *> &Strides,
+    unsigned BIdx,
     const DenseMap<Value *, SmallVector<const Value *, 16>>
         &UnderlyingObjects) {
   assert(AIdx < BIdx && "Must pass arguments in program order");
@@ -2028,8 +2011,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // Get the dependence distance, stride, type size and what access writes for
   // the dependence between A and B.
   auto Res = getDependenceDistanceStrideAndSize(
-      A, InstMap[AIdx], B, InstMap[BIdx], Strides, UnderlyingObjects, PSE,
-      InnermostLoop);
+      A, InstMap[AIdx], B, InstMap[BIdx], UnderlyingObjects);
   if (std::holds_alternative<Dependence::DepType>(Res))
     return std::get<Dependence::DepType>(Res);
 
@@ -2264,7 +2246,6 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
 bool MemoryDepChecker::areDepsSafe(
     DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
-    const DenseMap<Value *, const SCEV *> &Strides,
     const DenseMap<Value *, SmallVector<const Value *, 16>>
         &UnderlyingObjects) {
 
@@ -2309,9 +2290,8 @@ bool MemoryDepChecker::areDepsSafe(
             if (*I1 > *I2)
               std::swap(A, B);
 
-            Dependence::DepType Type =
-                isDependent(*A.first, A.second, *B.first, B.second, Strides,
-                            UnderlyingObjects);
+            Dependence::DepType Type = isDependent(*A.first, A.second, *B.first,
+                                                   B.second, UnderlyingObjects);
             mergeInStatus(Dependence::isSafeForVectorization(Type));
 
             // Gather dependences unless we accumulated MaxDependences
@@ -2669,9 +2649,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   CanVecMem = true;
   if (Accesses.isDependencyCheckNeeded()) {
     LLVM_DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
-    CanVecMem = DepChecker->areDepsSafe(
-        DependentAccesses, Accesses.getDependenciesToCheck(), SymbolicStrides,
-        Accesses.getUnderlyingObjects());
+    CanVecMem = DepChecker->areDepsSafe(DependentAccesses,
+                                        Accesses.getDependenciesToCheck(),
+                                        Accesses.getUnderlyingObjects());
 
     if (!CanVecMem && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
@@ -3061,8 +3041,8 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
     if (ScalableWidth.isNonZero())
       MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
   }
-  DepChecker =
-      std::make_unique<MemoryDepChecker>(*PSE, L, MaxTargetVectorWidthInBits);
+  DepChecker = std::make_unique<MemoryDepChecker>(*PSE, L, SymbolicStrides,
+                                                  MaxTargetVectorWidthInBits);
   PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
   if (canAnalyzeLoop())
     analyzeLoop(AA, LI, TLI, DT);
