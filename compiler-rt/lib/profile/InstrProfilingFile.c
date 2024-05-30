@@ -1282,7 +1282,8 @@ int __llvm_write_custom_profile(const char *Target,
                                 const __llvm_profile_data *DataEnd,
                                 const char *CountersBegin,
                                 const char *CountersEnd, const char *NamesBegin,
-                                const char *NamesEnd) {
+                                const char *NamesEnd,
+                                const uint64_t *VersionOverride) {
   int ReturnValue = 0, FilenameLength, TargetLength;
   char *FilenameBuf, *TargetFilename;
   const char *Filename;
@@ -1354,10 +1355,15 @@ int __llvm_write_custom_profile(const char *Target,
   ProfDataWriter fileWriter;
   initFileWriter(&fileWriter, OutputFile);
 
+  uint64_t Version = __llvm_profile_get_version();
+  if (VersionOverride)
+    Version = *VersionOverride;
+
   /* Write custom data to the file */
-  ReturnValue = lprofWriteDataImpl(
-      &fileWriter, DataBegin, DataEnd, CountersBegin, CountersEnd, NULL, NULL,
-      lprofGetVPDataReader(), NULL, NULL, NULL, NULL, NamesBegin, NamesEnd, 0);
+  ReturnValue =
+      lprofWriteDataImpl(&fileWriter, DataBegin, DataEnd, CountersBegin,
+                         CountersEnd, NULL, NULL, lprofGetVPDataReader(), NULL,
+                         NULL, NULL, NULL, NamesBegin, NamesEnd, 0, Version);
   closeFileObject(OutputFile);
 
   // Restore SIGKILL.

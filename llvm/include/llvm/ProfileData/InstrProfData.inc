@@ -152,7 +152,7 @@ INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::PointerType::getUnqual(Ctx), Next, \
 #define INSTR_PROF_DATA_DEFINED
 #endif
 INSTR_PROF_RAW_HEADER(uint64_t, Magic, __llvm_profile_get_magic())
-INSTR_PROF_RAW_HEADER(uint64_t, Version, __llvm_profile_get_version())
+INSTR_PROF_RAW_HEADER(uint64_t, Version, Version)
 INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
 INSTR_PROF_RAW_HEADER(uint64_t, NumData, NumData)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesBeforeCounters, PaddingBytesBeforeCounters)

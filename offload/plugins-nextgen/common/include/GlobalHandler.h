@@ -13,6 +13,7 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 
+#include <optional>
 #include <type_traits>
 
 #include "llvm/ADT/DenseMap.h"
@@ -64,10 +65,13 @@ struct __llvm_profile_data {
 };
 
 extern "C" {
-extern int __attribute__((weak)) __llvm_write_custom_profile(
-    const char *Target, const __llvm_profile_data *DataBegin,
-    const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd);
+extern int __attribute__((weak))
+__llvm_write_custom_profile(const char *Target,
+                            const __llvm_profile_data *DataBegin,
+                            const __llvm_profile_data *DataEnd,
+                            const char *CountersBegin, const char *CountersEnd,
+                            const char *NamesBegin, const char *NamesEnd,
+                            const uint64_t *VersionOverride);
 }
 
 /// PGO profiling data extracted from a GPU device
@@ -76,6 +80,7 @@ struct GPUProfGlobals {
   SmallVector<__llvm_profile_data> Data;
   SmallVector<uint8_t> NamesData;
   Triple TargetTriple;
+  std::optional<uint64_t> Version;
 
   void dump() const;
   Error write() const;
