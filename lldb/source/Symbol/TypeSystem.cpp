@@ -359,17 +359,6 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
   return GetTypeSystemForLanguage(language);
 }
 
-bool TypeSystem::SupportsLanguageStatic(lldb::LanguageType language) {
-  if (language == eLanguageTypeUnknown)
-    return false;
-
-  LanguageSet languages =
-      PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();
-  if (languages.Empty())
-    return false;
-  return languages[language];
-}
-
 // BEGIN SWIFT
 llvm::Expected<TypeSystemSP>
 TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
