@@ -2158,15 +2158,15 @@ class xxevalPattern <dag pattern, bits<8> imm> :
 
 let Predicates = [PrefixInstrs, HasP10Vector] in {
   let AddedComplexity = 400 in {
-	def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
-								i32immNonAllOneNonZero:$A,
-                                i32immNonAllOneNonZero:$A,
-                                i32immNonAllOneNonZero:$A)),
+    def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
+				   i32immNonAllOneNonZero:$A,
+                                   i32immNonAllOneNonZero:$A,
+                                   i32immNonAllOneNonZero:$A)),
               (v4i32 (XXSPLTIW imm:$A))>;
-	def : Pat<(f32 nzFPImmAsi32:$A),
+    def : Pat<(f32 nzFPImmAsi32:$A),
               (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
                               VSFRC)>;
-	def : Pat<(f64 nzFPImmAsi32:$A),
+    def : Pat<(f64 nzFPImmAsi32:$A),
               (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
                               VSFRC)>;
 
