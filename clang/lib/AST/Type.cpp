@@ -4251,7 +4251,8 @@ TemplateSpecializationType::TemplateSpecializationType(
   assert((T.getKind() == TemplateName::Template ||
           T.getKind() == TemplateName::SubstTemplateTemplateParm ||
           T.getKind() == TemplateName::SubstTemplateTemplateParmPack ||
-          T.getKind() == TemplateName::UsingTemplate) &&
+          T.getKind() == TemplateName::UsingTemplate ||
+          T.getKind() == TemplateName::QualifiedTemplate) &&
          "Unexpected template name for TemplateSpecializationType");
 
   auto *TemplateArgs = reinterpret_cast<TemplateArgument *>(this + 1);
