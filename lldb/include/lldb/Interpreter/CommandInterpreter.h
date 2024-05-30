@@ -777,7 +777,8 @@ private:
   /// Contains a list of handled commands and their details. Each element in
   /// the list is a dictionary with the following keys/values:
   /// - "command" (string): The command that was given by the user.
-  /// - "resolvedCommand" (string): The expanded command that was executed.
+  /// - "commandName" (string): The name of the executed command.
+  /// - "commandArguments" (string): The arguments of the executed command.
   /// - "output" (string): The output of the command. Empty ("") if no output.
   /// - "error" (string): The error of the command. Empty ("") if no error.
   /// - "durationInSeconds" (float): The time it took to execute the command.
