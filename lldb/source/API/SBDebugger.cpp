@@ -1748,7 +1748,3 @@ bool SBDebugger::InterruptRequested()   {
     return m_opaque_sp->InterruptRequested();
   return false;
 }
-
-bool SBDebugger::SupportsLanguage(lldb::LanguageType language) {
-  return TypeSystem::SupportsLanguageStatic(language);
-}
