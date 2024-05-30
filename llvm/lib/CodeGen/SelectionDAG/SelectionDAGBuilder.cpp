@@ -7518,16 +7518,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::clear_cache: {
     SDValue InputChain = DAG.getRoot();
-    Value *Start = I.getArgOperand(0);
-    SDValue StartVal = getValue(Start);
-    Value *End = I.getArgOperand(1);
-    SDValue EndVal = getValue(End);
+    SDValue StartVal = getValue(I.getArgOperand(0));
+    SDValue EndVal = getValue(I.getArgOperand(1));
     Res = DAG.getNode(ISD::CLEAR_CACHE, sdl, DAG.getVTList(MVT::Other),
                       {InputChain, StartVal, EndVal});
     setValue(&I, Res);
     DAG.setRoot(Res);
     return;
-   }
+  }
   case Intrinsic::donothing:
   case Intrinsic::seh_try_begin:
   case Intrinsic::seh_scope_begin:
