@@ -46,6 +46,36 @@ linked list."
 ) lldb::SBValue;
 
 %feature("docstring", "
+Returns true if the SBValue holds any useful state
+and false otherwise.
+IsValid is a very weak API, lldb will only return
+invalid SBValues if it has no useful information
+about the SBValue.
+The two main ways you will end up with an invalid
+SBValue are:
+1) default constructed SBValues are not valid.
+2) SBValues that have outlived their SBTarget are
+no longer valid since its not safe to ask them
+questions.
+"
+) lldb::SBValue::IsValid
+
+%feature("docstring", "
+SBValues use the lldb::SBError object returned by
+this API to report construction errors when the SBValue
+is made; and on each stop, the SBError will tell you
+whether lldb could successfully determine the value for
+this program entity represented by this SBValue.
+
+For instance, if you made an SBValue to
+represent a local variable, and then stepped to a PC where
+the variable was unavailable due to optimization, then
+GetError().Success() will be false for this stop, and the
+error string will have more information about the failure.
+"
+) lldb::SBValue::GetError
+
+%feature("docstring", "
     Get a child value by index from a value.
 
     Structs, unions, classes, arrays and pointers have child
