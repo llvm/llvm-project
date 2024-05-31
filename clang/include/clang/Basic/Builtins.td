@@ -2575,6 +2575,20 @@ def SetJmpEx : MSLibBuiltin<"setjmpex.h"> {
   let Prototype = "int(jmp_buf)";
 }
 
+// C++ contracts
+def ContractViolation : Builtin {
+  let Spellings = ["contract_violation"];
+  let Prototype = "void(char const*, int, char const*)";
+  let Attributes = [NoThrow];
+  let Namespace = "std";
+}
+
+def ContractAssert : Builtin {
+  let Spellings = ["contract_assert"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(bool)";
+}
+
 // C99 library functions
 // C99 stdarg.h
 def VaStart : LibBuiltin<"stdarg.h"> {
