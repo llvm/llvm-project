@@ -33,7 +33,7 @@ class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {
 public:
   SystemZTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple),
-        ISARevision(getISARevision(CLANG_SYSTEMZ_DEFAULT_ARCH)),
+        ISARevision(getISARevision("z10")),
         HasTransactionalExecution(false), HasVector(false), SoftFloat(false),
         UnalignedSymbols(false) {
     IntMaxType = SignedLong;
