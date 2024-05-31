@@ -90,10 +90,10 @@ static bool equalJumpTables(const JumpTable &JumpTableA,
 /// given instruction of the given function. The functions should have
 /// identical CFG.
 template <class Compare>
-static bool
-isInstrEquivalentWith(const MCInst &InstA, const BinaryBasicBlock &BBA,
-                      const MCInst &InstB, const BinaryBasicBlock &BBB,
-                      Compare Comp) {
+static bool isInstrEquivalentWith(const MCInst &InstA,
+                                  const BinaryBasicBlock &BBA,
+                                  const MCInst &InstB,
+                                  const BinaryBasicBlock &BBB, Compare Comp) {
   if (InstA.getOpcode() != InstB.getOpcode())
     return false;
 
