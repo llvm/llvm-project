@@ -9674,6 +9674,27 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportInstantiatedFromMember) {
   EXPECT_TRUE(ImportedPartialSpecialization->getInstantiatedFromMember());
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportAnonymousEnum) {
+  const char *ToCode =
+      R"(
+      struct A {
+        enum { E1,E2} x;
+      };
+      )";
+  (void)getToTuDecl(ToCode, Lang_CXX11);
+  const char *Code =
+      R"(
+      struct A {
+        enum { E1,E2} x;
+      };
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromE = FirstDeclMatcher<EnumDecl>().match(FromTU, enumDecl());
+  auto *ToE = Import(FromE, Lang_CXX11);
+  ASSERT_TRUE(ToE);
+  EXPECT_FALSE(ToE->enumerators().empty());
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
                          DefaultTestValuesForRunOptions);
 
