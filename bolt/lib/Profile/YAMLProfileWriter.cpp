@@ -171,6 +171,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
       YamlSI.Index = Successor->getLayoutIndex();
       YamlSI.Count = BranchInfo->Count;
       YamlSI.Mispreds = BranchInfo->MispredictedCount;
+
       YamlBB.Successors.emplace_back(YamlSI);
 
       ++BranchInfo;
