@@ -1,0 +1,1 @@
+cc -c -Wall -Wextra -o test_1.o test_1.c
