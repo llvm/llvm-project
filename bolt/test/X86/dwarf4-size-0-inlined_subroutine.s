@@ -16,8 +16,8 @@
 # CHECK:		DW_AT_high_pc [DW_FORM_data4] (0x00000000)
 
 
-# Testing BOLT handles correctly when size of DW_AT_inlined_subroutine is 0.
-# In other words DW_AT_high_pc is 0 or DW_AT_low_pc == DW_AT_high_pc.
+## Testing BOLT handles correctly when size of DW_AT_inlined_subroutine is 0.
+## In other words DW_AT_high_pc is 0 or DW_AT_low_pc == DW_AT_high_pc.
 
 # Modified assembly manually to set DW_AT_high_pc to 0.
 # clang++ -g2 -gdwarf-4 main.cpp -O1 -S -o main4.s
