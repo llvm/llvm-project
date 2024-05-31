@@ -161,6 +161,7 @@ CharSetConverterICU::convert(StringRef Source,
         continue;
       }
       // Some other error occured.
+      Result.resize(Output - Result.data());
       return std::error_code(EILSEQ, std::generic_category());
     }
     break;
@@ -227,6 +228,7 @@ CharSetConverterIconv::convert(StringRef Source,
         return std::error_code();
       } else {
         // Some other error occured.
+        Result.resize(Output - Result.data());
         return std::error_code(errno, std::generic_category());
       }
     } else {
