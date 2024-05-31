@@ -116,6 +116,7 @@ template <template <class TestArg> class TestFunctor>
 struct TestEachAtomicType {
   void operator()() const {
     TestEachIntegralType<TestFunctor>()();
+    TestEachPointerType<TestFunctor>()();
     TestFunctor<UserAtomicType>()();
     /*
             Note: These aren't going to be lock-free,
@@ -128,8 +129,6 @@ struct TestEachAtomicType {
         TestFunctor<PaddedUserAtomicType>()();
         TestFunctor<WeirdUserAtomicType>()();
 */
-    TestFunctor<int*>()();
-    TestFunctor<const int*>()();
     TestFunctor<float>()();
     TestFunctor<double>()();
   }

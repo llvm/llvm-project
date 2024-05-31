@@ -30,11 +30,12 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -1389,6 +1390,12 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
         if (!Arg)
           continue;
 
+        if (AL.hasParamAttr(I, Attribute::ByVal))
+          // It's unsound to propagate memory attributes to byval arguments.
+          // Even if CalledFunction doesn't e.g. write to the argument,
+          // the call to NewInnerCB may write to its by-value copy.
+          continue;
+
         unsigned ArgNo = Arg->getArgNo();
         // If so, propagate its access attributes.
         AL = AL.addParamAttributes(Context, I, ValidParamAttrs[ArgNo]);
@@ -1444,6 +1451,8 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
     Valid.addAttribute(Attribute::NonNull);
   if (CB.hasRetAttr(Attribute::Alignment))
     Valid.addAlignmentAttr(CB.getRetAlign());
+  if (std::optional<ConstantRange> Range = CB.getRange())
+    Valid.addRangeAttr(*Range);
   return Valid;
 }
 
@@ -1535,6 +1544,14 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     if (ValidPG.getAlignment().valueOrOne() < AL.getRetAlignment().valueOrOne())
       ValidPG.removeAttribute(Attribute::Alignment);
     if (ValidPG.hasAttributes()) {
+      Attribute CBRange = ValidPG.getAttribute(Attribute::Range);
+      if (CBRange.isValid()) {
+        Attribute NewRange = AL.getRetAttr(Attribute::Range);
+        if (NewRange.isValid()) {
+          ValidPG.addRangeAttr(
+              CBRange.getRange().intersectWith(NewRange.getRange()));
+        }
+      }
       // Three checks.
       // If the callsite has `noundef`, then a poison due to violating the
       // return attribute will create UB anyways so we can always propagate.
@@ -1888,29 +1905,12 @@ static void trackInlinedStores(Function::iterator Start, Function::iterator End,
 /// otherwise a function inlined more than once into the same function
 /// will cause DIAssignID to be shared by many instructions.
 static void fixupAssignments(Function::iterator Start, Function::iterator End) {
-  // Map {Old, New} metadata. Not used directly - use GetNewID.
   DenseMap<DIAssignID *, DIAssignID *> Map;
-  auto GetNewID = [&Map](Metadata *Old) {
-    DIAssignID *OldID = cast<DIAssignID>(Old);
-    if (DIAssignID *NewID = Map.lookup(OldID))
-      return NewID;
-    DIAssignID *NewID = DIAssignID::getDistinct(OldID->getContext());
-    Map[OldID] = NewID;
-    return NewID;
-  };
   // Loop over all the inlined instructions. If we find a DIAssignID
   // attachment or use, replace it with a new version.
   for (auto BBI = Start; BBI != End; ++BBI) {
-    for (Instruction &I : *BBI) {
-      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
-        if (DVR.isDbgAssign())
-          DVR.setAssignId(GetNewID(DVR.getAssignID()));
-      }
-      if (auto *ID = I.getMetadata(LLVMContext::MD_DIAssignID))
-        I.setMetadata(LLVMContext::MD_DIAssignID, GetNewID(ID));
-      else if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
-        DAI->setAssignId(GetNewID(DAI->getAssignID()));
-    }
+    for (Instruction &I : *BBI)
+      at::remapAssignID(Map, I);
   }
 }
 #undef DEBUG_TYPE

@@ -49,7 +49,6 @@ void fn1(int i) {
   // CHECK-NEXT: store
   // init the list
   // CHECK-NEXT: getelementptr
-  // CHECK-NEXT: getelementptr inbounds [3 x i32], ptr
   // CHECK-NEXT: store ptr
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: getelementptr inbounds [3 x i32], ptr [[array]], i{{32|64}} 0, i{{32|64}} 3

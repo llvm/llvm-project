@@ -17,6 +17,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIPROGRAMINFO_H
 
 #include "llvm/IR/CallingConv.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -27,7 +28,7 @@ class MCExpr;
 class MachineFunction;
 
 /// Track resource usage for kernels / entry functions.
-struct SIProgramInfo {
+struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
     // Fields set in PGM_RSRC1 pm4 packet.
     const MCExpr *VGPRBlocks = nullptr;
     const MCExpr *SGPRBlocks = nullptr;

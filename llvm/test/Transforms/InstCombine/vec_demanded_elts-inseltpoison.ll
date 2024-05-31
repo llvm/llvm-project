@@ -566,7 +566,7 @@ define ptr @gep_cvbase_w_s_idx(<2 x ptr> %base, i64 %raw_addr) {
 
 define ptr @gep_cvbase_w_cv_idx(<2 x ptr> %base, i64 %raw_addr) {
 ; CHECK-LABEL: @gep_cvbase_w_cv_idx(
-; CHECK-NEXT:    ret ptr getelementptr inbounds (i32, ptr @GLOBAL, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @GLOBAL, i64 4)
 ;
   %gep = getelementptr i32, <2 x ptr> <ptr @GLOBAL, ptr @GLOBAL>, <2 x i64> <i64 0, i64 1>
   %ee = extractelement <2 x ptr> %gep, i32 1

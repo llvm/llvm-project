@@ -3385,13 +3385,13 @@ struct Conv1DGenerator
       auto rhsSize = cast<VectorType>(rhs.getType()).getShape()[0];
       auto resSize = cast<VectorType>(res.getType()).getShape()[1];
 
-      SmallVector<int64_t, 16> indicies;
+      SmallVector<int64_t, 16> indices;
       for (int i = 0; i < resSize / rhsSize; ++i) {
         for (int j = 0; j < rhsSize; ++j)
-          indicies.push_back(j);
+          indices.push_back(j);
       }
 
-      rhs = rewriter.create<vector::ShuffleOp>(loc, rhs, rhs, indicies);
+      rhs = rewriter.create<vector::ShuffleOp>(loc, rhs, rhs, indices);
     }
     // Broadcast the filter to match the output vector
     rhs = rewriter.create<vector::BroadcastOp>(

@@ -146,6 +146,25 @@ let TargetGuard = "sme" in {
                              [IsOverloadNone, IsStreamingCompatible, IsOutZA]>;
 }
 
+let TargetGuard = "sme2p1" in {
+  def SVZERO_ZA64_VG1x2 : SInst<"svzero_za64_vg1x2", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg1x2",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG1x4 : SInst<"svzero_za64_vg1x4", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg1x4",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG2x1 : SInst<"svzero_za64_vg2x1", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg2x1",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG2x2 : SInst<"svzero_za64_vg2x2", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg2x2",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG2x4 : SInst<"svzero_za64_vg2x4", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg2x4",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG4x1 : SInst<"svzero_za64_vg4x1", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg4x1",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG4x2 : SInst<"svzero_za64_vg4x2", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg4x2",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG4x4 : SInst<"svzero_za64_vg4x4", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg4x4",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // SME - Counting elements in a streaming vector
 
@@ -297,6 +316,16 @@ multiclass ZAAddSub<string n_suffix> {
   let TargetGuard = "sme2,sme-f64f64" in {
     def NAME # _ZA64_VG1X2_F64 : Inst<"sv" # n_suffix # "_za64[_{d}]_vg1x2", "vm2", "d", MergeNone, "aarch64_sme_" # n_suffix # "_za64_vg1x2", [IsStreaming, IsInOutZA], []>;
     def NAME # _ZA64_VG1X4_F64 : Inst<"sv" # n_suffix # "_za64[_{d}]_vg1x4", "vm4", "d", MergeNone, "aarch64_sme_" # n_suffix # "_za64_vg1x4", [IsStreaming, IsInOutZA], []>;
+  }
+
+  let TargetGuard = "sme-f16f16|sme-f8f16" in {
+    def NAME # _ZA16_VG1X2_F16 : Inst<"sv" # n_suffix # "_za16[_{d}]_vg1x2", "vm2", "h", MergeNone, "aarch64_sme_" # n_suffix # "_za16_vg1x2", [IsStreaming, IsInOutZA], []>;
+    def NAME # _ZA16_VG1X4_F16 : Inst<"sv" # n_suffix # "_za16[_{d}]_vg1x4", "vm4", "h", MergeNone, "aarch64_sme_" # n_suffix # "_za16_vg1x4", [IsStreaming, IsInOutZA], []>;
+  }
+
+  let TargetGuard = "sme2,b16b16" in {
+    def NAME # _ZA16_VG1X2_BF16 : Inst<"sv" # n_suffix # "_za16[_{d}]_vg1x2", "vm2", "b", MergeNone, "aarch64_sme_" # n_suffix # "_za16_vg1x2", [IsStreaming, IsInOutZA], []>;
+    def NAME # _ZA16_VG1X4_BF16 : Inst<"sv" # n_suffix # "_za16[_{d}]_vg1x4", "vm4", "b", MergeNone, "aarch64_sme_" # n_suffix # "_za16_vg1x4", [IsStreaming, IsInOutZA], []>;
   }
 }
 
@@ -707,4 +736,28 @@ let TargetGuard = "sme2" in {
 let TargetGuard = "sme2" in {
   def SVLUTI2_LANE_ZT_X2 : Inst<"svluti2_lane_zt_{d}_x2", "2.di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti2_lane_zt_x2", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_7>]>;
   def SVLUTI4_LANE_ZT_X2 : Inst<"svluti4_lane_zt_{d}_x2", "2.di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti4_lane_zt_x2", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_3>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SME2p1 - FMOPA, FMOPS (non-widening)
+let TargetGuard = "sme2,b16b16" in {
+  def SVMOPA_BF16_NW : SInst<"svmopa_za16[_bf16]_m", "viPPdd", "b",
+                             MergeNone, "aarch64_sme_mopa",
+                             [IsStreaming, IsInOutZA],
+                             [ImmCheck<0, ImmCheck0_1>]>;
+  def SVMOPS_BF16_NW : SInst<"svmops_za16[_bf16]_m", "viPPdd", "b",
+                             MergeNone, "aarch64_sme_mops",
+                             [IsStreaming, IsInOutZA],
+                             [ImmCheck<0, ImmCheck0_1>]>;
+}
+
+let TargetGuard = "sme-f16f16" in {
+  def SVMOPA_F16_NW : SInst<"svmopa_za16[_f16]_m", "viPPdd", "h",
+                            MergeNone, "aarch64_sme_mopa",
+                            [IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_1>]>;
+  def SVMOPS_F16_NW : SInst<"svmops_za16[_f16]_m", "viPPdd", "h",
+                            MergeNone, "aarch64_sme_mops",
+                            [IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_1>]>;
 }

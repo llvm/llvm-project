@@ -9,7 +9,7 @@ entry:
   %num.addr = alloca i32, align 4
   store i32 %num, ptr %num.addr, align 4
   ; CHECK-NOT: call void @llvm.dbg.addr
-  ; CHECK: call void @llvm.dbg.value(metadata ptr %num.addr, metadata ![[#]], metadata !DIExpression(DW_OP_plus_uconst, 0, DW_OP_deref))
+  ; CHECK: call void @llvm.dbg.value(metadata ptr %num.addr, metadata ![[#]], metadata !DIExpression(DW_OP_deref))
   call void @llvm.dbg.addr(metadata ptr %num.addr, metadata !16, metadata !DIExpression(DW_OP_plus_uconst, 0)), !dbg !17
   %0 = load i32, ptr %num.addr, align 4
   ret i32 %0

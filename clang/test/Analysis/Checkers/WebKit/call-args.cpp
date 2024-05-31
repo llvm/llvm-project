@@ -358,3 +358,10 @@ namespace call_with_ptr_on_ref {
     // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
   }
 }
+
+namespace call_with_explicit_temporary_obj {
+  void foo() {
+    Ref { *provide() }->method();
+    RefPtr { provide() }->method();
+  }
+}

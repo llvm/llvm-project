@@ -377,6 +377,10 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadInsts;
   for (BasicBlock *BB : L->getBlocks()) {
+    // Remove repeated debug instructions after loop unrolling.
+    if (BB->getParent()->getSubprogram())
+      RemoveRedundantDbgInstrs(BB);
+
     for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
       if (Value *V = simplifyInstruction(&Inst, {DL, nullptr, DT, AC}))
         if (LI->replacementPreservesLCSSAForm(&Inst, V))

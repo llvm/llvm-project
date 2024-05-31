@@ -17,6 +17,34 @@
 
 using namespace clang;
 
+bool OpenACCClauseWithParams::classof(const OpenACCClause *C) {
+  return OpenACCDeviceTypeClause::classof(C) ||
+         OpenACCClauseWithCondition::classof(C) ||
+         OpenACCClauseWithExprs::classof(C);
+}
+bool OpenACCClauseWithExprs::classof(const OpenACCClause *C) {
+  return OpenACCWaitClause::classof(C) || OpenACCNumGangsClause::classof(C) ||
+         OpenACCClauseWithSingleIntExpr::classof(C) ||
+         OpenACCClauseWithVarList::classof(C);
+}
+bool OpenACCClauseWithVarList::classof(const OpenACCClause *C) {
+  return OpenACCPrivateClause::classof(C) ||
+         OpenACCFirstPrivateClause::classof(C) ||
+         OpenACCDevicePtrClause::classof(C) ||
+         OpenACCDevicePtrClause::classof(C) ||
+         OpenACCAttachClause::classof(C) || OpenACCNoCreateClause::classof(C) ||
+         OpenACCPresentClause::classof(C) || OpenACCCopyClause::classof(C) ||
+         OpenACCCopyInClause::classof(C) || OpenACCCopyOutClause::classof(C) ||
+         OpenACCReductionClause::classof(C) || OpenACCCreateClause::classof(C);
+}
+bool OpenACCClauseWithCondition::classof(const OpenACCClause *C) {
+  return OpenACCIfClause::classof(C) || OpenACCSelfClause::classof(C);
+}
+bool OpenACCClauseWithSingleIntExpr::classof(const OpenACCClause *C) {
+  return OpenACCNumWorkersClause::classof(C) ||
+         OpenACCVectorLengthClause::classof(C) ||
+         OpenACCAsyncClause::classof(C);
+}
 OpenACCDefaultClause *OpenACCDefaultClause::Create(const ASTContext &C,
                                                    OpenACCDefaultClauseKind K,
                                                    SourceLocation BeginLoc,
@@ -271,6 +299,27 @@ OpenACCCreateClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                                        VarList, EndLoc);
 }
 
+OpenACCDeviceTypeClause *OpenACCDeviceTypeClause::Create(
+    const ASTContext &C, OpenACCClauseKind K, SourceLocation BeginLoc,
+    SourceLocation LParenLoc, ArrayRef<DeviceTypeArgument> Archs,
+    SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCDeviceTypeClause::totalSizeToAlloc<DeviceTypeArgument>(
+          Archs.size()));
+  return new (Mem)
+      OpenACCDeviceTypeClause(K, BeginLoc, LParenLoc, Archs, EndLoc);
+}
+
+OpenACCReductionClause *OpenACCReductionClause::Create(
+    const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+    OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
+    SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCReductionClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem)
+      OpenACCReductionClause(BeginLoc, LParenLoc, Operator, VarList, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -406,6 +455,14 @@ void OpenACCClausePrinter::VisitCreateClause(const OpenACCCreateClause &C) {
   OS << ")";
 }
 
+void OpenACCClausePrinter::VisitReductionClause(
+    const OpenACCReductionClause &C) {
+  OS << "reduction(" << C.getReductionOp() << ": ";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
 void OpenACCClausePrinter::VisitWaitClause(const OpenACCWaitClause &C) {
   OS << "wait";
   if (!C.getLParenLoc().isInvalid()) {
@@ -423,4 +480,18 @@ void OpenACCClausePrinter::VisitWaitClause(const OpenACCWaitClause &C) {
                           [&](const Expr *E) { printExpr(E); });
     OS << ")";
   }
+}
+
+void OpenACCClausePrinter::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {
+  OS << C.getClauseKind();
+  OS << "(";
+  llvm::interleaveComma(C.getArchitectures(), OS,
+                        [&](const DeviceTypeArgument &Arch) {
+                          if (Arch.first == nullptr)
+                            OS << "*";
+                          else
+                            OS << Arch.first->getName();
+                        });
+  OS << ")";
 }

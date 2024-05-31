@@ -171,8 +171,6 @@ def HasSME2          : Predicate<"Subtarget->hasSME2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2), "sme2">;
 def HasSME2p1        : Predicate<"Subtarget->hasSME2p1()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p1), "sme2p1">;
-def HasFPMR          : Predicate<"Subtarget->hasFPMR()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureFPMR), "fpmr">;
 def HasFP8           : Predicate<"Subtarget->hasFP8()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP8), "fp8">;
 def HasFAMINMAX      : Predicate<"Subtarget->hasFAMINMAX()">,
@@ -735,6 +733,12 @@ def AArch64rev64 : SDNode<"AArch64ISD::REV64", SDT_AArch64UnaryVec>;
 def AArch64ext : SDNode<"AArch64ISD::EXT", SDT_AArch64ExtVec>;
 
 def AArch64vashr : SDNode<"AArch64ISD::VASHR", SDT_AArch64vshift>;
+
+def AArch64vashr_exact : PatFrag<(ops          node:$lhs, node:$rhs),
+                                 (AArch64vashr node:$lhs, node:$rhs), [{
+  return N->getFlags().hasExact();
+}]>;
+
 def AArch64vlshr : SDNode<"AArch64ISD::VLSHR", SDT_AArch64vshift>;
 def AArch64vshl : SDNode<"AArch64ISD::VSHL", SDT_AArch64vshift>;
 def AArch64sqshli : SDNode<"AArch64ISD::SQSHL_I", SDT_AArch64vshift>;
@@ -5403,6 +5407,98 @@ def : Pat<(AArch64bsp (v4i32 V128:$Rd), V128:$Rn, V128:$Rm),
 def : Pat<(AArch64bsp (v2i64 V128:$Rd), V128:$Rn, V128:$Rm),
           (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
 
+// The following SetCC patterns are used for GlobalISel only
+multiclass SelectSetCC<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag (v8i8 V64:$Rn), (v8i8 V64:$Rm))),
+            (v8i8 (!cast<Instruction>(INST # v8i8) (v8i8 V64:$Rn), (v8i8 V64:$Rm)))>;
+  def : Pat<(v16i8 (InFrag (v16i8 V128:$Rn), (v16i8 V128:$Rm))),
+            (v16i8 (!cast<Instruction>(INST # v16i8) (v16i8 V128:$Rn), (v16i8 V128:$Rm)))>;
+  def : Pat<(v4i16 (InFrag (v4i16 V64:$Rn), (v4i16 V64:$Rm))),
+            (v4i16 (!cast<Instruction>(INST # v4i16) (v4i16 V64:$Rn), (v4i16 V64:$Rm)))>;
+  def : Pat<(v8i16 (InFrag (v8i16 V128:$Rn), (v8i16 V128:$Rm))),
+            (v8i16 (!cast<Instruction>(INST # v8i16) (v8i16 V128:$Rn), (v8i16 V128:$Rm)))>;
+  def : Pat<(v2i32 (InFrag (v2i32 V64:$Rn), (v2i32 V64:$Rm))),
+            (v2i32 (!cast<Instruction>(INST # v2i32) (v2i32 V64:$Rn), (v2i32 V64:$Rm)))>;
+  def : Pat<(v4i32 (InFrag (v4i32 V128:$Rn), (v4i32 V128:$Rm))),
+            (v4i32 (!cast<Instruction>(INST # v4i32) (v4i32 V128:$Rn), (v4i32 V128:$Rm)))>;
+  def : Pat<(v2i64 (InFrag (v2i64 V128:$Rn), (v2i64 V128:$Rm))),
+            (v2i64 (!cast<Instruction>(INST # v2i64) (v2i64 V128:$Rn), (v2i64 V128:$Rm)))>;
+}
+
+defm : SelectSetCC<seteq, "CMEQ">;
+defm : SelectSetCC<setgt, "CMGT">;
+defm : SelectSetCC<setge, "CMGE">;
+defm : SelectSetCC<setugt, "CMHI">;
+defm : SelectSetCC<setuge, "CMHS">;
+
+multiclass SelectSetCCSwapOperands<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag (v8i8 V64:$Rn), (v8i8 V64:$Rm))),
+            (v8i8 (!cast<Instruction>(INST # v8i8) (v8i8 V64:$Rm), (v8i8 V64:$Rn)))>;
+  def : Pat<(v16i8 (InFrag (v16i8 V128:$Rn), (v16i8 V128:$Rm))),
+            (v16i8 (!cast<Instruction>(INST # v16i8) (v16i8 V128:$Rm), (v16i8 V128:$Rn)))>;
+  def : Pat<(v4i16 (InFrag (v4i16 V64:$Rn), (v4i16 V64:$Rm))),
+            (v4i16 (!cast<Instruction>(INST # v4i16) (v4i16 V64:$Rm), (v4i16 V64:$Rn)))>;
+  def : Pat<(v8i16 (InFrag (v8i16 V128:$Rn), (v8i16 V128:$Rm))),
+            (v8i16 (!cast<Instruction>(INST # v8i16) (v8i16 V128:$Rm), (v8i16 V128:$Rn)))>;
+  def : Pat<(v2i32 (InFrag (v2i32 V64:$Rn), (v2i32 V64:$Rm))),
+            (v2i32 (!cast<Instruction>(INST # v2i32) (v2i32 V64:$Rm), (v2i32 V64:$Rn)))>;
+  def : Pat<(v4i32 (InFrag (v4i32 V128:$Rn), (v4i32 V128:$Rm))),
+            (v4i32 (!cast<Instruction>(INST # v4i32) (v4i32 V128:$Rm), (v4i32 V128:$Rn)))>;
+  def : Pat<(v2i64 (InFrag (v2i64 V128:$Rn), (v2i64 V128:$Rm))),
+            (v2i64 (!cast<Instruction>(INST # v2i64) (v2i64 V128:$Rm), (v2i64 V128:$Rn)))>;
+}
+
+defm : SelectSetCCSwapOperands<setlt, "CMGT">;
+defm : SelectSetCCSwapOperands<setle, "CMGE">;
+defm : SelectSetCCSwapOperands<setult, "CMHI">;
+defm : SelectSetCCSwapOperands<setule, "CMHS">;
+
+multiclass SelectSetCCZeroRHS<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag (v8i8 V64:$Rn), immAllZerosV)),
+            (v8i8 (!cast<Instruction>(INST # v8i8rz) (v8i8 V64:$Rn)))>;
+  def : Pat<(v16i8 (InFrag (v16i8 V128:$Rn), immAllZerosV)),
+            (v16i8 (!cast<Instruction>(INST # v16i8rz) (v16i8 V128:$Rn)))>;
+  def : Pat<(v4i16 (InFrag (v4i16 V64:$Rn), immAllZerosV)),
+            (v4i16 (!cast<Instruction>(INST # v4i16rz) (v4i16 V64:$Rn)))>;
+  def : Pat<(v8i16 (InFrag (v8i16 V128:$Rn), immAllZerosV)),
+            (v8i16 (!cast<Instruction>(INST # v8i16rz) (v8i16 V128:$Rn)))>;
+  def : Pat<(v2i32 (InFrag (v2i32 V64:$Rn), immAllZerosV)),
+            (v2i32 (!cast<Instruction>(INST # v2i32rz) (v2i32 V64:$Rn)))>;
+  def : Pat<(v4i32 (InFrag (v4i32 V128:$Rn), immAllZerosV)),
+            (v4i32 (!cast<Instruction>(INST # v4i32rz) (v4i32 V128:$Rn)))>;
+  def : Pat<(v2i64 (InFrag (v2i64 V128:$Rn), immAllZerosV)),
+            (v2i64 (!cast<Instruction>(INST # v2i64rz) (v2i64 V128:$Rn)))>;
+}
+
+defm : SelectSetCCZeroRHS<seteq, "CMEQ">;
+defm : SelectSetCCZeroRHS<setgt, "CMGT">;
+defm : SelectSetCCZeroRHS<setge, "CMGE">;
+defm : SelectSetCCZeroRHS<setlt, "CMLT">;
+defm : SelectSetCCZeroRHS<setle, "CMLE">;
+
+multiclass SelectSetCCZeroLHS<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag immAllZerosV, (v8i8 V64:$Rn))),
+            (v8i8 (!cast<Instruction>(INST # v8i8rz) (v8i8 V64:$Rn)))>;
+  def : Pat<(v16i8 (InFrag immAllZerosV, (v16i8 V128:$Rn))),
+            (v16i8 (!cast<Instruction>(INST # v16i8rz) (v16i8 V128:$Rn)))>;
+  def : Pat<(v4i16 (InFrag immAllZerosV, (v4i16 V64:$Rn))),
+            (v4i16 (!cast<Instruction>(INST # v4i16rz) (v4i16 V64:$Rn)))>;
+  def : Pat<(v8i16 (InFrag immAllZerosV, (v8i16 V128:$Rn))),
+            (v8i16 (!cast<Instruction>(INST # v8i16rz) (v8i16 V128:$Rn)))>;
+  def : Pat<(v2i32 (InFrag immAllZerosV, (v2i32 V64:$Rn))),
+            (v2i32 (!cast<Instruction>(INST # v2i32rz) (v2i32 V64:$Rn)))>;
+  def : Pat<(v4i32 (InFrag immAllZerosV, (v4i32 V128:$Rn))),
+            (v4i32 (!cast<Instruction>(INST # v4i32rz) (v4i32 V128:$Rn)))>;
+  def : Pat<(v2i64 (InFrag immAllZerosV, (v2i64 V128:$Rn))),
+            (v2i64 (!cast<Instruction>(INST # v2i64rz) (v2i64 V128:$Rn)))>;
+}
+
+defm : SelectSetCCZeroLHS<seteq, "CMEQ">;
+defm : SelectSetCCZeroLHS<setgt, "CMLT">;
+defm : SelectSetCCZeroLHS<setge, "CMLE">;
+defm : SelectSetCCZeroLHS<setlt, "CMGT">;
+defm : SelectSetCCZeroLHS<setle, "CMGE">;
+
 let Predicates = [HasNEON] in {
 def : InstAlias<"mov{\t$dst.16b, $src.16b|.16b\t$dst, $src}",
                 (ORRv16i8 V128:$dst, V128:$src, V128:$src), 1>;
@@ -7619,6 +7715,25 @@ defm SCVTF: SIMDVectorRShiftToFP<0, 0b11100, "scvtf",
                                    int_aarch64_neon_vcvtfxs2fp>;
 defm RSHRN   : SIMDVectorRShiftNarrowBHS<0, 0b10001, "rshrn", AArch64rshrn>;
 defm SHL     : SIMDVectorLShiftBHSD<0, 0b01010, "shl", AArch64vshl>;
+
+let Predicates = [HasNEON] in {
+def : Pat<(v2f32 (sint_to_fp (v2i32 (AArch64vashr_exact v2i32:$Vn, i32:$shift)))),
+          (SCVTFv2i32_shift $Vn, vecshiftR32:$shift)>;
+
+def : Pat<(v4f32 (sint_to_fp (v4i32 (AArch64vashr_exact v4i32:$Vn, i32:$shift)))),
+          (SCVTFv4i32_shift $Vn, vecshiftR32:$shift)>;
+
+def : Pat<(v2f64 (sint_to_fp (v2i64 (AArch64vashr_exact v2i64:$Vn, i32:$shift)))),
+          (SCVTFv2i64_shift $Vn, vecshiftR64:$shift)>;
+}
+
+let Predicates = [HasNEON, HasFullFP16] in {
+def : Pat<(v4f16 (sint_to_fp (v4i16 (AArch64vashr_exact v4i16:$Vn, i32:$shift)))),
+          (SCVTFv4i16_shift $Vn, vecshiftR16:$shift)>;
+
+def : Pat<(v8f16 (sint_to_fp (v8i16 (AArch64vashr_exact v8i16:$Vn, i32:$shift)))),
+          (SCVTFv8i16_shift $Vn, vecshiftR16:$shift)>;
+}
 
 // X << 1 ==> X + X
 class SHLToADDPat<ValueType ty, RegisterClass regtype>
