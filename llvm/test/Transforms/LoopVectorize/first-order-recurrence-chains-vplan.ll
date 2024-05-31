@@ -35,7 +35,7 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT:  Successor(s): exit, loop
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>
 ; CHECK-NEXT:  No successors
@@ -99,7 +99,7 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT:  Successor(s): exit, loop
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>
 ; CHECK-NEXT:  No successors

@@ -74,7 +74,7 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT branch-on-cond ir<true>
-; CHECK-NEXT: Successor(s): exit, loop
+; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
@@ -153,7 +153,7 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT branch-on-cond ir<true>
-; CHECK-NEXT: Successor(s): exit, loop
+; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
@@ -231,7 +231,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:  EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result ir<%and.red>, vp<[[SEL]]>
 ; CHECK-NEXT:   EMIT branch-on-cond ir<true>
-; CHECK-NEXT: Successor(s): exit, loop
+; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
@@ -336,7 +336,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT branch-on-cond ir<true>
-; CHECK-NEXT: Successor(s): exit, loop
+; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
@@ -426,7 +426,7 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT branch-on-cond ir<true>
-; CHECK-NEXT: Successor(s): exit, loop
+; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
@@ -505,7 +505,7 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias 
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT branch-on-cond ir<true>
-; CHECK-NEXT: Successor(s): exit, loop
+; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors

@@ -7500,10 +7500,10 @@ LoopVectorizationPlanner::executePlan(
   using namespace llvm::VPlanPatternMatch;
   if (MiddleVPBB->begin() != MiddleVPBB->end() &&
       match(&MiddleVPBB->back(), m_BranchOnCond(m_VPValue()))) {
-    cast<VPIRWrapperBlock>(MiddleVPBB->getSuccessors()[1])
+    cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[1])
         ->resetBlock(OrigLoop->getLoopPreheader());
   } else
-    cast<VPIRWrapperBlock>(MiddleVPBB->getSuccessors()[0])
+    cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])
         ->resetBlock(OrigLoop->getLoopPreheader());
 
   // Only use noalias metadata when using memory checks guaranteeing no overlap

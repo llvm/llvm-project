@@ -367,7 +367,8 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
            vp_depth_first_deep(Plan.getEntry()))) {
     auto *PredVPBB =
         dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
-    if (PredVPBB && PredVPBB->getNumSuccessors() == 1)
+    if (PredVPBB && PredVPBB->getNumSuccessors() == 1 &&
+        !isa<VPIRBasicBlock>(VPBB))
       WorkList.push_back(VPBB);
   }
 

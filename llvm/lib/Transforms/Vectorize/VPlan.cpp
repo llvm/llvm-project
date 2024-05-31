@@ -442,9 +442,12 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   return NewBB;
 }
 
-void VPIRWrapperBlock::execute(VPTransformState *State) {
+void VPIRBasicBlock::execute(VPTransformState *State) {
   assert(getHierarchicalSuccessors().empty() &&
          "VPIRBasicBlock cannot have successors at the moment");
+
+  State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
+  executeRecipes(State, getIRBasicBlock());
 
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
     VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
@@ -462,7 +465,7 @@ void VPIRWrapperBlock::execute(VPTransformState *State) {
       unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
       assert(!TermBr->getSuccessor(idx) &&
              "Trying to reset an existing successor block.");
-      TermBr->setSuccessor(idx, WrappedBlock);
+      TermBr->setSuccessor(idx, IRBB);
     }
   }
 }
@@ -663,12 +666,6 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
   printSuccessors(O, Indent);
 }
 
-void VPIRWrapperBlock::print(raw_ostream &O, const Twine &Indent,
-                             VPSlotTracker &SlotTracker) const {
-  O << Indent << "ir-bb<" << getName() << ">\n";
-  printSuccessors(O, Indent);
-}
-
 #endif
 
 static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
@@ -840,7 +837,7 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
 
   BasicBlock *EB = TheLoop->getUniqueExitBlock();
   if (RequiresScalarEpilogueCheck) {
-    VPIRWrapperBlock *EBWrapper = new VPIRWrapperBlock(EB);
+    auto *EBWrapper = new VPIRBasicBlock(EB);
     VPBlockUtils::insertBlockAfter(EBWrapper, MiddleVPBB);
 
     auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
@@ -863,7 +860,7 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
     MiddleVPBB->appendRecipe(Br);
   }
   BasicBlock *Header = TheLoop->getHeader();
-  VPIRWrapperBlock *PHWrapper = new VPIRWrapperBlock(Header);
+  VPIRBasicBlock *PHWrapper = new VPIRBasicBlock(Header);
   VPBlockUtils::connectBlocks(MiddleVPBB, PHWrapper);
 
   return Plan;
@@ -1218,8 +1215,6 @@ void VPlanPrinter::dumpBlock(const VPBlockBase *Block) {
     dumpBasicBlock(BasicBlock);
   else if (const VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
     dumpRegion(Region);
-  else if (const auto *Wrapper = dyn_cast<VPIRWrapperBlock>(Block))
-    dumpIRWrapperBlock(Wrapper);
   else
     llvm_unreachable("Unsupported kind of VPBlock.");
 }
@@ -1229,9 +1224,9 @@ void VPlanPrinter::drawEdge(const VPBlockBase *From, const VPBlockBase *To,
   // Due to "dot" we print an edge between two regions as an edge between the
   // exiting basic block and the entry basic of the respective regions.
   const VPBlockBase *Tail =
-      isa<VPIRWrapperBlock>(From) ? From : From->getExitingBasicBlock();
+      isa<VPIRBasicBlock>(From) ? From : From->getExitingBasicBlock();
   const VPBlockBase *Head =
-      isa<VPIRWrapperBlock>(To) ? To : To->getEntryBasicBlock();
+      isa<VPIRBasicBlock>(To) ? To : To->getEntryBasicBlock();
   OS << Indent << getUID(Tail) << " -> " << getUID(Head);
   OS << " [ label=\"" << Label << '\"';
   if (Tail != From)
@@ -1285,34 +1280,6 @@ void VPlanPrinter::dumpBasicBlock(const VPBasicBlock *BasicBlock) {
   OS << Indent << "]\n";
 
   dumpEdges(BasicBlock);
-}
-
-void VPlanPrinter::dumpIRWrapperBlock(const VPIRWrapperBlock *WrapperBlock) {
-  OS << Indent << getUID(WrapperBlock) << " [label =\n";
-  bumpIndent(1);
-  std::string Str;
-  raw_string_ostream SS(Str);
-  // Use no indentation as we need to wrap the lines into quotes ourselves.
-  WrapperBlock->print(SS, "", SlotTracker);
-
-  // We need to process each line of the output separately, so split
-  // single-string plain-text dump.
-  SmallVector<StringRef, 0> Lines;
-  StringRef(Str).rtrim('\n').split(Lines, "\n");
-
-  auto EmitLine = [&](StringRef Line, StringRef Suffix) {
-    OS << Indent << '"' << DOT::EscapeString(Line.str()) << "\\l\"" << Suffix;
-  };
-
-  // Don't need the "+" after the last line.
-  for (auto Line : make_range(Lines.begin(), Lines.end() - 1))
-    EmitLine(Line, " +\n");
-  EmitLine(Lines.back(), "\n");
-
-  bumpIndent(-1);
-  OS << Indent << "]\n";
-
-  dumpEdges(WrapperBlock);
 }
 
 void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
