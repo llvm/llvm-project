@@ -1724,13 +1724,13 @@ public:
   }
 
   MachineInstrBuilder
-  buildFMinimumNUM(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
+  buildFMinimumnum(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
                    std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FMINIMUMNUM, {Dst}, {Src0, Src1}, Flags);
   }
 
   MachineInstrBuilder
-  buildFMaximumNUM(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
+  buildFMaximumnum(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
                    std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FMAXIMUMNUM, {Dst}, {Src0, Src1}, Flags);
   }

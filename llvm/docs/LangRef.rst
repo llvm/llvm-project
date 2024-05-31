@@ -16097,7 +16097,7 @@ are perfectly preserved.
    * - ``NUM vs qNaN``
      - NUM, no exception
      - qNaN, no exception
-     - qNaN, no exception
+     - NUM, no exception
 
    * - ``NUM vs sNaN``
      - qNaN, invalid exception
