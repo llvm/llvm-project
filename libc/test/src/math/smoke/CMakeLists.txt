@@ -321,6 +321,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  floorf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    floorf16_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorf16
+)
+
+add_fp_unittest(
   floorf128_test
   SUITE
     libc-math-smoke-tests

@@ -110,6 +110,7 @@ add_math_entrypoint_object(fdimf128)
 add_math_entrypoint_object(floor)
 add_math_entrypoint_object(floorf)
 add_math_entrypoint_object(floorl)
+add_math_entrypoint_object(floorf16)
 add_math_entrypoint_object(floorf128)
 
 add_math_entrypoint_object(fma)
