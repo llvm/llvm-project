@@ -1386,6 +1386,7 @@ class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
 
 def PackedF16InputModsMatchClass : PackedFPInputModsMatchClass<16>;
 def PackedI16InputModsMatchClass : PackedIntInputModsMatchClass<16>;
+def PackedF32InputModsMatchClass : PackedFPInputModsMatchClass<32>;
 
 class PackedFPInputMods <PackedFPInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
@@ -1397,6 +1398,7 @@ class PackedIntInputMods <PackedIntInputModsMatchClass matchClass> : InputMods <
 
 def PackedF16InputMods : PackedFPInputMods<PackedF16InputModsMatchClass>;
 def PackedI16InputMods : PackedIntInputMods<PackedI16InputModsMatchClass>;
+def PackedF32InputMods : PackedFPInputMods<PackedF32InputModsMatchClass>;
 
 def MFMALdScaleModifierOp : TImmLeaf<i32, [{
   return isUInt<2>(Imm);
