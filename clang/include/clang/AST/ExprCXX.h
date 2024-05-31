@@ -3812,25 +3812,8 @@ public:
     return getQualifierLoc().getNestedNameSpecifier();
   }
 
-#if 0
-  /// Retrieve the first part of the nested-name-specifier that was
-  /// found in the scope of the member access expression when the member access
-  /// was initially parsed.
-  ///
-  /// This function only returns a useful result when member access expression
-  /// uses a qualified member name, e.g., "x.Base::f". Here, the declaration
-  /// returned by this function describes what was found by unqualified name
-  /// lookup for the identifier "Base" within the scope of the member access
-  /// expression itself. At template instantiation time, this information is
-  /// combined with the results of name lookup into the type of the object
-  /// expression itself (the class type of x).
-  NamedDecl *getFirstQualifierFoundInScope() const {
-    if (!hasFirstQualifierFoundInScope())
-      return nullptr;
-    return *getTrailingObjects<NamedDecl *>();
-  }
-#endif
-
+  /// Retrieve the declarations found by unqualified lookup for the first
+  /// component name of the nested-name-specifier, if any.
   ArrayRef<DeclAccessPair> unqualified_lookups() const {
     if (!getNumUnqualifiedLookups())
       return std::nullopt;

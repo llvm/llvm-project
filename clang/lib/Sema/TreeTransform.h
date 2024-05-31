@@ -14743,15 +14743,6 @@ TreeTransform<Derived>::TransformCXXDependentScopeMemberExpr(
     ObjectType = BaseType->castAs<PointerType>()->getPointeeType();
   }
 
-#if 0
-  // Transform the first part of the nested-name-specifier that qualifies
-  // the member name.
-  NamedDecl *FirstQualifierInScope
-    = getDerived().TransformFirstQualifierInScope(
-                                            E->getFirstQualifierFoundInScope(),
-                                            E->getQualifierLoc().getBeginLoc());
-#endif
-
   UnresolvedSet<4> UnqualifiedLookups;
   for (auto D : E->unqualified_lookups()) {
     if (NamedDecl *InstD = getDerived().TransformFirstQualifierInScope(

@@ -2023,37 +2023,6 @@ void ASTStmtWriter::VisitCXXDependentScopeMemberExpr(
     AddTemplateKWAndArgsInfo(*E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
                              E->getTrailingObjects<TemplateArgumentLoc>());
 
-#if 0
-  // Don't emit anything here (or if you do you will have to update
-  // the corresponding deserialization function).
-  Record.push_back(E->getNumTemplateArgs());
-  CurrentPackingBits.updateBits();
-  CurrentPackingBits.addBit(E->hasTemplateKWAndArgsInfo());
-  CurrentPackingBits.addBit(E->hasFirstQualifierFoundInScope());
-
-  if (E->hasTemplateKWAndArgsInfo()) {
-    const ASTTemplateKWAndArgsInfo &ArgInfo =
-        *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>();
-    AddTemplateKWAndArgsInfo(ArgInfo,
-                             E->getTrailingObjects<TemplateArgumentLoc>());
-  }
-
-  CurrentPackingBits.addBit(E->isArrow());
-
-  Record.AddTypeRef(E->getBaseType());
-  Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
-  CurrentPackingBits.addBit(!E->isImplicitAccess());
-  if (!E->isImplicitAccess())
-    Record.AddStmt(E->getBase());
-
-  Record.AddSourceLocation(E->getOperatorLoc());
-
-  if (E->hasFirstQualifierFoundInScope())
-    Record.AddDeclRef(E->getFirstQualifierFoundInScope());
-
-  Record.AddDeclarationNameInfo(E->MemberNameInfo);
-#endif
-
   Code = serialization::EXPR_CXX_DEPENDENT_SCOPE_MEMBER;
 }
 

@@ -2024,52 +2024,12 @@ void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
     auto AS = (AccessSpecifier)Record.readInt();
     E->getTrailingObjects<DeclAccessPair>()[I] =
         DeclAccessPair::make(FoundD, AS);
-    ;
   }
 
   if (HasTemplateInfo)
     ReadTemplateKWAndArgsInfo(
         *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
         E->getTrailingObjects<TemplateArgumentLoc>(), NumTemplateArgs);
-
-#if 0
-  unsigned NumTemplateArgs = Record.readInt();
-  CurrentUnpackingBits.emplace(Record.readInt());
-  bool HasTemplateKWAndArgsInfo = CurrentUnpackingBits->getNextBit();
-  bool HasFirstQualifierFoundInScope = CurrentUnpackingBits->getNextBit();
-
-  assert((HasTemplateKWAndArgsInfo == E->hasTemplateKWAndArgsInfo()) &&
-         "Wrong HasTemplateKWAndArgsInfo!");
-  assert(
-      (HasFirstQualifierFoundInScope == E->hasFirstQualifierFoundInScope()) &&
-      "Wrong HasFirstQualifierFoundInScope!");
-
-  if (HasTemplateKWAndArgsInfo)
-    ReadTemplateKWAndArgsInfo(
-        *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
-        E->getTrailingObjects<TemplateArgumentLoc>(), NumTemplateArgs);
-
-  assert((NumTemplateArgs == E->getNumTemplateArgs()) &&
-         "Wrong NumTemplateArgs!");
-
-  E->CXXDependentScopeMemberExprBits.IsArrow =
-      CurrentUnpackingBits->getNextBit();
-
-  E->BaseType = Record.readType();
-  E->QualifierLoc = Record.readNestedNameSpecifierLoc();
-  // not ImplicitAccess
-  if (CurrentUnpackingBits->getNextBit())
-    E->Base = Record.readSubExpr();
-  else
-    E->Base = nullptr;
-
-  E->CXXDependentScopeMemberExprBits.OperatorLoc = readSourceLocation();
-
-  if (HasFirstQualifierFoundInScope)
-    *E->getTrailingObjects<NamedDecl *>() = readDeclAs<NamedDecl>();
-
-  E->MemberNameInfo = Record.readDeclarationNameInfo();
-#endif
 }
 
 void
@@ -4116,16 +4076,6 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CXX_DEPENDENT_SCOPE_MEMBER: {
-
-#if 0
-      unsigned NumTemplateArgs = Record[ASTStmtReader::NumExprFields];
-      BitsUnpacker DependentScopeMemberBits(
-          Record[ASTStmtReader::NumExprFields + 1]);
-      bool HasTemplateKWAndArgsInfo = DependentScopeMemberBits.getNextBit();
-
-      bool HasFirstQualifierFoundInScope =
-          DependentScopeMemberBits.getNextBit();
-#endif
       BitsUnpacker DependentScopeMemberBits(
           Record[ASTStmtReader::NumExprFields]);
       bool HasQualifier = DependentScopeMemberBits.getNextBit();
