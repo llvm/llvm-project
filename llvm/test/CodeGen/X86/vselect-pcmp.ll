@@ -1509,16 +1509,16 @@ define void @store_blend_load_v16i16(ptr %a0, ptr %a1, ptr %a2) {
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8]
-; AVX1-NEXT:    vpmaxuw %xmm2, %xmm1, %xmm3
-; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpmaxuw %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps (%rsi), %ymm0, %ymm1
-; AVX1-NEXT:    vandps (%rdi), %ymm0, %ymm0
-; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vpmaxuw %xmm2, %xmm0, %xmm3
+; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm0, %xmm3
+; AVX1-NEXT:    vpmaxuw %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vmovdqa (%rsi), %xmm4
+; AVX1-NEXT:    vmovdqa 16(%rsi), %xmm5
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm5, %xmm1
+; AVX1-NEXT:    vpblendvb %xmm3, %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1-NEXT:    vmovdqa %xmm1, 16(%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_blend_load_v16i16:
@@ -1578,16 +1578,16 @@ define void @store_blend_load_v32i8(ptr %a0, ptr %a1, ptr %a2) {
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
-; AVX1-NEXT:    vpmaxub %xmm2, %xmm1, %xmm3
-; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpmaxub %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps (%rsi), %ymm0, %ymm1
-; AVX1-NEXT:    vandps (%rdi), %ymm0, %ymm0
-; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vpmaxub %xmm2, %xmm0, %xmm3
+; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm3
+; AVX1-NEXT:    vpmaxub %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vmovdqa (%rsi), %xmm4
+; AVX1-NEXT:    vmovdqa 16(%rsi), %xmm5
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm5, %xmm1
+; AVX1-NEXT:    vpblendvb %xmm3, %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1-NEXT:    vmovdqa %xmm1, 16(%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_blend_load_v32i8:
