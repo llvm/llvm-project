@@ -2679,6 +2679,7 @@ cc_library(
         "lib/Dialect/IRDL/IR/IRDL.cpp",
         "lib/Dialect/IRDL/IR/IRDLOps.cpp",
         "lib/Dialect/IRDL/IRDLLoading.cpp",
+        "lib/Dialect/IRDL/IRDLSymbols.cpp",
         "lib/Dialect/IRDL/IRDLVerifiers.cpp",
     ],
     hdrs = [
