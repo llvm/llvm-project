@@ -16,6 +16,7 @@
 #include <__functional/invoke.h>
 #include <__functional/weak_result_type.h>
 #include <__memory/addressof.h>
+#include <__optional/cooperate.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/remove_cvref.h>
@@ -115,6 +116,15 @@ public:
   }
 
 #endif // _LIBCPP_STD_VER >= 26
+
+#if _LIBCPP_STD_VER >= 17
+  template <class>
+  friend struct __optional::__cooperate;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit reference_wrapper(
+      __optional::__disengaged_construct, __optional::__disengaged_construct) noexcept
+      : __f_(nullptr) {}
+#endif
 };
 
 #if _LIBCPP_STD_VER >= 17
@@ -148,6 +158,29 @@ template <class _Tp>
 void ref(const _Tp&&) = delete;
 template <class _Tp>
 void cref(const _Tp&&) = delete;
+
+#if _LIBCPP_STD_VER >= 17
+
+template <class _Tp>
+struct __optional::__cooperate<reference_wrapper<_Tp>> {
+  _LIBCPP_HIDE_FROM_ABI static constexpr bool __do_cooperate() { return true; }
+
+  _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_engaged(const reference_wrapper<_Tp>& __v) {
+    return __v.__f_ != nullptr;
+  }
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI static constexpr void __construct_over(reference_wrapper<_Tp>& __v, _Args&&... __args) {
+    __v = reference_wrapper<_Tp>(std::forward<_Args>(__args)...);
+  }
+
+  template <class _Up>
+  _LIBCPP_HIDE_FROM_ABI static constexpr void __disengage(reference_wrapper<_Tp>& __v) {
+    __v.__f_ = nullptr;
+  }
+};
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

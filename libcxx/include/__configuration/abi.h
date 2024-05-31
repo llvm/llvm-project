@@ -89,6 +89,9 @@
 // requires code not to make these assumptions.
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
+// Cooperative definition of std::optional<T> for some standard types T
+// such that std::optional<T> holds a T and nothing else
+#  define _LIBCPP_ABI_COOPERATIVE_OPTIONAL 1
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
