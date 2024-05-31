@@ -1616,7 +1616,7 @@ void SemaObjC::handleDirectAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   if (getLangOpts().ObjCRuntime.allowsDirectDispatch()) {
-    SemaRef.handleSimpleAttribute<ObjCDirectAttr>(D, AL);
+    handleSimpleAttribute<ObjCDirectAttr>(*this, D, AL);
   } else {
     Diag(AL.getLoc(), diag::warn_objc_direct_ignored) << AL;
   }
@@ -1624,7 +1624,7 @@ void SemaObjC::handleDirectAttr(Decl *D, const ParsedAttr &AL) {
 
 void SemaObjC::handleDirectMembersAttr(Decl *D, const ParsedAttr &AL) {
   if (getLangOpts().ObjCRuntime.allowsDirectDispatch()) {
-    SemaRef.handleSimpleAttribute<ObjCDirectMembersAttr>(D, AL);
+    handleSimpleAttribute<ObjCDirectMembersAttr>(*this, D, AL);
   } else {
     Diag(AL.getLoc(), diag::warn_objc_direct_ignored) << AL;
   }
@@ -1741,14 +1741,14 @@ void SemaObjC::AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
   ValueDecl *VD = cast<ValueDecl>(D);
   switch (K) {
   case Sema::RetainOwnershipKind::OS:
-    SemaRef.handleSimpleAttributeOrDiagnose<OSConsumedAttr>(
-        VD, CI, isValidSubjectOfOSAttribute(VD->getType()),
+    handleSimpleAttributeOrDiagnose<OSConsumedAttr>(
+        *this, VD, CI, isValidSubjectOfOSAttribute(VD->getType()),
         diag::warn_ns_attribute_wrong_parameter_type,
         /*ExtraArgs=*/CI.getRange(), "os_consumed", /*pointers*/ 1);
     return;
   case Sema::RetainOwnershipKind::NS:
-    SemaRef.handleSimpleAttributeOrDiagnose<NSConsumedAttr>(
-        VD, CI, isValidSubjectOfNSAttribute(VD->getType()),
+    handleSimpleAttributeOrDiagnose<NSConsumedAttr>(
+        *this, VD, CI, isValidSubjectOfNSAttribute(VD->getType()),
 
         // These attributes are normally just advisory, but in ARC, ns_consumed
         // is significant.  Allow non-dependent code to contain inappropriate
@@ -1760,8 +1760,8 @@ void SemaObjC::AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
         /*ExtraArgs=*/CI.getRange(), "ns_consumed", /*objc pointers*/ 0);
     return;
   case Sema::RetainOwnershipKind::CF:
-    SemaRef.handleSimpleAttributeOrDiagnose<CFConsumedAttr>(
-        VD, CI, isValidSubjectOfCFAttribute(VD->getType()),
+    handleSimpleAttributeOrDiagnose<CFConsumedAttr>(
+        *this, VD, CI, isValidSubjectOfCFAttribute(VD->getType()),
         diag::warn_ns_attribute_wrong_parameter_type,
         /*ExtraArgs=*/CI.getRange(), "cf_consumed", /*pointers*/ 1);
     return;
@@ -1919,25 +1919,25 @@ void SemaObjC::handleXReturnsXRetainedAttr(Decl *D, const ParsedAttr &AL) {
   default:
     llvm_unreachable("invalid ownership attribute");
   case ParsedAttr::AT_NSReturnsAutoreleased:
-    SemaRef.handleSimpleAttribute<NSReturnsAutoreleasedAttr>(D, AL);
+    handleSimpleAttribute<NSReturnsAutoreleasedAttr>(*this, D, AL);
     return;
   case ParsedAttr::AT_CFReturnsNotRetained:
-    SemaRef.handleSimpleAttribute<CFReturnsNotRetainedAttr>(D, AL);
+    handleSimpleAttribute<CFReturnsNotRetainedAttr>(*this, D, AL);
     return;
   case ParsedAttr::AT_NSReturnsNotRetained:
-    SemaRef.handleSimpleAttribute<NSReturnsNotRetainedAttr>(D, AL);
+    handleSimpleAttribute<NSReturnsNotRetainedAttr>(*this, D, AL);
     return;
   case ParsedAttr::AT_CFReturnsRetained:
-    SemaRef.handleSimpleAttribute<CFReturnsRetainedAttr>(D, AL);
+    handleSimpleAttribute<CFReturnsRetainedAttr>(*this, D, AL);
     return;
   case ParsedAttr::AT_NSReturnsRetained:
-    SemaRef.handleSimpleAttribute<NSReturnsRetainedAttr>(D, AL);
+    handleSimpleAttribute<NSReturnsRetainedAttr>(*this, D, AL);
     return;
   case ParsedAttr::AT_OSReturnsRetained:
-    SemaRef.handleSimpleAttribute<OSReturnsRetainedAttr>(D, AL);
+    handleSimpleAttribute<OSReturnsRetainedAttr>(*this, D, AL);
     return;
   case ParsedAttr::AT_OSReturnsNotRetained:
-    SemaRef.handleSimpleAttribute<OSReturnsNotRetainedAttr>(D, AL);
+    handleSimpleAttribute<OSReturnsNotRetainedAttr>(*this, D, AL);
     return;
   };
 }
@@ -2229,7 +2229,7 @@ void SemaObjC::handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL) {
     if (!tryMakeVariablePseudoStrong(SemaRef, VD, /*DiagnoseFailure=*/true))
       return;
 
-    SemaRef.handleSimpleAttribute<ObjCExternallyRetainedAttr>(D, AL);
+    handleSimpleAttribute<ObjCExternallyRetainedAttr>(*this, D, AL);
     return;
   }
 
@@ -2251,7 +2251,7 @@ void SemaObjC::handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL) {
 
     tryMakeVariablePseudoStrong(SemaRef, PVD, /*DiagnoseFailure=*/false);
   }
-  SemaRef.handleSimpleAttribute<ObjCExternallyRetainedAttr>(D, AL);
+  handleSimpleAttribute<ObjCExternallyRetainedAttr>(*this, D, AL);
 }
 
 } // namespace clang

@@ -13,12 +13,17 @@
 #ifndef LLVM_CLANG_SEMA_ATTR_H
 #define LLVM_CLANG_SEMA_ATTR_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/AttributeCommonInfo.h"
+#include "clang/Sema/ParsedAttr.h"
+#include "clang/Sema/SemaBase.h"
 #include "llvm/Support/Casting.h"
 
 namespace clang {
@@ -116,6 +121,69 @@ inline bool isInstanceMethod(const Decl *D) {
   if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(D))
     return MethodDecl->isInstance();
   return false;
+}
+
+/// Diagnose mutually exclusive attributes when present on a given
+/// declaration. Returns true if diagnosed.
+template <typename AttrTy>
+bool checkAttrMutualExclusion(SemaBase &S, Decl *D, const ParsedAttr &AL) {
+  if (const auto *A = D->getAttr<AttrTy>()) {
+    S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+        << AL << A
+        << (AL.isRegularKeywordAttribute() || A->isRegularKeywordAttribute());
+    S.Diag(A->getLocation(), diag::note_conflicting_attribute);
+    return true;
+  }
+  return false;
+}
+
+template <typename AttrTy>
+bool checkAttrMutualExclusion(SemaBase &S, Decl *D, const Attr &AL) {
+  if (const auto *A = D->getAttr<AttrTy>()) {
+    S.Diag(AL.getLocation(), diag::err_attributes_are_not_compatible)
+        << &AL << A
+        << (AL.isRegularKeywordAttribute() || A->isRegularKeywordAttribute());
+    Diag(A->getLocation(), diag::note_conflicting_attribute);
+    return true;
+  }
+  return false;
+}
+
+template <typename... DiagnosticArgs>
+const SemaBase::SemaDiagnosticBuilder &
+appendDiagnostics(const SemaBase::SemaDiagnosticBuilder &Bldr) {
+  return Bldr;
+}
+
+template <typename T, typename... DiagnosticArgs>
+const SemaBase::SemaDiagnosticBuilder &
+appendDiagnostics(const SemaBase::SemaDiagnosticBuilder &Bldr, T &&ExtraArg,
+                  DiagnosticArgs &&...ExtraArgs) {
+  return appendDiagnostics(Bldr << std::forward<T>(ExtraArg),
+                            std::forward<DiagnosticArgs>(ExtraArgs)...);
+}
+
+/// Applies the given attribute to the Decl without performing any
+/// additional semantic checking.
+template <typename AttrType>
+void handleSimpleAttribute(SemaBase &S, Decl *D, const AttributeCommonInfo &CI) {
+  D->addAttr(::new (S.getASTContext()) AttrType(S.getASTContext(), CI));
+}
+
+/// Add an attribute @c AttrType to declaration @c D, provided that
+/// @c PassesCheck is true.
+/// Otherwise, emit diagnostic @c DiagID, passing in all parameters
+/// specified in @c ExtraArgs.
+template <typename AttrType, typename... DiagnosticArgs>
+void handleSimpleAttributeOrDiagnose(SemaBase &S, Decl *D, const AttributeCommonInfo &CI,
+                                      bool PassesCheck, unsigned DiagID,
+                                      DiagnosticArgs &&...ExtraArgs) {
+  if (!PassesCheck) {
+    SemaBase::SemaDiagnosticBuilder DB = S.Diag(D->getBeginLoc(), DiagID);
+    appendDiagnostics(DB, std::forward<DiagnosticArgs>(ExtraArgs)...);
+    return;
+  }
+  handleSimpleAttribute<AttrType>(S, D, CI);
 }
 
 } // namespace clang

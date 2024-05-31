@@ -282,7 +282,7 @@ void SemaMIPS::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   // We still have to do this manually because the Interrupt attributes are
   // a bit special due to sharing their spellings across targets.
-  if (SemaRef.checkAttrMutualExclusion<Mips16Attr>(D, AL))
+  if (checkAttrMutualExclusion<Mips16Attr>(*this, D, AL))
     return;
 
   MipsInterruptAttr::InterruptType Kind;

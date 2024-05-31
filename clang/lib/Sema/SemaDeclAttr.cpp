@@ -1729,7 +1729,7 @@ static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Ensure we don't combine these with themselves, since that causes some
   // confusing behavior.
   if (AL.getParsedKind() == ParsedAttr::AT_CPUDispatch) {
-    if (S.checkAttrMutualExclusion<CPUSpecificAttr>(D, AL))
+    if (checkAttrMutualExclusion<CPUSpecificAttr>(S, D, AL))
       return;
 
     if (const auto *Other = D->getAttr<CPUDispatchAttr>()) {
@@ -1738,7 +1738,7 @@ static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       return;
     }
   } else if (AL.getParsedKind() == ParsedAttr::AT_CPUSpecific) {
-    if (S.checkAttrMutualExclusion<CPUDispatchAttr>(D, AL))
+    if (checkAttrMutualExclusion<CPUDispatchAttr>(S, D, AL))
       return;
 
     if (const auto *Other = D->getAttr<CPUSpecificAttr>()) {
@@ -1862,7 +1862,7 @@ static void handleNoCfCheckAttr(Sema &S, Decl *D, const ParsedAttr &Attrs) {
   if (!S.getLangOpts().CFProtectionBranch)
     S.Diag(Attrs.getLoc(), diag::warn_nocf_check_attribute_ignored);
   else
-    S.handleSimpleAttribute<AnyX86NoCfCheckAttr>(D, Attrs);
+    handleSimpleAttribute<AnyX86NoCfCheckAttr>(S, D, Attrs);
 }
 
 bool Sema::CheckAttrNoArgs(const ParsedAttr &Attrs) {
@@ -3190,7 +3190,7 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(Other->getLocation(), diag::note_conflicting_attribute);
     return;
   }
-  if (S.checkAttrMutualExclusion<TargetClonesAttr>(D, AL))
+  if (checkAttrMutualExclusion<TargetClonesAttr>(S, D, AL))
     return;
 
   SmallVector<StringRef, 2> Strings;
@@ -4835,7 +4835,7 @@ static void handleLifetimeCategoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // declaration.
   D = D->getCanonicalDecl();
   if (AL.getKind() == ParsedAttr::AT_Owner) {
-    if (S.checkAttrMutualExclusion<PointerAttr>(D, AL))
+    if (checkAttrMutualExclusion<PointerAttr>(S, D, AL))
       return;
     if (const auto *OAttr = D->getAttr<OwnerAttr>()) {
       const Type *ExistingDerefType = OAttr->getDerefTypeLoc()
@@ -4854,7 +4854,7 @@ static void handleLifetimeCategoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       Redecl->addAttr(::new (S.Context) OwnerAttr(S.Context, AL, DerefTypeLoc));
     }
   } else {
-    if (S.checkAttrMutualExclusion<OwnerAttr>(D, AL))
+    if (checkAttrMutualExclusion<OwnerAttr>(S, D, AL))
       return;
     if (const auto *PAttr = D->getAttr<PointerAttr>()) {
       const Type *ExistingDerefType = PAttr->getDerefTypeLoc()
@@ -4877,7 +4877,7 @@ static void handleLifetimeCategoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleRandomizeLayoutAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (S.checkAttrMutualExclusion<NoRandomizeLayoutAttr>(D, AL))
+  if (checkAttrMutualExclusion<NoRandomizeLayoutAttr>(S, D, AL))
     return;
   if (!D->hasAttr<RandomizeLayoutAttr>())
     D->addAttr(::new (S.Context) RandomizeLayoutAttr(S.Context, AL));
@@ -4885,7 +4885,7 @@ static void handleRandomizeLayoutAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleNoRandomizeLayoutAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
-  if (S.checkAttrMutualExclusion<RandomizeLayoutAttr>(D, AL))
+  if (checkAttrMutualExclusion<RandomizeLayoutAttr>(S, D, AL))
     return;
   if (!D->hasAttr<NoRandomizeLayoutAttr>())
     D->addAttr(::new (S.Context) NoRandomizeLayoutAttr(S.Context, AL));
@@ -5329,7 +5329,7 @@ static void handleNullableTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  S.handleSimpleAttribute<TypeNullableAttr>(D, AL);
+  handleSimpleAttribute<TypeNullableAttr>(S, D, AL);
 }
 
 static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -6077,7 +6077,7 @@ static void handleFunctionReturnThunksAttr(Sema &S, Decl *D,
 static void handleAvailableOnlyInDefaultEvalMethod(Sema &S, Decl *D,
                                                    const ParsedAttr &AL) {
   assert(isa<TypedefNameDecl>(D) && "This attribute only applies to a typedef");
-  S.handleSimpleAttribute<AvailableOnlyInDefaultEvalMethodAttr>(D, AL);
+  handleSimpleAttribute<AvailableOnlyInDefaultEvalMethodAttr>(S, D, AL);
 }
 
 static void handleNoMergeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -6102,9 +6102,9 @@ static void handleDestroyAttr(Sema &S, Decl *D, const ParsedAttr &A) {
   }
 
   if (A.getKind() == ParsedAttr::AT_AlwaysDestroy)
-    S.handleSimpleAttribute<AlwaysDestroyAttr>(D, A);
+    handleSimpleAttribute<AlwaysDestroyAttr>(S, D, A);
   else
-    S.handleSimpleAttribute<NoDestroyAttr>(D, A);
+    handleSimpleAttribute<NoDestroyAttr>(S, D, A);
 }
 
 static void handleUninitializedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -6132,7 +6132,7 @@ static void handleMIGServerRoutineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  S.handleSimpleAttribute<MIGServerRoutineAttr>(D, AL);
+  handleSimpleAttribute<MIGServerRoutineAttr>(S, D, AL);
 }
 
 static void handleMSAllocatorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -6146,7 +6146,7 @@ static void handleMSAllocatorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  S.handleSimpleAttribute<MSAllocatorAttr>(D, AL);
+  handleSimpleAttribute<MSAllocatorAttr>(S, D, AL);
 }
 
 static void handleAcquireHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -6427,7 +6427,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     S.X86().handleForceAlignArgPointerAttr(D, AL);
     break;
   case ParsedAttr::AT_ReadOnlyPlacement:
-    S.handleSimpleAttribute<ReadOnlyPlacementAttr>(D, AL);
+    handleSimpleAttribute<ReadOnlyPlacementAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_DLLExport:
   case ParsedAttr::AT_DLLImport:
@@ -6455,7 +6455,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     S.BPF().handlePreserveAccessIndexAttr(D, AL);
     break;
   case ParsedAttr::AT_BPFPreserveStaticOffset:
-    S.handleSimpleAttribute<BPFPreserveStaticOffsetAttr>(D, AL);
+    handleSimpleAttribute<BPFPreserveStaticOffsetAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_BTFDeclTag:
     handleBTFDeclTagAttr(S, D, AL);
@@ -6567,7 +6567,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     S.SYCL().handleKernelAttr(D, AL);
     break;
   case ParsedAttr::AT_SYCLSpecialClass:
-    S.handleSimpleAttribute<SYCLSpecialClassAttr>(D, AL);
+    handleSimpleAttribute<SYCLSpecialClassAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_Format:
     handleFormatAttr(S, D, AL);
@@ -6616,7 +6616,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleNoEscapeAttr(S, D, AL);
     break;
   case ParsedAttr::AT_MaybeUndef:
-    S.handleSimpleAttribute<MaybeUndefAttr>(D, AL);
+    handleSimpleAttribute<MaybeUndefAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_AssumeAligned:
     handleAssumeAlignedAttr(S, D, AL);
@@ -6641,7 +6641,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_NoThrow:
     if (!AL.isUsedAsTypeAttr())
-      S.handleSimpleAttribute<NoThrowAttr>(D, AL);
+      handleSimpleAttribute<NoThrowAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_CUDAShared:
     handleSharedAttr(S, D, AL);
@@ -6690,14 +6690,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
                               /*IsTemplateInstantiation=*/false);
     break;
   case ParsedAttr::AT_OSReturnsRetainedOnZero:
-    S.handleSimpleAttributeOrDiagnose<OSReturnsRetainedOnZeroAttr>(
-        D, AL, S.ObjC().isValidOSObjectOutParameter(D),
+    handleSimpleAttributeOrDiagnose<OSReturnsRetainedOnZeroAttr>(
+        S, D, AL, S.ObjC().isValidOSObjectOutParameter(D),
         diag::warn_ns_attribute_wrong_parameter_type,
         /*Extra Args=*/AL, /*pointer-to-OSObject-pointer*/ 3, AL.getRange());
     break;
   case ParsedAttr::AT_OSReturnsRetainedOnNonZero:
-    S.handleSimpleAttributeOrDiagnose<OSReturnsRetainedOnNonZeroAttr>(
-        D, AL, S.ObjC().isValidOSObjectOutParameter(D),
+    handleSimpleAttributeOrDiagnose<OSReturnsRetainedOnNonZeroAttr>(
+        S, D, AL, S.ObjC().isValidOSObjectOutParameter(D),
         diag::warn_ns_attribute_wrong_parameter_type,
         /*Extra Args=*/AL, /*pointer-to-OSObject-poointer*/ 3, AL.getRange());
     break;
@@ -6769,7 +6769,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_ObjCDirectMembers:
     S.ObjC().handleDirectMembersAttr(D, AL);
-    S.handleSimpleAttribute<ObjCDirectMembersAttr>(D, AL);
+    handleSimpleAttribute<ObjCDirectMembersAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_ObjCExplicitProtocolImpl:
     S.ObjC().handleSuppresProtocolAttr(D, AL);
@@ -6913,7 +6913,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     S.HLSL().handleNumThreadsAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
-    S.handleSimpleAttribute<HLSLSV_GroupIndexAttr>(D, AL);
+    handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_DispatchThreadID:
     S.HLSL().handleSV_DispatchThreadIDAttr(D, AL);
@@ -7090,7 +7090,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
 
   case ParsedAttr::AT_ArmLocallyStreaming:
-    S.handleSimpleAttribute<ArmLocallyStreamingAttr>(D, AL);
+    handleSimpleAttribute<ArmLocallyStreamingAttr>(S, D, AL);
     break;
 
   case ParsedAttr::AT_ArmNew:
@@ -7130,7 +7130,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
 
   case ParsedAttr::AT_UsingIfExists:
-    S.handleSimpleAttribute<UsingIfExistsAttr>(D, AL);
+    handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
     break;
 
   case ParsedAttr::AT_TypeNullable:

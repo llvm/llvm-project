@@ -194,5 +194,5 @@ void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  SemaRef.handleSimpleAttribute<SYCLKernelAttr>(D, AL);
+  handleSimpleAttribute<SYCLKernelAttr>(*this, D, AL);
 }

@@ -28,7 +28,7 @@ void SemaAVR::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   if (!AL.checkExactlyNumArgs(SemaRef, 0))
     return;
 
-  SemaRef.handleSimpleAttribute<AVRInterruptAttr>(D, AL);
+  handleSimpleAttribute<AVRInterruptAttr>(*this, D, AL);
 }
 
 void SemaAVR::handleSignalAttr(Decl *D, const ParsedAttr &AL) {
@@ -41,7 +41,7 @@ void SemaAVR::handleSignalAttr(Decl *D, const ParsedAttr &AL) {
   if (!AL.checkExactlyNumArgs(SemaRef, 0))
     return;
 
-  SemaRef.handleSimpleAttribute<AVRSignalAttr>(D, AL);
+  handleSimpleAttribute<AVRSignalAttr>(*this, D, AL);
 }
 
 } // namespace clang
