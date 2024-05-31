@@ -2047,9 +2047,9 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
   llvm::Type *CtorPFTy = llvm::PointerType::get(CtorFTy,
       TheModule.getDataLayout().getProgramAddressSpace());
 
-  // Get the type of a ctor entry, { i32, program void ()*, global i8* }.
-  llvm::StructType *CtorStructTy =
-      llvm::StructType::get(Int32Ty, CtorPFTy, GlobalsInt8PtrTy);
+  // Get the type of a ctor entry, { i32, void ()*, i8* }.
+  llvm::StructType *CtorStructTy = llvm::StructType::get(
+      Int32Ty, CtorPFTy, VoidPtrTy);
 
   // Construct the constructor and destructor arrays.
   ConstantInitBuilder builder(*this);
@@ -2061,7 +2061,7 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
     if (I.AssociatedData)
       ctor.add(I.AssociatedData);
     else
-      ctor.addNullPointer(GlobalsInt8PtrTy);
+      ctor.addNullPointer(VoidPtrTy);
     ctor.finishAndAddTo(ctors);
   }
 
