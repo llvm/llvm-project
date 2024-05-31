@@ -16183,8 +16183,11 @@ static SDValue combineTruncOfSraSext(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::SRA, SDLoc(N), N->getValueType(0), N00, SMin);
 }
 
-// Combine (truncate_vector_vl (umin X, C)) -> (vnclipu_vl X) if C is maximum
-// value for the truncated type.
+// Combine (truncate_vector_vl (umin X, C)) -> (vnclipu_vl X) if C is the
+// maximum value for the truncated type.
+// Combine (truncate_vector_vl (smin (smax X, C2), C1)) -> (vnclip_vl X) if C1
+// is the signed maximum value for the truncated type and C2 is the signed
+// minimum value.
 static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
                                     const RISCVSubtarget &Subtarget) {
   assert(N->getOpcode() == RISCVISD::TRUNCATE_VECTOR_VL);
@@ -16240,10 +16243,32 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
     return UMin;
   };
 
+  auto DetectSSatPattern = [&](SDValue V) {
+    unsigned NumDstBits = VT.getScalarSizeInBits();
+    unsigned NumSrcBits = V.getScalarValueSizeInBits();
+    APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
+    APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
+
+    APInt CMin, CMax;
+    if (SDValue SMin = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, CMin))
+      if (SDValue SMax = MatchMinMax(SMin, ISD::SMAX, RISCVISD::SMAX_VL, CMax))
+        if (CMin == SignedMax && CMax == SignedMin)
+          return SMax;
+
+    if (SDValue SMax = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, CMax))
+      if (SDValue SMin = MatchMinMax(SMax, ISD::SMIN, RISCVISD::SMIN_VL, CMin))
+        if (CMin == SignedMax && CMax == SignedMin)
+          return SMin;
+
+    return SDValue();
+  };
+
   SDValue Val;
   unsigned ClipOpc;
   if ((Val = DetectUSatPattern(N->getOperand(0))))
     ClipOpc = RISCVISD::VNCLIPU_VL;
+  else if ((Val = DetectSSatPattern(N->getOperand(0))))
+    ClipOpc = RISCVISD::VNCLIP_VL;
   else
     return SDValue();
 
