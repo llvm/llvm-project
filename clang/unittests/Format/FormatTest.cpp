@@ -17375,6 +17375,8 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
   verifyFormat("int x __attribute__( ( aligned( 16 ) ) ) = 0;", Spaces);
   verifyFormat("class __declspec( dllimport ) X {};", Spaces);
   verifyFormat("class __declspec( ( dllimport ) ) X {};", Spaces);
+  verifyFormat("int x = ( ( a - 1 ) * 3 );", Spaces);
+  verifyFormat("int x = ( 3 * ( a - 1 ) );", Spaces);
 
   Spaces.SpacesInParensOptions.ExceptDoubleParentheses = true;
   verifyFormat("SomeType *__attribute__(( attr )) *a = NULL;", Spaces);
@@ -17384,6 +17386,8 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
   verifyFormat("int x __attribute__(( aligned( 16 ) )) = 0;", Spaces);
   verifyFormat("class __declspec( dllimport ) X {};", Spaces);
   verifyFormat("class __declspec(( dllimport )) X {};", Spaces);
+  verifyFormat("int x = ( ( a - 1 ) * 3 );", Spaces);
+  verifyFormat("int x = ( 3 * ( a - 1 ) );", Spaces);
 
   Spaces.SpacesInParensOptions.Other = false;
   verifyFormat("SomeType *__attribute__((attr)) *a = NULL;", Spaces);
@@ -17559,10 +17563,10 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
   verifyFormat("decltype( ( foo() ) ) a = foo();", Spaces);
   verifyFormat("decltype( ( bar( 10 ) ) ) a = bar( 11 );", Spaces);
   verifyFormat("decltype( ( foo->bar ) ) baz;", Spaces);
-  verifyFormat("if (( i = j ))\n"
+  verifyFormat("if ( ( i = j ) )\n"
                "  do_something( i );",
                Spaces);
-  verifyFormat("if constexpr (( a = b ))\n"
+  verifyFormat("if constexpr ( ( a = b ) )\n"
                "  c;",
                Spaces);
 
