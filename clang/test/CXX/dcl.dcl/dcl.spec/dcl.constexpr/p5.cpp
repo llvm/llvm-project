@@ -30,54 +30,54 @@ static_assert(g4() == 5, "");
 
 constexpr int f(bool b)
   { return b ? throw 0 : 0; } // ok
-constexpr int f() { return throw 0, 0; } // expected-error {{constexpr function never produces a constant expression}} expected-note {{subexpression}}
+constexpr int f() { return throw 0, 0; }
 
 struct B {
   constexpr B(int x) : i(0) { }
   int i;
 };
 
-int global; // expected-note {{declared here}}
+int global;
 
 struct D : B {
-  constexpr D() : B(global) { } // expected-error {{constexpr constructor never produces a constant expression}} expected-note {{read of non-const}}
+  constexpr D() : B(global) { }
 };
 
 }
 
 namespace PotentialConstant {
 
-constexpr int Comma(int n) { return // expected-error {{constexpr function never produces a constant expression}}
+constexpr int Comma(int n) { return
   (void)(n * 2),
-  throw 0, // expected-note {{subexpression}}
+  throw 0,
   0;
 }
 
-int ng; // expected-note 6{{here}}
-constexpr int BinaryOp1(int n) { return n + ng; } // expected-error {{never produces}} expected-note {{read}}
-constexpr int BinaryOp2(int n) { return ng + n; } // expected-error {{never produces}} expected-note {{read}}
+int ng;
+constexpr int BinaryOp1(int n) { return n + ng; }
+constexpr int BinaryOp2(int n) { return ng + n; }
 
-double dg; // expected-note 2{{here}}
-constexpr double BinaryOp1(double d) { return d + dg; } // expected-error {{never produces}} expected-note {{read}}
-constexpr double BinaryOp2(double d) { return dg + d; } // expected-error {{never produces}} expected-note {{read}}
+double dg;
+constexpr double BinaryOp1(double d) { return d + dg; }
+constexpr double BinaryOp2(double d) { return dg + d; }
 
 constexpr int Add(int a, int b, int c) { return a + b + c; }
-constexpr int FunctionArgs(int a) { return Add(a, ng, a); } // expected-error {{never produces}} expected-note {{read}}
+constexpr int FunctionArgs(int a) { return Add(a, ng, a); }
 
 struct S { int a; int b; int c[2]; };
-constexpr S InitList(int a) { return { a, ng }; }; // expected-error {{never produces}} expected-note {{read}}
-constexpr S InitList1a(int a) { return S{ a, ng }; }; // expected-error {{never produces}} expected-note {{read}}
-constexpr S InitList2(int a) { return { a, a, { ng } }; }; // expected-error {{never produces}} expected-note {{read}}
+constexpr S InitList(int a) { return { a, ng }; };
+constexpr S InitList1a(int a) { return S{ a, ng }; };
+constexpr S InitList2(int a) { return { a, a, { ng } }; };
 constexpr S InitList3(int a) { return a ? S{ a, a } : S{ a, ng }; }; // ok
 
 constexpr int LogicalAnd1(int n) { return n && (throw, 0); } // ok
-constexpr int LogicalAnd2(int n) { return 1 && (throw, 0); } // expected-error {{never produces}} expected-note {{subexpression}}
+constexpr int LogicalAnd2(int n) { return 1 && (throw, 0); }
 
 constexpr int LogicalOr1(int n) { return n || (throw, 0); } // ok
-constexpr int LogicalOr2(int n) { return 0 || (throw, 0); } // expected-error {{never produces}} expected-note {{subexpression}}
+constexpr int LogicalOr2(int n) { return 0 || (throw, 0); }
 
 constexpr int Conditional1(bool b, int n) { return b ? n : ng; } // ok
-constexpr int Conditional2(bool b, int n) { return b ? n * ng : n + ng; } // expected-error {{never produces}} expected-note {{both arms of conditional operator are unable to produce a constant expression}}
+constexpr int Conditional2(bool b, int n) { return b ? n * ng : n + ng; }
 
 // __builtin_constant_p ? : is magical, and is always a potential constant.
 constexpr bool BcpCall(int n) {
@@ -136,5 +136,5 @@ namespace PR14550 {
 #endif
 
 #if __cplusplus >= 201402L
-constexpr void f() { throw; } // expected-error {{never produces}} expected-note {{subexpression}}
+constexpr void f() { throw; }
 #endif

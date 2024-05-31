@@ -402,7 +402,7 @@ namespace cwg638 { // cwg638: no
 
   class X {
     typedef int type;
-    template<class T> friend struct A<T>::B; 
+    template<class T> friend struct A<T>::B;
     // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::f();
     // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'X'}}
@@ -599,25 +599,16 @@ namespace cwg647 { // cwg647: 3.1
     int n;
     D d;
 
-    // FIXME: We should diagnose this, as the conversion function is not
-    // constexpr. However, that part of this issue is supreseded by cwg1364 and
-    // others; no diagnostic is required for this any more.
     constexpr E()
         : n(D(0)),
           d(0) {}
 
     constexpr E(int)
-    // cxx11-20-error@-1 {{constexpr constructor never produces a constant expression}}
-    //   cxx11-20-note@#cwg647-int-d {{non-constexpr constructor 'D' cannot be used in a constant expression}}
-    //   cxx11-20-note@#cwg647-D-float-ctor {{declared here}}
         : n(0),
-          d(0.0f) {} // #cwg647-int-d
+          d(0.0f) {}
     constexpr E(float f)
-    // cxx11-20-error@-1 {{never produces a constant expression}}
-    //   cxx11-20-note@#cwg647-float-d {{non-constexpr constructor}}
-    //   cxx11-20-note@#cwg647-D-float-ctor {{declared here}}
         : n(get()),
-          d(D(0) + f) {} // #cwg647-float-d
+          d(D(0) + f) {}
   };
 }
 #endif
@@ -1073,7 +1064,7 @@ namespace cwg677 { // cwg677: no
   struct A {
     void *operator new(std::size_t);
     void operator delete(void*) = delete; // #cwg677-A-delete
-    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}} 
+    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
   };
   struct B {
     void *operator new(std::size_t);

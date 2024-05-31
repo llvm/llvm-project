@@ -34,17 +34,16 @@ constexpr int test4() {
     return 0;
 }
 
-constexpr int test5() { // expected-error {{constexpr function never produce}}
-  for (;; a++); // expected-error {{use of undeclared identifier}}  \
-                   expected-note {{constexpr evaluation hit maximum step limit; possible infinite loop?}}
+constexpr int test5() {
+  for (;; a++); // expected-error {{use of undeclared identifier}}
   return 1;
 }
 
-constexpr int test6() { // expected-error {{constexpr function never produce}}
+constexpr int test6() {
   int n = 0;
   switch (n) {
     for (;; a++) { // expected-error {{use of undeclared identifier}}
-    case 0:; // expected-note {{constexpr evaluation hit maximum step limit; possible infinite loop?}}
+    case 0:;
     }
   }
   return 0;

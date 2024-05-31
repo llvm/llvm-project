@@ -115,7 +115,11 @@ namespace InvalidBase {
 }
 
 // PR44268
-constexpr int bos_new() { // cxx14-error {{constant expression}}
-  void *p = new int; // cxx14-note {{until C++20}}
-  return __builtin_object_size(p, 0);
+constexpr int bos_new() {
+  auto *p = new int; // cxx14-note {{until C++20}}
+  int ret = __builtin_object_size(p, 0);
+  delete p;
+  return ret;
 }
+static_assert(bos_new() == sizeof(int), ""); // cxx14-error {{static assertion expression is not an integral constant expression}} cxx14-note {{in call to}}
+

@@ -100,8 +100,8 @@ namespace std {
 // Note: this doesn't have a 'moveable' member. Instantiation of the above
 // functions will fail if it's attempted.
 struct A {};
-constexpr bool f(A a) { // #f
-  A &&move = std::move(a); // #call
+constexpr bool f(A a) {
+  A &&move = std::move(a);
   A &&move_if_noexcept = std::move_if_noexcept(a);
   A &&forward1 = std::forward<A>(a);
   A &forward2 = std::forward<A&>(a);
@@ -116,9 +116,6 @@ constexpr bool f(A a) { // #f
 
 #ifndef NO_CONSTEXPR
 static_assert(f({}), "should be constexpr");
-#elif !defined(NEW_INTERP)
-// expected-error@#f {{never produces a constant expression}}
-// expected-note@#call {{}}
 #endif
 
 A &forward_rval_as_lval() {

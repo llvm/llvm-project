@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
-
+// expected-no-diagnostics
 
 static_assert(__is_literal(int), "fail");
 static_assert(__is_literal_type(int), "fail"); // alternate spelling for GCC
@@ -53,10 +53,10 @@ static_assert(!__is_literal(HasNonLiteralBase), "fail");
 static_assert(!__is_literal(HasNonLiteralMember), "fail");
 
 // DR1361 removes the brace-or-equal-initializer bullet so that we can allow:
-extern int f(); // expected-note {{here}}
+extern int f();
 struct HasNonConstExprMemInit {
-  int x = f(); // expected-note {{non-constexpr function}}
-  constexpr HasNonConstExprMemInit() {} // expected-error {{never produces a constant expression}}
+  int x = f();
+  constexpr HasNonConstExprMemInit() {}
   constexpr HasNonConstExprMemInit(int y) : x(y) {} // ok
 };
 static_assert(__is_literal(HasNonConstExprMemInit), "fail");

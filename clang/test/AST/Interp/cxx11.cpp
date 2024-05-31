@@ -31,18 +31,18 @@ constexpr const int *p = &s.m + 1;
 
 constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // ok
 
-constexpr int preDec(int x) { // both-error {{never produces a constant expression}}
-  return --x;                 // both-note {{subexpression}}
+constexpr int preDec(int x) {
+  return --x;
 }
 
-constexpr int postDec(int x) { // both-error {{never produces a constant expression}}
-  return x--;                  // both-note {{subexpression}}
+constexpr int postDec(int x) {
+  return x--;
 }
 
-constexpr int preInc(int x) { // both-error {{never produces a constant expression}}
-  return ++x;                  // both-note {{subexpression}}
+constexpr int preInc(int x) {
+  return ++x;
 }
 
-constexpr int postInc(int x) { // both-error {{never produces a constant expression}}
-  return x++;                  // both-note {{subexpression}}
+constexpr int postInc(int x) {
+  return x++;
 }

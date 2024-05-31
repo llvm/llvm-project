@@ -1,17 +1,13 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=cxx17 %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref %s
-// RUN: %clang_cc1 -std=c++17 -verify=ref-cxx17 %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,all %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=cxx17,all,all-cxx17 %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,all %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref-cxx17,all,all-cxx17 %s
 
 #define INT_MIN (~__INT_MAX__)
 
 
 namespace shifts {
-  constexpr void test() { // ref-error {{constexpr function never produces a constant expression}} \
-                          // ref-cxx17-error {{constexpr function never produces a constant expression}} \
-                          // expected-error {{constexpr function never produces a constant expression}} \
-                          // cxx17-error {{constexpr function never produces a constant expression}} \
-
+  constexpr int test() {
     char c; // cxx17-warning {{uninitialized variable}} \
             // ref-cxx17-warning {{uninitialized variable}}
 
@@ -107,7 +103,12 @@ namespace shifts {
     lli = INT_MIN << 2; // cxx17-warning {{shifting a negative signed value is undefined}} \
                         // ref-cxx17-warning {{shifting a negative signed value is undefined}}
     lli = 1LL << (sizeof(long long) * __CHAR_BIT__ - 2);
+
+    return 0;
   }
+
+  static_assert(test() == 0, ""); // all-error {{static assertion expression is not an integral constant expression}} \
+                                     all-note {{in call to}}
 
   static_assert(1 << 4 == 16, "");
   constexpr unsigned m = 2 >> 1;
@@ -155,21 +156,23 @@ namespace shifts {
   constexpr decltype(L) M2 = (R > 32 && R < 64) ?  L >> R : 0;
 
 
-  constexpr int signedShift() { // cxx17-error {{never produces a constant expression}} \
-                                // ref-cxx17-error {{never produces a constant expression}}
+  constexpr int signedShift() {
     return 1024 << 31; // cxx17-warning {{signed shift result}} \
                        // ref-cxx17-warning {{signed shift result}} \
                        // cxx17-note {{signed left shift discards bits}} \
                        // ref-cxx17-note {{signed left shift discards bits}}
   }
+  static_assert(signedShift() == 0, ""); // all-cxx17-error {{static assertion expression is not an integral constant expression}} \
+                                            all-cxx17-note {{in call to}}
 
-  constexpr int negativeShift() { // cxx17-error {{never produces a constant expression}} \
-                                  // ref-cxx17-error {{never produces a constant expression}}
+  constexpr int negativeShift() {
     return -1 << 2; // cxx17-warning {{shifting a negative signed value is undefined}} \
                     // ref-cxx17-warning {{shifting a negative signed value is undefined}} \
                     // cxx17-note {{left shift of negative value -1}} \
                     // ref-cxx17-note {{left shift of negative value -1}}
   }
+  static_assert(negativeShift() == -4, ""); // all-cxx17-error {{static assertion expression is not an integral constant expression}} \
+                                               all-cxx17-note {{in call to}}
 
   constexpr int foo(int a) {
     return -a << 2; // cxx17-note {{left shift of negative value -10}} \

@@ -208,8 +208,7 @@ class AU {
 public:
   int a;
   constexpr AU() : a(5 / 0) {} // both-warning {{division by zero is undefined}} \
-                               // both-note 2{{division by zero}} \
-                               // both-error {{never produces a constant expression}}
+                               // both-note {{division by zero}}
 };
 class B {
 public:
@@ -290,25 +289,25 @@ namespace IncDec {
   }
   static_assert(getSecondToLast2() == 3, "");
 
-  constexpr int bad1() { // both-error {{never produces a constant expression}}
+  constexpr int bad1() {
     const int *e =  E + 3;
     e++; // This is fine because it's a one-past-the-end pointer
-    return *e; // both-note 2{{read of dereferenced one-past-the-end pointer}}
+    return *e; // both-note {{read of dereferenced one-past-the-end pointer}}
   }
   static_assert(bad1() == 0, ""); // both-error {{not an integral constant expression}} \
                                   // both-note {{in call to}}
 
-  constexpr int bad2() { // both-error {{never produces a constant expression}}
+  constexpr int bad2() {
     const int *e = E + 4;
-    e++; // both-note 2{{cannot refer to element 5 of array of 4 elements}}
+    e++; // both-note {{cannot refer to element 5 of array of 4 elements}}
     return *e; // This is UB as well
   }
   static_assert(bad2() == 0, ""); // both-error {{not an integral constant expression}} \
                                   // both-note {{in call to}}
 
-  constexpr int bad3() { // both-error {{never produces a constant expression}}
+  constexpr int bad3() {
     const int *e = E;
-    e--; // both-note 2{{cannot refer to element -1 of array of 4 elements}}
+    e--; // both-note {{cannot refer to element -1 of array of 4 elements}}
     return *e; // This is UB as well
   }
    static_assert(bad3() == 0, ""); // both-error {{not an integral constant expression}} \
@@ -385,11 +384,11 @@ namespace NoInitMapLeak {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdivision-by-zero"
 #pragma clang diagnostic ignored "-Wc++20-extensions"
-  constexpr int testLeak() { // both-error {{never produces a constant expression}}
+  constexpr int testLeak() {
     int a[2];
     a[0] = 1;
     // interrupts interpretation.
-    (void)(1 / 0); // both-note 2{{division by zero}}
+    (void)(1 / 0); // both-note {{division by zero}}
 
     return 1;
   }
@@ -408,8 +407,8 @@ namespace NoInitMapLeak {
   static_assert(b == 1, ""); // ref-error {{not an integral constant expression}} \
                              // ref-note {{not a constant expression}}
 
-  constexpr int f() { // both-error {{never produces a constant expression}}
-    int a[] = {19,2,3/0,4}; // both-note 2{{division by zero}} \
+  constexpr int f() {
+    int a[] = {19,2,3/0,4}; // both-note {{division by zero}} \
                             // both-warning {{is undefined}}
     return 1;
   }
@@ -587,10 +586,9 @@ const int SZA[] = {};
 void testZeroSizedArrayAccess() { unsigned c = SZA[4]; }
 
 #if __cplusplus >= 202002L
-constexpr int test_multiarray2() { // both-error {{never produces a constant expression}}
+constexpr int test_multiarray2() {
   int multi2[2][1]; // both-note {{declared here}}
-  return multi2[2][0]; // both-note {{cannot access array element of pointer past the end of object}} \
-                       // both-warning {{array index 2 is past the end of the array (that has type 'int[2][1]')}}
+  return multi2[2][0]; // both-warning {{array index 2 is past the end of the array (that has type 'int[2][1]')}}
 }
 
 /// Same but with a dummy pointer.

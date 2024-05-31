@@ -42,8 +42,8 @@ template<typename ...P> struct ConstexprCtor {
 };
 constexpr ConstexprCtor<> f1() { return {}; } // ok
 constexpr ConstexprCtor<int> f2() { return 0; } // ok
-constexpr ConstexprCtor<NonLiteral> f3() { return { 0 }; } // expected-error {{never produces a constant expression}} expected-note {{non-literal type 'NonLiteral}}
-constexpr ConstexprCtor<int, NonLiteral> f4() { return { 0, 0 }; } // expected-error {{never produces a constant expression}} expected-note {{non-literal type 'NonLiteral}}
+constexpr ConstexprCtor<NonLiteral> f3() { return { 0 }; }
+constexpr ConstexprCtor<int, NonLiteral> f4() { return { 0, 0 }; }
 
 struct VirtBase : virtual S {}; // expected-note {{here}}
 

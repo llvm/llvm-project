@@ -2,16 +2,15 @@
 
 
 struct Foo {
-    constexpr void zomg() const { (void)(1 / 0); } // expected-error {{constant expression}} \
-                                                      expected-warning {{division by zero}} \
-                                                      expected-note 2{{division by zero}}
+    constexpr void zomg() const { (void)(1 / 0); } // expected-warning {{division by zero}} \
+                                                      expected-note {{division by zero}}
 };
 
 struct S {
     constexpr S() {}
-    constexpr bool operator==(const S&) const { // expected-error {{never produces a constant expression}}
+    constexpr bool operator==(const S&) const {
       return 1 / 0; // expected-warning {{division by zero}} \
-                       expected-note 3{{division by zero}}
+                       expected-note 2{{division by zero}}
     }
 
     constexpr bool heh() const {
@@ -36,9 +35,8 @@ static_assert(*sptr == *sptr2); // expected-error {{constant expression}} \
                                    expected-note {{in call to '*sptr.operator==(s2)'}}
 
 struct A {
-  constexpr int foo() { (void)(1/0); return 1;} // expected-error {{never produces a constant expression}} \
-                                                   expected-warning {{division by zero}} \
-                                                   expected-note 2{{division by zero}}
+  constexpr int foo() { (void)(1/0); return 1;} // expected-warning {{division by zero}} \
+                                                   expected-note {{division by zero}}
 };
 
 struct B {

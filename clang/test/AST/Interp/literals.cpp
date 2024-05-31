@@ -257,10 +257,10 @@ namespace SizeOf {
   }
 
 #if __cplusplus >= 201402L
-  constexpr int IgnoredRejected() { // ref-error {{never produces a constant expression}}
+  constexpr int IgnoredRejected() {
     int n = 0;
     sizeof(int[n++]); // both-warning {{expression result unused}} \
-                      // ref-note 2{{subexpression not valid in a constant expression}}
+                      // ref-note {{subexpression not valid in a constant expression}}
     return n;
   }
   /// FIXME: This is rejected because the parameter so sizeof() is not constant.
@@ -272,8 +272,8 @@ namespace SizeOf {
 
 #if __cplusplus >= 202002L
   /// FIXME: The following code should be accepted.
-  consteval int foo(int n) { // ref-error {{consteval function never produces a constant expression}}
-    return sizeof(int[n]); // ref-note 3{{not valid in a constant expression}}
+  consteval int foo(int n) {
+    return sizeof(int[n]); // ref-note 2{{not valid in a constant expression}}
   }
   constinit int var = foo(5); // ref-error {{not a constant expression}} \
                               // ref-note 2{{in call to}} \
@@ -593,17 +593,17 @@ namespace IncDec {
                                                    // ref-note {{in call to 'uninit<int *, false, false>()'}} \
                                                    // expected-note {{in call to 'uninit()'}}
 
-  constexpr int OverFlow() { // both-error {{never produces a constant expression}}
+  constexpr int OverFlow() {
     int a = INT_MAX;
-    ++a; // both-note 2{{is outside the range}}
+    ++a; // both-note {{is outside the range}}
     return -1;
   }
   static_assert(OverFlow() == -1, "");  // both-error {{not an integral constant expression}} \
                                         // both-note {{in call to 'OverFlow()'}}
 
-  constexpr int UnderFlow() { // both-error {{never produces a constant expression}}
+  constexpr int UnderFlow() {
     int a = INT_MIN;
-    --a; // both-note 2{{is outside the range}}
+    --a; // both-note {{is outside the range}}
     return -1;
   }
   static_assert(UnderFlow() == -1, "");  // both-error {{not an integral constant expression}} \
@@ -792,11 +792,13 @@ namespace IncDec {
   }
   static_assert(ptrInc2() == 2, "");
 
-  constexpr int ptrInc3() { // both-error {{never produces a constant expression}}
+  constexpr int ptrInc3() {
     const int *p = arr;
     p += 12; // both-note {{cannot refer to element 12 of array of 3 elements}}
     return *p;
   }
+  static_assert(ptrInc3() == 0, ""); // both-error {{static assertion expression is not an integral constant expression}} \
+                                        both-note {{in call to}}
 
   constexpr int ptrIncDec1() {
     const int *p = arr;
@@ -806,11 +808,13 @@ namespace IncDec {
   }
   static_assert(ptrIncDec1() == 2, "");
 
-  constexpr int ptrDec1() { // both-error {{never produces a constant expression}}
+  constexpr int ptrDecl() {
     const int *p = arr;
     p -= 1;  // both-note {{cannot refer to element -1 of array of 3 elements}}
     return *p;
   }
+  static_assert(ptrDecl() == 0, ""); // both-error {{static assertion expression is not an integral constant expression}} \
+                                        both-note {{in call to}}
 
   /// This used to leave a 0 on the stack instead of the previous
   /// value of a.
@@ -1182,11 +1186,11 @@ namespace incdecbool {
 
 
 #if __cplusplus == 201103L
-  constexpr bool foo() { // both-error {{never produces a constant expression}}
+  constexpr bool foo() {
     bool b = true; // both-warning {{variable declaration in a constexpr function is a C++14 extension}}
     b++; // both-warning {{incrementing expression of type bool is deprecated and incompatible with C++17}} \
          // both-warning {{use of this statement in a constexpr function is a C++14 extension}} \
-         // both-note 2{{subexpression not valid in a constant expression}}
+         // both-note {{subexpression not valid in a constant expression}}
 
     return b;
   }
@@ -1201,11 +1205,13 @@ namespace incdecbool {
 #if __cplusplus >= 201402L
 /// NOTE: The diagnostics of the two interpreters are a little
 /// different here, but they both make sense.
-constexpr int externvar1() { // both-error {{never produces a constant expression}}
+constexpr int externvar1() {
   extern char arr[]; // ref-note {{declared here}}
    return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
                   // expected-note {{array-to-pointer decay of array member without known bound is not supported}}
 }
+static_assert(externvar1() == 0, ""); // both-error {{not an integral constant expression}} \
+                                         both-note {{in call to}}
 #endif
 
 namespace Extern {

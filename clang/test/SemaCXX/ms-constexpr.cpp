@@ -29,9 +29,7 @@ static_assert(test_get_msconstexpr_true());
 struct S2 {
     [[msvc::constexpr]] S2() {}
     [[msvc::constexpr]] bool value() { return true; }
-    static constexpr bool check() { [[msvc::constexpr]] return S2{}.value(); } // expected-error {{constexpr function never produces a constant expression}} \
-                                                                               // expected-note {{non-literal type 'S2' cannot be used in a constant expression}} \
-                                                                               // expected-note {{non-literal type 'S2' cannot be used in a constant expression}}
+    static constexpr bool check() { [[msvc::constexpr]] return S2{}.value(); }  // expected-note {{non-literal type 'S2' cannot be used in a constant expression}}
 };
 static_assert(S2::check()); // expected-error {{static assertion expression is not an integral constant expression}} \
                             // expected-note {{in call to 'check()'}}

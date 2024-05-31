@@ -72,10 +72,11 @@ static_assert(h(4) == sizeof(int));
 static_assert(__has_cpp_attribute(assume) == 202207L);
 static_assert(__has_attribute(assume));
 
-constexpr bool i() { // ext-error {{never produces a constant expression}}
-  [[assume(false)]]; // ext-note {{assumption evaluated to false}} expected-note {{assumption evaluated to false}} ext-warning {{C++23 extension}}
+constexpr bool i() {
+  [[assume(false)]]; // expected-note 2 {{assumption evaluated to false}} ext-warning {{C++23 extension}}
   return true;
 }
+static_assert(i()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
 constexpr bool j(bool b) {
   [[assume(b)]]; // expected-note {{assumption evaluated to false}} ext-warning {{C++23 extension}}

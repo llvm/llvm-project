@@ -904,7 +904,7 @@ void func() {
   S<Baz, 3> s7;
 }
 
-consteval int aConstevalFunction() { // expected-error {{consteval function never produces a constant expression}}
+consteval int aConstevalFunction() {
   // Defaulted default constructors are implicitly consteval.
   S<Bar, 1> s1;
 
@@ -914,6 +914,7 @@ consteval int aConstevalFunction() { // expected-error {{consteval function neve
   S<Baz, 3> s3;
   return 0;
 }
+static_assert(aConstevalFunction() == 0); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
 } // namespace multiple_default_constructors
 

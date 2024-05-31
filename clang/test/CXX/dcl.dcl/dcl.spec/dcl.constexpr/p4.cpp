@@ -16,7 +16,7 @@ struct NonLiteral { // expected-note 2{{no constexpr constructors}}
 };
 struct Literal {
   constexpr Literal() {}
-  explicit Literal(int); // expected-note 2 {{here}}
+  explicit Literal(int);
   operator int() const { return 0; }
 };
 
@@ -240,18 +240,15 @@ template<typename T> struct enable_shared_from_this {
 };
 constexpr int f(enable_shared_from_this<int>);
 
-// - every constructor involved in initializing non-static data members and base
-//   class sub-objects shall be a constexpr constructor.
-// This will no longer be the case once we support P2448R2
 struct ConstexprBaseMemberCtors : Literal {
   Literal l;
 
   constexpr ConstexprBaseMemberCtors() : Literal(), l() {} // ok
-  constexpr ConstexprBaseMemberCtors(char) : // expected-error {{constexpr constructor never produces a constant expression}}
-    Literal(0), // expected-note {{non-constexpr constructor}}
+  constexpr ConstexprBaseMemberCtors(char) :
+    Literal(0),
     l() {}
-  constexpr ConstexprBaseMemberCtors(double) : Literal(), // expected-error {{constexpr constructor never produces a constant expression}}
-    l(0) // expected-note {{non-constexpr constructor}}
+  constexpr ConstexprBaseMemberCtors(double) : Literal(),
+    l(0)
   {}
 };
 
@@ -295,18 +292,10 @@ struct XU4 {
 static_assert(XU2().a == 1, "");
 static_assert(XU4().a == 1, "");
 
-//  - every implicit conversion used in converting a constructor argument to the
-//    corresponding parameter type and converting a full-expression to the
-//    corresponding member type shall be one of those allowed in a constant
-//    expression.
-//
-// We implement the proposed resolution of DR1364 and ignore this bullet.
-// However, we implement the intent of this wording as part of the p5 check that
-// the function must be able to produce a constant expression.
-int kGlobal; // expected-note {{here}}
+int kGlobal;
 struct Z {
   constexpr Z(int a) : n(a) {}
-  constexpr Z() : n(kGlobal) {} // expected-error {{constexpr constructor never produces a constant expression}} expected-note {{read of non-const}}
+  constexpr Z() : n(kGlobal) {}
   int n;
 };
 

@@ -83,8 +83,8 @@ static_assert(b() == 11);
 
 /// The diagnostics between the two interpreters used to be different here.
 struct S { int a; };
-constexpr S getS() { // both-error {{constexpr function never produces a constant expression}}
-  (void)(1/0); // both-note 2{{division by zero}} \
+constexpr S getS() {
+  (void)(1/0); // both-note {{division by zero}} \
                // both-warning {{division by zero}}
   return S{12};
 }

@@ -352,26 +352,29 @@ namespace Union {
     A a;
     int b;
   };
-  constexpr int read_wrong_member() { // expected-error {{never produces a constant}}
+  constexpr int read_wrong_member() {
     B b = {.b = 1};
     return b.a.x; // expected-note {{read of member 'a' of union with active member 'b'}}
   }
+  static_assert(read_wrong_member()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
   constexpr int change_member() {
     B b = {.b = 1};
     b.a.x = 1;
     return b.a.x;
   }
   static_assert(change_member() == 1);
-  constexpr int change_member_then_read_wrong_member() { // expected-error {{never produces a constant}}
+  constexpr int change_member_then_read_wrong_member() {
     B b = {.b = 1};
     b.a.x = 1;
     return b.b; // expected-note {{read of member 'b' of union with active member 'a'}}
   }
-  constexpr int read_wrong_member_indirect() { // expected-error {{never produces a constant}}
+  static_assert(change_member_then_read_wrong_member()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
+  constexpr int read_wrong_member_indirect() {
     B b = {.b = 1};
     int *p = &b.a.y;
     return *p; // expected-note {{read of member 'a' of union with active member 'b'}}
   }
+  static_assert(read_wrong_member_indirect()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
   constexpr int read_uninitialized() {
     B b = {.b = 1};
     int *p = &b.a.y;
@@ -379,11 +382,13 @@ namespace Union {
     return *p; // expected-note {{read of uninitialized object}}
   }
   static_assert(read_uninitialized() == 0); // expected-error {{constant}} expected-note {{in call}}
-  constexpr void write_wrong_member_indirect() { // expected-error {{never produces a constant}}
+  constexpr int write_wrong_member_indirect() {
     B b = {.b = 1};
     int *p = &b.a.y;
     *p = 1; // expected-note {{assignment to member 'a' of union with active member 'b'}}
+    return 0;
   }
+  static_assert(write_wrong_member_indirect()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
   constexpr int write_uninitialized() {
     B b = {.b = 1};
     int *p = &b.a.y;
@@ -475,12 +480,13 @@ namespace Union {
     return r.a.r.b;
   }
   static_assert(ref_member_test_1() == 2);
-  constexpr int ref_member_test_2() { // expected-error {{never produces a constant}}
+  constexpr int ref_member_test_2() {
     ref_member_3 r = {.a = {.r = {.a = 1}}};
     // FIXME: This note isn't great. The 'read' here is reading the referent of the reference.
     r.b.r.b = 2; // expected-note {{read of member 'b' of union with active member 'a'}}
     return r.b.r.b;
   }
+  static_assert(ref_member_test_2()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
   namespace PR43762 {
     struct A { int x = 1; constexpr int f() { return 1; } };
@@ -766,7 +772,7 @@ namespace dynamic_alloc {
   }
   static_assert(f(123) == 123 * 122 / 2);
 
-  constexpr bool nvdtor() { // expected-error {{never produces a constant expression}}
+  constexpr bool nvdtor() {
     struct S {
       constexpr ~S() {}
     };
@@ -774,6 +780,7 @@ namespace dynamic_alloc {
     delete (S*)new T; // expected-note {{delete of object with dynamic type 'T' through pointer to base class type 'S' with non-virtual destructor}}
     return true;
   }
+  static_assert(nvdtor()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
   constexpr int vdtor_1() {
     int a;
@@ -837,10 +844,12 @@ namespace dynamic_alloc {
   static_assert(vdtor_3(2) == 3); // expected-error {{}} expected-note {{in call}}
   static_assert(vdtor_3(3) == 3);
 
-  constexpr void delete_mismatch() { // expected-error {{never produces a constant expression}}
+  constexpr int delete_mismatch() {
     delete[] // expected-note {{array delete used to delete pointer to non-array object of type 'int'}}
       new int; // expected-note {{allocation}}
+    return 0;
   }
+  static_assert(delete_mismatch()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
   template<typename T>
   constexpr T dynarray(int elems, int i) {
@@ -911,11 +920,13 @@ namespace dynamic_alloc {
   }
   static_assert(evaluate_nothrow_arg());
 
-  constexpr void double_delete() { // expected-error {{never produces a constant expression}}
+  constexpr int double_delete() {
     int *p = new int;
     delete p;
     delete p; // expected-note {{delete of pointer that has already been deleted}}
+    return 0;
   }
+  static_assert(double_delete()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
   constexpr bool super_secret_double_delete() {
     struct A {
       constexpr ~A() { delete this; } // expected-note {{destruction of object that is already being destroyed}} expected-note {{in call}}
@@ -925,17 +936,21 @@ namespace dynamic_alloc {
   }
   static_assert(super_secret_double_delete()); // expected-error {{constant expression}} expected-note {{in call}}
 
-  constexpr void use_after_free() { // expected-error {{never produces a constant expression}}
+  constexpr int use_after_free() {
     int *p = new int;
     delete p;
     *p = 1; // expected-note {{assignment to heap allocated object that has been deleted}}
+    return 0;
   }
-  constexpr void use_after_free_2() { // expected-error {{never produces a constant expression}}
+  static_assert(use_after_free()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
+  constexpr int use_after_free_2() {
     struct X { constexpr void f() {} };
     X *p = new X;
     delete p;
     p->f(); // expected-note {{member call on heap allocated object that has been deleted}}
+    return 0;
   }
+  static_assert(use_after_free_2()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
   template<typename T> struct X {
     std::size_t n;
@@ -1069,10 +1084,12 @@ namespace std {
 
 namespace dtor_call {
   struct A { int n; };
-  constexpr void f() { // expected-error {{never produces a constant expression}}
+  constexpr int f() {
     A a; // expected-note {{destroying object 'a' whose lifetime has already ended}}
     a.~A();
+    return 0;
   }
+  static_assert(f()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
   union U { A a; };
   constexpr void g() {
     U u;
@@ -1206,21 +1223,27 @@ namespace dtor_call {
   }
   static_assert((destroy_after_lifetime3(), true)); // expected-error {{}} expected-note {{in call}}
 
-  constexpr void destroy_after_lifetime4() { // expected-error {{never produces a constant expression}}
+  constexpr int destroy_after_lifetime4() {
     A *p = new A;
     delete p;
     p->~A(); // expected-note {{destruction of heap allocated object that has been deleted}}
+    return 0;
   }
+  static_assert(destroy_after_lifetime4()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
   struct Extern { constexpr ~Extern() {} } extern e;
-  constexpr void destroy_extern() { // expected-error {{never produces a constant expression}}
+  constexpr int destroy_extern() {
     e.~Extern(); // expected-note {{cannot modify an object that is visible outside}}
+    return 0;
   }
+  static_assert(destroy_extern()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
   constexpr A &&a_ref = A(); // expected-note {{temporary created here}}
-  constexpr void destroy_extern_2() { // expected-error {{never produces a constant expression}}
+  constexpr int destroy_extern_2() {
     a_ref.~A(); // expected-note {{destruction of temporary is not allowed in a constant expression outside the expression that created the temporary}}
+    return 0;
   }
+  static_assert(destroy_extern_2()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
   struct S {
     constexpr S() { n = 1; }
@@ -1232,42 +1255,54 @@ namespace dtor_call {
   }
   static_assert((destroy_volatile(), true)); // ok, not volatile during construction and destruction
 
-  constexpr void destroy_null() { // expected-error {{never produces a constant expression}}
+  constexpr int destroy_null() {
     ((A*)nullptr)->~A(); // expected-note {{destruction of dereferenced null pointer}}
+    return 0;
   }
+  static_assert(destroy_null()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
-  constexpr void destroy_past_end() { // expected-error {{never produces a constant expression}}
+  constexpr int destroy_past_end() {
     A a;
     (&a+1)->~A(); // expected-note {{destruction of dereferenced one-past-the-end pointer}}
+    return 0;
   }
+  static_assert(destroy_past_end()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
-  constexpr void destroy_past_end_array() { // expected-error {{never produces a constant expression}}
+  constexpr int destroy_past_end_array() {
     A a[2];
     a[2].~A(); // expected-note {{destruction of dereferenced one-past-the-end pointer}}
+    return 0;
   }
+  static_assert(destroy_past_end_array()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
   union As {
     A a, b;
   };
 
-  constexpr void destroy_no_active() { // expected-error {{never produces a constant expression}}
+  constexpr int destroy_no_active() {
     As as;
     as.b.~A(); // expected-note {{destruction of member 'b' of union with no active member}}
+    return 0;
   }
+  static_assert(destroy_no_active()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
-  constexpr void destroy_inactive() { // expected-error {{never produces a constant expression}}
+  constexpr int destroy_inactive() {
     As as;
     as.a.n = 1;
     as.b.~A(); // expected-note {{destruction of member 'b' of union with active member 'a'}}
+    return 0;
   }
+  static_assert(destroy_inactive()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
-  constexpr void destroy_no_active_2() { // expected-error {{never produces a constant expression}}
+  constexpr int destroy_no_active_2() {
     As as;
     as.a.n = 1;
     as.a.~A();
     // FIXME: This diagnostic is wrong; the union has no active member now.
     as.b.~A(); // expected-note {{destruction of member 'b' of union with active member 'a'}}
+    return 0;
   }
+  static_assert(destroy_no_active_2()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
   constexpr void destroy_pointer() {
     using T = int*;
@@ -1327,16 +1362,22 @@ namespace mutable_subobjects {
   auto &ti2 = typeid(a.m);
   auto &ti3 = typeid(a.n);
 
-  constexpr void destroy1() { // expected-error {{constexpr}}
+  constexpr int destroy1() {
     a.~A(); // expected-note {{cannot modify an object that is visible outside}}
+    return 0;
   }
+  static_assert(destroy1()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
   using T = int;
-  constexpr void destroy2() { // expected-error {{constexpr}}
+  constexpr int destroy2() {
     a.m.~T(); // expected-note {{cannot modify an object that is visible outside}}
+    return 0;
   }
-  constexpr void destroy3() { // expected-error {{constexpr}}
+  static_assert(destroy2()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
+  constexpr int destroy3() {
     a.n.~T(); // expected-note {{cannot modify an object that is visible outside}}
+    return 0;
   }
+  static_assert(destroy3()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
   struct X {
     mutable int n = 0;
@@ -1466,9 +1507,9 @@ namespace PR45879 {
   static_assert(f());
 
   // Only syntactic assignments change the active union member.
-  constexpr bool g() { // expected-error {{never produces a constant expression}}
+  constexpr bool g() {
     C c = {.n = 1};
-    c.a.operator=(B{2}.a); // expected-note 2{{member call on member 'a' of union with active member 'n' is not allowed in a constant expression}}
+    c.a.operator=(B{2}.a); // expected-note {{member call on member 'a' of union with active member 'n' is not allowed in a constant expression}}
     return c.a.n == 2;
   }
   static_assert(g()); // expected-error {{constant expression}} expected-note {{in call}}

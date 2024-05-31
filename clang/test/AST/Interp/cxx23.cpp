@@ -4,51 +4,39 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=expected20,all,all20 %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=expected23,all %s -fexperimental-new-constant-interpreter
 
-/// FIXME: The new interpreter is missing all the 'control flows through...' diagnostics.
-
-constexpr int f(int n) {  // ref20-error {{constexpr function never produces a constant expression}}
-  static const int m = n; // ref20-note {{control flows through the definition of a static variable}} \
-                          // ref20-warning {{is a C++23 extension}} \
+constexpr int f(int n) {
+  static const int m = n; // ref20-warning {{is a C++23 extension}} \
                           // expected20-warning {{is a C++23 extension}}
 
   return m;
 }
-constexpr int g(int n) {        // ref20-error {{constexpr function never produces a constant expression}}
-  thread_local const int m = n; // ref20-note {{control flows through the definition of a thread_local variable}} \
-                                // ref20-warning {{is a C++23 extension}} \
+constexpr int g(int n) {
+  thread_local const int m = n; // ref20-warning {{is a C++23 extension}} \
                                 // expected20-warning {{is a C++23 extension}}
   return m;
 }
 
-constexpr int c_thread_local(int n) { // ref20-error {{constexpr function never produces a constant expression}} \
-                                      // expected20-error {{constexpr function never produces a constant expression}}
-  static _Thread_local int m = 0;     // ref20-note {{control flows through the definition of a thread_local variable}} \
-                                      // ref20-warning {{is a C++23 extension}} \
-                                      // expected20-warning {{is a C++23 extension}} \
-                                      // expected20-note {{declared here}}
-  return m; // expected20-note {{read of non-const variable}}
+constexpr int c_thread_local(int n) {
+  static _Thread_local int m = 0;     // ref20-warning {{is a C++23 extension}} \
+                                      // expected20-warning {{is a C++23 extension}}
+  return m;
 }
 
 
-constexpr int gnu_thread_local(int n) { // ref20-error {{constexpr function never produces a constant expression}} \
-                                        // expected20-error {{constexpr function never produces a constant expression}}
-  static __thread int m = 0;            // ref20-note {{control flows through the definition of a thread_local variable}} \
-                                        // ref20-warning {{is a C++23 extension}} \
-                                        // expected20-warning {{is a C++23 extension}} \
-                                        // expected20-note {{declared here}}
-  return m; // expected20-note {{read of non-const variable}}
+constexpr int gnu_thread_local(int n) {
+  static __thread int m = 0;            // ref20-warning {{is a C++23 extension}} \
+                                        // expected20-warning {{is a C++23 extension}}
+  return m;
 }
 
-constexpr int h(int n) {  // ref20-error {{constexpr function never produces a constant expression}}
-  static const int m = n; // ref20-note {{control flows through the definition of a static variable}} \
-                          // ref20-warning {{is a C++23 extension}} \
+constexpr int h(int n) {
+  static const int m = n; // ref20-warning {{is a C++23 extension}} \
                           // expected20-warning {{is a C++23 extension}}
   return &m - &m;
 }
 
-constexpr int i(int n) {        // ref20-error {{constexpr function never produces a constant expression}}
-  thread_local const int m = n; // ref20-note {{control flows through the definition of a thread_local variable}} \
-                                // ref20-warning {{is a C++23 extension}} \
+constexpr int i(int n) {
+  thread_local const int m = n; // ref20-warning {{is a C++23 extension}} \
                                 // expected20-warning {{is a C++23 extension}}
   return &m - &m;
 }
@@ -104,9 +92,8 @@ namespace StaticOperators {
   static_assert(f2() == 3);
 
   struct S1 {
-    constexpr S1() { // all20-error {{never produces a constant expression}}
-      throw; // all-note {{not valid in a constant expression}} \
-             // all20-note {{not valid in a constant expression}}
+    constexpr S1() {
+      throw; // all-note {{not valid in a constant expression}}
     }
     static constexpr int operator()() { return 3; } // ref20-warning {{C++23 extension}} \
                                                     // expected20-warning {{C++23 extension}}
@@ -160,9 +147,9 @@ namespace VirtualBases {
 }
 
 namespace LabelGoto {
-  constexpr int foo() { // all20-error {{never produces a constant expression}}
+  constexpr int foo() {
     a: // all20-warning {{use of this statement in a constexpr function is a C++23 extension}}
-    goto a; // all20-note 2{{subexpression not valid in a constant expression}} \
+    goto a; // all20-note {{subexpression not valid in a constant expression}} \
             // ref23-note {{subexpression not valid in a constant expression}} \
             // expected23-note {{subexpression not valid in a constant expression}}
 

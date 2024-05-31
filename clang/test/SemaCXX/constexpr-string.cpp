@@ -601,15 +601,15 @@ namespace MemcpyEtc {
     constexpr NonTrivial(const NonTrivial &) : n(1) {}
     int n;
   };
-  constexpr bool test_nontrivial_memcpy() { // expected-error {{never produces a constant}}
+  constexpr bool test_nontrivial_memcpy() {
     NonTrivial arr[3] = {};
-    __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // expected-note 2{{non-trivially-copyable}}
+    __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // expected-note {{non-trivially-copyable}}
     return true;
   }
   static_assert(test_nontrivial_memcpy()); // expected-error {{constant}} expected-note {{in call}}
-  constexpr bool test_nontrivial_memmove() { // expected-error {{never produces a constant}}
+  constexpr bool test_nontrivial_memmove() {
     NonTrivial arr[3] = {};
-    __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // expected-note 2{{non-trivially-copyable}}
+    __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // expected-note {{non-trivially-copyable}}
     return true;
   }
   static_assert(test_nontrivial_memmove()); // expected-error {{constant}} expected-note {{in call}}
@@ -649,29 +649,29 @@ namespace MemcpyEtc {
   static_assert(test_address_of_const_array_type() == 1234);
 
   // Check that an incomplete array is rejected.
-  constexpr int test_incomplete_array_type() { // expected-error {{never produces a constant}}
+  constexpr int test_incomplete_array_type() {
     extern int arr[];
     __builtin_memmove(arr, arr, 4 * sizeof(arr[0]));
-    // expected-note@-1 2{{'memmove' not supported: source is not a contiguous array of at least 4 elements of type 'int'}}
+    // expected-note@-1 {{'memmove' not supported: source is not a contiguous array of at least 4 elements of type 'int'}}
     return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
   }
   static_assert(test_incomplete_array_type() == 1234); // expected-error {{constant}} expected-note {{in call}}
 
   // Check that a pointer to an incomplete array is rejected.
-  constexpr int test_address_of_incomplete_array_type() { // expected-error {{never produces a constant}}
+  constexpr int test_address_of_incomplete_array_type() {
     extern int arr[];
     __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0]));
-    // expected-note@-1 2{{cannot constant evaluate 'memmove' between objects of incomplete type 'int[]'}}
+    // expected-note@-1 {{cannot constant evaluate 'memmove' between objects of incomplete type 'int[]'}}
     return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
   }
   static_assert(test_address_of_incomplete_array_type() == 1234); // expected-error {{constant}} expected-note {{in call}}
 
   // Check that a pointer to an incomplete struct is rejected.
-  constexpr bool test_address_of_incomplete_struct_type() { // expected-error {{never produces a constant}}
+  constexpr bool test_address_of_incomplete_struct_type() {
     struct Incomplete;
     extern Incomplete x, y;
     __builtin_memcpy(&x, &x, 4);
-    // expected-note@-1 2{{cannot constant evaluate 'memcpy' between objects of incomplete type 'Incomplete'}}
+    // expected-note@-1 {{cannot constant evaluate 'memcpy' between objects of incomplete type 'Incomplete'}}
     return true;
   }
   static_assert(test_address_of_incomplete_struct_type()); // expected-error {{constant}} expected-note {{in call}}

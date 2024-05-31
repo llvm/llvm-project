@@ -241,15 +241,19 @@ struct BodylessMemberFunction {
   }
 };
 
+// FIXME: The new constant expression interpreter diagnoses differently than
+// the reference implementation.
 constexpr int nyd(int m);
-constexpr int doit() { return nyd(10); }
-constexpr int nyd(int m) { return m; }
-static_assert(doit() == 10, "");
+constexpr int doit() { return nyd(10); } // expected-note {{in call to}}
+constexpr int nyd(int m) { return m; } // expected-note {{function parameter 'm' with unknown value cannot be used in a constant expression}} \
+                                          expected-note {{declared here}}
+static_assert(doit() == 10, ""); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                    expected-note {{in call to}}
 
 namespace InvalidCall {
   struct S {
-    constexpr int a() const { // both-error {{never produces a constant expression}}
-      return 1 / 0; // both-note 2{{division by zero}} \
+    constexpr int a() const {
+      return 1 / 0; // both-note {{division by zero}} \
                     // both-warning {{is undefined}}
     }
   };

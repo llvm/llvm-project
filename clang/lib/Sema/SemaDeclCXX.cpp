@@ -2457,33 +2457,6 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
     }
   }
 
-  // C++11 [dcl.constexpr]p5:
-  //   if no function argument values exist such that the function invocation
-  //   substitution would produce a constant expression, the program is
-  //   ill-formed; no diagnostic required.
-  // C++11 [dcl.constexpr]p3:
-  //   - every constructor call and implicit conversion used in initializing the
-  //     return value shall be one of those allowed in a constant expression.
-  // C++11 [dcl.constexpr]p4:
-  //   - every constructor involved in initializing non-static data members and
-  //     base class sub-objects shall be a constexpr constructor.
-  //
-  // Note that this rule is distinct from the "requirements for a constexpr
-  // function", so is not checked in CheckValid mode.
-  SmallVector<PartialDiagnosticAt, 8> Diags;
-  if (Kind == Sema::CheckConstexprKind::Diagnose &&
-      !Expr::isPotentialConstantExpr(Dcl, Diags) &&
-      !SemaRef.getLangOpts().CPlusPlus23) {
-    SemaRef.Diag(Dcl->getLocation(),
-                 diag::ext_constexpr_function_never_constant_expr)
-        << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval()
-        << Dcl->getNameInfo().getSourceRange();
-    for (size_t I = 0, N = Diags.size(); I != N; ++I)
-      SemaRef.Diag(Diags[I].first, Diags[I].second);
-    // Don't return false here: we allow this for compatibility in
-    // system headers.
-  }
-
   return true;
 }
 

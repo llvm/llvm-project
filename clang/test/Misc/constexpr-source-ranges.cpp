@@ -6,7 +6,7 @@ constexpr int f() {
   return 0;
 }
 
-// CHECK: constexpr-source-ranges.cpp:5:3:{5:3-5:10}
+
 
 
 constexpr int I = 12;
@@ -24,7 +24,6 @@ static_assert(divByZero() == 0, "");
 /// We see this twice. Once from sema and once when
 /// evaluating the static_assert above.
 // CHECK: constexpr-source-ranges.cpp:23:15:{23:15-23:31}
-// CHECK: constexpr-source-ranges.cpp:21:12:{21:14-21:20}
 
 constexpr int div(bool a, bool b) {
   return 1 / (int)b;
@@ -33,7 +32,7 @@ constexpr int ints(int a, int b, int c, int d) {
   return 1;
 }
 static_assert(ints(1, div(true, false), 2, div(false, true)) == 1, "");
-// CHECK: constexpr-source-ranges.cpp:35:23:{35:23-35:39}
+// CHECK: constexpr-source-ranges.cpp:34:23:{34:23-34:39}
 
 namespace overflow {
 // CHECK:      :{[[@LINE+1]]:9-[[@LINE+1]]:29}:
@@ -49,7 +48,3 @@ constexpr int uninit() {
   return aaa;
 }
 static_assert(uninit() == 0, "");
-
-
-constexpr void neverValid() { throw; }
-// CHECK: :{[[@LINE-1]]:16-[[@LINE-1]]:26}:

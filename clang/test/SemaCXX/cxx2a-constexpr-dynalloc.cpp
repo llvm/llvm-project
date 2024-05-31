@@ -90,11 +90,12 @@ constexpr int no_deallocate_nonalloc = (std::allocator<int>().deallocate((int*)&
 // expected-note@-2 {{declared here}}
 
 void *operator new(std::size_t, void *p) { return p; }
-constexpr bool no_placement_new_in_user_code() { // expected-error {{never produces a constant expression}}
+constexpr bool no_placement_new_in_user_code() {
   int a;
   new (&a) int(42); // expected-note {{call to placement 'operator new'}}
   return a == 42;
 }
+static_assert(no_placement_new_in_user_code()); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
 namespace std {
   constexpr bool placement_new_in_stdlib() {

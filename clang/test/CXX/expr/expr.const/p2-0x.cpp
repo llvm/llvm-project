@@ -302,10 +302,11 @@ constexpr float negpi = -pi; // expect no error on unary operator
 
 #if __cplusplus >= 201703L
 namespace CompoundAssignment {
-constexpr int rem() { // expected-error {{constexpr function never produces a constant expression}}
+constexpr int rem() {
     int x = ~__INT_MAX__;
     return x%=-1; // cxx20-note {{value 2147483648 is outside the range of representable values of type 'int'}}
 }
+static_assert(rem() == 0); // cxx20-error {{static assertion expression is not an integral constant expression}} cxx20-note {{in call to}}
 }
 #endif
 }
@@ -447,9 +448,9 @@ namespace PseudoDtor {
     int n : (k.~I(), 1); // expected-error {{constant expression}} expected-note {{visible outside that expression}}
   };
 
-  constexpr int f(int a = 1) { // cxx11-error {{constant expression}} expected-note {{destroying object 'a' whose lifetime has already ended}}
+  constexpr int f(int a = 1) { // expected-note {{destroying object 'a' whose lifetime has already ended}}
     return (
-        a.~I(), // cxx11-note {{pseudo-destructor}}
+        a.~I(),
         0);
   }
   static_assert(f() == 0, ""); // expected-error {{constant expression}}
@@ -457,9 +458,9 @@ namespace PseudoDtor {
   // This is OK in C++20: the union has no active member after the
   // pseudo-destructor call, so the union destructor has no effect.
   union U { int x; };
-  constexpr int g(U u = {1}) { // cxx11-error {{constant expression}}
+  constexpr int g(U u = {1}) {
     return (
-        u.x.~I(), // cxx11-note 2{{pseudo-destructor}}
+        u.x.~I(), // cxx11-note {{pseudo-destructor}}
         0);
   }
   static_assert(g() == 0, ""); // cxx11-error {{constant expression}} cxx11-note {{in call}}
