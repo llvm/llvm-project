@@ -1,25 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.PointerSub -verify %s
 
-#if 0
-
-void f(void) {
-  int a[3][4];
-  int d;
-  d = (int *)(((char *)(&a[2][2]) + 1) - 1) - &a[2][2];
-  d = (int *)(((char *)(&a[2][2]) + 1) - 1) - (int *)(((char *)(&a[1][1]) + 1) - 1);
-
-  long long l;
-  char *a1 = (char *)&l;
-  d = a1[3] - l;
-
-  long long la1[3];
-  long long la2[3];
-  char *a2 = (char *)la1;
-  d = &a2[3] - (char *)&la2[2];
-}
-
-#else
-
 void f1(void) {
   int x, y, z[10];
   int d = &y - &x; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
@@ -41,14 +21,14 @@ void f2(void) {
   q = a + 10;
   d = q - p; // no warning (use of pointer to one after the end is allowed)
   q = a + 11;
-  d = q - a; // no-warning (no check for past-the-end array access in this checker)
+  d = q - a; // no-warning (no check for past-the-end array pointers in this checker)
 
   d = &a[4] - a; // no-warning
   d = &a[2] - p; // no-warning
   d = &c - p; // expected-warning{{Subtraction of two pointers that}}
 
-  d = (int *)((char *)(&a[4]) + 4) - &a[4]; // no-warning (pointers into the same array data)
-  d = (int *)((char *)(&a[4]) + 3) - &a[4]; // expected-warning{{Subtraction of two pointers that}}
+  d = (int *)((char *)(&a[4]) + sizeof(int)) - &a[4]; // no-warning (pointers into the same array data)
+  d = (int *)((char *)(&a[4]) + 1) - &a[4]; // expected-warning{{Subtraction of two pointers that}}
 }
 
 void f3(void) {
@@ -61,9 +41,10 @@ void f3(void) {
   d = &(a[1][2]) - &(a[1][0]);
   d = &(a[1][2]) - &(a[0][0]); // expected-warning{{Subtraction of two pointers that}}
 
-  // FIXME: This warning is wrong:
-  // 2-dimensional array is internally converted into one-dimensional by the analyzer
-  d = (int *)(((char *)(&a[2][2]) + 2) - 1) - &a[2][2]; // expected-warning{{Subtraction of two pointers that}}
+  d = (int *)((char *)(&a[2][2]) + sizeof(int)) - &a[2][2]; // expected-warning{{Subtraction of two pointers that}}
+  d = (int *)((char *)(&a[2][2]) + 1) - &a[2][2]; // expected-warning{{Subtraction of two pointers that}}
+  d = (int (*)[4])((char *)&a[2] + sizeof(int (*)[4])) - &a[2]; // expected-warning{{Subtraction of two pointers that}}
+  d = (int (*)[4])((char *)&a[2] + 1) - &a[2]; // expected-warning{{Subtraction of two pointers that}}
 }
 
 void f4(void) {
@@ -114,6 +95,8 @@ void f6(void) {
   long long la2[3];
   char *pla1 = (char *)la1;
   char *pla2 = (char *)la2;
+  d = pla1[1] - pla1[0];
+  d = (long long *)&pla1[1] - &l; // expected-warning{{Subtraction of two pointers that}}
   d = &pla2[3] - &pla1[3]; // expected-warning{{Subtraction of two pointers that}}
 }
 
@@ -121,5 +104,3 @@ void f7(int *p) {
   int a[10];
   int d = &a[10] - p; // no-warning ('p' is unknown, even if it cannot point into 'a')
 }
-
-#endif
