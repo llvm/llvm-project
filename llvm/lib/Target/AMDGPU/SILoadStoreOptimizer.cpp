@@ -2052,9 +2052,6 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     MemInfoMap &Visited,
     SmallPtrSet<MachineInstr *, 4> &AnchorList) const {
 
-  if (!(MI.mayLoad() ^ MI.mayStore()))
-    return false;
-
   if (!STM->hasFlatInstOffsets() || !SIInstrInfo::isFLAT(MI))
     return false;
 
@@ -2064,10 +2061,6 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
 
   unsigned AS = SIInstrInfo::isFLATGlobal(MI) ? AMDGPUAS::GLOBAL_ADDRESS
                                               : AMDGPUAS::FLAT_ADDRESS;
-
-  if (MI.mayLoad() &&
-      TII->getNamedOperand(MI, AMDGPU::OpName::vdata) != nullptr)
-    return false;
 
   if (AnchorList.count(&MI))
     return false;
