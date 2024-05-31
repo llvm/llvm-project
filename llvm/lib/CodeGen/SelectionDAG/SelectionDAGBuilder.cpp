@@ -9196,10 +9196,13 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         break;
       case LibFunc_fminimum_num:
       case LibFunc_fminimum_numf:
+      case LibFunc_fminimum_numl:
         if (visitBinaryFloatCall(I, ISD::FMINIMUMNUM))
           return;
         break;
       case LibFunc_fmaximum_num:
+      case LibFunc_fmaximum_numf:
+      case LibFunc_fmaximum_numl:
         if (visitBinaryFloatCall(I, ISD::FMAXIMUMNUM))
           return;
         break;
