@@ -563,14 +563,15 @@ private:
   IndexedVersion Version;
 
   // Mappings from CallStackId to the indexes into the call stack array.
-  llvm::DenseMap<memprof::CallStackId, uint32_t> *MemProfCallStackIndexes;
+  llvm::DenseMap<memprof::CallStackId, LinearCallStackId>
+      *MemProfCallStackIndexes;
 
 public:
   // We do not support the default constructor, which does not set Version.
   RecordWriterTrait() = delete;
-  RecordWriterTrait(
-      const MemProfSchema *Schema, IndexedVersion V,
-      llvm::DenseMap<memprof::CallStackId, uint32_t> *MemProfCallStackIndexes)
+  RecordWriterTrait(const MemProfSchema *Schema, IndexedVersion V,
+                    llvm::DenseMap<memprof::CallStackId, LinearCallStackId>
+                        *MemProfCallStackIndexes)
       : Schema(Schema), Version(V),
         MemProfCallStackIndexes(MemProfCallStackIndexes) {}
 
