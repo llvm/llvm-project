@@ -32,6 +32,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaBase.h"
@@ -1347,6 +1348,8 @@ public:
   ExprResult ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
                                   SourceLocation LLoc, SourceLocation RLoc,
                                   ArrayRef<OMPIteratorData> Data);
+
+  void handleOMPAssumeAttr(Decl *D, const ParsedAttr &AL);
 
 private:
   void *VarDataSharingAttributesStack;

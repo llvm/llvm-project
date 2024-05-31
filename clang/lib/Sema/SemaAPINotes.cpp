@@ -17,6 +17,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaSwift.h"
 
 using namespace clang;
 
@@ -303,7 +304,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                         SourceLocation(), nullptr, nullptr, nullptr,
                         ParsedAttr::Form::GNU());
 
-          if (!S.DiagnoseSwiftName(D, Info.SwiftName, D->getLocation(), *SNA,
+          if (!S.Swift().DiagnoseName(D, Info.SwiftName, D->getLocation(), *SNA,
                                    /*IsAsync=*/false))
             return nullptr;
 

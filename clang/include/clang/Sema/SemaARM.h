@@ -13,8 +13,10 @@
 #ifndef LLVM_CLANG_SEMA_SEMAARM_H
 #define LLVM_CLANG_SEMA_SEMAARM_H
 
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/SmallVector.h"
 #include <tuple>
@@ -54,6 +56,15 @@ public:
   bool BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall, int ArgNum,
                             unsigned ExpectedFieldNum, bool AllowName);
   bool BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall);
+
+  bool MveAliasValid(unsigned BuiltinID, StringRef AliasName);
+  bool CdeAliasValid(unsigned BuiltinID, StringRef AliasName);
+  bool SveAliasValid(unsigned BuiltinID, StringRef AliasName);
+  bool SmeAliasValid(unsigned BuiltinID, StringRef AliasName);
+  void handleBuiltinAliasAttr(Decl *D, const ParsedAttr &AL);
+  void handleNewAttr(Decl *D, const ParsedAttr &AL);
+  void handleCmseNSEntryAttr(Decl *D, const ParsedAttr &AL);
+  void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
 };
 
 SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD);

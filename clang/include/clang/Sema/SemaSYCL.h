@@ -14,9 +14,11 @@
 #define LLVM_CLANG_SEMA_SEMASYCL_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/DenseSet.h"
 
@@ -58,6 +60,8 @@ public:
                                        SourceLocation LParen,
                                        SourceLocation RParen,
                                        ParsedType ParsedTy);
+
+  void handleKernelAttr(Decl *D, const ParsedAttr &AL);
 };
 
 } // namespace clang

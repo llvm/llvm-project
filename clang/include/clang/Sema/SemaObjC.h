@@ -1007,6 +1007,57 @@ public:
                                        ObjCInterfaceDecl *IDecl);
 
   ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name ObjC Attributes
+  /// Implementations are in SemaObjC.cpp
+  ///@{
+
+  bool isNSStringType(QualType T, bool AllowNSAttributedString = false);
+  bool isCFStringType(QualType T);
+
+  void handleIBOutlet(Decl *D, const ParsedAttr &AL);
+  void handleIBOutletCollection(Decl *D, const ParsedAttr &AL);
+
+  void handleSuppresProtocolAttr(Decl *D, const ParsedAttr &AL);
+  void handleDirectAttr(Decl *D, const ParsedAttr &AL);
+  void handleDirectMembersAttr(Decl *D, const ParsedAttr &AL);
+  void handleMethodFamilyAttr(Decl *D, const ParsedAttr &AL);
+  void handleNSObject(Decl *D, const ParsedAttr &AL);
+  void handleIndependentClass(Decl *D, const ParsedAttr &AL);
+  void handleBlocksAttr(Decl *D, const ParsedAttr &AL);
+  void handleReturnsInnerPointerAttr(Decl *D, const ParsedAttr &Attrs);
+  void handleXReturnsXRetainedAttr(Decl *D, const ParsedAttr &AL);
+  void handleRequiresSuperAttr(Decl *D, const ParsedAttr &Attrs);
+  void handleNSErrorDomain(Decl *D, const ParsedAttr &Attr);
+  void handleBridgeAttr(Decl *D, const ParsedAttr &AL);
+  void handleBridgeMutableAttr(Decl *D, const ParsedAttr &AL);
+  void handleBridgeRelatedAttr(Decl *D, const ParsedAttr &AL);
+  void handleDesignatedInitializer(Decl *D, const ParsedAttr &AL);
+  void handleRuntimeName(Decl *D, const ParsedAttr &AL);
+  void handleBoxable(Decl *D, const ParsedAttr &AL);
+  void handleOwnershipAttr(Decl *D, const ParsedAttr &AL);
+  void handlePreciseLifetimeAttr(Decl *D, const ParsedAttr &AL);
+  void handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL);
+
+  void AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
+                            Sema::RetainOwnershipKind K,
+                            bool IsTemplateInstantiation);
+
+  /// \return whether the parameter is a pointer to OSObject pointer.
+  bool isValidOSObjectOutParameter(const Decl *D);
+  bool checkNSReturnsRetainedReturnType(SourceLocation loc, QualType type);
+
+  Sema::RetainOwnershipKind
+  parsedAttrToRetainOwnershipKind(const ParsedAttr &AL);
+
+
+  ///@}
 };
 
 } // namespace clang

@@ -20,6 +20,7 @@
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
 #include <initializer_list>
@@ -50,6 +51,13 @@ public:
       const Attr *A, HLSLShaderAttr::ShaderType Stage,
       std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages);
   void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
+
+  void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
+  void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
+  void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
+  void handleShaderAttr(Decl *D, const ParsedAttr &AL);
+  void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
+  void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
 };
 
 } // namespace clang

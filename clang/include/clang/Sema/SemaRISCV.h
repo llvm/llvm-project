@@ -18,6 +18,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/RISCVIntrinsicManager.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/StringMap.h"
@@ -35,6 +36,9 @@ public:
                            const llvm::StringMap<bool> &FeatureMap);
 
   bool isValidRVVBitcast(QualType srcType, QualType destType);
+
+  void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
+  bool isAliasValid(unsigned BuiltinID, StringRef AliasName);
 
   /// Indicate RISC-V vector builtin functions enabled or not.
   bool DeclareRVVBuiltins = false;

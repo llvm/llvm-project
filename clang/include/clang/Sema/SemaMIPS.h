@@ -13,8 +13,10 @@
 #ifndef LLVM_CLANG_SEMA_SEMAMIPS_H
 #define LLVM_CLANG_SEMA_SEMAMIPS_H
 
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
@@ -27,6 +29,7 @@ public:
   bool CheckMipsBuiltinCpu(const TargetInfo &TI, unsigned BuiltinID,
                            CallExpr *TheCall);
   bool CheckMipsBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall);
+  void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
 };
 } // namespace clang
 

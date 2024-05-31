@@ -171,4 +171,22 @@ bool SemaBPF::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
   return false;
 }
 
+void SemaBPF::handlePreserveAIRecord(RecordDecl *RD) {
+  // Add preserve_access_index attribute to all fields and inner records.
+  for (auto *D : RD->decls()) {
+    if (D->hasAttr<BPFPreserveAccessIndexAttr>())
+      continue;
+
+    D->addAttr(BPFPreserveAccessIndexAttr::CreateImplicit(getASTContext()));
+    if (auto *Rec = dyn_cast<RecordDecl>(D))
+      handlePreserveAIRecord(Rec);
+  }
+}
+
+void SemaBPF::handlePreserveAccessIndexAttr(Decl *D, const ParsedAttr &AL) {
+  auto *Rec = cast<RecordDecl>(D);
+  handlePreserveAIRecord(Rec);
+  Rec->addAttr(::new (getASTContext()) BPFPreserveAccessIndexAttr(getASTContext(), AL));
+}
+
 } // namespace clang
