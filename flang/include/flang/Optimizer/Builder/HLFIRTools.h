@@ -116,7 +116,7 @@ public:
     return fir::isRecordWithTypeParameters(getFortranElementType());
   }
 
-  bool hasNonDefaultLowerBounds() const;
+  bool mayHaveNonDefaultLowerBounds() const;
 
   // Is this entity known to be contiguous at compile time?
   // Note that when this returns false, the entity may still
