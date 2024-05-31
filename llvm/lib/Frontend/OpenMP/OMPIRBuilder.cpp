@@ -1700,6 +1700,12 @@ void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
     return;
   emitTaskyieldImpl(Loc);
 }
+
+// Processes the dependencies in Dependencies and does the following
+// - Allocates space on the stack of an array of DependInfo objects
+// - Populates each DependInfo object with relevant information of
+//   the corresponding dependence.
+// - All code is inserted in the entry block of the current function.
 static Value *
 emitDepArray(OpenMPIRBuilder &OMPBuilder,
              SmallVector<OpenMPIRBuilder::DependData> &Dependencies) {
