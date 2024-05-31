@@ -1,4 +1,3 @@
-// REQUIRES: m68k-registered-target
 // RUN: %clang --target=m68k -ffixed-a0 -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-FIXED-A0 < %t %s
 // CHECK-FIXED-A0: "-target-feature" "+reserve-a0"

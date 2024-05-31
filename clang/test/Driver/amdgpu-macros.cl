@@ -1,4 +1,3 @@
-// REQUIRES: amdgpu-registered-target
 // Check that appropriate macros are defined for every supported AMDGPU
 // "-target" and "-mcpu" options.
 

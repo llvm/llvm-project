@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // Check invalid -fuse-cuid= option.
 
 // RUN: not %clang -### -x hip \

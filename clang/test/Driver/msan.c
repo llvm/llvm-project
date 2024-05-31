@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target
-
 // RUN: %clang --target=mips64-linux-gnu -fsanitize=memory %s -S -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK0
 // RUN: %clang --target=mips64el-unknown-linux-gnu -fsanitize=memory %s -S -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK0
 // RUN: %clang --target=powerpc64-unknown-linux-gnu -fsanitize=memory %s -S -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK0

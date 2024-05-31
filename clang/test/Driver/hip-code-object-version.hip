@@ -1,6 +1,3 @@
-// REQUIRES: amdgpu-registered-target
-
-
 // Check bundle ID for code object version 4.
 
 // RUN: not %clang -### --target=x86_64-linux-gnu \
