@@ -2123,23 +2123,22 @@ bool DWARFExpression::Evaluate(
 
           const Value::ValueType curr_piece_source_value_type =
               curr_piece_source_value.GetValueType();
+          Scalar &scalar = curr_piece_source_value.GetScalar();
+          const lldb::addr_t addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
           switch (curr_piece_source_value_type) {
           case Value::ValueType::Invalid:
             return false;
           case Value::ValueType::LoadAddress:
             if (process) {
               if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
-                lldb::addr_t load_addr =
-                    curr_piece_source_value.GetScalar().ULongLong(
-                        LLDB_INVALID_ADDRESS);
-                if (process->ReadMemory(
-                        load_addr, curr_piece.GetBuffer().GetBytes(),
-                        piece_byte_size, error) != piece_byte_size) {
+                if (process->ReadMemory(addr, curr_piece.GetBuffer().GetBytes(),
+                                        piece_byte_size,
+                                        error) != piece_byte_size) {
                   if (error_ptr)
                     error_ptr->SetErrorStringWithFormat(
                         "failed to read memory DW_OP_piece(%" PRIu64
-                        ") from 0x%" PRIx64,
-                        piece_byte_size, load_addr);
+                        ") from load address 0x%" PRIx64,
+                        piece_byte_size, addr);
                   return false;
                 }
               } else {
@@ -2153,26 +2152,42 @@ bool DWARFExpression::Evaluate(
             }
             break;
 
-          case Value::ValueType::FileAddress:
-          case Value::ValueType::HostAddress:
-            if (error_ptr) {
-              lldb::addr_t addr = curr_piece_source_value.GetScalar().ULongLong(
-                  LLDB_INVALID_ADDRESS);
+          case Value::ValueType::FileAddress: {
+            if (target) {
+              if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
+                if (target->ReadMemory(addr, curr_piece.GetBuffer().GetBytes(),
+                                       piece_byte_size, error,
+                                       /*force_live_memory=*/false) !=
+                    piece_byte_size) {
+                  if (error_ptr)
+                    error_ptr->SetErrorStringWithFormat(
+                        "failed to read memory DW_OP_piece(%" PRIu64
+                        ") from file address 0x%" PRIx64,
+                        piece_byte_size, addr);
+                  return false;
+                }
+              } else {
+                if (error_ptr)
+                  error_ptr->SetErrorStringWithFormat(
+                      "failed to resize the piece memory buffer for "
+                      "DW_OP_piece(%" PRIu64 ")",
+                      piece_byte_size);
+                return false;
+              }
+            }
+          } break;
+          case Value::ValueType::HostAddress: {
+            if (error_ptr)
               error_ptr->SetErrorStringWithFormat(
                   "failed to read memory DW_OP_piece(%" PRIu64
-                  ") from %s address 0x%" PRIx64,
-                  piece_byte_size, curr_piece_source_value.GetValueType() ==
-                                           Value::ValueType::FileAddress
-                                       ? "file"
-                                       : "host",
-                  addr);
-            }
+                  ") from host address 0x%" PRIx64,
+                  piece_byte_size, addr);
             return false;
+          } break;
 
           case Value::ValueType::Scalar: {
             uint32_t bit_size = piece_byte_size * 8;
             uint32_t bit_offset = 0;
-            Scalar &scalar = curr_piece_source_value.GetScalar();
             if (!scalar.ExtractBitfield(
                     bit_size, bit_offset)) {
               if (error_ptr)

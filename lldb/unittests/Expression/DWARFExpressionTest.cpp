@@ -768,3 +768,63 @@ Sections:
 
   testExpressionVendorExtensions(dwo_module_sp, *dwo_dwarf_unit);
 }
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
+  struct MockTarget : Target {
+    MockTarget(Debugger &debugger, const ArchSpec &target_arch,
+               const lldb::PlatformSP &platform_sp)
+        : Target(debugger, target_arch, platform_sp, true) {}
+
+    size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                      Status &error, bool force_live_memory = false,
+                      lldb::addr_t *load_addr_ptr = nullptr) override {
+      // We expected to be called in a very specific way.
+      assert(dst_len == 1);
+      assert(addr.GetOffset() == 0x40 || addr.GetOffset() == 0x50);
+
+      if (addr.GetOffset() == 0x40)
+        ((uint8_t *)dst)[0] = 0x11;
+
+      if (addr.GetOffset() == 0x50)
+        ((uint8_t *)dst)[0] = 0x22;
+
+      return 1;
+    }
+  };
+
+  // Set up a mock process.
+  ArchSpec arch("i386-pc-linux");
+  Platform::SetHostPlatform(
+      platform_linux::PlatformLinux::CreateInstance(true, &arch));
+  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  lldb::PlatformSP platform_sp;
+  lldb::TargetSP target_sp =
+      std::make_shared<MockTarget>(*debugger_sp, arch, platform_sp);
+  ASSERT_TRUE(target_sp);
+  ASSERT_TRUE(target_sp->GetArchitecture().IsValid());
+
+  ExecutionContext exe_ctx(target_sp, false);
+
+  uint8_t expr[] = {DW_OP_addr, 0x40, 0x0, 0x0, 0x0, DW_OP_piece, 1,
+                    DW_OP_addr, 0x50, 0x0, 0x0, 0x0, DW_OP_piece, 1};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 4);
+  Value result;
+  Status status;
+  ASSERT_TRUE(DWARFExpression::Evaluate(
+      &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor,
+      /*unit*/ nullptr, lldb::eRegisterKindLLDB,
+      /*initial_value_ptr*/ nullptr,
+      /*object_address_ptr*/ nullptr, result, &status))
+      << status.ToError();
+
+  ASSERT_EQ(result.GetValueType(), Value::ValueType::HostAddress);
+
+  DataBufferHeap &buf = result.GetBuffer();
+  ASSERT_EQ(buf.GetByteSize(), 2U);
+
+  const uint8_t *bytes = buf.GetBytes();
+  EXPECT_EQ(bytes[0], 0x11);
+  EXPECT_EQ(bytes[1], 0x22);
+}
