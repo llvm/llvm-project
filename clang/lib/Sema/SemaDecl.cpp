@@ -9325,7 +9325,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         SemaRef.Context, DC, D.getBeginLoc(), NameInfo, R, TInfo, SC,
         SemaRef.getCurFPFeatures().isFPConstrained(), isInline, HasPrototype,
         ConstexprSpecKind::Unspecified,
-        /*TrailingRequiresClause=*/nullptr);
+        /*TrailingRequiresClause=*/nullptr, {});
     if (D.isInvalidType())
       NewFD->setInvalidDecl();
 
@@ -9334,6 +9334,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
 
   ExplicitSpecifier ExplicitSpecifier = D.getDeclSpec().getExplicitSpecifier();
   Expr *TrailingRequiresClause = D.getTrailingRequiresClause();
+  SmallVector<Expr*> PreContracts = D.getPreContracts();
 
   SemaRef.CheckExplicitObjectMemberFunction(DC, D, Name, R);
 
@@ -9347,7 +9348,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         SemaRef.Context, cast<CXXRecordDecl>(DC), D.getBeginLoc(), NameInfo, R,
         TInfo, ExplicitSpecifier, SemaRef.getCurFPFeatures().isFPConstrained(),
         isInline, /*isImplicitlyDeclared=*/false, ConstexprKind,
-        InheritedConstructor(), TrailingRequiresClause);
+        InheritedConstructor(), TrailingRequiresClause, PreContracts);
 
   } else if (Name.getNameKind() == DeclarationName::CXXDestructorName) {
     // This is a C++ destructor declaration.
@@ -9382,7 +9383,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
       return FunctionDecl::Create(
           SemaRef.Context, DC, D.getBeginLoc(), D.getIdentifierLoc(), Name, R,
           TInfo, SC, SemaRef.getCurFPFeatures().isFPConstrained(), isInline,
-          /*hasPrototype=*/true, ConstexprKind, TrailingRequiresClause);
+          /*hasPrototype=*/true, ConstexprKind, TrailingRequiresClause, PreContracts);
     }
 
   } else if (Name.getNameKind() == DeclarationName::CXXConversionFunctionName) {
@@ -9401,7 +9402,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         SemaRef.Context, cast<CXXRecordDecl>(DC), D.getBeginLoc(), NameInfo, R,
         TInfo, SemaRef.getCurFPFeatures().isFPConstrained(), isInline,
         ExplicitSpecifier, ConstexprKind, SourceLocation(),
-        TrailingRequiresClause);
+        TrailingRequiresClause, PreContracts);
 
   } else if (Name.getNameKind() == DeclarationName::CXXDeductionGuideName) {
     if (TrailingRequiresClause)
@@ -9430,7 +9431,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     CXXMethodDecl *Ret = CXXMethodDecl::Create(
         SemaRef.Context, cast<CXXRecordDecl>(DC), D.getBeginLoc(), NameInfo, R,
         TInfo, SC, SemaRef.getCurFPFeatures().isFPConstrained(), isInline,
-        ConstexprKind, SourceLocation(), TrailingRequiresClause);
+        ConstexprKind, SourceLocation(), TrailingRequiresClause, PreContracts);
     IsVirtualOkay = !Ret->isStatic();
     return Ret;
   } else {
@@ -9445,7 +9446,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     return FunctionDecl::Create(
         SemaRef.Context, DC, D.getBeginLoc(), NameInfo, R, TInfo, SC,
         SemaRef.getCurFPFeatures().isFPConstrained(), isInline,
-        true /*HasPrototype*/, ConstexprKind, TrailingRequiresClause);
+        true /*HasPrototype*/, ConstexprKind, TrailingRequiresClause, PreContracts);
   }
 }
 
