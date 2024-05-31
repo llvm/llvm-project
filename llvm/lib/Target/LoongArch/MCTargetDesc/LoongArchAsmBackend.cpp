@@ -214,8 +214,8 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(
 
   // Calculate total Nops we need to insert. If there are none to insert
   // then simply return.
-  unsigned Count;
-  if (!shouldInsertExtraNopBytesForCodeAlign(AF, Count))
+  unsigned InsertedNopBytes;
+  if (!shouldInsertExtraNopBytesForCodeAlign(AF, InsertedNopBytes))
     return false;
 
   MCSection *Sec = AF.getParent();
@@ -224,25 +224,26 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(
   // Create fixup_loongarch_align fixup.
   MCFixup Fixup =
       MCFixup::create(0, Dummy, MCFixupKind(LoongArch::fixup_loongarch_align));
+  unsigned MaxBytesToEmit = AF.getMaxBytesToEmit();
 
   auto createExtendedValue = [&]() {
     const MCSymbolRefExpr *MCSym = getSecToAlignSym()[Sec];
     if (MCSym == nullptr) {
-      // Create a symbol and make the value of symbol is zero.
+      // Define a marker symbol at the section with an offset of 0.
       MCSymbol *Sym = Ctx.createNamedTempSymbol("la-relax-align");
       Sym->setFragment(&*Sec->getBeginSymbol()->getFragment());
       Asm.registerSymbol(*Sym);
       MCSym = MCSymbolRefExpr::create(Sym, Ctx);
       getSecToAlignSym()[Sec] = MCSym;
     }
-    unsigned Lo = Log2_64(Count) + 1;
-    unsigned Hi = AF.getMaxBytesToEmit();
-    return MCValue::get(MCSym, nullptr, Hi << 8 | Lo);
+    return MCValue::get(MCSym, nullptr,
+                        MaxBytesToEmit << 8 | Log2(AF.getAlignment()));
   };
 
   uint64_t FixedValue = 0;
-  MCValue Value = AF.getMaxBytesToEmit() >= Count ? MCValue::get(Count)
-                                                  : createExtendedValue();
+  MCValue Value = MaxBytesToEmit >= InsertedNopBytes
+                      ? MCValue::get(InsertedNopBytes)
+                      : createExtendedValue();
   Asm.getWriter().recordRelocation(Asm, Layout, &AF, Fixup, Value, FixedValue);
 
   return true;
