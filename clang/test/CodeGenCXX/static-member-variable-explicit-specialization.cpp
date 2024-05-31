@@ -14,7 +14,7 @@ int f();
 
 // ELF-SELECTANY: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @selectany }]
 // ELF-SELECTANY: @llvm.used = appending global [1 x ptr] [ptr @selectany]
-// GLOBALAS-ELF-SELECTANY: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @selectany }]
+// GLOBALAS-ELF-SELECTANY: @llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr addrspace(1) }] [{ i32, ptr, ptr addrspace(1) } { i32 65535, ptr @__cxx_global_var_init, ptr addrspace(1) @selectany }]
 int __declspec(selectany) selectany = f();
 
 #else
@@ -33,7 +33,7 @@ template<> int A<char>::a;
 template<> int A<bool>::a = 10;
 
 // ALL: @llvm.global_ctors = appending global [16 x { i32, ptr, ptr }]
-// GLOBALAS-ELF: @llvm.global_ctors = appending global [16 x { i32, ptr, ptr }]
+// GLOBALAS-ELF: @llvm.global_ctors = appending addrspace(1) global [16 x { i32, ptr, ptr addrspace(1) }]
 
 // ELF:  [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered:[^,]*]], ptr @_ZN1AIsE1aE },
 // MACHO: [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered:[^,]*]], ptr null },
