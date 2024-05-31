@@ -47,7 +47,7 @@ class UnrollBitCastOp final : public OpRewritePattern<vector::BitCastOp> {
 public:
   UnrollBitCastOp(int64_t targetRank, MLIRContext *context,
                   PatternBenefit benefit = 1)
-      : OpRewritePattern(context, benefit), targetRank(targetRank){};
+      : OpRewritePattern(context, benefit), targetRank(targetRank) {};
 
   LogicalResult matchAndRewrite(vector::BitCastOp op,
                                 PatternRewriter &rewriter) const override {
