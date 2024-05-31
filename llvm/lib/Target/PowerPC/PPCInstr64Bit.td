@@ -1487,9 +1487,7 @@ def ADDItocL8: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:
 // Local Data Transform
 def ADDItoc8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
                    "#ADDItoc8",
-                   [(set i64:$rD,
-                     (PPCtoc_entry i64:$reg, tglobaladdr:$disp))]>, isPPC64;
-
+                   []>, isPPC64;
 let mayLoad = 1 in
 def LDtocL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc_nox0:$reg),
                    "#LDtocL", []>, isPPC64;

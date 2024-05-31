@@ -6098,10 +6098,13 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       SDValue TocBase = TocEntry->getOperand(1);
       SDNode *MN = nullptr;
       if (OpCode == PPC::ADDItoc || OpCode == PPC::ADDItoc8)
+        // toc-data access doesn't involve in loading from got, no need to
+        // keep memory operands.
         MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, TocBase, GA);
-      else
+      else {
         MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, GA, TocBase);
-      transferMemOperands(TocEntry, MN);
+        transferMemOperands(TocEntry, MN);
+      }
       ReplaceNode(TocEntry, MN);
     };
 
