@@ -15,9 +15,9 @@ namespace LIBC_NAMESPACE::internal {
 // mark as no_stack_protector for x86 since TLS can be torn down before calling
 // exit so that the stack protector canary cannot be loaded.
 #ifdef LIBC_TARGET_ARCH_IS_X86
-[[clang::no_stack_protector]]
+__attribute__((no_stack_protector))
 #endif
-[[noreturn]] void
+__attribute__((noreturn)) void
 exit(int status) {
   for (;;) {
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit_group, status);
