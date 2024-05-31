@@ -49,7 +49,7 @@ static size_t serializedSizeV3(const IndexedAllocationInfo &IAI,
                                const MemProfSchema &Schema) {
   size_t Size = 0;
   // The linear call stack ID.
-  Size += sizeof(uint32_t);
+  Size += sizeof(LinearCallStackId);
   // The size of the payload.
   Size += PortableMemInfoBlock::serializedSize(Schema);
   return Size;
@@ -110,7 +110,7 @@ static size_t serializedSizeV3(const IndexedMemProfRecord &Record,
   // The number of callsites we have information for.
   Result += sizeof(uint64_t);
   // The linear call stack ID.
-  Result += Record.CallSiteIds.size() * sizeof(uint32_t);
+  Result += Record.CallSiteIds.size() * sizeof(LinearCallStackId);
   return Result;
 }
 
@@ -308,8 +308,12 @@ static IndexedMemProfRecord deserializeV3(const MemProfSchema &Schema,
       endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   Record.CallSiteIds.reserve(NumCtxs);
   for (uint64_t J = 0; J < NumCtxs; J++) {
-    CallStackId CSId =
-        endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
+    // We are storing LinearCallStackId in CallSiteIds, which is a vector of
+    // CallStackId.  Assert that CallStackId is no smaller than
+    // LinearCallStackId.
+    static_assert(sizeof(LinearCallStackId) <= sizeof(CallStackId));
+    LinearCallStackId CSId =
+        endian::readNext<LinearCallStackId, llvm::endianness::little>(Ptr);
     Record.CallSiteIds.push_back(CSId);
   }
 
