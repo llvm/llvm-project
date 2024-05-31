@@ -28,6 +28,11 @@ TEST(LlvmLibcArrayTest, Basic) {
   ASSERT_EQ(*(++it), 1);
   ASSERT_EQ(*(++it), 0);
 
+  auto forward_it = a.begin();
+  ASSERT_EQ(*forward_it, 0);
+  ASSERT_EQ(*(++forward_it), 1);
+  ASSERT_EQ(*(++forward_it), 2);
+
   for (int &x : a)
     ASSERT_GE(x, 0);
 }
