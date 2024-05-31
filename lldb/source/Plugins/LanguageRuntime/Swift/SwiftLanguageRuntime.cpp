@@ -2766,7 +2766,6 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   plan->SetSourcedFromCompiler(eLazyBoolNo);
   plan->SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
   plan->SetUnwindPlanForSignalTrap(eLazyBoolYes);
-  behaves_like_zeroth_frame = true;
   return plan;
 }
 

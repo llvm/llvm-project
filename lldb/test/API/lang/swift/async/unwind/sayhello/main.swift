@@ -20,9 +20,18 @@ func sayGeneric<T>(_ msg: T) async {
   print("\(str) after calls - arg \(msg)")
 }
 
+func synchronousSayHelo() {
+  print("synchronously saying hello") // break synchronous hello
+}
+
+func callSyncHello() async {
+  synchronousSayHelo() // frame 1 line
+}
+
 @main struct Main {
   static func main() async {
     await sayGeneric("world")
     await sayHello()
+    await callSyncHello()
   }
 }
