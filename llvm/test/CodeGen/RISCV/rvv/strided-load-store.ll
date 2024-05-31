@@ -299,6 +299,26 @@ define void @constant_stride(<vscale x 1 x i64> %x, ptr %p, i64 %stride) {
   ret void
 }
 
+define <vscale x 1 x i64> @vector_base_scalar_offset(ptr %p, i64 %offset) {
+; CHECK-LABEL: @vector_base_scalar_offset(
+; CHECK-NEXT:    [[STEP:%.*]] = call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
+; CHECK-NEXT:    [[PTRS1:%.*]] = getelementptr i64, ptr [[P:%.*]], <vscale x 1 x i64> [[STEP]]
+; CHECK-NEXT:    [[PTRS2:%.*]] = getelementptr i64, <vscale x 1 x ptr> [[PTRS1]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> [[PTRS2]], i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), <vscale x 1 x i64> poison)
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
+;
+  %step = call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
+  %ptrs1 = getelementptr i64, ptr %p, <vscale x 1 x i64> %step
+  %ptrs2 = getelementptr i64, <vscale x 1 x ptr> %ptrs1, i64 %offset
+  %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
+  <vscale x 1 x ptr> %ptrs2,
+  i32 8,
+  <vscale x 1 x i1> splat (i1 1),
+  <vscale x 1 x i64> poison
+  )
+  ret <vscale x 1 x i64> %x
+}
+
 declare i64 @llvm.vscale.i64()
 declare void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64>, <vscale x 1 x ptr>, i32, <vscale x 1 x i1>)
 declare <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x i64>)
