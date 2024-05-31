@@ -11700,7 +11700,8 @@ public:
       R.eraseInstruction(EI);
     }
     if (NumParts == 1 || UniqueBases.size() == 1) {
-      return VecBase ? castToScalarTyElem(VecBase) : nullptr;
+      assert(VecBase && "Expected vectorized value.");
+      return castToScalarTyElem(VecBase);
     }
     UseVecBaseAsInput = true;
     auto TransformToIdentity = [](MutableArrayRef<int> Mask) {
