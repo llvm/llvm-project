@@ -24,6 +24,9 @@ namespace llvm {
 
 /// A base class for all GenericMachineInstrs.
 class GenericMachineInstr : public MachineInstr {
+  constexpr static int PoisonFlags = NoUWrap | NoSWrap | NoUSWrap | IsExact |
+                                     Disjoint | NonNeg | FmNoNans | FmNoInfs;
+
 public:
   GenericMachineInstr() = delete;
 
@@ -35,14 +38,10 @@ public:
     return isPreISelGenericOpcode(MI->getOpcode());
   }
 
-  bool hasPoisonGeneratingFlags() const {
-    return getFlags() & (NoUWrap | NoSWrap | NoUSWrap | IsExact | Disjoint |
-                         NonNeg | FmNoNans | FmNoInfs);
-  }
+  bool hasPoisonGeneratingFlags() const { return getFlags() & PoisonFlags; }
 
   void dropPoisonGeneratingFlags() {
-    clearFlags(NoUWrap | NoSWrap | NoUSWrap | IsExact | Disjoint | NonNeg |
-               FmNoNans | FmNoInfs);
+    clearFlags(PoisonFlags);
     assert(!hasPoisonGeneratingFlags());
   }
 };

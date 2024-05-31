@@ -26,8 +26,8 @@ define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) #1 {
   ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; GCN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C1]](s32)
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
+  ; GCN-NEXT:   %4:_(p5) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C1]](s32)
+  ; GCN-NEXT:   G_STORE [[C]](s32), %4(p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
   ; GCN-NEXT:   $vgpr0 = COPY [[ADD]](s32)
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0
@@ -68,8 +68,8 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_stack_object(i32 %a, i32 %b, 
   ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; GCN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C1]](s32)
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
+  ; GCN-NEXT:   %5:_(p5) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C1]](s32)
+  ; GCN-NEXT:   G_STORE [[C]](s32), %5(p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32
   ; GCN-NEXT:   $vgpr0 = COPY [[COPY]](s32)
   ; GCN-NEXT:   $vgpr1 = COPY [[COPY1]](s32)
@@ -95,8 +95,8 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_callee_stack_object(i32 %a, i
   ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; GCN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C1]](s32)
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
+  ; GCN-NEXT:   %5:_(p5) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C1]](s32)
+  ; GCN-NEXT:   G_STORE [[C]](s32), %5(p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_stack_object
   ; GCN-NEXT:   $vgpr0 = COPY [[COPY]](s32)
   ; GCN-NEXT:   $vgpr1 = COPY [[COPY1]](s32)
@@ -451,8 +451,8 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32_stack_object(i32 %a, i
   ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; GCN-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw G_PTR_ADD [[FRAME_INDEX3]], [[C1]](s32)
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
+  ; GCN-NEXT:   %39:_(p5) = nuw nusw G_PTR_ADD [[FRAME_INDEX3]], [[C1]](s32)
+  ; GCN-NEXT:   G_STORE [[C]](s32), %39(p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_a32i32
   ; GCN-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
   ; GCN-NEXT:   G_STORE [[LOAD]](s32), [[FRAME_INDEX4]](p5) :: (store (s32) into %fixed-stack.2, align 16, addrspace 5)
@@ -646,8 +646,8 @@ define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32(i32 %a, i3
   ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; GCN-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw G_PTR_ADD [[FRAME_INDEX3]], [[C1]](s32)
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
+  ; GCN-NEXT:   %39:_(p5) = nuw nusw G_PTR_ADD [[FRAME_INDEX3]], [[C1]](s32)
+  ; GCN-NEXT:   G_STORE [[C]](s32), %39(p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_a32i32
   ; GCN-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
   ; GCN-NEXT:   G_STORE [[LOAD]](s32), [[FRAME_INDEX4]](p5) :: (store (s32) into %fixed-stack.2, align 16, addrspace 5)
@@ -751,8 +751,8 @@ define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32_larger_arg
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GCN-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw G_PTR_ADD [[FRAME_INDEX7]], [[C2]](s32)
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
+  ; GCN-NEXT:   %47:_(p5) = nuw nusw G_PTR_ADD [[FRAME_INDEX7]], [[C2]](s32)
+  ; GCN-NEXT:   G_STORE [[C]](s32), %47(p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_a32i32
   ; GCN-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
   ; GCN-NEXT:   G_STORE [[C1]](s32), [[FRAME_INDEX8]](p5) :: (store (s32) into %fixed-stack.2, align 16, addrspace 5)
