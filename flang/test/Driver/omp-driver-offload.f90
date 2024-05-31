@@ -130,14 +130,14 @@
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
 ! RUN: -fopenmp-targets=amdgcn-amd-amdhsa \
-! RUN: -fopenmp-target-debug -nogpulib\
-! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
+! RUN: -fopenmp-target-debug=111 -nogpulib\
+! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG-EQ
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=sm_70 \
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
-! RUN: -fopenmp-target-debug \
-! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
-! CHECK-TARGET-DEBUG: "{{[^"]*}}flang" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug=111" {{.*}}.f90"
+! RUN: -fopenmp-target-debug=111 \
+! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG-EQ
+! CHECK-TARGET-DEBUG-EQ: "{{[^"]*}}flang" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug=111" {{.*}}.f90"
 
 ! RUN: %flang -S -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
