@@ -73,6 +73,7 @@ Error PLTCall::runOnFunctions(BinaryContext &BC) {
         const InstructionListType NewCode = BC.MIB->createIndirectPltCall(
             *II, CalleeBF->getPLTSymbol(), BC.Ctx.get());
         II = BB.replaceInstruction(II, NewCode);
+        assert(!NewCode.empty() && "PLT Call replacement must be non-empty");
         std::advance(II, NewCode.size() - 1);
         BC.MIB->addAnnotation(*II, "PLTCall", true);
         ++NumCallsOptimized;
