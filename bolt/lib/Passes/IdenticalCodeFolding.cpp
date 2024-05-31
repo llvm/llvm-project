@@ -79,7 +79,7 @@ static bool equalJumpTables(const JumpTable &JumpTableA,
     }
 
     assert(TargetA && TargetB && "cannot locate target block(s)");
-      
+
     if (TargetA->getLayoutIndex() != TargetB->getLayoutIndex())
       return false;
   }
@@ -183,7 +183,7 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
   auto BBI = OrderB.begin();
   for (const BinaryBasicBlock *BB : OrderA) {
     const BinaryBasicBlock *OtherBB = *BBI;
-      
+
     if (BB->getLayoutIndex() != OtherBB->getLayoutIndex())
       return false;
 
