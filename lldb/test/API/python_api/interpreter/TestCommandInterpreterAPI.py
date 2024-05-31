@@ -167,7 +167,9 @@ class CommandInterpreterAPICase(TestBase):
         # (lldb) br s -f main.c -l <line>
         self.assertEqual(transcript[2]["command"], "br s -f main.c -l %d" % self.line)
         self.assertEqual(transcript[2]["commandName"], "breakpoint set")
-        self.assertEqual(transcript[2]["commandArguments"], "-f main.c -l %d" % self.line)
+        self.assertEqual(
+            transcript[2]["commandArguments"], "-f main.c -l %d" % self.line
+        )
         # Breakpoint 1: where = a.out`main + 29 at main.c:5:3, address = 0x0000000100000f7d
         self.assertIn("Breakpoint 1: where = a.out`main ", transcript[2]["output"])
         self.assertEqual(transcript[2]["error"], "")

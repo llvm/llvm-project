@@ -668,5 +668,5 @@ class TestCase(TestBase):
         self.runCmd("version")
 
         # Verify the output of a first "statistics dump"
-        debug_stats = self.get_stats() # Not with "--transcript"
+        debug_stats = self.get_stats()  # Not with "--transcript"
         self.assertNotIn("transcript", debug_stats)
