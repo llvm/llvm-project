@@ -405,9 +405,14 @@ static GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS) {
     ProfileVersion |= VARIANT_MASK_BYTE_COVERAGE;
   if (PGOTemporalInstrumentation)
     ProfileVersion |= VARIANT_MASK_TEMPORAL_PROF;
-  auto IRLevelVersionVariable = new GlobalVariable(
+  assert(!M.global_empty() &&
+         "If a module was instrumented, there must be defined global variables "
+         "at least for the counters.");
+  auto *InsertionPoint = &*M.global_begin();
+  auto *IRLevelVersionVariable = new GlobalVariable(
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
-      Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
+      Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName,
+      InsertionPoint);
   IRLevelVersionVariable->setVisibility(GlobalValue::HiddenVisibility);
   Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {
@@ -1829,11 +1834,6 @@ static bool InstrumentAllFunctions(
     Module &M, function_ref<TargetLibraryInfo &(Function &)> LookupTLI,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI, bool IsCS) {
-  // For the context-sensitve instrumentation, we should have a separated pass
-  // (before LTO/ThinLTO linking) to create these variables.
-  if (!IsCS && !PGOCtxProfLoweringPass::isContextualIRPGOEnabled())
-    createIRLevelProfileFlagVar(M, /*IsCS=*/false);
-
   Triple TT(M.getTargetTriple());
   LLVMContext &Ctx = M.getContext();
   if (!TT.isOSBinFormatELF() && EnableVTableValueProfiling)
@@ -1855,8 +1855,14 @@ static bool InstrumentAllFunctions(
     instrumentOneFunc(F, &M, TLI, BPI, BFI, ComdatMembers, IsCS);
     AnythingInstrumented = true;
   }
+
   if (!AnythingInstrumented)
     return false;
+
+  // For the context-sensitve instrumentation, we should have a separated pass
+  // (before LTO/ThinLTO linking) to create these variables.
+  if (!IsCS && !PGOCtxProfLoweringPass::isContextualIRPGOEnabled())
+    createIRLevelProfileFlagVar(M, /*IsCS=*/false);
 
   return true;
 }
