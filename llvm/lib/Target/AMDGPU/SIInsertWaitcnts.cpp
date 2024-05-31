@@ -671,8 +671,12 @@ private:
 
   WaitcntGenerator *WCG = nullptr;
 
+#if LLPC_BUILD_GFX12
+  // S_ENDPGM instructions before which we should deallocate the VGPRs.
+#else /* LLPC_BUILD_GFX12 */
   // S_ENDPGM instructions before which we should insert a DEALLOC_VGPRS
   // message.
+#endif /* LLPC_BUILD_GFX12 */
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
 
   InstCounterType MaxCounter = NUM_NORMAL_INST_CNTS;
@@ -1867,22 +1871,36 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
   }
+#if LLPC_BUILD_GFX12
+  // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
+  // Technically the hardware will do this on its own if we don't, but that
+  // might cost extra cycles compared to doing it explicitly.
+  // When not in dynamic VGPR mode, identify S_ENDPGM instructions which may
+  // have to wait for outstanding VMEM stores. In this case it can be useful to
+  // send a message to explicitly release all VGPRs before the stores have
+  // completed, but it is only safe to do this if there are no outstanding
+  // scratch stores.
+#else /* LLPC_BUILD_GFX12 */
   // Identify S_ENDPGM instructions which may have to wait for outstanding VMEM
   // stores. In this case it can be useful to send a message to explicitly
   // release all VGPRs before the stores have completed, but it is only safe to
   // do this if:
   // * there are no outstanding scratch stores
   // * we are not in Dynamic VGPR mode
+#endif /* LLPC_BUILD_GFX12 */
   else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
 #if LLPC_BUILD_GFX12
-    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
-        !ST->isDynamicVGPREnabled() && !WCG->isOptNone() &&
+    if (!WCG->isOptNone() &&
+        (ST->isDynamicVGPREnabled() ||
+         (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+          ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
+          !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))))
 #else /* LLPC_BUILD_GFX12 */
     if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 && !WCG->isOptNone() &&
-#endif /* LLPC_BUILD_GFX12 */
         ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
         !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))
+#endif /* LLPC_BUILD_GFX12 */
       ReleaseVGPRInsts.insert(&MI);
   }
   // Resolve vm waits before gs-done.
@@ -2797,15 +2815,15 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
-#if LLPC_BUILD_GFX12
     Modified = true;
+#if LLPC_BUILD_GFX12
   } else if (isExpertMode(MaxCounter)) {
     for (MachineBasicBlock::iterator E = EntryBB.end();
          I != E && (I->isPHI() || I->isMetaInstruction()); ++I)
       ;
     setSchedulingMode(EntryBB, *I, true);
-#endif /* LLPC_BUILD_GFX12 */
     Modified = true;
+#endif /* LLPC_BUILD_GFX12 */
   }
 
   // Keep iterating over the blocks in reverse post order, inserting and
@@ -2915,16 +2933,42 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+#if LLPC_BUILD_GFX12
+  // Deallocate the VGPRs before previously identified S_ENDPGM instructions.
+  // This is done in different ways depending on how the VGPRs were allocated
+  // (i.e. whether we're in dynamic VGPR mode or not).
+#else /* LLPC_BUILD_GFX12 */
   // Insert DEALLOC_VGPR messages before previously identified S_ENDPGM
   // instructions.
+#endif /* LLPC_BUILD_GFX12 */
   for (MachineInstr *MI : ReleaseVGPRInsts) {
+#if LLPC_BUILD_GFX12
+    if (ST->isDynamicVGPREnabled())
+      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+              TII->get(AMDGPU::S_ALLOC_VGPR))
+#else /* LLPC_BUILD_GFX12 */
     if (ST->requiresNopBeforeDeallocVGPRs()) {
       BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::S_NOP))
+#endif /* LLPC_BUILD_GFX12 */
           .addImm(0);
+#if LLPC_BUILD_GFX12
+    else {
+      if (ST->requiresNopBeforeDeallocVGPRs()) {
+        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                TII->get(AMDGPU::S_NOP))
+            .addImm(0);
+      }
+      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+              TII->get(AMDGPU::S_SENDMSG))
+          .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+#endif /* LLPC_BUILD_GFX12 */
     }
+#if LLPC_BUILD_GFX12
+#else /* LLPC_BUILD_GFX12 */
     BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
             TII->get(AMDGPU::S_SENDMSG))
         .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+#endif /* LLPC_BUILD_GFX12 */
     Modified = true;
   }
   ReleaseVGPRInsts.clear();

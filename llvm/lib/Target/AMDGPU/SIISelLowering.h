@@ -223,8 +223,7 @@ private:
   SDValue performClampCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performRcpCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
-  bool isLegalFlatAddressingMode(const AddrMode &AM, unsigned AddrSpace,
-                                 uint64_t FlatVariant) const;
+  bool isLegalFlatAddressingMode(const AddrMode &AM, unsigned AddrSpace) const;
   bool isLegalMUBUFAddressingMode(const AddrMode &AM) const;
 
   unsigned isCFIntrinsic(const SDNode *Intr) const;

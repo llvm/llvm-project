@@ -659,6 +659,10 @@ private:
   std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
   /// MemProf call stack data on-disk indexed via call stack id.
   std::unique_ptr<MemProfCallStackHashTable> MemProfCallStackTable;
+  /// The starting address of the frame array.
+  const unsigned char *FrameBase = nullptr;
+  /// The starting address of the call stack array.
+  const unsigned char *CallStackBase = nullptr;
 
   Error deserializeV012(const unsigned char *Start, const unsigned char *Ptr,
                         uint64_t FirstWord, memprof::IndexedVersion Version);

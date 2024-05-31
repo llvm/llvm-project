@@ -56,7 +56,6 @@ function compute-projects-to-test() {
   isForWindows=$1
   shift
   projects=${@}
-  echo "isForWindows : $isForWindows ; projects: $projects " >&2
   for project in ${projects}; do
     echo "${project}"
     case ${project} in

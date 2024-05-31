@@ -348,8 +348,7 @@ define <2 x i32> @narrow_lshr_constant(<2 x i8> %x, <2 x i8> %y) {
 
 define i32 @mul_splat_fold(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[X:%.*]], 65535
-; CHECK-NEXT:    ret i32 [[T]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %m = mul nuw i32 %x, 65537
   %t = lshr i32 %m, 16
@@ -362,8 +361,7 @@ define <3 x i14> @mul_splat_fold_vec(<3 x i14> %x) {
 ; CHECK-LABEL: @mul_splat_fold_vec(
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw <3 x i14> [[X:%.*]], <i14 129, i14 129, i14 129>
 ; CHECK-NEXT:    call void @usevec(<3 x i14> [[M]])
-; CHECK-NEXT:    [[T:%.*]] = and <3 x i14> [[X]], <i14 127, i14 127, i14 127>
-; CHECK-NEXT:    ret <3 x i14> [[T]]
+; CHECK-NEXT:    ret <3 x i14> [[X]]
 ;
   %m = mul nuw <3 x i14> %x, <i14 129, i14 129, i14 129>
   call void @usevec(<3 x i14> %m)
@@ -628,8 +626,6 @@ define i32 @mul_splat_fold_wrong_lshr_const(i32 %x) {
   ret i32 %t
 }
 
-; Negative test (but simplifies into a different transform)
-
 define i32 @mul_splat_fold_no_nuw(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_no_nuw(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 16
@@ -641,7 +637,7 @@ define i32 @mul_splat_fold_no_nuw(i32 %x) {
   ret i32 %t
 }
 
-; Negative test 
+; Negative test
 
 define i32 @mul_splat_fold_no_flags(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_no_flags(
