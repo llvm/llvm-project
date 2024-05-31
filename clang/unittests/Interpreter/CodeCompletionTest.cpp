@@ -5,10 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Unit tests for Clang's Interpreter library.
-//
-//===----------------------------------------------------------------------===//
 
 #include "InterpreterTestFixture.h"
 
@@ -18,9 +14,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/Sema.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "gmock/gmock.h"
@@ -32,12 +26,14 @@ auto CB = clang::IncrementalCompilerBuilder();
 
 class CodeCompletionTest : public InterpreterTestBase {
 public:
-  std::unique_ptr<CompilerInstance> CI;
   std::unique_ptr<Interpreter> Interp;
 
-  CodeCompletionTest()
-      : CI(cantFail(CB.CreateCpp())),
-        Interp(cantFail(clang::Interpreter::create(std::move(CI)))) {}
+  void SetUp() override {
+    if (!HostSupportsJIT())
+      GTEST_SKIP();
+    std::unique_ptr<CompilerInstance> CI = cantFail(CB.CreateCpp());
+    this->Interp = cantFail(clang::Interpreter::create(std::move(CI)));
+  }
 
   std::vector<std::string> runComp(llvm::StringRef Input, llvm::Error &ErrR) {
     auto ComplCI = CB.CreateCpp();
