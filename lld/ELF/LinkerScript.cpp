@@ -1390,8 +1390,8 @@ LinkerScript::AddressState::AddressState() {
 // Here we assign addresses as instructed by linker script SECTIONS
 // sub-commands. Doing that allows us to use final VA values, so here
 // we also handle rest commands like symbol assignments and ASSERTs.
-// Returns a symbol that has changed its section or value, or nullptr if no
-// symbol has changed.
+// Return an output section that has changed its address or null, and a symbol
+// that has changed its section or value (or nullptr if no symbol has changed).
 std::pair<const OutputSection *, const Defined *>
 LinkerScript::assignAddresses() {
   if (script->hasSectionsCommand) {
