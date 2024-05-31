@@ -5595,7 +5595,7 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   LocalInstantiationScope Scope(*this);
 
   EnterExpressionEvaluationContext EECtx{
-      *this, ExpressionEvaluationContext::ConstantEvaluated, CSD};
+      *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(

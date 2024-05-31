@@ -5014,7 +5014,7 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
   // We need the argument for T while evaluating type constraint D in
   // building the CallExpr to the lambda.
   EnterExpressionEvaluationContext EECtx(
-      S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+      S, Sema::ExpressionEvaluationContext::Unevaluated,
       ImplicitConceptSpecializationDecl::Create(
           S.getASTContext(), Concept->getDeclContext(), Concept->getLocation(),
           CanonicalConverted));
