@@ -353,16 +353,19 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
   Value *Base = GEP->getPointerOperand();
   if (auto *BaseInst = dyn_cast<Instruction>(Base);
       BaseInst && BaseInst->getType()->isVectorTy()) {
-    auto [BaseBase, Stride] = determineBaseAndStride(BaseInst, Builder);
     // If GEP's offset is scalar then we can add it to the base pointer's base.
     auto IsScalar = [](Value *Idx) { return !Idx->getType()->isVectorTy(); };
-    if (BaseBase && all_of(GEP->indices(), IsScalar)) {
-      Builder.SetInsertPoint(GEP);
-      SmallVector<Value *> Indices(GEP->indices());
-      Value *OffsetBase =
-          Builder.CreateGEP(GEP->getSourceElementType(), BaseBase, Indices, "",
-                            GEP->isInBounds());
-      return {OffsetBase, Stride};
+    if (all_of(GEP->indices(), IsScalar)) {
+      auto [BaseBase, Stride] = determineBaseAndStride(BaseInst, Builder);
+      if (BaseBase) {
+        Builder.SetInsertPoint(GEP);
+        SmallVector<Value *> Indices(GEP->indices());
+        Value *OffsetBase =
+            Builder.CreateGEP(GEP->getSourceElementType(), BaseBase, Indices,
+                              "", GEP->isInBounds());
+        OffsetBase->takeName(GEP);
+        return {OffsetBase, Stride};
+      }
     }
   }
 
