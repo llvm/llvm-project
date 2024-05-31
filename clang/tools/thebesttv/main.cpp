@@ -598,11 +598,13 @@ void generateFromInput(const ordered_json &input, fs::path outputDir) {
         }
     }
 
-    for (const auto &loc : Global.npeSuspectedSources) {
-        ordered_json j;
-        j["type"] = "npe-good-source";
-        j["locations"].push_back(loc);
-        output["results"].push_back(j);
+    if (!Global.noNpeGoodSource) {
+        for (const auto &loc : Global.npeSuspectedSources) {
+            ordered_json j;
+            j["type"] = "npe-good-source";
+            j["locations"].push_back(loc);
+            output["results"].push_back(j);
+        }
     }
 
     std::ofstream o(jsonResult);
@@ -652,6 +654,9 @@ int main(int argc, const char **argv) {
         argParser, "N", "DFS timeout in seconds, default 30", {'t'});
     args::Flag argKeepAST(argParser, "keep-ast", "Keep AST dumps on disk",
                           {"keep-ast"});
+    args::Flag argNoNpeGoodSource(argParser, "no-npe-good-source",
+                                  "Do not generate npe-good-source",
+                                  {"no-npe-good-source"});
 
     args::Positional<std::string> argIR(argParser, "IR", "Path to input.json",
                                         {args::Options::Required});
@@ -678,6 +683,8 @@ int main(int argc, const char **argv) {
     Global.dfsTick = getArgValue(argDfsTick, 1'000'000, "DFS tick");
     Global.dfsTimeout = getArgValue(argDfsTimeout, 30, "DFS timeout");
     Global.keepAST = getArgValue(argKeepAST, "Keep AST");
+    Global.noNpeGoodSource =
+        getArgValue(argNoNpeGoodSource, "No npe-good-source");
 
     setClangPath(argv[0]);
 

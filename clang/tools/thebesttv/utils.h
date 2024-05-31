@@ -215,6 +215,7 @@ struct GlobalStat {
     int dfsTick;
     int dfsTimeout;
     bool keepAST;
+    bool noNpeGoodSource;
 };
 
 SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context);
