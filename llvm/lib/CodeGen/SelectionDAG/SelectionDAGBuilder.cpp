@@ -7516,11 +7516,16 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::invariant_end:
     // Discard region information.
     return;
-  case Intrinsic::clear_cache:
-    /// FunctionName may be null.
-    if (const char *FunctionName = TLI.getClearCacheBuiltinName())
-      lowerCallToExternalSymbol(I, FunctionName);
+  case Intrinsic::clear_cache: {
+    SDValue InputChain = DAG.getRoot();
+    SDValue StartVal = getValue(I.getArgOperand(0));
+    SDValue EndVal = getValue(I.getArgOperand(1));
+    Res = DAG.getNode(ISD::CLEAR_CACHE, sdl, DAG.getVTList(MVT::Other),
+                      {InputChain, StartVal, EndVal});
+    setValue(&I, Res);
+    DAG.setRoot(Res);
     return;
+  }
   case Intrinsic::donothing:
   case Intrinsic::seh_try_begin:
   case Intrinsic::seh_scope_begin:

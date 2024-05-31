@@ -223,8 +223,7 @@ private:
   SDValue performClampCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performRcpCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
-  bool isLegalFlatAddressingMode(const AddrMode &AM, unsigned AddrSpace,
-                                 uint64_t FlatVariant) const;
+  bool isLegalFlatAddressingMode(const AddrMode &AM, unsigned AddrSpace) const;
   bool isLegalMUBUFAddressingMode(const AddrMode &AM) const;
 
   unsigned isCFIntrinsic(const SDNode *Intr) const;
@@ -275,7 +274,8 @@ private:
   // Handle 8 bit and 16 bit buffer loads
   SDValue handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT, SDLoc DL,
                                      ArrayRef<SDValue> Ops,
-                                     MachineMemOperand *MMO) const;
+                                     MachineMemOperand *MMO,
+                                     bool IsTFE = false) const;
 
   // Handle 8 bit and 16 bit buffer stores
   SDValue handleByteShortBufferStores(SelectionDAG &DAG, EVT VDataType,

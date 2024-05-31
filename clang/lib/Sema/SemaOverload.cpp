@@ -1482,7 +1482,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   }
 
   if (OldMethod && NewMethod && !OldMethod->isStatic() &&
-      !OldMethod->isStatic()) {
+      !NewMethod->isStatic()) {
     bool HaveCorrespondingObjectParameters = [&](const CXXMethodDecl *Old,
                                                  const CXXMethodDecl *New) {
       auto NewObjectType = New->getFunctionObjectParameterReferenceType();
@@ -10367,7 +10367,7 @@ static bool sameFunctionParameterTypeLists(Sema &S,
   FunctionDecl *Fn1 = Cand1.Function;
   FunctionDecl *Fn2 = Cand2.Function;
 
-  if (Fn1->isVariadic() != Fn1->isVariadic())
+  if (Fn1->isVariadic() != Fn2->isVariadic())
     return false;
 
   if (!S.FunctionNonObjectParamTypesAreEqual(
@@ -14363,7 +14363,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     if (Fn.isInvalid())
       return ExprError();
     return CXXOperatorCallExpr::Create(Context, Op, Fn.get(), ArgsArray,
-                                       Context.DependentTy, VK, OpLoc,
+                                       Context.DependentTy, VK_PRValue, OpLoc,
                                        CurFPFeatureOverrides());
   }
 
