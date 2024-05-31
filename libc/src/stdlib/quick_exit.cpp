@@ -1,4 +1,4 @@
-//===------------------- Implementation of _Exit --------------------------===//
+//===-- Implementation of quick_exit --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/stdlib/quick_exit.h"
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/common.h"
 
-#include "src/stdlib/_Exit.h"
+// extern "C" void __cxa_finalize(void *);
 
 namespace LIBC_NAMESPACE {
 
-[[noreturn]] LLVM_LIBC_FUNCTION(void, _Exit, (int status)) {
+[[noreturn]] LLVM_LIBC_FUNCTION(void, quick_exit, (int status)) {
+  // __cxa_finalize(nullptr);
   internal::exit(status);
 }
 

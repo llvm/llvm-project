@@ -1,4 +1,4 @@
-//===---------- GPU implementation of a quick exit function -----*- C++ -*-===//
+//===------------- GPU implementation of an exit function -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/OSUtil/quick_exit.h"
+#include "src/__support/OSUtil/exit.h"
 
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/macros/properties/architectures.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE::internal {
 
-[[noreturn]] void quick_exit(int status) {
+[[noreturn]] void exit(int status) {
   // We want to first make sure the server is listening before we exit.
   rpc::Client::Port port = rpc::client.open<RPC_EXIT>();
   port.send_and_recv([](rpc::Buffer *) {}, [](rpc::Buffer *) {});
@@ -25,4 +25,4 @@ namespace LIBC_NAMESPACE {
   gpu::end_program();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE::internal
