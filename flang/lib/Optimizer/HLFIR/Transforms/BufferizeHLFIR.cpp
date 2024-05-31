@@ -534,6 +534,11 @@ struct AssociateOpConversion
       mlir::Value firBase = hlfir::Entity{bufferizedExpr}.getFirBase();
       replaceWith(bufferizedExpr, firBase, mustFree);
       eraseAllUsesInDestroys(associate.getSource(), rewriter);
+      // Make sure to erase the hlfir.destroy if there is an indirection through
+      // a hlfir.no_reassoc operation.
+      if (auto noReassoc = mlir::dyn_cast_or_null<hlfir::NoReassocOp>(
+              associate.getSource().getDefiningOp()))
+        eraseAllUsesInDestroys(noReassoc.getVal(), rewriter);
       return mlir::success();
     }
     if (isTrivialValue) {
