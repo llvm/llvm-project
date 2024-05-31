@@ -40,12 +40,9 @@ public:
   }
 };
 
-/// Check if the signedness of type \p ty matches the expected
-/// signedness, and issue a type with the correct signedness if
-/// necessary.
+/// Get the signed or unsigned type corresponding to \p ty.
 Type adaptIntegralTypeSignedness(Type ty, bool needsUnsigned) {
   if (isa<IntegerType>(ty)) {
-    // Turns signless integers into signed integers.
     if (ty.isUnsignedInteger() != needsUnsigned) {
       auto signedness = needsUnsigned
                             ? IntegerType::SignednessSemantics::Unsigned
@@ -57,8 +54,7 @@ Type adaptIntegralTypeSignedness(Type ty, bool needsUnsigned) {
   return ty;
 }
 
-/// Insert a cast operation to type \p ty if \p val
-/// does not have this type.
+/// Insert a cast operation to type \p ty if \p val does not have this type.
 Value adaptValueType(Value val, ConversionPatternRewriter &rewriter, Type ty) {
   return rewriter.createOrFold<emitc::CastOp>(val.getLoc(), ty, val);
 }
