@@ -297,9 +297,8 @@ void foo() {
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[TMP1]], i64 0, i64 0
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], float noundef 1.000000e+00)
-// CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], float noundef 1.000000e+00)
+// CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[TMP1]], i64 1
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], float noundef 2.000000e+00)
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    ret ptr [[TMP2]]
@@ -574,9 +573,8 @@ void foo() {
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[TMP1]], i64 0, i64 0
-// CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 noundef 1)
-// CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 1)
+// CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[TMP1]], i64 1
 // CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    ret ptr [[TMP2]]
