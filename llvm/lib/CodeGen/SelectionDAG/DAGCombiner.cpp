@@ -15881,29 +15881,29 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   bool CanReassociate =
       Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
   if (CanReassociate) {
-    SDValue FMA, E;
-    if (isFusedOp(N0) && N0.hasOneUse()) {
-      FMA = N0;
+    SDValue Tmp, E;
+    if (isFusedOp(N0) && (Aggressive || N0.hasOneUse())) {
+      Tmp = N0;
       E = N1;
-    } else if (isFusedOp(N1) && N1.hasOneUse()) {
-      FMA = N1;
+    } else if (isFusedOp(N1) && (Aggressive || N1.hasOneUse())) {
+      Tmp = N1;
       E = N0;
     }
 
-    SDValue TmpFMA = FMA;
-    while (E && isFusedOp(TmpFMA) && TmpFMA.hasOneUse()) {
-      SDValue FMul = TmpFMA->getOperand(2);
-      if (matcher.match(FMul, ISD::FMUL) && FMul.hasOneUse()) {
-        SDValue C = FMul.getOperand(0);
-        SDValue D = FMul.getOperand(1);
-        SDValue CDE = matcher.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
-        DAG.ReplaceAllUsesOfValueWith(FMul, CDE);
-        // Replacing the inner FMul could cause the outer FMA to be simplified
-        // away.
-        return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue(N, 0) : FMA;
+    if (Tmp) {
+      SmallVector<SDNode *> FMAs;
+      do {
+        FMAs.push_back(Tmp.getNode());
+        Tmp = Tmp->getOperand(2);
+      } while (isFusedOp(Tmp) && (Aggressive || Tmp.hasOneUse()));
+      if (matcher.match(Tmp, ISD::FMUL) && (Aggressive || Tmp.hasOneUse())) {
+        Tmp = matcher.getNode(PreferredFusedOpcode, SL, VT, Tmp.getOperand(0),
+                              Tmp.getOperand(1), E);
+        for (SDNode *FMA : reverse(FMAs))
+          Tmp = matcher.getNode(PreferredFusedOpcode, SL, VT,
+                                FMA->getOperand(0), FMA->getOperand(1), Tmp);
+        return Tmp;
       }
-
-      TmpFMA = TmpFMA->getOperand(2);
     }
   }
 
