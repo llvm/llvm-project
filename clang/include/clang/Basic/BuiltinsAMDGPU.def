@@ -569,6 +569,22 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_fp8_f16, "V2sV2sV2hfIb", "nc", "
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_fp8_bf16, "V2sV2sV2yfIb", "nc", "fp8-cvt-scale-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_bf8_f16, "V2sV2sV2hfIb", "nc", "bf8-cvt-scale-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_bf8_bf16, "V2sV2sV2yfIb", "nc", "bf8-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_f32_fp4, "V2fUifIi", "nc", "fp4-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_fp4_f32, "UiUifffIi", "nc", "fp4-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_f16_fp4, "V2hUifIi", "nc", "fp4-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_bf16_fp4, "V2yUifIi", "nc", "fp4-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_f32_fp6, "V32fV6Uif", "nc", "fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_f32_bf6, "V32fV6Uif", "nc", "fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_f16_fp6, "V32hV6Uif", "nc", "fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_bf16_fp6, "V32yV6Uif", "nc", "fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_f16_bf6, "V32hV6Uif", "nc", "fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_bf16_bf6, "V32yV6Uif", "nc", "fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_f16_fp8, "V2hUifIb", "nc", "fp8-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_bf16_fp8, "V2yUifIb", "nc", "fp8-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_f16_bf8, "V2hUifIb", "nc", "bf8-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_bf16_bf8, "V2yUifIb", "nc", "bf8-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_fp4_f16, "UiUiV2hfIi", "nc", "fp4-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk_fp4_bf16, "UiUiV2yfIi", "nc", "fp4-cvt-scale-insts")
 
 //===----------------------------------------------------------------------===//
 // GFX1210+ only builtins.
