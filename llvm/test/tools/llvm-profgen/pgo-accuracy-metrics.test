@@ -1,0 +1,24 @@
+; Test pgo accuracy metrics
+; RUN: llvm-profgen --perfscript=%S/Inputs/pgo-accuracy-metrics.perfscript --binary=%S/Inputs/pgo-accuracy-metrics.perfbin --output=%t --pgo-accuracy-metrics 2>&1 | FileCheck %s --check-prefix=CHECK-STATS
+
+; CHECK-STATS: UnknownBranches: 0
+; CHECK-STATS: MatchedBranches: 5
+; CHECK-STATS: DismatchedBranches: 4
+
+; Original code:
+; clang++ test.cpp  -g -fbasic-block-sections=labels -mllvm -pgo-analysis-map=br-prob
+
+#include <iostream>
+#include <random>
+int main() {
+    int a = 0;
+    int b = 0;
+    for (int i = 0; i < 100000000; ++i) {
+        if (rand() % 1) {
+            ++a;
+        } else {
+            ++b;
+        }
+    }
+    return 0;
+}
