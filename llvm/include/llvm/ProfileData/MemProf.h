@@ -307,6 +307,9 @@ struct Frame {
 // A type representing the index into the table of call stacks.
 using CallStackId = uint64_t;
 
+// A type representing the index into the call stack array.
+using LinearCallStackId = uint32_t;
+
 // Holds allocation information in a space efficient format where frames are
 // represented using unique identifiers.
 struct IndexedAllocationInfo {
