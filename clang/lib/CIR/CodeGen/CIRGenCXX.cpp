@@ -122,18 +122,19 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // Check if we have it already.
   StringRef MangledName = getMangledName(AliasDecl);
   auto Entry = getGlobalValue(MangledName);
-  auto fnOp = dyn_cast_or_null<mlir::cir::FuncOp>(Entry);
-  if (Entry && fnOp && !fnOp.isDeclaration())
+  auto globalValue = dyn_cast<mlir::cir::CIRGlobalValueInterface>(Entry);
+  if (Entry && globalValue && !globalValue.isDeclaration())
     return false;
   if (Replacements.count(MangledName))
     return false;
 
-  assert(fnOp && "only knows how to handle FuncOp");
+  assert(globalValue && "only knows how to handle GlobalValue");
   [[maybe_unused]] auto AliasValueType = getTypes().GetFunctionType(AliasDecl);
 
   // Find the referent.
   auto Aliasee = cast<mlir::cir::FuncOp>(GetAddrOfGlobal(TargetDecl));
-
+  auto AliaseeGV = dyn_cast_or_null<mlir::cir::CIRGlobalValueInterface>(
+      GetAddrOfGlobal(TargetDecl));
   // Instead of creating as alias to a linkonce_odr, replace all of the uses
   // of the aliasee.
   if (mlir::cir::isDiscardableIfUnused(Linkage) &&
@@ -161,7 +162,7 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // is
   // avaialable_externally, don't emit an alias.  We can't emit aliases to
   // declarations; that's just not how aliases work.
-  if (Aliasee.isDeclarationForLinker())
+  if (AliaseeGV && AliaseeGV.isDeclarationForLinker())
     return true;
 
   // Don't create an alias to a linker weak symbol. This avoids producing

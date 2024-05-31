@@ -444,10 +444,14 @@ static void emitConstructorDestructorAlias(CIRGenModule &CGM,
 
   // Does this function alias already exists?
   StringRef MangledName = CGM.getMangledName(AliasDecl);
+  auto globalValue = dyn_cast_or_null<mlir::cir::CIRGlobalValueInterface>(
+      CGM.getGlobalValue(MangledName));
+  if (globalValue && !globalValue.isDeclaration()) {
+    return;
+  }
+
   auto Entry =
       dyn_cast_or_null<mlir::cir::FuncOp>(CGM.getGlobalValue(MangledName));
-  if (Entry && !Entry.isDeclaration())
-    return;
 
   // Retrieve aliasee info.
   auto Aliasee =
@@ -2047,19 +2051,22 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &CGVT,
     // EmitFundamentalRTTIDescriptors(RD);
   }
 
+  auto VTableAsGlobalValue =
+      dyn_cast<mlir::cir::CIRGlobalValueInterface>(*VTable);
+  assert(VTableAsGlobalValue && "VTable must support CIRGlobalValueInterface");
+  bool isDeclarationForLinker = VTableAsGlobalValue.isDeclarationForLinker();
   // Always emit type metadata on non-available_externally definitions, and on
   // available_externally definitions if we are performing whole program
   // devirtualization. For WPD we need the type metadata on all vtable
   // definitions to ensure we associate derived classes with base classes
   // defined in headers but with a strong definition only in a shared
   // library.
-  if (!VTable.isDeclarationForLinker() ||
-      CGM.getCodeGenOpts().WholeProgramVTables) {
+  if (!isDeclarationForLinker || CGM.getCodeGenOpts().WholeProgramVTables) {
     CGM.buildVTableTypeMetadata(RD, VTable, VTLayout);
     // For available_externally definitions, add the vtable to
     // @llvm.compiler.used so that it isn't deleted before whole program
     // analysis.
-    if (VTable.isDeclarationForLinker()) {
+    if (isDeclarationForLinker) {
       llvm_unreachable("NYI");
       assert(CGM.getCodeGenOpts().WholeProgramVTables);
       assert(!UnimplementedFeature::addCompilerUsedGlobal());

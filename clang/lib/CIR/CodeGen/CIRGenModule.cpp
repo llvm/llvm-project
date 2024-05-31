@@ -470,11 +470,12 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   Op = GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/true,
                          ForDefinition);
 
-  auto Fn = cast<mlir::cir::FuncOp>(Op);
-  // Already emitted.
-  if (!Fn.isDeclaration())
+  auto globalVal = dyn_cast_or_null<mlir::cir::CIRGlobalValueInterface>(Op);
+  if (globalVal && !globalVal.isDeclaration()) {
+    // Already emitted.
     return;
-
+  }
+  auto Fn = cast<mlir::cir::FuncOp>(Op);
   setFunctionLinkage(GD, Fn);
   setGVProperties(Op, D);
   // TODO(cir): MaubeHandleStaticInExternC
@@ -2435,18 +2436,17 @@ void CIRGenModule::buildGlobalDecl(clang::GlobalDecl &D) {
   // ways (e.g. by an extern inline function acquiring a strong function
   // redefinition). Just ignore those cases.
   // TODO: Not sure what to map this to for MLIR
-  if (auto Fn = dyn_cast<mlir::cir::FuncOp>(Op))
-    if (!Fn.isDeclaration())
-      return;
-
-  // TODO(cir): create a global value trait that allow us to uniformly handle
-  //       global variables and functions.
+  auto globalValueOp = Op;
   if (auto Gv = dyn_cast<mlir::cir::GetGlobalOp>(Op)) {
     auto *result =
         mlir::SymbolTable::lookupSymbolIn(getModule(), Gv.getNameAttr());
-    if (auto globalOp = dyn_cast<mlir::cir::GlobalOp>(result))
-      if (!globalOp.isDeclaration())
-        return;
+    globalValueOp = result;
+  }
+
+  if (auto cirGlobalValue =
+          dyn_cast<mlir::cir::CIRGlobalValueInterface>(globalValueOp)) {
+    if (!cirGlobalValue.isDeclaration())
+      return;
   }
 
   // If this is OpenMP, check if it is legal to emit this global normally.
