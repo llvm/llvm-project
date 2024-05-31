@@ -871,6 +871,14 @@ public:
   bool matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
                                              BuildFnTy &MatchInfo);
 
+  bool matchAddOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchMulOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchSubOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchShlOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
