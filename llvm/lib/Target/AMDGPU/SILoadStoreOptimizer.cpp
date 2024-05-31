@@ -2062,12 +2062,8 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   if (SIInstrInfo::isFLATScratch(MI))
     return false;
 
-  unsigned AS = AMDGPUAS::FLAT_ADDRESS;
-  uint64_t FlatVariant = SIInstrFlags::FLAT;
-  if (SIInstrInfo::isFLATGlobal(MI)) {
-    AS = AMDGPUAS::GLOBAL_ADDRESS;
-    FlatVariant = SIInstrFlags::FlatGlobal;
-  }
+  unsigned AS = SIInstrInfo::isFLATGlobal(MI) ? AMDGPUAS::GLOBAL_ADDRESS
+                                              : AMDGPUAS::FLAT_ADDRESS;
 
   if (MI.mayLoad() &&
       TII->getNamedOperand(MI, AMDGPU::OpName::vdata) != nullptr)
@@ -2167,7 +2163,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     TargetLoweringBase::AddrMode AM;
     AM.HasBaseReg = true;
     AM.BaseOffs = Dist;
-    if (TLI->isLegalFlatAddressingMode(AM, AS, FlatVariant) &&
+    if (TLI->isLegalFlatAddressingMode(AM, AS) &&
         (uint32_t)std::abs(Dist) > MaxDist) {
       MaxDist = std::abs(Dist);
 
@@ -2193,7 +2189,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
       AM.HasBaseReg = true;
       AM.BaseOffs = OtherOffset - AnchorAddr.Offset;
 
-      if (TLI->isLegalFlatAddressingMode(AM, AS, FlatVariant)) {
+      if (TLI->isLegalFlatAddressingMode(AM, AS)) {
         LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset; dbgs() << ")";
                    OtherMI->dump());
         updateBaseAndOffset(*OtherMI, Base, OtherOffset - AnchorAddr.Offset);
