@@ -17,10 +17,11 @@
 #include "clang/AST/Expr.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class ParsedAttr;
+
 class SemaX86 : public SemaBase {
 public:
   SemaX86(Sema &S);

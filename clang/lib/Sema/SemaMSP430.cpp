@@ -14,6 +14,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Attr.h"
+#include "clang/Sema/ParsedAttr.h"
 
 namespace clang {
 

@@ -16,10 +16,11 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class ParsedAttr;
+
 class SemaBPF : public SemaBase {
 public:
   SemaBPF(Sema &S);

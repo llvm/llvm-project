@@ -20,12 +20,12 @@
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
 #include <initializer_list>
 
 namespace clang {
+class ParsedAttr;
 
 class SemaHLSL : public SemaBase {
 public:

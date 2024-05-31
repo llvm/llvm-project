@@ -12,7 +12,9 @@
 
 #include "clang/Sema/SemaM68k.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Sema/ParsedAttr.h"
 
 namespace clang {
 SemaM68k::SemaM68k(Sema &S) : SemaBase(S) {}

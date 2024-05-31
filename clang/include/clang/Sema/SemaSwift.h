@@ -14,15 +14,17 @@
 #define LLVM_CLANG_SEMA_SEMASWIFT_H
 
 #include "clang/AST/Attr.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/Specifiers.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
+class AttributeCommonInfo;
+class Decl;
+class ParsedAttr;
+class SwiftNameAttr;
+
 class SemaSwift : public SemaBase {
 public:
   SemaSwift(Sema &S);

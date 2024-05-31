@@ -16,10 +16,11 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class ParsedAttr;
+
 class SemaMIPS : public SemaBase {
 public:
   SemaMIPS(Sema &S);

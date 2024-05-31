@@ -16,12 +16,12 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/SmallVector.h"
 #include <tuple>
 
 namespace clang {
+class ParsedAttr;
 
 class SemaARM : public SemaBase {
 public:

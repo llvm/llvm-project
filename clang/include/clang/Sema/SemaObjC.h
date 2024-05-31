@@ -30,7 +30,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Redeclaration.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
@@ -45,6 +44,7 @@
 namespace clang {
 
 enum class CheckedConversionKind;
+class ParsedAttr;
 struct SkipBodyInfo;
 
 class SemaObjC : public SemaBase {

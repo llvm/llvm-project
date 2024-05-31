@@ -18,11 +18,11 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/DenseSet.h"
 
 namespace clang {
+class ParsedAttr;
 
 class SemaSYCL : public SemaBase {
 public:

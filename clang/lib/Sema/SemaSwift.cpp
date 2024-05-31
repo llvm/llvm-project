@@ -11,8 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaSwift.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Sema/Attr.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaObjC.h"
 

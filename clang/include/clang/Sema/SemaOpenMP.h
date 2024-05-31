@@ -32,7 +32,6 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaBase.h"
@@ -43,6 +42,7 @@
 #include <utility>
 
 namespace clang {
+class ParsedAttr;
 
 class SemaOpenMP : public SemaBase {
 public:

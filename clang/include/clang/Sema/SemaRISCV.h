@@ -18,13 +18,14 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/RISCVIntrinsicManager.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
 
 namespace clang {
+class ParsedAttr;
+
 class SemaRISCV : public SemaBase {
 public:
   SemaRISCV(Sema &S);

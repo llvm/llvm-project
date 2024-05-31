@@ -13,10 +13,11 @@
 #ifndef LLVM_CLANG_SEMA_SEMAAVR_H
 #define LLVM_CLANG_SEMA_SEMAAVR_H
 
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class Decl;
+class ParsedAttr;
 
 class SemaAVR : public SemaBase {
 public:

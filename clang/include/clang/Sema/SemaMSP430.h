@@ -14,10 +14,11 @@
 #define LLVM_CLANG_SEMA_SEMAMSP430_H
 
 #include "clang/AST/DeclBase.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class ParsedAttr;
+
 class SemaMSP430 : public SemaBase {
 public:
   SemaMSP430(Sema &S);
