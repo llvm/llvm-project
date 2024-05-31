@@ -2804,7 +2804,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fminimum_numl:
     case Builtin::BI__builtin_fminimum_numf128:
       return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
-          *this, E, Intrinsic::minnum,
+          *this, E, Intrinsic::minimumnum,
           Intrinsic::experimental_constrained_minimumnum));
 
     // fmod() is a special-case. It maps to the frem instruction rather than an
