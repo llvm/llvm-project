@@ -135,6 +135,17 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 #define ptrauth_auth_data(__value, __old_key, __old_data)                      \
   __builtin_ptrauth_auth(__value, __old_key, __old_data)
 
+/* Compute a constant discriminator from the given string.
+
+   The result can be used as the second argument to
+   ptrauth_blend_discriminator or the third argument to the
+   __ptrauth qualifier.  It has type size_t.
+
+   The argument must be a string literal.
+   A call to this function is an integer constant expression. */
+#define ptrauth_string_discriminator(__string)                                 \
+  __builtin_ptrauth_string_discriminator(__string)
+
 /* Compute a signature for the given pair of pointer-sized values.
    The order of the arguments is significant.
 
@@ -194,6 +205,12 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
     (void)__old_key;                                                           \
     (void)__old_data;                                                          \
     __value;                                                                   \
+  })
+
+#define ptrauth_string_discriminator(__string)                                 \
+  ({                                                                           \
+    (void)__string;                                                            \
+    ((ptrauth_extra_data_t)0);                                                 \
   })
 
 #define ptrauth_sign_generic_data(__value, __data)                             \
