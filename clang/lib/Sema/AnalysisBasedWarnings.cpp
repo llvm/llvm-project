@@ -2511,7 +2511,12 @@ public:
       : Callback(Callback) {}
 
   bool VisitFieldDecl(FieldDecl *Node) {
-    if (cast<DeclContext>(Node->getParent())->isDependentContext())
+    DeclContext *DeclCtx;
+    if (auto *ID = dyn_cast<ObjCIvarDecl>(Node))
+      DeclCtx = cast<DeclContext>(ID->getContainingInterface());
+    else
+      DeclCtx = cast<DeclContext>(Node->getParent());
+    if (DeclCtx->isDependentContext())
       return true; // Not to analyze dependent decl
     if (Node->hasInClassInitializer())
       Callback(Node);
