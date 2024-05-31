@@ -5461,7 +5461,8 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
 
   SmallVector<Register, 2> PartialRes;
   unsigned NumParts = Size / 32;
-  MachineInstrBuilder Src0Parts = B.buildUnmerge(PartialResTy, Src0), Src2Parts;
+  MachineInstrBuilder Src0Parts = B.buildUnmerge(PartialResTy, Src0);
+  MachineInstrBuilder Src2Parts;
 
   if (Src2.isValid())
     Src2Parts = B.buildUnmerge(PartialResTy, Src2);
