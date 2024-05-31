@@ -2019,22 +2019,6 @@ GenericValue Interpreter::getConstantExprValue (ConstantExpr *CE,
   switch (CE->getOpcode()) {
   case Instruction::Trunc:
       return executeTruncInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::ZExt:
-      return executeZExtInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::SExt:
-      return executeSExtInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::FPTrunc:
-      return executeFPTruncInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::FPExt:
-      return executeFPExtInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::UIToFP:
-      return executeUIToFPInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::SIToFP:
-      return executeSIToFPInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::FPToUI:
-      return executeFPToUIInst(CE->getOperand(0), CE->getType(), SF);
-  case Instruction::FPToSI:
-      return executeFPToSIInst(CE->getOperand(0), CE->getType(), SF);
   case Instruction::PtrToInt:
       return executePtrToIntInst(CE->getOperand(0), CE->getType(), SF);
   case Instruction::IntToPtr:
@@ -2050,12 +2034,7 @@ GenericValue Interpreter::getConstantExprValue (ConstantExpr *CE,
                           getOperandValue(CE->getOperand(0), SF),
                           getOperandValue(CE->getOperand(1), SF),
                           CE->getOperand(0)->getType());
-  case Instruction::Select:
-    return executeSelectInst(getOperandValue(CE->getOperand(0), SF),
-                             getOperandValue(CE->getOperand(1), SF),
-                             getOperandValue(CE->getOperand(2), SF),
-                             CE->getOperand(0)->getType());
-  default :
+  default:
     break;
   }
 
@@ -2064,31 +2043,13 @@ GenericValue Interpreter::getConstantExprValue (ConstantExpr *CE,
   GenericValue Op0 = getOperandValue(CE->getOperand(0), SF);
   GenericValue Op1 = getOperandValue(CE->getOperand(1), SF);
   GenericValue Dest;
-  Type * Ty = CE->getOperand(0)->getType();
   switch (CE->getOpcode()) {
   case Instruction::Add:  Dest.IntVal = Op0.IntVal + Op1.IntVal; break;
   case Instruction::Sub:  Dest.IntVal = Op0.IntVal - Op1.IntVal; break;
   case Instruction::Mul:  Dest.IntVal = Op0.IntVal * Op1.IntVal; break;
-  case Instruction::FAdd: executeFAddInst(Dest, Op0, Op1, Ty); break;
-  case Instruction::FSub: executeFSubInst(Dest, Op0, Op1, Ty); break;
-  case Instruction::FMul: executeFMulInst(Dest, Op0, Op1, Ty); break;
-  case Instruction::FDiv: executeFDivInst(Dest, Op0, Op1, Ty); break;
-  case Instruction::FRem: executeFRemInst(Dest, Op0, Op1, Ty); break;
-  case Instruction::SDiv: Dest.IntVal = Op0.IntVal.sdiv(Op1.IntVal); break;
-  case Instruction::UDiv: Dest.IntVal = Op0.IntVal.udiv(Op1.IntVal); break;
-  case Instruction::URem: Dest.IntVal = Op0.IntVal.urem(Op1.IntVal); break;
-  case Instruction::SRem: Dest.IntVal = Op0.IntVal.srem(Op1.IntVal); break;
-  case Instruction::And:  Dest.IntVal = Op0.IntVal & Op1.IntVal; break;
-  case Instruction::Or:   Dest.IntVal = Op0.IntVal | Op1.IntVal; break;
   case Instruction::Xor:  Dest.IntVal = Op0.IntVal ^ Op1.IntVal; break;
   case Instruction::Shl:
     Dest.IntVal = Op0.IntVal.shl(Op1.IntVal.getZExtValue());
-    break;
-  case Instruction::LShr:
-    Dest.IntVal = Op0.IntVal.lshr(Op1.IntVal.getZExtValue());
-    break;
-  case Instruction::AShr:
-    Dest.IntVal = Op0.IntVal.ashr(Op1.IntVal.getZExtValue());
     break;
   default:
     dbgs() << "Unhandled ConstantExpr: " << *CE << "\n";
