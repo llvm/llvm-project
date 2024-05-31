@@ -19,9 +19,9 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/Support/Casting.h"
@@ -160,13 +160,14 @@ const SemaBase::SemaDiagnosticBuilder &
 appendDiagnostics(const SemaBase::SemaDiagnosticBuilder &Bldr, T &&ExtraArg,
                   DiagnosticArgs &&...ExtraArgs) {
   return appendDiagnostics(Bldr << std::forward<T>(ExtraArg),
-                            std::forward<DiagnosticArgs>(ExtraArgs)...);
+                           std::forward<DiagnosticArgs>(ExtraArgs)...);
 }
 
 /// Applies the given attribute to the Decl without performing any
 /// additional semantic checking.
 template <typename AttrType>
-void handleSimpleAttribute(SemaBase &S, Decl *D, const AttributeCommonInfo &CI) {
+void handleSimpleAttribute(SemaBase &S, Decl *D,
+                           const AttributeCommonInfo &CI) {
   D->addAttr(::new (S.getASTContext()) AttrType(S.getASTContext(), CI));
 }
 
@@ -175,9 +176,10 @@ void handleSimpleAttribute(SemaBase &S, Decl *D, const AttributeCommonInfo &CI) 
 /// Otherwise, emit diagnostic @c DiagID, passing in all parameters
 /// specified in @c ExtraArgs.
 template <typename AttrType, typename... DiagnosticArgs>
-void handleSimpleAttributeOrDiagnose(SemaBase &S, Decl *D, const AttributeCommonInfo &CI,
-                                      bool PassesCheck, unsigned DiagID,
-                                      DiagnosticArgs &&...ExtraArgs) {
+void handleSimpleAttributeOrDiagnose(SemaBase &S, Decl *D,
+                                     const AttributeCommonInfo &CI,
+                                     bool PassesCheck, unsigned DiagID,
+                                     DiagnosticArgs &&...ExtraArgs) {
   if (!PassesCheck) {
     SemaBase::SemaDiagnosticBuilder DB = S.Diag(D->getBeginLoc(), DiagID);
     appendDiagnostics(DB, std::forward<DiagnosticArgs>(ExtraArgs)...);
