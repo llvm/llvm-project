@@ -14,7 +14,6 @@
 #define LLVM_CLANG_SEMA_SEMASYCL_H
 
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
@@ -22,6 +21,7 @@
 #include "llvm/ADT/DenseSet.h"
 
 namespace clang {
+class Decl;
 class ParsedAttr;
 
 class SemaSYCL : public SemaBase {
