@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InterpreterTestFixture.h"
+
 #include "clang/Interpreter/Interpreter.h"
 
 #include "clang/AST/Expr.h"
@@ -18,64 +20,50 @@
 #include "clang/Sema/Sema.h"
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/TargetSelect.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
 #include <system_error>
+
+#if defined(_AIX) || defined(__MVS__)
+#define CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+#endif
 
 using namespace clang;
 namespace {
 
-static bool HostSupportsJit() {
-  auto J = llvm::orc::LLJITBuilder().create();
-  if (J)
-    return true;
-  LLVMConsumeError(llvm::wrap(J.takeError()));
-  return false;
-}
-
-struct LLVMInitRAII {
-  LLVMInitRAII() {
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-  }
-  ~LLVMInitRAII() { llvm::llvm_shutdown(); }
-} LLVMInit;
-
-class TestCreateResetExecutor : public Interpreter {
-public:
-  TestCreateResetExecutor(std::unique_ptr<CompilerInstance> CI,
-                          llvm::Error &Err)
-      : Interpreter(std::move(CI), Err) {}
-
-  llvm::Error testCreateExecutor() { return Interpreter::CreateExecutor(); }
-
-  void resetExecutor() { Interpreter::ResetExecutor(); }
-};
-
-#ifdef _AIX
-TEST(InterpreterExtensionsTest, DISABLED_ExecutorCreateReset) {
-#else
-TEST(InterpreterExtensionsTest, ExecutorCreateReset) {
-#endif
-  // Make sure we can create the executer on the platform.
-  if (!HostSupportsJit())
+class InterpreterExtensionsTest : public InterpreterTestBase {
+protected:
+  void SetUp() override {
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
     GTEST_SKIP();
+#endif
+  }
 
-  clang::IncrementalCompilerBuilder CB;
-  llvm::Error ErrOut = llvm::Error::success();
-  TestCreateResetExecutor Interp(cantFail(CB.CreateCpp()), ErrOut);
-  cantFail(std::move(ErrOut));
-  cantFail(Interp.testCreateExecutor());
-  Interp.resetExecutor();
-  cantFail(Interp.testCreateExecutor());
-  EXPECT_THAT_ERROR(Interp.testCreateExecutor(),
-                    llvm::FailedWithMessage("Operation failed. "
-                                            "Execution engine exists"));
-}
+  static void SetUpTestSuite() {
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetInfos();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmPrinters();
+  }
+
+public:
+  // Some tests require a arm-registered-target
+  static bool IsARMTargetRegistered() {
+    llvm::Triple TT;
+    TT.setArch(llvm::Triple::arm);
+    TT.setVendor(llvm::Triple::UnknownVendor);
+    TT.setOS(llvm::Triple::UnknownOS);
+
+    std::string UnusedErr;
+    return llvm::TargetRegistry::lookupTarget(TT.str(), UnusedErr);
+  }
+};
 
 class RecordRuntimeIBMetrics : public Interpreter {
   struct NoopRuntimeInterfaceBuilder : public RuntimeInterfaceBuilder {
@@ -114,7 +102,10 @@ public:
   NoopRuntimeInterfaceBuilder *RuntimeIBPtr = nullptr;
 };
 
-TEST(InterpreterExtensionsTest, FindRuntimeInterface) {
+TEST_F(InterpreterExtensionsTest, FindRuntimeInterface) {
+  if (!HostSupportsJIT())
+    GTEST_SKIP();
+
   clang::IncrementalCompilerBuilder CB;
   llvm::Error ErrOut = llvm::Error::success();
   RecordRuntimeIBMetrics Interp(cantFail(CB.CreateCpp()), ErrOut);
@@ -124,6 +115,78 @@ TEST(InterpreterExtensionsTest, FindRuntimeInterface) {
   cantFail(Interp.Parse("int c = 3; c"));
   EXPECT_EQ(3U, Interp.RuntimeIBPtr->TransformedExprs);
   EXPECT_EQ(1U, Interp.RuntimeIBPtr->TransformerQueries);
+}
+
+class CustomJBInterpreter : public Interpreter {
+  using CustomJITBuilderCreatorFunction =
+      std::function<llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>()>;
+  CustomJITBuilderCreatorFunction JBCreator = nullptr;
+
+public:
+  CustomJBInterpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &ErrOut,
+                      std::unique_ptr<llvm::orc::LLJITBuilder> JB)
+      : Interpreter(std::move(CI), ErrOut, std::move(JB)) {}
+
+  ~CustomJBInterpreter() override {
+    // Skip cleanUp() because it would trigger LLJIT default dtors
+    Interpreter::ResetExecutor();
+  }
+
+  llvm::Error CreateExecutor() { return Interpreter::CreateExecutor(); }
+};
+
+TEST_F(InterpreterExtensionsTest, DefaultCrossJIT) {
+  if (!IsARMTargetRegistered())
+    GTEST_SKIP();
+
+  IncrementalCompilerBuilder CB;
+  CB.SetTargetTriple("armv6-none-eabi");
+  auto CI = cantFail(CB.CreateCpp());
+  llvm::Error ErrOut = llvm::Error::success();
+  CustomJBInterpreter Interp(std::move(CI), ErrOut, nullptr);
+  cantFail(std::move(ErrOut));
+}
+
+TEST_F(InterpreterExtensionsTest, CustomCrossJIT) {
+  if (!IsARMTargetRegistered())
+    GTEST_SKIP();
+
+  std::string TargetTriple = "armv6-none-eabi";
+
+  IncrementalCompilerBuilder CB;
+  CB.SetTargetTriple(TargetTriple);
+  auto CI = cantFail(CB.CreateCpp());
+
+  using namespace llvm::orc;
+  LLJIT *JIT = nullptr;
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> Objs;
+  auto JTMB = JITTargetMachineBuilder(llvm::Triple(TargetTriple));
+  JTMB.setCPU("cortex-m0plus");
+
+  auto JB = std::make_unique<LLJITBuilder>();
+  JB->setJITTargetMachineBuilder(JTMB);
+  JB->setPlatformSetUp(setUpInactivePlatform);
+  JB->setNotifyCreatedCallback([&](LLJIT &J) {
+    ObjectLayer &ObjLayer = J.getObjLinkingLayer();
+    auto *JITLinkObjLayer = llvm::dyn_cast<ObjectLinkingLayer>(&ObjLayer);
+    JITLinkObjLayer->setReturnObjectBuffer(
+        [&Objs](std::unique_ptr<llvm::MemoryBuffer> MB) {
+          Objs.push_back(std::move(MB));
+        });
+    JIT = &J;
+    return llvm::Error::success();
+  });
+
+  llvm::Error ErrOut = llvm::Error::success();
+  CustomJBInterpreter Interp(std::move(CI), ErrOut, std::move(JB));
+  cantFail(std::move(ErrOut));
+
+  EXPECT_EQ(0U, Objs.size());
+  cantFail(Interp.ParseAndExecute("int a = 1;"));
+  ASSERT_NE(JIT, nullptr); // But it is, because JBCreator was never called
+  ExecutorAddr Addr = cantFail(JIT->lookup("a"));
+  EXPECT_NE(0U, Addr.getValue());
+  EXPECT_EQ(1U, Objs.size());
 }
 
 } // end anonymous namespace

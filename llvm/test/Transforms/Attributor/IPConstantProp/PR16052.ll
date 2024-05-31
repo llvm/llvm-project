@@ -91,11 +91,11 @@ entry:
   ret i64 %cond
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync willreturn }
+;.
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
 ; CGSCC: [[RNG0]] = !{i64 -2147483606, i64 2147483690}
 ;.

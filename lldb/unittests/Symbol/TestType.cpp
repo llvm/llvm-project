@@ -10,43 +10,41 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Symbol/Type.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-namespace {
-void TestGetTypeScopeAndBasenameHelper(const char *full_type,
-                                       bool expected_is_scoped,
-                                       const char *expected_scope,
-                                       const char *expected_name) {
-  llvm::StringRef scope, name;
-  lldb::TypeClass type_class;
-  bool is_scoped =
-      Type::GetTypeScopeAndBasename(full_type, scope, name, type_class);
-  EXPECT_EQ(is_scoped, expected_is_scoped);
-  if (expected_is_scoped) {
-    EXPECT_EQ(scope, expected_scope);
-    EXPECT_EQ(name, expected_name);
-  }
-}
-}
-
 TEST(Type, GetTypeScopeAndBasename) {
-  TestGetTypeScopeAndBasenameHelper("int", false, "", "");
-  TestGetTypeScopeAndBasenameHelper("std::string", true, "std::", "string");
-  TestGetTypeScopeAndBasenameHelper("std::set<int>", true, "std::", "set<int>");
-  TestGetTypeScopeAndBasenameHelper("std::set<int, std::less<int>>", true,
-                                    "std::", "set<int, std::less<int>>");
-  TestGetTypeScopeAndBasenameHelper("std::string::iterator", true,
-                                    "std::string::", "iterator");
-  TestGetTypeScopeAndBasenameHelper("std::set<int>::iterator", true,
-                                    "std::set<int>::", "iterator");
-  TestGetTypeScopeAndBasenameHelper(
-      "std::set<int, std::less<int>>::iterator", true,
-      "std::set<int, std::less<int>>::", "iterator");
-  TestGetTypeScopeAndBasenameHelper(
-      "std::set<int, std::less<int>>::iterator<bool>", true,
-      "std::set<int, std::less<int>>::", "iterator<bool>");
+  EXPECT_EQ(Type::GetTypeScopeAndBasename("int"),
+            (Type::ParsedName{eTypeClassAny, {}, "int"}));
+  EXPECT_EQ(Type::GetTypeScopeAndBasename("std::string"),
+            (Type::ParsedName{eTypeClassAny, {"std"}, "string"}));
+  EXPECT_EQ(Type::GetTypeScopeAndBasename("::std::string"),
+            (Type::ParsedName{eTypeClassAny, {"::", "std"}, "string"}));
+  EXPECT_EQ(Type::GetTypeScopeAndBasename("struct std::string"),
+            (Type::ParsedName{eTypeClassStruct, {"std"}, "string"}));
+  EXPECT_EQ(Type::GetTypeScopeAndBasename("std::set<int>"),
+            (Type::ParsedName{eTypeClassAny, {"std"}, "set<int>"}));
+  EXPECT_EQ(
+      Type::GetTypeScopeAndBasename("std::set<int, std::less<int>>"),
+      (Type::ParsedName{eTypeClassAny, {"std"}, "set<int, std::less<int>>"}));
+  EXPECT_EQ(Type::GetTypeScopeAndBasename("std::string::iterator"),
+            (Type::ParsedName{eTypeClassAny, {"std", "string"}, "iterator"}));
+  EXPECT_EQ(Type::GetTypeScopeAndBasename("std::set<int>::iterator"),
+            (Type::ParsedName{eTypeClassAny, {"std", "set<int>"}, "iterator"}));
+  EXPECT_EQ(
+      Type::GetTypeScopeAndBasename("std::set<int, std::less<int>>::iterator"),
+      (Type::ParsedName{
+          eTypeClassAny, {"std", "set<int, std::less<int>>"}, "iterator"}));
+  EXPECT_EQ(Type::GetTypeScopeAndBasename(
+                "std::set<int, std::less<int>>::iterator<bool>"),
+            (Type::ParsedName{eTypeClassAny,
+                              {"std", "set<int, std::less<int>>"},
+                              "iterator<bool>"}));
+
+  EXPECT_EQ(Type::GetTypeScopeAndBasename("std::"), std::nullopt);
+  EXPECT_EQ(Type::GetTypeScopeAndBasename("foo<::bar"), std::nullopt);
 }
 
 TEST(Type, CompilerContextPattern) {

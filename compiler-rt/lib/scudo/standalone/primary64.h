@@ -117,57 +117,53 @@ public:
     SmallerBlockReleasePageDelta =
         PagesInGroup * (1 + MinSizeClass / 16U) / 100;
 
-    // Reserve the space required for the Primary.
-    CHECK(ReservedMemory.create(/*Addr=*/0U, PrimarySize,
-                                "scudo:primary_reserve"));
-    PrimaryBase = ReservedMemory.getBase();
-    DCHECK_NE(PrimaryBase, 0U);
-
     u32 Seed;
     const u64 Time = getMonotonicTimeFast();
     if (!getRandom(reinterpret_cast<void *>(&Seed), sizeof(Seed)))
-      Seed = static_cast<u32>(Time ^ (PrimaryBase >> 12));
+      Seed = static_cast<u32>(Time ^ (reinterpret_cast<uptr>(&Seed) >> 12));
 
-    for (uptr I = 0; I < NumClasses; I++) {
-      RegionInfo *Region = getRegionInfo(I);
+    for (uptr I = 0; I < NumClasses; I++)
+      getRegionInfo(I)->RandState = getRandomU32(&Seed);
 
-      // The actual start of a region is offset by a random number of pages
-      // when PrimaryEnableRandomOffset is set.
-      Region->RegionBeg = (PrimaryBase + (I << RegionSizeLog)) +
-                          (Config::getEnableRandomOffset()
-                               ? ((getRandomModN(&Seed, 16) + 1) * PageSize)
-                               : 0);
-      Region->RandState = getRandomU32(&Seed);
-      // Releasing small blocks is expensive, set a higher threshold to avoid
-      // frequent page releases.
-      if (isSmallBlock(getSizeByClassId(I)))
-        Region->TryReleaseThreshold = PageSize * SmallerBlockReleasePageDelta;
-      else
-        Region->TryReleaseThreshold = PageSize;
-      Region->ReleaseInfo.LastReleaseAtNs = Time;
+    if (Config::getEnableContiguousRegions()) {
+      ReservedMemoryT ReservedMemory = {};
+      // Reserve the space required for the Primary.
+      CHECK(ReservedMemory.create(/*Addr=*/0U, RegionSize * NumClasses,
+                                  "scudo:primary_reserve"));
+      const uptr PrimaryBase = ReservedMemory.getBase();
 
-      Region->MemMapInfo.MemMap = ReservedMemory.dispatch(
-          PrimaryBase + (I << RegionSizeLog), RegionSize);
-      CHECK(Region->MemMapInfo.MemMap.isAllocated());
+      for (uptr I = 0; I < NumClasses; I++) {
+        MemMapT RegionMemMap = ReservedMemory.dispatch(
+            PrimaryBase + (I << RegionSizeLog), RegionSize);
+        RegionInfo *Region = getRegionInfo(I);
+
+        initRegion(Region, I, RegionMemMap, Config::getEnableRandomOffset());
+      }
+      shuffle(RegionInfoArray, NumClasses, &Seed);
     }
-    shuffle(RegionInfoArray, NumClasses, &Seed);
 
     // The binding should be done after region shuffling so that it won't bind
     // the FLLock from the wrong region.
     for (uptr I = 0; I < NumClasses; I++)
       getRegionInfo(I)->FLLockCV.bindTestOnly(getRegionInfo(I)->FLLock);
 
+    // The default value in the primary config has the higher priority.
+    if (Config::getDefaultReleaseToOsIntervalMs() != INT32_MIN)
+      ReleaseToOsInterval = Config::getDefaultReleaseToOsIntervalMs();
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
-  void unmapTestOnly() NO_THREAD_SAFETY_ANALYSIS {
+  void unmapTestOnly() {
     for (uptr I = 0; I < NumClasses; I++) {
       RegionInfo *Region = getRegionInfo(I);
+      {
+        ScopedLock ML(Region->MMLock);
+        MemMapT MemMap = Region->MemMapInfo.MemMap;
+        if (MemMap.isAllocated())
+          MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+      }
       *Region = {};
     }
-    if (PrimaryBase)
-      ReservedMemory.release();
-    PrimaryBase = 0U;
   }
 
   // When all blocks are freed, it has to be the same size as `AllocatedUser`.
@@ -251,9 +247,10 @@ public:
         }
 
         const bool RegionIsExhausted = Region->Exhausted;
-        if (!RegionIsExhausted)
+        if (!RegionIsExhausted) {
           PopCount = populateFreeListAndPopBlocks(C, ClassId, Region, ToArray,
                                                   MaxBlockCount);
+        }
         ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
         break;
       }
@@ -372,10 +369,11 @@ public:
         PushedBlocks += Region->FreeListInfo.PushedBlocks;
       }
     }
+    const s32 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
     Str->append("Stats: SizeClassAllocator64: %zuM mapped (%uM rss) in %zu "
-                "allocations; remains %zu\n",
+                "allocations; remains %zu; ReleaseToOsIntervalMs = %d\n",
                 TotalMapped >> 20, 0U, PoppedBlocks,
-                PoppedBlocks - PushedBlocks);
+                PoppedBlocks - PushedBlocks, IntervalMs >= 0 ? IntervalMs : -1);
 
     for (uptr I = 0; I < NumClasses; I++) {
       RegionInfo *Region = getRegionInfo(I);
@@ -513,7 +511,6 @@ public:
 private:
   static const uptr RegionSize = 1UL << RegionSizeLog;
   static const uptr NumClasses = SizeClassMap::NumClasses;
-  static const uptr PrimarySize = RegionSize * NumClasses;
 
   static const uptr MapSizeIncrement = Config::getMapSizeIncrement();
   // Fill at most this number of batches from the newly map'd memory.
@@ -569,9 +566,14 @@ private:
   }
 
   uptr getRegionBaseByClassId(uptr ClassId) {
-    return roundDown(getRegionInfo(ClassId)->RegionBeg - PrimaryBase,
-                     RegionSize) +
-           PrimaryBase;
+    RegionInfo *Region = getRegionInfo(ClassId);
+    Region->MMLock.assertHeld();
+
+    if (!Config::getEnableContiguousRegions() &&
+        !Region->MemMapInfo.MemMap.isAllocated()) {
+      return 0U;
+    }
+    return Region->MemMapInfo.MemMap.getBase();
   }
 
   static CompactPtrT compactPtrInternal(uptr Base, uptr Ptr) {
@@ -599,6 +601,30 @@ private:
   ALWAYS_INLINE static bool isLargeBlock(uptr BlockSize) {
     const uptr PageSize = getPageSizeCached();
     return BlockSize > PageSize;
+  }
+
+  ALWAYS_INLINE void initRegion(RegionInfo *Region, uptr ClassId,
+                                MemMapT MemMap, bool EnableRandomOffset)
+      REQUIRES(Region->MMLock) {
+    DCHECK(!Region->MemMapInfo.MemMap.isAllocated());
+    DCHECK(MemMap.isAllocated());
+
+    const uptr PageSize = getPageSizeCached();
+
+    Region->MemMapInfo.MemMap = MemMap;
+
+    Region->RegionBeg = MemMap.getBase();
+    if (EnableRandomOffset) {
+      Region->RegionBeg +=
+          (getRandomModN(&Region->RandState, 16) + 1) * PageSize;
+    }
+
+    // Releasing small blocks is expensive, set a higher threshold to avoid
+    // frequent page releases.
+    if (isSmallBlock(getSizeByClassId(ClassId)))
+      Region->TryReleaseThreshold = PageSize * SmallerBlockReleasePageDelta;
+    else
+      Region->TryReleaseThreshold = PageSize;
   }
 
   void pushBatchClassBlocks(RegionInfo *Region, CompactPtrT *Array, u32 Size)
@@ -861,9 +887,10 @@ private:
         ScopedLock ML(Region->MMLock);
 
         const bool RegionIsExhausted = Region->Exhausted;
-        if (!RegionIsExhausted)
+        if (!RegionIsExhausted) {
           PopCount = populateFreeListAndPopBlocks(C, ClassId, Region, ToArray,
                                                   MaxBlockCount);
+        }
         ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
 
         {
@@ -988,9 +1015,25 @@ private:
                                             CompactPtrT *ToArray,
                                             const u16 MaxBlockCount)
       REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
+    if (!Config::getEnableContiguousRegions() &&
+        !Region->MemMapInfo.MemMap.isAllocated()) {
+      ReservedMemoryT ReservedMemory;
+      if (UNLIKELY(!ReservedMemory.create(/*Addr=*/0U, RegionSize,
+                                          "scudo:primary_reserve",
+                                          MAP_ALLOWNOMEM))) {
+        Printf("Can't reserve pages for size class %zu.\n",
+               getSizeByClassId(ClassId));
+        return 0U;
+      }
+      initRegion(Region, ClassId,
+                 ReservedMemory.dispatch(ReservedMemory.getBase(),
+                                         ReservedMemory.getCapacity()),
+                 /*EnableRandomOffset=*/false);
+    }
+
+    DCHECK(Region->MemMapInfo.MemMap.isAllocated());
     const uptr Size = getSizeByClassId(ClassId);
     const u16 MaxCount = CacheT::getMaxCached(Size);
-
     const uptr RegionBeg = Region->RegionBeg;
     const uptr MappedUser = Region->MemMapInfo.MappedUser;
     const uptr TotalUserBytes =
@@ -1682,10 +1725,6 @@ private:
       Region->FLLockCV.notifyAll(Region->FLLock);
   }
 
-  // TODO: `PrimaryBase` can be obtained from ReservedMemory. This needs to be
-  // deprecated.
-  uptr PrimaryBase = 0;
-  ReservedMemoryT ReservedMemory = {};
   // The minimum size of pushed blocks that we will try to release the pages in
   // that size class.
   uptr SmallerBlockReleasePageDelta = 0;

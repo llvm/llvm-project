@@ -350,8 +350,20 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     "DIFileAttr":$file,
     OptionalParameter<"StringAttr">:$producer,
     "bool":$isOptimized,
-    "DIEmissionKind":$emissionKind
+    "DIEmissionKind":$emissionKind,
+    OptionalParameter<"DINameTableKind">:$nameTableKind
   );
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+      "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
+      "StringAttr":$producer, "bool":$isOptimized,
+      "DIEmissionKind":$emissionKind,
+      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind
+    ), [{
+      return $_get(id.getContext(), id, sourceLanguage, file, producer,
+                   isOptimized, emissionKind, nameTableKind);
+    }]>
+  ];
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
@@ -373,7 +385,11 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint64_t">:$alignInBits,
-    OptionalArrayRefParameter<"DINodeAttr">:$elements
+    OptionalArrayRefParameter<"DINodeAttr">:$elements,
+    OptionalParameter<"DIExpressionAttr">:$dataLocation,
+    OptionalParameter<"DIExpressionAttr">:$rank,
+    OptionalParameter<"DIExpressionAttr">:$allocated,
+    OptionalParameter<"DIExpressionAttr">:$associated
   );
   let assemblyFormat = "`<` struct(params) `>`";
   let extraClassDeclaration = [{
@@ -405,7 +421,9 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
     OptionalParameter<"DITypeAttr">:$baseType,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint32_t">:$alignInBits,
-    OptionalParameter<"uint64_t">:$offsetInBits
+    OptionalParameter<"uint64_t">:$offsetInBits,
+    OptionalParameter<"std::optional<unsigned>">:$dwarfAddressSpace,
+    OptionalParameter<"DINodeAttr">:$extraData
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -545,7 +563,7 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
     "DIFileAttr":$file,
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$scopeLine,
-    "DISubprogramFlags":$subprogramFlags,
+    OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
     OptionalParameter<"DISubroutineTypeAttr">:$type
   );
   let builders = [
@@ -1018,5 +1036,26 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
   let assemblyFormat = "`<` `[` (`]`) : ($features^ `]`)? `>`";
   let genVerifyDecl = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// UndefAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::UndefOp.
+def LLVM_UndefAttr : LLVM_Attr<"Undef", "undef">;
+
+//===----------------------------------------------------------------------===//
+// PoisonAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::PoisonOp.
+def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
+
+//===----------------------------------------------------------------------===//
+// ZeroAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::ZeroOp.
+def LLVM_ZeroAttr : LLVM_Attr<"Zero", "zero">;
 
 #endif // LLVMIR_ATTRDEFS

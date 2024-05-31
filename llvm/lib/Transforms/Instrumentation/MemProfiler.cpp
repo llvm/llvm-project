@@ -140,6 +140,15 @@ static cl::opt<int> ClDebugMin("memprof-debug-min", cl::desc("Debug min inst"),
 static cl::opt<int> ClDebugMax("memprof-debug-max", cl::desc("Debug max inst"),
                                cl::Hidden, cl::init(-1));
 
+// By default disable matching of allocation profiles onto operator new that
+// already explicitly pass a hot/cold hint, since we don't currently
+// override these hints anyway.
+static cl::opt<bool> ClMemProfMatchHotColdNew(
+    "memprof-match-hot-cold-new",
+    cl::desc(
+        "Match allocation profiles onto existing hot/cold operator new calls"),
+    cl::Hidden, cl::init(false));
+
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
 STATISTIC(NumSkippedStackReads, "Number of non-instrumented stack reads");
@@ -661,6 +670,37 @@ stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
   return InlCallStackIter == InlinedCallStack.end();
 }
 
+static bool isNewWithHotColdVariant(Function *Callee,
+                                    const TargetLibraryInfo &TLI) {
+  if (!Callee)
+    return false;
+  LibFunc Func;
+  if (!TLI.getLibFunc(*Callee, Func))
+    return false;
+  switch (Func) {
+  case LibFunc_Znwm:
+  case LibFunc_ZnwmRKSt9nothrow_t:
+  case LibFunc_ZnwmSt11align_val_t:
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
+  case LibFunc_Znam:
+  case LibFunc_ZnamRKSt9nothrow_t:
+  case LibFunc_ZnamSt11align_val_t:
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
+    return true;
+  case LibFunc_Znwm12__hot_cold_t:
+  case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_Znam12__hot_cold_t:
+  case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+    return ClMemProfMatchHotColdNew;
+  default:
+    return false;
+  }
+}
+
 static void readMemprof(Module &M, Function &F,
                         IndexedInstrProfReader *MemProfReader,
                         const TargetLibraryInfo &TLI) {
@@ -812,7 +852,7 @@ static void readMemprof(Module &M, Function &F,
       if (AllocInfoIter != LocHashToAllocInfo.end()) {
         // Only consider allocations via new, to reduce unnecessary metadata,
         // since those are the only allocations that will be targeted initially.
-        if (!isNewLikeFn(CI, &TLI))
+        if (!isNewWithHotColdVariant(CI->getCalledFunction(), TLI))
           continue;
         // We may match this instruction's location list to multiple MIB
         // contexts. Add them to a Trie specialized for trimming the contexts to

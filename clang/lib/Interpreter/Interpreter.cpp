@@ -229,12 +229,32 @@ IncrementalCompilerBuilder::CreateCudaHost() {
 }
 
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> CI,
-                         llvm::Error &Err) {
-  llvm::ErrorAsOutParameter EAO(&Err);
+                         llvm::Error &ErrOut,
+                         std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder)
+    : JITBuilder(std::move(JITBuilder)) {
+  llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
-  IncrParser = std::make_unique<IncrementalParser>(*this, std::move(CI),
-                                                   *TSCtx->getContext(), Err);
+  IncrParser = std::make_unique<IncrementalParser>(
+      *this, std::move(CI), *TSCtx->getContext(), ErrOut);
+  if (ErrOut)
+    return;
+
+  // Not all frontends support code-generation, e.g. ast-dump actions don't
+  if (IncrParser->getCodeGen()) {
+    if (llvm::Error Err = CreateExecutor()) {
+      ErrOut = joinErrors(std::move(ErrOut), std::move(Err));
+      return;
+    }
+
+    // Process the PTUs that came from initialization. For example -include will
+    // give us a header that's processed at initialization of the preprocessor.
+    for (PartialTranslationUnit &PTU : IncrParser->getPTUs())
+      if (llvm::Error Err = Execute(PTU)) {
+        ErrOut = joinErrors(std::move(ErrOut), std::move(Err));
+        return;
+      }
+  }
 }
 
 Interpreter::~Interpreter() {
@@ -372,15 +392,39 @@ Interpreter::Parse(llvm::StringRef Code) {
   return IncrParser->Parse(Code);
 }
 
+static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
+createJITTargetMachineBuilder(const std::string &TT) {
+  if (TT == llvm::sys::getProcessTriple())
+    // This fails immediately if the target backend is not registered
+    return llvm::orc::JITTargetMachineBuilder::detectHost();
+
+  // If the target backend is not registered, LLJITBuilder::create() will fail
+  return llvm::orc::JITTargetMachineBuilder(llvm::Triple(TT));
+}
+
 llvm::Error Interpreter::CreateExecutor() {
-  const clang::TargetInfo &TI =
-      getCompilerInstance()->getASTContext().getTargetInfo();
   if (IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "Execution engine exists",
                                                std::error_code());
+  if (!IncrParser->getCodeGen())
+    return llvm::make_error<llvm::StringError>("Operation failed. "
+                                               "No code generator available",
+                                               std::error_code());
+  if (!JITBuilder) {
+    const std::string &TT = getCompilerInstance()->getTargetOpts().Triple;
+    auto JTMB = createJITTargetMachineBuilder(TT);
+    if (!JTMB)
+      return JTMB.takeError();
+    auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
+    if (!JB)
+      return JB.takeError();
+    JITBuilder = std::move(*JB);
+  }
+
   llvm::Error Err = llvm::Error::success();
-  auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI);
+  auto Executor =
+      std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err);
   if (!Err)
     IncrExecutor = std::move(Executor);
 
@@ -530,7 +574,8 @@ std::unique_ptr<RuntimeInterfaceBuilder> Interpreter::FindRuntimeInterface() {
 
   auto LookupInterface = [&](Expr *&Interface, llvm::StringRef Name) {
     LookupResult R(S, &Ctx.Idents.get(Name), SourceLocation(),
-                   Sema::LookupOrdinaryName, Sema::ForVisibleRedeclaration);
+                   Sema::LookupOrdinaryName,
+                   RedeclarationKind::ForVisibleRedeclaration);
     S.LookupQualifiedName(R, Ctx.getTranslationUnitDecl());
     if (R.empty())
       return false;

@@ -58,7 +58,7 @@ class AttributeSetNode;
 class BasicBlock;
 class ConstantRangeAttributeImpl;
 struct DiagnosticHandler;
-class DPMarker;
+class DbgMarker;
 class ElementCount;
 class Function;
 class GlobalObject;
@@ -441,7 +441,7 @@ template <> struct MDNodeKeyImpl<DIEnumerator> {
   bool IsUnsigned;
 
   MDNodeKeyImpl(APInt Value, bool IsUnsigned, MDString *Name)
-      : Value(Value), Name(Name), IsUnsigned(IsUnsigned) {}
+      : Value(std::move(Value)), Name(Name), IsUnsigned(IsUnsigned) {}
   MDNodeKeyImpl(int64_t Value, bool IsUnsigned, MDString *Name)
       : Value(APInt(64, Value, !IsUnsigned)), Name(Name),
         IsUnsigned(IsUnsigned) {}
@@ -825,19 +825,26 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   bool isDefinition() const { return SPFlags & DISubprogram::SPFlagDefinition; }
 
   unsigned getHashValue() const {
+    // Use the Scope's linkage name instead of using the scope directly, as the
+    // scope may be a temporary one which can replaced, which would produce a
+    // different hash for the same DISubprogram.
+    llvm::StringRef ScopeLinkageName;
+    if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
+      if (auto *ID = CT->getRawIdentifier())
+        ScopeLinkageName = ID->getString();
+
     // If this is a declaration inside an ODR type, only hash the type and the
     // name.  Otherwise the hash will be stronger than
     // MDNodeSubsetEqualImpl::isDeclarationOfODRMember().
-    if (!isDefinition() && LinkageName)
-      if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
-        if (CT->getRawIdentifier())
-          return hash_combine(LinkageName, Scope);
+    if (!isDefinition() && LinkageName &&
+        isa_and_nonnull<DICompositeType>(Scope))
+      return hash_combine(LinkageName, ScopeLinkageName);
 
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
     // collision "most of the time". There is no correctness issue in case of
     // collision because of the full check above.
-    return hash_combine(Name, Scope, File, Type, Line);
+    return hash_combine(Name, ScopeLinkageName, File, Type, Line);
   }
 };
 
@@ -1450,6 +1457,10 @@ public:
   /// will be automatically deleted if this context is deleted.
   SmallPtrSet<Module *, 4> OwnedModules;
 
+  /// MachineFunctionNums - Keep the next available unique number available for
+  /// a MachineFunction in given module. Module must in OwnedModules.
+  DenseMap<Module *, unsigned> MachineFunctionNums;
+
   /// The main remark streamer used by all the other streamers (e.g. IR, MIR,
   /// frontends, etc.). This should only be used by the specific streamers, and
   /// never directly.
@@ -1550,6 +1561,8 @@ public:
   DenseMap<const GlobalValue *, DSOLocalEquivalent *> DSOLocalEquivalents;
 
   DenseMap<const GlobalValue *, NoCFIValue *> NoCFIValues;
+
+  ConstantUniqueMap<ConstantPtrAuth> ConstantPtrAuths;
 
   ConstantUniqueMap<ConstantExpr> ExprConstants;
 
@@ -1689,15 +1702,15 @@ public:
   /// "trail" in such a way. These are stored in LLVMContext because typically
   /// LLVM only edits a small number of blocks at a time, so there's no need to
   /// bloat BasicBlock with such a data structure.
-  SmallDenseMap<BasicBlock *, DPMarker *> TrailingDbgRecords;
+  SmallDenseMap<BasicBlock *, DbgMarker *> TrailingDbgRecords;
 
   // Set, get and delete operations for TrailingDbgRecords.
-  void setTrailingDbgRecords(BasicBlock *B, DPMarker *M) {
+  void setTrailingDbgRecords(BasicBlock *B, DbgMarker *M) {
     assert(!TrailingDbgRecords.count(B));
     TrailingDbgRecords[B] = M;
   }
 
-  DPMarker *getTrailingDbgRecords(BasicBlock *B) {
+  DbgMarker *getTrailingDbgRecords(BasicBlock *B) {
     return TrailingDbgRecords.lookup(B);
   }
 

@@ -51,6 +51,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
@@ -1065,11 +1066,8 @@ static int ConstantIntSortPredicate(ConstantInt *const *P1,
 static void GetBranchWeights(Instruction *TI,
                              SmallVectorImpl<uint64_t> &Weights) {
   MDNode *MD = TI->getMetadata(LLVMContext::MD_prof);
-  assert(MD);
-  for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
-    ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(i));
-    Weights.push_back(CI->getValue().getZExtValue());
-  }
+  assert(MD && "Invalid branch-weight metadata");
+  extractFromBranchWeightMD64(MD, Weights);
 
   // If TI is a conditional eq, the default case is the false case,
   // and the corresponding branch-weight data is at index 2. We swap the
@@ -1126,9 +1124,8 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     NewBonusInst->insertInto(PredBlock, PTI->getIterator());
     auto Range = NewBonusInst->cloneDebugInfoFrom(&BonusInst);
-    RemapDbgVariableRecordRange(NewBonusInst->getModule(), Range, VMap,
-                                RF_NoModuleLevelChanges |
-                                    RF_IgnoreMissingLocals);
+    RemapDbgRecordRange(NewBonusInst->getModule(), Range, VMap,
+                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
     if (isa<DbgInfoIntrinsic>(BonusInst))
       continue;
@@ -1677,7 +1674,8 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     for (auto &SuccIter : OtherSuccIterRange) {
       Instruction *I2 = &*SuccIter;
       HasTerminator |= I2->isTerminator();
-      if (AllInstsAreIdentical && !I1->isIdenticalToWhenDefined(I2))
+      if (AllInstsAreIdentical && (!I1->isIdenticalToWhenDefined(I2) ||
+                                   MMRAMetadata(*I1) != MMRAMetadata(*I2)))
         AllInstsAreIdentical = false;
     }
 
@@ -1964,6 +1962,7 @@ static bool canSinkInstructions(
   }
 
   const Instruction *I0 = Insts.front();
+  const auto I0MMRA = MMRAMetadata(*I0);
   for (auto *I : Insts) {
     if (!I->isSameOperationAs(I0))
       return false;
@@ -1974,6 +1973,11 @@ static bool canSinkInstructions(
     if (isa<StoreInst>(I) && I->getOperand(1)->isSwiftError())
       return false;
     if (isa<LoadInst>(I) && I->getOperand(0)->isSwiftError())
+      return false;
+
+    // Treat MMRAs conservatively. This pass can be quite aggressive and
+    // could drop a lot of MMRAs otherwise.
+    if (MMRAMetadata(*I) != I0MMRA)
       return false;
   }
 
@@ -2888,7 +2892,8 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
       // simple, to avoid introducing a spurious non-atomic write after an
       // atomic write.
       if (SI->getPointerOperand() == StorePtr &&
-          SI->getValueOperand()->getType() == StoreTy && SI->isSimple())
+          SI->getValueOperand()->getType() == StoreTy && SI->isSimple() &&
+          SI->getAlign() >= StoreToHoist->getAlign())
         // Found the previous store, return its value operand.
         return SI->getValueOperand();
       return nullptr; // Unknown store.
@@ -2896,7 +2901,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
 
     if (auto *LI = dyn_cast<LoadInst>(&CurI)) {
       if (LI->getPointerOperand() == StorePtr && LI->getType() == StoreTy &&
-          LI->isSimple()) {
+          LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
         // Local objects (created by an `alloca` instruction) are always
         // writable, so once we are past a read from a location it is valid to
         // also write to that same location.
@@ -3854,8 +3859,8 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
     for (DbgVariableRecord &DVR :
          filterDbgVars(PredBlock->getTerminator()->getDbgRecordRange())) {
-      RemapDbgVariableRecord(M, &DVR, VMap,
-                             RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      RemapDbgRecord(M, &DVR, VMap,
+                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
   }
 
@@ -5496,11 +5501,13 @@ static bool CasesAreContiguous(SmallVectorImpl<ConstantInt *> &Cases) {
 }
 
 static void createUnreachableSwitchDefault(SwitchInst *Switch,
-                                           DomTreeUpdater *DTU) {
+                                           DomTreeUpdater *DTU,
+                                           bool RemoveOrigDefaultBlock = true) {
   LLVM_DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
   auto *BB = Switch->getParent();
   auto *OrigDefaultBlock = Switch->getDefaultDest();
-  OrigDefaultBlock->removePredecessor(BB);
+  if (RemoveOrigDefaultBlock)
+    OrigDefaultBlock->removePredecessor(BB);
   BasicBlock *NewDefaultBlock = BasicBlock::Create(
       BB->getContext(), BB->getName() + ".unreachabledefault", BB->getParent(),
       OrigDefaultBlock);
@@ -5509,7 +5516,8 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
   if (DTU) {
     SmallVector<DominatorTree::UpdateType, 2> Updates;
     Updates.push_back({DominatorTree::Insert, BB, &*NewDefaultBlock});
-    if (!is_contained(successors(BB), OrigDefaultBlock))
+    if (RemoveOrigDefaultBlock &&
+        !is_contained(successors(BB), OrigDefaultBlock))
       Updates.push_back({DominatorTree::Delete, BB, &*OrigDefaultBlock});
     DTU->applyUpdates(Updates);
   }
@@ -5691,10 +5699,33 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
       Known.getBitWidth() - (Known.Zero | Known.One).popcount();
   assert(NumUnknownBits <= Known.getBitWidth());
   if (HasDefault && DeadCases.empty() &&
-      NumUnknownBits < 64 /* avoid overflow */ &&
-      SI->getNumCases() == (1ULL << NumUnknownBits)) {
-    createUnreachableSwitchDefault(SI, DTU);
-    return true;
+      NumUnknownBits < 64 /* avoid overflow */) {
+    uint64_t AllNumCases = 1ULL << NumUnknownBits;
+    if (SI->getNumCases() == AllNumCases) {
+      createUnreachableSwitchDefault(SI, DTU);
+      return true;
+    }
+    // When only one case value is missing, replace default with that case.
+    // Eliminating the default branch will provide more opportunities for
+    // optimization, such as lookup tables.
+    if (SI->getNumCases() == AllNumCases - 1) {
+      assert(NumUnknownBits > 1 && "Should be canonicalized to a branch");
+      IntegerType *CondTy = cast<IntegerType>(Cond->getType());
+      if (CondTy->getIntegerBitWidth() > 64 ||
+          !DL.fitsInLegalInteger(CondTy->getIntegerBitWidth()))
+        return false;
+
+      uint64_t MissingCaseVal = 0;
+      for (const auto &Case : SI->cases())
+        MissingCaseVal ^= Case.getCaseValue()->getValue().getLimitedValue();
+      auto *MissingCase =
+          cast<ConstantInt>(ConstantInt::get(Cond->getType(), MissingCaseVal));
+      SwitchInstProfUpdateWrapper SIW(*SI);
+      SIW.addCase(MissingCase, SI->getDefaultDest(), SIW.getSuccessorWeight(0));
+      createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
+      SIW.setSuccessorWeight(0, 0);
+      return true;
+    }
   }
 
   if (DeadCases.empty())
@@ -6575,16 +6606,17 @@ static void reuseTableCompare(
   Constant *FalseConst = ConstantInt::getFalse(RangeCmp->getType());
 
   // Check if the compare with the default value is constant true or false.
-  Constant *DefaultConst = ConstantExpr::getICmp(CmpInst->getPredicate(),
-                                                 DefaultValue, CmpOp1, true);
+  const DataLayout &DL = PhiBlock->getModule()->getDataLayout();
+  Constant *DefaultConst = ConstantFoldCompareInstOperands(
+      CmpInst->getPredicate(), DefaultValue, CmpOp1, DL);
   if (DefaultConst != TrueConst && DefaultConst != FalseConst)
     return;
 
   // Check if the compare with the case values is distinct from the default
   // compare result.
   for (auto ValuePair : Values) {
-    Constant *CaseConst = ConstantExpr::getICmp(CmpInst->getPredicate(),
-                                                ValuePair.second, CmpOp1, true);
+    Constant *CaseConst = ConstantFoldCompareInstOperands(
+        CmpInst->getPredicate(), ValuePair.second, CmpOp1, DL);
     if (!CaseConst || CaseConst == DefaultConst ||
         (CaseConst != TrueConst && CaseConst != FalseConst))
       return;
@@ -6783,9 +6815,11 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
           return SwitchLookupTable::WouldFitInRegister(
               DL, UpperBound, KV.second /* ResultType */);
         })) {
+      // There may be some case index larger than the UpperBound (unreachable
+      // case), so make sure the table size does not get smaller.
+      TableSize = std::max(UpperBound, TableSize);
       // The default branch is unreachable after we enlarge the lookup table.
       // Adjust DefaultIsReachable to reuse code path.
-      TableSize = UpperBound;
       DefaultIsReachable = false;
     }
   }
@@ -7512,6 +7546,13 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
         return (!NullPointerIsDefined(SI->getFunction(),
                                       SI->getPointerAddressSpace())) &&
                SI->getPointerOperand() == I;
+
+    // llvm.assume(false/undef) always triggers immediate UB.
+    if (auto *Assume = dyn_cast<AssumeInst>(Use)) {
+      // Ignore assume operand bundles.
+      if (I == Assume->getArgOperand(0))
+        return true;
+    }
 
     if (auto *CB = dyn_cast<CallBase>(Use)) {
       if (C->isNullValue() && NullPointerIsDefined(CB->getFunction()))

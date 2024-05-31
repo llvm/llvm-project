@@ -31,7 +31,7 @@ namespace LIBC_NAMESPACE {
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
-using Sign = fputil::Sign;
+
 using LIBC_NAMESPACE::operator""_u128;
 
 // log2(e)

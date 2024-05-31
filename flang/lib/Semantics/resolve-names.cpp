@@ -175,7 +175,9 @@ public:
     }
   }
 
-  bool InModuleFile() const { return GetFoldingContext().inModuleFile(); }
+  bool InModuleFile() const {
+    return GetFoldingContext().moduleFileName().has_value();
+  }
 
   // Make a placeholder symbol for a Name that otherwise wouldn't have one.
   // It is not in any scope and always has MiscDetails.
@@ -535,7 +537,9 @@ public:
   void SayAlreadyDeclared(const SourceName &, const SourceName &);
   void SayWithReason(
       const parser::Name &, Symbol &, MessageFixedText &&, Message &&);
-  void SayWithDecl(const parser::Name &, Symbol &, MessageFixedText &&);
+  template <typename... A>
+  void SayWithDecl(
+      const parser::Name &, Symbol &, MessageFixedText &&, A &&...args);
   void SayLocalMustBeVariable(const parser::Name &, Symbol &);
   void SayDerivedType(const SourceName &, MessageFixedText &&, const Scope &);
   void Say2(const SourceName &, MessageFixedText &&, const SourceName &,
@@ -685,7 +689,7 @@ protected:
       Symbol &, bool respectImplicitNoneType = true);
   void CheckEntryDummyUse(SourceName, Symbol *);
   bool ConvertToObjectEntity(Symbol &);
-  bool ConvertToProcEntity(Symbol &);
+  bool ConvertToProcEntity(Symbol &, std::optional<SourceName> = std::nullopt);
 
   const DeclTypeSpec &MakeNumericType(
       TypeCategory, const std::optional<parser::KindSelector> &);
@@ -955,7 +959,7 @@ public:
   void Post(const parser::TargetStmt &) { objectDeclAttr_ = std::nullopt; }
   void Post(const parser::DimensionStmt::Declaration &);
   void Post(const parser::CodimensionDecl &);
-  bool Pre(const parser::TypeDeclarationStmt &) { return BeginDecl(); }
+  bool Pre(const parser::TypeDeclarationStmt &);
   void Post(const parser::TypeDeclarationStmt &);
   void Post(const parser::IntegerTypeSpec &);
   void Post(const parser::IntrinsicTypeSpec::Real &);
@@ -1039,10 +1043,10 @@ protected:
   Symbol &DeclareObjectEntity(const parser::Name &, Attrs = Attrs{});
   // Make sure that there's an entity in an enclosing scope called Name
   Symbol &FindOrDeclareEnclosingEntity(const parser::Name &);
-  // Declare a LOCAL/LOCAL_INIT entity. If there isn't a type specified
-  // it comes from the entity in the containing scope, or implicit rules.
-  // Return pointer to the new symbol, or nullptr on error.
-  Symbol *DeclareLocalEntity(const parser::Name &);
+  // Declare a LOCAL/LOCAL_INIT/REDUCE entity while setting a locality flag. If
+  // there isn't a type specified it comes from the entity in the containing
+  // scope, or implicit rules.
+  void DeclareLocalEntity(const parser::Name &, Symbol::Flag);
   // Declare a statement entity (i.e., an implied DO loop index for
   // a DATA statement or an array constructor).  If there isn't an explict
   // type specified, implicit rules apply. Return pointer to the new symbol,
@@ -1143,7 +1147,8 @@ private:
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
   void Initialization(const parser::Name &, const parser::Initialization &,
       bool inComponentDecl);
-  bool PassesLocalityChecks(const parser::Name &name, Symbol &symbol);
+  bool PassesLocalityChecks(
+      const parser::Name &name, Symbol &symbol, Symbol::Flag flag);
   bool CheckForHostAssociatedImplicit(const parser::Name &);
 
   // Declare an object or procedure entity.
@@ -1202,6 +1207,7 @@ private:
   bool MustBeScalar(const Symbol &symbol) const {
     return mustBeScalar_.find(symbol) != mustBeScalar_.end();
   }
+  void DeclareIntrinsic(const parser::Name &);
 };
 
 // Resolve construct entities and statement entities.
@@ -1211,6 +1217,7 @@ public:
   bool Pre(const parser::ConcurrentHeader &);
   bool Pre(const parser::LocalitySpec::Local &);
   bool Pre(const parser::LocalitySpec::LocalInit &);
+  bool Pre(const parser::LocalitySpec::Reduce &);
   bool Pre(const parser::LocalitySpec::Shared &);
   bool Pre(const parser::AcSpec &);
   bool Pre(const parser::AcImpliedDo &);
@@ -1634,6 +1641,8 @@ private:
   void FinishDerivedTypeInstantiation(Scope &);
   void ResolveExecutionParts(const ProgramTree &);
   void UseCUDABuiltinNames();
+  void HandleDerivedTypesInImplicitStmts(const parser::ImplicitPart &,
+      const std::list<parser::DeclarationConstruct> &);
 };
 
 // ImplicitRules implementation
@@ -1774,7 +1783,6 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
       !symbol.attrs().test(Attr::BIND_C)) {
     return;
   }
-
   std::optional<std::string> label{
       evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
   // 18.9.2(2): discard leading and trailing blanks
@@ -1793,16 +1801,18 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
   } else {
     label = symbol.name().ToString();
   }
-  // Check if a symbol has two Bind names.
+  // Checks whether a symbol has two Bind names.
   std::string oldBindName;
-  if (symbol.GetBindName()) {
-    oldBindName = *symbol.GetBindName();
+  if (const auto *bindName{symbol.GetBindName()}) {
+    oldBindName = *bindName;
   }
   symbol.SetBindName(std::move(*label));
   if (!oldBindName.empty()) {
     if (const std::string * newBindName{symbol.GetBindName()}) {
       if (oldBindName != *newBindName) {
-        Say(symbol.name(), "The entity '%s' has multiple BIND names"_err_en_US);
+        Say(symbol.name(),
+            "The entity '%s' has multiple BIND names ('%s' and '%s')"_err_en_US,
+            symbol.name(), oldBindName, *newBindName);
       }
     }
   }
@@ -1833,9 +1843,11 @@ bool AttrsVisitor::Pre(const parser::Pass &x) {
 bool AttrsVisitor::IsDuplicateAttr(Attr attrName) {
   CHECK(attrs_);
   if (attrs_->test(attrName)) {
-    Say(currStmtSource().value(),
-        "Attribute '%s' cannot be used more than once"_warn_en_US,
-        AttrToString(attrName));
+    if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+      Say(currStmtSource().value(),
+          "Attribute '%s' cannot be used more than once"_warn_en_US,
+          AttrToString(attrName));
+    }
     return true;
   }
   return false;
@@ -2034,6 +2046,7 @@ bool ImplicitRulesVisitor::Pre(const parser::ImplicitSpec &) {
 }
 
 void ImplicitRulesVisitor::Post(const parser::ImplicitSpec &) {
+  set_allowForwardReferenceToDerivedType(false);
   EndDeclTypeSpec();
 }
 
@@ -2245,16 +2258,23 @@ void ScopeHandler::SayWithReason(const parser::Name &name, Symbol &symbol,
   context().SetError(symbol, isFatal);
 }
 
-void ScopeHandler::SayWithDecl(
-    const parser::Name &name, Symbol &symbol, MessageFixedText &&msg) {
-  bool isFatal{msg.IsFatal()};
-  Say(name, std::move(msg), symbol.name())
-      .Attach(Message{name.source,
-          symbol.test(Symbol::Flag::Implicit)
-              ? "Implicit declaration of '%s'"_en_US
-              : "Declaration of '%s'"_en_US,
-          name.source});
-  context().SetError(symbol, isFatal);
+template <typename... A>
+void ScopeHandler::SayWithDecl(const parser::Name &name, Symbol &symbol,
+    MessageFixedText &&msg, A &&...args) {
+  auto &message{
+      Say(name.source, std::move(msg), symbol.name(), std::forward<A>(args)...)
+          .Attach(symbol.name(),
+              symbol.test(Symbol::Flag::Implicit)
+                  ? "Implicit declaration of '%s'"_en_US
+                  : "Declaration of '%s'"_en_US,
+              name.source)};
+  if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
+    if (auto usedAsProc{proc->usedAsProcedureHere()}) {
+      if (usedAsProc->begin() != symbol.name().begin()) {
+        message.Attach(*usedAsProc, "Referenced as a procedure"_en_US);
+      }
+    }
+  }
 }
 
 void ScopeHandler::SayLocalMustBeVariable(
@@ -2653,9 +2673,9 @@ bool ScopeHandler::ConvertToObjectEntity(Symbol &symbol) {
   return true;
 }
 // Convert symbol to be a ProcEntity or return false if it can't be.
-bool ScopeHandler::ConvertToProcEntity(Symbol &symbol) {
+bool ScopeHandler::ConvertToProcEntity(
+    Symbol &symbol, std::optional<SourceName> usedHere) {
   if (symbol.has<ProcEntityDetails>()) {
-    // nothing to do
   } else if (symbol.has<UnknownDetails>()) {
     symbol.set_details(ProcEntityDetails{});
   } else if (auto *details{symbol.detailsIf<EntityDetails>()}) {
@@ -2677,6 +2697,10 @@ bool ScopeHandler::ConvertToProcEntity(Symbol &symbol) {
     return hostDetails->symbol().has<ProcEntityDetails>();
   } else {
     return false;
+  }
+  auto &proc{symbol.get<ProcEntityDetails>()};
+  if (usedHere && !proc.usedAsProcedureHere()) {
+    proc.set_usedAsProcedureHere(*usedHere);
   }
   return true;
 }
@@ -3587,9 +3611,11 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   ResolveSpecificsInGeneric(generic, true);
   auto &details{generic.get<GenericDetails>()};
   if (auto *proc{details.CheckSpecific()}) {
-    Say(proc->name().begin() > generic.name().begin() ? proc->name()
-                                                      : generic.name(),
-        "'%s' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic"_warn_en_US);
+    if (context().ShouldWarn(common::UsageWarning::HomonymousSpecific)) {
+      Say(proc->name().begin() > generic.name().begin() ? proc->name()
+                                                        : generic.name(),
+          "'%s' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic"_warn_en_US);
+    }
   }
   auto &specifics{details.specificProcs()};
   if (specifics.empty()) {
@@ -3603,14 +3629,17 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   bool isBoth{false};
   for (const Symbol &specific : specifics) {
     if (isFunction != specific.test(Symbol::Flag::Function)) { // C1514
-      auto &msg{Say(generic.name(),
-          "Generic interface '%s' has both a function and a subroutine"_warn_en_US)};
-      if (isFunction) {
-        msg.Attach(firstSpecific.name(), "Function declaration"_en_US);
-        msg.Attach(specific.name(), "Subroutine declaration"_en_US);
-      } else {
-        msg.Attach(firstSpecific.name(), "Subroutine declaration"_en_US);
-        msg.Attach(specific.name(), "Function declaration"_en_US);
+      if (context().ShouldWarn(
+              common::LanguageFeature::SubroutineAndFunctionSpecifics)) {
+        auto &msg{Say(generic.name(),
+            "Generic interface '%s' has both a function and a subroutine"_warn_en_US)};
+        if (isFunction) {
+          msg.Attach(firstSpecific.name(), "Function declaration"_en_US);
+          msg.Attach(specific.name(), "Subroutine declaration"_en_US);
+        } else {
+          msg.Attach(firstSpecific.name(), "Subroutine declaration"_en_US);
+          msg.Attach(specific.name(), "Function declaration"_en_US);
+        }
       }
       isFunction = false;
       isBoth = true;
@@ -3644,7 +3673,7 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
       misparsedStmtFuncFound_ = true;
       return false;
     }
-    if (DoesScopeContain(&ultimate.owner(), currScope())) {
+    if (IsHostAssociated(*symbol, currScope())) {
       if (context().ShouldWarn(
               common::LanguageFeature::StatementFunctionExtensions)) {
         Say(name,
@@ -3751,9 +3780,12 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
             (*current == common::CUDASubprogramAttrs::HostDevice &&
                 (attr == common::CUDASubprogramAttrs::Host ||
                     attr == common::CUDASubprogramAttrs::Device))) {
-          Say(currStmtSource().value(),
-              "ATTRIBUTES(%s) appears more than once"_warn_en_US,
-              common::EnumToString(attr));
+          if (context().ShouldWarn(
+                  common::LanguageFeature::RedundantAttribute)) {
+            Say(currStmtSource().value(),
+                "ATTRIBUTES(%s) appears more than once"_warn_en_US,
+                common::EnumToString(attr));
+          }
         } else if ((attr == common::CUDASubprogramAttrs::Host ||
                        attr == common::CUDASubprogramAttrs::Device) &&
             (*current == common::CUDASubprogramAttrs::Host ||
@@ -3769,6 +3801,26 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
         }
       } else {
         subp->set_cudaSubprogramAttrs(attr);
+      }
+    }
+    if (auto attrs{subp->cudaSubprogramAttrs()}) {
+      if (*attrs == common::CUDASubprogramAttrs::Global ||
+          *attrs == common::CUDASubprogramAttrs::Device) {
+        const Scope &scope{currScope()};
+        const Scope *mod{FindModuleContaining(scope)};
+        if (mod && mod->GetName().value() == "cudadevice") {
+          return false;
+        }
+        // Implicitly USE the cudadevice module by copying its symbols in the
+        // current scope.
+        const Scope &cudaDeviceScope{context().GetCUDADeviceScope()};
+        for (auto sym : cudaDeviceScope.GetSymbols()) {
+          if (!currScope().FindSymbol(sym->name())) {
+            auto &localSymbol{MakeSymbol(
+                sym->name(), Attrs{}, UseDetails{sym->name(), *sym})};
+            localSymbol.flags() = sym->flags();
+          }
+        }
       }
     }
   }
@@ -3935,11 +3987,13 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   }
   // C1560.
   if (info.resultName && !distinctResultName) {
-    Say(info.resultName->source,
-        "The function name should not appear in RESULT; references to '%s' "
-        "inside the function will be considered as references to the "
-        "result only"_warn_en_US,
-        name.source);
+    if (context().ShouldWarn(common::UsageWarning::HomonymousResult)) {
+      Say(info.resultName->source,
+          "The function name should not appear in RESULT; references to '%s' "
+          "inside the function will be considered as references to the "
+          "result only"_warn_en_US,
+          name.source);
+    }
     // RESULT name was ignored above, the only side effect from doing so will be
     // the inability to make recursive calls. The related parser::Name is still
     // resolved to the created function result symbol because every parser::Name
@@ -4020,27 +4074,10 @@ void SubprogramVisitor::CreateEntry(
       attrs = extant->attrs();
     }
   }
-  bool badResultName{false};
   std::optional<SourceName> distinctResultName;
   if (suffix && suffix->resultName &&
       suffix->resultName->source != entryName.source) {
     distinctResultName = suffix->resultName->source;
-    const parser::Name &resultName{*suffix->resultName};
-    if (resultName.source == subprogram.name()) { // C1574
-      Say2(resultName.source,
-          "RESULT(%s) may not have the same name as the function"_err_en_US,
-          subprogram, "Containing function"_en_US);
-      badResultName = true;
-    } else if (const Symbol * extant{FindSymbol(outer, resultName)}) { // C1574
-      if (const auto *details{extant->detailsIf<SubprogramDetails>()}) {
-        if (details->entryScope() == &currScope()) {
-          Say2(resultName.source,
-              "RESULT(%s) may not have the same name as an ENTRY in the function"_err_en_US,
-              extant->name(), "Conflicting ENTRY"_en_US);
-          badResultName = true;
-        }
-      }
-    }
   }
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
     attrs.set(Attr::PUBLIC);
@@ -4076,17 +4113,24 @@ void SubprogramVisitor::CreateEntry(
     EntityDetails resultDetails;
     resultDetails.set_funcResult(true);
     if (distinctResultName) {
-      if (!badResultName) {
-        // RESULT(x) can be the same explicitly-named RESULT(x) as
-        // the enclosing function or another ENTRY.
-        if (auto iter{currScope().find(suffix->resultName->source)};
-            iter != currScope().end()) {
-          result = &*iter->second;
-        }
-        if (!result) {
-          result = &MakeSymbol(
-              *distinctResultName, Attrs{}, std::move(resultDetails));
-        }
+      // An explicit RESULT() can also be an explicit RESULT()
+      // of the function or another ENTRY.
+      if (auto iter{currScope().find(suffix->resultName->source)};
+          iter != currScope().end()) {
+        result = &*iter->second;
+      }
+      if (!result) {
+        result =
+            &MakeSymbol(*distinctResultName, Attrs{}, std::move(resultDetails));
+      } else if (!result->has<EntityDetails>()) {
+        Say(*distinctResultName,
+            "ENTRY cannot have RESULT(%s) that is not a variable"_err_en_US,
+            *distinctResultName)
+            .Attach(result->name(), "Existing declaration of '%s'"_en_US,
+                result->name());
+        result = nullptr;
+      }
+      if (result) {
         Resolve(*suffix->resultName, *result);
       }
     } else {
@@ -4096,8 +4140,7 @@ void SubprogramVisitor::CreateEntry(
       entryDetails.set_result(*result);
     }
   }
-  if (subpFlag == Symbol::Flag::Subroutine ||
-      (distinctResultName && !badResultName)) {
+  if (subpFlag == Symbol::Flag::Subroutine || distinctResultName) {
     Symbol &assoc{MakeSymbol(entryName.source)};
     assoc.set_details(HostAssocDetails{*entrySymbol});
     assoc.set(Symbol::Flag::Subroutine);
@@ -4353,8 +4396,10 @@ bool SubprogramVisitor::HandlePreviousCalls(
       if (symbol.attrs().test(Attr::EXTERNAL) &&
           !symbol.implicitAttrs().test(Attr::EXTERNAL)) {
         // Warn if external statement previously declared.
-        Say(name,
-            "EXTERNAL attribute was already specified on '%s'"_warn_en_US);
+        if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+          Say(name,
+              "EXTERNAL attribute was already specified on '%s'"_warn_en_US);
+        }
       } else if (symbol.test(other)) {
         Say2(name,
             subpFlag == Symbol::Flag::Function
@@ -4550,6 +4595,20 @@ void DeclarationVisitor::CheckAccessibility(
   }
 }
 
+bool DeclarationVisitor::Pre(const parser::TypeDeclarationStmt &x) {
+  BeginDecl();
+  // If INTRINSIC appears as an attr-spec, handle it now as if the
+  // names had appeared on an INTRINSIC attribute statement beforehand.
+  for (const auto &attr : std::get<std::list<parser::AttrSpec>>(x.t)) {
+    if (std::holds_alternative<parser::Intrinsic>(attr.u)) {
+      for (const auto &decl : std::get<std::list<parser::EntityDecl>>(x.t)) {
+        DeclareIntrinsic(parser::GetFirstName(decl));
+      }
+      break;
+    }
+  }
+  return true;
+}
 void DeclarationVisitor::Post(const parser::TypeDeclarationStmt &) {
   EndDecl();
 }
@@ -4571,6 +4630,7 @@ bool DeclarationVisitor::Pre(const parser::Initialization &) {
 void DeclarationVisitor::Post(const parser::EntityDecl &x) {
   const auto &name{std::get<parser::ObjectName>(x.t)};
   Attrs attrs{attrs_ ? HandleSaveName(name.source, *attrs_) : Attrs{}};
+  attrs.set(Attr::INTRINSIC, false); // dealt with in Pre(TypeDeclarationStmt)
   Symbol &symbol{DeclareUnknownEntity(name, attrs)};
   symbol.ReplaceName(name.source);
   SetCUDADataAttr(name.source, symbol, cudaDataAttr());
@@ -4646,23 +4706,23 @@ bool DeclarationVisitor::Pre(const parser::OldParameterStmt &x) {
 bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   auto &name{std::get<parser::NamedConstant>(x.t).v};
   auto &symbol{HandleAttributeStmt(Attr::PARAMETER, name)};
-  if (!ConvertToObjectEntity(symbol) ||
-      symbol.test(Symbol::Flag::CrayPointer) ||
+  ConvertToObjectEntity(symbol);
+  auto *details{symbol.detailsIf<ObjectEntityDetails>()};
+  if (!details || symbol.test(Symbol::Flag::CrayPointer) ||
       symbol.test(Symbol::Flag::CrayPointee)) {
     SayWithDecl(
         name, symbol, "PARAMETER attribute not allowed on '%s'"_err_en_US);
     return false;
   }
   const auto &expr{std::get<parser::ConstantExpr>(x.t)};
-  auto &details{symbol.get<ObjectEntityDetails>()};
-  if (details.init() || symbol.test(Symbol::Flag::InDataStmt)) {
+  if (details->init() || symbol.test(Symbol::Flag::InDataStmt)) {
     Say(name, "Named constant '%s' already has a value"_err_en_US);
   }
   if (inOldStyleParameterStmt_) {
     // non-standard extension PARAMETER statement (no parentheses)
     Walk(expr);
     auto folded{EvaluateExpr(expr)};
-    if (details.type()) {
+    if (details->type()) {
       SayWithDecl(name, symbol,
           "Alternative style PARAMETER '%s' must not already have an explicit type"_err_en_US);
     } else if (folded) {
@@ -4674,9 +4734,9 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
           } else if (auto shape{ToArraySpec(
                          GetFoldingContext(), evaluate::GetShape(*folded))}) {
             // The type of the named constant is assumed from the expression.
-            details.set_type(*type);
-            details.set_init(std::move(*folded));
-            details.set_shape(std::move(*shape));
+            details->set_type(*type);
+            details->set_init(std::move(*folded));
+            details->set_shape(std::move(*shape));
           } else {
             Say(at, "The expression must have constant shape"_err_en_US);
           }
@@ -4693,7 +4753,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
     Walk(expr);
     if (auto converted{EvaluateNonPointerInitializer(
             symbol, expr, expr.thing.value().source)}) {
-      details.set_init(std::move(*converted));
+      details->set_init(std::move(*converted));
     }
   }
   return false;
@@ -4784,13 +4844,16 @@ bool DeclarationVisitor::Pre(const parser::ExternalStmt &x) {
   HandleAttributeStmt(Attr::EXTERNAL, x.v);
   for (const auto &name : x.v) {
     auto *symbol{FindSymbol(name)};
-    if (!ConvertToProcEntity(DEREF(symbol))) {
+    if (!ConvertToProcEntity(DEREF(symbol), name.source)) {
       // Check if previous symbol is an interface.
       if (auto *details{symbol->detailsIf<SubprogramDetails>()}) {
         if (details->isInterface()) {
           // Warn if interface previously declared.
-          Say(name,
-              "EXTERNAL attribute was already specified on '%s'"_warn_en_US);
+          if (context().ShouldWarn(
+                  common::LanguageFeature::RedundantAttribute)) {
+            Say(name,
+                "EXTERNAL attribute was already specified on '%s'"_warn_en_US);
+          }
         }
       } else {
         SayWithDecl(
@@ -4811,25 +4874,32 @@ bool DeclarationVisitor::Pre(const parser::IntentStmt &x) {
       HandleAttributeStmt(IntentSpecToAttr(intentSpec), names);
 }
 bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
-  HandleAttributeStmt(Attr::INTRINSIC, x.v);
   for (const auto &name : x.v) {
-    if (!IsIntrinsic(name.source, std::nullopt)) {
-      Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
-    }
-    auto &symbol{DEREF(FindSymbol(name))};
-    if (symbol.has<GenericDetails>()) {
-      // Generic interface is extending intrinsic; ok
-    } else if (!ConvertToProcEntity(symbol)) {
-      SayWithDecl(
-          name, symbol, "INTRINSIC attribute not allowed on '%s'"_err_en_US);
-    } else if (symbol.attrs().test(Attr::EXTERNAL)) { // C840
-      Say(symbol.name(),
-          "Symbol '%s' cannot have both EXTERNAL and INTRINSIC attributes"_err_en_US,
-          symbol.name());
-    } else {
-      if (symbol.GetType()) {
-        // These warnings are worded so that they should make sense in either
-        // order.
+    DeclareIntrinsic(name);
+  }
+  return false;
+}
+void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
+  HandleAttributeStmt(Attr::INTRINSIC, name);
+  if (!IsIntrinsic(name.source, std::nullopt)) {
+    Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
+  }
+  auto &symbol{DEREF(FindSymbol(name))};
+  if (symbol.has<GenericDetails>()) {
+    // Generic interface is extending intrinsic; ok
+  } else if (!ConvertToProcEntity(symbol, name.source)) {
+    SayWithDecl(
+        name, symbol, "INTRINSIC attribute not allowed on '%s'"_err_en_US);
+  } else if (symbol.attrs().test(Attr::EXTERNAL)) { // C840
+    Say(symbol.name(),
+        "Symbol '%s' cannot have both EXTERNAL and INTRINSIC attributes"_err_en_US,
+        symbol.name());
+  } else {
+    if (symbol.GetType()) {
+      // These warnings are worded so that they should make sense in either
+      // order.
+      if (context().ShouldWarn(
+              common::UsageWarning::IgnoredIntrinsicFunctionType)) {
         Say(symbol.name(),
             "Explicit type declaration ignored for intrinsic function '%s'"_warn_en_US,
             symbol.name())
@@ -4837,19 +4907,17 @@ bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
                 "INTRINSIC statement for explicitly-typed '%s'"_en_US,
                 name.source);
       }
-      if (!symbol.test(Symbol::Flag::Function) &&
-          !symbol.test(Symbol::Flag::Subroutine)) {
-        if (context().intrinsics().IsIntrinsicFunction(
-                name.source.ToString())) {
-          symbol.set(Symbol::Flag::Function);
-        } else if (context().intrinsics().IsIntrinsicSubroutine(
-                       name.source.ToString())) {
-          symbol.set(Symbol::Flag::Subroutine);
-        }
+    }
+    if (!symbol.test(Symbol::Flag::Function) &&
+        !symbol.test(Symbol::Flag::Subroutine)) {
+      if (context().intrinsics().IsIntrinsicFunction(name.source.ToString())) {
+        symbol.set(Symbol::Flag::Function);
+      } else if (context().intrinsics().IsIntrinsicSubroutine(
+                     name.source.ToString())) {
+        symbol.set(Symbol::Flag::Subroutine);
       }
     }
   }
-  return false;
 }
 bool DeclarationVisitor::Pre(const parser::OptionalStmt &x) {
   return CheckNotInBlock("OPTIONAL") && // C1107
@@ -4904,9 +4972,11 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
     }
   } else if (symbol && symbol->has<UseDetails>()) {
     if (symbol->GetUltimate().attrs().test(attr)) {
-      Say(currStmtSource().value(),
-          "Use-associated '%s' already has '%s' attribute"_warn_en_US,
-          name.source, EnumToString(attr));
+      if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+        Say(currStmtSource().value(),
+            "Use-associated '%s' already has '%s' attribute"_warn_en_US,
+            name.source, EnumToString(attr));
+      }
     } else {
       Say(currStmtSource().value(),
           "Cannot change %s attribute on use-associated '%s'"_err_en_US,
@@ -4954,7 +5024,9 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
     if (symbol.attrs().test(Attr::EXTERNAL)) {
       ConvertToProcEntity(symbol);
     }
-    SetBindNameOn(symbol);
+    if (attrs.test(Attr::BIND_C)) {
+      SetBindNameOn(symbol);
+    }
     return symbol;
   }
 }
@@ -4967,8 +5039,7 @@ bool DeclarationVisitor::HasCycle(
     if (procsInCycle.count(*interface) > 0) {
       for (const auto &procInCycle : procsInCycle) {
         Say(procInCycle->name(),
-            "The interface for procedure '%s' is recursively "
-            "defined"_err_en_US,
+            "The interface for procedure '%s' is recursively defined"_err_en_US,
             procInCycle->name());
         context().SetError(*procInCycle);
       }
@@ -5035,8 +5106,10 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
           context().SetError(symbol);
         }
       } else if (MustBeScalar(symbol)) {
-        Say(name,
-            "'%s' appeared earlier as a scalar actual argument to a specification function"_warn_en_US);
+        if (context().ShouldWarn(common::UsageWarning::PreviousScalarUse)) {
+          Say(name,
+              "'%s' appeared earlier as a scalar actual argument to a specification function"_warn_en_US);
+        }
       } else if (details->init() || symbol.test(Symbol::Flag::InDataStmt)) {
         Say(name, "'%s' was initialized earlier as a scalar"_err_en_US);
       } else {
@@ -5414,8 +5487,10 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
     details.set_sequence(true);
     if (componentDefs.empty()) {
       // F'2023 C745 - not enforced by any compiler
-      Say(stmt.source,
-          "A sequence type should have at least one component"_warn_en_US);
+      if (context().ShouldWarn(common::LanguageFeature::EmptySequenceType)) {
+        Say(stmt.source,
+            "A sequence type should have at least one component"_warn_en_US);
+      }
     }
     if (!details.paramNames().empty()) { // C740
       Say(stmt.source,
@@ -5445,7 +5520,7 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
   std::optional<DerivedTypeSpec> extendsType{
       ResolveExtendsType(name, extendsName)};
   DerivedTypeDetails derivedTypeDetails;
-  if (Symbol *typeSymbol{FindInScope(currScope(), name)}; typeSymbol &&
+  if (Symbol * typeSymbol{FindInScope(currScope(), name)}; typeSymbol &&
       typeSymbol->has<DerivedTypeDetails>() &&
       typeSymbol->get<DerivedTypeDetails>().isForwardReferenced()) {
     derivedTypeDetails.set_isForwardReferenced(true);
@@ -5489,8 +5564,7 @@ void DeclarationVisitor::Post(const parser::TypeParamDefStmt &x) {
       SetType(name, *type);
       if (auto &init{
               std::get<std::optional<parser::ScalarIntConstantExpr>>(decl.t)}) {
-        if (auto maybeExpr{EvaluateNonPointerInitializer(
-                *symbol, *init, init->thing.thing.thing.value().source)}) {
+        if (auto maybeExpr{AnalyzeExpr(context(), *init)}) {
           if (auto *intExpr{std::get_if<SomeIntExpr>(&maybeExpr->u)}) {
             symbol->get<TypeParamDetails>().set_init(std::move(*intExpr));
           }
@@ -5519,13 +5593,17 @@ bool DeclarationVisitor::Pre(const parser::PrivateStmt &) {
   } else if (!derivedTypeInfo_.privateComps) {
     derivedTypeInfo_.privateComps = true;
   } else { // C738
-    Say("PRIVATE should not appear more than once in derived type components"_warn_en_US);
+    if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+      Say("PRIVATE should not appear more than once in derived type components"_warn_en_US);
+    }
   }
   return false;
 }
 bool DeclarationVisitor::Pre(const parser::SequenceStmt &) {
   if (derivedTypeInfo_.sequence) { // C738
-    Say("SEQUENCE should not appear more than once in derived type components"_warn_en_US);
+    if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+      Say("SEQUENCE should not appear more than once in derived type components"_warn_en_US);
+    }
   }
   derivedTypeInfo_.sequence = true;
   return false;
@@ -6049,7 +6127,9 @@ void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
     }
     if (const auto *pointeeType{pointee->GetType()}) {
       if (const auto *derived{pointeeType->AsDerived()}) {
-        if (!IsSequenceOrBindCType(derived)) {
+        if (!IsSequenceOrBindCType(derived) &&
+            context().ShouldWarn(
+                common::LanguageFeature::NonSequenceCrayPointee)) {
           Say(pointeeName,
               "Type of Cray pointee '%s' is a derived type that is neither SEQUENCE nor BIND(C)"_warn_en_US);
         }
@@ -6153,7 +6233,7 @@ void DeclarationVisitor::CheckEquivalenceSets() {
     }
     for (const parser::EquivalenceObject &object : *set) {
       const auto &designator{object.v.value()};
-      // The designator was not resolved when it was encountered so do it now.
+      // The designator was not resolved when it was encountered, so do it now.
       // AnalyzeExpr causes array sections to be changed to substrings as needed
       Walk(designator);
       if (AnalyzeExpr(context(), designator)) {
@@ -6197,9 +6277,11 @@ void DeclarationVisitor::CheckSaveStmts() {
       // error was reported
     } else if (specPartState_.saveInfo.saveAll) {
       // C889 - note that pgi, ifort, xlf do not enforce this constraint
-      Say2(name,
-          "Explicit SAVE of '%s' is redundant due to global SAVE statement"_warn_en_US,
-          *specPartState_.saveInfo.saveAll, "Global SAVE statement"_en_US);
+      if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+        Say2(name,
+            "Explicit SAVE of '%s' is redundant due to global SAVE statement"_warn_en_US,
+            *specPartState_.saveInfo.saveAll, "Global SAVE statement"_en_US);
+      }
     } else if (!IsSaved(*symbol)) {
       SetExplicitAttr(*symbol, Attr::SAVE);
     }
@@ -6241,7 +6323,8 @@ Attrs DeclarationVisitor::HandleSaveName(const SourceName &name, Attrs attrs) {
 void DeclarationVisitor::AddSaveName(
     std::set<SourceName> &set, const SourceName &name) {
   auto pair{set.insert(name)};
-  if (!pair.second) {
+  if (!pair.second &&
+      context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
     Say2(name, "SAVE attribute was already specified on '%s'"_warn_en_US,
         *pair.first, "Previous specification of SAVE attribute"_en_US);
   }
@@ -6401,44 +6484,59 @@ bool DeclarationVisitor::PassesSharedLocalityChecks(
   return true;
 }
 
-// Checks for locality-specs LOCAL and LOCAL_INIT
+// Checks for locality-specs LOCAL, LOCAL_INIT, and REDUCE
 bool DeclarationVisitor::PassesLocalityChecks(
-    const parser::Name &name, Symbol &symbol) {
-  if (IsAllocatable(symbol)) { // C1128
+    const parser::Name &name, Symbol &symbol, Symbol::Flag flag) {
+  bool isReduce{flag == Symbol::Flag::LocalityReduce};
+  const char *specName{
+      flag == Symbol::Flag::LocalityLocalInit ? "LOCAL_INIT" : "LOCAL"};
+  if (IsAllocatable(symbol) && !isReduce) { // F'2023 C1130
     SayWithDecl(name, symbol,
-        "ALLOCATABLE variable '%s' not allowed in a locality-spec"_err_en_US);
+        "ALLOCATABLE variable '%s' not allowed in a %s locality-spec"_err_en_US,
+        specName);
     return false;
   }
-  if (IsOptional(symbol)) { // C1128
+  if (IsOptional(symbol)) { // F'2023 C1130-C1131
     SayWithDecl(name, symbol,
         "OPTIONAL argument '%s' not allowed in a locality-spec"_err_en_US);
     return false;
   }
-  if (IsIntentIn(symbol)) { // C1128
+  if (IsIntentIn(symbol)) { // F'2023 C1130-C1131
     SayWithDecl(name, symbol,
         "INTENT IN argument '%s' not allowed in a locality-spec"_err_en_US);
     return false;
   }
-  if (IsFinalizable(symbol)) { // C1128
+  if (IsFinalizable(symbol) && !isReduce) { // F'2023 C1130
     SayWithDecl(name, symbol,
-        "Finalizable variable '%s' not allowed in a locality-spec"_err_en_US);
+        "Finalizable variable '%s' not allowed in a %s locality-spec"_err_en_US,
+        specName);
     return false;
   }
-  if (evaluate::IsCoarray(symbol)) { // C1128
-    SayWithDecl(
-        name, symbol, "Coarray '%s' not allowed in a locality-spec"_err_en_US);
+  if (evaluate::IsCoarray(symbol) && !isReduce) { // F'2023 C1130
+    SayWithDecl(name, symbol,
+        "Coarray '%s' not allowed in a %s locality-spec"_err_en_US, specName);
     return false;
   }
   if (const DeclTypeSpec * type{symbol.GetType()}) {
-    if (type->IsPolymorphic() && IsDummy(symbol) &&
-        !IsPointer(symbol)) { // C1128
+    if (type->IsPolymorphic() && IsDummy(symbol) && !IsPointer(symbol) &&
+        !isReduce) { // F'2023 C1130
       SayWithDecl(name, symbol,
-          "Nonpointer polymorphic argument '%s' not allowed in a "
-          "locality-spec"_err_en_US);
+          "Nonpointer polymorphic argument '%s' not allowed in a %s locality-spec"_err_en_US,
+          specName);
       return false;
     }
   }
-  if (IsAssumedSizeArray(symbol)) { // C1128
+  if (symbol.attrs().test(Attr::ASYNCHRONOUS) && isReduce) { // F'2023 C1131
+    SayWithDecl(name, symbol,
+        "ASYNCHRONOUS variable '%s' not allowed in a REDUCE locality-spec"_err_en_US);
+    return false;
+  }
+  if (symbol.attrs().test(Attr::VOLATILE) && isReduce) { // F'2023 C1131
+    SayWithDecl(name, symbol,
+        "VOLATILE variable '%s' not allowed in a REDUCE locality-spec"_err_en_US);
+    return false;
+  }
+  if (IsAssumedSizeArray(symbol)) { // F'2023 C1130-C1131
     SayWithDecl(name, symbol,
         "Assumed size array '%s' not allowed in a locality-spec"_err_en_US);
     return false;
@@ -6446,8 +6544,7 @@ bool DeclarationVisitor::PassesLocalityChecks(
   if (std::optional<Message> whyNot{WhyNotDefinable(
           name.source, currScope(), DefinabilityFlags{}, symbol)}) {
     SayWithReason(name, symbol,
-        "'%s' may not appear in a locality-spec because it is not "
-        "definable"_err_en_US,
+        "'%s' may not appear in a locality-spec because it is not definable"_err_en_US,
         std::move(*whyNot));
     return false;
   }
@@ -6467,12 +6564,14 @@ Symbol &DeclarationVisitor::FindOrDeclareEnclosingEntity(
   return *prev;
 }
 
-Symbol *DeclarationVisitor::DeclareLocalEntity(const parser::Name &name) {
+void DeclarationVisitor::DeclareLocalEntity(
+    const parser::Name &name, Symbol::Flag flag) {
   Symbol &prev{FindOrDeclareEnclosingEntity(name)};
-  if (!PassesLocalityChecks(name, prev)) {
-    return nullptr;
+  if (PassesLocalityChecks(name, prev, flag)) {
+    if (auto *symbol{&MakeHostAssocSymbol(name, prev)}) {
+      symbol->set(flag);
+    }
   }
-  return &MakeHostAssocSymbol(name, prev);
 }
 
 Symbol *DeclarationVisitor::DeclareStatementEntity(
@@ -6486,6 +6585,7 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
       return nullptr;
     }
     name.symbol = nullptr;
+    // F'2023 19.4 p5 ambiguous rule about outer declarations
     declTypeSpec = prev->GetType();
   }
   Symbol &symbol{DeclareEntity<ObjectEntityDetails>(name, {})};
@@ -6504,9 +6604,7 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
   } else {
     ApplyImplicitRules(symbol);
   }
-  Symbol *result{Resolve(name, &symbol)};
-  AnalyzeExpr(context(), doVar); // enforce INTEGER type
-  return result;
+  return Resolve(name, &symbol);
 }
 
 // Set the type of an entity or report an error.
@@ -6693,8 +6791,11 @@ bool DeclarationVisitor::OkToAddComponent(
               " '%s'"_err_en_US;
       } else if (CheckAccessibleSymbol(currScope(), *prev)) {
         // inaccessible component -- redeclaration is ok
-        msg = "Component '%s' is inaccessibly declared in or as a "
-              "parent of this derived type"_warn_en_US;
+        if (context().ShouldWarn(
+                common::UsageWarning::RedeclaredInaccessibleComponent)) {
+          msg =
+              "Component '%s' is inaccessibly declared in or as a parent of this derived type"_warn_en_US;
+        }
       } else if (prev->test(Symbol::Flag::ParentComp)) {
         msg = "'%s' is a parent type of this type and so cannot be"
               " a component"_err_en_US;
@@ -6807,18 +6908,21 @@ bool ConstructVisitor::Pre(const parser::ConcurrentHeader &header) {
 
 bool ConstructVisitor::Pre(const parser::LocalitySpec::Local &x) {
   for (auto &name : x.v) {
-    if (auto *symbol{DeclareLocalEntity(name)}) {
-      symbol->set(Symbol::Flag::LocalityLocal);
-    }
+    DeclareLocalEntity(name, Symbol::Flag::LocalityLocal);
   }
   return false;
 }
 
 bool ConstructVisitor::Pre(const parser::LocalitySpec::LocalInit &x) {
   for (auto &name : x.v) {
-    if (auto *symbol{DeclareLocalEntity(name)}) {
-      symbol->set(Symbol::Flag::LocalityLocalInit);
-    }
+    DeclareLocalEntity(name, Symbol::Flag::LocalityLocalInit);
+  }
+  return false;
+}
+
+bool ConstructVisitor::Pre(const parser::LocalitySpec::Reduce &x) {
+  for (const auto &name : std::get<std::list<parser::Name>>(x.t)) {
+    DeclareLocalEntity(name, Symbol::Flag::LocalityReduce);
   }
   return false;
 }
@@ -6826,8 +6930,10 @@ bool ConstructVisitor::Pre(const parser::LocalitySpec::LocalInit &x) {
 bool ConstructVisitor::Pre(const parser::LocalitySpec::Shared &x) {
   for (const auto &name : x.v) {
     if (!FindSymbol(name)) {
-      Say(name,
-          "Variable '%s' with SHARED locality implicitly declared"_warn_en_US);
+      if (context().ShouldWarn(common::UsageWarning::ImplicitShared)) {
+        Say(name,
+            "Variable '%s' with SHARED locality implicitly declared"_warn_en_US);
+      }
     }
     Symbol &prev{FindOrDeclareEnclosingEntity(name)};
     if (PassesSharedLocalityChecks(name, prev)) {
@@ -6915,23 +7021,22 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
   // When a name first appears as an object in a DATA statement, it should
   // be implicitly declared locally as if it had been assigned.
   auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
-  common::visit(common::visitors{
-                    [&](const Indirection<parser::Variable> &y) {
-                      auto restorer{
-                          common::ScopedSet(deferImplicitTyping_, true)};
-                      Walk(y.value());
-                      const parser::Name &first{
-                          parser::GetFirstName(y.value())};
-                      if (first.symbol) {
-                        first.symbol->set(Symbol::Flag::InDataStmt);
-                      }
-                    },
-                    [&](const parser::DataImpliedDo &y) {
-                      PushScope(Scope::Kind::ImpliedDos, nullptr);
-                      Walk(y);
-                      PopScope();
-                    },
-                },
+  common::visit(
+      common::visitors{
+          [&](const Indirection<parser::Variable> &y) {
+            auto restorer{common::ScopedSet(deferImplicitTyping_, true)};
+            Walk(y.value());
+            const parser::Name &first{parser::GetFirstName(y.value())};
+            if (first.symbol) {
+              first.symbol->set(Symbol::Flag::InDataStmt);
+            }
+          },
+          [&](const parser::DataImpliedDo &y) {
+            PushScope(Scope::Kind::ImpliedDos, nullptr);
+            Walk(y);
+            PopScope();
+          },
+      },
       x.u);
   return false;
 }
@@ -7682,6 +7787,7 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
               } else if (!context().HasError(*name->symbol)) {
                 SayWithDecl(*name, *name->symbol,
                     "Cannot reference function '%s' as data"_err_en_US);
+                context().SetError(*name->symbol);
               }
             }
             return name;
@@ -7764,28 +7870,31 @@ bool DeclarationVisitor::CheckForHostAssociatedImplicit(
   if (name.symbol) {
     ApplyImplicitRules(*name.symbol, true);
   }
-  Symbol *hostSymbol;
-  Scope *host{GetHostProcedure()};
-  if (!host || isImplicitNoneType(*host)) {
-    return false;
+  if (Scope * host{GetHostProcedure()}; host && !isImplicitNoneType(*host)) {
+    Symbol *hostSymbol{nullptr};
+    if (!name.symbol) {
+      if (currScope().CanImport(name.source)) {
+        hostSymbol = &MakeSymbol(*host, name.source, Attrs{});
+        ConvertToObjectEntity(*hostSymbol);
+        ApplyImplicitRules(*hostSymbol);
+        hostSymbol->set(Symbol::Flag::ImplicitOrError);
+      }
+    } else if (name.symbol->test(Symbol::Flag::ImplicitOrError)) {
+      hostSymbol = name.symbol;
+    }
+    if (hostSymbol) {
+      Symbol &symbol{MakeHostAssocSymbol(name, *hostSymbol)};
+      if (auto *assoc{symbol.detailsIf<HostAssocDetails>()}) {
+        if (isImplicitNoneType()) {
+          assoc->implicitOrExplicitTypeError = true;
+        } else {
+          assoc->implicitOrSpecExprError = true;
+        }
+        return true;
+      }
+    }
   }
-  if (!name.symbol) {
-    hostSymbol = &MakeSymbol(*host, name.source, Attrs{});
-    ConvertToObjectEntity(*hostSymbol);
-    ApplyImplicitRules(*hostSymbol);
-    hostSymbol->set(Symbol::Flag::ImplicitOrError);
-  } else if (name.symbol->test(Symbol::Flag::ImplicitOrError)) {
-    hostSymbol = name.symbol;
-  } else {
-    return false;
-  }
-  Symbol &symbol{MakeHostAssocSymbol(name, *hostSymbol)};
-  if (isImplicitNoneType()) {
-    symbol.get<HostAssocDetails>().implicitOrExplicitTypeError = true;
-  } else {
-    symbol.get<HostAssocDetails>().implicitOrSpecExprError = true;
-  }
-  return true;
+  return false;
 }
 
 bool DeclarationVisitor::IsUplevelReference(const Symbol &symbol) {
@@ -7822,7 +7931,7 @@ const parser::Name *DeclarationVisitor::FindComponent(
   auto &symbol{base->symbol->GetUltimate()};
   if (!symbol.has<AssocEntityDetails>() && !ConvertToObjectEntity(symbol)) {
     SayWithDecl(*base, symbol,
-        "'%s' is an invalid base for a component reference"_err_en_US);
+        "'%s' is not an object and may not be used as the base of a component reference or type parameter inquiry"_err_en_US);
     return nullptr;
   }
   auto *type{symbol.GetType()};
@@ -8096,7 +8205,7 @@ void ResolveNamesVisitor::HandleProcedureName(
       symbol = &MakeSymbol(context().globalScope(), name.source, Attrs{});
     }
     Resolve(name, *symbol);
-    ConvertToProcEntity(*symbol);
+    ConvertToProcEntity(*symbol, name.source);
     if (!symbol->attrs().test(Attr::INTRINSIC)) {
       if (CheckImplicitNoneExternal(name.source, *symbol)) {
         MakeExternal(*symbol);
@@ -8121,7 +8230,7 @@ void ResolveNamesVisitor::HandleProcedureName(
       name.symbol = symbol;
     }
     CheckEntryDummyUse(name.source, symbol);
-    bool convertedToProcEntity{ConvertToProcEntity(*symbol)};
+    bool convertedToProcEntity{ConvertToProcEntity(*symbol, name.source)};
     if (convertedToProcEntity && !symbol->attrs().test(Attr::EXTERNAL) &&
         IsIntrinsic(symbol->name(), flag) && !IsDummy(*symbol)) {
       AcquireIntrinsicProcedureFlags(*symbol);
@@ -8180,7 +8289,7 @@ void ResolveNamesVisitor::NoteExecutablePartCall(
             ? Symbol::Flag::Function
             : Symbol::Flag::Subroutine};
     if (!symbol->test(other)) {
-      ConvertToProcEntity(*symbol);
+      ConvertToProcEntity(*symbol, name);
       if (auto *details{symbol->detailsIf<ProcEntityDetails>()}) {
         symbol->set(flag);
         if (IsDummy(*symbol)) {
@@ -8217,11 +8326,13 @@ bool ResolveNamesVisitor::SetProcFlag(
   if (symbol.test(Symbol::Flag::Function) && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(
         name, symbol, "Cannot call function '%s' like a subroutine"_err_en_US);
+    context().SetError(symbol);
     return false;
   } else if (symbol.test(Symbol::Flag::Subroutine) &&
       flag == Symbol::Flag::Function) {
     SayWithDecl(
         name, symbol, "Cannot call subroutine '%s' like a function"_err_en_US);
+    context().SetError(symbol);
     return false;
   } else if (flag == Symbol::Flag::Function &&
       IsLocallyImplicitGlobalSymbol(symbol, name) &&
@@ -8240,6 +8351,7 @@ bool ResolveNamesVisitor::SetProcFlag(
   } else if (symbol.GetType() && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(
         name, symbol, "Cannot call function '%s' like a subroutine"_err_en_US);
+    context().SetError(symbol);
   } else if (symbol.attrs().test(Attr::INTRINSIC)) {
     AcquireIntrinsicProcedureFlags(symbol);
   }
@@ -8285,12 +8397,16 @@ Symbol &ModuleVisitor::SetAccess(
   Attrs &attrs{symbol->attrs()};
   if (attrs.HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
     // PUBLIC/PRIVATE already set: make it a fatal error if it changed
-    Attr prev = attrs.test(Attr::PUBLIC) ? Attr::PUBLIC : Attr::PRIVATE;
-    Say(name,
-        WithSeverity(
-            "The accessibility of '%s' has already been specified as %s"_warn_en_US,
-            attr != prev ? parser::Severity::Error : parser::Severity::Warning),
-        MakeOpName(name), EnumToString(prev));
+    Attr prev{attrs.test(Attr::PUBLIC) ? Attr::PUBLIC : Attr::PRIVATE};
+    if (attr != prev ||
+        context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+      Say(name,
+          WithSeverity(
+              "The accessibility of '%s' has already been specified as %s"_warn_en_US,
+              attr != prev ? parser::Severity::Error
+                           : parser::Severity::Warning),
+          MakeOpName(name), EnumToString(prev));
+    }
   } else {
     attrs.set(attr);
   }
@@ -8308,6 +8424,67 @@ static bool NeedsExplicitType(const Symbol &symbol) {
     return !details->procInterface() && !details->type();
   } else {
     return false;
+  }
+}
+
+void ResolveNamesVisitor::HandleDerivedTypesInImplicitStmts(
+    const parser::ImplicitPart &implicitPart,
+    const std::list<parser::DeclarationConstruct> &decls) {
+  // Detect derived type definitions and create symbols for them now if
+  // they appear in IMPLICIT statements so that these forward-looking
+  // references will not be ambiguous with host associations.
+  std::set<SourceName> implicitDerivedTypes;
+  for (const auto &ipStmt : implicitPart.v) {
+    if (const auto *impl{std::get_if<
+            parser::Statement<common::Indirection<parser::ImplicitStmt>>>(
+            &ipStmt.u)}) {
+      if (const auto *specs{std::get_if<std::list<parser::ImplicitSpec>>(
+              &impl->statement.value().u)}) {
+        for (const auto &spec : *specs) {
+          const auto &declTypeSpec{
+              std::get<parser::DeclarationTypeSpec>(spec.t)};
+          if (const auto *dtSpec{common::visit(
+                  common::visitors{
+                      [](const parser::DeclarationTypeSpec::Type &x) {
+                        return &x.derived;
+                      },
+                      [](const parser::DeclarationTypeSpec::Class &x) {
+                        return &x.derived;
+                      },
+                      [](const auto &) -> const parser::DerivedTypeSpec * {
+                        return nullptr;
+                      }},
+                  declTypeSpec.u)}) {
+            implicitDerivedTypes.emplace(
+                std::get<parser::Name>(dtSpec->t).source);
+          }
+        }
+      }
+    }
+  }
+  if (!implicitDerivedTypes.empty()) {
+    for (const auto &decl : decls) {
+      if (const auto *spec{
+              std::get_if<parser::SpecificationConstruct>(&decl.u)}) {
+        if (const auto *dtDef{
+                std::get_if<common::Indirection<parser::DerivedTypeDef>>(
+                    &spec->u)}) {
+          const parser::DerivedTypeStmt &dtStmt{
+              std::get<parser::Statement<parser::DerivedTypeStmt>>(
+                  dtDef->value().t)
+                  .statement};
+          const parser::Name &name{std::get<parser::Name>(dtStmt.t)};
+          if (implicitDerivedTypes.find(name.source) !=
+                  implicitDerivedTypes.end() &&
+              !FindInScope(name)) {
+            DerivedTypeDetails details;
+            details.set_isForwardReferenced(true);
+            Resolve(name, MakeSymbol(name, std::move(details)));
+            implicitDerivedTypes.erase(name.source);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -8329,6 +8506,7 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
   ClearUseOnly();
   ClearModuleUses();
   Walk(importStmts);
+  HandleDerivedTypesInImplicitStmts(implicitPart, decls);
   Walk(implicitPart);
   for (const auto &decl : decls) {
     if (const auto *spec{
@@ -8507,7 +8685,9 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
   Symbol *symbol{name.symbol};
   auto *details{symbol ? symbol->detailsIf<SubprogramDetails>() : nullptr};
   if (!details || !symbol->scope() ||
-      &symbol->scope()->parent() != &currScope()) {
+      &symbol->scope()->parent() != &currScope() || details->isInterface() ||
+      details->isDummy() || details->entryScope() ||
+      details->moduleInterface() || symbol->test(Symbol::Flag::Subroutine)) {
     return; // error recovery
   }
   // Resolve the symbols on the RHS of the statement function.
@@ -8637,7 +8817,7 @@ bool ResolveNamesVisitor::Pre(const parser::PointerAssignmentStmt &x) {
           context().globalScope(), name->source, Attrs{Attr::EXTERNAL})};
       symbol.implicitAttrs().set(Attr::EXTERNAL);
       Resolve(*name, symbol);
-      ConvertToProcEntity(symbol);
+      ConvertToProcEntity(symbol, name->source);
       return false;
     }
   }
@@ -8785,8 +8965,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
         }
       }
     }
-  } else {
-    Say(x.source, "Compiler directive was ignored"_warn_en_US);
+  } else if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
+    Say(x.source, "Unrecognized compiler directive was ignored"_warn_en_US);
   }
 }
 
@@ -8801,13 +8981,13 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
     ResolveAccParts(context(), x, &topScope_);
     return false;
   }
-  auto root{ProgramTree::Build(x)};
+  auto root{ProgramTree::Build(x, context())};
   SetScope(topScope_);
   ResolveSpecificationParts(root);
   FinishSpecificationParts(root);
   ResolveExecutionParts(root);
   FinishExecutionParts(root);
-  ResolveAccParts(context(), x);
+  ResolveAccParts(context(), x, /*topScope=*/nullptr);
   ResolveOmpParts(context(), x);
   return false;
 }

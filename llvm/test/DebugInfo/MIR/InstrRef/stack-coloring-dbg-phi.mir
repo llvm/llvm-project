@@ -106,6 +106,7 @@ liveins:
   - { reg: '$rdi', virtual-reg: '%15' }
 frameInfo:
   maxAlignment:    8
+  adjustsStack:    true
   hasCalls:        true
 stack:
   - { id: 0, size: 8, alignment: 8 }

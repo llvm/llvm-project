@@ -441,9 +441,9 @@ ValueEnumerator::ValueEnumerator(const Module &M,
         };
 
         for (DbgRecord &DR : I.getDbgRecordRange()) {
-          if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-            EnumerateMetadata(&F, DPL->getLabel());
-            EnumerateMetadata(&F, &*DPL->getDebugLoc());
+          if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+            EnumerateMetadata(&F, DLR->getLabel());
+            EnumerateMetadata(&F, &*DLR->getDebugLoc());
             continue;
           }
           // Enumerate non-local location metadata.
@@ -1191,6 +1191,6 @@ unsigned ValueEnumerator::getGlobalBasicBlockID(const BasicBlock *BB) const {
   return getGlobalBasicBlockID(BB);
 }
 
-uint64_t ValueEnumerator::computeBitsRequiredForTypeIndicies() const {
+uint64_t ValueEnumerator::computeBitsRequiredForTypeIndices() const {
   return Log2_32_Ceil(getTypes().size() + 1);
 }

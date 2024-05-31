@@ -50,7 +50,6 @@ namespace std
 #include <__atomic/atomic_base.h>
 #include <__atomic/atomic_sync.h>
 #include <__atomic/memory_order.h>
-#include <__availability>
 #include <cstddef>
 #include <limits>
 #include <version>
@@ -66,7 +65,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class latch {
+class _LIBCPP_DEPRECATED_ATOMIC_SYNC latch {
   __atomic_base<ptrdiff_t> __a_;
 
 public:

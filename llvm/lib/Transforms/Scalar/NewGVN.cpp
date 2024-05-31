@@ -892,7 +892,7 @@ private:
 
   // Debug counter info.  When verifying, we have to reset the value numbering
   // debug counter to the same state it started in to get the same results.
-  int64_t StartingVNCounter = 0;
+  DebugCounter::CounterState StartingVNCounter;
 };
 
 } // end anonymous namespace
@@ -3278,7 +3278,7 @@ void NewGVN::verifyIterationSettled(Function &F) {
 #ifndef NDEBUG
   LLVM_DEBUG(dbgs() << "Beginning iteration verification\n");
   if (DebugCounter::isCounterSet(VNCounter))
-    DebugCounter::setCounterValue(VNCounter, StartingVNCounter);
+    DebugCounter::setCounterState(VNCounter, StartingVNCounter);
 
   // Note that we have to store the actual classes, as we may change existing
   // classes during iteration.  This is because our memory iteration propagation
@@ -3423,7 +3423,7 @@ void NewGVN::iterateTouchedInstructions() {
 // This is the main transformation entry point.
 bool NewGVN::runGVN() {
   if (DebugCounter::isCounterSet(VNCounter))
-    StartingVNCounter = DebugCounter::getCounterValue(VNCounter);
+    StartingVNCounter = DebugCounter::getCounterState(VNCounter);
   bool Changed = false;
   NumFuncArgs = F.arg_size();
   MSSAWalker = MSSA->getWalker();
@@ -4019,7 +4019,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
           // dominated defs as dead.
           if (Def) {
             // For anything in this case, what and how we value number
-            // guarantees that any side-effets that would have occurred (ie
+            // guarantees that any side-effects that would have occurred (ie
             // throwing, etc) can be proven to either still occur (because it's
             // dominated by something that has the same side-effects), or never
             // occur.  Otherwise, we would not have been able to prove it value

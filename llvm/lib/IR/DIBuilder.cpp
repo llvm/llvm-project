@@ -356,6 +356,17 @@ DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,
                             nullptr, Annotations);
 }
 
+DIDerivedType *
+DIBuilder::createTemplateAlias(DIType *Ty, StringRef Name, DIFile *File,
+                               unsigned LineNo, DIScope *Context,
+                               DINodeArray TParams, uint32_t AlignInBits,
+                               DINode::DIFlags Flags, DINodeArray Annotations) {
+  return DIDerivedType::get(VMContext, dwarf::DW_TAG_template_alias, Name, File,
+                            LineNo, getNonCompileUnitScope(Context), Ty, 0,
+                            AlignInBits, 0, std::nullopt, std::nullopt, Flags,
+                            TParams.get(), Annotations);
+}
+
 DIDerivedType *DIBuilder::createFriend(DIType *Ty, DIType *FriendTy) {
   assert(Ty && "Invalid type!");
   assert(FriendTy && "Invalid friend type!");
@@ -1155,12 +1166,12 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
 
   trackIfUnresolved(LabelInfo);
   if (M.IsNewDbgInfoFormat) {
-    DPLabel *DPL = new DPLabel(LabelInfo, DL);
+    DbgLabelRecord *DLR = new DbgLabelRecord(LabelInfo, DL);
     if (InsertBB && InsertBefore)
-      InsertBB->insertDbgRecordBefore(DPL, InsertBefore->getIterator());
+      InsertBB->insertDbgRecordBefore(DLR, InsertBefore->getIterator());
     else if (InsertBB)
-      InsertBB->insertDbgRecordBefore(DPL, InsertBB->end());
-    return DPL;
+      InsertBB->insertDbgRecordBefore(DLR, InsertBB->end());
+    return DLR;
   }
 
   if (!LabelFn)

@@ -1270,13 +1270,22 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .custom();
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
-  getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF})
-    .legalFor({{S32, S32}, {S32, S64}})
-    .clampScalar(0, S32, S32)
-    .clampScalar(1, S32, S64)
-    .scalarize(0)
-    .widenScalarToNextPow2(0, 32)
-    .widenScalarToNextPow2(1, 32);
+  getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+      .legalFor({{S32, S32}, {S32, S64}})
+      .customIf(scalarNarrowerThan(1, 32))
+      .clampScalar(0, S32, S32)
+      .clampScalar(1, S32, S64)
+      .scalarize(0)
+      .widenScalarToNextPow2(0, 32)
+      .widenScalarToNextPow2(1, 32);
+
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
+      .legalFor({{S32, S32}, {S32, S64}})
+      .clampScalar(0, S32, S32)
+      .clampScalar(1, S32, S64)
+      .scalarize(0)
+      .widenScalarToNextPow2(0, 32)
+      .widenScalarToNextPow2(1, 32);
 
   // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
   // RegBankSelect.
@@ -1624,7 +1633,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
-  if (ST.hasLDSFPAtomicAdd()) {
+  if (ST.hasLDSFPAtomicAddF32()) {
     Atomic.legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
     if (ST.hasLdsAtomicAddF64())
       Atomic.legalFor({{S64, LocalPtr}});
@@ -2030,6 +2039,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
       .lower();
 
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP}).custom();
+
   getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
         G_INDEXED_LOAD, G_INDEXED_SEXTLOAD,
         G_INDEXED_ZEXTLOAD, G_INDEXED_STORE})
@@ -2126,6 +2137,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
     return legalizeCTLZ_CTTZ(MI, MRI, B);
+  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+    return legalizeCTLZ_ZERO_UNDEF(MI, MRI, B);
   case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND:
     return legalizeFPTruncRound(MI, B);
   case TargetOpcode::G_STACKSAVE:
@@ -2134,6 +2147,10 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeGetFPEnv(MI, MRI, B);
   case TargetOpcode::G_SET_FPENV:
     return legalizeSetFPEnv(MI, MRI, B);
+  case TargetOpcode::G_TRAP:
+    return legalizeTrap(MI, MRI, B);
+  case TargetOpcode::G_DEBUGTRAP:
+    return legalizeDebugTrap(MI, MRI, B);
   default:
     return false;
   }
@@ -2913,7 +2930,7 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
 
   if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isModuleEntryFunction() &&
-        !GV->getName().equals("llvm.amdgcn.module.lds")) {
+        GV->getName() != "llvm.amdgcn.module.lds") {
       const Function &Fn = MF.getFunction();
       DiagnosticInfoUnsupported BadLDSDecl(
         Fn, "local memory global used by non-kernel function", MI.getDebugLoc(),
@@ -2925,7 +2942,7 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
       // functions that use local objects. However, if these dead functions are
       // not eliminated, we don't want a compile time error. Just emit a warning
       // and a trap, since there should be no callable path here.
-      B.buildIntrinsic(Intrinsic::trap, ArrayRef<Register>());
+      B.buildTrap();
       B.buildUndef(DstReg);
       MI.eraseFromParent();
       return true;
@@ -4139,6 +4156,25 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI,
+                                                  MachineRegisterInfo &MRI,
+                                                  MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(Src);
+  TypeSize NumBits = SrcTy.getSizeInBits();
+
+  assert(NumBits < 32u);
+
+  auto ShiftAmt = B.buildConstant(S32, 32u - NumBits);
+  auto Extend = B.buildAnyExt(S32, {Src}).getReg(0u);
+  auto Shift = B.buildShl(S32, Extend, ShiftAmt);
+  auto Ctlz = B.buildInstr(AMDGPU::G_AMDGPU_FFBH_U32, {S32}, {Shift});
+  B.buildTrunc(Dst, Ctlz);
+  MI.eraseFromParent();
+  return true;
+}
+
 // Check that this is a G_XOR x, -1
 static bool isNot(const MachineRegisterInfo &MRI, const MachineInstr &MI) {
   if (MI.getOpcode() != TargetOpcode::G_XOR)
@@ -4242,7 +4278,8 @@ bool AMDGPULegalizerInfo::loadInputValue(
       AMDGPU::isEntryFunctionCC(CC) && !MFI->hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
   const ArgDescriptor WorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
-  if (ST.hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
+  if (ST.hasArchitectedSGPRs() &&
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (ArgType) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Arg = &WorkGroupIDX;
@@ -5833,17 +5870,18 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
                   : AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT;
     }
   } else {
-    if (IsTFE)
-      return false;
     switch (MemTy.getSizeInBits()) {
     case 8:
-      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE;
+      Opc = IsTFE ? AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE_TFE
+                  : AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE;
       break;
     case 16:
-      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT;
+      Opc = IsTFE ? AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT_TFE
+                  : AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT;
       break;
     default:
-      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD;
+      Opc = IsTFE ? AMDGPU::G_AMDGPU_BUFFER_LOAD_TFE
+                  : AMDGPU::G_AMDGPU_BUFFER_LOAD;
       break;
     }
   }
@@ -5855,7 +5893,11 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(LoadTy);
     buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
                     Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
-    if (NumValueDWords == 1) {
+    if (MemTy.getSizeInBits() < 32) {
+      Register ExtDst = B.getMRI()->createGenericVirtualRegister(S32);
+      B.buildUnmerge({ExtDst, StatusDst}, LoadDstReg);
+      B.buildTrunc(Dst, ExtDst);
+    } else if (NumValueDWords == 1) {
       B.buildUnmerge({Dst, StatusDst}, LoadDstReg);
     } else {
       SmallVector<Register, 5> LoadElts;
@@ -6618,9 +6660,9 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
 }
 
 // TODO: Move to selection
-bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
-                                                MachineRegisterInfo &MRI,
-                                                MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeTrap(MachineInstr &MI,
+                                       MachineRegisterInfo &MRI,
+                                       MachineIRBuilder &B) const {
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return legalizeTrapEndpgm(MI, MRI, B);
@@ -6718,16 +6760,27 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeTrapHsa(
-    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeTrapHsa(MachineInstr &MI,
+                                          MachineRegisterInfo &MRI,
+                                          MachineIRBuilder &B) const {
+  // We need to simulate the 's_trap 2' instruction on targets that run in
+  // PRIV=1 (where it is treated as a nop).
+  if (ST.hasPrivEnabledTrap2NopBug()) {
+    ST.getInstrInfo()->insertSimulatedTrap(MRI, B.getMBB(), MI,
+                                           MI.getDebugLoc());
+    MI.eraseFromParent();
+    return true;
+  }
+
   B.buildInstr(AMDGPU::S_TRAP)
       .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));
   MI.eraseFromParent();
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeDebugTrapIntrinsic(
-    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
+                                            MachineRegisterInfo &MRI,
+                                            MachineIRBuilder &B) const {
   // Is non-HSA path or trap-handler disabled? Then, report a warning
   // accordingly
   if (!ST.isTrapHandlerEnabled() ||
@@ -7270,10 +7323,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd_v2bf16:
     return legalizeBufferAtomic(MI, B, IntrID);
-  case Intrinsic::trap:
-    return legalizeTrapIntrinsic(MI, MRI, B);
-  case Intrinsic::debugtrap:
-    return legalizeDebugTrapIntrinsic(MI, MRI, B);
   case Intrinsic::amdgcn_rsq_clamp:
     return legalizeRsqClampIntrinsic(MI, MRI, B);
   case Intrinsic::amdgcn_ds_fadd:

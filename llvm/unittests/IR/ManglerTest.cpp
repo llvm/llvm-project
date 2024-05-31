@@ -171,7 +171,7 @@ TEST(ManglerTest, GOFF) {
             "foo");
   EXPECT_EQ(mangleFunc("foo", llvm::GlobalValue::PrivateLinkage,
                        llvm::CallingConv::C, Mod, Mang),
-            "@foo");
+            "L#foo");
 }
 
 } // end anonymous namespace

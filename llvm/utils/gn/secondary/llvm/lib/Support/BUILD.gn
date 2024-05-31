@@ -6,7 +6,6 @@ static_library("Support") {
     "//llvm/include/llvm/Support:write_vcsrevision",
     "//llvm/lib/Demangle",
     "//llvm/utils/gn/build/libs/pthread",
-    "//llvm/utils/gn/build/libs/terminfo",
     "//llvm/utils/gn/build/libs/zlib",
   ]
 
@@ -90,6 +89,8 @@ static_library("Support") {
     "GlobPattern.cpp",
     "GraphWriter.cpp",
     "Hashing.cpp",
+    "HexagonAttributeParser.cpp",
+    "HexagonAttributes.cpp",
     "InitLLVM.cpp",
     "InstructionCost.cpp",
     "IntEqClasses.cpp",
@@ -117,7 +118,7 @@ static_library("Support") {
     "PrettyStackTrace.cpp",
     "RISCVAttributeParser.cpp",
     "RISCVAttributes.cpp",
-    "RISCVISAInfo.cpp",
+    "RISCVISAUtils.cpp",
     "RWMutex.cpp",
     "RandomNumberGenerator.cpp",
     "Regex.cpp",

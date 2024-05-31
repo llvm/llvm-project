@@ -16,9 +16,9 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/DynoStats.h"
+#include "bolt/Profile/BoltAddressTranslation.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
-#include <map>
 #include <set>
 #include <string>
 #include <unordered_set>
@@ -53,15 +53,31 @@ public:
   virtual Error runOnFunctions(BinaryContext &BC) = 0;
 };
 
+/// A pass to set initial program-wide dynostats.
+class DynoStatsSetPass : public BinaryFunctionPass {
+public:
+  DynoStatsSetPass() : BinaryFunctionPass(false) {}
+
+  const char *getName() const override {
+    return "set dyno-stats before optimizations";
+  }
+
+  bool shouldPrint(const BinaryFunction &BF) const override { return false; }
+
+  Error runOnFunctions(BinaryContext &BC) override {
+    BC.InitialDynoStats = getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
+    return Error::success();
+  }
+};
+
 /// A pass to print program-wide dynostats.
 class DynoStatsPrintPass : public BinaryFunctionPass {
 protected:
-  DynoStats PrevDynoStats;
   std::string Title;
 
 public:
-  DynoStatsPrintPass(const DynoStats &PrevDynoStats, const char *Title)
-      : BinaryFunctionPass(false), PrevDynoStats(PrevDynoStats), Title(Title) {}
+  DynoStatsPrintPass(const char *Title)
+      : BinaryFunctionPass(false), Title(Title) {}
 
   const char *getName() const override {
     return "print dyno-stats after optimizations";
@@ -70,6 +86,7 @@ public:
   bool shouldPrint(const BinaryFunction &BF) const override { return false; }
 
   Error runOnFunctions(BinaryContext &BC) override {
+    const DynoStats PrevDynoStats = BC.InitialDynoStats;
     const DynoStats NewDynoStats =
         getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
     const bool Changed = (NewDynoStats != PrevDynoStats);
@@ -400,9 +417,11 @@ public:
 /// Prints a list of the top 100 functions sorted by a set of
 /// dyno stats categories.
 class PrintProgramStats : public BinaryFunctionPass {
+  BoltAddressTranslation *BAT = nullptr;
+
 public:
-  explicit PrintProgramStats(const cl::opt<bool> &PrintPass)
-      : BinaryFunctionPass(PrintPass) {}
+  explicit PrintProgramStats(BoltAddressTranslation *BAT = nullptr)
+      : BinaryFunctionPass(false), BAT(BAT) {}
 
   const char *getName() const override { return "print-stats"; }
   bool shouldPrint(const BinaryFunction &) const override { return false; }

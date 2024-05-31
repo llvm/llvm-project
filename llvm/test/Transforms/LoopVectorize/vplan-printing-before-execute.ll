@@ -13,7 +13,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (zext i4 (trunc i64 %N to i4) to i64)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -23,11 +23,12 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     EMIT ir<%p.src> = WIDEN-POINTER-INDUCTION ir<%A>, 1
-; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer ir<%p.src>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     EMIT vp<[[PADD:%.+]]> = ptradd ir<%A>, vp<[[STEPS]]>
+; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer vp<[[PADD]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add nsw ir<%l>, ir<10>
-; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer ir<%p.src>
+; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer vp<[[PADD]]>
 ; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%add>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -44,7 +45,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (zext i4 (trunc i64 %N to i4) to i64)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -54,11 +55,12 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     EMIT ir<%p.src> = WIDEN-POINTER-INDUCTION ir<%A>, 1
-; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer ir<%p.src>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     EMIT vp<[[PADD:%.+]]> = ptradd ir<%A>, vp<[[STEPS]]>
+; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer vp<[[PADD]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add nsw ir<%l>, ir<10>
-; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer ir<%p.src>
+; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer vp<[[PADD]]>
 ; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%add>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-cond ir<true>

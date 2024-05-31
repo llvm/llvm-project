@@ -68,7 +68,7 @@ static Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> &Elf) {
     if (Dyn.d_tag == ELF::DT_STRTAB) {
       auto MappedAddrOrError = Elf.toMappedAddr(Dyn.getPtr());
       if (!MappedAddrOrError)
-        consumeError(MappedAddrOrError.takeError());
+        return MappedAddrOrError.takeError();
       return StringRef(reinterpret_cast<const char *>(*MappedAddrOrError));
     }
   }
@@ -223,7 +223,6 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
       continue;
 
     std::string Str = Elf.getDynamicTagAsString(Dyn.d_tag);
-    outs() << format(TagFmt.c_str(), Str.c_str());
 
     const char *Fmt =
         ELFT::Is64Bits ? "0x%016" PRIx64 "\n" : "0x%08" PRIx64 "\n";
@@ -232,14 +231,16 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
         Dyn.d_tag == ELF::DT_AUXILIARY || Dyn.d_tag == ELF::DT_FILTER) {
       Expected<StringRef> StrTabOrErr = getDynamicStrTab(Elf);
       if (StrTabOrErr) {
-        const char *Data = StrTabOrErr.get().data();
-        outs() << (Data + Dyn.d_un.d_val) << "\n";
+        const char *Data = StrTabOrErr->data();
+        outs() << format(TagFmt.c_str(), Str.c_str()) << Data + Dyn.getVal()
+               << "\n";
         continue;
       }
       reportWarning(toString(StrTabOrErr.takeError()), Obj.getFileName());
       consumeError(StrTabOrErr.takeError());
     }
-    outs() << format(Fmt, (uint64_t)Dyn.d_un.d_val);
+    outs() << format(TagFmt.c_str(), Str.c_str())
+           << format(Fmt, (uint64_t)Dyn.getVal());
   }
 }
 

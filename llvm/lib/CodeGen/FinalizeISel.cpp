@@ -59,8 +59,7 @@ bool FinalizeISel::runOnMachineFunction(MachineFunction &MF) {
 
       // Set AdjustsStack to true if the instruction selector emits a stack
       // frame setup instruction or a stack aligning inlineasm.
-      if (MI.getOpcode() == TII->getCallFrameSetupOpcode() ||
-          MI.isStackAligningInlineAsm())
+      if (TII->isFrameInstr(MI) || MI.isStackAligningInlineAsm())
         MF.getFrameInfo().setAdjustsStack(true);
 
       // If MI is a pseudo, expand it.

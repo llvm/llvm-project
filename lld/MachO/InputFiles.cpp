@@ -1170,7 +1170,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
           continue;
         }
         add += sym->value;
-        referentIsec = cast<ConcatInputSection>(sym->isec);
+        referentIsec = cast<ConcatInputSection>(sym->isec());
       } else {
         referentIsec =
             cast<ConcatInputSection>(r.referent.dyn_cast<InputSection *>());
@@ -1191,7 +1191,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         ++it;
         continue;
       }
-      d->unwindEntry = isec;
+      d->originalUnwindEntry = isec;
       // Now that the symbol points to the unwind entry, we can remove the reloc
       // that points from the unwind entry back to the symbol.
       //
@@ -1348,7 +1348,7 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   }
   if (Invert)
     std::swap(pcSym, target);
-  if (pcSym->isec == isec) {
+  if (pcSym->isec() == isec) {
     if (pcSym->value - (Invert ? -1 : 1) * minuend.addend != subtrahend.offset)
       fatal("invalid FDE relocation in __eh_frame");
   } else {
@@ -1420,7 +1420,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       // We already have an explicit relocation for the CIE offset.
       cieIsec =
           targetSymFromCanonicalSubtractor</*Invert=*/true>(isec, cieOffRelocIt)
-              ->isec;
+              ->isec();
       dataOff += sizeof(uint32_t);
     } else {
       // If we haven't found a relocation, then the CIE offset is most likely
@@ -1480,15 +1480,15 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       // to register the unwind entry under same symbol.
       // This is not particularly efficient, but we should run into this case
       // infrequently (only when handling the output of `ld -r`).
-      if (funcSym->isec)
-        funcSym = findSymbolAtOffset(cast<ConcatInputSection>(funcSym->isec),
+      if (funcSym->isec())
+        funcSym = findSymbolAtOffset(cast<ConcatInputSection>(funcSym->isec()),
                                      funcSym->value);
     } else {
       funcSym = findSymbolAtAddress(sections, funcAddr);
       ehRelocator.makePcRel(funcAddrOff, funcSym, target->p2WordSize);
     }
     // The symbol has been coalesced, or already has a compact unwind entry.
-    if (!funcSym || funcSym->getFile() != this || funcSym->unwindEntry) {
+    if (!funcSym || funcSym->getFile() != this || funcSym->unwindEntry()) {
       // We must prune unused FDEs for correctness, so we cannot rely on
       // -dead_strip being enabled.
       isec->live = false;
@@ -1497,7 +1497,8 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
 
     InputSection *lsdaIsec = nullptr;
     if (lsdaAddrRelocIt != isec->relocs.end()) {
-      lsdaIsec = targetSymFromCanonicalSubtractor(isec, lsdaAddrRelocIt)->isec;
+      lsdaIsec =
+          targetSymFromCanonicalSubtractor(isec, lsdaAddrRelocIt)->isec();
     } else if (lsdaAddrOpt) {
       uint64_t lsdaAddr = *lsdaAddrOpt;
       Section *sec = findContainingSection(sections, &lsdaAddr);
@@ -1507,7 +1508,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
     }
 
     fdes[isec] = {funcLength, cie.personalitySymbol, lsdaIsec};
-    funcSym->unwindEntry = isec;
+    funcSym->originalUnwindEntry = isec;
     ehRelocator.commit();
   }
 

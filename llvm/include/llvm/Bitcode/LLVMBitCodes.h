@@ -385,7 +385,7 @@ enum ConstantsCodes {
   CST_CODE_CSTRING = 9,          // CSTRING:       [values]
   CST_CODE_CE_BINOP = 10,        // CE_BINOP:      [opcode, opval, opval]
   CST_CODE_CE_CAST = 11,         // CE_CAST:       [opcode, opty, opval]
-  CST_CODE_CE_GEP = 12,          // CE_GEP:        [n x operands]
+  CST_CODE_CE_GEP_OLD = 12,      // CE_GEP:        [n x operands]
   CST_CODE_CE_SELECT = 13,       // CE_SELECT:     [opval, opval, opval]
   CST_CODE_CE_EXTRACTELT = 14,   // CE_EXTRACTELT: [opty, opval, opval]
   CST_CODE_CE_INSERTELT = 15,    // CE_INSERTELT:  [opval, opval, opval]
@@ -399,18 +399,21 @@ enum ConstantsCodes {
   CST_CODE_DATA = 22,            // DATA:          [n x elements]
   CST_CODE_INLINEASM_OLD2 = 23,  // INLINEASM:     [sideeffect|alignstack|
                                  //                 asmdialect,asmstr,conststr]
-  CST_CODE_CE_GEP_WITH_INRANGE_INDEX = 24, //      [opty, flags, n x operands]
-  CST_CODE_CE_UNOP = 25,                   // CE_UNOP:      [opcode, opval]
-  CST_CODE_POISON = 26,                    // POISON
-  CST_CODE_DSO_LOCAL_EQUIVALENT = 27,      // DSO_LOCAL_EQUIVALENT [gvty, gv]
-  CST_CODE_INLINEASM_OLD3 = 28,    // INLINEASM:     [sideeffect|alignstack|
-                                   //                 asmdialect|unwind,
-                                   //                 asmstr,conststr]
-  CST_CODE_NO_CFI_VALUE = 29, // NO_CFI [ fty, f ]
-  CST_CODE_INLINEASM = 30,    // INLINEASM:     [fnty,
-                              //                 sideeffect|alignstack|
-                              //                 asmdialect|unwind,
-                              //                 asmstr,conststr]
+  CST_CODE_CE_GEP_WITH_INRANGE_INDEX_OLD = 24, //  [opty, flags, n x operands]
+  CST_CODE_CE_UNOP = 25,                       // CE_UNOP:      [opcode, opval]
+  CST_CODE_POISON = 26,                        // POISON
+  CST_CODE_DSO_LOCAL_EQUIVALENT = 27, // DSO_LOCAL_EQUIVALENT [gvty, gv]
+  CST_CODE_INLINEASM_OLD3 = 28,       // INLINEASM:     [sideeffect|alignstack|
+                                      //                 asmdialect|unwind,
+                                      //                 asmstr,conststr]
+  CST_CODE_NO_CFI_VALUE = 29,         // NO_CFI [ fty, f ]
+  CST_CODE_INLINEASM = 30,            // INLINEASM:     [fnty,
+                                      //                 sideeffect|alignstack|
+                                      //                 asmdialect|unwind,
+                                      //                 asmstr,conststr]
+  CST_CODE_CE_GEP_WITH_INRANGE = 31,  // [opty, flags, range, n x operands]
+  CST_CODE_CE_GEP = 32,               // [opty, flags, n x operands]
+  CST_CODE_PTRAUTH = 33,              // [ptr, key, disc, addrdisc]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which
@@ -491,6 +494,13 @@ enum OverflowingBinaryOperatorOptionalFlags {
   OBO_NO_SIGNED_WRAP = 1
 };
 
+/// TruncInstOptionalFlags - Flags for serializing
+/// TruncInstOptionalFlags's SubclassOptionalData contents.
+enum TruncInstOptionalFlags {
+  TIO_NO_UNSIGNED_WRAP = 0,
+  TIO_NO_SIGNED_WRAP = 1
+};
+
 /// FastMath Flags
 /// This is a fixed layout derived from the bitcode emitted by LLVM 5.0
 /// intended to decouple the in-memory representation from the serialization.
@@ -515,6 +525,14 @@ enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 /// PossiblyDisjointInstOptionalFlags - Flags for serializing
 /// PossiblyDisjointInst's SubclassOptionalData contents.
 enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
+
+/// GetElementPtrOptionalFlags - Flags for serializing
+/// GEPOperator's SubclassOptionalData contents.
+enum GetElementPtrOptionalFlags {
+  GEP_INBOUNDS = 0,
+  GEP_NUSW = 1,
+  GEP_NUW = 2,
+};
 
 /// Encoded AtomicOrdering values.
 enum AtomicOrderingCodes {

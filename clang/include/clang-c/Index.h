@@ -1644,8 +1644,9 @@ enum CXCursorKind {
   CXCursor_ObjCSelfExpr = 146,
 
   /** OpenMP 5.0 [2.1.5, Array Section].
+   * OpenACC 3.3 [2.7.1, Data Specification for Data Clauses (Sub Arrays)]
    */
-  CXCursor_OMPArraySectionExpr = 147,
+  CXCursor_ArraySectionExpr = 147,
 
   /** Represents an @available(...) check.
    */
@@ -2991,6 +2992,7 @@ enum CXCallingConv {
   CXCallingConv_AArch64SVEPCS = 18,
   CXCallingConv_M68kRTD = 19,
   CXCallingConv_PreserveNone = 20,
+  CXCallingConv_RISCVVectorCall = 21,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200

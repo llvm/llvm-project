@@ -2452,8 +2452,9 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
   }
 
   if (llvm::any_of(Worklist, [&](AA::ValueAndContext VAC) {
-        return !isKnownNonZero(VAC.getValue(), A.getDataLayout(), 0, AC,
-                               VAC.getCtxI(), DT);
+        return !isKnownNonZero(
+            VAC.getValue(),
+            SimplifyQuery(A.getDataLayout(), DT, AC, VAC.getCtxI()));
       }))
     return false;
 
@@ -5190,6 +5191,12 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
   } else if (auto *LI = dyn_cast<LoadInst>(I)) {
     if (LI->getPointerOperand() == UseV)
       MA = LI->getAlign();
+  } else if (auto *AI = dyn_cast<AtomicRMWInst>(I)) {
+    if (AI->getPointerOperand() == UseV)
+      MA = AI->getAlign();
+  } else if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I)) {
+    if (AI->getPointerOperand() == UseV)
+      MA = AI->getAlign();
   }
 
   if (!MA || *MA <= QueryingAA.getKnownAlign())
@@ -5683,6 +5690,9 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
     return V.use_empty();
 
   // You cannot "capture" null in the default address space.
+  //
+  // FIXME: This should use NullPointerIsDefined to account for the function
+  // attribute.
   if (isa<UndefValue>(V) || (isa<ConstantPointerNull>(V) &&
                              V.getType()->getPointerAddressSpace() == 0)) {
     return true;
@@ -5892,10 +5902,13 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
 
   const Function *F =
       isArgumentPosition() ? IRP.getAssociatedFunction() : IRP.getAnchorScope();
-  assert(F && "Expected a function!");
-  const IRPosition &FnPos = IRPosition::function(*F);
+
+  // TODO: Is the checkForAllUses below useful for constants?
+  if (!F)
+    return indicatePessimisticFixpoint();
 
   AANoCapture::StateType T;
+  const IRPosition &FnPos = IRPosition::function(*F);
 
   // Readonly means we cannot capture through memory.
   bool IsKnown;

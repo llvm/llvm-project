@@ -93,7 +93,7 @@ void MCTargetStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {}
 
 MCStreamer::MCStreamer(MCContext &Ctx)
     : Context(Ctx), CurrentWinFrameInfo(nullptr),
-      CurrentProcWinFrameInfoStartIndex(0), UseAssemblerInfoForParsing(false) {
+      CurrentProcWinFrameInfoStartIndex(0) {
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
 }
 
@@ -141,7 +141,7 @@ void MCStreamer::emitIntValue(uint64_t Value, unsigned Size) {
   unsigned Index = IsLittleEndian ? 0 : 8 - Size;
   emitBytes(StringRef(reinterpret_cast<char *>(&Swapped) + Index, Size));
 }
-void MCStreamer::emitIntValue(APInt Value) {
+void MCStreamer::emitIntValue(const APInt &Value) {
   if (Value.getNumWords() == 1) {
     emitIntValue(Value.getLimitedValue(), Value.getBitWidth() / 8);
     return;

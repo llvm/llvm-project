@@ -16,10 +16,10 @@
 namespace clang {
 namespace format {
 
-class FormatTestTableGen : public ::testing::Test {
+class FormatTestTableGen : public testing::Test {
 protected:
-  static std::string format(llvm::StringRef Code, unsigned Offset,
-                            unsigned Length, const FormatStyle &Style) {
+  static std::string format(StringRef Code, unsigned Offset, unsigned Length,
+                            const FormatStyle &Style) {
     LLVM_DEBUG(llvm::errs() << "---\n");
     LLVM_DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
@@ -30,22 +30,22 @@ protected:
     return *Result;
   }
 
-  static std::string format(llvm::StringRef Code) {
+  static std::string format(StringRef Code) {
     FormatStyle Style = getGoogleStyle(FormatStyle::LK_TableGen);
     Style.ColumnLimit = 60; // To make writing tests easier.
     return format(Code, 0, Code.size(), Style);
   }
 
-  static void verifyFormat(llvm::StringRef Code) {
+  static void verifyFormat(StringRef Code) {
     EXPECT_EQ(Code.str(), format(Code)) << "Expected code is not stable";
     EXPECT_EQ(Code.str(), format(test::messUp(Code)));
   }
 
-  static void verifyFormat(llvm::StringRef Result, llvm::StringRef MessedUp) {
+  static void verifyFormat(StringRef Result, StringRef MessedUp) {
     EXPECT_EQ(Result, format(MessedUp));
   }
 
-  static void verifyFormat(llvm::StringRef Code, const FormatStyle &Style) {
+  static void verifyFormat(StringRef Code, const FormatStyle &Style) {
     EXPECT_EQ(Code.str(), format(Code, 0, Code.size(), Style))
         << "Expected code is not stable";
     auto MessUp = test::messUp(Code);
@@ -72,7 +72,7 @@ TEST_F(FormatTestTableGen, LiteralsAndIdentifiers) {
                "  let 0startID = $TokVarName;\n"
                "  let 0xstartInteger = 0x42;\n"
                "  let someIdentifier = $TokVarName;\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestTableGen, BangOperators) {
@@ -101,22 +101,22 @@ TEST_F(FormatTestTableGen, BangOperators) {
                "                                  \"zerozero\",\n"
                "                                  true:  // default\n"
                "                                  \"positivepositive\");\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestTableGen, Include) {
-  verifyFormat("include \"test/IncludeFile.h\"\n");
+  verifyFormat("include \"test/IncludeFile.h\"");
 }
 
 TEST_F(FormatTestTableGen, Types) {
-  verifyFormat("def Types : list<int>, bits<3>, list<list<string>> {}\n");
+  verifyFormat("def Types : list<int>, bits<3>, list<list<string>> {}");
 }
 
 TEST_F(FormatTestTableGen, SimpleValue1_SingleLiterals) {
   verifyFormat("def SimpleValue {\n"
                "  let Integer = 42;\n"
                "  let String = \"some string\";\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestTableGen, SimpleValue1_MultilineString) {
@@ -129,7 +129,7 @@ TEST_F(FormatTestTableGen, SimpleValue1_MultilineString) {
       "delimited by \\[{ and }\\]. It  can break across lines and the line "
       "breaks are retained in the string. \n"
       "(https://llvm.org/docs/TableGen/ProgRef.html#grammar-token-TokCode)}];\n"
-      "}\n";
+      "}";
   StringRef DefWithCodeMessedUp =
       "def SimpleValueCode {  let  \n"
       "Code=       \n"
@@ -139,7 +139,7 @@ TEST_F(FormatTestTableGen, SimpleValue1_MultilineString) {
       "breaks are retained in the string. \n"
       "(https://llvm.org/docs/TableGen/ProgRef.html#grammar-token-TokCode)}] \n"
       " ;  \n"
-      "   }    \n";
+      "   }    ";
   verifyFormat(DefWithCode, DefWithCodeMessedUp);
 }
 
@@ -147,15 +147,15 @@ TEST_F(FormatTestTableGen, SimpleValue2) {
   verifyFormat("def SimpleValue2 {\n"
                "  let True = true;\n"
                "  let False = false;\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestTableGen, SimpleValue3) {
-  verifyFormat("class SimpleValue3<int x> { int Question = ?; }\n");
+  verifyFormat("class SimpleValue3<int x> { int Question = ?; }");
 }
 
 TEST_F(FormatTestTableGen, SimpleValue4) {
-  verifyFormat("def SimpleValue4 { let ValueList = {1, 2, 3}; }\n");
+  verifyFormat("def SimpleValue4 { let ValueList = {1, 2, 3}; }");
 }
 
 TEST_F(FormatTestTableGen, SimpleValue5) {
@@ -166,7 +166,7 @@ TEST_F(FormatTestTableGen, SimpleValue5) {
                "      list<int>>;\n"
                "  let SquareBitsListWithType = [ {1, 2},\n"
                "                                 {3, 4} ]<list<bits<8>>>;\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestTableGen, SimpleValue6) {
@@ -184,15 +184,15 @@ TEST_F(FormatTestTableGen, SimpleValue6) {
                "  );\n"
                "  let DAGArgBang = (!cast<SomeType>(\"Some\") i32:$src1,\n"
                "      i32:$src2);\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestTableGen, SimpleValue7) {
-  verifyFormat("def SimpleValue7 { let Identifier = SimpleValue; }\n");
+  verifyFormat("def SimpleValue7 { let Identifier = SimpleValue; }");
 }
 
 TEST_F(FormatTestTableGen, SimpleValue8) {
-  verifyFormat("def SimpleValue8 { let Class = SimpleValue3<3>; }\n");
+  verifyFormat("def SimpleValue8 { let Class = SimpleValue3<3>; }");
 }
 
 TEST_F(FormatTestTableGen, ValueSuffix) {
@@ -203,19 +203,18 @@ TEST_F(FormatTestTableGen, ValueSuffix) {
                "  let Slice1 = value[1, ];\n"
                "  let Slice2 = value[4...7, 17, 2...3, 4];\n"
                "  let Field = value.field;\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestTableGen, PasteOperator) {
-  verifyFormat(
-      "def Paste#\"Operator\" { string Paste = \"Paste\"#operator; }\n");
+  verifyFormat("def Paste#\"Operator\" { string Paste = \"Paste\"#operator; }");
 
   verifyFormat("def [\"Traring\", \"Paste\"]# {\n"
                "  string X = Traring#;\n"
                "  string Y = List<\"Operator\">#;\n"
                "  string Z = [\"Traring\", \"Paste\", \"Traring\", \"Paste\",\n"
                "              \"Traring\", \"Paste\"]#;\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestTableGen, ClassDefinition) {
@@ -229,9 +228,9 @@ TEST_F(FormatTestTableGen, ClassDefinition) {
                "  defvar Item6 = 6;\n"
                "  let Item7 = ?;\n"
                "  assert !ge(x, 0), \"Assert7\";\n"
-               "}\n");
+               "}");
 
-  verifyFormat("class FPFormat<bits<3> val> { bits<3> Value = val; }\n");
+  verifyFormat("class FPFormat<bits<3> val> { bits<3> Value = val; }");
 }
 
 TEST_F(FormatTestTableGen, Def) {
@@ -240,18 +239,18 @@ TEST_F(FormatTestTableGen, Def) {
                "  let Item2{1, 3...4} = {1, 2};\n"
                "  defvar Item3 = (ops nodty:$node1, nodty:$node2);\n"
                "  assert !le(Item2, 0), \"Assert4\";\n"
-               "}\n");
+               "}");
 
-  verifyFormat("class FPFormat<bits<3> val> { bits<3> Value = val; }\n");
+  verifyFormat("class FPFormat<bits<3> val> { bits<3> Value = val; }");
 
-  verifyFormat("def NotFP : FPFormat<0>;\n");
+  verifyFormat("def NotFP : FPFormat<0>;");
 }
 
 TEST_F(FormatTestTableGen, Let) {
   verifyFormat("let x = 1, y = value<type>,\n"
                "    z = !and(!gt(!add(1, 2), !sub(3, 4)), !isa<Ty>($x)) in {\n"
                "  class Class1 : Parent<x, y> { let Item1 = z; }\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestTableGen, MultiClass) {
@@ -287,25 +286,35 @@ TEST_F(FormatTestTableGen, MultiClass) {
                "      }\n"
                "    }\n"
                "  }\n"
-               "}\n");
+               "}");
+}
+
+TEST_F(FormatTestTableGen, MultiClassesWithPasteOperator) {
+  // This is a sensitive example for the handling of the paste operators in
+  // brace type calculation.
+  verifyFormat("multiclass MultiClass1<int i> {\n"
+               "  def : Def#x<i>;\n"
+               "  def : Def#y<i>;\n"
+               "}\n"
+               "multiclass MultiClass2<int i> { def : Def#x<i>; }");
 }
 
 TEST_F(FormatTestTableGen, Defm) {
-  verifyFormat("defm : Multiclass<0>;\n");
+  verifyFormat("defm : Multiclass<0>;");
 
-  verifyFormat("defm Defm1 : Multiclass<1>;\n");
+  verifyFormat("defm Defm1 : Multiclass<1>;");
 }
 
 TEST_F(FormatTestTableGen, Defset) {
   verifyFormat("defset list<Class> DefSet1 = {\n"
                "  def Def1 : Class<1>;\n"
                "  def Def2 : Class<2>;\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestTableGen, Defvar) {
   verifyFormat("defvar DefVar1 = !cond(!ge(!size(PaseOperator.Paste), 1): 1,\n"
-               "                       true: 0);\n");
+               "                       true: 0);");
 }
 
 TEST_F(FormatTestTableGen, ForEach) {
@@ -315,21 +324,21 @@ TEST_F(FormatTestTableGen, ForEach) {
       "                  (!if(!lt(x, i),\n"
       "                       !shl(!mul(x, i), !size(\"string\")),\n"
       "                       !size(!strconcat(\"a\", \"b\", \"c\"))))>;\n"
-      "}\n");
+      "}");
 }
 
-TEST_F(FormatTestTableGen, Dump) { verifyFormat("dump \"Dump\";\n"); }
+TEST_F(FormatTestTableGen, Dump) { verifyFormat("dump \"Dump\";"); }
 
 TEST_F(FormatTestTableGen, If) {
   verifyFormat("if !gt(x, 0) then {\n"
                "  def : IfThen<x>;\n"
                "} else {\n"
                "  def : IfElse<x>;\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestTableGen, Assert) {
-  verifyFormat("assert !le(DefVar1, 0), \"Assert1\";\n");
+  verifyFormat("assert !le(DefVar1, 0), \"Assert1\";");
 }
 
 TEST_F(FormatTestTableGen, DAGArgBreakElements) {
@@ -339,7 +348,7 @@ TEST_F(FormatTestTableGen, DAGArgBreakElements) {
   ASSERT_EQ(Style.TableGenBreakInsideDAGArg, FormatStyle::DAS_DontBreak);
   verifyFormat("def Def : Parent {\n"
                "  let dagarg = (ins a:$src1, aa:$src2, aaa:$src3)\n"
-               "}\n",
+               "}",
                Style);
   // This option forces to break inside the DAGArg.
   Style.TableGenBreakInsideDAGArg = FormatStyle::DAS_BreakElements;
@@ -347,13 +356,13 @@ TEST_F(FormatTestTableGen, DAGArgBreakElements) {
                "  let dagarg = (ins a:$src1,\n"
                "                    aa:$src2,\n"
                "                    aaa:$src3);\n"
-               "}\n",
+               "}",
                Style);
   verifyFormat("def Def : Parent {\n"
                "  let dagarg = (other a:$src1,\n"
                "                      aa:$src2,\n"
                "                      aaa:$src3);\n"
-               "}\n",
+               "}",
                Style);
   // Then, limit the DAGArg operator only to "ins".
   Style.TableGenBreakingDAGArgOperators = {"ins"};
@@ -361,11 +370,11 @@ TEST_F(FormatTestTableGen, DAGArgBreakElements) {
                "  let dagarg = (ins a:$src1,\n"
                "                    aa:$src2,\n"
                "                    aaa:$src3);\n"
-               "}\n",
+               "}",
                Style);
   verifyFormat("def Def : Parent {\n"
                "  let dagarg = (other a:$src1, aa:$src2, aaa:$src3)\n"
-               "}\n",
+               "}",
                Style);
 }
 
@@ -375,7 +384,7 @@ TEST_F(FormatTestTableGen, DAGArgBreakAll) {
   // By default, the DAGArg does not have a break inside.
   verifyFormat("def Def : Parent {\n"
                "  let dagarg = (ins a:$src1, aa:$src2, aaa:$src3)\n"
-               "}\n",
+               "}",
                Style);
   // This option forces to break inside the DAGArg.
   Style.TableGenBreakInsideDAGArg = FormatStyle::DAS_BreakAll;
@@ -385,7 +394,7 @@ TEST_F(FormatTestTableGen, DAGArgBreakAll) {
                "      aa:$src2,\n"
                "      aaa:$src3\n"
                "  );\n"
-               "}\n",
+               "}",
                Style);
   verifyFormat("def Def : Parent {\n"
                "  let dagarg = (other\n"
@@ -393,7 +402,7 @@ TEST_F(FormatTestTableGen, DAGArgBreakAll) {
                "      aa:$src2,\n"
                "      aaa:$src3\n"
                "  );\n"
-               "}\n",
+               "}",
                Style);
   // Then, limit the DAGArg operator only to "ins".
   Style.TableGenBreakingDAGArgOperators = {"ins"};
@@ -403,11 +412,43 @@ TEST_F(FormatTestTableGen, DAGArgBreakAll) {
                "      aa:$src2,\n"
                "      aaa:$src3\n"
                "  );\n"
-               "}\n",
+               "}",
                Style);
   verifyFormat("def Def : Parent {\n"
                "  let dagarg = (other a:$src1, aa:$src2, aaa:$src3);\n"
-               "}\n",
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestTableGen, DAGArgAlignment) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TableGen);
+  Style.ColumnLimit = 60;
+  Style.TableGenBreakInsideDAGArg = FormatStyle::DAS_BreakAll;
+  Style.TableGenBreakingDAGArgOperators = {"ins", "outs"};
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (ins\n"
+               "      a:$src1,\n"
+               "      aa:$src2,\n"
+               "      aaa:$src3\n"
+               "  )\n"
+               "}",
+               Style);
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (not a:$src1, aa:$src2, aaa:$src2)\n"
+               "}",
+               Style);
+  Style.AlignConsecutiveTableGenBreakingDAGArgColons.Enabled = true;
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (ins\n"
+               "      a  :$src1,\n"
+               "      aa :$src2,\n"
+               "      aaa:$src3\n"
+               "  )\n"
+               "}",
+               Style);
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (not a:$src1, aa:$src2, aaa:$src2)\n"
+               "}",
                Style);
 }
 
@@ -416,12 +457,12 @@ TEST_F(FormatTestTableGen, CondOperatorAlignment) {
   Style.ColumnLimit = 60;
   verifyFormat("let CondOpe1 = !cond(!eq(size, 1): 1,\n"
                "                     !eq(size, 16): 1,\n"
-               "                     true: 0);\n",
+               "                     true: 0);",
                Style);
   Style.AlignConsecutiveTableGenCondOperatorColons.Enabled = true;
   verifyFormat("let CondOpe1 = !cond(!eq(size, 1) : 1,\n"
                "                     !eq(size, 16): 1,\n"
-               "                     true         : 0);\n",
+               "                     true         : 0);",
                Style);
 }
 
@@ -430,12 +471,12 @@ TEST_F(FormatTestTableGen, DefAlignment) {
   Style.ColumnLimit = 60;
   verifyFormat("def Def : Parent {}\n"
                "def DefDef : Parent {}\n"
-               "def DefDefDef : Parent {}\n",
+               "def DefDefDef : Parent {}",
                Style);
   Style.AlignConsecutiveTableGenDefinitionColons.Enabled = true;
   verifyFormat("def Def       : Parent {}\n"
                "def DefDef    : Parent {}\n"
-               "def DefDefDef : Parent {}\n",
+               "def DefDefDef : Parent {}",
                Style);
 }
 

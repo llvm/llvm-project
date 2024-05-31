@@ -1354,16 +1354,15 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP43:%.*]] = phi <4 x i32> [ [[TMP37]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP42]], [[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP44:%.*]] = icmp ne <4 x i32> [[TMP43]], zeroinitializer
-; CHECK-NEXT:    [[TMP45:%.*]] = select <4 x i1> [[TMP19]], <4 x i1> [[TMP44]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP46:%.*]] = xor <4 x i1> [[TMP19]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP47:%.*]] = or <4 x i1> [[TMP45]], [[TMP46]]
+; CHECK-NEXT:    [[TMP47:%.*]] = select <4 x i1> [[TMP46]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[TMP44]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = bitcast <4 x i1> [[TMP47]] to i4
-; CHECK-NEXT:    [[TMP49:%.*]] = call i4 @llvm.ctpop.i4(i4 [[TMP48]]), !range [[RNG42:![0-9]+]]
+; CHECK-NEXT:    [[TMP49:%.*]] = call range(i4 0, 5) i4 @llvm.ctpop.i4(i4 [[TMP48]])
 ; CHECK-NEXT:    [[TMP50:%.*]] = zext nneg i4 [[TMP49]] to i32
 ; CHECK-NEXT:    [[TMP51]] = add i32 [[VEC_PHI]], [[TMP50]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP52:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP52]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP43:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP52]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -1378,7 +1377,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP44:![0-9]+]]
+; CHECK-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP43:![0-9]+]]
 ;
 entry:
   br label %for.body

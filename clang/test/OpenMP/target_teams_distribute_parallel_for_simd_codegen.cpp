@@ -181,7 +181,7 @@ void test_target_teams_atomic() {
 // CHECK1-NEXT:    [[TMP34:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP28]], 0
 // CHECK1-NEXT:    [[TMP35:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP29]], 0
 // CHECK1-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 2, ptr [[TMP36]], align 4
+// CHECK1-NEXT:    store i32 3, ptr [[TMP36]], align 4
 // CHECK1-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 5, ptr [[TMP37]], align 4
 // CHECK1-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -248,7 +248,7 @@ void test_target_teams_atomic() {
 // CHECK1-NEXT:    [[ADD17:%.*]] = add nsw i32 [[TMP67]], 1
 // CHECK1-NEXT:    [[TMP68:%.*]] = zext i32 [[ADD17]] to i64
 // CHECK1-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 2, ptr [[TMP69]], align 4
+// CHECK1-NEXT:    store i32 3, ptr [[TMP69]], align 4
 // CHECK1-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 3, ptr [[TMP70]], align 4
 // CHECK1-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 2
@@ -821,7 +821,7 @@ void test_target_teams_atomic() {
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CHECK1-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CHECK1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1116,7 +1116,7 @@ void test_target_teams_atomic() {
 // CHECK3-NEXT:    [[TMP34:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP28]], 0
 // CHECK3-NEXT:    [[TMP35:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP29]], 0
 // CHECK3-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK3-NEXT:    store i32 2, ptr [[TMP36]], align 4
+// CHECK3-NEXT:    store i32 3, ptr [[TMP36]], align 4
 // CHECK3-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK3-NEXT:    store i32 5, ptr [[TMP37]], align 4
 // CHECK3-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1183,7 +1183,7 @@ void test_target_teams_atomic() {
 // CHECK3-NEXT:    [[ADD17:%.*]] = add nsw i32 [[TMP67]], 1
 // CHECK3-NEXT:    [[TMP68:%.*]] = zext i32 [[ADD17]] to i64
 // CHECK3-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 0
-// CHECK3-NEXT:    store i32 2, ptr [[TMP69]], align 4
+// CHECK3-NEXT:    store i32 3, ptr [[TMP69]], align 4
 // CHECK3-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 1
 // CHECK3-NEXT:    store i32 3, ptr [[TMP70]], align 4
 // CHECK3-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 2
@@ -1746,7 +1746,7 @@ void test_target_teams_atomic() {
 // CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK3-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CHECK3-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK3-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CHECK3-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2

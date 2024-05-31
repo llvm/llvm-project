@@ -68,7 +68,7 @@ static bool evenFlexibleArraySize(ASTContext &Ctx, CharUnits RegionSize,
     FlexSize = Ctx.getTypeSizeInChars(ElemType);
     if (ArrayTy->getSize() == 1 && TypeSize > FlexSize)
       TypeSize -= FlexSize;
-    else if (ArrayTy->getSize() != 0)
+    else if (!ArrayTy->isZeroSize())
       return false;
   } else if (RD->hasFlexibleArrayMember()) {
     FlexSize = Ctx.getTypeSizeInChars(ElemType);

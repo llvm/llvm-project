@@ -39,6 +39,16 @@ MDNode *MDBuilder::createBranchWeights(uint32_t TrueWeight,
   return createBranchWeights({TrueWeight, FalseWeight});
 }
 
+MDNode *MDBuilder::createLikelyBranchWeights() {
+  // Value chosen to match UR_NONTAKEN_WEIGHT, see BranchProbabilityInfo.cpp
+  return createBranchWeights((1U << 20) - 1, 1);
+}
+
+MDNode *MDBuilder::createUnlikelyBranchWeights() {
+  // Value chosen to match UR_NONTAKEN_WEIGHT, see BranchProbabilityInfo.cpp
+  return createBranchWeights(1, (1U << 20) - 1);
+}
+
 MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights) {
   assert(Weights.size() >= 1 && "Need at least one branch weights!");
 
@@ -76,9 +86,8 @@ MDNode *MDBuilder::createFunctionEntryCount(
 }
 
 MDNode *MDBuilder::createFunctionSectionPrefix(StringRef Prefix) {
-  return MDNode::get(Context,
-                     {createString("function_section_prefix"),
-                      createString(Prefix)});
+  return MDNode::get(
+      Context, {createString("function_section_prefix"), createString(Prefix)});
 }
 
 MDNode *MDBuilder::createRange(const APInt &Lo, const APInt &Hi) {
@@ -138,9 +147,10 @@ MDNode *MDBuilder::mergeCallbackEncodings(MDNode *ExistingCallbacks,
   for (unsigned u = 0; u < NumExistingOps; u++) {
     Ops[u] = ExistingCallbacks->getOperand(u);
 
-    auto *OldCBCalleeIdxAsCM = cast<ConstantAsMetadata>(Ops[u]);
+    auto *OldCBCalleeIdxAsCM =
+        cast<ConstantAsMetadata>(cast<MDNode>(Ops[u])->getOperand(0));
     uint64_t OldCBCalleeIdx =
-      cast<ConstantInt>(OldCBCalleeIdxAsCM->getValue())->getZExtValue();
+        cast<ConstantInt>(OldCBCalleeIdxAsCM->getValue())->getZExtValue();
     (void)OldCBCalleeIdx;
     assert(NewCBCalleeIdx != OldCBCalleeIdx &&
            "Cannot map a callback callee index twice!");
@@ -329,8 +339,8 @@ MDNode *MDBuilder::createMutableTBAAAccessTag(MDNode *Tag) {
 
 MDNode *MDBuilder::createIrrLoopHeaderWeight(uint64_t Weight) {
   Metadata *Vals[] = {
-    createString("loop_header_weight"),
-    createConstant(ConstantInt::get(Type::getInt64Ty(Context), Weight)),
+      createString("loop_header_weight"),
+      createConstant(ConstantInt::get(Type::getInt64Ty(Context), Weight)),
   };
   return MDNode::get(Context, Vals);
 }

@@ -273,7 +273,7 @@ define void @outgoing_v4f16_return(ptr %ptr) #0 {
 ; NOFP16-NEXT:    strh w0, [x19]
 ; NOFP16-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; NOFP16-NEXT:    ret
-  %val = call <4 x half> @v4f16_result()
+  %val = call <4 x half> @v4f16_result() #0
   store <4 x half> %val, ptr %ptr
   ret void
 }
@@ -297,7 +297,7 @@ define void @outgoing_v8f16_return(ptr %ptr) #0 {
 ; NOFP16-NEXT:    strh w0, [x19]
 ; NOFP16-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; NOFP16-NEXT:    ret
-  %val = call <8 x half> @v8f16_result()
+  %val = call <8 x half> @v8f16_result() #0
   store <8 x half> %val, ptr %ptr
   ret void
 }
@@ -312,7 +312,7 @@ define half @call_split_type_used_outside_block_v8f16() #0 {
 ; NOFP16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; NOFP16-NEXT:    ret
 bb0:
-  %split.ret.type = call <8 x half> @v8f16_result()
+  %split.ret.type = call <8 x half> @v8f16_result() #0
   br label %bb1
 
 bb1:

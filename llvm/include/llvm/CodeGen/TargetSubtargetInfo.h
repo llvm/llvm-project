@@ -235,7 +235,9 @@ public:
   // and UseOpIdx are the indices of the operands in Def and Use, respectively.
   // Otherwise, either may be -1.
   virtual void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use,
-                                     int UseOpIdx, SDep &Dep) const {}
+                                     int UseOpIdx, SDep &Dep,
+                                     const TargetSchedModel *SchedModel) const {
+  }
 
   // For use with PostRAScheduling: get the anti-dependence breaking that should
   // be performed before post-RA scheduling.

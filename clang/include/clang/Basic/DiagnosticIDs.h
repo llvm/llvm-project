@@ -32,7 +32,7 @@ namespace clang {
     enum {
       DIAG_SIZE_COMMON        =  300,
       DIAG_SIZE_DRIVER        =  400,
-      DIAG_SIZE_FRONTEND      =  150,
+      DIAG_SIZE_FRONTEND      =  200,
       DIAG_SIZE_SERIALIZATION =  120,
       DIAG_SIZE_LEX           =  400,
       DIAG_SIZE_PARSE         =  700,

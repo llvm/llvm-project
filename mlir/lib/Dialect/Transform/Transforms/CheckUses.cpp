@@ -13,7 +13,7 @@
 
 #include "mlir/Dialect/Transform/Transforms/Passes.h"
 
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SetOperations.h"

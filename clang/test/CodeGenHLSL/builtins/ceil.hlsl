@@ -41,16 +41,3 @@ float3 test_ceil_float3(float3 p0) { return ceil(p0); }
 // CHECK: define noundef <4 x float> @
 // CHECK: call <4 x float> @llvm.ceil.v4f32(
 float4 test_ceil_float4(float4 p0) { return ceil(p0); }
-
-// CHECK: define noundef double @
-// CHECK: call double @llvm.ceil.f64(
-double test_ceil_double(double p0) { return ceil(p0); }
-// CHECK: define noundef <2 x double> @
-// CHECK: call <2 x double> @llvm.ceil.v2f64(
-double2 test_ceil_double2(double2 p0) { return ceil(p0); }
-// CHECK: define noundef <3 x double> @
-// CHECK: call <3 x double> @llvm.ceil.v3f64(
-double3 test_ceil_double3(double3 p0) { return ceil(p0); }
-// CHECK: define noundef <4 x double> @
-// CHECK: call <4 x double> @llvm.ceil.v4f64(
-double4 test_ceil_double4(double4 p0) { return ceil(p0); }

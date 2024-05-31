@@ -87,7 +87,7 @@ private:
   void
   populateIteratorTypes(Type t,
                         SmallVector<utils::IteratorType> &iterTypes) const {
-    RankedTensorType rankedTensorType = t.dyn_cast<RankedTensorType>();
+    RankedTensorType rankedTensorType = dyn_cast<RankedTensorType>(t);
     if (!rankedTensorType) {
       return;
     }
@@ -106,7 +106,7 @@ struct ElementwiseShardingInterface
           ElementwiseShardingInterface<ElemwiseOp>, ElemwiseOp> {
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     Value val = op->getOperand(0);
-    auto type = val.getType().dyn_cast<RankedTensorType>();
+    auto type = dyn_cast<RankedTensorType>(val.getType());
     if (!type)
       return {};
     SmallVector<utils::IteratorType> types(type.getRank(),
@@ -117,7 +117,7 @@ struct ElementwiseShardingInterface
   SmallVector<AffineMap> getIndexingMaps(Operation *op) const {
     MLIRContext *ctx = op->getContext();
     Value val = op->getOperand(0);
-    auto type = val.getType().dyn_cast<RankedTensorType>();
+    auto type = dyn_cast<RankedTensorType>(val.getType());
     if (!type)
       return {};
     int64_t rank = type.getRank();

@@ -27,10 +27,8 @@ typedef enum {
   RPC_STATUS_SUCCESS = 0x0,
   RPC_STATUS_CONTINUE = 0x1,
   RPC_STATUS_ERROR = 0x1000,
-  RPC_STATUS_OUT_OF_RANGE = 0x1001,
-  RPC_STATUS_UNHANDLED_OPCODE = 0x1002,
-  RPC_STATUS_INVALID_LANE_SIZE = 0x1003,
-  RPC_STATUS_NOT_INITIALIZED = 0x1004,
+  RPC_STATUS_UNHANDLED_OPCODE = 0x1001,
+  RPC_STATUS_INVALID_LANE_SIZE = 0x1002,
 } rpc_status_t;
 
 /// A struct containing an opaque handle to an RPC port. This is what allows the
@@ -44,6 +42,11 @@ typedef struct rpc_port_s {
 typedef struct rpc_buffer_s {
   uint64_t data[8];
 } rpc_buffer_t;
+
+/// An opaque handle to an RPC server that can be attached to a device.
+typedef struct rpc_device_s {
+  uintptr_t handle;
+} rpc_device_t;
 
 /// A function used to allocate \p bytes for use by the RPC server and client.
 /// The memory should support asynchronous and atomic access from both the
@@ -60,34 +63,28 @@ typedef void (*rpc_opcode_callback_ty)(rpc_port_t port, void *data);
 /// A callback function to use the port to receive or send a \p buffer.
 typedef void (*rpc_port_callback_ty)(rpc_buffer_t *buffer, void *data);
 
-/// Initialize the rpc library for general use on \p num_devices.
-rpc_status_t rpc_init(uint32_t num_devices);
-
-/// Shut down the rpc interface.
-rpc_status_t rpc_shutdown(void);
-
-/// Initialize the server for a given device.
-rpc_status_t rpc_server_init(uint32_t device_id, uint64_t num_ports,
+/// Initialize the server for a given device and return it in \p device.
+rpc_status_t rpc_server_init(rpc_device_t *rpc_device, uint64_t num_ports,
                              uint32_t lane_size, rpc_alloc_ty alloc,
                              void *data);
 
 /// Shut down the server for a given device.
-rpc_status_t rpc_server_shutdown(uint32_t device_id, rpc_free_ty dealloc,
+rpc_status_t rpc_server_shutdown(rpc_device_t rpc_device, rpc_free_ty dealloc,
                                  void *data);
 
 /// Queries the RPC clients at least once and performs server-side work if there
 /// are any active requests. Runs until all work on the server is completed.
-rpc_status_t rpc_handle_server(uint32_t device_id);
+rpc_status_t rpc_handle_server(rpc_device_t rpc_device);
 
 /// Register a callback to handle an opcode from the RPC client. The associated
 /// data must remain accessible as long as the user intends to handle the server
 /// with this callback.
-rpc_status_t rpc_register_callback(uint32_t device_id, uint16_t opcode,
+rpc_status_t rpc_register_callback(rpc_device_t rpc_device, uint16_t opcode,
                                    rpc_opcode_callback_ty callback, void *data);
 
 /// Obtain a pointer to a local client buffer that can be copied directly to the
 /// other process using the address stored at the rpc client symbol name.
-const void *rpc_get_client_buffer(uint32_t device_id);
+const void *rpc_get_client_buffer(rpc_device_t device);
 
 /// Returns the size of the client in bytes to be used for a memory copy.
 uint64_t rpc_get_client_size();

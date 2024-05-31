@@ -62,7 +62,7 @@ The operations themselves can be defined using ODS, exactly in the same way as r
 #define MY_EXTENSION
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -124,7 +124,7 @@ This will generate two files, `MyExtension.h.inc` and `MyExtension.cpp.inc`, tha
 ```c++
 // In MyExtension.h.
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 
 #define GET_OP_CLASSES
 #include "MyExtension.h.inc"

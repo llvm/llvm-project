@@ -2,12 +2,12 @@
 
 // the fir.embox in the init region is turned into an alloca for the box. Test
 // that CodeGen.cpp knows where to place an alloca when it is inside of an
-// omp.reduction.declare
+// omp.declare_reduction
 
 // regretably this has to be nonsense IR because we need the subsequent patches
 // to process anything useful
 
-omp.reduction.declare @test_reduction : !fir.ref<!fir.box<i32>> init {
+omp.declare_reduction @test_reduction : !fir.ref<!fir.box<i32>> init {
 ^bb0(%arg0: !fir.ref<!fir.box<i32>>):
   %0 = fir.alloca !fir.box<i32>
   %1 = fir.alloca i32
@@ -25,7 +25,7 @@ omp.reduction.declare @test_reduction : !fir.ref<!fir.box<i32>> init {
 
 func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {
   %4 = fir.alloca !fir.box<i32>
-  omp.parallel byref reduction(@test_reduction %4 -> %arg0 : !fir.ref<!fir.box<i32>>) {
+  omp.parallel reduction(byref @test_reduction %4 -> %arg0 : !fir.ref<!fir.box<i32>>) {
     omp.terminator
   }
   return

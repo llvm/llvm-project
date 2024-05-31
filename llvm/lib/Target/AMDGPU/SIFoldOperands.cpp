@@ -2106,6 +2106,8 @@ bool SIFoldOperands::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
 
     for (unsigned K = 1; K < MI.getNumOperands(); K += 2) {
       MachineOperand &PhiMO = MI.getOperand(K);
+      if (!PhiMO.getSubReg())
+        continue;
       RegToMO[{PhiMO.getReg(), PhiMO.getSubReg()}].push_back(&PhiMO);
     }
   }

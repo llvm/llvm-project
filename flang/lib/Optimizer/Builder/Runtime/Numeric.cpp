@@ -118,6 +118,20 @@ struct ForcedMod16 {
   }
 };
 
+/// Placeholder for real*10 version of Modulo Intrinsic
+struct ForcedModulo10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ModuloReal10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto fltTy = mlir::FloatType::getF80(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {fltTy, fltTy, strTy, intTy},
+                                     {fltTy});
+    };
+  }
+};
+
 /// Placeholder for real*16 version of Modulo Intrinsic
 struct ForcedModulo16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ModuloReal16));
@@ -349,7 +363,13 @@ mlir::Value fir::runtime::genModulo(fir::FirOpBuilder &builder,
 
   // MODULO is lowered into math operations in intrinsics lowering,
   // so genModulo() should only be used for F128 data type now.
-  if (fltTy.isF128())
+  if (fltTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ModuloReal4)>(loc, builder);
+  else if (fltTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ModuloReal8)>(loc, builder);
+  else if (fltTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedModulo10>(loc, builder);
+  else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedModulo16>(loc, builder);
   else
     fir::intrinsicTypeTODO(builder, fltTy, loc, "MODULO");
@@ -448,12 +468,53 @@ mlir::Value fir::runtime::genScale(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
+/// Generate call to Selected_char_kind intrinsic runtime routine.
+mlir::Value fir::runtime::genSelectedCharKind(fir::FirOpBuilder &builder,
+                                              mlir::Location loc,
+                                              mlir::Value name,
+                                              mlir::Value length) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(SelectedCharKind)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(1));
+  if (!fir::isa_ref_type(name.getType()))
+    fir::emitFatalError(loc, "argument address for runtime not found");
+
+  auto args = fir::runtime::createArguments(builder, loc, fTy, sourceFile,
+                                            sourceLine, name, length);
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
 /// Generate call to Selected_int_kind intrinsic runtime routine.
 mlir::Value fir::runtime::genSelectedIntKind(fir::FirOpBuilder &builder,
                                              mlir::Location loc,
                                              mlir::Value x) {
   mlir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(SelectedIntKind)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(1));
+  if (!fir::isa_ref_type(x.getType()))
+    fir::emitFatalError(loc, "argument address for runtime not found");
+  mlir::Type eleTy = fir::unwrapRefType(x.getType());
+  mlir::Value xKind = builder.createIntegerConstant(
+      loc, fTy.getInput(3), eleTy.getIntOrFloatBitWidth() / 8);
+  auto args = fir::runtime::createArguments(builder, loc, fTy, sourceFile,
+                                            sourceLine, x, xKind);
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+/// Generate call to Selected_logical_kind intrinsic runtime routine.
+mlir::Value fir::runtime::genSelectedLogicalKind(fir::FirOpBuilder &builder,
+                                                 mlir::Location loc,
+                                                 mlir::Value x) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(SelectedLogicalKind)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =

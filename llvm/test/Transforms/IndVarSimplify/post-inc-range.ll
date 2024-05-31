@@ -180,7 +180,7 @@ define void @test_neg(ptr %array_length_ptr, ptr %base,
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP2]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:

@@ -17,6 +17,8 @@ add_llvm_target(SPIRVCodeGen
   SPIRVAsmPrinter.cpp
   SPIRVBuiltins.cpp
   SPIRVCallLowering.cpp
+  SPIRVInlineAsmLowering.cpp
+  SPIRVCommandLine.cpp
   SPIRVDuplicatesTracker.cpp
   SPIRVEmitIntrinsics.cpp
   SPIRVGlobalRegistry.cpp

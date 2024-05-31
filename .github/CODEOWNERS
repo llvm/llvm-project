@@ -23,6 +23,7 @@
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
 /llvm/lib/Analysis/ValueTracking.cpp @nikic
 /llvm/lib/IR/ConstantRange.cpp @nikic
+/llvm/lib/IR/Core.cpp @nikic
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
@@ -34,6 +35,10 @@
 
 clang/lib/AST/Interp/ @tbaederr
 clang/test/AST/Interp/ @tbaederr
+
+/clang/include/clang/CIR @lanza @bcardosolopes
+/clang/lib/CIR @lanza @bcardosolopes
+/clang/tools/cir-* @lanza @bcardosolopes
 
 /lldb/ @JDevlieghere
 
@@ -59,8 +64,8 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
 
 # Linalg Dialect in MLIR.
-/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache
+/mlir/include/mlir/Dialect/Linalg/* @dcaballe @nicolasvasilache @rengolin
+/mlir/lib/Dialect/Linalg/* @dcaballe @nicolasvasilache @rengolin
 /mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
@@ -77,14 +82,14 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
-/mlir/**/*VectorToSCF* @banach-space @dcaballe @nicolasvasilache @matthias-springer
+/mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
-/mlir/include/mlir/Dialect/Vector @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/**/*EmulateNarrowType* @hanhanW
+/mlir/include/mlir/Dialect/Vector/* @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Vector/* @dcaballe @nicolasvasilache
 /mlir/lib/Dialect/Vector/Transforms/* @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
+/mlir/**/*EmulateNarrowType* @dcaballe @hanhanW
 
 # Presburger library in MLIR
 /mlir/**/*Presburger* @Groverkss @Superty
@@ -96,6 +101,7 @@ clang/test/AST/Interp/ @tbaederr
 # Transform Dialect in MLIR.
 /mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache
 /mlir/lib/Dialect/Transform/* @ftynse @nicolasvasilache
+/mlir/**/*TransformOps* @ftynse @nicolasvasilache
 
 # SPIR-V Dialect in MLIR.
 /mlir/**/SPIRV/ @antiagainst @kuhar
@@ -106,8 +112,32 @@ clang/test/AST/Interp/ @tbaederr
 # MLIR Sparsifier.
 /mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
 
+# MLIR NVGPU Dialect
+/mlir/**/NVGPU*/ @grypp
+/mlir/test/**/CUDA/ @grypp
+
+# MLIR NVVM Dialect in MLIR
+/mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
+/mlir/**/NVVM* @grypp
+
+# MLIR Python Bindings
+/mlir/test/python/ @ftynse @makslevental @stellaraccident
+/mlir/python/ @ftynse @makslevental @stellaraccident
+
+# MLIR Mem2Reg/SROA
+/mlir/**/Transforms/Mem2Reg.* @moxinilian
+/mlir/**/Transforms/SROA.* @moxinilian
+
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
 
 # Bazel build system.
-/utils/bazel/ @rupprecht
+/utils/bazel/ @rupprecht @keith
+
+# InstallAPI and TextAPI
+/llvm/**/TextAPI/ @cyndyishida
+/clang/**/InstallAPI/ @cyndyishida
+/clang/tools/clang-installapi/ @cyndyishida
+
+# ExtractAPI
+/clang/**/ExtractAPI @daniel-grumberg

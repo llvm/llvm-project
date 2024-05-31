@@ -15,7 +15,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/UniqueVector.h"
-#include "llvm/Analysis/Interval.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"

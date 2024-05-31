@@ -170,12 +170,43 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
       shapedType.getContext());
 }
 
+/// Check if `write` is of a constant splat and the masked `read` is padded with
+/// the same splat value -- meaning it could be the same value as the initial
+/// constant splat.
+static bool isSplatWriteConsistentWithMaskedRead(vector::TransferWriteOp write,
+                                                 vector::TransferReadOp read) {
+  auto readMask = read.getMask();
+  auto writeMask = write.getMask();
+  // Check if the masks are consistent. The splat value could be the same if the
+  // read is masked (and padded with the splat value), and the write is unmasked
+  // or has the same mask. Note this does not allow the case where the write is
+  // masked and the read is unmasked, as then the read could be of more elements
+  // than the write (which may not be the same value).
+  bool couldBeSameSplat = readMask && (!writeMask || writeMask == readMask);
+  if (!couldBeSameSplat)
+    return false;
+  // Check for constant splat (as the source of the write).
+  DenseElementsAttr splatAttr;
+  if (!matchPattern(write.getVector(),
+                    m_Constant<DenseElementsAttr>(&splatAttr)) ||
+      !splatAttr.isSplat()) {
+    return false;
+  }
+  // The padding of the read and the constant splat value must be the same.
+  Attribute padAttr;
+  if (!matchPattern(read.getPadding(), m_Constant(&padAttr)))
+    return false;
+  return padAttr == splatAttr.getSplatValue<Attribute>();
+}
+
 bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
                                      vector::TransferReadOp read) {
-  return !defWrite.hasOutOfBoundsDim() && !defWrite.getMask() &&
-         !read.getMask() && defWrite.getIndices() == read.getIndices() &&
+  return !defWrite.hasOutOfBoundsDim() &&
+         defWrite.getIndices() == read.getIndices() &&
          defWrite.getVectorType() == read.getVectorType() &&
-         defWrite.getPermutationMap() == read.getPermutationMap();
+         defWrite.getPermutationMap() == read.getPermutationMap() &&
+         ((!defWrite.getMask() && !read.getMask()) ||
+          isSplatWriteConsistentWithMaskedRead(defWrite, read));
 }
 
 bool mlir::vector::checkSameValueWAW(vector::TransferWriteOp write,
@@ -382,8 +413,8 @@ void VectorDialect::initialize() {
                             YieldOp>();
   declarePromisedInterfaces<SubsetOpInterface, TransferReadOp,
                             TransferWriteOp>();
-  declarePromisedInterface<TransferReadOp, SubsetExtractionOpInterface>();
-  declarePromisedInterface<TransferWriteOp, SubsetInsertionOpInterface>();
+  declarePromisedInterface<SubsetExtractionOpInterface, TransferReadOp>();
+  declarePromisedInterface<SubsetInsertionOpInterface, TransferWriteOp>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
@@ -898,13 +929,12 @@ static LogicalResult verifyOutputShape(
 
     AffineMap resMap = op.getIndexingMapsArray()[2];
     auto extentsMap = AffineMap::get(/*dimCount=*/extents.size(),
-                                     /*symCount=*/0, extents, ctx);
+                                     /*symbolCount=*/0, extents, ctx);
     // Compose the resMap with the extentsMap, which is a constant map.
     AffineMap expectedMap = simplifyAffineMap(resMap.compose(extentsMap));
-    assert(
-        llvm::all_of(expectedMap.getResults(),
-                     [](AffineExpr e) { return isa<AffineConstantExpr>(e); }) &&
-        "expected constant extent along all dimensions.");
+    assert(llvm::all_of(expectedMap.getResults(),
+                        llvm::IsaPred<AffineConstantExpr>) &&
+           "expected constant extent along all dimensions.");
     // Extract the expected shape and build the type.
     auto expectedShape = llvm::to_vector<4>(
         llvm::map_range(expectedMap.getResults(), [](AffineExpr e) {
@@ -6170,7 +6200,7 @@ void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
 
 OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   auto constOperand = adaptor.getInput();
-  if (!constOperand.isa_and_nonnull<IntegerAttr, FloatAttr>())
+  if (!isa_and_nonnull<IntegerAttr, FloatAttr>(constOperand))
     return {};
 
   // SplatElementsAttr::get treats single value for second arg as being a splat.

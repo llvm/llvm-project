@@ -796,11 +796,14 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC   = 0x053,
   EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC     = 0x054,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X55 = 0x055,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56 = 0x056,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57 = 0x057,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X58 = 0x058,
   // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -1140,6 +1143,8 @@ enum : unsigned {
   SHT_RISCV_ATTRIBUTES = 0x70000003U,
 
   SHT_CSKY_ATTRIBUTES = 0x70000001U,
+
+  SHT_HEXAGON_ATTRIBUTES = 0x70000003U,
 
   SHT_HIPROC = 0x7fffffff, // Highest processor arch-specific type.
   SHT_LOUSER = 0x80000000, // Lowest type reserved for applications.
@@ -1710,11 +1715,6 @@ enum {
   NT_ANDROID_TYPE_MEMTAG = 4,
 };
 
-// ARM note types.
-enum {
-  NT_ARM_TYPE_PAUTH_ABI_TAG = 1,
-};
-
 // Memory tagging values used in NT_ANDROID_TYPE_MEMTAG notes.
 enum {
   // Enumeration to determine the tagging mode. In Android-land, 'SYNC' means
@@ -1738,6 +1738,7 @@ enum : unsigned {
   GNU_PROPERTY_STACK_SIZE = 1,
   GNU_PROPERTY_NO_COPY_ON_PROTECTED = 2,
   GNU_PROPERTY_AARCH64_FEATURE_1_AND = 0xc0000000,
+  GNU_PROPERTY_AARCH64_FEATURE_PAUTH = 0xc0000001,
   GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002,
 
   GNU_PROPERTY_X86_UINT32_OR_LO = 0xc0008000,
@@ -1754,6 +1755,26 @@ enum : unsigned {
   GNU_PROPERTY_AARCH64_FEATURE_1_BTI = 1 << 0,
   GNU_PROPERTY_AARCH64_FEATURE_1_PAC = 1 << 1,
   GNU_PROPERTY_AARCH64_FEATURE_1_GCS = 1 << 2,
+};
+
+// aarch64 PAuth platforms.
+enum : unsigned {
+  AARCH64_PAUTH_PLATFORM_INVALID = 0x0,
+  AARCH64_PAUTH_PLATFORM_BAREMETAL = 0x1,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX = 0x10000002,
+};
+
+// Bit positions of version flags for AARCH64_PAUTH_PLATFORM_LLVM_LINUX.
+enum : unsigned {
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INTRINSICS = 0,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_CALLS = 1,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_RETURNS = 2,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_AUTHTRAPS = 3,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRADDRDISCR = 4,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR = 5,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI = 6,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST =
+      AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI,
 };
 
 // x86 processor feature bits.
@@ -1920,6 +1941,13 @@ uint16_t convertArchNameToEMachine(StringRef Arch);
 
 /// Convert an ELF's e_machine value into an architecture name.
 StringRef convertEMachineToArchName(uint16_t EMachine);
+
+// Convert a lowercase string identifier into an OSABI value.
+uint8_t convertNameToOSABI(StringRef Name);
+
+// Convert an OSABI value into a string that identifies the OS- or ABI-
+// specific ELF extension.
+StringRef convertOSABIToName(uint8_t OSABI);
 
 } // end namespace ELF
 } // end namespace llvm

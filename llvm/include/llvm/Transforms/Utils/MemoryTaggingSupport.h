@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Alignment.h"
 
 namespace llvm {
@@ -79,6 +80,13 @@ private:
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
 void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
 bool isLifetimeIntrinsic(Value *V);
+
+Value *readRegister(IRBuilder<> &IRB, StringRef Name);
+Value *getFP(IRBuilder<> &IRB);
+Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
+Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot);
+
+void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag);
 
 } // namespace memtag
 } // namespace llvm

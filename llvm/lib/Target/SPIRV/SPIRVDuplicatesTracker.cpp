@@ -39,6 +39,7 @@ void SPIRVGeneralDuplicatesTracker::buildDepsGraph(
   prebuildReg2Entry(GT, Reg2Entry);
   prebuildReg2Entry(FT, Reg2Entry);
   prebuildReg2Entry(AT, Reg2Entry);
+  prebuildReg2Entry(MT, Reg2Entry);
   prebuildReg2Entry(ST, Reg2Entry);
 
   for (auto &Op2E : Reg2Entry) {

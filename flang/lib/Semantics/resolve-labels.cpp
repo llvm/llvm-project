@@ -935,7 +935,8 @@ void CheckBranchesIntoDoBody(const SourceStmtList &branches,
       const auto &fromPosition{branch.parserCharBlock};
       const auto &toPosition{branchTarget.parserCharBlock};
       for (const auto &body : loopBodies) {
-        if (!InBody(fromPosition, body) && InBody(toPosition, body)) {
+        if (!InBody(fromPosition, body) && InBody(toPosition, body) &&
+            context.ShouldWarn(common::LanguageFeature::BranchIntoConstruct)) {
           context
               .Say(
                   fromPosition, "branch into loop body from outside"_warn_en_US)
@@ -1062,11 +1063,16 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
           break;
         }
       }
-      context.Say(position,
-          isFatal
-              ? "Label '%u' is in a construct that prevents its use as a branch target here"_err_en_US
-              : "Label '%u' is in a construct that should not be used as a branch target here"_warn_en_US,
-          SayLabel(label));
+      if (isFatal) {
+        context.Say(position,
+            "Label '%u' is in a construct that prevents its use as a branch target here"_err_en_US,
+            SayLabel(label));
+      } else if (context.ShouldWarn(
+                     common::LanguageFeature::BranchIntoConstruct)) {
+        context.Say(position,
+            "Label '%u' is in a construct that should not be used as a branch target here"_warn_en_US,
+            SayLabel(label));
+      }
     }
   }
 }
@@ -1087,7 +1093,8 @@ void CheckBranchTargetConstraints(const SourceStmtList &stmts,
             .Attach(stmt.parserCharBlock, "Control flow use of '%u'"_en_US,
                 SayLabel(label));
       } else if (!branchTarget.labeledStmtClassificationSet.test(
-                     TargetStatementEnum::Branch)) { // warning
+                     TargetStatementEnum::Branch) &&
+          context.ShouldWarn(common::LanguageFeature::BadBranchTarget)) {
         context
             .Say(branchTarget.parserCharBlock,
                 "Label '%u' is not a branch target"_warn_en_US, SayLabel(label))
@@ -1140,15 +1147,21 @@ void CheckAssignTargetConstraints(const SourceStmtList &stmts,
             TargetStatementEnum::Branch) &&
         !target.labeledStmtClassificationSet.test(
             TargetStatementEnum::Format)) {
-      context
-          .Say(target.parserCharBlock,
-              target.labeledStmtClassificationSet.test(
-                  TargetStatementEnum::CompatibleBranch)
-                  ? "Label '%u' is not a branch target or FORMAT"_warn_en_US
-                  : "Label '%u' is not a branch target or FORMAT"_err_en_US,
-              SayLabel(label))
-          .Attach(stmt.parserCharBlock, "ASSIGN statement use of '%u'"_en_US,
-              SayLabel(label));
+      parser::Message *msg{nullptr};
+      if (!target.labeledStmtClassificationSet.test(
+              TargetStatementEnum::CompatibleBranch)) {
+        msg = &context.Say(target.parserCharBlock,
+            "Label '%u' is not a branch target or FORMAT"_err_en_US,
+            SayLabel(label));
+      } else if (context.ShouldWarn(common::LanguageFeature::BadBranchTarget)) {
+        msg = &context.Say(target.parserCharBlock,
+            "Label '%u' is not a branch target or FORMAT"_warn_en_US,
+            SayLabel(label));
+      }
+      if (msg) {
+        msg->Attach(stmt.parserCharBlock, "ASSIGN statement use of '%u'"_en_US,
+            SayLabel(label));
+      }
     }
   }
 }

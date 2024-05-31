@@ -27,11 +27,14 @@ struct SROAStatistics {
   llvm::Statistic *maxSubelementAmount = nullptr;
 };
 
-/// Attempts to destructure the slots of destructurable allocators. Returns
-/// failure if no slot was destructured.
+/// Attempts to destructure the slots of destructurable allocators. Iteratively
+/// retries the destructuring of all slots as destructuring one slot might
+/// enable subsequent destructuring. Returns failure if no slot was
+/// destructured.
 LogicalResult tryToDestructureMemorySlots(
     ArrayRef<DestructurableAllocationOpInterface> allocators,
-    RewriterBase &rewriter, SROAStatistics statistics = {});
+    OpBuilder &builder, const DataLayout &dataLayout,
+    SROAStatistics statistics = {});
 
 } // namespace mlir
 

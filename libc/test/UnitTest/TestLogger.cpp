@@ -1,10 +1,10 @@
 #include "test/UnitTest/TestLogger.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/OSUtil/io.h" // write_to_stderr
-#include "src/__support/UInt.h"      // is_big_int
-#include "src/__support/UInt128.h"
+#include "src/__support/OSUtil/io.h"               // write_to_stderr
+#include "src/__support/big_int.h"                 // is_big_int
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
+#include "src/__support/uint128.h"
 
 #include <stdint.h>
 

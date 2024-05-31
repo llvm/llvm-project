@@ -215,6 +215,18 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
   inferGslPointerAttribute(Record, Record);
 }
 
+void Sema::inferNullableClassAttribute(CXXRecordDecl *CRD) {
+  static llvm::StringSet<> Nullable{
+      "auto_ptr",         "shared_ptr", "unique_ptr",         "exception_ptr",
+      "coroutine_handle", "function",   "move_only_function",
+  };
+
+  if (CRD->isInStdNamespace() && Nullable.count(CRD->getName()) &&
+      !CRD->hasAttr<TypeNullableAttr>())
+    for (Decl *Redecl : CRD->redecls())
+      Redecl->addAttr(TypeNullableAttr::CreateImplicit(Context));
+}
+
 void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
                                    SourceLocation PragmaLoc) {
   PragmaMsStackAction Action = Sema::PSK_Reset;
@@ -825,7 +837,7 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
 
   IdentifierInfo *Name = IdTok.getIdentifierInfo();
   LookupResult Lookup(*this, Name, IdTok.getLocation(), LookupOrdinaryName);
-  LookupParsedName(Lookup, curScope, nullptr, true);
+  LookupName(Lookup, curScope, /*AllowBuiltinCreation=*/true);
 
   if (Lookup.empty()) {
     Diag(PragmaLoc, diag::warn_pragma_unused_undeclared_var)
@@ -846,22 +858,6 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
 
   VD->addAttr(UnusedAttr::CreateImplicit(Context, IdTok.getLocation(),
                                          UnusedAttr::GNU_unused));
-}
-
-void Sema::AddCFAuditedAttribute(Decl *D) {
-  IdentifierInfo *Ident;
-  SourceLocation Loc;
-  std::tie(Ident, Loc) = PP.getPragmaARCCFCodeAuditedInfo();
-  if (!Loc.isValid()) return;
-
-  // Don't add a redundant or conflicting attribute.
-  if (D->hasAttr<CFAuditedTransferAttr>() ||
-      D->hasAttr<CFUnknownTransferAttr>())
-    return;
-
-  AttributeCommonInfo Info(Ident, SourceRange(Loc),
-                           AttributeCommonInfo::Form::Pragma());
-  D->addAttr(CFAuditedTransferAttr::CreateImplicit(Context, Info));
 }
 
 namespace {

@@ -76,7 +76,15 @@ elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
 endif()
 
 set(gpu_test_architecture "")
-if(LIBC_GPU_TEST_ARCHITECTURE)
+if(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_AMDGPU
+   AND NOT "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(LIBC_GPU_TESTS_DISABLED TRUE)
+  message(STATUS "AMDGPU backend is not available, tests will not be built")
+elseif(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_AMDGPU
+       AND NOT "NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(LIBC_GPU_TESTS_DISABLED TRUE)
+  message(STATUS "NVPTX backend is not available, tests will not be built")
+elseif(LIBC_GPU_TEST_ARCHITECTURE)
   set(LIBC_GPU_TESTS_DISABLED FALSE)
   set(gpu_test_architecture ${LIBC_GPU_TEST_ARCHITECTURE})
   message(STATUS "Using user-specified GPU architecture for testing: "
@@ -92,6 +100,11 @@ else()
                  "built")
 endif()
 set(LIBC_GPU_TARGET_ARCHITECTURE "${gpu_test_architecture}")
+
+# The NVPTX backend cannot currently handle objects created in debug mode.
+if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(LIBC_GPU_TESTS_DISABLED TRUE)
+endif()
 
 # Identify the GPU loader utility used to run tests.
 set(LIBC_GPU_LOADER_EXECUTABLE "" CACHE STRING "Executable for the GPU loader.")

@@ -19,8 +19,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-#ifndef _WIN32
+#ifdef _WIN32
+#include "flang/Common/windows-include.h"
+#else
 #include <sys/time.h> // gettimeofday
+#include <sys/times.h>
+#include <unistd.h>
 #endif
 
 // CPU_TIME (Fortran 2018 16.9.57)
@@ -368,6 +372,70 @@ void RTNAME(DateAndTime)(char *date, std::size_t dateChars, char *time,
   Fortran::runtime::Terminator terminator{source, line};
   return GetDateAndTime(
       terminator, date, dateChars, time, timeChars, zone, zoneChars, values);
+}
+
+void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
+    const char *sourceFile, int line) {
+  Fortran::runtime::Terminator terminator{sourceFile, line};
+
+  double usrTime = -1.0, sysTime = -1.0, realTime = -1.0;
+
+#ifdef _WIN32
+  FILETIME creationTime;
+  FILETIME exitTime;
+  FILETIME kernelTime;
+  FILETIME userTime;
+
+  if (GetProcessTimes(GetCurrentProcess(), &creationTime, &exitTime,
+          &kernelTime, &userTime) == 0) {
+    ULARGE_INTEGER userSystemTime;
+    ULARGE_INTEGER kernelSystemTime;
+
+    memcpy(&userSystemTime, &userTime, sizeof(FILETIME));
+    memcpy(&kernelSystemTime, &kernelTime, sizeof(FILETIME));
+
+    usrTime = ((double)(userSystemTime.QuadPart)) / 10000000.0;
+    sysTime = ((double)(kernelSystemTime.QuadPart)) / 10000000.0;
+    realTime = usrTime + sysTime;
+  }
+#else
+  struct tms tms;
+  if (times(&tms) != -1) {
+    usrTime = ((double)(tms.tms_utime)) / sysconf(_SC_CLK_TCK);
+    sysTime = ((double)(tms.tms_stime)) / sysconf(_SC_CLK_TCK);
+    realTime = usrTime + sysTime;
+  }
+#endif
+
+  if (values) {
+    auto typeCode{values->type().GetCategoryAndKind()};
+    // ETIME values argument must have decimal range == 2.
+    RUNTIME_CHECK(terminator,
+        values->rank() == 1 && values->GetDimension(0).Extent() == 2 &&
+            typeCode && typeCode->first == Fortran::common::TypeCategory::Real);
+    // Only accept KIND=4 here.
+    int kind{typeCode->second};
+    RUNTIME_CHECK(terminator, kind == 4);
+
+    ApplyFloatingPointKind<StoreFloatingPointAt, void>(
+        kind, terminator, *values, /* atIndex = */ 0, usrTime);
+    ApplyFloatingPointKind<StoreFloatingPointAt, void>(
+        kind, terminator, *values, /* atIndex = */ 1, sysTime);
+  }
+
+  if (time) {
+    auto typeCode{time->type().GetCategoryAndKind()};
+    // ETIME time argument must have decimal range == 0.
+    RUNTIME_CHECK(terminator,
+        time->rank() == 0 && typeCode &&
+            typeCode->first == Fortran::common::TypeCategory::Real);
+    // Only accept KIND=4 here.
+    int kind{typeCode->second};
+    RUNTIME_CHECK(terminator, kind == 4);
+
+    ApplyFloatingPointKind<StoreFloatingPointAt, void>(
+        kind, terminator, *time, /* atIndex = */ 0, realTime);
+  }
 }
 
 } // extern "C"

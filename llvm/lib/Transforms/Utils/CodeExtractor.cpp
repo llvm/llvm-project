@@ -745,7 +745,7 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
 /// and other with remaining incoming blocks; then first PHIs are placed in
 /// outlined region.
 void CodeExtractor::severSplitPHINodesOfExits(
-    const SmallPtrSetImpl<BasicBlock *> &Exits) {
+    const SetVector<BasicBlock *> &Exits) {
   for (BasicBlock *ExitBB : Exits) {
     BasicBlock *NewBB = nullptr;
 
@@ -1619,8 +1619,8 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 
   auto UpdateDbgRecordsOnInst = [&](Instruction &I) -> void {
     for (DbgRecord &DR : I.getDbgRecordRange()) {
-      if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-        UpdateDbgLabel(DPL);
+      if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+        UpdateDbgLabel(DLR);
         continue;
       }
 
@@ -1678,8 +1678,9 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     DVR->getMarker()->MarkedInstr->dropOneDbgRecord(DVR);
   DIB.finalizeSubprogram(NewSP);
 
-  // Fix up the scope information attached to the line locations in the new
-  // function.
+  // Fix up the scope information attached to the line locations and the
+  // debug assignment metadata in the new function.
+  DenseMap<DIAssignID *, DIAssignID *> AssignmentIDMap;
   for (Instruction &I : instructions(NewFunc)) {
     if (const DebugLoc &DL = I.getDebugLoc())
       I.setDebugLoc(
@@ -1695,6 +1696,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       return MD;
     };
     updateLoopMetadataDebugLocations(I, updateLoopInfoLoc);
+    at::remapAssignID(AssignmentIDMap, I);
   }
   if (!TheCall.getDebugLoc())
     TheCall.setDebugLoc(DILocation::get(Ctx, 0, 0, OldSP));
@@ -1751,7 +1753,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   // Calculate the exit blocks for the extracted region and the total exit
   // weights for each of those blocks.
   DenseMap<BasicBlock *, BlockFrequency> ExitWeights;
-  SmallPtrSet<BasicBlock *, 1> ExitBlocks;
+  SetVector<BasicBlock *> ExitBlocks;
   for (BasicBlock *Block : Blocks) {
     for (BasicBlock *Succ : successors(Block)) {
       if (!Blocks.count(Succ)) {

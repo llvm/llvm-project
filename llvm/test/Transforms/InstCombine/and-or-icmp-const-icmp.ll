@@ -223,30 +223,30 @@ define <2 x i1> @ne_vector_unequal2(<2 x i8> %x, <2 x i8> %y) {
 }
 
 ; ==============================================================================
-; Tests with undef
+; Tests with poison
 ; ==============================================================================
-define <2 x i1> @eq_vector_undef_icmp(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: define <2 x i1> @eq_vector_undef_icmp
+define <2 x i1> @eq_vector_poison_icmp(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: define <2 x i1> @eq_vector_poison_icmp
 ; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], <i8 -6, i8 -6>
 ; CHECK-NEXT:    [[OR:%.*]] = icmp uge <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %sub = add <2 x i8> %x, <i8 -5, i8 -5>
-  %c1 = icmp eq <2 x i8> %x, <i8 5, i8 undef>
+  %c1 = icmp eq <2 x i8> %x, <i8 5, i8 poison>
   %c2 = icmp ugt <2 x i8> %sub, %y
   %or = or <2 x i1> %c1, %c2
   ret <2 x i1> %or
 }
 
-define <2 x i1> @eq_vector_undef_add(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: define <2 x i1> @eq_vector_undef_add
+define <2 x i1> @eq_vector_poison_add(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: define <2 x i1> @eq_vector_poison_add
 ; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], <i8 -6, i8 -6>
 ; CHECK-NEXT:    [[OR:%.*]] = icmp uge <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
-  %sub = add <2 x i8> %x, <i8 -5, i8 undef>
+  %sub = add <2 x i8> %x, <i8 -5, i8 poison>
   %c1 = icmp eq <2 x i8> %x, <i8 5, i8 5>
   %c2 = icmp ugt <2 x i8> %sub, %y
   %or = or <2 x i1> %c1, %c2

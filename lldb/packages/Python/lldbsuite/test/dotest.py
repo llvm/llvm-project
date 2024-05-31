@@ -248,7 +248,7 @@ def parseOptionsAndInitTestdirs():
             configuration.compiler = which(args.compiler)
         if not is_exe(configuration.compiler):
             logging.error(
-                "%s is not a valid compiler executable; aborting...", args.compiler
+                '"%s" is not a valid compiler executable; aborting...', args.compiler
             )
             sys.exit(-1)
     else:
@@ -423,6 +423,7 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_module_cache_dir = os.path.join(
             configuration.test_build_dir, "module-cache-lldb"
         )
+
     if args.clang_module_cache_dir:
         configuration.clang_module_cache_dir = args.clang_module_cache_dir
     else:
@@ -432,6 +433,8 @@ def parseOptionsAndInitTestdirs():
 
     if args.lldb_libs_dir:
         configuration.lldb_libs_dir = args.lldb_libs_dir
+    if args.lldb_obj_root:
+        configuration.lldb_obj_root = args.lldb_obj_root
 
     if args.enabled_plugins:
         configuration.enabled_plugins = args.enabled_plugins
@@ -539,12 +542,6 @@ def setupSysPath():
     lldbDAPExec = os.path.join(lldbDir, "lldb-dap")
     if is_exe(lldbDAPExec):
         os.environ["LLDBDAP_EXEC"] = lldbDAPExec
-    else:
-        if not configuration.shouldSkipBecauseOfCategories(["lldb-dap"]):
-            print(
-                "The 'lldb-dap' executable cannot be located.  The lldb-dap tests can not be run as a result."
-            )
-            configuration.skip_categories.append("lldb-dap")
 
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
 
@@ -926,6 +923,24 @@ def checkPexpectSupport():
         configuration.skip_categories.append("pexpect")
 
 
+def checkDAPSupport():
+    import lldb
+
+    if "LLDBDAP_EXEC" not in os.environ:
+        msg = (
+            "The 'lldb-dap' executable cannot be located and its tests will not be run."
+        )
+    elif lldb.remote_platform:
+        msg = "lldb-dap tests are not compatible with remote platforms and will not be run."
+    else:
+        msg = None
+
+    if msg:
+        if configuration.verbose:
+            print(msg)
+        configuration.skip_categories.append("lldb-dap")
+
+
 def run_suite():
     # On MacOS X, check to make sure that domain for com.apple.DebugSymbols defaults
     # does not exist before proceeding to running the test suite.
@@ -1026,6 +1041,7 @@ def run_suite():
     checkObjcSupport()
     checkForkVForkSupport()
     checkPexpectSupport()
+    checkDAPSupport()
 
     skipped_categories_list = ", ".join(configuration.skip_categories)
     print(

@@ -74,8 +74,10 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
       auto rankedDestType = dyn_cast<MemRefType>(type);
       if (!rankedDestType)
         return nullptr;
+      BufferizationOptions options;
+      options.bufferAlignment = 0;
       FailureOr<Value> replacement =
-          castOrReallocMemRefValue(builder, inputs[0], rankedDestType);
+          castOrReallocMemRefValue(builder, inputs[0], rankedDestType, options);
       if (failed(replacement))
         return nullptr;
       return *replacement;
@@ -182,6 +184,11 @@ parseHeuristicOption(const std::string &s) {
     return OneShotBufferizationOptions::AnalysisHeuristic::BottomUp;
   if (s == "top-down")
     return OneShotBufferizationOptions::AnalysisHeuristic::TopDown;
+  if (s == "bottom-up-from-terminators")
+    return OneShotBufferizationOptions::AnalysisHeuristic::
+        BottomUpFromTerminators;
+  if (s == "fuzzer")
+    return OneShotBufferizationOptions::AnalysisHeuristic::Fuzzer;
   llvm_unreachable("invalid analysisheuristic option");
 }
 
@@ -312,29 +319,6 @@ private:
   std::optional<OneShotBufferizationOptions> options;
 };
 } // namespace
-
-namespace {
-struct BufferizationBufferizePass
-    : public bufferization::impl::BufferizationBufferizeBase<
-          BufferizationBufferizePass> {
-  void runOnOperation() override {
-    BufferizationOptions options = getPartialBufferizationOptions();
-    options.opFilter.allowDialect<BufferizationDialect>();
-
-    if (failed(bufferizeOp(getOperation(), options)))
-      signalPassFailure();
-  }
-
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<bufferization::BufferizationDialect, memref::MemRefDialect>();
-  }
-};
-} // namespace
-
-std::unique_ptr<Pass> mlir::bufferization::createBufferizationBufferizePass() {
-  return std::make_unique<BufferizationBufferizePass>();
-}
 
 std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass() {
   return std::make_unique<OneShotBufferizePass>();
@@ -507,8 +491,8 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   // Fold all to_memref(to_tensor(x)) pairs.
   for (Operation *op : toMemrefOps) {
     rewriter.setInsertionPoint(op);
-    (void)bufferization::foldToMemrefToTensorPair(rewriter,
-                                                  cast<ToMemrefOp>(op));
+    (void)bufferization::foldToMemrefToTensorPair(
+        rewriter, cast<ToMemrefOp>(op), options);
   }
 
   // Remove all dead to_tensor ops.

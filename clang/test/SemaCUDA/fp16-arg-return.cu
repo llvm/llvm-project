@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - -triple amdgcn-amd-amdhsa -fcuda-is-device -fsyntax-only -verify %s
+// RUN: %clang_cc1 -o - -triple amdgcn-amd-amdhsa -fcuda-is-device -fsyntax-only -verify %s
 
 // expected-no-diagnostics
 

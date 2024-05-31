@@ -211,8 +211,9 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
 }
 
 static CodeModel::Model
-getEffectiveX86CodeModel(std::optional<CodeModel::Model> CM, bool JIT,
-                         bool Is64Bit) {
+getEffectiveX86CodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
+                         bool JIT) {
+  bool Is64Bit = TT.getArch() == Triple::x86_64;
   if (CM) {
     if (*CM == CodeModel::Tiny)
       report_fatal_error("Target does not support the tiny CodeModel", false);
@@ -234,7 +235,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(
           T, computeDataLayout(TT), TT, CPU, FS, Options,
           getEffectiveRelocModel(TT, JIT, RM),
-          getEffectiveX86CodeModel(CM, JIT, TT.getArch() == Triple::x86_64),
+          getEffectiveX86CodeModel(TT, CM, JIT),
           OL),
       TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
   // On PS4/PS5, the "return address" of a 'noreturn' call must still be within
@@ -504,6 +505,9 @@ bool X86PassConfig::addRegBankSelect() {
 
 bool X86PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
+  // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
+  if (isGlobalISelAbortEnabled())
+    addPass(createX86GlobalBaseRegPass());
   return false;
 }
 

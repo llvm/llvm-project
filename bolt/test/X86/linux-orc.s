@@ -27,7 +27,7 @@
 ## Verify ORC bindings to instructions.
 
 # RUN: llvm-bolt %t.exe --print-normalized --dump-orc --print-orc -o %t.out \
-# RUN:   --bolt-info=0 |& FileCheck %s
+# RUN:   --keep-nops=0 --bolt-info=0 |& FileCheck %s
 
 
 ## Verify ORC bindings after rewrite.
@@ -37,7 +37,7 @@
 
 ## Verify ORC binding after rewrite when some of the functions are skipped.
 
-# RUN: llvm-bolt %t.exe -o %t.out --skip-funcs=bar --bolt-info=0
+# RUN: llvm-bolt %t.exe -o %t.out --skip-funcs=bar --bolt-info=0 --keep-nops=0
 # RUN: llvm-bolt %t.out -o %t.out.1 --print-normalized --print-orc \
 # RUN:   |& FileCheck %s
 

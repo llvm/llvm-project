@@ -22,6 +22,8 @@ constexpr const char klassPropList[] = "__OBJC_$_CLASS_PROP_LIST_";
 constexpr const char metaclass[] = "_OBJC_METACLASS_$_";
 constexpr const char ehtype[] = "_OBJC_EHTYPE_$_";
 constexpr const char ivar[] = "_OBJC_IVAR_$_";
+constexpr const char instanceMethods[] = "__OBJC_$_INSTANCE_METHODS_";
+constexpr const char classMethods[] = "__OBJC_$_CLASS_METHODS_";
 constexpr const char listProprieties[] = "__OBJC_$_PROP_LIST_";
 
 constexpr const char category[] = "__OBJC_$_CATEGORY_";

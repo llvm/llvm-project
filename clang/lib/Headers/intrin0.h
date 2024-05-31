@@ -15,7 +15,7 @@
 #ifndef __INTRIN0_H
 #define __INTRIN0_H
 
-#ifdef __x86_64__
+#if defined(__x86_64__) && !defined(__arm64ec__)
 #include <adcintrin.h>
 #endif
 
@@ -27,7 +27,7 @@ unsigned char _BitScanForward(unsigned long *_Index, unsigned long _Mask);
 unsigned char _BitScanReverse(unsigned long *_Index, unsigned long _Mask);
 void _ReadWriteBarrier(void);
 
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__arm64ec__)
 unsigned int _CountLeadingZeros(unsigned long);
 unsigned int _CountLeadingZeros64(unsigned _int64);
 unsigned char _InterlockedCompareExchange128_acq(__int64 volatile *_Destination,
@@ -44,7 +44,7 @@ unsigned char _InterlockedCompareExchange128_rel(__int64 volatile *_Destination,
                                                  __int64 *_ComparandResult);
 #endif
 
-#ifdef __x86_64__
+#ifdef __x86_64__ && !defined(__arm64ec__)
 unsigned __int64 _umul128(unsigned __int64, unsigned __int64,
                           unsigned __int64 *);
 unsigned __int64 __shiftleft128(unsigned __int64 _LowPart,
@@ -55,7 +55,7 @@ unsigned __int64 __shiftright128(unsigned __int64 _LowPart,
                                  unsigned char _Shift);
 #endif
 
-#if defined(__x86_64__) || defined(__i386__)
+#if defined(__i386__) || (defined(__x86_64__) && !defined(__arm64ec__))
 void _mm_pause(void);
 #endif
 
@@ -83,7 +83,7 @@ __int64 _InterlockedXor64(__int64 volatile *_Value, __int64 _Mask);
 __int64 _InterlockedAnd64(__int64 volatile *_Value, __int64 _Mask);
 #endif
 
-#if defined(__arm__) || defined(__aarch64__)
+#if defined(__arm__) || defined(__aarch64__) || defined(__arm64ec__)
 /*----------------------------------------------------------------------------*\
 |* Interlocked Exchange Add
 \*----------------------------------------------------------------------------*/

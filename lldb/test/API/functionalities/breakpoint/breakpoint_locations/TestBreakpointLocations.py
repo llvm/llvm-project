@@ -293,6 +293,12 @@ class BreakpointLocationsTestCase(TestBase):
             startstr="3 breakpoints enabled.",
         )
 
+        # The 'breakpoint enable 1.' command should not crash.
+        self.expect(
+            "breakpoint enable 1.",
+            startstr="0 breakpoints enabled.",
+        )
+
         # The 'breakpoint disable 1.1' command should disable 1 location.
         self.expect(
             "breakpoint disable 1.1",

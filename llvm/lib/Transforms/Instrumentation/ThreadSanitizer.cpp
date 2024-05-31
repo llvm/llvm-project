@@ -803,6 +803,10 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
 int ThreadSanitizer::getMemoryAccessFuncIndex(Type *OrigTy, Value *Addr,
                                               const DataLayout &DL) {
   assert(OrigTy->isSized());
+  if (OrigTy->isScalableTy()) {
+    // FIXME: support vscale.
+    return -1;
+  }
   uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
   if (TypeSize != 8  && TypeSize != 16 &&
       TypeSize != 32 && TypeSize != 64 && TypeSize != 128) {

@@ -22,6 +22,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
@@ -97,8 +98,6 @@ static bool TypeHasMayAlias(QualType QTy) {
 
 /// Check if the given type is a valid base type to be used in access tags.
 static bool isValidBaseType(QualType QTy) {
-  if (QTy->isReferenceType())
-    return false;
   if (const RecordType *TTy = QTy->getAs<RecordType>()) {
     const RecordDecl *RD = TTy->getDecl()->getDefinition();
     // Incomplete types are not valid base access types.
@@ -242,9 +241,10 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   // aggregate will result into the may-alias access descriptor, meaning all
   // subsequent accesses to direct and indirect members of that aggregate will
   // be considered may-alias too.
-  // TODO: Combine getTypeInfo() and getBaseTypeInfo() into a single function.
+  // TODO: Combine getTypeInfo() and getValidBaseTypeInfo() into a single
+  // function.
   if (isValidBaseType(QTy))
-    return getBaseTypeInfo(QTy);
+    return getValidBaseTypeInfo(QTy);
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
   if (llvm::MDNode *N = MetadataCache[Ty])
@@ -319,7 +319,13 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
       // base type.
       if ((*i)->isBitField()) {
         const CGBitFieldInfo &Info = CGRL.getBitFieldInfo(*i);
-        if (Info.Offset != 0)
+        // For big endian targets the first bitfield in the consecutive run is
+        // at the most-significant end; see CGRecordLowering::setBitFieldInfo
+        // for more information.
+        bool IsBE = Context.getTargetInfo().isBigEndian();
+        bool IsFirst = IsBE ? Info.StorageSize - (Info.Offset + Info.Size) == 0
+                            : Info.Offset == 0;
+        if (!IsFirst)
           continue;
         unsigned CurrentBitFieldSize = Info.StorageSize;
         uint64_t Size =
@@ -387,7 +393,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
         if (BaseRD->isEmpty())
           continue;
         llvm::MDNode *TypeNode = isValidBaseType(BaseQTy)
-                                     ? getBaseTypeInfo(BaseQTy)
+                                     ? getValidBaseTypeInfo(BaseQTy)
                                      : getTypeInfo(BaseQTy);
         if (!TypeNode)
           return nullptr;
@@ -408,11 +414,12 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
                  });
     }
     for (FieldDecl *Field : RD->fields()) {
-      if (Field->isZeroSize(Context) || Field->isUnnamedBitfield())
+      if (Field->isZeroSize(Context) || Field->isUnnamedBitField())
         continue;
       QualType FieldQTy = Field->getType();
-      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy) ?
-          getBaseTypeInfo(FieldQTy) : getTypeInfo(FieldQTy);
+      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy)
+                                   ? getValidBaseTypeInfo(FieldQTy)
+                                   : getTypeInfo(FieldQTy);
       if (!TypeNode)
         return nullptr;
 
@@ -449,9 +456,8 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
   return nullptr;
 }
 
-llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
-  if (!isValidBaseType(QTy))
-    return nullptr;
+llvm::MDNode *CodeGenTBAA::getValidBaseTypeInfo(QualType QTy) {
+  assert(isValidBaseType(QTy) && "Must be a valid base type");
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
 
@@ -468,6 +474,10 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
   assert(inserted.second && "BaseType metadata was already inserted");
 
   return TypeNode;
+}
+
+llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
+  return isValidBaseType(QTy) ? getValidBaseTypeInfo(QTy) : nullptr;
 }
 
 llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {

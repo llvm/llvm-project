@@ -13,7 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "FormatTokenLexer.h"
+#include "FormatToken.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Format/Format.h"
+#include "llvm/Support/Regex.h"
 
 namespace clang {
 namespace format {
@@ -30,7 +34,6 @@ FormatTokenLexer::FormatTokenLexer(
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
       FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd) {
-  assert(IsCpp == Style.isCpp());
   Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts));
   Lex->SetKeepWhitespaceMode(true);
 
@@ -111,7 +114,7 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
   if (tryMergeForEach())
     return;
-  if (IsCpp && tryTransformTryUsageForC())
+  if (Style.isCpp() && tryTransformTryUsageForC())
     return;
 
   if (Style.isJavaScript() || Style.isCSharp()) {
@@ -401,7 +404,7 @@ bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
     return false;
   auto &NullishCoalescing = *(Tokens.end() - 2);
   auto &Equal = *(Tokens.end() - 1);
-  if (NullishCoalescing->getType() != TT_NullCoalescingOperator ||
+  if (NullishCoalescing->isNot(TT_NullCoalescingOperator) ||
       Equal->isNot(tok::equal)) {
     return false;
   }
@@ -1338,7 +1341,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     Column = FormatTok->LastLineColumnWidth;
   }
 
-  if (IsCpp) {
+  if (Style.isCpp()) {
     auto *Identifier = FormatTok->Tok.getIdentifierInfo();
     auto it = Macros.find(Identifier);
     if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
@@ -1439,7 +1442,6 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {
   StringRef Buffer = SourceMgr.getBufferData(ID);
-  LangOpts = getFormattingLangOpts(Style);
   Lex.reset(new Lexer(SourceMgr.getLocForStartOfFile(ID), LangOpts,
                       Buffer.begin(), Buffer.begin() + Offset, Buffer.end()));
   Lex->SetKeepWhitespaceMode(true);

@@ -39,13 +39,10 @@
     br label %for.body
   }
 
-  ; Function Attrs: nounwind
   declare i32 @llvm.arm.space(i32 immarg, i32) #0
 
-  ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.start.loop.iterations.i32(i32) #1
 
-  ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
 
   attributes #0 = { nounwind }
@@ -125,56 +122,62 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: size_limit
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r7
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   $sp = frame-setup tSUBspi $sp, 8, 14 /* CC::al */, $noreg
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 40
-  ; CHECK:   dead $lr = tMOVr renamable $r3, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 4, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRspi killed $r1, $sp, 7, 14 /* CC::al */, $noreg :: (store (s32) into %stack.0)
-  ; CHECK:   tSTRspi killed $r2, $sp, 6, 14 /* CC::al */, $noreg :: (store (s32) into %stack.1)
-  ; CHECK:   tSTRspi killed $r0, $sp, 5, 14 /* CC::al */, $noreg :: (store (s32) into %stack.2)
-  ; CHECK:   tSTRspi killed $r3, $sp, 4, 14 /* CC::al */, $noreg :: (store (s32) into %stack.3)
-  ; CHECK:   tB %bb.3, 14 /* CC::al */, $noreg
-  ; CHECK: bb.1.for.body:
-  ; CHECK:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   $r0 = tLDRspi $sp, 3, 14 /* CC::al */, $noreg :: (load (s32) from %stack.4)
-  ; CHECK:   renamable $r1, renamable $r0 = t2LDR_PRE killed renamable $r0, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep11)
-  ; CHECK:   $r2 = tLDRspi $sp, 2, 14 /* CC::al */, $noreg :: (load (s32) from %stack.5)
-  ; CHECK:   renamable $r3, renamable $r2 = t2LDR_PRE killed renamable $r2, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep7)
-  ; CHECK:   renamable $r1, dead $cpsr = nsw tMUL killed renamable $r3, killed renamable $r1, 14 /* CC::al */, $noreg
-  ; CHECK:   $r3 = tLDRspi $sp, 1, 14 /* CC::al */, $noreg :: (load (s32) from %stack.6)
-  ; CHECK:   early-clobber renamable $r3 = t2STR_PRE killed renamable $r1, killed renamable $r3, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.scevgep3)
-  ; CHECK:   $r1 = tLDRspi $sp, 0, 14 /* CC::al */, $noreg :: (load (s32) from %stack.7)
-  ; CHECK:   $lr = tMOVr killed $r1, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
-  ; CHECK:   $r12 = tMOVr killed $lr, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRspi killed $r0, $sp, 7, 14 /* CC::al */, $noreg :: (store (s32) into %stack.0)
-  ; CHECK:   tSTRspi killed $r2, $sp, 6, 14 /* CC::al */, $noreg :: (store (s32) into %stack.1)
-  ; CHECK:   tSTRspi killed $r3, $sp, 5, 14 /* CC::al */, $noreg :: (store (s32) into %stack.2)
-  ; CHECK:   t2STRi12 killed $r12, $sp, 16, 14 /* CC::al */, $noreg :: (store (s32) into %stack.3)
-  ; CHECK:   tBcc %bb.3, 1 /* CC::ne */, killed $cpsr
-  ; CHECK:   tB %bb.2, 14 /* CC::al */, $noreg
-  ; CHECK: bb.2.for.cond.cleanup:
-  ; CHECK:   $sp = tADDspi $sp, 8, 14 /* CC::al */, $noreg
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
-  ; CHECK: bb.3.for.header:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   $r0 = tLDRspi $sp, 4, 14 /* CC::al */, $noreg :: (load (s32) from %stack.3)
-  ; CHECK:   $r1 = tLDRspi $sp, 5, 14 /* CC::al */, $noreg :: (load (s32) from %stack.2)
-  ; CHECK:   $r2 = tLDRspi $sp, 6, 14 /* CC::al */, $noreg :: (load (s32) from %stack.1)
-  ; CHECK:   $r3 = tLDRspi $sp, 7, 14 /* CC::al */, $noreg :: (load (s32) from %stack.0)
-  ; CHECK:   tSTRspi killed $r0, $sp, 0, 14 /* CC::al */, $noreg :: (store (s32) into %stack.7)
-  ; CHECK:   tSTRspi killed $r1, $sp, 1, 14 /* CC::al */, $noreg :: (store (s32) into %stack.6)
-  ; CHECK:   tSTRspi killed $r2, $sp, 2, 14 /* CC::al */, $noreg :: (store (s32) into %stack.5)
-  ; CHECK:   tSTRspi killed $r3, $sp, 3, 14 /* CC::al */, $noreg :: (store (s32) into %stack.4)
-  ; CHECK:   tB %bb.1, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3, $r7
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK-NEXT:   $sp = frame-setup tSUBspi $sp, 8, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 40
+  ; CHECK-NEXT:   dead $lr = tMOVr renamable $r3, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   tSTRspi killed $r1, $sp, 7, 14 /* CC::al */, $noreg :: (store (s32) into %stack.0)
+  ; CHECK-NEXT:   tSTRspi killed $r2, $sp, 6, 14 /* CC::al */, $noreg :: (store (s32) into %stack.1)
+  ; CHECK-NEXT:   tSTRspi killed $r0, $sp, 5, 14 /* CC::al */, $noreg :: (store (s32) into %stack.2)
+  ; CHECK-NEXT:   tSTRspi killed $r3, $sp, 4, 14 /* CC::al */, $noreg :: (store (s32) into %stack.3)
+  ; CHECK-NEXT:   tB %bb.3, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.for.body:
+  ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $r0 = tLDRspi $sp, 3, 14 /* CC::al */, $noreg :: (load (s32) from %stack.4)
+  ; CHECK-NEXT:   renamable $r1, renamable $r0 = t2LDR_PRE killed renamable $r0, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep11)
+  ; CHECK-NEXT:   $r2 = tLDRspi $sp, 2, 14 /* CC::al */, $noreg :: (load (s32) from %stack.5)
+  ; CHECK-NEXT:   renamable $r3, renamable $r2 = t2LDR_PRE killed renamable $r2, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep7)
+  ; CHECK-NEXT:   renamable $r1, dead $cpsr = nsw tMUL killed renamable $r3, killed renamable $r1, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r3 = tLDRspi $sp, 1, 14 /* CC::al */, $noreg :: (load (s32) from %stack.6)
+  ; CHECK-NEXT:   early-clobber renamable $r3 = t2STR_PRE killed renamable $r1, killed renamable $r3, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.scevgep3)
+  ; CHECK-NEXT:   $r1 = tLDRspi $sp, 0, 14 /* CC::al */, $noreg :: (load (s32) from %stack.7)
+  ; CHECK-NEXT:   $lr = tMOVr killed $r1, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
+  ; CHECK-NEXT:   $r12 = tMOVr killed $lr, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   tSTRspi killed $r0, $sp, 7, 14 /* CC::al */, $noreg :: (store (s32) into %stack.0)
+  ; CHECK-NEXT:   tSTRspi killed $r2, $sp, 6, 14 /* CC::al */, $noreg :: (store (s32) into %stack.1)
+  ; CHECK-NEXT:   tSTRspi killed $r3, $sp, 5, 14 /* CC::al */, $noreg :: (store (s32) into %stack.2)
+  ; CHECK-NEXT:   t2STRi12 killed $r12, $sp, 16, 14 /* CC::al */, $noreg :: (store (s32) into %stack.3)
+  ; CHECK-NEXT:   tBcc %bb.3, 1 /* CC::ne */, killed $cpsr
+  ; CHECK-NEXT:   tB %bb.2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.for.cond.cleanup:
+  ; CHECK-NEXT:   $sp = tADDspi $sp, 8, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.for.header:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $r0 = tLDRspi $sp, 4, 14 /* CC::al */, $noreg :: (load (s32) from %stack.3)
+  ; CHECK-NEXT:   $r1 = tLDRspi $sp, 5, 14 /* CC::al */, $noreg :: (load (s32) from %stack.2)
+  ; CHECK-NEXT:   $r2 = tLDRspi $sp, 6, 14 /* CC::al */, $noreg :: (load (s32) from %stack.1)
+  ; CHECK-NEXT:   $r3 = tLDRspi $sp, 7, 14 /* CC::al */, $noreg :: (load (s32) from %stack.0)
+  ; CHECK-NEXT:   tSTRspi killed $r0, $sp, 0, 14 /* CC::al */, $noreg :: (store (s32) into %stack.7)
+  ; CHECK-NEXT:   tSTRspi killed $r1, $sp, 1, 14 /* CC::al */, $noreg :: (store (s32) into %stack.6)
+  ; CHECK-NEXT:   tSTRspi killed $r2, $sp, 2, 14 /* CC::al */, $noreg :: (store (s32) into %stack.5)
+  ; CHECK-NEXT:   tSTRspi killed $r3, $sp, 3, 14 /* CC::al */, $noreg :: (store (s32) into %stack.4)
+  ; CHECK-NEXT:   tB %bb.1, 14 /* CC::al */, $noreg
   bb.0.entry:
     successors: %bb.3(0x80000000)
     liveins: $r0, $r1, $r2, $r3, $r7, $lr

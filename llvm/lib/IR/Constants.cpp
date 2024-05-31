@@ -315,8 +315,8 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   Type *IntTy = VectorType::getInteger(VTy);
   Constant *C0 = ConstantExpr::getBitCast(const_cast<Constant *>(this), IntTy);
   Constant *C1 = ConstantExpr::getBitCast(cast<Constant>(Y), IntTy);
-  Constant *CmpEq = ConstantExpr::getICmp(ICmpInst::ICMP_EQ, C0, C1);
-  return isa<UndefValue>(CmpEq) || match(CmpEq, m_One());
+  Constant *CmpEq = ConstantFoldCompareInstruction(ICmpInst::ICMP_EQ, C0, C1);
+  return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
 }
 
 static bool
@@ -549,6 +549,9 @@ void llvm::deleteConstant(Constant *C) {
     break;
   case Constant::NoCFIValueVal:
     delete static_cast<NoCFIValue *>(C);
+    break;
+  case Constant::ConstantPtrAuthVal:
+    delete static_cast<ConstantPtrAuth *>(C);
     break;
   case Constant::UndefValueVal:
     delete static_cast<UndefValue *>(C);
@@ -1568,7 +1571,7 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
-        GEPO->isInBounds(), GEPO->getInRangeIndex(), OnlyIfReducedTy);
+        GEPO->getNoWrapFlags(), GEPO->getInRange(), OnlyIfReducedTy);
   }
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -1696,14 +1699,14 @@ void ConstantVector::destroyConstantImpl() {
   getType()->getContext().pImpl->VectorConstants.remove(this);
 }
 
-Constant *Constant::getSplatValue(bool AllowUndefs) const {
+Constant *Constant::getSplatValue(bool AllowPoison) const {
   assert(this->getType()->isVectorTy() && "Only valid for vectors!");
   if (isa<ConstantAggregateZero>(this))
     return getNullValue(cast<VectorType>(getType())->getElementType());
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
     return CV->getSplatValue();
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
-    return CV->getSplatValue(AllowUndefs);
+    return CV->getSplatValue(AllowPoison);
 
   // Check if this is a constant expression splat of the form returned by
   // ConstantVector::getSplat()
@@ -1728,7 +1731,7 @@ Constant *Constant::getSplatValue(bool AllowUndefs) const {
   return nullptr;
 }
 
-Constant *ConstantVector::getSplatValue(bool AllowUndefs) const {
+Constant *ConstantVector::getSplatValue(bool AllowPoison) const {
   // Check out first element.
   Constant *Elt = getOperand(0);
   // Then make sure all remaining elements point to the same value.
@@ -1738,15 +1741,15 @@ Constant *ConstantVector::getSplatValue(bool AllowUndefs) const {
       continue;
 
     // Strict mode: any mismatch is not a splat.
-    if (!AllowUndefs)
+    if (!AllowPoison)
       return nullptr;
 
-    // Allow undefs mode: ignore undefined elements.
-    if (isa<UndefValue>(OpC))
+    // Allow poison mode: ignore poison elements.
+    if (isa<PoisonValue>(OpC))
       continue;
 
     // If we do not have a defined element yet, use the current operand.
-    if (isa<UndefValue>(Elt))
+    if (isa<PoisonValue>(Elt))
       Elt = OpC;
 
     if (OpC != Elt)
@@ -2013,6 +2016,124 @@ Value *NoCFIValue::handleOperandChangeImpl(Value *From, Value *To) {
     mutateType(GV->getType());
 
   return nullptr;
+}
+
+//---- ConstantPtrAuth::get() implementations.
+//
+
+ConstantPtrAuth *ConstantPtrAuth::get(Constant *Ptr, ConstantInt *Key,
+                                      ConstantInt *Disc, Constant *AddrDisc) {
+  Constant *ArgVec[] = {Ptr, Key, Disc, AddrDisc};
+  ConstantPtrAuthKeyType MapKey(ArgVec);
+  LLVMContextImpl *pImpl = Ptr->getContext().pImpl;
+  return pImpl->ConstantPtrAuths.getOrCreate(Ptr->getType(), MapKey);
+}
+
+ConstantPtrAuth *ConstantPtrAuth::getWithSameSchema(Constant *Pointer) const {
+  return get(Pointer, getKey(), getDiscriminator(), getAddrDiscriminator());
+}
+
+ConstantPtrAuth::ConstantPtrAuth(Constant *Ptr, ConstantInt *Key,
+                                 ConstantInt *Disc, Constant *AddrDisc)
+    : Constant(Ptr->getType(), Value::ConstantPtrAuthVal, &Op<0>(), 4) {
+  assert(Ptr->getType()->isPointerTy());
+  assert(Key->getBitWidth() == 32);
+  assert(Disc->getBitWidth() == 64);
+  assert(AddrDisc->getType()->isPointerTy());
+  setOperand(0, Ptr);
+  setOperand(1, Key);
+  setOperand(2, Disc);
+  setOperand(3, AddrDisc);
+}
+
+/// Remove the constant from the constant table.
+void ConstantPtrAuth::destroyConstantImpl() {
+  getType()->getContext().pImpl->ConstantPtrAuths.remove(this);
+}
+
+Value *ConstantPtrAuth::handleOperandChangeImpl(Value *From, Value *ToV) {
+  assert(isa<Constant>(ToV) && "Cannot make Constant refer to non-constant!");
+  Constant *To = cast<Constant>(ToV);
+
+  SmallVector<Constant *, 4> Values;
+  Values.reserve(getNumOperands());
+
+  unsigned NumUpdated = 0;
+
+  Use *OperandList = getOperandList();
+  unsigned OperandNo = 0;
+  for (Use *O = OperandList, *E = OperandList + getNumOperands(); O != E; ++O) {
+    Constant *Val = cast<Constant>(O->get());
+    if (Val == From) {
+      OperandNo = (O - OperandList);
+      Val = To;
+      ++NumUpdated;
+    }
+    Values.push_back(Val);
+  }
+
+  return getContext().pImpl->ConstantPtrAuths.replaceOperandsInPlace(
+      Values, this, From, To, NumUpdated, OperandNo);
+}
+
+bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
+                                            const Value *Discriminator,
+                                            const DataLayout &DL) const {
+  // If the keys are different, there's no chance for this to be compatible.
+  if (getKey() != Key)
+    return false;
+
+  // We can have 3 kinds of discriminators:
+  // - simple, integer-only:    `i64 x, ptr null` vs. `i64 x`
+  // - address-only:            `i64 0, ptr p` vs. `ptr p`
+  // - blended address/integer: `i64 x, ptr p` vs. `@llvm.ptrauth.blend(p, x)`
+
+  // If this constant has a simple discriminator (integer, no address), easy:
+  // it's compatible iff the provided full discriminator is also a simple
+  // discriminator, identical to our integer discriminator.
+  if (!hasAddressDiscriminator())
+    return getDiscriminator() == Discriminator;
+
+  // Otherwise, we can isolate address and integer discriminator components.
+  const Value *AddrDiscriminator = nullptr;
+
+  // This constant may or may not have an integer discriminator (instead of 0).
+  if (!getDiscriminator()->isNullValue()) {
+    // If it does, there's an implicit blend.  We need to have a matching blend
+    // intrinsic in the provided full discriminator.
+    if (!match(Discriminator,
+               m_Intrinsic<Intrinsic::ptrauth_blend>(
+                   m_Value(AddrDiscriminator), m_Specific(getDiscriminator()))))
+      return false;
+  } else {
+    // Otherwise, interpret the provided full discriminator as address-only.
+    AddrDiscriminator = Discriminator;
+  }
+
+  // Either way, we can now focus on comparing the address discriminators.
+
+  // Discriminators are i64, so the provided addr disc may be a ptrtoint.
+  if (auto *Cast = dyn_cast<PtrToIntOperator>(AddrDiscriminator))
+    AddrDiscriminator = Cast->getPointerOperand();
+
+  // Beyond that, we're only interested in compatible pointers.
+  if (getAddrDiscriminator()->getType() != AddrDiscriminator->getType())
+    return false;
+
+  // These are often the same constant GEP, making them trivially equivalent.
+  if (getAddrDiscriminator() == AddrDiscriminator)
+    return true;
+
+  // Finally, they may be equivalent base+offset expressions.
+  APInt Off1(DL.getIndexTypeSizeInBits(getAddrDiscriminator()->getType()), 0);
+  auto *Base1 = getAddrDiscriminator()->stripAndAccumulateConstantOffsets(
+      DL, Off1, /*AllowNonInbounds=*/true);
+
+  APInt Off2(DL.getIndexTypeSizeInBits(AddrDiscriminator->getType()), 0);
+  auto *Base2 = AddrDiscriminator->stripAndAccumulateConstantOffsets(
+      DL, Off2, /*AllowNonInbounds=*/true);
+
+  return Base1 == Base2 && Off1 == Off2;
 }
 
 //---- ConstantExpr::get() implementations.
@@ -2348,18 +2469,19 @@ Constant *ConstantExpr::getCompare(unsigned short Predicate, Constant *C1,
 }
 
 Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
-                                         ArrayRef<Value *> Idxs, bool InBounds,
-                                         std::optional<unsigned> InRangeIndex,
+                                         ArrayRef<Value *> Idxs,
+                                         GEPNoWrapFlags NW,
+                                         std::optional<ConstantRange> InRange,
                                          Type *OnlyIfReducedTy) {
   assert(Ty && "Must specify element type");
   assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
 
   if (Constant *FC =
-          ConstantFoldGetElementPtr(Ty, C, InBounds, InRangeIndex, Idxs))
-    return FC;          // Fold a few common cases.
+          ConstantFoldGetElementPtr(Ty, C, NW.isInBounds(), InRange, Idxs))
+    return FC; // Fold a few common cases.
 
-  assert(GetElementPtrInst::getIndexedType(Ty, Idxs) &&
-         "GEP indices invalid!");;
+  assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
+  ;
 
   // Get the result type of the getelementptr!
   Type *ReqTy = GetElementPtrInst::getGEPReturnType(C, Idxs);
@@ -2391,11 +2513,8 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
     ArgVec.push_back(Idx);
   }
 
-  unsigned SubClassOptionalData = InBounds ? GEPOperator::IsInBounds : 0;
-  if (InRangeIndex && *InRangeIndex < 63)
-    SubClassOptionalData |= (*InRangeIndex + 1) << 1;
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
-                                SubClassOptionalData, std::nullopt, Ty);
+                                NW.getRaw(), std::nullopt, Ty, InRange);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
@@ -2522,10 +2641,10 @@ Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
   return pImpl->ExprConstants.getOrCreate(ShufTy, Key);
 }
 
-Constant *ConstantExpr::getNeg(Constant *C, bool HasNUW, bool HasNSW) {
+Constant *ConstantExpr::getNeg(Constant *C, bool HasNSW) {
   assert(C->getType()->isIntOrIntVectorTy() &&
          "Cannot NEG a nonintegral value!");
-  return getSub(ConstantInt::get(C->getType(), 0), C, HasNUW, HasNSW);
+  return getSub(ConstantInt::get(C->getType(), 0), C, /*HasNUW=*/false, HasNSW);
 }
 
 Constant *ConstantExpr::getNot(Constant *C) {
@@ -2691,13 +2810,15 @@ const char *ConstantExpr::getOpcodeName() const {
 }
 
 GetElementPtrConstantExpr::GetElementPtrConstantExpr(
-    Type *SrcElementTy, Constant *C, ArrayRef<Constant *> IdxList, Type *DestTy)
+    Type *SrcElementTy, Constant *C, ArrayRef<Constant *> IdxList, Type *DestTy,
+    std::optional<ConstantRange> InRange)
     : ConstantExpr(DestTy, Instruction::GetElementPtr,
                    OperandTraits<GetElementPtrConstantExpr>::op_end(this) -
                        (IdxList.size() + 1),
                    IdxList.size() + 1),
       SrcElementTy(SrcElementTy),
-      ResElementTy(GetElementPtrInst::getIndexedType(SrcElementTy, IdxList)) {
+      ResElementTy(GetElementPtrInst::getIndexedType(SrcElementTy, IdxList)),
+      InRange(std::move(InRange)) {
   Op<0>() = C;
   Use *OperandList = getOperandList();
   for (unsigned i = 0, E = IdxList.size(); i != E; ++i)
@@ -2710,6 +2831,10 @@ Type *GetElementPtrConstantExpr::getSourceElementType() const {
 
 Type *GetElementPtrConstantExpr::getResultElementType() const {
   return ResElementTy;
+}
+
+std::optional<ConstantRange> GetElementPtrConstantExpr::getInRange() const {
+  return InRange;
 }
 
 //===----------------------------------------------------------------------===//

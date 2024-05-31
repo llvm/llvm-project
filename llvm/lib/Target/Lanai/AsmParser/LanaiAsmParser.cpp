@@ -151,7 +151,7 @@ public:
   // getEndLoc - Gets location of the last token of this operand
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(isReg() && "Invalid type access!");
     return Reg.RegNum;
   }

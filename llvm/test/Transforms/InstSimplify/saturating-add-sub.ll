@@ -44,7 +44,7 @@ define <2 x i8> @uadd_vector_0_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @uadd_vector_0_commute(
 ; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
 ;
-  %x2v = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 0, i8 undef>, <2 x i8> %a)
+  %x2v = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 0, i8 poison>, <2 x i8> %a)
   ret <2 x i8> %x2v
 }
 
@@ -156,7 +156,7 @@ define <2 x i8> @sadd_vector_0(<2 x i8> %a) {
 ; CHECK-LABEL: @sadd_vector_0(
 ; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
 ;
-  %y1v = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 undef, i8 0>)
+  %y1v = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 poison, i8 0>)
   ret <2 x i8> %y1v
 }
 
@@ -205,10 +205,10 @@ define i8 @sadd_scalar_maxval_commute(i8 %a) {
 
 define <2 x i8> @sadd_vector_maxval_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @sadd_vector_maxval_commute(
-; CHECK-NEXT:    [[Y4V:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 undef, i8 127>, <2 x i8> [[A:%.*]])
+; CHECK-NEXT:    [[Y4V:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 poison, i8 127>, <2 x i8> [[A:%.*]])
 ; CHECK-NEXT:    ret <2 x i8> [[Y4V]]
 ;
-  %y4v = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 undef, i8 127>, <2 x i8> %a)
+  %y4v = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 poison, i8 127>, <2 x i8> %a)
   ret <2 x i8> %y4v
 }
 

@@ -112,18 +112,16 @@ template struct X1<int>::B<bool>;
 // Template template parameters
 template<typename T>
 struct X2 {
-  template<template<class U, T Value> class>  // expected-error{{cannot have type 'float'}} \
-                                              // expected-note{{previous non-type template}}
+  template<template<class U, T Value> class>  // expected-error{{cannot have type 'float'}}
     struct Inner { };
 };
 
-template<typename T, 
-         int Value> // expected-note{{template non-type parameter}}
+template<typename T, int Value>
   struct X2_arg;
 
 X2<int>::Inner<X2_arg> x2i1;
 X2<float> x2a; // expected-note{{instantiation}}
-X2<long>::Inner<X2_arg> x2i3; // expected-error{{template template argument has different}}
+X2<long>::Inner<X2_arg> x2i3;
 
 namespace PR10896 {
   template<typename TN>

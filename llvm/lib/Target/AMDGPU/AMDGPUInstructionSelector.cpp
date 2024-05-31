@@ -63,6 +63,7 @@ void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
                                         BlockFrequencyInfo *BFI) {
   MRI = &MF.getRegInfo();
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
+  Subtarget->checkSubtargetFeatures(MF.getFunction());
   InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
 }
 
@@ -1013,7 +1014,7 @@ bool AMDGPUInstructionSelector::selectDivScale(MachineInstr &MI) const {
 }
 
 bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
-  unsigned IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_if_break: {
     MachineBasicBlock *BB = I.getParent();
@@ -2045,38 +2046,6 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   if (BaseOpcode->HasD16)
     MIB.addImm(IsD16 ? -1 : 0);
 
-  if (IsTexFail) {
-    // An image load instruction with TFE/LWE only conditionally writes to its
-    // result registers. Initialize them to zero so that we always get well
-    // defined result values.
-    assert(VDataOut && !VDataIn);
-    Register Tied = MRI->cloneVirtualRegister(VDataOut);
-    Register Zero = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::V_MOV_B32_e32), Zero)
-      .addImm(0);
-    auto Parts = TRI.getRegSplitParts(MRI->getRegClass(Tied), 4);
-    if (STI.usePRTStrictNull()) {
-      // With enable-prt-strict-null enabled, initialize all result registers to
-      // zero.
-      auto RegSeq =
-          BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::REG_SEQUENCE), Tied);
-      for (auto Sub : Parts)
-        RegSeq.addReg(Zero).addImm(Sub);
-    } else {
-      // With enable-prt-strict-null disabled, only initialize the extra TFE/LWE
-      // result register.
-      Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::IMPLICIT_DEF), Undef);
-      auto RegSeq =
-          BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::REG_SEQUENCE), Tied);
-      for (auto Sub : Parts.drop_back(1))
-        RegSeq.addReg(Undef).addImm(Sub);
-      RegSeq.addReg(Zero).addImm(Parts.back());
-    }
-    MIB.addReg(Tied, RegState::Implicit);
-    MIB->tieOperands(0, MIB->getNumOperands() - 1);
-  }
-
   MI.eraseFromParent();
   constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
   TII.enforceOperandRCAlignment(*MIB, AMDGPU::OpName::vaddr);
@@ -2110,9 +2079,24 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
+bool AMDGPUInstructionSelector::selectPOPSExitingWaveID(
+    MachineInstr &MI) const {
+  Register Dst = MI.getOperand(0).getReg();
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock *MBB = MI.getParent();
+
+  // TODO: Select this with a tablegen pattern. This is tricky because the
+  // intrinsic is IntrReadMem/IntrWriteMem but the instruction is not marked
+  // mayLoad/mayStore and tablegen complains about the mismatch.
+  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), Dst)
+                 .addReg(AMDGPU::SRC_POPS_EXITING_WAVE_ID);
+  MI.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+}
+
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
-  unsigned IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_end_cf:
     return selectEndCfIntrinsic(I);
@@ -2160,6 +2144,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectSBarrierSignalIsfirst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_leave:
     return selectSBarrierLeave(I);
+  case Intrinsic::amdgcn_pops_exiting_wave_id:
+    return selectPOPSExitingWaveID(I);
   }
   return selectImpl(I, *CoverageInfo);
 }

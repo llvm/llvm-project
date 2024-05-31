@@ -1255,7 +1255,7 @@ static void setRetExtAttr(Function &F,
 }
 
 // Modeled after X86TargetLowering::markLibCallAttributes.
-static void markRegisterParameterAttributes(Function *F) {
+void llvm::markRegisterParameterAttributes(Function *F) {
   if (!F->arg_size() || F->isVarArg())
     return;
 

@@ -28,9 +28,9 @@ AvailabilityInfo AvailabilityInfo::createFromDecl(const Decl *Decl) {
     for (const auto *A : RD->specific_attrs<AvailabilityAttr>()) {
       if (A->getPlatform()->getName() != PlatformName)
         continue;
-      Availability =
-          AvailabilityInfo(A->getPlatform()->getName(), A->getIntroduced(),
-                           A->getDeprecated(), A->getObsoleted(), false, false);
+      Availability = AvailabilityInfo(
+          A->getPlatform()->getName(), A->getIntroduced(), A->getDeprecated(),
+          A->getObsoleted(), A->getUnavailable(), false, false);
       break;
     }
 

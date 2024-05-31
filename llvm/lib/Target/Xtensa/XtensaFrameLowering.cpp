@@ -37,3 +37,23 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
 
 void XtensaFrameLowering::emitEpilogue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {}
+
+// Eliminate ADJCALLSTACKDOWN, ADJCALLSTACKUP pseudo instructions
+MachineBasicBlock::iterator XtensaFrameLowering::eliminateCallFramePseudoInstr(
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator I) const {
+  const XtensaInstrInfo &TII =
+      *static_cast<const XtensaInstrInfo *>(MF.getSubtarget().getInstrInfo());
+
+  if (!hasReservedCallFrame(MF)) {
+    int64_t Amount = I->getOperand(0).getImm();
+
+    if (I->getOpcode() == Xtensa::ADJCALLSTACKDOWN)
+      Amount = -Amount;
+
+    unsigned SP = Xtensa::SP;
+    TII.adjustStackPtr(SP, Amount, MBB, I);
+  }
+
+  return MBB.erase(I);
+}

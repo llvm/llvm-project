@@ -509,8 +509,10 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
   BasicBlock *NewEntry = BasicBlock::Create(F.getContext(), "", &F, HeaderBB);
   NewEntry->takeName(HeaderBB);
   HeaderBB->setName("tailrecurse");
-  BranchInst *BI = BranchInst::Create(HeaderBB, NewEntry);
-  BI->setDebugLoc(CI->getDebugLoc());
+  BranchInst::Create(HeaderBB, NewEntry);
+  // If the new branch preserves the debug location of CI, it could result in
+  // misleading stepping, if CI is located in a conditional branch.
+  // So, here we don't give any debug location to the new branch.
 
   // Move all fixed sized allocas from HeaderBB to NewEntry.
   for (BasicBlock::iterator OEBI = HeaderBB->begin(), E = HeaderBB->end(),

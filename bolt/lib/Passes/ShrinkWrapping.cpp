@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/ShrinkWrapping.h"
-#include "bolt/Core/MCPlus.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/MCF.h"
 #include "bolt/Utils/CommandLineOpts.h"

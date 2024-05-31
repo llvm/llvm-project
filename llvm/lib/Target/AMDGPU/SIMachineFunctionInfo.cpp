@@ -110,7 +110,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   }
 
   if (!AMDGPU::isGraphics(CC) ||
-      (CC == CallingConv::AMDGPU_CS && ST.hasArchitectedSGPRs())) {
+      ((CC == CallingConv::AMDGPU_CS || CC == CallingConv::AMDGPU_Gfx) &&
+       ST.hasArchitectedSGPRs())) {
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
       WorkGroupIDX = true;
 
@@ -748,35 +749,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
 }
 
 bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
-  for (const BasicBlock &BB : F) {
-    for (const Instruction &I : BB) {
-      const auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB)
-        continue;
-
-      if (CB->isInlineAsm()) {
-        const InlineAsm *IA = dyn_cast<InlineAsm>(CB->getCalledOperand());
-        for (const auto &CI : IA->ParseConstraints()) {
-          for (StringRef Code : CI.Codes) {
-            Code.consume_front("{");
-            if (Code.starts_with("a"))
-              return true;
-          }
-        }
-        continue;
-      }
-
-      const Function *Callee =
-          dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
-      if (!Callee)
-        return true;
-
-      if (Callee->getIntrinsicID() == Intrinsic::not_intrinsic)
-        return true;
-    }
-  }
-
-  return false;
+  return !F.hasFnAttribute("amdgpu-no-agpr");
 }
 
 bool SIMachineFunctionInfo::usesAGPRs(const MachineFunction &MF) const {

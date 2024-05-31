@@ -378,6 +378,9 @@ enum NodeType : unsigned {
   // Element swapping load/store.  Same operands as regular load/store.
   VLER, VSTER,
 
+  // Use STORE CLOCK FAST to store current TOD clock value.
+  STCKF,
+
   // Prefetch from the second operand using the 4-bit control code in
   // the first operand.  The code is 1 for a load prefetch and 2 for
   // a store prefetch.
@@ -693,6 +696,7 @@ private:
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LDST_I128(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LOAD_OP(SDValue Op, SelectionDAG &DAG,
@@ -717,6 +721,7 @@ private:
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
 
   bool canTreatAsByteVector(EVT VT) const;
   SDValue combineExtract(const SDLoc &DL, EVT ElemVT, EVT VecVT, SDValue OrigOp,
@@ -756,6 +761,8 @@ private:
                                   MachineBasicBlock *Target) const;
 
   // Implement EmitInstrWithCustomInserter for individual operation types.
+  MachineBasicBlock *emitAdjCallStack(MachineInstr &MI,
+                                      MachineBasicBlock *BB) const;
   MachineBasicBlock *emitSelect(MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *emitCondStore(MachineInstr &MI, MachineBasicBlock *BB,
                                    unsigned StoreOpcode, unsigned STOCOpcode,

@@ -30,6 +30,7 @@
 #include "clang-include-cleaner/Record.h"
 #include "support/Path.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/Lexer.h"
@@ -97,6 +98,10 @@ struct PreambleData {
   // Version of the ParseInputs this preamble was built from.
   std::string Version;
   tooling::CompileCommand CompileCommand;
+  // Target options used when building the preamble. Changes in target can cause
+  // crashes when deserializing preamble, this enables consumers to use the
+  // same target (without reparsing CompileCommand).
+  std::shared_ptr<TargetOptions> TargetOpts = nullptr;
   PrecompiledPreamble Preamble;
   std::vector<Diag> Diags;
   // Processes like code completions and go-to-definitions will need #include

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -emit-llvm -DBITS=32 -triple spir-unknown-unknown -finclude-default-header -fdeclare-opencl-builtins -o - -verify -fsyntax-only
-// RUN: %clang_cc1 %s -emit-llvm -DBITS=64 -triple spir64-unknown-unknown -finclude-default-header -fdeclare-opencl-builtins -o - -verify -fsyntax-only
+// RUN: %clang_cc1 %s -DBITS=32 -triple spir-unknown-unknown -finclude-default-header -fdeclare-opencl-builtins -o - -verify -fsyntax-only
+// RUN: %clang_cc1 %s -DBITS=64 -triple spir64-unknown-unknown -finclude-default-header -fdeclare-opencl-builtins -o - -verify -fsyntax-only
 
 char3 f1(char16 x) {
   return  __builtin_astype(x, char3); // expected-error{{invalid reinterpretation: sizes of 'char3' (vector of 3 'char' values) and '__private char16' (vector of 16 'char' values) must match}}

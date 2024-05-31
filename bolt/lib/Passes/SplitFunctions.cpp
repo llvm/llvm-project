@@ -17,7 +17,6 @@
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CommandLine.h"
@@ -716,6 +715,12 @@ Error SplitFunctions::runOnFunctions(BinaryContext &BC) {
   if (!opts::SplitFunctions)
     return Error::success();
 
+  if (BC.IsLinuxKernel && BC.BOLTReserved.empty()) {
+    BC.errs() << "BOLT-ERROR: split functions require reserved space in the "
+                 "Linux kernel binary\n";
+    exit(1);
+  }
+
   // If split strategy is not CDSplit, then a second run of the pass is not
   // needed after function reordering.
   if (BC.HasFinalizedFunctionOrder &&
@@ -829,6 +834,13 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
           break;
         }
       }
+    }
+
+    // Outlining blocks with dynamic branches is not supported yet.
+    if (BC.IsLinuxKernel) {
+      if (llvm::any_of(
+              *BB, [&](MCInst &Inst) { return BC.MIB->isDynamicBranch(Inst); }))
+        BB->setCanOutline(false);
     }
   }
 

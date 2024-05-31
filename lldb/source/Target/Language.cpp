@@ -19,6 +19,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
 
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Threading.h"
 
 using namespace lldb;
@@ -532,3 +533,36 @@ Language::Language() = default;
 
 // Destructor
 Language::~Language() = default;
+
+SourceLanguage::SourceLanguage(lldb::LanguageType language_type) {
+  auto lname =
+      llvm::dwarf::toDW_LNAME((llvm::dwarf::SourceLanguage)language_type);
+  if (!lname)
+    return;
+  name = lname->first;
+  version = lname->second;
+}
+
+lldb::LanguageType SourceLanguage::AsLanguageType() const {
+  if (auto lang = llvm::dwarf::toDW_LANG((llvm::dwarf::SourceLanguageName)name,
+                                         version))
+    return (lldb::LanguageType)*lang;
+  return lldb::eLanguageTypeUnknown;
+}
+
+llvm::StringRef SourceLanguage::GetDescription() const {
+  LanguageType type = AsLanguageType();
+  if (type)
+    return Language::GetNameForLanguageType(type);
+  return llvm::dwarf::LanguageDescription(
+      (llvm::dwarf::SourceLanguageName)name);
+}
+bool SourceLanguage::IsC() const { return name == llvm::dwarf::DW_LNAME_C; }
+
+bool SourceLanguage::IsObjC() const {
+  return name == llvm::dwarf::DW_LNAME_ObjC;
+}
+
+bool SourceLanguage::IsCPlusPlus() const {
+  return name == llvm::dwarf::DW_LNAME_C_plus_plus;
+}

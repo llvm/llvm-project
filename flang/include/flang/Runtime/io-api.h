@@ -51,12 +51,20 @@ constexpr InquiryKeywordHash HashInquiryKeyword(const char *p) {
   return hash;
 }
 
-const char *InquiryKeywordHashDecode(
+RT_API_ATTRS const char *InquiryKeywordHashDecode(
     char *buffer, std::size_t, InquiryKeywordHash);
 
 extern "C" {
 
 #define IONAME(name) RTNAME(io##name)
+
+#ifndef IODECL
+#define IODECL(name) RT_API_ATTRS IONAME(name)
+#endif
+
+#ifndef IODEF
+#define IODEF(name) RT_API_ATTRS IONAME(name)
+#endif
 
 // These functions initiate data transfer statements (READ, WRITE, PRINT).
 // Example: PRINT *, 666 is implemented as the series of calls:
@@ -84,18 +92,18 @@ constexpr std::size_t RecommendedInternalIoScratchAreaBytes(
 
 // Internal I/O to/from character arrays &/or non-default-kind character
 // requires a descriptor, which is copied.
-Cookie IONAME(BeginInternalArrayListOutput)(const Descriptor &,
+Cookie IODECL(BeginInternalArrayListOutput)(const Descriptor &,
     void **scratchArea = nullptr, std::size_t scratchBytes = 0,
     const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginInternalArrayListInput)(const Descriptor &,
+Cookie IODECL(BeginInternalArrayListInput)(const Descriptor &,
     void **scratchArea = nullptr, std::size_t scratchBytes = 0,
     const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginInternalArrayFormattedOutput)(const Descriptor &,
+Cookie IODECL(BeginInternalArrayFormattedOutput)(const Descriptor &,
     const char *format, std::size_t formatLength,
     const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
     int sourceLine = 0);
-Cookie IONAME(BeginInternalArrayFormattedInput)(const Descriptor &,
+Cookie IODECL(BeginInternalArrayFormattedInput)(const Descriptor &,
     const char *format, std::size_t formatLength,
     const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
@@ -103,20 +111,20 @@ Cookie IONAME(BeginInternalArrayFormattedInput)(const Descriptor &,
 
 // Internal I/O to/from a default-kind character scalar can avoid a
 // descriptor.
-Cookie IONAME(BeginInternalListOutput)(char *internal,
+Cookie IODECL(BeginInternalListOutput)(char *internal,
     std::size_t internalLength, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
     int sourceLine = 0);
-Cookie IONAME(BeginInternalListInput)(const char *internal,
+Cookie IODECL(BeginInternalListInput)(const char *internal,
     std::size_t internalLength, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
     int sourceLine = 0);
-Cookie IONAME(BeginInternalFormattedOutput)(char *internal,
+Cookie IODECL(BeginInternalFormattedOutput)(char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
     const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
     int sourceLine = 0);
-Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
+Cookie IODECL(BeginInternalFormattedInput)(const char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
     const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
@@ -131,63 +139,63 @@ Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
 // If handleError is false, and the unit number is out of range, the program
 // will be terminated. Otherwise, if unit is out of range, a nonzero Iostat
 // code is returned and ioMsg is set if it is not a nullptr.
-enum Iostat IONAME(CheckUnitNumberInRange64)(std::int64_t unit,
+enum Iostat IODECL(CheckUnitNumberInRange64)(std::int64_t unit,
     bool handleError, char *ioMsg = nullptr, std::size_t ioMsgLength = 0,
     const char *sourceFile = nullptr, int sourceLine = 0);
-enum Iostat IONAME(CheckUnitNumberInRange128)(common::int128_t unit,
+enum Iostat IODECL(CheckUnitNumberInRange128)(common::int128_t unit,
     bool handleError, char *ioMsg = nullptr, std::size_t ioMsgLength = 0,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
 // External synchronous I/O initiation
-Cookie IONAME(BeginExternalListOutput)(ExternalUnit = DefaultOutputUnit,
+Cookie IODECL(BeginExternalListOutput)(ExternalUnit = DefaultOutputUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginExternalListInput)(ExternalUnit = DefaultInputUnit,
+Cookie IODECL(BeginExternalListInput)(ExternalUnit = DefaultInputUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginExternalFormattedOutput)(const char *format, std::size_t,
+Cookie IODECL(BeginExternalFormattedOutput)(const char *format, std::size_t,
     const Descriptor *formatDescriptor = nullptr,
     ExternalUnit = DefaultOutputUnit, const char *sourceFile = nullptr,
     int sourceLine = 0);
-Cookie IONAME(BeginExternalFormattedInput)(const char *format, std::size_t,
+Cookie IODECL(BeginExternalFormattedInput)(const char *format, std::size_t,
     const Descriptor *formatDescriptor = nullptr,
     ExternalUnit = DefaultInputUnit, const char *sourceFile = nullptr,
     int sourceLine = 0);
-Cookie IONAME(BeginUnformattedOutput)(ExternalUnit = DefaultOutputUnit,
+Cookie IODECL(BeginUnformattedOutput)(ExternalUnit = DefaultOutputUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginUnformattedInput)(ExternalUnit = DefaultInputUnit,
+Cookie IODECL(BeginUnformattedInput)(ExternalUnit = DefaultInputUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
 // WAIT(ID=)
-Cookie IONAME(BeginWait)(ExternalUnit, AsynchronousId,
+Cookie IODECL(BeginWait)(ExternalUnit, AsynchronousId,
     const char *sourceFile = nullptr, int sourceLine = 0);
 // WAIT(no ID=)
-Cookie IONAME(BeginWaitAll)(
+Cookie IODECL(BeginWaitAll)(
     ExternalUnit, const char *sourceFile = nullptr, int sourceLine = 0);
 
 // Other I/O statements
-Cookie IONAME(BeginClose)(
+Cookie IODECL(BeginClose)(
     ExternalUnit, const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginFlush)(
+Cookie IODECL(BeginFlush)(
     ExternalUnit, const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginBackspace)(
+Cookie IODECL(BeginBackspace)(
     ExternalUnit, const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginEndfile)(
+Cookie IODECL(BeginEndfile)(
     ExternalUnit, const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginRewind)(
+Cookie IODECL(BeginRewind)(
     ExternalUnit, const char *sourceFile = nullptr, int sourceLine = 0);
 
 // OPEN(UNIT=) and OPEN(NEWUNIT=) have distinct interfaces.
-Cookie IONAME(BeginOpenUnit)(
+Cookie IODECL(BeginOpenUnit)(
     ExternalUnit, const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginOpenNewUnit)(
+Cookie IODECL(BeginOpenNewUnit)(
     const char *sourceFile = nullptr, int sourceLine = 0);
 
 // The variant forms of INQUIRE() statements have distinct interfaces.
 // BeginInquireIoLength() is basically a no-op output statement.
-Cookie IONAME(BeginInquireUnit)(
+Cookie IODECL(BeginInquireUnit)(
     ExternalUnit, const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginInquireFile)(const char *, std::size_t,
+Cookie IODECL(BeginInquireFile)(const char *, std::size_t,
     const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginInquireIoLength)(
+Cookie IODECL(BeginInquireIoLength)(
     const char *sourceFile = nullptr, int sourceLine = 0);
 
 // If an I/O statement has any IOSTAT=, ERR=, END=, or EOR= specifiers,
@@ -206,33 +214,33 @@ Cookie IONAME(BeginInquireIoLength)(
 //     }
 //   }
 //   if (EndIoStatement(cookie) == FORTRAN_RUTIME_IOSTAT_END) goto label666;
-void IONAME(EnableHandlers)(Cookie, bool hasIoStat = false, bool hasErr = false,
+void IODECL(EnableHandlers)(Cookie, bool hasIoStat = false, bool hasErr = false,
     bool hasEnd = false, bool hasEor = false, bool hasIoMsg = false);
 
 // ASYNCHRONOUS='YES' or 'NO' on READ/WRITE/OPEN
 // Use GetAsynchronousId() to handle ID=.
-bool IONAME(SetAsynchronous)(Cookie, const char *, std::size_t);
+bool IODECL(SetAsynchronous)(Cookie, const char *, std::size_t);
 
 // Control list options.  These return false on a error that the
 // Begin...() call has specified will be handled by the caller.
 // The interfaces that pass a default-kind CHARACTER argument
 // are limited to passing specific case-insensitive keyword values.
 // ADVANCE=YES, NO
-bool IONAME(SetAdvance)(Cookie, const char *, std::size_t);
+bool IODECL(SetAdvance)(Cookie, const char *, std::size_t);
 // BLANK=NULL, ZERO
-bool IONAME(SetBlank)(Cookie, const char *, std::size_t);
+bool IODECL(SetBlank)(Cookie, const char *, std::size_t);
 // DECIMAL=COMMA, POINT
-bool IONAME(SetDecimal)(Cookie, const char *, std::size_t);
+bool IODECL(SetDecimal)(Cookie, const char *, std::size_t);
 // DELIM=APOSTROPHE, QUOTE, NONE
-bool IONAME(SetDelim)(Cookie, const char *, std::size_t);
+bool IODECL(SetDelim)(Cookie, const char *, std::size_t);
 // PAD=YES, NO
-bool IONAME(SetPad)(Cookie, const char *, std::size_t);
-bool IONAME(SetPos)(Cookie, std::int64_t);
-bool IONAME(SetRec)(Cookie, std::int64_t);
+bool IODECL(SetPad)(Cookie, const char *, std::size_t);
+bool IODECL(SetPos)(Cookie, std::int64_t);
+bool IODECL(SetRec)(Cookie, std::int64_t);
 // ROUND=UP, DOWN, ZERO, NEAREST, COMPATIBLE, PROCESSOR_DEFINED
-bool IONAME(SetRound)(Cookie, const char *, std::size_t);
+bool IODECL(SetRound)(Cookie, const char *, std::size_t);
 // SIGN=PLUS, SUPPRESS, PROCESSOR_DEFINED
-bool IONAME(SetSign)(Cookie, const char *, std::size_t);
+bool IODECL(SetSign)(Cookie, const char *, std::size_t);
 
 // Data item transfer for modes other than NAMELIST:
 // Any data object that can be passed as an actual argument without the
@@ -248,34 +256,34 @@ bool IONAME(SetSign)(Cookie, const char *, std::size_t);
 // Once the statement has encountered an error, all following items will be
 // ignored and also return false; but compiled code should check for errors
 // and avoid the following items when they might crash.
-bool IONAME(OutputDescriptor)(Cookie, const Descriptor &);
-bool IONAME(InputDescriptor)(Cookie, const Descriptor &);
+bool IODECL(OutputDescriptor)(Cookie, const Descriptor &);
+bool IODECL(InputDescriptor)(Cookie, const Descriptor &);
 // Formatted (including list directed) I/O data items
-bool IONAME(OutputInteger8)(Cookie, std::int8_t);
-bool IONAME(OutputInteger16)(Cookie, std::int16_t);
-bool IONAME(OutputInteger32)(Cookie, std::int32_t);
-bool IONAME(OutputInteger64)(Cookie, std::int64_t);
-bool IONAME(OutputInteger128)(Cookie, common::int128_t);
-bool IONAME(InputInteger)(Cookie, std::int64_t &, int kind = 8);
-bool IONAME(OutputReal32)(Cookie, float);
-bool IONAME(InputReal32)(Cookie, float &);
-bool IONAME(OutputReal64)(Cookie, double);
-bool IONAME(InputReal64)(Cookie, double &);
-bool IONAME(OutputComplex32)(Cookie, float, float);
-bool IONAME(InputComplex32)(Cookie, float[2]);
-bool IONAME(OutputComplex64)(Cookie, double, double);
-bool IONAME(InputComplex64)(Cookie, double[2]);
-bool IONAME(OutputCharacter)(Cookie, const char *, std::size_t, int kind = 1);
-bool IONAME(OutputAscii)(Cookie, const char *, std::size_t);
-bool IONAME(InputCharacter)(Cookie, char *, std::size_t, int kind = 1);
-bool IONAME(InputAscii)(Cookie, char *, std::size_t);
-bool IONAME(OutputLogical)(Cookie, bool);
-bool IONAME(InputLogical)(Cookie, bool &);
+bool IODECL(OutputInteger8)(Cookie, std::int8_t);
+bool IODECL(OutputInteger16)(Cookie, std::int16_t);
+bool IODECL(OutputInteger32)(Cookie, std::int32_t);
+bool IODECL(OutputInteger64)(Cookie, std::int64_t);
+bool IODECL(OutputInteger128)(Cookie, common::int128_t);
+bool IODECL(InputInteger)(Cookie, std::int64_t &, int kind = 8);
+bool IODECL(OutputReal32)(Cookie, float);
+bool IODECL(InputReal32)(Cookie, float &);
+bool IODECL(OutputReal64)(Cookie, double);
+bool IODECL(InputReal64)(Cookie, double &);
+bool IODECL(OutputComplex32)(Cookie, float, float);
+bool IODECL(InputComplex32)(Cookie, float[2]);
+bool IODECL(OutputComplex64)(Cookie, double, double);
+bool IODECL(InputComplex64)(Cookie, double[2]);
+bool IODECL(OutputCharacter)(Cookie, const char *, std::size_t, int kind = 1);
+bool IODECL(OutputAscii)(Cookie, const char *, std::size_t);
+bool IODECL(InputCharacter)(Cookie, char *, std::size_t, int kind = 1);
+bool IODECL(InputAscii)(Cookie, char *, std::size_t);
+bool IODECL(OutputLogical)(Cookie, bool);
+bool IODECL(InputLogical)(Cookie, bool &);
 
 // NAMELIST I/O must be the only data item in an (otherwise)
 // list-directed I/O statement.
-bool IONAME(OutputNamelist)(Cookie, const NamelistGroup &);
-bool IONAME(InputNamelist)(Cookie, const NamelistGroup &);
+bool IODECL(OutputNamelist)(Cookie, const NamelistGroup &);
+bool IODECL(InputNamelist)(Cookie, const NamelistGroup &);
 
 // When an I/O list item has a derived type with a specific defined
 // I/O subroutine of the appropriate generic kind for the active
@@ -286,9 +294,9 @@ bool IONAME(InputNamelist)(Cookie, const NamelistGroup &);
 // made such a generic interface inaccessible), these data item transfer
 // APIs enable the I/O runtime to make the right calls to defined I/O
 // subroutines.
-bool IONAME(OutputDerivedType)(
+bool IODECL(OutputDerivedType)(
     Cookie, const Descriptor &, const NonTbpDefinedIoTable *);
-bool IONAME(InputDerivedType)(
+bool IODECL(InputDerivedType)(
     Cookie, const Descriptor &, const NonTbpDefinedIoTable *);
 
 // Additional specifier interfaces for the connection-list of
@@ -296,56 +304,56 @@ bool IONAME(InputDerivedType)(
 // SetDelim(), GetIoMsg(), SetPad(), SetRound(), SetSign(),
 // & SetAsynchronous() are also acceptable for OPEN.
 // ACCESS=SEQUENTIAL, DIRECT, STREAM
-bool IONAME(SetAccess)(Cookie, const char *, std::size_t);
+bool IODECL(SetAccess)(Cookie, const char *, std::size_t);
 // ACTION=READ, WRITE, or READWRITE
-bool IONAME(SetAction)(Cookie, const char *, std::size_t);
+bool IODECL(SetAction)(Cookie, const char *, std::size_t);
 // CARRIAGECONTROL=LIST, FORTRAN, NONE
-bool IONAME(SetCarriagecontrol)(Cookie, const char *, std::size_t);
+bool IODECL(SetCarriagecontrol)(Cookie, const char *, std::size_t);
 // CONVERT=NATIVE, LITTLE_ENDIAN, BIG_ENDIAN, or SWAP
-bool IONAME(SetConvert)(Cookie, const char *, std::size_t);
+bool IODECL(SetConvert)(Cookie, const char *, std::size_t);
 // ENCODING=UTF-8, DEFAULT
-bool IONAME(SetEncoding)(Cookie, const char *, std::size_t);
+bool IODECL(SetEncoding)(Cookie, const char *, std::size_t);
 // FORM=FORMATTED, UNFORMATTED
-bool IONAME(SetForm)(Cookie, const char *, std::size_t);
+bool IODECL(SetForm)(Cookie, const char *, std::size_t);
 // POSITION=ASIS, REWIND, APPEND
-bool IONAME(SetPosition)(Cookie, const char *, std::size_t);
-bool IONAME(SetRecl)(Cookie, std::size_t); // RECL=
+bool IODECL(SetPosition)(Cookie, const char *, std::size_t);
+bool IODECL(SetRecl)(Cookie, std::size_t); // RECL=
 
 // STATUS can be set during an OPEN or CLOSE statement.
 // For OPEN: STATUS=OLD, NEW, SCRATCH, REPLACE, UNKNOWN
 // For CLOSE: STATUS=KEEP, DELETE
-bool IONAME(SetStatus)(Cookie, const char *, std::size_t);
+bool IODECL(SetStatus)(Cookie, const char *, std::size_t);
 
-bool IONAME(SetFile)(Cookie, const char *, std::size_t chars);
+bool IODECL(SetFile)(Cookie, const char *, std::size_t chars);
 
 // Acquires the runtime-created unit number for OPEN(NEWUNIT=)
-bool IONAME(GetNewUnit)(Cookie, int &, int kind = 4);
+bool IODECL(GetNewUnit)(Cookie, int &, int kind = 4);
 
 // READ(SIZE=), after all input items
-std::size_t IONAME(GetSize)(Cookie);
+std::size_t IODECL(GetSize)(Cookie);
 
 // INQUIRE(IOLENGTH=), after all output items
-std::size_t IONAME(GetIoLength)(Cookie);
+std::size_t IODECL(GetIoLength)(Cookie);
 
 // GetIoMsg() does not modify its argument unless an error or
 // end-of-record/file condition is present.
-void IONAME(GetIoMsg)(Cookie, char *, std::size_t); // IOMSG=
+void IODECL(GetIoMsg)(Cookie, char *, std::size_t); // IOMSG=
 
 // Defines ID= on READ/WRITE(ASYNCHRONOUS='YES')
-AsynchronousId IONAME(GetAsynchronousId)(Cookie);
+AsynchronousId IODECL(GetAsynchronousId)(Cookie);
 
 // INQUIRE() specifiers are mostly identified by their NUL-terminated
 // case-insensitive names.
 // ACCESS, ACTION, ASYNCHRONOUS, BLANK, CONVERT, DECIMAL, DELIM, DIRECT,
 // ENCODING, FORM, FORMATTED, NAME, PAD, POSITION, READ, READWRITE, ROUND,
 // SEQUENTIAL, SIGN, STREAM, UNFORMATTED, WRITE:
-bool IONAME(InquireCharacter)(Cookie, InquiryKeywordHash, char *, std::size_t);
+bool IODECL(InquireCharacter)(Cookie, InquiryKeywordHash, char *, std::size_t);
 // EXIST, NAMED, OPENED, and PENDING (without ID):
-bool IONAME(InquireLogical)(Cookie, InquiryKeywordHash, bool &);
+bool IODECL(InquireLogical)(Cookie, InquiryKeywordHash, bool &);
 // PENDING with ID
-bool IONAME(InquirePendingId)(Cookie, AsynchronousId, bool &);
+bool IODECL(InquirePendingId)(Cookie, AsynchronousId, bool &);
 // NEXTREC, NUMBER, POS, RECL, SIZE
-bool IONAME(InquireInteger64)(
+bool IODECL(InquireInteger64)(
     Cookie, InquiryKeywordHash, std::int64_t &, int kind = 8);
 
 // This function must be called to end an I/O statement, and its
@@ -357,7 +365,7 @@ bool IONAME(InquireInteger64)(
 // returned is guaranteed to only be one of the problems that the
 // EnableHandlers() call has indicated should be handled in compiled code
 // rather than by terminating the image.
-enum Iostat IONAME(EndIoStatement)(Cookie);
+enum Iostat IODECL(EndIoStatement)(Cookie);
 
 } // extern "C"
 } // namespace Fortran::runtime::io

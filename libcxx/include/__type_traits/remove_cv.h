@@ -10,8 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_REMOVE_CV_H
 
 #include <__config>
-#include <__type_traits/remove_const.h>
-#include <__type_traits/remove_volatile.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

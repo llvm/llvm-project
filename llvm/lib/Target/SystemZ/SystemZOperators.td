@@ -132,6 +132,8 @@ def SDT_ZIPM                : SDTypeProfile<1, 1,
 def SDT_ZPrefetch           : SDTypeProfile<0, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>]>;
+def SDT_ZStoreInherent      : SDTypeProfile<0, 1,
+                                            [SDTCisPtrTy<0>]>;
 def SDT_ZTBegin             : SDTypeProfile<1, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>,
@@ -307,6 +309,8 @@ def z_loadeswap        : SDNode<"SystemZISD::VLER", SDTLoad,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def z_storeeswap       : SDNode<"SystemZISD::VSTER", SDTStore,
                                  [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def z_stckf            : SDNode<"SystemZISD::STCKF", SDT_ZStoreInherent,
+                                [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def z_tdc               : SDNode<"SystemZISD::TDC", SDT_ZTest>;
 
@@ -824,6 +828,18 @@ def any_fnms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 
 // Floating-point negative absolute.
 def fnabs : PatFrag<(ops node:$ptr), (fneg (fabs node:$ptr))>;
+
+// Floating-point operations which will not participate in reassociation, and
+// therefore are candidates for reg/mem folding during isel.
+def z_any_fadd_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fadd node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+def z_any_fsub_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fsub node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+def z_any_fmul_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fmul node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
 
 // Strict floating-point fragments.
 def z_any_fcmp    : PatFrags<(ops node:$lhs, node:$rhs),

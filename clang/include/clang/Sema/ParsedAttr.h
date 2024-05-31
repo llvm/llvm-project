@@ -40,6 +40,7 @@ class LangOptions;
 class Sema;
 class Stmt;
 class TargetInfo;
+struct IdentifierLoc;
 
 /// Represents information about a change in availability for
 /// an entity, which is part of the encoding of the 'availability'
@@ -68,12 +69,14 @@ struct AvailabilityData {
   AvailabilityChange Changes[NumAvailabilitySlots];
   SourceLocation StrictLoc;
   const Expr *Replacement;
+  const IdentifierLoc *EnvironmentLoc;
 
   AvailabilityData(const AvailabilityChange &Introduced,
                    const AvailabilityChange &Deprecated,
-                   const AvailabilityChange &Obsoleted,
-                   SourceLocation Strict, const Expr *ReplaceExpr)
-    : StrictLoc(Strict), Replacement(ReplaceExpr) {
+                   const AvailabilityChange &Obsoleted, SourceLocation Strict,
+                   const Expr *ReplaceExpr, const IdentifierLoc *EnvironmentLoc)
+      : StrictLoc(Strict), Replacement(ReplaceExpr),
+        EnvironmentLoc(EnvironmentLoc) {
     Changes[IntroducedSlot] = Introduced;
     Changes[DeprecatedSlot] = Deprecated;
     Changes[ObsoletedSlot] = Obsoleted;
@@ -94,7 +97,7 @@ struct PropertyData {
       : GetterId(getterId), SetterId(setterId) {}
 };
 
-} // namespace
+} // namespace detail
 
 /// Wraps an identifier and optional source location for the identifier.
 struct IdentifierLoc {
@@ -234,7 +237,7 @@ private:
              const AvailabilityChange &deprecated,
              const AvailabilityChange &obsoleted, SourceLocation unavailable,
              const Expr *messageExpr, Form formUsed, SourceLocation strict,
-             const Expr *replacementExpr)
+             const Expr *replacementExpr, const IdentifierLoc *environmentLoc)
       : AttributeCommonInfo(attrName, scopeName, attrRange, scopeLoc, formUsed),
         NumArgs(1), Invalid(false), UsedAsTypeAttr(false), IsAvailability(true),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
@@ -243,8 +246,9 @@ private:
         Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion PVal(Parm);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
-    new (getAvailabilityData()) detail::AvailabilityData(
-        introduced, deprecated, obsoleted, strict, replacementExpr);
+    new (getAvailabilityData())
+        detail::AvailabilityData(introduced, deprecated, obsoleted, strict,
+                                 replacementExpr, environmentLoc);
   }
 
   /// Constructor for objc_bridge_related attributes.
@@ -443,6 +447,12 @@ public:
     assert(getParsedKind() == AT_Availability &&
            "Not an availability attribute");
     return getAvailabilityData()->Replacement;
+  }
+
+  const IdentifierLoc *getEnvironment() const {
+    assert(getParsedKind() == AT_Availability &&
+           "Not an availability attribute");
+    return getAvailabilityData()->EnvironmentLoc;
   }
 
   const ParsedType &getMatchingCType() const {
@@ -743,11 +753,6 @@ public:
                      IdentifierInfo *scopeName, SourceLocation scopeLoc,
                      ArgsUnion *args, unsigned numArgs, ParsedAttr::Form form,
                      SourceLocation ellipsisLoc = SourceLocation()) {
-    size_t temp =
-        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
-                                     detail::TypeTagForDatatypeData, ParsedType,
-                                     detail::PropertyData>(numArgs, 0, 0, 0, 0);
-    (void)temp;
     void *memory = allocate(
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
@@ -764,11 +769,13 @@ public:
                      const AvailabilityChange &obsoleted,
                      SourceLocation unavailable, const Expr *MessageExpr,
                      ParsedAttr::Form form, SourceLocation strict,
-                     const Expr *ReplacementExpr) {
+                     const Expr *ReplacementExpr,
+                     IdentifierLoc *EnvironmentLoc) {
     void *memory = allocate(AttributeFactory::AvailabilityAllocSize);
-    return add(new (memory) ParsedAttr(
-        attrName, attrRange, scopeName, scopeLoc, Param, introduced, deprecated,
-        obsoleted, unavailable, MessageExpr, form, strict, ReplacementExpr));
+    return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
+                                       Param, introduced, deprecated, obsoleted,
+                                       unavailable, MessageExpr, form, strict,
+                                       ReplacementExpr, EnvironmentLoc));
   }
 
   ParsedAttr *create(IdentifierInfo *attrName, SourceRange attrRange,
@@ -953,6 +960,7 @@ public:
   ParsedAttributes(AttributeFactory &factory) : pool(factory) {}
   ParsedAttributes(const ParsedAttributes &) = delete;
   ParsedAttributes &operator=(const ParsedAttributes &) = delete;
+  ParsedAttributes(ParsedAttributes &&G) = default;
 
   AttributePool &getPool() const { return pool; }
 
@@ -998,10 +1006,12 @@ public:
                      const AvailabilityChange &obsoleted,
                      SourceLocation unavailable, const Expr *MessageExpr,
                      ParsedAttr::Form form, SourceLocation strict,
-                     const Expr *ReplacementExpr) {
-    ParsedAttr *attr = pool.create(
-        attrName, attrRange, scopeName, scopeLoc, Param, introduced, deprecated,
-        obsoleted, unavailable, MessageExpr, form, strict, ReplacementExpr);
+                     const Expr *ReplacementExpr,
+                     IdentifierLoc *EnvironmentLoc) {
+    ParsedAttr *attr =
+        pool.create(attrName, attrRange, scopeName, scopeLoc, Param, introduced,
+                    deprecated, obsoleted, unavailable, MessageExpr, form,
+                    strict, ReplacementExpr, EnvironmentLoc);
     addAtEnd(attr);
     return attr;
   }

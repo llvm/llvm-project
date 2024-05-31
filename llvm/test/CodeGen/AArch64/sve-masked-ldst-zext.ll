@@ -98,9 +98,9 @@ define <vscale x 8 x i64> @masked_zload_nxv8i16(ptr %a, <vscale x 8 x i1> %mask)
 define <vscale x 2 x double> @masked_zload_2i16_2f64(ptr noalias %in, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_zload_2i16_2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ucvtf z0.d, p1/m, z0.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
   %wide.load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %in, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
   %zext = zext <vscale x 2 x i16> %wide.load to <vscale x 2 x i32>
@@ -230,9 +230,9 @@ define <vscale x 8 x i64> @masked_zload_x2_8i8_8i64(ptr %a, ptr %b, <vscale x 8 
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    punpkhi p3.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ld1b { z3.d }, p2/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ld1b { z5.d }, p2/z, [x1, #3, mul vl]
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ld1b { z2.d }, p1/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1b { z6.d }, p1/z, [x1, #2, mul vl]
 ; CHECK-NEXT:    ld1b { z1.d }, p3/z, [x0, #1, mul vl]

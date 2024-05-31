@@ -10,7 +10,7 @@
 # CHECK:      Section Headers:
 # CHECK-NEXT:  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
 # CHECK-NEXT:  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
-# CHECK-NEXT:  [ 1] .rela.dyn         RELA            0000000001000158 000158 000030 18  AI  0   4  8
+# CHECK-NEXT:  [ 1] .rela.dyn         RELA            0000000001000158 000158 000030 18   A  0   0  8
 # CHECK-NEXT:  [ 2] .text             PROGBITS        0000000001001188 000188 00001c 00  AX  0   0  4
 # CHECK-NEXT:  [ 3] .iplt             PROGBITS        00000000010011b0 0001b0 000040 00  AX  0   0 16
 # CHECK-NEXT:  [ 4] .got.plt          PROGBITS        00000000010021f0 0001f0 000010 00  WA  0   0  8

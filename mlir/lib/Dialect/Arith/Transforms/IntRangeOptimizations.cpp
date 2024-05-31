@@ -102,6 +102,24 @@ static FailureOr<bool> handleUge(ConstantIntRanges lhs, ConstantIntRanges rhs) {
 }
 
 namespace {
+/// This class listens on IR transformations performed during a pass relying on
+/// information from a `DataflowSolver`. It erases state associated with the
+/// erased operation and its results from the `DataFlowSolver` so that Patterns
+/// do not accidentally query old state information for newly created Ops.
+class DataFlowListener : public RewriterBase::Listener {
+public:
+  DataFlowListener(DataFlowSolver &s) : s(s) {}
+
+protected:
+  void notifyOperationErased(Operation *op) override {
+    s.eraseState(op);
+    for (Value res : op->getResults())
+      s.eraseState(res);
+  }
+
+  DataFlowSolver &s;
+};
+
 struct ConvertCmpOp : public OpRewritePattern<arith::CmpIOp> {
 
   ConvertCmpOp(MLIRContext *context, DataFlowSolver &s)
@@ -167,10 +185,15 @@ struct IntRangeOptimizationsPass
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 
+    DataFlowListener listener(solver);
+
     RewritePatternSet patterns(ctx);
     populateIntRangeOptimizationsPatterns(patterns, solver);
 
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    GreedyRewriteConfig config;
+    config.listener = &listener;
+
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
       signalPassFailure();
   }
 };

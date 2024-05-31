@@ -55,7 +55,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // bad_function_call
 
 _LIBCPP_DIAGNOSTIC_PUSH
+#  if !_LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
+#  endif
 class _LIBCPP_EXPORTED_FROM_ABI bad_function_call : public exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_function_call() _NOEXCEPT                                    = default;
@@ -64,7 +66,7 @@ public:
 // Note that when a key function is not used, every translation unit that uses
 // bad_function_call will end up containing a weak definition of the vtable and
 // typeinfo.
-#  ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
+#  if _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
   ~bad_function_call() _NOEXCEPT override;
 #  else
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~bad_function_call() _NOEXCEPT override {}

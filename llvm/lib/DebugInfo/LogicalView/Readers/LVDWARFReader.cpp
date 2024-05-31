@@ -878,7 +878,7 @@ Error LVDWARFReader::createScopes() {
     // Additional discussions here:
     // https://www.mail-archive.com/dwarf-discuss@lists.dwarfstd.org/msg00883.html
 
-    // The ELF Reader is expecting the files are 1-indexed, so using
+    // The DWARF reader is expecting the files are 1-indexed, so using
     // the .debug_line header information decide if the indexed require
     // an internal adjustment.
 
@@ -918,7 +918,7 @@ Error LVDWARFReader::createScopes() {
       // DWARF-5 -> Increment index.
       return true;
     };
-    // The ELF reader expects the indexes as 1-indexed.
+    // The DWARF reader expects the indexes as 1-indexed.
     IncrementFileIndex = DeduceIncrementFileIndex();
 
     DWARFDie UnitDie = CU->getUnitDIE();

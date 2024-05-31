@@ -1,9 +1,16 @@
+//===- bolt/tools/bat-dump/bat-dump.cpp - BAT dumper utility --------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/Error.h"
@@ -18,7 +25,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <assert.h>
 #include <cstdint>
 #include <map>
@@ -27,7 +33,6 @@
 #include <system_error>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace bolt;

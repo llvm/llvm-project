@@ -575,7 +575,7 @@ public:
   // Emit code to generate this result as a Value *.
   std::string asValue() override {
     if (AddressType)
-      return "(" + varname() + ".getPointer())";
+      return "(" + varname() + ".emitRawPointer(*this))";
     return Result::asValue();
   }
   bool hasIntegerValue() const override { return Immediate; }
@@ -658,9 +658,9 @@ public:
   std::vector<Ptr> Args;
   std::set<unsigned> AddressArgs;
   std::map<unsigned, std::string> IntegerArgs;
-  IRBuilderResult(StringRef CallPrefix, std::vector<Ptr> Args,
-                  std::set<unsigned> AddressArgs,
-                  std::map<unsigned, std::string> IntegerArgs)
+  IRBuilderResult(StringRef CallPrefix, const std::vector<Ptr> &Args,
+                  const std::set<unsigned> &AddressArgs,
+                  const std::map<unsigned, std::string> &IntegerArgs)
       : CallPrefix(CallPrefix), Args(Args), AddressArgs(AddressArgs),
         IntegerArgs(IntegerArgs) {}
   void genCode(raw_ostream &OS,
@@ -727,8 +727,9 @@ public:
   std::string IntrinsicID;
   std::vector<const Type *> ParamTypes;
   std::vector<Ptr> Args;
-  IRIntrinsicResult(StringRef IntrinsicID, std::vector<const Type *> ParamTypes,
-                    std::vector<Ptr> Args)
+  IRIntrinsicResult(StringRef IntrinsicID,
+                    const std::vector<const Type *> &ParamTypes,
+                    const std::vector<Ptr> &Args)
       : IntrinsicID(std::string(IntrinsicID)), ParamTypes(ParamTypes),
         Args(Args) {}
   void genCode(raw_ostream &OS,
@@ -927,8 +928,8 @@ public:
       llvm::APInt ArgTypeRange = llvm::APInt::getMaxValue(ArgTypeBits).zext(128);
       llvm::APInt ActualRange = (hi-lo).trunc(64).sext(128);
       if (ActualRange.ult(ArgTypeRange))
-        SemaChecks.push_back("SemaBuiltinConstantArgRange(TheCall, " + Index +
-                             ", " + signedHexLiteral(lo) + ", " +
+        SemaChecks.push_back("SemaRef.BuiltinConstantArgRange(TheCall, " +
+                             Index + ", " + signedHexLiteral(lo) + ", " +
                              signedHexLiteral(hi) + ")");
 
       if (!IA.ExtraCheckType.empty()) {
@@ -942,7 +943,7 @@ public:
           }
           Suffix = (Twine(", ") + Arg).str();
         }
-        SemaChecks.push_back((Twine("SemaBuiltinConstantArg") +
+        SemaChecks.push_back((Twine("SemaRef.BuiltinConstantArg") +
                               IA.ExtraCheckType + "(TheCall, " + Index +
                               Suffix + ")")
                                  .str());

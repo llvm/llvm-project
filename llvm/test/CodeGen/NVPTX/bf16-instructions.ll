@@ -330,3 +330,15 @@ define bfloat @test_uitofp_i64(i64 %a) {
   %r = uitofp i64 %a to bfloat
   ret bfloat %r
 }
+
+; CHECK-LABEL: test_roundeven(
+; CHECK:      ld.param.b16      [[A:%rs[0-9]+]], [test_roundeven_param_0];
+; SM80:       cvt.rni.f32.f32   [[F:%f[0-9]+]]
+; SM80:       cvt.rn.bf16.f32   [[R:%rs[0-9]+]], [[F]];
+; SM90:       cvt.rni.bf16.bf16 [[R:%rs[0-9]+]], [[A]];
+; CHECK:      st.param.b16      [func_retval0+0], [[R]];
+; CHECK:      ret;
+define bfloat @test_roundeven(bfloat %a) {
+  %r = call bfloat @llvm.roundeven.bf16(bfloat %a)
+  ret bfloat %r
+}

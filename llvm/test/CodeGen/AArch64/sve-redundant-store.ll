@@ -35,8 +35,8 @@ entry:
 define void @keep_scalable_store(ptr writeonly %ptr, ptr %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: keep_scalable_store:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldp q2, q1, [x1]
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    stp q2, q1, [x0]
 ; CHECK-NEXT:    ret

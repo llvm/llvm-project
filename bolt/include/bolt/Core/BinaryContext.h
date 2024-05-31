@@ -17,9 +17,11 @@
 #include "bolt/Core/BinaryData.h"
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/DebugData.h"
+#include "bolt/Core/DynoStats.h"
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
@@ -265,7 +267,8 @@ class BinaryContext {
 
 public:
   static Expected<std::unique_ptr<BinaryContext>>
-  createBinaryContext(const ObjectFile *File, bool IsPIC,
+  createBinaryContext(Triple TheTriple, StringRef InputFileName,
+                      SubtargetFeatures *Features, bool IsPIC,
                       std::unique_ptr<DWARFContext> DwCtx,
                       JournalingStreams Logger);
 
@@ -357,7 +360,7 @@ public:
   void setFileBuildID(StringRef ID) { FileBuildID = std::string(ID); }
 
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
-  void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = true; }
+  void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }
 
   /// Return true if relocations against symbol with a given name
   /// must be created.
@@ -675,6 +678,9 @@ public:
   /// have an origin file name available.
   bool HasSymbolsWithFileName{false};
 
+  /// Does the binary have BAT section.
+  bool HasBATSection{false};
+
   /// Sum of execution count of all functions
   uint64_t SumExecutionCount{0};
 
@@ -712,6 +718,9 @@ public:
     uint64_t NumStaleBlocksWithEqualIcount{0};
   } Stats;
 
+  // Original binary execution count stats.
+  DynoStats InitialDynoStats;
+
   // Address of the first allocated segment.
   uint64_t FirstAllocAddress{std::numeric_limits<uint64_t>::max()};
 
@@ -724,6 +733,9 @@ public:
   uint64_t OldTextSectionAddress{0};
   uint64_t OldTextSectionOffset{0};
   uint64_t OldTextSectionSize{0};
+
+  /// Area in the input binary reserved for BOLT.
+  AddressRange BOLTReserved;
 
   /// Address of the code/function that is executed before any other code in
   /// the binary.
@@ -1212,8 +1224,7 @@ public:
 
   /// Return a signed value of \p Size stored at \p Address. The address has
   /// to be a valid statically allocated address for the binary.
-  ErrorOr<uint64_t> getSignedValueAtAddress(uint64_t Address,
-                                            size_t Size) const;
+  ErrorOr<int64_t> getSignedValueAtAddress(uint64_t Address, size_t Size) const;
 
   /// Special case of getUnsignedValueAtAddress() that uses a pointer size.
   ErrorOr<uint64_t> getPointerAtAddress(uint64_t Address) const {

@@ -287,7 +287,7 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
     return;
 
   SmallVector<uint32_t, 2> Weights;
-  extractFromBranchWeightMD(WeightMD, Weights);
+  extractFromBranchWeightMD32(WeightMD, Weights);
   if (Weights.size() != 2)
     return;
   uint32_t OrigLoopExitWeight = Weights[0];
@@ -347,9 +347,19 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
         // probabilities as if there are only 0-trip and 1-trip cases.
         ExitWeight0 = OrigLoopExitWeight - OrigLoopBackedgeWeight;
       }
+    } else {
+      // Theoretically, if the loop body must be executed at least once, the
+      // backedge count must be not less than exit count. However the branch
+      // weight collected by sampling-based PGO may be not very accurate due to
+      // sampling. Therefore this workaround is required here to avoid underflow
+      // of unsigned in following update of branch weight.
+      if (OrigLoopExitWeight > OrigLoopBackedgeWeight)
+        OrigLoopBackedgeWeight = OrigLoopExitWeight;
     }
+    assert(OrigLoopExitWeight >= ExitWeight0 && "Bad branch weight");
     ExitWeight1 = OrigLoopExitWeight - ExitWeight0;
     EnterWeight = ExitWeight1;
+    assert(OrigLoopBackedgeWeight >= EnterWeight && "Bad branch weight");
     LoopBackWeight = OrigLoopBackedgeWeight - EnterWeight;
   } else if (OrigLoopExitWeight == 0) {
     if (OrigLoopBackedgeWeight == 0) {
@@ -601,7 +611,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // a range because it gives us a natural way of testing whether
     //  there were DbgRecords on the next instruction before we hoisted things).
     iterator_range<DbgRecord::self_iterator> NextDbgInsts =
-        (I != E) ? I->getDbgRecordRange() : DPMarker::getEmptyDbgRecordRange();
+        (I != E) ? I->getDbgRecordRange() : DbgMarker::getEmptyDbgRecordRange();
 
     while (I != E) {
       Instruction *Inst = &*I++;
@@ -629,9 +639,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
             !NextDbgInsts.empty()) {
           auto DbgValueRange =
               LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
-          RemapDbgVariableRecordRange(M, DbgValueRange, ValueMap,
-                                      RF_NoModuleLevelChanges |
-                                          RF_IgnoreMissingLocals);
+          RemapDbgRecordRange(M, DbgValueRange, ValueMap,
+                              RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
           // Erase anything we've seen before.
           for (DbgVariableRecord &DVR :
                make_early_inc_range(filterDbgVars(DbgValueRange)))
@@ -656,10 +665,9 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat &&
           !NextDbgInsts.empty()) {
         auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
-        RemapDbgVariableRecordRange(M, Range, ValueMap,
-                                    RF_NoModuleLevelChanges |
-                                        RF_IgnoreMissingLocals);
-        NextDbgInsts = DPMarker::getEmptyDbgRecordRange();
+        RemapDbgRecordRange(M, Range, ValueMap,
+                            RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+        NextDbgInsts = DbgMarker::getEmptyDbgRecordRange();
         // Erase anything we've seen before.
         for (DbgVariableRecord &DVR :
              make_early_inc_range(filterDbgVars(Range)))

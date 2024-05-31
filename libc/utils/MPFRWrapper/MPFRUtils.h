@@ -37,6 +37,7 @@ enum class Operation : int {
   Erf,
   Exp,
   Exp2,
+  Exp2m1,
   Exp10,
   Expm1,
   Floor,
@@ -48,6 +49,7 @@ enum class Operation : int {
   ModPIOver2,
   ModPIOver4,
   Round,
+  RoundEven,
   Sin,
   Sinh,
   Sqrt,
@@ -68,6 +70,7 @@ enum class Operation : int {
   // input and produce a single floating point number of the same type as
   // output.
   BeginBinaryOperationsSingleOutput,
+  Atan2,
   Fmod,
   Hypot,
   Pow,

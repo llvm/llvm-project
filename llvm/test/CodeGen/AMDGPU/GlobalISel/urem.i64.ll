@@ -983,7 +983,7 @@ define i64 @v_urem_i64_oddk_denom(i64 %num) {
 ; CHECK-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; CHECK-NEXT:    v_mul_lo_u32 v6, v4, v5
 ; CHECK-NEXT:    v_mul_lo_u32 v7, v3, v5
-; CHECK-NEXT:    v_mul_hi_u32 v8, v5, v3
+; CHECK-NEXT:    v_mul_hi_u32 v8, v3, v5
 ; CHECK-NEXT:    v_sub_i32_e32 v6, vcc, v6, v3
 ; CHECK-NEXT:    v_add_i32_e32 v6, vcc, v6, v8
 ; CHECK-NEXT:    v_mul_lo_u32 v8, v4, v7
@@ -1010,7 +1010,7 @@ define i64 @v_urem_i64_oddk_denom(i64 %num) {
 ; CHECK-NEXT:    v_add_i32_e32 v3, vcc, v3, v7
 ; CHECK-NEXT:    v_addc_u32_e32 v4, vcc, v4, v6, vcc
 ; CHECK-NEXT:    v_mul_lo_u32 v6, v3, v5
-; CHECK-NEXT:    v_mul_hi_u32 v7, v5, v3
+; CHECK-NEXT:    v_mul_hi_u32 v7, v3, v5
 ; CHECK-NEXT:    v_mul_lo_u32 v5, v4, v5
 ; CHECK-NEXT:    v_mul_lo_u32 v8, v4, v6
 ; CHECK-NEXT:    v_mul_hi_u32 v9, v3, v6
@@ -1058,7 +1058,7 @@ define i64 @v_urem_i64_oddk_denom(i64 %num) {
 ; CHECK-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; CHECK-NEXT:    v_add_i32_e32 v5, vcc, v6, v5
 ; CHECK-NEXT:    v_mul_lo_u32 v6, v3, v2
-; CHECK-NEXT:    v_mul_hi_u32 v3, v2, v3
+; CHECK-NEXT:    v_mul_hi_u32 v3, v3, v2
 ; CHECK-NEXT:    v_add_i32_e32 v4, vcc, v4, v5
 ; CHECK-NEXT:    v_mul_lo_u32 v4, v4, v2
 ; CHECK-NEXT:    v_add_i32_e32 v3, vcc, v4, v3
@@ -1265,10 +1265,10 @@ define <2 x i64> @v_urem_v2i64_oddk_denom(<2 x i64> %num) {
 ; GISEL-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
 ; GISEL-NEXT:    v_add_i32_e32 v10, vcc, v11, v10
 ; GISEL-NEXT:    v_mul_lo_u32 v11, v9, v4
-; GISEL-NEXT:    v_mul_hi_u32 v9, v4, v9
+; GISEL-NEXT:    v_mul_hi_u32 v9, v9, v4
 ; GISEL-NEXT:    v_add_i32_e32 v8, vcc, v12, v8
 ; GISEL-NEXT:    v_mul_lo_u32 v12, v5, v4
-; GISEL-NEXT:    v_mul_hi_u32 v5, v4, v5
+; GISEL-NEXT:    v_mul_hi_u32 v5, v5, v4
 ; GISEL-NEXT:    v_add_i32_e32 v7, vcc, v7, v10
 ; GISEL-NEXT:    v_add_i32_e32 v6, vcc, v6, v8
 ; GISEL-NEXT:    v_mul_lo_u32 v7, v7, v4
@@ -1339,7 +1339,7 @@ define <2 x i64> @v_urem_v2i64_oddk_denom(<2 x i64> %num) {
 ; CGP-NEXT:    v_cvt_u32_f32_e32 v5, v5
 ; CGP-NEXT:    v_mul_lo_u32 v8, v6, v7
 ; CGP-NEXT:    v_mul_lo_u32 v9, v5, v7
-; CGP-NEXT:    v_mul_hi_u32 v10, v7, v5
+; CGP-NEXT:    v_mul_hi_u32 v10, v5, v7
 ; CGP-NEXT:    v_sub_i32_e32 v8, vcc, v8, v5
 ; CGP-NEXT:    v_add_i32_e32 v8, vcc, v8, v10
 ; CGP-NEXT:    v_mul_lo_u32 v10, v6, v9
@@ -1366,7 +1366,7 @@ define <2 x i64> @v_urem_v2i64_oddk_denom(<2 x i64> %num) {
 ; CGP-NEXT:    v_add_i32_e32 v5, vcc, v5, v9
 ; CGP-NEXT:    v_addc_u32_e32 v6, vcc, v6, v8, vcc
 ; CGP-NEXT:    v_mul_lo_u32 v8, v5, v7
-; CGP-NEXT:    v_mul_hi_u32 v9, v7, v5
+; CGP-NEXT:    v_mul_hi_u32 v9, v5, v7
 ; CGP-NEXT:    v_mul_lo_u32 v7, v6, v7
 ; CGP-NEXT:    v_mul_lo_u32 v10, v6, v8
 ; CGP-NEXT:    v_mul_hi_u32 v11, v5, v8
@@ -1433,10 +1433,10 @@ define <2 x i64> @v_urem_v2i64_oddk_denom(<2 x i64> %num) {
 ; CGP-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
 ; CGP-NEXT:    v_add_i32_e32 v8, vcc, v9, v8
 ; CGP-NEXT:    v_mul_lo_u32 v9, v7, v4
-; CGP-NEXT:    v_mul_hi_u32 v7, v4, v7
+; CGP-NEXT:    v_mul_hi_u32 v7, v7, v4
 ; CGP-NEXT:    v_add_i32_e32 v10, vcc, v11, v10
 ; CGP-NEXT:    v_mul_lo_u32 v11, v5, v4
-; CGP-NEXT:    v_mul_hi_u32 v5, v4, v5
+; CGP-NEXT:    v_mul_hi_u32 v5, v5, v4
 ; CGP-NEXT:    v_add_i32_e32 v8, vcc, v15, v8
 ; CGP-NEXT:    v_add_i32_e32 v6, vcc, v6, v10
 ; CGP-NEXT:    v_mul_lo_u32 v8, v8, v4

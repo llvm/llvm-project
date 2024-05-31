@@ -5,7 +5,6 @@
 from ....ir import Operation
 from ...._mlir_libs import _mlirTransformInterpreter as _cextTransformInterpreter
 
-
 TransformOptions = _cextTransformInterpreter.TransformOptions
 
 
@@ -30,4 +29,13 @@ def apply_named_sequence(
     if transform_options is None:
         _cextTransformInterpreter.apply_named_sequence(*args)
     else:
-        _cextTransformInterpreter(*args, transform_options)
+        _cextTransformInterpreter.apply_named_sequence(*args, transform_options)
+
+
+def copy_symbols_and_merge_into(target, other):
+    """Copies symbols from other into target, renaming private symbols to avoid
+    duplicates. Raises an error if copying would lead to duplicate public
+    symbols."""
+    _cextTransformInterpreter.copy_symbols_and_merge_into(
+        _unpack_operation(target), _unpack_operation(other)
+    )

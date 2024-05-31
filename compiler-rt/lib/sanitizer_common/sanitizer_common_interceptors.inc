@@ -7650,9 +7650,9 @@ static void write_protoent(void *ctx, struct __sanitizer_protoent *p) {
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases, pp_size * sizeof(char *));
 }
 
-INTERCEPTOR(struct __sanitizer_protoent *, getprotoent) {
+INTERCEPTOR(struct __sanitizer_protoent *, getprotoent,) {
   void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, getprotoent);
+  COMMON_INTERCEPTOR_ENTER(ctx, getprotoent,);
   struct __sanitizer_protoent *p = REAL(getprotoent)();
   if (p)
     write_protoent(ctx, p);
@@ -7739,9 +7739,9 @@ INTERCEPTOR(int, getprotobynumber_r, int num,
 #endif
 
 #if SANITIZER_INTERCEPT_NETENT
-INTERCEPTOR(struct __sanitizer_netent *, getnetent) {
+INTERCEPTOR(struct __sanitizer_netent *, getnetent,) {
   void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, getnetent);
+  COMMON_INTERCEPTOR_ENTER(ctx, getnetent,);
   struct __sanitizer_netent *n = REAL(getnetent)();
   if (n) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n, sizeof(*n));
@@ -9903,9 +9903,9 @@ INTERCEPTOR(char *, fdevname_r,  int fd, char *buf, SIZE_T len) {
 #endif
 
 #if SANITIZER_INTERCEPT_GETUSERSHELL
-INTERCEPTOR(char *, getusershell) {
+INTERCEPTOR(char *, getusershell,) {
   void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, getusershell);
+  COMMON_INTERCEPTOR_ENTER(ctx, getusershell,);
   char *res = REAL(getusershell)();
   if (res)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, internal_strlen(res) + 1);

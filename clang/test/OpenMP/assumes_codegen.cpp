@@ -67,46 +67,46 @@ int lambda_outer() {
 }
 #pragma omp end assumes
 
-// AST:      __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) void foo() {
-// AST-NEXT: }
-// AST-NEXT: class BAR {
-// AST-NEXT: public:
-// AST-NEXT:     __attribute__((assume("ompx_range_bar_only"))) __attribute__((assume("ompx_range_bar_only_2"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) BAR()      {
-// AST-NEXT:     }
-// AST-NEXT:     __attribute__((assume("ompx_range_bar_only"))) __attribute__((assume("ompx_range_bar_only_2"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) void bar1()     {
-// AST-NEXT:     }
-// AST-NEXT:     __attribute__((assume("ompx_range_bar_only"))) __attribute__((assume("ompx_range_bar_only_2"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) static void bar2()      {
-// AST-NEXT:     }
-// AST-NEXT: };
-// AST-NEXT:  __attribute__((assume("ompx_range_bar_only"))) __attribute__((assume("ompx_range_bar_only_2"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) void bar() {
-// AST-NEXT:     BAR b;
-// AST-NEXT: }
-// AST-NEXT: void baz() __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")));
-// AST-NEXT: template <typename T> class BAZ {
-// AST-NEXT: public:
-// AST-NEXT:     __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) BAZ<T>()      {
-// AST-NEXT:     }
-// AST-NEXT:     __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")))  void baz1()     {
-// AST-NEXT:     }
-// AST-NEXT:     __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) static void baz2()      {
-// AST-NEXT:     }
-// AST-NEXT: };
-// AST-NEXT: template<> class BAZ<float> {
-// AST-NEXT: public:
-// AST-NEXT:     __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")))  BAZ()    {
-// AST-NEXT:     }
-// AST-NEXT:     void baz1() __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")));
-// AST-NEXT:     static void baz2() __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")));
-// AST-NEXT: };
-// AST-NEXT: __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) void baz() {
-// AST-NEXT:     BAZ<float> b;
-// AST-NEXT: }
-// AST-NEXT: __attribute__((assume("ompx_lambda_assumption"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) int lambda_outer() {
-// AST-NEXT:     auto lambda_inner = []() {
-// AST-NEXT:         return 42;
-// AST-NEXT:     };
-// AST-NEXT:     return lambda_inner();
-// AST-NEXT: }
+// AST{LITERAL}:      void foo() [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] {
+// AST-NEXT{LITERAL}: }
+// AST-NEXT{LITERAL}: class BAR {
+// AST-NEXT{LITERAL}: public:
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] BAR() {
+// AST-NEXT{LITERAL}:     }
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void bar1() {
+// AST-NEXT{LITERAL}:     }
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] static void bar2() {
+// AST-NEXT{LITERAL}:     }
+// AST-NEXT{LITERAL}: };
+// AST-NEXT{LITERAL}: [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void bar() {
+// AST-NEXT{LITERAL}:     BAR b;
+// AST-NEXT{LITERAL}: }
+// AST-NEXT{LITERAL}: [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void baz();
+// AST-NEXT{LITERAL}: template <typename T> class BAZ {
+// AST-NEXT{LITERAL}: public:
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] BAZ<T>() {
+// AST-NEXT{LITERAL}:     }
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void baz1() {
+// AST-NEXT{LITERAL}:     }
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] static void baz2() {
+// AST-NEXT{LITERAL}:     }
+// AST-NEXT{LITERAL}: };
+// AST-NEXT{LITERAL}: template<> class BAZ<float> {
+// AST-NEXT{LITERAL}: public:
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] BAZ() {
+// AST-NEXT{LITERAL}:     }
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void baz1();
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] static void baz2();
+// AST-NEXT{LITERAL}: };
+// AST-NEXT{LITERAL}: [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void baz() {
+// AST-NEXT{LITERAL}:     BAZ<float> b;
+// AST-NEXT{LITERAL}: }
+// AST-NEXT{LITERAL}: [[omp::assume("ompx_lambda_assumption")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] int lambda_outer() {
+// AST-NEXT{LITERAL}:     auto lambda_inner = []() {
+// AST-NEXT{LITERAL}:         return 42;
+// AST-NEXT{LITERAL}:     };
+// AST-NEXT{LITERAL}:     return lambda_inner();
+// AST-NEXT{LITERAL}: }
 
 #endif
 

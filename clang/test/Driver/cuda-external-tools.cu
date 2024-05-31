@@ -86,6 +86,12 @@
 // RUN:   -Xcuda-fatbinary -bar1 -Xcuda-ptxas -foo2 -Xcuda-fatbinary -bar2 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CHECK,SM35,PTXAS-EXTRA,FATBINARY-EXTRA %s
 
+// Check -Xcuda-ptxas with clang-cl
+// RUN: %clang_cl -### -c -Xcuda-ptxas -foo1 \
+// RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
+// RUN:   -Xcuda-ptxas -foo2 -- %s 2>&1 \
+// RUN: | FileCheck -check-prefixes=CHECK,SM35,PTXAS-EXTRA %s
+
 // MacOS spot-checks
 // RUN: %clang -### --target=x86_64-apple-macosx -O0 -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
@@ -140,6 +146,8 @@
 // CHECK-SAME: "[[PTXFILE]]"
 // PTXAS-EXTRA-SAME: "-foo1"
 // PTXAS-EXTRA-SAME: "-foo2"
+// CHECK-NOT: "-foo1"
+// CHECK-NOT: "-foo2"
 // RDC-SAME: "-c"
 // CHECK-NOT: "-c"
 

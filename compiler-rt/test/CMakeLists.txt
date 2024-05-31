@@ -1,14 +1,6 @@
 # Needed for lit support in standalone builds.
 include(AddLLVM)
 
-option(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS
-  "When set to ON and testing in a standalone build, test the runtime \
-  libraries built by this standalone build rather than the runtime libraries \
-  shipped with the compiler (used for testing). When set to OFF and testing \
-  in a standalone build, test the runtime libraries shipped with the compiler \
-  (used for testing). This option has no effect if the compiler and this \
-  build are configured to use the same runtime library path."
-  ON)
 pythonize_bool(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
 
 pythonize_bool(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -99,6 +91,9 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   endif()
   if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
     compiler_rt_test_runtime(profile)
+  endif()
+  if(COMPILER_RT_BUILD_CTX_PROFILE)
+    compiler_rt_test_runtime(ctx_profile)
   endif()
   if(COMPILER_RT_BUILD_MEMPROF)
     compiler_rt_test_runtime(memprof)

@@ -25,6 +25,7 @@
 #include "src/__support/CPP/type_traits/is_base_of.h"
 #include "src/__support/CPP/type_traits/is_class.h"
 #include "src/__support/CPP/type_traits/is_const.h"
+#include "src/__support/CPP/type_traits/is_constant_evaluated.h"
 #include "src/__support/CPP/type_traits/is_convertible.h"
 #include "src/__support/CPP/type_traits/is_destructible.h"
 #include "src/__support/CPP/type_traits/is_enum.h"

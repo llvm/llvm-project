@@ -33,17 +33,17 @@ struct Dummy {
 
 struct ThrowsCtorT {
   ThrowsCtorT(int) noexcept(false) {}
-  ThrowsCtorT &operator=(int) noexcept { return *this; }
+  ThrowsCtorT& operator=(int) noexcept { return *this; }
 };
 
 struct ThrowsAssignT {
   ThrowsAssignT(int) noexcept {}
-  ThrowsAssignT &operator=(int) noexcept(false) { return *this; }
+  ThrowsAssignT& operator=(int) noexcept(false) { return *this; }
 };
 
 struct NoThrowT {
   NoThrowT(int) noexcept {}
-  NoThrowT &operator=(int) noexcept { return *this; }
+  NoThrowT& operator=(int) noexcept { return *this; }
 };
 
 } // namespace MetaHelpers
@@ -55,7 +55,7 @@ struct ThrowsCtorT {
   int value;
   ThrowsCtorT() : value(0) {}
   ThrowsCtorT(int) noexcept(false) { throw 42; }
-  ThrowsCtorT &operator=(int v) noexcept {
+  ThrowsCtorT& operator=(int v) noexcept {
     value = v;
     return *this;
   }
@@ -64,9 +64,12 @@ struct ThrowsCtorT {
 struct MoveCrashes {
   int value;
   MoveCrashes(int v = 0) noexcept : value{v} {}
-  MoveCrashes(MoveCrashes &&) noexcept { assert(false); }
-  MoveCrashes &operator=(MoveCrashes &&) noexcept { assert(false); return *this; }
-  MoveCrashes &operator=(int v) noexcept {
+  MoveCrashes(MoveCrashes&&) noexcept { assert(false); }
+  MoveCrashes& operator=(MoveCrashes&&) noexcept {
+    assert(false);
+    return *this;
+  }
+  MoveCrashes& operator=(int v) noexcept {
     value = v;
     return *this;
   }
@@ -76,8 +79,8 @@ struct ThrowsCtorTandMove {
   int value;
   ThrowsCtorTandMove() : value(0) {}
   ThrowsCtorTandMove(int) noexcept(false) { throw 42; }
-  ThrowsCtorTandMove(ThrowsCtorTandMove &&) noexcept(false) { assert(false); }
-  ThrowsCtorTandMove &operator=(int v) noexcept {
+  ThrowsCtorTandMove(ThrowsCtorTandMove&&) noexcept(false) { assert(false); }
+  ThrowsCtorTandMove& operator=(int v) noexcept {
     value = v;
     return *this;
   }
@@ -87,14 +90,14 @@ struct ThrowsAssignT {
   int value;
   ThrowsAssignT() : value(0) {}
   ThrowsAssignT(int v) noexcept : value(v) {}
-  ThrowsAssignT &operator=(int) noexcept(false) { throw 42; }
+  ThrowsAssignT& operator=(int) noexcept(false) { throw 42; }
 };
 
 struct NoThrowT {
   int value;
   NoThrowT() : value(0) {}
   NoThrowT(int v) noexcept : value(v) {}
-  NoThrowT &operator=(int v) noexcept {
+  NoThrowT& operator=(int v) noexcept {
     value = v;
     return *this;
   }
@@ -103,7 +106,7 @@ struct NoThrowT {
 #endif // !defined(TEST_HAS_NO_EXCEPTIONS)
 } // namespace RuntimeHelpers
 
-void test_T_assignment_noexcept() {
+constexpr void test_T_assignment_noexcept() {
   using namespace MetaHelpers;
   {
     using V = std::variant<Dummy, NoThrowT>;
@@ -119,17 +122,17 @@ void test_T_assignment_noexcept() {
   }
 }
 
-void test_T_assignment_sfinae() {
+constexpr void test_T_assignment_sfinae() {
   {
     using V = std::variant<long, long long>;
     static_assert(!std::is_assignable<V, int>::value, "ambiguous");
   }
   {
     using V = std::variant<std::string, std::string>;
-    static_assert(!std::is_assignable<V, const char *>::value, "ambiguous");
+    static_assert(!std::is_assignable<V, const char*>::value, "ambiguous");
   }
   {
-    using V = std::variant<std::string, void *>;
+    using V = std::variant<std::string, void*>;
     static_assert(!std::is_assignable<V, int>::value, "no matching operator=");
   }
   {
@@ -138,8 +141,7 @@ void test_T_assignment_sfinae() {
   }
   {
     using V = std::variant<std::unique_ptr<int>, bool>;
-    static_assert(!std::is_assignable<V, std::unique_ptr<char>>::value,
-                  "no explicit bool in operator=");
+    static_assert(!std::is_assignable<V, std::unique_ptr<char>>::value, "no explicit bool in operator=");
     struct X {
       operator void*();
     };
@@ -152,22 +154,11 @@ void test_T_assignment_sfinae() {
       operator X();
     };
     using V = std::variant<X>;
-    static_assert(std::is_assignable<V, Y>::value,
-                  "regression on user-defined conversions in operator=");
+    static_assert(std::is_assignable<V, Y>::value, "regression on user-defined conversions in operator=");
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int, int &&>;
-    static_assert(!std::is_assignable<V, int>::value, "ambiguous");
-  }
-  {
-    using V = std::variant<int, const int &>;
-    static_assert(!std::is_assignable<V, int>::value, "ambiguous");
-  }
-#endif // TEST_VARIANT_HAS_NO_REFERENCES
 }
 
-void test_T_assignment_basic() {
+TEST_CONSTEXPR_CXX20 void test_T_assignment_basic() {
   {
     std::variant<int> v(43);
     v = 42;
@@ -194,38 +185,146 @@ void test_T_assignment_basic() {
   }
   {
     std::variant<std::string, bool> v = true;
-    v = "bar";
+    v                                 = "bar";
     assert(v.index() == 0);
     assert(std::get<0>(v) == "bar");
   }
-  {
-    std::variant<bool, std::unique_ptr<int>> v;
-    v = nullptr;
-    assert(v.index() == 1);
-    assert(std::get<1>(v) == nullptr);
-  }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int &, int &&, long>;
-    int x = 42;
-    V v(43l);
-    v = x;
-    assert(v.index() == 0);
-    assert(&std::get<0>(v) == &x);
-    v = std::move(x);
-    assert(v.index() == 1);
-    assert(&std::get<1>(v) == &x);
-    // 'long' is selected by FUN(const int &) since 'const int &' cannot bind
-    // to 'int&'.
-    const int &cx = x;
-    v = cx;
-    assert(v.index() == 2);
-    assert(std::get<2>(v) == 42);
-  }
-#endif // TEST_VARIANT_HAS_NO_REFERENCES
 }
 
-void test_T_assignment_performs_construction() {
+void test_T_assignment_basic_no_constexpr() {
+  std::variant<bool, std::unique_ptr<int>> v;
+  v = nullptr;
+  assert(v.index() == 1);
+  assert(std::get<1>(v) == nullptr);
+}
+
+struct TraceStat {
+  int construct      = 0;
+  int copy_construct = 0;
+  int copy_assign    = 0;
+  int move_construct = 0;
+  int move_assign    = 0;
+  int T_copy_assign  = 0;
+  int T_move_assign  = 0;
+  int destroy        = 0;
+};
+
+template <bool CtorNoexcept, bool MoveCtorNoexcept>
+struct Trace {
+  struct T {};
+
+  constexpr Trace(TraceStat* s) noexcept(CtorNoexcept) : stat(s) { ++s->construct; }
+  constexpr Trace(T) noexcept(CtorNoexcept) : stat(nullptr) {}
+  constexpr Trace(const Trace& o) : stat(o.stat) { ++stat->copy_construct; }
+  constexpr Trace(Trace&& o) noexcept(MoveCtorNoexcept) : stat(o.stat) { ++stat->move_construct; }
+  constexpr Trace& operator=(const Trace&) {
+    ++stat->copy_assign;
+    return *this;
+  }
+  constexpr Trace& operator=(Trace&&) noexcept {
+    ++stat->move_assign;
+    return *this;
+  }
+
+  constexpr Trace& operator=(const T&) {
+    ++stat->T_copy_assign;
+    return *this;
+  }
+  constexpr Trace& operator=(T&&) noexcept {
+    ++stat->T_move_assign;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX20 ~Trace() { ++stat->destroy; }
+
+  TraceStat* stat;
+};
+
+TEST_CONSTEXPR_CXX20 void test_T_assignment_performs_construction() {
+  {
+    using V = std::variant<int, Trace<false, false>>;
+    TraceStat stat;
+    V v{1};
+    v = &stat;
+    assert(stat.construct == 1);
+    assert(stat.copy_construct == 0);
+    assert(stat.move_construct == 0);
+    assert(stat.copy_assign == 0);
+    assert(stat.move_assign == 0);
+    assert(stat.destroy == 0);
+  }
+  {
+    using V = std::variant<int, Trace<false, true>>;
+    TraceStat stat;
+    V v{1};
+    v = &stat;
+    assert(stat.construct == 1);
+    assert(stat.copy_construct == 0);
+    assert(stat.move_construct == 1);
+    assert(stat.copy_assign == 0);
+    assert(stat.move_assign == 0);
+    assert(stat.destroy == 1);
+  }
+
+  {
+    using V = std::variant<int, Trace<true, false>>;
+    TraceStat stat;
+    V v{1};
+    v = &stat;
+    assert(stat.construct == 1);
+    assert(stat.copy_construct == 0);
+    assert(stat.move_construct == 0);
+    assert(stat.copy_assign == 0);
+    assert(stat.move_assign == 0);
+    assert(stat.destroy == 0);
+  }
+
+  {
+    using V = std::variant<int, Trace<true, true>>;
+    TraceStat stat;
+    V v{1};
+    v = &stat;
+    assert(stat.construct == 1);
+    assert(stat.copy_construct == 0);
+    assert(stat.move_construct == 0);
+    assert(stat.copy_assign == 0);
+    assert(stat.move_assign == 0);
+    assert(stat.destroy == 0);
+  }
+}
+
+TEST_CONSTEXPR_CXX20 void test_T_assignment_performs_assignment() {
+  {
+    using V = std::variant<int, Trace<false, false>>;
+    TraceStat stat;
+    V v{&stat};
+    v = Trace<false, false>::T{};
+    assert(stat.construct == 1);
+    assert(stat.copy_construct == 0);
+    assert(stat.move_construct == 0);
+    assert(stat.copy_assign == 0);
+    assert(stat.move_assign == 0);
+    assert(stat.T_copy_assign == 0);
+    assert(stat.T_move_assign == 1);
+    assert(stat.destroy == 0);
+  }
+  {
+    using V = std::variant<int, Trace<false, false>>;
+    TraceStat stat;
+    V v{&stat};
+    Trace<false, false>::T t;
+    v = t;
+    assert(stat.construct == 1);
+    assert(stat.copy_construct == 0);
+    assert(stat.move_construct == 0);
+    assert(stat.copy_assign == 0);
+    assert(stat.move_assign == 0);
+    assert(stat.T_copy_assign == 1);
+    assert(stat.T_move_assign == 0);
+    assert(stat.destroy == 0);
+  }
+}
+
+void test_T_assignment_performs_construction_throw() {
   using namespace RuntimeHelpers;
 #ifndef TEST_HAS_NO_EXCEPTIONS
   {
@@ -249,7 +348,7 @@ void test_T_assignment_performs_construction() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
-void test_T_assignment_performs_assignment() {
+void test_T_assignment_performs_assignment_throw() {
   using namespace RuntimeHelpers;
 #ifndef TEST_HAS_NO_EXCEPTIONS
   {
@@ -291,7 +390,7 @@ void test_T_assignment_performs_assignment() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
-void test_T_assignment_vector_bool() {
+TEST_CONSTEXPR_CXX20 void test_T_assignment_vector_bool() {
   std::vector<bool> vec = {true};
   std::variant<bool, int> v;
   v = vec[0];
@@ -299,7 +398,13 @@ void test_T_assignment_vector_bool() {
   assert(std::get<0>(v) == true);
 }
 
-int main(int, char**) {
+void non_constexpr_test() {
+  test_T_assignment_basic_no_constexpr();
+  test_T_assignment_performs_construction_throw();
+  test_T_assignment_performs_assignment_throw();
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
   test_T_assignment_basic();
   test_T_assignment_performs_construction();
   test_T_assignment_performs_assignment();
@@ -307,5 +412,15 @@ int main(int, char**) {
   test_T_assignment_sfinae();
   test_T_assignment_vector_bool();
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  non_constexpr_test();
+
+#if TEST_STD_VER >= 20
+  static_assert(test());
+#endif
   return 0;
 }

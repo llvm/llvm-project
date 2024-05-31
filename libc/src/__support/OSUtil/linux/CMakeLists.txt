@@ -4,11 +4,12 @@ endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 
-add_header_library(
+add_object_library(
   linux_util
+  SRCS
+    quick_exit.cpp
   HDRS
     io.h
-    quick_exit.h
     syscall.h
   DEPENDS
     .${LIBC_TARGET_ARCHITECTURE}.linux_${LIBC_TARGET_ARCHITECTURE}_util
