@@ -32,62 +32,6 @@ using namespace mlir;
 // Utility functions
 //===----------------------------------------------------------------------===//
 
-/// Converts a memref::SubViewOp or memref::ReinterpretCastOp to the converted
-/// type. The result MemRefType of the old op must have a rank and stride of 1,
-/// with static offset and size. The number of bits in the offset must evenly
-/// divide the bitwidth of the new converted type.
-template <typename MemRefOpTy>
-static LogicalResult convertCastingOp(ConversionPatternRewriter &rewriter,
-                                      typename MemRefOpTy::Adaptor adaptor,
-                                      MemRefOpTy op, MemRefType newTy) {
-  static_assert(std::is_same<MemRefOpTy, memref::SubViewOp>() ||
-                    std::is_same<MemRefOpTy, memref::ReinterpretCastOp>(),
-                "Expected only memref::SubViewOp or memref::ReinterpretCastOp");
-
-  auto convertedElementType = newTy.getElementType();
-  auto oldElementType = op.getType().getElementType();
-  int srcBits = oldElementType.getIntOrFloatBitWidth();
-  int dstBits = convertedElementType.getIntOrFloatBitWidth();
-  if (dstBits % srcBits != 0) {
-    return rewriter.notifyMatchFailure(op,
-                                       "only dstBits % srcBits == 0 supported");
-  }
-
-  // Only support stride of 1.
-  if (llvm::any_of(op.getStaticStrides(),
-                   [](int64_t stride) { return stride != 1; })) {
-    return rewriter.notifyMatchFailure(op->getLoc(),
-                                       "stride != 1 is not supported");
-  }
-
-  auto sizes = op.getStaticSizes();
-  int64_t offset = op.getStaticOffset(0);
-  // Only support static sizes and offsets.
-  if (llvm::any_of(sizes,
-                   [](int64_t size) { return size == ShapedType::kDynamic; }) ||
-      offset == ShapedType::kDynamic) {
-    return rewriter.notifyMatchFailure(
-        op->getLoc(), "dynamic size or offset is not supported");
-  }
-
-  int elementsPerByte = dstBits / srcBits;
-  if (offset % elementsPerByte != 0) {
-    return rewriter.notifyMatchFailure(
-        op->getLoc(), "offset not multiple of elementsPerByte is not "
-                      "supported");
-  }
-
-  SmallVector<int64_t> size;
-  if (sizes.size())
-    size.push_back(ceilDiv(sizes[0], elementsPerByte));
-  offset = offset / elementsPerByte;
-
-  rewriter.replaceOpWithNewOp<MemRefOpTy>(op, newTy,
-                                          *adaptor.getODSOperands(0).begin(),
-                                          offset, size, op.getStaticStrides());
-  return success();
-}
-
 /// When data is loaded/stored in `targetBits` granularity, but is used in
 /// `sourceBits` granularity (`sourceBits` < `targetBits`), the `targetBits` is
 /// treated as an array of elements of width `sourceBits`.
@@ -335,7 +279,48 @@ struct ConvertMemRefReinterpretCast final
           op->getLoc(), "subview with rank > 1 is not supported");
     }
 
-    return convertCastingOp(rewriter, adaptor, op, newTy);
+    Type convertedElementType = newTy.getElementType();
+    Type oldElementType = op.getType().getElementType();
+    int srcBits = oldElementType.getIntOrFloatBitWidth();
+    int dstBits = convertedElementType.getIntOrFloatBitWidth();
+    if (dstBits % srcBits != 0) {
+      return rewriter.notifyMatchFailure(
+          op, "only dstBits % srcBits == 0 supported");
+    }
+
+    // Only support stride of 1.
+    if (llvm::any_of(op.getStaticStrides(),
+                     [](int64_t stride) { return stride != 1; })) {
+      return rewriter.notifyMatchFailure(op->getLoc(),
+                                         "stride != 1 is not supported");
+    }
+
+    auto sizes = op.getStaticSizes();
+    int64_t offset = op.getStaticOffset(0);
+    // Only support static sizes and offsets.
+    if (llvm::any_of(
+            sizes, [](int64_t size) { return size == ShapedType::kDynamic; }) ||
+        offset == ShapedType::kDynamic) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(), "dynamic size or offset is not supported");
+    }
+
+    int elementsPerByte = dstBits / srcBits;
+    if (offset % elementsPerByte != 0) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(), "offset not multiple of elementsPerByte is not "
+                        "supported");
+    }
+
+    SmallVector<int64_t> size;
+    if (sizes.size())
+      size.push_back(ceilDiv(sizes[0], elementsPerByte));
+    offset = offset / elementsPerByte;
+
+    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
+        op, newTy, *adaptor.getODSOperands(0).begin(), offset, size,
+        op.getStaticStrides());
+    return success();
   }
 };
 
@@ -402,29 +387,68 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
 
 /// Emulating narrow ints on subview have limited support, supporting only
 /// static offset and size and stride of 1. Ideally, the subview should be
-/// folded away before running narrow type emulation, and this pattern would
-/// never run. This pattern is mostly used for testing pruposes.
+/// folded away before running narrow type emulation, and this pattern should
+/// only run for cases that can't be folded.
 struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(memref::SubViewOp op, OpAdaptor adaptor,
+  matchAndRewrite(memref::SubViewOp subViewOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    MemRefType newTy =
-        dyn_cast<MemRefType>(getTypeConverter()->convertType(op.getType()));
+    MemRefType newTy = dyn_cast<MemRefType>(
+        getTypeConverter()->convertType(subViewOp.getType()));
     if (!newTy) {
       return rewriter.notifyMatchFailure(
-          op->getLoc(),
-          llvm::formatv("failed to convert memref type: {0}", op.getType()));
+          subViewOp->getLoc(),
+          llvm::formatv("failed to convert memref type: {0}",
+                        subViewOp.getType()));
     }
 
-    // Only support offset for 1-D subview.
-    if (op.getType().getRank() != 1) {
+    Location loc = subViewOp.getLoc();
+    Type convertedElementType = newTy.getElementType();
+    Type oldElementType = subViewOp.getType().getElementType();
+    int srcBits = oldElementType.getIntOrFloatBitWidth();
+    int dstBits = convertedElementType.getIntOrFloatBitWidth();
+    if (dstBits % srcBits != 0)
       return rewriter.notifyMatchFailure(
-          op->getLoc(), "subview with rank > 1 is not supported");
+          subViewOp, "only dstBits % srcBits == 0 supported");
+
+    // Only support stride of 1.
+    if (llvm::any_of(subViewOp.getStaticStrides(),
+                     [](int64_t stride) { return stride != 1; })) {
+      return rewriter.notifyMatchFailure(subViewOp->getLoc(),
+                                         "stride != 1 is not supported");
     }
 
-    return convertCastingOp(rewriter, adaptor, op, newTy);
+    auto sizes = subViewOp.getStaticSizes();
+    int64_t lastOffset = subViewOp.getStaticOffsets().back();
+    // Only support static sizes and offsets.
+    if (llvm::any_of(
+            sizes, [](int64_t size) { return size == ShapedType::kDynamic; }) ||
+        lastOffset == ShapedType::kDynamic) {
+      return rewriter.notifyMatchFailure(
+          subViewOp->getLoc(), "dynamic size or offset is not supported");
+    }
+
+    // Transform the offsets, sizes and strides according to the emulation.
+    auto stridedMetadata = rewriter.create<memref::ExtractStridedMetadataOp>(
+        loc, subViewOp.getViewSource());
+
+    OpFoldResult linearizedIndices;
+    auto strides = stridedMetadata.getConstifiedMixedStrides();
+    memref::LinearizedMemRefInfo linearizedInfo;
+    std::tie(linearizedInfo, linearizedIndices) =
+        memref::getLinearizedMemRefOffsetAndSize(
+            rewriter, loc, srcBits, dstBits,
+            stridedMetadata.getConstifiedMixedOffset(),
+            subViewOp.getMixedSizes(), strides,
+            getMixedValues(adaptor.getStaticOffsets(), adaptor.getOffsets(),
+                           rewriter));
+
+    rewriter.replaceOpWithNewOp<memref::SubViewOp>(
+        subViewOp, newTy, adaptor.getSource(), linearizedIndices,
+        linearizedInfo.linearizedSize, strides.back());
+    return success();
   }
 };
 
