@@ -1684,10 +1684,9 @@ if.else:
 
 @g = external global i8
 
-; FIXME: This is a miscompile
 define ptr @constexpr_gep_of_gep_with_narrow_type() {
 ; CHECK-LABEL: @constexpr_gep_of_gep_with_narrow_type(
-; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i64 -2)
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i64 254)
 ;
   ret ptr getelementptr (i8, ptr getelementptr (i8, ptr @g, i8 127), i8 127)
 }
