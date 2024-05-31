@@ -420,6 +420,11 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
                                          "stride != 1 is not supported");
     }
 
+    if (!memref::isStaticShapeAndContiguousRowMajor(subViewOp.getType())) {
+      return rewriter.notifyMatchFailure(
+          subViewOp, "the result memref type is not contiguous");
+    }
+
     auto sizes = subViewOp.getStaticSizes();
     int64_t lastOffset = subViewOp.getStaticOffsets().back();
     // Only support static sizes and offsets.
