@@ -398,11 +398,13 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       OS << '(' << cast<OpenACCDefaultClause>(C)->getDefaultClauseKind() << ')';
       break;
     case OpenACCClauseKind::Async:
+    case OpenACCClauseKind::Auto:
     case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
     case OpenACCClauseKind::If:
+    case OpenACCClauseKind::Independent:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::FirstPrivate:
     case OpenACCClauseKind::NoCreate:
@@ -411,6 +413,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
     case OpenACCClauseKind::Self:
+    case OpenACCClauseKind::Seq:
     case OpenACCClauseKind::VectorLength:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.

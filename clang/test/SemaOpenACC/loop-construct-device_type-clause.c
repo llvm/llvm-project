@@ -50,13 +50,10 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop device_type(*) if_present
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc loop device_type(*) seq
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'independent' not yet implemented, clause ignored}}
 #pragma acc loop device_type(*) independent
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'auto' not yet implemented, clause ignored}}
 #pragma acc loop device_type(*) auto
   for(;;);
   // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}

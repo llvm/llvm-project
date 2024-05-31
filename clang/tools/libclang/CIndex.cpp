@@ -2860,6 +2860,10 @@ void OpenACCClauseEnqueue::VisitReductionClause(
     const OpenACCReductionClause &C) {
   VisitVarList(C);
 }
+void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
+void OpenACCClauseEnqueue::VisitIndependentClause(
+    const OpenACCIndependentClause &C) {}
+void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {

@@ -7975,12 +7975,15 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(RC);
     return;
   }
-
-  case OpenACCClauseKind::Finalize:
-  case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
   case OpenACCClauseKind::Independent:
   case OpenACCClauseKind::Auto:
+    // Nothing to do here, there is no additional information beyond the
+    // begin/end loc and clause kind.
+    return;
+
+  case OpenACCClauseKind::Finalize:
+  case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:

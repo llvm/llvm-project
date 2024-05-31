@@ -1132,6 +1132,8 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       // clause, as we are a 'single token' clause.
       ParsedClause.setEndLoc(ClauseLoc);
     }
+  } else {
+    ParsedClause.setEndLoc(ClauseLoc);
   }
   return OpenACCSuccess(
       Actions.OpenACC().ActOnClause(ExistingClauses, ParsedClause));
