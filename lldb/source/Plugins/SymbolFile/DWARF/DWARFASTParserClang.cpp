@@ -2232,6 +2232,10 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
       // For objective C we don't start the definition when the class is
       // created.
       TypeSystemClang::StartTagDeclarationDefinition(clang_type);
+    } else {
+      assert(clang_type.IsBeingDefined() &&
+             "Trying to complete a definition without a prior call to "
+             "StartTagDeclarationDefinition.");
     }
 
     AccessType default_accessibility = eAccessNone;

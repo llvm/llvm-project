@@ -260,9 +260,6 @@ private:
 
 /// Class to manage the bitcode writing for a module.
 class ModuleBitcodeWriter : public ModuleBitcodeWriterBase {
-  /// Pointer to the buffer allocated by caller for bitcode writing.
-  const SmallVectorImpl<char> &Buffer;
-
   /// True if a module hash record should be written.
   bool GenerateHash;
 
@@ -278,14 +275,13 @@ class ModuleBitcodeWriter : public ModuleBitcodeWriterBase {
 public:
   /// Constructs a ModuleBitcodeWriter object for the given Module,
   /// writing to the provided \p Buffer.
-  ModuleBitcodeWriter(const Module &M, SmallVectorImpl<char> &Buffer,
-                      StringTableBuilder &StrtabBuilder,
+  ModuleBitcodeWriter(const Module &M, StringTableBuilder &StrtabBuilder,
                       BitstreamWriter &Stream, bool ShouldPreserveUseListOrder,
                       const ModuleSummaryIndex *Index, bool GenerateHash,
                       ModuleHash *ModHash = nullptr)
       : ModuleBitcodeWriterBase(M, StrtabBuilder, Stream,
                                 ShouldPreserveUseListOrder, Index),
-        Buffer(Buffer), GenerateHash(GenerateHash), ModHash(ModHash),
+        GenerateHash(GenerateHash), ModHash(ModHash),
         BitcodeStartBit(Stream.GetCurrentBitNo()) {}
 
   /// Emit the current module to the bitstream.
@@ -414,7 +410,7 @@ private:
   writeFunction(const Function &F,
                 DenseMap<const Function *, uint64_t> &FunctionToBitcodeIndex);
   void writeBlockInfo();
-  void writeModuleHash(size_t BlockStartPos);
+  void writeModuleHash(StringRef View);
 
   unsigned getEncodedSyncScopeID(SyncScope::ID SSID) {
     return unsigned(SSID);
@@ -4819,13 +4815,13 @@ static void writeIdentificationBlock(BitstreamWriter &Stream) {
   Stream.ExitBlock();
 }
 
-void ModuleBitcodeWriter::writeModuleHash(size_t BlockStartPos) {
+void ModuleBitcodeWriter::writeModuleHash(StringRef View) {
   // Emit the module's hash.
   // MODULE_CODE_HASH: [5*i32]
   if (GenerateHash) {
     uint32_t Vals[5];
-    Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&(Buffer)[BlockStartPos],
-                                    Buffer.size() - BlockStartPos));
+    Hasher.update(ArrayRef<uint8_t>(
+        reinterpret_cast<const uint8_t *>(View.data()), View.size()));
     std::array<uint8_t, 20> Hash = Hasher.result();
     for (int Pos = 0; Pos < 20; Pos += 4) {
       Vals[Pos / 4] = support::endian::read32be(Hash.data() + Pos);
@@ -4844,7 +4840,9 @@ void ModuleBitcodeWriter::write() {
   writeIdentificationBlock(Stream);
 
   Stream.EnterSubblock(bitc::MODULE_BLOCK_ID, 3);
-  size_t BlockStartPos = Buffer.size();
+  // We will want to write the module hash at this point. Block any flushing so
+  // we can have access to the whole underlying data later.
+  Stream.markAndBlockFlushing();
 
   writeModuleVersion();
 
@@ -4895,7 +4893,7 @@ void ModuleBitcodeWriter::write() {
 
   writeGlobalValueSymbolTable(FunctionToBitcodeIndex);
 
-  writeModuleHash(BlockStartPos);
+  writeModuleHash(Stream.getMarkedBufferAndResumeFlushing());
 
   Stream.ExitBlock();
 }
@@ -4976,8 +4974,13 @@ static void writeBitcodeHeader(BitstreamWriter &Stream) {
   Stream.Emit(0xD, 4);
 }
 
-BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer, raw_fd_stream *FS)
-    : Buffer(Buffer), Stream(new BitstreamWriter(Buffer, FS, FlushThreshold)) {
+BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer)
+    : Stream(new BitstreamWriter(Buffer)) {
+  writeBitcodeHeader(*Stream);
+}
+
+BitcodeWriter::BitcodeWriter(raw_ostream &FS)
+    : Stream(new BitstreamWriter(FS, FlushThreshold)) {
   writeBitcodeHeader(*Stream);
 }
 
@@ -5060,7 +5063,7 @@ void BitcodeWriter::writeModule(const Module &M,
   assert(M.isMaterialized());
   Mods.push_back(const_cast<Module *>(&M));
 
-  ModuleBitcodeWriter ModuleWriter(M, Buffer, StrtabBuilder, *Stream,
+  ModuleBitcodeWriter ModuleWriter(M, StrtabBuilder, *Stream,
                                    ShouldPreserveUseListOrder, Index,
                                    GenerateHash, ModHash);
   ModuleWriter.write();
@@ -5080,27 +5083,28 @@ void llvm::WriteBitcodeToFile(const Module &M, raw_ostream &Out,
                               bool ShouldPreserveUseListOrder,
                               const ModuleSummaryIndex *Index,
                               bool GenerateHash, ModuleHash *ModHash) {
-  SmallVector<char, 0> Buffer;
-  Buffer.reserve(256*1024);
-
-  // If this is darwin or another generic macho target, reserve space for the
-  // header.
+  auto Write = [&](BitcodeWriter &Writer) {
+    Writer.writeModule(M, ShouldPreserveUseListOrder, Index, GenerateHash,
+                       ModHash);
+    Writer.writeSymtab();
+    Writer.writeStrtab();
+  };
   Triple TT(M.getTargetTriple());
-  if (TT.isOSDarwin() || TT.isOSBinFormatMachO())
+  if (TT.isOSDarwin() || TT.isOSBinFormatMachO()) {
+    // If this is darwin or another generic macho target, reserve space for the
+    // header. Note that the header is computed *after* the output is known, so
+    // we currently explicitly use a buffer, write to it, and then subsequently
+    // flush to Out.
+    SmallVector<char, 256 * 1024> Buffer;
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
-
-  BitcodeWriter Writer(Buffer, dyn_cast<raw_fd_stream>(&Out));
-  Writer.writeModule(M, ShouldPreserveUseListOrder, Index, GenerateHash,
-                     ModHash);
-  Writer.writeSymtab();
-  Writer.writeStrtab();
-
-  if (TT.isOSDarwin() || TT.isOSBinFormatMachO())
+    BitcodeWriter Writer(Buffer);
+    Write(Writer);
     emitDarwinBCHeaderAndTrailer(Buffer, TT);
-
-  // Write the generated bitstream to "Out".
-  if (!Buffer.empty())
-    Out.write((char *)&Buffer.front(), Buffer.size());
+    Out.write(Buffer.data(), Buffer.size());
+  } else {
+    BitcodeWriter Writer(Out);
+    Write(Writer);
+  }
 }
 
 void IndexBitcodeWriter::write() {

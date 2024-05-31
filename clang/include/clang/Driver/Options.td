@@ -4345,6 +4345,10 @@ defm strict_dwarf : BoolOption<"g", "strict-dwarf",
           "the specified version, avoiding features from later versions.">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>,
   Group<g_flags_Group>;
+defm omit_unreferenced_methods : BoolGOption<"omit-unreferenced-methods",
+  CodeGenOpts<"DebugOmitUnreferencedMethods">, DefaultFalse,
+  NegFlag<SetFalse>,
+  PosFlag<SetTrue, [], [CC1Option]>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>;
 defm column_info : BoolOption<"g", "column-info",
   CodeGenOpts<"DebugColumnInfo">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
@@ -6280,6 +6284,8 @@ def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_F
 // For stability, we only add a feature to -mapxf after it passes the validation of llvm-test-suite && cpu2017 on Intel SDE.
 def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
 def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
+def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
+                                HelpText<"Enable use of GPR32 in inline assembly for APX">;
 } // let Flags = [TargetSpecific]
 
 // VE feature flags

@@ -537,7 +537,8 @@ define i32 @test21() {
 
 define i1 @test22() {
 ; CHECK-LABEL: @test22(
-; CHECK-NEXT:    ret i1 icmp ult (ptr getelementptr inbounds (i8, ptr @A, i64 4), ptr getelementptr (i8, ptr @B, i64 8))
+; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr getelementptr inbounds (i8, ptr @A, i64 4), getelementptr (i8, ptr @B, i64 8)
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %C = icmp ult ptr getelementptr (i32, ptr @A, i64 1),
   getelementptr (i32, ptr @B, i64 2)
@@ -1678,6 +1679,17 @@ if.then:
   ret i64 %val
 if.else:
   ret i64 0
+}
+
+
+@g = external global i8
+
+; FIXME: This is a miscompile
+define ptr @constexpr_gep_of_gep_with_narrow_type() {
+; CHECK-LABEL: @constexpr_gep_of_gep_with_narrow_type(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i64 -2)
+;
+  ret ptr getelementptr (i8, ptr getelementptr (i8, ptr @g, i8 127), i8 127)
 }
 
 !0 = !{!"branch_weights", i32 2, i32 10}
