@@ -675,8 +675,14 @@ static void AttemptToFoldSymbolOffsetDifference(
     if (FA == FB) {
       Reverse = SA.getOffset() < SB.getOffset();
     } else if (!isa<MCDummyFragment>(FA)) {
-      Reverse = std::find_if(std::next(FA->getIterator()), SecA.end(),
-                             [&](auto &I) { return &I == FB; }) != SecA.end();
+      // Testing FA < FB is slow. Use setLayoutOrder to speed up computation.
+      // The formal layout order will be finalized in MCAssembler::layout.
+      if (FA->getLayoutOrder() == 0 || FB->getLayoutOrder()== 0) {
+        unsigned LayoutOrder = 0;
+        for (MCFragment &F : *FA->getParent())
+          F.setLayoutOrder(++LayoutOrder);
+      }
+      Reverse = FA->getLayoutOrder() < FB->getLayoutOrder();
     }
 
     uint64_t SAOffset = SA.getOffset(), SBOffset = SB.getOffset();
