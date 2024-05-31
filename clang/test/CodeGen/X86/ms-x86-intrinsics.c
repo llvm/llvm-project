@@ -69,7 +69,7 @@ int test_inp(unsigned short port) {
 }
 // CHECK-LABEL: i32 @test_inp(i16 noundef
 // CHECK-SAME:  [[PORT:%.*]])
-// CHECK:       [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:b}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK:       [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:w}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
 // CHECK-NEXT:  ret i32 [[TMP0]]
 
 unsigned short test_inpw(unsigned short port) {
@@ -77,7 +77,7 @@ unsigned short test_inpw(unsigned short port) {
 }
 // CHECK-LABEL: i16 @test_inpw(i16 noundef
 // CHECK-SAME:  [[PORT:%.*]])
-// CHECK:       [[TMP0:%.*]] = tail call i16 asm sideeffect "inw ${1:w}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK:       [[TMP0:%.*]] = tail call i16 asm sideeffect "inw ${1:w}, ${0:w}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
 // CHECK-NEXT:  ret i16 [[TMP0]]
 
 unsigned long test_inpd(unsigned short port) {
@@ -85,7 +85,7 @@ unsigned long test_inpd(unsigned short port) {
 }
 // CHECK-LABEL: i32 @test_inpd(i16 noundef
 // CHECK-SAME:  [[PORT:%.*]])
-// CHECK:       [[TMP0:%.*]] = tail call i32 asm sideeffect "inl ${1:k}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK:       [[TMP0:%.*]] = tail call i32 asm sideeffect "inl ${1:w}, ${0:k}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
 // CHECK-NEXT:  ret i32 [[TMP0]]
 
 int test_inp2(unsigned short port) {
@@ -93,7 +93,7 @@ int test_inp2(unsigned short port) {
 }
 // CHECK-LABEL: i32 @test_inp2(i16 noundef
 // CHECK-SAME:  [[PORT:%.*]])
-// CHECK:       [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:b}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK:       [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:w}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
 // CHECK-NEXT:  ret i32 [[TMP0]]
 
 unsigned short test_inpw2(unsigned short port) {
@@ -101,7 +101,7 @@ unsigned short test_inpw2(unsigned short port) {
 }
 // CHECK-LABEL: i16 @test_inpw2(i16 noundef
 // CHECK-SAME:  [[PORT:%.*]])
-// CHECK:       [[TMP0:%.*]] = tail call i16 asm sideeffect "inw ${1:w}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK:       [[TMP0:%.*]] = tail call i16 asm sideeffect "inw ${1:w}, ${0:w}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
 // CHECK-NEXT:  ret i16 [[TMP0]]
 
 #if defined(__x86_64__)

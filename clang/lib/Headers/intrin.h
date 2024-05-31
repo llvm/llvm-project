@@ -332,19 +332,19 @@ static __inline__ void __DEFAULT_FN_ATTRS __halt(void) {
 
 static inline int _inp(unsigned short port) {
   int ret;
-  __asm__ volatile("inb %b1, %b0" : "=a"(ret) : "Nd"(port));
+  __asm__ volatile("inb %w1, %b0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 
 static inline unsigned short _inpw(unsigned short port) {
   unsigned short ret;
-  __asm__ volatile("inw %w1, %b0" : "=a"(ret) : "Nd"(port));
+  __asm__ volatile("inw %w1, %w0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 
 static inline unsigned long _inpd(unsigned short port) {
   unsigned long ret;
-  __asm__ volatile("inl %k1, %b0" : "=a"(ret) : "Nd"(port));
+  __asm__ volatile("inl %w1, %k0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 
