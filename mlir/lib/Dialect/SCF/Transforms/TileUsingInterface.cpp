@@ -94,16 +94,12 @@ verifyTileSizeOptions(RewriterBase &rewriter, Location loc,
   return success();
 }
 
-/// Compute the tile sizes and num threads values passed in.
+/// Method to instantiate the tile sizes and/or number of threads specified
+/// by the user.
 static std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>>
-getTileSizes(RewriterBase &rewriter, TilingInterface op,
-             ArrayRef<Range> iterationDomain,
-             const scf::SCFTilingOptions &options) {
-  assert(
-      llvm::all_of(iterationDomain,
-                   [](Range r) { return isConstantIntValue(r.stride, 1); }) &&
-      "tile size computation assumes that all dimensions of the iteration "
-      "domain have stride 1");
+getUserTileSizesAndNumThreads(RewriterBase &rewriter, TilingInterface op,
+                              ArrayRef<Range> iterationDomain,
+                              const scf::SCFTilingOptions &options) {
   OpFoldResult zero = rewriter.getIndexAttr(0);
   SmallVector<OpFoldResult> tileSizes, numThreads;
   size_t numLoops = iterationDomain.size();
@@ -240,7 +236,9 @@ static bool canOmitTileOffsetInBoundsCheck(OpFoldResult tileSize,
   return *tileSizeConst * (*numThreadsConst - 1) < *iterSizeConst;
 }
 
-/// Compute the tile offsets and sizes.
+/// Compute the `OpFoldResult`s that represents the multi-dimensional
+/// `offset`s and `size`s of the tile of the iteration space that the
+/// innermost loop body of the generated tiled loops corresponds to.
 static std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>>
 getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
                       ArrayRef<Range> iterationDomain,
@@ -248,12 +246,6 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
                       ArrayRef<OpFoldResult> numThreads) {
   SmallVector<OpFoldResult> offsets, sizes;
   int materializedLoopNum = 0;
-
-  assert(
-      llvm::all_of(iterationDomain,
-                   [](Range r) { return isConstantIntValue(r.stride, 1); }) &&
-      "the offset and tile size computation assumes stride 1 for all "
-      "dimensions of the iteration domain");
 
   if (!numThreads.empty()) {
     AffineExpr d0, d1, s0, s1;
@@ -266,7 +258,9 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
     for (auto [nt, tileSize, loopRange] :
          llvm::zip_equal(numThreads, tileSizes, iterationDomain)) {
 
-      if (isConstantIntValue(nt, 0) || isConstantIntValue(nt, 1)) {
+      // Non-tiled cases, set the offset and size to the
+      // `loopRange.offset/size`.
+      if (isConstantIntValue(nt, 0)) {
         offsets.push_back(loopRange.offset);
         sizes.push_back(loopRange.size);
         continue;
@@ -290,6 +284,16 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
             AffineMap::getMultiDimIdentityMap(2, rewriter.getContext()),
             {sizeMinusOffsetPerThread, tileSize});
       }
+
+      // Consider the case where the original loop was `[0, 100)`.
+      // If number of threads are `7`, the tile size would be computed as
+      // `ceilDiv(100, 7) = 15`. For the last thread (thread_id = 6)
+      // - `offset = 0 + 6 * 15 = 105`
+      // - `tileSize = min(15, 100 - 105) = -5`
+      // To avoid negative tile sizes, we need to do a further
+      // `nonNegativeTileSize = affine.max(0, tileSize)`.
+      // This `max` can be avoided if
+      //  `offset + tileSize * (numThreads - 1) < (ub - lb)`
       if (!canOmitTileOffsetInBoundsCheck(tileSize, nt, loopRange.size)) {
         AffineMap maxMap =
             AffineMap::getMultiDimIdentityMap(2, rewriter.getContext());
@@ -305,6 +309,8 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
     for (auto [tileSize, loopRange] :
          llvm::zip_equal(tileSizes, iterationDomain)) {
 
+      // Non-tiled cases, set the offset and size to the
+      // `loopRange.offset/size`.
       if (isConstantIntValue(tileSize, 0)) {
         offsets.push_back(loopRange.offset);
         sizes.push_back(loopRange.size);
@@ -787,16 +793,11 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
 
   // 1. Get the range of the loops that are represented by the operation.
   SmallVector<Range> iterationDomain = op.getIterationDomain(rewriter);
-  if (llvm::any_of(iterationDomain,
-                   [](Range r) { return !isConstantIntValue(r.stride, 1); })) {
-    return rewriter.notifyMatchFailure(
-        op, "unhandled tiling of iteration domain with non-unit stride");
-  }
 
   // 2. Materialize the tile sizes and/or number of threads;
   SmallVector<OpFoldResult> tileSizes, numThreads;
   std::tie(tileSizes, numThreads) =
-      getTileSizes(rewriter, op, iterationDomain, options);
+      getUserTileSizesAndNumThreads(rewriter, op, iterationDomain, options);
 
   // Check if it is safe to tile. This is hold over from previous iterations
   // of tile to for-all. Consider dropping it.
