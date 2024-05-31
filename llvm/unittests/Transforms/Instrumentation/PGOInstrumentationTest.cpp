@@ -217,7 +217,8 @@ TEST_P(PGOInstrumentationGenIgnoreTest, NotInstrumented) {
 
   const auto *IRInstrVar =
       M->getNamedGlobal(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
-  EXPECT_THAT(IRInstrVar, IsNull());
+  EXPECT_THAT(IRInstrVar, NotNull());
+  EXPECT_FALSE(IRInstrVar->isDeclaration());
 }
 
 } // end anonymous namespace
