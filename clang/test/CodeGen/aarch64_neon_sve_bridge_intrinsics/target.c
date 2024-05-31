@@ -24,9 +24,9 @@ void base(int8x16_t n, bfloat16x8_t m) {
   svget_neonq_s8(svundef_s8()); // expected-error {{'svget_neonq_s8' needs target feature sve}}
   svdup_neonq_s8(n); // expected-error {{'svdup_neonq_s8' needs target feature sve}}
 
-  // expected-error@+1 {{'svundef_bf16' needs target feature sve}}
+  // expected-error@+1 {{'svundef_bf16' needs target feature (sve,bf16)|sme}}
   svset_neonq_bf16(svundef_bf16(), m); // expected-error {{'svset_neonq_bf16' needs target feature sve,bf16}}
-  // expected-error@+1 {{'svundef_bf16' needs target feature sve}}
+  // expected-error@+1 {{'svundef_bf16' needs target feature (sve,bf16)|sme}}
   svget_neonq_bf16(svundef_bf16()); // expected-error {{'svget_neonq_bf16' needs target feature sve,bf16}}
   svdup_neonq_bf16(m); // expected-error {{'svdup_neonq_bf16' needs target feature sve,bf16}}
 }
