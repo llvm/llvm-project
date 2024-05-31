@@ -224,7 +224,7 @@ void AMDGPUPALMetadata::setRegister(unsigned Reg, const MCExpr *Val,
       REM[Reg] = Val;
     (void)Unused;
   }
-  DelayedExprs.AssignDocNode(N, msgpack::Type::UInt, Val);
+  DelayedExprs.assignDocNode(N, msgpack::Type::UInt, Val);
 }
 
 // Set the entry point name for one shader.
@@ -350,7 +350,7 @@ void AMDGPUPALMetadata::setFunctionNumUsedVgprs(StringRef FnName,
 void AMDGPUPALMetadata::setFunctionNumUsedVgprs(StringRef FnName,
                                                 const MCExpr *Val) {
   auto Node = getShaderFunction(FnName);
-  DelayedExprs.AssignDocNode(Node[".vgpr_count"], msgpack::Type::UInt, Val);
+  DelayedExprs.assignDocNode(Node[".vgpr_count"], msgpack::Type::UInt, Val);
 }
 
 // Set the number of used vgprs in the metadata.
@@ -363,7 +363,7 @@ void AMDGPUPALMetadata::setFunctionNumUsedSgprs(StringRef FnName,
 void AMDGPUPALMetadata::setFunctionNumUsedSgprs(StringRef FnName,
                                                 const MCExpr *Val) {
   auto Node = getShaderFunction(FnName);
-  DelayedExprs.AssignDocNode(Node[".sgpr_count"], msgpack::Type::UInt, Val);
+  DelayedExprs.assignDocNode(Node[".sgpr_count"], msgpack::Type::UInt, Val);
 }
 
 // Set the hardware register bit in PAL metadata to enable wave32 on the
@@ -762,7 +762,7 @@ void AMDGPUPALMetadata::toString(std::string &String) {
   String.clear();
   if (!BlobType)
     return;
-  ResolvedAll = DelayedExprs.ResolveDelayedExpressions();
+  ResolvedAll = DelayedExprs.resolveDelayedExpressions();
   raw_string_ostream Stream(String);
   if (isLegacy()) {
     if (MsgPackDoc.getRoot().getKind() == msgpack::Type::Nil)
@@ -812,7 +812,7 @@ void AMDGPUPALMetadata::toString(std::string &String) {
 // a .note record of the specified AMD type. Returns an empty blob if
 // there is no PAL metadata,
 void AMDGPUPALMetadata::toBlob(unsigned Type, std::string &Blob) {
-  ResolvedAll = DelayedExprs.ResolveDelayedExpressions();
+  ResolvedAll = DelayedExprs.resolveDelayedExpressions();
   if (Type == ELF::NT_AMD_PAL_METADATA)
     toLegacyBlob(Blob);
   else if (Type)
@@ -1052,7 +1052,7 @@ void AMDGPUPALMetadata::setHwStage(unsigned CC, StringRef field, bool Val) {
 
 void AMDGPUPALMetadata::setHwStage(unsigned CC, StringRef field,
                                    msgpack::Type Type, const MCExpr *Val) {
-  DelayedExprs.AssignDocNode(getHwStage(CC)[field], Type, Val);
+  DelayedExprs.assignDocNode(getHwStage(CC)[field], Type, Val);
 }
 
 void AMDGPUPALMetadata::setComputeRegisters(StringRef field, unsigned Val) {

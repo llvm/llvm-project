@@ -27,8 +27,8 @@ class DelayedMCExpr {
   std::deque<DelayedExpr> DelayedExprs;
 
 public:
-  bool ResolveDelayedExpressions();
-  void AssignDocNode(msgpack::DocNode &DN, msgpack::Type Type,
+  bool resolveDelayedExpressions();
+  void assignDocNode(msgpack::DocNode &DN, msgpack::Type Type,
                      const MCExpr *Expr);
   void clear();
   bool empty();

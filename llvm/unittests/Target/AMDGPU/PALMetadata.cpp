@@ -40,9 +40,9 @@ protected:
   }
 
   PALMetadata() {
-    std::string Triple = "amdgcn--amdpal";
-    std::string CPU = "gfx1010";
-    std::string FS = "";
+    StringRef Triple = "amdgcn--amdpal";
+    StringRef CPU = "gfx1010";
+    StringRef FS = "";
 
     std::string Error;
     const Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
@@ -67,18 +67,18 @@ protected:
 };
 
 TEST_F(PALMetadata, ResourceRegisterSetORsResolvableUnknown) {
-  std::string yaml = "---\n"
-                     "amdpal.pipelines:\n"
-                     "  - .hardware_stages:\n"
-                     "      .es:\n"
-                     "        .entry_point:    Test\n"
-                     "        .scratch_memory_size: 0\n"
-                     "        .sgpr_count:     0x1\n"
-                     "        .vgpr_count:     0x1\n"
-                     "    .registers:\n"
-                     "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
-                     "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0\n"
-                     "...\n";
+  StringRef yaml = "---\n"
+                   "amdpal.pipelines:\n"
+                   "  - .hardware_stages:\n"
+                   "      .es:\n"
+                   "        .entry_point:    Test\n"
+                   "        .scratch_memory_size: 0\n"
+                   "        .sgpr_count:     0x1\n"
+                   "        .vgpr_count:     0x1\n"
+                   "    .registers:\n"
+                   "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
+                   "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0\n"
+                   "...\n";
 
   MCContext &MCCtx = MF->getContext();
   auto CC = CallingConv::AMDGPU_VS;
@@ -100,18 +100,18 @@ TEST_F(PALMetadata, ResourceRegisterSetORsResolvableUnknown) {
 }
 
 TEST_F(PALMetadata, ResourceRegisterSetORsResolvableUnknowns) {
-  std::string yaml = "---\n"
-                     "amdpal.pipelines:\n"
-                     "  - .hardware_stages:\n"
-                     "      .es:\n"
-                     "        .entry_point:    Test\n"
-                     "        .scratch_memory_size: 0\n"
-                     "        .sgpr_count:     0x1\n"
-                     "        .vgpr_count:     0x1\n"
-                     "    .registers:\n"
-                     "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
-                     "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0\n"
-                     "...\n";
+  StringRef yaml = "---\n"
+                   "amdpal.pipelines:\n"
+                   "  - .hardware_stages:\n"
+                   "      .es:\n"
+                   "        .entry_point:    Test\n"
+                   "        .scratch_memory_size: 0\n"
+                   "        .sgpr_count:     0x1\n"
+                   "        .vgpr_count:     0x1\n"
+                   "    .registers:\n"
+                   "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
+                   "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0\n"
+                   "...\n";
 
   MCContext &MCCtx = MF->getContext();
   auto CC = CallingConv::AMDGPU_VS;
@@ -138,18 +138,18 @@ TEST_F(PALMetadata, ResourceRegisterSetORsResolvableUnknowns) {
 }
 
 TEST_F(PALMetadata, ResourceRegisterSetORsPreset) {
-  std::string yaml = "---\n"
-                     "amdpal.pipelines:\n"
-                     "  - .hardware_stages:\n"
-                     "      .es:\n"
-                     "        .entry_point:    Test\n"
-                     "        .scratch_memory_size: 0\n"
-                     "        .sgpr_count:     0x1\n"
-                     "        .vgpr_count:     0x1\n"
-                     "    .registers:\n"
-                     "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
-                     "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0x2a\n"
-                     "...\n";
+  StringRef yaml = "---\n"
+                   "amdpal.pipelines:\n"
+                   "  - .hardware_stages:\n"
+                   "      .es:\n"
+                   "        .entry_point:    Test\n"
+                   "        .scratch_memory_size: 0\n"
+                   "        .sgpr_count:     0x1\n"
+                   "        .vgpr_count:     0x1\n"
+                   "    .registers:\n"
+                   "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
+                   "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0x2a\n"
+                   "...\n";
 
   MCContext &MCCtx = MF->getContext();
   auto CC = CallingConv::AMDGPU_VS;
@@ -166,18 +166,18 @@ TEST_F(PALMetadata, ResourceRegisterSetORsPreset) {
 }
 
 TEST_F(PALMetadata, ResourceRegisterSetORs) {
-  std::string yaml = "---\n"
-                     "amdpal.pipelines:\n"
-                     "  - .hardware_stages:\n"
-                     "      .es:\n"
-                     "        .entry_point:    Test\n"
-                     "        .scratch_memory_size: 0\n"
-                     "        .sgpr_count:     0x1\n"
-                     "        .vgpr_count:     0x1\n"
-                     "    .registers:\n"
-                     "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
-                     "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0\n"
-                     "...\n";
+  StringRef yaml = "---\n"
+                   "amdpal.pipelines:\n"
+                   "  - .hardware_stages:\n"
+                   "      .es:\n"
+                   "        .entry_point:    Test\n"
+                   "        .scratch_memory_size: 0\n"
+                   "        .sgpr_count:     0x1\n"
+                   "        .vgpr_count:     0x1\n"
+                   "    .registers:\n"
+                   "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
+                   "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0\n"
+                   "...\n";
 
   MCContext &MCCtx = MF->getContext();
   auto CC = CallingConv::AMDGPU_VS;
@@ -195,18 +195,18 @@ TEST_F(PALMetadata, ResourceRegisterSetORs) {
 }
 
 TEST_F(PALMetadata, ResourceRegisterSetUnresolvedSym) {
-  std::string yaml = "---\n"
-                     "amdpal.pipelines:\n"
-                     "  - .hardware_stages:\n"
-                     "      .es:\n"
-                     "        .entry_point:    Test\n"
-                     "        .scratch_memory_size: 0\n"
-                     "        .sgpr_count:     0x1\n"
-                     "        .vgpr_count:     0x1\n"
-                     "    .registers:\n"
-                     "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
-                     "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0\n"
-                     "...\n";
+  StringRef yaml = "---\n"
+                   "amdpal.pipelines:\n"
+                   "  - .hardware_stages:\n"
+                   "      .es:\n"
+                   "        .entry_point:    Test\n"
+                   "        .scratch_memory_size: 0\n"
+                   "        .sgpr_count:     0x1\n"
+                   "        .vgpr_count:     0x1\n"
+                   "    .registers:\n"
+                   "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
+                   "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0\n"
+                   "...\n";
 
   MCContext &MCCtx = MF->getContext();
   auto CC = CallingConv::AMDGPU_VS;
@@ -221,18 +221,18 @@ TEST_F(PALMetadata, ResourceRegisterSetUnresolvedSym) {
 }
 
 TEST_F(PALMetadata, ResourceRegisterSetNoEmitUnresolved) {
-  std::string yaml = "---\n"
-                     "amdpal.pipelines:\n"
-                     "  - .hardware_stages:\n"
-                     "      .es:\n"
-                     "        .entry_point:    Test\n"
-                     "        .scratch_memory_size: 0\n"
-                     "        .sgpr_count:     0x1\n"
-                     "        .vgpr_count:     0x1\n"
-                     "    .registers:\n"
-                     "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
-                     "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0\n"
-                     "...\n";
+  StringRef yaml = "---\n"
+                   "amdpal.pipelines:\n"
+                   "  - .hardware_stages:\n"
+                   "      .es:\n"
+                   "        .entry_point:    Test\n"
+                   "        .scratch_memory_size: 0\n"
+                   "        .sgpr_count:     0x1\n"
+                   "        .vgpr_count:     0x1\n"
+                   "    .registers:\n"
+                   "      \'0x2c4a (SPI_SHADER_PGM_RSRC1_VS)\': 0x2f0000\n"
+                   "      \'0x2c4b (SPI_SHADER_PGM_RSRC2_VS)\': 0\n"
+                   "...\n";
 
   MCContext &MCCtx = MF->getContext();
   auto CC = CallingConv::AMDGPU_VS;

@@ -24,7 +24,7 @@ namespace AMDGPU {
 ///
 /// For example, given C_00B848_FWD_PROGRESS (i.e., 0x7FFFFFFF) from
 /// SIDefines.h, this will return the pair as (31,1).
-constexpr inline std::pair<unsigned, unsigned> getShiftMask(unsigned Value) {
+constexpr std::pair<unsigned, unsigned> getShiftMask(unsigned Value) {
   unsigned Shift = 0;
   unsigned Mask = 0;
 

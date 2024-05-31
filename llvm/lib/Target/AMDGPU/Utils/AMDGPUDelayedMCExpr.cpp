@@ -27,7 +27,7 @@ static msgpack::DocNode getNode(msgpack::DocNode DN, msgpack::Type Type,
   }
 }
 
-void DelayedMCExpr::AssignDocNode(msgpack::DocNode &DN, msgpack::Type Type,
+void DelayedMCExpr::assignDocNode(msgpack::DocNode &DN, msgpack::Type Type,
                                   const MCExpr *Expr) {
   MCValue Res;
   if (Expr->evaluateAsRelocatable(Res, nullptr, nullptr)) {
@@ -40,7 +40,7 @@ void DelayedMCExpr::AssignDocNode(msgpack::DocNode &DN, msgpack::Type Type,
   DelayedExprs.push_back(DelayedExpr{DN, Type, Expr});
 }
 
-bool DelayedMCExpr::ResolveDelayedExpressions() {
+bool DelayedMCExpr::resolveDelayedExpressions() {
   bool Success;
 
   while (!DelayedExprs.empty()) {
