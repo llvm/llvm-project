@@ -320,21 +320,19 @@ llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
 
     llvm::Metadata *metadata =
         llvm::TypeSwitch<Attribute, llvm::Metadata *>(attr)
-            .Case<IntegerAttr>([&](IntegerAttr intAttr) {
+            .Case([&](IntegerAttr intAttr) {
               return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
                   llvm::Type::getInt64Ty(llvmCtx), intAttr.getInt()));
             })
-            .Case<LLVM::DIExpressionAttr>([&](LLVM::DIExpressionAttr expr) {
+            .Case([&](LLVM::DIExpressionAttr expr) {
               return translateExpression(expr);
             })
-            .Case<LLVM::DILocalVariableAttr>(
-                [&](LLVM::DILocalVariableAttr local) {
-                  return translate(local);
-                })
-            .Case<LLVM::DIGlobalVariableAttr>(
-                [&](LLVM::DIGlobalVariableAttr global) {
-                  return translate(global);
-                })
+            .Case([&](LLVM::DILocalVariableAttr local) {
+              return translate(local);
+            })
+            .Case<>([&](LLVM::DIGlobalVariableAttr global) {
+              return translate(global);
+            })
             .Default([&](Attribute attr) { return nullptr; });
     return metadata;
   };

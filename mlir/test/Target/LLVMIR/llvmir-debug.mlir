@@ -547,14 +547,12 @@ llvm.func @fn_with_composite() {
 #loc1 = loc("test.f90": 1:1)
 #loc2 = loc(fused<#sp>[#loc1])
 
-module attributes {} {
-  llvm.mlir.global external @gv() {dbg_expr = #gve} : i64
+llvm.mlir.global external @gv() {dbg_expr = #gve} : i64
 
-  llvm.func @subranges(%arg: !llvm.ptr) {
-    llvm.intr.dbg.declare #lvar2 = %arg : !llvm.ptr
-    llvm.return
-  } loc(#loc2)
-}
+llvm.func @subranges(%arg: !llvm.ptr) {
+  llvm.intr.dbg.declare #lvar2 = %arg : !llvm.ptr
+  llvm.return
+} loc(#loc2)
 
 // CHECK-LABEL: define void @subranges
 // CHECK: ![[GV:[0-9]+]] = {{.*}}!DIGlobalVariable(name: "gv"{{.*}})

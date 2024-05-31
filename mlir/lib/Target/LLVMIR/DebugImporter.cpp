@@ -217,19 +217,18 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
 }
 
 DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {
-  auto getAttrOrNull =
-      [&](llvm::DISubrange::BoundType data) -> mlir::Attribute {
+  auto getAttrOrNull = [&](llvm::DISubrange::BoundType data) -> Attribute {
     if (data.isNull())
       return nullptr;
-    if (auto *constInt = llvm::dyn_cast<llvm::ConstantInt *>(data))
+    if (auto *constInt = dyn_cast<llvm::ConstantInt *>(data))
       return IntegerAttr::get(IntegerType::get(context, 64),
                               constInt->getSExtValue());
-    if (auto *expr = llvm::dyn_cast<llvm::DIExpression *>(data))
+    if (auto *expr = dyn_cast<llvm::DIExpression *>(data))
       return translateExpression(expr);
-    if (auto *var = llvm::dyn_cast<llvm::DIVariable *>(data)) {
-      if (auto *local = llvm::dyn_cast<llvm::DILocalVariable>(var))
+    if (auto *var = dyn_cast<llvm::DIVariable *>(data)) {
+      if (auto *local = dyn_cast<llvm::DILocalVariable>(var))
         return translate(local);
-      if (auto *global = llvm::dyn_cast<llvm::DIGlobalVariable>(var))
+      if (auto *global = dyn_cast<llvm::DIGlobalVariable>(var))
         return translate(global);
       return nullptr;
     }
