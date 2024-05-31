@@ -75,7 +75,7 @@ class CXXScopeSpec {
   SourceRange Range;
   NestedNameSpecifierLocBuilder Builder;
   ArrayRef<TemplateParameterList *> TemplateParamLists;
-  NamedDecl *FoundFirstQualifierInScope;
+  ArrayRef<DeclAccessPair> UnqualifiedLookups;
 
 public:
   SourceRange getRange() const { return Range; }
@@ -92,11 +92,11 @@ public:
     return TemplateParamLists;
   }
 
-  void setFoundFirstQualifierInScope(NamedDecl *Found) {
-    FoundFirstQualifierInScope = Found;
+  void setUnqualifiedLookups(ArrayRef<DeclAccessPair> Found) {
+    UnqualifiedLookups = Found;
   }
-  NamedDecl *getFirstQualifierFoundInScope() const {
-    return FoundFirstQualifierInScope;
+  ArrayRef<DeclAccessPair> getUnqualifiedLookups() const {
+    return UnqualifiedLookups;
   }
 
   /// Retrieve the representation of the nested-name-specifier.

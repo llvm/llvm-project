@@ -2802,7 +2802,7 @@ public:
   /// (e.g., Base::), perform name lookup for that identifier as a
   /// nested-name-specifier within the given scope, and return the result of
   /// that name lookup.
-  NamedDecl *FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS);
+  bool LookupFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS, UnresolvedSetImpl &R);
 
   /// Keeps information about an identifier in a nested-name-spec.
   ///
@@ -2866,7 +2866,6 @@ public:
   /// specifier.
   bool BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                    bool EnteringContext, CXXScopeSpec &SS,
-                                   NamedDecl *ScopeLookupResult,
                                    bool ErrorRecoveryLookup,
                                    bool *IsCorrectedToColon = nullptr,
                                    bool OnlyNamespace = false);
@@ -8569,7 +8568,7 @@ public:
   ExprResult ActOnDependentMemberExpr(
       Expr *Base, QualType BaseType, bool IsArrow, SourceLocation OpLoc,
       const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-      NamedDecl *FirstQualifierInScope, const DeclarationNameInfo &NameInfo,
+      const DeclarationNameInfo &NameInfo,
       const TemplateArgumentListInfo *TemplateArgs);
 
   /// The main callback when the parser finds something like
@@ -8626,15 +8625,14 @@ public:
   ExprResult BuildMemberReferenceExpr(
       Expr *Base, QualType BaseType, SourceLocation OpLoc, bool IsArrow,
       CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-      NamedDecl *FirstQualifierInScope, const DeclarationNameInfo &NameInfo,
+      const DeclarationNameInfo &NameInfo,
       const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
       ActOnMemberAccessExtraArgs *ExtraArgs = nullptr);
 
   ExprResult
   BuildMemberReferenceExpr(Expr *Base, QualType BaseType, SourceLocation OpLoc,
                            bool IsArrow, const CXXScopeSpec &SS,
-                           SourceLocation TemplateKWLoc,
-                           NamedDecl *FirstQualifierInScope, LookupResult &R,
+                           SourceLocation TemplateKWLoc, LookupResult &R,
                            const TemplateArgumentListInfo *TemplateArgs,
                            const Scope *S, bool SuppressQualifierCheck = false,
                            ActOnMemberAccessExtraArgs *ExtraArgs = nullptr);

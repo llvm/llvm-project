@@ -307,7 +307,7 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
   CXXScopeSpec SS;
   ExprResult Result = S.BuildMemberReferenceExpr(
       Base, Base->getType(), Loc, /*IsPtr=*/false, SS,
-      SourceLocation(), nullptr, NameInfo, /*TemplateArgs=*/nullptr,
+      SourceLocation(), NameInfo, /*TemplateArgs=*/nullptr,
       /*Scope=*/nullptr);
   if (Result.isInvalid())
     return ExprError();

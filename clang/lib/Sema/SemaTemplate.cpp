@@ -469,10 +469,13 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     //   expression. If the identifier is not found, it is then looked up in
     //   the context of the entire postfix-expression and shall name a class
     //   template.
-    if (S)
+    if (S) {
       LookupName(Found, S);
-    else if (LookupFirstQualifierInScope && SS.getFirstQualifierFoundInScope())
-      Found.addDecl(SS.getFirstQualifierFoundInScope());
+    } else if (LookupFirstQualifierInScope &&
+        !SS.getUnqualifiedLookups().empty()) {
+      Found.addAllDecls(SS.getUnqualifiedLookups());
+      Found.resolveKind();
+    }
 
     if (!ObjectType.isNull())
       ObjectTypeSearchedInScope = true;
@@ -744,7 +747,7 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
         /*IsArrow=*/!Context.getLangOpts().HLSL,
         /*OperatorLoc=*/SourceLocation(),
         /*QualifierLoc=*/NestedNameSpecifierLoc(), TemplateKWLoc,
-        /*FirstQualifierFoundInScope=*/nullptr, NameInfo, TemplateArgs);
+        /*UnqualifiedLookups=*/std::nullopt, NameInfo, TemplateArgs);
   }
   return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs);
 }

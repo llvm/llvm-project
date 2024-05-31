@@ -16045,9 +16045,8 @@ Sema::BuildForRangeBeginEndCall(SourceLocation Loc,
   if (!MemberLookup.empty()) {
     ExprResult MemberRef =
         BuildMemberReferenceExpr(Range, Range->getType(), Loc,
-                                 /*IsPtr=*/false, CXXScopeSpec(),
+                                 /*IsPtr=*/false, /*SS=*/CXXScopeSpec(),
                                  /*TemplateKWLoc=*/SourceLocation(),
-                                 /*FirstQualifierInScope=*/nullptr,
                                  MemberLookup,
                                  /*TemplateArgs=*/nullptr, S);
     if (MemberRef.isInvalid()) {

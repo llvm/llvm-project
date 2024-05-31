@@ -1275,9 +1275,11 @@ static bool checkTupleLikeDecomposition(Sema &S,
     if (UseMemberGet) {
       //   if [lookup of member get] finds at least one declaration, the
       //   initializer is e.get<i-1>().
-      E = S.BuildMemberReferenceExpr(E.get(), DecompType, Loc, false,
-                                     CXXScopeSpec(), SourceLocation(), nullptr,
-                                     MemberGet, &Args, nullptr);
+      E = S.BuildMemberReferenceExpr(E.get(), DecompType, Loc,
+                                     /*IsArrow=*/false,
+                                     /*SS=*/CXXScopeSpec(),
+                                     /*TemplateKWLoc=*/SourceLocation(),
+                                     MemberGet, &Args, /*S=*/nullptr);
       if (E.isInvalid())
         return true;
 
@@ -4907,10 +4909,9 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
                                          /*IsArrow=*/false,
                                          SS,
                                          /*TemplateKWLoc=*/SourceLocation(),
-                                         /*FirstQualifierInScope=*/nullptr,
                                          MemberLookup,
                                          /*TemplateArgs=*/nullptr,
-                                         /*S*/nullptr);
+                                         /*S=*/nullptr);
     if (CtorArg.isInvalid())
       return true;
 
@@ -14336,8 +14337,9 @@ class MemberBuilder: public ExprBuilder {
 public:
   Expr *build(Sema &S, SourceLocation Loc) const override {
     return assertNotNull(S.BuildMemberReferenceExpr(
-        Builder.build(S, Loc), Type, Loc, IsArrow, SS, SourceLocation(),
-        nullptr, MemberLookup, nullptr, nullptr).get());
+        Builder.build(S, Loc), Type, Loc, IsArrow, SS,
+        /*TemplateKwLoc=*/SourceLocation(), MemberLookup,
+        /*TemplateArgs=*/nullptr, /*S=*/nullptr).get());
   }
 
   MemberBuilder(const ExprBuilder &Builder, QualType Type, bool IsArrow,
@@ -14546,7 +14548,6 @@ buildSingleCopyAssignRecursively(Sema &S, SourceLocation Loc, QualType T,
     ExprResult OpEqualRef
       = S.BuildMemberReferenceExpr(To.build(S, Loc), T, Loc, /*IsArrow=*/false,
                                    SS, /*TemplateKWLoc=*/SourceLocation(),
-                                   /*FirstQualifierInScope=*/nullptr,
                                    OpLookup,
                                    /*TemplateArgs=*/nullptr, /*S*/nullptr,
                                    /*SuppressQualifierCheck=*/true);
@@ -17155,8 +17156,9 @@ bool Sema::EvaluateStaticAssertMessageAsString(Expr *Message,
 
   auto BuildExpr = [&](LookupResult &LR) {
     ExprResult Res = BuildMemberReferenceExpr(
-        Message, Message->getType(), Message->getBeginLoc(), false,
-        CXXScopeSpec(), SourceLocation(), nullptr, LR, nullptr, nullptr);
+        Message, Message->getType(), Message->getBeginLoc(), /*IsArrow=*/false,
+        /*SS=*/CXXScopeSpec(), /*TemplateKWLoc=*/SourceLocation(), LR,
+        /*TemplateArgs=*/nullptr, /*S=*/nullptr);
     if (Res.isInvalid())
       return ExprError();
     Res = BuildCallExpr(nullptr, Res.get(), Loc, std::nullopt, Loc, nullptr,

@@ -356,9 +356,9 @@ bool Sema::isAcceptableNestedNameSpecifier(const NamedDecl *SD,
   return false;
 }
 
-NamedDecl *Sema::FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS) {
-  if (!S || !NNS)
-    return nullptr;
+bool Sema::LookupFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS, UnresolvedSetImpl &R) {
+  if (!S)
+    return false;
 
   while (NNS->getPrefix())
     NNS = NNS->getPrefix();
@@ -372,23 +372,20 @@ NamedDecl *Sema::FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS) {
                 NNS->getAsType()))
       II = DTST->getIdentifier();
     else
-      return nullptr;
+      return false;
   }
   assert(II && "Missing first qualifier in scope");
   LookupResult Found(*this, II, SourceLocation(),
                      NNS->getAsIdentifier() ? LookupNestedNameSpecifierName
                                             : LookupOrdinaryName);
   LookupName(Found, S);
-  assert(!Found.isAmbiguous() && "Cannot handle ambiguities here yet");
 
-  if (!Found.isSingleResult())
-    return nullptr;
+  if (Found.empty())
+    return false;
 
-  NamedDecl *Result = Found.getFoundDecl();
-  // if (isAcceptableNestedNameSpecifier(Result))
-  return Result;
-
-  // return nullptr;
+  R.addAllDecls(Found.asUnresolvedSet().pairs());
+  Found.suppressDiagnostics();
+  return true;
 }
 
 namespace {
@@ -417,7 +414,6 @@ public:
 
 bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                        bool EnteringContext, CXXScopeSpec &SS,
-                                       NamedDecl *ScopeLookupResult,
                                        bool ErrorRecoveryLookup,
                                        bool *IsCorrectedToColon,
                                        bool OnlyNamespace) {
@@ -469,10 +465,13 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
   // but instead of using them we should store them via
   // setFirstQualifierFoundInScope and pretend we found nothing.
   if (SS.isEmpty() && (ObjectType.isNull() || LookupFirstQualifierInScope)) {
-    if (S)
+    if (S) {
       LookupName(Found, S);
-    else if (LookupFirstQualifierInScope && SS.getFirstQualifierFoundInScope())
-      Found.addDecl(SS.getFirstQualifierFoundInScope());
+    } else if (LookupFirstQualifierInScope &&
+        !SS.getUnqualifiedLookups().empty()) {
+      Found.addAllDecls(SS.getUnqualifiedLookups());
+      Found.resolveKind();
+    }
 
     if (!ObjectType.isNull())
       ObjectTypeSearchedInScope = true;
@@ -622,14 +621,14 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
       // scope, reconstruct the result from the template instantiation itself.
       //
       // Note that C++11 does *not* perform this redundant lookup.
-      NamedDecl *OuterDecl;
+      NamedDecl *OuterDecl = nullptr;
       if (S) {
         LookupResult FoundOuter(*this, IdInfo.Identifier, IdInfo.IdentifierLoc,
                                 LookupNestedNameSpecifierName);
         LookupName(FoundOuter, S);
         OuterDecl = FoundOuter.getAsSingle<NamedDecl>();
-      } else
-        OuterDecl = ScopeLookupResult;
+      } else if (!SS.getUnqualifiedLookups().empty())
+        OuterDecl = SS.getUnqualifiedLookups().front().getDecl();
 
       if (isAcceptableNestedNameSpecifier(OuterDecl) &&
           OuterDecl->getCanonicalDecl() != SD->getCanonicalDecl() &&
@@ -807,7 +806,7 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     return true;
 
   return BuildCXXNestedNameSpecifier(S, IdInfo, EnteringContext, SS,
-                                     /*ScopeLookupResult=*/nullptr, false,
+                                     /*ErrorRecoveryLookup=*/false,
                                      IsCorrectedToColon, OnlyNamespace);
 }
 
@@ -868,7 +867,7 @@ bool Sema::IsInvalidUnlessNestedName(Scope *S, CXXScopeSpec &SS,
     return false;
 
   return !BuildCXXNestedNameSpecifier(S, IdInfo, EnteringContext, SS,
-                                      /*ScopeLookupResult=*/nullptr, true);
+                                      /*ErrorRecoveryLookup=*/true);
 }
 
 bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
