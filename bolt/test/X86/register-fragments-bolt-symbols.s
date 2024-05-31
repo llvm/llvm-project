@@ -1,4 +1,4 @@
-# Test the heuristics for matching BOLT-added split functions.
+## Test the heuristics for matching BOLT-added split functions.
 
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %S/cdsplit-symbol-names.s -o %t.main.o
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %s -o %t.chain.o
