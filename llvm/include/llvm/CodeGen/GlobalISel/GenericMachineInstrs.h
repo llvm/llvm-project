@@ -24,8 +24,9 @@ namespace llvm {
 
 /// A base class for all GenericMachineInstrs.
 class GenericMachineInstr : public MachineInstr {
-  constexpr static int PoisonFlags = NoUWrap | NoSWrap | NoUSWrap | IsExact |
-                                     Disjoint | NonNeg | FmNoNans | FmNoInfs;
+  constexpr static unsigned PoisonFlags = NoUWrap | NoSWrap | NoUSWrap |
+                                          IsExact | Disjoint | NonNeg |
+                                          FmNoNans | FmNoInfs;
 
 public:
   GenericMachineInstr() = delete;
