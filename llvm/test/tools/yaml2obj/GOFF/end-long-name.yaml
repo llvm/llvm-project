@@ -1,11 +1,15 @@
-# RUN: sed -e "s/@FILL@/$(printf '%47s')/g" < %s | yaml2obj | \
-# RUN:   od -v -An -tx1 | FileCheck --ignore-case --check-prefix CHECK1 %s
-# RUN: sed -e "s/@FILL@/$(printf '%48s')/g" < %s | yaml2obj | \
-# RUN:   od -v -An -tx1 | FileCheck --ignore-case --check-prefix CHECK2 %s
-# RUN: sed -e "s/@FILL@/$(printf '%125s')/g" < %s | yaml2obj | \
-# RUN:   od -v -An -tx1 | FileCheck --ignore-case --check-prefix CHECK3 %s
-# RUN: sed -e "s/@FILL@/$(printf '%160s')/g" < %s | yaml2obj | \
-# RUN:   od -v -An -tx1 | FileCheck --ignore-case --check-prefix CHECK4 %s
+# RUN: awk -e 'BEGIN {str = sprintf("%47s", "")} {gsub("@FILL@", str); print}' < %s | \
+# RUN:   yaml2obj | od -v -An -tx1 | \
+# RUN:   FileCheck --ignore-case --check-prefix CHECK1 %s
+# RUN: awk -e 'BEGIN {str = sprintf("%48s", "")} {gsub("@FILL@", str); print}' < %s | \
+# RUN:   yaml2obj | od -v -An -tx1 | \
+# RUN:   FileCheck --ignore-case --check-prefix CHECK2 %s
+# RUN: awk -e 'BEGIN {str = sprintf("%125s", "")} {gsub("@FILL@", str); print}' < %s | \
+# RUN:   yaml2obj | od -v -An -tx1 | \
+# RUN:   FileCheck --ignore-case --check-prefix CHECK3 %s
+# RUN: awk -e 'BEGIN {str = sprintf("%160s", "")} {gsub("@FILL@", str); print}' < %s | \
+# RUN:   yaml2obj | od -v -An -tx1 | \
+# RUN:   FileCheck --ignore-case --check-prefix CHECK4 %s
 
 
 ## Verify that the entry name is written correctly over multiple records.
