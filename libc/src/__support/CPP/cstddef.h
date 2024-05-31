@@ -16,6 +16,10 @@ namespace LIBC_NAMESPACE::cpp {
 
 enum class byte : unsigned char {};
 
+// When built with clang, this will use the definition from the clang header
+// __stddef_max_align_t.h
+using ::max_align_t LIBC_USING_IF_EXISTS;
+
 template <class IntegerType>
 LIBC_INLINE constexpr enable_if_t<is_integral_v<IntegerType>, byte>
 operator>>(byte b, IntegerType shift) noexcept {
