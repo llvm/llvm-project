@@ -1,0 +1,94 @@
+// RUN: cir-opt %s -cir-to-mlir -o %t.mlir
+// RUN: FileCheck %s --input-file %t.mlir
+
+!s16i = !cir.int<s, 16>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u16i = !cir.int<u, 16>
+!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
+
+
+// int clz_u16(unsigned short x) {
+//   return __builtin_clzs(x);   
+// }
+cir.func @clz_u16(%arg : !u16i) {
+  %0 = cir.bit.clz(%arg : !u16i) : !s32i
+  cir.return
+}
+
+//      CHECK:   func.func @clz_u16(%arg0: i16) {
+// CHECK-NEXT:     %[[CLZ_U16:.+]] = math.ctlz %arg0 : i16
+// CHECK-NEXT:     %[[EXTUI_U16:.+]] = arith.extui %[[CLZ_U16]] : i16 to i32
+// CHECK-NEXT:     return
+// CHECK-NEXT:   }
+
+// int clz_u32(unsigned x) {
+//   return __builtin_clz(x);
+// }
+cir.func @clz_u32(%arg : !u32i) {
+  %0 = cir.bit.clz(%arg : !u32i) : !s32i
+  cir.return
+}
+
+//      CHECK:   func.func @clz_u32(%arg0: i32) {
+// CHECK-NEXT:     %[[CLZ_U32:.+]] = math.ctlz %arg0 : i32
+// CHECK-NEXT:     %[[BITCAST_U32:.+]] = arith.bitcast %[[CLZ_U32]] : i32 to i32
+// CHECK-NEXT:     return
+// CHECK-NEXT:   }
+
+// int clz_u64(unsigned long x) {
+//   return __builtin_clzl(x);
+// }
+cir.func @clz_u64(%arg : !u64i) {
+  %0 = cir.bit.clz(%arg : !u64i) : !s32i
+  cir.return
+}
+
+//      CHECK:   func.func @clz_u64(%arg0: i64) {
+// CHECK-NEXT:     %[[CLZ_U64:.+]] = math.ctlz %arg0 : i64
+// CHECK-NEXT:     %[[TRUNCI_U64:.+]] = arith.trunci %[[CLZ_U64]] : i64 to i32
+// CHECK-NEXT:     return
+// CHECK-NEXT:   }
+
+// int ctz_u16(unsigned short x) {
+//   return __builtin_ctzs(x);   
+// }
+cir.func @ctz_u16(%arg : !u16i) {
+  %0 = cir.bit.ctz(%arg : !u16i) : !s32i
+  cir.return
+}
+
+//      CHECK:   func.func @ctz_u16(%arg0: i16) {
+// CHECK-NEXT:     %[[CTZ_U16:.+]] = math.cttz %arg0 : i16
+// CHECK-NEXT:     %[[EXTUI_U16:.+]] = arith.extui %[[CTZ_U16]] : i16 to i32
+// CHECK-NEXT:     return
+// CHECK-NEXT:   }
+
+// int ctz_u32(unsigned x) {
+//   return __builtin_ctz(x);   
+// }
+cir.func @ctz_u32(%arg : !u32i) {
+  %0 = cir.bit.ctz(%arg : !u32i) : !s32i
+  cir.return
+}
+
+//      CHECK:   func.func @ctz_u32(%arg0: i32) {
+// CHECK-NEXT:     %[[CTZ_U32:.+]] = math.cttz %arg0 : i32
+// CHECK-NEXT:     %[[BITCAST_U32:.+]] = arith.bitcast %[[CTZ_U32]] : i32 to i32
+// CHECK-NEXT:     return
+// CHECK-NEXT:   }
+
+// int ctz_u64(unsigned long x) {
+//   return __builtin_ctzl(x);   
+// }
+cir.func @ctz_u64(%arg : !u64i) {
+  %0 = cir.bit.ctz(%arg : !u64i) : !s32i
+  cir.return
+}
+
+//      CHECK:   func.func @ctz_u64(%arg0: i64) {
+// CHECK-NEXT:     %[[CTZ_U64:.+]] = math.cttz %arg0 : i64
+// CHECK-NEXT:     %[[TRUNCI_U64:.+]] = arith.trunci %[[CTZ_U64]] : i64 to i32
+// CHECK-NEXT:     return
+// CHECK-NEXT:   }
