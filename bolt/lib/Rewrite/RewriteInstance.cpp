@@ -55,7 +55,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
@@ -945,9 +944,6 @@ void RewriteInstance::discoverFileObjects() {
   BinaryFunction *PreviousFunction = nullptr;
   unsigned AnonymousId = 0;
 
-  // Regex object for matching cold fragments.
-  const Regex ColdFragment(".*\\.cold(\\.[0-9]+)?");
-
   const auto SortedSymbolsEnd =
       LastSymbol == SortedSymbols.end() ? LastSymbol : std::next(LastSymbol);
   for (auto Iter = SortedSymbols.begin(); Iter != SortedSymbolsEnd; ++Iter) {
@@ -1229,7 +1225,7 @@ void RewriteInstance::discoverFileObjects() {
     }
 
     // Check if it's a cold function fragment.
-    if (ColdFragment.match(SymName)) {
+    if (FunctionFragmentTemplate.match(SymName)) {
       static bool PrintedWarning = false;
       if (!PrintedWarning) {
         PrintedWarning = true;
@@ -1460,10 +1456,10 @@ void RewriteInstance::registerFragments() {
     for (StringRef Name : Function.getNames()) {
       StringRef BaseName = NR.restore(Name);
       const bool IsGlobal = BaseName == Name;
-      const size_t ColdSuffixPos = BaseName.find(".cold");
-      if (ColdSuffixPos == StringRef::npos)
+      SmallVector<StringRef> Matches;
+      if (!FunctionFragmentTemplate.match(BaseName, &Matches))
         continue;
-      StringRef ParentName = BaseName.substr(0, ColdSuffixPos);
+      StringRef ParentName = Matches[1];
       const BinaryData *BD = BC->getBinaryDataByName(ParentName);
       const uint64_t NumPossibleLocalParents =
           NR.getUniquifiedNameCount(ParentName);
