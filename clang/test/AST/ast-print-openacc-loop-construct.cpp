@@ -32,4 +32,20 @@ void foo() {
 // CHECK-NEXT: ;
 #pragma acc loop dtype(AnotherIdent)
   for(;;);
+
+// CHECK: #pragma acc loop independent
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop independent
+  for(;;);
+// CHECK: #pragma acc loop seq
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop seq
+  for(;;);
+// CHECK: #pragma acc loop auto
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop auto
+  for(;;);
 }
