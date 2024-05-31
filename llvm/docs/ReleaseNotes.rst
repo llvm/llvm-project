@@ -158,6 +158,7 @@ Changes to the RISC-V Backend
 * Zabha is no longer experimental.
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 * Added smcdeleg and ssccfg extensions to -march.
+* Added smcsrind and sscsrind extensions to -march. CSR names for them were already supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------
