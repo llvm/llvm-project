@@ -1064,8 +1064,6 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
 
 amd_comgr_status_t AMDGPUCompiler::addDeviceLibraries() {
 
-  Args.push_back("-Xclang");
-  Args.push_back("-mlink-builtin-bitcode-postopt");
   NoGpuLib = false;
 
   SmallString<256> ClangBinaryPath(env::getLLVMPath());
@@ -1159,6 +1157,13 @@ amd_comgr_status_t AMDGPUCompiler::compileToBitcode(bool WithDeviceLibs) {
     if (auto Status = addDeviceLibraries()) {
       return Status;
     }
+
+    // Currently linking postopt is only needed for OpenCL. If this becomes
+    // necessary for HIP (for example if HIP adopts the same AMDGPUSimplifyLibs
+    // strategy that potentially introduces undefined device-library symbols),
+    // we will need also apply this option in compileToRelocatable().
+    Args.push_back("-Xclang");
+    Args.push_back("-mlink-builtin-bitcode-postopt");
   }
 
   return processFiles(AMD_COMGR_DATA_KIND_BC, ".bc");
