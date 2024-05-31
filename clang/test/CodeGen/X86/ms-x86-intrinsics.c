@@ -88,22 +88,6 @@ unsigned long test_inpd(unsigned short port) {
 // CHECK:       [[TMP0:%.*]] = tail call i32 asm sideeffect "inl ${1:w}, ${0:k}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
 // CHECK-NEXT:  ret i32 [[TMP0]]
 
-int test_inp2(unsigned short port) {
-  return inp(port);
-}
-// CHECK-LABEL: i32 @test_inp2(i16 noundef
-// CHECK-SAME:  [[PORT:%.*]])
-// CHECK:       [[TMP0:%.*]] = tail call i32 asm sideeffect "inb ${1:w}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
-// CHECK-NEXT:  ret i32 [[TMP0]]
-
-unsigned short test_inpw2(unsigned short port) {
-  return inpw(port);
-}
-// CHECK-LABEL: i16 @test_inpw2(i16 noundef
-// CHECK-SAME:  [[PORT:%.*]])
-// CHECK:       [[TMP0:%.*]] = tail call i16 asm sideeffect "inw ${1:w}, ${0:w}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
-// CHECK-NEXT:  ret i16 [[TMP0]]
-
 #if defined(__x86_64__)
 
 char test__readgsbyte(unsigned long Offset) {

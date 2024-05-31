@@ -348,9 +348,6 @@ static inline unsigned long _inpd(unsigned short port) {
   return ret;
 }
 
-#define inp(port) _inp((port))
-#define inpw(port) _inpw((port))
-
 #endif
 
 #if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
