@@ -14,7 +14,7 @@
 // UNSUPPORTED: no-exceptions
 
 // 65ace9daa360 made it in the dylib in macOS 10.11
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx10.{{9|10}}
 
 #include <cassert>
 

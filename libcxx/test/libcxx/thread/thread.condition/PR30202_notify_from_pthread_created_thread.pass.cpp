@@ -14,7 +14,7 @@
 // UNSUPPORTED: c++03
 
 // PR30202 was fixed starting in macosx10.13.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
 // <condition_variable>
 

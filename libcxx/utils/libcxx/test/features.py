@@ -591,7 +591,7 @@ DEFAULT_FEATURES += [
 # markup, where we want to make sure that using the annotated facility on a deployment
 # target that doesn't support it will fail at compile time, not at runtime. This can
 # be achieved by creating a `.verify.cpp` test that checks for the right errors, and
-# mark that test as requiring `stdlib=<vendor>-libc++ && target=<target>`.
+# mark that test as requiring `stdlib=system && target=<target>`.
 #
 # Since it is not always known which deployment target to pick there are
 # short-hands based on the LLVM version like using-built-library-before-llvm-xx.
@@ -603,14 +603,14 @@ DEFAULT_FEATURES += [
     Feature(
         name="using-built-library-before-llvm-11",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0)(.0)?}}",
+            "stdlib=system && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0)(.0)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="using-built-library-before-llvm-12",
         when=lambda cfg: BooleanExpression.evaluate(
-            "using-built-library-before-llvm-11 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx12.{{(0|1|2)}}.0)",
+            "using-built-library-before-llvm-11 || (stdlib=system && target={{.+}}-apple-macosx12.{{(0|1|2)}}.0)",
             cfg.available_features,
         ),
     ),
@@ -618,7 +618,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="using-built-library-before-llvm-13",
         when=lambda cfg: BooleanExpression.evaluate(
-            "using-built-library-before-llvm-12 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx{{((12.(3|4|5|6|7))|(13.(0|1|2|3)))}}.0)",
+            "using-built-library-before-llvm-12 || (stdlib=system && target={{.+}}-apple-macosx{{((12.(3|4|5|6|7))|(13.(0|1|2|3)))}}.0)",
             cfg.available_features,
         ),
     ),
@@ -634,7 +634,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="using-built-library-before-llvm-15",
         when=lambda cfg: BooleanExpression.evaluate(
-            "using-built-library-before-llvm-14 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx13.{{(4|5|6)}}.0)",
+            "using-built-library-before-llvm-14 || (stdlib=system && target={{.+}}-apple-macosx13.{{(4|5|6)}}.0)",
             cfg.available_features,
         ),
     ),
@@ -642,7 +642,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="using-built-library-before-llvm-16",
         when=lambda cfg: BooleanExpression.evaluate(
-            "using-built-library-before-llvm-15 || (stdlib=apple-libc++ && target={{.+}}-apple-macosx14.{{(0|1|2|3)}}.0)",
+            "using-built-library-before-llvm-15 || (stdlib=system && target={{.+}}-apple-macosx14.{{(0|1|2|3)}}.0)",
             cfg.available_features,
         ),
     ),
@@ -660,7 +660,7 @@ DEFAULT_FEATURES += [
         when=lambda cfg: BooleanExpression.evaluate(
             # For now, no released version of macOS contains LLVM 18
             # TODO(ldionne) Please provide the correct value.
-            "using-built-library-before-llvm-17 || stdlib=apple-libc++ && target={{.+}}-apple-macosx{{.+}}",
+            "using-built-library-before-llvm-17 || stdlib=system && target={{.+}}-apple-macosx{{.+}}",
             cfg.available_features,
         ),
     ),
@@ -670,7 +670,7 @@ DEFAULT_FEATURES += [
         when=lambda cfg: BooleanExpression.evaluate(
             # For now, no released version of macOS contains LLVM 19
             # TODO(ldionne) Please provide the correct value.
-            "using-built-library-before-llvm-18 || stdlib=apple-libc++ && target={{.+}}-apple-macosx{{.+}}",
+            "using-built-library-before-llvm-18 || stdlib=system && target={{.+}}-apple-macosx{{.+}}",
             cfg.available_features,
         ),
     ),
