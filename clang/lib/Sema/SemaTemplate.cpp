@@ -472,7 +472,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     if (S) {
       LookupName(Found, S);
     } else if (LookupFirstQualifierInScope &&
-        !SS.getUnqualifiedLookups().empty()) {
+               !SS.getUnqualifiedLookups().empty()) {
       Found.addAllDecls(SS.getUnqualifiedLookups());
       Found.resolveKind();
     }

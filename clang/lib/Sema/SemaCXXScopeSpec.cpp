@@ -356,7 +356,12 @@ bool Sema::isAcceptableNestedNameSpecifier(const NamedDecl *SD,
   return false;
 }
 
-bool Sema::LookupFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS, UnresolvedSetImpl &R) {
+/// If the given nested-name-specifier begins with a bare identifier
+/// (e.g., Base::), perform name lookup for that identifier as a
+/// nested-name-specifier within the given scope, and return the result of that
+/// name lookup.
+bool Sema::LookupFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS,
+                                       UnresolvedSetImpl &R) {
   if (!S)
     return false;
 
@@ -468,7 +473,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     if (S) {
       LookupName(Found, S);
     } else if (LookupFirstQualifierInScope &&
-        !SS.getUnqualifiedLookups().empty()) {
+               !SS.getUnqualifiedLookups().empty()) {
       Found.addAllDecls(SS.getUnqualifiedLookups());
       Found.resolveKind();
     }

@@ -1515,11 +1515,10 @@ namespace {
                                    NestedNameSpecifierLoc QualifierLoc,
                                    QualType T);
 
-    TemplateName
-    TransformTemplateName(CXXScopeSpec &SS, TemplateName Name,
-                          SourceLocation NameLoc,
-                          QualType ObjectType = QualType(),
-                          bool AllowInjectedClassName = false);
+    TemplateName TransformTemplateName(CXXScopeSpec &SS, TemplateName Name,
+                                       SourceLocation NameLoc,
+                                       QualType ObjectType = QualType(),
+                                       bool AllowInjectedClassName = false);
 
     const CXXAssumeAttr *TransformCXXAssumeAttr(const CXXAssumeAttr *AA);
     const LoopHintAttr *TransformLoopHintAttr(const LoopHintAttr *LH);

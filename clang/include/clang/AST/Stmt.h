@@ -1030,12 +1030,12 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasTemplateKWAndArgsInfo : 1;
 
-    #if 0
+#if 0
     /// See getFirstQualifierFoundInScope() and the comment listing
     /// the trailing objects.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFirstQualifierFoundInScope : 1;
-    #endif
+#endif
     /// Number of declarations found by unqualified lookup for the
     /// first component name of the nested-name-specifier.
     unsigned NumUnqualifiedLookups;

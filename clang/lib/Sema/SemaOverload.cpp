@@ -16043,12 +16043,11 @@ Sema::BuildForRangeBeginEndCall(SourceLocation Loc,
 
   CandidateSet->clear(OverloadCandidateSet::CSK_Normal);
   if (!MemberLookup.empty()) {
-    ExprResult MemberRef =
-        BuildMemberReferenceExpr(Range, Range->getType(), Loc,
-                                 /*IsPtr=*/false, /*SS=*/CXXScopeSpec(),
-                                 /*TemplateKWLoc=*/SourceLocation(),
-                                 MemberLookup,
-                                 /*TemplateArgs=*/nullptr, S);
+    ExprResult MemberRef = BuildMemberReferenceExpr(
+        Range, Range->getType(), Loc,
+        /*IsPtr=*/false, /*SS=*/CXXScopeSpec(),
+        /*TemplateKWLoc=*/SourceLocation(), MemberLookup,
+        /*TemplateArgs=*/nullptr, S);
     if (MemberRef.isInvalid()) {
       *CallExpr = ExprError();
       return FRS_DiagnosticIssued;

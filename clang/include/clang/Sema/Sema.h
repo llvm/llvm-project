@@ -2802,7 +2802,8 @@ public:
   /// (e.g., Base::), perform name lookup for that identifier as a
   /// nested-name-specifier within the given scope, and return the result of
   /// that name lookup.
-  bool LookupFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS, UnresolvedSetImpl &R);
+  bool LookupFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS,
+                                   UnresolvedSetImpl &R);
 
   /// Keeps information about an identifier in a nested-name-spec.
   ///
@@ -8565,11 +8566,12 @@ public:
                           const TemplateArgumentListInfo *TemplateArgs,
                           bool IsDefiniteInstance, const Scope *S);
 
-  ExprResult ActOnDependentMemberExpr(
-      Expr *Base, QualType BaseType, bool IsArrow, SourceLocation OpLoc,
-      const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-      const DeclarationNameInfo &NameInfo,
-      const TemplateArgumentListInfo *TemplateArgs);
+  ExprResult
+  ActOnDependentMemberExpr(Expr *Base, QualType BaseType, bool IsArrow,
+                           SourceLocation OpLoc, const CXXScopeSpec &SS,
+                           SourceLocation TemplateKWLoc,
+                           const DeclarationNameInfo &NameInfo,
+                           const TemplateArgumentListInfo *TemplateArgs);
 
   /// The main callback when the parser finds something like
   ///   expression . [nested-name-specifier] identifier

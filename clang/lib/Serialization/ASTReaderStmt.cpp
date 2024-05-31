@@ -1999,11 +1999,13 @@ void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
   unsigned NumUnqualifiedLookups = Record.readInt();
   unsigned NumTemplateArgs = Record.readInt();
   E->CXXDependentScopeMemberExprBits.HasQualifier = HasQualifier;
-  E->CXXDependentScopeMemberExprBits.NumUnqualifiedLookups = NumUnqualifiedLookups;
+  E->CXXDependentScopeMemberExprBits.NumUnqualifiedLookups =
+      NumUnqualifiedLookups;
   E->CXXDependentScopeMemberExprBits.HasTemplateKWAndArgsInfo = HasTemplateInfo;
 
   E->BaseType = Record.readType();
-  E->CXXDependentScopeMemberExprBits.IsArrow = CurrentUnpackingBits->getNextBit();
+  E->CXXDependentScopeMemberExprBits.IsArrow =
+      CurrentUnpackingBits->getNextBit();
 
   if (CurrentUnpackingBits->getNextBit())
     E->Base = Record.readSubExpr();
@@ -2020,7 +2022,9 @@ void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
   for (unsigned I = 0; I != NumUnqualifiedLookups; ++I) {
     auto *FoundD = Record.readDeclAs<NamedDecl>();
     auto AS = (AccessSpecifier)Record.readInt();
-    E->getTrailingObjects<DeclAccessPair>()[I] = DeclAccessPair::make(FoundD, AS);;
+    E->getTrailingObjects<DeclAccessPair>()[I] =
+        DeclAccessPair::make(FoundD, AS);
+    ;
   }
 
   if (HasTemplateInfo)
@@ -2028,8 +2032,7 @@ void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
         *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
         E->getTrailingObjects<TemplateArgumentLoc>(), NumTemplateArgs);
 
-
-  #if 0
+#if 0
   unsigned NumTemplateArgs = Record.readInt();
   CurrentUnpackingBits.emplace(Record.readInt());
   bool HasTemplateKWAndArgsInfo = CurrentUnpackingBits->getNextBit();
@@ -2066,7 +2069,7 @@ void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
     *E->getTrailingObjects<NamedDecl *>() = readDeclAs<NamedDecl>();
 
   E->MemberNameInfo = Record.readDeclarationNameInfo();
-  #endif
+#endif
 }
 
 void
@@ -4114,7 +4117,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_CXX_DEPENDENT_SCOPE_MEMBER: {
 
-      #if 0
+#if 0
       unsigned NumTemplateArgs = Record[ASTStmtReader::NumExprFields];
       BitsUnpacker DependentScopeMemberBits(
           Record[ASTStmtReader::NumExprFields + 1]);
@@ -4122,16 +4125,17 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
       bool HasFirstQualifierFoundInScope =
           DependentScopeMemberBits.getNextBit();
-      #endif
-      BitsUnpacker DependentScopeMemberBits(Record[ASTStmtReader::NumExprFields]);
+#endif
+      BitsUnpacker DependentScopeMemberBits(
+          Record[ASTStmtReader::NumExprFields]);
       bool HasQualifier = DependentScopeMemberBits.getNextBit();
       bool HasTemplateInfo = DependentScopeMemberBits.getNextBit();
       unsigned NumUnqualifiedLookups = Record[ASTStmtReader::NumExprFields + 1];
       unsigned NumTemplateArgs = Record[ASTStmtReader::NumExprFields + 2];
 
       S = CXXDependentScopeMemberExpr::CreateEmpty(
-          Context, HasQualifier, NumUnqualifiedLookups,
-          HasTemplateInfo, NumTemplateArgs);
+          Context, HasQualifier, NumUnqualifiedLookups, HasTemplateInfo,
+          NumTemplateArgs);
       break;
     }
 
