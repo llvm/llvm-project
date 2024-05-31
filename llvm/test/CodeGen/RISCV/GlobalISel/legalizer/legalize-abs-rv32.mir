@@ -52,31 +52,25 @@ body:             |
     ; RV32I: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32I-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
     ; RV32I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
+    ; RV32I-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[ASSERT_SEXT]], [[C]](s32)
+    ; RV32I-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ASSERT_SEXT]], [[ASHR]]
+    ; RV32I-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[ADD]], [[ASHR]]
     ; RV32I-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; RV32I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ASSERT_SEXT]], [[C1]](s32)
-    ; RV32I-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C1]](s32)
-    ; RV32I-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[ASHR]], [[C]](s32)
-    ; RV32I-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ASSERT_SEXT]], [[ASHR1]]
-    ; RV32I-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[ADD]], [[ASHR1]]
-    ; RV32I-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; RV32I-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[XOR]], [[C2]](s32)
-    ; RV32I-NEXT: [[ASHR2:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C2]](s32)
-    ; RV32I-NEXT: $x10 = COPY [[ASHR2]](s32)
+    ; RV32I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[XOR]], [[C1]](s32)
+    ; RV32I-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C1]](s32)
+    ; RV32I-NEXT: $x10 = COPY [[ASHR1]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
     ; RV32ZBB-LABEL: name: abs_i16
     ; RV32ZBB: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
-    ; RV32ZBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; RV32ZBB-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ASSERT_SEXT]], [[C]](s32)
-    ; RV32ZBB-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; RV32ZBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[ASHR]]
-    ; RV32ZBB-NEXT: [[SMAX:%[0-9]+]]:_(s32) = G_SMAX [[ASHR]], [[SUB]]
-    ; RV32ZBB-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; RV32ZBB-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[SMAX]], [[C2]](s32)
-    ; RV32ZBB-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C2]](s32)
-    ; RV32ZBB-NEXT: $x10 = COPY [[ASHR1]](s32)
+    ; RV32ZBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]], [[ASSERT_SEXT]]
+    ; RV32ZBB-NEXT: [[SMAX:%[0-9]+]]:_(s32) = G_SMAX [[ASSERT_SEXT]], [[SUB]]
+    ; RV32ZBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; RV32ZBB-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SMAX]], [[C1]](s32)
+    ; RV32ZBB-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C1]](s32)
+    ; RV32ZBB-NEXT: $x10 = COPY [[ASHR]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %2:_(s32) = G_ASSERT_SEXT %1, 16
