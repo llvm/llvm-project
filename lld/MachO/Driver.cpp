@@ -1162,6 +1162,8 @@ static void createFiles(const InputArgList &args) {
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
   bool isLazy = false;
+  bool inLib = false; // If we've processed an opening --start-lib, without a
+                      // matching --end-lib
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -1169,8 +1171,7 @@ static void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(rerootPath(arg->getValue()), LoadType::CommandLine,
-              isLazy && !config->allLoad);
+      addFile(rerootPath(arg->getValue()), LoadType::CommandLine, isLazy);
       break;
     case OPT_needed_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
@@ -1190,7 +1191,7 @@ static void createFiles(const InputArgList &args) {
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
-      addFileList(arg->getValue(), isLazy && !config->allLoad);
+      addFileList(arg->getValue(), isLazy);
       break;
     case OPT_force_load:
       addFile(rerootPath(arg->getValue()), LoadType::CommandLineForce);
@@ -1220,13 +1221,16 @@ static void createFiles(const InputArgList &args) {
                    LoadType::CommandLine);
       break;
     case OPT_start_lib:
-      if (isLazy)
+      if (inLib)
         error("nested --start-lib");
-      isLazy = true;
+      inLib = true;
+      if (!config->allLoad)
+        isLazy = true;
       break;
     case OPT_end_lib:
-      if (!isLazy)
+      if (!inLib)
         error("stray --end-lib");
+      inLib = false;
       isLazy = false;
       break;
     default:
