@@ -250,7 +250,6 @@ protected:
   bool HasForceVALUThrottle = false;
   bool HasAshrPkInsts = false;
   bool HasMLMathInsts = false;
-  bool HasConsumePowerInst = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
@@ -1339,7 +1338,6 @@ public:
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
   bool hasAshrPkInsts() const { return HasAshrPkInsts; }
-  bool hasConsumePowerInst() const { return HasConsumePowerInst; }
 
   bool hasAddPC64Inst() const { return GFX12_10Insts; }
 
@@ -1699,6 +1697,10 @@ public:
   bool requiresNopBeforeDeallocVGPRs() const {
     return !GFX12_10Insts;
   }
+
+  // \returns true if the subtarget needs S_WAIT_ALU 0 before S_GETREG_B32 on
+  // STATUS, STATE_PRIV, EXCP_FLAG_PRIV, or EXCP_FLAG_USER.
+  bool requiresWaitIdleBeforeGetReg() const { return GFX12_10Insts; }
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 };

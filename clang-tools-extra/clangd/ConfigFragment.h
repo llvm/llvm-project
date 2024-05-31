@@ -254,6 +254,10 @@ struct Fragment {
       /// unused or missing. These can match any suffix of the header file in
       /// question.
       std::vector<Located<std::string>> IgnoreHeader;
+
+      /// If false (default), unused system headers will be ignored.
+      /// Standard library headers are analyzed regardless of this option.
+      std::optional<Located<bool>> AnalyzeAngledIncludes;
     };
     IncludesBlock Includes;
 

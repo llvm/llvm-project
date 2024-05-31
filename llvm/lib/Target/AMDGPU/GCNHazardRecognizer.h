@@ -110,6 +110,7 @@ private:
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   void computeVALUHazardSGPRs(MachineFunction *MMF);
   bool fixVALUReadSGPRHazard(MachineInstr *MI);
+  bool fixGetRegWaitIdle(MachineInstr *MI);
 
   int checkMAIHazards(MachineInstr *MI);
   int checkMAIHazards908(MachineInstr *MI);

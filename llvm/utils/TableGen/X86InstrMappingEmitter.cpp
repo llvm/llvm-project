@@ -63,6 +63,8 @@ private:
                              raw_ostream &OS);
   void emitNFTransformTable(ArrayRef<const CodeGenInstruction *> Insts,
                             raw_ostream &OS);
+  void emitND2NonNDTable(ArrayRef<const CodeGenInstruction *> Insts,
+                         raw_ostream &OS);
 
   // Prints the definition of class X86TableEntry.
   void printClassDef(raw_ostream &OS);
@@ -277,10 +279,42 @@ void X86InstrMappingEmitter::emitNFTransformTable(
     if (Pos == std::string::npos)
       continue;
 
-    if (auto *NewRec = Records.getDef(Name.erase(Pos, 3)))
+    if (auto *NewRec = Records.getDef(Name.erase(Pos, 3))) {
+#ifndef NDEBUG
+      auto ClobberEFLAGS = [](const Record *R) {
+        return llvm::any_of(
+            R->getValueAsListOfDefs("Defs"),
+            [](const Record *Def) { return Def->getName() == "EFLAGS"; });
+      };
+      if (ClobberEFLAGS(Rec))
+        report_fatal_error("EFLAGS should not be clobbered by " +
+                           Rec->getName());
+      if (!ClobberEFLAGS(NewRec))
+        report_fatal_error("EFLAGS should be clobbered by " +
+                           NewRec->getName());
+#endif
       Table.push_back(std::pair(&Target.getInstruction(NewRec), Inst));
+    }
   }
   printTable(Table, "X86NFTransformTable", "GET_X86_NF_TRANSFORM_TABLE", OS);
+}
+
+void X86InstrMappingEmitter::emitND2NonNDTable(
+    ArrayRef<const CodeGenInstruction *> Insts, raw_ostream &OS) {
+  std::vector<Entry> Table;
+  for (const CodeGenInstruction *Inst : Insts) {
+    const Record *Rec = Inst->TheDef;
+    StringRef Name = Rec->getName();
+    if (!isInteresting(Rec) || !Name.ends_with("_ND"))
+      continue;
+    auto *NewRec = Records.getDef(Name.drop_back(3));
+    if (!NewRec)
+      continue;
+    auto &NewInst = Target.getInstruction(NewRec);
+    if (isRegisterOperand(NewInst.Operands[0].Rec))
+      Table.push_back(std::pair(Inst, &NewInst));
+  }
+  printTable(Table, "X86ND2NonNDTable", "GET_X86_ND2NONND_TABLE", OS);
 }
 
 void X86InstrMappingEmitter::run(raw_ostream &OS) {
@@ -291,6 +325,7 @@ void X86InstrMappingEmitter::run(raw_ostream &OS) {
   printClassDef(OS);
   emitCompressEVEXTable(Insts, OS);
   emitNFTransformTable(Insts, OS);
+  emitND2NonNDTable(Insts, OS);
 }
 } // namespace
 

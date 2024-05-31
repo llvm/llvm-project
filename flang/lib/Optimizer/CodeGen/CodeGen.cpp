@@ -391,9 +391,8 @@ struct BoxIsArrayOpConversion : public fir::FIROpConversion<fir::BoxIsArrayOp> {
     mlir::Value a = adaptor.getOperands()[0];
     auto loc = boxisarray.getLoc();
     TypePair boxTyPair = getBoxTypePair(boxisarray.getVal().getType());
-    auto rank = getValueFromBox(loc, boxTyPair, a, rewriter.getI32Type(),
-                                rewriter, kRankPosInBox);
-    auto c0 = genConstantOffset(loc, rewriter, 0);
+    mlir::Value rank = getRankFromBox(loc, boxTyPair, a, rewriter);
+    mlir::Value c0 = genConstantIndex(loc, rank.getType(), rewriter, 0);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         boxisarray, mlir::LLVM::ICmpPredicate::ne, rank, c0);
     return mlir::success();
@@ -429,9 +428,10 @@ struct BoxRankOpConversion : public fir::FIROpConversion<fir::BoxRankOp> {
     mlir::Value a = adaptor.getOperands()[0];
     auto loc = boxrank.getLoc();
     mlir::Type ty = convertType(boxrank.getType());
-    TypePair boxTyPair = getBoxTypePair(boxrank.getVal().getType());
-    auto result =
-        getValueFromBox(loc, boxTyPair, a, ty, rewriter, kRankPosInBox);
+    TypePair boxTyPair =
+        getBoxTypePair(fir::unwrapRefType(boxrank.getBox().getType()));
+    mlir::Value rank = getRankFromBox(loc, boxTyPair, a, rewriter);
+    mlir::Value result = integerCast(loc, rewriter, ty, rank);
     rewriter.replaceOp(boxrank, result);
     return mlir::success();
   }
@@ -2864,23 +2864,32 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
       // descriptor value into a new descriptor temp.
       auto inputBoxStorage = adaptor.getOperands()[0];
       mlir::Location loc = load.getLoc();
-      fir::SequenceType seqTy = fir::unwrapUntilSeqType(boxTy);
-      // fir.box of assumed rank do not have a storage
-      // size that is know at compile time. The copy needs to be runtime driven
-      // depending on the actual dynamic rank or type.
-      if (seqTy && seqTy.hasUnknownShape())
-        TODO(loc, "loading or assumed rank fir.box");
-      auto boxValue =
-          rewriter.create<mlir::LLVM::LoadOp>(loc, llvmLoadTy, inputBoxStorage);
-      if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
-        boxValue.setTBAATags(*optionalTag);
-      else
-        attachTBAATag(boxValue, boxTy, boxTy, nullptr);
       auto newBoxStorage =
           genAllocaAndAddrCastWithType(loc, llvmLoadTy, defaultAlign, rewriter);
-      auto storeOp =
-          rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, newBoxStorage);
-      attachTBAATag(storeOp, boxTy, boxTy, nullptr);
+      // TODO: always generate llvm.memcpy, LLVM is better at optimizing it than
+      // aggregate loads + stores.
+      if (boxTy.isAssumedRank()) {
+
+        TypePair boxTypePair{boxTy, llvmLoadTy};
+        mlir::Value boxSize =
+            computeBoxSize(loc, boxTypePair, inputBoxStorage, rewriter);
+        auto memcpy = rewriter.create<mlir::LLVM::MemcpyOp>(
+            loc, newBoxStorage, inputBoxStorage, boxSize, /*isVolatile=*/false);
+        if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
+          memcpy.setTBAATags(*optionalTag);
+        else
+          attachTBAATag(memcpy, boxTy, boxTy, nullptr);
+      } else {
+        auto boxValue = rewriter.create<mlir::LLVM::LoadOp>(loc, llvmLoadTy,
+                                                            inputBoxStorage);
+        if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
+          boxValue.setTBAATags(*optionalTag);
+        else
+          attachTBAATag(boxValue, boxTy, boxTy, nullptr);
+        auto storeOp =
+            rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, newBoxStorage);
+        attachTBAATag(storeOp, boxTy, boxTy, nullptr);
+      }
       rewriter.replaceOp(load, newBoxStorage);
     } else {
       auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(
