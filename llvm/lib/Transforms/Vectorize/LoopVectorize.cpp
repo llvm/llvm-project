@@ -3080,8 +3080,6 @@ void InnerLoopVectorizer::createInductionResumeValues(
   }
 }
 
-
-
 std::pair<BasicBlock *, Value *>
 InnerLoopVectorizer::createVectorizedLoopSkeleton(
     const SCEV2ValueTy &ExpandedSCEVs) {
