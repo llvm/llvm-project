@@ -936,7 +936,8 @@ void LinkerScript::addOrphanSections() {
 
 void LinkerScript::diagnoseOrphanHandling() const {
   llvm::TimeTraceScope timeScope("Diagnose orphan sections");
-  if (config->orphanHandling == OrphanHandlingPolicy::Place)
+  if (config->orphanHandling == OrphanHandlingPolicy::Place ||
+      !hasSectionsCommand)
     return;
   for (const InputSectionBase *sec : orphanSections) {
     // .relro_padding is inserted before DATA_SEGMENT_RELRO_END, if present,
