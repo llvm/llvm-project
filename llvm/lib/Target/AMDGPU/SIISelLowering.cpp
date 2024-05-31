@@ -1491,7 +1491,7 @@ bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM,
     return AM.BaseOffs == 0 && AM.Scale == 0;
   }
 
-  uint64_t FlatVariant =
+  decltype(SIInstrFlags::FLAT) FlatVariant =
       AddrSpace == AMDGPUAS::GLOBAL_ADDRESS    ? SIInstrFlags::FlatGlobal
       : AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ? SIInstrFlags::FlatScratch
                                                : SIInstrFlags::FLAT;
