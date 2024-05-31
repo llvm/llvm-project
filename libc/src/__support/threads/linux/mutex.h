@@ -116,7 +116,26 @@ public:
     }
   }
 
-  MutexError trylock();
+  MutexError trylock() {
+    FutexWordType mutex_status = FutexWordType(LockState::Free);
+    FutexWordType locked_status = FutexWordType(LockState::Locked);
+
+    if (futex_word.compare_exchange_strong(mutex_status,
+                                           FutexWordType(LockState::Locked))) {
+      return MutexError::NONE;
+    }
+
+    switch (LockState(mutex_status)) {
+    case LockState::Locked:
+      if (recursive && this == owner) {
+        lock_count++;
+      }
+      return MutexError::NONE;
+    case LockState::Free:
+      // If it was LockState::Free, we shouldn't be here at all.
+      return MutexError::BAD_LOCK_STATE;
+    }
+  }
 };
 
 } // namespace LIBC_NAMESPACE
