@@ -215,6 +215,11 @@ void PPCMergeStringPool::collectCandidateConstants(Module &M) {
         Global.getLinkage() != GlobalValue::InternalLinkage)
       continue;
 
+    // Do not pool thread-local constants, as the pooled strings can contain
+    // non-thread-local constants, and these should not be mixed together.
+    if (Global.isThreadLocal())
+      continue;
+
     LLVM_DEBUG(dbgs() << "Constant data of Global: ");
     LLVM_DEBUG(ConstData->dump());
     LLVM_DEBUG(dbgs() << "\n\n");
