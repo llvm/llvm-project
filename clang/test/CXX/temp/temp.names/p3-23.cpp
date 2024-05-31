@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++23 %s -verify
+// RUN: %clang_cc1 -std=c++23 -Wno-unused %s -verify
 
 namespace FoundNothing {
   template<typename T>
