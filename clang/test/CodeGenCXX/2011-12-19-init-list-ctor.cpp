@@ -23,4 +23,4 @@ struct S {
 // CHECK: store i32 1, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 1)
 // CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (%struct.S, ptr @arr, i64 1, i32 1), ptr noundef @.str.1)
 // CHECK: store i32 2, ptr getelementptr inbounds (%struct.S, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 1), i64 1)
-// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (%struct.S, ptr @arr, i64 2, i32 1), ptr noundef @.str.2)
+// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (%struct.S, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 1), i64 1, i32 1), ptr noundef @.str.2)
