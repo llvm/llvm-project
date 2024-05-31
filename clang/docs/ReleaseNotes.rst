@@ -710,6 +710,7 @@ Bug Fixes to C++ Support
 - Correctly treat the compound statement of an ``if consteval`` as an immediate context. Fixes (#GH91509).
 - When partial ordering alias templates against template template parameters,
   allow pack expansions when the alias has a fixed-size parameter list. Fixes (#GH62529).
+- Fixed a type constraint substitution issue involving a generic lambda expression. (#GH93821)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
