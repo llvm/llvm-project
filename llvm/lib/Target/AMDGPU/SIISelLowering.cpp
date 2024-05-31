@@ -16128,6 +16128,8 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case AMDGPUISD::BUFFER_ATOMIC_FMAX:
     // Target-specific read-modify-write atomics are sources of divergence.
     return true;
+  case AMDGPUISD::WRITELANE:
+    return true;
   default:
     if (auto *A = dyn_cast<AtomicSDNode>(N)) {
       // Generic read-modify-write atomics are sources of divergence.

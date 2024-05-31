@@ -354,9 +354,9 @@ def AMDGPUDWritelaneOp : SDTypeProfile<1, 3, [
   SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<0, 3>
 ]>;
 
-def AMDGPUreadlane_impl : SDNode<"AMDGPUISD::READLANE", AMDGPUReadlaneOp>;
-def AMDGPUreadfirstlane_impl : SDNode<"AMDGPUISD::READFIRSTLANE", AMDGPUReadfirstlaneOp>;
-def AMDGPUwritelane_impl : SDNode<"AMDGPUISD::WRITELANE", AMDGPUDWritelaneOp>;
+def AMDGPUreadlane_impl : SDNode<"AMDGPUISD::READLANE", AMDGPUReadlaneOp, [SDNPOptInGlue]>;
+def AMDGPUreadfirstlane_impl : SDNode<"AMDGPUISD::READFIRSTLANE", AMDGPUReadfirstlaneOp, [SDNPOptInGlue]>;
+def AMDGPUwritelane_impl : SDNode<"AMDGPUISD::WRITELANE", AMDGPUDWritelaneOp, [SDNPOptInGlue]>;
 
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [

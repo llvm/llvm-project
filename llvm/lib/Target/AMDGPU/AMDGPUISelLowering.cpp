@@ -902,6 +902,9 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     return false;
   case AMDGPUISD::SETCC: // ballot-style instruction
     return true;
+  case AMDGPUISD::READFIRSTLANE:
+  case AMDGPUISD::READLANE:
+    return true;
   }
   return false;
 }
