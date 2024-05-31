@@ -37,17 +37,41 @@ inline Error finiteLoop(function_ref<Expected<bool>()> Iteration,
 }
 
 /// Make a best effort to guess the
-/// Xcode.app/Contents/Developer/Toolchains/ path from an SDK path.
-inline SmallString<128> guessToolchainBaseDir(StringRef SysRoot) {
+/// Xcode.app/Contents/Developer path from an SDK path.
+inline StringRef guessDeveloperDir(StringRef SysRoot) {
   SmallString<128> Result;
   // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
-  StringRef Base = sys::path::parent_path(SysRoot);
-  if (sys::path::filename(Base) != "SDKs")
-    return Result;
-  Base = sys::path::parent_path(Base);
-  Result = Base;
-  Result += "/Toolchains";
-  return Result;
+  auto it = sys::path::rbegin(SysRoot);
+  auto end = sys::path::rend(SysRoot);
+  if (it == end || !it->ends_with(".sdk"))
+    return {};
+  ++it;
+  // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs
+  if (it == end || *it != "SDKs")
+    return {};
+  auto developerEnd = it;
+  ++it;
+  while (it != end) {
+    // Contents/Developer/Platforms/MacOSX.platform/Developer
+    if (*it != "Developer")
+      return {};
+    ++it;
+    if (it == end)
+      return {};
+    if (*it == "Contents")
+      return StringRef(SysRoot.data(),
+                       developerEnd - sys::path::rend(SysRoot) - 1);
+    // Contents/Developer/Platforms/MacOSX.platform
+    if (!it->ends_with(".platform"))
+      return {};
+    ++it;
+    // Contents/Developer/Platforms
+    if (it == end || *it != "Platforms")
+      return {};
+    developerEnd = it;
+    ++it;
+  }
+  return {};
 }
 
 inline bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
