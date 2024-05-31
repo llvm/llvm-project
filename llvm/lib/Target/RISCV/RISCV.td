@@ -84,3 +84,9 @@ def RISCV : Target {
   let AssemblyWriters = [RISCVAsmWriter];
   let AllowRegisterRenaming = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// Pfm Counters
+//===----------------------------------------------------------------------===//
+
+include "RISCVPfmCounters.td"

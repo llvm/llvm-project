@@ -31,22 +31,7 @@ namespace exegesis {
 
 namespace {
 
-// TODO move perf counter data to td files (although it looks like an overkill
-// of sorts)
-
-static const char *RISCVPfmCounterNames[] = {
-    "CPU_CYCLES", // 0
-};
-
-static const PfmCountersInfo RISCVDefaultPfmCounters = {
-    RISCVPfmCounterNames[0], // Cycle counter
-    nullptr,                 // No uops counter.
-    nullptr,                 // No issue counters.
-    0};
-
-static const CpuAndPfmCounters RISCVCpuPfmCounters[] = {
-    {"", &RISCVDefaultPfmCounters},
-};
+#include "RISCVGenExegesis.inc"
 
 class ExegesisRISCVTarget : public ExegesisTarget {
 public:
@@ -102,6 +87,7 @@ Expected<std::unique_ptr<pfm::CounterGroup>> ExegesisRISCVTarget::createCounter(
     StringRef CounterName, const LLVMState &State,
     ArrayRef<const char *> ValidationCounters, const pid_t ProcessID) const {
   if (CounterName == RISCVPfmCounterNames[0]) {
+    // TODO add support for Linux perf counters
     return createRISCVCpuCyclesCounter(pfm::PerfEvent(CounterName));
   }
   return make_error<Failure>(Twine("Unsupported performance counter '")
