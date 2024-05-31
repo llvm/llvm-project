@@ -286,6 +286,7 @@ typedef enum {
   LLVMInstructionValueKind,
   LLVMPoisonValueValueKind,
   LLVMConstantTargetNoneValueKind,
+  LLVMConstantPtrAuthValueKind,
 } LLVMValueKind;
 
 typedef enum {
@@ -1653,6 +1654,35 @@ LLVMTypeRef LLVMScalableVectorType(LLVMTypeRef ElementType,
 unsigned LLVMGetVectorSize(LLVMTypeRef VectorTy);
 
 /**
+ * Get the pointer value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getPointer
+ */
+LLVMValueRef LLVMGetConstantPtrAuthPointer(LLVMValueRef PtrAuth);
+
+/**
+ * Get the key value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getKey
+ */
+LLVMValueRef LLVMGetConstantPtrAuthKey(LLVMValueRef PtrAuth);
+
+/**
+ * Get the discriminator value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getDiscriminator
+ */
+LLVMValueRef LLVMGetConstantPtrAuthDiscriminator(LLVMValueRef PtrAuth);
+
+/**
+ * Get the address discriminator value for the associated ConstantPtrAuth
+ * constant.
+ *
+ * @see llvm::ConstantPtrAuth::getAddrDiscriminator
+ */
+LLVMValueRef LLVMGetConstantPtrAuthAddrDiscriminator(LLVMValueRef PtrAuth);
+
+/**
  * @}
  */
 
@@ -1758,6 +1788,7 @@ LLVMTypeRef LLVMTargetExtTypeInContext(LLVMContextRef C, const char *Name,
       macro(ConstantStruct)                 \
       macro(ConstantTokenNone)              \
       macro(ConstantVector)                 \
+      macro(ConstantPtrAuth)                \
       macro(GlobalValue)                    \
         macro(GlobalAlias)                  \
         macro(GlobalObject)                 \
@@ -2321,6 +2352,14 @@ LLVM_ATTRIBUTE_C_DEPRECATED(
  * @see llvm::ConstantVector::get()
  */
 LLVMValueRef LLVMConstVector(LLVMValueRef *ScalarConstantVals, unsigned Size);
+
+/**
+ * Create a ConstantPtrAuth constant with the given values.
+ *
+ * @see llvm::ConstantPtrAuth::get()
+ */
+LLVMValueRef LLVMConstantPtrAuth(LLVMValueRef Ptr, LLVMValueRef Key,
+                                 LLVMValueRef Disc, LLVMValueRef AddrDisc);
 
 /**
  * @}

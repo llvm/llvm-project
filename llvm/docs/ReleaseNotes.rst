@@ -186,6 +186,14 @@ Changes to the C API
   * ``LLVMGetCallBrNumIndirectDests``
   * ``LLVMGetCallBrIndirectDest``
 
+* Added the following functions for creating and accessing data for ConstantPtrAuth constants:
+
+  * ``LLVMConstantPtrAuth``
+  * ``LLVMGetConstantPtrAuthPointer``
+  * ``LLVMGetConstantPtrAuthKey``
+  * ``LLVMGetConstantPtrAuthDiscriminator``
+  * ``LLVMGetConstantPtrAuthAddrDiscriminator``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
