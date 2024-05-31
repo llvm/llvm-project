@@ -1533,9 +1533,7 @@ uint32_t GenericDeviceTy::queryCoarseGrainMemory(const void *ptr,
 
 bool GenericDeviceTy::hasAPUDevice() { return hasAPUDeviceImpl(); }
 
-bool GenericDeviceTy::hasDGpuWithUsmSupport() {
-  return hasDGpuWithUsmSupportImpl();
-}
+bool GenericDeviceTy::hasGfx90aDevice() { return hasGfx90aDeviceImpl(); }
 
 bool GenericDeviceTy::supportsUnifiedMemory() {
   return supportsUnifiedMemoryImpl();
@@ -1811,9 +1809,9 @@ bool GenericPluginTy::has_apu_device(int32_t DeviceId) {
   return R;
 }
 
-bool GenericPluginTy::has_USM_capable_dGPU(int32_t DeviceId) {
+bool GenericPluginTy::is_gfx90a(int32_t DeviceId) {
   auto T = logger::log<bool>(__func__, DeviceId);
-  auto R = [&]() { return getDevice(DeviceId).hasDGpuWithUsmSupport(); }();
+  auto R = [&]() { return getDevice(DeviceId).hasGfx90aDeviceImpl(); }();
   T.res(R);
   return R;
 }

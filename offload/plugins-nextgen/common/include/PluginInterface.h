@@ -824,9 +824,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   bool hasAPUDevice();
   virtual bool hasAPUDeviceImpl() { return false; }
 
-  // Returns true if the system is equipped with a dGPU that supports USM/
-  bool hasDGpuWithUsmSupport();
-  virtual bool hasDGpuWithUsmSupportImpl() { return false; }
+  // Returns true if the device is a gfx90a.
+  bool hasGfx90aDevice();
+  virtual bool hasGfx90aDeviceImpl() { return false; }
 
   // Returns true if the system supports unified memory.
   bool supportsUnifiedMemory();
@@ -1214,8 +1214,8 @@ public:
   /// Returns if this device is an APU.
   bool has_apu_device(int32_t DeviceId);
 
-  /// Returns if this discrete GPU supports USM.
-  bool has_USM_capable_dGPU(int32_t DeviceId);
+  /// Returns if this discrete GPU is a gfx90a.
+  bool is_gfx90a(int32_t DeviceId);
 
   /// Returns if this device supports USM.
   bool supports_unified_memory(int32_t DeviceId);

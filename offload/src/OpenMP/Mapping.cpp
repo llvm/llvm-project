@@ -270,8 +270,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       // can optimize memory access latency by registering allocated
       // memory as coarse-grained. The usage of coarse-grained memory can be
       // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1.
-      // This is not done for APUs.
-      if (Device.RTL->has_USM_capable_dGPU(Device.DeviceID) && HstPtrBegin &&
+      if (Device.RTL->is_gfx90a(Device.DeviceID) && HstPtrBegin &&
           (!Device.RTL->is_fine_grained_memory_enabled(Device.DeviceID))) {
         Device.RTL->set_coarse_grain_mem_region(Device.DeviceID, HstPtrBegin,
                                                 Size);

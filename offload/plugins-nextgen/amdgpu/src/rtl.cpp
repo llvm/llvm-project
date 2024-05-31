@@ -3895,14 +3895,11 @@ private:
 
   bool hasAPUDeviceImpl() override final { return IsAPU; }
 
-  // TODO: move the following two functions in private section.
+  // TODO: move the following function in private section.
   bool hasMI300xDevice() { return IsEquippedWithMI300X; }
 
-  bool hasGfx90aDevice() { return IsEquippedWithGFX90A; }
-
-  bool hasDGpuWithUsmSupportImpl() override final {
-    return hasGfx90aDevice() || hasMI300xDevice();
-  }
+  /// Returns whether the device is a gfx90a.
+  bool hasGfx90aDeviceImpl() override final { return IsEquippedWithGFX90A; }
 
   /// Returns whether AMD GPU supports unified memory in
   /// the current configuration.
