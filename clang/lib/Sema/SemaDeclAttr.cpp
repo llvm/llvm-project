@@ -9246,7 +9246,7 @@ static void handleVTablePointerAuthentication(Sema &S, Decl *D,
       AL.setInvalid();
     }
 
-    if (!AL.isArgExpr(3) || !S.checkUInt32Argument(AL, AL.getArgAsExpr(3),
+    if (!AL.isArgExpr(3) || !checkUInt32Argument(S, AL, AL.getArgAsExpr(3),
                                                    customDiscriminationValue)) {
       S.Diag(AL.getLoc(), diag::err_invalid_custom_discrimination);
       AL.setInvalid();
