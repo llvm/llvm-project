@@ -1129,20 +1129,20 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
   }
   auto restorer{
       messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
-  auto checkActualArgForLabel = [&](evaluate::ActualArgument &arg) {
+  auto CheckActualArgForLabel = [&](evaluate::ActualArgument &arg) {
     if (arg.isAlternateReturn()) {
       messages.Say(
           "Alternate return label '%d' cannot be associated with %s"_err_en_US,
           arg.GetLabel(), dummyName);
-      return true;
-    } else {
       return false;
+    } else {
+      return true;
     }
   };
   common::visit(
       common::visitors{
           [&](const characteristics::DummyDataObject &object) {
-            if (!checkActualArgForLabel(arg)) {
+            if (CheckActualArgForLabel(arg)) {
               ConvertBOZLiteralArg(arg, object.type.type());
               if (auto *expr{arg.UnwrapExpr()}) {
                 if (auto type{characteristics::TypeAndShape::Characterize(
@@ -1160,9 +1160,16 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                     evaluate::IsNullObjectPointer(*expr)) {
                   // ok, ASSOCIATED(NULL(without MOLD=))
                 } else if (object.type.attrs().test(characteristics::
-                                   TypeAndShape::Attr::AssumedRank)) {
+                                   TypeAndShape::Attr::AssumedRank) &&
+                    evaluate::IsNullObjectPointer(*expr) &&
+                    (object.attrs.test(
+                         characteristics::DummyDataObject::Attr::Allocatable) ||
+                        object.attrs.test(
+                            characteristics::DummyDataObject::Attr::Pointer) ||
+                        !object.attrs.test(characteristics::DummyDataObject::
+                                Attr::Optional))) {
                   messages.Say(
-                      "NULL() without MOLD= must not be associated with an assumed-rank dummy argument"_err_en_US);
+                      "NULL() without MOLD= must not be associated with an assumed-rank dummy argument that is ALLOCATABLE, POINTER, or non-OPTIONAL"_err_en_US);
                 } else if ((object.attrs.test(characteristics::DummyDataObject::
                                     Attr::Pointer) ||
                                object.attrs.test(characteristics::
@@ -1223,7 +1230,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
             }
           },
           [&](const characteristics::DummyProcedure &dummy) {
-            if (!checkActualArgForLabel(arg)) {
+            if (CheckActualArgForLabel(arg)) {
               CheckProcedureArg(arg, proc, dummy, dummyName, context,
                   ignoreImplicitVsExplicit);
             }

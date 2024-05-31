@@ -260,9 +260,6 @@ private:
 
 /// Class to manage the bitcode writing for a module.
 class ModuleBitcodeWriter : public ModuleBitcodeWriterBase {
-  /// Pointer to the buffer allocated by caller for bitcode writing.
-  const SmallVectorImpl<char> &Buffer;
-
   /// True if a module hash record should be written.
   bool GenerateHash;
 
@@ -278,14 +275,13 @@ class ModuleBitcodeWriter : public ModuleBitcodeWriterBase {
 public:
   /// Constructs a ModuleBitcodeWriter object for the given Module,
   /// writing to the provided \p Buffer.
-  ModuleBitcodeWriter(const Module &M, SmallVectorImpl<char> &Buffer,
-                      StringTableBuilder &StrtabBuilder,
+  ModuleBitcodeWriter(const Module &M, StringTableBuilder &StrtabBuilder,
                       BitstreamWriter &Stream, bool ShouldPreserveUseListOrder,
                       const ModuleSummaryIndex *Index, bool GenerateHash,
                       ModuleHash *ModHash = nullptr)
       : ModuleBitcodeWriterBase(M, StrtabBuilder, Stream,
                                 ShouldPreserveUseListOrder, Index),
-        Buffer(Buffer), GenerateHash(GenerateHash), ModHash(ModHash),
+        GenerateHash(GenerateHash), ModHash(ModHash),
         BitcodeStartBit(Stream.GetCurrentBitNo()) {}
 
   /// Emit the current module to the bitstream.
@@ -414,7 +410,7 @@ private:
   writeFunction(const Function &F,
                 DenseMap<const Function *, uint64_t> &FunctionToBitcodeIndex);
   void writeBlockInfo();
-  void writeModuleHash(size_t BlockStartPos);
+  void writeModuleHash(StringRef View);
 
   unsigned getEncodedSyncScopeID(SyncScope::ID SSID) {
     return unsigned(SSID);
@@ -1668,6 +1664,13 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= 1 << bitc::TIO_NO_SIGNED_WRAP;
     if (TI->hasNoUnsignedWrap())
       Flags |= 1 << bitc::TIO_NO_UNSIGNED_WRAP;
+  } else if (const auto *GEP = dyn_cast<GEPOperator>(V)) {
+    if (GEP->isInBounds())
+      Flags |= 1 << bitc::GEP_INBOUNDS;
+    if (GEP->hasNoUnsignedSignedWrap())
+      Flags |= 1 << bitc::GEP_NUSW;
+    if (GEP->hasNoUnsignedWrap())
+      Flags |= 1 << bitc::GEP_NUW;
   }
 
   return Flags;
@@ -2779,12 +2782,11 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Code = bitc::CST_CODE_CE_GEP;
         const auto *GO = cast<GEPOperator>(C);
         Record.push_back(VE.getTypeID(GO->getSourceElementType()));
+        Record.push_back(getOptimizationFlags(GO));
         if (std::optional<ConstantRange> Range = GO->getInRange()) {
           Code = bitc::CST_CODE_CE_GEP_WITH_INRANGE;
-          Record.push_back(GO->isInBounds());
           emitConstantRange(Record, *Range);
-        } else if (GO->isInBounds())
-          Code = bitc::CST_CODE_CE_INBOUNDS_GEP;
+        }
         for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i) {
           Record.push_back(VE.getTypeID(C->getOperand(i)->getType()));
           Record.push_back(VE.getValueID(C->getOperand(i)));
@@ -2842,6 +2844,12 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       Code = bitc::CST_CODE_NO_CFI_VALUE;
       Record.push_back(VE.getTypeID(NC->getGlobalValue()->getType()));
       Record.push_back(VE.getValueID(NC->getGlobalValue()));
+    } else if (const auto *CPA = dyn_cast<ConstantPtrAuth>(C)) {
+      Code = bitc::CST_CODE_PTRAUTH;
+      Record.push_back(VE.getValueID(CPA->getPointer()));
+      Record.push_back(VE.getValueID(CPA->getKey()));
+      Record.push_back(VE.getValueID(CPA->getDiscriminator()));
+      Record.push_back(VE.getValueID(CPA->getAddrDiscriminator()));
     } else {
 #ifndef NDEBUG
       C->dump();
@@ -2973,7 +2981,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Code = bitc::FUNC_CODE_INST_GEP;
     AbbrevToUse = FUNCTION_INST_GEP_ABBREV;
     auto &GEPInst = cast<GetElementPtrInst>(I);
-    Vals.push_back(GEPInst.isInBounds());
+    Vals.push_back(getOptimizationFlags(&I));
     Vals.push_back(VE.getTypeID(GEPInst.getSourceElementType()));
     for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i)
       pushValueAndType(I.getOperand(i), InstID, Vals);
@@ -3871,7 +3879,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
   {
     auto Abbv = std::make_shared<BitCodeAbbrev>();
     Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_GEP));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, // dest ty
                               Log2_32_Ceil(VE.getTypes().size() + 1)));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
@@ -4807,13 +4815,13 @@ static void writeIdentificationBlock(BitstreamWriter &Stream) {
   Stream.ExitBlock();
 }
 
-void ModuleBitcodeWriter::writeModuleHash(size_t BlockStartPos) {
+void ModuleBitcodeWriter::writeModuleHash(StringRef View) {
   // Emit the module's hash.
   // MODULE_CODE_HASH: [5*i32]
   if (GenerateHash) {
     uint32_t Vals[5];
-    Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&(Buffer)[BlockStartPos],
-                                    Buffer.size() - BlockStartPos));
+    Hasher.update(ArrayRef<uint8_t>(
+        reinterpret_cast<const uint8_t *>(View.data()), View.size()));
     std::array<uint8_t, 20> Hash = Hasher.result();
     for (int Pos = 0; Pos < 20; Pos += 4) {
       Vals[Pos / 4] = support::endian::read32be(Hash.data() + Pos);
@@ -4832,7 +4840,9 @@ void ModuleBitcodeWriter::write() {
   writeIdentificationBlock(Stream);
 
   Stream.EnterSubblock(bitc::MODULE_BLOCK_ID, 3);
-  size_t BlockStartPos = Buffer.size();
+  // We will want to write the module hash at this point. Block any flushing so
+  // we can have access to the whole underlying data later.
+  Stream.markAndBlockFlushing();
 
   writeModuleVersion();
 
@@ -4883,7 +4893,7 @@ void ModuleBitcodeWriter::write() {
 
   writeGlobalValueSymbolTable(FunctionToBitcodeIndex);
 
-  writeModuleHash(BlockStartPos);
+  writeModuleHash(Stream.getMarkedBufferAndResumeFlushing());
 
   Stream.ExitBlock();
 }
@@ -4964,8 +4974,13 @@ static void writeBitcodeHeader(BitstreamWriter &Stream) {
   Stream.Emit(0xD, 4);
 }
 
-BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer, raw_fd_stream *FS)
-    : Buffer(Buffer), Stream(new BitstreamWriter(Buffer, FS, FlushThreshold)) {
+BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer)
+    : Stream(new BitstreamWriter(Buffer)) {
+  writeBitcodeHeader(*Stream);
+}
+
+BitcodeWriter::BitcodeWriter(raw_ostream &FS)
+    : Stream(new BitstreamWriter(FS, FlushThreshold)) {
   writeBitcodeHeader(*Stream);
 }
 
@@ -5048,7 +5063,7 @@ void BitcodeWriter::writeModule(const Module &M,
   assert(M.isMaterialized());
   Mods.push_back(const_cast<Module *>(&M));
 
-  ModuleBitcodeWriter ModuleWriter(M, Buffer, StrtabBuilder, *Stream,
+  ModuleBitcodeWriter ModuleWriter(M, StrtabBuilder, *Stream,
                                    ShouldPreserveUseListOrder, Index,
                                    GenerateHash, ModHash);
   ModuleWriter.write();
@@ -5068,27 +5083,28 @@ void llvm::WriteBitcodeToFile(const Module &M, raw_ostream &Out,
                               bool ShouldPreserveUseListOrder,
                               const ModuleSummaryIndex *Index,
                               bool GenerateHash, ModuleHash *ModHash) {
-  SmallVector<char, 0> Buffer;
-  Buffer.reserve(256*1024);
-
-  // If this is darwin or another generic macho target, reserve space for the
-  // header.
+  auto Write = [&](BitcodeWriter &Writer) {
+    Writer.writeModule(M, ShouldPreserveUseListOrder, Index, GenerateHash,
+                       ModHash);
+    Writer.writeSymtab();
+    Writer.writeStrtab();
+  };
   Triple TT(M.getTargetTriple());
-  if (TT.isOSDarwin() || TT.isOSBinFormatMachO())
+  if (TT.isOSDarwin() || TT.isOSBinFormatMachO()) {
+    // If this is darwin or another generic macho target, reserve space for the
+    // header. Note that the header is computed *after* the output is known, so
+    // we currently explicitly use a buffer, write to it, and then subsequently
+    // flush to Out.
+    SmallVector<char, 256 * 1024> Buffer;
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
-
-  BitcodeWriter Writer(Buffer, dyn_cast<raw_fd_stream>(&Out));
-  Writer.writeModule(M, ShouldPreserveUseListOrder, Index, GenerateHash,
-                     ModHash);
-  Writer.writeSymtab();
-  Writer.writeStrtab();
-
-  if (TT.isOSDarwin() || TT.isOSBinFormatMachO())
+    BitcodeWriter Writer(Buffer);
+    Write(Writer);
     emitDarwinBCHeaderAndTrailer(Buffer, TT);
-
-  // Write the generated bitstream to "Out".
-  if (!Buffer.empty())
-    Out.write((char *)&Buffer.front(), Buffer.size());
+    Out.write(Buffer.data(), Buffer.size());
+  } else {
+    BitcodeWriter Writer(Out);
+    Write(Writer);
+  }
 }
 
 void IndexBitcodeWriter::write() {

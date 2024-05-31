@@ -1084,12 +1084,22 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateArguments(
 
       if (StringRef(ArgumentFragment.begin()->Spelling)
               .starts_with("type-parameter")) {
-        std::string ProperArgName = TemplateArgumentLocs.value()[i]
-                                        .getTypeSourceInfo()
-                                        ->getType()
-                                        .getAsString();
-        ArgumentFragment.begin()->Spelling.swap(ProperArgName);
+        if (TemplateArgumentLocs.has_value() &&
+            TemplateArgumentLocs->size() > i) {
+          std::string ProperArgName = TemplateArgumentLocs.value()[i]
+                                          .getTypeSourceInfo()
+                                          ->getType()
+                                          .getAsString();
+          ArgumentFragment.begin()->Spelling.swap(ProperArgName);
+        } else {
+          auto &Spelling = ArgumentFragment.begin()->Spelling;
+          Spelling.clear();
+          raw_string_ostream OutStream(Spelling);
+          CTA.print(Context.getPrintingPolicy(), OutStream, false);
+          OutStream.flush();
+        }
       }
+
       Fragments.append(std::move(ArgumentFragment));
       break;
     }
@@ -1212,9 +1222,9 @@ DeclarationFragmentsBuilder::getFragmentsForClassTemplateSpecialization(
           cast<CXXRecordDecl>(Decl)))
       .pop_back() // there is an extra semicolon now
       .append("<", DeclarationFragments::FragmentKind::Text)
-      .append(
-          getFragmentsForTemplateArguments(Decl->getTemplateArgs().asArray(),
-                                           Decl->getASTContext(), std::nullopt))
+      .append(getFragmentsForTemplateArguments(
+          Decl->getTemplateArgs().asArray(), Decl->getASTContext(),
+          Decl->getTemplateArgsAsWritten()->arguments()))
       .append(">", DeclarationFragments::FragmentKind::Text)
       .appendSemicolon();
 }
@@ -1255,9 +1265,9 @@ DeclarationFragmentsBuilder::getFragmentsForVarTemplateSpecialization(
       .append(DeclarationFragmentsBuilder::getFragmentsForVarTemplate(Decl))
       .pop_back() // there is an extra semicolon now
       .append("<", DeclarationFragments::FragmentKind::Text)
-      .append(
-          getFragmentsForTemplateArguments(Decl->getTemplateArgs().asArray(),
-                                           Decl->getASTContext(), std::nullopt))
+      .append(getFragmentsForTemplateArguments(
+          Decl->getTemplateArgs().asArray(), Decl->getASTContext(),
+          Decl->getTemplateArgsAsWritten()->arguments()))
       .append(">", DeclarationFragments::FragmentKind::Text)
       .appendSemicolon();
 }

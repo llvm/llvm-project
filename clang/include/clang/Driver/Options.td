@@ -2981,6 +2981,10 @@ def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Enable full Microsoft Visual C++ compatibility">,
   MarshallingInfoFlag<LangOpts<"MSVCCompat">>;
+def fms_define_stdc : Flag<["-"], "fms-define-stdc">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Define '__STDC__' to '1' in MSVC Compatibility mode">,
+  MarshallingInfoFlag<LangOpts<"MSVCEnableStdcMacro">>;
 def fms_extensions : Flag<["-"], "fms-extensions">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Accept some non-standard constructs supported by the Microsoft compiler">,
@@ -4341,6 +4345,10 @@ defm strict_dwarf : BoolOption<"g", "strict-dwarf",
           "the specified version, avoiding features from later versions.">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>,
   Group<g_flags_Group>;
+defm omit_unreferenced_methods : BoolGOption<"omit-unreferenced-methods",
+  CodeGenOpts<"DebugOmitUnreferencedMethods">, DefaultFalse,
+  NegFlag<SetFalse>,
+  PosFlag<SetTrue, [], [CC1Option]>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>;
 defm column_info : BoolOption<"g", "column-info",
   CodeGenOpts<"DebugColumnInfo">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
@@ -6273,11 +6281,11 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf">;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf">;
-// Features egpr, push2pop2, ppx and ndd are validated with llvm-test-suite && cpu2017 on Intel SDE.
-// For stability, we turn on these features only for -mapxf. After a feature pass the validation,
-// we will add it to -mapxf.
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx", "ndd"]>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd"]>;
+// For stability, we only add a feature to -mapxf after it passes the validation of llvm-test-suite && cpu2017 on Intel SDE.
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
+def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
+                                HelpText<"Enable use of GPR32 in inline assembly for APX">;
 } // let Flags = [TargetSpecific]
 
 // VE feature flags
@@ -8306,6 +8314,9 @@ def _SLASH_vd : CLJoined<"vd">, HelpText<"Control vtordisp placement">,
   Alias<vtordisp_mode_EQ>;
 def _SLASH_X : CLFlag<"X">,
   HelpText<"Do not add %INCLUDE% to include search path">, Alias<nostdlibinc>;
+def _SLASH_Zc___STDC__ : CLFlag<"Zc:__STDC__">,
+  HelpText<"Define __STDC__">,
+  Alias<fms_define_stdc>;
 def _SLASH_Zc_sizedDealloc : CLFlag<"Zc:sizedDealloc">,
   HelpText<"Enable C++14 sized global deallocation functions">,
   Alias<fsized_deallocation>;

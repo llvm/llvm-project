@@ -443,6 +443,9 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 }
 
 void VPIRWrapperBlock::execute(VPTransformState *State) {
+  assert(getHierarchicalSuccessors().empty() &&
+         "VPIRBasicBlock cannot have successors at the moment");
+
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
     VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
     auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
@@ -529,16 +532,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
   }
 
   // 2. Fill the IR basic block with IR instructions.
-  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
-                    << " in BB:" << NewBB->getName() << '\n');
-
-  State->CFG.VPBB2IRBB[this] = NewBB;
-  State->CFG.PrevVPBB = this;
-
-  for (VPRecipeBase &Recipe : Recipes)
-    Recipe.execute(*State);
-
-  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *NewBB);
+  executeRecipes(State, NewBB);
 }
 
 void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
@@ -549,6 +543,19 @@ void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
     for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
       R.setOperand(I, NewValue);
   }
+}
+
+void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
+  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
+                    << " in BB:" << BB->getName() << '\n');
+
+  State->CFG.VPBB2IRBB[this] = BB;
+  State->CFG.PrevVPBB = this;
+
+  for (VPRecipeBase &Recipe : Recipes)
+    Recipe.execute(*State);
+
+  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *BB);
 }
 
 VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
@@ -820,7 +827,7 @@ VPlan::~VPlan() {
 VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
                                    bool RequiresScalarEpilogueCheck,
                                    bool TailFolded, Loop *TheLoop) {
-  VPBasicBlock *Preheader = new VPBasicBlock("ph");
+  VPIRBasicBlock *Preheader = new VPIRBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
   Plan->TripCount =
@@ -979,9 +986,9 @@ void VPlan::execute(VPTransformState *State) {
   }
 
   State->CFG.DTU.flush();
-  // DT is currently updated for non-native path only.
-  assert(EnableVPlanNativePath || State->CFG.DTU.getDomTree().verify(
-                                      DominatorTree::VerificationLevel::Fast));
+  assert(State->CFG.DTU.getDomTree().verify(
+             DominatorTree::VerificationLevel::Fast) &&
+         "DT not preserved correctly");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
