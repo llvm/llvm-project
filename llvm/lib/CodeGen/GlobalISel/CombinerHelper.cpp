@@ -7420,7 +7420,8 @@ bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
   const auto &TLI = getTargetLowering();
 
   // Convert zext nneg to sext if sext is the preferred form for the target.
-  if (TLI.isSExtCheaperThanZExt(getMVTForLLT(SrcTy), getMVTForLLT(DstTy))) {
+  if (isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT, {DstTy, SrcTy}}) &&
+      TLI.isSExtCheaperThanZExt(getMVTForLLT(SrcTy), getMVTForLLT(DstTy))) {
     MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
     return true;
   }
