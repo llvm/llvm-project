@@ -1,9 +1,6 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// Needs post merge help
-// XFAIL: *
-
 //
 // Check help message.
 //
@@ -41,7 +38,7 @@
 
 // CHECK-IR: [[BIN:@.+]] = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}"
 
-// CHECK-IR: [[IMAGES:@.+]] = internal unnamed_addr constant [1 x [[IMAGETY]]] [[[IMAGETY]] { ptr [[BIN]], ptr getelementptr inbounds ([[[SIZE]] x i8], ptr [[BIN]], i64 1, i64 0), ptr [[ENTBEGIN]], ptr [[ENTEND]] }]
+// CHECK-IR: [[IMAGES:@.+]] = internal unnamed_addr constant [1 x [[IMAGETY]]] [[[IMAGETY]] { ptr [[BIN]], ptr getelementptr ([[[SIZE]] x i8], ptr [[BIN]], i64 0, i64 160), ptr [[ENTBEGIN]], ptr [[ENTEND]] }]
 
 // CHECK-IR: [[DESC:@.+]] = internal constant [[DESCTY]] { i32 1, ptr [[IMAGES]], ptr [[ENTBEGIN]], ptr [[ENTEND]] }
 
