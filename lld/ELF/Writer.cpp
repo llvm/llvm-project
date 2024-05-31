@@ -618,7 +618,6 @@ enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 27,
   RF_NOT_ALLOC = 1 << 26,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
-  RF_NOT_SPECIAL = 1 << 17,
   RF_LARGE_ALT = 1 << 15,
   RF_WRITE = 1 << 14,
   RF_EXEC_WRITE = 1 << 13,
@@ -644,24 +643,6 @@ unsigned elf::getSectionRank(OutputSection &osec) {
   if (!(osec.flags & SHF_ALLOC))
     return rank | RF_NOT_ALLOC;
 
-  if (osec.type == SHT_LLVM_PART_EHDR)
-    return rank;
-  if (osec.type == SHT_LLVM_PART_PHDR)
-    return rank | 1;
-
-  // Put .interp first because some loaders want to see that section
-  // on the first page of the executable file when loaded into memory.
-  if (osec.name == ".interp")
-    return rank | 2;
-
-  // Put .note sections at the beginning so that they are likely to be included
-  // in a truncate core file. In particular, .note.gnu.build-id, if available,
-  // can identify the object file.
-  if (osec.type == SHT_NOTE)
-    return rank | 3;
-
-  rank |= RF_NOT_SPECIAL;
-
   // Sort sections based on their access permission in the following
   // order: R, RX, RXW, RW(RELRO), RW(non-RELRO).
   //
@@ -677,11 +658,6 @@ unsigned elf::getSectionRank(OutputSection &osec) {
   bool isWrite = osec.flags & SHF_WRITE;
 
   if (!isWrite && !isExec) {
-    // Make PROGBITS sections (e.g .rodata .eh_frame) closer to .text to
-    // alleviate relocation overflow pressure. Large special sections such as
-    // .dynstr and .dynsym can be away from .text.
-    if (osec.type == SHT_PROGBITS)
-      rank |= RF_RODATA;
     // Among PROGBITS sections, place .lrodata further from .text.
     // For -z lrodata-after-bss, place .lrodata after .lbss like GNU ld. This
     // layout has one extra PT_LOAD, but alleviates relocation overflow
@@ -691,6 +667,25 @@ unsigned elf::getSectionRank(OutputSection &osec) {
       rank |= config->zLrodataAfterBss ? RF_LARGE_ALT : 0;
     else
       rank |= config->zLrodataAfterBss ? 0 : RF_LARGE;
+
+    if (osec.type == SHT_LLVM_PART_EHDR)
+      ;
+    else if (osec.type == SHT_LLVM_PART_PHDR)
+      rank |= 1;
+    else if (osec.name == ".interp")
+      rank |= 2;
+    // Put .note sections at the beginning so that they are likely to be
+    // included in a truncate core file. In particular, .note.gnu.build-id, if
+    // available, can identify the object file.
+    else if (osec.type == SHT_NOTE)
+      rank |= 3;
+    // Make PROGBITS sections (e.g .rodata .eh_frame) closer to .text to
+    // alleviate relocation overflow pressure. Large special sections such as
+    // .dynstr and .dynsym can be away from .text.
+    else if (osec.type != SHT_PROGBITS)
+      rank |= 4;
+    else
+      rank |= RF_RODATA;
   } else if (isExec) {
     rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
   } else {
@@ -1484,16 +1479,22 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= part.memtagGlobalDescriptors->updateAllocSize();
     }
 
-    const Defined *changedSym = script->assignAddresses();
+    std::pair<const OutputSection *, const Defined *> changes =
+        script->assignAddresses();
     if (!changed) {
       // Some symbols may be dependent on section addresses. When we break the
       // loop, the symbol values are finalized because a previous
       // assignAddresses() finalized section addresses.
-      if (!changedSym)
+      if (!changes.first && !changes.second)
         break;
       if (++assignPasses == 5) {
-        errorOrWarn("assignment to symbol " + toString(*changedSym) +
-                    " does not converge");
+        if (changes.first)
+          errorOrWarn("address (0x" + Twine::utohexstr(changes.first->addr) +
+                      ") of section '" + changes.first->name +
+                      "' does not converge");
+        if (changes.second)
+          errorOrWarn("assignment to symbol " + toString(*changes.second) +
+                      " does not converge");
         break;
       }
     } else if (spilled) {

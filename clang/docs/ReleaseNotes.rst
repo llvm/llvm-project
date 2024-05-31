@@ -251,6 +251,9 @@ Resolutions to C++ Defect Reports
 - P0522 implementation is enabled by default in all language versions, and
   provisional wording for CWG2398 is implemented.
 
+- Clang now requires a template argument list after a template keyword.
+  (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
+
 C Language Changes
 ------------------
 
@@ -816,6 +819,9 @@ Bug Fixes to C++ Support
 - Fix incorrect merging of modules which contain using declarations which shadow
   other declarations. This could manifest as ODR checker false positives.
   Fixes (`#80252 <https://github.com/llvm/llvm-project/issues/80252>`_)
+- Fix a regression introduced in Clang 18 causing incorrect overload resolution in the presence of functions only
+  differering by their constraints when only one of these function was variadic.
+- Fix a crash when a variable is captured by a block nested inside a lambda. (Fixes #GH93625).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
