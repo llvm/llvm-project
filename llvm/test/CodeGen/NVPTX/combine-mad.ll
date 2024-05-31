@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 -O1 | FileCheck %s
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -O1 | FileCheck %s
 ; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 -O1 | %ptxas-verify %}
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -O1 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -O1 | %ptxas-verify %}
 
 define i32 @test1(i32 %n, i32 %m) {
 ;
