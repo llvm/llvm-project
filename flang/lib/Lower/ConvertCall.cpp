@@ -643,6 +643,9 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     // Standard procedure call with fir.call.
     auto call = builder.create<fir::CallOp>(loc, funcType.getResults(),
                                             funcSymbolAttr, operands);
+    if (caller.characterize().IsBindC())
+      call.setIsBindC(true);
+
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
       callResult = call.getResult(0);
