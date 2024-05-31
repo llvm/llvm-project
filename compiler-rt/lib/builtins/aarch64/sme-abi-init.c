@@ -57,7 +57,7 @@ static void init_aarch64_has_sme(void) {
 #pragma GCC diagnostic ignored "-Wprio-ctor-dtor"
 #endif
 __attribute__((constructor(90))) static void get_aarch64_cpu_features(void) {
-  if (!get_features())
+  if (!__get_aarch64_features())
     __init_cpu_features();
 }
 
@@ -71,7 +71,7 @@ extern struct SME_STATE __arm_sme_state(void) __arm_streaming_compatible;
 __attribute__((target("sve"))) long
 __arm_get_current_vg(void) __arm_streaming_compatible {
   struct SME_STATE State = __arm_sme_state();
-  bool HasSVE = get_features() & (1ULL << FEAT_SVE);
+  bool HasSVE = __get_aarch64_features() & (1ULL << FEAT_SVE);
 
   if (!HasSVE && !has_sme())
     return 0;
