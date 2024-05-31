@@ -4411,6 +4411,12 @@ def PtrauthAuth : Builtin {
   let Prototype = "void*(void*,int,void*)";
 }
 
+def PtrauthStringDiscriminator : Builtin {
+  let Spellings = ["__builtin_ptrauth_string_discriminator"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "size_t(char const*)";
+}
+
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.
 def ReadPipe : OCLPipeLangBuiltin {

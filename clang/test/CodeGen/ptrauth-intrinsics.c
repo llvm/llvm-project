@@ -71,3 +71,16 @@ void test_sign_generic_data() {
   // CHECK-NEXT: store i64 [[RESULT]], ptr @signature,
   signature = __builtin_ptrauth_sign_generic_data(fnptr, ptr_discriminator);
 }
+
+// CHECK-LABEL: define void @test_string_discriminator()
+void test_string_discriminator() {
+  // CHECK:      [[X:%.*]] = alloca i32
+
+  // Check a couple of random discriminators used by Swift.
+
+  // CHECK:      store i32 58298, ptr [[X]],
+  int x = __builtin_ptrauth_string_discriminator("InitializeWithCopy");
+
+  // CHECK:      store i32 9112, ptr [[X]],
+  x = __builtin_ptrauth_string_discriminator("DestroyArray");
+}
