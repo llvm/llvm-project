@@ -1426,5 +1426,7 @@ let Command = "statistics dump" in {
     "Force loading all the debug information if not yet loaded, and collect "
     "statistics with those.">;
   def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
-    Desc<"Include transcript.">;
+    Desc<"If the setting interpreter.save-transcript is enabled and this "
+    "option is specified, include a JSON array with all commands the user and/"
+    "or scripts executed during a debug session.">;
 }
