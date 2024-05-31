@@ -11,14 +11,37 @@ define void @test_umin(i32 %N) {
 ; CHECK-NEXT:    [[CMP5_NOT:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP5_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL2:%.*]]
+; CHECK:       for.body.peel.begin:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
+; CHECK:       for.body.peel:
+; CHECK-NEXT:    [[COND_PEEL:%.*]] = tail call i32 @llvm.umin.i32(i32 0, i32 2)
+; CHECK-NEXT:    tail call void @foo(i32 [[COND_PEEL]])
+; CHECK-NEXT:    [[INC_PEEL:%.*]] = add nuw i32 0, 1
+; CHECK-NEXT:    [[EXITCOND_NOT_PEEL:%.*]] = icmp eq i32 [[INC_PEEL]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT_PEEL]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY_PEEL_NEXT:%.*]]
+; CHECK:       for.body.peel.next:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL3:%.*]]
+; CHECK:       for.body.peel2:
+; CHECK-NEXT:    [[COND_PEEL3:%.*]] = tail call i32 @llvm.umin.i32(i32 [[INC_PEEL]], i32 2)
+; CHECK-NEXT:    tail call void @foo(i32 [[COND_PEEL3]])
+; CHECK-NEXT:    [[INC_PEEL4:%.*]] = add nuw i32 [[INC_PEEL]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT_PEEL5:%.*]] = icmp eq i32 [[INC_PEEL4]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT_PEEL5]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY_PEEL_NEXT1:%.*]]
+; CHECK:       for.body.peel.next1:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT6:%.*]]
+; CHECK:       for.body.peel.next6:
+; CHECK-NEXT:    br label [[FOR_BODY_PREHEADER_PEEL_NEWPH:%.*]]
+; CHECK:       for.body.preheader.peel.newph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.umin.i32(i32 [[I_06]], i32 2)
-; CHECK-NEXT:    tail call void @foo(i32 [[COND]])
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[INC_PEEL4]], [[FOR_BODY_PREHEADER_PEEL_NEWPH]] ]
+; CHECK-NEXT:    tail call void @foo(i32 2)
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_06]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       for.cond.cleanup.loopexit.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
@@ -47,14 +70,37 @@ define void @test_umax(i32 %N) {
 ; CHECK-NEXT:    [[CMP5_NOT:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP5_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL2:%.*]]
+; CHECK:       for.body.peel.begin:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
+; CHECK:       for.body.peel:
+; CHECK-NEXT:    [[COND_PEEL:%.*]] = tail call i32 @llvm.umax.i32(i32 0, i32 2)
+; CHECK-NEXT:    tail call void @foo(i32 [[COND_PEEL]])
+; CHECK-NEXT:    [[INC_PEEL:%.*]] = add nuw i32 0, 1
+; CHECK-NEXT:    [[EXITCOND_NOT_PEEL:%.*]] = icmp eq i32 [[INC_PEEL]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT_PEEL]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY_PEEL_NEXT:%.*]]
+; CHECK:       for.body.peel.next:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL3:%.*]]
+; CHECK:       for.body.peel2:
+; CHECK-NEXT:    [[COND_PEEL3:%.*]] = tail call i32 @llvm.umax.i32(i32 [[INC_PEEL]], i32 2)
+; CHECK-NEXT:    tail call void @foo(i32 [[COND_PEEL3]])
+; CHECK-NEXT:    [[INC_PEEL4:%.*]] = add nuw i32 [[INC_PEEL]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT_PEEL5:%.*]] = icmp eq i32 [[INC_PEEL4]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT_PEEL5]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY_PEEL_NEXT1:%.*]]
+; CHECK:       for.body.peel.next1:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT6:%.*]]
+; CHECK:       for.body.peel.next6:
+; CHECK-NEXT:    br label [[FOR_BODY_PREHEADER_PEEL_NEWPH:%.*]]
+; CHECK:       for.body.preheader.peel.newph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.umax.i32(i32 [[I_06]], i32 2)
-; CHECK-NEXT:    tail call void @foo(i32 [[COND]])
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[INC_PEEL4]], [[FOR_BODY_PREHEADER_PEEL_NEWPH]] ]
+; CHECK-NEXT:    tail call void @foo(i32 [[I_06]])
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_06]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       for.cond.cleanup.loopexit.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
@@ -83,14 +129,37 @@ define void @test_smax(i32 %N) {
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL2:%.*]]
+; CHECK:       for.body.peel.begin:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
+; CHECK:       for.body.peel:
+; CHECK-NEXT:    [[COND_PEEL:%.*]] = tail call i32 @llvm.smax.i32(i32 0, i32 -2)
+; CHECK-NEXT:    tail call void @foo(i32 [[COND_PEEL]])
+; CHECK-NEXT:    [[DEC_PEEL:%.*]] = add nsw i32 0, -1
+; CHECK-NEXT:    [[CMP_PEEL:%.*]] = icmp sgt i32 [[DEC_PEEL]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_PEEL]], label [[FOR_BODY_PEEL_NEXT:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; CHECK:       for.body.peel.next:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL3:%.*]]
+; CHECK:       for.body.peel2:
+; CHECK-NEXT:    [[COND_PEEL3:%.*]] = tail call i32 @llvm.smax.i32(i32 [[DEC_PEEL]], i32 -2)
+; CHECK-NEXT:    tail call void @foo(i32 [[COND_PEEL3]])
+; CHECK-NEXT:    [[DEC_PEEL4:%.*]] = add nsw i32 [[DEC_PEEL]], -1
+; CHECK-NEXT:    [[CMP_PEEL5:%.*]] = icmp sgt i32 [[DEC_PEEL4]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_PEEL5]], label [[FOR_BODY_PEEL_NEXT1:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT]]
+; CHECK:       for.body.peel.next1:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT6:%.*]]
+; CHECK:       for.body.peel.next6:
+; CHECK-NEXT:    br label [[FOR_BODY_PREHEADER_PEEL_NEWPH:%.*]]
+; CHECK:       for.body.preheader.peel.newph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[DEC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.smax.i32(i32 [[I_06]], i32 -2)
-; CHECK-NEXT:    tail call void @foo(i32 [[COND]])
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[DEC:%.*]], [[FOR_BODY]] ], [ [[DEC_PEEL4]], [[FOR_BODY_PREHEADER_PEEL_NEWPH]] ]
+; CHECK-NEXT:    tail call void @foo(i32 -2)
 ; CHECK-NEXT:    [[DEC]] = add nsw i32 [[I_06]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[DEC]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       for.cond.cleanup.loopexit.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
@@ -119,14 +188,37 @@ define void @test_smin(i32 %N) {
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL2:%.*]]
+; CHECK:       for.body.peel.begin:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
+; CHECK:       for.body.peel:
+; CHECK-NEXT:    [[COND_PEEL:%.*]] = tail call i32 @llvm.smin.i32(i32 0, i32 -2)
+; CHECK-NEXT:    tail call void @foo(i32 noundef signext [[COND_PEEL]])
+; CHECK-NEXT:    [[DEC_PEEL:%.*]] = add nsw i32 0, -1
+; CHECK-NEXT:    [[CMP_PEEL:%.*]] = icmp sgt i32 [[DEC_PEEL]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_PEEL]], label [[FOR_BODY_PEEL_NEXT:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; CHECK:       for.body.peel.next:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL3:%.*]]
+; CHECK:       for.body.peel2:
+; CHECK-NEXT:    [[COND_PEEL3:%.*]] = tail call i32 @llvm.smin.i32(i32 [[DEC_PEEL]], i32 -2)
+; CHECK-NEXT:    tail call void @foo(i32 noundef signext [[COND_PEEL3]])
+; CHECK-NEXT:    [[DEC_PEEL4:%.*]] = add nsw i32 [[DEC_PEEL]], -1
+; CHECK-NEXT:    [[CMP_PEEL5:%.*]] = icmp sgt i32 [[DEC_PEEL4]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_PEEL5]], label [[FOR_BODY_PEEL_NEXT1:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT]]
+; CHECK:       for.body.peel.next1:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT6:%.*]]
+; CHECK:       for.body.peel.next6:
+; CHECK-NEXT:    br label [[FOR_BODY_PREHEADER_PEEL_NEWPH:%.*]]
+; CHECK:       for.body.preheader.peel.newph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[DEC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.smin.i32(i32 [[I_06]], i32 -2)
-; CHECK-NEXT:    tail call void @foo(i32 noundef signext [[COND]])
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[DEC:%.*]], [[FOR_BODY]] ], [ [[DEC_PEEL4]], [[FOR_BODY_PREHEADER_PEEL_NEWPH]] ]
+; CHECK-NEXT:    tail call void @foo(i32 noundef signext [[I_06]])
 ; CHECK-NEXT:    [[DEC]] = add nsw i32 [[I_06]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[DEC]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       for.cond.cleanup.loopexit.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
@@ -191,14 +283,14 @@ define void @test_max_count_threshold(i32 %N) {
 ; CHECK-NEXT:    [[CMP5_NOT:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP5_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.umin.i32(i32 [[I_06]], i32 5)
-; CHECK-NEXT:    tail call void @foo(i32 [[COND]])
-; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_06]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    [[I_6:%.*]] = phi i32 [ [[INC1:%.*]], [[FOR_BODY1]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[COND1:%.*]] = tail call i32 @llvm.umin.i32(i32 [[I_6]], i32 5)
+; CHECK-NEXT:    tail call void @foo(i32 [[COND1]])
+; CHECK-NEXT:    [[INC1]] = add nuw i32 [[I_6]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT1:%.*]] = icmp eq i32 [[INC1]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT1]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY1]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
@@ -227,14 +319,14 @@ define void @test_wrap(i8 %N) {
 ; CHECK-NEXT:    [[CMP5_NOT:%.*]] = icmp eq i8 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP5_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_06:%.*]] = phi i8 [ [[INC1:%.*]], [[FOR_BODY1]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[COND1:%.*]] = tail call i8 @llvm.umin.i8(i8 [[I_06]], i8 -2)
-; CHECK-NEXT:    tail call void @bar(i8 [[COND1]])
-; CHECK-NEXT:    [[INC1]] = add i8 [[I_06]], 127
-; CHECK-NEXT:    [[EXITCOND_NOT1:%.*]] = icmp eq i8 [[INC1]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT1]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY1]]
+; CHECK-NEXT:    [[I_06:%.*]] = phi i8 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[COND:%.*]] = tail call i8 @llvm.umin.i8(i8 [[I_06]], i8 -2)
+; CHECK-NEXT:    tail call void @bar(i8 [[COND]])
+; CHECK-NEXT:    [[INC]] = add i8 [[I_06]], 127
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i8 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
@@ -255,3 +347,10 @@ for.body:
 for.cond.cleanup:
   ret void
 }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.peeled.count", i32 2}
+; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]]}
+;.
