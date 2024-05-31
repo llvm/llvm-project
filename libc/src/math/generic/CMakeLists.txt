@@ -83,6 +83,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ceilf16
+  SRCS
+    ceilf16.cpp
+  HDRS
+    ../ceilf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
   ceilf128
   SRCS
     ceilf128.cpp

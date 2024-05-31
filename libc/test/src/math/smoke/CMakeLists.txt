@@ -269,6 +269,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ceilf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ceilf16_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceilf16
+)
+
+add_fp_unittest(
   ceilf128_test
   SUITE
     libc-math-smoke-tests
