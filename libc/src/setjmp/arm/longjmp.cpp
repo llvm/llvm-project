@@ -49,7 +49,8 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
 
 #else // Thumb2 or ARM
 
-// TODO(https://github.com/llvm/llvm-project/issues/94061): fp registers (d0-d16)
+// TODO(https://github.com/llvm/llvm-project/issues/94061): fp registers
+// (d0-d16)
 // TODO(https://github.com/llvm/llvm-project/issues/94062): pac+bti
 [[gnu::naked]]
 LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
