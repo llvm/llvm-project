@@ -9357,6 +9357,13 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    \"a aaaaaaa aaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaa aaaaaaaaaaaaa\"\n"
       ");",
       Style);
+  verifyFormat(
+      "auto lambda =\n"
+      "    [&b](\n"
+      "        auto "
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "    ) {};",
+      Style);
 }
 
 TEST_F(FormatTest, ParenthesesAndOperandAlignment) {

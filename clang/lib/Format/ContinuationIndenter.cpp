@@ -813,6 +813,20 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
              Tok.Previous->Previous->Previous &&
              Tok.Previous->Previous->Previous->is(TT_FunctionDeclarationName)));
   };
+  const auto IsLambdaParameterList = [](const FormatToken *Left) {
+    // adapted from TokenAnnotator.cpp:isLambdaParameterList()
+    // Skip <...> if present.
+    if (Left->Previous && Left->Previous->is(tok::greater) &&
+        Left->Previous->MatchingParen &&
+        Left->Previous->MatchingParen->is(TT_TemplateOpener)) {
+      Left = Left->Previous->MatchingParen;
+    }
+
+    // Check for `[...]`.
+    return Left->Previous && Left->Previous->is(tok::r_square) &&
+           Left->Previous->MatchingParen &&
+           Left->Previous->MatchingParen->is(TT_LambdaLSquare);
+  };
   const auto IsFunctionCallParen = [&](const FormatToken &Tok) {
     return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
            Tok.Previous->is(tok::identifier);
@@ -828,18 +842,18 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     }
     return false;
   };
+  // Identifies simple (no expression) one-argument function calls.
   const auto IsNotSimpleFunction = [&](const FormatToken &Tok) {
     const auto *Previous = Tok.Previous;
     const auto *Next = Tok.Next;
     if (Tok.FakeLParens.size() > 0 && Tok.FakeLParens.back() > prec::Unknown)
       return true;
     if (Previous &&
-        (IsFunctionDeclParen(*Previous) || IsFunctionCallParen(*Previous))) {
-      if (!IsOpeningBracket(Tok) && Next && !Next->isMemberAccess() &&
-          !IsInTemplateString(Tok) && !IsFunctionDeclParen(*Next) &&
-          !IsFunctionCallParen(*Next)) {
-        return true;
-      }
+        (IsFunctionDeclParen(*Previous) || IsFunctionCallParen(*Previous) ||
+         IsLambdaParameterList(Previous))) {
+      return !IsOpeningBracket(Tok) && Next && !Next->isMemberAccess() &&
+             !IsInTemplateString(Tok) && !IsFunctionDeclParen(*Next) &&
+             !IsFunctionCallParen(*Next);
     }
     return false;
   };
