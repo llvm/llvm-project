@@ -9,7 +9,7 @@
 ; DBG-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
-; DBG-NEXT: ph:
+; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1000 + (-1 * %start))
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
@@ -179,7 +179,7 @@ exit:
 ; DBG-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
-; DBG-NEXT: ph:
+; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 (1 smax %n) to i64)
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
