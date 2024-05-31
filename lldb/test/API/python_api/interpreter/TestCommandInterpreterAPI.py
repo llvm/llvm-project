@@ -177,7 +177,8 @@ class CommandInterpreterAPICase(TestBase):
         # (lldb) r
         self.assertEqual(transcript[3]["command"], "r")
         self.assertEqual(transcript[3]["commandName"], "process launch")
-        self.assertEqual(transcript[3]["commandArguments"], "-X true --")
+        # Not checking `commandArguments`, because it can be different on different platforms/configurations.
+        # On macOS, it's "-X true --". On Linux, it's "-c/bin/bash --".
         # Process 25494 launched: '<path>/TestCommandInterpreterAPI.test_structured_transcript/a.out' (x86_64)
         self.assertIn("Process", transcript[3]["output"])
         self.assertIn("launched", transcript[3]["output"])
