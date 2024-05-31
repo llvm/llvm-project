@@ -3045,7 +3045,7 @@ SelectionDAG::getValidShiftAmountRange(SDValue V, const APInt &DemandedElts,
     assert(((!MinAmt && !MaxAmt) || (MinAmt && MaxAmt)) &&
            "Failed to find matching min/max shift amounts");
     if (MinAmt && MaxAmt)
-      return ConstantRange(*MinAmt, *MaxAmt);
+      return ConstantRange(*MinAmt, *MaxAmt + 1);
   }
 
   // Use computeKnownBits to find a hidden constant/knownbits (usually type
