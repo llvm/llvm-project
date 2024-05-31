@@ -646,12 +646,13 @@ struct TransferWriteToVectorStoreLowering
       rewriter.create<vector::MaskedStoreOp>(
           write.getLoc(), write.getSource(), write.getIndices(),
           write.getMask(), write.getVector());
-      return Value();
     } else {
       rewriter.create<vector::StoreOp>(write.getLoc(), write.getVector(),
                                        write.getSource(), write.getIndices());
-      return Value();
     }
+    // There's no return value for StoreOps. Use Value() to signal success to
+    // matchAndRewrite.
+    return Value();
   }
 
   std::optional<unsigned> maxTransferRank;

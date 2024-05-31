@@ -51,6 +51,23 @@ func.func @transfer_to_load(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32>
   return %res : vector<4xf32>
 }
 
+// Masked transfer_read/write inside are NOT lowered to vector.load/store
+// CHECK-LABEL:   func @masked_transfer_to_load(
+//  CHECK-SAME:                                %[[MEM:.*]]: memref<8x8xf32>,
+//  CHECK-SAME:                                %[[IDX:.*]]: index,
+//  CHECK-SAME:                                %[[MASK:.*]]: vector<4xi1>) -> memref<8x8xf32>
+//   CHECK-NOT:      vector.load 
+//   CHECK-NOT:      vector.store
+//       CHECK:      %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %arg0[%[[IDX]], %[[IDX]]]{{.*}} : memref<8x8xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+//       CHECK:      vector.mask %[[MASK]] { vector.transfer_write %[[READ]], %[[MEM]][%[[IDX]], %[[IDX]]]{{.*}} : vector<4xf32>, memref<8x8xf32> } : vector<4xi1>
+
+func.func @masked_transfer_to_load(%mem : memref<8x8xf32>, %i : index, %mask : vector<4xi1>) -> memref<8x8xf32> {
+  %cf0 = arith.constant 0.0 : f32
+  %read = vector.mask %mask {vector.transfer_read %mem[%i, %i], %cf0 {in_bounds = [true]} : memref<8x8xf32>, vector<4xf32>} : vector<4xi1> -> vector<4xf32>
+  vector.mask %mask {vector.transfer_write %read, %mem[%i, %i] {in_bounds = [true]} : vector<4xf32>, memref<8x8xf32> } : vector<4xi1> 
+  return %mem : memref<8x8xf32>
+}
+
 // n-D results are also supported.
 // CHECK-LABEL:   func @transfer_2D(
 // CHECK-SAME:                           %[[MEM:.*]]: memref<8x8xf32>,
@@ -390,24 +407,6 @@ func.func @transfer_2D_masked(%mem : memref<?x?xf32>, %mask : vector<2x4xi1>) ->
   %res = vector.transfer_read %mem[%c0, %c0], %pad, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<2x4xf32>
   vector.transfer_write %res, %mem[%c0, %c0], %mask {in_bounds = [true, true]} : vector<2x4xf32>, memref<?x?xf32>
   return %res : vector<2x4xf32>
-}
-
-// Masked transfer_read/write inside are NOT lowered to vector.load/store
-// CHECK-LABEL:   func @masked_transfer_to_load(
-//  CHECK-SAME:                                %[[MEM:.*]]: memref<8x8xf32>,
-//  CHECK-SAME:                                %[[IDX:.*]]: index,
-//  CHECK-SAME:                                %[[MASK:.*]]: vector<4xi1>) -> memref<8x8xf32>
-//   CHECK-NOT:      vector.load 
-//   CHECK-NOT:      vector.store
-//       CHECK:      %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %arg0[%[[IDX]], %[[IDX]]]{{.*}} : memref<8x8xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
-//       CHECK:      vector.mask %[[MASK]] { vector.transfer_write %[[READ]], %[[MEM]][%[[IDX]], %[[IDX]]]{{.*}} : vector<4xf32>, memref<8x8xf32> } : vector<4xi1>
-
-
-func.func @masked_transfer_to_load(%mem : memref<8x8xf32>, %i : index, %mask : vector<4xi1>) -> memref<8x8xf32> {
-  %cf0 = arith.constant 0.0 : f32
-  %read = vector.mask %mask { vector.transfer_read %mem[%i, %i], %cf0 {in_bounds = [true]} : memref<8x8xf32>, vector<4xf32>} : vector<4xi1> -> vector<4xf32>
-  vector.mask %mask {vector.transfer_write %read, %mem[%i, %i] {in_bounds = [true]} : vector<4xf32>, memref<8x8xf32> } : vector<4xi1> 
-  return %mem : memref<8x8xf32>
 }
 
 module attributes {transform.with_named_sequence} {
