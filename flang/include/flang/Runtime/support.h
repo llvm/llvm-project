@@ -34,6 +34,9 @@ extern "C" {
 // Predicate: is the storage described by a Descriptor contiguous in memory?
 bool RTDECL(IsContiguous)(const Descriptor &);
 
+// Predicate: is this descriptor describing an assumed-size array?
+bool RTDECL(IsAssumedSize)(const Descriptor &);
+
 // Copy "from" descriptor into "to" descriptor and update "to" dynamic type,
 // CFI_attribute, and lower bounds according to the other arguments.
 // "newDynamicType" may be a null pointer in which case "to" dynamic type is the

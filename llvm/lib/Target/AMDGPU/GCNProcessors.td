@@ -304,12 +304,15 @@ def : ProcessorModel<"gfx11-generic", GFX11SpeedModel,
 // GCN GFX12.
 //===----------------------------------------------------------------------===//
 
-// TODO: gfx12-generic ?
-
 def : ProcessorModel<"gfx1200", GFX12SpeedModel,
   FeatureISAVersion12.Features
 >;
 
 def : ProcessorModel<"gfx1201", GFX12SpeedModel,
   FeatureISAVersion12.Features
+>;
+
+// [gfx1200, gfx1201]
+def : ProcessorModel<"gfx12-generic", GFX12SpeedModel,
+  FeatureISAVersion12_Generic.Features
 >;

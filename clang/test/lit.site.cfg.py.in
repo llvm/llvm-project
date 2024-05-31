@@ -43,6 +43,7 @@ config.llvm_external_lit = path(r"@LLVM_EXTERNAL_LIT@")
 config.standalone_build = @CLANG_BUILT_STANDALONE@
 config.ppc_linux_default_ieeelongdouble = @PPC_LINUX_DEFAULT_IEEELONGDOUBLE@
 config.have_llvm_driver = @LLVM_TOOL_LLVM_DRIVER_BUILD@
+config.substitutions.append(("%llvm-version-major", "@LLVM_VERSION_MAJOR@"))
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

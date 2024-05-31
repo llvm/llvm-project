@@ -7499,9 +7499,9 @@ LoopVectorizationPlanner::executePlan(
   assert(
       (IsEpilogueVectorization || !ExpandedSCEVs) &&
       "expanded SCEVs to reuse can only be used during epilogue vectorization");
+  (void)IsEpilogueVectorization;
 
-  if (!IsEpilogueVectorization)
-    VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
+  VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF
                     << ", UF=" << BestUF << '\n');
