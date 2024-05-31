@@ -29,6 +29,7 @@
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
+#include "Utils/SIDefinesUtils.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1194,30 +1195,6 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
                             getLdsDwGranularity(ST) * sizeof(uint32_t)));
 }
 
-static constexpr std::pair<unsigned, unsigned> getShiftMask(unsigned Value) {
-  unsigned Shift = 0;
-  unsigned Mask = 0;
-
-  Mask = ~Value;
-  for (; !(Mask & 1); Shift++, Mask >>= 1) {
-  }
-
-  return std::make_pair(Shift, Mask);
-}
-
-static const MCExpr *MaskShiftSet(const MCExpr *Val, uint32_t Mask,
-                                  uint32_t Shift, MCContext &Ctx) {
-  if (Mask) {
-    const MCExpr *MaskExpr = MCConstantExpr::create(Mask, Ctx);
-    Val = MCBinaryExpr::createAnd(Val, MaskExpr, Ctx);
-  }
-  if (Shift) {
-    const MCExpr *ShiftExpr = MCConstantExpr::create(Shift, Ctx);
-    Val = MCBinaryExpr::createShl(Val, ShiftExpr, Ctx);
-  }
-  return Val;
-}
-
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type
 // is AMDPAL.  It stores each compute/SPI register setting and other PAL
 // metadata items into the PALMD::Metadata, combining with any provided by the
@@ -1249,7 +1226,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
           MCBinaryExpr::createGT(CurrentProgramInfo.ScratchBlocks,
                                  MCConstantExpr::create(0, Ctx), Ctx);
       auto [Shift, Mask] = getShiftMask(C_00B84C_SCRATCH_EN);
-      MD->setRsrc2(CC, MaskShiftSet(HasScratchBlocks, Mask, Shift, Ctx), Ctx);
+      MD->setRsrc2(CC, maskShiftSet(HasScratchBlocks, Mask, Shift, Ctx), Ctx);
     }
   } else {
     MD->setHwStage(CC, ".debug_mode", (bool)CurrentProgramInfo.DebugMode);
