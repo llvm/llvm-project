@@ -144,13 +144,18 @@ APValue Pointer::toAPValue() const {
 
   // TODO: compute the offset into the object.
   CharUnits Offset = CharUnits::Zero();
-  bool IsOnePastEnd = isOnePastEnd();
 
   // Build the path into the object.
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
-    if (Ptr.isArrayElement()) {
-      Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getIndex()));
+    if (Ptr.isArrayRoot()) {
+        Path.push_back(APValue::LValuePathEntry::ArrayIndex(0));
+        Ptr = Ptr.getBase();
+    } else if (Ptr.isArrayElement()) {
+      if (Ptr.isOnePastEnd())
+        Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getArray().getNumElems()));
+      else
+        Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getIndex()));
       Ptr = Ptr.getArray();
     } else {
       // TODO: figure out if base is virtual
@@ -173,7 +178,7 @@ APValue Pointer::toAPValue() const {
   // Just invert the order of the elements.
   std::reverse(Path.begin(), Path.end());
 
-  return APValue(Base, Offset, Path, IsOnePastEnd, /*IsNullPtr=*/false);
+  return APValue(Base, Offset, Path, /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
 }
 
 void Pointer::print(llvm::raw_ostream &OS) const {
@@ -346,6 +351,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
             } else {
               Ok &= Composite(FieldTy, FP, Value);
             }
+            ActiveField = FP.getFieldDesc()->asFieldDecl();
             break;
           }
         }

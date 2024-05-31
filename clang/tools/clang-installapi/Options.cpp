@@ -13,6 +13,7 @@
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/InstallAPIDiagnostic.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Program.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TextAPI/DylibReader.h"
@@ -80,6 +81,47 @@ public:
 
 static llvm::opt::OptTable *createDriverOptTable() {
   return new DriverOptTable();
+}
+
+/// Parse JSON input into argument list.
+///
+/* Expected input format.
+ *  { "label" : ["-ClangArg1", "-ClangArg2"] }
+ */
+///
+/// Input is interpreted as "-Xlabel ClangArg1 -XLabel ClangArg2".
+static Expected<llvm::opt::InputArgList>
+getArgListFromJSON(const StringRef Input, llvm::opt::OptTable *Table,
+                   std::vector<std::string> &Storage) {
+  using namespace json;
+  Expected<Value> ValOrErr = json::parse(Input);
+  if (!ValOrErr)
+    return ValOrErr.takeError();
+
+  const Object *Root = ValOrErr->getAsObject();
+  if (!Root)
+    return llvm::opt::InputArgList();
+
+  for (const auto &KV : *Root) {
+    const Array *ArgList = KV.getSecond().getAsArray();
+    std::string Label = "-X" + KV.getFirst().str();
+    if (!ArgList)
+      return make_error<TextAPIError>(TextAPIErrorCode::InvalidInputFormat);
+    for (auto Arg : *ArgList) {
+      std::optional<StringRef> ArgStr = Arg.getAsString();
+      if (!ArgStr)
+        return make_error<TextAPIError>(TextAPIErrorCode::InvalidInputFormat);
+      Storage.emplace_back(Label);
+      Storage.emplace_back(*ArgStr);
+    }
+  }
+
+  std::vector<const char *> CArgs(Storage.size());
+  llvm::for_each(Storage,
+                 [&CArgs](StringRef Str) { CArgs.emplace_back(Str.data()); });
+
+  unsigned MissingArgIndex, MissingArgCount;
+  return Table->ParseArgs(CArgs, MissingArgIndex, MissingArgCount);
 }
 
 bool Options::processDriverOptions(InputArgList &Args) {
@@ -348,6 +390,31 @@ bool Options::processXarchOption(InputArgList &Args, arg_iterator Curr) {
   return true;
 }
 
+bool Options::processOptionList(InputArgList &Args,
+                                llvm::opt::OptTable *Table) {
+  Arg *A = Args.getLastArg(OPT_option_list);
+  if (!A)
+    return true;
+
+  const StringRef Path = A->getValue(0);
+  auto InputOrErr = FM->getBufferForFile(Path);
+  if (auto Err = InputOrErr.getError()) {
+    Diags->Report(diag::err_cannot_open_file) << Path << Err.message();
+    return false;
+  }
+  // Backing storage referenced for argument processing.
+  std::vector<std::string> Storage;
+  auto ArgsOrErr =
+      getArgListFromJSON((*InputOrErr)->getBuffer(), Table, Storage);
+
+  if (auto Err = ArgsOrErr.takeError()) {
+    Diags->Report(diag::err_cannot_read_input_list)
+        << "option" << Path << toString(std::move(Err));
+    return false;
+  }
+  return processInstallAPIXOptions(*ArgsOrErr);
+}
+
 bool Options::processLinkerOptions(InputArgList &Args) {
   // Handle required arguments.
   if (const Arg *A = Args.getLastArg(drv::OPT_install__name))
@@ -508,6 +575,9 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
 
   // Capture InstallAPI only driver options.
   if (!processInstallAPIXOptions(ParsedArgs))
+    return {};
+
+  if (!processOptionList(ParsedArgs, Table.get()))
     return {};
 
   DriverOpts.Demangle = ParsedArgs.hasArg(OPT_demangle);
@@ -818,7 +888,7 @@ InstallAPIContext Options::createContext() {
     Expected<AliasMap> Result = parseAliasList(Buffer.get());
     if (!Result) {
       Diags->Report(diag::err_cannot_read_input_list)
-          << /*IsFileList=*/false << ListPath << toString(Result.takeError());
+          << "symbol alias" << ListPath << toString(Result.takeError());
       return Ctx;
     }
     Aliases.insert(Result.get().begin(), Result.get().end());
@@ -839,7 +909,7 @@ InstallAPIContext Options::createContext() {
     if (auto Err = FileListReader::loadHeaders(std::move(Buffer.get()),
                                                Ctx.InputHeaders, FM)) {
       Diags->Report(diag::err_cannot_read_input_list)
-          << /*IsFileList=*/true << ListPath << std::move(Err);
+          << "header file" << ListPath << std::move(Err);
       return Ctx;
     }
   }

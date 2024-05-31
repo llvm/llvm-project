@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-omp-backend=LLVM -polly-codegen-verify -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force -polly-omp-backend=LLVM -polly-codegen-verify -passes=polly-codegen -S < %s | FileCheck %s
 ; https://github.com/llvm/llvm-project/issues/56692
 ;
 ; CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_call({{.*}}), !dbg ![[OPTLOC:[0-9]+]]

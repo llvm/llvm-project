@@ -299,6 +299,8 @@ private:
   getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile,
                        bool RequiresNullTerminator) const;
 
+  DirectoryEntry *&getRealDirEntry(const llvm::vfs::Status &Status);
+
 public:
   /// Get the 'stat' information for the given \p Path.
   ///

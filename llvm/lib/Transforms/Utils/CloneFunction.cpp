@@ -825,13 +825,6 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
       if (!NewI)
         continue;
 
-      // Skip over non-intrinsic callsites, we don't want to remove any nodes
-      // from the CGSCC.
-      CallBase *CB = dyn_cast<CallBase>(NewI);
-      if (CB && CB->getCalledFunction() &&
-          !CB->getCalledFunction()->isIntrinsic())
-        continue;
-
       if (Value *V = simplifyInstruction(NewI, DL)) {
         NewI->replaceAllUsesWith(V);
 

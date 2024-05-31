@@ -6,6 +6,7 @@ add_flang_library(CUFDialect
 
   DEPENDS
   MLIRIR
+  CUFAttrsIncGen
   CUFOpsIncGen
 
   LINK_LIBS
