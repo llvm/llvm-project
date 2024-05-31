@@ -1,0 +1,22 @@
+[
+{
+  "directory": "$test_dir/build",
+  "command": "clang++ -o main.o -I../include $test_dir/src/main.cpp",
+  "file": "$test_dir/src/main.cpp"
+},
+{
+  "directory": "$test_dir/build",
+  "command": "clang++ -o Calculator.o -I../include $test_dir/src/Calculator.cpp",
+  "file": "$test_dir/src/Calculator.cpp"
+},
+{
+  "directory": "$test_dir/build",
+  "command": "clang++ -o Circle.o -I../include $test_dir/src/Circle.cpp",
+  "file": "$test_dir/src/Circle.cpp"
+},
+{
+  "directory": "$test_dir/build",
+  "command": "clang++ -o Rectangle.o -I../include $test_dir/src/Rectangle.cpp",
+  "file": "$test_dir/src/Rectangle.cpp"
+}
+]
