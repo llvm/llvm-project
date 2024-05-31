@@ -82,7 +82,7 @@ void test() {
     test(STR("'\u00ff'"), STR("?}"), '\xff');
   }
 #    endif // TEST_HAS_NO_WIDE_CHARACTERS
-#  endif // TEST_HAS_NO_UNICODE
+#  endif   // TEST_HAS_NO_UNICODE
 #endif   // TEST_STD_VER > 20
 
   test(STR("10000000"), STR("b}"), char(128));
