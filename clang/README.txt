@@ -23,4 +23,4 @@ on the Clang forums:
   https://discourse.llvm.org/c/clang/
 
 If you find a bug in Clang, please file it in the LLVM bug tracker:
-  http://llvm.org/bugs/
+  https://github.com/llvm/llvm-project/issues
