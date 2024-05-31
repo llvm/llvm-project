@@ -717,7 +717,6 @@ backend:AMDGPU:
   - '**/*amdgpu*/**'
   - '**/*AMDGPU*/**'
 
-  
 backend:NVPTX:
   - 'llvm/**/*nvvm*'
   - 'llvm/**/*NVVM*'
