@@ -390,6 +390,66 @@ int main(int, char**)
         assert(err == ios.goodbit);
         assert(v == 2);
     }
+    {
+      v                                      = -1;
+      const char str[]                       = ".5";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 2);
+      assert(err == ios.goodbit);
+      assert(v == 0.5l);
+    }
+    {
+      v                                      = -1;
+      const char str[]                       = "-.5";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 3);
+      assert(err == ios.goodbit);
+      assert(v == -0.5l);
+    }
+    {
+      v                                      = -1;
+      const char str[]                       = ".5E1";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 4);
+      assert(err == ios.goodbit);
+      assert(v == 5.0l);
+    }
+    {
+      v                                      = -1;
+      const char str[]                       = "-.5e+1";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 6);
+      assert(err == ios.goodbit);
+      assert(v == -5.0l);
+    }
+    {
+      v                                      = -1;
+      const char str[]                       = ".625E-1";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 7);
+      assert(err == ios.goodbit);
+      assert(v == 0.0625l);
+    }
+    {
+      v                                      = -1;
+      const char str[]                       = "-.3125e-1";
+      std::ios_base::iostate err             = ios.goodbit;
+      cpp17_input_iterator<const char*> iter = f.get(
+          cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
+      assert(base(iter) == str + 9);
+      assert(err == ios.goodbit);
+      assert(v == -0.03125l);
+    }
 
   return 0;
 }
