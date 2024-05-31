@@ -368,7 +368,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"ieee_signaling_ne",
      &I::genIeeeSignalingCompare<mlir::arith::CmpFPredicate::UNE>},
     {"ieee_signbit", &I::genIeeeSignbit},
-    {"ieee_support_flag", &I::genIeeeSupportFlagOrHalting},
+    {"ieee_support_flag",
+     &I::genIeeeSupportFlagOrHalting,
+     {{{"flag", asValue}, {"x", asInquired, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"ieee_support_halting", &I::genIeeeSupportFlagOrHalting},
     {"ieee_support_rounding", &I::genIeeeSupportRounding},
     {"ieee_unordered", &I::genIeeeUnordered},
@@ -4672,15 +4675,15 @@ mlir::Value IntrinsicLibrary::genIeeeSignbit(mlir::Type resultType,
 }
 
 // IEEE_SUPPORT_FLAG, IEEE_SUPPORT_HALTING
-mlir::Value IntrinsicLibrary::genIeeeSupportFlagOrHalting(
-    mlir::Type resultType, llvm::ArrayRef<mlir::Value> args) {
+fir::ExtendedValue IntrinsicLibrary::genIeeeSupportFlagOrHalting(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
   // Check if a floating point exception or halting mode FLAG is supported.
   // An IEEE_SUPPORT_FLAG flag is supported either for all type kinds or none.
   // An optional kind argument X is therefore ignored.
   // Standard flags are all supported.
   // The nonstandard DENORM extension is not supported. (At least for now.)
   assert(args.size() == 1 || args.size() == 2);
-  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, args[0]);
+  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, fir::getBase(args[0]));
   mlir::Value flag = builder.create<fir::LoadOp>(loc, fieldRef);
   mlir::Value mask = builder.createIntegerConstant( // values are powers of 2
       loc, fieldTy,

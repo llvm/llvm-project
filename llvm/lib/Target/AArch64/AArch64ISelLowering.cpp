@@ -145,6 +145,15 @@ static cl::opt<bool> EnableExtToTBL("aarch64-enable-ext-to-tbl", cl::Hidden,
 static cl::opt<unsigned> MaxXors("aarch64-max-xors", cl::init(16), cl::Hidden,
                                  cl::desc("Maximum of xors"));
 
+// By turning this on, we will not fallback to DAG ISel when encountering
+// scalable vector types for all instruction, even if SVE is not yet supported
+// with some instructions.
+// See [AArch64TargetLowering::fallbackToDAGISel] for implementation details.
+static cl::opt<bool> EnableSVEGISel(
+    "aarch64-enable-gisel-sve", cl::Hidden,
+    cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
+    cl::init(false));
+
 /// Value type used for condition codes.
 static const MVT MVT_CC = MVT::i32;
 
@@ -9562,13 +9571,17 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
           Attribute::NoImplicitFloat))
     return SDValue();
 
-  if (!Subtarget->hasNEON())
+  EVT VT = Op.getValueType();
+  if (VT.isScalableVector() ||
+      useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
+
+  if (!Subtarget->isNeonAvailable())
     return SDValue();
 
   bool IsParity = Op.getOpcode() == ISD::PARITY;
   SDValue Val = Op.getOperand(0);
   SDLoc DL(Op);
-  EVT VT = Op.getValueType();
 
   // for i32, general parity function using EORs is more efficient compared to
   // using floating point
@@ -9616,10 +9629,6 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   }
 
   assert(!IsParity && "ISD::PARITY of vector types not supported");
-
-  if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
 
   assert((VT == MVT::v1i64 || VT == MVT::v2i64 || VT == MVT::v2i32 ||
           VT == MVT::v4i32 || VT == MVT::v4i16 || VT == MVT::v8i16) &&
@@ -26469,16 +26478,22 @@ bool AArch64TargetLowering::shouldLocalize(
 }
 
 bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
-  if (Inst.getType()->isScalableTy())
-    return true;
-
-  for (unsigned i = 0; i < Inst.getNumOperands(); ++i)
-    if (Inst.getOperand(i)->getType()->isScalableTy())
+  // Fallback for scalable vectors.
+  // Note that if EnableSVEGISel is true, we allow scalable vector types for
+  // all instructions, regardless of whether they are actually supported.
+  if (!EnableSVEGISel) {
+    if (Inst.getType()->isScalableTy()) {
       return true;
+    }
 
-  if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-    if (AI->getAllocatedType()->isScalableTy())
-      return true;
+    for (unsigned i = 0; i < Inst.getNumOperands(); ++i)
+      if (Inst.getOperand(i)->getType()->isScalableTy())
+        return true;
+
+    if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
+      if (AI->getAllocatedType()->isScalableTy())
+        return true;
+    }
   }
 
   // Checks to allow the use of SME instructions

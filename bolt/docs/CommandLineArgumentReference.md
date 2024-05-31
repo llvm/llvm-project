@@ -6,41 +6,37 @@
 
 ## OPTIONS
 
-### Generic options
+### Generic options:
 
 - `-h`
 
-  Alias for `--help`
+  Alias for --help
 
 - `--help`
 
-  Display available options (`--help-hidden` for more).
+  Display available options (--help-hidden for more)
 
 - `--help-hidden`
 
-  Display all available options.
+  Display all available options
 
 - `--help-list`
 
-  Display list of available options (`--help-list-hidden` for more).
+  Display list of available options (--help-list-hidden for more)
 
 - `--help-list-hidden`
 
-  Display list of all available options.
-
-- `--print-all-options`
-
-  Print all option values after command line parsing.
-
-- `--print-options`
-
-  Print non-default options after command line parsing.
+  Display list of all available options
 
 - `--version`
 
-  Display the version of this program.
+  Display the version of this program
 
-### Output options
+### Output options:
+
+- `--bolt-info`
+
+  Write bolt info section in the output binary
 
 - `-o <string>`
 
@@ -50,7 +46,7 @@
 
   Save recorded profile to a file
 
-### BOLT generic options
+### BOLT generic options:
 
 - `--align-text=<uint>`
 
@@ -89,15 +85,20 @@
 
 - `--data=<string>`
 
-  <data file>
+  data file
+
+- `--data2=<string>`
+
+  data file
 
 - `--debug-skeleton-cu`
 
-  Prints out offsets for abbrev and debug_info of Skeleton CUs that get patched.
+  Prints out offsetrs for abbrev and debu_info of Skeleton CUs that get patched.
 
 - `--deterministic-debuginfo`
 
-  Disables parallel execution of tasks that may produce nondeterministic debug info
+  Disables parallel execution of tasks that may produce nondeterministic debug
+  info
 
 - `--dot-tooltip-code`
 
@@ -113,7 +114,7 @@
 
 - `--dump-dot-all`
 
-  Dump function CFGs to graphviz format after each stage; enable '-print-loops'
+  Dump function CFGs to graphviz format after each stage;enable '-print-loops'
   for color-coded blocks
 
 - `--dump-orc`
@@ -179,8 +180,8 @@
 - `--hot-text`
 
   Generate hot text symbols. Apply this option to a precompiled binary that
-  manually calls into hugify, such that at runtime hugify call will put hot
-  code into 2M pages. This requires relocation.
+  manually calls into hugify, such that at runtime hugify call will put hot code
+  into 2M pages. This requires relocation.
 
 - `--hot-text-move-sections=<sec1,sec2,sec3,...>`
 
@@ -227,15 +228,15 @@
 - `--profile-format=<value>`
 
   Format to dump profile output in aggregation mode, default is fdata
-  - `=fdata`: offset-based plaintext format
-  - `=yaml`: dense YAML representation
+  - `fdata`: offset-based plaintext format
+  - `yaml`: dense YAML representation
 
 - `--r11-availability=<value>`
 
   Determine the availability of r11 before indirect branches
-  - `=never`: r11 not available
-  - `=always`: r11 available before calls and jumps
-  - `=abi`r11 available before calls but not before jumps
+  - `never`: r11 not available
+  - `always`: r11 available before calls and jumps
+  - `abi`: r11 available before calls but not before jumps
 
 - `--relocs`
 
@@ -283,7 +284,8 @@
 
 - `--trap-avx512`
 
-  In relocation mode trap upon entry to any function that uses AVX-512 instructions
+  In relocation mode trap upon entry to any function that uses AVX-512
+  instructions
 
 - `--trap-old-code`
 
@@ -311,7 +313,7 @@
   Output a single dwarf package file (dwp) instead of multiple non-relocatable
   dwarf object files (dwo).
 
-### BOLT optimization options
+### BOLT optimization options:
 
 - `--align-blocks`
 
@@ -357,13 +359,14 @@
 
 - `--cg-use-split-hot-size`
 
-  Use hot/cold data on basic blocks to determine hot sizes for call graph functions
+  Use hot/cold data on basic blocks to determine hot sizes for call graph
+  functions
 
 - `--cold-threshold=<uint>`
 
   Tenths of percents of main entry frequency to use as a threshold when
-  evaluating whether a basic block is cold (0 means it is only considered
-  cold if the block has zero samples). Default: 0
+  evaluating whether a basic block is cold (0 means it is only considered cold
+  if the block has zero samples). Default: 0
 
 - `--elim-link-veneers`
 
@@ -375,8 +378,8 @@
 
 - `--equalize-bb-counts`
 
-  Use same count for BBs that should have equivalent count (used in non-LBR
-  and shrink wrapping)
+  Use same count for BBs that should have equivalent count (used in non-LBR and
+  shrink wrapping)
 
 - `--execution-count-threshold=<uint>`
 
@@ -438,8 +441,8 @@
 
 - `--icp-calls-remaining-percent-threshold=<uint>`
 
-  The percentage threshold against remaining unpromoted indirect call count
-  for the promotion for calls
+  The percentage threshold against remaining unpromoted indirect call count for
+  the promotion for calls
 
 - `--icp-calls-topn`
 
@@ -518,22 +521,18 @@
 
 - `--indirect-call-promotion-jump-tables-topn=<uint>`
 
-  Limit number of targets to consider when doing indirect call promotion on
-  jump tables. 0 = no limit
-
-- `--indirect-call-promotion-mispredict-threshold=<uint>`
-
-  Misprediction threshold for skipping ICP on an indirect call
+  Limit number of targets to consider when doing indirect call promotion on jump
+  tables. 0 = no limit
 
 - `--indirect-call-promotion-topn=<uint>`
 
-  Limit number of targets to consider when doing indirect call promotion.
-  0 = no limit
+  Limit number of targets to consider when doing indirect call promotion. 0 = no
+  limit
 
 - `--indirect-call-promotion-use-mispredicts`
 
   Use misprediction frequency for determining whether or not ICP should be
-  applied at a callsite. The `-indirect-call-promotion-mispredict-threshold`
+  applied at a callsite.  The -indirect-call-promotion-mispredict-threshold
   value will be used by this heuristic
 
 - `--infer-fall-throughs`
@@ -566,11 +565,13 @@
 
 - `--inline-small-functions`
 
-  Inline functions if increase in size is less than defined by `-inline-small-functions-bytes`
+  Inline functions if increase in size is less than defined by -inline-small-
+  functions-bytes
 
 - `--inline-small-functions-bytes=<uint>`
 
-  Max number of bytes for the function to be considered small for inlining purposes
+  Max number of bytes for the function to be considered small for inlining
+  purposes
 
 - `--instrument`
 
@@ -590,7 +591,7 @@
   Make jump tables size smaller at the cost of using more instructions at jump
   sites
 
-- `-jump-tables=<value>`
+- `--jump-tables=<value>`
 
   Jump tables support (default=basic)
   - `none`: do not optimize functions with jump tables
@@ -780,23 +781,22 @@
 - `--split-strategy=<value>`
 
   Strategy used to partition blocks into fragments
-
-  - `profile2`: split each function into a hot and cold fragment using
-  profiling information
+  - `profile2`: split each function into a hot and cold fragment using profiling
+  information
   - `cdsplit`: split each function into a hot, warm, and cold fragment using
   profiling information
   - `random2`: split each function into a hot and cold fragment at a randomly
   chosen split point (ignoring any available profiling information)
-  - `randomN`: split each function into N fragments at randomly chosen split
+  - `randomN`: split each function into N fragments at a randomly chosen split
   points (ignoring any available profiling information)
-  - `all`: split all basic blocks of each function into fragments such that
-  each fragment contains exactly a single basic block
+  - `all`: split all basic blocks of each function into fragments such that each
+  fragment contains exactly a single basic block
 
 - `--split-threshold=<uint>`
 
   Split function only if its main size is reduced by more than given amount of
-  bytes. Default value: 0, i.e. split iff the size is reduced. Note that on
-  some architectures the size can increase after splitting.
+  bytes. Default value: 0, i.e. split iff the size is reduced. Note that on some
+  architectures the size can increase after splitting.
 
 - `--stale-matching-max-func-size=<uint>`
 
@@ -817,19 +817,20 @@
 - `--tail-duplication=<value>`
 
   Duplicate unconditional branches that cross a cache line
-
-  - `none` do not apply
-  - `aggressive` aggressive strategy
-  - `moderate` moderate strategy
-  - `cache` cache-aware duplication strategy
+  - `none`: do not apply
+  - `aggressive`: aggressive strategy
+  - `moderate`: moderate strategy
+  - `cache`: cache-aware duplication strategy
 
 - `--tsp-threshold=<uint>`
 
-  Maximum number of hot basic blocks in a function for which to use a precise TSP solution while re-ordering basic blocks
+  Maximum number of hot basic blocks in a function for which to use a precise
+  TSP solution while re-ordering basic blocks
 
 - `--use-aggr-reg-reassign`
 
-  Use register liveness analysis to try to find more opportunities for -reg-reassign optimization
+  Use register liveness analysis to try to find more opportunities for -reg-
+  reassign optimization
 
 - `--use-compact-aligner`
 
@@ -847,21 +848,16 @@
 
   Only apply branch boundary alignment in hot code
 
-- `--x86-strip-redundant-address-size`
+### BOLT options in relocation mode:
 
-  Remove redundant Address-Size override prefix
-
-### BOLT options in relocation mode
-
-- `-align-macro-fusion=<value>`
+- `--align-macro-fusion=<value>`
 
   Fix instruction alignment for macro-fusion (x86 relocation mode)
-
   - `none`: do not insert alignment no-ops for macro-fusion
   - `hot`: only insert alignment no-ops on hot execution paths (default)
   - `all`: always align instructions to allow macro-fusion
 
-### BOLT instrumentation options
+### BOLT instrumentation options:
 
 `llvm-bolt <executable> -instrument [-o outputfile] <instrumented-executable>`
 
@@ -893,72 +889,21 @@
 
 - `--instrumentation-no-counters-clear`
 
-  Don't clear counters across dumps (use with `instrumentation-sleep-time` option)
+  Don't clear counters across dumps (use with instrumentation-sleep-time option)
 
 - `--instrumentation-sleep-time=<uint>`
 
   Interval between profile writes (default: 0 = write only at program end).
   This is useful for service workloads when you want to dump profile every X
-  minutes or if you are killing the program and the profile is not being
-  dumped at the end.
+  minutes or if you are killing the program and the profile is not being dumped
+  at the end.
 
 - `--instrumentation-wait-forks`
 
   Wait until all forks of instrumented process will finish (use with
-  `instrumentation-sleep-time` option)
+  instrumentation-sleep-time option)
 
-### Data aggregation options (perf2bolt)
-
-`perf2bolt -p perf.data [-o outputfile] perf.fdata <executable>`
-
-- `--autofdo`
-
-  Generate autofdo textual data instead of bolt data
-
-- `--filter-mem-profile`
-
-  If processing a memory profile, filter out stack or heap accesses that won't
-  be useful for BOLT to reduce profile file size
-
-- `--ignore-build-id`
-
-  Continue even if build-ids in input binary and perf.data mismatch
-
-- `--ignore-interrupt-lbr`
-
-  Ignore kernel interrupt LBR that happens asynchronously
-
-- `--itrace=<string>`
-
-  Generate LBR info with perf itrace argument
-
-- `--nl`
-
-  Aggregate basic samples (without LBR info)
-
-- `--pa`
-
-  Skip perf and read data from a pre-aggregated file format
-
-- `--perfdata=<string>`
-
-  Data file
-
-- `--pid=<ulong>`
-
-  Only use samples from process with specified PID
-
-- `--time-aggr`
-
-  Time BOLT aggregator
-
-- `--use-event-pc`
-
-  Use event PC in combination with LBR sampling
-
-### BOLT printing options
-
-#### Generic options
+### BOLT printing options:
 
 - `--print-aliases`
 
@@ -1032,10 +977,10 @@
 - `--print-pseudo-probes=<value>`
 
   Print pseudo probe info
-  - `=decode`: decode probes section from binary
-  - `=address_conversion`: update address2ProbesMap with output block address
-  - `=encoded_probes`: display the encoded probes in binary section
-  - `=all`: enable all debugging printout
+  - `decode`: decode probes section from binary
+  - `address_conversion`: update address2ProbesMap with output block address
+  - `encoded_probes`: display the encoded probes in binary section
+  - `all`: enable all debugging printout
 
 - `--print-relocations`
 
@@ -1061,11 +1006,13 @@
 
   Print names of functions with unknown control flow
 
-- `--time-opts`
+- `--time-build`
 
-  Print time spent in each optimization
+  Print time spent constructing binary functions
 
-#### Optimization options
+- `--time-rewrite`
+
+  Print time spent in rewriting passes
 
 - `--print-after-branch-fixup`
 
@@ -1204,10 +1151,14 @@
 
   Print functions after veneer elimination pass
 
-- `--time-build`
+- `--time-opts`
 
-  Print time spent constructing binary functions
+  Print time spent in each optimization
 
-- `--time-rewrite`
+- `--print-all-options`
 
-  Print time spent in rewriting passes
+  Print all option values after command line parsing
+
+- `--print-options`
+
+  Print non-default options after command line parsing

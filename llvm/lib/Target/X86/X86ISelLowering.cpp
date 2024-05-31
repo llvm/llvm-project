@@ -136,6 +136,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // X86-SSE is even stranger. It uses -1 or 0 for vector masks.
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
+  // X86 instruction cache is coherent with its data cache so we can use the
+  // default expansion to a no-op.
+  setOperationAction(ISD::CLEAR_CACHE, MVT::Other, Expand);
+
   // For 64-bit, since we have so many registers, use the ILP scheduler.
   // For 32-bit, use the register pressure specific scheduling.
   // For Atom, always use ILP scheduling.
@@ -17840,6 +17844,22 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
     MVT NewCondVT = MVT::getVectorVT(NewCondSVT, NumElts);
     Cond = DAG.getSExtOrTrunc(Cond, dl, NewCondVT);
     return DAG.getNode(ISD::VSELECT, dl, VT, Cond, LHS, RHS);
+  }
+
+  // v16i16/v32i8 selects without AVX2, if the condition and another operand
+  // are free to split, then better to split before expanding the
+  // select. Don't bother with XOP as it has the fast VPCMOV instruction.
+  // TODO: This is very similar to narrowVectorSelect.
+  // TODO: Add Load splitting to isFreeToSplitVector ?
+  if (EltSize < 32 && VT.is256BitVector() && !Subtarget.hasAVX2() &&
+      !Subtarget.hasXOP()) {
+    bool FreeCond = isFreeToSplitVector(Cond.getNode(), DAG);
+    bool FreeLHS = isFreeToSplitVector(LHS.getNode(), DAG) ||
+                   (ISD::isNormalLoad(LHS.getNode()) && LHS.hasOneUse());
+    bool FreeRHS = isFreeToSplitVector(RHS.getNode(), DAG) ||
+                   (ISD::isNormalLoad(RHS.getNode()) && RHS.hasOneUse());
+    if (FreeCond && (FreeLHS || FreeRHS))
+      return splitVectorOp(Op, DAG, dl);
   }
 
   // Only some types will be legal on some subtargets. If we can emit a legal
@@ -57840,6 +57860,15 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
       case '2':
         return C_RegisterClass;
       }
+      break;
+    case 'j':
+      switch (Constraint[1]) {
+      default:
+        break;
+      case 'r':
+      case 'R':
+        return C_RegisterClass;
+      }
     }
   } else if (parseConstraintCode(Constraint) != X86::COND_INVALID)
     return C_Other;
@@ -57916,6 +57945,19 @@ X86TargetLowering::getSingleConstraintMatchWeight(
     case '2':
       if (!Subtarget.hasSSE2())
         return CW_Invalid;
+      break;
+    }
+    break;
+  case 'j':
+    if (StringRef(Constraint).size() != 2)
+      break;
+    switch (Constraint[1]) {
+    default:
+      return CW_Invalid;
+    case 'r':
+    case 'R':
+      if (CallOperandVal->getType()->isIntegerTy())
+        Wt = CW_SpecificReg;
       break;
     }
     break;
@@ -58218,6 +58260,10 @@ static bool isVKClass(const TargetRegisterClass &RC) {
          RC.hasSuperClassEq(&X86::VK64RegClass);
 }
 
+static bool useEGPRInlineAsm(const X86Subtarget &Subtarget) {
+  return Subtarget.hasEGPR() && Subtarget.useInlineAsmGPR32();
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                 StringRef Constraint,
@@ -58258,13 +58304,21 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'q':   // GENERAL_REGS in 64-bit mode, Q_REGS in 32-bit mode.
       if (Subtarget.is64Bit()) {
         if (VT == MVT::i8 || VT == MVT::i1)
-          return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
+          return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                        ? &X86::GR8RegClass
+                                        : &X86::GR8_NOREX2RegClass);
         if (VT == MVT::i16)
-          return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
+          return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                        ? &X86::GR16RegClass
+                                        : &X86::GR16_NOREX2RegClass);
         if (VT == MVT::i32 || VT == MVT::f32)
-          return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
+          return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                        ? &X86::GR32RegClass
+                                        : &X86::GR32_NOREX2RegClass);
         if (VT != MVT::f80 && !VT.isVector())
-          return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
+          return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                        ? &X86::GR64RegClass
+                                        : &X86::GR64_NOREX2RegClass);
         break;
       }
       [[fallthrough]];
@@ -58283,14 +58337,22 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'r':   // GENERAL_REGS
     case 'l':   // INDEX_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
-        return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
+        return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                      ? &X86::GR8RegClass
+                                      : &X86::GR8_NOREX2RegClass);
       if (VT == MVT::i16)
-        return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
+        return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                      ? &X86::GR16RegClass
+                                      : &X86::GR16_NOREX2RegClass);
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
-        return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
+        return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                      ? &X86::GR32RegClass
+                                      : &X86::GR32_NOREX2RegClass);
       if (VT != MVT::f80 && !VT.isVector())
-        return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
+        return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                      ? &X86::GR64RegClass
+                                      : &X86::GR64_NOREX2RegClass);
       break;
     case 'R':   // LEGACY_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
@@ -58512,6 +58574,31 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (VT == MVT::v64i1 || VT == MVT::i64)
           return std::make_pair(0U, &X86::VK64WMRegClass);
       }
+      break;
+    }
+  } else if (Constraint.size() == 2 && Constraint[0] == 'j') {
+    switch (Constraint[1]) {
+    default:
+      break;
+    case 'r':
+      if (VT == MVT::i8 || VT == MVT::i1)
+        return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
+      if (VT == MVT::i16)
+        return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
+      if (VT == MVT::i32 || VT == MVT::f32)
+        return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
+      if (VT != MVT::f80 && !VT.isVector())
+        return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
+      break;
+    case 'R':
+      if (VT == MVT::i8 || VT == MVT::i1)
+        return std::make_pair(0U, &X86::GR8RegClass);
+      if (VT == MVT::i16)
+        return std::make_pair(0U, &X86::GR16RegClass);
+      if (VT == MVT::i32 || VT == MVT::f32)
+        return std::make_pair(0U, &X86::GR32RegClass);
+      if (VT != MVT::f80 && !VT.isVector())
+        return std::make_pair(0U, &X86::GR64RegClass);
       break;
     }
   }

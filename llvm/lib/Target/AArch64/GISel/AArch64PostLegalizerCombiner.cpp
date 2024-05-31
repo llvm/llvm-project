@@ -309,6 +309,8 @@ bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (!Store.isSimple())
     return false;
   LLT ValTy = MRI.getType(Store.getValueReg());
+  if (ValTy.isScalableVector())
+    return false;
   if (!ValTy.isVector() || ValTy.getSizeInBits() != 128)
     return false;
   if (Store.getMemSizeInBits() != ValTy.getSizeInBits())
@@ -708,6 +710,11 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
     // should only be in a single block.
     resetState();
     for (auto &MI : MBB) {
+      // Skip for scalable vectors
+      if (auto *LdSt = dyn_cast<GLoadStore>(&MI);
+          LdSt && MRI.getType(LdSt->getOperand(0).getReg()).isScalableVector())
+        continue;
+
       if (auto *St = dyn_cast<GStore>(&MI)) {
         Register PtrBaseReg;
         APInt Offset;
