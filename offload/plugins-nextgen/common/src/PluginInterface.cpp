@@ -839,6 +839,10 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     if (!ProfOrErr)
       return ProfOrErr.takeError();
 
+    if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
+        uint32_t(DeviceDebugKind::PGODump))
+      ProfOrErr->dump();
+
     // Write data to profiling file
     if (auto Err = ProfOrErr->write()) {
       consumeError(std::move(Err));
