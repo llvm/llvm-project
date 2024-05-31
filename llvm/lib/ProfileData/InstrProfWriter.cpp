@@ -454,8 +454,8 @@ static uint64_t writeMemProfRecords(
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
     memprof::MemProfSchema *Schema, memprof::IndexedVersion Version,
-    llvm::DenseMap<memprof::CallStackId, uint32_t> *MemProfCallStackIndexes =
-        nullptr) {
+    llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
+        *MemProfCallStackIndexes = nullptr) {
   memprof::RecordWriterTrait RecordWriter(Schema, Version,
                                           MemProfCallStackIndexes);
   OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
@@ -536,18 +536,20 @@ static uint64_t writeMemProfCallStacks(
   return CallStackTableGenerator.Emit(OS.OS);
 }
 
-static llvm::DenseMap<memprof::CallStackId, uint32_t>
+static llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
 writeMemProfCallStackArray(
     ProfOStream &OS,
     llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
         &MemProfCallStackData,
     llvm::DenseMap<memprof::FrameId, uint32_t> &MemProfFrameIndexes) {
-  llvm::DenseMap<memprof::CallStackId, uint32_t> MemProfCallStackIndexes;
+  llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
+      MemProfCallStackIndexes;
 
   MemProfCallStackIndexes.reserve(MemProfCallStackData.size());
   uint64_t CallStackBase = OS.tell();
   for (const auto &[CSId, CallStack] : MemProfCallStackData) {
-    uint64_t CallStackIndex = (OS.tell() - CallStackBase) / sizeof(uint32_t);
+    memprof::LinearCallStackId CallStackIndex =
+        (OS.tell() - CallStackBase) / sizeof(memprof::LinearCallStackId);
     MemProfCallStackIndexes.insert({CSId, CallStackIndex});
     const llvm::SmallVector<memprof::FrameId> CS = CallStack;
     OS.write32(CS.size());
@@ -712,9 +714,9 @@ static Error writeMemProfV3(ProfOStream &OS,
       writeMemProfFrameArray(OS, MemProfData.FrameData);
 
   uint64_t CallStackPayloadOffset = OS.tell();
-  llvm::DenseMap<memprof::CallStackId, uint32_t> MemProfCallStackIndexes =
-      writeMemProfCallStackArray(OS, MemProfData.CallStackData,
-                                 MemProfFrameIndexes);
+  llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
+      MemProfCallStackIndexes = writeMemProfCallStackArray(
+          OS, MemProfData.CallStackData, MemProfFrameIndexes);
 
   uint64_t RecordPayloadOffset = OS.tell();
   uint64_t RecordTableOffset =
