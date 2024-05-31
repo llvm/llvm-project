@@ -20,6 +20,11 @@ namespace clang::tidy::modernize {
 
 namespace {
 AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
+AST_MATCHER(QualType, isSimpleChar) {
+  const auto ActualType = Node.getTypePtr();
+  return ActualType->isSpecificBuiltinType(BuiltinType::Char_S) ||
+         ActualType->isSpecificBuiltinType(BuiltinType::Char_U);
+}
 } // namespace
 
 UseStdFormatCheck::UseStdFormatCheck(StringRef Name, ClangTidyContext *Context)
@@ -47,13 +52,14 @@ void UseStdFormatCheck::registerPPCallbacks(const SourceManager &SM,
 }
 
 void UseStdFormatCheck::registerMatchers(MatchFinder *Finder) {
+  auto CharPointerType = hasType(pointerType(pointee(isSimpleChar())));
   Finder->addMatcher(
-      callExpr(argumentCountAtLeast(1),
-               hasArgument(0, stringLiteral(isOrdinary())),
-               callee(functionDecl(unless(cxxMethodDecl()),
-                                   matchers::matchesAnyListedName(
-                                       StrFormatLikeFunctions))
-                          .bind("func_decl")))
+      callExpr(
+          argumentCountAtLeast(1), hasArgument(0, stringLiteral(isOrdinary())),
+          callee(functionDecl(
+                     unless(cxxMethodDecl()), hasParameter(0, CharPointerType),
+                     matchers::matchesAnyListedName(StrFormatLikeFunctions))
+                     .bind("func_decl")))
           .bind("strformat"),
       this);
 }

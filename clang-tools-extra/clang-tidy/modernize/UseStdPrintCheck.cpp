@@ -20,6 +20,11 @@ namespace clang::tidy::modernize {
 
 namespace {
 AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
+AST_MATCHER(QualType, isSimpleChar) {
+  const auto ActualType = Node.getTypePtr();
+  return ActualType->isSpecificBuiltinType(BuiltinType::Char_S) ||
+         ActualType->isSpecificBuiltinType(BuiltinType::Char_U);
+}
 } // namespace
 
 UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
@@ -95,12 +100,14 @@ unusedReturnValue(clang::ast_matchers::StatementMatcher MatchedCallExpr) {
 }
 
 void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
+  auto CharPointerType = hasType(pointerType(pointee(isSimpleChar())));
   if (!PrintfLikeFunctions.empty())
     Finder->addMatcher(
         unusedReturnValue(
             callExpr(argumentCountAtLeast(1),
                      hasArgument(0, stringLiteral(isOrdinary())),
                      callee(functionDecl(unless(cxxMethodDecl()),
+                                         hasParameter(0, CharPointerType),
                                          matchers::matchesAnyListedName(
                                              PrintfLikeFunctions))
                                 .bind("func_decl")))
@@ -113,6 +120,7 @@ void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
             callExpr(argumentCountAtLeast(2),
                      hasArgument(1, stringLiteral(isOrdinary())),
                      callee(functionDecl(unless(cxxMethodDecl()),
+                                         hasParameter(1, CharPointerType),
                                          matchers::matchesAnyListedName(
                                              FprintfLikeFunctions))
                                 .bind("func_decl")))
