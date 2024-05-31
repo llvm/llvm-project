@@ -2066,46 +2066,48 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
   // us from jumping into any of these scopes anyway.
   if (!HaveInsertPoint()) return;
 
-  // If we're initializing directly on the heap, _Block_object_destroy will
-  // handle destruction, so we don't need to perform cleanups directly.
-  if (!emission.NeedsInitOnHeap) {
-    const VarDecl &D = *emission.Variable;
+  const VarDecl &D = *emission.Variable;
 
+  if (emission.NeedsInitOnHeap) {
+    // If this is a __block variable that we initialized directly on the heap,
+    // then the stack object is uninitialized and doesn't need destruction.
+    // But we do need to tell the destroy helper that the real byref is
+    // successfully initialized.
+    emitByrefMarkInitialized(emission);
+  } else {
     // Check the type for a cleanup.
     if (QualType::DestructionKind dtorKind = D.needsDestruction(getContext()))
       emitAutoVarTypeCleanup(emission, dtorKind);
 
-    // In GC mode, honor objc_precise_lifetime.
-    if (getLangOpts().getGC() != LangOptions::NonGC &&
-        D.hasAttr<ObjCPreciseLifetimeAttr>()) {
-      EHStack.pushCleanup<ExtendGCLifetime>(NormalCleanup, &D);
-    }
-
-    // Handle the cleanup attribute.
-    if (const CleanupAttr *CA = D.getAttr<CleanupAttr>()) {
-      const FunctionDecl *FD = CA->getFunctionDecl();
-
-      llvm::Constant *F = CGM.GetAddrOfFunction(FD);
-      assert(F && "Could not find function!");
-
-      const CGFunctionInfo &Info =
-          CGM.getTypes().arrangeFunctionDeclaration(FD);
-      EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, F, &Info,
-                                               &D);
+    // If this is a block variable, call _Block_object_destroy (on the
+    // unforwarded address). Don't enter this cleanup if we're in pure-GC
+    // mode.
+    if (emission.IsEscapingByRef &&
+        CGM.getLangOpts().getGC() != LangOptions::GCOnly) {
+      BlockFieldFlags Flags = BLOCK_FIELD_IS_BYREF;
+      if (D.getType().isObjCGCWeak())
+        Flags |= BLOCK_FIELD_IS_WEAK;
+      enterByrefCleanup(NormalAndEHCleanup, emission.Addr, Flags,
+                        /*LoadBlockVarAddr*/ false,
+                        cxxDestructorCanThrow(D.getType()));
     }
   }
 
-  // If this is a block variable, call _Block_object_destroy
-  // (on the unforwarded address). Don't enter this cleanup if we're in pure-GC
-  // mode.
-  if (emission.IsEscapingByRef &&
-      CGM.getLangOpts().getGC() != LangOptions::GCOnly) {
-    BlockFieldFlags Flags = BLOCK_FIELD_IS_BYREF;
-    if (emission.Variable->getType().isObjCGCWeak())
-      Flags |= BLOCK_FIELD_IS_WEAK;
-    enterByrefCleanup(NormalAndEHCleanup, emission.Addr, Flags,
-                      /*LoadBlockVarAddr*/ false,
-                      cxxDestructorCanThrow(emission.Variable->getType()));
+  // In GC mode, honor objc_precise_lifetime.
+  if (getLangOpts().getGC() != LangOptions::NonGC &&
+      D.hasAttr<ObjCPreciseLifetimeAttr>()) {
+    EHStack.pushCleanup<ExtendGCLifetime>(NormalCleanup, &D);
+  }
+
+  // Handle the cleanup attribute.
+  if (const CleanupAttr *CA = D.getAttr<CleanupAttr>()) {
+    const FunctionDecl *FD = CA->getFunctionDecl();
+
+    llvm::Constant *F = CGM.GetAddrOfFunction(FD);
+    assert(F && "Could not find function!");
+
+    const CGFunctionInfo &Info = CGM.getTypes().arrangeFunctionDeclaration(FD);
+    EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, F, &Info, &D);
   }
 }
 

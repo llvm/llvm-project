@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -triple arm64e-apple-ios -x c++ -std=c++20 -fblocks -Wimplicit-block-var-alloc -verify -emit-llvm %s -o - | \
-// RUN:    FileCheck --implicit-check-not "call{{.*}}_ZN3Big" %s
+// RUN: %clang_cc1 -triple arm64e-apple-ios -x c++ -std=c++20 -fblocks -Wimplicit-block-var-alloc -fexceptions \
+// RUN:            -verify -emit-llvm %s -o - | \
+// RUN:    FileCheck --implicit-check-not "call{{.*}}_ZN3BigD" %s
 
 // CHECK: %struct.__block_byref_baz = type { ptr, ptr, i32, i32, i32 }
 // CHECK: [[baz:%[0-9a-z_]*]] = alloca %struct.__block_byref_baz
@@ -26,27 +27,36 @@ private:
 };
 Big getBig(Big * (^)());
 
+void myCleanup(void *);
+
 // CHECK: define void @_Z11heapInitBigv
+// CHECK: store i8 0, ptr {{.*}}initialized
 // CHECK: call void @_Block_object_assign(ptr {{.*}}, ptr {{.*}}, i32 8)
 // CHECK: call void @_Block_object_dispose(ptr {{.*}}, i32 8)
-// CHECK: %B1 = getelementptr inbounds %struct.__block_byref_B, ptr %{{.*}}, i32 0, i32 6
-// CHECK: call void @_Z6getBigU13block_pointerFP3BigvE({{[^,]*}} %B1,
+// CHECK: %B11 = getelementptr inbounds %struct.__block_byref_B1, ptr %{{.*}}, i32 0, i32 
+// CHECK: invoke void @_Z6getBigU13block_pointerFP3BigvE({{[^,]*}} %B11,
+//
+// CHECK: invoke.cont:
+// CHECK: store i1 true, ptr {{.*}}initialized
 // CHECK: call void @_Block_object_dispose
 // (no call to destructor, enforced by --implicit-check-not)
-
+//
 // CHECK: define internal void @__Block_byref_object_copy_
 // (no call to copy constructor, enforced by --implicit-check-not)
-
+//
 // CHECK: define internal void @__Block_byref_object_dispose_
+// CHECK: load {{.*}}initialized
+// CHECK: br {{.*}}label %skip
 // CHECK: call {{.*}} @_ZN3BigD1Ev(
-
+// CHECK: skip:
+//
 void heapInitBig() {
-  // expected-warning@+1{{variable 'B' will be initialized in a heap allocation}}
-  __block Big B = ({ // Make sure this works with statement expressions.
+  // expected-warning@+1{{variable 'B1' will be initialized in a heap allocation}}
+  __block Big B1 = ({ // Make sure this works with statement expressions.
     getBig(
         // expected-note@+1{{because it is captured by a block used in its own initializer}}
         ^{
-          return &B;
+          return &B1;
         });
   });
 }
@@ -59,8 +69,9 @@ extern Small getSmall(const void * (^)(), const void * (^)());
 extern Small getSmall(__SIZE_TYPE__);
 extern int getInt(const void *(^)());
 
-// CHECK: %S11 = getelementptr inbounds %struct.__block_byref_S1, ptr %{{.*}}, i32 0, i32 4
-// CHECK: [[call:%[0-9a-z_\.]*]] = call i64 @_Z8getSmallU13block_pointerFPKvvE(
+// CHECK: define {{.*}} @_Z19heapInitSmallAtomicv
+// CHECK: %S11 = getelementptr inbounds %struct.__block_byref_S1, ptr %{{.*}}, i32 0, i32
+// CHECK: [[call:%[0-9a-z_\.]*]] = invoke i64 @_Z8getSmallU13block_pointerFPKvvE(
 // CHECK: [[dive:%[0-9a-z_\.]*]] = getelementptr inbounds %struct.Small, ptr %S11, i32 0, i32 0
 // CHECK: store i64 [[call]], ptr [[dive]], align 8
 
@@ -86,6 +97,52 @@ void heapInitTwoSmall() {
       ^const void * {
         return &S2;
       });
+}
+
+
+// Test __attribute__((cleanup)) with direct init on heap.  We expect this to
+// first call the cleanup function on the heap allocation, then call
+// _Block_object_dispose (which runs the destructor and frees the allocation).
+//
+// CHECK: define {{.*}} @_Z19heapInitWithCleanupv
+// CHECK: store i1 true, ptr {{.*}}initialized
+// CHECK: [[fwd:%.*]] = load ptr, ptr %forwarding
+// CHECK: [[obj:%.*]] = getelementptr inbounds %struct.__block_byref_B2, ptr [[fwd]], i32 0, i32 8
+// CHECK: invoke void @_Z9myCleanupPv({{.*}}[[obj]])
+// CHECK-NOT: ret
+// CHECK: call void @_Block_object_dispose(ptr %
+void heapInitWithCleanup() {
+  // expected-warning@+1{{variable 'B2' will be initialized in a heap allocation}}
+  __attribute__((cleanup(myCleanup))) __block Big B2 = getBig(
+      // expected-note@+1{{because it is captured by a block used in its own initializer}}
+      ^{
+        return &B2;
+      });
+}
+
+// Same as above but without direct init on heap; therefore, the stack copy
+// needs to be destroyed in addition to the above operations.  This must happen
+// after the cleanup call (and also happens after _Block_object_dispose, but
+// doesn't need to).
+//
+// CHECK: define {{.*}} @_Z22nonHeapInitWithCleanupv()
+// CHECK: [[fwd:%.*]] = load ptr, ptr %forwarding
+// CHECK: [[obj:%.*]] = getelementptr inbounds %struct.__block_byref_B3, ptr [[fwd]], i32 0, i32
+// CHECK: invoke void @_Z9myCleanupPv({{.*}}[[obj]])
+//
+// CHECK: invoke.cont:
+// CHECK: call void @_Block_object_dispose
+// CHECK: call {{.*}} @_ZN3BigD1Ev(
+//
+// CHECK: lpad:
+// CHECK: call void @_Block_object_dispose
+// CHECK: call {{.*}} @_ZN3BigD1Ev(
+//
+// CHECK: define internal void @__Block_byref_object_dispose_
+// CHECK: call {{.*}} @_ZN3BigD1Ev(
+void nonHeapInitWithCleanup() {
+  __attribute__((cleanup(myCleanup))) __block Big B3 = getBig(nullptr);
+  (void)^{ return &B3; };
 }
 
 // This used to cause an ICE because the type of the variable makes it eligible

@@ -2313,7 +2313,8 @@ public:
 
   class AutoVarEmission;
 
-  void emitByrefInitOnHeap(llvm::Value *P);
+  void emitByrefHeapAlloc(llvm::Value *fakeByref, QualType declType);
+  void emitByrefMarkInitialized(const AutoVarEmission &emission);
   void emitByrefStructureInit(const AutoVarEmission &emission);
 
   /// Enter a cleanup to destroy a __block variable.  Note that this
