@@ -242,7 +242,7 @@
 // RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
 // RUN: %clang -### -c -fdebug-ranges-base-address -fno-debug-ranges-base-address %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
 //
-// RUN: %clang -### -c -gomit-unreferenced-methods %s 2>&1 | FileCheck -check-prefix=INCTYPES %s
+// RUN: %clang -### -c -gomit-unreferenced-methods -fno-standalone-debug %s 2>&1 | FileCheck -check-prefix=INCTYPES %s
 // RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NOINCTYPES %s
 // RUN: %clang -### -c -gomit-unreferenced-methods -fdebug-types-section -target x86_64-unknown-linux %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=NOINCTYPES %s
