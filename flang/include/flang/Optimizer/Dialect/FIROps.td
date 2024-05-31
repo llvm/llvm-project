@@ -2393,7 +2393,8 @@ def fir_CallOp : fir_Op<"call",
     OptionalAttr<SymbolRefAttr>:$callee,
     Variadic<AnyType>:$args,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::mlir::arith::FastMathFlags::none">:$fastmath,
+    UnitAttr:$is_bind_c
   );
   let results = (outs Variadic<AnyType>);
 
