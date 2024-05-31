@@ -70,6 +70,7 @@ public:
   using iterator_category = std::bidirectional_iterator_tag;
   using const_pointer = typename OptionsT::const_pointer;
   using const_reference = typename OptionsT::const_reference;
+  using parent_ptr_ty = typename OptionsT::parent_ptr_ty;
 
 private:
   using node_pointer = typename Traits::node_pointer;
@@ -100,6 +101,8 @@ public:
     NodePtr = RHS.NodePtr;
     return *this;
   }
+
+  parent_ptr_ty getNodeParent() { return NodePtr->getNodeBaseParent(); }
 
   /// Explicit conversion between forward/reverse iterators.
   ///
@@ -168,6 +171,8 @@ public:
     return tmp;
   }
 
+  bool isValid() const { return NodePtr; }
+
   /// Get the underlying ilist_node.
   node_pointer getNodePtr() const { return static_cast<node_pointer>(NodePtr); }
 
@@ -195,6 +200,7 @@ public:
   using iterator_category = std::bidirectional_iterator_tag;
   using const_pointer = typename OptionsT::const_pointer;
   using const_reference = typename OptionsT::const_reference;
+  using parent_ptr_ty = typename OptionsT::parent_ptr_ty;
 
 private:
   using node_pointer = typename Traits::node_pointer;
@@ -318,6 +324,10 @@ public:
     ++*this;
     return tmp;
   }
+
+  parent_ptr_ty getNodeParent() { return NodePtr->getNodeBaseParent(); }
+
+  bool isValid() const { return NodePtr; }
 
   /// Get the underlying ilist_node.
   node_pointer getNodePtr() const { return static_cast<node_pointer>(NodePtr); }

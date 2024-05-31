@@ -118,7 +118,9 @@ public:
   }
 
   // Under-approximation, but always available for assertions.
+  using node_base_type::getNodeBaseParent;
   using node_base_type::isKnownSentinel;
+  using node_base_type::setNodeBaseParent;
 
   /// Check whether this is the sentinel node.
   ///
@@ -170,6 +172,15 @@ public:
 ///   ListB.push_back(N1);
 /// }
 /// \endexample
+///
+/// When the \a ilist_parent<ParentTy> option is passed to an ilist_node and the
+/// owning ilist, each node contains a pointer to the ilist's owner. This
+/// pointer does not have any automatic behaviour; set it manually, including
+/// for the sentinel node when the list is created. The primary benefit of this
+/// over declaring and using this pointer in the final node class is that the
+/// pointer will be added in the sentinel, meaning that you can safely use \a
+/// ilist_iterator::getNodeParent() to get the node parent from any valid (i.e.
+/// non-null) iterator, even a sentinel value.
 ///
 /// See \a is_valid_option for steps on adding a new option.
 template <class T, class... Options>

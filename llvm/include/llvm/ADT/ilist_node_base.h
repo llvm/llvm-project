@@ -16,9 +16,9 @@ namespace llvm {
 /// Base class for ilist nodes.
 ///
 /// Optionally tracks whether this node is the sentinel.
-template <bool EnableSentinelTracking> class ilist_node_base;
+template <bool EnableSentinelTracking, class ParentPtrTy> class ilist_node_base;
 
-template <> class ilist_node_base<false> {
+template <> class ilist_node_base<false, void> {
   ilist_node_base *Prev = nullptr;
   ilist_node_base *Next = nullptr;
 
@@ -28,11 +28,14 @@ public:
   ilist_node_base *getPrev() const { return Prev; }
   ilist_node_base *getNext() const { return Next; }
 
+  void setNodeBaseParent(void) {}
+  inline void getNodeBaseParent() const {}
+
   bool isKnownSentinel() const { return false; }
   void initializeSentinel() {}
 };
 
-template <> class ilist_node_base<true> {
+template <> class ilist_node_base<true, void> {
   PointerIntPair<ilist_node_base *, 1> PrevAndSentinel;
   ilist_node_base *Next = nullptr;
 
@@ -41,6 +44,48 @@ public:
   void setNext(ilist_node_base *Next) { this->Next = Next; }
   ilist_node_base *getPrev() const { return PrevAndSentinel.getPointer(); }
   ilist_node_base *getNext() const { return Next; }
+
+  void setNodeBaseParent(void) {}
+  inline void getNodeBaseParent() const {}
+
+  bool isSentinel() const { return PrevAndSentinel.getInt(); }
+  bool isKnownSentinel() const { return isSentinel(); }
+  void initializeSentinel() { PrevAndSentinel.setInt(true); }
+};
+
+template <class ParentPtrTy> class ilist_node_base<false, ParentPtrTy> {
+  ilist_node_base *Prev = nullptr;
+  ilist_node_base *Next = nullptr;
+  ParentPtrTy Parent = nullptr;
+
+public:
+  void setPrev(ilist_node_base *Prev) { this->Prev = Prev; }
+  void setNext(ilist_node_base *Next) { this->Next = Next; }
+  ilist_node_base *getPrev() const { return Prev; }
+  ilist_node_base *getNext() const { return Next; }
+
+  void setNodeBaseParent(ParentPtrTy Parent) { this->Parent = Parent; }
+  inline const ParentPtrTy getNodeBaseParent() const { return Parent; }
+  inline ParentPtrTy getNodeBaseParent() { return Parent; }
+
+  bool isKnownSentinel() const { return false; }
+  void initializeSentinel() {}
+};
+
+template <class ParentPtrTy> class ilist_node_base<true, ParentPtrTy> {
+  PointerIntPair<ilist_node_base *, 1> PrevAndSentinel;
+  ilist_node_base *Next = nullptr;
+  ParentPtrTy Parent = nullptr;
+
+public:
+  void setPrev(ilist_node_base *Prev) { PrevAndSentinel.setPointer(Prev); }
+  void setNext(ilist_node_base *Next) { this->Next = Next; }
+  ilist_node_base *getPrev() const { return PrevAndSentinel.getPointer(); }
+  ilist_node_base *getNext() const { return Next; }
+
+  void setNodeBaseParent(ParentPtrTy Parent) { this->Parent = Parent; }
+  inline const ParentPtrTy getNodeBaseParent() const { return Parent; }
+  inline ParentPtrTy getNodeBaseParent() { return Parent; }
 
   bool isSentinel() const { return PrevAndSentinel.getInt(); }
   bool isKnownSentinel() const { return isSentinel(); }
