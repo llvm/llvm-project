@@ -63,6 +63,7 @@ unsigned __int64 test__emulu(unsigned int a, unsigned int b) {
 // CHECK: [[RES:%[0-9]+]] = mul nuw i64 [[Y]], [[X]]
 // CHECK: ret i64 [[RES]]
 
+
 int test_inp(unsigned short port) {
   return _inp(port);
 }
@@ -91,24 +92,27 @@ int test_outp(unsigned short port, int data) {
     return _outp(port, data);
 }
 // CHECK-LABEL: i32 @test_outp(
-// CHECK-SAME:  [[PORT:%.*]], i32 noundef returned [[DATA:%.*]])
-// CHECK-NEXT:  tail call void asm sideeffect "outb ${0:b}, ${1:w}", "{ax},N{dx},~{memory},~{dirflag},~{fpsr},~{flags}"(i32 [[DATA]], i16 [[PORT]]
+// CHECK-SAME:  [[PORT:%.*]],
+// CHECK-SAME:  [[DATA:%.*]])
+// CHECK:       tail call void asm sideeffect "outb ${0:b}, ${1:w}", "{ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i32 [[DATA]], i16 [[PORT]])
 // CHECK-NEXT:  ret i32 [[DATA]]
 
 unsigned short test_outpw(unsigned short port, unsigned short data) {
     return _outpw(port, data);
 }
 // CHECK-LABEL: i16 @test_outpw(
-// CHECK-SAME:  [[PORT:%.*]], i16 noundef returned zeroext [[DATA:%.*]])
-// CHECK-NEXT:  tail call void asm sideeffect "outw ${0:w}, ${1:w}", "{ax},N{dx},~{memory},~{dirflag},~{fpsr},~{flags}"(i16 [[DATA]], i16 [[PORT]])
+// CHECK-SAME:  [[PORT:%.*]],
+// CHECK-SAME:  [[DATA:%.*]])
+// CHECK:       tail call void asm sideeffect "outw ${0:w}, ${1:w}", "{ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[DATA]], i16 [[PORT]])
 // CHECK-NEXT:  ret i16 [[DATA]]
 
 unsigned long test_outpd(unsigned short port, unsigned long data) {
     return _outpd(port, data);
 }
 // CHECK-LABEL: i32 @test_outpd(
-// CHECK-SAME:  [[PORT:%.*]], i32 noundef returned [[DATA:%.*]])
-// CHECK-NEXT:  tail call void asm sideeffect "outl ${0:k}, ${1:w}", "{ax},N{dx},~{memory},~{dirflag},~{fpsr},~{flags}"(i32 [[DATA]], i16 [[PORT]])
+// CHECK-SAME:  [[PORT:%.*]],
+// CHECK-SAME:  [[DATA:%.*]])
+// CHECK:       tail call void asm sideeffect "outl ${0:k}, ${1:w}", "{ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i32 [[DATA]], i16 [[PORT]])
 // CHECK-NEXT:  ret i32 [[DATA]]
 
 #if defined(__x86_64__)

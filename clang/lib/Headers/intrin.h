@@ -353,18 +353,18 @@ static inline int _outp(unsigned short port, int data) {
   return data;
 }
 
-static inline unsigned short
-_outpw(unsigned short port, unsigned short data) {
+static inline unsigned short _outpw(unsigned short port, unsigned short data) {
   __asm__ volatile("outw %w0, %w1" : : "a"(data), "Nd"(port));
   return data;
 }
 
-static inline unsigned long _outpd(unsigned short port,
-                                   unsigned long data) {
+static inline unsigned long _outpd(unsigned short port, unsigned long data) {
   __asm__ volatile("outl %k0, %w1" : : "a"(data), "Nd"(port));
   return data;
 }
+#endif
 
+#if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
 static __inline__ void __DEFAULT_FN_ATTRS __nop(void) {
   __asm__ volatile("nop");
 }
