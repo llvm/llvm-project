@@ -8299,7 +8299,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // Performing a tail call may require extra checks when PAuth is enabled.
   // If PAuth is disabled, set it to zero for uniformity.
   unsigned NumBytesToCheckLRInTCEpilogue = 0;
-  if (RepeatedSequenceLocs[0].getMF()
+  if (RepeatedSequenceLocs[0]
+          .getMF()
           ->getInfo<AArch64FunctionInfo>()
           ->shouldSignReturnAddress(true)) {
     // One PAC and one AUT instructions
