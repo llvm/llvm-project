@@ -25,6 +25,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
+#include <deque>
 
 using namespace llvm;
 
@@ -852,9 +853,10 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
-/// Try to simplify recipe \p R. Returns any new recipes introduced during
-/// simplification, as a candidate for further simplification.
-static VPRecipeBase *simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+/// Try to simplify recipe \p R.  Returns any new recipes introduced during
+/// simplification, as candidates for further simplification.
+static SmallVector<VPRecipeBase *>
+simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo, VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
 
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
@@ -869,11 +871,11 @@ static VPRecipeBase *simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     if (UniqueValues.size() == 1) {
       Blend->replaceAllUsesWith(*UniqueValues.begin());
       Blend->eraseFromParent();
-      return nullptr;
+      return {};
     }
 
     if (Blend->isNormalized())
-      return nullptr;
+      return {};
 
     // Normalize the blend so its first incoming value is used as the initial
     // value with the others blended into it.
@@ -908,7 +910,7 @@ static VPRecipeBase *simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     Blend->replaceAllUsesWith(NewBlend);
     Blend->eraseFromParent();
     recursivelyDeleteDeadRecipes(DeadMask);
-    return nullptr;
+    return {};
   }
 
   VPValue *A;
@@ -921,7 +923,7 @@ static VPRecipeBase *simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     } else {
       // Don't replace a scalarizing recipe with a widened cast.
       if (isa<VPReplicateRecipe>(&R))
-        return nullptr;
+        return {};
       if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
 
         unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
@@ -956,26 +958,73 @@ static VPRecipeBase *simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         assert(TypeInfo.inferScalarType(VPV) == TypeInfo2.inferScalarType(VPV));
     }
 #endif
-    return nullptr;
+    return {};
   }
 
-  // Simplify (X && Y) || (X && !Y) -> X.
-  // TODO: Split up into simpler, modular combines: (X && Y) || (X && Z) into X
-  // && (Y || Z) and (X || !X) into true. This requires queuing newly created
-  // recipes to be visited during simplification.
-  VPValue *X, *Y, *X1, *Y1;
-  if (match(&R,
-            m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                         m_LogicalAnd(m_VPValue(X1), m_Not(m_VPValue(Y1))))) &&
-      X == X1 && Y == Y1) {
+  VPValue *X, *X1, *Y, *Z;
+  LLVMContext &Ctx = TypeInfo.getContext();
+
+  // (X || !X) -> true.
+  if (match(&R, m_c_BinaryOr(m_VPValue(X), m_Not(m_VPValue(X1)))) && X == X1) {
+    VPValue *VPV = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
+    R.getVPSingleValue()->replaceAllUsesWith(VPV);
+    return {};
+  }
+
+  // (X || true) -> true.
+  if (match(&R, m_c_BinaryOr(m_VPValue(X), m_True()))) {
+    VPValue *VPV = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
+    R.getVPSingleValue()->replaceAllUsesWith(VPV);
+    return {};
+  }
+
+  // (X || false) -> X.
+  if (match(&R, m_c_BinaryOr(m_VPValue(X), m_False()))) {
     R.getVPSingleValue()->replaceAllUsesWith(X);
-    R.eraseFromParent();
-    return nullptr;
+    return {};
   }
 
-  if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
-    R.getVPSingleValue()->replaceAllUsesWith(A);
-  return nullptr;
+  // (X && !X) -> false.
+  if (match(&R, m_LogicalAnd(m_VPValue(X), m_Not(m_VPValue(X1)))) && X == X1) {
+    VPValue *VPV = Plan.getOrAddLiveIn(ConstantInt::getFalse(Ctx));
+    R.getVPSingleValue()->replaceAllUsesWith(VPV);
+    return {};
+  }
+
+  // (X && true) -> X.
+  if (match(&R, m_LogicalAnd(m_VPValue(X), m_True()))) {
+    R.getVPSingleValue()->replaceAllUsesWith(X);
+    return {};
+  }
+
+  // (X && false) -> false.
+  if (match(&R, m_LogicalAnd(m_VPValue(X), m_False()))) {
+    VPValue *VPV = Plan.getOrAddLiveIn(ConstantInt::getFalse(Ctx));
+    R.getVPSingleValue()->replaceAllUsesWith(VPV);
+    return {};
+  }
+
+  // (X * 1) -> X.
+  if (match(&R, m_c_Mul(m_VPValue(X), m_SpecificInt(1)))) {
+    R.getVPSingleValue()->replaceAllUsesWith(X);
+    return {};
+  }
+
+  // (X && Y) || (X && Z) -> X && (Y || Z).
+  if (match(&R, m_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                           m_LogicalAnd(m_VPValue(X1), m_VPValue(Z)))) &&
+      X == X1) {
+    VPBuilder Builder(&R);
+    VPInstruction *YorZ = Builder.createOr(Y, Z, R.getDebugLoc());
+    VPInstruction *VPI = Builder.createLogicalAnd(X, YorZ, R.getDebugLoc());
+    R.getVPSingleValue()->replaceAllUsesWith(VPI);
+    R.eraseFromParent();
+    // Order of simplification matters: simplify sub-recipes before root
+    // recipes.
+    return {YorZ, VPI};
+  }
+
+  return {};
 }
 
 /// Try to simplify the recipes in \p Plan.
@@ -984,10 +1033,17 @@ static void simplifyRecipes(VPlan &Plan, LLVMContext &Ctx) {
       Plan.getEntry());
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(), Ctx);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    // Order of simplification matters: add new candidates for simplification to
+    // the back of the Worklist, while the Worklist processes recipes from the
+    // front.
+    std::deque<VPRecipeBase *> Worklist;
     for (auto &R : make_early_inc_range(*VPBB)) {
-      VPRecipeBase *NewR = simplifyRecipe(R, TypeInfo);
-      while (NewR)
-        NewR = simplifyRecipe(*NewR, TypeInfo);
+      Worklist.emplace_front(&R);
+      while (!Worklist.empty()) {
+        VPRecipeBase *R = Worklist.front();
+        Worklist.pop_front();
+        append_range(Worklist, simplifyRecipe(*R, TypeInfo, Plan));
+      }
     }
   }
 }

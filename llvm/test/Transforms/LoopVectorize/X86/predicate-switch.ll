@@ -975,7 +975,8 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; COST-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], <i64 13, i64 13, i64 13, i64 13>
 ; COST-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP7]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
 ; COST-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP7]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
-; COST-NEXT:    [[TMP12:%.*]] = or <4 x i1> [[TMP10]], [[TMP11]]
+; COST-NEXT:    [[TMP15:%.*]] = or <4 x i1> [[TMP8]], [[TMP9]]
+; COST-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP7]], <4 x i1> [[TMP15]], <4 x i1> zeroinitializer
 ; COST-NEXT:    [[TMP13:%.*]] = xor <4 x i1> [[TMP12]], <i1 true, i1 true, i1 true, i1 true>
 ; COST-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP7]], <4 x i1> [[TMP13]], <4 x i1> zeroinitializer
 ; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[TMP6]], i32 1, <4 x i1> [[TMP11]])
@@ -1056,8 +1057,10 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    [[TMP25:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP13]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    [[TMP26:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP14]], <4 x i1> zeroinitializer
-; FORCED-NEXT:    [[TMP27:%.*]] = or <4 x i1> [[TMP15]], [[TMP25]]
-; FORCED-NEXT:    [[TMP20:%.*]] = or <4 x i1> [[TMP16]], [[TMP26]]
+; FORCED-NEXT:    [[TMP28:%.*]] = or <4 x i1> [[TMP11]], [[TMP13]]
+; FORCED-NEXT:    [[TMP29:%.*]] = or <4 x i1> [[TMP12]], [[TMP14]]
+; FORCED-NEXT:    [[TMP27:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP28]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP29]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    [[TMP21:%.*]] = xor <4 x i1> [[TMP27]], <i1 true, i1 true, i1 true, i1 true>
 ; FORCED-NEXT:    [[TMP22:%.*]] = xor <4 x i1> [[TMP20]], <i1 true, i1 true, i1 true, i1 true>
 ; FORCED-NEXT:    [[TMP23:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP21]], <4 x i1> zeroinitializer
