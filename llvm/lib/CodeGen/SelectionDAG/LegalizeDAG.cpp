@@ -1105,6 +1105,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     if (Action == TargetLowering::Legal)
       Action = TargetLowering::Custom;
     break;
+  case ISD::CLEAR_CACHE:
+    // This operation is typically going to be LibCall unless the target wants
+    // something differrent.
+    Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
+    break;
   case ISD::READCYCLECOUNTER:
   case ISD::READSTEADYCOUNTER:
     // READCYCLECOUNTER and READSTEADYCOUNTER return a i64, even if type
@@ -4159,7 +4164,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
              "expanded.");
       EVT CCVT = getSetCCResultType(CmpVT);
       SDValue Cond = DAG.getNode(ISD::SETCC, dl, CCVT, Tmp1, Tmp2, CC, Node->getFlags());
-      Results.push_back(DAG.getSelect(dl, VT, Cond, Tmp3, Tmp4));
+      Results.push_back(
+          DAG.getSelect(dl, VT, Cond, Tmp3, Tmp4, Node->getFlags()));
       break;
     }
 
@@ -4296,6 +4302,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::VP_CTTZ_ELTS:
   case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
     Results.push_back(TLI.expandVPCTTZElements(Node, DAG));
+    break;
+  case ISD::CLEAR_CACHE:
+    // The default expansion of llvm.clear_cache is simply a no-op for those
+    // targets where it is not needed.
+    Results.push_back(Node->getOperand(0));
     break;
   case ISD::GLOBAL_OFFSET_TABLE:
   case ISD::GlobalAddress:
@@ -4452,6 +4463,17 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
 
     Results.push_back(CallResult.second);
+    break;
+  }
+  case ISD::CLEAR_CACHE: {
+    TargetLowering::MakeLibCallOptions CallOptions;
+    SDValue InputChain = Node->getOperand(0);
+    SDValue StartVal = Node->getOperand(1);
+    SDValue EndVal = Node->getOperand(2);
+    std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(
+        DAG, RTLIB::CLEAR_CACHE, MVT::isVoid, {StartVal, EndVal}, CallOptions,
+        SDLoc(Node), InputChain);
+    Results.push_back(Tmp.second);
     break;
   }
   case ISD::FMINNUM:
