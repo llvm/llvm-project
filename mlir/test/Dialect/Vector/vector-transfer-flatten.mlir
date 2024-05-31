@@ -471,16 +471,16 @@ func.func @regression_non_contiguous_dim_read(%subview : memref<1x3x3x2xf32, str
 }
 
 //       CHECK:  #[[$MAP:.+]] = affine_map<()[s0] -> (s0 * 2)>
-// CHECK-LABEL:    func.func @regression_non_contiguous_dim_read(
-//       CHECK:      %[[COLLAPSE:.+]] = memref.collapse_shape %{{.*}} {{\[}}[0], [1], [2, 3]] : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>> into memref<1x3x6xf32, strided<[40, 10, 1], offset: ?>>
-//       CHECK:     %[[APPLY:.*]] = affine.apply #[[$MAP]]()
+// CHECK-LABEL:  func.func @regression_non_contiguous_dim_read(
+//       CHECK:    %[[COLLAPSE:.+]] = memref.collapse_shape %{{.*}} {{\[}}[0], [1], [2, 3]] : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>> into memref<1x3x6xf32, strided<[40, 10, 1], offset: ?>>
+//       CHECK:    %[[APPLY:.*]] = affine.apply #[[$MAP]]()
 
 // CHECK-128B-LABEL: func @regression_non_contiguous_dim_read(
 //       CHECK-128B:   memref.collapse_shape
 
 // -----
 
-func.func @unsupported_non_contiguous_dim_write(%value : vector<2x2xf32>,
+func.func @regression_non_contiguous_dim_write(%value : vector<2x2xf32>,
                                                 %subview : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>,
                                                 %idx0 : index, %idx1 : index) {
   %c0 = arith.constant 0 : index
@@ -488,8 +488,10 @@ func.func @unsupported_non_contiguous_dim_write(%value : vector<2x2xf32>,
   return
 }
 
-// CHECK-LABEL:  func.func @unsupported_non_contiguous_dim_write(
-//   CHECK-NOT:    memref.collapse_shape
+//       CHECK:  #[[$MAP:.+]] = affine_map<()[s0] -> (s0 * 2)>
+// CHECK-LABEL:  func.func @regression_non_contiguous_dim_write(
+//       CHECK:    %[[APPLY:.*]] = affine.apply #[[$MAP]]()
+//       CHECK:    %[[COLLAPSE:.+]] = memref.collapse_shape %{{.*}} {{\[}}[0], [1], [2, 3]] : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>> into memref<1x3x6xf32, strided<[40, 10, 1], offset: ?>>
 
-// CHECK-128B-LABEL: func @unsupported_non_contiguous_dim_write(
-//   CHECK-128B-NOT:   memref.collapse_shape
+// CHECK-128B-LABEL: func @regression_non_contiguous_dim_write(
+//       CHECK-128B:   memref.collapse_shape
