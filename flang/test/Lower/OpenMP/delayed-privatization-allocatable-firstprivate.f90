@@ -1,10 +1,13 @@
 ! Test delayed privatization for allocatables: `firstprivate`.
 
+! RUN: split-file %s %t
+
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
-! RUN:   -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %s 2>&1 |\
+! RUN:   -o - %t/test_ir.f90 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %t/test_ir.f90 2>&1 |\
 ! RUN:   FileCheck %s
 
+!--- test_ir.f90
 subroutine delayed_privatization_allocatable
   implicit none
   integer, allocatable :: var1
@@ -34,3 +37,17 @@ end subroutine
 ! CHECK-NEXT:    %[[ORIG_BASE_LD:.*]] = fir.load %[[ORIG_BASE_ADDR]]
 ! CHECK-NEXT:    hlfir.assign %[[ORIG_BASE_LD]] to %[[PRIV_BASE_BOX]] temporary_lhs
 ! CHECK-NEXT:  }
+
+! RUN: %flang -c -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN:   -o - %t/test_compilation_to_obj.f90
+
+!--- test_compilation_to_obj.f90
+
+program compilation_to_obj
+  real, allocatable :: t(:)
+
+!$omp parallel firstprivate(t)
+  t(1) = 3.14
+!$omp end parallel
+
+end program compilation_to_obj

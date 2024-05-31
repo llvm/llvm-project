@@ -252,7 +252,8 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
               .getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>()) {
     return ompOutlineableIface.getAllocaBlock();
   }
-  if (getRegion().getParentOfType<mlir::omp::DeclareReductionOp>())
+  if (getRegion().getParentOfType<mlir::omp::DeclareReductionOp>() ||
+      getRegion().getParentOfType<mlir::omp::PrivateClauseOp>())
     return &getRegion().front();
   if (auto accRecipeIface =
           getRegion().getParentOfType<mlir::acc::RecipeInterface>()) {
