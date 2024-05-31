@@ -37,3 +37,7 @@ void test_string_discriminator(int *dp) {
   ptrauth_extra_data_t t0 = ptrauth_string_discriminator("string");
   (void)t0;
 }
+
+void test_sign_constant(int *dp) {
+  dp = ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0);
+}

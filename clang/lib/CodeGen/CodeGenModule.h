@@ -937,6 +937,11 @@ public:
   // Return the function body address of the given function.
   llvm::Constant *GetFunctionStart(const ValueDecl *Decl);
 
+  llvm::Constant *getConstantSignedPointer(llvm::Constant *pointer,
+                                           unsigned key,
+                                           llvm::Constant *storageAddress,
+                                           llvm::Constant *extraDiscrim);
+
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
     return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&

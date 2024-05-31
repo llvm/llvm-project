@@ -104,6 +104,12 @@ llvm::Type *convertTypeForMemory(CodeGenModule &CGM, QualType T);
 unsigned getLLVMFieldNumber(CodeGenModule &CGM,
                             const RecordDecl *RD, const FieldDecl *FD);
 
+/// Return a signed constant pointer.
+llvm::Constant *getConstantSignedPointer(CodeGenModule &CGM,
+                                         llvm::Constant *pointer,
+                                         unsigned key,
+                                         llvm::Constant *storageAddress,
+                                         llvm::Constant *otherDiscriminator);
 /// Given the language and code-generation options that Clang was configured
 /// with, set the default LLVM IR attributes for a function definition.
 /// The attributes set here are mostly global target-configuration and
