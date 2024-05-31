@@ -23,13 +23,22 @@ LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
       # the high registers > r7 in stmia, so move them into lower GPRs first.
       # Thumb(1) also doesn't support using str with sp or lr, move them
       # together with the rest.
-      mov r2, r8
-      mov r3, r9
-      mov r4, r10
-      mov r5, r11
-      mov r6, sp
-      mov r7, lr
-      stmia r0!, {r2-r7}
+      mov r1, r8
+      mov r2, r9
+      mov r3, r10
+      mov r4, r11
+      mov r5, sp
+      mov r6, lr
+      stmia r0!, {r1-r6}
+
+      # AAPCS32 states
+      # A subroutine must preserve the contents of the registers r4-r8 ...
+      # so rewind the buf pointer by the number of registers saved (i.e. 10
+      # registers: r4, r5, r6, r7, r8, r9, r10, r11, sp, lr), then restore
+      # r4, r5, and r6. r7 and r8 were not clobbered. These register are 4B, so
+      # 10 registers times 4B gives us 40B to rewind buf by.
+      subs r0, r0, #40
+      ldmia r0!, {r4-r6}
 
       # Return 0.
       movs r0, #0
