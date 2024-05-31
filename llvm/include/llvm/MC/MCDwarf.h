@@ -122,6 +122,8 @@ class MCDwarfLoc {
 private: // MCContext manages these
   friend class MCContext;
   friend class MCDwarfLineEntry;
+  // DwarfDebug::endFunctionImpl needs to construct MCDwarfLoc(IsEndOfFunction)
+  friend class DwarfDebug;
 
   MCDwarfLoc(unsigned fileNum, unsigned line, unsigned column, unsigned flags,
              unsigned isa, unsigned discriminator)
@@ -194,13 +196,26 @@ private:
 
 public:
   // Constructor to create an MCDwarfLineEntry given a symbol and the dwarf loc.
-  MCDwarfLineEntry(MCSymbol *label, const MCDwarfLoc loc)
-      : MCDwarfLoc(loc), Label(label) {}
+  MCDwarfLineEntry(MCSymbol *label, const MCDwarfLoc loc,
+                   bool isEndOfFunction = false,
+                   MCSymbol *streamLabel = nullptr)
+      : MCDwarfLoc(loc), Label(label), IsEndOfFunction(isEndOfFunction),
+        StreamLabel(streamLabel) {}
 
   MCSymbol *getLabel() const { return Label; }
 
   // This indicates the line entry is synthesized for an end entry.
   bool IsEndEntry = false;
+
+  // This indicates that the current line entry denotes the end of a function,
+  // it is used to emit a DW_LNE_end_sequnece to reset the state machine
+  // registers.
+  bool IsEndOfFunction;
+
+  // Optional symbol to be emitted just before the line is written into the
+  // output stream. It can be used to reference the position of the start of
+  // this line's data in the output stream.
+  MCSymbol *StreamLabel;
 
   // Override the label with the given EndLabel.
   void setEndLabel(MCSymbol *EndLabel) {
@@ -227,7 +242,7 @@ public:
 
   // Add an end entry by cloning the last entry, if exists, for the section
   // the given EndLabel belongs to. The label is replaced by the given EndLabel.
-  void addEndEntry(MCSymbol *EndLabel);
+  void addEndEntry(MCSymbol *EndLabel, bool generatingFuncLineTableOffsets);
 
   using MCDwarfLineEntryCollection = std::vector<MCDwarfLineEntry>;
   using iterator = MCDwarfLineEntryCollection::iterator;

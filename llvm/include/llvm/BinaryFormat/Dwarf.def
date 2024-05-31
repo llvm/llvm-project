@@ -578,6 +578,8 @@ HANDLE_DW_AT(0x2904, GO_runtime_type, 0, GO)
 
 HANDLE_DW_AT(0x3210, UPC_threads_scaled, 0, UPC)
 
+HANDLE_DW_AT(0x3600, META_stmt_sequence, 0, META)
+
 HANDLE_DW_AT(0x393e, IBM_wsa_addr, 0, IBM)
 HANDLE_DW_AT(0x393f, IBM_home_location, 0, IBM)
 HANDLE_DW_AT(0x3940, IBM_alt_srcview, 0, IBM)

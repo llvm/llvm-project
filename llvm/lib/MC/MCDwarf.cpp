@@ -103,8 +103,18 @@ void MCDwarfLineEntry::make(MCStreamer *MCOS, MCSection *Section) {
   // Get the current .loc info saved in the context.
   const MCDwarfLoc &DwarfLoc = MCOS->getContext().getCurrentDwarfLoc();
 
+  MCSymbol *StreamLabel = nullptr;
+  // If functions need offsets into the generated line table, then we need to
+  // create a label referencing where the line was generated in the output
+  // stream
+  if (MCOS->getGenerateFuncLineTableOffsets()) {
+    StreamLabel = MCOS->getContext().createTempSymbol();
+    MCOS->emittedLineStreamSym(StreamLabel);
+  }
+
   // Create a (local) line entry with the symbol and the current .loc info.
-  MCDwarfLineEntry LineEntry(LineSym, DwarfLoc);
+  MCDwarfLineEntry LineEntry(LineSym, DwarfLoc, /*isEndOfFunction=*/false,
+                             StreamLabel);
 
   // clear DwarfLocSeen saying the current .loc info is now used.
   MCOS->getContext().clearDwarfLocSeen();
@@ -144,7 +154,8 @@ makeStartPlusIntExpr(MCContext &Ctx, const MCSymbol &Start, int IntVal) {
   return Res;
 }
 
-void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
+void MCLineSection::addEndEntry(MCSymbol *EndLabel,
+                                bool generatingFuncLineTableOffsets) {
   auto *Sec = &EndLabel->getSection();
   // The line table may be empty, which we should skip adding an end entry.
   // There are two cases:
@@ -157,8 +168,12 @@ void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
   if (I != MCLineDivisions.end()) {
     auto &Entries = I->second;
     auto EndEntry = Entries.back();
-    EndEntry.setEndLabel(EndLabel);
-    Entries.push_back(EndEntry);
+    // If generatingFuncLineTableOffsets is set, then we already generated an
+    // end label at the end of the last function, so skip generating another one
+    if (!generatingFuncLineTableOffsets) {
+      EndEntry.setEndLabel(EndLabel);
+      Entries.push_back(EndEntry);
+    }
   }
 }
 
@@ -187,8 +202,11 @@ void MCDwarfLineTable::emitOne(
   bool EndEntryEmitted = false;
   for (const MCDwarfLineEntry &LineEntry : LineEntries) {
     MCSymbol *Label = LineEntry.getLabel();
+    if (LineEntry.StreamLabel && MCOS->getGenerateFuncLineTableOffsets()) {
+      MCOS->emitLabel(LineEntry.StreamLabel);
+    }
     const MCAsmInfo *asmInfo = MCOS->getContext().getAsmInfo();
-    if (LineEntry.IsEndEntry) {
+    if (LineEntry.IsEndEntry || LineEntry.IsEndOfFunction) {
       MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, Label,
                                      asmInfo->getCodePointerSize());
       init();
