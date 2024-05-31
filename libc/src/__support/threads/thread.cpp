@@ -115,7 +115,8 @@ class ThreadAtExitCallbackMgr {
 public:
   constexpr ThreadAtExitCallbackMgr()
       : mtx(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
-            /*pshared=*/false) {}
+            /*pshared=*/false),
+        callback_list() {}
 
   int add_callback(AtExitCallback *callback, void *obj) {
     cpp::lock_guard lock(mtx);
