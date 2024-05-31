@@ -2686,6 +2686,7 @@ cc_library(
         "include/mlir/Dialect/IRDL/IR/IRDLInterfaces.h",
         "include/mlir/Dialect/IRDL/IR/IRDLTraits.h",
         "include/mlir/Dialect/IRDL/IRDLLoading.h",
+        "include/mlir/Dialect/IRDL/IRDLSymbols.h",
         "include/mlir/Dialect/IRDL/IRDLVerifiers.h",
     ],
     includes = ["include"],
