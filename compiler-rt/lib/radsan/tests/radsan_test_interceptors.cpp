@@ -239,6 +239,28 @@ TEST(TestRadsanInterceptors, CloseDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST(TestRadsanInterceptors, fcntlSetFdDiesWhenRealtime) {
+  int fd = creat(TemporaryFilePath(), S_IRUSR | S_IWUSR);
+  ASSERT_THAT(fd, Ne(-1));
+
+  auto func = [fd]() {
+    int old_flags = fcntl(fd, F_GETFD);
+    ASSERT_THAT(fcntl(fd, F_SETFD, FD_CLOEXEC), Eq(0));
+
+    int flags = fcntl(fd, F_GETFD);
+    ASSERT_THAT(flags, Ne(-1));
+    ASSERT_THAT(flags & FD_CLOEXEC, Eq(FD_CLOEXEC));
+
+    ASSERT_THAT(fcntl(fd, F_SETFD, old_flags), Eq(0));
+    ASSERT_THAT(fcntl(fd, F_GETFD), Eq(old_flags));
+  };
+
+  ExpectRealtimeDeath(func, "fcntl");
+  ExpectNonRealtimeSurvival(func);
+
+  close(fd);
+}
+
 TEST(TestRadsanInterceptors, FopenDiesWhenRealtime) {
   auto Func = []() {
     FILE *fd = fopen(TemporaryFilePath(), "w");
