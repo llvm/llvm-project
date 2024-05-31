@@ -1,14 +1,16 @@
 // RUN: %libomptarget-compile-generic -fprofile-generate-gpu
-// RUN: env LLVM_PROFILE_FILE=llvm.profraw %libomptarget-run-generic 2>&1
+// RUN: env LLVM_PROFILE_FILE=%basename_t.llvm.profraw \
+// RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
-// RUN:     %target_triple.llvm.profraw | %fcheck-generic \
-// RUN:     --check-prefix="LLVM-PGO"
+// RUN:     %target_triple.%basename_t.llvm.profraw | \
+// RUN:     %fcheck-generic --check-prefix="LLVM-PGO"
 
 // RUN: %libomptarget-compile-generic -fprofile-instr-generate-gpu
-// RUN: env LLVM_PROFILE_FILE=clang.profraw %libomptarget-run-generic 2>&1
+// RUN: env LLVM_PROFILE_FILE=%basename_t.clang.profraw \
+// RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
-// RUN:     %target_triple.clang.profraw | %fcheck-generic \
-// RUN:     --check-prefix="CLANG-PGO"
+// RUN:     %target_triple.%basename_t.clang.profraw | \
+// RUN:     %fcheck-generic --check-prefix="CLANG-PGO"
 
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
