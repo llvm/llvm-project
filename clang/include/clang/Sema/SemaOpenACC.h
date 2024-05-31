@@ -379,7 +379,7 @@ public:
   /// Called after the construct has been parsed, but clauses haven't been
   /// parsed.  This allows us to diagnose not-implemented, as well as set up any
   /// state required for parsing the clauses.
-  void ActOnConstruct(OpenACCDirectiveKind K, SourceLocation StartLoc);
+  void ActOnConstruct(OpenACCDirectiveKind K, SourceLocation DirLoc);
 
   /// Called after the directive, including its clauses, have been parsed and
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
@@ -400,6 +400,7 @@ public:
   /// declaration group or associated statement.
   StmtResult ActOnEndStmtDirective(OpenACCDirectiveKind K,
                                    SourceLocation StartLoc,
+                                   SourceLocation DirLoc,
                                    SourceLocation EndLoc,
                                    ArrayRef<OpenACCClause *> Clauses,
                                    StmtResult AssocStmt);

@@ -2236,16 +2236,34 @@ struct ConcurrentHeader {
       t;
 };
 
+// F'2023 R1131 reduce-operation -> reduction-operator
+// CUF reduction-op -> reduction-operator
+// OpenACC 3.3 2.5.15 reduction-operator ->
+//                      + | * | .AND. | .OR. | .EQV. | .NEQV. |
+//                      MAX | MIN | IAND | IOR | IEOR
+struct ReductionOperator {
+  ENUM_CLASS(
+      Operator, Plus, Multiply, Max, Min, Iand, Ior, Ieor, And, Or, Eqv, Neqv)
+  WRAPPER_CLASS_BOILERPLATE(ReductionOperator, Operator);
+  CharBlock source;
+};
+
 // R1130 locality-spec ->
 //         LOCAL ( variable-name-list ) | LOCAL_INIT ( variable-name-list ) |
+//         REDUCE ( reduce-operation : variable-name-list ) |
 //         SHARED ( variable-name-list ) | DEFAULT ( NONE )
 struct LocalitySpec {
   UNION_CLASS_BOILERPLATE(LocalitySpec);
   WRAPPER_CLASS(Local, std::list<Name>);
   WRAPPER_CLASS(LocalInit, std::list<Name>);
+  struct Reduce {
+    TUPLE_CLASS_BOILERPLATE(Reduce);
+    using Operator = ReductionOperator;
+    std::tuple<Operator, std::list<Name>> t;
+  };
   WRAPPER_CLASS(Shared, std::list<Name>);
   EMPTY_CLASS(DefaultNone);
-  std::variant<Local, LocalInit, Shared, DefaultNone> u;
+  std::variant<Local, LocalInit, Reduce, Shared, DefaultNone> u;
 };
 
 // R1123 loop-control ->
@@ -4066,17 +4084,9 @@ struct AccObjectListWithModifier {
   std::tuple<std::optional<AccDataModifier>, AccObjectList> t;
 };
 
-// 2.5.15: + | * | max | min | iand | ior | ieor | .and. | .or. | .eqv. | .neqv.
-struct AccReductionOperator {
-  ENUM_CLASS(
-      Operator, Plus, Multiply, Max, Min, Iand, Ior, Ieor, And, Or, Eqv, Neqv)
-  WRAPPER_CLASS_BOILERPLATE(AccReductionOperator, Operator);
-  CharBlock source;
-};
-
 struct AccObjectListWithReduction {
   TUPLE_CLASS_BOILERPLATE(AccObjectListWithReduction);
-  std::tuple<AccReductionOperator, AccObjectList> t;
+  std::tuple<ReductionOperator, AccObjectList> t;
 };
 
 struct AccWaitArgument {
@@ -4312,11 +4322,11 @@ struct OpenACCConstruct {
 // block -> * | scalar-int-expr | ( star-or-expr-list )
 // stream -> 0, scalar-int-expr | STREAM = scalar-int-expr
 // cuf-reduction -> [ REDUCE | REDUCTION ] (
-//                  acc-reduction-op : scalar-variable-list )
+//                  reduction-op : scalar-variable-list )
 
 struct CUFReduction {
   TUPLE_CLASS_BOILERPLATE(CUFReduction);
-  using Operator = AccReductionOperator;
+  using Operator = ReductionOperator;
   std::tuple<Operator, std::list<Scalar<Variable>>> t;
 };
 

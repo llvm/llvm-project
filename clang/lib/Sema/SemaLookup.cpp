@@ -5897,6 +5897,16 @@ void Sema::diagnoseTypo(const TypoCorrection &Correction,
 
   NamedDecl *ChosenDecl =
       Correction.isKeyword() ? nullptr : Correction.getFoundDecl();
+
+  // For builtin functions which aren't declared anywhere in source,
+  // don't emit the "declared here" note.
+  if (const auto *FD = dyn_cast_if_present<FunctionDecl>(ChosenDecl);
+      FD && FD->getBuiltinID() &&
+      PrevNote.getDiagID() == diag::note_previous_decl &&
+      Correction.getCorrectionRange().getBegin() == FD->getBeginLoc()) {
+    ChosenDecl = nullptr;
+  }
+
   if (PrevNote.getDiagID() && ChosenDecl)
     Diag(ChosenDecl->getLocation(), PrevNote)
       << CorrectedQuotedStr << (ErrorRecovery ? FixItHint() : FixTypo);
