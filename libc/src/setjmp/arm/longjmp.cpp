@@ -20,27 +20,30 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
       # Reload r4, r5, r6, r7.
       ldmia r0!, {r4, r5, r6, r7}
 
-      # Reload r8, r9, r10. They cannot appear in register lists so load them
+      # Reload r8, r9. They cannot appear in register lists so load them
       # into the lower registers, then move them into place.
-      ldmia r0!, {r1, r2, r3}
-      mov r8, r1
-      mov r9, r2
-      mov r10, r3
+      ldmia r0!, {r2, r3}
+      mov r8, r2
+      mov r9, r3
 
-      # Reload r11, sp, lr. They cannot appear in register lists so load them
+      # Reload r10, r11. They cannot appear in register lists so load them
       # into the lower registers, then move them into place.
-      ldmia r0!, {r1, r2, r3}
-      mov r11, r1
+      ldmia r0!, {r2, r3}
+      mov r10, r2
+      mov r11, r3
+
+      # Reload sp, lr. They cannot appear in register lists so load them
+      # into the lower registers, then move them into place.
+      ldmia r0!, {r2, r3}
       mov sp, r2
       mov lr, r3
 
       # return val ?: 1;
       movs r0, r1
-      beq .Lret_one
-      bx lr
-
-    .Lret_one:
+      bne .Lret_val
       movs r0, #1
+
+    .Lret_val:
       bx lr)");
 }
 
