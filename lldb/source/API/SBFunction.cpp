@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBFunction.h"
-#include "lldb/API/SBAddressRange.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Disassembler.h"
@@ -159,19 +158,6 @@ SBAddress SBFunction::GetEndAddress() {
     }
   }
   return addr;
-}
-
-lldb::SBAddressRangeList SBFunction::GetRanges() {
-  LLDB_INSTRUMENT_VA(this);
-
-  lldb::SBAddressRangeList ranges;
-  if (m_opaque_ptr) {
-    lldb::SBAddressRange range;
-    (*range.m_opaque_up) = m_opaque_ptr->GetAddressRange();
-    ranges.Append(std::move(range));
-  }
-
-  return ranges;
 }
 
 const char *SBFunction::GetArgumentName(uint32_t arg_idx) {

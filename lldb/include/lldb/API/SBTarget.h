@@ -954,7 +954,6 @@ public:
 
 protected:
   friend class SBAddress;
-  friend class SBAddressRange;
   friend class SBBlock;
   friend class SBBreakpoint;
   friend class SBBreakpointList;
