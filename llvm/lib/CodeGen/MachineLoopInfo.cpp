@@ -198,7 +198,8 @@ MDNode *MachineLoop::getLoopID() const {
   return LoopID;
 }
 
-bool MachineLoop::isLoopInvariantImplicitPhysReg(Register Reg) const {
+bool MachineLoop::isLoopInvariantImplicitPhysReg(
+    Register Reg, Register ExcludeReg, unsigned RecursionDepth) const {
   MachineFunction *MF = getHeader()->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
 
@@ -210,15 +211,20 @@ bool MachineLoop::isLoopInvariantImplicitPhysReg(Register Reg) const {
            ->shouldAnalyzePhysregInMachineLoopInfo(Reg))
     return false;
 
-  return !llvm::any_of(
-      MRI->def_instructions(Reg),
-      [this](const MachineInstr &MI) { return this->contains(&MI); });
+  return !llvm::any_of(MRI->def_instructions(Reg), [=](const MachineInstr &MI) {
+    return (this->contains(&MI) &&
+            !isLoopInvariant(MI, ExcludeReg, RecursionDepth - 1));
+  });
 }
 
-bool MachineLoop::isLoopInvariant(MachineInstr &I,
-                                  const Register ExcludeReg) const {
-  MachineFunction *MF = I.getParent()->getParent();
-  MachineRegisterInfo *MRI = &MF->getRegInfo();
+bool MachineLoop::isLoopInvariant(const MachineInstr &I,
+                                  const Register ExcludeReg,
+                                  unsigned RecursionDepth) const {
+  if (RecursionDepth == 0)
+    return false;
+
+  const MachineFunction *MF = I.getParent()->getParent();
+  const MachineRegisterInfo *MRI = &MF->getRegInfo();
   const TargetSubtargetInfo &ST = MF->getSubtarget();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   const TargetInstrInfo *TII = ST.getInstrInfo();
@@ -243,7 +249,7 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
         // it could get allocated to something with a def during allocation.
         // However, if the physreg is known to always be caller saved/restored
         // then this use is safe to hoist.
-        if (!isLoopInvariantImplicitPhysReg(Reg) &&
+        if (!isLoopInvariantImplicitPhysReg(Reg, ExcludeReg, RecursionDepth) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
             !TII->isIgnorableUse(MO))
           return false;
@@ -265,9 +271,11 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
     assert(MRI->getVRegDef(Reg) &&
            "Machine instr not mapped for this vreg?!");
 
-    // If the loop contains the definition of an operand, then the instruction
-    // isn't loop invariant.
-    if (contains(MRI->getVRegDef(Reg)))
+    // If the loop contains the definition of an operand, then it must be loop
+    // invariant
+    MachineInstr *VRegDefMI = MRI->getVRegDef(Reg);
+    if (contains(VRegDefMI) &&
+        !isLoopInvariant(*VRegDefMI, ExcludeReg, RecursionDepth - 1))
       return false;
   }
 
