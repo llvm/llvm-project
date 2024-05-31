@@ -636,9 +636,12 @@ bool getArgValue(args::Flag &arg, const std::string &name) {
 int main(int argc, const char **argv) {
     spdlog::set_level(spdlog::level::debug);
 
-    args::ArgumentParser argParser("Path generation tool\n"
-                                   "Example:\n"
-                                   "  ./tool npe/input.json\n");
+    args::ArgumentParser argParser(
+        "Path generation tool\n"
+        "Example:\n"
+        "  ./tool npe/input.json\n"
+        "  ./tool -d10 -t60 npe/input.json\n"
+        "  ./tool --no-npe-good-source npe/input.json\n");
 
     args::HelpFlag help(argParser, "help", "Display help menu", {'h', "help"});
 
