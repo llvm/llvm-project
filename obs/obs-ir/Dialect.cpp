@@ -11,11 +11,21 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/VersionTuple.h"
 #include <algorithm>
+#include <mlir/IR/DialectImplementation.h>
+#include <mlir/IR/MLIRContext.h>
+#include <mlir/IR/TypeRange.h>
+#include <mlir/IR/TypeSupport.h>
+#include <mlir/IR/Types.h>
+#include <mlir/Support/TypeID.h>
 #include <string>
+#include <utility>
+#include <vector>
 
 using namespace mlir;
 using namespace mlir::obs;
@@ -27,7 +37,11 @@ void OBSDialect::initialize() {
     #define GET_OP_LIST
     #include "Ops.cpp.inc"
     >();
+
+    addTypes<OwnType>();
+    addTypes<RefType>();
 }
+
 
 static mlir::ParseResult parseBinaryOp(mlir::OpAsmParser &parser, mlir::OperationState &result) {
 
@@ -67,6 +81,7 @@ static void printBinary(mlir::OpAsmPrinter &printer, mlir::Operation *op) {
     printer.printFunctionalType(op->getOperandTypes(), op->getResultTypes());
 }
 
+
 void ConstantOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, double value) {
     auto dataType = RankedTensorType::get({}, builder.getF64Type());
     auto dataAttribute = DenseElementsAttr::get(dataType, value);
@@ -88,6 +103,34 @@ void ConstantOp::print(mlir::OpAsmPrinter &printer) {
     printer << " ";
     printer.printOptionalAttrDict((*this)->getAttrs(), {"value"});
     printer << getValue();
+}
+
+mlir::LogicalResult OwnOp::verify() {
+    if (getType() == "vector") {
+        return success();
+    } else {
+        return failure();
+    }
+}
+
+mlir::LogicalResult RefOp::verify() {
+    //TODO: add complete verifying.
+    return success();
+}
+
+mlir::LogicalResult WriteOp::verify() {
+    //TODO: add complete verifying.
+    return success();
+}
+
+mlir::LogicalResult ReadOp::verify() {
+    //TODO: add complete verifying.
+    return success();
+}
+
+mlir::LogicalResult DeleteOp::verify() {
+    //TODO: add complete verifying.
+    return success();
 }
 
 mlir::LogicalResult ConstantOp::verify() {
@@ -216,6 +259,126 @@ mlir::LogicalResult TransposeOp::verify() {
     }
     return mlir::success();
 }
+
+namespace mlir {
+namespace obs {
+
+namespace user_types {
+/*
+ * The definition of the owner type. 
+ **/
+struct OwnTypeStorage : public mlir::TypeStorage {
+
+    
+
+    // StringRef is the name of the resource.
+    // RankedTensorType is the dimensions.
+    using KeyTy = std::pair<StringRef, ArrayRef<unsigned int>>;
+
+    OwnTypeStorage(StringRef resName, ArrayRef<unsigned int> dims): resName(resName), dims(dims)  {}
+
+    static OwnTypeStorage *construct(mlir::TypeStorageAllocator &allocator, const KeyTy &key) {
+        StringRef resName = allocator.copyInto(key.first);
+        ArrayRef<unsigned int> dim = allocator.copyInto(key.second);
+        return new (allocator.allocate<OwnTypeStorage>()) OwnTypeStorage(resName, dim);
+    }
+
+    static llvm::hash_code hashKey(const KeyTy &key) {
+        return llvm::hash_value(key);
+    }
+
+    static KeyTy getKey(StringRef resName, ArrayRef<unsigned int> dims) {
+        return KeyTy(resName, dims);
+    }
+
+    bool operator==(const KeyTy &key) const {
+        return (key.first == resName && key.second == dims);
+    }
+
+    StringRef resName;
+    ArrayRef<unsigned int> dims;
+};
+
+/*
+ * The definition of the reference type. 
+ **/
+struct RefTypeStorage : public mlir::TypeStorage {
+
+    // Here we use array, but usually it contains only one element.
+    using KeyTy = ArrayRef<mlir::Type>;
+
+    RefTypeStorage(ArrayRef<mlir::Type> ownerType): ownerType(ownerType) {}
+
+    static RefTypeStorage *construct(mlir::TypeStorageAllocator &allocator, const KeyTy &key) {
+        
+        ArrayRef<mlir::Type> ownerType = allocator.copyInto(key);
+        return new (allocator.allocate<RefTypeStorage>()) RefTypeStorage(ownerType);
+    }
+
+    static llvm::hash_code hashKey(const KeyTy &key) {
+        return llvm::hash_value(key);
+    }
+
+    static KeyTy getKey(ArrayRef<mlir::Type> ownerType) {
+        return KeyTy(ownerType);
+    }
+
+    bool operator==(const KeyTy &key) const {
+        return (key == ownerType);
+    }
+
+    // The resource type it refers to.
+    ArrayRef<mlir::Type> ownerType;
+};
+
+} //user_types
+} //obs
+} //mlir
+
+OwnType OwnType::get(mlir::MLIRContext *ctx, StringRef resName, ArrayRef<unsigned int> dims) {
+    return Base::get(ctx, resName, dims);
+}
+
+StringRef OwnType::getResName() {
+    return getImpl()->resName;
+}
+
+ArrayRef<unsigned int> OwnType::getDims() {
+    return getImpl()->dims;
+}
+
+RefType RefType::get(ArrayRef<mlir::Type> ownType) {
+    return Base::get(ownType.front().getContext(), ownType);
+}
+
+ArrayRef<mlir::Type> RefType::getOwnerType() {
+    return getImpl()->ownerType;
+}
+
+
+void OBSDialect::printType(::mlir::Type type,
+                 ::mlir::DialectAsmPrinter &printer) const {
+    if (llvm::isa<OwnType>(type)) {
+        OwnType ownType = llvm::cast<OwnType>(type);
+        printer << "Own( ";
+        printer << ownType.getResName();
+        printer << ", [";
+        llvm::interleaveComma(ownType.getDims(), printer);
+        printer << " ] )";
+    } else if (RefType refType = llvm::cast<RefType>(type)) {
+        printer << "Ref( ";
+        printer << refType.getOwnerType() ;
+        printer << " )";
+    }
+}
+
+mlir::Type OBSDialect::parseType(mlir::DialectAsmParser &parser) const {
+    //TODO: complete parseType
+    if (parser.parseKeyword("Own") || parser.parseLess())
+        return Type();
+    return Type();
+}
+
 
 #define GET_OP_CLASSES
 #include "Ops.cpp.inc"

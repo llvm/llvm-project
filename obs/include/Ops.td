@@ -11,17 +11,136 @@ def OBS_Dialect: Dialect {
     //The namespace of the Dialect.
     let name = "obs";
 
-    let summary = "A high-level dialect for analyzing and optimzing the Language";
+    let summary = "A dialect for representing abstract memory operations.";
 
     let description = [{
-        The Toy language is a tensor-based language that allows you to define functions, perform some math computation, and
-        print results. This dialect provides a reprentation of the language that is amenable to analysis and optimization.
+        The OBS dialect is an abstraction over memory operations. 
+        It is used to reason about Ownership and Borrowing in a programming language.
+        It contains the operations:
+        (1) OwnOp(type, Dim);
+        (2) RefOp(x)
+        (3) Read(x);
+        (4) Write(x);
+        (5) delete(x); 
+        (6) Function;
     }];
 
     let cppNamespace = "::mlir::obs";
+
+    let useDefaultTypePrinterParser = 1;
 }
 
 class OBS_op<string mnemonic, list<Trait> traits = []> : Op<OBS_Dialect, mnemonic, traits>;
+
+def OBS_OwnType : 
+    DialectType<OBS_Dialect, CPred<"::llvm::isa<OwnType>($_self)">, "OBS own type">;
+
+def OBS_RefType : 
+    DialectType<OBS_Dialect, CPred<"::llvm::isa<RefType>($_self)">, "OBS ref type">;
+
+def OBS_Type : AnyTypeOf<[OBS_OwnType, OBS_RefType]>;
+
+def OwnOp : OBS_op<"Own", []> {
+
+    let summary = "Allocate a memory resource and bind to an owner." ;
+
+    let description = [{
+        This operation creates a memory resource and bind it to an owner.
+    }];
+
+
+    let arguments = (ins StrAttr:$type, F64Tensor:$dim);
+    let results = (outs OBS_OwnType);
+
+    let assemblyFormat = [{
+       `(` attr-dict `,` $dim `:` type($dim) `)` `:` type(results)
+    }];
+
+
+    let hasVerifier = 1;
+
+    let builders = [
+        OpBuilder<(ins "StringRef":$type, "Value":$dim )>
+    ];
+}
+
+def RefOp : OBS_op<"Ref", []> {
+
+    let summary = "Create a reference to a resource." ;
+
+    let description = [{
+        This operation creates a reference to a resource.
+    }];
+
+    let arguments = (ins OBS_Type:$ownType);
+    let results = (outs OBS_RefType);
+
+    let assemblyFormat = [{
+       `(` attr-dict $ownType `:` type($ownType) `)` `:` type(results)
+    }];
+
+
+    let hasVerifier = 1;
+
+    let builders = [
+        OpBuilder<(ins "Value":$ownType )>
+    ];
+}
+
+def ReadOp : OBS_op<"Read", []> {
+
+    let summary = "Read the resource though a variable" ;
+
+    let description = [{
+        This operation creates a read operation.
+    }];
+
+    let arguments = (ins OBS_Type:$ownType);
+
+    let assemblyFormat = [{
+       `(` attr-dict $ownType `:` type($ownType) `)`
+    }];
+
+
+    let hasVerifier = 1;
+}
+
+def WriteOp : OBS_op<"Write", []> {
+
+    let summary = "Write the resource though a variable" ;
+
+    let description = [{
+        This operation creates a write operation.
+    }];
+
+    let arguments = (ins OBS_Type:$ownType);
+
+    let assemblyFormat = [{
+       `(` attr-dict $ownType `:` type($ownType) `)`
+    }];
+
+
+    let hasVerifier = 1;
+}
+
+def DeleteOp : OBS_op<"Delete", []> {
+
+    let summary = "Delete a resource through its owner." ;
+
+    let description = [{
+        This operation creates a delete operation.
+    }];
+
+    let arguments = (ins OBS_Type:$ownType);
+
+    let assemblyFormat = [{
+       `(` attr-dict $ownType `:` type($ownType) `)`
+    }];
+
+
+    let hasVerifier = 1;
+}
+
 
 def ConstantOp : OBS_op<"constant", [Pure]> {
 

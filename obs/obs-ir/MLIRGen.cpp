@@ -21,13 +21,18 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
+#include <mlir-c/BuiltinTypes.h>
 #include <mlir/IR/BuiltinAttributes.h>
 #include <mlir/IR/Location.h>
 #include <mlir/IR/OwningOpRef.h>
+#include <mlir/IR/Types.h>
+#include <mlir/Support/LLVM.h>
 #include <numeric>
 #include <optional>
 #include <vector>
@@ -150,12 +155,23 @@ private:
   }
 
   mlir::LogicalResult mlirGen(PrintExprAST &call) {
+
+    auto arg = mlirGen(*call.getArg());
+    if (!arg) {
+      return mlir::failure();
+    }
+
+    auto ownType = mlir::obs::OwnType::get(theModule.getContext(), "vector", {1,2});
+    auto refType = mlir::obs::RefType::get({ownType});
+    builder.create<RefOp>(loc(call.loc()), refType , arg);
+
+    /*
     auto arg = mlirGen(*call.getArg());
     if (!arg) {
         return mlir::failure();
     }
 
-    builder.create<PrintOp>(loc(call.loc()), arg);
+    builder.create<PrintOp>(loc(call.loc()), arg); */
     return mlir::success();
   } 
 
@@ -248,6 +264,7 @@ private:
 
   mlir::Value mlirGen(VariableExprAST &expr) {
     if (auto variable = symbolTable.lookup(expr.getName())) {
+        builder.create<ReadOp>(loc(expr.loc()), variable);
         return variable;
     }
     mlir::emitError(loc(expr.loc()), "error: unknown variable '") << expr.getName() << "'";
@@ -293,6 +310,35 @@ private:
   }
 
   mlir::Value mlirGen(VarDeclExprAST &vardecl) {
+
+    auto *init = vardecl.getInitVal();
+
+    if (!init) {
+        mlir::emitError(loc(vardecl.loc()), "missing initializer in variable declaration");
+        return nullptr;
+    }
+
+    
+
+    mlir::Value value = mlirGen(*init);
+
+    StringRef type = "vector";
+
+    auto ownType = mlir::obs::OwnType::get(theModule.getContext(), "vector", {1,2});
+    
+    std::vector<double> data = {1, 2};
+
+    
+    builder.getI32VectorAttr({1, 2});
+    value = builder.create<OwnOp>(loc(vardecl.loc()), ownType , type, value);
+
+    if (failed(declare(vardecl.getName(), value))) {
+        return nullptr;
+    }
+
+    return value;
+
+/*
     auto *init = vardecl.getInitVal();
 
     if (!init) {
@@ -312,7 +358,7 @@ private:
     if (failed(declare(vardecl.getName(), value))) {
         return nullptr;
     }
-    return value;
+    return value; */
   }
 
 };
