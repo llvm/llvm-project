@@ -614,6 +614,17 @@ static Value *emitTernaryBuiltin(CodeGenFunction &CGF,
   return CGF.Builder.CreateCall(F, { Src0, Src1, Src2 });
 }
 
+// Emit an intrinsic that has N operands of the same type as its result.
+static Value *emitNaryBuiltin(CodeGenFunction &CGF, const CallExpr *E,
+                              unsigned IntrinsicID) {
+  SmallVector<Value *, 16> Args;
+  for (unsigned i = 0, e = E->getNumArgs(); i != e; i++)
+    Args.push_back(CGF.EmitScalarExpr(E->getArg(i)));
+
+  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Args[0]->getType());
+  return CGF.Builder.CreateCall(F, Args);
+}
+
 // Emit an intrinsic that has 1 float or double operand, and 1 integer.
 static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
                                const CallExpr *E,
@@ -18480,21 +18491,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, Args);
   }
   case AMDGPU::BI__builtin_amdgcn_permlane16:
-  case AMDGPU::BI__builtin_amdgcn_permlanex16: {
-    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
-    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
-    llvm::Value *Src3 = EmitScalarExpr(E->getArg(3));
-    llvm::Value *Src4 = EmitScalarExpr(E->getArg(4));
-    llvm::Value *Src5 = EmitScalarExpr(E->getArg(5));
-
-    Intrinsic::ID IID = BuiltinID == AMDGPU::BI__builtin_amdgcn_permlane16
-                            ? Intrinsic::amdgcn_permlane16
-                            : Intrinsic::amdgcn_permlanex16;
-
-    llvm::Function *F = CGM.getIntrinsic(IID, Src0->getType());
-    return Builder.CreateCall(F, {Src0, Src1, Src2, Src3, Src4, Src5});
-  }
+  case AMDGPU::BI__builtin_amdgcn_permlanex16:
+    return emitNaryBuiltin(*this, E,
+                           BuiltinID == AMDGPU::BI__builtin_amdgcn_permlane16
+                               ? Intrinsic::amdgcn_permlane16
+                               : Intrinsic::amdgcn_permlanex16);
   case AMDGPU::BI__builtin_amdgcn_permlane64:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_permlane64);
   case AMDGPU::BI__builtin_amdgcn_readlane:
