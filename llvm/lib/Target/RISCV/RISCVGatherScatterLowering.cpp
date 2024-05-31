@@ -350,9 +350,10 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
   SmallVector<Value *, 2> Ops(GEP->operands());
 
   // If the base pointer is a vector, check if it's strided.
-  if (GEP->getPointerOperand()->getType()->isVectorTy()) {
-    auto [BaseBase, Stride] = determineBaseAndStride(
-        cast<Instruction>(GEP->getPointerOperand()), Builder);
+  Value *Base = GEP->getPointerOperand();
+  if (auto *BaseInst = dyn_cast<Instruction>(Base);
+      BaseInst && BaseInst->getType()->isVectorTy()) {
+    auto [BaseBase, Stride] = determineBaseAndStride(BaseInst, Builder);
     // If GEP's offset is scalar then we can add it to the base pointer's base.
     auto IsScalar = [](Value *Idx) { return !Idx->getType()->isVectorTy(); };
     if (BaseBase && all_of(GEP->indices(), IsScalar)) {
@@ -366,7 +367,7 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
   }
 
   // Base pointer needs to be a scalar.
-  Value *ScalarBase = Ops[0];
+  Value *ScalarBase = Base;
   if (ScalarBase->getType()->isVectorTy()) {
     ScalarBase = getSplatValue(ScalarBase);
     if (!ScalarBase)
