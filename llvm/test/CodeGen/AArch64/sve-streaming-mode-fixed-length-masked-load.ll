@@ -980,7 +980,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:    tbnz w8, #1, .LBB3_3
 ; NONEON-NOSVE-NEXT:    b .LBB3_4
 ; NONEON-NOSVE-NEXT:  .LBB3_2:
-; NONEON-NOSVE-NEXT:    mov v0.16b, v1.16b
+; NONEON-NOSVE-NEXT:    str q1, [sp, #-16]!
+; NONEON-NOSVE-NEXT:    ldr q0, [sp], #16
 ; NONEON-NOSVE-NEXT:    tbz w8, #1, .LBB3_4
 ; NONEON-NOSVE-NEXT:  .LBB3_3: // %cond.load1
 ; NONEON-NOSVE-NEXT:    ldrb w10, [x0, #1]
@@ -2095,7 +2096,8 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:    tbnz w8, #1, .LBB7_3
 ; NONEON-NOSVE-NEXT:    b .LBB7_4
 ; NONEON-NOSVE-NEXT:  .LBB7_2:
-; NONEON-NOSVE-NEXT:    mov v0.16b, v1.16b
+; NONEON-NOSVE-NEXT:    str q1, [sp, #-16]!
+; NONEON-NOSVE-NEXT:    ldr q0, [sp], #16
 ; NONEON-NOSVE-NEXT:    tbz w8, #1, .LBB7_4
 ; NONEON-NOSVE-NEXT:  .LBB7_3: // %cond.load1
 ; NONEON-NOSVE-NEXT:    ldr h2, [x0, #2]
@@ -2616,7 +2618,8 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:    tbnz w8, #1, .LBB10_3
 ; NONEON-NOSVE-NEXT:    b .LBB10_4
 ; NONEON-NOSVE-NEXT:  .LBB10_2:
-; NONEON-NOSVE-NEXT:    mov v0.16b, v1.16b
+; NONEON-NOSVE-NEXT:    str q1, [sp, #-16]!
+; NONEON-NOSVE-NEXT:    ldr q0, [sp], #16
 ; NONEON-NOSVE-NEXT:    tbz w8, #1, .LBB10_4
 ; NONEON-NOSVE-NEXT:  .LBB10_3: // %cond.load1
 ; NONEON-NOSVE-NEXT:    ldr s2, [x0, #4]
@@ -2839,7 +2842,8 @@ define <4 x double> @masked_load_v4f64(ptr %src, <4 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:    tbnz w8, #1, .LBB12_3
 ; NONEON-NOSVE-NEXT:    b .LBB12_4
 ; NONEON-NOSVE-NEXT:  .LBB12_2:
-; NONEON-NOSVE-NEXT:    mov v0.16b, v1.16b
+; NONEON-NOSVE-NEXT:    str q1, [sp, #-16]!
+; NONEON-NOSVE-NEXT:    ldr q0, [sp], #16
 ; NONEON-NOSVE-NEXT:    tbz w8, #1, .LBB12_4
 ; NONEON-NOSVE-NEXT:  .LBB12_3: // %cond.load1
 ; NONEON-NOSVE-NEXT:    ldr d2, [x0, #8]

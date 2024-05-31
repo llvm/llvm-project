@@ -15,7 +15,8 @@ define fp128 @test_streaming_compatible_register_mov(fp128 %q0, fp128 %q1) {
 ;
 ; NONEON-NOSVE-LABEL: test_streaming_compatible_register_mov:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    mov v0.16b, v1.16b
+; NONEON-NOSVE-NEXT:    str q1, [sp, #-16]!
+; NONEON-NOSVE-NEXT:    ldr q0, [sp], #16
 ; NONEON-NOSVE-NEXT:    ret
   ret fp128 %q1
 }

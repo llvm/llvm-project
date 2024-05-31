@@ -21,7 +21,7 @@ define fp128 @copy_FPR128(fp128 %a, fp128 %b) {
 ; CHECK-LABEL: copy_FPR128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str q1, [sp, #-16]!
-; CHECK-NEXT:    ldr q0, [sp, #16]!
+; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
   ret fp128 %b;
 }
