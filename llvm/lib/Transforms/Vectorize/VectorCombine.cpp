@@ -1670,8 +1670,12 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
 
 using InstLane = std::pair<Value *, int>;
 
-static InstLane lookThroughShuffles(Value *V, int Lane) {
+static InstLane
+lookThroughShuffles(Value *V, int Lane,
+                    SmallPtrSetImpl<Instruction *> *VisitedShuffles) {
   while (auto *SV = dyn_cast<ShuffleVectorInst>(V)) {
+    if (VisitedShuffles)
+      VisitedShuffles->insert(SV);
     unsigned NumElts =
         cast<FixedVectorType>(SV->getOperand(0)->getType())->getNumElements();
     int M = SV->getMaskValue(Lane);
@@ -1688,13 +1692,15 @@ static InstLane lookThroughShuffles(Value *V, int Lane) {
   return InstLane{V, Lane};
 }
 
-static SmallVector<InstLane>
-generateInstLaneVectorFromOperand(ArrayRef<InstLane> Item, int Op) {
+static SmallVector<InstLane> generateInstLaneVectorFromOperand(
+    ArrayRef<InstLane> Item, int Op,
+    SmallPtrSetImpl<Instruction *> *VisitedShuffles) {
   SmallVector<InstLane> NItem;
   for (InstLane IL : Item) {
     auto [V, Lane] = IL;
     InstLane OpLane =
-        V ? lookThroughShuffles(cast<Instruction>(V)->getOperand(Op), Lane)
+        V ? lookThroughShuffles(cast<Instruction>(V)->getOperand(Op), Lane,
+                                VisitedShuffles)
           : InstLane{nullptr, PoisonMaskElem};
     NItem.emplace_back(OpLane);
   }
@@ -1733,8 +1739,9 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
       Ops[Idx] = II->getOperand(Idx);
       continue;
     }
-    Ops[Idx] = generateNewInstTree(generateInstLaneVectorFromOperand(Item, Idx),
-                                   Ty, IdentityLeafs, SplatLeafs, Builder);
+    Ops[Idx] = generateNewInstTree(
+        generateInstLaneVectorFromOperand(Item, Idx, nullptr), Ty,
+        IdentityLeafs, SplatLeafs, Builder);
   }
   Builder.SetInsertPoint(I);
   Type *DstTy =
@@ -1763,13 +1770,14 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   if (!Ty)
     return false;
 
+  SmallPtrSet<Instruction *, 4> VisitedShuffles;
   SmallVector<InstLane> Start(Ty->getNumElements());
   for (unsigned M = 0, E = Ty->getNumElements(); M < E; ++M)
-    Start[M] = lookThroughShuffles(&I, M);
+    Start[M] = lookThroughShuffles(&I, M, &VisitedShuffles);
 
   SmallVector<SmallVector<InstLane>> Worklist;
   Worklist.push_back(Start);
-  SmallPtrSet<Value *, 4> IdentityLeafs, SplatLeafs;
+  SmallPtrSet<Value *, 4> IdentityLeafs, SplatLeafs, ConstLeafs;
   unsigned NumVisited = 0;
 
   while (!Worklist.empty()) {
@@ -1803,7 +1811,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
           Value *V = IL.first;
           return !V || V == FrontV;
         })) {
-      SplatLeafs.insert(FrontV);
+      ConstLeafs.insert(FrontV);
       continue;
     }
     // Look for a splat value.
@@ -1847,14 +1855,20 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     if ((isa<BinaryOperator>(FrontV) &&
          !cast<BinaryOperator>(FrontV)->isIntDivRem()) ||
         isa<CmpInst>(FrontV)) {
-      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
-      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
+      Worklist.push_back(
+          generateInstLaneVectorFromOperand(Item, 0, &VisitedShuffles));
+      Worklist.push_back(
+          generateInstLaneVectorFromOperand(Item, 1, &VisitedShuffles));
     } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst>(FrontV)) {
-      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+      Worklist.push_back(
+          generateInstLaneVectorFromOperand(Item, 0, &VisitedShuffles));
     } else if (isa<SelectInst>(FrontV)) {
-      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
-      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
-      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 2));
+      Worklist.push_back(
+          generateInstLaneVectorFromOperand(Item, 0, &VisitedShuffles));
+      Worklist.push_back(
+          generateInstLaneVectorFromOperand(Item, 1, &VisitedShuffles));
+      Worklist.push_back(
+          generateInstLaneVectorFromOperand(Item, 2, &VisitedShuffles));
     } else if (auto *II = dyn_cast<IntrinsicInst>(FrontV);
                II && isTriviallyVectorizable(II->getIntrinsicID())) {
       for (unsigned Op = 0, E = II->getNumOperands() - 1; Op < E; Op++) {
@@ -1868,7 +1882,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             return false;
           continue;
         }
-        Worklist.push_back(generateInstLaneVectorFromOperand(Item, Op));
+        Worklist.push_back(
+            generateInstLaneVectorFromOperand(Item, Op, &VisitedShuffles));
       }
     } else {
       return false;
@@ -1877,6 +1892,31 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
 
   if (NumVisited <= 1)
     return false;
+
+  LLVM_DEBUG(dbgs() << "Found a set of shuffles that can be removed:\n");
+  InstructionCost OldShuffleCost;
+  for (auto *I : VisitedShuffles) {
+    InstructionCost C = TTI.getInstructionCost(I, TTI::TCK_RecipThroughput);
+    LLVM_DEBUG(dbgs() << C << *I << "\n");
+    OldShuffleCost += C;
+  }
+  LLVM_DEBUG(dbgs() << "  total cost " << OldShuffleCost << "\n");
+  SmallVector<int, 16> ExtractMask(Ty->getNumElements());
+  std::iota(ExtractMask.begin(), ExtractMask.end(), 0);
+  InstructionCost IdentityCost = TTI.getShuffleCost(
+      TTI::SK_PermuteSingleSrc, Ty, ExtractMask, TTI::TCK_RecipThroughput);
+  InstructionCost SplatCost = TTI.getShuffleCost(
+      TTI::SK_Broadcast, Ty, std::nullopt, TTI::TCK_RecipThroughput);
+  InstructionCost NewShuffleCost =
+      IdentityCost * IdentityLeafs.size() + SplatCost * SplatLeafs.size();
+  LLVM_DEBUG(dbgs() << "      vs     " << NewShuffleCost << " (" << IdentityCost
+                    << " * " << IdentityLeafs.size() << " + " << SplatCost
+                    << " * " << SplatLeafs.size() << ")\n");
+
+  if (OldShuffleCost < NewShuffleCost)
+    return false;
+
+  SplatLeafs.insert(ConstLeafs.begin(), ConstLeafs.end());
 
   // If we got this far, we know the shuffles are superfluous and can be
   // removed. Scan through again and generate the new tree of instructions.
