@@ -4846,8 +4846,12 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_TemplateOpener)) {
       return true;
     }
-    if (Left.Tok.getIdentifierInfo() && Right.is(tok::numeric_constant))
+    // C++ Core Guidelines suppression tag, e.g. `[[suppress(type.5)]]`.
+    if (Left.is(tok::identifier) && Right.is(tok::numeric_constant))
       return Right.TokenText[0] != '.';
+    // `Left` is a keyword (including C++ alternative operator) or identifier.
+    if (Left.Tok.getIdentifierInfo() && Right.Tok.isLiteral())
+      return true;
   } else if (Style.isProto()) {
     if (Right.is(tok::period) &&
         Left.isOneOf(Keywords.kw_optional, Keywords.kw_required,

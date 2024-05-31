@@ -1410,13 +1410,6 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
   }
 }
 
-static bool isAltOperator(const FormatToken &Tok) {
-  return isalpha(Tok.TokenText[0]) &&
-         Tok.isOneOf(tok::ampamp, tok::ampequal, tok::amp, tok::pipe,
-                     tok::tilde, tok::exclaim, tok::exclaimequal, tok::pipepipe,
-                     tok::pipeequal, tok::caret, tok::caretequal);
-}
-
 void UnwrappedLineParser::parseStructuralElement(
     const FormatToken *OpeningBrace, IfStmtKind *IfKind,
     FormatToken **IfLeftBrace, bool *HasDoWhile, bool *HasLabel) {
@@ -1699,7 +1692,7 @@ void UnwrappedLineParser::parseStructuralElement(
   for (const bool InRequiresExpression =
            OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
        !eof();) {
-    if (IsCpp && isAltOperator(*FormatTok)) {
+    if (IsCpp && FormatTok->isCppAlternativeOperatorKeyword()) {
       if (auto *Next = Tokens->peekNextToken(/*SkipComment=*/true);
           Next && Next->isBinaryOperator()) {
         FormatTok->Tok.setKind(tok::identifier);
