@@ -1479,16 +1479,22 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= part.memtagGlobalDescriptors->updateAllocSize();
     }
 
-    const Defined *changedSym = script->assignAddresses();
+    std::pair<const OutputSection *, const Defined *> changes =
+        script->assignAddresses();
     if (!changed) {
       // Some symbols may be dependent on section addresses. When we break the
       // loop, the symbol values are finalized because a previous
       // assignAddresses() finalized section addresses.
-      if (!changedSym)
+      if (!changes.first && !changes.second)
         break;
       if (++assignPasses == 5) {
-        errorOrWarn("assignment to symbol " + toString(*changedSym) +
-                    " does not converge");
+        if (changes.first)
+          errorOrWarn("address (0x" + Twine::utohexstr(changes.first->addr) +
+                      ") of section '" + changes.first->name +
+                      "' does not converge");
+        if (changes.second)
+          errorOrWarn("assignment to symbol " + toString(*changes.second) +
+                      " does not converge");
         break;
       }
     } else if (spilled) {
