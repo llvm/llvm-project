@@ -268,10 +268,16 @@ m_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative>(Op0, Op1);
 }
 
-template <typename Op0_t, typename Op1_t>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Mul>
+template <typename Op0_t, typename Op1_t, bool Commutative = false>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Mul, Commutative>
 m_Mul(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_Binary<Instruction::Mul, Op0_t, Op1_t>(Op0, Op1);
+  return m_Binary<Instruction::Mul, Op0_t, Op1_t, Commutative>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t, bool Commutative = true>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Mul, Commutative>
+m_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::Mul, Op0_t, Op1_t, Commutative>(Op0, Op1);
 }
 
 /// Match a binary OR operation. Note that while conceptually the operands can
@@ -284,11 +290,10 @@ m_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::Or, Op0_t, Op1_t, Commutative>(Op0, Op1);
 }
 
-template <typename Op0_t, typename Op1_t>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or,
-                             /*Commutative*/ true>
+template <typename Op0_t, typename Op1_t, bool Commutative = true>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or, Commutative>
 m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_BinaryOr<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
+  return m_BinaryOr<Op0_t, Op1_t, Commutative>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
