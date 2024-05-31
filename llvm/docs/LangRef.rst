@@ -16080,6 +16080,51 @@ The returned value is completely identical to the input except for the sign bit;
 in particular, if the input is a NaN, then the quiet/signaling bit and payload
 are perfectly preserved.
 
+.. _i_fminmax_family:
+
+'``llvm.min.*``' Intrinsics Comparation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 28 28 28
+
+   * - Operation
+     - minnum/maxnum
+     - minimum/maximum
+     - minimumnum/maximumnum
+
+   * - ``NUM vs qNaN``
+     - NUM, no exception
+     - qNaN, no exception
+     - qNaN, no exception
+
+   * - ``NUM vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - NUM, invalid exception
+
+   * - ``qNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``sNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``+0.0 vs -0.0``
+     - either one
+     - +0.0(max)/-0.0(min)
+     - +0.0(max)/-0.0(min)
+
+   * - ``NUM vs NUM``
+     - larger(max)/smaller(min)
+     - larger(max)/smaller(min)
+     - larger(max)/smaller(min)
+
+
 .. _i_minnum:
 
 '``llvm.minnum.*``' Intrinsic
