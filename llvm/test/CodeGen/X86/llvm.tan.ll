@@ -30,12 +30,17 @@ define double @use_tanf64(double %a) nounwind {
   ret double %x
 }
 
-define double @use_tanf80(double %a) nounwind {
+define x86_fp80 @use_tanf80(x86_fp80 %a) nounwind {
 ; CHECK-LABEL: use_tanf80:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp tan@PLT # TAILCALL
-  %x = call double @llvm.tan.f80(double %a)
-  ret double %x
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    fldt 32(%rsp)
+; CHECK-NEXT:    fstpt (%rsp)
+; CHECK-NEXT:    callq tanl@PLT
+; CHECK-NEXT:    addq  $24, %rsp
+; CHECK-NEXT:    retq
+  %x = call x86_fp80 @llvm.tan.f80(x86_fp80 %a)
+  ret x86_fp80 %x
 }
 
 define fp128 @use_tanfp128(fp128 %a) nounwind {
@@ -60,5 +65,6 @@ define ppc_fp128 @use_tanppc_fp128(ppc_fp128 %a) nounwind {
 declare half @llvm.tan.f16(half)
 declare float @llvm.tan.f32(float)
 declare double @llvm.tan.f64(double)
+declare x86_fp80 @llvm.tan.f80(x86_fp80)
 declare fp128 @llvm.tan.f128(fp128)
 declare ppc_fp128 @llvm.tan.ppcf128(ppc_fp128)
