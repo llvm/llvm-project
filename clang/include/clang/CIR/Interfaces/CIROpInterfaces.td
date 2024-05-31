@@ -10,24 +10,49 @@
 #define MLIR_CIR_OP_INTERFACES
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 
 let cppNamespace = "::mlir::cir" in {
   // The CIRCallOpInterface must be used instead of CallOpInterface when looking
   // at arguments and other bits of CallOp. This creates a level of abstraction
   // that's useful for handling indirect calls and other details.
-  def CIRCallOpInterface : OpInterface<"CIRCallOpInterface", [CallOpInterface]> {
+  def CIRCallOpInterface
+      : OpInterface<"CIRCallOpInterface", [CallOpInterface]> {
     let methods = [
       InterfaceMethod<"", "mlir::Operation::operand_iterator",
                       "arg_operand_begin", (ins)>,
       InterfaceMethod<"", "mlir::Operation::operand_iterator",
                       "arg_operand_end", (ins)>,
       InterfaceMethod<
-        "Return the operand at index 'i', accounts for indirect call or "
-        "exception info", "mlir::Value", "getArgOperand", (ins "unsigned":$i)>,
+          "Return the operand at index 'i', accounts for indirect call or "
+          "exception info",
+          "mlir::Value", "getArgOperand",
+          (ins "unsigned"
+           : $i)>,
       InterfaceMethod<
-        "Return the number of operands, accounts for indirect call or "
-        "exception info", "unsigned", "getNumArgOperands", (ins)>,
+          "Return the number of operands, accounts for indirect call or "
+          "exception info",
+          "unsigned", "getNumArgOperands", (ins)>,
+    ];
+  }
+
+  def CIRGlobalValueInterface
+      : OpInterface<"CIRGlobalValueInterface", [Symbol]> {
+
+    let methods = [
+      InterfaceMethod<"",
+      "bool", "hasAvailableExternallyLinkage", (ins), [{}],
+      /*defaultImplementation=*/[{ return false; }]
+      >,
+      InterfaceMethod<"",
+      "bool", "isDeclarationForLinker", (ins), [{}],
+      /*defaultImplementation=*/[{
+        if ($_op.hasAvailableExternallyLinkage())
+          return true;
+        return $_op.isDeclaration();
+      }]
+      >,
     ];
   }
 

@@ -1872,7 +1872,10 @@ def TLSModel : I32EnumAttr<
   let cppNamespace = "::mlir::cir";
 }
 
-def GlobalOp : CIR_Op<"global", [Symbol, DeclareOpInterfaceMethods<RegionBranchOpInterface>, NoRegionArguments]> {
+def GlobalOp : CIR_Op<"global",
+                      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                       DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
+                       NoRegionArguments]> {
   let summary = "Declares or defines a global variable";
   let description = [{
     The `cir.global` operation declares or defines a named global variable.
@@ -1933,13 +1936,6 @@ def GlobalOp : CIR_Op<"global", [Symbol, DeclareOpInterfaceMethods<RegionBranchO
     bool hasAvailableExternallyLinkage() {
       return mlir::cir::isAvailableExternallyLinkage(getLinkage());
     }
-    bool isDeclarationForLinker() {
-      if (hasAvailableExternallyLinkage())
-        return true;
-
-      return isDeclaration();
-    }
-
     /// Whether the definition of this global may be replaced at link time.
     bool isWeakForLinker() { return cir::isWeakForLinker(getLinkage()); }
   }];
@@ -2585,7 +2581,8 @@ def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
 
 def FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
-  IsolatedFromAbove, Symbol
+  DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
+  IsolatedFromAbove
 ]> {
   let summary = "Declare or define a function";
   let description = [{
@@ -2727,12 +2724,8 @@ def FuncOp : CIR_Op<"func", [
 
     bool isDeclaration();
 
-    // FIXME: should be shared with GlobalOp extra declaration.
-    bool isDeclarationForLinker() {
-      if (mlir::cir::isAvailableExternallyLinkage(getLinkage()))
-        return true;
-
-      return isDeclaration();
+    bool hasAvailableExternallyLinkage() {
+      return mlir::cir::isAvailableExternallyLinkage(getLinkage());
     }
   }];
 
