@@ -1639,8 +1639,23 @@ public:
   /// Set type metadata to the given function.
   void setKCFIType(const FunctionDecl *FD, llvm::Function *F);
 
+  /// Set RISC-V Zicfilp func-sig CFI label in metadata of the given function.
+  void setRISCVZicfilpFuncSigLabel(const FunctionDecl &FD, llvm::Function *F);
+
   /// Emit KCFI type identifier constants and remove unused identifiers.
   void finalizeKCFITypes();
+
+  /// Fixup RISCV Zicfilp func-sig CFI labels
+  void finalizeRISCVZicfilpFuncSigLabels();
+
+  /// Fixup RISCV Zicfilp func-sig CFI label for llvm::Function
+  void finalizeRISCVZicfilpFuncSigLabel(llvm::Function &F);
+
+  /// Calculate function signature based on RISC-V Zicfilp func-sig scheme
+  std::string calcRISCVZicfilpFuncSig(const FunctionType &FT, const bool IsMain,
+                                      const bool IsCXXInstanceMethod,
+                                      const bool IsCXXVirtualMethod,
+                                      const bool IsCXXDestructor);
 
   /// Whether this function's return type has no side effects, and thus may
   /// be trivially discarded if it is unused.
@@ -1809,6 +1824,8 @@ public:
     // behavior. So projects like the Linux kernel can rely on it.
     return !getLangOpts().CPlusPlus;
   }
+
+  bool UseRISCVZicfilpFuncSigCFI;
 
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;

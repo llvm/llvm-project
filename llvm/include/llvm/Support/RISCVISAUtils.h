@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Utilities shared by TableGen and RISCVISAInfo.
+// Utilities shared by TableGen, RISCVISAInfo and other RISC-V specifics.
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,6 +42,10 @@ struct ExtensionComparator {
 /// in canonical order of extension.
 typedef std::map<std::string, ExtensionVersion, ExtensionComparator>
     OrderedExtensionMap;
+
+/// Obtain a 20-bit integer from a (function-signature) string using the method
+/// defined in the psABI for Zicfilp func-sig CFI scheme
+uint32_t zicfilpFuncSigHash(const StringRef FuncSig);
 
 } // namespace RISCVISAUtils
 
