@@ -2596,18 +2596,16 @@ private:
     }
   }
 
-  void attachLoopDirective(const Fortran::parser::CompilerDirective &dir,
+  void attachDirectiveToLoop(const Fortran::parser::CompilerDirective &dir,
                            Fortran::lower::pft::Evaluation *e) {
-    while (e->isDirective()) {
+    while (e->isDirective())
       e = e->lexicalSuccessor;
-    }
 
-    if (e->isA<Fortran::parser::NonLabelDoStmt>()) {
+    if (e->isA<Fortran::parser::NonLabelDoStmt>())
       e->dirs.push_back(&dir);
-    } else {
+    else
       fir::emitFatalError(toLocation(),
                           "loop directive must appear before a loop");
-    }
   }
 
   void genFIR(const Fortran::parser::CompilerDirective &dir) {
@@ -2616,7 +2614,7 @@ private:
     std::visit(
         Fortran::common::visitors{
             [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
-              attachLoopDirective(dir, &eval);
+              attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},
         dir.u);

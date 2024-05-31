@@ -19,7 +19,7 @@ func.func @_QPvector_always() {
     %5 = fir.convert %c1_i32 : (i32) -> index
     %6 = fir.convert %c10_i32 : (i32) -> index
     %7 = fir.convert %5 : (index) -> i32
-    %8:2 = fir.do_loop %arg0 = %5 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) attributes {loop_annotation = #loop_annotation} {
+    %8:2 = fir.do_loop %arg0 = %5 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) attributes {loopAnnotation = #loop_annotation} {
       fir.store %arg1 to %4 : !fir.ref<i32>
       %9 = fir.load %4 : !fir.ref<i32>
       %10 = fir.load %4 : !fir.ref<i32>
