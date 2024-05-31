@@ -9571,13 +9571,17 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
           Attribute::NoImplicitFloat))
     return SDValue();
 
-  if (!Subtarget->hasNEON())
+  EVT VT = Op.getValueType();
+  if (VT.isScalableVector() ||
+      useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
+
+  if (!Subtarget->isNeonAvailable())
     return SDValue();
 
   bool IsParity = Op.getOpcode() == ISD::PARITY;
   SDValue Val = Op.getOperand(0);
   SDLoc DL(Op);
-  EVT VT = Op.getValueType();
 
   // for i32, general parity function using EORs is more efficient compared to
   // using floating point
@@ -9625,10 +9629,6 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   }
 
   assert(!IsParity && "ISD::PARITY of vector types not supported");
-
-  if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
 
   assert((VT == MVT::v1i64 || VT == MVT::v2i64 || VT == MVT::v2i32 ||
           VT == MVT::v4i32 || VT == MVT::v4i16 || VT == MVT::v8i16) &&
