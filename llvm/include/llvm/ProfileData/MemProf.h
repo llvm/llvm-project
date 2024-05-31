@@ -424,7 +424,7 @@ struct IndexedMemProfRecord {
   // on the schema provided in \p Schema.
   void serialize(const MemProfSchema &Schema, raw_ostream &OS,
                  IndexedVersion Version,
-                 llvm::DenseMap<memprof::CallStackId, uint32_t>
+                 llvm::DenseMap<memprof::CallStackId, LinearCallStackId>
                      *MemProfCallStackIndexes = nullptr);
 
   // Deserializes memprof records from the Buffer.
@@ -858,7 +858,7 @@ struct LinearFrameIdConverter {
   LinearFrameIdConverter(const unsigned char *FrameBase)
       : FrameBase(FrameBase) {}
 
-  Frame operator()(uint32_t LinearId) {
+  Frame operator()(LinearFrameId LinearId) {
     uint64_t Offset = static_cast<uint64_t>(LinearId) * Frame::serializedSize();
     return Frame::deserialize(FrameBase + Offset);
   }
@@ -868,24 +868,26 @@ struct LinearFrameIdConverter {
 // call stack array in the profile.
 struct LinearCallStackIdConverter {
   const unsigned char *CallStackBase;
-  std::function<Frame(uint32_t)> FrameIdToFrame;
+  std::function<Frame(LinearFrameId)> FrameIdToFrame;
 
   LinearCallStackIdConverter() = delete;
   LinearCallStackIdConverter(const unsigned char *CallStackBase,
-                             std::function<Frame(uint32_t)> FrameIdToFrame)
+                             std::function<Frame(LinearFrameId)> FrameIdToFrame)
       : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
 
-  llvm::SmallVector<Frame> operator()(uint32_t LinearCSId) {
+  llvm::SmallVector<Frame> operator()(LinearCallStackId LinearCSId) {
     llvm::SmallVector<Frame> Frames;
 
     const unsigned char *Ptr =
-        CallStackBase + static_cast<uint64_t>(LinearCSId) * sizeof(uint32_t);
+        CallStackBase +
+        static_cast<uint64_t>(LinearCSId) * sizeof(LinearFrameId);
     uint32_t NumFrames =
         support::endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
     Frames.reserve(NumFrames);
     for (; NumFrames; --NumFrames) {
-      uint32_t Elem =
-          support::endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
+      LinearFrameId Elem =
+          support::endian::readNext<LinearFrameId, llvm::endianness::little>(
+              Ptr);
       Frames.push_back(FrameIdToFrame(Elem));
     }
 
