@@ -35,4 +35,9 @@ void uses() {
   // expected-error@+1{{OpenACC clause 'wait' requires expression of integer type ('struct NotConvertible' invalid)}}
 #pragma acc parallel wait(devnum:arr : queues: arr, NC, 5)
   while(1);
+
+  // expected-error@+2{{OpenACC 'wait' clause is not valid on 'loop' directive}}
+  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+#pragma acc loop wait
+  for(;;);
 }

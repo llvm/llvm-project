@@ -51,4 +51,9 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel present((float)ArrayParam[2])
   while(1);
+
+  // expected-error@+2{{OpenACC 'present' clause is not valid on 'loop' directive}}
+  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+#pragma acc loop present(LocalInt)
+  for(;;);
 }
