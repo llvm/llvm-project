@@ -1307,7 +1307,10 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
     auto vecTy = mlir::VectorType::get(sz, i8Ty);
     mlir::Attribute zero = builder.getIntegerAttr(i8Ty, 0);
     auto init = mlir::DenseElementsAttr::get(vecTy, llvm::ArrayRef(zero));
-    builder.createGlobal(loc, commonTy, commonName, linkage, init);
+    global = builder.createGlobal(loc, commonTy, commonName, linkage, init);
+    if (const auto *details =
+            common.detailsIf<Fortran::semantics::CommonBlockDetails>())
+      global.setAlignment(details->alignment());
     // No need to add any initial value later.
     return std::nullopt;
   }
@@ -1320,6 +1323,9 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
       getTypeOfCommonWithInit(converter, cmnBlkMems, commonSize);
   // Create the global object, the initial value will be added later.
   global = builder.createGlobal(loc, commonTy, commonName);
+  if (const auto *details =
+          common.detailsIf<Fortran::semantics::CommonBlockDetails>())
+    global.setAlignment(details->alignment());
   return std::make_tuple(global, std::move(cmnBlkMems), loc);
 }
 
