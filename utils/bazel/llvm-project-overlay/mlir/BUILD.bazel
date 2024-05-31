@@ -5795,6 +5795,24 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "GPUToLLVMSPVTransforms",
+    src = glob([
+        "lib/Conversion/GPUToLLVMSPV/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/GPUToLLVMSPV/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":GPUDialect",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":SPIRVDialect",
+    ]
+)
+
+cc_library(
     name = "GPUToNVVMTransforms",
     srcs = glob([
         "lib/Conversion/GPUToNVVM/*.cpp",
