@@ -17,7 +17,7 @@
 #include "clang/Sema/SemaObjC.h"
 
 namespace clang {
-SemaSwift::SemaSwift(Sema& S) : SemaBase(S) {}
+SemaSwift::SemaSwift(Sema &S) : SemaBase(S) {}
 
 SwiftNameAttr *SemaSwift::mergeNameAttr(Decl *D, const SwiftNameAttr &SNA,
                                         StringRef Name) {
@@ -189,7 +189,8 @@ void SemaSwift::handleError(Decl *D, const ParsedAttr &AL) {
     break;
   }
 
-  D->addAttr(::new (getASTContext()) SwiftErrorAttr(getASTContext(), AL, Convention));
+  D->addAttr(::new (getASTContext())
+                 SwiftErrorAttr(getASTContext(), AL, Convention));
 }
 
 static void checkSwiftAsyncErrorBlock(Sema &S, Decl *D,
@@ -222,7 +223,8 @@ static void checkSwiftAsyncErrorBlock(Sema &S, Decl *D,
     uint32_t ParamIdx = ErrorAttr->getHandlerParamIdx();
     if (ParamIdx == 0 || ParamIdx > BlockParams.size()) {
       S.Diag(ErrorAttr->getLocation(),
-             diag::err_attribute_argument_out_of_bounds) << ErrorAttr << 2;
+             diag::err_attribute_argument_out_of_bounds)
+          << ErrorAttr << 2;
       return;
     }
     QualType ErrorParam = BlockParams[ParamIdx - 1];
@@ -303,8 +305,8 @@ void SemaSwift::handleAsyncError(Decl *D, const ParsedAttr &AL) {
   }
   }
 
-  auto *ErrorAttr =
-      ::new (getASTContext()) SwiftAsyncErrorAttr(getASTContext(), AL, ConvKind, ParamIdx);
+  auto *ErrorAttr = ::new (getASTContext())
+      SwiftAsyncErrorAttr(getASTContext(), AL, ConvKind, ParamIdx);
   D->addAttr(ErrorAttr);
 
   if (auto *AsyncAttr = D->getAttr<SwiftAsyncAttr>())
@@ -319,10 +321,10 @@ void SemaSwift::handleAsyncError(Decl *D, const ParsedAttr &AL) {
 // For a type, enum constant, property, or variable declaration, this will
 // validate either a simple identifier, or a qualified
 // <code>context.identifier</code> name.
-static bool
-validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
-                          StringRef Name, unsigned &SwiftParamCount,
-                          bool &IsSingleParamInit) {
+static bool validateSwiftFunctionName(Sema &S, const ParsedAttr &AL,
+                                      SourceLocation Loc, StringRef Name,
+                                      unsigned &SwiftParamCount,
+                                      bool &IsSingleParamInit) {
   SwiftParamCount = 0;
   IsSingleParamInit = false;
 
@@ -383,7 +385,7 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
     // Setters and subscripts must have at least one parameter.
     if (IsSubscript) {
       S.Diag(Loc, diag::warn_attr_swift_name_subscript_invalid_parameter)
-          << AL << /* have at least one parameter */1;
+          << AL << /* have at least one parameter */ 1;
       return false;
     }
 
@@ -409,7 +411,7 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
 
     if (!isValidAsciiIdentifier(CurrentParam)) {
       S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
-          << AL << /*parameter*/2;
+          << AL << /*parameter*/ 2;
       return false;
     }
 
@@ -440,20 +442,20 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
   // Only instance subscripts are currently supported.
   if (IsSubscript && !SelfLocation) {
     S.Diag(Loc, diag::warn_attr_swift_name_subscript_invalid_parameter)
-        << AL << /*have a 'self:' parameter*/2;
+        << AL << /*have a 'self:' parameter*/ 2;
     return false;
   }
 
   IsSingleParamInit =
-        SwiftParamCount == 1 && BaseName == "init" && CurrentParam != "_";
+      SwiftParamCount == 1 && BaseName == "init" && CurrentParam != "_";
 
   // Check the number of parameters for a getter/setter.
   if (IsGetter || IsSetter) {
     // Setters have one parameter for the new value.
     unsigned NumExpectedParams = IsGetter ? 0 : 1;
-    unsigned ParamDiag =
-        IsGetter ? diag::warn_attr_swift_name_getter_parameters
-                 : diag::warn_attr_swift_name_setter_parameters;
+    unsigned ParamDiag = IsGetter
+                             ? diag::warn_attr_swift_name_getter_parameters
+                             : diag::warn_attr_swift_name_setter_parameters;
 
     // Instance methods have one parameter for "self".
     if (SelfLocation)
@@ -476,7 +478,8 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
           return false;
         }
         if (NewValueCount > 1) {
-          S.Diag(Loc, diag::warn_attr_swift_name_subscript_setter_multiple_newValues)
+          S.Diag(Loc,
+                 diag::warn_attr_swift_name_subscript_setter_multiple_newValues)
               << AL;
           return false;
         }
@@ -503,7 +506,7 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
 bool SemaSwift::DiagnoseName(Decl *D, StringRef Name, SourceLocation Loc,
                              const ParsedAttr &AL, bool IsAsync) {
   if (isa<ObjCMethodDecl>(D) || isa<FunctionDecl>(D)) {
-    ArrayRef<ParmVarDecl*> Params;
+    ArrayRef<ParmVarDecl *> Params;
     unsigned ParamCount;
 
     if (const auto *Method = dyn_cast<ObjCMethodDecl>(D)) {
@@ -535,8 +538,8 @@ bool SemaSwift::DiagnoseName(Decl *D, StringRef Name, SourceLocation Loc,
 
     unsigned SwiftParamCount;
     bool IsSingleParamInit;
-    if (!validateSwiftFunctionName(SemaRef, AL, Loc, Name,
-                                   SwiftParamCount, IsSingleParamInit))
+    if (!validateSwiftFunctionName(SemaRef, AL, Loc, Name, SwiftParamCount,
+                                   IsSingleParamInit))
       return false;
 
     bool ParamCountValid;
@@ -577,14 +580,14 @@ bool SemaSwift::DiagnoseName(Decl *D, StringRef Name, SourceLocation Loc,
       BaseName = ContextName;
       ContextName = StringRef();
     } else if (!isValidAsciiIdentifier(ContextName)) {
-      Diag(Loc, diag::warn_attr_swift_name_invalid_identifier) << AL
-          << /*context*/1;
+      Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
+          << AL << /*context*/ 1;
       return false;
     }
 
     if (!isValidAsciiIdentifier(BaseName)) {
-      Diag(Loc, diag::warn_attr_swift_name_invalid_identifier) << AL
-          << /*basename*/0;
+      Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
+          << AL << /*basename*/ 0;
       return false;
     }
   } else {
@@ -615,7 +618,8 @@ void SemaSwift::handleAsyncName(Decl *D, const ParsedAttr &AL) {
   if (!DiagnoseName(D, Name, Loc, AL, /*IsAsync=*/true))
     return;
 
-  D->addAttr(::new (getASTContext()) SwiftAsyncNameAttr(getASTContext(), AL, Name));
+  D->addAttr(::new (getASTContext())
+                 SwiftAsyncNameAttr(getASTContext(), AL, Name));
 }
 
 void SemaSwift::handleNewType(Decl *D, const ParsedAttr &AL) {
@@ -642,7 +646,8 @@ void SemaSwift::handleNewType(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  D->addAttr(::new (getASTContext()) SwiftNewTypeAttr(getASTContext(), AL, Kind));
+  D->addAttr(::new (getASTContext())
+                 SwiftNewTypeAttr(getASTContext(), AL, Kind));
 }
 
 void SemaSwift::handleAsyncAttr(Decl *D, const ParsedAttr &AL) {
@@ -677,16 +682,14 @@ void SemaSwift::handleAsyncAttr(Decl *D, const ParsedAttr &AL) {
         getFunctionOrMethodParam(D, Idx.getASTIndex());
     QualType CompletionBlockType = CompletionBlock->getType();
     if (!CompletionBlockType->isBlockPointerType()) {
-      Diag(CompletionBlock->getLocation(),
-             diag::err_swift_async_bad_block_type)
+      Diag(CompletionBlock->getLocation(), diag::err_swift_async_bad_block_type)
           << CompletionBlock->getType();
       return;
     }
     QualType BlockTy =
         CompletionBlockType->castAs<BlockPointerType>()->getPointeeType();
     if (!BlockTy->castAs<FunctionType>()->getReturnType()->isVoidType()) {
-      Diag(CompletionBlock->getLocation(),
-             diag::err_swift_async_bad_block_type)
+      Diag(CompletionBlock->getLocation(), diag::err_swift_async_bad_block_type)
           << CompletionBlock->getType();
       return;
     }
@@ -701,7 +704,7 @@ void SemaSwift::handleAsyncAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaSwift::AddParameterABIAttr(Decl *D, const AttributeCommonInfo &CI,
-                               ParameterABI abi) {
+                                    ParameterABI abi) {
   ASTContext &Context = getASTContext();
   QualType type = cast<ParmVarDecl>(D)->getType();
 

@@ -305,7 +305,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                         ParsedAttr::Form::GNU());
 
           if (!S.Swift().DiagnoseName(D, Info.SwiftName, D->getLocation(), *SNA,
-                                   /*IsAsync=*/false))
+                                      /*IsAsync=*/false))
             return nullptr;
 
           return new (S.Context)

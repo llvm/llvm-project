@@ -27,7 +27,8 @@ class SemaSwift : public SemaBase {
 public:
   SemaSwift(Sema &S);
 
-  SwiftNameAttr *mergeNameAttr(Decl *D, const SwiftNameAttr &SNA, StringRef Name);
+  SwiftNameAttr *mergeNameAttr(Decl *D, const SwiftNameAttr &SNA,
+                               StringRef Name);
 
   void handleAttrAttr(Decl *D, const ParsedAttr &AL);
   void handleAsyncAttr(Decl *D, const ParsedAttr &AL);
@@ -46,9 +47,9 @@ public:
   ///
   /// \returns true if the name is a valid swift name for \p D, false otherwise.
   bool DiagnoseName(Decl *D, StringRef Name, SourceLocation Loc,
-                             const ParsedAttr &AL, bool IsAsync);
+                    const ParsedAttr &AL, bool IsAsync);
   void AddParameterABIAttr(Decl *D, const AttributeCommonInfo &CI,
-                               ParameterABI abi);
+                           ParameterABI abi);
 };
 
 } // namespace clang

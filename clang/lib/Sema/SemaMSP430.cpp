@@ -67,7 +67,8 @@ void SemaMSP430::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  D->addAttr(::new (getASTContext()) MSP430InterruptAttr(getASTContext(), AL, Num));
+  D->addAttr(::new (getASTContext())
+                 MSP430InterruptAttr(getASTContext(), AL, Num));
   D->addAttr(UsedAttr::CreateImplicit(getASTContext()));
 }
 

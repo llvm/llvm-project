@@ -46,7 +46,8 @@ void SemaM68k::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  D->addAttr(::new (getASTContext()) M68kInterruptAttr(getASTContext(), AL, Num));
+  D->addAttr(::new (getASTContext())
+                 M68kInterruptAttr(getASTContext(), AL, Num));
   D->addAttr(UsedAttr::CreateImplicit(getASTContext()));
 }
 } // namespace clang

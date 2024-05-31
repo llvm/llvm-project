@@ -292,7 +292,8 @@ void SemaMIPS::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  D->addAttr(::new (getASTContext()) MipsInterruptAttr(getASTContext(), AL, Kind));
+  D->addAttr(::new (getASTContext())
+                 MipsInterruptAttr(getASTContext(), AL, Kind));
 }
 
 } // namespace clang

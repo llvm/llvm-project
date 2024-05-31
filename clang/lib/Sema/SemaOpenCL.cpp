@@ -16,7 +16,7 @@
 #include "clang/Sema/Sema.h"
 
 namespace clang {
-SemaOpenCL::SemaOpenCL(Sema& S) : SemaBase(S) {}
+SemaOpenCL::SemaOpenCL(Sema &S) : SemaBase(S) {}
 
 void SemaOpenCL::handleNoSVMAttr(Decl *D, const ParsedAttr &AL) {
   if (getLangOpts().getOpenCLCompatibleVersion() < 200)
@@ -60,8 +60,8 @@ void SemaOpenCL::handleAccessAttr(Decl *D, const ParsedAttr &AL) {
       bool ReadWriteImagesUnsupported =
           (getLangOpts().getOpenCLCompatibleVersion() < 200) ||
           (getLangOpts().getOpenCLCompatibleVersion() == 300 &&
-           !SemaRef.getOpenCLOptions().isSupported("__opencl_c_read_write_images",
-                                             getLangOpts()));
+           !SemaRef.getOpenCLOptions().isSupported(
+               "__opencl_c_read_write_images", getLangOpts()));
       if (ReadWriteImagesUnsupported || DeclTy->isPipeType()) {
         Diag(AL.getLoc(), diag::err_opencl_invalid_read_write)
             << AL << PDecl->getType() << DeclTy->isImageType();

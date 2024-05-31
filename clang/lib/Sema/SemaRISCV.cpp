@@ -1423,12 +1423,11 @@ bool SemaRISCV::isValidRVVBitcast(QualType srcTy, QualType destTy) {
          ValidScalableConversion(destTy, srcTy);
 }
 
-void SemaRISCV::handleInterruptAttr(Decl *D,
-                                     const ParsedAttr &AL) {
+void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   // Warn about repeated attributes.
   if (const auto *A = D->getAttr<RISCVInterruptAttr>()) {
     Diag(AL.getRange().getBegin(),
-      diag::warn_riscv_repeated_interrupt_attribute);
+         diag::warn_riscv_repeated_interrupt_attribute);
     Diag(A->getLocation(), diag::note_riscv_repeated_interrupt_attribute);
     return;
   }
@@ -1461,24 +1460,25 @@ void SemaRISCV::handleInterruptAttr(Decl *D,
 
   if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
     Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-      << /*RISC-V*/ 2 << 0;
+        << /*RISC-V*/ 2 << 0;
     return;
   }
 
   if (!getFunctionOrMethodResultType(D)->isVoidType()) {
     Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-      << /*RISC-V*/ 2 << 1;
+        << /*RISC-V*/ 2 << 1;
     return;
   }
 
   RISCVInterruptAttr::InterruptType Kind;
   if (!RISCVInterruptAttr::ConvertStrToInterruptType(Str, Kind)) {
-    Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << Str
-                                                                 << ArgLoc;
+    Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
+        << AL << Str << ArgLoc;
     return;
   }
 
-  D->addAttr(::new (getASTContext()) RISCVInterruptAttr(getASTContext(), AL, Kind));
+  D->addAttr(::new (getASTContext())
+                 RISCVInterruptAttr(getASTContext(), AL, Kind));
 }
 
 bool SemaRISCV::isAliasValid(unsigned BuiltinID, StringRef AliasName) {

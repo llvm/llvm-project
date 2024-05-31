@@ -57,8 +57,8 @@
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
-#include "clang/Sema/SemaX86.h"
 #include "clang/Sema/SemaWasm.h"
+#include "clang/Sema/SemaX86.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
@@ -109,7 +109,6 @@ static bool checkPositiveIntArgument(Sema &S, const AttrInfo &AI, const Expr *Ex
 
   Val = UVal;
   return true;
-
 }
 
 /// Check if the argument \p E is a ASCII string literal. If not emit an error
@@ -554,7 +553,7 @@ static bool checkParamIsIntegerType(Sema &S, const Decl *D, const AttrInfo &AI,
   Expr *AttrArg = AI.getArgAsExpr(AttrArgNo);
   ParamIdx Idx;
   if (!S.checkFunctionOrMethodParameterIndex(D, AI, AttrArgNo + 1, AttrArg,
-                                           Idx))
+                                             Idx))
     return false;
 
   QualType ParamTy = getFunctionOrMethodParamType(D, Idx.getASTIndex());
@@ -3374,8 +3373,7 @@ static void handleFormatArgAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType Ty = getFunctionOrMethodParamType(D, Idx.getASTIndex());
 
   bool NotNSStringTy = !S.ObjC().isNSStringType(Ty);
-  if (NotNSStringTy &&
-      !S.ObjC().isCFStringType(Ty) &&
+  if (NotNSStringTy && !S.ObjC().isCFStringType(Ty) &&
       (!Ty->isPointerType() ||
        !Ty->castAs<PointerType>()->getPointeeType()->isCharType())) {
     S.Diag(AL.getLoc(), diag::err_format_attribute_not)
@@ -3586,8 +3584,7 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // make sure the format string is really a string
   QualType Ty = getFunctionOrMethodParamType(D, ArgIdx);
 
-  if (!S.ObjC().isNSStringType(Ty, true) &&
-      !S.ObjC().isCFStringType(Ty) &&
+  if (!S.ObjC().isNSStringType(Ty, true) && !S.ObjC().isCFStringType(Ty) &&
       (!Ty->isPointerType() ||
        !Ty->castAs<PointerType>()->getPointeeType()->isCharType())) {
     S.Diag(AL.getLoc(), diag::err_format_attribute_not)
@@ -5213,12 +5210,12 @@ static void handleArgumentWithTypeTagAttr(Sema &S, Decl *D,
 
   ParamIdx ArgumentIdx;
   if (!S.checkFunctionOrMethodParameterIndex(D, AL, 2, AL.getArgAsExpr(1),
-                                           ArgumentIdx))
+                                             ArgumentIdx))
     return;
 
   ParamIdx TypeTagIdx;
   if (!S.checkFunctionOrMethodParameterIndex(D, AL, 3, AL.getArgAsExpr(2),
-                                           TypeTagIdx))
+                                             TypeTagIdx))
     return;
 
   bool IsPointer = AL.getAttrName()->getName() == "pointer_with_type_tag";
@@ -5266,8 +5263,8 @@ static void handleXRayLogArgsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   ParamIdx ArgCount;
 
   if (!S.checkFunctionOrMethodParameterIndex(D, AL, 1, AL.getArgAsExpr(0),
-                                           ArgCount,
-                                           true /* CanIndexImplicitThis */))
+                                             ArgCount,
+                                             true /* CanIndexImplicitThis */))
     return;
 
   // ArgCount isn't a parameter index [0;n), it's a count [1;n]
@@ -5294,8 +5291,7 @@ static void handlePatchableFunctionEntryAttr(Sema &S, Decl *D,
                  PatchableFunctionEntryAttr(S.Context, AL, Count, Offset));
 }
 
-static void handleBuiltinAliasAttr(Sema &S, Decl *D,
-                                        const ParsedAttr &AL) {
+static void handleBuiltinAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.isArgIdent(0)) {
     S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
         << AL << 1 << AANT_ArgumentIdentifier;
@@ -6689,8 +6685,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_CFConsumed:
   case ParsedAttr::AT_NSConsumed:
   case ParsedAttr::AT_OSConsumed:
-    S.ObjC().AddXConsumedAttr(D, AL, S.ObjC().parsedAttrToRetainOwnershipKind(AL),
-                       /*IsTemplateInstantiation=*/false);
+    S.ObjC().AddXConsumedAttr(D, AL,
+                              S.ObjC().parsedAttrToRetainOwnershipKind(AL),
+                              /*IsTemplateInstantiation=*/false);
     break;
   case ParsedAttr::AT_OSReturnsRetainedOnZero:
     S.handleSimpleAttributeOrDiagnose<OSReturnsRetainedOnZeroAttr>(

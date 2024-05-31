@@ -1094,8 +1094,8 @@ struct IntrinToName {
 } // unnamed namespace
 
 static bool BuiltinAliasValid(unsigned BuiltinID, StringRef AliasName,
-                                 ArrayRef<IntrinToName> Map,
-                                 const char *IntrinNames) {
+                              ArrayRef<IntrinToName> Map,
+                              const char *IntrinNames) {
   AliasName.consume_front("__arm_");
   const IntrinToName *It =
       llvm::lower_bound(Map, BuiltinID, [](const IntrinToName &L, unsigned Id) {
@@ -1235,8 +1235,8 @@ void SemaARM::handleNewAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   D->dropAttr<ArmNewAttr>();
-  D->addAttr(::new (getASTContext())
-                 ArmNewAttr(getASTContext(), AL, NewState.data(), NewState.size()));
+  D->addAttr(::new (getASTContext()) ArmNewAttr(
+      getASTContext(), AL, NewState.data(), NewState.size()));
 }
 
 void SemaARM::handleCmseNSEntryAttr(Decl *D, const ParsedAttr &AL) {
@@ -1271,12 +1271,13 @@ void SemaARM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   ARMInterruptAttr::InterruptType Kind;
   if (!ARMInterruptAttr::ConvertStrToInterruptType(Str, Kind)) {
-    Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << Str
-                                                                 << ArgLoc;
+    Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
+        << AL << Str << ArgLoc;
     return;
   }
 
-  D->addAttr(::new (getASTContext()) ARMInterruptAttr(getASTContext(), AL, Kind));
+  D->addAttr(::new (getASTContext())
+                 ARMInterruptAttr(getASTContext(), AL, Kind));
 }
 
 } // namespace clang

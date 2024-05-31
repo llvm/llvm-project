@@ -186,7 +186,8 @@ void SemaBPF::handlePreserveAIRecord(RecordDecl *RD) {
 void SemaBPF::handlePreserveAccessIndexAttr(Decl *D, const ParsedAttr &AL) {
   auto *Rec = cast<RecordDecl>(D);
   handlePreserveAIRecord(Rec);
-  Rec->addAttr(::new (getASTContext()) BPFPreserveAccessIndexAttr(getASTContext(), AL));
+  Rec->addAttr(::new (getASTContext())
+                   BPFPreserveAccessIndexAttr(getASTContext(), AL));
 }
 
 } // namespace clang

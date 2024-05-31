@@ -40,8 +40,8 @@ inline bool isFunctionOrMethodOrBlockForAttrSubject(const Decl *D) {
 /// been processed by Sema::GetTypeForDeclarator.
 inline bool hasDeclarator(const Decl *D) {
   // In some sense, TypedefDecl really *ought* to be a DeclaratorDecl.
-  return isa<DeclaratorDecl>(D) || isa<BlockDecl>(D) || isa<TypedefNameDecl>(D) ||
-         isa<ObjCPropertyDecl>(D);
+  return isa<DeclaratorDecl>(D) || isa<BlockDecl>(D) ||
+         isa<TypedefNameDecl>(D) || isa<ObjCPropertyDecl>(D);
 }
 
 /// hasFunctionProto - Return true if the given decl has a argument

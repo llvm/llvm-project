@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaAVR.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Basic/DiagnosticSema.h"
 
 namespace clang {
 SemaAVR::SemaAVR(Sema &S) : SemaBase(S) {}

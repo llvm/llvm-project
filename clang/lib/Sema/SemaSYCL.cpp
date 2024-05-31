@@ -176,7 +176,7 @@ void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
     const NamedDecl *TParam = TL->getParam(I);
     if (isa<NonTypeTemplateParmDecl>(TParam)) {
       Diag(FT->getLocation(),
-             diag::warn_sycl_kernel_invalid_template_param_type);
+           diag::warn_sycl_kernel_invalid_template_param_type);
       return;
     }
   }

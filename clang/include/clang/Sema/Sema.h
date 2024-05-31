@@ -46,8 +46,8 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TypeTraits.h"
-#include "clang/Sema/Attr.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
+#include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ExternalSemaSource.h"
@@ -3870,17 +3870,17 @@ public:
   }
 
   template <typename... DiagnosticArgs>
-  static const Sema::SemaDiagnosticBuilder&
+  static const Sema::SemaDiagnosticBuilder &
   appendDiagnostics(const Sema::SemaDiagnosticBuilder &Bldr) {
     return Bldr;
   }
 
   template <typename T, typename... DiagnosticArgs>
-  static const Sema::SemaDiagnosticBuilder&
+  static const Sema::SemaDiagnosticBuilder &
   appendDiagnostics(const Sema::SemaDiagnosticBuilder &Bldr, T &&ExtraArg,
-                    DiagnosticArgs &&... ExtraArgs) {
+                    DiagnosticArgs &&...ExtraArgs) {
     return appendDiagnostics(Bldr << std::forward<T>(ExtraArg),
-                            std::forward<DiagnosticArgs>(ExtraArgs)...);
+                             std::forward<DiagnosticArgs>(ExtraArgs)...);
   }
 
   /// Add an attribute @c AttrType to declaration @c D, provided that
@@ -3888,10 +3888,9 @@ public:
   /// Otherwise, emit diagnostic @c DiagID, passing in all parameters
   /// specified in @c ExtraArgs.
   template <typename AttrType, typename... DiagnosticArgs>
-  void handleSimpleAttributeOrDiagnose(Decl *D,
-                                              const AttributeCommonInfo &CI,
-                                              bool PassesCheck, unsigned DiagID,
-                                              DiagnosticArgs &&... ExtraArgs) {
+  void handleSimpleAttributeOrDiagnose(Decl *D, const AttributeCommonInfo &CI,
+                                       bool PassesCheck, unsigned DiagID,
+                                       DiagnosticArgs &&...ExtraArgs) {
     if (!PassesCheck) {
       Sema::SemaDiagnosticBuilder DB = Diag(D->getBeginLoc(), DiagID);
       appendDiagnostics(DB, std::forward<DiagnosticArgs>(ExtraArgs)...);
@@ -3903,8 +3902,7 @@ public:
   /// Applies the given attribute to the Decl without performing any
   /// additional semantic checking.
   template <typename AttrType>
-  void handleSimpleAttribute(Decl *D,
-                                    const AttributeCommonInfo &CI) {
+  void handleSimpleAttribute(Decl *D, const AttributeCommonInfo &CI) {
     D->addAttr(::new (Context) AttrType(Context, CI));
   }
 
@@ -3913,9 +3911,10 @@ public:
   ///
   /// \returns true if IdxExpr is a valid index.
   template <typename AttrInfo>
-  bool checkFunctionOrMethodParameterIndex(
-      const Decl *D, const AttrInfo &AI, unsigned AttrArgNum,
-      const Expr *IdxExpr, ParamIdx &Idx, bool CanIndexImplicitThis = false) {
+  bool checkFunctionOrMethodParameterIndex(const Decl *D, const AttrInfo &AI,
+                                           unsigned AttrArgNum,
+                                           const Expr *IdxExpr, ParamIdx &Idx,
+                                           bool CanIndexImplicitThis = false) {
     assert(isFunctionOrMethodOrBlockForAttrSubject(D));
 
     // In C++ the implicit 'this' function parameter also counts.
@@ -3943,8 +3942,7 @@ public:
     }
     if (HasImplicitThisParam && !CanIndexImplicitThis) {
       if (IdxSource == 1) {
-        Diag(getAttrLoc(AI),
-              diag::err_attribute_invalid_implicit_this_argument)
+        Diag(getAttrLoc(AI), diag::err_attribute_invalid_implicit_this_argument)
             << &AI << IdxExpr->getSourceRange();
         return false;
       }

@@ -313,7 +313,8 @@ void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {
     return;
   if (X > 1024) {
     Diag(AL.getArgAsExpr(0)->getExprLoc(),
-           diag::err_hlsl_numthreads_argument_oor) << 0 << 1024;
+         diag::err_hlsl_numthreads_argument_oor)
+        << 0 << 1024;
     return;
   }
   uint32_t Y;
@@ -321,7 +322,8 @@ void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {
     return;
   if (Y > 1024) {
     Diag(AL.getArgAsExpr(1)->getExprLoc(),
-           diag::err_hlsl_numthreads_argument_oor) << 1 << 1024;
+         diag::err_hlsl_numthreads_argument_oor)
+        << 1 << 1024;
     return;
   }
   uint32_t Z;
@@ -329,7 +331,8 @@ void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {
     return;
   if (Z > ZMax) {
     SemaRef.Diag(AL.getArgAsExpr(2)->getExprLoc(),
-           diag::err_hlsl_numthreads_argument_oor) << 2 << ZMax;
+                 diag::err_hlsl_numthreads_argument_oor)
+        << 2 << ZMax;
     return;
   }
 
@@ -351,8 +354,7 @@ static bool isLegalTypeForHLSLSV_DispatchThreadID(QualType T) {
   return true;
 }
 
-void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D,
-                                              const ParsedAttr &AL) {
+void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {
   // FIXME: support semantic on field.
   // See https://github.com/llvm/llvm-project/issues/57889.
   if (isa<FieldDecl>(D)) {
@@ -368,7 +370,8 @@ void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D,
     return;
   }
 
-  D->addAttr(::new (getASTContext()) HLSLSV_DispatchThreadIDAttr(getASTContext(), AL));
+  D->addAttr(::new (getASTContext())
+                 HLSLSV_DispatchThreadIDAttr(getASTContext(), AL));
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
@@ -416,8 +419,8 @@ void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  D->addAttr(::new (getASTContext())
-                 HLSLPackOffsetAttr(getASTContext(), AL, SubComponent, Component));
+  D->addAttr(::new (getASTContext()) HLSLPackOffsetAttr(
+      getASTContext(), AL, SubComponent, Component));
 }
 
 void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
@@ -440,8 +443,7 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-void SemaHLSL::handleResourceBindingAttr(Decl *D,
-                                          const ParsedAttr &AL) {
+void SemaHLSL::handleResourceBindingAttr(Decl *D, const ParsedAttr &AL) {
   StringRef Space = "space0";
   StringRef Slot = "";
 
@@ -512,8 +514,7 @@ void SemaHLSL::handleResourceBindingAttr(Decl *D,
     D->addAttr(NewAttr);
 }
 
-void SemaHLSL::handleParamModifierAttr(Decl *D,
-                                        const ParsedAttr &AL) {
+void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
   HLSLParamModifierAttr *NewAttr = mergeParamModifierAttr(
       D, AL,
       static_cast<HLSLParamModifierAttr::Spelling>(AL.getSemanticSpelling()));

@@ -897,8 +897,9 @@ void SemaX86::handleAnyInterruptAttr(Decl *D, const ParsedAttr &AL) {
   // Interrupt handler must have void return type.
   if (!getFunctionOrMethodResultType(D)->isVoidType()) {
     Diag(getFunctionOrMethodResultSourceRange(D).getBegin(),
-           diag::err_anyx86_interrupt_attribute)
-        << (SemaRef.Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86
+         diag::err_anyx86_interrupt_attribute)
+        << (SemaRef.Context.getTargetInfo().getTriple().getArch() ==
+                    llvm::Triple::x86
                 ? 0
                 : 1)
         << 0;
@@ -917,7 +918,7 @@ void SemaX86::handleAnyInterruptAttr(Decl *D, const ParsedAttr &AL) {
   // The first argument must be a pointer.
   if (!getFunctionOrMethodParamType(D, 0)->isPointerType()) {
     Diag(getFunctionOrMethodParamRange(D, 0).getBegin(),
-           diag::err_anyx86_interrupt_attribute)
+         diag::err_anyx86_interrupt_attribute)
         << (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86
                 ? 0
                 : 1)
@@ -933,7 +934,7 @@ void SemaX86::handleAnyInterruptAttr(Decl *D, const ParsedAttr &AL) {
       (!getFunctionOrMethodParamType(D, 1)->isUnsignedIntegerType() ||
        Context.getTypeSize(getFunctionOrMethodParamType(D, 1)) != TypeSize)) {
     Diag(getFunctionOrMethodParamRange(D, 1).getBegin(),
-           diag::err_anyx86_interrupt_attribute)
+         diag::err_anyx86_interrupt_attribute)
         << (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86
                 ? 0
                 : 1)
@@ -944,8 +945,7 @@ void SemaX86::handleAnyInterruptAttr(Decl *D, const ParsedAttr &AL) {
   D->addAttr(UsedAttr::CreateImplicit(Context));
 }
 
-void SemaX86::handleForceAlignArgPointerAttr(Decl *D,
-                                              const ParsedAttr &AL) {
+void SemaX86::handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL) {
   // If we try to apply it to a function pointer, don't warn, but don't
   // do anything, either. It doesn't matter anyway, because there's nothing
   // special about calling a force_align_arg_pointer function.
@@ -955,7 +955,7 @@ void SemaX86::handleForceAlignArgPointerAttr(Decl *D,
   // Also don't warn on function pointer typedefs.
   const auto *TD = dyn_cast<TypedefNameDecl>(D);
   if (TD && (TD->getUnderlyingType()->isFunctionPointerType() ||
-    TD->getUnderlyingType()->isFunctionType()))
+             TD->getUnderlyingType()->isFunctionType()))
     return;
   // Attribute can only be applied to function types.
   if (!isa<FunctionDecl>(D)) {
@@ -964,7 +964,8 @@ void SemaX86::handleForceAlignArgPointerAttr(Decl *D,
     return;
   }
 
-  D->addAttr(::new (getASTContext()) X86ForceAlignArgPointerAttr(getASTContext(), AL));
+  D->addAttr(::new (getASTContext())
+                 X86ForceAlignArgPointerAttr(getASTContext(), AL));
 }
 
 } // namespace clang

@@ -1046,8 +1046,8 @@ public:
   void handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL);
 
   void AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
-                            Sema::RetainOwnershipKind K,
-                            bool IsTemplateInstantiation);
+                        Sema::RetainOwnershipKind K,
+                        bool IsTemplateInstantiation);
 
   /// \return whether the parameter is a pointer to OSObject pointer.
   bool isValidOSObjectOutParameter(const Decl *D);
@@ -1055,7 +1055,6 @@ public:
 
   Sema::RetainOwnershipKind
   parsedAttrToRetainOwnershipKind(const ParsedAttr &AL);
-
 
   ///@}
 };
