@@ -1607,20 +1607,20 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
   }
 };
 
-FailureOr<VectorType> dropNonScalableUnitDimType(VectorType inVecTy) {
-  int numUnitDimsDropped = 0;
-  auto inVecShape = inVecTy.getShape();
+VectorType dropNonScalableUnitDimType(VectorType inVecTy) {
   auto newVecBuilder = VectorType::Builder(inVecTy);
-  for (unsigned i = 0; i < inVecShape.size(); i++) {
-    if (inVecShape[i] == 1 && !inVecTy.getScalableDims()[i]) {
-      newVecBuilder.dropDim(i - numUnitDimsDropped);
-      numUnitDimsDropped++;
+  auto inVecShape = inVecTy.getShape();
+  SmallVector<int64_t> newShape;
+  SmallVector<bool> newScalableDims;
+  for (auto [dim, isScalable] :
+       llvm::zip(inVecShape, inVecTy.getScalableDims())) {
+    if (dim != 1 || isScalable) {
+      newShape.push_back(dim);
+      newScalableDims.push_back(isScalable);
     }
   }
 
-  if (numUnitDimsDropped == 0)
-    return failure();
-  return VectorType(newVecBuilder);
+  return VectorType::get(newShape, inVecTy.getElementType(), newScalableDims);
 }
 
 /// For vectors with at least an unit dim, replaces:
@@ -1676,16 +1676,15 @@ struct DropUnitDimFromElementwiseOps final
     for (auto operand : op->getOperands()) {
       auto opVectorType = cast<VectorType>(operand.getType());
       auto newVType = dropNonScalableUnitDimType(opVectorType);
-      if (failed(newVType)) {
-        return failure();
+      if (newVType == opVectorType) {
+        return rewriter.notifyMatchFailure(op, "No unit dimension to remove.");
       }
-      auto opSC =
-          rewriter.create<vector::ShapeCastOp>(loc, newVType.value(), operand);
+      auto opSC = rewriter.create<vector::ShapeCastOp>(loc, newVType, operand);
       newOperands.push_back(opSC);
     }
 
     VectorType newResultVectorType =
-        dropNonScalableUnitDimType(resultVectorType).value();
+        dropNonScalableUnitDimType(resultVectorType);
     // Create an updated elementwise Op without unit dim
     Operation *elementwiseOp =
         rewriter.create(loc, op->getName().getIdentifier(), newOperands,
