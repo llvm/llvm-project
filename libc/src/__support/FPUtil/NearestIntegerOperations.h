@@ -49,6 +49,7 @@ LIBC_INLINE T trunc(T x) {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T ceil(T x) {
+  using StorageType = typename FPBits<T>::StorageType;
   FPBits<T> bits(x);
 
   // If x is infinity NaN or zero, return it.
@@ -71,7 +72,9 @@ LIBC_INLINE T ceil(T x) {
   }
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
-  bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
+  StorageType trunc_mantissa =
+      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
+  bits.set_mantissa(trunc_mantissa);
   T trunc_value = bits.get_val();
 
   // If x is already an integer, return it.
