@@ -1703,6 +1703,10 @@ void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
 static Value *
 emitDepArray(OpenMPIRBuilder &OMPBuilder,
              SmallVector<OpenMPIRBuilder::DependData> &Dependencies) {
+  // Early return if we have no dependencies to process
+  if (!Dependencies.size())
+    return nullptr;
+
   IRBuilderBase &Builder = OMPBuilder.Builder;
   Type *DependInfo = OMPBuilder.DependInfo;
   Module &M = OMPBuilder.M;
@@ -5561,16 +5565,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
       Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
                            SharedsSize);
     }
-    if (Dependencies.size()) {
-      Value *DepArray = emitDepArray(*this, Dependencies);
-      Function *TaskWaitFn =
-          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_wait_deps);
-      Builder.CreateCall(
-          TaskWaitFn,
-          {Ident, ThreadID, Builder.getInt32(Dependencies.size()), DepArray,
-           ConstantInt::get(Builder.getInt32Ty(), 0),
-           ConstantPointerNull::get(PointerType::getUnqual(M.getContext()))});
-    }
+
+    Value *DepArray = emitDepArray(*this, Dependencies);
 
     // ---------------------------------------------------------------
     // V5.2 13.8 target construct
@@ -5581,6 +5577,15 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
     // The above means that the lack of a nowait on the target construct
     // translates to '#pragma omp task if(0)'
     if (!HasNoWait) {
+      if (DepArray) {
+        Function *TaskWaitFn =
+            getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_wait_deps);
+        Builder.CreateCall(
+            TaskWaitFn,
+            {Ident, ThreadID, Builder.getInt32(Dependencies.size()), DepArray,
+             ConstantInt::get(Builder.getInt32Ty(), 0),
+             ConstantPointerNull::get(PointerType::getUnqual(M.getContext()))});
+      }
       // Included task.
       Function *TaskBeginFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_begin_if0);
@@ -5594,6 +5599,17 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
         CI = Builder.CreateCall(ProxyFn, {ThreadID});
       CI->setDebugLoc(StaleCI->getDebugLoc());
       Builder.CreateCall(TaskCompleteFn, {Ident, ThreadID, TaskData});
+    } else if (DepArray) {
+      // HasNoWait - meaning the task may be deferred. Call
+      // __kmpc_omp_task_with_deps if there are dependencies,
+      // else call __kmpc_omp_task
+      Function *TaskFn =
+          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_with_deps);
+      Builder.CreateCall(
+          TaskFn,
+          {Ident, ThreadID, TaskData, Builder.getInt32(Dependencies.size()),
+           DepArray, ConstantInt::get(Builder.getInt32Ty(), 0),
+           ConstantPointerNull::get(PointerType::getUnqual(M.getContext()))});
     } else {
       // Emit the @__kmpc_omp_task runtime call to spawn the task
       Function *TaskFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task);
