@@ -62,7 +62,7 @@ void CheckAndStoreIntToDescriptor(
 
 // If a condition occurs that would assign a nonzero value to CMDSTAT but
 // the CMDSTAT variable is not present, error termination is initiated.
-std::int64_t  TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
+std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, Terminator &terminator) {
 #ifdef _WIN32
   // On WIN32 API std::system returns exit status directly
@@ -164,7 +164,8 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
   if (wait) {
     // either wait is not specified or wait is true: synchronous mode
     std::int64_t status{std::system(newCmd)};
-    std::int64_t exitStatusVal{TerminationCheck(status, cmdstat, cmdmsg, terminator)};
+    std::int64_t exitStatusVal{
+        TerminationCheck(status, cmdstat, cmdmsg, terminator)};
     // If sync, assigned processor-dependent exit status. Otherwise unchanged
     CheckAndStoreIntToDescriptor(exitstat, exitStatusVal, terminator);
   } else {
