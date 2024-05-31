@@ -3036,7 +3036,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
       if (TNK == TNK_Non_template)
         return true;
 
-      // C++ [template.names]p6
+      // C++2c [tem.names]p6
       // A name prefixed by the keyword template shall be followed by a template
       // argument list or refer to a class template or an alias template.
       if ((TNK == TNK_Function_template || TNK == TNK_Dependent_template_name ||
