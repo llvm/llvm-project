@@ -104,7 +104,7 @@ class CommandInterpreterAPICase(TestBase):
 
         return json.loads(stream.GetData())
 
-    def test_structured_transcript(self):
+    def test_get_transcript(self):
         """Test structured transcript generation and retrieval."""
         ci = self.buildAndCreateTarget()
 
@@ -118,7 +118,7 @@ class CommandInterpreterAPICase(TestBase):
         res = lldb.SBCommandReturnObject()
         ci.HandleCommand("version", res)
         ci.HandleCommand("an-unknown-command", res)
-        ci.HandleCommand("breakpoint set -f main.c -l %d" % self.line, res)
+        ci.HandleCommand("br s -f main.c -l %d" % self.line, res)
         ci.HandleCommand("r", res)
         ci.HandleCommand("p a", res)
         ci.HandleCommand("statistics dump", res)
@@ -130,22 +130,28 @@ class CommandInterpreterAPICase(TestBase):
         # All commands should have expected fields.
         for command in transcript:
             self.assertIn("command", command)
+            # Unresolved commands don't have "commandName"/"commandArguments".
+            # We will validate these fields below, instead of here.
             self.assertIn("output", command)
             self.assertIn("error", command)
-            self.assertIn("seconds", command)
+            self.assertIn("durationInSeconds", command)
+            self.assertIn("timestampInEpochSeconds", command)
 
         # The following validates individual commands in the transcript.
         #
         # Notes:
         # 1. Some of the asserts rely on the exact output format of the
         #    commands. Hopefully we are not changing them any time soon.
-        # 2. We are removing the "seconds" field from each command, so that
-        #    some of the validations below can be easier / more readable.
+        # 2. We are removing the time-related fields from each command, so
+        #    that some of the validations below can be easier / more readable.
         for command in transcript:
-            del(command["seconds"])
+            del command["durationInSeconds"]
+            del command["timestampInEpochSeconds"]
 
         # (lldb) version
         self.assertEqual(transcript[0]["command"], "version")
+        self.assertEqual(transcript[0]["commandName"], "version")
+        self.assertEqual(transcript[0]["commandArguments"], "")
         self.assertIn("lldb version", transcript[0]["output"])
         self.assertEqual(transcript[0]["error"], "")
 
@@ -153,18 +159,25 @@ class CommandInterpreterAPICase(TestBase):
         self.assertEqual(transcript[1],
             {
                 "command": "an-unknown-command",
+                # Unresolved commands don't have "commandName"/"commandArguments"
                 "output": "",
                 "error": "error: 'an-unknown-command' is not a valid command.\n",
             })
 
-        # (lldb) breakpoint set -f main.c -l <line>
-        self.assertEqual(transcript[2]["command"], "breakpoint set -f main.c -l %d" % self.line)
+        # (lldb) br s -f main.c -l <line>
+        self.assertEqual(transcript[2]["command"], "br s -f main.c -l %d" % self.line)
+        self.assertEqual(transcript[2]["commandName"], "breakpoint set")
+        self.assertEqual(
+            transcript[2]["commandArguments"], "-f main.c -l %d" % self.line
+        )
         # Breakpoint 1: where = a.out`main + 29 at main.c:5:3, address = 0x0000000100000f7d
         self.assertIn("Breakpoint 1: where = a.out`main ", transcript[2]["output"])
         self.assertEqual(transcript[2]["error"], "")
 
         # (lldb) r
         self.assertEqual(transcript[3]["command"], "r")
+        self.assertEqual(transcript[3]["commandName"], "process launch")
+        self.assertEqual(transcript[3]["commandArguments"], "-X true --")
         # Process 25494 launched: '<path>/TestCommandInterpreterAPI.test_structured_transcript/a.out' (x86_64)
         self.assertIn("Process", transcript[3]["output"])
         self.assertIn("launched", transcript[3]["output"])
@@ -174,11 +187,17 @@ class CommandInterpreterAPICase(TestBase):
         self.assertEqual(transcript[4],
             {
                 "command": "p a",
+                "commandName": "dwim-print",
+                "commandArguments": "-- a",
                 "output": "(int) 123\n",
                 "error": "",
             })
 
         # (lldb) statistics dump
+        self.assertEqual(transcript[5]["command"], "statistics dump")
+        self.assertEqual(transcript[5]["commandName"], "statistics dump")
+        self.assertEqual(transcript[5]["commandArguments"], "")
+        self.assertEqual(transcript[5]["error"], "")
         statistics_dump = json.loads(transcript[5]["output"])
         # Dump result should be valid JSON
         self.assertTrue(statistics_dump is not json.JSONDecodeError)
@@ -194,7 +213,6 @@ class CommandInterpreterAPICase(TestBase):
 
         # The setting's default value should be "false"
         self.runCmd("settings show interpreter.save-transcript", "interpreter.save-transcript (boolean) = false\n")
-        # self.assertEqual(res.GetOutput(), )
 
     def test_save_transcript_setting_off(self):
         ci = self.buildAndCreateTarget()
@@ -220,7 +238,7 @@ class CommandInterpreterAPICase(TestBase):
         self.assertEqual(len(transcript), 1)
         self.assertEqual(transcript[0]["command"], "version")
 
-    def test_save_transcript_returns_copy(self):
+    def test_get_transcript_returns_copy(self):
         """
         Test that the returned structured data is *at least* a shallow copy.
 
