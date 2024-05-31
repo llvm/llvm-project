@@ -431,12 +431,6 @@ def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
   "Has Arithmetic Shift Pack instructions"
 >;
 
-def FeatureConsumePowerInst : SubtargetFeature<"consume-power-inst",
-  "HasConsumePowerInst",
-  "true",
-  "Has v_consume_power instruction"
->;
-
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -1410,7 +1404,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
-   FeatureConsumePowerInst, FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
   ]
 >;
 
@@ -2176,10 +2170,6 @@ def HasPermlane16Swap :
 def HasPermlane32Swap :
   Predicate<"Subtarget->hasPermlane32Swap()">,
   AssemblerPredicate<(all_of FeaturePermlane32Swap)>;
-
-def HasConsumePowerInst :
-  Predicate<"Subtarget->hasConsumePowerInst()">,
-  AssemblerPredicate<(all_of FeatureConsumePowerInst)>;
 
 def isGFX940Only :
   Predicate<"Subtarget->hasGFX940Insts() && !Subtarget->hasGFX950Insts()">,

@@ -250,7 +250,6 @@ protected:
   bool HasForceVALUThrottle = false;
   bool HasAshrPkInsts = false;
   bool HasMLMathInsts = false;
-  bool HasConsumePowerInst = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
@@ -1337,7 +1336,6 @@ public:
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
   bool hasAshrPkInsts() const { return HasAshrPkInsts; }
-  bool hasConsumePowerInst() const { return HasConsumePowerInst; }
 
   bool hasAddPC64Inst() const { return GFX12_10Insts; }
 

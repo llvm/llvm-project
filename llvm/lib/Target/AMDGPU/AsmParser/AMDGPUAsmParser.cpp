@@ -1864,8 +1864,6 @@ private:
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   bool validateSetVgprMSB(const MCInst &Inst, const OperandVector &Operands);
   bool validateAuxData(const MCInst &Inst, const OperandVector &Operands);
-  bool validateConsumePowerOp(const MCInst &Inst,
-                              const OperandVector &Operands);
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
@@ -5409,23 +5407,6 @@ bool AMDGPUAsmParser::validateAuxData(const MCInst &Inst,
   return true;
 }
 
-bool AMDGPUAsmParser::validateConsumePowerOp(const MCInst &Inst,
-                                             const OperandVector &Operands) {
-  if (Inst.getOpcode() != AMDGPU::V_CONSUME_POWER_gfx13)
-    return true;
-
-  AMDGPUOperand &SrcOp = ((AMDGPUOperand &)*Operands[1]);
-  if (!SrcOp.isImmLiteral()) {
-    Error(SrcOp.getStartLoc(), "immediate operand expected");
-    return false;
-  }
-  if (!isUInt<6>(SrcOp.getImm())) {
-    Error(SrcOp.getStartLoc(), "the operand must be in range [0..63]");
-    return false;
-  }
-  return true;
-}
-
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
@@ -5552,9 +5533,6 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateAuxData(Inst, Operands)) {
-    return false;
-  }
-  if (!validateConsumePowerOp(Inst, Operands)) {
     return false;
   }
 
