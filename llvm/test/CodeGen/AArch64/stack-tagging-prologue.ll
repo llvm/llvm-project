@@ -6,15 +6,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android10000"
 
-declare void @use8(ptr)
 declare void @use32(ptr)
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
-
-define dso_local void @noUse32(ptr) sanitize_memtag {
-entry:
-  ret void
-}
 
 define void @OneVar() sanitize_memtag {
 entry:
