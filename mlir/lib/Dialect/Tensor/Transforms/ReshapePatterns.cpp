@@ -61,7 +61,7 @@ struct FoldUnPaddingCollapseIntoExtract
     // Collapse cannot be folded away with multiple users of the extract slice
     // and it is not necessarily beneficial to only convert the collapse into
     // another extract slice.
-    if (!extractSliceOp || !extractSliceOp.getResult().hasOneUse())
+    if (!extractSliceOp || !extractSliceOp->hasOneUse())
       return failure();
 
     // Only fold away simple collapse where all removed dimensions have static
