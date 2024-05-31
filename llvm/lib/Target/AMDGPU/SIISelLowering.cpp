@@ -6093,30 +6093,36 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   unsigned IntrinsicID = N->getConstantOperandVal(0);
   bool IsPermLane16 = IntrinsicID == Intrinsic::amdgcn_permlane16 ||
                       IntrinsicID == Intrinsic::amdgcn_permlanex16;
-  bool IsPermLane64 = IntrinsicID == Intrinsic::amdgcn_permlane64;
   SDValue Src0 = N->getOperand(1);
   SDLoc SL(N);
   MVT IntVT = MVT::getIntegerVT(ValSize);
 
-  auto createLaneOp = [&](SDValue Src0, SDValue Src1, SDValue Src2,
-                          MVT ValueT) -> SDValue {
-    if (IsPermLane16 || IsPermLane64) {
-      if (IsPermLane16) {
-        SDValue Src3 = N->getOperand(4);
-        SDValue Src4 = N->getOperand(5);
-        SDValue Src5 = N->getOperand(6);
-        return DAG.getNode(IntrinsicID == Intrinsic::amdgcn_permlane16
-                               ? AMDGPUISD::PERMLANE16
-                               : AMDGPUISD::PERMLANEX16,
-                           SL, ValueT, {Src0, Src1, Src2, Src3, Src4, Src5});
-      }
-      return DAG.getNode(AMDGPUISD::PERMLANE64, SL, ValueT, {Src0});
+  auto createLaneOp = [&DAG, &SL, N](SDValue Src0, SDValue Src1, SDValue Src2,
+                                     MVT ValueT) -> SDValue {
+    switch (unsigned IID = N->getConstantOperandVal(0)) {
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_permlane64:
+      return DAG.getNode(IID == Intrinsic::amdgcn_readfirstlane
+                             ? AMDGPUISD::READFIRSTLANE
+                             : AMDGPUISD::PERMLANE64,
+                         SL, ValueT, {Src0});
+    case Intrinsic::amdgcn_readlane:
+      return DAG.getNode(AMDGPUISD::READLANE, SL, ValueT, {Src0, Src1});
+    case Intrinsic::amdgcn_writelane:
+      return DAG.getNode(AMDGPUISD::WRITELANE, SL, ValueT, {Src0, Src1, Src2});
+    case Intrinsic::amdgcn_permlane16:
+    case Intrinsic::amdgcn_permlanex16: {
+      SDValue Src3 = N->getOperand(4);
+      SDValue Src4 = N->getOperand(5);
+      SDValue Src5 = N->getOperand(6);
+      return DAG.getNode(IID == Intrinsic::amdgcn_permlane16
+                             ? AMDGPUISD::PERMLANE16
+                             : AMDGPUISD::PERMLANEX16,
+                         SL, ValueT, {Src0, Src1, Src2, Src3, Src4, Src5});
     }
-
-    return (
-        Src2 ? DAG.getNode(AMDGPUISD::WRITELANE, SL, ValueT, {Src0, Src1, Src2})
-        : Src1 ? DAG.getNode(AMDGPUISD::READLANE, SL, ValueT, {Src0, Src1})
-               : DAG.getNode(AMDGPUISD::READFIRSTLANE, SL, ValueT, {Src0}));
+    default:
+      llvm_unreachable("unhandled lane op");
+    }
   };
 
   SDValue Src1, Src2;
@@ -6133,31 +6139,73 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   }
 
   if (ValSize < 32) {
-    SDValue InitBitCast = DAG.getBitcast(IntVT, Src0);
-    Src0 = DAG.getAnyExtOrTrunc(InitBitCast, SL, MVT::i32);
+    bool IsFloat = VT.isFloatingPoint();
+    Src0 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src0) : Src0,
+                                SL, MVT::i32);
 
     if (IsPermLane16) {
-      SDValue Src1Cast = DAG.getBitcast(IntVT, Src1);
-      Src1 = DAG.getAnyExtOrTrunc(Src1Cast, SL, MVT::i32);
+      Src1 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src1) : Src1,
+                                  SL, MVT::i32);
     }
 
     if (IntrinsicID == Intrinsic::amdgcn_writelane) {
-      SDValue Src2Cast = DAG.getBitcast(IntVT, Src2);
-      Src2 = DAG.getAnyExtOrTrunc(Src2Cast, SL, MVT::i32);
+      Src2 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src2) : Src2,
+                                  SL, MVT::i32);
     }
 
     SDValue LaneOp = createLaneOp(Src0, Src1, Src2, MVT::i32);
     SDValue Trunc = DAG.getAnyExtOrTrunc(LaneOp, SL, IntVT);
-    return DAG.getBitcast(VT, Trunc);
+    return IsFloat ? DAG.getBitcast(VT, Trunc) : Trunc;
   }
 
-  if ((ValSize % 32) == 0) {
+  if (ValSize % 32 != 0)
+    return SDValue();
+
+  if (VT.isVector()) {
+    switch (MVT::SimpleValueType EltTy =
+                VT.getVectorElementType().getSimpleVT().SimpleTy) {
+    case MVT::i32:
+    case MVT::f32: {
+      SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VT.getSimpleVT());
+      return DAG.UnrollVectorOp(LaneOp.getNode());
+    }
+    case MVT::i16:
+    case MVT::f16:
+    case MVT::bf16: {
+      MVT SubVecVT = MVT::getVectorVT(EltTy, 2);
+      SmallVector<SDValue, 4> Pieces;
+      SDValue Src0SubVec, Src1SubVec, Src2SubVec;
+      for (unsigned i = 0, EltIdx = 0; i < ValSize / 32; i++) {
+        Src0SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src0,
+                                 DAG.getConstant(EltIdx, SL, MVT::i32));
+
+        if (IsPermLane16)
+          Src1SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src1,
+                                   DAG.getConstant(EltIdx, SL, MVT::i32));
+
+        if (IntrinsicID == Intrinsic::amdgcn_writelane)
+          Src2SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src2,
+                                   DAG.getConstant(EltIdx, SL, MVT::i32));
+
+        Pieces.push_back(
+            IsPermLane16
+                ? createLaneOp(Src0SubVec, Src1SubVec, Src2, SubVecVT)
+                : createLaneOp(Src0SubVec, Src1, Src2SubVec, SubVecVT));
+        EltIdx += 2;
+      }
+      return DAG.getNode(ISD::CONCAT_VECTORS, SL, VT, Pieces);
+    }
+    default:
+      // Handle all other cases by bitcasting to i32 vectors
+      break;
+    }
+  }
+
     MVT VecVT = MVT::getVectorVT(MVT::i32, ValSize / 32);
     Src0 = DAG.getBitcast(VecVT, Src0);
 
-    if (IsPermLane16) {
+    if (IsPermLane16)
       Src1 = DAG.getBitcast(VecVT, Src1);
-    }
 
     if (IntrinsicID == Intrinsic::amdgcn_writelane)
       Src2 = DAG.getBitcast(VecVT, Src2);
@@ -6165,9 +6213,6 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VecVT);
     SDValue UnrolledLaneOp = DAG.UnrollVectorOp(LaneOp.getNode());
     return DAG.getBitcast(VT, UnrolledLaneOp);
-  }
-
-  return SDValue();
 }
 
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
