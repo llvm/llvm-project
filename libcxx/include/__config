@@ -621,10 +621,16 @@ typedef __char32_t char32_t;
                                inline namespace _LIBCPP_ABI_NAMESPACE {
 #  define _LIBCPP_END_NAMESPACE_STD }} _LIBCPP_POP_EXTENSION_DIAGNOSTICS
 
+#ifdef _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
+#  define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM _LIBCPP_BEGIN_NAMESPACE_STD namespace filesystem {
+#  define _LIBCPP_END_NAMESPACE_FILESYSTEM } _LIBCPP_END_NAMESPACE_STD
+#else
 #  define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM _LIBCPP_BEGIN_NAMESPACE_STD                                               \
                                              inline namespace __fs { namespace filesystem {
 
 #  define _LIBCPP_END_NAMESPACE_FILESYSTEM }} _LIBCPP_END_NAMESPACE_STD
+#endif
+
 // clang-format on
 
 #  if __has_attribute(__enable_if__)
