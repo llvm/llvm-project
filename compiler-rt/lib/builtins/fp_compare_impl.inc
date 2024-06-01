@@ -12,7 +12,7 @@
 // functions. We need to ensure that the return value is sign-extended in the
 // same way as GCC expects (since otherwise GCC-generated __builtin_isinf
 // returns true for finite 128-bit floating-point numbers).
-#ifdef __aarch64__
+#if defined(__aarch64__) || defined(__wasm__)
 // AArch64 GCC overrides libgcc_cmp_return to use int instead of long.
 typedef int CMP_RESULT;
 #elif __SIZEOF_POINTER__ == 8 && __SIZEOF_LONG__ == 4
