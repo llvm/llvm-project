@@ -6339,8 +6339,7 @@ static Value *foldMinMaxSharedOp(Intrinsic::ID IID, Value *Op0, Value *Op1) {
 static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
                                          Value *Op1) {
   assert((IID == Intrinsic::maxnum || IID == Intrinsic::minnum ||
-          IID == Intrinsic::maximum || IID == Intrinsic::minimum ||
-          IID == Intrinsic::maximumnum || IID == Intrinsic::minimumnum) &&
+          IID == Intrinsic::maximum || IID == Intrinsic::minimum) &&
          "Unsupported intrinsic");
 
   auto *M0 = dyn_cast<IntrinsicInst>(Op0);
@@ -6353,8 +6352,6 @@ static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
   Value *Y0 = M0->getOperand(1);
   // Simple case, m(m(X,Y), X) => m(X, Y)
   //              m(m(X,Y), Y) => m(X, Y)
-  // For minimumnum/maximumnum, X is NaN => m(NaN, Y) == Y and m(Y, Y) == Y.
-  // For minimumnum/maximumnum, Y is NaN => m(X, NaN) == X and m(X, NaN) == X.
   // For minimum/maximum, X is NaN => m(NaN, Y) == NaN and m(NaN, NaN) == NaN.
   // For minimum/maximum, Y is NaN => m(X, NaN) == NaN  and m(NaN, NaN) == NaN.
   // For minnum/maxnum, X is NaN => m(NaN, Y) == Y and m(Y, Y) == Y.
@@ -6370,8 +6367,6 @@ static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
   Intrinsic::ID IID1 = M1->getIntrinsicID();
   // we have a case m(m(X,Y),m'(X,Y)) taking into account m' is commutative.
   // if m' is m or inversion of m => m(m(X,Y),m'(X,Y)) == m(X,Y).
-  // For minimumnum/maximumnum, X is NaN => m(NaN,Y) == m'(NaN, Y) == Y.
-  // For minimumnum/maximumnum, Y is NaN => m(X,NaN) == m'(X, NaN) == X.
   // For minimum/maximum, X is NaN => m(NaN,Y) == m'(NaN, Y) == NaN.
   // For minimum/maximum, Y is NaN => m(X,NaN) == m'(X, NaN) == NaN.
   // For minnum/maxnum, X is NaN => m(NaN,Y) == m'(NaN, Y) == Y.
@@ -6635,8 +6630,6 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   }
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
-  case Intrinsic::maximumnum:
-  case Intrinsic::minimumnum:
   case Intrinsic::maximum:
   case Intrinsic::minimum: {
     // If the arguments are the same, this is a no-op.
@@ -6652,15 +6645,12 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return Op0;
 
     bool PropagateNaN = IID == Intrinsic::minimum || IID == Intrinsic::maximum;
-    bool IsMin = IID == Intrinsic::minimum || IID == Intrinsic::minnum ||
-                 IID == Intrinsic::minimumnum;
+    bool IsMin = IID == Intrinsic::minimum || IID == Intrinsic::minnum;
 
     // minnum(X, nan) -> X
     // maxnum(X, nan) -> X
     // minimum(X, nan) -> nan
     // maximum(X, nan) -> nan
-    // minimumnum(X, nan) -> X
-    // maximumnum(X, nan) -> X
     if (match(Op1, m_NaN()))
       return PropagateNaN ? propagateNaN(cast<Constant>(Op1)) : Op0;
 
@@ -6673,8 +6663,6 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       // maxnum(X, +inf) -> +inf
       // minimum(X, -inf) -> -inf if nnan
       // maximum(X, +inf) -> +inf if nnan
-      // minimumnum(X, -inf) -> -inf
-      // maximumnum(X, +inf) -> +inf
       if (C->isNegative() == IsMin &&
           (!PropagateNaN || (Call && Call->hasNoNaNs())))
         return ConstantFP::get(ReturnType, *C);
@@ -6683,8 +6671,6 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       // maxnum(X, -inf) -> X if nnan
       // minimum(X, +inf) -> X
       // maximum(X, -inf) -> X
-      // minimumnum(X, +inf) -> X if nnan
-      // maximumnum(X, -inf) -> X if nnan
       if (C->isNegative() != IsMin &&
           (PropagateNaN || (Call && Call->hasNoNaNs())))
         return Op0;

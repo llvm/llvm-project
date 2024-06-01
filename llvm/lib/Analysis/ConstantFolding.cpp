@@ -1557,8 +1557,6 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum:
-  case Intrinsic::minimumnum:
-  case Intrinsic::maximumnum:
   case Intrinsic::log:
   case Intrinsic::log2:
   case Intrinsic::log10:
@@ -2653,8 +2651,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::minnum:
     case Intrinsic::maximum:
     case Intrinsic::minimum:
-    case Intrinsic::maximumnum:
-    case Intrinsic::minimumnum:
       // If one argument is undef, return the other argument.
       if (IsOp0Undef)
         return Operands[1];
@@ -2718,10 +2714,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantFP::get(Ty->getContext(), minimum(Op1V, Op2V));
       case Intrinsic::maximum:
         return ConstantFP::get(Ty->getContext(), maximum(Op1V, Op2V));
-      case Intrinsic::minimumnum:
-        return ConstantFP::get(Ty->getContext(), minimumnum(Op1V, Op2V));
-      case Intrinsic::maximumnum:
-        return ConstantFP::get(Ty->getContext(), maximumnum(Op1V, Op2V));
       }
 
       if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
