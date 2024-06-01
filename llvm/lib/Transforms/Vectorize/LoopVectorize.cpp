@@ -7389,8 +7389,9 @@ InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
   return CM.getInstructionCost(UI, VF).first;
 }
 
-bool VPCostContext::skipCostComputation(Instruction *UI) const {
-  return CM.VecValuesToIgnore.contains(UI) || SkipCostComputation.contains(UI);
+bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
+  return (IsVector && CM.VecValuesToIgnore.contains(UI)) ||
+         SkipCostComputation.contains(UI);
 }
 
 InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
@@ -7402,9 +7403,10 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
   // Cost modeling for inductions is inaccurate in the legacy cost model
   // compared to the recipes that are generated. To match here initially during
   // VPlan cost model bring up directly use the induction costs from the legacy
-  // cost model and skip induction bump recipes. Note that we do this as
-  // pre-processing; the VPlan may not have any recipes associated with the
-  // original induction increment instruction.
+  // cost model. Note that we do this as pre-processing; the VPlan may not have
+  // any recipes associated with the original induction increment instruction.
+  // We precompute the cost for both cases, and always skip recipes for
+  // induction increments later on, if they exist.
   // TODO: Switch to more accurate costing based on VPlan.
   for (const auto &[IV, _] : Legal->getInductionVars()) {
     Instruction *IVInc = cast<Instruction>(

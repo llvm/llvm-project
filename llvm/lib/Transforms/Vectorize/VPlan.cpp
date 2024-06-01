@@ -767,6 +767,8 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
 
   // Compute the cost of a replicate region. Replicating isn't supported for
   // scalable vectors, return an invalid cost for them.
+  // TODO: Discard scalable VPlans with replicate recipes earlier after
+  // construction.
   if (VF.isScalable())
     return InstructionCost::getInvalid();
 

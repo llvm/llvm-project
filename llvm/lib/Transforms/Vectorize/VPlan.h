@@ -630,6 +630,9 @@ public:
   /// VPBlockBase, thereby "executing" the VPlan.
   virtual void execute(VPTransformState *State) = 0;
 
+  /// Compute the cost of the block.
+  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
+
   /// Delete all blocks reachable from a given VPBlockBase, inclusive.
   static void deleteCFG(VPBlockBase *Entry);
 
@@ -676,9 +679,6 @@ public:
   /// the cloned recipes, including all blocks in the single-entry single-exit
   /// region for VPRegionBlocks.
   virtual VPBlockBase *clone() = 0;
-
-  /// Compute the cost of the block.
-  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
 };
 
 /// A value that is used outside the VPlan. The operand of the user needs to be
@@ -734,7 +734,7 @@ struct VPCostContext {
 
   /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
   /// already has been pre-computed.
-  bool skipCostComputation(Instruction *UI) const;
+  bool skipCostComputation(Instruction *UI, bool IsVector) const;
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
@@ -2953,6 +2953,9 @@ public:
   /// this VPBasicBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
 
+  /// Compute the cost of this VPBasicBlock.
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
+
   /// Return the position of the first non-phi node recipe in the block.
   iterator getFirstNonPhi();
 
@@ -2997,9 +3000,6 @@ public:
       NewBlock->appendRecipe(R.clone());
     return NewBlock;
   }
-
-  /// Compute the cost of this VPBasicBlock
-  InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
 
 protected:
   /// Execute the recipes in the IR basic block \p BB.
@@ -3130,6 +3130,9 @@ public:
   /// this VPRegionBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
 
+  // Compute the cost of this region.
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
+
   void dropAllReferences(VPValue *NewValue) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3147,9 +3150,6 @@ public:
   /// Clone all blocks in the single-entry single-exit region of the block and
   /// their recipes without updating the operands of the cloned recipes.
   VPRegionBlock *clone() override;
-
-  // Compute the cost of this region.
-  InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
 };
 
 /// VPlan models a candidate for vectorization, encoding various decisions take

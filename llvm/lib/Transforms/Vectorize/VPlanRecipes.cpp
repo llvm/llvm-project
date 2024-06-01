@@ -257,7 +257,7 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
 InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
   if (auto *S = dyn_cast<VPSingleDefRecipe>(this)) {
     auto *UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
-    if (UI && Ctx.skipCostComputation(UI))
+    if (UI && Ctx.skipCostComputation(UI, VF.isVector()))
       return 0;
   }
 

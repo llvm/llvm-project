@@ -1435,6 +1435,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
           VPInstruction *New = Builder.createOverflowingOp(
               Instruction::Add, {A, B}, {false, false},
               RecWithFlags->getDebugLoc());
+          New->setUnderlyingValue(RecWithFlags->getUnderlyingValue());
           RecWithFlags->replaceAllUsesWith(New);
           RecWithFlags->eraseFromParent();
           CurRec = New;
