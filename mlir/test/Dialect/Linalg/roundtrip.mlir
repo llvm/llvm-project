@@ -485,6 +485,48 @@ func.func @variadic_reduce_memref(%input1: memref<16x32x64xf32>,
 
 // -----
 
+func.func @reduce_asymmetric(%input: tensor<16x32x64xi32>, %input2: tensor<16x32x64xi32>,
+                  %init: tensor<16x64xi32>) -> tensor<16x64xi32> {
+  %reduce = linalg.reduce
+      ins(%input, %input2:tensor<16x32x64xi32>, tensor<16x32x64xi32>)
+      outs(%init:tensor<16x64xi32>)
+      dimensions = [1]
+      (%in: i32, %in2: i32, %out: i32) {
+        %0 = arith.muli %in, %in2: i32
+        %1 = arith.addi %out, %0: i32
+        linalg.yield %1: i32
+      }
+  func.return %reduce : tensor<16x64xi32>
+}
+// CHECK-LABEL: func @reduce_asymmetric
+//       CHECK:   linalg.reduce ins(%{{.*}}, %{{.*}}: tensor<16x32x64xi32>, tensor<16x32x64xi32>)
+//  CHECK-NOT:    operandSegmentSize
+//  CHECK-SAME:   outs(%{{.*}}: tensor<16x64xi32>)
+//  CHECK-SAME:   dimensions = [1]
+
+// -----
+
+func.func @reduce_asymmetric_memref(%input: memref<16x32x64xi32>, %input2: memref<16x32x64xi32>,
+                  %init: memref<16x64xi32>) {
+  linalg.reduce
+      ins(%input, %input2:memref<16x32x64xi32>, memref<16x32x64xi32>)
+      outs(%init:memref<16x64xi32>)
+      dimensions = [1]
+      (%in: i32, %in2: i32, %out: i32) {
+        %0 = arith.muli %in, %in2: i32
+        %1 = arith.addi %out, %0: i32
+        linalg.yield %1: i32
+      }
+  func.return
+}
+// CHECK-LABEL: func @reduce_asymmetric_memref
+//       CHECK:   linalg.reduce ins(%{{.*}}, %{{.*}}: memref<16x32x64xi32>, memref<16x32x64xi32>)
+//  CHECK-NOT:    operandSegmentSize
+//  CHECK-SAME:   outs(%{{.*}}: memref<16x64xi32>)
+//  CHECK-SAME:   dimensions = [1]
+
+// -----
+
 func.func @transpose(%input: tensor<16x32x64xf32>,
                      %init: tensor<32x64x16xf32>) -> tensor<32x64x16xf32> {
   %transpose = linalg.transpose

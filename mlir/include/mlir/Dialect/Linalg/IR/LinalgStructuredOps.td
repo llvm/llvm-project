@@ -331,7 +331,7 @@ def MapOp : LinalgStructuredBase_Op<"map", [
 def ReduceOp : LinalgStructuredBase_Op<"reduce", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>,
-    SameVariadicOperandSize,
+    AttrSizedOperandSegments,
     SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "Reduce operator";
   let description = [{
