@@ -10,6 +10,7 @@
 #include "src/__support/CPP/mutex.h"
 #include "src/__support/OSUtil/syscall.h"           // syscall_impl
 #include "src/__support/threads/linux/futex_word.h" // FutexWordType
+#include "src/__support/threads/linux/raw_mutex.h"  // RawMutex
 #include "src/__support/threads/mutex.h"            // Mutex
 
 #include <sys/syscall.h> // For syscall numbers.
@@ -74,11 +75,11 @@ void CndVar::notify_one() {
   if (waitq_front == nullptr)
     waitq_back = nullptr;
 
-  qmtx.futex_word = FutexWordType(Mutex::LockState::Free);
+  qmtx.reset();
 
   // this is a special WAKE_OP, so we use syscall directly
   LIBC_NAMESPACE::syscall_impl<long>(
-      FUTEX_SYSCALL_ID, &qmtx.futex_word.val, FUTEX_WAKE_OP, 1, 1,
+      FUTEX_SYSCALL_ID, &qmtx.get_raw_futex(), FUTEX_WAKE_OP, 1, 1,
       &first->futex_word.val,
       FUTEX_OP(FUTEX_OP_SET, WS_Signalled, FUTEX_OP_CMP_EQ, WS_Waiting));
 }

@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE {
 /// define the Mutex interface and require that only a single thread executes
 /// code requiring a mutex lock.
 struct Mutex {
-  LIBC_INLINE constexpr Mutex(bool, bool, bool) {}
+  LIBC_INLINE constexpr Mutex(bool, bool, bool, bool) {}
 
   LIBC_INLINE MutexError lock() { return MutexError::NONE; }
   LIBC_INLINE MutexError unlock() { return MutexError::NONE; }
