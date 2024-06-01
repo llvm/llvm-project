@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-new-constant-interpreter -verify %s
 
 // Math stuff
 
@@ -203,6 +204,18 @@ char isfpclass_snan_0   [__builtin_isfpclass(__builtin_nansf(""), 0x0001) ? 1 : 
 char isfpclass_snan_1   [!__builtin_isfpclass(__builtin_nans(""), 0x0002) ? 1 : -1]; // fcQNan
 char isfpclass_snan_2   [__builtin_isfpclass(__builtin_nansl(""), 0x0207) ? 1 : -1]; // ~fcFinite
 char isfpclass_snan_3   [!__builtin_isfpclass(__builtin_nans(""), 0x01F8) ? 1 : -1]; // fcFinite
+
+__extension__ _Static_assert(
+  !__builtin_signbit(1.0) && __builtin_signbit(-1.0) && !__builtin_signbit(0.0) && __builtin_signbit(-0.0) &&
+  !__builtin_signbitf(1.0f) && __builtin_signbitf(-1.0f) && !__builtin_signbitf(0.0f) && __builtin_signbitf(-0.0f) &&
+  !__builtin_signbitl(1.0L) && __builtin_signbitf(-1.0L) && !__builtin_signbitf(0.0L) && __builtin_signbitf(-0.0L) &&
+  !__builtin_signbit(1.0f) && __builtin_signbit(-1.0f) && !__builtin_signbit(0.0f) && __builtin_signbit(-0.0f) &&
+  !__builtin_signbit(1.0L) && __builtin_signbit(-1.0L) && !__builtin_signbit(0.0L) && __builtin_signbit(-0.0L) &&
+#if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+  !__builtin_signbit(1.0q) && __builtin_signbit(-1.0q) && !__builtin_signbit(0.0q) && __builtin_signbit(-0.0q) &&
+#endif
+  1, ""
+);
 
 //double       g19 = __builtin_powi(2.0, 4);
 //float        g20 = __builtin_powif(2.0f, 4);

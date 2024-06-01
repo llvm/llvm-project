@@ -12650,6 +12650,14 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
            Success(Val.isZero() ? 1 : 0, E);
   }
 
+  case Builtin::BI__builtin_signbit:
+  case Builtin::BI__builtin_signbitf:
+  case Builtin::BI__builtin_signbitl: {
+    APFloat Val(0.0);
+    return EvaluateFloat(E->getArg(0), Val, Info) &&
+           Success(Val.isNegative() ? 1 : 0, E);
+  }
+
   case Builtin::BI__builtin_issignaling: {
     APFloat Val(0.0);
     return EvaluateFloat(E->getArg(0), Val, Info) &&

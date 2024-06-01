@@ -430,6 +430,15 @@ static bool interp__builtin_iszero(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_signbit(InterpState &S, CodePtr OpPC,
+                                    const InterpFrame *Frame, const Function *F,
+                                    const CallExpr *Call) {
+  const Floating &Arg = S.Stk.peek<Floating>();
+
+  pushInteger(S, Arg.isNegative(), Call->getType());
+  return true;
+}
+
 /// First parameter to __builtin_isfpclass is the floating value, the
 /// second one is an integral value.
 static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
@@ -1212,6 +1221,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
   case Builtin::BI__builtin_iszero:
     if (!interp__builtin_iszero(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+  case Builtin::BI__builtin_signbit:
+  case Builtin::BI__builtin_signbitf:
+  case Builtin::BI__builtin_signbitl:
+    if (!interp__builtin_signbit(S, OpPC, Frame, F, Call))
       return false;
     break;
   case Builtin::BI__builtin_isfpclass:

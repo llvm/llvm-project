@@ -646,19 +646,21 @@ def IsFPClass : Builtin {
 def Signbit : Builtin {
   let Spellings = ["__builtin_signbit"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def SignbitF : Builtin {
   let Spellings = ["__builtin_signbitf"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
+                    Constexpr];
   let Prototype = "int(float)";
 }
 
 def SignbitL : Builtin {
   let Spellings = ["__builtin_signbitl"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
+                    Constexpr];
   let Prototype = "int(long double)";
 }
 
