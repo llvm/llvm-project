@@ -57,6 +57,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -601,7 +602,8 @@ public:
     return typeConstructionStack;
   }
 
-  bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) override final {
+  bool
+  isPresentShallowLookup(const Fortran::semantics::Symbol &sym) override final {
     return bool(shallowLookupSymbol(sym));
   }
 
@@ -3798,11 +3800,17 @@ private:
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::HostDevice);
       if (!rhs.isVariable()) {
-        auto associate = hlfir::genAssociateExpr(
-            loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
-        builder.create<cuf::DataTransferOp>(loc, associate.getBase(), lhsVal,
-                                            transferKindAttr);
-        builder.create<hlfir::EndAssociateOp>(loc, associate);
+        // Special case if the rhs is a constant.
+        if (matchPattern(rhs.getDefiningOp(), mlir::m_Constant())) {
+          builder.create<cuf::DataTransferOp>(loc, rhs, lhsVal,
+                                              transferKindAttr);
+        } else {
+          auto associate = hlfir::genAssociateExpr(
+              loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
+          builder.create<cuf::DataTransferOp>(loc, associate.getBase(), lhsVal,
+                                              transferKindAttr);
+          builder.create<hlfir::EndAssociateOp>(loc, associate);
+        }
       } else {
         builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal,
                                             transferKindAttr);

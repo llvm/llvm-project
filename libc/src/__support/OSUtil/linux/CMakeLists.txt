@@ -7,7 +7,7 @@ add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 add_object_library(
   linux_util
   SRCS
-    quick_exit.cpp
+    exit.cpp
   HDRS
     io.h
     syscall.h

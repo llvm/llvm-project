@@ -24,13 +24,17 @@ private:
   }
 
 public:
-#if defined(LIBC_TYPES_HAS_FLOAT128)
   LIBC_INLINE_VAR static constexpr bool value =
-      __is_unqualified_any_of<T, float, double, long double, float128>();
-#else
-  LIBC_INLINE_VAR static constexpr bool value =
-      __is_unqualified_any_of<T, float, double, long double>();
-#endif // LIBC_TYPES_HAS_FLOAT128
+      __is_unqualified_any_of<T, float, double, long double
+#ifdef LIBC_TYPES_HAS_FLOAT16
+                              ,
+                              float16
+#endif
+#ifdef LIBC_TYPES_HAS_FLOAT128
+                              ,
+                              float128
+#endif
+                              >();
 };
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_floating_point_v =

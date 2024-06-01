@@ -51,10 +51,7 @@ expand_template(
         "#cmakedefine01 MLIR_ENABLE_NVPTXCOMPILER": "#define MLIR_ENABLE_NVPTXCOMPILER 0",
         "#cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH": "#define MLIR_ENABLE_PDL_IN_PATTERNMATCH 1",
         "#cmakedefine01 MLIR_ENABLE_ROCM_CONVERSIONS": "#define MLIR_ENABLE_ROCM_CONVERSIONS 0",
-    } | if_cuda_available(
-        {"#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS": "#define MLIR_ENABLE_CUDA_CONVERSIONS 1"},
-        {"#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS": "#define MLIR_ENABLE_CUDA_CONVERSIONS 0"},
-    ),
+    },
     template = "include/mlir/Config/mlir-config.h.cmake",
 )
 
@@ -2682,6 +2679,7 @@ cc_library(
         "lib/Dialect/IRDL/IR/IRDL.cpp",
         "lib/Dialect/IRDL/IR/IRDLOps.cpp",
         "lib/Dialect/IRDL/IRDLLoading.cpp",
+        "lib/Dialect/IRDL/IRDLSymbols.cpp",
         "lib/Dialect/IRDL/IRDLVerifiers.cpp",
     ],
     hdrs = [
@@ -2689,6 +2687,7 @@ cc_library(
         "include/mlir/Dialect/IRDL/IR/IRDLInterfaces.h",
         "include/mlir/Dialect/IRDL/IR/IRDLTraits.h",
         "include/mlir/Dialect/IRDL/IRDLLoading.h",
+        "include/mlir/Dialect/IRDL/IRDLSymbols.h",
         "include/mlir/Dialect/IRDL/IRDLVerifiers.h",
     ],
     includes = ["include"],
@@ -4187,6 +4186,7 @@ cc_library(
         ":FuncToLLVM",
         ":FuncToSPIRV",
         ":GPUToGPURuntimeTransforms",
+        ":GPUToLLVMSPVTransforms",
         ":GPUToNVVMTransforms",
         ":GPUToROCDLTransforms",
         ":GPUToSPIRV",
@@ -5616,7 +5616,6 @@ cc_library(
         ":Transforms",
         ":VectorToLLVM",
         ":VectorToSCF",
-        ":config",
     ],
 )
 
@@ -5799,6 +5798,29 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "GPUToLLVMSPVTransforms",
+    srcs = glob([
+        "lib/Conversion/GPUToLLVMSPV/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/GPUToLLVMSPV/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":GPUDialect",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":Pass",
+        ":SPIRVDialect",
+        ":Support",
+        ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "GPUToNVVMTransforms",
     srcs = glob([
         "lib/Conversion/GPUToNVVM/*.cpp",
@@ -5898,7 +5920,6 @@ cc_library(
         ":Support",
         ":TransformUtils",
         ":VectorDialect",
-        ":VectorTransforms",
         "//llvm:Support",
     ],
 )
@@ -6036,6 +6057,7 @@ cc_library(
         ":SPIRVDialect",
         ":Support",
         ":TransformUtils",
+        ":VectorToSPIRV",
         "//llvm:Support",
     ],
 )
@@ -6282,7 +6304,6 @@ cc_library(
         ":NVVMToLLVMIRTranslation",
         ":TargetLLVM",
         ":ToLLVMIRTranslation",
-        ":config",
         "//llvm:NVPTXCodeGen",
         "//llvm:Support",
         "//llvm:config",
@@ -7597,7 +7618,6 @@ cc_library(
         "include/mlir/Transforms/LoopInvariantCodeMotionUtils.h",
         "include/mlir/Transforms/OneToNTypeConversion.h",
         "include/mlir/Transforms/RegionUtils.h",
-        "include/mlir/Transforms/TopologicalSortUtils.h",
     ],
     includes = ["include"],
     deps = [
@@ -8367,6 +8387,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":EmitCDialect",
+        ":PDLLAST",
         ":Pass",
         ":TransformUtils",
     ],
@@ -8723,6 +8744,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":DLTIDialect",
         ":IR",
         ":LLVMConversionIncGen",
@@ -8957,6 +8979,7 @@ cc_library(
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenACC/*.h"]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":IR",
         ":LLVMDialect",
         ":OpenACCDialect",
@@ -8976,6 +8999,7 @@ cc_library(
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenMP/*.h"]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":IR",
         ":LLVMDialect",
         ":OpenMPCommon",
@@ -9360,7 +9384,6 @@ cc_library(
         ":X86VectorTransforms",
         ":XeGPUDialect",
         ":XeGPUTransforms",
-        ":config",
     ],
 )
 

@@ -84,6 +84,11 @@ Objective-C
 Miscellaneous
 ^^^^^^^^^^^^^
 
+- Added a boolean option `AnalyzeAngledIncludes` to `Includes` config section,
+  which allows to enable unused includes detection for all angled ("system") headers.
+  At this moment umbrella headers are not supported, so enabling this option
+  may result in false-positives.
+
 Improvements to clang-doc
 -------------------------
 
@@ -363,6 +368,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/const-return-type>` check to eliminate false
   positives when returning types with const not at the top level.
 
+- Improved :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check to prevent false
+  positives when utilizing ``size`` or ``length`` methods that accept parameter.
+
 - Improved :doc:`readability-duplicate-include
   <clang-tidy/checks/readability/duplicate-include>` check by excluding include
   directives that form the filename using macro.
@@ -381,7 +390,9 @@ Changes in existing checks
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
   valid fix suggestions for ``static_cast`` without a preceding space and
-  fixed problem with duplicate parentheses in double implicit casts.
+  fixed problem with duplicate parentheses in double implicit casts. Corrected
+  the fix suggestions for C23 and later by using C-style casts instead of
+  ``static_cast``.
 
 - Improved :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly

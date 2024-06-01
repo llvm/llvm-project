@@ -1,4 +1,4 @@
-# Check that we don't accidentally optimize out a tail call.
+## Check that we don't accidentally optimize out a tail call.
 
 RUN: %clang %cflags %S/Inputs/sctc_bug3.s -o %t
 RUN: llvm-bolt %t -o %t.null --funcs=main --print-after-lowering \
@@ -7,9 +7,9 @@ RUN:   --sequential-disassembly 2>&1 | FileCheck %s
 CHECK: .LBB00 (1 instructions, align : 1)
 CHECK:  cmpq   %rdi, 0x0
 
-# Check that .Ltmp0 does not have a deleted predecessor.
+## Check that .Ltmp0 does not have a deleted predecessor.
 CHECK: .Ltmp0 (1 instructions, align : 1)
 CHECK:  Predecessors: .LBB00
 
-# Tail call.
+## Tail call.
 CHECK:    jmp    foo

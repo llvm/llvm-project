@@ -699,18 +699,6 @@ namespace llvm {
     // Test if in transactional execution.
     XTEST,
 
-    // ERI instructions.
-    RSQRT28,
-    RSQRT28_SAE,
-    RSQRT28S,
-    RSQRT28S_SAE,
-    RCP28,
-    RCP28_SAE,
-    RCP28S,
-    RCP28S_SAE,
-    EXP2,
-    EXP2_SAE,
-
     // Conversions between float and half-float.
     CVTPS2PH,
     CVTPS2PH_SAE,
@@ -746,6 +734,10 @@ namespace llvm {
 
     // Perform an FP80 add after changing precision control in FPCW.
     FP80_ADD,
+
+    // Conditional compare instructions
+    CCMP,
+    CTEST,
 
     /// X86 strict FP compare instructions.
     STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
@@ -1481,11 +1473,6 @@ namespace llvm {
                                  const SelectionDAG &DAG,
                                  const MachineMemOperand &MMO) const override;
 
-    /// Intel processors have a unified instruction and data cache
-    const char * getClearCacheBuiltinName() const override {
-      return nullptr; // nothing to do, move along.
-    }
-
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
 
@@ -1805,6 +1792,9 @@ namespace llvm {
 
     MachineBasicBlock *EmitSjLjDispatchBlock(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const;
+
+    MachineBasicBlock *emitPatchableEventCall(MachineInstr &MI,
+                                              MachineBasicBlock *MBB) const;
 
     /// Emit flags for the given setcc condition and operands. Also returns the
     /// corresponding X86 condition code constant in X86CC.

@@ -65,4 +65,17 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel copyin(invalid:(float)ArrayParam[2])
   while(1);
+
+  // expected-error@+2{{OpenACC 'copyin' clause is not valid on 'loop' directive}}
+  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+#pragma acc loop copyin(LocalInt)
+  for(;;);
+  // expected-error@+2{{OpenACC 'pcopyin' clause is not valid on 'loop' directive}}
+  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+#pragma acc loop pcopyin(LocalInt)
+  for(;;);
+  // expected-error@+2{{OpenACC 'present_or_copyin' clause is not valid on 'loop' directive}}
+  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+#pragma acc loop present_or_copyin(LocalInt)
+  for(;;);
 }

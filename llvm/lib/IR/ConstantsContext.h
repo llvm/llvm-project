@@ -23,6 +23,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -286,6 +287,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CompareConstantExpr, Value)
 template <class ConstantClass> struct ConstantAggrKeyType;
 struct InlineAsmKeyType;
 struct ConstantExprKeyType;
+struct ConstantPtrAuthKeyType;
 
 template <class ConstantClass> struct ConstantInfo;
 template <> struct ConstantInfo<ConstantExpr> {
@@ -307,6 +309,10 @@ template <> struct ConstantInfo<ConstantStruct> {
 template <> struct ConstantInfo<ConstantVector> {
   using ValType = ConstantAggrKeyType<ConstantVector>;
   using TypeClass = VectorType;
+};
+template <> struct ConstantInfo<ConstantPtrAuth> {
+  using ValType = ConstantPtrAuthKeyType;
+  using TypeClass = Type;
 };
 
 template <class ConstantClass> struct ConstantAggrKeyType {
@@ -533,6 +539,47 @@ public:
       return new CompareConstantExpr(Ty, Instruction::FCmp, SubclassData,
                                      Ops[0], Ops[1]);
     }
+  }
+};
+
+struct ConstantPtrAuthKeyType {
+  ArrayRef<Constant *> Operands;
+
+  ConstantPtrAuthKeyType(ArrayRef<Constant *> Operands) : Operands(Operands) {}
+
+  ConstantPtrAuthKeyType(ArrayRef<Constant *> Operands, const ConstantPtrAuth *)
+      : Operands(Operands) {}
+
+  ConstantPtrAuthKeyType(const ConstantPtrAuth *C,
+                         SmallVectorImpl<Constant *> &Storage) {
+    assert(Storage.empty() && "Expected empty storage");
+    for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I)
+      Storage.push_back(cast<Constant>(C->getOperand(I)));
+    Operands = Storage;
+  }
+
+  bool operator==(const ConstantPtrAuthKeyType &X) const {
+    return Operands == X.Operands;
+  }
+
+  bool operator==(const ConstantPtrAuth *C) const {
+    if (Operands.size() != C->getNumOperands())
+      return false;
+    for (unsigned I = 0, E = Operands.size(); I != E; ++I)
+      if (Operands[I] != C->getOperand(I))
+        return false;
+    return true;
+  }
+
+  unsigned getHash() const {
+    return hash_combine_range(Operands.begin(), Operands.end());
+  }
+
+  using TypeClass = typename ConstantInfo<ConstantPtrAuth>::TypeClass;
+
+  ConstantPtrAuth *create(TypeClass *Ty) const {
+    return new ConstantPtrAuth(Operands[0], cast<ConstantInt>(Operands[1]),
+                               cast<ConstantInt>(Operands[2]), Operands[3]);
   }
 };
 

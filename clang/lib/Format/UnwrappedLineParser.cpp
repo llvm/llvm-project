@@ -1689,9 +1689,15 @@ void UnwrappedLineParser::parseStructuralElement(
     break;
   }
 
-  const bool InRequiresExpression =
-      OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
-  do {
+  for (const bool InRequiresExpression =
+           OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
+       !eof();) {
+    if (IsCpp && FormatTok->isCppAlternativeOperatorKeyword()) {
+      if (auto *Next = Tokens->peekNextToken(/*SkipComment=*/true);
+          Next && Next->isBinaryOperator()) {
+        FormatTok->Tok.setKind(tok::identifier);
+      }
+    }
     const FormatToken *Previous = FormatTok->Previous;
     switch (FormatTok->Tok.getKind()) {
     case tok::at:
@@ -2122,7 +2128,7 @@ void UnwrappedLineParser::parseStructuralElement(
       nextToken();
       break;
     }
-  } while (!eof());
+  }
 }
 
 bool UnwrappedLineParser::tryToParsePropertyAccessor() {
@@ -4013,6 +4019,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       if (AngleNestingLevel == 0) {
         if (FormatTok->is(tok::colon)) {
           IsDerived = true;
+        } else if (FormatTok->is(tok::identifier) &&
+                   FormatTok->Previous->is(tok::coloncolon)) {
+          ClassName = FormatTok;
         } else if (FormatTok->is(tok::l_paren) &&
                    IsNonMacroIdentifier(FormatTok->Previous)) {
           break;
