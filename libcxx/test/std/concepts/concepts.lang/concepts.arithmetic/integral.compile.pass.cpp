@@ -41,7 +41,7 @@ constexpr bool CheckIntegralQualifiers() {
 
   static_assert(!std::integral<T (*)()>);
   static_assert(!std::integral<T (&)()>);
-  static_assert(!std::integral<T(&&)()>);
+  static_assert(!std::integral<T (&&)()>);
 
   return result;
 }

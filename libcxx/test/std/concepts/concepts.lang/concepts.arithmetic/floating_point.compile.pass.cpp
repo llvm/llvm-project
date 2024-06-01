@@ -40,7 +40,7 @@ constexpr bool CheckFloatingPointQualifiers() {
 
   static_assert(!std::floating_point<T (*)()>);
   static_assert(!std::floating_point<T (&)()>);
-  static_assert(!std::floating_point<T(&&)()>);
+  static_assert(!std::floating_point<T (&&)()>);
 
   return result;
 }
