@@ -35,6 +35,9 @@ jobs:
             const failure_regex = /Process completed with exit code 1./
             const preemption_regex = /The runner has received a shutdown signal/
             
+            const wf_run = context.payload.workflow_run
+            core.notice(`Running on "${wf_run.display_title}" by @${wf_run.actor.login} (event: ${wf_run.event})\nWorkflow run URL: ${wf_run.html_url}`)
+
             console.log('Listing check runs for suite')
             const check_suites = await github.rest.checks.listForSuite({
               owner: context.repo.owner,
@@ -83,19 +86,19 @@ jobs:
                 if (failure_match != null) {
                   // We only want to restart the workflow if all of the failures were due to preemption.
                   // We don't want to restart the workflow if there were other failures.
-                  console.log('Choosing not to rerun workflow because we found a non-preemption failure');
-                  console.log('Failure message: ' + annotation.message);
+                  core.notice('Choosing not to rerun workflow because we found a non-preemption failure' +
+                    'Failure message: "' + annotation.message + '"');
                   return;
                 }
               }
             } 
              
             if (!has_preempted_job) {
-              console.log('No preempted jobs found. Not restarting workflow.');
+              core.notice('No preempted jobs found. Not restarting workflow.');
               return;
             }
             
-            console.log("Restarted workflow: " + context.payload.workflow_run.id);
+            core.notice("Restarted workflow: " + context.payload.workflow_run.id);
             await github.rest.actions.reRunWorkflowFailedJobs({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
