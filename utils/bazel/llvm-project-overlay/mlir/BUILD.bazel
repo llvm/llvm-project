@@ -2679,6 +2679,7 @@ cc_library(
         "lib/Dialect/IRDL/IR/IRDL.cpp",
         "lib/Dialect/IRDL/IR/IRDLOps.cpp",
         "lib/Dialect/IRDL/IRDLLoading.cpp",
+        "lib/Dialect/IRDL/IRDLSymbols.cpp",
         "lib/Dialect/IRDL/IRDLVerifiers.cpp",
     ],
     hdrs = [
@@ -2686,6 +2687,7 @@ cc_library(
         "include/mlir/Dialect/IRDL/IR/IRDLInterfaces.h",
         "include/mlir/Dialect/IRDL/IR/IRDLTraits.h",
         "include/mlir/Dialect/IRDL/IRDLLoading.h",
+        "include/mlir/Dialect/IRDL/IRDLSymbols.h",
         "include/mlir/Dialect/IRDL/IRDLVerifiers.h",
     ],
     includes = ["include"],
@@ -4184,6 +4186,7 @@ cc_library(
         ":FuncToLLVM",
         ":FuncToSPIRV",
         ":GPUToGPURuntimeTransforms",
+        ":GPUToLLVMSPVTransforms",
         ":GPUToNVVMTransforms",
         ":GPUToROCDLTransforms",
         ":GPUToSPIRV",
@@ -5791,6 +5794,29 @@ gentbl_cc_library(
     deps = [
         ":GPUOpsTdFiles",
         ":NVVMOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "GPUToLLVMSPVTransforms",
+    srcs = glob([
+        "lib/Conversion/GPUToLLVMSPV/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/GPUToLLVMSPV/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":GPUDialect",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":Pass",
+        ":SPIRVDialect",
+        ":Support",
+        ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 

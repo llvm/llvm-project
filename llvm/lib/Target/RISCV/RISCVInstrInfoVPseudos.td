@@ -4237,16 +4237,16 @@ class VPatBinaryMask<string intrinsic_name,
                    (op2_type op2_kind:$rs2),
                    (mask_type V0), GPR:$vl, sew)>;
 
-class VPatBinaryMaskTA<string intrinsic_name,
-                       string inst,
-                       ValueType result_type,
-                       ValueType op1_type,
-                       ValueType op2_type,
-                       ValueType mask_type,
-                       int sew,
-                       VReg result_reg_class,
-                       VReg op1_reg_class,
-                       DAGOperand op2_kind> :
+class VPatBinaryMaskPolicy<string intrinsic_name,
+                           string inst,
+                           ValueType result_type,
+                           ValueType op1_type,
+                           ValueType op2_type,
+                           ValueType mask_type,
+                           int sew,
+                           VReg result_reg_class,
+                           VReg op1_reg_class,
+                           DAGOperand op2_kind> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name#"_mask")
                    (result_type result_reg_class:$merge),
                    (op1_type op1_reg_class:$rs1),
@@ -4442,7 +4442,7 @@ class VPatTernaryNoMask<string intrinsic,
                     op2_kind:$rs2,
                     GPR:$vl, sew)>;
 
-class VPatTernaryNoMaskTA<string intrinsic,
+class VPatTernaryNoMaskTU<string intrinsic,
                           string inst,
                           string kind,
                           ValueType result_type,
@@ -4462,19 +4462,19 @@ class VPatTernaryNoMaskTA<string intrinsic,
                     result_reg_class:$rs3,
                     (op1_type op1_reg_class:$rs1),
                     op2_kind:$rs2,
-                    GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
+                    GPR:$vl, log2sew, TU_MU)>;
 
-class VPatTernaryNoMaskTARoundingMode<string intrinsic,
-                          string inst,
-                          string kind,
-                          ValueType result_type,
-                          ValueType op1_type,
-                          ValueType op2_type,
-                          int log2sew,
-                          LMULInfo vlmul,
-                          VReg result_reg_class,
-                          RegisterClass op1_reg_class,
-                          DAGOperand op2_kind> :
+class VPatTernaryNoMaskTURoundingMode<string intrinsic,
+                                      string inst,
+                                      string kind,
+                                      ValueType result_type,
+                                      ValueType op1_type,
+                                      ValueType op2_type,
+                                      int log2sew,
+                                      LMULInfo vlmul,
+                                      VReg result_reg_class,
+                                      RegisterClass op1_reg_class,
+                                      DAGOperand op2_kind> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic)
                     (result_type result_reg_class:$rs3),
                     (op1_type op1_reg_class:$rs1),
@@ -4486,7 +4486,7 @@ class VPatTernaryNoMaskTARoundingMode<string intrinsic,
                     (op1_type op1_reg_class:$rs1),
                     op2_kind:$rs2,
                     (XLenVT timm:$round),
-                    GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
+                    GPR:$vl, log2sew, TU_MU)>;
 
 class VPatTernaryNoMaskWithPolicy<string intrinsic,
                                   string inst,
@@ -4617,7 +4617,7 @@ class VPatTernaryMaskPolicyRoundingMode<string intrinsic,
                     (XLenVT timm:$round),
                     GPR:$vl, log2sew, (XLenVT timm:$policy))>;
 
-class VPatTernaryMaskTA<string intrinsic,
+class VPatTernaryMaskTU<string intrinsic,
                         string inst,
                         string kind,
                         ValueType result_type,
@@ -4640,9 +4640,9 @@ class VPatTernaryMaskTA<string intrinsic,
                     (op1_type op1_reg_class:$rs1),
                     op2_kind:$rs2,
                     (mask_type V0),
-                    GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
+                    GPR:$vl, log2sew, TU_MU)>;
 
-class VPatTernaryMaskTARoundingMode<string intrinsic,
+class VPatTernaryMaskTURoundingMode<string intrinsic,
                                     string inst,
                                     string kind,
                                     ValueType result_type,
@@ -4667,7 +4667,7 @@ class VPatTernaryMaskTARoundingMode<string intrinsic,
                     op2_kind:$rs2,
                     (mask_type V0),
                     (XLenVT timm:$round),
-                    GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
+                    GPR:$vl, log2sew, TU_MU)>;
 
 multiclass VPatUnaryS_M<string intrinsic_name,
                              string inst> {
@@ -4812,9 +4812,9 @@ multiclass VPatBinary<string intrinsic,
                       DAGOperand op2_kind> {
   def : VPatBinaryNoMaskTU<intrinsic, inst, result_type, op1_type, op2_type,
                            sew, result_reg_class, op1_reg_class, op2_kind>;
-  def : VPatBinaryMaskTA<intrinsic, inst, result_type, op1_type, op2_type,
-                         mask_type, sew, result_reg_class, op1_reg_class,
-                         op2_kind>;
+  def : VPatBinaryMaskPolicy<intrinsic, inst, result_type, op1_type, op2_type,
+                             mask_type, sew, result_reg_class, op1_reg_class,
+                             op2_kind>;
 }
 
 multiclass VPatBinaryRoundingMode<string intrinsic,
@@ -4920,17 +4920,17 @@ multiclass VPatBinaryMaskOut<string intrinsic,
                          GPR:$vl, sew)>;
 }
 
-multiclass VPatConversionTA<string intrinsic,
-                            string inst,
-                            string kind,
-                            ValueType result_type,
-                            ValueType op1_type,
-                            ValueType mask_type,
-                            int log2sew,
-                            LMULInfo vlmul,
-                            VReg result_reg_class,
-                            VReg op1_reg_class,
-                            bit isSEWAware = 0> {
+multiclass VPatConversion<string intrinsic,
+                          string inst,
+                          string kind,
+                          ValueType result_type,
+                          ValueType op1_type,
+                          ValueType mask_type,
+                          int log2sew,
+                          LMULInfo vlmul,
+                          VReg result_reg_class,
+                          VReg op1_reg_class,
+                          bit isSEWAware = 0> {
   def : VPatUnaryNoMask<intrinsic, inst, kind, result_type, op1_type,
                         log2sew, vlmul, result_reg_class, op1_reg_class,
                         isSEWAware>;
@@ -4939,17 +4939,17 @@ multiclass VPatConversionTA<string intrinsic,
                       isSEWAware>;
 }
 
-multiclass VPatConversionTARoundingMode<string intrinsic,
-                                        string inst,
-                                        string kind,
-                                        ValueType result_type,
-                                        ValueType op1_type,
-                                        ValueType mask_type,
-                                        int log2sew,
-                                        LMULInfo vlmul,
-                                        VReg result_reg_class,
-                                        VReg op1_reg_class,
-                                        bit isSEWAware = 0> {
+multiclass VPatConversionRoundingMode<string intrinsic,
+                                      string inst,
+                                      string kind,
+                                      ValueType result_type,
+                                      ValueType op1_type,
+                                      ValueType mask_type,
+                                      int log2sew,
+                                      LMULInfo vlmul,
+                                      VReg result_reg_class,
+                                      VReg op1_reg_class,
+                                      bit isSEWAware = 0> {
   def : VPatUnaryNoMaskRoundingMode<intrinsic, inst, kind, result_type, op1_type,
                                     log2sew, vlmul, result_reg_class,
                                     op1_reg_class, isSEWAware>;
@@ -5173,10 +5173,10 @@ multiclass VPatBinaryW_WV<string intrinsic, string instruction,
                                Wti.Vector, Vti.Vector, Vti.Mask,
                                Vti.Log2SEW, Wti.RegClass, Vti.RegClass>;
       }
-      def : VPatBinaryMaskTA<intrinsic, instruction # "_WV_" # Vti.LMul.MX,
-                             Wti.Vector, Wti.Vector, Vti.Vector, Vti.Mask,
-                             Vti.Log2SEW, Wti.RegClass,
-                             Wti.RegClass, Vti.RegClass>;
+      def : VPatBinaryMaskPolicy<intrinsic, instruction # "_WV_" # Vti.LMul.MX,
+                                 Wti.Vector, Wti.Vector, Vti.Vector, Vti.Mask,
+                                 Vti.Log2SEW, Wti.RegClass,
+                                 Wti.RegClass, Vti.RegClass>;
     }
   }
 }
@@ -5643,7 +5643,7 @@ multiclass VPatTernaryWithPolicyRoundingMode<string intrinsic,
                                                 op2_kind, isSEWAware>;
 }
 
-multiclass VPatTernaryTA<string intrinsic,
+multiclass VPatTernaryTU<string intrinsic,
                          string inst,
                          string kind,
                          ValueType result_type,
@@ -5655,15 +5655,15 @@ multiclass VPatTernaryTA<string intrinsic,
                          VReg result_reg_class,
                          RegisterClass op1_reg_class,
                          DAGOperand op2_kind> {
-  def : VPatTernaryNoMaskTA<intrinsic, inst, kind, result_type, op1_type,
+  def : VPatTernaryNoMaskTU<intrinsic, inst, kind, result_type, op1_type,
                             op2_type, log2sew, vlmul, result_reg_class,
                             op1_reg_class, op2_kind>;
-  def : VPatTernaryMaskTA<intrinsic, inst, kind, result_type, op1_type,
+  def : VPatTernaryMaskTU<intrinsic, inst, kind, result_type, op1_type,
                           op2_type, mask_type, log2sew, vlmul,
                           result_reg_class, op1_reg_class, op2_kind>;
 }
 
-multiclass VPatTernaryTARoundingMode<string intrinsic,
+multiclass VPatTernaryTURoundingMode<string intrinsic,
                                      string inst,
                                      string kind,
                                      ValueType result_type,
@@ -5675,10 +5675,10 @@ multiclass VPatTernaryTARoundingMode<string intrinsic,
                                      VReg result_reg_class,
                                      RegisterClass op1_reg_class,
                                      DAGOperand op2_kind> {
-  def : VPatTernaryNoMaskTARoundingMode<intrinsic, inst, kind, result_type, op1_type,
+  def : VPatTernaryNoMaskTURoundingMode<intrinsic, inst, kind, result_type, op1_type,
                             op2_type, log2sew, vlmul, result_reg_class,
                             op1_reg_class, op2_kind>;
-  def : VPatTernaryMaskTARoundingMode<intrinsic, inst, kind, result_type, op1_type,
+  def : VPatTernaryMaskTURoundingMode<intrinsic, inst, kind, result_type, op1_type,
                           op2_type, mask_type, log2sew, vlmul,
                           result_reg_class, op1_reg_class, op2_kind>;
 }
@@ -5856,7 +5856,7 @@ multiclass VPatReductionV_VS<string intrinsic, string instruction, bit IsFloat =
   foreach vti = !if(IsFloat, NoGroupFloatVectors, NoGroupIntegerVectors) in {
     defvar vectorM1 = !cast<VTypeInfo>(!if(IsFloat, "VF", "VI") # vti.SEW # "M1");
     let Predicates = GetVTypePredicates<vti>.Predicates in
-    defm : VPatTernaryTA<intrinsic, instruction, "VS",
+    defm : VPatTernaryTU<intrinsic, instruction, "VS",
                          vectorM1.Vector, vti.Vector,
                          vectorM1.Vector, vti.Mask,
                          vti.Log2SEW, vti.LMul,
@@ -5864,7 +5864,7 @@ multiclass VPatReductionV_VS<string intrinsic, string instruction, bit IsFloat =
   }
   foreach gvti = !if(IsFloat, GroupFloatVectors, GroupIntegerVectors) in {
     let Predicates = GetVTypePredicates<gvti>.Predicates in
-    defm : VPatTernaryTA<intrinsic, instruction, "VS",
+    defm : VPatTernaryTU<intrinsic, instruction, "VS",
                          gvti.VectorM1, gvti.Vector,
                          gvti.VectorM1, gvti.Mask,
                          gvti.Log2SEW, gvti.LMul,
@@ -5876,7 +5876,7 @@ multiclass VPatReductionV_VS_RM<string intrinsic, string instruction, bit IsFloa
   foreach vti = !if(IsFloat, NoGroupFloatVectors, NoGroupIntegerVectors) in {
     defvar vectorM1 = !cast<VTypeInfo>(!if(IsFloat, "VF", "VI") # vti.SEW # "M1");
     let Predicates = GetVTypePredicates<vti>.Predicates in
-    defm : VPatTernaryTARoundingMode<intrinsic, instruction, "VS",
+    defm : VPatTernaryTURoundingMode<intrinsic, instruction, "VS",
                                      vectorM1.Vector, vti.Vector,
                                      vectorM1.Vector, vti.Mask,
                                      vti.Log2SEW, vti.LMul,
@@ -5884,7 +5884,7 @@ multiclass VPatReductionV_VS_RM<string intrinsic, string instruction, bit IsFloa
   }
   foreach gvti = !if(IsFloat, GroupFloatVectors, GroupIntegerVectors) in {
     let Predicates = GetVTypePredicates<gvti>.Predicates in
-    defm : VPatTernaryTARoundingMode<intrinsic, instruction, "VS",
+    defm : VPatTernaryTURoundingMode<intrinsic, instruction, "VS",
                                      gvti.VectorM1, gvti.Vector,
                                      gvti.VectorM1, gvti.Mask,
                                      gvti.Log2SEW, gvti.LMul,
@@ -5898,7 +5898,7 @@ multiclass VPatReductionW_VS<string intrinsic, string instruction, bit IsFloat =
     if !le(wtiSEW, 64) then {
       defvar wtiM1 = !cast<VTypeInfo>(!if(IsFloat, "VF", "VI") # wtiSEW # "M1");
       let Predicates = GetVTypePredicates<vti>.Predicates in
-      defm : VPatTernaryTA<intrinsic, instruction, "VS",
+      defm : VPatTernaryTU<intrinsic, instruction, "VS",
                            wtiM1.Vector, vti.Vector,
                            wtiM1.Vector, vti.Mask,
                            vti.Log2SEW, vti.LMul,
@@ -5914,7 +5914,7 @@ multiclass VPatReductionW_VS_RM<string intrinsic, string instruction, bit IsFloa
     if !le(wtiSEW, 64) then {
       defvar wtiM1 = !cast<VTypeInfo>(!if(IsFloat, "VF", "VI") # wtiSEW # "M1");
       let Predicates = GetVTypePredicates<vti>.Predicates in
-      defm : VPatTernaryTARoundingMode<intrinsic, instruction, "VS",
+      defm : VPatTernaryTURoundingMode<intrinsic, instruction, "VS",
                                        wtiM1.Vector, vti.Vector,
                                        wtiM1.Vector, vti.Mask,
                                        vti.Log2SEW, vti.LMul,
@@ -5930,9 +5930,9 @@ multiclass VPatConversionVI_VF<string intrinsic,
     defvar ivti = GetIntVTypeInfo<fvti>.Vti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<ivti>.Predicates) in
-    defm : VPatConversionTA<intrinsic, instruction, "V",
-                            ivti.Vector, fvti.Vector, ivti.Mask, fvti.Log2SEW,
-                            fvti.LMul, ivti.RegClass, fvti.RegClass>;
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          ivti.Vector, fvti.Vector, ivti.Mask, fvti.Log2SEW,
+                          fvti.LMul, ivti.RegClass, fvti.RegClass>;
   }
 }
 
@@ -5942,9 +5942,9 @@ multiclass VPatConversionVI_VF_RM<string intrinsic,
     defvar ivti = GetIntVTypeInfo<fvti>.Vti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<ivti>.Predicates) in
-    defm : VPatConversionTARoundingMode<intrinsic, instruction, "V",
-                                        ivti.Vector, fvti.Vector, ivti.Mask, fvti.Log2SEW,
-                                        fvti.LMul, ivti.RegClass, fvti.RegClass>;
+    defm : VPatConversionRoundingMode<intrinsic, instruction, "V",
+                                      ivti.Vector, fvti.Vector, ivti.Mask, fvti.Log2SEW,
+                                      fvti.LMul, ivti.RegClass, fvti.RegClass>;
   }
 }
 
@@ -5954,10 +5954,10 @@ multiclass VPatConversionVF_VI_RM<string intrinsic, string instruction,
     defvar ivti = GetIntVTypeInfo<fvti>.Vti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<ivti>.Predicates) in
-    defm : VPatConversionTARoundingMode<intrinsic, instruction, "V",
-                                        fvti.Vector, ivti.Vector, fvti.Mask, ivti.Log2SEW,
-                                        ivti.LMul, fvti.RegClass, ivti.RegClass,
-                                        isSEWAware>;
+    defm : VPatConversionRoundingMode<intrinsic, instruction, "V",
+                                      fvti.Vector, ivti.Vector, fvti.Mask, ivti.Log2SEW,
+                                      ivti.LMul, fvti.RegClass, ivti.RegClass,
+                                      isSEWAware>;
   }
 }
 
@@ -5967,9 +5967,9 @@ multiclass VPatConversionWI_VF<string intrinsic, string instruction> {
     defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<iwti>.Predicates) in
-    defm : VPatConversionTA<intrinsic, instruction, "V",
-                            iwti.Vector, fvti.Vector, iwti.Mask, fvti.Log2SEW,
-                            fvti.LMul, iwti.RegClass, fvti.RegClass>;
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          iwti.Vector, fvti.Vector, iwti.Mask, fvti.Log2SEW,
+                          fvti.LMul, iwti.RegClass, fvti.RegClass>;
   }
 }
 
@@ -5979,9 +5979,9 @@ multiclass VPatConversionWI_VF_RM<string intrinsic, string instruction> {
     defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<iwti>.Predicates) in
-    defm : VPatConversionTARoundingMode<intrinsic, instruction, "V",
-                                        iwti.Vector, fvti.Vector, iwti.Mask, fvti.Log2SEW,
-                                        fvti.LMul, iwti.RegClass, fvti.RegClass>;
+    defm : VPatConversionRoundingMode<intrinsic, instruction, "V",
+                                      iwti.Vector, fvti.Vector, iwti.Mask, fvti.Log2SEW,
+                                      fvti.LMul, iwti.RegClass, fvti.RegClass>;
   }
 }
 
@@ -5992,9 +5992,9 @@ multiclass VPatConversionWF_VI<string intrinsic, string instruction,
     defvar fwti = vtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                  GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversionTA<intrinsic, instruction, "V",
-                            fwti.Vector, vti.Vector, fwti.Mask, vti.Log2SEW,
-                            vti.LMul, fwti.RegClass, vti.RegClass, isSEWAware>;
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          fwti.Vector, vti.Vector, fwti.Mask, vti.Log2SEW,
+                          vti.LMul, fwti.RegClass, vti.RegClass, isSEWAware>;
   }
 }
 
@@ -6007,35 +6007,35 @@ multiclass VPatConversionWF_VF<string intrinsic, string instruction,
     let Predicates = !if(!eq(fvti.Scalar, f16), [HasVInstructionsF16Minimal],
                          !listconcat(GetVTypePredicates<fvti>.Predicates,
                                      GetVTypePredicates<fwti>.Predicates)) in
-      defm : VPatConversionTA<intrinsic, instruction, "V",
-                              fwti.Vector, fvti.Vector, fwti.Mask, fvti.Log2SEW,
-                              fvti.LMul, fwti.RegClass, fvti.RegClass, isSEWAware>;
+      defm : VPatConversion<intrinsic, instruction, "V",
+                            fwti.Vector, fvti.Vector, fwti.Mask, fvti.Log2SEW,
+                            fvti.LMul, fwti.RegClass, fvti.RegClass, isSEWAware>;
   }
 }
 
-multiclass VPatConversionWF_VF_BF <string intrinsic, string instruction,
-                                   bit isSEWAware = 0> {
+multiclass VPatConversionWF_VF_BF<string intrinsic, string instruction,
+                                  bit isSEWAware = 0> {
   foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in
   {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversionTA<intrinsic, instruction, "V",
-                            fwti.Vector, fvti.Vector, fwti.Mask, fvti.Log2SEW,
-                            fvti.LMul, fwti.RegClass, fvti.RegClass, isSEWAware>;
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          fwti.Vector, fvti.Vector, fwti.Mask, fvti.Log2SEW,
+                          fvti.LMul, fwti.RegClass, fvti.RegClass, isSEWAware>;
   }
 }
 
-multiclass VPatConversionVI_WF <string intrinsic, string instruction> {
+multiclass VPatConversionVI_WF<string intrinsic, string instruction> {
   foreach vtiToWti = AllWidenableIntToFloatVectors in {
     defvar vti = vtiToWti.Vti;
     defvar fwti = vtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                  GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversionTA<intrinsic, instruction, "W",
-                            vti.Vector, fwti.Vector, vti.Mask, vti.Log2SEW,
-                            vti.LMul, vti.RegClass, fwti.RegClass>;
+    defm : VPatConversion<intrinsic, instruction, "W",
+                          vti.Vector, fwti.Vector, vti.Mask, vti.Log2SEW,
+                          vti.LMul, vti.RegClass, fwti.RegClass>;
   }
 }
 
@@ -6045,9 +6045,9 @@ multiclass VPatConversionVI_WF_RM <string intrinsic, string instruction> {
     defvar fwti = vtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                  GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversionTARoundingMode<intrinsic, instruction, "W",
-                                        vti.Vector, fwti.Vector, vti.Mask, vti.Log2SEW,
-                                        vti.LMul, vti.RegClass, fwti.RegClass>;
+    defm : VPatConversionRoundingMode<intrinsic, instruction, "W",
+                                      vti.Vector, fwti.Vector, vti.Mask, vti.Log2SEW,
+                                      vti.LMul, vti.RegClass, fwti.RegClass>;
   }
 }
 
@@ -6058,10 +6058,10 @@ multiclass VPatConversionVF_WI_RM <string intrinsic, string instruction,
     defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<iwti>.Predicates) in
-    defm : VPatConversionTARoundingMode<intrinsic, instruction, "W",
-                                        fvti.Vector, iwti.Vector, fvti.Mask, fvti.Log2SEW,
-                                        fvti.LMul, fvti.RegClass, iwti.RegClass,
-                                        isSEWAware>;
+    defm : VPatConversionRoundingMode<intrinsic, instruction, "W",
+                                      fvti.Vector, iwti.Vector, fvti.Mask, fvti.Log2SEW,
+                                      fvti.LMul, fvti.RegClass, iwti.RegClass,
+                                      isSEWAware>;
   }
 }
 
@@ -6072,9 +6072,9 @@ multiclass VPatConversionVF_WF<string intrinsic, string instruction,
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversionTA<intrinsic, instruction, "W",
-                            fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
-                            fvti.LMul, fvti.RegClass, fwti.RegClass, isSEWAware>;
+    defm : VPatConversion<intrinsic, instruction, "W",
+                          fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
+                          fvti.LMul, fvti.RegClass, fwti.RegClass, isSEWAware>;
   }
 }
 
@@ -6086,24 +6086,24 @@ multiclass VPatConversionVF_WF_RM<string intrinsic, string instruction,
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversionTARoundingMode<intrinsic, instruction, "W",
-                                        fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
-                                        fvti.LMul, fvti.RegClass, fwti.RegClass,
-                                        isSEWAware>;
+    defm : VPatConversionRoundingMode<intrinsic, instruction, "W",
+                                      fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
+                                      fvti.LMul, fvti.RegClass, fwti.RegClass,
+                                      isSEWAware>;
   }
 }
 
-multiclass VPatConversionVF_WF_BF_RM <string intrinsic, string instruction,
-                                      bit isSEWAware = 0> {
+multiclass VPatConversionVF_WF_BF_RM<string intrinsic, string instruction,
+                                     bit isSEWAware = 0> {
   foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversionTARoundingMode<intrinsic, instruction, "W",
-                                        fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
-                                        fvti.LMul, fvti.RegClass, fwti.RegClass,
-                                        isSEWAware>;
+    defm : VPatConversionRoundingMode<intrinsic, instruction, "W",
+                                      fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
+                                      fvti.LMul, fvti.RegClass, fwti.RegClass,
+                                      isSEWAware>;
   }
 }
 
@@ -6297,15 +6297,16 @@ foreach vti = AllIntegerVectors in {
                                                         (XLenVT timm:$policy))>;
 
     // Match VSUB with a small immediate to vadd.vi by negating the immediate.
-    def : Pat<(vti.Vector (int_riscv_vsub (vti.Vector (undef)),
+    def : Pat<(vti.Vector (int_riscv_vsub (vti.Vector vti.RegClass:$merge),
                                           (vti.Vector vti.RegClass:$rs1),
                                           (vti.Scalar simm5_plus1:$rs2),
                                           VLOpFrag)),
-              (!cast<Instruction>("PseudoVADD_VI_"#vti.LMul.MX) (vti.Vector (IMPLICIT_DEF)),
-                                                                vti.RegClass:$rs1,
-                                                                (NegImm simm5_plus1:$rs2),
-                                                                GPR:$vl,
-                                                                vti.Log2SEW, TA_MA)>;
+              (!cast<Instruction>("PseudoVADD_VI_"#vti.LMul.MX)
+                                                      vti.RegClass:$merge,
+                                                      vti.RegClass:$rs1,
+                                                      (NegImm simm5_plus1:$rs2),
+                                                      GPR:$vl,
+                                                      vti.Log2SEW, TA_MA)>;
     def : Pat<(vti.Vector (int_riscv_vsub_mask (vti.Vector vti.RegClass:$merge),
                                                (vti.Vector vti.RegClass:$rs1),
                                                (vti.Scalar simm5_plus1:$rs2),

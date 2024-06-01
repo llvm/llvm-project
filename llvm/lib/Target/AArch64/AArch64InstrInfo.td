@@ -660,6 +660,30 @@ def AArch64call_arm64ec_to_x64 : SDNode<"AArch64ISD::CALL_ARM64EC_TO_X64",
                                       [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                        SDNPVariadic]>;
 
+def AArch64authcall : SDNode<"AArch64ISD::AUTH_CALL",
+                             SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
+                                                   SDTCisVT<1, i32>,
+                                                   SDTCisVT<2, i64>,
+                                                   SDTCisVT<3, i64>]>,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                              SDNPVariadic]>;
+
+def AArch64authtcret: SDNode<"AArch64ISD::AUTH_TC_RETURN",
+                             SDTypeProfile<0, 5, [SDTCisPtrTy<0>,
+                                                  SDTCisVT<2, i32>,
+                                                  SDTCisVT<3, i64>,
+                                                  SDTCisVT<4, i64>]>,
+                             [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
+
+def AArch64authcall_rvmarker : SDNode<"AArch64ISD::AUTH_CALL_RVMARKER",
+                                 SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
+                                                       SDTCisPtrTy<1>,
+                                                       SDTCisVT<2, i32>,
+                                                       SDTCisVT<3, i64>,
+                                                       SDTCisVT<4, i64>]>,
+                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                  SDNPVariadic]>;
+
 def AArch64brcond        : SDNode<"AArch64ISD::BRCOND", SDT_AArch64Brcond,
                                 [SDNPHasChain]>;
 def AArch64cbz           : SDNode<"AArch64ISD::CBZ", SDT_AArch64cbz,
@@ -1696,6 +1720,38 @@ let Predicates = [HasPAuth] in {
     def BLRABZ  : AuthOneOperand<0b001, 1, "blrabz">;
   }
 
+  // BLRA pseudo, a generalized version of BLRAA/BLRAB/Z.
+  // This directly manipulates x16/x17 to materialize the discriminator.
+  // x16/x17 are generally used as the safe registers for sensitive ptrauth
+  // operations (such as raw address manipulation or discriminator
+  // materialization here), in part because they're handled in a safer way by
+  // the kernel, notably on Darwin.
+  def BLRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
+                                 GPR64noip:$AddrDisc),
+                    [(AArch64authcall GPR64noip:$Rn, timm:$Key, timm:$Disc,
+                                      GPR64noip:$AddrDisc)]>, Sched<[]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let isCall = 1;
+    let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
+    let Defs = [X17,LR];
+    let Uses = [SP];
+  }
+
+  def BLRA_RVMARKER : Pseudo<
+        (outs), (ins i64imm:$rvfunc, GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
+                     GPR64noip:$AddrDisc),
+        [(AArch64authcall_rvmarker tglobaladdr:$rvfunc,
+                                   GPR64noip:$Rn, timm:$Key, timm:$Disc,
+                                   GPR64noip:$AddrDisc)]>, Sched<[]> {
+    let isCodeGenOnly = 1;
+    let isCall = 1;
+    let Defs = [X17,LR];
+    let Uses = [SP];
+  }
+
   let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
     def RETAA   : AuthReturn<0b010, 0, "retaa">;
     def RETAB   : AuthReturn<0b010, 1, "retab">;
@@ -1705,6 +1761,32 @@ let Predicates = [HasPAuth] in {
 
   defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
+
+  // Size 16: 4 fixed + 8 variable, to compute discriminator.
+  let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Size = 16,
+      Uses = [SP] in {
+    def AUTH_TCRETURN
+      : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff, i32imm:$Key,
+                            i64imm:$Disc, tcGPR64:$AddrDisc),
+               []>, Sched<[WriteBrReg]>;
+    def AUTH_TCRETURN_BTI
+      : Pseudo<(outs), (ins tcGPRx16x17:$dst, i32imm:$FPDiff, i32imm:$Key,
+                            i64imm:$Disc, tcGPR64:$AddrDisc),
+               []>, Sched<[WriteBrReg]>;
+  }
+
+  let Predicates = [TailCallAny] in
+    def : Pat<(AArch64authtcret tcGPR64:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
+                                (i64 timm:$Disc), tcGPR64:$AddrDisc),
+              (AUTH_TCRETURN tcGPR64:$dst, imm:$FPDiff, imm:$Key, imm:$Disc,
+                             tcGPR64:$AddrDisc)>;
+
+  let Predicates = [TailCallX16X17] in
+    def : Pat<(AArch64authtcret tcGPRx16x17:$dst, (i32 timm:$FPDiff),
+                                (i32 timm:$Key), (i64 timm:$Disc),
+                                tcGPR64:$AddrDisc),
+              (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
+                                 imm:$Disc, tcGPR64:$AddrDisc)>;
 
 }
 
