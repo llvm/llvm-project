@@ -933,12 +933,14 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
         ReciprocalDivisor->setFastMathFlags(I.getFastMathFlags());
         SafetyInfo->insertInstructionTo(ReciprocalDivisor, I.getParent());
         ReciprocalDivisor->insertBefore(&I);
+        ReciprocalDivisor->setDebugLoc(I.getDebugLoc());
 
         auto Product =
             BinaryOperator::CreateFMul(I.getOperand(0), ReciprocalDivisor);
         Product->setFastMathFlags(I.getFastMathFlags());
         SafetyInfo->insertInstructionTo(Product, I.getParent());
         Product->insertAfter(&I);
+        Product->setDebugLoc(I.getDebugLoc());
         I.replaceAllUsesWith(Product);
         eraseInstruction(I, *SafetyInfo, MSSAU);
 
@@ -2749,7 +2751,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
   IRBuilder<> Builder(Preheader->getTerminator());
   for (auto *U : Changes) {
     assert(L.isLoopInvariant(U->get()));
-    Instruction *Ins = cast<Instruction>(U->getUser());
+    auto *Ins = cast<BinaryOperator>(U->getUser());
     Value *Mul;
     if (I.getType()->isIntOrIntVectorTy()) {
       Mul = Builder.CreateMul(U->get(), Factor, "factor.op.mul");
@@ -2757,8 +2759,20 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
       Ins->dropPoisonGeneratingFlags();
     } else
       Mul = Builder.CreateFMulFMF(U->get(), Factor, Ins, "factor.op.fmul");
-    U->set(Mul);
+
+    // Rewrite the reassociable instruction.
+    unsigned OpIdx = U->getOperandNo();
+    auto *LHS = OpIdx == 0 ? Mul : Ins->getOperand(0);
+    auto *RHS = OpIdx == 1 ? Mul : Ins->getOperand(1);
+    auto *NewBO = BinaryOperator::Create(Ins->getOpcode(), LHS, RHS,
+                                         Ins->getName() + ".reass", Ins);
+    NewBO->copyIRFlags(Ins);
+    if (VariantOp == Ins)
+      VariantOp = NewBO;
+    Ins->replaceAllUsesWith(NewBO);
+    eraseInstruction(*Ins, SafetyInfo, MSSAU);
   }
+
   I.replaceAllUsesWith(VariantOp);
   eraseInstruction(I, SafetyInfo, MSSAU);
   return true;

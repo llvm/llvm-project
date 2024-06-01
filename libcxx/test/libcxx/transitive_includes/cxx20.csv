@@ -589,6 +589,7 @@ numeric cstddef
 numeric cstdint
 numeric execution
 numeric functional
+numeric initializer_list
 numeric iterator
 numeric limits
 numeric new

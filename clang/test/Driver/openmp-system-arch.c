@@ -31,7 +31,7 @@
 // RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch= \
 // RUN:     --nvptx-arch-tool=%t/nvptx_arch_empty --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-OUTPUT-ERROR
-// NO-OUTPUT-ERROR: error: failed to deduce triple for target architecture 'native'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead.
+// NO-OUTPUT-ERROR: error: failed to deduce triple for target architecture 'native'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead
 
 // case when amdgpu-arch succeeds.
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \

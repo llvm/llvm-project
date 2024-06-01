@@ -164,9 +164,9 @@ bool isRuntimePath(const StringRef Path) {
   const StringRef Filename = llvm::sys::path::filename(Path);
   // This list should be updated in case new files with additional interceptors
   // are added to the memprof runtime.
-  return Filename.equals("memprof_malloc_linux.cpp") ||
-         Filename.equals("memprof_interceptors.cpp") ||
-         Filename.equals("memprof_new_delete.cpp");
+  return Filename == "memprof_malloc_linux.cpp" ||
+         Filename == "memprof_interceptors.cpp" ||
+         Filename == "memprof_new_delete.cpp";
 }
 
 std::string getBuildIdString(const SegmentEntry &Entry) {
@@ -587,31 +587,27 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
 std::vector<std::string>
 RawMemProfReader::peekBuildIds(MemoryBuffer *DataBuffer) {
   const char *Next = DataBuffer->getBufferStart();
-  // Use a set + vector since a profile file may contain multiple raw profile
+  // Use a SetVector since a profile file may contain multiple raw profile
   // dumps, each with segment information. We want them unique and in order they
   // were stored in the profile; the profiled binary should be the first entry.
   // The runtime uses dl_iterate_phdr and the "... first object visited by
   // callback is the main program."
   // https://man7.org/linux/man-pages/man3/dl_iterate_phdr.3.html
-  std::vector<std::string> BuildIds;
-  llvm::SmallSet<std::string, 10> BuildIdsSet;
+  llvm::SetVector<std::string, std::vector<std::string>,
+                  llvm::SmallSet<std::string, 10>>
+      BuildIds;
   while (Next < DataBuffer->getBufferEnd()) {
     auto *Header = reinterpret_cast<const memprof::Header *>(Next);
 
     const llvm::SmallVector<SegmentEntry> Entries =
         readSegmentEntries(Next + Header->SegmentOffset);
 
-    for (const auto &Entry : Entries) {
-      const std::string Id = getBuildIdString(Entry);
-      if (BuildIdsSet.contains(Id))
-        continue;
-      BuildIds.push_back(Id);
-      BuildIdsSet.insert(Id);
-    }
+    for (const auto &Entry : Entries)
+      BuildIds.insert(getBuildIdString(Entry));
 
     Next += Header->TotalSize;
   }
-  return BuildIds;
+  return BuildIds.takeVector();
 }
 
 Error RawMemProfReader::readRawProfile(

@@ -61,7 +61,7 @@ enum {
 namespace RISCVVType {
 // Is this a SEW value that can be encoded into the VTYPE format.
 inline static bool isValidSEW(unsigned SEW) {
-  return isPowerOf2_32(SEW) && SEW >= 8 && SEW <= 1024;
+  return isPowerOf2_32(SEW) && SEW >= 8 && SEW <= 64;
 }
 
 // Is this a LMUL value that can be encoded into the VTYPE format.

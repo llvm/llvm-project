@@ -37,8 +37,8 @@ entry:
   %save = call token @llvm.coro.save(ptr null)
   %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
   switch i8 %suspend, label %exit [
-  i8 0, label %await.ready
-  i8 1, label %exit
+    i8 0, label %await.ready
+    i8 1, label %exit
   ]
 await.ready:
   br label %exit
@@ -74,8 +74,8 @@ entry:
   %save = call token @llvm.coro.save(ptr null)
   %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
   switch i8 %suspend, label %exit [
-  i8 0, label %await.ready
-  i8 1, label %exit
+    i8 0, label %await.ready
+    i8 1, label %exit
   ]
 await.ready:
   br label %exit
@@ -122,8 +122,8 @@ if.end:
   %save = call token @llvm.coro.save(ptr null)
   %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
   switch i8 %suspend, label %exit [
-  i8 0, label %await.ready
-  i8 1, label %exit
+    i8 0, label %await.ready
+    i8 1, label %exit
   ]
 await.ready:
   br label %exit

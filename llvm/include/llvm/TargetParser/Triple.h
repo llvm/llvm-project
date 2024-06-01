@@ -429,6 +429,10 @@ public:
   /// (SubArch).  This should only be called with Vulkan SPIR-V triples.
   VersionTuple getVulkanVersion() const;
 
+  /// Parse the DXIL version number from the OSVersion and DXIL version
+  /// (SubArch).  This should only be called with DXIL triples.
+  VersionTuple getDXILVersion() const;
+
   /// @}
   /// @name Direct Component Access
   /// @{

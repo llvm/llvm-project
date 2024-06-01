@@ -884,6 +884,9 @@ class PatFrags<dag ops, list<dag> frags, code pred = [{}],
   // If set to true, a predicate is added that checks for the absence of use of
   // the first result.
   bit HasNoUse = ?;
+  // If set to true, a predicate is added that checks for the sole use of
+  // the first result.
+  bit HasOneUse = ?;
 
   // Is the desired pre-packaged predicate for a load?
   bit IsLoad = ?;

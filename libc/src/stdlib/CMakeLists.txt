@@ -43,6 +43,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  quick_exit
+  SRCS
+    quick_exit.cpp
+  HDRS
+    quick_exit.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
   getenv
   SRCS
     getenv.cpp
@@ -414,6 +424,7 @@ add_entrypoint_object(
   CXX_STANDARD
     20 # For constinit of the atexit callback list.
   DEPENDS
+    libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
     libc.src.__support.OSUtil.osutil
     libc.src.__support.blockstore

@@ -60,6 +60,8 @@ public:
 
   virtual ConstString GetDIEClassTemplateParams(const DWARFDIE &die) = 0;
 
+  virtual lldb_private::Type *FindDefinitionTypeForDIE(const DWARFDIE &die) = 0;
+
   static std::optional<SymbolFile::ArrayInfo>
   ParseChildArrayInfo(const DWARFDIE &parent_die,
                       const ExecutionContext *exe_ctx = nullptr);

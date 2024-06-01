@@ -38,6 +38,7 @@ namespace format {
   /* l_brace of a block that is not the body of a (e.g. loop) statement. */    \
   TYPE(BlockLBrace)                                                            \
   TYPE(BracedListLBrace)                                                       \
+  TYPE(CaseLabelArrow)                                                         \
   /* The colon at the end of a case label. */                                  \
   TYPE(CaseLabelColon)                                                         \
   TYPE(CastRParen)                                                             \
@@ -148,6 +149,8 @@ namespace format {
   TYPE(StructLBrace)                                                           \
   TYPE(StructRBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
+  TYPE(SwitchExpressionLabel)                                                  \
+  TYPE(SwitchExpressionLBrace)                                                 \
   TYPE(TableGenBangOperator)                                                   \
   TYPE(TableGenCondOperator)                                                   \
   TYPE(TableGenCondOperatorColon)                                              \
@@ -681,12 +684,8 @@ public:
            isAttribute();
   }
 
-  /// Determine whether the token is a simple-type-specifier.
-  [[nodiscard]] bool isSimpleTypeSpecifier() const;
-
-  [[nodiscard]] bool isTypeName(bool IsCpp) const;
-
-  [[nodiscard]] bool isTypeOrIdentifier(bool IsCpp) const;
+  [[nodiscard]] bool isTypeName(const LangOptions &LangOpts) const;
+  [[nodiscard]] bool isTypeOrIdentifier(const LangOptions &LangOpts) const;
 
   bool isObjCAccessSpecifier() const {
     return is(tok::at) && Next &&
@@ -726,6 +725,29 @@ public:
 
   bool isPointerOrReference() const {
     return isOneOf(tok::star, tok::amp, tok::ampamp);
+  }
+
+  bool isCppAlternativeOperatorKeyword() const {
+    assert(!TokenText.empty());
+    if (!isalpha(TokenText[0]))
+      return false;
+
+    switch (Tok.getKind()) {
+    case tok::ampamp:
+    case tok::ampequal:
+    case tok::amp:
+    case tok::pipe:
+    case tok::tilde:
+    case tok::exclaim:
+    case tok::exclaimequal:
+    case tok::pipepipe:
+    case tok::pipeequal:
+    case tok::caret:
+    case tok::caretequal:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool isUnaryOperator() const {

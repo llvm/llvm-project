@@ -93,7 +93,11 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
       getStringAttrOrNull(node->getRawName()), translate(node->getFile()),
       node->getLine(), translate(node->getScope()), baseType,
       flags.value_or(DIFlags::Zero), node->getSizeInBits(),
-      node->getAlignInBits(), elements);
+      node->getAlignInBits(), elements,
+      translateExpression(node->getDataLocationExp()),
+      translateExpression(node->getRankExp()),
+      translateExpression(node->getAllocatedExp()),
+      translateExpression(node->getAssociatedExp()));
 }
 
 DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
@@ -106,7 +110,7 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
-      node->getOffsetInBits(), extraData);
+      node->getOffsetInBits(), node->getDWARFAddressSpace(), extraData);
 }
 
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
@@ -456,6 +460,9 @@ Location DebugImporter::translateLoc(llvm::DILocation *loc) {
 }
 
 DIExpressionAttr DebugImporter::translateExpression(llvm::DIExpression *node) {
+  if (!node)
+    return nullptr;
+
   SmallVector<DIExpressionElemAttr> ops;
 
   // Begin processing the operations.
