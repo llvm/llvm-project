@@ -24,7 +24,7 @@ jobs:
     name: "Restart Job"
     permissions:
       statuses: read
-      checks: read
+      checks: write
       actions: write
     runs-on: ubuntu-latest
     steps:
