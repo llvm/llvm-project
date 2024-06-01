@@ -15,5 +15,3 @@ std::map<int,int>::iterator it;
 #include "test_macros.h"
 using std::set;
 using std::multiset;
-
-int main(int, char**) { return 0; }

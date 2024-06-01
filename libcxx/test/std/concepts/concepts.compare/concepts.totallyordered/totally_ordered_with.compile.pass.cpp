@@ -1134,5 +1134,3 @@ static_assert(
     !check_totally_ordered_with<totally_ordered_with_others,
                                 no_ge_not_totally_ordered_with>());
 } // namespace types_fit_for_purpose
-
-int main(int, char**) { return 0; }

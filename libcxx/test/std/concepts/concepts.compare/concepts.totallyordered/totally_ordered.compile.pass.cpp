@@ -168,5 +168,3 @@ static_assert(std::totally_ordered<partial_ordering_totally_ordered_with>);
 static_assert(std::totally_ordered<weak_ordering_totally_ordered_with>);
 static_assert(std::totally_ordered<strong_ordering_totally_ordered_with>);
 } // namespace types_fit_for_purpose
-
-int main(int, char**) { return 0; }

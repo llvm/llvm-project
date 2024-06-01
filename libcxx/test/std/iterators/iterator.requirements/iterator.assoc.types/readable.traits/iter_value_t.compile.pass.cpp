@@ -69,5 +69,3 @@ struct different_value_element_members {
   using element_type = long;
 };
 static_assert(check_no_iter_value_t<different_value_element_members>());
-
-int main(int, char**) { return 0; }

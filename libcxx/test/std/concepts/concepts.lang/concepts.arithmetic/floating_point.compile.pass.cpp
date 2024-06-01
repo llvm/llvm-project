@@ -74,5 +74,3 @@ static_assert(!CheckFloatingPointQualifiers<ScopedEnum>());
 static_assert(!CheckFloatingPointQualifiers<EmptyStruct>());
 static_assert(!CheckFloatingPointQualifiers<int EmptyStruct::*>());
 static_assert(!CheckFloatingPointQualifiers<int (EmptyStruct::*)()>());
-
-int main(int, char**) { return 0; }

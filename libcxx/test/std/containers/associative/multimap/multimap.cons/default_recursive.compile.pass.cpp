@@ -27,5 +27,3 @@ struct X
     std::multimap<int, X>::const_reverse_iterator cri;
 #endif // TEST_STD_VER <= 17
 };
-
-int main(int, char**) { return 0; }
