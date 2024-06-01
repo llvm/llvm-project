@@ -12658,6 +12658,65 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
            Success(Val.isNegative() ? 1 : 0, E);
   }
 
+  case Builtin::BI__builtin_isgreater:
+  case Builtin::BI__builtin_isgreaterequal:
+  case Builtin::BI__builtin_isless:
+  case Builtin::BI__builtin_islessequal:
+  case Builtin::BI__builtin_islessgreater:
+  case Builtin::BI__builtin_isunordered: {
+    APFloat LHS(0.0);
+    APFloat RHS(0.0);
+    if (!EvaluateFloat(E->getArg(0), LHS, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info))
+      return false;
+
+    APFloat::cmpResult Cmp = LHS.compare(RHS);
+    bool FunctionResult;
+    if (BuiltinOp == Builtin::BI__builtin_isunordered ||
+        Cmp == APFloat::cmpResult::cmpUnordered) {
+      FunctionResult = BuiltinOp == Builtin::BI__builtin_isunordered &&
+                       Cmp == APFloat::cmpResult::cmpUnordered;
+    } else {
+      int CmpStrong;
+      switch (Cmp) {
+      case APFloat::cmpResult::cmpEqual:
+        CmpStrong = 0;
+        break;
+      case APFloat::cmpResult::cmpLessThan:
+        CmpStrong = -1;
+        break;
+      case APFloat::cmpResult::cmpGreaterThan:
+        CmpStrong = 1;
+        break;
+      default:
+        llvm_unreachable("Unchecked cmpResult enum");
+      }
+
+      switch (BuiltinOp) {
+      case Builtin::BI__builtin_isgreater:
+        FunctionResult = CmpStrong > 0;
+        break;
+      case Builtin::BI__builtin_isgreaterequal:
+        FunctionResult = CmpStrong >= 0;
+        break;
+      case Builtin::BI__builtin_isless:
+        FunctionResult = CmpStrong < 0;
+        break;
+      case Builtin::BI__builtin_islessequal:
+        FunctionResult = CmpStrong <= 0;
+        break;
+      case Builtin::BI__builtin_islessgreater:
+        FunctionResult = CmpStrong != 0;
+        break;
+      default:
+        llvm_unreachable("Unexpected builtin ID: Should be a floating point "
+                         "comparison function");
+      }
+    }
+
+    return Success(FunctionResult ? 1 : 0, E);
+  }
+
   case Builtin::BI__builtin_issignaling: {
     APFloat Val(0.0);
     return EvaluateFloat(E->getArg(0), Val, Info) &&

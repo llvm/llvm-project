@@ -533,42 +533,42 @@ def BuiltinComplex : Builtin {
 def IsGreater : Builtin {
   let Spellings = ["__builtin_isgreater"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def IsGreaterEqual : Builtin {
   let Spellings = ["__builtin_isgreaterequal"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def IsLess : Builtin {
   let Spellings = ["__builtin_isless"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def IsLessEqual : Builtin {
   let Spellings = ["__builtin_islessequal"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def IsLessGreater : Builtin {
   let Spellings = ["__builtin_islessgreater"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 
 def IsUnordered : Builtin {
   let Spellings = ["__builtin_isunordered"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
-                    CustomTypeChecking];
+                    CustomTypeChecking, Constexpr];
   let Prototype = "int(...)";
 }
 

@@ -439,6 +439,69 @@ static bool interp__builtin_signbit(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp_floating_comparison(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *F,
+                                       const CallExpr *Call) {
+  const Floating &RHS = S.Stk.peek<Floating>();
+  const Floating &LHS = S.Stk.peek<Floating>(align(2u * primSize(PT_Float)));
+  unsigned ID = F->getBuiltinID();
+  assert(ID == Builtin::BI__builtin_isgreater ||
+         ID == Builtin::BI__builtin_isgreaterequal ||
+         ID == Builtin::BI__builtin_isless ||
+         ID == Builtin::BI__builtin_islessequal ||
+         ID == Builtin::BI__builtin_islessgreater ||
+         ID == Builtin::BI__builtin_isunordered);
+
+  ComparisonCategoryResult Cmp = LHS.compare(RHS);
+  bool FunctionResult;
+  if (ID == Builtin::BI__builtin_isunordered ||
+      Cmp == ComparisonCategoryResult::Unordered) {
+    FunctionResult = ID == Builtin::BI__builtin_isunordered &&
+                     Cmp == ComparisonCategoryResult::Unordered;
+  } else {
+    int CmpStrong;
+    switch (Cmp) {
+    case ComparisonCategoryResult::Equal:
+    case ComparisonCategoryResult::Equivalent:
+      CmpStrong = 0;
+      break;
+    case ComparisonCategoryResult::Less:
+      CmpStrong = -1;
+      break;
+    case ComparisonCategoryResult::Greater:
+      CmpStrong = 1;
+      break;
+    default:
+      llvm_unreachable("Unchecked ComparisonCategoryResult enum");
+    }
+
+    switch (ID) {
+    case Builtin::BI__builtin_isgreater:
+      FunctionResult = CmpStrong > 0;
+      break;
+    case Builtin::BI__builtin_isgreaterequal:
+      FunctionResult = CmpStrong >= 0;
+      break;
+    case Builtin::BI__builtin_isless:
+      FunctionResult = CmpStrong < 0;
+      break;
+    case Builtin::BI__builtin_islessequal:
+      FunctionResult = CmpStrong <= 0;
+      break;
+    case Builtin::BI__builtin_islessgreater:
+      FunctionResult = CmpStrong != 0;
+      break;
+    default:
+      llvm_unreachable("Unexpected builtin ID: Should be a floating point "
+                       "comparison function");
+    }
+  }
+
+  pushInteger(S, FunctionResult, Call->getType());
+  return true;
+}
+
 /// First parameter to __builtin_isfpclass is the floating value, the
 /// second one is an integral value.
 static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
@@ -1227,6 +1290,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_signbitf:
   case Builtin::BI__builtin_signbitl:
     if (!interp__builtin_signbit(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+  case Builtin::BI__builtin_isgreater:
+  case Builtin::BI__builtin_isgreaterequal:
+  case Builtin::BI__builtin_isless:
+  case Builtin::BI__builtin_islessequal:
+  case Builtin::BI__builtin_islessgreater:
+  case Builtin::BI__builtin_isunordered:
+    if (!interp_floating_comparison(S, OpPC, Frame, F, Call))
       return false;
     break;
   case Builtin::BI__builtin_isfpclass:
