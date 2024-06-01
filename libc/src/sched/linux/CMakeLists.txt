@@ -29,7 +29,7 @@ add_entrypoint_object(
   HDRS
     ../sched_getcpucount.h
   DEPENDS
-    libc.include.sched
+    libc.hdr.types.cpu_set_t
   )
 
 add_entrypoint_object(
