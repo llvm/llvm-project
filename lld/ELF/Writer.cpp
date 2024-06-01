@@ -948,6 +948,10 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
   if (!isa<OutputDesc>(*i))
     return e;
 
+  auto isOutputSec = [](SectionCommand *cmd) {
+    return isa<OutputDesc>(cmd);
+  };
+
   // If i's rank is larger, the orphan section can be placed before i.
   //
   // However, don't do this if custom program headers are defined. Otherwise,
@@ -957,25 +961,25 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
   // better resemble the behavior of GNU ld.
   bool mustAfter = script->hasPhdrsCommands() || !script->memoryRegions.empty();
   if (cast<OutputDesc>(*i)->osec.sortRank <= sec->sortRank || mustAfter) {
-    while (++i != e) {
-      auto *cur = dyn_cast<OutputDesc>(*i);
-      if (cur && getRankProximity(sec, cur) != proximity)
+    for (auto j = ++i; j != e; ++j) {
+      if (!isOutputSec(*j))
+        continue;
+      if (getRankProximity(sec, *j) != proximity)
         break;
+      i = j + 1;
     }
+  } else {
+    for (; i != b; --i)
+      if (isOutputSec(i[-1]))
+        break;
   }
-
-  auto isOutputSec = [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); };
-  auto j = std::find_if(std::make_reverse_iterator(i),
-                        std::make_reverse_iterator(b), isOutputSec);
-  i = j.base();
 
   // As a special case, if the orphan section is the last section, put
   // it at the very end, past any other commands.
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  auto nextSec = std::find_if(i, e, isOutputSec);
-  if (nextSec == e)
+  if (std::find_if(i, e, isOutputSec) == e)
     return e;
 
   while (i != e && shouldSkip(*i))
