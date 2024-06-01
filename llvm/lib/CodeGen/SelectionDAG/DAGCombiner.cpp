@@ -10120,13 +10120,16 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
 
   // fold (shl X, cttz(Y)) -> (mul (Y & -Y), X) if cttz is unsupported on the
   // target.
-  if ((N1.getOpcode() == ISD::CTTZ || N1.getOpcode() == ISD::CTTZ_ZERO_UNDEF) &&
-      N1.hasOneUse() && !TLI.isOperationLegalOrCustom(ISD::CTTZ, VT) &&
+  if (((N1.getOpcode() == ISD::CTTZ &&
+        VT.getScalarSizeInBits() >= ShiftVT.getScalarSizeInBits()) ||
+       N1.getOpcode() == ISD::CTTZ_ZERO_UNDEF) &&
+      N1.hasOneUse() && !TLI.isOperationLegalOrCustom(ISD::CTTZ, ShiftVT) &&
       TLI.isOperationLegalOrCustom(ISD::MUL, VT)) {
     SDValue Y = N1.getOperand(0);
     SDLoc DL(N);
-    SDValue NegY = DAG.getNegative(Y, DL, VT);
-    SDValue And = DAG.getNode(ISD::AND, DL, VT, Y, NegY);
+    SDValue NegY = DAG.getNegative(Y, DL, ShiftVT);
+    SDValue And =
+        DAG.getZExtOrTrunc(DAG.getNode(ISD::AND, DL, ShiftVT, Y, NegY), DL, VT);
     return DAG.getNode(ISD::MUL, DL, VT, And, N0);
   }
 
