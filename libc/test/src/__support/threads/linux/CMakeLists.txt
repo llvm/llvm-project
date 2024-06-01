@@ -1,0 +1,12 @@
+add_libc_test(
+  raw_mutex_test
+  SUITE
+    libc-support-threads-tests
+  SRCS
+    raw_mutex_test.cpp
+  DEPENDS
+    libc.src.__support.threads.linux.raw_mutex
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.stdlib.exit
+)
