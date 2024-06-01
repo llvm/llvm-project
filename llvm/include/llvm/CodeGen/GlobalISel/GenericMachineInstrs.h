@@ -885,7 +885,7 @@ public:
 };
 
 /// Represents a shift left.
-class GSHL : public GenericMachineInstr {
+class GShl : public GenericMachineInstr {
 public:
   Register getSrcReg() const { return getOperand(1).getReg(); }
   Register getShiftReg() const { return getOperand(2).getReg(); }

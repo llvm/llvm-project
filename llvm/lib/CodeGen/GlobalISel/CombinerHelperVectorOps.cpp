@@ -464,7 +464,7 @@ bool CombinerHelper::matchSubOfVScale(const MachineOperand &MO,
 
 bool CombinerHelper::matchShlOfVScale(const MachineOperand &MO,
                                       BuildFnTy &MatchInfo) {
-  GSHL *Shl = cast<GSHL>(MRI.getVRegDef(MO.getReg()));
+  GShl *Shl = cast<GShl>(MRI.getVRegDef(MO.getReg()));
   GVScale *LHSVScale = cast<GVScale>(MRI.getVRegDef(Shl->getSrcReg()));
 
   std::optional<APInt> MaybeRHS = getIConstantVRegVal(Shl->getShiftReg(), MRI);
