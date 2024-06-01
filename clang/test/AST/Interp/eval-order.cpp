@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -std=c++1z -verify %s -fcxx-exceptions -triple=x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++1z -verify %s -fcxx-exceptions -triple=x86_64-linux-gnu -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++1z -verify=ref,both %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++1z -verify=expected,both %s -fcxx-exceptions -triple=x86_64-linux-gnu -fexperimental-new-constant-interpreter
 
 // ref-no-diagnostics
-// expected-no-diagnostics
 
 /// Check that assignment operators evaluate their operands right-to-left.
 /// Copied from test/SemaCXX/constant-expression-cxx1z.cpp
@@ -46,7 +45,7 @@ namespace EvalOrder {
     }
     template <typename T> constexpr T &&b(T &&v) {
       if (!done_a)
-        throw "wrong";
+        throw "wrong"; // expected-note 7{{not valid}}
       done_b = true;
       return (T &&)v;
     }
@@ -76,21 +75,30 @@ namespace EvalOrder {
   // SEQ(A(&ud)->*B(&UserDefined::n)); FIXME
 
   // Rule 4: a(b1, b2, b3)
-  // SEQ(A(f)(B(1), B(2), B(3))); FIXME
+  SEQ(A(f)(B(1), B(2), B(3))); // expected-error {{not an integral constant expression}} FIXME \
+                               // expected-note 2{{in call to}}
 
   // Rule 5: b = a, b @= a
-  // SEQ(B(lvalue<int>().get()) = A(0)); FIXME
-  // SEQ(B(lvalue<UserDefined>().get()) = A(ud)); FIXME
+  SEQ(B(lvalue<int>().get()) = A(0)); // expected-error {{not an integral constant expression}} FIXME \
+                                      // expected-note 2{{in call to}}
+  SEQ(B(lvalue<UserDefined>().get()) = A(ud)); // expected-error {{not an integral constant expression}} FIXME \
+                                               // expected-note 2{{in call to}}
   SEQ(B(lvalue<int>().get()) += A(0));
-  // SEQ(B(lvalue<UserDefined>().get()) += A(ud)); FIXME
-  // SEQ(B(lvalue<NonMember>().get()) += A(nm)); FIXME
+  SEQ(B(lvalue<UserDefined>().get()) += A(ud)); // expected-error {{not an integral constant expression}} FIXME \
+                                                // expected-note 2{{in call to}}
+
+  SEQ(B(lvalue<NonMember>().get()) += A(nm)); // expected-error {{not an integral constant expression}} FIXME \
+                                              // expected-note 2{{in call to}}
+
 
   // Rule 6: a[b]
   constexpr int arr[3] = {};
   SEQ(A(arr)[B(0)]);
   SEQ(A(+arr)[B(0)]);
-  // SEQ(A(0)[B(arr)]); FIXME
-  // SEQ(A(0)[B(+arr)]); FIXME
+  SEQ(A(0)[B(arr)]); // expected-error {{not an integral constant expression}} FIXME \
+                     // expected-note 2{{in call to}}
+  SEQ(A(0)[B(+arr)]); // expected-error {{not an integral constant expression}} FIXME \
+                      // expected-note 2{{in call to}}
   SEQ(A(ud)[B(0)]);
 
   // Rule 7: a << b

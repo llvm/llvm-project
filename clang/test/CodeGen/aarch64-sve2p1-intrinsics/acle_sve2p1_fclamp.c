@@ -11,14 +11,14 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 \
 // RUN:   -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme2 -target-feature +sve \
-// RUN:   -S -DTEST_SME2 -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN:   -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sve.h>
 
-#ifndef TEST_SME2
-#define ATTR
-#else
+#ifdef __ARM_FEATURE_SME
 #define ATTR __arm_streaming
+#else
+#define ATTR
 #endif
 
 #ifdef SVE_OVERLOADED_FORMS

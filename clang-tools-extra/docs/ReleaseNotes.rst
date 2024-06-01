@@ -84,6 +84,11 @@ Objective-C
 Miscellaneous
 ^^^^^^^^^^^^^
 
+- Added a boolean option `AnalyzeAngledIncludes` to `Includes` config section,
+  which allows to enable unused includes detection for all angled ("system") headers.
+  At this moment umbrella headers are not supported, so enabling this option
+  may result in false-positives.
+
 Improvements to clang-doc
 -------------------------
 
@@ -93,6 +98,8 @@ Improvements to clang-query
 - Added the `file` command to dynamically load a list of commands and matchers
   from an external file, allowing the cost of reading the compilation database
   and building the AST to be imposed just once for faster prototyping.
+
+- Removed support for ``enable output srcloc``. Fixes #GH82591
 
 Improvements to clang-rename
 ----------------------------
@@ -262,6 +269,12 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/use-default-member-init>`. Fixed
   incorrect hints when using list-initialization.
 
+- Improved :doc:`cppcoreguidelines-special-member-functions
+  <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check with a
+  new option `AllowImplicitlyDeletedCopyOrMove`, which removes the requirement
+  for explicit copy or move special member functions when they are already
+  implicitly deleted.
+
 - Improved :doc:`google-build-namespaces
   <clang-tidy/checks/google/build-namespaces>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
@@ -322,6 +335,10 @@ Changes in existing checks
   don't remove parentheses used in ``sizeof`` calls when they have array index
   accesses as arguments.
 
+- Improved :doc:`modernize-use-constraints
+  <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash that
+  occurred in some scenarios and excluding system headers from analysis.
+
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check to include support for C23,
   which also has introduced the ``nullptr`` keyword.
@@ -351,6 +368,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/const-return-type>` check to eliminate false
   positives when returning types with const not at the top level.
 
+- Improved :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check to prevent false
+  positives when utilizing ``size`` or ``length`` methods that accept parameter.
+
 - Improved :doc:`readability-duplicate-include
   <clang-tidy/checks/readability/duplicate-include>` check by excluding include
   directives that form the filename using macro.
@@ -363,12 +384,15 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
   Prefix when configured to `LowerCase`. Added support for renaming designated
-  initializers. Added support for renaming macro arguments.
+  initializers. Added support for renaming macro arguments. Fixed renaming
+  conflicts arising from out-of-line member function template definitions.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
   valid fix suggestions for ``static_cast`` without a preceding space and
-  fixed problem with duplicate parentheses in double implicit casts.
+  fixed problem with duplicate parentheses in double implicit casts. Corrected
+  the fix suggestions for C23 and later by using C-style casts instead of
+  ``static_cast``.
 
 - Improved :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly

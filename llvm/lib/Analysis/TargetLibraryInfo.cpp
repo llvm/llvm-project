@@ -160,11 +160,28 @@ bool TargetLibraryInfoImpl::isCallingConvCCompatible(Function *F) {
                                     F->getFunctionType());
 }
 
+static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
+  bool ShouldExtI32Param, ShouldExtI32Return;
+  bool ShouldSignExtI32Param, ShouldSignExtI32Return;
+  TargetLibraryInfo::initExtensionsForTriple(
+      ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param,
+      ShouldSignExtI32Return, T);
+  TLI.setShouldExtI32Param(ShouldExtI32Param);
+  TLI.setShouldExtI32Return(ShouldExtI32Return);
+  TLI.setShouldSignExtI32Param(ShouldSignExtI32Param);
+  TLI.setShouldSignExtI32Return(ShouldSignExtI32Return);
+
+  // Let's assume by default that the size of int is 32 bits, unless the target
+  // is a 16-bit architecture because then it most likely is 16 bits. If that
+  // isn't true for a target those defaults should be overridden below.
+  TLI.setIntSize(T.isArch16Bit() ? 16 : 32);
+}
+
 /// Initialize the set of available library functions based on the specified
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
-static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
-                       ArrayRef<StringLiteral> StandardNames) {
+static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
+                               ArrayRef<StringLiteral> StandardNames) {
   // Set IO unlocked variants as unavailable
   // Set them as available per system below
   TLI.setUnavailable(LibFunc_getc_unlocked);
@@ -177,20 +194,6 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   TLI.setUnavailable(LibFunc_fwrite_unlocked);
   TLI.setUnavailable(LibFunc_fputs_unlocked);
   TLI.setUnavailable(LibFunc_fgets_unlocked);
-
-  bool ShouldExtI32Param, ShouldExtI32Return;
-  bool ShouldSignExtI32Param, ShouldSignExtI32Return;
-  TargetLibraryInfo::initExtensionsForTriple(ShouldExtI32Param,
-       ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return, T);
-  TLI.setShouldExtI32Param(ShouldExtI32Param);
-  TLI.setShouldExtI32Return(ShouldExtI32Return);
-  TLI.setShouldSignExtI32Param(ShouldSignExtI32Param);
-  TLI.setShouldSignExtI32Return(ShouldSignExtI32Return);
-
-  // Let's assume by default that the size of int is 32 bits, unless the target
-  // is a 16-bit architecture because then it most likely is 16 bits. If that
-  // isn't true for a target those defaults should be overridden below.
-  TLI.setIntSize(T.isArch16Bit() ? 16 : 32);
 
   // There is really no runtime library on AMDGPU, apart from
   // __kmpc_alloc/free_shared.
@@ -879,14 +882,25 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_vec_free);
   }
 
+  if (T.isOSAIX())
+    TLI.setUnavailable(LibFunc_memrchr);
+
   TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary, T);
 }
 
-TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
-  // Default to everything being available.
-  memset(AvailableArray, -1, sizeof(AvailableArray));
+/// Initialize the set of available library functions based on the specified
+/// target triple. This should be carefully written so that a missing target
+/// triple gets a sane set of defaults.
+static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
+                       ArrayRef<StringLiteral> StandardNames) {
+  initializeBase(TLI, T);
+  initializeLibCalls(TLI, T, StandardNames);
+}
 
-  initialize(*this, Triple(), StandardNames);
+TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
+  // Default to nothing being available.
+  memset(AvailableArray, 0, sizeof(AvailableArray));
+  initializeBase(*this, Triple());
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T) {
@@ -1190,26 +1204,31 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
 static const VecDesc VecFuncs_Accelerate[] = {
 #define TLI_DEFINE_ACCELERATE_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_ACCELERATE_VECFUNCS
 };
 
 static const VecDesc VecFuncs_DarwinLibSystemM[] = {
 #define TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 };
 
 static const VecDesc VecFuncs_LIBMVEC_X86[] = {
 #define TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 };
 
 static const VecDesc VecFuncs_MASSV[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_MASSV_VECFUNCS
 };
 
 static const VecDesc VecFuncs_SVML[] = {
 #define TLI_DEFINE_SVML_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_SVML_VECFUNCS
 };
 
 static const VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
@@ -1217,18 +1236,21 @@ static const VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
   {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX},
 #include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 };
 static const VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
   {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX},
 #include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 };
 static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX},
 #include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 };
 
 static const VecDesc VecFuncs_ArmPL[] = {
@@ -1236,6 +1258,7 @@ static const VecDesc VecFuncs_ArmPL[] = {
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX},
 #include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_ARMPL_VECFUNCS
 };
 
 const VecDesc VecFuncs_AMDLIBM[] = {
@@ -1243,6 +1266,7 @@ const VecDesc VecFuncs_AMDLIBM[] = {
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX},
 #include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_AMDLIBM_VECFUNCS
 };
 
 void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
@@ -1382,6 +1406,10 @@ TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
     : ImmutablePass(ID), TLA(TLIImpl) {
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
+
+TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
+    const TargetLibraryInfo &TLIOther)
+    : TargetLibraryInfoWrapperPass(*TLIOther.Impl) {}
 
 AnalysisKey TargetLibraryAnalysis::Key;
 

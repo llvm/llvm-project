@@ -170,7 +170,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
           return false;
         // Return a match if debug-info-filename is not specified. Otherwise,
         // check for equality.
-        return DIFilename.empty() || It->second.equals(DIFilename);
+        return DIFilename.empty() || It->second == DIFilename;
       });
       if (!FunctionFound) {
         // Skip the following profile by setting the profile iterator (FI) to
@@ -317,7 +317,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
           return false;
         // Return a match if debug-info-filename is not specified. Otherwise,
         // check for equality.
-        return DIFilename.empty() || It->second.equals(DIFilename);
+        return DIFilename.empty() || It->second == DIFilename;
       });
       if (!FunctionFound) {
         // Skip the following profile by setting the profile iterator (FI) to

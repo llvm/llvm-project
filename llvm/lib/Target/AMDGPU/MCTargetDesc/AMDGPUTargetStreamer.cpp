@@ -13,7 +13,6 @@
 #include "AMDGPUTargetStreamer.h"
 #include "AMDGPUMCKernelDescriptor.h"
 #include "AMDGPUPTNote.h"
-#include "AMDKernelCodeT.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
@@ -120,6 +119,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:  AK = GK_GFX10_1_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:  AK = GK_GFX10_3_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:    AK = GK_GFX11_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC:    AK = GK_GFX12_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   default:                                 AK = GK_NONE;    break;
   }
@@ -202,6 +202,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX10_1_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC;
   case GK_GFX10_3_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC;
   case GK_GFX11_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC;
+  case GK_GFX12_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
   // clang-format on
@@ -240,10 +241,9 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
   OS << "\t.amdhsa_code_object_version " << COV << '\n';
 }
 
-void
-AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
+void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
   OS << "\t.amd_kernel_code_t\n";
-  dumpAmdKernelCode(&Header, OS, "\t\t");
+  Header.EmitKernelCodeT(OS, getContext());
   OS << "\t.end_amd_kernel_code_t\n";
 }
 
@@ -770,6 +770,9 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
     case AMDGPU::GK_GFX11_GENERIC:
       Version = GenericVersion::GFX11;
       break;
+    case AMDGPU::GK_GFX12_GENERIC:
+      Version = GenericVersion::GFX12;
+      break;
     default:
       break;
     }
@@ -789,12 +792,10 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
 
 void AMDGPUTargetELFStreamer::EmitDirectiveAMDGCNTarget() {}
 
-void
-AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
-
+void AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
   MCStreamer &OS = getStreamer();
   OS.pushSection();
-  OS.emitBytes(StringRef((const char*)&Header, sizeof(Header)));
+  Header.EmitKernelCodeT(OS, getContext());
   OS.popSection();
 }
 

@@ -65,13 +65,13 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
   let builders = [
     OpBuilder<(ins "Type":$type, "Value":$lhs, "Value":$rhs,
                    "IntegerOverflowFlags":$overflowFlags), [{
-      build($_builder, $_state, type, lhs, rhs);
       $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
+      build($_builder, $_state, type, lhs, rhs);
     }]>,
     OpBuilder<(ins "Value":$lhs, "Value":$rhs,
                    "IntegerOverflowFlags":$overflowFlags), [{
-      build($_builder, $_state, lhs, rhs);
       $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
+      build($_builder, $_state, lhs, rhs);
     }]>
   ];
 
@@ -1522,7 +1522,7 @@ def LLVM_NoneTokenOp
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-def LLVM_UndefOp : LLVM_Op<"mlir.undef", [Pure]>,
+def LLVM_UndefOp : LLVM_Op<"mlir.undef", [Pure, ConstantLike]>,
                    LLVM_Builder<"$res = llvm::UndefValue::get($_resultType);"> {
   let summary = "Creates an undefined value of LLVM dialect type.";
   let description = [{
@@ -1541,9 +1541,10 @@ def LLVM_UndefOp : LLVM_Op<"mlir.undef", [Pure]>,
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
+  let hasFolder = 1;
 }
 
-def LLVM_PoisonOp : LLVM_Op<"mlir.poison", [Pure]>,
+def LLVM_PoisonOp : LLVM_Op<"mlir.poison", [Pure, ConstantLike]>,
                     LLVM_Builder<"$res = llvm::PoisonValue::get($_resultType);"> {
   let summary = "Creates a poison value of LLVM dialect type.";
   let description = [{
@@ -1563,10 +1564,11 @@ def LLVM_PoisonOp : LLVM_Op<"mlir.poison", [Pure]>,
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
+  let hasFolder = 1;
 }
 
 def LLVM_ZeroOp
-    : LLVM_Op<"mlir.zero", [Pure]>,
+    : LLVM_Op<"mlir.zero", [Pure, ConstantLike]>,
       LLVM_Builder<"$res = llvm::Constant::getNullValue($_resultType);">
 {
   let summary = "Creates a zero-initialized value of LLVM dialect type.";
@@ -1588,6 +1590,7 @@ def LLVM_ZeroOp
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def LLVM_ConstantOp

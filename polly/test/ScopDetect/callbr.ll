@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-detect -polly-detect-track-failures -disable-output -pass-remarks-missed=polly-detect < %s 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: opt %loadPolly -polly-detect -polly-detect-track-failures -disable-output -stats                            < %s 2>&1 | FileCheck %s --check-prefix=STAT
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -polly-detect-track-failures -disable-output -pass-remarks-missed=polly-detect < %s 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -polly-detect-track-failures -disable-output -stats                            < %s 2>&1 | FileCheck %s --check-prefix=STAT
 ; REQUIRES: asserts
 
 ; REMARK: Branch from indirect terminator.

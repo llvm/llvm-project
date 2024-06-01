@@ -2588,6 +2588,12 @@ void OpenACCClauseProfiler::VisitWaitClause(const OpenACCWaitClause &Clause) {
 /// Nothing to do here, there are no sub-statements.
 void OpenACCClauseProfiler::VisitDeviceTypeClause(
     const OpenACCDeviceTypeClause &Clause) {}
+
+void OpenACCClauseProfiler::VisitReductionClause(
+    const OpenACCReductionClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
 } // namespace
 
 void StmtProfiler::VisitOpenACCComputeConstruct(

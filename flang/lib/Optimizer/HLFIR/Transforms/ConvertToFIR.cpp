@@ -320,16 +320,16 @@ public:
     mlir::Location loc = declareOp->getLoc();
     mlir::Value memref = declareOp.getMemref();
     fir::FortranVariableFlagsAttr fortranAttrs;
-    fir::CUDADataAttributeAttr cudaAttr;
+    cuf::DataAttributeAttr dataAttr;
     if (auto attrs = declareOp.getFortranAttrs())
       fortranAttrs =
           fir::FortranVariableFlagsAttr::get(rewriter.getContext(), *attrs);
-    if (auto attr = declareOp.getCudaAttr())
-      cudaAttr = fir::CUDADataAttributeAttr::get(rewriter.getContext(), *attr);
+    if (auto attr = declareOp.getDataAttr())
+      dataAttr = cuf::DataAttributeAttr::get(rewriter.getContext(), *attr);
     auto firDeclareOp = rewriter.create<fir::DeclareOp>(
         loc, memref.getType(), memref, declareOp.getShape(),
         declareOp.getTypeparams(), declareOp.getDummyScope(),
-        declareOp.getUniqName(), fortranAttrs, cudaAttr);
+        declareOp.getUniqName(), fortranAttrs, dataAttr);
 
     // Propagate other attributes from hlfir.declare to fir.declare.
     // OpenACC's acc.declare is one example. Right now, the propagation
@@ -348,7 +348,17 @@ public:
       // Helper to generate the hlfir fir.box with the local lower bounds and
       // type parameters.
       auto genHlfirBox = [&]() -> mlir::Value {
-        if (!mlir::isa<fir::BaseBoxType>(firBase.getType())) {
+        if (auto baseBoxType =
+                mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
+          // Rebox so that lower bounds are correct.
+          if (baseBoxType.isAssumedRank())
+            return builder.create<fir::ReboxAssumedRankOp>(
+                loc, hlfirBaseType, firBase,
+                fir::LowerBoundModifierAttribute::SetToOnes);
+          return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
+                                              declareOp.getShape(),
+                                              /*slice=*/mlir::Value{});
+        } else {
           llvm::SmallVector<mlir::Value> typeParams;
           auto maybeCharType = mlir::dyn_cast<fir::CharacterType>(
               fir::unwrapSequenceType(fir::unwrapPassByRefType(hlfirBaseType)));
@@ -358,11 +368,6 @@ public:
           return builder.create<fir::EmboxOp>(
               loc, hlfirBaseType, firBase, declareOp.getShape(),
               /*slice=*/mlir::Value{}, typeParams);
-        } else {
-          // Rebox so that lower bounds are correct.
-          return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
-                                              declareOp.getShape(),
-                                              /*slice=*/mlir::Value{});
         }
       };
       if (!mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
@@ -789,7 +794,3 @@ public:
 };
 
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createConvertHLFIRtoFIRPass() {
-  return std::make_unique<ConvertHLFIRtoFIR>();
-}

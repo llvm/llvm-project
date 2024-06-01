@@ -1407,6 +1407,11 @@ enum NodeType {
   // Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
+  // llvm.clear_cache intrinsic
+  // Operands: Input Chain, Start Addres, End Address
+  // Outputs: Output Chain
+  CLEAR_CACHE,
+
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.
   BUILTIN_OP_END
