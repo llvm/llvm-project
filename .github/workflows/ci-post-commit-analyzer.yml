@@ -27,23 +27,27 @@ jobs:
       github.repository_owner == 'llvm' &&
       github.event.action != 'closed'
     runs-on: ubuntu-22.04
+    env:
+      LLVM_VERSION: 18
     steps:
       - name: Checkout Source
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Install Dependencies
         run: |
+          sudo echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | sudo tee -a /etc/apt/sources.list.d/llvm.list
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           sudo apt-get update
           sudo apt-get install \
             cmake \
             ninja-build \
             perl \
-            clang-tools \
-            clang
+            clang-tools-$LLVM_VERSION \
+            clang-$LLVM_VERSION
 
       - name: Configure
         run: |
-          scan-build \
+          scan-build-$LLVM_VERSION \
               --use-c++=clang++ \
               --use-cc=clang \
               cmake -B build -S llvm -G Ninja \
@@ -54,7 +58,7 @@ jobs:
 
       - name: Build
         run: |
-           scan-build -o analyzer-results --use-c++=clang++ --use-cc=clang ninja -v -C build
+           scan-build-$LLVM_VERSION -o analyzer-results --use-c++=clang++ --use-cc=clang ninja -v -C build
 
       - name: Upload Results
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
