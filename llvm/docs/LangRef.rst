@@ -16085,6 +16085,51 @@ are perfectly preserved.
 '``llvm.min.*``' Intrinsics Comparation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Standard:
+"""""""""
+
+IEEE754 and ISO C define some min/max operations, and they have some differences
+on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
+
+.. list-table::
+   :header-rows: 2
+
+   * - ``ISO C``
+     - fmin/fmax
+     - none
+     - fmininum/fmaximum
+     - fminimum_num/fmaximum_num
+
+   * - ``IEEE754``
+     - none
+     - nimNUM/maxNUM (2008)
+     - minimum/maximum (2019)
+     - minimumNumber/maximumNumber (2019)
+
+   * - ``+0.0 vs -0.0``
+     - either one
+     - +0.0 > -0.0
+     - +0.0 > -0.0
+     - +0.0 > -0.0
+
+   * - ``NUM vs sNaN``
+     - qNaN, invalid excpetion
+     - qNaN, invalid excpetion
+     - qNaN, invalid excpetion
+     - NUM, invalid excpetion
+
+   * - ``NUM vs qNaN``
+     - NUM, no excpetion
+     - NUM, no excpetion
+     - qNaN, no excpetion
+     - NUM, no excpetion
+
+
+LLVM Implementation:
+""""""""""""""""""""
+
+LLVM implements all ISO C flavors as listed in this table.
+
 .. list-table::
    :header-rows: 1
    :widths: 16 28 28 28
