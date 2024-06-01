@@ -21,9 +21,9 @@ public:
 
   void testMul(FMulFunc func) {
     EXPECT_FP_EQ(T(15.0), func(3.0, 5.0));
-    EXPECT_FP_EQ(T(7.34684e-40), func(0x1.0p1,0x1.0p-131));
+    EXPECT_FP_EQ(T(7.34684e-40), func(0x1.0p1, 0x1.0p-131));
     EXPECT_FP_EQ(T(5.87747e-39), func(0x1.0p2, 0x1.0p-129));
-}
+  }
 };
 
 #define LIST_FMUL_TESTS(T, R, func)                                            \

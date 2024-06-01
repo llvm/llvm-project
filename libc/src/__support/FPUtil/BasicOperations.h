@@ -180,26 +180,25 @@ LIBC_INLINE T fdim(T x, T y) {
 
 // helpers for fmul
 
-uint64_t maxu(uint64_t A, uint64_t B) {
-  return A > B ? A : B;
-}
+uint64_t maxu(uint64_t A, uint64_t B) { return A > B ? A : B; }
 
 uint64_t mul(uint64_t a, uint64_t b) {
-    __uint128_t product = static_cast<__uint128_t>(a) * static_cast<__uint128_t>(b);
-    return static_cast<uint64_t>(product >> 64);
+  __uint128_t product =
+      static_cast<__uint128_t>(a) * static_cast<__uint128_t>(b);
+  return static_cast<uint64_t>(product >> 64);
 }
-
 
 uint64_t mullow(uint64_t a, uint64_t b) {
-    __uint128_t product = static_cast<__uint128_t>(a) * static_cast<__uint128_t>(b);
-    return static_cast<uint64_t>(product);
+  __uint128_t product =
+      static_cast<__uint128_t>(a) * static_cast<__uint128_t>(b);
+  return static_cast<uint64_t>(product);
 }
-
 
 uint64_t nlz(uint64_t x) {
   uint64_t z = 0;
 
-  if (x == 0) return 64;
+  if (x == 0)
+    return 64;
   if (x <= 0x00000000FFFFFFFF) {
     z = z + 32;
     x = x << 32;
@@ -225,10 +224,9 @@ uint64_t nlz(uint64_t x) {
   }
   return z;
 }
-  
+
 LIBC_INLINE float fmul(double x, double y) {
-  
-  
+
   auto x_bits = FPBits<double>(x);
   uint64_t x_u = x_bits.uintval();
 
@@ -241,26 +239,26 @@ LIBC_INLINE float fmul(double x, double y) {
   uint64_t exponent_x = absx >> 52;
   uint64_t exponent_y = absy >> 52;
 
-  //uint64_t x_normal_bit = absx >= 0x10000000000000;
-  //uint64_t y_normal_bit = absy >= 0x10000000000000;
+  // uint64_t x_normal_bit = absx >= 0x10000000000000;
+  // uint64_t y_normal_bit = absy >= 0x10000000000000;
 
   uint64_t mx, my;
-  
-  mx = maxu(nlz(absx), 11); 
 
-  //lambdax = mx - 11;  
+  mx = maxu(nlz(absx), 11);
+
+  // lambdax = mx - 11;
 
   my = maxu(nlz(absy), 11);
 
-  //lambday = my - 11;
+  // lambday = my - 11;
 
   int32_t dm1;
-  uint64_t mpx, mpy, highs,lows, b;
-  uint64_t  g, hight, lowt, morlowt, c, m;
+  uint64_t mpx, mpy, highs, lows, b;
+  uint64_t g, hight, lowt, morlowt, c, m;
   mpx = (x_u << mx) | 0x8000000000000000;
-  mpy = (y_u << my) |  0x8000000000000000;
-  highs = mul(mpx, mpy); 
-  c = highs >= 0x8000000000000000; 
+  mpy = (y_u << my) | 0x8000000000000000;
+  highs = mul(mpx, mpy);
+  c = highs >= 0x8000000000000000;
   lows = mullow(mpx, mpy);
 
   lowt = (lows != 0);
@@ -275,62 +273,61 @@ LIBC_INLINE float fmul(double x, double y) {
 
   if (dm1 >= 255) {
     dm1 = 255;
-    
+
     m = 0;
-  }
-  else if (dm1<=0) {
+  } else if (dm1 <= 0) {
     m = static_cast<uint32_t>((highs >> (39 + c)) >> (1 - dm1));
     dm1 = 0;
     morlowt = m | lowt;
     b = g & (morlowt | hight);
-  }
-  else  {
+  } else {
     m = static_cast<uint32_t>(highs >> (39 + c));
     morlowt = m | lowt;
     b = g & (morlowt | hight);
   }
 
   uint32_t sr = static_cast<uint32_t>((x_u ^ y_u) & 0x8000000000000000);
-  
 
   uint32_t exp16 = sr | (static_cast<uint32_t>(dm1) << 23);
   if (dm1 == 0) {
     uint32_t m2 = static_cast<uint32_t>(m);
-    uint32_t result = (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
-   
-    
-    float result32 = cpp::bit_cast<float>(result);
-    
-    return result32;
-      
- } else {
-   constexpr uint32_t FLOAT32_MANTISSA_MASK = 0b00000000011111111111111111111111;
-   uint32_t m2 = static_cast<uint32_t>(m) & FLOAT32_MANTISSA_MASK;
-   
-   uint32_t result = (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
-  
-  float result16 = cpp::bit_cast<float>(result);
-  // std::memcpy(&result16, &result, sizeof(result16));  
-  //result = *reinterpret_cast<_Float16*>(&result);
-  
-  return result16;
- }
-}
-  /*
-LIBC_INLINE float fmul(double x, double y){
-  FPBits<double> bitx(x), bity(y);
+    uint32_t result =
+        (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
 
-  long long int product;
-  long long int p;
-  
-  if (bitx.is_normal() && bity.is_normal()) {
-    product = bitx.get_mantissa() * bity.get_mantissa();
-    p = product & ((1ULL << 24) -1);
-    sr = bitx.sign() ^ bity.sign();
-    return pow(-1, sr) * pow(p, p.biased_exponent());
+    float result32 = cpp::bit_cast<float>(result);
+
+    return result32;
+
+  } else {
+    constexpr uint32_t FLOAT32_MANTISSA_MASK =
+        0b00000000011111111111111111111111;
+    uint32_t m2 = static_cast<uint32_t>(m) & FLOAT32_MANTISSA_MASK;
+
+    uint32_t result =
+        (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
+
+    float result16 = cpp::bit_cast<float>(result);
+    // std::memcpy(&result16, &result, sizeof(result16));
+    // result = *reinterpret_cast<_Float16*>(&result);
+
+    return result16;
   }
 }
-  */
+/*
+LIBC_INLINE float fmul(double x, double y){
+FPBits<double> bitx(x), bity(y);
+
+long long int product;
+long long int p;
+
+if (bitx.is_normal() && bity.is_normal()) {
+  product = bitx.get_mantissa() * bity.get_mantissa();
+  p = product & ((1ULL << 24) -1);
+  sr = bitx.sign() ^ bity.sign();
+  return pow(-1, sr) * pow(p, p.biased_exponent());
+}
+}
+*/
 LIBC_INLINE float fmull(long double x, long double y) {
   return static_cast<float>(x * y);
 }
