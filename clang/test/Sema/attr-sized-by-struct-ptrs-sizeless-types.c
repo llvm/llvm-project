@@ -10,7 +10,7 @@ struct on_sizeless_pointee_ty {
 
 struct on_sizeless_ty {
     int count;
-    // expected-error@+2{{'sized_by' only applies to pointers}}
+    // expected-error-re@+2{{'sized_by' only applies to pointers{{$}}}}
     // expected-error@+1{{field has sizeless type '__SVInt8_t'}}
     __SVInt8_t member __sized_by(count);
 };

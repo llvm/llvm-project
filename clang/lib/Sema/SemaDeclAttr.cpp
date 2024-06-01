@@ -8320,6 +8320,15 @@ static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   return RD;
 }
 
+static CountAttributedType::DynamicCountPointerKind
+getCountAttrKind(bool CountInBytes, bool OrNull) {
+  if (CountInBytes)
+    return OrNull ? CountAttributedType::SizedByOrNull
+                  : CountAttributedType::SizedBy;
+  return OrNull ? CountAttributedType::CountedByOrNull
+                : CountAttributedType::CountedBy;
+}
+
 enum class CountedByInvalidPointeeTypeKind {
   INCOMPLETE,
   SIZELESS,
@@ -8334,12 +8343,10 @@ CheckCountedByAttrOnField(Sema &S, FieldDecl *FD, Expr *E,
                           bool CountInBytes, bool OrNull) {
   // Check the context the attribute is used in
 
-  unsigned Kind = CountInBytes;
-  if (OrNull)
-    Kind += 2;
+  unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
 
   if (FD->getParent()->isUnion()) {
-    S.Diag(FD->getBeginLoc(), diag::err_counted_by_attr_in_union)
+    S.Diag(FD->getBeginLoc(), diag::err_count_attr_in_union)
         << Kind << FD->getSourceRange();
     return true;
   }
@@ -8347,14 +8354,14 @@ CheckCountedByAttrOnField(Sema &S, FieldDecl *FD, Expr *E,
   const auto FieldTy = FD->getType();
   if (FieldTy->isArrayType() && (CountInBytes || OrNull)) {
     S.Diag(FD->getBeginLoc(),
-           diag::err_counted_by_attr_not_on_ptr_or_flexible_array_member)
-        << Kind << FD->getLocation();
+           diag::err_count_attr_not_on_ptr_or_flexible_array_member)
+        << Kind << FD->getLocation() << /* suggest counted_by */ 1;
     return true;
   }
   if (!FieldTy->isArrayType() && !FieldTy->isPointerType()) {
     S.Diag(FD->getBeginLoc(),
-           diag::err_counted_by_attr_not_on_ptr_or_flexible_array_member)
-        << Kind << FD->getLocation();
+           diag::err_count_attr_not_on_ptr_or_flexible_array_member)
+        << Kind << FD->getLocation() << /* do not suggest counted_by */ 0;
     return true;
   }
 
@@ -8419,7 +8426,7 @@ CheckCountedByAttrOnField(Sema &S, FieldDecl *FD, Expr *E,
   // Check the expression
 
   if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
-    S.Diag(E->getBeginLoc(), diag::err_counted_by_attr_argument_not_integer)
+    S.Diag(E->getBeginLoc(), diag::err_count_attr_argument_not_integer)
         << Kind << E->getSourceRange();
     return true;
   }
@@ -8427,7 +8434,7 @@ CheckCountedByAttrOnField(Sema &S, FieldDecl *FD, Expr *E,
   auto *DRE = dyn_cast<DeclRefExpr>(E);
   if (!DRE) {
     S.Diag(E->getBeginLoc(),
-           diag::err_counted_by_attr_only_support_simple_decl_reference)
+           diag::err_count_attr_only_support_simple_decl_reference)
         << Kind << E->getSourceRange();
     return true;
   }
@@ -8438,7 +8445,7 @@ CheckCountedByAttrOnField(Sema &S, FieldDecl *FD, Expr *E,
     CountFD = IFD->getAnonField();
   }
   if (!CountFD) {
-    S.Diag(E->getBeginLoc(), diag::err_counted_by_must_be_in_structure)
+    S.Diag(E->getBeginLoc(), diag::err_count_attr_must_be_in_structure)
         << CountDecl << Kind << E->getSourceRange();
 
     S.Diag(CountDecl->getBeginLoc(),
@@ -8449,7 +8456,7 @@ CheckCountedByAttrOnField(Sema &S, FieldDecl *FD, Expr *E,
 
   if (FD->getParent() != CountFD->getParent()) {
     if (CountFD->getParent()->isUnion()) {
-      S.Diag(CountFD->getBeginLoc(), diag::err_counted_by_attr_refer_to_union)
+      S.Diag(CountFD->getBeginLoc(), diag::err_count_attr_refer_to_union)
           << Kind << CountFD->getSourceRange();
       return true;
     }
@@ -8460,9 +8467,8 @@ CheckCountedByAttrOnField(Sema &S, FieldDecl *FD, Expr *E,
     auto *CountRD = GetEnclosingNamedOrTopAnonRecord(CountFD);
 
     if (RD != CountRD) {
-      S.Diag(E->getBeginLoc(),
-             diag::err_flexible_array_count_not_in_same_struct)
-          << CountFD << Kind << E->getSourceRange();
+      S.Diag(E->getBeginLoc(), diag::err_count_attr_param_not_in_same_struct)
+          << CountFD << Kind << FieldTy->isArrayType() << E->getSourceRange();
       S.Diag(CountFD->getBeginLoc(),
              diag::note_flexible_array_counted_by_attr_field)
           << CountFD << CountFD->getSourceRange();

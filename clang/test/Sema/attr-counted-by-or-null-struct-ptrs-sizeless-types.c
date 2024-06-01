@@ -11,7 +11,7 @@ struct on_sizeless_pointee_ty {
 
 struct on_sizeless_ty {
     int count;
-    // expected-error@+2{{'counted_by_or_null' only applies to pointers}}
+    // expected-error-re@+2{{'counted_by_or_null' only applies to pointers{{$}}}}
     // expected-error@+1{{field has sizeless type '__SVInt8_t'}}
     __SVInt8_t member __counted_by_or_null(count);
 };
