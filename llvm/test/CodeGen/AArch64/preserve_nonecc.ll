@@ -21,7 +21,7 @@ entry:
 declare preserve_nonecc RETTYPE @preserve_nonecc2(i64, i64, double, double)
 define void @bar() nounwind {
 entry:
-;ALL-LABEL: preserve_nonecc2
+;ALL-LABEL: bar
 ;ALL:       InlineAsm Start
 ;ALL:       stp x9, x8
 ;ALL:       stp x11, x10
