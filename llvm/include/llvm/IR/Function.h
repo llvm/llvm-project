@@ -654,7 +654,9 @@ public:
     return getUWTableKind() != UWTableKind::None;
   }
   void setUWTableKind(UWTableKind K) {
-    if (K != UWTableKind::None)
+    if (K == UWTableKind::None)
+      removeFnAttr(Attribute::UWTable);
+    else
       addFnAttr(Attribute::getWithUWTableKind(getContext(), K));
   }
   /// True if this function needs an unwind table.

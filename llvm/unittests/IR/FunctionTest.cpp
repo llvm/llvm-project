@@ -486,4 +486,27 @@ TEST(FunctionTest, EraseBBs) {
   It = F->erase(F->begin(), F->end());
   EXPECT_EQ(F->size(), 0u);
 }
+
+TEST(FunctionTest, UWTable) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @foo() {
+     bb1:
+       ret void
+    }
+)");
+
+  Function &F = *M->getFunction("foo");
+
+  EXPECT_FALSE(F.hasUWTable());
+  EXPECT_TRUE(F.getUWTableKind() == UWTableKind::None);
+
+  F.setUWTableKind(UWTableKind::Async);
+  EXPECT_TRUE(F.hasUWTable());
+  EXPECT_TRUE(F.getUWTableKind() == UWTableKind::Async);
+
+  F.setUWTableKind(UWTableKind::None);
+  EXPECT_FALSE(F.hasUWTable());
+  EXPECT_TRUE(F.getUWTableKind() == UWTableKind::None);
+}
 } // end namespace
