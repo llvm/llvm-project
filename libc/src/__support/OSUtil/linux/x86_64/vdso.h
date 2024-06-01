@@ -30,6 +30,10 @@ enum class VDSOSym {
 };
 
 // translate VDSOSym to symbol names
+// On x86, there are symbols defined without the __vdso_ prefix, however,
+// it is suggested that one should use the __vdso_ prefix.
+// Additionally, there is also an __vdso_sgx_enter_enclave, it is for the SGX
+// support, we do not include it here for now.
 LIBC_INLINE constexpr cpp::string_view symbol_name(VDSOSym sym) {
   switch (sym) {
   case VDSOSym::ClockGetTime:
