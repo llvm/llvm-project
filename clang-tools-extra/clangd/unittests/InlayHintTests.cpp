@@ -1757,34 +1757,29 @@ TEST(TypeHints, Links) {
     }
 
   )cpp");
-  assertTypeLinkHints(Source, "1",
-                      ExpectedHintLabelPiece{": "},
+  assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": "},
                       ExpectedHintLabelPiece{"Container", "Container"},
                       ExpectedHintLabelPiece{"<"},
                       ExpectedHintLabelPiece{"Package", "Package"},
                       ExpectedHintLabelPiece{"<char, int>>"});
 
   assertTypeLinkHints(
-      Source, "2", 
-      ExpectedHintLabelPiece{": "},
+      Source, "2", ExpectedHintLabelPiece{": "},
       ExpectedHintLabelPiece{"Container", "Container"},
       ExpectedHintLabelPiece{"<"},
       ExpectedHintLabelPiece{"Package", "SpecializationOfPackage"},
       ExpectedHintLabelPiece{"<float, const int>>"});
 
-  assertTypeLinkHints(Source, "3", 
-                      ExpectedHintLabelPiece{": "},
+  assertTypeLinkHints(Source, "3", ExpectedHintLabelPiece{": "},
                       ExpectedHintLabelPiece{"Container", "Container"},
                       ExpectedHintLabelPiece{"<"},
                       ExpectedHintLabelPiece{"Container", "Container"},
                       ExpectedHintLabelPiece{"<int, int>, long>"});
 
   // TODO: Support links on NTTP arguments.
-  assertTypeLinkHints(
-      Source, "4",
-      ExpectedHintLabelPiece{": "},
-      ExpectedHintLabelPiece{"NttpContainer", "NttpContainer"},
-      ExpectedHintLabelPiece{"<D, E, ScopedEnum::X, Enum::E>"});
+  assertTypeLinkHints(Source, "4", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"NttpContainer", "NttpContainer"},
+                      ExpectedHintLabelPiece{"<D, E, ScopedEnum::X, Enum::E>"});
 
   assertTypeLinkHints(Source, "5", ExpectedHintLabelPiece{": "},
                       ExpectedHintLabelPiece{"ns::Nested", "Nested"},

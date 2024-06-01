@@ -540,8 +540,8 @@ public:
                                 const PrintingPolicy &PP,
                                 llvm::StringRef Prefix,
                                 std::vector<InlayHintLabelPart> &LabelChunks)
-      : CurrentType(Current), CurrentNestedNameSpecifier(nullptr), Context(Context), PP(PP),
-        LabelChunks(LabelChunks) {
+      : CurrentType(Current), CurrentNestedNameSpecifier(nullptr),
+        Context(Context), PP(PP), LabelChunks(LabelChunks) {
     LabelChunks.reserve(16);
     if (!Prefix.empty())
       addLabel(Prefix.str());
