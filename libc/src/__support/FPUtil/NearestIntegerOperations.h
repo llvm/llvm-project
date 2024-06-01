@@ -130,7 +130,9 @@ LIBC_INLINE T round(T x) {
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
   bool half_bit_set =
       bool(bits.get_mantissa() & (StorageType(1) << (trim_size - 1)));
-  bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
+  StorageType trunc_mantissa =
+      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
+  bits.set_mantissa(trunc_mantissa);
   T trunc_value = bits.get_val();
 
   // If x is already an integer, return it.

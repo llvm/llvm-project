@@ -295,6 +295,7 @@ add_math_entrypoint_object(rintf128)
 add_math_entrypoint_object(round)
 add_math_entrypoint_object(roundf)
 add_math_entrypoint_object(roundl)
+add_math_entrypoint_object(roundf16)
 add_math_entrypoint_object(roundf128)
 
 add_math_entrypoint_object(roundeven)

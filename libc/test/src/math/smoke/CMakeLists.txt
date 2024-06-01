@@ -397,6 +397,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  roundf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundf16_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.math.roundf16
+)
+
+add_fp_unittest(
   roundf128_test
   SUITE
     libc-math-smoke-tests
