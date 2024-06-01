@@ -170,6 +170,57 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     default:
       return false;
     }
+  case OpenACCClauseKind::CopyIn:
+  case OpenACCClauseKind::PCopyIn:
+  case OpenACCClauseKind::PresentOrCopyIn:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::Declare:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::CopyOut:
+  case OpenACCClauseKind::PCopyOut:
+  case OpenACCClauseKind::PresentOrCopyOut:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::ExitData:
+    case OpenACCDirectiveKind::Declare:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Create:
+  case OpenACCClauseKind::PCreate:
+  case OpenACCClauseKind::PresentOrCreate:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+
   case OpenACCClauseKind::Attach:
     switch (DirectiveKind) {
     case OpenACCDirectiveKind::Parallel:
@@ -238,6 +289,27 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     case OpenACCDirectiveKind::Parallel:
     case OpenACCDirectiveKind::Serial:
     case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+
+  case OpenACCClauseKind::DeviceType:
+  case OpenACCClauseKind::DType:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::Init:
+    case OpenACCDirectiveKind::Shutdown:
+    case OpenACCDirectiveKind::Set:
+    case OpenACCDirectiveKind::Update:
+    case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::Routine:
     case OpenACCDirectiveKind::ParallelLoop:
     case OpenACCDirectiveKind::SerialLoop:
     case OpenACCDirectiveKind::KernelsLoop:
@@ -844,7 +916,7 @@ ExprResult SemaOpenACC::CheckReductionVar(Expr *VarExpr) {
 }
 
 void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
-                                 SourceLocation StartLoc) {
+                                 SourceLocation DirLoc) {
   switch (K) {
   case OpenACCDirectiveKind::Invalid:
     // Nothing to do here, an invalid kind has nothing we can check here.  We
@@ -859,7 +931,7 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
     // here as these constructs do not take any arguments.
     break;
   default:
-    Diag(StartLoc, diag::warn_acc_construct_unimplemented) << K;
+    Diag(DirLoc, diag::warn_acc_construct_unimplemented) << K;
     break;
   }
 }
@@ -1265,6 +1337,7 @@ bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
 
 StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
                                               SourceLocation StartLoc,
+                                              SourceLocation DirLoc,
                                               SourceLocation EndLoc,
                                               ArrayRef<OpenACCClause *> Clauses,
                                               StmtResult AssocStmt) {
@@ -1278,7 +1351,7 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Kernels:
     // TODO OpenACC: Add clauses to the construct here.
     return OpenACCComputeConstruct::Create(
-        getASTContext(), K, StartLoc, EndLoc, Clauses,
+        getASTContext(), K, StartLoc, DirLoc, EndLoc, Clauses,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   llvm_unreachable("Unhandled case in directive handling?");

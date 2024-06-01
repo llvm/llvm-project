@@ -58,4 +58,9 @@ void uses() {
 
 #pragma acc parallel deviceptr(s.PtrMem)
   while (1);
+
+  // expected-error@+2{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
+  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+#pragma acc loop deviceptr(LocalInt)
+  for(;;);
 }

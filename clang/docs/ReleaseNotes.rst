@@ -98,6 +98,8 @@ ABI Changes in This Version
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
+- The text ast-dumper has improved printing of TemplateArguments.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Removed support for constructing on-stack ``TemplateArgumentList``\ s; interfaces should instead
@@ -248,6 +250,9 @@ Resolutions to C++ Defect Reports
 
 - P0522 implementation is enabled by default in all language versions, and
   provisional wording for CWG2398 is implemented.
+
+- Clang now requires a template argument list after a template keyword.
+  (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
 
 C Language Changes
 ------------------
@@ -541,6 +546,9 @@ Improvements to Clang's diagnostics
 - Clang emits a ``-Wparentheses`` warning for expressions with consecutive comparisons like ``x < y < z``.
   Fixes #GH20456.
 
+- Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
+  Fixes #GH93369.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -628,6 +636,9 @@ Bug Fixes in This Version
 
 - ``__is_array`` and ``__is_bounded_array`` no longer return ``true`` for
   zero-sized arrays. Fixes (#GH54705).
+
+- Correctly reject declarations where a statement is required in C.
+  Fixes #GH92775
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -802,12 +813,23 @@ Bug Fixes to C++ Support
 - Fixed a regression introduced in Clang 18 causing a static function overloading a non-static function
   with the same parameters not to be diagnosed. (Fixes #GH93456).
 - Clang now diagnoses unexpanded parameter packs in attributes. (Fixes #GH93269).
+- Clang now allows ``@$``` in raw string literals. Fixes (#GH93130).
+- Fix an assertion failure when checking invalid ``this`` usage in the wrong context. (Fixes #GH91536).
+- Clang no longer models dependent NTTP arguments as ``TemplateParamObjectDecl`` s. Fixes (#GH84052).
+- Fix incorrect merging of modules which contain using declarations which shadow
+  other declarations. This could manifest as ODR checker false positives.
+  Fixes (`#80252 <https://github.com/llvm/llvm-project/issues/80252>`_)
+- Fix a regression introduced in Clang 18 causing incorrect overload resolution in the presence of functions only
+  differering by their constraints when only one of these function was variadic.
+- Fix a crash when a variable is captured by a block nested inside a lambda. (Fixes #GH93625).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
 - The presence of the ``typename`` keyword is now stored in ``TemplateTemplateParmDecl``.
 - Fixed malformed AST generated for anonymous union access in templates. (#GH90842)
+- Improved preservation of qualifiers and sugar in `TemplateNames`, including
+  template keyword.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -964,9 +986,10 @@ clang-format
   ``BreakTemplateDeclarations``.
 - ``AlwaysBreakAfterReturnType`` is deprecated and renamed to
   ``BreakAfterReturnType``.
-- Handles Java ``switch`` expressions.
+- Handles Java switch expressions.
 - Adds ``AllowShortCaseExpressionOnASingleLine`` option.
 - Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
+- Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
 
 libclang
 --------

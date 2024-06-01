@@ -776,10 +776,14 @@ private:
 
   /// Contains a list of handled commands and their details. Each element in
   /// the list is a dictionary with the following keys/values:
-  /// - "command" (string): The command that was executed.
+  /// - "command" (string): The command that was given by the user.
+  /// - "commandName" (string): The name of the executed command.
+  /// - "commandArguments" (string): The arguments of the executed command.
   /// - "output" (string): The output of the command. Empty ("") if no output.
   /// - "error" (string): The error of the command. Empty ("") if no error.
-  /// - "seconds" (float): The time it took to execute the command.
+  /// - "durationInSeconds" (float): The time it took to execute the command.
+  /// - "timestampInEpochSeconds" (int): The timestamp when the command is
+  ///   executed.
   ///
   /// Turn on settings `interpreter.save-transcript` for LLDB to populate
   /// this list. Otherwise this list is empty.

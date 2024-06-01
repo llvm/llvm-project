@@ -906,7 +906,7 @@ raw_fd_ostream &llvm::outs() {
 }
 
 raw_fd_ostream &llvm::errs() {
-  // Set standard error to be unbuffered and tied to outs() by default.
+  // Set standard error to be unbuffered.
 #ifdef __MVS__
   std::error_code EC = enableAutoConversion(STDERR_FILENO);
   assert(!EC);
@@ -975,6 +975,10 @@ void raw_svector_ostream::write_impl(const char *Ptr, size_t Size) {
 void raw_svector_ostream::pwrite_impl(const char *Ptr, size_t Size,
                                       uint64_t Offset) {
   memcpy(OS.data() + Offset, Ptr, Size);
+}
+
+bool raw_svector_ostream::classof(const raw_ostream *OS) {
+  return OS->get_kind() == OStreamKind::OK_SVecStream;
 }
 
 //===----------------------------------------------------------------------===//
