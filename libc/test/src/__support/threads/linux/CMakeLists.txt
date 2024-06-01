@@ -9,4 +9,5 @@ add_libc_test(
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.stdlib.exit
+    libc.hdr.signal_macros
 )
