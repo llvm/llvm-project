@@ -531,160 +531,80 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], 26
 ; MAX-BW-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], 28
 ; MAX-BW-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 30
-; MAX-BW-NEXT:    [[TMP16:%.*]] = add i64 [[OFFSET_IDX]], 32
-; MAX-BW-NEXT:    [[TMP17:%.*]] = add i64 [[OFFSET_IDX]], 34
-; MAX-BW-NEXT:    [[TMP18:%.*]] = add i64 [[OFFSET_IDX]], 36
-; MAX-BW-NEXT:    [[TMP19:%.*]] = add i64 [[OFFSET_IDX]], 38
-; MAX-BW-NEXT:    [[TMP20:%.*]] = add i64 [[OFFSET_IDX]], 40
-; MAX-BW-NEXT:    [[TMP21:%.*]] = add i64 [[OFFSET_IDX]], 42
-; MAX-BW-NEXT:    [[TMP22:%.*]] = add i64 [[OFFSET_IDX]], 44
-; MAX-BW-NEXT:    [[TMP23:%.*]] = add i64 [[OFFSET_IDX]], 46
-; MAX-BW-NEXT:    [[TMP24:%.*]] = add i64 [[OFFSET_IDX]], 48
-; MAX-BW-NEXT:    [[TMP25:%.*]] = add i64 [[OFFSET_IDX]], 50
-; MAX-BW-NEXT:    [[TMP26:%.*]] = add i64 [[OFFSET_IDX]], 52
-; MAX-BW-NEXT:    [[TMP27:%.*]] = add i64 [[OFFSET_IDX]], 54
-; MAX-BW-NEXT:    [[TMP28:%.*]] = add i64 [[OFFSET_IDX]], 56
-; MAX-BW-NEXT:    [[TMP29:%.*]] = add i64 [[OFFSET_IDX]], 58
-; MAX-BW-NEXT:    [[TMP30:%.*]] = add i64 [[OFFSET_IDX]], 60
-; MAX-BW-NEXT:    [[TMP31:%.*]] = add i64 [[OFFSET_IDX]], 62
-; MAX-BW-NEXT:    [[TMP32:%.*]] = add nuw nsw i64 [[TMP0]], 0
-; MAX-BW-NEXT:    [[TMP33:%.*]] = add nuw nsw i64 [[TMP1]], 0
-; MAX-BW-NEXT:    [[TMP34:%.*]] = add nuw nsw i64 [[TMP2]], 0
-; MAX-BW-NEXT:    [[TMP35:%.*]] = add nuw nsw i64 [[TMP3]], 0
-; MAX-BW-NEXT:    [[TMP36:%.*]] = add nuw nsw i64 [[TMP4]], 0
-; MAX-BW-NEXT:    [[TMP37:%.*]] = add nuw nsw i64 [[TMP5]], 0
-; MAX-BW-NEXT:    [[TMP38:%.*]] = add nuw nsw i64 [[TMP6]], 0
-; MAX-BW-NEXT:    [[TMP39:%.*]] = add nuw nsw i64 [[TMP7]], 0
-; MAX-BW-NEXT:    [[TMP40:%.*]] = add nuw nsw i64 [[TMP8]], 0
-; MAX-BW-NEXT:    [[TMP41:%.*]] = add nuw nsw i64 [[TMP9]], 0
-; MAX-BW-NEXT:    [[TMP42:%.*]] = add nuw nsw i64 [[TMP10]], 0
-; MAX-BW-NEXT:    [[TMP43:%.*]] = add nuw nsw i64 [[TMP11]], 0
-; MAX-BW-NEXT:    [[TMP44:%.*]] = add nuw nsw i64 [[TMP12]], 0
-; MAX-BW-NEXT:    [[TMP45:%.*]] = add nuw nsw i64 [[TMP13]], 0
-; MAX-BW-NEXT:    [[TMP46:%.*]] = add nuw nsw i64 [[TMP14]], 0
-; MAX-BW-NEXT:    [[TMP47:%.*]] = add nuw nsw i64 [[TMP15]], 0
-; MAX-BW-NEXT:    [[TMP48:%.*]] = add nuw nsw i64 [[TMP16]], 0
-; MAX-BW-NEXT:    [[TMP49:%.*]] = add nuw nsw i64 [[TMP17]], 0
-; MAX-BW-NEXT:    [[TMP50:%.*]] = add nuw nsw i64 [[TMP18]], 0
-; MAX-BW-NEXT:    [[TMP51:%.*]] = add nuw nsw i64 [[TMP19]], 0
-; MAX-BW-NEXT:    [[TMP52:%.*]] = add nuw nsw i64 [[TMP20]], 0
-; MAX-BW-NEXT:    [[TMP53:%.*]] = add nuw nsw i64 [[TMP21]], 0
-; MAX-BW-NEXT:    [[TMP54:%.*]] = add nuw nsw i64 [[TMP22]], 0
-; MAX-BW-NEXT:    [[TMP55:%.*]] = add nuw nsw i64 [[TMP23]], 0
-; MAX-BW-NEXT:    [[TMP56:%.*]] = add nuw nsw i64 [[TMP24]], 0
-; MAX-BW-NEXT:    [[TMP57:%.*]] = add nuw nsw i64 [[TMP25]], 0
-; MAX-BW-NEXT:    [[TMP58:%.*]] = add nuw nsw i64 [[TMP26]], 0
-; MAX-BW-NEXT:    [[TMP59:%.*]] = add nuw nsw i64 [[TMP27]], 0
-; MAX-BW-NEXT:    [[TMP60:%.*]] = add nuw nsw i64 [[TMP28]], 0
-; MAX-BW-NEXT:    [[TMP61:%.*]] = add nuw nsw i64 [[TMP29]], 0
-; MAX-BW-NEXT:    [[TMP62:%.*]] = add nuw nsw i64 [[TMP30]], 0
-; MAX-BW-NEXT:    [[TMP63:%.*]] = add nuw nsw i64 [[TMP31]], 0
-; MAX-BW-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A:%.*]], i64 0, i64 [[TMP32]]
-; MAX-BW-NEXT:    [[TMP65:%.*]] = getelementptr inbounds i32, ptr [[TMP64]], i32 0
-; MAX-BW-NEXT:    [[WIDE_VEC:%.*]] = load <64 x i32>, ptr [[TMP65]], align 4
-; MAX-BW-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <64 x i32> [[WIDE_VEC]], <64 x i32> poison, <32 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62>
-; MAX-BW-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <64 x i32> [[WIDE_VEC]], <64 x i32> poison, <32 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63>
-; MAX-BW-NEXT:    [[TMP66:%.*]] = add <32 x i32> [[STRIDED_VEC]], [[STRIDED_VEC1]]
-; MAX-BW-NEXT:    [[TMP67:%.*]] = trunc <32 x i32> [[TMP66]] to <32 x i8>
-; MAX-BW-NEXT:    [[TMP68:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B:%.*]], i64 0, i64 [[TMP32]]
-; MAX-BW-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP33]]
-; MAX-BW-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP34]]
-; MAX-BW-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP35]]
-; MAX-BW-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP36]]
-; MAX-BW-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP37]]
-; MAX-BW-NEXT:    [[TMP74:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP38]]
-; MAX-BW-NEXT:    [[TMP75:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP39]]
-; MAX-BW-NEXT:    [[TMP76:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP40]]
-; MAX-BW-NEXT:    [[TMP77:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP41]]
-; MAX-BW-NEXT:    [[TMP78:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP42]]
-; MAX-BW-NEXT:    [[TMP79:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP43]]
-; MAX-BW-NEXT:    [[TMP80:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP44]]
-; MAX-BW-NEXT:    [[TMP81:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP45]]
-; MAX-BW-NEXT:    [[TMP82:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP46]]
-; MAX-BW-NEXT:    [[TMP83:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP47]]
-; MAX-BW-NEXT:    [[TMP84:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP48]]
-; MAX-BW-NEXT:    [[TMP85:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP49]]
-; MAX-BW-NEXT:    [[TMP86:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP50]]
-; MAX-BW-NEXT:    [[TMP87:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP51]]
-; MAX-BW-NEXT:    [[TMP88:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP52]]
-; MAX-BW-NEXT:    [[TMP89:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP53]]
-; MAX-BW-NEXT:    [[TMP90:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP54]]
-; MAX-BW-NEXT:    [[TMP91:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP55]]
-; MAX-BW-NEXT:    [[TMP92:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP56]]
-; MAX-BW-NEXT:    [[TMP93:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP57]]
-; MAX-BW-NEXT:    [[TMP94:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP58]]
-; MAX-BW-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP59]]
-; MAX-BW-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP60]]
-; MAX-BW-NEXT:    [[TMP97:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP61]]
-; MAX-BW-NEXT:    [[TMP98:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP62]]
-; MAX-BW-NEXT:    [[TMP99:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP63]]
-; MAX-BW-NEXT:    [[TMP100:%.*]] = extractelement <32 x i8> [[TMP67]], i32 0
-; MAX-BW-NEXT:    store i8 [[TMP100]], ptr [[TMP68]], align 1
-; MAX-BW-NEXT:    [[TMP101:%.*]] = extractelement <32 x i8> [[TMP67]], i32 1
-; MAX-BW-NEXT:    store i8 [[TMP101]], ptr [[TMP69]], align 1
-; MAX-BW-NEXT:    [[TMP102:%.*]] = extractelement <32 x i8> [[TMP67]], i32 2
-; MAX-BW-NEXT:    store i8 [[TMP102]], ptr [[TMP70]], align 1
-; MAX-BW-NEXT:    [[TMP103:%.*]] = extractelement <32 x i8> [[TMP67]], i32 3
-; MAX-BW-NEXT:    store i8 [[TMP103]], ptr [[TMP71]], align 1
-; MAX-BW-NEXT:    [[TMP104:%.*]] = extractelement <32 x i8> [[TMP67]], i32 4
-; MAX-BW-NEXT:    store i8 [[TMP104]], ptr [[TMP72]], align 1
-; MAX-BW-NEXT:    [[TMP105:%.*]] = extractelement <32 x i8> [[TMP67]], i32 5
-; MAX-BW-NEXT:    store i8 [[TMP105]], ptr [[TMP73]], align 1
-; MAX-BW-NEXT:    [[TMP106:%.*]] = extractelement <32 x i8> [[TMP67]], i32 6
-; MAX-BW-NEXT:    store i8 [[TMP106]], ptr [[TMP74]], align 1
-; MAX-BW-NEXT:    [[TMP107:%.*]] = extractelement <32 x i8> [[TMP67]], i32 7
-; MAX-BW-NEXT:    store i8 [[TMP107]], ptr [[TMP75]], align 1
-; MAX-BW-NEXT:    [[TMP108:%.*]] = extractelement <32 x i8> [[TMP67]], i32 8
-; MAX-BW-NEXT:    store i8 [[TMP108]], ptr [[TMP76]], align 1
-; MAX-BW-NEXT:    [[TMP109:%.*]] = extractelement <32 x i8> [[TMP67]], i32 9
-; MAX-BW-NEXT:    store i8 [[TMP109]], ptr [[TMP77]], align 1
-; MAX-BW-NEXT:    [[TMP110:%.*]] = extractelement <32 x i8> [[TMP67]], i32 10
-; MAX-BW-NEXT:    store i8 [[TMP110]], ptr [[TMP78]], align 1
-; MAX-BW-NEXT:    [[TMP111:%.*]] = extractelement <32 x i8> [[TMP67]], i32 11
-; MAX-BW-NEXT:    store i8 [[TMP111]], ptr [[TMP79]], align 1
-; MAX-BW-NEXT:    [[TMP112:%.*]] = extractelement <32 x i8> [[TMP67]], i32 12
-; MAX-BW-NEXT:    store i8 [[TMP112]], ptr [[TMP80]], align 1
-; MAX-BW-NEXT:    [[TMP113:%.*]] = extractelement <32 x i8> [[TMP67]], i32 13
-; MAX-BW-NEXT:    store i8 [[TMP113]], ptr [[TMP81]], align 1
-; MAX-BW-NEXT:    [[TMP114:%.*]] = extractelement <32 x i8> [[TMP67]], i32 14
-; MAX-BW-NEXT:    store i8 [[TMP114]], ptr [[TMP82]], align 1
-; MAX-BW-NEXT:    [[TMP115:%.*]] = extractelement <32 x i8> [[TMP67]], i32 15
-; MAX-BW-NEXT:    store i8 [[TMP115]], ptr [[TMP83]], align 1
-; MAX-BW-NEXT:    [[TMP116:%.*]] = extractelement <32 x i8> [[TMP67]], i32 16
-; MAX-BW-NEXT:    store i8 [[TMP116]], ptr [[TMP84]], align 1
-; MAX-BW-NEXT:    [[TMP117:%.*]] = extractelement <32 x i8> [[TMP67]], i32 17
-; MAX-BW-NEXT:    store i8 [[TMP117]], ptr [[TMP85]], align 1
-; MAX-BW-NEXT:    [[TMP118:%.*]] = extractelement <32 x i8> [[TMP67]], i32 18
-; MAX-BW-NEXT:    store i8 [[TMP118]], ptr [[TMP86]], align 1
-; MAX-BW-NEXT:    [[TMP119:%.*]] = extractelement <32 x i8> [[TMP67]], i32 19
-; MAX-BW-NEXT:    store i8 [[TMP119]], ptr [[TMP87]], align 1
-; MAX-BW-NEXT:    [[TMP120:%.*]] = extractelement <32 x i8> [[TMP67]], i32 20
-; MAX-BW-NEXT:    store i8 [[TMP120]], ptr [[TMP88]], align 1
-; MAX-BW-NEXT:    [[TMP121:%.*]] = extractelement <32 x i8> [[TMP67]], i32 21
-; MAX-BW-NEXT:    store i8 [[TMP121]], ptr [[TMP89]], align 1
-; MAX-BW-NEXT:    [[TMP122:%.*]] = extractelement <32 x i8> [[TMP67]], i32 22
-; MAX-BW-NEXT:    store i8 [[TMP122]], ptr [[TMP90]], align 1
-; MAX-BW-NEXT:    [[TMP123:%.*]] = extractelement <32 x i8> [[TMP67]], i32 23
-; MAX-BW-NEXT:    store i8 [[TMP123]], ptr [[TMP91]], align 1
-; MAX-BW-NEXT:    [[TMP124:%.*]] = extractelement <32 x i8> [[TMP67]], i32 24
-; MAX-BW-NEXT:    store i8 [[TMP124]], ptr [[TMP92]], align 1
-; MAX-BW-NEXT:    [[TMP125:%.*]] = extractelement <32 x i8> [[TMP67]], i32 25
-; MAX-BW-NEXT:    store i8 [[TMP125]], ptr [[TMP93]], align 1
-; MAX-BW-NEXT:    [[TMP126:%.*]] = extractelement <32 x i8> [[TMP67]], i32 26
-; MAX-BW-NEXT:    store i8 [[TMP126]], ptr [[TMP94]], align 1
-; MAX-BW-NEXT:    [[TMP127:%.*]] = extractelement <32 x i8> [[TMP67]], i32 27
-; MAX-BW-NEXT:    store i8 [[TMP127]], ptr [[TMP95]], align 1
-; MAX-BW-NEXT:    [[TMP128:%.*]] = extractelement <32 x i8> [[TMP67]], i32 28
-; MAX-BW-NEXT:    store i8 [[TMP128]], ptr [[TMP96]], align 1
-; MAX-BW-NEXT:    [[TMP129:%.*]] = extractelement <32 x i8> [[TMP67]], i32 29
-; MAX-BW-NEXT:    store i8 [[TMP129]], ptr [[TMP97]], align 1
-; MAX-BW-NEXT:    [[TMP130:%.*]] = extractelement <32 x i8> [[TMP67]], i32 30
-; MAX-BW-NEXT:    store i8 [[TMP130]], ptr [[TMP98]], align 1
-; MAX-BW-NEXT:    [[TMP131:%.*]] = extractelement <32 x i8> [[TMP67]], i32 31
-; MAX-BW-NEXT:    store i8 [[TMP131]], ptr [[TMP99]], align 1
-; MAX-BW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
-; MAX-BW-NEXT:    [[TMP132:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
-; MAX-BW-NEXT:    br i1 [[TMP132]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; MAX-BW-NEXT:    [[TMP16:%.*]] = add nuw nsw i64 [[TMP0]], 0
+; MAX-BW-NEXT:    [[TMP17:%.*]] = add nuw nsw i64 [[TMP1]], 0
+; MAX-BW-NEXT:    [[TMP18:%.*]] = add nuw nsw i64 [[TMP2]], 0
+; MAX-BW-NEXT:    [[TMP19:%.*]] = add nuw nsw i64 [[TMP3]], 0
+; MAX-BW-NEXT:    [[TMP20:%.*]] = add nuw nsw i64 [[TMP4]], 0
+; MAX-BW-NEXT:    [[TMP21:%.*]] = add nuw nsw i64 [[TMP5]], 0
+; MAX-BW-NEXT:    [[TMP22:%.*]] = add nuw nsw i64 [[TMP6]], 0
+; MAX-BW-NEXT:    [[TMP23:%.*]] = add nuw nsw i64 [[TMP7]], 0
+; MAX-BW-NEXT:    [[TMP24:%.*]] = add nuw nsw i64 [[TMP8]], 0
+; MAX-BW-NEXT:    [[TMP25:%.*]] = add nuw nsw i64 [[TMP9]], 0
+; MAX-BW-NEXT:    [[TMP26:%.*]] = add nuw nsw i64 [[TMP10]], 0
+; MAX-BW-NEXT:    [[TMP27:%.*]] = add nuw nsw i64 [[TMP11]], 0
+; MAX-BW-NEXT:    [[TMP28:%.*]] = add nuw nsw i64 [[TMP12]], 0
+; MAX-BW-NEXT:    [[TMP29:%.*]] = add nuw nsw i64 [[TMP13]], 0
+; MAX-BW-NEXT:    [[TMP30:%.*]] = add nuw nsw i64 [[TMP14]], 0
+; MAX-BW-NEXT:    [[TMP31:%.*]] = add nuw nsw i64 [[TMP15]], 0
+; MAX-BW-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A:%.*]], i64 0, i64 [[TMP16]]
+; MAX-BW-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i32 0
+; MAX-BW-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i32>, ptr [[TMP33]], align 4
+; MAX-BW-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i32> [[WIDE_VEC]], <32 x i32> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+; MAX-BW-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <32 x i32> [[WIDE_VEC]], <32 x i32> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
+; MAX-BW-NEXT:    [[TMP34:%.*]] = add <16 x i32> [[STRIDED_VEC]], [[STRIDED_VEC1]]
+; MAX-BW-NEXT:    [[TMP35:%.*]] = trunc <16 x i32> [[TMP34]] to <16 x i8>
+; MAX-BW-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B:%.*]], i64 0, i64 [[TMP16]]
+; MAX-BW-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP17]]
+; MAX-BW-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP18]]
+; MAX-BW-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP19]]
+; MAX-BW-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP20]]
+; MAX-BW-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP21]]
+; MAX-BW-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP22]]
+; MAX-BW-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP23]]
+; MAX-BW-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP24]]
+; MAX-BW-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP25]]
+; MAX-BW-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP26]]
+; MAX-BW-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP27]]
+; MAX-BW-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP28]]
+; MAX-BW-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP29]]
+; MAX-BW-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP30]]
+; MAX-BW-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[TMP31]]
+; MAX-BW-NEXT:    [[TMP52:%.*]] = extractelement <16 x i8> [[TMP35]], i32 0
+; MAX-BW-NEXT:    store i8 [[TMP52]], ptr [[TMP36]], align 1
+; MAX-BW-NEXT:    [[TMP53:%.*]] = extractelement <16 x i8> [[TMP35]], i32 1
+; MAX-BW-NEXT:    store i8 [[TMP53]], ptr [[TMP37]], align 1
+; MAX-BW-NEXT:    [[TMP54:%.*]] = extractelement <16 x i8> [[TMP35]], i32 2
+; MAX-BW-NEXT:    store i8 [[TMP54]], ptr [[TMP38]], align 1
+; MAX-BW-NEXT:    [[TMP55:%.*]] = extractelement <16 x i8> [[TMP35]], i32 3
+; MAX-BW-NEXT:    store i8 [[TMP55]], ptr [[TMP39]], align 1
+; MAX-BW-NEXT:    [[TMP56:%.*]] = extractelement <16 x i8> [[TMP35]], i32 4
+; MAX-BW-NEXT:    store i8 [[TMP56]], ptr [[TMP40]], align 1
+; MAX-BW-NEXT:    [[TMP57:%.*]] = extractelement <16 x i8> [[TMP35]], i32 5
+; MAX-BW-NEXT:    store i8 [[TMP57]], ptr [[TMP41]], align 1
+; MAX-BW-NEXT:    [[TMP58:%.*]] = extractelement <16 x i8> [[TMP35]], i32 6
+; MAX-BW-NEXT:    store i8 [[TMP58]], ptr [[TMP42]], align 1
+; MAX-BW-NEXT:    [[TMP59:%.*]] = extractelement <16 x i8> [[TMP35]], i32 7
+; MAX-BW-NEXT:    store i8 [[TMP59]], ptr [[TMP43]], align 1
+; MAX-BW-NEXT:    [[TMP60:%.*]] = extractelement <16 x i8> [[TMP35]], i32 8
+; MAX-BW-NEXT:    store i8 [[TMP60]], ptr [[TMP44]], align 1
+; MAX-BW-NEXT:    [[TMP61:%.*]] = extractelement <16 x i8> [[TMP35]], i32 9
+; MAX-BW-NEXT:    store i8 [[TMP61]], ptr [[TMP45]], align 1
+; MAX-BW-NEXT:    [[TMP62:%.*]] = extractelement <16 x i8> [[TMP35]], i32 10
+; MAX-BW-NEXT:    store i8 [[TMP62]], ptr [[TMP46]], align 1
+; MAX-BW-NEXT:    [[TMP63:%.*]] = extractelement <16 x i8> [[TMP35]], i32 11
+; MAX-BW-NEXT:    store i8 [[TMP63]], ptr [[TMP47]], align 1
+; MAX-BW-NEXT:    [[TMP64:%.*]] = extractelement <16 x i8> [[TMP35]], i32 12
+; MAX-BW-NEXT:    store i8 [[TMP64]], ptr [[TMP48]], align 1
+; MAX-BW-NEXT:    [[TMP65:%.*]] = extractelement <16 x i8> [[TMP35]], i32 13
+; MAX-BW-NEXT:    store i8 [[TMP65]], ptr [[TMP49]], align 1
+; MAX-BW-NEXT:    [[TMP66:%.*]] = extractelement <16 x i8> [[TMP35]], i32 14
+; MAX-BW-NEXT:    store i8 [[TMP66]], ptr [[TMP50]], align 1
+; MAX-BW-NEXT:    [[TMP67:%.*]] = extractelement <16 x i8> [[TMP35]], i32 15
+; MAX-BW-NEXT:    store i8 [[TMP67]], ptr [[TMP51]], align 1
+; MAX-BW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; MAX-BW-NEXT:    [[TMP68:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
+; MAX-BW-NEXT:    br i1 [[TMP68]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; MAX-BW:       middle.block:
 ; MAX-BW-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; MAX-BW:       scalar.ph:
