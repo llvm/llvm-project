@@ -822,6 +822,7 @@ Bug Fixes to C++ Support
 - Fix a regression introduced in Clang 18 causing incorrect overload resolution in the presence of functions only
   differering by their constraints when only one of these function was variadic.
 - Fix a crash when a variable is captured by a block nested inside a lambda. (Fixes #GH93625).
+- Fixed a type constraint substitution issue involving a generic lambda expression. (#GH93821)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
