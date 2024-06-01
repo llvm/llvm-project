@@ -46,18 +46,20 @@ protected:
   void SetUp() override {
     const ::testing::TestInfo *const test_info =
         ::testing::UnitTest::GetInstance()->current_test_info();
-    file_path = std::string("/tmp/radsan_temporary_test_file_") +
-                test_info->name() + ".txt";
+    file_path_ = std::string("/tmp/radsan_temporary_test_file_") +
+                 test_info->name() + ".txt";
+    RemoveTemporaryFile();
   }
 
-  // Gets a file path with the test's name in in
+  // Gets a file path with the test's name in it
   // This file will be removed if it exists at the end of the test
-  const char *GetTemporaryFilePath() const { return file_path.c_str(); }
+  const char *GetTemporaryFilePath() const { return file_path_.c_str(); }
 
-  void TearDown() override { std::remove(GetTemporaryFilePath()); }
+  void TearDown() override { RemoveTemporaryFile(); }
 
 private:
-  std::string file_path;
+  void RemoveTemporaryFile() const { std::remove(GetTemporaryFilePath()); }
+  std::string file_path_;
 };
 
 /*
