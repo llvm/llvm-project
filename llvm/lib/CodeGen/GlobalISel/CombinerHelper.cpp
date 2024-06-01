@@ -7407,3 +7407,24 @@ bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
 
   return false;
 }
+
+bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
+                                     BuildFnTy &MatchInfo) {
+  GZext *Zext = cast<GZext>(MRI.getVRegDef(MO.getReg()));
+
+  Register Dst = Zext->getReg(0);
+  Register Src = Zext->getSrcReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  const auto &TLI = getTargetLowering();
+
+  // Convert zext nneg to sext if sext is the preferred form for the target.
+  if (isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT, {DstTy, SrcTy}}) &&
+      TLI.isSExtCheaperThanZExt(getMVTForLLT(SrcTy), getMVTForLLT(DstTy))) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  return false;
+}
