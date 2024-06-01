@@ -392,26 +392,26 @@ std::optional<Location> toLocation(SourceManager &SM, SourceRange Range) {
 class TypeInlayHintLabelPartBuilder
     : public TypeVisitor<TypeInlayHintLabelPartBuilder> {
   QualType CurrentType;
+  NestedNameSpecifier *CurrentNestedNameSpecifier;
   ASTContext &Context;
   const PrintingPolicy &PP;
   std::vector<InlayHintLabelPart> &LabelChunks;
 
-  bool ShouldAddLinksToTagTypes;
-
   struct CurrentTypeRAII {
     TypeInlayHintLabelPartBuilder &Builder;
     QualType PreviousType;
-    bool PreviousShouldAddLinksToTagTypes;
+    NestedNameSpecifier *PreviousNestedNameSpecifier;
     CurrentTypeRAII(TypeInlayHintLabelPartBuilder &Builder, QualType New,
-                    bool ShouldAddLinksToTagTypes)
+                    NestedNameSpecifier *NNS = nullptr)
         : Builder(Builder), PreviousType(Builder.CurrentType),
-          PreviousShouldAddLinksToTagTypes(Builder.ShouldAddLinksToTagTypes) {
+          PreviousNestedNameSpecifier(Builder.CurrentNestedNameSpecifier) {
       Builder.CurrentType = New;
-      Builder.ShouldAddLinksToTagTypes = ShouldAddLinksToTagTypes;
+      if (NNS)
+        Builder.CurrentNestedNameSpecifier = NNS;
     }
     ~CurrentTypeRAII() {
       Builder.CurrentType = PreviousType;
-      Builder.ShouldAddLinksToTagTypes = PreviousShouldAddLinksToTagTypes;
+      Builder.CurrentNestedNameSpecifier = PreviousNestedNameSpecifier;
     }
   };
 
@@ -420,8 +420,6 @@ class TypeInlayHintLabelPartBuilder
     std::string Label;
     llvm::raw_string_ostream OS(Label);
     NamePrinter(OS);
-    if (!ShouldAddLinksToTagTypes)
-      return addLabel(std::move(Label));
     auto &Name = LabelChunks.emplace_back();
     Name.value = std::move(Label);
     Name.location = toLocation(Context.getSourceManager(), SourceRangeGetter());
@@ -458,8 +456,7 @@ class TypeInlayHintLabelPartBuilder
     case TemplateArgument::Pack:
       return printTemplateArgumentList(TA.pack_elements());
     case TemplateArgument::Type: {
-      CurrentTypeRAII Guard(*this, TA.getAsType(),
-                            /*ShouldAddLinksToTagTypes=*/true);
+      CurrentTypeRAII Guard(*this, TA.getAsType());
       return Visit(TA.getAsType().getTypePtr());
     }
     // TODO: Add support for NTTP arguments.
@@ -485,16 +482,32 @@ class TypeInlayHintLabelPartBuilder
                                SourceRange TemplateNameRange = SourceRange()) {
     SourceRange Range;
     TemplateDecl *TD = nullptr;
+    auto PrintType = TemplateName::Qualified::AsWritten;
     switch (TN.getKind()) {
     case TemplateName::Template:
       TD = TN.getAsTemplateDecl();
       Range = TD->getSourceRange();
-      LLVM_FALLTHROUGH;
-    default:
+      break;
+    case TemplateName::QualifiedTemplate:
+      if (NestedNameSpecifier *NNS =
+              TN.getAsQualifiedTemplateName()->getQualifier();
+          NNS == CurrentNestedNameSpecifier) {
+        // We have handled the NNS in VisitElaboratedType(). Avoid printing it
+        // twice.
+        TN = TN.getAsQualifiedTemplateName()->getUnderlyingTemplate();
+        PrintType = TemplateName::Qualified::None;
+      }
+      break;
+    case TemplateName::OverloadedTemplate:
+    case TemplateName::AssumedTemplate:
+    case TemplateName::DependentTemplate:
+    case TemplateName::SubstTemplateTemplateParm:
+    case TemplateName::SubstTemplateTemplateParmPack:
+    case TemplateName::UsingTemplate:
       break;
     }
 
-    addLabel([&](llvm::raw_ostream &OS) { TN.print(OS, PP); },
+    addLabel([&](llvm::raw_ostream &OS) { TN.print(OS, PP, PrintType); },
              [&] {
                if (TemplateNameRange.isValid())
                  return TemplateNameRange;
@@ -525,12 +538,10 @@ class TypeInlayHintLabelPartBuilder
 public:
   TypeInlayHintLabelPartBuilder(QualType Current, ASTContext &Context,
                                 const PrintingPolicy &PP,
-                                bool ShouldAddLinksToTagTypes,
                                 llvm::StringRef Prefix,
                                 std::vector<InlayHintLabelPart> &LabelChunks)
-      : CurrentType(Current), Context(Context), PP(PP),
-        LabelChunks(LabelChunks),
-        ShouldAddLinksToTagTypes(ShouldAddLinksToTagTypes) {
+      : CurrentType(Current), CurrentNestedNameSpecifier(nullptr), Context(Context), PP(PP),
+        LabelChunks(LabelChunks) {
     LabelChunks.reserve(16);
     if (!Prefix.empty())
       addLabel(Prefix.str());
@@ -539,8 +550,6 @@ public:
   void VisitType(const Type *) { addLabel(CurrentType.getAsString(PP)); }
 
   void VisitTagType(const TagType *TT) {
-    if (!ShouldAddLinksToTagTypes)
-      return VisitType(TT);
     auto *D = TT->getDecl();
     if (auto *Specialization = dyn_cast<ClassTemplateSpecializationDecl>(D))
       return handleTemplateSpecialization(
@@ -558,8 +567,7 @@ public:
     if (!AT->isDeduced() || AT->getDeducedType()->isDecltypeType())
       return;
     maybeAddQualifiers();
-    CurrentTypeRAII Guard(*this, AT->getDeducedType(),
-                          ShouldAddLinksToTagTypes);
+    CurrentTypeRAII Guard(*this, AT->getDeducedType());
     return Visit(AT->getDeducedType().getTypePtr());
   }
 
@@ -582,21 +590,21 @@ public:
             *this,
             QualType(
                 NNS->getAsType(),
-                /*Quals=*/0), // Do we need cv-qualifiers on type specifiers?
-            ShouldAddLinksToTagTypes);
+                /*Quals=*/0) // Do we need cv-qualifiers on type specifiers?
+        );
         Visit(NNS->getAsType());
         addLabel("::");
         break;
       }
     }
-    CurrentTypeRAII Guard(*this, ET->getNamedType(), ShouldAddLinksToTagTypes);
+    CurrentTypeRAII Guard(*this, ET->getNamedType(), ET->getQualifier());
     return Visit(ET->getNamedType().getTypePtr());
   }
 
   void VisitReferenceType(const ReferenceType *RT) {
     maybeAddQualifiers();
     QualType Next = skipTopLevelReferences(RT->getPointeeTypeAsWritten());
-    CurrentTypeRAII Guard(*this, Next, ShouldAddLinksToTagTypes);
+    CurrentTypeRAII Guard(*this, Next);
     Visit(Next.getTypePtr());
     if (Next->getPointeeType().isNull())
       addLabel(" ");
@@ -608,8 +616,7 @@ public:
 
   void VisitPointerType(const PointerType *PT) {
     QualType Next = PT->getPointeeType();
-    std::optional<CurrentTypeRAII> Guard(std::in_place, *this, Next,
-                                         ShouldAddLinksToTagTypes);
+    std::optional<CurrentTypeRAII> Guard(std::in_place, *this, Next);
     Visit(Next.getTypePtr());
     if (Next->getPointeeType().isNull())
       addLabel(" ");
@@ -646,8 +653,7 @@ public:
 
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
     maybeAddQualifiers();
-    CurrentTypeRAII Guard(*this, ST->getReplacementType(),
-                          /*ShouldAddLinksToTagTypes=*/true);
+    CurrentTypeRAII Guard(*this, ST->getReplacementType());
     return Visit(ST->getReplacementType().getTypePtr());
   }
 };
@@ -1332,17 +1338,15 @@ private:
     // type in other cases.
     auto Desugared = maybeDesugar(AST, T);
     std::vector<InlayHintLabelPart> Chunks;
-    TypeInlayHintLabelPartBuilder Builder(
-        Desugared, AST, TypeHintPolicy,
-        /*ShouldAddLinksToTagTypes=*/T != Desugared, Prefix, Chunks);
+    TypeInlayHintLabelPartBuilder Builder(Desugared, AST, TypeHintPolicy,
+                                          Prefix, Chunks);
     Builder.Visit(Desugared.getTypePtr());
     if (T != Desugared && !shouldPrintTypeHint(Chunks)) {
       // If the desugared type is too long to display, fallback to the sugared
       // type.
       Chunks.clear();
-      TypeInlayHintLabelPartBuilder Builder(T, AST, TypeHintPolicy,
-                                            /*ShouldAddLinksToTagTypes=*/false,
-                                            Prefix, Chunks);
+      TypeInlayHintLabelPartBuilder Builder(T, AST, TypeHintPolicy, Prefix,
+                                            Chunks);
       Builder.Visit(T.getTypePtr());
     }
     if (shouldPrintTypeHint(Chunks))
