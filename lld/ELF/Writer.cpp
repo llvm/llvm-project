@@ -935,14 +935,18 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
       return i;
   }
 
-  // Find the first element that has as close a rank as possible.
   if (b == e)
     return e;
+  // Select the most similar output section. In case of ties, select the first
+  // section with a rank > the orphan's rank, or the last one with a rank <= the
+  // orphan's rank.
   int proximity = getRankProximity(sec, *b);
   auto i = b;
   for (auto j = b; ++j != e;) {
-    int p = getRankProximity(sec, *j);
-    if (p > proximity) {
+    auto p = getRankProximity(sec, *j);
+    if (p > proximity ||
+        (p == proximity && proximity >= 0 &&
+         cast<OutputDesc>(*j)->osec.sortRank <= sec->sortRank)) {
       proximity = p;
       i = j;
     }

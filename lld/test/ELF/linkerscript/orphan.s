@@ -65,6 +65,18 @@
 # RW-TEXT-NEXT: .text     PROGBITS 0000000000001{{...}} 0
 # RW-TEXT-NEXT: .mytext   PROGBITS 0000000000001{{...}} 0
 
+# RUN: ld.lld a.o -T rw-text-rw.lds -o rw-text-rw
+# RUN: llvm-readelf -S rw-text-rw | FileCheck %s --check-prefix=RW-TEXT-RW
+# RW-TEXT-RW:      .jcr      PROGBITS 00000000000002{{..}} 0
+# RW-TEXT-RW-NEXT: .rw1      PROGBITS 00000000000002{{..}} 0
+# RW-TEXT-RW-NEXT: .interp   PROGBITS 00000000000002{{..}} 0
+# RW-TEXT-RW-NEXT: .note.my  NOTE     00000000000002{{..}} 0
+# RW-TEXT-RW-NEXT: .text     PROGBITS 0000000000001{{...}} 0
+# RW-TEXT-RW-NEXT: .mytext   PROGBITS 0000000000001{{...}} 0
+# RW-TEXT-RW-NEXT: .rw2      PROGBITS 0000000000002{{...}} 0
+# RW-TEXT-RW-NEXT: .rw3      PROGBITS 0000000000002{{...}} 0
+# RW-TEXT-RW-NEXT: .bss      NOBITS   0000000000002{{...}} 0
+
 #--- a.s
 .section .rw1, "aw"; .byte 0
 .section .rw2, "aw"; .byte 0
@@ -111,4 +123,14 @@ SECTIONS {
   .rw1 : { *(.rw1) }
   . = ALIGN(CONSTANT(MAXPAGESIZE));
   .text : { *(.text) }
+}
+
+#--- rw-text-rw.lds
+SECTIONS {
+  . = SIZEOF_HEADERS;
+  .rw1 : { *(.rw1) }
+  . = ALIGN(CONSTANT(MAXPAGESIZE));
+  .text : { *(.text) }
+  . = ALIGN(CONSTANT(MAXPAGESIZE));
+  .rw2 : { *(.rw2) }
 }
