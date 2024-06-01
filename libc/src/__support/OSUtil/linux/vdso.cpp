@@ -47,7 +47,7 @@ public:
   constexpr Symbol(size_t idx) : sym(static_cast<VDSOSym>(idx)) {}
   constexpr cpp::string_view name() const { return symbol_name(sym); }
   constexpr cpp::string_view version() const { return symbol_version(sym); }
-  operator size_t() const { return static_cast<size_t>(sym); }
+  constexpr operator size_t() const { return static_cast<size_t>(sym); }
 };
 
 // See https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/symverdefs.html
