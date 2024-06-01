@@ -1,0 +1,64 @@
+name: Post-Commit Static Analyzer
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'llvm/**'
+  pull_request:
+    paths:
+      - '.github/workflows/ci-post-commit-analyzer.yml'
+  schedule:
+    - cron: '30 0 * * *'
+
+concurrency:
+  group: >-
+    llvm-project-${{ github.workflow }}-${{ github.event_name == 'pull_request' &&
+      ( github.event.pull_request.number || github.ref) }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  post-commit-analyzer:
+    if: >-
+      github.repository_owner == 'llvm' &&
+      github.event.action != 'closed'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install \
+            cmake \
+            ninja-build \
+            perl \
+            clang-tools \
+            clang
+
+      - name: Configure
+        run: |
+          scan-build \
+              --use-c++=clang++ \
+              --use-cc=clang \
+              cmake -B build -S llvm -G Ninja \
+                  -DLLVM_ENABLE_ASSERTIONS=ON \
+                  -DLLVM_BUILD_LLVM_DYLIB=ON \
+                  -DLLVM_LINK_LLVM_DYLIB=ON \
+                  -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+           scan-build -o analyzer-results --use-c++=clang++ --use-cc=clang ninja -v -C build
+
+      - name: Upload Results
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        with:
+          name: analyzer-results
+          path: 'analyzer-results/**/*'
+
