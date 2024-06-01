@@ -193,19 +193,19 @@ struct on_pointer_anon_size_ty_pos {
 
 struct on_pod_ty {
   int size;
-  // expected-error@+1{{'sized_by' only applies to pointers}}
+  // expected-error-re@+1{{'sized_by' only applies to pointers{{$}}}}
   int wrong_ty __sized_by(size);
 };
 
 struct on_void_ty {
   int size;
-  // expected-error@+2{{'sized_by' only applies to pointers}}
+  // expected-error-re@+2{{'sized_by' only applies to pointers{{$}}}}
   // expected-error@+1{{field has incomplete type 'void'}}
   void wrong_ty __sized_by(size);
 };
 
 struct on_member_array_complete_ty {
   int size;
-  // expected-error@+1{{'sized_by' only applies to pointers}}
+  // expected-error@+1{{'sized_by' only applies to pointers; did you mean to use 'counted_by'?}}
   struct size_known array[] __sized_by(size);
 };

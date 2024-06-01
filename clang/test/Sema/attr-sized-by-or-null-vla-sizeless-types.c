@@ -5,7 +5,7 @@
 
 struct on_sizeless_elt_ty {
     int count;
-    // expected-error@+2{{'sized_by_or_null' only applies to pointers}}
+    // expected-error-re@+2{{'sized_by_or_null' only applies to pointers{{$}}}}
     // expected-error@+1{{array has sizeless element type '__SVInt8_t'}}
     __SVInt8_t arr[] __sized_by_or_null(count);
 };

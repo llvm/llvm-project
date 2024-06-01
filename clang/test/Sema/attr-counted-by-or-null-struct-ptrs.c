@@ -213,13 +213,13 @@ struct on_pointer_anon_count_ty_pos {
 
 struct on_pod_ty {
   int count;
-  // expected-error@+1{{'counted_by_or_null' only applies to pointers}}
+  // expected-error-re@+1{{'counted_by_or_null' only applies to pointers{{$}}}}
   int wrong_ty __counted_by_or_null(count);
 };
 
 struct on_void_ty {
   int count;
-  // expected-error@+2{{'counted_by_or_null' only applies to pointers}}
+  // expected-error-re@+2{{'counted_by_or_null' only applies to pointers{{$}}}}
   // expected-error@+1{{field has incomplete type 'void'}}
   void wrong_ty __counted_by_or_null(count);
 };

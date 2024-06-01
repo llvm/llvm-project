@@ -70,7 +70,7 @@ struct on_member_pointer_struct_with_vla {
 
 struct has_annotated_vla {
   int size;
-  // expected-error@+1{{'sized_by_or_null' only applies to pointers}}
+  // expected-error@+1{{'sized_by_or_null' only applies to pointers; did you mean to use 'counted_by'?}}
   int buffer[] __sized_by_or_null(size);
 };
 
@@ -230,13 +230,13 @@ struct on_pointer_anon_count_ty_pos {
 //==============================================================================
 
 struct on_pod_ty {
-  // expected-error@+1{{'sized_by_or_null' only applies to pointers}}
+  // expected-error-re@+1{{'sized_by_or_null' only applies to pointers{{$}}}}
   int wrong_ty __sized_by_or_null(size);
   int size;
 };
 
 struct on_void_ty {
-  // expected-error@+2{{'sized_by_or_null' only applies to pointers}}
+  // expected-error-re@+2{{'sized_by_or_null' only applies to pointers{{$}}}}
   // expected-error@+1{{field has incomplete type 'void'}}
   void wrong_ty __sized_by_or_null(size);
   int size;
