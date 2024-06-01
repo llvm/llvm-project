@@ -19,12 +19,12 @@ program main
 
    !$omp target
       scalar = scalar + 50
-   !$omp end target 
+   !$omp end target
 
   !$omp target exit data map(from: scalar)
 
-  ! not the answer one may expect, but it is the same 
-  ! answer Clang gives so we are correctly on par with 
+  ! not the answer one may expect, but it is the same
+  ! answer Clang gives so we are correctly on par with
   ! Clang for the moment.
   print *, scalar
 end program

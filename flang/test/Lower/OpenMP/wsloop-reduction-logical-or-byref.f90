@@ -36,12 +36,12 @@
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_9]] to %[[VAL_4]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_10:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_10:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFsimple_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_12:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@or_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK:             omp.wsloop reduction(byref @or_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
 ! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reductionEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 fir.store %[[VAL_16]] to %[[VAL_11]]#1 : !fir.ref<i32>
@@ -85,12 +85,12 @@ end subroutine
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_9]] to %[[VAL_4]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_10:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_10:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFsimple_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_12:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@or_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK:             omp.wsloop reduction(byref @or_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
 ! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reduction_switch_orderEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 fir.store %[[VAL_16]] to %[[VAL_11]]#1 : !fir.ref<i32>
@@ -144,12 +144,12 @@ end subroutine
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_17]] to %[[VAL_11]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_18:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_18:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFmultiple_reductionsEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_20:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_21:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_22:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@or_reduction %[[VAL_7]]#0 -> %[[VAL_23:.*]] : !fir.ref<!fir.logical<4>>, @or_reduction %[[VAL_9]]#0 -> %[[VAL_24:.*]] : !fir.ref<!fir.logical<4>>, @or_reduction %[[VAL_11]]#0 -> %[[VAL_25:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK:             omp.wsloop reduction(byref @or_reduction %[[VAL_7]]#0 -> %[[VAL_23:.*]] : !fir.ref<!fir.logical<4>>, byref @or_reduction %[[VAL_9]]#0 -> %[[VAL_24:.*]] : !fir.ref<!fir.logical<4>>, byref @or_reduction %[[VAL_11]]#0 -> %[[VAL_25:.*]] : !fir.ref<!fir.logical<4>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_26:.*]]) : i32 = (%[[VAL_20]]) to (%[[VAL_21]]) inclusive step (%[[VAL_22]]) {
 ! CHECK:                 %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_23]] {uniq_name = "_QFmultiple_reductionsEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_24]] {uniq_name = "_QFmultiple_reductionsEy"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)

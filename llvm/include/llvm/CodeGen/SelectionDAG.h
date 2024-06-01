@@ -469,6 +469,7 @@ public:
   MachineFunction &getMachineFunction() const { return *MF; }
   const Pass *getPass() const { return SDAGISelPass; }
 
+  CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
   const TargetMachine &getTarget() const { return TM; }
   const TargetSubtargetInfo &getSubtarget() const { return MF->getSubtarget(); }
@@ -990,6 +991,11 @@ public:
   /// value assuming it was the smaller SrcTy value.
   SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
 
+  /// Return the expression required to zero extend the Op
+  /// value assuming it was the smaller SrcTy value.
+  SDValue getVPZeroExtendInReg(SDValue Op, SDValue Mask, SDValue EVL,
+                               const SDLoc &DL, EVT VT);
+
   /// Convert Op, which must be of integer type, to the integer type VT, by
   /// either truncating it or performing either zero or sign extension as
   /// appropriate extension for the pointer's semantics.
@@ -1235,11 +1241,11 @@ public:
   /// Helper function to make it easier to build Select's if you just have
   /// operands and don't want to check for vector.
   SDValue getSelect(const SDLoc &DL, EVT VT, SDValue Cond, SDValue LHS,
-                    SDValue RHS) {
+                    SDValue RHS, SDNodeFlags Flags = SDNodeFlags()) {
     assert(LHS.getValueType() == VT && RHS.getValueType() == VT &&
            "Cannot use select on differing types");
     auto Opcode = Cond.getValueType().isVector() ? ISD::VSELECT : ISD::SELECT;
-    return getNode(Opcode, DL, VT, Cond, LHS, RHS);
+    return getNode(Opcode, DL, VT, Cond, LHS, RHS, Flags);
   }
 
   /// Helper function to make it easier to build SelectCC's if you just have an

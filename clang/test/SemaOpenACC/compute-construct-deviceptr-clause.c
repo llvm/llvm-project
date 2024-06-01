@@ -16,7 +16,7 @@ void uses() {
 #pragma acc parallel deviceptr(LocalInt)
   while (1);
 
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel deviceptr(&LocalInt)
   while (1);
 
@@ -58,4 +58,9 @@ void uses() {
 
 #pragma acc parallel deviceptr(s.PtrMem)
   while (1);
+
+  // expected-error@+2{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
+  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+#pragma acc loop deviceptr(LocalInt)
+  for(;;);
 }
