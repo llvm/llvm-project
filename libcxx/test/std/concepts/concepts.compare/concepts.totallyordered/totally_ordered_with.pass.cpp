@@ -1034,10 +1034,8 @@ static_assert(
 static_assert(!check_totally_ordered_with<std::vector<int>, int>());
 
 struct A {};
-static_assert(!check_totally_ordered_with<std::optional<std::vector<A> >,
-                                         std::optional<std::vector<A> > >());
-static_assert(!check_totally_ordered_with<std::optional<std::vector<A> >,
-                                         std::vector<A> >());
+static_assert(!check_totally_ordered_with<std::optional<std::vector<A> >, std::optional<std::vector<A> > >());
+static_assert(!check_totally_ordered_with<std::optional<std::vector<A> >, std::vector<A> >());
 struct B {};
 static_assert(!check_totally_ordered_with<std::vector<A>, std::vector<B> >());
 static_assert(
