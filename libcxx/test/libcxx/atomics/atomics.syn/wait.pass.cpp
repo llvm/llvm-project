@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-threads
-// XFAIL: availability-synchronization_library-missing
 // This bug was first fixed in LLVM 19
-// XFAIL: using-built-library-before-llvm-19
+// UNSUPPORTED: using-built-library-before-llvm-19
+// XFAIL: availability-synchronization_library-missing
 
 #include <atomic>
 #include <cassert>
