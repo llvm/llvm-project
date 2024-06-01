@@ -263,6 +263,8 @@ C++23 Feature Support
 - Implemented `P2797R0: Static and explicit object member functions with the same parameter-type-lists <https://wg21.link/P2797R0>`_.
   This completes the support for "deducing this".
 
+- Implemented `P2582R1: Wording for class template argument deduction from inherited constructors <https://wg21.link/P2582R1>`_.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
