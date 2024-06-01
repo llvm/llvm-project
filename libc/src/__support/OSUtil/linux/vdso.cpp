@@ -15,6 +15,8 @@
 #include <linux/auxvec.h>
 #include <linux/elf.h>
 
+// TODO: This is a temporary workaround to avoid including elf.h
+// Include our own headers for ElfW and friends once we have them.
 #ifndef ElfW
 #if __POINTER_WIDTH__ == 32
 #define ElfW(type) Elf32_##type
