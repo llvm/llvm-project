@@ -335,6 +335,7 @@ add_math_entrypoint_object(tgammaf)
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)
 add_math_entrypoint_object(truncl)
+add_math_entrypoint_object(truncf16)
 add_math_entrypoint_object(truncf128)
 
 add_math_entrypoint_object(ufromfp)

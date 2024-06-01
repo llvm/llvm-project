@@ -317,6 +317,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  truncf16
+  SRCS
+    truncf16.cpp
+  HDRS
+    ../truncf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
   truncf128
   SRCS
     truncf128.cpp

@@ -157,6 +157,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  truncf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    truncf16_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.truncf16
+)
+
+add_fp_unittest(
   truncf128_test
   SUITE
     libc-math-smoke-tests
