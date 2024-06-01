@@ -42,6 +42,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/APInt.h"
@@ -931,7 +932,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
 
   // PPC MMA non-pointer types are not allowed as throw expr types.
   if (Ex && Context.getTargetInfo().getTriple().isPPC64())
-    CheckPPCMMAType(Ex->getType(), Ex->getBeginLoc());
+    PPC().CheckPPCMMAType(Ex->getType(), Ex->getBeginLoc());
 
   return new (Context)
       CXXThrowExpr(Ex, Context.VoidTy, OpLoc, IsThrownVarInScope);
@@ -1444,10 +1445,10 @@ bool Sema::CheckCXXThisType(SourceLocation Loc, QualType Type) {
   //   category are defined within such member functions as they are within
   //   an implicit object member function).
   DeclContext *DC = getFunctionLevelDeclContext();
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(DC);
-      Method && Method->isExplicitObjectMemberFunction()) {
+  const auto *Method = dyn_cast<CXXMethodDecl>(DC);
+  if (Method && Method->isExplicitObjectMemberFunction()) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
-  } else if (isLambdaCallWithExplicitObjectParameter(CurContext)) {
+  } else if (Method && isLambdaCallWithExplicitObjectParameter(CurContext)) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
   } else {
     Diag(Loc, diag::err_invalid_this_use) << 0;

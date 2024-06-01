@@ -44,6 +44,7 @@
 ; GCN-O0-NEXT:      Lower constant intrinsics
 ; GCN-O0-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O0-NEXT:      Expand vector predication intrinsics
+; GCN-O0-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O0-NEXT:      Expand reduction intrinsics
 ; GCN-O0-NEXT:    CallGraph Construction
@@ -225,6 +226,7 @@
 ; GCN-O1-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O1-NEXT:      Partially inline calls to library functions
 ; GCN-O1-NEXT:      Expand vector predication intrinsics
+; GCN-O1-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O1-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O1-NEXT:      Expand reduction intrinsics
 ; GCN-O1-NEXT:      Natural Loop Information
@@ -513,6 +515,7 @@
 ; GCN-O1-OPTS-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O1-OPTS-NEXT:      Partially inline calls to library functions
 ; GCN-O1-OPTS-NEXT:      Expand vector predication intrinsics
+; GCN-O1-OPTS-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O1-OPTS-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O1-OPTS-NEXT:      Expand reduction intrinsics
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
@@ -820,6 +823,7 @@
 ; GCN-O2-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O2-NEXT:      Partially inline calls to library functions
 ; GCN-O2-NEXT:      Expand vector predication intrinsics
+; GCN-O2-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O2-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O2-NEXT:      Expand reduction intrinsics
 ; GCN-O2-NEXT:      Natural Loop Information
@@ -1135,6 +1139,7 @@
 ; GCN-O3-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O3-NEXT:      Partially inline calls to library functions
 ; GCN-O3-NEXT:      Expand vector predication intrinsics
+; GCN-O3-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O3-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O3-NEXT:      Expand reduction intrinsics
 ; GCN-O3-NEXT:      Natural Loop Information

@@ -8,8 +8,8 @@
 ; RUN: llvm-dwarfdump --debug-info main.exe | FileCheck -check-prefix=PRE-BOLT-MAIN %s
 ; RUN: llvm-dwarfdump --debug-info main.exe.bolt | FileCheck -check-prefix=BOLT-MAIN %s
 
-; Tests whether we add DW_AT_GNU_ranges_base, if it's not present when Skeleton CU has
-; DW_AT_ranges.
+;; Tests whether we add DW_AT_GNU_ranges_base, if it's not present when Skeleton CU has
+;; DW_AT_ranges.
 
 ; PRE-BOLT-MAIN-NOT: DW_AT_GNU_ranges_base
 ; BOLT-MAIN: DW_AT_GNU_ranges_base

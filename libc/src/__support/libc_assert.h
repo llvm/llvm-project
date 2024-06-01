@@ -20,8 +20,8 @@
 
 #else // Not LIBC_COPT_USE_C_ASSERT
 
+#include "src/__support/OSUtil/exit.h"
 #include "src/__support/OSUtil/io.h"
-#include "src/__support/OSUtil/quick_exit.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 
@@ -51,7 +51,7 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
 
 // The public "assert" macro calls abort on failure. Should it be same here?
 // The libc internal assert can fire from anywhere inside the libc. So, to
-// avoid potential chicken-and-egg problems, it is simple to do a quick_exit
+// avoid potential chicken-and-egg problems, it is simple to do an exit
 // on assertion failure instead of calling abort. We also don't want to use
 // __builtin_trap as it could potentially be implemented using illegal
 // instructions which can be very misleading when debugging.
@@ -76,7 +76,7 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
                                                "' in function: '");            \
       LIBC_NAMESPACE::write_to_stderr(__PRETTY_FUNCTION__);                    \
       LIBC_NAMESPACE::write_to_stderr("'\n");                                  \
-      LIBC_NAMESPACE::quick_exit(0xFF);                                        \
+      LIBC_NAMESPACE::internal::exit(0xFF);                                    \
     }                                                                          \
   } while (false)
 #endif // NDEBUG

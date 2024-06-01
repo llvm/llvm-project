@@ -714,6 +714,7 @@ public:
       CrayPointer, CrayPointee,
       LocalityLocal, // named in LOCAL locality-spec
       LocalityLocalInit, // named in LOCAL_INIT locality-spec
+      LocalityReduce, // named in REDUCE locality-spec
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement, =>object, or /init/
       InNamelist, // in a Namelist group

@@ -137,6 +137,8 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let mayStore           = ps.mayStore;
   let IsAtomicRet        = ps.IsAtomicRet;
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
+  let Uses               = ps.Uses;
+  let Defs               = ps.Defs;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -351,6 +353,8 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let IsAtomicNoRet        = ps.IsAtomicNoRet;
   let VALU                 = ps.VALU;
   let LGKM_CNT             = ps.LGKM_CNT;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -2401,6 +2405,8 @@ class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
   let LGKM_CNT           = ps.LGKM_CNT;
   let MUBUF              = ps.MUBUF;
   let MTBUF              = ps.MTBUF;
+  let Uses               = ps.Uses;
+  let Defs               = ps.Defs;
 
   bits<24> offset;
   bits<8>  vaddr;
