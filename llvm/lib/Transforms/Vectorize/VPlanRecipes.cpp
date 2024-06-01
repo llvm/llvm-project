@@ -137,7 +137,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
-    case VPInstruction::ExtractRecurrenceResult:
+    case VPInstruction::ExtractFromEnd:
     case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
       return false;
@@ -301,7 +301,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
-  case VPInstruction::ExtractRecurrenceResult:
+  case VPInstruction::ExtractFromEnd:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
     return true;
@@ -560,23 +560,25 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     return ReducedPartRdx;
   }
-  case VPInstruction::ExtractRecurrenceResult: {
+  case VPInstruction::ExtractFromEnd: {
     if (Part != 0)
       return State.get(this, 0, /*IsScalar*/ true);
 
-    // Extract the second last element in the middle block for users outside the
-    // loop.
+    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    unsigned Offset = CI->getZExtValue();
+
+    // Extract lane VF - Offset in the from the operand.
     Value *Res;
     if (State.VF.isVector()) {
       Res = State.get(
           getOperand(0),
-          VPIteration(State.UF - 1, VPLane::getLastLaneForVF(State.VF, 2)));
+          VPIteration(State.UF - 1, VPLane::getLaneFromEnd(State.VF, Offset)));
     } else {
       assert(State.UF > 1 && "VF and UF cannot both be 1");
       // When loop is unrolled without vectorizing, retrieve the value just
       // prior to the final unrolled value. This is analogous to the vectorized
       // case above: extracting the second last element when VF > 1.
-      Res = State.get(getOperand(0), State.UF - 2);
+      Res = State.get(getOperand(0), State.UF - Offset);
     }
     Res->setName(Name);
     return Res;
@@ -621,7 +623,7 @@ void VPInstruction::execute(VPTransformState &State) {
   bool GeneratesPerFirstLaneOnly =
       canGenerateScalarForFirstLane() &&
       (vputils::onlyFirstLaneUsed(this) ||
-       getOpcode() == VPInstruction::ExtractRecurrenceResult ||
+       getOpcode() == VPInstruction::ExtractFromEnd ||
        getOpcode() == VPInstruction::ComputeReductionResult);
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
   for (unsigned Part = 0; Part < State.UF; ++Part) {
@@ -716,8 +718,8 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::BranchOnCount:
     O << "branch-on-count";
     break;
-  case VPInstruction::ExtractRecurrenceResult:
-    O << "extract-recurrence-result";
+  case VPInstruction::ExtractFromEnd:
+    O << "extract-from-end";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";

@@ -167,7 +167,7 @@ public:
 
   static VPLane getFirstLane() { return VPLane(0, VPLane::Kind::First); }
 
-  static VPLane getLastLaneForVF(const ElementCount &VF, unsigned Offset = 1) {
+  static VPLane getLaneFromEnd(const ElementCount &VF, unsigned Offset) {
     unsigned LaneOffset = VF.getKnownMinValue() - Offset;
     Kind LaneKind;
     if (VF.isScalable())
@@ -177,6 +177,10 @@ public:
     else
       LaneKind = VPLane::Kind::First;
     return VPLane(LaneOffset, LaneKind);
+  }
+
+  static VPLane getLastLaneForVF(const ElementCount &VF) {
+    return getLaneFromEnd(VF, 1);
   }
 
   /// Returns a compile-time known value for the lane index and asserts if the
@@ -1182,7 +1186,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
-    ExtractRecurrenceResult,
+    ExtractFromEnd,
     LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
@@ -3659,7 +3663,7 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
     return all_of(GEP->operands(), isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(Def))
     return VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
-           VPI->getOpcode() == VPInstruction::ExtractRecurrenceResult;
+           VPI->getOpcode() == VPInstruction::ExtractFromEnd;
   return false;
 }
 } // end namespace vputils
