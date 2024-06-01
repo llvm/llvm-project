@@ -496,27 +496,13 @@ bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
   if (!isa<BinaryOperator>(S))
     return false;
 
-  auto getRedVarDecl =
-      [](const Expr *E,
-         const CodeGenModule::XteamRedVarMap &RVM) -> const VarDecl * {
-    if (!isa<DeclRefExpr>(E))
-      return nullptr;
-    const ValueDecl *ValDecl = cast<DeclRefExpr>(E)->getDecl();
-    if (!isa<VarDecl>(ValDecl))
-      return nullptr;
-    const VarDecl *VD = cast<VarDecl>(ValDecl);
-    if (RVM.find(VD) == RVM.end())
-      return nullptr;
-    return VD;
-  };
-
   const BinaryOperator *RedBO = cast<BinaryOperator>(S);
   const CodeGenModule::XteamRedVarMap &RedVarMap =
       CGM.getXteamRedVarMap(CGM.getCurrentXteamRedStmt());
 
   // Is a reduction variable the lhs?
   const VarDecl *RedVarDecl =
-      getRedVarDecl(RedBO->getLHS()->IgnoreImpCasts(), RedVarMap);
+      CGM.getXteamRedVarDecl(RedBO->getLHS()->IgnoreImpCasts(), RedVarMap);
   if (RedVarDecl == nullptr)
     return false;
 
@@ -524,16 +510,6 @@ bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
   assert(
       (RedBO->getOpcode() == BO_AddAssign || RedBO->getOpcode() == BO_Assign) &&
       "Unexpected operator during Xteam CodeGen");
-
-  auto isRedVarExpr = [](const Expr *E, const VarDecl *RedVarDecl) {
-    if (!isa<DeclRefExpr>(E))
-      return false;
-    const ValueDecl *ValDecl = cast<DeclRefExpr>(E)->getDecl();
-    if (!isa<VarDecl>(ValDecl))
-      return false;
-    const VarDecl *VD = cast<VarDecl>(ValDecl);
-    return VD == RedVarDecl;
-  };
 
   // Extract the rhs for the reduction.
   const Expr *RedRHSExpr = nullptr;
@@ -549,9 +525,10 @@ bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
     assert(OpcL2BO == BO_Add && "Unexpected operator");
     // If the redvar is lhs, use the rhs in the generated reduction statement
     // and vice-versa.
-    if (isRedVarExpr(L2BO->getLHS()->IgnoreImpCasts(), RedVarDecl))
+    if (CGM.isXteamRedVarExpr(L2BO->getLHS()->IgnoreImpCasts(), RedVarDecl))
       RedRHSExpr = L2BO->getRHS();
-    else if (isRedVarExpr(L2BO->getRHS()->IgnoreImpCasts(), RedVarDecl))
+    else if (CGM.isXteamRedVarExpr(L2BO->getRHS()->IgnoreImpCasts(),
+                                   RedVarDecl))
       RedRHSExpr = L2BO->getLHS();
     else
       llvm_unreachable("Unhandled add expression during xteam reduction");

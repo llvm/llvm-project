@@ -7876,8 +7876,9 @@ private:
 /// red_var
 class XteamRedExprChecker final : public ConstStmtVisitor<XteamRedExprChecker> {
 public:
-  XteamRedExprChecker(const CodeGenModule::XteamRedVarMap &RVM)
-      : RedMap(RVM), IsSupported(true) {}
+  XteamRedExprChecker(CodeGenModule &CGM,
+                      const CodeGenModule::XteamRedVarMap &RVM)
+      : CGM(CGM), RedMap(RVM), IsSupported(true) {}
   XteamRedExprChecker() = delete;
 
   bool isSupported() const { return IsSupported; }
@@ -7885,18 +7886,6 @@ public:
   void VisitStmt(const Stmt *S) {
     if (!S)
       return;
-
-    auto isExprXteamRedVar = [this](const Expr *E) {
-      if (!isa<DeclRefExpr>(E))
-        return false;
-      auto *Decl = cast<DeclRefExpr>(E)->getDecl();
-      if (!isa<VarDecl>(Decl))
-        return false;
-      auto *VD = cast<VarDecl>(Decl);
-      if (RedMap.find(VD) != RedMap.end())
-        return true;
-      return false;
-    };
 
     if (isa<BinaryOperator>(S)) {
       const BinaryOperator *BinOpExpr = cast<BinaryOperator>(S);
@@ -7908,51 +7897,77 @@ public:
       // We punt on anything more complex.
 
       const Expr *LHS = BinOpExpr->getLHS()->IgnoreImpCasts();
-      if (isExprXteamRedVar(LHS)) {
-        auto BinOpExprOp = BinOpExpr->getOpcode();
-        if (BinOpExprOp != BO_Assign && BinOpExprOp != BO_AddAssign &&
-            BinOpExprOp != BO_Add) {
+      auto BinOpExprOp = BinOpExpr->getOpcode();
+      // Get the reduction variable, if any, from the LHS.
+      const VarDecl *RedVarDecl = CGM.getXteamRedVarDecl(LHS, RedMap);
+      if (RedVarDecl != nullptr) {
+        if (BinOpExprOp == BO_Assign || BinOpExprOp == BO_AddAssign) {
+          const Expr *RHS = BinOpExpr->getRHS()->IgnoreImpCasts();
+          // If operator +=, reject if RHS accesses any reduction variable.
+          if (BinOpExprOp == BO_AddAssign) {
+            ValidateChildren(RHS);
+            if (!IsSupported)
+              return;
+          } else { // BinOpExprOp == BO_Assign
+            if (isa<BinaryOperator>(RHS)) {
+              const BinaryOperator *BinOpRHS = cast<BinaryOperator>(RHS);
+              if (BinOpRHS->getOpcode() == BO_Add) {
+                const Expr *LHSBinOpRHS = BinOpRHS->getLHS()->IgnoreImpCasts();
+                const Expr *RHSBinOpRHS = BinOpRHS->getRHS()->IgnoreImpCasts();
+                // If LHS is the reduction variable, the RHS must not access any
+                // reduction variable. Similarly, vice-versa for RHS.
+                if (CGM.isXteamRedVarExpr(LHSBinOpRHS, RedVarDecl))
+                  ValidateChildren(RHSBinOpRHS);
+                else if (CGM.isXteamRedVarExpr(RHSBinOpRHS, RedVarDecl))
+                  ValidateChildren(LHSBinOpRHS);
+                else // Neither LHS nor RHS is the reduction variable.
+                  IsSupported = false;
+                if (!IsSupported)
+                  return;
+              } else { // Not an add binary operator.
+                IsSupported = false;
+                return;
+              }
+            } else { // RHS is not a binary operator for assignment.
+              IsSupported = false;
+              return;
+            }
+          }
+        } else { // Binary operator is neither +=, nor =.
           IsSupported = false;
           return;
         }
-        // We only need to further examine the assignment case.
-        // If += or +, Codegen will extract the rhs.
-        if (BinOpExpr->getOpcode() == BO_Assign) {
-          const Expr *RHS = BinOpExpr->getRHS()->IgnoreImpCasts();
-          if (!isa<BinaryOperator>(RHS)) {
-            IsSupported = false;
-            return;
-          }
-          const BinaryOperator *BinOpRHS = cast<BinaryOperator>(RHS);
-          if (BinOpRHS->getOpcode() != BO_Add) {
-            IsSupported = false;
-            return;
-          }
-          const Expr *LHSBinOpRHS = BinOpRHS->getLHS()->IgnoreImpCasts();
-          const Expr *RHSBinOpRHS = BinOpRHS->getRHS()->IgnoreImpCasts();
-          if (!isExprXteamRedVar(LHSBinOpRHS) &&
-              !isExprXteamRedVar(RHSBinOpRHS)) {
-            IsSupported = false;
-            return;
-          }
-        }
+      } else { // LHS of binary operator does not access any reduction variable.
+        // Ensure that RHS does not access any reduction variable either.
+        ValidateChildren(S);
+        if (!IsSupported)
+          return;
       }
-    } else if (isa<UnaryOperator>(S)) {
-      const Expr *UnaryOpExpr =
-          cast<UnaryOperator>(S)->getSubExpr()->IgnoreImpCasts();
-      // Xteam reduction does not handle unary operators currently.
-      if (isExprXteamRedVar(UnaryOpExpr)) {
+    } else if (isa<DeclRefExpr>(S)) {
+      // Not a binary operator, so not supported at this point. So ensure no
+      // reduction variable is accessed.
+      if (CGM.hasXteamRedVar(cast<DeclRefExpr>(S), RedMap)) {
         IsSupported = false;
         return;
       }
+    } else {
+      // Recursively check the children.
+      ValidateChildren(S);
+      if (!IsSupported)
+        return;
     }
-
-    for (const Stmt *Child : S->children())
-      if (Child)
+  }
+  void ValidateChildren(const Stmt *S) {
+    for (auto Child : S->children())
+      if (Child) {
         Visit(Child);
+        if (!IsSupported)
+          return;
+      }
   }
 
 private:
+  CodeGenModule &CGM;
   /// Map of reduction variables for this directive.
   const CodeGenModule::XteamRedVarMap &RedMap;
   /// Set to false if codegen does not support the reduction expression.
@@ -8438,7 +8453,7 @@ CodeGenModule::getXteamRedForStmtStatus(const OMPExecutableDirective &D,
   // the directive
   const ForStmt *FStmt = getSingleForStmt(OMPStmt);
   assert(FStmt != nullptr && "Unexpected missing For Stmt");
-  XteamRedExprChecker Chk(RVM);
+  XteamRedExprChecker Chk(*this, RVM);
   Chk.Visit(FStmt);
   if (!Chk.isSupported())
     return std::make_pair(NxUnsupportedRedExpr, HasNestedGenericCall);
@@ -8618,6 +8633,45 @@ CodeGenModule::collectXteamRedVars(const OptKernelNestDirectives &NestDirs) {
     return std::make_pair(NxNoRedVar, std::make_pair(VarMap, VarVec));
 
   return std::make_pair(NxSuccess, std::make_pair(VarMap, VarVec));
+}
+
+bool CodeGenModule::hasXteamRedVar(const Expr *E,
+                                   const XteamRedVarMap &RedMap) const {
+  assert(E && "Unexpected null expression");
+  if (!isa<DeclRefExpr>(E))
+    return false;
+  auto *Decl = cast<DeclRefExpr>(E)->getDecl();
+  if (!isa<VarDecl>(Decl))
+    return false;
+  auto *VD = cast<VarDecl>(Decl);
+  if (RedMap.find(VD) != RedMap.end())
+    return true;
+  return false;
+}
+
+const VarDecl *
+CodeGenModule::getXteamRedVarDecl(const Expr *E,
+                                  const XteamRedVarMap &RedMap) const {
+  if (!isa<DeclRefExpr>(E))
+    return nullptr;
+  const ValueDecl *ValDecl = cast<DeclRefExpr>(E)->getDecl();
+  if (!isa<VarDecl>(ValDecl))
+    return nullptr;
+  const VarDecl *VD = cast<VarDecl>(ValDecl);
+  if (RedMap.find(VD) == RedMap.end())
+    return nullptr;
+  return VD;
+}
+
+bool CodeGenModule::isXteamRedVarExpr(const Expr *E,
+                                      const VarDecl *RedVarDecl) const {
+  if (!isa<DeclRefExpr>(E))
+    return false;
+  const ValueDecl *ValDecl = cast<DeclRefExpr>(E)->getDecl();
+  if (!isa<VarDecl>(ValDecl))
+    return false;
+  const VarDecl *VD = cast<VarDecl>(ValDecl);
+  return VD == RedVarDecl;
 }
 
 const OMPExecutableDirective *

@@ -1915,6 +1915,19 @@ public:
   void setCurrentXteamRedStmt(const Stmt *S) { CurrentXteamRedStmt = S; }
   const Stmt *getCurrentXteamRedStmt() { return CurrentXteamRedStmt; }
 
+  /// Return true if the provided expression accesses a variable in the provided
+  /// map, otherwise return false.
+  bool hasXteamRedVar(const Expr *E, const XteamRedVarMap &RedMap) const;
+
+  /// If present in the provided map, return the reduction variable accessed by
+  /// the provided expression, otherwise return nullptr.
+  const VarDecl *getXteamRedVarDecl(const Expr *E,
+                                    const XteamRedVarMap &RedMap) const;
+
+  /// Return true if the provided expression accesses the provided variable,
+  /// otherwise return false.
+  bool isXteamRedVarExpr(const Expr *E, const VarDecl *VD) const;
+
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
   /// because we'll lose all important information after each repl.
