@@ -7140,6 +7140,21 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
       if ((SI = dyn_cast<StoreInst>(&I)) &&
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
         ValuesToIgnore.insert(&I);
+      if (isAccessInterleaved(&I)) {
+        auto *Group = getInterleavedAccessGroup(&I);
+        if (Group->getInsertPos() == &I)
+          continue;
+        Value *PointerOp = getLoadStorePointerOperand(&I);
+        SmallSetVector<Value *, 4> Worklist;
+        Worklist.insert(PointerOp);
+        for (unsigned I = 0; I != Worklist.size(); ++I) {
+          auto *Op = dyn_cast<Instruction>(Worklist[I]);
+          if (!Op || !TheLoop->contains(Op) || !Op->hasOneUse())
+            continue;
+          VecValuesToIgnore.insert(Op);
+          Worklist.insert(Op->op_begin(), Op->op_end());
+        }
+      }
     }
 
   // Ignore type-promoting instructions we identified during reduction
