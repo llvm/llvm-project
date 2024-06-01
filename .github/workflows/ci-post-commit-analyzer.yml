@@ -9,6 +9,7 @@ on:
       - 'release/**'
     paths:
       - 'llvm/**'
+      - '.github/workflows/ci-post-commit-analyzer.yml'
   pull_request:
     paths:
       - '.github/workflows/ci-post-commit-analyzer.yml'
