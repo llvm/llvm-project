@@ -5283,8 +5283,11 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
-    // If the max shift amount isn't in range, then the shift can create poison.
-    return !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
+    // If the max shift amount isn't in range, then the shift can
+    // create poison.
+    return !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedElts,
+                                             Depth + 1) ||
+           !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
 
   case ISD::SCALAR_TO_VECTOR:
     // Check if we demand any upper (undef) elements.
