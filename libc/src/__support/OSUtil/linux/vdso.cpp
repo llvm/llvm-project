@@ -12,8 +12,6 @@
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/errno/libc_errno.h"
-#include "x86_64/vdso.h"
-#include <cstddef>
 #include <linux/auxvec.h>
 #include <linux/elf.h>
 
@@ -36,11 +34,21 @@ namespace vdso {
 
 namespace {
 
-// Helper functions to convert between VDSOSym and its index
-constexpr VDSOSym symbolize(size_t index) {
-  return static_cast<VDSOSym>(index);
-}
-constexpr size_t numeralize(VDSOSym sym) { return static_cast<size_t>(sym); }
+// This class is an internal helper for symbol <-> index conversion and
+// improve the readability of the code.
+// We keep this class internal on purpose to avoid users from implicitly
+// converting between size_t and VDSOSym.
+class Symbol {
+  VDSOSym sym;
+
+public:
+  static constexpr size_t COUNT = static_cast<size_t>(VDSOSym::VDSOSymCount);
+  constexpr Symbol(VDSOSym sym) : sym(sym) {}
+  constexpr Symbol(size_t idx) : sym(static_cast<VDSOSym>(idx)) {}
+  constexpr cpp::string_view name() const { return symbol_name(sym); }
+  constexpr cpp::string_view version() const { return symbol_version(sym); }
+  operator size_t() const { return static_cast<size_t>(sym); }
+};
 
 // See https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/symverdefs.html
 struct Verdaux {
@@ -91,7 +99,7 @@ cpp::string_view find_version(Verdef *verdef, ElfW(Half) * versym,
   return "";
 }
 
-using VDSOArray = cpp::array<void *, numeralize(VDSOSym::VDSOSymCount)>;
+using VDSOArray = cpp::array<void *, Symbol::COUNT>;
 
 VDSOArray symbol_table;
 
@@ -115,9 +123,9 @@ struct VDSOSymbolTable {
 
   void populate_symbol_cache(size_t symbol_count, ElfW(Addr) vdso_addr) {
     for (size_t i = 0, e = symbol_table.size(); i < e; ++i) {
-      VDSOSym sym = symbolize(i);
-      cpp::string_view name = symbol_name(sym);
-      cpp::string_view version = symbol_version(sym);
+      Symbol sym = i;
+      cpp::string_view name = sym.name();
+      cpp::string_view version = sym.version();
       for (size_t j = 0; j < symbol_count; ++j) {
         if (name == strtab + symtab[j].st_name) {
           // we find a symbol with desired name
@@ -245,14 +253,14 @@ void initialize_vdso_global_cache() {
 
 void *get_symbol(VDSOSym sym) {
   // if sym is invalid, return nullptr
-  const size_t index = numeralize(sym);
-  if (index >= symbol_table.size())
+  Symbol symbol(sym);
+  if (symbol >= symbol_table.size())
     return nullptr;
 
   static FutexWordType once_flag = 0;
   callonce(reinterpret_cast<CallOnceFlag *>(&once_flag),
            initialize_vdso_global_cache);
-  return symbol_table[index];
+  return symbol_table[symbol];
 }
 } // namespace vdso
 } // namespace LIBC_NAMESPACE
