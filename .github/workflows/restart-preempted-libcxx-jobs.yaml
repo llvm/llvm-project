@@ -38,6 +38,27 @@ jobs:
             const wf_run = context.payload.workflow_run
             core.notice(`Running on "${wf_run.display_title}" by @${wf_run.actor.login} (event: ${wf_run.event})\nWorkflow run URL: ${wf_run.html_url}`)
 
+
+            async function create_check_run(conclusion, message) {
+                // Create a check run on the given workflow run to indicate if
+                // we are restarting the workflow or not.
+                if (conclusion != 'success' && conclusion != 'skipped' && conclusion != 'neutral') {
+                  core.setFailed('Invalid conclusion: ' + conclusion)
+                }
+                await github.rest.checks.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: 'Restart Preempted Job',
+                    head_sha: wf_run.head_sha,
+                    status: 'completed',
+                    conclusion: conclusion,
+                    output: {
+                      title: 'Restarted Preempted Job',
+                      summary: message
+                    }
+                })
+            }
+
             console.log('Listing check runs for suite')
             const check_suites = await github.rest.checks.listForSuite({
               owner: context.repo.owner,
@@ -88,6 +109,8 @@ jobs:
                   // We don't want to restart the workflow if there were other failures.
                   core.notice('Choosing not to rerun workflow because we found a non-preemption failure' +
                     'Failure message: "' + annotation.message + '"');
+                  await create_check_run('skipped', 'Choosing not to rerun workflow because we found a non-preemption failure\n'
+                    + 'Failure message: ' + annotation.message)
                   return;
                 }
               }
@@ -95,6 +118,7 @@ jobs:
              
             if (!has_preempted_job) {
               core.notice('No preempted jobs found. Not restarting workflow.');
+              await create_check_run('neutral', 'No preempted jobs found. Not restarting workflow.')
               return;
             }
             
@@ -104,5 +128,6 @@ jobs:
                 repo: context.repo.repo,
                 run_id: context.payload.workflow_run.id
               })
+            await create_check_run('success', 'Restarted workflow run due to preempted job')
             
         
