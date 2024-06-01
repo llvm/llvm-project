@@ -340,7 +340,7 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
   // supported yet.
   if (T->isIntegerTy())
     return T->getIntegerBitWidth() <= Subtarget.getXLen() * 2;
-  if (T->isFloatTy() || T->isDoubleTy())
+  if (T->isHalfTy() || T->isFloatTy() || T->isDoubleTy())
     return true;
   if (T->isPointerTy())
     return true;
@@ -361,7 +361,7 @@ static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget,
   // supported yet.
   if (T->isIntegerTy())
     return T->getIntegerBitWidth() <= Subtarget.getXLen() * 2;
-  if (T->isFloatTy() || T->isDoubleTy())
+  if (T->isHalfTy() || T->isFloatTy() || T->isDoubleTy())
     return true;
   if (T->isPointerTy())
     return true;

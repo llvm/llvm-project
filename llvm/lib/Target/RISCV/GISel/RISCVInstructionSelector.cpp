@@ -849,6 +849,8 @@ const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
   }
 
   if (RB.getID() == RISCV::FPRBRegBankID) {
+    if (Ty.getSizeInBits() == 16)
+      return &RISCV::FPR16RegClass;
     if (Ty.getSizeInBits() == 32)
       return &RISCV::FPR32RegClass;
     if (Ty.getSizeInBits() == 64)
