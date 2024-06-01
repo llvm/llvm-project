@@ -491,7 +491,7 @@ class TypeInlayHintLabelPartBuilder
     case TemplateName::QualifiedTemplate:
       if (NestedNameSpecifier *NNS =
               TN.getAsQualifiedTemplateName()->getQualifier();
-          NNS == CurrentNestedNameSpecifier) {
+          NNS && NNS == CurrentNestedNameSpecifier) {
         // We have handled the NNS in VisitElaboratedType(). Avoid printing it
         // twice.
         TN = TN.getAsQualifiedTemplateName()->getUnderlyingTemplate();
@@ -582,6 +582,7 @@ public:
       case NestedNameSpecifier::Super: {
         std::string Label;
         llvm::raw_string_ostream OS(Label);
+        NNS->print(OS, PP);
         addLabel(std::move(Label));
       } break;
       case NestedNameSpecifier::TypeSpec:

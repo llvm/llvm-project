@@ -1779,7 +1779,7 @@ TEST(TypeHints, Links) {
                       ExpectedHintLabelPiece{"Container", "Container"},
                       ExpectedHintLabelPiece{"<int, int>, long>"});
 
-  // TODO: Support links on NTTP arguments
+  // TODO: Support links on NTTP arguments.
   assertTypeLinkHints(
       Source, "4",
       ExpectedHintLabelPiece{": "},
