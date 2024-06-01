@@ -364,7 +364,7 @@ struct IndexedAllocationInfo {
 // be used for temporary in-memory instances.
 struct AllocationInfo {
   // Same as IndexedAllocationInfo::CallStack with the frame contents inline.
-  llvm::SmallVector<Frame> CallStack;
+  std::vector<Frame> CallStack;
   // Same as IndexedAllocationInfo::Info;
   PortableMemInfoBlock Info;
 
@@ -446,8 +446,7 @@ struct IndexedMemProfRecord {
   // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
   // translate CallStackId to call stacks with frames inline.
   MemProfRecord toMemProfRecord(
-      llvm::function_ref<llvm::SmallVector<Frame>(const CallStackId)> Callback)
-      const;
+      llvm::function_ref<std::vector<Frame>(const CallStackId)> Callback) const;
 
   // Returns the GUID for the function name after canonicalization. For
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
@@ -462,7 +461,7 @@ struct MemProfRecord {
   // Same as IndexedMemProfRecord::AllocSites with frame contents inline.
   llvm::SmallVector<AllocationInfo> AllocSites;
   // Same as IndexedMemProfRecord::CallSites with frame contents inline.
-  llvm::SmallVector<llvm::SmallVector<Frame>> CallSites;
+  llvm::SmallVector<std::vector<Frame>> CallSites;
 
   MemProfRecord() = default;
   MemProfRecord(
@@ -472,7 +471,7 @@ struct MemProfRecord {
       AllocSites.emplace_back(IndexedAI, IdToFrameCallback);
     }
     for (const ArrayRef<FrameId> Site : Record.CallSites) {
-      llvm::SmallVector<Frame> Frames;
+      std::vector<Frame> Frames;
       for (const FrameId Id : Site) {
         Frames.push_back(IdToFrameCallback(Id));
       }
@@ -490,7 +489,7 @@ struct MemProfRecord {
 
     if (!CallSites.empty()) {
       OS << "    CallSites:\n";
-      for (const llvm::SmallVector<Frame> &Frames : CallSites) {
+      for (const std::vector<Frame> &Frames : CallSites) {
         for (const Frame &F : Frames) {
           OS << "    -\n";
           F.printYAML(OS);
@@ -844,8 +843,8 @@ template <typename MapTy> struct CallStackIdConverter {
   CallStackIdConverter(const CallStackIdConverter &) = delete;
   CallStackIdConverter &operator=(const CallStackIdConverter &) = delete;
 
-  llvm::SmallVector<Frame> operator()(CallStackId CSId) {
-    llvm::SmallVector<Frame> Frames;
+  std::vector<Frame> operator()(CallStackId CSId) {
+    std::vector<Frame> Frames;
     auto CSIter = Map.find(CSId);
     if (CSIter == Map.end()) {
       LastUnmappedId = CSId;
@@ -886,8 +885,8 @@ struct LinearCallStackIdConverter {
                              std::function<Frame(LinearFrameId)> FrameIdToFrame)
       : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
 
-  llvm::SmallVector<Frame> operator()(LinearCallStackId LinearCSId) {
-    llvm::SmallVector<Frame> Frames;
+  std::vector<Frame> operator()(LinearCallStackId LinearCSId) {
+    std::vector<Frame> Frames;
 
     const unsigned char *Ptr =
         CallStackBase +
