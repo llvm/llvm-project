@@ -461,6 +461,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  roundevenf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundevenf16_test.cpp
+  HDRS
+    RoundEvenTest.h
+  DEPENDS
+    libc.src.math.roundevenf16
+)
+
+add_fp_unittest(
   roundevenf128_test
   SUITE
     libc-math-smoke-tests

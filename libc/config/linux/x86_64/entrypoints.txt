@@ -536,6 +536,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fabsf16
     libc.src.math.floorf16
     libc.src.math.roundf16
+    libc.src.math.roundevenf16
   )
 endif()
 

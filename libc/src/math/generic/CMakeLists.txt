@@ -490,6 +490,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  roundevenf16
+  SRCS
+    roundevenf16.cpp
+  HDRS
+    ../roundevenf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
   roundevenf128
   SRCS
     roundevenf128.cpp
