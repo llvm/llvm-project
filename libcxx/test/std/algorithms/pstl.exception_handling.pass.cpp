@@ -9,7 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-exceptions
 // `check_assertion.h` requires Unix headers and regex support.
-// UNSUPPORTED: !has-unix-headers, no-localization
+// REQUIRES: has-unix-headers
+// UNSUPPORTED: no-localization
 
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
