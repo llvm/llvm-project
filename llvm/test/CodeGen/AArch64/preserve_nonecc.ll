@@ -18,8 +18,8 @@ entry:
 
 ; When calling a preserve_none function, all live registers must be saved and
 ; restored around the function call.
-declare preserve_nonecc RETTYPE @bar(i64, i64, double, double)
-define void @preserve_nonecc2() nounwind {
+declare preserve_nonecc RETTYPE @preserve_nonecc2(i64, i64, double, double)
+define void @bar() nounwind {
 entry:
 ;ALL-LABEL: preserve_nonecc2
 ;ALL:       InlineAsm Start
@@ -86,7 +86,7 @@ entry:
   %f8 = call <1 x double> asm sideeffect "", "={d15}"() nounwind
   %f9 = call <1 x double> asm sideeffect "", "={d16}"() nounwind
 
-  call preserve_nonecc RETTYPE @bar(i64 1, i64 2, double 3.0, double 4.0)
+  call preserve_nonecc RETTYPE @preserve_nonecc2(i64 1, i64 2, double 3.0, double 4.0)
   call void asm sideeffect "", "{x8},{x9},{x10},{x11},{x12},{x13},{x14},{x15},{x16},{x17},{x19},{x20},{x21},{x22},{x23},{x24},{x25},{x26},{x27},{x28},{d7},{d8},{d9},{d10},{d11},{d12},{d13},{d14},{d15},{d16}"(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12, i64 %a13, i64 %a14, i64 %a15, i64 %a16, i64 %a17, i64 %a18, i64 %a19, <1 x double> %f0, <1 x double> %f1, <1 x double> %f2, <1 x double> %f3, <1 x double> %f4, <1 x double> %f5, <1 x double> %f6, <1 x double> %f7, <1 x double> %f8, <1 x double> %f9)
   ret void
 }

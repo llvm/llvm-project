@@ -499,7 +499,7 @@ def CC_AArch64_Preserve_None : CallingConv<[
     // We can pass arguments in all general registers, except:
     // - X8, used for sret
     // - X16/X17, used by the linker as IP0/IP1
-    // - X18, used for the 'nest' parameter
+    // - X18, the platform register
     // - X29, the frame pointer
     // - X30, the link register
     // General registers are not preserved with the exception of

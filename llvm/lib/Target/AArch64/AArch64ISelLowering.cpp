@@ -7966,10 +7966,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       ++NumTailCalls;
   }
 
-  if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall()) {
+  if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
-  }
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
