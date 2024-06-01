@@ -1825,7 +1825,7 @@ TEST(TypeHints, Links) {
 
   assertTypeLinkHints(Source, "10", ExpectedHintLabelPiece{": "},
                       ExpectedHintLabelPiece{"Container", "Container"},
-                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"<ns::"},
                       ExpectedHintLabelPiece{"NestedInt", "NestedInt"},
                       ExpectedHintLabelPiece{">"});
 }

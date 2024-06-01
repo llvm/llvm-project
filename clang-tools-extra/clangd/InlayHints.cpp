@@ -491,7 +491,7 @@ class TypeInlayHintLabelPartBuilder
     case TemplateName::QualifiedTemplate:
       if (NestedNameSpecifier *NNS =
               TN.getAsQualifiedTemplateName()->getQualifier();
-          NNS && NNS == CurrentNestedNameSpecifier) {
+          NNS == CurrentNestedNameSpecifier) {
         // We have handled the NNS in VisitElaboratedType(). Avoid printing it
         // twice.
         TN = TN.getAsQualifiedTemplateName()->getUnderlyingTemplate();
