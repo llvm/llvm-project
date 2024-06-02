@@ -1629,14 +1629,14 @@ private:
   /// elements is a power-of-2 larger than zero. If scalable vectorization is
   /// disabled or unsupported, then the scalable part will be equal to
   /// ElementCount::getScalable(0).
-  FixedScalableVFPair computeFeasibleMaxVF(unsigned MaxTripCount,
+  FixedScalableVFPair computeFeasibleMaxVF(std::optional<unsigned> MaxTripCount,
                                            ElementCount UserVF,
                                            bool FoldTailByMasking);
 
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
   /// This is a helper function of computeFeasibleMaxVF.
-  ElementCount getMaximizedVFForTarget(unsigned MaxTripCount,
+  ElementCount getMaximizedVFForTarget(std::optional<unsigned> MaxTripCount,
                                        unsigned SmallestType,
                                        unsigned WidestType,
                                        ElementCount MaxSafeVF,
@@ -4448,7 +4448,8 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 }
 
 FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
-    unsigned MaxTripCount, ElementCount UserVF, bool FoldTailByMasking) {
+    std::optional<unsigned> MaxTripCount, ElementCount UserVF,
+    bool FoldTailByMasking) {
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
   unsigned SmallestType, WidestType;
   std::tie(SmallestType, WidestType) = getSmallestAndWidestTypes();
@@ -4564,10 +4565,13 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return FixedScalableVFPair::getNone();
   }
 
-  unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop).value_or(0);
-  unsigned MaxTC =
-      PSE.getSE()->getSmallConstantMaxTripCount(TheLoop).value_or(0);
-  LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
+  std::optional<unsigned> TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
+  std::optional<unsigned> MaxTC =
+      PSE.getSE()->getSmallConstantMaxTripCount(TheLoop);
+
+  if (TC)
+    LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
+
   if (TC == 1) {
     reportVectorizationFailure("Single iteration (non) loop",
         "loop trip count is one, irrelevant for vectorization",
@@ -4704,7 +4708,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return FixedScalableVFPair::getNone();
   }
 
-  if (TC == 0) {
+  if (!TC) {
     reportVectorizationFailure(
         "Unable to calculate the loop count due to complex control flow",
         "unable to calculate the loop count due to complex control flow",
@@ -4722,8 +4726,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 }
 
 ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
-    unsigned MaxTripCount, unsigned SmallestType, unsigned WidestType,
-    ElementCount MaxSafeVF, bool FoldTailByMasking) {
+    std::optional<unsigned> MaxTripCount, unsigned SmallestType,
+    unsigned WidestType, ElementCount MaxSafeVF, bool FoldTailByMasking) {
   bool ComputeScalableMaxVF = MaxSafeVF.isScalable();
   const TypeSize WidestRegister = TTI.getRegisterBitWidth(
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
@@ -4763,17 +4767,17 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
   // When a scalar epilogue is required, at least one iteration of the scalar
   // loop has to execute. Adjust MaxTripCount accordingly to avoid picking a
   // max VF that results in a dead vector loop.
-  if (MaxTripCount > 0 && requiresScalarEpilogue(true))
-    MaxTripCount -= 1;
+  if (MaxTripCount && requiresScalarEpilogue(true))
+    *MaxTripCount -= 1;
 
   if (MaxTripCount && MaxTripCount <= WidestRegisterMinEC &&
-      (!FoldTailByMasking || isPowerOf2_32(MaxTripCount))) {
+      (!FoldTailByMasking || isPowerOf2_32(*MaxTripCount))) {
     // If upper bound loop trip count (TC) is known at compile time there is no
     // point in choosing VF greater than TC (as done in the loop below). Select
     // maximum power of two which doesn't exceed TC. If MaxVectorElementCount is
     // scalable, we only fall back on a fixed VF when the TC is less than or
     // equal to the known number of lanes.
-    auto ClampedUpperTripCount = llvm::bit_floor(MaxTripCount);
+    auto ClampedUpperTripCount = llvm::bit_floor(*MaxTripCount);
     LLVM_DEBUG(dbgs() << "LV: Clamping the MaxVF to maximum power of two not "
                          "exceeding the constant trip count: "
                       << ClampedUpperTripCount << "\n");
@@ -4858,8 +4862,8 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   InstructionCost CostA = A.Cost;
   InstructionCost CostB = B.Cost;
 
-  unsigned MaxTripCount =
-      PSE.getSE()->getSmallConstantMaxTripCount(OrigLoop).value_or(0);
+  std::optional<unsigned> MaxTripCount =
+      PSE.getSE()->getSmallConstantMaxTripCount(OrigLoop);
 
   // Improve estimate for the vector width if it is scalable.
   unsigned EstimatedWidthA = A.Width.getKnownMinValue();
@@ -4898,8 +4902,9 @@ bool LoopVectorizationPlanner::isMoreProfitable(
     // different VFs we can use this to compare the total loop-body cost
     // expected after vectorization.
     if (CM.foldTailByMasking())
-      return VectorCost * divideCeil(MaxTripCount, VF);
-    return VectorCost * (MaxTripCount / VF) + ScalarCost * (MaxTripCount % VF);
+      return VectorCost * divideCeil(*MaxTripCount, VF);
+    return VectorCost * (*MaxTripCount / VF) +
+           ScalarCost * (*MaxTripCount % VF);
   };
 
   auto RTCostA = GetCostForTC(EstimatedWidthA, CostA, A.ScalarCost);
