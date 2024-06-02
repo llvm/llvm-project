@@ -8256,7 +8256,8 @@ static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
 
 std::optional<outliner::OutlinedFunction>
 AArch64InstrInfo::getOutliningCandidateInfo(
-    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+    unsigned MinRep) const {
   outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
 
   unsigned SequenceSize = 0;
@@ -8370,7 +8371,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     llvm::erase_if(RepeatedSequenceLocs, hasIllegalSPModification);
 
     // If the sequence doesn't have enough candidates left, then we're done.
-    if (RepeatedSequenceLocs.size() < 2)
+    if (RepeatedSequenceLocs.size() < MinRep)
       return std::nullopt;
   }
 
@@ -8614,7 +8615,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     }
 
     // If we dropped all of the candidates, bail out here.
-    if (RepeatedSequenceLocs.size() < 2) {
+    if (RepeatedSequenceLocs.size() < MinRep) {
       RepeatedSequenceLocs.clear();
       return std::nullopt;
     }
