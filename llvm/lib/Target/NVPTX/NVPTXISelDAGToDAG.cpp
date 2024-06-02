@@ -38,21 +38,16 @@ static cl::opt<bool>
 /// NVPTX-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
                                        llvm::CodeGenOptLevel OptLevel) {
-  return new NVPTXDAGToDAGISelLegacy(TM, OptLevel);
+  return new NVPTXDAGToDAGISel(TM, OptLevel);
 }
 
-NVPTXDAGToDAGISelLegacy::NVPTXDAGToDAGISelLegacy(NVPTXTargetMachine &tm,
-                                                 CodeGenOptLevel OptLevel)
-    : SelectionDAGISelLegacy(
-          ID, std::make_unique<NVPTXDAGToDAGISel>(tm, OptLevel)) {}
+char NVPTXDAGToDAGISel::ID = 0;
 
-char NVPTXDAGToDAGISelLegacy::ID = 0;
-
-INITIALIZE_PASS(NVPTXDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(NVPTXDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                                      CodeGenOptLevel OptLevel)
-    : SelectionDAGISel(tm, OptLevel), TM(tm) {
+    : SelectionDAGISel(ID, tm, OptLevel), TM(tm) {
   doMulWide = (OptLevel > CodeGenOptLevel::None);
 }
 

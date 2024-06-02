@@ -109,8 +109,6 @@ public:
 
   StackProtector();
 
-  SSPLayoutInfo &getLayoutInfo() { return LayoutInfo; }
-
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   // Return true if StackProtector is supposed to be handled by SelectionDAG.

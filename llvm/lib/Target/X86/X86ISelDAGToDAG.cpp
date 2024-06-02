@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "X86ISelDAGToDAG.h"
 #include "X86.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
@@ -170,10 +169,12 @@ namespace {
     bool IndirectTlsSegRefs;
 
   public:
+    static char ID;
+
     X86DAGToDAGISel() = delete;
 
     explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOptLevel OptLevel)
-        : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr),
+        : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr),
           OptForMinSize(false), IndirectTlsSegRefs(false) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
@@ -186,7 +187,9 @@ namespace {
       OptForMinSize = MF.getFunction().hasMinSize();
       assert((!OptForMinSize || MF.getFunction().hasOptSize()) &&
              "OptForMinSize implies OptForSize");
-      return SelectionDAGISel::runOnMachineFunction(MF);
+
+      SelectionDAGISel::runOnMachineFunction(MF);
+      return true;
     }
 
     void emitFunctionEntryCode() override;
@@ -574,20 +577,11 @@ namespace {
     bool hasNoSignFlagUses(SDValue Flags) const;
     bool hasNoCarryFlagUses(SDValue Flags) const;
   };
-
-  class X86DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
-  public:
-    static char ID;
-    explicit X86DAGToDAGISelLegacy(X86TargetMachine &tm,
-                                   CodeGenOptLevel OptLevel)
-        : SelectionDAGISelLegacy(
-              ID, std::make_unique<X86DAGToDAGISel>(tm, OptLevel)) {}
-  };
 }
 
-char X86DAGToDAGISelLegacy::ID = 0;
+char X86DAGToDAGISel::ID = 0;
 
-INITIALIZE_PASS(X86DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(X86DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 // Returns true if this masked compare can be implemented legally with this
 // type.
@@ -6599,13 +6593,9 @@ bool X86DAGToDAGISel::SelectInlineAsmMemoryOperand(
   return false;
 }
 
-X86ISelDAGToDAGPass::X86ISelDAGToDAGPass(X86TargetMachine &TM)
-    : SelectionDAGISelPass(
-          std::make_unique<X86DAGToDAGISel>(TM, TM.getOptLevel())) {}
-
 /// This pass converts a legalized DAG into a X86-specific DAG,
 /// ready for instruction scheduling.
 FunctionPass *llvm::createX86ISelDag(X86TargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new X86DAGToDAGISelLegacy(TM, OptLevel);
+  return new X86DAGToDAGISel(TM, OptLevel);
 }

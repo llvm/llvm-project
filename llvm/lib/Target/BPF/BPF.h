@@ -35,7 +35,7 @@ InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
                                                   const BPFRegisterBankInfo &);
 
 void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
-void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
+void initializeBPFDAGToDAGISelPass(PassRegistry &);
 void initializeBPFMIPeepholePass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry&);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry &);

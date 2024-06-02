@@ -48,7 +48,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeGlobalISel(PR);
   initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
-  initializeBPFDAGToDAGISelLegacyPass(PR);
+  initializeBPFDAGToDAGISelPass(PR);
 }
 
 // DataLayout: little or big endian

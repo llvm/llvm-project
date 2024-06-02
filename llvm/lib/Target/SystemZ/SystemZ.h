@@ -199,7 +199,7 @@ FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZTDCPass();
 
 void initializeSystemZCopyPhysRegsPass(PassRegistry &);
-void initializeSystemZDAGToDAGISelLegacyPass(PassRegistry &);
+void initializeSystemZDAGToDAGISelPass(PassRegistry &);
 void initializeSystemZElimComparePass(PassRegistry &);
 void initializeSystemZLDCleanupPass(PassRegistry &);
 void initializeSystemZLongBranchPass(PassRegistry &);

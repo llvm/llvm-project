@@ -49,11 +49,11 @@ using namespace llvm;
 // instructions for SelectionDAG operations.
 //===----------------------------------------------------------------------===//
 
-void MipsDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+void MipsDAGToDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
   // There are multiple MipsDAGToDAGISel instances added to the pass pipeline.
   // We need to preserve StackProtector for the next one.
   AU.addPreserved<StackProtector>();
-  SelectionDAGISelLegacy::getAnalysisUsage(AU);
+  SelectionDAGISel::getAnalysisUsage(AU);
 }
 
 bool MipsDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
@@ -344,10 +344,6 @@ bool MipsDAGToDAGISel::isUnneededShiftMask(SDNode *N,
   return (Known.Zero | RHS).countr_one() >= ShAmtBits;
 }
 
-char MipsDAGToDAGISelLegacy::ID = 0;
+char MipsDAGToDAGISel::ID = 0;
 
-MipsDAGToDAGISelLegacy::MipsDAGToDAGISelLegacy(
-    std::unique_ptr<SelectionDAGISel> S)
-    : SelectionDAGISelLegacy(ID, std::move(S)) {}
-
-INITIALIZE_PASS(MipsDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(MipsDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
