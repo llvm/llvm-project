@@ -3135,17 +3135,42 @@ alpha.unix
 alpha.unix.BlockInCriticalSection (C)
 """""""""""""""""""""""""""""""""""""
 Check for calls to blocking functions inside a critical section.
-Applies to: ``lock, unlock, sleep, getc, fgets, read, recv, pthread_mutex_lock,``
-`` pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``
+Blocking functions detected by this checker: ``sleep, getc, fgets, read, recv``.
+Critical section handling functions modelled by this checker: ``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``.
 
 .. code-block:: c
 
- void test() {
-   std::mutex m;
-   m.lock();
-   sleep(3); // warn: a blocking function sleep is called inside a critical
-             //       section
-   m.unlock();
+ void pthread_lock_example(pthread_mutex_t *m) {
+   pthread_mutex_lock(m); // note: entering critical section here
+   sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
+   pthread_mutex_unlock(m);
+ }
+
+.. code-block:: cpp
+
+ void overlapping_critical_sections(mtx_t *m1, std::mutex &m2) {
+   std::lock_guard lg{m2}; // note: entering critical section here
+   mtx_lock(m1); // note: entering critical section here
+   sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
+   mtx_unlock(m1);
+   sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
+             // still inside of the critical section of the std::lock_guard
+ }
+
+**Limitations**
+
+* The ``trylock`` and ``timedlock`` versions of acquiring locks are currently assumed to always succeed.
+  This can lead to false positives.
+
+.. code-block:: c
+
+ void trylock_example(pthread_mutex_t *m) {
+   if (pthread_mutex_trylock(m) == 0) { // assume trylock always succeeds
+     sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
+     pthread_mutex_unlock(m);
+   } else {
+     sleep(10); // false positive: Incorrect warning about blocking function inside critical section.
+   }
  }
 
 .. _alpha-unix-Chroot:
