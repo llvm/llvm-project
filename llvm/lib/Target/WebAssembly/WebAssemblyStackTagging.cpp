@@ -91,7 +91,7 @@ Instruction *WebAssemblyStackTagging::insertBaseTaggedPointer(
 
   IRBuilder<> IRB(&PrologueBB->front());
   Function *RdTag = Intrinsic::getDeclaration(F->getParent(),
-                                              Intrinsic::wasm_memory_randomtag);
+                                              Intrinsic::wasm_memtag_random);
   Instruction *Base =
       IRB.CreateCall(RdTag, {IRB.getInt32(0),
                              ::llvm::ConstantPointerNull::get(IRB.getPtrTy())});
@@ -164,7 +164,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     Type *Int64Type = IRB.getInt64Ty();
     Type *IntPtrType = iswasm32 ? Int32Type : Int64Type;
     Function *StoreTagDecl = Intrinsic::getDeclaration(
-        F->getParent(), Intrinsic::wasm_memory_storetag, {IntPtrType});
+        F->getParent(), Intrinsic::wasm_memtag_store, {IntPtrType});
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
@@ -176,7 +176,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
         !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
       auto *HintTagDecl = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_memory_hinttag, {IntPtrType});
+          F->getParent(), Intrinsic::wasm_memtag_hint, {IntPtrType});
       auto *TagPCall = IRB.CreateCall(
           HintTagDecl, {ConstantInt::get(Int32Type, 0), Info.AI, Base,
                         ConstantInt::get(IntPtrType, Tag)});
@@ -205,7 +205,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       auto *HintStoreTagDecl = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_memory_hintstoretag,
+          F->getParent(), Intrinsic::wasm_memtag_hintstore,
           {IntPtrType, IntPtrType});
       auto *TagPCall = IRB.CreateCall(HintStoreTagDecl,
                                       {ConstantInt::get(Int32Type, 0), Info.AI,

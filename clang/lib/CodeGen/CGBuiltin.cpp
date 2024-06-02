@@ -21350,184 +21350,113 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
 
     return Builder.CreateCall(Callee, {TableX, TableY, SrcIdx, DstIdx, NElems});
   }
-  case WebAssembly::BI__builtin_wasm_memory_randomtag: {
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomtag);
+  case WebAssembly::BI__builtin_wasm_memtag_random: {
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_random);
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     return Builder.CreateCall(Callee, {Index, Ptr});
   }
-  case WebAssembly::BI__builtin_wasm_memory_copytag: {
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_copytag);
+  case WebAssembly::BI__builtin_wasm_memtag_copy: {
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_copy);
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr0 = EmitScalarExpr(E->getArg(1));
     Value *Ptr1 = EmitScalarExpr(E->getArg(2));
     return Builder.CreateCall(Callee, {Index, Ptr0, Ptr1});
   }
-  case WebAssembly::BI__builtin_wasm_memory_subtag: {
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_subtag, ConvertType(E->getType()));
+  case WebAssembly::BI__builtin_wasm_memtag_sub: {
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_sub, ConvertType(E->getType()));
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr0 = EmitScalarExpr(E->getArg(1));
     Value *Ptr1 = EmitScalarExpr(E->getArg(2));
     return Builder.CreateCall(Callee, {Index, Ptr0, Ptr1});
   }
-  case WebAssembly::BI__builtin_wasm_memory_loadtag: {
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_loadtag);
+  case WebAssembly::BI__builtin_wasm_memtag_load: {
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_load);
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     return Builder.CreateCall(Callee, {Index, Ptr});
   }
-  case WebAssembly::BI__builtin_wasm_memory_storetag: {
+  case WebAssembly::BI__builtin_wasm_memtag_store: {
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_storetag, B16->getType());
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_store, B16->getType());
     return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
-  case WebAssembly::BI__builtin_wasm_memory_storeztag: {
+  case WebAssembly::BI__builtin_wasm_memtag_storez: {
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_storeztag, B16->getType());
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_storez, B16->getType());
     return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
-  case WebAssembly::BI__builtin_wasm_memory_store1tag: {
+  case WebAssembly::BI__builtin_wasm_memtag_randomstore: {
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_store1tag, B16->getType());
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_randomstore, B16->getType());
     return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
-  case WebAssembly::BI__builtin_wasm_memory_storez1tag: {
+  case WebAssembly::BI__builtin_wasm_memtag_randomstorez: {
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_storez1tag, B16->getType());
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_randomstorez, B16->getType());
     return Builder.CreateCall(Callee, {Index, Ptr, B16});
   }
-  case WebAssembly::BI__builtin_wasm_memory_randomstoretag: {
-    Value *Index = EmitScalarExpr(E->getArg(0));
-    Value *Ptr = EmitScalarExpr(E->getArg(1));
-    Value *B16 = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstoretag, B16->getType());
-    return Builder.CreateCall(Callee, {Index, Ptr, B16});
-  }
-  case WebAssembly::BI__builtin_wasm_memory_randomstoreztag: {
-    Value *Index = EmitScalarExpr(E->getArg(0));
-    Value *Ptr = EmitScalarExpr(E->getArg(1));
-    Value *B16 = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstoreztag, B16->getType());
-    return Builder.CreateCall(Callee, {Index, Ptr, B16});
-  }
-  case WebAssembly::BI__builtin_wasm_memory_randomstore1tag: {
-    Value *Index = EmitScalarExpr(E->getArg(0));
-    Value *Ptr = EmitScalarExpr(E->getArg(1));
-    Value *B16 = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstore1tag, B16->getType());
-    return Builder.CreateCall(Callee, {Index, Ptr, B16});
-  }
-  case WebAssembly::BI__builtin_wasm_memory_randomstorez1tag: {
-    Value *Index = EmitScalarExpr(E->getArg(0));
-    Value *Ptr = EmitScalarExpr(E->getArg(1));
-    Value *B16 = EmitScalarExpr(E->getArg(2));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstorez1tag, B16->getType());
-    return Builder.CreateCall(Callee, {Index, Ptr, B16});
-  }
-  case WebAssembly::BI__builtin_wasm_memory_hinttag: {
+  case WebAssembly::BI__builtin_wasm_memtag_hint: {
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *HintPtr = EmitScalarExpr(E->getArg(2));
     Value *HintIdx = EmitScalarExpr(E->getArg(3));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_hinttag, HintIdx->getType());
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_hint, HintIdx->getType());
     return Builder.CreateCall(Callee, {Index, Ptr, HintPtr, HintIdx});
   }
-  case WebAssembly::BI__builtin_wasm_memory_hintstoretag: {
+  case WebAssembly::BI__builtin_wasm_memtag_hintstore: {
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Value *HintPtr = EmitScalarExpr(E->getArg(3));
     Value *HintIdx = EmitScalarExpr(E->getArg(4));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_hintstoretag,
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_hintstore,
       {B16->getType(), HintIdx->getType()});
     return Builder.CreateCall(Callee, {Index, Ptr, B16, HintPtr, HintIdx});
   }
-  case WebAssembly::BI__builtin_wasm_memory_hintstoreztag: {
+  case WebAssembly::BI__builtin_wasm_memtag_hintstorez: {
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
     Value *B16 = EmitScalarExpr(E->getArg(2));
     Value *HintPtr = EmitScalarExpr(E->getArg(3));
     Value *HintIdx = EmitScalarExpr(E->getArg(4));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_hintstoreztag,
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_hintstorez,
       {B16->getType(), HintIdx->getType()});
     return Builder.CreateCall(Callee, {Index, Ptr, B16, HintPtr, HintIdx});
   }
-  case WebAssembly::BI__builtin_wasm_memory_hintstore1tag: {
+  case WebAssembly::BI__builtin_wasm_memtag_clear: {
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
-    Value *B16 = EmitScalarExpr(E->getArg(2));
-    Value *HintPtr = EmitScalarExpr(E->getArg(3));
-    Value *HintIdx = EmitScalarExpr(E->getArg(4));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_hintstore1tag,
-      {B16->getType(), HintIdx->getType()});
-    return Builder.CreateCall(Callee, {Index, Ptr, B16, HintPtr, HintIdx});
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_clear);
+    return Builder.CreateCall(Callee, {Index, Ptr});
   }
-  case WebAssembly::BI__builtin_wasm_memory_hintstorez1tag: {
+  case WebAssembly::BI__builtin_wasm_memtag_extract: {
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
-    Value *B16 = EmitScalarExpr(E->getArg(2));
-    Value *HintPtr = EmitScalarExpr(E->getArg(3));
-    Value *HintIdx = EmitScalarExpr(E->getArg(4));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_hintstorez1tag,
-      {B16->getType(), HintIdx->getType()});
-    return Builder.CreateCall(Callee, {Index, Ptr, B16, HintPtr, HintIdx});
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_extract,
+      {ConvertType(E->getType())});
+    return Builder.CreateCall(Callee, {Index, Ptr});
   }
-  case WebAssembly::BI__builtin_wasm_memory_addtag: {
+  case WebAssembly::BI__builtin_wasm_memtag_insert: {
     Value *Index = EmitScalarExpr(E->getArg(0));
     Value *Ptr = EmitScalarExpr(E->getArg(1));
-    Value *Offset = EmitScalarExpr(E->getArg(2));
-    Value *HintIdx = EmitScalarExpr(E->getArg(3));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_addtag,
-      {Offset->getType(), HintIdx->getType()});
-    return Builder.CreateCall(Callee, {Index, Ptr, Offset, HintIdx});
+    Value *Newtag = EmitScalarExpr(E->getArg(2));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_insert,
+      {Newtag->getType()});
+    return Builder.CreateCall(Callee, {Index, Ptr, Newtag});
   }
-  case WebAssembly::BI__builtin_wasm_memory_addstoretag: {
+  case WebAssembly::BI__builtin_wasm_memtag_tagbits: {
     Value *Index = EmitScalarExpr(E->getArg(0));
-    Value *Ptr = EmitScalarExpr(E->getArg(1));
-    Value *B16 = EmitScalarExpr(E->getArg(2));
-    Value *Offset = EmitScalarExpr(E->getArg(3));
-    Value *HintIdx = EmitScalarExpr(E->getArg(4));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_hintstoretag,
-      {B16->getType(), Offset->getType(), HintIdx->getType()});
-    return Builder.CreateCall(Callee, {Index, Ptr, B16, Offset, HintIdx});
-  }
-  case WebAssembly::BI__builtin_wasm_memory_addstoreztag: {
-    Value *Index = EmitScalarExpr(E->getArg(0));
-    Value *Ptr = EmitScalarExpr(E->getArg(1));
-    Value *B16 = EmitScalarExpr(E->getArg(2));
-    Value *Offset = EmitScalarExpr(E->getArg(3));
-    Value *HintIdx = EmitScalarExpr(E->getArg(4));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_addstoreztag,
-      {B16->getType(), Offset->getType(), HintIdx->getType()});
-    return Builder.CreateCall(Callee, {Index, Ptr, B16, Offset, HintIdx});
-  }
-  case WebAssembly::BI__builtin_wasm_memory_addstore1tag: {
-    Value *Index = EmitScalarExpr(E->getArg(0));
-    Value *Ptr = EmitScalarExpr(E->getArg(1));
-    Value *B16 = EmitScalarExpr(E->getArg(2));
-    Value *Offset = EmitScalarExpr(E->getArg(3));
-    Value *HintIdx = EmitScalarExpr(E->getArg(4));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_addstore1tag,
-      {B16->getType(), Offset->getType(), HintIdx->getType()});
-    return Builder.CreateCall(Callee, {Index, Ptr, B16, Offset, HintIdx});
-  }
-  case WebAssembly::BI__builtin_wasm_memory_addstorez1tag: {
-    Value *Index = EmitScalarExpr(E->getArg(0));
-    Value *Ptr = EmitScalarExpr(E->getArg(1));
-    Value *B16 = EmitScalarExpr(E->getArg(2));
-    Value *Offset = EmitScalarExpr(E->getArg(3));
-    Value *HintIdx = EmitScalarExpr(E->getArg(4));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_addstorez1tag,
-      {B16->getType(), Offset->getType(), HintIdx->getType()});
-    return Builder.CreateCall(Callee, {Index, Ptr, B16, Offset, HintIdx});
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memtag_tagbits);
+    return Builder.CreateCall(Callee, {Index});
   }
   default:
     return nullptr;
