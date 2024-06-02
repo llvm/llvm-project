@@ -52,6 +52,8 @@ add_header_library(
   DEPENDS
     .futex_utils
     .raw_mutex
+    libc.src.__support.common
+    libc.src.__support.OSUtil.osutil
   COMPILE_OPTIONS
     -DLIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT}
     ${monotonicity_flags}
