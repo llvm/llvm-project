@@ -11,11 +11,8 @@
 #include "hdr/errno_macros.h"
 #include "hdr/types/pid_t.h"
 #include "src/__support/CPP/atomic.h"
-#include "src/__support/CPP/expected.h"
-#include "src/__support/CPP/new.h"
 #include "src/__support/CPP/optional.h"
-#include "src/__support/CPP/type_traits/make_signed.h"
-#include "src/__support/OSUtil/linux/x86_64/syscall.h"
+#include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
@@ -100,7 +97,7 @@ public:
   enum class Preference : char { Reader, Writer };
   enum class LockResult {
     Success = 0,
-    Timeout = ETIMEDOUT,
+    TimedOut = ETIMEDOUT,
     Overflow = EAGAIN,
     Busy = EBUSY,
     Deadlock = EDEADLOCK,
@@ -431,7 +428,7 @@ private:
 
         // Phase 8: exit the loop is timeout is reached.
         if (timeout_flag)
-          return LockResult::Timeout;
+          return LockResult::TimedOut;
 
         // Phase 9: reload the state and retry the acquisition.
         old = SpinReload(state, preference, spin_count);
