@@ -2300,6 +2300,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  nearbyintf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyintf16_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyintf16
+)
+
+add_fp_unittest(
   nearbyintf128_test
   SUITE
     libc-math-smoke-tests

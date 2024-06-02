@@ -810,6 +810,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nearbyintf16
+  SRCS
+    nearbyintf16.cpp
+  HDRS
+    ../nearbyintf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   nearbyintf128
   SRCS
     nearbyintf128.cpp

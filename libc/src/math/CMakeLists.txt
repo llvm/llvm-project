@@ -255,6 +255,7 @@ add_math_entrypoint_object(nanf128)
 add_math_entrypoint_object(nearbyint)
 add_math_entrypoint_object(nearbyintf)
 add_math_entrypoint_object(nearbyintl)
+add_math_entrypoint_object(nearbyintf16)
 add_math_entrypoint_object(nearbyintf128)
 
 add_math_entrypoint_object(nextafter)

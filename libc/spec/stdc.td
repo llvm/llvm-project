@@ -615,6 +615,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"nearbyint", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"nearbyintf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"nearbyintl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"nearbyintf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"nearbyintf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"nextafterf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
