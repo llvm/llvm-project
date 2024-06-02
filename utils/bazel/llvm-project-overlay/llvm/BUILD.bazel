@@ -9,7 +9,7 @@ load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
 load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary", "select_driver_tools")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
-load(":targets.bzl", "llvm_targets")
+load(":targets.bzl", "llvm_targets", "llvm_native_target_defines")
 load(":tblgen.bzl", "gentbl")
 
 package(
@@ -171,7 +171,7 @@ cc_library(
         "include/llvm/Config/llvm-config.h",
     ],
     copts = llvm_copts,
-    defines = llvm_config_defines,
+    defines = llvm_config_defines + llvm_native_target_defines,
     includes = ["include"],
     textual_hdrs = [
         "include/llvm/Config/AsmParsers.def",

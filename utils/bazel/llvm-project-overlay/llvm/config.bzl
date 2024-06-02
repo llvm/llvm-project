@@ -12,20 +12,6 @@ load(
     "LLVM_VERSION_PATCH",
 )
 
-def native_arch_defines(arch, triple):
-    return [
-        r'LLVM_NATIVE_ARCH=\"{}\"'.format(arch),
-        "LLVM_NATIVE_ASMPARSER=LLVMInitialize{}AsmParser".format(arch),
-        "LLVM_NATIVE_ASMPRINTER=LLVMInitialize{}AsmPrinter".format(arch),
-        "LLVM_NATIVE_DISASSEMBLER=LLVMInitialize{}Disassembler".format(arch),
-        "LLVM_NATIVE_TARGET=LLVMInitialize{}Target".format(arch),
-        "LLVM_NATIVE_TARGETINFO=LLVMInitialize{}TargetInfo".format(arch),
-        "LLVM_NATIVE_TARGETMC=LLVMInitialize{}TargetMC".format(arch),
-        "LLVM_NATIVE_TARGETMCA=LLVMInitialize{}TargetMCA".format(arch),
-        r'LLVM_HOST_TRIPLE=\"{}\"'.format(triple),
-        r'LLVM_DEFAULT_TARGET_TRIPLE=\"{}\"'.format(triple),
-    ]
-
 posix_defines = [
     "LLVM_ON_UNIX=1",
     "HAVE_BACKTRACE=1",
@@ -96,15 +82,7 @@ builtin_thread_pointer = select({
 })
 
 # TODO: We should split out host vs. target here.
-llvm_config_defines = os_defines + builtin_thread_pointer + select({
-    "@bazel_tools//src/conditions:windows": native_arch_defines("X86", "x86_64-pc-win32"),
-    "@bazel_tools//src/conditions:darwin_arm64": native_arch_defines("AArch64", "arm64-apple-darwin"),
-    "@bazel_tools//src/conditions:darwin_x86_64": native_arch_defines("X86", "x86_64-unknown-darwin"),
-    "@bazel_tools//src/conditions:linux_aarch64": native_arch_defines("AArch64", "aarch64-unknown-linux-gnu"),
-    "@bazel_tools//src/conditions:linux_ppc64le": native_arch_defines("PowerPC", "powerpc64le-unknown-linux-gnu"),
-    "@bazel_tools//src/conditions:linux_s390x": native_arch_defines("SystemZ", "systemz-unknown-linux_gnu"),
-    "//conditions:default": native_arch_defines("X86", "x86_64-unknown-linux-gnu"),
-}) + [
+llvm_config_defines = os_defines + builtin_thread_pointer + [
     "LLVM_VERSION_MAJOR={}".format(LLVM_VERSION_MAJOR),
     "LLVM_VERSION_MINOR={}".format(LLVM_VERSION_MINOR),
     "LLVM_VERSION_PATCH={}".format(LLVM_VERSION_PATCH),
