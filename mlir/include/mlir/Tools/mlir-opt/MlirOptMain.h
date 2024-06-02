@@ -187,6 +187,13 @@ public:
   /// Reproducer file generation (no crash required).
   StringRef getReproducerFilename() const { return generateReproducerFileFlag; }
 
+  /// Print the pass-pipeline as text before executing.
+  MlirOptMainConfig &retainIdentifierNames(bool retain) {
+    retainIdentifierNamesFlag = retain;
+    return *this;
+  }
+  bool shouldRetainIdentifierNames() const { return retainIdentifierNamesFlag; }
+
 protected:
   /// Allow operation with no registered dialects.
   /// This option is for convenience during testing only and discouraged in
@@ -239,6 +246,9 @@ protected:
   /// Set whether to check that emitted diagnostics match `expected-*` lines on
   /// the corresponding line. This is meant for implementing diagnostic tests.
   bool verifyDiagnosticsFlag = false;
+
+  /// Retain identifier names in the output (e.g., `%my_var` instead of `%0`).
+  bool retainIdentifierNamesFlag = false;
 
   /// Run the verifier after each transformation pass.
   bool verifyPassesFlag = true;
