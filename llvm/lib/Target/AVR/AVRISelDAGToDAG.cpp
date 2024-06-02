@@ -29,8 +29,6 @@ namespace {
 /// Lowers LLVM IR (in DAG form) to AVR MC instructions (in DAG form).
 class AVRDAGToDAGISel : public SelectionDAGISel {
 public:
-  static char ID;
-
   AVRDAGToDAGISel() = delete;
 
   AVRDAGToDAGISel(AVRTargetMachine &TM, CodeGenOptLevel OptLevel)
