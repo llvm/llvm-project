@@ -1,7 +1,7 @@
 // RUN: %clangxx_tsan -O1 --std=c++11 %s -o %t && %run %t 2>&1 | FileCheck %s
 #include "custom_mutex.h"
 
-#include <type_traits>
+#include <cstddef>
 
 // Test that the destruction events of a mutex are ignored when the
 // annotations request this.

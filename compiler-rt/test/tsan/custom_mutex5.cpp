@@ -1,7 +1,7 @@
 // RUN: %clangxx_tsan -O1 --std=c++11 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
 #include "custom_mutex.h"
 
-#include <type_traits>
+#include <cstddef>
 
 // Test that we detect the destruction of an in-use mutex when the
 // thread annotations don't otherwise disable the check.
