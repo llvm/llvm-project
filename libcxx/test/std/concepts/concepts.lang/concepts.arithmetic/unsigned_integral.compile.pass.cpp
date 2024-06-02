@@ -41,7 +41,7 @@ constexpr bool CheckUnsignedIntegralQualifiers() {
 
   static_assert(!std::unsigned_integral<T (*)()>);
   static_assert(!std::unsigned_integral<T (&)()>);
-  static_assert(!std::unsigned_integral<T(&&)()>);
+  static_assert(!std::unsigned_integral<T (&&)()>);
 
   return result;
 }
@@ -54,18 +54,12 @@ static_assert(CheckUnsignedIntegralQualifiers<unsigned long>());
 static_assert(CheckUnsignedIntegralQualifiers<unsigned long long>());
 
 // Whether bool and character types are signed or unsigned is impl-defined
-static_assert(CheckUnsignedIntegralQualifiers<wchar_t>() ==
-              !std::is_signed_v<wchar_t>);
-static_assert(CheckUnsignedIntegralQualifiers<bool>() ==
-              !std::is_signed_v<bool>);
-static_assert(CheckUnsignedIntegralQualifiers<char>() ==
-              !std::is_signed_v<char>);
-static_assert(CheckUnsignedIntegralQualifiers<char8_t>() ==
-              !std::is_signed_v<char8_t>);
-static_assert(CheckUnsignedIntegralQualifiers<char16_t>() ==
-              !std::is_signed_v<char16_t>);
-static_assert(CheckUnsignedIntegralQualifiers<char32_t>() ==
-              !std::is_signed_v<char32_t>);
+static_assert(CheckUnsignedIntegralQualifiers<wchar_t>() == !std::is_signed_v<wchar_t>);
+static_assert(CheckUnsignedIntegralQualifiers<bool>() == !std::is_signed_v<bool>);
+static_assert(CheckUnsignedIntegralQualifiers<char>() == !std::is_signed_v<char>);
+static_assert(CheckUnsignedIntegralQualifiers<char8_t>() == !std::is_signed_v<char8_t>);
+static_assert(CheckUnsignedIntegralQualifiers<char16_t>() == !std::is_signed_v<char16_t>);
+static_assert(CheckUnsignedIntegralQualifiers<char32_t>() == !std::is_signed_v<char32_t>);
 
 // extended integers
 #ifndef TEST_HAS_NO_INT128
@@ -93,5 +87,3 @@ static_assert(!CheckUnsignedIntegralQualifiers<int (EmptyStruct::*)()>());
 
 static_assert(CheckSubsumption(0));
 static_assert(CheckSubsumption(0U));
-
-int main(int, char**) { return 0; }
