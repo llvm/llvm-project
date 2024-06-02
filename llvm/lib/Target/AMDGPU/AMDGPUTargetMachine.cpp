@@ -19,7 +19,6 @@
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
 #include "AMDGPUIGroupLP.h"
-#include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPURegBankSelect.h"
 #include "AMDGPUSplitModule.h"
@@ -388,7 +387,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeR600ExpandSpecialInstrsPassPass(*PR);
   initializeR600VectorRegMergerPass(*PR);
   initializeGlobalISel(*PR);
-  initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
+  initializeAMDGPUDAGToDAGISelPass(*PR);
   initializeGCNDPPCombinePass(*PR);
   initializeSILowerI1CopiesPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);

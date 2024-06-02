@@ -3912,14 +3912,9 @@ bool RISCVDAGToDAGISel::doPeepholeNoRegPassThru() {
 // for instruction scheduling.
 FunctionPass *llvm::createRISCVISelDag(RISCVTargetMachine &TM,
                                        CodeGenOptLevel OptLevel) {
-  return new RISCVDAGToDAGISelLegacy(TM, OptLevel);
+  return new RISCVDAGToDAGISel(TM, OptLevel);
 }
 
-char RISCVDAGToDAGISelLegacy::ID = 0;
+char RISCVDAGToDAGISel::ID = 0;
 
-RISCVDAGToDAGISelLegacy::RISCVDAGToDAGISelLegacy(RISCVTargetMachine &TM,
-                                                 CodeGenOptLevel OptLevel)
-    : SelectionDAGISelLegacy(
-          ID, std::make_unique<RISCVDAGToDAGISel>(TM, OptLevel)) {}
-
-INITIALIZE_PASS(RISCVDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(RISCVDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
