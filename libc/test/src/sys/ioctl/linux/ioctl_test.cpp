@@ -8,7 +8,9 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/errno/libc_errno.h"
+#include "src/fcntl/open.h"
 #include "src/sys/ioctl/ioctl.h"
+#include "src/unistd/close.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
@@ -31,9 +33,12 @@ TEST(LlvmLibcIoctlTest, InvalidFileDescriptor) {
 
 TEST(LlvmLibcIoctlTest, ValidFileDescriptor) {
   constexpr const char *TEST_FILE = "testdata/ioctl.test";
-  int fd = open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  LIBC_NAMESPACE::libc_errno = 0;
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_GT(fd, 0);
   int data;
   int res = LIBC_NAMESPACE::ioctl(fd, FS_IOC_GETFLAGS, &data);
   EXPECT_THAT(res, Succeeds());
-  ASSERT_THAT(close(fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
