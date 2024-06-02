@@ -176,9 +176,8 @@ add_llvm_component_library(LLVMSupport
   ExponentialBackoff.cpp
   ExtensibleRTTI.cpp
   FileCollector.cpp
-  FileDescriptor.cpp
-  FileOutputBuffer.cpp
   FileUtilities.cpp
+  FileOutputBuffer.cpp
   FloatingPointMode.cpp
   FoldingSet.cpp
   FormattedStream.cpp
