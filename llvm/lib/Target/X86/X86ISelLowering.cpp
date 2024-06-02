@@ -17846,6 +17846,22 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::VSELECT, dl, VT, Cond, LHS, RHS);
   }
 
+  // v16i16/v32i8 selects without AVX2, if the condition and another operand
+  // are free to split, then better to split before expanding the
+  // select. Don't bother with XOP as it has the fast VPCMOV instruction.
+  // TODO: This is very similar to narrowVectorSelect.
+  // TODO: Add Load splitting to isFreeToSplitVector ?
+  if (EltSize < 32 && VT.is256BitVector() && !Subtarget.hasAVX2() &&
+      !Subtarget.hasXOP()) {
+    bool FreeCond = isFreeToSplitVector(Cond.getNode(), DAG);
+    bool FreeLHS = isFreeToSplitVector(LHS.getNode(), DAG) ||
+                   (ISD::isNormalLoad(LHS.getNode()) && LHS.hasOneUse());
+    bool FreeRHS = isFreeToSplitVector(RHS.getNode(), DAG) ||
+                   (ISD::isNormalLoad(RHS.getNode()) && RHS.hasOneUse());
+    if (FreeCond && (FreeLHS || FreeRHS))
+      return splitVectorOp(Op, DAG, dl);
+  }
+
   // Only some types will be legal on some subtargets. If we can emit a legal
   // VSELECT-matching blend, return Op, and but if we need to expand, return
   // a null value.
@@ -20503,7 +20519,7 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   // the truncation then we can use PACKSS by converting the srl to a sra.
   // SimplifyDemandedBits often relaxes sra to srl so we need to reverse it.
   if (In.getOpcode() == ISD::SRL && In->hasOneUse())
-    if (const APInt *ShAmt = DAG.getValidShiftAmountConstant(In)) {
+    if (std::optional<uint64_t> ShAmt = DAG.getValidShiftAmount(In)) {
       if (*ShAmt == MinSignBits) {
         PackOpcode = X86ISD::PACKSS;
         return DAG.getNode(ISD::SRA, DL, SrcVT, In->ops());

@@ -10120,13 +10120,16 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
 
   // fold (shl X, cttz(Y)) -> (mul (Y & -Y), X) if cttz is unsupported on the
   // target.
-  if ((N1.getOpcode() == ISD::CTTZ || N1.getOpcode() == ISD::CTTZ_ZERO_UNDEF) &&
-      N1.hasOneUse() && !TLI.isOperationLegalOrCustom(ISD::CTTZ, VT) &&
+  if (((N1.getOpcode() == ISD::CTTZ &&
+        VT.getScalarSizeInBits() >= ShiftVT.getScalarSizeInBits()) ||
+       N1.getOpcode() == ISD::CTTZ_ZERO_UNDEF) &&
+      N1.hasOneUse() && !TLI.isOperationLegalOrCustom(ISD::CTTZ, ShiftVT) &&
       TLI.isOperationLegalOrCustom(ISD::MUL, VT)) {
     SDValue Y = N1.getOperand(0);
     SDLoc DL(N);
-    SDValue NegY = DAG.getNegative(Y, DL, VT);
-    SDValue And = DAG.getNode(ISD::AND, DL, VT, Y, NegY);
+    SDValue NegY = DAG.getNegative(Y, DL, ShiftVT);
+    SDValue And =
+        DAG.getZExtOrTrunc(DAG.getNode(ISD::AND, DL, ShiftVT, Y, NegY), DL, VT);
     return DAG.getNode(ISD::MUL, DL, VT, And, N0);
   }
 
@@ -15816,8 +15819,6 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
-  bool CanReassociate =
-      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
   bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
                               Options.UnsafeFPMath || HasFMAD);
   // If the addition is not contractable, do not combine.
@@ -15877,6 +15878,8 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   // fadd (G, (fma A, B, (fma (C, D, (fmul (E, F)))))) -->
   // fma A, B, (fma C, D, fma (E, F, G)).
   // This requires reassociation because it changes the order of operations.
+  bool CanReassociate =
+      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
   if (CanReassociate) {
     SDValue FMA, E;
     if (isFusedOp(N0) && N0.hasOneUse()) {
@@ -17033,9 +17036,6 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
   MatchContextClass matcher(DAG, TLI, N);
 
-  bool CanReassociate =
-      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
-
   // Constant fold FMA.
   if (isa<ConstantFPSDNode>(N0) &&
       isa<ConstantFPSDNode>(N1) &&
@@ -17078,6 +17078,8 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
      !DAG.isConstantFPBuildVectorOrConstantFP(N1))
     return matcher.getNode(ISD::FMA, SDLoc(N), VT, N1, N0, N2);
 
+  bool CanReassociate =
+      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
   if (CanReassociate) {
     // (fma x, c1, (fmul x, c2)) -> (fmul x, c1+c2)
     if (matcher.match(N2, ISD::FMUL) && N0 == N2.getOperand(0) &&
