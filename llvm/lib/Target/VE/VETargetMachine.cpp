@@ -30,7 +30,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
   RegisterTargetMachine<VETargetMachine> X(getTheVETarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeVEDAGToDAGISelLegacyPass(PR);
+  initializeVEDAGToDAGISelPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &T) {

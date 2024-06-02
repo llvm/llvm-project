@@ -38,7 +38,7 @@ FunctionPass *createLoongArchISelDag(LoongArchTargetMachine &TM);
 FunctionPass *createLoongArchOptWInstrsPass();
 FunctionPass *createLoongArchPreRAExpandPseudoPass();
 FunctionPass *createLoongArchExpandPseudoPass();
-void initializeLoongArchDAGToDAGISelLegacyPass(PassRegistry &);
+void initializeLoongArchDAGToDAGISelPass(PassRegistry &);
 void initializeLoongArchExpandAtomicPseudoPass(PassRegistry &);
 void initializeLoongArchOptWInstrsPass(PassRegistry &);
 void initializeLoongArchPreRAExpandPseudoPass(PassRegistry &);

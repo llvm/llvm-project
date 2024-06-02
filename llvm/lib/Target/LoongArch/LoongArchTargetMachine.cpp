@@ -36,7 +36,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   auto *PR = PassRegistry::getPassRegistry();
   initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
-  initializeLoongArchDAGToDAGISelLegacyPass(*PR);
+  initializeLoongArchDAGToDAGISelPass(*PR);
 }
 
 static cl::opt<bool>
