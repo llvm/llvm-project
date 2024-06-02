@@ -222,8 +222,10 @@ struct TemplateInit {
     T g;
     T h;
   };
-  // FIXME: This is ill-formed (no diagnostic required). We should diagnose it.
-  constexpr TemplateInit() {} // desired-error {{must initialize all members}}
+  constexpr TemplateInit() {}
+#ifndef CXX2A
+  // expected-error@-2 {{constexpr union constructor that does not initialize any member is a C++20 extension}}
+#endif
 };
 template<typename T> struct TemplateInit2 {
   Literal l;

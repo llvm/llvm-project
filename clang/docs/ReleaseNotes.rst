@@ -459,8 +459,7 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses member template declarations with multiple declarators.
 
-- Clang now diagnoses use of the ``template`` keyword after declarative nested
-  name specifiers.
+- Clang now diagnoses constexpr constructor for not initializing at least one member of union.  Fixes  `#46689 <https://github.com/llvm/llvm-project/issues/46689>`_.
 
 - The ``-Wshorten-64-to-32`` diagnostic is now grouped under ``-Wimplicit-int-conversion`` instead
    of ``-Wconversion``. Fixes #GH69444.
