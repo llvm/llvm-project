@@ -526,6 +526,13 @@ public:
     notify_pending_threads();
     return LockResult::Success;
   }
+
+  LIBC_INLINE LockResult check_for_destroy() {
+    State old = State::load(state, cpp::MemoryOrder::RELAXED);
+    if (old.has_acitve_owner())
+      return LockResult::Busy;
+    return LockResult::Success;
+  }
 };
 } // namespace LIBC_NAMESPACE
 
