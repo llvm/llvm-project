@@ -1268,6 +1268,11 @@ def POSIX : StandardSpec<"POSIX"> {
         "pthread_rwlock_init",
         RetValSpec<IntType>,
         [ArgSpec<PThreadRWLockTPtr>, ArgSpec<ConstRestrictedPThreadRWLockAttrTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_tryrdlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
       >
     ]
   >;

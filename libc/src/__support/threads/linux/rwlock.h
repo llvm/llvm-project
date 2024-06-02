@@ -94,7 +94,7 @@ private:
 
 public:
   enum class Preference : char { Reader, Writer };
-  enum class LockResult {
+  enum class LockResult : int {
     Success = 0,
     TimedOut = ETIMEDOUT,
     Overflow = EAGAIN,
