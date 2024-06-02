@@ -15,6 +15,7 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/linux/raw_mutex.h"
@@ -350,28 +351,51 @@ public:
   }
 
 private:
-  template <State (&SpinReload)(cpp::Atomic<int32_t> &, Preference, unsigned),
-            State (&SetPending)(cpp::Atomic<int32_t> &, cpp::MemoryOrder),
-            State (&ClearPending)(cpp::Atomic<int32_t> &, cpp::MemoryOrder),
-            FutexWordType &(WaitingQueue::Guard::*Serialization)(),
-            FutexWordType &(WaitingQueue::Guard::*PendingCount)(),
-            LockResult (RwLock::*TryLock)(State &),
-            long (WaitingQueue::*Wait)(FutexWordType,
-                                       cpp::optional<Futex::Timeout>, bool),
-            bool (State::*CanAcquire)(Preference) const>
+  struct Proxy {
+    State (&spin_reload)(cpp::Atomic<int32_t> &, Preference, unsigned);
+    State (&set_pending)(cpp::Atomic<int32_t> &, cpp::MemoryOrder);
+    State (&clear_pending)(cpp::Atomic<int32_t> &, cpp::MemoryOrder);
+    FutexWordType &(WaitingQueue::Guard::*serialization)();
+    FutexWordType &(WaitingQueue::Guard::*pending_count)();
+    LockResult (RwLock::*try_lock)(State &);
+    long (WaitingQueue::*wait)(FutexWordType, cpp::optional<Futex::Timeout>,
+                               bool);
+    bool (State::*can_acquire)(Preference) const;
+  };
+
+  LIBC_INLINE_VAR static constexpr Proxy READER = {
+      State::spin_reload_for_reader,
+      State::fetch_set_pending_reader,
+      State::fetch_clear_pending_reader,
+      &WaitingQueue::Guard::reader_serialization,
+      &WaitingQueue::Guard::pending_reader,
+      &RwLock::try_read_lock,
+      &WaitingQueue::reader_wait,
+      &State::can_acquire_reader};
+
+  LIBC_INLINE_VAR static constexpr Proxy WRITER = {
+      State::spin_reload_for_writer,
+      State::fetch_set_pending_writer,
+      State::fetch_clear_pending_writer,
+      &WaitingQueue::Guard::writer_serialization,
+      &WaitingQueue::Guard::pending_writer,
+      &RwLock::try_write_lock,
+      &WaitingQueue::writer_wait,
+      &State::can_acquire_writer};
+
   LIBC_INLINE LockResult
-  lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
+  lock(const Proxy &proxy, cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
        unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
     // Phase 1: deadlock detection.
     // A deadlock happens if this is a RAW/WAW lock in the same thread.
     if (writer_tid.load(cpp::MemoryOrder::RELAXED) == gettid())
       return LockResult::Deadlock;
 
-    // Phase 2: spin to get the initial state. We ignore the timing due to spin
-    // since it should end quickly.
-    State old = SpinReload(state, preference, spin_count);
+    // Phase 2: spin to get the initial state. We ignore the timing due to
+    // spin since it should end quickly.
+    State old = proxy.spin_reload(state, preference, spin_count);
     {
-      LockResult result = (this->*TryLock)(old);
+      LockResult result = (this->*proxy.try_lock)(old);
       if (result != LockResult::Busy)
         return result;
     }
@@ -385,7 +409,7 @@ private:
     // Enter the main acquisition loop.
     for (;;) {
       // Phase 4: if the lock can be acquired, try to acquire it.
-      LockResult result = (this->*TryLock)(old);
+      LockResult result = (this->*proxy.try_lock)(old);
       if (result != LockResult::Busy)
         return result;
 
@@ -394,39 +418,39 @@ private:
       {
         // The queue need to be protected by a mutex since the operations in
         // this block must be executed as a whole transaction. It is possible
-        // that this lock will make the timeout imprecise, but this is the best
-        // we can do. The transaction is small and everyone should make
+        // that this lock will make the timeout imprecise, but this is the
+        // best we can do. The transaction is small and everyone should make
         // progress rather quickly.
         WaitingQueue::Guard guard = queue.acquire();
-        (guard.*PendingCount)()++;
+        (guard.*proxy.pending_count)()++;
 
         // Use atomic operation to guarantee the total order of the operations
         // on the state. The pending flag update should be visible to any
-        // succeeding unlock events. Or, if a unlock does happen before we sleep
-        // on the futex, we can avoid such waiting.
-        old = SetPending(state, cpp::MemoryOrder::RELAXED);
+        // succeeding unlock events. Or, if a unlock does happen before we
+        // sleep on the futex, we can avoid such waiting.
+        old = proxy.set_pending(state, cpp::MemoryOrder::RELAXED);
         // no need to use atomic since it is already protected by the mutex.
-        serial_number = (guard.*Serialization)();
+        serial_number = (guard.*proxy.serialization)();
       }
 
       // Phase 6: do futex wait until the lock is available or timeout is
       // reached.
       bool timeout_flag = false;
-      if (!(old.*CanAcquire)(preference)) {
-        timeout_flag =
-            ((queue.*Wait)(serial_number, timeout, is_pshared) == -ETIMEDOUT);
+      if (!(old.*proxy.can_acquire)(preference)) {
+        timeout_flag = ((queue.*proxy.wait)(serial_number, timeout,
+                                            is_pshared) == -ETIMEDOUT);
 
         // Phase 7: unregister ourselves as a pending reader.
         {
           // Similarly, the unregister operation should also be an atomic
           // transaction.
           WaitingQueue::Guard guard = queue.acquire();
-          (guard.*PendingCount)()--;
-          // Clear the flag if we are the last reader. The flag must be cleared
-          // otherwise operations like trylock may fail even though there is no
-          // competitors.
-          if ((guard.*PendingCount)() == 0)
-            ClearPending(state, cpp::MemoryOrder::RELAXED);
+          (guard.*proxy.pending_count)()--;
+          // Clear the flag if we are the last reader. The flag must be
+          // cleared otherwise operations like trylock may fail even though
+          // there is no competitors.
+          if ((guard.*proxy.pending_count)() == 0)
+            proxy.clear_pending(state, cpp::MemoryOrder::RELAXED);
         }
 
         // Phase 8: exit the loop is timeout is reached.
@@ -434,7 +458,7 @@ private:
           return LockResult::TimedOut;
 
         // Phase 9: reload the state and retry the acquisition.
-        old = SpinReload(state, preference, spin_count);
+        old = proxy.spin_reload(state, preference, spin_count);
       }
     }
   }
@@ -443,22 +467,12 @@ public:
   LIBC_INLINE LockResult
   read_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
-    return lock<State::spin_reload_for_reader, State::fetch_set_pending_reader,
-                State::fetch_clear_pending_reader,
-                &WaitingQueue::Guard::reader_serialization,
-                &WaitingQueue::Guard::pending_reader, &RwLock::try_read_lock,
-                &WaitingQueue::reader_wait, &State::can_acquire_reader>(
-        timeout, spin_count);
+    return lock(READER, timeout, spin_count);
   }
   LIBC_INLINE LockResult
   write_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
              unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
-    return lock<State::spin_reload_for_writer, State::fetch_set_pending_writer,
-                State::fetch_clear_pending_writer,
-                &WaitingQueue::Guard::writer_serialization,
-                &WaitingQueue::Guard::pending_writer, &RwLock::try_write_lock,
-                &WaitingQueue::writer_wait, &State::can_acquire_writer>(
-        timeout, spin_count);
+    return lock(WRITER, timeout, spin_count);
   }
 
 private:
