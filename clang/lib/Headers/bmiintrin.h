@@ -19,7 +19,7 @@
    to use it as a potentially faster version of BSF. */
 #define __RELAXED_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
-#if defined (__cplusplus) && (__cplusplus >= 201103L)
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __RELAXED_FN_ATTRS_CONSTEXPR __RELAXED_FN_ATTRS constexpr
 #else
 #define __RELAXED_FN_ATTRS_CONSTEXPR __RELAXED_FN_ATTRS
@@ -172,7 +172,7 @@ _mm_tzcnt_64(unsigned long long __X)
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("bmi")))
 
-#if defined (__cplusplus) && (__cplusplus >= 201103L)
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
 #else
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
