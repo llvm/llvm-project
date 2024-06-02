@@ -1613,7 +1613,7 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
         instrprof_error::unknown_function,
         "memprof record not found for function hash " + Twine(FuncNameHash));
 
-  const memprof::IndexedMemProfRecord IndexedRecord = *Iter;
+  const memprof::IndexedMemProfRecord &IndexedRecord = *Iter;
   switch (Version) {
   case memprof::Version0:
   case memprof::Version1:
