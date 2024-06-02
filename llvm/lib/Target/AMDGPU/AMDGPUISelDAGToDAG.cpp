@@ -98,8 +98,9 @@ static SDValue stripExtractLoElt(SDValue In) {
 
 } // end anonymous namespace
 
-INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISel, "amdgpu-isel",
-                      "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
+INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISelLegacy, "amdgpu-isel",
+                      "AMDGPU DAG->DAG Pattern Instruction Selection", false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfo)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUPerfHintAnalysis)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
@@ -107,19 +108,20 @@ INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 #endif
-INITIALIZE_PASS_END(AMDGPUDAGToDAGISel, "amdgpu-isel",
-                    "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
+INITIALIZE_PASS_END(AMDGPUDAGToDAGISelLegacy, "amdgpu-isel",
+                    "AMDGPU DAG->DAG Pattern Instruction Selection", false,
+                    false)
 
 /// This pass converts a legalized DAG into a AMDGPU-specific
 // DAG, ready for instruction scheduling.
 FunctionPass *llvm::createAMDGPUISelDag(TargetMachine &TM,
                                         CodeGenOptLevel OptLevel) {
-  return new AMDGPUDAGToDAGISel(TM, OptLevel);
+  return new AMDGPUDAGToDAGISelLegacy(TM, OptLevel);
 }
 
 AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(TargetMachine &TM,
                                        CodeGenOptLevel OptLevel)
-    : SelectionDAGISel(ID, TM, OptLevel) {
+    : SelectionDAGISel(TM, OptLevel) {
   EnableLateStructurizeCFG = AMDGPUTargetMachine::EnableLateStructurizeCFG;
 }
 
@@ -200,14 +202,14 @@ bool AMDGPUDAGToDAGISel::fp16SrcZerosHighBits(unsigned Opc) const {
   }
 }
 
-void AMDGPUDAGToDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
+void AMDGPUDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AMDGPUArgumentUsageInfo>();
   AU.addRequired<UniformityInfoWrapperPass>();
 #ifdef EXPENSIVE_CHECKS
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<LoopInfoWrapperPass>();
 #endif
-  SelectionDAGISel::getAnalysisUsage(AU);
+  SelectionDAGISelLegacy::getAnalysisUsage(AU);
 }
 
 bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
@@ -771,9 +773,13 @@ bool AMDGPUDAGToDAGISel::isBaseWithConstantOffset64(SDValue Addr, SDValue &LHS,
   return false;
 }
 
-StringRef AMDGPUDAGToDAGISel::getPassName() const {
+StringRef AMDGPUDAGToDAGISelLegacy::getPassName() const {
   return "AMDGPU DAG->DAG Pattern Instruction Selection";
 }
+
+AMDGPUISelDAGToDAGPass::AMDGPUISelDAGToDAGPass(TargetMachine &TM)
+    : SelectionDAGISelPass(
+          std::make_unique<AMDGPUDAGToDAGISel>(TM, TM.getOptLevel())) {}
 
 //===----------------------------------------------------------------------===//
 // Complex Patterns
@@ -3607,4 +3613,9 @@ void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
   } while (IsModified);
 }
 
-char AMDGPUDAGToDAGISel::ID = 0;
+AMDGPUDAGToDAGISelLegacy::AMDGPUDAGToDAGISelLegacy(TargetMachine &TM,
+                                                   CodeGenOptLevel OptLevel)
+    : SelectionDAGISelLegacy(
+          ID, std::make_unique<AMDGPUDAGToDAGISel>(TM, OptLevel)) {}
+
+char AMDGPUDAGToDAGISelLegacy::ID = 0;
