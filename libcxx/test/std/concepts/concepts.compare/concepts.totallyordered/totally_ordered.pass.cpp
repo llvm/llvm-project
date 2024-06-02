@@ -111,13 +111,12 @@ static_assert(!std::totally_ordered<std::unordered_map<int, void*> >);
 static_assert(!std::totally_ordered<std::unordered_set<int> >);
 
 struct A {};
-// FIXME(cjdb): uncomment when operator<=> is implemented for each of these types.
-// static_assert(!std::totally_ordered<std::array<A, 10> >);
-// static_assert(!std::totally_ordered<std::deque<A> >);
-// static_assert(!std::totally_ordered<std::forward_list<A> >);
-// static_assert(!std::totally_ordered<std::list<A> >);
-// static_assert(!std::totally_ordered<std::set<A> >);
-// static_assert(!std::totally_ordered<std::vector<A> >);
+static_assert(!std::totally_ordered<std::array<A, 10> >);
+static_assert(!std::totally_ordered<std::deque<A> >);
+static_assert(!std::totally_ordered<std::forward_list<A> >);
+static_assert(!std::totally_ordered<std::list<A> >);
+static_assert(!std::totally_ordered<std::set<A> >);
+static_assert(!std::totally_ordered<std::vector<A> >);
 } // namespace standard_types
 
 namespace types_fit_for_purpose {
