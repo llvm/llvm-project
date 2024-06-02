@@ -17,6 +17,10 @@ const SystemZMCExpr *SystemZMCExpr::create(VariantKind Kind, const MCExpr *Expr,
   return new (Ctx) SystemZMCExpr(Kind, Expr);
 }
 
+const SystemZMCExpr *SystemZMCExpr::create(const MCExpr *Expr, MCContext &Ctx) {
+  return create(VK_SystemZ_None, Expr, Ctx);
+}
+
 StringRef SystemZMCExpr::getVariantKindName() const {
   switch (static_cast<uint32_t>(getKind())) {
   case VK_SystemZ_None:

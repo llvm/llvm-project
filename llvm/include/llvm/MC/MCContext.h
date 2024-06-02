@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCDwarf.h"
@@ -61,6 +62,7 @@ class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class MCSymbolELF;
+class MCSymbolGOFF;
 class MCSymbolWasm;
 class MCSymbolXCOFF;
 class MCTargetOptions;
@@ -299,6 +301,25 @@ private:
     }
   };
 
+  struct GOFFSectionKey {
+    std::string SectionName;
+    GOFF::GOFFSectionType SectionType;
+    bool HasParentSection;
+
+    GOFFSectionKey(StringRef SectionName, GOFF::GOFFSectionType SectionType,
+                   bool HasParentSection)
+        : SectionName(SectionName), SectionType(SectionType),
+          HasParentSection(HasParentSection) {}
+
+    bool operator<(const GOFFSectionKey &Other) const {
+      if (SectionType == GOFF::GOFFSectionType::Other
+          && SectionType == GOFF::GOFFSectionType::Other) {
+        return SectionName < Other.SectionName;
+      }
+      return SectionType < Other.SectionType;
+    }
+  };
+
   struct WasmSectionKey {
     std::string SectionName;
     StringRef GroupName;
@@ -352,7 +373,7 @@ private:
   StringMap<MCSectionMachO *> MachOUniquingMap;
   std::map<ELFSectionKey, MCSectionELF *> ELFUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
-  std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
+  std::map<GOFFSectionKey, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
@@ -618,7 +639,23 @@ public:
                                                    unsigned EntrySize);
 
   MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
-                                MCSection *Parent, const MCExpr *SubsectionId);
+                                GOFF::ESDTextStyle TextStyle = GOFF::ESD_TS_ByteOriented,
+                                GOFF::ESDBindingAlgorithm BindAlgorithm = GOFF::ESD_BA_Concatenate,
+                                GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial,
+                                GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified,
+                                bool isRooted = false,
+                                const MCSymbolGOFF *TextOwner = nullptr);
+
+  MCSectionGOFF *
+  getGOFFSection(StringRef Section, SectionKind Kind,
+                 MCSection *Parent = nullptr,
+                 const MCExpr *SubsectionId = nullptr,
+                 GOFF::GOFFSectionType SectionType = GOFF::Other,
+                 GOFF::ESDTextStyle TextStyle = GOFF::ESD_TS_ByteOriented,
+                 GOFF::ESDBindingAlgorithm BindAlgorithm = GOFF::ESD_BA_Concatenate,
+                 GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial,
+                 GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified,
+                 bool isRooted = false, const MCSymbolGOFF * TextOwner = nullptr);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 SectionKind Kind, StringRef COMDATSymName,

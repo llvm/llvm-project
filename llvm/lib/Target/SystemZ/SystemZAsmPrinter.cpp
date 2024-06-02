@@ -19,6 +19,7 @@
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Mangler.h"
@@ -26,6 +27,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ConvertEBCDIC.h"
@@ -985,12 +987,12 @@ void SystemZAsmPrinter::emitADASection() {
 
   const unsigned PointerSize = getDataLayout().getPointerSize();
   OutStreamer->switchSection(getObjFileLowering().getADASection());
-
+  OutStreamer->emitLabel(ADASym);
   unsigned EmittedBytes = 0;
   for (auto &Entry : ADATable.getTable()) {
-    const MCSymbol *Sym;
-    unsigned SlotKind;
-    std::tie(Sym, SlotKind) = Entry.first;
+    MCSymbolGOFF *Sym =
+        static_cast<MCSymbolGOFF *>(const_cast<MCSymbol *>(Entry.first.first));
+    unsigned SlotKind = Entry.first.second;
     unsigned Offset = Entry.second;
     assert(Offset == EmittedBytes && "Offset not as expected");
     (void)EmittedBytes;
@@ -1420,9 +1422,46 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
                                       4);
 }
 
+const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV) {
+  const Triple &TargetTriple = TM.getTargetTriple();
+  if (TargetTriple.isOSzOS()) {
+    const GlobalAlias *GA = dyn_cast<GlobalAlias>(CV);
+    const Function *FV = dyn_cast<Function>(CV);
+    bool IsFunc = FV || (GA && isa<Function>(GA->getAliaseeObject()));
+    MCSymbolGOFF *Sym = nullptr;
+
+    if (auto GValue = dyn_cast<GlobalValue>(CV))
+      Sym = cast<MCSymbolGOFF>(getSymbol(GValue));
+    // TODO: Is it necessary to assert if CV is of type GlobalIFunc?
+
+    if (IsFunc) {
+      if (Sym) {
+        if (Sym->isExternal())
+          return SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
+                                       MCSymbolRefExpr::create(Sym, OutContext),
+                                       OutContext);
+        // Trigger creation of function descriptor in ADA for internal
+        // functions.
+        unsigned Disp =
+            ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
+        return MCBinaryExpr::createAdd(
+            SystemZMCExpr::create(MCSymbolRefExpr::create(ADASym, OutContext),
+                                  OutContext),
+            MCConstantExpr::create(Disp, OutContext), OutContext);
+      } else {
+        return MCSymbolRefExpr::create(Sym, OutContext);
+      }
+    }
+  }
+
+  return AsmPrinter::lowerConstant(CV);
+}
+
 void SystemZAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (TM.getTargetTriple().isOSzOS())
+  if (TM.getTargetTriple().isOSzOS()) {
+    ADASym = OutContext.createTempSymbol("ada_sec_start");
     emitPPA2(M);
+  }
   AsmPrinter::emitStartOfAsmFile(M);
 }
 
@@ -1433,6 +1472,10 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   // Make CELQSTRT symbol.
   const char *StartSymbolName = "CELQSTRT";
   MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
+  auto *GStartSym = static_cast<MCSymbolGOFF *>(CELQSTRT);
+  OutStreamer->emitSymbolAttribute(GStartSym, MCSA_ELF_TypeFunction);
+  OutStreamer->emitSymbolAttribute(GStartSym, MCSA_ZOS_OS_Linkage);
+  GStartSym->setExternal(true);
 
   // Create symbol and assign to class field for use in PPA1.
   PPA2Sym = OutContext.createTempSymbol("PPA2", false);
@@ -1600,6 +1643,27 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
   }
 
   AsmPrinter::emitFunctionEntryLabel();
+}
+
+bool SystemZAsmPrinter::doFinalization(Module &M) {
+  if (TM.getTargetTriple().isOSzOS()) {
+    // Set symbol flags for all global objects.
+    // Global Variables are objects (data)...
+    for (const auto &G : M.globals()) {
+      if (!G.hasInternalLinkage()) {
+        MCSymbol *Sym = getSymbol(&G);
+        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+      }
+    }
+    // and Funtions are functions (executable).
+    for (const Function &F : M) {
+      if (!F.hasInternalLinkage()) {
+        MCSymbol *Sym = getSymbol(&F);
+        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      }
+    }
+  }
+  return AsmPrinter::doFinalization(M);
 }
 
 // Force static initialization.
