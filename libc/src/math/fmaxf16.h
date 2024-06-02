@@ -18,4 +18,3 @@ float16 fmaxf16(float16 x, float16 y);
 } // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_FMAXF16_H
-
