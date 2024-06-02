@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE {
 
-namespace Fmul  {
+namespace Fmul {
 uint64_t maxu(uint64_t A, uint64_t B) { return A > B ? A : B; }
 
 uint64_t mul(uint64_t a, uint64_t b) {
@@ -138,7 +138,7 @@ float fmul(double x, double y) {
     return result16;
   }
 }
-}
+} // namespace Fmul
 
 LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   return Fmul::fmul(x, y);
