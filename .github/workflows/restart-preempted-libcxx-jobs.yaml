@@ -63,7 +63,8 @@ jobs:
             const check_suites = await github.rest.checks.listForSuite({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              check_suite_id: context.payload.workflow_run.check_suite_id
+              check_suite_id: context.payload.workflow_run.check_suite_id,
+              per_page: 100 // FIXME: We don't have 100 check runs yet, but we should handle this better.
             })
 
             check_run_ids = [];
