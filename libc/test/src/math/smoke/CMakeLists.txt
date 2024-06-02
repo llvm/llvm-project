@@ -1800,6 +1800,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmaxf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaxf16_test.cpp
+  HDRS
+    FMaxTest.h
+  DEPENDS
+    libc.src.math.fmaxf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fmaximuml_test
   SUITE
     libc-math-smoke-tests
