@@ -42,13 +42,11 @@ class WebAssemblyDAGToDAGISel final : public SelectionDAGISel {
   const WebAssemblySubtarget *Subtarget;
 
 public:
-  static char ID;
-
   WebAssemblyDAGToDAGISel() = delete;
 
   WebAssemblyDAGToDAGISel(WebAssemblyTargetMachine &TM,
                           CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, TM, OptLevel), Subtarget(nullptr) {}
+      : SelectionDAGISel(TM, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     LLVM_DEBUG(dbgs() << "********** ISelDAGToDAG **********\n"
@@ -82,11 +80,21 @@ private:
   bool SelectAddrAddOperands(MVT OffsetType, SDValue N, SDValue &Offset,
                              SDValue &Addr);
 };
+
+class WebAssemblyDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit WebAssemblyDAGToDAGISelLegacy(WebAssemblyTargetMachine &TM,
+                                         CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<WebAssemblyDAGToDAGISel>(TM, OptLevel)) {}
+};
 } // end anonymous namespace
 
-char WebAssemblyDAGToDAGISel::ID;
+char WebAssemblyDAGToDAGISelLegacy::ID;
 
-INITIALIZE_PASS(WebAssemblyDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(WebAssemblyDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false,
+                false)
 
 void WebAssemblyDAGToDAGISel::PreprocessISelDAG() {
   // Stack objects that should be allocated to locals are hoisted to WebAssembly
@@ -409,5 +417,5 @@ bool WebAssemblyDAGToDAGISel::SelectAddrOperands64(SDValue Op, SDValue &Offset,
 /// for instruction scheduling.
 FunctionPass *llvm::createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
                                              CodeGenOptLevel OptLevel) {
-  return new WebAssemblyDAGToDAGISel(TM, OptLevel);
+  return new WebAssemblyDAGToDAGISelLegacy(TM, OptLevel);
 }
