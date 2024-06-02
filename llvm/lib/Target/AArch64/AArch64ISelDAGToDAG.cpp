@@ -44,11 +44,13 @@ class AArch64DAGToDAGISel : public SelectionDAGISel {
   const AArch64Subtarget *Subtarget;
 
 public:
+  static char ID;
+
   AArch64DAGToDAGISel() = delete;
 
   explicit AArch64DAGToDAGISel(AArch64TargetMachine &tm,
                                CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr) {}
+      : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<AArch64Subtarget>();
@@ -505,20 +507,11 @@ private:
   bool SelectAllActivePredicate(SDValue N);
   bool SelectAnyPredicate(SDValue N);
 };
-
-class AArch64DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
-public:
-  static char ID;
-  explicit AArch64DAGToDAGISelLegacy(AArch64TargetMachine &tm,
-                                     CodeGenOptLevel OptLevel)
-      : SelectionDAGISelLegacy(
-            ID, std::make_unique<AArch64DAGToDAGISel>(tm, OptLevel)) {}
-};
 } // end anonymous namespace
 
-char AArch64DAGToDAGISelLegacy::ID = 0;
+char AArch64DAGToDAGISel::ID = 0;
 
-INITIALIZE_PASS(AArch64DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(AArch64DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// isIntImmediate - This method tests to see if the node is a constant
 /// operand. If so Imm will receive the 32-bit value.
@@ -6874,7 +6867,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 /// AArch64-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createAArch64ISelDag(AArch64TargetMachine &TM,
                                          CodeGenOptLevel OptLevel) {
-  return new AArch64DAGToDAGISelLegacy(TM, OptLevel);
+  return new AArch64DAGToDAGISel(TM, OptLevel);
 }
 
 /// When \p PredVT is a scalable vector predicate in the form

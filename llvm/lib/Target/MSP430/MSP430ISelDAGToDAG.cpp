@@ -91,10 +91,12 @@ namespace {
 namespace {
   class MSP430DAGToDAGISel : public SelectionDAGISel {
   public:
+    static char ID;
+
     MSP430DAGToDAGISel() = delete;
 
     MSP430DAGToDAGISel(MSP430TargetMachine &TM, CodeGenOptLevel OptLevel)
-        : SelectionDAGISel(TM, OptLevel) {}
+        : SelectionDAGISel(ID, TM, OptLevel) {}
 
   private:
     bool MatchAddress(SDValue N, MSP430ISelAddressMode &AM);
@@ -117,26 +119,18 @@ namespace {
 
     bool SelectAddr(SDValue Addr, SDValue &Base, SDValue &Disp);
   };
-
-  class MSP430DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
-  public:
-    static char ID;
-    MSP430DAGToDAGISelLegacy(MSP430TargetMachine &TM, CodeGenOptLevel OptLevel)
-        : SelectionDAGISelLegacy(
-              ID, std::make_unique<MSP430DAGToDAGISel>(TM, OptLevel)) {}
-  };
 }  // end anonymous namespace
 
-char MSP430DAGToDAGISelLegacy::ID;
+char MSP430DAGToDAGISel::ID;
 
-INITIALIZE_PASS(MSP430DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(MSP430DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// createMSP430ISelDag - This pass converts a legalized DAG into a
 /// MSP430-specific DAG, ready for instruction scheduling.
 ///
 FunctionPass *llvm::createMSP430ISelDag(MSP430TargetMachine &TM,
                                         CodeGenOptLevel OptLevel) {
-  return new MSP430DAGToDAGISelLegacy(TM, OptLevel);
+    return new MSP430DAGToDAGISel(TM, OptLevel);
 }
 
 /// MatchWrapper - Try to match MSP430ISD::Wrapper node into an addressing mode.
