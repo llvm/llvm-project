@@ -364,24 +364,24 @@ private:
   };
 
   LIBC_INLINE_VAR static constexpr Proxy READER = {
-      State::spin_reload_for_reader,
-      State::fetch_set_pending_reader,
-      State::fetch_clear_pending_reader,
-      &WaitingQueue::Guard::reader_serialization,
-      &WaitingQueue::Guard::pending_reader,
-      &RwLock::try_read_lock,
-      &WaitingQueue::reader_wait,
-      &State::can_acquire_reader};
+      /*spin_reload=*/State::spin_reload_for_reader,
+      /*set_pending=*/State::fetch_set_pending_reader,
+      /*clear_pending=*/State::fetch_clear_pending_reader,
+      /*serialization=*/&WaitingQueue::Guard::reader_serialization,
+      /*pending_count=*/&WaitingQueue::Guard::pending_reader,
+      /*try_lock=*/&RwLock::try_read_lock,
+      /*wait=*/&WaitingQueue::reader_wait,
+      /*can_acquire=*/&State::can_acquire_reader};
 
   LIBC_INLINE_VAR static constexpr Proxy WRITER = {
-      State::spin_reload_for_writer,
-      State::fetch_set_pending_writer,
-      State::fetch_clear_pending_writer,
-      &WaitingQueue::Guard::writer_serialization,
-      &WaitingQueue::Guard::pending_writer,
-      &RwLock::try_write_lock,
-      &WaitingQueue::writer_wait,
-      &State::can_acquire_writer};
+      /*spin_reload=*/State::spin_reload_for_writer,
+      /*set_pending=*/State::fetch_set_pending_writer,
+      /*clear_pending=*/State::fetch_clear_pending_writer,
+      /*serialization=*/&WaitingQueue::Guard::writer_serialization,
+      /*pending_count=*/&WaitingQueue::Guard::pending_writer,
+      /*try_lock=*/&RwLock::try_write_lock,
+      /*wait=*/&WaitingQueue::writer_wait,
+      /*can_acquire=*/&State::can_acquire_writer};
 
   LIBC_INLINE LockResult
   lock(const Proxy &proxy, cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
