@@ -180,6 +180,9 @@ public:
   /// Returns the list of element types contained in a non-opaque struct.
   ArrayRef<Type> getBody() const;
 
+  /// Returns the number of elements in a struct.
+  size_t getNumElements() const;
+
   /// Verifies that the type about to be constructed is well-formed.
   static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
                               StringRef, bool);

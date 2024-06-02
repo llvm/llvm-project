@@ -2076,6 +2076,19 @@ LogicalResult GlobalOp::verify() {
       return emitOpError(
           "requires an i8 array type of the length equal to that of the string "
           "attribute");
+  } else if (auto arrayType = llvm::dyn_cast<LLVMArrayType>(getType());
+             arrayType && getValueOrNull()) {
+    // Currently, creating arrays is only supported from ArrayAttrs
+    // or from StringAttr (but that was verified above)
+    auto arrayAttr = llvm::dyn_cast_or_null<ArrayAttr>(getValueOrNull());
+    if (arrayAttr && arrayAttr.size() != arrayType.getNumElements())
+      return emitOpError()
+             << "array type requires an array attribute of the same size, but "
+                "was provided with array attribute of size "
+             << arrayAttr.size() << " for an array type of size "
+             << arrayType.getNumElements();
+    // Checking that the element types match would be nice,
+    // but is not as trivial
   }
 
   if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType())) {
@@ -2086,6 +2099,23 @@ LogicalResult GlobalOp::verify() {
     if (Attribute value = getValueOrNull())
       return emitOpError() << "global with target extension type can only be "
                               "initialized with zero-initializer";
+  }
+
+  if (llvm::isa<LLVMStructType>(getType()) && getValueOrNull()) {
+    // Currently, creating structs is only supported from ArrayAttrs
+    auto structType = llvm::dyn_cast<LLVMStructType>(getType());
+    auto arrayAttr = llvm::dyn_cast_or_null<ArrayAttr>(getValueOrNull());
+    if (!arrayAttr)
+      return emitOpError()
+             << "struct type requires an array attribute of the same size";
+    if (arrayAttr.size() != structType.getNumElements())
+      return emitOpError()
+             << "struct type requires an array attribute of the same size, but "
+                "was provided with array attribute of size "
+             << arrayAttr.size() << " for an struct type of size "
+             << structType.getNumElements();
+    // Checking that the element types match would be nice,
+    // but is not as trivial
   }
 
   if (getLinkage() == Linkage::Common) {

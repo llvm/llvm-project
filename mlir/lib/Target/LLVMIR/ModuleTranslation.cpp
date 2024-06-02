@@ -352,6 +352,74 @@ static llvm::Type *getInnermostElementType(llvm::Type *type) {
   } while (true);
 }
 
+/// Convert an array attribute to an LLVM IR constant of array type by creating
+/// constants for each attribute in the array. Reports errors at `loc`.
+static llvm::Constant *
+convertArrayAttrToArrayType(Location loc, ArrayAttr arrayAttr,
+                            llvm::ArrayType *arrayType,
+                            const ModuleTranslation &moduleTranslation) {
+  if (!arrayAttr || !arrayType)
+    return nullptr;
+
+  const auto numElementsInAttr = arrayAttr.size();
+  const auto numElementsInLLVMType = arrayType->getNumElements();
+  if (numElementsInLLVMType != numElementsInAttr) {
+    emitError(loc, "Number of elements in provided MLIR array attribute and "
+                   "desired LLVM array type do not match. ArrayAttr size: ")
+        << numElementsInAttr << " != ArrayType size: " << numElementsInLLVMType;
+    return nullptr;
+  }
+
+  // Create constants for array elements
+  llvm::Type *llvmElemType = arrayType->getElementType();
+  SmallVector<llvm::Constant *> constants;
+  constants.reserve(numElementsInAttr);
+  for (auto attr : arrayAttr) {
+    llvm::Constant *constant = LLVM::detail::getLLVMConstant(
+        llvmElemType, attr, loc, moduleTranslation);
+    if (!constant)
+      return nullptr;
+    constants.push_back(constant);
+  }
+  ArrayRef<llvm::Constant *> constantsRef = constants;
+  return llvm::ConstantArray::get(arrayType, constantsRef);
+}
+
+/// Convert an array attribute to an LLVM IR constant of struct type by creating
+/// constants for each attribute in the array. Reports errors at `loc`.
+static llvm::Constant *
+convertArrayAttrToStructType(Location loc, ArrayAttr arrayAttr,
+                             llvm::StructType *structType,
+                             const ModuleTranslation &moduleTranslation) {
+  if (!arrayAttr || !structType)
+    return nullptr;
+
+  const auto numElementsInAttr = arrayAttr.size();
+  const auto numElementsInLLVMType = structType->getNumElements();
+  if (numElementsInLLVMType != numElementsInAttr) {
+    emitError(loc, "Number of elements in provided MLIR array attribute and "
+                   "desired LLVM struct type do not match. ArrayAttr size: ")
+        << numElementsInAttr
+        << " != StructType size: " << numElementsInLLVMType;
+    return nullptr;
+  }
+
+  // Create constants for array elements
+  SmallVector<llvm::Constant *> constants;
+  constants.reserve(numElementsInAttr);
+  for (auto [index, attr] : llvm::enumerate(arrayAttr)) {
+    llvm::Type *llvmElemType = structType->getElementType(index);
+    llvm::Constant *constant = LLVM::detail::getLLVMConstant(
+        llvmElemType, attr, loc, moduleTranslation);
+    if (!constant)
+      return nullptr;
+    constants.push_back(constant);
+  }
+
+  ArrayRef<llvm::Constant *> constantsRef = constants;
+  return llvm::ConstantStruct::get(structType, constantsRef);
+}
+
 /// Convert a dense elements attribute to an LLVM IR constant using its raw data
 /// storage if possible. This supports elements attributes of tensor or vector
 /// type and avoids constructing separate objects for individual values of the
@@ -545,31 +613,17 @@ static llvm::Constant *convertDenseResourceElementsAttr(
 }
 
 /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
-/// This currently supports integer, floating point, splat and dense element
-/// attributes and combinations thereof. Also, an array attribute with two
-/// elements is supported to represent a complex constant.  In case of error,
-/// report it to `loc` and return nullptr.
+/// This currently supports integer, floating point, array, struct, splat
+/// and dense element attributes and combinations thereof.
+/// In case of error, report it to `loc` and return nullptr.
 llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     llvm::Type *llvmType, Attribute attr, Location loc,
     const ModuleTranslation &moduleTranslation) {
   if (!attr)
     return llvm::UndefValue::get(llvmType);
   if (auto *structType = dyn_cast<::llvm::StructType>(llvmType)) {
-    auto arrayAttr = dyn_cast<ArrayAttr>(attr);
-    if (!arrayAttr || arrayAttr.size() != 2) {
-      emitError(loc, "expected struct type to be a complex number");
-      return nullptr;
-    }
-    llvm::Type *elementType = structType->getElementType(0);
-    llvm::Constant *real =
-        getLLVMConstant(elementType, arrayAttr[0], loc, moduleTranslation);
-    if (!real)
-      return nullptr;
-    llvm::Constant *imag =
-        getLLVMConstant(elementType, arrayAttr[1], loc, moduleTranslation);
-    if (!imag)
-      return nullptr;
-    return llvm::ConstantStruct::get(structType, {real, imag});
+    return convertArrayAttrToStructType(loc, dyn_cast<::mlir::ArrayAttr>(attr),
+                                        structType, moduleTranslation);
   }
   // For integer types, we allow a mismatch in sizes as the index type in
   // MLIR might have a different size than the index type in the LLVM module.
@@ -711,6 +765,11 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
         moduleTranslation.getLLVMContext(),
         ArrayRef<char>{stringAttr.getValue().data(),
                        stringAttr.getValue().size()});
+  }
+  if (llvm::Constant *result = convertArrayAttrToArrayType(
+          loc, dyn_cast<::mlir::ArrayAttr>(attr),
+          dyn_cast<::llvm::ArrayType>(llvmType), moduleTranslation)) {
+    return result;
   }
   emitError(loc, "unsupported constant value");
   return nullptr;
