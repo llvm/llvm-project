@@ -2028,6 +2028,20 @@ void DeclaratorDecl::setTrailingRequiresClause(Expr *TrailingRequiresClause) {
   getExtInfo()->TrailingRequiresClause = TrailingRequiresClause;
 }
 
+void DeclaratorDecl::setPreContracts(SmallVector<Expr*> PreContracts) {
+  // Make sure the extended decl info is allocated.
+  if (!hasExtInfo()) {
+    // Save (non-extended) type source info pointer.
+    auto *savedTInfo = DeclInfo.get<TypeSourceInfo*>();
+    // Allocate external info struct.
+    DeclInfo = new (getASTContext()) ExtInfo;
+    // Restore savedTInfo into (extended) decl info.
+    getExtInfo()->TInfo = savedTInfo;
+  }
+  // Set requires clause info.
+  getExtInfo()->PreContracts = PreContracts;
+}
+
 void DeclaratorDecl::setTemplateParameterListsInfo(
     ASTContext &Context, ArrayRef<TemplateParameterList *> TPLists) {
   assert(!TPLists.empty());
@@ -3078,7 +3092,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
   if (TrailingRequiresClause)
     setTrailingRequiresClause(TrailingRequiresClause);
-//  setPreContracts(PreContracts);
+  setPreContracts(PreContracts);
 }
 
 void FunctionDecl::getNameForDiagnostic(

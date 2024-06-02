@@ -336,6 +336,48 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
   return llvm::DebugLoc();
 }
 
+void CodeGenFunction::EmitCXXContractCheck(const Expr* Expr) {
+  llvm::Value *ArgValue = EmitScalarExpr(Expr);
+/*
+  llvm::BasicBlock *Begin = Builder.GetInsertBlock();
+  llvm::BasicBlock *End = createBasicBlock("contract_assert_end", this->CurFn);
+  llvm::BasicBlock *Violation = createBasicBlock("contract_assert_violation", this->CurFn);
+
+  Builder.SetInsertPoint(Begin);
+  Builder.CreateCondBr(ArgValue, End, Violation);
+
+  Builder.SetInsertPoint(Violation);
+  */
+/*
+  SourceRange range = Expr->getSourceRange();
+  PresumedLoc PLoc = Ctx.getSourceManager().getPresumedLoc(range->getBegin());
+  clang::StringLiteral* Filename = PLoc->getFilename();
+  llvm::Value* LineNo = PLoc->getLine();
+  clang::StringLiteral* ExpressionText = range.print(os, Ctx.getSourceManager());
+*/
+  const char *VLibCallName = "__contract_violation"; // const char*
+  CallArgList Args;
+  /*
+  Args.add(EmitLoadOfLValue(EmitStringLiteralLValue(Filename), Expr->getExprLoc()), getContext().VoidPtrTy);
+  Args.add(RValue::get(LineNo), getContext().getSizeType());
+  Args.add(EmitLoadOfLValue(EmitStringLiteralLValue(ExpressionText), Expr->getExprLoc()), getContext().VoidPtrTy);
+  */
+  /*
+  const CGFunctionInfo &VFuncInfo = CGM.getTypes().arrangeBuiltinFunctionCall(getContext().VoidPtrTy, {});
+  llvm::FunctionType *VFTy = CGM.getTypes().GetFunctionType(VFuncInfo);
+  llvm::FunctionCallee VFunc = CGM.CreateRuntimeFunction(VFTy, VLibCallName);
+  EmitCall(VFuncInfo, CGCallee::forDirect(VFunc), ReturnValueSlot(), Args);
+*/
+
+//  Builder.SetInsertPoint(End);
+}
+
+void CodeGenFunction::EmitCXXContractImply(const Expr* expr) {
+  llvm::Value *ArgValue = EmitScalarExpr(expr);
+  llvm::Function *FnAssume = CGM.getIntrinsic(llvm::Intrinsic::assume);
+  Builder.CreateCall(FnAssume, ArgValue);
+}
+
 static void EmitIfUsed(CodeGenFunction &CGF, llvm::BasicBlock *BB) {
   if (!BB) return;
   if (!BB->use_empty()) {
@@ -420,6 +462,12 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // Emit debug descriptor for function end.
   if (CGDebugInfo *DI = getDebugInfo())
     DI->EmitFunctionEnd(Builder, CurFn);
+/*
+  for (Expr* expr : FN->getPostContracts()) {
+    EmitCXXContractCheck(expr);
+    EmitCXXContractImply(expr);
+  }
+  */
 
   // Reset the debug location to that of the simple 'return' expression, if any
   // rather than that of the end of the function's scope '}'.
@@ -1199,6 +1247,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     CGM.getHLSLRuntime().emitEntryFunction(FD, Fn);
 
   EmitFunctionProlog(*CurFnInfo, CurFn, Args);
+
+  for (Expr* expr : FD->getPreContracts()) {
+    EmitCXXContractCheck(expr);
+    EmitCXXContractImply(expr);
+  }
 
   if (const CXXMethodDecl *MD = dyn_cast_if_present<CXXMethodDecl>(D);
       MD && !MD->isStatic()) {

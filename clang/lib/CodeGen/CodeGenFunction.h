@@ -4337,6 +4337,9 @@ public:
   LValue EmitObjCSelectorLValue(const ObjCSelectorExpr *E);
   void   EmitDeclRefExprDbgValue(const DeclRefExpr *E, const APValue &Init);
 
+  void   EmitCXXContractCheck(const Expr* expr);
+  void   EmitCXXContractImply(const Expr* expr);
+
   //===--------------------------------------------------------------------===//
   //                         Scalar Expression Emission
   //===--------------------------------------------------------------------===//
