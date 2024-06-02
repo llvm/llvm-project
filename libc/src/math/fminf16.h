@@ -1,4 +1,4 @@
-//===-- Implementation header for fmaxf16 -----------------------*- C++ -*-===//
+//===-- Implementation header for fminf16 ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_FMAXF_H
-#define LLVM_LIBC_SRC_MATH_FMAXF_H
+#ifndef LLVM_LIBC_SRC_MATH_FMINF16_H
+#define LLVM_LIBC_SRC_MATH_FMINF16_H
 
 #include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE {
 
-float16 fmaxf16(float16 x, float16 y);
+float16 fminf16(float16 x, float16 y);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_MATH_FMAXF16_H
-
+#endif // LLVM_LIBC_SRC_MATH_FMINF16_H

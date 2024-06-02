@@ -1748,6 +1748,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fminf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminf16_test.cpp
+  HDRS
+    FMinTest.h
+  DEPENDS
+    libc.src.math.fminf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fmaxf_test
   SUITE
     libc-math-smoke-tests
