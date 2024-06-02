@@ -31,7 +31,7 @@ struct X
 
 bool X::dtor_called = false;
 
-constexpr bool check_reset()
+TEST_CONSTEXPR_CXX20 bool check_reset()
 {
     {
         optional<int> opt;

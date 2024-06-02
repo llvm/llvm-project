@@ -210,7 +210,7 @@ void test_on_test_type() {
     }
 }
 
-constexpr bool test_empty_emplace()
+TEST_CONSTEXPR_CXX20 bool test_empty_emplace()
 {
     optional<const int> opt;
     auto &v = opt.emplace(42);
