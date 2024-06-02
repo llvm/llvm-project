@@ -26,6 +26,7 @@ add_mlir_library(MLIRTestTransforms
   TestInlining.cpp
   TestIntRangeInference.cpp
   TestMakeIsolatedFromAbove.cpp
+  TestSCFVectorize.cpp
   ${MLIRTestTransformsPDLSrc}
 
   EXCLUDE_FROM_LIBMLIR

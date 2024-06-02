@@ -9,12 +9,10 @@
 #ifndef MLIR_TRANSFORMS_SCFVECTORIZE_H_
 #define MLIR_TRANSFORMS_SCFVECTORIZE_H_
 
-#include <memory>
 #include <optional>
 
 namespace mlir {
-class OpBuilder;
-class Pass;
+class DataLayout;
 struct LogicalResult;
 namespace scf {
 class ParallelOp;
@@ -43,9 +41,9 @@ struct SCFVectorizeInfo {
 /// specified dimension.
 ///
 /// `vectorBitwidth` - maximum vector size, in bits.
-std::optional<SCFVectorizeInfo> getLoopVectorizeInfo(mlir::scf::ParallelOp loop,
-                                                     unsigned dim,
-                                                     unsigned vectorBitwidth);
+std::optional<SCFVectorizeInfo>
+getLoopVectorizeInfo(mlir::scf::ParallelOp loop, unsigned dim,
+                     unsigned vectorBitwidth, const DataLayout *DL = nullptr);
 
 /// Vectorization params
 struct SCFVectorizeParams {
@@ -64,11 +62,9 @@ struct SCFVectorizeParams {
 /// If `masked` is `true` and loop bound is not divisible by `factor`, instead
 /// of generating second loop to process remainig iterations, extend loop count
 /// and generate masked vector ops to handle out-of bounds memory accesses.
-mlir::LogicalResult vectorizeLoop(mlir::OpBuilder &builder,
-                                  mlir::scf::ParallelOp loop,
-                                  const SCFVectorizeParams &params);
-
-std::unique_ptr<mlir::Pass> createSCFVectorizePass();
+mlir::LogicalResult vectorizeLoop(mlir::scf::ParallelOp loop,
+                                  const SCFVectorizeParams &params,
+                                  const DataLayout *DL = nullptr);
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_SCFVECTORIZE_H_
