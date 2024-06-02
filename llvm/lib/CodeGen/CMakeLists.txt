@@ -266,6 +266,7 @@ add_llvm_component_library(LLVMCodeGen
   Analysis
   BitReader
   BitWriter
+  CodeGenData
   CodeGenTypes
   Core
   MC
