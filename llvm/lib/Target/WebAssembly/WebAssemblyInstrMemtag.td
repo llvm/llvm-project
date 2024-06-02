@@ -132,9 +132,9 @@ defm MEMTAG_INSERT_A#B: I<(outs rc:$taggedptr), (ins i32imm:$tableidx, rc:$ptr, 
                     "memtag.insert\t$tableidx",
                     0xfc2d>;
 
-defm MEMTAG_TAGBITS_A#B: I<(outs I32:$taggedbits), (ins i32imm:$tableidx),
+defm MEMTAG_TAGBITS_A#B: I<(outs i32:$taggedbits), (ins i32imm:$tableidx),
                     (outs), (ins i32imm:$tableidx),
-                    [(set rc:$taggedbits,
+                    [(set i32:$taggedbits,
                         (int_wasm_memtag_tagbits (i32 imm:$tableidx)))],
                     "memtag.tagbits\t$taggedbits, $tableidx",
                     "memtag.tagbits\t$tableidx",
