@@ -229,7 +229,8 @@ TEST(SegmentedArrayTest, PlacementNewOnAlignedStorage) {
   alignas(AllocatorType) std::byte AllocatorStorage[sizeof(AllocatorType)];
   new (&AllocatorStorage) AllocatorType(1 << 10);
   auto *A = reinterpret_cast<AllocatorType *>(&AllocatorStorage);
-  alignas(Array<ShadowStackEntry>) std::byte ArrayStorage[sizeof(Array<ShadowStackEntry>)];
+  alignas(Array<ShadowStackEntry>)
+      std::byte ArrayStorage[sizeof(Array<ShadowStackEntry>)];
   new (&ArrayStorage) Array<ShadowStackEntry>(*A);
   auto *Data = reinterpret_cast<Array<ShadowStackEntry> *>(&ArrayStorage);
 
