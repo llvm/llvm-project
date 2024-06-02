@@ -24,8 +24,6 @@ class LoongArchDAGToDAGISel : public SelectionDAGISel {
   const LoongArchSubtarget *Subtarget = nullptr;
 
 public:
-  static char ID;
-
   LoongArchDAGToDAGISel() = delete;
 
   explicit LoongArchDAGToDAGISel(LoongArchTargetMachine &TM)
