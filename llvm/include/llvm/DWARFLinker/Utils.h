@@ -36,11 +36,10 @@ inline Error finiteLoop(function_ref<Expected<bool>()> Iteration,
   return createStringError(std::errc::invalid_argument, "Infinite recursion");
 }
 
-/// Make a best effort to guess the
-/// Xcode.app/Contents/Developer/Toolchains/ path from an SDK path.
-inline SmallString<128> guessToolchainBaseDir(StringRef SysRoot) {
-  SmallString<128> Result;
+/// Xcode.app/Contents/Developer path from an SDK path.
+inline StringRef guessDeveloperDir(StringRef SysRoot) {
   // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+  SmallString<128> Result;
   StringRef Base = sys::path::parent_path(SysRoot);
   if (sys::path::filename(Base) != "SDKs")
     return Result;
@@ -48,6 +47,28 @@ inline SmallString<128> guessToolchainBaseDir(StringRef SysRoot) {
   Result = Base;
   Result += "/Toolchains";
   return Result;
+}
+
+/// Make a best effort to determine whether Path is inside a toolchain.
+inline bool isInToolchainDir(StringRef Path) {
+  // Library/Developer/Toolchains/swift-DEVELOPMENT-SNAPSHOT-2024-05-15-a.xctoolchain/usr/lib/swift/macosx/_StringProcessing.swiftmodule/arm64-apple-macos.private.swiftinterface
+  for (auto it = sys::path::rbegin(Path), end = sys::path::rend(Path);
+       it != end; ++it) {
+    if (it->ends_with(".xctoolchain")) {
+      ++it;
+      if (it == end)
+        return false;
+      if (*it != "Toolchains")
+        return false;
+      ++it;
+      if (it == end)
+        return false;
+      if (*it != "Developer")
+        return false;
+      return true;
+    }
+  }
+  return false;
 }
 
 inline bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {

@@ -2972,7 +2972,9 @@ class VPIRBasicBlock : public VPBasicBlock {
 
 public:
   VPIRBasicBlock(BasicBlock *IRBB)
-      : VPBasicBlock(VPIRBasicBlockSC, "ph"), IRBB(IRBB) {}
+      : VPBasicBlock(VPIRBasicBlockSC,
+                     (Twine("ir-bb<") + IRBB->getName() + Twine(">")).str()),
+        IRBB(IRBB) {}
 
   ~VPIRBasicBlock() override {}
 
