@@ -74,25 +74,25 @@ static_assert(!std::totally_ordered<int (S::*)() noexcept>);
 static_assert(!std::totally_ordered<int (S::*)() &>);
 static_assert(!std::totally_ordered<int (S::*)() & noexcept>);
 static_assert(!std::totally_ordered<int (S::*)() &&>);
-static_assert(!std::totally_ordered < int (S::*)() && noexcept >);
+static_assert(!std::totally_ordered < int(S::*)() && noexcept >);
 static_assert(!std::totally_ordered<int (S::*)() const>);
 static_assert(!std::totally_ordered<int (S::*)() const noexcept>);
 static_assert(!std::totally_ordered<int (S::*)() const&>);
 static_assert(!std::totally_ordered<int (S::*)() const & noexcept>);
 static_assert(!std::totally_ordered<int (S::*)() const&&>);
-static_assert(!std::totally_ordered < int (S::*)() const&& noexcept >);
+static_assert(!std::totally_ordered < int(S::*)() const&& noexcept >);
 static_assert(!std::totally_ordered<int (S::*)() volatile>);
 static_assert(!std::totally_ordered<int (S::*)() volatile noexcept>);
 static_assert(!std::totally_ordered<int (S::*)() volatile&>);
 static_assert(!std::totally_ordered<int (S::*)() volatile & noexcept>);
 static_assert(!std::totally_ordered<int (S::*)() volatile&&>);
-static_assert(!std::totally_ordered < int (S::*)() volatile&& noexcept >);
+static_assert(!std::totally_ordered < int(S::*)() volatile && noexcept >);
 static_assert(!std::totally_ordered<int (S::*)() const volatile>);
 static_assert(!std::totally_ordered<int (S::*)() const volatile noexcept>);
 static_assert(!std::totally_ordered<int (S::*)() const volatile&>);
 static_assert(!std::totally_ordered<int (S::*)() const volatile & noexcept>);
 static_assert(!std::totally_ordered<int (S::*)() const volatile&&>);
-static_assert(!std::totally_ordered < int (S::*)() const volatile&& noexcept >);
+static_assert(!std::totally_ordered < int(S::*)() const volatile&& noexcept >);
 
 static_assert(!std::totally_ordered<void>);
 } // namespace fundamentals
@@ -146,14 +146,10 @@ static_assert(!std::totally_ordered<wrong_return_type>);
 
 static_assert(!std::totally_ordered<cxx20_member_eq_operator_with_deleted_ne>);
 static_assert(!std::totally_ordered<cxx20_friend_eq_operator_with_deleted_ne>);
-static_assert(
-    !std::totally_ordered<member_three_way_comparable_with_deleted_eq>);
-static_assert(
-    !std::totally_ordered<member_three_way_comparable_with_deleted_ne>);
-static_assert(
-    !std::totally_ordered<friend_three_way_comparable_with_deleted_eq>);
-static_assert(
-    !std::totally_ordered<friend_three_way_comparable_with_deleted_ne>);
+static_assert(!std::totally_ordered<member_three_way_comparable_with_deleted_eq>);
+static_assert(!std::totally_ordered<member_three_way_comparable_with_deleted_ne>);
+static_assert(!std::totally_ordered<friend_three_way_comparable_with_deleted_eq>);
+static_assert(!std::totally_ordered<friend_three_way_comparable_with_deleted_ne>);
 
 static_assert(!std::totally_ordered<eq_returns_explicit_bool>);
 static_assert(!std::totally_ordered<ne_returns_explicit_bool>);
@@ -168,5 +164,3 @@ static_assert(std::totally_ordered<partial_ordering_totally_ordered_with>);
 static_assert(std::totally_ordered<weak_ordering_totally_ordered_with>);
 static_assert(std::totally_ordered<strong_ordering_totally_ordered_with>);
 } // namespace types_fit_for_purpose
-
-int main(int, char**) { return 0; }

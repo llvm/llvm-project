@@ -6,4 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-int main(int, char**) { return 0; }
+// Tests workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=37804
+
+#include <set>
+std::set<int> s;
+#include <map>
+
+#include "test_macros.h"
+using std::map;
+using std::multimap;

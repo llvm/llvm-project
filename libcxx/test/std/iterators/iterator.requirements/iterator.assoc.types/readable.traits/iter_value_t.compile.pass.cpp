@@ -40,7 +40,7 @@ static_assert(check_iter_value_t<std::vector<int>::iterator, int>());
 static_assert(check_iter_value_t<std::shared_ptr<int>, int>());
 
 struct both_members {
-  using value_type = double;
+  using value_type   = double;
   using element_type = double;
 };
 static_assert(check_iter_value_t<both_members, double>());
@@ -65,9 +65,7 @@ struct S {};
 static_assert(check_no_iter_value_t<S>());
 
 struct different_value_element_members {
-  using value_type = int;
+  using value_type   = int;
   using element_type = long;
 };
 static_assert(check_no_iter_value_t<different_value_element_members>());
-
-int main(int, char**) { return 0; }

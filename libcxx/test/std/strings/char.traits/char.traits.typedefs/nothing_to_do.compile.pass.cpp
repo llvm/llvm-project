@@ -5,15 +5,3 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-// Tests workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=37804
-
-#include <map>
-std::map<int,int>::iterator it;
-#include <set>
-
-#include "test_macros.h"
-using std::set;
-using std::multiset;
-
-int main(int, char**) { return 0; }
