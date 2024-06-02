@@ -38,8 +38,10 @@ end subroutine
 ! CHECK-NEXT:    hlfir.assign %[[ORIG_BASE_LD]] to %[[PRIV_BASE_BOX]] temporary_lhs
 ! CHECK-NEXT:  }
 
-! RUN: %flang -c -fopenmp -mmlir --openmp-enable-delayed-privatization \
-! RUN:   -o - %t/test_compilation_to_obj.f90
+! RUN: %flang -c -emit-llvm -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN:   -o - %t/test_compilation_to_obj.f90 | \
+! RUN:   llvm-dis 2>&1 |\
+! RUN:   FileCheck %s -check-prefix=LLVM
 
 !--- test_compilation_to_obj.f90
 
@@ -51,3 +53,10 @@ program compilation_to_obj
 !$omp end parallel
 
 end program compilation_to_obj
+
+! LLVM: @[[GLOB_VAR:[^[:space:]]+]]t = internal global
+
+! LLVM: define internal void @_QQmain..omp_par
+! LLVM: %[[LOCAL_VAR:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
+! LLVM-NEXT: %[[GLOB_VAL:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @[[GLOB_VAR]]t, align 8
+! LLVM-NEXT: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[GLOB_VAL]], ptr %[[LOCAL_VAR]], align 8
