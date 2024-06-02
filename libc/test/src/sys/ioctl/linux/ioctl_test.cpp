@@ -34,4 +34,5 @@ TEST(LlvmLibcIoctlTest, ValidFileDescriptor) {
   int data;
   int res = LIBC_NAMESPACE::ioctl(fd, FS_IOC_GETFLAGS, &data);
   EXPECT_THAT(res, Succeeds());
+  ASSERT_EQ(0, close(fd));
 }
