@@ -416,10 +416,10 @@ def int_wasm_memtag_untag :
   DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memtag.untag">;
 
 def int_wasm_memtag_untagstore :
-  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.untagstore">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.untagstore">;
 
 def int_wasm_memtag_untagstorez :
-  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.untagstorez">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.untagstorez">;
 
 def int_wasm_memtag_store :
   DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_anyint_ty], [IntrWriteMem], "llvm.wasm.memtag.store">;

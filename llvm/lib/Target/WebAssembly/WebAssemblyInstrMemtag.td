@@ -87,17 +87,19 @@ defm MEMTAG_UNTAG_A#B: I<(outs rc:$untaggedptr), (ins i32imm:$tableidx, rc:$ptr)
                     0xfc28>;
 
 let mayStore = 1 in
-defm MEMTAG_UNTAGSTORE_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
+defm MEMTAG_UNTAGSTOREZ_A#B: I<(outs rc:$untaggedptr), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
-                    [(int_wasm_memtag_store (i32 imm:$tableidx), rc:$src, rc:$b16)],
-                    "memtag.untagstore\t$tableidx, $src, $b16",
-                    "memtag.untagstore\t$tableidx",
+                    [(set rc:$untaggedptr,
+                        (int_wasm_memtag_untagstore (i32 imm:$tableidx), rc:$src, rc:$b16))],
+                    "memtag.untagstorez\t$tableidx, $src, $b16",
+                    "memtag.untagstorez\t$tableidx",
                     0xfc29>;
 
 let mayStore = 1 in
-defm MEMTAG_UNTAGSTOREZ_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
+defm MEMTAG_UNTAGSTOREZ_A#B: I<(outs rc:$untaggedptr), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
-                    [(int_wasm_memtag_storez (i32 imm:$tableidx), rc:$src, rc:$b16)],
+                    [(set rc:$untaggedptr,
+                        (int_wasm_memtag_untagstorez (i32 imm:$tableidx), rc:$src, rc:$b16))],
                     "memtag.untagstorez\t$tableidx, $src, $b16",
                     "memtag.untagstorez\t$tableidx",
                     0xfc2a>;
@@ -167,7 +169,7 @@ let hasSideEffects = 1, mayStore = 1 in
 defm MEMTAG_RANDOMMASKSTORE_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$mask),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$dst,
-                        (int_wasm_memtag_randomstore (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$mask))],
+                        (int_wasm_memtag_randommaskstore (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$mask))],
                     "memtag.randommaskstore\t$dst, $tableidx, $src, $b16, $mask",
                     "memtag.randommaskstore\t$tableidx",
                     0xfc32>;
