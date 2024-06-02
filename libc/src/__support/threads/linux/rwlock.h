@@ -372,6 +372,11 @@ private:
     // Phase 2: spin to get the initial state. We ignore the timing due to spin
     // since it should end quickly.
     State old = SpinReload(state, preference, spin_count);
+    {
+      LockResult result = (this->*TryLock)(old);
+      if (result != LockResult::Busy)
+        return result;
+    }
 
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
     // Phase 3: convert the timeout if necessary.
