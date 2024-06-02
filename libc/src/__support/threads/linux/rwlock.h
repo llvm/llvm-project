@@ -62,7 +62,7 @@ private:
       LIBC_INLINE FutexWordType &writer_serialization() {
         return queue.writer_serialization.val;
       }
-      friend RwLock;
+      friend WaitingQueue;
     };
 
   public:
