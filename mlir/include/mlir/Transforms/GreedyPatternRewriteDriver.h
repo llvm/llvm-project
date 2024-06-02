@@ -47,6 +47,10 @@ public:
   /// Note: Only applicable when simplifying entire regions.
   bool enableRegionSimplification = true;
 
+  /// If set to "true", constants are CSE'd (even across multiple regions that
+  /// are in a parent-ancestor relationship).
+  bool cseConstants = true;
+
   /// This specifies the maximum number of times the rewriter will iterate
   /// between applying patterns and simplifying regions. Use `kNoLimit` to
   /// disable this iteration limit.

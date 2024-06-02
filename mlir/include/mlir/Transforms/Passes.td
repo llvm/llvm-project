@@ -35,6 +35,8 @@ def Canonicalizer : Pass<"canonicalize"> {
     Option<"enableRegionSimplification", "region-simplify", "bool",
            /*default=*/"true",
            "Perform control flow optimizations to the region tree">,
+    Option<"cseConstants", "cse-constants", "bool", /*default=*/"true",
+           "CSE constant operations">,
     Option<"maxIterations", "max-iterations", "int64_t",
            /*default=*/"10",
            "Max. iterations between applying patterns / simplifying regions">,
