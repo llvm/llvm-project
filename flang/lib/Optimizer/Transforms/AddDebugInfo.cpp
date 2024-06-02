@@ -95,9 +95,10 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   // intermediate op and not to BlockArgument. We need to find those cases and
   // walk the chain to get to the actual argument.
   unsigned argNo = 0;
-  if (mlir::isa<mlir::func::FuncOp>(declOp->getParentOp()))
-    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref()))
-      argNo = arg.getArgNumber() + 1;
+  if (fir::isDummyArgument(declOp.getMemref())) {
+    auto arg = llvm::cast<mlir::BlockArgument>(declOp.getMemref());
+    argNo = arg.getArgNumber() + 1;
+  }
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
                                     fileAttr, scopeAttr, declOp.getLoc());
