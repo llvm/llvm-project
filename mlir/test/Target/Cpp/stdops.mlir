@@ -40,7 +40,7 @@ func.func @std_call_two_results() {
 
 
 func.func @one_result() -> i32 {
-  %0 = "emitc.constant"() <{value = 0 : i32}> : () -> i32
+  %0 = emitc.constant(0 : i32) : i32
   return %0 : i32
 }
 // CPP-DEFAULT: int32_t one_result() {
@@ -54,8 +54,8 @@ func.func @one_result() -> i32 {
 
 
 func.func @two_results() -> (i32, f32) {
-  %0 = "emitc.constant"() <{value = 0 : i32}> : () -> i32
-  %1 = "emitc.constant"() <{value = 1.0 : f32}> : () -> f32
+  %0 = emitc.constant(0 : i32) : i32
+  %1 = emitc.constant(1.0 : f32) : f32
   return %0, %1 : i32, f32
 }
 // CPP-DEFAULT: std::tuple<int32_t, float> two_results() {

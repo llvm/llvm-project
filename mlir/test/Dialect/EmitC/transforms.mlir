@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: func.func @single_expression(
 // CHECK-SAME:                               %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32, %[[VAL_3:.*]]: i32) -> i1 {
-// CHECK:           %[[VAL_4:.*]] = "emitc.constant"() <{value = 42 : i32}> : () -> i32
+// CHECK:           %[[VAL_4:.*]] = emitc.constant(42 : i32) : i32
 // CHECK:           %[[VAL_5:.*]] = emitc.expression : i1 {
 // CHECK:             %[[VAL_6:.*]] = emitc.mul %[[VAL_0]], %[[VAL_4]] : (i32, i32) -> i32
 // CHECK:             %[[VAL_7:.*]] = emitc.sub %[[VAL_6]], %[[VAL_2]] : (i32, i32) -> i32
@@ -13,7 +13,7 @@
 // CHECK:       }
 
 func.func @single_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i1 {
-  %c42 = "emitc.constant"(){value = 42 : i32} : () -> i32
+  %c42 = emitc.constant (42 : i32) : i32
   %a = emitc.mul %arg0, %c42 : (i32, i32) -> i32
   %b = emitc.sub %a, %arg2 : (i32, i32) -> i32
   %c = emitc.cmp lt, %b, %arg3 :(i32, i32) -> i1
