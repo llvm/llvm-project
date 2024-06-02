@@ -460,37 +460,9 @@ public:
                 &WaitingQueue::writer_wait, &State::can_acquire_writer>(
         timeout, spin_count);
   }
-  LIBC_INLINE LockResult unlock() {
-    State old = State::load(state, cpp::MemoryOrder::RELAXED);
 
-    if (old.has_active_writer()) {
-      // The lock is held by a writer.
-
-      // Check if we are the owner of the lock.
-      if (writer_tid.load(cpp::MemoryOrder::RELAXED) != gettid())
-        return LockResult::PermissionDenied;
-
-      // clear writer tid.
-      writer_tid.store(0, cpp::MemoryOrder::RELAXED);
-
-      // clear the writer bit.
-      old = State::fetch_clear_active_writer(state);
-
-      // If there is no pending readers or writers, we are done.
-      if (!old.has_pending())
-        return LockResult::Success;
-    } else if (old.has_active_reader()) {
-      // The lock is held by readers.
-
-      // Decrease the reader count.
-      old = State::fetch_sub_reader_count(state);
-
-      // If there is no pending readers or writers, we are done.
-      if (!old.has_last_reader() || !old.has_pending())
-        return LockResult::Success;
-    } else
-      return LockResult::PermissionDenied;
-
+private:
+  LIBC_INLINE void notify_pending_threads() {
     enum class WakeTarget { Readers, Writers, None };
     WakeTarget status;
 
@@ -510,7 +482,34 @@ public:
       queue.reader_notify_all(is_pshared);
     else if (status == WakeTarget::Writers)
       queue.writer_notify_one(is_pshared);
+  }
 
+public:
+  LIBC_INLINE LockResult unlock() {
+    State old = State::load(state, cpp::MemoryOrder::RELAXED);
+    if (old.has_active_writer()) {
+      // The lock is held by a writer.
+      // Check if we are the owner of the lock.
+      if (writer_tid.load(cpp::MemoryOrder::RELAXED) != gettid())
+        return LockResult::PermissionDenied;
+      // clear writer tid.
+      writer_tid.store(0, cpp::MemoryOrder::RELAXED);
+      // clear the writer bit.
+      old = State::fetch_clear_active_writer(state);
+      // If there is no pending readers or writers, we are done.
+      if (!old.has_pending())
+        return LockResult::Success;
+    } else if (old.has_active_reader()) {
+      // The lock is held by readers.
+      // Decrease the reader count.
+      old = State::fetch_sub_reader_count(state);
+      // If there is no pending readers or writers, we are done.
+      if (!old.has_last_reader() || !old.has_pending())
+        return LockResult::Success;
+    } else
+      return LockResult::PermissionDenied;
+
+    notify_pending_threads();
     return LockResult::Success;
   }
 };
