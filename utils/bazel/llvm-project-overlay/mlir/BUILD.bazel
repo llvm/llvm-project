@@ -2831,6 +2831,7 @@ cc_library(
         ":TensorTransforms",
         ":TilingInterface",
         ":TransformUtils",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -7525,6 +7526,7 @@ cc_library(
         ":TilingInterface",
         ":TransformUtils",
         ":ValueBoundsOpInterface",
+        ":ViewLikeInterface",
         ":VectorDialect",
         ":VectorUtils",
         "//llvm:Support",

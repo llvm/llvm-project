@@ -17,7 +17,8 @@ namespace LIBC_NAMESPACE {
 
 namespace {
 
-Mutex handler_list_mtx(false, false, false);
+Mutex handler_list_mtx(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
+                       /*pshared=*/false);
 
 using AtExitCallback = void(void *);
 using StdCAtExitCallback = void(void);

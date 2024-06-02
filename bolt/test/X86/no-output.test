@@ -1,4 +1,4 @@
-# This script checks that BOLT is able to work in dry run mode (no output)
+## This script checks that BOLT is able to work in dry run mode (no output)
 
 # REQUIRES: system-linux
 
