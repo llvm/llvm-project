@@ -141,6 +141,9 @@ public:
 
 protected:
   template <typename PassT>
+  using has_required_t = decltype(std::declval<PassT &>().isRequired());
+
+  template <typename PassT>
   using is_module_pass_t = decltype(std::declval<PassT &>().run(
       std::declval<Module &>(), std::declval<ModuleAnalysisManager &>()));
 
@@ -170,8 +173,10 @@ protected:
       static_assert((is_detected<is_function_pass_t, PassT>::value ||
                      is_detected<is_module_pass_t, PassT>::value) &&
                     "Only module pass and function pass are supported.");
-
-      if (!PB.runBeforeAdding(Name))
+      bool Required = false;
+      if constexpr (is_detected<has_required_t, PassT>::value)
+        Required = PassT::isRequired();
+      if (!PB.runBeforeAdding(Name) && !Required)
         return;
 
       // Add Function Pass
