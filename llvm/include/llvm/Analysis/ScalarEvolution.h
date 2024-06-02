@@ -810,27 +810,23 @@ public:
                                         const Loop *L);
 
   /// Returns the exact trip count of the loop if we can compute it, and
-  /// the result is a small constant.  '0' is used to represent an unknown
-  /// or non-constant trip count.  Note that a trip count is simply one more
+  /// the result is a small constant. Note that a trip count is simply one more
   /// than the backedge taken count for the loop.
-  unsigned getSmallConstantTripCount(const Loop *L);
+  std::optional<unsigned> getSmallConstantTripCount(const Loop *L);
 
   /// Return the exact trip count for this loop if we exit through ExitingBlock.
-  /// '0' is used to represent an unknown or non-constant trip count.  Note
-  /// that a trip count is simply one more than the backedge taken count for
-  /// the same exit.
-  /// This "trip count" assumes that control exits via ExitingBlock. More
-  /// precisely, it is the number of times that control will reach ExitingBlock
-  /// before taking the branch. For loops with multiple exits, it may not be
-  /// the number times that the loop header executes if the loop exits
-  /// prematurely via another branch.
-  unsigned getSmallConstantTripCount(const Loop *L,
-                                     const BasicBlock *ExitingBlock);
+  /// Note that a trip count is simply one more than the backedge taken count
+  /// for the same exit. This "trip count" assumes that control exits via
+  /// ExitingBlock. More precisely, it is the number of times that control will
+  /// reach ExitingBlock before taking the branch. For loops with multiple
+  /// exits, it may not be the number times that the loop header executes if the
+  /// loop exits prematurely via another branch.
+  std::optional<unsigned>
+  getSmallConstantTripCount(const Loop *L, const BasicBlock *ExitingBlock);
 
   /// Returns the upper bound of the loop trip count as a normal unsigned
   /// value.
-  /// Returns 0 if the trip count is unknown or not constant.
-  unsigned getSmallConstantMaxTripCount(const Loop *L);
+  std::optional<unsigned> getSmallConstantMaxTripCount(const Loop *L);
 
   /// Returns the largest constant divisor of the trip count as a normal
   /// unsigned value, if possible. This means that the actual trip count is

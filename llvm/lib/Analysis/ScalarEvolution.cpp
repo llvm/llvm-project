@@ -6463,7 +6463,7 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
     // TODO: Handle the power function forms some day.
     return FullSet;
 
-  unsigned TC = getSmallConstantMaxTripCount(L);
+  std::optional<unsigned> TC = getSmallConstantMaxTripCount(L);
   if (!TC || TC >= BitWidth)
     return FullSet;
 
@@ -6474,7 +6474,7 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
 
   // Compute total shift amount, being careful of overflow and bitwidths.
   auto MaxShiftAmt = KnownStep.getMaxValue();
-  APInt TCAP(BitWidth, TC-1);
+  APInt TCAP(BitWidth, *TC - 1);
   bool Overflow = false;
   auto TotalShift = MaxShiftAmt.umul_ov(TCAP, Overflow);
   if (Overflow)
@@ -8174,26 +8174,28 @@ const SCEV *ScalarEvolution::getTripCountFromExitCount(const SCEV *ExitCount,
   return getAddExpr(getTruncateOrZeroExtend(ExitCount, EvalTy), getOne(EvalTy));
 }
 
-static unsigned getConstantTripCount(const SCEVConstant *ExitCount) {
+static std::optional<unsigned>
+getConstantTripCount(const SCEVConstant *ExitCount) {
   if (!ExitCount)
-    return 0;
+    return std::nullopt;
 
   ConstantInt *ExitConst = ExitCount->getValue();
 
-  // Guard against huge trip counts.
-  if (ExitConst->getValue().getActiveBits() > 32)
-    return 0;
+  // Guanteed to never overflow.
+  if (std::optional<uint64_t> V = ExitConst->getValue().tryZExtValue())
+    if (V < std::numeric_limits<unsigned>::max())
+      return ((unsigned)*V) + 1;
 
-  // In case of integer overflow, this returns 0, which is correct.
-  return ((unsigned)ExitConst->getZExtValue()) + 1;
+  return std::nullopt;
 }
 
-unsigned ScalarEvolution::getSmallConstantTripCount(const Loop *L) {
+std::optional<unsigned>
+ScalarEvolution::getSmallConstantTripCount(const Loop *L) {
   auto *ExitCount = dyn_cast<SCEVConstant>(getBackedgeTakenCount(L, Exact));
   return getConstantTripCount(ExitCount);
 }
 
-unsigned
+std::optional<unsigned>
 ScalarEvolution::getSmallConstantTripCount(const Loop *L,
                                            const BasicBlock *ExitingBlock) {
   assert(ExitingBlock && "Must pass a non-null exiting block!");
@@ -8204,7 +8206,8 @@ ScalarEvolution::getSmallConstantTripCount(const Loop *L,
   return getConstantTripCount(ExitCount);
 }
 
-unsigned ScalarEvolution::getSmallConstantMaxTripCount(const Loop *L) {
+std::optional<unsigned>
+ScalarEvolution::getSmallConstantMaxTripCount(const Loop *L) {
   const auto *MaxExitCount =
       dyn_cast<SCEVConstant>(getConstantMaxBackedgeTakenCount(L));
   return getConstantTripCount(MaxExitCount);

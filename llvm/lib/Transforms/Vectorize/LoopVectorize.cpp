@@ -428,7 +428,7 @@ static unsigned getReciprocalPredBlockProb() { return 2; }
 static std::optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE,
                                                    Loop *L) {
   // Check if exact trip count is known.
-  if (unsigned ExpectedTC = SE.getSmallConstantTripCount(L))
+  if (std::optional<unsigned> ExpectedTC = SE.getSmallConstantTripCount(L))
     return ExpectedTC;
 
   // Check if there is an expected trip count available from profile data.
@@ -437,7 +437,7 @@ static std::optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE,
       return *EstimatedTC;
 
   // Check if upper bound estimate is known.
-  if (unsigned ExpectedTC = SE.getSmallConstantMaxTripCount(L))
+  if (std::optional<unsigned> ExpectedTC = SE.getSmallConstantMaxTripCount(L))
     return ExpectedTC;
 
   return std::nullopt;
@@ -2046,8 +2046,9 @@ public:
           unsigned BestTripCount = 2;
 
           // If exact trip count is known use that.
-          if (unsigned SmallTC = SE->getSmallConstantTripCount(OuterLoop))
-            BestTripCount = SmallTC;
+          if (std::optional<unsigned> SmallTC =
+                  SE->getSmallConstantTripCount(OuterLoop))
+            BestTripCount = *SmallTC;
           else if (LoopVectorizeWithBlockFrequency) {
             // Else use profile data if available.
             if (auto EstimatedTC = getLoopEstimatedTripCount(OuterLoop))
@@ -2382,7 +2383,7 @@ static bool isIndvarOverflowCheckKnownFalse(
   // We know the runtime overflow check is known false iff the (max) trip-count
   // is known and (max) trip-count + (VF * UF) does not overflow in the type of
   // the vector loop induction variable.
-  if (unsigned TC =
+  if (std::optional<unsigned> TC =
           Cost->PSE.getSE()->getSmallConstantMaxTripCount(Cost->TheLoop)) {
     uint64_t MaxVF = VF.getKnownMinValue();
     if (VF.isScalable()) {
@@ -2393,7 +2394,7 @@ static bool isIndvarOverflowCheckKnownFalse(
       MaxVF *= *MaxVScale;
     }
 
-    return (MaxUIntTripCount - TC).ugt(MaxVF * MaxUF);
+    return (MaxUIntTripCount - *TC).ugt(MaxVF * MaxUF);
   }
 
   return false;
@@ -4563,8 +4564,9 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return FixedScalableVFPair::getNone();
   }
 
-  unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
-  unsigned MaxTC = PSE.getSE()->getSmallConstantMaxTripCount(TheLoop);
+  unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop).value_or(0);
+  unsigned MaxTC =
+      PSE.getSE()->getSmallConstantMaxTripCount(TheLoop).value_or(0);
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
   if (TC == 1) {
     reportVectorizationFailure("Single iteration (non) loop",
@@ -4856,7 +4858,8 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   InstructionCost CostA = A.Cost;
   InstructionCost CostB = B.Cost;
 
-  unsigned MaxTripCount = PSE.getSE()->getSmallConstantMaxTripCount(OrigLoop);
+  unsigned MaxTripCount =
+      PSE.getSE()->getSmallConstantMaxTripCount(OrigLoop).value_or(0);
 
   // Improve estimate for the vector width if it is scalable.
   unsigned EstimatedWidthA = A.Width.getKnownMinValue();
@@ -5388,12 +5391,12 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   }
   assert(EstimatedVF >= 1 && "Estimated VF shouldn't be less than 1");
 
-  unsigned KnownTC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
-  if (KnownTC > 0) {
+  if (std::optional<unsigned> KnownTC =
+          PSE.getSE()->getSmallConstantTripCount(TheLoop)) {
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
     unsigned AvailableTC =
-        requiresScalarEpilogue(VF.isVector()) ? KnownTC - 1 : KnownTC;
+        requiresScalarEpilogue(VF.isVector()) ? *KnownTC - 1 : *KnownTC;
 
     // If trip count is known we select between two prospective ICs, where
     // 1) the aggressive IC is capped by the trip count divided by VF

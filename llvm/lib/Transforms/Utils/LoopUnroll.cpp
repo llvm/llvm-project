@@ -477,7 +477,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   L->getExitBlocks(ExitBlocks);
   std::vector<BasicBlock *> OriginalLoopBlocks = L->getBlocks();
 
-  const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
+  const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L).value_or(0);
   const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
   unsigned EstimatedLoopInvocationWeight = 0;
   std::optional<unsigned> OriginalTripCount =
@@ -507,7 +507,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       continue;
 
     ExitInfo &Info = ExitInfos.try_emplace(ExitingBlock).first->second;
-    Info.TripCount = SE->getSmallConstantTripCount(L, ExitingBlock);
+    Info.TripCount = SE->getSmallConstantTripCount(L, ExitingBlock).value_or(0);
     Info.TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
     if (Info.TripCount != 0) {
       Info.BreakoutTrip = Info.TripCount % ULO.Count;

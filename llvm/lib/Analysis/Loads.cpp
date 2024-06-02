@@ -287,7 +287,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
   if (!Step)
     return false;
 
-  auto TC = SE.getSmallConstantMaxTripCount(L);
+  std::optional<unsigned> TC = SE.getSmallConstantMaxTripCount(L);
   if (!TC)
     return false;
 
@@ -301,7 +301,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
   // same.
   // For patterns with gaps (i.e. non unit stride), we are
   // accessing EltSize bytes at every Step.
-  APInt AccessSize = TC * Step->getAPInt();
+  APInt AccessSize = *TC * Step->getAPInt();
 
   assert(SE.isLoopInvariant(AddRec->getStart(), L) &&
          "implied by addrec definition");

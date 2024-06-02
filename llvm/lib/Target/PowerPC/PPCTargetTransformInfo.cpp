@@ -346,7 +346,7 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   SchedModel.init(ST);
 
   // Do not convert small short loops to CTR loop.
-  unsigned ConstTripCount = SE.getSmallConstantTripCount(L);
+  unsigned ConstTripCount = SE.getSmallConstantTripCount(L).value_or(0);
   if (ConstTripCount && ConstTripCount < SmallCTRLoopThreshold) {
     SmallPtrSet<const Value *, 32> EphValues;
     CodeMetrics::collectEphemeralValues(L, &AC, EphValues);

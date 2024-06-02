@@ -88,9 +88,8 @@ void HexagonTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                            TTI::PeelingPreferences &PP) {
   BaseT::getPeelingPreferences(L, SE, PP);
   // Only try to peel innermost loops with small runtime trip counts.
-  if (L && L->isInnermost() && canPeel(L) &&
-      SE.getSmallConstantTripCount(L) == 0 &&
-      SE.getSmallConstantMaxTripCount(L) > 0 &&
+  if (L && L->isInnermost() && canPeel(L) && !SE.getSmallConstantTripCount(L) &&
+      SE.getSmallConstantMaxTripCount(L) &&
       SE.getSmallConstantMaxTripCount(L) <= 5) {
     PP.PeelCount = 2;
   }

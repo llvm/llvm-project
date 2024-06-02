@@ -363,9 +363,10 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   // Find trip count and trip multiple
   BasicBlock *Latch = L->getLoopLatch();
   BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
-  unsigned OuterTripCount = SE.getSmallConstantTripCount(L, Latch);
+  unsigned OuterTripCount = SE.getSmallConstantTripCount(L, Latch).value_or(0);
   unsigned OuterTripMultiple = SE.getSmallConstantTripMultiple(L, Latch);
-  unsigned InnerTripCount = SE.getSmallConstantTripCount(SubLoop, SubLoopLatch);
+  unsigned InnerTripCount =
+      SE.getSmallConstantTripCount(SubLoop, SubLoopLatch).value_or(0);
 
   // Decide if, and by how much, to unroll
   bool IsCountSetExplicitly = computeUnrollAndJamCount(

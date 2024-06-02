@@ -1234,9 +1234,10 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
   for (BasicBlock *ExitingBlock : ExitingBlocks)
-    if (unsigned TC = SE.getSmallConstantTripCount(L, ExitingBlock))
+    if (std::optional<unsigned> TC =
+            SE.getSmallConstantTripCount(L, ExitingBlock))
       if (!TripCount || TC < TripCount)
-        TripCount = TripMultiple = TC;
+        TripCount = TripMultiple = *TC;
 
   if (!TripCount) {
     // If no exact trip count is known, determine the trip multiple of either
@@ -1269,7 +1270,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   unsigned MaxTripCount = 0;
   bool MaxOrZero = false;
   if (!TripCount) {
-    MaxTripCount = SE.getSmallConstantMaxTripCount(L);
+    MaxTripCount = SE.getSmallConstantMaxTripCount(L).value_or(0);
     MaxOrZero = SE.isBackedgeTakenCountMaxOrZero(L);
   }
 

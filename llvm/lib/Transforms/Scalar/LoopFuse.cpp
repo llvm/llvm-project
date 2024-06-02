@@ -754,8 +754,8 @@ private:
 
     // Currently only considering loops with a single exit point
     // and a non-constant trip count.
-    const unsigned TC0 = SE.getSmallConstantTripCount(FC0.L);
-    const unsigned TC1 = SE.getSmallConstantTripCount(FC1.L);
+    const unsigned TC0 = SE.getSmallConstantTripCount(FC0.L).value_or(0);
+    const unsigned TC1 = SE.getSmallConstantTripCount(FC1.L).value_or(0);
 
     // If any of the tripcounts are zero that means that loop(s) do not have
     // a single exit or a constant tripcount.
