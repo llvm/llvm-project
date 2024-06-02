@@ -31,10 +31,10 @@ TEST(LlvmLibcIoctlTest, InvalidFileDescriptor) {
 
 TEST(LlvmLibcIoctlTest, ValidFileDescriptor) {
   constexpr const char *TEST_FILE = "testdata/ioctl.test";
-  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  int fd = open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_FALSE(fd == -1);
   int data;
   int res = LIBC_NAMESPACE::ioctl(fd, FS_IOC_GETFLAGS, &data);
   EXPECT_THAT(res, Succeeds());
-  ASSERT_EQ(0, LIBC_NAMESPACE::close(fd));
+  ASSERT_EQ(0, close(fd));
 }
