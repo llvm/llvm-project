@@ -1,6 +1,6 @@
-# Tests whether llvm-bolt will correctly exit with error code and printing
-# fatal error message in case one occurs. Here we test opening a function
-# reordering file that does not exist.
+## Tests whether llvm-bolt will correctly exit with error code and printing
+## fatal error message in case one occurs. Here we test opening a function
+## reordering file that does not exist.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q

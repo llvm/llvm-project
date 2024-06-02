@@ -641,7 +641,7 @@ libc_support_library(
         ":__support_integer_to_string",
         ":__support_macros_attributes",
         ":__support_osutil_io",
-        ":__support_osutil_quick_exit",
+        ":__support_osutil_exit",
     ],
 )
 
@@ -1073,9 +1073,9 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_osutil_quick_exit",
-    srcs = ["src/__support/OSUtil/linux/quick_exit.cpp"],
-    hdrs = ["src/__support/OSUtil/quick_exit.h"],
+    name = "__support_osutil_exit",
+    srcs = ["src/__support/OSUtil/linux/exit.cpp"],
+    hdrs = ["src/__support/OSUtil/exit.h"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
