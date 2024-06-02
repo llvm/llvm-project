@@ -12,14 +12,14 @@
 // has run.
 
 int main() {
-  std::aligned_storage<sizeof(Mutex), alignof(Mutex)>::type mu1_store;
+  alignas(Mutex) std::byte mu1_store[sizeof(Mutex)];
   Mutex* mu1 = reinterpret_cast<Mutex*>(&mu1_store);
   new(&mu1_store) Mutex(false, __tsan_mutex_linker_init);
   mu1->Lock();
   mu1->~Mutex();
   mu1->Unlock();
 
-  std::aligned_storage<sizeof(Mutex), alignof(Mutex)>::type mu2_store;
+  alignas(Mutex) std::byte mu2_store[sizeof(Mutex)];
   Mutex* mu2 = reinterpret_cast<Mutex*>(&mu2_store);
   new(&mu2_store) Mutex(false, 0, __tsan_mutex_not_static);
   mu2->Lock();
