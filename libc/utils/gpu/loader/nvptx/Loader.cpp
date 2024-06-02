@@ -29,16 +29,16 @@
 using namespace llvm;
 using namespace object;
 
-static void handle_error(CUresult err) {
+static void handle_error_impl(const char *file, int32_t line, CUresult err) {
   if (err == CUDA_SUCCESS)
     return;
 
   const char *err_str = nullptr;
   CUresult result = cuGetErrorString(err, &err_str);
   if (result != CUDA_SUCCESS)
-    fprintf(stderr, "Unknown Error\n");
+    fprintf(stderr, "%s:%d:0: Unknown Error\n", file, line);
   else
-    fprintf(stderr, "%s\n", err_str);
+    fprintf(stderr, "%s:%d:0: Error: %s\n", file, line, err_str);
   exit(1);
 }
 

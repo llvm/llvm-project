@@ -4605,6 +4605,7 @@ TreeTransform<Derived>::TransformTemplateName(CXXScopeSpec &SS,
                                             ObjectType, AllowInjectedClassName);
   }
 
+  // FIXME: Try to preserve more of the TemplateName.
   if (TemplateDecl *Template = Name.getAsTemplateDecl()) {
     TemplateDecl *TransTemplate
       = cast_or_null<TemplateDecl>(getDerived().TransformDecl(NameLoc,
@@ -4612,11 +4613,8 @@ TreeTransform<Derived>::TransformTemplateName(CXXScopeSpec &SS,
     if (!TransTemplate)
       return TemplateName();
 
-    if (!getDerived().AlwaysRebuild() &&
-        TransTemplate == Template)
-      return Name;
-
-    return TemplateName(TransTemplate);
+    return getDerived().RebuildTemplateName(SS, /*TemplateKeyword=*/false,
+                                            TransTemplate);
   }
 
   if (SubstTemplateTemplateParmPackStorage *SubstPack
