@@ -54,6 +54,15 @@ def create_parser():
         dest="swiftcompiler",
         help="The path to a valid Swift compiler",
     )
+    group.add_argument(
+        "--sysroot",
+        metavar="sysroot",
+        dest="sysroot",
+        default="",
+        help=textwrap.dedent(
+            """Specify the path to sysroot. This overrides apple_sdk sysroot."""
+        ),
+    )
     if sys.platform == "darwin":
         group.add_argument(
             "--apple-sdk",
