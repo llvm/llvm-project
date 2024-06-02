@@ -23,6 +23,7 @@
 #define __RELAXED_FN_ATTRS_CONSTEXPR __RELAXED_FN_ATTRS constexpr
 #else
 #define __RELAXED_FN_ATTRS_CONSTEXPR __RELAXED_FN_ATTRS
+#endif
 
 /// Counts the number of trailing zero bits in the operand.
 ///
@@ -176,6 +177,7 @@ _mm_tzcnt_64(unsigned long long __X)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
 #else
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
 
 /// Performs a bitwise AND of the second operand with the one's
 ///    complement of the first operand.
