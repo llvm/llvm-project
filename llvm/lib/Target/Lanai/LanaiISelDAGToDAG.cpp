@@ -48,8 +48,6 @@ namespace {
 
 class LanaiDAGToDAGISel : public SelectionDAGISel {
 public:
-  static char ID;
-
   LanaiDAGToDAGISel() = delete;
 
   explicit LanaiDAGToDAGISel(LanaiTargetMachine &TargetMachine)
