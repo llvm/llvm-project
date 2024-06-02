@@ -177,43 +177,43 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 #endif // _WIN32
 }
 
-Expected<std::unique_ptr<raw_socket_stream>>
-ListeningSocket::accept(std::chrono::milliseconds Timeout) {
-
-  struct pollfd FDs[2];
-  FDs[0].events = POLLIN;
+static llvm::Error manageTimeout(std::atomic<int> &ActiveFD, int CancelFD,
+                                 std::chrono::milliseconds Timeout) {
+  struct pollfd FD[2];
+  FD[0].events = POLLIN;
 #ifdef _WIN32
   SOCKET WinServerSock = _get_osfhandle(FD);
-  FDs[0].fd = WinServerSock;
+  FD[0].fd = WinServerSock;
 #else
-  FDs[0].fd = FD;
+  FD[0].fd = ActiveFD.load();
 #endif
-  FDs[1].events = POLLIN;
-  FDs[1].fd = PipeFD[0];
+  FD[1].events = POLLIN;
+  FD[1].fd = CancelFD;
 
-  // Keep track of how much time has passed in case poll is interupted by a
-  // signal and needs to be recalled
+  // Keep track of how much time has passed in case ::poll or WSAPoll are
+  // interupted by a signal and need to be recalled
   int RemainingTime = Timeout.count();
   std::chrono::milliseconds ElapsedTime = std::chrono::milliseconds(0);
   int PollStatus = -1;
 
   while (PollStatus == -1 && (Timeout.count() == -1 || ElapsedTime < Timeout)) {
+    // Timeout of -1 indicates that no Timeout was provided
     if (Timeout.count() != -1)
       RemainingTime -= ElapsedTime.count();
-
     auto Start = std::chrono::steady_clock::now();
+
 #ifdef _WIN32
-    PollStatus = WSAPoll(FDs, 2, RemainingTime);
+    PollStatus = WSAPoll(FD, 2, RemainingTime);
 #else
-    PollStatus = ::poll(FDs, 2, RemainingTime);
+    PollStatus = ::poll(FD, 2, RemainingTime);
 #endif
+
     // If FD equals -1 then ListeningSocket::shutdown has been called and it is
     // appropriate to return operation_canceled
-    if (FD.load() == -1)
+    if (ActiveFD.load() == -1)
       return llvm::make_error<StringError>(
           std::make_error_code(std::errc::operation_canceled),
           "Accept canceled");
-
 #if _WIN32
     if (PollStatus == SOCKET_ERROR) {
 #else
@@ -222,14 +222,14 @@ ListeningSocket::accept(std::chrono::milliseconds Timeout) {
       std::error_code PollErrCode = getLastSocketErrorCode();
       // Ignore EINTR (signal occured before any request event) and retry
       if (PollErrCode != std::errc::interrupted)
-        return llvm::make_error<StringError>(PollErrCode, "FD poll failed");
+        return llvm::make_error<StringError>(PollErrCode, "poll failed");
     }
     if (PollStatus == 0)
       return llvm::make_error<StringError>(
           std::make_error_code(std::errc::timed_out),
           "No client requests within timeout window");
 
-    if (FDs[0].revents & POLLNVAL)
+    if (FD[0].revents & POLLNVAL)
       return llvm::make_error<StringError>(
           std::make_error_code(std::errc::bad_file_descriptor));
 
@@ -237,6 +237,14 @@ ListeningSocket::accept(std::chrono::milliseconds Timeout) {
     ElapsedTime +=
         std::chrono::duration_cast<std::chrono::milliseconds>(Stop - Start);
   }
+  return llvm::Error::success();
+}
+
+Expected<std::unique_ptr<raw_socket_stream>>
+ListeningSocket::accept(std::chrono::milliseconds Timeout) {
+  llvm::Error TimeoutErr = manageTimeout(FD, PipeFD[0], Timeout);
+  if (TimeoutErr)
+    return TimeoutErr;
 
   int AcceptFD;
 #ifdef _WIN32
