@@ -9937,10 +9937,10 @@ td_library(
         "include/mlir/Dialect/OpenACC/AccCommon.td",
         "include/mlir/Dialect/OpenACC/OpenACCBase.td",
         "include/mlir/Dialect/OpenACC/OpenACCOps.td",
-        "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
         "include/mlir/Dialect/OpenACC/OpenACCOpsTypes.td",
         "include/mlir/Dialect/OpenACC/OpenACCTypeInterfaces.td",
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.td",
     ],
     includes = ["include"],
     deps = [
@@ -9951,19 +9951,19 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "OpenACCOpsInterfacesIncGen",
+    name = "OpenACCMPOpsInterfacesIncGen",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
-            "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc",
+            "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h.inc",
         ),
         (
             ["-gen-op-interface-defs"],
-            "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.cpp.inc",
+            "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
+    td_file = "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.td",
     deps = [":OpenAccOpsTdFiles"],
 )
 
@@ -10099,7 +10099,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":OpenACCOpsIncGen",
-        ":OpenACCOpsInterfacesIncGen",
+        ":OpenACCMPOpsInterfacesIncGen",
         ":OpenACCTypeInterfacesIncGen",
         ":OpenACCTypesIncGen",
         ":SideEffectInterfaces",
