@@ -499,6 +499,34 @@ TEST(DenseMapCustomTest, ReserveTest) {
   }
 }
 
+TEST(DenseMapCustomTest, InsertOrAssignTest) {
+  DenseMap<int, CountCopyAndMove> Map;
+  CountCopyAndMove::Copy = 0;
+  CountCopyAndMove::Move = 0;
+
+  CountCopyAndMove val1;
+  auto try0 = Map.insert_or_assign(0, val1);
+  EXPECT_TRUE(try0.second);
+  EXPECT_EQ(0, CountCopyAndMove::Move);
+  EXPECT_EQ(1, CountCopyAndMove::Copy);
+
+  auto try1 = Map.insert_or_assign(0, val1);
+  EXPECT_FALSE(try1.second);
+  EXPECT_EQ(0, CountCopyAndMove::Move);
+  EXPECT_EQ(2, CountCopyAndMove::Copy);
+
+  CountCopyAndMove val2;
+  auto try2 = Map.insert_or_assign(2, val2);
+  EXPECT_TRUE(try2.second);
+  EXPECT_EQ(0, CountCopyAndMove::Move);
+  EXPECT_EQ(3, CountCopyAndMove::Copy);
+
+  auto try3 = Map.insert_or_assign(2, std::move(val2));
+  EXPECT_FALSE(try3.second);
+  EXPECT_EQ(1, CountCopyAndMove::Move);
+  EXPECT_EQ(3, CountCopyAndMove::Copy);
+}
+
 // Make sure DenseMap works with StringRef keys.
 TEST(DenseMapCustomTest, StringRefTest) {
   DenseMap<StringRef, int> M;
