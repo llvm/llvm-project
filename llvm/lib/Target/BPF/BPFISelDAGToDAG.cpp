@@ -46,8 +46,6 @@ class BPFDAGToDAGISel : public SelectionDAGISel {
   const BPFSubtarget *Subtarget;
 
 public:
-  static char ID;
-
   BPFDAGToDAGISel() = delete;
 
   explicit BPFDAGToDAGISel(BPFTargetMachine &TM)
