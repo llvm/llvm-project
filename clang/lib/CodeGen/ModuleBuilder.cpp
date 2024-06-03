@@ -288,7 +288,6 @@ namespace {
     }
 
     void HandleTranslationUnit(ASTContext &Ctx) override {
-      IRGenFinished = true;
 
       // Release the Builder when there is no error.
       if (!Diags.hasUnrecoverableErrorOccurred() && Builder)
@@ -300,8 +299,9 @@ namespace {
         if (Builder)
           Builder->clear();
         M.reset();
-        return;
       }
+
+      IRGenFinished = true;
     }
 
     void AssignInheritanceModel(CXXRecordDecl *RD) override {
