@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <chrono>
 #include <cstdlib>
 #include <limits>
 #include <memory>
@@ -1922,11 +1921,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
     transcript_item = std::make_shared<StructuredData::Dictionary>();
     transcript_item->AddStringItem("command", command_line);
-    transcript_item->AddIntegerItem(
-        "timestampInEpochSeconds",
-        std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::system_clock::now().time_since_epoch())
-            .count());
     m_transcript.AddItem(transcript_item);
   }
 
@@ -2074,14 +2068,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
         log, "HandleCommand, command line after removing command name(s): '%s'",
         remainder.c_str());
 
-    // To test whether or not transcript should be saved, `transcript_item` is
-    // used instead of `GetSaveTrasncript()`. This is because the latter will
-    // fail when the command is "settings set interpreter.save-transcript true".
-    if (transcript_item) {
-      transcript_item->AddStringItem("commandName", cmd_obj->GetCommandName());
-      transcript_item->AddStringItem("commandArguments", remainder);
-    }
-
     ElapsedTime elapsed(execute_time);
     cmd_obj->Execute(remainder.c_str(), result);
   }
@@ -2098,8 +2084,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
     transcript_item->AddStringItem("output", result.GetOutputData());
     transcript_item->AddStringItem("error", result.GetErrorData());
-    transcript_item->AddFloatItem("durationInSeconds",
-                                  execute_time.get().count());
+    transcript_item->AddFloatItem("seconds", execute_time.get().count());
   }
 
   return result.Succeeded();
