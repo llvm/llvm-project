@@ -95,6 +95,16 @@ public:
   }
 };
 
+class MockTarget : public Target {
+public:
+  MockTarget(Debugger &debugger, const ArchSpec &target_arch,
+             const lldb::PlatformSP &platform_sp)
+      : Target(debugger, target_arch, platform_sp, true) {}
+
+  MOCK_METHOD6(ReadMemory, size_t(const Address &, void *, size_t, Status &,
+                                  bool, lldb::addr_t *));
+};
+
 TEST(DWARFExpression, DW_OP_pick) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1, DW_OP_lit0, DW_OP_pick, 0}),
                        llvm::HasValue(0));
@@ -770,27 +780,9 @@ Sections:
 }
 
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
-  struct MockTarget : Target {
-    MockTarget(Debugger &debugger, const ArchSpec &target_arch,
-               const lldb::PlatformSP &platform_sp)
-        : Target(debugger, target_arch, platform_sp, true) {}
-
-    size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
-                      Status &error, bool force_live_memory = false,
-                      lldb::addr_t *load_addr_ptr = nullptr) override {
-      // We expected to be called in a very specific way.
-      assert(dst_len == 1);
-      assert(addr.GetOffset() == 0x40 || addr.GetOffset() == 0x50);
-
-      if (addr.GetOffset() == 0x40)
-        ((uint8_t *)dst)[0] = 0x11;
-
-      if (addr.GetOffset() == 0x50)
-        ((uint8_t *)dst)[0] = 0x22;
-
-      return 1;
-    }
-  };
+  using ::testing::_;
+  using ::testing::ElementsAre;
+  using ::testing::Return;
 
   // Set up a mock process.
   ArchSpec arch("i386-pc-linux");
@@ -799,12 +791,28 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
   lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
   lldb::PlatformSP platform_sp;
-  lldb::TargetSP target_sp =
+  auto target_sp =
       std::make_shared<MockTarget>(*debugger_sp, arch, platform_sp);
   ASSERT_TRUE(target_sp);
   ASSERT_TRUE(target_sp->GetArchitecture().IsValid());
 
-  ExecutionContext exe_ctx(target_sp, false);
+  EXPECT_CALL(*target_sp, ReadMemory(Address(0x40), _, 1, _, _, _))
+      .WillOnce([&](const Address &addr, void *dst, size_t dst_len,
+                    Status &error, bool force_live_memory = false,
+                    lldb::addr_t *load_addr_ptr = nullptr) {
+        ((uint8_t *)dst)[0] = 0x11;
+        return 1;
+      });
+
+  EXPECT_CALL(*target_sp, ReadMemory(Address(0x50), _, 1, _, _, _))
+      .WillOnce([&](const Address &addr, void *dst, size_t dst_len,
+                    Status &error, bool force_live_memory = false,
+                    lldb::addr_t *load_addr_ptr = nullptr) {
+        ((uint8_t *)dst)[0] = 0x22;
+        return 1;
+      });
+
+  ExecutionContext exe_ctx(static_cast<lldb::TargetSP>(target_sp), false);
 
   uint8_t expr[] = {DW_OP_addr, 0x40, 0x0, 0x0, 0x0, DW_OP_piece, 1,
                     DW_OP_addr, 0x50, 0x0, 0x0, 0x0, DW_OP_piece, 1};
@@ -820,11 +828,5 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
       << status.ToError();
 
   ASSERT_EQ(result.GetValueType(), Value::ValueType::HostAddress);
-
-  DataBufferHeap &buf = result.GetBuffer();
-  ASSERT_EQ(buf.GetByteSize(), 2U);
-
-  const uint8_t *bytes = buf.GetBytes();
-  EXPECT_EQ(bytes[0], 0x11);
-  EXPECT_EQ(bytes[1], 0x22);
+  ASSERT_THAT(result.GetBuffer().GetData(), ElementsAre(0x11, 0x22));
 }
