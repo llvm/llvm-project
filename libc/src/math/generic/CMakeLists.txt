@@ -627,6 +627,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  llroundf16
+  SRCS
+    llroundf16.cpp
+  HDRS
+    ../llroundf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
   llroundf128
   SRCS
     llroundf128.cpp

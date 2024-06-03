@@ -231,6 +231,7 @@ add_math_entrypoint_object(llrintf128)
 add_math_entrypoint_object(llround)
 add_math_entrypoint_object(llroundf)
 add_math_entrypoint_object(llroundl)
+add_math_entrypoint_object(llroundf16)
 add_math_entrypoint_object(llroundf128)
 
 add_math_entrypoint_object(lrint)

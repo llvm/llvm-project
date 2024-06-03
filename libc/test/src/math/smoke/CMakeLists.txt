@@ -626,6 +626,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  llroundf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llroundf16_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.llroundf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   llroundf128_test
   SUITE
     libc-math-smoke-tests
