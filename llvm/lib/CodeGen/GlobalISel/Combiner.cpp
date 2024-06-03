@@ -166,7 +166,7 @@ bool Combiner::combineMachineInstrs() {
       WLObserver->reportFullyCreatedInstrs();
     }
     MFChanged |= Changed;
-  } while (Changed);
+  } while (Changed && CInfo.EnableFixedPointIteration);
 
 #ifndef NDEBUG
   if (CSEInfo) {

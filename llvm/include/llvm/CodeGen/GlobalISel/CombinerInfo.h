@@ -49,6 +49,11 @@ struct CombinerInfo {
   bool EnableOptSize;
   /// Whether we're optimizing for minsize (-Oz).
   bool EnableMinSize;
+
+  /// Whether the Combiner repeatedly iterates over all instructions until no
+  /// combine can be applied. Disabling this improves compile-time, but the IR
+  /// might not get transformed completely.
+  bool EnableFixedPointIteration = true;
 };
 } // namespace llvm
 
