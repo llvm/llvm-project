@@ -2166,22 +2166,22 @@ static ExprResult PointerAuthAuthAndResign(Sema &S, CallExpr *Call) {
   return Call;
 }
 
-static ExprResult PointerAuthStringDiscriminator(Sema &S, CallExpr *call) {
-  if (checkPointerAuthEnabled(S, call)) return ExprError();
+static ExprResult PointerAuthStringDiscriminator(Sema &S, CallExpr *Call) {
+  if (checkPointerAuthEnabled(S, Call)) return ExprError();
 
   // We've already performed normal call type-checking.
-  Expr *arg = call->getArgs()[0]->IgnoreParenImpCasts();
+  const Expr *Arg = Call->getArg(0)->IgnoreParenImpCasts();
 
   // Operand must be an ordinary or UTF-8 string literal.
-  auto literal = dyn_cast<StringLiteral>(arg);
-  if (!literal || literal->getCharByteWidth() != 1) {
-    S.Diag(arg->getExprLoc(), diag::err_ptrauth_string_not_literal)
-      << (literal ? 1 : 0)
-      << arg->getSourceRange();
+  const auto *Literal = dyn_cast<StringLiteral>(Arg);
+  if (!Literal || Literal->getCharByteWidth() != 1) {
+    S.Diag(Arg->getExprLoc(), diag::err_ptrauth_string_not_literal)
+      << (Literal ? 1 : 0)
+      << Arg->getSourceRange();
     return ExprError();
   }
 
-  return call;
+  return Call;
 }
 
 static ExprResult BuiltinLaunder(Sema &S, CallExpr *TheCall) {
