@@ -29,8 +29,6 @@ LLVM_LIBC_FUNCTION(int, fcntl, (int fd, int cmd, ...)) {
   va_end(varargs);
 
   switch (cmd) {
-  case F_SETLKW:
-    return syscall_impl<int>(SYS_fcntl, fd, cmd, arg);
   case F_OFD_SETLKW: {
     struct flock *flk = reinterpret_cast<struct flock *>(arg);
     // convert the struct to a flock64
@@ -86,8 +84,15 @@ LLVM_LIBC_FUNCTION(int, fcntl, (int fd, int cmd, ...)) {
     return -1;
   }
   // The general case
-  default:
-    return syscall_impl<int>(SYS_fcntl, fd, cmd, reinterpret_cast<void *>(arg));
+  default: {
+    int retVal =
+        syscall_impl<int>(SYS_fcntl, fd, cmd, reinterpret_cast<void *>(arg));
+    if (retVal >= 0) {
+      return retVal;
+    }
+    libc_errno = -retVal;
+    return -1;
+  }
   }
 }
 } // namespace LIBC_NAMESPACE
