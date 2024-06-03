@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/MissingFeatures.h"
 #include <CIRGenCXXABI.h>
 #include <CIRGenFunction.h>
 #include <CIRGenModule.h>
 #include <CIRGenValue.h>
-#include <UnimplementedFeatureGuarding.h>
 
 #include <clang/AST/DeclCXX.h>
 
@@ -138,7 +138,7 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
       // one or the one of the full expression, we would have to build
       // a derived-to-base cast to compute the correct this pointer, but
       // we don't have support for that yet, so do a virtual call.
-      assert(!UnimplementedFeature::buildDerivedToBaseCastForDevirt());
+      assert(!MissingFeatures::buildDerivedToBaseCastForDevirt());
       DevirtualizedMethod = nullptr;
     }
   }
@@ -173,7 +173,7 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
   LValue This;
   if (IsArrow) {
     LValueBaseInfo BaseInfo;
-    assert(!UnimplementedFeature::tbaa());
+    assert(!MissingFeatures::tbaa());
     Address ThisValue = buildPointerWithAlignment(Base, &BaseInfo);
     This = makeAddrLValue(ThisValue, Base->getType(), BaseInfo);
   } else {
@@ -238,7 +238,7 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
       SkippedChecks.set(SanitizerKind::Null, true);
   }
 
-  if (UnimplementedFeature::buildTypeCheck())
+  if (MissingFeatures::buildTypeCheck())
     llvm_unreachable("NYI");
 
   // C++ [class.virtual]p12:
@@ -613,7 +613,7 @@ static void buildNewInitializer(CIRGenFunction &CGF, const CXXNewExpr *E,
                                 QualType ElementType, mlir::Type ElementTy,
                                 Address NewPtr, mlir::Value NumElements,
                                 mlir::Value AllocSizeWithoutCookie) {
-  assert(!UnimplementedFeature::generateDebugInfo());
+  assert(!MissingFeatures::generateDebugInfo());
   if (E->isArray()) {
     llvm_unreachable("NYI");
   } else if (const Expr *Init = E->getInitializer()) {
@@ -735,7 +735,7 @@ static bool EmitObjectDelete(CIRGenFunction &CGF, const CXXDeleteExpr *DE,
   // In traditional LLVM codegen null checks are emitted to save a delete call.
   // In CIR we optimize for size by default, the null check should be added into
   // this function callers.
-  assert(!UnimplementedFeature::emitNullCheckForDeleteCalls());
+  assert(!MissingFeatures::emitNullCheckForDeleteCalls());
 
   CGF.PopCleanupBlock();
   return false;
@@ -755,7 +755,7 @@ void CIRGenFunction::buildCXXDeleteExpr(const CXXDeleteExpr *E) {
   //
   // CIR note: emit the code size friendly by default for now, such as mentioned
   // in `EmitObjectDelete`.
-  assert(!UnimplementedFeature::emitNullCheckForDeleteCalls());
+  assert(!MissingFeatures::emitNullCheckForDeleteCalls());
   QualType DeleteTy = E->getDestroyedType();
 
   // A destroying operator delete overrides the entire operation of the
@@ -861,7 +861,7 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
         buildNewDeleteCall(*this, allocator, allocatorType, allocatorArgs);
 
     // Set !heapallocsite metadata on the call to operator new.
-    assert(!UnimplementedFeature::generateDebugInfo());
+    assert(!MissingFeatures::generateDebugInfo());
 
     // If this was a call to a global replaceable allocation function that does
     // not take an alignment argument, the allocator is known to produce storage
@@ -1010,7 +1010,7 @@ static RValue buildNewDeleteCall(CIRGenFunction &CGF,
   ///   to a replaceable global allocation function.
   ///
   /// We model such elidable calls with the 'builtin' attribute.
-  assert(!UnimplementedFeature::attributeBuiltin());
+  assert(!MissingFeatures::attributeBuiltin());
   return RV;
 }
 

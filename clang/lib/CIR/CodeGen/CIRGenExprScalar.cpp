@@ -14,7 +14,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenOpenMPRuntime.h"
-#include "UnimplementedFeatureGuarding.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include "clang/AST/StmtVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
@@ -59,7 +59,7 @@ struct BinOpInfo {
       return true;
 
     llvm::APInt Result;
-    assert(!UnimplementedFeature::mayHaveIntegerOverflow());
+    assert(!MissingFeatures::mayHaveIntegerOverflow());
     llvm_unreachable("NYI");
     return false;
   }
@@ -278,7 +278,7 @@ public:
     // Do we need anything like TestAndClearIgnoreResultAssign()?
 
     if (E->getBase()->getType()->isVectorType()) {
-      assert(!UnimplementedFeature::scalableVectors() &&
+      assert(!MissingFeatures::scalableVectors() &&
              "NYI: index into scalable vector");
       // Subscript of vector type.  This is handled differently, with a custom
       // operation.
@@ -350,7 +350,7 @@ public:
   mlir::Value VisitCallExpr(const CallExpr *E);
 
   mlir::Value VisitStmtExpr(StmtExpr *E) {
-    assert(!UnimplementedFeature::stmtExprEvaluation() && "NYI");
+    assert(!MissingFeatures::stmtExprEvaluation() && "NYI");
     Address retAlloca =
         CGF.buildCompoundStmt(*E->getSubStmt(), !E->getType()->isVoidType());
     if (!retAlloca.isValid())
@@ -482,14 +482,14 @@ public:
         } else {
           value = builder.create<mlir::cir::PtrStrideOp>(loc, value.getType(),
                                                          value, amt);
-          assert(!UnimplementedFeature::emitCheckedInBoundsGEP());
+          assert(!MissingFeatures::emitCheckedInBoundsGEP());
         }
       }
     } else if (type->isVectorType()) {
       llvm_unreachable("no vector inc/dec yet");
     } else if (type->isRealFloatingType()) {
       // TODO(cir): CGFPOptionsRAII
-      assert(!UnimplementedFeature::CGFPOptionsRAII());
+      assert(!MissingFeatures::CGFPOptionsRAII());
 
       if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
         llvm_unreachable("__fp16 type NYI");
@@ -810,7 +810,7 @@ public:
     Result.Opcode = E->getOpcode();
     Result.Loc = E->getSourceRange();
     // TODO: Result.FPFeatures
-    assert(!UnimplementedFeature::getFPFeaturesInEffect());
+    assert(!MissingFeatures::getFPFeaturesInEffect());
     Result.E = E;
     return Result;
   }
@@ -1365,7 +1365,7 @@ mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
   // LLVM we shall take VLA's, division by element size, etc.
   //
   // See more in `EmitSub` in CGExprScalar.cpp.
-  assert(!UnimplementedFeature::llvmLoweringPtrDiffConsidersPointee());
+  assert(!MissingFeatures::llvmLoweringPtrDiffConsidersPointee());
   return Builder.create<mlir::cir::PtrDiffOp>(CGF.getLoc(Ops.Loc),
                                               CGF.PtrDiffTy, Ops.LHS, Ops.RHS);
 }
@@ -1477,7 +1477,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     auto Src = Visit(const_cast<Expr *>(E));
     mlir::Type DstTy = CGF.convertType(DestTy);
 
-    assert(!UnimplementedFeature::addressSpace());
+    assert(!MissingFeatures::addressSpace());
     if (CGF.SanOpts.has(SanitizerKind::CFIUnrelatedCast)) {
       llvm_unreachable("NYI");
     }
@@ -1487,17 +1487,17 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     }
 
     // Update heapallocsite metadata when there is an explicit pointer cast.
-    assert(!UnimplementedFeature::addHeapAllocSiteMetadata());
+    assert(!MissingFeatures::addHeapAllocSiteMetadata());
 
     // If Src is a fixed vector and Dst is a scalable vector, and both have the
     // same element type, use the llvm.vector.insert intrinsic to perform the
     // bitcast.
-    assert(!UnimplementedFeature::scalableVectors());
+    assert(!MissingFeatures::scalableVectors());
 
     // If Src is a scalable vector and Dst is a fixed vector, and both have the
     // same element type, use the llvm.vector.extract intrinsic to perform the
     // bitcast.
-    assert(!UnimplementedFeature::scalableVectors());
+    assert(!MissingFeatures::scalableVectors());
 
     // Perform VLAT <-> VLST bitcast through memory.
     // TODO: since the llvm.experimental.vector.{insert,extract} intrinsics
@@ -1505,7 +1505,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     //       need to keep this around for bitcasts between VLAT <-> VLST where
     //       the element types of the vectors are not the same, until we figure
     //       out a better way of doing these casts.
-    assert(!UnimplementedFeature::scalableVectors());
+    assert(!MissingFeatures::scalableVectors());
 
     return CGF.getBuilder().createBitcast(CGF.getLoc(E->getSourceRange()), Src,
                                           DstTy);
@@ -1558,7 +1558,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     if (MustVisitNullValue(E))
       CGF.buildIgnoredExpr(E);
 
-    assert(!UnimplementedFeature::cxxABI());
+    assert(!MissingFeatures::cxxABI());
 
     const MemberPointerType *MPT = CE->getType()->getAs<MemberPointerType>();
     assert(!MPT->isMemberFunctionPointerType() && "NYI");
@@ -1707,14 +1707,14 @@ mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *E) {
     return buildLoadOfLValue(E);
 
   auto V = CGF.buildCallExpr(E).getScalarVal();
-  assert(!UnimplementedFeature::buildLValueAlignmentAssumption());
+  assert(!MissingFeatures::buildLValueAlignmentAssumption());
   return V;
 }
 
 mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
   // TODO(cir): Folding all this constants sound like work for MLIR optimizers,
   // keep assertion for now.
-  assert(!UnimplementedFeature::tryEmitAsConstant());
+  assert(!MissingFeatures::tryEmitAsConstant());
   Expr::EvalResult Result;
   if (E->EvaluateAsInt(Result, CGF.getContext(), Expr::SE_AllowSideEffects)) {
     llvm::APSInt Value = Result.Val.getInt();
@@ -1761,9 +1761,8 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
     llvm_unreachable("NYI");
 
   if (E->getType()->isVectorType()) {
-    assert(!UnimplementedFeature::scalableVectors() &&
-           "NYI: scalable vector init");
-    assert(!UnimplementedFeature::vectorConstants() && "NYI: vector constants");
+    assert(!MissingFeatures::scalableVectors() && "NYI: scalable vector init");
+    assert(!MissingFeatures::vectorConstants() && "NYI: vector constants");
     auto VectorType =
         CGF.getCIRType(E->getType()).dyn_cast<mlir::cir::VectorType>();
     SmallVector<mlir::Value, 16> Elements;
@@ -2189,7 +2188,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     // If the dead side doesn't have labels we need, just emit the Live part.
     if (!CGF.ContainsLabel(dead)) {
       if (CondExprBool)
-        assert(!UnimplementedFeature::incrementProfileCounter());
+        assert(!MissingFeatures::incrementProfileCounter());
       auto Result = Visit(live);
 
       // If the live part is a throw expression, it acts like it has a void
@@ -2227,7 +2226,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       isCheapEnoughToEvaluateUnconditionally(rhsExpr, CGF)) {
     bool lhsIsVoid = false;
     auto condV = CGF.evaluateExprAsBool(condExpr);
-    assert(!UnimplementedFeature::incrementProfileCounter());
+    assert(!MissingFeatures::incrementProfileCounter());
 
     return builder
         .create<mlir::cir::TernaryOp>(
@@ -2287,7 +2286,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
                                                   b.getInsertionBlock()};
             CGF.currLexScope->setAsTernary();
 
-            assert(!UnimplementedFeature::incrementProfileCounter());
+            assert(!MissingFeatures::incrementProfileCounter());
             eval.begin(CGF);
             auto lhs = Visit(lhsExpr);
             eval.end(CGF);
@@ -2307,7 +2306,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
                                                   b.getInsertionBlock()};
             CGF.currLexScope->setAsTernary();
 
-            assert(!UnimplementedFeature::incrementProfileCounter());
+            assert(!MissingFeatures::incrementProfileCounter());
             eval.begin(CGF);
             auto rhs = Visit(rhsExpr);
             eval.end(CGF);
@@ -2508,7 +2507,7 @@ mlir::Value ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
   QualType Ty = VE->getType();
 
   if (Ty->isVariablyModifiedType())
-    assert(!UnimplementedFeature::variablyModifiedTypeEmission() && "NYI");
+    assert(!MissingFeatures::variablyModifiedTypeEmission() && "NYI");
 
   Address ArgValue = Address::invalid();
   mlir::Value Val = CGF.buildVAArg(VE, ArgValue);
@@ -2568,6 +2567,6 @@ mlir::Value CIRGenFunction::buildCheckedInBoundsGEP(
 
   // TODO(cir): the unreachable code below hides a substantial amount of code
   // from the original codegen related with pointer overflow sanitizer.
-  assert(UnimplementedFeature::pointerOverflowSanitizer());
+  assert(MissingFeatures::pointerOverflowSanitizer());
   llvm_unreachable("pointer overflow sanitizer NYI");
 }

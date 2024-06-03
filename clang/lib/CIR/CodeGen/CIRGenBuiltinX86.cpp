@@ -16,7 +16,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "TargetInfo.h"
-#include "UnimplementedFeatureGuarding.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Value.h"

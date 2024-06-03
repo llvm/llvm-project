@@ -828,7 +828,7 @@ void CIRGenTypes::UpdateCompletedType(const TagDecl *TD) {
     }
     // If necessary, provide the full definition of a type only used with a
     // declaration so far.
-    assert(!UnimplementedFeature::generateDebugInfo());
+    assert(!MissingFeatures::generateDebugInfo());
     return;
   }
 

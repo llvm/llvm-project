@@ -297,7 +297,7 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
     // FIXME(cir): create a new scope to copy out the params?
     // LLVM create scope cleanups here, but might be due to the use
     // of many basic blocks?
-    assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+    assert(!MissingFeatures::generateDebugInfo() && "NYI");
     ParamReferenceReplacerRAII ParamReplacer(LocalDeclMap);
 
     // Create mapping between parameters and copy-params for coroutine
@@ -307,7 +307,7 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
            "ParamMoves and FnArgs should be the same size for coroutine "
            "function");
     // For zipping the arg map into debug info.
-    assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+    assert(!MissingFeatures::generateDebugInfo() && "NYI");
 
     // Create parameter copies. We do it before creating a promise, since an
     // evolution of coroutine TS may allow promise constructor to observe
@@ -348,7 +348,7 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
 
     // FIXME(cir): wrap buildBodyAndFallthrough with try/catch bits.
     if (S.getExceptionHandler())
-      assert(!UnimplementedFeature::unhandledException() && "NYI");
+      assert(!MissingFeatures::unhandledException() && "NYI");
     if (buildBodyAndFallthrough(*this, S, S.getBody(), currLexScope).failed())
       return mlir::failure();
 

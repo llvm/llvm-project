@@ -20,7 +20,6 @@
 #include "CIRGenValue.h"
 #include "TargetInfo.h"
 
-#include "UnimplementedFeatureGuarding.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Attributes.h"
@@ -32,6 +31,7 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Verifier.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DeclCXX.h"
@@ -371,15 +371,15 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
   if (langOpts.OpenMP) {
     // If this is OpenMP, check if it is legal to emit this global normally.
     if (openMPRuntime && openMPRuntime->emitTargetGlobal(GD)) {
-      assert(!UnimplementedFeature::openMPRuntime());
+      assert(!MissingFeatures::openMPRuntime());
       return;
     }
     if (auto *DRD = dyn_cast<OMPDeclareReductionDecl>(Global)) {
-      assert(!UnimplementedFeature::openMP());
+      assert(!MissingFeatures::openMP());
       return;
     }
     if (auto *DMD = dyn_cast<OMPDeclareMapperDecl>(Global)) {
-      assert(!UnimplementedFeature::openMP());
+      assert(!MissingFeatures::openMP());
       return;
     }
   }
@@ -578,7 +578,7 @@ mlir::cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &CGM,
 }
 
 void CIRGenModule::setCommonAttributes(GlobalDecl GD, mlir::Operation *GV) {
-  assert(!UnimplementedFeature::setCommonAttributes());
+  assert(!MissingFeatures::setCommonAttributes());
 }
 
 void CIRGenModule::replaceGlobal(mlir::cir::GlobalOp Old,
@@ -678,14 +678,13 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
     // Handle dropped DLL attributes.
     if (D && !D->hasAttr<clang::DLLImportAttr>() &&
         !D->hasAttr<clang::DLLExportAttr>())
-      assert(!UnimplementedFeature::setDLLStorageClass() && "NYI");
+      assert(!MissingFeatures::setDLLStorageClass() && "NYI");
 
     if (langOpts.OpenMP && !langOpts.OpenMPSimd && D)
       getOpenMPRuntime().registerTargetGlobalVariable(D, Entry);
 
     // TODO(cir): check TargetAS matches Entry address space
-    if (Entry.getSymType() == Ty &&
-        !UnimplementedFeature::addressSpaceInGlobalVar())
+    if (Entry.getSymType() == Ty && !MissingFeatures::addressSpaceInGlobalVar())
       return Entry;
 
     // If there are two attempts to define the same mangled name, issue an
@@ -1114,11 +1113,11 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   GV.setVisibility(getMLIRVisibilityFromCIRLinkage(Linkage));
   // TODO(cir): handle DLL storage classes in CIR?
   if (D->hasAttr<DLLImportAttr>())
-    assert(!UnimplementedFeature::setDLLStorageClass());
+    assert(!MissingFeatures::setDLLStorageClass());
   else if (D->hasAttr<DLLExportAttr>())
-    assert(!UnimplementedFeature::setDLLStorageClass());
+    assert(!MissingFeatures::setDLLStorageClass());
   else
-    assert(!UnimplementedFeature::setDLLStorageClass());
+    assert(!MissingFeatures::setDLLStorageClass());
 
   if (Linkage == mlir::cir::GlobalLinkageKind::CommonLinkage) {
     // common vars aren't constant even if declared const.
@@ -1257,8 +1256,7 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
                       StringRef GlobalName, CharUnits Alignment) {
   unsigned AddrSpace = CGM.getASTContext().getTargetAddressSpace(
       CGM.getGlobalConstantAddressSpace());
-  assert((AddrSpace == 0 &&
-          !cir::UnimplementedFeature::addressSpaceInGlobalVar()) &&
+  assert((AddrSpace == 0 && !cir::MissingFeatures::addressSpaceInGlobalVar()) &&
          "NYI");
 
   // Create a global variable for this string
@@ -1273,10 +1271,10 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
   CIRGenModule::setInitializer(GV, C);
 
   // TODO(cir)
-  assert(!cir::UnimplementedFeature::threadLocal() && "NYI");
-  assert(!cir::UnimplementedFeature::unnamedAddr() && "NYI");
+  assert(!cir::MissingFeatures::threadLocal() && "NYI");
+  assert(!cir::MissingFeatures::unnamedAddr() && "NYI");
   assert(!mlir::cir::isWeakForLinker(LT) && "NYI");
-  assert(!cir::UnimplementedFeature::setDSOLocal() && "NYI");
+  assert(!cir::MissingFeatures::setDSOLocal() && "NYI");
   return GV;
 }
 
@@ -1327,7 +1325,7 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
                                Alignment);
     ConstantStringMap[C] = GV;
 
-    assert(!cir::UnimplementedFeature::reportGlobalToASan() && "NYI");
+    assert(!cir::MissingFeatures::reportGlobalToASan() && "NYI");
   }
 
   auto ArrayTy = GV.getSymType().dyn_cast<mlir::cir::ArrayType>();
@@ -1411,7 +1409,7 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
     break;
   case Decl::ClassTemplateSpecialization: {
     // const auto *Spec = cast<ClassTemplateSpecializationDecl>(decl);
-    assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+    assert(!MissingFeatures::generateDebugInfo() && "NYI");
   }
     [[fallthrough]];
   case Decl::CXXRecord: {
@@ -1438,7 +1436,7 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
   case Decl::UsingEnum: // using enum X; [C++]
   case Decl::NamespaceAlias:
   case Decl::UsingDirective: // using namespace X; [C++]
-    assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+    assert(!MissingFeatures::generateDebugInfo() && "NYI");
     break;
   case Decl::CXXConstructor:
     getCXXABI().buildCXXConstructors(cast<CXXConstructorDecl>(decl));
@@ -1459,7 +1457,7 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
   case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
   case Decl::Enum:
-    assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+    assert(!MissingFeatures::generateDebugInfo() && "NYI");
     break;
   }
 }
@@ -1699,9 +1697,9 @@ void CIRGenModule::ReplaceUsesOfNonProtoTypeWithRealFunction(
     return;
 
   // TODO(cir): this RAUW ignores the features below.
-  assert(!UnimplementedFeature::exceptions() && "Call vs Invoke NYI");
-  assert(!UnimplementedFeature::parameterAttributes());
-  assert(!UnimplementedFeature::operandBundles());
+  assert(!MissingFeatures::exceptions() && "Call vs Invoke NYI");
+  assert(!MissingFeatures::parameterAttributes());
+  assert(!MissingFeatures::operandBundles());
   assert(OldFn->getAttrs().size() > 1 && "Attribute forwarding NYI");
 
   // Mark new function as originated from a no-proto declaration.
@@ -1776,7 +1774,7 @@ void CIRGenModule::buildAliasForGlobal(StringRef mangledName,
       alias, getMLIRVisibilityFromCIRLinkage(linkage));
 
   // Alias constructors and destructors are always unnamed_addr.
-  assert(!UnimplementedFeature::unnamedAddr());
+  assert(!MissingFeatures::unnamedAddr());
 
   // Switch any previous uses to the alias.
   if (op) {
@@ -1973,16 +1971,16 @@ void CIRGenModule::buildTentativeDefinition(const VarDecl *D) {
 
 void CIRGenModule::setGlobalVisibility(mlir::Operation *GV,
                                        const NamedDecl *D) const {
-  assert(!UnimplementedFeature::setGlobalVisibility());
+  assert(!MissingFeatures::setGlobalVisibility());
 }
 
 void CIRGenModule::setDSOLocal(mlir::Operation *Op) const {
-  assert(!UnimplementedFeature::setDSOLocal());
+  assert(!MissingFeatures::setDSOLocal());
 }
 
 void CIRGenModule::setGVProperties(mlir::Operation *Op,
                                    const NamedDecl *D) const {
-  assert(!UnimplementedFeature::setDLLImportDLLExport());
+  assert(!MissingFeatures::setDLLImportDLLExport());
   setGVPropertiesAux(Op, D);
 }
 
@@ -1990,7 +1988,7 @@ void CIRGenModule::setGVPropertiesAux(mlir::Operation *Op,
                                       const NamedDecl *D) const {
   setGlobalVisibility(Op, D);
   setDSOLocal(Op);
-  assert(!UnimplementedFeature::setPartition());
+  assert(!MissingFeatures::setPartition());
 }
 
 bool CIRGenModule::lookupRepresentativeDecl(StringRef MangledName,
@@ -2194,7 +2192,7 @@ void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
 void CIRGenModule::setFunctionAttributes(GlobalDecl GD, mlir::cir::FuncOp F,
                                          bool IsIncompleteFunction,
                                          bool IsThunk) {
-  assert(!UnimplementedFeature::setFunctionAttributes());
+  assert(!MissingFeatures::setFunctionAttributes());
 }
 
 /// If the specified mangled name is not in the module,
@@ -2379,7 +2377,7 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   }
 
   // TODO(cir): Might need bitcast to different address space.
-  assert(!UnimplementedFeature::addressSpace());
+  assert(!MissingFeatures::addressSpace());
   return F;
 }
 
@@ -2615,7 +2613,7 @@ void CIRGenModule::maybeSetTrivialComdat(const Decl &D, mlir::Operation *Op) {
     return;
 
   // TODO: Op.setComdat
-  assert(!UnimplementedFeature::setComdat() && "NYI");
+  assert(!MissingFeatures::setComdat() && "NYI");
 }
 
 bool CIRGenModule::isInNoSanitizeList(SanitizerMask Kind, mlir::cir::FuncOp Fn,
@@ -2687,7 +2685,7 @@ void CIRGenModule::buildExplicitCastExprType(const ExplicitCastExpr *E,
   if (CGF && E->getType()->isVariablyModifiedType())
     llvm_unreachable("NYI");
 
-  assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+  assert(!MissingFeatures::generateDebugInfo() && "NYI");
 }
 
 void CIRGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
@@ -2742,10 +2740,10 @@ mlir::cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
     OldGV->erase();
   }
 
-  assert(!UnimplementedFeature::setComdat());
+  assert(!MissingFeatures::setComdat());
   if (supportsCOMDAT() && mlir::cir::isWeakForLinker(Linkage) &&
       !GV.hasAvailableExternallyLinkage())
-    assert(!UnimplementedFeature::setComdat());
+    assert(!MissingFeatures::setComdat());
 
   GV.setAlignmentAttr(getSize(Alignment));
   return GV;
@@ -2802,7 +2800,7 @@ mlir::cir::GlobalOp CIRGenModule::getOrInsertGlobal(
   // If the variable exists but has the wrong type, return a bitcast to the
   // right type.
   auto GVTy = GV.getSymType();
-  assert(!UnimplementedFeature::addressSpace());
+  assert(!MissingFeatures::addressSpace());
   auto PTy = builder.getPointerTo(Ty);
 
   if (GVTy != PTy)

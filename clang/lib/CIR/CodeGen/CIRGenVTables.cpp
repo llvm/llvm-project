@@ -151,7 +151,7 @@ void CIRGenModule::buildDeferredVTables() {
 }
 
 void CIRGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
-  assert(!UnimplementedFeature::generateDebugInfo());
+  assert(!MissingFeatures::generateDebugInfo());
 
   if (RD->getNumVBases())
     CGM.getCXXABI().emitVirtualInheritanceTables(RD);
@@ -524,7 +524,7 @@ void CIRGenVTables::buildVTTDefinition(mlir::cir::GlobalOp VTT,
                                          CIRGenModule::getMLIRVisibility(VTT));
 
   if (CGM.supportsCOMDAT() && VTT.isWeakForLinker()) {
-    assert(!UnimplementedFeature::setComdat());
+    assert(!MissingFeatures::setComdat());
   }
 }
 

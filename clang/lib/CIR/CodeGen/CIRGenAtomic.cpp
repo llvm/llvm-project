@@ -16,7 +16,6 @@
 #include "CIRGenModule.h"
 #include "CIRGenOpenMPRuntime.h"
 #include "TargetInfo.h"
-#include "UnimplementedFeatureGuarding.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
@@ -24,6 +23,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -440,7 +440,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
                           mlir::Value IsWeak, mlir::Value FailureOrder,
                           uint64_t Size, mlir::cir::MemOrder Order,
                           uint8_t Scope) {
-  assert(!UnimplementedFeature::syncScopeID());
+  assert(!MissingFeatures::syncScopeID());
   StringRef Op;
 
   auto &builder = CGF.getBuilder();
@@ -487,7 +487,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__scoped_atomic_load: {
     auto *load = builder.createLoad(loc, Ptr).getDefiningOp();
     // FIXME(cir): add scope information.
-    assert(!UnimplementedFeature::syncScopeID());
+    assert(!MissingFeatures::syncScopeID());
     load->setAttr("mem_order", orderAttr);
     if (E->isVolatile())
       load->setAttr("is_volatile", mlir::UnitAttr::get(builder.getContext()));
@@ -512,7 +512,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__scoped_atomic_store_n: {
     auto loadVal1 = builder.createLoad(loc, Val1);
     // FIXME(cir): add scope information.
-    assert(!UnimplementedFeature::syncScopeID());
+    assert(!MissingFeatures::syncScopeID());
     builder.createStore(loc, loadVal1, Ptr, E->isVolatile(),
                         /*alignment=*/mlir::IntegerAttr{}, orderAttr);
     return;
@@ -685,7 +685,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
   // LLVM atomic instructions always have synch scope. If clang atomic
   // expression has no scope operand, use default LLVM synch scope.
   if (!ScopeModel) {
-    assert(!UnimplementedFeature::syncScopeID());
+    assert(!MissingFeatures::syncScopeID());
     buildAtomicOp(CGF, Expr, Dest, Ptr, Val1, Val2, IsWeak, FailureOrder, Size,
                   Order, /*FIXME(cir): LLVM default scope*/ 1);
     return;
@@ -693,7 +693,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
 
   // Handle constant scope.
   if (getConstOpIntAttr(Scope)) {
-    assert(!UnimplementedFeature::syncScopeID());
+    assert(!MissingFeatures::syncScopeID());
     llvm_unreachable("NYI");
     return;
   }
@@ -1289,7 +1289,7 @@ void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue dest,
       store.setIsVolatile(true);
 
     // DecorateInstructionWithTBAA
-    assert(!UnimplementedFeature::tbaa());
+    assert(!MissingFeatures::tbaa());
     return;
   }
 
