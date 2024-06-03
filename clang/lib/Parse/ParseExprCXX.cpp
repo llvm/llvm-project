@@ -566,11 +566,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
           // member of an unknown specialization. However, this will only
           // parse correctly as a template, so suggest the keyword 'template'
           // before 'getAs' and treat this as a dependent template name.
-          unsigned DiagID = diag::err_missing_dependent_template_keyword;
-          if (getLangOpts().MicrosoftExt)
-            DiagID = diag::warn_missing_dependent_template_keyword;
-
-          Diag(Tok.getLocation(), DiagID)
+          Diag(Tok.getLocation(), diag::ext_missing_dependent_template_keyword)
               << II.getName()
               << FixItHint::CreateInsertion(Tok.getLocation(), "template ");
         }
@@ -2580,7 +2576,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(
             else
               Name += Id.Identifier->getName();
           }
-          Diag(Id.StartLocation, diag::err_missing_dependent_template_keyword)
+          Diag(Id.StartLocation, diag::ext_missing_dependent_template_keyword)
               << Name
               << FixItHint::CreateInsertion(Id.StartLocation, "template ");
         }

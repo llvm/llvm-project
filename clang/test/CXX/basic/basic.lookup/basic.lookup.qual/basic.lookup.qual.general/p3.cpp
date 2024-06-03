@@ -31,9 +31,9 @@ namespace Unambiguous {
     t.x;
     t.A::x;
     t.B::x;
-    t.C<int>::x; // expected-error {{use 'template' keyword to treat 'C' as a dependent template name}}
+    t.C<int>::x; // expected-warning {{use 'template' keyword to treat 'C' as a dependent template name}}
     t.template C<int>::x;
-    t.D<int>::x; // expected-error {{use 'template' keyword to treat 'D' as a dependent template name}}
+    t.D<int>::x; // expected-warning {{use 'template' keyword to treat 'D' as a dependent template name}}
     t.template D<int>::x;
     t.E::x;
   }
