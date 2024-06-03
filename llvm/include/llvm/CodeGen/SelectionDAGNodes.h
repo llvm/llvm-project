@@ -479,7 +479,6 @@ private:
   /// The operation that this node performs.
   int32_t NodeType;
 
-public:
   SDNodeFlags Flags;
 
 protected:
@@ -607,6 +606,14 @@ END_TWO_BYTE_PACK()
   static_assert(sizeof(LoadSDNodeBitfields) <= 2, "field too wide");
   static_assert(sizeof(StoreSDNodeBitfields) <= 2, "field too wide");
 
+public:
+  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
+  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
+  /// intentionally because it adds unneeded complexity without noticeable
+  /// benefits (see discussion with @thakis in D120714). Currently, there are
+  /// two padding bytes after this field.
+  uint16_t PersistentId = 0xffff;
+
 private:
   friend class SelectionDAG;
   // TODO: unfriend HandleSDNode once we fix its operand handling.
@@ -614,13 +621,6 @@ private:
 
   /// Unique id per SDNode in the DAG.
   int NodeId = -1;
-
-  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
-  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
-  /// intentionally because it adds unneeded complexity without noticeable
-  /// benefits (see discussion with @thakis in D120714). Currently, there are
-  /// two padding bytes after this field.
-  uint16_t PersistentId = 0xffff;
 
   /// The values that are used by this operation.
   SDUse *OperandList = nullptr;
