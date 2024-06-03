@@ -587,27 +587,34 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
 
 static Attr *handleHLSLLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                     SourceRange Range) {
+
+  if (A.getSemanticSpelling() == HLSLLoopHintAttr::Spelling::Microsoft_loop &&
+      !A.checkAtMostNumArgs(S, 0))
+    return nullptr;
+
   unsigned UnrollFactor = 0;
   if (A.getNumArgs() == 1) {
-    Expr *E = A.getArgAsExpr(0);
-    std::optional<llvm::APSInt> ArgVal;
 
-    if (!(ArgVal = E->getIntegerConstantExpr(S.Context))) {
+    if (A.isArgIdent(0)) {
       S.Diag(A.getLoc(), diag::err_attribute_argument_type)
-          << A << AANT_ArgumentIntegerConstant << E->getSourceRange();
+          << A << AANT_ArgumentIntegerConstant << A.getRange();
       return nullptr;
     }
 
-    int Val = ArgVal->getSExtValue();
-    if (Val <= 0) {
-      S.Diag(A.getRange().getBegin(),
-             diag::err_attribute_requires_positive_integer)
-          << A << /* positive */ 0;
+    Expr *E = A.getArgAsExpr(0);
+
+    if (S.CheckLoopHintExpr(E, St->getBeginLoc(),
+                            /*AllowZero=*/false))
       return nullptr;
-    }
+
+    std::optional<llvm::APSInt> ArgVal = E->getIntegerConstantExpr(S.Context);
+    // CheckLoopHintExpr handles non int const cases
+    assert(ArgVal != std::nullopt && "ArgVal should be an integer constant.");
+    int Val = ArgVal->getSExtValue();
+    // CheckLoopHintExpr handles negative and zero cases
+    assert(Val > 0 && "Val should be a positive integer greater than zero.");
     UnrollFactor = static_cast<unsigned>(Val);
   }
-
   return ::new (S.Context) HLSLLoopHintAttr(S.Context, A, UnrollFactor);
 }
 

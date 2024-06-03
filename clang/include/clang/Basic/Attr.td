@@ -4120,12 +4120,11 @@ def HLSLLoopHint: StmtAttr {
   /// [unroll(directive)]
   /// [loop]
   let Spellings = [Microsoft<"unroll">, Microsoft<"loop">];
-  let Args = [UnsignedArgument<"directive">];
+  let Args = [UnsignedArgument<"directive", /*opt*/1>];
   let Subjects = SubjectList<[ForStmt, WhileStmt, DoStmt],
                               ErrorDiag, "'for', 'while', and 'do' statements">;
   let LangOpts = [HLSL];
   let Documentation = [HLSLLoopHintDocs, HLSLUnrollHintDocs];
-  let HasCustomParsing = 1;
 }
 
 def CapturedRecord : InheritableAttr {

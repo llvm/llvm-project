@@ -26,6 +26,34 @@ void for_enable()
 // CHECK: br label %{{.*}}, !llvm.loop ![[FOR_ENABLE:.*]]
 }
 
+void for_nested_one_unroll_enable()
+{
+// CHECK-LABEL: for_nested_one_unroll_enable
+    int s = 0;
+    [unroll]
+    for( int i = 0; i < 1000; ++i) {
+        for( int j = 0; j < 10; ++j)
+            s += i + j;
+    }
+// CHECK: br label %{{.*}}, !llvm.loop ![[FOR_NESTED_ENABLE:.*]]
+// CHECK-NOT: br label %{{.*}}, !llvm.loop ![[FOR_NESTED_1_ENABLE:.*]]
+}
+
+void for_nested_two_unroll_enable()
+{
+// CHECK-LABEL: for_nested_two_unroll_enable
+    int s = 0;
+    [unroll]
+    for( int i = 0; i < 1000; ++i) {
+        [unroll]
+        for( int j = 0; j < 10; ++j)
+            s += i + j;
+    }
+// CHECK: br label %{{.*}}, !llvm.loop ![[FOR_NESTED2_ENABLE:.*]]
+// CHECK: br label %{{.*}}, !llvm.loop ![[FOR_NESTED2_1_ENABLE:.*]]
+}
+
+
 /*** while ***/
 void while_count()
 {
@@ -89,6 +117,9 @@ void do_enable()
 // CHECK: ![[DISABLE]]       =  !{!"llvm.loop.unroll.disable"}
 // CHECK: ![[FOR_ENABLE]]      =  distinct !{![[FOR_ENABLE]],  ![[ENABLE:.*]]}
 // CHECK: ![[ENABLE]]          =  !{!"llvm.loop.unroll.enable"}
+// CHECK: ![[FOR_NESTED_ENABLE]] =  distinct !{![[FOR_NESTED_ENABLE]], ![[ENABLE]]}
+// CHECK: ![[FOR_NESTED2_ENABLE]] =  distinct !{![[FOR_NESTED2_ENABLE]], ![[ENABLE]]}
+// CHECK: ![[FOR_NESTED2_1_ENABLE]] =  distinct !{![[FOR_NESTED2_1_ENABLE]], ![[ENABLE]]}
 // CHECK: ![[WHILE_DISTINCT]]   =  distinct !{![[WHILE_DISTINCT]],    ![[WHILE_COUNT:.*]]}
 // CHECK: ![[WHILE_COUNT]]         =  !{!"llvm.loop.unroll.count", i32 4}
 // CHECK: ![[WHILE_DISABLE]] =  distinct !{![[WHILE_DISABLE]],  ![[DISABLE]]}
