@@ -49,6 +49,7 @@ public:
   void DiagnoseAttrStageMismatch(
       const Attr *A, HLSLShaderAttr::ShaderType Stage,
       std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages);
+  void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 };
 
 } // namespace clang

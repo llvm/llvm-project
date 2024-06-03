@@ -3205,9 +3205,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
       }
 
       // Sort by diag::kind for deterministic output.
-      llvm::sort(Mappings, [](const auto &LHS, const auto &RHS) {
-        return LHS.first < RHS.first;
-      });
+      llvm::sort(Mappings, llvm::less_first());
 
       for (const auto &I : Mappings) {
         Record.push_back(I.first);
@@ -7835,7 +7833,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::If: {
     const auto *IC = cast<OpenACCIfClause>(C);
     writeSourceLocation(IC->getLParenLoc());
-    writeStmtRef(IC->getConditionExpr());
+    AddStmt(const_cast<Expr*>(IC->getConditionExpr()));
     return;
   }
   case OpenACCClauseKind::Self: {
@@ -7843,7 +7841,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(SC->getLParenLoc());
     writeBool(SC->hasConditionExpr());
     if (SC->hasConditionExpr())
-      writeStmtRef(SC->getConditionExpr());
+      AddStmt(const_cast<Expr*>(SC->getConditionExpr()));
     return;
   }
   case OpenACCClauseKind::NumGangs: {
@@ -7857,13 +7855,13 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::NumWorkers: {
     const auto *NWC = cast<OpenACCNumWorkersClause>(C);
     writeSourceLocation(NWC->getLParenLoc());
-    writeStmtRef(NWC->getIntExpr());
+    AddStmt(const_cast<Expr*>(NWC->getIntExpr()));
     return;
   }
   case OpenACCClauseKind::VectorLength: {
     const auto *NWC = cast<OpenACCVectorLengthClause>(C);
     writeSourceLocation(NWC->getLParenLoc());
-    writeStmtRef(NWC->getIntExpr());
+    AddStmt(const_cast<Expr*>(NWC->getIntExpr()));
     return;
   }
   case OpenACCClauseKind::Private: {
@@ -7942,15 +7940,15 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(AC->getLParenLoc());
     writeBool(AC->hasIntExpr());
     if (AC->hasIntExpr())
-      writeStmtRef(AC->getIntExpr());
+      AddStmt(const_cast<Expr*>(AC->getIntExpr()));
     return;
   }
   case OpenACCClauseKind::Wait: {
     const auto *WC = cast<OpenACCWaitClause>(C);
     writeSourceLocation(WC->getLParenLoc());
     writeBool(WC->getDevNumExpr());
-    if (const Expr *DNE = WC->getDevNumExpr())
-      writeStmtRef(DNE);
+    if (Expr *DNE = WC->getDevNumExpr())
+      AddStmt(DNE);
     writeSourceLocation(WC->getQueuesLoc());
 
     writeOpenACCIntExprList(WC->getQueueIdExprs());

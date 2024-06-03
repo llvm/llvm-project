@@ -564,25 +564,6 @@ static bool LinearizeExprTree(Instruction *I,
         // Update the number of paths to the leaf.
         IncorporateWeight(It->second, Weight, Opcode);
 
-#if 0   // TODO: Re-enable once PR13021 is fixed.
-        // The leaf already has one use from inside the expression.  As we want
-        // exactly one such use, drop this new use of the leaf.
-        assert(!Op->hasOneUse() && "Only one use, but we got here twice!");
-        I->setOperand(OpIdx, UndefValue::get(I->getType()));
-        Changed = true;
-
-        // If the leaf is a binary operation of the right kind and we now see
-        // that its multiple original uses were in fact all by nodes belonging
-        // to the expression, then no longer consider it to be a leaf and add
-        // its operands to the expression.
-        if (BinaryOperator *BO = isReassociableOp(Op, Opcode)) {
-          LLVM_DEBUG(dbgs() << "UNLEAF: " << *Op << " (" << It->second << ")\n");
-          Worklist.push_back(std::make_pair(BO, It->second));
-          Leaves.erase(It);
-          continue;
-        }
-#endif
-
         // If we still have uses that are not accounted for by the expression
         // then it is not safe to modify the value.
         if (!Op->hasOneUse())
