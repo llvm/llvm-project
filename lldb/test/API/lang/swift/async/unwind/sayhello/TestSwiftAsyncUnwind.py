@@ -32,3 +32,22 @@ class TestSwiftAsyncUnwind(lldbtest.TestBase):
         # to see that this is really the async unwinder.
         self.assertIn(thread.GetFrameAtIndex(1).GetRegisters().GetSize(), [2,3,4])
         self.assertIn(thread.GetFrameAtIndex(2).GetRegisters().GetSize(), [2,3,4])
+
+        # Delete the old breakpoint, otherwise it would be reached again.
+        target.BreakpointDelete(bkpt.GetID())
+        lldbutil.continue_to_source_breakpoint(
+            self, process, "break synchronous hello", src
+        )
+
+        self.assertTrue(
+            "synchronousSayHelo" in thread.GetFrameAtIndex(0).GetFunctionName(),
+        )
+        frame1 = thread.GetFrameAtIndex(1)
+        self.assertTrue(
+            "callSyncHello" in frame1.GetFunctionName(),
+        )
+        location = frame1.GetLineEntry()
+        # Check that the callsite location is on the correct line.
+        self.assertEqual(
+            location.GetLine(), lldbtest.line_number("main.swift", "frame 1 line")
+        )
