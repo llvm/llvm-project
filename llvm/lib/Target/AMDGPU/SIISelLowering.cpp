@@ -5369,6 +5369,124 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   return RetBB;
 }
 
+static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
+                                             MachineBasicBlock &MBB,
+                                             const GCNSubtarget &ST) {
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineFunction *MF = MBB.getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  // common code to generate IDX for SADDR mode
+  auto EmitIdxSAddr = [&](MachineInstr &MI) {
+    Register SAddrReg =
+        TII->getNamedOperand(MI, AMDGPU::OpName::saddr)->getReg();
+    int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
+    Register IdxReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
+    // index should be in the unit of dword
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_LSHR_B32), IdxReg)
+        .addReg(SAddrReg)
+        .addImm(2u);
+    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
+      Offset = Offset >> 2;
+    } else {
+      Register AddReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), AddReg)
+          .addReg(IdxReg)
+          .addImm(Offset >> 2);
+      Offset = 0;
+      IdxReg = AddReg;
+    }
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX1)
+        .addReg(IdxReg);
+    return Offset;
+  };
+
+  // common code to generate IDX for ST mode
+  auto EmitIdxST = [&](MachineInstr &MI) {
+    int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
+    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX1)
+          .addImm(0);
+      Offset = Offset >> 2;
+    } else {
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX1)
+          .addImm(Offset >> 2);
+      Offset = 0;
+    }
+    return Offset;
+  };
+
+  // IDX0 is reserved as the base of per-wave VGPR base.
+  // IDX1 is used in ISEL for accessing lane-shared VGPR.
+  // TODO-GFX13: we may want a virtual idx-reg instead of physical IDX1.
+  switch (MI.getOpcode()) {
+  case AMDGPU::SCRATCH_LOAD_DWORD_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX2_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX3_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX4_SADDR: {
+    Register Dst = MI.getOperand(0).getReg();
+    int Offset = EmitIdxSAddr(MI);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
+        .addReg(AMDGPU::IDX1)
+        .addImm(Offset)
+        .addImm(1u); // indicates lane-shared access
+    MI.eraseFromParent();
+    return &MBB;
+  }
+  // _ST only has immed offset
+  case AMDGPU::SCRATCH_LOAD_DWORD_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX2_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX3_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX4_ST: {
+    Register Dst = MI.getOperand(0).getReg();
+    int Offset = EmitIdxST(MI);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
+        .addReg(AMDGPU::IDX1)
+        .addImm(Offset)
+        .addImm(1u); // indicates lane-shared access
+
+    MI.eraseFromParent();
+    return &MBB;
+  }
+  case AMDGPU::SCRATCH_STORE_DWORD_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX2_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX3_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX4_SADDR: {
+    Register Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+    int Offset = EmitIdxSAddr(MI);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_STORE_IDX))
+        .addReg(Dst)
+        .addReg(AMDGPU::IDX1)
+        .addImm(Offset)
+        .addImm(1u); // indicates lane-shared access
+
+    MI.eraseFromParent();
+    return &MBB;
+  }
+  // _ST only has immed offset
+  case AMDGPU::SCRATCH_STORE_DWORD_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX2_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX3_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX4_ST: {
+    Register Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+    int Offset = EmitIdxST(MI);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_STORE_IDX))
+        .addReg(Dst)
+        .addReg(AMDGPU::IDX1)
+        .addImm(Offset)
+        .addImm(1u); // indicates lane-shared access
+
+    MI.eraseFromParent();
+    return &MBB;
+  }
+  default:
+    assert(false && "missing conversion to v_load/store_idx");
+    break;
+  }
+  return &MBB;
+}
+
 MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   MachineInstr &MI, MachineBasicBlock *BB) const {
 
@@ -5970,6 +6088,30 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     return SplitBB;
   }
   default:
+    if (TII->isFLATScratch(MI)) {
+      bool LaneSharedInVGPR = false;
+      for (const auto *MemOp : MI.memoperands()) {
+        if (auto *val = MemOp->getValue()) {
+          if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(val)) {
+            if (GV->hasAttribute("lane-shared-in-vgpr")) {
+              assert(MemOp->getAddrSpace() == AMDGPUAS::LANE_SHARED);
+              LaneSharedInVGPR = true;
+              break;
+            }
+          } else if (const Instruction *I = dyn_cast<const Instruction>(val)) {
+            if (I->hasMetadata("lane-shared-in-vgpr")) {
+              assert(MemOp->getAddrSpace() == AMDGPUAS::LANE_SHARED);
+              LaneSharedInVGPR = true;
+              break;
+            }
+          }
+        }
+      }
+      if (LaneSharedInVGPR) {
+        return emitVLoadVStoreIdx(MI, *BB, *getSubtarget());
+      }
+      return BB;
+    }
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
       if (!MI.mayStore())
         AddMemOpInit(MI);

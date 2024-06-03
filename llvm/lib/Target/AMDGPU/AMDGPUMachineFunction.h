@@ -25,9 +25,12 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
   /// local memory space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
-  /// A map to keep track of lane-shared-memory objects and their offsets
-  /// within the lane-shared-memory space.
+  /// A map to keep track of lane-shared objects and their offsets
+  /// mapping to the lane-shared-memory space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LaneSharedMemoryObjects;
+  /// A map to keep track of lane-shared objects and their offsets
+  /// mapping to the lane-shared-vgpr space.
+  SmallDenseMap<const GlobalValue *, unsigned, 4> LaneSharedVGPRObjects;
 
 protected:
   uint64_t ExplicitKernArgSize = 0; // Cache for this.
@@ -49,8 +52,11 @@ protected:
   /// stages.
   Align DynLDSAlign;
 
-  /// Number of bytes in the lane-shared that are being used.
-  uint32_t LaneSharedSize = 0;
+  /// Number of bytes of scratch-memory allocated to lane-shared.
+  uint32_t LaneSharedScratchSize = 0;
+  /// Number of bytes of VGPR-space allocated to lane-shared.
+  /// Need to be aligned and converted into dwords for VGPR counting.
+  uint32_t LaneSharedVGPRSize = 0;
 
   // Flag to check dynamic LDS usage by kernel.
   bool UsesDynamicLDS = false;
@@ -90,7 +96,8 @@ public:
     return GDSSize;
   }
 
-  uint32_t getLaneSharedSize() const { return LaneSharedSize; }
+  uint32_t getLaneSharedScratchSize() const { return LaneSharedScratchSize; }
+  uint32_t getLaneSharedVGPRSize() const { return LaneSharedVGPRSize; }
 
   bool isEntryFunction() const {
     return IsEntryFunction;

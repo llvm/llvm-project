@@ -903,6 +903,8 @@
 ; GCN-O2-NEXT:        LCSSA Verifier
 ; GCN-O2-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O2-NEXT:      Analysis if a function is memory bound
+; GCN-O2-NEXT:      FunctionPass Manager
+; GCN-O2-NEXT:        Mark promotable lane-shared
 ; GCN-O2-NEXT:      DummyCGSCCPass
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Prepare callbr
@@ -1230,6 +1232,8 @@
 ; GCN-O3-NEXT:        LCSSA Verifier
 ; GCN-O3-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O3-NEXT:      Analysis if a function is memory bound
+; GCN-O3-NEXT:      FunctionPass Manager
+; GCN-O3-NEXT:        Mark promotable lane-shared
 ; GCN-O3-NEXT:      DummyCGSCCPass
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Prepare callbr

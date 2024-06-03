@@ -2020,7 +2020,8 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
     return MFI.getStackSize() != 0;
   }
   // TODO-GFX13: replace the 1st condition with the real wavegroup attribute
-  return MF.getInfo<SIMachineFunctionInfo>()->getLaneSharedSize() ||
+  return MF.getInfo<SIMachineFunctionInfo>()->getLaneSharedScratchSize() ||
+         MF.getInfo<SIMachineFunctionInfo>()->getLaneSharedVGPRSize() ||
          frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
