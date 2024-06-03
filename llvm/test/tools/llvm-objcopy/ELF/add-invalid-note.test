@@ -36,7 +36,7 @@
 # RUN: llvm-objcopy --add-section=.note.short=%t-short-note.bin --no-verify-note-sections %t.o %t-with-note.o
 
 ## test that last argument has precedence
-# RUN: llvm-objcopy --add-section=.note.short=%t-short-note.bin --verify-note-section --no-verify-note-sections %t.o %t-with-note.o
+# RUN: llvm-objcopy --add-section=.note.short=%t-short-note.bin --verify-note-sections --no-verify-note-sections %t.o %t-with-note.o
 
 !ELF
 FileHeader:
