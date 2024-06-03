@@ -18,6 +18,7 @@
 #include <__config>
 #include <__numeric/transform_reduce.h>
 #include <__pstl/backend_fwd.h>
+#include <__pstl/configuration_fwd.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -74,14 +75,14 @@ struct __merge<__serial_backend_tag, _ExecutionPolicy> {
       _ForwardIterator1 __last1,
       _ForwardIterator2 __first2,
       _ForwardIterator2 __last2,
-      _ForwardOutIterator __out,
+      _ForwardOutIterator __outit,
       _Comp&& __comp) const noexcept {
     return std::merge(
         std::move(__first1),
         std::move(__last1),
         std::move(__first2),
         std::move(__last2),
-        std::move(__out),
+        std::move(__outit),
         std::forward<_Comp>(__comp));
   }
 };
@@ -92,6 +93,7 @@ struct __stable_sort<__serial_backend_tag, _ExecutionPolicy> {
   _LIBCPP_HIDE_FROM_ABI optional<__empty>
   operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp&& __comp) const noexcept {
     std::stable_sort(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
+    return __empty{};
   }
 };
 
@@ -99,9 +101,10 @@ template <class _ExecutionPolicy>
 struct __transform<__serial_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _UnaryOperation>
   _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> operator()(
-      _Policy&&, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __out, _UnaryOperation&& __op)
+      _Policy&&, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __outit, _UnaryOperation&& __op)
       const noexcept {
-    return std::transform(std::move(__first), std::move(__last), std::move(__out), std::forward<_UnaryOperation>(__op));
+    return std::transform(
+        std::move(__first), std::move(__last), std::move(__outit), std::forward<_UnaryOperation>(__op));
   }
 };
 
@@ -117,13 +120,13 @@ struct __transform_binary<__serial_backend_tag, _ExecutionPolicy> {
              _ForwardIterator1 __first1,
              _ForwardIterator1 __last1,
              _ForwardIterator2 __first2,
-             _ForwardOutIterator __out,
+             _ForwardOutIterator __outit,
              _BinaryOperation&& __op) const noexcept {
     return std::transform(
         std::move(__first1),
         std::move(__last1),
         std::move(__first2),
-        std::move(__out),
+        std::move(__outit),
         std::forward<_BinaryOperation>(__op));
   }
 };
@@ -135,13 +138,13 @@ struct __transform_reduce<__serial_backend_tag, _ExecutionPolicy> {
   operator()(_Policy&&,
              _ForwardIterator __first,
              _ForwardIterator __last,
-             _Tp const& __init,
+             _Tp __init,
              _BinaryOperation&& __reduce,
              _UnaryOperation&& __transform) const noexcept {
     return std::transform_reduce(
         std::move(__first),
         std::move(__last),
-        __init,
+        std::move(__init),
         std::forward<_BinaryOperation>(__reduce),
         std::forward<_UnaryOperation>(__transform));
   }
@@ -160,14 +163,14 @@ struct __transform_reduce_binary<__serial_backend_tag, _ExecutionPolicy> {
       _ForwardIterator1 __first1,
       _ForwardIterator1 __last1,
       _ForwardIterator2 __first2,
-      _Tp const& __init,
+      _Tp __init,
       _BinaryOperation1&& __reduce,
       _BinaryOperation2&& __transform) const noexcept {
     return std::transform_reduce(
         std::move(__first1),
         std::move(__last1),
         std::move(__first2),
-        __init,
+        std::move(__init),
         std::forward<_BinaryOperation1>(__reduce),
         std::forward<_BinaryOperation2>(__transform));
   }
