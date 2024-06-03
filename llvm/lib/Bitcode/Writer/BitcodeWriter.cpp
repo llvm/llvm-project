@@ -5095,7 +5095,8 @@ void llvm::WriteBitcodeToFile(const Module &M, raw_ostream &Out,
     // header. Note that the header is computed *after* the output is known, so
     // we currently explicitly use a buffer, write to it, and then subsequently
     // flush to Out.
-    SmallVector<char, 256 * 1024> Buffer;
+    SmallVector<char, 0> Buffer;
+    Buffer.reserve(256 * 1024);
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
     BitcodeWriter Writer(Buffer);
     Write(Writer);
