@@ -40,8 +40,9 @@ define i32 @test_direct_call() #0 {
 ; CHECK-NEXT:   ldr x16, [x16, _f@GOTPAGEOFF]
 ; CHECK-NEXT:   mov x17, #42
 ; CHECK-NEXT:   pacia x16, x17
-; CHECK-NEXT:   mov w8, #42
-; CHECK-NEXT:   blrab x16, x8
+; CHECK-NEXT:   mov x8, x16
+; CHECK-NEXT:   mov x17, #42
+; CHECK-NEXT:   blrab x8, x17
 ; CHECK-NEXT:   ldp x29, x30, [sp], #16
 ; CHECK-NEXT:   retab
 define i32 @test_direct_call_mismatch() #0 {

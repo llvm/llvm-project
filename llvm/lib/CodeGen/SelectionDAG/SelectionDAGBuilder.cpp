@@ -8614,8 +8614,7 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
 }
 
 void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
-                                      bool isTailCall,
-                                      bool isMustTailCall,
+                                      bool isTailCall, bool isMustTailCall,
                                       const BasicBlock *EHPadBB,
                                       const TargetLowering::PtrAuthInfo *PAI) {
   auto &DL = DAG.getDataLayout();
@@ -9307,12 +9306,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
 void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
     const CallBase &CB, const BasicBlock *EHPadBB) {
   auto PAB = CB.getOperandBundle("ptrauth");
-  auto *CalleeV = CB.getCalledOperand();
+  const Value *CalleeV = CB.getCalledOperand();
 
   // Gather the call ptrauth data from the operand bundle:
   //   [ i32 <key>, i64 <discriminator> ]
-  auto *Key = cast<ConstantInt>(PAB->Inputs[0]);
-  Value *Discriminator = PAB->Inputs[1];
+  const auto *Key = cast<ConstantInt>(PAB->Inputs[0]);
+  const Value *Discriminator = PAB->Inputs[1];
 
   assert(Key->getType()->isIntegerTy(32) && "Invalid ptrauth key");
   assert(Discriminator->getType()->isIntegerTy(64) &&
@@ -9330,12 +9329,7 @@ void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
   }
 
   // Functions should never be ptrauth-called directly.
-  // We could lower these to direct unauthenticated calls, but for that to
-  // occur, there must have been a semantic mismatch somewhere leading to this
-  // arguably incorrect IR.
-  if (isa<Function>(CalleeV))
-    report_fatal_error("Cannot lower direct authenticated call to"
-                       " unauthenticated target");
+  assert(!isa<Function>(CalleeV) && "invalid direct ptrauth call");
 
   // Otherwise, do an authenticated indirect call.
   TargetLowering::PtrAuthInfo PAI = {Key->getZExtValue(),

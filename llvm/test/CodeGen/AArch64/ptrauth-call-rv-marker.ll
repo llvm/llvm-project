@@ -1,7 +1,6 @@
-; RUN: llc -verify-machineinstrs -o - %s | FileCheck --check-prefix=CHECK %s
-; DISABLED: llc -verify-machineinstrs -global-isel -o - %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -global-isel -o - %s | FileCheck %s
 
-; TODO: support ptrauth call generation with GlobalISel
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "arm64e-apple-iphoneos"
 
@@ -49,8 +48,8 @@ entry:
 define void @rv_marker_ptrauth_blraa_disc_imm16(i8* ()** %arg0) {
 ; CHECK-LABEL: rv_marker_ptrauth_blraa_disc_imm16
 ; CHECK:         ldr [[ADDR:x[0-9]+]], [
-; CHECK-NEXT:    mov w9, #45431
-; CHECK-NEXT:    blrab [[ADDR]], x9
+; CHECK-NEXT:    mov x17, #45431
+; CHECK-NEXT:    blrab [[ADDR]], x17
 ; CHECK-NEXT:    mov x29, x29
 ; CHECK-NEXT:    bl objc_retainAutoreleasedReturnValue
 ;
@@ -96,8 +95,8 @@ define void @rv_marker_ptrauth_blrab(i8* ()** %arg0, i64 %arg1) {
 define void @rv_marker_ptrauth_blrab_disc_imm16(i8* ()** %arg0) {
 ; CHECK-LABEL: rv_marker_ptrauth_blrab_disc_imm16
 ; CHECK:         ldr [[ADDR:x[0-9]+]], [
-; CHECK-NEXT:    mov w9, #256
-; CHECK-NEXT:    blrab [[ADDR]], x9
+; CHECK-NEXT:    mov x17, #256
+; CHECK-NEXT:    blrab [[ADDR]], x17
 ; CHECK-NEXT:   mov x29, x29
 ; CHECK-NEXT:   bl objc_retainAutoreleasedReturnValue
 ;
