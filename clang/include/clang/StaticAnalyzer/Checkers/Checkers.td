@@ -1011,6 +1011,11 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
+def SetgidSetuidOrderChecker : Checker<"SetgidSetuidOrder">,
+  HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
+           "'setuid(getuid())' (CERT: POS36-C)">,
+  Documentation<HasDocumentation>;
+
 } // end "security"
 
 let ParentPackage = ENV in {
@@ -1030,15 +1035,6 @@ let ParentPackage = ENV in {
 
 } // end "security.cert.env"
 
-let ParentPackage = POSAlpha in {
-
-  def PutenvWithAuto : Checker<"34c">,
-  HelpText<"Finds calls to the 'putenv' function which pass a pointer to "
-           "an automatic variable as the argument.">,
-  Documentation<HasDocumentation>;
-
-} // end "alpha.cert.pos"
-
 let ParentPackage = SecurityAlpha in {
 
 def ArrayBoundChecker : Checker<"ArrayBound">,
@@ -1047,10 +1043,6 @@ def ArrayBoundChecker : Checker<"ArrayBound">,
 
 def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
   HelpText<"Warn about buffer overflows (newer checker)">,
-  Documentation<HasDocumentation>;
-
-def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
-  HelpText<"Check for an out-of-bound pointer being returned to callers">,
   Documentation<HasDocumentation>;
 
 def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
@@ -1071,6 +1063,15 @@ def MmapWriteExecChecker : Checker<"MmapWriteExec">,
                   "0x01",
                   Released>
   ]>,
+  Documentation<HasDocumentation>;
+
+def PutenvStackArray : Checker<"PutenvStackArray">,
+  HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
+           "an automatic (stack-allocated) array as the argument.">,
+  Documentation<HasDocumentation>;
+
+def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
+  HelpText<"Check for an out-of-bound pointer being returned to callers">,
   Documentation<HasDocumentation>;
 
 } // end "alpha.security"

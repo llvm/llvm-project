@@ -14,6 +14,7 @@
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "DescriptorModel.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/CodeGen/TBAABuilder.h"
 #include "flang/Optimizer/CodeGen/Target.h"
@@ -36,7 +37,8 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
           module.getContext(), getTargetTriple(module), getKindMapping(module),
           getTargetCPU(module), getTargetFeatures(module), dl)),
       tbaaBuilder(std::make_unique<TBAABuilder>(module->getContext(), applyTBAA,
-                                                forceUnifiedTBAATree)) {
+                                                forceUnifiedTBAATree)),
+      dataLayout{&dl} {
   LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
   // Each conversion should return a value of type mlir::Type.
@@ -243,7 +245,10 @@ mlir::Type LLVMTypeConverter::convertBoxTypeAsStruct(BaseBoxType box,
   // [dims]
   if (rank == unknownRank()) {
     if (auto seqTy = mlir::dyn_cast<SequenceType>(ele))
-      rank = seqTy.getDimension();
+      if (seqTy.hasUnknownShape())
+        rank = Fortran::common::maxRank;
+      else
+        rank = seqTy.getDimension();
     else
       rank = 0;
   }

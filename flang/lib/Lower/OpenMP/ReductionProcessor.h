@@ -67,14 +67,11 @@ public:
   static bool
   supportedIntrinsicProcReduction(const omp::clause::ProcedureDesignator &pd);
 
-  static const Fortran::semantics::SourceName
-  getRealName(const Fortran::semantics::Symbol *symbol);
+  static const semantics::SourceName
+  getRealName(const semantics::Symbol *symbol);
 
-  static const Fortran::semantics::SourceName
+  static const semantics::SourceName
   getRealName(const omp::clause::ProcedureDesignator &pd);
-
-  static bool
-  doReductionByRef(const llvm::SmallVectorImpl<mlir::Value> &reductionVars);
 
   static std::string getReductionName(llvm::StringRef name,
                                       const fir::KindMapping &kindMap,
@@ -124,13 +121,13 @@ public:
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
   static void addDeclareReduction(
-      mlir::Location currentLocation,
-      Fortran::lower::AbstractConverter &converter,
+      mlir::Location currentLocation, lower::AbstractConverter &converter,
       const omp::clause::Reduction &reduction,
       llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+      llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-          *reductionSymbols = nullptr);
+      llvm::SmallVectorImpl<const semantics::Symbol *> *reductionSymbols =
+          nullptr);
 };
 
 template <typename FloatOp, typename IntegerOp>

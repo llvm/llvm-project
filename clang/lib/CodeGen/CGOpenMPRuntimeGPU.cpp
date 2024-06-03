@@ -1103,13 +1103,13 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
         VoidPtr, VarPtrTy, VD->getName() + "_on_stack");
     LValue VarAddr =
         CGF.MakeNaturalAlignPointeeRawAddrLValue(CastedVoidPtr, VarTy);
-    Rec.second.PrivateAddr = VarAddr.getAddress(CGF);
+    Rec.second.PrivateAddr = VarAddr.getAddress();
     Rec.second.GlobalizedVal = VoidPtr;
 
     // Assign the local allocation to the newly globalized location.
     if (EscapedParam) {
       CGF.EmitStoreOfScalar(ParValue, VarAddr);
-      I->getSecond().MappedParams->setVarAddr(CGF, VD, VarAddr.getAddress(CGF));
+      I->getSecond().MappedParams->setVarAddr(CGF, VD, VarAddr.getAddress());
     }
     if (auto *DI = CGF.getDebugInfo())
       VoidPtr->setDebugLoc(DI->SourceLocToDebugLoc(VD->getLocation()));
@@ -1123,7 +1123,7 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
     LValue Base = CGF.MakeAddrLValue(AddrSizePair.first, VD->getType(),
                                      CGM.getContext().getDeclAlign(VD),
                                      AlignmentSource::Decl);
-    I->getSecond().MappedParams->setVarAddr(CGF, VD, Base.getAddress(CGF));
+    I->getSecond().MappedParams->setVarAddr(CGF, VD, Base.getAddress());
   }
   I->getSecond().MappedParams->apply(CGF);
 }
@@ -2226,7 +2226,7 @@ static llvm::Value *emitListToGlobalCopyFunction(
         Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
-    Address GlobAddr = GlobLVal.getAddress(CGF);
+    Address GlobAddr = GlobLVal.getAddress();
     GlobLVal.setAddress(Address(GlobAddr.emitRawPointer(CGF),
                                 CGF.ConvertTypeForMem(Private->getType()),
                                 GlobAddr.getAlignment()));
@@ -2327,7 +2327,7 @@ static llvm::Value *emitListToGlobalReduceFunction(
         Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
-    Address GlobAddr = GlobLVal.getAddress(CGF);
+    Address GlobAddr = GlobLVal.getAddress();
     CGF.EmitStoreOfScalar(GlobAddr.emitRawPointer(CGF), Elem,
                           /*Volatile=*/false, C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
@@ -2433,7 +2433,7 @@ static llvm::Value *emitGlobalToListCopyFunction(
         Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
-    Address GlobAddr = GlobLVal.getAddress(CGF);
+    Address GlobAddr = GlobLVal.getAddress();
     GlobLVal.setAddress(Address(GlobAddr.emitRawPointer(CGF),
                                 CGF.ConvertTypeForMem(Private->getType()),
                                 GlobAddr.getAlignment()));
@@ -2534,7 +2534,7 @@ static llvm::Value *emitGlobalToListReduceFunction(
         Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
-    Address GlobAddr = GlobLVal.getAddress(CGF);
+    Address GlobAddr = GlobLVal.getAddress();
     CGF.EmitStoreOfScalar(GlobAddr.emitRawPointer(CGF), Elem,
                           /*Volatile=*/false, C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
@@ -3406,7 +3406,7 @@ void CGOpenMPRuntimeGPU::adjustTargetSpecificDataForLambdas(
       if (VD->getType().getCanonicalType()->isReferenceType())
         VDAddr = CGF.EmitLoadOfReferenceLValue(VDAddr,
                                                VD->getType().getCanonicalType())
-                     .getAddress(CGF);
+                     .getAddress();
       CGF.EmitStoreOfScalar(VDAddr.emitRawPointer(CGF), VarLVal);
     }
   }

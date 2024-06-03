@@ -14,144 +14,19 @@
 #ifndef OPENMP_OPS
 #define OPENMP_OPS
 
-include "mlir/IR/EnumAttr.td"
-include "mlir/IR/OpBase.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td"
-include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td"
-include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td"
-
-def OpenMP_Dialect : Dialect {
-  let name = "omp";
-  let cppNamespace = "::mlir::omp";
-  let dependentDialects = ["::mlir::LLVM::LLVMDialect, ::mlir::func::FuncDialect"];
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
-}
-
-// OmpCommon requires definition of OpenACC_Dialect.
-include "mlir/Dialect/OpenMP/OmpCommon.td"
-
-//===----------------------------------------------------------------------===//
-//  OpenMP Attributes
-//===----------------------------------------------------------------------===//
-
-class OpenMP_Attr<string name, string attrMnemonic,
-                list<Trait> traits = [],
-                string baseCppClass = "::mlir::Attribute">
-    : AttrDef<OpenMP_Dialect, name, traits, baseCppClass> {
-  let mnemonic = attrMnemonic;
-}
-
-def VersionAttr : OpenMP_Attr<"Version", "version"> {
-  let parameters = (ins
-    "uint32_t":$version
-  );
-
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
-//===----------------------------------------------------------------------===//
-// Runtime library flag's attribute that holds information for lowering to LLVM
-//===----------------------------------------------------------------------===//
-
-def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
-  let parameters = (ins
-    DefaultValuedParameter<"uint32_t", "0">:$debug_kind,
-    DefaultValuedParameter<"bool", "false">:$assume_teams_oversubscription,
-    DefaultValuedParameter<"bool", "false">:$assume_threads_oversubscription,
-    DefaultValuedParameter<"bool", "false">:$assume_no_thread_state,
-    DefaultValuedParameter<"bool", "false">:$assume_no_nested_parallelism,
-    DefaultValuedParameter<"bool", "false">:$no_gpu_lib,
-    DefaultValuedParameter<"uint32_t", "50">:$openmp_device_version
-  );
-
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
-
-class OpenMP_Op<string mnemonic, list<Trait> traits = []> :
-      Op<OpenMP_Dialect, mnemonic, traits>;
-
-// Type which can be constraint accepting standard integers and indices.
-def IntLikeType : AnyTypeOf<[AnyInteger, Index]>;
-
-def OpenMP_PointerLikeType : TypeAlias<OpenMP_PointerLikeTypeInterface,
-	"OpenMP-compatible variable type">;
-
-class OpenMP_Type<string name, string typeMnemonic> : TypeDef<OpenMP_Dialect, name> {
-  let mnemonic = typeMnemonic;
-}
-
-//===----------------------------------------------------------------------===//
-//  2.12.7 Declare Target Directive
-//===----------------------------------------------------------------------===//
-
-def DeviceTypeAny : I32EnumAttrCase<"any", 0>;
-def DeviceTypeHost   : I32EnumAttrCase<"host", 1>;
-def DeviceTypeNoHost   : I32EnumAttrCase<"nohost", 2>;
-
-def DeclareTargetDeviceType : I32EnumAttr<
-    "DeclareTargetDeviceType",
-    "device_type clause",
-    [DeviceTypeAny, DeviceTypeHost, DeviceTypeNoHost]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::omp";
-}
-
-def DeclareTargetDeviceTypeAttr : EnumAttr<OpenMP_Dialect, DeclareTargetDeviceType,
-                                    "device_type"> {
-  let assemblyFormat = "`(` $value `)`";
-}
-
-def CaptureClauseTo : I32EnumAttrCase<"to", 0>;
-def CaptureClauseLink   : I32EnumAttrCase<"link", 1>;
-def CaptureClauseEnter   : I32EnumAttrCase<"enter", 2>;
-
-def DeclareTargetCaptureClause : I32EnumAttr<
-    "DeclareTargetCaptureClause",
-    "capture clause",
-    [CaptureClauseTo, CaptureClauseLink, CaptureClauseEnter]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::omp";
-}
-
-def DeclareTargetCaptureClauseAttr : EnumAttr<OpenMP_Dialect, DeclareTargetCaptureClause,
-                                    "capture_clause"> {
-  let assemblyFormat = "`(` $value `)`";
-}
-
-def DeclareTargetAttr : OpenMP_Attr<"DeclareTarget", "declaretarget"> {
-  let parameters = (ins
-    OptionalParameter<"DeclareTargetDeviceTypeAttr">:$device_type,
-    OptionalParameter<"DeclareTargetCaptureClauseAttr">:$capture_clause
-  );
-
-  let assemblyFormat = "`<` struct(params) `>`";
-}
+include "mlir/Dialect/OpenMP/OpenMPAttrDefs.td"
+include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/EnumAttr.td"
+include "mlir/IR/OpBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // 2.19.4 Data-Sharing Attribute Clauses
 //===----------------------------------------------------------------------===//
-
-def DataSharingTypePrivate      : I32EnumAttrCase<"Private", 0, "private">;
-def DataSharingTypeFirstPrivate : I32EnumAttrCase<"FirstPrivate", 1, "firstprivate">;
-
-def DataSharingClauseType : I32EnumAttr<
-    "DataSharingClauseType",
-    "Type of a data-sharing clause",
-    [DataSharingTypePrivate, DataSharingTypeFirstPrivate]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::omp";
-}
-
-def DataSharingClauseTypeAttr : EnumAttr<
-    OpenMP_Dialect, DataSharingClauseType, "data_sharing_type"> {
-  let assemblyFormat = "`{` `type` `=` $value `}`";
-}
 
 def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
   let summary = "Provides declaration of [first]private logic.";
@@ -272,22 +147,17 @@ def ParallelOp : OpenMP_Op<"parallel", [
     that specify the memory allocator to be used to obtain storage for private values.
 
     Reductions can be performed in a parallel construct by specifying reduction
-    accumulator variables in `reduction_vars` and symbols referring to reduction
-    declarations in the `reductions` attribute. Each reduction is identified
-    by the accumulator it uses and accumulators must not be repeated in the same
-    reduction. The `omp.reduction` operation accepts the accumulator and a
-    partial value which is considered to be produced by the thread for the
-    given reduction. If multiple values are produced for the same accumulator,
-    i.e. there are multiple `omp.reduction`s, the last value is taken. The
+    accumulator variables in `reduction_vars`, symbols referring to reduction
+    declarations in the `reductions` attribute, and whether the reduction
+    variable should be passed into the reduction region by value or by reference
+    in `reduction_vars_byref`. Each reduction is identified by the accumulator
+    it uses and accumulators must not be repeated in the same reduction. The
     reduction declaration specifies how to combine the values from each thread
     into the final value, which is available in the accumulator after all the
     threads complete.
 
     The optional $proc_bind_val attribute controls the thread affinity for the execution
     of the parallel region.
-
-    The optional byref attribute controls whether reduction arguments are passed by
-    reference or by value.
   }];
 
   let arguments = (ins Optional<I1>:$if_expr_var,
@@ -295,11 +165,11 @@ def ParallelOp : OpenMP_Op<"parallel", [
              Variadic<AnyType>:$allocate_vars,
              Variadic<AnyType>:$allocators_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+             OptionalAttr<DenseBoolArrayAttr>:$reduction_vars_byref,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ProcBindKindAttr>:$proc_bind_val,
              Variadic<AnyType>:$private_vars,
-             OptionalAttr<SymbolRefArrayAttr>:$privatizers,
-             UnitAttr:$byref);
+             OptionalAttr<SymbolRefArrayAttr>:$privatizers);
 
   let regions = (region AnyRegion:$region);
 
@@ -321,10 +191,9 @@ def ParallelOp : OpenMP_Op<"parallel", [
                 $allocators_vars, type($allocators_vars)
               ) `)`
           | `proc_bind` `(` custom<ClauseAttr>($proc_bind_val) `)`
-          | `byref` $byref
     ) custom<ParallelRegion>($region, $reduction_vars, type($reduction_vars),
-                             $reductions, $private_vars, type($private_vars),
-                             $privatizers) attr-dict
+                             $reduction_vars_byref, $reductions, $private_vars,
+                             type($private_vars), $privatizers) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -405,23 +274,6 @@ def TeamsOp : OpenMP_Op<"teams", [
   let hasVerifier = 1;
 }
 
-def OMP_ScheduleModNone         : I32EnumAttrCase<"none", 0>;
-def OMP_ScheduleModMonotonic    : I32EnumAttrCase<"monotonic", 1>;
-def OMP_ScheduleModNonmonotonic : I32EnumAttrCase<"nonmonotonic", 2>;
-// FIXME: remove this value for the modifier because this is handled using a
-// separate attribute
-def OMP_ScheduleModSIMD         : I32EnumAttrCase<"simd", 3>;
-
-def ScheduleModifier
-    : I32EnumAttr<"ScheduleModifier", "OpenMP Schedule Modifier",
-                  [OMP_ScheduleModNone, OMP_ScheduleModMonotonic,
-                   OMP_ScheduleModNonmonotonic, OMP_ScheduleModSIMD]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::omp";
-}
-def ScheduleModifierAttr : EnumAttr<OpenMP_Dialect, ScheduleModifier,
-                                    "sched_mod">;
-
 //===----------------------------------------------------------------------===//
 // 2.8.1 Sections Construct
 //===----------------------------------------------------------------------===//
@@ -451,13 +303,9 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
     accumulator variables in `reduction_vars` and symbols referring to reduction
     declarations in the `reductions` attribute. Each reduction is identified
     by the accumulator it uses and accumulators must not be repeated in the same
-    reduction. The `omp.reduction` operation accepts the accumulator and a
-    partial value which is considered to be produced by the section for the
-    given reduction. If multiple values are produced for the same accumulator,
-    i.e. there are multiple `omp.reduction`s, the last value is taken. The
-    reduction declaration specifies how to combine the values from each section
-    into the final value, which is available in the accumulator after all the
-    sections complete.
+    reduction. The reduction declaration specifies how to combine the values
+    from each section into the final value, which is available in the
+    accumulator after all the sections complete.
 
     The $allocators_vars and $allocate_vars parameters are a variadic list of values
     that specify the memory allocator to be used to obtain storage for private values.
@@ -649,14 +497,15 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     elements.
 
     Reductions can be performed in a worksharing-loop by specifying reduction
-    accumulator variables in `reduction_vars` and symbols referring to reduction
-    declarations in the `reductions` attribute. Each reduction is identified
-    by the accumulator it uses and accumulators must not be repeated in the same
-    reduction. A private variable corresponding to the accumulator is used in
-    place of the accumulator inside the body of the worksharing-loop. The
-    reduction declaration specifies how to combine the values from each
-    iteration into the final value, which is available in the accumulator after
-    the loop completes.
+    accumulator variables in `reduction_vars`, symbols referring to reduction
+    declarations in the `reductions` attribute, and whether the reduction
+    variable should be passed by reference or value in `reduction_vars_byref`.
+    Each reduction is identified by the accumulator it uses and accumulators
+    must not be repeated in the same reduction. A private variable corresponding
+    to the accumulator is used in place of the accumulator inside the body of
+    the worksharing-loop. The reduction declaration specifies how to combine the
+    values from each iteration into the final value, which is available in the
+    accumulator after the loop completes.
 
     The optional `schedule_val` attribute specifies the loop schedule for this
     loop, determining how the loop is distributed across the parallel threads.
@@ -677,21 +526,18 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     The optional `order` attribute specifies which order the iterations of the
     associate loops are executed in. Currently the only option for this
     attribute is "concurrent".
-
-    The optional `byref` attribute indicates that reduction arguments should be
-    passed by reference.
   }];
 
   let arguments = (ins Variadic<AnyType>:$linear_vars,
              Variadic<I32>:$linear_step_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+             OptionalAttr<DenseBoolArrayAttr>:$reduction_vars_byref,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ScheduleKindAttr>:$schedule_val,
              Optional<AnyType>:$schedule_chunk_var,
              OptionalAttr<ScheduleModifierAttr>:$schedule_modifier,
              UnitAttr:$simd_modifier,
              UnitAttr:$nowait,
-             UnitAttr:$byref,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
              OptionalAttr<OrderKindAttr>:$order_val);
 
@@ -716,11 +562,10 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                 $schedule_val, $schedule_modifier, $simd_modifier,
                 $schedule_chunk_var, type($schedule_chunk_var)) `)`
           |`nowait` $nowait
-          |`byref` $byref
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
     ) custom<Wsloop>($region, $reduction_vars, type($reduction_vars),
-                     $reductions) attr-dict
+                     $reduction_vars_byref, $reductions) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -909,26 +754,6 @@ def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
 // 2.10.1 task Construct
 //===----------------------------------------------------------------------===//
 
-def ClauseTaskDependIn    : I32EnumAttrCase<"taskdependin",    0>;
-def ClauseTaskDependOut   : I32EnumAttrCase<"taskdependout",   1>;
-def ClauseTaskDependInOut : I32EnumAttrCase<"taskdependinout", 2>;
-
-def ClauseTaskDepend : I32EnumAttr<
-    "ClauseTaskDepend",
-    "depend clause in a target or task construct",
-    [ClauseTaskDependIn, ClauseTaskDependOut, ClauseTaskDependInOut]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::omp";
-}
-def ClauseTaskDependAttr :
-  EnumAttr<OpenMP_Dialect, ClauseTaskDepend, "clause_task_depend"> {
-  let assemblyFormat = "`(` $value `)`";
-}
-def TaskDependArrayAttr :
-  TypedArrayAttrBase<ClauseTaskDependAttr, "clause_task_depend array attr"> {
-    let constBuilderCall = ?;
-  }
-
 def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
                        OutlineableOpenMPOpInterface, AutomaticAllocationScope,
                        ReductionClauseInterface]> {
@@ -1079,11 +904,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
     variables in `reduction_vars` or `in_reduction_vars` and symbols referring
     to reduction declarations in the `reductions` or `in_reductions` attribute.
     Each reduction is identified by the accumulator it uses and accumulators
-    must not be repeated in the same reduction. The `omp.reduction` operation
-    accepts the accumulator and a partial value which is considered to be
-    produced by the current loop iteration for the given reduction. If multiple
-    values are produced for the same accumulator, i.e. there are multiple
-    `omp.reduction`s, the last value is taken. The reduction declaration
+    must not be repeated in the same reduction. The reduction declaration
     specifies how to combine the values from each iteration into the final
     value, which is available in the accumulator after the loop completes.
 
@@ -1288,28 +1109,6 @@ def FlushOp : OpenMP_Op<"flush"> {
 // Map related constructs
 //===----------------------------------------------------------------------===//
 
-def CaptureThis : I32EnumAttrCase<"This", 0>;
-def CaptureByRef : I32EnumAttrCase<"ByRef", 1>;
-def CaptureByCopy : I32EnumAttrCase<"ByCopy", 2>;
-def CaptureVLAType : I32EnumAttrCase<"VLAType", 3>;
-
-def VariableCaptureKind : I32EnumAttr<
-    "VariableCaptureKind",
-    "variable capture kind",
-    [CaptureThis, CaptureByRef, CaptureByCopy, CaptureVLAType]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::omp";
-}
-
-def VariableCaptureKindAttr : EnumAttr<OpenMP_Dialect, VariableCaptureKind,
-                                       "variable_capture_kind"> {
-  let assemblyFormat = "`(` $value `)`";
-}
-
-def MapBoundsType : OpenMP_Type<"MapBounds", "map_bounds_ty"> {
-  let summary = "Type for representing omp map clause bounds information";
-}
-
 def MapBoundsOp : OpenMP_Op<"map.bounds",
     [AttrSizedOperandSegments, NoMemoryEffect]> {
   let summary = "Represents normalized bounds information for map clauses.";
@@ -1391,7 +1190,7 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
                        Optional<IntLikeType>:$stride,
                        DefaultValuedAttr<BoolAttr, "false">:$stride_in_bytes,
                        Optional<IntLikeType>:$start_idx);
-  let results = (outs MapBoundsType:$result);
+  let results = (outs OpenMP_MapBoundsType:$result);
 
   let assemblyFormat = [{
     oilist(
@@ -1424,7 +1223,7 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<OpenMP_PointerLikeType>:$members,
                        OptionalAttr<AnyIntElementsAttr>:$members_index,
-                       Variadic<MapBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
+                       Variadic<OpenMP_MapBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        OptionalAttr<UI64Attr>:$map_type,
                        OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
                        OptionalAttr<StrAttr>:$name,
@@ -1899,20 +1698,6 @@ def BarrierOp : OpenMP_Op<"barrier"> {
 // [5.1] 2.19.9 ordered Construct
 //===----------------------------------------------------------------------===//
 
-def ClauseDependSource : I32EnumAttrCase<"dependsource", 0>;
-def ClauseDependSink   : I32EnumAttrCase<"dependsink",   1>;
-
-def ClauseDepend : I32EnumAttr<
-    "ClauseDepend",
-    "depend clause",
-    [ClauseDependSource, ClauseDependSink]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::omp";
-}
-def ClauseDependAttr : EnumAttr<OpenMP_Dialect, ClauseDepend, "clause_depend"> {
-  let assemblyFormat = "`(` $value `)`";
-}
-
 def OrderedOp : OpenMP_Op<"ordered"> {
   let summary = "ordered construct without region";
   let description = [{
@@ -2360,57 +2145,6 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [Symbol,
     }
   }];
   let hasRegionVerifier = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// 2.19.5.4 reduction clause
-//===----------------------------------------------------------------------===//
-
-def ReductionOp : OpenMP_Op<"reduction"> {
-  let summary = "reduction construct";
-  let description = [{
-    Indicates the value that is produced by the current reduction-participating
-    entity for a reduction requested in some ancestor. The reduction is
-    identified by the accumulator, but the value of the accumulator may not be
-    updated immediately.
-  }];
-
-  let arguments= (ins AnyType:$operand, OpenMP_PointerLikeType:$accumulator);
-  let assemblyFormat = [{
-    $operand `,` $accumulator attr-dict `:` type($operand) `,` type($accumulator)
-  }];
-  let hasVerifier = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// 8.2 requires directive
-//===----------------------------------------------------------------------===//
-
-// atomic_default_mem_order clause values not defined here because they can be
-// represented by the OMPC_MemoryOrder enumeration instead.
-def ClauseRequiresNone : I32BitEnumAttrCaseNone<"none">;
-def ClauseRequiresReverseOffload : I32BitEnumAttrCaseBit<"reverse_offload", 0>;
-def ClauseRequiresUnifiedAddress : I32BitEnumAttrCaseBit<"unified_address", 1>;
-def ClauseRequiresUnifiedSharedMemory
-    : I32BitEnumAttrCaseBit<"unified_shared_memory", 2>;
-def ClauseRequiresDynamicAllocators
-    : I32BitEnumAttrCaseBit<"dynamic_allocators", 3>;
-
-def ClauseRequires : I32BitEnumAttr<
-    "ClauseRequires",
-    "requires clauses",
-    [
-      ClauseRequiresNone,
-      ClauseRequiresReverseOffload,
-      ClauseRequiresUnifiedAddress,
-      ClauseRequiresUnifiedSharedMemory,
-      ClauseRequiresDynamicAllocators
-    ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::omp";
-}
-def ClauseRequiresAttr :
-  EnumAttr<OpenMP_Dialect, ClauseRequires, "clause_requires"> {
 }
 
 #endif // OPENMP_OPS

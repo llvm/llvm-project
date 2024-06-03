@@ -1899,7 +1899,7 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
                         !D->defaultArgumentWasInherited();
   Record.push_back(OwnsDefaultArg);
   if (OwnsDefaultArg)
-    Record.AddTypeSourceInfo(D->getDefaultArgumentInfo());
+    Record.AddTemplateArgumentLoc(D->getDefaultArgument());
 
   if (!TC && !OwnsDefaultArg &&
       D->getDeclContext() == D->getLexicalDeclContext() &&
@@ -1941,7 +1941,7 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
                           !D->defaultArgumentWasInherited();
     Record.push_back(OwnsDefaultArg);
     if (OwnsDefaultArg)
-      Record.AddStmt(D->getDefaultArgument());
+      Record.AddTemplateArgumentLoc(D->getDefaultArgument());
     Code = serialization::DECL_NON_TYPE_TEMPLATE_PARM;
   }
 }

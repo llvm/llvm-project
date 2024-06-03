@@ -1467,6 +1467,28 @@ llvm.func @omp_atomic_update_intrinsic(%x:!llvm.ptr, %expr: i32) {
 
 // -----
 
+// CHECK-LABEL: @atomic_update_cmpxchg
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[EXPR:.*]]) {
+// CHECK:  %[[AT_LOAD_VAL:.*]] = load atomic i32, ptr %[[X]] monotonic, align 4
+// CHECK:  %[[LOAD_VAL_PHI:.*]] = phi i32 [ %[[AT_LOAD_VAL]], %entry ], [ %[[LOAD_VAL:.*]], %.atomic.cont ]
+// CHECK:  %[[VAL_SUCCESS:.*]] = cmpxchg ptr %[[X]], i32 %[[LOAD_VAL_PHI]], i32 %{{.*}} monotonic monotonic, align 4
+// CHECK:  %[[LOAD_VAL]] = extractvalue { i32, i1 } %[[VAL_SUCCESS]], 0
+// CHECK:  br i1 %{{.*}}, label %.atomic.exit, label %.atomic.cont
+
+llvm.func @atomic_update_cmpxchg(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  %0 = llvm.load %arg1 : !llvm.ptr -> f32
+  omp.atomic.update %arg0 : !llvm.ptr {
+  ^bb0(%arg2: i32):
+    %1 = llvm.sitofp %arg2 : i32 to f32
+    %2 = llvm.fadd %1, %0 : f32
+    %3 = llvm.fptosi %2 : f32 to i32
+    omp.yield(%3 : i32)
+  }
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @omp_atomic_capture_prefix_update
 // CHECK-SAME: (ptr %[[x:.*]], ptr %[[v:.*]], i32 %[[expr:.*]], ptr %[[xf:.*]], ptr %[[vf:.*]], float %[[exprf:.*]])
 llvm.func @omp_atomic_capture_prefix_update(

@@ -385,15 +385,19 @@ func.func @atomic_load(%ptr : !llvm.ptr) {
   %0 = llvm.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
   // CHECK: llvm.load volatile %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
   %1 = llvm.load volatile %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
+  // CHECK: llvm.load %{{.*}} atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> i128
+  %2 = llvm.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> i128
   llvm.return
 }
 
 // CHECK-LABEL: @atomic_store
-func.func @atomic_store(%val : f32, %ptr : !llvm.ptr) {
+func.func @atomic_store(%val : f32, %large_val : i256, %ptr : !llvm.ptr) {
   // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
   llvm.store %val, %ptr atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
   // CHECK: llvm.store volatile %{{.*}}, %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
   llvm.store volatile %val, %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic {alignment = 4 : i64} : i256, !llvm.ptr
+  llvm.store %large_val, %ptr atomic monotonic {alignment = 4 : i64} : i256, !llvm.ptr
   llvm.return
 }
 

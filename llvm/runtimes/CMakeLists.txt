@@ -93,6 +93,7 @@ function(builtin_default_target compiler_rt_path)
                                                 SANITIZER
                            USE_TOOLCHAIN
                            TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
+                           FOLDER "Compiler-RT"
                            ${EXTRA_ARGS})
 endfunction()
 
@@ -128,6 +129,7 @@ function(builtin_register_target compiler_rt_path name)
                                       ${COMMON_CMAKE_ARGS}
                                       ${${name}_extra_args}
                            USE_TOOLCHAIN
+                           FOLDER "Compiler-RT"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 endfunction()
 
@@ -148,6 +150,10 @@ if(compiler_rt_path)
       add_custom_target(builtins)
       add_custom_target(install-builtins)
       add_custom_target(install-builtins-stripped)
+      set_target_properties(
+        builtins install-builtins install-builtins-stripped
+        PROPERTIES FOLDER "Compiler-RT"
+      )
     endif()
 
     foreach(target ${LLVM_BUILTIN_TARGETS})
@@ -263,6 +269,7 @@ function(runtime_default_target)
                                          ${SUB_INSTALL_TARGETS}
                            USE_TOOLCHAIN
                            TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
+                           FOLDER "Runtimes"
                            ${EXTRA_ARGS})
 endfunction()
 
@@ -388,6 +395,7 @@ function(runtime_register_target name)
                            EXTRA_TARGETS ${${name}_extra_targets}
                                          ${${name}_test_targets}
                            USE_TOOLCHAIN
+                           FOLDER "Runtimes"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 
   add_dependencies(runtimes runtimes-${name})
@@ -401,14 +409,17 @@ function(runtime_register_target name)
   foreach(runtime_name ${runtime_names})
     if(NOT TARGET ${runtime_name})
       add_custom_target(${runtime_name})
+      set_target_properties(${runtime_name} PROPERTIES FOLDER "${runtime_name}")
     endif()
     add_dependencies(${runtime_name} ${runtime_name}-${name})
     if(NOT TARGET install-${runtime_name})
       add_custom_target(install-${runtime_name})
+      set_target_properties(install-${runtime_name} PROPERTIES FOLDER "${runtime_name}")
     endif()
     add_dependencies(install-${runtime_name} install-${runtime_name}-${name})
     if(NOT TARGET install-${runtime_name}-stripped)
       add_custom_target(install-${runtime_name}-stripped)
+      set_target_properties(install-${runtime_name} PROPERTIES FOLDER "${runtime_name}")
     endif()
     add_dependencies(install-${runtime_name}-stripped install-${runtime_name}-${name}-stripped)
   endforeach()
@@ -507,9 +518,17 @@ if(runtimes)
       add_custom_target(runtimes-configure)
       add_custom_target(install-runtimes)
       add_custom_target(install-runtimes-stripped)
+      set_target_properties(
+        runtimes runtimes-configure install-runtimes install-runtimes-stripped
+        PROPERTIES FOLDER "Runtimes"
+      )
       if(LLVM_INCLUDE_TESTS)
         add_custom_target(check-runtimes)
         add_custom_target(runtimes-test-depends)
+        set_target_properties(
+          check-runtimes runtimes-test-depends
+          PROPERTIES FOLDER "Runtimes"
+        )
         set(test_targets "")
       endif()
       if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
@@ -517,6 +536,10 @@ if(runtimes)
           add_custom_target(${component})
           add_custom_target(install-${component})
           add_custom_target(install-${component}-stripped)
+          set_target_properties(
+            ${component} install-${component} install-${component}-stripped
+            PROPERTIES FOLDER "${component}"
+          )
         endforeach()
       endif()
     endif()

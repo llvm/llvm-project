@@ -717,8 +717,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       [](UWTableKind K, const outliner::Candidate &C) {
         return std::max(K, C.getMF()->getFunction().getUWTableKind());
       });
-  if (UW != UWTableKind::None)
-    F->setUWTableKind(UW);
+  F->setUWTableKind(UW);
 
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
   IRBuilder<> Builder(EntryBB);

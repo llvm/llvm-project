@@ -1586,14 +1586,14 @@ void TypePrinter::printTemplateId(const TemplateSpecializationType *T,
   IncludeStrongLifetimeRAII Strong(Policy);
 
   TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl();
-  // FIXME: Null TD never excercised in test suite.
+  // FIXME: Null TD never exercised in test suite.
   if (FullyQualify && TD) {
     if (!Policy.SuppressScope)
       AppendScope(TD->getDeclContext(), OS, TD->getDeclName());
 
     OS << TD->getName();
   } else {
-    T->getTemplateName().print(OS, Policy);
+    T->getTemplateName().print(OS, Policy, TemplateName::Qualified::None);
   }
 
   DefaultTemplateArgsPolicyRAII TemplateArgs(Policy);
@@ -2273,16 +2273,17 @@ bool clang::isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,
 
   if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(Param)) {
     return TTPD->hasDefaultArgument() &&
-           isSubstitutedTemplateArgument(Ctx, Arg, TTPD->getDefaultArgument(),
-                                         Args, Depth);
+           isSubstitutedTemplateArgument(
+               Ctx, Arg, TTPD->getDefaultArgument().getArgument(), Args, Depth);
   } else if (auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
     return TTPD->hasDefaultArgument() &&
            isSubstitutedTemplateArgument(
                Ctx, Arg, TTPD->getDefaultArgument().getArgument(), Args, Depth);
   } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
     return NTTPD->hasDefaultArgument() &&
-           isSubstitutedTemplateArgument(Ctx, Arg, NTTPD->getDefaultArgument(),
-                                         Args, Depth);
+           isSubstitutedTemplateArgument(
+               Ctx, Arg, NTTPD->getDefaultArgument().getArgument(), Args,
+               Depth);
   }
   return false;
 }

@@ -30,6 +30,39 @@
 ; RUN: -o %t/output.tbd 2>&1 | FileCheck %s --check-prefix=INVALID_PROJECT_OPT
 ; INVALID_PROJECT_OPT: error: invalid argument '-Xproject' not allowed with '-fprofile-instr-generate'
 
+// Validate arguments not allowed with -X passed via json
+; RUN: not clang-installapi -target arm64-apple-macos12 \
+; RUN: -install_name @rpath/libfoo.dylib -current_version 1 -compatibility_version 1 \
+; RUN: -optionlist %t/options.json -I/fake/path \
+; RUN: -I%t -dynamiclib -o %t/output.tbd 2>&1 | FileCheck %s --check-prefix=INVALID_JSON_OPT
+; INVALID_JSON_OPT: error: invalid argument '-XApple' not allowed with '-I/fake/path'
+
+// Validate invalid json path
+; RUN: not clang-installapi -target arm64-apple-macos12 \
+; RUN: -install_name @rpath/libfoo.dylib -current_version 1 \
+; RUN: -compatibility_version 1 -optionlist %t/invalid_loc.json \
+; RUN: -I/fake/path -I%t -dynamiclib \
+; RUN: -o %t/output.tbd %t 2>&1 | FileCheck %s --check-prefix=INVALID_JSON_LOC -DMSG=%errc_ENOENT
+; INVALID_JSON_LOC: error: cannot open file {{.*}}invalid_loc.json': [[MSG]] 
+
+// Validate invalid json format 
+; RUN: not clang-installapi -target arm64-apple-macos12 \
+; RUN: -install_name @rpath/libfoo.dylib -current_version 1 \
+; RUN: -compatibility_version 1 -optionlist %t/invalid_format.json \
+; RUN: -I/fake/path -isysroot %sysroot -I%t -dynamiclib \
+; RUN: -o %t/output.tbd %t 2>&1 | FileCheck %s --check-prefix=INVALID_JSON_FORMAT
+; INVALID_JSON_FORMAT: error: could not read option input list {{.*}}invalid_format.json': invalid input format
+
+;--- options.json
+{
+  "Apple" : ["-I/fake/path"]
+}
+
+;--- invalid_format.json
+{
+  "Apple" : {"opt"  : "-I/fake/path"}
+}
+
 ;--- inputs.json
 {
   "headers": [ ],

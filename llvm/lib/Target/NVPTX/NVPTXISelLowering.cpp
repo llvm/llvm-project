@@ -1434,12 +1434,11 @@ std::string NVPTXTargetLowering::getPrototype(
 
     if (!Outs[OIdx].Flags.isByVal()) {
       if (IsTypePassedAsArray(Ty)) {
-        unsigned ParamAlign = 0;
         const CallInst *CallI = cast<CallInst>(&CB);
-        // +1 because index 0 is reserved for return type alignment
-        if (!getAlign(*CallI, i + 1, ParamAlign))
-          ParamAlign = getFunctionParamOptimizedAlign(F, Ty, DL).value();
-        O << ".param .align " << ParamAlign << " .b8 ";
+        Align ParamAlign =
+            getAlign(*CallI, i + AttributeList::FirstArgIndex)
+                .value_or(getFunctionParamOptimizedAlign(F, Ty, DL));
+        O << ".param .align " << ParamAlign.value() << " .b8 ";
         O << "_";
         O << "[" << DL.getTypeAllocSize(Ty) << "]";
         // update the index for Outs
@@ -1489,6 +1488,11 @@ std::string NVPTXTargetLowering::getPrototype(
   return Prototype;
 }
 
+Align NVPTXTargetLowering::getFunctionArgumentAlignment(
+    const Function *F, Type *Ty, unsigned Idx, const DataLayout &DL) const {
+  return getAlign(*F, Idx).value_or(getFunctionParamOptimizedAlign(F, Ty, DL));
+}
+
 Align NVPTXTargetLowering::getArgumentAlignment(const CallBase *CB, Type *Ty,
                                                 unsigned Idx,
                                                 const DataLayout &DL) const {
@@ -1497,7 +1501,6 @@ Align NVPTXTargetLowering::getArgumentAlignment(const CallBase *CB, Type *Ty,
     return DL.getABITypeAlign(Ty);
   }
 
-  unsigned Alignment = 0;
   const Function *DirectCallee = CB->getCalledFunction();
 
   if (!DirectCallee) {
@@ -1507,21 +1510,16 @@ Align NVPTXTargetLowering::getArgumentAlignment(const CallBase *CB, Type *Ty,
     // With bitcast'd call targets, the instruction will be the call
     if (const auto *CI = dyn_cast<CallInst>(CB)) {
       // Check if we have call alignment metadata
-      if (getAlign(*CI, Idx, Alignment))
-        return Align(Alignment);
+      if (MaybeAlign StackAlign = getAlign(*CI, Idx))
+        return StackAlign.value();
     }
     DirectCallee = getMaybeBitcastedCallee(CB);
   }
 
   // Check for function alignment information if we found that the
   // ultimate target is a Function
-  if (DirectCallee) {
-    if (getAlign(*DirectCallee, Idx, Alignment))
-      return Align(Alignment);
-    // If alignment information is not available, fall back to the
-    // default function param optimized type alignment
-    return getFunctionParamOptimizedAlign(DirectCallee, Ty, DL);
-  }
+  if (DirectCallee)
+    return getFunctionArgumentAlignment(DirectCallee, Ty, Idx, DL);
 
   // Call is indirect, fall back to the ABI type alignment
   return DL.getABITypeAlign(Ty);
@@ -3195,8 +3193,9 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       if (VTs.empty())
         report_fatal_error("Empty parameter types are not supported");
 
-      auto VectorInfo =
-          VectorizePTXValueVTs(VTs, Offsets, DL.getABITypeAlign(Ty));
+      Align ArgAlign = getFunctionArgumentAlignment(
+          F, Ty, i + AttributeList::FirstArgIndex, DL);
+      auto VectorInfo = VectorizePTXValueVTs(VTs, Offsets, ArgAlign);
 
       SDValue Arg = getParamSymbol(DAG, i, PtrVT);
       int VecIdx = -1; // Index of the first element of the current vector.
@@ -5615,17 +5614,103 @@ static SDValue TryMULWIDECombine(SDNode *N,
   return DCI.DAG.getNode(Opc, DL, MulType, TruncLHS, TruncRHS);
 }
 
+static bool isConstOne(const SDValue &Operand) {
+  const auto *Const = dyn_cast<ConstantSDNode>(Operand);
+  return Const && Const->getZExtValue() == 1;
+}
+
+static SDValue matchMADConstOnePattern(SDValue Add) {
+  if (Add->getOpcode() != ISD::ADD)
+    return SDValue();
+
+  if (isConstOne(Add->getOperand(0)))
+    return Add->getOperand(1);
+
+  if (isConstOne(Add->getOperand(1)))
+    return Add->getOperand(0);
+
+  return SDValue();
+}
+
+static SDValue combineMADConstOne(SDValue X, SDValue Add, EVT VT, SDLoc DL,
+                                  TargetLowering::DAGCombinerInfo &DCI) {
+
+  if (SDValue Y = matchMADConstOnePattern(Add))
+    return DCI.DAG.getNode(NVPTXISD::IMAD, DL, VT, X, Y, X);
+
+  return SDValue();
+}
+
+static SDValue combineMulSelectConstOne(SDValue X, SDValue Select, EVT VT,
+                                        SDLoc DL,
+                                        TargetLowering::DAGCombinerInfo &DCI) {
+  if (Select->getOpcode() != ISD::SELECT)
+    return SDValue();
+
+  SDValue Cond = Select->getOperand(0);
+
+  unsigned ConstOpNo;
+  if (isConstOne(Select->getOperand(1)))
+    ConstOpNo = 1;
+  else if (isConstOne(Select->getOperand(2)))
+    ConstOpNo = 2;
+  else
+    return SDValue();
+
+  SDValue Y = Select->getOperand((ConstOpNo == 1) ? 2 : 1);
+
+  // Do not combine if the resulting sequence is not obviously profitable.
+  if (!matchMADConstOnePattern(Y))
+    return SDValue();
+
+  SDValue NewMul = DCI.DAG.getNode(ISD::MUL, DL, VT, X, Y);
+
+  return DCI.DAG.getNode(ISD::SELECT, DL, VT, Cond,
+                         (ConstOpNo == 1) ? X : NewMul,
+                         (ConstOpNo == 1) ? NewMul : X);
+}
+
+static SDValue
+PerformMULCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
+                              TargetLowering::DAGCombinerInfo &DCI) {
+
+  EVT VT = N0.getValueType();
+  if (VT.isVector())
+    return SDValue();
+
+  if (VT != MVT::i16 && VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // (mul x, (add y, 1)) -> (mad x, y, x)
+  if (SDValue Res = combineMADConstOne(N0, N1, VT, DL, DCI))
+    return Res;
+  if (SDValue Res = combineMADConstOne(N1, N0, VT, DL, DCI))
+    return Res;
+
+  // (mul x, (select y, 1)) -> (select (mul x, y), x)
+  if (SDValue Res = combineMulSelectConstOne(N0, N1, VT, DL, DCI))
+    return Res;
+  if (SDValue Res = combineMulSelectConstOne(N1, N0, VT, DL, DCI))
+    return Res;
+
+  return SDValue();
+}
+
 /// PerformMULCombine - Runs PTX-specific DAG combine patterns on MUL nodes.
 static SDValue PerformMULCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  CodeGenOptLevel OptLevel) {
-  if (OptLevel > CodeGenOptLevel::None) {
-    // Try mul.wide combining at OptLevel > 0
-    if (SDValue Ret = TryMULWIDECombine(N, DCI))
-      return Ret;
-  }
+  if (OptLevel == CodeGenOptLevel::None)
+    return SDValue();
 
-  return SDValue();
+  if (SDValue Ret = TryMULWIDECombine(N, DCI))
+    return Ret;
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  return PerformMULCombineWithOperands(N, N0, N1, DCI);
 }
 
 /// PerformSHLCombine - Runs PTX-specific DAG combine patterns on SHL nodes.

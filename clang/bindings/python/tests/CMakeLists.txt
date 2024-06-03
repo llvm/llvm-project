@@ -11,7 +11,7 @@ add_custom_target(check-clang-python
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 set(RUN_PYTHON_TESTS TRUE)
-set_target_properties(check-clang-python PROPERTIES FOLDER "Clang tests")
+set_target_properties(check-clang-python PROPERTIES FOLDER "Clang/Tests")
 
 # Tests require libclang.so which is only built with LLVM_ENABLE_PIC=ON
 if(NOT LLVM_ENABLE_PIC)

@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Tools/PDLL/AST/Types.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -110,6 +111,93 @@ public:
     rewriter.replaceOpWithNewOp<emitc::CmpOp>(op, op.getType(), pred, lhs, rhs);
     return success();
   }
+};
+
+template <typename ArithOp, bool castToUnsigned>
+class CastConversion : public OpConversionPattern<ArithOp> {
+public:
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type opReturnType = this->getTypeConverter()->convertType(op.getType());
+    if (!isa_and_nonnull<IntegerType>(opReturnType))
+      return rewriter.notifyMatchFailure(op, "expected integer result type");
+
+    if (adaptor.getOperands().size() != 1) {
+      return rewriter.notifyMatchFailure(
+          op, "CastConversion only supports unary ops");
+    }
+
+    Type operandType = adaptor.getIn().getType();
+    if (!isa_and_nonnull<IntegerType>(operandType))
+      return rewriter.notifyMatchFailure(op, "expected integer operand type");
+
+    // Signed (sign-extending) casts from i1 are not supported.
+    if (operandType.isInteger(1) && !castToUnsigned)
+      return rewriter.notifyMatchFailure(op,
+                                         "operation not supported on i1 type");
+
+    // to-i1 conversions: arith semantics want truncation, whereas (bool)(v) is
+    // equivalent to (v != 0). Implementing as (bool)(v & 0x01) gives
+    // truncation.
+    if (opReturnType.isInteger(1)) {
+      auto constOne = rewriter.create<emitc::ConstantOp>(
+          op.getLoc(), operandType, rewriter.getIntegerAttr(operandType, 1));
+      auto oneAndOperand = rewriter.create<emitc::BitwiseAndOp>(
+          op.getLoc(), operandType, adaptor.getIn(), constOne);
+      rewriter.replaceOpWithNewOp<emitc::CastOp>(op, opReturnType,
+                                                 oneAndOperand);
+      return success();
+    }
+
+    bool isTruncation = operandType.getIntOrFloatBitWidth() >
+                        opReturnType.getIntOrFloatBitWidth();
+    bool doUnsigned = castToUnsigned || isTruncation;
+
+    Type castType = opReturnType;
+    // If the op is a ui variant and the type wanted as
+    // return type isn't unsigned, we need to issue an unsigned type to do
+    // the conversion.
+    if (castType.isUnsignedInteger() != doUnsigned) {
+      castType = rewriter.getIntegerType(opReturnType.getIntOrFloatBitWidth(),
+                                         /*isSigned=*/!doUnsigned);
+    }
+
+    Value actualOp = adaptor.getIn();
+    // Adapt the signedness of the operand if necessary
+    if (operandType.isUnsignedInteger() != doUnsigned) {
+      Type correctSignednessType =
+          rewriter.getIntegerType(operandType.getIntOrFloatBitWidth(),
+                                  /*isSigned=*/!doUnsigned);
+      actualOp = rewriter.template create<emitc::CastOp>(
+          op.getLoc(), correctSignednessType, actualOp);
+    }
+
+    auto result = rewriter.template create<emitc::CastOp>(op.getLoc(), castType,
+                                                          actualOp);
+
+    // Cast to the expected output type
+    if (castType != opReturnType) {
+      result = rewriter.template create<emitc::CastOp>(op.getLoc(),
+                                                       opReturnType, result);
+    }
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+template <typename ArithOp>
+class UnsignedCastConversion : public CastConversion<ArithOp, true> {
+  using CastConversion<ArithOp, true>::CastConversion;
+};
+
+template <typename ArithOp>
+class SignedCastConversion : public CastConversion<ArithOp, false> {
+  using CastConversion<ArithOp, false>::CastConversion;
 };
 
 template <typename ArithOp, typename EmitCOp>
@@ -306,13 +394,19 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ArithConstantOpConversionPattern,
     ArithOpConversion<arith::AddFOp, emitc::AddOp>,
     ArithOpConversion<arith::DivFOp, emitc::DivOp>,
+    ArithOpConversion<arith::DivSIOp, emitc::DivOp>,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,
+    ArithOpConversion<arith::RemSIOp, emitc::RemOp>,
     ArithOpConversion<arith::SubFOp, emitc::SubOp>,
     IntegerOpConversion<arith::AddIOp, emitc::AddOp>,
     IntegerOpConversion<arith::MulIOp, emitc::MulOp>,
     IntegerOpConversion<arith::SubIOp, emitc::SubOp>,
     CmpIOpConversion,
     SelectOpConversion,
+    // Truncation is guaranteed for unsigned types.
+    UnsignedCastConversion<arith::TruncIOp>,
+    SignedCastConversion<arith::ExtSIOp>,
+    UnsignedCastConversion<arith::ExtUIOp>,
     ItoFCastOpConversion<arith::SIToFPOp>,
     ItoFCastOpConversion<arith::UIToFPOp>,
     FtoICastOpConversion<arith::FPToSIOp>,

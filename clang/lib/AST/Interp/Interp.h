@@ -56,7 +56,8 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK);
 
 /// Checks if a pointer is a dummy pointer.
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                AccessKinds AK);
 
 /// Checks if a pointer is null.
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -588,7 +589,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Inc(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
@@ -602,7 +603,7 @@ bool Inc(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool IncPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK_Increment))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
     return false;
@@ -617,7 +618,7 @@ bool IncPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Dec(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
@@ -631,7 +632,7 @@ bool Dec(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool DecPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckDummy(S, OpPC, Ptr))
+  if (!CheckDummy(S, OpPC, Ptr, AK_Decrement))
     return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
     return false;
@@ -1245,6 +1246,8 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
     return false;
 
@@ -1333,16 +1336,19 @@ inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool FinishInitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   return true;
 }
 
 inline bool FinishInit(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   return true;
 }
 
@@ -1367,9 +1373,6 @@ inline bool GetPtrVirtBasePop(InterpState &S, CodePtr OpPC,
   assert(D);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
-    return false;
-  if (Ptr.isDummy()) // FIXME: Once we have type info for dummy pointers, this
-                     // needs to go.
     return false;
   return VirtBaseHelper(S, OpPC, D, Ptr);
 }
@@ -1536,9 +1539,6 @@ inline bool Memcpy(InterpState &S, CodePtr OpPC) {
 template <class T, ArithOp Op>
 bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
                   const Pointer &Ptr) {
-  if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
-    return false;
-
   // A zero offset does not change the pointer.
   if (Offset.isZero()) {
     S.Stk.push<Pointer>(Ptr);
@@ -1556,8 +1556,12 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   if (!CheckArray(S, OpPC, Ptr))
     return false;
 
-  uint64_t Index = Ptr.getIndex();
   uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
+  uint64_t Index;
+  if (Ptr.isOnePastEnd())
+    Index = MaxIndex;
+  else
+    Index = Ptr.getIndex();
 
   bool Invalid = false;
   // Helper to report an invalid offset, computed as APSInt.

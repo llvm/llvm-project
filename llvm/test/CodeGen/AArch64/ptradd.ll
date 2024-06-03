@@ -81,13 +81,12 @@ define void @vector_gep_v3i32(<3 x ptr> %b, <3 x i32> %off, ptr %p) {
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    smov x9, v3.s[1]
-; CHECK-GI-NEXT:    mov s3, v3.s[2]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fmov x8, d2
+; CHECK-GI-NEXT:    mov w8, v3.s[2]
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    add x8, x8, w9, sxtw
+; CHECK-GI-NEXT:    fmov x9, d2
+; CHECK-GI-NEXT:    add x8, x9, w8, sxtw
 ; CHECK-GI-NEXT:    add v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    str x8, [x0, #16]
 ; CHECK-GI-NEXT:    str q0, [x0]

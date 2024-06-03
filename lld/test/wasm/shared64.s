@@ -154,6 +154,7 @@ get_local_func_address:
 # CHECK-NEXT:           Index:           0
 # CHECK-NEXT:           ElemType:        FUNCREF
 # CHECK-NEXT:           Limits:
+# CHECK-NEXT:             Flags:         [ IS_64 ]
 # CHECK-NEXT:             Minimum:         0x2
 # CHECK-NEXT:       - Module:          env
 # CHECK-NEXT:         Field:           __stack_pointer
@@ -169,11 +170,6 @@ get_local_func_address:
 # CHECK-NEXT:         Field:           __table_base
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         GlobalType:      I64
-# CHECK-NEXT:         GlobalMutable:   false
-# CHECK-NEXT:       - Module:          env
-# CHECK-NEXT:         Field:           __table_base32
-# CHECK-NEXT:         Kind:            GLOBAL
-# CHECK-NEXT:         GlobalType:      I32
 # CHECK-NEXT:         GlobalMutable:   false
 # CHECK-NEXT:       - Module:          GOT.mem
 # CHECK-NEXT:         Field:           indirect_func
@@ -209,7 +205,7 @@ get_local_func_address:
 # CHECK-NEXT:     Segments:
 # CHECK-NEXT:       - Offset:
 # CHECK-NEXT:           Opcode:          GLOBAL_GET
-# CHECK-NEXT:           Index:           3
+# CHECK-NEXT:           Index:           2
 # CHECK-NEXT:         Functions:       [ 3, 2 ]
 
 # check the generated code in __wasm_call_ctors and __wasm_apply_data_relocs functions
@@ -223,7 +219,7 @@ get_local_func_address:
 # DIS-NEXT:                 i64.const       4
 # DIS-NEXT:                 global.get      1
 # DIS-NEXT:                 i64.add
-# DIS-NEXT:                 global.get      5
+# DIS-NEXT:                 global.get      4
 # DIS-NEXT:                 i64.store       0:p2align=2
 # DIS-NEXT:                 i64.const       12
 # DIS-NEXT:                 global.get      1
@@ -242,12 +238,12 @@ get_local_func_address:
 # DIS-NEXT:                 i64.const       24
 # DIS-NEXT:                 global.get      1
 # DIS-NEXT:                 i64.add
-# DIS-NEXT:                 global.get      6
+# DIS-NEXT:                 global.get      5
 # DIS-NEXT:                 i64.store       0:p2align=2
 # DIS-NEXT:                 i64.const       32
 # DIS-NEXT:                 global.get      1
 # DIS-NEXT:                 i64.add
-# DIS-NEXT:                 global.get      7
+# DIS-NEXT:                 global.get      6
 # DIS-NEXT:                 i32.const       4
 # DIS-NEXT:                 i32.add
 # DIS-NEXT:                 i32.store       0

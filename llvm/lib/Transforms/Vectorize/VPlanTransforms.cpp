@@ -935,6 +935,19 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 #endif
   }
 
+  // Simplify (X && Y) || (X && !Y) -> X.
+  // TODO: Split up into simpler, modular combines: (X && Y) || (X && Z) into X
+  // && (Y || Z) and (X || !X) into true. This requires queuing newly created
+  // recipes to be visited during simplification.
+  VPValue *X, *Y, *X1, *Y1;
+  if (match(&R,
+            m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                         m_LogicalAnd(m_VPValue(X1), m_Not(m_VPValue(Y1))))) &&
+      X == X1 && Y == Y1) {
+    R.getVPSingleValue()->replaceAllUsesWith(X);
+    return;
+  }
+
   if (match(&R, m_CombineOr(m_Mul(m_VPValue(A), m_SpecificInt(1)),
                             m_Mul(m_SpecificInt(1), m_VPValue(A)))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
@@ -1305,8 +1318,16 @@ void VPlanTransforms::addActiveLaneMask(
 /// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
 /// ...
 ///
-void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
+bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  // The transform updates all users of inductions to work based on EVL, instead
+  // of the VF directly. At the moment, widened inductions cannot be updated, so
+  // bail out if the plan contains any.
+  if (any_of(Header->phis(), [](VPRecipeBase &Phi) {
+        return (isa<VPWidenIntOrFpInductionRecipe>(&Phi) ||
+                isa<VPWidenPointerInductionRecipe>(&Phi));
+      }))
+    return false;
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
@@ -1364,6 +1385,7 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
+  return true;
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
@@ -1402,7 +1424,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
         // for dependence analysis). Instead, replace it with an equivalent Add.
         // This is possible as all users of the disjoint OR only access lanes
         // where the operands are disjoint or poison otherwise.
-        if (match(RecWithFlags, m_Or(m_VPValue(A), m_VPValue(B))) &&
+        if (match(RecWithFlags, m_BinaryOr(m_VPValue(A), m_VPValue(B))) &&
             RecWithFlags->isDisjoint()) {
           VPBuilder Builder(RecWithFlags);
           VPInstruction *New = Builder.createOverflowingOp(

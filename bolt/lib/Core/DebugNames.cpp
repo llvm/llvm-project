@@ -112,8 +112,6 @@ void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
 // Returns true if DW_TAG_variable should be included in .debug-names based on
 // section 6.1.1.1 for DWARF5 spec.
 static bool shouldIncludeVariable(const DWARFUnit &Unit, const DIE &Die) {
-  if (Die.findAttribute(dwarf::Attribute::DW_AT_declaration))
-    return false;
   const DIEValue LocAttrInfo =
       Die.findAttribute(dwarf::Attribute::DW_AT_location);
   if (!LocAttrInfo)
@@ -148,6 +146,8 @@ static bool shouldIncludeVariable(const DWARFUnit &Unit, const DIE &Die) {
 
 bool static canProcess(const DWARFUnit &Unit, const DIE &Die,
                        std::string &NameToUse, const bool TagsOnly) {
+  if (Die.findAttribute(dwarf::Attribute::DW_AT_declaration))
+    return false;
   switch (Die.getTag()) {
   case dwarf::DW_TAG_base_type:
   case dwarf::DW_TAG_class_type:

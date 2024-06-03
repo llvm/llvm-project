@@ -55,7 +55,6 @@ using binary_semaphore = counting_semaphore<1>;
 #include <__atomic/atomic_base.h>
 #include <__atomic/atomic_sync.h>
 #include <__atomic/memory_order.h>
-#include <__availability>
 #include <__chrono/time_point.h>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/support.h>

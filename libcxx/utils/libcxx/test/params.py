@@ -144,6 +144,14 @@ def getSuitableClangTidy(cfg):
 # fmt: off
 DEFAULT_PARAMETERS = [
     Parameter(
+        name="compiler",
+        type=str,
+        help="The path of the compiler to use for testing.",
+        actions=lambda cxx: [
+            AddSubstitution("%{cxx}", shlex.quote(cxx)),
+        ],
+    ),
+    Parameter(
         name="target_triple",
         type=str,
         help="The target triple to compile the test suite for. This must be "
