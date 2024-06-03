@@ -22,6 +22,7 @@
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
+#include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/unreachable.h>
