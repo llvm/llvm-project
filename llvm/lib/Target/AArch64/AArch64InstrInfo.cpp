@@ -4661,7 +4661,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(AArch64::Z0 + (DestReg - AArch64::Q0), RegState::Define)
           .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0))
           .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0));
-    else if (Subtarget.hasNEON())
+    else if (Subtarget.isNeonAvailable())
       BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestReg)
           .addReg(SrcReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
@@ -4671,7 +4671,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcReg, getKillRegState(KillSrc))
           .addReg(AArch64::SP)
           .addImm(-16);
-      BuildMI(MBB, I, DL, get(AArch64::LDRQpre))
+      BuildMI(MBB, I, DL, get(AArch64::LDRQpost))
           .addReg(AArch64::SP, RegState::Define)
           .addReg(DestReg, RegState::Define)
           .addReg(AArch64::SP)
