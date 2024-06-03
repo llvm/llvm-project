@@ -51,7 +51,7 @@ public:
   virtual void MacroDefinitionRead(serialization::PreprocessedEntityID,
                                    MacroDefinitionRecord *MD) {}
   /// A module definition was read from the AST file.
-  virtual void ModuleRead(serialization::SubmoduleID ID, Module *Mod) {}
+  virtual void ModuleRead(serialization::SubmoduleID ID, const Module *Mod) {}
   /// A module import was read from the AST file.
   virtual void ModuleImportRead(serialization::SubmoduleID ID,
                                 SourceLocation ImportLoc) {}

@@ -658,7 +658,7 @@ void CodeGenModule::EmitCXXThreadLocalInitFunc() {
    We then call initializers for the Private Module Fragment (if present)
 */
 
-void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
+void CodeGenModule::EmitCXXModuleInitFunc(const Module *Primary) {
   assert(Primary->isInterfaceOrPartition() &&
          "The function should only be called for C++20 named module interface"
          " or partition.");
@@ -670,28 +670,28 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   // Module initializers for imported modules are emitted first.
 
   // Collect all the modules that we import
-  llvm::SmallSetVector<Module *, 8> AllImports;
+  llvm::SmallSetVector<const Module *, 8> AllImports;
   // Ones that we export
   for (auto I : Primary->Exports)
     AllImports.insert(I.getPointer());
   // Ones that we only import.
-  for (Module *M : Primary->Imports)
+  for (const Module *M : Primary->Imports)
     AllImports.insert(M);
   // Ones that we import in the global module fragment or the private module
   // fragment.
-  for (Module *SubM : Primary->submodules()) {
+  for (const Module *SubM : Primary->submodules()) {
     assert((SubM->isGlobalModule() || SubM->isPrivateModule()) &&
            "The sub modules of C++20 module unit should only be global module "
            "fragments or private module framents.");
     assert(SubM->Exports.empty() &&
            "The global mdoule fragments and the private module fragments are "
            "not allowed to export import modules.");
-    for (Module *M : SubM->Imports)
+    for (const Module *M : SubM->Imports)
       AllImports.insert(M);
   }
 
   SmallVector<llvm::Function *, 8> ModuleInits;
-  for (Module *M : AllImports) {
+  for (const Module *M : AllImports) {
     // No Itanium initializer in header like modules.
     if (M->isHeaderLikeModule())
       continue; // TODO: warn of mixed use of module map modules and C++20?
@@ -831,7 +831,7 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   // When we import C++20 modules, we must run their initializers first.
   SmallVector<llvm::Function *, 8> ModuleInits;
   if (CXX20ModuleInits)
-    for (Module *M : ImportedModules) {
+    for (const Module *M : ImportedModules) {
       // No Itanium initializer in header like modules.
       if (M->isHeaderLikeModule())
         continue;

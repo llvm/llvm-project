@@ -139,7 +139,7 @@ public:
   /// \param D The definition that was previously not visible.
   /// \param M The containing module in which the definition was made visible,
   ///        if any.
-  virtual void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) {}
+  virtual void RedefinedHiddenDefinition(const NamedDecl *D, const Module *M) {}
 
   /// An attribute was added to a RecordDecl
   ///

@@ -3663,7 +3663,7 @@ llvm::DIModule *CGDebugInfo::getParentModuleOrNull(const Decl *D) {
     // file where the type's definition is located, so it might be
     // best to make this behavior a command line or debugger tuning
     // option.
-    if (Module *M = D->getOwningModule()) {
+    if (const Module *M = D->getOwningModule()) {
       // This is a (sub-)module.
       auto Info = ASTSourceDescriptor(*M);
       return getOrCreateModuleRef(Info, /*SkeletonCU=*/false);
@@ -5864,7 +5864,7 @@ void CGDebugInfo::EmitUsingEnumDecl(const UsingEnumDecl &UD) {
 void CGDebugInfo::EmitImportDecl(const ImportDecl &ID) {
   if (CGM.getCodeGenOpts().getDebuggerTuning() != llvm::DebuggerKind::LLDB)
     return;
-  if (Module *M = ID.getImportedModule()) {
+  if (const Module *M = ID.getImportedModule()) {
     auto Info = ASTSourceDescriptor(*M);
     auto Loc = ID.getLocation();
     DBuilder.createImportedDeclaration(

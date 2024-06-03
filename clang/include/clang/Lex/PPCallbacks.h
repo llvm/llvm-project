@@ -153,8 +153,8 @@ public:
   ///
   /// \param ForPragma If entering from pragma directive.
   ///
-  virtual void EnteredSubmodule(Module *M, SourceLocation ImportLoc,
-                                bool ForPragma) { }
+  virtual void EnteredSubmodule(const Module *M, SourceLocation ImportLoc,
+                                bool ForPragma) {}
 
   /// Callback invoked whenever a submodule was left.
   ///
@@ -164,8 +164,8 @@ public:
   ///
   /// \param ForPragma If entering from pragma directive.
   ///
-  virtual void LeftSubmodule(Module *M, SourceLocation ImportLoc,
-                             bool ForPragma) { }
+  virtual void LeftSubmodule(const Module *M, SourceLocation ImportLoc,
+                             bool ForPragma) {}
 
   /// Callback invoked whenever there was an explicit module-import
   /// syntax.
@@ -487,13 +487,13 @@ public:
                                SuggestedModule, ModuleImported, FileType);
   }
 
-  void EnteredSubmodule(Module *M, SourceLocation ImportLoc,
+  void EnteredSubmodule(const Module *M, SourceLocation ImportLoc,
                         bool ForPragma) override {
     First->EnteredSubmodule(M, ImportLoc, ForPragma);
     Second->EnteredSubmodule(M, ImportLoc, ForPragma);
   }
 
-  void LeftSubmodule(Module *M, SourceLocation ImportLoc,
+  void LeftSubmodule(const Module *M, SourceLocation ImportLoc,
                      bool ForPragma) override {
     First->LeftSubmodule(M, ImportLoc, ForPragma);
     Second->LeftSubmodule(M, ImportLoc, ForPragma);

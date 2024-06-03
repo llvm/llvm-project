@@ -190,7 +190,7 @@ void HeaderSearch::getHeaderMapFileNames(
     Names.push_back(std::string(HM.first.getName()));
 }
 
-std::string HeaderSearch::getCachedModuleFileName(Module *Module) {
+std::string HeaderSearch::getCachedModuleFileName(const Module *Module) {
   OptionalFileEntryRef ModuleMap =
       getModuleMap().getModuleMapFileForUniquing(Module);
   // The ModuleMap maybe a nullptr, when we load a cached C++ module without
@@ -231,7 +231,8 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
   return {};
 }
 
-std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
+std::string
+HeaderSearch::getPrebuiltImplicitModuleFileName(const Module *Module) {
   OptionalFileEntryRef ModuleMap =
       getModuleMap().getModuleMapFileForUniquing(Module);
   StringRef ModuleName = Module->Name;
@@ -602,7 +603,7 @@ getTopFrameworkDir(FileManager &FileMgr, StringRef DirName,
   return TopFrameworkDir;
 }
 
-static bool needModuleLookup(Module *RequestingModule,
+static bool needModuleLookup(const Module *RequestingModule,
                              bool HasSuggestedModule) {
   return HasSuggestedModule ||
          (RequestingModule && RequestingModule->NoUndeclaredIncludes);
@@ -1441,9 +1442,9 @@ void HeaderSearch::MarkFileModuleHeader(FileEntryRef FE,
   HFI.isCompilingModuleHeader |= isCompilingModuleHeader;
 }
 
-bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
-                                          FileEntryRef File, bool isImport,
-                                          bool ModulesEnabled, Module *M,
+bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP, FileEntryRef File,
+                                          bool isImport, bool ModulesEnabled,
+                                          const Module *M,
                                           bool &IsFirstIncludeOfFile) {
   // An include file should be entered if either:
   // 1. This is the first include of the file.
@@ -1936,7 +1937,7 @@ HeaderSearch::loadModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
   return LMM_InvalidModuleMap;
 }
 
-void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
+void HeaderSearch::collectAllModules(SmallVectorImpl<const Module *> &Modules) {
   Modules.clear();
 
   if (HSOpts->ImplicitModuleMaps) {

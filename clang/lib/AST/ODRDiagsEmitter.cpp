@@ -42,7 +42,7 @@ static unsigned computeODRHash(const TemplateArgument &TA) {
 
 std::string ODRDiagsEmitter::getOwningModuleNameForDiagnostic(const Decl *D) {
   // If we know the owning module, use it.
-  if (Module *M = D->getImportedOwningModule())
+  if (const Module *M = D->getImportedOwningModule())
     return M->getFullModuleName();
 
   // Not from a module.

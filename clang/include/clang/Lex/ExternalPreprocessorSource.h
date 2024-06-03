@@ -39,7 +39,7 @@ public:
   virtual IdentifierInfo *GetIdentifier(unsigned ID) = 0;
 
   /// Map a module ID to a module.
-  virtual Module *getModule(unsigned ModuleID) = 0;
+  virtual const Module *getModule(unsigned ModuleID) = 0;
 };
 
 }

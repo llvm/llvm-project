@@ -547,8 +547,8 @@ public:
   /// \param M The module to which `File` belongs (this should usually be the
   /// SuggestedModule returned by LookupFile/LookupSubframeworkHeader)
   bool ShouldEnterIncludeFile(Preprocessor &PP, FileEntryRef File,
-                              bool isImport, bool ModulesEnabled, Module *M,
-                              bool &IsFirstIncludeOfFile);
+                              bool isImport, bool ModulesEnabled,
+                              const Module *M, bool &IsFirstIncludeOfFile);
 
   /// Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
@@ -622,7 +622,7 @@ public:
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getCachedModuleFileName(Module *Module);
+  std::string getCachedModuleFileName(const Module *Module);
 
   /// Retrieve the name of the prebuilt module file that should be used
   /// to load a module with the given name.
@@ -644,7 +644,7 @@ public:
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getPrebuiltImplicitModuleFileName(Module *Module);
+  std::string getPrebuiltImplicitModuleFileName(const Module *Module);
 
   /// Retrieve the name of the (to-be-)cached module file that should
   /// be used to load a module with the given name.
@@ -736,7 +736,7 @@ public:
   /// Collect the set of all known, top-level modules.
   ///
   /// \param Modules Will be filled with the set of known, top-level modules.
-  void collectAllModules(SmallVectorImpl<Module *> &Modules);
+  void collectAllModules(SmallVectorImpl<const Module *> &Modules);
 
   /// Load all known, top-level system modules.
   void loadTopLevelSystemModules();

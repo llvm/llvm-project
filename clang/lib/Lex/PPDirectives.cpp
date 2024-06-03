@@ -880,7 +880,7 @@ Module *Preprocessor::getModuleForLocation(SourceLocation Loc,
 OptionalFileEntryRef
 Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
                                                SourceLocation Loc) {
-  Module *IncM = getModuleForLocation(
+  const Module *IncM = getModuleForLocation(
       IncLoc, LangOpts.ModulesValidateTextualHeaderIncludes);
 
   // Walk up through the include stack, looking through textual headers of M
@@ -1902,7 +1902,7 @@ bool Preprocessor::checkModuleIsAvailable(const LangOptions &LangOpts,
                                           DiagnosticsEngine &Diags) {
   Module::Requirement Requirement;
   Module::UnresolvedHeaderDirective MissingHeader;
-  Module *ShadowingModule = nullptr;
+  const Module *ShadowingModule = nullptr;
   if (M.isAvailable(LangOpts, TargetInfo, Requirement, MissingHeader,
                     ShadowingModule))
     return false;
@@ -2296,7 +2296,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     // FIXME: Should we have a second loadModule() overload to avoid this
     // extra lookup step?
     SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
-    for (Module *Mod = ModuleToImport; Mod; Mod = Mod->Parent)
+    for (const Module *Mod = ModuleToImport; Mod; Mod = Mod->Parent)
       Path.push_back(std::make_pair(getIdentifierInfo(Mod->Name),
                                     FilenameTok.getLocation()));
     std::reverse(Path.begin(), Path.end());
@@ -2319,7 +2319,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       Action = Import;
     } else if (Imported.isMissingExpected()) {
       markClangModuleAsAffecting(
-          static_cast<Module *>(Imported)->getTopLevelModule());
+          static_cast<const Module *>(Imported)->getTopLevelModule());
       // We failed to find a submodule that we assumed would exist (because it
       // was in the directory of an umbrella header, for instance), but no
       // actual module containing it exists (because the umbrella header is

@@ -1329,7 +1329,7 @@ static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
 /// using the options provided by the importing compiler instance. Returns true
 /// if the module was built without errors.
 static bool compileModule(CompilerInstance &ImportingInstance,
-                          SourceLocation ImportLoc, Module *Module,
+                          SourceLocation ImportLoc, const Module *Module,
                           StringRef ModuleFileName) {
   InputKind IK(getLanguageFromOptions(ImportingInstance.getLangOpts()),
                InputKind::ModuleMap);
@@ -1410,7 +1410,8 @@ static bool compileModule(CompilerInstance &ImportingInstance,
 static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
                                       SourceLocation ImportLoc,
                                       SourceLocation ModuleNameLoc,
-                                      Module *Module, StringRef ModuleFileName,
+                                      const Module *Module,
+                                      StringRef ModuleFileName,
                                       bool *OutOfDate) {
   DiagnosticsEngine &Diags = ImportingInstance.getDiagnostics();
 
@@ -1445,7 +1446,7 @@ static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
 static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
                                         SourceLocation ImportLoc,
                                         SourceLocation ModuleNameLoc,
-                                        Module *Module,
+                                        const Module *Module,
                                         StringRef ModuleFileName) {
   if (!compileModule(ImportingInstance, ModuleNameLoc, Module,
                      ModuleFileName)) {
@@ -1470,7 +1471,8 @@ static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
 /// bugs in the lock file manager.
 static bool compileModuleAndReadASTBehindLock(
     CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
-    SourceLocation ModuleNameLoc, Module *Module, StringRef ModuleFileName) {
+    SourceLocation ModuleNameLoc, const Module *Module,
+    StringRef ModuleFileName) {
   DiagnosticsEngine &Diags = ImportingInstance.getDiagnostics();
 
   Diags.Report(ModuleNameLoc, diag::remark_module_lock)
@@ -1541,7 +1543,8 @@ static bool compileModuleAndReadASTBehindLock(
 static bool compileModuleAndReadAST(CompilerInstance &ImportingInstance,
                                     SourceLocation ImportLoc,
                                     SourceLocation ModuleNameLoc,
-                                    Module *Module, StringRef ModuleFileName) {
+                                    const Module *Module,
+                                    StringRef ModuleFileName) {
   return ImportingInstance.getInvocation()
                  .getFrontendOpts()
                  .BuildingImplicitModuleUsesLock
@@ -1556,7 +1559,7 @@ static bool compileModuleAndReadAST(CompilerInstance &ImportingInstance,
 /// Diagnose differences between the current definition of the given
 /// configuration macro and the definition provided on the command line.
 static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
-                             Module *Mod, SourceLocation ImportLoc) {
+                             const Module *Mod, SourceLocation ImportLoc) {
   IdentifierInfo *Id = PP.getIdentifierInfo(ConfigMacro);
   SourceManager &SourceMgr = PP.getSourceManager();
 
@@ -1611,9 +1614,9 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
   }
 }
 
-static void checkConfigMacros(Preprocessor &PP, Module *M,
+static void checkConfigMacros(Preprocessor &PP, const Module *M,
                               SourceLocation ImportLoc) {
-  clang::Module *TopModule = M->getTopLevelModule();
+  const clang::Module *TopModule = M->getTopLevelModule();
   for (const StringRef ConMacro : TopModule->ConfigMacros) {
     checkConfigMacro(PP, ConMacro, M, ImportLoc);
   }
@@ -1816,7 +1819,7 @@ enum ModuleSource {
 /// Select a source for loading the named module and compute the filename to
 /// load it from.
 static ModuleSource selectModuleSource(
-    Module *M, StringRef ModuleName, std::string &ModuleFilename,
+    const Module *M, StringRef ModuleName, std::string &ModuleFilename,
     const std::map<std::string, std::string, std::less<>> &BuiltModules,
     HeaderSearch &HS) {
   assert(ModuleFilename.empty() && "Already has a module source?");
@@ -2122,7 +2125,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       SmallVector<StringRef, 2> Best;
       unsigned BestEditDistance = (std::numeric_limits<unsigned>::max)();
 
-      for (class Module *SubModule : Module->submodules()) {
+      for (const class Module *SubModule : Module->submodules()) {
         unsigned ED =
             Name.edit_distance(SubModule->Name,
                                /*AllowReplacements=*/true, BestEditDistance);
@@ -2303,7 +2306,7 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
     bool RecreateIndex = false;
     for (ModuleMap::module_iterator I = MMap.module_begin(),
         E = MMap.module_end(); I != E; ++I) {
-      Module *TheModule = I->second;
+      const Module *TheModule = I->second;
       OptionalFileEntryRef Entry = TheModule->getASTFile();
       if (!Entry) {
         SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;

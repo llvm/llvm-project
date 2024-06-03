@@ -296,7 +296,7 @@ public:
   SmallVector<Requirement, 2> Requirements;
 
   /// A module with the same name that shadows this module.
-  Module *ShadowingModule = nullptr;
+  const Module *ShadowingModule = nullptr;
 
   /// Whether this module has declared itself unimportable, either because
   /// it's missing a requirement from \p Requirements or because it's been
@@ -403,7 +403,7 @@ public:
 
   /// The set of top-level modules that affected the compilation of this module,
   /// but were not imported.
-  llvm::SmallSetVector<Module *, 2> AffectingClangModules;
+  llvm::SmallSetVector<const Module *, 2> AffectingClangModules;
 
   /// Describes an exported module.
   ///
@@ -433,7 +433,7 @@ public:
   SmallVector<UnresolvedExportDecl, 2> UnresolvedExports;
 
   /// The directly used modules.
-  SmallVector<Module *, 2> DirectUses;
+  SmallVector<const Module *, 2> DirectUses;
 
   /// The set of use declarations that have yet to be resolved.
   SmallVector<ModuleId, 2> UnresolvedDirectUses;
@@ -487,7 +487,7 @@ public:
   /// A conflict between two modules.
   struct Conflict {
     /// The module that this module conflicts with.
-    Module *Other;
+    const Module *Other;
 
     /// The message provided to the user when there is a conflict.
     std::string Message;
@@ -519,7 +519,7 @@ public:
   /// \param ShadowingModule If this module is unimportable because it is
   /// shadowed, this parameter will be set to the shadowing module.
   bool isUnimportable(const LangOptions &LangOpts, const TargetInfo &Target,
-                      Requirement &Req, Module *&ShadowingModule) const;
+                      Requirement &Req, const Module *&ShadowingModule) const;
 
   /// Determine whether this module can be built in this compilation.
   bool isForBuilding(const LangOptions &LangOpts) const;
@@ -545,11 +545,9 @@ public:
   ///
   /// \param ShadowingModule If this module is unavailable because it is
   /// shadowed, this parameter will be set to the shadowing module.
-  bool isAvailable(const LangOptions &LangOpts,
-                   const TargetInfo &Target,
-                   Requirement &Req,
-                   UnresolvedHeaderDirective &MissingHeader,
-                   Module *&ShadowingModule) const;
+  bool isAvailable(const LangOptions &LangOpts, const TargetInfo &Target,
+                   Requirement &Req, UnresolvedHeaderDirective &MissingHeader,
+                   const Module *&ShadowingModule) const;
 
   /// Determine whether this module is a submodule.
   bool isSubModule() const { return Parent != nullptr; }
@@ -755,13 +753,13 @@ public:
   /// one.
   ///
   /// \returns The GMF sub-module if found, or NULL otherwise.
-  Module *getGlobalModuleFragment() const;
+  const Module *getGlobalModuleFragment() const;
 
   /// Get the Private Module Fragment (sub-module) for this module, it there is
   /// one.
   ///
   /// \returns The PMF sub-module if found, or NULL otherwise.
-  Module *getPrivateModuleFragment() const;
+  const Module *getPrivateModuleFragment() const;
 
   /// Determine whether the specified module would be visible to
   /// a lookup at the end of this module.
@@ -845,20 +843,22 @@ public:
 
   /// A callback to call when a module is made visible (directly or
   /// indirectly) by a call to \ref setVisible.
-  using VisibleCallback = llvm::function_ref<void(Module *M)>;
+  using VisibleCallback = llvm::function_ref<void(const Module *M)>;
 
   /// A callback to call when a module conflict is found. \p Path
   /// consists of a sequence of modules from the conflicting module to the one
   /// made visible, where each was exported by the next.
   using ConflictCallback =
-      llvm::function_ref<void(ArrayRef<Module *> Path, Module *Conflict,
-                         StringRef Message)>;
+      llvm::function_ref<void(ArrayRef<const Module *> Path,
+                              const Module *Conflict, StringRef Message)>;
 
   /// Make a specific module visible.
-  void setVisible(Module *M, SourceLocation Loc,
-                  VisibleCallback Vis = [](Module *) {},
-                  ConflictCallback Cb = [](ArrayRef<Module *>, Module *,
-                                           StringRef) {});
+  void setVisible(
+      const Module *M, SourceLocation Loc,
+      VisibleCallback Vis = [](const Module *) {},
+      ConflictCallback Cb = [](ArrayRef<const Module *>, const Module *,
+                               StringRef) {});
+
 private:
   /// Import locations for each visible module. Indexed by the module's
   /// VisibilityID.
@@ -876,7 +876,7 @@ class ASTSourceDescriptor {
   StringRef Path;
   StringRef ASTFile;
   ASTFileSignature Signature;
-  Module *ClangModule = nullptr;
+  const Module *ClangModule = nullptr;
 
 public:
   ASTSourceDescriptor() = default;
@@ -884,13 +884,13 @@ public:
                       ASTFileSignature Signature)
       : PCHModuleName(std::move(Name)), Path(std::move(Path)),
         ASTFile(std::move(ASTFile)), Signature(Signature) {}
-  ASTSourceDescriptor(Module &M);
+  ASTSourceDescriptor(const Module &M);
 
   std::string getModuleName() const;
   StringRef getPath() const { return Path; }
   StringRef getASTFile() const { return ASTFile; }
   ASTFileSignature getSignature() const { return Signature; }
-  Module *getModuleOrNull() const { return ClangModule; }
+  const Module *getModuleOrNull() const { return ClangModule; }
 };
 
 

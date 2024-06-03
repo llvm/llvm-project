@@ -12141,7 +12141,7 @@ public:
 static void DiagnoseInvisibleNamespace(const TypoCorrection &Corrected,
                                        Sema &S) {
   auto *ND = cast<NamespaceDecl>(Corrected.getFoundDecl());
-  Module *M = ND->getOwningModule();
+  const Module *M = ND->getOwningModule();
   assert(M && "hidden namespace definition not in a module?");
 
   if (M->isExplicitGlobalModule())

@@ -859,13 +859,13 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // token is at the include location (outside the file) and the module_end
       // token is at the EOF location (within the file).
       Callbacks->BeginModule(
-          reinterpret_cast<Module *>(Tok.getAnnotationValue()));
+          reinterpret_cast<const Module *>(Tok.getAnnotationValue()));
       PP.Lex(Tok);
       IsStartOfLine = true;
       continue;
     } else if (Tok.is(tok::annot_module_end)) {
       Callbacks->EndModule(
-          reinterpret_cast<Module *>(Tok.getAnnotationValue()));
+          reinterpret_cast<const Module *>(Tok.getAnnotationValue()));
       PP.Lex(Tok);
       IsStartOfLine = true;
       continue;
@@ -874,7 +874,8 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // module-name.
       // FIXME: The module name could contain non-identifier module name
       // components. We don't have a good way to round-trip those.
-      Module *M = reinterpret_cast<Module *>(Tok.getAnnotationValue());
+      const Module *M =
+          reinterpret_cast<const Module *>(Tok.getAnnotationValue());
       std::string Name = M->getFullModuleName();
       Callbacks->OS->write(Name.data(), Name.size());
       Callbacks->HandleNewlinesInToken(Name.data(), Name.size());

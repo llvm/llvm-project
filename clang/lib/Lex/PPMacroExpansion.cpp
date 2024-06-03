@@ -129,7 +129,7 @@ void Preprocessor::setLoadedMacroDirective(IdentifierInfo *II,
     II->setHasMacroDefinition(false);
 }
 
-ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
+ModuleMacro *Preprocessor::addModuleMacro(const Module *Mod, IdentifierInfo *II,
                                           MacroInfo *Macro,
                                           ArrayRef<ModuleMacro *> Overrides,
                                           bool &New) {
@@ -168,7 +168,7 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
   return MM;
 }
 
-ModuleMacro *Preprocessor::getModuleMacro(Module *Mod,
+ModuleMacro *Preprocessor::getModuleMacro(const Module *Mod,
                                           const IdentifierInfo *II) {
   llvm::FoldingSetNodeID ID;
   ModuleMacro::Profile(ID, Mod, II);

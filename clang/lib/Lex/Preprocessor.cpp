@@ -530,7 +530,7 @@ Module *Preprocessor::getCurrentModule() {
   return getHeaderSearchInfo().lookupModule(getLangOpts().CurrentModule);
 }
 
-Module *Preprocessor::getCurrentModuleImplementation() {
+const Module *Preprocessor::getCurrentModuleImplementation() {
   if (!getLangOpts().isCompilingModuleImplementation())
     return nullptr;
 
@@ -1331,8 +1331,9 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
 
 void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc) {
   CurSubmoduleState->VisibleModules.setVisible(
-      M, Loc, [](Module *) {},
-      [&](ArrayRef<Module *> Path, Module *Conflict, StringRef Message) {
+      M, Loc, [](const Module *) {},
+      [&](ArrayRef<const Module *> Path, const Module *Conflict,
+          StringRef Message) {
         // FIXME: Include the path in the diagnostic.
         // FIXME: Include the import location for the conflicting module.
         Diag(ModuleImportLoc, diag::warn_module_conflict)

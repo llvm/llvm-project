@@ -861,7 +861,7 @@ void Sema::popCodeSynthesisContext() {
          "forgot to remove a lookup module for a template instantiation");
   if (CodeSynthesisContexts.size() ==
       CodeSynthesisContextLookupModules.size()) {
-    if (Module *M = CodeSynthesisContextLookupModules.back())
+    if (const Module *M = CodeSynthesisContextLookupModules.back())
       LookupModulesCache.erase(M);
     CodeSynthesisContextLookupModules.pop_back();
   }

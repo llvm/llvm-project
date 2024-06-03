@@ -586,7 +586,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   // each of the headers within the directory, including all submodules, is
   // covered by the umbrella header was actually included by the umbrella
   // header.
-  if (Module *Mod = getCurrentModule()) {
+  if (const Module *Mod = getCurrentModule()) {
     llvm::SmallVector<const Module *, 4> AllMods;
     collectAllSubModulesWithUmbrellaHeader(*Mod, AllMods);
     for (auto *M : AllMods)

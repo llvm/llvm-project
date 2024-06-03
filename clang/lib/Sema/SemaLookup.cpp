@@ -1555,7 +1555,7 @@ void Sema::makeMergedDefinitionVisible(NamedDecl *ND) {
 }
 
 /// Find the module in which the given declaration was defined.
-static Module *getDefiningModule(Sema &S, Decl *Entity) {
+static const Module *getDefiningModule(Sema &S, Decl *Entity) {
   if (FunctionDecl *FD = dyn_cast<FunctionDecl>(Entity)) {
     // If this function was instantiated from a template, the defining module is
     // the module containing the pattern.
@@ -1580,13 +1580,14 @@ static Module *getDefiningModule(Sema &S, Decl *Entity) {
   return getDefiningModule(S, cast<Decl>(Context));
 }
 
-llvm::DenseSet<Module*> &Sema::getLookupModules() {
+llvm::DenseSet<const Module *> &Sema::getLookupModules() {
   unsigned N = CodeSynthesisContexts.size();
   for (unsigned I = CodeSynthesisContextLookupModules.size();
        I != N; ++I) {
-    Module *M = CodeSynthesisContexts[I].Entity ?
-                getDefiningModule(*this, CodeSynthesisContexts[I].Entity) :
-                nullptr;
+    const Module *M =
+        CodeSynthesisContexts[I].Entity
+            ? getDefiningModule(*this, CodeSynthesisContexts[I].Entity)
+            : nullptr;
     if (M && !LookupModulesCache.insert(M).second)
       M = nullptr;
     CodeSynthesisContextLookupModules.push_back(M);
@@ -1697,8 +1698,8 @@ bool Sema::hasReachableDefaultArgument(
 template <typename Filter>
 static bool
 hasAcceptableDeclarationImpl(Sema &S, const NamedDecl *D,
-                             llvm::SmallVectorImpl<Module *> *Modules, Filter F,
-                             Sema::AcceptableKind Kind) {
+                             llvm::SmallVectorImpl<const Module *> *Modules,
+                             Filter F, Sema::AcceptableKind Kind) {
   bool HasFilteredRedecls = false;
 
   for (auto *Redecl : D->redecls()) {
@@ -1722,10 +1723,9 @@ hasAcceptableDeclarationImpl(Sema &S, const NamedDecl *D,
   return true;
 }
 
-static bool
-hasAcceptableExplicitSpecialization(Sema &S, const NamedDecl *D,
-                                    llvm::SmallVectorImpl<Module *> *Modules,
-                                    Sema::AcceptableKind Kind) {
+static bool hasAcceptableExplicitSpecialization(
+    Sema &S, const NamedDecl *D, llvm::SmallVectorImpl<const Module *> *Modules,
+    Sema::AcceptableKind Kind) {
   return hasAcceptableDeclarationImpl(
       S, D, Modules,
       [](const NamedDecl *D) {
@@ -1744,21 +1744,20 @@ hasAcceptableExplicitSpecialization(Sema &S, const NamedDecl *D,
 }
 
 bool Sema::hasVisibleExplicitSpecialization(
-    const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules) {
+    const NamedDecl *D, llvm::SmallVectorImpl<const Module *> *Modules) {
   return ::hasAcceptableExplicitSpecialization(*this, D, Modules,
                                                Sema::AcceptableKind::Visible);
 }
 
 bool Sema::hasReachableExplicitSpecialization(
-    const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules) {
+    const NamedDecl *D, llvm::SmallVectorImpl<const Module *> *Modules) {
   return ::hasAcceptableExplicitSpecialization(*this, D, Modules,
                                                Sema::AcceptableKind::Reachable);
 }
 
-static bool
-hasAcceptableMemberSpecialization(Sema &S, const NamedDecl *D,
-                                  llvm::SmallVectorImpl<Module *> *Modules,
-                                  Sema::AcceptableKind Kind) {
+static bool hasAcceptableMemberSpecialization(
+    Sema &S, const NamedDecl *D, llvm::SmallVectorImpl<const Module *> *Modules,
+    Sema::AcceptableKind Kind) {
   assert(isa<CXXRecordDecl>(D->getDeclContext()) &&
          "not a member specialization");
   return hasAcceptableDeclarationImpl(
@@ -1778,13 +1777,13 @@ hasAcceptableMemberSpecialization(Sema &S, const NamedDecl *D,
 }
 
 bool Sema::hasVisibleMemberSpecialization(
-    const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules) {
+    const NamedDecl *D, llvm::SmallVectorImpl<const Module *> *Modules) {
   return hasAcceptableMemberSpecialization(*this, D, Modules,
                                            Sema::AcceptableKind::Visible);
 }
 
 bool Sema::hasReachableMemberSpecialization(
-    const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules) {
+    const NamedDecl *D, llvm::SmallVectorImpl<const Module *> *Modules) {
   return hasAcceptableMemberSpecialization(*this, D, Modules,
                                            Sema::AcceptableKind::Reachable);
 }
@@ -1803,7 +1802,7 @@ bool LookupResult::isAcceptableSlow(Sema &SemaRef, NamedDecl *D,
   assert(!D->isUnconditionallyVisible() &&
          "should not call this: not in slow case");
 
-  Module *DeclModule = SemaRef.getOwningModule(D);
+  const Module *DeclModule = SemaRef.getOwningModule(D);
   assert(DeclModule && "hidden decl has no owning module");
 
   // If the owning module is visible, the decl is acceptable.
@@ -1928,7 +1927,7 @@ bool Sema::isModuleVisible(const Module *M, bool ModulePrivate) {
 bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   assert(!isVisible(SemaRef, D) && "Shouldn't call the slow case.\n");
 
-  Module *DeclModule = SemaRef.getOwningModule(D);
+  const Module *DeclModule = SemaRef.getOwningModule(D);
   assert(DeclModule && "hidden decl has no owning module");
 
   // Entities in header like modules are reachable only if they're visible.
@@ -2050,8 +2049,8 @@ static NamedDecl *findAcceptableDecl(Sema &SemaRef, NamedDecl *D,
   return nullptr;
 }
 
-bool Sema::hasVisibleDeclarationSlow(const NamedDecl *D,
-                                     llvm::SmallVectorImpl<Module *> *Modules) {
+bool Sema::hasVisibleDeclarationSlow(
+    const NamedDecl *D, llvm::SmallVectorImpl<const Module *> *Modules) {
   assert(!isVisible(D) && "not in slow case");
   return hasAcceptableDeclarationImpl(
       *this, D, Modules, [](const NamedDecl *) { return true; },
@@ -2059,7 +2058,7 @@ bool Sema::hasVisibleDeclarationSlow(const NamedDecl *D,
 }
 
 bool Sema::hasReachableDeclarationSlow(
-    const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules) {
+    const NamedDecl *D, llvm::SmallVectorImpl<const Module *> *Modules) {
   assert(!isReachable(D) && "not in slow case");
   return hasAcceptableDeclarationImpl(
       *this, D, Modules, [](const NamedDecl *) { return true; },
@@ -3955,7 +3954,7 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
             continue;
 
           if (D->isInExportDeclContext()) {
-            Module *FM = D->getOwningModule();
+            const Module *FM = D->getOwningModule();
             // C++20 [basic.lookup.argdep] p4.3 .. are exported ...
             // exports are only valid in module purview and outside of any
             // PMF (although a PMF should not even be present in a module
@@ -5778,7 +5777,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
 
   // Weed out duplicates from module list.
   llvm::SmallVector<Module*, 8> UniqueModules;
-  llvm::SmallDenseSet<Module*, 8> UniqueModuleSet;
+  llvm::SmallDenseSet<const Module *, 8> UniqueModuleSet;
   for (auto *M : Modules) {
     if (M->isExplicitGlobalModule() || M->isPrivateModule())
       continue;
@@ -5816,7 +5815,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
     if (M->isModuleMapModule())
       return M->getFullModuleName();
 
-    Module *CurrentModule = getCurrentModule();
+    const Module *CurrentModule = getCurrentModule();
 
     if (M->isImplicitGlobalModule())
       M = M->getTopLevelModule();

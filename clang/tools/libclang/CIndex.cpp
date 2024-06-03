@@ -5084,7 +5084,7 @@ static CXString getDeclSpelling(const Decl *D) {
         return cxstring::createDup(Property->getIdentifier()->getName());
 
     if (const ImportDecl *ImportD = dyn_cast<ImportDecl>(D))
-      if (Module *Mod = ImportD->getImportedModule())
+      if (const Module *Mod = ImportD->getImportedModule())
         return cxstring::createDup(Mod->getFullModuleName());
 
     return cxstring::createEmpty();
@@ -9016,35 +9016,35 @@ CXModule clang_getModuleForFile(CXTranslationUnit TU, CXFile File) {
 CXFile clang_Module_getASTFile(CXModule CXMod) {
   if (!CXMod)
     return nullptr;
-  Module *Mod = static_cast<Module *>(CXMod);
+  const Module *Mod = static_cast<const Module *>(CXMod);
   return cxfile::makeCXFile(Mod->getASTFile());
 }
 
 CXModule clang_Module_getParent(CXModule CXMod) {
   if (!CXMod)
     return nullptr;
-  Module *Mod = static_cast<Module *>(CXMod);
+  const Module *Mod = static_cast<const Module *>(CXMod);
   return Mod->Parent;
 }
 
 CXString clang_Module_getName(CXModule CXMod) {
   if (!CXMod)
     return cxstring::createEmpty();
-  Module *Mod = static_cast<Module *>(CXMod);
+  const Module *Mod = static_cast<const Module *>(CXMod);
   return cxstring::createDup(Mod->Name);
 }
 
 CXString clang_Module_getFullName(CXModule CXMod) {
   if (!CXMod)
     return cxstring::createEmpty();
-  Module *Mod = static_cast<Module *>(CXMod);
+  const Module *Mod = static_cast<const Module *>(CXMod);
   return cxstring::createDup(Mod->getFullModuleName());
 }
 
 int clang_Module_isSystem(CXModule CXMod) {
   if (!CXMod)
     return 0;
-  Module *Mod = static_cast<Module *>(CXMod);
+  const Module *Mod = static_cast<const Module *>(CXMod);
   return Mod->IsSystem;
 }
 

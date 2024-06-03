@@ -117,7 +117,7 @@ public:
     if (!ID)
       return true;
 
-    clang::Module *M = ID->getImportedModule();
+    const clang::Module *M = ID->getImportedModule();
     assert(M);
     if (M->Name != "R")
       return true;

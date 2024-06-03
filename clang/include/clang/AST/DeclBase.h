@@ -828,7 +828,7 @@ public:
   ///
   /// \param IgnoreLinkage Ignore the linkage of the entity; assume that
   /// all declarations in a global module fragment are unowned.
-  Module *getOwningModuleForLinkage(bool IgnoreLinkage = false) const;
+  const Module *getOwningModuleForLinkage(bool IgnoreLinkage = false) const;
 
   /// Determine whether this declaration is definitely visible to name lookup,
   /// independent of whether the owning module is visible.

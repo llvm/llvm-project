@@ -1109,7 +1109,7 @@ void CXXNameMangler::mangleNameWithAbiTags(GlobalDecl GD,
 
 void CXXNameMangler::mangleModuleName(const NamedDecl *ND) {
   if (ND->isExternallyVisible())
-    if (Module *M = ND->getOwningModuleForLinkage())
+    if (const Module *M = ND->getOwningModuleForLinkage())
       mangleModuleNamePrefix(M->getPrimaryModuleInterfaceName());
 }
 

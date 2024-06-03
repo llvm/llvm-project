@@ -521,7 +521,7 @@ class ModuleMacro : public llvm::FoldingSetNode {
   MacroInfo *Macro;
 
   /// The module that exports this macro.
-  Module *OwningModule;
+  const Module *OwningModule;
 
   /// The number of module macros that override this one.
   unsigned NumOverriddenBy = 0;
@@ -529,8 +529,8 @@ class ModuleMacro : public llvm::FoldingSetNode {
   /// The number of modules whose macros are directly overridden by this one.
   unsigned NumOverrides;
 
-  ModuleMacro(Module *OwningModule, const IdentifierInfo *II, MacroInfo *Macro,
-              ArrayRef<ModuleMacro *> Overrides)
+  ModuleMacro(const Module *OwningModule, const IdentifierInfo *II,
+              MacroInfo *Macro, ArrayRef<ModuleMacro *> Overrides)
       : II(II), Macro(Macro), OwningModule(OwningModule),
         NumOverrides(Overrides.size()) {
     std::copy(Overrides.begin(), Overrides.end(),
@@ -538,7 +538,7 @@ class ModuleMacro : public llvm::FoldingSetNode {
   }
 
 public:
-  static ModuleMacro *create(Preprocessor &PP, Module *OwningModule,
+  static ModuleMacro *create(Preprocessor &PP, const Module *OwningModule,
                              const IdentifierInfo *II, MacroInfo *Macro,
                              ArrayRef<ModuleMacro *> Overrides);
 
@@ -546,7 +546,7 @@ public:
     return Profile(ID, OwningModule, II);
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, Module *OwningModule,
+  static void Profile(llvm::FoldingSetNodeID &ID, const Module *OwningModule,
                       const IdentifierInfo *II) {
     ID.AddPointer(OwningModule);
     ID.AddPointer(II);
@@ -556,7 +556,7 @@ public:
   const IdentifierInfo *getName() const { return II; }
 
   /// Get the ID of the module that exports this macro.
-  Module *getOwningModule() const { return OwningModule; }
+  const Module *getOwningModule() const { return OwningModule; }
 
   /// Get definition for this exported #define, or nullptr if this
   /// represents a #undef.

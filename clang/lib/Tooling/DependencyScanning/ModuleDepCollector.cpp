@@ -362,7 +362,7 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
 
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();
-    if (Module *CurrentModule = PP.getCurrentModuleImplementation())
+    if (const Module *CurrentModule = PP.getCurrentModuleImplementation())
       if (OptionalFileEntryRef CurrentModuleMap =
               PP.getHeaderSearchInfo()
                   .getModuleMap()

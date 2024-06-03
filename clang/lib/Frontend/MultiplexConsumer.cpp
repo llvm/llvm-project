@@ -71,7 +71,7 @@ void MultiplexASTDeserializationListener::MacroDefinitionRead(
 }
 
 void MultiplexASTDeserializationListener::ModuleRead(
-    serialization::SubmoduleID ID, Module *Mod) {
+    serialization::SubmoduleID ID, const Module *Mod) {
   for (auto &Listener : Listeners)
     Listener->ModuleRead(ID, Mod);
 }
@@ -115,7 +115,7 @@ public:
   void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) override;
   void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                             const Attr *Attr) override;
-  void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
+  void RedefinedHiddenDefinition(const NamedDecl *D, const Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
   void EnteringModulePurview() override;
@@ -234,7 +234,7 @@ void MultiplexASTMutationListener::DeclarationMarkedOpenMPDeclareTarget(
     L->DeclarationMarkedOpenMPDeclareTarget(D, Attr);
 }
 void MultiplexASTMutationListener::RedefinedHiddenDefinition(const NamedDecl *D,
-                                                             Module *M) {
+                                                             const Module *M) {
   for (auto *L : Listeners)
     L->RedefinedHiddenDefinition(D, M);
 }

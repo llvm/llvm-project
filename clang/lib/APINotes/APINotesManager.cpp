@@ -218,7 +218,7 @@ static bool hasPrivateSubmodules(const Module *M) {
 }
 
 llvm::SmallVector<FileEntryRef, 2>
-APINotesManager::getCurrentModuleAPINotes(Module *M, bool LookInModule,
+APINotesManager::getCurrentModuleAPINotes(const Module *M, bool LookInModule,
                                           ArrayRef<std::string> SearchPaths) {
   FileManager &FM = SM.getFileManager();
   auto ModuleName = M->getTopLevelModuleName();

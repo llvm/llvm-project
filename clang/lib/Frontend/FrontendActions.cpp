@@ -880,7 +880,7 @@ void DumpModuleInfoAction::ExecuteAction() {
 
     struct SubModInfo {
       unsigned Idx;
-      Module *Mod;
+      const Module *Mod;
       Module::ModuleKind Kind;
       std::string &Name;
       bool Seen;
@@ -896,7 +896,7 @@ void DumpModuleInfoAction::ExecuteAction() {
         Out << " is at index #" << I->second.Idx << "\n";
       }
     };
-    Module *Primary = nullptr;
+    const Module *Primary = nullptr;
     for (unsigned Idx = 0; Idx <= SubModuleCount; ++Idx) {
       Module *M = R->getModule(Idx);
       if (!M)
@@ -923,7 +923,7 @@ void DumpModuleInfoAction::ExecuteAction() {
       if (!Primary->Exports.empty())
         Out << "   Exports:\n";
       for (unsigned MN = 0, N = Primary->Exports.size(); MN != N; ++MN) {
-        if (Module *M = Primary->Exports[MN].getPointer()) {
+        if (const Module *M = Primary->Exports[MN].getPointer()) {
           PrintSubMapEntry(M->Name, M->Kind);
         }
       }
