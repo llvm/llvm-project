@@ -419,11 +419,11 @@ LogicalResult mlir::vectorizeLoop(scf::ParallelOp loop,
   };
 
   auto canTriviallyVectorizeMemOp = [&](auto op) -> bool {
-    return !!::canTriviallyVectorizeMemOpImpl(loop, dim, op, DL);
+    return ::canTriviallyVectorizeMemOpImpl(loop, dim, op, DL).has_value();
   };
 
   auto canGatherScatter = [&](auto op) {
-    return !!::canGatherScatterImpl(loop, op, DL);
+    return ::canGatherScatterImpl(loop, op, DL).has_value();
   };
 
   // Get idices for vectorized memref load/store.
