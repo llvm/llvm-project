@@ -151,7 +151,6 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
   uint64_t NextTag = 0;
   for (auto &I : AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
-    TrackingVH<Instruction> OldAI = Info.AI;
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     uint64_t Tag = NextTag;
     if (iswasm32) {
@@ -227,10 +226,12 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       for (auto *II : Info.LifetimeEnd)
         II->eraseFromParent();
     }
-    // Fixup debug intrinsics to point to the new alloca.
-    for (auto *DVI : Info.DbgVariableIntrinsics)
-      DVI->replaceVariableLocationOp(OldAI, Info.AI);
+
+    memtag::annotateDebugRecords(Info, static_cast<unsigned long>(Tag));
   }
+
+  for (auto *I : SInfo.UnrecognizedLifetimes)
+    I->eraseFromParent();
   return true;
 }
 
