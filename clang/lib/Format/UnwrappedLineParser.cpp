@@ -3993,8 +3993,10 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     case tok::coloncolon:
       break;
     default:
-      if (!ClassName && Previous->is(tok::identifier))
+      if (!ClassName && Previous->is(tok::identifier) &&
+          Previous->isNot(TT_AttributeMacro)) {
         ClassName = Previous;
+      }
     }
   }
 
