@@ -255,6 +255,12 @@ public:
   }
 };
 
+// The unaligned decl ID used in the Blobs of bistreams.
+using unaligned_decl_id_t =
+    llvm::support::detail::packed_endian_specific_integral<
+        serialization::DeclID, llvm::endianness::native,
+        llvm::support::unaligned>;
+
 /// The number of predefined preprocessed entity IDs.
 const unsigned int NUM_PREDEF_PP_ENTITY_IDS = 1;
 
