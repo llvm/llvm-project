@@ -126,6 +126,7 @@ def TimeTType : NamedType<"time_t">;
 def StructTimeSpec : NamedType<"struct timespec">;
 def StructTimeSpecPtr : PtrType<StructTimeSpec>;
 def ConstStructTimeSpecPtr : ConstType<StructTimeSpecPtr>;
+def ConstRestructTimeSpecPtr : ConstType<RestrictedPtrType<StructTimeSpec>>;
 
 def BSearchCompareT : NamedType<"__bsearchcompare_t">;
 def QSortCompareT : NamedType<"__qsortcompare_t">;

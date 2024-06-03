@@ -545,6 +545,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_rwlock_timedrdlock
+  SRCS
+    pthread_rwlock_timedrdlock.cpp
+  HDRS
+    pthread_rwlock_timedrdlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
   pthread_rwlock_rdlock
   SRCS
     pthread_rwlock_rdlock.cpp

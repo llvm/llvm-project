@@ -129,6 +129,7 @@ def POSIX : StandardSpec<"POSIX"> {
 
   NamedType PThreadRWLockTType = NamedType<"pthread_rwlock_t">;
   PtrType PThreadRWLockTPtr = PtrType<PThreadRWLockTType>;
+  RestrictedPtrType RestrictedPThreadRWLockTPtr = RestrictedPtrType<PThreadRWLockTType>;
 
   PtrType PThreadTPtr = PtrType<PThreadTType>;
   RestrictedPtrType RestrictedPThreadTPtr = RestrictedPtrType<PThreadTType>;
@@ -1273,6 +1274,11 @@ def POSIX : StandardSpec<"POSIX"> {
         "pthread_rwlock_tryrdlock",
         RetValSpec<IntType>,
         [ArgSpec<PThreadRWLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_timedrdlock",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ConstRestructTimeSpecPtr>]
       >,
       FunctionSpec<
         "pthread_rwlock_rdlock",
