@@ -15,7 +15,6 @@
 #define LLVM_CLANG_SERIALIZATION_MODULEMANAGER_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/DenseMap.h"
