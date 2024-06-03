@@ -429,6 +429,9 @@ private:
   FileManager &FileMgr;
   const PCHContainerReader &PCHContainerRdr;
   DiagnosticsEngine &Diags;
+  // Sema has duplicate logic, but SemaObj can sometimes be null so ASTReader
+  // has its own version.
+  bool WarnedStackExhausted = false;
 
   /// The semantic analysis object that will be processing the
   /// AST files and the translation unit that uses it.
@@ -500,6 +503,12 @@ private:
   /// When the pointer at index I is non-NULL, the declaration with ID
   /// = I + 1 has already been loaded.
   llvm::PagedVector<Decl *> DeclsLoaded;
+
+  using GlobalDeclMapType = ContinuousRangeMap<GlobalDeclID, ModuleFile *, 4>;
+
+  /// Mapping from global declaration IDs to the module in which the
+  /// declaration resides.
+  GlobalDeclMapType GlobalDeclMap;
 
   using FileOffset = std::pair<ModuleFile *, uint64_t>;
   using FileOffsetsTy = SmallVector<FileOffset, 2>;
@@ -583,11 +592,10 @@ private:
 
   struct FileDeclsInfo {
     ModuleFile *Mod = nullptr;
-    ArrayRef<serialization::unaligned_decl_id_t> Decls;
+    ArrayRef<LocalDeclID> Decls;
 
     FileDeclsInfo() = default;
-    FileDeclsInfo(ModuleFile *Mod,
-                  ArrayRef<serialization::unaligned_decl_id_t> Decls)
+    FileDeclsInfo(ModuleFile *Mod, ArrayRef<LocalDeclID> Decls)
         : Mod(Mod), Decls(Decls) {}
   };
 
@@ -596,7 +604,11 @@ private:
 
   /// An array of lexical contents of a declaration context, as a sequence of
   /// Decl::Kind, DeclID pairs.
-  using LexicalContents = ArrayRef<serialization::unaligned_decl_id_t>;
+  using unaligned_decl_id_t =
+      llvm::support::detail::packed_endian_specific_integral<
+          serialization::DeclID, llvm::endianness::native,
+          llvm::support::unaligned>;
+  using LexicalContents = ArrayRef<unaligned_decl_id_t>;
 
   /// Map from a DeclContext to its lexical contents.
   llvm::DenseMap<const DeclContext*, std::pair<ModuleFile*, LexicalContents>>
@@ -1477,11 +1489,10 @@ private:
                                unsigned ClientLoadCapabilities);
 
 public:
-  class ModuleDeclIterator
-      : public llvm::iterator_adaptor_base<
-            ModuleDeclIterator, const serialization::unaligned_decl_id_t *,
-            std::random_access_iterator_tag, const Decl *, ptrdiff_t,
-            const Decl *, const Decl *> {
+  class ModuleDeclIterator : public llvm::iterator_adaptor_base<
+                                 ModuleDeclIterator, const LocalDeclID *,
+                                 std::random_access_iterator_tag, const Decl *,
+                                 ptrdiff_t, const Decl *, const Decl *> {
     ASTReader *Reader = nullptr;
     ModuleFile *Mod = nullptr;
 
@@ -1489,11 +1500,11 @@ public:
     ModuleDeclIterator() : iterator_adaptor_base(nullptr) {}
 
     ModuleDeclIterator(ASTReader *Reader, ModuleFile *Mod,
-                       const serialization::unaligned_decl_id_t *Pos)
+                       const LocalDeclID *Pos)
         : iterator_adaptor_base(Pos), Reader(Reader), Mod(Mod) {}
 
     value_type operator*() const {
-      return Reader->GetDecl(Reader->getGlobalDeclID(*Mod, (LocalDeclID)*I));
+      return Reader->GetDecl(Reader->getGlobalDeclID(*Mod, *I));
     }
 
     value_type operator->() const { return **this; }
@@ -1532,9 +1543,6 @@ private:
   void Error(unsigned DiagID, StringRef Arg1 = StringRef(),
              StringRef Arg2 = StringRef(), StringRef Arg3 = StringRef()) const;
   void Error(llvm::Error &&Err) const;
-
-  /// Translate a \param GlobalDeclID to the index of DeclsLoaded array.
-  unsigned translateGlobalDeclIDToIndex(GlobalDeclID ID) const;
 
 public:
   /// Load the AST file and validate its contents against the given
@@ -1907,8 +1915,7 @@ public:
 
   /// Retrieve the module file that owns the given declaration, or NULL
   /// if the declaration is not from a module file.
-  ModuleFile *getOwningModuleFile(const Decl *D) const;
-  ModuleFile *getOwningModuleFile(GlobalDeclID ID) const;
+  ModuleFile *getOwningModuleFile(const Decl *D);
 
   /// Returns the source location for the decl \p ID.
   SourceLocation getSourceLocationForDeclID(GlobalDeclID ID);
@@ -2130,6 +2137,8 @@ public:
 
   /// Report a diagnostic.
   DiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID) const;
+
+  void warnStackExhausted(SourceLocation Loc);
 
   IdentifierInfo *DecodeIdentifierInfo(serialization::IdentifierID ID);
 
