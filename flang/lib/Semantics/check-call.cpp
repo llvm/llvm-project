@@ -35,7 +35,8 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "Keyword '%s=' may not appear in a reference to a procedure with an implicit interface"_err_en_US,
         *kw);
   }
-  if (auto type{arg.GetType()}) {
+  auto type{arg.GetType()};
+  if (type) {
     if (type->IsAssumedType()) {
       messages.Say(
           "Assumed type actual argument requires an explicit interface"_err_en_US);
@@ -48,6 +49,11 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
             "Parameterized derived type actual argument requires an explicit interface"_err_en_US);
       }
     }
+  }
+  if (arg.isPercentVal() &&
+      (!type || !type->IsLengthlessIntrinsicType() || arg.Rank() != 0)) {
+    messages.Say(
+        "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
     if (IsBOZLiteral(*expr)) {
@@ -314,7 +320,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     SemanticsContext &context, evaluate::FoldingContext &foldingContext,
     const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
     bool allowActualArgumentConversions, bool extentErrors,
-    const characteristics::Procedure &procedure) {
+    const characteristics::Procedure &procedure,
+    const evaluate::ActualArgument &arg) {
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{foldingContext.messages()};
@@ -939,10 +946,24 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   }
 
-  // Breaking change warnings
+  // Warning for breaking F'2023 change with character allocatables
   if (intrinsic && dummy.intent != common::Intent::In) {
     WarnOnDeferredLengthCharacterScalar(
         context, &actual, messages.at(), dummyName.c_str());
+  }
+
+  // %VAL() and %REF() checking for explicit interface
+  if ((arg.isPercentRef() || arg.isPercentVal()) &&
+      dummy.IsPassedByDescriptor(procedure.IsBindC())) {
+    messages.Say(
+        "%VAL or %REF are not allowed for %s that must be passed by means of a descriptor"_err_en_US,
+        dummyName);
+  }
+  if (arg.isPercentVal() &&
+      (!actualType.type().IsLengthlessIntrinsicType() ||
+          actualType.Rank() != 0)) {
+    messages.Say(
+        "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
 }
 
@@ -1152,7 +1173,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                       object.type.Rank() == 0 && proc.IsElemental()};
                   CheckExplicitDataArg(object, dummyName, *expr, *type,
                       isElemental, context, foldingContext, scope, intrinsic,
-                      allowActualArgumentConversions, extentErrors, proc);
+                      allowActualArgumentConversions, extentErrors, proc, arg);
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                     IsBOZLiteral(*expr)) {
                   // ok
