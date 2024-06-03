@@ -1797,21 +1797,20 @@ private:
 
 /// Pattern aiming to fold a series of ops mulf(tr(broadcast(A)), broadcast(B))
 /// into vector.outerproduct(A, B) such as :
-/// ```mlir
+///
 ///  %lhsBcast = vector.broadcast %lhs : vector<4xi32> to vector<4x4xi32>
 ///  %lhsT = vector.transpose %lhsBcast, [1, 0] : vector<4x4xi32> to
 ///  vector<4x4xi32> %rhsBcast = vector.broadcast %rhs : vector<4xi32> to
 ///  vector<4x4xi32> %mul = arith.muli %lhsT, %rhsBcast : vector<4x4xi32>
-///```
+///
 /// Becomes :
-///```mlir
+///
 ///  %res = vector.outerproduct %lhs, %rhs : vector<4xi32>, vector<4xi32>
-///```
+///
 /// Edge Cases where broadcast ops are not 1D to 2D as follow are not handled.
 /// %ex1 = vector.broadcast %lhsCast : vector<1x4xf32> to vector<4x4xf32>
 /// %ex2 = vector.broadcast %lhsCast : f32 to vector<4x4xf32>
 /// %ex3 = vector.broadcast %lhsCast : vector<1x1xf32> to vector<4x4xf32>
-
 template <typename MulOpType>
 struct ElementwiseToOuterproduct : public OpRewritePattern<MulOpType> {
   using OpRewritePattern<MulOpType>::OpRewritePattern;
