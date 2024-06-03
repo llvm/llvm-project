@@ -9406,7 +9406,7 @@ DiagnosticBuilder ASTReader::Diag(SourceLocation Loc, unsigned DiagID) const {
 }
 
 void ASTReader::warnStackExhausted(SourceLocation Loc) {
-  // When Sema is available, avoid duplicate errors. This should be rare.
+  // When Sema is available, avoid duplicate errors.
   if (SemaObj) {
     SemaObj->warnStackExhausted(Loc);
     return;
