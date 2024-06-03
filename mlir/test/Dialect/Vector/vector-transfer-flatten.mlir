@@ -495,3 +495,28 @@ func.func @regression_non_contiguous_dim_write(%value : vector<2x2xf32>,
 
 // CHECK-128B-LABEL: func @regression_non_contiguous_dim_write(
 //       CHECK-128B:   memref.collapse_shape
+
+// -----
+
+func.func @negative_out_of_bound_transfer_read(
+    %arg : memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<5x4x3x2xi8> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0 : i8
+  %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst {in_bounds = [false, true, true, true]} :
+    memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
+  return %v : vector<5x4x3x2xi8>
+}
+// CHECK:     func.func @negative_out_of_bound_transfer_read
+// CHECK-NOT:   memref.collapse_shape
+
+// -----
+
+func.func @negative_out_of_bound_transfer_write(
+    %arg : memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, %vec : vector<1x1x3x2xi8>) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0] {in_bounds = [false, true, true, true]} :
+    vector<1x1x3x2xi8>, memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>
+  return
+}
+// CHECK:     func.func @negative_out_of_bound_transfer_write
+// CHECK-NOT:   memref.collapse_shape

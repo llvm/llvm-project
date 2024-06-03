@@ -505,11 +505,8 @@ static Value collapseInnerDims(PatternRewriter &rewriter, mlir::Location loc,
   return rewriter.create<memref::CollapseShapeOp>(loc, input, reassociation);
 }
 
-/// Checks that the indices corresponding to dimensions starting at
-/// `firstDimToCollapse` are constant 0, and writes to `outIndices`
-/// the truncated indices where `firstDimToCollapse` is now the innermost dim.
-/// TODO: Extract the logic that writes to outIndices so that this method
-/// simply checks one pre-condition.
+/// Returns the new indices that collapses the inner dimensions starting from
+/// the `firstDimToCollapse` dimension.
 static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
                                               Location loc,
                                               ArrayRef<int64_t> shape,
@@ -519,13 +516,13 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
 
   // If all the collapsed indices are zero then no extra logic is needed.
   // Otherwise, a new offset/index has to be computed.
-  SmallVector<Value> collapsedIndices(indices.begin(),
-                                      indices.begin() + firstDimToCollapse);
+  SmallVector<Value> indicesAfterCollapsing(
+      indices.begin(), indices.begin() + firstDimToCollapse);
   SmallVector<Value> indicesToCollapse(indices.begin() + firstDimToCollapse,
                                        indices.end());
   if (llvm::all_of(indicesToCollapse, isZeroIndex)) {
-    collapsedIndices.push_back(indicesToCollapse[0]);
-    return collapsedIndices;
+    indicesAfterCollapsing.push_back(indicesToCollapse[0]);
+    return indicesAfterCollapsing;
   }
 
   // Compute the remaining trailing index/offset required for reading from
@@ -556,13 +553,13 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
       rewriter, loc, collapsedExpr, collapsedVals);
 
   if (collapsedOffset.is<Value>()) {
-    collapsedIndices.push_back(collapsedOffset.get<Value>());
+    indicesAfterCollapsing.push_back(collapsedOffset.get<Value>());
   } else {
-    collapsedIndices.push_back(rewriter.create<arith::ConstantIndexOp>(
+    indicesAfterCollapsing.push_back(rewriter.create<arith::ConstantIndexOp>(
         loc, *getConstantIntValue(collapsedOffset)));
   }
 
-  return collapsedIndices;
+  return indicesAfterCollapsing;
 }
 
 namespace {
