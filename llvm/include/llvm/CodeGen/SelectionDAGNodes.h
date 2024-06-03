@@ -480,16 +480,12 @@ private:
   int32_t NodeType;
 
 public:
-  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
-  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
-  /// intentionally because it adds unneeded complexity without noticeable
-  /// benefits (see discussion with @thakis in D120714).
-  uint16_t PersistentId = 0xffff;
+  SDNodeFlags Flags;
 
 protected:
   // We define a set of mini-helper classes to help us interpret the bits in our
   // SubclassData.  These are designed to fit within a uint16_t so they pack
-  // with PersistentId.
+  // with SDNodeFlags.
 
 #if defined(_AIX) && (!defined(__GNUC__) || defined(__clang__))
 // Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
@@ -619,8 +615,12 @@ private:
   /// Unique id per SDNode in the DAG.
   int NodeId = -1;
 
-  /// Index in worklist of DAGCombiner, or -1.
-  int CombinerWorklistIndex = -1;
+  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
+  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
+  /// intentionally because it adds unneeded complexity without noticeable
+  /// benefits (see discussion with @thakis in D120714). Currently, there are
+  /// two padding bytes after this field.
+  uint16_t PersistentId = 0xffff;
 
   /// The values that are used by this operation.
   SDUse *OperandList = nullptr;
@@ -649,7 +649,8 @@ private:
   /// Return a pointer to the specified value type.
   static const EVT *getValueTypeList(EVT VT);
 
-  SDNodeFlags Flags;
+  /// Index in worklist of DAGCombiner, or -1.
+  int CombinerWorklistIndex = -1;
 
   uint32_t CFIType = 0;
 
