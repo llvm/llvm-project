@@ -4,4 +4,4 @@
 
 // CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_ctor, ptr null }]
 // EMSCRIPTEN: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 50, ptr @asan.module_ctor, ptr null }]
-// GLOBALAS: @llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr addrspace(1) }] [{ i32, ptr, ptr addrspace(1) } { i32 1, ptr @asan.module_ctor, ptr addrspace(1) null }]
+// GLOBALAS: @llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_ctor, ptr null }]

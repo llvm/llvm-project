@@ -11,6 +11,7 @@
 
 // CHECK:      @llvm.used = appending global [8 x ptr] [ptr @c0, ptr @foo.l0, ptr @f0, ptr @f2, ptr @g0, ptr @g1, ptr @g3, ptr @g4], section "llvm.metadata"
 // CHECK:      @llvm.compiler.used = appending global [3 x ptr] [ptr @f2, ptr @g3, ptr @g4], section "llvm.metadata"
+
 const int c0 __attribute__((retain)) = 42;
 
 void foo(void) {
