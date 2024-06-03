@@ -1733,6 +1733,8 @@ def TaintAllocChecker: Checker<"TaintAlloc">,
   HelpText<"Check for memory allocations, where the size parameter "
            "might be a tainted (attacker controlled) value.">,
   Dependencies<[DynamicMemoryModeling]>,
+  //FIXME: GenericTaintChecker should be a dependency, but only after it
+  //is transformed into a modeling checker
   Documentation<HasDocumentation>;
 
 } // end "optin.taint"

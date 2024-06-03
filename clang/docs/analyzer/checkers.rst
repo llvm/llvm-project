@@ -964,7 +964,7 @@ by explicitly marking the ``size`` parameter as sanitized. See the
 .. code-block:: c
 
   void vulnerable(void) {
-    size_t size;
+    size_t size = 0;
     scanf("%zu", &size);
     int *p = malloc(size); // warn: malloc is called with a tainted (potentially attacker controlled) value
     free(p);

@@ -1708,8 +1708,7 @@ MallocChecker::processNewAllocation(const CXXAllocatorCall &Call,
   // existing binding.
   SVal Target = Call.getObjectUnderConstruction();
   if (Call.getOriginExpr()->isArray()) {
-    std::optional<const Expr *> SizeEx = NE->getArraySize();
-    if (SizeEx)
+    if (auto SizeEx = NE->getArraySize())
       checkTaintedness(C, Call, C.getSVal(*SizeEx), State, AF_CXXNewArray);
   }
 
