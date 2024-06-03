@@ -472,6 +472,11 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MRI);
       } else if (MIOp == TargetOpcode::G_GLOBAL_VALUE) {
         propagateSPIRVType(&MI, GR, MRI, MIB);
+      } else if (MIOp == TargetOpcode::G_BITREVERSE) {
+        Register Reg = MI.getOperand(0).getReg();
+        LLT RegType = MRI.getType(Reg);
+        if (RegType.getSizeInBits() < 32)
+          MRI.setType(Reg, LLT::scalar(32));
       }
 
       if (MII == Begin)
