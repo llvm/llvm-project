@@ -181,7 +181,8 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 // If a file descriptor being monitored by poll is closed by another thread, the
 // result is unspecified. In the case poll does not unblock and return when
 // ActiveFD is closed you can provide another file descriptor via CancelFD that
-// when written to will cause poll to return
+// when written to will cause poll to return. Typically CancelFD is the read end
+// of a unidirectional pipe.
 static llvm::Error manageTimeout(std::chrono::milliseconds Timeout,
                                  std::function<int()> getActiveFD,
                                  std::optional<int> CancelFD = std::nullopt) {
@@ -217,9 +218,9 @@ static llvm::Error manageTimeout(std::chrono::milliseconds Timeout,
     PollStatus = ::poll(FD, FDCount, RemainingTime);
 #endif
 
-    // If FD equals -1 then ListeningSocket::shutdown has been called and it is
-    // appropriate to return operation_canceled
-    if (getActiveFD() == -1)
+    // If ActiveFD equals -1 or CancelFD has data to be read then the operation
+    // has been canceled by another thread
+    if (getActiveFD() == -1 || FD[1].revents & POLLIN)
       return llvm::make_error<StringError>(
           std::make_error_code(std::errc::operation_canceled),
           "Accept canceled");
