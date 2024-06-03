@@ -15030,10 +15030,18 @@ bool ScalarEvolution::matchURem(const SCEV *Expr, const SCEV *&LHS,
 class SCEVLoopGuardRewriter : public SCEVRewriteVisitor<SCEVLoopGuardRewriter> {
   const DenseMap<const SCEV *, const SCEV *> &Map;
 
+  SCEV::NoWrapFlags FlagMask = SCEV::FlagAnyWrap;
+
 public:
   SCEVLoopGuardRewriter(ScalarEvolution &SE,
-                        DenseMap<const SCEV *, const SCEV *> &M)
-      : SCEVRewriteVisitor(SE), Map(M) {}
+                        DenseMap<const SCEV *, const SCEV *> &M,
+                        bool PreserveNUW, bool PreserveNSW)
+      : SCEVRewriteVisitor(SE), Map(M) {
+    if (PreserveNUW)
+      FlagMask = ScalarEvolution::setFlags(FlagMask, SCEV::FlagNUW);
+    if (PreserveNSW)
+      FlagMask = ScalarEvolution::setFlags(FlagMask, SCEV::FlagNSW);
+  }
 
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) { return Expr; }
 
@@ -15088,6 +15096,36 @@ public:
     if (I == Map.end())
       return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSMinExpr(Expr);
     return I->second;
+  }
+
+  const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+    SmallVector<const SCEV *, 2> Operands;
+    bool Changed = false;
+    for (const auto *Op : Expr->operands()) {
+      Operands.push_back(SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
+      Changed |= Op != Operands.back();
+    }
+    // We are only replacing operands with equivalent values, so transfer the
+    // flags from the original expression.
+    return !Changed
+               ? Expr
+               : SE.getAddExpr(Operands, ScalarEvolution::maskFlags(
+                                             Expr->getNoWrapFlags(), FlagMask));
+  }
+
+  const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
+    SmallVector<const SCEV *, 2> Operands;
+    bool Changed = false;
+    for (const auto *Op : Expr->operands()) {
+      Operands.push_back(SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
+      Changed |= Op != Operands.back();
+    }
+    // We are only replacing operands with equivalent values, so transfer the
+    // flags from the original expression.
+    return !Changed
+               ? Expr
+               : SE.getMulExpr(Operands, ScalarEvolution::maskFlags(
+                                             Expr->getNoWrapFlags(), FlagMask));
   }
 };
 
@@ -15503,6 +15541,17 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
   if (RewriteMap.empty())
     return Expr;
 
+  // Let the rewriter preserve NUW/NSW flags if the unsigned/signed ranges of
+  // the replacement expressions are contained in the ranges of the replaced
+  // expressions.
+  bool PreserveNUW = true;
+  bool PreserveNSW = true;
+  for (const SCEV *Expr : ExprsToRewrite) {
+    const SCEV *RewriteTo = RewriteMap[Expr];
+    PreserveNUW &= getUnsignedRange(Expr).contains(getUnsignedRange(RewriteTo));
+    PreserveNSW &= getSignedRange(Expr).contains(getSignedRange(RewriteTo));
+  }
+
   // Now that all rewrite information is collect, rewrite the collected
   // expressions with the information in the map. This applies information to
   // sub-expressions.
@@ -15510,11 +15559,11 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     for (const SCEV *Expr : ExprsToRewrite) {
       const SCEV *RewriteTo = RewriteMap[Expr];
       RewriteMap.erase(Expr);
-      SCEVLoopGuardRewriter Rewriter(*this, RewriteMap);
+      SCEVLoopGuardRewriter Rewriter(*this, RewriteMap, PreserveNUW,
+                                     PreserveNSW);
       RewriteMap.insert({Expr, Rewriter.visit(RewriteTo)});
     }
   }
-
-  SCEVLoopGuardRewriter Rewriter(*this, RewriteMap);
+  SCEVLoopGuardRewriter Rewriter(*this, RewriteMap, PreserveNUW, PreserveNSW);
   return Rewriter.visit(Expr);
 }
