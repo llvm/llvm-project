@@ -1,3 +1,5 @@
+! Tests delayed privatization for `targets ... private(..)` for simple variables.
+
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
 ! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %s 2>&1 \
