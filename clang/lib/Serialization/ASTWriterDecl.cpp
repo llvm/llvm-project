@@ -1735,7 +1735,7 @@ void ASTDeclWriter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   if (Writer.isGeneratingReducedBMI()) {
     auto Name = Context.DeclarationNames.getCXXDeductionGuideName(D);
     for (auto *DG : D->getDeclContext()->noload_lookup(Name))
-      Writer.GetDeclRef(DG);
+      Writer.GetDeclRef(DG->getCanonicalDecl());
   }
 
   Code = serialization::DECL_CLASS_TEMPLATE;
