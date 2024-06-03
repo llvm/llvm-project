@@ -302,6 +302,97 @@ static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
   return Res;
 }
 
+/// Returns k such that lambda(2^Bitwidth) = 2^k, where lambda is the Carmichael
+/// function. This means that x^(2^k) === 1 mod 2^Bitwidth for
+/// every odd x, i.e. x^(2^k) = 1 for every odd x in Bitwidth-bit arithmetic.
+/// Note that 0 <= k < Bitwidth, and if Bitwidth > 3 then x^(2^k) = 0 for every
+/// even x in Bitwidth-bit arithmetic.
+static unsigned CarmichaelShift(unsigned Bitwidth) {
+  if (Bitwidth < 3)
+    return Bitwidth - 1;
+  return Bitwidth - 2;
+}
+
+/// Add the extra weight 'RHS' to the existing weight 'LHS',
+/// reducing the combined weight using any special properties of the operation.
+/// The existing weight LHS represents the computation X op X op ... op X where
+/// X occurs LHS times.  The combined weight represents  X op X op ... op X with
+/// X occurring LHS + RHS times.  If op is "Xor" for example then the combined
+/// operation is equivalent to X if LHS + RHS is odd, or 0 if LHS + RHS is even;
+/// the routine returns 1 in LHS in the first case, and 0 in LHS in the second.
+static void IncorporateWeight(APInt &LHS, const APInt &RHS, unsigned Opcode) {
+  // If we were working with infinite precision arithmetic then the combined
+  // weight would be LHS + RHS.  But we are using finite precision arithmetic,
+  // and the APInt sum LHS + RHS may not be correct if it wraps (it is correct
+  // for nilpotent operations and addition, but not for idempotent operations
+  // and multiplication), so it is important to correctly reduce the combined
+  // weight back into range if wrapping would be wrong.
+
+  // If RHS is zero then the weight didn't change.
+  if (RHS.isMinValue())
+    return;
+  // If LHS is zero then the combined weight is RHS.
+  if (LHS.isMinValue()) {
+    LHS = RHS;
+    return;
+  }
+  // From this point on we know that neither LHS nor RHS is zero.
+
+  if (Instruction::isIdempotent(Opcode)) {
+    // Idempotent means X op X === X, so any non-zero weight is equivalent to a
+    // weight of 1.  Keeping weights at zero or one also means that wrapping is
+    // not a problem.
+    assert(LHS == 1 && RHS == 1 && "Weights not reduced!");
+    return; // Return a weight of 1.
+  }
+  if (Instruction::isNilpotent(Opcode)) {
+    // Nilpotent means X op X === 0, so reduce weights modulo 2.
+    assert(LHS == 1 && RHS == 1 && "Weights not reduced!");
+    LHS = 0; // 1 + 1 === 0 modulo 2.
+    return;
+  }
+  if (Opcode == Instruction::Add || Opcode == Instruction::FAdd) {
+    // TODO: Reduce the weight by exploiting nsw/nuw?
+    LHS += RHS;
+    return;
+  }
+
+  assert((Opcode == Instruction::Mul || Opcode == Instruction::FMul) &&
+         "Unknown associative operation!");
+  unsigned Bitwidth = LHS.getBitWidth();
+  // If CM is the Carmichael number then a weight W satisfying W >= CM+Bitwidth
+  // can be replaced with W-CM.  That's because x^W=x^(W-CM) for every Bitwidth
+  // bit number x, since either x is odd in which case x^CM = 1, or x is even in
+  // which case both x^W and x^(W - CM) are zero.  By subtracting off multiples
+  // of CM like this weights can always be reduced to the range [0, CM+Bitwidth)
+  // which by a happy accident means that they can always be represented using
+  // Bitwidth bits.
+  // TODO: Reduce the weight by exploiting nsw/nuw?  (Could do much better than
+  // the Carmichael number).
+  if (Bitwidth > 3) {
+    /// CM - The value of Carmichael's lambda function.
+    APInt CM = APInt::getOneBitSet(Bitwidth, CarmichaelShift(Bitwidth));
+    // Any weight W >= Threshold can be replaced with W - CM.
+    APInt Threshold = CM + Bitwidth;
+    assert(LHS.ult(Threshold) && RHS.ult(Threshold) && "Weights not reduced!");
+    // For Bitwidth 4 or more the following sum does not overflow.
+    LHS += RHS;
+    while (LHS.uge(Threshold))
+      LHS -= CM;
+  } else {
+    // To avoid problems with overflow do everything the same as above but using
+    // a larger type.
+    unsigned CM = 1U << CarmichaelShift(Bitwidth);
+    unsigned Threshold = CM + Bitwidth;
+    assert(LHS.getZExtValue() < Threshold && RHS.getZExtValue() < Threshold &&
+           "Weights not reduced!");
+    unsigned Total = LHS.getZExtValue() + RHS.getZExtValue();
+    while (Total >= Threshold)
+      Total -= CM;
+    LHS = Total;
+  }
+}
+
 using RepeatedValue = std::pair<Value*, APInt>;
 
 /// Given an associative binary expression, return the leaf
@@ -471,7 +562,7 @@ static bool LinearizeExprTree(Instruction *I,
                "In leaf map but not visited!");
 
         // Update the number of paths to the leaf.
-        It->second += Weight;
+        IncorporateWeight(It->second, Weight, Opcode);
 
         // If we still have uses that are not accounted for by the expression
         // then it is not safe to modify the value.
