@@ -12,8 +12,8 @@
 
 // CHECK:      @llvm.used = appending global [8 x ptr] [ptr @c0, ptr @foo.l0, ptr @f0, ptr @f2, ptr @g0, ptr @g1, ptr @g3, ptr @g4], section "llvm.metadata"
 // CHECK:      @llvm.compiler.used = appending global [3 x ptr] [ptr @f2, ptr @g3, ptr @g4], section "llvm.metadata"
-// GLOBALAS:   @llvm.used = appending addrspace(1) global [8 x ptr addrspace(1)] [ptr addrspace(1) addrspacecast (ptr addrspace(4) @c0 to ptr addrspace(1)), ptr addrspace(1) @foo.l0, ptr addrspace(1) addrspacecast (ptr @f0 to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @f2 to ptr addrspace(1)), ptr addrspace(1) @g0, ptr addrspace(1) @g1, ptr addrspace(1) @g3, ptr addrspace(1) @g4], section "llvm.metadata"
-// GLOBALAS:   @llvm.compiler.used = appending addrspace(1) global [3 x ptr addrspace(1)] [ptr addrspace(1) addrspacecast (ptr @f2 to ptr addrspace(1)), ptr addrspace(1) @g3, ptr addrspace(1) @g4], section "llvm.metadata"
+// GLOBALAS:   @llvm.used = appending addrspace(1) global [8 x ptr] [ptr addrspacecast (ptr addrspace(4) @c0 to ptr), ptr addrspacecast (ptr addrspace(1) @foo.l0 to ptr), ptr @f0, ptr @f2, ptr addrspacecast (ptr addrspace(1) @g0 to ptr), ptr addrspacecast (ptr addrspace(1) @g1 to ptr), ptr addrspacecast (ptr addrspace(1) @g3 to ptr), ptr addrspacecast (ptr addrspace(1) @g4 to ptr)], section "llvm.metadata"
+// GLOBALAS:   appending addrspace(1) global [3 x ptr] [ptr @f2, ptr addrspacecast (ptr addrspace(1) @g3 to ptr), ptr addrspacecast (ptr addrspace(1) @g4 to ptr)], section "llvm.metadata"
 const int c0 __attribute__((retain)) = 42;
 
 void foo(void) {

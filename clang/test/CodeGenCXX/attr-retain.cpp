@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -emit-llvm -triple amdgcn-amd-amdhsa -Werror %s -o - | FileCheck %s --check-prefix=GLOBALAS
 
 // CHECK:      @llvm.used = appending global [7 x ptr]
-// GLOBALAS:   @llvm.used = appending addrspace(1) global [7 x ptr addrspace(1)]
+// GLOBALAS:   @llvm.used = appending addrspace(1) global [7 x ptr]
 // CHECK-SAME:   @_ZN2X0C2Ev
 // CHECK-SAME:   @_ZN2X0C1Ev
 // CHECK-SAME:   @_ZN2X0D2Ev
