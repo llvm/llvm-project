@@ -75,7 +75,7 @@ static std::optional<unsigned>
 canTriviallyVectorizeMemOpImpl(scf::ParallelOp loop, unsigned dim, Op memOp,
                                const DataLayout *DL) {
   auto loopIndexVars = loop.getInductionVars();
-  assert(dim < loopIndexVars.size());
+  assert(dim < loopIndexVars.size() && "Invalid loop dimension");
   auto memref = memOp.getMemRef();
   auto type = cast<MemRefType>(memref.getType());
   std::optional<unsigned> width = getTypeBitWidth(type.getElementType(), DL);
@@ -105,7 +105,7 @@ canTriviallyVectorizeMemOpImpl(scf::ParallelOp loop, unsigned dim, Op memOp,
 static std::optional<unsigned>
 canTriviallyVectorizeMemOp(scf::ParallelOp loop, unsigned dim, Operation &op,
                            const DataLayout *DL) {
-  assert(dim < loop.getInductionVars().size());
+  assert(dim < loop.getInductionVars().size() && "Invalid loop dimension");
   if (auto storeOp = dyn_cast<memref::StoreOp>(op))
     return canTriviallyVectorizeMemOpImpl(loop, dim, storeOp, DL);
 
@@ -170,8 +170,8 @@ static std::optional<vector::CombiningKind> getReductionKind(Block &body) {
 std::optional<scf::SCFVectorizeInfo>
 mlir::scf::getLoopVectorizeInfo(scf::ParallelOp loop, unsigned dim,
                                 unsigned vectorBitwidth, const DataLayout *DL) {
-  assert(dim < loop.getStep().size());
-  assert(vectorBitwidth > 0);
+  assert(dim < loop.getStep().size() && "Invalid loop dimension");
+  assert(vectorBitwidth > 0 && "Invalid vector bitwidth");
   unsigned factor = vectorBitwidth / 8;
   if (factor <= 1)
     return std::nullopt;
@@ -250,9 +250,9 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
   auto dim = params.dim;
   auto factor = params.factor;
   auto masked = params.masked;
-  assert(dim < loop.getStep().size());
-  assert(factor > 1);
-  assert(isConstantIntValue(loop.getStep()[dim], 1));
+  assert(dim < loop.getStep().size() && "Invalid loop dimension");
+  assert(factor > 1 && "Invalid vectorize factor");
+  assert(isConstantIntValue(loop.getStep()[dim], 1) && "Loop stepust be 1");
 
   OpBuilder builder(loop);
   auto lower = llvm::to_vector(loop.getLowerBound());
@@ -332,7 +332,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
       return vec;
     }
     auto type = orig.getType();
-    assert(isSupportedVecElem(type));
+    assert(isSupportedVecElem(type) && "Unsupported vector element type");
 
     Value val = orig;
     auto origIndexVars = loop.getInductionVars();
@@ -367,7 +367,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
     // cache and not handled here.
 
     auto &ret = unpackedVals[val];
-    assert(ret.empty());
+    assert(ret.empty() && "Invalid unpackedVals state");
     if (!isSupportedVecElem(val.getType())) {
       // Non vectorizable value, it must be a value defined outside the loop,
       // just replicate it.
@@ -387,8 +387,8 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
 
   // Add unpacked values to the cache.
   auto setUnpackedVals = [&](Value origVal, ValueRange newVals) {
-    assert(newVals.size() == factor);
-    assert(unpackedVals.count(origVal) == 0);
+    assert(newVals.size() == factor && "Invalid values count");
+    assert(unpackedVals.count(origVal) == 0 && "Invalid unpackedVals state");
     unpackedVals[origVal].append(newVals.begin(), newVals.end());
 
     auto type = origVal.getType();
@@ -555,7 +555,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
 
     for (auto &&[i, arg] : llvm::enumerate(op.getOperands())) {
       auto unpacked = getUnpackedVals(arg);
-      assert(unpacked.size() == factor);
+      assert(unpacked.size() == factor && "Invalid unpacked size");
       for (auto j : llvm::seq(0u, factor))
         duplicatedArgs[j * numArgs + i] = unpacked[j];
     }
@@ -588,7 +588,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
        llvm::zip(reduceOp.getReductions(), reduceOp.getOperands())) {
     scalarMapping.clear();
     Block &reduceBody = body.front();
-    assert(reduceBody.getNumArguments() == 2);
+    assert(reduceBody.getNumArguments() == 2 && "Malformed scf.reduce");
 
     Value reduceVal;
     if (auto redKind = getReductionKind(reduceBody)) {
@@ -596,7 +596,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
       Value redArg = getVecVal(arg);
       if (redArg) {
         auto neutral = arith::getNeutralElement(&reduceBody.front());
-        assert(neutral);
+        assert(neutral && "getNeutralElement has unepectedly failed");
         Value neutralVal = builder.create<arith::ConstantOp>(loc, *neutral);
         Value neutralVec =
             builder.create<vector::SplatOp>(loc, neutralVal, redArg.getType());
@@ -618,7 +618,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
       auto lhs = reduceBody.getArgument(0);
       auto rhs = reduceBody.getArgument(1);
       auto unpacked = getUnpackedVals(arg);
-      assert(unpacked.size() == factor);
+      assert(unpacked.size() == factor && "Invalid unpacked size");
       reduceVal = unpacked.front();
       for (auto i : llvm::seq(1u, factor)) {
         Value val = unpacked[i];
