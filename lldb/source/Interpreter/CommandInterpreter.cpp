@@ -3235,6 +3235,8 @@ bool CommandInterpreter::SaveTranscript(
   if (output_file == std::nullopt || output_file->empty()) {
     std::string now = llvm::to_string(std::chrono::system_clock::now());
     std::replace(now.begin(), now.end(), ' ', '_');
+    // Can't have file name with colons on Windows
+    std::replace(now.begin(), now.end(), ':', '-');
     const std::string file_name = "lldb_session_" + now + ".log";
 
     FileSpec save_location = GetSaveSessionDirectory();
