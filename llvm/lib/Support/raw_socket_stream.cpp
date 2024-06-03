@@ -189,7 +189,7 @@ static llvm::Error manageTimeout(std::chrono::milliseconds Timeout,
   struct pollfd FD[2];
   FD[0].events = POLLIN;
 #ifdef _WIN32
-  SOCKET WinServerSock = _get_osfhandle(FD);
+  SOCKET WinServerSock = _get_osfhandle(getActiveFD());
   FD[0].fd = WinServerSock;
 #else
   FD[0].fd = getActiveFD();
