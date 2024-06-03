@@ -1455,6 +1455,22 @@ static bool isSwiftAsyncCallee(const CallExpr *CE) {
 /// if the function returns void, or may be missing one if the function returns
 /// non-void.  Fun stuff :).
 void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
+  if (RetExpr) {
+    if (RetExpr->getType()->isRecordType() &&
+        RetExpr->getType().isDestructedType()) {
+      // This is a return of a class inside the return expression of another
+      // return statement.
+      //
+      // Generating correct code for a nested return of a class is hard: we need
+      // to destroy any temporaries which have already been stored in the return
+      // value slot, and it's not clear when that's supposed to happen. In some
+      // cases, there's no possible consistent order.  So reject for now.
+      //
+      // Currently, this can only show up with statement expressions.
+      CGM.ErrorUnsupported(&S, "nested return statement");
+    }
+  }
+
   if (requiresReturnValueCheck()) {
     llvm::Constant *SLoc = EmitCheckSourceLocation(S.getBeginLoc());
     auto *SLocPtr =
