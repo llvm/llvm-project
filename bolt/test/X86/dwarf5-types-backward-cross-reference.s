@@ -5,8 +5,8 @@
 # RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that BOLT handles backward cross CU references for dwarf5
-# when -fdebug-types-sections is specified.
+## This test checks that BOLT handles backward cross CU references for dwarf5
+## when -fdebug-types-sections is specified.
 
 # The assembly was manually modified to do cross CU reference.
 

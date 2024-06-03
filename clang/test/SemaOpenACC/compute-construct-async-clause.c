@@ -38,4 +38,9 @@ void Test() {
 
 #pragma acc kernels async(SomeE)
   while(1);
+
+  // expected-error@+2{{OpenACC 'async' clause is not valid on 'loop' directive}}
+  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+#pragma acc loop async(1)
+  for(;;);
 }
