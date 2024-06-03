@@ -1607,7 +1607,10 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
   }
 };
 
-VectorType dropNonScalableUnitDimType(VectorType inVecTy) {
+/// Drop unit dimension of the input VectorType. Scalable dimensions cannot be
+/// folded as we do not want to merge them through a shape_cast and create ill
+/// shaped scalable sizes.
+static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
   auto newVecBuilder = VectorType::Builder(inVecTy);
   auto inVecShape = inVecTy.getShape();
   SmallVector<int64_t> newShape;
@@ -1676,7 +1679,7 @@ struct DropUnitDimFromElementwiseOps final
     auto loc = op->getLoc();
     for (auto operand : op->getOperands()) {
       auto opVectorType = cast<VectorType>(operand.getType());
-      auto newVType = dropNonScalableUnitDimType(opVectorType);
+      auto newVType = dropNonScalableUnitDimFromType(opVectorType);
       if (newVType == opVectorType)
         return rewriter.notifyMatchFailure(op, "No unit dimension to remove.");
 
@@ -1685,7 +1688,7 @@ struct DropUnitDimFromElementwiseOps final
     }
 
     VectorType newResultVectorType =
-        dropNonScalableUnitDimType(resultVectorType);
+        dropNonScalableUnitDimFromType(resultVectorType);
     // Create an updated elementwise Op without unit dim
     Operation *elementwiseOp =
         rewriter.create(loc, op->getName().getIdentifier(), newOperands,
