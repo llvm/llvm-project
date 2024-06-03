@@ -373,6 +373,19 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.signal.raise
   )
 
+  add_libc_test(
+    quick_exit_test
+    # The EXPECT_EXITS test is only availible for unit tests.
+    UNIT_TEST_ONLY
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      quick_exit_test.cpp
+    DEPENDS
+      libc.include.stdlib
+      libc.src.stdlib.quick_exit
+  )
+
   # Only the GPU has an in-tree 'malloc' implementation.
   if(LIBC_TARGET_OS_IS_GPU)
     add_libc_test(
