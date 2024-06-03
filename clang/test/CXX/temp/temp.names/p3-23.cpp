@@ -28,7 +28,7 @@ namespace FoundSingleNonTemplate {
   void g0(T &t) {
     t.f0<0;
     t.f0<0>; // expected-error {{expected expression}}
-    t.f0<0> 1;
+    t.f0<0>1;
 
     t.A0<0;
     t.A0<0>; // expected-error {{expected expression}}

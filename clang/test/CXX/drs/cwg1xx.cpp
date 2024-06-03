@@ -615,7 +615,6 @@ namespace cwg141 { // cwg141: 3.1
     //   cxx98-note@#cwg141-S {{lookup from the current scope refers here}}
     // expected-error@#cwg141-a {{no member named 'n' in 'cwg141::A::S<int>'; did you mean '::cwg141::S<int>::n'?}}
     //   expected-note@#cwg141-S {{'::cwg141::S<int>::n' declared here}}
-    // FIXME: we issue a useful diagnostic first, then some bogus ones.
     b.f<int>();
     // expected-error@-1 {{no member named 'f' in 'cwg141::B'}}
     (void)b.S<int>::n;
