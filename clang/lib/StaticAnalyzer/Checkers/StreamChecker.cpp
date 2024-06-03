@@ -737,8 +737,8 @@ escapeByStartIndexAndCount(ProgramStateRef State, CheckerContext &C,
     return std::nullopt;
   };
 
-  auto StartIndexVal = UnboxAsInt(StartIndex);
-  auto CountVal = UnboxAsInt(Count);
+  std::optional<int64_t> StartIndexVal = UnboxAsInt(StartIndex);
+  std::optional<int64_t> CountVal = UnboxAsInt(Count);
 
   // FIXME: Maybe we could make this more generic, and expose this by the
   // 'invalidateRegions' API. After doing so, it might make sense to make this
