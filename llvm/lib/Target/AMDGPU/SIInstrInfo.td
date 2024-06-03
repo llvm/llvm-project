@@ -1702,9 +1702,10 @@ class getSrcMod <ValueType VT, bit IsTrue16 = 0> {
 }
 
 class getOpSelMod <ValueType VT> {
-  Operand ret = !cond(!eq(VT, f16) : FP16InputMods,
-                      !eq(VT, bf16) : FP16InputMods,
-                      !eq(VT, v2f16) : PackedF16InputMods,
+  Operand ret = !cond(!eq(VT, f16)    : FP16InputMods,
+                      !eq(VT, bf16)   : FP16InputMods,
+                      !eq(VT, f32)    : FP32InputMods,
+                      !eq(VT, v2f16)  : PackedF16InputMods,
                       !eq(VT, v2bf16) : PackedF16InputMods,
                       1 : IntOpSelMods);
 }
@@ -2645,6 +2646,8 @@ def VOP_V2I16_V2BF16_F32 : VOPProfile<[v2i16, v2bf16, f32, untyped]>;
 def VOP_I32_F32_F32_F32 : VOPProfile<[i32, f32, f32, f32]>;
 def VOP_I32_V2F16_F32_F32 : VOPProfile<[i32, v2f16, f32, f32]>;
 def VOP_I32_V2BF16_F32_F32: VOPProfile<[i32, v2bf16, f32, f32]>;
+def VOP_BF16_F32_I32 : VOPProfile<[bf16, f32, i32, untyped]>;
+def VOP_F16_F32_I32 : VOPProfile<[f16, f32, i32, untyped]>;
 
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
