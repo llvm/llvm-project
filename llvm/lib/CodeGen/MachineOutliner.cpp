@@ -594,7 +594,7 @@ void MachineOutliner::findCandidates(
     unsigned NumKept = 0;
 #endif
     // Sort the start indices so that we can efficiently check if candidates
-    // overlap with each other in MachineOutliner::findCandidates().
+    // overlap with the ones we've already found for this sequence.
     llvm::sort(RS.StartIndices);
     for (const unsigned &StartIdx : RS.StartIndices) {
       // Trick: Discard some candidates that would be incompatible with the
