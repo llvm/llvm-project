@@ -193,7 +193,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(RemoveSemicolon);
   CHECK_PARSE_BOOL(SkipMacroDefinitionBody);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
-  CHECK_PARSE_BOOL(SpaceInEmptyBlock);
   CHECK_PARSE_BOOL(SpacesInContainerLiterals);
   CHECK_PARSE_BOOL(SpaceAfterCStyleCast);
   CHECK_PARSE_BOOL(SpaceAfterTemplateKeyword);
@@ -245,6 +244,8 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterPlacementOperator);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, BeforeNonEmptyParentheses);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, ExceptDoubleParentheses);
+  CHECK_PARSE_NESTED_BOOL(SpaceInEmptyBracesOptions, Block);
+  CHECK_PARSE_NESTED_BOOL(SpaceInEmptyBracesOptions, InitList);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InCStyleCasts);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InConditionalStatements);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InEmptyParentheses);
@@ -687,6 +688,12 @@ TEST(ConfigParseTest, ParsesConfiguration) {
       FormatStyle::SpacesInParensCustom(false, false, false, true, false));
   Style.SpacesInParens = FormatStyle::SIPO_Never;
   Style.SpacesInParensOptions = {};
+
+  // For backward compatibility
+  Style.SpaceInEmptyBraces = FormatStyle::SIEBO_Never;
+  Style.SpaceInEmptyBracesOptions = {};
+  CHECK_PARSE("SpaceInEmptyBlock: true", SpaceInEmptyBracesOptions,
+              FormatStyle::SpaceInEmptyBracesCustom(true, true, false, true));
 
   Style.ColumnLimit = 123;
   FormatStyle BaseStyle = getLLVMStyle();

@@ -4668,13 +4668,11 @@ struct FormatStyle {
   bool SpaceBeforeRangeBasedForLoopColon;
 
   /// If ``true``, spaces will be inserted into ``{}``.
-  /// \code
-  ///    true:                                false:
-  ///    void f() { }                   vs.   void f() {}
-  ///    while (true) { }                     while (true) {}
-  /// \endcode
+  /// This option is **deprecated**. The previous behavior is preserved by using
+  /// ``SpaceInEmptyBraces`` with ``Custom`` and by setting ``Block`` in
+  /// ``SpaceInEmptyBracesOptions`` to ``true``.
   /// \version 10
-  bool SpaceInEmptyBlock;
+  // bool SpaceInEmptyBlock;
 
   /// If ``true``, spaces may be inserted into ``()``.
   /// This option is **deprecated**. See ``InEmptyParentheses`` of
@@ -4912,6 +4910,107 @@ struct FormatStyle {
   /// \endcode
   /// \version 17
   SpacesInParensCustom SpacesInParensOptions;
+
+  /// Different ways to put a space in empty braces.
+  enum SpaceInEmptyBracesStyle : int8_t {
+    /// Never put a space in empty braces.
+    /// \code
+    ///    void f() {}
+    ///    T x{};
+    ///    while (true) {}
+    ///    struct U1 {};
+    ///    union U2 {};
+    ///    class U3 {};
+    ///    enum U4 {};
+    /// \endcode
+    SIEBO_Never,
+    /// Always put a space in empty braces.
+    SIEBO_Always,
+    /// Configure each individual space in empty braces in
+    /// `SpacesInEmptyBracesOptions`.
+    SIEBO_Custom,
+  };
+
+  /// Defines in which cases spaces will be inserted in empty braces.
+  /// \version 19
+  SpaceInEmptyBracesStyle SpaceInEmptyBraces;
+
+  /// Precise control over the spacing in empty braces.
+  /// \code
+  ///   # Should be declared this way:
+  ///   SpaceInEmptyBraces: Custom
+  ///   SpaceInEmptyBracesOptions:
+  ///     Function: true
+  ///     Record: false
+  ///     InitList: true
+  ///     Block: false
+  /// \endcode
+  struct SpaceInEmptyBracesCustom {
+    /// Put a space in empty braces of function definition.
+    /// \code
+    ///    true:                                  false:
+    ///    void f() { }                   vs.     void f() {}
+    /// \endcode
+    bool Function;
+    /// Put a space in empty braces of record/struct definition.
+    /// \code
+    ///    true:                                  false:
+    ///    struct U1 { };                 vs.     struct U1 {};
+    ///    union U2 { };                          union U2 {};
+    ///    class U3 { };                          class U3 {};
+    ///    enum U4 { };                           enum U4 {};
+    /// \endcode
+    bool Record;
+    /// Put a space in empty braces of initializer list.
+    /// \code
+    ///    true:                                  false:
+    ///    T x{ };                        vs.     T x{};
+    /// \endcode
+    bool InitList;
+    /// Put a space in empty braces of other blocks, including functions and
+    /// record, compatible with ``SpaceInEmptyBlock``.
+    /// \code
+    ///    true:                                  false:
+    ///    void f() { }                   vs.     void f() {}
+    ///    enum Unit { };                         enum Unit {};
+    ///    while (true) { }                       while (true) {}
+    /// \endcode
+    bool Block;
+
+    SpaceInEmptyBracesCustom()
+        : Function(false), Record(false), InitList(false), Block(false) {}
+
+    SpaceInEmptyBracesCustom(bool Function, bool Record, bool InitList,
+                             bool Block)
+        : Function(Function), Record(Record), InitList(InitList), Block(Block) {
+    }
+
+    bool operator==(const SpaceInEmptyBracesCustom &R) const {
+      return Function == R.Function && Record == R.Record &&
+             InitList == R.InitList && Block == R.Block;
+    }
+
+    bool operator!=(const SpaceInEmptyBracesCustom &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Control of individual spaces in empty braces.
+  ///
+  /// If ``SpaceInEmptyBraces`` is set to ``Custom``, use this to specify
+  /// how each individual space in empty braces case should be handled.
+  /// Otherwise, this is ignored.
+  /// \code{.yaml}
+  ///   # Example of usage:
+  ///   SpaceInEmptyBraces: Custom
+  ///   SpaceInEmptyBracesOptions:
+  ///     Function: true
+  ///     Record: false
+  ///     InitList: true
+  ///     Block: false
+  /// \endcode
+  /// \version 19
+  SpaceInEmptyBracesCustom SpaceInEmptyBracesOptions;
 
   /// If ``true``, spaces will be inserted after ``[`` and before ``]``.
   /// Lambdas without arguments or unspecified size array declarations will not
@@ -5339,7 +5438,8 @@ struct FormatStyle {
            SpaceBeforeRangeBasedForLoopColon ==
                R.SpaceBeforeRangeBasedForLoopColon &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
-           SpaceInEmptyBlock == R.SpaceInEmptyBlock &&
+           SpaceInEmptyBraces == R.SpaceInEmptyBraces &&
+           SpaceInEmptyBracesOptions == R.SpaceInEmptyBracesOptions &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&

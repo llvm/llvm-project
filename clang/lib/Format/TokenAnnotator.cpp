@@ -4464,9 +4464,31 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return Left.is(tok::hash);
   if (Left.isOneOf(tok::hashhash, tok::hash))
     return Right.is(tok::hash);
-  if (Left.is(BK_Block) && Right.is(tok::r_brace) &&
+
+  if ((Left.is(tok::l_paren) && Right.is(tok::r_paren)) ||
+      (Left.is(tok::l_brace) && Left.isNot(BK_Block) &&
+       Right.is(tok::r_brace) && Right.isNot(BK_Block) &&
+       Style.SpaceInEmptyBraces == FormatStyle::SIEBO_Never)) {
+    return Style.SpacesInParensOptions.InEmptyParentheses;
+  }
+  // Other braces for records are handled in tryMergeSimpleBlock on
+  // UnwrappedLineFormatter.cpp.
+  if (Left.is(tok::l_brace) && Right.is(tok::r_brace) &&
       Right.MatchingParen == &Left && Line.Children.empty()) {
-    return Style.SpaceInEmptyBlock;
+    if (Style.SpaceInEmptyBraces == FormatStyle::SIEBO_Never)
+      return false;
+    if (Style.SpaceInEmptyBraces == FormatStyle::SIEBO_Always)
+      return true;
+    if (Style.SpaceInEmptyBraces == FormatStyle::SIEBO_Custom) {
+      if (Left.is(BK_BracedInit) && Right.is(BK_BracedInit))
+        return Style.SpaceInEmptyBracesOptions.InitList;
+      if (Left.is(TT_EnumLBrace) && Right.is(TT_EnumRBrace)) {
+        return Style.SpaceInEmptyBracesOptions.Record ||
+               Style.SpaceInEmptyBracesOptions.Block;
+      }
+      if (Left.is(BK_Block))
+        return Style.SpaceInEmptyBracesOptions.Block;
+    }
   }
   if (Style.SpacesInParens == FormatStyle::SIPO_Custom) {
     if ((Left.is(tok::l_paren) && Right.is(tok::r_paren)) ||
