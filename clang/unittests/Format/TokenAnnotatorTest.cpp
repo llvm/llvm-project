@@ -1577,6 +1577,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[2], tok::arrow, TT_TrailingReturnArrow);
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_LambdaLBrace);
 
+  Tokens = annotate("foo([&](u32 bar) __attribute__((attr)) -> void {});");
+  ASSERT_EQ(Tokens.size(), 22u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[15], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_LambdaLBrace);
+
   Tokens = annotate("[] <typename T> () {}");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
@@ -1988,11 +1994,11 @@ TEST_F(TokenAnnotatorTest, UnderstandHashInMacro) {
 
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacros) {
   // '__attribute__' has special handling.
-  auto Tokens = annotate("__attribute__(X) void Foo(void);");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  auto Tokens = annotate("__attribute__((X)) void Foo(void);");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw___attribute, TT_Unknown);
   EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_AttributeLParen);
-  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_AttributeRParen);
 
   // Generic macro has no special handling in this location.
   Tokens = annotate("A(X) void Foo(void);");
@@ -2014,11 +2020,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacros) {
 
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCDecl) {
   // '__attribute__' has special handling.
-  auto Tokens = annotate("__attribute__(X) @interface Foo");
-  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  auto Tokens = annotate("__attribute__((X)) @interface Foo");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw___attribute, TT_Unknown);
   EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_AttributeLParen);
-  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_AttributeRParen);
 
   // Generic macro has no special handling in this location.
   Tokens = annotate("A(X) @interface Foo");
@@ -2042,11 +2048,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCDecl) {
 
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCMethodDecl) {
   // '__attribute__' has special handling.
-  auto Tokens = annotate("- (id)init __attribute__(X);");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  auto Tokens = annotate("- (id)init __attribute__((X));");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::kw___attribute, TT_Unknown);
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_AttributeLParen);
-  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_AttributeRParen);
 
   // Generic macro has no special handling in this location.
   Tokens = annotate("- (id)init A(X);");
@@ -2070,11 +2076,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCMethodDecl) {
 
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCProperty) {
   // '__attribute__' has special handling.
-  auto Tokens = annotate("@property(weak) id delegate __attribute__(X);");
-  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  auto Tokens = annotate("@property(weak) id delegate __attribute__((X));");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::kw___attribute, TT_Unknown);
   EXPECT_TOKEN(Tokens[8], tok::l_paren, TT_AttributeLParen);
-  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[12], tok::r_paren, TT_AttributeRParen);
 
   // Generic macro has no special handling in this location.
   Tokens = annotate("@property(weak) id delegate A(X);");
@@ -2913,6 +2919,11 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[5], BK_Block);
   EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+
+  Tokens = annotate("struct Foo<int>::Bar {};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[7], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
 
   Tokens = annotate("struct Foo<int> : Base {};");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;

@@ -676,6 +676,20 @@ mlir::Type fir::BoxDimsOp::getTupleType() {
 }
 
 //===----------------------------------------------------------------------===//
+// BoxRankOp
+//===----------------------------------------------------------------------===//
+
+void fir::BoxRankOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  mlir::Value inputBox = getBox();
+  if (fir::isBoxAddress(inputBox.getType()))
+    effects.emplace_back(mlir::MemoryEffects::Read::get(), inputBox,
+                         mlir::SideEffects::DefaultResource::get());
+}
+
+//===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
 

@@ -265,11 +265,14 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
     }
   }
 
-  cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
-
   // Eliminate freeze if all operands are guaranteed non-poison.
   if (!MaybePoisonOperand) {
-    MatchInfo = [=](MachineIRBuilder &B) { MRI.replaceRegWith(DstOp, OrigOp); };
+    MatchInfo = [=](MachineIRBuilder &B) {
+      Observer.changingInstr(*OrigDef);
+      cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
+      Observer.changedInstr(*OrigDef);
+      B.buildCopy(DstOp, OrigOp);
+    };
     return true;
   }
 
@@ -277,6 +280,9 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
   LLT MaybePoisonOperandRegTy = MRI.getType(MaybePoisonOperandReg);
 
   MatchInfo = [=](MachineIRBuilder &B) mutable {
+    Observer.changingInstr(*OrigDef);
+    cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
+    Observer.changedInstr(*OrigDef);
     B.setInsertPt(*OrigDef->getParent(), OrigDef->getIterator());
     auto Freeze = B.buildFreeze(MaybePoisonOperandRegTy, MaybePoisonOperandReg);
     replaceRegOpWith(
@@ -1144,7 +1150,8 @@ bool CombinerHelper::isIndexedLoadStoreLegal(GLoadStore &LdSt) const {
   LLT Ty = MRI.getType(LdSt.getReg(0));
   LLT MemTy = LdSt.getMMO().getMemoryType();
   SmallVector<LegalityQuery::MemDesc, 2> MemDescrs(
-      {{MemTy, MemTy.getSizeInBits(), AtomicOrdering::NotAtomic}});
+      {{MemTy, MemTy.getSizeInBits().getKnownMinValue(),
+        AtomicOrdering::NotAtomic}});
   unsigned IndexedOpc = getIndexedOpc(LdSt.getOpcode());
   SmallVector<LLT> OpTys;
   if (IndexedOpc == TargetOpcode::G_INDEXED_STORE)
@@ -7395,6 +7402,27 @@ bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
     MatchInfo = [=](MachineIRBuilder &B) {
       B.buildZExt(Dst, Src, MachineInstr::MIFlag::NonNeg);
     };
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
+                                     BuildFnTy &MatchInfo) {
+  GZext *Zext = cast<GZext>(MRI.getVRegDef(MO.getReg()));
+
+  Register Dst = Zext->getReg(0);
+  Register Src = Zext->getSrcReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  const auto &TLI = getTargetLowering();
+
+  // Convert zext nneg to sext if sext is the preferred form for the target.
+  if (isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT, {DstTy, SrcTy}}) &&
+      TLI.isSExtCheaperThanZExt(getMVTForLLT(SrcTy), getMVTForLLT(DstTy))) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
     return true;
   }
 
