@@ -95,12 +95,12 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func.func @ewise_outerproduct
+// CHECK-LABEL: func.func @arith_to_outerproduct_scalable_i32
 //  CHECK-SAME:   %[[LHS:.*]]: vector<[4]xi32>,
 //  CHECK-SAME:   %[[RHS:.*]]: vector<[4]xi32>) -> vector<[4]x[4]xi32> {
 //       CHECK:     %[[RES:.*]] = vector.outerproduct %[[LHS]], %[[RHS]] : vector<[4]xi32>, vector<[4]xi32>
 //       CHECK:     return %[[RES]] : vector<[4]x[4]xi32>
-func.func @ewise_outerproduct(%lhs: vector<[4]xi32>, %rhs: vector<[4]xi32>) -> vector<[4]x[4]xi32> {
+func.func @arith_to_outerproduct_scalable_i32(%lhs: vector<[4]xi32>, %rhs: vector<[4]xi32>) -> vector<[4]x[4]xi32> {
   %lhsBcast = vector.broadcast %lhs : vector<[4]xi32> to vector<[4]x[4]xi32>
   %lhsT = vector.transpose %lhsBcast, [1, 0] : vector<[4]x[4]xi32> to vector<[4]x[4]xi32>
   %rhsBcast = vector.broadcast %rhs : vector<[4]xi32> to vector<[4]x[4]xi32>
@@ -108,30 +108,17 @@ func.func @ewise_outerproduct(%lhs: vector<[4]xi32>, %rhs: vector<[4]xi32>) -> v
   return %mul: vector<[4]x[4]xi32>
 }
 
-// CHECK-LABEL: func.func @ewise_outerproduct_transposed_rhs
+// CHECK-LABEL: func.func @arith_to_outerproduct_trans_rhs_f32
 //  CHECK-SAME:   %[[LHS:.*]]: vector<16xf32>,
-//  CHECK-SAME:   %[[RHS:.*]]: vector<16xf32>) -> vector<16x16xf32> {
-//       CHECK:     %[[RES:.*]] = vector.outerproduct %[[RHS]], %[[LHS]] : vector<16xf32>, vector<16xf32>
-//       CHECK:     return %[[RES]] : vector<16x16xf32>
-func.func @ewise_outerproduct_transposed_rhs(%lhs: vector<16xf32>, %rhs: vector<16xf32>) -> vector<16x16xf32> {
-  %rhsBcast = vector.broadcast %rhs : vector<16xf32> to vector<16x16xf32>
-  %rhsT = vector.transpose %rhsBcast, [1, 0] : vector<16x16xf32> to vector<16x16xf32>
-  %lhsBcast = vector.broadcast %lhs : vector<16xf32> to vector<16x16xf32>
-  %mul = arith.mulf %lhsBcast, %rhsT : vector<16x16xf32>
-  return %mul: vector<16x16xf32>
-}
-
-// CHECK-LABEL: func.func @ewise_outerproduct_different_sizes
-//  CHECK-SAME:   %[[LHS:.*]]: vector<8xf32>,
-//  CHECK-SAME:   %[[RHS:.*]]: vector<4xf32>) -> vector<8x4xf32> {
-//       CHECK:     %[[RES:.*]] = vector.outerproduct %[[LHS]], %[[RHS]] : vector<8xf32>, vector<4xf32>
-//       CHECK:     return %[[RES]] : vector<8x4xf32>
-func.func @ewise_outerproduct_different_sizes(%lhs: vector<8xf32>, %rhs: vector<4xf32>) -> vector<8x4xf32> {
-  %lhsBcast = vector.broadcast %lhs : vector<8xf32> to vector<4x8xf32>
-  %lhsT = vector.transpose %lhsBcast, [1, 0] : vector<4x8xf32> to vector<8x4xf32>
-  %rhsBcast = vector.broadcast %rhs : vector<4xf32> to vector<8x4xf32>
-  %mul = arith.mulf %lhsT, %rhsBcast : vector<8x4xf32>
-  return %mul: vector<8x4xf32>
+//  CHECK-SAME:   %[[RHS:.*]]: vector<8xf32>) -> vector<8x16xf32> {
+//       CHECK:     %[[RES:.*]] = vector.outerproduct %[[RHS]], %[[LHS]] : vector<8xf32>, vector<16xf32>
+//       CHECK:     return %[[RES]] : vector<8x16xf32>
+func.func @arith_to_outerproduct_trans_rhs_f32(%lhs: vector<16xf32>, %rhs: vector<8xf32>) -> vector<8x16xf32> {
+  %rhsBcast = vector.broadcast %rhs : vector<8xf32> to vector<16x8xf32>
+  %rhsT = vector.transpose %rhsBcast, [1, 0] : vector<16x8xf32> to vector<8x16xf32>
+  %lhsBcast = vector.broadcast %lhs : vector<16xf32> to vector<8x16xf32>
+  %mul = arith.mulf %lhsBcast, %rhsT : vector<8x16xf32>
+  return %mul: vector<8x16xf32>
 }
 
 module attributes {transform.with_named_sequence} {

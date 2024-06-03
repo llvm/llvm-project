@@ -1795,9 +1795,9 @@ private:
   unsigned maxNumElementsToExtract = 0;
 };
 
-/// Pattern aiming to fold a series of ops mulf(tr(broadcast(A)), broadcast(B))
-/// into vector.outerproduct(A, B) such as :
-///
+/// Fold `mulf(tr(broadcast(A)), broadcast(B))` into `vector.outerproduct(A,
+/// B)`.
+/// Example:
 ///  %lhsBcast = vector.broadcast %lhs : vector<4xi32> to vector<4x4xi32>
 ///  %lhsT = vector.transpose %lhsBcast, [1, 0] : vector<4x4xi32> to
 ///  vector<4x4xi32> %rhsBcast = vector.broadcast %rhs : vector<4xi32> to
@@ -1807,65 +1807,72 @@ private:
 ///
 ///  %res = vector.outerproduct %lhs, %rhs : vector<4xi32>, vector<4xi32>
 ///
-/// Edge Cases where broadcast ops are not 1D to 2D as follow are not handled.
+/// Supports only 1D-to-2D broadcasts. The following cases are not supported.
 /// %ex1 = vector.broadcast %lhsCast : vector<1x4xf32> to vector<4x4xf32>
 /// %ex2 = vector.broadcast %lhsCast : f32 to vector<4x4xf32>
 /// %ex3 = vector.broadcast %lhsCast : vector<1x1xf32> to vector<4x4xf32>
 template <typename MulOpType>
-struct ElementwiseToOuterproduct : public OpRewritePattern<MulOpType> {
+struct FoldArithToVectorOuterProduct : public OpRewritePattern<MulOpType> {
   using OpRewritePattern<MulOpType>::OpRewritePattern;
-  // Helper function returning the source of the input broadcast if it matches
-  // requirements for an outerproduct pattern.
-  Value getValidBroadcastSource(vector::BroadcastOp broadcastOp) const {
+  // Returns whether a vector.broadcast matches requirements for an outerproduct
+  // pattern. aka a 1D-to-2D broadcastOp without broadcasted unit dimension.
+  bool isValidBroadcastSource(vector::BroadcastOp broadcastOp) const {
     // Fail if it is not a 1-to-2 dimension to broadcast to avoid generating
     // shape_casts/broadcasts which does not belong in this pattern.
     if (!broadcastOp.computeBroadcastedUnitDims().empty())
-      return Value();
+      return false;
     // Avoid broadcast like f32 or vector<f32> -> ResType
-    auto srcVT = dyn_cast<VectorType>(broadcastOp.getSourceType());
-    if (!srcVT || srcVT.getRank() != 1)
-      return Value();
-    return broadcastOp.getSource();
+    auto srcType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    if (!srcType || srcType.getRank() == 2)
+      return false;
+    return true;
   }
 
   LogicalResult matchAndRewrite(MulOpType mulOp,
                                 PatternRewriter &rewriter) const override {
-    auto VT = llvm::cast<VectorType>(mulOp.getResult().getType());
-    if (!VT)
+    auto resType = llvm::cast<VectorType>(mulOp.getResult().getType());
+    if (!resType)
       return failure();
-    if (VT.getRank() != 2)
+    if (resType.getRank() != 2)
       return failure();
-
-    auto canonicalize = [&](Value OperandA,
-                            Value OperandB) -> vector::OuterProductOp {
+    /// If operandA can be written as tr(broadcast(A)) and operandB as
+    /// broadcast(B) where broadcasts are 1D-to-2D, create and return
+    /// vector.outerproduct(A, B). Returns failure() otherwise.
+    auto matchOuterProduct =
+        [&](Value operandA,
+            Value operandB) -> FailureOr<vector::OuterProductOp> {
       vector::TransposeOp transposedLhs =
-          dyn_cast_or_null<vector::TransposeOp>(OperandA.getDefiningOp());
+          dyn_cast_or_null<vector::TransposeOp>(operandA.getDefiningOp());
       if (!transposedLhs)
-        return vector::OuterProductOp();
+        return failure();
       // Fail unless this is a true 2-D matrix transpose.
       ArrayRef<int64_t> permutation = transposedLhs.getPermutation();
-      if (permutation[0] != 1 || permutation[1] != 0)
-        return vector::OuterProductOp();
+      if (permutation.size() != 2 || permutation[0] != 1 || permutation[1] != 0)
+        return failure();
 
-      vector::BroadcastOp broadcastedLhs = dyn_cast<vector::BroadcastOp>(
-          transposedLhs.getVector().getDefiningOp());
-      if (!broadcastedLhs || !getValidBroadcastSource(broadcastedLhs))
-        return vector::OuterProductOp();
+      auto broadcastedLhs =
+          transposedLhs.getVector().getDefiningOp<vector::BroadcastOp>();
+      if (!broadcastedLhs || !isValidBroadcastSource(broadcastedLhs))
+        return failure();
 
-      vector::BroadcastOp broadcastedRhs =
-          dyn_cast<vector::BroadcastOp>(OperandB.getDefiningOp());
-      if (!broadcastedRhs || !getValidBroadcastSource(broadcastedRhs))
-        return vector::OuterProductOp();
+      auto broadcastedRhs = operandB.getDefiningOp<vector::BroadcastOp>();
+      if (!broadcastedRhs || !isValidBroadcastSource(broadcastedRhs))
+        return failure();
 
-      return rewriter.replaceOpWithNewOp<vector::OuterProductOp>(
-          mulOp, VT, broadcastedLhs.getSource(), broadcastedRhs.getSource(),
-          Value(), vector::CombiningKind::ADD);
+      return rewriter.create<vector::OuterProductOp>(
+          mulOp->getLoc(), resType, broadcastedLhs.getSource(),
+          broadcastedRhs.getSource(), Value(), vector::CombiningKind::ADD);
     };
-    Value a = mulOp->getOperand(0), b = mulOp->getOperand(1);
-    vector::OuterProductOp outerP = canonicalize(a, b);
+
+    Value lhs = mulOp->getOperand(0), rhs = mulOp->getOperand(1);
+    auto maybeOuterP = matchOuterProduct(lhs, rhs);
     // Handle commutativity, the transposed op is the outerproduct LHS.
-    outerP = outerP ? outerP : canonicalize(b, a);
-    return outerP ? success() : failure();
+    if (failed(maybeOuterP))
+      maybeOuterP = matchOuterProduct(rhs, lhs);
+    if (failed(maybeOuterP))
+      return failure();
+    rewriter.replaceOp(mulOp, maybeOuterP->getResult());
+    return success();
   }
 };
 
@@ -1958,8 +1965,9 @@ void mlir::vector::populateBreakDownVectorReductionPatterns(
 
 void mlir::vector::populateElementwiseToVectorOpsPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<ElementwiseToOuterproduct<arith::MulFOp>,
-               ElementwiseToOuterproduct<arith::MulIOp>>(patterns.getContext());
+  patterns.add<FoldArithToVectorOuterProduct<arith::MulFOp>,
+               FoldArithToVectorOuterProduct<arith::MulIOp>>(
+      patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
