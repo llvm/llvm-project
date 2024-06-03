@@ -282,6 +282,17 @@ define i1 @gep17() {
   ret i1 %cmp
 }
 
+@weak = extern_weak global i8
+
+define i1 @extern_weak_may_be_null() {
+; CHECK-LABEL: @extern_weak_may_be_null(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr @weak, null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne ptr @weak, null
+  ret i1 %cmp
+}
+
 ; Negative test: GEP inbounds may cross sign boundary.
 define i1 @gep_same_base_constant_indices(ptr %a) {
 ; CHECK-LABEL: @gep_same_base_constant_indices(
