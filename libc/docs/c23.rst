@@ -58,6 +58,7 @@ Additions:
   * fromfp* |check|
   * ufromfp* |check|
   * fromfpx* |check|
+  * ufromfpx* |check|
   * nextup*
   * nextdown*
   * canonicalize*

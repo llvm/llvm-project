@@ -1287,6 +1287,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ufromfpxf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpxf16_test.cpp
+  HDRS
+    UfromfpxTest.h
+  DEPENDS
+    libc.src.math.ufromfpxf16
+)
+
+add_fp_unittest(
   ufromfpxf128_test
   SUITE
     libc-math-smoke-tests

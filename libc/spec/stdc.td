@@ -494,7 +494,8 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"ufromfpx", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
           FunctionSpec<"ufromfpxf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
           FunctionSpec<"ufromfpxl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
-          GuardedFunctionSpec<"ufromfpxf128", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>], "LIBC_TYPES_HAS_FLOAT128">,
+          GuardedFunctionSpec<"ufromfpxf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"ufromfpxf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"hypot", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"hypotf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,

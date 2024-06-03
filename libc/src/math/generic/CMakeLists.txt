@@ -2902,6 +2902,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ufromfpxf16
+  SRCS
+    ufromfpxf16.cpp
+  HDRS
+    ../ufromfpxf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   ufromfpxf128
   SRCS
     ufromfpxf128.cpp
