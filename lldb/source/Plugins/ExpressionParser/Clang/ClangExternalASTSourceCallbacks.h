@@ -11,8 +11,14 @@
 
 #include "Plugins/TypeSystem/Clang/ImporterBackedASTSource.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/ASTSourceDescriptor.h"
 #include <optional>
+
+namespace clang {
+
+class Module;
+
+} // namespace clang
 
 namespace lldb_private {
 
