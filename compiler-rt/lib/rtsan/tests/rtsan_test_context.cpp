@@ -1,5 +1,4 @@
-//===--- radsan_test_context.cpp - Realtime Sanitizer --------------*- C++
-//-*-===//
+//===--- rtsan_test_context.cpp - Realtime Sanitizer ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,34 +8,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "radsan_test_utilities.h"
+#include "rtsan_test_utilities.h"
 
-#include "radsan_context.h"
+#include "rtsan_context.h"
 
-TEST(TestRadsanContext, CanCreateContext) { __radsan::Context context{}; }
+TEST(TestRtsanContext, CanCreateContext) { __rtsan::Context context{}; }
 
-TEST(TestRadsanContext, ExpectNotRealtimeDoesNotDieBeforeRealtimePush) {
-  __radsan::Context context{};
+TEST(TestRtsanContext, ExpectNotRealtimeDoesNotDieBeforeRealtimePush) {
+  __rtsan::Context context{};
   context.ExpectNotRealtime("do_some_stuff");
 }
 
-TEST(TestRadsanContext, ExpectNotRealtimeDoesNotDieAfterPushAndPop) {
-  __radsan::Context context{};
+TEST(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterPushAndPop) {
+  __rtsan::Context context{};
   context.RealtimePush();
   context.RealtimePop();
   context.ExpectNotRealtime("do_some_stuff");
 }
 
-TEST(TestRadsanContext, ExpectNotRealtimeDiesAfterRealtimePush) {
-  __radsan::Context context{};
+TEST(TestRtsanContext, ExpectNotRealtimeDiesAfterRealtimePush) {
+  __rtsan::Context context{};
 
   context.RealtimePush();
   EXPECT_DEATH(context.ExpectNotRealtime("do_some_stuff"), "");
 }
 
-TEST(TestRadsanContext,
+TEST(TestRtsanContext,
      ExpectNotRealtimeDiesAfterRealtimeAfterMorePushesThanPops) {
-  __radsan::Context context{};
+  __rtsan::Context context{};
 
   context.RealtimePush();
   context.RealtimePush();
@@ -46,17 +45,17 @@ TEST(TestRadsanContext,
   EXPECT_DEATH(context.ExpectNotRealtime("do_some_stuff"), "");
 }
 
-TEST(TestRadsanContext, ExpectNotRealtimeDoesNotDieAfterBypassPush) {
-  __radsan::Context context{};
+TEST(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterBypassPush) {
+  __rtsan::Context context{};
 
   context.RealtimePush();
   context.BypassPush();
   context.ExpectNotRealtime("do_some_stuff");
 }
 
-TEST(TestRadsanContext,
+TEST(TestRtsanContext,
      ExpectNotRealtimeDoesNotDieIfBypassDepthIsGreaterThanZero) {
-  __radsan::Context context{};
+  __rtsan::Context context{};
 
   context.RealtimePush();
   context.BypassPush();

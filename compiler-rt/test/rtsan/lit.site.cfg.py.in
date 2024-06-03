@@ -1,10 +1,10 @@
 @LIT_SITE_CFG_IN_HEADER@
 
 # Tool-specific config options.
-config.name_suffix = "@RADSAN_TEST_CONFIG_SUFFIX@"
-config.radsan_lit_source_dir = "@RADSAN_LIT_SOURCE_DIR@"
-config.target_cflags = "@RADSAN_TEST_TARGET_CFLAGS@"
-config.target_arch = "@RADSAN_TEST_TARGET_ARCH@"
+config.name_suffix = "@RTSAN_TEST_CONFIG_SUFFIX@"
+config.rtsan_lit_source_dir = "@RTSAN_LIT_SOURCE_DIR@"
+config.target_cflags = "@RTSAN_TEST_TARGET_CFLAGS@"
+config.target_arch = "@RTSAN_TEST_TARGET_ARCH@"
 config.built_with_llvm = ("@COMPILER_RT_STANDALONE_BUILD@" != "TRUE")
 
 if config.built_with_llvm:

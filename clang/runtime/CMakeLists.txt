@@ -150,7 +150,7 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
         check-lsan
         check-msan
         check-profile
-        check-radsan
+        check-rtsan
         check-safestack
         check-sanitizer
         check-tsan

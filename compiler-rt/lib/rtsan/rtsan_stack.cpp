@@ -1,4 +1,4 @@
-//===--- radsan_stack.cpp - Realtime Sanitizer --------------*- C++ -*-===//
+//===--- rtsan_stack.cpp - Realtime Sanitizer -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "radsan_stack.h"
+#include "rtsan_stack.h"
 
 #include <sanitizer_common/sanitizer_flags.h>
 #include <sanitizer_common/sanitizer_stacktrace.h>
@@ -33,12 +33,12 @@ static void SetGlobalStackTraceFormat() {
   CommonFlags cf;
   cf.CopyFrom(*common_flags());
   cf.stack_trace_format = "DEFAULT";
-  cf.external_symbolizer_path = GetEnv("RADSAN_SYMBOLIZER_PATH");
+  cf.external_symbolizer_path = GetEnv("RTSAN_SYMBOLIZER_PATH");
   OverrideCommonFlags(cf);
 }
 
-using namespace __radsan;
-void __radsan::PrintStackTrace() {
+using namespace __rtsan;
+void __rtsan::PrintStackTrace() {
 
   BufferedStackTrace stack{};
 

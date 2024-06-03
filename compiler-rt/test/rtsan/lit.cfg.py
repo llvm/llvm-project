@@ -1,31 +1,31 @@
 import os
 
 # Setup config name.
-config.name = "RADSAN" + config.name_suffix
+config.name = "RTSAN" + config.name_suffix
 
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
 
-# Setup default compiler flags use with -fradsan-instrument option.
-clang_radsan_cflags = ["-fradsan-instrument", config.target_cflags]
+# Setup default compiler flags use with -frtsan-instrument option.
+clang_rtsan_cflags = ["-frtsan-instrument", config.target_cflags]
 
-# If libc++ was used to build radsan libraries, libc++ is needed. Fix applied
+# If libc++ was used to build rtsan libraries, libc++ is needed. Fix applied
 # to Linux only since -rpath may not be portable. This can be extended to
 # other platforms.
 if config.libcxx_used == "1" and config.host_os == "Linux":
-    clang_radsan_cflags = clang_radsan_cflags + (
+    clang_rtsan_cflags = clang_rtsan_cflags + (
         ["-L%s -lc++ -Wl,-rpath=%s" % (config.llvm_shlib_dir, config.llvm_shlib_dir)]
     )
 
-clang_radsan_cxxflags = config.cxx_mode_flags + clang_radsan_cflags
+clang_rtsan_cxxflags = config.cxx_mode_flags + clang_rtsan_cflags
 
 
 def build_invocation(compile_flags):
     return " " + " ".join([config.clang] + compile_flags) + " "
 
 
-# Assume that llvm-radsan is in the config.llvm_tools_dir.
-llvm_radsan = os.path.join(config.llvm_tools_dir, "llvm-radsan")
+# Assume that llvm-rtsan is in the config.llvm_tools_dir.
+llvm_rtsan = os.path.join(config.llvm_tools_dir, "llvm-rtsan")
 
 # Setup substitutions.
 if config.host_os == "Linux":
@@ -37,17 +37,17 @@ config.substitutions.append(("%clang ", build_invocation([config.target_cflags])
 config.substitutions.append(
     ("%clangxx ", build_invocation(config.cxx_mode_flags + [config.target_cflags]))
 )
-config.substitutions.append(("%clang_radsan ", build_invocation(clang_radsan_cflags)))
+config.substitutions.append(("%clang_rtsan ", build_invocation(clang_rtsan_cflags)))
 config.substitutions.append(
-    ("%clangxx_radsan", build_invocation(clang_radsan_cxxflags))
+    ("%clangxx_rtsan", build_invocation(clang_rtsan_cxxflags))
 )
-config.substitutions.append(("%llvm_radsan", llvm_radsan))
+config.substitutions.append(("%llvm_rtsan", llvm_rtsan))
 config.substitutions.append(
     (
-        "%radsanlib",
+        "%rtsanlib",
         (
             "-lm -lpthread %s -lrt -L%s "
-            "-Wl,-whole-archive -lclang_rt.radsan%s -Wl,-no-whole-archive"
+            "-Wl,-whole-archive -lclang_rt.rtsan%s -Wl,-no-whole-archive"
         )
         % (libdl_flag, config.compiler_rt_libdir, config.target_suffix),
     )

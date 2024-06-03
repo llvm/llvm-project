@@ -1,5 +1,4 @@
-//===--- radsan_interceptors.h - Realtime Sanitizer --------------*- C++
-//-*-===//
+//===--- rtsan_stack.h - Realtime Sanitizer ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,6 +10,6 @@
 
 #pragma once
 
-namespace __radsan {
-void InitializeInterceptors();
-} // namespace __radsan
+namespace __rtsan {
+void PrintStackTrace();
+} // namespace __rtsan

@@ -1,4 +1,4 @@
-//===--- radsan_context.h - Realtime Sanitizer --------------*- C++ -*-===//
+//===--- rtsan_context.h - Realtime Sanitizer -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 
 #pragma once
 
-namespace __radsan {
+namespace __rtsan {
 
 class Context {
 public:
@@ -35,4 +35,4 @@ private:
 
 Context &GetContextForThisThread();
 
-} // namespace __radsan
+} // namespace __rtsan

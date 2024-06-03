@@ -9,7 +9,7 @@ config.name = 'RealtimeSanitizer-Unit'
 # Setup test source and exec root. For unit tests, we define
 # it as build directory with ASan unit tests.
 # FIXME: De-hardcode this path.
-config.test_exec_root = "@COMPILER_RT_BINARY_DIR@/lib/radsan/tests"
+config.test_exec_root = "@COMPILER_RT_BINARY_DIR@/lib/rtsan/tests"
 config.test_source_root = config.test_exec_root
 
 if not config.parallelism_group:
@@ -17,9 +17,9 @@ if not config.parallelism_group:
 
 if config.host_os == 'Darwin':
   # On Darwin, we default to ignore_noninstrumented_modules=1, which also
-  # suppresses some races the tests are supposed to find.  See radsan/lit.cfg.py.
-  if 'RADSAN_OPTIONS' in config.environment:
-    config.environment['RADSAN_OPTIONS'] += ':ignore_noninstrumented_modules=0'
+  # suppresses some races the tests are supposed to find.  See rtsan/lit.cfg.py.
+  if 'RTSAN_OPTIONS' in config.environment:
+    config.environment['RTSAN_OPTIONS'] += ':ignore_noninstrumented_modules=0'
   else:
-    config.environment['RADSAN_OPTIONS'] = 'ignore_noninstrumented_modules=0'
-  config.environment['RADSAN_OPTIONS'] += ':ignore_interceptors_accesses=0'
+    config.environment['RTSAN_OPTIONS'] = 'ignore_noninstrumented_modules=0'
+  config.environment['RTSAN_OPTIONS'] += ':ignore_interceptors_accesses=0'
