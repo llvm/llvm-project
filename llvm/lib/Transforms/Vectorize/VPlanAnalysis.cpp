@@ -45,6 +45,12 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
+  case VPInstruction::ExtractFromEnd: {
+    Type *BaseTy = inferScalarType(R->getOperand(0));
+    if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
+      return VecTy->getElementType();
+    return BaseTy;
+  }
   case VPInstruction::Not: {
     Type *ResTy = inferScalarType(R->getOperand(0));
     assert(IntegerType::get(Ctx, 1) == ResTy &&
