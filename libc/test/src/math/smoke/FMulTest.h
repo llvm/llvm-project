@@ -31,6 +31,18 @@ public:
     EXPECT_FP_EQ(inf, func(3.0, inf));
     EXPECT_FP_EQ(0.0, func(0.0, 0.0));
     EXPECT_FP_EQ(0.0, func(0.0, 0x1.0p-129));
+    EXPECT_FP_EQ(aNaN, func(inf, 0.0));
+    EXPECT_FP_EQ(aNaN, func(0.0, inf));
+    EXPECT_FP_EQ(aNaN, func(0.0, aNaN));
+    EXPECT_FP_EQ(aNaN, func(2.0, aNaN));
+    EXPECT_FP_EQ(aNaN, func(0x1.0p-129, aNaN));
+    EXPECT_FP_EQ(aNaN, func(inf, aNaN));
+    EXPECT_FP_EQ(aNaN, func(aNaN, aNaN));
+    EXPECT_FP_EQ(aNaN, func(0.0, sNaN));
+    EXPECT_FP_EQ(aNaN, func(2.0, sNaN));
+    EXPECT_FP_EQ(aNaN, func(0x1.0p-129, sNaN));
+    EXPECT_FP_EQ(aNaN, func(inf, sNaN));
+    EXPECT_FP_EQ(aNaN, func(sNaN, sNaN));
   }
 };
 
