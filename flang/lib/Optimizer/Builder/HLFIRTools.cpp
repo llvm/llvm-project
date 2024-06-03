@@ -115,7 +115,7 @@ genLboundsAndExtentsFromBox(mlir::Location loc, fir::FirOpBuilder &builder,
 static llvm::SmallVector<mlir::Value>
 getNonDefaultLowerBounds(mlir::Location loc, fir::FirOpBuilder &builder,
                          hlfir::Entity entity) {
-  if (!entity.hasNonDefaultLowerBounds())
+  if (!entity.mayHaveNonDefaultLowerBounds())
     return {};
   if (auto varIface = entity.getIfVariableInterface()) {
     llvm::SmallVector<mlir::Value> lbounds = getExplicitLbounds(varIface);
@@ -193,6 +193,29 @@ mlir::Value hlfir::Entity::getFirBase() const {
       return associateOp.getFirBase();
   }
   return getBase();
+}
+
+static bool isShapeWithLowerBounds(mlir::Value shape) {
+  if (!shape)
+    return false;
+  auto shapeTy = shape.getType();
+  return mlir::isa<fir::ShiftType>(shapeTy) ||
+         mlir::isa<fir::ShapeShiftType>(shapeTy);
+}
+
+bool hlfir::Entity::mayHaveNonDefaultLowerBounds() const {
+  if (!isBoxAddressOrValue() || isScalar())
+    return false;
+  if (isMutableBox())
+    return true;
+  if (auto varIface = getIfVariableInterface())
+    return isShapeWithLowerBounds(varIface.getShape());
+  // Go through chain of fir.box converts.
+  if (auto convert = getDefiningOp<fir::ConvertOp>())
+    return hlfir::Entity{convert.getValue()}.mayHaveNonDefaultLowerBounds();
+  // TODO: Embox and Rebox do not have hlfir variable interface, but are
+  // easy to reason about.
+  return true;
 }
 
 fir::FortranVariableOpInterface
@@ -571,7 +594,7 @@ mlir::Value hlfir::genExtent(mlir::Location loc, fir::FirOpBuilder &builder,
 
 mlir::Value hlfir::genLBound(mlir::Location loc, fir::FirOpBuilder &builder,
                              hlfir::Entity entity, unsigned dim) {
-  if (!entity.hasNonDefaultLowerBounds())
+  if (!entity.mayHaveNonDefaultLowerBounds())
     return builder.createIntegerConstant(loc, builder.getIndexType(), 1);
   if (auto shape = tryRetrievingShapeOrShift(entity)) {
     auto lbounds = getExplicitLboundsFromShape(shape);
@@ -891,7 +914,8 @@ static fir::ExtendedValue translateVariableToExtendedValue(
   llvm::SmallVector<mlir::Value> extents;
   llvm::SmallVector<mlir::Value> nonDefaultLbounds;
   if (mlir::isa<fir::BaseBoxType>(variable.getType()) &&
-      !variable.getIfVariableInterface()) {
+      !variable.getIfVariableInterface() &&
+      variable.mayHaveNonDefaultLowerBounds()) {
     // This special case avoids generating two sets of identical
     // fir.box_dim to get both the lower bounds and extents.
     genLboundsAndExtentsFromBox(loc, builder, variable, nonDefaultLbounds,
@@ -1219,7 +1243,7 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
       hlfir::genElementalOp(loc, builder, toType, shape, lenParams, genKernel,
                             /*isUnordered=*/true);
 
-  if (preserveLowerBounds && source.hasNonDefaultLowerBounds()) {
+  if (preserveLowerBounds && source.mayHaveNonDefaultLowerBounds()) {
     hlfir::AssociateOp associate =
         genAssociateExpr(loc, builder, hlfir::Entity{convertedRhs},
                          convertedRhs.getType(), ".tmp.keeplbounds");

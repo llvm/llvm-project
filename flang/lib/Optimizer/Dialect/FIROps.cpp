@@ -3908,6 +3908,16 @@ std::optional<std::int64_t> fir::getIntIfConstant(mlir::Value value) {
   return {};
 }
 
+bool fir::isDummyArgument(mlir::Value v) {
+  auto blockArg{mlir::dyn_cast<mlir::BlockArgument>(v)};
+  if (!blockArg)
+    return false;
+
+  auto *owner{blockArg.getOwner()};
+  return owner->isEntryBlock() &&
+         mlir::isa<mlir::FunctionOpInterface>(owner->getParentOp());
+}
+
 mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
   for (auto i = path.begin(), end = path.end(); eleTy && i < end;) {
     eleTy = llvm::TypeSwitch<mlir::Type, mlir::Type>(eleTy)
