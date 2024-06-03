@@ -169,6 +169,7 @@ function exclude-windows() {
     compiler-rt)         ;; # tests taking too long
     openmp)              ;; # TODO: having trouble with the Perl installation
     libc)                ;; # no Windows support
+    lldb)                ;; # custom environment requirements (https://github.com/llvm/llvm-project/pull/94208#issuecomment-2146256857)
     bolt)                ;; # tests are not supported yet
     *)
       echo "${project}"
