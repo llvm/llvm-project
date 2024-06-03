@@ -220,4 +220,8 @@ void __throw_system_error(int ev, const char* what_arg) {
 #endif
 }
 
+void contract_violation() {
+  std::terminate();
+}
+
 _LIBCPP_END_NAMESPACE_STD

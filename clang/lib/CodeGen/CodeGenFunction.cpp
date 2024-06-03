@@ -338,7 +338,6 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
 
 void CodeGenFunction::EmitCXXContractCheck(const Expr* Expr) {
   llvm::Value *ArgValue = EmitScalarExpr(Expr);
-/*
   llvm::BasicBlock *Begin = Builder.GetInsertBlock();
   llvm::BasicBlock *End = createBasicBlock("contract_assert_end", this->CurFn);
   llvm::BasicBlock *Violation = createBasicBlock("contract_assert_violation", this->CurFn);
@@ -347,7 +346,7 @@ void CodeGenFunction::EmitCXXContractCheck(const Expr* Expr) {
   Builder.CreateCondBr(ArgValue, End, Violation);
 
   Builder.SetInsertPoint(Violation);
-  */
+
 /*
   SourceRange range = Expr->getSourceRange();
   PresumedLoc PLoc = Ctx.getSourceManager().getPresumedLoc(range->getBegin());
@@ -355,21 +354,25 @@ void CodeGenFunction::EmitCXXContractCheck(const Expr* Expr) {
   llvm::Value* LineNo = PLoc->getLine();
   clang::StringLiteral* ExpressionText = range.print(os, Ctx.getSourceManager());
 */
-  const char *VLibCallName = "__contract_violation"; // const char*
+  const char *VLibCallName = "_ZSt18contract_violationv"; // const char*
   CallArgList Args;
-  /*
+/*
   Args.add(EmitLoadOfLValue(EmitStringLiteralLValue(Filename), Expr->getExprLoc()), getContext().VoidPtrTy);
   Args.add(RValue::get(LineNo), getContext().getSizeType());
   Args.add(EmitLoadOfLValue(EmitStringLiteralLValue(ExpressionText), Expr->getExprLoc()), getContext().VoidPtrTy);
-  */
-  /*
-  const CGFunctionInfo &VFuncInfo = CGM.getTypes().arrangeBuiltinFunctionCall(getContext().VoidPtrTy, {});
+*/
+  const CGFunctionInfo &VFuncInfo = CGM.getTypes().arrangeBuiltinFunctionCall(getContext().VoidTy, {});
   llvm::FunctionType *VFTy = CGM.getTypes().GetFunctionType(VFuncInfo);
   llvm::FunctionCallee VFunc = CGM.CreateRuntimeFunction(VFTy, VLibCallName);
   EmitCall(VFuncInfo, CGCallee::forDirect(VFunc), ReturnValueSlot(), Args);
-*/
 
-//  Builder.SetInsertPoint(End);
+  llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
+  TrapCall->setDoesNotReturn();
+  TrapCall->setDoesNotThrow();
+  Builder.CreateUnreachable();
+  Builder.ClearInsertionPoint();
+
+  Builder.SetInsertPoint(End);
 }
 
 void CodeGenFunction::EmitCXXContractImply(const Expr* expr) {
