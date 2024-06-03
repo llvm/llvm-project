@@ -10,13 +10,14 @@
 #define LLVM_LIBC___SUPPORT_SRC_THREADS_LINUX_CNDVAR_H
 
 #include "src/__support/threads/linux/futex_utils.h" // Futex
+#include "src/__support/threads/linux/raw_mutex.h"   // RawMutex
 #include "src/__support/threads/mutex.h"             // Mutex
 
 #include <stdint.h> // uint32_t
 
 namespace LIBC_NAMESPACE {
 
-struct CndVar {
+class CndVar {
   enum CndWaiterStatus : uint32_t {
     WS_Waiting = 0xE,
     WS_Signalled = 0x5,
@@ -29,15 +30,16 @@ struct CndVar {
 
   CndWaiter *waitq_front;
   CndWaiter *waitq_back;
-  Mutex qmtx;
+  RawMutex qmtx;
 
-  static int init(CndVar *cv) {
+public:
+  LIBC_INLINE static int init(CndVar *cv) {
     cv->waitq_front = cv->waitq_back = nullptr;
-    auto err = Mutex::init(&cv->qmtx, false, false, false);
-    return err == MutexError::NONE ? 0 : -1;
+    RawMutex::init(&cv->qmtx);
+    return 0;
   }
 
-  static void destroy(CndVar *cv) {
+  LIBC_INLINE static void destroy(CndVar *cv) {
     cv->waitq_front = cv->waitq_back = nullptr;
   }
 
