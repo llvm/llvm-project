@@ -364,11 +364,12 @@ public:
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS)
       ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
-          [LocalDepFS = DepFS](FileEntryRef File)
+          [LocalDepFS = DepFS,
+           &LangOpts = ScanInstance.getLangOpts()](FileEntryRef File)
           -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
         if (llvm::ErrorOr<EntryRef> Entry =
                 LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
+          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry, LangOpts))
             return Entry->getDirectiveTokens();
         return std::nullopt;
       };
