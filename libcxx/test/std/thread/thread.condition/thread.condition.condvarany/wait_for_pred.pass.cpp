@@ -162,4 +162,10 @@ void test() {
   }
 }
 
-int main(int, char**) { return 0; }
+int main(int, char**) {
+  test<std::unique_lock<std::mutex>>();
+  test<std::unique_lock<std::timed_mutex>>();
+  test<MyLock<std::mutex>>();
+  test<MyLock<std::timed_mutex>>();
+  return 0;
+}

@@ -62,6 +62,12 @@ class fir_SimpleOneResultOp<string mnemonic, list<Trait> traits = []> :
   let builders = [fir_OneResultOpBuilder];
 }
 
+// Whether a type is a BaseBoxType or a reference to a BaseBoxType.
+def IsBoxAddressOrValueTypePred
+        : CPred<"::fir::isBoxAddressOrValue($_self)">;
+def fir_BoxAddressOrValueType : Type<IsBoxAddressOrValueTypePred,
+    "fir.box or fir.class type or reference">;
+
 //===----------------------------------------------------------------------===//
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
@@ -1165,6 +1171,23 @@ def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
+def fir_IsAssumedSizeOp : fir_SimpleOp<"is_assumed_size", [NoMemoryEffect]> {
+  let summary = "detect if a boxed value is an assumed-size array";
+
+  let description = [{
+    Fir box SSA values may describe assumed-size arrays. This operation
+    allows detecting this, even for assumed-rank box.
+
+    ```
+      %a = fir.is_assumed_size %b : (!fir.box<!fir.array<*:f64>>) -> i1
+    ```
+  }];
+
+  let arguments = (ins BoxOrClassType:$val);
+
+  let results = (outs BoolLike);
+}
+
 def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoMemoryEffect]> {
   let summary = "is the boxed value a POINTER?";
 
@@ -1205,7 +1228,8 @@ def fir_BoxProcHostOp : fir_SimpleOp<"boxproc_host", [NoMemoryEffect]> {
   let results = (outs fir_ReferenceType);
 }
 
-def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoMemoryEffect]> {
+def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank",
+  [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "return the number of dimensions for the boxed value";
 
   let description = [{
@@ -1222,7 +1246,7 @@ def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoMemoryEffect]> {
     descriptor may be either an array or a scalar, so the value is nonnegative.
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins fir_BoxAddressOrValueType:$box);
 
   let results = (outs AnyIntegerType);
 }
@@ -2369,7 +2393,8 @@ def fir_CallOp : fir_Op<"call",
     OptionalAttr<SymbolRefAttr>:$callee,
     Variadic<AnyType>:$args,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::mlir::arith::FastMathFlags::none">:$fastmath,
+    UnitAttr:$is_bind_c
   );
   let results = (outs Variadic<AnyType>);
 

@@ -1,10 +1,22 @@
-# Test the heuristics for matching BOLT-added split functions.
+## Test the heuristics for matching BOLT-added split functions.
 
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %S/cdsplit-symbol-names.s -o %t.main.o
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %s -o %t.chain.o
 # RUN: link_fdata %S/cdsplit-symbol-names.s %t.main.o %t.fdata
-# RUN: sed -i 's|chain|chain/2|g' %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.main.o
+
+## Check warm fragment name matching (produced by cdsplit)
+# RUN: %clang %cflags %t.main.o -o %t.warm.exe -Wl,-q
+# RUN: llvm-bolt %t.warm.exe -o %t.warm.bolt --split-functions --split-strategy=cdsplit \
+# RUN:   --call-scale=2 --data=%t.fdata --reorder-blocks=ext-tsp --enable-bat
+# RUN: link_fdata %s %t.warm.bolt %t.preagg.warm PREAGGWARM
+# PREAGGWARM: B X:0 #chain.warm# 1 0
+# RUN: perf2bolt %t.warm.bolt -p %t.preagg.warm --pa -o %t.warm.fdata -w %t.warm.yaml \
+# RUN:   -v=1 | FileCheck %s --check-prefix=CHECK-BOLT-WARM
+
+# CHECK-BOLT-WARM: marking chain.warm/1(*2) as a fragment of chain
+
+# RUN: sed -i 's|chain|chain/2|g' %t.fdata
 # RUN: llvm-objcopy --localize-symbol=chain %t.main.o
 # RUN: %clang %cflags %t.chain.o %t.main.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.bolt --split-functions --split-strategy=randomN \

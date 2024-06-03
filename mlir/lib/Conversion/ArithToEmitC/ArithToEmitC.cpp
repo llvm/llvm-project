@@ -42,6 +42,25 @@ public:
   }
 };
 
+/// Get the signed or unsigned type corresponding to \p ty.
+Type adaptIntegralTypeSignedness(Type ty, bool needsUnsigned) {
+  if (isa<IntegerType>(ty)) {
+    if (ty.isUnsignedInteger() != needsUnsigned) {
+      auto signedness = needsUnsigned
+                            ? IntegerType::SignednessSemantics::Unsigned
+                            : IntegerType::SignednessSemantics::Signed;
+      return IntegerType::get(ty.getContext(), ty.getIntOrFloatBitWidth(),
+                              signedness);
+    }
+  }
+  return ty;
+}
+
+/// Insert a cast operation to type \p ty if \p val does not have this type.
+Value adaptValueType(Value val, ConversionPatternRewriter &rewriter, Type ty) {
+  return rewriter.createOrFold<emitc::CastOp>(val.getLoc(), ty, val);
+}
+
 class CmpFOpConversion : public OpConversionPattern<arith::CmpFOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -159,7 +178,7 @@ public:
   }
 
 private:
-  /// Return a value that is true iff \p operand is NaN.
+  /// Return a value that is true if \p operand is NaN.
   Value isNaN(ConversionPatternRewriter &rewriter, Location loc,
               Value operand) const {
     // A value is NaN exactly when it compares unequal to itself.
@@ -167,7 +186,7 @@ private:
         loc, rewriter.getI1Type(), emitc::CmpPredicate::ne, operand, operand);
   }
 
-  /// Return a value that is true iff \p operand is not NaN.
+  /// Return a value that is true if \p operand is not NaN.
   Value isNotNaN(ConversionPatternRewriter &rewriter, Location loc,
                  Value operand) const {
     // A value is not NaN exactly when it compares equal to itself.
@@ -175,7 +194,7 @@ private:
         loc, rewriter.getI1Type(), emitc::CmpPredicate::eq, operand, operand);
   }
 
-  /// Return a value that is true iff the operands \p first and \p second are
+  /// Return a value that is true if the operands \p first and \p second are
   /// unordered (i.e., at least one of them is NaN).
   Value createCheckIsUnordered(ConversionPatternRewriter &rewriter,
                                Location loc, Value first, Value second) const {
@@ -185,7 +204,7 @@ private:
                                                firstIsNaN, secondIsNaN);
   }
 
-  /// Return a value that is true iff the operands \p first and \p second are
+  /// Return a value that is true if the operands \p first and \p second are
   /// both ordered (i.e., none one of them is NaN).
   Value createCheckIsOrdered(ConversionPatternRewriter &rewriter, Location loc,
                              Value first, Value second) const {
@@ -421,6 +440,46 @@ public:
   }
 };
 
+template <typename ArithOp, typename EmitCOp>
+class BitwiseOpConversion : public OpConversionPattern<ArithOp> {
+public:
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type type = this->getTypeConverter()->convertType(op.getType());
+    if (!isa_and_nonnull<IntegerType>(type)) {
+      return rewriter.notifyMatchFailure(
+          op,
+          "expected integer type, vector/tensor support not yet implemented");
+    }
+
+    // Bitwise ops can be performed directly on booleans
+    if (type.isInteger(1)) {
+      rewriter.replaceOpWithNewOp<EmitCOp>(op, type, adaptor.getLhs(),
+                                           adaptor.getRhs());
+      return success();
+    }
+
+    // Bitwise ops are defined by the C standard on unsigned operands.
+    Type arithmeticType =
+        adaptIntegralTypeSignedness(type, /*needsUnsigned=*/true);
+
+    Value lhs = adaptValueType(adaptor.getLhs(), rewriter, arithmeticType);
+    Value rhs = adaptValueType(adaptor.getRhs(), rewriter, arithmeticType);
+
+    Value arithmeticResult = rewriter.template create<EmitCOp>(
+        op.getLoc(), arithmeticType, lhs, rhs);
+
+    Value result = adaptValueType(arithmeticResult, rewriter, type);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 class SelectOpConversion : public OpConversionPattern<arith::SelectOp> {
 public:
   using OpConversionPattern<arith::SelectOp>::OpConversionPattern;
@@ -557,6 +616,9 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     IntegerOpConversion<arith::AddIOp, emitc::AddOp>,
     IntegerOpConversion<arith::MulIOp, emitc::MulOp>,
     IntegerOpConversion<arith::SubIOp, emitc::SubOp>,
+    BitwiseOpConversion<arith::AndIOp, emitc::BitwiseAndOp>,
+    BitwiseOpConversion<arith::OrIOp, emitc::BitwiseOrOp>,
+    BitwiseOpConversion<arith::XOrIOp, emitc::BitwiseXorOp>,
     CmpFOpConversion,
     CmpIOpConversion,
     SelectOpConversion,

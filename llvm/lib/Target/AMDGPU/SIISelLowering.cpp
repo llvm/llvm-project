@@ -1484,13 +1484,17 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
 }
 
 bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM,
-                                                 unsigned AddrSpace,
-                                                 uint64_t FlatVariant) const {
+                                                 unsigned AddrSpace) const {
   if (!Subtarget->hasFlatInstOffsets()) {
     // Flat instructions do not have offsets, and only have the register
     // address.
     return AM.BaseOffs == 0 && AM.Scale == 0;
   }
+
+  decltype(SIInstrFlags::FLAT) FlatVariant =
+      AddrSpace == AMDGPUAS::GLOBAL_ADDRESS    ? SIInstrFlags::FlatGlobal
+      : AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ? SIInstrFlags::FlatScratch
+                                               : SIInstrFlags::FLAT;
 
   return AM.Scale == 0 &&
          (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
@@ -1499,8 +1503,7 @@ bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM,
 
 bool SITargetLowering::isLegalGlobalAddressingMode(const AddrMode &AM) const {
   if (Subtarget->hasFlatGlobalInsts())
-    return isLegalFlatAddressingMode(AM, AMDGPUAS::GLOBAL_ADDRESS,
-                                     SIInstrFlags::FlatGlobal);
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::GLOBAL_ADDRESS);
 
   if (!Subtarget->hasAddr64() || Subtarget->useFlatForGlobal()) {
     // Assume the we will use FLAT for all global memory accesses
@@ -1512,8 +1515,7 @@ bool SITargetLowering::isLegalGlobalAddressingMode(const AddrMode &AM) const {
     // by setting the stride value in the resource descriptor which would
     // increase the size limit to (stride * 4GB).  However, this is risky,
     // because it has never been validated.
-    return isLegalFlatAddressingMode(AM, AMDGPUAS::FLAT_ADDRESS,
-                                     SIInstrFlags::FLAT);
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::FLAT_ADDRESS);
   }
 
   return isLegalMUBUFAddressingMode(AM);
@@ -1619,8 +1621,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return Subtarget->enableFlatScratch()
-               ? isLegalFlatAddressingMode(AM, AMDGPUAS::PRIVATE_ADDRESS,
-                                           SIInstrFlags::FlatScratch)
+               ? isLegalFlatAddressingMode(AM, AMDGPUAS::PRIVATE_ADDRESS)
                : isLegalMUBUFAddressingMode(AM);
 
   if (AS == AMDGPUAS::LOCAL_ADDRESS ||
@@ -1647,8 +1648,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // computation. We don't have instructions that compute pointers with any
     // addressing modes, so treat them as having no offset like flat
     // instructions.
-    return isLegalFlatAddressingMode(AM, AMDGPUAS::FLAT_ADDRESS,
-                                     SIInstrFlags::FLAT);
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::FLAT_ADDRESS);
   }
 
   // Assume a user alias of global for unknown address spaces.

@@ -2500,7 +2500,8 @@ AArch64FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   return resolveFrameIndexReference(
       MF, FI, FrameReg,
       /*PreferFP=*/
-      MF.getFunction().hasFnAttribute(Attribute::SanitizeHWAddress),
+      MF.getFunction().hasFnAttribute(Attribute::SanitizeHWAddress) ||
+          MF.getFunction().hasFnAttribute(Attribute::SanitizeMemTag),
       /*ForSimm=*/false);
 }
 

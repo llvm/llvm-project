@@ -86,7 +86,7 @@ void DataSharingProcessor::insertDeallocs() {
     if (semantics::IsAllocatable(sym->GetUltimate())) {
       if (!useDelayedPrivatization) {
         converter.createHostAssociateVarCloneDealloc(*sym);
-        return;
+        continue;
       }
 
       lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
