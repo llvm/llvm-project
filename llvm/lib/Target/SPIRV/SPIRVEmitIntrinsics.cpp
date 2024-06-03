@@ -851,6 +851,11 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
   I->setOperand(OperandToReplace, PtrCastI);
 }
 
+static bool inline isDirectNonIntrinsicCall(CallInst *CI) {
+  return CI && !CI->isIndirectCall() && !CI->isInlineAsm() &&
+         CI->getCalledFunction() && !CI->getCalledFunction()->isIntrinsic();
+}
+
 void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
                                                          IRBuilder<> &B) {
   // Handle basic instructions:
@@ -874,14 +879,12 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
 
   // Handle calls to builtins (non-intrinsics):
   CallInst *CI = dyn_cast<CallInst>(I);
-  if (!CI || CI->isIndirectCall() || CI->isInlineAsm() ||
-      !CI->getCalledFunction() || CI->getCalledFunction()->isIntrinsic())
+  if (!isDirectNonIntrinsicCall(CI))
     return;
 
-  // collect information about formal parameter types
-  std::string DemangledName =
-      getOclOrSpirvBuiltinDemangledName(CI->getCalledFunction()->getName());
+  // Collect information about formal parameter types
   Function *CalledF = CI->getCalledFunction();
+  std::string DemangledName = demangleBuiltinCall(CalledF->getName());
   SmallVector<Type *, 4> CalledArgTys;
   bool HaveTypes = false;
   for (unsigned OpIdx = 0; OpIdx < CalledF->arg_size(); ++OpIdx) {
@@ -1195,12 +1198,21 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
     I->replaceAllUsesWith(NewOp);
     NewOp->setArgOperand(0, I);
   }
+
+  auto *CI = dyn_cast<CallInst>(I);
+  bool IsCall = CI && isDirectNonIntrinsicCall(CI);
+  std::string DemangledCall =
+      IsCall ? demangleBuiltinCall(CI->getCalledFunction()->getName()) : "";
+
   bool IsPhi = isa<PHINode>(I), BPrepared = false;
+
   for (const auto &Op : I->operands()) {
     if ((isa<ConstantAggregateZero>(Op) && Op->getType()->isVectorTy()) ||
         isa<PHINode>(I) || isa<SwitchInst>(I))
       TrackConstants = false;
     if ((isa<ConstantData>(Op) || isa<ConstantExpr>(Op)) && TrackConstants) {
+      Constant *OpConst = cast<Constant>(Op);
+
       unsigned OpNo = Op.getOperandNo();
       if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
                  (II->paramHasAttr(OpNo, Attribute::ImmArg))))
@@ -1210,12 +1222,27 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
               : B.SetInsertPoint(I);
         BPrepared = true;
       }
+
       Value *OpTyVal = Op;
-      if (Op->getType()->isTargetExtTy())
+      Value *ConstVal = Op;
+
+      if (Op->getType()->isTargetExtTy() ||
+          (Op->getType()->isPointerTy() && !DemangledCall.empty() &&
+           OpConst->isNullValue())) {
         OpTyVal = PoisonValue::get(Op->getType());
+      }
+
+      if (Op->getType()->isPointerTy() && !DemangledCall.empty() &&
+          OpConst->isNullValue()) {
+        Type *DemangledTy = SPIRV::parseBuiltinCallArgumentBaseType(
+            DemangledCall, Op.getOperandNo(), I->getContext());
+        if (DemangledTy)
+          ConstVal = Constant::getNullValue(DemangledTy);
+      }
+
       auto *NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
-                                    {Op->getType(), OpTyVal->getType()}, Op,
-                                    OpTyVal, {}, B);
+                                    {Op->getType(), OpTyVal->getType()},
+                                    ConstVal, OpTyVal, {}, B);
       I->setOperand(OpNo, NewOp);
     }
   }

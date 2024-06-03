@@ -258,8 +258,7 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
   }
 
-  std::string DemangledFuncName =
-      getOclOrSpirvBuiltinDemangledName(F.getName());
+  std::string DemangledFuncName = demangleBuiltinCall(F.getName());
   if (!DemangledFuncName.empty()) {
     Type *BuiltinType = SPIRV::parseBuiltinCallArgumentBaseType(
         DemangledFuncName, ArgIdx, F.getContext());
@@ -521,7 +520,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // globally later.
   if (Info.Callee.isGlobal()) {
     std::string FuncName = Info.Callee.getGlobal()->getName().str();
-    DemangledName = getOclOrSpirvBuiltinDemangledName(FuncName);
+    DemangledName = demangleBuiltinCall(FuncName);
     CF = dyn_cast_or_null<const Function>(Info.Callee.getGlobal());
     // TODO: support constexpr casts and indirect calls.
     if (CF == nullptr)

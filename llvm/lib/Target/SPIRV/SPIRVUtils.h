@@ -90,9 +90,9 @@ bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
 
-// If OpenCL or SPIR-V builtin function name is recognized, return a demangled
-// name, otherwise return an empty string.
-std::string getOclOrSpirvBuiltinDemangledName(StringRef Name);
+// If SPIR-V builtin function name is recognized, return a demangled name,
+// otherwise return an empty string.
+std::string demangleBuiltinCall(StringRef Name);
 
 // Check if a string contains a builtin prefix.
 bool hasBuiltinTypePrefix(StringRef Name);

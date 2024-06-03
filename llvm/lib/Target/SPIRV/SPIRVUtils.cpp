@@ -332,7 +332,7 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
          Name == "__translate_sampler_initializer";
 }
 
-std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
+std::string demangleBuiltinCall(StringRef Name) {
   bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
   bool IsNonMangledSPIRV = Name.starts_with("__spirv_");
   bool IsNonMangledHLSL = Name.starts_with("__hlsl_");
