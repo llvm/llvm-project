@@ -2129,29 +2129,6 @@ bool DWARFExpression::Evaluate(
           case Value::ValueType::Invalid:
             return false;
           case Value::ValueType::LoadAddress:
-            if (process) {
-              if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
-                if (process->ReadMemory(addr, curr_piece.GetBuffer().GetBytes(),
-                                        piece_byte_size,
-                                        error) != piece_byte_size) {
-                  if (error_ptr)
-                    error_ptr->SetErrorStringWithFormat(
-                        "failed to read memory DW_OP_piece(%" PRIu64
-                        ") from load address 0x%" PRIx64,
-                        piece_byte_size, addr);
-                  return false;
-                }
-              } else {
-                if (error_ptr)
-                  error_ptr->SetErrorStringWithFormat(
-                      "failed to resize the piece memory buffer for "
-                      "DW_OP_piece(%" PRIu64 ")",
-                      piece_byte_size);
-                return false;
-              }
-            }
-            break;
-
           case Value::ValueType::FileAddress: {
             if (target) {
               if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
@@ -2159,11 +2136,16 @@ bool DWARFExpression::Evaluate(
                                        piece_byte_size, error,
                                        /*force_live_memory=*/false) !=
                     piece_byte_size) {
-                  if (error_ptr)
+                  if (error_ptr) {
+                    const char *addr_type = (curr_piece_source_value_type ==
+                                             Value::ValueType::LoadAddress)
+                                                ? "load"
+                                                : "file";
                     error_ptr->SetErrorStringWithFormat(
                         "failed to read memory DW_OP_piece(%" PRIu64
-                        ") from file address 0x%" PRIx64,
-                        piece_byte_size, addr);
+                        ") from %s address 0x%" PRIx64,
+                        piece_byte_size, addr_type, addr);
+                  }
                   return false;
                 }
               } else {
