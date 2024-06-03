@@ -268,6 +268,7 @@ struct CastedValue {
   unsigned ZExtBits = 0;
   unsigned SExtBits = 0;
   unsigned TruncBits = 0;
+  /// Whether trunc(V) is non-negative.
   bool IsNonNegative = false;
 
   explicit CastedValue(const Value *V) : V(V) {}
@@ -292,7 +293,7 @@ struct CastedValue {
                         NewV->getType()->getPrimitiveSizeInBits();
     if (ExtendBy <= TruncBits)
       // zext<nneg>(trunc(zext(NewV))) == zext<nneg>(trunc(NewV))
-      // The nneg can be preserved on the outer zext here
+      // The nneg can be preserved on the outer zext here.
       return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy,
                          IsNonNegative);
 
@@ -471,11 +472,10 @@ static LinearExpression GetLinearExpression(
     }
   }
 
-  if (isa<ZExtInst>(Val.V))
+  if (const auto *ZExt = dyn_cast<ZExtInst>(Val.V))
     return GetLinearExpression(
-        Val.withZExtOfValue(cast<CastInst>(Val.V)->getOperand(0),
-                            cast<ZExtInst>(Val.V)->hasNonNeg()),
-        DL, Depth + 1, AC, DT);
+        Val.withZExtOfValue(ZExt->getOperand(0), ZExt->hasNonNeg()), DL,
+        Depth + 1, AC, DT);
 
   if (isa<SExtInst>(Val.V))
     return GetLinearExpression(
