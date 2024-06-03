@@ -362,8 +362,7 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
         SmallVector<Value *> Indices(GEP->indices());
         Value *OffsetBase =
             Builder.CreateGEP(GEP->getSourceElementType(), BaseBase, Indices,
-                              "", GEP->isInBounds());
-        OffsetBase->takeName(GEP);
+                              GEP->getName() + "offset", GEP->isInBounds());
         return {OffsetBase, Stride};
       }
     }
