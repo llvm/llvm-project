@@ -38,7 +38,7 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
     Direction direction, Fortran::common::optional<bool>,
     IoErrorHandler &handler) {
   if (direction != Direction::Output) {
-    terminator.Crash("ExternalFileUnit only supports output IO");
+    handler.Crash("ExternalFileUnit only supports output IO");
   }
   return New<ExternalFileUnit>{handler}(unit).release();
 }
