@@ -20,22 +20,23 @@ using namespace sampleprof;
 
 #define DEBUG_TYPE "sample-profile-matcher"
 
-static cl::opt<bool> SalvageRenamedProfile(
-    "salvage-renamed-profile", cl::Hidden, cl::init(false),
-    cl::desc("Salvage renamed profile by function renaming matching."));
+static cl::opt<bool> SalvageUnusedProfile(
+    "salvage-unused-profile", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Salvage unused profile by matching new functions on call graph."));
 
-static cl::opt<unsigned> RenamedFuncSimilarityThreshold(
-    "renamed-func-similarity-threshold", cl::Hidden, cl::init(80),
+static cl::opt<unsigned> FuncProfileSimilarityThreshold(
+    "func-profile-similarity-threshold", cl::Hidden, cl::init(80),
     cl::desc("The profile matches the function if their similarity is above "
              "the given number(percentage)."));
 
-static cl::opt<unsigned> MinBBForCGMatching(
-    "min-bb-for-cg-matching", cl::Hidden, cl::init(5),
+static cl::opt<unsigned> MinFuncCountForCGMatching(
+    "min-func-count-for-cg-matching", cl::Hidden, cl::init(5),
     cl::desc("The minimum number of basic blocks required for a function to "
              "run stale profile call graph matching."));
 
-static cl::opt<unsigned> MinCallAnchorForCGMatching(
-    "min-call-for-cg-matching", cl::Hidden, cl::init(3),
+static cl::opt<unsigned> MinCallCountForCGMatching(
+    "min-call-count-for-cg-matching", cl::Hidden, cl::init(3),
     cl::desc("The minimum number of call anchors required for a function to "
              "run stale profile call graph matching."));
 
@@ -656,10 +657,15 @@ void SampleProfileMatcher::findNewIRFunctions(
   }
 }
 
-void SampleProfileMatcher::findNewIRCallees(
-    Function &Caller, const StringMap<Function *> &NewIRFunctions,
-    std::vector<Function *> &NewIRCallees) {
-  for (auto &BB : Caller) {
+std::vector<Function *> *SampleProfileMatcher::findNewIRCallees(
+    Function &Func, const StringMap<Function *> &NewIRFunctions) {
+  auto R = FuncToNewCalleesMap.try_emplace(&Func, std::vector<Function *>());
+  std::vector<Function *> &IRCalleesToMatch = R.first->second;
+  // Skip the lookup if it's in the cache.
+  if (!R.second)
+    return &IRCalleesToMatch;
+
+  for (auto &BB : Func) {
     for (auto &I : BB) {
       const auto *CB = dyn_cast<CallBase>(&I);
       if (!CB || isa<IntrinsicInst>(&I))
@@ -670,42 +676,23 @@ void SampleProfileMatcher::findNewIRCallees(
       StringRef CalleeName =
           FunctionSamples::getCanonicalFnName(Callee->getName());
       if (NewIRFunctions.count(CalleeName))
-        NewIRCallees.push_back(Callee);
+        IRCalleesToMatch.push_back(Callee);
     }
   }
+  return &IRCalleesToMatch;
 }
 
-std::pair<Function *, SampleProfileMatcher::MatchState>
-SampleProfileMatcher::findFunction(
-    const FunctionId &ProfFunc,
-    const FunctionMap &OldProfToNewSymbolMap) const {
-  auto F = SymbolMap->find(ProfFunc);
+Function *SampleProfileMatcher::findFuncByProfileName(
+    const FunctionId &ProfileName) const {
+  auto F = SymbolMap->find(ProfileName);
   if (F != SymbolMap->end())
-    return {F->second, MatchState::InitialMatch};
+    return F->second;
 
-  // Existing matched function is found.
-  auto NewF = OldProfToNewSymbolMap.find(ProfFunc);
-  if (NewF != OldProfToNewSymbolMap.end())
-    return {NewF->second, MatchState::RecoveredMismatch};
-  return {nullptr, MatchState::Unknown};
-}
-
-std::pair<Function *, SampleProfileMatcher::MatchState>
-SampleProfileMatcher::findOrMatchFunction(
-    const FunctionId &ProfFunc, FunctionMap &OldProfToNewSymbolMap,
-    const std::vector<Function *> &NewIRCallees) {
-  auto R = findFunction(ProfFunc, OldProfToNewSymbolMap);
-  // We need to check the match state instead of nullptr function because the
-  // returned function can be nullptr even if it's found in the symbol map.
-  if (R.second != MatchState::Unknown)
-    return R;
-
-  for (auto *IRCallee : NewIRCallees)
-    if (functionMatchesProfile(*IRCallee, ProfFunc)) {
-      OldProfToNewSymbolMap[ProfFunc] = IRCallee;
-      return {IRCallee, MatchState::RecoveredMismatch};
-    }
-  return {nullptr, MatchState::Unknown};
+  // Find in new matched function map.
+  auto NewF = ProfileNameToFuncMap.find(ProfileName);
+  if (NewF != ProfileNameToFuncMap.end())
+    return NewF->second;
+  return nullptr;
 }
 
 bool SampleProfileMatcher::functionMatchesProfileHelper(
@@ -719,8 +706,8 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   // Similarity check may not be reliable if the function is tiny, we use the
   // number of basic block as a proxy for the function complexity and skip the
   // matching if it's too small.
-  if (IRFunc.size() < MinBBForCGMatching ||
-      FSFlattened->getBodySamples().size() < MinBBForCGMatching)
+  if (IRFunc.size() < MinFuncCountForCGMatching ||
+      FSFlattened->getBodySamples().size() < MinFuncCountForCGMatching)
     return false;
 
   // For probe-based function, we first trust the checksum info. If the checksum
@@ -747,8 +734,8 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
                         FilteredProfileAnchorList);
 
   // Similarly skip the matching if the num of anchors is not enough.
-  if (FilteredIRAnchorsList.size() < MinCallAnchorForCGMatching ||
-      FilteredProfileAnchorList.size() < MinCallAnchorForCGMatching)
+  if (FilteredIRAnchorsList.size() < MinCallCountForCGMatching ||
+      FilteredProfileAnchorList.size() < MinCallCountForCGMatching)
     return false;
 
   // Use the diff algorithm to find the LCS between IR and profile.
@@ -764,10 +751,10 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
                     << format("%.2f", Similarity) << "\n");
   assert((Similarity >= 0 && Similarity <= 1.0) &&
          "Similarity value should be in [0, 1]");
-  return Similarity * 100 > RenamedFuncSimilarityThreshold;
+  return Similarity * 100 > FuncProfileSimilarityThreshold;
 }
 
-bool SampleProfileMatcher::functionMatchesProfile(const Function &IRFunc,
+bool SampleProfileMatcher::functionMatchesProfile(Function &IRFunc,
                                                   const FunctionId &ProfFunc) {
   auto R = FunctionProfileNameMap.find({&IRFunc, ProfFunc});
   if (R != FunctionProfileNameMap.end())
@@ -775,48 +762,64 @@ bool SampleProfileMatcher::functionMatchesProfile(const Function &IRFunc,
 
   bool Matched = functionMatchesProfileHelper(IRFunc, ProfFunc);
   FunctionProfileNameMap[{&IRFunc, ProfFunc}] = Matched;
+  ProfileNameToFuncMap[ProfFunc] = &IRFunc;
   return Matched;
 }
 
-// Match profile for new function on the profiled call-graph edge to limit the
-// matching scope.
+void SampleProfileMatcher::matchCalleeProfile(
+    const FunctionId &Caller, const FunctionId &ProfileCalleeName,
+    const std::vector<Function *> *IRCalleesToMatch,
+    std::vector<std::pair<FunctionId, FunctionId>> &MatchResult) {
+  if (!IRCalleesToMatch)
+    return;
+  // Check whether this is an existing function matching the profile, we only
+  // run the matching when the callee profile is unused.
+  auto F = SymbolMap->find(ProfileCalleeName);
+  if (F != SymbolMap->end())
+    return;
+
+  for (auto *IRFuncCandidate : *IRCalleesToMatch)
+    if (functionMatchesProfile(*IRFuncCandidate, ProfileCalleeName)) {
+      FunctionId IRCalleeName(IRFuncCandidate->getName());
+      assert(IRCalleeName != ProfileCalleeName &&
+             "New callee symbol is not a new function");
+      LLVM_DEBUG(dbgs() << "In function " << Caller
+                        << ", changing profile name from " << ProfileCalleeName
+                        << " to " << IRCalleeName << "\n");
+      MatchResult.emplace_back(IRCalleeName, ProfileCalleeName);
+      return;
+    }
+}
+
+// Traverse the profiled call-graph recursively to run the matching.
 void SampleProfileMatcher::matchProfileForNewFunctions(
-    const StringMap<Function *> &NewIRFunctions, FunctionSamples &CallerFS,
-    FunctionMap &OldProfToNewSymbolMap) {
-  // Find the new candidate callees from IR in the current caller scope.
-  std::vector<Function *> NewIRCallees;
-  if (auto *IRCaller =
-          findFunction(CallerFS.getFunction(), OldProfToNewSymbolMap).first) {
+    const StringMap<Function *> &NewIRFunctions, FunctionSamples &FuncProfile) {
+  // Find the new candidate IR callees in the current caller scope.
+  std::vector<Function *> *IRCalleesToMatch = nullptr;
+  if (auto *IRCaller = findFuncByProfileName(FuncProfile.getFunction())) {
     // No callees for external function, skip the rename matching.
     if (IRCaller->isDeclaration())
       return;
-    findNewIRCallees(*IRCaller, NewIRFunctions, NewIRCallees);
+    IRCalleesToMatch = findNewIRCallees(*IRCaller, NewIRFunctions);
   }
+  // Don't return here when IRCalleesToMatch is nullptr or empty, this is
+  // because even if there is no matching in the current scope, there could be
+  // matching in deeper callee scope/edge, so we need to keep traversing the
+  // call-graph. For IRCalleesToMatch is nullptr or empty case, later the
+  // matching function(matchCalleeProfile) will handle this to make it non-op.
 
   // Match non-inline callees.
-  for (auto &BS : const_cast<BodySampleMap &>(CallerFS.getBodySamples())) {
-    if (NewIRCallees.empty())
-      break;
+  for (auto &BS : const_cast<BodySampleMap &>(FuncProfile.getBodySamples())) {
     // New function to old function pairs used to update the CallTargetMap.
-    std::vector<std::pair<FunctionId, FunctionId>> CallTargetsToUpdate;
+    std::vector<std::pair<FunctionId, FunctionId>> MatchResult;
     SampleRecord::CallTargetMap &CTM =
         const_cast<SampleRecord::CallTargetMap &>(BS.second.getCallTargets());
-    for (const auto &TS : CTM) {
-      const FunctionId &ProfCallee = TS.first;
-      auto MatchRes =
-          findOrMatchFunction(ProfCallee, OldProfToNewSymbolMap, NewIRCallees);
-      if (MatchRes.second != MatchState::RecoveredMismatch)
-        continue;
-      FunctionId NewIRCalleeName(MatchRes.first->getName());
-      assert(NewIRCalleeName != ProfCallee &&
-             "New callee symbol is not a new function");
-      LLVM_DEBUG(dbgs() << "In function " << CallerFS.getFunction()
-                        << ", changing profile name from " << ProfCallee
-                        << " to " << NewIRCalleeName << "\n");
-      CallTargetsToUpdate.emplace_back(NewIRCalleeName, ProfCallee);
-    }
+    for (const auto &TS : CTM)
+      matchCalleeProfile(FuncProfile.getFunction(), TS.first, IRCalleesToMatch,
+                         MatchResult);
 
-    for (const auto &P : CallTargetsToUpdate) {
+    // Update the CallTargetMap.
+    for (const auto &P : MatchResult) {
       CTM[P.first] = CTM[P.second];
       CTM.erase(P.second);
     }
@@ -824,61 +827,48 @@ void SampleProfileMatcher::matchProfileForNewFunctions(
 
   // Match inline callees.
   for (auto &CM :
-       const_cast<CallsiteSampleMap &>(CallerFS.getCallsiteSamples())) {
+       const_cast<CallsiteSampleMap &>(FuncProfile.getCallsiteSamples())) {
     auto &CalleeMap = CM.second;
-    // New function to old FunctionSamples pairs used to update the
-    // CallsiteSampleMap.
-    std::vector<std::pair<FunctionId, FunctionSamples *>> FSamplesToUpdate;
+    // New function to old function pairs used to update the CallsiteSampleMap.
+    std::vector<std::pair<FunctionId, FunctionId>> MatchResult;
     for (auto &CS : CalleeMap) {
-      FunctionSamples &CalleeFS = CS.second;
-      FunctionId ProfCallee = CalleeFS.getFunction();
-      auto MatchRes =
-          findOrMatchFunction(ProfCallee, OldProfToNewSymbolMap, NewIRCallees);
-      if (MatchRes.second == MatchState::RecoveredMismatch) {
-        FunctionId NewIRCalleeName(MatchRes.first->getName());
-        assert(NewIRCalleeName != ProfCallee &&
-               "New callee symbol is not a new function");
-        LLVM_DEBUG(dbgs() << "In function " << CallerFS.getFunction()
-                          << ", changing profile name from " << ProfCallee
-                          << " to " << NewIRCalleeName << "\n");
-        FSamplesToUpdate.emplace_back(NewIRCalleeName, &CalleeFS);
-      }
-      // Note that even there is no renaming in the current scope, there could
-      // be renaming in deeper callee scope, we need to traverse all the callee
-      // profiles.
-      matchProfileForNewFunctions(NewIRFunctions, CalleeFS,
-                                  OldProfToNewSymbolMap);
+      FunctionSamples &CalleeProfile = CS.second;
+      matchCalleeProfile(FuncProfile.getFunction(), CalleeProfile.getFunction(),
+                         IRCalleesToMatch, MatchResult);
+
+      // Traverse all the inlined callee profiles.
+      matchProfileForNewFunctions(NewIRFunctions, CalleeProfile);
     }
 
     // Update the CalleeMap using the new name and remove the old entry.
-    for (auto &P : FSamplesToUpdate) {
-      const FunctionId &OldFunction = P.second->getFunction();
-      assert(P.first != OldFunction &&
+    for (auto &P : MatchResult) {
+      assert(P.first != P.second &&
              "Renamed function name should be different from the old map key");
-      P.second->setFunction(P.first);
-      CalleeMap[P.first] = *P.second;
-      CalleeMap.erase(OldFunction);
+      FunctionSamples &FS = CalleeMap[P.second];
+      FS.setFunction(P.first);
+      CalleeMap[P.first] = FS;
+      CalleeMap.erase(P.second);
     }
   }
 }
 
-std::vector<FunctionSamples *>
-SampleProfileMatcher::sortFuncProfiles(SampleProfileMap &ProfileMap) {
-  std::vector<FunctionSamples *> SortedProfiles;
-  for (auto &I : ProfileMap)
-    SortedProfiles.push_back(&I.second);
-
-  llvm::stable_sort(SortedProfiles,
-                    [](const FunctionSamples *A, const FunctionSamples *B) {
-                      if (A->getTotalSamples() == B->getTotalSamples())
-                        return A->getContext() < B->getContext();
-                      return A->getTotalSamples() > B->getTotalSamples();
-                    });
-  return SortedProfiles;
-}
-
+// Match the unused profile with new IR functions on the profiled call-graph.
+// The high-level steps for the algorithm:
+// 1) Find all the new functions that show only in the IR, use them as the
+// matching candidates to compute new callees.
+//
+// 2) Traverse all the nodes in the profiled call-graph.
+// For each function caller scope:
+//  a) Find a set of callees in the IR that doesn't exist in the profile. See
+//  findNewIRCallees.
+//  b) Find a set of callees in the profile that doesn't exist
+//  in the IR. See matchCalleeProfile.
+//  c) Match the callee pairs between a and b. Compute a similarity ratio
+//  between the pair, it's considered match if the similarity is above a given
+//  threshold. See MatchProfileForNewFunctions.
+//  d) Update the profile with the matched name in-place.
 void SampleProfileMatcher::runCallGraphMatching() {
-  if (!SalvageRenamedProfile)
+  if (!SalvageUnusedProfile)
     return;
   assert(SymbolMap && "SymbolMap is null");
   assert(FunctionProfileNameMap.empty() &&
@@ -889,29 +879,29 @@ void SampleProfileMatcher::runCallGraphMatching() {
   if (NewIRFunctions.empty())
     return;
 
-  // The new functions found by the renaming matching. Save them into a map
-  // whose key is the old(profile) function name and value is the new(renamed)
-  // function.
-  FunctionMap OldProfToNewSymbolMap;
   // Sort the profiles to make the matching order deterministic.
-  for (auto *P : sortFuncProfiles(Reader.getProfiles()))
-    matchProfileForNewFunctions(NewIRFunctions, *P, OldProfToNewSymbolMap);
+  std::vector<NameFunctionSamples> SortedProfiles;
+  ::llvm::sortFuncProfiles(Reader.getProfiles(), SortedProfiles);
+  for (auto &P : SortedProfiles)
+    matchProfileForNewFunctions(NewIRFunctions,
+                                *const_cast<FunctionSamples *>(P.second));
 
-  FunctionProfileNameMap.clear();
-  if (OldProfToNewSymbolMap.empty())
+  clearCacheData();
+  if (ProfileNameToFuncMap.empty())
     return;
   // Update all the data generated by the old profile.
   // Add the new function to the SymbolMap, which will be used in
   // SampleLoader.
-  for (auto &I : OldProfToNewSymbolMap) {
+  for (auto &I : ProfileNameToFuncMap) {
     assert(I.second && "New function is null");
     SymbolMap->emplace(FunctionId(I.second->getName()), I.second);
   }
 
-  // Re-flatten the profiles after the renaming.
+  // Re-flatten the profiles after the matching.
   FlattenedProfiles.clear();
   ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
                                    FunctionSamples::ProfileIsCS);
+  ProfileNameToFuncMap.clear();
 }
 
 void SampleProfileMatcher::runOnFunction(Function &F) {
@@ -920,7 +910,8 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
   runCFGMatching(F);
 }
 
-void SampleProfileMatcher::runOnModule(FunctionMap &SymMap) {
+void SampleProfileMatcher::runOnModule(
+    HashKeyMap<std::unordered_map, FunctionId, Function *> &SymMap) {
   ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
                                    FunctionSamples::ProfileIsCS);
   SymbolMap = &SymMap;

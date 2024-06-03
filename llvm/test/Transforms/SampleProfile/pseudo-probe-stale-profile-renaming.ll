@@ -1,7 +1,7 @@
 ; REQUIRES: x86_64-linux
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-renamed-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-for-cg-matching=0 --min-bb-for-cg-matching=0 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-renamed-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl --min-call-for-cg-matching=10 --min-bb-for-cg-matching=10 2>&1 | FileCheck %s  --check-prefix=TINY-FUNC
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl --min-call-count-for-cg-matching=10 --min-func-count-for-cg-matching=10 2>&1 | FileCheck %s  --check-prefix=TINY-FUNC
 
 
 ; CHECK: Function new_block_only is not in profile or symbol list table.

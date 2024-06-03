@@ -21,7 +21,6 @@ namespace llvm {
 
 using AnchorList = std::vector<std::pair<LineLocation, FunctionId>>;
 using AnchorMap = std::map<LineLocation, FunctionId>;
-using FunctionMap = HashKeyMap<std::unordered_map, FunctionId, Function *>;
 
 // Sample profile matching - fuzzy match.
 class SampleProfileMatcher {
@@ -65,12 +64,26 @@ class SampleProfileMatcher {
       return hash_combine(P.first, P.second);
     }
   };
+  // A map from a pair of function and profile name to a boolean value
+  // indicating whether they are matched. This is used as a cache for the
+  // matching result.
   std::unordered_map<std::pair<const Function *, FunctionId>, bool,
                      FuncProfNameMapHash>
       FunctionProfileNameMap;
+  // The new functions found by the call graph matching. The map's key is the
+  // old profile name and value is the new(renamed) function.
+  HashKeyMap<std::unordered_map, FunctionId, Function *> ProfileNameToFuncMap;
 
-  FunctionMap *SymbolMap;
+  // A map pointer to the SymbolMap in the SampleProfileLoader, which stores all
+  // the original matched symbols before the matching. this is to determine if
+  // the profile is unused(to be matched) or not.
+  HashKeyMap<std::unordered_map, FunctionId, Function *> *SymbolMap;
 
+  // A map from the caller to its new callees, this is used as a cache for the
+  // candidate callees.
+  std::unordered_map<Function *, std::vector<Function *>> FuncToNewCalleesMap;
+
+  // Pointer to the Profile Symbol List in the reader.
   std::shared_ptr<ProfileSymbolList> PSL;
 
   // Profile mismatch statstics:
@@ -99,11 +112,13 @@ public:
                        std::shared_ptr<ProfileSymbolList> PSL)
       : M(M), Reader(Reader), ProbeManager(ProbeManager), LTOPhase(LTOPhase),
         PSL(PSL) {};
-  void runOnModule(FunctionMap &SymbolMap);
+  void runOnModule(
+      HashKeyMap<std::unordered_map, FunctionId, Function *> &SymbolMap);
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
     // will be used for sample loader.
     FuncCallsiteMatchStates.clear();
+    FlattenedProfiles.clear();
   }
 
 private:
@@ -188,27 +203,25 @@ private:
                                LocToLocMap &IRToProfileLocationMap);
   /// Find the existing or new matched function using the profile name.
   ///
-  /// \returns The function and a match state.
-  std::pair<Function *, MatchState>
-  findFunction(const FunctionId &ProfFunc,
-               const FunctionMap &OldProfToNewSymbolMap) const;
-  /// Find the function using the profile name. If the function is not found but
-  /// the \p NewIRCallees is provided, try to match the function profile with
-  /// all functions in \p NewIRCallees and return the matched function.
+  /// \returns The function pointer.
+  Function *findFuncByProfileName(const FunctionId &ProfileName) const;
+  /// Match the callee profile with the IR function. If the profile callee is
+  /// found in the SymbolMap, which means it's an original matched symbol, skip
+  /// the matching. Otherwise match the callee profile with all functions in
+  /// \p NewIRFuncsToMatch and save the match result into \p MatchResult.
   ///
-  /// \param ProfFunc The function profile name.
-  /// \param OldProfToNewSymbolMap The map from old profile name to new symbol.
-  /// \param NewIRCallees The new candidate callees in the same scope to match.
-  ///
-  /// \returns The matched function and a match state.
-  std::pair<Function *, MatchState>
-  findOrMatchFunction(const FunctionId &ProfFunc,
-                      FunctionMap &OldProfToNewSymbolMap,
-                      const std::vector<Function *> &NewIRCallees);
-  std::vector<FunctionSamples *> sortFuncProfiles(SampleProfileMap &ProfileMap);
-  void findNewIRCallees(Function &Caller,
-                        const StringMap<Function *> &NewIRFunctions,
-                        std::vector<Function *> &NewIRCallees);
+  /// \param Caller The caller function.
+  /// \param ProfileCalleeName The profile callee name.
+  /// \param IRCalleesToMatch The new candidate IR callees in the same scope to
+  /// match.
+  /// \param MatchResult The matched result.
+  void matchCalleeProfile(
+      const FunctionId &Caller, const FunctionId &ProfileCalleeName,
+      const std::vector<Function *> *IRCalleesToMatch,
+      std::vector<std::pair<FunctionId, FunctionId>> &MatchResult);
+  std::vector<Function *> *
+  findNewIRCallees(Function &Caller,
+                   const StringMap<Function *> &NewIRFunctions);
   bool functionMatchesProfileHelper(const Function &IRFunc,
                                     const FunctionId &ProfFunc);
   /// Determine if the function matches profile by computing a similarity ratio
@@ -216,17 +229,19 @@ private:
   /// above the threshold, the function matches the profile.
   ///
   /// \returns True if the function matches profile.
-  bool functionMatchesProfile(const Function &IRFunc,
-                              const FunctionId &ProfFunc);
+  bool functionMatchesProfile(Function &IRFunc, const FunctionId &ProfFunc);
   void matchProfileForNewFunctions(const StringMap<Function *> &NewIRFunctions,
-                                   FunctionSamples &FS,
-                                   FunctionMap &OldProfToNewSymbolMap);
+                                   FunctionSamples &FS);
   /// Find functions that don't show in the profile or profile symbol list,
   /// which are supposed to be new functions. We use them as the targets for
   /// renaming matching.
   ///
   /// \param NewIRFunctions The map from function name to the IR function.
   void findNewIRFunctions(StringMap<Function *> &NewIRFunctions);
+  void clearCacheData() {
+    FunctionProfileNameMap.clear();
+    FuncToNewCalleesMap.clear();
+  }
   void runCallGraphMatching();
   void reportOrPersistProfileStats();
 };
