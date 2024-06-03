@@ -3307,12 +3307,12 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
   const BasicBlock *EHPadBB = I.getSuccessor(1);
   MachineBasicBlock *EHPadMBB = FuncInfo.MBBMap[EHPadBB];
 
-  // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
+  // Deopt and ptrauth bundles are lowered in helper functions, and we don't
   // have to do anything here to lower funclet bundles.
   assert(!I.hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
               LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
-              LLVMContext::OB_cfguardtarget,
+              LLVMContext::OB_cfguardtarget, LLVMContext::OB_ptrauth,
               LLVMContext::OB_clang_arc_attachedcall}) &&
          "Cannot lower invokes with arbitrary operand bundles yet!");
 
@@ -3363,6 +3363,8 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     // intrinsic, and right now there are no plans to support other intrinsics
     // with deopt state.
     LowerCallSiteWithDeoptBundle(&I, getValue(Callee), EHPadBB);
+  } else if (I.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+    LowerCallSiteWithPtrAuthBundle(cast<CallBase>(I), EHPadBB);
   } else {
     LowerCallTo(I, getValue(Callee), false, false, EHPadBB);
   }
@@ -8598,9 +8600,9 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
 }
 
 void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
-                                      bool isTailCall,
-                                      bool isMustTailCall,
-                                      const BasicBlock *EHPadBB) {
+                                      bool isTailCall, bool isMustTailCall,
+                                      const BasicBlock *EHPadBB,
+                                      const TargetLowering::PtrAuthInfo *PAI) {
   auto &DL = DAG.getDataLayout();
   FunctionType *FTy = CB.getFunctionType();
   Type *RetTy = CB.getType();
@@ -8707,6 +8709,15 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
           CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
       .setCFIType(CFIType)
       .setConvergenceControlToken(ConvControlToken);
+
+  // Set the pointer authentication info if we have it.
+  if (PAI) {
+    if (!TLI.supportPtrAuthBundles())
+      report_fatal_error(
+          "This target doesn't support calls with ptrauth operand bundles.");
+    CLI.setPtrAuth(*PAI);
+  }
+
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   if (Result.first.getNode()) {
@@ -9252,6 +9263,11 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     }
   }
 
+  if (I.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+    LowerCallSiteWithPtrAuthBundle(cast<CallBase>(I), /*EHPadBB=*/nullptr);
+    return;
+  }
+
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
   // CFGuardTarget bundles are lowered in LowerCallTo.
@@ -9271,6 +9287,31 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     // is be done within LowerCallTo, after more information about the call is
     // known.
     LowerCallTo(I, Callee, I.isTailCall(), I.isMustTailCall());
+}
+
+void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
+    const CallBase &CB, const BasicBlock *EHPadBB) {
+  auto PAB = CB.getOperandBundle("ptrauth");
+  const Value *CalleeV = CB.getCalledOperand();
+
+  // Gather the call ptrauth data from the operand bundle:
+  //   [ i32 <key>, i64 <discriminator> ]
+  const auto *Key = cast<ConstantInt>(PAB->Inputs[0]);
+  const Value *Discriminator = PAB->Inputs[1];
+
+  assert(Key->getType()->isIntegerTy(32) && "Invalid ptrauth key");
+  assert(Discriminator->getType()->isIntegerTy(64) &&
+         "Invalid ptrauth discriminator");
+
+  // Functions should never be ptrauth-called directly.
+  assert(!isa<Function>(CalleeV) && "invalid direct ptrauth call");
+
+  // Otherwise, do an authenticated indirect call.
+  TargetLowering::PtrAuthInfo PAI = {Key->getZExtValue(),
+                                     getValue(Discriminator)};
+
+  LowerCallTo(CB, getValue(CalleeV), CB.isTailCall(), CB.isMustTailCall(),
+              EHPadBB, &PAI);
 }
 
 namespace {
