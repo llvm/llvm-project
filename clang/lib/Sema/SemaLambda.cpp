@@ -1036,16 +1036,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
   // be dependent, because there are template parameters in scope.
   CXXRecordDecl::LambdaDependencyKind LambdaDependencyKind =
       CXXRecordDecl::LDK_Unknown;
-
-  if (LSI->NumExplicitTemplateParams > 0) {
-    Scope *TemplateParamScope = CurScope->getTemplateParamParent();
-    assert(TemplateParamScope &&
-           "Lambda with explicit template param list should establish a "
-           "template param scope");
-    assert(TemplateParamScope->getParent());
-    if (TemplateParamScope->getParent()->getTemplateParamParent() != nullptr)
-      LambdaDependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
-  } else if (CurScope->getTemplateParamParent() != nullptr) {
+  if (CurScope->getTemplateParamParent() != nullptr) {
     LambdaDependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
   } else if (Scope *P = CurScope->getParent()) {
     // Given a lambda defined inside a requires expression,
