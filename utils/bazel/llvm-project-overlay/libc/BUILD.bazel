@@ -174,6 +174,11 @@ libc_support_library(
     hdrs = ["hdr/types/time_t.h"],
 )
 
+libc_support_library(
+    name = "types_pid_t",
+    hdrs = ["hdr/types/pid_t.h"],
+)
+
 ############################### Support libraries ##############################
 
 libc_support_library(
@@ -1147,6 +1152,33 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_threads_sleep",
+    hdrs = ["src/__support/threads/sleep.h"],
+)
+
+libc_support_library(
+    name = "__support_threads_raw_mutex",
+    hdrs = [
+        "src/__support/threads/linux/raw_mutex.h",
+    ],
+    defines = [
+        "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY",
+        "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT"
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_cpp_optional",
+        ":__support_time_linux",
+        ":__support_threads_linux_futex_utils",
+        ":__support_threads_sleep",
+        ":types_pid_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_threads_mutex",
     hdrs = [
         "src/__support/threads/mutex.h",
@@ -1163,6 +1195,8 @@ libc_support_library(
         ":__support_cpp_atomic",
         ":__support_osutil_syscall",
         ":__support_threads_linux_futex_utils",
+        ":__support_threads_raw_mutex",
+        ":types_pid_t",
     ],
 )
 
