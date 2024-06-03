@@ -17,9 +17,7 @@ struct LogicalResult;
 namespace scf {
 class ParallelOp;
 }
-} // namespace mlir
-
-namespace mlir {
+namespace scf {
 
 /// Loop vectorization info
 struct SCFVectorizeInfo {
@@ -65,6 +63,7 @@ struct SCFVectorizeParams {
 mlir::LogicalResult vectorizeLoop(mlir::scf::ParallelOp loop,
                                   const SCFVectorizeParams &params,
                                   const DataLayout *DL = nullptr);
+} // namespace scf
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_SCFVECTORIZE_H_

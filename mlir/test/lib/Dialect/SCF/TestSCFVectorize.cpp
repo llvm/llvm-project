@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/SCFVectorize.h"
+#include "mlir/Dialect/SCF/Transforms/SCFVectorize.h"
 
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -58,20 +58,20 @@ struct TestSCFVectorizePass
     Operation *root = getOperation();
     auto &DLAnalysis = getAnalysis<DataLayoutAnalysis>();
 
-    llvm::SmallVector<std::pair<scf::ParallelOp, SCFVectorizeParams>>
+    llvm::SmallVector<std::pair<scf::ParallelOp, scf::SCFVectorizeParams>>
         toVectorize;
 
     // Simple heuristic: total number of elements processed by vector ops, but
     // prefer masked mode over non-masked.
-    auto getBenefit = [](const SCFVectorizeInfo &info) {
+    auto getBenefit = [](const scf::SCFVectorizeInfo &info) {
       return info.factor * info.count * (int(info.masked) + 1);
     };
 
     root->walk([&](scf::ParallelOp loop) {
       const DataLayout &DL = DLAnalysis.getAbove(loop);
-      std::optional<SCFVectorizeInfo> best;
+      std::optional<scf::SCFVectorizeInfo> best;
       for (auto dim : llvm::seq(0u, loop.getNumLoops())) {
-        auto info = getLoopVectorizeInfo(loop, dim, vectorBitwidth, &DL);
+        auto info = scf::getLoopVectorizeInfo(loop, dim, vectorBitwidth, &DL);
         if (!info)
           continue;
 
@@ -88,7 +88,7 @@ struct TestSCFVectorizePass
         return;
 
       toVectorize.emplace_back(
-          loop, SCFVectorizeParams{best->dim, best->factor, best->masked});
+          loop, scf::SCFVectorizeParams{best->dim, best->factor, best->masked});
     });
 
     if (toVectorize.empty())
@@ -96,7 +96,7 @@ struct TestSCFVectorizePass
 
     for (auto &&[loop, params] : toVectorize) {
       const DataLayout &DL = DLAnalysis.getAbove(loop);
-      if (failed(vectorizeLoop(loop, params, &DL)))
+      if (failed(scf::vectorizeLoop(loop, params, &DL)))
         return signalPassFailure();
     }
   }

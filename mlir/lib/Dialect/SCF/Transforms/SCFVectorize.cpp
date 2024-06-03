@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/SCFVectorize.h"
+#include "mlir/Dialect/SCF/Transforms/SCFVectorize.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h" // getCombinerOpKind
@@ -157,9 +157,9 @@ static std::optional<vector::CombiningKind> getReductionKind(Block &body) {
   return linalg::getCombinerOpKind(&body.front());
 }
 
-std::optional<SCFVectorizeInfo>
-mlir::getLoopVectorizeInfo(scf::ParallelOp loop, unsigned dim,
-                           unsigned vectorBitwidth, const DataLayout *DL) {
+std::optional<scf::SCFVectorizeInfo>
+mlir::scf::getLoopVectorizeInfo(scf::ParallelOp loop, unsigned dim,
+                                unsigned vectorBitwidth, const DataLayout *DL) {
   assert(dim < loop.getStep().size());
   assert(vectorBitwidth > 0);
   unsigned factor = vectorBitwidth / 8;
@@ -234,9 +234,9 @@ static arith::FastMathFlags getFMF(Operation &op) {
   return arith::FastMathFlags::none;
 }
 
-LogicalResult mlir::vectorizeLoop(scf::ParallelOp loop,
-                                  const SCFVectorizeParams &params,
-                                  const DataLayout *DL) {
+LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
+                                       const scf::SCFVectorizeParams &params,
+                                       const DataLayout *DL) {
   auto dim = params.dim;
   auto factor = params.factor;
   auto masked = params.masked;
