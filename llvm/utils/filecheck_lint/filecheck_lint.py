@@ -228,7 +228,8 @@ def find_directive_typos(
         )
 
     potential_directives = find_potential_directives(content)
-
+    # cache score and best_match to skip recalculating
+    checked_potential_directives = dict()
     for filerange, potential_directive in potential_directives:
         # TODO(bchetioui): match count directives more finely. We skip directives
         # starting with 'CHECK-COUNT-' for the moment as they require more complex
@@ -244,7 +245,11 @@ def find_directive_typos(
         if len(potential_directive) > max(map(len, all_directives)) + threshold:
             continue
 
-        score, best_match = find_best_match(potential_directive)
+        if potential_directive not in checked_potential_directives:
+            score, best_match = find_best_match(potential_directive)
+            checked_potential_directives[potential_directive] = (score, best_match)
+        else:
+            score, best_match = checked_potential_directives[potential_directive]
         if score == 0:  # This is an actual directive, ignore.
             continue
         elif score <= threshold and best_match not in _ignore:
