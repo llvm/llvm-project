@@ -283,7 +283,7 @@ namespace llvm {
   /// critical-path and resource depth.
   extern char &MachineCombinerID;
 
-  /// StackColoring - This pass performs stack coloring and merging.
+  /// StackSlotColoring - This pass performs stack coloring and merging.
   /// It merges disjoint allocas to reduce the stack size.
   extern char &StackColoringID;
 
