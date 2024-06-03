@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -verify %s \
+// RUN:   -triple x86_64-linux-gnu  \
 // RUN:   -analyzer-checker=core,unix.Stream,alpha.security.taint \
 // RUN:   -analyzer-checker=debug.ExprInspection
 
@@ -324,6 +325,87 @@ void test_small_read(void) {
     clang_analyzer_dump(buffer[5]); // expected-warning{{42 S32b}}
     if (1 == fread(buffer, sizeof(int), 5, fp)) {
       clang_analyzer_dump(buffer[5]); // expected-warning{{42 S32b}}
+    }
+    fclose(fp);
+  }
+}
+
+void test_partial_elements_read(void) {
+  clang_analyzer_dump(sizeof(int)); // expected-warning {{4 S32b}}
+
+  int buffer[100];
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
+    // 3*5: 15 bytes read; which is not exactly 4 integers, thus we invalidate the whole buffer.
+    if (5 == fread(buffer + 1, 3, 5, fp)) {
+      clang_analyzer_dump(buffer[0]); // expected-warning{{derived_}}
+    } else {
+      clang_analyzer_dump(buffer[0]); // expected-warning{{derived_}}
+    }
+    fclose(fp);
+  }
+}
+
+void test_whole_elements_read(void) {
+  clang_analyzer_dump(sizeof(int)); // expected-warning {{4 S32b}}
+
+  int buffer[100];
+  buffer[0] = 1;
+  buffer[15] = 2;
+  buffer[16] = 3;
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
+    // 3*20: 60 bytes read; which is basically 15 integers.
+    if (20 == fread(buffer + 1, 3, 20, fp)) {
+      clang_analyzer_dump(buffer[0]); // expected-warning{{1 S32b}}
+      clang_analyzer_dump(buffer[20]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[21]); // expected-warning{{1st function call argument is an uninitialized value}}
+    } else {
+      clang_analyzer_dump(buffer[0]); // expected-warning{{1 S32b}}
+      clang_analyzer_dump(buffer[20]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[21]); // expected-warning{{1st function call argument is an uninitialized value}}
+    }
+    fclose(fp);
+  }
+}
+
+void test_unaligned_start_read(void) {
+  clang_analyzer_dump(sizeof(int)); // expected-warning {{4 S32b}}
+
+  int buffer[100];
+  buffer[0] = 3;
+  buffer[1] = 4;
+  buffer[2] = 5;
+  char *asChar = (char*)buffer;
+
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
+    // We have an 'int' binding at offset 0 of value 3.
+    // We read 4 bytes at byte offset: 1,2,3,4.
+    if (4 == fread(asChar + 1, 1, 4, fp)) {
+      void clang_analyzer_printState(void);
+      clang_analyzer_printState();
+      clang_analyzer_dump(buffer[0]); // expected-warning{{3 S32b}} FIXME Reading a 'char' should not result in a 'S32b' value.
+      clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[2]); // expected-warning{{5 S32b}}
+
+      clang_analyzer_dump(asChar[0]); // expected-warning{{3 S32b}} FIXME Reading a 'char' should not result in a 'S32b' value.
+      clang_analyzer_dump(asChar[1]); // expected-warning{{conj_}} 1
+      clang_analyzer_dump(asChar[2]); // expected-warning{{conj_}} 2
+      clang_analyzer_dump(asChar[3]); // expected-warning{{conj_}} 3
+      clang_analyzer_dump(asChar[4]); // expected-warning{{conj_}} 4
+      clang_analyzer_dump(asChar[5]); // expected-warning{{1st function call argument is an uninitialized value}}
+    } else {
+      clang_analyzer_dump(buffer[0]); // expected-warning{{3 S32b}} FIXME Reading a 'char' should not result in a 'S32b' value.
+      clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[2]); // expected-warning{{5 S32b}}
+
+      clang_analyzer_dump(asChar[0]); // expected-warning{{3 S32b}} FIXME Reading a 'char' should not result in a 'S32b' value.
+      clang_analyzer_dump(asChar[1]); // expected-warning{{conj_}} 1
+      clang_analyzer_dump(asChar[2]); // expected-warning{{conj_}} 2
+      clang_analyzer_dump(asChar[3]); // expected-warning{{conj_}} 3
+      clang_analyzer_dump(asChar[4]); // expected-warning{{conj_}} 4
+      clang_analyzer_dump(asChar[5]); // expected-warning{{1st function call argument is an uninitialized value}}
     }
     fclose(fp);
   }
