@@ -16,3 +16,4 @@ else:
   %p = phi i64 [%r, %then], [%x, %entry]
   ret i64 %p
 }
+
