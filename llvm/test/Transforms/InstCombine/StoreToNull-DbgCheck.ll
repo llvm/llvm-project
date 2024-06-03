@@ -6,7 +6,7 @@
 define void @_Z3foov() {
 ; CHECK-LABEL: define void @_Z3foov() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    store i1 true, ptr poison, align 1, !dbg
 ; CHECK-NEXT:    ret void
 ;
 entry:
