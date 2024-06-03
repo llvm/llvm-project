@@ -1,0 +1,7 @@
+# These Python packages are required to be able to run the LLDB test suite.
+
+psutil
+# pexpect is only required on Linux, can be installed on Windows but pexpect
+# tests are automatically skipped there because they are known not to work
+# (llvm.org/pr22274).
+pexpect
