@@ -19244,7 +19244,7 @@ The argument to this intrinsic must be a vector of floating-point values.
 .. _int_vector_reduce_fmaximumnum:
 
 '``llvm.vector.reduce.fmaximumnum.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -19273,7 +19273,7 @@ The argument to this intrinsic must be a vector of floating-point values.
 .. _int_vector_reduce_fminimumnum:
 
 '``llvm.vector.reduce.fminimumnum.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -21489,7 +21489,7 @@ Examples:
 .. _int_vp_minimumnum:
 
 '``llvm.vp.minimumnum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -21539,7 +21539,7 @@ Examples:
 .. _int_vp_maximumnum:
 
 '``llvm.vp.maximumnum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -22989,7 +22989,7 @@ Examples:
 .. _int_vp_reduce_fmaximumnum:
 
 '``llvm.vp.reduce.fmaximumnum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -23059,7 +23059,7 @@ Examples:
 .. _int_vp_reduce_fminimumnum:
 
 '``llvm.vp.reduce.fminimumnum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -27432,7 +27432,7 @@ This function follows semantics specified in the draft of IEEE 754-2019.
 
 
 '``llvm.experimental.constrained.maximumnum``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -27464,7 +27464,7 @@ This function follows semantics specified in IEEE 754-2019.
 
 
 '``llvm.experimental.constrained.minimumnum``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
