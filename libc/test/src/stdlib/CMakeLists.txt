@@ -340,6 +340,23 @@ add_libc_test(
 if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
+    at_quick_exit_test
+    UNIT_TEST_ONLY
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      at_quick_exit_test.cpp
+    DEPENDS
+      libc.include.stdlib
+      libc.src.stdlib._Exit
+      libc.src.stdlib.exit
+      libc.src.stdlib.at_quick_exit
+      libc.src.stdlib.quick_exit
+      libc.src.__support.CPP.array
+      libc.src.__support.CPP.utility
+  )
+
+  add_libc_test(
     _Exit_test
     # The EXPECT_EXITS test is only availible for unit tests.
     UNIT_TEST_ONLY
