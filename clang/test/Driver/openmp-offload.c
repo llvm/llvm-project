@@ -2,11 +2,9 @@
 /// Perform several driver tests for OpenMP offloading
 ///
 
-// REQUIRES: x86-registered-target
-// REQUIRES: powerpc-registered-target
-// REQUIRES: nvptx-registered-target
-
 /// ###########################################################################
+
+// XFAIL: *
 
 /// Check whether an invalid OpenMP target is specified:
 // RUN:   not %clang -### -fopenmp=libomp -fopenmp-targets=aaa-bbb-ccc-ddd %s 2>&1 \

@@ -8257,10 +8257,8 @@ static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
 std::optional<outliner::OutlinedFunction>
 AArch64InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
-  outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
-
   unsigned SequenceSize = 0;
-  for (auto &MI : FirstCand)
+  for (auto &MI : RepeatedSequenceLocs[0])
     SequenceSize += getInstSizeInBytes(MI);
 
   unsigned NumBytesToCreateFrame = 0;
@@ -8303,7 +8301,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // Performing a tail call may require extra checks when PAuth is enabled.
   // If PAuth is disabled, set it to zero for uniformity.
   unsigned NumBytesToCheckLRInTCEpilogue = 0;
-  if (FirstCand.getMF()
+  if (RepeatedSequenceLocs[0]
+          .getMF()
           ->getInfo<AArch64FunctionInfo>()
           ->shouldSignReturnAddress(true)) {
     // One PAC and one AUT instructions
@@ -8475,7 +8474,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   // True if it's possible to fix up each stack instruction in this sequence.
   // Important for frames/call variants that modify the stack.
-  bool AllStackInstrsSafe = llvm::all_of(FirstCand, IsSafeToFixup);
+  bool AllStackInstrsSafe =
+      llvm::all_of(RepeatedSequenceLocs[0], IsSafeToFixup);
 
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
@@ -8625,6 +8625,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
     // Check if the range contains a call. These require a save + restore of the
     // link register.
+    outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
     bool ModStackToSaveLR = false;
     if (std::any_of(FirstCand.begin(), std::prev(FirstCand.end()),
                     [](const MachineInstr &MI) { return MI.isCall(); }))

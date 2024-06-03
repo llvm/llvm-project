@@ -4000,6 +4000,9 @@ ExprResult Parser::ParseArrayTypeTrait() {
     ExprResult DimExpr = ParseExpression();
     T.consumeClose();
 
+    if (DimExpr.isInvalid())
+      return ExprError();
+
     return Actions.ActOnArrayTypeTrait(ATT, Loc, Ty.get(), DimExpr.get(),
                                        T.getCloseLocation());
   }
