@@ -106,7 +106,7 @@ def FeatureFPARMv8 : Extension<"fp-armv8", "FPARMv8",
   "Enable ARMv8 (FEAT_FP)", [],
   "FEAT_FP", "+fp-armv8,+neon", 90>;
 
-let ArchExtKindSpelling = "AEK_SIMD", MArchName = "simd" in
+let ArchExtKindSpelling = "AEK_SIMD", MArchName = "simd", MArchAlias = "neon" in
 def FeatureNEON : Extension<"neon", "NEON",
   "Enable Advanced SIMD instructions (FEAT_AdvSIMD)", [FeatureFPARMv8],
   "FEAT_SIMD", "+fp-armv8,+neon", 100>;

@@ -27,7 +27,7 @@ int main(void) {
   (void)__builtin_cpu_supports("x86-64-v4");
   (void)__builtin_cpu_supports("x86-64-v5"); // expected-warning {{invalid cpu feature string for builtin}}
 #else
-  if (__builtin_cpu_supports("neon")) // expected-warning {{invalid cpu feature string for builtin}}
+  if (__builtin_cpu_supports("neon"))
     a("vsx");
 
   if (__builtin_cpu_is("cortex-x3")) // expected-error {{builtin is not supported on this target}}
