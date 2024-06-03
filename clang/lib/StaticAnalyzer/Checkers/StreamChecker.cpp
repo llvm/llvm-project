@@ -717,61 +717,45 @@ const ExplodedNode *StreamChecker::getAcquisitionSite(const ExplodedNode *N,
   return nullptr;
 }
 
+static std::optional<int64_t> getKnownValue(ProgramStateRef State, SVal V) {
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  if (const llvm::APSInt *Int = SVB.getKnownValue(State, V))
+    return Int->tryExtValue();
+  return std::nullopt;
+}
+
 /// Invalidate only the requested elements instead of the whole buffer.
 /// This is basically a refinement of the more generic 'escapeArgs' or
 /// the plain old 'invalidateRegions'.
-/// This only works if the \p StartIndex and \p Count are concrete or
-/// perfectly-constrained.
 static ProgramStateRef
-escapeByStartIndexAndCount(ProgramStateRef State, CheckerContext &C,
-                           const CallEvent &Call, const MemRegion *Buffer,
-                           QualType ElemType, SVal StartIndex, SVal Count) {
-  const auto *BufferAsRegion = dyn_cast_or_null<SubRegion>(Buffer);
-  if (!BufferAsRegion)
-    return State;
-
-  auto UnboxAsInt = [&C, &State](SVal V) -> std::optional<int64_t> {
-    auto &SVB = C.getSValBuilder();
-    if (const llvm::APSInt *Int = SVB.getKnownValue(State, V))
-      return Int->tryExtValue();
-    return std::nullopt;
-  };
-
-  std::optional<int64_t> StartIndexVal = UnboxAsInt(StartIndex);
-  std::optional<int64_t> CountVal = UnboxAsInt(Count);
-
-  // FIXME: Maybe we could make this more generic, and expose this by the
-  // 'invalidateRegions' API. After doing so, it might make sense to make this
-  // limit configurable.
-  constexpr int MaxInvalidatedElementsLimit = 64;
-  if (!StartIndexVal || !CountVal || *CountVal > MaxInvalidatedElementsLimit) {
-    return State->invalidateRegions({loc::MemRegionVal{BufferAsRegion}},
-                                    Call.getOriginExpr(), C.blockCount(),
-                                    C.getLocationContext(),
-                                    /*CausesPointerEscape=*/false);
-  }
-
+escapeByStartIndexAndCount(ProgramStateRef State, const CallEvent &Call,
+                           unsigned BlockCount, const SubRegion *Buffer,
+                           QualType ElemType, int64_t StartIndex,
+                           int64_t ElementCount) {
   constexpr auto DoNotInvalidateSuperRegion =
       RegionAndSymbolInvalidationTraits::InvalidationKinds::
           TK_DoNotInvalidateSuperRegion;
 
-  auto &RegionManager = BufferAsRegion->getMemRegionManager();
+  const LocationContext *LCtx = Call.getLocationContext();
+  const ASTContext &Ctx = State->getStateManager().getContext();
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  auto &RegionManager = Buffer->getMemRegionManager();
+
   SmallVector<SVal> EscapingVals;
-  EscapingVals.reserve(*CountVal);
+  EscapingVals.reserve(ElementCount);
 
   RegionAndSymbolInvalidationTraits ITraits;
-  for (auto Idx : llvm::seq(*StartIndexVal, *StartIndexVal + *CountVal)) {
-    NonLoc Index = C.getSValBuilder().makeArrayIndex(Idx);
-    const auto *Element = RegionManager.getElementRegion(
-        ElemType, Index, BufferAsRegion, C.getASTContext());
+  for (auto Idx : llvm::seq(StartIndex, StartIndex + ElementCount)) {
+    NonLoc Index = SVB.makeArrayIndex(Idx);
+    const auto *Element =
+        RegionManager.getElementRegion(ElemType, Index, Buffer, Ctx);
     EscapingVals.push_back(loc::MemRegionVal(Element));
     ITraits.setTrait(Element, DoNotInvalidateSuperRegion);
   }
-  return State->invalidateRegions(EscapingVals, Call.getOriginExpr(),
-                                  C.blockCount(), C.getLocationContext(),
-                                  /*CausesPointerEscape=*/false,
-                                  /*InvalidatedSymbols=*/nullptr, &Call,
-                                  &ITraits);
+  return State->invalidateRegions(
+      EscapingVals, Call.getOriginExpr(), BlockCount, LCtx,
+      /*CausesPointerEscape=*/false,
+      /*InvalidatedSymbols=*/nullptr, &Call, &ITraits);
 }
 
 static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
@@ -961,6 +945,73 @@ void StreamChecker::preWrite(const FnDescription *Desc, const CallEvent &Call,
   C.addTransition(State);
 }
 
+static std::optional<QualType> getPointeeType(const MemRegion *R) {
+  if (!R)
+    return std::nullopt;
+  if (const auto *ER = dyn_cast<ElementRegion>(R))
+    return ER->getElementType();
+  if (const auto *TR = dyn_cast<TypedValueRegion>(R))
+    return TR->getValueType();
+  if (const auto *SR = dyn_cast<SymbolicRegion>(R))
+    return SR->getPointeeStaticType();
+  return std::nullopt;
+}
+
+static std::optional<NonLoc> getStartIndex(SValBuilder &SVB,
+                                           const MemRegion *R) {
+  if (!R)
+    return std::nullopt;
+
+  auto Zero = [&SVB] {
+    BasicValueFactory &BVF = SVB.getBasicValueFactory();
+    return nonloc::ConcreteInt(BVF.getIntValue(0, /*isUnsigned=*/false));
+  };
+
+  if (const auto *ER = dyn_cast<ElementRegion>(R))
+    return ER->getIndex();
+  if (const auto *TR = dyn_cast<TypedValueRegion>(R))
+    return Zero();
+  if (const auto *SR = dyn_cast<SymbolicRegion>(R))
+    return Zero();
+  return std::nullopt;
+}
+
+static ProgramStateRef
+tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
+                                     const CallEvent &Call, NonLoc SizeVal,
+                                     NonLoc NMembVal) {
+  // Try to invalidate the individual elements.
+  const auto *Buffer =
+      dyn_cast_or_null<SubRegion>(Call.getArgSVal(0).getAsRegion());
+
+  std::optional<QualType> ElemTy = getPointeeType(Buffer);
+  std::optional<SVal> StartElementIndex =
+      getStartIndex(C.getSValBuilder(), Buffer);
+
+  // Drop the outermost ElementRegion to get the buffer.
+  if (const auto *ER = dyn_cast_or_null<ElementRegion>(Buffer))
+    Buffer = dyn_cast<SubRegion>(ER->getSuperRegion());
+
+  std::optional<int64_t> CountVal = getKnownValue(State, NMembVal);
+  std::optional<int64_t> Size = getKnownValue(State, SizeVal);
+  std::optional<int64_t> StartIndexVal =
+      getKnownValue(State, StartElementIndex.value_or(UnknownVal()));
+
+  if (ElemTy && CountVal && Size && StartIndexVal) {
+    int64_t NumBytesRead = Size.value() * CountVal.value();
+    int64_t ElemSizeInChars =
+        C.getASTContext().getTypeSizeInChars(*ElemTy).getQuantity();
+    bool DivisibleAccessSpan = (NumBytesRead % ElemSizeInChars) == 0;
+    int64_t NumElementsRead = NumBytesRead / ElemSizeInChars;
+    constexpr int MaxInvalidatedElementsLimit = 64;
+    if (DivisibleAccessSpan && NumElementsRead <= MaxInvalidatedElementsLimit) {
+      return escapeByStartIndexAndCount(State, Call, C.blockCount(), Buffer,
+                                        *ElemTy, *StartIndexVal, *CountVal);
+    }
+  }
+  return nullptr;
+}
+
 void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
                                     const CallEvent &Call, CheckerContext &C,
                                     bool IsFread) const {
@@ -993,17 +1044,11 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   // except if EOF was already present.
   if (IsFread && !E.isStreamEof()) {
     // Try to invalidate the individual elements.
-    if (const auto *BufferFirstElem =
-            dyn_cast_or_null<ElementRegion>(Call.getArgSVal(0).getAsRegion())) {
-      const MemRegion *Buffer = BufferFirstElem->getSuperRegion();
-      QualType ElemTy = BufferFirstElem->getElementType();
-      SVal FirstAccessedItem = BufferFirstElem->getIndex();
-      State = escapeByStartIndexAndCount(State, C, Call, Buffer, ElemTy,
-                                         FirstAccessedItem, *NMembVal);
-    } else {
-      // Otherwise just fall back to invalidating the whole buffer.
-      State = escapeArgs(State, C, Call, {0});
-    }
+    // Otherwise just fall back to invalidating the whole buffer.
+    ProgramStateRef InvalidatedState = tryToInvalidateFReadBufferByElements(
+        State, C, Call, *SizeVal, *NMembVal);
+    State =
+        InvalidatedState ? InvalidatedState : escapeArgs(State, C, Call, {0});
   }
 
   // Generate a transition for the success state.

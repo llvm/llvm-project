@@ -82,7 +82,7 @@ void read_one_byte3(char *buffer) {
     fread(buffer, 1, 1, fp);
     char p = buffer[1];
     clang_analyzer_isTainted(p); // expected-warning{{NO}}
-    clang_analyzer_dump(buffer[1]); // expected-warning{{derived_}} FIXME This should be 10.
+    clang_analyzer_dump(buffer[1]); // expected-warning{{10 S32b}}
     fclose(fp);
   }
 }
@@ -274,13 +274,9 @@ void compound_write2(void) {
   if (fp) {
     struct S s; // s.a is not touched by fread.
     if (1 == fread(&s.b, sizeof(s.b), 1, fp)) {
-      long p = s.a; // FIXME: This should raise an uninitialized read.
-      clang_analyzer_isTainted(p); // expected-warning {{NO}} FIXME: This should be YES.
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
+      long p = s.a; // expected-warning {{Assigned value is garbage or undefined}}
     } else {
-      long p = s.a; // FIXME: This should raise an uninitialized read.
-      clang_analyzer_isTainted(p); // expected-warning {{NO}} FIXME: This should be YES.
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
+      long p = s.a; // expected-warning {{Assigned value is garbage or undefined}}
     }
     fclose(fp);
   }
