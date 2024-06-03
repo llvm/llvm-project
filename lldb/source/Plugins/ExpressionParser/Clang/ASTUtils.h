@@ -10,12 +10,18 @@
 #define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_ASTUTILS_H
 
 #include "Plugins/TypeSystem/Clang/ImporterBackedASTSource.h"
-#include "clang/Basic/Module.h"
+#include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
 #include <optional>
+
+namespace clang {
+
+class Module;
+
+} // namespace clang
 
 namespace lldb_private {
 
