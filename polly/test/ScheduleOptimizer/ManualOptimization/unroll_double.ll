@@ -39,23 +39,23 @@ return:
 
 ; CHECK-LABEL: Printing analysis 'Polly - Optimize schedule of SCoP' for region: 'for => return' in function 'func':
 ; CHECK: domain: "{ Stmt_body[i0] : 0 <= i0 <= 11 }"
-; CHECK    sequence:
+; CHECK:    sequence:
 ; CHECK:   - filter: "{ Stmt_body[i0] : 0 <= i0 <= 3 }"
-; CHECK        sequence:
+; CHECK:        sequence:
 ; CHECK:       - filter: "{ Stmt_body[0] }"
 ; CHECK:       - filter: "{ Stmt_body[i0] : (-1 + i0) mod 4 = 0 }"
 ; CHECK:       - filter: "{ Stmt_body[i0] : (2 + i0) mod 4 = 0 }"
 ; CHECK:       - filter: "{ Stmt_body[i0] : (1 + i0) mod 4 = 0 }"
-; CHECK    sequence:
-; CHECK:   - filter: "{ Stmt_body[i0] : 4 <= i0 <= 7 }"
-; CHECK        sequence:
+; CHECK:       - filter: "{ Stmt_body[i0] : 4 <= i0 <= 7 }"
+; CHECK:    sequence:
+; CHECK:        sequence:
 ; CHECK:       - filter: "{ Stmt_body[4] }"
 ; CHECK:       - filter: "{ Stmt_body[i0] : (-1 + i0) mod 4 = 0 }"
 ; CHECK:       - filter: "{ Stmt_body[i0] : (2 + i0) mod 4 = 0 }"
 ; CHECK:       - filter: "{ Stmt_body[i0] : (1 + i0) mod 4 = 0 }"
-; CHECK    sequence:
-; CHECK:   - filter: "{ Stmt_body[i0] : 8 <= i0 <= 11 }"
-; CHECK        sequence:
+; CHECK:       - filter: "{ Stmt_body[i0] : 8 <= i0 <= 11 }"
+; CHECK:    sequence:
+; CHECK:        sequence:
 ; CHECK:       - filter: "{ Stmt_body[8] }"
 ; CHECK:       - filter: "{ Stmt_body[i0] : (-1 + i0) mod 4 = 0 }"
 ; CHECK:       - filter: "{ Stmt_body[i0] : (2 + i0) mod 4 = 0 }"
