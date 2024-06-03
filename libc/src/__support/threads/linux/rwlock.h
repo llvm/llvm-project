@@ -361,7 +361,7 @@ public:
 
 private:
   template <Role role>
-  LIBC_INLINE LockResult
+  [[gnu::always_inline]] LIBC_INLINE LockResult
   lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
        unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
     // Phase 1: deadlock detection.
@@ -444,7 +444,7 @@ private:
   }
 
 public:
-  LIBC_INLINE LockResult
+  [[gnu::always_inline]] LIBC_INLINE LockResult
   read_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
     return lock<Role::Reader>(timeout, spin_count);
