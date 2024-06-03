@@ -5117,7 +5117,7 @@ the configuration (without a prefix: ``Auto``).
 
   .. note::
 
-   It must contain ``type``.
+   It **must** contain ``type``.
 
   Items to the left of ``type`` will be placed to the left of the type and
   aligned in the order supplied. Items to the right of ``type`` will be
@@ -6410,6 +6410,7 @@ the configuration (without a prefix: ``Auto``).
 
     TableGenBreakInsideDAGArg: BreakAll
     TableGenBreakingDAGArgOperators: [ins, outs]
+
   makes the line break only occurs inside DAGArgs beginning with the
   specified identifiers ``ins`` and ``outs``.
 
@@ -6537,7 +6538,7 @@ The goal of the clang-format project is more on the side of supporting a
 limited set of styles really well as opposed to supporting every single style
 used by a codebase somewhere in the wild. Of course, we do want to support all
 major projects and thus have established the following bar for adding style
-options. Each new style option must ..
+options. Each new style option must:
 
   * be used in a project of significant size (have dozens of contributors)
   * have a publicly accessible style guide
