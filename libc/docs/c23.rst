@@ -57,7 +57,7 @@ Additions:
   * roundeven* |check|
   * fromfp* |check|
   * ufromfp* |check|
-  * fromfpx*
+  * fromfpx* |check|
   * nextup*
   * nextdown*
   * canonicalize*

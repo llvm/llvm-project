@@ -186,6 +186,7 @@ add_math_entrypoint_object(fromfpf128)
 add_math_entrypoint_object(fromfpx)
 add_math_entrypoint_object(fromfpxf)
 add_math_entrypoint_object(fromfpxl)
+add_math_entrypoint_object(fromfpxf16)
 add_math_entrypoint_object(fromfpxf128)
 
 add_math_entrypoint_object(hypot)
