@@ -40,8 +40,8 @@ define i32 @test_tailcall_ib_0(i32 ()* %arg0) #0 {
 ; CHECK-LABEL: _test_call_ia_imm:
 ; CHECK-NEXT:  pacibsp
 ; CHECK-NEXT:  stp x29, x30, [sp, #-16]!
-; CHECK-NEXT:  mov w8, #42
-; CHECK-NEXT:  blraa x0, x8
+; CHECK-NEXT:  mov x17, #42
+; CHECK-NEXT:  blraa x0, x17
 ; CHECK-NEXT:  ldp x29, x30, [sp], #16
 ; CHECK-NEXT:  retab
 define i32 @test_call_ia_imm(i32 ()* %arg0) #0 {
@@ -52,8 +52,8 @@ define i32 @test_call_ia_imm(i32 ()* %arg0) #0 {
 ; CHECK-LABEL: _test_call_ib_imm:
 ; CHECK-NEXT:  pacibsp
 ; CHECK-NEXT:  stp x29, x30, [sp, #-16]!
-; CHECK-NEXT:  mov w8, #42
-; CHECK-NEXT:  blrab x0, x8
+; CHECK-NEXT:  mov x17, #42
+; CHECK-NEXT:  blrab x0, x17
 ; CHECK-NEXT:  ldp x29, x30, [sp], #16
 ; CHECK-NEXT:  retab
 define i32 @test_call_ib_imm(i32 ()* %arg0) #0 {
@@ -62,16 +62,16 @@ define i32 @test_call_ib_imm(i32 ()* %arg0) #0 {
 }
 
 ; CHECK-LABEL: _test_tailcall_ia_imm:
-; CHECK-NEXT:  mov w1, #42
-; CHECK-NEXT:  braa x0, x1
+; CHECK-NEXT:  mov x16, #42
+; CHECK-NEXT:  braa x0, x16
 define i32 @test_tailcall_ia_imm(i32 ()* %arg0) #0 {
   %tmp0 = tail call i32 %arg0() [ "ptrauth"(i32 0, i64 42) ]
   ret i32 %tmp0
 }
 
 ; CHECK-LABEL: _test_tailcall_ib_imm:
-; CHECK-NEXT:  mov w1, #42
-; CHECK-NEXT:  brab x0, x1
+; CHECK-NEXT:  mov x16, #42
+; CHECK-NEXT:  brab x0, x16
 define i32 @test_tailcall_ib_imm(i32 ()* %arg0) #0 {
   %tmp0 = tail call i32 %arg0() [ "ptrauth"(i32 1, i64 42) ]
   ret i32 %tmp0

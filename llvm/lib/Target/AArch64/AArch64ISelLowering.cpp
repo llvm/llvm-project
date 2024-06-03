@@ -9110,7 +9110,8 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
   if (DAG.getMachineFunction().getFunction().hasFnAttribute("ptrauth-calls")) {
     Opcode = AArch64ISD::AUTH_CALL;
     Ops.push_back(DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32));
-    Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64));
+    Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64)); // Integer Disc.
+    Ops.push_back(DAG.getRegister(AArch64::NoRegister, MVT::i64)); // Addr Disc.
   }
 
   Ops.push_back(DAG.getRegister(AArch64::X0, MVT::i64));

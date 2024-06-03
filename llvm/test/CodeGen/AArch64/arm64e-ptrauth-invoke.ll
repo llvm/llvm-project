@@ -133,9 +133,9 @@ continuebb:
 ; CHECK-NEXT:         adrp x1, __ZTIPKc@GOTPAGE
 ; CHECK-NEXT: Lloh{{.*}}:
 ; CHECK-NEXT:         ldr x1, [x1, __ZTIPKc@GOTPAGEOFF]
-; CHECK-NEXT:         mov w8, #42
 ; CHECK-NEXT:         mov x2, #0
-; CHECK-NEXT:         blrab x19, x8
+; CHECK-NEXT:         mov x17, #42
+; CHECK-NEXT:         blrab x19, x17
 ; CHECK-NEXT: [[POSTCALL:L.*]]:
 ; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT:         brk #0x1
