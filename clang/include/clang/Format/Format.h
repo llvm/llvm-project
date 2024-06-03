@@ -3650,7 +3650,7 @@ struct FormatStyle {
   ///   * type
   ///
   /// \note
-  ///  It \b must contain ``type``.
+  ///  It **must** contain ``type``.
   /// \endnote
   ///
   /// Items to the left of ``type`` will be placed to the left of the type and
