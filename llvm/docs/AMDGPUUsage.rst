@@ -627,6 +627,13 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
                                                                                                 - ``gfx1152``
+
+
+     ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
+                                         - ``gfx1201``     - cumode             flat scratch
+                                                                              - Packed
+                                                                                work-item
+                                                                                IDs
      ==================== ============== ================= ================== ================= =================================
 
 .. _amdgpu-generic-processor-versioning:
@@ -2019,6 +2026,7 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x056      Reserved.
      *reserved*                                 0x057      Reserved.
      *reserved*                                 0x058      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ========================================== ========== =============================
 
 Sections
