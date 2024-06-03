@@ -36,8 +36,6 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlock_init,
   if (attr)
     rwlockattr = *attr;
 
-  ::new (rwlock) RwLock();
-
   // PTHREAD_RWLOCK_PREFER_WRITER_NP is not supported.
   RwLock::Role preference;
   switch (rwlockattr.pref) {
