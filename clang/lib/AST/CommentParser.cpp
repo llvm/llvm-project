@@ -91,19 +91,19 @@ class TextTokenRetokenizer {
 
   /// Extract a template type
   bool lexTemplate(SmallString<32> &WordText) {
-    unsigned IncrementCounter = 0;
+    unsigned BracketCount = 0;
     while (!isEnd()) {
       const char C = peek();
       WordText.push_back(C);
       consumeChar();
       switch (C) {
       case '<': {
-        IncrementCounter++;
+        BracketCount++;
         break;
       }
       case '>': {
-        IncrementCounter--;
-        if (!IncrementCounter)
+        BracketCount--;
+        if (!BracketCount)
           return true;
         break;
       }
