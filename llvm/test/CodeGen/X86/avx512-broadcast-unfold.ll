@@ -1367,12 +1367,11 @@ define void @bcast_unfold_fdiv_v16f32(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v16f32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm0 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB42_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %zmm1
-; CHECK-NEXT:    vdivps %zmm0, %zmm1, %zmm1
+; CHECK-NEXT:    vmulps 4096(%rdi,%rax), %zmm0, %zmm1
 ; CHECK-NEXT:    vmovups %zmm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
 ; CHECK-NEXT:    jne .LBB42_1
@@ -1400,12 +1399,11 @@ define void @bcast_unfold_fdiv_v8f32(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v8f32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB43_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %ymm1
-; CHECK-NEXT:    vdivps %ymm0, %ymm1, %ymm1
+; CHECK-NEXT:    vmulps 4096(%rdi,%rax), %ymm0, %ymm1
 ; CHECK-NEXT:    vmovups %ymm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
 ; CHECK-NEXT:    jne .LBB43_1
@@ -1433,12 +1431,11 @@ define void @bcast_unfold_fdiv_v4f32(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v4f32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB44_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %xmm1
-; CHECK-NEXT:    vdivps %xmm0, %xmm1, %xmm1
+; CHECK-NEXT:    vmulps 4096(%rdi,%rax), %xmm0, %xmm1
 ; CHECK-NEXT:    vmovups %xmm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    jne .LBB44_1
@@ -1465,12 +1462,11 @@ define void @bcast_unfold_fdiv_v8f64(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v8f64:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm0 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1,5.0E-1]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB45_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %zmm1
-; CHECK-NEXT:    vdivpd %zmm0, %zmm1, %zmm1
+; CHECK-NEXT:    vmulpd 8192(%rdi,%rax), %zmm0, %zmm1
 ; CHECK-NEXT:    vmovupd %zmm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
 ; CHECK-NEXT:    jne .LBB45_1
@@ -1498,12 +1494,11 @@ define void @bcast_unfold_fdiv_v4f64(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v4f64:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB46_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %ymm1
-; CHECK-NEXT:    vdivpd %ymm0, %ymm1, %ymm1
+; CHECK-NEXT:    vmulpd 8192(%rdi,%rax), %ymm0, %ymm1
 ; CHECK-NEXT:    vmovupd %ymm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
 ; CHECK-NEXT:    jne .LBB46_1
@@ -1531,13 +1526,12 @@ define void @bcast_unfold_fdiv_v2f64(ptr nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fdiv_v2f64:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [2.0E+0,2.0E+0]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [5.0E-1,5.0E-1]
 ; CHECK-NEXT:    # xmm0 = mem[0,0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB47_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %xmm1
-; CHECK-NEXT:    vdivpd %xmm0, %xmm1, %xmm1
+; CHECK-NEXT:    vmulpd 8192(%rdi,%rax), %xmm0, %xmm1
 ; CHECK-NEXT:    vmovupd %xmm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    jne .LBB47_1

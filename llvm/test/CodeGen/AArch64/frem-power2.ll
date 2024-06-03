@@ -341,11 +341,12 @@ entry:
 define <4 x float> @frem2_vec(<4 x float> %x) {
 ; CHECK-SD-LABEL: frem2_vec:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.4s, #64, lsl #24
+; CHECK-SD-NEXT:    movi v1.4s, #63, lsl #24
+; CHECK-SD-NEXT:    movi v2.4s, #64, lsl #24
 ; CHECK-SD-NEXT:    mov v3.16b, v0.16b
-; CHECK-SD-NEXT:    fdiv v2.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    frintz v2.4s, v2.4s
-; CHECK-SD-NEXT:    fmls v3.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    fmul v1.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    frintz v1.4s, v1.4s
+; CHECK-SD-NEXT:    fmls v3.4s, v2.4s, v1.4s
 ; CHECK-SD-NEXT:    mvni v1.4s, #128, lsl #24
 ; CHECK-SD-NEXT:    bit v0.16b, v3.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
@@ -402,10 +403,11 @@ entry:
 define <4 x float> @frem2_nsz_vec(<4 x float> %x) {
 ; CHECK-SD-LABEL: frem2_nsz_vec:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.4s, #64, lsl #24
-; CHECK-SD-NEXT:    fdiv v2.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    frintz v2.4s, v2.4s
-; CHECK-SD-NEXT:    fmls v0.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    movi v1.4s, #63, lsl #24
+; CHECK-SD-NEXT:    movi v2.4s, #64, lsl #24
+; CHECK-SD-NEXT:    fmul v1.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    frintz v1.4s, v1.4s
+; CHECK-SD-NEXT:    fmls v0.4s, v2.4s, v1.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem2_nsz_vec:
@@ -460,12 +462,14 @@ entry:
 define <4 x float> @frem1152921504606846976_absv(<4 x float> %x) {
 ; CHECK-SD-LABEL: frem1152921504606846976_absv:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #1568669696 // =0x5d800000
+; CHECK-SD-NEXT:    mov w8, #562036736 // =0x21800000
 ; CHECK-SD-NEXT:    fabs v0.4s, v0.4s
 ; CHECK-SD-NEXT:    dup v1.4s, w8
-; CHECK-SD-NEXT:    fdiv v2.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    frintz v2.4s, v2.4s
-; CHECK-SD-NEXT:    fmls v0.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    mov w8, #1568669696 // =0x5d800000
+; CHECK-SD-NEXT:    dup v2.4s, w8
+; CHECK-SD-NEXT:    fmul v1.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    frintz v1.4s, v1.4s
+; CHECK-SD-NEXT:    fmls v0.4s, v2.4s, v1.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem1152921504606846976_absv:

@@ -17273,10 +17273,10 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
 
   // fold (fdiv X, c2) -> (fmul X, 1/c2) if there is no loss in precision, or
   // the loss is acceptable with AllowReciprocal.
-  if (auto *N1CFP = dyn_cast<ConstantFPSDNode>(N1)) {
+  if (auto *N1CFP = isConstOrConstSplatFP(N1, true)) {
     // Compute the reciprocal 1.0 / c2.
     const APFloat &N1APF = N1CFP->getValueAPF();
-    APFloat Recip(N1APF.getSemantics(), 1); // 1.0
+    APFloat Recip = APFloat::getOne(N1APF.getSemantics());
     APFloat::opStatus st = Recip.divide(N1APF, APFloat::rmNearestTiesToEven);
     // Only do the transform if the reciprocal is a legal fp immediate that
     // isn't too nasty (eg NaN, denormal, ...).

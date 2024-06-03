@@ -964,6 +964,14 @@ public:
     return Val;
   }
 
+  /// Factory for Positive and Negative One.
+  ///
+  /// \param Negative True iff the number should be negative.
+  static APFloat getOne(const fltSemantics &Sem, bool Negative = false) {
+    APFloat Val(Sem, Negative ? -1 : 1);
+    return Val;
+  }
+
   /// Factory for Positive and Negative Infinity.
   ///
   /// \param Negative True iff the number should be negative.

@@ -88,8 +88,8 @@ define double @divf64_2(double %a) nounwind {
 define <4 x float> @divv4f32_2(<4 x float> %a) nounwind {
 ; CHECK-LABEL: divv4f32_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #64, lsl #24
-; CHECK-NEXT:    fdiv v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    movi v1.4s, #63, lsl #24
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %r = fdiv <4 x float> %a, <float 2.0, float 2.0, float 2.0, float 2.0>
   ret <4 x float> %r
@@ -141,9 +141,8 @@ define <4 x float> @divv4f32_24816(<4 x float> %a) nounwind {
 define <vscale x 4 x float> @divnxv4f32_2(<vscale x 4 x float> %a) nounwind {
 ; CHECK-LABEL: divnxv4f32_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov z1.s, #2.00000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, #0.5
 ; CHECK-NEXT:    ret
   %r = fdiv <vscale x 4 x float> %a, splat (float 2.0)
   ret <vscale x 4 x float> %r
