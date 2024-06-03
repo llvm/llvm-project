@@ -350,9 +350,9 @@ class LoopVectorizationPlanner {
   /// LoopVectorizationLegality to handle inductions and reductions, which is
   /// why it is kept separate from the VPlan-only cost infrastructure.
   ///
-  /// TODO: Move to VPlan::computeCost once the use of LoopVectorizationLegality
-  /// has been retired.
-  InstructionCost computeCost(VPlan &Plan, ElementCount VF) const;
+  /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
+  /// been retired.
+  InstructionCost cost(VPlan &Plan, ElementCount VF) const;
 
 public:
   LoopVectorizationPlanner(
@@ -456,7 +456,9 @@ private:
                                   ElementCount MinVF);
 
   /// \return The most profitable vectorization factor and the cost of that VF.
-  /// This method checks every VF in \p CandidateVFs.
+  /// This method checks every VF in \p CandidateVFs. This is now only used to
+  /// verify the decisions by the new VPlan-based cost-model and will be retired
+  /// once the VPlan-based cost-model is stabilized.
   VectorizationFactor
   selectVectorizationFactor(const ElementCountSet &CandidateVFs);
 

@@ -7373,7 +7373,10 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (!MaxFactors.hasVector())
     return VectorizationFactor::Disabled();
 
-  // Select the optimal vectorization factor.
+  // Select the optimal vectorization factor according to the legacy cost-model.
+  // This is now only used to verify the decisions by the new VPlan-based
+  // cost-model and will be retired once the VPlan-based cost-model is
+  // stabilized.
   VectorizationFactor VF = selectVectorizationFactor(VFCandidates);
   assert((VF.Width.isScalar() || VF.ScalarCost > 0) && "when vectorizing, the scalar cost must be non-zero.");
   if (!hasPlanWithVF(VF.Width)) {
@@ -7394,8 +7397,8 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
          SkipCostComputation.contains(UI);
 }
 
-InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
-                                                      ElementCount VF) const {
+InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
+                                               ElementCount VF) const {
   InstructionCost Cost = 0;
   LLVMContext &LLVMCtx = OrigLoop->getHeader()->getContext();
   VPCostContext CostCtx(CM.TTI, Legal->getWidestInductionType(), LLVMCtx, CM);
@@ -7405,12 +7408,17 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
   // VPlan cost model bring up directly use the induction costs from the legacy
   // cost model. Note that we do this as pre-processing; the VPlan may not have
   // any recipes associated with the original induction increment instruction.
-  // We precompute the cost for both cases, and always skip recipes for
-  // induction increments later on, if they exist.
+  // We precompute the cost of both induction increment instructions that are
+  // represented by recipes and those that are not, to avoid distinguishing
+  // between them here, and skip all recipes that represent induction increments
+  // (the former case) later on, if they exist, to avoid counting them twice.
   // TODO: Switch to more accurate costing based on VPlan.
   for (const auto &[IV, _] : Legal->getInductionVars()) {
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
+    assert(!CostCtx.SkipCostComputation.contains(IVInc) &&
+           "Same IV increment for multiple inductions?");
+    CostCtx.SkipCostComputation.insert(IVInc);
     InstructionCost InductionCost = CM.getInstructionCost(IVInc, VF).first;
     LLVM_DEBUG({
       dbgs() << "Cost of " << InductionCost << " for VF " << VF
@@ -7418,9 +7426,6 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
       IVInc->dump();
     });
     Cost += InductionCost;
-    assert(!CostCtx.SkipCostComputation.contains(IVInc) &&
-           "Same IV increment for multiple inductions?");
-    CostCtx.SkipCostComputation.insert(IVInc);
   }
 
   // The legacy cost model has special logic to compute the cost of in-loop
@@ -7432,19 +7437,19 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
       continue;
 
     const auto &ChainOps = RdxDesc.getReductionOpChain(RedPhi, OrigLoop);
-    SetVector<Instruction *> ReductionOperations(ChainOps.begin(),
+    SetVector<Instruction *> ChainOpsAndOperands(ChainOps.begin(),
                                                  ChainOps.end());
     // Also include the operands of instructions in the chain, as the cost-model
     // may mark extends as free.
-    for (unsigned I = 0, E = ReductionOperations.size(); I != E; ++I) {
-      for (Value *Op : ReductionOperations[I]->operands()) {
+    for (auto *ChainOp : ChainOps) {
+      for (Value *Op : ChainOp->operands()) {
         if (auto *I = dyn_cast<Instruction>(Op))
-          ReductionOperations.insert(I);
+          ChainOpsAndOperands.insert(I);
       }
     }
 
     // Pre-compute the cost for I, if it has a reduction pattern cost.
-    for (Instruction *I : ReductionOperations) {
+    for (Instruction *I : ChainOpsAndOperands) {
       auto ReductionCost = CM.getReductionPatternCost(
           I, VF, ToVectorTy(I->getType(), VF), TTI::TCK_RecipThroughput);
       if (!ReductionCost)
@@ -7475,7 +7480,7 @@ VPlan &LoopVectorizationPlanner::getBestPlan() const {
   assert(hasPlanWithVF(ScalarVF) &&
          "More than a single plan/VF w/o any plan having scalar VF");
 
-  InstructionCost ScalarCost = computeCost(getBestPlanFor(ScalarVF), ScalarVF);
+  InstructionCost ScalarCost = cost(getBestPlanFor(ScalarVF), ScalarVF);
   VectorizationFactor BestFactor(ScalarVF, ScalarCost, ScalarCost);
 
   bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
@@ -7490,7 +7495,7 @@ VPlan &LoopVectorizationPlanner::getBestPlan() const {
     for (ElementCount VF : P->vectorFactors()) {
       if (VF.isScalar())
         continue;
-      InstructionCost Cost = computeCost(*P, VF);
+      InstructionCost Cost = cost(*P, VF);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
       if (isMoreProfitable(CurrentFactor, BestFactor)) {
         BestFactor = CurrentFactor;

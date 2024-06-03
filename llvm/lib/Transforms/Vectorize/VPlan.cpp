@@ -749,7 +749,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
 
 InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   InstructionCost Cost = 0;
-  for (VPRecipeBase &R : *this)
+  for (VPRecipeBase &R : Recipes)
     Cost += R.cost(VF, Ctx);
   return Cost;
 }
@@ -777,23 +777,17 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   // uniform condition.
   using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
-  for (VPRecipeBase &R : *Then)
-    Cost += R.cost(VF, Ctx);
+  Cost += Then->cost(VF, Ctx);
 
   // Note the cost estimates below closely match the current legacy cost model.
   auto *BOM = cast<VPBranchOnMaskRecipe>(&getEntryBasicBlock()->front());
   VPValue *Cond = BOM->getOperand(0);
 
   // Check if Cond is a uniform compare or a header mask and don't account for
-  // branching costs. A uniform condition correspondings to a single branch per
+  // branching costs. A uniform condition corresponding to a single branch per
   // VF, and the header mask will always be true except in the last iteration.
-  VPValue *Op;
-  bool IsHeaderMaskOrUniformCond =
-      vputils::isUniformBoolean(Cond) || isa<VPActiveLaneMaskPHIRecipe>(Cond) ||
-      match(Cond, m_ActiveLaneMask(m_VPValue(), m_VPValue())) ||
-      (match(Cond, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue(Op))) &&
-       Op == getPlan()->getOrCreateBackedgeTakenCount());
-  if (IsHeaderMaskOrUniformCond)
+  if (vputils::isUniformBoolean(Cond) ||
+      vputils::isHeaderMask(Cond, *getPlan()))
     return Cost;
 
   // For the scalar case, we may not always execute the original predicated
@@ -803,13 +797,14 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
 
   // Add the cost for branches around scalarized and predicated blocks.
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-  auto *Vec_i1Ty = VectorType::get(IntegerType::getInt1Ty(Ctx.Ctx), VF);
-  return Cost +
-         Ctx.TTI.getScalarizationOverhead(
-             Vec_i1Ty, APInt::getAllOnes(VF.getFixedValue()),
-             /*Insert*/ false, /*Extract*/ true, CostKind) +
-         (Ctx.TTI.getCFInstrCost(Instruction::Br, CostKind) *
-          VF.getFixedValue());
+
+  auto *Vec_i1Ty = VectorType::get(IntegerType::getInt1Ty(Ctx.LLVMCtx), VF);
+  auto FixedVF = VF.getFixedValue(); // Known to be non scalable.
+  Cost += Ctx.TTI.getScalarizationOverhead(Vec_i1Ty, APInt::getAllOnes(FixedVF),
+                                           /*Insert*/ false, /*Extract*/ true,
+                                           CostKind);
+  Cost += Ctx.TTI.getCFInstrCost(Instruction::Br, CostKind) * FixedVF;
+  return Cost;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1539,4 +1534,12 @@ bool vputils::isUniformBoolean(VPValue *Cond) {
          all_of(R->operands(), [](VPValue *Op) {
            return vputils::isUniformAfterVectorization(Op);
          });
+}
+
+bool vputils::isHeaderMask(VPValue *V, VPlan &Plan) {
+  VPValue *Op;
+  return isa<VPActiveLaneMaskPHIRecipe>(V) ||
+         match(V, m_ActiveLaneMask(m_VPValue(), m_VPValue())) ||
+         (match(V, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue(Op))) &&
+          Op == Plan.getOrCreateBackedgeTakenCount());
 }

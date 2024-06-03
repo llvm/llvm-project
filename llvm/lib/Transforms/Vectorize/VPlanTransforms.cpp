@@ -908,13 +908,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
                                  ? Instruction::SExt
                                  : Instruction::ZExt;
-        VPSingleDefRecipe *VPC;
-        if (auto *UnderlyingExt = R.getOperand(0)->getUnderlyingValue())
-          VPC = new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A,
-                                      TruncTy, *cast<CastInst>(UnderlyingExt));
-        else
-          VPC = new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A,
-                                      TruncTy);
+        auto *VPC =
+            new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
+        if (auto *UnderlyingExt = R.getOperand(0)->getUnderlyingValue()) {
+          // UnderlyingExt has distinct return type, used to retain legacy cost.
+          VPC->setUnderlyingValue(UnderlyingExt);
+        }
         VPC->insertBefore(&R);
         Trunc->replaceAllUsesWith(VPC);
       } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {

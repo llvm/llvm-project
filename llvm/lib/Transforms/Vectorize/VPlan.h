@@ -630,7 +630,7 @@ public:
   /// VPBlockBase, thereby "executing" the VPlan.
   virtual void execute(VPTransformState *State) = 0;
 
-  /// Compute the cost of the block.
+  /// Return the cost of the block.
   virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
 
   /// Delete all blocks reachable from a given VPBlockBase, inclusive.
@@ -720,20 +720,20 @@ public:
 struct VPCostContext {
   const TargetTransformInfo &TTI;
   VPTypeAnalysis Types;
-  LLVMContext &Ctx;
+  LLVMContext &LLVMCtx;
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
 
-  VPCostContext(const TargetTransformInfo &TTI, Type *CanIVTy, LLVMContext &Ctx,
-                LoopVectorizationCostModel &CM)
-      : TTI(TTI), Types(CanIVTy, Ctx), Ctx(Ctx), CM(CM) {}
+  VPCostContext(const TargetTransformInfo &TTI, Type *CanIVTy,
+                LLVMContext &LLVMCtx, LoopVectorizationCostModel &CM)
+      : TTI(TTI), Types(CanIVTy, LLVMCtx), LLVMCtx(LLVMCtx), CM(CM) {}
 
-  /// Return the cost for \p UI with \p VF using the legacy cost model until
-  /// computing the cost for all recipes has been migrated to VPlan.
+  /// Return the cost for \p UI with \p VF using the legacy cost model as
+  /// fallback until computing the cost of all recipes migrates to VPlan.
   InstructionCost getLegacyCost(Instruction *UI, ElementCount VF) const;
 
   /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
-  /// already has been pre-computed.
+  /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
 };
 
@@ -843,7 +843,7 @@ public:
   DebugLoc getDebugLoc() const { return DL; }
 
 protected:
-  /// Compute the cost of this recipe using the legacy cost model and the
+  /// Return the cost of this recipe using the legacy cost model and the
   /// underlying instructions.
   InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
 };
@@ -2953,7 +2953,7 @@ public:
   /// this VPBasicBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
 
-  /// Compute the cost of this VPBasicBlock.
+  /// Return the cost of this VPBasicBlock.
   InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
 
   /// Return the position of the first non-phi node recipe in the block.
@@ -3130,7 +3130,7 @@ public:
   /// this VPRegionBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
 
-  // Compute the cost of this region.
+  // Return the cost of this region.
   InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
 
   void dropAllReferences(VPValue *NewValue) override;
@@ -3250,7 +3250,7 @@ public:
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);
 
-  /// Compute the cost of this plan.
+  /// Return the cost of this plan.
   InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
 
   VPBasicBlock *getEntry() { return Entry; }
@@ -3723,6 +3723,9 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
 
 /// Return true if \p Cond is a uniform boolean.
 bool isUniformBoolean(VPValue *Cond);
+
+/// Return true if \p V is a header mask in \p Plan.
+bool isHeaderMask(VPValue *V, VPlan &Plan);
 
 } // end namespace vputils
 
