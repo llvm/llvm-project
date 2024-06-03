@@ -237,6 +237,17 @@ struct Frame {
 
   bool operator!=(const Frame &Other) const { return !operator==(Other); }
 
+  bool hasSymbolName() const { return SymbolName.has_value(); }
+
+  StringRef getSymbolName() const {
+    assert(SymbolName.has_value());
+    return *SymbolName;
+  }
+
+  std::string getSymbolNameOr(StringRef Alt) const {
+    return std::string(hasSymbolName() ? getSymbolName() : Alt);
+  }
+
   // Write the contents of the frame to the ostream \p OS.
   void serialize(raw_ostream &OS) const {
     using namespace support;
@@ -279,7 +290,7 @@ struct Frame {
   void printYAML(raw_ostream &OS) const {
     OS << "      -\n"
        << "        Function: " << Function << "\n"
-       << "        SymbolName: " << SymbolName.value_or("<None>") << "\n"
+       << "        SymbolName: " << getSymbolNameOr("<None>") << "\n"
        << "        LineOffset: " << LineOffset << "\n"
        << "        Column: " << Column << "\n"
        << "        Inline: " << IsInlineFrame << "\n";
