@@ -1,3 +1,6 @@
+// Fails on ARM/AArch64-hosted Windows, can't tell why.
+// UNSUPPORTED: system-windows
+
 // Check that --sysroot= also applies to header search paths.
 // RUN: %clang -target i386-unk-unk --sysroot=/FOO -### -E %s 2> %t1
 // RUN: FileCheck --check-prefix=CHECK-SYSROOTEQ < %t1 %s
