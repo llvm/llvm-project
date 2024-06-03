@@ -726,7 +726,8 @@ static ProgramStateRef
 escapeByStartIndexAndCount(ProgramStateRef State, CheckerContext &C,
                            const CallEvent &Call, const MemRegion *Buffer,
                            QualType ElemType, SVal StartIndex, SVal Count) {
-  if (!llvm::isa_and_nonnull<SubRegion>(Buffer))
+  const auto *BufferAsRegion = dyn_cast_or_null<SubRegion>(Buffer);
+  if (!BufferAsRegion)
     return State;
 
   auto UnboxAsInt = [&C, &State](SVal V) -> std::optional<int64_t> {
@@ -744,7 +745,7 @@ escapeByStartIndexAndCount(ProgramStateRef State, CheckerContext &C,
   // limit configurable.
   constexpr int MaxInvalidatedElementsLimit = 64;
   if (!StartIndexVal || !CountVal || *CountVal > MaxInvalidatedElementsLimit) {
-    return State->invalidateRegions({loc::MemRegionVal{Buffer}},
+    return State->invalidateRegions({loc::MemRegionVal{BufferAsRegion}},
                                     Call.getOriginExpr(), C.blockCount(),
                                     C.getLocationContext(),
                                     /*CausesPointerEscape=*/false);
@@ -754,7 +755,7 @@ escapeByStartIndexAndCount(ProgramStateRef State, CheckerContext &C,
       RegionAndSymbolInvalidationTraits::InvalidationKinds::
           TK_DoNotInvalidateSuperRegion;
 
-  auto &RegionManager = Buffer->getMemRegionManager();
+  auto &RegionManager = BufferAsRegion->getMemRegionManager();
   SmallVector<SVal> EscapingVals;
   EscapingVals.reserve(*CountVal);
 
@@ -762,7 +763,7 @@ escapeByStartIndexAndCount(ProgramStateRef State, CheckerContext &C,
   for (auto Idx : llvm::seq(*StartIndexVal, *StartIndexVal + *CountVal)) {
     NonLoc Index = C.getSValBuilder().makeArrayIndex(Idx);
     const auto *Element = RegionManager.getElementRegion(
-        ElemType, Index, cast<SubRegion>(Buffer), C.getASTContext());
+        ElemType, Index, BufferAsRegion, C.getASTContext());
     EscapingVals.push_back(loc::MemRegionVal(Element));
     ITraits.setTrait(Element, DoNotInvalidateSuperRegion);
   }
