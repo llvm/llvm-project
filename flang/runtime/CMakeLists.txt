@@ -136,6 +136,7 @@ set(sources
   inquiry.cpp
   internal-unit.cpp
   io-api.cpp
+  io-api-minimal.cpp
   io-error.cpp
   io-stmt.cpp
   iostat.cpp
@@ -198,6 +199,7 @@ set(supported_files
   inquiry.cpp
   internal-unit.cpp
   io-api.cpp
+  io-api-minimal.cpp
   io-error.cpp
   io-stmt.cpp
   iostat.cpp
@@ -269,21 +271,26 @@ else()
     LINK_LIBS
     FortranDecimal.static
     INSTALL_WITH_TOOLCHAIN)
+  set_target_properties(FortranRuntime.static PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
   add_flang_library(FortranRuntime.dynamic ${sources}
     LINK_LIBS
     FortranDecimal.dynamic
     INSTALL_WITH_TOOLCHAIN)
+  set_target_properties(FortranRuntime.dynamic PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
   add_flang_library(FortranRuntime.static_dbg ${sources}
     LINK_LIBS
     FortranDecimal.static_dbg
     INSTALL_WITH_TOOLCHAIN)
+  set_target_properties(FortranRuntime.static_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
   add_flang_library(FortranRuntime.dynamic_dbg ${sources}
     LINK_LIBS
     FortranDecimal.dynamic_dbg
     INSTALL_WITH_TOOLCHAIN)
+  set_target_properties(FortranRuntime.dynamic_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
   add_dependencies(FortranRuntime FortranRuntime.static FortranRuntime.dynamic
     FortranRuntime.static_dbg FortranRuntime.dynamic_dbg)
 endif()
+set_target_properties(FortranRuntime PROPERTIES FOLDER "Flang/Runtime Libraries")

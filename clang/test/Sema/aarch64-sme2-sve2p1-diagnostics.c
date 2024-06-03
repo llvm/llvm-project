@@ -6,6 +6,8 @@
 
 //svldnt1:
 
+// expected-error@+3 {{SVE vector type 'svcount_t' (aka '__SVCount_t') cannot be used in a non-streaming function}}
+// expected-error@+2 {{SVE vector type 'svuint8x2_t' (aka '__clang_svuint8x2_t') cannot be used in a non-streaming function}}
 __attribute__((target("+sme2")))
 svuint8x2_t sme2_or_sve2p1_intrinsic_test_sme2_invalid(svcount_t png, const uint8_t *rn) {
   // expected-warning@+1 {{builtin call has undefined behaviour when called from a non-streaming function}}

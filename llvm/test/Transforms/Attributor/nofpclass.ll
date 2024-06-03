@@ -114,7 +114,7 @@ define <2 x double> @returned_strange_constant_vector_elt() {
 
 ; Test a vector element that's undef
 define <3 x double> @returned_undef_constant_vector_elt() {
-; CHECK-LABEL: define nofpclass(nan inf sub norm) <3 x double> @returned_undef_constant_vector_elt() {
+; CHECK-LABEL: define <3 x double> @returned_undef_constant_vector_elt() {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret <3 x double> <double -0.000000e+00, double 0.000000e+00, double undef>
 ;

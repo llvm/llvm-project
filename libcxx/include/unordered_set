@@ -533,7 +533,6 @@ template <class Value, class Hash, class Pred, class Alloc>
 
 #include <__algorithm/is_permutation.h>
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>

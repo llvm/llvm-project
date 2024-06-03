@@ -31,9 +31,9 @@ InstrBuilder::InstrBuilder(const llvm::MCSubtargetInfo &sti,
                            const llvm::MCInstrInfo &mcii,
                            const llvm::MCRegisterInfo &mri,
                            const llvm::MCInstrAnalysis *mcia,
-                           const mca::InstrumentManager &im)
+                           const mca::InstrumentManager &im, unsigned cl)
     : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia), IM(im), FirstCallInst(true),
-      FirstReturnInst(true) {
+      FirstReturnInst(true), CallLatency(cl) {
   const MCSchedModel &SM = STI.getSchedModel();
   ProcResourceMasks.resize(SM.getNumProcResourceKinds());
   computeProcResourceMasks(STI.getSchedModel(), ProcResourceMasks);
@@ -220,17 +220,19 @@ static void initializeUsedResources(InstrDesc &ID,
 
 static void computeMaxLatency(InstrDesc &ID, const MCInstrDesc &MCDesc,
                               const MCSchedClassDesc &SCDesc,
-                              const MCSubtargetInfo &STI) {
+                              const MCSubtargetInfo &STI,
+                              unsigned CallLatency) {
   if (MCDesc.isCall()) {
     // We cannot estimate how long this call will take.
-    // Artificially set an arbitrarily high latency (100cy).
-    ID.MaxLatency = 100U;
+    // Artificially set an arbitrarily high latency.
+    ID.MaxLatency = CallLatency;
     return;
   }
 
   int Latency = MCSchedModel::computeInstrLatency(STI, SCDesc);
-  // If latency is unknown, then conservatively assume a MaxLatency of 100cy.
-  ID.MaxLatency = Latency < 0 ? 100U : static_cast<unsigned>(Latency);
+  // If latency is unknown, then conservatively assume the MaxLatency set for
+  // calls.
+  ID.MaxLatency = Latency < 0 ? CallLatency : static_cast<unsigned>(Latency);
 }
 
 static Error verifyOperands(const MCInstrDesc &MCDesc, const MCInst &MCI) {
@@ -568,7 +570,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
     // We don't correctly model calls.
     WithColor::warning() << "found a call in the input assembly sequence.\n";
     WithColor::note() << "call instructions are not correctly modeled. "
-                      << "Assume a latency of 100cy.\n";
+                      << "Assume a latency of " << CallLatency << "cy.\n";
     FirstCallInst = false;
   }
 
@@ -580,7 +582,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
   }
 
   initializeUsedResources(*ID, SCDesc, STI, ProcResourceMasks);
-  computeMaxLatency(*ID, MCDesc, SCDesc, STI);
+  computeMaxLatency(*ID, MCDesc, SCDesc, STI, CallLatency);
 
   if (Error Err = verifyOperands(MCDesc, MCI))
     return std::move(Err);

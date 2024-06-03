@@ -2466,24 +2466,26 @@ def int_amdgcn_perm :
 // GFX9 Intrinsics
 //===----------------------------------------------------------------------===//
 
-class AMDGPUGlobalLoadLDS : Intrinsic <
-  [],
-  [LLVMQualPointerType<1>,             // Base global pointer to load from
-   LLVMQualPointerType<3>,             // LDS base pointer to store to
-   llvm_i32_ty,                        // Data byte size: 1/2/4
-   llvm_i32_ty,                        // imm offset (applied to both global and LDS address)
-   llvm_i32_ty],                       // auxiliary data (imm, cachepolicy (bit 0 = glc/sc0,
-                                       //                                   bit 1 = slc/sc1,
-                                       //                                   bit 2 = dlc on gfx10/gfx11))
-                                       //                                   bit 4 = scc/nt on gfx90a+))
-                                       //                  gfx12+:
-                                       //                      cachepolicy (bits [0-2] = th,
-                                       //                                   bits [3-4] = scope)
-                                       //                      swizzled buffer (bit 6 = swz),
-  [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
-   ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
-  "", [SDNPMemOperand]>;
+class AMDGPUGlobalLoadLDS :
+  ClangBuiltin<"__builtin_amdgcn_global_load_lds">,
+  Intrinsic <
+    [],
+    [LLVMQualPointerType<1>,            // Base global pointer to load from
+     LLVMQualPointerType<3>,            // LDS base pointer to store to
+     llvm_i32_ty,                       // Data byte size: 1/2/4
+     llvm_i32_ty,                       // imm offset (applied to both global and LDS address)
+     llvm_i32_ty],                      // auxiliary data (imm, cachepolicy (bit 0 = sc0,
+                                        //                                   bit 1 = sc1,
+                                        //                                   bit 4 = scc))
+    [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+     ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
+     "", [SDNPMemOperand]>;
 def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
+
+// Use read/write of inaccessible memory to model the fact that this reads a
+// volatile value.
+def int_amdgcn_pops_exiting_wave_id :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrInaccessibleMemOnly]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics

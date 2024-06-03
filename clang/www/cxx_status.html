@@ -172,7 +172,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Clarifying rules for brace elision in aggregate initialization</td>
   <td><a href="https://wg21.link/P3106R1">P3106R1</a> (<a href="#dr">DR</a>)</td>
-  <td class="none" align="center">No</td>
+  <td class="full" align="center">Clang 17</td>
  </tr>
  <tr>
   <td>Attributes for Structured Bindings</td>
@@ -870,8 +870,8 @@ C++23, informally referred to as C++26.</p>
       <td class="partial" align="center">
         <details>
           <summary>Clang 19 (Partial)</summary>
-          The associated constraints (over.match.class.deduct#3.3) for the
-          synthesized deduction guides are not yet implemented.
+          This feature has been initially completed, but the feature macro
+          __cpp_deduction_guides has not been updated.
         </details>
       </td>
     </tr>
@@ -1255,12 +1255,11 @@ version.
 </table>
 
 <p>
-<span id="n3778">(7): In Clang 3.7 and later, sized deallocation is only enabled
-if the user passes the <code>-fsized-deallocation</code> flag. The user must
-supply definitions of the sized deallocation functions, either by providing them
-explicitly or by using a C++ standard library that does. <code>libstdc++</code>
-added these functions in version 5.0, and <code>libc++</code> added them in
-version 3.7.
+<span id="n3778">(7): The user must supply definitions of the sized deallocation
+  functions, either by providing them explicitly or by using a C++ standard library
+  that does. <code>libstdc++</code> added these functions in version 5.0, and
+  <code>libc++</code> added them in version 3.7. The user can also use the
+  <code>-fno-sized-deallocation</code> option to disable sized deallocation.
 </span>
 </p>
 </details>

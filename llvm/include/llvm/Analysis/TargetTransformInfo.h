@@ -1397,7 +1397,7 @@ public:
   InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
                                             int VF,
                                             const APInt &DemandedDstElts,
-                                            TTI::TargetCostKind CostKind);
+                                            TTI::TargetCostKind CostKind) const;
 
   /// \return The cost of Load and Store instructions.
   InstructionCost

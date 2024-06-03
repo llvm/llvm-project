@@ -10,17 +10,17 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu \
 // RUN:   -target-feature +sve2p1 -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu \
-// RUN:   -target-feature +sme -DTEST_SME -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -S -DTEST_SME -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu \
+// RUN:   -target-feature +sme -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sve.h>
 
-#ifndef TEST_SME
-#define ATTR
-#else
+#ifdef __ARM_FEATURE_SME
 #define ATTR __arm_streaming
+#else
+#define ATTR
 #endif
 
 // CHECK-LABEL: @test_svpsel_lane_b8(

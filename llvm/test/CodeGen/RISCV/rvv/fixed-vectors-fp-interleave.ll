@@ -56,9 +56,9 @@ define <4 x double> @interleave_v2f64(<2 x double> %x, <2 x double> %y) {
 ; RV32-V512-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
 ; RV32-V512-NEXT:    vid.v v10
 ; RV32-V512-NEXT:    vsrl.vi v11, v10, 1
+; RV32-V512-NEXT:    vmv.v.i v0, 10
 ; RV32-V512-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; RV32-V512-NEXT:    vrgatherei16.vv v10, v8, v11
-; RV32-V512-NEXT:    vmv.v.i v0, 10
 ; RV32-V512-NEXT:    vrgatherei16.vv v10, v9, v11, v0.t
 ; RV32-V512-NEXT:    vmv.v.v v8, v10
 ; RV32-V512-NEXT:    ret
@@ -68,8 +68,8 @@ define <4 x double> @interleave_v2f64(<2 x double> %x, <2 x double> %y) {
 ; RV64-V512-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
 ; RV64-V512-NEXT:    vid.v v10
 ; RV64-V512-NEXT:    vsrl.vi v11, v10, 1
-; RV64-V512-NEXT:    vrgather.vv v10, v8, v11
 ; RV64-V512-NEXT:    vmv.v.i v0, 10
+; RV64-V512-NEXT:    vrgather.vv v10, v8, v11
 ; RV64-V512-NEXT:    vrgather.vv v10, v9, v11, v0.t
 ; RV64-V512-NEXT:    vmv.v.v v8, v10
 ; RV64-V512-NEXT:    ret
@@ -261,13 +261,13 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
 ; V128-NEXT:    vwmaccu.vx v8, a0, v16
 ; V128-NEXT:    lui a1, 699051
 ; V128-NEXT:    addi a1, a1, -1366
-; V128-NEXT:    li a2, 32
 ; V128-NEXT:    vmv.s.x v0, a1
-; V128-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; V128-NEXT:    li a1, 32
+; V128-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; V128-NEXT:    vmerge.vvm v24, v8, v24, v0
-; V128-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; V128-NEXT:    addi a1, sp, 16
 ; V128-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; V128-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; V128-NEXT:    vwaddu.vv v0, v16, v8
 ; V128-NEXT:    vwmaccu.vx v0, a0, v8
 ; V128-NEXT:    vmv8r.v v8, v0

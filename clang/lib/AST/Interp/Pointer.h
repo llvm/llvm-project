@@ -314,11 +314,13 @@ public:
   /// Returns the type of the innermost field.
   QualType getType() const {
     if (inPrimitiveArray() && Offset != asBlockPointer().Base) {
-      // Unfortunately, complex types are not array types in clang, but they are
-      // for us.
+      // Unfortunately, complex and vector types are not array types in clang,
+      // but they are for us.
       if (const auto *AT = getFieldDesc()->getType()->getAsArrayTypeUnsafe())
         return AT->getElementType();
       if (const auto *CT = getFieldDesc()->getType()->getAs<ComplexType>())
+        return CT->getElementType();
+      if (const auto *CT = getFieldDesc()->getType()->getAs<VectorType>())
         return CT->getElementType();
     }
     return getFieldDesc()->getType();
@@ -535,9 +537,6 @@ public:
     if (isZero())
       return 0;
 
-    if (isElementPastEnd())
-      return 1;
-
     // narrow()ed element in a composite array.
     if (asBlockPointer().Base > sizeof(InlineDescriptor) &&
         asBlockPointer().Base == Offset)
@@ -556,11 +555,15 @@ public:
     if (!asBlockPointer().Pointee)
       return false;
 
-    return isElementPastEnd() || getSize() == getOffset();
+    return isElementPastEnd() ||
+           (getSize() == getOffset() && !isZeroSizeArray());
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
   bool isElementPastEnd() const { return Offset == PastEndMark; }
+
+  /// Checks if the pointer is pointing to a zero-size array.
+  bool isZeroSizeArray() const { return getFieldDesc()->isZeroSizeArray(); }
 
   /// Dereferences the pointer, if it's live.
   template <typename T> T &deref() const {

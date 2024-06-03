@@ -2464,3 +2464,56 @@ define float @trunc_ext(float %a) nounwind {
   %c = fpext bfloat %b to float
   ret float %c
 }
+
+define void @PR92471(ptr %0, ptr %1) nounwind {
+; X86-LABEL: PR92471:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vpinsrd $1, 4(%ecx), %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $2, 8(%ecx), %xmm0, %xmm0
+; X86-NEXT:    vpinsrw $6, 12(%ecx), %xmm0, %xmm0
+; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X86-NEXT:    vpslld $16, %ymm0, %ymm0
+; X86-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; X86-NEXT:    vpextrd $2, %xmm1, 24(%eax)
+; X86-NEXT:    vpextrd $1, %xmm1, 20(%eax)
+; X86-NEXT:    vmovd %xmm1, 16(%eax)
+; X86-NEXT:    vmovdqu %xmm0, (%eax)
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: PR92471:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    pinsrw $2, 12(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-NEXT:    movdqu %xmm2, (%rsi)
+; SSE2-NEXT:    movq %xmm3, 16(%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
+; SSE2-NEXT:    movd %xmm0, 24(%rsi)
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: PR92471:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vpinsrd $2, 8(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $6, 12(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX-NEXT:    vpextrd $2, %xmm1, 24(%rsi)
+; AVX-NEXT:    vmovq %xmm1, 16(%rsi)
+; AVX-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %3 = load <7 x bfloat>, ptr %0, align 2
+  %4 = fpext <7 x bfloat> %3 to <7 x float>
+  store <7 x float> %4, ptr %1, align 4
+  ret void
+}
