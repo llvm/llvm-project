@@ -941,18 +941,17 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
   //
   // In the event of proximity ties, we select the first or last section
   // depending on whether the orphan's rank is smaller.
-  int maxP = -1;
+  int maxP = 0;
   auto i = e;
   for (auto j = b; j != e; ++j) {
     int p = getRankProximity(sec, *j);
     if (p > maxP ||
-        (p == maxP && maxP >= 0 &&
-         cast<OutputDesc>(*j)->osec.sortRank <= sec->sortRank)) {
+        (p == maxP && cast<OutputDesc>(*j)->osec.sortRank <= sec->sortRank)) {
       maxP = p;
       i = j;
     }
   }
-  if (maxP == -1)
+  if (i == e)
     return e;
 
   auto isOutputSecWithInputSections = [](SectionCommand *cmd) {
