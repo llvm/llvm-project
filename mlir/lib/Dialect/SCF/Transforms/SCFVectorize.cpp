@@ -287,8 +287,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
   Value newIndexVar = newLoop.getInductionVars()[dim];
 
   auto toVectorType = [&](Type elemType) -> VectorType {
-    auto f = static_cast<int64_t>(factor);
-    return VectorType::get(f, elemType);
+    return VectorType::get(factor, elemType);
   };
 
   IRMapping mapping;
