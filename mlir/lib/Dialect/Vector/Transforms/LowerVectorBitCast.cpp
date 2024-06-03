@@ -59,11 +59,13 @@ public:
     // TODO: Support the scalable vector cases. It is not supported because
     // the final rank could be values other than `targetRank`. It makes creating
     // the result type of new vector.bitcast ops much harder.
-    if (resultType.isScalable())
-      return rewriter.notifyMatchFailure(
-          op, "unrolling vector.bitcast on scalable vectors is NIY");
+    if (resultType.isScalable()) {
+      return rewriter.notifyMatchFailure(op,
+                                         "unrolling vector.bitcast on scalable "
+                                         "vectors is not yet implemented");
+    }
 
-    SmallVector<int64_t> shape(resultType.getShape().take_back(targetRank));
+    ArrayRef<int64_t> shape = resultType.getShape().take_back(targetRank);
     auto bitcastResType = VectorType::get(shape, resultType.getElementType());
 
     Location loc = op.getLoc();

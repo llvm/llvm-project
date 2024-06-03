@@ -1,5 +1,23 @@
 // RUN: mlir-opt %s --transform-interpreter | FileCheck %s
 
+func.func @vector_bitcast_0d(%arg0: vector<i32>) -> vector<f32> {
+  %0 = vector.bitcast %arg0 : vector<i32> to vector<f32>
+  return %0 : vector<f32>
+}
+// CHECK-LABEL: func.func @vector_bitcast_0d
+// CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]
+// CHECK:         %[[RES:.+]] = vector.bitcast %[[IN]] : vector<i32> to vector<f32>
+// CHECK:         return %[[RES]]
+
+func.func @vector_bitcast_1d(%arg0: vector<10xi64>) -> vector<20xi32> {
+  %0 = vector.bitcast %arg0 : vector<10xi64> to vector<20xi32>
+  return %0 : vector<20xi32>
+}
+// CHECK-LABEL: func.func @vector_bitcast_1d
+// CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]
+// CHECK:         %[[RES:.+]] = vector.bitcast %[[IN]] : vector<10xi64> to vector<20xi32>
+// CHECK:         return %[[RES]]
+
 func.func @vector_bitcast_2d(%arg0: vector<2x4xi32>) -> vector<2x2xi64> {
   %0 = vector.bitcast %arg0 : vector<2x4xi32> to vector<2x2xi64>
   return %0 : vector<2x2xi64>
