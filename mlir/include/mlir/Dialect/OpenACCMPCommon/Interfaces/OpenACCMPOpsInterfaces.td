@@ -17,7 +17,7 @@ include "mlir/IR/OpBase.td"
 
 def RecipeInterface : OpInterface<"RecipeInterface"> {
     let description = [{
-      OpenACC operations with one or more regions holding executable code.
+      OpenACC/OpenMP operations with one or more regions holding executable code.
     }];
     let cppNamespace = "::mlir::accomp";
     let methods = [
