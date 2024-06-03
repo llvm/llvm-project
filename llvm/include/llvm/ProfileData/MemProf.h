@@ -216,7 +216,7 @@ struct Frame {
     IsInlineFrame = Other.IsInlineFrame;
   }
 
-  Frame(uint64_t Hash, uint32_t Off, uint32_t Col, bool Inline)
+  Frame(GlobalValue::GUID Hash, uint32_t Off, uint32_t Col, bool Inline)
       : Function(Hash), LineOffset(Off), Column(Col), IsInlineFrame(Inline) {}
 
   bool operator==(const Frame &Other) const {

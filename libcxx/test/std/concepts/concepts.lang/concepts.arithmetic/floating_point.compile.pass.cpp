@@ -40,7 +40,7 @@ constexpr bool CheckFloatingPointQualifiers() {
 
   static_assert(!std::floating_point<T (*)()>);
   static_assert(!std::floating_point<T (&)()>);
-  static_assert(!std::floating_point<T(&&)()>);
+  static_assert(!std::floating_point<T (&&)()>);
 
   return result;
 }
@@ -74,5 +74,3 @@ static_assert(!CheckFloatingPointQualifiers<ScopedEnum>());
 static_assert(!CheckFloatingPointQualifiers<EmptyStruct>());
 static_assert(!CheckFloatingPointQualifiers<int EmptyStruct::*>());
 static_assert(!CheckFloatingPointQualifiers<int (EmptyStruct::*)()>());
-
-int main(int, char**) { return 0; }

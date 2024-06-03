@@ -41,7 +41,7 @@ constexpr bool CheckIntegralQualifiers() {
 
   static_assert(!std::integral<T (*)()>);
   static_assert(!std::integral<T (&)()>);
-  static_assert(!std::integral<T(&&)()>);
+  static_assert(!std::integral<T (&&)()>);
 
   return result;
 }
@@ -88,5 +88,3 @@ static_assert(!CheckIntegralQualifiers<int (EmptyStruct::*)()>());
 
 static_assert(CheckSubsumption(0));
 static_assert(CheckSubsumption(0U));
-
-int main(int, char**) { return 0; }

@@ -259,9 +259,7 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
     ++Index;
   }
 
-  llvm::stable_sort(SimpleNames, [](const MacroOpt &A, const MacroOpt &B) {
-    return A.first < B.first;
-  });
+  llvm::stable_sort(SimpleNames, llvm::less_first());
   // Keep the last instance of each macro name by going in reverse
   auto NewEnd = std::unique(
       SimpleNames.rbegin(), SimpleNames.rend(),
