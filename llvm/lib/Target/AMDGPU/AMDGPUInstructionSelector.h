@@ -148,6 +148,7 @@ private:
   bool selectGlobalLoadLds(MachineInstr &MI) const;
   bool selectBVHIntersectRayIntrinsic(MachineInstr &I) const;
   bool selectSMFMACIntrin(MachineInstr &I) const;
+  bool selectPermlaneSwapIntrin(MachineInstr &I, Intrinsic::ID IntrID) const;
   bool selectWaveAddress(MachineInstr &I) const;
   bool selectBITOP3(MachineInstr &I) const;
   bool selectStackRestore(MachineInstr &MI) const;
