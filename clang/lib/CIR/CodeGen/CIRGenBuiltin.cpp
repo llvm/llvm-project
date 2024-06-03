@@ -26,6 +26,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Value.h"
@@ -165,6 +166,86 @@ EncompassingIntegerType(ArrayRef<struct WidthAndSignedness> Types) {
   }
 
   return {Width, Signed};
+}
+
+/// Emit the conversions required to turn the given value into an
+/// integer of the given size.
+static mlir::Value buildToInt(CIRGenFunction &CGF, mlir::Value v, QualType t,
+                              mlir::cir::IntType intType) {
+  v = CGF.buildToMemory(v, t);
+
+  if (isa<mlir::cir::PointerType>(v.getType()))
+    return CGF.getBuilder().createPtrToInt(v, intType);
+
+  assert(v.getType() == intType);
+  return v;
+}
+
+static mlir::Value buildFromInt(CIRGenFunction &CGF, mlir::Value v, QualType t,
+                                mlir::Type resultType) {
+  v = CGF.buildFromMemory(v, t);
+
+  if (isa<mlir::cir::PointerType>(resultType))
+    return CGF.getBuilder().createIntToPtr(v, resultType);
+
+  assert(v.getType() == resultType);
+  return v;
+}
+
+static Address checkAtomicAlignment(CIRGenFunction &CGF, const CallExpr *E) {
+  ASTContext &ctx = CGF.getContext();
+  Address ptr = CGF.buildPointerWithAlignment(E->getArg(0));
+  unsigned bytes =
+      isa<mlir::cir::PointerType>(ptr.getElementType())
+          ? ctx.getTypeSizeInChars(ctx.VoidPtrTy).getQuantity()
+          : CGF.CGM.getDataLayout().getTypeSizeInBits(ptr.getElementType()) / 8;
+  unsigned align = ptr.getAlignment().getQuantity();
+  if (align % bytes != 0) {
+    DiagnosticsEngine &diags = CGF.CGM.getDiags();
+    diags.Report(E->getBeginLoc(), diag::warn_sync_op_misaligned);
+    // Force address to be at least naturally-aligned.
+    return ptr.withAlignment(CharUnits::fromQuantity(bytes));
+  }
+  return ptr;
+}
+
+/// Utility to insert an atomic instruction based on Intrinsic::ID
+/// and the expression node.
+static mlir::Value
+makeBinaryAtomicValue(CIRGenFunction &cgf, mlir::cir::AtomicFetchKind kind,
+                      const CallExpr *expr,
+                      mlir::cir::MemOrder ordering =
+                          mlir::cir::MemOrder::SequentiallyConsistent) {
+
+  QualType typ = expr->getType();
+
+  assert(expr->getArg(0)->getType()->isPointerType());
+  assert(cgf.getContext().hasSameUnqualifiedType(
+      typ, expr->getArg(0)->getType()->getPointeeType()));
+  assert(
+      cgf.getContext().hasSameUnqualifiedType(typ, expr->getArg(1)->getType()));
+
+  Address destAddr = checkAtomicAlignment(cgf, expr);
+  auto &builder = cgf.getBuilder();
+  auto *ctxt = builder.getContext();
+  auto intType = builder.getSIntNTy(cgf.getContext().getTypeSize(typ));
+  mlir::Value val = cgf.buildScalarExpr(expr->getArg(1));
+  mlir::Type valueType = val.getType();
+  val = buildToInt(cgf, val, typ, intType);
+
+  auto fetchAttr =
+      mlir::cir::AtomicFetchKindAttr::get(builder.getContext(), kind);
+  auto rmwi = builder.create<mlir::cir::AtomicFetch>(
+      cgf.getLoc(expr->getSourceRange()), destAddr.emitRawPointer(), val, kind,
+      ordering, false, /* is volatile */
+      true);           /* fetch first */
+  return buildFromInt(cgf, rmwi->getResult(0), typ, valueType);
+}
+
+static RValue buildBinaryAtomic(CIRGenFunction &CGF,
+                                mlir::cir::AtomicFetchKind kind,
+                                const CallExpr *E) {
+  return RValue::get(makeBinaryAtomicValue(CGF, kind, E));
 }
 
 RValue CIRGenFunction::buildRotate(const CallExpr *E, bool IsRotateRight) {
@@ -907,6 +988,16 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Bitcast the alloca to the expected type.
     return RValue::get(
         builder.createBitcast(AllocaAddr, builder.getVoidPtrTy()));
+  }
+
+  case Builtin::BI__sync_fetch_and_add:
+    llvm_unreachable("Shouldn't make it through sema");
+  case Builtin::BI__sync_fetch_and_add_1:
+  case Builtin::BI__sync_fetch_and_add_2:
+  case Builtin::BI__sync_fetch_and_add_4:
+  case Builtin::BI__sync_fetch_and_add_8:
+  case Builtin::BI__sync_fetch_and_add_16: {
+    return buildBinaryAtomic(*this, mlir::cir::AtomicFetchKind::Add, E);
   }
 
   case Builtin::BI__builtin_add_overflow:
