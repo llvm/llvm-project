@@ -63,10 +63,7 @@ public:
       return output;
     }
 
-    if (auto *RI = dyn_cast<ReturnInst>(T))
-      return output;
-
-    assert(false && "Unhandled terminator type.");
+    assert(isa<ReturnInst>(T) && "Unhandled terminator type.");
     return output;
   }
 
@@ -76,7 +73,7 @@ public:
       BasicBlock *BB,
       const std::unordered_map<BasicBlock *, ConstantInt *> &TargetToValue) {
     auto *T = BB->getTerminator();
-    if (auto *RI = dyn_cast<ReturnInst>(T))
+    if (isa<ReturnInst>(T))
       return nullptr;
 
     IRBuilder<> Builder(BB);
