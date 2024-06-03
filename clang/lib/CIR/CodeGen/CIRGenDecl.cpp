@@ -15,7 +15,6 @@
 #include "CIRGenFunction.h"
 #include "CIRGenOpenMPRuntime.h"
 #include "EHScopeStack.h"
-#include "UnimplementedFeatureGuarding.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -26,6 +25,7 @@
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
@@ -38,7 +38,7 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
   QualType Ty = D.getType();
   // TODO: (|| Ty.getAddressSpace() == LangAS::opencl_private &&
   //        getLangOpts().OpenCL))
-  assert(!UnimplementedFeature::openCL());
+  assert(!MissingFeatures::openCL());
   assert(Ty.getAddressSpace() == LangAS::Default);
   assert(!D.hasAttr<AnnotateAttr>() && "not implemented");
 
@@ -55,8 +55,8 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
   if (Ty->isVariablyModifiedType())
     buildVariablyModifiedType(Ty);
 
-  assert(!UnimplementedFeature::generateDebugInfo());
-  assert(!UnimplementedFeature::cxxABI());
+  assert(!MissingFeatures::generateDebugInfo());
+  assert(!MissingFeatures::cxxABI());
 
   Address address = Address::invalid();
   Address allocaAddr = Address::invalid();
@@ -153,7 +153,7 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
       }
       // TODO: what about emitting lifetime markers for MSVC catch parameters?
       // TODO: something like @llvm.lifetime.start/end here? revisit this later.
-      assert(!UnimplementedFeature::shouldEmitLifetimeMarkers());
+      assert(!MissingFeatures::shouldEmitLifetimeMarkers());
     }
   } else { // not openmp nor constant sized type
     bool VarAllocated = false;
@@ -190,7 +190,7 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
     // If we have debug info enabled, properly describe the VLA dimensions for
     // this type by registering the vla size expression for each of the
     // dimensions.
-    assert(!UnimplementedFeature::generateDebugInfo());
+    assert(!MissingFeatures::generateDebugInfo());
   }
 
   emission.Addr = address;
@@ -222,12 +222,12 @@ static void emitStoresForConstant(CIRGenModule &CGM, const VarDecl &D,
   uint64_t ConstantSize = layout.getTypeAllocSize(Ty);
   if (!ConstantSize)
     return;
-  assert(!UnimplementedFeature::addAutoInitAnnotation());
-  assert(!UnimplementedFeature::vectorConstants());
-  assert(!UnimplementedFeature::shouldUseBZeroPlusStoresToInitialize());
-  assert(!UnimplementedFeature::shouldUseMemSetToInitialize());
-  assert(!UnimplementedFeature::shouldSplitConstantStore());
-  assert(!UnimplementedFeature::shouldCreateMemCpyFromGlobal());
+  assert(!MissingFeatures::addAutoInitAnnotation());
+  assert(!MissingFeatures::vectorConstants());
+  assert(!MissingFeatures::shouldUseBZeroPlusStoresToInitialize());
+  assert(!MissingFeatures::shouldUseMemSetToInitialize());
+  assert(!MissingFeatures::shouldSplitConstantStore());
+  assert(!MissingFeatures::shouldCreateMemCpyFromGlobal());
   // In CIR we want to emit a store for the whole thing, later lowering
   // prepare to LLVM should unwrap this into the best policy (see asserts
   // above).
@@ -275,7 +275,7 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
   // Check whether this is a byref variable that's potentially
   // captured and moved by its own initializer.  If so, we'll need to
   // emit the initializer first, then copy into the variable.
-  assert(!UnimplementedFeature::capturedByInit() && "NYI");
+  assert(!MissingFeatures::capturedByInit() && "NYI");
 
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
@@ -464,7 +464,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &D,
     Name = getStaticDeclName(*this, D);
 
   mlir::Type LTy = getTypes().convertTypeForMem(Ty);
-  assert(!UnimplementedFeature::addressSpace());
+  assert(!MissingFeatures::addressSpace());
 
   // OpenCL variables in local address space and CUDA shared
   // variables cannot have an initializer.
@@ -491,7 +491,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &D,
   setGVProperties(GV, &D);
 
   // Make sure the result is of the correct type.
-  assert(!UnimplementedFeature::addressSpace());
+  assert(!MissingFeatures::addressSpace());
 
   // Ensure that the static local gets initialized by making sure the parent
   // function gets emitted eventually.
@@ -518,7 +518,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &D,
     // never defer them.
     assert(isa<ObjCMethodDecl>(DC) && "unexpected parent code decl");
   }
-  if (GD.getDecl() && UnimplementedFeature::openMP()) {
+  if (GD.getDecl() && MissingFeatures::openMP()) {
     // Disable emission of the parent function for the OpenMP device codegen.
     llvm_unreachable("OpenMP is NYI");
   }
@@ -658,7 +658,7 @@ void CIRGenFunction::buildStaticVarDecl(const VarDecl &D,
          "static var init type mismatch is NYI");
   CGM.setStaticLocalDeclAddress(&D, var);
 
-  assert(!UnimplementedFeature::reportGlobalToASan());
+  assert(!MissingFeatures::reportGlobalToASan());
 
   // Emit global variable debug descriptor for static vars.
   auto *DI = getDebugInfo();
@@ -678,14 +678,14 @@ void CIRGenFunction::buildNullabilityCheck(LValue LHS, mlir::Value RHS,
 void CIRGenFunction::buildScalarInit(const Expr *init, mlir::Location loc,
                                      LValue lvalue, bool capturedByInit) {
   Qualifiers::ObjCLifetime lifetime = Qualifiers::ObjCLifetime::OCL_None;
-  assert(!UnimplementedFeature::objCLifetime());
+  assert(!MissingFeatures::objCLifetime());
 
   if (!lifetime) {
     SourceLocRAIIObject Loc{*this, loc};
     mlir::Value value = buildScalarExpr(init);
     if (capturedByInit)
       llvm_unreachable("NYI");
-    assert(!UnimplementedFeature::emitNullabilityCheck());
+    assert(!MissingFeatures::emitNullabilityCheck());
     buildStoreThroughLValue(RValue::get(value), lvalue, true);
     return;
   }
@@ -827,7 +827,7 @@ void CIRGenFunction::buildDecl(const Decl &D) {
   case Decl::Using:          // using X; [C++]
   case Decl::UsingEnum:      // using enum X; [C++]
   case Decl::UsingDirective: // using namespace X; [C++]
-    assert(!UnimplementedFeature::generateDebugInfo());
+    assert(!MissingFeatures::generateDebugInfo());
     return;
   case Decl::UsingPack:
     assert(0 && "Not implemented");
@@ -853,7 +853,7 @@ void CIRGenFunction::buildDecl(const Decl &D) {
   case Decl::TypeAlias: { // using X = int; [C++0x]
     QualType Ty = cast<TypedefNameDecl>(D).getUnderlyingType();
     if (auto *DI = getDebugInfo())
-      assert(!UnimplementedFeature::generateDebugInfo());
+      assert(!MissingFeatures::generateDebugInfo());
     if (Ty->isVariablyModifiedType())
       buildVariablyModifiedType(Ty);
     return;

@@ -16,7 +16,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "TargetInfo.h"
-#include "UnimplementedFeatureGuarding.h"
+#include "clang/CIR/MissingFeatures.h"
 
 // TODO(cir): we shouldn't need this but we currently reuse intrinsic IDs for
 // convenience.
@@ -717,7 +717,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_unpredictable: {
     if (CGM.getCodeGenOpts().OptimizationLevel != 0)
-      assert(!UnimplementedFeature::insertBuiltinUnpredictable());
+      assert(!MissingFeatures::insertBuiltinUnpredictable());
     return RValue::get(buildScalarExpr(E->getArg(0)));
   }
 
@@ -978,7 +978,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // default (e.g. in C / C++ auto vars are in the generic address space). At
     // the AST level this is handled within CreateTempAlloca et al., but for the
     // builtin / dynamic alloca we have to handle it here.
-    assert(!UnimplementedFeature::addressSpace());
+    assert(!MissingFeatures::addressSpace());
     LangAS AAS = getASTAllocaAddressSpace();
     LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
     if (EAS != AAS) {
@@ -1233,7 +1233,7 @@ mlir::Value CIRGenFunction::buildCheckedArgForBuiltin(const Expr *E,
   if (!SanOpts.has(SanitizerKind::Builtin))
     return value;
 
-  assert(!UnimplementedFeature::sanitizerBuiltin());
+  assert(!MissingFeatures::sanitizerBuiltin());
   llvm_unreachable("NYI");
 }
 

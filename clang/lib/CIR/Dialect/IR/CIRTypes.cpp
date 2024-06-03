@@ -10,12 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MissingFeatures.h"
-
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypesDetails.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"

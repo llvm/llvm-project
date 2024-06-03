@@ -19,7 +19,7 @@
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
 #include "CIRGenValue.h"
-#include "UnimplementedFeatureGuarding.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtVisitor.h"

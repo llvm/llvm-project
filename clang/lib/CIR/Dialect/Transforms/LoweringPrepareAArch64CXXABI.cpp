@@ -12,11 +12,11 @@
 //
 //===------------------------------------------------------------------===//
 
-#include "../IR/MissingFeatures.h"
 #include "LoweringPrepareItaniumCXXABI.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include <assert.h>
 

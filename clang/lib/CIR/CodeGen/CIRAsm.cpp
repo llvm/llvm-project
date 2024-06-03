@@ -3,7 +3,7 @@
 
 #include "CIRGenFunction.h"
 #include "TargetInfo.h"
-#include "UnimplementedFeatureGuarding.h"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace cir;
 using namespace clang;
@@ -285,7 +285,7 @@ static void buildAsmStores(CIRGenFunction &CGF, const AsmStmt &S,
     mlir::Type TruncTy = ResultTruncRegTypes[i];
 
     if ((i < ResultRegIsFlagReg.size()) && ResultRegIsFlagReg[i]) {
-      assert(!UnimplementedFeature::asm_llvm_assume());
+      assert(!MissingFeatures::asmLLVMAssume());
     }
 
     // If the result type of the LLVM IR asm doesn't match the result type of
@@ -311,7 +311,7 @@ static void buildAsmStores(CIRGenFunction &CGF, const AsmStmt &S,
       } else if (isa<mlir::cir::IntType>(TruncTy)) {
         Tmp = Builder.createIntCast(Tmp, TruncTy);
       } else if (false /*TruncTy->isVectorTy()*/) {
-        assert(!UnimplementedFeature::asm_vector_type());
+        assert(!MissingFeatures::asmVectorType());
       }
     }
 
@@ -468,7 +468,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
       }
 
       // Update largest vector width for any vector types.
-      assert(!UnimplementedFeature::asm_vector_type());
+      assert(!MissingFeatures::asmVectorType());
     } else {
       Address DestAddr = Dest.getAddress();
 
@@ -504,7 +504,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
         Arg = builder.createBitcast(Arg, AdjTy);
 
       // Update largest vector width for any vector types.
-      assert(!UnimplementedFeature::asm_vector_type());
+      assert(!MissingFeatures::asmVectorType());
 
       // Only tie earlyclobber physregs.
       if (Info.allowsRegister() && (GCCReg.empty() || Info.earlyClobber()))
@@ -593,7 +593,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
           << InputExpr->getType() << InputConstraint;
 
     // Update largest vector width for any vector types.
-    assert(!UnimplementedFeature::asm_vector_type());
+    assert(!MissingFeatures::asmVectorType());
 
     ArgTypes.push_back(Arg.getType());
     ArgElemTypes.push_back(ArgElemType);
@@ -636,11 +636,11 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
       HasSideEffect, inferFlavor(CGM, S), mlir::ArrayAttr());
 
   if (false /*IsGCCAsmGoto*/) {
-    assert(!UnimplementedFeature::asm_goto());
+    assert(!MissingFeatures::asmGoto());
   } else if (HasUnwindClobber) {
-    assert(!UnimplementedFeature::asm_unwind_clobber());
+    assert(!MissingFeatures::asmUnwindClobber());
   } else {
-    assert(!UnimplementedFeature::asm_memory_effects());
+    assert(!MissingFeatures::asmMemoryEffects());
 
     mlir::Value result;
     if (IA.getNumResults())

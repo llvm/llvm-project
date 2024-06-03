@@ -12,7 +12,7 @@
 #include "Address.h"
 #include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
-#include "UnimplementedFeatureGuarding.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
@@ -406,7 +406,7 @@ public:
     // FIXME: replay LLVM codegen for now, perhaps add a vtable ptr special
     // type so it's a bit more clear and C++ idiomatic.
     auto fnTy = mlir::cir::FuncType::get({}, getUInt32Ty(), isVarArg);
-    assert(!UnimplementedFeature::isVarArg());
+    assert(!MissingFeatures::isVarArg());
     return getPointerTo(getPointerTo(fnTy));
   }
 
@@ -639,11 +639,11 @@ public:
   }
 
   mlir::Value createFSub(mlir::Value lhs, mlir::Value rhs) {
-    assert(!UnimplementedFeature::metaDataNode());
+    assert(!MissingFeatures::metaDataNode());
     if (IsFPConstrained)
       llvm_unreachable("Constrained FP NYI");
 
-    assert(!UnimplementedFeature::foldBinOpFMF());
+    assert(!MissingFeatures::foldBinOpFMF());
     return create<mlir::cir::BinOp>(lhs.getLoc(), mlir::cir::BinOpKind::Sub,
                                     lhs, rhs);
   }
@@ -660,7 +660,7 @@ public:
   mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
                                   bool vtableUseRelativeLayout) {
     // TODO(cir): consider address space here.
-    assert(!UnimplementedFeature::addressSpace());
+    assert(!MissingFeatures::addressSpace());
     auto destTy = getVoidPtrTy();
     return create<mlir::cir::DynamicCastOp>(
         loc, destTy, mlir::cir::DynamicCastKind::ptr, src,
@@ -772,7 +772,7 @@ public:
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,
                                 mlir::Value ptr, llvm::MaybeAlign align) {
     // TODO: make sure callsites shouldn't be really passing volatile.
-    assert(!UnimplementedFeature::volatileLoadOrStore());
+    assert(!MissingFeatures::volatileLoadOrStore());
     return createAlignedLoad(loc, ty, ptr, align, /*isVolatile=*/false);
   }
 
@@ -913,7 +913,7 @@ public:
     auto memberPtrTy = memberPtr.getType().cast<mlir::cir::DataMemberType>();
 
     // TODO(cir): consider address space.
-    assert(!UnimplementedFeature::addressSpace());
+    assert(!MissingFeatures::addressSpace());
     auto resultTy = getPointerTo(memberPtrTy.getMemberTy());
 
     return create<mlir::cir::GetRuntimeMemberOp>(loc, resultTy, objectPtr,

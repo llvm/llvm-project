@@ -1771,7 +1771,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
                               Elts, typedFiller);
   }
   case APValue::MemberPointer: {
-    assert(!UnimplementedFeature::cxxABI());
+    assert(!MissingFeatures::cxxABI());
 
     const ValueDecl *memberDecl = Value.getMemberPointerDecl();
     assert(!Value.isMemberPointerToDerivedMember() && "NYI");
@@ -1824,7 +1824,7 @@ mlir::Value CIRGenModule::buildNullConstant(QualType T, mlir::Location loc) {
 }
 
 mlir::Value CIRGenModule::buildMemberPointerConstant(const UnaryOperator *E) {
-  assert(!UnimplementedFeature::cxxABI());
+  assert(!MissingFeatures::cxxABI());
 
   auto loc = getLoc(E->getSourceRange());
 

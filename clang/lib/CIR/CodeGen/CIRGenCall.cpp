@@ -26,13 +26,13 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
-#include "UnimplementedFeatureGuarding.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace cir;
 using namespace clang;
@@ -164,7 +164,7 @@ void ClangToCIRArgMapping::construct(const ASTContext &Context,
       //
       // TODO(cir): a LLVM lowering prepare pass should break this down into
       // the appropriated pieces.
-      assert(!UnimplementedFeature::constructABIArgDirectExtend());
+      assert(!MissingFeatures::constructABIArgDirectExtend());
       CIRArgs.NumberOfArgs = 1;
       break;
     }
@@ -428,12 +428,12 @@ void CIRGenModule::ConstructAttributeList(StringRef Name,
     }
 
     if (TargetDecl->hasAttr<OpenCLKernelAttr>()) {
-      assert(!UnimplementedFeature::openCL());
+      assert(!MissingFeatures::openCL());
     }
 
     if (TargetDecl->hasAttr<CUDAGlobalAttr>() &&
         getLangOpts().OffloadUniformBlock)
-      assert(!UnimplementedFeature::CUDA());
+      assert(!MissingFeatures::CUDA());
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       ;
@@ -503,7 +503,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
     // Some architectures (such as x86-64) have the ABI changed based on
     // attribute-target/features. Give them a chance to diagnose.
-    assert(!UnimplementedFeature::checkFunctionCallABI());
+    assert(!MissingFeatures::checkFunctionCallABI());
   }
 
   // TODO: add DNEBUG code
@@ -526,7 +526,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // When passing arguments using temporary allocas, we need to add the
   // appropriate lifetime markers. This vector keeps track of all the lifetime
   // markers that need to be ended right after the call.
-  assert(!UnimplementedFeature::shouldEmitLifetimeMarkers() && "NYI");
+  assert(!MissingFeatures::shouldEmitLifetimeMarkers() && "NYI");
 
   // Translate all of the arguments as necessary to match the CIR lowering.
   assert(CallInfo.arg_size() == CallArgs.size() &&
@@ -841,7 +841,7 @@ mlir::Value CIRGenFunction::buildRuntimeCall(mlir::Location loc,
                                              mlir::cir::FuncOp callee,
                                              ArrayRef<mlir::Value> args) {
   // TODO(cir): set the calling convention to this runtime call.
-  assert(!UnimplementedFeature::setCallingConv());
+  assert(!MissingFeatures::setCallingConv());
 
   auto call = builder.create<mlir::cir::CallOp>(loc, callee, args);
   assert(call->getNumResults() <= 1 &&
@@ -1324,7 +1324,7 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
       addExtParameterInfosForCall(paramInfos, proto, numExtraRequiredArgs,
                                   args.size());
   } else if (llvm::isa<FunctionNoProtoType>(fnType)) {
-    assert(!UnimplementedFeature::targetCodeGenInfoIsProtoCallVariadic());
+    assert(!MissingFeatures::targetCodeGenInfoIsProtoCallVariadic());
     required = RequiredArgs(args.size());
   }
 

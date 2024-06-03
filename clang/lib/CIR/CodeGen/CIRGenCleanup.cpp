@@ -38,7 +38,7 @@ mlir::cir::BrOp CIRGenFunction::buildBranchThroughCleanup(mlir::Location Loc,
   // Remove this once we go for making sure unreachable code is
   // well modeled (or not).
   assert(builder.getInsertionBlock() && "not yet implemented");
-  assert(!UnimplementedFeature::ehStack());
+  assert(!MissingFeatures::ehStack());
 
   // Insert a branch: to the cleanup block (unsolved) or to the already
   // materialized label. Keep track of unsolved goto's.
@@ -316,7 +316,7 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     // FIXME(cir): LLVM traditional codegen tries to simplify some of the
     // codegen here. Once we are further down with EH support revisit whether we
     // need to this during lowering.
-    assert(!UnimplementedFeature::simplifyCleanupEntry());
+    assert(!MissingFeatures::simplifyCleanupEntry());
   }
 }
 

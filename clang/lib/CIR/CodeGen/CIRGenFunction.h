@@ -153,7 +153,7 @@ public:
       // Work around an extremely aggressive peephole optimization in
       // EmitScalarConversion which assumes that all other uses of a
       // value are extant.
-      assert(!UnimplementedFeature::peepholeProtection() && "NYI");
+      assert(!MissingFeatures::peepholeProtection() && "NYI");
       return data;
     }
 
@@ -167,7 +167,7 @@ public:
         CGF.OpaqueLValues.erase(OpaqueValue);
       } else {
         CGF.OpaqueRValues.erase(OpaqueValue);
-        assert(!UnimplementedFeature::peepholeProtection() && "NYI");
+        assert(!MissingFeatures::peepholeProtection() && "NYI");
       }
     }
   };
@@ -930,7 +930,7 @@ public:
   bool currentFunctionUsesSEHTry() const { return !!CurSEHParent; }
 
   /// Returns true inside SEH __try blocks.
-  bool isSEHTryScope() const { return UnimplementedFeature::isSEHTryScope(); }
+  bool isSEHTryScope() const { return MissingFeatures::isSEHTryScope(); }
 
   mlir::Operation *CurrentFuncletPad = nullptr;
 
@@ -1931,7 +1931,7 @@ public:
 
     ~LexicalScope() {
       // EmitLexicalBlockEnd
-      assert(!UnimplementedFeature::generateDebugInfo());
+      assert(!MissingFeatures::generateDebugInfo());
       // If we should perform a cleanup, force them now.  Note that
       // this ends the cleanup scope before rescoping any labels.
       cleanup();

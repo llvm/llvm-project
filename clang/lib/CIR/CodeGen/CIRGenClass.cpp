@@ -12,12 +12,12 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
-#include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace cir;
@@ -272,7 +272,7 @@ private:
     if (!MemcpyableCtor)
       return false;
 
-    assert(!UnimplementedFeature::fieldMemcpyizerBuildMemcpy());
+    assert(!MissingFeatures::fieldMemcpyizerBuildMemcpy());
     return false;
   }
 
@@ -733,11 +733,11 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   //
   // vtable field is derived from `this` pointer, therefore they should be in
   // the same addr space.
-  assert(!UnimplementedFeature::addressSpace());
+  assert(!MissingFeatures::addressSpace());
   VTableField = builder.createElementBitCast(loc, VTableField,
                                              VTableAddressPoint.getType());
   builder.createStore(loc, VTableAddressPoint, VTableField);
-  assert(!UnimplementedFeature::tbaa());
+  assert(!MissingFeatures::tbaa());
 }
 
 void CIRGenFunction::initializeVTablePointers(mlir::Location loc,
@@ -861,7 +861,7 @@ void CIRGenFunction::buildInitializerForField(FieldDecl *Field, LValue LHS,
   // constructor.
   QualType::DestructionKind dtorKind = FieldType.isDestructedType();
   (void)dtorKind;
-  if (UnimplementedFeature::cleanups())
+  if (MissingFeatures::cleanups())
     llvm_unreachable("NYI");
 }
 
@@ -908,7 +908,7 @@ void CIRGenFunction::buildImplicitAssignmentOperatorBody(
   // LexicalScope Scope(*this, RootCS->getSourceRange());
   // FIXME(cir): add all of the below under a new scope.
 
-  assert(!UnimplementedFeature::incrementProfileCounter());
+  assert(!MissingFeatures::incrementProfileCounter());
   AssignmentMemcpyizer AM(*this, AssignOp, Args);
   for (auto *I : RootCS->body())
     AM.emitAssignment(I);
@@ -1114,7 +1114,7 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
 
   Stmt *Body = Dtor->getBody();
   if (Body)
-    assert(!UnimplementedFeature::incrementProfileCounter());
+    assert(!MissingFeatures::incrementProfileCounter());
 
   // The call to operator delete in a deleting destructor happens
   // outside of the function-try-block, which means it's always
@@ -1139,7 +1139,7 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
     llvm_unreachable("NYI");
     // EnterCXXTryStmt(*cast<CXXTryStmt>(Body), true);
   }
-  if (UnimplementedFeature::emitAsanPrologueOrEpilogue())
+  if (MissingFeatures::emitAsanPrologueOrEpilogue())
     llvm_unreachable("NYI");
 
   // Enter the epilogue cleanups.
@@ -1277,7 +1277,7 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
     if (CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
         SanOpts.has(SanitizerKind::Memory) && ClassDecl->getNumVBases() &&
         ClassDecl->isPolymorphic())
-      assert(!UnimplementedFeature::sanitizeDtor());
+      assert(!MissingFeatures::sanitizeDtor());
 
     // We push them in the forward order so that they'll be popped in
     // the reverse order.
@@ -1289,7 +1289,7 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
         // Under SanitizeMemoryUseAfterDtor, poison the trivial base class
         // memory. For non-trival base classes the same is done in the class
         // destructor.
-        assert(!UnimplementedFeature::sanitizeDtor());
+        assert(!MissingFeatures::sanitizeDtor());
       } else {
         EHStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup, BaseClassDecl,
                                           /*BaseIsVirtual*/ true);
@@ -1305,7 +1305,7 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
   if (CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
       SanOpts.has(SanitizerKind::Memory) && !ClassDecl->getNumVBases() &&
       ClassDecl->isPolymorphic())
-    assert(!UnimplementedFeature::sanitizeDtor());
+    assert(!MissingFeatures::sanitizeDtor());
 
   // Destroy non-virtual bases.
   for (const auto &Base : ClassDecl->bases()) {
@@ -1318,7 +1318,7 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
     if (BaseClassDecl->hasTrivialDestructor()) {
       if (CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
           SanOpts.has(SanitizerKind::Memory) && !BaseClassDecl->isEmpty())
-        assert(!UnimplementedFeature::sanitizeDtor());
+        assert(!MissingFeatures::sanitizeDtor());
     } else {
       EHStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup, BaseClassDecl,
                                         /*BaseIsVirtual*/ false);
@@ -1329,12 +1329,12 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
   // invoked, and before the base class destructor runs, is invalid.
   bool SanitizeFields = CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
                         SanOpts.has(SanitizerKind::Memory);
-  assert(!UnimplementedFeature::sanitizeDtor());
+  assert(!MissingFeatures::sanitizeDtor());
 
   // Destroy direct fields.
   for (const auto *Field : ClassDecl->fields()) {
     if (SanitizeFields)
-      assert(!UnimplementedFeature::sanitizeDtor());
+      assert(!MissingFeatures::sanitizeDtor());
 
     QualType type = Field->getType();
     QualType::DestructionKind dtorKind = type.isDestructedType();
@@ -1351,7 +1351,7 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
   }
 
   if (SanitizeFields)
-    assert(!UnimplementedFeature::sanitizeDtor());
+    assert(!MissingFeatures::sanitizeDtor());
 }
 
 void CIRGenFunction::buildCXXDestructorCall(const CXXDestructorDecl *DD,
@@ -1422,7 +1422,7 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
 
   // Get the base pointer type.
   auto BaseValueTy = convertType((PathEnd[-1])->getType());
-  assert(!UnimplementedFeature::addressSpace());
+  assert(!MissingFeatures::addressSpace());
   // auto BasePtrTy = builder.getPointerTo(BaseValueTy);
   // QualType DerivedTy = getContext().getRecordType(Derived);
   // CharUnits DerivedAlign = CGM.getClassPointerAlignment(Derived);
@@ -1505,11 +1505,11 @@ mlir::Value CIRGenFunction::getVTablePtr(mlir::Location Loc, Address This,
                                          const CXXRecordDecl *RD) {
   Address VTablePtrSrc = builder.createElementBitCast(Loc, This, VTableTy);
   auto VTable = builder.createLoad(Loc, VTablePtrSrc);
-  assert(!UnimplementedFeature::tbaa());
+  assert(!MissingFeatures::tbaa());
 
   if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       CGM.getCodeGenOpts().StrictVTablePointers) {
-    assert(!UnimplementedFeature::createInvariantGroup());
+    assert(!MissingFeatures::createInvariantGroup());
   }
 
   return VTable;
@@ -1518,7 +1518,7 @@ mlir::Value CIRGenFunction::getVTablePtr(mlir::Location Loc, Address This,
 Address CIRGenFunction::buildCXXMemberDataPointerAddress(
     const Expr *E, Address base, mlir::Value memberPtr,
     const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo) {
-  assert(!UnimplementedFeature::cxxABI());
+  assert(!MissingFeatures::cxxABI());
 
   auto op = builder.createGetIndirectMember(getLoc(E->getSourceRange()),
                                             base.getPointer(), memberPtr);

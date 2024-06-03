@@ -14,7 +14,6 @@
 #include "CIRGenModule.h"
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
-#include "UnimplementedFeatureGuarding.h"
 #include "mlir/IR/Attributes.h"
 
 #include "clang/AST/Decl.h"
@@ -23,6 +22,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -208,7 +208,7 @@ public:
   void VisitCallExpr(const CallExpr *E);
 
   void VisitStmtExpr(const StmtExpr *E) {
-    assert(!UnimplementedFeature::stmtExprEvaluation() && "NYI");
+    assert(!MissingFeatures::stmtExprEvaluation() && "NYI");
     CGF.buildCompoundStmt(*E->getSubStmt(), /*getLast=*/true, Dest);
   }
 
@@ -235,7 +235,7 @@ public:
     // do an atomic copy.
     if (lhs.getType()->isAtomicType() ||
         CGF.LValueIsSuitableForInlineAtomic(lhs)) {
-      assert(!UnimplementedFeature::atomicTypes());
+      assert(!MissingFeatures::atomicTypes());
       return;
     }
 
@@ -246,7 +246,7 @@ public:
 
     // A non-volatile aggregate destination might have volatile member.
     if (!lhsSlot.isVolatile() && CGF.hasVolatileMember(E->getLHS()->getType()))
-      assert(!UnimplementedFeature::atomicTypes());
+      assert(!MissingFeatures::atomicTypes());
 
     CGF.buildAggExpr(E->getRHS(), lhsSlot);
 
@@ -333,7 +333,7 @@ void AggExprEmitter::buildAggLoadOfLValue(const Expr *E) {
 
   // If the type of the l-value is atomic, then do an atomic load.
   if (LV.getType()->isAtomicType() || CGF.LValueIsSuitableForInlineAtomic(LV) ||
-      UnimplementedFeature::atomicTypes())
+      MissingFeatures::atomicTypes())
     llvm_unreachable("atomic load is NYI");
 
   buildFinalDestCopy(E->getType(), LV);
@@ -358,7 +358,7 @@ void AggExprEmitter::buildFinalDestCopy(QualType type, const LValue &src,
 
   // Copy non-trivial C structs here.
   if (Dest.isVolatile())
-    assert(!UnimplementedFeature::volatileTypes());
+    assert(!MissingFeatures::volatileTypes());
 
   if (SrcValueKind == EVK_RValue) {
     if (type.isNonTrivialToPrimitiveDestructiveMove() == QualType::PCK_Struct) {
@@ -537,7 +537,7 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto currentElement = builder.createLoad(loc, tmpAddr);
 
-          if (UnimplementedFeature::cleanups())
+          if (MissingFeatures::cleanups())
             llvm_unreachable("NYI");
 
           // Emit the actual filler expression.
@@ -830,7 +830,7 @@ void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
 }
 
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
-  if (UnimplementedFeature::cleanups())
+  if (MissingFeatures::cleanups())
     llvm_unreachable("NYI");
 
   auto &builder = CGF.getBuilder();
@@ -852,7 +852,7 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
 
   // We'll need to enter cleanup scopes in case any of the element initializers
   // throws an exception.
-  if (UnimplementedFeature::cleanups())
+  if (MissingFeatures::cleanups())
     llvm_unreachable("NYI");
   mlir::Operation *CleanupDominator = nullptr;
 
@@ -892,7 +892,7 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
 
   // Deactivate all the partial cleanups in reverse order, which generally means
   // popping them.
-  if (UnimplementedFeature::cleanups())
+  if (MissingFeatures::cleanups())
     llvm_unreachable("NYI");
 
   // Destroy the placeholder if we made one.
@@ -909,7 +909,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     // If we're loading from a volatile type, force the destination
     // into existence.
     if (E->getSubExpr()->getType().isVolatileQualified() ||
-        UnimplementedFeature::volatileTypes()) {
+        MissingFeatures::volatileTypes()) {
       bool Destruct =
           !Dest.isExternallyDestructed() &&
           E->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
@@ -1026,14 +1026,14 @@ void AggExprEmitter::withReturnValueSlot(
                  (RequiresDestruction && !Dest.getAddress().isValid());
 
   Address RetAddr = Address::invalid();
-  assert(!UnimplementedFeature::shouldEmitLifetimeMarkers() && "NYI");
+  assert(!MissingFeatures::shouldEmitLifetimeMarkers() && "NYI");
 
   if (!UseTemp) {
     RetAddr = Dest.getAddress();
   } else {
     RetAddr = CGF.CreateMemTemp(RetTy, CGF.getLoc(E->getSourceRange()), "tmp",
                                 &RetAddr);
-    assert(!UnimplementedFeature::shouldEmitLifetimeMarkers() && "NYI");
+    assert(!MissingFeatures::shouldEmitLifetimeMarkers() && "NYI");
   }
 
   RValue Src =
@@ -1050,7 +1050,7 @@ void AggExprEmitter::withReturnValueSlot(
     // If there's no dtor to run, the copy was the last use of our temporary.
     // Since we're not guaranteed to be in an ExprWithCleanups, clean up
     // eagerly.
-    assert(!UnimplementedFeature::shouldEmitLifetimeMarkers() && "NYI");
+    assert(!MissingFeatures::shouldEmitLifetimeMarkers() && "NYI");
   }
 }
 
@@ -1251,7 +1251,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     LValue LV =
         CGF.buildLValueForFieldInitialization(DestLV, field, field->getName());
     // We never generate write-barries for initialized fields.
-    assert(!UnimplementedFeature::setNonGC());
+    assert(!MissingFeatures::setNonGC());
 
     if (curInitIndex < NumInitElements) {
       // Store the initializer into the field.
@@ -1314,7 +1314,7 @@ void AggExprEmitter::VisitAbstractConditionalOperator(
   // Bind the common expression if necessary.
   CIRGenFunction::OpaqueValueMapping binding(CGF, E);
   CIRGenFunction::ConditionalEvaluation eval(CGF);
-  assert(!UnimplementedFeature::getProfileCount());
+  assert(!MissingFeatures::getProfileCount());
 
   // Save whether the destination's lifetime is externally managed.
   bool isExternallyDestructed = Dest.isExternallyDestructed();
@@ -1331,7 +1331,7 @@ void AggExprEmitter::VisitAbstractConditionalOperator(
           CIRGenFunction::LexicalScope lexScope{CGF, loc,
                                                 builder.getInsertionBlock()};
           Dest.setExternallyDestructed(isExternallyDestructed);
-          assert(!UnimplementedFeature::incrementProfileCounter());
+          assert(!MissingFeatures::incrementProfileCounter());
           Visit(E->getTrueExpr());
         }
         eval.end(CGF);
@@ -1348,7 +1348,7 @@ void AggExprEmitter::VisitAbstractConditionalOperator(
           // with us, and we can safely emit the RHS into the same slot, but
           // we shouldn't claim that it's already being destructed.
           Dest.setExternallyDestructed(isExternallyDestructed);
-          assert(!UnimplementedFeature::incrementProfileCounter());
+          assert(!MissingFeatures::incrementProfileCounter());
           Visit(E->getFalseExpr());
         }
         eval.end(CGF);
@@ -1357,7 +1357,7 @@ void AggExprEmitter::VisitAbstractConditionalOperator(
 
   if (destructNonTrivialCStruct)
     llvm_unreachable("NYI");
-  assert(!UnimplementedFeature::incrementProfileCounter());
+  assert(!MissingFeatures::incrementProfileCounter());
 }
 
 void AggExprEmitter::VisitBinComma(const BinaryOperator *E) {
@@ -1612,7 +1612,7 @@ void CIRGenFunction::buildAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case
   // the optimizer wishes to expand it in to scalar memory operations.
-  if (CGM.getCodeGenOpts().NewStructPathTBAA || UnimplementedFeature::tbaa())
+  if (CGM.getCodeGenOpts().NewStructPathTBAA || MissingFeatures::tbaa())
     llvm_unreachable("TBAA is NYI");
 }
 

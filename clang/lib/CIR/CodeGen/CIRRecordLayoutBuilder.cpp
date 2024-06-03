@@ -398,7 +398,7 @@ void CIRRecordLowering::computeVolatileBitfields() {
     return;
 
   for ([[maybe_unused]] auto &I : bitFields) {
-    assert(!UnimplementedFeature::armComputeVolatileBitfields());
+    assert(!MissingFeatures::armComputeVolatileBitfields());
   }
 }
 

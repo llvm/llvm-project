@@ -38,7 +38,7 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   //  an alias, unless this class owns no members.
   if (getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
       !D->getParent()->field_empty())
-    assert(!UnimplementedFeature::sanitizeDtor());
+    assert(!MissingFeatures::sanitizeDtor());
 
   // If the destructor doesn't have a trivial body, we have to emit it
   // separately.

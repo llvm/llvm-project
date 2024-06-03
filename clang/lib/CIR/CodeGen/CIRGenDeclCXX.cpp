@@ -70,7 +70,7 @@ void CIRGenModule::buildGlobalVarDeclInit(const VarDecl *D,
     // For example, in the above CUDA code, the static local variable s has a
     // "shared" address space qualifier, but the constructor of StructWithCtor
     // expects "this" in the "generic" address space.
-    assert(!UnimplementedFeature::addressSpace());
+    assert(!MissingFeatures::addressSpace());
 
     if (!T->isReferenceType()) {
       bool NeedsDtor =

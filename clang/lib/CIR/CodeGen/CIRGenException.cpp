@@ -14,7 +14,6 @@
 #include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
-#include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/StmtVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
@@ -22,6 +21,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 
@@ -439,7 +439,7 @@ static void buildCatchDispatchBlock(CIRGenFunction &CGF,
     assert(typeValue && "fell into catch-all case!");
     // Check for address space mismatch: if (typeValue->getType() !=
     // argTy)
-    assert(!UnimplementedFeature::addressSpace());
+    assert(!MissingFeatures::addressSpace());
 
     bool nextIsEnd = false;
     // If this is the last handler, we're at the end, and the next
@@ -559,7 +559,7 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     CGM.getCXXABI().emitBeginCatch(*this, C);
 
     // Emit the PGO counter increment.
-    assert(!UnimplementedFeature::incrementProfileCounter());
+    assert(!MissingFeatures::incrementProfileCounter());
 
     // Perform the body of the catch.
     (void)buildStmt(C->getHandlerBlock(), /*useCurrentScope=*/true);
@@ -594,7 +594,7 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     llvm_unreachable("NYI");
   }
 
-  assert(!UnimplementedFeature::incrementProfileCounter());
+  assert(!MissingFeatures::incrementProfileCounter());
 }
 
 /// Check whether this is a non-EH scope, i.e. a scope which doesn't
@@ -672,7 +672,7 @@ mlir::Operation *CIRGenFunction::buildLandingPad() {
   {
     // Save the current CIR generation state.
     mlir::OpBuilder::InsertionGuard guard(builder);
-    assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+    assert(!MissingFeatures::generateDebugInfo() && "NYI");
 
     // Traditional LLVM codegen creates the lpad basic block, extract
     // values, landing pad instructions, etc.
@@ -749,7 +749,7 @@ mlir::Operation *CIRGenFunction::buildLandingPad() {
       // Otherwise, signal that we at least have cleanups.
     } else if (hasCleanup) {
       // FIXME(cir): figure out whether and how we need this in CIR.
-      assert(!UnimplementedFeature::setLandingPadCleanup());
+      assert(!MissingFeatures::setLandingPadCleanup());
     }
 
     assert((clauses.size() > 0 || hasCleanup) && "CatchOp has no clauses!");
@@ -814,7 +814,7 @@ CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator si) {
     }
 
     case EHScope::Cleanup:
-      assert(!UnimplementedFeature::setLandingPadCleanup());
+      assert(!MissingFeatures::setLandingPadCleanup());
       dispatchBlock = currLexScope->getOrCreateCleanupBlock(builder);
       break;
 

@@ -26,7 +26,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Location.h"
 
-#include "UnimplementedFeatureGuarding.h"
+#include "clang/CIR/MissingFeatures.h"
 
 namespace clang {
 class Decl;
