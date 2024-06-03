@@ -354,7 +354,7 @@ added in the future:
     not be used lightly but only for specific situations such as an
     alternative to the *register pinning* performance technique often
     used when implementing functional programming languages. At the
-    moment only X86, AArch64, and RISCV support this convention. The 
+    moment only X86, AArch64, and RISCV support this convention. The
     following limitations exist:
 
     -  On *X86-32* only up to 4 bit type parameters are supported. No
@@ -685,10 +685,10 @@ implementation defined, the optimizer can't do the latter.  The former is
 challenging as many commonly expected properties, such as
 ``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.
 Similar restrictions apply to intrinsics that might examine the pointer bits,
-such as :ref:`llvm.ptrmask<int_ptrmask>`. 
+such as :ref:`llvm.ptrmask<int_ptrmask>`.
 
 The alignment information provided by the frontend for a non-integral pointer
-(typically using attributes or metadata) must be valid for every possible 
+(typically using attributes or metadata) must be valid for every possible
 representation of the pointer.
 
 .. _globalvars:
@@ -1649,10 +1649,10 @@ Currently, only the following parameter attributes are defined:
     -  Both ``a`` and ``b`` are constants.
     -  The range is allowed to wrap.
     -  The range should not represent the full or empty set. That is, ``a!=b``.
-    
-    This attribute may only be applied to parameters or return values with integer 
+
+    This attribute may only be applied to parameters or return values with integer
     or vector of integer types.
-    
+
     For vector-typed parameters, the range is applied element-wise.
 
 .. _gc:
@@ -8602,8 +8602,9 @@ The '``llvm.used``' Global Variable
 The ``@llvm.used`` global is an array which has
 :ref:`appending linkage <linkage_appending>`. This array contains a list of
 pointers to named global variables, functions and aliases which may optionally
-have a pointer cast formed of bitcast or getelementptr. For example, a legal
-use of it is:
+have a pointer cast formed of bitcast or getelementptr. The pointers are
+intentionally left unqualified to underline their ephemeral nature. For example,
+a legal use of it is:
 
 .. code-block:: llvm
 
@@ -14214,7 +14215,7 @@ Arguments:
 """"""""""
 The first 4 arguments are similar to ``llvm.instrprof.increment``. The indexing
 is specific to callsites, meaning callsites are indexed from 0, independent from
-the indexes used by the other intrinsics (such as 
+the indexes used by the other intrinsics (such as
 ``llvm.instrprof.increment[.step]``).
 
 The last argument is the called value of the callsite this intrinsic precedes.
@@ -14228,7 +14229,7 @@ a buffer LLVM can use to perform counter increments (i.e. the lowering of
 ``llvm.instrprof.increment[.step]``. The address range following the counter
 buffer, ``<num-counters>`` x ``sizeof(ptr)`` - sized, is expected to contain
 pointers to contexts of functions called from this function ("subcontexts").
-LLVM does not dereference into that memory region, just calculates GEPs. 
+LLVM does not dereference into that memory region, just calculates GEPs.
 
 The lowering of ``llvm.instrprof.callsite`` consists of:
 
@@ -14848,8 +14849,8 @@ integer bit width or any vector of integer elements.
 Overview:
 """""""""
 
-Return ``-1`` if ``%a`` is signed less than ``%b``, ``0`` if they are equal, and 
-``1`` if ``%a`` is signed greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+Return ``-1`` if ``%a`` is signed less than ``%b``, ``0`` if they are equal, and
+``1`` if ``%a`` is signed greater than ``%b``. Vector intrinsics operate on a per-element basis.
 
 Arguments:
 """"""""""
@@ -14877,8 +14878,8 @@ integer bit width or any vector of integer elements.
 Overview:
 """""""""
 
-Return ``-1`` if ``%a`` is unsigned less than ``%b``, ``0`` if they are equal, and 
-``1`` if ``%a`` is unsigned greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+Return ``-1`` if ``%a`` is unsigned less than ``%b``, ``0`` if they are equal, and
+``1`` if ``%a`` is unsigned greater than ``%b``. Vector intrinsics operate on a per-element basis.
 
 Arguments:
 """"""""""
@@ -20940,9 +20941,9 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.minimum``' intrinsic performs floating-point minimum (:ref:`minimum <i_minimum>`)
-of the first and second vector operand on each enabled lane, the result being 
+of the first and second vector operand on each enabled lane, the result being
 NaN if either operand is a NaN. -0.0 is considered to be less than +0.0 for this
-intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`. 
+intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 The operation is performed in the default floating-point environment.
 
 Examples:
@@ -20990,9 +20991,9 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.maximum``' intrinsic performs floating-point maximum (:ref:`maximum <i_maximum>`)
-of the first and second vector operand on each enabled lane, the result being 
+of the first and second vector operand on each enabled lane, the result being
 NaN if either operand is a NaN. -0.0 is considered to be less than +0.0 for this
-intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`. 
+intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 The operation is performed in the default floating-point environment.
 
 Examples:
@@ -28269,7 +28270,7 @@ Semantics:
 """"""""""
 
 The intrinsic ``@llvm.allow.ubsan.check()`` returns either ``true`` or
-``false``, depending on compiler options. 
+``false``, depending on compiler options.
 
 For each evaluation of a call to this intrinsic, the program must be valid and
 correct both if it returns ``true`` and if it returns ``false``.
@@ -28328,13 +28329,13 @@ Semantics:
 """"""""""
 
 The intrinsic ``@llvm.allow.runtime.check()`` returns either ``true`` or
-``false``, depending on compiler options. 
+``false``, depending on compiler options.
 
 For each evaluation of a call to this intrinsic, the program must be valid and
 correct both if it returns ``true`` and if it returns ``false``.
 
 When used in a branch condition, it allows us to choose between
-two alternative correct solutions for the same problem. 
+two alternative correct solutions for the same problem.
 
 If the intrinsic is evaluated as ``true``, program should execute a guarded
 check. If the intrinsic is evaluated as ``false``, the program should avoid any
