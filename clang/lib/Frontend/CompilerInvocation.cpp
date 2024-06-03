@@ -3128,8 +3128,8 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Args.hasArg(OPT_clangir_verify_diagnostics))
     Opts.ClangIRVerifyDiags = true;
 
-  if (Args.hasArg(OPT_fclangir_call_conv_lowering))
-    Opts.ClangIREnableCallConvLowering = true;
+  if (Args.hasArg(OPT_fclangir_analysis_only))
+    Opts.ClangIRAnalysisOnly = true;
 
   if (const Arg *A = Args.getLastArg(OPT_fclangir_lifetime_check,
                                      OPT_fclangir_lifetime_check_EQ)) {
