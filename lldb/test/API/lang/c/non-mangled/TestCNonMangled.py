@@ -1,10 +1,8 @@
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test.decorators import skipIfWindows
 
 
 class TestCase(TestBase):
-    @skipIfWindows
     def test_functions_having_dlang_mangling_prefix(self):
         """
         Ensure C functions with a '_D' prefix alone are not mistakenly treated
