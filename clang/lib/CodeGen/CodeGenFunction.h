@@ -4410,9 +4410,6 @@ public:
                                         llvm::Value *storageAddress,
                                         GlobalDecl calleeDecl,
                                         QualType calleeType);
-  llvm::Value *EmitPointerAuthSign(QualType pointeeType, llvm::Value *pointer);
-  llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &info,
-                                   llvm::Value *pointer);
   void EmitPointerAuthOperandBundle(
       const CGPointerAuthInfo &info,
       SmallVectorImpl<llvm::OperandBundleDef> &bundles);
