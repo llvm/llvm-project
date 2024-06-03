@@ -47,7 +47,7 @@ DependencyScanningWorkerFilesystem::readFile(StringRef Filename) {
 }
 
 bool DependencyScanningWorkerFilesystem::ensureDirectiveTokensArePopulated(
-    EntryRef Ref) {
+    EntryRef Ref, const LangOptions &LangOpts) {
   auto &Entry = Ref.Entry;
 
   if (Entry.isError() || Entry.isDirectory())
@@ -71,7 +71,7 @@ bool DependencyScanningWorkerFilesystem::ensureDirectiveTokensArePopulated(
   // dependencies.
   if (scanSourceForDependencyDirectives(Contents->Original->getBuffer(),
                                         Contents->DepDirectiveTokens,
-                                        Directives)) {
+                                        Directives, LangOpts)) {
     Contents->DepDirectiveTokens.clear();
     // FIXME: Propagate the diagnostic if desired by the client.
     Contents->DepDirectives.store(new std::optional<DependencyDirectivesTy>());
