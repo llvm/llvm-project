@@ -471,3 +471,11 @@ EmitLLVMAction::EmitLLVMAction(mlir::MLIRContext *_MLIRContext)
 void EmitObjAction::anchor() {}
 EmitObjAction::EmitObjAction(mlir::MLIRContext *_MLIRContext)
     : CIRGenAction(OutputType::EmitObj, _MLIRContext) {}
+
+std::unique_ptr<clang::ASTConsumer>
+cir::createCIRAnalysisOnlyConsumer(clang::CompilerInstance &ci) {
+  return std::make_unique<cir::CIRGenConsumer>(
+      CIRGenAction::OutputType::None, ci.getDiagnostics(),
+      &ci.getVirtualFileSystem(), ci.getHeaderSearchOpts(), ci.getCodeGenOpts(),
+      ci.getTargetOpts(), ci.getLangOpts(), ci.getFrontendOpts(), nullptr);
+}
