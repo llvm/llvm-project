@@ -672,8 +672,7 @@ private:
 
   WaitcntGenerator *WCG = nullptr;
 
-  // S_ENDPGM instructions before which we should insert a DEALLOC_VGPRS
-  // message.
+  // S_ENDPGM instructions before which we should deallocate the VGPRs.
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
 
   InstCounterType MaxCounter = NUM_NORMAL_INST_CNTS;
@@ -1858,18 +1857,21 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     Wait = Wait.combined(
         WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false, /*IncludeXCnt=*/true));
   }
-  // Identify S_ENDPGM instructions which may have to wait for outstanding VMEM
-  // stores. In this case it can be useful to send a message to explicitly
-  // release all VGPRs before the stores have completed, but it is only safe to
-  // do this if:
-  // * there are no outstanding scratch stores
-  // * we are not in Dynamic VGPR mode
+  // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
+  // Technically the hardware will do this on its own if we don't, but that
+  // might cost extra cycles compared to doing it explicitly.
+  // When not in dynamic VGPR mode, identify S_ENDPGM instructions which may
+  // have to wait for outstanding VMEM stores. In this case it can be useful to
+  // send a message to explicitly release all VGPRs before the stores have
+  // completed, but it is only safe to do this if there are no outstanding
+  // scratch stores.
   else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
-    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
-        !ST->isDynamicVGPREnabled() && !WCG->isOptNone() &&
-        ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
-        !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))
+    if (!WCG->isOptNone() &&
+        (ST->isDynamicVGPREnabled() ||
+         (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+          ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
+          !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))))
       ReleaseVGPRInsts.insert(&MI);
   }
   // Resolve vm waits before gs-done.
@@ -2906,16 +2908,24 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  // Insert DEALLOC_VGPR messages before previously identified S_ENDPGM
-  // instructions.
+  // Deallocate the VGPRs before previously identified S_ENDPGM instructions.
+  // This is done in different ways depending on how the VGPRs were allocated
+  // (i.e. whether we're in dynamic VGPR mode or not).
   for (MachineInstr *MI : ReleaseVGPRInsts) {
-    if (ST->requiresNopBeforeDeallocVGPRs()) {
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::S_NOP))
+    if (ST->isDynamicVGPREnabled())
+      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+              TII->get(AMDGPU::S_ALLOC_VGPR))
           .addImm(0);
+    else {
+      if (ST->requiresNopBeforeDeallocVGPRs()) {
+        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                TII->get(AMDGPU::S_NOP))
+            .addImm(0);
+      }
+      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+              TII->get(AMDGPU::S_SENDMSG))
+          .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
     }
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-            TII->get(AMDGPU::S_SENDMSG))
-        .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
     Modified = true;
   }
   ReleaseVGPRInsts.clear();

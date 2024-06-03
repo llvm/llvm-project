@@ -818,6 +818,7 @@ Bug Fixes to C++ Support
   Fixes (`#80252 <https://github.com/llvm/llvm-project/issues/80252>`_)
 - Fix a regression introduced in Clang 18 causing incorrect overload resolution in the presence of functions only
   differering by their constraints when only one of these function was variadic.
+- Fix a crash when a variable is captured by a block nested inside a lambda. (Fixes #GH93625).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

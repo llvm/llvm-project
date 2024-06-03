@@ -71,6 +71,8 @@ class SM_Real <SM_Pseudo ps, string opName = ps.Mnemonic>
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let IsAtomicRet          = ps.IsAtomicRet;
   let IsAtomicNoRet        = ps.IsAtomicNoRet;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
 
   let TSFlags = ps.TSFlags;
 

@@ -104,6 +104,8 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let VM_CNT               = ps.VM_CNT;
   let LGKM_CNT             = ps.LGKM_CNT;
   let VALU                 = ps.VALU;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
 
   // encoding fields
   bits<8> vaddr;
@@ -167,6 +169,8 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let VM_CNT               = ps.VM_CNT;
   let LGKM_CNT             = ps.LGKM_CNT;
   let VALU                 = ps.VALU;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
 
   bits<7> saddr;
   bits<8> vdst;

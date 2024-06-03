@@ -1171,6 +1171,23 @@ def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
+def fir_IsAssumedSizeOp : fir_SimpleOp<"is_assumed_size", [NoMemoryEffect]> {
+  let summary = "detect if a boxed value is an assumed-size array";
+
+  let description = [{
+    Fir box SSA values may describe assumed-size arrays. This operation
+    allows detecting this, even for assumed-rank box.
+
+    ```
+      %a = fir.is_assumed_size %b : (!fir.box<!fir.array<*:f64>>) -> i1
+    ```
+  }];
+
+  let arguments = (ins BoxOrClassType:$val);
+
+  let results = (outs BoolLike);
+}
+
 def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoMemoryEffect]> {
   let summary = "is the boxed value a POINTER?";
 
