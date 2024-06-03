@@ -1777,7 +1777,8 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *symbol_file = GetDIERefSymbolFile(die_ref);
   if (symbol_file)
-    return symbol_file->DebugInfo().GetDIE(die_ref);
+    return symbol_file->DebugInfo().GetDIE(die_ref.section(),
+                                           die_ref.die_offset());
   return DWARFDIE();
 }
 

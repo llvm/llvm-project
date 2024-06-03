@@ -86,7 +86,7 @@ private:
 
   DWARFUnit *GetNonSkeletonUnit(const DebugNames::Entry &entry) const;
   DWARFDIE GetDIE(const DebugNames::Entry &entry) const;
-  DWARFTypeUnit *GetForeignTypeUnit(const DebugNames::Entry &entry) const;
+
   // std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry) const;
 
   /// Checks if an entry is a foreign TU and fetch the type unit.
