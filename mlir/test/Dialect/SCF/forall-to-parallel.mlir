@@ -60,3 +60,21 @@ func.func @nested(%ub1: index, %ub2: index, %ub3: index, %ub4: index) {
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: @mapping_attr
+func.func @mapping_attr() -> () {
+  // CHECK: scf.parallel
+  // CHECK:   scf.reduce
+  // CHECK: {mapping = [#gpu.thread<x>]}
+
+  %num_threads = arith.constant 100 : index
+
+  scf.forall (%thread_idx) in (%num_threads) {
+    scf.forall.in_parallel {
+    }
+  } {mapping = [#gpu.thread<x>]}
+  return
+
+}
