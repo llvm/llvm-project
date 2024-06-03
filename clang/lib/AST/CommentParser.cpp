@@ -297,7 +297,8 @@ public:
     memcpy(TextPtr, WordText.c_str(), Length + 1);
     StringRef Text = StringRef(TextPtr, Length);
 
-    formTokenWithChars(Tok, Loc, WordBegin, Pos.BufferPtr - WordBegin, Text);
+    formTokenWithChars(Tok, Loc, WordBegin,
+                       Pos.BufferPtr - WordBegin, Text);
     return true;
   }
 
@@ -367,7 +368,6 @@ Parser::parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs) {
       Comment::Argument[NumArgs];
   unsigned ParsedArgs = 0;
   Token Arg;
-
   while (ParsedArgs < NumArgs && Retokenizer.lexWord(Arg)) {
     Args[ParsedArgs] = Comment::Argument{
         SourceRange(Arg.getLocation(), Arg.getEndLocation()), Arg.getText()};
