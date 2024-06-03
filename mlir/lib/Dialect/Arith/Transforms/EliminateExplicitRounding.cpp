@@ -37,23 +37,21 @@ struct EliminateExplicitRounding final
     getOperation()->walk([&](arith::ExtFOp extFOp) {
       // Check whether match `truncF->extF` pair.
       auto truncFOp = extFOp.getOperand().getDefiningOp<arith::TruncFOp>();
-      if (truncFOp) {
-        // Check whether the rounding pair's input and output data type are the
-        // same. Currently only consider to eliminate rounding pairs for (bf16 /
-        // f16
-        // <-> f32).
-        Value input = truncFOp.getOperand();
-        Type inTy = getElementTypeOrSelf(input.getType());
-        Type outTy = getElementTypeOrSelf(extFOp.getType());
-        Type shortTy = getElementTypeOrSelf(truncFOp.getType());
-        if (isa<Float32Type>(inTy) && isa<Float32Type>(outTy) &&
-            (isa<Float16Type, BFloat16Type>(shortTy))) {
-          for (auto &use :
-               llvm::make_early_inc_range(extFOp.getResult().getUses())) {
-            use.set(input);
-          }
-          extFOp.erase();
-        }
+      if (!truncFOp)
+        return;
+      // Check whether the rounding pair's input and output data type are the
+      // same. Currently only consider to eliminate rounding pairs for (bf16 /
+      // f16 <-> f32).
+      Value input = truncFOp.getOperand();
+      Type inTy = getElementTypeOrSelf(input.getType());
+      Type outTy = getElementTypeOrSelf(extFOp.getType());
+      Type shortTy = getElementTypeOrSelf(truncFOp.getType());
+      if (isa<Float32Type>(inTy) && isa<Float32Type>(outTy) &&
+          (isa<Float16Type, BFloat16Type>(shortTy))) {
+        extFOp.replaceAllUsesWith(input);
+        extFOp.erase();
+        if (truncFOp.getResult().getUses().empty())
+          truncFOp.erase();
       }
     });
   }
