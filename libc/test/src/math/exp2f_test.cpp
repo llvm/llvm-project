@@ -11,7 +11,7 @@
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/errno/libc_errno.h"
 #include "src/math/exp2f.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 

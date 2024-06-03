@@ -18,7 +18,7 @@ namespace LIBC_NAMESPACE::testing {
 // This provides a test fixture (or base class for other test fixtures) that
 // asserts that each test does not leave the FPU state represented by `fenv_t`
 // (aka `FPState`) perturbed from its initial state.
-class FEnvSafeTest : public Test {
+class FEnvSafeTest : virtual public Test {
 public:
   void TearDown() override;
 

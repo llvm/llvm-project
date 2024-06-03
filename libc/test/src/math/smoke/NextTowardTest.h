@@ -16,14 +16,14 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 
 // TODO: Strengthen errno,exception checks and remove these assert macros
 // after new matchers/test fixtures are added
 #define ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, expected_exception)      \
   ASSERT_FP_EQ(result, expected);                                              \
-  ASSERT_FP_EXCEPTION(expected_exception);                                     \
+  ASSERT_FP_EXCEPTION_HAPPENED(expected_exception);                            \
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
 
 #define ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected)                          \

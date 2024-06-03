@@ -8,7 +8,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/sin.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 

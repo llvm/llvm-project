@@ -109,25 +109,6 @@ add_header_library(
 )
 
 add_unittest_framework_library(
-  LibcFPTestHelpers
-  SRCS
-    FEnvSafeTest.cpp
-    RoundingModeUtils.cpp
-  HDRS
-    FEnvSafeTest.h
-    FPMatcher.h
-    RoundingModeUtils.h
-  DEPENDS
-    LibcTest
-    libc.test.UnitTest.string_utils
-    libc.src.__support.CPP.array
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fpbits_str
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.rounding_mode
-)
-
-add_unittest_framework_library(
   LibcFPExceptionHelpers
   SRCS
     FPExceptMatcher.cpp
@@ -138,6 +119,51 @@ add_unittest_framework_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
     libc.hdr.types.fenv_t
+    libc.hdr.fenv_macros
+)
+
+add_header_library(
+  ErrnoSetterMatcher
+  HDRS
+    ErrnoSetterMatcher.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.StringUtil.error_to_string
+    libc.src.errno.errno
+)
+
+add_header_library(
+  ErrnoSafeTest
+  HDRS
+    ErrnoSafeTest.h
+  DEPENDS
+    libc.src.__support.CPP.utility
+    libc.src.errno.errno
+)
+
+add_unittest_framework_library(
+  LibcFPTestHelpers
+  SRCS
+    FEnvSafeTest.cpp
+    RoundingModeUtils.cpp
+  HDRS
+    FEnvSafeTest.h
+    FPMatcher.h
+    FPTest.h
+    RoundingModeUtils.h
+  DEPENDS
+    LibcTest
+    ErrnoSafeTest
+    ErrnoSetterMatcher
+    LibcFPExceptionHelpers
+    libc.test.UnitTest.string_utils
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.utility
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fpbits_str
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.rounding_mode
 )
 
 add_unittest_framework_library(
@@ -175,15 +201,4 @@ add_unittest_framework_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.stdio.scanf_core.core_structs
     libc.test.UnitTest.string_utils
-)
-
-add_header_library(
-  ErrnoSetterMatcher
-  HDRS
-    ErrnoSetterMatcher.h
-  DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.StringUtil.error_to_string
-    libc.src.errno.errno
 )

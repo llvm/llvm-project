@@ -12,14 +12,14 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/integer_literals.h"
 #include "test/UnitTest/FEnvSafeTest.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"
 
 #define TEST_SPECIAL(x, y, expected, expected_exception)                       \
   EXPECT_EQ(expected, f(&x, &y));                                              \
-  EXPECT_FP_EXCEPTION(expected_exception);                                     \
+  EXPECT_FP_EXCEPTION_HAPPENED(expected_exception);                            \
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
 
 #define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, 0)

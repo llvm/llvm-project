@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 
 #include "src/__support/CPP/bit.h"

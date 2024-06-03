@@ -12,7 +12,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
@@ -62,7 +62,7 @@ private:
     // all math functions using RoundToInteger test:
     // https://github.com/llvm/llvm-project/pull/88816
     if (expectError) {
-      ASSERT_FP_EXCEPTION(FE_INVALID);
+      ASSERT_FP_EXCEPTION_HAPPENED(FE_INVALID);
       ASSERT_MATH_ERRNO(EDOM);
     }
   }
