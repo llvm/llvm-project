@@ -469,6 +469,8 @@ body:             |
   ; NDD-NF-NEXT:   RET 0, $al
   ; NDD-NF-NEXT: {{  $}}
   ; NDD-NF-NEXT: bb.1:
+  ; NDD-NF-NEXT:   liveins: $eflags
+  ; NDD-NF-NEXT: {{  $}}
   ; NDD-NF-NEXT:   $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND]], 7, implicit $eflags
   ; NDD-NF-NEXT:   $eax = ADC32rr_ND $eax, $edi, implicit-def dead $eflags, implicit $eflags
   ; NDD-NF-NEXT:   RET 0, $al
@@ -560,17 +562,21 @@ body:             |
   ; NDD-NF-NEXT: {{  $}}
   ; NDD-NF-NEXT: bb.1:
   ; NDD-NF-NEXT:   successors: %bb.3(0x80000000)
+  ; NDD-NF-NEXT:   liveins: $eflags
   ; NDD-NF-NEXT: {{  $}}
   ; NDD-NF-NEXT:   $eax = IMUL32rr_NF_ND $eax, $edi
   ; NDD-NF-NEXT:   JMP_1 %bb.3
   ; NDD-NF-NEXT: {{  $}}
   ; NDD-NF-NEXT: bb.2:
   ; NDD-NF-NEXT:   successors: %bb.3(0x80000000)
+  ; NDD-NF-NEXT:   liveins: $eflags
   ; NDD-NF-NEXT: {{  $}}
   ; NDD-NF-NEXT:   $eax = IMUL32rr_NF $eax, $esi
   ; NDD-NF-NEXT:   JMP_1 %bb.3
   ; NDD-NF-NEXT: {{  $}}
   ; NDD-NF-NEXT: bb.3:
+  ; NDD-NF-NEXT:   liveins: $eflags
+  ; NDD-NF-NEXT: {{  $}}
   ; NDD-NF-NEXT:   $eax = CMOV32rr_ND $edi, [[SUB32rr_NF_ND]], 7, implicit $eflags
   ; NDD-NF-NEXT:   RET 0, $al
   bb.0:

@@ -343,6 +343,11 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
                 ->getOperandNo());
         ++NumNFsConvertedTo;
       }
+      // Update liveins for basic blocks in the path
+      for (auto BI = idf_begin(CopyIMBB), BE = idf_end(CopyDefIMBB); BI != BE;
+           ++BI)
+        if (*BI != CopyDefIMBB)
+          BI->addLiveIn(X86::EFLAGS);
     ProcessNextCopyI:
       CopyIIt = NCopyIIt;
     }
