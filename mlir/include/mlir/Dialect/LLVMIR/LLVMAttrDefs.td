@@ -385,7 +385,11 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint64_t">:$alignInBits,
-    OptionalArrayRefParameter<"DINodeAttr">:$elements
+    OptionalArrayRefParameter<"DINodeAttr">:$elements,
+    OptionalParameter<"DIExpressionAttr">:$dataLocation,
+    OptionalParameter<"DIExpressionAttr">:$rank,
+    OptionalParameter<"DIExpressionAttr">:$allocated,
+    OptionalParameter<"DIExpressionAttr">:$associated
   );
   let assemblyFormat = "`<` struct(params) `>`";
   let extraClassDeclaration = [{
@@ -1032,5 +1036,26 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
   let assemblyFormat = "`<` `[` (`]`) : ($features^ `]`)? `>`";
   let genVerifyDecl = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// UndefAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::UndefOp.
+def LLVM_UndefAttr : LLVM_Attr<"Undef", "undef">;
+
+//===----------------------------------------------------------------------===//
+// PoisonAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::PoisonOp.
+def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
+
+//===----------------------------------------------------------------------===//
+// ZeroAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::ZeroOp.
+def LLVM_ZeroAttr : LLVM_Attr<"Zero", "zero">;
 
 #endif // LLVMIR_ATTRDEFS

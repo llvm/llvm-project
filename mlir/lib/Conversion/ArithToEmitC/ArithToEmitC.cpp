@@ -40,6 +40,25 @@ public:
   }
 };
 
+/// Get the signed or unsigned type corresponding to \p ty.
+Type adaptIntegralTypeSignedness(Type ty, bool needsUnsigned) {
+  if (isa<IntegerType>(ty)) {
+    if (ty.isUnsignedInteger() != needsUnsigned) {
+      auto signedness = needsUnsigned
+                            ? IntegerType::SignednessSemantics::Unsigned
+                            : IntegerType::SignednessSemantics::Signed;
+      return IntegerType::get(ty.getContext(), ty.getIntOrFloatBitWidth(),
+                              signedness);
+    }
+  }
+  return ty;
+}
+
+/// Insert a cast operation to type \p ty if \p val does not have this type.
+Value adaptValueType(Value val, ConversionPatternRewriter &rewriter, Type ty) {
+  return rewriter.createOrFold<emitc::CastOp>(val.getLoc(), ty, val);
+}
+
 class CmpIOpConversion : public OpConversionPattern<arith::CmpIOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -265,6 +284,46 @@ public:
   }
 };
 
+template <typename ArithOp, typename EmitCOp>
+class BitwiseOpConversion : public OpConversionPattern<ArithOp> {
+public:
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type type = this->getTypeConverter()->convertType(op.getType());
+    if (!isa_and_nonnull<IntegerType>(type)) {
+      return rewriter.notifyMatchFailure(
+          op,
+          "expected integer type, vector/tensor support not yet implemented");
+    }
+
+    // Bitwise ops can be performed directly on booleans
+    if (type.isInteger(1)) {
+      rewriter.replaceOpWithNewOp<EmitCOp>(op, type, adaptor.getLhs(),
+                                           adaptor.getRhs());
+      return success();
+    }
+
+    // Bitwise ops are defined by the C standard on unsigned operands.
+    Type arithmeticType =
+        adaptIntegralTypeSignedness(type, /*needsUnsigned=*/true);
+
+    Value lhs = adaptValueType(adaptor.getLhs(), rewriter, arithmeticType);
+    Value rhs = adaptValueType(adaptor.getRhs(), rewriter, arithmeticType);
+
+    Value arithmeticResult = rewriter.template create<EmitCOp>(
+        op.getLoc(), arithmeticType, lhs, rhs);
+
+    Value result = adaptValueType(arithmeticResult, rewriter, type);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 class SelectOpConversion : public OpConversionPattern<arith::SelectOp> {
 public:
   using OpConversionPattern<arith::SelectOp>::OpConversionPattern;
@@ -394,11 +453,16 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ArithConstantOpConversionPattern,
     ArithOpConversion<arith::AddFOp, emitc::AddOp>,
     ArithOpConversion<arith::DivFOp, emitc::DivOp>,
+    ArithOpConversion<arith::DivSIOp, emitc::DivOp>,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,
+    ArithOpConversion<arith::RemSIOp, emitc::RemOp>,
     ArithOpConversion<arith::SubFOp, emitc::SubOp>,
     IntegerOpConversion<arith::AddIOp, emitc::AddOp>,
     IntegerOpConversion<arith::MulIOp, emitc::MulOp>,
     IntegerOpConversion<arith::SubIOp, emitc::SubOp>,
+    BitwiseOpConversion<arith::AndIOp, emitc::BitwiseAndOp>,
+    BitwiseOpConversion<arith::OrIOp, emitc::BitwiseOrOp>,
+    BitwiseOpConversion<arith::XOrIOp, emitc::BitwiseXorOp>,
     CmpIOpConversion,
     SelectOpConversion,
     // Truncation is guaranteed for unsigned types.

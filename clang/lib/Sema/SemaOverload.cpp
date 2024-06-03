@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DependenceFlags.h"
@@ -1481,7 +1482,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   }
 
   if (OldMethod && NewMethod && !OldMethod->isStatic() &&
-      !OldMethod->isStatic()) {
+      !NewMethod->isStatic()) {
     bool HaveCorrespondingObjectParameters = [&](const CXXMethodDecl *Old,
                                                  const CXXMethodDecl *New) {
       auto NewObjectType = New->getFunctionObjectParameterReferenceType();
@@ -10366,7 +10367,7 @@ static bool sameFunctionParameterTypeLists(Sema &S,
   FunctionDecl *Fn1 = Cand1.Function;
   FunctionDecl *Fn2 = Cand2.Function;
 
-  if (Fn1->isVariadic() != Fn1->isVariadic())
+  if (Fn1->isVariadic() != Fn2->isVariadic())
     return false;
 
   if (!S.FunctionNonObjectParamTypesAreEqual(
@@ -11301,8 +11302,16 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   Expr *FromExpr = Conv.Bad.FromExpr;
   QualType FromTy = Conv.Bad.getFromType();
   QualType ToTy = Conv.Bad.getToType();
-  SourceRange ToParamRange =
-      !isObjectArgument ? Fn->getParamDecl(I)->getSourceRange() : SourceRange();
+  SourceRange ToParamRange;
+
+  // FIXME: In presence of parameter packs we can't determine parameter range
+  // reliably, as we don't have access to instantiation.
+  bool HasParamPack =
+      llvm::any_of(Fn->parameters().take_front(I), [](const ParmVarDecl *Parm) {
+        return Parm->isParameterPack();
+      });
+  if (!isObjectArgument && !HasParamPack)
+    ToParamRange = Fn->getParamDecl(I)->getSourceRange();
 
   if (FromTy == S.Context.OverloadTy) {
     assert(FromExpr && "overload set argument came from implicit argument?");
@@ -14354,7 +14363,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     if (Fn.isInvalid())
       return ExprError();
     return CXXOperatorCallExpr::Create(Context, Op, Fn.get(), ArgsArray,
-                                       Context.DependentTy, VK, OpLoc,
+                                       Context.DependentTy, VK_PRValue, OpLoc,
                                        CurFPFeatureOverrides());
   }
 

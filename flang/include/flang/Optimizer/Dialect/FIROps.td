@@ -62,6 +62,12 @@ class fir_SimpleOneResultOp<string mnemonic, list<Trait> traits = []> :
   let builders = [fir_OneResultOpBuilder];
 }
 
+// Whether a type is a BaseBoxType or a reference to a BaseBoxType.
+def IsBoxAddressOrValueTypePred
+        : CPred<"::fir::isBoxAddressOrValue($_self)">;
+def fir_BoxAddressOrValueType : Type<IsBoxAddressOrValueTypePred,
+    "fir.box or fir.class type or reference">;
+
 //===----------------------------------------------------------------------===//
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
@@ -857,6 +863,43 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 }
 
+def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
+  [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "create an assumed-rank box given another assumed-rank box";
+
+  let description = [{
+    Limited version of fir.rebox for assumed-rank. Only the lower bounds,
+    attribute, and element type may change.
+
+    The input may be a box or a reference to a box, in which case the operation
+    reads the incoming reference.
+    Since a fir.shift cannot be built without knowing the rank statically,
+    lower bound changes are encoded via a LowerBoundModifierAttribute.
+    Attribute and element type change are encoded in the result type.
+    Changing the element type is only allowed if the input type is a derived
+    type that extends the output element type.
+
+    Example:
+    ```
+      fir.rebox_assumed_rank %1 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+    ```    
+  }];
+
+  let arguments = (ins
+    AnyRefOrBoxType:$box,
+    fir_LowerBoundModifierAttribute:$lbs_modifier
+  );
+
+  let results = (outs BoxOrClassType);
+
+  let assemblyFormat = [{
+    $box `lbs` $lbs_modifier
+        attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def fir_EmboxCharOp : fir_Op<"emboxchar", [NoMemoryEffect]> {
   let summary = "boxes a given CHARACTER reference and its LEN parameter";
 
@@ -1128,6 +1171,23 @@ def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
+def fir_IsAssumedSizeOp : fir_SimpleOp<"is_assumed_size", [NoMemoryEffect]> {
+  let summary = "detect if a boxed value is an assumed-size array";
+
+  let description = [{
+    Fir box SSA values may describe assumed-size arrays. This operation
+    allows detecting this, even for assumed-rank box.
+
+    ```
+      %a = fir.is_assumed_size %b : (!fir.box<!fir.array<*:f64>>) -> i1
+    ```
+  }];
+
+  let arguments = (ins BoxOrClassType:$val);
+
+  let results = (outs BoolLike);
+}
+
 def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoMemoryEffect]> {
   let summary = "is the boxed value a POINTER?";
 
@@ -1168,7 +1228,8 @@ def fir_BoxProcHostOp : fir_SimpleOp<"boxproc_host", [NoMemoryEffect]> {
   let results = (outs fir_ReferenceType);
 }
 
-def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoMemoryEffect]> {
+def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank",
+  [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "return the number of dimensions for the boxed value";
 
   let description = [{
@@ -1185,7 +1246,7 @@ def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoMemoryEffect]> {
     descriptor may be either an array or a scalar, so the value is nonnegative.
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins fir_BoxAddressOrValueType:$box);
 
   let results = (outs AnyIntegerType);
 }
@@ -2332,7 +2393,8 @@ def fir_CallOp : fir_Op<"call",
     OptionalAttr<SymbolRefAttr>:$callee,
     Variadic<AnyType>:$args,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::mlir::arith::FastMathFlags::none">:$fastmath,
+    UnitAttr:$is_bind_c
   );
   let results = (outs Variadic<AnyType>);
 

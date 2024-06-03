@@ -13327,22 +13327,22 @@ define <8 x i16> @mgather_shuffle_rotate(ptr %base) {
 define <8 x i16> @mgather_shuffle_vrgather(ptr %base) {
 ; RV32-LABEL: mgather_shuffle_vrgather:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    lui a1, %hi(.LCPI119_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI119_0)
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v9, (a0)
-; RV32-NEXT:    lui a0, %hi(.LCPI119_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI119_0)
+; RV32-NEXT:    vle16.v v9, (a1)
 ; RV32-NEXT:    vle16.v v10, (a0)
-; RV32-NEXT:    vrgather.vv v8, v9, v10
+; RV32-NEXT:    vrgather.vv v8, v10, v9
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_shuffle_vrgather:
 ; RV64V:       # %bb.0:
+; RV64V-NEXT:    lui a1, %hi(.LCPI119_0)
+; RV64V-NEXT:    addi a1, a1, %lo(.LCPI119_0)
 ; RV64V-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64V-NEXT:    vle16.v v9, (a0)
-; RV64V-NEXT:    lui a0, %hi(.LCPI119_0)
-; RV64V-NEXT:    addi a0, a0, %lo(.LCPI119_0)
+; RV64V-NEXT:    vle16.v v9, (a1)
 ; RV64V-NEXT:    vle16.v v10, (a0)
-; RV64V-NEXT:    vrgather.vv v8, v9, v10
+; RV64V-NEXT:    vrgather.vv v8, v10, v9
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_shuffle_vrgather:

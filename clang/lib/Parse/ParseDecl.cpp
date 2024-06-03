@@ -467,6 +467,11 @@ bool Parser::ParseAttributeArgumentList(
       break;
     }
 
+    if (Actions.DiagnoseUnexpandedParameterPack(Expr.get())) {
+      SawError = true;
+      break;
+    }
+
     Exprs.push_back(Expr.get());
 
     if (Tok.isNot(tok::comma))

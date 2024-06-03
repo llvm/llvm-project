@@ -5692,8 +5692,15 @@ QualType getApproximateType(const Expr *E) {
     }
   }
   if (const auto *UO = llvm::dyn_cast<UnaryOperator>(E)) {
-    if (UO->getOpcode() == UnaryOperatorKind::UO_Deref)
-      return UO->getSubExpr()->getType()->getPointeeType();
+    if (UO->getOpcode() == UnaryOperatorKind::UO_Deref) {
+      // We recurse into the subexpression because it could be of dependent
+      // type.
+      if (auto Pointee = getApproximateType(UO->getSubExpr())->getPointeeType();
+          !Pointee.isNull())
+        return Pointee;
+      // Our caller expects a non-null result, even though the SubType is
+      // supposed to have a pointee. Fall through to Unresolved anyway.
+    }
   }
   return Unresolved;
 }

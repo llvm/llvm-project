@@ -79,7 +79,7 @@ nested_init_list<int>::B nil {1, 2};
 using NIL = decltype(nil);
 using NIL = nested_init_list<int>::B<int>;
 
-// expected-error@+1 {{no viable constructor or deduction guide for deduction of template arguments of 'concept_fail'}}
+// expected-error@+1 {{no viable constructor or deduction guide for deduction of template arguments of 'nested_init_list<int>::concept_fail'}}
 nested_init_list<int>::concept_fail nil_invalid{1, ""};
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate template ignored: substitution failure [with F = const char *]: constraints not satisfied for class template 'concept_fail' [with F = const char *]}}
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 1 argument, but 2 were provided}}
