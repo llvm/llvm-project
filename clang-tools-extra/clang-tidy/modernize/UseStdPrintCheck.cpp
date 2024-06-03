@@ -20,11 +20,6 @@ namespace clang::tidy::modernize {
 
 namespace {
 AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
-AST_MATCHER(QualType, isSimpleChar) {
-  const auto ActualType = Node.getTypePtr();
-  return ActualType->isSpecificBuiltinType(BuiltinType::Char_S) ||
-         ActualType->isSpecificBuiltinType(BuiltinType::Char_U);
-}
 } // namespace
 
 UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
@@ -100,7 +95,8 @@ unusedReturnValue(clang::ast_matchers::StatementMatcher MatchedCallExpr) {
 }
 
 void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
-  auto CharPointerType = hasType(pointerType(pointee(isSimpleChar())));
+  auto CharPointerType =
+      hasType(pointerType(pointee(matchers::isSimpleChar())));
   if (!PrintfLikeFunctions.empty())
     Finder->addMatcher(
         unusedReturnValue(
