@@ -303,7 +303,12 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
 
   // Do not inline expressions used by other expressions, as any desired
   // expression folding was taken care of by transformations.
-  return !user->getParentOfType<ExpressionOp>();
+  if (user->getParentOfType<ExpressionOp>())
+    return false;
+
+  // Do not inline expressions used by ops with the CExpression trait. If this
+  // was intended, the user could have been merged into the expression op.
+  return !user->hasTrait<OpTrait::emitc::CExpression>();
 }
 
 static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
@@ -1339,17 +1344,7 @@ LogicalResult CppEmitter::emitOperand(Value value) {
 
   auto expressionOp = dyn_cast_if_present<ExpressionOp>(value.getDefiningOp());
   if (expressionOp && shouldBeInlined(expressionOp)) {
-    Operation *user = *expressionOp->getUsers().begin();
-    const bool safeToSkipParentheses =
-        isa<emitc::AssignOp, emitc::CallOp, emitc::CallOpaqueOp, emitc::ForOp,
-            emitc::IfOp, emitc::ReturnOp, func::CallOp, func::ReturnOp>(user);
-    if (!safeToSkipParentheses)
-      os << "(";
-    if (failed(emitExpression(expressionOp)))
-      return failure();
-    if (!safeToSkipParentheses)
-      os << ")";
-    return success();
+    return emitExpression(expressionOp);
   }
 
   auto literalOp = dyn_cast_if_present<LiteralOp>(value.getDefiningOp());
