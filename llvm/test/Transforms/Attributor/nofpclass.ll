@@ -2681,6 +2681,15 @@ define <vscale x 4 x float> @scalable_splat_zero() {
   ret <vscale x 4 x float> zeroinitializer
 }
 
+; Verify we do not derive 'nofpclass(inf zero sub norm)' for the argument __x.
+; See https://github.com/llvm/llvm-project/issues/78507
+
+define double @call_abs(double noundef %__x) {
+entry:
+  %abs = tail call double @llvm.fabs.f64(double %__x)
+  ret double %abs
+}
+
 declare i64 @_Z13get_global_idj(i32 noundef)
 
 attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
