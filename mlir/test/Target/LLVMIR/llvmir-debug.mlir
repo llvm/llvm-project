@@ -562,5 +562,5 @@ llvm.func @subranges(%arg: !llvm.ptr) {
 
 // CHECK: !DICompositeType(tag: DW_TAG_array_type, name: "var_elements"{{.*}}elements: ![[ELEMENTS2:[0-9]+]])
 // CHECK: ![[ELEMENTS2]] = !{![[ELEMENT2:[0-9]+]]}
-// CHECK: ![[ELEMENT2]] = !DISubrange(count: ![[SR2:[0-9]+]], stride: ![[GV:[0-9]+]])
-// CHECK: ![[SR2]] = !DILocalVariable(name: "size"{{.*}})
+// CHECK: ![[ELEMENT2]] = !DISubrange(count: ![[LV:[0-9]+]], stride: ![[GV:[0-9]+]])
+// CHECK: ![[LV]] = !DILocalVariable(name: "size"{{.*}})

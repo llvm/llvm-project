@@ -234,8 +234,8 @@ DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {
     }
     return nullptr;
   };
-  mlir::Attribute count = getAttrOrNull(node->getCount());
-  mlir::Attribute upperBound = getAttrOrNull(node->getUpperBound());
+  Attribute count = getAttrOrNull(node->getCount());
+  Attribute upperBound = getAttrOrNull(node->getUpperBound());
   // Either count or the upper bound needs to be present. Otherwise, the
   // metadata is invalid. The conversion might fail due to unsupported DI nodes.
   if (!count && !upperBound)
