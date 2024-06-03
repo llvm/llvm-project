@@ -201,6 +201,12 @@ foreach Index = 0...3 in {
   def IDX#Index : SIReg<"idx"#Index, Index>;
 }
 
+def STG_SRCA : SIReg<"stg_srcA", 0>;
+def STG_SRCB : SIReg<"stg_srcB", 1>;
+def STG_SRCC : SIReg<"stg_srcC", 2>;
+def STG_DSTA : SIReg<"stg_dstA", 0>;
+def STG_DSTB : SIReg<"stg_dstB", 1>;
+
 // Pseudo-register to represent the program-counter DWARF register.
 def PC_REG : SIReg<"pc", 0>, DwarfRegNum<[16, 16]> {
   // There is no physical register corresponding to a "program counter", but
@@ -480,6 +486,12 @@ def IDX_REG_32 : SIRegisterClass<"AMDGPU", [i32], 32,
   let isAllocatable = 0;
   let BaseClassOrder = 10000;
   let DecoderMethod = "decodeOperand_IDX_REG";
+}
+
+// Staging pseudo-registers for representing dynamically indexed VGPRs
+def STAGING_REG : SIRegisterClass<"AMDGPU", [i32], 32, (add STG_SRCA, STG_SRCB, STG_SRCC, STG_DSTA, STG_DSTB)> {
+  let isAllocatable = 0;
+  let BaseClassOrder = 10000;
 }
 
 // Trap handler TMP 32-bit registers
@@ -1154,6 +1166,15 @@ let GlobalPriority = true in {
 defm AV_512 : AVRegClass<16, VReg_512.RegTypes, (add VGPR_512), (add AGPR_512)>;
 defm AV_1024 : AVRegClass<32, VReg_1024.RegTypes, (add VGPR_1024), (add AGPR_1024)>;
 }
+
+// Register class for the dst of V_LOAD_IDX and for the src of V_STORE_IDX
+// Can contain physical staging pseudo-registers, or VGPRs
+// It is not allocatable because we expect instructions using this Register
+// Class to replace the VGPRs with staging registers before RA.
+def STAGING_OR_VGPR : SIRegisterClass<"AMDGPU", [i32], 32, (add STAGING_REG, VGPR_32)> {
+  let isAllocatable = 0;
+}
+
 
 //===----------------------------------------------------------------------===//
 //  Register operands
