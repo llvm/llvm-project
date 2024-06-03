@@ -95,14 +95,32 @@ public:
   }
 };
 
+// NB: This class doesn't use the override keyword to avoid
+// -Winconsistent-missing-override warnings from the compiler. The
+// inconsistency comes from the overriding definitions in the MOCK_*** macros.
 class MockTarget : public Target {
 public:
   MockTarget(Debugger &debugger, const ArchSpec &target_arch,
              const lldb::PlatformSP &platform_sp)
       : Target(debugger, target_arch, platform_sp, true) {}
 
-  MOCK_METHOD6(ReadMemory, size_t(const Address &, void *, size_t, Status &,
-                                  bool, lldb::addr_t *));
+  MOCK_METHOD2(ReadMemory,
+               llvm::Expected<std::vector<uint8_t>>(lldb::addr_t addr,
+                                                    size_t size));
+
+  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                    Status &error, bool force_live_memory = false,
+                    lldb::addr_t *load_addr_ptr = nullptr) /*override*/ {
+    auto expected_memory = this->ReadMemory(addr.GetOffset(), dst_len);
+    if (!expected_memory) {
+      llvm::consumeError(expected_memory.takeError());
+      return 0;
+    }
+    const size_t bytes_read = expected_memory->size();
+    assert(bytes_read <= dst_len);
+    std::memcpy(dst, expected_memory->data(), bytes_read);
+    return bytes_read;
+  }
 };
 
 TEST(DWARFExpression, DW_OP_pick) {
@@ -780,7 +798,7 @@ Sections:
 }
 
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
-  using ::testing::_;
+  using ::testing::ByMove;
   using ::testing::ElementsAre;
   using ::testing::Return;
 
@@ -796,21 +814,10 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
   ASSERT_TRUE(target_sp);
   ASSERT_TRUE(target_sp->GetArchitecture().IsValid());
 
-  EXPECT_CALL(*target_sp, ReadMemory(Address(0x40), _, 1, _, _, _))
-      .WillOnce([&](const Address &addr, void *dst, size_t dst_len,
-                    Status &error, bool force_live_memory = false,
-                    lldb::addr_t *load_addr_ptr = nullptr) {
-        ((uint8_t *)dst)[0] = 0x11;
-        return 1;
-      });
-
-  EXPECT_CALL(*target_sp, ReadMemory(Address(0x50), _, 1, _, _, _))
-      .WillOnce([&](const Address &addr, void *dst, size_t dst_len,
-                    Status &error, bool force_live_memory = false,
-                    lldb::addr_t *load_addr_ptr = nullptr) {
-        ((uint8_t *)dst)[0] = 0x22;
-        return 1;
-      });
+  EXPECT_CALL(*target_sp, ReadMemory(0x40, 1))
+      .WillOnce(Return(ByMove(std::vector<uint8_t>{0x11})));
+  EXPECT_CALL(*target_sp, ReadMemory(0x50, 1))
+      .WillOnce(Return(ByMove(std::vector<uint8_t>{0x22})));
 
   ExecutionContext exe_ctx(static_cast<lldb::TargetSP>(target_sp), false);
 
