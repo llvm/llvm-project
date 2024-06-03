@@ -258,7 +258,6 @@ struct CommonConfig {
   bool StripNonAlloc = false;
   bool StripSections = false;
   bool StripUnneeded = false;
-  bool VerifyNoteSections = true;
   bool Weaken = false;
   bool DecompressDebugSections = false;
 

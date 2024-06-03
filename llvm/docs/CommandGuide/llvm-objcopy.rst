@@ -512,6 +512,12 @@ them.
  specified format. See `SUPPORTED FORMATS`_ for a list of valid ``<format>``
  values.
 
+.. option:: --verify-note-sections, --no-verify-note-sections
+
+ When adding note sections, verify if the section format is valid. Defaults to
+ ``--verify-note-sections``
+
+
 .. option:: --weaken-symbol <symbol>, -W
 
  Mark global symbols named ``<symbol>`` as weak symbols in the output. Can

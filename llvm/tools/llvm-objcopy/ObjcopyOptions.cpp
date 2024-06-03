@@ -949,8 +949,12 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                              ? DiscardType::All
                              : DiscardType::Locals;
   }
-  Config.VerifyNoteSections =
-      !InputArgs.hasArg(OBJCOPY_no_verify_note_sections);
+
+  const bool ShouldVerifyNoteSectionsByDefault = true;
+  ELFConfig.VerifyNoteSections = InputArgs.hasFlag(
+      OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections,
+      ShouldVerifyNoteSectionsByDefault);
+
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
   ELFConfig.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   MachOConfig.KeepUndefined = InputArgs.hasArg(OBJCOPY_keep_undefined);

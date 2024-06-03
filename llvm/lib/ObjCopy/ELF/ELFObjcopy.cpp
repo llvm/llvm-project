@@ -653,7 +653,7 @@ static Error verifyNoteSection(StringRef Name, endianness Endianness,
   uint32_t NameSizeValue = *reinterpret_cast<const uint32_t *>(NameSize.data());
   uint32_t DescSizeValue = *reinterpret_cast<const uint32_t *>(DescSize.data());
 
-  if (Endianness != llvm::endianness::native) {
+  if (Endianness != endianness::native) {
     NameSizeValue = byteswap(NameSizeValue);
     DescSizeValue = byteswap(DescSizeValue);
   }
@@ -737,7 +737,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
           Obj.addSection<OwnedDataSection>(Name, Data);
       if (Name.starts_with(".note") && Name != ".note.GNU-stack") {
         NewSection.Type = SHT_NOTE;
-        if (Config.VerifyNoteSections)
+        if (ELFConfig.VerifyNoteSections)
           return verifyNoteSection(Name, E, Data);
       }
       return Error::success();
