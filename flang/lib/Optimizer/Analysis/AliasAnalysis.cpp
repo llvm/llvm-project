@@ -28,16 +28,6 @@ using namespace mlir;
 // AliasAnalysis: alias
 //===----------------------------------------------------------------------===//
 
-static bool isDummyArgument(mlir::Value v) {
-  auto blockArg{mlir::dyn_cast<mlir::BlockArgument>(v)};
-  if (!blockArg)
-    return false;
-
-  auto *owner{blockArg.getOwner()};
-  return owner->isEntryBlock() &&
-         mlir::isa<mlir::FunctionOpInterface>(owner->getParentOp());
-}
-
 /// Temporary function to skip through all the no op operations
 /// TODO: Generalize support of fir.load
 static mlir::Value getOriginalDef(mlir::Value v) {
@@ -85,7 +75,7 @@ bool AliasAnalysis::Source::isTargetOrPointer() const {
 
 bool AliasAnalysis::Source::isDummyArgument() const {
   if (auto v = origin.u.dyn_cast<mlir::Value>()) {
-    return ::isDummyArgument(v);
+    return fir::isDummyArgument(v);
   }
   return false;
 }
