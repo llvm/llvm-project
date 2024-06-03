@@ -1049,6 +1049,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DECL_UNRESOLVED_USING_VALUE);
   RECORD(DECL_UNRESOLVED_USING_TYPENAME);
   RECORD(DECL_LINKAGE_SPEC);
+  RECORD(DECL_EXPORT);
   RECORD(DECL_CXX_RECORD);
   RECORD(DECL_CXX_METHOD);
   RECORD(DECL_CXX_CONSTRUCTOR);
@@ -3204,9 +3205,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
       }
 
       // Sort by diag::kind for deterministic output.
-      llvm::sort(Mappings, [](const auto &LHS, const auto &RHS) {
-        return LHS.first < RHS.first;
-      });
+      llvm::sort(Mappings, llvm::less_first());
 
       for (const auto &I : Mappings) {
         Record.push_back(I.first);
@@ -5037,6 +5036,14 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
         continue;
     }
 
+    // If we're writing C++ named modules, don't emit declarations which are
+    // not from modules by default. They may be built in declarations (be
+    // handled above) or implcit declarations (see the implementation of
+    // `Sema::Initialize()` for example).
+    if (isWritingStdCXXNamedModules() && !D->getOwningModule() &&
+        D->isImplicit())
+      continue;
+
     GetDeclRef(D);
   }
 
@@ -6197,8 +6204,9 @@ bool ASTWriter::wasDeclEmitted(const Decl *D) const {
     return true;
 
   bool Emitted = DeclIDs.contains(D);
-  assert((Emitted || GeneratingReducedBMI) &&
-         "The declaration can only be omitted in reduced BMI.");
+  assert((Emitted || (!D->getOwningModule() && isWritingStdCXXNamedModules()) ||
+          GeneratingReducedBMI) &&
+         "The declaration within modules can only be omitted in reduced BMI.");
   return Emitted;
 }
 
@@ -7825,7 +7833,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::If: {
     const auto *IC = cast<OpenACCIfClause>(C);
     writeSourceLocation(IC->getLParenLoc());
-    writeStmtRef(IC->getConditionExpr());
+    AddStmt(const_cast<Expr*>(IC->getConditionExpr()));
     return;
   }
   case OpenACCClauseKind::Self: {
@@ -7833,7 +7841,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(SC->getLParenLoc());
     writeBool(SC->hasConditionExpr());
     if (SC->hasConditionExpr())
-      writeStmtRef(SC->getConditionExpr());
+      AddStmt(const_cast<Expr*>(SC->getConditionExpr()));
     return;
   }
   case OpenACCClauseKind::NumGangs: {
@@ -7847,13 +7855,13 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::NumWorkers: {
     const auto *NWC = cast<OpenACCNumWorkersClause>(C);
     writeSourceLocation(NWC->getLParenLoc());
-    writeStmtRef(NWC->getIntExpr());
+    AddStmt(const_cast<Expr*>(NWC->getIntExpr()));
     return;
   }
   case OpenACCClauseKind::VectorLength: {
     const auto *NWC = cast<OpenACCVectorLengthClause>(C);
     writeSourceLocation(NWC->getLParenLoc());
-    writeStmtRef(NWC->getIntExpr());
+    AddStmt(const_cast<Expr*>(NWC->getIntExpr()));
     return;
   }
   case OpenACCClauseKind::Private: {
@@ -7932,15 +7940,15 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(AC->getLParenLoc());
     writeBool(AC->hasIntExpr());
     if (AC->hasIntExpr())
-      writeStmtRef(AC->getIntExpr());
+      AddStmt(const_cast<Expr*>(AC->getIntExpr()));
     return;
   }
   case OpenACCClauseKind::Wait: {
     const auto *WC = cast<OpenACCWaitClause>(C);
     writeSourceLocation(WC->getLParenLoc());
     writeBool(WC->getDevNumExpr());
-    if (const Expr *DNE = WC->getDevNumExpr())
-      writeStmtRef(DNE);
+    if (Expr *DNE = WC->getDevNumExpr())
+      AddStmt(DNE);
     writeSourceLocation(WC->getQueuesLoc());
 
     writeOpenACCIntExprList(WC->getQueueIdExprs());

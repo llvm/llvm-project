@@ -1,5 +1,5 @@
-# Check that functions listed in -function-order list take precedence over
-# lite mode function filtering.
+## Check that functions listed in -function-order list take precedence over
+## lite mode function filtering.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata

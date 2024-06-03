@@ -2488,6 +2488,8 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FMINIMUM:
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
+    case ISD::FMAXNUM_IEEE:
+    case ISD::FMINNUM_IEEE:
     case ISD::FMUL:
     case ISD::FPOW:
     case ISD::FREM:

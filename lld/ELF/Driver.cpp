@@ -466,6 +466,10 @@ static void checkOptions() {
       error("-z bti-report only supported on AArch64");
     if (config->zPauthReport != "none")
       error("-z pauth-report only supported on AArch64");
+    if (config->zGcsReport != "none")
+      error("-z gcs-report only supported on AArch64");
+    if (config->zGcs != GcsPolicy::Implicit)
+      error("-z gcs only supported on AArch64");
   }
 
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
@@ -555,6 +559,25 @@ static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
       else
         error("unknown -z start-stop-visibility= value: " +
               StringRef(kv.second));
+    }
+  }
+  return ret;
+}
+
+static GcsPolicy getZGcs(opt::InputArgList &args) {
+  GcsPolicy ret = GcsPolicy::Implicit;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "gcs") {
+      arg->claim();
+      if (kv.second == "implicit")
+        ret = GcsPolicy::Implicit;
+      else if (kv.second == "never")
+        ret = GcsPolicy::Never;
+      else if (kv.second == "always")
+        ret = GcsPolicy::Always;
+      else
+        error("unknown -z gcs= value: " + kv.second);
     }
   }
   return ret;
@@ -1438,6 +1461,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   config->zForceBti = hasZOption(args, "force-bti");
   config->zForceIbt = hasZOption(args, "force-ibt");
+  config->zGcs = getZGcs(args);
   config->zGlobal = hasZOption(args, "global");
   config->zGnustack = getZGnuStack(args);
   config->zHazardplt = hasZOption(args, "hazardplt");
@@ -1510,6 +1534,7 @@ static void readConfigs(opt::InputArgList &args) {
 
   auto reports = {std::make_pair("bti-report", &config->zBtiReport),
                   std::make_pair("cet-report", &config->zCetReport),
+                  std::make_pair("gcs-report", &config->zGcsReport),
                   std::make_pair("pauth-report", &config->zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
@@ -2678,6 +2703,11 @@ static void readSecurityNotes() {
                       "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
 
     checkAndReportMissingFeature(
+        config->zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
+        toString(f) + ": -z gcs-report: file does not have "
+                      "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
+
+    checkAndReportMissingFeature(
         config->zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
         toString(f) + ": -z cet-report: file does not have "
                       "GNU_PROPERTY_X86_FEATURE_1_IBT property");
@@ -2729,6 +2759,12 @@ static void readSecurityNotes() {
   // Force enable Shadow Stack.
   if (config->zShstk)
     config->andFeatures |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
+
+  // Force enable/disable GCS
+  if (config->zGcs == GcsPolicy::Always)
+    config->andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+  else if (config->zGcs == GcsPolicy::Never)
+    config->andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {

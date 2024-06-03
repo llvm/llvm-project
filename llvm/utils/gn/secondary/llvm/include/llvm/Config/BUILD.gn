@@ -10,7 +10,6 @@ import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/curl/enable.gni")
 import("//llvm/utils/gn/build/libs/edit/enable.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
-import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
 import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
@@ -294,12 +293,6 @@ write_cmake_config("config") {
     values += [ "HAVE_LIBEDIT=" ]
   }
 
-  if (llvm_enable_terminfo) {
-    values += [ "LLVM_ENABLE_TERMINFO=1" ]
-  } else {
-    values += [ "LLVM_ENABLE_TERMINFO=" ]
-  }
-
   if (llvm_enable_libxml2) {
     values += [ "LLVM_ENABLE_LIBXML2=1" ]
   } else {
@@ -325,6 +318,7 @@ write_cmake_config("llvm-config") {
     "LLVM_ENABLE_ZSTD=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
+    "LLVM_HAS_LOGF128=",
     "LLVM_HAVE_TFLITE=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",

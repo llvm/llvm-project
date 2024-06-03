@@ -135,6 +135,11 @@ static cl::opt<unsigned>
                                "(instructions per cycle)"),
                       cl::cat(ToolOptions), cl::init(0));
 
+static cl::opt<unsigned>
+    CallLatency("call-latency", cl::Hidden,
+                cl::desc("Number of cycles to assume for a call instruction"),
+                cl::cat(ToolOptions), cl::init(100U));
+
 enum class SkipType { NONE, LACK_SCHED, PARSE_FAILURE, ANY_FAILURE };
 
 static cl::opt<enum SkipType> SkipUnsupportedInstructions(
@@ -568,7 +573,7 @@ int main(int argc, char **argv) {
   }
 
   // Create an instruction builder.
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, CallLatency);
 
   // Create a context to control ownership of the pipeline hardware.
   mca::Context MCA(*MRI, *STI);

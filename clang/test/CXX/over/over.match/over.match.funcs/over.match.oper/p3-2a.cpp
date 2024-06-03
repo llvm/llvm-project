@@ -315,7 +315,7 @@ int a1 = 0 == A<1>(); // Should not find 2 as the requires clause does not match
 
 namespace static_operators {
 // Verify no crash.
-struct X { 
+struct X {
   bool operator ==(X const&); // expected-note {{ambiguity is between a regular call}}
                               // expected-note@-1 {{mark 'operator==' as const or add a matching 'operator!=' to resolve the ambiguity}}
   static bool operator !=(X const&, X const&); // expected-error {{overloaded 'operator!=' cannot be a static member function}}
@@ -474,7 +474,7 @@ namespace ns {
 template <class T> struct A {};
 template <class T> struct B : A<T> {};
 
-template <class T> bool operator==(B<T>, A<T>); // expected-note {{candidate template ignored: could not match 'B' against 'A'}}
+template <class T> bool operator==(B<T>, A<T>); // expected-note {{candidate template ignored: could not match 'B' against 'ns::A'}}
 template <class T> bool operator!=(B<T>, A<T>);
 }
 

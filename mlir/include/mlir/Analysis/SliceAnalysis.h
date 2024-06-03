@@ -223,11 +223,6 @@ SetVector<Operation *>
 getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions = {},
          const ForwardSliceOptions &forwardSliceOptions = {});
 
-/// Multi-root DAG topological sort.
-/// Performs a topological sort of the Operation in the `toSort` SetVector.
-/// Returns a topologically sorted SetVector.
-SetVector<Operation *> topologicalSort(const SetVector<Operation *> &toSort);
-
 /// Utility to match a generic reduction given a list of iteration-carried
 /// arguments, `iterCarriedArgs` and the position of the potential reduction
 /// argument within the list, `redPos`. If a reduction is matched, returns the

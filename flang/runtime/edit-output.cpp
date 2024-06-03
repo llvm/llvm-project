@@ -263,7 +263,6 @@ template <int KIND>
 RT_API_ATTRS decimal::ConversionToDecimalResult
 RealOutputEditing<KIND>::ConvertToDecimal(
     int significantDigits, enum decimal::FortranRounding rounding, int flags) {
-#if !defined(RT_DEVICE_COMPILATION)
   auto converted{decimal::ConvertToDecimal<binaryPrecision>(buffer_,
       sizeof buffer_, static_cast<enum decimal::DecimalConversionFlags>(flags),
       significantDigits, rounding, x_)};
@@ -273,10 +272,6 @@ RealOutputEditing<KIND>::ConvertToDecimal(
         sizeof buffer_);
   }
   return converted;
-#else // defined(RT_DEVICE_COMPILATION)
-  // TODO: enable Decimal library build for the device.
-  io_.GetIoErrorHandler().Crash("not implemented yet: decimal conversion");
-#endif // defined(RT_DEVICE_COMPILATION)
 }
 
 static RT_API_ATTRS bool IsInfOrNaN(const char *p, int length) {

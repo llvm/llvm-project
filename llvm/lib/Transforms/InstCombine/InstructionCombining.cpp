@@ -5000,31 +5000,24 @@ bool InstCombinerImpl::run() {
       BasicBlock *UserParent = nullptr;
       unsigned NumUsers = 0;
 
-      for (auto *U : I->users()) {
-        if (U->isDroppable())
+      for (Use &U : I->uses()) {
+        User *User = U.getUser();
+        if (User->isDroppable())
           continue;
         if (NumUsers > MaxSinkNumUsers)
           return std::nullopt;
 
-        Instruction *UserInst = cast<Instruction>(U);
+        Instruction *UserInst = cast<Instruction>(User);
         // Special handling for Phi nodes - get the block the use occurs in.
-        if (PHINode *PN = dyn_cast<PHINode>(UserInst)) {
-          for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
-            if (PN->getIncomingValue(i) == I) {
-              // Bail out if we have uses in different blocks. We don't do any
-              // sophisticated analysis (i.e finding NearestCommonDominator of
-              // these use blocks).
-              if (UserParent && UserParent != PN->getIncomingBlock(i))
-                return std::nullopt;
-              UserParent = PN->getIncomingBlock(i);
-            }
-          }
-          assert(UserParent && "expected to find user block!");
-        } else {
-          if (UserParent && UserParent != UserInst->getParent())
-            return std::nullopt;
-          UserParent = UserInst->getParent();
-        }
+        BasicBlock *UserBB = UserInst->getParent();
+        if (PHINode *PN = dyn_cast<PHINode>(UserInst))
+          UserBB = PN->getIncomingBlock(U);
+        // Bail out if we have uses in different blocks. We don't do any
+        // sophisticated analysis (i.e finding NearestCommonDominator of these
+        // use blocks).
+        if (UserParent && UserParent != UserBB)
+          return std::nullopt;
+        UserParent = UserBB;
 
         // Make sure these checks are done only once, naturally we do the checks
         // the first time we get the userparent, this will save compile time.

@@ -276,11 +276,11 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
 
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     include(CheckLinkerFlag)
-    # Linkers that support Darwin allow a setting to internalize all symbol exports, 
+    # Linkers that support Darwin allow a setting to internalize all symbol exports,
     # aiding in reducing binary size and often is applicable for executables.
     check_linker_flag(C "-Wl,-no_exported_symbols" LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
-    
-    if (NOT LLVM_USE_LINKER) 
+
+    if (NOT LLVM_USE_LINKER)
       # Apple's linker complains about duplicate libraries, which CMake likes to do
       # to support ELF platforms. To silence that warning, we can use
       # -no_warn_duplicate_libraries, but only in versions of the linker that
@@ -289,8 +289,8 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     else()
       set(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES OFF CACHE INTERNAL "")
     endif()
-  
-  else() 
+
+  else()
     set(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS OFF CACHE INTERNAL "")
   endif()
 endif()
@@ -825,7 +825,7 @@ function(add_llvm_install_targets target)
                             ${prefix_option}
                             -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
                     USES_TERMINAL)
-  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Install")
+  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Installation")
   add_custom_target(${target}-stripped
                     DEPENDS ${file_dependencies}
                     COMMAND "${CMAKE_COMMAND}"
@@ -834,7 +834,7 @@ function(add_llvm_install_targets target)
                             -DCMAKE_INSTALL_DO_STRIP=1
                             -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
                     USES_TERMINAL)
-  set_target_properties(${target}-stripped PROPERTIES FOLDER "${subproject_title}/Install")
+  set_target_properties(${target}-stripped PROPERTIES FOLDER "${subproject_title}/Installation")
   if(target_dependencies)
     add_dependencies(${target} ${target_dependencies})
     add_dependencies(${target}-stripped ${target_dependencies})
@@ -1069,7 +1069,7 @@ macro(add_llvm_executable name)
     add_llvm_symbol_exports( ${name} ${LLVM_EXPORTED_SYMBOL_FILE} )
   endif(LLVM_EXPORTED_SYMBOL_FILE)
 
-  if (DEFINED LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND 
+  if (DEFINED LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND
       NOT LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES)
     if(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
       set_property(TARGET ${name} APPEND_STRING PROPERTY
@@ -1449,8 +1449,8 @@ macro(llvm_add_tool project name)
     if( LLVM_BUILD_TOOLS )
       set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
     endif()
-    get_subproject_title(subproject_title)
   endif()
+  get_subproject_title(subproject_title)
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Tools")
 endmacro(llvm_add_tool project name)
 
@@ -1677,7 +1677,7 @@ function(add_unittest test_suite test_name)
 
   if (SUPPORTS_VARIADIC_MACROS_FLAG)
     list(APPEND LLVM_COMPILE_FLAGS "-Wno-variadic-macros")
-  endif ()
+  endif()
   # Some parts of gtest rely on this GNU extension, don't warn on it.
   if(SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
     list(APPEND LLVM_COMPILE_FLAGS "-Wno-gnu-zero-variadic-macro-arguments")
@@ -1745,7 +1745,7 @@ function(add_benchmark benchmark_name)
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${benchmark_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   get_subproject_title(subproject_title)
-  set_property(TARGET ${benchmark_name} PROPERTY FOLDER "${subproject_title}/Utils")
+  set_property(TARGET ${benchmark_name} PROPERTY FOLDER "${subproject_title}/Benchmarks")
   target_link_libraries(${benchmark_name} PRIVATE benchmark)
 endfunction()
 
@@ -2118,7 +2118,7 @@ function(add_lit_testsuites project directory)
 
     if (NOT ARG_FOLDER)
       get_subproject_title(subproject_title)
-      set(ARG_FOLDER "${subproject_title}/Tests")
+      set(ARG_FOLDER "${subproject_title}/Tests/LIT Testsuites")
     endif()
 
     # Search recursively for test directories by assuming anything not

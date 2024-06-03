@@ -613,7 +613,6 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
         if (std::error_code EC = writeBATYAML(BC, opts::SaveProfile))
           report_error("cannot create output data file", EC);
     }
-    BC.logBOLTErrorsAndQuitOnFatal(PrintProgramStats().runOnFunctions(BC));
   }
 
   return Error::success();
@@ -673,7 +672,8 @@ DataAggregator::getBATParentFunction(const BinaryFunction &Func) const {
   return nullptr;
 }
 
-StringRef DataAggregator::getLocationName(const BinaryFunction &Func) const {
+StringRef DataAggregator::getLocationName(const BinaryFunction &Func,
+                                          bool BAT) {
   if (!BAT)
     return Func.getOneName();
 
@@ -702,7 +702,7 @@ bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
   auto I = NamesToSamples.find(Func.getOneName());
   if (I == NamesToSamples.end()) {
     bool Success;
-    StringRef LocName = getLocationName(Func);
+    StringRef LocName = getLocationName(Func, BAT);
     std::tie(I, Success) = NamesToSamples.insert(
         std::make_pair(Func.getOneName(),
                        FuncSampleData(LocName, FuncSampleData::ContainerTy())));
@@ -722,7 +722,7 @@ bool DataAggregator::doIntraBranch(BinaryFunction &Func, uint64_t From,
   FuncBranchData *AggrData = getBranchData(Func);
   if (!AggrData) {
     AggrData = &NamesToBranches[Func.getOneName()];
-    AggrData->Name = getLocationName(Func);
+    AggrData->Name = getLocationName(Func, BAT);
     setBranchData(Func, AggrData);
   }
 
@@ -741,7 +741,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
   StringRef SrcFunc;
   StringRef DstFunc;
   if (FromFunc) {
-    SrcFunc = getLocationName(*FromFunc);
+    SrcFunc = getLocationName(*FromFunc, BAT);
     FromAggrData = getBranchData(*FromFunc);
     if (!FromAggrData) {
       FromAggrData = &NamesToBranches[FromFunc->getOneName()];
@@ -752,7 +752,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
     recordExit(*FromFunc, From, Mispreds, Count);
   }
   if (ToFunc) {
-    DstFunc = getLocationName(*ToFunc);
+    DstFunc = getLocationName(*ToFunc, BAT);
     ToAggrData = getBranchData(*ToFunc);
     if (!ToAggrData) {
       ToAggrData = &NamesToBranches[ToFunc->getOneName()];
@@ -2340,7 +2340,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         continue;
       BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
       assert(BF);
-      YamlBF.Name = getLocationName(*BF);
+      YamlBF.Name = getLocationName(*BF, BAT);
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
@@ -2349,11 +2349,11 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           BAT->getBBHashMap(FuncAddress);
       YamlBF.Blocks.resize(YamlBF.NumBasicBlocks);
 
-      for (auto &&[Idx, YamlBB] : llvm::enumerate(YamlBF.Blocks))
-        YamlBB.Index = Idx;
-
-      for (auto BI = BlockMap.begin(), BE = BlockMap.end(); BI != BE; ++BI)
-        YamlBF.Blocks[BI->second.getBBIndex()].Hash = BI->second.getBBHash();
+      for (auto &&[Entry, YamlBB] : llvm::zip(BlockMap, YamlBF.Blocks)) {
+        const auto &Block = Entry.second;
+        YamlBB.Hash = Block.Hash;
+        YamlBB.Index = Block.Index;
+      }
 
       // Lookup containing basic block offset and index
       auto getBlock = [&BlockMap](uint32_t Offset) {
@@ -2363,7 +2363,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           exit(1);
         }
         --BlockIt;
-        return std::pair(BlockIt->first, BlockIt->second.getBBIndex());
+        return std::pair(BlockIt->first, BlockIt->second.Index);
       };
 
       for (const BranchInfo &BI : Branches.Data) {

@@ -73,8 +73,7 @@ static void printDie(DWARFUnit &DU, uint64_t DIEOffset) {
   DWARFDataExtractor DebugInfoData = DU.getDebugInfoExtractor();
   DWARFDebugInfoEntry DIEEntry;
   if (DIEEntry.extractFast(DU, &DIEOffset, DebugInfoData, NextCUOffset, 0)) {
-    if (const DWARFAbbreviationDeclaration *AbbrDecl =
-            DIEEntry.getAbbreviationDeclarationPtr()) {
+    if (DIEEntry.getAbbreviationDeclarationPtr()) {
       DWARFDie DDie(&DU, &DIEEntry);
       printDie(DDie);
     } else {
@@ -353,7 +352,7 @@ static cl::opt<bool> CreateDebugNames(
 
 static cl::opt<bool>
     DebugSkeletonCu("debug-skeleton-cu",
-                    cl::desc("prints out offsetrs for abbrev and debu_info of "
+                    cl::desc("prints out offsets for abbrev and debug_info of "
                              "Skeleton CUs that get patched."),
                     cl::ZeroOrMore, cl::Hidden, cl::init(false),
                     cl::cat(BoltCategory));
