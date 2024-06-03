@@ -182,7 +182,9 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
                         ConstantInt::get(IntPtrType, Tag)});
       if (Info.AI->hasName())
         TagPCall->setName(Info.AI->getName() + ".tag");
-      Info.AI->replaceAllUsesWith(TagPCall);
+      Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
+        return !memtag::isLifetimeIntrinsic(U.getUser());
+      });
       TagPCall->setOperand(1, Info.AI);
       IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size =
