@@ -9177,7 +9177,6 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
         Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp_gfx13 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp8_gfx1210 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp8_gfx13)) {
-    assert(!IsPacked);
     Inst.addOperand(Inst.getOperand(0));
   }
 
