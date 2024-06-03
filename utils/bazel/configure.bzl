@@ -110,7 +110,7 @@ def _extract_cmake_settings(repository_ctx, llvm_cmake):
         # Skip if `CMAKE_CXX_STANDARD` is set with
         # `LLVM_REQUIRED_CXX_STANDARD`.
         # Then `v` will not be desired form, like "${...} CACHE"
-        if c[k] != None:
+        if c[k] is not None:
             continue
 
         # Pick up 1st word as the value.
@@ -160,7 +160,7 @@ def _llvm_configure_impl(repository_ctx):
         repository_ctx,
         "cmake/Modules/LLVMVersion.cmake",
     )
-    version = {k: v for k, v in version.items() if v != None}
+    version = {k: v for k, v in version.items() if v is not None}
     vars.update(version)
 
     _write_dict_to_file(
