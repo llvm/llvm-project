@@ -1169,8 +1169,8 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
   llvm::SmallVector<dependency_directives_scan::Token, 16> Tokens;
   llvm::SmallVector<dependency_directives_scan::Directive, 32> Directives;
   if (scanSourceForDependencyDirectives(
-          FromFile.getBuffer(), Tokens, Directives, &CI.getDiagnostics(),
-          SM.getLocForStartOfFile(SM.getMainFileID()))) {
+          FromFile.getBuffer(), Tokens, Directives, CI.getLangOpts(),
+          &CI.getDiagnostics(), SM.getLocForStartOfFile(SM.getMainFileID()))) {
     assert(CI.getDiagnostics().hasErrorOccurred() &&
            "no errors reported for failure");
 
