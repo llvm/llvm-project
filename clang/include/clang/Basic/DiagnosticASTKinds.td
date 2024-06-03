@@ -403,6 +403,8 @@ def note_constexpr_assumption_failed : Note<
   "assumption evaluated to false">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
+def note_constexpr_contract_failure : Error<
+  "contract failed during execution of constexpr function">;
 
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,

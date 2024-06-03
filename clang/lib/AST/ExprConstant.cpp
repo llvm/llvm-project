@@ -15508,6 +15508,17 @@ public:
     case Builtin::BI__builtin_operator_delete:
       return HandleOperatorDeleteCall(Info, E);
 
+    case Builtin::BIcontract_assert:
+    {
+      APSInt Desired;
+      if (!EvaluateInteger(E->getArg(0), Desired, Info)){
+        return false;
+      }
+      if (!Desired) {
+        Info.CCEDiag(E, diag::note_constexpr_contract_failure);
+      }
+      return true;
+    }
     default:
       return false;
     }
