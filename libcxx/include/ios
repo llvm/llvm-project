@@ -617,21 +617,16 @@ protected:
 private:
   basic_ostream<char_type, traits_type>* __tie_;
 
-#if defined(_AIX) || (defined(__MVS__) && defined(__64BIT__))
-// AIX and 64-bit MVS must use _OptionalFill for ABI backward compatibility.
+#if defined(_LIBCXX_IOS_FORCE_OPTIONAL_FILL)
   using _FillType = _OptionalFill<_Traits>;
-#else
-#if defined(_WIN32)
-  static const bool _OptOutForABICompat = true;
-#else
-  static const bool _OptOutForABICompat = false;
-#endif
-
+#elif defined(_LIBCXX_IOS_MAY_USE_OPTIONAL_FILL)
   using _FillType = _If<
-      sizeof(char_type) >= sizeof(int_type) && !_OptOutForABICompat,
+      sizeof(char_type) >= sizeof(int_type),
       _OptionalFill<_Traits>,
       _SentinelValueFill<_Traits>
   >;
+#else
+  using _FillType = _SentinelValueFill<_Traits>;
 #endif
   mutable _FillType __fill_;
 };

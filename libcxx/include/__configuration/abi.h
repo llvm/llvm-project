@@ -91,6 +91,15 @@
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
 // Dont' add an inline namespace for `std::filesystem`
 #    define _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
+// libcxx std::basic_ios uses WEOF to indicate that the fill value is
+// uninitialized. However, on platforms where the size of char_type is
+// equal to or greater than the size of int_type,
+// std::char_traits<char_type>::eq_int_type() cannot distinguish between WEOF
+// and WCHAR_MAX. Helper class _OptionalFill is used for targets where a
+// variable is needed to indicate whether the fill value has been initialized.
+// Existing targets where this would break ABI compatibility can choose to keep
+// the existing ABI by undefining macro _LIBCXX_IOS_MAY_USE_OPTIONAL_FILL.
+#  define _LIBCXX_IOS_MAY_USE_OPTIONAL_FILL
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
@@ -107,6 +116,10 @@
 // are deprecated.
 #  if defined(__FreeBSD__) && __FreeBSD__ < 14
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
+#  endif
+// AIX and 64-bit MVS must use _OptionalFill for ABI backward compatibility.
+#  if defined(_AIX) || (defined(__MVS__) && defined(__64BIT__))
+#    define _LIBCXX_IOS_FORCE_OPTIONAL_FILL
 #  endif
 #endif
 
