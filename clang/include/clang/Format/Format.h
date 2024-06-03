@@ -4806,6 +4806,7 @@ struct FormatStyle {
   ///   TableGenBreakInsideDAGArg: BreakAll
   ///   TableGenBreakingDAGArgOperators: [ins, outs]
   /// \endcode
+  ///
   /// makes the line break only occurs inside DAGArgs beginning with the
   /// specified identifiers ``ins`` and ``outs``.
   ///
