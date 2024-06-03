@@ -294,14 +294,13 @@ bool VPInstruction::doesGeneratePerAllLanes() const {
 bool VPInstruction::canGenerateScalarForFirstLane() const {
   if (Instruction::isBinaryOp(getOpcode()))
     return true;
-
+  if (isVectorToScalar())
+    return true;
   switch (Opcode) {
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::ComputeReductionResult:
-  case VPInstruction::ExtractFromEnd:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
     return true;
@@ -567,17 +566,15 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
     unsigned Offset = CI->getZExtValue();
 
-    // Extract lane VF - Offset in the from the operand.
     Value *Res;
     if (State.VF.isVector()) {
+      // Extract lane VF - Offset from the operand.
       Res = State.get(
           getOperand(0),
           VPIteration(State.UF - 1, VPLane::getLaneFromEnd(State.VF, Offset)));
     } else {
       assert(State.UF > 1 && "VF and UF cannot both be 1");
-      // When loop is unrolled without vectorizing, retrieve the value just
-      // prior to the final unrolled value. This is analogous to the vectorized
-      // case above: extracting the second last element when VF > 1.
+      // When loop is unrolled without vectorizing, retrieve UF - Offset.
       Res = State.get(getOperand(0), State.UF - Offset);
     }
     Res->setName(Name);
@@ -598,6 +595,11 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
+}
+
+bool VPInstruction::isVectorToScalar() const {
+  return getOpcode() == VPInstruction::ExtractFromEnd ||
+         getOpcode() == VPInstruction::ComputeReductionResult;
 }
 
 #if !defined(NDEBUG)
@@ -622,9 +624,7 @@ void VPInstruction::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   bool GeneratesPerFirstLaneOnly =
       canGenerateScalarForFirstLane() &&
-      (vputils::onlyFirstLaneUsed(this) ||
-       getOpcode() == VPInstruction::ExtractFromEnd ||
-       getOpcode() == VPInstruction::ComputeReductionResult);
+      (vputils::onlyFirstLaneUsed(this) || isVectorToScalar());
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     if (GeneratesPerAllLanes) {

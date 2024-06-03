@@ -168,6 +168,8 @@ public:
   static VPLane getFirstLane() { return VPLane(0, VPLane::Kind::First); }
 
   static VPLane getLaneFromEnd(const ElementCount &VF, unsigned Offset) {
+    assert(Offset <= VF.getKnownMinValue() &&
+           "trying to extract with invalid offset");
     unsigned LaneOffset = VF.getKnownMinValue() - Offset;
     Kind LaneKind;
     if (VF.isScalable())
@@ -1186,6 +1188,10 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
+    // Takes the VPValue to extract from as first operand and the lane to
+    // extract from as second operand. The second operand must be a constant and
+    // <= VF when extracting from a vector or <= UF when extracting from a
+    // scalar.
     ExtractFromEnd,
     LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
@@ -1223,6 +1229,10 @@ private:
   /// the modeled instruction for a given lane. \returns the scalar generated
   /// value for lane \p Lane.
   Value *generatePerLane(VPTransformState &State, const VPIteration &Lane);
+
+  /// Returns true if this VPInstruction converts a vector value to a scalar,
+  /// e.g. by performing a reduction or extracting a lane.
+  bool isVectorToScalar() const;
 
 #if !defined(NDEBUG)
   /// Return true if the VPInstruction is a floating point math operation, i.e.
