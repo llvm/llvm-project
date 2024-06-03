@@ -5641,7 +5641,6 @@ TEST(HasParent, MatchesAllParents) {
 TEST(HasParent, NoDuplicateParents) {
   class HasDuplicateParents : public BoundNodesCallback {
   public:
-    bool run(const BoundNodes *Nodes) override { return false; }
     bool run(const BoundNodes *Nodes, ASTContext *Context) override {
       const Stmt *Node = Nodes->getNodeAs<Stmt>("node");
       std::set<const void *> Parents;
@@ -5850,16 +5849,14 @@ template <typename T> class VerifyMatchOnNode : public BoundNodesCallback {
 public:
   VerifyMatchOnNode(StringRef Id, const internal::Matcher<T> &InnerMatcher,
                     StringRef InnerId)
-    : Id(Id), InnerMatcher(InnerMatcher), InnerId(InnerId) {
-  }
-
-  bool run(const BoundNodes *Nodes) override { return false; }
+      : Id(Id), InnerMatcher(InnerMatcher), InnerId(InnerId) {}
 
   bool run(const BoundNodes *Nodes, ASTContext *Context) override {
     const T *Node = Nodes->getNodeAs<T>(Id);
     return selectFirst<T>(InnerId, match(InnerMatcher, *Node, *Context)) !=
-      nullptr;
+           nullptr;
   }
+
 private:
   std::string Id;
   internal::Matcher<T> InnerMatcher;

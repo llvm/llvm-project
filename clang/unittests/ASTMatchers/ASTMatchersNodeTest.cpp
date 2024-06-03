@@ -2030,8 +2030,6 @@ TEST_P(ASTMatchersTest,
 template <typename T>
 class VerifyAncestorHasChildIsEqual : public BoundNodesCallback {
 public:
-  bool run(const BoundNodes *Nodes) override { return false; }
-
   bool run(const BoundNodes *Nodes, ASTContext *Context) override {
     const T *Node = Nodes->getNodeAs<T>("");
     return verify(*Nodes, *Context, Node);
