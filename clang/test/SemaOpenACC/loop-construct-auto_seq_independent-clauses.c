@@ -106,7 +106,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present' clause is not valid on 'loop' directive}}
 #pragma acc loop auto present(Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'private' not yet implemented}}
 #pragma acc loop auto private(Var)
   for(;;);
   // expected-error@+1{{OpenACC 'copyout' clause is not valid on 'loop' directive}}
@@ -246,7 +245,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present' clause is not valid on 'loop' directive}}
 #pragma acc loop present(Var) auto
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'private' not yet implemented}}
 #pragma acc loop private(Var) auto
   for(;;);
   // expected-error@+1{{OpenACC 'copyout' clause is not valid on 'loop' directive}}
@@ -387,7 +385,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present' clause is not valid on 'loop' directive}}
 #pragma acc loop independent present(Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'private' not yet implemented}}
 #pragma acc loop independent private(Var)
   for(;;);
   // expected-error@+1{{OpenACC 'copyout' clause is not valid on 'loop' directive}}
@@ -527,7 +524,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present' clause is not valid on 'loop' directive}}
 #pragma acc loop present(Var) independent
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'private' not yet implemented}}
 #pragma acc loop private(Var) independent
   for(;;);
   // expected-error@+1{{OpenACC 'copyout' clause is not valid on 'loop' directive}}
@@ -677,7 +673,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present' clause is not valid on 'loop' directive}}
 #pragma acc loop seq present(Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'private' not yet implemented}}
 #pragma acc loop seq private(Var)
   for(;;);
   // expected-error@+1{{OpenACC 'copyout' clause is not valid on 'loop' directive}}
@@ -826,7 +821,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present' clause is not valid on 'loop' directive}}
 #pragma acc loop present(Var) seq
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'private' not yet implemented}}
 #pragma acc loop private(Var) seq
   for(;;);
   // expected-error@+1{{OpenACC 'copyout' clause is not valid on 'loop' directive}}
