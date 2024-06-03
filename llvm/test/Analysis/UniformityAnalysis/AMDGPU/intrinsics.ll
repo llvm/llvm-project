@@ -760,6 +760,20 @@ define amdgpu_kernel void @smfmac_f32_32x32x64_fp8_fp8(<4 x i32> %arg0, <8 x i32
   ret void
 }
 
+; CHECK: DIVERGENT:   %v = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 %src0, i32 %src1, i1 false, i1 false)
+define amdgpu_kernel void @v_permlane16_swap(ptr addrspace(1) %out, i32 %src0, i32 %src1) #0 {
+  %v = call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 %src0, i32 %src1, i1 false, i1 false)
+  store { i32, i32 } %v, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT:   %v = call { i32, i32 } @llvm.amdgcn.permlane32.swap(i32 %src0, i32 %src1, i1 false, i1 false)
+define amdgpu_kernel void @v_permlane32_swap(ptr addrspace(1) %out, i32 %src0, i32 %src1) #0 {
+  %v = call { i32, i32 } @llvm.amdgcn.permlane32.swap(i32 %src0, i32 %src1, i1 false, i1 false)
+  store { i32, i32 } %v, ptr addrspace(1) %out
+  ret void
+}
+
 ; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.bcast(i32 %src0, i32 %src1, i32 %src2)
 define amdgpu_kernel void @v_permlane_bcast_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
   %result= call i32 @llvm.amdgcn.permlane.bcast(i32 %src0, i32 %src1, i32 %src2)
@@ -794,6 +808,8 @@ define amdgpu_kernel void @v_permlane_idx_gen_b32(ptr addrspace(1) %out, i32 %sr
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
+
+
 
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
 declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1) #1
