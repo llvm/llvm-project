@@ -225,6 +225,7 @@ add_math_entrypoint_object(logbf128)
 add_math_entrypoint_object(llrint)
 add_math_entrypoint_object(llrintf)
 add_math_entrypoint_object(llrintl)
+add_math_entrypoint_object(llrintf16)
 add_math_entrypoint_object(llrintf128)
 
 add_math_entrypoint_object(llround)
