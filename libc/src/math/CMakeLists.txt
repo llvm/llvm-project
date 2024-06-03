@@ -348,6 +348,7 @@ add_math_entrypoint_object(truncf128)
 add_math_entrypoint_object(ufromfp)
 add_math_entrypoint_object(ufromfpf)
 add_math_entrypoint_object(ufromfpl)
+add_math_entrypoint_object(ufromfpf16)
 add_math_entrypoint_object(ufromfpf128)
 
 add_math_entrypoint_object(ufromfpx)
