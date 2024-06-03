@@ -14,7 +14,7 @@ module {
     %3 = cir.const #cir.const_array<[#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float]> : !cir.array<!cir.float x 2>
     // CHECK: llvm.mlir.constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : !llvm.array<2 x f32>
     %4 = cir.const #cir.zero : !cir.array<!s32i x 3>
-    // CHECK: cir.llvmir.zeroinit : !llvm.array<3 x i32>
+    // CHECK: llvm.mlir.zero : !llvm.array<3 x i32>
     cir.return
   }
 
@@ -63,7 +63,7 @@ module {
   // CHECK: llvm.func @testArrWithTrailingZeros()
   // CHECK:   %0 = llvm.mlir.constant(1 : index) : i64
   // CHECK:   %1 = llvm.alloca %0 x !llvm.array<10 x i32> {alignment = 16 : i64} : (i64) -> !llvm.ptr
-  // CHECK:   %2 = cir.llvmir.zeroinit : !llvm.array<10 x i32>
+  // CHECK:   %2 = llvm.mlir.zero : !llvm.array<10 x i32>
   // CHECK:   %3 = llvm.mlir.constant(1 : i32) : i32
   // CHECK:   %4 = llvm.insertvalue %3, %2[0] : !llvm.array<10 x i32>
 

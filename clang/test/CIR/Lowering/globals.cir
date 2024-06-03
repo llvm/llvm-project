@@ -143,7 +143,7 @@ module {
   // MLIR: }
   cir.global external @zeroStruct = #cir.zero : !ty_22Bar22
   // MLIR: llvm.mlir.global external @zeroStruct()
-  // MLIR:   %0 = cir.llvmir.zeroinit : !llvm.struct<"struct.Bar", (i32, i8)>
+  // MLIR:   %0 = llvm.mlir.zero : !llvm.struct<"struct.Bar", (i32, i8)>
   // MLIR:   llvm.return %0 : !llvm.struct<"struct.Bar", (i32, i8)>
   // MLIR: }
   cir.global common @comm = #cir.int<0> : !s32i
