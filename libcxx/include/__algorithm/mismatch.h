@@ -55,113 +55,34 @@ __mismatch(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Pred& __pred, _Pro
 }
 
 #if _LIBCPP_VECTORIZE_ALGORITHMS
-
-template <class _ValueType>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<long long, 2>
-__reverse_vector(__simd_vector<long long, 2>& __cmp_res) {
-#  if defined(_LIBCPP_BIG_ENDIAN)
-  __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 1, 0);
-#  endif
-  return __cmp_res;
+template <class _ValueType, size_t _Np>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __simd_vector<long long, _Np>
+__reverse_vector(__simd_vector<long long, _Np> __cmp_res) {
+  return [&]<size_t... _Indices>(index_sequence<_Indices...>) {
+    return __builtin_shufflevector(__cmp_res, __cmp_res, (_Np - _Indices - 1)...);
+  }(make_index_sequence<_Np>{});
 }
-
-template <class _ValueType>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<long, 2>
-__reverse_vector(__simd_vector<long, 2>& __cmp_res) {
-#  if defined(_LIBCPP_BIG_ENDIAN)
-  __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 1, 0);
-#  endif
-  return __cmp_res;
+template <class _ValueType, size_t _Np>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __simd_vector<long, _Np>
+__reverse_vector(__simd_vector<long, _Np> __cmp_res) {
+  return [&]<size_t... _Indices>(index_sequence<_Indices...>) {
+    return __builtin_shufflevector(__cmp_res, __cmp_res, (_Np - _Indices - 1)...);
+  }(make_index_sequence<_Np>{});
 }
-
-template <class _ValueType>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<long, 4>
-__reverse_vector(__simd_vector<long, 4>& __cmp_res) {
-#  if defined(_LIBCPP_BIG_ENDIAN)
-  __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 3, 2, 1, 0);
-#  endif
-  return __cmp_res;
+template <class _ValueType, size_t _Np>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __simd_vector<int, _Np>
+__reverse_vector(__simd_vector<int, _Np> __cmp_res) {
+  return [&]<size_t... _Indices>(index_sequence<_Indices...>) {
+    return __builtin_shufflevector(__cmp_res, __cmp_res, (_Np - _Indices - 1)...);
+  }(make_index_sequence<_Np>{});
 }
-
-template <class _ValueType>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<int, 8>
-__reverse_vector(__simd_vector<int, 8>& __cmp_res) {
-#  if defined(_LIBCPP_BIG_ENDIAN)
-  __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 7, 6, 5, 4, 3, 2, 1, 0);
-#  endif
-  return __cmp_res;
+template <class _ValueType, size_t _Np>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __simd_vector<_ValueType, _Np>
+__reverse_vector(__simd_vector<_ValueType, _Np> __cmp_res) {
+  return [&]<size_t... _Indices>(index_sequence<_Indices...>) {
+    return __builtin_shufflevector(__cmp_res, __cmp_res, (_Np - _Indices - 1)...);
+  }(make_index_sequence<_Np>{});
 }
-
-template <class _ValueType>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<int, 4>
-__reverse_vector(__simd_vector<int, 4>& __cmp_res) {
-#  if defined(_LIBCPP_BIG_ENDIAN)
-  __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 3, 2, 1, 0);
-#  endif
-  return __cmp_res;
-}
-
-template <class _ValueType>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<_ValueType, 8>
-__reverse_vector(__simd_vector<_ValueType, 8>& __cmp_res) {
-#  if defined(_LIBCPP_BIG_ENDIAN)
-  __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 7, 6, 5, 4, 3, 2, 1, 0);
-#  endif
-  return __cmp_res;
-}
-
-template <class _ValueType>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<_ValueType, 16>
-__reverse_vector(__simd_vector<_ValueType, 16> __cmp_res) {
-#  if defined(_LIBCPP_BIG_ENDIAN)
-  __cmp_res = __builtin_shufflevector(__cmp_res, __cmp_res, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-#  endif
-  return __cmp_res;
-}
-
-template <class _ValueType>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __simd_vector<_ValueType, 32>
-__reverse_vector(__simd_vector<_ValueType, 32> __cmp_res) {
-#  if defined(_LIBCPP_BIG_ENDIAN)
-  __cmp_res = __builtin_shufflevector(
-      __cmp_res,
-      __cmp_res,
-      31,
-      30,
-      29,
-      28,
-      27,
-      26,
-      25,
-      24,
-      23,
-      22,
-      21,
-      20,
-      19,
-      18,
-      17,
-      16,
-      15,
-      14,
-      13,
-      12,
-      11,
-      10,
-      9,
-      8,
-      7,
-      6,
-      5,
-      4,
-      3,
-      2,
-      1,
-      0);
-#  endif
-  return __cmp_res;
-}
-
 template <class _Iter>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter, _Iter>
 __mismatch_vectorized(_Iter __first1, _Iter __last1, _Iter __first2) {
@@ -184,7 +105,9 @@ __mismatch_vectorized(_Iter __first1, _Iter __last1, _Iter __first2) {
 
       for (size_t __i = 0; __i != __unroll_count; ++__i) {
         auto __cmp_res = __lhs[__i] == __rhs[__i];
+#  if defined(_LIBCPP_BIG_ENDIAN)
         __cmp_res      = std::__reverse_vector<__value_type>(__cmp_res);
+#  endif
         if (!std::__all_of(__cmp_res)) {
           auto __offset = __i * __vec_size + std::__find_first_not_set(__cmp_res);
           return {__first1 + __offset, __first2 + __offset};
@@ -198,7 +121,9 @@ __mismatch_vectorized(_Iter __first1, _Iter __last1, _Iter __first2) {
     // check the remaining 0-3 vectors
     while (static_cast<size_t>(__last1 - __first1) >= __vec_size) {
       auto __cmp_res = std::__load_vector<__vec>(__first1) == std::__load_vector<__vec>(__first2);
+#  if defined(_LIBCPP_BIG_ENDIAN)
       __cmp_res      = std::__reverse_vector<__value_type>(__cmp_res);
+#  endif
       if (!std::__all_of(__cmp_res)) {
         auto __offset = std::__find_first_not_set(__cmp_res);
         return {__first1 + __offset, __first2 + __offset};
@@ -216,7 +141,9 @@ __mismatch_vectorized(_Iter __first1, _Iter __last1, _Iter __first2) {
       __first1 = __last1 - __vec_size;
       __first2 = __last2 - __vec_size;
       auto __cmp_res = std::__load_vector<__vec>(__first1) == std::__load_vector<__vec>(__first2);
+#  if defined(_LIBCPP_BIG_ENDIAN)
       __cmp_res      = std::__reverse_vector<__value_type>(__cmp_res);
+#  endif
       auto __offset  = std::__find_first_not_set(__cmp_res);
       return {__first1 + __offset, __first2 + __offset};
     } // else loop over the elements individually
