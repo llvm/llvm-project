@@ -447,7 +447,6 @@ static bool allCallersPassValidPointerForArgument(Argument *Arg,
 /// parts it can be promoted into.
 static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
                          unsigned MaxElements, bool IsRecursive,
-                         bool IsSelfRecursive,
                          SmallVectorImpl<OffsetAndArgPart> &ArgPartsVec) {
   // Quick exit for unused arguments
   if (Arg->use_empty())
@@ -614,7 +613,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
 
     auto *CB = dyn_cast<CallBase>(V);
     Value *PtrArg = dyn_cast<Value>(U);
-    if (IsSelfRecursive && CB && PtrArg) {
+    if (IsRecursive && CB && PtrArg) {
       Type *PtrTy = PtrArg->getType();
       Align PtrAlign = PtrArg->getPointerAlignment(DL);
       APInt Offset(DL.getIndexTypeSizeInBits(PtrArg->getType()), 0);
@@ -625,6 +624,23 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
         return false;
 
       if (Offset.getSignificantBits() >= 64)
+        return false;
+
+      // If this is a recursive function and one of the argument types is a
+      // pointer that isn't loaded to a non pointer type, it can lead to
+      // recursive promotion. Look for any Load candidates above the function
+      // call that load a non pointer type from this argument pointer. If we
+      // don't find even one such use, return false. For reference, you can
+      // refer to Transforms/ArgumentPromotion/pr42028-recursion.ll and
+      // Transforms/ArgumentPromotion/2008-09-08-CGUpdateSelfEdge.ll
+      // testcases.
+      bool doesPointerResolve = false;
+      for (auto Load : Loads)
+        if (Load->getPointerOperand() == PtrArg &&
+            !Load->getType()->isPointerTy())
+          doesPointerResolve = true;
+
+      if (!doesPointerResolve)
         return false;
 
       int64_t Off = Offset.getSExtValue();
@@ -749,10 +765,6 @@ static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
 /// calls the DoPromotion method.
 static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
                                   unsigned MaxElements, bool IsRecursive) {
-  // Due to complexity of handling cases where the SCC has more than one
-  // component. We want to limit argument promotion of recursive calls to
-  // just functions that directly call themselves.
-  bool IsSelfRecursive = false;
   // Don't perform argument promotion for naked functions; otherwise we can end
   // up removing parameters that are seemingly 'not used' as they are referred
   // to in the assembly.
@@ -798,10 +810,8 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     if (CB->isMustTailCall())
       return nullptr;
 
-    if (CB->getFunction() == F) {
+    if (CB->getFunction() == F)
       IsRecursive = true;
-      IsSelfRecursive = true;
-    }
   }
 
   // Can't change signature of musttail caller
@@ -835,8 +845,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     // If we can promote the pointer to its value.
     SmallVector<OffsetAndArgPart, 4> ArgParts;
 
-    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, IsSelfRecursive,
-                     ArgParts)) {
+    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, ArgParts)) {
       SmallVector<Type *, 4> Types;
       for (const auto &Pair : ArgParts)
         Types.push_back(Pair.second.Ty);
