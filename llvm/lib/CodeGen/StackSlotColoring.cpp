@@ -155,8 +155,8 @@ namespace {
       AU.addPreserved<MachineBlockFrequencyInfo>();
       AU.addPreservedID(MachineDominatorsID);
 
-      // As in some Target's pipeline, register allocation (RA) might be
-      // splitted into multiple phases based on register class. So, this pass
+      // In some Target's pipeline, register allocation (RA) might be
+      // split into multiple phases based on register class. So, this pass
       // may be invoked multiple times requiring it to save these analyses to be
       // used by RA later.
       AU.addPreserved<LiveIntervals>();
