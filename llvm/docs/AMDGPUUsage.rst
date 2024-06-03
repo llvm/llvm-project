@@ -1395,8 +1395,11 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-no-workitem-id-x"               Indicates the function does not depend on the value of the
                                              llvm.amdgcn.workitem.id.x intrinsic. If a function is marked with this
-                                             attribute, or reached through a call site marked with this attribute,
-                                             the value returned by the intrinsic is undefined. The backend can
+                                             attribute, or reached through a call site marked with this attribute, and
+                                             that intrinsic is called, the behavior of the program is undefined. (Whole-program
+                                             undefined behavior is used here because, for example, the absence of a required workitem
+                                             ID in the preloaded register set can mean that all other preloaded registers
+                                             are earlier than the compilation assumed they would be.) The backend can
                                              generally infer this during code generation, so typically there is no
                                              benefit to frontends marking functions with this.
 
