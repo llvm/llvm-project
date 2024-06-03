@@ -2043,18 +2043,17 @@ bool Sema::checkConstantPointerAuthKey(Expr *Arg, unsigned &Result) {
 static std::pair<const ValueDecl *, CharUnits>
 findConstantBaseAndOffset(Sema &S, Expr *E) {
   // Must evaluate as a pointer.
-  Expr::EvalResult result;
-  if (!E->EvaluateAsRValue(result, S.Context) ||
-      !result.Val.isLValue())
+  Expr::EvalResult Result;
+  if (!E->EvaluateAsRValue(Result, S.Context) || !Result.Val.isLValue())
     return std::make_pair(nullptr, CharUnits());
 
   // Base must be a declaration and can't be weakly imported.
-  auto baseDecl =
-    result.Val.getLValueBase().dyn_cast<const ValueDecl *>();
-  if (!baseDecl || baseDecl->hasAttr<WeakRefAttr>())
+  const auto *BaseDecl =
+      Result.Val.getLValueBase().dyn_cast<const ValueDecl *>();
+  if (!BaseDecl || BaseDecl->hasAttr<WeakRefAttr>())
     return std::make_pair(nullptr, CharUnits());
 
-  return std::make_pair(baseDecl, result.Val.getLValueOffset());
+  return std::make_pair(BaseDecl, Result.Val.getLValueOffset());
 }
 
 static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
@@ -2120,73 +2119,73 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
   // The main argument.
   if (OpKind == PAO_Sign) {
     // Require the value we're signing to have a special form.
-    auto result = findConstantBaseAndOffset(S, Arg);
-    bool invalid;
+    auto BaseOffsetPair = findConstantBaseAndOffset(S, Arg);
+    bool Invalid;
 
     // Must be rooted in a declaration reference.
-    if (!result.first) {
-      invalid = true;
+    if (!BaseOffsetPair.first) {
+      Invalid = true;
 
-    // If it's a function declaration, we can't have an offset.
-    } else if (isa<FunctionDecl>(result.first)) {
-      invalid = !result.second.isZero();
+      // If it's a function declaration, we can't have an offset.
+    } else if (isa<FunctionDecl>(BaseOffsetPair.first)) {
+      Invalid = !BaseOffsetPair.second.isZero();
 
-    // Otherwise we're fine.
+      // Otherwise we're fine.
     } else {
-      invalid = false;
+      Invalid = false;
     }
 
-    if (invalid) {
+    if (Invalid) {
       S.Diag(Arg->getExprLoc(), diag::err_ptrauth_bad_constant_pointer);
     }
-    return invalid;
+    return Invalid;
   }
 
   // The discriminator argument.
   assert(OpKind == PAO_Discriminator);
 
   // Must be a pointer or integer or blend thereof.
-  Expr *pointer = nullptr;
-  Expr *integer = nullptr;
-  if (auto call = dyn_cast<CallExpr>(Arg->IgnoreParens())) {
-    if (call->getBuiltinCallee() ==
-          Builtin::BI__builtin_ptrauth_blend_discriminator) {
-      pointer = call->getArg(0);
-      integer = call->getArg(1);
+  Expr *Pointer = nullptr;
+  Expr *Integer = nullptr;
+  if (auto *Call = dyn_cast<CallExpr>(Arg->IgnoreParens())) {
+    if (Call->getBuiltinCallee() ==
+        Builtin::BI__builtin_ptrauth_blend_discriminator) {
+      Pointer = Call->getArg(0);
+      Integer = Call->getArg(1);
     }
   }
-  if (!pointer && !integer) {
+  if (!Pointer && !Integer) {
     if (Arg->getType()->isPointerType())
-      pointer = Arg;
+      Pointer = Arg;
     else
-      integer = Arg;
+      Integer = Arg;
   }
 
   // Check the pointer.
-  bool invalid = false;
-  if (pointer) {
-    assert(pointer->getType()->isPointerType());
+  bool Invalid = false;
+  if (Pointer) {
+    assert(Pointer->getType()->isPointerType());
 
     // TODO: if we're initializing a global, check that the address is
     // somehow related to what we're initializing.  This probably will
     // never really be feasible and we'll have to catch it at link-time.
-    auto result = findConstantBaseAndOffset(S, pointer);
-    if (!result.first || !isa<VarDecl>(result.first)) {
-      invalid = true;
+    auto BaseOffsetPair = findConstantBaseAndOffset(S, Pointer);
+    if (!BaseOffsetPair.first || !isa<VarDecl>(BaseOffsetPair.first)) {
+      Invalid = true;
     }
   }
 
   // Check the integer.
-  if (integer) {
-    assert(integer->getType()->isIntegerType());
-    if (!integer->isEvaluatable(S.Context))
-      invalid = true;
+  if (Integer) {
+    assert(Integer->getType()->isIntegerType());
+    if (!Integer->isEvaluatable(S.Context))
+      Invalid = true;
   }
 
-  if (invalid) {
+  if (Invalid) {
     S.Diag(Arg->getExprLoc(), diag::err_ptrauth_bad_constant_discriminator);
   }
-  return invalid;
+  return Invalid;
 }
 
 static ExprResult PointerAuthStrip(Sema &S, CallExpr *Call) {
@@ -3040,13 +3039,13 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return PointerAuthBlendDiscriminator(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_sign_constant:
     return PointerAuthSignOrAuth(*this, TheCall, PAO_Sign,
-                                 /*constant*/ true);
+                                 /*RequireConstant=*/true);
   case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
     return PointerAuthSignOrAuth(*this, TheCall, PAO_Sign,
-                                 /*constant*/ false);
+                                 /*RequireConstant=*/false);
   case Builtin::BI__builtin_ptrauth_auth:
     return PointerAuthSignOrAuth(*this, TheCall, PAO_Auth,
-                                 /*constant*/ false);
+                                 /*RequireConstant=*/false);
   case Builtin::BI__builtin_ptrauth_sign_generic_data:
     return PointerAuthSignGenericData(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_auth_and_resign:

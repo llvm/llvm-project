@@ -11,67 +11,53 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CGCXXABI.h"
-#include "CGCall.h"
-#include "CodeGenFunction.h"
 #include "CodeGenModule.h"
-#include "clang/AST/Attr.h"
-#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
-#include "clang/CodeGen/ConstantInitBuilder.h"
-
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/IR/ValueMap.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include <vector>
 
 using namespace clang;
 using namespace CodeGen;
 
 /// Build a signed-pointer "ptrauth" constant.
 static llvm::ConstantPtrAuth *
-buildConstantAddress(CodeGenModule &CGM, llvm::Constant *pointer, unsigned key,
-                     llvm::Constant *storageAddress,
-                     llvm::Constant *otherDiscriminator) {
-  llvm::Constant *addressDiscriminator = nullptr;
-  if (storageAddress) {
-    addressDiscriminator = storageAddress;
-    assert(storageAddress->getType() == CGM.UnqualPtrTy);
+buildConstantAddress(CodeGenModule &CGM, llvm::Constant *Pointer, unsigned Key,
+                     llvm::Constant *StorageAddress,
+                     llvm::Constant *OtherDiscriminator) {
+  llvm::Constant *AddressDiscriminator = nullptr;
+  if (StorageAddress) {
+    AddressDiscriminator = StorageAddress;
+    assert(StorageAddress->getType() == CGM.UnqualPtrTy);
   } else {
-    addressDiscriminator = llvm::Constant::getNullValue(CGM.UnqualPtrTy);
+    AddressDiscriminator = llvm::Constant::getNullValue(CGM.UnqualPtrTy);
   }
 
-  llvm::ConstantInt *integerDiscriminator = nullptr;
-  if (otherDiscriminator) {
-    assert(otherDiscriminator->getType() == CGM.Int64Ty);
-    integerDiscriminator = cast<llvm::ConstantInt>(otherDiscriminator);
+  llvm::ConstantInt *IntegerDiscriminator = nullptr;
+  if (OtherDiscriminator) {
+    assert(OtherDiscriminator->getType() == CGM.Int64Ty);
+    IntegerDiscriminator = cast<llvm::ConstantInt>(OtherDiscriminator);
   } else {
-    integerDiscriminator = llvm::ConstantInt::get(CGM.Int64Ty, 0);
+    IntegerDiscriminator = llvm::ConstantInt::get(CGM.Int64Ty, 0);
   }
 
-  return llvm::ConstantPtrAuth::get(
-    pointer, llvm::ConstantInt::get(CGM.Int32Ty, key), integerDiscriminator,
-    addressDiscriminator);
+  return llvm::ConstantPtrAuth::get(Pointer,
+                                    llvm::ConstantInt::get(CGM.Int32Ty, Key),
+                                    IntegerDiscriminator, AddressDiscriminator);
 }
 
 llvm::Constant *
-CodeGenModule::getConstantSignedPointer(llvm::Constant *pointer,
-                                        unsigned key,
-                                        llvm::Constant *storageAddress,
-                                        llvm::Constant *otherDiscriminator) {
-  // Unique based on the underlying value, not a signing of it.
-  auto stripped = pointer->stripPointerCasts();
+CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
+                                        llvm::Constant *StorageAddress,
+                                        llvm::Constant *OtherDiscriminator) {
+  llvm::Constant *Stripped = Pointer->stripPointerCasts();
 
   // Build the constant.
-  return buildConstantAddress(*this, stripped, key, storageAddress,
-                              otherDiscriminator);
+  return buildConstantAddress(*this, Stripped, Key, StorageAddress,
+                              OtherDiscriminator);
 }
 
 llvm::Constant *
-CodeGen::getConstantSignedPointer(CodeGenModule &CGM,
-                                  llvm::Constant *pointer, unsigned key,
-                                  llvm::Constant *storageAddress,
-                                  llvm::Constant *otherDiscriminator) {
-  return CGM.getConstantSignedPointer(pointer, key, storageAddress,
-                                      otherDiscriminator);
+CodeGen::getConstantSignedPointer(CodeGenModule &CGM, llvm::Constant *Pointer,
+                                  unsigned Key, llvm::Constant *StorageAddress,
+                                  llvm::Constant *OtherDiscriminator) {
+  return CGM.getConstantSignedPointer(Pointer, Key, StorageAddress,
+                                      OtherDiscriminator);
 }

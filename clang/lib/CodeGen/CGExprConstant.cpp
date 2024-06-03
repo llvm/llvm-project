@@ -2141,54 +2141,54 @@ ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
 
 ConstantLValue
 ConstantLValueEmitter::emitPointerAuthSignConstant(const CallExpr *E) {
-  auto unsignedPointer = emitPointerAuthPointer(E->getArg(0));
-  auto key = emitPointerAuthKey(E->getArg(1));
-  llvm::Constant *storageAddress;
-  llvm::Constant *otherDiscriminator;
-  std::tie(storageAddress, otherDiscriminator) =
-    emitPointerAuthDiscriminator(E->getArg(2));
+  llvm::Constant *UnsignedPointer = emitPointerAuthPointer(E->getArg(0));
+  unsigned Key = emitPointerAuthKey(E->getArg(1));
+  llvm::Constant *StorageAddress;
+  llvm::Constant *OtherDiscriminator;
+  std::tie(StorageAddress, OtherDiscriminator) =
+      emitPointerAuthDiscriminator(E->getArg(2));
 
-  auto signedPointer =
-    CGM.getConstantSignedPointer(unsignedPointer, key, storageAddress,
-                                 otherDiscriminator);
-  return signedPointer;
+  llvm::Constant *SignedPointer = CGM.getConstantSignedPointer(
+      UnsignedPointer, Key, StorageAddress, OtherDiscriminator);
+  return SignedPointer;
 }
 
 llvm::Constant *ConstantLValueEmitter::emitPointerAuthPointer(const Expr *E) {
-  Expr::EvalResult result;
-  bool succeeded = E->EvaluateAsRValue(result, CGM.getContext());
-  assert(succeeded); (void) succeeded;
+  Expr::EvalResult Result;
+  bool Succeeded = E->EvaluateAsRValue(Result, CGM.getContext());
+  assert(Succeeded);
+  (void)Succeeded;
 
   // The assertions here are all checked by Sema.
-  assert(result.Val.isLValue());
+  assert(Result.Val.isLValue());
   return ConstantEmitter(CGM, Emitter.CGF)
-           .emitAbstract(E->getExprLoc(), result.Val, E->getType());
+      .emitAbstract(E->getExprLoc(), Result.Val, E->getType());
 }
 
 unsigned ConstantLValueEmitter::emitPointerAuthKey(const Expr *E) {
   return E->EvaluateKnownConstInt(CGM.getContext()).getZExtValue();
 }
 
-std::pair<llvm::Constant*, llvm::Constant*>
+std::pair<llvm::Constant *, llvm::Constant *>
 ConstantLValueEmitter::emitPointerAuthDiscriminator(const Expr *E) {
   E = E->IgnoreParens();
 
-  if (auto call = dyn_cast<CallExpr>(E)) {
-    if (call->getBuiltinCallee() ==
-          Builtin::BI__builtin_ptrauth_blend_discriminator) {
-      auto pointer = ConstantEmitter(CGM).emitAbstract(call->getArg(0),
-                                            call->getArg(0)->getType());
-      auto extra = ConstantEmitter(CGM).emitAbstract(call->getArg(1),
-                                            call->getArg(1)->getType());
-      return { pointer, extra };
+  if (auto *Call = dyn_cast<CallExpr>(E)) {
+    if (Call->getBuiltinCallee() ==
+        Builtin::BI__builtin_ptrauth_blend_discriminator) {
+      llvm::Constant *Pointer = ConstantEmitter(CGM).emitAbstract(
+          Call->getArg(0), Call->getArg(0)->getType());
+      llvm::Constant *Extra = ConstantEmitter(CGM).emitAbstract(
+          Call->getArg(1), Call->getArg(1)->getType());
+      return {Pointer, Extra};
     }
   }
 
-  auto result = ConstantEmitter(CGM).emitAbstract(E, E->getType());
-  if (result->getType()->isPointerTy())
-    return { result, nullptr };
+  llvm::Constant *Result = ConstantEmitter(CGM).emitAbstract(E, E->getType());
+  if (Result->getType()->isPointerTy())
+    return {Result, nullptr};
   else
-    return { nullptr, result };
+    return {nullptr, Result};
 }
 
 ConstantLValue
