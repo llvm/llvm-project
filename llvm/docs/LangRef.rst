@@ -462,7 +462,7 @@ added in the future:
     registers to pass arguments. This attribute doesn't impact non-general
     purpose registers (e.g. floating point registers, on X86 XMMs/YMMs).
     Non-general purpose registers still follow the standard c calling
-    convention. Currently it is for x86_64 only.
+    convention. Currently it is for x86_64 and AArch64 only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style TLS. The access
     function generally has an entry block, an exit block and an initialization

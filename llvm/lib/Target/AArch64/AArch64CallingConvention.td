@@ -494,6 +494,32 @@ def CC_AArch64_GHC : CallingConv<[
   CCIfType<[i64], CCAssignToReg<[X19, X20, X21, X22, X23, X24, X25, X26, X27, X28]>>
 ]>;
 
+let Entry = 1 in
+def CC_AArch64_Preserve_None : CallingConv<[
+    // We can pass arguments in all general registers, except:
+    // - X8, used for sret
+    // - X16/X17, used by the linker as IP0/IP1
+    // - X18, the platform register
+    // - X29, the frame pointer
+    // - X30, the link register
+    // General registers are not preserved with the exception of
+    // FP, LR, and X18
+    // Non-volatile registers are used first, so functions may call
+    // normal functions without saving and reloading arguments.
+    CCIfType<[i32], CCAssignToReg<[W19, W20, W21, W22, W23,
+                                   W24, W25, W26, W27, W28,
+                                   W0, W1, W2, W3, W4, W5,
+                                   W6, W7, W9, W10, W11,
+                                   W12, W13, W14, W15]>>,
+    CCIfType<[i64], CCAssignToReg<[X19, X20, X21, X22, X23,
+                                   X24, X25, X26, X27, X28,
+                                   X0, X1, X2, X3, X4, X5,
+                                   X6, X7, X9, X10, X11,
+                                   X12, X13, X14, X15]>>,
+
+    CCDelegateTo<CC_AArch64_AAPCS>
+]>;
+
 // The order of the callee-saves in this file is important, because the
 // FrameLowering code will use this order to determine the layout the
 // callee-save area in the stack frame. As can be observed below, Darwin
@@ -606,6 +632,8 @@ def CSR_AArch64_AllRegs
 
 def CSR_AArch64_NoRegs : CalleeSavedRegs<(add)>;
 
+def CSR_AArch64_NoneRegs : CalleeSavedRegs<(add LR, FP)>;
+
 def CSR_AArch64_RT_MostRegs :  CalleeSavedRegs<(add CSR_AArch64_AAPCS,
                                                 (sequence "X%u", 9, 15))>;
 
@@ -681,6 +709,8 @@ def CSR_Darwin_AArch64_RT_AllRegs
 // These all preserve x18 in addition to any other registers.
 def CSR_AArch64_NoRegs_SCS
     : CalleeSavedRegs<(add CSR_AArch64_NoRegs, X18)>;
+def CSR_AArch64_NoneRegs_SCS
+    : CalleeSavedRegs<(add CSR_AArch64_NoneRegs, X18)>;
 def CSR_AArch64_AllRegs_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AllRegs, X18)>;
 def CSR_AArch64_AAPCS_SwiftError_SCS
