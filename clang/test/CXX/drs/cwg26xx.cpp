@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 
 namespace cwg2621 { // cwg2621: 16
@@ -129,7 +129,7 @@ int y = cwg2640_a\N{LOTUS});
 namespace cwg2644 { // cwg2644: 8
 #if __cplusplus >= 201103L
 auto z = [a = 42](int a) {
-// cxx11-warning@-1 {{initialized lambda captures are a C++14 extension}}
+// cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
 // since-cxx11-error@-2 {{a lambda parameter cannot shadow an explicitly captured entity}}
 //   since-cxx11-note@-3 {{variable 'a' is explicitly captured here}}
      return 1;
