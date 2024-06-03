@@ -39,10 +39,11 @@ Options
 
 .. option:: MatchInheritedVirtualFunctions
 
-  When ``true``, all classes with a virtual function are considered,
+  When `true`, all classes with a virtual function are considered,
   even if the function is inherited.
   Classes that do not declare a new virtual function are excluded
   by default, as they make up the majority of false positives.
+  Default: `false`.
 
   .. code-block:: c++
   
