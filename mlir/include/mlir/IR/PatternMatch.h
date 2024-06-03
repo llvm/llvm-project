@@ -784,7 +784,7 @@ public:
 /// place.
 class PatternRewriter : public RewriterBase {
 public:
-  PatternRewriter(MLIRContext *ctx) : RewriterBase(ctx) {}
+  explicit PatternRewriter(MLIRContext *ctx) : RewriterBase(ctx) {}
   using RewriterBase::RewriterBase;
 
   /// A hook used to indicate if the pattern rewriter can recover from failure
