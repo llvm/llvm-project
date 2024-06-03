@@ -359,15 +359,15 @@ struct CountCopyAndMove {
     return *this;
   }
   CountCopyAndMove(CountCopyAndMove &&) { Move++; }
-  CountCopyAndMove &operator=(const CountCopyAndMove &&) {
+  CountCopyAndMove &operator=(CountCopyAndMove &&) {
     Move++;
     return *this;
   }
 };
+
 int CountCopyAndMove::Copy = 0;
 int CountCopyAndMove::Move = 0;
-
-} // anonymous namespace
+} // namespace
 
 // Test initializer list construction.
 TEST(DenseMapCustomTest, InitializerList) {
@@ -500,11 +500,16 @@ TEST(DenseMapCustomTest, ReserveTest) {
 }
 
 TEST(DenseMapCustomTest, InsertOrAssignTest) {
-  DenseMap<int, CountCopyAndMove> Map;
+  struct C : CountCopyAndMove {
+    C(int v) : v(v) {}
+    int v;
+  };
+
+  DenseMap<int, C> Map;
   CountCopyAndMove::Copy = 0;
   CountCopyAndMove::Move = 0;
 
-  CountCopyAndMove val1;
+  C val1(1);
   auto try0 = Map.insert_or_assign(0, val1);
   EXPECT_TRUE(try0.second);
   EXPECT_EQ(0, CountCopyAndMove::Move);
@@ -516,7 +521,7 @@ TEST(DenseMapCustomTest, InsertOrAssignTest) {
   EXPECT_EQ(2, CountCopyAndMove::Copy);
 
   int key2 = 2;
-  CountCopyAndMove val2;
+  C val2(2);
   auto try2 = Map.insert_or_assign(key2, val2);
   EXPECT_TRUE(try2.second);
   EXPECT_EQ(0, CountCopyAndMove::Move);
