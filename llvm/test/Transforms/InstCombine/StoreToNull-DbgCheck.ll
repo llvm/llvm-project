@@ -3,15 +3,12 @@
 ; !dbg should be present at the end of "store to null" instruction
 ; RUN: opt -S -passes='instcombine' < %s | FileCheck %s > /dev/null
 
-source_filename = "test.ll"
-target triple = "hexagon"
-
 define void @_Z3foov() {
 ; CHECK-LABEL: define void @_Z3foov() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i1 true, ptr poison, align 1, !dbg
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
-
+;
 entry:
   tail call void null(), !dbg !4
   ret void
@@ -20,7 +17,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "Clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !2, splitDebugInlining: false, debugInfoForProfiling: true, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !2, splitDebugInlining: false, debugInfoForProfiling: true, nameTableKind: None)
 !1 = !DIFile(filename: "test_sym_mod.cpp", directory: "/workspace/asaravan/test_bugpoint")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
