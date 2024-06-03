@@ -7853,7 +7853,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     assert(PtrVT == Ptr.getValueType());
     assert(MemVT == Mask.getValueType());
     if (MemVT != PtrVT)
-      Mask = DAG.getPtrExtOrTrunc(Mask, sdl, PtrVT);
+      Mask = DAG.getZExtOrTrunc(Mask, sdl, PtrVT);
 
     setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
