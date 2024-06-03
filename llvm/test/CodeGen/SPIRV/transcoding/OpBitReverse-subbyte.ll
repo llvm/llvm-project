@@ -13,6 +13,9 @@
 ; CHECK-SPIRV-NO: %[[#CharTy:]] = OpTypeInt 8 0
 ; CHECK-SPIRV-COUNT-2: %[[#]] = OpBitReverse %[[#CharTy]] %[[#]]
 
+; TODO: Add a check to ensure that there's no behavior change of bitreverse operation
+;       between the LLVM-IR and SPIR-V for i2 and i4
+
 define spir_func void @foo(i2 %a, i4 %b) {
 entry:
   %res2 = tail call i2 @llvm.bitreverse.i2(i2 %a)

@@ -91,7 +91,8 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeBool(MachineIRBuilder &MIRBuilder) {
 }
 
 unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
-  assert(Width <= 64 && "Unsupported integer width!");
+  if (Width > 64)
+    report_fatal_error("Unsupported integer width!");
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(CurMF->getSubtarget());
   if (ST.canUseExtension(
           SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers))
@@ -102,7 +103,7 @@ unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
     Width = 16;
   else if (Width <= 32)
     Width = 32;
-  else if (Width <= 64)
+  else
     Width = 64;
   return Width;
 }

@@ -15,6 +15,9 @@
 ; CHECK-SPIRV: %[[#Res:]] = OpBitReverse %[[#CharTy]] %[[#Arg]]
 ; CHECK-SPIRV: OpReturnValue %[[#Res]]
 
+; TODO: Add a check to ensure that there's no behavior change of bitreverse operation
+;       between the LLVM-IR and SPIR-V for i2
+
 define spir_func signext i2 @foo(i2 noundef signext %a) {
 entry:
   %b = tail call i2 @llvm.bitreverse.i2(i2 %a)
