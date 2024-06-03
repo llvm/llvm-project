@@ -212,7 +212,7 @@ lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::cir::ZeroAttr zeroAttr,
                     mlir::ConversionPatternRewriter &rewriter,
                     const mlir::TypeConverter *converter) {
   auto loc = parentOp->getLoc();
-  return rewriter.create<mlir::cir::ZeroInitConstOp>(
+  return rewriter.create<mlir::LLVM::ZeroOp>(
       loc, converter->convertType(zeroAttr.getType()));
 }
 
@@ -279,7 +279,7 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
 
   if (auto zeros = constArr.getTrailingZerosNum()) {
     auto arrayTy = constArr.getType();
-    result = rewriter.create<mlir::cir::ZeroInitConstOp>(
+    result = rewriter.create<mlir::LLVM::ZeroOp>(
         loc, converter->convertType(arrayTy));
   } else {
     result = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
@@ -3457,7 +3457,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                            mlir::func::FuncDialect>();
 
   // Allow operations that will be lowered directly to LLVM IR.
-  target.addLegalOp<mlir::cir::ZeroInitConstOp>();
+  target.addLegalOp<mlir::LLVM::ZeroOp>();
 
   getOperation()->removeAttr("cir.sob");
   getOperation()->removeAttr("cir.lang");

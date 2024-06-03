@@ -76,7 +76,7 @@ public:
       mlir::Operation *op, llvm::IRBuilderBase &builder,
       mlir::LLVM::ModuleTranslation &moduleTranslation) const final {
 
-    if (auto cirOp = llvm::dyn_cast<mlir::cir::ZeroInitConstOp>(op))
+    if (auto cirOp = llvm::dyn_cast<mlir::LLVM::ZeroOp>(op))
       moduleTranslation.mapValue(cirOp.getResult()) =
           llvm::Constant::getNullValue(
               moduleTranslation.convertType(cirOp.getType()));
