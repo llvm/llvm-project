@@ -2,22 +2,13 @@
 // RUN:   -analyzer-checker=core,unix.Stream,alpha.security.taint \
 // RUN:   -analyzer-checker=debug.ExprInspection
 
+#include "Inputs/system-header-simulator-for-simple-stream.h"
+
 #define EOF (-1)
-
-extern "C" {
-typedef __typeof(sizeof(int)) size_t;
-typedef struct _FILE FILE;
-
-FILE *fopen(const char *filename, const char *mode);
-int fclose(FILE *stream);
-size_t fread(void *buffer, size_t size, size_t count, FILE *stream);
-int fgetc(FILE *stream);
-void *malloc(size_t size);
-}
 
 void clang_analyzer_dump(int);
 void clang_analyzer_isTainted(int);
-void clang_analyzer_warnIfReached();
+void clang_analyzer_warnIfReached(void);
 
 // A stream is only tracked by StreamChecker if it results from a call to "fopen".
 // Otherwise, there is no specific modelling of "fread".
@@ -30,8 +21,9 @@ void untracked_stream(FILE *fp) {
   }
 }
 
-void fgetc_props_taint() {
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+void fgetc_props_taint(void) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     int c = fgetc(fp); // c is tainted.
     if (c != EOF) {
       clang_analyzer_isTainted(c); // expected-warning{{YES}}
@@ -40,8 +32,9 @@ void fgetc_props_taint() {
   }
 }
 
-void fread_props_taint() {
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+void fread_props_taint(void) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     char buffer[10];
     int c = fread(buffer, 1, 10, fp); // c is tainted.
     if (c != 10) {
@@ -52,8 +45,9 @@ void fread_props_taint() {
   }
 }
 
-void read_one_byte1() {
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+void read_one_byte1(void) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     char c;
     if (1 == fread(&c, 1, 1, fp)) {
       char p = c; // Unknown value but not garbage.
@@ -67,7 +61,8 @@ void read_one_byte1() {
 }
 
 void read_one_byte2(char *buffer) {
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     if (1 == fread(buffer, 1, 1, fp)) {
       char p = buffer[0]; // Unknown value but not garbage.
       clang_analyzer_isTainted(p); // expected-warning{{YES}}
@@ -81,7 +76,8 @@ void read_one_byte2(char *buffer) {
 
 void read_one_byte3(char *buffer) {
   buffer[1] = 10;
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     // buffer[1] is not mutated by fread and remains not tainted.
     fread(buffer, 1, 1, fp);
     char p = buffer[1];
@@ -92,7 +88,8 @@ void read_one_byte3(char *buffer) {
 }
 
 void read_many_bytes(char *buffer) {
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     if (42 == fread(buffer, 1, 42, fp)) {
       char p = buffer[0]; // Unknown value but not garbage.
       clang_analyzer_isTainted(p); // expected-warning{{YES}}
@@ -105,9 +102,10 @@ void read_many_bytes(char *buffer) {
 }
 
 void random_access_write1(int index) {
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     long c[4];
-    bool success = 2 == fread(c + 1, sizeof(long), 2, fp);
+    int success = 2 == fread(c + 1, sizeof(long), 2, fp);
 
     switch (index) {
     case 0:
@@ -158,8 +156,9 @@ void random_access_write1(int index) {
   }
 }
 
-void random_access_write2(bool b) {
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+void random_access_write2(int b) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     int buffer[10];
     int *ptr = buffer + 2;
     if (5 == fread(ptr - 1, sizeof(int), 5, fp)) {
@@ -182,7 +181,8 @@ void random_access_write_symbolic_count(size_t count) {
   if (count > 2)
     return;
 
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     long c[4];
     fread(c + 1, sizeof(long), count, fp);
 
@@ -204,7 +204,8 @@ void random_access_write_symbolic_count(size_t count) {
 }
 
 void dynamic_random_access_write(int startIndex) {
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     long buffer[10];
     // Cannot reason about index.
     size_t res = fread(buffer + startIndex, sizeof(long), 5, fp);
@@ -251,9 +252,10 @@ struct S {
   long b;
 };
 
-void compound_write1() {
-  if (FILE *fp = fopen("/home/test", "rb+")) {
-    S s; // s.a is not touched by fread.
+void compound_write1(void) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
+    struct S s; // s.a is not touched by fread.
     if (1 == fread(&s.b, sizeof(s.b), 1, fp)) {
       long p = s.b;
       clang_analyzer_isTainted(p); // expected-warning {{YES}}
@@ -267,9 +269,10 @@ void compound_write1() {
   }
 }
 
-void compound_write2() {
-  if (FILE *fp = fopen("/home/test", "rb+")) {
-    S s; // s.a is not touched by fread.
+void compound_write2(void) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
+    struct S s; // s.a is not touched by fread.
     if (1 == fread(&s.b, sizeof(s.b), 1, fp)) {
       long p = s.a; // FIXME: This should raise an uninitialized read.
       clang_analyzer_isTainted(p); // expected-warning {{NO}} FIXME: This should be YES.
@@ -283,8 +286,9 @@ void compound_write2() {
   }
 }
 
-void var_write() {
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+void var_write(void) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     int a, b; // 'a' is not touched by fread.
     if (1 == fread(&b, sizeof(b), 1, fp)) {
       long p = a; // expected-warning{{Assigned value is garbage or undefined}}
@@ -299,10 +303,11 @@ void var_write() {
 // Instead, the knowledge of the whole array is lost.
 #define MaxInvalidatedElementRegion 64 // See StreamChecker::evalFreadFwrite in StreamChecker.cpp.
 #define PastMaxComplexity MaxInvalidatedElementRegion + 1
-void test_large_read() {
+void test_large_read(void) {
   int buffer[PastMaxComplexity + 1];
   buffer[PastMaxComplexity] = 42;
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     if (buffer[PastMaxComplexity] != 42) {
       clang_analyzer_warnIfReached(); // Unreachable.
     }
@@ -315,10 +320,11 @@ void test_large_read() {
   }
 }
 
-void test_small_read() {
+void test_small_read(void) {
   int buffer[10];
   buffer[5] = 42;
-  if (FILE *fp = fopen("/home/test", "rb+")) {
+  FILE *fp = fopen("/home/test", "rb+");
+  if (fp) {
     clang_analyzer_dump(buffer[5]); // expected-warning{{42 S32b}}
     if (1 == fread(buffer, sizeof(int), 5, fp)) {
       clang_analyzer_dump(buffer[5]); // expected-warning{{42 S32b}}
