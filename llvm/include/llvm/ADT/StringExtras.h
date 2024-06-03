@@ -34,7 +34,7 @@ class raw_ostream;
 
 /// hexdigit - Return the hexadecimal character for the
 /// given number \p X (which should be less than 16).
-inline char hexdigit(unsigned X, bool LowerCase = false) {
+static inline char hexdigit(unsigned X, bool LowerCase = false) {
   assert(X < 16);
   static const char LUT[] = "0123456789ABCDEF";
   const uint8_t Offset = LowerCase ? 32 : 0;
