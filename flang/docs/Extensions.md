@@ -118,6 +118,12 @@ end
   procedure interface.  This compiler accepts it, since there is otherwise
   no way to declare an interoperable dummy procedure with an arbitrary
   interface like `void (*)()`.
+* `PURE` functions are allowed to have dummy arguments that are
+  neither `INTENT(IN)` nor `VALUE`, similar to `PURE` subroutines,
+  with a warning.
+  This enables atomic memory operations to be naturally represented
+  as `PURE` functions, which allows their use in parallel constructs
+  and `DO CONCURRENT`.
 
 ## Extensions, deletions, and legacy features supported by default
 
