@@ -2236,7 +2236,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
   bool InTemplateParameterList = false;
 
   while (FormatTok->isNot(tok::l_brace)) {
-    if (FormatTok->isTypeName(LangOpts)) {
+    if (FormatTok->isTypeName(LangOpts) || FormatTok->isAttribute()) {
       nextToken();
       continue;
     }

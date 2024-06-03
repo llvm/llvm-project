@@ -7,6 +7,7 @@ import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/utils/llvm-lit/lit_path_function.gni")
+import("//llvm/version.gni")
 import("clang_lit_site_cfg_files.gni")
 
 template("write_lit_config") {
@@ -69,6 +70,7 @@ write_lit_config("lit_site_cfg") {
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOL_LLVM_DRIVER_BUILD=0",  # FIXME: Add actual support for this.
     "LLVM_USE_SANITIZER=",
+    "LLVM_VERSION_MAJOR=$llvm_version_major",
     "Python3_EXECUTABLE=$python_path",
     "USE_Z3_SOLVER=",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=0",
