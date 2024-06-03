@@ -1638,7 +1638,8 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic"),          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic"),              \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")
 #else /* LLPC_BUILD_GFX12 */
 #define AMDGPU_MACH_ENUM_ENTS                                                  \
   ENUM_ENT(EF_AMDGPU_MACH_NONE, "none"),                                       \
@@ -1705,7 +1706,8 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic"),          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic"),              \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")
 #endif /* LLPC_BUILD_GFX12 */
 // clang-format on
 

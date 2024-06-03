@@ -59,4 +59,9 @@ void BoolExpr(int *I, float *F) {
   // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc kernels loop if (*I < *F)
   while(0);
+
+  // expected-error@+2{{OpenACC 'if' clause is not valid on 'loop' directive}}
+  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+#pragma acc loop if(I)
+  for(;;);
 }

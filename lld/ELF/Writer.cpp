@@ -936,51 +936,53 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
   }
 
   // Find the first element that has as close a rank as possible.
-  auto i = std::max_element(b, e, [=](SectionCommand *a, SectionCommand *b) {
-    return getRankProximity(sec, a) < getRankProximity(sec, b);
-  });
-  if (i == e)
+  if (b == e)
     return e;
+  int proximity = getRankProximity(sec, *b);
+  auto i = b;
+  for (auto j = b; ++j != e;) {
+    int p = getRankProximity(sec, *j);
+    if (p > proximity) {
+      proximity = p;
+      i = j;
+    }
+  }
   if (!isa<OutputDesc>(*i))
     return e;
-  auto foundSec = &cast<OutputDesc>(*i)->osec;
-
-  // Consider all existing sections with the same proximity.
-  int proximity = getRankProximity(sec, *i);
-  unsigned sortRank = sec->sortRank;
-  if (script->hasPhdrsCommands() || !script->memoryRegions.empty())
-    // Prevent the orphan section to be placed before the found section. If
-    // custom program headers are defined, that helps to avoid adding it to a
-    // previous segment and changing flags of that segment, for example, making
-    // a read-only segment writable. If memory regions are defined, an orphan
-    // section should continue the same region as the found section to better
-    // resemble the behavior of GNU ld.
-    sortRank = std::max(sortRank, foundSec->sortRank);
-  for (; i != e; ++i) {
-    auto *curSecDesc = dyn_cast<OutputDesc>(*i);
-    if (!curSecDesc || !curSecDesc->osec.hasInputSections)
-      continue;
-    if (getRankProximity(sec, curSecDesc) != proximity ||
-        sortRank < curSecDesc->osec.sortRank)
-      break;
-  }
 
   auto isOutputSecWithInputSections = [](SectionCommand *cmd) {
     auto *osd = dyn_cast<OutputDesc>(cmd);
     return osd && osd->osec.hasInputSections;
   };
-  auto j =
-      std::find_if(std::make_reverse_iterator(i), std::make_reverse_iterator(b),
-                   isOutputSecWithInputSections);
-  i = j.base();
+
+  // If i's rank is larger, the orphan section can be placed before i.
+  //
+  // However, don't do this if custom program headers are defined. Otherwise,
+  // adding the orphan to a previous segment can change its flags, for example,
+  // making a read-only segment writable. If memory regions are defined, an
+  // orphan section should continue the same region as the found section to
+  // better resemble the behavior of GNU ld.
+  bool mustAfter = script->hasPhdrsCommands() || !script->memoryRegions.empty();
+  if (cast<OutputDesc>(*i)->osec.sortRank <= sec->sortRank || mustAfter) {
+    for (auto j = ++i; j != e; ++j) {
+      if (!isOutputSecWithInputSections(*j))
+        continue;
+      if (getRankProximity(sec, *j) != proximity)
+        break;
+      i = j + 1;
+    }
+  } else {
+    for (; i != b; --i)
+      if (isOutputSecWithInputSections(i[-1]))
+        break;
+  }
 
   // As a special case, if the orphan section is the last section, put
   // it at the very end, past any other commands.
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  auto nextSec = std::find_if(i, e, isOutputSecWithInputSections);
-  if (nextSec == e)
+  if (std::find_if(i, e, isOutputSecWithInputSections) == e)
     return e;
 
   while (i != e && shouldSkip(*i))
@@ -1479,16 +1481,22 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= part.memtagGlobalDescriptors->updateAllocSize();
     }
 
-    const Defined *changedSym = script->assignAddresses();
+    std::pair<const OutputSection *, const Defined *> changes =
+        script->assignAddresses();
     if (!changed) {
       // Some symbols may be dependent on section addresses. When we break the
       // loop, the symbol values are finalized because a previous
       // assignAddresses() finalized section addresses.
-      if (!changedSym)
+      if (!changes.first && !changes.second)
         break;
       if (++assignPasses == 5) {
-        errorOrWarn("assignment to symbol " + toString(*changedSym) +
-                    " does not converge");
+        if (changes.first)
+          errorOrWarn("address (0x" + Twine::utohexstr(changes.first->addr) +
+                      ") of section '" + changes.first->name +
+                      "' does not converge");
+        if (changes.second)
+          errorOrWarn("assignment to symbol " + toString(*changes.second) +
+                      " does not converge");
         break;
       }
     } else if (spilled) {

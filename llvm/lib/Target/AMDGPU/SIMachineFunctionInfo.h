@@ -689,10 +689,7 @@ public:
 
 #endif /* LLPC_BUILD_GFX12 */
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
-    assert(
-        is_sorted(PrologEpilogSGPRSpills, [](const auto &LHS, const auto &RHS) {
-          return LHS.first < RHS.first;
-        }));
+    assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));
     return PrologEpilogSGPRSpills;
   }
 
