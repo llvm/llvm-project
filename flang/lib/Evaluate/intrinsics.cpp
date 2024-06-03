@@ -1808,7 +1808,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           continue;
         } else if (d.typePattern.kindCode == KindCode::nullPointerType) {
           continue;
+        } else if (IsNullPointer(expr)) {
+          messages.Say(arg->sourceLocation(),
+              "Actual argument for '%s=' may not be NULL()"_err_en_US,
+              d.keyword);
         } else {
+          CHECK(IsProcedure(expr));
           messages.Say(arg->sourceLocation(),
               "Actual argument for '%s=' may not be a procedure"_err_en_US,
               d.keyword);
