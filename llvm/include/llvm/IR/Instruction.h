@@ -151,9 +151,6 @@ public:
   Instruction       *user_back()       { return cast<Instruction>(*user_begin());}
   const Instruction *user_back() const { return cast<Instruction>(*user_begin());}
 
-  inline const BasicBlock *getParent() const { return getNodeBaseParent(); }
-  inline BasicBlock *getParent() { return getNodeBaseParent(); }
-
   /// Return the module owning the function this instruction belongs to
   /// or nullptr it the function does not have a module.
   ///
@@ -995,8 +992,6 @@ private:
   unsigned short getSubclassDataFromValue() const {
     return Value::getSubclassDataFromValue();
   }
-
-  void setParent(BasicBlock *P);
 
 protected:
   // Instruction subclasses can stick up to 15 bits of stuff into the

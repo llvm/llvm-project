@@ -189,7 +189,7 @@ BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
     assert(!InsertBefore &&
            "Cannot insert block before another block with no function!");
 
-  end().getNodePtr()->setNodeBaseParent(this);
+  end().getNodePtr()->setParent(this);
   setName(Name);
   if (NewParent)
     setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);

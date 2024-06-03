@@ -74,8 +74,6 @@ Instruction::~Instruction() {
   setMetadata(LLVMContext::MD_DIAssignID, nullptr);
 }
 
-void Instruction::setParent(BasicBlock *P) { setNodeBaseParent(P); }
-
 const Module *Instruction::getModule() const {
   return getParent()->getModule();
 }
