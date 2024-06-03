@@ -212,7 +212,7 @@ function check-targets() {
       echo "check-unwind"
     ;;
     lldb)
-      echo "check-lldb" # TODO: check-lldb may not include all the LLDB tests?
+      echo "check-lldb"
     ;;
     pstl)
       echo "check-all"
