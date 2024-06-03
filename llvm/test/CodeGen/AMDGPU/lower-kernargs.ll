@@ -1121,17 +1121,17 @@ define amdgpu_kernel void @kern_noundef_global_ptr(ptr addrspace(1) noundef %ptr
 ; HSA-NEXT:    [[KERN_NOUNDEF_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_NOUNDEF_GLOBAL_PTR_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 16, !invariant.load [[META1]]
-; HSA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) undef, align 8
+; HSA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) null, align 8
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_noundef_global_ptr(
 ; MESA-NEXT:    [[KERN_NOUNDEF_GLOBAL_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; MESA-NEXT:    [[PTR_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_NOUNDEF_GLOBAL_PTR_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[PTR_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[PTR_KERNARG_OFFSET]], align 4, !invariant.load [[META1]]
-; MESA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) undef, align 8
+; MESA-NEXT:    store volatile ptr addrspace(1) [[PTR_LOAD]], ptr addrspace(1) null, align 8
 ; MESA-NEXT:    ret void
 ;
-  store volatile ptr addrspace(1) %ptr, ptr addrspace(1) undef
+  store volatile ptr addrspace(1) %ptr, ptr addrspace(1) null
   ret void
 }
 
