@@ -3,11 +3,10 @@
 
 // Check explicitly invalid code
 
-void runtime() {}
+void runtime() {} // expected-note {{declared here}}
 
-[[msvc::constexpr]] int f0() { runtime(); return 0; } // expected-note {{declared here}}
-static_assert(f0() == 0); // expected-error {{static assertion expression is not an integral constant expression}} \
-                             expected-note{{non-constexpr function 'f0' cannot be used in a constant expression}}
+[[msvc::constexpr]] void f0() { runtime(); } // expected-error {{constexpr function never produces a constant expression}} \
+                                             // expected-note {{non-constexpr function 'runtime' cannot be used in a constant expression}}
 [[msvc::constexpr]] constexpr void f1() {} // expected-error {{attribute 'msvc::constexpr' cannot be applied to the constexpr function 'f1'}}
 #if __cplusplus >= 202202L
 [[msvc::constexpr]] consteval void f2() {} // expected-error {{attribute 'msvc::constexpr' cannot be applied to the consteval function 'f1'}}
@@ -24,18 +23,23 @@ struct [[msvc::constexpr]] S2{}; // expected-error {{'constexpr' attribute only 
 
 [[msvc::constexpr]] int f4(int x) { return x > 1 ? 1 + f4(x / 2) : 0; } // expected-note {{non-constexpr function 'f4' cannot be used in a constant expression}} \
                                                                         // expected-note {{declared here}} \
+                                                                        // expected-note {{declared here}} \
                                                                         // expected-note {{declared here}}
 constexpr bool f5() { [[msvc::constexpr]] return f4(32) == 5; } // expected-note {{in call to 'f4(32)'}}
 static_assert(f5()); // expected-error {{static assertion expression is not an integral constant expression}} \
                      // expected-note {{in call to 'f5()'}}
 
-int f6(int x) { [[msvc::constexpr]] return x > 1 ? 1 + f6(x / 2) : 0; } // expected-note {{declared here}}
-constexpr bool f7() { [[msvc::constexpr]] return f6(32) == 5; } // expected-note {{non-constexpr function 'f6' cannot be used in a constant expression}}
+int f6(int x) { [[msvc::constexpr]] return x > 1 ? 1 + f6(x / 2) : 0; } // expected-note {{declared here}} \
+                                                                        // expected-note {{declared here}}
+constexpr bool f7() { [[msvc::constexpr]] return f6(32) == 5; } // expected-error {{constexpr function never produces a constant expression}} \
+                                                                // expected-note {{non-constexpr function 'f6' cannot be used in a constant expression}} \
+                                                                // expected-note {{non-constexpr function 'f6' cannot be used in a constant expression}}
 static_assert(f7()); // expected-error {{static assertion expression is not an integral constant expression}} \
                      // expected-note {{in call to 'f7()'}}
 
-constexpr bool f8() {
+constexpr bool f8() { // expected-error {{constexpr function never produces a constant expression}}
     [[msvc::constexpr]] f4(32); // expected-error {{'constexpr' attribute only applies to functions and return statements}} \
+                                // expected-note {{non-constexpr function 'f4' cannot be used in a constant expression}} \
                                 // expected-note {{non-constexpr function 'f4' cannot be used in a constant expression}}
     [[msvc::constexpr]] int i5 = f4(32); // expected-error {{'constexpr' attribute only applies to functions and return statements}}
     return i5 == 5;

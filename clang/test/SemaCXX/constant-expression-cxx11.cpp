@@ -1273,10 +1273,9 @@ namespace PR11595 {
   struct B { B(); A& x; };
   static_assert(B().x == 3, "");  // expected-error {{constant expression}} expected-note {{non-literal type 'B' cannot be used in a constant expression}}
 
-  constexpr bool f(int k) {
-    return B().x == k; // expected-note {{non-literal type 'B' cannot be used in a constant expression}}
+  constexpr bool f(int k) { // cxx11_20-error {{constexpr function never produces a constant expression}}
+    return B().x == k; // cxx11_20-note {{non-literal type 'B' cannot be used in a constant expression}}
   }
-  static_assert(f(3), ""); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 }
 
 namespace ExprWithCleanups {
@@ -1327,9 +1326,8 @@ namespace ExternConstexpr {
   constexpr int g() { return q; } // expected-note {{outside its lifetime}}
   constexpr int q = g(); // expected-error {{constant expression}} expected-note {{in call}}
 
-  extern int r; // expected-note {{here}}
-  constexpr int h() { return r; } // expected-note {{read of non-const}}
-  static_assert(h() == 0, ""); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
+  extern int r; // cxx11_20-note {{here}}
+  constexpr int h() { return r; } // cxx11_20-error {{never produces a constant}} cxx11_20-note {{read of non-const}}
 
   struct S { int n; };
   extern const S s;
@@ -1908,13 +1906,12 @@ namespace StmtExpr {
     });
   }
   static_assert(g(123) == 15129, "");
-  constexpr int h() {
+  constexpr int h() { // cxx11_20-error {{never produces a constant}}
     return ({ // expected-warning {{extension}}
-      return 0; // expected-note {{not supported}}
+      return 0; // cxx11_20-note {{not supported}}
       1;
     });
   }
-  static_assert(h() == 0, ""); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 }
 
 namespace VirtualFromBase {
@@ -2096,10 +2093,9 @@ namespace ZeroSizeTypes {
   // expected-note@-2 {{subtraction of pointers to type 'int[0]' of zero size}}
 
   int arr[5][0];
-  constexpr int f() {
-    return &arr[3] - &arr[0]; // expected-note {{subtraction of pointers to type 'int[0]' of zero size}}
+  constexpr int f() { // cxx11_20-error {{never produces a constant expression}}
+    return &arr[3] - &arr[0]; // cxx11_20-note {{subtraction of pointers to type 'int[0]' of zero size}}
   }
-  static_assert(f() == 0, ""); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 }
 
 namespace BadDefaultInit {
@@ -2122,12 +2118,11 @@ namespace NeverConstantTwoWays {
   // If we see something non-constant but foldable followed by something
   // non-constant and not foldable, we want the first diagnostic, not the
   // second.
-  constexpr int f(int n) {
-    return (int *)(long)&n == &n ?
-        1 / 0 : // expected-note {{division by zero}} expected-warning {{division by zero is undefined}}
+  constexpr int f(int n) { // cxx11_20-error {{never produces a constant expression}}
+    return (int *)(long)&n == &n ? // cxx11_20-note {{reinterpret_cast}}
+        1 / 0 : // expected-warning {{division by zero}}
         0;
   }
-  static_assert(f(0) == 0, ""); // expected-error {{static assertion expression is not an integral constant expression}} expected-note {{in call to}}
 
   constexpr int n = // expected-error {{must be initialized by a constant expression}}
       (int *)(long)&n == &n ? // expected-note {{reinterpret_cast}}
@@ -2323,9 +2318,10 @@ namespace PR28366 {
 namespace ns1 {
 
 void f(char c) { //expected-note{{declared here}}
+  //cxx11_20-note@-1{{declared here}}
   struct X {
-    static constexpr char f() {
-      return c; //expected-error{{reference to local}}
+    static constexpr char f() { // cxx11_20-error {{never produces a constant expression}}
+      return c; //expected-error{{reference to local}} cxx11_20-note{{function parameter}}
     }
   };
   int I = X::f();

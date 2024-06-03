@@ -192,9 +192,9 @@ namespace thisPointer {
     constexpr int get12() { return 12; }
   };
 
-  constexpr int foo() {
+  constexpr int foo() { // both-error {{never produces a constant expression}}
     S *s = nullptr;
-    return s->get12(); // both-note {{member call on dereferenced null pointer}}
+    return s->get12(); // both-note 2{{member call on dereferenced null pointer}}
 
   }
   static_assert(foo() == 12, ""); // both-error {{not an integral constant expression}} \
@@ -329,7 +329,8 @@ namespace InitializerTemporaries {
   struct S {
     constexpr S() {}
     constexpr ~S() noexcept(false) { throw 12; } // both-error {{cannot use 'throw'}} \
-                                                 // both-note {{subexpression not valid}}
+                                                 // both-error {{never produces a constant expression}} \
+                                                 // both-note 2{{subexpression not valid}}
   };
 
   constexpr int f() {
@@ -403,14 +404,17 @@ namespace MI {
 
 namespace DeriveFailures {
 #if __cplusplus < 202002L
-  struct Base { // both-note {{declared here}}
+  struct Base { // both-note {{declared here}} \
+                // ref-note {{declared here}}
     int Val;
   };
 
   struct Derived : Base {
     int OtherVal;
 
-    constexpr Derived(int i) : OtherVal(i) {} // both-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}}
+    constexpr Derived(int i) : OtherVal(i) {} // ref-error {{never produces a constant expression}} \
+                                              // both-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} \
+                                              // ref-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} 
   };
 
   constexpr Derived D(12); // both-error {{must be initialized by a constant expression}} \
@@ -593,9 +597,9 @@ namespace Destructors {
 
   struct S {
     constexpr S() {}
-    constexpr ~S() {
+    constexpr ~S() { // both-error {{never produces a constant expression}}
       int i = 1 / 0; // both-warning {{division by zero}} \
-                     // both-note {{division by zero}}
+                     // both-note 2{{division by zero}}
     }
   };
   constexpr int testS() {
@@ -1062,20 +1066,20 @@ namespace AccessOnNullptr {
     int a;
   };
 
-  constexpr int a() {
+  constexpr int a() { // both-error {{never produces a constant expression}}
     F *f = nullptr;
 
-    f->a = 0; // both-note {{cannot access field of null pointer}}
+    f->a = 0; // both-note 2{{cannot access field of null pointer}}
     return f->a;
   }
   static_assert(a() == 0, ""); // both-error {{not an integral constant expression}} \
                                // both-note {{in call to 'a()'}}
 
-  constexpr int a2() {
+  constexpr int a2() { // both-error {{never produces a constant expression}}
     F *f = nullptr;
 
 
-    const int *a = &(f->a); // both-note {{cannot access field of null pointer}}
+    const int *a = &(f->a); // both-note 2{{cannot access field of null pointer}}
     return f->a;
   }
   static_assert(a2() == 0, ""); // both-error {{not an integral constant expression}} \
@@ -1242,11 +1246,8 @@ namespace InvalidCtorInitializer {
 extern int f(); // both-note {{here}}
 struct HasNonConstExprMemInit {
   int x = f(); // both-note {{non-constexpr function}}
-  constexpr HasNonConstExprMemInit() {}
+  constexpr HasNonConstExprMemInit() {} // both-error {{never produces a constant expression}}
 };
-HasNonConstExprMemInit NonConstexprUse;
-constexpr HasNonConstExprMemInit ConstexprUse; // both-error {{constexpr variable 'ConstexprUse' must be initialized by a constant expression}} \
-                                                  both-note {{in call to}}
 
 namespace {
   template <class Tp, Tp v>
@@ -1447,8 +1448,8 @@ namespace TemporaryWithInvalidDestructor {
 #if __cplusplus >= 202002L
   struct A {
     bool a = true;
-    constexpr ~A() noexcept(false) {
-      throw; // both-note {{not valid in a constant expression}} \
+    constexpr ~A() noexcept(false) { // both-error {{never produces a constant expression}}
+      throw; // both-note 2{{not valid in a constant expression}} \
              // both-error {{cannot use 'throw' with exceptions disabled}}
     }
   };
