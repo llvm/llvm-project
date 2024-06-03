@@ -242,6 +242,7 @@ add_math_entrypoint_object(lrintf128)
 add_math_entrypoint_object(lround)
 add_math_entrypoint_object(lroundf)
 add_math_entrypoint_object(lroundl)
+add_math_entrypoint_object(lroundf16)
 add_math_entrypoint_object(lroundf128)
 
 add_math_entrypoint_object(modf)
