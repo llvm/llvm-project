@@ -180,6 +180,7 @@ add_math_entrypoint_object(frexpf128)
 add_math_entrypoint_object(fromfp)
 add_math_entrypoint_object(fromfpf)
 add_math_entrypoint_object(fromfpl)
+add_math_entrypoint_object(fromfpf16)
 add_math_entrypoint_object(fromfpf128)
 
 add_math_entrypoint_object(fromfpx)
