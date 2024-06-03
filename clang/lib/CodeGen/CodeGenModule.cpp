@@ -2065,8 +2065,8 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
     ctor.addInt(Int32Ty, I.Priority);
     ctor.add(I.Initializer);
     if (I.AssociatedData)
-      ctor.add(llvm::ConstantExpr::getPointerCast(I.AssociatedData,
-                                                  AssocDataPtrTy));
+      ctor.add(
+          llvm::ConstantExpr::getPointerCast(I.AssociatedData, AssocDataPtrTy));
     else
       ctor.addNullPointer(AssocDataPtrTy);
     ctor.finishAndAddTo(ctors);
