@@ -282,14 +282,111 @@ define i1 @gep17() {
   ret i1 %cmp
 }
 
-@weak = extern_weak global i8
+@extern_weak = extern_weak global i8
 
 define i1 @extern_weak_may_be_null() {
 ; CHECK-LABEL: @extern_weak_may_be_null(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr @weak, null
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr @extern_weak, null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %cmp = icmp ne ptr @weak, null
+  %cmp = icmp ne ptr @extern_weak, null
+  ret i1 %cmp
+}
+
+; Don't fold this. @A might really be allocated next to @B, in which case the
+; icmp should return true. It's not valid to *dereference* in @B from a pointer
+; based on @A, but icmp isn't a dereference.
+define i1 @globals_might_be_adjacent() {
+; CHECK-LABEL: @globals_might_be_adjacent(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr getelementptr inbounds (i32, ptr @A, i64 1), @B
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr getelementptr inbounds (i32, ptr @A, i64 1), @B
+  ret i1 %cmp
+}
+
+define i1 @globals_might_be_adjacent2() {
+; CHECK-LABEL: @globals_might_be_adjacent2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr getelementptr inbounds (i64, ptr @A, i64 1), getelementptr inbounds (i64, ptr @B, i64 2)
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr getelementptr inbounds (i64, ptr @A, i64 1), getelementptr inbounds (i64, ptr @B, i64 2)
+  ret i1 %cmp
+}
+
+@weak = weak global i32 0
+
+; An object with weak linkage cannot have it's identity determined at compile time.
+define i1 @weak_comparison() {
+; CHECK-LABEL: @weak_comparison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @weak, @A
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr @weak, @A
+  ret i1 %cmp
+}
+
+@empty.1 = external global [0 x i8], align 1
+@empty.2 = external global [0 x i8], align 1
+
+; Empty globals might end up anywhere, even on top of another global.
+define i1 @empty_global_comparison() {
+; CHECK-LABEL: @empty_global_comparison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @empty.1, @empty.2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr @empty.1, @empty.2
+  ret i1 %cmp
+}
+
+@unnamed.1 = unnamed_addr constant [5 x i8] c"asdf\00"
+@unnamed.2 = unnamed_addr constant [5 x i8] c"asdf\00"
+
+; Two unnamed_addr globals can share an address
+define i1 @unnamed_addr_comparison() {
+; CHECK-LABEL: @unnamed_addr_comparison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @unnamed.1, @unnamed.2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr @unnamed.1, @unnamed.2
+  ret i1 %cmp
+}
+
+@addrspace3 = internal addrspace(3) global i32 undef
+
+define i1 @no.fold.addrspace.icmp.eq.gv.null() {
+; CHECK-LABEL: @no.fold.addrspace.icmp.eq.gv.null(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(3) @addrspace3, null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr addrspace(3) @addrspace3, null
+  ret i1 %cmp
+}
+
+define i1 @no.fold.addrspace.icmp.eq.null.gv() {
+; CHECK-LABEL: @no.fold.addrspace.icmp.eq.null.gv(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(3) null, @addrspace3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr addrspace(3) null, @addrspace3
+  ret i1 %cmp
+}
+
+define i1 @no.fold.addrspace.icmp.ne.gv.null() {
+; CHECK-LABEL: @no.fold.addrspace.icmp.ne.gv.null(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr addrspace(3) @addrspace3, null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne ptr addrspace(3) @addrspace3, null
+  ret i1 %cmp
+}
+
+define i1 @no.fold.addrspace.icmp.ne.null.gv() {
+; CHECK-LABEL: @no.fold.addrspace.icmp.ne.null.gv(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr addrspace(3) null, @addrspace3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne ptr addrspace(3) null, @addrspace3
   ret i1 %cmp
 }
 
