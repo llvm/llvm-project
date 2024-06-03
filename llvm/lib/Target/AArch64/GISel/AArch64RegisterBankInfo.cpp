@@ -527,6 +527,18 @@ bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
   if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
     return false;
 
+  if (MI.getNumDefs() == 1 && MI.getFlag(MachineInstr::DefinesFP)) {
+    // If the instruction defines an FP register, e.g.
+    // %4 = phi float [ %2, %1 ], [ %7, %3 ]
+    // and the defined register %4 is used by any instruction that only takes
+    // FP operand, then assign it to FPR.
+    if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+               [&](const MachineInstr &UseMI) {
+                 return onlyUsesFP(UseMI, MRI, TRI, Depth + 1);
+               }))
+      return true;
+  }
+
   return any_of(MI.explicit_uses(), [&](const MachineOperand &Op) {
     return Op.isReg() &&
            onlyDefinesFP(*MRI.getVRegDef(Op.getReg()), MRI, TRI, Depth + 1);
