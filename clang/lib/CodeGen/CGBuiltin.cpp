@@ -1044,63 +1044,116 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
 
 namespace {
 
-class ObjectSizeVisitor
-    : public ConstStmtVisitor<ObjectSizeVisitor, const Expr *> {
+/// BaseObjectVisitor - Take an expression and return its underlying object,
+/// removing casts and unary ops (addrof or deref) that don't affect the
+/// object's underlying type.
+///
+///     Object                                        Underlying Object
+///     ------                                        -----------------
+///     p[x]                                          p
+///     &p[x]                                         p[x]
+///     &(*(int *)&((char *)&p[22][1])[x]             ((char *)&p[22][1])[x]
+///
+class BaseObjectVisitor
+    : public ConstStmtVisitor<BaseObjectVisitor, const Expr *> {
   ASTContext &Ctx;
-  bool SkipASE;
 
 public:
-  ObjectSizeVisitor(ASTContext &Ctx, bool SkipASE = false)
-      : Ctx(Ctx), SkipASE(SkipASE) {}
+  BaseObjectVisitor(ASTContext &Ctx) : Ctx(Ctx) {}
 
   const Expr *Visit(const Expr *E) {
-    return ConstStmtVisitor<ObjectSizeVisitor, const Expr *>::Visit(E);
+    return ConstStmtVisitor<BaseObjectVisitor, const Expr *>::Visit(E);
   }
-
   const Expr *VisitStmt(const Stmt *S) { return nullptr; }
 
   const Expr *VisitDeclRefExpr(const DeclRefExpr *E) { return E; }
   const Expr *VisitMemberExpr(const MemberExpr *E) { return E; }
   const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-    return SkipASE ? Visit(E->getBase()->IgnoreParenImpCasts()) : E;
+    return E->getBase()->IgnoreParenImpCasts();
   }
 
   const Expr *VisitCastExpr(const CastExpr *E) {
     const Expr *NoopE = E->IgnoreParenNoopCasts(Ctx);
-    return NoopE != E ? Visit(NoopE->IgnoreParenImpCasts()) : nullptr;
+    return NoopE == E ? nullptr : Visit(NoopE);
   }
   const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
+    const Expr *SubExpr = E->getSubExpr()->IgnoreParenImpCasts();
+    if (isa<MemberExpr>(SubExpr) || isa<DeclRefExpr>(SubExpr) ||
+        isa<ArraySubscriptExpr>(SubExpr))
+      return SubExpr;
+    return Visit(SubExpr);
+  }
+  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
     return Visit(E->getSubExpr()->IgnoreParenImpCasts());
+  }
+};
+
+/// ArrayBaseVisitor - Get the base MemberExpr of the expression. This is used
+/// to test the array base to see if it's a flexible array member. We skip
+/// past all casts, '*'s, and '&'s, because they aren't important for that
+/// analysis.
+class ArrayBaseVisitor
+    : public ConstStmtVisitor<ArrayBaseVisitor, const Expr *> {
+  ASTContext &Ctx;
+
+public:
+  ArrayBaseVisitor(ASTContext &Ctx) : Ctx(Ctx) {}
+
+  const Expr *Visit(const Expr *E) {
+    return ConstStmtVisitor<ArrayBaseVisitor, const Expr *>::Visit(E);
+  }
+  const Expr *VisitStmt(const Stmt *S) { return nullptr; }
+
+  const Expr *VisitDeclRefExpr(const DeclRefExpr *E) { return E; }
+  const Expr *VisitMemberExpr(const MemberExpr *E) { return E; }
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) { return E; }
+
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    const Expr *NoopE = E->IgnoreParenNoopCasts(Ctx);
+    return NoopE == E ? nullptr : Visit(NoopE);
+  }
+  const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
+    const Expr *SubExpr = E->getSubExpr()->IgnoreParenImpCasts();
+    if (isa<MemberExpr>(SubExpr) || isa<DeclRefExpr>(SubExpr) ||
+        isa<ArraySubscriptExpr>(SubExpr))
+      return SubExpr;
+    return Visit(SubExpr);
+  }
+  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
+    return Visit(E->getSubExpr()->IgnoreParenImpCasts());
+  }
+};
+
+/// ArrayIndexVisitor - Get the index expression of the top-level array.
+class ArrayIndexVisitor
+    : public ConstStmtVisitor<ArrayIndexVisitor, const Expr *> {
+public:
+  const Expr *Visit(const Expr *E) {
+    return ConstStmtVisitor<ArrayIndexVisitor, const Expr *>::Visit(E);
+  }
+  const Expr *VisitStmt(const Stmt *S) { return nullptr; }
+
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    return E->getIdx()->IgnoreParens();
+  }
+
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    return Visit(E->getSubExpr()->IgnoreParens());
+  }
+  const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
+    return Visit(E->getSubExpr()->IgnoreParens());
+  }
+  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
+    return Visit(E->getSubExpr()->IgnoreParens());
   }
 };
 
 } // end anonymous namespace
 
-/// getLastDecl - Return the last FieldDecl in the struct.
-static const FieldDecl *getLastDecl(const RecordDecl *RD) {
-  const FieldDecl *LastFieldDecl = nullptr;
-  for (const FieldDecl *FD : RD->fields())
-    LastFieldDecl = FD;
-
-  if (LastFieldDecl) {
-    QualType Ty = LastFieldDecl->getType();
-    if (Ty->isPointerType())
-      Ty = Ty->getPointeeType();
-
-    if (const RecordDecl *Rec = Ty->getAsRecordDecl())
-      // The last FieldDecl is a structure. Look into that struct to find its
-      // last FieldDecl.
-      LastFieldDecl = getLastDecl(Rec);
-  }
-
-  return LastFieldDecl;
-}
-
 /// tryToCalculateSubObjectSize - It may be possible to calculate the
 /// sub-object size of an array and skip the generation of the llvm.objectsize
 /// intrinsic. This avoids the complication in conveying the sub-object's
-/// information to the backend. This calculation works for an N-dimentional
-/// array.
+/// information to the backend.
 llvm::Value *
 CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
                                              llvm::IntegerType *ResType) {
@@ -1108,90 +1161,63 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
     // Only support sub-object calculation.
     return nullptr;
 
+  // BaseObj is the object we want the size of.
   ASTContext &Ctx = getContext();
-  const Expr *ObjectRef = ObjectSizeVisitor(Ctx).Visit(E);
-  if (!ObjectRef)
+  const Expr *BaseObj = BaseObjectVisitor(Ctx).Visit(E);
+  if (!BaseObj)
     return nullptr;
 
-  QualType ObjectRefType = ObjectRef->getType();
-  if (ObjectRefType->isPointerType())
-    ObjectRefType = ObjectRefType->getPointeeType();
+  // Return the sub-object of the base object, which is expected to be an array
+  // or casts surrounding an array.
+  const Expr *ArrayBase = ArrayBaseVisitor(Ctx).Visit(
+      (isa<ArraySubscriptExpr>(BaseObj)
+           ? cast<ArraySubscriptExpr>(BaseObj)->getBase()
+           : BaseObj)
+          ->IgnoreParenImpCasts());
+  if (!ArrayBase || !ArrayBase->getType()->isArrayType())
+    return nullptr;
 
-  // Collect the base and index from the array.
-  QualType ObjectBaseRefTy;
-  const Expr *ArrayIdx = nullptr;
+  // Check to see if the underlying object's base is a flexible array member.
+  // Processing of the 'counted_by' attribute is done by now. So return MAX_INT
+  // because we don't have any information on the size.
+  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+      getLangOpts().getStrictFlexArraysLevel();
+  if (ArrayBase->isFlexibleArrayMemberLike(
+          Ctx, StrictFlexArraysLevel,
+          /*IgnoreTemplateOrMacroSubstitution=*/true))
+    return ConstantInt::get(ResType, -1, /*isSigned=*/true);
 
-  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(ObjectRef)) {
-    ArrayIdx = ASE->getIdx()->IgnoreParenImpCasts();
-
-    const Expr *ArrayRefBase = ASE->getBase()->IgnoreParenImpCasts();
-    if (isa<ArraySubscriptExpr>(ArrayRefBase)) {
-      ObjectBaseRefTy = ArrayRefBase->getType();
-      if (ObjectBaseRefTy->isPointerType())
-        ObjectBaseRefTy = ObjectBaseRefTy->getPointeeType();
-    }
-  }
-
+  // Collect the index from the array original object. The array index cannot
+  // have side effects because we emit it.
+  const Expr *ArrayIdx = ArrayIndexVisitor().Visit(E);
   if (!ArrayIdx || ArrayIdx->HasSideEffects(Ctx))
     return nullptr;
 
-  // Check to see if the Decl is a flexible array member. Processing of the
-  // 'counted_by' attribute is done by now. So we don't have any information on
-  // its size, so return MAX_INT.
-  //
-  // Rerun the visitor to find the base expr: MemberExpr or DeclRefExpr.
-  ObjectRef = ObjectSizeVisitor(Ctx, true).Visit(ObjectRef);
-  if (!ObjectRef)
-    return nullptr;
-
-  if (const auto *ME = dyn_cast<MemberExpr>(ObjectRef)) {
-    if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-      const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-          getLangOpts().getStrictFlexArraysLevel();
-      const RecordDecl *OuterRD =
-          FD->getParent()->getOuterLexicalRecordContext();
-
-      if (getLastDecl(OuterRD) == FD &&
-          Decl::isFlexibleArrayMemberLike(
-              Ctx, FD, FD->getType(), StrictFlexArraysLevel,
-              /*IgnoreTemplateOrMacroSubstitution=*/true))
-        return ConstantInt::get(ResType, -1, /*isSigned=*/true);
-    }
-  }
-
-  if (ObjectBaseRefTy.isNull()) {
-    ObjectBaseRefTy = ObjectRef->getType();
-    if (ObjectBaseRefTy->isPointerType())
-      ObjectBaseRefTy = ObjectBaseRefTy->getPointeeType();
-  }
-
   // Generate the calculation:
   //
-  //     S Object[n_1][n_2]...[n_m]; /* M-dimentional array */
+  //     Ty Object[n_1][n_2]...[n_m]; /* M-dimensional array */
   //
-  //     ObjectRef = Object[n_1]...[n_x]; /* 0 < x < m */
-  //     ObjectBaseRef = Object[n_1]...[n_{x-1}];
+  //     BaseObj = Object[n_1]...[n_{x-1}];
   //
-  //     ArrayRefSize = sizeof( typeof( ObjectRef ) );
-  //     ArrayRefBaseSize = sizeof( typeof( ObjectBaseRef ) );
+  //     BaseObjTySize = sizeof( typeof( BaseObj ) );
+  //     ArrayBaseTySize = sizeof( typeof( BaseObj[0] ) );
   //
-  //     Size = ArrayRefSize - (ArrayRefBaseSize * ArrayIdx);
+  //     Size = ArrayBaseTySize - (BaseObjTySize * ArrayIdx);
   //     return Size > 0 ? Size : 0;
   //
-  Value *ArrayRefSize = ConstantInt::get(
-      ResType, Ctx.getTypeSizeInChars(ObjectRefType).getQuantity(),
-      /*isSigned=*/true);
-  Value *ArrayRefBaseSize = ConstantInt::get(
-      ResType, Ctx.getTypeSizeInChars(ObjectBaseRefTy).getQuantity(),
-      /*isSigned=*/true);
-
   Value *Res = EmitScalarExpr(ArrayIdx);
-
   Res = Builder.CreateIntCast(Res, ResType,
                               ArrayIdx->getType()->isSignedIntegerType());
-  Res =
-      Builder.CreateSub(ArrayRefBaseSize, Builder.CreateMul(ArrayRefSize, Res));
 
+  Value *BaseObjTySize = ConstantInt::get(
+      ResType, Ctx.getTypeSizeInChars(BaseObj->getType()).getQuantity(),
+      /*isSigned=*/true);
+  Value *ArrayBaseTySize = ConstantInt::get(
+      ResType, Ctx.getTypeSizeInChars(ArrayBase->getType()).getQuantity(),
+      /*isSigned=*/true);
+
+  Res = Builder.CreateMul(BaseObjTySize, Res);
+  Res = Builder.CreateSub(ArrayBaseTySize, Res);
   return Builder.CreateSelect(Builder.CreateIsNotNeg(Res), Res,
                               ConstantInt::get(ResType, 0, /*isSigned=*/true));
 }
