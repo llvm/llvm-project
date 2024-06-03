@@ -4765,8 +4765,6 @@ public:
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
   ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
-  void ActOnPreContract(Scope *S, Declarator &D);
-  void ActOnPostContract(Scope *S, Declarator &D);
 
   NamedDecl *
   ActOnDecompositionDeclarator(Scope *S, Declarator &D,

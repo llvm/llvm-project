@@ -2066,9 +2066,10 @@ protected:
                 QualType T, TypeSourceInfo *TInfo, StorageClass SC,
                 bool UsesFPIntrin, bool isInline,
                 ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-                Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {})
+                Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {}, 
+                SmallVector<Expr*> PostContracts = {})
       : FunctionDecl(DK, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
-                     isInline, ConstexprKind, TrailingRequiresClause, PreContracts) {
+                     isInline, ConstexprKind, TrailingRequiresClause, PreContracts, PostContracts) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
   }
@@ -2079,7 +2080,7 @@ public:
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
          StorageClass SC, bool UsesFPIntrin, bool isInline,
          ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-         Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {});
+         Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {}, SmallVector<Expr*> PostContracts = {});
 
   static CXXMethodDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
@@ -2547,7 +2548,7 @@ class CXXConstructorDecl final
                      bool UsesFPIntrin, bool isInline,
                      bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
                      InheritedConstructor Inherited,
-                     Expr *TrailingRequiresClause, SmallVector<Expr*> PreContracts);
+                     Expr *TrailingRequiresClause, SmallVector<Expr*> PreContracts, SmallVector<Expr*> PostContracts);
 
   void anchor() override;
 
@@ -2590,7 +2591,8 @@ public:
          ExplicitSpecifier ES, bool UsesFPIntrin, bool isInline,
          bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
          InheritedConstructor Inherited = InheritedConstructor(),
-         Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {});
+         Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {}, 
+         SmallVector<Expr*> PostContracts = {});
 
   void setExplicitSpecifier(ExplicitSpecifier ES) {
     assert((!ES.getExpr() ||
@@ -2809,10 +2811,11 @@ class CXXDestructorDecl : public CXXMethodDecl {
                     const DeclarationNameInfo &NameInfo, QualType T,
                     TypeSourceInfo *TInfo, bool UsesFPIntrin, bool isInline,
                     bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
-                    Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {})
+                    Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {},
+                    SmallVector<Expr*> PostContracts = {})
       : CXXMethodDecl(CXXDestructor, C, RD, StartLoc, NameInfo, T, TInfo,
                       SC_None, UsesFPIntrin, isInline, ConstexprKind,
-                      SourceLocation(), TrailingRequiresClause, PreContracts) {
+                      SourceLocation(), TrailingRequiresClause, PreContracts, PostContracts) {
     setImplicit(isImplicitlyDeclared);
   }
 
@@ -2824,7 +2827,8 @@ public:
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
          bool UsesFPIntrin, bool isInline, bool isImplicitlyDeclared,
          ConstexprSpecKind ConstexprKind,
-         Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {});
+         Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {},
+         SmallVector<Expr*> PostContracts = {});
   static CXXDestructorDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   void setOperatorDelete(FunctionDecl *OD, Expr *ThisArg);
@@ -2865,10 +2869,11 @@ class CXXConversionDecl : public CXXMethodDecl {
                     TypeSourceInfo *TInfo, bool UsesFPIntrin, bool isInline,
                     ExplicitSpecifier ES, ConstexprSpecKind ConstexprKind,
                     SourceLocation EndLocation,
-                    Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {})
+                    Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {},
+                    SmallVector<Expr*> PostContracts = {})
       : CXXMethodDecl(CXXConversion, C, RD, StartLoc, NameInfo, T, TInfo,
                       SC_None, UsesFPIntrin, isInline, ConstexprKind,
-                      EndLocation, TrailingRequiresClause, PreContracts),
+                      EndLocation, TrailingRequiresClause, PreContracts, PostContracts),
         ExplicitSpec(ES) {}
   void anchor() override;
 
@@ -2883,7 +2888,8 @@ public:
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
          bool UsesFPIntrin, bool isInline, ExplicitSpecifier ES,
          ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-         Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {});
+         Expr *TrailingRequiresClause = nullptr, SmallVector<Expr*> PreContracts = {}, 
+         SmallVector<Expr*> PostContracts = {});
   static CXXConversionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   ExplicitSpecifier getExplicitSpecifier() {

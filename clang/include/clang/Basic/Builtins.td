@@ -2578,8 +2578,7 @@ def SetJmpEx : MSLibBuiltin<"setjmpex.h"> {
 // C++ contracts
 def ContractViolation : Builtin {
   let Spellings = ["contract_violation"];
-//  let Prototype = "void(char const*, int, char const*)";
-  let Prototype = "void()";
+  let Prototype = "void(char const*, int, char const*)";
   let Attributes = [NoThrow, NoReturn, Constexpr];
   let Namespace = "std";
 }

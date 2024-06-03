@@ -465,12 +465,6 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // Emit debug descriptor for function end.
   if (CGDebugInfo *DI = getDebugInfo())
     DI->EmitFunctionEnd(Builder, CurFn);
-/*
-  for (Expr* expr : FN->getPostContracts()) {
-    EmitCXXContractCheck(expr);
-    EmitCXXContractImply(expr);
-  }
-  */
 
   // Reset the debug location to that of the simple 'return' expression, if any
   // rather than that of the end of the function's scope '}'.
@@ -1251,11 +1245,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   EmitFunctionProlog(*CurFnInfo, CurFn, Args);
 
-  for (Expr* expr : FD->getPreContracts()) {
-    EmitCXXContractCheck(expr);
-    EmitCXXContractImply(expr);
-  }
-
   if (const CXXMethodDecl *MD = dyn_cast_if_present<CXXMethodDecl>(D);
       MD && !MD->isStatic()) {
     bool IsInLambda =
@@ -1535,6 +1524,11 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   // Emit the standard function prologue.
   StartFunction(GD, ResTy, Fn, FnInfo, Args, Loc, BodyRange.getBegin());
 
+  for (Expr* expr : FD->getPreContracts()) {
+    EmitCXXContractCheck(expr);
+    EmitCXXContractImply(expr);
+  }
+
   // Save parameters for coroutine function.
   if (Body && isa_and_nonnull<CoroutineBodyStmt>(Body))
     llvm::append_range(FnArgs, FD->parameters());
@@ -1608,6 +1602,11 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
       Builder.CreateUnreachable();
       Builder.ClearInsertionPoint();
     }
+  }
+
+  for (Expr* expr : FD->getPostContracts()) {
+    EmitCXXContractCheck(expr);
+    EmitCXXContractImply(expr);
   }
 
   // Emit the standard function epilogue.

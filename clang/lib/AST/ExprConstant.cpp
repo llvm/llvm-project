@@ -6301,7 +6301,20 @@ static bool EvaluatePreContracts(const FunctionDecl* Callee, EvalInfo& Info) {
       return false;
     }
     if (!Desired) {
-      Info.CCEDiag(E, diag::note_constexpr_contract_failure);
+      Info.report(E->getSourceRange().getBegin(), diag::note_constexpr_contract_failure) << E->getSourceRange();
+    }
+  }
+  return true;
+}
+
+static bool EvaluatePostContracts(const FunctionDecl* Callee, EvalInfo& Info) {
+  for (Expr* E : Callee->getPostContracts()) {
+    APSInt Desired;
+    if (!EvaluateInteger(E, Desired, Info)){
+      return false;
+    }
+    if (!Desired) {
+      Info.report(E->getSourceRange().getBegin(), diag::note_constexpr_contract_failure) << E->getSourceRange();
     }
   }
   return true;
@@ -6355,6 +6368,7 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
   EvaluatePreContracts(Callee, Info);
   StmtResult Ret = {Result, ResultSlot};
   EvalStmtResult ESR = EvaluateStmt(Ret, Info, Body);
+  EvaluatePostContracts(Callee, Info);
   if (ESR == ESR_Succeeded) {
     if (Callee->getReturnType()->isVoidType())
       return true;
@@ -15529,7 +15543,7 @@ public:
         return false;
       }
       if (!Desired) {
-        Info.CCEDiag(E->getArg(0), diag::note_constexpr_contract_failure);
+        Info.report(E->getArg(0)->getSourceRange().getBegin(), diag::note_constexpr_contract_failure) << E->getArg(0)->getSourceRange();
       }
       return true;
     }

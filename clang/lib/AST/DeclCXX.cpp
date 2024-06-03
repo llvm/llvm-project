@@ -2276,10 +2276,11 @@ CXXMethodDecl::Create(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
                       TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin,
                       bool isInline, ConstexprSpecKind ConstexprKind,
                       SourceLocation EndLocation,
-                      Expr *TrailingRequiresClause, SmallVector<Expr*> PreContracts) {
+                      Expr *TrailingRequiresClause, SmallVector<Expr*> PreContracts,
+                      SmallVector<Expr*> PostContracts) {
   return new (C, RD) CXXMethodDecl(
       CXXMethod, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
-      isInline, ConstexprKind, EndLocation, TrailingRequiresClause, PreContracts);
+      isInline, ConstexprKind, EndLocation, TrailingRequiresClause, PreContracts, PostContracts);
 }
 
 CXXMethodDecl *CXXMethodDecl::CreateDeserialized(ASTContext &C,
@@ -2287,7 +2288,7 @@ CXXMethodDecl *CXXMethodDecl::CreateDeserialized(ASTContext &C,
   return new (C, ID) CXXMethodDecl(
       CXXMethod, C, nullptr, SourceLocation(), DeclarationNameInfo(),
       QualType(), nullptr, SC_None, false, false,
-      ConstexprSpecKind::Unspecified, SourceLocation(), nullptr, {});
+      ConstexprSpecKind::Unspecified, SourceLocation(), nullptr, {}, {});
 }
 
 CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
@@ -2685,10 +2686,11 @@ CXXConstructorDecl::CXXConstructorDecl(
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     ExplicitSpecifier ES, bool UsesFPIntrin, bool isInline,
     bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
-    InheritedConstructor Inherited, Expr *TrailingRequiresClause, SmallVector<Expr*> PreContracts)
+    InheritedConstructor Inherited, Expr *TrailingRequiresClause, 
+    SmallVector<Expr*> PreContracts, SmallVector<Expr*> PostContracts)
     : CXXMethodDecl(CXXConstructor, C, RD, StartLoc, NameInfo, T, TInfo,
                     SC_None, UsesFPIntrin, isInline, ConstexprKind,
-                    SourceLocation(), TrailingRequiresClause, PreContracts) {
+                    SourceLocation(), TrailingRequiresClause, PreContracts, PostContracts) {
   setNumCtorInitializers(0);
   setInheritingConstructor(static_cast<bool>(Inherited));
   setImplicit(isImplicitlyDeclared);
@@ -2712,7 +2714,7 @@ CXXConstructorDecl *CXXConstructorDecl::CreateDeserialized(ASTContext &C,
   auto *Result = new (C, ID, Extra) CXXConstructorDecl(
       C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(), nullptr,
       ExplicitSpecifier(), false, false, false, ConstexprSpecKind::Unspecified,
-      InheritedConstructor(), nullptr, {});
+      InheritedConstructor(), nullptr, {}, {});
   Result->setInheritingConstructor(isInheritingConstructor);
   Result->CXXConstructorDeclBits.HasTrailingExplicitSpecifier =
       hasTrailingExplicit;
@@ -2725,7 +2727,8 @@ CXXConstructorDecl *CXXConstructorDecl::Create(
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     ExplicitSpecifier ES, bool UsesFPIntrin, bool isInline,
     bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
-    InheritedConstructor Inherited, Expr *TrailingRequiresClause, SmallVector<Expr*> PreContracts) {
+    InheritedConstructor Inherited, Expr *TrailingRequiresClause, 
+    SmallVector<Expr*> PreContracts, SmallVector<Expr*> PostContracts) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXConstructorName &&
          "Name must refer to a constructor");
@@ -2734,7 +2737,7 @@ CXXConstructorDecl *CXXConstructorDecl::Create(
           Inherited ? 1 : 0, ES.getExpr() ? 1 : 0);
   return new (C, RD, Extra) CXXConstructorDecl(
       C, RD, StartLoc, NameInfo, T, TInfo, ES, UsesFPIntrin, isInline,
-      isImplicitlyDeclared, ConstexprKind, Inherited, TrailingRequiresClause, PreContracts);
+      isImplicitlyDeclared, ConstexprKind, Inherited, TrailingRequiresClause, PreContracts, PostContracts);
 }
 
 CXXConstructorDecl::init_const_iterator CXXConstructorDecl::init_begin() const {
@@ -2858,13 +2861,14 @@ CXXDestructorDecl *CXXDestructorDecl::Create(
     ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     bool UsesFPIntrin, bool isInline, bool isImplicitlyDeclared,
-    ConstexprSpecKind ConstexprKind, Expr *TrailingRequiresClause, SmallVector<Expr*> PreContracts) {
+    ConstexprSpecKind ConstexprKind, Expr *TrailingRequiresClause, 
+    SmallVector<Expr*> PreContracts, SmallVector<Expr*> PostContracts) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXDestructorName &&
          "Name must refer to a destructor");
   return new (C, RD) CXXDestructorDecl(
       C, RD, StartLoc, NameInfo, T, TInfo, UsesFPIntrin, isInline,
-      isImplicitlyDeclared, ConstexprKind, TrailingRequiresClause, PreContracts);
+      isImplicitlyDeclared, ConstexprKind, TrailingRequiresClause, PreContracts, PostContracts);
 }
 
 void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
@@ -2892,13 +2896,14 @@ CXXConversionDecl *CXXConversionDecl::Create(
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     bool UsesFPIntrin, bool isInline, ExplicitSpecifier ES,
     ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-    Expr *TrailingRequiresClause, SmallVector<Expr*> PreContracts) {
+    Expr *TrailingRequiresClause, SmallVector<Expr*> PreContracts,
+    SmallVector<Expr*> PostContracts) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXConversionFunctionName &&
          "Name must refer to a conversion function");
   return new (C, RD) CXXConversionDecl(
       C, RD, StartLoc, NameInfo, T, TInfo, UsesFPIntrin, isInline, ES,
-      ConstexprKind, EndLocation, TrailingRequiresClause, PreContracts);
+      ConstexprKind, EndLocation, TrailingRequiresClause, PreContracts, PostContracts);
 }
 
 bool CXXConversionDecl::isLambdaToBlockPointerConversion() const {
