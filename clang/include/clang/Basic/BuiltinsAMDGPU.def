@@ -589,6 +589,13 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f16, "UiUiV2hUifIi", "nc"
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_bf16, "UiUiV2yUifIi", "nc", "fp4-cvt-scale-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk_fp4_f32, "UiUiV2fUifIi", "nc", "fp4-cvt-scale-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_bf6_bf16, "V6UiV32yUif", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_bf6_f16, "V6UiV32hUif", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_bf6_f32, "V6UiV32fUif", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_fp6_bf16, "V6UiV32yUif", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_fp6_f16, "V6UiV32hUif", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_fp6_f32, "V6UiV32fUif", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
+
 //===----------------------------------------------------------------------===//
 // GFX1210+ only builtins.
 //===----------------------------------------------------------------------===//
@@ -682,14 +689,8 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk8_bf8_f32, "V2UiV8ff", "nc", "gfx
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk8_fp4_f32, "UiV8ff", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk8_fp4_f16, "UiV8hf", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk8_fp4_bf16, "UiV8yf", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_fp6_f32, "V6UiV32fUif", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_bf6_f32, "V6UiV32fUif", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_fp6_f16, "V6UiV32hUif", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_bf6_f16, "V6UiV32hUif", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk8_fp8_bf16, "V2UiV8yUif", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk8_bf8_bf16, "V2UiV8yUif", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_fp6_bf16, "V6UiV32yUif", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_bf6_bf16, "V6UiV32yUif", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk8_fp8_f16, "V2UiV8hUif", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk8_bf8_f16, "V2UiV8hUif", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk8_fp8_f32, "V2UiV8fUif", "nc", "gfx12-10-insts")
