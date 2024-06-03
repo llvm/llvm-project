@@ -2517,6 +2517,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::fabs: {
     Value *Cond, *TVal, *FVal;
+    Value* Arg = II->getArgOperand(0);
+    Value* X;
+    // fabs (-X) --> fabs (X)
+    if (match(Arg, m_FNeg(m_Value(X)))) {
+        return replaceInstUsesWith(CI, Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X));
+    }
+
     if (match(II->getArgOperand(0),
               m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
       // fabs (select Cond, TrueC, FalseC) --> select Cond, AbsT, AbsF
