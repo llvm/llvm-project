@@ -16,6 +16,7 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/linux/raw_mutex.h"
@@ -457,6 +458,10 @@ public:
   }
 
 private:
+  // Compiler somehow decides that this function may be inlined, which leads to
+  // a larger unlock function that is infeasible to be inlined. Since
+  // notifcation routine is colder we mark it as noinline explicitly.
+  [[gnu::noinline]]
   LIBC_INLINE void notify_pending_threads() {
     enum class WakeTarget { Readers, Writers, None };
     WakeTarget status;

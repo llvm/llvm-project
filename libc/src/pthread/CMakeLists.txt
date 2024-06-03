@@ -545,6 +545,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_rwlock_trywrlock
+  SRCS
+    pthread_rwlock_trywrlock.cpp
+  HDRS
+    pthread_rwlock_trywrlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
   pthread_rwlock_timedrdlock
   SRCS
     pthread_rwlock_timedrdlock.cpp
@@ -556,11 +567,55 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_rwlock_timedwrlock
+  SRCS
+    pthread_rwlock_timedwrlock.cpp
+  HDRS
+    pthread_rwlock_timedwrlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
   pthread_rwlock_rdlock
   SRCS
     pthread_rwlock_rdlock.cpp
   HDRS
     pthread_rwlock_rdlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_wrlock
+  SRCS
+    pthread_rwlock_wrlock.cpp
+  HDRS
+    pthread_rwlock_wrlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_unlock
+  SRCS
+    pthread_rwlock_unlock.cpp
+  HDRS
+    pthread_rwlock_unlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_destroy
+  SRCS
+    pthread_rwlock_destroy.cpp
+  HDRS
+    pthread_rwlock_destroy.h
   DEPENDS
     libc.include.pthread
     libc.src.__support.threads.linux.rwlock
