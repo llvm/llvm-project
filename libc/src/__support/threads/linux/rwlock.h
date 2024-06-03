@@ -258,7 +258,7 @@ private:
     LIBC_INLINE static State spin_reload_until(cpp::Atomic<Type> &target,
                                                F &&func, unsigned spin_count) {
       for (;;) {
-        auto state = State::load(target);
+        auto state = State::load(target, cpp::MemoryOrder::RELAXED);
         if (func(state) || spin_count == 0)
           return state;
         sleep_briefly();
@@ -495,14 +495,14 @@ public:
       // clear writer tid.
       writer_tid.store(0, cpp::MemoryOrder::RELAXED);
       // clear the writer bit.
-      old = State::fetch_clear_active_writer(state);
+      old = State::fetch_clear_active_writer(state, cpp::MemoryOrder::RELEASE);
       // If there is no pending readers or writers, we are done.
       if (!old.has_pending())
         return LockResult::Success;
     } else if (old.has_active_reader()) {
       // The lock is held by readers.
       // Decrease the reader count.
-      old = State::fetch_sub_reader_count(state);
+      old = State::fetch_sub_reader_count(state, cpp::MemoryOrder::RELEASE);
       // If there is no pending readers or writers, we are done.
       if (!old.has_last_reader() || !old.has_pending())
         return LockResult::Success;
