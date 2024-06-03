@@ -758,15 +758,33 @@ genBodyOfTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                   llvm::ArrayRef<const semantics::Symbol *> mapSyms,
                   llvm::ArrayRef<mlir::Location> mapSymLocs,
                   llvm::ArrayRef<mlir::Type> mapSymTypes,
+                  DataSharingProcessor &dsp,
                   const mlir::Location &currentLocation,
                   const ConstructQueue &queue, ConstructQueue::iterator item) {
   assert(mapSymTypes.size() == mapSymLocs.size());
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Region &region = targetOp.getRegion();
+  mlir::OperandRange privateVars = targetOp.getPrivateVars();
 
-  auto *regionBlock =
-      firOpBuilder.createBlock(&region, {}, mapSymTypes, mapSymLocs);
+  llvm::SmallVector<mlir::Type> allRegionArgTypes;
+  allRegionArgTypes.reserve(mapSymTypes.size() +
+                            targetOp.getPrivateVars().size());
+  llvm::transform(mapSymTypes, std::back_inserter(allRegionArgTypes),
+                  [](mlir::Type t) { return t; });
+  llvm::transform(privateVars, std::back_inserter(allRegionArgTypes),
+                  [](mlir::Value v) { return v.getType(); });
+
+  llvm::SmallVector<mlir::Location> allRegionArgLocs;
+  allRegionArgTypes.reserve(mapSymTypes.size() +
+                            targetOp.getPrivateVars().size());
+  llvm::transform(mapSymLocs, std::back_inserter(allRegionArgLocs),
+                  [](mlir::Location l) { return l; });
+  llvm::transform(privateVars, std::back_inserter(allRegionArgLocs),
+                  [](mlir::Value v) { return v.getLoc(); });
+
+  auto *regionBlock = firOpBuilder.createBlock(&region, {}, allRegionArgTypes,
+                                               allRegionArgLocs);
 
   // Clones the `bounds` placing them inside the target region and returns them.
   auto cloneBound = [&](mlir::Value bound) {
@@ -828,6 +846,20 @@ genBodyOfTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           TODO(converter.getCurrentLocation(),
                "target map clause operand unsupported type");
         });
+  }
+
+  for (auto [argIndex, argSymbol] :
+       llvm::enumerate(dsp.getAllSymbolsToPrivatize())) {
+    argIndex = mapSyms.size() + argIndex;
+
+    const mlir::BlockArgument &arg = region.getArgument(argIndex);
+    converter.bindSymbol(*argSymbol,
+                         hlfir::translateToExtendedValue(
+                             currentLocation, firOpBuilder, hlfir::Entity{arg},
+                             /*contiguousHint=*/
+                             evaluate::IsSimplyContiguous(
+                                 *argSymbol, converter.getFoldingContext()))
+                             .first);
   }
 
   // Check if cloning the bounds introduced any dependency on the outer region.
@@ -907,6 +939,8 @@ genBodyOfTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   } else {
     genNestedEvaluations(converter, eval);
   }
+
+  dsp.processStep2(targetOp, /*isLoop=*/false);
 }
 
 template <typename OpTy, typename... Args>
@@ -1048,15 +1082,18 @@ static void genTargetClauses(
                         devicePtrSyms);
   cp.processMap(loc, stmtCtx, clauseOps, &mapSyms, &mapLocs, &mapTypes);
   cp.processThreadLimit(stmtCtx, clauseOps);
-  // TODO Support delayed privatization.
 
   if (processHostOnlyClauses)
     cp.processNowait(clauseOps);
 
   cp.processTODO<clause::Allocate, clause::Defaultmap, clause::Firstprivate,
-                 clause::InReduction, clause::Private, clause::Reduction,
+                 clause::InReduction, clause::Reduction,
                  clause::UsesAllocators>(loc,
                                          llvm::omp::Directive::OMPD_target);
+
+  // `target private(..)` is only supported in delayed privatization mode.
+  if (!enableDelayedPrivatization)
+    cp.processTODO<clause::Private>(loc, llvm::omp::Directive::OMPD_target);
 }
 
 static void genTargetDataClauses(
@@ -1289,7 +1326,6 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   lower::StatementContext stmtCtx;
   mlir::omp::ParallelClauseOps clauseOps;
-  llvm::SmallVector<const semantics::Symbol *> privateSyms;
   llvm::SmallVector<mlir::Type> reductionTypes;
   llvm::SmallVector<const semantics::Symbol *> reductionSyms;
   genParallelClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
@@ -1319,7 +1355,7 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                            /*useDelayedPrivatization=*/true, &symTable);
 
   if (privatize)
-    dsp.processStep1(&clauseOps, &privateSyms);
+    dsp.processStep1(&clauseOps);
 
   auto genRegionEntryCB = [&](mlir::Operation *op) {
     auto parallelOp = llvm::cast<mlir::omp::ParallelOp>(op);
@@ -1344,9 +1380,10 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                              privateVarLocs);
 
     llvm::SmallVector<const semantics::Symbol *> allSymbols = reductionSyms;
-    allSymbols.append(privateSyms);
+    allSymbols.append(dsp.getAllSymbolsToPrivatize().begin(),
+                      dsp.getAllSymbolsToPrivatize().end());
+
     for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments())) {
-      fir::ExtendedValue hostExV = converter.getSymbolExtendedValue(*arg);
       converter.bindSymbol(*arg, hlfir::translateToExtendedValue(
                                      loc, firOpBuilder, hlfir::Entity{prv},
                                      /*contiguousHint=*/
@@ -1541,11 +1578,22 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    deviceAddrLocs, deviceAddrTypes, devicePtrSyms,
                    devicePtrLocs, devicePtrTypes);
 
+  llvm::SmallVector<const semantics::Symbol *> privateSyms;
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/
+                           lower::omp::isLastItemInQueue(item, queue),
+                           /*useDelayedPrivatization=*/true, &symTable);
+  dsp.processStep1(&clauseOps);
+
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
-  // symbols used inside the region that have not been explicitly mapped using
-  // the map clause.
+  // symbols used inside the region that do not have explicit data-environment
+  // attribute clauses (neither data-sharing; e.g. `private`, nor `map`
+  // clauses).
   auto captureImplicitMap = [&](const semantics::Symbol &sym) {
+    if (dsp.getAllSymbolsToPrivatize().contains(&sym))
+      return;
+
     if (llvm::find(mapSyms, &sym) == mapSyms.end()) {
       mlir::Value baseOp = converter.getSymbolAddress(sym);
       if (!baseOp)
@@ -1632,7 +1680,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   auto targetOp = firOpBuilder.create<mlir::omp::TargetOp>(loc, clauseOps);
   genBodyOfTargetOp(converter, symTable, semaCtx, eval, targetOp, mapSyms,
-                    mapLocs, mapTypes, loc, queue, item);
+                    mapLocs, mapTypes, dsp, loc, queue, item);
   return targetOp;
 }
 
