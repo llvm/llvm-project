@@ -832,6 +832,7 @@ Bug Fixes to AST Handling
 - Fixed malformed AST generated for anonymous union access in templates. (#GH90842)
 - Improved preservation of qualifiers and sugar in `TemplateNames`, including
   template keyword.
+- ``forCallable`` now properly preserves binding on successful match. (#GH89657)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
