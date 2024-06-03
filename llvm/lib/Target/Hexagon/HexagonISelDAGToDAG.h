@@ -29,13 +29,14 @@ class HexagonDAGToDAGISel : public SelectionDAGISel {
   const HexagonSubtarget *HST;
   const HexagonInstrInfo *HII;
   const HexagonRegisterInfo *HRI;
-
 public:
+  static char ID;
+
   HexagonDAGToDAGISel() = delete;
 
   explicit HexagonDAGToDAGISel(HexagonTargetMachine &tm,
                                CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(tm, OptLevel), HST(nullptr), HII(nullptr),
+      : SelectionDAGISel(ID, tm, OptLevel), HST(nullptr), HII(nullptr),
         HRI(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -161,13 +162,6 @@ private:
   SDValue balanceSubTree(SDNode *N, bool Factorize = false);
   void rebalanceAddressTrees();
 }; // end HexagonDAGToDAGISel
-
-class HexagonDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
-public:
-  static char ID;
-  explicit HexagonDAGToDAGISelLegacy(HexagonTargetMachine &tm,
-                                     CodeGenOptLevel OptLevel);
-};
 }
 
 #endif // LLVM_LIB_TARGET_HEXAGON_HEXAGONISELDAGTODAG_H

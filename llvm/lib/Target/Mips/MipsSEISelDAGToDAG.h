@@ -27,6 +27,8 @@ private:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
   void addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
                              MachineFunction &MF);
 
@@ -135,12 +137,6 @@ private:
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                     InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
-};
-
-class MipsSEDAGToDAGISelLegacy : public MipsDAGToDAGISelLegacy {
-public:
-  explicit MipsSEDAGToDAGISelLegacy(MipsTargetMachine &TM, CodeGenOptLevel OL);
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
 FunctionPass *createMipsSEISelDag(MipsTargetMachine &TM,

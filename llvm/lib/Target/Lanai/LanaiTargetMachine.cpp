@@ -37,7 +37,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiTarget() {
   RegisterTargetMachine<LanaiTargetMachine> registered_target(
       getTheLanaiTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeLanaiDAGToDAGISelLegacyPass(PR);
+  initializeLanaiDAGToDAGISelPass(PR);
 }
 
 static std::string computeDataLayout() {
