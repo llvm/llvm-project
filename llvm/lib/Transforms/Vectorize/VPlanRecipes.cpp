@@ -565,7 +565,7 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
     unsigned Offset = CI->getZExtValue();
-
+    assert(Offset > 0 && "Offset from end must be positive");
     Value *Res;
     if (State.VF.isVector()) {
       assert(Offset <= State.VF.getKnownMinValue() &&
