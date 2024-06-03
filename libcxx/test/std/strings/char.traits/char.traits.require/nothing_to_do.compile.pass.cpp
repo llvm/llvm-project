@@ -5,7 +5,3 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include <string_view>
-
-int main(int, char**) { return 0; }
