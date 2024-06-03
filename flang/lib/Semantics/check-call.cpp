@@ -652,38 +652,42 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // Definability
   bool actualIsVariable{evaluate::IsVariable(actual)};
-  const char *reason{nullptr};
-  if (dummy.intent == common::Intent::Out) {
-    reason = "INTENT(OUT)";
-  } else if (dummy.intent == common::Intent::InOut) {
-    reason = "INTENT(IN OUT)";
-  }
-  if (reason && scope) {
-    // Problems with polymorphism are caught in the callee's definition.
-    DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
-    if (isElemental) { // 15.5.2.4(21)
-      flags.set(DefinabilityFlag::VectorSubscriptIsOk);
-    }
-    if (actualIsPointer && dummyIsPointer) { // 19.6.8
-      flags.set(DefinabilityFlag::PointerDefinition);
-    }
-    if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
-      if (auto *msg{messages.Say(
-              "Actual argument associated with %s %s is not definable"_err_en_US,
-              reason, dummyName)}) {
-        msg->Attach(std::move(*whyNot));
+  if (scope) {
+    std::optional<parser::MessageFixedText> undefinableMessage;
+    if (dummy.intent == common::Intent::Out) {
+      undefinableMessage =
+          "Actual argument associated with INTENT(OUT) %s is not definable"_err_en_US;
+    } else if (dummy.intent == common::Intent::InOut) {
+      undefinableMessage =
+          "Actual argument associated with INTENT(IN OUT) %s is not definable"_err_en_US;
+    } else if (context.ShouldWarn(common::LanguageFeature::
+                       UndefinableAsynchronousOrVolatileActual)) {
+      if (dummy.attrs.test(
+              characteristics::DummyDataObject::Attr::Asynchronous)) {
+        undefinableMessage =
+            "Actual argument associated with ASYNCHRONOUS %s is not definable"_warn_en_US;
+      } else if (dummy.attrs.test(
+                     characteristics::DummyDataObject::Attr::Volatile)) {
+        undefinableMessage =
+            "Actual argument associated with VOLATILE %s is not definable"_warn_en_US;
       }
     }
-  }
-
-  // technically legal but worth emitting a warning
-  // llvm-project issue #58973: constant actual argument passed in where dummy
-  // argument is marked volatile
-  if (dummyIsVolatile && !actualIsVariable &&
-      context.ShouldWarn(common::UsageWarning::ExprPassedToVolatile)) {
-    messages.Say(
-        "actual argument associated with VOLATILE %s is not a variable"_warn_en_US,
-        dummyName);
+    if (undefinableMessage) {
+      // Problems with polymorphism are caught in the callee's definition.
+      DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
+      if (isElemental) { // 15.5.2.4(21)
+        flags.set(DefinabilityFlag::VectorSubscriptIsOk);
+      }
+      if (actualIsPointer && dummyIsPointer) { // 19.6.8
+        flags.set(DefinabilityFlag::PointerDefinition);
+      }
+      if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
+        if (auto *msg{
+                messages.Say(std::move(*undefinableMessage), dummyName)}) {
+          msg->Attach(std::move(*whyNot));
+        }
+      }
+    }
   }
 
   // Cases when temporaries might be needed but must not be permitted.
@@ -883,7 +887,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         dummyName, actual.AsFortran());
   }
 
-  // Warn about dubious actual argument association with a TARGET dummy argument
+  // Warn about dubious actual argument association with a TARGET dummy
+  // argument
   if (dummy.attrs.test(characteristics::DummyDataObject::Attr::Target) &&
       context.ShouldWarn(common::UsageWarning::NonTargetPassedToTarget)) {
     bool actualIsTemp{!actualIsVariable || HasVectorSubscript(actual) ||
