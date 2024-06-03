@@ -222,18 +222,19 @@ public:
     return true;
   }
 
-  /// Check if this line starts with @par or \par
+  // Check if this line starts with @par or \par
   bool startsWithParCommand() {
     unsigned Offset = 1;
 
-    /// Skip all whitespace characters at the beginning.
-    /// This needs to backtrack because Pos has already advanced past the
-    /// actual \par or @par command by the time this function is called.
+    // Skip all whitespace characters at the beginning.
+    // This needs to backtrack because Pos has already advanced past the
+    // actual \par or @par command by the time this function is called.
     while (isWhitespace(*(Pos.BufferPtr - Offset)))
       Offset++;
 
-    /// Check if next four characters are \par or @par
-    llvm::StringRef LineStart(Pos.BufferPtr - 5, 4);
+    // Once we've reached the whitespace, backtrack and check if the previous four
+    // characters are \par or @par.
+    llvm::StringRef LineStart(Pos.BufferPtr - Offset - 3, 4);
     return LineStart.starts_with("\\par") || LineStart.starts_with("@par");
   }
 
@@ -253,7 +254,7 @@ public:
       return false;
 
     // Read until the end of this token, which is effectively the end of the
-    // line This gets us the content of the par header, if there is one.
+    // line. This gets us the content of the par header, if there is one.
     while (!isEnd()) {
       WordText.push_back(peek());
       if (Pos.BufferPtr + 1 == Pos.BufferEnd) {
