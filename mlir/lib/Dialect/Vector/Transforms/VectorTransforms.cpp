@@ -1613,11 +1613,12 @@ VectorType dropNonScalableUnitDimType(VectorType inVecTy) {
   SmallVector<int64_t> newShape;
   SmallVector<bool> newScalableDims;
   for (auto [dim, isScalable] :
-       llvm::zip(inVecShape, inVecTy.getScalableDims())) {
-    if (dim != 1 || isScalable) {
-      newShape.push_back(dim);
-      newScalableDims.push_back(isScalable);
-    }
+       llvm::zip_equal(inVecShape, inVecTy.getScalableDims())) {
+    if (dim == 1 && !isScalable)
+      continue;
+
+    newShape.push_back(dim);
+    newScalableDims.push_back(isScalable);
   }
 
   return VectorType::get(newShape, inVecTy.getElementType(), newScalableDims);
@@ -1676,9 +1677,9 @@ struct DropUnitDimFromElementwiseOps final
     for (auto operand : op->getOperands()) {
       auto opVectorType = cast<VectorType>(operand.getType());
       auto newVType = dropNonScalableUnitDimType(opVectorType);
-      if (newVType == opVectorType) {
+      if (newVType == opVectorType)
         return rewriter.notifyMatchFailure(op, "No unit dimension to remove.");
-      }
+
       auto opSC = rewriter.create<vector::ShapeCastOp>(loc, newVType, operand);
       newOperands.push_back(opSC);
     }
