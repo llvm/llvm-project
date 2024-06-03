@@ -27935,7 +27935,7 @@ Syntax:
 
 ::
 
-      declare {ptr, i1} @llvm.type.checked.load.relative(ptr %ptr, i32 %offset, metadata %type) argmemonly nounwind readonly
+      declare {ptr, i1} @llvm.type.checked.load.relative(ptr %ptr, i32 %offset, metadata %type) nounwind memory(argmem: read)
 
 Overview:
 """""""""

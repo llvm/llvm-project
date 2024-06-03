@@ -11,13 +11,8 @@ def isWave32 : Predicate<"Subtarget->getWavefrontSize() == 32">,
 def isWave64 : Predicate<"Subtarget->getWavefrontSize() == 64">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
 
-class GCNPredicateControl : PredicateControl {
-  Predicate SIAssemblerPredicate = isGFX6GFX7;
-  Predicate VIAssemblerPredicate = isGFX8GFX9;
-}
-
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
-    : MnemonicAlias<From, To, VariantName>, GCNPredicateControl;
+    : MnemonicAlias<From, To, VariantName>, PredicateControl;
 
 // Except for the NONE field, this must be kept in sync with the
 // SIEncodingFamily enum in SIInstrInfo.cpp and the columns of the
@@ -2670,7 +2665,7 @@ class VINTRP_Real_vi <bits <2> op, string opName, dag outs, dag ins,
   VINTRPCommon <outs, ins, asm, []>,
   VINTRPe_vi <op>,
   SIMCInstr<opName, SIEncodingFamily.VI> {
-  let AssemblerPredicate = VIAssemblerPredicate;
+  let AssemblerPredicate = isGFX8GFX9;
   let DecoderNamespace = "GFX8";
 }
 

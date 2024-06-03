@@ -895,9 +895,6 @@ public:
     void disable() { Active = false; }
   };
 
-  /// Build a partial diagnostic.
-  PartialDiagnostic PDiag(unsigned DiagID = 0); // in SemaInternal.h
-
   sema::FunctionScopeInfo *getCurFunction() const {
     return FunctionScopes.empty() ? nullptr : FunctionScopes.back();
   }

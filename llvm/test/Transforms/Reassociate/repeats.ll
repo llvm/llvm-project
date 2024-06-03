@@ -15,7 +15,7 @@ define i8 @nilpotent(i8 %x) {
 define i2 @idempotent(i2 %x) {
 ; CHECK-LABEL: define i2 @idempotent(
 ; CHECK-SAME: i2 [[X:%.*]]) {
-; CHECK-NEXT:    ret i2 -1
+; CHECK-NEXT:    ret i2 [[X]]
 ;
   %tmp1 = and i2 %x, %x
   %tmp2 = and i2 %tmp1, %x
@@ -60,8 +60,7 @@ define i3 @foo3x5(i3 %x) {
 ; CHECK-SAME: i3 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i3 [[X]], [[X]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i3 [[TMP3]], [[X]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i3 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    ret i3 [[TMP5]]
+; CHECK-NEXT:    ret i3 [[TMP4]]
 ;
   %tmp1 = mul i3 %x, %x
   %tmp2 = mul i3 %tmp1, %x
@@ -75,8 +74,7 @@ define i3 @foo3x5_nsw(i3 %x) {
 ; CHECK-LABEL: define i3 @foo3x5_nsw(
 ; CHECK-SAME: i3 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i3 [[X]], [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i3 [[TMP3]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i3 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw i3 [[TMP3]], [[X]]
 ; CHECK-NEXT:    ret i3 [[TMP4]]
 ;
   %tmp1 = mul i3 %x, %x
@@ -91,8 +89,7 @@ define i3 @foo3x6(i3 %x) {
 ; CHECK-LABEL: define i3 @foo3x6(
 ; CHECK-SAME: i3 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i3 [[X]], [[X]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i3 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i3 [[TMP3]], [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i3 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret i3 [[TMP2]]
 ;
   %tmp1 = mul i3 %x, %x
@@ -108,9 +105,7 @@ define i3 @foo3x7(i3 %x) {
 ; CHECK-LABEL: define i3 @foo3x7(
 ; CHECK-SAME: i3 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i3 [[X]], [[X]]
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i3 [[TMP5]], [[X]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i3 [[TMP7]], [[X]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i3 [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i3 [[TMP5]], [[X]]
 ; CHECK-NEXT:    ret i3 [[TMP6]]
 ;
   %tmp1 = mul i3 %x, %x
@@ -127,8 +122,7 @@ define i4 @foo4x8(i4 %x) {
 ; CHECK-LABEL: define i4 @foo4x8(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i4 [[X]], [[X]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i4 [[TMP1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i4 [[TMP3]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i4 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret i4 [[TMP4]]
 ;
   %tmp1 = mul i4 %x, %x
@@ -146,9 +140,8 @@ define i4 @foo4x9(i4 %x) {
 ; CHECK-LABEL: define i4 @foo4x9(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i4 [[X]], [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i4 [[TMP1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i4 [[TMP2]], [[X]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i4 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i4 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i4 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i4 [[TMP8]]
 ;
   %tmp1 = mul i4 %x, %x
@@ -167,8 +160,7 @@ define i4 @foo4x10(i4 %x) {
 ; CHECK-LABEL: define i4 @foo4x10(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i4 [[X]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i4 [[TMP1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i4 [[TMP4]], [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i4 [[TMP1]], [[X]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i4 [[TMP2]], [[TMP2]]
 ; CHECK-NEXT:    ret i4 [[TMP3]]
 ;
@@ -189,8 +181,7 @@ define i4 @foo4x11(i4 %x) {
 ; CHECK-LABEL: define i4 @foo4x11(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i4 [[X]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i4 [[TMP1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i4 [[TMP4]], [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i4 [[TMP1]], [[X]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i4 [[TMP2]], [[X]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i4 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i4 [[TMP10]]
@@ -213,9 +204,7 @@ define i4 @foo4x12(i4 %x) {
 ; CHECK-LABEL: define i4 @foo4x12(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i4 [[X]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i4 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i4 [[TMP4]], [[TMP4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i4 [[TMP3]], [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i4 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret i4 [[TMP2]]
 ;
   %tmp1 = mul i4 %x, %x
@@ -238,9 +227,7 @@ define i4 @foo4x13(i4 %x) {
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i4 [[X]], [[X]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i4 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i4 [[TMP2]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i4 [[TMP3]], [[X]]
-; CHECK-NEXT:    [[TMP12:%.*]] = mul i4 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = mul i4 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i4 [[TMP12]]
 ;
   %tmp1 = mul i4 %x, %x
@@ -263,9 +250,7 @@ define i4 @foo4x14(i4 %x) {
 ; CHECK-LABEL: define i4 @foo4x14(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i4 [[X]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i4 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i4 [[TMP4]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i4 [[TMP5]], [[X]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i4 [[TMP1]], [[X]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i4 [[TMP6]], [[TMP6]]
 ; CHECK-NEXT:    ret i4 [[TMP7]]
 ;
@@ -290,9 +275,7 @@ define i4 @foo4x15(i4 %x) {
 ; CHECK-LABEL: define i4 @foo4x15(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i4 [[X]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i4 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i4 [[TMP4]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i4 [[TMP3]], [[X]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i4 [[TMP1]], [[X]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i4 [[TMP6]], [[X]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul i4 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    ret i4 [[TMP14]]

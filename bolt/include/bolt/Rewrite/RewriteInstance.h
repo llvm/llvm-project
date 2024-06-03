@@ -21,6 +21,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Regex.h"
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -595,6 +596,9 @@ private:
   uint64_t NumFailedRelocations{0};
 
   NameResolver NR;
+
+  // Regex object matching split function names.
+  const Regex FunctionFragmentTemplate{"(.*)\\.(cold|warm)(\\.[0-9]+)?"};
 
   friend class RewriteInstanceDiff;
 };
