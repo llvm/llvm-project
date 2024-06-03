@@ -40,7 +40,7 @@ static std::optional<unsigned> getArgsTypeWidth(Operation &op,
                                                 const DataLayout *DL) {
   unsigned ret = 0;
   for (auto r : {ValueRange(op.getOperands()), ValueRange(op.getResults())}) {
-    for (auto arg : op.getOperands()) {
+    for (Value arg : op.getOperands()) {
       std::optional<unsigned> w = getTypeBitWidth(arg.getType(), DL);
       if (!w)
         return std::nullopt;
@@ -62,7 +62,7 @@ static bool isRangePermutation(ValueRange val1, ValueRange val2) {
   if (val1.size() != val2.size())
     return false;
 
-  for (auto v1 : val1) {
+  for (Value v1 : val1) {
     auto it = llvm::find(val2, v1);
     if (it == val2.end())
       return false;
@@ -74,9 +74,9 @@ template <typename Op>
 static std::optional<unsigned>
 canTriviallyVectorizeMemOpImpl(scf::ParallelOp loop, unsigned dim, Op memOp,
                                const DataLayout *DL) {
-  auto loopIndexVars = loop.getInductionVars();
+  ValueRange loopIndexVars = loop.getInductionVars();
   assert(dim < loopIndexVars.size() && "Invalid loop dimension");
-  auto memref = memOp.getMemRef();
+  Value memref = memOp.getMemRef();
   auto type = cast<MemRefType>(memref.getType());
   std::optional<unsigned> width = getTypeBitWidth(type.getElementType(), DL);
   if (!width)
@@ -118,7 +118,7 @@ canTriviallyVectorizeMemOp(scf::ParallelOp loop, unsigned dim, Operation &op,
 template <typename Op>
 static std::optional<unsigned> canGatherScatterImpl(scf::ParallelOp loop, Op op,
                                                     const DataLayout *DL) {
-  auto memref = op.getMemRef();
+  Value memref = op.getMemRef();
   auto memrefType = cast<MemRefType>(memref.getType());
   std::optional<unsigned> width =
       getTypeBitWidth(memrefType.getElementType(), DL);
@@ -151,7 +151,7 @@ canGatherScatter(scf::ParallelOp loop, Operation &op, const DataLayout *DL) {
 static std::optional<unsigned> cenVectorizeMemrefOp(scf::ParallelOp loop,
                                                     unsigned dim, Operation &op,
                                                     const DataLayout *DL) {
-  if (auto w = canTriviallyVectorizeMemOp(loop, dim, op, DL))
+  if (std::optional<unsigned> w = canTriviallyVectorizeMemOp(loop, dim, op, DL))
     return w;
 
   return canGatherScatter(loop, op, DL);
@@ -200,8 +200,8 @@ mlir::scf::getLoopVectorizeInfo(scf::ParallelOp loop, unsigned dim,
       return std::nullopt;
 
     /// Check mem ops.
-    if (auto w = cenVectorizeMemrefOp(loop, dim, op, DL)) {
-      auto newFactor = vectorBitwidth / *w;
+    if (std::optional<unsigned> w = cenVectorizeMemrefOp(loop, dim, op, DL)) {
+      unsigned newFactor = vectorBitwidth / *w;
       if (newFactor > 1) {
         factor = std::min(factor, newFactor);
         ++count;
@@ -220,7 +220,7 @@ mlir::scf::getLoopVectorizeInfo(scf::ParallelOp loop, unsigned dim,
     if (!width)
       return std::nullopt;
 
-    auto newFactor = vectorBitwidth / *width;
+    unsigned newFactor = vectorBitwidth / *width;
     if (newFactor <= 1)
       continue;
 
@@ -247,26 +247,26 @@ static arith::FastMathFlags getFMF(Operation &op) {
 LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
                                        const scf::SCFVectorizeParams &params,
                                        const DataLayout *DL) {
-  auto dim = params.dim;
-  auto factor = params.factor;
-  auto masked = params.masked;
+  unsigned dim = params.dim;
+  unsigned factor = params.factor;
+  bool masked = params.masked;
   assert(dim < loop.getStep().size() && "Invalid loop dimension");
   assert(factor > 1 && "Invalid vectorize factor");
   assert(isConstantIntValue(loop.getStep()[dim], 1) && "Loop stepust be 1");
 
   OpBuilder builder(loop);
-  auto lower = llvm::to_vector(loop.getLowerBound());
-  auto upper = llvm::to_vector(loop.getUpperBound());
-  auto step = llvm::to_vector(loop.getStep());
+  SmallVector<Value> lower = llvm::to_vector(loop.getLowerBound());
+  SmallVector<Value> upper = llvm::to_vector(loop.getUpperBound());
+  SmallVector<Value> step = llvm::to_vector(loop.getStep());
 
-  auto loc = loop.getLoc();
+  Location loc = loop.getLoc();
 
-  auto origIndexVar = loop.getInductionVars()[dim];
+  Value origIndexVar = loop.getInductionVars()[dim];
 
   Value factorVal = builder.create<arith::ConstantIndexOp>(loc, factor);
 
-  auto origLower = lower[dim];
-  auto origUpper = upper[dim];
+  Value origLower = lower[dim];
+  Value origUpper = upper[dim];
   Value count = builder.createOrFold<arith::SubIOp>(loc, origUpper, origLower);
   Value newCount;
 
@@ -284,10 +284,10 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
   // Vectorized loop.
   auto newLoop = builder.create<scf::ParallelOp>(loc, lower, upper, step,
                                                  loop.getInitVals());
-  auto newIndexVar = newLoop.getInductionVars()[dim];
+  Value newIndexVar = newLoop.getInductionVars()[dim];
 
   auto toVectorType = [&](Type elemType) -> VectorType {
-    int64_t f = factor;
+    auto f = static_cast<int64_t>(factor);
     return VectorType::get(f, elemType);
   };
 
@@ -311,14 +311,14 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
   // Get vector value in new loop for provided `orig` value in source loop.
   auto getVecVal = [&](Value orig) -> Value {
     // Use cached value if present.
-    if (auto mapped = mapping.lookupOrNull(orig))
+    if (Value mapped = mapping.lookupOrNull(orig))
       return mapped;
 
     // Vectorized loop index, loop index is divided by factor, so for factorN
     // vectorized index will looks like `splat(idx) + (0, 1, ..., N - 1)`
     if (orig == origIndexVar) {
-      auto vecType = toVectorType(builder.getIndexType());
-      llvm::SmallVector<Attribute> elems(factor);
+      VectorType vecType = toVectorType(builder.getIndexType());
+      SmallVector<Attribute> elems(factor);
       for (auto i : llvm::seq(0u, factor))
         elems[i] = builder.getIndexAttr(i);
       auto attr = DenseElementsAttr::get(vecType, elems);
@@ -331,11 +331,11 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
       mapping.map(orig, vec);
       return vec;
     }
-    auto type = orig.getType();
+    Type type = orig.getType();
     assert(isSupportedVecElem(type) && "Unsupported vector element type");
 
     Value val = orig;
-    auto origIndexVars = loop.getInductionVars();
+    ValueRange origIndexVars = loop.getInductionVars();
     auto it = llvm::find(origIndexVars, orig);
 
     // If loop index, but not on vectorized dimension, just take new loop index
@@ -346,14 +346,12 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
     // Values which are defined inside loop body are preemptively added to the
     // mapper and not handled here. Values defined outside body are just
     // splatted.
-
-    auto vecType = toVectorType(type);
-    Value vec = builder.create<vector::SplatOp>(loc, val, vecType);
+    Value vec = builder.create<vector::SplatOp>(loc, val, toVectorType(type));
     mapping.map(orig, vec);
     return vec;
   };
 
-  llvm::DenseMap<Value, llvm::SmallVector<Value>> unpackedVals;
+  llvm::DenseMap<Value, SmallVector<Value>> unpackedVals;
 
   // Get unpacked values for provided `orig` value in source loop.
   // Values are returned as `ValueRange` and not as vector value.
@@ -376,7 +374,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
     }
 
     // Get vector value and extract elements from it.
-    auto vecVal = getVecVal(val);
+    Value vecVal = getVecVal(val);
     ret.resize(factor);
     for (auto i : llvm::seq(0u, factor)) {
       Value idx = builder.create<arith::ConstantIndexOp>(loc, i);
@@ -391,13 +389,13 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
     assert(unpackedVals.count(origVal) == 0 && "Invalid unpackedVals state");
     unpackedVals[origVal].append(newVals.begin(), newVals.end());
 
-    auto type = origVal.getType();
+    Type type = origVal.getType();
     if (!isSupportedVecElem(type))
       return;
 
     // If type is vectorizabale construct a vector add it to vector cache as
     // well.
-    auto vecType = toVectorType(type);
+    VectorType vecType = toVectorType(type);
 
     Value vec = createPosionVec(vecType);
     for (auto i : llvm::seq(0u, factor)) {
@@ -422,7 +420,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
     } else {
       maskSize = builder.getIndexAttr(factor);
     }
-    auto vecType = toVectorType(builder.getI1Type());
+    VectorType vecType = toVectorType(builder.getI1Type());
     mask = builder.create<vector::CreateMaskOp>(loc, vecType, maskSize);
 
     return mask;
@@ -437,11 +435,11 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
   };
 
   // Get idices for vectorized memref load/store.
-  auto getMemrefVecIndices = [&](ValueRange indices) {
+  auto getMemrefVecIndices = [&](ValueRange indices) -> SmallVector<Value> {
     scalarMapping.clear();
     scalarMapping.map(loop.getInductionVars(), newLoop.getInductionVars());
 
-    llvm::SmallVector<Value> ret(indices.size());
+    SmallVector<Value> ret(indices.size());
     for (auto &&[i, val] : llvm::enumerate(indices)) {
       if (val == origIndexVar) {
         Value idx = getrIndexVarMult();
@@ -457,13 +455,13 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
 
   // Create vectorized memref load for specified non-vectorized load.
   auto genLoad = [&](auto loadOp) {
-    auto indices = getMemrefVecIndices(loadOp.getIndices());
-    auto resType = toVectorType(loadOp.getResult().getType());
-    auto memref = loadOp.getMemRef();
+    SmallVector<Value> indices = getMemrefVecIndices(loadOp.getIndices());
+    VectorType resType = toVectorType(loadOp.getResult().getType());
+    Value memref = loadOp.getMemRef();
     Value vecLoad;
     if (masked) {
-      auto mask = getMask();
-      auto init = createPosionVec(resType);
+      Value mask = getMask();
+      Value init = createPosionVec(resType);
       vecLoad = builder.create<vector::MaskedLoadOp>(loc, resType, memref,
                                                      indices, mask, init);
     } else {
@@ -474,19 +472,19 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
 
   // Create vectorized memref store for specified non-vectorized store.
   auto genStore = [&](auto storeOp) {
-    auto indices = getMemrefVecIndices(storeOp.getIndices());
-    auto value = getVecVal(storeOp.getValueToStore());
-    auto memref = storeOp.getMemRef();
+    SmallVector<Value> indices = getMemrefVecIndices(storeOp.getIndices());
+    Value value = getVecVal(storeOp.getValueToStore());
+    Value memref = storeOp.getMemRef();
     if (masked) {
-      auto mask = getMask();
+      Value mask = getMask();
       builder.create<vector::MaskedStoreOp>(loc, memref, indices, mask, value);
     } else {
       builder.create<vector::StoreOp>(loc, value, memref, indices);
     }
   };
 
-  llvm::SmallVector<Value> duplicatedArgs;
-  llvm::SmallVector<Value> duplicatedResults;
+  SmallVector<Value> duplicatedArgs;
+  SmallVector<Value> duplicatedResults;
 
   builder.setInsertionPointToStart(newLoop.getBody());
   for (Operation &op : loop.getBody()->without_terminator()) {
@@ -494,11 +492,11 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
     if (isSupportedVectorOp(op)) {
       // If op can be vectorized, clone it with vectorized inputs and  update
       // resuls to vectorized types.
-      for (auto arg : op.getOperands())
+      for (Value arg : op.getOperands())
         getVecVal(arg); // init mapper for op args
 
-      auto newOp = builder.clone(op, mapping);
-      for (auto res : newOp->getResults())
+      Operation *newOp = builder.clone(op, mapping);
+      for (Value res : newOp->getResults())
         res.setType(toVectorType(res.getType()));
 
       continue;
@@ -512,11 +510,11 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
         continue;
       }
       if (canGatherScatter(loadOp)) {
-        auto resType = toVectorType(loadOp.getResult().getType());
-        auto memref = loadOp.getMemRef();
-        auto mask = getMask();
-        auto indexVec = getVecVal(loadOp.getIndices()[0]);
-        auto init = createPosionVec(resType);
+        VectorType resType = toVectorType(loadOp.getResult().getType());
+        Value memref = loadOp.getMemRef();
+        Value mask = getMask();
+        Value indexVec = getVecVal(loadOp.getIndices()[0]);
+        Value init = createPosionVec(resType);
 
         auto gather = builder.create<vector::GatherOp>(
             loc, resType, memref, zero, indexVec, mask, init);
@@ -531,10 +529,10 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
         continue;
       }
       if (canGatherScatter(storeOp)) {
-        auto memref = storeOp.getMemRef();
-        auto value = getVecVal(storeOp.getValueToStore());
-        auto mask = getMask();
-        auto indexVec = getVecVal(storeOp.getIndices()[0]);
+        Value memref = storeOp.getMemRef();
+        Value value = getVecVal(storeOp.getValueToStore());
+        Value mask = getMask();
+        Value indexVec = getVecVal(storeOp.getIndices()[0]);
 
         builder.create<vector::ScatterOp>(loc, memref, zero, indexVec, mask,
                                           value);
@@ -554,7 +552,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
     duplicatedResults.resize(numResults * factor);
 
     for (auto &&[i, arg] : llvm::enumerate(op.getOperands())) {
-      auto unpacked = getUnpackedVals(arg);
+      ValueRange unpacked = getUnpackedVals(arg);
       assert(unpacked.size() == factor && "Invalid unpacked size");
       for (auto j : llvm::seq(0u, factor))
         duplicatedArgs[j * numArgs + i] = unpacked[j];
@@ -565,7 +563,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
                       .drop_front(numArgs * i)
                       .take_front(numArgs);
       scalarMapping.map(op.getOperands(), args);
-      auto results = builder.clone(op, scalarMapping)->getResults();
+      ValueRange results = builder.clone(op, scalarMapping)->getResults();
 
       for (auto j : llvm::seq(0u, numResults))
         duplicatedResults[j * factor + i] = results[j];
@@ -581,7 +579,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
 
   // Vectorize `scf.reduce` op.
   auto reduceOp = cast<scf::ReduceOp>(loop.getBody()->getTerminator());
-  llvm::SmallVector<Value> reduceVals;
+  SmallVector<Value> reduceVals;
   reduceVals.reserve(reduceOp.getNumOperands());
 
   for (auto &&[body, arg] :
@@ -595,16 +593,17 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
       // Generate `vector.reduce` if possible.
       Value redArg = getVecVal(arg);
       if (redArg) {
-        auto neutral = arith::getNeutralElement(&reduceBody.front());
+        std::optional<TypedAttr> neutral =
+            arith::getNeutralElement(&reduceBody.front());
         assert(neutral && "getNeutralElement has unepectedly failed");
         Value neutralVal = builder.create<arith::ConstantOp>(loc, *neutral);
         Value neutralVec =
             builder.create<vector::SplatOp>(loc, neutralVal, redArg.getType());
-        auto mask = getMask();
+        Value mask = getMask();
         redArg = builder.create<arith::SelectOp>(loc, mask, redArg, neutralVec);
       }
 
-      auto fmf = getFMF(reduceBody.front());
+      arith::FastMathFlags fmf = getFMF(reduceBody.front());
       reduceVal =
           builder.create<vector::ReductionOp>(loc, *redKind, redArg, fmf);
     } else {
@@ -615,16 +614,16 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
       // individually.
 
       auto reduceTerm = cast<scf::ReduceReturnOp>(reduceBody.getTerminator());
-      auto lhs = reduceBody.getArgument(0);
-      auto rhs = reduceBody.getArgument(1);
-      auto unpacked = getUnpackedVals(arg);
+      Value lhs = reduceBody.getArgument(0);
+      Value rhs = reduceBody.getArgument(1);
+      ValueRange unpacked = getUnpackedVals(arg);
       assert(unpacked.size() == factor && "Invalid unpacked size");
       reduceVal = unpacked.front();
       for (auto i : llvm::seq(1u, factor)) {
         Value val = unpacked[i];
         scalarMapping.map(lhs, reduceVal);
         scalarMapping.map(rhs, val);
-        for (auto &redOp : reduceBody.without_terminator())
+        for (Operation &redOp : reduceBody.without_terminator())
           builder.clone(redOp, scalarMapping);
 
         reduceVal = scalarMapping.lookupOrDefault(reduceTerm.getResult());
@@ -648,7 +647,7 @@ LogicalResult mlir::scf::vectorizeLoop(scf::ParallelOp loop,
         builder.createOrFold<arith::MulIOp>(loc, newCount, factorVal);
     newLower = builder.createOrFold<arith::AddIOp>(loc, origLower, newLower);
 
-    auto lowerCopy = llvm::to_vector(loop.getLowerBound());
+    SmallVector<Value> lowerCopy = llvm::to_vector(loop.getLowerBound());
     lowerCopy[dim] = newLower;
     loop.getLowerBoundMutable().assign(lowerCopy);
     loop.getInitValsMutable().assign(newLoop.getResults());
