@@ -2497,8 +2497,10 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
   FALLBACK(REFERENCE, FALLBACK_ARGS, {});                                      \
   return IMPL();
 #define VALIDATE_AND_RETURN_EXPECTED(IMPL, REFERENCE, TYPE, EXE_CTX, ARGS,     \
-                                     FALLBACK_ARGS, DEFAULT)                   \
-  FALLBACK(REFERENCE, FALLBACK_ARGS, DEFAULT);                                 \
+                                     FALLBACK_ARGS)                            \
+  FALLBACK(REFERENCE, FALLBACK_ARGS,                                           \
+           llvm::createStringError(llvm::inconvertibleErrorCode(),             \
+                                   "incomplete AST type information"));        \
   return IMPL();
 #endif
 
