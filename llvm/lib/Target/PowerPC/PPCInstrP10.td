@@ -1159,7 +1159,7 @@ let Predicates = [PairedVectorMemops] in {
     def LXVPX : XForm_XTp5_XAB5<31, 333, (outs vsrprc:$XTp), (ins (memrr $RA, $RB):$addr),
                                 "lxvpx $XTp, $addr", IIC_LdStLFD,
                                 []>;
-}
+  }
 
   let mayLoad = 0, mayStore = 1 in {
     def STXVP : DQForm_XTp5_RA17_MEM<6, 1, (outs), (ins vsrprc:$XTp,
