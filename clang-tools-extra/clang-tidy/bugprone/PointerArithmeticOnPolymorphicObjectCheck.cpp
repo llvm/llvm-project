@@ -72,7 +72,7 @@ void PointerArithmeticOnPolymorphicObjectCheck::check(
   diag(PointerExpr->getBeginLoc(),
        "pointer arithmetic on polymorphic class '%0', which can result in "
        "undefined behavior if the pointee is a different class")
-      << PointeeType->getName();
+      << PointeeType->getName() << PointeeType->getSourceRange();
 }
 
 } // namespace clang::tidy::bugprone
