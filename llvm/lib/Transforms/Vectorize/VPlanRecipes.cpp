@@ -568,12 +568,14 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     Value *Res;
     if (State.VF.isVector()) {
+      assert(Offset <= State.VF.getKnownMinValue() &&
+             "invalid offset to extract from");
       // Extract lane VF - Offset from the operand.
       Res = State.get(
           getOperand(0),
           VPIteration(State.UF - 1, VPLane::getLaneFromEnd(State.VF, Offset)));
     } else {
-      assert(State.UF > 1 && "VF and UF cannot both be 1");
+      assert(Offset <= State.UF && "invalid offset to extract from");
       // When loop is unrolled without vectorizing, retrieve UF - Offset.
       Res = State.get(getOperand(0), State.UF - Offset);
     }
