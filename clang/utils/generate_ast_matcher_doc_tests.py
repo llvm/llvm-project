@@ -446,6 +446,8 @@ def can_code_compile(
     code_file_name = "code.cpp"
     if compile_commands and compile_commands.lang_spec.cxx == "":
         code_file_name = "code.c"
+    if compile_commands and "cuda" in compile_commands.lang_spec.raw:
+        code_file_name = "code.cu"
 
     (tmp_path / code_file_name).write_text(code)
 
@@ -601,7 +603,7 @@ class TestCase:
     const StringRef Code = R"cpp(\n{self.code})cpp";\n"""
 
         if has_cuda:
-            res += """
+            res += f"""
     const StringRef CudaHeader = R"cuda({cuda_header}
     )cuda";
 """
