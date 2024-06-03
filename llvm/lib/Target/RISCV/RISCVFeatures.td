@@ -221,8 +221,8 @@ def HasStdExtAOrZaamo
                          "'Zaamo' (Atomic Memory Operations)">;
 
 def FeatureStdExtZabha
-    : RISCVExperimentalExtension<"zabha", 1, 0,
-                                 "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
+    : RISCVExtension<"zabha", 1, 0,
+                     "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
 def HasStdExtZabha : Predicate<"Subtarget->hasStdExtZabha()">,
                      AssemblerPredicate<(all_of FeatureStdExtZabha),
                          "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
