@@ -13,7 +13,7 @@
 
 !Constant should not be present inside target region.
 !CHECK-HOST: omp.target
-!CHECK-NOT-HOST: arith.constant 10
+!CHECK-HOST-NOT: arith.constant 10
 !CHECK-HOST: omp.terminator
 
 subroutine writeIndex(sum)
