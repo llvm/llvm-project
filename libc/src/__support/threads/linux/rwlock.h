@@ -361,28 +361,23 @@ public:
 
 private:
   template <Role role>
-  [[gnu::always_inline]] LIBC_INLINE LockResult
-  lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
-       unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
+  LIBC_INLINE LockResult
+  lock_slow(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
+            unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
     // Phase 1: deadlock detection.
     // A deadlock happens if this is a RAW/WAW lock in the same thread.
     if (writer_tid.load(cpp::MemoryOrder::RELAXED) == gettid())
       return LockResult::Deadlock;
 
-    // Phase 2: spin to get the initial state. We ignore the timing due to
-    // spin since it should end quickly.
-    State old = State::spin_reload<role>(state, preference, spin_count);
-    {
-      LockResult result = try_lock<role>(old);
-      if (result != LockResult::Busy)
-        return result;
-    }
-
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
-    // Phase 3: convert the timeout if necessary.
+    // Phase 2: convert the timeout if necessary.
     if (timeout)
       ensure_monotonicity(*timeout);
 #endif
+
+    // Phase 3: spin to get the initial state. We ignore the timing due to
+    // spin since it should end quickly.
+    State old = State::spin_reload<role>(state, preference, spin_count);
 
     // Enter the main acquisition loop.
     for (;;) {
@@ -444,15 +439,21 @@ private:
   }
 
 public:
-  [[gnu::always_inline]] LIBC_INLINE LockResult
+  LIBC_INLINE LockResult
   read_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
-    return lock<Role::Reader>(timeout, spin_count);
+    LockResult result = try_read_lock();
+    if (LIBC_LIKELY(result != LockResult::Busy))
+      return result;
+    return lock_slow<Role::Reader>(timeout, spin_count);
   }
   LIBC_INLINE LockResult
   write_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
              unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
-    return lock<Role::Writer>(timeout, spin_count);
+    LockResult result = try_write_lock();
+    if (LIBC_LIKELY(result != LockResult::Busy))
+      return result;
+    return lock_slow<Role::Writer>(timeout, spin_count);
   }
 
 private:
