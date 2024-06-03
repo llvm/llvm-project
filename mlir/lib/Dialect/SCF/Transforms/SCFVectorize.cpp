@@ -20,11 +20,12 @@ using namespace mlir;
 
 static bool isSupportedVecElem(Type type) { return type.isIntOrIndexOrFloat(); }
 
-/// Return type bitwidth for vectorization purposes or 0 if type cannot be
+/// Return type bitwidth for vectorization purposes or empty if type cannot be
 /// vectorized.
-static unsigned getTypeBitWidth(Type type, const DataLayout *DL) {
+static std::optional<unsigned> getTypeBitWidth(Type type,
+                                               const DataLayout *DL) {
   if (!isSupportedVecElem(type))
-    return 0;
+    return std::nullopt;
 
   if (DL)
     return DL->getTypeSizeInBits(type);
@@ -32,16 +33,21 @@ static unsigned getTypeBitWidth(Type type, const DataLayout *DL) {
   if (type.isIntOrFloat())
     return type.getIntOrFloatBitWidth();
 
-  return 0;
+  return std::nullopt;
 }
 
-static unsigned getArgsTypeWidth(Operation &op, const DataLayout *DL) {
+static std::optional<unsigned> getArgsTypeWidth(Operation &op,
+                                                const DataLayout *DL) {
   unsigned ret = 0;
-  for (auto arg : op.getOperands())
-    ret = std::max(ret, getTypeBitWidth(arg.getType(), DL));
+  for (auto r : {ValueRange(op.getOperands()), ValueRange(op.getResults())}) {
+    for (auto arg : op.getOperands()) {
+      std::optional<unsigned> w = getTypeBitWidth(arg.getType(), DL);
+      if (!w)
+        return std::nullopt;
 
-  for (auto res : op.getResults())
-    ret = std::max(ret, getTypeBitWidth(res.getType(), DL));
+      ret = std::max(ret, *w);
+    }
+  }
 
   return ret;
 }
@@ -72,8 +78,8 @@ canTriviallyVectorizeMemOpImpl(scf::ParallelOp loop, unsigned dim, Op memOp,
   assert(dim < loopIndexVars.size());
   auto memref = memOp.getMemRef();
   auto type = cast<MemRefType>(memref.getType());
-  auto width = getTypeBitWidth(type.getElementType(), DL);
-  if (width == 0)
+  std::optional<unsigned> width = getTypeBitWidth(type.getElementType(), DL);
+  if (!width)
     return std::nullopt;
 
   if (!type.getLayout().isIdentity())
@@ -114,13 +120,17 @@ static std::optional<unsigned> canGatherScatterImpl(scf::ParallelOp loop, Op op,
                                                     const DataLayout *DL) {
   auto memref = op.getMemRef();
   auto memrefType = cast<MemRefType>(memref.getType());
-  auto width = getTypeBitWidth(memrefType.getElementType(), DL);
-  if (width == 0)
+  std::optional<unsigned> width =
+      getTypeBitWidth(memrefType.getElementType(), DL);
+  if (!width)
     return std::nullopt;
 
   DominanceInfo dom;
-  return dom.properlyDominates(memref, loop) && op.getIndices().size() == 1 &&
-         memrefType.getLayout().isIdentity();
+  if (!dom.properlyDominates(memref, loop) || op.getIndices().size() != 1 ||
+      !memrefType.getLayout().isIdentity())
+    return std::nullopt;
+
+  return width;
 }
 
 // Check if memref access can be converted into gather/scatter.
@@ -206,11 +216,11 @@ mlir::scf::getLoopVectorizeInfo(scf::ParallelOp loop, unsigned dim,
       continue;
     }
 
-    auto width = getArgsTypeWidth(op, DL);
-    if (width == 0)
+    std::optional<unsigned> width = getArgsTypeWidth(op, DL);
+    if (!width)
       return std::nullopt;
 
-    auto newFactor = vectorBitwidth / width;
+    auto newFactor = vectorBitwidth / *width;
     if (newFactor <= 1)
       continue;
 
