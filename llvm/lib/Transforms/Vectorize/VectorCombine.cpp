@@ -1901,10 +1901,10 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     OldShuffleCost += C;
   }
   LLVM_DEBUG(dbgs() << "  total cost " << OldShuffleCost << "\n");
-  SmallVector<int, 16> ExtractMask(Ty->getNumElements());
-  std::iota(ExtractMask.begin(), ExtractMask.end(), 0);
+  SmallVector<int, 16> IdentityMask(Ty->getNumElements());
+  std::iota(IdentityMask.begin(), IdentityMask.end(), 0);
   InstructionCost IdentityCost = TTI.getShuffleCost(
-      TTI::SK_PermuteSingleSrc, Ty, ExtractMask, TTI::TCK_RecipThroughput);
+      TTI::SK_PermuteSingleSrc, Ty, IdentityMask, TTI::TCK_RecipThroughput);
   InstructionCost SplatCost = TTI.getShuffleCost(
       TTI::SK_Broadcast, Ty, std::nullopt, TTI::TCK_RecipThroughput);
   InstructionCost NewShuffleCost =
