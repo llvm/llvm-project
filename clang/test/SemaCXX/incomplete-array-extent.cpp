@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -std=c++11 %s
+// RUN: %clang_cc1 -verify -std=c++14 %s
 
-auto f() { // expected-error {{'auto' return without trailing return type; deduced return types are a C++14 extension}}
+auto f() {
   return __array_extent(int, ); // expected-error {{expected expression}}
 }
