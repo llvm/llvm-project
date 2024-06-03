@@ -356,6 +356,8 @@ end
 * A derived type that meets (most of) the requirements of an interoperable
   derived type can be used as such where an interoperable type is
   required, with warnings, even if it lacks the BIND(C) attribute.
+* A "mult-operand" in an expression can be preceded by a unary
+  `+` or `-` operator.
 
 ### Extensions supported when enabled by options
 
