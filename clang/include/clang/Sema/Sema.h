@@ -8584,7 +8584,7 @@ public:
   ///   decl; this is an ugly hack around the fact that Objective-C
   ///   \@implementations aren't properly put in the context chain
   ExprResult ActOnMemberAccessExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
-                                   bool IsArrow, CXXScopeSpec &SS,
+                                   tok::TokenKind OpKind, CXXScopeSpec &SS,
                                    SourceLocation TemplateKWLoc,
                                    UnqualifiedId &Member, Decl *ObjCImpDecl);
 

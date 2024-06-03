@@ -1035,7 +1035,7 @@ ExprResult Sema::BuildMemberReferenceExpr(
       if (RetryExpr.isUsable() && !Trap.hasErrorOccurred()) {
         CXXScopeSpec TempSS(SS);
         RetryExpr = ActOnMemberAccessExpr(
-            ExtraArgs->S, RetryExpr.get(), OpLoc, /*IsArrow=*/true, TempSS,
+            ExtraArgs->S, RetryExpr.get(), OpLoc, tok::arrow, TempSS,
             TemplateKWLoc, ExtraArgs->Id, ExtraArgs->ObjCImpDecl);
       }
       if (Trap.hasErrorOccurred())
@@ -1738,10 +1738,12 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
 }
 
 ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
-                                       SourceLocation OpLoc, bool IsArrow,
+                                       SourceLocation OpLoc,
+                                       tok::TokenKind OpKind,
                                        CXXScopeSpec &SS,
                                        SourceLocation TemplateKWLoc,
-                                       UnqualifiedId &Id, Decl *ObjCImpDecl) {
+                                       UnqualifiedId &Id,
+                                       Decl *ObjCImpDecl) {
   // Warn about the explicit constructor calls Microsoft extension.
   if (getLangOpts().MicrosoftExt &&
       Id.getKind() == UnqualifiedIdKind::IK_ConstructorName)
@@ -1755,6 +1757,7 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   const TemplateArgumentListInfo *TemplateArgs;
   DecomposeUnqualifiedId(Id, TemplateArgsBuffer,
                          NameInfo, TemplateArgs);
+  bool IsArrow = OpKind == tok::arrow;
 
   if (getLangOpts().HLSL && IsArrow)
     return ExprError(Diag(OpLoc, diag::err_hlsl_operator_unsupported) << 2);

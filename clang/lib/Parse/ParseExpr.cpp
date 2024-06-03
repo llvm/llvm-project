@@ -2269,7 +2269,6 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           }
           break;
         }
-
         ParseOptionalCXXScopeSpecifier(
             SS, ObjectType, LHS.get() && LHS.get()->containsErrors(),
             /*EnteringContext=*/false, &MayBePseudoDestructor);
@@ -2344,10 +2343,10 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       }
 
       if (!LHS.isInvalid())
-        LHS = Actions.ActOnMemberAccessExpr(
-            getCurScope(), LHS.get(), OpLoc, OpKind == tok::arrow, SS,
-            TemplateKWLoc, Name,
-            CurParsedObjCImpl ? CurParsedObjCImpl->Dcl : nullptr);
+        LHS = Actions.ActOnMemberAccessExpr(getCurScope(), LHS.get(), OpLoc,
+                                            OpKind, SS, TemplateKWLoc, Name,
+                                 CurParsedObjCImpl ? CurParsedObjCImpl->Dcl
+                                                   : nullptr);
       if (!LHS.isInvalid()) {
         if (Tok.is(tok::less))
           checkPotentialAngleBracket(LHS);
