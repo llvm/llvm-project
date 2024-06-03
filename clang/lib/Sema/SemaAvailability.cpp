@@ -157,6 +157,18 @@ static bool ShouldDiagnoseAvailabilityInContext(
     }
   }
 
+  // In HLSL, emit diagnostic during parsing only if the diagnostic
+  // mode is set to strict (-fhlsl-strict-availability), and either the decl
+  // availability is not restricted to a specific environment/shader stage,
+  // or the target stage is known (= it is not shader library).
+  if (S.getLangOpts().HLSL) {
+    if (!S.getLangOpts().HLSLStrictAvailability ||
+        (DeclEnv != nullptr &&
+         S.getASTContext().getTargetInfo().getTriple().getEnvironment() ==
+             llvm::Triple::EnvironmentType::Library))
+      return false;
+  }
+
   // Checks if we should emit the availability diagnostic in the context of C.
   auto CheckContext = [&](const Decl *C) {
     if (K == AR_NotYetIntroduced) {
@@ -830,20 +842,6 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
       return;
 
     const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
-
-    // In HLSL, emit diagnostic here during parsing only if the diagnostic
-    // mode is set to strict (-fhlsl-strict-availability), and either the decl
-    // availability is not restricted to a specific environment/shader stage,
-    // or the target stage is known (= it is not shader library).
-    const LangOptions &LandOpts = SemaRef.getLangOpts();
-    if (LandOpts.HLSL) {
-      if (!LandOpts.HLSLStrictAvailability ||
-          (AA->getEnvironment() != nullptr &&
-           TI.getTriple().getEnvironment() ==
-               llvm::Triple::EnvironmentType::Library))
-        return;
-    }
-
     std::string PlatformName(
         AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
     llvm::StringRef TargetEnvironment(TI.getTriple().getEnvironmentName());
