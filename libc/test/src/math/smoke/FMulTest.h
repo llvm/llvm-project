@@ -16,6 +16,8 @@
 template <typename T, typename R>
 class FmulTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
+  DECLARE_SPECIAL_CONSTANTS(T)
+
 public:
   typedef T (*FMulFunc)(R, R);
 
@@ -23,6 +25,12 @@ public:
     EXPECT_FP_EQ(T(15.0), func(3.0, 5.0));
     EXPECT_FP_EQ(T(0x1.0p-130), func(0x1.0p1, 0x1.0p-131));
     EXPECT_FP_EQ(T(0x1.0p-127), func(0x1.0p2, 0x1.0p-129));
+    EXPECT_FP_EQ(inf, func(inf, 0x1.0p-129));
+    EXPECT_FP_EQ(inf, func(0x1.0p-129, inf));
+    EXPECT_FP_EQ(inf, func(inf, 2.0));
+    EXPECT_FP_EQ(inf, func(3.0, inf));
+    EXPECT_FP_EQ(0.0, func(0.0, 0.0));
+    EXPECT_FP_EQ(0.0, func(0.0, 0x1.0p-129));
   }
 };
 

@@ -61,12 +61,35 @@ uint64_t nlz(uint64_t x) {
 
 float fmul(double x, double y) {
 
+  
   auto x_bits = fputil::FPBits<double>(x);
   uint64_t x_u = x_bits.uintval();
 
   auto y_bits = fputil::FPBits<double>(y);
   uint64_t y_u = y_bits.uintval();
 
+  if ((x_bits.is_subnormal() || x_bits.is_normal()) && y_bits.is_inf())
+    return y_bits.inf().get_val();
+  if (x_bits.is_inf() && (y_bits.is_subnormal() || y_bits.is_normal()))
+    return x_bits.inf().get_val();
+  if ((x_bits.is_subnormal() || x_bits.is_normal()) && y_bits.is_zero())
+    return y_bits.zero().get_val();
+  if (x_bits.is_zero() && (y_bits.is_subnormal() || y_bits.is_normal()))
+    return x_bits.zero().get_val();
+  if (x_bits.is_zero() && y_bits.is_zero())
+    return x_bits.zero().get_val();
+  if (x_bits.is_inf() && y_bits.is_zero())
+    return fputil::FPBits<float>::quiet_nan().get_val();
+  if (y_bits.is_inf() && x_bits.is_zero())
+    return fputil::FPBits<float>::quiet_nan().get_val();
+  if ((x_bits.is_zero() || x_bits.is_normal() || x_bits.is_subnormal() || x_bits.is_inf()) && y_bits.is_nan()) {
+    fputil::raise_except_if_required(FE_INVALID);
+    return fputil::FPBits<float>::quiet_nan().get_val();
+  }
+  if ((y_bits.is_zero() || x_bits.is_normal() || x_bits.is_subnormal() || x_bits.is_inf()) &&  x_bits.is_nan()) {
+    fputil::raise_except_if_required(FE_INVALID);
+    return fputil::FPBits<float>::quiet_nan().get_val();
+  }
   uint64_t absx = x_u & 0x7FFFFFFFFFFFFFFF;
   uint64_t absy = y_u & 0x7FFFFFFFFFFFFFFF;
 
