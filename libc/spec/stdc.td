@@ -595,6 +595,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"lrint", RetValSpec<LongType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"lrintf", RetValSpec<LongType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"lrintl", RetValSpec<LongType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"lrintf16", RetValSpec<LongType>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"lrintf128", RetValSpec<LongType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"llrint", RetValSpec<LongLongType>, [ArgSpec<DoubleType>]>,
