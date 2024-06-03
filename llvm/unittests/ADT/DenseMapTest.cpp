@@ -515,13 +515,14 @@ TEST(DenseMapCustomTest, InsertOrAssignTest) {
   EXPECT_EQ(0, CountCopyAndMove::Move);
   EXPECT_EQ(2, CountCopyAndMove::Copy);
 
+  int key2 = 2;
   CountCopyAndMove val2;
-  auto try2 = Map.insert_or_assign(2, val2);
+  auto try2 = Map.insert_or_assign(key2, val2);
   EXPECT_TRUE(try2.second);
   EXPECT_EQ(0, CountCopyAndMove::Move);
   EXPECT_EQ(3, CountCopyAndMove::Copy);
 
-  auto try3 = Map.insert_or_assign(2, std::move(val2));
+  auto try3 = Map.insert_or_assign(key2, std::move(val2));
   EXPECT_FALSE(try3.second);
   EXPECT_EQ(1, CountCopyAndMove::Move);
   EXPECT_EQ(3, CountCopyAndMove::Copy);
