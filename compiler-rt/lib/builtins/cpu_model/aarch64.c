@@ -61,10 +61,6 @@ struct {
   // As features grows new fields could be added
 } __aarch64_cpu_features __attribute__((visibility("hidden"), nocommon));
 
-long long __get_aarch64_features(void) {
-  return __aarch64_cpu_features.features;
-}
-
 // The formatter wants to re-order these includes, but doing so is incorrect:
 // clang-format off
 #if defined(__APPLE__)

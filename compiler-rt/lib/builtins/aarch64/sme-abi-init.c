@@ -2,8 +2,6 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include "../cpu_model/aarch64.h"
-
 __attribute__((visibility("hidden"), nocommon))
 _Bool __aarch64_has_sme_and_tpidr2_el0;
 
@@ -51,36 +49,4 @@ static _Bool has_sme(void)  {
 __attribute__((constructor(90)))
 static void init_aarch64_has_sme(void) {
   __aarch64_has_sme_and_tpidr2_el0 = has_sme();
-}
-
-#if __GNUC__ >= 9
-#pragma GCC diagnostic ignored "-Wprio-ctor-dtor"
-#endif
-__attribute__((constructor(90))) static void get_aarch64_cpu_features(void) {
-  if (!__get_aarch64_features())
-    __init_cpu_features();
-}
-
-struct SME_STATE {
-  long PSTATE;
-  long TPIDR2_EL0;
-};
-
-extern struct SME_STATE __arm_sme_state(void) __arm_streaming_compatible;
-
-__attribute__((target("sve"))) long
-__arm_get_current_vg(void) __arm_streaming_compatible {
-  struct SME_STATE State = __arm_sme_state();
-  bool HasSVE = __get_aarch64_features() & (1ULL << FEAT_SVE);
-
-  if (!HasSVE && !has_sme())
-    return 0;
-
-  if (HasSVE || (State.PSTATE & 1)) {
-    long vl;
-    __asm__ __volatile__("cntd %0" : "=r"(vl));
-    return vl;
-  }
-
-  return 0;
 }

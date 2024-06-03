@@ -83,8 +83,6 @@ enum CPUFeatures {
   FEAT_INIT      // Used as flag of features initialization completion
 };
 
-long long __get_aarch64_features(void);
-
-void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void);
+void __init_cpu_features(void);
 
 #endif // !defined(DISABLE_AARCH64_FMV)
