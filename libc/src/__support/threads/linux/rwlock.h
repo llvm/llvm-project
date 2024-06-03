@@ -36,6 +36,9 @@
 
 namespace LIBC_NAMESPACE {
 class RwLock {
+public:
+  enum class Role : char { Reader, Writer };
+
 private:
   class WaitingQueue final : private RawMutex {
     FutexWordType pending_reader;
@@ -51,17 +54,17 @@ private:
 
     public:
       LIBC_INLINE ~Guard() { queue.unlock(); }
-      LIBC_INLINE FutexWordType &pending_reader() {
-        return queue.pending_reader;
+      template <Role role> LIBC_INLINE FutexWordType &pending_count() {
+        if constexpr (role == Role::Reader)
+          return queue.pending_reader;
+        else
+          return queue.pending_writer;
       }
-      LIBC_INLINE FutexWordType &pending_writer() {
-        return queue.pending_writer;
-      }
-      LIBC_INLINE FutexWordType &reader_serialization() {
-        return queue.reader_serialization.val;
-      }
-      LIBC_INLINE FutexWordType &writer_serialization() {
-        return queue.writer_serialization.val;
+      template <Role role> LIBC_INLINE FutexWordType &serialization() {
+        if constexpr (role == Role::Reader)
+          return queue.reader_serialization.val;
+        else
+          return queue.writer_serialization.val;
       }
       friend WaitingQueue;
     };
@@ -74,26 +77,26 @@ private:
       this->lock();
       return Guard(*this);
     }
-    LIBC_INLINE long reader_wait(FutexWordType expected,
-                                 cpp::optional<Futex::Timeout> timeout,
-                                 bool is_pshared) {
-      return reader_serialization.wait(expected, timeout, is_pshared);
+
+    template <Role role>
+    LIBC_INLINE long wait(FutexWordType expected,
+                          cpp::optional<Futex::Timeout> timeout,
+                          bool is_pshared) {
+      if constexpr (role == Role::Reader)
+        return reader_serialization.wait(expected, timeout, is_pshared);
+      else
+        return writer_serialization.wait(expected, timeout, is_pshared);
     }
-    LIBC_INLINE long reader_notify_all(bool is_pshared) {
-      return reader_serialization.notify_all(is_pshared);
-    }
-    LIBC_INLINE long writer_wait(FutexWordType expected,
-                                 cpp::optional<Futex::Timeout> timeout,
-                                 bool is_pshared) {
-      return writer_serialization.wait(expected, timeout, is_pshared);
-    }
-    LIBC_INLINE long writer_notify_one(bool is_pshared) {
-      return writer_serialization.notify_one(is_pshared);
+
+    template <Role role> LIBC_INLINE long notify(bool is_pshared) {
+      if constexpr (role == Role::Reader)
+        return reader_serialization.notify_all(is_pshared);
+      else
+        return writer_serialization.notify_one(is_pshared);
     }
   };
 
 public:
-  enum class Preference : char { Reader, Writer };
   enum class LockResult : int {
     Success = 0,
     TimedOut = ETIMEDOUT,
@@ -168,21 +171,23 @@ private:
     LIBC_INLINE constexpr State set_writer_bit() const {
       return State(state | ACTIVE_WRITER_BIT);
     }
+
     // The preference parameter changes the behavior of the lock acquisition
     // if there are both readers and writers waiting for the lock. If writers
     // are preferred, reader acquisition will be blocked until all pending
     // writers are served.
-    LIBC_INLINE bool can_acquire_reader(Preference preference) const {
-      switch (preference) {
-      case Preference::Reader:
-        return !has_active_writer();
-      case Preference::Writer:
-        return !has_active_writer() && !has_pending_writer();
-      }
+    template <Role role> LIBC_INLINE bool can_acquire(Role preference) const {
+      if constexpr (role == Role::Reader) {
+        switch (preference) {
+        case Role::Reader:
+          return !has_active_writer();
+        case Role::Writer:
+          return !has_active_writer() && !has_pending_writer();
+        }
+      } else
+        return !has_acitve_owner();
     }
-    LIBC_INLINE bool can_acquire_writer(Preference /*unused*/) const {
-      return !has_acitve_owner();
-    }
+
     // This function check if it is possible to grow the reader count without
     // overflowing the state.
     LIBC_INLINE cpp::optional<State> try_increase_reader_count() const {
@@ -202,30 +207,30 @@ private:
                            cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
       return State(target.fetch_sub(ACTIVE_READER_COUNT_UNIT, order));
     }
+
     LIBC_INLINE static State
     load(cpp::Atomic<Type> &target,
          cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
       return State(target.load(order));
     }
-    LIBC_INLINE static State fetch_set_pending_reader(
-        cpp::Atomic<Type> &target,
-        cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
-      return State(target.fetch_or(PENDING_READER_BIT, order));
+
+    template <Role role>
+    LIBC_INLINE static State
+    fetch_set_pending_bit(cpp::Atomic<Type> &target,
+                          cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
+      if constexpr (role == Role::Reader)
+        return State(target.fetch_or(PENDING_READER_BIT, order));
+      else
+        return State(target.fetch_or(PENDING_WRITER_BIT, order));
     }
-    LIBC_INLINE static State fetch_clear_pending_reader(
+    template <Role role>
+    LIBC_INLINE static State fetch_clear_pending_bit(
         cpp::Atomic<Type> &target,
         cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
-      return State(target.fetch_and(~PENDING_READER_BIT, order));
-    }
-    LIBC_INLINE static State fetch_set_pending_writer(
-        cpp::Atomic<Type> &target,
-        cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
-      return State(target.fetch_or(PENDING_WRITER_BIT, order));
-    }
-    LIBC_INLINE static State fetch_clear_pending_writer(
-        cpp::Atomic<Type> &target,
-        cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
-      return State(target.fetch_and(~PENDING_WRITER_BIT, order));
+      if constexpr (role == Role::Reader)
+        return State(target.fetch_and(~PENDING_READER_BIT, order));
+      else
+        return State(target.fetch_and(~PENDING_WRITER_BIT, order));
     }
     LIBC_INLINE static State fetch_set_active_writer(
         cpp::Atomic<Type> &target,
@@ -261,31 +266,33 @@ private:
     }
 
   public:
-    // Return the reader state if either the lock is available or there is any
-    // ongoing contention.
-    LIBC_INLINE static State spin_reload_for_reader(cpp::Atomic<Type> &target,
-                                                    Preference preference,
-                                                    unsigned spin_count) {
-      return spin_reload_until(
-          target,
-          [=](State state) {
-            return state.can_acquire_reader(preference) || state.has_pending();
-          },
-          spin_count);
-    }
-    // Return the writer state if either the lock is available or there is any
-    // contention *between writers*. Since writers can be way less than readers,
-    // we allow them to spin more to improve the fairness.
-    LIBC_INLINE static State spin_reload_for_writer(cpp::Atomic<Type> &target,
-                                                    Preference preference,
-                                                    unsigned spin_count) {
-      return spin_reload_until(
-          target,
-          [=](State state) {
-            return state.can_acquire_writer(preference) ||
-                   state.has_pending_writer();
-          },
-          spin_count);
+    template <Role role>
+    LIBC_INLINE static State spin_reload(cpp::Atomic<Type> &target,
+                                         Role preference, unsigned spin_count) {
+      if constexpr (role == Role::Reader) {
+        // Return the reader state if either the lock is available or there is
+        // any
+        // ongoing contention.
+        return spin_reload_until(
+            target,
+            [=](State state) {
+              return state.can_acquire<Role::Reader>(preference) ||
+                     state.has_pending();
+            },
+            spin_count);
+      } else {
+        // Return the writer state if either the lock is available or there is
+        // any
+        // contention *between writers*. Since writers can be way less than
+        // readers, we allow them to spin more to improve the fairness.
+        return spin_reload_until(
+            target,
+            [=](State state) {
+              return state.can_acquire<Role::Writer>(preference) ||
+                     state.has_pending_writer();
+            },
+            spin_count);
+      }
     }
   };
 
@@ -293,7 +300,7 @@ private:
   // Whether the RwLock is shared between processes.
   bool is_pshared;
   // Reader/Writer preference.
-  Preference preference;
+  Role preference;
   // State to keep track of the RwLock.
   cpp::Atomic<int32_t> state;
   // writer_tid is used to keep track of the thread id of the writer. Notice
@@ -307,84 +314,55 @@ private:
   // TODO: use cached thread id once implemented.
   LIBC_INLINE static pid_t gettid() { return syscall_impl<pid_t>(SYS_gettid); }
 
-  LIBC_INLINE LockResult try_read_lock(State &old) {
-    while (LIBC_LIKELY(old.can_acquire_reader(preference))) {
-      cpp::optional<State> next = old.try_increase_reader_count();
-      if (!next)
-        return LockResult::Overflow;
-      if (LIBC_LIKELY(old.compare_exchange_weak_with(
-              state, *next, cpp::MemoryOrder::ACQUIRE,
-              cpp::MemoryOrder::RELAXED)))
-        return LockResult::Success;
-      // Notice that old is updated by the compare_exchange_weak_with function.
-    }
-    return LockResult::Busy;
-  }
-
-  LIBC_INLINE LockResult try_write_lock(State &old) {
-    // This while loop should terminate quickly
-    while (LIBC_LIKELY(old.can_acquire_writer(preference))) {
-      if (LIBC_LIKELY(old.compare_exchange_weak_with(
-              state, old.set_writer_bit(), cpp::MemoryOrder::ACQUIRE,
-              cpp::MemoryOrder::RELAXED))) {
-        writer_tid.store(gettid(), cpp::MemoryOrder::RELAXED);
-        return LockResult::Success;
+  template <Role role> LIBC_INLINE LockResult try_lock(State &old) {
+    if constexpr (role == Role::Reader) {
+      while (LIBC_LIKELY(old.can_acquire<Role::Reader>(preference))) {
+        cpp::optional<State> next = old.try_increase_reader_count();
+        if (!next)
+          return LockResult::Overflow;
+        if (LIBC_LIKELY(old.compare_exchange_weak_with(
+                state, *next, cpp::MemoryOrder::ACQUIRE,
+                cpp::MemoryOrder::RELAXED)))
+          return LockResult::Success;
+        // Notice that old is updated by the compare_exchange_weak_with
+        // function.
       }
-      // Notice that old is updated by the compare_exchange_weak_with function.
+      return LockResult::Busy;
+    } else {
+      // This while loop should terminate quickly
+      while (LIBC_LIKELY(old.can_acquire<Role::Writer>(preference))) {
+        if (LIBC_LIKELY(old.compare_exchange_weak_with(
+                state, old.set_writer_bit(), cpp::MemoryOrder::ACQUIRE,
+                cpp::MemoryOrder::RELAXED))) {
+          writer_tid.store(gettid(), cpp::MemoryOrder::RELAXED);
+          return LockResult::Success;
+        }
+        // Notice that old is updated by the compare_exchange_weak_with
+        // function.
+      }
+      return LockResult::Busy;
     }
-    return LockResult::Busy;
   }
 
 public:
-  LIBC_INLINE constexpr RwLock(Preference preference = Preference::Reader,
+  LIBC_INLINE constexpr RwLock(Role preference = Role::Reader,
                                bool is_pshared = false)
       : is_pshared(is_pshared), preference(preference), state(0), writer_tid(0),
         queue() {}
 
   LIBC_INLINE LockResult try_read_lock() {
     State old = State::load(state, cpp::MemoryOrder::RELAXED);
-    return try_read_lock(old);
+    return try_lock<Role::Reader>(old);
   }
   LIBC_INLINE LockResult try_write_lock() {
     State old = State::load(state, cpp::MemoryOrder::RELAXED);
-    return try_write_lock(old);
+    return try_lock<Role::Writer>(old);
   }
 
 private:
-  struct Proxy {
-    State (&spin_reload)(cpp::Atomic<int32_t> &, Preference, unsigned);
-    State (&set_pending)(cpp::Atomic<int32_t> &, cpp::MemoryOrder);
-    State (&clear_pending)(cpp::Atomic<int32_t> &, cpp::MemoryOrder);
-    FutexWordType &(WaitingQueue::Guard::*serialization)();
-    FutexWordType &(WaitingQueue::Guard::*pending_count)();
-    LockResult (RwLock::*try_lock)(State &);
-    long (WaitingQueue::*wait)(FutexWordType, cpp::optional<Futex::Timeout>,
-                               bool);
-    bool (State::*can_acquire)(Preference) const;
-  };
-
-  LIBC_INLINE_VAR static constexpr Proxy READER = {
-      /*spin_reload=*/State::spin_reload_for_reader,
-      /*set_pending=*/State::fetch_set_pending_reader,
-      /*clear_pending=*/State::fetch_clear_pending_reader,
-      /*serialization=*/&WaitingQueue::Guard::reader_serialization,
-      /*pending_count=*/&WaitingQueue::Guard::pending_reader,
-      /*try_lock=*/&RwLock::try_read_lock,
-      /*wait=*/&WaitingQueue::reader_wait,
-      /*can_acquire=*/&State::can_acquire_reader};
-
-  LIBC_INLINE_VAR static constexpr Proxy WRITER = {
-      /*spin_reload=*/State::spin_reload_for_writer,
-      /*set_pending=*/State::fetch_set_pending_writer,
-      /*clear_pending=*/State::fetch_clear_pending_writer,
-      /*serialization=*/&WaitingQueue::Guard::writer_serialization,
-      /*pending_count=*/&WaitingQueue::Guard::pending_writer,
-      /*try_lock=*/&RwLock::try_write_lock,
-      /*wait=*/&WaitingQueue::writer_wait,
-      /*can_acquire=*/&State::can_acquire_writer};
-
+  template <Role role>
   LIBC_INLINE LockResult
-  lock(const Proxy &proxy, cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
+  lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
        unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
     // Phase 1: deadlock detection.
     // A deadlock happens if this is a RAW/WAW lock in the same thread.
@@ -393,9 +371,9 @@ private:
 
     // Phase 2: spin to get the initial state. We ignore the timing due to
     // spin since it should end quickly.
-    State old = proxy.spin_reload(state, preference, spin_count);
+    State old = State::spin_reload<role>(state, preference, spin_count);
     {
-      LockResult result = (this->*proxy.try_lock)(old);
+      LockResult result = try_lock<role>(old);
       if (result != LockResult::Busy)
         return result;
     }
@@ -409,7 +387,7 @@ private:
     // Enter the main acquisition loop.
     for (;;) {
       // Phase 4: if the lock can be acquired, try to acquire it.
-      LockResult result = (this->*proxy.try_lock)(old);
+      LockResult result = try_lock<role>(old);
       if (result != LockResult::Busy)
         return result;
 
@@ -422,35 +400,37 @@ private:
         // best we can do. The transaction is small and everyone should make
         // progress rather quickly.
         WaitingQueue::Guard guard = queue.acquire();
-        (guard.*proxy.pending_count)()++;
+        guard.template pending_count<role>()++;
 
         // Use atomic operation to guarantee the total order of the operations
         // on the state. The pending flag update should be visible to any
         // succeeding unlock events. Or, if a unlock does happen before we
         // sleep on the futex, we can avoid such waiting.
-        old = proxy.set_pending(state, cpp::MemoryOrder::RELAXED);
+        old = State::fetch_set_pending_bit<role>(state,
+                                                 cpp::MemoryOrder::RELAXED);
         // no need to use atomic since it is already protected by the mutex.
-        serial_number = (guard.*proxy.serialization)();
+        serial_number = guard.serialization<role>();
       }
 
       // Phase 6: do futex wait until the lock is available or timeout is
       // reached.
       bool timeout_flag = false;
-      if (!(old.*proxy.can_acquire)(preference)) {
-        timeout_flag = ((queue.*proxy.wait)(serial_number, timeout,
-                                            is_pshared) == -ETIMEDOUT);
+      if (!old.can_acquire<role>(preference)) {
+        timeout_flag = (queue.wait<role>(serial_number, timeout, is_pshared) ==
+                        -ETIMEDOUT);
 
         // Phase 7: unregister ourselves as a pending reader.
         {
           // Similarly, the unregister operation should also be an atomic
           // transaction.
           WaitingQueue::Guard guard = queue.acquire();
-          (guard.*proxy.pending_count)()--;
+          guard.pending_count<role>()--;
           // Clear the flag if we are the last reader. The flag must be
           // cleared otherwise operations like trylock may fail even though
           // there is no competitors.
-          if ((guard.*proxy.pending_count)() == 0)
-            proxy.clear_pending(state, cpp::MemoryOrder::RELAXED);
+          if (guard.pending_count<role>() == 0)
+            State::fetch_clear_pending_bit<role>(state,
+                                                 cpp::MemoryOrder::RELAXED);
         }
 
         // Phase 8: exit the loop is timeout is reached.
@@ -458,7 +438,7 @@ private:
           return LockResult::TimedOut;
 
         // Phase 9: reload the state and retry the acquisition.
-        old = proxy.spin_reload(state, preference, spin_count);
+        old = State::spin_reload<role>(state, preference, spin_count);
       }
     }
   }
@@ -467,12 +447,12 @@ public:
   LIBC_INLINE LockResult
   read_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
-    return lock(READER, timeout, spin_count);
+    return lock<Role::Reader>(timeout, spin_count);
   }
   LIBC_INLINE LockResult
   write_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
              unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
-    return lock(WRITER, timeout, spin_count);
+    return lock<Role::Writer>(timeout, spin_count);
   }
 
 private:
@@ -482,20 +462,20 @@ private:
 
     {
       WaitingQueue::Guard guard = queue.acquire();
-      if (guard.pending_writer() != 0) {
-        guard.writer_serialization()++;
+      if (guard.pending_count<Role::Writer>() != 0) {
+        guard.serialization<Role::Writer>()++;
         status = WakeTarget::Writers;
-      } else if (guard.pending_reader() != 0) {
-        guard.reader_serialization()++;
+      } else if (guard.pending_count<Role::Reader>() != 0) {
+        guard.serialization<Role::Reader>()++;
         status = WakeTarget::Readers;
       } else
         status = WakeTarget::None;
     }
 
     if (status == WakeTarget::Readers)
-      queue.reader_notify_all(is_pshared);
+      queue.notify<Role::Reader>(is_pshared);
     else if (status == WakeTarget::Writers)
-      queue.writer_notify_one(is_pshared);
+      queue.notify<Role::Writer>(is_pshared);
   }
 
 public:
