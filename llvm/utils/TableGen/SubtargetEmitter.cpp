@@ -289,7 +289,8 @@ unsigned SubtargetEmitter::FeatureKeyValues(
     ++NumFeatures;
 
     if (!UniqueKeys.insert(CommandLineName).second)
-      PrintFatalError("Duplicate key in SubtargetFeatureKV: " +)
+      PrintFatalError("Duplicate key in SubtargetFeatureKV: " +
+                      CommandLineName);
   }
 
   // End feature table
