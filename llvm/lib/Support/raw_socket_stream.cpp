@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <fcntl.h>
+#include <functional>
 #include <thread>
 
 #ifndef _WIN32
@@ -177,18 +178,27 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 #endif // _WIN32
 }
 
-static llvm::Error manageTimeout(std::atomic<int> &ActiveFD, int CancelFD,
-                                 std::chrono::milliseconds Timeout) {
+// If a file descriptor being monitored by poll is closed by another thread, the
+// result is unspecified. In the case poll does not unblock and return when
+// ActiveFD is closed you can provide another file descriptor via CancelFD that
+// when written to will cause poll to return
+static llvm::Error manageTimeout(std::chrono::milliseconds Timeout,
+                                 std::function<int()> getActiveFD,
+                                 std::optional<int> CancelFD = std::nullopt) {
   struct pollfd FD[2];
   FD[0].events = POLLIN;
 #ifdef _WIN32
   SOCKET WinServerSock = _get_osfhandle(FD);
   FD[0].fd = WinServerSock;
 #else
-  FD[0].fd = ActiveFD.load();
+  FD[0].fd = getActiveFD();
 #endif
-  FD[1].events = POLLIN;
-  FD[1].fd = CancelFD;
+  uint8_t FDCount = 1;
+  if (CancelFD.has_value()) {
+    FD[1].events = POLLIN;
+    FD[1].fd = CancelFD.value();
+    FDCount++;
+  }
 
   // Keep track of how much time has passed in case ::poll or WSAPoll are
   // interupted by a signal and need to be recalled
@@ -197,20 +207,19 @@ static llvm::Error manageTimeout(std::atomic<int> &ActiveFD, int CancelFD,
   int PollStatus = -1;
 
   while (PollStatus == -1 && (Timeout.count() == -1 || ElapsedTime < Timeout)) {
-    // Timeout of -1 indicates that no Timeout was provided
     if (Timeout.count() != -1)
       RemainingTime -= ElapsedTime.count();
     auto Start = std::chrono::steady_clock::now();
 
 #ifdef _WIN32
-    PollStatus = WSAPoll(FD, 2, RemainingTime);
+    PollStatus = WSAPoll(FD, FDCount, RemainingTime);
 #else
-    PollStatus = ::poll(FD, 2, RemainingTime);
+    PollStatus = ::poll(FD, FDCount, RemainingTime);
 #endif
 
     // If FD equals -1 then ListeningSocket::shutdown has been called and it is
     // appropriate to return operation_canceled
-    if (ActiveFD.load() == -1)
+    if (getActiveFD() == -1)
       return llvm::make_error<StringError>(
           std::make_error_code(std::errc::operation_canceled),
           "Accept canceled");
@@ -242,13 +251,14 @@ static llvm::Error manageTimeout(std::atomic<int> &ActiveFD, int CancelFD,
 
 Expected<std::unique_ptr<raw_socket_stream>>
 ListeningSocket::accept(std::chrono::milliseconds Timeout) {
-  llvm::Error TimeoutErr = manageTimeout(FD, PipeFD[0], Timeout);
+  auto getActiveFD = [this]() -> int { return FD; };
+  llvm::Error TimeoutErr = manageTimeout(Timeout, getActiveFD, PipeFD[0]);
   if (TimeoutErr)
     return TimeoutErr;
 
   int AcceptFD;
 #ifdef _WIN32
-  SOCKET WinAcceptSock = ::accept(WinServerSock, NULL, NULL);
+  SOCKET WinAcceptSock = ::accept(_get_osfhandle(FD), NULL, NULL);
   AcceptFD = _open_osfhandle(WinAcceptSock, 0);
 #else
   AcceptFD = ::accept(FD, NULL, NULL);
@@ -303,6 +313,8 @@ ListeningSocket::~ListeningSocket() {
 raw_socket_stream::raw_socket_stream(int SocketFD)
     : raw_fd_stream(SocketFD, true) {}
 
+raw_socket_stream::~raw_socket_stream() {}
+
 Expected<std::unique_ptr<raw_socket_stream>>
 raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
 #ifdef _WIN32
@@ -314,4 +326,30 @@ raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
   return std::make_unique<raw_socket_stream>(*FD);
 }
 
-raw_socket_stream::~raw_socket_stream() {}
+Expected<std::string>
+raw_socket_stream::readFromSocket(std::chrono::milliseconds Timeout) {
+  auto getActiveFD = [this]() -> int { return this->get_fd(); };
+  llvm::Error TimeoutErr = manageTimeout(Timeout, getActiveFD);
+  if (TimeoutErr)
+    return TimeoutErr;
+
+  std::vector<char> Buffer;
+  constexpr ssize_t TmpBufferSize = 1024;
+  char TmpBuffer[TmpBufferSize];
+
+  while (true) {
+    std::memset(TmpBuffer, 0, TmpBufferSize);
+    ssize_t BytesRead = this->read(TmpBuffer, TmpBufferSize);
+    if (BytesRead == -1)
+      return llvm::make_error<StringError>(this->error(), "read failed");
+    else if (BytesRead == 0)
+      break;
+    else
+      Buffer.insert(Buffer.end(), TmpBuffer, TmpBuffer + BytesRead);
+    // All available bytes have been read. Another call to read will block
+    if (BytesRead < TmpBufferSize)
+      break;
+  }
+
+  return std::string(Buffer.begin(), Buffer.end());
+}
