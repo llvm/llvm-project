@@ -25,13 +25,11 @@ class RISCVDAGToDAGISel : public SelectionDAGISel {
   const RISCVSubtarget *Subtarget = nullptr;
 
 public:
-  static char ID;
-
   RISCVDAGToDAGISel() = delete;
 
   explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine,
                              CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, TargetMachine, OptLevel) {}
+      : SelectionDAGISel(TargetMachine, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<RISCVSubtarget>();
@@ -194,6 +192,13 @@ private:
   bool doPeepholeMergeVVMFold();
   bool doPeepholeNoRegPassThru();
   bool performCombineVMergeAndVOps(SDNode *N);
+};
+
+class RISCVDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit RISCVDAGToDAGISelLegacy(RISCVTargetMachine &TargetMachine,
+                                   CodeGenOptLevel OptLevel);
 };
 
 namespace RISCV {
