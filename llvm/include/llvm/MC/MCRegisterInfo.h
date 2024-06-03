@@ -727,125 +727,30 @@ public:
   }
 };
 
-/// MCRegAliasIterator enumerates all registers aliasing Reg.  If IncludeSelf is
-/// set, Reg itself is included in the list.  This iterator does not guarantee
-/// any ordering or that entries are unique.
-///
-/// This iterator can work in two modes: cached and uncached.
-///
-/// In Uncached mode, this uses RegUnit/RegUnitRoot/SuperReg iterators to
-/// find all aliases. This is very expensive if the target (such as AMDGPU)
-/// has a lot of register and register aliases. It can also cause us
-/// to iterate the same register many times over.
-///
-/// In cached mode, the iterator requests MCRegisterInfo for a cache.
-/// MCRegisterInfo then returns a cached list of sorted, uniqued
-/// aliases for that register. This allows the iterator to be faster
-/// past the first request, but also to iterate much less in some
-/// cases, giving a slight speedup to any code that's using it.
+/// MCRegAliasIterator enumerates all registers aliasing Reg.
 class MCRegAliasIterator {
 private:
-  MCRegister Reg;
-  const MCRegisterInfo *MCRI;
-  bool IncludeSelf : 1;
-  bool IsCached : 1;
-
-  /// TODO: Should we dynamically allocate this? If we don't make caching
-  /// specific for each target, we probably should in order to keep the size of
-  /// this object under control. RegAliasIterator is currently 80 bytes.
-  struct UncachedData {
-    MCRegUnitIterator RI;
-    MCRegUnitRootIterator RRI;
-    MCSuperRegIterator SI;
-  };
-
-  struct CachedData {
-    ArrayRef<MCPhysReg> Aliases;
-    // Index into Aliases. The actual index is (Idx - IncludeSelf) because, when
-    // IncludeSelf is used, we use zero to represent self.
-    unsigned Idx;
-  };
-
-  union {
-    UncachedData Iters;
-    CachedData Cache;
-  };
+  const MCPhysReg *It = nullptr;
+  const MCPhysReg *End = nullptr;
 
 public:
   MCRegAliasIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
-                     bool IncludeSelf, bool UseCache = true)
-      : Reg(Reg), MCRI(MCRI), IncludeSelf(IncludeSelf) {
-
-    IsCached = UseCache;
-    if (IsCached) {
-      Cache.Aliases = MCRI->getCachedAliasesOf(Reg);
-      Cache.Idx = 0;
-      return;
-    }
-
-    // Initialize the iterators.
-    for (Iters.RI = MCRegUnitIterator(Reg, MCRI); Iters.RI.isValid();
-         ++Iters.RI) {
-      for (Iters.RRI = MCRegUnitRootIterator(*Iters.RI, MCRI);
-           Iters.RRI.isValid(); ++Iters.RRI) {
-        for (Iters.SI = MCSuperRegIterator(*Iters.RRI, MCRI, true);
-             Iters.SI.isValid(); ++Iters.SI) {
-          if (!(!IncludeSelf && Reg == *Iters.SI))
-            return;
-        }
-      }
-    }
+                     bool IncludeSelf) {
+    ArrayRef<MCPhysReg> Cache = MCRI->getCachedAliasesOf(Reg);
+    assert(Cache.back() == Reg);
+    It = Cache.begin();
+    End = Cache.end();
+    if (!IncludeSelf)
+      --End;
   }
 
-  bool isValid() const {
-    return IsCached ? (Cache.Idx < (Cache.Aliases.size() + IncludeSelf))
-                    : Iters.RI.isValid();
-  }
+  bool isValid() const { return It != End; }
 
-  MCRegister operator*() const {
-    if (IsCached) {
-      if (IncludeSelf && (Cache.Idx == 0))
-        return Reg;
-      return Cache.Aliases[Cache.Idx - IncludeSelf];
-    }
-
-    assert(Iters.SI.isValid() && "Cannot dereference an invalid iterator.");
-    return *Iters.SI;
-  }
-
-  void advance() {
-    if (IsCached) {
-      ++Cache.Idx;
-      return;
-    }
-
-    // Assuming SI is valid.
-    ++Iters.SI;
-    if (Iters.SI.isValid())
-      return;
-
-    ++Iters.RRI;
-    if (Iters.RRI.isValid()) {
-      Iters.SI = MCSuperRegIterator(*Iters.RRI, MCRI, true);
-      return;
-    }
-
-    ++Iters.RI;
-    if (Iters.RI.isValid()) {
-      Iters.RRI = MCRegUnitRootIterator(*Iters.RI, MCRI);
-      Iters.SI = MCSuperRegIterator(*Iters.RRI, MCRI, true);
-    }
-  }
+  MCRegister operator*() const { return *It; }
 
   MCRegAliasIterator &operator++() {
     assert(isValid() && "Cannot move off the end of the list.");
-    if (IsCached)
-      advance();
-    else {
-      do
-        advance();
-      while (!IncludeSelf && isValid() && *Iters.SI == Reg);
-    }
+    ++It;
     return *this;
   }
 };

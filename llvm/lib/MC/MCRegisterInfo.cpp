@@ -20,22 +20,81 @@
 
 using namespace llvm;
 
+namespace {
+/// MCRegAliasIterator enumerates all registers aliasing Reg.  This iterator
+/// does not guarantee any ordering or that entries are unique.
+class MCRegAliasIteratorImpl {
+private:
+  MCRegister Reg;
+  const MCRegisterInfo *MCRI;
+
+  MCRegUnitIterator RI;
+  MCRegUnitRootIterator RRI;
+  MCSuperRegIterator SI;
+
+public:
+  MCRegAliasIteratorImpl(MCRegister Reg, const MCRegisterInfo *MCRI)
+      : Reg(Reg), MCRI(MCRI) {
+
+    // Initialize the iterators.
+    for (RI = MCRegUnitIterator(Reg, MCRI); RI.isValid(); ++RI) {
+      for (RRI = MCRegUnitRootIterator(*RI, MCRI); RRI.isValid(); ++RRI) {
+        for (SI = MCSuperRegIterator(*RRI, MCRI, true); SI.isValid(); ++SI) {
+          if (Reg != *SI)
+            return;
+        }
+      }
+    }
+  }
+
+  bool isValid() const { return RI.isValid(); }
+
+  MCRegister operator*() const {
+    assert(SI.isValid() && "Cannot dereference an invalid iterator.");
+    return *SI;
+  }
+
+  void advance() {
+    // Assuming SI is valid.
+    ++SI;
+    if (SI.isValid())
+      return;
+
+    ++RRI;
+    if (RRI.isValid()) {
+      SI = MCSuperRegIterator(*RRI, MCRI, true);
+      return;
+    }
+
+    ++RI;
+    if (RI.isValid()) {
+      RRI = MCRegUnitRootIterator(*RI, MCRI);
+      SI = MCSuperRegIterator(*RRI, MCRI, true);
+    }
+  }
+
+  MCRegAliasIteratorImpl &operator++() {
+    assert(isValid() && "Cannot move off the end of the list.");
+    do
+      advance();
+    while (isValid() && *SI == Reg);
+    return *this;
+  }
+};
+} // namespace
+
 ArrayRef<MCPhysReg> MCRegisterInfo::getCachedAliasesOf(MCPhysReg R) const {
   if (auto It = RegAliasesCache.find(R); It != RegAliasesCache.end())
     return It->second;
 
-  // TODO: Should we have a DenseSet instead & then convert it
-  // to vector? Or even a BitVector that's then converted to a normal
-  // MCPhysReg vector?
   auto &Aliases = RegAliasesCache[R];
-  for (MCRegAliasIterator It(R, this, /*IncludeSelf=*/false,
-                             /*UseCache=*/false);
-       It.isValid(); ++It) {
+  for (MCRegAliasIteratorImpl It(R, this); It.isValid(); ++It)
     Aliases.push_back(*It);
-  }
 
   llvm::sort(Aliases);
   Aliases.erase(unique(Aliases), Aliases.end());
+  // Always put "self" at the end, so the iterator can choose to ignore it.
+  Aliases.push_back(R);
   Aliases.shrink_to_fit();
   return Aliases;
 }
