@@ -7846,8 +7846,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // zero-extended to 64 bits when in registers.  Thus the mask is 32 bits to
     // match the index type, but the pointer is 64 bits, so the the mask must be
     // zero-extended up to 64 bits to match the pointer.
-    EVT PtrVT = TLI.getValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
-    EVT MemVT = TLI.getMemValueType(DAG.getDataLayout(),  I.getOperand(0)->getType());
+    EVT PtrVT =
+        TLI.getValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
+    EVT MemVT =
+        TLI.getMemValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
     assert(PtrVT == Ptr.getValueType());
     assert(MemVT == Mask.getValueType());
     if (MemVT != PtrVT)
