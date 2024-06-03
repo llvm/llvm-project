@@ -52,17 +52,21 @@ enum NodeType : unsigned {
   WrapperLarge, // 4-instruction MOVZ/MOVK sequence for 64-bit addresses.
   CALL,         // Function call.
 
-  // Function call, authenticating the callee value first:
-  // AUTH_CALL chain, callee, auth key #, discriminator, operands.
-  AUTH_CALL,
-  // AUTH_TC_RETURN chain, callee, fpdiff, auth key #, discriminator, operands.
-  AUTH_TC_RETURN,
-
   // Pseudo for a OBJC call that gets emitted together with a special `mov
   // x29, x29` marker instruction.
   CALL_RVMARKER,
 
   CALL_BTI, // Function call followed by a BTI instruction.
+
+  // Function call, authenticating the callee value first:
+  // AUTH_CALL chain, callee, auth key #, int disc, addr disc, operands.
+  AUTH_CALL,
+  // AUTH_TC_RETURN chain, callee, fpdiff, auth key #, int disc, addr disc,
+  // operands.
+  AUTH_TC_RETURN,
+
+  // Authenticated variant of CALL_RVMARKER.
+  AUTH_CALL_RVMARKER,
 
   COALESCER_BARRIER,
 
@@ -917,9 +921,7 @@ public:
     return true;
   }
 
-  bool supportPtrAuthBundles() const override {
-    return true;
-  }
+  bool supportPtrAuthBundles() const override { return true; }
 
   bool supportKCFIBundles() const override { return true; }
 
