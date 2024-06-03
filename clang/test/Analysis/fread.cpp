@@ -251,7 +251,7 @@ struct S {
   long b;
 };
 
-void comopund_write1() {
+void compound_write1() {
   if (FILE *fp = fopen("/home/test", "rb+")) {
     S s; // s.a is not touched by fread.
     if (1 == fread(&s.b, sizeof(s.b), 1, fp)) {
@@ -267,7 +267,7 @@ void comopund_write1() {
   }
 }
 
-void comopund_write2() {
+void compound_write2() {
   if (FILE *fp = fopen("/home/test", "rb+")) {
     S s; // s.a is not touched by fread.
     if (1 == fread(&s.b, sizeof(s.b), 1, fp)) {
