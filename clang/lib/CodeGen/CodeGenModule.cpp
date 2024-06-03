@@ -2922,6 +2922,8 @@ static void emitUsed(CodeGenModule &CGM, StringRef Name,
   if (List.empty())
     return;
 
+  // We unconditionally use unqualified pointers - this is intentional as these
+  // are fake / ephemeral globals, serving only as lifetime extension hooks
   llvm::Type *UsedPtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
 
   // Convert List to what ConstantArray needs.
