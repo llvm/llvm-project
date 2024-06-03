@@ -499,7 +499,12 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
+    libc.src.math.ceilf16
     libc.src.math.fabsf16
+    libc.src.math.floorf16
+    libc.src.math.roundf16
+    libc.src.math.roundevenf16
+    libc.src.math.truncf16
   )
 endif()
 

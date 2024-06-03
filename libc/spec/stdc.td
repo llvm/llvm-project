@@ -390,6 +390,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"ceil", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"ceilf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"ceill", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"ceilf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"ceilf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>], [ConstAttr]>,
@@ -406,6 +407,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"floor", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"floorf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"floorl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"floorf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"floorf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fmin", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
@@ -565,7 +567,14 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"round", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"roundf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"roundl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"roundf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"roundf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          FunctionSpec<"roundeven", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"roundevenf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"roundevenl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"roundevenf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"roundevenf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"lround", RetValSpec<LongType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"lroundf", RetValSpec<LongType>, [ArgSpec<FloatType>]>,
@@ -600,6 +609,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"trunc", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"truncf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"truncl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"truncf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"truncf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"nearbyint", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
