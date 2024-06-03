@@ -6301,7 +6301,7 @@ static bool EvaluatePreContracts(const FunctionDecl* Callee, EvalInfo& Info) {
       return false;
     }
     if (!Desired) {
-      Info.report(E->getSourceRange().getBegin(), diag::note_constexpr_contract_failure) << E->getSourceRange();
+      Info.CCEDiag(E, diag::note_constexpr_contract_failure);
     }
   }
   return true;
@@ -6314,7 +6314,7 @@ static bool EvaluatePostContracts(const FunctionDecl* Callee, EvalInfo& Info) {
       return false;
     }
     if (!Desired) {
-      Info.report(E->getSourceRange().getBegin(), diag::note_constexpr_contract_failure) << E->getSourceRange();
+      Info.CCEDiag(E, diag::note_constexpr_contract_failure);
     }
   }
   return true;
@@ -15543,7 +15543,7 @@ public:
         return false;
       }
       if (!Desired) {
-        Info.report(E->getArg(0)->getSourceRange().getBegin(), diag::note_constexpr_contract_failure) << E->getArg(0)->getSourceRange();
+        Info.CCEDiag(E->getArg(0), diag::note_constexpr_contract_failure);
       }
       return true;
     }
