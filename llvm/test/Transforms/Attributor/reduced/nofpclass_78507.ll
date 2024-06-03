@@ -4,30 +4,7 @@
 ; Verify we do not derive 'nofpclass(inf zero sub norm)' for the argument __x.
 ; See https://github.com/llvm/llvm-project/issues/78507
 
-source_filename = "llvm-link"
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
-target triple = "amdgcn-amd-amdhsa"
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare double @llvm.ldexp.f64.i32(double, i32) #0
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare double @llvm.amdgcn.fract.f64(double) #0
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare double @llvm.fma.f64(double, double, double) #0
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare double @llvm.fabs.f64(double) #0
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare double @llvm.rint.f64(double) #0
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare double @llvm.amdgcn.trig.preop.f64(double, i32) #0
-
-; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-define hidden double @sin(double noundef %__x) local_unnamed_addr #1 {
+define double @sin(double noundef %__x) #1 {
 ; CHECK: Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@sin
 ; CHECK-SAME: (double noundef [[__X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
