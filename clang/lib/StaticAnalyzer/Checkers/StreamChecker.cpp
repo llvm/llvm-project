@@ -998,9 +998,8 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
       const MemRegion *Buffer = BufferFirstElem->getSuperRegion();
       QualType ElemTy = BufferFirstElem->getElementType();
       SVal FirstAccessedItem = BufferFirstElem->getIndex();
-      SVal ItemCount = Call.getArgSVal(2);
       State = escapeByStartIndexAndCount(State, C, Call, Buffer, ElemTy,
-                                         FirstAccessedItem, ItemCount);
+                                         FirstAccessedItem, *NMembVal);
     } else {
       // Otherwise just fall back to invalidating the whole buffer.
       State = escapeArgs(State, C, Call, {0});
