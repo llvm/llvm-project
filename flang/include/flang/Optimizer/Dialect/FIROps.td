@@ -2107,35 +2107,6 @@ class region_Op<string mnemonic, list<Trait> traits = []> :
   let hasVerifier = 1;
 }
 
-def fir_ReduceOp : fir_SimpleOp<"reduce", [NoMemoryEffect]> {
-  let summary = "Represent reduction semantics for the reduce clause";
-
-  let description = [{
-    Given the address of a variable, creates reduction information for the
-    reduce clause.
-
-    ```
-      %17 = fir.reduce %8 {name = "sum"} : (!fir.ref<f32>) -> !fir.ref<f32>
-      fir.do_loop ... unordered reduce(#fir.reduce_attr<add> -> %17 : !fir.ref<f32>) ...
-    ```
-
-    This operation is typically used for DO CONCURRENT REDUCE clause. The memref
-    operand may have a unique name while the `name` attribute preserves the
-    original name of a reduction variable.
-  }];
-
-  let arguments = (ins
-     AnyRefOrBoxLike:$memref,
-     Builtin_StringAttr:$name
-  );
-
-  let results = (outs AnyRefOrBox);
-
-  let assemblyFormat = [{
-    operands attr-dict `:` functional-type(operands, results)
-  }];
-}
-
 def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<LoopLikeOpInterface,
         ["getYieldedValuesMutable"]>]> {
