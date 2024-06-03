@@ -151,6 +151,16 @@ public:
     ModulePass::getAnalysisUsage(AU);
   }
 };
+
+bool isConvergenceIntrinsic(const Instruction *I) {
+  const auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+
+  return II->getIntrinsicID() == Intrinsic::experimental_convergence_entry ||
+         II->getIntrinsicID() == Intrinsic::experimental_convergence_loop ||
+         II->getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
+}
 } // namespace
 
 char SPIRVEmitIntrinsics::ID = 0;
@@ -1353,6 +1363,10 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     Worklist.push_back(&I);
 
   for (auto &I : Worklist) {
+    // Don't emit intrinsincs for convergence intrinsics.
+    if (isConvergenceIntrinsic(I))
+      continue;
+
     insertAssignPtrTypeIntrs(I, B);
     insertAssignTypeIntrs(I, B);
     insertPtrCastOrAssignTypeInstr(I, B);
@@ -1371,6 +1385,11 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     I = visit(*I);
     if (!I)
       continue;
+
+    // Don't emit intrinsics for convergence operations.
+    if (isConvergenceIntrinsic(I))
+      continue;
+
     processInstrAfterVisit(I, B);
   }
 
