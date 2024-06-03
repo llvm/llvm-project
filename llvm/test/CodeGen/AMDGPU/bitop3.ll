@@ -319,10 +319,15 @@ define amdgpu_ps half @not_and_and_not_and_b16(i16 %a, i16 %b, i16 %c) {
 }
 
 define amdgpu_ps half @test_xor3_b16(i16 %a, i16 %b, i16 %c) {
-; GCN-LABEL: test_xor3_b16:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0x96
-; GCN-NEXT:    ; return to shader part epilog
+; GCN-SDAG-LABEL: test_xor3_b16:
+; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0x96
+; GCN-SDAG-NEXT:    ; return to shader part epilog
+;
+; GCN-GISEL-LABEL: test_xor3_b16:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    v_xor3_b32 v0, v0, v1, v2
+; GCN-GISEL-NEXT:    ; return to shader part epilog
   %xor1 = xor i16 %a, %b
   %xor2 = xor i16 %xor1, %c
   %ret_cast = bitcast i16 %xor2 to half
@@ -330,10 +335,15 @@ define amdgpu_ps half @test_xor3_b16(i16 %a, i16 %b, i16 %c) {
 }
 
 define amdgpu_ps half @test_or3_b16(i16 %a, i16 %b, i16 %c) {
-; GCN-LABEL: test_or3_b16:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0xfe
-; GCN-NEXT:    ; return to shader part epilog
+; GCN-SDAG-LABEL: test_or3_b16:
+; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0xfe
+; GCN-SDAG-NEXT:    ; return to shader part epilog
+;
+; GCN-GISEL-LABEL: test_or3_b16:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    v_or3_b32 v0, v0, v1, v2
+; GCN-GISEL-NEXT:    ; return to shader part epilog
   %or1 = or i16 %a, %b
   %or2 = or i16 %or1, %c
   %ret_cast = bitcast i16 %or2 to half
@@ -341,10 +351,15 @@ define amdgpu_ps half @test_or3_b16(i16 %a, i16 %b, i16 %c) {
 }
 
 define amdgpu_ps half @test_and_or_b16(i16 %a, i16 %b, i16 %c) {
-; GCN-LABEL: test_and_or_b16:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0xec
-; GCN-NEXT:    ; return to shader part epilog
+; GCN-SDAG-LABEL: test_and_or_b16:
+; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0xec
+; GCN-SDAG-NEXT:    ; return to shader part epilog
+;
+; GCN-GISEL-LABEL: test_and_or_b16:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    v_and_or_b32 v0, v0, v1, v2
+; GCN-GISEL-NEXT:    ; return to shader part epilog
   %and1 = and i16 %a, %b
   %or1 = or i16 %and1, %c
   %ret_cast = bitcast i16 %or1 to half
