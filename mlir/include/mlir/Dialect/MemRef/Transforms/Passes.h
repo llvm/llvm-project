@@ -77,6 +77,10 @@ std::unique_ptr<Pass> createExpandStridedMetadataPass();
 /// components.
 std::unique_ptr<Pass> createExpandReallocPass(bool emitDeallocs = true);
 
+/// Creates an operation pass to merge the local memref allocations
+std::unique_ptr<Pass>
+createMergeAllocPass(const memref::MergeAllocOptions &o = {});
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

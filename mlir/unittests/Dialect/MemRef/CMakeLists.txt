@@ -1,7 +1,9 @@
 add_mlir_unittest(MLIRMemRefTests
   InferShapeTest.cpp
+  StaticMemoryPlanning.cpp
 )
 target_link_libraries(MLIRMemRefTests
   PRIVATE
   MLIRMemRefDialect
+  MLIRMemRefTransforms
   )
