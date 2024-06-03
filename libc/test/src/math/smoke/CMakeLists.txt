@@ -1977,32 +1977,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  fmull_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    fmull_test.cpp
-  HDRS
-    FMulTest.h
-  DEPENDS
-    libc.src.math.fmull
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
-  dmull_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    dmull_test.cpp
-  HDRS
-    FMulTest.h
-  DEPENDS
-    libc.src.math.dmull
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
   sqrtf_test
   SUITE
     libc-math-smoke-tests

@@ -92,6 +92,7 @@ float fmul(double x, double y) {
        x_bits.is_inf() || x_bits.is_nan()) &&
       y_bits.is_nan())
     return fputil::FPBits<float>::quiet_nan().get_val();
+  
   if ((y_bits.is_zero() || y_bits.is_normal() || y_bits.is_subnormal() ||
        y_bits.is_inf() || y_bits.is_nan()) &&
       x_bits.is_nan())
