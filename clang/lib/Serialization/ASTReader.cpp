@@ -40,9 +40,11 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/AST/UnresolvedSet.h"
+#include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticError.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
@@ -9401,6 +9403,20 @@ DiagnosticBuilder ASTReader::Diag(unsigned DiagID) const {
 
 DiagnosticBuilder ASTReader::Diag(SourceLocation Loc, unsigned DiagID) const {
   return Diags.Report(Loc, DiagID);
+}
+
+void ASTReader::warnStackExhausted(SourceLocation Loc) {
+  // When Sema is available, avoid duplicate errors.
+  if (SemaObj) {
+    SemaObj->warnStackExhausted(Loc);
+    return;
+  }
+
+  if (WarnedStackExhausted)
+    return;
+  WarnedStackExhausted = true;
+
+  Diag(Loc, diag::warn_stack_exhausted);
 }
 
 /// Retrieve the identifier table associated with the

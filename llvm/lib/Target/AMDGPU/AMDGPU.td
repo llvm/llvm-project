@@ -1594,6 +1594,10 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDPPSrc1SGPR,
    Feature1_5xVGPRs]>;
 
+def FeatureISAVersion12_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion12.Features,
+    [FeatureRequiresCOV6])>;
+
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {
