@@ -88,7 +88,7 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   std::optional<BranchProbabilityInfo *> BPI;
   bool ChangedSinceLastAnalysisUpdate = false;
   bool HasGuards = false;
-#ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if !LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
 #else
   SmallSet<AssertingVH<const BasicBlock>, 16> LoopHeaders;
