@@ -1237,11 +1237,12 @@ Check calls to various UNIX/Posix functions: ``open, pthread_once, calloc, mallo
 
 .. _unix-BlockInCriticalSection:
 
-unix.BlockInCriticalSection (C)
-"""""""""""""""""""""""""""""""""""""
+unix.BlockInCriticalSection (C, C++)
+""""""""""""""""""""""""""""""""""""
 Check for calls to blocking functions inside a critical section.
 Blocking functions detected by this checker: ``sleep, getc, fgets, read, recv``.
-Critical section handling functions modelled by this checker: ``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``.
+Critical section handling functions modeled by this checker:
+``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``.
 
 .. code-block:: c
 
@@ -1259,7 +1260,7 @@ Critical section handling functions modelled by this checker: ``lock, unlock, pt
    sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
    mtx_unlock(m1);
    sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
-             // still inside of the critical section of the std::lock_guard
+              // still inside of the critical section of the std::lock_guard
  }
 
 **Limitations**
