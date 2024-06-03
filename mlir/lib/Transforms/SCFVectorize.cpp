@@ -66,7 +66,7 @@ static bool isRangePermutation(ValueRange val1, ValueRange val2) {
 
 template <typename Op>
 static std::optional<unsigned>
-cavTriviallyVectorizeMemOpImpl(scf::ParallelOp loop, unsigned dim, Op memOp,
+canTriviallyVectorizeMemOpImpl(scf::ParallelOp loop, unsigned dim, Op memOp,
                                const DataLayout *DL) {
   auto loopIndexVars = loop.getInductionVars();
   assert(dim < loopIndexVars.size());
@@ -97,14 +97,14 @@ cavTriviallyVectorizeMemOpImpl(scf::ParallelOp loop, unsigned dim, Op memOp,
 /// Returns memref element bitwidth or `std::nullopt` if access cannot be
 /// vectorized.
 static std::optional<unsigned>
-cavTriviallyVectorizeMemOp(scf::ParallelOp loop, unsigned dim, Operation &op,
+canTriviallyVectorizeMemOp(scf::ParallelOp loop, unsigned dim, Operation &op,
                            const DataLayout *DL) {
   assert(dim < loop.getInductionVars().size());
   if (auto storeOp = dyn_cast<memref::StoreOp>(op))
-    return cavTriviallyVectorizeMemOpImpl(loop, dim, storeOp, DL);
+    return canTriviallyVectorizeMemOpImpl(loop, dim, storeOp, DL);
 
   if (auto loadOp = dyn_cast<memref::LoadOp>(op))
-    return cavTriviallyVectorizeMemOpImpl(loop, dim, loadOp, DL);
+    return canTriviallyVectorizeMemOpImpl(loop, dim, loadOp, DL);
 
   return std::nullopt;
 }
@@ -141,7 +141,7 @@ canGatherScatter(scf::ParallelOp loop, Operation &op, const DataLayout *DL) {
 static std::optional<unsigned> cenVectorizeMemrefOp(scf::ParallelOp loop,
                                                     unsigned dim, Operation &op,
                                                     const DataLayout *DL) {
-  if (auto w = cavTriviallyVectorizeMemOp(loop, dim, op, DL))
+  if (auto w = canTriviallyVectorizeMemOp(loop, dim, op, DL))
     return w;
 
   return canGatherScatter(loop, op, DL);
@@ -419,7 +419,7 @@ LogicalResult mlir::vectorizeLoop(scf::ParallelOp loop,
   };
 
   auto canTriviallyVectorizeMemOp = [&](auto op) -> bool {
-    return !!::cavTriviallyVectorizeMemOpImpl(loop, dim, op, DL);
+    return !!::canTriviallyVectorizeMemOpImpl(loop, dim, op, DL);
   };
 
   auto canGatherScatter = [&](auto op) {
