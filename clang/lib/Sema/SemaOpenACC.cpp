@@ -675,10 +675,12 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
         Clause.getEndLoc());
   }
   case OpenACCClauseKind::Private: {
-    // Restrictions only properly implemented on 'compute' constructs, and
-    // 'compute' constructs are the only construct that can do anything with
-    // this yet, so skip/treat as unimplemented in this case.
-    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+    // Restrictions only properly implemented on 'compute' and 'loop'
+    // constructs, and 'compute'/'loop' constructs are the only construct that
+    // can do anything with this yet, so skip/treat as unimplemented in this
+    // case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+        Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
       break;
 
     // ActOnVar ensured that everything is a valid variable reference, so there
