@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "FS.h"
 #include "ProjectModules.h"
+#include "ScanningProjectModules.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -751,12 +752,8 @@ DirectoryBasedGlobalCompilationDatabase::getProjectModules(PathRef File) const {
   auto Res = lookupCDB(Req);
   if (!Res)
     return {};
-  // FIXME: Passing *this here means we won't use outer OverlayCDB, which
-  // (among other things) has the mechanism for detecting and injecting
-  // resource-dir.
-  return ProjectModules::create(
-      ProjectModules::ProjectModulesKind::ScanningAllFiles,
-      Res->CDB->getAllFiles(), *this, Opts.TFS);
+
+  return scanningProjectModules(Res->CDB, Opts.TFS);
 }
 
 OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,

@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 
+#include "ProjectModules.h"
 #include "support/Function.h"
 #include "support/Path.h"
 #include "support/Threading.h"
@@ -24,8 +25,6 @@
 
 namespace clang {
 namespace clangd {
-
-class ProjectModules;
 
 struct ProjectInfo {
   // The directory in which the compilation database was discovered.

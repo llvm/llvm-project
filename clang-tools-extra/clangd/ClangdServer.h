@@ -16,6 +16,7 @@
 #include "FeatureModule.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
+#include "ModulesBuilder.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "TUScheduler.h"
@@ -43,7 +44,6 @@
 namespace clang {
 namespace clangd {
 
-class ModulesBuilder;
 /// Manages a collection of source files and derived data (ASTs, indexes),
 /// and provides language-aware features such as code completion.
 ///

@@ -48,7 +48,7 @@ namespace clangd {
 ///
 ///   // c.cppm
 ///   export module c;
-///   import a;
+///   import b;
 ///   ```
 ///
 /// For the source file `c.cppm`, an instance of the class will store
@@ -80,11 +80,6 @@ public:
   canReuse(const CompilerInvocation &CI,
            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const = 0;
 
-  /// Return true if the modile file specified by ModuleName is built.
-  /// Note that this interface will only check the existence of the module
-  /// file instead of checking the validness of the module file.
-  virtual bool isModuleUnitBuilt(llvm::StringRef ModuleName) const = 0;
-
   virtual ~PrerequisiteModules() = default;
 };
 
@@ -103,7 +98,7 @@ public:
   ModulesBuilder &operator=(ModulesBuilder &&) = delete;
 
   std::unique_ptr<PrerequisiteModules>
-  buildPrerequisiteModulesFor(PathRef File, const ThreadsafeFS *TFS) const;
+  buildPrerequisiteModulesFor(PathRef File, const ThreadsafeFS &TFS) const;
 
 private:
   const GlobalCompilationDatabase &CDB;

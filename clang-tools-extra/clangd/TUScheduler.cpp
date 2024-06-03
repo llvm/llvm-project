@@ -652,10 +652,6 @@ public:
   TUScheduler::FileStats stats() const;
   bool isASTCached() const;
 
-  const GlobalCompilationDatabase &getCompilationDatabase() { return CDB; }
-
-  ModulesBuilder *getModulesBuilder() { return FileInputs.ModulesManager; }
-
 private:
   // Details of an update request that are relevant to scheduling.
   struct UpdateType {
@@ -1089,7 +1085,7 @@ void PreambleThread::build(Request Req) {
   bool IsFirstPreamble = !LatestBuild;
 
   LatestBuild = clang::clangd::buildPreamble(
-      FileName, *Req.CI, Inputs, StoreInMemory, ASTPeer.getModulesBuilder(),
+      FileName, *Req.CI, Inputs, StoreInMemory,
       [&](CapturedASTCtx ASTCtx,
           std::shared_ptr<const include_cleaner::PragmaIncludes> PI) {
         Callbacks.onPreambleAST(FileName, Inputs.Version, std::move(ASTCtx),

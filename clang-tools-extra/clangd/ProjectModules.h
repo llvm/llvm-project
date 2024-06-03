@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROJECTMODULES_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROJECTMODULES_H
 
-#include "GlobalCompilationDatabase.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 
@@ -37,12 +36,6 @@ namespace clangd {
 /// `<primary-module-name>[:partition-name]`. So module names covers partitions.
 class ProjectModules {
 public:
-  enum class ProjectModulesKind { ScanningAllFiles };
-
-  static std::unique_ptr<ProjectModules>
-  create(ProjectModulesKind Kind, std::vector<std::string> &&AllFiles,
-         const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS);
-
   virtual std::vector<std::string> getRequiredModules(PathRef File) = 0;
   virtual PathRef
   getSourceForModuleName(llvm::StringRef ModuleName,

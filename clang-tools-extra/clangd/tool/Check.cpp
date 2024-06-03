@@ -237,14 +237,8 @@ public:
   bool buildAST() {
     log("Building preamble...");
 
-    auto RequiredModuleBuilder =
-        Opts.ExperimentalModulesSupport
-            ? std::make_unique<ModulesBuilder>(*CDB.get())
-            : nullptr;
-
     Preamble = buildPreamble(
         File, *Invocation, Inputs, /*StoreInMemory=*/true,
-        RequiredModuleBuilder.get(),
         [&](CapturedASTCtx Ctx,
             std::shared_ptr<const include_cleaner::PragmaIncludes> PI) {
           if (!Opts.BuildDynamicSymbolIndex)

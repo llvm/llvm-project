@@ -13,9 +13,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 
-using namespace clang;
-using namespace clang::clangd;
-
+namespace clang::clangd {
 namespace {
 /// A scanner to query the dependency information for C++20 Modules.
 ///
@@ -36,8 +34,9 @@ namespace {
 /// interfere with each other.
 class ModuleDependencyScanner {
 public:
-  ModuleDependencyScanner(const GlobalCompilationDatabase &CDB,
-                          const ThreadsafeFS &TFS)
+  ModuleDependencyScanner(
+      std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
+      const ThreadsafeFS &TFS)
       : CDB(CDB), TFS(TFS),
         Service(tooling::dependencies::ScanningMode::CanonicalPreprocessing,
                 tooling::dependencies::ScanningOutputFormat::P1689) {}
@@ -60,7 +59,7 @@ public:
   /// a global module dependency scanner to monitor every file. Or we
   /// can simply require the build systems (or even the end users)
   /// to provide the map.
-  void globalScan(llvm::ArrayRef<std::string> AllFiles);
+  void globalScan();
 
   /// Get the source file from the module name. Note that the language
   /// guarantees all the module names are unique in a valid program.
@@ -75,7 +74,7 @@ public:
   std::vector<std::string> getRequiredModules(PathRef File);
 
 private:
-  const GlobalCompilationDatabase &CDB;
+  std::shared_ptr<const clang::tooling::CompilationDatabase> CDB;
   const ThreadsafeFS &TFS;
 
   // Whether the scanner has scanned the project globally.
@@ -91,10 +90,14 @@ private:
 
 std::optional<ModuleDependencyScanner::ModuleDependencyInfo>
 ModuleDependencyScanner::scan(PathRef FilePath) {
-  std::optional<tooling::CompileCommand> Cmd = CDB.getCompileCommand(FilePath);
-
-  if (!Cmd)
+  auto Candidates = CDB->getCompileCommands(FilePath);
+  if (Candidates.empty())
     return std::nullopt;
+
+  // Choose the first candidates as the compile commands as the file.
+  // Following the same logic with
+  // DirectoryBasedGlobalCompilationDatabase::getCompileCommand.
+  tooling::CompileCommand Cmd = std::move(Candidates.front());
 
   using namespace clang::tooling::dependencies;
 
@@ -103,7 +106,7 @@ ModuleDependencyScanner::scan(PathRef FilePath) {
   DependencyScanningTool ScanningTool(Service, TFS.view(FilePathDir));
 
   llvm::Expected<P1689Rule> ScanningResult =
-      ScanningTool.getP1689ModuleDependencyFile(*Cmd, Cmd->Directory);
+      ScanningTool.getP1689ModuleDependencyFile(Cmd, Cmd.Directory);
 
   if (auto E = ScanningResult.takeError()) {
     elog("Scanning modules dependencies for {0} failed: {1}", FilePath,
@@ -124,8 +127,8 @@ ModuleDependencyScanner::scan(PathRef FilePath) {
   return Result;
 }
 
-void ModuleDependencyScanner::globalScan(llvm::ArrayRef<std::string> AllFiles) {
-  for (auto &File : AllFiles)
+void ModuleDependencyScanner::globalScan() {
+  for (auto &File : CDB->getAllFiles())
     scan(File);
 
   GlobalScanned = true;
@@ -154,9 +157,6 @@ ModuleDependencyScanner::getRequiredModules(PathRef File) {
 }
 } // namespace
 
-namespace clang {
-namespace clangd {
-
 /// TODO: The existing `ScanningAllProjectModules` is not efficient. See the
 /// comments in ModuleDependencyScanner for detail.
 ///
@@ -166,10 +166,10 @@ namespace clangd {
 /// the state of each file.
 class ScanningAllProjectModules : public ProjectModules {
 public:
-  ScanningAllProjectModules(std::vector<std::string> &&AllFiles,
-                            const GlobalCompilationDatabase &CDB,
-                            const ThreadsafeFS &TFS)
-      : AllFiles(std::move(AllFiles)), Scanner(CDB, TFS) {}
+  ScanningAllProjectModules(
+      std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
+      const ThreadsafeFS &TFS)
+      : Scanner(CDB, TFS) {}
 
   ~ScanningAllProjectModules() override = default;
 
@@ -182,25 +182,18 @@ public:
   PathRef
   getSourceForModuleName(llvm::StringRef ModuleName,
                          PathRef RequiredSourceFile = PathRef()) override {
-    Scanner.globalScan(AllFiles);
+    Scanner.globalScan();
     return Scanner.getSourceForModuleName(ModuleName);
   }
 
 private:
-  std::vector<std::string> AllFiles;
-
   ModuleDependencyScanner Scanner;
 };
 
-std::unique_ptr<ProjectModules> ProjectModules::create(
-    ProjectModulesKind Kind, std::vector<std::string> &&AllFiles,
-    const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS) {
-  if (Kind == ProjectModulesKind::ScanningAllFiles)
-    return std::make_unique<ScanningAllProjectModules>(std::move(AllFiles), CDB,
-                                                       TFS);
-
-  llvm_unreachable("Unknown ProjectModulesKind.");
+std::unique_ptr<ProjectModules> scanningProjectModules(
+    std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
+    const ThreadsafeFS &TFS) {
+  return std::make_unique<ScanningAllProjectModules>(CDB, TFS);
 }
 
-} // namespace clangd
-} // namespace clang
+} // namespace clang::clangd

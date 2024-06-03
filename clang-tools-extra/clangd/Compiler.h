@@ -16,6 +16,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 
 #include "FeatureModule.h"
+#include "ModulesBuilder.h"
 #include "TidyProvider.h"
 #include "index/Index.h"
 #include "support/ThreadsafeFS.h"
@@ -43,8 +44,6 @@ struct ParseOptions {
 
   bool ImportInsertions = false;
 };
-
-class ModulesBuilder;
 
 /// Information required to run clang, e.g. to parse AST or do code completion.
 struct ParseInputs {

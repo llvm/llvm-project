@@ -154,13 +154,9 @@ struct PreambleBuildStats {
 /// If \p PreambleCallback is set, it will be run on top of the AST while
 /// building the preamble.
 /// If Stats is not non-null, build statistics will be exported there.
-/// If \p RequiredModuleBuilder is not null, it will scan the source file
-/// to see if it is related to modules, and if yes, modules related things
-/// will be built.
 std::shared_ptr<const PreambleData>
 buildPreamble(PathRef FileName, CompilerInvocation CI,
               const ParseInputs &Inputs, bool StoreInMemory,
-              ModulesBuilder *RequiredModuleBuilder,
               PreambleParsedCallback PreambleCallback,
               PreambleBuildStats *Stats = nullptr);
 

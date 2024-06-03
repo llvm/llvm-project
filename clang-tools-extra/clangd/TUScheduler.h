@@ -222,9 +222,6 @@ public:
     /// Cache (large) preamble data in RAM rather than temporary files on disk.
     bool StorePreamblesInMemory = false;
 
-    /// Enable experimental support for modules.
-    bool ExperimentalModulesSupport = false;
-
     /// Time to wait after an update to see if another one comes along.
     /// This tries to ensure we rebuild once the user stops typing.
     DebouncePolicy UpdateDebounce;

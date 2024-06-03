@@ -589,8 +589,8 @@ public:
 
 std::shared_ptr<const PreambleData> buildPreamble(
     PathRef FileName, CompilerInvocation CI, const ParseInputs &Inputs,
-    bool StoreInMemory, ModulesBuilder *RequiredModuleBuilder,
-    PreambleParsedCallback PreambleCallback, PreambleBuildStats *Stats) {
+    bool StoreInMemory, PreambleParsedCallback PreambleCallback,
+    PreambleBuildStats *Stats) {
   // Note that we don't need to copy the input contents, preamble can live
   // without those.
   auto ContentsBuffer =
@@ -698,12 +698,12 @@ std::shared_ptr<const PreambleData> buildPreamble(
     Result->Pragmas = std::make_shared<const include_cleaner::PragmaIncludes>(
         CapturedInfo.takePragmaIncludes());
 
-    if (RequiredModuleBuilder) {
+    if (Inputs.ModulesManager) {
       WallTimer PrerequisiteModuleTimer;
       PrerequisiteModuleTimer.startTimer();
       Result->RequiredModules =
-          RequiredModuleBuilder->buildPrerequisiteModulesFor(FileName,
-                                                             Inputs.TFS);
+          Inputs.ModulesManager->buildPrerequisiteModulesFor(FileName,
+                                                             *Inputs.TFS);
       PrerequisiteModuleTimer.stopTimer();
 
       log("Built prerequisite modules for file {0} in {1} seconds", FileName,

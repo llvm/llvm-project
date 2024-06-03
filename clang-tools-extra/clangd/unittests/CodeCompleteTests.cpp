@@ -136,7 +136,6 @@ CodeCompleteResult completions(const TestTU &TU, Position Point,
   MockCompilationDatabase CDB;
   auto Preamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
                                 /*InMemory=*/true,
-                                /*RequiredModuleBuilder=*/nullptr,
                                 /*Callback=*/nullptr);
   return codeComplete(testPath(TU.Filename), Point, Preamble.get(), Inputs,
                       Opts);
@@ -1371,7 +1370,7 @@ signatures(llvm::StringRef Text, Position Point,
   MockCompilationDatabase CDB;
   auto Preamble =
       buildPreamble(testPath(TU.Filename), *CI, Inputs,
-                    /*InMemory=*/true, /*RequiredModuleBuilder=*/nullptr,
+                    /*InMemory=*/true,
                     /*Callback=*/nullptr);
   if (!Preamble) {
     ADD_FAILURE() << "Couldn't build Preamble";
@@ -1674,7 +1673,7 @@ TEST(SignatureHelpTest, StalePreamble) {
   MockCompilationDatabase CDB;
   auto EmptyPreamble =
       buildPreamble(testPath(TU.Filename), *CI, Inputs,
-                    /*InMemory=*/true, /*RequiredModuleBuilder=*/nullptr,
+                    /*InMemory=*/true,
                     /*Callback=*/nullptr);
   ASSERT_TRUE(EmptyPreamble);
 

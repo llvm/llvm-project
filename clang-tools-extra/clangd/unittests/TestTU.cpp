@@ -110,7 +110,6 @@ TestTU::preamble(PreambleParsedCallback PreambleCallback) const {
   MockCompilationDatabase CDB;
   return clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,
                                       /*StoreInMemory=*/true,
-                                      /*RequiredModuleBuilder=*/nullptr,
                                       PreambleCallback);
 }
 
@@ -130,7 +129,6 @@ ParsedAST TestTU::build() const {
   auto Preamble =
       clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,
                                    /*StoreInMemory=*/true,
-                                   /*RequiredModuleBuilder=*/nullptr,
                                    /*PreambleCallback=*/nullptr);
   auto AST = ParsedAST::build(testPath(Filename), Inputs, std::move(CI),
                               Diags.take(), Preamble);
