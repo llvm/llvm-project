@@ -14,6 +14,10 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+namespace {
+AST_MATCHER(CXXRecordDecl, isAbstract) { return Node.isAbstract(); }
+} // namespace
+
 PointerArithmeticOnPolymorphicObjectCheck::
     PointerArithmeticOnPolymorphicObjectCheck(StringRef Name,
                                               ClangTidyContext *Context)
@@ -31,15 +35,15 @@ void PointerArithmeticOnPolymorphicObjectCheck::registerMatchers(
   const auto PolymorphicPointerExpr =
       expr(hasType(hasCanonicalType(
                pointerType(pointee(hasCanonicalType(hasDeclaration(
-                   cxxRecordDecl(cxxRecordDecl(hasMethod(isVirtual())),
-                                 unless(isFinal())))))))))
+                   cxxRecordDecl(unless(isFinal()),
+                                 cxxRecordDecl(hasMethod(isVirtual()))))))))))
           .bind("pointer");
 
   const auto PointerExprWithVirtualMethod =
       expr(hasType(hasCanonicalType(pointerType(
                pointee(hasCanonicalType(hasDeclaration(cxxRecordDecl(
-                   hasMethod(anyOf(isVirtualAsWritten(), isPure())),
-                   unless(isFinal())))))))))
+                   unless(isFinal()),
+                   anyOf(hasMethod(isVirtualAsWritten()), isAbstract())))))))))
           .bind("pointer");
 
   const auto SelectedPointerExpr = MatchInheritedVirtualFunctions

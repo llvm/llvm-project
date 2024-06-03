@@ -15,10 +15,7 @@ public:
   virtual ~AbstractBase() {}
 };
 
-class AbstractInherited : public AbstractBase {
-  // FIXME: Check pure virtual functions transitively, not just explicit delete.
-  void f() override = 0;
-};
+class AbstractInherited : public AbstractBase {};
 
 class AbstractOverride : public AbstractInherited {
 public:

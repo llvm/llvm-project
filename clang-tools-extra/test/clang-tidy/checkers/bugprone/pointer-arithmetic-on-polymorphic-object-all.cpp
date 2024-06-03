@@ -17,9 +17,7 @@ public:
   virtual ~AbstractBase() {}
 };
 
-class AbstractInherited : public AbstractBase {
-  void f() override = 0;
-};
+class AbstractInherited : public AbstractBase {};
 
 class AbstractOverride : public AbstractInherited {
 public:
