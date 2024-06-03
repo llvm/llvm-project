@@ -663,6 +663,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  rintf16
+  SRCS
+    rintf16.cpp
+  HDRS
+    ../rintf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
   rintf128
   SRCS
     rintf128.cpp

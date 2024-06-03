@@ -676,6 +676,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rintf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    rintf16_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.src.math.rintf16
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   rintf128_test
   SUITE
     libc-math-smoke-tests

@@ -291,6 +291,7 @@ add_math_entrypoint_object(remquol)
 add_math_entrypoint_object(rint)
 add_math_entrypoint_object(rintf)
 add_math_entrypoint_object(rintl)
+add_math_entrypoint_object(rintf16)
 add_math_entrypoint_object(rintf128)
 
 add_math_entrypoint_object(round)
