@@ -1000,7 +1000,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     }
 
     setTargetDAGCombine({ISD::SHL, ISD::SRL, ISD::SRA, ISD::FP_TO_SINT,
-                         ISD::FP_TO_UINT, ISD::FDIV, ISD::LOAD});
+                         ISD::FP_TO_UINT, ISD::FMUL, ISD::LOAD});
 
     // It is legal to extload from v4i8 to v4i16 or v4i32.
     for (MVT Ty : {MVT::v8i8, MVT::v4i8, MVT::v2i8, MVT::v4i16, MVT::v2i16,
@@ -17011,17 +17011,17 @@ static SDValue PerformFADDCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// PerformVDIVCombine - VCVT (fixed-point to floating-point, Advanced SIMD)
-/// can replace combinations of VCVT (integer to floating-point) and VDIV
-/// when the VDIV has a constant operand that is a power of 2.
+/// PerformVMulVCTPCombine - VCVT (fixed-point to floating-point, Advanced SIMD)
+/// can replace combinations of VCVT (integer to floating-point) and VMUL
+/// when the VMUL has a constant operand that is a power of 2.
 ///
-/// Example (assume d17 = <float 8.000000e+00, float 8.000000e+00>):
+/// Example (assume d17 = <float 0.125, float 0.125>):
 ///  vcvt.f32.s32    d16, d16
-///  vdiv.f32        d16, d17, d16
+///  vmul.f32        d16, d16, d17
 /// becomes:
 ///  vcvt.f32.s32    d16, d16, #3
-static SDValue PerformVDIVCombine(SDNode *N, SelectionDAG &DAG,
-                                  const ARMSubtarget *Subtarget) {
+static SDValue PerformVMulVCTPCombine(SDNode *N, SelectionDAG &DAG,
+                                      const ARMSubtarget *Subtarget) {
   if (!Subtarget->hasNEON())
     return SDValue();
 
@@ -17048,26 +17048,34 @@ static SDValue PerformVDIVCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
-  BitVector UndefElements;
-  BuildVectorSDNode *BV = cast<BuildVectorSDNode>(ConstVec);
-  int32_t C = BV->getConstantFPSplatPow2ToLog2Int(&UndefElements, 33);
+  ConstantFPSDNode *CN = isConstOrConstSplatFP(ConstVec, true);
+  APFloat Recip(0.0f);
+  if (!CN || !CN->getValueAPF().getExactInverse(&Recip))
+    return SDValue();
+
+  bool IsExact;
+  APSInt IntVal(33);
+  if (Recip.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact) !=
+          APFloat::opOK ||
+      !IsExact)
+    return SDValue();
+
+  int32_t C = IntVal.exactLogBase2();
   if (C == -1 || C == 0 || C > 32)
     return SDValue();
 
-  SDLoc dl(N);
+  SDLoc DL(N);
   bool isSigned = OpOpcode == ISD::SINT_TO_FP;
   SDValue ConvInput = Op.getOperand(0);
   if (IntBits < FloatBits)
-    ConvInput = DAG.getNode(isSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND,
-                            dl, NumLanes == 2 ? MVT::v2i32 : MVT::v4i32,
-                            ConvInput);
+    ConvInput = DAG.getNode(isSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL,
+                            NumLanes == 2 ? MVT::v2i32 : MVT::v4i32, ConvInput);
 
-  unsigned IntrinsicOpcode = isSigned ? Intrinsic::arm_neon_vcvtfxs2fp :
-    Intrinsic::arm_neon_vcvtfxu2fp;
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl,
-                     Op.getValueType(),
-                     DAG.getConstant(IntrinsicOpcode, dl, MVT::i32),
-                     ConvInput, DAG.getConstant(C, dl, MVT::i32));
+  unsigned IntrinsicOpcode = isSigned ? Intrinsic::arm_neon_vcvtfxs2fp
+                                      : Intrinsic::arm_neon_vcvtfxu2fp;
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op.getValueType(),
+                     DAG.getConstant(IntrinsicOpcode, DL, MVT::i32), ConvInput,
+                     DAG.getConstant(C, DL, MVT::i32));
 }
 
 static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
@@ -18897,8 +18905,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformVCVTCombine(N, DCI.DAG, Subtarget);
   case ISD::FADD:
     return PerformFADDCombine(N, DCI.DAG, Subtarget);
-  case ISD::FDIV:
-    return PerformVDIVCombine(N, DCI.DAG, Subtarget);
+  case ISD::FMUL:
+    return PerformVMulVCTPCombine(N, DCI.DAG, Subtarget);
   case ISD::INTRINSIC_WO_CHAIN:
     return PerformIntrinsicCombine(N, DCI);
   case ISD::SHL:
