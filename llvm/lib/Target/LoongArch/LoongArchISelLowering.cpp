@@ -121,6 +121,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // Set operations for LA64 only.
 
   if (Subtarget.is64Bit()) {
+    setOperationAction(ISD::ADD, MVT::i32, Custom);
+    setOperationAction(ISD::SUB, MVT::i32, Custom);
     setOperationAction(ISD::SHL, MVT::i32, Custom);
     setOperationAction(ISD::SRA, MVT::i32, Custom);
     setOperationAction(ISD::SRL, MVT::i32, Custom);
@@ -1723,6 +1725,18 @@ static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG, int NumOp,
   return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewRes);
 }
 
+// Converts the given 32-bit operation to a i64 operation with signed extension
+// semantic to reduce the signed extension instructions.
+static SDValue customLegalizeToWOpWithSExt(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+  SDValue NewOp1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+  SDValue NewWOp = DAG.getNode(N->getOpcode(), DL, MVT::i64, NewOp0, NewOp1);
+  SDValue NewRes = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, NewWOp,
+                               DAG.getValueType(MVT::i32));
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
+}
+
 // Helper function that emits error message for intrinsics with/without chain
 // and return a UNDEF or and the chain as the results.
 static void emitErrorAndReplaceIntrinsicResults(
@@ -1846,6 +1860,12 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Don't know how to legalize this operation");
+  case ISD::ADD:
+  case ISD::SUB:
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    Results.push_back(customLegalizeToWOpWithSExt(N, DAG));
+    break;
   case ISD::UDIV:
   case ISD::UREM:
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&

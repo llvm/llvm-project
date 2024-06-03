@@ -441,7 +441,7 @@ def simm16_lsl16 : Operand<GRLenVT>,
 // A 32-bit signed immediate expressible with a pair of `addu16i.d + addi` for
 // use in additions.
 def simm32_hi16_lo12: Operand<GRLenVT>, ImmLeaf<GRLenVT, [{
-  return isShiftedInt<16, 16>(Imm - SignExtend64<12>(Imm));
+  return !isInt<12>(Imm) && isShiftedInt<16, 16>(Imm - SignExtend64<12>(Imm));
 }]>;
 
 def BareSymbol : AsmOperandClass {
@@ -1106,11 +1106,8 @@ foreach Idx = 1...3 in {
 
 let Predicates = [IsLA64] in {
 def : PatGprGpr<add, ADD_D>;
-def : PatGprGpr_32<add, ADD_W>;
 def : PatGprImm<add, ADDI_D, simm12>;
-def : PatGprImm_32<add, ADDI_W, simm12>;
 def : PatGprGpr<sub, SUB_D>;
-def : PatGprGpr_32<sub, SUB_W>;
 def : PatGprGpr<sdiv, DIV_D>;
 def : PatGprGpr_32<sdiv, DIV_W>;
 def : PatGprGpr<udiv, DIV_DU>;
