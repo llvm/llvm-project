@@ -802,7 +802,7 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
 }
 
 bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
-                                                  VPBuilder &Builder) {
+                                                  VPBuilder &LoopBuilder) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
@@ -812,6 +812,8 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
       RecurrencePhis.push_back(FOR);
 
+  VPBuilder MiddleBuilder(
+      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor()));
   for (VPFirstOrderRecurrencePHIRecipe *FOR : RecurrencePhis) {
     SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
     VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
@@ -831,18 +833,28 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // fixed-order recurrence.
     VPBasicBlock *InsertBlock = Previous->getParent();
     if (isa<VPHeaderPHIRecipe>(Previous))
-      Builder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
+      LoopBuilder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
     else
-      Builder.setInsertPoint(InsertBlock, std::next(Previous->getIterator()));
+      LoopBuilder.setInsertPoint(InsertBlock,
+                                 std::next(Previous->getIterator()));
 
     auto *RecurSplice = cast<VPInstruction>(
-        Builder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
-                             {FOR, FOR->getBackedgeValue()}));
+        LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
+                                 {FOR, FOR->getBackedgeValue()}));
 
     FOR->replaceAllUsesWith(RecurSplice);
     // Set the first operand of RecurSplice to FOR again, after replacing
     // all users.
     RecurSplice->setOperand(0, FOR);
+
+    Type *IntTy = Plan.getCanonicalIV()->getScalarType();
+    auto *Result = cast<VPInstruction>(MiddleBuilder.createNaryOp(
+        VPInstruction::ExtractFromEnd,
+        {FOR->getBackedgeValue(),
+         Plan.getOrAddLiveIn(ConstantInt::get(IntTy, 2))},
+        {}, "vector.recur.extract.for.phi"));
+    RecurSplice->replaceUsesWithIf(
+        Result, [](VPUser &U, unsigned) { return isa<VPLiveOut>(&U); });
   }
   return true;
 }
