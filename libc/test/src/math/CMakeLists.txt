@@ -243,6 +243,7 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floor
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -257,6 +258,7 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floorf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -271,6 +273,22 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floorl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  floorf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    floorf16_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
