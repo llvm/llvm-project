@@ -24,8 +24,51 @@ define <8 x i8> @mla8xi8(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C) {
 ;
 ; NONEON-NOSVE-LABEL: mla8xi8:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    mla v2.8b, v0.8b, v1.8b
-; NONEON-NOSVE-NEXT:    fmov d0, d2
+; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #-32]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
+; NONEON-NOSVE-NEXT:    ldrb w1, [sp, #15]
+; NONEON-NOSVE-NEXT:    ldrb w2, [sp, #7]
+; NONEON-NOSVE-NEXT:    str d2, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldrb w5, [sp, #23]
+; NONEON-NOSVE-NEXT:    ldrb w3, [sp, #14]
+; NONEON-NOSVE-NEXT:    ldrb w4, [sp, #6]
+; NONEON-NOSVE-NEXT:    madd w1, w2, w1, w5
+; NONEON-NOSVE-NEXT:    ldrb w18, [sp, #13]
+; NONEON-NOSVE-NEXT:    ldrb w0, [sp, #5]
+; NONEON-NOSVE-NEXT:    ldrb w16, [sp, #12]
+; NONEON-NOSVE-NEXT:    ldrb w17, [sp, #4]
+; NONEON-NOSVE-NEXT:    ldrb w14, [sp, #11]
+; NONEON-NOSVE-NEXT:    ldrb w15, [sp, #3]
+; NONEON-NOSVE-NEXT:    ldrb w12, [sp, #10]
+; NONEON-NOSVE-NEXT:    ldrb w13, [sp, #2]
+; NONEON-NOSVE-NEXT:    strb w1, [sp, #31]
+; NONEON-NOSVE-NEXT:    ldrb w1, [sp, #22]
+; NONEON-NOSVE-NEXT:    ldrb w10, [sp, #9]
+; NONEON-NOSVE-NEXT:    madd w1, w4, w3, w1
+; NONEON-NOSVE-NEXT:    ldrb w11, [sp, #1]
+; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldrb w9, [sp]
+; NONEON-NOSVE-NEXT:    strb w1, [sp, #30]
+; NONEON-NOSVE-NEXT:    ldrb w1, [sp, #21]
+; NONEON-NOSVE-NEXT:    madd w18, w0, w18, w1
+; NONEON-NOSVE-NEXT:    strb w18, [sp, #29]
+; NONEON-NOSVE-NEXT:    ldrb w18, [sp, #20]
+; NONEON-NOSVE-NEXT:    madd w16, w17, w16, w18
+; NONEON-NOSVE-NEXT:    strb w16, [sp, #28]
+; NONEON-NOSVE-NEXT:    ldrb w16, [sp, #19]
+; NONEON-NOSVE-NEXT:    madd w14, w15, w14, w16
+; NONEON-NOSVE-NEXT:    strb w14, [sp, #27]
+; NONEON-NOSVE-NEXT:    ldrb w14, [sp, #18]
+; NONEON-NOSVE-NEXT:    madd w12, w13, w12, w14
+; NONEON-NOSVE-NEXT:    strb w12, [sp, #26]
+; NONEON-NOSVE-NEXT:    ldrb w12, [sp, #17]
+; NONEON-NOSVE-NEXT:    madd w10, w11, w10, w12
+; NONEON-NOSVE-NEXT:    strb w10, [sp, #25]
+; NONEON-NOSVE-NEXT:    ldrb w10, [sp, #16]
+; NONEON-NOSVE-NEXT:    madd w8, w9, w8, w10
+; NONEON-NOSVE-NEXT:    strb w8, [sp, #24]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
+; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = mul <8 x i8> %A, %B;
   %tmp2 = add <8 x i8> %C, %tmp1;

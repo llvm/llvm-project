@@ -1,23 +1,23 @@
 // REQUIRES: arm
-// RUN: llvm-mc -filetype=obj -arm-add-build-attributes --arch=thumb --mcpu=cortex-m33 %p/Inputs/arm-plt-reloc.s -o %t1
-// RUN: llvm-mc -filetype=obj -arm-add-build-attributes --arch=thumb --mcpu=cortex-m33 %s -o %t2
-// RUN: ld.lld %t1 %t2 -o %t
+// RUN: llvm-mc -filetype=obj -arm-add-build-attributes -triple=thumbv8-none-linux-gnueabi --arch=thumb --mcpu=cortex-m33 %p/Inputs/arm-plt-reloc.s -o %t1.o
+// RUN: llvm-mc -filetype=obj -arm-add-build-attributes -triple=thumbv8-none-linux-gnueabi --arch=thumb --mcpu=cortex-m33 %s -o %t2.o
+// RUN: ld.lld %t1.o %t2.o -o %t
 // RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s
-// RUN: ld.lld -shared %t1 %t2 -o %t.so
+// RUN: ld.lld -shared %t1.o %t2.o -o %t.so
 // RUN: llvm-objdump --no-print-imm-hex -d %t.so | FileCheck --check-prefix=DSO %s
 // RUN: llvm-readelf -S -r %t.so | FileCheck -check-prefix=DSOREL %s
 
-// RUN: llvm-mc -filetype=obj -arm-add-build-attributes --arch=thumbeb --mcpu=cortex-m33 %p/Inputs/arm-plt-reloc.s -o %t1.be
-// RUN: llvm-mc -filetype=obj -arm-add-build-attributes --arch=thumbeb --mcpu=cortex-m33 %s -o %t2.be
-// RUN: ld.lld %t1.be %t2.be -o %t.be
+// RUN: llvm-mc -filetype=obj -arm-add-build-attributes -triple=thumbv8-none-linux-gnueabi --arch=thumbeb --mcpu=cortex-m33 %p/Inputs/arm-plt-reloc.s -o %t1.be.o
+// RUN: llvm-mc -filetype=obj -arm-add-build-attributes -triple=thumbv8-none-linux-gnueabi --arch=thumbeb --mcpu=cortex-m33 %s -o %t2.be.o
+// RUN: ld.lld %t1.be.o %t2.be.o -o %t.be
 // RUN: llvm-objdump --no-print-imm-hex -d %t.be | FileCheck %s
-// RUN: ld.lld -shared %t1.be %t2.be -o %t.so.be
+// RUN: ld.lld -shared %t1.be.o %t2.be.o -o %t.so.be
 // RUN: llvm-objdump --no-print-imm-hex -d %t.so.be | FileCheck --check-prefix=DSO %s
 // RUN: llvm-readelf -S -r %t.so.be | FileCheck -check-prefix=DSOREL %s
 
-// RUN: ld.lld --be8 %t1.be %t2.be -o %t.be
+// RUN: ld.lld --be8 %t1.be.o %t2.be.o -o %t.be
 // RUN: llvm-objdump --no-print-imm-hex -d %t.be | FileCheck %s
-// RUN: ld.lld --be8 -shared %t1.be %t2.be -o %t.so.be
+// RUN: ld.lld --be8 -shared %t1.be.o %t2.be.o -o %t.so.be
 // RUN: llvm-objdump --no-print-imm-hex -d %t.so.be | FileCheck --check-prefix=DSO %s
 // RUN: llvm-readelf -S -r %t.so.be | FileCheck -check-prefix=DSOREL %s
 

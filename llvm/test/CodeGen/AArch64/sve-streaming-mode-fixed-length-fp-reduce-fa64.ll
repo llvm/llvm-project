@@ -30,26 +30,30 @@ define half @fadda_v4f16(half %start, <4 x half> %a) {
 ;
 ; NONEON-NOSVE-LABEL: fadda_v4f16:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    // kill: def $d1 killed $d1 def $q1
-; NONEON-NOSVE-NEXT:    fcvt s2, h1
+; NONEON-NOSVE-NEXT:    sub sp, sp, #16
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NOSVE-NEXT:    str d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fadd s0, s0, s2
-; NONEON-NOSVE-NEXT:    mov h2, v1.h[1]
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fadd s0, s0, s2
-; NONEON-NOSVE-NEXT:    mov h2, v1.h[2]
-; NONEON-NOSVE-NEXT:    mov h1, v1.h[3]
-; NONEON-NOSVE-NEXT:    fcvt h0, s0
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
+; NONEON-NOSVE-NEXT:    ldr h1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
+; NONEON-NOSVE-NEXT:    fadd s0, s0, s1
+; NONEON-NOSVE-NEXT:    ldr h1, [sp, #10]
+; NONEON-NOSVE-NEXT:    fcvt s1, h1
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fadd s0, s0, s2
+; NONEON-NOSVE-NEXT:    fadd s0, s0, s1
+; NONEON-NOSVE-NEXT:    ldr h1, [sp, #12]
+; NONEON-NOSVE-NEXT:    fcvt s1, h1
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fadd s0, s0, s1
+; NONEON-NOSVE-NEXT:    ldr h1, [sp, #14]
+; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fadd s0, s0, s1
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call half @llvm.vector.reduce.fadd.v4f16(half %start, <4 x half> %a)
   ret half %res

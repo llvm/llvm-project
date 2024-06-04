@@ -496,6 +496,24 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpxl
 )
 
+if(LIBC_TYPES_HAS_FLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float16 entrypoints
+    libc.src.math.ceilf16
+    libc.src.math.fabsf16
+    libc.src.math.floorf16
+    libc.src.math.llrintf16
+    libc.src.math.llroundf16
+    libc.src.math.lrintf16
+    libc.src.math.lroundf16
+    libc.src.math.nearbyintf16
+    libc.src.math.rintf16
+    libc.src.math.roundf16
+    libc.src.math.roundevenf16
+    libc.src.math.truncf16
+  )
+endif()
+
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints

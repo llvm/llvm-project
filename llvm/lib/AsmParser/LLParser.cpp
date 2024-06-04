@@ -4046,6 +4046,60 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.NoCFI = true;
     return false;
   }
+  case lltok::kw_ptrauth: {
+    // ValID ::= 'ptrauth' '(' ptr @foo ',' i32 <key>
+    //                         (',' i64 <disc> (',' ptr addrdisc)? )? ')'
+    Lex.Lex();
+
+    Constant *Ptr, *Key;
+    Constant *Disc = nullptr, *AddrDisc = nullptr;
+
+    if (parseToken(lltok::lparen,
+                   "expected '(' in constant ptrauth expression") ||
+        parseGlobalTypeAndValue(Ptr) ||
+        parseToken(lltok::comma,
+                   "expected comma in constant ptrauth expression") ||
+        parseGlobalTypeAndValue(Key))
+      return true;
+    // If present, parse the optional disc/addrdisc.
+    if (EatIfPresent(lltok::comma))
+      if (parseGlobalTypeAndValue(Disc) ||
+          (EatIfPresent(lltok::comma) && parseGlobalTypeAndValue(AddrDisc)))
+        return true;
+    if (parseToken(lltok::rparen,
+                   "expected ')' in constant ptrauth expression"))
+      return true;
+
+    if (!Ptr->getType()->isPointerTy())
+      return error(ID.Loc, "constant ptrauth base pointer must be a pointer");
+
+    auto *KeyC = dyn_cast<ConstantInt>(Key);
+    if (!KeyC || KeyC->getBitWidth() != 32)
+      return error(ID.Loc, "constant ptrauth key must be i32 constant");
+
+    ConstantInt *DiscC = nullptr;
+    if (Disc) {
+      DiscC = dyn_cast<ConstantInt>(Disc);
+      if (!DiscC || DiscC->getBitWidth() != 64)
+        return error(
+            ID.Loc,
+            "constant ptrauth integer discriminator must be i64 constant");
+    } else {
+      DiscC = ConstantInt::get(Type::getInt64Ty(Context), 0);
+    }
+
+    if (AddrDisc) {
+      if (!AddrDisc->getType()->isPointerTy())
+        return error(
+            ID.Loc, "constant ptrauth address discriminator must be a pointer");
+    } else {
+      AddrDisc = ConstantPointerNull::get(PointerType::get(Context, 0));
+    }
+
+    ID.ConstantVal = ConstantPtrAuth::get(Ptr, KeyC, DiscC, AddrDisc);
+    ID.Kind = ValID::t_Constant;
+    return false;
+  }
 
   case lltok::kw_trunc:
   case lltok::kw_bitcast:
@@ -4122,37 +4176,9 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_fptosi:
     return error(ID.Loc, "fptosi constexprs are no longer supported");
   case lltok::kw_icmp:
-  case lltok::kw_fcmp: {
-    unsigned PredVal, Opc = Lex.getUIntVal();
-    Constant *Val0, *Val1;
-    Lex.Lex();
-    if (parseCmpPredicate(PredVal, Opc) ||
-        parseToken(lltok::lparen, "expected '(' in compare constantexpr") ||
-        parseGlobalTypeAndValue(Val0) ||
-        parseToken(lltok::comma, "expected comma in compare constantexpr") ||
-        parseGlobalTypeAndValue(Val1) ||
-        parseToken(lltok::rparen, "expected ')' in compare constantexpr"))
-      return true;
-
-    if (Val0->getType() != Val1->getType())
-      return error(ID.Loc, "compare operands must have the same type");
-
-    CmpInst::Predicate Pred = (CmpInst::Predicate)PredVal;
-
-    if (Opc == Instruction::FCmp) {
-      if (!Val0->getType()->isFPOrFPVectorTy())
-        return error(ID.Loc, "fcmp requires floating point operands");
-      ID.ConstantVal = ConstantExpr::getFCmp(Pred, Val0, Val1);
-    } else {
-      assert(Opc == Instruction::ICmp && "Unexpected opcode for CmpInst!");
-      if (!Val0->getType()->isIntOrIntVectorTy() &&
-          !Val0->getType()->isPtrOrPtrVectorTy())
-        return error(ID.Loc, "icmp requires pointer or integer operands");
-      ID.ConstantVal = ConstantExpr::getICmp(Pred, Val0, Val1);
-    }
-    ID.Kind = ValID::t_Constant;
-    return false;
-  }
+    return error(ID.Loc, "icmp constexprs are no longer supported");
+  case lltok::kw_fcmp:
+    return error(ID.Loc, "fcmp constexprs are no longer supported");
 
   // Binary Operators.
   case lltok::kw_add:

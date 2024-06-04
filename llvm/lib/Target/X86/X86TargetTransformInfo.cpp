@@ -6257,7 +6257,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
                                 AddressSpace, CostKind);
 
   unsigned VF = VecTy->getNumElements() / Factor;
-  MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);
+  MVT VT =
+      MVT::getVectorVT(TLI->getSimpleValueType(DL, VecTy->getScalarType()), VF);
 
   InstructionCost MaskCost;
   if (UseMaskedMemOp) {

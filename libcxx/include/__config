@@ -12,6 +12,7 @@
 
 #include <__config_site>
 #include <__configuration/abi.h>
+#include <__configuration/availability.h>
 #include <__configuration/compiler.h>
 #include <__configuration/platform.h>
 
@@ -34,25 +35,6 @@
 #  if __STDC_HOSTED__ == 0
 #    define _LIBCPP_FREESTANDING
 #  endif
-
-// NOLINTBEGIN(libcpp-cpp-version-check)
-#  ifndef _LIBCPP_STD_VER
-#    if __cplusplus <= 201103L
-#      define _LIBCPP_STD_VER 11
-#    elif __cplusplus <= 201402L
-#      define _LIBCPP_STD_VER 14
-#    elif __cplusplus <= 201703L
-#      define _LIBCPP_STD_VER 17
-#    elif __cplusplus <= 202002L
-#      define _LIBCPP_STD_VER 20
-#    elif __cplusplus <= 202302L
-#      define _LIBCPP_STD_VER 23
-#    else
-// Expected release year of the next C++ standard
-#      define _LIBCPP_STD_VER 26
-#    endif
-#  endif // _LIBCPP_STD_VER
-// NOLINTEND(libcpp-cpp-version-check)
 
 // HARDENING {
 
@@ -364,10 +346,6 @@ typedef __char32_t char32_t;
 
 #  endif
 
-#  if !defined(__cpp_exceptions) || __cpp_exceptions < 199711L
-#    define _LIBCPP_HAS_NO_EXCEPTIONS
-#  endif
-
 #  define _LIBCPP_PREFERRED_ALIGNOF(_Tp) __alignof(_Tp)
 
 #  if defined(_LIBCPP_COMPILER_CLANG_BASED)
@@ -594,10 +572,6 @@ typedef __char32_t char32_t;
 #  endif
 #  define _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 
-// This macro provides a HIDE_FROM_ABI equivalent that can be applied to extern
-// "C" function, as those lack mangling.
-#  define _LIBCPP_HIDE_FROM_ABI_C _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
-
 #  ifdef _LIBCPP_BUILDING_LIBRARY
 #    if _LIBCPP_ABI_VERSION > 1
 #      define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
@@ -643,10 +617,16 @@ typedef __char32_t char32_t;
                                inline namespace _LIBCPP_ABI_NAMESPACE {
 #  define _LIBCPP_END_NAMESPACE_STD }} _LIBCPP_POP_EXTENSION_DIAGNOSTICS
 
+#ifdef _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
+#  define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM _LIBCPP_BEGIN_NAMESPACE_STD namespace filesystem {
+#  define _LIBCPP_END_NAMESPACE_FILESYSTEM } _LIBCPP_END_NAMESPACE_STD
+#else
 #  define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM _LIBCPP_BEGIN_NAMESPACE_STD                                               \
                                              inline namespace __fs { namespace filesystem {
 
 #  define _LIBCPP_END_NAMESPACE_FILESYSTEM }} _LIBCPP_END_NAMESPACE_STD
+#endif
+
 // clang-format on
 
 #  if __has_attribute(__enable_if__)
@@ -838,11 +818,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX23 constexpr
 #  else
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX23
-#  endif
-
-// Try to find out if RTTI is disabled.
-#  if !defined(__cpp_rtti) || __cpp_rtti < 199711L
-#    define _LIBCPP_HAS_NO_RTTI
 #  endif
 
 #  ifndef _LIBCPP_WEAK

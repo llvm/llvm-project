@@ -429,6 +429,9 @@ private:
   FileManager &FileMgr;
   const PCHContainerReader &PCHContainerRdr;
   DiagnosticsEngine &Diags;
+  // Sema has duplicate logic, but SemaObj can sometimes be null so ASTReader
+  // has its own version.
+  bool WarnedStackExhausted = false;
 
   /// The semantic analysis object that will be processing the
   /// AST files and the translation unit that uses it.
@@ -2134,6 +2137,8 @@ public:
 
   /// Report a diagnostic.
   DiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID) const;
+
+  void warnStackExhausted(SourceLocation Loc);
 
   IdentifierInfo *DecodeIdentifierInfo(serialization::IdentifierID ID);
 

@@ -198,10 +198,9 @@ define i32 @sub_clamp_zero_i32(i32 signext %x, i32 signext %y) {
 ;
 ; LA64-LABEL: sub_clamp_zero_i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sub.d $a2, $a0, $a1
 ; LA64-NEXT:    sub.w $a0, $a0, $a1
-; LA64-NEXT:    srai.d $a0, $a0, 31
-; LA64-NEXT:    andn $a0, $a2, $a0
+; LA64-NEXT:    srai.d $a1, $a0, 31
+; LA64-NEXT:    andn $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %sub = sub nsw i32 %x, %y
   %cmp = icmp sgt i32 %sub, 0

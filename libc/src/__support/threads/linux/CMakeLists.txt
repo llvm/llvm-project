@@ -22,12 +22,37 @@ add_header_library(
     libc.src.__support.time.linux.abs_timeout
 )
 
+set(raw_mutex_additional_flags)
+if (LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
+  set(raw_mutex_additional_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=1)
+else()
+  set(raw_mutex_additional_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
+endif()
+
+add_header_library(
+  raw_mutex
+  HDRS
+    mutex.h
+  DEPENDS
+    .futex_utils
+    libc.src.__support.threads.sleep
+    libc.src.__support.time.linux.abs_timeout
+    libc.src.__support.time.linux.monotonicity
+    libc.src.__support.CPP.optional
+    libc.hdr.types.pid_t
+  COMPILE_OPTIONS
+    -DLIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=${LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT}
+    ${raw_mutex_additional_flags}
+  
+)
+
 add_header_library(
   mutex
   HDRS
     mutex.h
   DEPENDS
     .futex_utils
+    .raw_mutex
     libc.src.__support.threads.mutex_common
 )
 
@@ -75,5 +100,6 @@ add_object_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.linux.futex_word_type
     libc.src.__support.threads.mutex
+    libc.src.__support.threads.linux.raw_mutex
     libc.src.__support.CPP.mutex
 )
