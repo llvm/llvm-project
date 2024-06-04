@@ -20,6 +20,11 @@ svfloat32_t good3(svfloat32_t a, svfloat32_t b, svfloat32_t c) __arm_streaming_c
   return svclamp(a, b, c);
 }
 
+__attribute__((target("+sve2p1,+sme2")))
+svfloat32_t good4(svfloat32_t a, svfloat32_t b, svfloat32_t c) __arm_streaming {
+  return svclamp(a, b, c);
+}
+
 // Without '+sme2', the builtin is only valid in non-streaming mode.
 __attribute__((target("+sve2p1,+sme")))
 svfloat32_t bad1(svfloat32_t a, svfloat32_t b, svfloat32_t c) __arm_streaming {
