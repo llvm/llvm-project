@@ -162,8 +162,8 @@ func.func @non_scalable_code() {
 
 // -----
 
-#map_remainder_start = affine_map<()[s0] -> (-(1000 mod s0) + 1000)>
-#map_remainder_size = affine_map<(d0) -> (-d0 + 1000)>
+#remainder_start_index = affine_map<()[s0] -> (-(1000 mod s0) + 1000)>
+#remaining_iterations = affine_map<(d0) -> (-d0 + 1000)>
 
 // CHECK: #[[$REMAINDER_START_MAP:.*]] = affine_map<()[s0] -> (-(1000 mod s0) + 1000)>
 // CHECK: #[[$SCALABLE_BOUND_MAP_4:.*]] = affine_map<()[s0] -> (s0 * 8 - 1)>
@@ -177,12 +177,12 @@ func.func @test_scalable_remainder_loop() {
   %c1000 = arith.constant 1000 : index
   %vscale = vector.vscale
   %c8_vscale = arith.muli %vscale, %c8 : index
-  %0 = affine.apply #map_remainder_start()[%c8_vscale]
+  %0 = affine.apply #remainder_start_index()[%c8_vscale]
   scf.for %arg1 = %0 to %c1000 step %c8_vscale {
-    %remainder_trip_count = affine.apply #map_remainder_size(%arg1)
+    %remaining_iterations = affine.apply #remaining_iterations(%arg1)
     // The upper bound for the remainder loop iterations should be: %c8_vscale - 1
     // (expressed as an affine map, affine_map<()[s0] -> (s0 * 8 - 1)>, where s0 is vscale)
-    %bound = "test.reify_bound"(%remainder_trip_count) <{scalable, type = "UB", vscale_min = 1 : i64, vscale_max = 16 : i64}> : (index) -> index
+    %bound = "test.reify_bound"(%remaining_iterations) <{scalable, type = "UB", vscale_min = 1 : i64, vscale_max = 16 : i64}> : (index) -> index
     "test.some_use"(%bound) : (index) -> ()
   }
   return
