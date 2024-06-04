@@ -1029,6 +1029,10 @@ public:
   /// \returns true if the subtarget has the v_permlane64_b32 instruction.
   bool hasPermLane64() const { return getGeneration() >= GFX11; }
 
+  bool hasPermlaneUp() const { return getGeneration() >= GFX13; }
+
+  bool hasPermlaneBcast() const { return getGeneration() >= GFX13; }
+
   bool hasDPP() const {
     return HasDPP;
   }
