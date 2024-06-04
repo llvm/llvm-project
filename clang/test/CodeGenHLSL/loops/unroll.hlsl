@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
-// RUN: dxil-pc-shadermodel6.3-library %s -emit-llvm -o - | FileCheck %s
+// RUN: dxil-pc-shadermodel6.3-library -O3 %s -emit-llvm -o - | FileCheck %s
 
 /*** for ***/
 void for_count()
