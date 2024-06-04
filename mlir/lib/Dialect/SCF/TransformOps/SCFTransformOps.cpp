@@ -442,39 +442,32 @@ static DiagnosedSilenceableFailure isOpSibling(Operation *target,
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Check if `target` scf.forall can be fused into `source` scf.forall.
+/// Check if `target` scf loop can be fused into `source` scf loop.
+/// Applies for scf.for, scf.forall, and scf.parallel.
 ///
 /// This simply checks if both loops have the same bounds, steps and mapping.
 /// No attempt is made at checking that the side effects of `target` and
 /// `source` are independent of each other.
-static bool isForallWithIdenticalConfiguration(Operation *target,
-                                               Operation *source) {
-  auto targetOp = dyn_cast<scf::ForallOp>(target);
-  auto sourceOp = dyn_cast<scf::ForallOp>(source);
+template <typename LoopTy>
+static bool isLoopWithIdenticalConfiguration(Operation *target,
+                                             Operation *source) {
+  static_assert(llvm::is_one_of<LoopTy, scf::ForallOp, scf::ForOp,
+                                scf::ParallelOp>::value,
+                "applies to only `forall`, `for` and `parallel`");
+  auto targetOp = dyn_cast<LoopTy>(target);
+  auto sourceOp = dyn_cast<LoopTy>(source);
   if (!targetOp || !sourceOp)
     return false;
 
-  return targetOp.getMixedLowerBound() == sourceOp.getMixedLowerBound() &&
-         targetOp.getMixedUpperBound() == sourceOp.getMixedUpperBound() &&
-         targetOp.getMixedStep() == sourceOp.getMixedStep() &&
-         targetOp.getMapping() == sourceOp.getMapping();
-}
-
-/// Check if `target` scf.for can be fused into `source` scf.for.
-///
-/// This simply checks if both loops have the same bounds and steps. No attempt
-/// is made at checking that the side effects of `target` and `source` are
-/// independent of each other.
-static bool isForWithIdenticalConfiguration(Operation *target,
-                                            Operation *source) {
-  auto targetOp = dyn_cast<scf::ForOp>(target);
-  auto sourceOp = dyn_cast<scf::ForOp>(source);
-  if (!targetOp || !sourceOp)
-    return false;
-
-  return targetOp.getLowerBound() == sourceOp.getLowerBound() &&
-         targetOp.getUpperBound() == sourceOp.getUpperBound() &&
-         targetOp.getStep() == sourceOp.getStep();
+  if constexpr (std::is_same_v<LoopTy, scf::ForallOp>)
+    return targetOp.getMixedLowerBound() == sourceOp.getMixedLowerBound() &&
+           targetOp.getMixedUpperBound() == sourceOp.getMixedUpperBound() &&
+           targetOp.getMixedStep() == sourceOp.getMixedStep() &&
+           targetOp.getMapping() == sourceOp.getMapping();
+  else
+    return targetOp.getLowerBound() == sourceOp.getLowerBound() &&
+           targetOp.getUpperBound() == sourceOp.getUpperBound() &&
+           targetOp.getStep() == sourceOp.getStep();
 }
 
 DiagnosedSilenceableFailure
@@ -502,12 +495,16 @@ transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
 
   Operation *fusedLoop;
   /// TODO: Support fusion for loop-like ops besides scf.for and scf.forall.
-  if (isForWithIdenticalConfiguration(target, source)) {
+  if (isLoopWithIdenticalConfiguration<scf::ForOp>(target, source)) {
     fusedLoop = fuseIndependentSiblingForLoops(
         cast<scf::ForOp>(target), cast<scf::ForOp>(source), rewriter);
-  } else if (isForallWithIdenticalConfiguration(target, source)) {
+  } else if (isLoopWithIdenticalConfiguration<scf::ForallOp>(target, source)) {
     fusedLoop = fuseIndependentSiblingForallLoops(
         cast<scf::ForallOp>(target), cast<scf::ForallOp>(source), rewriter);
+  } else if (isLoopWithIdenticalConfiguration<scf::ParallelOp>(target,
+                                                               source)) {
+    fusedLoop = fuseIndependentSiblingParallelLoops(
+        cast<scf::ParallelOp>(target), cast<scf::ParallelOp>(source), rewriter);
   } else
     return emitSilenceableFailure(target->getLoc())
            << "operations cannot be fused";
