@@ -463,7 +463,7 @@ public:
     auto *SI = new StoreInst(ConstantInt::getTrue(Ctx),
                              PoisonValue::get(PointerType::getUnqual(Ctx)),
                              /*isVolatile*/ false, Align(1));
-    InsertNewInstBefore(SI, InsertAt->getIterator());
+    InsertNewInstWith(SI, InsertAt->getIterator());
   }
 
   /// Combiner aware instruction erasure.
