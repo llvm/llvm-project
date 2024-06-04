@@ -1656,29 +1656,31 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       Diag(getLastFPEvalPragmaLocation(), diag::note_pragma_entered_here);
     }
   } else if (II == Ident__ROUNDING_MODE__) {
+    StringRef RoundingModeIdent;
     switch (getCurrentRoundingMode()) {
     case LangOptions::RoundingMode::TowardZero:
-      OS << "_rtz";
+      RoundingModeIdent = "_rtz";
       break;
     case LangOptions::RoundingMode::NearestTiesToEven:
-      OS << "_rte";
+     RoundingModeIdent = "_rte";
       break;
     case LangOptions::RoundingMode::TowardPositive:
-      OS << "_rtp";
+      RoundingModeIdent = "_rtp";
       break;
     case LangOptions::RoundingMode::TowardNegative:
-      OS << "_rtn";
+      RoundingModeIdent = "_rtn";
       break;
     case LangOptions::RoundingMode::NearestTiesToAway:
-      OS << "_rta";
+      RoundingModeIdent = "_rta";
       break;
     case LangOptions::RoundingMode::Dynamic:
-      OS << "";
       break;
     default:
       llvm_unreachable("unknown rounding mode");
     }
-    Tok.setKind(tok::string_literal);
+    OS << RoundingModeIdent;
+    Tok.setIdentifierInfo(getIdentifierInfo(RoundingModeIdent));
+    Tok.setKind(tok::identifier);
   } else if (II == Ident__COUNTER__) {
     // __COUNTER__ expands to a simple numeric value.
     OS << CounterValue++;
