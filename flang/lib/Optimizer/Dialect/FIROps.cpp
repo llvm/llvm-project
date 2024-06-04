@@ -394,11 +394,17 @@ mlir::LogicalResult fir::ArrayCoorOp::verify() {
     } else {
       auto s = mlir::cast<fir::ShiftType>(shapeTy);
       shapeTyRank = s.getRank();
+      // TODO: it looks like PreCGRewrite and CodeGen can support
+      // fir.shift with plain array reference, so we may consider
+      // removing this check.
       if (!mlir::isa<fir::BaseBoxType>(getMemref().getType()))
         return emitOpError("shift can only be provided with fir.box memref");
     }
     if (arrDim && arrDim != shapeTyRank)
       return emitOpError("rank of dimension mismatched");
+    // TODO: support slicing with changing the number of dimensions,
+    // e.g. when array_coor represents an element access to array(:,1,:)
+    // slice: the shape is 3D and the number of indices is 2 in this case.
     if (shapeTyRank != getIndices().size())
       return emitOpError("number of indices do not match dim rank");
   }
@@ -415,6 +421,377 @@ mlir::LogicalResult fir::ArrayCoorOp::verify() {
     return emitOpError("invalid type parameters");
 
   return mlir::success();
+}
+
+// Pull in fir.embox and fir.rebox into fir.array_coor when possible.
+struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
+  using mlir::OpRewritePattern<fir::ArrayCoorOp>::OpRewritePattern;
+  mlir::LogicalResult
+  matchAndRewrite(fir::ArrayCoorOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Value memref = op.getMemref();
+    if (!mlir::isa<fir::BaseBoxType>(memref.getType()))
+      return mlir::failure();
+
+    mlir::Value boxedMemref, boxedShape, boxedSlice;
+    if (auto emboxOp =
+            mlir::dyn_cast_or_null<fir::EmboxOp>(memref.getDefiningOp())) {
+      boxedMemref = emboxOp.getMemref();
+      boxedShape = emboxOp.getShape();
+      boxedSlice = emboxOp.getSlice();
+      // If any of operands, that are not currently supported for migration
+      // to ArrayCoorOp, is present, don't rewrite.
+      if (!emboxOp.getTypeparams().empty() || emboxOp.getSourceBox() ||
+          emboxOp.getAccessMap())
+        return mlir::failure();
+    } else if (auto reboxOp = mlir::dyn_cast_or_null<fir::ReboxOp>(
+                   memref.getDefiningOp())) {
+      boxedMemref = reboxOp.getBox();
+      boxedShape = reboxOp.getShape();
+      // Avoid pulling in rebox that performs reshaping.
+      // There is no way to represent box reshaping with array_coor.
+      if (boxedShape && !mlir::isa<fir::ShiftType>(boxedShape.getType()))
+        return mlir::failure();
+      boxedSlice = reboxOp.getSlice();
+    } else {
+      return mlir::failure();
+    }
+
+    bool boxedShapeIsShift =
+        boxedShape && mlir::isa<fir::ShiftType>(boxedShape.getType());
+    bool boxedShapeIsShape =
+        boxedShape && mlir::isa<fir::ShapeType>(boxedShape.getType());
+    bool boxedShapeIsShapeShift =
+        boxedShape && mlir::isa<fir::ShapeShiftType>(boxedShape.getType());
+
+    // Slices changing the number of dimensions are not supported
+    // for array_coor yet.
+    unsigned origBoxRank;
+    if (mlir::isa<fir::BaseBoxType>(boxedMemref.getType()))
+      origBoxRank = fir::getBoxRank(boxedMemref.getType());
+    else if (auto arrTy = mlir::dyn_cast<fir::SequenceType>(
+                 fir::unwrapRefType(boxedMemref.getType())))
+      origBoxRank = arrTy.getDimension();
+    else
+      return mlir::failure();
+
+    if (fir::getBoxRank(memref.getType()) != origBoxRank)
+      return mlir::failure();
+
+    // Slices with substring are not supported by array_coor.
+    if (boxedSlice)
+      if (auto sliceOp =
+              mlir::dyn_cast_or_null<fir::SliceOp>(boxedSlice.getDefiningOp()))
+        if (!sliceOp.getSubstr().empty())
+          return mlir::failure();
+
+    // If embox/rebox and array_coor have conflicting shapes or slices,
+    // do nothing.
+    if (op.getShape() && boxedShape && boxedShape != op.getShape())
+      return mlir::failure();
+    if (op.getSlice() && boxedSlice && boxedSlice != op.getSlice())
+      return mlir::failure();
+
+    std::optional<IndicesVectorTy> shiftedIndices;
+    // The embox/rebox and array_coor either have compatible
+    // shape/slice at this point or shape/slice is null
+    // in one of them but not in the other.
+    // The compatibility means they are equal or both null.
+    if (!op.getShape()) {
+      if (boxedShape) {
+        if (op.getSlice()) {
+          if (!boxedSlice) {
+            if (boxedShapeIsShift) {
+              // %0 = fir.rebox %arg(%shift)
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // Both the slice indices and %idx are 1-based, so the rebox
+              // may be pulled in as:
+              // %1 = fir.array_coor %arg [%slice] %idx
+              boxedShape = nullptr;
+            } else if (boxedShapeIsShape) {
+              // %0 = fir.embox %arg(%shape)
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // Pull in as:
+              // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+            } else if (boxedShapeIsShapeShift) {
+              // %0 = fir.embox %arg(%shapeshift)
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // Pull in as:
+              // %shape = fir.shape <extents from the %shapeshift>
+              // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+              boxedShape = getShapeFromShapeShift(boxedShape, rewriter);
+              if (!boxedShape)
+                return mlir::failure();
+            } else {
+              return mlir::failure();
+            }
+          } else {
+            if (boxedShapeIsShift) {
+              // %0 = fir.rebox %arg(%shift) [%slice]
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // This FIR may only be valid if the shape specifies
+              // that all lower bounds are 1s and the slice's start indices
+              // and strides are all 1s.
+              // We could pull in the rebox as:
+              // %1 = fir.array_coor %arg [%slice] %idx
+              // Do not do anything for the time being.
+              return mlir::failure();
+            } else if (boxedShapeIsShape) {
+              // %0 = fir.embox %arg(%shape) [%slice]
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // This FIR may only be valid if the slice's start indices
+              // and strides are all 1s.
+              // We could pull in the embox as:
+              // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+              return mlir::failure();
+            } else if (boxedShapeIsShapeShift) {
+              // %0 = fir.embox %arg(%shapeshift) [%slice]
+              // %1 = fir.array_coor %0 [%slice] %idx
+              // This FIR may only be valid if the shape specifies
+              // that all lower bounds are 1s and the slice's start indices
+              // and strides are all 1s.
+              // We could pull in the embox as:
+              // %shape = fir.shape <extents from the %shapeshift>
+              // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+              return mlir::failure();
+            } else {
+              return mlir::failure();
+            }
+          }
+        } else { // !op.getSlice()
+          if (!boxedSlice) {
+            if (boxedShapeIsShift) {
+              // %0 = fir.rebox %arg(%shift)
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %1 = fir.array_coor %arg %idx
+              boxedShape = nullptr;
+            } else if (boxedShapeIsShape) {
+              // %0 = fir.embox %arg(%shape)
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %1 = fir.array_coor %arg(%shape) %idx
+            } else if (boxedShapeIsShapeShift) {
+              // %0 = fir.embox %arg(%shapeshift)
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %shape = fir.shape <extents from the %shapeshift>
+              // %1 = fir.array_coor %arg(%shape) %idx
+              boxedShape = getShapeFromShapeShift(boxedShape, rewriter);
+              if (!boxedShape)
+                return mlir::failure();
+            } else {
+              return mlir::failure();
+            }
+          } else {
+            if (boxedShapeIsShift) {
+              // %0 = fir.embox %arg(%shift) [%slice]
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %tmp = arith.addi %idx, %shift.origin
+              // %idx_shifted = arith.subi %tmp, 1
+              // %1 = fir.array_coor %arg(%shift) %[slice] %idx_shifted
+              shiftedIndices =
+                  getShiftedIndices(boxedShape, op.getIndices(), rewriter);
+              if (!shiftedIndices)
+                return mlir::failure();
+            } else if (boxedShapeIsShape) {
+              // %0 = fir.embox %arg(%shape) [%slice]
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %1 = fir.array_coor %arg(%shape) %[slice] %idx
+            } else if (boxedShapeIsShapeShift) {
+              // %0 = fir.embox %arg(%shapeshift) [%slice]
+              // %1 = fir.array_coor %0 %idx
+              // Pull in as:
+              // %tmp = arith.addi %idx, %shapeshift.lb
+              // %idx_shifted = arith.subi %tmp, 1
+              // %1 = fir.array_coor %arg(%shapeshift) %[slice] %idx_shifted
+              shiftedIndices =
+                  getShiftedIndices(boxedShape, op.getIndices(), rewriter);
+              if (!shiftedIndices)
+                return mlir::failure();
+            } else {
+              return mlir::failure();
+            }
+          }
+        }
+      } else { // !boxedShape
+        if (op.getSlice()) {
+          if (!boxedSlice) {
+            // %0 = fir.rebox %arg
+            // %1 = fir.array_coor %0 [%slice] %idx
+            // Pull in as:
+            // %1 = fir.array_coor %arg [%slice] %idx
+          } else {
+            // %0 = fir.rebox %arg [%slice]
+            // %1 = fir.array_coor %0 [%slice] %idx
+            // This is a valid FIR iff the slice's lower bounds
+            // and strides are all 1s.
+            // Pull in as:
+            // %1 = fir.array_coor %arg [%slice] %idx
+          }
+        } else { // !op.getSlice()
+          if (!boxedSlice) {
+            // %0 = fir.rebox %arg
+            // %1 = fir.array_coor %0 %idx
+            // Pull in as:
+            // %1 = fir.array_coor %arg %idx
+          } else {
+            // %0 = fir.rebox %arg [%slice]
+            // %1 = fir.array_coor %0 %idx
+            // Pull in as:
+            // %1 = fir.array_coor %arg [%slice] %idx
+          }
+        }
+      }
+    } else { // op.getShape()
+      if (boxedShape) {
+        // Check if pulling in non-default shape is correct.
+        if (op.getSlice()) {
+          if (!boxedSlice) {
+            // %0 = fir.embox %arg(%shape)
+            // %1 = fir.array_coor %0(%shape) [%slice] %idx
+            // Pull in as:
+            // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+          } else {
+            // %0 = fir.embox %arg(%shape) [%slice]
+            // %1 = fir.array_coor %0(%shape) [%slice] %idx
+            // Pull in as:
+            // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+          }
+        } else { // !op.getSlice()
+          if (!boxedSlice) {
+            // %0 = fir.embox %arg(%shape)
+            // %1 = fir.array_coor %0(%shape) %idx
+            // Pull in as:
+            // %1 = fir.array_coor %arg(%shape) %idx
+          } else {
+            // %0 = fir.embox %arg(%shape) [%slice]
+            // %1 = fir.array_coor %0(%shape) %idx
+            // Pull in as:
+            // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+          }
+        }
+      } else { // !boxedShape
+        if (op.getSlice()) {
+          if (!boxedSlice) {
+            // %0 = fir.rebox %arg
+            // %1 = fir.array_coor %0(%shape) [%slice] %idx
+            // Pull in as:
+            // %1 = fir.array_coor %arg(%shape) [%slice] %idx
+          } else {
+            // %0 = fir.rebox %arg [%slice]
+            // %1 = fir.array_coor %0(%shape) [%slice] %idx
+            return mlir::failure();
+          }
+        } else { // !op.getSlice()
+          if (!boxedSlice) {
+            // %0 = fir.rebox %arg
+            // %1 = fir.array_coor %0(%shape) %idx
+            // Pull in as:
+            // %1 = fir.array_coor %arg(%shape) %idx
+          } else {
+            // %0 = fir.rebox %arg [%slice]
+            // %1 = fir.array_coor %0(%shape) %idx
+            // Cannot pull in without adjusting the slice indices.
+            return mlir::failure();
+          }
+        }
+      }
+    }
+
+    // TODO: temporarily avoid producing array_coor with the shape shift
+    // and plain array reference (it seems to be a limitation of
+    // ArrayCoorOp verifier).
+    if (!mlir::isa<fir::BaseBoxType>(boxedMemref.getType())) {
+      if (boxedShape) {
+        if (mlir::isa<fir::ShiftType>(boxedShape.getType()))
+          return mlir::failure();
+      } else if (op.getShape() &&
+                 mlir::isa<fir::ShiftType>(op.getShape().getType())) {
+        return mlir::failure();
+      }
+    }
+
+    rewriter.modifyOpInPlace(op, [&]() {
+      op.getMemrefMutable().assign(boxedMemref);
+      if (boxedShape)
+        op.getShapeMutable().assign(boxedShape);
+      if (boxedSlice)
+        op.getSliceMutable().assign(boxedSlice);
+      if (shiftedIndices)
+        op.getIndicesMutable().assign(*shiftedIndices);
+    });
+    return mlir::success();
+  }
+
+private:
+  using IndicesVectorTy = std::vector<mlir::Value>;
+
+  // If v is a shape_shift operation:
+  //   fir.shape_shift %l1, %e1, %l2, %e2, ...
+  // create:
+  //   fir.shape %e1, %e2, ...
+  static mlir::Value getShapeFromShapeShift(mlir::Value v,
+                                            mlir::PatternRewriter &rewriter) {
+    auto shapeShiftOp =
+        mlir::dyn_cast_or_null<fir::ShapeShiftOp>(v.getDefiningOp());
+    if (!shapeShiftOp)
+      return nullptr;
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(shapeShiftOp);
+    return rewriter.create<fir::ShapeOp>(shapeShiftOp.getLoc(),
+                                         shapeShiftOp.getExtents());
+  }
+
+  static std::optional<IndicesVectorTy>
+  getShiftedIndices(mlir::Value v, mlir::ValueRange indices,
+                    mlir::PatternRewriter &rewriter) {
+    auto insertAdjustments = [&](mlir::Operation *op, mlir::ValueRange lbs) {
+      // Compute the shifted indices using the extended type.
+      // Note that this can probably result in less efficient
+      // MLIR and further LLVM IR due to the extra conversions.
+      mlir::OpBuilder::InsertPoint savedIP = rewriter.saveInsertionPoint();
+      rewriter.setInsertionPoint(op);
+      mlir::Location loc = op->getLoc();
+      mlir::Type idxTy = rewriter.getIndexType();
+      mlir::Value one = rewriter.create<mlir::arith::ConstantOp>(
+          loc, idxTy, rewriter.getIndexAttr(1));
+      rewriter.restoreInsertionPoint(savedIP);
+      auto nsw = mlir::arith::IntegerOverflowFlags::nsw;
+
+      IndicesVectorTy shiftedIndices;
+      for (auto [lb, idx] : llvm::zip(lbs, indices)) {
+        mlir::Value extLb = rewriter.create<fir::ConvertOp>(loc, idxTy, lb);
+        mlir::Value extIdx = rewriter.create<fir::ConvertOp>(loc, idxTy, idx);
+        mlir::Value add =
+            rewriter.create<mlir::arith::AddIOp>(loc, extIdx, extLb, nsw);
+        mlir::Value sub =
+            rewriter.create<mlir::arith::SubIOp>(loc, add, one, nsw);
+        shiftedIndices.push_back(sub);
+      }
+
+      return std::move(shiftedIndices);
+    };
+
+    if (auto shiftOp =
+            mlir::dyn_cast_or_null<fir::ShiftOp>(v.getDefiningOp())) {
+      return insertAdjustments(shiftOp.getOperation(), shiftOp.getOrigins());
+    } else if (auto shapeShiftOp = mlir::dyn_cast_or_null<fir::ShapeShiftOp>(
+                   v.getDefiningOp())) {
+      return insertAdjustments(shapeShiftOp.getOperation(),
+                               shapeShiftOp.getOrigins());
+    }
+
+    return std::nullopt;
+  }
+};
+
+void fir::ArrayCoorOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  // TODO: !fir.shape<1> operand may be removed from array_coor always.
+  patterns.add<SimplifyArrayCoorOp>(context);
 }
 
 //===----------------------------------------------------------------------===//
