@@ -39,7 +39,7 @@ namespace {
 // An AffineExprFlattenerWithLocalVars extends a SimpleAffineExprFlattener by
 // recording constraint information associated with mod's, floordiv's, and
 // ceildiv's in FlatLinearConstraints 'localVarCst'.
-struct AffineExprFlattenerWithLocalVars : public SimpleAffineExprFlattener {
+struct AffineExprFlattener : public SimpleAffineExprFlattener {
   using SimpleAffineExprFlattener::SimpleAffineExprFlattener;
 
   // Constraints connecting newly introduced local variables (for mod's and
@@ -47,7 +47,7 @@ struct AffineExprFlattenerWithLocalVars : public SimpleAffineExprFlattener {
   // inequalities.
   IntegerPolyhedron localVarCst;
 
-  AffineExprFlattenerWithLocalVars(unsigned nDims, unsigned nSymbols)
+  AffineExprFlattener(unsigned nDims, unsigned nSymbols)
       : SimpleAffineExprFlattener(nDims, nSymbols),
         localVarCst(PresburgerSpace::getSetSpace(nDims, nSymbols)) {};
 
@@ -65,18 +65,6 @@ private:
     localVarCst.addLocalFloorDiv(dividend, divisor);
   }
 
-  // Semi-affine expressions are not supported by all flatteners.
-  LogicalResult addLocalIdSemiAffine(ArrayRef<int64_t> lhs,
-                                     ArrayRef<int64_t> rhs,
-                                     AffineExpr localExpr) override = 0;
-};
-
-// An AffineExprFlattener is an AffineExprFlattenerWithLocalVars that explicitly
-// disallows semi-affine expressions. Flattening will fail if a semi-affine
-// expression is encountered.
-struct AffineExprFlattener : public AffineExprFlattenerWithLocalVars {
-  using AffineExprFlattenerWithLocalVars::AffineExprFlattenerWithLocalVars;
-
   LogicalResult addLocalIdSemiAffine(ArrayRef<int64_t> lhs,
                                      ArrayRef<int64_t> rhs,
                                      AffineExpr localExpr) override {
@@ -91,8 +79,8 @@ struct AffineExprFlattener : public AffineExprFlattenerWithLocalVars {
 // the final constraints set will be empty/inconsistent. If the assumptions are
 // never contradicted the final bounds still only will be correct if the
 // assumptions hold.
-struct SemiAffineExprFlattener : public AffineExprFlattenerWithLocalVars {
-  using AffineExprFlattenerWithLocalVars::AffineExprFlattenerWithLocalVars;
+struct SemiAffineExprFlattener : public AffineExprFlattener {
+  using AffineExprFlattener::AffineExprFlattener;
 
   LogicalResult addLocalIdSemiAffine(ArrayRef<int64_t> lhs,
                                      ArrayRef<int64_t> rhs,
@@ -104,25 +92,32 @@ struct SemiAffineExprFlattener : public AffineExprFlattenerWithLocalVars {
     (void)result;
 
     if (localExpr.getKind() == AffineExprKind::Mod) {
-      localVarCst.appendVar(VarKind::Local);
-      // Add a conservative bound for `mod` assuming the rhs is > 0.
+      // Given two numbers a and b, division is defined as:
+      //
+      // a = bq + r
+      // 0 <= r < |b| (where |x| is the absolute value of x)
+      //
+      // q = a floordiv b
+      // r = a mod b
 
-      // Note: If the rhs is later found to be < 0 the following two constraints
-      // will contradict each other (and lead to the final constraints set
-      // becoming empty). If the sign of the rhs is never specified the bound
-      // will assume it is positive.
+      // Add a new local variable (r) to represent the mod.
+      unsigned rPos = localVarCst.appendVar(VarKind::Local);
 
-      // Upper bound: rhs - (lhs % rhs) - 1 >= 0 i.e. lhs % rhs < rhs
-      // This only holds if the rhs is > 0.
-      SmallVector<int64_t, 8> resultUpperBound(rhs);
-      resultUpperBound.insert(resultUpperBound.end() - 1, -1);
-      --resultUpperBound.back();
-      localVarCst.addInequality(resultUpperBound);
+      // r >= 0 (Can ALWAYS be added)
+      localVarCst.addBound(BoundType::LB, rPos, 0);
 
-      // Lower bound: lhs % rhs >= 0 (always holds)
-      SmallVector<int64_t, 8> resultLowerBound(rhs.size());
-      resultLowerBound.insert(resultLowerBound.end() - 1, 1);
-      localVarCst.addInequality(resultLowerBound);
+      // r < b (Can be added if b > 0, which we assume here)
+      ArrayRef<int64_t> b = rhs;
+      SmallVector<int64_t> bSubR(b);
+      bSubR.insert(bSubR.begin() + rPos, -1);
+      // Note: bSubR = b - r
+      // So this adds the bound b - r >= 1 (equivalent to r < b)
+      localVarCst.addBound(BoundType::LB, bSubR, 1);
+
+      // Note: The assumption of b > 0 is based on the affine expression docs,
+      // which state "RHS of mod is always a constant or a symbolic expression
+      // with a positive value." (see AffineExprKind in AffineExpr.h). If this
+      // assumption does not hold constraints (added above) are a contradiction.
 
       return success();
     }
@@ -150,8 +145,7 @@ getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
     return success();
   }
 
-  auto flattenExprs =
-      [&](AffineExprFlattenerWithLocalVars &flattener) -> LogicalResult {
+  auto flattenExprs = [&](AffineExprFlattener &flattener) -> LogicalResult {
     // Use the same flattener to simplify each expression successively. This way
     // local variables / expressions are shared.
     for (auto expr : exprs) {

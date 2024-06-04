@@ -61,8 +61,9 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
   scalableCstr.processWorklist();
 
   // Check the resulting constraints set is valid.
-  if (scalableCstr.cstr.isEmpty())
+  if (scalableCstr.cstr.isEmpty()) {
     return failure();
+  }
 
   // Project out all columns apart from vscale and the starting point
   // (value/dim). This should result in constraints in terms of vscale only.
@@ -75,7 +76,7 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
   scalableCstr.projectOut(projectOutFn);
   // Also project out local variables (these are not tracked by the
   // ValueBoundsConstraintSet).
-  for (unsigned i = 0; i < scalableCstr.cstr.getNumLocalVars(); ++i) {
+  for (unsigned i = 0, e = scalableCstr.cstr.getNumLocalVars(); i < e; ++i) {
     scalableCstr.cstr.projectOut(scalableCstr.cstr.getNumDimAndSymbolVars());
   }
 

@@ -82,11 +82,11 @@ public:
   /// only be added as a closed bound.
   ///
   /// Conservative bounds for semi-affine expressions will be added if
-  /// `AddConservativeSemiAffineBounds` is set to `Yes`. This currently does not
-  /// cover all semi-affine expressions, so `addBound()` still may fail with
-  /// this set. Note: If enabled it is possible for the resulting constraint set
-  /// to become empty if a precondition of a conservative bound is found not to
-  /// hold.
+  /// `AddConservativeSemiAffineBounds` is set to `Yes`. This currently only
+  /// covers semi-affine `mod` expressions, so `addBound()` will still fail if
+  /// it encounters a semi-affine `floordiv`, `ceildiv`, or `mul`. Note: If
+  /// enabled it is possible for the resulting constraint set to become empty if
+  /// a precondition of a conservative bound is found not to hold.
   ///
   /// Note: The dimensions/symbols of this FlatLinearConstraints must match the
   /// dimensions/symbols of the affine map.
@@ -102,11 +102,11 @@ public:
   /// is added.
   ///
   /// Conservative bounds for semi-affine expressions will be added if
-  /// `AddConservativeSemiAffineBounds` is set to `Yes`. This currently does not
-  /// cover all semi-affine expressions, so `addBound()` still may fail with
-  /// this set. If enabled it is possible for the resulting constraint set
-  /// to become empty if a precondition of a conservative bound is found not to
-  /// hold.
+  /// `AddConservativeSemiAffineBounds` is set to `Yes`. This currently only
+  /// covers semi-affine `mod` expressions, so `addBound()` will still fail if
+  /// it encounters a semi-affine `floordiv`, `ceildiv`, or `mul`. Note: If
+  /// enabled it is possible for the resulting constraint set to become empty if
+  /// a precondition of a conservative bound is found not to hold.
   ///
   /// Note: The dimensions/symbols of this FlatLinearConstraints must match the
   /// dimensions/symbols of the affine map. By default the lower bound is closed
