@@ -1760,7 +1760,8 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
           Low = cast<SCEVAddRecExpr>(Low)->getStart();
           // If there is a possibility that the stride is negative then we have
           // to generate extra checks to ensure the stride is positive.
-          if (!SE.isKnownNonNegative(Recur)) {
+          if (!SE.isKnownNonNegative(
+                  SE.applyLoopGuards(Recur, HighAR->getLoop()))) {
             Stride = Recur;
             LLVM_DEBUG(dbgs() << "LAA: ... but need to check stride is "
                                  "positive: "
