@@ -3910,8 +3910,15 @@ std::optional<std::int64_t> fir::getIntIfConstant(mlir::Value value) {
 
 bool fir::isDummyArgument(mlir::Value v) {
   auto blockArg{mlir::dyn_cast<mlir::BlockArgument>(v)};
-  if (!blockArg)
+  if (!blockArg) {
+    auto defOp = v.getDefiningOp();
+    if (defOp) {
+      if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(defOp))
+        if (declareOp.getDummyScope())
+          return true;
+    }
     return false;
+  }
 
   auto *owner{blockArg.getOwner()};
   return owner->isEntryBlock() &&
