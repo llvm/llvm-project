@@ -440,10 +440,10 @@ CallStackId hashCallStack(ArrayRef<FrameId> CS) {
 // To quickly determine the location of the common prefix within RadixArray,
 // Indexes caches the indexes of the previous call stack's frames within
 // RadixArray.
-uint32_t CallStackRadixTreeBuilder::encodeCallStack(
+LinearCallStackId CallStackRadixTreeBuilder::encodeCallStack(
     const llvm::SmallVector<FrameId> *CallStack,
     const llvm::SmallVector<FrameId> *Prev,
-    const llvm::DenseMap<FrameId, uint32_t> &MemProfFrameIndexes) {
+    const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes) {
   // Compute the length of the common root prefix between Prev and CallStack.
   uint32_t CommonLen = 0;
   if (Prev) {
@@ -486,7 +486,7 @@ uint32_t CallStackRadixTreeBuilder::encodeCallStack(
 void CallStackRadixTreeBuilder::build(
     llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
         &&MemProfCallStackData,
-    const llvm::DenseMap<FrameId, uint32_t> &MemProfFrameIndexes) {
+    const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes) {
   // Take the vector portion of MemProfCallStackData.  The vector is exactly
   // what we need to sort.  Also, we no longer need its lookup capability.
   llvm::SmallVector<CSIdPair, 0> CallStacks = MemProfCallStackData.takeVector();
@@ -537,7 +537,8 @@ void CallStackRadixTreeBuilder::build(
   // to appropriate prefixes of Call Stack 3.
   const llvm::SmallVector<FrameId> *Prev = nullptr;
   for (const auto &[CSId, CallStack] : llvm::reverse(CallStacks)) {
-    uint32_t Pos = encodeCallStack(&CallStack, Prev, MemProfFrameIndexes);
+    LinearCallStackId Pos =
+        encodeCallStack(&CallStack, Prev, MemProfFrameIndexes);
     CallStackPos.insert({CSId, Pos});
     Prev = &CallStack;
   }

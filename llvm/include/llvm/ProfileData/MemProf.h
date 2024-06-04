@@ -1006,10 +1006,10 @@ class CallStackRadixTreeBuilder {
 
   // Encode a call stack into RadixArray.  Return the starting index within
   // RadixArray.
-  uint32_t
-  encodeCallStack(const llvm::SmallVector<FrameId> *CallStack,
-                  const llvm::SmallVector<FrameId> *Prev,
-                  const llvm::DenseMap<FrameId, uint32_t> &MemProfFrameIndexes);
+  LinearCallStackId encodeCallStack(
+      const llvm::SmallVector<FrameId> *CallStack,
+      const llvm::SmallVector<FrameId> *Prev,
+      const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes);
 
 public:
   CallStackRadixTreeBuilder() = default;
@@ -1017,7 +1017,7 @@ public:
   // Build a radix tree array.
   void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
                  &&MemProfCallStackData,
-             const llvm::DenseMap<FrameId, uint32_t> &MemProfFrameIndexes);
+             const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes);
 
   const std::vector<uint32_t> &getRadixArray() const { return RadixArray; }
 
