@@ -100,6 +100,8 @@ public:
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
 
+  uint64_t getCFGHashForFunction(StringRef FuncName) const;
+
 private:
   StringRef getAliasName(StringRef FuncName) const {
     auto R = FuncAliasMap.find(FuncName);
@@ -151,6 +153,8 @@ private:
   // Some functions have alias names. We use this map to find the main alias
   // name which appears in ProgramPathAndClusterInfo as a key.
   StringMap<StringRef> FuncAliasMap;
+
+  StringMap<uint64_t> FuncHashMap;
 };
 
 // Creates a BasicBlockSectionsProfileReader pass to parse the basic block
@@ -205,6 +209,8 @@ public:
 
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
+
+  uint64_t getCFGHashForFunction(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.

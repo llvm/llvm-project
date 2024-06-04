@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionHashBuilder.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -229,6 +230,7 @@ INITIALIZE_PASS_BEGIN(
     "Applies path clonings for the -basic-block-sections=list option", false,
     false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineFunctionHashBuilder)
 INITIALIZE_PASS_END(
     BasicBlockPathCloning, "bb-path-cloning",
     "Applies path clonings for the -basic-block-sections=list option", false,
@@ -239,6 +241,14 @@ bool BasicBlockPathCloning::runOnMachineFunction(MachineFunction &MF) {
          "BB Sections list not enabled!");
   if (hasInstrProfHashMismatch(MF))
     return false;
+  // Check for cfg drift.
+  if (auto *MFHB = getAnalysisIfAvailable<MachineFunctionHashBuilder>()) {
+    auto &BBSPRWP = getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>();
+    if (MFHB->getCFGHash(MF.getName()) !=
+        BBSPRWP.getCFGHashForFunction(MF.getName())) {
+      return false;
+    }
+  }
 
   return ApplyCloning(MF,
                       getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
@@ -248,6 +258,7 @@ bool BasicBlockPathCloning::runOnMachineFunction(MachineFunction &MF) {
 void BasicBlockPathCloning::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
+  AU.addUsedIfAvailable<MachineFunctionHashBuilder>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
