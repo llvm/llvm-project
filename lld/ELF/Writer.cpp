@@ -935,19 +935,23 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
       return i;
   }
 
-  // Find the first element that has as close a rank as possible.
-  if (b == e)
-    return e;
-  int proximity = getRankProximity(sec, *b);
-  auto i = b;
-  for (auto j = b; ++j != e;) {
+  // Find the most similar output section as the anchor. Rank Proximity is a
+  // value in the range [-1, 32] where [0, 32] indicates potential anchors (0:
+  // least similar; 32: identical). -1 means not an anchor.
+  //
+  // In the event of proximity ties, we select the first or last section
+  // depending on whether the orphan's rank is smaller.
+  int maxP = 0;
+  auto i = e;
+  for (auto j = b; j != e; ++j) {
     int p = getRankProximity(sec, *j);
-    if (p > proximity) {
-      proximity = p;
+    if (p > maxP ||
+        (p == maxP && cast<OutputDesc>(*j)->osec.sortRank <= sec->sortRank)) {
+      maxP = p;
       i = j;
     }
   }
-  if (!isa<OutputDesc>(*i))
+  if (i == e)
     return e;
 
   auto isOutputSecWithInputSections = [](SectionCommand *cmd) {
@@ -955,7 +959,8 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
     return osd && osd->osec.hasInputSections;
   };
 
-  // If i's rank is larger, the orphan section can be placed before i.
+  // Then, scan backward or forward through the script for a suitable insertion
+  // point. If i's rank is larger, the orphan section can be placed before i.
   //
   // However, don't do this if custom program headers are defined. Otherwise,
   // adding the orphan to a previous segment can change its flags, for example,
@@ -967,7 +972,7 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
     for (auto j = ++i; j != e; ++j) {
       if (!isOutputSecWithInputSections(*j))
         continue;
-      if (getRankProximity(sec, *j) != proximity)
+      if (getRankProximity(sec, *j) != maxP)
         break;
       i = j + 1;
     }

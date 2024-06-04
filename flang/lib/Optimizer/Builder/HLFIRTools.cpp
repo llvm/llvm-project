@@ -115,6 +115,8 @@ genLboundsAndExtentsFromBox(mlir::Location loc, fir::FirOpBuilder &builder,
 static llvm::SmallVector<mlir::Value>
 getNonDefaultLowerBounds(mlir::Location loc, fir::FirOpBuilder &builder,
                          hlfir::Entity entity) {
+  assert(!entity.isAssumedRank() &&
+         "cannot compute assumed rank bounds statically");
   if (!entity.mayHaveNonDefaultLowerBounds())
     return {};
   if (auto varIface = entity.getIfVariableInterface()) {
@@ -889,11 +891,14 @@ static fir::ExtendedValue translateVariableToExtendedValue(
                                 fir::MutableProperties{});
 
   if (mlir::isa<fir::BaseBoxType>(base.getType())) {
-    bool contiguous = variable.isSimplyContiguous() || contiguousHint;
+    const bool contiguous = variable.isSimplyContiguous() || contiguousHint;
+    const bool isAssumedRank = variable.isAssumedRank();
     if (!contiguous || variable.isPolymorphic() ||
-        variable.isDerivedWithLengthParameters() || variable.isOptional()) {
-      llvm::SmallVector<mlir::Value> nonDefaultLbounds =
-          getNonDefaultLowerBounds(loc, builder, variable);
+        variable.isDerivedWithLengthParameters() || variable.isOptional() ||
+        isAssumedRank) {
+      llvm::SmallVector<mlir::Value> nonDefaultLbounds;
+      if (!isAssumedRank)
+        nonDefaultLbounds = getNonDefaultLowerBounds(loc, builder, variable);
       return fir::BoxValue(base, nonDefaultLbounds,
                            getExplicitTypeParams(variable));
     }
