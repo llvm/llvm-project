@@ -718,7 +718,7 @@ public:
           {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
           {"clang-modulemap-file", MD.ClangModuleMapFile},
           {"command-line", MD.getBuildArguments()},
-          {"link-libraries", toJSONSorted(MD.LinkLibraries)}};
+          {"link-libraries", toJSONSorted(MD.LinkLibraries)},
       };
       if (MD.ModuleCacheKey)
         O.try_emplace("cache-key", MD.ModuleCacheKey);
