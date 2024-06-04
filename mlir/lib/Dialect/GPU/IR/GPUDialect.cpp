@@ -2263,7 +2263,7 @@ CompilationTarget TargetOptions::getCompilationTarget() const {
 }
 
 CompilationTarget TargetOptions::getDefaultCompilationTarget() {
-  return CompilationTarget::Fatbin;
+  return CompilationTarget::Binary;
 }
 
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
