@@ -2417,6 +2417,8 @@ generateByrefDisposeHelper(CodeGenFunction &CGF,
 
       Address initializedAddr = CGF.Builder.CreateStructGEP(
           addr, byrefInfo.IndexOfInitializedFlag, "byref.initialized");
+      // This is safe to load non-atomically because the store of true (if any)
+      // happens while the creating function still holds a reference.
       llvm::Value *initialized =
           CGF.Builder.CreateFlagLoad(initializedAddr.emitRawPointer(CGF));
 
