@@ -293,9 +293,16 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   if (!result.hasOneUse())
     return false;
 
+  Operation *user = *result.getUsers().begin();
+
+  // Do not inline expressions used by subscript operations, since the
+  // way the subscript operation translation is implemented requires that
+  // variables be materialized.
+  if (isa<emitc::SubscriptOp>(user))
+    return false;
+
   // Do not inline expressions used by other expressions, as any desired
   // expression folding was taken care of by transformations.
-  Operation *user = *result.getUsers().begin();
   return !user->getParentOfType<ExpressionOp>();
 }
 
@@ -1309,7 +1316,11 @@ LogicalResult CppEmitter::emitOperand(Value value) {
     FailureOr<int> precedence = getOperatorPrecedence(def);
     if (failed(precedence))
       return failure();
-    bool encloseInParenthesis = precedence.value() < getExpressionPrecedence();
+
+    // Sub-expressions with equal or lower precedence need to be parenthesized,
+    // as they might be evaluated in the wrong order depending on the shape of
+    // the expression tree.
+    bool encloseInParenthesis = precedence.value() <= getExpressionPrecedence();
     if (encloseInParenthesis) {
       os << "(";
       pushExpressionPrecedence(lowestPrecedence());

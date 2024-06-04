@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -385,8 +386,9 @@ struct TemporalProfTraceTy {
   /// Use a set of temporal profile traces to create a list of balanced
   /// partitioning function nodes used by BalancedPartitioning to generate a
   /// function order that reduces page faults during startup
-  static std::vector<BPFunctionNode>
-  createBPFunctionNodes(ArrayRef<TemporalProfTraceTy> Traces);
+  static void createBPFunctionNodes(ArrayRef<TemporalProfTraceTy> Traces,
+                                    std::vector<BPFunctionNode> &Nodes,
+                                    bool RemoveOutlierUNs = true);
 };
 
 inline std::error_code make_error_code(instrprof_error E) {
@@ -471,6 +473,12 @@ private:
   // A map from MD5 keys to function define. We only populate this map
   // when build the Symtab from a Module.
   std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
+  // A map from MD5 to the global variable. This map is only populated when
+  // building the symtab from a module. Use separate container instances for
+  // `MD5FuncMap` and `MD5VTableMap`.
+  // TODO: Unify the container type and the lambda function 'mapName' inside
+  // add{Func,VTable}WithName.
+  DenseMap<uint64_t, GlobalVariable *> MD5VTableMap;
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
   AddrHashMap AddrToMD5Map;
@@ -489,11 +497,17 @@ private:
 
   // Add the function into the symbol table, by creating the following
   // map entries:
-  // name-set = {PGOFuncName} + {getCanonicalName(PGOFuncName)} if the canonical
-  // name is different from pgo name
+  // name-set = {PGOFuncName} union {getCanonicalName(PGOFuncName)}
   // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
   // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
   Error addFuncWithName(Function &F, StringRef PGOFuncName);
+
+  // Add the vtable into the symbol table, by creating the following
+  // map entries:
+  // name-set = {PGOName} union {getCanonicalName(PGOName)}
+  // - In MD5NameMap:  <MD5Hash(name), name> for name in name-set
+  // - In MD5VTableMap: <MD5Hash(name), name> for name in name-set
+  Error addVTableWithName(GlobalVariable &V, StringRef PGOVTableName);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c
   // finalizeSymtab needs to be called before looking up function names.
@@ -556,6 +570,7 @@ public:
   Error create(const FuncNameIterRange &FuncIterRange,
                const VTableNameIterRange &VTableIterRange);
 
+  // Map the MD5 of the symbol name to the name.
   Error addSymbolName(StringRef SymbolName) {
     if (SymbolName.empty())
       return make_error<InstrProfError>(instrprof_error::malformed,
@@ -630,6 +645,10 @@ public:
 
   /// Return function from the name's md5 hash. Return nullptr if not found.
   inline Function *getFunction(uint64_t FuncMD5Hash);
+
+  /// Return the global variable corresponding to md5 hash. Return nullptr if
+  /// not found.
+  inline GlobalVariable *getGlobalVariable(uint64_t MD5Hash);
 
   /// Return the name section data.
   inline StringRef getNameData() const { return Data; }
@@ -707,6 +726,12 @@ Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
                                      uint64_t RHS) { return LHS.first < RHS; });
   if (Result != MD5FuncMap.end() && Result->first == FuncMD5Hash)
     return Result->second;
+  return nullptr;
+}
+
+GlobalVariable *InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) {
+  if (auto Iter = MD5VTableMap.find(MD5Hash); Iter != MD5VTableMap.end())
+    return Iter->second;
   return nullptr;
 }
 
@@ -1148,26 +1173,17 @@ enum ProfVersion {
   Version11 = 11,
   // VTable profiling,
   Version12 = 12,
-  // Add additional header fields to allow partial forward compatibility.
-  // - Allow reader to locate the end byte of the profile header and each
-  //   payload section.
-  //   - Prior to this version, header records the start byte offset of each
-  //   payload; for some payloads, reader knows the end byte offset as it reads
-  //   (or decodes) the payload (i.e., without explicit header fields).
-  //   - With this change, profile header records the byte size of the profile
-  //   header, and the end byte offset of a payload if explicit recording is
-  //   necessary for reader to locate the end of this payload.
-  //
-  // - Profile reader (in compilers and tools) can detect whether it can parse
-  // known payloads with the correct semantic. It makes use of the compatible
-  // profiles and rejects the incompatbile ones (in this case users should
-  // update compilers and/or command line tools to parse profiles with newer
-  // versions)
-  //  - Indexed profile reader compares the latest version it can parse with
-  //    the  minimum version required by (and recorded in) the profile; if the
-  //    reader  can reasonably interpret the payload, it proceeds to parse known
-  //    sections and skip new unknown sections; otherwise it stops reading and
-  //    throws error.
+  // Additional fields for profile reader to have limited forward compatibility.
+  // 1. Records the byte size of the profile header. This allows profile reader
+  // to skip unknown new header fields (introduced in newer versions of
+  // profiles) and correctly locate the start of payload sections.
+  // 2. Records the minimum compatible version required from profile reader to
+  // parse the profiles in the correct semantic. Indexed profile reader compares
+  // the latest version it can parse with the minimum version required
+  // by the profile to decide if it can reasonably interpret the payload. If
+  // yes, it proceeds to parse known sections and skip new unknown sections;
+  // otherwise it stops reading and throws error. In the latter case, users
+  // should update the compilers or tools binary to support newer versions.
   Version13 = 13,
   // The current version is 13.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
@@ -1182,64 +1198,51 @@ inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 // data file in indexed-format. Please update llvm/docs/InstrProfileFormat.rst
 // as appropriate when updating the indexed profile format.
 struct Header {
-  uint64_t Magic;
+  uint64_t Magic = IndexedInstrProf::Magic;
   // The lower 32 bits specify the version of the indexed profile.
   // The most significant 32 bits are reserved to specify the variant types of
   // the profile.
-  uint64_t Version;
-  uint64_t Unused; // Becomes unused since version 4
-  uint64_t HashType;
+  uint64_t Version = 0;
+  uint64_t Unused = 0; // Becomes unused since version 4
+  uint64_t HashType = static_cast<uint64_t>(IndexedInstrProf::HashType);
   // This field records the offset of this hash table's metadata (i.e., the
   // number of buckets and entries), which follows right after the payload of
   // the entire hash table.
-  uint64_t HashOffset;
-  uint64_t MemProfOffset;
-  uint64_t BinaryIdOffset;
-  uint64_t TemporalProfTracesOffset;
-  uint64_t VTableNamesOffset;
-
+  uint64_t HashOffset = 0;
+  uint64_t MemProfOffset = 0;
+  uint64_t BinaryIdOffset = 0;
+  uint64_t TemporalProfTracesOffset = 0;
+  uint64_t VTableNamesOffset = 0;
   // Records the on-disk byte size of the header.
-  uint64_t OnDiskHeaderByteSize = 0;
-
-  // Indexed profile writer will records the minimum profile reader version
-  // required to parse this profile. If a profile reader's supported version is
-  // smaller than what's recorded in this field, the profile reader (in
-  // compilers or command line tools) should be updated.
+  uint64_t HeaderByteSize = 0;
+  // Indexed profile writer should record the minimum profile reader version
+  // required to parse this profile. If a profile reader's newest known version
+  // is smaller than what's recorded in this field, the profile reader will stop
+  // parsing profiles and throw error.
   //
-  // Example scenario:
-  // The semantics of an existing section change starting from version V + 1
-  // (with readers supporting both versions to preserve backward compatibility),
-  // indexed profile writer should record `MinimumProfileReaderVersion` as V
-  // + 1. Previously-built profile readers won't know how to interpret the
-  // existing section correctly; these readers will find the
-  // `MinimumProfileReaderVersion` recorded in the profile is higher than the
-  // readers' supported version (a constant baked in the library), and stop the
-  // read process.
-  uint64_t MinimumProfileReaderVersion = 0;
-
-  // The byte size of temporal profiles.
-  uint64_t TemporalProfSectionSize = 0;
-
-  // Records the on-disk byte size of the profiles (header and payloads).
-  uint64_t OnDiskProfileByteSize = 0;
+  // Here is an example scenario; the semantics of an existing section change
+  // starting from version V + 1, indexed profile writer should record
+  // `MinCompatibleReaderVersion` as V + 1. Previously-built profile readers
+  // won't know how to interpret the existing section correctly; these readers
+  // will find the `MinCompatibleReaderVersion` recorded in the profile is
+  // higher than the readers' supported version (a constant baked in the
+  // executable).
+  uint64_t MinCompatibleReaderVersion = 0;
 
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.
 
-  // Reads a header struct from the buffer.
+  // Reads a header struct from the buffer. Header fields are in machine native
+  // endianness.
   static Expected<Header> readFromBuffer(const unsigned char *Buffer);
 
-  // Returns the on-disk byte size of the header for all valid fields based on
-  // the version.
+  // Returns the on-disk byte size of the header.
   size_t size() const;
 
-  // Returns the end byte offset of all known fields by the reader.
-  Expected<size_t> knownFieldsEndByteOffset() const;
-
-  // Returns the format version in little endian. The header retains the
-  // version in native endian of the compiler runtime.
-  uint64_t formatVersion() const;
+  // Return the indexed profile version, i.e., the least significant 32 bits
+  // in Header.Version.
+  uint64_t getIndexedProfileVersion() const;
 };
 
 // Profile summary data recorded in the profile data file in indexed

@@ -11,7 +11,7 @@
 # RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
 # RUN:     --target=thumbv8m.main-none-eabihf --sysroot= \
 # RUN:   | FileCheck -DSYSROOT=%T/baremetal_multilib %s
-# CHECK:      "-cc1" "-triple" "thumbv8m.main-none-unknown-eabihf"
+# CHECK:      "-cc1" "-triple" "thumbv8m.main-unknown-none-eabihf"
 # CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/include/c++/v1"
 # CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/include"
 # CHECK-SAME: "-x" "c++" "{{.*}}baremetal-multilib.yaml"
@@ -24,11 +24,11 @@
 # RUN:     --target=thumbv7em-none-eabi -mfpu=fpv4-sp-d16 --sysroot= \
 # RUN:   | FileCheck --check-prefix=CHECK-NO-MATCH %s
 # CHECK-NO-MATCH: warning: no multilib found matching flags:
-# CHECK-NO-MATCH-SAME: --target=thumbv7em-none-unknown-eabi
+# CHECK-NO-MATCH-SAME: --target=thumbv7em-unknown-none-eabi
 # CHECK-NO-MATCH: note: available multilibs are:
-# CHECK-NO-MATCH: --target=thumbv6m-none-unknown-eabi -mfpu=none
-# CHECK-NO-MATCH: --target=thumbv7m-none-unknown-eabi -mfpu=none
-# CHECK-NO-MATCH: --target=thumbv7em-none-unknown-eabi -mfpu=none
+# CHECK-NO-MATCH: --target=thumbv6m-unknown-none-eabi -mfpu=none
+# CHECK-NO-MATCH: --target=thumbv7m-unknown-none-eabi -mfpu=none
+# CHECK-NO-MATCH: --target=thumbv7em-unknown-none-eabi -mfpu=none
 
 # RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -print-multi-directory 2>&1 \
 # RUN:     --target=thumbv8m.main-none-eabihf --sysroot= \
@@ -38,16 +38,16 @@
 # RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -print-multi-lib 2>&1 \
 # RUN:     --target=arm-none-eabi --sysroot= \
 # RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-LIB %s
-# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v6-m/nofp;@-target=thumbv6m-none-unknown-eabi@mfpu=none
-# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7-m/nofp;@-target=thumbv7m-none-unknown-eabi@mfpu=none
-# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/nofp;@-target=thumbv7em-none-unknown-eabi@mfpu=none
-# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8-m.main/nofp;@-target=thumbv8m.main-none-unknown-eabi@mfpu=none
-# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/nofp/nomve;@-target=thumbv8.1m.main-none-unknown-eabi@mfpu=none
-# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/fpv4_sp_d16;@-target=thumbv7em-none-unknown-eabihf@mfpu=fpv4-sp-d16
-# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/fpv5_d16;@-target=thumbv7em-none-unknown-eabihf@mfpu=fpv5-d16
-# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8-m.main/fp;@-target=thumbv8m.main-none-unknown-eabihf@mfpu=fpv5-d16
-# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/fp;@-target=thumbv8.1m.main-none-unknown-eabihf@mfpu=fp-armv8-fullfp16-sp-d16
-# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/nofp/mve;@-target=thumbv8.1m.main-none-unknown-eabihf@march=thumbv8.1m.main+mve@mfpu=none
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v6-m/nofp;@-target=thumbv6m-unknown-none-eabi@mfpu=none
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7-m/nofp;@-target=thumbv7m-unknown-none-eabi@mfpu=none
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/nofp;@-target=thumbv7em-unknown-none-eabi@mfpu=none
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8-m.main/nofp;@-target=thumbv8m.main-unknown-none-eabi@mfpu=none
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/nofp/nomve;@-target=thumbv8.1m.main-unknown-none-eabi@mfpu=none
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/fpv4_sp_d16;@-target=thumbv7em-unknown-none-eabihf@mfpu=fpv4-sp-d16
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/fpv5_d16;@-target=thumbv7em-unknown-none-eabihf@mfpu=fpv5-d16
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8-m.main/fp;@-target=thumbv8m.main-unknown-none-eabihf@mfpu=fpv5-d16
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/fp;@-target=thumbv8.1m.main-unknown-none-eabihf@mfpu=fp-armv8-fullfp16-sp-d16
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/nofp/mve;@-target=thumbv8.1m.main-unknown-none-eabihf@march=thumbv8.1m.main+mve@mfpu=none
 
 # RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -x assembler -mexecute-only \
 # RUN:     --target=arm-none-eabi --sysroot= %s -c -### 2>&1 \
@@ -86,37 +86,37 @@ MultilibVersion: 1.0
 
 Variants:
 - Dir: arm-none-eabi/arm/v4t
-  Flags: [--target=armv4t-none-unknown-eabi]
+  Flags: [--target=armv4t-unknown-none-eabi]
 
 - Dir: arm-none-eabi/thumb/v6-m/nofp
-  Flags: [--target=thumbv6m-none-unknown-eabi, -mfpu=none]
+  Flags: [--target=thumbv6m-unknown-none-eabi, -mfpu=none]
 
 - Dir: arm-none-eabi/thumb/v7-m/nofp
-  Flags: [--target=thumbv7m-none-unknown-eabi, -mfpu=none]
+  Flags: [--target=thumbv7m-unknown-none-eabi, -mfpu=none]
 
 - Dir: arm-none-eabi/thumb/v7e-m/nofp
-  Flags: [--target=thumbv7em-none-unknown-eabi, -mfpu=none]
+  Flags: [--target=thumbv7em-unknown-none-eabi, -mfpu=none]
 
 - Dir: arm-none-eabi/thumb/v8-m.main/nofp
-  Flags: [--target=thumbv8m.main-none-unknown-eabi, -mfpu=none]
+  Flags: [--target=thumbv8m.main-unknown-none-eabi, -mfpu=none]
 
 - Dir: arm-none-eabi/thumb/v8.1-m.main/nofp/nomve
-  Flags: [--target=thumbv8.1m.main-none-unknown-eabi, -mfpu=none]
+  Flags: [--target=thumbv8.1m.main-unknown-none-eabi, -mfpu=none]
 
 - Dir: arm-none-eabi/thumb/v7e-m/fpv4_sp_d16
-  Flags: [--target=thumbv7em-none-unknown-eabihf, -mfpu=fpv4-sp-d16]
+  Flags: [--target=thumbv7em-unknown-none-eabihf, -mfpu=fpv4-sp-d16]
 
 - Dir: arm-none-eabi/thumb/v7e-m/fpv5_d16
-  Flags: [--target=thumbv7em-none-unknown-eabihf, -mfpu=fpv5-d16]
+  Flags: [--target=thumbv7em-unknown-none-eabihf, -mfpu=fpv5-d16]
 
 - Dir: arm-none-eabi/thumb/v8-m.main/fp
-  Flags: [--target=thumbv8m.main-none-unknown-eabihf, -mfpu=fpv5-d16]
+  Flags: [--target=thumbv8m.main-unknown-none-eabihf, -mfpu=fpv5-d16]
 
 - Dir: arm-none-eabi/thumb/v8.1-m.main/fp
-  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf, -mfpu=fp-armv8-fullfp16-sp-d16]
+  Flags: [--target=thumbv8.1m.main-unknown-none-eabihf, -mfpu=fp-armv8-fullfp16-sp-d16]
 
 - Dir: arm-none-eabi/thumb/v8.1-m.main/nofp/mve
-  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf, -march=thumbv8.1m.main+mve, -mfpu=none]
+  Flags: [--target=thumbv8.1m.main-unknown-none-eabihf, -march=thumbv8.1m.main+mve, -mfpu=none]
 
 
 # The second section of the file is a map from auto-detected flags
@@ -126,17 +126,17 @@ Variants:
 # All flags in the "Flags" list will be added if an argument matches.
 Mappings:
 # For v8m.base (and potential later v8m baseline versions) use v6m
-- Match: --target=thumbv8(\.[0-9]+)?m\.base-none-unknown-eabi
-  Flags: [--target=thumbv6m-none-unknown-eabi]
+- Match: --target=thumbv8(\.[0-9]+)?m\.base-unknown-none-eabi
+  Flags: [--target=thumbv6m-unknown-none-eabi]
 # Match versions after v8.1m.main. We assume that v8.2m (if/when it exists) will
 # be backwards compatible with v8.1m.
 # The alternative is to not recognise later versions, and require that
 # this multilib spec is updated before it can be used with newer
 # architecture versions.
-- Match: --target=thumbv8\.[1-9]m\.main-none-unknown-eabi
-  Flags: [--target=thumbv8.1m.main-none-unknown-eabi]
-- Match: --target=thumbv8\.[1-9]m\.main-none-unknown-eabihf
-  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf]
+- Match: --target=thumbv8\.[1-9]m\.main-unknown-none-eabi
+  Flags: [--target=thumbv8.1m.main-unknown-none-eabi]
+- Match: --target=thumbv8\.[1-9]m\.main-unknown-none-eabihf
+  Flags: [--target=thumbv8.1m.main-unknown-none-eabihf]
 
 - Match: -march=thumbv8\.[1-9]m\.main.*\+mve($|\+).*
   Flags: [-march=thumbv8.1m.main+mve]

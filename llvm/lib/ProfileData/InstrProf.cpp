@@ -482,8 +482,40 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
       return E;
   }
 
+  SmallVector<MDNode *, 2> Types;
+  for (GlobalVariable &G : M.globals()) {
+    if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
+      continue;
+    if (Error E = addVTableWithName(
+            G, getIRPGOObjectName(G, InLTO, /* PGONameMetadata */ nullptr)))
+      return E;
+  }
+
   Sorted = false;
   finalizeSymtab();
+  return Error::success();
+}
+
+Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
+                                         StringRef VTablePGOName) {
+  auto mapName = [&](StringRef Name) -> Error {
+    if (Error E = addSymbolName(Name))
+      return E;
+
+    bool Inserted = true;
+    std::tie(std::ignore, Inserted) =
+        MD5VTableMap.try_emplace(GlobalValue::getGUID(Name), &VTable);
+    if (!Inserted)
+      LLVM_DEBUG(dbgs() << "GUID conflict within one module");
+    return Error::success();
+  };
+  if (Error E = mapName(VTablePGOName))
+    return E;
+
+  StringRef CanonicalName = getCanonicalName(VTablePGOName);
+  if (CanonicalName != VTablePGOName)
+    return mapName(CanonicalName);
+
   return Error::success();
 }
 
@@ -976,46 +1008,60 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
     ValueSites.emplace_back(VData, VData + N);
 }
 
-std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
-    ArrayRef<TemporalProfTraceTy> Traces) {
+void TemporalProfTraceTy::createBPFunctionNodes(
+    ArrayRef<TemporalProfTraceTy> Traces, std::vector<BPFunctionNode> &Nodes,
+    bool RemoveOutlierUNs) {
   using IDT = BPFunctionNode::IDT;
   using UtilityNodeT = BPFunctionNode::UtilityNodeT;
-  // Collect all function IDs ordered by their smallest timestamp. This will be
-  // used as the initial FunctionNode order.
-  SetVector<IDT> FunctionIds;
-  size_t LargestTraceSize = 0;
-  for (auto &Trace : Traces)
-    LargestTraceSize =
-        std::max(LargestTraceSize, Trace.FunctionNameRefs.size());
-  for (size_t Timestamp = 0; Timestamp < LargestTraceSize; Timestamp++)
-    for (auto &Trace : Traces)
-      if (Timestamp < Trace.FunctionNameRefs.size())
-        FunctionIds.insert(Trace.FunctionNameRefs[Timestamp]);
-
-  const int N = Log2_64(LargestTraceSize) + 1;
-
+  UtilityNodeT MaxUN = 0;
+  DenseMap<IDT, size_t> IdToFirstTimestamp;
+  DenseMap<IDT, UtilityNodeT> IdToFirstUN;
+  DenseMap<IDT, SmallVector<UtilityNodeT>> IdToUNs;
   // TODO: We need to use the Trace.Weight field to give more weight to more
   // important utilities
-  DenseMap<IDT, SmallVector<UtilityNodeT, 4>> FuncGroups;
-  for (size_t TraceIdx = 0; TraceIdx < Traces.size(); TraceIdx++) {
-    auto &Trace = Traces[TraceIdx].FunctionNameRefs;
-    for (size_t Timestamp = 0; Timestamp < Trace.size(); Timestamp++) {
-      for (int I = Log2_64(Timestamp + 1); I < N; I++) {
-        auto FunctionId = Trace[Timestamp];
-        UtilityNodeT GroupId = TraceIdx * N + I;
-        FuncGroups[FunctionId].push_back(GroupId);
+  for (auto &Trace : Traces) {
+    size_t CutoffTimestamp = 1;
+    for (size_t Timestamp = 0; Timestamp < Trace.FunctionNameRefs.size();
+         Timestamp++) {
+      IDT Id = Trace.FunctionNameRefs[Timestamp];
+      auto [It, WasInserted] = IdToFirstTimestamp.try_emplace(Id, Timestamp);
+      if (!WasInserted)
+        It->getSecond() = std::min<size_t>(It->getSecond(), Timestamp);
+      if (Timestamp >= CutoffTimestamp) {
+        ++MaxUN;
+        CutoffTimestamp = 2 * Timestamp;
       }
+      IdToFirstUN.try_emplace(Id, MaxUN);
     }
+    for (auto &[Id, FirstUN] : IdToFirstUN)
+      for (auto UN = FirstUN; UN <= MaxUN; ++UN)
+        IdToUNs[Id].push_back(UN);
+    ++MaxUN;
+    IdToFirstUN.clear();
   }
 
-  std::vector<BPFunctionNode> Nodes;
-  for (auto Id : FunctionIds) {
-    auto &UNs = FuncGroups[Id];
-    llvm::sort(UNs);
-    UNs.erase(std::unique(UNs.begin(), UNs.end()), UNs.end());
-    Nodes.emplace_back(Id, UNs);
+  if (RemoveOutlierUNs) {
+    DenseMap<UtilityNodeT, unsigned> UNFrequency;
+    for (auto &[Id, UNs] : IdToUNs)
+      for (auto &UN : UNs)
+        ++UNFrequency[UN];
+    // Filter out utility nodes that are too infrequent or too prevalent to make
+    // BalancedPartitioning more effective.
+    for (auto &[Id, UNs] : IdToUNs)
+      llvm::erase_if(UNs, [&](auto &UN) {
+        return UNFrequency[UN] <= 1 || 2 * UNFrequency[UN] > IdToUNs.size();
+      });
   }
-  return Nodes;
+
+  for (auto &[Id, UNs] : IdToUNs)
+    Nodes.emplace_back(Id, UNs);
+
+  // Since BalancedPartitioning is sensitive to the initial order, we explicitly
+  // order nodes by their earliest timestamp.
+  llvm::sort(Nodes, [&](auto &L, auto &R) {
+    return std::make_pair(IdToFirstTimestamp[L.Id], L.Id) <
+           std::make_pair(IdToFirstTimestamp[R.Id], R.Id);
+  });
 }
 
 #define INSTR_PROF_COMMON_API_IMPL
@@ -1289,7 +1335,7 @@ MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
     return nullptr;
 
   MDString *Tag = cast<MDString>(MD->getOperand(0));
-  if (!Tag || !Tag->getString().equals("VP"))
+  if (!Tag || Tag->getString() != "VP")
     return nullptr;
 
   // Now check kind:
@@ -1587,186 +1633,92 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
 }
 
 namespace IndexedInstrProf {
-// A C++14 compatible version of the offsetof macro.
-template <typename T1, typename T2>
-inline size_t constexpr offsetOf(T1 T2::*Member) {
-  constexpr T2 Object{};
-  return size_t(&(Object.*Member)) - size_t(&Object);
-}
-
-static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
-  return *reinterpret_cast<const uint64_t *>(Buffer + Offset);
-}
-
-uint64_t Header::formatVersion() const {
-  using namespace support;
-  return endian::byte_swap<uint64_t, llvm::endianness::little>(Version);
-}
-
-constexpr size_t kOnDiskSizeOffset = 9 * sizeof(uint64_t);
-
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   using namespace support;
   static_assert(std::is_standard_layout_v<Header>,
-                "Keep the header a standard-layout class for simplicity");
-
+                "Use standard layout for Header for simplicity");
   Header H;
-  H.Magic = read(Buffer, 0);
+
+  H.Magic = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   // Check the magic number.
-  uint64_t Magic =
-      endian::byte_swap<uint64_t, llvm::endianness::little>(H.Magic);
-  if (Magic != IndexedInstrProf::Magic)
+  if (H.Magic != IndexedInstrProf::Magic)
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
   // Read the version.
-  H.Version = read(Buffer, sizeof(uint64_t));
-  uint64_t ProfileRecordedProfileVersion = GET_VERSION(H.formatVersion());
+  H.Version = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
 
-  if (ProfileRecordedProfileVersion >= ProfVersion::Version13) {
-    // Starting from version 13, profiles should records header's on-disk byte
-    // size and the minimum profile reader version required.
-    H.OnDiskHeaderByteSize =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(
-            read(Buffer, kOnDiskSizeOffset));
-    H.MinimumProfileReaderVersion =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(
-            read(Buffer, kOnDiskSizeOffset + sizeof(uint64_t)));
-    H.TemporalProfSectionSize =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(
-            read(Buffer, kOnDiskSizeOffset + 2 * sizeof(uint64_t)));
-    H.OnDiskProfileByteSize =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(
-            read(Buffer, kOnDiskSizeOffset + 3 * sizeof(uint64_t)));
-  } else {
-    // Prior to version 13, the largest version supported by the reader
-    // (ProfVersion::CurrentVersion) must be greater than or equal to the
-    // profile-recorded version.
-    H.MinimumProfileReaderVersion = ProfileRecordedProfileVersion;
+  // Starting from version 13, profile records the minimum compatible reader
+  // version at a fixed byte offset in the header.
+  if (H.getIndexedProfileVersion() >= IndexedInstrProf::ProfVersion::Version13)
+    H.MinCompatibleReaderVersion =
+        endian::read<uint64_t, llvm::endianness::little>(Buffer + 64);
+  else {
+    // Use profile recorded version. This is consistent with reader/profile
+    // compatibility detection prior to version 13.
+    H.MinCompatibleReaderVersion = H.getIndexedProfileVersion();
   }
 
   // Stop reading and return error if the largest version supported by the
   // reader falls behind the minimum reader version required by the profiles.
   if (IndexedInstrProf::ProfVersion::CurrentVersion <
-      H.MinimumProfileReaderVersion)
+      H.MinCompatibleReaderVersion)
     return make_error<InstrProfError>(
         instrprof_error::unsupported_incompatible_future_version,
-        formatv("Profile reader should support {0} to parse profile of version "
-                "{1} ",
-                H.MinimumProfileReaderVersion, ProfileRecordedProfileVersion));
+        formatv("Profile reader should support version {0} or later versions "
+                "to parse profile of version {1}. Please update the tools or "
+                "rebuild it.",
+                H.MinCompatibleReaderVersion, H.getIndexedProfileVersion()));
 
-  // `FieldByteOffset` represents the end byte of the last known header field.
-  auto FieldByteOffsetOrErr = H.knownFieldsEndByteOffset();
-  if (Error E = FieldByteOffsetOrErr.takeError())
-    return E;
-
-  auto FieldByteOffset = FieldByteOffsetOrErr.get();
-
-  assert(FieldByteOffset != 0 &&
-         "FieldByteOffset specifies the byte offset of the last known field in "
-         "header and should not be zero");
-
-  // If the version from profile is higher than the currently supported version,
-  // read the known defined header fields and discard the rest.
-  if (ProfileRecordedProfileVersion > ProfVersion::CurrentVersion)
-    ProfileRecordedProfileVersion = ProfVersion::CurrentVersion;
-
-  // Initialize header fields based on the currently supported version.
-  switch (ProfileRecordedProfileVersion) {
-    // When a new field is added in the header add a case statement here to
-    // populate it.
-    static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
-        "Please update the reading code below if a new field has been added, "
-        "if not add a case statement to fall through to the latest version.");
-  case 13ull:
-    // Size field is already read.
-    FieldByteOffset -= sizeof(Header::OnDiskHeaderByteSize);
-    FieldByteOffset -= sizeof(Header::TemporalProfSectionSize);
-    FieldByteOffset -= sizeof(Header::MinimumProfileReaderVersion);
-    FieldByteOffset -= sizeof(Header::OnDiskProfileByteSize);
-    [[fallthrough]];
-  case 12ull:
-    FieldByteOffset -= sizeof(Header::VTableNamesOffset);
-    H.VTableNamesOffset = read(Buffer, FieldByteOffset);
-    [[fallthrough]];
-  case 11ull:
-    [[fallthrough]];
-  case 10ull:
-    FieldByteOffset -= sizeof(Header::TemporalProfTracesOffset);
-    H.TemporalProfTracesOffset = read(Buffer, FieldByteOffset);
-    [[fallthrough]];
-  case 9ull:
-    FieldByteOffset -= sizeof(Header::BinaryIdOffset);
-    H.BinaryIdOffset = read(Buffer, FieldByteOffset);
-    [[fallthrough]];
-  case 8ull:
-    FieldByteOffset -= sizeof(Header::MemProfOffset);
-    H.MemProfOffset = read(Buffer, FieldByteOffset);
-    [[fallthrough]];
-  default: // Version7 (when the backwards compatible header was introduced).
-    FieldByteOffset -= sizeof(Header::HashOffset);
-    H.HashOffset = read(Buffer, FieldByteOffset);
-    FieldByteOffset -= sizeof(Header::HashType);
-    H.HashType = read(Buffer, FieldByteOffset);
-  }
-
+  Buffer += sizeof(uint64_t); // Skip Header.Unused field.
+  H.HashType = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  H.HashOffset = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >= 8)
+    H.MemProfOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >= 9)
+    H.BinaryIdOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  // Version 11 is handled by this condition.
+  if (H.getIndexedProfileVersion() >= 10)
+    H.TemporalProfTracesOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >= 12)
+    H.VTableNamesOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >= 13)
+    H.HeaderByteSize =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   return H;
 }
 
-Expected<size_t> Header::knownFieldsEndByteOffset() const {
-  // All header fields are known before, so the end byte offset of known fields
-  // is the same as header byte size.
-  const uint64_t ProfileRecordedProfileVersion = GET_VERSION(formatVersion());
-  if (ProfileRecordedProfileVersion <= ProfVersion::Version12)
-    return this->size();
-
-  // Starting from version 13, the known field end byte offset is calculated
-  // based on the currently supported version recorded in the reader.
-  switch (IndexedInstrProf::ProfVersion::CurrentVersion) {
-    // When a new field is added in the header add a case statement here to
-    // populate it.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
-                  "If current version bumps, please update the case below to "
-                  "calculate the known field end byte offset.");
-  case 13ull:
-    return kOnDiskSizeOffset + sizeof(Header::OnDiskHeaderByteSize) +
-           sizeof(Header::MinimumProfileReaderVersion) +
-           sizeof(Header::OnDiskProfileByteSize) +
-           sizeof(Header::TemporalProfSectionSize);
-  default:
-    break;
-  }
-
-  return make_error<InstrProfError>(instrprof_error::unsupported_version);
+uint64_t Header::getIndexedProfileVersion() const {
+  return GET_VERSION(Version);
 }
 
 size_t Header::size() const {
-  const uint64_t ProfileRecordedProfileVersion = GET_VERSION(formatVersion());
-  // Starting from version 13, the indexed profile records the byte size of
-  // header.
-  if (ProfileRecordedProfileVersion >= ProfVersion::Version13) {
-    assert(OnDiskHeaderByteSize != 0 &&
-           "User can call Header::size() only after reading it "
-           "from readMemoryBuffer");
-    return OnDiskHeaderByteSize;
-  }
-  switch (ProfileRecordedProfileVersion) {
-    assert(ProfileRecordedProfileVersion <= ProfVersion::Version12 &&
-           "Do not infer header size field for newer version");
+  if (getIndexedProfileVersion() >= Version13)
+    return HeaderByteSize;
+  switch (getIndexedProfileVersion()) {
+    // To retain backward compatibility, new fields must be appended to the end
+    // of the header, and byte offset of existing fields shouldn't change when
+    // indexed profile version gets incremented.
+    static_assert(
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
+        "Please update the size computation below if a new field has "
+        "been added to the header; for a version bump without new "
+        "fields, add a case statement to fall through to the latest version.");
   case 12ull:
-    return offsetOf(&Header::VTableNamesOffset) +
-           sizeof(Header::VTableNamesOffset);
+    return 72;
   case 11ull:
     [[fallthrough]];
   case 10ull:
-    return offsetOf(&Header::TemporalProfTracesOffset) +
-           sizeof(Header::TemporalProfTracesOffset);
+    return 64;
   case 9ull:
-    return offsetOf(&Header::BinaryIdOffset) + sizeof(Header::BinaryIdOffset);
+    return 56;
   case 8ull:
-    return offsetOf(&Header::MemProfOffset) + sizeof(Header::MemProfOffset);
+    return 48;
   default: // Version7 (when the backwards compatible header was introduced).
-    return offsetOf(&Header::HashOffset) + sizeof(Header::HashOffset);
+    return 40;
   }
 }
 

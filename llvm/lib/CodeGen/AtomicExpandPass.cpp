@@ -37,6 +37,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -909,9 +910,10 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
   Value *ValOperand_Shifted = nullptr;
   if (Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Add ||
       Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Nand) {
+    Value *ValOp = Builder.CreateBitCast(AI->getValOperand(), PMV.IntValueType);
     ValOperand_Shifted =
-        Builder.CreateShl(Builder.CreateZExt(AI->getValOperand(), PMV.WordType),
-                          PMV.ShiftAmt, "ValOperand_Shifted");
+        Builder.CreateShl(Builder.CreateZExt(ValOp, PMV.WordType), PMV.ShiftAmt,
+                          "ValOperand_Shifted");
   }
 
   auto PerformPartwordOp = [&](IRBuilderBase &Builder, Value *Loaded) {
@@ -934,6 +936,36 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
   Value *FinalOldResult = extractMaskedValue(Builder, OldResult, PMV);
   AI->replaceAllUsesWith(FinalOldResult);
   AI->eraseFromParent();
+}
+
+/// Copy metadata that's safe to preserve when widening atomics.
+static void copyMetadataForAtomic(Instruction &Dest,
+                                  const Instruction &Source) {
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
+  Source.getAllMetadata(MD);
+  LLVMContext &Ctx = Dest.getContext();
+  MDBuilder MDB(Ctx);
+
+  for (auto [ID, N] : MD) {
+    switch (ID) {
+    case LLVMContext::MD_dbg:
+    case LLVMContext::MD_tbaa:
+    case LLVMContext::MD_tbaa_struct:
+    case LLVMContext::MD_alias_scope:
+    case LLVMContext::MD_noalias:
+    case LLVMContext::MD_access_group:
+    case LLVMContext::MD_mmra:
+      Dest.setMetadata(ID, N);
+      break;
+    default:
+      if (ID == Ctx.getMDKindID("amdgpu.no.remote.memory"))
+        Dest.setMetadata(ID, N);
+      else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
+        Dest.setMetadata(ID, N);
+
+      break;
+    }
+  }
 }
 
 // Widen the bitwise atomicrmw (or/xor/and) to the minimum supported width.
@@ -964,7 +996,8 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
   AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(
       Op, PMV.AlignedAddr, NewOperand, PMV.AlignedAddrAlignment,
       AI->getOrdering(), AI->getSyncScopeID());
-  // TODO: Preserve metadata
+
+  copyMetadataForAtomic(*NewAI, *AI);
 
   Value *FinalOldResult = extractMaskedValue(Builder, NewAI, PMV);
   AI->replaceAllUsesWith(FinalOldResult);

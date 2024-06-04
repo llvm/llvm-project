@@ -40,6 +40,7 @@ class TestRosetta(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessAppleSilicon
+    @skipIfLLVMTargetMissing("X86")
     @skipIfDarwinEmbedded
     def test_rosetta(self):
         """There can be many tests in a test case - describe this test here."""
@@ -49,7 +50,7 @@ class TestRosetta(TestBase):
         if rosetta_debugserver_installed():
             broadcaster = self.dbg.GetBroadcaster()
             listener = lldbutil.start_listening_from(
-                broadcaster, lldb.eBroadcastBitWarning
+                broadcaster, lldb.SBDebugger.eBroadcastBitWarning
             )
 
             target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(

@@ -4580,3 +4580,35 @@ define i32 @sequence_select_with_same_cond_extra_use(i1 %c1, i1 %c2){
   %s3 = select i1 %c1, i32 789, i32 %s2
   ret i32 %s3
 }
+
+define i8 @test_replace_freeze_multiuse(i1 %x, i8 %y) {
+; CHECK-LABEL: @test_replace_freeze_multiuse(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[X:%.*]] to i8
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[EXT]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_FR:%.*]] = freeze i8 [[SHL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X]], i8 0, i8 [[SHL_FR]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SHL_FR]], [[SEL]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %ext = zext i1 %x to i8
+  %shl = shl nuw i8 %ext, %y
+  %shl.fr = freeze i8 %shl
+  %sel = select i1 %x, i8 0, i8 %shl.fr
+  %add = add i8 %shl.fr, %sel
+  ret i8 %add
+}
+
+define i8 @test_replace_freeze_oneuse(i1 %x, i8 %y) {
+; CHECK-LABEL: @test_replace_freeze_oneuse(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[X:%.*]] to i8
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[EXT]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_FR:%.*]] = freeze i8 [[SHL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X]], i8 0, i8 [[SHL_FR]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %ext = zext i1 %x to i8
+  %shl = shl nuw i8 %ext, %y
+  %shl.fr = freeze i8 %shl
+  %sel = select i1 %x, i8 0, i8 %shl.fr
+  ret i8 %sel
+}

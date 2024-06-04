@@ -269,8 +269,12 @@ public:
     return success();
   }
 
-  /// Parse a floating point value from the stream.
-  ParseResult parseFloat(double &result) override {
+  /// Parse a floating point value with given semantics from the stream. Since
+  /// this implementation parses the string as double precision and only
+  /// afterwards converts the value to the requested semantic, precision may be
+  /// lost.
+  ParseResult parseFloat(const llvm::fltSemantics &semantics,
+                         APFloat &result) override {
     bool isNegative = parser.consumeIf(Token::minus);
     Token curTok = parser.getToken();
     SMLoc loc = curTok.getLoc();
@@ -281,7 +285,9 @@ public:
       if (!val)
         return emitError(loc, "floating point value too large");
       parser.consumeToken(Token::floatliteral);
-      result = isNegative ? -*val : *val;
+      result = APFloat(isNegative ? -*val : *val);
+      bool losesInfo;
+      result.convert(semantics, APFloat::rmNearestTiesToEven, &losesInfo);
       return success();
     }
 
@@ -289,16 +295,26 @@ public:
     if (curTok.is(Token::integer)) {
       std::optional<APFloat> apResult;
       if (failed(parser.parseFloatFromIntegerLiteral(
-              apResult, curTok, isNegative, APFloat::IEEEdouble(),
-              /*typeSizeInBits=*/64)))
+              apResult, curTok, isNegative, semantics,
+              APFloat::semanticsSizeInBits(semantics))))
         return failure();
 
+      result = *apResult;
       parser.consumeToken(Token::integer);
-      result = apResult->convertToDouble();
       return success();
     }
 
     return emitError(loc, "expected floating point literal");
+  }
+
+  /// Parse a floating point value from the stream.
+  ParseResult parseFloat(double &result) override {
+    llvm::APFloat apResult(0.0);
+    if (parseFloat(APFloat::IEEEdouble(), apResult))
+      return failure();
+
+    result = apResult.convertToDouble();
+    return success();
   }
 
   /// Parse an optional integer value from the stream.

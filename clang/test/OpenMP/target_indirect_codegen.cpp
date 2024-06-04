@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s --check-prefix=DEVICE
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgcn-amd-amdhsa %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -emit-pch -o %t
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -triple amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -include-pch %t -o - | FileCheck %s --check-prefix=DEVICE
 
 // expected-no-diagnostics

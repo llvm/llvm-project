@@ -90,7 +90,7 @@ inline std::string mangleArrayLiteral(
   return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
                             x.shape(), Fortran::common::TypeCategory::Derived,
                             /*kind=*/0, /*charLen=*/-1,
-                            eleTy.cast<fir::RecordType>().getName());
+                            mlir::cast<fir::RecordType>(eleTy).getName());
 }
 
 /// Return the compiler-generated name of a static namelist variable descriptor.

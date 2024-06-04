@@ -430,3 +430,23 @@ func.func @rank_zero_memref_store(%arg0: i4) -> () {
 //       CHECK32:   %[[EXTUI:.+]] = arith.extui %[[ARG0]] : i4 to i32
 //       CHECK32:   %[[WRITE_RMW:.+]] = memref.atomic_rmw assign %[[EXTUI]], %[[ALLOC]][] : (i32, memref<i32>) -> i32
 //       CHECK32:   return
+
+// -----
+
+func.func @memref_collapse_shape_i4(%idx0 : index, %idx1 : index) -> i4 {
+  %arr = memref.alloc() : memref<32x8x128xi4>
+  %collapse = memref.collapse_shape %arr[[0, 1], [2]] : memref<32x8x128xi4> into memref<256x128xi4>
+  %1 = memref.load %collapse[%idx0, %idx1] : memref<256x128xi4>
+  return %1 : i4
+}
+
+// CHECK-LABEL:   func.func @memref_collapse_shape_i4(
+//       CHECK:     %[[ALLOC:.*]] = memref.alloc() : memref<16384xi8>
+//   CHECK-NOT:     memref.collapse_shape
+//       CHECK:     memref.load %[[ALLOC]][%{{.*}}] : memref<16384xi8>
+
+// CHECK32-LABEL:   func.func @memref_collapse_shape_i4(
+//       CHECK32:     %[[ALLOC:.*]] = memref.alloc() : memref<4096xi32>
+//   CHECK32-NOT:     memref.collapse_shape
+//       CHECK32:     memref.load %[[ALLOC]][%{{.*}}] : memref<4096xi32>
+

@@ -629,7 +629,84 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @match() -> !transform.any_op
+  // expected-note @below {{symbol declaration}}
+  transform.named_sequence @match(!transform.any_op {transform.readonly}, !transform.any_op {transform.readonly}) -> !transform.any_op
+  transform.named_sequence @action(!transform.any_op {transform.readonly})
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    // expected-error @below {{the number of operands (1) doesn't match the number of matcher arguments (2) for @match}}
+    transform.foreach_match in %root
+      @match -> @action : (!transform.any_op) -> !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-note @below {{symbol declaration}}
+  transform.named_sequence @match(!transform.any_op {transform.readonly}, !transform.any_op {transform.consumed}) -> !transform.any_op
+  transform.named_sequence @action(!transform.any_op {transform.readonly})
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    %r = transform.replicate num(%root) %root : !transform.any_op, !transform.any_op
+    // expected-error @below {{'transform.foreach_match' op does not expect matcher symbol to consume its operand #1}}
+    transform.foreach_match in %root, %r
+      @match -> @action : (!transform.any_op, !transform.any_op) -> !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-note @below {{symbol declaration}}
+  transform.named_sequence @match(!transform.any_op {transform.readonly}, !transform.any_op {transform.readonly}) -> !transform.any_op
+  transform.named_sequence @action(!transform.any_op {transform.readonly})
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    %r = transform.get_operand %root[0] : (!transform.any_op) -> !transform.any_value
+    // expected-error @below {{mismatching type interfaces for operand and matcher argument #1 of matcher @match}}
+    transform.foreach_match in %root, %r
+      @match -> @action : (!transform.any_op, !transform.any_value) -> !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match(!transform.any_op {transform.readonly}) -> !transform.any_op
+  // expected-note @below {{symbol declaration}}
+  transform.named_sequence @action(!transform.any_op {transform.readonly}) -> !transform.any_op
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    // expected-error @below {{the number of action results (1) for @action doesn't match the number of extra op results (0)}}
+    transform.foreach_match in %root
+      @match -> @action : (!transform.any_op) -> !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match(!transform.any_op {transform.readonly}) -> !transform.any_op
+  // expected-note @below {{symbol declaration}}
+  transform.named_sequence @action(!transform.any_op {transform.readonly}) -> !transform.any_op
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    // expected-error @below {{mismatching type interfaces for action result #0 of action @action and op result}}
+    transform.foreach_match in %root
+      @match -> @action : (!transform.any_op) -> (!transform.any_op, !transform.any_value)
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match(!transform.any_op {transform.readonly}) -> !transform.any_op
   transform.named_sequence @action()
 
   transform.sequence failures(propagate) {
@@ -649,7 +726,7 @@ module attributes { transform.with_named_sequence } {
 
   transform.sequence failures(propagate) {
   ^bb0(%root: !transform.any_op):
-    // expected-error @below {{action symbol is not expected to have results}}
+    // expected-error @below {{the number of action results (1) for @action doesn't match the number of extra op results (0)}}
     transform.foreach_match in %root
       @match -> @action : (!transform.any_op) -> !transform.any_op
   }
@@ -664,7 +741,7 @@ module attributes { transform.with_named_sequence } {
 
   transform.sequence failures(propagate) {
   ^bb0(%root: !transform.any_op):
-    // expected-error @below {{expects matcher symbol to have one argument with the same transform interface as the first operand}}
+    // expected-error @below {{the number of operands (1) doesn't match the number of matcher arguments (0) for @match}}
     transform.foreach_match in %root
       @match -> @action : (!transform.any_op) -> !transform.any_op
   }
@@ -679,7 +756,7 @@ module attributes { transform.with_named_sequence } {
 
   transform.sequence failures(propagate) {
   ^bb0(%root: !transform.any_op):
-    // expected-error @below {{'transform.foreach_match' op does not expect matcher symbol to consume its operand}}
+    // expected-error @below {{'transform.foreach_match' op does not expect matcher symbol to consume its operand #0}}
     transform.foreach_match in %root
       @match -> @action : (!transform.any_op) -> !transform.any_op
   }

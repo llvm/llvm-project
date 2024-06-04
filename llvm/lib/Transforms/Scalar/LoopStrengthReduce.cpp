@@ -1817,10 +1817,12 @@ static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
   case LSRUse::Address: {
     // Check the scaling factor cost with both the min and max offsets.
     InstructionCost ScaleCostMinOffset = TTI.getScalingFactorCost(
-        LU.AccessTy.MemTy, F.BaseGV, F.BaseOffset + LU.MinOffset, F.HasBaseReg,
+        LU.AccessTy.MemTy, F.BaseGV,
+        StackOffset::getFixed(F.BaseOffset + LU.MinOffset), F.HasBaseReg,
         F.Scale, LU.AccessTy.AddrSpace);
     InstructionCost ScaleCostMaxOffset = TTI.getScalingFactorCost(
-        LU.AccessTy.MemTy, F.BaseGV, F.BaseOffset + LU.MaxOffset, F.HasBaseReg,
+        LU.AccessTy.MemTy, F.BaseGV,
+        StackOffset::getFixed(F.BaseOffset + LU.MaxOffset), F.HasBaseReg,
         F.Scale, LU.AccessTy.AddrSpace);
 
     assert(ScaleCostMinOffset.isValid() && ScaleCostMaxOffset.isValid() &&
@@ -5249,8 +5251,6 @@ void LSRInstance::Solve(SmallVectorImpl<const Formula *> &Solution) const {
   assert(Solution.size() == Uses.size() && "Malformed solution!");
 
   if (BaselineCost.isLess(SolutionCost)) {
-    LLVM_DEBUG(dbgs() << "The baseline solution requires ";
-               BaselineCost.print(dbgs()); dbgs() << "\n");
     if (!AllowDropSolutionIfLessProfitable)
       LLVM_DEBUG(
           dbgs() << "Baseline is more profitable than chosen solution, "
@@ -5929,6 +5929,8 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
 
   LLVM_DEBUG(dbgs() << "LSR found " << Uses.size() << " uses:\n";
              print_uses(dbgs()));
+  LLVM_DEBUG(dbgs() << "The baseline solution requires ";
+             BaselineCost.print(dbgs()); dbgs() << "\n");
 
   // Now use the reuse data to generate a bunch of interesting ways
   // to formulate the values needed for the uses.

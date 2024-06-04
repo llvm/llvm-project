@@ -242,8 +242,8 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
     unsigned Length = Curr->getConcatLen();
 
     // Iterate over each child, saving internal nodes for visiting, and
-    // leaf nodes in LeafChildren. Internal nodes represent individual
-    // strings, which may repeat.
+    // leaf nodes' SuffixIdx in RepeatedSubstringStarts. Internal nodes
+    // represent individual strings, which may repeat.
     for (auto &ChildPair : Curr->Children) {
       // Save all of this node's children for processing.
       if (auto *InternalChild =

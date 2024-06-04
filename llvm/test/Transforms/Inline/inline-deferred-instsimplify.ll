@@ -38,8 +38,6 @@ store_ptr_in_gvar:                                ; preds = %entry
 
 check_pointers_are_equal:                         ; preds = %store_ptr_in_gvar, %entry
   %phi = phi ptr [ %ptr, %store_ptr_in_gvar ], [ @other_g_var, %entry ]
-; FIXME: While inlining, the following is miscompiled to i1 false,
-; as %ptr in the phi-node is not taken into account.
   %.not1 = icmp eq ptr %phi, %ptr
   br i1 %.not1, label %return, label %abort
 
@@ -64,9 +62,13 @@ define i32 @main() {
 ; CHECK-NEXT:    br label [[CHECK_POINTERS_ARE_EQUAL_I]]
 ; CHECK:       check_pointers_are_equal.i:
 ; CHECK-NEXT:    [[PHI_I:%.*]] = phi ptr [ [[G_VAR]], [[STORE_PTR_IN_GVAR_I]] ], [ @other_g_var, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[DOTNOT1_I:%.*]] = icmp eq ptr [[PHI_I]], [[G_VAR]]
+; CHECK-NEXT:    br i1 [[DOTNOT1_I]], label [[CALLEE_EXIT:%.*]], label [[ABORT_I:%.*]]
+; CHECK:       abort.i:
 ; CHECK-NEXT:    call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       callee.exit:
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr [[G_VAR]])
 ; CHECK-NEXT:    ret i32 0
 ;
   call void @callee(ptr noundef byval(%struct.a) align 8 @g_var)

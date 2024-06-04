@@ -565,4 +565,16 @@ struct Foo : public Baz { // expected-error {{cannot override a non-deleted func
 };
 }
 
+namespace GH89544 {
+class Foo {
+  ~Foo() = {}
+  // expected-error@-1 {{initializer on function does not look like a pure-specifier}}
+  // expected-error@-2 {{expected ';' at end of declaration list}}
+};
+
+static_assert(!__is_trivially_constructible(Foo), "");
+static_assert(!__is_trivially_constructible(Foo, const Foo &), "");
+static_assert(!__is_trivially_constructible(Foo, Foo &&), "");
+} // namespace GH89544
+
 #endif // BE_THE_HEADER

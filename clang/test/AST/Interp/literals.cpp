@@ -985,6 +985,8 @@ namespace DiscardExprs {
     __uuidof(GuidType);
     __uuidof(number); // both-error {{cannot call operator __uuidof on a type with no GUID}}
 
+    requires{false;};
+
     return 0;
   }
   static_assert(ignoredExprs() == 0, "");

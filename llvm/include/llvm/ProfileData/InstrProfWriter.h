@@ -51,18 +51,8 @@ private:
   SmallVector<TemporalProfTraceTy> TemporalProfTraces;
   std::mt19937 RNG;
 
-  // A map to hold memprof data per function. The lower 64 bits obtained from
-  // the md5 hash of the function name is used to index into the map.
-  llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
-      MemProfRecordData;
-  // A map to hold frame id to frame mappings. The mappings are used to
-  // convert IndexedMemProfRecord to MemProfRecords with frame information
-  // inline.
-  llvm::MapVector<memprof::FrameId, memprof::Frame> MemProfFrameData;
-
-  // A map to hold call stack id to call stacks.
-  llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
-      MemProfCallStackData;
+  // The MemProf data.
+  memprof::IndexedMemProfData MemProfData;
 
   // List of binary ids.
   std::vector<llvm::object::BuildID> BinaryIds;
@@ -88,23 +78,22 @@ private:
   // Whether to serialize the full schema.
   bool MemProfFullSchema;
 
-  // Returns the profile version in uint32_t.
-  // Header.Version is uint64_t with the lowest 32 bits specifying profile
-  // version and the most significant bits specyfing profile flavors.
+  // Returns the profile version in uint32_t, which should be used as the
+  // the lowest 32 bits in Header.Version.
   uint32_t profileVersion() const;
 
   // Returns the minimum profile reader version required to parse this profile.
-  uint64_t minProfileReaderVersion() const;
+  uint64_t minCompatibleReaderVersion() const;
 
-  // The following fields are used in unit tests only.
+  // The following fields are used by unit tests only.
   // If not std::nullopt, this field overwrites the lowest 32 bits of
   // Header::Version in the generated profile.
   std::optional<uint32_t> ProfileVersion = std::nullopt;
-  // If true, profile writer will append one 64-bit dummy value as unknown
-  // header fields.
+  // If true, profile writer will append one 64-bit dummy value as an unknown
+  // new header field.
   bool AppendAdditionalHeaderFields = false;
   // If not std::nullopt, this field overwrites
-  // Header::MinimumProfileReaderVersion in the generated profile.
+  // Header::MinCompatibleReaderVersion in the generated profile.
   std::optional<int> MinCompatibleReaderProfileVersion = std::nullopt;
 
 public:
@@ -246,6 +235,15 @@ private:
   void addTemporalProfileTrace(TemporalProfTraceTy Trace);
 
   Error writeImpl(ProfOStream &OS);
+
+  // Writes known header fields and reserves space for fields whose value are
+  // known only after payloads are written. Returns the start byte offset for
+  // back patching.
+  uint64_t writeHeader(const IndexedInstrProf::Header &header,
+                       const bool WritePrevVersion, ProfOStream &OS);
+
+  // Writes compressed vtable names to profiles.
+  Error writeVTableNames(ProfOStream &OS);
 };
 
 } // end namespace llvm

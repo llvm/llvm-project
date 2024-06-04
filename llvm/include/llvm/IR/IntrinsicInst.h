@@ -311,7 +311,8 @@ public:
 
   Value *getVariableLocationOp(unsigned OpIdx) const;
 
-  void replaceVariableLocationOp(Value *OldValue, Value *NewValue);
+  void replaceVariableLocationOp(Value *OldValue, Value *NewValue,
+                                 bool AllowEmpty = false);
   void replaceVariableLocationOp(unsigned OpIdx, Value *NewValue);
   /// Adding a new location operand will always result in this intrinsic using
   /// an ArgList, and must always be accompanied by a new expression that uses
@@ -706,8 +707,7 @@ public:
 /// This is the common base class for constrained floating point intrinsics.
 class ConstrainedFPIntrinsic : public IntrinsicInst {
 public:
-  bool isUnaryOp() const;
-  bool isTernaryOp() const;
+  unsigned getNonMetadataArgCount() const;
   std::optional<RoundingMode> getRoundingMode() const;
   std::optional<fp::ExceptionBehavior> getExceptionBehavior() const;
   bool isDefaultFPEnvironment() const;
@@ -1435,6 +1435,7 @@ protected:
     case Intrinsic::instrprof_cover:
     case Intrinsic::instrprof_increment:
     case Intrinsic::instrprof_increment_step:
+    case Intrinsic::instrprof_callsite:
     case Intrinsic::instrprof_timestamp:
     case Intrinsic::instrprof_value_profile:
       return true;
@@ -1517,6 +1518,21 @@ public:
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
+};
+
+/// This represents the llvm.instrprof.callsite intrinsic.
+/// It is structurally like the increment or step counters, hence the
+/// inheritance relationship, albeit somewhat tenuous (it's not 'counting' per
+/// se)
+class InstrProfCallsite : public InstrProfCntrInstBase {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::instrprof_callsite;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  Value *getCallee() const;
 };
 
 /// This represents the llvm.instrprof.timestamp intrinsic.

@@ -82,6 +82,28 @@ bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   return false;
 }
 
+std::pair<unsigned, const TargetRegisterClass *>
+SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                                                  StringRef Constraint,
+                                                  MVT VT) const {
+  const TargetRegisterClass *RC = nullptr;
+  if (Constraint.starts_with("{"))
+    return std::make_pair(0u, RC);
+
+  if (VT.isFloatingPoint())
+    RC = VT.isVector() ? &SPIRV::vfIDRegClass
+                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::fID64RegClass
+                                                        : &SPIRV::fIDRegClass);
+  else if (VT.isInteger())
+    RC = VT.isVector() ? &SPIRV::vIDRegClass
+                       : (VT.getScalarSizeInBits() > 32 ? &SPIRV::ID64RegClass
+                                                        : &SPIRV::IDRegClass);
+  else
+    RC = &SPIRV::IDRegClass;
+
+  return std::make_pair(0u, RC);
+}
+
 // Insert a bitcast before the instruction to keep SPIR-V code valid
 // when there is a type mismatch between results and operand types.
 static void validatePtrTypes(const SPIRVSubtarget &STI,
@@ -314,6 +336,16 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
                                       SPIRV::OpTypeBool))
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
         break;
+      case SPIRV::OpConstantI: {
+        SPIRVType *Type = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+        if (Type->getOpcode() != SPIRV::OpTypeInt && MI.getOperand(2).isImm() &&
+            MI.getOperand(2).getImm() == 0) {
+          // Validate the null constant of a target extension type
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpConstantNull));
+          for (unsigned i = MI.getNumOperands() - 1; i > 1; --i)
+            MI.removeOperand(i);
+        }
+      } break;
       }
     }
   }

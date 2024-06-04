@@ -24,9 +24,9 @@ define void @test() #0 {
 ; GCN-NEXT:    s_mov_b64 exec, -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
+; GCN-NEXT:    v_writelane_b32 v40, s16, 4
 ; GCN-NEXT:    v_writelane_b32 v40, s28, 2
 ; GCN-NEXT:    v_writelane_b32 v40, s29, 3
-; GCN-NEXT:    v_writelane_b32 v40, s16, 4
 ; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    s_addk_i32 s32, 0x800
@@ -55,9 +55,9 @@ define void @test() #0 {
 ; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
 ; GCN-NEXT:    ; kill: killed $vgpr1
+; GCN-NEXT:    v_readlane_b32 s4, v40, 4
 ; GCN-NEXT:    v_readlane_b32 s28, v40, 2
 ; GCN-NEXT:    v_readlane_b32 s29, v40, 3
-; GCN-NEXT:    v_readlane_b32 s4, v40, 4
 ; GCN-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
@@ -79,9 +79,9 @@ define void @test() #0 {
 ; GCN-O0-NEXT:    s_mov_b64 exec, -1
 ; GCN-O0-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[18:19]
+; GCN-O0-NEXT:    v_writelane_b32 v40, s16, 4
 ; GCN-O0-NEXT:    v_writelane_b32 v40, s28, 2
 ; GCN-O0-NEXT:    v_writelane_b32 v40, s29, 3
-; GCN-O0-NEXT:    v_writelane_b32 v40, s16, 4
 ; GCN-O0-NEXT:    s_add_i32 s32, s32, 0x400
 ; GCN-O0-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-O0-NEXT:    v_writelane_b32 v40, s30, 0
@@ -117,9 +117,9 @@ define void @test() #0 {
 ; GCN-O0-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-O0-NEXT:    v_readlane_b32 s30, v40, 0
 ; GCN-O0-NEXT:    ; kill: killed $vgpr0
+; GCN-O0-NEXT:    v_readlane_b32 s4, v40, 4
 ; GCN-O0-NEXT:    v_readlane_b32 s28, v40, 2
 ; GCN-O0-NEXT:    v_readlane_b32 s29, v40, 3
-; GCN-O0-NEXT:    v_readlane_b32 s4, v40, 4
 ; GCN-O0-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GCN-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    s_mov_b64 exec, -1

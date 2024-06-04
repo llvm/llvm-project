@@ -203,7 +203,7 @@ define i64 @atomic_load_i64_unordered(ptr %a) nounwind {
 ; NO-ATOMIC-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-NEXT:    move.l #0, (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (16,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __atomic_load_8@PLT
+; NO-ATOMIC-NEXT:    jsr __atomic_load_8
 ; NO-ATOMIC-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-NEXT:    rts
 ;
@@ -212,7 +212,7 @@ define i64 @atomic_load_i64_unordered(ptr %a) nounwind {
 ; ATOMIC-NEXT:    suba.l #12, %sp
 ; ATOMIC-NEXT:    move.l #0, (4,%sp)
 ; ATOMIC-NEXT:    move.l (16,%sp), (%sp)
-; ATOMIC-NEXT:    jsr __atomic_load_8@PLT
+; ATOMIC-NEXT:    jsr __atomic_load_8
 ; ATOMIC-NEXT:    adda.l #12, %sp
 ; ATOMIC-NEXT:    rts
   %1 = load atomic i64, ptr %a unordered, align 8
@@ -225,7 +225,7 @@ define i64 @atomic_load_i64_monotonic(ptr %a) nounwind {
 ; NO-ATOMIC-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-NEXT:    move.l #0, (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (16,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __atomic_load_8@PLT
+; NO-ATOMIC-NEXT:    jsr __atomic_load_8
 ; NO-ATOMIC-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-NEXT:    rts
 ;
@@ -234,7 +234,7 @@ define i64 @atomic_load_i64_monotonic(ptr %a) nounwind {
 ; ATOMIC-NEXT:    suba.l #12, %sp
 ; ATOMIC-NEXT:    move.l #0, (4,%sp)
 ; ATOMIC-NEXT:    move.l (16,%sp), (%sp)
-; ATOMIC-NEXT:    jsr __atomic_load_8@PLT
+; ATOMIC-NEXT:    jsr __atomic_load_8
 ; ATOMIC-NEXT:    adda.l #12, %sp
 ; ATOMIC-NEXT:    rts
   %1 = load atomic i64, ptr %a monotonic, align 8
@@ -247,7 +247,7 @@ define i64 @atomic_load_i64_acquire(ptr %a) nounwind {
 ; NO-ATOMIC-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-NEXT:    move.l #2, (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (16,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __atomic_load_8@PLT
+; NO-ATOMIC-NEXT:    jsr __atomic_load_8
 ; NO-ATOMIC-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-NEXT:    rts
 ;
@@ -256,7 +256,7 @@ define i64 @atomic_load_i64_acquire(ptr %a) nounwind {
 ; ATOMIC-NEXT:    suba.l #12, %sp
 ; ATOMIC-NEXT:    move.l #2, (4,%sp)
 ; ATOMIC-NEXT:    move.l (16,%sp), (%sp)
-; ATOMIC-NEXT:    jsr __atomic_load_8@PLT
+; ATOMIC-NEXT:    jsr __atomic_load_8
 ; ATOMIC-NEXT:    adda.l #12, %sp
 ; ATOMIC-NEXT:    rts
   %1 = load atomic i64, ptr %a acquire, align 8
@@ -269,7 +269,7 @@ define i64 @atomic_load_i64_seq_cst(ptr %a) nounwind {
 ; NO-ATOMIC-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-NEXT:    move.l #5, (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (16,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __atomic_load_8@PLT
+; NO-ATOMIC-NEXT:    jsr __atomic_load_8
 ; NO-ATOMIC-NEXT:    adda.l #12, %sp
 ; NO-ATOMIC-NEXT:    rts
 ;
@@ -278,7 +278,7 @@ define i64 @atomic_load_i64_seq_cst(ptr %a) nounwind {
 ; ATOMIC-NEXT:    suba.l #12, %sp
 ; ATOMIC-NEXT:    move.l #5, (4,%sp)
 ; ATOMIC-NEXT:    move.l (16,%sp), (%sp)
-; ATOMIC-NEXT:    jsr __atomic_load_8@PLT
+; ATOMIC-NEXT:    jsr __atomic_load_8
 ; ATOMIC-NEXT:    adda.l #12, %sp
 ; ATOMIC-NEXT:    rts
   %1 = load atomic i64, ptr %a seq_cst, align 8
@@ -509,7 +509,7 @@ define void @atomic_store_i64_unordered(ptr %a, i64 %val) nounwind {
 ; NO-ATOMIC-NEXT:    move.l (32,%sp), (8,%sp)
 ; NO-ATOMIC-NEXT:    move.l (28,%sp), (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (24,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __atomic_store_8@PLT
+; NO-ATOMIC-NEXT:    jsr __atomic_store_8
 ; NO-ATOMIC-NEXT:    adda.l #20, %sp
 ; NO-ATOMIC-NEXT:    rts
 ;
@@ -520,7 +520,7 @@ define void @atomic_store_i64_unordered(ptr %a, i64 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (32,%sp), (8,%sp)
 ; ATOMIC-NEXT:    move.l (28,%sp), (4,%sp)
 ; ATOMIC-NEXT:    move.l (24,%sp), (%sp)
-; ATOMIC-NEXT:    jsr __atomic_store_8@PLT
+; ATOMIC-NEXT:    jsr __atomic_store_8
 ; ATOMIC-NEXT:    adda.l #20, %sp
 ; ATOMIC-NEXT:    rts
   store atomic i64 %val, ptr %a unordered, align 8
@@ -535,7 +535,7 @@ define void @atomic_store_i64_monotonic(ptr %a, i64 %val) nounwind {
 ; NO-ATOMIC-NEXT:    move.l (32,%sp), (8,%sp)
 ; NO-ATOMIC-NEXT:    move.l (28,%sp), (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (24,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __atomic_store_8@PLT
+; NO-ATOMIC-NEXT:    jsr __atomic_store_8
 ; NO-ATOMIC-NEXT:    adda.l #20, %sp
 ; NO-ATOMIC-NEXT:    rts
 ;
@@ -546,7 +546,7 @@ define void @atomic_store_i64_monotonic(ptr %a, i64 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (32,%sp), (8,%sp)
 ; ATOMIC-NEXT:    move.l (28,%sp), (4,%sp)
 ; ATOMIC-NEXT:    move.l (24,%sp), (%sp)
-; ATOMIC-NEXT:    jsr __atomic_store_8@PLT
+; ATOMIC-NEXT:    jsr __atomic_store_8
 ; ATOMIC-NEXT:    adda.l #20, %sp
 ; ATOMIC-NEXT:    rts
   store atomic i64 %val, ptr %a monotonic, align 8
@@ -561,7 +561,7 @@ define void @atomic_store_i64_release(ptr %a, i64 %val) nounwind {
 ; NO-ATOMIC-NEXT:    move.l (32,%sp), (8,%sp)
 ; NO-ATOMIC-NEXT:    move.l (28,%sp), (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (24,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __atomic_store_8@PLT
+; NO-ATOMIC-NEXT:    jsr __atomic_store_8
 ; NO-ATOMIC-NEXT:    adda.l #20, %sp
 ; NO-ATOMIC-NEXT:    rts
 ;
@@ -572,7 +572,7 @@ define void @atomic_store_i64_release(ptr %a, i64 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (32,%sp), (8,%sp)
 ; ATOMIC-NEXT:    move.l (28,%sp), (4,%sp)
 ; ATOMIC-NEXT:    move.l (24,%sp), (%sp)
-; ATOMIC-NEXT:    jsr __atomic_store_8@PLT
+; ATOMIC-NEXT:    jsr __atomic_store_8
 ; ATOMIC-NEXT:    adda.l #20, %sp
 ; ATOMIC-NEXT:    rts
   store atomic i64 %val, ptr %a release, align 8
@@ -587,7 +587,7 @@ define void @atomic_store_i64_seq_cst(ptr %a, i64 %val) nounwind {
 ; NO-ATOMIC-NEXT:    move.l (32,%sp), (8,%sp)
 ; NO-ATOMIC-NEXT:    move.l (28,%sp), (4,%sp)
 ; NO-ATOMIC-NEXT:    move.l (24,%sp), (%sp)
-; NO-ATOMIC-NEXT:    jsr __atomic_store_8@PLT
+; NO-ATOMIC-NEXT:    jsr __atomic_store_8
 ; NO-ATOMIC-NEXT:    adda.l #20, %sp
 ; NO-ATOMIC-NEXT:    rts
 ;
@@ -598,7 +598,7 @@ define void @atomic_store_i64_seq_cst(ptr %a, i64 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (32,%sp), (8,%sp)
 ; ATOMIC-NEXT:    move.l (28,%sp), (4,%sp)
 ; ATOMIC-NEXT:    move.l (24,%sp), (%sp)
-; ATOMIC-NEXT:    jsr __atomic_store_8@PLT
+; ATOMIC-NEXT:    jsr __atomic_store_8
 ; ATOMIC-NEXT:    adda.l #20, %sp
 ; ATOMIC-NEXT:    rts
   store atomic i64 %val, ptr %a seq_cst, align 8

@@ -22,6 +22,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # fcntl.h entrypoints
     libc.src.fcntl.creat
+    libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.fcntl.openat
 
@@ -495,6 +496,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpxl
 )
 
+if(LIBC_TYPES_HAS_FLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float16 entrypoints
+    libc.src.math.fabsf16
+  )
+endif()
+
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
@@ -527,11 +535,13 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.lroundf128
     libc.src.math.modff128
     libc.src.math.nanf128
+    libc.src.math.nearbyintf128
     libc.src.math.nextafterf128
     libc.src.math.nextdownf128
     libc.src.math.nextupf128
     libc.src.math.rintf128
     libc.src.math.roundf128
+    libc.src.math.scalbnf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128
     libc.src.math.ufromfpf128

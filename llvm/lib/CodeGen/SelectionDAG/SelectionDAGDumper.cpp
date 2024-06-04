@@ -528,6 +528,11 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "stackmap";
   case ISD::PATCHPOINT:
     return "patchpoint";
+  case ISD::CLEAR_CACHE:
+    return "clear_cache";
+
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
+    return "histogram";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \

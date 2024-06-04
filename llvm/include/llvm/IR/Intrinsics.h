@@ -109,6 +109,10 @@ namespace Intrinsic {
   /// Floating-Point Intrinsics".
   bool isConstrainedFPIntrinsic(ID QID);
 
+  /// Returns true if the intrinsic ID is for one of the "Constrained
+  /// Floating-Point Intrinsics" that take rounding mode metadata.
+  bool hasConstrainedFPRoundingModeOperand(ID QID);
+
   /// This is a type descriptor which explains the type requirements of an
   /// intrinsic. This is returned by getIntrinsicInfoTableEntries.
   struct IITDescriptor {

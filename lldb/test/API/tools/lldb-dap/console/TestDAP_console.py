@@ -4,17 +4,15 @@ Test lldb-dap setBreakpoints request
 
 import dap_server
 import lldbdap_testcase
-import psutil
-from collections import deque
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-def get_subprocess(process_name):
-    queue = deque([psutil.Process(os.getpid())])
+def get_subprocess(root_process, process_name):
+    queue = [root_process]
     while queue:
-        process = queue.popleft()
+        process = queue.pop()
         if process.name() == process_name:
             return process
         queue.extend(process.children())
@@ -40,7 +38,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_scopes_variables_setVariable_evaluate(self):
         """
         Tests that the "scopes" request causes the currently selected
@@ -84,7 +81,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         self.check_lldb_command("frame select", "frame #1", "frame 1 is selected")
 
     @skipIfWindows
-    @skipIfRemote
     def test_custom_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, commandEscapePrefix="::")
@@ -101,7 +97,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_empty_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, commandEscapePrefix="")
@@ -118,7 +113,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_exit_status_message_sigterm(self):
         source = "main.cpp"
         program = self.getBuildArtifact("a.out")
@@ -131,7 +125,17 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         process_name = (
             "debugserver" if platform.system() in ["Darwin"] else "lldb-server"
         )
-        process = get_subprocess(process_name)
+
+        try:
+            import psutil
+        except ImportError:
+            print(
+                "psutil not installed, please install using 'pip install psutil'. "
+                "Skipping test_exit_status_message_sigterm test.",
+                file=sys.stderr,
+            )
+            return
+        process = get_subprocess(psutil.Process(os.getpid()), process_name)
         process.terminate()
         process.wait()
 
@@ -146,7 +150,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_exit_status_message_ok(self):
         source = "main.cpp"
         program = self.getBuildArtifact("a.out")

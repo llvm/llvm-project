@@ -173,8 +173,8 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   LLVMContextImpl *pImpl = Context.pImpl;
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  ID.AddInteger(CR.getLower());
-  ID.AddInteger(CR.getUpper());
+  CR.getLower().Profile(ID);
+  CR.getUpper().Profile(ID);
 
   void *InsertPoint;
   AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
@@ -360,7 +360,7 @@ Type *Attribute::getValueAsType() const {
   return pImpl->getValueAsType();
 }
 
-ConstantRange Attribute::getValueAsConstantRange() const {
+const ConstantRange &Attribute::getValueAsConstantRange() const {
   assert(isConstantRangeAttribute() &&
          "Invalid attribute type to get the value as a ConstantRange!");
   return pImpl->getValueAsConstantRange();
@@ -444,7 +444,7 @@ FPClassTest Attribute::getNoFPClass() const {
   return static_cast<FPClassTest>(pImpl->getValueAsInt());
 }
 
-ConstantRange Attribute::getRange() const {
+const ConstantRange &Attribute::getRange() const {
   assert(hasAttribute(Attribute::Range) &&
          "Trying to get range args from non-range attribute");
   return pImpl->getValueAsConstantRange();
@@ -607,7 +607,7 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   if (hasAttribute(Attribute::Range)) {
     std::string Result;
     raw_string_ostream OS(Result);
-    ConstantRange CR = getValueAsConstantRange();
+    const ConstantRange &CR = getValueAsConstantRange();
     OS << "range(";
     OS << "i" << CR.getBitWidth() << " ";
     OS << CR.getLower() << ", " << CR.getUpper();
@@ -735,7 +735,7 @@ Type *AttributeImpl::getValueAsType() const {
   return static_cast<const TypeAttributeImpl *>(this)->getTypeValue();
 }
 
-ConstantRange AttributeImpl::getValueAsConstantRange() const {
+const ConstantRange &AttributeImpl::getValueAsConstantRange() const {
   assert(isConstantRangeAttribute());
   return static_cast<const ConstantRangeAttributeImpl *>(this)
       ->getConstantRangeValue();
@@ -2282,7 +2282,7 @@ struct StrBoolAttr {
   static bool isSet(const Function &Fn,
                     StringRef Kind) {
     auto A = Fn.getFnAttribute(Kind);
-    return A.getValueAsString().equals("true");
+    return A.getValueAsString() == "true";
   }
 
   static void set(Function &Fn,

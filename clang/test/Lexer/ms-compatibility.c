@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -E -fms-compatibility %s | FileCheck --check-prefix=CHECK-MS-COMPAT %s
-// RUN: %clang_cc1 -fsyntax-only -E %s | FileCheck --check-prefix=CHECK-NO-MS-COMPAT %s
+// RUN: %clang_cc1 -E -fms-compatibility %s | FileCheck --check-prefix=CHECK-MS-COMPAT %s
+// RUN: %clang_cc1 -E %s | FileCheck --check-prefix=CHECK-NO-MS-COMPAT %s
 
 #define FN(x) L#x
 #define F L "aaa"

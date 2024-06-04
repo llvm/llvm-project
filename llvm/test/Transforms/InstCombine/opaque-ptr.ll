@@ -289,7 +289,9 @@ define ptr @geps_combinable_different_elem_type_extra_use2(ptr %a, i64 %idx) {
 
 define ptr @geps_combinable_scalable(ptr %a, i64 %idx) {
 ; CHECK-LABEL: @geps_combinable_scalable(
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds <vscale x 2 x i32>, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds i8, ptr [[A2]], i64 4
 ; CHECK-NEXT:    ret ptr [[A3]]
 ;
@@ -300,7 +302,9 @@ define ptr @geps_combinable_scalable(ptr %a, i64 %idx) {
 
 define ptr @geps_combinable_scalable_vector_array(ptr %a, i64 %idx) {
 ; CHECK-LABEL: @geps_combinable_scalable_vector_array(
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds [4 x <vscale x 2 x i32>], ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 5
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds i8, ptr [[A2]], i64 4
 ; CHECK-NEXT:    ret ptr [[A3]]
 ;

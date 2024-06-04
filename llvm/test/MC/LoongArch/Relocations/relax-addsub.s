@@ -28,7 +28,7 @@
 
 # RELAX:       Relocations [
 # RELAX-NEXT:    Section ({{.*}}) .rela.text {
-# RELAX-NEXT:      0x4 R_LARCH_ALIGN .text 0x4
+# RELAX-NEXT:      0x4 R_LARCH_ALIGN {{.*}} 0x4
 # RELAX-NEXT:      0x10 R_LARCH_PCALA_HI20 .L1 0x0
 # RELAX-NEXT:      0x10 R_LARCH_RELAX - 0x0
 # RELAX-NEXT:      0x14 R_LARCH_PCALA_LO12 .L1 0x0

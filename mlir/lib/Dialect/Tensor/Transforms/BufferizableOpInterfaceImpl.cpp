@@ -338,6 +338,9 @@ struct ExpandShapeOpInterface
 
     // Memref result type is inferred by the builder based on reassociation
     // indices and result shape.
+    // TODO: Instead of inferring the output shape argument of
+    // memref.expand_shape op, use output_shape argument of tensor.expand_shape
+    // op.
     replaceOpWithNewBufferizedOp<memref::ExpandShapeOp>(
         rewriter, op, tensorResultType.getShape(), *buffer,
         expandShapeOp.getReassociationIndices());

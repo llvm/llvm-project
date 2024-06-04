@@ -35,6 +35,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -372,7 +373,11 @@ struct VPTransformState {
     /// of replication, maps the BasicBlock of the last replica created.
     SmallDenseMap<VPBasicBlock *, BasicBlock *> VPBB2IRBB;
 
-    CFGState() = default;
+    /// Updater for the DominatorTree.
+    DomTreeUpdater DTU;
+
+    CFGState(DominatorTree *DT)
+        : DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy) {}
 
     /// Returns the BasicBlock* mapped to the pre-header of the loop region
     /// containing \p R.
@@ -381,9 +386,6 @@ struct VPTransformState {
 
   /// Hold a pointer to LoopInfo to register new basic blocks in the loop.
   LoopInfo *LI;
-
-  /// Hold a pointer to Dominator Tree to register new basic blocks in the loop.
-  DominatorTree *DT;
 
   /// Hold a reference to the IRBuilder used to generate output IR code.
   IRBuilderBase &Builder;
@@ -471,7 +473,7 @@ public:
   /// that are actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPBlockBase objects. They are used for concrete
   /// type identification.
-  using VPBlockTy = enum { VPBasicBlockSC, VPRegionBlockSC };
+  using VPBlockTy = enum { VPRegionBlockSC, VPBasicBlockSC, VPIRBasicBlockSC };
 
   using VPBlocksTy = SmallVectorImpl<VPBlockBase *>;
 
@@ -841,6 +843,7 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPDefID()) {
     case VPRecipeBase::VPDerivedIVSC:
+    case VPRecipeBase::VPEVLBasedIVPHISC:
     case VPRecipeBase::VPExpandSCEVSC:
     case VPRecipeBase::VPInstructionSC:
     case VPRecipeBase::VPReductionSC:
@@ -1092,7 +1095,10 @@ public:
       I->setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
-      cast<GetElementPtrInst>(I)->setIsInBounds(GEPFlags.IsInBounds);
+      // TODO(gep_nowrap): Track the full GEPNoWrapFlags in VPlan.
+      cast<GetElementPtrInst>(I)->setNoWrapFlags(
+          GEPFlags.IsInBounds ? GEPNoWrapFlags::inBounds()
+                              : GEPNoWrapFlags::none());
       break;
     case OperationType::FPMathOp:
       I->setHasAllowReassoc(FMFs.AllowReassoc);
@@ -1176,6 +1182,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
+    LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
@@ -1458,24 +1465,38 @@ class VPWidenCallRecipe : public VPSingleDefRecipe {
 
 public:
   template <typename IterT>
-  VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments,
+  VPWidenCallRecipe(Value *UV, iterator_range<IterT> CallArguments,
                     Intrinsic::ID VectorIntrinsicID, DebugLoc DL = {},
                     Function *Variant = nullptr)
-      : VPSingleDefRecipe(VPDef::VPWidenCallSC, CallArguments, &I, DL),
-        VectorIntrinsicID(VectorIntrinsicID), Variant(Variant) {}
+      : VPSingleDefRecipe(VPDef::VPWidenCallSC, CallArguments, UV, DL),
+        VectorIntrinsicID(VectorIntrinsicID), Variant(Variant) {
+    assert(
+        isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
+        "last operand must be the called function");
+  }
 
   ~VPWidenCallRecipe() override = default;
 
   VPWidenCallRecipe *clone() override {
-    return new VPWidenCallRecipe(*cast<CallInst>(getUnderlyingInstr()),
-                                 operands(), VectorIntrinsicID, getDebugLoc(),
-                                 Variant);
+    return new VPWidenCallRecipe(getUnderlyingValue(), operands(),
+                                 VectorIntrinsicID, getDebugLoc(), Variant);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
 
   /// Produce a widened version of the call instruction.
   void execute(VPTransformState &State) override;
+
+  Function *getCalledScalarFunction() const {
+    return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+  }
+
+  operand_range arg_operands() {
+    return make_range(op_begin(), op_begin() + getNumOperands() - 1);
+  }
+  const_operand_range arg_operands() const {
+    return make_range(op_begin(), op_begin() + getNumOperands() - 1);
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1743,7 +1764,8 @@ public:
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 
   /// Returns true if the induction is canonical, i.e. starting at 0 and
-  /// incremented by UF * VF (= the original IV is incremented by 1).
+  /// incremented by UF * VF (= the original IV is incremented by 1) and has the
+  /// same type as the canonical induction.
   bool isCanonical() const;
 
   /// Returns the scalar type of the induction.
@@ -2399,8 +2421,8 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe *L, VPValue *EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L->getIngredient(),
-                            {L->getAddr(), EVL}, L->isConsecutive(), false,
-                            L->getDebugLoc()),
+                            {L->getAddr(), EVL}, L->isConsecutive(),
+                            L->isReverse(), L->getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -2476,7 +2498,8 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe *S, VPValue *EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S->getIngredient(),
                             {S->getAddr(), S->getStoredValue(), EVL},
-                            S->isConsecutive(), false, S->getDebugLoc()) {
+                            S->isConsecutive(), S->isReverse(),
+                            S->getDebugLoc()) {
     setMask(Mask);
   }
 
@@ -2694,12 +2717,6 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-
-  /// Returns the scalar type of the induction.
-  const Type *getScalarType() const {
-    return cast<VPCanonicalIVPHIRecipe>(getOperand(0)->getDefiningRecipe())
-        ->getScalarType();
-  }
 };
 
 /// A recipe for converting the input value \p IV value to the corresponding
@@ -2816,9 +2833,12 @@ class VPBasicBlock : public VPBlockBase {
 public:
   using RecipeListTy = iplist<VPRecipeBase>;
 
-private:
+protected:
   /// The VPRecipes held in the order of output instructions to generate.
   RecipeListTy Recipes;
+
+  VPBasicBlock(const unsigned char BlockSC, const Twine &Name = "")
+      : VPBlockBase(BlockSC, Name.str()) {}
 
 public:
   VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr)
@@ -2868,7 +2888,8 @@ public:
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
-    return V->getVPBlockID() == VPBlockBase::VPBasicBlockSC;
+    return V->getVPBlockID() == VPBlockBase::VPBasicBlockSC ||
+           V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
   }
 
   void insert(VPRecipeBase *Recipe, iterator InsertPt) {
@@ -2931,10 +2952,48 @@ public:
     return NewBlock;
   }
 
+protected:
+  /// Execute the recipes in the IR basic block \p BB.
+  void executeRecipes(VPTransformState *State, BasicBlock *BB);
+
 private:
   /// Create an IR BasicBlock to hold the output instructions generated by this
   /// VPBasicBlock, and return it. Update the CFGState accordingly.
   BasicBlock *createEmptyBasicBlock(VPTransformState::CFGState &CFG);
+};
+
+/// A special type of VPBasicBlock that wraps an existing IR basic block.
+/// Recipes of the block get added before the first non-phi instruction in the
+/// wrapped block.
+/// Note: At the moment, VPIRBasicBlock can only be used to wrap VPlan's
+/// preheader block.
+class VPIRBasicBlock : public VPBasicBlock {
+  BasicBlock *IRBB;
+
+public:
+  VPIRBasicBlock(BasicBlock *IRBB)
+      : VPBasicBlock(VPIRBasicBlockSC,
+                     (Twine("ir-bb<") + IRBB->getName() + Twine(">")).str()),
+        IRBB(IRBB) {}
+
+  ~VPIRBasicBlock() override {}
+
+  static inline bool classof(const VPBlockBase *V) {
+    return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
+  }
+
+  /// The method which generates the output IR instructions that correspond to
+  /// this VPBasicBlock, thereby "executing" the VPlan.
+  void execute(VPTransformState *State) override;
+
+  VPIRBasicBlock *clone() override {
+    auto *NewBlock = new VPIRBasicBlock(IRBB);
+    for (VPRecipeBase &R : Recipes)
+      NewBlock->appendRecipe(R.clone());
+    return NewBlock;
+  }
+
+  BasicBlock *getIRBasicBlock() const { return IRBB; }
 };
 
 /// VPRegionBlock represents a collection of VPBasicBlocks and VPRegionBlocks
@@ -3125,12 +3184,12 @@ public:
   ~VPlan();
 
   /// Create initial VPlan skeleton, having an "entry" VPBasicBlock (wrapping
-  /// original scalar pre-header) which contains SCEV expansions that need to
-  /// happen before the CFG is modified; a VPBasicBlock for the vector
+  /// original scalar pre-header \p PH) which contains SCEV expansions that need
+  /// to happen before the CFG is modified; a VPBasicBlock for the vector
   /// pre-header, followed by a region for the vector loop, followed by the
   /// middle VPBasicBlock.
   static VPlanPtr createInitialVPlan(const SCEV *TripCount,
-                                     ScalarEvolution &PSE);
+                                     ScalarEvolution &PSE, BasicBlock *PH);
 
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
@@ -3215,6 +3274,9 @@ public:
     return Value2VPValue[V];
   }
 
+  /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
+  VPValue *getLiveIn(Value *V) const { return Value2VPValue.lookup(V); }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the live-ins of this VPlan to \p O.
   void printLiveIns(raw_ostream &O) const;
@@ -3274,13 +3336,6 @@ public:
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
   VPlan *duplicate();
-
-private:
-  /// Add to the given dominator tree the header block and every new basic block
-  /// that was created between it and the latch block, inclusive.
-  static void updateDominatorTree(DominatorTree *DT, BasicBlock *LoopLatchBB,
-                                  BasicBlock *LoopPreHeaderBB,
-                                  BasicBlock *LoopExitBB);
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

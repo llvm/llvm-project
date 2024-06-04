@@ -511,7 +511,7 @@ define { <vscale x 4 x double>, <vscale x 4 x double> } @deinterleave_nxptr_fact
 ; CHECK-NEXT:    ret { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP12]]
 ;
   %wide.vec = load <vscale x 8 x double>, ptr %ptr, align 8
-  %ldN = tail call { <vscale x 4 x double>, <vscale x 4 x double> } @llvm.experimental.vector.deinterleave2.nxv8f64(<vscale x 8 x double> %wide.vec)
+  %ldN = tail call { <vscale x 4 x double>, <vscale x 4 x double> } @llvm.vector.deinterleave2.nxv8f64(<vscale x 8 x double> %wide.vec)
   ret { <vscale x 4 x double>, <vscale x 4 x double> } %ldN
 }
 

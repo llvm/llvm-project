@@ -121,6 +121,7 @@ public:
 
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
                        const unsigned Depth = 0) const;
+  bool hasAllBUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 8); }
   bool hasAllHUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 16); }
   bool hasAllWUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 32); }
 

@@ -277,6 +277,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FCEIL,
                                G_FCOS,
                                G_FSIN,
+                               G_FTAN,
                                G_FSQRT,
                                G_FFLOOR,
                                G_FRINT,
@@ -303,6 +304,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
     // Struct return types become a single scalar, so cannot easily legalize.
     getActionDefinitionsBuilder({G_SMULH, G_UMULH}).alwaysLegal();
+
+    // supported saturation arithmetic
+    getActionDefinitionsBuilder({G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT})
+        .legalFor(allIntScalarsAndVectors);
   }
 
   getLegacyLegalizerInfo().computeTables();

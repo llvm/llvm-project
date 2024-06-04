@@ -151,7 +151,10 @@ def CFGConversion : Pass<"cfg-conversion"> {
   let options = [
     Option<"forceLoopToExecuteOnce", "always-execute-loop-body", "bool",
            /*default=*/"false",
-           "force the body of a loop to execute at least once">
+           "force the body of a loop to execute at least once">,
+    Option<"setNSW", "set-nsw", "bool",
+           /*default=*/"false",
+           "set nsw on loop variable increment">
   ];
 }
 
@@ -247,7 +250,6 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
            "std::size_t", /*default=*/"~static_cast<std::size_t>(0)",
            "Set maximum number of elements of an array allocated on the stack.">
   ];
-  let constructor = "::fir::createMemoryAllocationPass()";
 }
 
 def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
@@ -257,7 +259,6 @@ def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
     allocations.
   }];
   let dependentDialects = [ "fir::FIROpsDialect" ];
-  let constructor = "::fir::createStackArraysPass()";
 }
 
 def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
@@ -277,7 +278,6 @@ def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
     aren't races adding new tags to the mlir context.
   }];
   let dependentDialects = [ "fir::FIROpsDialect" ];
-  let constructor = "::fir::createAliasTagsPass()";
 }
 
 def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
@@ -300,14 +300,13 @@ def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
   let constructor = "::fir::createAlgebraicSimplificationPass()";
 }
 
-def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "::mlir::func::FuncOp"> {
+def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
   let summary =
     "Simplify operations on polymorphic types";
   let description = [{
     This pass breaks up the lowering of operations on polymorphic types by 
     introducing an intermediate FIR level that simplifies code geneation. 
   }];
-  let constructor = "::fir::createPolymorphicOpConversionPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
@@ -321,26 +320,23 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     an array has element sized stride. The element sizes stride allows some
     loops to be vectorized as well as other loop optimizations.
   }];
-  let constructor = "::fir::createLoopVersioningPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def OMPDescriptorMapInfoGenPass
-    : Pass<"omp-descriptor-map-info-gen", "mlir::func::FuncOp"> {
+def OMPMapInfoFinalizationPass
+    : Pass<"omp-map-info-finalization"> {
   let summary = "expands OpenMP MapInfo operations containing descriptors";
   let description = [{
     Expands MapInfo operations containing descriptor types into multiple 
     MapInfo's for each pointer element in the descriptor that requires 
     explicit individual mapping by the OpenMP runtime.
   }];
-  let constructor = "::fir::createOMPDescriptorMapInfoGenPass()";
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
 def OMPMarkDeclareTargetPass
     : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
   let summary = "Marks all functions called by an OpenMP declare target function as declare target";
-  let constructor = "::fir::createOMPMarkDeclareTargetPass()";
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
@@ -402,6 +398,18 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
            "Set the unsafe-fp-math attribute on functions in the module.">,
   ];
   let constructor = "::fir::createFunctionAttrPass()";
+}
+
+def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
+  let summary =
+    "Simplify operations on assumed-rank types";
+  let description = [{
+    This pass breaks up the lowering of operations on assumed-rank types by 
+    introducing an intermediate FIR level that simplifies code generation. 
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::func::FuncDialect"
+  ];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

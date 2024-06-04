@@ -48,5 +48,3 @@ include_directories(${mca_includes})
 add_llvm_target_unittest(LLVMMCATests
   ${mca_sources}
   )
-
-set_property(TARGET LLVMMCATests PROPERTY FOLDER "Tests/UnitTests/ToolTests")

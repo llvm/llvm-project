@@ -23,7 +23,6 @@
 
 #include "variant.h"
 #include "flang/Common/api-attrs.h"
-#include "llvm/Support/Compiler.h"
 #include <type_traits>
 
 namespace Fortran::common {
@@ -31,7 +30,7 @@ namespace log2visit {
 
 template <std::size_t LOW, std::size_t HIGH, typename RESULT, typename VISITOR,
     typename... VARIANT>
-inline RT_API_ATTRS RESULT Log2VisitHelper(
+RT_DEVICE_NOINLINE_HOST_INLINE RT_API_ATTRS RESULT Log2VisitHelper(
     VISITOR &&visitor, std::size_t which, VARIANT &&...u) {
   if constexpr (LOW + 7 >= HIGH) {
     switch (which - LOW) {
@@ -41,17 +40,17 @@ inline RT_API_ATTRS RESULT Log2VisitHelper(
       return visitor(std::get<(LOW + N)>(std::forward<VARIANT>(u))...); \
     }
       VISIT_CASE_N(1)
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
       VISIT_CASE_N(2)
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
       VISIT_CASE_N(3)
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
       VISIT_CASE_N(4)
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
       VISIT_CASE_N(5)
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
       VISIT_CASE_N(6)
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
       VISIT_CASE_N(7)
 #undef VISIT_CASE_N
     }
@@ -69,8 +68,9 @@ inline RT_API_ATTRS RESULT Log2VisitHelper(
 }
 
 template <typename VISITOR, typename... VARIANT>
-inline RT_API_ATTRS auto visit(VISITOR &&visitor, VARIANT &&...u)
-    -> decltype(visitor(std::get<0>(std::forward<VARIANT>(u))...)) {
+RT_DEVICE_NOINLINE_HOST_INLINE RT_API_ATTRS auto
+visit(VISITOR &&visitor, VARIANT &&...u) -> decltype(visitor(std::get<0>(
+                                             std::forward<VARIANT>(u))...)) {
   using Result = decltype(visitor(std::get<0>(std::forward<VARIANT>(u))...));
   if constexpr (sizeof...(u) == 1) {
     static constexpr std::size_t high{
@@ -89,7 +89,7 @@ inline RT_API_ATTRS auto visit(VISITOR &&visitor, VARIANT &&...u)
 // Some versions of clang have bugs that cause compilation to hang
 // on these templates.  MSVC and older GCC versions may work but are
 // not well tested.  So enable only for GCC 9 and better.
-#if __GNUC__ < 9
+#if __GNUC__ < 9 && !defined(__clang__)
 #define FLANG_USE_STD_VISIT
 #endif
 

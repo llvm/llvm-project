@@ -109,16 +109,14 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
   } else if (PragmaName == "unroll") {
     // #pragma unroll N
-    if (ValueExpr && !ValueExpr->isValueDependent()) {
-      llvm::APSInt ValueAPS;
-      ExprResult R = S.VerifyIntegerConstantExpression(ValueExpr, &ValueAPS);
-      assert(!R.isInvalid() && "unroll count value must be a valid value, it's "
-                               "should be checked in Sema::CheckLoopHintExpr");
-      (void)R;
-      // The values of 0 and 1 block any unrolling of the loop.
-      if (ValueAPS.isZero() || ValueAPS.isOne())
-        SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Disable);
-      else
+    if (ValueExpr) {
+      if (!ValueExpr->isValueDependent()) {
+        auto Value = ValueExpr->EvaluateKnownConstInt(S.getASTContext());
+        if (Value.isZero() || Value.isOne())
+          SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
+        else
+          SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
+      } else
         SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
     } else
       SetHints(LoopHintAttr::Unroll, LoopHintAttr::Enable);
@@ -287,7 +285,7 @@ bool Sema::CheckAlwaysInlineAttr(const Stmt *OrigSt, const Stmt *CurSt,
 static Attr *handleNoInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
   NoInlineAttr NIA(S.Context, A);
-  if (!NIA.isClangNoInline()) {
+  if (!NIA.isStmtNoInline()) {
     S.Diag(St->getBeginLoc(), diag::warn_function_attribute_ignored_in_stmt)
         << "[[clang::noinline]]";
     return nullptr;
@@ -667,11 +665,17 @@ bool Sema::CheckRebuiltStmtAttributes(ArrayRef<const Attr *> Attrs) {
 ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
                                     SourceRange Range) {
   if (A.getNumArgs() != 1 || !A.getArgAsExpr(0)) {
-    Diag(A.getLoc(), diag::err_assume_attr_args) << A.getAttrName() << Range;
+    Diag(A.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << A.getAttrName() << 1 << Range;
     return ExprError();
   }
 
   auto *Assumption = A.getArgAsExpr(0);
+
+  if (DiagnoseUnexpandedParameterPack(Assumption)) {
+    return ExprError();
+  }
+
   if (Assumption->getDependence() == ExprDependence::None) {
     ExprResult Res = BuildCXXAssumeExpr(Assumption, A.getAttrName(), Range);
     if (Res.isInvalid())
@@ -679,7 +683,8 @@ ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
     Assumption = Res.get();
   }
 
-  if (!getLangOpts().CPlusPlus23)
+  if (!getLangOpts().CPlusPlus23 &&
+      A.getSyntax() == AttributeCommonInfo::AS_CXX11)
     Diag(A.getLoc(), diag::ext_cxx23_attr) << A << Range;
 
   return Assumption;

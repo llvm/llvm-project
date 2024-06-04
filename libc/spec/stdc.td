@@ -395,6 +395,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>], [ConstAttr]>,
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"fabsl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"fabsf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"fabsf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fdim", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
@@ -604,6 +605,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"nearbyint", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"nearbyintf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"nearbyintl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"nearbyintf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"nextafterf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"nextafter", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
@@ -647,6 +649,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"scalbn", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>]>,
           FunctionSpec<"scalbnf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>]>,
           FunctionSpec<"scalbnl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>]>,
+          GuardedFunctionSpec<"scalbnf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntType>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"nanf", RetValSpec<FloatType>, [ArgSpec<ConstCharPtr>]>,
           FunctionSpec<"nan", RetValSpec<DoubleType>, [ArgSpec<ConstCharPtr>]>,
@@ -1069,6 +1072,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"_Exit", RetValSpec<NoReturn>, [ArgSpec<IntType>]>,
           FunctionSpec<"exit", RetValSpec<NoReturn>, [ArgSpec<IntType>]>,
           FunctionSpec<"atexit", RetValSpec<IntType>, [ArgSpec<AtexitHandlerT>]>,
+          FunctionSpec<"quick_exit", RetValSpec<NoReturn>, [ArgSpec<IntType>]>,
       ]
   >;
 
@@ -1396,6 +1400,9 @@ def StdC : StandardSpec<"stdc"> {
       [], // Macros
       [ //Types
         MBStateTType,
+        Char8TType,
+        Char16TType,
+        Char32TType,
       ],
       [], // Enumerations
       []

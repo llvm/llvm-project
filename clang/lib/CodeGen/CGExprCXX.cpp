@@ -142,7 +142,7 @@ RValue CodeGenFunction::EmitCXXPseudoDestructorExpr(
       BaseQuals = PTy->getPointeeType().getQualifiers();
     } else {
       LValue BaseLV = EmitLValue(BaseExpr);
-      BaseValue = BaseLV.getAddress(*this);
+      BaseValue = BaseLV.getAddress();
       QualType BaseTy = BaseExpr->getType();
       BaseQuals = BaseTy.getQualifiers();
     }
@@ -298,7 +298,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
         /*ImplicitParamTy=*/QualType(), CE, Args, nullptr);
 
     EmitCXXConstructorCall(Ctor, Ctor_Complete, /*ForVirtualBase=*/false,
-                           /*Delegating=*/false, This.getAddress(*this), Args,
+                           /*Delegating=*/false, This.getAddress(), Args,
                            AggValueSlot::DoesNotOverlap, CE->getExprLoc(),
                            /*NewPointerIsChecked=*/false);
     return RValue::get(nullptr);
@@ -375,7 +375,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
     if (UseVirtualCall) {
       CGM.getCXXABI().EmitVirtualDestructorCall(*this, Dtor, Dtor_Complete,
-                                                This.getAddress(*this),
+                                                This.getAddress(),
                                                 cast<CXXMemberCallExpr>(CE));
     } else {
       GlobalDecl GD(Dtor, Dtor_Complete);
@@ -403,14 +403,14 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
 
   CGCallee Callee;
   if (UseVirtualCall) {
-    Callee = CGCallee::forVirtual(CE, MD, This.getAddress(*this), Ty);
+    Callee = CGCallee::forVirtual(CE, MD, This.getAddress(), Ty);
   } else {
     if (SanOpts.has(SanitizerKind::CFINVCall) &&
         MD->getParent()->isDynamicClass()) {
       llvm::Value *VTable;
       const CXXRecordDecl *RD;
       std::tie(VTable, RD) = CGM.getCXXABI().LoadVTablePtr(
-          *this, This.getAddress(*this), CalleeDecl->getParent());
+          *this, This.getAddress(), CalleeDecl->getParent());
       EmitVTablePtrCheckForCall(RD, VTable, CFITCK_NVCall, CE->getBeginLoc());
     }
 
@@ -429,7 +429,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   if (MD->isVirtual()) {
     Address NewThisAddr =
         CGM.getCXXABI().adjustThisArgumentForVirtualFunctionCall(
-            *this, CalleeDecl, This.getAddress(*this), UseVirtualCall);
+            *this, CalleeDecl, This.getAddress(), UseVirtualCall);
     This.setAddress(NewThisAddr);
   }
 
@@ -456,7 +456,7 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   if (BO->getOpcode() == BO_PtrMemI)
     This = EmitPointerWithAlignment(BaseExpr, nullptr, nullptr, KnownNonNull);
   else
-    This = EmitLValue(BaseExpr, KnownNonNull).getAddress(*this);
+    This = EmitLValue(BaseExpr, KnownNonNull).getAddress();
 
   EmitTypeCheck(TCK_MemberCall, E->getExprLoc(), This.emitRawPointer(*this),
                 QualType(MPT->getClass(), 0));
@@ -1008,8 +1008,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
   const Expr *Init = E->getInitializer();
   Address EndOfInit = Address::invalid();
   QualType::DestructionKind DtorKind = ElementType.isDestructedType();
-  EHScopeStack::stable_iterator Cleanup;
-  llvm::Instruction *CleanupDominator = nullptr;
+  CleanupDeactivationScope deactivation(*this);
+  bool pushedCleanup = false;
 
   CharUnits ElementSize = getContext().getTypeSizeInChars(ElementType);
   CharUnits ElementAlign =
@@ -1105,19 +1105,24 @@ void CodeGenFunction::EmitNewArrayInitializer(
     }
 
     // Enter a partial-destruction Cleanup if necessary.
-    if (needsEHCleanup(DtorKind)) {
+    if (DtorKind) {
+      AllocaTrackerRAII AllocaTracker(*this);
       // In principle we could tell the Cleanup where we are more
       // directly, but the control flow can get so varied here that it
       // would actually be quite complex.  Therefore we go through an
       // alloca.
+      llvm::Instruction *DominatingIP =
+          Builder.CreateFlagLoad(llvm::ConstantInt::getNullValue(Int8PtrTy));
       EndOfInit = CreateTempAlloca(BeginPtr.getType(), getPointerAlign(),
                                    "array.init.end");
-      CleanupDominator =
-          Builder.CreateStore(BeginPtr.emitRawPointer(*this), EndOfInit);
       pushIrregularPartialArrayCleanup(BeginPtr.emitRawPointer(*this),
                                        EndOfInit, ElementType, ElementAlign,
                                        getDestroyer(DtorKind));
-      Cleanup = EHStack.stable_begin();
+      cast<EHCleanupScope>(*EHStack.find(EHStack.stable_begin()))
+          .AddAuxAllocas(AllocaTracker.Take());
+      DeferredDeactivationCleanupStack.push_back(
+          {EHStack.stable_begin(), DominatingIP});
+      pushedCleanup = true;
     }
 
     CharUnits StartAlign = CurPtr.getAlignment();
@@ -1164,9 +1169,6 @@ void CodeGenFunction::EmitNewArrayInitializer(
   // initialization.
   llvm::ConstantInt *ConstNum = dyn_cast<llvm::ConstantInt>(NumElements);
   if (ConstNum && ConstNum->getZExtValue() <= InitListElements) {
-    // If there was a Cleanup, deactivate it.
-    if (CleanupDominator)
-      DeactivateCleanupBlock(Cleanup, CleanupDominator);
     return;
   }
 
@@ -1281,13 +1283,14 @@ void CodeGenFunction::EmitNewArrayInitializer(
     Builder.CreateStore(CurPtr.emitRawPointer(*this), EndOfInit);
 
   // Enter a partial-destruction Cleanup if necessary.
-  if (!CleanupDominator && needsEHCleanup(DtorKind)) {
-    llvm::Value *BeginPtrRaw = BeginPtr.emitRawPointer(*this);
-    llvm::Value *CurPtrRaw = CurPtr.emitRawPointer(*this);
-    pushRegularPartialArrayCleanup(BeginPtrRaw, CurPtrRaw, ElementType,
+  if (!pushedCleanup && needsEHCleanup(DtorKind)) {
+    llvm::Instruction *DominatingIP =
+        Builder.CreateFlagLoad(llvm::ConstantInt::getNullValue(Int8PtrTy));
+    pushRegularPartialArrayCleanup(BeginPtr.emitRawPointer(*this),
+                                   CurPtr.emitRawPointer(*this), ElementType,
                                    ElementAlign, getDestroyer(DtorKind));
-    Cleanup = EHStack.stable_begin();
-    CleanupDominator = Builder.CreateUnreachable();
+    DeferredDeactivationCleanupStack.push_back(
+        {EHStack.stable_begin(), DominatingIP});
   }
 
   // Emit the initializer into this element.
@@ -1295,10 +1298,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
                           AggValueSlot::DoesNotOverlap);
 
   // Leave the Cleanup if we entered one.
-  if (CleanupDominator) {
-    DeactivateCleanupBlock(Cleanup, CleanupDominator);
-    CleanupDominator->eraseFromParent();
-  }
+  deactivation.ForceDeactivate();
 
   // Advance to the next element by adjusting the pointer type as necessary.
   llvm::Value *NextPtr = Builder.CreateConstInBoundsGEP1_32(
@@ -2178,7 +2178,7 @@ static bool isGLValueFromPointerDeref(const Expr *E) {
 static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
                                          llvm::Type *StdTypeInfoPtrTy) {
   // Get the vtable pointer.
-  Address ThisPtr = CGF.EmitLValue(E).getAddress(CGF);
+  Address ThisPtr = CGF.EmitLValue(E).getAddress();
 
   QualType SrcRecordTy = E->getType();
 
@@ -2216,7 +2216,12 @@ static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
 }
 
 llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
-  llvm::Type *PtrTy = llvm::PointerType::getUnqual(getLLVMContext());
+  // Ideally, we would like to use GlobalsInt8PtrTy here, however, we cannot,
+  // primarily because the result of applying typeid is a value of type
+  // type_info, which is declared & defined by the standard library
+  // implementation and expects to operate on the generic (default) AS.
+  // https://reviews.llvm.org/D157452 has more context, and a possible solution.
+  llvm::Type *PtrTy = Int8PtrTy;
   LangAS GlobAS = CGM.GetGlobalVarAddressSpace(nullptr);
 
   auto MaybeASCast = [=](auto &&TypeInfo) {

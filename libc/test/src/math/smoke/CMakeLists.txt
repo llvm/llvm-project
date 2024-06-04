@@ -93,6 +93,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fabsf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fabsf16_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.math.fabsf16
+)
+
+add_fp_unittest(
   fabsf128_test
   SUITE
     libc-math-smoke-tests
@@ -2189,6 +2201,58 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  nearbyint_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyint_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyint
+)
+
+add_fp_unittest(
+  nearbyintf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyintf_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyintf
+)
+
+add_fp_unittest(
+  nearbyintl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyintl_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyintl
+)
+
+add_fp_unittest(
+  nearbyintf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyintf128_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyintf128
+)
+
+add_fp_unittest(
   nextafter_test
   SUITE
     libc-math-smoke-tests
@@ -2739,7 +2803,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbn
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -2753,7 +2816,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbnf
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -2767,7 +2829,19 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbnl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  scalbnf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalbnf128_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalbnf128
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(

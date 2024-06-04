@@ -83,3 +83,11 @@ subroutine s4
   !ERROR: VOLATILE attribute may apply only to a variable
   sf(x) = 1.
 end
+
+subroutine s5
+  !ERROR: Invalid specification expression: reference to impure function 'k'
+  real x(k())
+  !WARNING: Name 'k' from host scope should have a type declaration before its local statement function definition
+  !ERROR: 'k' is already declared in this scoping unit
+  k() = 0.0
+end

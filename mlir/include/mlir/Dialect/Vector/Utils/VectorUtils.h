@@ -157,7 +157,14 @@ private:
     if (failed(newOp))
       return failure();
 
-    rewriter.replaceOp(rootOp, *newOp);
+    // Rewriting succeeded but there are no values to replace.
+    if (rootOp->getNumResults() == 0) {
+      rewriter.eraseOp(rootOp);
+    } else {
+      assert(*newOp != Value() &&
+             "Cannot replace an op's use with an empty value.");
+      rewriter.replaceOp(rootOp, *newOp);
+    }
     return success();
   }
 
@@ -194,7 +201,7 @@ bool isLinearizableVector(VectorType type);
 /// for each dimension of the passed in tensor.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              ArrayRef<int64_t> readShape, Value padValue,
-                             bool useInBoundsInsteadOfMasking = true);
+                             bool useInBoundsInsteadOfMasking);
 
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:

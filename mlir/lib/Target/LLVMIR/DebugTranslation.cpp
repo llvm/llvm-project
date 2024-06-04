@@ -83,6 +83,13 @@ llvm::DIType *DebugTranslation::translateImpl(DINullTypeAttr attr) {
   return nullptr;
 }
 
+llvm::DIExpression *
+DebugTranslation::getExpressionAttrOrNull(DIExpressionAttr attr) {
+  if (!attr)
+    return nullptr;
+  return translateExpression(attr);
+}
+
 llvm::MDString *DebugTranslation::getMDStringOrNull(StringAttr stringAttr) {
   if (!stringAttr || stringAttr.empty())
     return nullptr;
@@ -156,7 +163,13 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
       /*OffsetInBits=*/0,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
       llvm::MDNode::get(llvmCtx, elements),
-      /*RuntimeLang=*/0, /*VTableHolder=*/nullptr);
+      /*RuntimeLang=*/0, /*VTableHolder=*/nullptr,
+      /*TemplateParams=*/nullptr, /*Identifier=*/nullptr,
+      /*Discriminator=*/nullptr,
+      getExpressionAttrOrNull(attr.getDataLocation()),
+      getExpressionAttrOrNull(attr.getAssociated()),
+      getExpressionAttrOrNull(attr.getAllocated()),
+      getExpressionAttrOrNull(attr.getRank()));
 }
 
 llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
@@ -165,7 +178,7 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*File=*/nullptr, /*Line=*/0,
       /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
-      /*DWARFAddressSpace=*/std::nullopt, /*PtrAuthData=*/std::nullopt,
+      attr.getDwarfAddressSpace(), /*PtrAuthData=*/std::nullopt,
       /*Flags=*/llvm::DINode::FlagZero, translate(attr.getExtraData()));
 }
 
@@ -406,6 +419,15 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc)) {
     // For callsites, the caller is fed as the inlinedAt for the callee.
     auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
+    // If the caller scope is not translatable, the overall callsite cannot be
+    // represented in LLVM (the callee scope may not match the parent function).
+    if (!callerLoc) {
+      // If there is an inlinedAt scope (an outer caller), skip to that
+      // directly. Otherwise, cannot translate.
+      if (!inlinedAt)
+        return nullptr;
+      callerLoc = inlinedAt;
+    }
     llvmLoc = translateLoc(callLoc.getCallee(), nullptr, callerLoc);
     // Fallback: Ignore callee if it has no debug scope.
     if (!llvmLoc)
