@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -global-isel-abort=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
+; CHECK-GI:         warning: Instruction selection used fallback path for interleave2_v4f16
+
 define <4 x half> @interleave2_v4f16(<2 x half> %vec0, <2 x half> %vec1) {
 ; CHECK-LABEL: interleave2_v4f16:
 ; CHECK:       // %bb.0:
