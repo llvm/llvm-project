@@ -176,7 +176,7 @@ LLVM_READONLY inline bool isRawStringDelimBody(unsigned char c) {
   using namespace charinfo;
   return (InfoTable[c] & (CHAR_UPPER | CHAR_LOWER | CHAR_PERIOD | CHAR_DIGIT |
                           CHAR_UNDER | CHAR_PUNCT)) != 0 &&
-         c != '(' && c != ')';
+         c != '(' && c != ')' && c != '\\';
 }
 
 enum class EscapeChar {
