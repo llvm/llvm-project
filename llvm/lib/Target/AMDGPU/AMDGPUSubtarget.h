@@ -55,6 +55,7 @@ protected:
   bool HasFP4ConversionScaleInsts = false;
   bool HasFP6BF6ConversionScaleInsts = false;
   bool HasF16BF16ToFP6BF6ConversionScaleInsts = false;
+  bool HasF32ToF16BF16ConversionSRInsts = false;
   bool EnableRealTrue16Insts = false;
   bool HasBF16TransInsts = false;
   bool HasBF16ConversionInsts = false;
@@ -200,6 +201,10 @@ public:
 
   bool hasF16BF16ToFP6BF6ConversionScaleInsts() const {
     return HasF16BF16ToFP6BF6ConversionScaleInsts;
+  }
+
+  bool hasF32ToF16BF16ConversionSRInsts() const {
+    return HasF32ToF16BF16ConversionSRInsts;
   }
 
   bool hasMadMacF32Insts() const {

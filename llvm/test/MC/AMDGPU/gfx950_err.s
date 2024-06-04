@@ -410,3 +410,9 @@ v_cvt_scalef32_sr_pk32_bf6_f32 v[0:5], v[6:37], v38, v39 clamp
 
 // GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 v_cvt_scalef32_sr_pk32_fp6_f32 v[0:5], v[6:37], v38, v39 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_sr_f16_f32 v1, v2, v3 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_sr_bf16_f32 v1, v2, v3 clamp
