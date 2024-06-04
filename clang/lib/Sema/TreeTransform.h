@@ -587,7 +587,8 @@ public:
   TemplateName TransformTemplateName(CXXScopeSpec &SS, TemplateName Name,
                                      SourceLocation NameLoc,
                                      QualType ObjectType = QualType(),
-                                     bool AllowInjectedClassName = false);
+                                     bool AllowInjectedClassName = false,
+                                     bool MayBeNNS = false);
 
   /// Transform the given template argument.
   ///
@@ -1137,7 +1138,8 @@ public:
     CXXScopeSpec SS;
     SS.Adopt(QualifierLoc);
     TemplateName InstName = getDerived().RebuildTemplateName(
-        SS, TemplateKWLoc, *Name, NameLoc, QualType(), AllowInjectedClassName);
+        SS, TemplateKWLoc, *Name, NameLoc, QualType(), AllowInjectedClassName,
+        /*MayBeNNS=*/false);
 
     if (InstName.isNull())
       return QualType();
@@ -1308,7 +1310,8 @@ public:
                                    SourceLocation TemplateKWLoc,
                                    const IdentifierInfo &Name,
                                    SourceLocation NameLoc, QualType ObjectType,
-                                   bool AllowInjectedClassName);
+                                   bool AllowInjectedClassName,
+                                   bool MayBeNNS);
 
   /// Build a new template name given a nested name specifier and the
   /// overloaded operator name that is referred to as a template.
@@ -4539,7 +4542,7 @@ TreeTransform<Derived>
 template <typename Derived>
 TemplateName TreeTransform<Derived>::TransformTemplateName(
     CXXScopeSpec &SS, TemplateName Name, SourceLocation NameLoc,
-    QualType ObjectType, bool AllowInjectedClassName) {
+    QualType ObjectType, bool AllowInjectedClassName, bool MayBeNNS) {
   if (QualifiedTemplateName *QTN = Name.getAsQualifiedTemplateName()) {
     TemplateDecl *Template = QTN->getUnderlyingTemplate().getAsTemplateDecl();
     assert(Template && "qualified template name must refer to a template");
@@ -4577,7 +4580,7 @@ TemplateName TreeTransform<Derived>::TransformTemplateName(
     if (DTN->isIdentifier()) {
       return getDerived().RebuildTemplateName(
           SS, TemplateKWLoc, *DTN->getIdentifier(), NameLoc, ObjectType,
-          AllowInjectedClassName);
+          AllowInjectedClassName, MayBeNNS);
     }
 
     return getDerived().RebuildTemplateName(SS, TemplateKWLoc,
@@ -5158,7 +5161,7 @@ TypeSourceInfo *TreeTransform<Derived>::TransformTSIInObjectScope(
 
     TemplateName Template = getDerived().TransformTemplateName(
         SS, SpecTL.getTypePtr()->getTemplateName(), SpecTL.getTemplateNameLoc(),
-        ObjectType, /*AllowInjectedClassName=*/true);
+        ObjectType, /*AllowInjectedClassName=*/true, /*MayBeNNS=*/true);
     if (Template.isNull())
       return nullptr;
 
@@ -5172,7 +5175,7 @@ TypeSourceInfo *TreeTransform<Derived>::TransformTSIInObjectScope(
         SS, SpecTL.getTemplateKeywordLoc(),
         *SpecTL.getTypePtr()->getIdentifier(), SpecTL.getTemplateNameLoc(),
         ObjectType,
-        /*AllowInjectedClassName=*/true);
+        /*AllowInjectedClassName=*/true, /*MayBeNNS=*/true);
     if (Template.isNull())
       return nullptr;
 
@@ -16217,14 +16220,15 @@ TreeTransform<Derived>::RebuildTemplateName(CXXScopeSpec &SS,
 template <typename Derived>
 TemplateName TreeTransform<Derived>::RebuildTemplateName(
     CXXScopeSpec &SS, SourceLocation TemplateKWLoc, const IdentifierInfo &Name,
-    SourceLocation NameLoc, QualType ObjectType, bool AllowInjectedClassName) {
+    SourceLocation NameLoc, QualType ObjectType, bool AllowInjectedClassName,
+    bool MayBeNNS) {
   UnqualifiedId TemplateName;
   TemplateName.setIdentifier(&Name, NameLoc);
   Sema::TemplateTy Template;
   getSema().ActOnTemplateName(/*Scope=*/nullptr, SS, TemplateKWLoc,
                               TemplateName, ParsedType::make(ObjectType),
                               /*EnteringContext=*/false, Template,
-                              AllowInjectedClassName);
+                              AllowInjectedClassName, MayBeNNS);
   return Template.get();
 }
 

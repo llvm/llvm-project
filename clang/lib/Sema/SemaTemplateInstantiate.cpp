@@ -1518,7 +1518,8 @@ namespace {
     TemplateName TransformTemplateName(CXXScopeSpec &SS, TemplateName Name,
                                        SourceLocation NameLoc,
                                        QualType ObjectType = QualType(),
-                                       bool AllowInjectedClassName = false);
+                                       bool AllowInjectedClassName = false,
+                                       bool MayBeNNS = false);
 
     const CXXAssumeAttr *TransformCXXAssumeAttr(const CXXAssumeAttr *AA);
     const LoopHintAttr *TransformLoopHintAttr(const LoopHintAttr *LH);
@@ -1950,7 +1951,7 @@ TemplateInstantiator::RebuildElaboratedType(SourceLocation KeywordLoc,
 
 TemplateName TemplateInstantiator::TransformTemplateName(
     CXXScopeSpec &SS, TemplateName Name, SourceLocation NameLoc,
-    QualType ObjectType, bool AllowInjectedClassName) {
+    QualType ObjectType, bool AllowInjectedClassName, bool MayBeNNS) {
   if (TemplateTemplateParmDecl *TTP
        = dyn_cast_or_null<TemplateTemplateParmDecl>(Name.getAsTemplateDecl())) {
     if (TTP->getDepth() < TemplateArgs.getNumLevels()) {
@@ -2022,7 +2023,7 @@ TemplateName TemplateInstantiator::TransformTemplateName(
   }
 
   return inherited::TransformTemplateName(SS, Name, NameLoc, ObjectType,
-                                          AllowInjectedClassName);
+                                          AllowInjectedClassName, MayBeNNS);
 }
 
 ExprResult

@@ -181,7 +181,8 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
                                       bool EnteringContext,
                                       TemplateTy &TemplateResult,
                                       bool &MemberOfUnknownSpecialization,
-                                      bool Disambiguation) {
+                                      bool Disambiguation,
+                                      bool MayBeNNS) {
   assert(getLangOpts().CPlusPlus && "No template names in C!");
 
   DeclarationName TName;
@@ -212,7 +213,8 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
   if (LookupTemplateName(R, S, SS, ObjectType, EnteringContext,
                          /*RequiredTemplate=*/SourceLocation(),
                          &AssumedTemplate,
-                         /*AllowTypoCorrection=*/!Disambiguation))
+                         /*AllowTypoCorrection=*/!Disambiguation,
+                         MayBeNNS))
     return TNK_Non_template;
 
   MemberOfUnknownSpecialization = R.wasNotFoundInCurrentInstantiation();
@@ -380,7 +382,8 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
                               QualType ObjectType, bool EnteringContext,
                               RequiredTemplateKind RequiredTemplate,
                               AssumedTemplateKind *ATK,
-                              bool AllowTypoCorrection) {
+                              bool AllowTypoCorrection,
+                              bool MayBeNNS) {
   if (ATK)
     *ATK = AssumedTemplateKind::None;
 
@@ -453,7 +456,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
   }
 
   bool LookupFirstQualifierInScope =
-      Found.getLookupKind() != LookupMemberName && Found.empty() &&
+      MayBeNNS && Found.empty() &&
       !ObjectType.isNull() && !IsDependent;
 
   // FIXME: We should still do the lookup if the object expression is dependent,
@@ -5707,7 +5710,8 @@ TemplateNameKind Sema::ActOnTemplateName(Scope *S,
                                          ParsedType ObjectType,
                                          bool EnteringContext,
                                          TemplateTy &Result,
-                                         bool AllowInjectedClassName) {
+                                         bool AllowInjectedClassName,
+                                         bool MayBeNNS) {
   if (TemplateKWLoc.isValid() && S && !S->getTemplateParamParent())
     Diag(TemplateKWLoc,
          getLangOpts().CPlusPlus11 ?
@@ -5744,7 +5748,8 @@ TemplateNameKind Sema::ActOnTemplateName(Scope *S,
   bool MemberOfUnknownSpecialization;
   TemplateNameKind TNK = isTemplateName(S, SS, TemplateKWLoc.isValid(), Name,
                                         ObjectType, EnteringContext, Result,
-                                        MemberOfUnknownSpecialization);
+                                        MemberOfUnknownSpecialization,
+                                        /*Disambiguation=*/false, MayBeNNS);
   if (TNK != TNK_Non_template) {
     // We resolved this to a (non-dependent) template name. Return it.
     auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(LookupCtx);
@@ -5783,7 +5788,8 @@ TemplateNameKind Sema::ActOnTemplateName(Scope *S,
                                    ? RequiredTemplateKind(TemplateKWLoc)
                                    : TemplateNameIsRequired;
     if (!LookupTemplateName(R, S, SS, ObjectType.get(), EnteringContext, RTK,
-                            /*ATK=*/nullptr, /*AllowTypoCorrection=*/false) &&
+                            /*ATK=*/nullptr, /*AllowTypoCorrection=*/false,
+                            MayBeNNS) &&
         !R.isAmbiguous()) {
       if (LookupCtx)
         Diag(Name.getBeginLoc(), diag::err_no_member)

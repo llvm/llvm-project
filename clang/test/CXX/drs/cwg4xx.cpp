@@ -20,7 +20,7 @@ namespace cwg400 { // cwg400: yes
   struct A { int a; struct a {}; }; // #cwg400-A
   struct B { int a; struct a {}; }; // #cwg400-B
   struct C : A, B { using A::a; struct a b; };
-  struct D : A, B { 
+  struct D : A, B {
     using A::a;
     // FIXME: we should issue a single diagnostic
     using B::a; // #cwg400-using-B-a

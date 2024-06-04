@@ -443,7 +443,7 @@ namespace cwg329 { // cwg329: 3.5
     //   expected-note@#cwg329-b {{in instantiation of template class 'cwg329::A<char>' requested here}}
     //   expected-note@#cwg329-i {{previous definition is here}}
   };
-  A<int> a; 
+  A<int> a;
   A<char> b; // #cwg329-b
 
   void test() {
@@ -684,9 +684,9 @@ namespace cwg341 { // cwg341: sup 1708
   namespace B {
     extern "C" int &cwg341_a = cwg341_a;
     // expected-error@-1 {{redefinition of 'cwg341_a'}}
-    //   expected-note@#cwg341_a {{previous definition is here}} 
+    //   expected-note@#cwg341_a {{previous definition is here}}
   }
-  extern "C" void cwg341_b(); // #cwg341_b 
+  extern "C" void cwg341_b(); // #cwg341_b
 }
 int cwg341_a;
 // expected-error@-1 {{declaration of 'cwg341_a' in global scope conflicts with declaration with C language linkage}}
@@ -704,7 +704,7 @@ namespace cwg341 {
   // expected-error@-1 {{declaration of 'cwg341_d' with C language linkage conflicts with declaration in global scope}}
   //   expected-note@#cwg341_d {{declared in global scope here}}
 
-  namespace A { extern "C" int cwg341_e; } // #cwg341_e 
+  namespace A { extern "C" int cwg341_e; } // #cwg341_e
   namespace B { extern "C" void cwg341_e(); }
   // expected-error@-1 {{redefinition of 'cwg341_e' as different kind of symbol}}
   //   expected-note@#cwg341_e {{previous definition is here}}
@@ -1106,7 +1106,7 @@ namespace cwg364 { // cwg364: yes
 }
 
 // cwg366: yes
-#if "foo" // expected-error {{invalid token at start of a preprocessor expression}} 
+#if "foo" // expected-error {{invalid token at start of a preprocessor expression}}
 #endif
 
 namespace cwg367 { // cwg367: yes

@@ -3376,7 +3376,8 @@ private:
                                     SourceLocation NameLoc,
                                     bool EnteringContext,
                                     UnqualifiedId &Id,
-                                    bool AssumeTemplateId);
+                                    bool AssumeTemplateId,
+                                    bool ForDestructor);
   bool ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
                                   ParsedType ObjectType,
                                   UnqualifiedId &Result);
