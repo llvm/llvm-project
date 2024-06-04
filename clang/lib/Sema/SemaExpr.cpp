@@ -5813,11 +5813,15 @@ static TypoCorrection TryTypoCorrectionForCall(Sema &S, Expr *Fn,
   return TypoCorrection();
 }
 
+// [C++26][[expr.unary.op]/p4
+// A pointer to member is only formed when an explicit &
+// is used and its operand is a qualified-id not enclosed in parentheses.
 static bool isParenthetizedAndQualifiedAddressOfExpr(Expr *Fn) {
   if (!isa<ParenExpr>(Fn))
     return false;
 
   Fn = Fn->IgnoreParens();
+
   auto *UO = dyn_cast<UnaryOperator>(Fn);
   if (!UO || UO->getOpcode() != clang::UO_AddrOf)
     return false;
