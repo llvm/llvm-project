@@ -3,7 +3,7 @@
 
 --- |
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-  target triple = "thumbv8.1m.main-none-unknown-eabi"
+  target triple = "thumbv8.1m.main-unknown-none-eabi"
 
   define arm_aapcs_vfpcc void @reg(<8 x i16> %acc0, <8 x i16> %acc1, ptr nocapture %px, i16 signext %p0) #0 {
   entry:
