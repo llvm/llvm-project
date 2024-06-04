@@ -375,6 +375,7 @@ config("compiler_defaults") {
            "ubsan only supported on iOS/Clang, Linux/Clang, or macOS/Clang")
     cflags += [
       "-fsanitize=undefined",
+      "-fno-sanitize=vptr,function",
       "-fno-sanitize-recover=all",
     ]
     ldflags += [ "-fsanitize=undefined" ]
