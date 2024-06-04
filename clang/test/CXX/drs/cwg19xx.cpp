@@ -158,7 +158,7 @@ class X {
   friend class A<T>::B::C;
   // expected-warning@-1 {{dependent nested name specifier 'A<T>::B::' for friend class declaration is not supported; turning off access control for 'X'}}
 };
-} // namespace cwg1918
+} // namespace cwg1945
 
 namespace cwg1947 { // cwg1947: 3.5
 #if __cplusplus >= 201402L
