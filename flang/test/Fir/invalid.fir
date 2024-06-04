@@ -1002,3 +1002,11 @@ func.func @bad_rebox_assumed_rank_3(%arg0: !fir.box<!fir.array<*:f32>> ) {
   %1 = fir.rebox_assumed_rank %arg0 lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:i32>>
   return
 }
+
+// -----
+
+func.func @bad_is_assumed_size(%arg0: !fir.ref<!fir.array<*:none>>) {
+  // expected-error@+1{{op operand #0 must be box or class, but got '!fir.ref<!fir.array<*:none>>'}}
+  %1 = fir.is_assumed_size %arg0 : (!fir.ref<!fir.array<*:none>>) -> i1
+  return
+}

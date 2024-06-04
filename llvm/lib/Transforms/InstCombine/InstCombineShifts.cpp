@@ -1275,6 +1275,17 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     return NewSub;
   }
 
+  // (sub nuw X, (Y << nuw Z)) >>u exact Z --> (X >>u exact Z) sub nuw Y
+  if (I.isExact() &&
+      match(Op0, m_OneUse(m_NUWSub(m_Value(X),
+                                   m_NUWShl(m_Value(Y), m_Specific(Op1)))))) {
+    Value *NewLshr = Builder.CreateLShr(X, Op1, "", /*isExact=*/true);
+    auto *NewSub = BinaryOperator::CreateNUWSub(NewLshr, Y);
+    NewSub->setHasNoSignedWrap(
+        cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap());
+    return NewSub;
+  }
+
   auto isSuitableBinOpcode = [](Instruction::BinaryOps BinOpcode) {
     switch (BinOpcode) {
     default:
@@ -1464,10 +1475,10 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       if (BitWidth > 2 && (*MulC - 1).isPowerOf2() &&
           MulC->logBase2() == ShAmtC) {
         // Look for a "splat" mul pattern - it replicates bits across each half
-        // of a value, so a right shift is just a mask of the low bits:
-        // lshr i[2N] (mul nuw X, (2^N)+1), N --> and iN X, (2^N)-1
+        // of a value, so a right shift simplifies back to just X:
+        // lshr i[2N] (mul nuw X, (2^N)+1), N --> X
         if (ShAmtC * 2 == BitWidth)
-          return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
+          return replaceInstUsesWith(I, X);
 
         // lshr (mul nuw (X, 2^N + 1)), N -> add nuw (X, lshr(X, N))
         if (Op0->hasOneUse()) {

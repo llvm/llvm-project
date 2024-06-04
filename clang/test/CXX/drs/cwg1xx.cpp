@@ -518,7 +518,7 @@ namespace cwg136 { // cwg136: 3.4
   void q() {
     j(A(), A()); // ok, has default argument
   }
-  extern "C" void k(int, int, int, int); // #cwg136-k 
+  extern "C" void k(int, int, int, int); // #cwg136-k
   namespace NSA {
   struct A {
     friend void cwg136::k(int, int, int, int = 0);
@@ -752,6 +752,46 @@ namespace cwg148 { // cwg148: yes
 }
 
 // cwg149: na
+
+namespace cwg150 { // cwg150: 19
+  namespace p1 {
+    template <class T, class U = int>
+    class ARG { };
+
+    template <class X, template <class Y> class PARM>
+    void f(PARM<X>) { }
+
+    void g() {
+      ARG<int> x;
+      f(x);
+    }
+  } // namespace p1
+
+  namespace p2 {
+    template <template <class T, class U = int> class PARM>
+    class C {
+      PARM<int> pi;
+    };
+  } // namespace p2
+
+  namespace n1 {
+    struct Dense { static const unsigned int dim = 1; };
+
+    template <template <typename> class View,
+              typename Block>
+    void operator+(float, View<Block> const&);
+
+    template <typename Block,
+              unsigned int Dim = Block::dim>
+    class Lvalue_proxy { operator float() const; };
+
+    void test_1d (void) {
+      Lvalue_proxy<Dense> p;
+      float b;
+      b + p;
+    }
+  } // namespace n1
+}
 
 namespace cwg151 { // cwg151: 3.1
   struct X {};
@@ -1048,7 +1088,7 @@ namespace cwg176 { // cwg176: 3.1
     cwg176::X *p4; // #cwg176-p4
     // cxx98-14-error@#cwg176-p4 {{use of class template 'cwg176::X' requires template arguments}}
     //  cxx98-14-note@#cwg176-X {{template is declared here}}
-    // since-cxx17-error@#cwg176-p4 {{use of class template 'X' requires template arguments; argument deduction not allowed in non-static class member}}
+    // since-cxx17-error@#cwg176-p4 {{use of class template 'cwg176::X' requires template arguments; argument deduction not allowed in non-static class member}}
     //  since-cxx17-note@#cwg176-X {{template is declared here}}
   };
 }
