@@ -220,6 +220,7 @@ public:
     OPW352,
     OPW384,
     OPW512,
+    OPW576,
     OPW1024,
     OPW16,
     OPWV216,

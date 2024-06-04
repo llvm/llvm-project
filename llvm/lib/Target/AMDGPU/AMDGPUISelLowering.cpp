@@ -106,6 +106,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v16f32, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v16f32, MVT::v16i32);
 
+  setOperationAction(ISD::LOAD, MVT::v18f32, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v18f32, MVT::v18i32);
+
   setOperationAction(ISD::LOAD, MVT::v32f32, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v32f32, MVT::v32i32);
 
@@ -431,7 +434,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                       MVT::v5i32,  MVT::v5f32,  MVT::v6i32,  MVT::v6f32,
                       MVT::v7i32,  MVT::v7f32,  MVT::v8i32,  MVT::v8f32,
                       MVT::v9i32,  MVT::v9f32,  MVT::v10i32, MVT::v10f32,
-                      MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32},
+                      MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32,
+                      MVT::v18i32, MVT::v18f32},
                      Custom);
 
   // FIXME: Why is v8f16/v8bf16 missing?
@@ -443,10 +447,10 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
        MVT::v6i32,  MVT::v7f32,  MVT::v7i32,  MVT::v8f32,  MVT::v8i32,
        MVT::v9f32,  MVT::v9i32,  MVT::v10i32, MVT::v10f32, MVT::v11i32,
        MVT::v11f32, MVT::v12i32, MVT::v12f32, MVT::v16f16, MVT::v16bf16,
-       MVT::v16i16, MVT::v16f32, MVT::v16i32, MVT::v32f32, MVT::v32i32,
-       MVT::v2f64,  MVT::v2i64,  MVT::v3f64,  MVT::v3i64,  MVT::v4f64,
-       MVT::v4i64,  MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64,
-       MVT::v32i16, MVT::v32f16, MVT::v32bf16},
+       MVT::v16i16, MVT::v16f32, MVT::v16i32, MVT::v18f32, MVT::v18i32,
+       MVT::v32f32, MVT::v32i32, MVT::v2f64,  MVT::v2i64,  MVT::v3f64,
+       MVT::v3i64,  MVT::v4f64,  MVT::v4i64,  MVT::v8f64,  MVT::v8i64,
+       MVT::v16f64, MVT::v16i64, MVT::v32i16, MVT::v32f16, MVT::v32bf16},
       Custom);
 
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
@@ -496,8 +500,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, VT, Custom);
 
   static const MVT::SimpleValueType VectorIntTypes[] = {
-      MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32, MVT::v6i32, MVT::v7i32,
-      MVT::v9i32, MVT::v10i32, MVT::v11i32, MVT::v12i32};
+      MVT::v2i32, MVT::v3i32,  MVT::v4i32,  MVT::v5i32,  MVT::v6i32, MVT::v7i32,
+      MVT::v9i32, MVT::v10i32, MVT::v11i32, MVT::v12i32, MVT::v18i32};
 
   for (MVT VT : VectorIntTypes) {
     // Expand the following operations for the current type by default.
@@ -517,8 +521,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   }
 
   static const MVT::SimpleValueType FloatVectorTypes[] = {
-      MVT::v2f32, MVT::v3f32,  MVT::v4f32, MVT::v5f32, MVT::v6f32, MVT::v7f32,
-      MVT::v9f32, MVT::v10f32, MVT::v11f32, MVT::v12f32};
+      MVT::v2f32, MVT::v3f32,  MVT::v4f32,  MVT::v5f32,  MVT::v6f32, MVT::v7f32,
+      MVT::v9f32, MVT::v10f32, MVT::v11f32, MVT::v12f32, MVT::v18f32};
 
   for (MVT VT : FloatVectorTypes) {
     setOperationAction(
@@ -568,6 +572,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::SELECT, MVT::v12f32, Promote);
   AddPromotedToType(ISD::SELECT, MVT::v12f32, MVT::v12i32);
+
+  setOperationAction(ISD::SELECT, MVT::v18f32, Promote);
+  AddPromotedToType(ISD::SELECT, MVT::v18f32, MVT::v18i32);
 
   // Disable most libcalls.
   for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
@@ -1247,6 +1254,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
       if (MemVT.isVector() && !MemVT.isPow2VectorType()) {
         assert(MemVT.getVectorNumElements() == 3 ||
                MemVT.getVectorNumElements() == 5 ||
+               MemVT.getVectorNumElements() == 6 ||
                (MemVT.getVectorNumElements() >= 9 &&
                 MemVT.getVectorNumElements() <= 12));
         MemVT = MemVT.getPow2VectorType(State.getContext());

@@ -6961,6 +6961,8 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
     report_fatal_error("Unsupported calling convention.");
   case CallingConv::GHC:
     return CC_AArch64_GHC;
+  case CallingConv::PreserveNone:
+    return CC_AArch64_Preserve_None;
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::PreserveMost:
@@ -7483,6 +7485,20 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     FuncInfo->setLazySaveTPIDR2Obj(TPIDR2Obj);
   }
 
+  if (CallConv == CallingConv::PreserveNone) {
+    for (const ISD::InputArg &I : Ins) {
+      if (I.Flags.isSwiftSelf() || I.Flags.isSwiftError() ||
+          I.Flags.isSwiftAsync()) {
+        MachineFunction &MF = DAG.getMachineFunction();
+        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+            MF.getFunction(),
+            "Swift attributes can't be used with preserve_none",
+            DL.getDebugLoc()));
+        break;
+      }
+    }
+  }
+
   return Chain;
 }
 
@@ -7654,6 +7670,7 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::AArch64_SVE_VectorCall:
   case CallingConv::PreserveMost:
   case CallingConv::PreserveAll:
+  case CallingConv::PreserveNone:
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
@@ -8725,6 +8742,20 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue X = DAG.getCopyToReg(Result, DL, Reg, InVals[I]);
       InVals[I] = DAG.getCopyFromReg(X, DL, Reg,
                                      InVals[I].getValueType());
+    }
+  }
+
+  if (CallConv == CallingConv::PreserveNone) {
+    for (const ISD::OutputArg &O : Outs) {
+      if (O.Flags.isSwiftSelf() || O.Flags.isSwiftError() ||
+          O.Flags.isSwiftAsync()) {
+        MachineFunction &MF = DAG.getMachineFunction();
+        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+            MF.getFunction(),
+            "Swift attributes can't be used with preserve_none",
+            DL.getDebugLoc()));
+        break;
+      }
     }
   }
 
@@ -15529,12 +15560,20 @@ static bool shouldSinkVectorOfPtrs(Value *Ptrs, SmallVectorImpl<Use *> &Ops) {
 }
 
 /// We want to sink following cases:
-/// (add|sub|gep) A, ((mul|shl) vscale, imm); (add|sub|gep) A, vscale
+/// (add|sub|gep) A, ((mul|shl) vscale, imm); (add|sub|gep) A, vscale;
+/// (add|sub|gep) A, ((mul|shl) zext(vscale), imm);
 static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   if (match(Op, m_VScale()))
     return true;
   if (match(Op, m_Shl(m_VScale(), m_ConstantInt())) ||
       match(Op, m_Mul(m_VScale(), m_ConstantInt()))) {
+    Ops.push_back(&cast<Instruction>(Op)->getOperandUse(0));
+    return true;
+  }
+  if (match(Op, m_Shl(m_ZExt(m_VScale()), m_ConstantInt())) ||
+      match(Op, m_Mul(m_ZExt(m_VScale()), m_ConstantInt()))) {
+    Value *ZExtOp = cast<Instruction>(Op)->getOperand(0);
+    Ops.push_back(&cast<Instruction>(ZExtOp)->getOperandUse(0));
     Ops.push_back(&cast<Instruction>(Op)->getOperandUse(0));
     return true;
   }

@@ -37,7 +37,7 @@ v_add_i32 v257, v0, v1
 // VI-ERR: :[[@LINE-4]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX1210-ERR: :[[@LINE-5]]:{{[0-9]+}}: error: register index is out of range
 
-s_mov_b64 s[0:17], -1
+s_mov_b64 s[0:18], -1
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid or unsupported register size
 
 s_mov_b64 s[103:104], -1

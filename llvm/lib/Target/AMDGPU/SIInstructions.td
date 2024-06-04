@@ -786,6 +786,7 @@ def SI_INDIRECT_SRC_V10 : SI_INDIRECT_SRC<VReg_320>;
 def SI_INDIRECT_SRC_V11 : SI_INDIRECT_SRC<VReg_352>;
 def SI_INDIRECT_SRC_V12 : SI_INDIRECT_SRC<VReg_384>;
 def SI_INDIRECT_SRC_V16 : SI_INDIRECT_SRC<VReg_512>;
+def SI_INDIRECT_SRC_V18 : SI_INDIRECT_SRC<VReg_576>;
 def SI_INDIRECT_SRC_V32 : SI_INDIRECT_SRC<VReg_1024>;
 
 def SI_INDIRECT_DST_V1 : SI_INDIRECT_DST<VGPR_32>;
@@ -797,6 +798,7 @@ def SI_INDIRECT_DST_V10 : SI_INDIRECT_DST<VReg_320>;
 def SI_INDIRECT_DST_V11 : SI_INDIRECT_DST<VReg_352>;
 def SI_INDIRECT_DST_V12 : SI_INDIRECT_DST<VReg_384>;
 def SI_INDIRECT_DST_V16 : SI_INDIRECT_DST<VReg_512>;
+def SI_INDIRECT_DST_V18 : SI_INDIRECT_DST<VReg_576>;
 def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 
 } // End Uses = [EXEC], Defs = [M0, EXEC]
@@ -842,6 +844,7 @@ def V_INDIRECT_REG_WRITE_MOVREL_B32_V10 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V11 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_352>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V12 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_384>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V16 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_512>;
+def V_INDIRECT_REG_WRITE_MOVREL_B32_V18 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_576>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V32 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_1024>;
 
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V1 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_32>;
@@ -855,6 +858,7 @@ def S_INDIRECT_REG_WRITE_MOVREL_B32_V10 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V11 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_352>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V12 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_384>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V16 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_512>;
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V18 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_576>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V32 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_1024>;
 
 def S_INDIRECT_REG_WRITE_MOVREL_B64_V1 : S_INDIRECT_REG_WRITE_MOVREL_B64_pseudo<SReg_64>;
@@ -887,6 +891,7 @@ def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V10 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<V
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V11 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_352>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V12 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_384>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V16 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_512>;
+def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V18 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_576>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_1024>;
 
 class V_INDIRECT_REG_READ_GPR_IDX_pseudo<RegisterClass rc> : PseudoInstSI <
@@ -907,6 +912,7 @@ def V_INDIRECT_REG_READ_GPR_IDX_B32_V10 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VRe
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V11 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_352>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V12 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_384>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V16 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_512>;
+def V_INDIRECT_REG_READ_GPR_IDX_B32_V18 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_576>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V32 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_1024>;
 
 multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
@@ -944,6 +950,7 @@ defm SI_SPILL_S320 : SI_SPILL_SGPR <SReg_320>;
 defm SI_SPILL_S352 : SI_SPILL_SGPR <SReg_352>;
 defm SI_SPILL_S384 : SI_SPILL_SGPR <SReg_384>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
+defm SI_SPILL_S576 : SI_SPILL_SGPR <SReg_576>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
 
 let Spill = 1, VALU = 1, isConvergent = 1 in {
@@ -1019,6 +1026,7 @@ defm SI_SPILL_V320 : SI_SPILL_VGPR <VReg_320>;
 defm SI_SPILL_V352 : SI_SPILL_VGPR <VReg_352>;
 defm SI_SPILL_V384 : SI_SPILL_VGPR <VReg_384>;
 defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
+defm SI_SPILL_V576 : SI_SPILL_VGPR <VReg_576>;
 defm SI_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024>;
 
 let Defs = [M0] in {
@@ -1040,6 +1048,7 @@ defm SI_SPILL_A320 : SI_SPILL_VGPR <AReg_320, 1>;
 defm SI_SPILL_A352 : SI_SPILL_VGPR <AReg_352, 1>;
 defm SI_SPILL_A384 : SI_SPILL_VGPR <AReg_384, 1>;
 defm SI_SPILL_A512 : SI_SPILL_VGPR <AReg_512, 1>;
+defm SI_SPILL_A576 : SI_SPILL_VGPR <AReg_576, 1>;
 defm SI_SPILL_A1024 : SI_SPILL_VGPR <AReg_1024, 1>;
 
 defm SI_SPILL_AV32  : SI_SPILL_VGPR <AV_32, 1>;
@@ -1055,6 +1064,7 @@ defm SI_SPILL_AV320 : SI_SPILL_VGPR <AV_320, 1>;
 defm SI_SPILL_AV352 : SI_SPILL_VGPR <AV_352, 1>;
 defm SI_SPILL_AV384 : SI_SPILL_VGPR <AV_384, 1>;
 defm SI_SPILL_AV512 : SI_SPILL_VGPR <AV_512, 1>;
+defm SI_SPILL_AV576 : SI_SPILL_VGPR <AV_576, 1>;
 defm SI_SPILL_AV1024 : SI_SPILL_VGPR <AV_1024, 1>;
 
 let isConvergent = 1 in {
@@ -1558,6 +1568,21 @@ foreach Index = 0-15 in {
   >;
 }
 
+foreach Index = 0-17 in {
+  def Extract_Element_v18i32_#Index : Extract_Element <
+    i32, v18i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v18i32_#Index : Insert_Element <
+    i32, v18i32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+
+  def Extract_Element_v18f32_#Index : Extract_Element <
+    f32, v18f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+  def Insert_Element_v18f32_#Index : Insert_Element <
+    f32, v18f32, Index, !cast<SubRegIndex>(sub#Index)
+  >;
+}
 
 foreach Index = 0-31 in {
   def Extract_Element_v32i32_#Index : Extract_Element <
@@ -1683,6 +1708,24 @@ def : BitConvert <v4f32, v4i32, VReg_128>;
 def : BitConvert <v3i32, v3f32, SGPR_96>;
 def : BitConvert <v3f32, v3i32, SGPR_96>;
 
+def : BitConvert <v3i32, v6f16, SGPR_96>;
+def : BitConvert <v6f16, v3i32, SGPR_96>;
+
+def : BitConvert <v3i32, v6bf16, SGPR_96>;
+def : BitConvert <v6bf16, v3i32, SGPR_96>;
+
+def : BitConvert <v3f32, v6bf16, SGPR_96>;
+def : BitConvert <v6bf16, v3f32, SGPR_96>;
+
+def : BitConvert <v6i16, v3i32, VReg_96>;
+def : BitConvert <v3i32, v6i16, VReg_96>;
+
+def : BitConvert <v6i16, v6bf16, SGPR_96>;
+def : BitConvert <v6f16, v6bf16, SGPR_96>;
+
+def : BitConvert <v6bf16, v6i16, SGPR_96>;
+def : BitConvert <v6bf16, v6f16, SGPR_96>;
+
 // 128-bit bitcast
 def : BitConvert <v2i64, v4i32, SReg_128>;
 def : BitConvert <v4i32, v2i64, SReg_128>;
@@ -1751,6 +1794,11 @@ def : BitConvert <v5i32, v5f32, SReg_160>;
 def : BitConvert <v5f32, v5i32, SReg_160>;
 def : BitConvert <v5i32, v5f32, VReg_160>;
 def : BitConvert <v5f32, v5i32, VReg_160>;
+
+def : BitConvert <v5i32, v10f16, SReg_160>;
+def : BitConvert <v5f32, v10i16, SReg_160>;
+def : BitConvert <v10i16, v5f32, VReg_160>;
+def : BitConvert <v10f16, v5i32, VReg_160>;
 
 // 192-bit bitcast
 def : BitConvert <v6i32, v6f32, SReg_192>;
@@ -1841,6 +1889,11 @@ def : BitConvert <v9f32, v9i32, SReg_288>;
 def : BitConvert <v9i32, v9f32, VReg_288>;
 def : BitConvert <v9f32, v9i32, VReg_288>;
 
+def : BitConvert <v9i32, v18f16, SReg_288>;
+def : BitConvert <v9f32, v18i16, SReg_288>;
+def : BitConvert <v18i16, v9f32, VReg_288>;
+def : BitConvert <v18f16, v9i32, VReg_288>;
+
 // 320-bit bitcast
 def : BitConvert <v10i32, v10f32, SReg_320>;
 def : BitConvert <v10f32, v10i32, SReg_320>;
@@ -1914,6 +1967,36 @@ def : BitConvert <v32bf16, v8i64, VReg_512>;
 def : BitConvert <v8i64, v32bf16, VReg_512>;
 def : BitConvert <v32bf16, v8i64, SReg_512>;
 def : BitConvert <v8i64, v32bf16, SReg_512>;
+
+// 576-bit bitcast
+
+def : BitConvert <v36i16, v36f16, SReg_576>;
+def : BitConvert <v36f16, v36i16, SReg_576>;
+def : BitConvert <v36i16, v36f16, VReg_576>;
+def : BitConvert <v36f16, v36i16, VReg_576>;
+
+def : BitConvert <v36i16, v36bf16, SReg_576>;
+def : BitConvert <v36bf16, v36i16, SReg_576>;
+def : BitConvert <v36i16, v36bf16, VReg_576>;
+def : BitConvert <v36bf16, v36i16, VReg_576>;
+
+def : BitConvert <v36bf16, v36f16, SReg_576>;
+def : BitConvert <v36f16, v36bf16, SReg_576>;
+def : BitConvert <v36bf16, v36f16, VReg_576>;
+def : BitConvert <v36f16, v36bf16, VReg_576>;
+
+def : BitConvert <v36i16, v18i32, SReg_576>;
+def : BitConvert <v36f16, v18i32, SReg_576>;
+def : BitConvert <v36bf16, v18i32, VReg_576>;
+
+def : BitConvert <v36i16, v18f32, SReg_576>;
+def : BitConvert <v36f16, v18f32, SReg_576>;
+def : BitConvert <v36bf16, v18f32, VReg_576>;
+
+def : BitConvert <v18i32, v18f32, SReg_576>;
+def : BitConvert <v18f32, v18i32, SReg_576>;
+def : BitConvert <v18i32, v18f32, VReg_576>;
+def : BitConvert <v18f32, v18i32, VReg_576>;
 
 // 1024-bit bitcast
 def : BitConvert <v32i32, v32f32, VReg_1024>;
@@ -2567,6 +2650,7 @@ defm : SI_INDIRECT_Pattern <v10f32, f32, "V10">;
 defm : SI_INDIRECT_Pattern <v11f32, f32, "V11">;
 defm : SI_INDIRECT_Pattern <v12f32, f32, "V12">;
 defm : SI_INDIRECT_Pattern <v16f32, f32, "V16">;
+defm : SI_INDIRECT_Pattern <v18f32, f32, "V18">;
 defm : SI_INDIRECT_Pattern <v32f32, f32, "V32">;
 
 defm : SI_INDIRECT_Pattern <v2i32, i32, "V2">;
@@ -2577,6 +2661,7 @@ defm : SI_INDIRECT_Pattern <v10i32, i32, "V10">;
 defm : SI_INDIRECT_Pattern <v11i32, i32, "V11">;
 defm : SI_INDIRECT_Pattern <v12i32, i32, "V12">;
 defm : SI_INDIRECT_Pattern <v16i32, i32, "V16">;
+defm : SI_INDIRECT_Pattern <v18i32, i32, "V18">;
 defm : SI_INDIRECT_Pattern <v32i32, i32, "V32">;
 
 //===----------------------------------------------------------------------===//
