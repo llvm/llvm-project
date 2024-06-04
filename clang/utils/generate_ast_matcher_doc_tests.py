@@ -496,15 +496,12 @@ class MatchType(Enum):
         Name: Use the name of the matched node to check if it matches
         TypeStr: Use the string representation of the matched type to check if
                  it matches
-        TypeOfStr: Use the string representation of the type of a matched node
-                   to check if it matches
     """
 
     Invalid = 0
     Code = 1
     Name = 2
     TypeStr = 3
-    TypeOfStr = 4
 
 
 def get_match_type(match: Match) -> MatchType:
@@ -515,9 +512,7 @@ def get_match_type(match: Match) -> MatchType:
         return MatchType.Code
     if match_type == "typestr":
         return MatchType.TypeStr
-    if match_type == "typeofstr":
-        return MatchType.TypeOfStr
-    print(f"match {match} has an invalid match type, tags: {match.tags}")
+    print(f"match {match} has an invalid match type: {match_type}")
     statistics["match_type_invalid"] += 1
     return MatchType.Invalid
 

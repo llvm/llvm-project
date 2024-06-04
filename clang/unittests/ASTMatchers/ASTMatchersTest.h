@@ -596,7 +596,6 @@ enum class MatchKind {
   Code,
   Name,
   TypeStr,
-  TypeOfStr,
 };
 
 inline llvm::StringRef toString(const MatchKind Kind) {
@@ -607,8 +606,6 @@ inline llvm::StringRef toString(const MatchKind Kind) {
     return "Name";
   case MatchKind::TypeStr:
     return "TypeStr";
-  case MatchKind::TypeOfStr:
-    return "TypeOfStr";
   }
   llvm_unreachable("Unhandled MatchKind");
 }
@@ -651,8 +648,6 @@ public:
         return getNameText(Node, EmitFailures);
       case MatchKind::TypeStr:
         return getTypeStrText(Node, EmitFailures);
-      case MatchKind::TypeOfStr:
-        return getTypeOfStrText(Node, EmitFailures);
       }
     }
 
@@ -695,27 +690,14 @@ public:
     getTypeStrText(const U *const Node, const bool EmitFailures = true) {
       if constexpr (std::is_base_of_v<Type, U>)
         return QualType(Node, 0).getAsString();
-      if constexpr (std::is_base_of_v<Decl, U>)
+      if constexpr (std::is_base_of_v<Decl, U>) {
         if (const auto *const TDecl = llvm::dyn_cast<TypeDecl>(Node))
           return getTypeStrText(TDecl->getTypeForDecl());
-
-      if (EmitFailures)
-        ADD_FAILURE() << "Match kind is 'TypeStr', but node of type 'U' is "
-                         "not handled.";
-      return std::nullopt;
-    }
-
-    template <typename U>
-    static std::optional<std::string>
-    getTypeOfStrText(const U *const Node, const bool EmitFailures = true) {
-      if constexpr (std::is_base_of_v<Decl, U>) {
         if (const auto *const VDecl = llvm::dyn_cast<ValueDecl>(Node))
           return VDecl->getType().getAsString();
-      } else if constexpr (std::is_base_of_v<Expr, U>)
-        return Node->getType().getAsString();
-
+      }
       if (EmitFailures)
-        ADD_FAILURE() << "Match kind is 'TypeOfStr', but node of type 'U' is "
+        ADD_FAILURE() << "Match kind is 'TypeStr', but node of type 'U' is "
                          "not handled.";
       return std::nullopt;
     }
@@ -823,8 +805,8 @@ private:
   static std::string getPossibleMatchStrings(const T *Node,
                                              const ASTContext &Context) {
     std::string MatchStrings{"\n"};
-    for (const auto Kind : {MatchKind::Code, MatchKind::Name,
-                            MatchKind::TypeStr, MatchKind::TypeOfStr})
+    for (const auto Kind :
+         {MatchKind::Code, MatchKind::Name, MatchKind::TypeStr})
       MatchStrings +=
           llvm::formatv("\tMatchKind:  {0}: '{1}',\n", toString(Kind),
                         Match::getMatchText(Node, Context, Kind, false)
