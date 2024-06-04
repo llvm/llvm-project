@@ -780,7 +780,7 @@ static void allocByValReductionVars(
     llvm::Value *var = builder.CreateAlloca(
         moduleTranslation.convertType(reductionDecls[i].getType()));
     moduleTranslation.mapValue(args[i], var);
-    privateReductionVariables.push_back(var);
+    privateReductionVariables[i] = var;
     reductionVariableMap.try_emplace(loop.getReductionVars()[i], var);
   }
 }
@@ -911,7 +911,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
 
-  SmallVector<llvm::Value *> privateReductionVariables;
+  SmallVector<llvm::Value *> privateReductionVariables(
+      wsloopOp.getNumReductionVars());
   DenseMap<Value, llvm::Value *> reductionVariableMap;
   allocByValReductionVars(wsloopOp, builder, moduleTranslation, allocaIP,
                           reductionDecls, privateReductionVariables,
@@ -942,7 +943,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       // ptr
       builder.CreateStore(phis[0], var);
 
-      privateReductionVariables.push_back(var);
+      privateReductionVariables[i] = var;
       moduleTranslation.mapValue(reductionArgs[i], phis[0]);
       reductionVariableMap.try_emplace(wsloopOp.getReductionVars()[i], phis[0]);
     } else {
@@ -1140,7 +1141,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   // Collect reduction declarations
   SmallVector<omp::DeclareReductionOp> reductionDecls;
   collectReductionDecls(opInst, reductionDecls);
-  SmallVector<llvm::Value *> privateReductionVariables;
+  SmallVector<llvm::Value *> privateReductionVariables(
+      opInst.getNumReductionVars());
 
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // Allocate reduction vars
@@ -1159,15 +1161,14 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     allocaIP =
         InsertPointTy(allocaIP.getBlock(),
                       allocaIP.getBlock()->getTerminator()->getIterator());
-    SmallVector<llvm::Value *> byRefVars;
-    if (isByRef) {
-      for (unsigned i = 0; i < opInst.getNumReductionVars(); ++i) {
+    SmallVector<llvm::Value *> byRefVars(opInst.getNumReductionVars());
+    for (unsigned i = 0; i < opInst.getNumReductionVars(); ++i) {
+      if (isByRef[i]) {
         // Allocate reduction variable (which is a pointer to the real reduciton
         // variable allocated in the inlined region)
-        byRefVars.push_back(builder.CreateAlloca(
-            moduleTranslation.convertType(reductionDecls[i].getType())));
+        byRefVars[i] = builder.CreateAlloca(
+            moduleTranslation.convertType(reductionDecls[i].getType()));
       }
-
     }
 
     for (unsigned i = 0; i < opInst.getNumReductionVars(); ++i) {
@@ -1184,12 +1185,12 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
              "reduction neutral element declaration region");
       builder.SetInsertPoint(initBlock->getTerminator());
 
-      if (isByRef) {
+      if (isByRef[i]) {
         // Store the result of the inlined region to the allocated reduction var
         // ptr
         builder.CreateStore(phis[0], byRefVars[i]);
 
-        privateReductionVariables.push_back(byRefVars[i]);
+        privateReductionVariables[i] = byRefVars[i];
         moduleTranslation.mapValue(reductionArgs[i], phis[0]);
         reductionVariableMap.try_emplace(opInst.getReductionVars()[i], phis[0]);
       } else {
