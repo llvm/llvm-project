@@ -1085,6 +1085,12 @@ def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
   "Has s_wait_xcnt instruction"
 >;
 
+def FeatureExclusiveScanInsts : SubtargetFeature<"exclusive-scan-insts",
+  "HasExclusiveScanInsts",
+  "true",
+  "Has exclusive scan instructions"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1404,7 +1410,8 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
-   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
+   FeatureExclusiveScanInsts
   ]
 >;
 
@@ -2690,6 +2697,9 @@ def HasVectorPrefetch :
 
 def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
   AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
+
+def HasExclusiveScanInsts : Predicate<"Subtarget->hasExclusiveScanInsts()">,
+  AssemblerPredicate<(all_of FeatureExclusiveScanInsts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

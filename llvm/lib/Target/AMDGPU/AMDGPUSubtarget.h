@@ -73,6 +73,7 @@ protected:
   bool EnablePromoteAlloca = false;
   bool HasTrigReducedRange = false;
   bool FastFMAF32 = false;
+  bool HasExclusiveScanInsts = false;
   unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
@@ -218,6 +219,8 @@ public:
   bool hasVOP3PInsts() const {
     return HasVOP3PInsts;
   }
+
+  bool hasExclusiveScanInsts() const { return HasExclusiveScanInsts; }
 
   bool hasMulI24() const {
     return HasMulI24;
