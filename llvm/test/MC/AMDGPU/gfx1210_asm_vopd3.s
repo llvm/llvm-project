@@ -4394,6 +4394,10 @@ v_dual_mov_b32 v255, -1 :: v_dual_mov_b32 v7, src_scc
 // GFX1210: v_dual_mov_b32 v255, -1 :: v_dual_mov_b32 v7, src_scc ; encoding: [0xc1,0x80,0x20,0xcf,0xfd,0x00,0x00,0x00,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
+v_dual_mov_b32 v25, v8 :: v_dual_mov_b32 v13, v16
+// GFX1210: v_dual_mov_b32 v25, v8 :: v_dual_mov_b32 v13, v16 ; encoding: [0x08,0x81,0x20,0xcf,0x10,0x01,0x00,0x00,0x19,0x00,0x00,0x0d]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
 v_dual_mov_b32 v255, v4 :: v_dual_mul_dx9_zero_f32 v7, v1, v255
 // GFX1210: v_dual_mov_b32 v255, v4 :: v_dual_mul_dx9_zero_f32 v7, v1, v255 ; encoding: [0x04,0x71,0x20,0xcf,0x01,0x01,0x00,0x00,0xff,0xff,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
