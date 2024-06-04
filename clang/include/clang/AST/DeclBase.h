@@ -670,6 +670,13 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
+  /// Whether the definition of the declaration should be emitted in external
+  /// sources.
+  bool shouldEmitInExternalSource() const;
+
+  /// Whether this declaration comes from a named module;
+  bool isInNamedModule() const;
+
   /// Whether this declaration comes from explicit global module.
   bool isFromExplicitGlobalModule() const;
 
@@ -701,7 +708,10 @@ public:
 
   /// Set the owning module ID.  This may only be called for
   /// deserialized Decls.
-  void setOwningModuleID(unsigned ID);
+  void setOwningModuleID(unsigned ID) {
+    assert(isFromASTFile() && "Only works on a deserialized declaration");
+    *((unsigned*)this - 2) = ID;
+  }
 
 public:
   /// Determine the availability of the given declaration.
@@ -774,11 +784,19 @@ public:
 
   /// Retrieve the global declaration ID associated with this
   /// declaration, which specifies where this Decl was loaded from.
-  GlobalDeclID getGlobalID() const;
+  GlobalDeclID getGlobalID() const {
+    if (isFromASTFile())
+      return (*((const GlobalDeclID *)this - 1));
+    return GlobalDeclID();
+  }
 
   /// Retrieve the global ID of the module that owns this particular
   /// declaration.
-  unsigned getOwningModuleID() const;
+  unsigned getOwningModuleID() const {
+    if (isFromASTFile())
+      return *((const unsigned*)this - 2);
+    return 0;
+  }
 
 private:
   Module *getOwningModuleSlow() const;

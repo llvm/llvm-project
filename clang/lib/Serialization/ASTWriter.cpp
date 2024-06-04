@@ -3357,10 +3357,12 @@ void ASTWriter::WriteTypeDeclOffsets() {
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(DECL_OFFSET));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // # of declarations
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // base decl ID
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // declarations block
   unsigned DeclOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
   {
-    RecordData::value_type Record[] = {DECL_OFFSET, DeclOffsets.size()};
+    RecordData::value_type Record[] = {DECL_OFFSET, DeclOffsets.size(),
+                                       FirstDeclID.get() - NUM_PREDEF_DECL_IDS};
     Stream.EmitRecordWithBlob(DeclOffsetAbbrev, Record, bytes(DeclOffsets));
   }
 }
@@ -3895,8 +3897,7 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
 
       // Write out identifiers if either the ID is local or the identifier has
       // changed since it was loaded.
-      if (ID >= FirstIdentID || !Chain || !II->isFromAST() ||
-          II->hasChangedSinceDeserialization() ||
+      if (ID >= FirstIdentID || II->hasChangedSinceDeserialization() ||
           (Trait.needDecls() &&
            II->hasFETokenInfoChangedSinceDeserialization()))
         Generator.insert(II, ID, Trait);
@@ -5422,6 +5423,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
                           M.NumPreprocessedEntities);
         writeBaseIDOrNone(M.BaseSubmoduleID, M.LocalNumSubmodules);
         writeBaseIDOrNone(M.BaseSelectorID, M.LocalNumSelectors);
+        writeBaseIDOrNone(M.BaseDeclID, M.LocalNumDecls);
         writeBaseIDOrNone(M.BaseTypeIndex, M.LocalNumTypes);
       }
     }
@@ -6506,10 +6508,12 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
     // computed.
     Record->push_back(D->getODRHash());
 
-  bool ModulesDebugInfo =
-      Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();
-  Record->push_back(ModulesDebugInfo);
-  if (ModulesDebugInfo)
+  bool ModulesCodegen =
+      !D->isDependentType() &&
+     (Writer->Context->getLangOpts().ModulesDebugInfo ||
+      D->isInNamedModule());
+  Record->push_back(ModulesCodegen);
+  if (ModulesCodegen)
     Writer->AddDeclRef(D, Writer->ModularCodegenDecls);
 
   // IsLambda bit is already saved.
@@ -6614,11 +6618,13 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
 
   // Note, this will get called multiple times, once one the reader starts up
   // and again each time it's done reading a PCH or module.
+  FirstDeclID = LocalDeclID(NUM_PREDEF_DECL_IDS + Chain->getTotalNumDecls());
   FirstTypeID = NUM_PREDEF_TYPE_IDS + Chain->getTotalNumTypes();
   FirstIdentID = NUM_PREDEF_IDENT_IDS + Chain->getTotalNumIdentifiers();
   FirstMacroID = NUM_PREDEF_MACRO_IDS + Chain->getTotalNumMacros();
   FirstSubmoduleID = NUM_PREDEF_SUBMODULE_IDS + Chain->getTotalNumSubmodules();
   FirstSelectorID = NUM_PREDEF_SELECTOR_IDS + Chain->getTotalNumSelectors();
+  NextDeclID = FirstDeclID;
   NextTypeID = FirstTypeID;
   NextIdentID = FirstIdentID;
   NextMacroID = FirstMacroID;
