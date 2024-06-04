@@ -1864,6 +1864,12 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   FrameEmitterImpl Emitter(IsEH, Streamer);
   ArrayRef<MCDwarfFrameInfo> FrameArray = Streamer.getDwarfFrameInfos();
 
+  // Disable AttemptToFoldSymbolOffsetDifference folding of EmitCompactUnwind
+  // and fdeStart-cieStart for EmitFDE due to the the performance issue. The
+  // label differences will be evaluate at write time.
+  assert(Streamer.getUseAssemblerInfoForParsing());
+  Streamer.setUseAssemblerInfoForParsing(false);
+
   // Emit the compact unwind info if available.
   bool NeedsEHFrameSection = !MOFI->getSupportsCompactUnwindWithoutEHFrame();
   if (IsEH && MOFI->getCompactUnwindSection()) {
@@ -1910,11 +1916,6 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
                     [](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) {
                       return CIEKey(X) < CIEKey(Y);
                     });
-  // Disable AttemptToFoldSymbolOffsetDifference folding of fdeStart-cieStart
-  // for EmitFDE due to the the performance issue. The label differences will be
-  // evaluate at write time.
-  assert(Streamer.getUseAssemblerInfoForParsing());
-  Streamer.setUseAssemblerInfoForParsing(false);
   for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
     const MCDwarfFrameInfo &Frame = *I;
     ++I;
