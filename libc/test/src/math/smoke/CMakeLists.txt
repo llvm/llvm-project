@@ -1468,7 +1468,7 @@ add_fp_unittest(
     FDimTest.h
   DEPENDS
     libc.src.math.fdimf
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1482,7 +1482,7 @@ add_fp_unittest(
     FDimTest.h
   DEPENDS
     libc.src.math.fdim
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1496,7 +1496,21 @@ add_fp_unittest(
     FDimTest.h
   DEPENDS
     libc.src.math.fdiml
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fdimf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fdimf16_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.src.math.fdimf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1510,7 +1524,7 @@ add_fp_unittest(
     FDimTest.h
   DEPENDS
     libc.src.math.fdimf128
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
