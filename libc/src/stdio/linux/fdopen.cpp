@@ -46,7 +46,6 @@ LLVM_LIBC_FUNCTION(::FILE *, fdopen, (int fd, const char *mode)) {
       !(fd_flags & O_APPEND)) {
     do_seek = true;
     if (LIBC_NAMESPACE::fcntl(fd, F_SETFL, fd_flags | O_APPEND) == -1) {
-      libc_errno = EBADF;
       return nullptr;
     }
   }

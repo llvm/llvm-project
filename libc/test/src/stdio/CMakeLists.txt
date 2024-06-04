@@ -380,6 +380,8 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.fcntl.open
       libc.src.stdio.fclose
       libc.src.stdio.fdopen
+      libc.src.stdio.fgets
+      libc.src.stdio.fputs
       libc.src.unistd.close
       libc.test.UnitTest.ErrnoSetterMatcher
   )
