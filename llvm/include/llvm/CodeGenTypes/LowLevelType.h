@@ -68,7 +68,7 @@ public:
   }
 
   /// Get a low-level vector of some number of elements and element type.
-  static constexpr LLT vector(ElementCount EC, LLT ScalarTy) {
+  static constexpr LLT vector(ElementCount EC, const LLT &ScalarTy) {
     assert(!EC.isScalar() && "invalid number of vector elements");
     assert(!ScalarTy.isVector() && "invalid vector element type");
     return LLT{ScalarTy.isPointer(),
@@ -121,7 +121,7 @@ public:
     return vector(ElementCount::getScalable(MinNumElements), ScalarTy);
   }
 
-  static constexpr LLT scalarOrVector(ElementCount EC, LLT ScalarTy) {
+  static constexpr LLT scalarOrVector(ElementCount EC, const LLT &ScalarTy) {
     return EC.isScalar() ? ScalarTy : LLT::vector(EC, ScalarTy);
   }
 
