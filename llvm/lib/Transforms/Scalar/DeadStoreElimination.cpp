@@ -591,7 +591,7 @@ static bool tryToSplitMiddle(Instruction *DeadI,
   // If Front and Rear are both bigger than the threshold they won't be inlined
   // in which case we want to bail out.
   // TODO: This is probably too restrictive.
-  if (FrontSize > Threshold && RearSize > Threshold)
+  if ((uint64_t) RearStart == (DeadStart + FrontSize) || (FrontSize > Threshold && RearSize > Threshold))
     return false;
 
   if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(DeadI)) {

@@ -246,9 +246,7 @@ define i32 @test5(i32 %x) nounwind ssp {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = alloca [[STRUCT_S:%.*]], align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[Y]], i64 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 dereferenceable(16) [[TMP0]], ptr align 16 @sS, i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 dereferenceable(16) [[Y]], ptr align 16 @sS, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[Y]], ptr align 16 @sS, i64 32, i1 false)
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [[STRUCT_S]], ptr [[Y]], i64 0, i32 1, i64 0
 ; CHECK-NEXT:    store i8 4, ptr [[A]], align 1
 ; CHECK-NEXT:    call void @test5a(ptr byval([[STRUCT_S]]) align 16 [[Y]])
