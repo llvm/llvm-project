@@ -630,8 +630,8 @@ void SampleProfileMatcher::findNewIRFunctions(
   }
 
   for (auto &F : M) {
-    // Skip declarations, as even if the function can be recognized renamed, we
-    // have nothing to do with it.
+    // Skip declarations, as even if the function can be matched, we have
+    // nothing to do with it.
     if (F.isDeclaration())
       continue;
 
@@ -797,7 +797,7 @@ void SampleProfileMatcher::matchProfileForNewFunctions(
   // Find the new candidate IR callees in the current caller scope.
   std::vector<Function *> *IRCalleesToMatch = nullptr;
   if (auto *IRCaller = findFuncByProfileName(FuncProfile.getFunction())) {
-    // No callees for external function, skip the rename matching.
+    // No callees for external function, skip the call graph matching.
     if (IRCaller->isDeclaration())
       return;
     IRCalleesToMatch = findNewIRCallees(*IRCaller, NewIRFunctions);
