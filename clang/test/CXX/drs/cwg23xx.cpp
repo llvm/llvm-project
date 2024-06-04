@@ -176,6 +176,20 @@ struct X {
 X<std::initializer_list<any>> x{ X<std::initializer_list<any>>() };
 // since-cxx17-error@-1 {{call to deleted constructor of 'X<std::initializer_list<any>>'}}
 //   since-cxx17-note@#cwg2311-X {{'X' has been explicitly marked deleted here}}
+
+// Per the currently implemented resolution, this does not apply to std::initializer_list.
+// An initializer list initialized from `{ e }` always has exactly one element constructed
+// from `e`, where previously that could have been a copy of an init list or `e.operator std::initializer_list()`
+struct InitListCtor {
+  InitListCtor(int);
+  InitListCtor(InitListCtor&&) = delete;
+  InitListCtor(std::initializer_list<InitListCtor>) = delete; // #cwg2311-InitListCtor
+};
+
+std::initializer_list<InitListCtor> i;
+auto j = std::initializer_list<InitListCtor>{ i };
+// since-cxx17-error@-1 {{conversion function from 'std::initializer_list<InitListCtor>' to 'const cwg2311::InitListCtor' invokes a deleted function}}
+//   since-cxx17-note@#cwg2311-InitListCtor {{'InitListCtor' has been explicitly marked deleted here}}
 #endif
 }
 

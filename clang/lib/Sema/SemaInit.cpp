@@ -4285,6 +4285,22 @@ static void TryConstructorInitialization(Sema &S,
       // CWG2311: T{ prvalue_of_type_T } is not eligible for copy elision
       // Make this an elision if this won't call an initializer-list
       // constructor. (Always on an aggregate type or check constructors first.)
+
+      // This effectively makes our resolution as follows. The parts in angle
+      // brackets are additions.
+      // C++17 [over.match.list]p(1.2):
+      //   - If no viable initializer-list constructor is found <and the
+      //     initializer list does not consist of exactly a single element with
+      //     the same cv-unqualified class type as T>, [...]
+      // C++17 [dcl.init.list]p(3.6):
+      //   - Otherwise, if T is a class type, constructors are considered. The
+      //     applicable constructors are enumerated and the best one is chosen
+      //     through overload resolution. <If no constructor is found and the
+      //     initializer list consists of exactly a single element with the same
+      //     cv-unqualified class type as T, the object is initialized from that
+      //     element (by copy-initialization for copy-list-initialization, or by
+      //     direct-initialization for direct-list-initialization). Otherwise, >
+      //     if a narrowing conversion [...]
       assert(!IsInitListCopy &&
              "IsInitListCopy only possible with aggregate types");
       CopyElisionPossible = true;
