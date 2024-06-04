@@ -2020,6 +2020,46 @@ void ThinLTOCodeGenerator::run() {
           }
         });
       }
+
+      WrittenObjects.wait(AllModules);
+
+      {
+        CacheLogOS.applyLocked([&](raw_ostream &OS) {
+          OS << "Waiting for outstanding cache requests...\n";
+        });
+        ScopedDurationTimer T([&](double Seconds) {
+          if (CacheLogging)
+            CacheLogOS.applyLocked([&](raw_ostream &OS) {
+              OS << "Handled outstanding cache requests in "
+                 << llvm::format("%.6fs", Seconds) << "\n";
+            });
+        });
+        auto Start = std::chrono::steady_clock::now();
+        auto CacheTimeout = DeterministicCheck
+                                ? std::chrono::milliseconds::max()
+                                : std::chrono::milliseconds(5000);
+
+        if (!HandledCacheReads.waitFor(CacheTimeout, AllModules)) {
+          // If we were unable to finish all cache reads in time, just request
+          // their cancellation (we already have all objects written) and don't
+          // bother writing to the cache (that would probably be even slower
+          // than reading form it).
+          GetCancelTok->requestCancellation();
+        } else {
+          auto Now = std::chrono::steady_clock::now();
+          auto RemainingCacheTimeout = CacheTimeout - (Now - Start);
+          // If we finished all cache reads in time, request writes.
+          if (!HandledCacheWrites.waitFor(RemainingCacheTimeout, AllModules)) {
+            // If we were unable to finish all cache writes in time, request
+            // their cancellation. We don't want to hold up the link any longer.
+            PutCancelTok->requestCancellation();
+          }
+        }
+
+        if (DeterministicCheck)
+          for (int count : ModulesOrdering)
+            (void)Infos[count].Entry->areLoadedAndWrittenResultsIdentical();
+      }
     }
 
     pruneCache(CacheOptions.Path, CacheOptions.Policy, ProducedBinaries);
