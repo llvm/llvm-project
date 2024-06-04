@@ -1011,6 +1011,11 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
+def PutenvStackArray : Checker<"PutenvStackArray">,
+  HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
+           "an automatic (stack-allocated) array as the argument.">,
+  Documentation<HasDocumentation>;
+
 def SetgidSetuidOrderChecker : Checker<"SetgidSetuidOrder">,
   HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
            "'setuid(getuid())' (CERT: POS36-C)">,
@@ -1063,11 +1068,6 @@ def MmapWriteExecChecker : Checker<"MmapWriteExec">,
                   "0x01",
                   Released>
   ]>,
-  Documentation<HasDocumentation>;
-
-def PutenvStackArray : Checker<"PutenvStackArray">,
-  HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
-           "an automatic (stack-allocated) array as the argument.">,
   Documentation<HasDocumentation>;
 
 def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,

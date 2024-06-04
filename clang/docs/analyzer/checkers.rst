@@ -1179,6 +1179,41 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
+.. _security-putenv-stack-array:
+
+security.PutenvStackArray (C)
+"""""""""""""""""""""""""""""
+Finds calls to the ``putenv`` function which pass a pointer to a stack-allocated
+(automatic) array as the argument. Function ``putenv`` does not copy the passed
+string, only a pointer to the data is stored and this data can be read even by
+other threads. Content of a stack-allocated array is likely to be overwritten
+after exiting from the function.
+
+The problem can be solved by using a static array variable or dynamically
+allocated memory. Even better is to avoid using ``putenv`` (it has other
+problems related to memory leaks) and use ``setenv`` instead.
+
+The check corresponds to CERT rule
+`POS34-C. Do not call putenv() with a pointer to an automatic variable as the argument
+<https://wiki.sei.cmu.edu/confluence/display/c/POS34-C.+Do+not+call+putenv%28%29+with+a+pointer+to+an+automatic+variable+as+the+argument>`_.
+
+.. code-block:: c
+
+  int f() {
+    char env[] = "NAME=value";
+    return putenv(env); // putenv function should not be called with stack-allocated string
+  }
+
+There is one case where the checker can report a false positive. This is when
+the stack-allocated array is used at `putenv` in a function or code branch that
+does not return (process is terminated on all execution paths).
+
+Another special case is if the `putenv` is called from function `main`. Here
+the stack is deallocated at the end of the program and it should be no problem
+to use the stack-allocated string (a multi-threaded program may require more
+attention). The checker does not warn for cases when stack space of `main` is
+used at the `putenv` call.
+
 security.SetgidSetuidOrder (C)
 """"""""""""""""""""""""""""""
 When dropping user-level and group-level privileges in a program by using
@@ -2876,41 +2911,6 @@ Warn on mmap() calls that are both writable and executable.
    //       exploitable memory regions, which could be overwritten with malicious
    //       code
  }
-
-.. _alpha-security-putenv-stack-array:
-
-alpha.security.PutenvStackArray (C)
-"""""""""""""""""""""""""""""""""""
-Finds calls to the ``putenv`` function which pass a pointer to a stack-allocated
-(automatic) array as the argument. Function ``putenv`` does not copy the passed
-string, only a pointer to the data is stored and this data can be read even by
-other threads. Content of a stack-allocated array is likely to be overwritten
-after returning from the parent function.
-
-The problem can be solved by using a static array variable or dynamically
-allocated memory. Even better is to avoid using ``putenv`` (it has other
-problems related to memory leaks) and use ``setenv`` instead.
-
-The check corresponds to CERT rule
-`POS34-C. Do not call putenv() with a pointer to an automatic variable as the argument
-<https://wiki.sei.cmu.edu/confluence/display/c/POS34-C.+Do+not+call+putenv%28%29+with+a+pointer+to+an+automatic+variable+as+the+argument>`_.
-
-.. code-block:: c
-
-  int f() {
-    char env[] = "NAME=value";
-    return putenv(env); // putenv function should not be called with stack-allocated string
-  }
-
-There is one case where the checker can report a false positive. This is when
-the stack-allocated array is used at `putenv` in a function or code branch that
-does not return (calls `fork` or `exec` like function).
-
-Another special case is if the `putenv` is called from function `main`. Here
-the stack is deallocated at the end of the program and it should be no problem
-to use the stack-allocated string (a multi-threaded program may require more
-attention). The checker does not warn for cases when stack space of `main` is
-used at the `putenv` call.
 
 .. _alpha-security-ReturnPtrRange:
 
