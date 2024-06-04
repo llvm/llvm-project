@@ -572,8 +572,6 @@ void llvm::deleteConstant(Constant *C) {
       delete static_cast<ShuffleVectorConstantExpr *>(C);
     else if (isa<GetElementPtrConstantExpr>(C))
       delete static_cast<GetElementPtrConstantExpr *>(C);
-    else if (isa<CompareConstantExpr>(C))
-      delete static_cast<CompareConstantExpr *>(C);
     else
       llvm_unreachable("Unexpected constant expr");
     break;
@@ -1514,17 +1512,7 @@ void ConstantTokenNone::destroyConstantImpl() {
 // Utility function for determining if a ConstantExpr is a CastOp or not. This
 // can't be inline because we don't want to #include Instruction.h into
 // Constant.h
-bool ConstantExpr::isCast() const {
-  return Instruction::isCast(getOpcode());
-}
-
-bool ConstantExpr::isCompare() const {
-  return getOpcode() == Instruction::ICmp || getOpcode() == Instruction::FCmp;
-}
-
-unsigned ConstantExpr::getPredicate() const {
-  return cast<CompareConstantExpr>(this)->predicate;
-}
+bool ConstantExpr::isCast() const { return Instruction::isCast(getOpcode()); }
 
 ArrayRef<int> ConstantExpr::getShuffleMask() const {
   return cast<ShuffleVectorConstantExpr>(this)->ShuffleMask;
@@ -1573,10 +1561,6 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
         GEPO->getNoWrapFlags(), GEPO->getInRange(), OnlyIfReducedTy);
   }
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-    return ConstantExpr::getCompare(getPredicate(), Ops[0], Ops[1],
-                                    OnlyIfReducedTy);
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
     return ConstantExpr::get(getOpcode(), Ops[0], Ops[1], SubclassOptionalData,
@@ -2318,8 +2302,8 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
   if (OnlyIfReducedTy == C1->getType())
     return nullptr;
 
-  Constant *ArgVec[] = { C1, C2 };
-  ConstantExprKeyType Key(Opcode, ArgVec, 0, Flags);
+  Constant *ArgVec[] = {C1, C2};
+  ConstantExprKeyType Key(Opcode, ArgVec, Flags);
 
   LLVMContextImpl *pImpl = C1->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(C1->getType(), Key);
@@ -2437,35 +2421,13 @@ Constant *ConstantExpr::getAlignOf(Type* Ty) {
   // alignof is implemented as: (i64) gep ({i1,Ty}*)null, 0, 1
   // Note that a non-inbounds gep is used, as null isn't within any object.
   Type *AligningTy = StructType::get(Type::getInt1Ty(Ty->getContext()), Ty);
-  Constant *NullPtr = Constant::getNullValue(PointerType::getUnqual(AligningTy->getContext()));
+  Constant *NullPtr =
+      Constant::getNullValue(PointerType::getUnqual(AligningTy->getContext()));
   Constant *Zero = ConstantInt::get(Type::getInt64Ty(Ty->getContext()), 0);
   Constant *One = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
-  Constant *Indices[2] = { Zero, One };
+  Constant *Indices[2] = {Zero, One};
   Constant *GEP = getGetElementPtr(AligningTy, NullPtr, Indices);
-  return getPtrToInt(GEP,
-                     Type::getInt64Ty(Ty->getContext()));
-}
-
-Constant *ConstantExpr::getCompare(unsigned short Predicate, Constant *C1,
-                                   Constant *C2, bool OnlyIfReduced) {
-  assert(C1->getType() == C2->getType() && "Op types should be identical!");
-
-  switch (Predicate) {
-  default: llvm_unreachable("Invalid CmpInst predicate");
-  case CmpInst::FCMP_FALSE: case CmpInst::FCMP_OEQ: case CmpInst::FCMP_OGT:
-  case CmpInst::FCMP_OGE:   case CmpInst::FCMP_OLT: case CmpInst::FCMP_OLE:
-  case CmpInst::FCMP_ONE:   case CmpInst::FCMP_ORD: case CmpInst::FCMP_UNO:
-  case CmpInst::FCMP_UEQ:   case CmpInst::FCMP_UGT: case CmpInst::FCMP_UGE:
-  case CmpInst::FCMP_ULT:   case CmpInst::FCMP_ULE: case CmpInst::FCMP_UNE:
-  case CmpInst::FCMP_TRUE:
-    return getFCmp(Predicate, C1, C2, OnlyIfReduced);
-
-  case CmpInst::ICMP_EQ:  case CmpInst::ICMP_NE:  case CmpInst::ICMP_UGT:
-  case CmpInst::ICMP_UGE: case CmpInst::ICMP_ULT: case CmpInst::ICMP_ULE:
-  case CmpInst::ICMP_SGT: case CmpInst::ICMP_SGE: case CmpInst::ICMP_SLT:
-  case CmpInst::ICMP_SLE:
-    return getICmp(Predicate, C1, C2, OnlyIfReduced);
-  }
+  return getPtrToInt(GEP, Type::getInt64Ty(Ty->getContext()));
 }
 
 Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
@@ -2513,61 +2475,11 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
     ArgVec.push_back(Idx);
   }
 
-  const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
-                                NW.getRaw(), std::nullopt, Ty, InRange);
+  const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, NW.getRaw(),
+                                std::nullopt, Ty, InRange);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
-}
-
-Constant *ConstantExpr::getICmp(unsigned short pred, Constant *LHS,
-                                Constant *RHS, bool OnlyIfReduced) {
-  auto Predicate = static_cast<CmpInst::Predicate>(pred);
-  assert(LHS->getType() == RHS->getType());
-  assert(CmpInst::isIntPredicate(Predicate) && "Invalid ICmp Predicate");
-
-  if (Constant *FC = ConstantFoldCompareInstruction(Predicate, LHS, RHS))
-    return FC;          // Fold a few common cases...
-
-  if (OnlyIfReduced)
-    return nullptr;
-
-  // Look up the constant in the table first to ensure uniqueness
-  Constant *ArgVec[] = { LHS, RHS };
-  // Get the key type with both the opcode and predicate
-  const ConstantExprKeyType Key(Instruction::ICmp, ArgVec, Predicate);
-
-  Type *ResultTy = Type::getInt1Ty(LHS->getContext());
-  if (VectorType *VT = dyn_cast<VectorType>(LHS->getType()))
-    ResultTy = VectorType::get(ResultTy, VT->getElementCount());
-
-  LLVMContextImpl *pImpl = LHS->getType()->getContext().pImpl;
-  return pImpl->ExprConstants.getOrCreate(ResultTy, Key);
-}
-
-Constant *ConstantExpr::getFCmp(unsigned short pred, Constant *LHS,
-                                Constant *RHS, bool OnlyIfReduced) {
-  auto Predicate = static_cast<CmpInst::Predicate>(pred);
-  assert(LHS->getType() == RHS->getType());
-  assert(CmpInst::isFPPredicate(Predicate) && "Invalid FCmp Predicate");
-
-  if (Constant *FC = ConstantFoldCompareInstruction(Predicate, LHS, RHS))
-    return FC;          // Fold a few common cases...
-
-  if (OnlyIfReduced)
-    return nullptr;
-
-  // Look up the constant in the table first to ensure uniqueness
-  Constant *ArgVec[] = { LHS, RHS };
-  // Get the key type with both the opcode and predicate
-  const ConstantExprKeyType Key(Instruction::FCmp, ArgVec, Predicate);
-
-  Type *ResultTy = Type::getInt1Ty(LHS->getContext());
-  if (VectorType *VT = dyn_cast<VectorType>(LHS->getType()))
-    ResultTy = VectorType::get(ResultTy, VT->getElementCount());
-
-  LLVMContextImpl *pImpl = LHS->getType()->getContext().pImpl;
-  return pImpl->ExprConstants.getOrCreate(ResultTy, Key);
 }
 
 Constant *ConstantExpr::getExtractElement(Constant *Val, Constant *Idx,
@@ -2635,7 +2547,7 @@ Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
 
   // Look up the constant in the table first to ensure uniqueness
   Constant *ArgVec[] = {V1, V2};
-  ConstantExprKeyType Key(Instruction::ShuffleVector, ArgVec, 0, 0, Mask);
+  ConstantExprKeyType Key(Instruction::ShuffleVector, ArgVec, 0, Mask);
 
   LLVMContextImpl *pImpl = ShufTy->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ShufTy, Key);
@@ -3455,11 +3367,6 @@ Instruction *ConstantExpr::getAsInstruction() const {
     return GetElementPtrInst::Create(GO->getSourceElementType(), Ops[0],
                                      Ops.slice(1), "");
   }
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-    return CmpInst::Create((Instruction::OtherOps)getOpcode(),
-                           (CmpInst::Predicate)getPredicate(), Ops[0], Ops[1],
-                           "");
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
     BinaryOperator *BO = BinaryOperator::Create(

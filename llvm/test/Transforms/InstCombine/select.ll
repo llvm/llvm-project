@@ -1493,10 +1493,10 @@ define <4 x i32> @cannot_canonicalize_to_shuffle1(<4 x i32> %a, <4 x i32> %b) {
 
 define <4 x i32> @cannot_canonicalize_to_shuffle2(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @cannot_canonicalize_to_shuffle2(
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> <i1 true, i1 undef, i1 false, i1 icmp sle (i16 ptrtoint (ptr @g to i16), i16 4)>, <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> <i1 true, i1 undef, i1 false, i1 ptrtoint (ptr @g to i1)>, <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
-  %sel = select <4 x i1> <i1 true, i1 undef, i1 false, i1 icmp sle (i16 ptrtoint (ptr @g to i16), i16 4)>, <4 x i32> %a, <4 x i32> %b
+  %sel = select <4 x i1> <i1 true, i1 undef, i1 false, i1 ptrtoint (ptr @g to i1)>, <4 x i32> %a, <4 x i32> %b
   ret <4 x i32> %sel
 }
 
