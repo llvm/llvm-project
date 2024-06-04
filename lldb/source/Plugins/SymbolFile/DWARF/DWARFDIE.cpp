@@ -16,6 +16,7 @@
 #include "lldb/Symbol/Type.h"
 
 #include "llvm/ADT/iterator.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
@@ -390,6 +391,11 @@ static void GetDeclContextImpl(DWARFDIE die,
       die = spec;
       continue;
     }
+    // To find the name of a type in a type unit, we must follow the signature.
+    if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_signature)) {
+      die = spec;
+      continue;
+    }
 
     // Add this DIE's contribution at the end of the chain.
     auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
@@ -444,6 +450,12 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
                                      std::vector<CompilerContext> &context) {
   // Stop if we hit a cycle.
   while (die && seen.insert(die.GetID()).second) {
+    // To find the name of a type in a type unit, we must follow the signature.
+    if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_signature)) {
+      die = spec;
+      continue;
+    }
+
     // If there is no name, then there is no need to look anything up for this
     // DIE.
     const char *name = die.GetName();

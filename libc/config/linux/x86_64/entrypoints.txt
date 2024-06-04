@@ -528,6 +528,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpxl
 )
 
+if(LIBC_TYPES_HAS_FLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float16 entrypoints
+    libc.src.math.fabsf16
+  )
+endif()
+
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
@@ -673,8 +680,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_settype
     libc.src.pthread.pthread_once
     libc.src.pthread.pthread_rwlockattr_destroy
+    libc.src.pthread.pthread_rwlockattr_getkind_np
     libc.src.pthread.pthread_rwlockattr_getpshared
     libc.src.pthread.pthread_rwlockattr_init
+    libc.src.pthread.pthread_rwlockattr_setkind_np
     libc.src.pthread.pthread_rwlockattr_setpshared
     libc.src.pthread.pthread_setspecific
 

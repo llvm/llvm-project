@@ -33,6 +33,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Attr.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Initialization.h"
@@ -40,10 +41,12 @@
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaWasm.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
@@ -71,19 +74,6 @@ namespace AttributeLangSupport {
 //  Helper functions
 //===----------------------------------------------------------------------===//
 
-/// isFunctionOrMethod - Return true if the given decl has function
-/// type (function or function-typed variable) or an Objective-C
-/// method.
-static bool isFunctionOrMethod(const Decl *D) {
-  return (D->getFunctionType() != nullptr) || isa<ObjCMethodDecl>(D);
-}
-
-/// Return true if the given decl has function type (function or
-/// function-typed variable) or an Objective-C method or a block.
-static bool isFunctionOrMethodOrBlock(const Decl *D) {
-  return isFunctionOrMethod(D) || isa<BlockDecl>(D);
-}
-
 /// Return true if the given decl has a declarator that should have
 /// been processed by Sema::GetTypeForDeclarator.
 static bool hasDeclarator(const Decl *D) {
@@ -94,7 +84,7 @@ static bool hasDeclarator(const Decl *D) {
 
 /// hasFunctionProto - Return true if the given decl has a argument
 /// information. This decl should have already passed
-/// isFunctionOrMethod or isFunctionOrMethodOrBlock.
+/// isFuncOrMethodForAttrSubject or isFunctionOrMethodOrBlockForAttrSubject.
 static bool hasFunctionProto(const Decl *D) {
   if (const FunctionType *FnTy = D->getFunctionType())
     return isa<FunctionProtoType>(FnTy);
@@ -207,52 +197,7 @@ static unsigned getNumAttributeArgs(const ParsedAttr &AL) {
   return AL.getNumArgs() + AL.hasParsedType();
 }
 
-/// A helper function to provide Attribute Location for the Attr types
-/// AND the ParsedAttr.
-template <typename AttrInfo>
-static std::enable_if_t<std::is_base_of_v<Attr, AttrInfo>, SourceLocation>
-getAttrLoc(const AttrInfo &AL) {
-  return AL.getLocation();
-}
-static SourceLocation getAttrLoc(const ParsedAttr &AL) { return AL.getLoc(); }
-
-/// If Expr is a valid integer constant, get the value of the integer
-/// expression and return success or failure. May output an error.
-///
-/// Negative argument is implicitly converted to unsigned, unless
-/// \p StrictlyUnsigned is true.
-template <typename AttrInfo>
-static bool checkUInt32Argument(Sema &S, const AttrInfo &AI, const Expr *Expr,
-                                uint32_t &Val, unsigned Idx = UINT_MAX,
-                                bool StrictlyUnsigned = false) {
-  std::optional<llvm::APSInt> I = llvm::APSInt(32);
-  if (Expr->isTypeDependent() ||
-      !(I = Expr->getIntegerConstantExpr(S.Context))) {
-    if (Idx != UINT_MAX)
-      S.Diag(getAttrLoc(AI), diag::err_attribute_argument_n_type)
-          << &AI << Idx << AANT_ArgumentIntegerConstant
-          << Expr->getSourceRange();
-    else
-      S.Diag(getAttrLoc(AI), diag::err_attribute_argument_type)
-          << &AI << AANT_ArgumentIntegerConstant << Expr->getSourceRange();
-    return false;
-  }
-
-  if (!I->isIntN(32)) {
-    S.Diag(Expr->getExprLoc(), diag::err_ice_too_large)
-        << toString(*I, 10, false) << 32 << /* Unsigned */ 1;
-    return false;
-  }
-
-  if (StrictlyUnsigned && I->isSigned() && I->isNegative()) {
-    S.Diag(getAttrLoc(AI), diag::err_attribute_requires_positive_integer)
-        << &AI << /*non-negative*/ 1;
-    return false;
-  }
-
-  Val = (uint32_t)I->getZExtValue();
-  return true;
-}
+SourceLocation Sema::getAttrLoc(const ParsedAttr &AL) { return AL.getLoc(); }
 
 /// Wrapper around checkUInt32Argument, with an extra check to be sure
 /// that the result will fit into a regular (signed) int. All args have the same
@@ -261,7 +206,7 @@ template <typename AttrInfo>
 static bool checkPositiveIntArgument(Sema &S, const AttrInfo &AI, const Expr *Expr,
                                      int &Val, unsigned Idx = UINT_MAX) {
   uint32_t UVal;
-  if (!checkUInt32Argument(S, AI, Expr, UVal, Idx))
+  if (!S.checkUInt32Argument(AI, Expr, UVal, Idx))
     return false;
 
   if (UVal > (uint32_t)std::numeric_limits<int>::max()) {
@@ -310,7 +255,7 @@ template <typename AttrInfo>
 static bool checkFunctionOrMethodParameterIndex(
     Sema &S, const Decl *D, const AttrInfo &AI, unsigned AttrArgNum,
     const Expr *IdxExpr, ParamIdx &Idx, bool CanIndexImplicitThis = false) {
-  assert(isFunctionOrMethodOrBlock(D));
+  assert(isFunctionOrMethodOrBlockForAttrSubject(D));
 
   // In C++ the implicit 'this' function parameter also counts.
   // Parameters are counted from one.
@@ -323,7 +268,7 @@ static bool checkFunctionOrMethodParameterIndex(
   std::optional<llvm::APSInt> IdxInt;
   if (IdxExpr->isTypeDependent() ||
       !(IdxInt = IdxExpr->getIntegerConstantExpr(S.Context))) {
-    S.Diag(getAttrLoc(AI), diag::err_attribute_argument_n_type)
+    S.Diag(S.getAttrLoc(AI), diag::err_attribute_argument_n_type)
         << &AI << AttrArgNum << AANT_ArgumentIntegerConstant
         << IdxExpr->getSourceRange();
     return false;
@@ -331,13 +276,14 @@ static bool checkFunctionOrMethodParameterIndex(
 
   unsigned IdxSource = IdxInt->getLimitedValue(UINT_MAX);
   if (IdxSource < 1 || (!IV && IdxSource > NumParams)) {
-    S.Diag(getAttrLoc(AI), diag::err_attribute_argument_out_of_bounds)
+    S.Diag(S.getAttrLoc(AI), diag::err_attribute_argument_out_of_bounds)
         << &AI << AttrArgNum << IdxExpr->getSourceRange();
     return false;
   }
   if (HasImplicitThisParam && !CanIndexImplicitThis) {
     if (IdxSource == 1) {
-      S.Diag(getAttrLoc(AI), diag::err_attribute_invalid_implicit_this_argument)
+      S.Diag(S.getAttrLoc(AI),
+             diag::err_attribute_invalid_implicit_this_argument)
           << &AI << IdxExpr->getSourceRange();
       return false;
     }
@@ -845,7 +791,7 @@ static void handleAllocSizeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.checkAtLeastNumArgs(S, 1) || !AL.checkAtMostNumArgs(S, 2))
     return;
 
-  assert(isFunctionOrMethod(D) && hasFunctionProto(D));
+  assert(isFuncOrMethodForAttrSubject(D) && hasFunctionProto(D));
 
   QualType RetTy = getFunctionOrMethodResultType(D);
   if (!RetTy->isPointerType()) {
@@ -1100,7 +1046,7 @@ static void handleDiagnoseAsBuiltinAttr(Sema &S, Decl *D,
     const Expr *IndexExpr = AL.getArgAsExpr(I);
     uint32_t Index;
 
-    if (!checkUInt32Argument(S, AL, IndexExpr, Index, I + 1, false))
+    if (!S.checkUInt32Argument(AL, IndexExpr, Index, I + 1, false))
       return;
 
     if (Index > DeclFD->getNumParams()) {
@@ -1210,7 +1156,7 @@ static void handlePassObjectSizeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   Expr *E = AL.getArgAsExpr(0);
   uint32_t Type;
-  if (!checkUInt32Argument(S, AL, E, Type, /*Idx=*/1))
+  if (!S.checkUInt32Argument(AL, E, Type, /*Idx=*/1))
     return;
 
   // pass_object_size's argument is passed in as the second argument of
@@ -2295,7 +2241,7 @@ static void handleAnalyzerNoReturnAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // The checking path for 'noreturn' and 'analyzer_noreturn' are different
   // because 'analyzer_noreturn' does not impact the type.
-  if (!isFunctionOrMethodOrBlock(D)) {
+  if (!isFunctionOrMethodOrBlockForAttrSubject(D)) {
     ValueDecl *VD = dyn_cast<ValueDecl>(D);
     if (!VD || (!VD->getType()->isBlockPointerType() &&
                 !VD->getType()->isFunctionPointerType())) {
@@ -2399,7 +2345,7 @@ static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
   if (AL.getNumArgs() &&
-      !checkUInt32Argument(S, AL, AL.getArgAsExpr(0), priority))
+      !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
     return;
 
   D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, priority));
@@ -2408,7 +2354,7 @@ static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   uint32_t priority = DestructorAttr::DefaultPriority;
   if (AL.getNumArgs() &&
-      !checkUInt32Argument(S, AL, AL.getArgAsExpr(0), priority))
+      !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
     return;
 
   D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, priority));
@@ -3297,8 +3243,8 @@ static void handleWorkGroupSize(Sema &S, Decl *D, const ParsedAttr &AL) {
   uint32_t WGSize[3];
   for (unsigned i = 0; i < 3; ++i) {
     const Expr *E = AL.getArgAsExpr(i);
-    if (!checkUInt32Argument(S, AL, E, WGSize[i], i,
-                             /*StrictlyUnsigned=*/true))
+    if (!S.checkUInt32Argument(AL, E, WGSize[i], i,
+                               /*StrictlyUnsigned=*/true))
       return;
     if (WGSize[i] == 0) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
@@ -3321,7 +3267,7 @@ static void handleWorkGroupSize(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleSubGroupSize(Sema &S, Decl *D, const ParsedAttr &AL) {
   uint32_t SGSize;
   const Expr *E = AL.getArgAsExpr(0);
-  if (!checkUInt32Argument(S, AL, E, SGSize))
+  if (!S.checkUInt32Argument(AL, E, SGSize))
     return;
   if (SGSize == 0) {
     S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
@@ -3790,7 +3736,7 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleMinVectorWidthAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Expr *E = AL.getArgAsExpr(0);
   uint32_t VecWidth;
-  if (!checkUInt32Argument(S, AL, E, VecWidth)) {
+  if (!S.checkUInt32Argument(AL, E, VecWidth)) {
     AL.setInvalid();
     return;
   }
@@ -4003,7 +3949,7 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   Expr *E = AL.getArgAsExpr(0);
   uint32_t prioritynum;
-  if (!checkUInt32Argument(S, AL, E, prioritynum)) {
+  if (!S.checkUInt32Argument(AL, E, prioritynum)) {
     AL.setInvalid();
     return;
   }
@@ -4102,7 +4048,7 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // checks for the 2nd argument
   Expr *IdxExpr = AL.getArgAsExpr(1);
   uint32_t Idx;
-  if (!checkUInt32Argument(S, AL, IdxExpr, Idx, 2))
+  if (!S.checkUInt32Argument(AL, IdxExpr, Idx, 2))
     return;
 
   if (Idx < 1 || Idx > NumArgs) {
@@ -4139,7 +4085,7 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // check the 3rd argument
   Expr *FirstArgExpr = AL.getArgAsExpr(2);
   uint32_t FirstArg;
-  if (!checkUInt32Argument(S, AL, FirstArgExpr, FirstArg, 3))
+  if (!S.checkUInt32Argument(AL, FirstArgExpr, FirstArg, 3))
     return;
 
   // FirstArg == 0 is is always valid.
@@ -4227,8 +4173,8 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       Expr *IdxExpr = AL.getArgAsExpr(I);
 
       // If the expression is not parseable as an int32_t we have a problem.
-      if (!checkUInt32Argument(S, AL, IdxExpr, (uint32_t &)ArgIdx, I + 1,
-                               false)) {
+      if (!S.checkUInt32Argument(AL, IdxExpr, (uint32_t &)ArgIdx, I + 1,
+                                 false)) {
         S.Diag(AL.getLoc(), diag::err_attribute_argument_out_of_bounds)
             << AL << (I + 1) << IdxExpr->getSourceRange();
         return;
@@ -5727,7 +5673,7 @@ bool Sema::CheckRegparmAttr(const ParsedAttr &AL, unsigned &numParams) {
 
   uint32_t NP;
   Expr *NumParamsExpr = AL.getArgAsExpr(0);
-  if (!checkUInt32Argument(*this, AL, NumParamsExpr, NP)) {
+  if (!checkUInt32Argument(AL, NumParamsExpr, NP)) {
     AL.setInvalid();
     return true;
   }
@@ -5923,14 +5869,14 @@ static void handleXRayLogArgsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handlePatchableFunctionEntryAttr(Sema &S, Decl *D,
                                              const ParsedAttr &AL) {
   uint32_t Count = 0, Offset = 0;
-  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), Count, 0, true))
+  if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), Count, 0, true))
     return;
   if (AL.getNumArgs() == 2) {
     Expr *Arg = AL.getArgAsExpr(1);
-    if (!checkUInt32Argument(S, AL, Arg, Offset, 1, true))
+    if (!S.checkUInt32Argument(AL, Arg, Offset, 1, true))
       return;
     if (Count < Offset) {
-      S.Diag(getAttrLoc(AL), diag::err_attribute_argument_out_of_range)
+      S.Diag(S.getAttrLoc(AL), diag::err_attribute_argument_out_of_range)
           << &AL << 0 << Count << Arg->getBeginLoc();
       return;
     }
@@ -6776,7 +6722,7 @@ static void handleSwiftAsyncError(Sema &S, Decl *D, const ParsedAttr &AL) {
       return;
 
     Expr *IdxExpr = AL.getArgAsExpr(1);
-    if (!checkUInt32Argument(S, AL, IdxExpr, ParamIdx))
+    if (!S.checkUInt32Argument(AL, IdxExpr, ParamIdx))
       return;
     break;
   }
@@ -7278,7 +7224,7 @@ static void handleHLSLNumThreadsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   uint32_t X;
-  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), X))
+  if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), X))
     return;
   if (X > 1024) {
     S.Diag(AL.getArgAsExpr(0)->getExprLoc(),
@@ -7286,7 +7232,7 @@ static void handleHLSLNumThreadsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
   uint32_t Y;
-  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(1), Y))
+  if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(1), Y))
     return;
   if (Y > 1024) {
     S.Diag(AL.getArgAsExpr(1)->getExprLoc(),
@@ -7294,7 +7240,7 @@ static void handleHLSLNumThreadsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
   uint32_t Z;
-  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(2), Z))
+  if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(2), Z))
     return;
   if (Z > ZMax) {
     S.Diag(AL.getArgAsExpr(2)->getExprLoc(),
@@ -7348,10 +7294,10 @@ static void handleHLSLPackOffsetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   uint32_t SubComponent;
-  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), SubComponent))
+  if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), SubComponent))
     return;
   uint32_t Component;
-  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(1), Component))
+  if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(1), Component))
     return;
 
   QualType T = cast<VarDecl>(D)->getType().getCanonicalType();
@@ -7602,7 +7548,7 @@ static void handleARMInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleMSP430InterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // MSP430 'interrupt' attribute is applied to
   // a function with no parameters and void return type.
-  if (!isFunctionOrMethod(D)) {
+  if (!isFuncOrMethodForAttrSubject(D)) {
     S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
         << AL << AL.isRegularKeywordAttribute() << ExpectedFunctionOrMethod;
     return;
@@ -7675,7 +7621,7 @@ static void handleMipsInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // e) The attribute itself must either have no argument or one of the
   //    valid interrupt types, see [MipsInterruptDocs].
 
-  if (!isFunctionOrMethod(D)) {
+  if (!isFuncOrMethodForAttrSubject(D)) {
     S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
         << AL << AL.isRegularKeywordAttribute() << ExpectedFunctionOrMethod;
     return;
@@ -7748,7 +7694,8 @@ static void handleAnyX86InterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // c) Must take 1 or 2 arguments.
   // d) The 1st argument must be a pointer.
   // e) The 2nd argument (if any) must be an unsigned integer.
-  if (!isFunctionOrMethod(D) || !hasFunctionProto(D) || isInstanceMethod(D) ||
+  if (!isFuncOrMethodForAttrSubject(D) || !hasFunctionProto(D) ||
+      isInstanceMethod(D) ||
       CXXMethodDecl::isStaticOverloadedOperator(
           cast<NamedDecl>(D)->getDeclName().getCXXOverloadedOperator())) {
     S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
@@ -7807,7 +7754,7 @@ static void handleAnyX86InterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleAVRInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!isFunctionOrMethod(D)) {
+  if (!isFuncOrMethodForAttrSubject(D)) {
     S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
         << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
     return;
@@ -7820,7 +7767,7 @@ static void handleAVRInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleAVRSignalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!isFunctionOrMethod(D)) {
+  if (!isFuncOrMethodForAttrSubject(D)) {
     S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
         << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
     return;
@@ -7873,102 +7820,6 @@ BTFDeclTagAttr *Sema::mergeBTFDeclTagAttr(Decl *D, const BTFDeclTagAttr &AL) {
   if (hasBTFDeclTagAttr(D, AL.getBTFDeclTag()))
     return nullptr;
   return ::new (Context) BTFDeclTagAttr(Context, AL, AL.getBTFDeclTag());
-}
-
-static void handleWebAssemblyExportNameAttr(Sema &S, Decl *D,
-                                            const ParsedAttr &AL) {
-  if (!isFunctionOrMethod(D)) {
-    S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
-        << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
-    return;
-  }
-
-  auto *FD = cast<FunctionDecl>(D);
-  if (FD->isThisDeclarationADefinition()) {
-    S.Diag(D->getLocation(), diag::err_alias_is_definition) << FD << 0;
-    return;
-  }
-
-  StringRef Str;
-  SourceLocation ArgLoc;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
-    return;
-
-  D->addAttr(::new (S.Context) WebAssemblyExportNameAttr(S.Context, AL, Str));
-  D->addAttr(UsedAttr::CreateImplicit(S.Context));
-}
-
-WebAssemblyImportModuleAttr *
-Sema::mergeImportModuleAttr(Decl *D, const WebAssemblyImportModuleAttr &AL) {
-  auto *FD = cast<FunctionDecl>(D);
-
-  if (const auto *ExistingAttr = FD->getAttr<WebAssemblyImportModuleAttr>()) {
-    if (ExistingAttr->getImportModule() == AL.getImportModule())
-      return nullptr;
-    Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import) << 0
-      << ExistingAttr->getImportModule() << AL.getImportModule();
-    Diag(AL.getLoc(), diag::note_previous_attribute);
-    return nullptr;
-  }
-  if (FD->hasBody()) {
-    Diag(AL.getLoc(), diag::warn_import_on_definition) << 0;
-    return nullptr;
-  }
-  return ::new (Context) WebAssemblyImportModuleAttr(Context, AL,
-                                                     AL.getImportModule());
-}
-
-WebAssemblyImportNameAttr *
-Sema::mergeImportNameAttr(Decl *D, const WebAssemblyImportNameAttr &AL) {
-  auto *FD = cast<FunctionDecl>(D);
-
-  if (const auto *ExistingAttr = FD->getAttr<WebAssemblyImportNameAttr>()) {
-    if (ExistingAttr->getImportName() == AL.getImportName())
-      return nullptr;
-    Diag(ExistingAttr->getLocation(), diag::warn_mismatched_import) << 1
-      << ExistingAttr->getImportName() << AL.getImportName();
-    Diag(AL.getLoc(), diag::note_previous_attribute);
-    return nullptr;
-  }
-  if (FD->hasBody()) {
-    Diag(AL.getLoc(), diag::warn_import_on_definition) << 1;
-    return nullptr;
-  }
-  return ::new (Context) WebAssemblyImportNameAttr(Context, AL,
-                                                   AL.getImportName());
-}
-
-static void
-handleWebAssemblyImportModuleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto *FD = cast<FunctionDecl>(D);
-
-  StringRef Str;
-  SourceLocation ArgLoc;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
-    return;
-  if (FD->hasBody()) {
-    S.Diag(AL.getLoc(), diag::warn_import_on_definition) << 0;
-    return;
-  }
-
-  FD->addAttr(::new (S.Context)
-                  WebAssemblyImportModuleAttr(S.Context, AL, Str));
-}
-
-static void
-handleWebAssemblyImportNameAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto *FD = cast<FunctionDecl>(D);
-
-  StringRef Str;
-  SourceLocation ArgLoc;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
-    return;
-  if (FD->hasBody()) {
-    S.Diag(AL.getLoc(), diag::warn_import_on_definition) << 1;
-    return;
-  }
-
-  FD->addAttr(::new (S.Context) WebAssemblyImportNameAttr(S.Context, AL, Str));
 }
 
 static void handleRISCVInterruptAttr(Sema &S, Decl *D,
@@ -8059,200 +7910,6 @@ static void handleInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 }
 
-static bool
-checkAMDGPUFlatWorkGroupSizeArguments(Sema &S, Expr *MinExpr, Expr *MaxExpr,
-                                      const AMDGPUFlatWorkGroupSizeAttr &Attr) {
-  // Accept template arguments for now as they depend on something else.
-  // We'll get to check them when they eventually get instantiated.
-  if (MinExpr->isValueDependent() || MaxExpr->isValueDependent())
-    return false;
-
-  uint32_t Min = 0;
-  if (!checkUInt32Argument(S, Attr, MinExpr, Min, 0))
-    return true;
-
-  uint32_t Max = 0;
-  if (!checkUInt32Argument(S, Attr, MaxExpr, Max, 1))
-    return true;
-
-  if (Min == 0 && Max != 0) {
-    S.Diag(Attr.getLocation(), diag::err_attribute_argument_invalid)
-        << &Attr << 0;
-    return true;
-  }
-  if (Min > Max) {
-    S.Diag(Attr.getLocation(), diag::err_attribute_argument_invalid)
-        << &Attr << 1;
-    return true;
-  }
-
-  return false;
-}
-
-AMDGPUFlatWorkGroupSizeAttr *
-Sema::CreateAMDGPUFlatWorkGroupSizeAttr(const AttributeCommonInfo &CI,
-                                        Expr *MinExpr, Expr *MaxExpr) {
-  AMDGPUFlatWorkGroupSizeAttr TmpAttr(Context, CI, MinExpr, MaxExpr);
-
-  if (checkAMDGPUFlatWorkGroupSizeArguments(*this, MinExpr, MaxExpr, TmpAttr))
-    return nullptr;
-  return ::new (Context)
-      AMDGPUFlatWorkGroupSizeAttr(Context, CI, MinExpr, MaxExpr);
-}
-
-void Sema::addAMDGPUFlatWorkGroupSizeAttr(Decl *D,
-                                          const AttributeCommonInfo &CI,
-                                          Expr *MinExpr, Expr *MaxExpr) {
-  if (auto *Attr = CreateAMDGPUFlatWorkGroupSizeAttr(CI, MinExpr, MaxExpr))
-    D->addAttr(Attr);
-}
-
-static void handleAMDGPUFlatWorkGroupSizeAttr(Sema &S, Decl *D,
-                                              const ParsedAttr &AL) {
-  Expr *MinExpr = AL.getArgAsExpr(0);
-  Expr *MaxExpr = AL.getArgAsExpr(1);
-
-  S.addAMDGPUFlatWorkGroupSizeAttr(D, AL, MinExpr, MaxExpr);
-}
-
-static bool checkAMDGPUWavesPerEUArguments(Sema &S, Expr *MinExpr,
-                                           Expr *MaxExpr,
-                                           const AMDGPUWavesPerEUAttr &Attr) {
-  if (S.DiagnoseUnexpandedParameterPack(MinExpr) ||
-      (MaxExpr && S.DiagnoseUnexpandedParameterPack(MaxExpr)))
-    return true;
-
-  // Accept template arguments for now as they depend on something else.
-  // We'll get to check them when they eventually get instantiated.
-  if (MinExpr->isValueDependent() || (MaxExpr && MaxExpr->isValueDependent()))
-    return false;
-
-  uint32_t Min = 0;
-  if (!checkUInt32Argument(S, Attr, MinExpr, Min, 0))
-    return true;
-
-  uint32_t Max = 0;
-  if (MaxExpr && !checkUInt32Argument(S, Attr, MaxExpr, Max, 1))
-    return true;
-
-  if (Min == 0 && Max != 0) {
-    S.Diag(Attr.getLocation(), diag::err_attribute_argument_invalid)
-        << &Attr << 0;
-    return true;
-  }
-  if (Max != 0 && Min > Max) {
-    S.Diag(Attr.getLocation(), diag::err_attribute_argument_invalid)
-        << &Attr << 1;
-    return true;
-  }
-
-  return false;
-}
-
-AMDGPUWavesPerEUAttr *
-Sema::CreateAMDGPUWavesPerEUAttr(const AttributeCommonInfo &CI, Expr *MinExpr,
-                                 Expr *MaxExpr) {
-  AMDGPUWavesPerEUAttr TmpAttr(Context, CI, MinExpr, MaxExpr);
-
-  if (checkAMDGPUWavesPerEUArguments(*this, MinExpr, MaxExpr, TmpAttr))
-    return nullptr;
-
-  return ::new (Context) AMDGPUWavesPerEUAttr(Context, CI, MinExpr, MaxExpr);
-}
-
-void Sema::addAMDGPUWavesPerEUAttr(Decl *D, const AttributeCommonInfo &CI,
-                                   Expr *MinExpr, Expr *MaxExpr) {
-  if (auto *Attr = CreateAMDGPUWavesPerEUAttr(CI, MinExpr, MaxExpr))
-    D->addAttr(Attr);
-}
-
-static void handleAMDGPUWavesPerEUAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!AL.checkAtLeastNumArgs(S, 1) || !AL.checkAtMostNumArgs(S, 2))
-    return;
-
-  Expr *MinExpr = AL.getArgAsExpr(0);
-  Expr *MaxExpr = (AL.getNumArgs() > 1) ? AL.getArgAsExpr(1) : nullptr;
-
-  S.addAMDGPUWavesPerEUAttr(D, AL, MinExpr, MaxExpr);
-}
-
-static void handleAMDGPUNumSGPRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t NumSGPR = 0;
-  Expr *NumSGPRExpr = AL.getArgAsExpr(0);
-  if (!checkUInt32Argument(S, AL, NumSGPRExpr, NumSGPR))
-    return;
-
-  D->addAttr(::new (S.Context) AMDGPUNumSGPRAttr(S.Context, AL, NumSGPR));
-}
-
-static void handleAMDGPUNumVGPRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t NumVGPR = 0;
-  Expr *NumVGPRExpr = AL.getArgAsExpr(0);
-  if (!checkUInt32Argument(S, AL, NumVGPRExpr, NumVGPR))
-    return;
-
-  D->addAttr(::new (S.Context) AMDGPUNumVGPRAttr(S.Context, AL, NumVGPR));
-}
-
-static bool
-checkAMDGPUMaxNumWorkGroupsArguments(Sema &S, Expr *XExpr, Expr *YExpr,
-                                     Expr *ZExpr,
-                                     const AMDGPUMaxNumWorkGroupsAttr &Attr) {
-  if (S.DiagnoseUnexpandedParameterPack(XExpr) ||
-      (YExpr && S.DiagnoseUnexpandedParameterPack(YExpr)) ||
-      (ZExpr && S.DiagnoseUnexpandedParameterPack(ZExpr)))
-    return true;
-
-  // Accept template arguments for now as they depend on something else.
-  // We'll get to check them when they eventually get instantiated.
-  if (XExpr->isValueDependent() || (YExpr && YExpr->isValueDependent()) ||
-      (ZExpr && ZExpr->isValueDependent()))
-    return false;
-
-  uint32_t NumWG = 0;
-  Expr *Exprs[3] = {XExpr, YExpr, ZExpr};
-  for (int i = 0; i < 3; i++) {
-    if (Exprs[i]) {
-      if (!checkUInt32Argument(S, Attr, Exprs[i], NumWG, i,
-                               /*StrictlyUnsigned=*/true))
-        return true;
-      if (NumWG == 0) {
-        S.Diag(Attr.getLoc(), diag::err_attribute_argument_is_zero)
-            << &Attr << Exprs[i]->getSourceRange();
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-AMDGPUMaxNumWorkGroupsAttr *
-Sema::CreateAMDGPUMaxNumWorkGroupsAttr(const AttributeCommonInfo &CI,
-                                       Expr *XExpr, Expr *YExpr, Expr *ZExpr) {
-  AMDGPUMaxNumWorkGroupsAttr TmpAttr(Context, CI, XExpr, YExpr, ZExpr);
-
-  if (checkAMDGPUMaxNumWorkGroupsArguments(*this, XExpr, YExpr, ZExpr, TmpAttr))
-    return nullptr;
-
-  return ::new (Context)
-      AMDGPUMaxNumWorkGroupsAttr(Context, CI, XExpr, YExpr, ZExpr);
-}
-
-void Sema::addAMDGPUMaxNumWorkGroupsAttr(Decl *D, const AttributeCommonInfo &CI,
-                                         Expr *XExpr, Expr *YExpr,
-                                         Expr *ZExpr) {
-  if (auto *Attr = CreateAMDGPUMaxNumWorkGroupsAttr(CI, XExpr, YExpr, ZExpr))
-    D->addAttr(Attr);
-}
-
-static void handleAMDGPUMaxNumWorkGroupsAttr(Sema &S, Decl *D,
-                                             const ParsedAttr &AL) {
-  Expr *YExpr = (AL.getNumArgs() > 1) ? AL.getArgAsExpr(1) : nullptr;
-  Expr *ZExpr = (AL.getNumArgs() > 2) ? AL.getArgAsExpr(2) : nullptr;
-  S.addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), YExpr, ZExpr);
-}
-
 static void handleX86ForceAlignArgPointerAttr(Sema &S, Decl *D,
                                               const ParsedAttr &AL) {
   // If we try to apply it to a function pointer, don't warn, but don't
@@ -8279,7 +7936,7 @@ static void handleX86ForceAlignArgPointerAttr(Sema &S, Decl *D,
 static void handleLayoutVersion(Sema &S, Decl *D, const ParsedAttr &AL) {
   uint32_t Version;
   Expr *VersionExpr = static_cast<Expr *>(AL.getArgAsExpr(0));
-  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), Version))
+  if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), Version))
     return;
 
   // TODO: Investigate what happens with the next major version of MSVC.
@@ -9392,19 +9049,19 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleDLLAttr(S, D, AL);
     break;
   case ParsedAttr::AT_AMDGPUFlatWorkGroupSize:
-    handleAMDGPUFlatWorkGroupSizeAttr(S, D, AL);
+    S.AMDGPU().handleAMDGPUFlatWorkGroupSizeAttr(D, AL);
     break;
   case ParsedAttr::AT_AMDGPUWavesPerEU:
-    handleAMDGPUWavesPerEUAttr(S, D, AL);
+    S.AMDGPU().handleAMDGPUWavesPerEUAttr(D, AL);
     break;
   case ParsedAttr::AT_AMDGPUNumSGPR:
-    handleAMDGPUNumSGPRAttr(S, D, AL);
+    S.AMDGPU().handleAMDGPUNumSGPRAttr(D, AL);
     break;
   case ParsedAttr::AT_AMDGPUNumVGPR:
-    handleAMDGPUNumVGPRAttr(S, D, AL);
+    S.AMDGPU().handleAMDGPUNumVGPRAttr(D, AL);
     break;
   case ParsedAttr::AT_AMDGPUMaxNumWorkGroups:
-    handleAMDGPUMaxNumWorkGroupsAttr(S, D, AL);
+    S.AMDGPU().handleAMDGPUMaxNumWorkGroupsAttr(D, AL);
     break;
   case ParsedAttr::AT_AVRSignal:
     handleAVRSignalAttr(S, D, AL);
@@ -9419,13 +9076,13 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleBTFDeclTagAttr(S, D, AL);
     break;
   case ParsedAttr::AT_WebAssemblyExportName:
-    handleWebAssemblyExportNameAttr(S, D, AL);
+    S.Wasm().handleWebAssemblyExportNameAttr(D, AL);
     break;
   case ParsedAttr::AT_WebAssemblyImportModule:
-    handleWebAssemblyImportModuleAttr(S, D, AL);
+    S.Wasm().handleWebAssemblyImportModuleAttr(D, AL);
     break;
   case ParsedAttr::AT_WebAssemblyImportName:
-    handleWebAssemblyImportNameAttr(S, D, AL);
+    S.Wasm().handleWebAssemblyImportNameAttr(D, AL);
     break;
   case ParsedAttr::AT_IBOutlet:
     handleIBOutlet(S, D, AL);

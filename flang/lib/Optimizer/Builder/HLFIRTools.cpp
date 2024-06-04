@@ -642,6 +642,15 @@ mlir::Value hlfir::genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
   return lenParams[0];
 }
 
+mlir::Value hlfir::genRank(mlir::Location loc, fir::FirOpBuilder &builder,
+                           hlfir::Entity entity, mlir::Type resultType) {
+  if (!entity.isAssumedRank())
+    return builder.createIntegerConstant(loc, resultType, entity.getRank());
+  assert(entity.isBoxAddressOrValue() &&
+         "assumed-ranks are box addresses or values");
+  return builder.create<fir::BoxRankOp>(loc, resultType, entity);
+}
+
 // Return a "shape" that can be used in fir.embox/fir.rebox with \p exv base.
 static mlir::Value asEmboxShape(mlir::Location loc, fir::FirOpBuilder &builder,
                                 const fir::ExtendedValue &exv,

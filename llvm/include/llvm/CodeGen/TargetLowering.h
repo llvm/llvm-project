@@ -4764,12 +4764,6 @@ public:
     return false;
   }
 
-  /// Return the builtin name for the __builtin___clear_cache intrinsic
-  /// Default is to invoke the clear cache library call
-  virtual const char * getClearCacheBuiltinName() const {
-    return "__clear_cache";
-  }
-
   /// Return the register ID of the name passed in. Used by named register
   /// global variables extension. There is no target-independent behaviour
   /// so the default action is to bail.

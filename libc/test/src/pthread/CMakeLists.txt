@@ -68,7 +68,9 @@ add_libc_unittest(
     libc.include.errno
     libc.include.pthread
     libc.src.pthread.pthread_rwlockattr_destroy
+    libc.src.pthread.pthread_rwlockattr_getkind_np
     libc.src.pthread.pthread_rwlockattr_getpshared
     libc.src.pthread.pthread_rwlockattr_init
+    libc.src.pthread.pthread_rwlockattr_setkind_np
     libc.src.pthread.pthread_rwlockattr_setpshared
 )
