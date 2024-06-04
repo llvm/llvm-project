@@ -1499,6 +1499,17 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
                 "POINTER= argument '%s' is an object pointer but the TARGET= argument '%s' is not a variable"_err_en_US,
                 pointerExpr->AsFortran(), targetExpr->AsFortran());
           }
+          if (!IsAssumedRank(*pointerExpr)) {
+            if (IsAssumedRank(*targetExpr)) {
+              messages.Say(
+                  "TARGET= argument '%s' may not be assumed-rank when POINTER= argument is not"_err_en_US,
+                  pointerExpr->AsFortran());
+            } else if (pointerExpr->Rank() != targetExpr->Rank()) {
+              messages.Say(
+                  "POINTER= argument and TARGET= argument have incompatible ranks %d and %d"_err_en_US,
+                  pointerExpr->Rank(), targetExpr->Rank());
+            }
+          }
         }
       }
     }
