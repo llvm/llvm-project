@@ -828,12 +828,18 @@ multiclass SIMDBitwise<SDPatternOperator node, string name, bits<32> simdop,
             (!cast<NI>(NAME) $lhs, $rhs)>;
 }
 
-multiclass SIMDUnary<Vec vec, SDPatternOperator node, string name, bits<32> simdop> {
+multiclass SIMDUnary<Vec vec, SDPatternOperator node, string name,
+                     bits<32> simdop, list<Predicate> reqs = []> {
   defm _#vec : SIMD_I<(outs V128:$dst), (ins V128:$v), (outs), (ins),
                       [(set (vec.vt V128:$dst),
                         (vec.vt (node (vec.vt V128:$v))))],
                       vec.prefix#"."#name#"\t$dst, $v",
-                      vec.prefix#"."#name, simdop>;
+                      vec.prefix#"."#name, simdop, reqs>;
+}
+
+multiclass HalfPrecisionUnary<Vec vec, SDPatternOperator node, string name,
+                              bits<32> simdop> {
+  defm "" : SIMDUnary<vec, node, name, simdop, [HasHalfPrecision]>;
 }
 
 // Bitwise logic: v128.not
@@ -1190,6 +1196,10 @@ defm EXTMUL_HIGH_U :
 multiclass SIMDUnaryFP<SDNode node, string name, bits<32> baseInst> {
   defm "" : SIMDUnary<F32x4, node, name, baseInst>;
   defm "" : SIMDUnary<F64x2, node, name, !add(baseInst, 12)>;
+  // Unlike F32x4 and F64x2 there's not a gap in the opcodes between "neg" and
+  // "sqrt" so subtract one from the offset.
+  defm "" : HalfPrecisionUnary<F16x8, node, name,
+                               !add(baseInst,!if(!eq(name, "sqrt"), 80, 81))>;
 }
 
 // Absolute value: abs
@@ -1210,14 +1220,20 @@ defm CEIL : SIMDUnary<F64x2, fceil, "ceil", 0x74>;
 defm FLOOR : SIMDUnary<F64x2, ffloor, "floor", 0x75>;
 defm TRUNC: SIMDUnary<F64x2, ftrunc, "trunc", 0x7a>;
 defm NEAREST: SIMDUnary<F64x2, fnearbyint, "nearest", 0x94>;
+defm CEIL : HalfPrecisionUnary<F16x8, fceil, "ceil", 0x13c>;
+defm FLOOR : HalfPrecisionUnary<F16x8, ffloor, "floor", 0x13d>;
+defm TRUNC : HalfPrecisionUnary<F16x8, ftrunc, "trunc", 0x13e>;
+defm NEAREST : HalfPrecisionUnary<F16x8, fnearbyint, "nearest", 0x13f>;
 
 // WebAssembly doesn't expose inexact exceptions, so map frint to fnearbyint.
 def : Pat<(v4f32 (frint (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
 def : Pat<(v2f64 (frint (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
+def : Pat<(v8f16 (frint (v8f16 V128:$src))), (NEAREST_F16x8 V128:$src)>;
 
 // WebAssembly always rounds ties-to-even, so map froundeven to fnearbyint.
 def : Pat<(v4f32 (froundeven (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
 def : Pat<(v2f64 (froundeven (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
+def : Pat<(v8f16 (froundeven (v8f16 V128:$src))), (NEAREST_F16x8 V128:$src)>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point binary arithmetic
