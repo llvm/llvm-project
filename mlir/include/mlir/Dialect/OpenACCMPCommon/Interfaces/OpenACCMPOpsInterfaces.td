@@ -1,4 +1,4 @@
-//===-- OpenACCOpsInterfaces.td - OpenACC op interfaces ----*- tablegen -*-===//
+//===-- OpenACCMPOpsInterfaces.td - OpenACC/MP op interfaces - tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is the OpenACC Dialect interfaces definition file.
+// This is the OpenACC/OpenMP Dialect interfaces definition file.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENACC_OPS_INTERFACES
-#define OPENACC_OPS_INTERFACES
+#ifndef OPENACC_MP_COMMON_OPS_INTERFACES
+#define OPENACC_MP_COMMON_OPS_INTERFACES
 
 include "mlir/IR/OpBase.td"
 
 def RecipeInterface : OpInterface<"RecipeInterface"> {
     let description = [{
-      OpenACC operations with one or more regions holding executable code.
+      OpenACC/OpenMP operations with one or more regions holding executable code.
     }];
-    let cppNamespace = "::mlir::acc";
+    let cppNamespace = "::mlir::accomp";
     let methods = [
       InterfaceMethod<
         /*description=*/[{
@@ -38,4 +38,4 @@ def RecipeInterface : OpInterface<"RecipeInterface"> {
     ];
 }
 
-#endif // OPENACC_OPS_INTERFACES
+#endif // OPENACC_MP_COMMON_OPS_INTERFACES
