@@ -390,7 +390,7 @@ Value *PHITransAddr::insertTranslatedSubExpr(
         InVal->getName() + ".phi.trans.insert",
         PredBB->getTerminator()->getIterator());
     Result->setDebugLoc(Inst->getDebugLoc());
-    Result->setIsInBounds(GEP->isInBounds());
+    Result->setNoWrapFlags(GEP->getNoWrapFlags());
     NewInsts.push_back(Result);
     return Result;
   }
