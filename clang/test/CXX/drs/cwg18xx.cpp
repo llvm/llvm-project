@@ -373,6 +373,98 @@ namespace cwg1837 { // cwg1837: 3.3
 #endif
 }
 
+namespace cwg1862 { // cwg1862: no
+template<class T>
+struct A {
+  struct B {
+    void e();
+  };
+  
+  void f();
+  
+  struct D {
+    void g();
+  };
+  
+  T h();
+
+  template<T U>
+  T i();
+};
+
+template<>
+struct A<int> {
+  struct B {
+    void e();
+  };
+  
+  int f();
+  
+  struct D {
+    void g();
+  };
+  
+  template<int U>
+  int i();
+};
+
+template<>
+struct A<float*> {
+  int* h();
+};
+
+class C {
+  int private_int;
+
+  template<class T>
+  friend struct A<T>::B;
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+
+  template<class T>
+  friend void A<T>::f();
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+
+  // FIXME: this is ill-formed, because A<T>​::​D does not end with a simple-template-id
+  template<class T>
+  friend void A<T>::D::g();
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::D::' for friend class declaration is not supported; turning off access control for 'C'}}
+  
+  template<class T>
+  friend int *A<T*>::h();
+  // expected-warning@-1 {{dependent nested name specifier 'A<T *>::' for friend class declaration is not supported; turning off access control for 'C'}}
+  
+  template<class T>
+  template<T U>
+  friend T A<T>::i();
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+};
+
+C c;
+
+template<class T>
+void A<T>::B::e() { (void)c.private_int; }
+void A<int>::B::e() { (void)c.private_int; }
+
+template<class T>
+void A<T>::f() { (void)c.private_int; }
+int A<int>::f() { (void)c.private_int; return 0; }
+
+// FIXME: both definition of 'D::g' are not friends, so they don't have access to 'private_int' 
+template<class T>
+void A<T>::D::g() { (void)c.private_int; }
+void A<int>::D::g() { (void)c.private_int; }
+
+template<class T>
+T A<T>::h() { (void)c.private_int; }
+int* A<float*>::h() { (void)c.private_int; return 0; }
+
+template<class T>
+template<T U>
+T A<T>::i() { (void)c.private_int; }
+template<int U>
+int A<int>::i() { (void)c.private_int; }
+} // namespace cwg1862
+
 namespace cwg1872 { // cwg1872: 9
 #if __cplusplus >= 201103L
   template<typename T> struct A : T {
