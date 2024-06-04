@@ -1588,10 +1588,10 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
 ///
 /// The matcher \matcher{cxxDeductionGuideDecl()}
 /// matches the written deduction guide
-/// \match{type=typeofstr$auto (int) -> X<int>},
-/// the implicit copy deduction guide \match{type=typeofstr$auto (int) -> X<T>}
+/// \match{type=typestr$auto (int) -> X<int>},
+/// the implicit copy deduction guide \match{type=typestr$auto (int) -> X<T>}
 /// and the implicitly declared deduction guide
-/// \match{type=typeofstr$auto (X<T>) -> X<T>}.
+/// \match{type=typestr$auto (X<T>) -> X<T>}.
 extern const internal::VariadicDynCastAllOfMatcher<Decl, CXXDeductionGuideDecl>
     cxxDeductionGuideDecl;
 
@@ -10116,7 +10116,7 @@ AST_MATCHER(CXXConstructorDecl, isDelegatingConstructor) {
 /// The matcher \matcher{cxxDeductionGuideDecl(isExplicit())}
 /// matches the deduction guide \match{explicit S(double) -> S<false>},
 /// the implicit copy deduction candiate
-/// \match{type=typeofstr$auto (double) -> S<b>} and
+/// \match{type=typestr$auto (double) -> S<b>} and
 /// the implicitly generated deduction guide for \match{explicit(true) S(char)},
 /// but does not match \nomatch{S(int) -> S<true>}.
 AST_POLYMORPHIC_MATCHER(isExplicit, AST_POLYMORPHIC_SUPPORTED_TYPES(
@@ -10156,7 +10156,7 @@ AST_POLYMORPHIC_MATCHER(isExplicit, AST_POLYMORPHIC_SUPPORTED_TYPES(
 /// The matcher
 /// \matcher{cxxDeductionGuideDecl(hasExplicitSpecifier(declRefExpr()))}
 /// matches the implicitly generated deduction guide
-/// \match{type=typeofstr$auto (float) -> S<b>} of the constructor
+/// \match{type=typestr$auto (float) -> S<b>} of the constructor
 /// \c{explicit(b) S(float)}.
 AST_MATCHER_P(FunctionDecl, hasExplicitSpecifier, internal::Matcher<Expr>,
               InnerMatcher) {
