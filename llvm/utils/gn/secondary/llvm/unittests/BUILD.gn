@@ -53,6 +53,7 @@ group("unittests") {
     "TextAPI:TextAPITests",
     "Transforms/Coroutines:CoroTests",
     "Transforms/IPO:IPOTests",
+    "Transforms/Instrumentation:InstrumentationTests",
     "Transforms/Scalar:ScalarTests",
     "Transforms/Utils:UtilsTests",
     "Transforms/Vectorize:VectorizeTests",

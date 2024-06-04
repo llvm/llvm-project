@@ -382,6 +382,20 @@ public:
       Env.setValue(*S, Env.makeNot(*SubExprVal));
       break;
     }
+    case UO_PreInc:
+    case UO_PreDec:
+      // Propagate the storage location, but don't create a new value; to
+      // avoid generating unnecessary values, we leave it to the specific
+      // analysis to do this if desired.
+      propagateStorageLocation(*S->getSubExpr(), *S, Env);
+      break;
+    case UO_PostInc:
+    case UO_PostDec:
+      // Propagate the old value, but don't create a new value; to avoid
+      // generating unnecessary values, we leave it to the specific analysis
+      // to do this if desired.
+      propagateValue(*S->getSubExpr(), *S, Env);
+      break;
     default:
       break;
     }
