@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_RUN_BACKEND_H
-#define _LIBCPP___PSTL_RUN_BACKEND_H
+#ifndef _LIBCPP___PSTL_HANDLE_EXCEPTION_H
+#define _LIBCPP___PSTL_HANDLE_EXCEPTION_H
 
 #include <__config>
 #include <__utility/forward.h>
@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
 
 template <class _BackendFunction, class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE auto __run_backend_impl(_Args&&... __args) noexcept {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE auto __handle_exception_impl(_Args&&... __args) noexcept {
   return _BackendFunction{}(std::forward<_Args>(__args)...);
 }
 
@@ -41,8 +41,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE auto __run_backend_impl(_Args&&... _
 // (such as moving or copying iterators) in here since that should terminate the
 // program, which is why we delegate to a noexcept helper below.
 template <class _BackendFunction, class... _Args>
-_LIBCPP_HIDE_FROM_ABI auto __run_backend(_Args&&... __args) {
-  auto __result = __pstl::__run_backend_impl<_BackendFunction>(std::forward<_Args>(__args)...);
+_LIBCPP_HIDE_FROM_ABI auto __handle_exception(_Args&&... __args) {
+  auto __result = __pstl::__handle_exception_impl<_BackendFunction>(std::forward<_Args>(__args)...);
   if (__result == nullopt)
     std::__throw_bad_alloc();
   else
@@ -54,4 +54,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_RUN_BACKEND_H
+#endif // _LIBCPP___PSTL_HANDLE_EXCEPTION_H

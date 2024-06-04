@@ -16,7 +16,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__pstl/backend.h>
 #include <__pstl/dispatch.h>
-#include <__pstl/run_backend.h>
+#include <__pstl/handle_exception.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
@@ -44,7 +44,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp reduce(
     _ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Tp __init, _BinaryOperation __op) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "reduce requires ForwardIterators");
   using _Implementation = __pstl::__dispatch<__pstl::__reduce, __pstl::__current_configuration, _RawPolicy>;
-  return __pstl::__run_backend<_Implementation>(
+  return __pstl::__handle_exception<_Implementation>(
       std::forward<_ExecutionPolicy>(__policy),
       std::move(__first),
       std::move(__last),
@@ -61,7 +61,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp
 reduce(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Tp __init) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "reduce requires ForwardIterators");
   using _Implementation = __pstl::__dispatch<__pstl::__reduce, __pstl::__current_configuration, _RawPolicy>;
-  return __pstl::__run_backend<_Implementation>(
+  return __pstl::__handle_exception<_Implementation>(
       std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__init), plus{});
 }
 
@@ -73,7 +73,7 @@ _LIBCPP_HIDE_FROM_ABI __iter_value_type<_ForwardIterator>
 reduce(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "reduce requires ForwardIterators");
   using _Implementation = __pstl::__dispatch<__pstl::__reduce, __pstl::__current_configuration, _RawPolicy>;
-  return __pstl::__run_backend<_Implementation>(
+  return __pstl::__handle_exception<_Implementation>(
       std::forward<_ExecutionPolicy>(__policy),
       std::move(__first),
       std::move(__last),
@@ -101,7 +101,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp transform_reduce(
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "transform_reduce requires ForwardIterators");
   using _Implementation =
       __pstl::__dispatch<__pstl::__transform_reduce_binary, __pstl::__current_configuration, _RawPolicy>;
-  return __pstl::__run_backend<_Implementation>(
+  return __pstl::__handle_exception<_Implementation>(
       std::forward<_ExecutionPolicy>(__policy),
       std::move(__first1),
       std::move(__last1),
@@ -129,7 +129,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp transform_reduce(
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "transform_reduce requires ForwardIterators");
   using _Implementation =
       __pstl::__dispatch<__pstl::__transform_reduce_binary, __pstl::__current_configuration, _RawPolicy>;
-  return __pstl::__run_backend<_Implementation>(
+  return __pstl::__handle_exception<_Implementation>(
       std::forward<_ExecutionPolicy>(__policy),
       std::move(__first1),
       std::move(__last1),
@@ -155,7 +155,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp transform_reduce(
     _UnaryOperation __transform) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "transform_reduce requires ForwardIterators");
   using _Implementation = __pstl::__dispatch<__pstl::__transform_reduce, __pstl::__current_configuration, _RawPolicy>;
-  return __pstl::__run_backend<_Implementation>(
+  return __pstl::__handle_exception<_Implementation>(
       std::forward<_ExecutionPolicy>(__policy),
       std::move(__first),
       std::move(__last),
