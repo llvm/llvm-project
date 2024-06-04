@@ -1634,8 +1634,6 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
       if (CE->isCast())
         return HandlePassthroughUser(Usr, CurPtr, Follow);
-      if (CE->isCompare())
-        return true;
       if (!isa<GEPOperator>(CE)) {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
                           << "\n");
@@ -10761,9 +10759,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       return;
     }
     Value *Stripped = getAssociatedValue().stripPointerCasts();
-    auto *CE = dyn_cast<ConstantExpr>(Stripped);
-    if (isa<Constant>(Stripped) &&
-        (!CE || CE->getOpcode() != Instruction::ICmp)) {
+    if (isa<Constant>(Stripped) && !isa<ConstantExpr>(Stripped)) {
       addValue(A, getState(), *Stripped, getCtxI(), AA::AnyScope,
                getAnchorScope());
       indicateOptimisticFixpoint();
@@ -11355,13 +11351,6 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       if (NewV && NewV != V) {
         Worklist.push_back({{*NewV, CtxI}, S});
         continue;
-      }
-
-      if (auto *CE = dyn_cast<ConstantExpr>(V)) {
-        if (CE->getOpcode() == Instruction::ICmp)
-          if (handleCmp(A, *CE, CE->getOperand(0), CE->getOperand(1),
-                        CmpInst::Predicate(CE->getPredicate()), II, Worklist))
-            continue;
       }
 
       if (auto *I = dyn_cast<Instruction>(V)) {

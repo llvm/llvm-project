@@ -1009,12 +1009,8 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
                                           GEP->getInRange());
   }
 
-  if (auto *CE = dyn_cast<ConstantExpr>(InstOrCE)) {
-    if (CE->isCompare())
-      return ConstantFoldCompareInstOperands(CE->getPredicate(), Ops[0], Ops[1],
-                                             DL, TLI);
+  if (auto *CE = dyn_cast<ConstantExpr>(InstOrCE))
     return CE->getWithOperands(Ops);
-  }
 
   switch (Opcode) {
   default: return nullptr;
