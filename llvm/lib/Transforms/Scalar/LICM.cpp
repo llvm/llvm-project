@@ -2796,55 +2796,40 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
                                ICFLoopSafetyInfo &SafetyInfo,
                                MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                                DominatorTree *DT) {
-  if (!isa<BinaryOperator>(I))
+  BinaryOperator *BO = dyn_cast<BinaryOperator>(&I);
+  if (!BO || !BO->isAssociative())
     return false;
 
-  Instruction::BinaryOps Opcode = dyn_cast<BinaryOperator>(&I)->getOpcode();
-  BinaryOperator *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0));
+  Instruction::BinaryOps Opcode = BO->getOpcode();
+  BinaryOperator *Op0 = dyn_cast<BinaryOperator>(BO->getOperand(0));
 
-  auto ClearSubclassDataAfterReassociation = [](Instruction &I) {
-    FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I);
-    if (!FPMO) {
-      I.clearSubclassOptionalData();
-      return;
-    }
+  // Transform: "(LV op C1) op C2" ==> "LV op (C1 op C2)"
+  if (Op0 && Op0->getOpcode() == Opcode) {
+    Value *LV = Op0->getOperand(0);
+    Value *C1 = Op0->getOperand(1);
+    Value *C2 = BO->getOperand(1);
 
-    FastMathFlags FMF = I.getFastMathFlags();
-    I.clearSubclassOptionalData();
-    I.setFastMathFlags(FMF);
-  };
+    if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) ||
+        !L.isLoopInvariant(C2))
+      return false;
 
-  if (I.isAssociative()) {
-    // Transform: "(LV op C1) op C2" ==> "LV op (C1 op C2)"
-    if (Op0 && Op0->getOpcode() == Opcode) {
-      Value *LV = Op0->getOperand(0);
-      Value *C1 = Op0->getOperand(1);
-      Value *C2 = I.getOperand(1);
+    auto *Preheader = L.getLoopPreheader();
+    assert(Preheader && "Loop is not in simplify form?");
+    IRBuilder<> Builder(Preheader->getTerminator());
+    Value *Inv = Builder.CreateBinOp(Opcode, C1, C2, "invariant.op");
 
-      if (L.isLoopInvariant(LV) || !L.isLoopInvariant(C1) ||
-          !L.isLoopInvariant(C2))
-        return false;
+    auto *NewBO = BinaryOperator::Create(Opcode, LV, Inv,
+                                         BO->getName() + ".reass", BO);
+    NewBO->copyIRFlags(BO);
+    BO->replaceAllUsesWith(NewBO);
+    eraseInstruction(*BO, SafetyInfo, MSSAU);
 
-      bool singleUseOp0 = Op0->hasOneUse();
+    // Note: (LV op C1) might not be erased if it has more uses than the one we
+    //       just replaced.
+    if (Op0->use_empty())
+      eraseInstruction(*Op0, SafetyInfo, MSSAU);
 
-      // Conservatively clear all optional flags since they may not be
-      // preserved by the reassociation, but preserve fast-math flags where
-      // applicable,
-      ClearSubclassDataAfterReassociation(I);
-
-      auto *Preheader = L.getLoopPreheader();
-      assert(Preheader && "Loop is not in simplify form?");
-      IRBuilder<> Builder(Preheader->getTerminator());
-      Value *V = Builder.CreateBinOp(Opcode, C1, C2, "invariant.op");
-      I.setOperand(0, LV);
-      I.setOperand(1, V);
-
-      // Note: (LV op CV1) might not be erased if it has more than one use.
-      if (singleUseOp0)
-        eraseInstruction(cast<Instruction>(*Op0), SafetyInfo, MSSAU);
-
-      return true;
-    }
+    return true;
   }
 
   return false;

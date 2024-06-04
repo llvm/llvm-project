@@ -785,7 +785,7 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    add r15, r5, r11
 ; CHECK-NEXT:    sldi r11, r14, 3
 ; CHECK-NEXT:    add r29, r5, r29
-; CHECK-NEXT:    add r28, r5, r26
+; CHECK-NEXT:    add r28, r3, r26
 ; CHECK-NEXT:    add r19, r5, r19
 ; CHECK-NEXT:    add r21, r23, r9
 ; CHECK-NEXT:    add r24, r23, r8
@@ -794,9 +794,9 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    add r25, r23, r20
 ; CHECK-NEXT:    add r20, r18, r20
 ; CHECK-NEXT:    add r30, r5, r30
-; CHECK-NEXT:    add r18, r5, r16
+; CHECK-NEXT:    add r18, r3, r16
 ; CHECK-NEXT:    add r24, r5, r24
-; CHECK-NEXT:    add r23, r5, r21
+; CHECK-NEXT:    add r23, r3, r21
 ; CHECK-NEXT:    add r27, r4, r26
 ; CHECK-NEXT:    add r22, r4, r21
 ; CHECK-NEXT:    add r17, r4, r16
@@ -804,11 +804,11 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    rldicl r4, r7, 2, 1
 ; CHECK-NEXT:    sub r7, r8, r9
 ; CHECK-NEXT:    ld r8, -200(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    add r26, r3, r26
+; CHECK-NEXT:    add r26, r5, r26
 ; CHECK-NEXT:    add r25, r5, r25
-; CHECK-NEXT:    add r21, r3, r21
+; CHECK-NEXT:    add r21, r5, r21
 ; CHECK-NEXT:    add r20, r5, r20
-; CHECK-NEXT:    add r16, r3, r16
+; CHECK-NEXT:    add r16, r5, r16
 ; CHECK-NEXT:    add r31, r5, r11
 ; CHECK-NEXT:    add r11, r3, r11
 ; CHECK-NEXT:    addi r4, r4, -4
@@ -842,61 +842,61 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    lfdx f1, r15, r9
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfdx f0, r15, r9
-; CHECK-NEXT:    lfd f0, 0(r16)
+; CHECK-NEXT:    lfd f0, 0(r18)
 ; CHECK-NEXT:    lfd f1, 0(r17)
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
-; CHECK-NEXT:    lfdx f1, r18, r9
+; CHECK-NEXT:    lfdx f1, r16, r9
 ; CHECK-NEXT:    xsadddp f0, f1, f0
-; CHECK-NEXT:    stfdx f0, r18, r9
-; CHECK-NEXT:    lfdx f0, r16, r7
+; CHECK-NEXT:    stfdx f0, r16, r9
+; CHECK-NEXT:    lfdx f0, r18, r7
 ; CHECK-NEXT:    lfdx f1, r17, r7
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
 ; CHECK-NEXT:    lfdx f1, r19, r9
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfdx f0, r19, r9
-; CHECK-NEXT:    lfdx f0, r16, r8
+; CHECK-NEXT:    lfdx f0, r18, r8
 ; CHECK-NEXT:    lfdx f1, r17, r8
-; CHECK-NEXT:    add r16, r16, r12
+; CHECK-NEXT:    add r18, r18, r12
 ; CHECK-NEXT:    add r17, r17, r12
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
 ; CHECK-NEXT:    lfdx f1, r20, r9
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfdx f0, r20, r9
-; CHECK-NEXT:    lfd f0, 0(r21)
+; CHECK-NEXT:    lfd f0, 0(r23)
 ; CHECK-NEXT:    lfd f1, 0(r22)
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
-; CHECK-NEXT:    lfdx f1, r23, r9
+; CHECK-NEXT:    lfdx f1, r21, r9
 ; CHECK-NEXT:    xsadddp f0, f1, f0
-; CHECK-NEXT:    stfdx f0, r23, r9
-; CHECK-NEXT:    lfdx f0, r21, r7
+; CHECK-NEXT:    stfdx f0, r21, r9
+; CHECK-NEXT:    lfdx f0, r23, r7
 ; CHECK-NEXT:    lfdx f1, r22, r7
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
 ; CHECK-NEXT:    lfdx f1, r24, r9
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfdx f0, r24, r9
-; CHECK-NEXT:    lfdx f0, r21, r8
+; CHECK-NEXT:    lfdx f0, r23, r8
 ; CHECK-NEXT:    lfdx f1, r22, r8
-; CHECK-NEXT:    add r21, r21, r12
+; CHECK-NEXT:    add r23, r23, r12
 ; CHECK-NEXT:    add r22, r22, r12
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
 ; CHECK-NEXT:    lfdx f1, r25, r9
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfdx f0, r25, r9
-; CHECK-NEXT:    lfd f0, 0(r26)
+; CHECK-NEXT:    lfd f0, 0(r28)
 ; CHECK-NEXT:    lfd f1, 0(r27)
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
-; CHECK-NEXT:    lfdx f1, r28, r9
+; CHECK-NEXT:    lfdx f1, r26, r9
 ; CHECK-NEXT:    xsadddp f0, f1, f0
-; CHECK-NEXT:    stfdx f0, r28, r9
-; CHECK-NEXT:    lfdx f0, r26, r7
+; CHECK-NEXT:    stfdx f0, r26, r9
+; CHECK-NEXT:    lfdx f0, r28, r7
 ; CHECK-NEXT:    lfdx f1, r27, r7
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
 ; CHECK-NEXT:    lfdx f1, r29, r9
 ; CHECK-NEXT:    xsadddp f0, f1, f0
 ; CHECK-NEXT:    stfdx f0, r29, r9
-; CHECK-NEXT:    lfdx f0, r26, r8
+; CHECK-NEXT:    lfdx f0, r28, r8
 ; CHECK-NEXT:    lfdx f1, r27, r8
-; CHECK-NEXT:    add r26, r26, r12
+; CHECK-NEXT:    add r28, r28, r12
 ; CHECK-NEXT:    add r27, r27, r12
 ; CHECK-NEXT:    xsmuldp f0, f0, f1
 ; CHECK-NEXT:    lfdx f1, r30, r9
