@@ -11,6 +11,11 @@ on:
       - 'llvm/**'
       - '.github/workflows/ci-post-commit-analyzer.yml'
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
     paths:
       - '.github/workflows/ci-post-commit-analyzer.yml'
   schedule:
@@ -28,6 +33,8 @@ jobs:
       github.repository_owner == 'llvm' &&
       github.event.action != 'closed'
     runs-on: ubuntu-22.04
+    container:
+      image: 'ghcr.io/llvm/ci-ubuntu-22.04:latest'
     env:
       LLVM_VERSION: 18
     steps:
@@ -35,34 +42,66 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Install Dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | sudo tee -a /etc/apt/sources.list.d/llvm.list
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-get update
-          sudo apt-get install \
+          apt-get update
+          apt-get -y install \
+            wget \
+            gnupg
+          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | tee -a /etc/apt/sources.list.d/llvm.list
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+          apt-get update
+          apt-get -y install \
             cmake \
             ninja-build \
             perl \
             clang-tools-$LLVM_VERSION \
             clang-$LLVM_VERSION
 
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          # A full build of llvm, clang, lld, and lldb takes about 250MB
+          # of ccache space. There's not much reason to have more than this,
+          # because we usually won't need to save cache entries from older
+          # builds.  Also, there is an overall 10GB cache limit, and each
+          # run creates a new cache entry so we want to ensure that we have
+          # enough cache space for all the tests to run at once and still
+          # fit under the 10 GB limit.
+          # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
+          max-size: 2G
+          key: post-commit-analyzer
+          variant: ccache
+
       - name: Configure
         run: |
           scan-build-$LLVM_VERSION \
-              --use-c++=clang++ \
-              --use-cc=clang \
+              --use-c++='clang++' \
+              --use-cc='clang' \
+              -analyzer-config max-nodes=75000 \
               cmake -B build -S llvm -G Ninja \
                   -DLLVM_ENABLE_ASSERTIONS=ON \
+                  -DLLVM_ENABLE_PROJECTS=clang \
                   -DLLVM_BUILD_LLVM_DYLIB=ON \
                   -DLLVM_LINK_LLVM_DYLIB=ON \
                   -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: |
-           scan-build-$LLVM_VERSION -o analyzer-results --use-c++=clang++ --use-cc=clang ninja -v -C build
+          # Create symlinks for use with ccache.
+          ln -s /usr/bin/ccache /usr/local/bin/clang++
+          ln -s /usr/bin/ccache /usr/local/bin/clang
+          scan-build-$LLVM_VERSION \
+              -o analyzer-results \
+              --use-c++=/usr/local/bin/clang++ \
+              --use-cc=/usr/local/bin/clang \
+              -analyzer-config max-nodes=75000 \
+              ninja -v -C build
 
       - name: Upload Results
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        if: always()
         with:
           name: analyzer-results
           path: 'analyzer-results/**/*'
