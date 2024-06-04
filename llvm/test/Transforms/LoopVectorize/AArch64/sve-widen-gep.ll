@@ -8,7 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-LABEL:  LV: Checking a loop in 'pointer_induction_used_as_vector'
 ; CHECK-NOT:    LV: Found {{.*}} scalar instruction:   %ptr.iv.2.next = getelementptr inbounds i8, ptr %ptr.iv.2, i64 1
 ;
-; CHECK:        VPlan 'Initial VPlan for VF={vscale x 2},UF>=1' {
+; CHECK:        VPlan 'Final VPlan for VF={vscale x 2},UF>=1' {
 ; CHECK-NEXT:   Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:   Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:   Live-in ir<%N> = original trip-count

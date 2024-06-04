@@ -8,7 +8,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize {
 ; CHECK-LABEL: sink_replicate_region_1
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -102,7 +102,7 @@ exit:
 
 define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-LABEL: sink_replicate_region_2
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -175,7 +175,7 @@ exit:
 
 define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-LABEL: sink_replicate_region_3_reduction
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -253,7 +253,7 @@ exit:
 ; containing %conv at the end, because %conv is the last recipe in the block.
 define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr %ptr, ptr noalias %dst) optsize {
 ; CHECK-LABEL: sink_replicate_region_4_requires_split_at_end_of_block
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -355,7 +355,7 @@ exit:
 ; Test case that requires sinking a recipe in a replicate region after another replicate region.
 define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias %dst.2, i32 %x, i8 %y) optsize {
 ; CHECK-LABEL: sink_replicate_region_after_replicate_region
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -437,7 +437,7 @@ exit:                                             ; preds = %loop
 
 define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias %dst) {
 ; CHECK-LABEL: need_new_block_after_sinking_pr56146
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count

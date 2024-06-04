@@ -106,6 +106,12 @@ struct VPlanTransforms {
   /// this transformation.
   /// \returns true if the transformation succeeds, or false if it doesn't.
   static bool tryAddExplicitVectorLength(VPlan &Plan);
+
+  /// Finalize \p Plan by introducing recipes needed for code-gen, like
+  /// introducing explicit increments for the canonical induction and the branch
+  /// to exit the vector loop.
+  static void finalizePlan(VPlan &Plan, bool HasNUW,
+                           bool DataAndControlFlowWithoutRuntimeCheck);
 };
 
 } // namespace llvm

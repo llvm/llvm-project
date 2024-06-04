@@ -30,6 +30,8 @@ class VPlanVerifier {
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
+  bool IsAbstract;
+
   // Verify that phi-like recipes are at the beginning of \p VPBB, with no
   // other recipes in between. Also check that only header blocks contain
   // VPHeaderPHIRecipes.
@@ -54,7 +56,8 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT) : VPDT(VPDT) {}
+  VPlanVerifier(VPDominatorTree &VPDT, bool IsAbstract)
+      : VPDT(VPDT), IsAbstract(IsAbstract) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -185,7 +188,7 @@ bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   if (VPB->getNumSuccessors() > 1 ||
       (VPBB && VPBB->getParent() && VPBB->isExiting() &&
        !VPBB->getParent()->isReplicator())) {
-    if (!VPBB || !VPBB->getTerminator()) {
+    if (!IsAbstract && (!VPBB || !VPBB->getTerminator())) {
       errs() << "Block has multiple successors but doesn't "
                 "have a proper branch recipe!\n";
       return false;
@@ -315,18 +318,20 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
     return false;
   }
 
-  if (Exiting->empty()) {
-    errs() << "VPlan vector loop exiting block must end with BranchOnCount or "
-              "BranchOnCond VPInstruction but is empty\n";
-    return false;
-  }
+  if (!IsAbstract) {
+    if (Exiting->empty()) {
+      errs() << "VPlan vector loop exiting block must end with BranchOnCount or"
+                "BranchOnCond VPInstruction but is empty\n";
+      return false;
+    }
 
-  auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
-  if (!LastInst || (LastInst->getOpcode() != VPInstruction::BranchOnCount &&
-                    LastInst->getOpcode() != VPInstruction::BranchOnCond)) {
-    errs() << "VPlan vector loop exit must end with BranchOnCount or "
-              "BranchOnCond VPInstruction\n";
-    return false;
+    auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
+    if (!LastInst || (LastInst->getOpcode() != VPInstruction::BranchOnCount &&
+                      LastInst->getOpcode() != VPInstruction::BranchOnCond)) {
+      errs() << "VPlan vector loop exit must end with BranchOnCount or "
+                "BranchOnCond VPInstruction\n";
+      return false;
+    }
   }
 
   for (const auto &KV : Plan.getLiveOuts())
@@ -338,9 +343,9 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   return true;
 }
 
-bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
+bool llvm::verifyVPlanIsValid(const VPlan &Plan, bool IsAbstract) {
   VPDominatorTree VPDT;
   VPDT.recalculate(const_cast<VPlan &>(Plan));
-  VPlanVerifier Verifier(VPDT);
+  VPlanVerifier Verifier(VPDT, IsAbstract);
   return Verifier.verify(Plan);
 }

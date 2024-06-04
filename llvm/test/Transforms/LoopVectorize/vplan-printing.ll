@@ -8,7 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
 ; CHECK-LABEL: Checking a loop in 'print_call_and_memory'
-; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -58,7 +58,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, ptr %z) nounwind uwtable {
 ; CHECK-LABEL: Checking a loop in 'print_widen_gep_and_select'
-; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -113,7 +113,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-LABEL: Checking a loop in 'print_reduction'
-; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -162,7 +162,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr noalias %dst) {
 ; CHECK-LABEL: Checking a loop in 'print_reduction_with_invariant_store'
-; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -210,7 +210,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-LABEL: Checking a loop in 'print_replicate_predicated_phi'
-; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -289,7 +289,7 @@ for.end:                                          ; preds = %for.inc
 
 define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-LABEL: Checking a loop in 'print_interleave_groups'
-; CHECK:       VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:       VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<256> = original trip-count
@@ -358,7 +358,7 @@ for.end:
 
 define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-LABEL: Checking a loop in 'print_fmuladd_strict'
-; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -413,7 +413,7 @@ for.end:
 
 define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {
 ; CHECK-LABEL: Checking a loop in 'debug_loc_vpinstruction'
-; CHECK:    VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:    VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<128> = original trip-count
@@ -502,7 +502,7 @@ declare float @llvm.fmuladd.f32(float, float, float)
 
 define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-LABEL: Checking a loop in 'print_expand_scev'
-; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK: VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -558,7 +558,7 @@ loop.exit:
 
 define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-LABEL: Checking a loop in 'print_exit_value'
-; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK: VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1000> = original trip-count
@@ -606,7 +606,7 @@ exit:
 
 define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %z) {
 ; CHECK-LABEL: Checking a loop in 'print_fast_math_flags'
-; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -659,7 +659,7 @@ exit:
 
 define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK-LABEL: Checking a loop in 'print_exact_flags'
-; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -710,7 +710,7 @@ exit:
 
 define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-LABEL: Checking a loop in 'print_call_flags'
-; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -792,7 +792,7 @@ end:
 ; FIXME: Preserve disjoint flag on OR recipe.
 define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-LABEL: Checking a loop in 'print_disjoint_flags'
-; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -843,7 +843,7 @@ exit:
 
 define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-LABEL: LV: Checking a loop in 'zext_nneg'
-; CHECK:       VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:       VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  Live-in ir<1000> = original trip-count

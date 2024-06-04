@@ -10,7 +10,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 
 ; CHECK-LABEL: LV: Checking a loop in 'sink1'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -79,7 +79,7 @@ exit:
 }
 
 ; CHECK-LABEL: LV: Checking a loop in 'sink2'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -163,7 +163,7 @@ exit:
 }
 
 ; CHECK-LABEL: LV: Checking a loop in 'sink3'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -249,7 +249,7 @@ exit:
 ; Make sure we do not sink uniform instructions.
 define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: LV: Checking a loop in 'uniform_gep'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -320,7 +320,7 @@ exit:
 ; Loop with predicated load.
 define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-LABEL: LV: Checking a loop in 'pred_cfg1'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -417,7 +417,7 @@ exit:
 ; loaded value.
 define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-LABEL: LV: Checking a loop in 'pred_cfg2'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -523,7 +523,7 @@ exit:
 ; on loaded value.
 define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-LABEL: LV: Checking a loop in 'pred_cfg3'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -629,7 +629,7 @@ exit:
 
 define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-LABEL: LV: Checking a loop in 'merge_3_replicate_region'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -734,7 +734,7 @@ exit:
 
 define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK-LABEL: LV: Checking a loop in 'update_2_uses_in_same_recipe_in_merged_block'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -801,7 +801,7 @@ exit:
 
 define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-LABEL: LV: Checking a loop in 'recipe_in_merge_candidate_used_by_first_order_recurrence'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -887,7 +887,7 @@ exit:
 
 define void @update_multiple_users(ptr noalias %src, ptr noalias %dst, i1 %c) {
 ; CHECK-LABEL: LV: Checking a loop in 'update_multiple_users'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<999> = original trip-count
@@ -952,7 +952,7 @@ exit:
 
 define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-LABEL: LV: Checking a loop in 'sinking_requires_duplication'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<201> = original trip-count
@@ -1022,7 +1022,7 @@ exit:
 ; need to be removed before merging.
 define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr noalias %dst) optsize {
 ; CHECK-LABEL: LV: Checking a loop in 'merge_with_dead_gep_between_regions'
-; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -1089,7 +1089,7 @@ exit:
 
 define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-LABEL: LV: Checking a loop in 'ptr_induction_remove_dead_recipe'
-; CHECK:       VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK:       VPlan 'Final VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
