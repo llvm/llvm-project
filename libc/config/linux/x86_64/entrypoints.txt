@@ -173,8 +173,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.atoll
     libc.src.stdlib.bsearch
     libc.src.stdlib.div
-    libc.src.stdlib.quick_exit
-    libc.src.stdlib.at_quick_exit
     libc.src.stdlib.labs
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
@@ -752,6 +750,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.abort
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
+    libc.src.stdlib.quick_exit
+    libc.src.stdlib.at_quick_exit
+
     libc.src.stdlib.getenv
 
     # signal.h entrypoints

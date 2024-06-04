@@ -449,6 +449,7 @@ add_entrypoint_object(
     libc.src.__support.fixedvector
     libc.src.__support.threads.mutex
     .exit_handler
+    libc.include.stdlib
 )
 add_entrypoint_object(
   at_quick_exit
@@ -464,6 +465,7 @@ add_entrypoint_object(
     libc.src.__support.fixedvector
     libc.src.__support.threads.mutex
     .exit_handler
+    libc.include.stdlib
 )
 
 add_entrypoint_object(
@@ -477,6 +479,7 @@ add_entrypoint_object(
     .atexit
     libc.src.__support.OSUtil.osutil
     .exit_handler
+    libc.include.stdlib
 )
 
 add_entrypoint_object(
