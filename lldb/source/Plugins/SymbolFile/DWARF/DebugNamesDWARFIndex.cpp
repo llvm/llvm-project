@@ -87,7 +87,8 @@ bool DebugNamesDWARFIndex::ProcessEntry(
     return true;
   // Clang erroneously emits index entries for declaration DIEs in case when the
   // definition is in a type unit (llvm.org/pr77696). Weed those out.
-  if (die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
+  if (die.IsStructUnionOrClass() &&
+      die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
     return true;
   return callback(die);
 }
