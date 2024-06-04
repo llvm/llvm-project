@@ -221,7 +221,7 @@ void __throw_system_error(int ev, const char* what_arg) {
 }
 
 void contract_violation() {
-  std::terminate();
+  std::abort();
 }
 
 _LIBCPP_END_NAMESPACE_STD
