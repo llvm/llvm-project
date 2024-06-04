@@ -1127,7 +1127,7 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
 /// into:
 ///   %0 = tail call i32 @llvm.cttz.i32(i32 %x, i1 false)
 static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
-                                 InstCombiner::BuilderTy &Builder) {
+                                 InstCombinerImpl &IC) {
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *CmpLHS = ICI->getOperand(0);
   Value *CmpRHS = ICI->getOperand(1);
@@ -1169,6 +1169,9 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
     // Explicitly clear the 'is_zero_poison' flag. It's always valid to go from
     // true to false on this flag, so we can replace it for all users.
     II->setArgOperand(1, ConstantInt::getFalse(II->getContext()));
+    // A range annotation on the intrinsic may no longer be valid.
+    II->dropPoisonGeneratingAnnotations();
+    IC.addToWorklist(II);
     return SelectArg;
   }
 
@@ -1921,7 +1924,7 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Value *V = foldSelectICmpLshrAshr(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
-  if (Value *V = foldSelectCttzCtlz(ICI, TrueVal, FalseVal, Builder))
+  if (Value *V = foldSelectCttzCtlz(ICI, TrueVal, FalseVal, *this))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeSaturatedSubtract(ICI, TrueVal, FalseVal, Builder))
