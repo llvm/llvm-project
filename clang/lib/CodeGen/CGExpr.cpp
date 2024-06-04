@@ -2014,6 +2014,9 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
   return EmitFromMemory(Load, Ty);
 }
 
+/// Converts a scalar value from its primary IR type (as returned
+/// by ConvertType) to its load/store type (as returned by
+/// convertTypeForLoadStore).
 llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
   if (hasBooleanRepresentation(Ty) ||
       (Ty->isBitIntType() && Value->getType()->isIntegerTy())) {
@@ -2035,6 +2038,9 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
   return Value;
 }
 
+/// Converts a scalar value from its load/store type (as returned
+/// by convertTypeForLoadStore) to its primary IR type (as returned
+/// by ConvertType).
 llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   if (Ty->isExtVectorBoolType()) {
     const auto *RawIntTy = Value->getType();
@@ -2050,8 +2056,7 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
 
   if (hasBooleanRepresentation(Ty) || Ty->isBitIntType()) {
     llvm::Type *ResTy = ConvertType(Ty);
-    bool Signed = Ty->isSignedIntegerOrEnumerationType();
-    return Builder.CreateIntCast(Value, ResTy, Signed, "loadedv");
+    return Builder.CreateTrunc(Value, ResTy, "loadedv");
   }
 
   return Value;
