@@ -146,6 +146,13 @@ ABI Affecting Changes
   ``random_device`` could throw a ``system_error`` with this value. It now
   throws ``ENOMSG``.
 
+- libcxx ``std::basic_ios`` uses ``WEOF`` to indicate that the fill value is uninitialized. However, on platforms
+  where the size of ``char_type`` is equal to or greater than the size of ``int_type``,
+  ``std::char_traits<char_type>::eq_int_type()`` cannot distinguish between ``WEOF`` and ``WCHAR_MAX``. Helper
+  class ``_OptionalFill`` is used for targets where a variable is needed to indicate whether the fill value
+  has been initialized. This is an ABI break on platforms where the size of ``char_type`` is equal to or greater
+  than the size of ``int_type``. Existing targets affected by this change can choose to keep the existing ABI
+  by undefining macro ``_LIBCXX_IOS_MAY_USE_OPTIONAL_FILL``.
 
 Build System Changes
 --------------------
