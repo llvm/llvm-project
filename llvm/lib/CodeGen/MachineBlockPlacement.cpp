@@ -3158,9 +3158,9 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
 
         // Handle the filter set
         if (BlockFilter) {
-          BlockFilter->remove(RemBB);
           if (*PrevUnplacedBlockInFilterIt == RemBB)
             PrevUnplacedBlockInFilterIt++;
+          BlockFilter->remove(RemBB);
         }
 
         // Remove the block from loop info.
