@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11 %s
-; RUN: not llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefix=R600 %s
+; RUN: not llc -mtriple=r600 -mcpu=redwood < %s
 
 define amdgpu_kernel void @s_fneg_f32(ptr addrspace(1) %out, float %in) {
 ; SI-LABEL: s_fneg_f32:
