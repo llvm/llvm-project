@@ -4176,37 +4176,9 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_fptosi:
     return error(ID.Loc, "fptosi constexprs are no longer supported");
   case lltok::kw_icmp:
-  case lltok::kw_fcmp: {
-    unsigned PredVal, Opc = Lex.getUIntVal();
-    Constant *Val0, *Val1;
-    Lex.Lex();
-    if (parseCmpPredicate(PredVal, Opc) ||
-        parseToken(lltok::lparen, "expected '(' in compare constantexpr") ||
-        parseGlobalTypeAndValue(Val0) ||
-        parseToken(lltok::comma, "expected comma in compare constantexpr") ||
-        parseGlobalTypeAndValue(Val1) ||
-        parseToken(lltok::rparen, "expected ')' in compare constantexpr"))
-      return true;
-
-    if (Val0->getType() != Val1->getType())
-      return error(ID.Loc, "compare operands must have the same type");
-
-    CmpInst::Predicate Pred = (CmpInst::Predicate)PredVal;
-
-    if (Opc == Instruction::FCmp) {
-      if (!Val0->getType()->isFPOrFPVectorTy())
-        return error(ID.Loc, "fcmp requires floating point operands");
-      ID.ConstantVal = ConstantExpr::getFCmp(Pred, Val0, Val1);
-    } else {
-      assert(Opc == Instruction::ICmp && "Unexpected opcode for CmpInst!");
-      if (!Val0->getType()->isIntOrIntVectorTy() &&
-          !Val0->getType()->isPtrOrPtrVectorTy())
-        return error(ID.Loc, "icmp requires pointer or integer operands");
-      ID.ConstantVal = ConstantExpr::getICmp(Pred, Val0, Val1);
-    }
-    ID.Kind = ValID::t_Constant;
-    return false;
-  }
+    return error(ID.Loc, "icmp constexprs are no longer supported");
+  case lltok::kw_fcmp:
+    return error(ID.Loc, "fcmp constexprs are no longer supported");
 
   // Binary Operators.
   case lltok::kw_add:

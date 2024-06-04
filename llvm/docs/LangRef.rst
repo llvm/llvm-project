@@ -4821,10 +4821,6 @@ The following is the syntax for constant expressions:
     required to make sense for the type of "pointer to TY". These indexes
     may be implicitly sign-extended or truncated to match the index size
     of CSTPTR's address space.
-``icmp COND (VAL1, VAL2)``
-    Perform the :ref:`icmp operation <i_icmp>` on constants.
-``fcmp COND (VAL1, VAL2)``
-    Perform the :ref:`fcmp operation <i_fcmp>` on constants.
 ``extractelement (VAL, IDX)``
     Perform the :ref:`extractelement operation <i_extractelement>` on
     constants.
