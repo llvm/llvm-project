@@ -12,11 +12,18 @@
 
 def global_ptr_ty : LLVMQualPointerType<1>;
 
+// The amdgpu-no-* attributes (ex amdgpu-no-workitem-id-z) typically inferred
+// by the backend cause whole-program undefined behavior when violated, such as
+// by causing all other preload register intrinsics to return arbitrarily incorrect
+// values. In non-entry-point functions, attempting to call a function that needs
+// some preloaded register from a function that is known to not need it is a violation
+// of the calling convention and also program-level UB. Outside of such IR-level UB,
+// these preloaded registers are always set to a well-defined value and are thus `noundef`.
 class AMDGPUReadPreloadRegisterIntrinsic
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 class AMDGPUReadPreloadRegisterIntrinsicNamed<string name>
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>, ClangBuiltin<name>;
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>, ClangBuiltin<name>;
 
 // Used to tag image and resource intrinsics with information used to generate
 // mem operands.
@@ -56,7 +63,7 @@ def int_r600_group_barrier : ClangBuiltin<"__builtin_r600_group_barrier">,
 def int_r600_implicitarg_ptr :
   ClangBuiltin<"__builtin_r600_implicitarg_ptr">,
   DefaultAttrsIntrinsic<[LLVMQualPointerType<7>], [],
-  [IntrNoMem, IntrSpeculatable]>;
+  [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 def int_r600_rat_store_typed :
   // 1st parameter: Data
@@ -144,39 +151,43 @@ defm int_amdgcn_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
 
 def int_amdgcn_dispatch_ptr :
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
-  [Align<RetIndex, 4>, IntrNoMem, IntrSpeculatable]>;
+  [Align<RetIndex, 4>, NoUndef<RetIndex>, NonNull<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_queue_ptr :
   ClangBuiltin<"__builtin_amdgcn_queue_ptr">,
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
-  [Align<RetIndex, 4>, IntrNoMem, IntrSpeculatable]>;
+  [Align<RetIndex, 4>, NoUndef<RetIndex>, NonNull<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_kernarg_segment_ptr :
   ClangBuiltin<"__builtin_amdgcn_kernarg_segment_ptr">,
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
-  [Align<RetIndex, 4>, IntrNoMem, IntrSpeculatable]>;
+  [Align<RetIndex, 4>, NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_implicitarg_ptr :
   ClangBuiltin<"__builtin_amdgcn_implicitarg_ptr">,
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
-  [Align<RetIndex, 4>, IntrNoMem, IntrSpeculatable]>;
+  [Align<RetIndex, 4>, NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
+// Returns the amount of LDS statically allocated for this program.
+// This is no longer guaranteed to be a compile-time constant due to linking
+// support.
 def int_amdgcn_groupstaticsize :
   ClangBuiltin<"__builtin_amdgcn_groupstaticsize">,
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_dispatch_id :
   ClangBuiltin<"__builtin_amdgcn_dispatch_id">,
-  DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrSpeculatable]>;
+  DefaultAttrsIntrinsic<[llvm_i64_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 // For internal use. Coordinates LDS lowering between IR transform and backend.
 def int_amdgcn_lds_kernel_id :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_implicit_buffer_ptr :
   ClangBuiltin<"__builtin_amdgcn_implicit_buffer_ptr">,
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
-  [Align<RetIndex, 4>, IntrNoMem, IntrSpeculatable]>;
+  [Align<RetIndex, 4>, NoUndef<RetIndex>,
+    IntrNoMem, IntrSpeculatable]>;
 
 // Set EXEC to the 64-bit value given.
 // This is always moved to the beginning of the basic block.
@@ -199,7 +210,7 @@ def int_amdgcn_init_exec_from_input : Intrinsic<[],
 
 def int_amdgcn_wavefrontsize :
   ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 // Represent a relocation constant.
 def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
@@ -1887,9 +1898,12 @@ def int_amdgcn_s_setprio :
                                 IntrHasSideEffects]>;
 
 def int_amdgcn_s_ttracedata :
+  ClangBuiltin<"__builtin_amdgcn_s_ttracedata">,
   DefaultAttrsIntrinsic<[], [llvm_i32_ty],
                         [IntrNoMem, IntrHasSideEffects]>;
+
 def int_amdgcn_s_ttracedata_imm :
+  ClangBuiltin<"__builtin_amdgcn_s_ttracedata_imm">,
   DefaultAttrsIntrinsic<[], [llvm_i16_ty],
                         [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
 
@@ -1920,8 +1934,8 @@ def int_amdgcn_s_setreg :
 // s_getpc_b64 instruction returns a zero-extended value.
 def int_amdgcn_s_getpc :
   ClangBuiltin<"__builtin_amdgcn_s_getpc">,
-  DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrSpeculatable,
-                                IntrWillReturn]>;
+  DefaultAttrsIntrinsic<[llvm_i64_ty], [], [NoUndef<RetIndex>, IntrNoMem,
+                                IntrSpeculatable, IntrWillReturn]>;
 
 // __builtin_amdgcn_interp_mov <param>, <attr_chan>, <attr>, <m0>
 // param values: 0 = P10, 1 = P20, 2 = P0
@@ -2041,7 +2055,7 @@ def int_amdgcn_ps_live : DefaultAttrsIntrinsic <
 // Query currently live lanes.
 // Returns true if lane is live (and not a helper lane).
 def int_amdgcn_live_mask : DefaultAttrsIntrinsic <[llvm_i1_ty],
-  [], [IntrReadMem, IntrInaccessibleMemOnly]
+  [], [NoUndef<RetIndex>, IntrReadMem, IntrInaccessibleMemOnly]
 >;
 
 def int_amdgcn_mbcnt_lo :
@@ -2463,24 +2477,26 @@ def int_amdgcn_perm :
 // GFX9 Intrinsics
 //===----------------------------------------------------------------------===//
 
-class AMDGPUGlobalLoadLDS : Intrinsic <
-  [],
-  [LLVMQualPointerType<1>,             // Base global pointer to load from
-   LLVMQualPointerType<3>,             // LDS base pointer to store to
-   llvm_i32_ty,                        // Data byte size: 1/2/4
-   llvm_i32_ty,                        // imm offset (applied to both global and LDS address)
-   llvm_i32_ty],                       // auxiliary data (imm, cachepolicy (bit 0 = glc/sc0,
-                                       //                                   bit 1 = slc/sc1,
-                                       //                                   bit 2 = dlc on gfx10/gfx11))
-                                       //                                   bit 4 = scc/nt on gfx90a+))
-                                       //                  gfx12+:
-                                       //                      cachepolicy (bits [0-2] = th,
-                                       //                                   bits [3-4] = scope)
-                                       //                      swizzled buffer (bit 6 = swz),
-  [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
-   ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
-  "", [SDNPMemOperand]>;
+class AMDGPUGlobalLoadLDS :
+  ClangBuiltin<"__builtin_amdgcn_global_load_lds">,
+  Intrinsic <
+    [],
+    [LLVMQualPointerType<1>,            // Base global pointer to load from
+     LLVMQualPointerType<3>,            // LDS base pointer to store to
+     llvm_i32_ty,                       // Data byte size: 1/2/4
+     llvm_i32_ty,                       // imm offset (applied to both global and LDS address)
+     llvm_i32_ty],                      // auxiliary data (imm, cachepolicy (bit 0 = sc0,
+                                        //                                   bit 1 = sc1,
+                                        //                                   bit 4 = scc))
+    [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+     ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
+     "", [SDNPMemOperand]>;
 def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
+
+// Use read/write of inaccessible memory to model the fact that this reads a
+// volatile value.
+def int_amdgcn_pops_exiting_wave_id :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrInaccessibleMemOnly]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
@@ -2512,7 +2528,7 @@ def int_amdgcn_mov_dpp8 :
 def int_amdgcn_s_get_waveid_in_workgroup :
   ClangBuiltin<"__builtin_amdgcn_s_get_waveid_in_workgroup">,
   Intrinsic<[llvm_i32_ty], [],
-    [IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+    [NoUndef<RetIndex>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 class AMDGPUAtomicRtn<LLVMType vt, LLVMType pt = llvm_anyptr_ty> : Intrinsic <
   [vt],
@@ -2746,7 +2762,7 @@ def int_amdgcn_global_load_tr_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
 
 // i32 @llvm.amdgcn.wave.id()
 def int_amdgcn_wave_id :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
@@ -3140,25 +3156,37 @@ def int_amdgcn_cvt_sr_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32">,
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.
 // ===----------------------------------------------------------------------===//
+//
+// Control-flow intrinsics in LLVM IR are convergent because they represent the
+// wave CFG, i.e., sets of threads that are "converged" or "execute in
+// lock-step". But they exist during a small window in the lowering process,
+// inserted after the structurizer and then translated to equivalent MIR
+// pseudos. So rather than create convergence tokens for these builtins, we
+// simply mark them as not convergent.
+//
+// This is really a workaround to allow control flow lowering in the presence of
+// convergence control tokens. The corresponding MIR pseudos are marked as
+// having side effects, which is sufficient to prevent optimizations without
+// having to mark them as convergent.
 def int_amdgcn_if : Intrinsic<[llvm_i1_ty, llvm_anyint_ty],
-  [llvm_i1_ty], [IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  [llvm_i1_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 def int_amdgcn_else : Intrinsic<[llvm_i1_ty, llvm_anyint_ty],
-  [llvm_anyint_ty], [IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  [llvm_anyint_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 def int_amdgcn_if_break : Intrinsic<[llvm_anyint_ty],
   [llvm_i1_ty, LLVMMatchType<0>],
-  [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 def int_amdgcn_loop : Intrinsic<[llvm_i1_ty],
-  [llvm_anyint_ty], [IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  [llvm_anyint_ty], [IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 def int_amdgcn_end_cf : Intrinsic<[], [llvm_anyint_ty],
-  [IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+  [IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // Represent unreachable in a divergent region.
 def int_amdgcn_unreachable : Intrinsic<[], [], [IntrConvergent, IntrNoCallback, IntrNoFree]>;

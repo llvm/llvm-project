@@ -23,6 +23,7 @@
 #include "llvm/TextAPI/TextAPIWriter.h"
 #include "llvm/TextAPI/Utils.h"
 
+using AliasMap = llvm::MachO::AliasMap;
 using Architecture = llvm::MachO::Architecture;
 using ArchitectureSet = llvm::MachO::ArchitectureSet;
 using SymbolFlags = llvm::MachO::SymbolFlags;
@@ -44,6 +45,8 @@ using SimpleSymbol = llvm::MachO::SimpleSymbol;
 using FileType = llvm::MachO::FileType;
 using PackedVersion = llvm::MachO::PackedVersion;
 using PathSeq = llvm::MachO::PathSeq;
+using PlatformType = llvm::MachO::PlatformType;
+using PathToPlatformSeq = llvm::MachO::PathToPlatformSeq;
 using Target = llvm::MachO::Target;
 using TargetList = llvm::MachO::TargetList;
 

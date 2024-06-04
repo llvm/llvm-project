@@ -1522,7 +1522,7 @@ Value *SCEVExpander::expand(const SCEV *S) {
   } else {
     for (Instruction *I : DropPoisonGeneratingInsts) {
       rememberFlags(I);
-      I->dropPoisonGeneratingFlagsAndMetadata();
+      I->dropPoisonGeneratingAnnotations();
       // See if we can re-infer from first principles any of the flags we just
       // dropped.
       if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))

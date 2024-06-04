@@ -352,7 +352,7 @@ namespace ns2 {
   };
   template<class T> template<class U, T N, U M> T&& A<T>::Var = T(N + M);
   int *AV = &A<int>().Var<char, 5, 'A'>;
-  
+
 } //end ns2
 } // end ns member_access_is_ok
 
@@ -372,7 +372,7 @@ struct Something
     }
 };
 
-int main() { 
+int main() {
     Something<Value>{}.foo();
     return 0;
 }
@@ -384,16 +384,16 @@ namespace dependent_static_var_template {
   struct A {
     template<int = 0> static int n; // expected-note 2{{here}}
   };
-  int &r = A::template n; // expected-error {{use of variable template 'n' requires template arguments}}
+  int &r = A::template n; // expected-error {{use of variable template 'A::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
   template<typename T>
-  int &f() { return T::template n; } // expected-error {{use of variable template 'n' requires template arguments}}
+  int &f() { return T::template n; } // expected-error {{use of variable template 'A::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
   int &s = f<A>(); // expected-note {{instantiation of}}
 
   namespace B {
     template<int = 0> static int n; // expected-note {{here}}
   }
-  int &t = B::template n; // expected-error {{use of variable template 'n' requires template arguments}}
+  int &t = B::template n; // expected-error {{use of variable template 'B::template n' requires template arguments}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
   struct C {
     template <class T> static T G;

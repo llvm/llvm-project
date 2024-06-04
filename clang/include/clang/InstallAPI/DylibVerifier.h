@@ -28,6 +28,16 @@ enum class VerificationMode {
 using LibAttrs = llvm::StringMap<ArchitectureSet>;
 using ReexportedInterfaces = llvm::SmallVector<llvm::MachO::InterfaceFile, 8>;
 
+// Pointers to information about a zippered declaration used for
+// querying and reporting violations against different
+// declarations that all map to the same symbol.
+struct ZipperedDeclSource {
+  const FrontendAttrs *FA;
+  clang::SourceManager *SrcMgr;
+  Target T;
+};
+using ZipperedDeclSources = std::vector<ZipperedDeclSource>;
+
 /// Service responsible to tracking state of verification across the
 /// lifetime of InstallAPI.
 /// As declarations are collected during AST traversal, they are
@@ -68,9 +78,11 @@ public:
   DylibVerifier() = default;
 
   DylibVerifier(llvm::MachO::Records &&Dylib, ReexportedInterfaces &&Reexports,
-                DiagnosticsEngine *Diag, VerificationMode Mode, bool Demangle,
+                AliasMap Aliases, DiagnosticsEngine *Diag,
+                VerificationMode Mode, bool Zippered, bool Demangle,
                 StringRef DSYMPath)
-      : Dylib(std::move(Dylib)), Reexports(std::move(Reexports)), Mode(Mode),
+      : Dylib(std::move(Dylib)), Reexports(std::move(Reexports)),
+        Aliases(std::move(Aliases)), Mode(Mode), Zippered(Zippered),
         Demangle(Demangle), DSYMPath(DSYMPath),
         Exports(std::make_unique<SymbolSet>()), Ctx(VerifierContext{Diag}) {}
 
@@ -94,7 +106,7 @@ public:
   void setTarget(const Target &T);
 
   /// Release ownership over exports.
-  std::unique_ptr<SymbolSet> getExports() { return std::move(Exports); }
+  std::unique_ptr<SymbolSet> takeExports();
 
   /// Get result of verification.
   Result getState() const { return Ctx.FrontendState; }
@@ -117,6 +129,15 @@ private:
   /// Check if declaration is exported from a reexported library. These
   /// symbols should be omitted from the text-api file.
   bool shouldIgnoreReexport(const Record *R, SymbolContext &SymCtx) const;
+
+  // Ignore and omit unavailable symbols in zippered libraries.
+  bool shouldIgnoreZipperedAvailability(const Record *R, SymbolContext &SymCtx);
+
+  // Check if an internal declaration in zippered library has an
+  // external declaration for a different platform. This results
+  // in the symbol being in a "seperate" platform slice.
+  bool shouldIgnoreInternalZipperedSymbol(const Record *R,
+                                          const SymbolContext &SymCtx) const;
 
   /// Compare the visibility declarations to the linkage of symbol found in
   /// dylib.
@@ -170,8 +191,14 @@ private:
   // Reexported interfaces apart of the library.
   ReexportedInterfaces Reexports;
 
+  // Symbol aliases.
+  AliasMap Aliases;
+
   // Controls what class of violations to report.
   VerificationMode Mode = VerificationMode::Invalid;
+
+  // Library is zippered.
+  bool Zippered = false;
 
   // Attempt to demangle when reporting violations.
   bool Demangle = false;
@@ -181,6 +208,10 @@ private:
 
   // Valid symbols in final text file.
   std::unique_ptr<SymbolSet> Exports = std::make_unique<SymbolSet>();
+
+  // Unavailable or obsoleted declarations for a zippered library.
+  // These are cross referenced against symbols in the dylib.
+  llvm::StringMap<ZipperedDeclSources> DeferredZipperedSymbols;
 
   // Track current state of verification while traversing AST.
   VerifierContext Ctx;

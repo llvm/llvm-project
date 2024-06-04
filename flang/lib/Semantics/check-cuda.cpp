@@ -296,8 +296,10 @@ private:
     return false;
   }
   void WarnOnIoStmt(const parser::CharBlock &source) {
-    context_.Say(
-        source, "I/O statement might not be supported on device"_warn_en_US);
+    if (context_.ShouldWarn(common::UsageWarning::CUDAUsage)) {
+      context_.Say(
+          source, "I/O statement might not be supported on device"_warn_en_US);
+    }
   }
   template <typename A>
   void WarnIfNotInternal(const A &stmt, const parser::CharBlock &source) {
@@ -344,6 +346,9 @@ private:
             [&](const common::Indirection<parser::BackspaceStmt> &x) {
               WarnOnIoStmt(source);
             },
+            [&](const common::Indirection<parser::IfStmt> &x) {
+              Check(x.value());
+            },
             [&](const auto &x) {
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
                 context_.Say(source, std::move(*msg));
@@ -368,6 +373,13 @@ private:
             std::get<std::optional<parser::IfConstruct::ElseBlock>>(ic.t)}) {
       Check(std::get<parser::Block>(eb->t));
     }
+  }
+  void Check(const parser::IfStmt &is) {
+    const auto &uS{
+        std::get<parser::UnlabeledStatement<parser::ActionStmt>>(is.t)};
+    CheckUnwrappedExpr(
+        context_, uS.source, std::get<parser::ScalarLogicalExpr>(is.t));
+    Check(uS.statement, uS.source);
   }
   void Check(const parser::LoopControl::Bounds &bounds) {
     Check(bounds.lower);
@@ -451,6 +463,46 @@ static int DoConstructTightNesting(
   return 1;
 }
 
+static void CheckReduce(
+    SemanticsContext &context, const parser::CUFReduction &reduce) {
+  auto op{std::get<parser::CUFReduction::Operator>(reduce.t).v};
+  for (const auto &var :
+      std::get<std::list<parser::Scalar<parser::Variable>>>(reduce.t)) {
+    if (const auto &typedExprPtr{var.thing.typedExpr};
+        typedExprPtr && typedExprPtr->v) {
+      const auto &expr{*typedExprPtr->v};
+      if (auto type{expr.GetType()}) {
+        auto cat{type->category()};
+        bool isOk{false};
+        switch (op) {
+        case parser::ReductionOperator::Operator::Plus:
+        case parser::ReductionOperator::Operator::Multiply:
+        case parser::ReductionOperator::Operator::Max:
+        case parser::ReductionOperator::Operator::Min:
+          isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real;
+          break;
+        case parser::ReductionOperator::Operator::Iand:
+        case parser::ReductionOperator::Operator::Ior:
+        case parser::ReductionOperator::Operator::Ieor:
+          isOk = cat == TypeCategory::Integer;
+          break;
+        case parser::ReductionOperator::Operator::And:
+        case parser::ReductionOperator::Operator::Or:
+        case parser::ReductionOperator::Operator::Eqv:
+        case parser::ReductionOperator::Operator::Neqv:
+          isOk = cat == TypeCategory::Logical;
+          break;
+        }
+        if (!isOk) {
+          context.Say(var.thing.GetSource(),
+              "!$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type %s"_err_en_US,
+              type->AsFortran());
+        }
+      }
+    }
+  }
+}
+
 void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
   auto source{std::get<parser::CUFKernelDoConstruct::Directive>(x.t).source};
   const auto &directive{std::get<parser::CUFKernelDoConstruct::Directive>(x.t)};
@@ -477,13 +529,27 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
   if (innerBlock) {
     DeviceContextChecker<true>{context_}.Check(*innerBlock);
   }
+  for (const auto &reduce :
+      std::get<std::list<parser::CUFReduction>>(directive.t)) {
+    CheckReduce(context_, reduce);
+  }
 }
 
 void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
+  auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
+  const auto &scope{context_.FindScope(lhsLoc)};
+  const Scope &progUnit{GetProgramUnitContaining(scope)};
+  if (IsCUDADeviceContext(&progUnit)) {
+    return; // Data transfer with assignment is only perform on host.
+  }
+
   const evaluate::Assignment *assign{semantics::GetAssignment(x)};
+  if (!assign) {
+    return;
+  }
+
   int nbLhs{evaluate::GetNbOfCUDASymbols(assign->lhs)};
   int nbRhs{evaluate::GetNbOfCUDASymbols(assign->rhs)};
-  auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
 
   // device to host transfer with more than one device object on the rhs is not
   // legal.

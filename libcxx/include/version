@@ -79,6 +79,10 @@ __cpp_lib_constexpr_utility                             201811L <utility>
 __cpp_lib_constexpr_vector                              201907L <vector>
 __cpp_lib_constrained_equality                          202403L <optional> <tuple> <utility>
                                                                 <variant>
+__cpp_lib_containers_ranges                             202202L <deque> <forward_list> <list>
+                                                                <map> <queue> <set>
+                                                                <stack> <string> <unordered_map>
+                                                                <unordered_set> <vector>
 __cpp_lib_copyable_function                             202306L <functional>
 __cpp_lib_coroutine                                     201902L <coroutine>
 __cpp_lib_debugging                                     202311L <debugging>
@@ -139,6 +143,7 @@ __cpp_lib_is_null_pointer                               201309L <type_traits>
 __cpp_lib_is_pointer_interconvertible                   201907L <type_traits>
 __cpp_lib_is_scoped_enum                                202011L <type_traits>
 __cpp_lib_is_swappable                                  201603L <type_traits>
+__cpp_lib_is_within_lifetime                            202306L <type_traits>
 __cpp_lib_jthread                                       201911L <stop_token> <thread>
 __cpp_lib_latch                                         201907L <latch>
 __cpp_lib_launder                                       201606L <new>
@@ -184,10 +189,7 @@ __cpp_lib_ranges_join_with                              202202L <ranges>
 __cpp_lib_ranges_repeat                                 202207L <ranges>
 __cpp_lib_ranges_slide                                  202202L <ranges>
 __cpp_lib_ranges_starts_ends_with                       202106L <algorithm>
-__cpp_lib_ranges_to_container                           202202L <deque> <forward_list> <list>
-                                                                <map> <queue> <ranges>
-                                                                <set> <stack> <string>
-                                                                <unordered_map> <unordered_set> <vector>
+__cpp_lib_ranges_to_container                           202202L <ranges>
 __cpp_lib_ranges_zip                                    202110L <ranges> <tuple> <utility>
 __cpp_lib_ratio                                         202306L <ratio>
 __cpp_lib_raw_memory_algorithms                         201606L <memory>
@@ -250,11 +252,9 @@ __cpp_lib_unreachable                                   202202L <utility>
 __cpp_lib_unwrap_ref                                    201811L <functional>
 __cpp_lib_variant                                       202102L <variant>
 __cpp_lib_void_t                                        201411L <type_traits>
-__cpp_lib_within_lifetime                               202306L <type_traits>
 
 */
 
-#include <__availability>
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -456,8 +456,8 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 # undef  __cpp_lib_constexpr_memory
 # define __cpp_lib_constexpr_memory                     202202L
 # define __cpp_lib_constexpr_typeinfo                   202106L
+# define __cpp_lib_containers_ranges                    202202L
 # define __cpp_lib_expected                             202211L
-// # define __cpp_lib_format_path                          202403L
 # define __cpp_lib_format_ranges                        202207L
 // # define __cpp_lib_formatters                           202302L
 # define __cpp_lib_forward_like                         202207L
@@ -488,7 +488,6 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 # define __cpp_lib_stdatomic_h                          202011L
 # define __cpp_lib_string_contains                      202011L
 # define __cpp_lib_string_resize_and_overwrite          202110L
-// # define __cpp_lib_to_string                            202306L
 # define __cpp_lib_to_underlying                        202102L
 // # define __cpp_lib_tuple_like                           202207L
 # define __cpp_lib_unreachable                          202202L
@@ -504,6 +503,7 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_copyable_function                    202306L
 // # define __cpp_lib_debugging                            202311L
 // # define __cpp_lib_default_template_type_for_algorithm_values 202403L
+// # define __cpp_lib_format_path                          202403L
 // # define __cpp_lib_freestanding_algorithm               202311L
 // # define __cpp_lib_freestanding_array                   202311L
 // # define __cpp_lib_freestanding_cstring                 202306L
@@ -518,13 +518,14 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_function_ref                         202306L
 // # define __cpp_lib_generate_random                      202403L
 // # define __cpp_lib_hazard_pointer                       202306L
+// # define __cpp_lib_is_within_lifetime                   202306L
 // # define __cpp_lib_linalg                               202311L
 # undef  __cpp_lib_out_ptr
 // # define __cpp_lib_out_ptr                              202311L
 // # define __cpp_lib_ranges_concat                        202403L
 # define __cpp_lib_ratio                                202306L
 // # define __cpp_lib_rcu                                  202306L
-// # define __cpp_lib_reference_wrapper                    202403L
+# define __cpp_lib_reference_wrapper                    202403L
 # define __cpp_lib_saturation_arithmetic                202311L
 // # define __cpp_lib_smart_ptr_owner_equality             202306L
 # define __cpp_lib_span_at                              202311L
@@ -534,9 +535,9 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_text_encoding                        202306L
 # undef  __cpp_lib_to_chars
 // # define __cpp_lib_to_chars                             202306L
+// # define __cpp_lib_to_string                            202306L
 # undef  __cpp_lib_tuple_like
 // # define __cpp_lib_tuple_like                           202311L
-// # define __cpp_lib_within_lifetime                      202306L
 #endif
 
 // clang-format on

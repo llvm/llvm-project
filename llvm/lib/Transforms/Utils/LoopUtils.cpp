@@ -222,7 +222,7 @@ void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
       // If it is of form key = value, try to parse it.
       if (Node->getNumOperands() == 2) {
         MDString *S = dyn_cast<MDString>(Node->getOperand(0));
-        if (S && S->getString().equals(StringMD)) {
+        if (S && S->getString() == StringMD) {
           ConstantInt *IntMD =
               mdconst::extract_or_null<ConstantInt>(Node->getOperand(1));
           if (IntMD && IntMD->getSExtValue() == V)
@@ -1918,10 +1918,12 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
   if (!TI || !TI->isConditional())
     return {};
 
-  auto *CondI = dyn_cast<CmpInst>(TI->getCondition());
+  auto *CondI = dyn_cast<Instruction>(TI->getCondition());
   // The case with the condition outside the loop should already be handled
   // earlier.
-  if (!CondI || !L.contains(CondI))
+  // Allow CmpInst and TruncInsts as they may be users of load instructions
+  // and have potential for partial unswitching
+  if (!CondI || !isa<CmpInst, TruncInst>(CondI) || !L.contains(CondI))
     return {};
 
   SmallVector<Instruction *> InstToDuplicate;

@@ -45,4 +45,4 @@
 
 // Make sure we use the libdispatch backend for the PSTL.
 //
-// RUN: grep "%{include-dir}/__config_site" -e '#define _LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH'
+// RUN: grep "%{include-dir}/__config_site" -e '#define _LIBCPP_PSTL_BACKEND_LIBDISPATCH'

@@ -47,13 +47,16 @@ bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
-  case VPWidenMemoryInstructionSC: {
-    return cast<VPWidenMemoryInstructionRecipe>(this)->isStore();
-  }
+  case VPWidenStoreEVLSC:
+  case VPWidenStoreSC:
+    return true;
   case VPReplicateSC:
-  case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayWriteToMemory();
+  case VPWidenCallSC:
+    return !cast<VPWidenCallRecipe>(this)
+                ->getCalledScalarFunction()
+                ->onlyReadsMemory();
   case VPBranchOnMaskSC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
@@ -64,6 +67,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenCastSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
+  case VPWidenLoadEVLSC:
+  case VPWidenLoadSC:
   case VPWidenPHISC:
   case VPWidenSC:
   case VPWidenSelectSC: {
@@ -81,16 +86,21 @@ bool VPRecipeBase::mayWriteToMemory() const {
 
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
-  case VPWidenMemoryInstructionSC: {
-    return !cast<VPWidenMemoryInstructionRecipe>(this)->isStore();
-  }
+  case VPWidenLoadEVLSC:
+  case VPWidenLoadSC:
+    return true;
   case VPReplicateSC:
-  case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayReadFromMemory();
+  case VPWidenCallSC:
+    return !cast<VPWidenCallRecipe>(this)
+                ->getCalledScalarFunction()
+                ->onlyWritesMemory();
   case VPBranchOnMaskSC:
-  case VPScalarIVStepsSC:
   case VPPredInstPHISC:
+  case VPScalarIVStepsSC:
+  case VPWidenStoreEVLSC:
+  case VPWidenStoreSC:
     return false;
   case VPBlendSC:
   case VPReductionSC:
@@ -127,14 +137,17 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::ExtractFromEnd:
+    case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
       return false;
     default:
       return true;
     }
-  case VPWidenCallSC:
-    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
-        ->mayHaveSideEffects();
+  case VPWidenCallSC: {
+    Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
+    return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
+  }
   case VPBlendSC:
   case VPReductionSC:
   case VPScalarIVStepsSC:
@@ -155,12 +168,15 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   }
   case VPInterleaveSC:
     return mayWriteToMemory();
-  case VPWidenMemoryInstructionSC:
-    assert(cast<VPWidenMemoryInstructionRecipe>(this)
-                   ->getIngredient()
-                   .mayHaveSideEffects() == mayWriteToMemory() &&
-           "mayHaveSideffects result for ingredient differs from this "
-           "implementation");
+  case VPWidenLoadEVLSC:
+  case VPWidenLoadSC:
+  case VPWidenStoreEVLSC:
+  case VPWidenStoreSC:
+    assert(
+        cast<VPWidenMemoryRecipe>(this)->getIngredient().mayHaveSideEffects() ==
+            mayWriteToMemory() &&
+        "mayHaveSideffects result for ingredient differs from this "
+        "implementation");
     return mayWriteToMemory();
   case VPReplicateSC: {
     auto *R = cast<VPReplicateRecipe>(this);
@@ -278,13 +294,13 @@ bool VPInstruction::doesGeneratePerAllLanes() const {
 bool VPInstruction::canGenerateScalarForFirstLane() const {
   if (Instruction::isBinaryOp(getOpcode()))
     return true;
-
+  if (isVectorToScalar())
+    return true;
   switch (Opcode) {
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::ComputeReductionResult:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
     return true;
@@ -410,8 +426,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     Value *TripCount = State.get(getOperand(1), VPIteration(0, 0));
     Value *AVL = State.Builder.CreateSub(TripCount, Index);
     Value *EVL = GetEVL(State, AVL);
-    assert(!State.EVL && "multiple EVL recipes");
-    State.EVL = this;
     return EVL;
   }
   case VPInstruction::CanonicalIVIncrementForPart: {
@@ -545,6 +559,34 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::ExtractFromEnd: {
+    if (Part != 0)
+      return State.get(this, 0, /*IsScalar*/ true);
+
+    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    unsigned Offset = CI->getZExtValue();
+    assert(Offset > 0 && "Offset from end must be positive");
+    Value *Res;
+    if (State.VF.isVector()) {
+      assert(Offset <= State.VF.getKnownMinValue() &&
+             "invalid offset to extract from");
+      // Extract lane VF - Offset from the operand.
+      Res = State.get(
+          getOperand(0),
+          VPIteration(State.UF - 1, VPLane::getLaneFromEnd(State.VF, Offset)));
+    } else {
+      assert(Offset <= State.UF && "invalid offset to extract from");
+      // When loop is unrolled without vectorizing, retrieve UF - Offset.
+      Res = State.get(getOperand(0), State.UF - Offset);
+    }
+    Res->setName(Name);
+    return Res;
+  }
+  case VPInstruction::LogicalAnd: {
+    Value *A = State.get(getOperand(0), Part);
+    Value *B = State.get(getOperand(1), Part);
+    return Builder.CreateLogicalAnd(A, B, Name);
+  }
   case VPInstruction::PtrAdd: {
     assert(vputils::onlyFirstLaneUsed(this) &&
            "can only generate first lane for PtrAdd");
@@ -555,6 +597,11 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
+}
+
+bool VPInstruction::isVectorToScalar() const {
+  return getOpcode() == VPInstruction::ExtractFromEnd ||
+         getOpcode() == VPInstruction::ComputeReductionResult;
 }
 
 #if !defined(NDEBUG)
@@ -579,8 +626,7 @@ void VPInstruction::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   bool GeneratesPerFirstLaneOnly =
       canGenerateScalarForFirstLane() &&
-      (vputils::onlyFirstLaneUsed(this) ||
-       getOpcode() == VPInstruction::ComputeReductionResult);
+      (vputils::onlyFirstLaneUsed(this) || isVectorToScalar());
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     if (GeneratesPerAllLanes) {
@@ -674,8 +720,14 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::BranchOnCount:
     O << "branch-on-count";
     break;
+  case VPInstruction::ExtractFromEnd:
+    O << "extract-from-end";
+    break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
+    break;
+  case VPInstruction::LogicalAnd:
+    O << "logical-and";
     break;
   case VPInstruction::PtrAdd:
     O << "ptradd";
@@ -696,8 +748,8 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
-  auto &CI = *cast<CallInst>(getUnderlyingInstr());
-  assert(!isa<DbgInfoIntrinsic>(CI) &&
+  Function *CalledScalarFn = getCalledScalarFunction();
+  assert(!isDbgInfoIntrinsic(CalledScalarFn->getIntrinsicID()) &&
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
   State.setDebugLocFrom(getDebugLoc());
 
@@ -710,10 +762,10 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     // Add return type if intrinsic is overloaded on it.
     if (UseIntrinsic &&
         isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1))
-      TysForDecl.push_back(
-          VectorType::get(CI.getType()->getScalarType(), State.VF));
+      TysForDecl.push_back(VectorType::get(
+          CalledScalarFn->getReturnType()->getScalarType(), State.VF));
     SmallVector<Value *, 4> Args;
-    for (const auto &I : enumerate(operands())) {
+    for (const auto &I : enumerate(arg_operands())) {
       // Some intrinsics have a scalar argument - don't replace it with a
       // vector.
       Value *Arg;
@@ -746,16 +798,19 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
       VectorF = Variant;
     }
 
+    auto *CI = cast_or_null<CallInst>(getUnderlyingInstr());
     SmallVector<OperandBundleDef, 1> OpBundles;
-    CI.getOperandBundlesAsDefs(OpBundles);
+    if (CI)
+      CI->getOperandBundlesAsDefs(OpBundles);
+
     CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
     if (isa<FPMathOperator>(V))
-      V->copyFastMathFlags(&CI);
+      V->copyFastMathFlags(CI);
 
     if (!V->getType()->isVoidTy())
       State.set(this, V, Part);
-    State.addMetadata(V, &CI);
+    State.addMetadata(V, CI);
   }
 }
 
@@ -764,16 +819,18 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-CALL ";
 
-  auto *CI = cast<CallInst>(getUnderlyingInstr());
-  if (CI->getType()->isVoidTy())
+  Function *CalledFn = getCalledScalarFunction();
+  if (CalledFn->getReturnType()->isVoidTy())
     O << "void ";
   else {
     printAsOperand(O, SlotTracker);
     O << " = ";
   }
 
-  O << "call @" << CI->getCalledFunction()->getName() << "(";
-  printOperands(O, SlotTracker);
+  O << "call @" << CalledFn->getName() << "(";
+  interleaveComma(arg_operands(), O, [&O, &SlotTracker](VPValue *Op) {
+    Op->printAsOperand(O, SlotTracker);
+  });
   O << ")";
 
   if (VectorIntrinsicID)
@@ -1204,7 +1261,9 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
     return false;
   auto *StepC = dyn_cast<ConstantInt>(getStepValue()->getLiveInIRValue());
   auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
-  return StartC && StartC->isZero() && StepC && StepC->isOne();
+  auto *CanIV = cast<VPCanonicalIVPHIRecipe>(&*getParent()->begin());
+  return StartC && StartC->isZero() && StepC && StepC->isOne() &&
+         getScalarType() == CanIV->getScalarType();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1478,24 +1537,25 @@ void VPBlendRecipe::execute(VPTransformState &State) {
   // Note that Mask0 is never used: lanes for which no path reaches this phi and
   // are essentially undef are taken from In0.
  VectorParts Entry(State.UF);
-  for (unsigned In = 0; In < NumIncoming; ++In) {
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      // We might have single edge PHIs (blocks) - use an identity
-      // 'select' for the first PHI operand.
-      Value *In0 = State.get(getIncomingValue(In), Part);
-      if (In == 0)
-        Entry[Part] = In0; // Initialize with the first incoming value.
-      else {
-        // Select between the current value and the previous incoming edge
-        // based on the incoming mask.
-        Value *Cond = State.get(getMask(In), Part);
-        Entry[Part] =
-            State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
-      }
-    }
-  }
+ bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+ for (unsigned In = 0; In < NumIncoming; ++In) {
+   for (unsigned Part = 0; Part < State.UF; ++Part) {
+     // We might have single edge PHIs (blocks) - use an identity
+     // 'select' for the first PHI operand.
+     Value *In0 = State.get(getIncomingValue(In), Part, OnlyFirstLaneUsed);
+     if (In == 0)
+       Entry[Part] = In0; // Initialize with the first incoming value.
+     else {
+       // Select between the current value and the previous incoming edge
+       // based on the incoming mask.
+       Value *Cond = State.get(getMask(In), Part, OnlyFirstLaneUsed);
+       Entry[Part] =
+           State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
+     }
+   }
+ }
   for (unsigned Part = 0; Part < State.UF; ++Part)
-    State.set(this, Entry[Part], Part);
+    State.set(this, Entry[Part], Part, OnlyFirstLaneUsed);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1768,16 +1828,31 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 
-void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
-                                           VPSlotTracker &SlotTracker) const {
+void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
+                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << " = load ";
+  printOperands(O, SlotTracker);
+}
 
-  if (!isStore()) {
-    getVPSingleValue()->printAsOperand(O, SlotTracker);
-    O << " = ";
-  }
-  O << Instruction::getOpcodeName(Ingredient.getOpcode()) << " ";
+void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
+                                 VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << " = vp.load ";
+  printOperands(O, SlotTracker);
+}
 
+void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN store ";
+  printOperands(O, SlotTracker);
+}
+
+void VPWidenStoreEVLRecipe::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN vp.store ";
   printOperands(O, SlotTracker);
 }
 #endif

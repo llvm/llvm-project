@@ -276,6 +276,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::RelaxedPrecision:
   case spirv::Decoration::Restrict:
   case spirv::Decoration::RestrictPointer:
+  case spirv::Decoration::NoContraction:
     // For unit attributes and decoration attributes, the args list
     // has no values so we do nothing.
     if (isa<UnitAttr, DecorationAttr>(attr))

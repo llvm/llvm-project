@@ -421,7 +421,7 @@ getContainerFromBeginEndCall(const Expr *Init, bool IsBegin, bool *IsArrow,
     return {};
   if (IsReverse && !Call->Name.consume_back("r"))
     return {};
-  if (!Call->Name.empty() && !Call->Name.equals("c"))
+  if (!Call->Name.empty() && Call->Name != "c")
     return {};
   return std::make_pair(Call->Container, Call->CallKind);
 }

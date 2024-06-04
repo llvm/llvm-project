@@ -195,6 +195,7 @@ template("stage2_unix_toolchain") {
       forward_variables_from(invoker.toolchain_args, "*")
 
       clang_base_path = root_build_dir
+      llvm_enable_zstd = false
       use_goma = false
     }
 
@@ -206,9 +207,6 @@ template("stage2_unix_toolchain") {
         toolchain_args.current_os != "mac") {
       ar = "bin/llvm-ar"
       deps += [ "//:llvm-ar($host_toolchain)" ]
-    }
-    if (toolchain_args.current_os != host_os) {
-      toolchain_args.llvm_enable_zstd = false
     }
   }
 }

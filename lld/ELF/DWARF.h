@@ -62,6 +62,9 @@ public:
   const LLDDWARFSection &getGnuPubtypesSection() const override {
     return gnuPubtypesSection;
   }
+  const LLDDWARFSection &getNamesSection() const override {
+    return namesSection;
+  }
 
   StringRef getFileName() const override { return ""; }
   StringRef getAbbrevSection() const override { return abbrevSection; }
@@ -87,6 +90,7 @@ private:
   LLDDWARFSection infoSection;
   LLDDWARFSection lineSection;
   LLDDWARFSection loclistsSection;
+  LLDDWARFSection namesSection;
   LLDDWARFSection rangesSection;
   LLDDWARFSection rnglistsSection;
   LLDDWARFSection strOffsetsSection;

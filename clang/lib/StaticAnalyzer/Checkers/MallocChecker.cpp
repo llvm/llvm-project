@@ -401,10 +401,11 @@ private:
   };
 
   const CallDescriptionMap<CheckFn> FreeingMemFnMap{
-      {{{"free"}, 1}, &MallocChecker::checkFree},
-      {{{"if_freenameindex"}, 1}, &MallocChecker::checkIfFreeNameIndex},
-      {{{"kfree"}, 1}, &MallocChecker::checkFree},
-      {{{"g_free"}, 1}, &MallocChecker::checkFree},
+      {{CDM::CLibrary, {"free"}, 1}, &MallocChecker::checkFree},
+      {{CDM::CLibrary, {"if_freenameindex"}, 1},
+       &MallocChecker::checkIfFreeNameIndex},
+      {{CDM::CLibrary, {"kfree"}, 1}, &MallocChecker::checkFree},
+      {{CDM::CLibrary, {"g_free"}, 1}, &MallocChecker::checkFree},
   };
 
   bool isFreeingCall(const CallEvent &Call) const;
@@ -413,41 +414,46 @@ private:
   friend class NoOwnershipChangeVisitor;
 
   CallDescriptionMap<CheckFn> AllocatingMemFnMap{
-      {{{"alloca"}, 1}, &MallocChecker::checkAlloca},
-      {{{"_alloca"}, 1}, &MallocChecker::checkAlloca},
-      {{{"malloc"}, 1}, &MallocChecker::checkBasicAlloc},
-      {{{"malloc"}, 3}, &MallocChecker::checkKernelMalloc},
-      {{{"calloc"}, 2}, &MallocChecker::checkCalloc},
-      {{{"valloc"}, 1}, &MallocChecker::checkBasicAlloc},
+      {{CDM::CLibrary, {"alloca"}, 1}, &MallocChecker::checkAlloca},
+      {{CDM::CLibrary, {"_alloca"}, 1}, &MallocChecker::checkAlloca},
+      // The line for "alloca" also covers "__builtin_alloca", but the
+      // _with_align variant must be listed separately because it takes an
+      // extra argument:
+      {{CDM::CLibrary, {"__builtin_alloca_with_align"}, 2},
+       &MallocChecker::checkAlloca},
+      {{CDM::CLibrary, {"malloc"}, 1}, &MallocChecker::checkBasicAlloc},
+      {{CDM::CLibrary, {"malloc"}, 3}, &MallocChecker::checkKernelMalloc},
+      {{CDM::CLibrary, {"calloc"}, 2}, &MallocChecker::checkCalloc},
+      {{CDM::CLibrary, {"valloc"}, 1}, &MallocChecker::checkBasicAlloc},
       {{CDM::CLibrary, {"strndup"}, 2}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"strdup"}, 1}, &MallocChecker::checkStrdup},
-      {{{"_strdup"}, 1}, &MallocChecker::checkStrdup},
-      {{{"kmalloc"}, 2}, &MallocChecker::checkKernelMalloc},
-      {{{"if_nameindex"}, 1}, &MallocChecker::checkIfNameIndex},
+      {{CDM::CLibrary, {"_strdup"}, 1}, &MallocChecker::checkStrdup},
+      {{CDM::CLibrary, {"kmalloc"}, 2}, &MallocChecker::checkKernelMalloc},
+      {{CDM::CLibrary, {"if_nameindex"}, 1}, &MallocChecker::checkIfNameIndex},
       {{CDM::CLibrary, {"wcsdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"_wcsdup"}, 1}, &MallocChecker::checkStrdup},
-      {{{"g_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
-      {{{"g_malloc0"}, 1}, &MallocChecker::checkGMalloc0},
-      {{{"g_try_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
-      {{{"g_try_malloc0"}, 1}, &MallocChecker::checkGMalloc0},
-      {{{"g_memdup"}, 2}, &MallocChecker::checkGMemdup},
-      {{{"g_malloc_n"}, 2}, &MallocChecker::checkGMallocN},
-      {{{"g_malloc0_n"}, 2}, &MallocChecker::checkGMallocN0},
-      {{{"g_try_malloc_n"}, 2}, &MallocChecker::checkGMallocN},
-      {{{"g_try_malloc0_n"}, 2}, &MallocChecker::checkGMallocN0},
+      {{CDM::CLibrary, {"g_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
+      {{CDM::CLibrary, {"g_malloc0"}, 1}, &MallocChecker::checkGMalloc0},
+      {{CDM::CLibrary, {"g_try_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
+      {{CDM::CLibrary, {"g_try_malloc0"}, 1}, &MallocChecker::checkGMalloc0},
+      {{CDM::CLibrary, {"g_memdup"}, 2}, &MallocChecker::checkGMemdup},
+      {{CDM::CLibrary, {"g_malloc_n"}, 2}, &MallocChecker::checkGMallocN},
+      {{CDM::CLibrary, {"g_malloc0_n"}, 2}, &MallocChecker::checkGMallocN0},
+      {{CDM::CLibrary, {"g_try_malloc_n"}, 2}, &MallocChecker::checkGMallocN},
+      {{CDM::CLibrary, {"g_try_malloc0_n"}, 2}, &MallocChecker::checkGMallocN0},
   };
 
   CallDescriptionMap<CheckFn> ReallocatingMemFnMap{
-      {{{"realloc"}, 2},
+      {{CDM::CLibrary, {"realloc"}, 2},
        std::bind(&MallocChecker::checkRealloc, _1, _2, _3, false)},
-      {{{"reallocf"}, 2},
+      {{CDM::CLibrary, {"reallocf"}, 2},
        std::bind(&MallocChecker::checkRealloc, _1, _2, _3, true)},
-      {{{"g_realloc"}, 2},
+      {{CDM::CLibrary, {"g_realloc"}, 2},
        std::bind(&MallocChecker::checkRealloc, _1, _2, _3, false)},
-      {{{"g_try_realloc"}, 2},
+      {{CDM::CLibrary, {"g_try_realloc"}, 2},
        std::bind(&MallocChecker::checkRealloc, _1, _2, _3, false)},
-      {{{"g_realloc_n"}, 3}, &MallocChecker::checkReallocN},
-      {{{"g_try_realloc_n"}, 3}, &MallocChecker::checkReallocN},
+      {{CDM::CLibrary, {"g_realloc_n"}, 3}, &MallocChecker::checkReallocN},
+      {{CDM::CLibrary, {"g_try_realloc_n"}, 3}, &MallocChecker::checkReallocN},
 
       // NOTE: the following CallDescription also matches the C++ standard
       // library function std::getline(); the callback will filter it out.
@@ -1259,9 +1265,6 @@ static bool isStandardRealloc(const CallEvent &Call) {
   assert(FD);
   ASTContext &AC = FD->getASTContext();
 
-  if (isa<CXXMethodDecl>(FD))
-    return false;
-
   return FD->getDeclaredReturnType().getDesugaredType(AC) == AC.VoidPtrTy &&
          FD->getParamDecl(0)->getType().getDesugaredType(AC) == AC.VoidPtrTy &&
          FD->getParamDecl(1)->getType().getDesugaredType(AC) ==
@@ -1273,9 +1276,6 @@ static bool isGRealloc(const CallEvent &Call) {
   assert(FD);
   ASTContext &AC = FD->getASTContext();
 
-  if (isa<CXXMethodDecl>(FD))
-    return false;
-
   return FD->getDeclaredReturnType().getDesugaredType(AC) == AC.VoidPtrTy &&
          FD->getParamDecl(0)->getType().getDesugaredType(AC) == AC.VoidPtrTy &&
          FD->getParamDecl(1)->getType().getDesugaredType(AC) ==
@@ -1284,14 +1284,14 @@ static bool isGRealloc(const CallEvent &Call) {
 
 void MallocChecker::checkRealloc(const CallEvent &Call, CheckerContext &C,
                                  bool ShouldFreeOnFail) const {
-  // HACK: CallDescription currently recognizes non-standard realloc functions
-  // as standard because it doesn't check the type, or wether its a non-method
-  // function. This should be solved by making CallDescription smarter.
-  // Mind that this came from a bug report, and all other functions suffer from
-  // this.
-  // https://bugs.llvm.org/show_bug.cgi?id=46253
+  // Ignore calls to functions whose type does not match the expected type of
+  // either the standard realloc or g_realloc from GLib.
+  // FIXME: Should we perform this kind of checking consistently for each
+  // function? If yes, then perhaps extend the `CallDescription` interface to
+  // handle this.
   if (!isStandardRealloc(Call) && !isGRealloc(Call))
     return;
+
   ProgramStateRef State = C.getState();
   State = ReallocMemAux(C, Call, ShouldFreeOnFail, State, AF_Malloc);
   State = ProcessZeroAllocCheck(Call, 1, State);
@@ -1727,7 +1727,7 @@ static std::optional<bool> getFreeWhenDoneArg(const ObjCMethodCall &Call) {
 
   // FIXME: We should not rely on fully-constrained symbols being folded.
   for (unsigned i = 1; i < S.getNumArgs(); ++i)
-    if (S.getNameForSlot(i).equals("freeWhenDone"))
+    if (S.getNameForSlot(i) == "freeWhenDone")
       return !Call.getArgSVal(i).isZeroConstant();
 
   return std::nullopt;
@@ -1819,6 +1819,10 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   if (Size.isUndef())
     Size = UnknownVal();
 
+  // TODO: If Size is tainted and we cannot prove that it is within
+  // reasonable bounds, emit a warning that an attacker may
+  // provoke a memory exhaustion error.
+
   // Set the region's extent.
   State = setDynamicExtent(State, RetVal.getAsRegion(),
                            Size.castAs<DefinedOrUnknownSVal>(), SVB);
@@ -1842,9 +1846,18 @@ static ProgramStateRef MallocUpdateRefState(CheckerContext &C, const Expr *E,
     return nullptr;
 
   SymbolRef Sym = RetVal->getAsLocSymbol();
+
   // This is a return value of a function that was not inlined, such as malloc()
   // or new(). We've checked that in the caller. Therefore, it must be a symbol.
   assert(Sym);
+  // FIXME: In theory this assertion should fail for `alloca()` calls (because
+  // `AllocaRegion`s are not symbolic); but in practice this does not happen.
+  // As the current code appears to work correctly, I'm not touching this issue
+  // now, but it would be good to investigate and clarify this.
+  // Also note that perhaps the special `AllocaRegion` should be replaced by
+  // `SymbolicRegion` (or turned into a subclass of `SymbolicRegion`) to enable
+  // proper tracking of memory allocated by `alloca()` -- and after that change
+  // this assertion would become valid again.
 
   // Set the symbol's state to Allocated.
   return State->set<RegionState>(Sym, RefState::getAllocated(Family, E));
@@ -3242,7 +3255,7 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
     if (FirstSlot.starts_with("addPointer") ||
         FirstSlot.starts_with("insertPointer") ||
         FirstSlot.starts_with("replacePointer") ||
-        FirstSlot.equals("valueWithPointer")) {
+        FirstSlot == "valueWithPointer") {
       return true;
     }
 
@@ -3438,7 +3451,7 @@ static bool isReferenceCountingPointerDestructor(const CXXDestructorDecl *DD) {
     if (N.contains_insensitive("ptr") || N.contains_insensitive("pointer")) {
       if (N.contains_insensitive("ref") || N.contains_insensitive("cnt") ||
           N.contains_insensitive("intrusive") ||
-          N.contains_insensitive("shared")) {
+          N.contains_insensitive("shared") || N.ends_with_insensitive("rc")) {
         return true;
       }
     }
@@ -3470,13 +3483,24 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
   // original reference count is positive, we should not report use-after-frees
   // on objects deleted in such destructors. This can probably be improved
   // through better shared pointer modeling.
-  if (ReleaseDestructorLC) {
+  if (ReleaseDestructorLC && (ReleaseDestructorLC == CurrentLC ||
+                              ReleaseDestructorLC->isParentOf(CurrentLC))) {
     if (const auto *AE = dyn_cast<AtomicExpr>(S)) {
+      // Check for manual use of atomic builtins.
       AtomicExpr::AtomicOp Op = AE->getOp();
       if (Op == AtomicExpr::AO__c11_atomic_fetch_add ||
           Op == AtomicExpr::AO__c11_atomic_fetch_sub) {
-        if (ReleaseDestructorLC == CurrentLC ||
-            ReleaseDestructorLC->isParentOf(CurrentLC)) {
+        BR.markInvalid(getTag(), S);
+      }
+    } else if (const auto *CE = dyn_cast<CallExpr>(S)) {
+      // Check for `std::atomic` and such. This covers both regular method calls
+      // and operator calls.
+      if (const auto *MD =
+              dyn_cast_or_null<CXXMethodDecl>(CE->getDirectCallee())) {
+        const CXXRecordDecl *RD = MD->getParent();
+        // A bit wobbly with ".contains()" because it may be like
+        // "__atomic_base" or something.
+        if (StringRef(RD->getNameAsString()).contains("atomic")) {
           BR.markInvalid(getTag(), S);
         }
       }

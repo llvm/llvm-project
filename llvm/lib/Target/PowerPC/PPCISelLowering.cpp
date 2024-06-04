@@ -141,6 +141,11 @@ static cl::opt<unsigned> PPCGatherAllAliasesMaxDepth(
     "ppc-gather-alias-max-depth", cl::init(18), cl::Hidden,
     cl::desc("max depth when checking alias info in GatherAllAliases()"));
 
+static cl::opt<unsigned> PPCAIXTLSModelOptUseIEForLDLimit(
+    "ppc-aix-shared-lib-tls-model-opt-limit", cl::init(1), cl::Hidden,
+    cl::desc("Set inclusive limit count of TLS local-dynamic access(es) in a "
+             "function to use initial-exec"));
+
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
 STATISTIC(ShufflesHandledWithVPERM,
@@ -153,10 +158,10 @@ static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl);
 
 static const char AIXSSPCanaryWordName[] = "__ssp_canary_word";
 
-// A faster local-exec TLS access sequence (enabled with the
-// -maix-small-local-exec-tls option) can be produced for TLS variables;
-// consistent with the IBM XL compiler, we apply a max size of slightly under
-// 32KB.
+// A faster local-[exec|dynamic] TLS access sequence (enabled with the
+// -maix-small-local-[exec|dynamic]-tls option) can be produced for TLS
+// variables; consistent with the IBM XL compiler, we apply a max size of
+// slightly under 32KB.
 constexpr uint64_t AIXSmallTlsPolicySizeLimit = 32751;
 
 // FIXME: Remove this once the bug has been fixed!
@@ -3362,6 +3367,54 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   return LowerGlobalTLSAddressLinux(Op, DAG);
 }
 
+/// updateForAIXShLibTLSModelOpt - Helper to initialize TLS model opt settings,
+/// and then apply the update.
+static void updateForAIXShLibTLSModelOpt(TLSModel::Model &Model,
+                                         SelectionDAG &DAG,
+                                         const TargetMachine &TM) {
+  // Initialize TLS model opt setting lazily:
+  // (1) Use initial-exec for single TLS var references within current function.
+  // (2) Use local-dynamic for multiple TLS var references within current
+  // function.
+  PPCFunctionInfo *FuncInfo =
+      DAG.getMachineFunction().getInfo<PPCFunctionInfo>();
+  if (!FuncInfo->isAIXFuncTLSModelOptInitDone()) {
+    SmallPtrSet<const GlobalValue *, 8> TLSGV;
+    // Iterate over all instructions within current function, collect all TLS
+    // global variables (global variables taken as the first parameter to
+    // Intrinsic::threadlocal_address).
+    const Function &Func = DAG.getMachineFunction().getFunction();
+    for (Function::const_iterator BI = Func.begin(), BE = Func.end(); BI != BE;
+         ++BI)
+      for (BasicBlock::const_iterator II = BI->begin(), IE = BI->end();
+           II != IE; ++II)
+        if (II->getOpcode() == Instruction::Call)
+          if (const CallInst *CI = dyn_cast<const CallInst>(&*II))
+            if (Function *CF = CI->getCalledFunction())
+              if (CF->isDeclaration() &&
+                  CF->getIntrinsicID() == Intrinsic::threadlocal_address)
+                if (const GlobalValue *GV =
+                        dyn_cast<GlobalValue>(II->getOperand(0))) {
+                  TLSModel::Model GVModel = TM.getTLSModel(GV);
+                  if (GVModel == TLSModel::LocalDynamic)
+                    TLSGV.insert(GV);
+                }
+
+    unsigned TLSGVCnt = TLSGV.size();
+    LLVM_DEBUG(dbgs() << format("LocalDynamic TLSGV count:%d\n", TLSGVCnt));
+    if (TLSGVCnt <= PPCAIXTLSModelOptUseIEForLDLimit)
+      FuncInfo->setAIXFuncUseTLSIEForLD();
+    FuncInfo->setAIXFuncTLSModelOptInitDone();
+  }
+
+  if (FuncInfo->isAIXFuncUseTLSIEForLD()) {
+    LLVM_DEBUG(
+        dbgs() << DAG.getMachineFunction().getName()
+               << " function is using the TLS-IE model for TLS-LD access.\n");
+    Model = TLSModel::InitialExec;
+  }
+}
+
 SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
                                                     SelectionDAG &DAG) const {
   GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
@@ -3374,6 +3427,11 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   bool Is64Bit = Subtarget.isPPC64();
   TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
+
+  // Apply update to the TLS model.
+  if (Subtarget.hasAIXShLibTLSModelOpt())
+    updateForAIXShLibTLSModelOpt(Model, DAG, getTargetMachine());
+
   bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
   if (IsTLSLocalExecModel || Model == TLSModel::InitialExec) {
@@ -3434,6 +3492,14 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   }
 
   if (Model == TLSModel::LocalDynamic) {
+    bool HasAIXSmallLocalDynamicTLS = Subtarget.hasAIXSmallLocalDynamicTLS();
+
+    // We do not implement the 32-bit version of the faster access sequence
+    // for local-dynamic that is controlled by -maix-small-local-dynamic-tls.
+    if (!Is64Bit && HasAIXSmallLocalDynamicTLS)
+      report_fatal_error("The small-local-dynamic TLS access sequence is "
+                         "currently only supported on AIX (64-bit mode).");
+
     // For local-dynamic on AIX, we need to generate one TOC entry for each
     // variable offset, and a single module-handle TOC entry for the entire
     // file.
@@ -3453,6 +3519,22 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
     SDValue ModuleHandleTOC = getTOCEntry(DAG, dl, ModuleHandleTGA);
     SDValue ModuleHandle =
         DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT, ModuleHandleTOC);
+
+    // With the -maix-small-local-dynamic-tls option, produce a faster access
+    // sequence for local-dynamic TLS variables where the offset from the
+    // module-handle is encoded as an immediate operand.
+    //
+    // We only utilize the faster local-dynamic access sequence when the TLS
+    // variable has a size within the policy limit. We treat types that are
+    // not sized or are empty as being over the policy size limit.
+    if (HasAIXSmallLocalDynamicTLS) {
+      Type *GVType = GV->getValueType();
+      if (GVType->isSized() && !GVType->isEmptyTy() &&
+          GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
+              AIXSmallTlsPolicySizeLimit)
+        return DAG.getNode(PPCISD::Lo, dl, PtrVT, VariableOffsetTGA,
+                           ModuleHandle);
+    }
 
     return DAG.getNode(ISD::ADD, dl, PtrVT, ModuleHandle, VariableOffset);
   }
@@ -9256,7 +9338,7 @@ SDValue PPCTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   if ((Op.getValueType() != MVT::f128) ||
       (Op0.getOpcode() != ISD::BUILD_PAIR) ||
       (Op0.getOperand(0).getValueType() != MVT::i64) ||
-      (Op0.getOperand(1).getValueType() != MVT::i64))
+      (Op0.getOperand(1).getValueType() != MVT::i64) || !Subtarget.isPPC64())
     return SDValue();
 
   return DAG.getNode(PPCISD::BUILD_FP128, dl, MVT::f128, Op0.getOperand(0),
@@ -9378,7 +9460,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // double. This is to exploit the XXSPLTIDP instruction.
   // If we lose precision, we use XXSPLTI32DX.
   if (BVNIsConstantSplat && (SplatBitSize == 64) &&
-      Subtarget.hasPrefixInstrs()) {
+      Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
     // Check the type first to short-circuit so we don't modify APSplatBits if
     // this block isn't executed.
     if ((Op->getValueType(0) == MVT::v2f64) &&
@@ -9523,11 +9605,11 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // with 4-byte splats. We replicate the SplatBits in case of 2-byte splat to
   // make a 4-byte splat element. For example: 2-byte splat of 0xABAB can be
   // turned into a 4-byte splat of 0xABABABAB.
-  if (Subtarget.hasPrefixInstrs() && SplatSize == 2)
+  if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector() && SplatSize == 2)
     return getCanonicalConstSplat(SplatBits | (SplatBits << 16), SplatSize * 2,
                                   Op.getValueType(), DAG, dl);
 
-  if (Subtarget.hasPrefixInstrs() && SplatSize == 4)
+  if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector() && SplatSize == 4)
     return getCanonicalConstSplat(SplatBits, SplatSize, Op.getValueType(), DAG,
                                   dl);
 
@@ -10160,7 +10242,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Ins);
   }
 
-  if (Subtarget.hasPrefixInstrs()) {
+  if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
     SDValue SplatInsertNode;
     if ((SplatInsertNode = lowerToXXSPLTI32DX(SVOp, DAG)))
       return SplatInsertNode;
@@ -14863,7 +14945,7 @@ static SDValue combineBVOfVecSExt(SDNode *N, SelectionDAG &DAG) {
     }
   }
 
-  // If the vector extract indicies are not correct, add the appropriate
+  // If the vector extract indices are not correct, add the appropriate
   // vector_shuffle.
   int TgtElemArrayIdx;
   int InputSize = Input.getValueType().getScalarSizeInBits();
@@ -17648,7 +17730,7 @@ bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return false;
   case MVT::f32:
   case MVT::f64: {
-    if (Subtarget.hasPrefixInstrs()) {
+    if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
       // we can materialize all immediatess via XXSPLTI32DX and XXSPLTIDP.
       return true;
     }
@@ -18232,11 +18314,12 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
   // Compute subtarget flags.
   if (!Subtarget.hasP9Vector())
     FlagSet |= PPC::MOF_SubtargetBeforeP9;
-  else {
+  else
     FlagSet |= PPC::MOF_SubtargetP9;
-    if (Subtarget.hasPrefixInstrs())
-      FlagSet |= PPC::MOF_SubtargetP10;
-  }
+
+  if (Subtarget.hasPrefixInstrs())
+    FlagSet |= PPC::MOF_SubtargetP10;
+
   if (Subtarget.hasSPE())
     FlagSet |= PPC::MOF_SubtargetSPE;
 

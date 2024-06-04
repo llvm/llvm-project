@@ -147,6 +147,15 @@ struct BinOpInfo {
       return UnOp->getSubExpr()->getType()->isFixedPointType();
     return false;
   }
+
+  /// Check if the RHS has a signed integer representation.
+  bool rhsHasSignedIntegerRepresentation() const {
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+      QualType RHSType = BinOp->getRHS()->getType();
+      return RHSType->hasSignedIntegerRepresentation();
+    }
+    return false;
+  }
 };
 
 static bool MustVisitNullValue(const Expr *E) {
@@ -782,7 +791,7 @@ public:
   void EmitUndefinedBehaviorIntegerDivAndRemCheck(const BinOpInfo &Ops,
                                                   llvm::Value *Zero,bool isDiv);
   // Common helper for getting how wide LHS of shift is.
-  static Value *GetMaximumShiftAmount(Value *LHS, Value *RHS);
+  static Value *GetMaximumShiftAmount(Value *LHS, Value *RHS, bool RHSIsSigned);
 
   // Used for shifting constraints for OpenCL, do mask for powers of 2, URem for
   // non powers of two.
@@ -1531,7 +1540,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   if (auto DstPT = dyn_cast<llvm::PointerType>(DstTy)) {
     // The source value may be an integer, or a pointer.
     if (isa<llvm::PointerType>(SrcTy))
-      return Builder.CreateBitCast(Src, DstTy, "conv");
+      return Src;
 
     assert(SrcType->isIntegerType() && "Not ptr->ptr or int->ptr conversion?");
     // First, convert to the correct width so that we control the kind of
@@ -1928,7 +1937,26 @@ Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
     }
   }
 
-  return EmitLoadOfLValue(E);
+  llvm::Value *Result = EmitLoadOfLValue(E);
+
+  // If -fdebug-info-for-profiling is specified, emit a pseudo variable and its
+  // debug info for the pointer, even if there is no variable associated with
+  // the pointer's expression.
+  if (CGF.CGM.getCodeGenOpts().DebugInfoForProfiling && CGF.getDebugInfo()) {
+    if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Result)) {
+      if (llvm::GetElementPtrInst *GEP =
+              dyn_cast<llvm::GetElementPtrInst>(Load->getPointerOperand())) {
+        if (llvm::Instruction *Pointer =
+                dyn_cast<llvm::Instruction>(GEP->getPointerOperand())) {
+          QualType Ty = E->getBase()->getType();
+          if (!E->isArrow())
+            Ty = CGF.getContext().getPointerType(Ty);
+          CGF.getDebugInfo()->EmitPseudoVariable(Builder, Pointer, Ty);
+        }
+      }
+    }
+  }
+  return Result;
 }
 
 Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
@@ -2203,7 +2231,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
   case CK_LValueBitCast:
   case CK_ObjCObjectLValueCast: {
-    Address Addr = EmitLValue(E).getAddress(CGF);
+    Address Addr = EmitLValue(E).getAddress();
     Addr = Addr.withElementType(CGF.ConvertTypeForMem(DestTy));
     LValue LV = CGF.MakeAddrLValue(Addr, DestTy);
     return EmitLoadOfLValue(LV, CE->getExprLoc());
@@ -2211,8 +2239,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
   case CK_LValueToRValueBitCast: {
     LValue SourceLVal = CGF.EmitLValue(E);
-    Address Addr = SourceLVal.getAddress(CGF).withElementType(
-        CGF.ConvertTypeForMem(DestTy));
+    Address Addr =
+        SourceLVal.getAddress().withElementType(CGF.ConvertTypeForMem(DestTy));
     LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
     DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
     return EmitLoadOfLValue(DestLV, CE->getExprLoc());
@@ -2321,7 +2349,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     }
 
     // Perform VLAT <-> VLST bitcast through memory.
-    // TODO: since the llvm.experimental.vector.{insert,extract} intrinsics
+    // TODO: since the llvm.vector.{insert,extract} intrinsics
     //       require the element types of the vectors to be the same, we
     //       need to keep this around for bitcasts between VLAT <-> VLST where
     //       the element types of the vectors are not the same, until we figure
@@ -2763,14 +2791,14 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     if (isInc && type->isBooleanType()) {
       llvm::Value *True = CGF.EmitToMemory(Builder.getTrue(), type);
       if (isPre) {
-        Builder.CreateStore(True, LV.getAddress(CGF), LV.isVolatileQualified())
+        Builder.CreateStore(True, LV.getAddress(), LV.isVolatileQualified())
             ->setAtomic(llvm::AtomicOrdering::SequentiallyConsistent);
         return Builder.getTrue();
       }
       // For atomic bool increment, we just store true and return it for
       // preincrement, do an atomic swap with true for postincrement
       return Builder.CreateAtomicRMW(
-          llvm::AtomicRMWInst::Xchg, LV.getAddress(CGF), True,
+          llvm::AtomicRMWInst::Xchg, LV.getAddress(), True,
           llvm::AtomicOrdering::SequentiallyConsistent);
     }
     // Special case for atomic increment / decrement on integers, emit
@@ -2788,7 +2816,20 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       llvm::Value *amt = CGF.EmitToMemory(
           llvm::ConstantInt::get(ConvertType(type), 1, true), type);
       llvm::Value *old =
-          Builder.CreateAtomicRMW(aop, LV.getAddress(CGF), amt,
+          Builder.CreateAtomicRMW(aop, LV.getAddress(), amt,
+                                  llvm::AtomicOrdering::SequentiallyConsistent);
+      return isPre ? Builder.CreateBinOp(op, old, amt) : old;
+    }
+    // Special case for atomic increment/decrement on floats
+    if (type->isFloatingType()) {
+      llvm::AtomicRMWInst::BinOp aop =
+          isInc ? llvm::AtomicRMWInst::FAdd : llvm::AtomicRMWInst::FSub;
+      llvm::Instruction::BinaryOps op =
+          isInc ? llvm::Instruction::FAdd : llvm::Instruction::FSub;
+      llvm::Value *amt = llvm::ConstantFP::get(
+          VMContext, llvm::APFloat(static_cast<float>(1.0)));
+      llvm::Value *old =
+          Builder.CreateAtomicRMW(aop, LV.getAddress(), amt,
                                   llvm::AtomicOrdering::SequentiallyConsistent);
       return isPre ? Builder.CreateBinOp(op, old, amt) : old;
     }
@@ -3530,7 +3571,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
                                  E->getExprLoc()),
             LHSTy);
         Value *OldVal = Builder.CreateAtomicRMW(
-            AtomicOp, LHSLV.getAddress(CGF), Amt,
+            AtomicOp, LHSLV.getAddress(), Amt,
             llvm::AtomicOrdering::SequentiallyConsistent);
 
         // Since operation is atomic, the result type is guaranteed to be the
@@ -4344,7 +4385,8 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
   return Builder.CreateExactSDiv(diffInChars, divisor, "sub.ptr.div");
 }
 
-Value *ScalarExprEmitter::GetMaximumShiftAmount(Value *LHS, Value *RHS) {
+Value *ScalarExprEmitter::GetMaximumShiftAmount(Value *LHS, Value *RHS,
+                                                bool RHSIsSigned) {
   llvm::IntegerType *Ty;
   if (llvm::VectorType *VT = dyn_cast<llvm::VectorType>(LHS->getType()))
     Ty = cast<llvm::IntegerType>(VT->getElementType());
@@ -4355,7 +4397,9 @@ Value *ScalarExprEmitter::GetMaximumShiftAmount(Value *LHS, Value *RHS) {
   // this in ConstantInt::get, this results in the value getting truncated.
   // Constrain the return value to be max(RHS) in this case.
   llvm::Type *RHSTy = RHS->getType();
-  llvm::APInt RHSMax = llvm::APInt::getMaxValue(RHSTy->getScalarSizeInBits());
+  llvm::APInt RHSMax =
+      RHSIsSigned ? llvm::APInt::getSignedMaxValue(RHSTy->getScalarSizeInBits())
+                  : llvm::APInt::getMaxValue(RHSTy->getScalarSizeInBits());
   if (RHSMax.ult(Ty->getBitWidth()))
     return llvm::ConstantInt::get(RHSTy, RHSMax);
   return llvm::ConstantInt::get(RHSTy, Ty->getBitWidth() - 1);
@@ -4370,7 +4414,7 @@ Value *ScalarExprEmitter::ConstrainShiftValue(Value *LHS, Value *RHS,
     Ty = cast<llvm::IntegerType>(LHS->getType());
 
   if (llvm::isPowerOf2_64(Ty->getBitWidth()))
-    return Builder.CreateAnd(RHS, GetMaximumShiftAmount(LHS, RHS), Name);
+    return Builder.CreateAnd(RHS, GetMaximumShiftAmount(LHS, RHS, false), Name);
 
   return Builder.CreateURem(
       RHS, llvm::ConstantInt::get(RHS->getType(), Ty->getBitWidth()), Name);
@@ -4403,7 +4447,9 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     SmallVector<std::pair<Value *, SanitizerMask>, 2> Checks;
-    llvm::Value *WidthMinusOne = GetMaximumShiftAmount(Ops.LHS, Ops.RHS);
+    bool RHSIsSigned = Ops.rhsHasSignedIntegerRepresentation();
+    llvm::Value *WidthMinusOne =
+        GetMaximumShiftAmount(Ops.LHS, Ops.RHS, RHSIsSigned);
     llvm::Value *ValidExponent = Builder.CreateICmpULE(Ops.RHS, WidthMinusOne);
 
     if (SanitizeExponent) {
@@ -4421,7 +4467,7 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
       Builder.CreateCondBr(ValidExponent, CheckShiftBase, Cont);
       llvm::Value *PromotedWidthMinusOne =
           (RHS == Ops.RHS) ? WidthMinusOne
-                           : GetMaximumShiftAmount(Ops.LHS, RHS);
+                           : GetMaximumShiftAmount(Ops.LHS, RHS, RHSIsSigned);
       CGF.EmitBlock(CheckShiftBase);
       llvm::Value *BitsShiftedOff = Builder.CreateLShr(
           Ops.LHS, Builder.CreateSub(PromotedWidthMinusOne, RHS, "shl.zeros",
@@ -4471,8 +4517,9 @@ Value *ScalarExprEmitter::EmitShr(const BinOpInfo &Ops) {
   else if (CGF.SanOpts.has(SanitizerKind::ShiftExponent) &&
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
-    llvm::Value *Valid =
-        Builder.CreateICmpULE(Ops.RHS, GetMaximumShiftAmount(Ops.LHS, Ops.RHS));
+    bool RHSIsSigned = Ops.rhsHasSignedIntegerRepresentation();
+    llvm::Value *Valid = Builder.CreateICmpULE(
+        Ops.RHS, GetMaximumShiftAmount(Ops.LHS, Ops.RHS, RHSIsSigned));
     EmitBinOpCheck(std::make_pair(Valid, SanitizerKind::ShiftExponent), Ops);
   }
 
@@ -4754,7 +4801,7 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   case Qualifiers::OCL_Weak:
     RHS = Visit(E->getRHS());
     LHS = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
-    RHS = CGF.EmitARCStoreWeak(LHS.getAddress(CGF), RHS, Ignore);
+    RHS = CGF.EmitARCStoreWeak(LHS.getAddress(), RHS, Ignore);
     break;
 
   case Qualifiers::OCL_None:
@@ -5506,7 +5553,7 @@ LValue CodeGenFunction::EmitObjCIsaExpr(const ObjCIsaExpr *E) {
         ConvertTypeForMem(BaseExpr->getType()->getPointeeType());
     Addr = Address(EmitScalarExpr(BaseExpr), BaseTy, getPointerAlign());
   } else {
-    Addr = EmitLValue(BaseExpr).getAddress(*this);
+    Addr = EmitLValue(BaseExpr).getAddress();
   }
 
   // Cast the address to Class*.

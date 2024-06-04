@@ -64,7 +64,7 @@ to specify the target triple:
      Vendor       Description
      ============ ==============================================================
      ``amd``      Can be used for all AMD GPU usage.
-     ``mesa3d``   Can be used if the OS is ``mesa3d``.
+     ``mesa``     Can be used if the OS is ``mesa3d``.
      ============ ==============================================================
 
   .. table:: AMDGPU Operating Systems
@@ -610,6 +610,13 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
 
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
+
+
+     ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
+                                         - ``gfx1201``     - cumode             flat scratch
+                                                                              - Packed
+                                                                                work-item
+                                                                                IDs
      ==================== ============== ================= ================== ================= =================================
 
 .. _amdgpu-generic-processor-versioning:
@@ -824,8 +831,8 @@ supported for the ``amdgcn`` target.
      Constant                              4               constant    *same as global* 64      0x0000000000000000
      Private                               5               private     scratch          32      0xFFFFFFFF
      Constant 32-bit                       6               *TODO*                               0x00000000
-     Buffer Fat Pointer (experimental)     7               *TODO*
-     Buffer Resource (experimental)        8               *TODO*
+     Buffer Fat Pointer                    7               N/A         N/A              160     0
+     Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
@@ -1157,6 +1164,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    register do not exactly match the FLT_ROUNDS values,
                                                    so a conversion is performed.
 
+  :ref:`llvm.set.rounding<int_set_rounding>`       Input value expected to be one of the valid results
+                                                   from '``llvm.get.rounding``'. Rounding mode is
+                                                   undefined if not passed a valid input. This should be
+                                                   a wave uniform value. In case of a divergent input
+                                                   value, the first active lane's value will be used.
+
   :ref:`llvm.get.fpenv<int_get_fpenv>`             Returns the current value of the AMDGPU floating point environment.
                                                    This stores information related to the current rounding mode,
                                                    denormalization mode, enabled traps, and floating point exceptions.
@@ -1382,8 +1395,11 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-no-workitem-id-x"               Indicates the function does not depend on the value of the
                                              llvm.amdgcn.workitem.id.x intrinsic. If a function is marked with this
-                                             attribute, or reached through a call site marked with this attribute,
-                                             the value returned by the intrinsic is undefined. The backend can
+                                             attribute, or reached through a call site marked with this attribute, and
+                                             that intrinsic is called, the behavior of the program is undefined. (Whole-program
+                                             undefined behavior is used here because, for example, the absence of a required workitem
+                                             ID in the preloaded register set can mean that all other preloaded registers
+                                             are earlier than the compilation assumed they would be.) The backend can
                                              generally infer this during code generation, so typically there is no
                                              benefit to frontends marking functions with this.
 
@@ -1964,6 +1980,10 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10-3-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC``    0x054      ``gfx11-generic``
      *reserved*                                 0x055      Reserved.
+     *reserved*                                 0x056      Reserved.
+     *reserved*                                 0x057      Reserved.
+     *reserved*                                 0x058      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ========================================== ========== =============================
 
 Sections
@@ -4652,7 +4672,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      entry point instruction
                                                      which must be 256 byte
                                                      aligned.
-     351:272 20                                      Reserved, must be 0.
+     351:192 20                                      Reserved, must be 0.
              bytes
      383:352 4 bytes COMPUTE_PGM_RSRC3               GFX6-GFX9
                                                        Reserved, must be 0.
@@ -5248,14 +5268,14 @@ The fields used by CP for code objects before V3 also match those specified in
      5:0     6 bits  ACCUM_OFFSET                    Offset of a first AccVGPR in the unified register file. Granularity 4.
                                                      Value 0-63. 0 - accum-offset = 4, 1 - accum-offset = 8, ...,
                                                      63 - accum-offset = 256.
-     6:15    10                                      Reserved, must be 0.
+     15:6    10                                      Reserved, must be 0.
              bits
      16      1 bit   TG_SPLIT                        - If 0 the waves of a work-group are
                                                        launched in the same CU.
                                                      - If 1 the waves of a work-group can be
                                                        launched in different CUs. The waves
                                                        cannot use S_BARRIER or LDS.
-     17:31   15                                      Reserved, must be 0.
+     31:17   15                                      Reserved, must be 0.
              bits
      32      **Total size 4 bytes.**
      ======= ===================================================================================================================
@@ -16024,7 +16044,7 @@ Additional Documentation
 .. [CLANG-ATTR] `Attributes in Clang <https://clang.llvm.org/docs/AttributeReference.html>`__
 .. [DWARF] `DWARF Debugging Information Format <http://dwarfstd.org/>`__
 .. [ELF] `Executable and Linkable Format (ELF) <http://www.sco.com/developers/gabi/>`__
-.. [HRF] `Heterogeneous-race-free Memory Models <http://benedictgaster.org/wp-content/uploads/2014/01/asplos269-FINAL.pdf>`__
+.. [HRF] `Heterogeneous-race-free Memory Models <https://research.cs.wisc.edu/multifacet/papers/asplos14_hrf.pdf>`__
 .. [HSA] `Heterogeneous System Architecture (HSA) Foundation <http://www.hsafoundation.com/>`__
 .. [MsgPack] `Message Pack <http://www.msgpack.org/>`__
 .. [OpenCL] `The OpenCL Specification Version 2.0 <http://www.khronos.org/registry/cl/specs/opencl-2.0.pdf>`__

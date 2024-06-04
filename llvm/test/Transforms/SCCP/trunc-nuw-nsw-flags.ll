@@ -16,7 +16,7 @@ entry:
 }
 
 define i8 @range_from_or_nsw(i16 %a) {
-; CHECK-LABEL: define i8 @range_from_or_nsw(
+; CHECK-LABEL: define range(i8 -128, 0) i8 @range_from_or_nsw(
 ; CHECK-SAME: i16 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = or i16 [[A]], -128
@@ -30,7 +30,7 @@ entry:
 }
 
 define i16 @range_from_and_nuw_nsw(i32 %a) {
-; CHECK-LABEL: define i16 @range_from_and_nuw_nsw(
+; CHECK-LABEL: define range(i16 0, -32768) i16 @range_from_and_nuw_nsw(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 32767

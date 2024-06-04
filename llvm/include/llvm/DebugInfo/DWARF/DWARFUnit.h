@@ -85,7 +85,7 @@ public:
                 uint64_t *offset_ptr, DWARFSectionKind SectionKind);
   // For units in DWARF Package File, remember the index entry and update
   // the abbreviation offset read by extract().
-  bool applyIndexEntry(const DWARFUnitIndex::Entry *Entry);
+  Error applyIndexEntry(const DWARFUnitIndex::Entry *Entry);
   uint64_t getOffset() const { return Offset; }
   const dwarf::FormParams &getFormParams() const { return FormParams; }
   uint16_t getVersion() const { return FormParams.Version; }

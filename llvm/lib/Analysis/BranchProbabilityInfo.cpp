@@ -630,8 +630,8 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
       if (!CmpLHSConst)
         continue;
       // Now constant-evaluate the compare
-      Constant *Result = ConstantExpr::getCompare(CI->getPredicate(),
-                                                  CmpLHSConst, CmpConst, true);
+      Constant *Result = ConstantFoldCompareInstOperands(
+          CI->getPredicate(), CmpLHSConst, CmpConst, DL);
       // If the result means we don't branch to the block then that block is
       // unlikely.
       if (Result &&
@@ -810,6 +810,7 @@ void BranchProbabilityInfo::computeEestimateBlockWeight(
     const Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
   SmallVector<BasicBlock *, 8> BlockWorkList;
   SmallVector<LoopBlock, 8> LoopWorkList;
+  SmallDenseMap<LoopData, SmallVector<BasicBlock *, 4>> LoopExitBlocks;
 
   // By doing RPO we make sure that all predecessors already have weights
   // calculated before visiting theirs successors.
@@ -828,12 +829,14 @@ void BranchProbabilityInfo::computeEestimateBlockWeight(
   do {
     while (!LoopWorkList.empty()) {
       const LoopBlock LoopBB = LoopWorkList.pop_back_val();
-
-      if (EstimatedLoopWeight.count(LoopBB.getLoopData()))
+      const LoopData LD = LoopBB.getLoopData();
+      if (EstimatedLoopWeight.count(LD))
         continue;
 
-      SmallVector<BasicBlock *, 4> Exits;
-      getLoopExitBlocks(LoopBB, Exits);
+      auto Res = LoopExitBlocks.try_emplace(LD);
+      SmallVectorImpl<BasicBlock *> &Exits = Res.first->second;
+      if (Res.second)
+        getLoopExitBlocks(LoopBB, Exits);
       auto LoopWeight = getMaxEstimatedEdgeWeight(
           LoopBB, make_range(Exits.begin(), Exits.end()));
 
@@ -842,7 +845,7 @@ void BranchProbabilityInfo::computeEestimateBlockWeight(
         if (LoopWeight <= static_cast<uint32_t>(BlockExecWeight::UNREACHABLE))
           LoopWeight = static_cast<uint32_t>(BlockExecWeight::LOWEST_NON_ZERO);
 
-        EstimatedLoopWeight.insert({LoopBB.getLoopData(), *LoopWeight});
+        EstimatedLoopWeight.insert({LD, *LoopWeight});
         // Add all blocks entering the loop into working list.
         getLoopEnterBlocks(LoopBB, BlockWorkList);
       }
@@ -1273,9 +1276,8 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
   EstimatedBlockWeight.clear();
   SccI.reset();
 
-  if (PrintBranchProb &&
-      (PrintBranchProbFuncName.empty() ||
-       F.getName().equals(PrintBranchProbFuncName))) {
+  if (PrintBranchProb && (PrintBranchProbFuncName.empty() ||
+                          F.getName() == PrintBranchProbFuncName)) {
     print(dbgs());
   }
 }

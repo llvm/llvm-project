@@ -14,7 +14,6 @@
 
 #include "clang/ExtractAPI/API.h"
 #include "clang/AST/RawCommentList.h"
-#include "clang/Basic/Module.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -54,7 +53,28 @@ RecordContext *APIRecord::castToRecordContext(const APIRecord *Record) {
   }
 }
 
+bool RecordContext::IsWellFormed() const {
+  // Check that First and Last are both null or both non-null.
+  return (First == nullptr) == (Last == nullptr);
+}
+
+void RecordContext::stealRecordChain(RecordContext &Other) {
+  assert(IsWellFormed());
+  // If we don't have an empty chain append Other's chain into ours.
+  if (First)
+    Last->NextInContext = Other.First;
+  else
+    First = Other.First;
+
+  Last = Other.Last;
+
+  // Delete Other's chain to ensure we don't accidentally traverse it.
+  Other.First = nullptr;
+  Other.Last = nullptr;
+}
+
 void RecordContext::addToRecordChain(APIRecord *Record) const {
+  assert(IsWellFormed());
   if (!First) {
     First = Record;
     Last = Record;
@@ -95,6 +115,7 @@ SymbolReference APISet::createSymbolReference(StringRef Name, StringRef USR,
 }
 
 APIRecord::~APIRecord() {}
+TagRecord::~TagRecord() {}
 RecordRecord::~RecordRecord() {}
 RecordFieldRecord::~RecordFieldRecord() {}
 ObjCContainerRecord::~ObjCContainerRecord() {}

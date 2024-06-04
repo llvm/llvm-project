@@ -28,11 +28,14 @@ end
 
 !CHECK-LABEL: sub_loop
 subroutine sub_loop()
-!CHECK: omp.wsloop {{.*}}  {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest {{.*}} {
   !$omp do
   do i=1,10
     print *, i
 !CHECK:   omp.yield loc(#[[LOOP_LOC:.*]])
+!CHECK: } loc(#[[LOOP_LOC]])
+!CHECK:   omp.terminator loc(#[[LOOP_LOC]])
 !CHECK: } loc(#[[LOOP_LOC]])
   end do
   !$omp end do
@@ -60,9 +63,9 @@ end subroutine
 
 !CHECK: #[[PAR_LOC]] = loc("{{.*}}location.f90":9:9)
 !CHECK: #[[TAR_LOC]] = loc("{{.*}}location.f90":21:9)
-!CHECK: #[[LOOP_LOC]] = loc("{{.*}}location.f90":32:9)
-!CHECK: #[[BAR_LOC]] = loc("{{.*}}location.f90":44:9)
-!CHECK: #[[TW_LOC]] = loc("{{.*}}location.f90":46:9)
-!CHECK: #[[TY_LOC]] = loc("{{.*}}location.f90":48:9)
-!CHECK: #[[IF_LOC]] = loc("{{.*}}location.f90":55:14)
-!CHECK: #[[TASK_LOC]] = loc("{{.*}}location.f90":55:9)
+!CHECK: #[[LOOP_LOC]] = loc("{{.*}}location.f90":33:9)
+!CHECK: #[[BAR_LOC]] = loc("{{.*}}location.f90":47:9)
+!CHECK: #[[TW_LOC]] = loc("{{.*}}location.f90":49:9)
+!CHECK: #[[TY_LOC]] = loc("{{.*}}location.f90":51:9)
+!CHECK: #[[IF_LOC]] = loc("{{.*}}location.f90":58:14)
+!CHECK: #[[TASK_LOC]] = loc("{{.*}}location.f90":58:9)

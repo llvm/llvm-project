@@ -789,9 +789,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
   auto kind{AnalyzeKindParam(x.kind, defaultKind)};
   if (letterKind && expoLetter != 'e') {
     if (kind != *letterKind) {
-      Say("Explicit kind parameter on real constant disagrees with "
-          "exponent letter '%c'"_warn_en_US,
-          expoLetter);
+      if (context_.ShouldWarn(
+              common::LanguageFeature::ExponentMatchingKindParam)) {
+        Say("Explicit kind parameter on real constant disagrees with exponent letter '%c'"_warn_en_US,
+            expoLetter);
+      }
     } else if (x.kind &&
         context_.ShouldWarn(
             common::LanguageFeature::ExponentMatchingKindParam)) {
@@ -1598,16 +1600,23 @@ private:
       parser::CharBlock name, std::int64_t lower, std::int64_t upper,
       std::int64_t stride);
 
-  template <int KIND, typename A>
-  std::optional<Expr<Type<TypeCategory::Integer, KIND>>> GetSpecificIntExpr(
-      const A &x) {
-    if (MaybeExpr y{exprAnalyzer_.Analyze(x)}) {
+  template <int KIND>
+  std::optional<Expr<Type<TypeCategory::Integer, KIND>>> ToSpecificInt(
+      MaybeExpr &&y) {
+    if (y) {
       Expr<SomeInteger> *intExpr{UnwrapExpr<Expr<SomeInteger>>(*y)};
       return Fold(exprAnalyzer_.GetFoldingContext(),
           ConvertToType<Type<TypeCategory::Integer, KIND>>(
               std::move(DEREF(intExpr))));
+    } else {
+      return std::nullopt;
     }
-    return std::nullopt;
+  }
+
+  template <int KIND, typename A>
+  std::optional<Expr<Type<TypeCategory::Integer, KIND>>> GetSpecificIntExpr(
+      const A &x) {
+    return ToSpecificInt<KIND>(exprAnalyzer_.Analyze(x));
   }
 
   // Nested array constructors all reference the same ExpressionAnalyzer,
@@ -1770,26 +1779,45 @@ void ArrayConstructorContext::Add(const parser::AcValue &x) {
 
 // Transforms l:u(:s) into (_,_=l,u(,s)) with an anonymous index '_'
 void ArrayConstructorContext::Add(const parser::AcValue::Triplet &triplet) {
-  std::optional<Expr<ImpliedDoIntType>> lower{
-      GetSpecificIntExpr<ImpliedDoIntType::kind>(std::get<0>(triplet.t))};
-  std::optional<Expr<ImpliedDoIntType>> upper{
-      GetSpecificIntExpr<ImpliedDoIntType::kind>(std::get<1>(triplet.t))};
-  std::optional<Expr<ImpliedDoIntType>> stride{
-      GetSpecificIntExpr<ImpliedDoIntType::kind>(std::get<2>(triplet.t))};
-  if (lower && upper) {
-    if (!stride) {
-      stride = Expr<ImpliedDoIntType>{1};
+  MaybeExpr lowerExpr{exprAnalyzer_.Analyze(std::get<0>(triplet.t))};
+  MaybeExpr upperExpr{exprAnalyzer_.Analyze(std::get<1>(triplet.t))};
+  MaybeExpr strideExpr{exprAnalyzer_.Analyze(std::get<2>(triplet.t))};
+  if (lowerExpr && upperExpr) {
+    auto lowerType{lowerExpr->GetType()};
+    auto upperType{upperExpr->GetType()};
+    auto strideType{strideExpr ? strideExpr->GetType() : lowerType};
+    if (lowerType && upperType && strideType) {
+      int kind{lowerType->kind()};
+      if (upperType->kind() > kind) {
+        kind = upperType->kind();
+      }
+      if (strideType->kind() > kind) {
+        kind = strideType->kind();
+      }
+      auto lower{ToSpecificInt<ImpliedDoIntType::kind>(std::move(lowerExpr))};
+      auto upper{ToSpecificInt<ImpliedDoIntType::kind>(std::move(upperExpr))};
+      if (lower && upper) {
+        auto stride{
+            ToSpecificInt<ImpliedDoIntType::kind>(std::move(strideExpr))};
+        if (!stride) {
+          stride = Expr<ImpliedDoIntType>{1};
+        }
+        DynamicType type{TypeCategory::Integer, kind};
+        if (!type_) {
+          type_ = DynamicTypeWithLength{type};
+        }
+        parser::CharBlock anonymous;
+        if (auto converted{ConvertToType(type,
+                AsGenericExpr(
+                    Expr<ImpliedDoIntType>{ImpliedDoIndex{anonymous}}))}) {
+          auto v{std::move(values_)};
+          Push(std::move(converted));
+          std::swap(v, values_);
+          values_.Push(ImpliedDo<SomeType>{anonymous, std::move(*lower),
+              std::move(*upper), std::move(*stride), std::move(v)});
+        }
+      }
     }
-    if (!type_) {
-      type_ = DynamicTypeWithLength{ImpliedDoIntType::GetType()};
-    }
-    auto v{std::move(values_)};
-    parser::CharBlock anonymous;
-    Push(Expr<SomeType>{
-        Expr<SomeInteger>{Expr<ImpliedDoIntType>{ImpliedDoIndex{anonymous}}}});
-    std::swap(v, values_);
-    values_.Push(ImpliedDo<SomeType>{anonymous, std::move(*lower),
-        std::move(*upper), std::move(*stride), std::move(v)});
   }
 }
 
@@ -1803,10 +1831,13 @@ void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
   const auto &bounds{std::get<parser::AcImpliedDoControl::Bounds>(control.t)};
   exprAnalyzer_.Analyze(bounds.name);
   parser::CharBlock name{bounds.name.thing.thing.source};
-  const Symbol *symbol{bounds.name.thing.thing.symbol};
   int kind{ImpliedDoIntType::kind};
-  if (const auto dynamicType{DynamicType::From(symbol)}) {
-    kind = dynamicType->kind();
+  if (const Symbol * symbol{bounds.name.thing.thing.symbol}) {
+    if (auto dynamicType{DynamicType::From(symbol)}) {
+      if (dynamicType->category() == TypeCategory::Integer) {
+        kind = dynamicType->kind();
+      }
+    }
   }
   std::optional<Expr<ImpliedDoIntType>> lower{
       GetSpecificIntExpr<ImpliedDoIntType::kind>(bounds.lower)};
@@ -2492,6 +2523,109 @@ static bool CheckCompatibleArguments(
   return true;
 }
 
+static constexpr int cudaInfMatchingValue{std::numeric_limits<int>::max()};
+
+// Compute the matching distance as described in section 3.2.3 of the CUDA
+// Fortran references.
+static int GetMatchingDistance(const common::LanguageFeatureControl &features,
+    const characteristics::DummyArgument &dummy,
+    const std::optional<ActualArgument> &actual) {
+  bool isCudaManaged{features.IsEnabled(common::LanguageFeature::CudaManaged)};
+  bool isCudaUnified{features.IsEnabled(common::LanguageFeature::CudaUnified)};
+  CHECK(!(isCudaUnified && isCudaManaged) && "expect only one enabled.");
+
+  std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
+  if (actual) {
+    if (auto *expr{actual->UnwrapExpr()}) {
+      const auto *actualLastSymbol{evaluate::GetLastSymbol(*expr)};
+      if (actualLastSymbol) {
+        actualLastSymbol = &semantics::ResolveAssociations(*actualLastSymbol);
+        if (const auto *actualObject{actualLastSymbol
+                    ? actualLastSymbol
+                          ->detailsIf<semantics::ObjectEntityDetails>()
+                    : nullptr}) {
+          actualDataAttr = actualObject->cudaDataAttr();
+        }
+      }
+    }
+  }
+
+  common::visit(common::visitors{
+                    [&](const characteristics::DummyDataObject &object) {
+                      dummyDataAttr = object.cudaDataAttr;
+                    },
+                    [&](const auto &) {},
+                },
+      dummy.u);
+
+  if (!dummyDataAttr) {
+    if (!actualDataAttr) {
+      if (isCudaUnified || isCudaManaged) {
+        return 3;
+      }
+      return 0;
+    } else if (*actualDataAttr == common::CUDADataAttr::Device) {
+      return cudaInfMatchingValue;
+    } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
+        *actualDataAttr == common::CUDADataAttr::Unified) {
+      return 3;
+    }
+  } else if (*dummyDataAttr == common::CUDADataAttr::Device) {
+    if (!actualDataAttr) {
+      if (isCudaUnified || isCudaManaged) {
+        return 2;
+      }
+      return cudaInfMatchingValue;
+    } else if (*actualDataAttr == common::CUDADataAttr::Device) {
+      return 0;
+    } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
+        *actualDataAttr == common::CUDADataAttr::Unified) {
+      return 2;
+    }
+  } else if (*dummyDataAttr == common::CUDADataAttr::Managed) {
+    if (!actualDataAttr) {
+      return isCudaUnified ? 1 : isCudaManaged ? 0 : cudaInfMatchingValue;
+    }
+    if (*actualDataAttr == common::CUDADataAttr::Device) {
+      return cudaInfMatchingValue;
+    } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
+      return 0;
+    } else if (*actualDataAttr == common::CUDADataAttr::Unified) {
+      return 1;
+    }
+  } else if (*dummyDataAttr == common::CUDADataAttr::Unified) {
+    if (!actualDataAttr) {
+      return isCudaUnified ? 0 : isCudaManaged ? 1 : cudaInfMatchingValue;
+    }
+    if (*actualDataAttr == common::CUDADataAttr::Device) {
+      return cudaInfMatchingValue;
+    } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
+      return 1;
+    } else if (*actualDataAttr == common::CUDADataAttr::Unified) {
+      return 0;
+    }
+  }
+  return cudaInfMatchingValue;
+}
+
+static int ComputeCudaMatchingDistance(
+    const common::LanguageFeatureControl &features,
+    const characteristics::Procedure &procedure,
+    const ActualArguments &actuals) {
+  const auto &dummies{procedure.dummyArguments};
+  CHECK(dummies.size() == actuals.size());
+  int distance{0};
+  for (std::size_t i{0}; i < dummies.size(); ++i) {
+    const characteristics::DummyArgument &dummy{dummies[i]};
+    const std::optional<ActualArgument> &actual{actuals[i]};
+    int d{GetMatchingDistance(features, dummy, actual)};
+    if (d == cudaInfMatchingValue)
+      return d;
+    distance += d;
+  }
+  return distance;
+}
+
 // Handles a forward reference to a module function from what must
 // be a specification expression.  Return false if the symbol is
 // an invalid forward reference.
@@ -2539,6 +2673,7 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
   const Symbol *elemental{nullptr}; // matching elemental specific proc
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
   const Symbol &ultimate{symbol.GetUltimate()};
+  int crtMatchingDistance{cudaInfMatchingValue};
   // Check for a match with an explicit INTRINSIC
   if (ultimate.attrs().test(semantics::Attr::INTRINSIC)) {
     parser::Messages buffer;
@@ -2562,7 +2697,8 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
       }
       if (std::optional<characteristics::Procedure> procedure{
               characteristics::Procedure::Characterize(
-                  ProcedureDesignator{specific}, context_.foldingContext())}) {
+                  ProcedureDesignator{specific}, context_.foldingContext(),
+                  /*emitError=*/false)}) {
         ActualArguments localActuals{actuals};
         if (specific.has<semantics::ProcBindingDetails>()) {
           if (!adjustActuals.value()(specific, localActuals)) {
@@ -2574,12 +2710,23 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
             CheckCompatibleArguments(*procedure, localActuals)) {
           if ((procedure->IsElemental() && elemental) ||
               (!procedure->IsElemental() && nonElemental)) {
-            // 16.9.144(6): a bare NULL() is not allowed as an actual
-            // argument to a generic procedure if the specific procedure
-            // cannot be unambiguously distinguished
-            // Underspecified external procedure actual arguments can
-            // also lead to ambiguity.
-            return {nullptr, true /* due to ambiguity */};
+            int d{ComputeCudaMatchingDistance(
+                context_.languageFeatures(), *procedure, localActuals)};
+            llvm::errs() << "matching distance: " << d << "\n";
+            if (d != crtMatchingDistance) {
+              if (d > crtMatchingDistance) {
+                continue;
+              }
+              // Matching distance is smaller than the previously matched
+              // specific. Let it go thourgh so the current procedure is picked.
+            } else {
+              // 16.9.144(6): a bare NULL() is not allowed as an actual
+              // argument to a generic procedure if the specific procedure
+              // cannot be unambiguously distinguished
+              // Underspecified external procedure actual arguments can
+              // also lead to ambiguity.
+              return {nullptr, true /* due to ambiguity */};
+            }
           }
           if (!procedure->IsElemental()) {
             // takes priority over elemental match
@@ -2587,6 +2734,8 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
           } else {
             elemental = &specific;
           }
+          crtMatchingDistance = ComputeCudaMatchingDistance(
+              context_.languageFeatures(), *procedure, localActuals);
         }
       }
     }
@@ -2775,7 +2924,9 @@ void ExpressionAnalyzer::CheckBadExplicitType(
       if (const auto *typeAndShape{result->GetTypeAndShape()}) {
         if (auto declared{
                 typeAndShape->Characterize(intrinsic, GetFoldingContext())}) {
-          if (!declared->type().IsTkCompatibleWith(typeAndShape->type())) {
+          if (!declared->type().IsTkCompatibleWith(typeAndShape->type()) &&
+              context_.ShouldWarn(
+                  common::UsageWarning::IgnoredIntrinsicFunctionType)) {
             if (auto *msg{Say(
                     "The result type '%s' of the intrinsic function '%s' is not the explicit declared type '%s'"_warn_en_US,
                     typeAndShape->AsFortran(), intrinsic.name(),
@@ -2988,8 +3139,8 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
   for (const auto &arg : actualArgList) {
     analyzer.Analyze(arg, true /* is subroutine call */);
   }
-  auto chevrons{AnalyzeChevrons(callStmt)};
-  if (!analyzer.fatalErrors() && chevrons) {
+  if (auto chevrons{AnalyzeChevrons(callStmt)};
+      chevrons && !analyzer.fatalErrors()) {
     if (std::optional<CalleeAndArguments> callee{
             GetCalleeAndArguments(std::get<parser::ProcedureDesignator>(call.t),
                 analyzer.GetActuals(), true /* subroutine */)}) {
@@ -3148,7 +3299,9 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
           iter != implicitInterfaces_.end()) {
         std::string whyNot;
         if (!chars->IsCompatibleWith(iter->second.second,
-                /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
+                /*ignoreImplicitVsExplicit=*/false, &whyNot) &&
+            context_.ShouldWarn(
+                common::UsageWarning::IncompatibleImplicitInterfaces)) {
           if (auto *msg{Say(callSite,
                   "Reference to the procedure '%s' has an implicit interface that is distinct from another reference: %s"_warn_en_US,
                   name, whyNot)}) {
@@ -3164,7 +3317,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   }
   if (!chars) {
     chars = characteristics::Procedure::Characterize(
-        proc, context_.foldingContext());
+        proc, context_.foldingContext(), /*emitError=*/true);
   }
   bool ok{true};
   if (chars) {
@@ -3832,8 +3985,10 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
-    Say("%s(KIND=%jd) is not an enabled type for this target"_warn_en_US,
-        ToUpperCase(EnumToString(category)), kind);
+    if (context_.ShouldWarn(common::UsageWarning::BadTypeForTarget)) {
+      Say("%s(KIND=%jd) is not an enabled type for this target"_warn_en_US,
+          ToUpperCase(EnumToString(category)), kind);
+    }
     return true;
   } else {
     Say("%s(KIND=%jd) is not a supported type"_err_en_US,
@@ -3859,8 +4014,10 @@ bool ExpressionAnalyzer::CheckIntrinsicSize(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
-    Say("%s*%jd is not an enabled type for this target"_warn_en_US,
-        ToUpperCase(EnumToString(category)), size);
+    if (context_.ShouldWarn(common::UsageWarning::BadTypeForTarget)) {
+      Say("%s*%jd is not an enabled type for this target"_warn_en_US,
+          ToUpperCase(EnumToString(category)), size);
+    }
     return true;
   } else {
     Say("%s*%jd is not a supported type"_err_en_US,
@@ -4030,13 +4187,13 @@ void ArgumentAnalyzer::Analyze(
           },
           [&](const parser::AltReturnSpec &label) {
             if (!isSubroutine) {
-              context_.Say("alternate return specification may not appear on"
-                           " function reference"_err_en_US);
+              context_.Say(
+                  "alternate return specification may not appear on function reference"_err_en_US);
             }
             actual = ActualArgument(label.v);
           },
           [&](const parser::ActualArg::PercentRef &percentRef) {
-            actual = AnalyzeVariable(percentRef.v);
+            actual = AnalyzeExpr(percentRef.v);
             if (actual.has_value()) {
               actual->set_isPercentRef();
             }
@@ -4045,12 +4202,6 @@ void ArgumentAnalyzer::Analyze(
             actual = AnalyzeExpr(percentVal.v);
             if (actual.has_value()) {
               actual->set_isPercentVal();
-              std::optional<DynamicType> type{actual->GetType()};
-              if (!type || !type->IsLengthlessIntrinsicType() ||
-                  actual->Rank() != 0) {
-                context_.SayAt(percentVal.v,
-                    "%VAL argument must be a scalar numerical or logical expression"_err_en_US);
-              }
             }
           },
       },
@@ -4199,7 +4350,9 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     if (Symbol *symbol{scope.FindSymbol(oprName)}) {
       anyPossibilities = true;
       parser::Name name{symbol->name(), symbol};
-      result = context_.AnalyzeDefinedOp(name, GetActuals());
+      if (!fatalErrors_) {
+        result = context_.AnalyzeDefinedOp(name, GetActuals());
+      }
       if (result) {
         inaccessible = CheckAccessibleSymbol(scope, *symbol);
         if (inaccessible) {
@@ -4449,14 +4602,15 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
     context_.SayAt(expr.source,
         "TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
   } else if (MaybeExpr argExpr{AnalyzeExprOrWholeAssumedSizeArray(expr)}) {
-    if (isProcedureCall_ || !IsProcedure(*argExpr)) {
+    if (isProcedureCall_ || !IsProcedureDesignator(*argExpr)) {
       ActualArgument arg{std::move(*argExpr)};
       SetArgSourceLocation(arg, expr.source);
       return std::move(arg);
     }
     context_.SayAt(expr.source,
-        IsFunction(*argExpr) ? "Function call must have argument list"_err_en_US
-                             : "Subroutine name is not allowed here"_err_en_US);
+        IsFunctionDesignator(*argExpr)
+            ? "Function call must have argument list"_err_en_US
+            : "Subroutine name is not allowed here"_err_en_US);
   }
   return std::nullopt;
 }

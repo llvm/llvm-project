@@ -1038,6 +1038,10 @@ public:
   void Unparse(const LocalitySpec::LocalInit &x) {
     Word("LOCAL_INIT("), Walk(x.v, ", "), Put(')');
   }
+  void Unparse(const LocalitySpec::Reduce &x) {
+    Word("REDUCE("), Walk(std::get<parser::ReductionOperator>(x.t));
+    Walk(":", std::get<std::list<parser::Name>>(x.t), ",", ")");
+  }
   void Unparse(const LocalitySpec::Shared &x) {
     Word("SHARED("), Walk(x.v, ", "), Put(')');
   }
@@ -2018,7 +2022,7 @@ public:
   }
   void Unparse(const AccObjectList &x) { Walk(x.v, ","); }
   void Unparse(const AccObjectListWithReduction &x) {
-    Walk(std::get<AccReductionOperator>(x.t));
+    Walk(std::get<ReductionOperator>(x.t));
     Put(":");
     Walk(std::get<AccObjectList>(x.t));
   }
@@ -2090,6 +2094,8 @@ public:
     Walk(":", x.step);
   }
   void Unparse(const OmpReductionClause &x) {
+    Walk(std::get<std::optional<OmpReductionClause::ReductionModifier>>(x.t),
+        ",");
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
@@ -2192,11 +2198,23 @@ public:
     case llvm::omp::Directive::OMPD_do_simd:
       Word("DO SIMD ");
       break;
+    case llvm::omp::Directive::OMPD_masked_taskloop_simd:
+      Word("MASKED TASKLOOP SIMD");
+      break;
+    case llvm::omp::Directive::OMPD_masked_taskloop:
+      Word("MASKED TASKLOOP");
+      break;
     case llvm::omp::Directive::OMPD_parallel_do:
       Word("PARALLEL DO ");
       break;
     case llvm::omp::Directive::OMPD_parallel_do_simd:
       Word("PARALLEL DO SIMD ");
+      break;
+    case llvm::omp::Directive::OMPD_parallel_masked_taskloop_simd:
+      Word("PARALLEL MASKED TASKLOOP SIMD");
+      break;
+    case llvm::omp::Directive::OMPD_parallel_masked_taskloop:
+      Word("PARALLEL MASKED TASKLOOP");
       break;
     case llvm::omp::Directive::OMPD_simd:
       Word("SIMD ");
@@ -2281,11 +2299,17 @@ public:
   }
   void Unparse(const OmpBlockDirective &x) {
     switch (x.v) {
+    case llvm::omp::Directive::OMPD_masked:
+      Word("MASKED");
+      break;
     case llvm::omp::Directive::OMPD_master:
       Word("MASTER");
       break;
     case llvm::omp::Directive::OMPD_ordered:
       Word("ORDERED ");
+      break;
+    case llvm::omp::Directive::OMPD_parallel_masked:
+      Word("PARALLEL MASKED");
       break;
     case llvm::omp::Directive::OMPD_parallel_workshare:
       Word("PARALLEL WORKSHARE ");
@@ -2703,7 +2727,6 @@ public:
   void Unparse(const CLASS::ENUM &x) { Word(CLASS::EnumToString(x)); }
   WALK_NESTED_ENUM(AccDataModifier, Modifier)
   WALK_NESTED_ENUM(AccessSpec, Kind) // R807
-  WALK_NESTED_ENUM(AccReductionOperator, Operator)
   WALK_NESTED_ENUM(common, TypeParamAttr) // R734
   WALK_NESTED_ENUM(common, CUDADataAttr) // CUDA
   WALK_NESTED_ENUM(common, CUDASubprogramAttrs) // CUDA
@@ -2727,11 +2750,38 @@ public:
   WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
   WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
+  WALK_NESTED_ENUM(
+      OmpReductionClause, ReductionModifier) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
   WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
 #undef WALK_NESTED_ENUM
+  void Unparse(const ReductionOperator::Operator x) {
+    switch (x) {
+    case ReductionOperator::Operator::Plus:
+      Word("+");
+      break;
+    case ReductionOperator::Operator::Multiply:
+      Word("*");
+      break;
+    case ReductionOperator::Operator::And:
+      Word(".AND.");
+      break;
+    case ReductionOperator::Operator::Or:
+      Word(".OR.");
+      break;
+    case ReductionOperator::Operator::Eqv:
+      Word(".EQV.");
+      break;
+    case ReductionOperator::Operator::Neqv:
+      Word(".NEQV.");
+      break;
+    default:
+      Word(ReductionOperator::EnumToString(x));
+      break;
+    }
+  }
 
   void Unparse(const CUFKernelDoConstruct::StarOrExpr &x) {
     if (x.v) {
@@ -2764,12 +2814,18 @@ public:
     if (const auto &stream{std::get<3>(x.t)}) {
       Word(",STREAM="), Walk(*stream);
     }
-    Word(">>>\n");
+    Word(">>>");
+    Walk(" ", std::get<std::list<CUFReduction>>(x.t), " ");
+    Word("\n");
   }
-
   void Unparse(const CUFKernelDoConstruct &x) {
     Walk(std::get<CUFKernelDoConstruct::Directive>(x.t));
     Walk(std::get<std::optional<DoConstruct>>(x.t));
+  }
+  void Unparse(const CUFReduction &x) {
+    Word("REDUCE(");
+    Walk(std::get<CUFReduction::Operator>(x.t));
+    Walk(":", std::get<std::list<Scalar<Variable>>>(x.t), ",", ")");
   }
 
   void Done() const { CHECK(indent_ == 0); }

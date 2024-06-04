@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -target-feature +vector -emit-llvm \
 // RUN:    | FileCheck %s -check-prefix=VECIR
-// RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -target-feature +vector -emit-obj -S \
+// RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -target-feature +vector -S \
 // RUN:    | FileCheck %s -check-prefix=VECASM
 // RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -target-feature -vector -emit-llvm \
 // RUN:    | FileCheck %s -check-prefix=SCALIR
-// RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -target-feature -vector -emit-obj -S \
+// RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -target-feature -vector -S \
 // RUN:    | FileCheck %s -check-prefix=SCALASM
 // REQUIRES: systemz-registered-target
 

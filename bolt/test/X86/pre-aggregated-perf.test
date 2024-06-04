@@ -1,21 +1,28 @@
-# This script checks that perf2bolt is reading pre-aggregated perf information
-# correctly for a simple example. The perf.data of this example was generated
-# with the following command:
-#
-#  $ perf record -j any,u -e branch -o perf.data -- ./blarge
-#
-#  blarge is the binary for "basicmath large inputs" taken from Mibench.
+## This script checks that perf2bolt is reading pre-aggregated perf information
+## correctly for a simple example. The perf.data of this example was generated
+## with the following command:
+##
+##  $ perf record -j any,u -e branch -o perf.data -- ./blarge
+##
+##  blarge is the binary for "basicmath large inputs" taken from Mibench.
 
-# Currently failing in MacOS / generating different hash for usqrt
+## Currently failing in MacOS / generating different hash for usqrt
 REQUIRES: system-linux
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated.txt -w %t.new \
-RUN:   --profile-use-dfs
+RUN:   --profile-use-dfs | FileCheck %s
+
+RUN: llvm-bolt %t.exe -data %t -o %t.null | FileCheck %s
+RUN: llvm-bolt %t.exe -data %t.new -o %t.null | FileCheck %s
+RUN: llvm-bolt %t.exe -p %p/Inputs/pre-aggregated.txt --pa -o %t.null | FileCheck %s
+
+CHECK: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
+
 RUN: cat %t | sort | FileCheck %s -check-prefix=PERF2BOLT
 RUN: cat %t.new | FileCheck %s -check-prefix=NEWFORMAT
 
-# Test --profile-format option with perf2bolt
+## Test --profile-format option with perf2bolt
 RUN: perf2bolt %t.exe -o %t.fdata --pa -p %p/Inputs/pre-aggregated.txt \
 RUN:   --profile-format=fdata
 RUN: cat %t.fdata | sort | FileCheck %s -check-prefix=PERF2BOLT
@@ -24,7 +31,7 @@ RUN: perf2bolt %t.exe -o %t.yaml --pa -p %p/Inputs/pre-aggregated.txt \
 RUN:   --profile-format=yaml --profile-use-dfs
 RUN: cat %t.yaml | FileCheck %s -check-prefix=NEWFORMAT
 
-# Test --profile-format option with llvm-bolt --aggregate-only
+## Test --profile-format option with llvm-bolt --aggregate-only
 RUN: llvm-bolt %t.exe -o %t.bolt.fdata --pa -p %p/Inputs/pre-aggregated.txt \
 RUN:   --aggregate-only --profile-format=fdata
 RUN: cat %t.bolt.fdata | sort | FileCheck %s -check-prefix=PERF2BOLT

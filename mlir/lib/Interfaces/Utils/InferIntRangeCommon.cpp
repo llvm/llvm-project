@@ -76,7 +76,7 @@ static ConstantIntRanges minMaxBy(ConstArithFn op, ArrayRef<APInt> lhs,
 //===----------------------------------------------------------------------===//
 
 ConstantIntRanges
-mlir::intrange::inferIndexOp(InferRangeFn inferFn,
+mlir::intrange::inferIndexOp(const InferRangeFn &inferFn,
                              ArrayRef<ConstantIntRanges> argRanges,
                              intrange::CmpMode mode) {
   ConstantIntRanges sixtyFour = inferFn(argRanges);
@@ -178,18 +178,24 @@ ConstantIntRanges mlir::intrange::truncRange(const ConstantIntRanges &range,
 //===----------------------------------------------------------------------===//
 
 ConstantIntRanges
-mlir::intrange::inferAdd(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferAdd(ArrayRef<ConstantIntRanges> argRanges,
+                         OverflowFlags ovfFlags) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
-  ConstArithFn uadd = [](const APInt &a,
-                         const APInt &b) -> std::optional<APInt> {
+
+  std::function uadd = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
-    APInt result = a.uadd_ov(b, overflowed);
+    APInt result = any(ovfFlags & OverflowFlags::Nuw)
+                       ? a.uadd_sat(b)
+                       : a.uadd_ov(b, overflowed);
     return overflowed ? std::optional<APInt>() : result;
   };
-  ConstArithFn sadd = [](const APInt &a,
-                         const APInt &b) -> std::optional<APInt> {
+  std::function sadd = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
-    APInt result = a.sadd_ov(b, overflowed);
+    APInt result = any(ovfFlags & OverflowFlags::Nsw)
+                       ? a.sadd_sat(b)
+                       : a.sadd_ov(b, overflowed);
     return overflowed ? std::optional<APInt>() : result;
   };
 
@@ -205,19 +211,24 @@ mlir::intrange::inferAdd(ArrayRef<ConstantIntRanges> argRanges) {
 //===----------------------------------------------------------------------===//
 
 ConstantIntRanges
-mlir::intrange::inferSub(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferSub(ArrayRef<ConstantIntRanges> argRanges,
+                         OverflowFlags ovfFlags) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn usub = [](const APInt &a,
-                         const APInt &b) -> std::optional<APInt> {
+  std::function usub = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
-    APInt result = a.usub_ov(b, overflowed);
+    APInt result = any(ovfFlags & OverflowFlags::Nuw)
+                       ? a.usub_sat(b)
+                       : a.usub_ov(b, overflowed);
     return overflowed ? std::optional<APInt>() : result;
   };
-  ConstArithFn ssub = [](const APInt &a,
-                         const APInt &b) -> std::optional<APInt> {
+  std::function ssub = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
-    APInt result = a.ssub_ov(b, overflowed);
+    APInt result = any(ovfFlags & OverflowFlags::Nsw)
+                       ? a.ssub_sat(b)
+                       : a.ssub_ov(b, overflowed);
     return overflowed ? std::optional<APInt>() : result;
   };
   ConstantIntRanges urange = computeBoundsBy(
@@ -232,19 +243,24 @@ mlir::intrange::inferSub(ArrayRef<ConstantIntRanges> argRanges) {
 //===----------------------------------------------------------------------===//
 
 ConstantIntRanges
-mlir::intrange::inferMul(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferMul(ArrayRef<ConstantIntRanges> argRanges,
+                         OverflowFlags ovfFlags) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn umul = [](const APInt &a,
-                         const APInt &b) -> std::optional<APInt> {
+  std::function umul = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
-    APInt result = a.umul_ov(b, overflowed);
+    APInt result = any(ovfFlags & OverflowFlags::Nuw)
+                       ? a.umul_sat(b)
+                       : a.umul_ov(b, overflowed);
     return overflowed ? std::optional<APInt>() : result;
   };
-  ConstArithFn smul = [](const APInt &a,
-                         const APInt &b) -> std::optional<APInt> {
+  std::function smul = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
-    APInt result = a.smul_ov(b, overflowed);
+    APInt result = any(ovfFlags & OverflowFlags::Nsw)
+                       ? a.smul_sat(b)
+                       : a.smul_ov(b, overflowed);
     return overflowed ? std::optional<APInt>() : result;
   };
 
@@ -542,17 +558,35 @@ mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
 //===----------------------------------------------------------------------===//
 
 ConstantIntRanges
-mlir::intrange::inferShl(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferShl(ArrayRef<ConstantIntRanges> argRanges,
+                         OverflowFlags ovfFlags) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
-  ConstArithFn shl = [](const APInt &l,
-                        const APInt &r) -> std::optional<APInt> {
-    return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.shl(r);
+  const APInt &rhsUMin = rhs.umin(), &rhsUMax = rhs.umax();
+
+  // The signed/unsigned overflow behavior of shl by `rhs` matches a mul with
+  // 2^rhs.
+  std::function ushl = [=](const APInt &l,
+                           const APInt &r) -> std::optional<APInt> {
+    bool overflowed = false;
+    APInt result = any(ovfFlags & OverflowFlags::Nuw)
+                       ? l.ushl_sat(r)
+                       : l.ushl_ov(r, overflowed);
+    return overflowed ? std::optional<APInt>() : result;
   };
+  std::function sshl = [=](const APInt &l,
+                           const APInt &r) -> std::optional<APInt> {
+    bool overflowed = false;
+    APInt result = any(ovfFlags & OverflowFlags::Nsw)
+                       ? l.sshl_sat(r)
+                       : l.sshl_ov(r, overflowed);
+    return overflowed ? std::optional<APInt>() : result;
+  };
+
   ConstantIntRanges urange =
-      minMaxBy(shl, {lhs.umin(), lhs.umax()}, {rhs.umin(), rhs.umax()},
+      minMaxBy(ushl, {lhs.umin(), lhs.umax()}, {rhsUMin, rhsUMax},
                /*isSigned=*/false);
   ConstantIntRanges srange =
-      minMaxBy(shl, {lhs.smin(), lhs.smax()}, {rhs.umin(), rhs.umax()},
+      minMaxBy(sshl, {lhs.smin(), lhs.smax()}, {rhsUMin, rhsUMax},
                /*isSigned=*/true);
   return urange.intersection(srange);
 }

@@ -336,7 +336,7 @@ def GetPtrDerivedPop : Opcode {
 }
 
 // [Pointer] -> [Pointer]
-def GetPtrVirtBase : Opcode {
+def GetPtrVirtBasePop : Opcode {
   // RecordDecl of base class.
   let Args = [ArgRecordDecl];
 }
@@ -376,7 +376,11 @@ def ArrayElem : Opcode {
   let HasGroup = 1;
 }
 
-
+def CopyArray : Opcode {
+  let Args = [ArgUint32, ArgUint32, ArgUint32];
+  let Types = [AllTypeClass];
+  let HasGroup = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Direct field accessors
@@ -664,9 +668,18 @@ def CastFloatingIntegralAPS : Opcode {
 }
 
 def CastPointerIntegral : Opcode {
-  let Types = [AluTypeClass];
-  let Args = [];
+  let Types = [FixedSizeIntegralTypeClass];
   let HasGroup = 1;
+}
+def CastPointerIntegralAP : Opcode {
+  let Types = [];
+  let HasGroup = 0;
+  let Args = [ArgUint32];
+}
+def CastPointerIntegralAPS : Opcode {
+  let Types = [];
+  let HasGroup = 0;
+  let Args = [ArgUint32];
 }
 
 def DecayPtr : Opcode {
@@ -726,6 +739,8 @@ def InvalidCast : Opcode {
 def InvalidDeclRef : Opcode {
   let Args = [ArgDeclRef];
 }
+
+def Assume : Opcode;
 
 def ArrayDecay : Opcode;
 

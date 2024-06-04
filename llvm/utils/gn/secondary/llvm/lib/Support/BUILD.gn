@@ -6,7 +6,6 @@ static_library("Support") {
     "//llvm/include/llvm/Support:write_vcsrevision",
     "//llvm/lib/Demangle",
     "//llvm/utils/gn/build/libs/pthread",
-    "//llvm/utils/gn/build/libs/terminfo",
     "//llvm/utils/gn/build/libs/zlib",
     "//llvm/utils/gn/build/libs/zstd",
   ]
@@ -120,7 +119,7 @@ static_library("Support") {
     "PrettyStackTrace.cpp",
     "RISCVAttributeParser.cpp",
     "RISCVAttributes.cpp",
-    "RISCVISAInfo.cpp",
+    "RISCVISAUtils.cpp",
     "RWMutex.cpp",
     "RandomNumberGenerator.cpp",
     "Regex.cpp",

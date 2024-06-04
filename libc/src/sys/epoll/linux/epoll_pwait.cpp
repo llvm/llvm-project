@@ -8,6 +8,7 @@
 
 #include "src/sys/epoll/epoll_pwait.h"
 
+#include "hdr/signal_macros.h" // for NSIG
 #include "hdr/types/sigset_t.h"
 #include "hdr/types/struct_epoll_event.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
@@ -23,7 +24,7 @@ LLVM_LIBC_FUNCTION(int, epoll_pwait,
                     int timeout, const sigset_t *sigmask)) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(
       SYS_epoll_pwait, epfd, reinterpret_cast<long>(events), maxevents, timeout,
-      reinterpret_cast<long>(sigmask), sizeof(sigset_t));
+      reinterpret_cast<long>(sigmask), NSIG / 8);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
@@ -32,7 +33,7 @@ LLVM_LIBC_FUNCTION(int, epoll_pwait,
     return -1;
   }
 
-  return 0;
+  return ret;
 }
 
 } // namespace LIBC_NAMESPACE

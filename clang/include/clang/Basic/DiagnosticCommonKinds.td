@@ -234,6 +234,9 @@ def err_cxx23_size_t_suffix: Error<
 def err_size_t_literal_too_large: Error<
   "%select{signed |}0'size_t' literal is out of range of possible "
   "%select{signed |}0'size_t' values">;
+def ext_cxx_bitint_suffix : Extension<
+  "'_BitInt' suffix for literals is a Clang extension">,
+  InGroup<BitIntExtension>;
 def ext_c23_bitint_suffix : ExtWarn<
   "'_BitInt' suffix for literals is a C23 extension">,
   InGroup<C23>;
@@ -358,9 +361,6 @@ def warn_invalid_feature_combination : Warning<
 def warn_target_unrecognized_env : Warning<
   "mismatch between architecture and environment in target triple '%0'; did you mean '%1'?">,
   InGroup<InvalidCommandLineArgument>;
-def warn_knl_knm_isa_support_removed : Warning<
-  "KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.">,
-  InGroup<DiagGroup<"knl-knm-isa-support-removed">>;
 def err_target_unsupported_abi_with_fpu : Error<
   "'%0' ABI is not supported with FPU">;
 

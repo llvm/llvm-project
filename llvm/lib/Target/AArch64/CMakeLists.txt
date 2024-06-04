@@ -73,6 +73,7 @@ add_llvm_target(AArch64CodeGen
   AArch64MIPeepholeOpt.cpp
   AArch64MCInstLower.cpp
   AArch64PointerAuth.cpp
+  AArch64PostCoalescerPass.cpp
   AArch64PromoteConstant.cpp
   AArch64PBQPRegAlloc.cpp
   AArch64RegisterInfo.cpp

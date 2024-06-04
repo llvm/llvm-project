@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-delicm-max-ops=1000000 -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-delicm-max-ops=1000000 '-passes=print<polly-delicm>' -disable-output < %s | FileCheck %s
 ;
 ; This causes an assertion to fail on out-of-quota after 1000000 operations.
 ; (The error was specific to -polly-delicm-max-ops=1000000 and changes

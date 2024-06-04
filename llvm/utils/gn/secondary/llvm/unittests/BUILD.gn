@@ -53,6 +53,7 @@ group("unittests") {
     "TextAPI:TextAPITests",
     "Transforms/Coroutines:CoroTests",
     "Transforms/IPO:IPOTests",
+    "Transforms/Instrumentation:InstrumentationTests",
     "Transforms/Scalar:ScalarTests",
     "Transforms/Utils:UtilsTests",
     "Transforms/Vectorize:VectorizeTests",
@@ -77,7 +78,7 @@ group("unittests") {
   }
   if (llvm_build_AMDGPU) {
     deps += [
-      "MC/AMDGPU:AMDGPUDwarfTests",
+      "MC/AMDGPU:AMDGPUMCTests",
       "Target/AMDGPU:AMDGPUTests",
     ]
   }

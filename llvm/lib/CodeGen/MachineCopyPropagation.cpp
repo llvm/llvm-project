@@ -737,7 +737,7 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     // cannot cope with that.
     if (isCopyInstr(MI, *TII, UseCopyInstr) &&
         MI.modifiesRegister(CopySrcReg, TRI) &&
-        !MI.definesRegister(CopySrcReg)) {
+        !MI.definesRegister(CopySrcReg, /*TRI=*/nullptr)) {
       LLVM_DEBUG(dbgs() << "MCP: Copy source overlap with dest in " << MI);
       continue;
     }
@@ -972,8 +972,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 }
 
 static bool isBackwardPropagatableCopy(const DestSourcePair &CopyOperands,
-                                       const MachineRegisterInfo &MRI,
-                                       const TargetInstrInfo &TII) {
+                                       const MachineRegisterInfo &MRI) {
   Register Def = CopyOperands.Destination->getReg();
   Register Src = CopyOperands.Source->getReg();
 
@@ -1060,7 +1059,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
       if (!TRI->regsOverlap(DefReg, SrcReg)) {
         // Unlike forward cp, we don't invoke propagateDefs here,
         // just let forward cp do COPY-to-COPY propagation.
-        if (isBackwardPropagatableCopy(*CopyOperands, *MRI, *TII)) {
+        if (isBackwardPropagatableCopy(*CopyOperands, *MRI)) {
           Tracker.invalidateRegister(SrcReg.asMCReg(), *TRI, *TII,
                                      UseCopyInstr);
           Tracker.invalidateRegister(DefReg.asMCReg(), *TRI, *TII,

@@ -13,10 +13,13 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
@@ -438,7 +441,7 @@ void Instruction::dropPoisonGeneratingFlags() {
     break;
 
   case Instruction::GetElementPtr:
-    cast<GetElementPtrInst>(this)->setIsInBounds(false);
+    cast<GetElementPtrInst>(this)->setNoWrapFlags(GEPNoWrapFlags::none());
     break;
 
   case Instruction::UIToFP:
@@ -470,6 +473,27 @@ void Instruction::dropPoisonGeneratingMetadata() {
   eraseMetadata(LLVMContext::MD_range);
   eraseMetadata(LLVMContext::MD_nonnull);
   eraseMetadata(LLVMContext::MD_align);
+}
+
+bool Instruction::hasPoisonGeneratingReturnAttributes() const {
+  if (const auto *CB = dyn_cast<CallBase>(this)) {
+    AttributeSet RetAttrs = CB->getAttributes().getRetAttrs();
+    return RetAttrs.hasAttribute(Attribute::Range) ||
+           RetAttrs.hasAttribute(Attribute::Alignment) ||
+           RetAttrs.hasAttribute(Attribute::NonNull);
+  }
+  return false;
+}
+
+void Instruction::dropPoisonGeneratingReturnAttributes() {
+  if (auto *CB = dyn_cast<CallBase>(this)) {
+    AttributeMask AM;
+    AM.addAttribute(Attribute::Range);
+    AM.addAttribute(Attribute::Alignment);
+    AM.addAttribute(Attribute::NonNull);
+    CB->removeRetAttrs(AM);
+  }
+  assert(!hasPoisonGeneratingReturnAttributes() && "must be kept in sync");
 }
 
 void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
@@ -613,6 +637,13 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
     }
   }
 
+  if (auto *TI = dyn_cast<TruncInst>(V)) {
+    if (isa<TruncInst>(this)) {
+      setHasNoSignedWrap(TI->hasNoSignedWrap());
+      setHasNoUnsignedWrap(TI->hasNoUnsignedWrap());
+    }
+  }
+
   // Copy the exact flag.
   if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
     if (isa<PossiblyExactOperator>(this))
@@ -629,7 +660,8 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
 
   if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
-      DestGEP->setIsInBounds(SrcGEP->isInBounds() || DestGEP->isInBounds());
+      DestGEP->setNoWrapFlags(SrcGEP->getNoWrapFlags() |
+                              DestGEP->getNoWrapFlags());
 
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
     if (isa<PossiblyNonNegInst>(this))
@@ -669,7 +701,8 @@ void Instruction::andIRFlags(const Value *V) {
 
   if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
-      DestGEP->setIsInBounds(SrcGEP->isInBounds() && DestGEP->isInBounds());
+      DestGEP->setNoWrapFlags(SrcGEP->getNoWrapFlags() &
+                              DestGEP->getNoWrapFlags());
 
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
     if (isa<PossiblyNonNegInst>(this))

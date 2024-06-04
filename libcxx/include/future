@@ -1841,9 +1841,8 @@ inline _LIBCPP_HIDE_FROM_ABI bool __does_policy_contain(launch __policy, launch 
 }
 
 template <class _Fp, class... _Args>
-_LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
-    future<typename __invoke_of<__decay_t<_Fp>, __decay_t<_Args>...>::type>
-    async(launch __policy, _Fp&& __f, _Args&&... __args) {
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI future<typename __invoke_of<__decay_t<_Fp>, __decay_t<_Args>...>::type>
+async(launch __policy, _Fp&& __f, _Args&&... __args) {
   typedef __async_func<__decay_t<_Fp>, __decay_t<_Args>...> _BF;
   typedef typename _BF::_Rp _Rp;
 
@@ -1867,9 +1866,8 @@ _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
 }
 
 template <class _Fp, class... _Args>
-_LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_HIDE_FROM_ABI
-    future<typename __invoke_of<__decay_t<_Fp>, __decay_t<_Args>...>::type>
-    async(_Fp&& __f, _Args&&... __args) {
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI future<typename __invoke_of<__decay_t<_Fp>, __decay_t<_Args>...>::type>
+async(_Fp&& __f, _Args&&... __args) {
   return std::async(launch::any, std::forward<_Fp>(__f), std::forward<_Args>(__args)...);
 }
 

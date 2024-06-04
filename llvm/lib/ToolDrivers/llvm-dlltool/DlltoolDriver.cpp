@@ -227,7 +227,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
 
   if (Machine == IMAGE_FILE_MACHINE_I386 && Args.hasArg(OPT_k)) {
     for (COFFShortExport &E : Exports) {
-      if (!E.AliasTarget.empty() || (!E.Name.empty() && E.Name[0] == '?'))
+      if (!E.ImportName.empty() || (!E.Name.empty() && E.Name[0] == '?'))
         continue;
       E.SymbolName = E.Name;
       // Trim off the trailing decoration. Symbols will always have a

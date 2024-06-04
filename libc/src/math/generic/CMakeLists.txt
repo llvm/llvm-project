@@ -83,6 +83,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ceilf16
+  SRCS
+    ceilf16.cpp
+  HDRS
+    ../ceilf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
   ceilf128
   SRCS
     ceilf128.cpp
@@ -242,6 +255,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fabsf16
+  SRCS
+    fabsf16.cpp
+  HDRS
+    ../fabsf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fabsf128
   SRCS
     fabsf128.cpp
@@ -287,6 +313,19 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  truncf16
+  SRCS
+    truncf16.cpp
+  HDRS
+    ../truncf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -340,6 +379,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  floorf16
+  SRCS
+    floorf16.cpp
+  HDRS
+    ../floorf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
   floorf128
   SRCS
     floorf128.cpp
@@ -389,6 +441,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  roundf16
+  SRCS
+    roundf16.cpp
+  HDRS
+    ../roundf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
   roundf128
   SRCS
     roundf128.cpp
@@ -434,6 +499,19 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  roundevenf16
+  SRCS
+    roundevenf16.cpp
+  HDRS
+    ../roundevenf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -704,7 +782,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -716,7 +794,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -728,7 +806,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+)
+
+add_entrypoint_object(
+  nearbyintf128
+  SRCS
+    nearbyintf128.cpp
+  HDRS
+    ../nearbyintf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_object_library(
@@ -2920,6 +3011,7 @@ add_entrypoint_object(
   HDRS
     ../scalbn.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -2932,6 +3024,7 @@ add_entrypoint_object(
   HDRS
     ../scalbnf.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -2944,6 +3037,21 @@ add_entrypoint_object(
   HDRS
     ../scalbnl.h
   DEPENDS
+    libc.hdr.float_macros
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  scalbnf128
+  SRCS
+    scalbnf128.cpp
+  HDRS
+    ../scalbnf128.h
+  DEPENDS
+    libc.hdr.float_macros
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3

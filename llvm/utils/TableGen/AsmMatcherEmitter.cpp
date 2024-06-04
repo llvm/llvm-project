@@ -3121,7 +3121,7 @@ static void emitMnemonicSpellChecker(raw_ostream &OS, CodeGenTarget &Target,
     OS << "\n";
     OS << "    StringRef T = I->getMnemonic();\n";
     OS << "    // Avoid recomputing the edit distance for the same string.\n";
-    OS << "    if (T.equals(Prev))\n";
+    OS << "    if (T == Prev)\n";
     OS << "      continue;\n";
     OS << "\n";
     OS << "    Prev = T;\n";
@@ -3472,9 +3472,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     }
     return false;
   });
-  FeatureBitsets.erase(
-      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
-      FeatureBitsets.end());
+  FeatureBitsets.erase(llvm::unique(FeatureBitsets), FeatureBitsets.end());
   OS << "// Feature bitsets.\n"
      << "enum : " << getMinimalTypeForRange(FeatureBitsets.size()) << " {\n"
      << "  AMFBS_None,\n";

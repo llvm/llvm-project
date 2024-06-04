@@ -25,13 +25,11 @@ class RISCVDAGToDAGISel : public SelectionDAGISel {
   const RISCVSubtarget *Subtarget = nullptr;
 
 public:
-  static char ID;
-
   RISCVDAGToDAGISel() = delete;
 
   explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine,
                              CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, TargetMachine, OptLevel) {}
+      : SelectionDAGISel(TargetMachine, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<RISCVSubtarget>();
@@ -121,6 +119,7 @@ public:
 
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
                        const unsigned Depth = 0) const;
+  bool hasAllBUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 8); }
   bool hasAllHUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 16); }
   bool hasAllWUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 32); }
 
@@ -195,6 +194,13 @@ private:
   bool performCombineVMergeAndVOps(SDNode *N);
 };
 
+class RISCVDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit RISCVDAGToDAGISelLegacy(RISCVTargetMachine &TargetMachine,
+                                   CodeGenOptLevel OptLevel);
+};
+
 namespace RISCV {
 struct VLSEGPseudo {
   uint16_t NF : 4;
@@ -261,13 +267,6 @@ struct VLX_VSXPseudo {
   uint16_t Pseudo;
 };
 
-struct RISCVMaskedPseudoInfo {
-  uint16_t MaskedPseudo;
-  uint16_t UnmaskedPseudo;
-  uint8_t MaskOpIdx;
-  uint8_t MaskAffectsResult : 1;
-};
-
 #define GET_RISCVVSSEGTable_DECL
 #define GET_RISCVVLSEGTable_DECL
 #define GET_RISCVVLXSEGTable_DECL
@@ -276,8 +275,6 @@ struct RISCVMaskedPseudoInfo {
 #define GET_RISCVVSETable_DECL
 #define GET_RISCVVLXTable_DECL
 #define GET_RISCVVSXTable_DECL
-#define GET_RISCVMaskedPseudosTable_DECL
-#include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 
 } // namespace llvm

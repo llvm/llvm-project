@@ -1444,7 +1444,8 @@ struct PragmaWarningHandler : public PragmaHandler {
                                  .Case("once", PPCallbacks::PWS_Once)
                                  .Case("suppress", PPCallbacks::PWS_Suppress)
                                  .Default(-1);
-          if ((SpecifierValid = SpecifierInt != -1))
+          SpecifierValid = SpecifierInt != -1;
+          if (SpecifierValid)
             Specifier =
                 static_cast<PPCallbacks::PragmaWarningSpecifier>(SpecifierInt);
 

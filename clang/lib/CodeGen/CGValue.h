@@ -367,10 +367,7 @@ public:
     return Addr.isValid() ? Addr.emitRawPointer(CGF) : nullptr;
   }
 
-  Address getAddress(CodeGenFunction &CGF) const {
-    // FIXME: remove parameter.
-    return Addr;
-  }
+  Address getAddress() const { return Addr; }
 
   void setAddress(Address address) { Addr = address; }
 
@@ -503,8 +500,8 @@ public:
     return R;
   }
 
-  RValue asAggregateRValue(CodeGenFunction &CGF) const {
-    return RValue::getAggregate(getAddress(CGF), isVolatileQualified());
+  RValue asAggregateRValue() const {
+    return RValue::getAggregate(getAddress(), isVolatileQualified());
   }
 };
 
@@ -607,11 +604,11 @@ public:
   }
 
   static AggValueSlot
-  forLValue(const LValue &LV, CodeGenFunction &CGF, IsDestructed_t isDestructed,
+  forLValue(const LValue &LV, IsDestructed_t isDestructed,
             NeedsGCBarriers_t needsGC, IsAliased_t isAliased,
             Overlap_t mayOverlap, IsZeroed_t isZeroed = IsNotZeroed,
             IsSanitizerChecked_t isChecked = IsNotSanitizerChecked) {
-    return forAddr(LV.getAddress(CGF), LV.getQuals(), isDestructed, needsGC,
+    return forAddr(LV.getAddress(), LV.getQuals(), isDestructed, needsGC,
                    isAliased, mayOverlap, isZeroed, isChecked);
   }
 

@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX1100 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX1150 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx11-generic --amdhsa-code-object-version=6 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX1100 %s
 
 ; On GFX11, ensure vdst and src2 do not partially overlap. Full overlap is ok.
 

@@ -126,13 +126,13 @@ define <2 x i64> @zext_negate_vec(<2 x i1> %A) {
   ret <2 x i64> %sub
 }
 
-define <2 x i64> @zext_negate_vec_undef_elt(<2 x i1> %A) {
-; CHECK-LABEL: @zext_negate_vec_undef_elt(
+define <2 x i64> @zext_negate_vec_poison_elt(<2 x i1> %A) {
+; CHECK-LABEL: @zext_negate_vec_poison_elt(
 ; CHECK-NEXT:    [[EXT_NEG:%.*]] = sext <2 x i1> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[EXT_NEG]]
 ;
   %ext = zext <2 x i1> %A to <2 x i64>
-  %sub = sub <2 x i64> <i64 0, i64 undef>, %ext
+  %sub = sub <2 x i64> <i64 0, i64 poison>, %ext
   ret <2 x i64> %sub
 }
 
@@ -169,13 +169,13 @@ define <2 x i64> @zext_sub_const_vec(<2 x i1> %A) {
   ret <2 x i64> %sub
 }
 
-define <2 x i64> @zext_sub_const_vec_undef_elt(<2 x i1> %A) {
-; CHECK-LABEL: @zext_sub_const_vec_undef_elt(
-; CHECK-NEXT:    [[SUB:%.*]] = select <2 x i1> [[A:%.*]], <2 x i64> <i64 41, i64 undef>, <2 x i64> <i64 42, i64 undef>
+define <2 x i64> @zext_sub_const_vec_poison_elt(<2 x i1> %A) {
+; CHECK-LABEL: @zext_sub_const_vec_poison_elt(
+; CHECK-NEXT:    [[SUB:%.*]] = select <2 x i1> [[A:%.*]], <2 x i64> <i64 41, i64 poison>, <2 x i64> <i64 42, i64 poison>
 ; CHECK-NEXT:    ret <2 x i64> [[SUB]]
 ;
   %ext = zext <2 x i1> %A to <2 x i64>
-  %sub = sub <2 x i64> <i64 42, i64 undef>, %ext
+  %sub = sub <2 x i64> <i64 42, i64 poison>, %ext
   ret <2 x i64> %sub
 }
 
@@ -212,13 +212,13 @@ define <2 x i64> @sext_negate_vec(<2 x i1> %A) {
   ret <2 x i64> %sub
 }
 
-define <2 x i64> @sext_negate_vec_undef_elt(<2 x i1> %A) {
-; CHECK-LABEL: @sext_negate_vec_undef_elt(
+define <2 x i64> @sext_negate_vec_poison_elt(<2 x i1> %A) {
+; CHECK-LABEL: @sext_negate_vec_poison_elt(
 ; CHECK-NEXT:    [[EXT_NEG:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[EXT_NEG]]
 ;
   %ext = sext <2 x i1> %A to <2 x i64>
-  %sub = sub <2 x i64> <i64 0, i64 undef>, %ext
+  %sub = sub <2 x i64> <i64 0, i64 poison>, %ext
   ret <2 x i64> %sub
 }
 
@@ -255,13 +255,13 @@ define <2 x i64> @sext_sub_const_vec(<2 x i1> %A) {
   ret <2 x i64> %sub
 }
 
-define <2 x i64> @sext_sub_const_vec_undef_elt(<2 x i1> %A) {
-; CHECK-LABEL: @sext_sub_const_vec_undef_elt(
-; CHECK-NEXT:    [[SUB:%.*]] = select <2 x i1> [[A:%.*]], <2 x i64> <i64 undef, i64 43>, <2 x i64> <i64 undef, i64 42>
+define <2 x i64> @sext_sub_const_vec_poison_elt(<2 x i1> %A) {
+; CHECK-LABEL: @sext_sub_const_vec_poison_elt(
+; CHECK-NEXT:    [[SUB:%.*]] = select <2 x i1> [[A:%.*]], <2 x i64> <i64 poison, i64 43>, <2 x i64> <i64 poison, i64 42>
 ; CHECK-NEXT:    ret <2 x i64> [[SUB]]
 ;
   %ext = sext <2 x i1> %A to <2 x i64>
-  %sub = sub <2 x i64> <i64 undef, i64 42>, %ext
+  %sub = sub <2 x i64> <i64 poison, i64 42>, %ext
   ret <2 x i64> %sub
 }
 

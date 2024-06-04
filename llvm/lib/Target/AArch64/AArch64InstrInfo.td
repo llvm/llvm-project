@@ -10,9 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 //===----------------------------------------------------------------------===//
 // ARM Instruction Predicate Definitions.
 //
+
+class AssemblerPredicateWithAll<dag cond, string name="">
+    : AssemblerPredicate<(any_of FeatureAll, cond), name>;
+
 def HasV8_0a         : Predicate<"Subtarget->hasV8_0aOps()">,
                                  AssemblerPredicate<(all_of HasV8_0aOps), "armv8.0a">;
 def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
@@ -166,8 +171,6 @@ def HasSME2          : Predicate<"Subtarget->hasSME2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2), "sme2">;
 def HasSME2p1        : Predicate<"Subtarget->hasSME2p1()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p1), "sme2p1">;
-def HasFPMR          : Predicate<"Subtarget->hasFPMR()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureFPMR), "fpmr">;
 def HasFP8           : Predicate<"Subtarget->hasFP8()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP8), "fp8">;
 def HasFAMINMAX      : Predicate<"Subtarget->hasFAMINMAX()">,
@@ -225,6 +228,12 @@ def HasSVE2p1_or_HasSME2
 def HasSVE2p1_or_HasSME2p1
     : Predicate<"Subtarget->hasSVE2p1() || Subtarget->hasSME2p1()">,
                  AssemblerPredicateWithAll<(any_of FeatureSME2p1, FeatureSVE2p1), "sme2p1 or sve2p1">;
+
+def HasSMEF16F16orSMEF8F16
+    : Predicate<"Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16()">,
+                AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
+                "sme-f16f16 or sme-f8f16">;
+
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasNEONorSME
@@ -309,6 +318,8 @@ def UseNegativeImmediates
                                              "NegativeImmediates">;
 
 def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
+
+def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
 
@@ -649,6 +660,30 @@ def AArch64call_arm64ec_to_x64 : SDNode<"AArch64ISD::CALL_ARM64EC_TO_X64",
                                       [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                        SDNPVariadic]>;
 
+def AArch64authcall : SDNode<"AArch64ISD::AUTH_CALL",
+                             SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
+                                                   SDTCisVT<1, i32>,
+                                                   SDTCisVT<2, i64>,
+                                                   SDTCisVT<3, i64>]>,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                              SDNPVariadic]>;
+
+def AArch64authtcret: SDNode<"AArch64ISD::AUTH_TC_RETURN",
+                             SDTypeProfile<0, 5, [SDTCisPtrTy<0>,
+                                                  SDTCisVT<2, i32>,
+                                                  SDTCisVT<3, i64>,
+                                                  SDTCisVT<4, i64>]>,
+                             [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
+
+def AArch64authcall_rvmarker : SDNode<"AArch64ISD::AUTH_CALL_RVMARKER",
+                                 SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
+                                                       SDTCisPtrTy<1>,
+                                                       SDTCisVT<2, i32>,
+                                                       SDTCisVT<3, i64>,
+                                                       SDTCisVT<4, i64>]>,
+                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                  SDNPVariadic]>;
+
 def AArch64brcond        : SDNode<"AArch64ISD::BRCOND", SDT_AArch64Brcond,
                                 [SDNPHasChain]>;
 def AArch64cbz           : SDNode<"AArch64ISD::CBZ", SDT_AArch64cbz,
@@ -722,6 +757,12 @@ def AArch64rev64 : SDNode<"AArch64ISD::REV64", SDT_AArch64UnaryVec>;
 def AArch64ext : SDNode<"AArch64ISD::EXT", SDT_AArch64ExtVec>;
 
 def AArch64vashr : SDNode<"AArch64ISD::VASHR", SDT_AArch64vshift>;
+
+def AArch64vashr_exact : PatFrag<(ops          node:$lhs, node:$rhs),
+                                 (AArch64vashr node:$lhs, node:$rhs), [{
+  return N->getFlags().hasExact();
+}]>;
+
 def AArch64vlshr : SDNode<"AArch64ISD::VLSHR", SDT_AArch64vshift>;
 def AArch64vshl : SDNode<"AArch64ISD::VSHL", SDT_AArch64vshift>;
 def AArch64sqshli : SDNode<"AArch64ISD::SQSHL_I", SDT_AArch64vshift>;
@@ -1679,6 +1720,38 @@ let Predicates = [HasPAuth] in {
     def BLRABZ  : AuthOneOperand<0b001, 1, "blrabz">;
   }
 
+  // BLRA pseudo, a generalized version of BLRAA/BLRAB/Z.
+  // This directly manipulates x16/x17 to materialize the discriminator.
+  // x16/x17 are generally used as the safe registers for sensitive ptrauth
+  // operations (such as raw address manipulation or discriminator
+  // materialization here), in part because they're handled in a safer way by
+  // the kernel, notably on Darwin.
+  def BLRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
+                                 GPR64noip:$AddrDisc),
+                    [(AArch64authcall GPR64noip:$Rn, timm:$Key, timm:$Disc,
+                                      GPR64noip:$AddrDisc)]>, Sched<[]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let isCall = 1;
+    let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
+    let Defs = [X17,LR];
+    let Uses = [SP];
+  }
+
+  def BLRA_RVMARKER : Pseudo<
+        (outs), (ins i64imm:$rvfunc, GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
+                     GPR64noip:$AddrDisc),
+        [(AArch64authcall_rvmarker tglobaladdr:$rvfunc,
+                                   GPR64noip:$Rn, timm:$Key, timm:$Disc,
+                                   GPR64noip:$AddrDisc)]>, Sched<[]> {
+    let isCodeGenOnly = 1;
+    let isCall = 1;
+    let Defs = [X17,LR];
+    let Uses = [SP];
+  }
+
   let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
     def RETAA   : AuthReturn<0b010, 0, "retaa">;
     def RETAB   : AuthReturn<0b010, 1, "retab">;
@@ -1688,6 +1761,32 @@ let Predicates = [HasPAuth] in {
 
   defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
+
+  // Size 16: 4 fixed + 8 variable, to compute discriminator.
+  let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Size = 16,
+      Uses = [SP] in {
+    def AUTH_TCRETURN
+      : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff, i32imm:$Key,
+                            i64imm:$Disc, tcGPR64:$AddrDisc),
+               []>, Sched<[WriteBrReg]>;
+    def AUTH_TCRETURN_BTI
+      : Pseudo<(outs), (ins tcGPRx16x17:$dst, i32imm:$FPDiff, i32imm:$Key,
+                            i64imm:$Disc, tcGPR64:$AddrDisc),
+               []>, Sched<[WriteBrReg]>;
+  }
+
+  let Predicates = [TailCallAny] in
+    def : Pat<(AArch64authtcret tcGPR64:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
+                                (i64 timm:$Disc), tcGPR64:$AddrDisc),
+              (AUTH_TCRETURN tcGPR64:$dst, imm:$FPDiff, imm:$Key, imm:$Disc,
+                             tcGPR64:$AddrDisc)>;
+
+  let Predicates = [TailCallX16X17] in
+    def : Pat<(AArch64authtcret tcGPRx16x17:$dst, (i32 timm:$FPDiff),
+                                (i32 timm:$Key), (i64 timm:$Disc),
+                                tcGPR64:$AddrDisc),
+              (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
+                                 imm:$Disc, tcGPR64:$AddrDisc)>;
 
 }
 
@@ -1815,6 +1914,20 @@ let Uses = [ X20 ], Defs = [ X16, X17, LR, NZCV ] in {
 def HWASAN_CHECK_MEMACCESS_SHORTGRANULES : Pseudo<
   (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo),
   [(int_hwasan_check_memaccess_shortgranules X20, GPR64noip:$ptr, (i32 timm:$accessinfo))]>,
+  Sched<[]>;
+}
+
+let Defs = [ X16, X17, LR, NZCV ] in {
+def HWASAN_CHECK_MEMACCESS_FIXEDSHADOW : Pseudo<
+  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo, i64imm:$fixed_shadow),
+  [(int_hwasan_check_memaccess_fixedshadow GPR64noip:$ptr, (i32 timm:$accessinfo), (i64 timm:$fixed_shadow))]>,
+  Sched<[]>;
+}
+
+let Defs = [ X16, X17, LR, NZCV ] in {
+def HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW : Pseudo<
+  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo, i64imm:$fixed_shadow),
+  [(int_hwasan_check_memaccess_shortgranules_fixedshadow GPR64noip:$ptr, (i32 timm:$accessinfo), (i64 timm:$fixed_shadow))]>,
   Sched<[]>;
 }
 
@@ -4954,18 +5067,8 @@ defm UABDL   : SIMDLongThreeVectorBHSabdl<1, 0b0111, "uabdl",
 def : Pat<(abs (v8i16 (sub (zext (v8i8 V64:$opA)),
                            (zext (v8i8 V64:$opB))))),
           (UABDLv8i8_v8i16 V64:$opA, V64:$opB)>;
-def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
-               (v8i16 (add (sub (zext (v8i8 V64:$opA)),
-                                (zext (v8i8 V64:$opB))),
-                           (AArch64vashr v8i16:$src, (i32 15))))),
-          (UABDLv8i8_v8i16 V64:$opA, V64:$opB)>;
 def : Pat<(abs (v8i16 (sub (zext (extract_high_v16i8 (v16i8 V128:$opA))),
                            (zext (extract_high_v16i8 (v16i8 V128:$opB)))))),
-          (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
-def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
-               (v8i16 (add (sub (zext (extract_high_v16i8 (v16i8 V128:$opA))),
-                                (zext (extract_high_v16i8 (v16i8 V128:$opB)))),
-                           (AArch64vashr v8i16:$src, (i32 15))))),
           (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
 def : Pat<(abs (v4i32 (sub (zext (v4i16 V64:$opA)),
                            (zext (v4i16 V64:$opB))))),
@@ -5385,6 +5488,98 @@ def : Pat<(AArch64bsp (v4i32 V128:$Rd), V128:$Rn, V128:$Rm),
           (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
 def : Pat<(AArch64bsp (v2i64 V128:$Rd), V128:$Rn, V128:$Rm),
           (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
+
+// The following SetCC patterns are used for GlobalISel only
+multiclass SelectSetCC<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag (v8i8 V64:$Rn), (v8i8 V64:$Rm))),
+            (v8i8 (!cast<Instruction>(INST # v8i8) (v8i8 V64:$Rn), (v8i8 V64:$Rm)))>;
+  def : Pat<(v16i8 (InFrag (v16i8 V128:$Rn), (v16i8 V128:$Rm))),
+            (v16i8 (!cast<Instruction>(INST # v16i8) (v16i8 V128:$Rn), (v16i8 V128:$Rm)))>;
+  def : Pat<(v4i16 (InFrag (v4i16 V64:$Rn), (v4i16 V64:$Rm))),
+            (v4i16 (!cast<Instruction>(INST # v4i16) (v4i16 V64:$Rn), (v4i16 V64:$Rm)))>;
+  def : Pat<(v8i16 (InFrag (v8i16 V128:$Rn), (v8i16 V128:$Rm))),
+            (v8i16 (!cast<Instruction>(INST # v8i16) (v8i16 V128:$Rn), (v8i16 V128:$Rm)))>;
+  def : Pat<(v2i32 (InFrag (v2i32 V64:$Rn), (v2i32 V64:$Rm))),
+            (v2i32 (!cast<Instruction>(INST # v2i32) (v2i32 V64:$Rn), (v2i32 V64:$Rm)))>;
+  def : Pat<(v4i32 (InFrag (v4i32 V128:$Rn), (v4i32 V128:$Rm))),
+            (v4i32 (!cast<Instruction>(INST # v4i32) (v4i32 V128:$Rn), (v4i32 V128:$Rm)))>;
+  def : Pat<(v2i64 (InFrag (v2i64 V128:$Rn), (v2i64 V128:$Rm))),
+            (v2i64 (!cast<Instruction>(INST # v2i64) (v2i64 V128:$Rn), (v2i64 V128:$Rm)))>;
+}
+
+defm : SelectSetCC<seteq, "CMEQ">;
+defm : SelectSetCC<setgt, "CMGT">;
+defm : SelectSetCC<setge, "CMGE">;
+defm : SelectSetCC<setugt, "CMHI">;
+defm : SelectSetCC<setuge, "CMHS">;
+
+multiclass SelectSetCCSwapOperands<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag (v8i8 V64:$Rn), (v8i8 V64:$Rm))),
+            (v8i8 (!cast<Instruction>(INST # v8i8) (v8i8 V64:$Rm), (v8i8 V64:$Rn)))>;
+  def : Pat<(v16i8 (InFrag (v16i8 V128:$Rn), (v16i8 V128:$Rm))),
+            (v16i8 (!cast<Instruction>(INST # v16i8) (v16i8 V128:$Rm), (v16i8 V128:$Rn)))>;
+  def : Pat<(v4i16 (InFrag (v4i16 V64:$Rn), (v4i16 V64:$Rm))),
+            (v4i16 (!cast<Instruction>(INST # v4i16) (v4i16 V64:$Rm), (v4i16 V64:$Rn)))>;
+  def : Pat<(v8i16 (InFrag (v8i16 V128:$Rn), (v8i16 V128:$Rm))),
+            (v8i16 (!cast<Instruction>(INST # v8i16) (v8i16 V128:$Rm), (v8i16 V128:$Rn)))>;
+  def : Pat<(v2i32 (InFrag (v2i32 V64:$Rn), (v2i32 V64:$Rm))),
+            (v2i32 (!cast<Instruction>(INST # v2i32) (v2i32 V64:$Rm), (v2i32 V64:$Rn)))>;
+  def : Pat<(v4i32 (InFrag (v4i32 V128:$Rn), (v4i32 V128:$Rm))),
+            (v4i32 (!cast<Instruction>(INST # v4i32) (v4i32 V128:$Rm), (v4i32 V128:$Rn)))>;
+  def : Pat<(v2i64 (InFrag (v2i64 V128:$Rn), (v2i64 V128:$Rm))),
+            (v2i64 (!cast<Instruction>(INST # v2i64) (v2i64 V128:$Rm), (v2i64 V128:$Rn)))>;
+}
+
+defm : SelectSetCCSwapOperands<setlt, "CMGT">;
+defm : SelectSetCCSwapOperands<setle, "CMGE">;
+defm : SelectSetCCSwapOperands<setult, "CMHI">;
+defm : SelectSetCCSwapOperands<setule, "CMHS">;
+
+multiclass SelectSetCCZeroRHS<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag (v8i8 V64:$Rn), immAllZerosV)),
+            (v8i8 (!cast<Instruction>(INST # v8i8rz) (v8i8 V64:$Rn)))>;
+  def : Pat<(v16i8 (InFrag (v16i8 V128:$Rn), immAllZerosV)),
+            (v16i8 (!cast<Instruction>(INST # v16i8rz) (v16i8 V128:$Rn)))>;
+  def : Pat<(v4i16 (InFrag (v4i16 V64:$Rn), immAllZerosV)),
+            (v4i16 (!cast<Instruction>(INST # v4i16rz) (v4i16 V64:$Rn)))>;
+  def : Pat<(v8i16 (InFrag (v8i16 V128:$Rn), immAllZerosV)),
+            (v8i16 (!cast<Instruction>(INST # v8i16rz) (v8i16 V128:$Rn)))>;
+  def : Pat<(v2i32 (InFrag (v2i32 V64:$Rn), immAllZerosV)),
+            (v2i32 (!cast<Instruction>(INST # v2i32rz) (v2i32 V64:$Rn)))>;
+  def : Pat<(v4i32 (InFrag (v4i32 V128:$Rn), immAllZerosV)),
+            (v4i32 (!cast<Instruction>(INST # v4i32rz) (v4i32 V128:$Rn)))>;
+  def : Pat<(v2i64 (InFrag (v2i64 V128:$Rn), immAllZerosV)),
+            (v2i64 (!cast<Instruction>(INST # v2i64rz) (v2i64 V128:$Rn)))>;
+}
+
+defm : SelectSetCCZeroRHS<seteq, "CMEQ">;
+defm : SelectSetCCZeroRHS<setgt, "CMGT">;
+defm : SelectSetCCZeroRHS<setge, "CMGE">;
+defm : SelectSetCCZeroRHS<setlt, "CMLT">;
+defm : SelectSetCCZeroRHS<setle, "CMLE">;
+
+multiclass SelectSetCCZeroLHS<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag immAllZerosV, (v8i8 V64:$Rn))),
+            (v8i8 (!cast<Instruction>(INST # v8i8rz) (v8i8 V64:$Rn)))>;
+  def : Pat<(v16i8 (InFrag immAllZerosV, (v16i8 V128:$Rn))),
+            (v16i8 (!cast<Instruction>(INST # v16i8rz) (v16i8 V128:$Rn)))>;
+  def : Pat<(v4i16 (InFrag immAllZerosV, (v4i16 V64:$Rn))),
+            (v4i16 (!cast<Instruction>(INST # v4i16rz) (v4i16 V64:$Rn)))>;
+  def : Pat<(v8i16 (InFrag immAllZerosV, (v8i16 V128:$Rn))),
+            (v8i16 (!cast<Instruction>(INST # v8i16rz) (v8i16 V128:$Rn)))>;
+  def : Pat<(v2i32 (InFrag immAllZerosV, (v2i32 V64:$Rn))),
+            (v2i32 (!cast<Instruction>(INST # v2i32rz) (v2i32 V64:$Rn)))>;
+  def : Pat<(v4i32 (InFrag immAllZerosV, (v4i32 V128:$Rn))),
+            (v4i32 (!cast<Instruction>(INST # v4i32rz) (v4i32 V128:$Rn)))>;
+  def : Pat<(v2i64 (InFrag immAllZerosV, (v2i64 V128:$Rn))),
+            (v2i64 (!cast<Instruction>(INST # v2i64rz) (v2i64 V128:$Rn)))>;
+}
+
+defm : SelectSetCCZeroLHS<seteq, "CMEQ">;
+defm : SelectSetCCZeroLHS<setgt, "CMLT">;
+defm : SelectSetCCZeroLHS<setge, "CMLE">;
+defm : SelectSetCCZeroLHS<setlt, "CMGT">;
+defm : SelectSetCCZeroLHS<setle, "CMGE">;
 
 let Predicates = [HasNEON] in {
 def : InstAlias<"mov{\t$dst.16b, $src.16b|.16b\t$dst, $src}",
@@ -7603,6 +7798,25 @@ defm SCVTF: SIMDVectorRShiftToFP<0, 0b11100, "scvtf",
 defm RSHRN   : SIMDVectorRShiftNarrowBHS<0, 0b10001, "rshrn", AArch64rshrn>;
 defm SHL     : SIMDVectorLShiftBHSD<0, 0b01010, "shl", AArch64vshl>;
 
+let Predicates = [HasNEON] in {
+def : Pat<(v2f32 (sint_to_fp (v2i32 (AArch64vashr_exact v2i32:$Vn, i32:$shift)))),
+          (SCVTFv2i32_shift $Vn, vecshiftR32:$shift)>;
+
+def : Pat<(v4f32 (sint_to_fp (v4i32 (AArch64vashr_exact v4i32:$Vn, i32:$shift)))),
+          (SCVTFv4i32_shift $Vn, vecshiftR32:$shift)>;
+
+def : Pat<(v2f64 (sint_to_fp (v2i64 (AArch64vashr_exact v2i64:$Vn, i32:$shift)))),
+          (SCVTFv2i64_shift $Vn, vecshiftR64:$shift)>;
+}
+
+let Predicates = [HasNEON, HasFullFP16] in {
+def : Pat<(v4f16 (sint_to_fp (v4i16 (AArch64vashr_exact v4i16:$Vn, i32:$shift)))),
+          (SCVTFv4i16_shift $Vn, vecshiftR16:$shift)>;
+
+def : Pat<(v8f16 (sint_to_fp (v8i16 (AArch64vashr_exact v8i16:$Vn, i32:$shift)))),
+          (SCVTFv8i16_shift $Vn, vecshiftR16:$shift)>;
+}
+
 // X << 1 ==> X + X
 class SHLToADDPat<ValueType ty, RegisterClass regtype>
   : Pat<(ty (AArch64vshl (ty regtype:$Rn), (i32 1))),
@@ -9486,7 +9700,7 @@ let Predicates = [HasMOPS], Defs = [NZCV], Size = 12, mayStore = 1 in {
   let mayLoad = 0 in {
     def MOPSMemorySetPseudo  : Pseudo<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
                                       (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
-                                      [], "$Rd = $Rd_wb,$Rn = $Rn_wb">, Sched<[]>;
+                                      [], "$Rd = $Rd_wb,$Rn = $Rn_wb,@earlyclobber $Rn_wb">, Sched<[]>;
   }
 }
 let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, mayStore = 1 in {

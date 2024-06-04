@@ -21,7 +21,7 @@ Additions:
 * fenv.h
 
   * fesetexcept |check|
-  * fetestexceptflag
+  * fetestexceptflag |check|
   * fegetmode
   * fesetmode
 * math.h
@@ -158,4 +158,4 @@ Additions:
 
   * mbrtoc8
   * c8rtomb
-  * char*_t
+  * char*_t |check|

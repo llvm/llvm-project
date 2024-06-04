@@ -709,7 +709,7 @@ bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
         for (MachineBasicBlock::iterator II = CSMI, IE = &MI; II != IE; ++II)
           for (auto ImplicitDef : ImplicitDefs)
             if (MachineOperand *MO = II->findRegisterUseOperand(
-                    ImplicitDef, /*isKill=*/true, TRI))
+                    ImplicitDef, TRI, /*isKill=*/true))
               MO->setIsKill(false);
       } else {
         // If the instructions aren't in the same BB, bail out and clear the

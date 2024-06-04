@@ -9,7 +9,7 @@
 ; 128-bit vectors
 ;
 
-define <16 x i8> @test_fixed_v16i8(<16 x i8> %a0, <16 x i8> %a1) {
+define <16 x i8> @test_fixed_v16i8(<16 x i8> %a0, <16 x i8> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgb %xmm1, %xmm0
@@ -26,7 +26,7 @@ define <16 x i8> @test_fixed_v16i8(<16 x i8> %a0, <16 x i8> %a1) {
   ret <16 x i8> %res
 }
 
-define <16 x i8> @test_ext_v16i8(<16 x i8> %a0, <16 x i8> %a1) {
+define <16 x i8> @test_ext_v16i8(<16 x i8> %a0, <16 x i8> %a1) nounwind {
 ; SSE-LABEL: test_ext_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgb %xmm1, %xmm0
@@ -45,7 +45,7 @@ define <16 x i8> @test_ext_v16i8(<16 x i8> %a0, <16 x i8> %a1) {
   ret <16 x i8> %res
 }
 
-define <8 x i16> @test_fixed_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
+define <8 x i16> @test_fixed_v8i16(<8 x i16> %a0, <8 x i16> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v8i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgw %xmm1, %xmm0
@@ -62,7 +62,7 @@ define <8 x i16> @test_fixed_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_ext_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
+define <8 x i16> @test_ext_v8i16(<8 x i16> %a0, <8 x i16> %a1) nounwind {
 ; SSE-LABEL: test_ext_v8i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgw %xmm1, %xmm0
@@ -81,7 +81,7 @@ define <8 x i16> @test_ext_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
   ret <8 x i16> %res
 }
 
-define <4 x i32> @test_fixed_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
+define <4 x i32> @test_fixed_v4i32(<4 x i32> %a0, <4 x i32> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
@@ -106,7 +106,7 @@ define <4 x i32> @test_fixed_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
   ret <4 x i32> %res
 }
 
-define <4 x i32> @test_ext_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
+define <4 x i32> @test_ext_v4i32(<4 x i32> %a0, <4 x i32> %a1) nounwind {
 ; SSE2-LABEL: test_ext_v4i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
@@ -195,7 +195,7 @@ define <4 x i32> @test_ext_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
   ret <4 x i32> %res
 }
 
-define <2 x i64> @test_fixed_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
+define <2 x i64> @test_fixed_v2i64(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v2i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
@@ -220,7 +220,7 @@ define <2 x i64> @test_fixed_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_ext_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
+define <2 x i64> @test_ext_v2i64(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; SSE2-LABEL: test_ext_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
@@ -310,7 +310,7 @@ define <2 x i64> @test_ext_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 ; 256-bit vectors
 ;
 
-define <32 x i8> @test_fixed_v32i8(<32 x i8> %a0, <32 x i8> %a1) {
+define <32 x i8> @test_fixed_v32i8(<32 x i8> %a0, <32 x i8> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v32i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgb %xmm2, %xmm0
@@ -342,7 +342,7 @@ define <32 x i8> @test_fixed_v32i8(<32 x i8> %a0, <32 x i8> %a1) {
   ret <32 x i8> %res
 }
 
-define <32 x i8> @test_ext_v32i8(<32 x i8> %a0, <32 x i8> %a1) {
+define <32 x i8> @test_ext_v32i8(<32 x i8> %a0, <32 x i8> %a1) nounwind {
 ; SSE-LABEL: test_ext_v32i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgb %xmm2, %xmm0
@@ -376,7 +376,7 @@ define <32 x i8> @test_ext_v32i8(<32 x i8> %a0, <32 x i8> %a1) {
   ret <32 x i8> %res
 }
 
-define <16 x i16> @test_fixed_v16i16(<16 x i16> %a0, <16 x i16> %a1) {
+define <16 x i16> @test_fixed_v16i16(<16 x i16> %a0, <16 x i16> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v16i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgw %xmm2, %xmm0
@@ -408,7 +408,7 @@ define <16 x i16> @test_fixed_v16i16(<16 x i16> %a0, <16 x i16> %a1) {
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_ext_v16i16(<16 x i16> %a0, <16 x i16> %a1) {
+define <16 x i16> @test_ext_v16i16(<16 x i16> %a0, <16 x i16> %a1) nounwind {
 ; SSE-LABEL: test_ext_v16i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgw %xmm2, %xmm0
@@ -442,7 +442,7 @@ define <16 x i16> @test_ext_v16i16(<16 x i16> %a0, <16 x i16> %a1) {
   ret <16 x i16> %res
 }
 
-define <8 x i32> @test_fixed_v8i32(<8 x i32> %a0, <8 x i32> %a1) {
+define <8 x i32> @test_fixed_v8i32(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v8i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm1, %xmm4
@@ -494,7 +494,7 @@ define <8 x i32> @test_fixed_v8i32(<8 x i32> %a0, <8 x i32> %a1) {
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_ext_v8i32(<8 x i32> %a0, <8 x i32> %a1) {
+define <8 x i32> @test_ext_v8i32(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; SSE2-LABEL: test_ext_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm4
@@ -629,7 +629,7 @@ define <8 x i32> @test_ext_v8i32(<8 x i32> %a0, <8 x i32> %a1) {
   ret <8 x i32> %res
 }
 
-define <4 x i64> @test_fixed_v4i64(<4 x i64> %a0, <4 x i64> %a1) {
+define <4 x i64> @test_fixed_v4i64(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v4i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm1, %xmm4
@@ -681,7 +681,7 @@ define <4 x i64> @test_fixed_v4i64(<4 x i64> %a0, <4 x i64> %a1) {
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_ext_v4i64(<4 x i64> %a0, <4 x i64> %a1) {
+define <4 x i64> @test_ext_v4i64(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; SSE2-LABEL: test_ext_v4i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
@@ -937,7 +937,7 @@ define <4 x i64> @test_ext_v4i64(<4 x i64> %a0, <4 x i64> %a1) {
 ; 512-bit vectors
 ;
 
-define <64 x i8> @test_fixed_v64i8(<64 x i8> %a0, <64 x i8> %a1) {
+define <64 x i8> @test_fixed_v64i8(<64 x i8> %a0, <64 x i8> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v64i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgb %xmm4, %xmm0
@@ -977,7 +977,7 @@ define <64 x i8> @test_fixed_v64i8(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %res
 }
 
-define <64 x i8> @test_ext_v64i8(<64 x i8> %a0, <64 x i8> %a1) {
+define <64 x i8> @test_ext_v64i8(<64 x i8> %a0, <64 x i8> %a1) nounwind {
 ; SSE-LABEL: test_ext_v64i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgb %xmm4, %xmm0
@@ -1019,7 +1019,7 @@ define <64 x i8> @test_ext_v64i8(<64 x i8> %a0, <64 x i8> %a1) {
   ret <64 x i8> %res
 }
 
-define <32 x i16> @test_fixed_v32i16(<32 x i16> %a0, <32 x i16> %a1) {
+define <32 x i16> @test_fixed_v32i16(<32 x i16> %a0, <32 x i16> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v32i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgw %xmm4, %xmm0
@@ -1059,7 +1059,7 @@ define <32 x i16> @test_fixed_v32i16(<32 x i16> %a0, <32 x i16> %a1) {
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_ext_v32i16(<32 x i16> %a0, <32 x i16> %a1) {
+define <32 x i16> @test_ext_v32i16(<32 x i16> %a0, <32 x i16> %a1) nounwind {
 ; SSE-LABEL: test_ext_v32i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pavgw %xmm4, %xmm0
@@ -1101,7 +1101,7 @@ define <32 x i16> @test_ext_v32i16(<32 x i16> %a0, <32 x i16> %a1) {
   ret <32 x i16> %res
 }
 
-define <16 x i32> @test_fixed_v16i32(<16 x i32> %a0, <16 x i32> %a1) {
+define <16 x i32> @test_fixed_v16i32(<16 x i32> %a0, <16 x i32> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v16i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm3, %xmm8
@@ -1177,7 +1177,7 @@ define <16 x i32> @test_fixed_v16i32(<16 x i32> %a0, <16 x i32> %a1) {
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_ext_v16i32(<16 x i32> %a0, <16 x i32> %a1) {
+define <16 x i32> @test_ext_v16i32(<16 x i32> %a0, <16 x i32> %a1) nounwind {
 ; SSE2-LABEL: test_ext_v16i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm2, %xmm8
@@ -1413,7 +1413,7 @@ define <16 x i32> @test_ext_v16i32(<16 x i32> %a0, <16 x i32> %a1) {
   ret <16 x i32> %res
 }
 
-define <8 x i64> @test_fixed_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
+define <8 x i64> @test_fixed_v8i64(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v8i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm3, %xmm8
@@ -1489,27 +1489,15 @@ define <8 x i64> @test_fixed_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_ext_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
+define <8 x i64> @test_ext_v8i64(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; SSE2-LABEL: test_ext_v8i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbp
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    pushq %r15
-; SSE2-NEXT:    .cfi_def_cfa_offset 24
 ; SSE2-NEXT:    pushq %r14
-; SSE2-NEXT:    .cfi_def_cfa_offset 32
 ; SSE2-NEXT:    pushq %r13
-; SSE2-NEXT:    .cfi_def_cfa_offset 40
 ; SSE2-NEXT:    pushq %r12
-; SSE2-NEXT:    .cfi_def_cfa_offset 48
 ; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    .cfi_def_cfa_offset 56
-; SSE2-NEXT:    .cfi_offset %rbx, -56
-; SSE2-NEXT:    .cfi_offset %r12, -48
-; SSE2-NEXT:    .cfi_offset %r13, -40
-; SSE2-NEXT:    .cfi_offset %r14, -32
-; SSE2-NEXT:    .cfi_offset %r15, -24
-; SSE2-NEXT:    .cfi_offset %rbp, -16
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm3[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm8, %rcx
 ; SSE2-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1617,39 +1605,21 @@ define <8 x i64> @test_ext_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm6[0]
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm7[0]
 ; SSE2-NEXT:    popq %rbx
-; SSE2-NEXT:    .cfi_def_cfa_offset 48
 ; SSE2-NEXT:    popq %r12
-; SSE2-NEXT:    .cfi_def_cfa_offset 40
 ; SSE2-NEXT:    popq %r13
-; SSE2-NEXT:    .cfi_def_cfa_offset 32
 ; SSE2-NEXT:    popq %r14
-; SSE2-NEXT:    .cfi_def_cfa_offset 24
 ; SSE2-NEXT:    popq %r15
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    popq %rbp
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: test_ext_v8i64:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pushq %rbp
-; SSE4-NEXT:    .cfi_def_cfa_offset 16
 ; SSE4-NEXT:    pushq %r15
-; SSE4-NEXT:    .cfi_def_cfa_offset 24
 ; SSE4-NEXT:    pushq %r14
-; SSE4-NEXT:    .cfi_def_cfa_offset 32
 ; SSE4-NEXT:    pushq %r13
-; SSE4-NEXT:    .cfi_def_cfa_offset 40
 ; SSE4-NEXT:    pushq %r12
-; SSE4-NEXT:    .cfi_def_cfa_offset 48
 ; SSE4-NEXT:    pushq %rbx
-; SSE4-NEXT:    .cfi_def_cfa_offset 56
-; SSE4-NEXT:    .cfi_offset %rbx, -56
-; SSE4-NEXT:    .cfi_offset %r12, -48
-; SSE4-NEXT:    .cfi_offset %r13, -40
-; SSE4-NEXT:    .cfi_offset %r14, -32
-; SSE4-NEXT:    .cfi_offset %r15, -24
-; SSE4-NEXT:    .cfi_offset %rbp, -16
 ; SSE4-NEXT:    movq %xmm3, %rcx
 ; SSE4-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; SSE4-NEXT:    movq %xmm7, %rdx
@@ -1747,39 +1717,21 @@ define <8 x i64> @test_ext_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
 ; SSE4-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm6[0]
 ; SSE4-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm7[0]
 ; SSE4-NEXT:    popq %rbx
-; SSE4-NEXT:    .cfi_def_cfa_offset 48
 ; SSE4-NEXT:    popq %r12
-; SSE4-NEXT:    .cfi_def_cfa_offset 40
 ; SSE4-NEXT:    popq %r13
-; SSE4-NEXT:    .cfi_def_cfa_offset 32
 ; SSE4-NEXT:    popq %r14
-; SSE4-NEXT:    .cfi_def_cfa_offset 24
 ; SSE4-NEXT:    popq %r15
-; SSE4-NEXT:    .cfi_def_cfa_offset 16
 ; SSE4-NEXT:    popq %rbp
-; SSE4-NEXT:    .cfi_def_cfa_offset 8
 ; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test_ext_v8i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    pushq %rbp
-; AVX1-NEXT:    .cfi_def_cfa_offset 16
 ; AVX1-NEXT:    pushq %r15
-; AVX1-NEXT:    .cfi_def_cfa_offset 24
 ; AVX1-NEXT:    pushq %r14
-; AVX1-NEXT:    .cfi_def_cfa_offset 32
 ; AVX1-NEXT:    pushq %r13
-; AVX1-NEXT:    .cfi_def_cfa_offset 40
 ; AVX1-NEXT:    pushq %r12
-; AVX1-NEXT:    .cfi_def_cfa_offset 48
 ; AVX1-NEXT:    pushq %rbx
-; AVX1-NEXT:    .cfi_def_cfa_offset 56
-; AVX1-NEXT:    .cfi_offset %rbx, -56
-; AVX1-NEXT:    .cfi_offset %r12, -48
-; AVX1-NEXT:    .cfi_offset %r13, -40
-; AVX1-NEXT:    .cfi_offset %r14, -32
-; AVX1-NEXT:    .cfi_offset %r15, -24
-; AVX1-NEXT:    .cfi_offset %rbp, -16
 ; AVX1-NEXT:    vmovq %xmm1, %rcx
 ; AVX1-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX1-NEXT:    vmovq %xmm3, %rdx
@@ -1885,39 +1837,21 @@ define <8 x i64> @test_ext_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm7[0],xmm6[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; AVX1-NEXT:    popq %rbx
-; AVX1-NEXT:    .cfi_def_cfa_offset 48
 ; AVX1-NEXT:    popq %r12
-; AVX1-NEXT:    .cfi_def_cfa_offset 40
 ; AVX1-NEXT:    popq %r13
-; AVX1-NEXT:    .cfi_def_cfa_offset 32
 ; AVX1-NEXT:    popq %r14
-; AVX1-NEXT:    .cfi_def_cfa_offset 24
 ; AVX1-NEXT:    popq %r15
-; AVX1-NEXT:    .cfi_def_cfa_offset 16
 ; AVX1-NEXT:    popq %rbp
-; AVX1-NEXT:    .cfi_def_cfa_offset 8
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_ext_v8i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rbp
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    pushq %r15
-; AVX2-NEXT:    .cfi_def_cfa_offset 24
 ; AVX2-NEXT:    pushq %r14
-; AVX2-NEXT:    .cfi_def_cfa_offset 32
 ; AVX2-NEXT:    pushq %r13
-; AVX2-NEXT:    .cfi_def_cfa_offset 40
 ; AVX2-NEXT:    pushq %r12
-; AVX2-NEXT:    .cfi_def_cfa_offset 48
 ; AVX2-NEXT:    pushq %rbx
-; AVX2-NEXT:    .cfi_def_cfa_offset 56
-; AVX2-NEXT:    .cfi_offset %rbx, -56
-; AVX2-NEXT:    .cfi_offset %r12, -48
-; AVX2-NEXT:    .cfi_offset %r13, -40
-; AVX2-NEXT:    .cfi_offset %r14, -32
-; AVX2-NEXT:    .cfi_offset %r15, -24
-; AVX2-NEXT:    .cfi_offset %rbp, -16
 ; AVX2-NEXT:    vmovq %xmm1, %rcx
 ; AVX2-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX2-NEXT:    vmovq %xmm3, %rdx
@@ -2023,39 +1957,21 @@ define <8 x i64> @test_ext_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm7[0],xmm6[0]
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; AVX2-NEXT:    popq %rbx
-; AVX2-NEXT:    .cfi_def_cfa_offset 48
 ; AVX2-NEXT:    popq %r12
-; AVX2-NEXT:    .cfi_def_cfa_offset 40
 ; AVX2-NEXT:    popq %r13
-; AVX2-NEXT:    .cfi_def_cfa_offset 32
 ; AVX2-NEXT:    popq %r14
-; AVX2-NEXT:    .cfi_def_cfa_offset 24
 ; AVX2-NEXT:    popq %r15
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    popq %rbp
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ext_v8i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    pushq %rbp
-; AVX512-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512-NEXT:    pushq %r15
-; AVX512-NEXT:    .cfi_def_cfa_offset 24
 ; AVX512-NEXT:    pushq %r14
-; AVX512-NEXT:    .cfi_def_cfa_offset 32
 ; AVX512-NEXT:    pushq %r13
-; AVX512-NEXT:    .cfi_def_cfa_offset 40
 ; AVX512-NEXT:    pushq %r12
-; AVX512-NEXT:    .cfi_def_cfa_offset 48
 ; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:    .cfi_def_cfa_offset 56
-; AVX512-NEXT:    .cfi_offset %rbx, -56
-; AVX512-NEXT:    .cfi_offset %r12, -48
-; AVX512-NEXT:    .cfi_offset %r13, -40
-; AVX512-NEXT:    .cfi_offset %r14, -32
-; AVX512-NEXT:    .cfi_offset %r15, -24
-; AVX512-NEXT:    .cfi_offset %rbp, -16
 ; AVX512-NEXT:    vmovq %xmm0, %rcx
 ; AVX512-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX512-NEXT:    vmovq %xmm1, %rdx
@@ -2164,17 +2080,11 @@ define <8 x i64> @test_ext_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
 ; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512-NEXT:    popq %rbx
-; AVX512-NEXT:    .cfi_def_cfa_offset 48
 ; AVX512-NEXT:    popq %r12
-; AVX512-NEXT:    .cfi_def_cfa_offset 40
 ; AVX512-NEXT:    popq %r13
-; AVX512-NEXT:    .cfi_def_cfa_offset 32
 ; AVX512-NEXT:    popq %r14
-; AVX512-NEXT:    .cfi_def_cfa_offset 24
 ; AVX512-NEXT:    popq %r15
-; AVX512-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512-NEXT:    popq %rbp
-; AVX512-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512-NEXT:    retq
   %x0 = zext <8 x i64> %a0 to <8 x i128>
   %x1 = zext <8 x i64> %a1 to <8 x i128>

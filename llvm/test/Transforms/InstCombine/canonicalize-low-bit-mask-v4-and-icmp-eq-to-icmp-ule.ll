@@ -54,15 +54,15 @@ define <2 x i1> @p1_vec(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i1> %ret
 }
 
-define <3 x i1> @p2_vec_undef0(<3 x i8> %x, <3 x i8> %y) {
-; CHECK-LABEL: @p2_vec_undef0(
-; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, [[Y:%.*]]
+define <3 x i1> @p2_vec_poison0(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @p2_vec_poison0(
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw <3 x i8> <i8 -1, i8 poison, i8 -1>, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use3i8(<3 x i8> [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i8> <i8 -1, i8 -1, i8 -1>, [[Y]]
 ; CHECK-NEXT:    [[RET:%.*]] = icmp uge <3 x i8> [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
-  %t0 = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, %y
+  %t0 = shl <3 x i8> <i8 -1, i8 poison, i8 -1>, %y
   call void @use3i8(<3 x i8> %t0)
   %t1 = lshr <3 x i8> %t0, %y
   %t2 = and <3 x i8> %t1, %x

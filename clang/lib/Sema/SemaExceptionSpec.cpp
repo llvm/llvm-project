@@ -258,13 +258,14 @@ Sema::UpdateExceptionSpec(FunctionDecl *FD,
 }
 
 static bool exceptionSpecNotKnownYet(const FunctionDecl *FD) {
-  auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  if (!MD)
+  ExceptionSpecificationType EST =
+      FD->getType()->castAs<FunctionProtoType>()->getExceptionSpecType();
+  if (EST == EST_Unparsed)
+    return true;
+  else if (EST != EST_Unevaluated)
     return false;
-
-  auto EST = MD->getType()->castAs<FunctionProtoType>()->getExceptionSpecType();
-  return EST == EST_Unparsed ||
-         (EST == EST_Unevaluated && MD->getParent()->isBeingDefined());
+  const DeclContext *DC = FD->getLexicalDeclContext();
+  return DC->isRecord() && cast<RecordDecl>(DC)->isBeingDefined();
 }
 
 static bool CheckEquivalentExceptionSpecImpl(
@@ -1314,7 +1315,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     // Some might be dependent for other reasons.
   case Expr::ArraySubscriptExprClass:
   case Expr::MatrixSubscriptExprClass:
-  case Expr::OMPArraySectionExprClass:
+  case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
   case Expr::BinaryOperatorClass:

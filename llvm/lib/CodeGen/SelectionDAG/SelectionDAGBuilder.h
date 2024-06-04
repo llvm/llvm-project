@@ -406,7 +406,8 @@ public:
   void CopyToExportRegsIfNeeded(const Value *V);
   void ExportFromCurrentBlock(const Value *V);
   void LowerCallTo(const CallBase &CB, SDValue Callee, bool IsTailCall,
-                   bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr);
+                   bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr,
+                   const TargetLowering::PtrAuthInfo *PAI = nullptr);
 
   // Lower range metadata from 0 to N to assert zext to an integer of nearest
   // floor power of two.
@@ -489,6 +490,9 @@ public:
                                         const BasicBlock *EHPadBB,
                                         bool VarArgDisallowed,
                                         bool ForceVoidReturnTy);
+
+  void LowerCallSiteWithPtrAuthBundle(const CallBase &CB,
+                                      const BasicBlock *EHPadBB);
 
   /// Returns the type of FrameIndex and TargetFrameIndex nodes.
   MVT getFrameIndexTy() {
@@ -624,6 +628,7 @@ private:
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
   void visitConvergenceControl(const CallInst &I, unsigned Intrinsic);
+  void visitVectorHistogram(const CallInst &I, unsigned IntrinsicID);
   void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
                    const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStore(const VPIntrinsic &VPIntrin,

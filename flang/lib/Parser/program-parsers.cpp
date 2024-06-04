@@ -247,7 +247,8 @@ TYPE_CONTEXT_PARSER("module subprogram part"_en_US,
 //         separate-module-subprogram
 TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(subroutineSubprogram)) ||
-    construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})))
+    construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})) ||
+    construct<ModuleSubprogram>(indirect(compilerDirective)))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 constexpr auto moduleNature{
@@ -471,8 +472,8 @@ TYPE_PARSER(construct<ActualArg>(expr) ||
     construct<ActualArg>(Parser<AltReturnSpec>{}) ||
     extension<LanguageFeature::PercentRefAndVal>(
         "nonstandard usage: %REF"_port_en_US,
-        construct<ActualArg>(construct<ActualArg::PercentRef>(
-            "%REF" >> parenthesized(variable)))) ||
+        construct<ActualArg>(
+            construct<ActualArg::PercentRef>("%REF" >> parenthesized(expr)))) ||
     extension<LanguageFeature::PercentRefAndVal>(
         "nonstandard usage: %VAL"_port_en_US,
         construct<ActualArg>(

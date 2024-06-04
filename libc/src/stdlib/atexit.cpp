@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/atexit.h"
+#include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/blockstore.h"
 #include "src/__support/common.h"
 #include "src/__support/fixedvector.h"
@@ -16,7 +17,8 @@ namespace LIBC_NAMESPACE {
 
 namespace {
 
-Mutex handler_list_mtx(false, false, false);
+Mutex handler_list_mtx(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
+                       /*pshared=*/false);
 
 using AtExitCallback = void(void *);
 using StdCAtExitCallback = void(void);
@@ -68,7 +70,7 @@ void call_exit_callbacks() {
 }
 
 int add_atexit_unit(const AtExitUnit &unit) {
-  MutexLock lock(&handler_list_mtx);
+  cpp::lock_guard lock(handler_list_mtx);
   if (exit_callbacks.push_back(unit))
     return 0;
   return -1;

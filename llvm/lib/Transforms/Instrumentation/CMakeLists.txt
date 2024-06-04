@@ -14,6 +14,7 @@ add_llvm_component_library(LLVMInstrumentation
   InstrProfiling.cpp
   KCFI.cpp
   LowerAllowCheckPass.cpp
+  PGOCtxProfLowering.cpp
   PGOForceFunctionAttrs.cpp
   PGOInstrumentation.cpp
   PGOMemOPSizeOpt.cpp

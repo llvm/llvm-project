@@ -227,6 +227,34 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
                               CallingConv::ARM_AAPCS_VFP);
       }
     }
+
+    switch (TT.getOS()) {
+    case Triple::MacOSX:
+      if (TT.isMacOSXVersionLT(10, 9)) {
+        setLibcallName(RTLIB::EXP10_F32, nullptr);
+        setLibcallName(RTLIB::EXP10_F64, nullptr);
+      } else {
+        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
+        setLibcallName(RTLIB::EXP10_F64, "__exp10");
+      }
+      break;
+    case Triple::IOS:
+    case Triple::TvOS:
+    case Triple::WatchOS:
+    case Triple::XROS:
+      if (!TT.isWatchOS() &&
+          (TT.isOSVersionLT(7, 0) || (TT.isOSVersionLT(9, 0) && TT.isX86()))) {
+        setLibcallName(RTLIB::EXP10_F32, nullptr);
+        setLibcallName(RTLIB::EXP10_F64, nullptr);
+      } else {
+        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
+        setLibcallName(RTLIB::EXP10_F64, "__exp10");
+      }
+
+      break;
+    default:
+      break;
+    }
   } else {
     setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
     setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
@@ -1007,6 +1035,10 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SET_FPMODE, VT, Expand);
   }
   setOperationAction(ISD::RESET_FPMODE, MVT::Other, Expand);
+
+  // This one by default will call __clear_cache unless the target
+  // wants something different.
+  setOperationAction(ISD::CLEAR_CACHE, MVT::Other, LibCall);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
@@ -1046,6 +1078,24 @@ bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
 bool TargetLoweringBase::isFreeAddrSpaceCast(unsigned SrcAS,
                                              unsigned DestAS) const {
   return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
+}
+
+unsigned TargetLoweringBase::getBitWidthForCttzElements(
+    Type *RetTy, ElementCount EC, bool ZeroIsPoison,
+    const ConstantRange *VScaleRange) const {
+  // Find the smallest "sensible" element type to use for the expansion.
+  ConstantRange CR(APInt(64, EC.getKnownMinValue()));
+  if (EC.isScalable())
+    CR = CR.umul_sat(*VScaleRange);
+
+  if (ZeroIsPoison)
+    CR = CR.subtract(APInt(64, 1));
+
+  unsigned EltWidth = RetTy->getScalarSizeInBits();
+  EltWidth = std::min(EltWidth, (unsigned)CR.getActiveBits());
+  EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
+
+  return EltWidth;
 }
 
 void TargetLoweringBase::setJumpIsExpensive(bool isExpensive) {
@@ -1384,9 +1434,6 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
 /// this allows us to compute derived properties we expose.
 void TargetLoweringBase::computeRegisterProperties(
     const TargetRegisterInfo *TRI) {
-  static_assert(MVT::VALUETYPE_SIZE <= MVT::MAX_ALLOWED_VALUETYPE,
-                "Too many value types for ValueTypeActions to hold!");
-
   // Everything defaults to needing one register.
   for (unsigned i = 0; i != MVT::VALUETYPE_SIZE; ++i) {
     NumRegistersForVT[i] = 1;
@@ -1809,8 +1856,16 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     else if (attr.hasRetAttr(Attribute::ZExt))
       Flags.setZExt();
 
-    for (unsigned i = 0; i < NumParts; ++i)
-      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, /*isfixed=*/true, 0, 0));
+    for (unsigned i = 0; i < NumParts; ++i) {
+      ISD::ArgFlagsTy OutFlags = Flags;
+      if (NumParts > 1 && i == 0)
+        OutFlags.setSplit();
+      else if (i == NumParts - 1 && i != 0)
+        OutFlags.setSplitEnd();
+
+      Outs.push_back(
+          ISD::OutputArg(OutFlags, PartVT, VT, /*isfixed=*/true, 0, 0));
+    }
   }
 }
 
@@ -2241,7 +2296,7 @@ static int getOpEnabled(bool IsSqrt, EVT VT, StringRef Override) {
     if (IsDisabled)
       RecipType = RecipType.substr(1);
 
-    if (RecipType.equals(VTName) || RecipType.equals(VTNameNoSize))
+    if (RecipType == VTName || RecipType == VTNameNoSize)
       return IsDisabled ? TargetLoweringBase::ReciprocalEstimate::Disabled
                         : TargetLoweringBase::ReciprocalEstimate::Enabled;
   }
@@ -2291,7 +2346,7 @@ static int getOpRefinementSteps(bool IsSqrt, EVT VT, StringRef Override) {
       continue;
 
     RecipType = RecipType.substr(0, RefPos);
-    if (RecipType.equals(VTName) || RecipType.equals(VTNameNoSize))
+    if (RecipType == VTName || RecipType == VTNameNoSize)
       return RefSteps;
   }
 

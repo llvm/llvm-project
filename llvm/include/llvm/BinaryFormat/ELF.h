@@ -796,11 +796,15 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC   = 0x053,
   EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC     = 0x054,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X55 = 0x055,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56 = 0x056,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57 = 0x057,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X58 = 0x058,
+  EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC = 0x059,
   // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -1938,6 +1942,13 @@ uint16_t convertArchNameToEMachine(StringRef Arch);
 
 /// Convert an ELF's e_machine value into an architecture name.
 StringRef convertEMachineToArchName(uint16_t EMachine);
+
+// Convert a lowercase string identifier into an OSABI value.
+uint8_t convertNameToOSABI(StringRef Name);
+
+// Convert an OSABI value into a string that identifies the OS- or ABI-
+// specific ELF extension.
+StringRef convertOSABIToName(uint8_t OSABI);
 
 } // end namespace ELF
 } // end namespace llvm

@@ -6,10 +6,7 @@ define <4 x i64> @PR67803(<8 x i32> %x, <8 x i32> %y, <8 x float> %a, <8 x float
 ; CHECK-LABEL: @PR67803(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <8 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP_LO:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[CMP_HI:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i1> [[CMP_LO]], <4 x i1> [[CMP_HI]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i1> [[TMP0]] to <8 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
 ; CHECK-NEXT:    [[CONCAT:%.*]] = bitcast <8 x i32> [[TMP1]] to <4 x i64>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast <4 x i64> [[CONCAT]] to <8 x float>
 ; CHECK-NEXT:    [[SEL:%.*]] = tail call noundef <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> [[A:%.*]], <8 x float> [[B:%.*]], <8 x float> [[MASK]])

@@ -35,11 +35,7 @@
 // NOPARAM-NEXT:   },
 // NOPARAM-NEXT:   {
 // NOPARAM-NEXT:     "kind": "text",
-// NOPARAM-NEXT:     "spelling": " (^"
-// NOPARAM-NEXT:   },
-// NOPARAM-NEXT:   {
-// NOPARAM-NEXT:     "kind": "text",
-// NOPARAM-NEXT:     "spelling": ")()) "
+// NOPARAM-NEXT:     "spelling": " (^)()) "
 // NOPARAM-NEXT:   },
 // NOPARAM-NEXT:   {
 // NOPARAM-NEXT:     "kind": "internalParam",
@@ -65,11 +61,7 @@
 // NOPARAM-NEXT:         },
 // NOPARAM-NEXT:         {
 // NOPARAM-NEXT:           "kind": "text",
-// NOPARAM-NEXT:           "spelling": " (^"
-// NOPARAM-NEXT:         },
-// NOPARAM-NEXT:         {
-// NOPARAM-NEXT:           "kind": "text",
-// NOPARAM-NEXT:           "spelling": ")()) "
+// NOPARAM-NEXT:           "spelling": " (^)()) "
 // NOPARAM-NEXT:         },
 // NOPARAM-NEXT:         {
 // NOPARAM-NEXT:           "kind": "internalParam",
@@ -120,11 +112,7 @@
 // PARAM-NEXT:   },
 // PARAM-NEXT:   {
 // PARAM-NEXT:     "kind": "text",
-// PARAM-NEXT:     "spelling": " (^"
-// PARAM-NEXT:   },
-// PARAM-NEXT:   {
-// PARAM-NEXT:     "kind": "text",
-// PARAM-NEXT:     "spelling": ")("
+// PARAM-NEXT:     "spelling": " (^)("
 // PARAM-NEXT:   },
 // PARAM-NEXT:   {
 // PARAM-NEXT:     "kind": "typeIdentifier",
@@ -167,11 +155,7 @@
 // PARAM-NEXT:         },
 // PARAM-NEXT:         {
 // PARAM-NEXT:           "kind": "text",
-// PARAM-NEXT:           "spelling": " (^"
-// PARAM-NEXT:         },
-// PARAM-NEXT:         {
-// PARAM-NEXT:           "kind": "text",
-// PARAM-NEXT:           "spelling": ")("
+// PARAM-NEXT:           "spelling": " (^)("
 // PARAM-NEXT:         },
 // PARAM-NEXT:         {
 // PARAM-NEXT:           "kind": "typeIdentifier",
@@ -239,11 +223,7 @@
 // MULTIPARAM-NEXT:   },
 // MULTIPARAM-NEXT:   {
 // MULTIPARAM-NEXT:     "kind": "text",
-// MULTIPARAM-NEXT:     "spelling": " (^"
-// MULTIPARAM-NEXT:   },
-// MULTIPARAM-NEXT:   {
-// MULTIPARAM-NEXT:     "kind": "text",
-// MULTIPARAM-NEXT:     "spelling": ")("
+// MULTIPARAM-NEXT:     "spelling": " (^)("
 // MULTIPARAM-NEXT:   },
 // MULTIPARAM-NEXT:   {
 // MULTIPARAM-NEXT:     "kind": "typeIdentifier",
@@ -303,11 +283,7 @@
 // MULTIPARAM-NEXT:         },
 // MULTIPARAM-NEXT:         {
 // MULTIPARAM-NEXT:           "kind": "text",
-// MULTIPARAM-NEXT:           "spelling": " (^"
-// MULTIPARAM-NEXT:         },
-// MULTIPARAM-NEXT:         {
-// MULTIPARAM-NEXT:           "kind": "text",
-// MULTIPARAM-NEXT:           "spelling": ")("
+// MULTIPARAM-NEXT:           "spelling": " (^)("
 // MULTIPARAM-NEXT:         },
 // MULTIPARAM-NEXT:         {
 // MULTIPARAM-NEXT:           "kind": "typeIdentifier",
@@ -392,11 +368,7 @@
 // VARIADIC-NEXT:   },
 // VARIADIC-NEXT:   {
 // VARIADIC-NEXT:     "kind": "text",
-// VARIADIC-NEXT:     "spelling": " (^"
-// VARIADIC-NEXT:   },
-// VARIADIC-NEXT:   {
-// VARIADIC-NEXT:     "kind": "text",
-// VARIADIC-NEXT:     "spelling": ")("
+// VARIADIC-NEXT:     "spelling": " (^)("
 // VARIADIC-NEXT:   },
 // VARIADIC-NEXT:   {
 // VARIADIC-NEXT:     "kind": "typeIdentifier",
@@ -439,11 +411,7 @@
 // VARIADIC-NEXT:         },
 // VARIADIC-NEXT:         {
 // VARIADIC-NEXT:           "kind": "text",
-// VARIADIC-NEXT:           "spelling": " (^"
-// VARIADIC-NEXT:         },
-// VARIADIC-NEXT:         {
-// VARIADIC-NEXT:           "kind": "text",
-// VARIADIC-NEXT:           "spelling": ")("
+// VARIADIC-NEXT:           "spelling": " (^)("
 // VARIADIC-NEXT:         },
 // VARIADIC-NEXT:         {
 // VARIADIC-NEXT:           "kind": "typeIdentifier",

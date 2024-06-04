@@ -93,7 +93,7 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     return failure();
 
   // Handle function entry count metadata.
-  if (name->getString().equals("function_entry_count")) {
+  if (name->getString() == "function_entry_count") {
 
     // TODO support function entry count metadata with GUID fields.
     if (node->getNumOperands() != 2)
@@ -111,7 +111,7 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
            << "expected function_entry_count to be attached to a function";
   }
 
-  if (!name->getString().equals("branch_weights"))
+  if (name->getString() != "branch_weights")
     return failure();
 
   // Handle branch weights metadata.

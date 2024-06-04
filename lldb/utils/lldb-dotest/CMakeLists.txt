@@ -1,7 +1,7 @@
 # Make lldb-dotest a custom target.
 add_custom_target(lldb-dotest)
 add_dependencies(lldb-dotest lldb-test-depends)
-set_target_properties(lldb-dotest PROPERTIES FOLDER "lldb utils")
+set_target_properties(lldb-dotest PROPERTIES FOLDER "LLDB/Utils")
 
 get_property(LLDB_TEST_USER_ARGS GLOBAL PROPERTY LLDB_TEST_USER_ARGS_PROPERTY)
 get_property(LLDB_TEST_COMMON_ARGS GLOBAL PROPERTY LLDB_TEST_COMMON_ARGS_PROPERTY)
@@ -10,7 +10,6 @@ set(LLDB_LIBS_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
   LLDB_HAS_LIBCXX
-  LLDB_TEST_USE_VENDOR_PACKAGES
 )
 
 if ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)

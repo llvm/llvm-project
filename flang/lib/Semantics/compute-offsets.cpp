@@ -277,20 +277,22 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
     const EquivalenceObject &object) {
   std::size_t offset{0};
   if (!object.subscripts.empty()) {
-    const ArraySpec &shape{object.symbol.get<ObjectEntityDetails>().shape()};
-    auto lbound{[&](std::size_t i) {
-      return *ToInt64(shape[i].lbound().GetExplicit());
-    }};
-    auto ubound{[&](std::size_t i) {
-      return *ToInt64(shape[i].ubound().GetExplicit());
-    }};
-    for (std::size_t i{object.subscripts.size() - 1};;) {
-      offset += object.subscripts[i] - lbound(i);
-      if (i == 0) {
-        break;
+    if (const auto *details{object.symbol.detailsIf<ObjectEntityDetails>()}) {
+      const ArraySpec &shape{details->shape()};
+      auto lbound{[&](std::size_t i) {
+        return *ToInt64(shape[i].lbound().GetExplicit());
+      }};
+      auto ubound{[&](std::size_t i) {
+        return *ToInt64(shape[i].ubound().GetExplicit());
+      }};
+      for (std::size_t i{object.subscripts.size() - 1};;) {
+        offset += object.subscripts[i] - lbound(i);
+        if (i == 0) {
+          break;
+        }
+        --i;
+        offset *= ubound(i) - lbound(i) + 1;
       }
-      --i;
-      offset *= ubound(i) - lbound(i) + 1;
     }
   }
   auto result{offset * GetSizeAndAlignment(object.symbol, false).size};

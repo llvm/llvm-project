@@ -10,6 +10,7 @@
 #define LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
@@ -19,7 +20,7 @@
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T>
-class HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class HypotTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 private:
   using Func = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;

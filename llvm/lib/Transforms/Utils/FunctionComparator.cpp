@@ -143,6 +143,18 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
         if (int Res = cmpNumbers((uint64_t)TyL, (uint64_t)TyR))
           return Res;
         continue;
+      } else if (LA.isConstantRangeAttribute() &&
+                 RA.isConstantRangeAttribute()) {
+        if (LA.getKindAsEnum() != RA.getKindAsEnum())
+          return cmpNumbers(LA.getKindAsEnum(), RA.getKindAsEnum());
+
+        const ConstantRange &LCR = LA.getRange();
+        const ConstantRange &RCR = RA.getRange();
+        if (int Res = cmpAPInts(LCR.getLower(), RCR.getLower()))
+          return Res;
+        if (int Res = cmpAPInts(LCR.getUpper(), RCR.getUpper()))
+          return Res;
+        continue;
       }
       if (LA < RA)
         return -1;
@@ -424,7 +436,8 @@ int FunctionComparator::cmpConstants(const Constant *L,
       if (int Res = cmpTypes(GEPL->getSourceElementType(),
                              GEPR->getSourceElementType()))
         return Res;
-      if (int Res = cmpNumbers(GEPL->isInBounds(), GEPR->isInBounds()))
+      if (int Res = cmpNumbers(GEPL->getNoWrapFlags().getRaw(),
+                               GEPR->getNoWrapFlags().getRaw()))
         return Res;
 
       std::optional<ConstantRange> InRangeL = GEPL->getInRange();

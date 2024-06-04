@@ -26,9 +26,11 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
-DebugImporter::DebugImporter(ModuleOp mlirModule)
+DebugImporter::DebugImporter(ModuleOp mlirModule,
+                             bool dropDICompositeTypeElements)
     : recursionPruner(mlirModule.getContext()),
-      context(mlirModule.getContext()), mlirModule(mlirModule) {}
+      context(mlirModule.getContext()), mlirModule(mlirModule),
+      dropDICompositeTypeElements(dropDICompositeTypeElements) {}
 
 Location DebugImporter::translateFuncLocation(llvm::Function *func) {
   llvm::DISubprogram *subprogram = func->getSubprogram();
@@ -69,9 +71,14 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
   std::optional<DIFlags> flags = symbolizeDIFlags(node->getFlags());
   SmallVector<DINodeAttr> elements;
-  for (llvm::DINode *element : node->getElements()) {
-    assert(element && "expected a non-null element type");
-    elements.push_back(translate(element));
+
+  // A vector always requires an element.
+  bool isVectorType = flags && bitEnumContainsAll(*flags, DIFlags::Vector);
+  if (isVectorType || !dropDICompositeTypeElements) {
+    for (llvm::DINode *element : node->getElements()) {
+      assert(element && "expected a non-null element type");
+      elements.push_back(translate(element));
+    }
   }
   // Drop the elements parameter if any of the elements are invalid.
   if (llvm::is_contained(elements, nullptr))
@@ -86,7 +93,11 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
       getStringAttrOrNull(node->getRawName()), translate(node->getFile()),
       node->getLine(), translate(node->getScope()), baseType,
       flags.value_or(DIFlags::Zero), node->getSizeInBits(),
-      node->getAlignInBits(), elements);
+      node->getAlignInBits(), elements,
+      translateExpression(node->getDataLocationExp()),
+      translateExpression(node->getRankExp()),
+      translateExpression(node->getAllocatedExp()),
+      translateExpression(node->getAssociatedExp()));
 }
 
 DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
@@ -99,7 +110,7 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
-      node->getOffsetInBits(), extraData);
+      node->getOffsetInBits(), node->getDWARFAddressSpace(), extraData);
 }
 
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
@@ -449,6 +460,9 @@ Location DebugImporter::translateLoc(llvm::DILocation *loc) {
 }
 
 DIExpressionAttr DebugImporter::translateExpression(llvm::DIExpression *node) {
+  if (!node)
+    return nullptr;
+
   SmallVector<DIExpressionElemAttr> ops;
 
   // Begin processing the operations.

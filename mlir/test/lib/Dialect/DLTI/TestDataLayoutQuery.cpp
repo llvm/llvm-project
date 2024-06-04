@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -46,9 +46,22 @@ struct TestDataLayoutQuery
       Attribute programMemorySpace = layout.getProgramMemorySpace();
       Attribute globalMemorySpace = layout.getGlobalMemorySpace();
       uint64_t stackAlignment = layout.getStackAlignment();
+
+      auto convertTypeSizeToAttr = [&](llvm::TypeSize typeSize) -> Attribute {
+        if (!typeSize.isScalable())
+          return builder.getIndexAttr(typeSize);
+
+        return builder.getDictionaryAttr({
+            builder.getNamedAttr("scalable", builder.getUnitAttr()),
+            builder.getNamedAttr(
+                "minimal_size",
+                builder.getIndexAttr(typeSize.getKnownMinValue())),
+        });
+      };
+
       op->setAttrs(
-          {builder.getNamedAttr("size", builder.getIndexAttr(size)),
-           builder.getNamedAttr("bitsize", builder.getIndexAttr(bitsize)),
+          {builder.getNamedAttr("size", convertTypeSizeToAttr(size)),
+           builder.getNamedAttr("bitsize", convertTypeSizeToAttr(bitsize)),
            builder.getNamedAttr("alignment", builder.getIndexAttr(alignment)),
            builder.getNamedAttr("preferred", builder.getIndexAttr(preferred)),
            builder.getNamedAttr("index", builder.getIndexAttr(index)),

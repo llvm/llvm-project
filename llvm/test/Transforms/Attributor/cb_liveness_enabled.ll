@@ -192,9 +192,6 @@ define i32 @test_ncheck2(i32 %0) #0 {
 
 attributes #0 = { noinline nounwind sspstrong uwtable}
 
-; TUNIT_: !0 = !{i32 0, i32 101}
-; TUNIT_: !1 = !{i32 100, i32 201}
-;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree noinline norecurse nosync nounwind sspstrong willreturn memory(none) uwtable }
 ; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind willreturn memory(none) }
 ;.
