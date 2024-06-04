@@ -299,8 +299,8 @@ class DAPTestCaseBase(TestBase):
         sourceMap=None,
         sourceInitFile=False,
         expectFailure=False,
-        port=None,
-        hostname=None,
+        gdbRemotePort=None,
+        gdbRemoteHostname=None,
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and attach to the process.
@@ -331,8 +331,8 @@ class DAPTestCaseBase(TestBase):
             coreFile=coreFile,
             postRunCommands=postRunCommands,
             sourceMap=sourceMap,
-            port=port,
-            hostname=hostname,
+            gdbRemotePort=gdbRemotePort,
+            gdbRemoteHostname=gdbRemoteHostname,
         )
         if expectFailure:
             return response
@@ -490,20 +490,17 @@ class DAPTestCaseBase(TestBase):
             expectFailure=expectFailure,
         )
 
-    def getBuiltinServerToolWithPortArg(self, port):
-        # Tries to find simulation/lldb-server/gdbserver tool and
-        # configure the server arguments to attach with given port numeber.
+    def getBuiltinDebugServerTool(self):
+        # Tries to find simulation/lldb-server/gdbserver tool path.
         server_tool = None
         if lldbplatformutil.getPlatform() == "linux":
             server_tool = lldbgdbserverutils.get_lldb_server_exe()
             if server_tool is None:
                 self.dap_server.request_disconnect(terminateDebuggee=True)
                 self.assertIsNotNone(server_tool, "lldb-server not found.")
-            server_tool += " g localhost:" + str(port) + " "
         elif lldbplatformutil.getPlatform() == "macosx":
             server_tool = lldbgdbserverutils.get_debugserver_exe()
             if server_tool is None:
                 self.dap_server.request_disconnect(terminateDebuggee=True)
                 self.assertIsNotNone(server_tool, "debugserver not found.")
-            server_tool += " --listen localhost:" + str(port) + " "
         return server_tool

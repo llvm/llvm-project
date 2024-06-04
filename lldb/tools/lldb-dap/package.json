@@ -348,14 +348,14 @@
                 "type": "string",
                 "description": "The time in seconds to wait for a program to stop when attaching using \"attachCommands\". Defaults to 30 seconds."
               },
-              "port": {
+              "gdb-remote-port": {
                 "type": [
                   "number",
                   "string"
                 ],
                 "description": "TCP/IP port to attach to. Specifying both pid and port is an error."
               },
-              "hostname": {
+              "gdb-remote-hostname": {
                 "type": "string",
                 "description": "The hostname to connect to a remote system. The default hostname being used localhost."
               },

@@ -572,8 +572,8 @@ class DebugCommunication(object):
         coreFile=None,
         postRunCommands=None,
         sourceMap=None,
-        port=None,
-        hostname=None,
+        gdbRemotePort=None,
+        gdbRemoteHostname=None,
     ):
         args_dict = {}
         if pid is not None:
@@ -603,10 +603,10 @@ class DebugCommunication(object):
             args_dict["postRunCommands"] = postRunCommands
         if sourceMap:
             args_dict["sourceMap"] = sourceMap
-        if port is not None:
-            args_dict["port"] = port
-        if hostname is not None:
-            args_dict["hostname"] = hostname
+        if gdbRemotePort is not None:
+            args_dict["gdb-remote-port"] = gdbRemotePort
+        if gdbRemoteHostname is not None:
+            args_dict["gdb-remote-hostname"] = gdbRemoteHostname
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 

@@ -676,8 +676,8 @@ void request_attach(const llvm::json::Object &request) {
   auto arguments = request.getObject("arguments");
   const lldb::pid_t pid =
       GetUnsigned(arguments, "pid", LLDB_INVALID_PROCESS_ID);
-  const auto port = GetUnsigned(arguments, "port", invalid_port);
-  llvm::StringRef hostname = GetString(arguments, "hostname", "localhost");
+  const auto gdb_remote_port = GetUnsigned(arguments, "gdb-remote-port", invalid_port);
+  llvm::StringRef gdb_remote_hostname = GetString(arguments, "gdb-remote-hostname", "localhost");
   if (pid != LLDB_INVALID_PROCESS_ID)
     attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor", false);
@@ -739,7 +739,7 @@ void request_attach(const llvm::json::Object &request) {
     return;
   }
 
-  if ((pid == LLDB_INVALID_PROCESS_ID || port == invalid_port) && wait_for) {
+  if ((pid == LLDB_INVALID_PROCESS_ID || gdb_remote_port == invalid_port) && wait_for) {
     char attach_msg[256];
     auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
                                    "Waiting to attach to \"%s\"...",
@@ -753,18 +753,18 @@ void request_attach(const llvm::json::Object &request) {
     // the launch call and the launch will happen synchronously
     g_dap.debugger.SetAsync(false);
     if (core_file.empty()) {
-      if ((pid != LLDB_INVALID_PROCESS_ID) && (port != invalid_port)) {
+      if ((pid != LLDB_INVALID_PROCESS_ID) && (gdb_remote_port != invalid_port)) {
         // If both pid and port numbers are specified.
         error.SetErrorString("The user can't specify both pid and port");
-      } else if (port != invalid_port) {
+      } else if (gdb_remote_port != invalid_port) {
         // If port is specified and pid is not.
         lldb::SBListener listener = g_dap.debugger.GetListener();
 
         // If the user hasn't provided the hostname property, default localhost
         // being used.
         std::string connect_url =
-            llvm::formatv("connect://{0}:", hostname.data());
-        connect_url += std::to_string(port);
+            llvm::formatv("connect://{0}:", gdb_remote_hostname.data());
+        connect_url += std::to_string(gdb_remote_port);
         g_dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
                                    error);
       } else {

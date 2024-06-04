@@ -8,38 +8,39 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbplatformutil
-import lldbgdbserverutils
 import lldbdap_testcase
 import os
 import shutil
 import subprocess
 import tempfile
 import threading
-import time
 import sys
 import socket
+import select
 
+
+# A class representing a pipe for communicating with debug server.
+# This class includes menthods to open the pipe and read the port number from it.
+class Pipe(object):
+    def __init__(self, prefix):
+        self.name = os.path.join(prefix, "stub_port_number")
+        os.mkfifo(self.name)
+        self._fd = os.open(self.name, os.O_RDONLY | os.O_NONBLOCK)
+
+    def finish_connection(self, timeout):
+        pass
+
+    def read(self, size, timeout):
+        (readers, _, _) = select.select([self._fd], [], [], timeout)
+        if self._fd not in readers:
+            raise TimeoutError
+        return os.read(self._fd, size)
+
+    def close(self):
+        os.close(self._fd)
 
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
-    def get_free_port(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(("", 0))
-        port = s.getsockname()[1]
-        s.close()
-        return port
-
-    def runTargetProgramOnPort(self, port=None, program=None):
-        server_tool = self.getBuiltinServerToolWithPortArg(port)
-        self.process = subprocess.Popen(
-            [server_tool + program],
-            shell=True,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-
-        return self.process
-
+    default_timeout = 20
     def set_and_hit_breakpoint(self, continueToExit=True):
         source = "main.c"
         main_source_path = os.path.join(os.getcwd(), source)
@@ -54,21 +55,54 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         if continueToExit:
             self.continue_to_exit()
 
+    def get_debug_server_command_line_args(self):
+        args = []
+        if lldbplatformutil.getPlatform() == "linux":
+            args = ["gdbserver"]    
+        elif lldbplatformutil.getPlatform() == "macosx":
+            args = ["--listen"]
+        if lldb.remote_platform:
+            args += ["*:0"]
+        else:
+            args += ["localhost:0"]
+        return args
+
+    def get_debug_server_pipe(self):
+        pipe = Pipe(self.getBuildDir())
+        self.addTearDownHook(lambda: pipe.close())
+        pipe.finish_connection(self.default_timeout)
+        return pipe
+        
     @skipIfWindows
     @skipIfNetBSD
     def test_by_port(self):
         """
         Tests attaching to a process by port.
         """
+        
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")
+        
+        debug_server_tool = self.getBuiltinDebugServerTool()
 
-        port = self.get_free_port()
-        self.process = self.runTargetProgramOnPort(port=port, program=program)
-        pid = self.process.pid
-        response = self.attach(program=program, port=port, sourceInitFile=True)
+        pipe = self.get_debug_server_pipe()
+        args = self.get_debug_server_command_line_args()
+        args += [program]
+        args += ["--named-pipe", pipe.name]
+        
+        self.process = self.spawnSubprocess(
+            debug_server_tool, args, install_remote=False
+        )
+        
+        # Read the port number from the debug server pipe.
+        port = pipe.read(10, 30)
+        # Trim null byte, convert to int
+        port = int(port[:-1])
+        self.assertIsNotNone(port, " Failed to read the port number from debug server pipe")
+
+        self.attach(program=program, gdbRemotePort=port, sourceInitFile=True)
         self.set_and_hit_breakpoint(continueToExit=True)
-        self.process.kill()
+        self.process.terminate()
 
     @skipIfWindows
     @skipIfNetBSD
@@ -79,13 +113,28 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")
 
-        port = self.get_free_port()
-        self.process = self.runTargetProgramOnPort(port=port, program=program)
+        debug_server_tool = self.getBuiltinDebugServerTool()
+        pipe = self.get_debug_server_pipe()
+        args = self.get_debug_server_command_line_args()
+        args += [program]
+        args += ["--named-pipe", pipe.name]
+        
+        self.process = self.spawnSubprocess(
+            debug_server_tool, args, install_remote=False
+        )
+        
+        # Read the port number from the debug server pipe.
+        port = pipe.read(10, 30)
+        # Trim null byte, convert to int
+        port = int(port[:-1])
+        self.assertIsNotNone(port, " Failed to read the port number from debug server pipe")
+        
         pid = self.process.pid
+        
         response = self.attach(
             program=program,
             pid=pid,
-            port=port,
+            gdbRemotePort=port,
             sourceInitFile=True,
             expectFailure=True,
         )
@@ -93,7 +142,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
             self.assertFalse(
                 response["success"], "The user can't specify both pid and port"
             )
-        self.process.kill()
+        self.process.terminate()
 
     @skipIfWindows
     @skipIfNetBSD
@@ -105,16 +154,21 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
 
         port = 0
-        self.process = self.runTargetProgramOnPort(port=port, program=program)
+        args = [program]
+        debug_server_tool = self.getBuiltinDebugServerTool()
+        self.process = self.spawnSubprocess(
+            debug_server_tool, args, install_remote=False
+        )
+
         response = self.attach(
-            program=program, port=port, sourceInitFile=True, expectFailure=True
+            program=program, gdbRemotePort=port, sourceInitFile=True, expectFailure=True
         )
         if not (response and response["success"]):
             self.assertFalse(
                 response["success"],
                 "The user can't attach with invalid port (%s)" % port,
             )
-        self.process.kill()
+        self.process.terminate()
 
     @skipIfWindows
     @skipIfNetBSD
@@ -126,13 +180,18 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
 
         port = 65536
-        self.process = self.runTargetProgramOnPort(port=port, program=program)
+        args = [program]
+        debug_server_tool = self.getBuiltinDebugServerTool()
+        self.process = self.spawnSubprocess(
+            debug_server_tool, args, install_remote=False
+        )
+
         response = self.attach(
-            program=program, port=port, sourceInitFile=True, expectFailure=True
+            program=program, gdbRemotePort=port, sourceInitFile=True, expectFailure=True
         )
         if not (response and response["success"]):
             self.assertFalse(
                 response["success"],
                 "The user can't attach with illegal port (%s)" % port,
             )
-        self.process.kill()
+        self.process.terminate()
