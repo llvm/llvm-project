@@ -92,16 +92,12 @@ namespace FoundSingleTemplate {
     struct A1; // expected-note 2{{member 'A1' declared here}}
 
     void g1() {
-      this->f0<0; // expected-error {{expected '>'}}
-                  // expected-note@-1 {{to match this '<'}}
-                  // expected-error@-2 {{expected unqualified-id}}
+      this->f0<0; // expected-error {{no member named 'f0' in 'B<T>'}}
       this->f0<0>; // expected-error {{no member named 'f0' in 'B<T>'}}
       this->f0<0>1; // expected-error {{no member named 'f0' in 'B<T>'}}
                     // expected-error@-1 {{expected ';' after expression}}
 
-      this->A0<0; // expected-error {{expected '>'}}
-                  // expected-note@-1 {{to match this '<'}}
-                  // expected-error@-2 {{expected unqualified-id}}
+      this->A0<0; // expected-error {{no member named 'A0' in 'B<T>'}}
       this->A0<0>; // expected-error {{no member named 'A0' in 'B<T>'}}
       this->A0<0>1; // expected-error {{no member named 'A0' in 'B<T>'}}
                     // expected-error@-1 {{expected ';' after expression}}
@@ -109,14 +105,12 @@ namespace FoundSingleTemplate {
 
       this->f1<0; // expected-error {{expected '>'}}
                   // expected-note@-1 {{to match this '<'}}
-                  // expected-error@-2 {{expected unqualified-id}}
       this->f1<0>; // expected-error {{reference to non-static member function must be called}}
       this->f1<0>1; // expected-error {{reference to non-static member function must be called}}
                     // expected-error@-1 {{expected ';' after expression}}
 
       this->A1<0; // expected-error {{expected '>'}}
                   // expected-note@-1 {{to match this '<'}}
-                  // expected-error@-2 {{expected unqualified-id}}
       this->A1<0>; // expected-error {{cannot refer to member 'A1' in 'B<T>' with '->'}}
       this->A1<0>1; // expected-error {{cannot refer to member 'A1' in 'B<T>' with '->'}}
                     // expected-error@-1 {{expected ';' after expression}}
@@ -211,37 +205,30 @@ namespace FoundAmbiguousTemplate {
     struct A1; // expected-note 2{{member 'A1' declared here}}
 
     void g1() {
-      this->f0<0; // expected-error {{expected '>'}}
-                  // expected-note@-1 {{to match this '<'}}
-                  // expected-error@-2 {{expected unqualified-id}}
-                  // expected-error@-3 {{reference to 'f0' is ambiguous}}
+      this->f0<0; // expected-error {{no member named 'f0' in 'B<T>'}}
+                  // expected-error@-1 {{reference to 'f0' is ambiguous}}
       this->f0<0>; // expected-error {{no member named 'f0' in 'B<T>'}}
                    // expected-error@-1 {{reference to 'f0' is ambiguous}}
       this->f0<0>1; // expected-error {{no member named 'f0' in 'B<T>'}}
                     // expected-error@-1 {{expected ';' after expression}}
                     // expected-error@-2 {{reference to 'f0' is ambiguous}}
 
-      this->A0<0; // expected-error {{expected '>'}}
-                  // expected-note@-1 {{to match this '<'}}
-                  // expected-error@-2 {{expected unqualified-id}}
-                  // expected-error@-3 {{reference to 'A0' is ambiguous}}
+      this->A0<0; // expected-error {{no member named 'A0' in 'B<T>'}}
+                  // expected-error@-1 {{reference to 'A0' is ambiguous}}
       this->A0<0>; // expected-error {{no member named 'A0' in 'B<T>'}}
                    // expected-error@-1 {{reference to 'A0' is ambiguous}}
       this->A0<0>1; // expected-error {{no member named 'A0' in 'B<T>'}}
                     // expected-error@-1 {{expected ';' after expression}}
                     // expected-error@-2 {{reference to 'A0' is ambiguous}}
 
-
       this->f1<0; // expected-error {{expected '>'}}
                   // expected-note@-1 {{to match this '<'}}
-                  // expected-error@-2 {{expected unqualified-id}}
       this->f1<0>; // expected-error {{reference to non-static member function must be called}}
       this->f1<0>1; // expected-error {{reference to non-static member function must be called}}
                     // expected-error@-1 {{expected ';' after expression}}
 
       this->A1<0; // expected-error {{expected '>'}}
                   // expected-note@-1 {{to match this '<'}}
-                  // expected-error@-2 {{expected unqualified-id}}
       this->A1<0>; // expected-error {{cannot refer to member 'A1' in 'B<T>' with '->'}}
       this->A1<0>1; // expected-error {{cannot refer to member 'A1' in 'B<T>' with '->'}}
                     // expected-error@-1 {{expected ';' after expression}}

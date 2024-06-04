@@ -65,9 +65,7 @@ namespace PR11856 {
     if (it1->end < it1->end) { }
 
     X *x;
-    if (x->end < 7) { } // expected-error{{expected '>'}}
-                        // expected-note@-1{{to match this '<'}}
-                        // expected-error@-2{{expected unqualified-id}}
+    if (x->end < 7) { } // expected-error{{no member named 'end' in 'PR11856::X'}}
 
     Y *y;
     if (y->end < 7) { }
