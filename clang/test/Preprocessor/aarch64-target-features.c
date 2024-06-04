@@ -676,7 +676,7 @@
 // CHECK-BEFORE-V83-NOT: __ARM_FEATURE_JCVT 1
 // CHECK-BEFORE-V85-NOT: __ARM_FEATURE_FRINT 1
 
-// Apple A14 and M1 are ArmV8.5-a but do not include BTI.
+// Apple A14 and M1 do not include BTI.
 // RUN: %clang -target aarch64 -mcpu=apple-a14 -x c -E -dM %s -o - | FileCheck --check-prefix=APPLE-A14-M1 %s
 // RUN: %clang -target aarch64 -mcpu=apple-m1 -x c -E -dM %s -o - | FileCheck --check-prefix=APPLE-A14-M1 %s
 // APPLE-A14-M1-NOT: __ARM_FEATURE_BTI 1
