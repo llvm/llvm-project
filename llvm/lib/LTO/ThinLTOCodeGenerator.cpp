@@ -2024,9 +2024,10 @@ void ThinLTOCodeGenerator::run() {
       WrittenObjects.wait(AllModules);
 
       {
-        CacheLogOS.applyLocked([&](raw_ostream &OS) {
-          OS << "Waiting for outstanding cache requests...\n";
-        });
+        if (CacheLogging)
+          CacheLogOS.applyLocked([&](raw_ostream &OS) {
+            OS << "Waiting for outstanding cache requests...\n";
+          });
         ScopedDurationTimer T([&](double Seconds) {
           if (CacheLogging)
             CacheLogOS.applyLocked([&](raw_ostream &OS) {
