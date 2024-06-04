@@ -6,7 +6,7 @@ void unroll_no_vars() {
 }
 
 void unroll_arg_count() {
-   [unroll(2,4)] // expected-error {{'unroll' attribute takes one argument}}
+   [unroll(2,4)] // expected-error {{'unroll' attribute takes no more than 1 argument}}
   for(int i=0; i<100; i++);
 }
 
