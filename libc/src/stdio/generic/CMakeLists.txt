@@ -396,8 +396,6 @@ add_entrypoint_object(
     ${printf_deps}
 )
 
-message(STATUS "the printf deps are ${printf_deps}")
-
 add_entrypoint_object(
   fgets
   SRCS

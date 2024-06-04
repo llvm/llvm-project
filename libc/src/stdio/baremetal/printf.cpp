@@ -19,12 +19,16 @@ extern "C" size_t __llvm_libc_raw_write(const char *s, size_t size);
 
 namespace LIBC_NAMESPACE {
 
+namespace {
+
 LIBC_INLINE int raw_write_hook(cpp::string_view new_str, void *) {
   size_t written = __llvm_libc_raw_write(new_str.data(), new_str.size());
   if (written != new_str.size())
     return printf_core::FILE_WRITE_ERROR;
   return printf_core::WRITE_OK;
 }
+
+} // namespace
 
 LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   va_list vlist;
