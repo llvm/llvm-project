@@ -984,7 +984,21 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
-      .legalFor({{v4s32, v2s32}, {v8s16, v4s16}, {v16s8, v8s8}});
+      .legalFor({{v4s32, v2s32}, {v8s16, v4s16}, {v16s8, v8s8}})
+      .bitcastIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getSizeInBits() <= 128 &&
+                   Query.Types[1].getSizeInBits() <= 64;
+          },
+          [=](const LegalityQuery &Query) {
+            const LLT DstTy = Query.Types[0];
+            const LLT SrcTy = Query.Types[1];
+            return std::pair(
+                0, DstTy.changeElementSize(SrcTy.getSizeInBits())
+                       .changeElementCount(
+                           DstTy.getElementCount().divideCoefficientBy(
+                               SrcTy.getNumElements())));
+          });
 
   getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({p0});
 

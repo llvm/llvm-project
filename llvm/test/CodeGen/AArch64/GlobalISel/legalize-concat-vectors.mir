@@ -81,7 +81,12 @@ body:             |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[COPY]](s16), [[COPY1]](s16), [[COPY2]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[BUILD_VECTOR]](<8 x s16>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s8>), [[UV1:%[0-9]+]]:_(<4 x s8>) = G_UNMERGE_VALUES [[TRUNC]](<8 x s8>)
-    ; CHECK-NEXT: %f:_(<16 x s8>) = G_CONCAT_VECTORS %c(<4 x s8>), [[UV]](<4 x s8>), [[UV]](<4 x s8>), [[UV]](<4 x s8>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST %c(<4 x s8>)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<4 x s8>)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<4 x s8>)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<4 x s8>)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[BITCAST]](s32), [[BITCAST1]](s32), [[BITCAST2]](s32), [[BITCAST3]](s32)
+    ; CHECK-NEXT: %f:_(<16 x s8>) = G_BITCAST [[BUILD_VECTOR1]](<4 x s32>)
     ; CHECK-NEXT: $q0 = COPY %f(<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %a:_(p0) = COPY $x0
@@ -112,7 +117,12 @@ body:             |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[BUILD_VECTOR]](<4 x s32>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[TRUNC]](<4 x s16>)
-    ; CHECK-NEXT: %f:_(<8 x s16>) = G_CONCAT_VECTORS %c(<2 x s16>), [[UV]](<2 x s16>), [[UV]](<2 x s16>), [[UV]](<2 x s16>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST %c(<2 x s16>)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[BITCAST]](s32), [[BITCAST1]](s32), [[BITCAST2]](s32), [[BITCAST3]](s32)
+    ; CHECK-NEXT: %f:_(<8 x s16>) = G_BITCAST [[BUILD_VECTOR1]](<4 x s32>)
     ; CHECK-NEXT: $q0 = COPY %f(<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %a:_(p0) = COPY $x0
