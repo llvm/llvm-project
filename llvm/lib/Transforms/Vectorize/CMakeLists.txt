@@ -1,6 +1,6 @@
 add_llvm_component_library(LLVMVectorize
   LoadStoreVectorizer.cpp
-  LoopIdiomTransform.cpp
+  LoopIdiomVectorize.cpp
   LoopVectorizationLegality.cpp
   LoopVectorize.cpp
   SLPVectorizer.cpp

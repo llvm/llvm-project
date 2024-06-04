@@ -51,7 +51,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Vectorize/LoopIdiomTransform.h"
+#include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -554,7 +554,7 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(LoopIdiomTransformPass());
+        LPM.addPass(LoopIdiomVectorizePass());
       });
 }
 

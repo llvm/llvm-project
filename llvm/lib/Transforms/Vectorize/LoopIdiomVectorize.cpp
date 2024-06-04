@@ -1,4 +1,4 @@
-//===-------- LoopIdiomTransform.cpp - Loop idiom recognition -------------===//
+//===-------- LoopIdiomVectorize.cpp - Loop idiom recognition -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,7 +35,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Vectorize/LoopIdiomTransform.h"
+#include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -50,24 +50,24 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-#define DEBUG_TYPE "loop-idiom-transform"
+#define DEBUG_TYPE "loop-idiom-vectorize"
 
-static cl::opt<bool> DisableAll("disable-loop-idiom-transform-all", cl::Hidden,
+static cl::opt<bool> DisableAll("disable-loop-idiom-vectorize-all", cl::Hidden,
                                 cl::init(false),
                                 cl::desc("Disable Loop Idiom Transform Pass."));
 
 static cl::opt<bool>
-    DisableByteCmp("disable-loop-idiom-transform-bytecmp", cl::Hidden,
+    DisableByteCmp("disable-loop-idiom-vectorize-bytecmp", cl::Hidden,
                    cl::init(false),
                    cl::desc("Proceed with Loop Idiom Transform Pass, but do "
                             "not convert byte-compare loop(s)."));
 
 static cl::opt<bool>
-    VerifyLoops("verify-loop-idiom-transform", cl::Hidden, cl::init(false),
+    VerifyLoops("verify-loop-idiom-vectorize", cl::Hidden, cl::init(false),
                 cl::desc("Verify loops generated Loop Idiom Transform Pass."));
 
 namespace {
-class LoopIdiomTransform {
+class LoopIdiomVectorize {
   Loop *CurLoop = nullptr;
   DominatorTree *DT;
   LoopInfo *LI;
@@ -82,7 +82,7 @@ class LoopIdiomTransform {
   BasicBlock *VectorLoopIncBlock = nullptr;
 
 public:
-  explicit LoopIdiomTransform(DominatorTree *DT, LoopInfo *LI,
+  explicit LoopIdiomVectorize(DominatorTree *DT, LoopInfo *LI,
                               const TargetTransformInfo *TTI,
                               const DataLayout *DL)
       : DT(DT), LI(LI), TTI(TTI), DL(DL) {}
@@ -115,7 +115,7 @@ private:
 };
 } // anonymous namespace
 
-PreservedAnalyses LoopIdiomTransformPass::run(Loop &L, LoopAnalysisManager &AM,
+PreservedAnalyses LoopIdiomVectorizePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &AR,
                                               LPMUpdater &) {
   if (DisableAll)
@@ -123,7 +123,7 @@ PreservedAnalyses LoopIdiomTransformPass::run(Loop &L, LoopAnalysisManager &AM,
 
   const auto *DL = &L.getHeader()->getModule()->getDataLayout();
 
-  LoopIdiomTransform LIT(&AR.DT, &AR.LI, &AR.TTI, DL);
+  LoopIdiomVectorize LIT(&AR.DT, &AR.LI, &AR.TTI, DL);
   if (!LIT.run(&L))
     return PreservedAnalyses::all();
 
@@ -132,11 +132,11 @@ PreservedAnalyses LoopIdiomTransformPass::run(Loop &L, LoopAnalysisManager &AM,
 
 //===----------------------------------------------------------------------===//
 //
-//          Implementation of LoopIdiomTransform
+//          Implementation of LoopIdiomVectorize
 //
 //===----------------------------------------------------------------------===//
 
-bool LoopIdiomTransform::run(Loop *L) {
+bool LoopIdiomVectorize::run(Loop *L) {
   CurLoop = L;
 
   Function &F = *L->getHeader()->getParent();
@@ -160,7 +160,7 @@ bool LoopIdiomTransform::run(Loop *L) {
   return recognizeByteCompare();
 }
 
-bool LoopIdiomTransform::recognizeByteCompare() {
+bool LoopIdiomVectorize::recognizeByteCompare() {
   // Currently the transformation only works on scalable vector types, although
   // there is no fundamental reason why it cannot be made to work for fixed
   // width too.
@@ -173,7 +173,7 @@ bool LoopIdiomTransform::recognizeByteCompare() {
 
   BasicBlock *Header = CurLoop->getHeader();
 
-  // In LoopIdiomTransform::run we have already checked that the loop
+  // In LoopIdiomVectorize::run we have already checked that the loop
   // has a preheader so we can assume it's in a canonical form.
   if (CurLoop->getNumBackEdges() != 1 || CurLoop->getNumBlocks() != 2)
     return false;
@@ -340,7 +340,7 @@ bool LoopIdiomTransform::recognizeByteCompare() {
   return true;
 }
 
-Value *LoopIdiomTransform::createMaskedFindMismatch(IRBuilder<> &Builder,
+Value *LoopIdiomVectorize::createMaskedFindMismatch(IRBuilder<> &Builder,
                                                     GetElementPtrInst *GEPA,
                                                     GetElementPtrInst *GEPB,
                                                     Value *ExtStart,
@@ -440,7 +440,7 @@ Value *LoopIdiomTransform::createMaskedFindMismatch(IRBuilder<> &Builder,
   return Builder.CreateTrunc(VectorLoopRes64, ResType);
 }
 
-Value *LoopIdiomTransform::expandFindMismatch(
+Value *LoopIdiomVectorize::expandFindMismatch(
     IRBuilder<> &Builder, DomTreeUpdater &DTU, GetElementPtrInst *GEPA,
     GetElementPtrInst *GEPB, Instruction *Index, Value *Start, Value *MaxLen) {
   Value *PtrA = GEPA->getPointerOperand();
@@ -659,7 +659,7 @@ Value *LoopIdiomTransform::expandFindMismatch(
   return FinalRes;
 }
 
-void LoopIdiomTransform::transformByteCompare(GetElementPtrInst *GEPA,
+void LoopIdiomVectorize::transformByteCompare(GetElementPtrInst *GEPA,
                                               GetElementPtrInst *GEPB,
                                               PHINode *IndPhi, Value *MaxLen,
                                               Instruction *Index, Value *Start,
