@@ -1310,8 +1310,7 @@ public:
                                    SourceLocation TemplateKWLoc,
                                    const IdentifierInfo &Name,
                                    SourceLocation NameLoc, QualType ObjectType,
-                                   bool AllowInjectedClassName,
-                                   bool MayBeNNS);
+                                   bool AllowInjectedClassName, bool MayBeNNS);
 
   /// Build a new template name given a nested name specifier and the
   /// overloaded operator name that is referred to as a template.

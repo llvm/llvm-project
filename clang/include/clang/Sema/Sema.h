@@ -11122,17 +11122,14 @@ public:
                      QualType ObjectType, bool EnteringContext,
                      RequiredTemplateKind RequiredTemplate = SourceLocation(),
                      AssumedTemplateKind *ATK = nullptr,
-                     bool AllowTypoCorrection = true,
-                     bool MayBeNNS = false);
+                     bool AllowTypoCorrection = true, bool MayBeNNS = false);
 
-  TemplateNameKind isTemplateName(Scope *S, CXXScopeSpec &SS,
-                                  bool hasTemplateKeyword,
-                                  const UnqualifiedId &Name,
-                                  ParsedType ObjectType, bool EnteringContext,
-                                  TemplateTy &Template,
-                                  bool &MemberOfUnknownSpecialization,
-                                  bool Disambiguation = false,
-                                  bool MayBeNNS = false);
+  TemplateNameKind
+  isTemplateName(Scope *S, CXXScopeSpec &SS, bool hasTemplateKeyword,
+                 const UnqualifiedId &Name, ParsedType ObjectType,
+                 bool EnteringContext, TemplateTy &Template,
+                 bool &MemberOfUnknownSpecialization,
+                 bool Disambiguation = false, bool MayBeNNS = false);
 
   /// Try to resolve an undeclared template name as a type template.
   ///
@@ -11461,13 +11458,11 @@ public:
   /// For example, given "x.MetaFun::template apply", the scope specifier
   /// \p SS will be "MetaFun::", \p TemplateKWLoc contains the location
   /// of the "template" keyword, and "apply" is the \p Name.
-  TemplateNameKind ActOnTemplateName(Scope *S, CXXScopeSpec &SS,
-                                     SourceLocation TemplateKWLoc,
-                                     const UnqualifiedId &Name,
-                                     ParsedType ObjectType,
-                                     bool EnteringContext, TemplateTy &Template,
-                                     bool AllowInjectedClassName = false,
-                                     bool MayBeNNS = false);
+  TemplateNameKind
+  ActOnTemplateName(Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+                    const UnqualifiedId &Name, ParsedType ObjectType,
+                    bool EnteringContext, TemplateTy &Template,
+                    bool AllowInjectedClassName = false, bool MayBeNNS = false);
 
   DeclResult ActOnClassTemplateSpecialization(
       Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
