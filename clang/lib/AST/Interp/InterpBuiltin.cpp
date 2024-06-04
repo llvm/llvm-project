@@ -446,59 +446,32 @@ static bool interp_floating_comparison(InterpState &S, CodePtr OpPC,
   const Floating &RHS = S.Stk.peek<Floating>();
   const Floating &LHS = S.Stk.peek<Floating>(align(2u * primSize(PT_Float)));
   unsigned ID = F->getBuiltinID();
-  assert(ID == Builtin::BI__builtin_isgreater ||
-         ID == Builtin::BI__builtin_isgreaterequal ||
-         ID == Builtin::BI__builtin_isless ||
-         ID == Builtin::BI__builtin_islessequal ||
-         ID == Builtin::BI__builtin_islessgreater ||
-         ID == Builtin::BI__builtin_isunordered);
 
-  ComparisonCategoryResult Cmp = LHS.compare(RHS);
-  bool FunctionResult;
-  if (ID == Builtin::BI__builtin_isunordered ||
-      Cmp == ComparisonCategoryResult::Unordered) {
-    FunctionResult = ID == Builtin::BI__builtin_isunordered &&
-                     Cmp == ComparisonCategoryResult::Unordered;
-  } else {
-    int CmpStrong;
-    switch (Cmp) {
-    case ComparisonCategoryResult::Equal:
-    case ComparisonCategoryResult::Equivalent:
-      CmpStrong = 0;
-      break;
-    case ComparisonCategoryResult::Less:
-      CmpStrong = -1;
-      break;
-    case ComparisonCategoryResult::Greater:
-      CmpStrong = 1;
-      break;
-    default:
-      llvm_unreachable("Unchecked ComparisonCategoryResult enum");
-    }
-
-    switch (ID) {
-    case Builtin::BI__builtin_isgreater:
-      FunctionResult = CmpStrong > 0;
-      break;
-    case Builtin::BI__builtin_isgreaterequal:
-      FunctionResult = CmpStrong >= 0;
-      break;
-    case Builtin::BI__builtin_isless:
-      FunctionResult = CmpStrong < 0;
-      break;
-    case Builtin::BI__builtin_islessequal:
-      FunctionResult = CmpStrong <= 0;
-      break;
-    case Builtin::BI__builtin_islessgreater:
-      FunctionResult = CmpStrong != 0;
-      break;
-    default:
-      llvm_unreachable("Unexpected builtin ID: Should be a floating point "
-                       "comparison function");
-    }
-  }
-
-  pushInteger(S, FunctionResult, Call->getType());
+  pushInteger(
+      S,
+      [&] {
+        switch (ID) {
+        case Builtin::BI__builtin_isgreater:
+          return LHS > RHS;
+        case Builtin::BI__builtin_isgreaterequal:
+          return LHS >= RHS;
+        case Builtin::BI__builtin_isless:
+          return LHS < RHS;
+        case Builtin::BI__builtin_islessequal:
+          return LHS <= RHS;
+        case Builtin::BI__builtin_islessgreater: {
+          ComparisonCategoryResult cmp = LHS.compare(RHS);
+          return cmp == ComparisonCategoryResult::Less ||
+                 cmp == ComparisonCategoryResult::Greater;
+        }
+        case Builtin::BI__builtin_isunordered:
+          return LHS.compare(RHS) == ComparisonCategoryResult::Unordered;
+        default:
+          llvm_unreachable("Unexpected builtin ID: Should be a floating point "
+                           "comparison function");
+        }
+      }(),
+      Call->getType());
   return true;
 }
 

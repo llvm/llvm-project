@@ -12670,51 +12670,32 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
 
-    APFloat::cmpResult Cmp = LHS.compare(RHS);
-    bool FunctionResult;
-    if (BuiltinOp == Builtin::BI__builtin_isunordered ||
-        Cmp == APFloat::cmpResult::cmpUnordered) {
-      FunctionResult = BuiltinOp == Builtin::BI__builtin_isunordered &&
-                       Cmp == APFloat::cmpResult::cmpUnordered;
-    } else {
-      int CmpStrong;
-      switch (Cmp) {
-      case APFloat::cmpResult::cmpEqual:
-        CmpStrong = 0;
-        break;
-      case APFloat::cmpResult::cmpLessThan:
-        CmpStrong = -1;
-        break;
-      case APFloat::cmpResult::cmpGreaterThan:
-        CmpStrong = 1;
-        break;
-      default:
-        llvm_unreachable("Unchecked cmpResult enum");
-      }
-
-      switch (BuiltinOp) {
-      case Builtin::BI__builtin_isgreater:
-        FunctionResult = CmpStrong > 0;
-        break;
-      case Builtin::BI__builtin_isgreaterequal:
-        FunctionResult = CmpStrong >= 0;
-        break;
-      case Builtin::BI__builtin_isless:
-        FunctionResult = CmpStrong < 0;
-        break;
-      case Builtin::BI__builtin_islessequal:
-        FunctionResult = CmpStrong <= 0;
-        break;
-      case Builtin::BI__builtin_islessgreater:
-        FunctionResult = CmpStrong != 0;
-        break;
-      default:
-        llvm_unreachable("Unexpected builtin ID: Should be a floating point "
-                         "comparison function");
-      }
-    }
-
-    return Success(FunctionResult ? 1 : 0, E);
+    return Success(
+        [&] {
+          switch (BuiltinOp) {
+          case Builtin::BI__builtin_isgreater:
+            return LHS > RHS;
+          case Builtin::BI__builtin_isgreaterequal:
+            return LHS >= RHS;
+          case Builtin::BI__builtin_isless:
+            return LHS < RHS;
+          case Builtin::BI__builtin_islessequal:
+            return LHS <= RHS;
+          case Builtin::BI__builtin_islessgreater: {
+            APFloat::cmpResult cmp = LHS.compare(RHS);
+            return cmp == APFloat::cmpResult::cmpLessThan ||
+                   cmp == APFloat::cmpResult::cmpGreaterThan;
+          }
+          case Builtin::BI__builtin_isunordered:
+            return LHS.compare(RHS) == APFloat::cmpResult::cmpUnordered;
+          default:
+            llvm_unreachable("Unexpected builtin ID: Should be a floating "
+                             "point comparison function");
+          }
+        }()
+            ? 1
+            : 0,
+        E);
   }
 
   case Builtin::BI__builtin_issignaling: {
