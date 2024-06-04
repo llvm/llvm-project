@@ -6,39 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "siphash.h"
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "llvm/Support/SipHash.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Endian.h"
+#include <cstdint>
 
-// Lightly adapted from the SipHash reference C implementation by
-// Jean-Philippe Aumasson and Daniel J. Bernstein.
+using namespace llvm;
+using namespace support;
 
-/* default: SipHash-2-4 */
-#ifndef cROUNDS
-#define cROUNDS 2
-#endif
-#ifndef dROUNDS
-#define dROUNDS 4
-#endif
+// Lightly adapted from the SipHash reference C implementation:
+//   https://github.com/veorq/SipHash
+// by Jean-Philippe Aumasson and Daniel J. Bernstein
 
 #define ROTL(x, b) (uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))
-
-#define U32TO8_LE(p, v)                                                        \
-  (p)[0] = (uint8_t)((v));                                                     \
-  (p)[1] = (uint8_t)((v) >> 8);                                                \
-  (p)[2] = (uint8_t)((v) >> 16);                                               \
-  (p)[3] = (uint8_t)((v) >> 24);
-
-#define U64TO8_LE(p, v)                                                        \
-  U32TO8_LE((p), (uint32_t)((v)));                                             \
-  U32TO8_LE((p) + 4, (uint32_t)((v) >> 32));
-
-#define U8TO64_LE(p)                                                           \
-  (((uint64_t)((p)[0])) | ((uint64_t)((p)[1]) << 8) |                          \
-   ((uint64_t)((p)[2]) << 16) | ((uint64_t)((p)[3]) << 24) |                   \
-   ((uint64_t)((p)[4]) << 32) | ((uint64_t)((p)[5]) << 40) |                   \
-   ((uint64_t)((p)[6]) << 48) | ((uint64_t)((p)[7]) << 56))
 
 #define SIPROUND                                                               \
   do {                                                                         \
@@ -58,27 +39,30 @@
     v2 = ROTL(v2, 32);                                                         \
   } while (0)
 
-/*
-    Computes a SipHash value
-    *in: pointer to input data (read-only)
-    inlen: input data length in bytes (any size_t value)
-    *k: pointer to the key data (read-only), must be 16 bytes
-    *out: pointer to output data (write-only), outlen bytes must be allocated
-    outlen: length of the output in bytes, must be 8 or 16
-*/
-int siphash(const void *in, const size_t inlen, const void *k, uint8_t *out,
-            const size_t outlen) {
+namespace {
+
+/// Computes a SipHash value
+///
+/// \param in: pointer to input data (read-only)
+/// \param inlen: input data length in bytes (any size_t value)
+/// \param k: reference to the key data 16-byte array (read-only)
+/// \returns output data, must be 8 or 16 bytes
+///
+template <int cROUNDS, int dROUNDS, size_t outlen>
+void siphash(const unsigned char *in, uint64_t inlen,
+             const unsigned char (&k)[16], unsigned char (&out)[outlen]) {
 
   const unsigned char *ni = (const unsigned char *)in;
   const unsigned char *kk = (const unsigned char *)k;
 
-  assert((outlen == 8) || (outlen == 16));
+  static_assert(outlen == 8 || outlen == 16, "result should be 8 or 16 bytes");
+
   uint64_t v0 = UINT64_C(0x736f6d6570736575);
   uint64_t v1 = UINT64_C(0x646f72616e646f6d);
   uint64_t v2 = UINT64_C(0x6c7967656e657261);
   uint64_t v3 = UINT64_C(0x7465646279746573);
-  uint64_t k0 = U8TO64_LE(kk);
-  uint64_t k1 = U8TO64_LE(kk + 8);
+  uint64_t k0 = endian::read64le(kk);
+  uint64_t k1 = endian::read64le(kk + 8);
   uint64_t m;
   int i;
   const unsigned char *end = ni + inlen - (inlen % sizeof(uint64_t));
@@ -93,7 +77,7 @@ int siphash(const void *in, const size_t inlen, const void *k, uint8_t *out,
     v1 ^= 0xee;
 
   for (; ni != end; ni += 8) {
-    m = U8TO64_LE(ni);
+    m = endian::read64le(ni);
     v3 ^= m;
 
     for (i = 0; i < cROUNDS; ++i)
@@ -105,22 +89,22 @@ int siphash(const void *in, const size_t inlen, const void *k, uint8_t *out,
   switch (left) {
   case 7:
     b |= ((uint64_t)ni[6]) << 48;
-    /* FALLTHRU */
+    LLVM_FALLTHROUGH;
   case 6:
     b |= ((uint64_t)ni[5]) << 40;
-    /* FALLTHRU */
+    LLVM_FALLTHROUGH;
   case 5:
     b |= ((uint64_t)ni[4]) << 32;
-    /* FALLTHRU */
+    LLVM_FALLTHROUGH;
   case 4:
     b |= ((uint64_t)ni[3]) << 24;
-    /* FALLTHRU */
+    LLVM_FALLTHROUGH;
   case 3:
     b |= ((uint64_t)ni[2]) << 16;
-    /* FALLTHRU */
+    LLVM_FALLTHROUGH;
   case 2:
     b |= ((uint64_t)ni[1]) << 8;
-    /* FALLTHRU */
+    LLVM_FALLTHROUGH;
   case 1:
     b |= ((uint64_t)ni[0]);
     break;
@@ -144,10 +128,10 @@ int siphash(const void *in, const size_t inlen, const void *k, uint8_t *out,
     SIPROUND;
 
   b = v0 ^ v1 ^ v2 ^ v3;
-  U64TO8_LE(out, b);
+  endian::write64le(out, b);
 
   if (outlen == 8)
-    return 0;
+    return;
 
   v1 ^= 0xdd;
 
@@ -155,7 +139,17 @@ int siphash(const void *in, const size_t inlen, const void *k, uint8_t *out,
     SIPROUND;
 
   b = v0 ^ v1 ^ v2 ^ v3;
-  U64TO8_LE(out + 8, b);
+  endian::write64le(out + 8, b);
+}
 
-  return 0;
+} // end anonymous namespace
+
+void llvm::getSipHash_2_4_64(ArrayRef<uint8_t> In, const uint8_t (&K)[16],
+                             uint8_t (&Out)[8]) {
+  siphash<2, 4>(In.data(), In.size(), K, Out);
+}
+
+void llvm::getSipHash_2_4_128(ArrayRef<uint8_t> In, const uint8_t (&K)[16],
+                              uint8_t (&Out)[16]) {
+  siphash<2, 4>(In.data(), In.size(), K, Out);
 }
