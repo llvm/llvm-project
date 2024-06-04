@@ -917,6 +917,63 @@ def opsel_i1timm : SDNodeXForm<timm, [{
 def gi_opsel_i1timm : GICustomOperandRenderer<"renderOpSelTImm">,
   GISDNodeXFormEquiv<opsel_i1timm>;
 
+class SrcAndDstSelToOpSelXForm<int modifier_idx, bit dest_sel> : SDNodeXForm<timm, [{
+  unsigned Val = N->getZExtValue();
+  unsigned New = 0;
+  if (}] # modifier_idx # [{ == 0) {
+    New = (}] # dest_sel # [{ == 1) ? ((Val & 0x2) ? (SISrcMods::OP_SEL_0 | SISrcMods::DST_OP_SEL) : SISrcMods::DST_OP_SEL)
+                                    : ((Val & 0x2) ? SISrcMods::OP_SEL_0 : SISrcMods::NONE);
+  } else if (}] # modifier_idx # [{== 1 || }] # modifier_idx # [{ == 2) {
+      New = (Val & 0x1) ? SISrcMods::OP_SEL_0 : SISrcMods::NONE;
+  }
+  return CurDAG->getTargetConstant(New, SDLoc(N), MVT::i32);
+}]>;
+
+def SrcAndDstSelToOpSelXForm_0_0 : SrcAndDstSelToOpSelXForm<0,0>;
+def SrcAndDstSelToOpSelXForm_0_1 : SrcAndDstSelToOpSelXForm<0,1>;
+def SrcAndDstSelToOpSelXForm_1_0 : SrcAndDstSelToOpSelXForm<1,0>;
+def SrcAndDstSelToOpSelXForm_1_1 : SrcAndDstSelToOpSelXForm<1,1>;
+def SrcAndDstSelToOpSelXForm_2_0 : SrcAndDstSelToOpSelXForm<2,0>;
+
+// The global isel renderer has no way to access the templatized args of (SrcAndDstSelToOpSelXForm) in
+// renderer C++ APIs. Therefore, combinations of modifier_idx & dest_sel are embedded in renderer name itself.
+// FixMe: Avoid combinations of modifier_idx & dest_sel for global isel cases.
+def gi_SrcAndDstSelToOpSelXForm_0_0 : GICustomOperandRenderer<"renderSrcAndDstSelToOpSelXForm_0_0">,
+  GISDNodeXFormEquiv<SrcAndDstSelToOpSelXForm_0_0>;
+def gi_SrcAndDstSelToOpSelXForm_0_1 : GICustomOperandRenderer<"renderSrcAndDstSelToOpSelXForm_0_1">,
+  GISDNodeXFormEquiv<SrcAndDstSelToOpSelXForm_0_1>;
+def gi_SrcAndDstSelToOpSelXForm_1_0 : GICustomOperandRenderer<"renderSrcAndDstSelToOpSelXForm_1_0">,
+  GISDNodeXFormEquiv<SrcAndDstSelToOpSelXForm_1_0>;
+def gi_SrcAndDstSelToOpSelXForm_1_1 : GICustomOperandRenderer<"renderSrcAndDstSelToOpSelXForm_1_1">,
+  GISDNodeXFormEquiv<SrcAndDstSelToOpSelXForm_1_1>;
+def gi_SrcAndDstSelToOpSelXForm_2_0 : GICustomOperandRenderer<"renderSrcAndDstSelToOpSelXForm_2_0">,
+  GISDNodeXFormEquiv<SrcAndDstSelToOpSelXForm_2_0>;
+
+def DstSelToOpSelXForm : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(
+      N->getZExtValue() ? SISrcMods::DST_OP_SEL : SISrcMods::NONE,
+      SDLoc(N), MVT::i32);
+}]>;
+def gi_DstSelToOpSelXForm : GICustomOperandRenderer<"renderDstSelToOpSelXForm">,
+  GISDNodeXFormEquiv<DstSelToOpSelXForm>;
+
+def SrcSelToOpSelXForm : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(
+      N->getZExtValue() ? SISrcMods::OP_SEL_0 : SISrcMods::NONE,
+      SDLoc(N), MVT::i32);
+}]>;
+def gi_SrcSelToOpSelXForm : GICustomOperandRenderer<"renderSrcSelToOpSelXForm">,
+  GISDNodeXFormEquiv<SrcSelToOpSelXForm>;
+
+def DstSelToOpSel3XForm : SDNodeXForm<timm, [{
+  uint32_t V = N->getZExtValue();
+  return CurDAG->getTargetConstant(
+      (V & 0x2) ? SISrcMods::DST_OP_SEL : SISrcMods::NONE,
+      SDLoc(N), MVT::i32);
+}]>;
+def gi_DstSelToOpSel3XForm : GICustomOperandRenderer<"renderDstSelToOpSel3XFormXForm">,
+  GISDNodeXFormEquiv<DstSelToOpSel3XForm>;
+
 class PermlanePat<SDPatternOperator permlane,
   Instruction inst> : GCNPat<
   (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2,
@@ -1001,20 +1058,30 @@ class VOP3_CVT_SCALE_F1632_FP8BF8_Profile<ValueType DstTy> : VOP3_Profile<VOPPro
   let HasOMod = 0;
 }
 
-def VOP3_CVT_SCALE_FP4FP8BF8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, f32, f32]>,
-                                              VOP3_OPSEL> {
+class VOP3_CVT_SCALE_F1632_FP8BF8_TiedInput_Profile<VOPProfile P> : VOP3_Profile<P, VOP3_OPSEL> {
+  let InsVOP3OpSel = (ins FP32InputMods:$src0_modifiers, Src0RC64:$src0,
+                          FP32InputMods:$src1_modifiers, Src1RC64:$src1,
+                          VGPR_32:$vdst_in, op_sel0:$op_sel);
+  let HasClamp = 0;
+  let HasSrc2 = 0;
+  let HasSrc2Mods = 0;
+  let HasExtVOP3DPP = 0;
+  let HasOpSel = 1;
+  let HasOMod = 0;
+}
+
+class VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<VOPProfile P> : VOP3_Profile<P, VOP3_OPSEL> {
   let InsVOP3OpSel = (ins FP32InputMods:$src0_modifiers, Src0RC64:$src0,
                           FP32InputMods:$src1_modifiers, Src1RC64:$src1,
                           FP32InputMods:$src2_modifiers, Src2RC64:$src2,
-                          op_sel0:$op_sel);
+                          VGPR_32:$vdst_in, op_sel0:$op_sel);
   let HasClamp = 0;
   let HasExtVOP3DPP = 0;
   let HasOpSel = 1;
   let HasOMod = 0;
 }
 
-def VOP3_CVT_SCALE_FP4_F16BF16_Profile : VOP3_Profile<VOPProfile<[i32, v2f16, f32, f32]>,
-                                              VOP3_OPSEL> {
+class VOP3_CVT_SCALE_FP4_F16BF16_TiedInput_Profile<VOPProfile P> : VOP3_Profile<P, VOP3_OPSEL> {
   let InsVOP3OpSel = (ins FP32InputMods:$src0_modifiers, Src0RC64:$src0,
                           FP32InputMods:$src1_modifiers, Src1RC64:$src1,
                           FP32InputMods:$src2_modifiers, VGPR_32:$src2,
@@ -1030,6 +1097,29 @@ def VOP3_CVT_SCALE_FP4_F16BF16_Profile : VOP3_Profile<VOPProfile<[i32, v2f16, f3
   let HasExtVOP3DPP = 0;
 }
 
+class VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<ValueType Src0Ty> :
+    VOP3_Profile<VOPProfile<[i32, Src0Ty, i32, f32]>, VOP3_OPSEL> {
+  let InsVOP3OpSel = (ins PackedF16InputMods: $src0_modifiers, Src0RC64:$src0,
+                          Int32InputMods:     $src1_modifiers, Src1RC64:$src1,
+                          FP32InputMods:      $src2_modifiers, Src2RC64:$src2,
+                          VGPR_32:$vdst_in,   op_sel0:$op_sel);
+  let HasClamp = 0;
+  let HasExtVOP3DPP = 0;
+  let HasOpSel = 1;
+  let HasOMod = 0;
+}
+
+def VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile : VOP3_Profile<VOPProfile<[i32, v2f32, i32, f32]>, VOP3_OPSEL> {
+  let InsVOP3OpSel = (ins PackedF32InputMods: $src0_modifiers, Src0RC64:$src0,
+                          Int32InputMods:     $src1_modifiers, Src1RC64:$src1,
+                          FP32InputMods:      $src2_modifiers, Src2RC64:$src2,
+                          VGPR_32:$vdst_in,   op_sel0:$op_sel);
+  let HasClamp = 0;
+  let HasExtVOP3DPP = 0;
+  let HasOpSel = 1;
+  let HasOMod = 0;
+}
+
 class VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<ValueType DstTy> : VOP3_Profile<VOPProfile<[DstTy, i32, f32, untyped]>,
                                               VOP3_OPSEL> {
   let InsVOP3OpSel = (ins FP32InputMods:$src0_modifiers, Src0RC64:$src0,
@@ -1043,11 +1133,10 @@ class VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<ValueType DstTy> : VOP3_Pro
   let HasOMod = 0;
 }
 
-def VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_Profile : VOP3_Profile<VOPProfile<[i32, v2f16, f32, untyped]>,
-                                              VOP3_OPSEL> {
+class VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_TiedInput_Profile<VOPProfile P> : VOP3_Profile<P,VOP3_OPSEL> {
   let InsVOP3OpSel = (ins FP32InputMods:$src0_modifiers, Src0RC64:$src0,
                           FP32InputMods:$src1_modifiers, Src1RC64:$src1,
-                          op_sel0:$op_sel);
+                          VGPR_32:$vdst_in, op_sel0:$op_sel);
   let HasClamp = 0;
   let HasSrc2 = 0;
   let HasSrc2Mods = 0;
@@ -1070,48 +1159,57 @@ class VOP3_CVT_SCALEF32_PK_F864_Profile<VOPProfile P> : VOP3_Profile<P> {
 }
 
 let SubtargetPredicate = HasFP8ConversionScaleInsts, mayRaiseFPException = 0 in {
-  defm V_CVT_SCALEF32_F16_FP8 : VOP3Inst<"v_cvt_scalef32_f16_fp8", VOP3_CVT_SCALE_F1632_FP8BF8_Profile<f16>>;
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+    defm V_CVT_SCALEF32_F16_FP8 : VOP3Inst<"v_cvt_scalef32_f16_fp8", VOP3_CVT_SCALE_F1632_FP8BF8_TiedInput_Profile<VOP_V2F16_I32_F32>>;
+    defm V_CVT_SCALEF32_PK_FP8_F32 : VOP3Inst<"v_cvt_scalef32_pk_fp8_f32", VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<VOP_V2I16_F32_F32_F32>>;
+    defm V_CVT_SCALEF32_PK_FP8_F16 : VOP3Inst<"v_cvt_scalef32_pk_fp8_f16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_TiedInput_Profile<VOP_V2I16_V2F16_F32>>;
+    defm V_CVT_SCALEF32_PK_FP8_BF16 : VOP3Inst<"v_cvt_scalef32_pk_fp8_bf16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_TiedInput_Profile<VOP_V2I16_V2BF16_F32>>;
+  }
   defm V_CVT_SCALEF32_F32_FP8 : VOP3Inst<"v_cvt_scalef32_f32_fp8", VOP3_CVT_SCALE_F1632_FP8BF8_Profile<f32>>;
-  defm V_CVT_SCALEF32_PK_FP8_F32 : VOP3Inst<"v_cvt_scalef32_pk_fp8_f32", VOP3_CVT_SCALE_FP4FP8BF8_F32_Profile>;
   defm V_CVT_SCALEF32_PK_F32_FP8 : VOP3Inst<"v_cvt_scalef32_pk_f32_fp8", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f32>>;
-  defm V_CVT_SCALEF32_PK_FP8_F16 : VOP3Inst<"v_cvt_scalef32_pk_fp8_f16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_Profile>;
-  defm V_CVT_SCALEF32_PK_FP8_BF16 : VOP3Inst<"v_cvt_scalef32_pk_fp8_bf16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_Profile>;
   defm V_CVT_SCALEF32_PK_F16_FP8    : VOP3Inst<"v_cvt_scalef32_pk_f16_fp8",  VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f16>>;
   defm V_CVT_SCALEF32_PK_BF16_FP8   : VOP3Inst<"v_cvt_scalef32_pk_bf16_fp8", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f16>>;
 }
 
 let SubtargetPredicate = HasBF8ConversionScaleInsts, mayRaiseFPException = 0 in {
-  defm V_CVT_SCALEF32_F16_BF8 : VOP3Inst<"v_cvt_scalef32_f16_bf8", VOP3_CVT_SCALE_F1632_FP8BF8_Profile<f16>>;
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+    defm V_CVT_SCALEF32_F16_BF8 : VOP3Inst<"v_cvt_scalef32_f16_bf8", VOP3_CVT_SCALE_F1632_FP8BF8_TiedInput_Profile<VOP_V2F16_I32_F32>>;
+    defm V_CVT_SCALEF32_PK_BF8_F32 : VOP3Inst<"v_cvt_scalef32_pk_bf8_f32", VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<VOP_V2I16_F32_F32_F32>>;
+    defm V_CVT_SCALEF32_PK_BF8_F16 : VOP3Inst<"v_cvt_scalef32_pk_bf8_f16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_TiedInput_Profile<VOP_V2I16_V2F16_F32>>;
+    defm V_CVT_SCALEF32_PK_BF8_BF16 : VOP3Inst<"v_cvt_scalef32_pk_bf8_bf16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_TiedInput_Profile<VOP_V2I16_V2BF16_F32>>;
+  }
   defm V_CVT_SCALEF32_F32_BF8 : VOP3Inst<"v_cvt_scalef32_f32_bf8", VOP3_CVT_SCALE_F1632_FP8BF8_Profile<f32>>;
-  defm V_CVT_SCALEF32_PK_BF8_F32 : VOP3Inst<"v_cvt_scalef32_pk_bf8_f32", VOP3_CVT_SCALE_FP4FP8BF8_F32_Profile>;
   defm V_CVT_SCALEF32_PK_F32_BF8 : VOP3Inst<"v_cvt_scalef32_pk_f32_bf8", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f32>>;
-  defm V_CVT_SCALEF32_PK_BF8_F16 : VOP3Inst<"v_cvt_scalef32_pk_bf8_f16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_Profile>;
-  defm V_CVT_SCALEF32_PK_BF8_BF16 : VOP3Inst<"v_cvt_scalef32_pk_bf8_bf16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_Profile>;
   defm V_CVT_SCALEF32_PK_F16_BF8    : VOP3Inst<"v_cvt_scalef32_pk_f16_bf8",  VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2bf16>>;
   defm V_CVT_SCALEF32_PK_BF16_BF8   : VOP3Inst<"v_cvt_scalef32_pk_bf16_bf8", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2bf16>>;
 }
 
 let SubtargetPredicate = HasFP4ConversionScaleInsts, mayRaiseFPException = 0 in {
   defm V_CVT_SCALEF32_PK_F32_FP4 : VOP3Inst<"v_cvt_scalef32_pk_f32_fp4", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f32>>;
-  defm V_CVT_SCALEF32_PK_FP4_F32 : VOP3Inst<"v_cvt_scalef32_pk_fp4_f32", VOP3_CVT_SCALE_FP4FP8BF8_F32_Profile>;
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+    defm V_CVT_SCALEF32_PK_FP4_F32 : VOP3Inst<"v_cvt_scalef32_pk_fp4_f32", VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<VOP_I32_F32_F32_F32>>;
+    defm V_CVT_SCALEF32_SR_PK_FP4_F16:  VOP3Inst<"v_cvt_scalef32_sr_pk_fp4_f16", VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<v2f16>>;
+    defm V_CVT_SCALEF32_SR_PK_FP4_BF16: VOP3Inst<"v_cvt_scalef32_sr_pk_fp4_bf16", VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<v2bf16>>;
+    defm V_CVT_SCALEF32_SR_PK_FP4_F32:  VOP3Inst<"v_cvt_scalef32_sr_pk_fp4_f32", VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile>;
+  }
   defm V_CVT_SCALEF32_PK_F16_FP4 : VOP3Inst<"v_cvt_scalef32_pk_f16_fp4", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f16>>;
   defm V_CVT_SCALEF32_PK_BF16_FP4 : VOP3Inst<"v_cvt_scalef32_pk_bf16_fp4", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2bf16>>;
 
   // These instructions have non-standard use of op_sel. In particular they are
   // using op_sel bits 2 and 3 while only having two sources.
   let Constraints = "$vdst = $src2", DisableEncoding = "$src2" in {
-    defm V_CVT_SCALEF32_PK_FP4_F16 : VOP3Inst<"v_cvt_scalef32_pk_fp4_f16", VOP3_CVT_SCALE_FP4_F16BF16_Profile>;
-    defm V_CVT_SCALEF32_PK_FP4_BF16 : VOP3Inst<"v_cvt_scalef32_pk_fp4_bf16", VOP3_CVT_SCALE_FP4_F16BF16_Profile>;
+    defm V_CVT_SCALEF32_PK_FP4_F16 : VOP3Inst<"v_cvt_scalef32_pk_fp4_f16", VOP3_CVT_SCALE_FP4_F16BF16_TiedInput_Profile<VOP_I32_V2F16_F32_F32>>;
+    defm V_CVT_SCALEF32_PK_FP4_BF16 : VOP3Inst<"v_cvt_scalef32_pk_fp4_bf16", VOP3_CVT_SCALE_FP4_F16BF16_TiedInput_Profile<VOP_I32_V2BF16_F32_F32>>;
   }
 }
 
 let SubtargetPredicate = HasFP6BF6ConversionScaleInsts, mayRaiseFPException = 0 in {
-  defm V_CVT_SCALEF32_PK32_F32_FP6  : VOP3Inst<"v_cvt_scalef32_pk32_f32_fp6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F32_V6I32_F32>>;
-  defm V_CVT_SCALEF32_PK32_F32_BF6  : VOP3Inst<"v_cvt_scalef32_pk32_f32_bf6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F32_V6I32_F32>>;
-  defm V_CVT_SCALEF32_PK32_F16_FP6  : VOP3Inst<"v_cvt_scalef32_pk32_f16_fp6",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F16_V6I32_F32>>;
-  defm V_CVT_SCALEF32_PK32_BF16_FP6 : VOP3Inst<"v_cvt_scalef32_pk32_bf16_fp6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32BF16_V6I32_F32>>;
-  defm V_CVT_SCALEF32_PK32_F16_BF6  : VOP3Inst<"v_cvt_scalef32_pk32_f16_bf6",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F16_V6I32_F32>>;
-  defm V_CVT_SCALEF32_PK32_BF16_BF6 : VOP3Inst<"v_cvt_scalef32_pk32_bf16_bf6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32BF16_V6I32_F32>>;
+  defm V_CVT_SCALEF32_PK32_F32_FP6  : VOP3Inst<"v_cvt_scalef32_pk32_f32_fp6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F32_V6I32_F32>, int_amdgcn_cvt_scalef32_pk32_f32_fp6>;
+  defm V_CVT_SCALEF32_PK32_F32_BF6  : VOP3Inst<"v_cvt_scalef32_pk32_f32_bf6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F32_V6I32_F32>, int_amdgcn_cvt_scalef32_pk32_f32_bf6>;
+  defm V_CVT_SCALEF32_PK32_F16_FP6  : VOP3Inst<"v_cvt_scalef32_pk32_f16_fp6",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F16_V6I32_F32>, int_amdgcn_cvt_scalef32_pk32_f16_fp6>;
+  defm V_CVT_SCALEF32_PK32_BF16_FP6 : VOP3Inst<"v_cvt_scalef32_pk32_bf16_fp6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32BF16_V6I32_F32>, int_amdgcn_cvt_scalef32_pk32_bf16_fp6>;
+  defm V_CVT_SCALEF32_PK32_F16_BF6  : VOP3Inst<"v_cvt_scalef32_pk32_f16_bf6",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32F16_V6I32_F32>, int_amdgcn_cvt_scalef32_pk32_f16_bf6>;
+  defm V_CVT_SCALEF32_PK32_BF16_BF6 : VOP3Inst<"v_cvt_scalef32_pk32_bf16_bf6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32BF16_V6I32_F32>, int_amdgcn_cvt_scalef32_pk32_bf16_bf6>;
 }
 
 let SubtargetPredicate = HasF16BF16ToFP6BF6ConversionScaleInsts, mayRaiseFPException = 0 in {
@@ -1125,6 +1223,74 @@ let SubtargetPredicate = HasGFX950Insts, mayRaiseFPException = 0 in {
   defm V_CVT_SCALEF32_2XPK16_FP6_F32 : VOP3Inst<"v_cvt_scalef32_2xpk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V16F32_V16F32_F32>,  int_amdgcn_cvt_scalef32_2xpk16_fp6_f32>;
   defm V_CVT_SCALEF32_2XPK16_BF6_F32 : VOP3Inst<"v_cvt_scalef32_2xpk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V16F32_V16F32_F32>,  int_amdgcn_cvt_scalef32_2xpk16_bf6_f32>;
 }
+
+class Cvt_Scale_FP4FP8BF8ToF16F32_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
+    (DstTy (node i32:$src0, f32:$src1, timm:$index)),
+    (inst (SrcAndDstSelToOpSelXForm_0_0 $index), $src0, (SrcAndDstSelToOpSelXForm_1_0 $index), $src1)
+>;
+def : Cvt_Scale_FP4FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_f32_fp8, V_CVT_SCALEF32_F32_FP8_e64, f32>;
+def : Cvt_Scale_FP4FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_f32_bf8, V_CVT_SCALEF32_F32_BF8_e64, f32>;
+def : Cvt_Scale_FP4FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_pk_f16_fp4, V_CVT_SCALEF32_PK_F16_FP4_e64, v2f16>;
+def : Cvt_Scale_FP4FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_pk_bf16_fp4, V_CVT_SCALEF32_PK_BF16_FP4_e64, v2bf16>;
+
+class Cvt_Scale_FP8BF8ToF16_Pat<SDPatternOperator node, VOP3_Pseudo inst, int dst_sel> : GCNPat<
+    (v2f16 (node v2f16:$vdst_in, i32:$src0, f32:$src1, timm:$src_sel, dst_sel)),
+    (inst !if(!eq(dst_sel, 0), (SrcAndDstSelToOpSelXForm_0_0 $src_sel), (SrcAndDstSelToOpSelXForm_0_1 $src_sel)), $src0,
+          !if(!eq(dst_sel, 0), (SrcAndDstSelToOpSelXForm_1_0 $src_sel), (SrcAndDstSelToOpSelXForm_1_1 $src_sel)), $src1, VGPR_32:$vdst_in)
+>;
+foreach DstSel = [0, -1] in {
+  def : Cvt_Scale_FP8BF8ToF16_Pat<int_amdgcn_cvt_scalef32_f16_fp8, V_CVT_SCALEF32_F16_FP8_e64, DstSel>;
+  def : Cvt_Scale_FP8BF8ToF16_Pat<int_amdgcn_cvt_scalef32_f16_bf8, V_CVT_SCALEF32_F16_BF8_e64, DstSel>;
+}
+
+class Cvt_Scale_PK_F32ToFP8BF8_Pat<SDPatternOperator node, VOP3_Pseudo inst> : GCNPat<
+    (v2i16 (node v2i16:$vdst_in, f32:$src0, f32:$src1, f32:$src2, timm:$word_sel)),
+    (inst (DstSelToOpSelXForm $word_sel), $src0, 0, $src1, 0, $src2, VGPR_32:$vdst_in)
+>;
+def : Cvt_Scale_PK_F32ToFP8BF8_Pat<int_amdgcn_cvt_scalef32_pk_fp8_f32, V_CVT_SCALEF32_PK_FP8_F32_e64>;
+def : Cvt_Scale_PK_F32ToFP8BF8_Pat<int_amdgcn_cvt_scalef32_pk_bf8_f32, V_CVT_SCALEF32_PK_BF8_F32_e64>;
+
+class Cvt_Scale_PK_FP8BF8ToF16F32_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
+    (DstTy (node i32:$src0, f32:$src1, timm:$word_sel)),
+    (inst (SrcSelToOpSelXForm $word_sel), $src0, 0, $src1)
+>;
+def : Cvt_Scale_PK_FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_pk_f32_fp8, V_CVT_SCALEF32_PK_F32_FP8_e64, v2f32>;
+def : Cvt_Scale_PK_FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_pk_f32_bf8, V_CVT_SCALEF32_PK_F32_BF8_e64, v2f32>;
+def : Cvt_Scale_PK_FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_pk_f16_bf8, V_CVT_SCALEF32_PK_F16_BF8_e64, v2f16>;
+def : Cvt_Scale_PK_FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_pk_bf16_bf8, V_CVT_SCALEF32_PK_BF16_BF8_e64, v2bf16>;
+def : Cvt_Scale_PK_FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_pk_f16_fp8, V_CVT_SCALEF32_PK_F16_FP8_e64, v2f16>;
+def : Cvt_Scale_PK_FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_pk_bf16_fp8, V_CVT_SCALEF32_PK_BF16_FP8_e64, v2bf16>;
+
+class Cvt_Scale_PK_F16BF16ToFP8BF8_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType SrcTy> : GCNPat<
+    (v2i16 (node v2i16:$vdst_in, SrcTy:$src0, f32:$src1, timm:$word_sel)),
+    (inst (DstSelToOpSelXForm $word_sel), $src0, 0, $src1, VGPR_32:$vdst_in)
+>;
+def : Cvt_Scale_PK_F16BF16ToFP8BF8_Pat<int_amdgcn_cvt_scalef32_pk_fp8_f16, V_CVT_SCALEF32_PK_FP8_F16_e64, v2f16>;
+def : Cvt_Scale_PK_F16BF16ToFP8BF8_Pat<int_amdgcn_cvt_scalef32_pk_fp8_bf16, V_CVT_SCALEF32_PK_FP8_BF16_e64, v2bf16>;
+def : Cvt_Scale_PK_F16BF16ToFP8BF8_Pat<int_amdgcn_cvt_scalef32_pk_bf8_f16, V_CVT_SCALEF32_PK_BF8_F16_e64, v2f16>;
+def : Cvt_Scale_PK_F16BF16ToFP8BF8_Pat<int_amdgcn_cvt_scalef32_pk_bf8_bf16, V_CVT_SCALEF32_PK_BF8_BF16_e64, v2bf16>;
+
+class Cvt_Scale_PK_F32ToFP4_Pat<SDPatternOperator node, VOP3_Pseudo inst> : GCNPat<
+    (i32 (node i32:$vdst_in, f32:$src0, f32:$src1, f32:$src2, timm:$index)),
+    (inst (DstSelToOpSel3XForm $index), $src0, 0, $src1, (SrcAndDstSelToOpSelXForm_2_0 $index), $src2, VGPR_32:$vdst_in)
+>;
+def : Cvt_Scale_FP4FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_pk_f32_fp4, V_CVT_SCALEF32_PK_F32_FP4_e64, v2f32>;
+def : Cvt_Scale_PK_F32ToFP4_Pat<int_amdgcn_cvt_scalef32_pk_fp4_f32, V_CVT_SCALEF32_PK_FP4_F32_e64>;
+
+class Cvt_Scale_PK_F16ToFP4_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType SrcTy> : GCNPat<
+    (i32 (node i32:$src2, SrcTy:$src0, f32:$src1, timm:$index)),
+    (inst (DstSelToOpSel3XForm $index), $src0, 0, $src1, (SrcAndDstSelToOpSelXForm_2_0 $index), $src2)
+>;
+def : Cvt_Scale_PK_F16ToFP4_Pat<int_amdgcn_cvt_scalef32_pk_fp4_f16, V_CVT_SCALEF32_PK_FP4_F16_e64, v2f16>;
+def : Cvt_Scale_PK_F16ToFP4_Pat<int_amdgcn_cvt_scalef32_pk_fp4_bf16, V_CVT_SCALEF32_PK_FP4_BF16_e64, v2bf16>;
+
+class Cvt_Scale_SR_PK_F1632ToFP4_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType SrcTy> : GCNPat<
+    (i32 (node i32:$vdst_in, SrcTy:$src0, i32:$src1, f32:$src2, timm:$index)),
+    (inst (DstSelToOpSel3XForm $index), $src0, 0, $src1, (SrcAndDstSelToOpSelXForm_2_0 $index), $src2, VGPR_32:$vdst_in)
+>;
+def : Cvt_Scale_SR_PK_F1632ToFP4_Pat<int_amdgcn_cvt_scalef32_sr_pk_fp4_f16, V_CVT_SCALEF32_SR_PK_FP4_F16_e64, v2f16>;
+def : Cvt_Scale_SR_PK_F1632ToFP4_Pat<int_amdgcn_cvt_scalef32_sr_pk_fp4_bf16, V_CVT_SCALEF32_SR_PK_FP4_BF16_e64, v2bf16>;
+def : Cvt_Scale_SR_PK_F1632ToFP4_Pat<int_amdgcn_cvt_scalef32_sr_pk_fp4_f32, V_CVT_SCALEF32_SR_PK_FP4_F32_e64, v2f32>;
 
 let SubtargetPredicate = isGFX10Plus in {
   let isCommutable = 1, isReMaterializable = 1 in {
@@ -2335,6 +2501,9 @@ defm V_CVT_SCALEF32_PK_F16_FP4 : VOP3OpSel_Real_gfx9 <0x250>;
 defm V_CVT_SCALEF32_PK_BF16_FP4 : VOP3OpSel_Real_gfx9 <0x251>;
 defm V_CVT_SCALEF32_PK_FP4_F16 : VOP3OpSel_Real_gfx9_forced_opsel2 <0x24c>;
 defm V_CVT_SCALEF32_PK_FP4_BF16: VOP3OpSel_Real_gfx9_forced_opsel2 <0x24d>;
+defm V_CVT_SCALEF32_SR_PK_FP4_F16:  VOP3OpSel_Real_gfx9 <0x24e>;
+defm V_CVT_SCALEF32_SR_PK_FP4_BF16: VOP3OpSel_Real_gfx9 <0x24f>;
+defm V_CVT_SCALEF32_SR_PK_FP4_F32:  VOP3OpSel_Real_gfx9 <0x23e>;
 }
 let OtherPredicates = [HasFP6BF6ConversionScaleInsts] in {
 defm V_CVT_SCALEF32_PK32_F32_FP6 : VOP3_Real_gfx9<0x256, "v_cvt_scalef32_pk32_f32_fp6">;

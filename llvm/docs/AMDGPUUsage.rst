@@ -653,6 +653,13 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
                                                                                                 - ``gfx1152``
+
+
+     ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
+                                         - ``gfx1201``     - cumode             flat scratch
+                                                                              - Packed
+                                                                                work-item
+                                                                                IDs
      ==================== ============== ================= ================== ================= =================================
 
 .. _amdgpu-generic-processor-versioning:
@@ -1373,20 +1380,34 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    sign-extended from the width of the underlying PC hardware register even on
                                                    processors where the s_getpc_b64 instruction returns a zero-extended value.
 
-   llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4     Emit `v_mfma_scale_f32_16x16x128_f8f6f4` to set the scale factor. The
+  llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4      Emit `v_mfma_scale_f32_16x16x128_f8f6f4` to set the scale factor. The
                                                    last 4 operands correspond to the scale inputs.
                                                      2-bit byte index to use for each lane for matrix A
                                                      Matrix A scale values
                                                      2-bit byte index to use for each lane for matrix B
                                                      Matrix B scale values
 
-   llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4      Emit `v_mfma_scale_f32_32x32x64_f8f6f4`
+  llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4       Emit `v_mfma_scale_f32_32x32x64_f8f6f4`
 
-   llvm.amdgcn.wavegroup.id                        In a wavegroup-enabled dispatch, return the 0-based ID of the
+
+  llvm.amdgcn.permlane16.swap                      Provide direct access to `v_permlane16_swap_b32` instruction on supported targets.
+                                                   Swaps the values across lanes of first 2 operands. Odd rows of the first operand are
+                                                   swapped with even rows of the second operand (one row is 16 lanes).
+                                                   Returns a pair for the swapped registers. The first element of the return corresponds
+                                                   to the swapped element of the first argument.
+
+
+  llvm.amdgcn.permlane32.swap                      Provide direct access to `v_permlane32_swap_b32` instruction on supported targets.
+                                                   Swaps the values across lanes of first 2 operands. Rows 2 and 3 of the first operand are
+                                                   swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
+                                                   Returns a pair for the swapped registers. The first element of the return
+                                                   corresponds to the swapped element of the first argument.
+
+  llvm.amdgcn.wavegroup.id                         In a wavegroup-enabled dispatch, return the 0-based ID of the
                                                    wavegroup within the workgroup. Otherwise the return value is
                                                    undefined.
 
-   llvm.amdgcn.wave.id.in.wavegroup                In a wavegroup-enabled dispatch, return the 0-based ID of the wave
+  llvm.amdgcn.wave.id.in.wavegroup                 In a wavegroup-enabled dispatch, return the 0-based ID of the wave
                                                    within the wavegroup. Otherwise the return value is undefined.
 
   ==============================================   ==========================================================
@@ -2052,6 +2073,7 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x056      Reserved.
      *reserved*                                 0x057      Reserved.
      *reserved*                                 0x058      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ========================================== ========== =============================
 
 Sections

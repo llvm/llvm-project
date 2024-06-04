@@ -7,6 +7,7 @@ typedef half half8 __attribute__((ext_vector_type(8)));
 typedef half half16 __attribute__((ext_vector_type(16)));
 typedef __bf16 bfloat8 __attribute__((ext_vector_type(8)));
 typedef __bf16 bfloat16 __attribute__((ext_vector_type(16)));
+typedef unsigned int uint2 __attribute__((ext_vector_type(2)));
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef int int8 __attribute__((ext_vector_type(8)));
 typedef int int16 __attribute__((ext_vector_type(16)));
@@ -27,7 +28,7 @@ void test(__global float4* out0, half8 a0, half8 b0, float4 c0,
           __global float16* out13, int4 a13, int8 b13, float16 c13,
           __global float4* out14, int8 a14, int8 b14, float4 c14, int d14, int e14,
           __global float16* out15, int8 a15, int8 b15, float16 c15, int d15, int e15,
-          __global int* out16, int a16, int b16) {
+          __global uint2* out16, int a16, int b16) {
   *out0 = __builtin_amdgcn_mfma_f32_16x16x32_f16(a0, b0, c0, 0, 0, 0); // expected-error{{'__builtin_amdgcn_mfma_f32_16x16x32_f16' needs target feature gfx950-insts}}
   *out1 = __builtin_amdgcn_mfma_f32_32x32x16_f16(a1, b1, c1, 0, 0, 0); // expected-error{{'__builtin_amdgcn_mfma_f32_32x32x16_f16' needs target feature gfx950-insts}}
   *out2 = __builtin_amdgcn_mfma_f32_32x32x16_bf16(a2, b2, c2, 0, 0, 0); // expected-error{{'__builtin_amdgcn_mfma_f32_32x32x16_bf16' needs target feature gfx950-insts}}

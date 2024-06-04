@@ -1884,6 +1884,10 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureMinimum3Maximum3PKF16,
 ]>;
 
+def FeatureISAVersion12_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion12.Features,
+    [FeatureRequiresCOV6])>;
+
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX12_10Insts,

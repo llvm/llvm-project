@@ -364,6 +364,10 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::v2f16);
   }
 
+  bool isPackedFP32InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VS_64RegClassID, MVT::v2f32);
+  }
+
   bool isVReg() const {
     return isRegClass(AMDGPU::VGPR_32RegClassID) ||
            isRegClass(AMDGPU::VReg_64RegClassID) ||
@@ -9177,7 +9181,6 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
         Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp_gfx13 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp8_gfx1210 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp8_gfx13)) {
-    assert(!IsPacked);
     Inst.addOperand(Inst.getOperand(0));
   }
 

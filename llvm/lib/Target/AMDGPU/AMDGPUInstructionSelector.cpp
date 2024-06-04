@@ -1105,6 +1105,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_smfmac_f32_32x32x64_fp8_bf8:
   case Intrinsic::amdgcn_smfmac_f32_32x32x64_fp8_fp8:
     return selectSMFMACIntrin(I);
+  case Intrinsic::amdgcn_permlane16_swap:
+  case Intrinsic::amdgcn_permlane32_swap:
+    return selectPermlaneSwapIntrin(I, IntrinsicID);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -3638,6 +3641,29 @@ bool AMDGPUInstructionSelector::selectSMFMACIntrin(MachineInstr &MI) const {
   MI.addOperand(VDst_In); // Readd VDst_In to the end
   MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
   return true;
+}
+
+bool AMDGPUInstructionSelector::selectPermlaneSwapIntrin(
+    MachineInstr &MI, Intrinsic::ID IntrID) const {
+  if (IntrID == Intrinsic::amdgcn_permlane16_swap &&
+      !Subtarget->hasPermlane16Swap())
+    return false;
+  if (IntrID == Intrinsic::amdgcn_permlane32_swap &&
+      !Subtarget->hasPermlane32Swap())
+    return false;
+
+  unsigned Opcode = IntrID == Intrinsic::amdgcn_permlane16_swap
+                        ? AMDGPU::V_PERMLANE16_SWAP_B32_e64
+                        : AMDGPU::V_PERMLANE32_SWAP_B32_e64;
+
+  MI.removeOperand(2);
+  MI.setDesc(TII.get(Opcode));
+  MI.addOperand(*MF, MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
+
+  MachineOperand &FI = MI.getOperand(4);
+  FI.setImm(FI.getImm() ? AMDGPU::DPP::DPP_FI_1 : AMDGPU::DPP::DPP_FI_0);
+
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
 bool AMDGPUInstructionSelector::selectWaveAddress(MachineInstr &MI) const {
@@ -6224,6 +6250,64 @@ void AMDGPUInstructionSelector::renderOpSelTImm(MachineInstrBuilder &MIB,
                                                 int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
   MIB.addImm(MI.getOperand(OpIdx).getImm() ? (int64_t)SISrcMods::OP_SEL_0 : 0);
+}
+
+void AMDGPUInstructionSelector::renderSrcAndDstSelToOpSelXForm_0_0(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm(
+      (MI.getOperand(OpIdx).getImm() & 0x2) ? (int64_t)SISrcMods::OP_SEL_0 : 0);
+}
+
+void AMDGPUInstructionSelector::renderSrcAndDstSelToOpSelXForm_0_1(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm((MI.getOperand(OpIdx).getImm() & 0x2)
+                 ? (int64_t)(SISrcMods::OP_SEL_0 | SISrcMods::DST_OP_SEL)
+                 : (int64_t)SISrcMods::DST_OP_SEL);
+}
+
+void AMDGPUInstructionSelector::renderSrcAndDstSelToOpSelXForm_1_0(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm(
+      (MI.getOperand(OpIdx).getImm() & 0x1) ? (int64_t)SISrcMods::OP_SEL_0 : 0);
+}
+
+void AMDGPUInstructionSelector::renderSrcAndDstSelToOpSelXForm_1_1(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm((MI.getOperand(OpIdx).getImm() & 0x1)
+                 ? (int64_t)(SISrcMods::OP_SEL_0)
+                 : 0);
+}
+
+void AMDGPUInstructionSelector::renderDstSelToOpSelXForm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm(MI.getOperand(OpIdx).getImm() ? (int64_t)(SISrcMods::DST_OP_SEL)
+                                           : 0);
+}
+
+void AMDGPUInstructionSelector::renderSrcSelToOpSelXForm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm(MI.getOperand(OpIdx).getImm() ? (int64_t)(SISrcMods::OP_SEL_0)
+                                           : 0);
+}
+
+void AMDGPUInstructionSelector::renderSrcAndDstSelToOpSelXForm_2_0(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm(
+      (MI.getOperand(OpIdx).getImm() & 0x1) ? (int64_t)SISrcMods::OP_SEL_0 : 0);
+}
+
+void AMDGPUInstructionSelector::renderDstSelToOpSel3XFormXForm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm(
+      (MI.getOperand(OpIdx).getImm() & 0x2) ? (int64_t)SISrcMods::DST_OP_SEL  : 0);
 }
 
 void AMDGPUInstructionSelector::renderExtractCPol(MachineInstrBuilder &MIB,

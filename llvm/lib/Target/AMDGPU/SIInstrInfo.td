@@ -11,13 +11,8 @@ def isWave32 : Predicate<"Subtarget->getWavefrontSize() == 32">,
 def isWave64 : Predicate<"Subtarget->getWavefrontSize() == 64">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
 
-class GCNPredicateControl : PredicateControl {
-  Predicate SIAssemblerPredicate = isGFX6GFX7;
-  Predicate VIAssemblerPredicate = isGFX8GFX9;
-}
-
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
-    : MnemonicAlias<From, To, VariantName>, GCNPredicateControl;
+    : MnemonicAlias<From, To, VariantName>, PredicateControl;
 
 // Except for the NONE field, this must be kept in sync with the
 // SIEncodingFamily enum in SIInstrInfo.cpp and the columns of the
@@ -1427,6 +1422,7 @@ class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
 
 def PackedF16InputModsMatchClass : PackedFPInputModsMatchClass<16>;
 def PackedI16InputModsMatchClass : PackedIntInputModsMatchClass<16>;
+def PackedF32InputModsMatchClass : PackedFPInputModsMatchClass<32>;
 
 class PackedFPInputMods <PackedFPInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
@@ -1438,6 +1434,7 @@ class PackedIntInputMods <PackedIntInputModsMatchClass matchClass> : InputMods <
 
 def PackedF16InputMods : PackedFPInputMods<PackedF16InputModsMatchClass>;
 def PackedI16InputMods : PackedIntInputMods<PackedI16InputModsMatchClass>;
+def PackedF32InputMods : PackedFPInputMods<PackedF32InputModsMatchClass>;
 
 def MFMALdScaleModifierOp : TImmLeaf<i32, [{
   return isUInt<2>(Imm);
@@ -2815,6 +2812,13 @@ def VOP_I32_V8F32_I32_F32 : VOPProfile<[i32, v8f32, i32, f32]>;
 def VOP_I32_V8F16_I32_F32 : VOPProfile<[i32, v8f16, i32, f32]>;
 def VOP_I32_V8BF16_I32_F32 : VOPProfile<[i32, v8bf16, i32, f32]>;
 def VOP_V6I32_V16F32_V16F32_F32 : VOPProfile<[v6i32, v16f32, v16f32, f32]>;
+def VOP_V2F16_I32_F32 : VOPProfile<[v2f16, i32, f32, untyped]>;
+def VOP_V2I16_F32_F32_F32 : VOPProfile<[v2i16, f32, f32, f32]>;
+def VOP_V2I16_V2F16_F32 : VOPProfile<[v2i16, v2f16, f32, untyped]>;
+def VOP_V2I16_V2BF16_F32 : VOPProfile<[v2i16, v2bf16, f32, untyped]>;
+def VOP_I32_F32_F32_F32 : VOPProfile<[i32, f32, f32, f32]>;
+def VOP_I32_V2F16_F32_F32 : VOPProfile<[i32, v2f16, f32, f32]>;
+def VOP_I32_V2BF16_F32_F32: VOPProfile<[i32, v2bf16, f32, f32]>;
 
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
@@ -2922,7 +2926,7 @@ class VINTRP_Real_vi <bits <2> op, string opName, dag outs, dag ins,
   VINTRPCommon <outs, ins, asm, []>,
   VINTRPe_vi <op>,
   SIMCInstr<opName, SIEncodingFamily.VI> {
-  let AssemblerPredicate = VIAssemblerPredicate;
+  let AssemblerPredicate = isGFX8GFX9;
   let DecoderNamespace = "GFX8";
 }
 
