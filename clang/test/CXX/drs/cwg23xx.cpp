@@ -104,7 +104,7 @@ struct Z : W,
 // cwg2331: na
 // cwg2335 is in cwg2335.cxx
 
-namespace dr2311 {  // dr2311: 18 open
+namespace cwg2311 {  // cwg2311 is open with no proposed resolution
 #if __cplusplus >= 201707L
 template<typename T>
 void test() {
@@ -170,12 +170,12 @@ struct any {
 template<typename T>
 struct X {
     X();
-    X(T) = delete; // #dr2311-X
+    X(T) = delete; // #cwg2311-X
 };
 
 X<std::initializer_list<any>> x{ X<std::initializer_list<any>>() };
 // since-cxx17-error@-1 {{call to deleted constructor of 'X<std::initializer_list<any>>'}}
-//   since-cxx17-note@#dr2311-X {{'X' has been explicitly marked deleted here}}
+//   since-cxx17-note@#cwg2311-X {{'X' has been explicitly marked deleted here}}
 #endif
 }
 
