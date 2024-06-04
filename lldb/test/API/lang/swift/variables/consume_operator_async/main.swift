@@ -25,7 +25,8 @@ public func copyableValueTest() async {
     let k = Klass()
     k.doSomething()
     await forceSplit() // Set breakpoint 01
-    let m = consume k    // Set breakpoint 02
+    print("stop here") // Set breakpoint 02
+    let m = consume k
     m.doSomething()    // Set breakpoint 03
     await forceSplit()
     m.doSomething()    // Set breakpoint 04
