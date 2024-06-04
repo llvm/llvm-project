@@ -254,8 +254,9 @@ Resolutions to C++ Defect Reports
 - Clang now requires a template argument list after a template keyword.
   (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
 
-- Implemented `CWG2137 <https://wg21.link/CWG2137>`_ which allows
-  list-initialization from objects of the same type.
+- Allow calling initializer list constructors from initializer lists with
+  a single element of the same type instead of always copying.
+  (`CWG2137: List-initialization from object of same type <https://cplusplus.github.io/CWG/issues/2137.html>`)
 
 C Language Changes
 ------------------

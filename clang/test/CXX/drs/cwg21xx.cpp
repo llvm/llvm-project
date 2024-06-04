@@ -12,7 +12,7 @@
 #endif
 
 namespace std {
-  __extension__ typedef __SIZE_TYPE__ size_t;
+  typedef __SIZE_TYPE__ size_t;
 
   template<typename E> struct initializer_list {
     const E *p; size_t n;
@@ -142,23 +142,23 @@ namespace cwg2126 { // cwg2126: 12
 #endif
 }
 
-namespace dr2137 { // dr2137: 18
+namespace cwg2137 { // cwg2137: 19
 #if __cplusplus >= 201103L
   struct Q {
     Q();
     Q(Q&&);
-    Q(std::initializer_list<Q>) = delete; // #dr2137-Qcons
+    Q(std::initializer_list<Q>) = delete; // #cwg2137-Qcons
   };
 
   Q x = Q { Q() };
   // since-cxx11-error@-1 {{call to deleted constructor of 'Q'}}
-  //   since-cxx11-note@#dr2137-Qcons {{'Q' has been explicitly marked deleted here}}
+  //   since-cxx11-note@#cwg2137-Qcons {{'Q' has been explicitly marked deleted here}}
 
-  int f(Q); // #dr2137-f
+  int f(Q); // #cwg2137-f
   int y = f({ Q() });
   // since-cxx11-error@-1 {{call to deleted constructor of 'Q'}}
-  //   since-cxx11-note@#dr2137-Qcons {{'Q' has been explicitly marked deleted here}}
-  //   since-cxx11-note@#dr2137-f {{passing argument to parameter here}}
+  //   since-cxx11-note@#cwg2137-Qcons {{'Q' has been explicitly marked deleted here}}
+  //   since-cxx11-note@#cwg2137-f {{passing argument to parameter here}}
 
   struct U {
     U();
