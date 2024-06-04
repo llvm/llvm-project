@@ -1120,23 +1120,33 @@ ParseStatus SparcAsmParser::parsePrefetchTag(OperandVector &Operands) {
   SMLoc E = Parser.getTok().getEndLoc();
   int64_t PrefetchVal = 0;
 
-  if (getLexer().getKind() == AsmToken::Hash) {
+  switch (getLexer().getKind()) {
+  case AsmToken::LParen:
+  case AsmToken::Integer:
+  case AsmToken::Identifier:
+  case AsmToken::Plus:
+  case AsmToken::Minus:
+  case AsmToken::Tilde:
+    if (getParser().parseAbsoluteExpression(PrefetchVal) ||
+        !isUInt<5>(PrefetchVal))
+      return Error(S, "invalid prefetch number, must be between 0 and 31");
+    break;
+  case AsmToken::Hash: {
     SMLoc TagStart = getLexer().peekTok(false).getLoc();
     Parser.Lex(); // Eat the '#'.
-    auto PrefetchName = Parser.getTok().getString();
-    auto PrefetchTag = SparcPrefetchTag::lookupPrefetchTagByName(PrefetchName);
+    const StringRef PrefetchName = Parser.getTok().getString();
+    const SparcPrefetchTag::PrefetchTag *PrefetchTag =
+        SparcPrefetchTag::lookupPrefetchTagByName(PrefetchName);
     Parser.Lex(); // Eat the identifier token.
 
     if (!PrefetchTag)
       return Error(TagStart, "unknown prefetch tag");
 
     PrefetchVal = PrefetchTag->Encoding;
-  } else if (!getParser().parseAbsoluteExpression(PrefetchVal)) {
-    if (!isUInt<5>(PrefetchVal))
-      return Error(S, "invalid prefetch number, must be between 0 and 31");
-  } else {
-    return Error(S, "malformed prefetch tag, must be a constant integer "
-                    "expression, or a named tag");
+    break;
+  }
+  default:
+    return ParseStatus::NoMatch;
   }
 
   Operands.push_back(SparcOperand::CreatePrefetchTag(PrefetchVal, S, E));
