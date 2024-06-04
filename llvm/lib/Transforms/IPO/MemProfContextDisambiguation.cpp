@@ -1681,9 +1681,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
   // from the profiled contexts.
   MapVector<CallInfo, ContextNode *> TailCallToContextNodeMap;
 
-  for (auto Entry = NonAllocationCallToContextNodeMap.begin();
-       Entry != NonAllocationCallToContextNodeMap.end(); Entry++) {
-    auto *Node = Entry->second;
+  for (auto &Entry : NonAllocationCallToContextNodeMap) {
+    auto *Node = Entry.second;
     assert(Node->Clones.empty());
     // Check all node callees and see if in the same function.
     auto Call = Node->Call.call();
