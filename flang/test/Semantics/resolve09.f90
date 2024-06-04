@@ -156,7 +156,7 @@ end
 
 subroutine s11
   real, pointer :: p(:)
-  !ERROR: Actual argument for 'a=' may not be NULL()
+  !ERROR: A NULL() pointer is not allowed for 'a=' intrinsic argument
   print *, rank(null())
   print *, rank(null(mold=p)) ! ok
 end

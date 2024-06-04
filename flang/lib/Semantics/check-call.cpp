@@ -35,7 +35,8 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "Keyword '%s=' may not appear in a reference to a procedure with an implicit interface"_err_en_US,
         *kw);
   }
-  if (auto type{arg.GetType()}) {
+  auto type{arg.GetType()};
+  if (type) {
     if (type->IsAssumedType()) {
       messages.Say(
           "Assumed type actual argument requires an explicit interface"_err_en_US);
@@ -48,6 +49,11 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
             "Parameterized derived type actual argument requires an explicit interface"_err_en_US);
       }
     }
+  }
+  if (arg.isPercentVal() &&
+      (!type || !type->IsLengthlessIntrinsicType() || arg.Rank() != 0)) {
+    messages.Say(
+        "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
     if (IsBOZLiteral(*expr)) {
@@ -314,7 +320,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     SemanticsContext &context, evaluate::FoldingContext &foldingContext,
     const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
     bool allowActualArgumentConversions, bool extentErrors,
-    const characteristics::Procedure &procedure) {
+    const characteristics::Procedure &procedure,
+    const evaluate::ActualArgument &arg) {
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{foldingContext.messages()};
@@ -645,38 +652,42 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // Definability
   bool actualIsVariable{evaluate::IsVariable(actual)};
-  const char *reason{nullptr};
-  if (dummy.intent == common::Intent::Out) {
-    reason = "INTENT(OUT)";
-  } else if (dummy.intent == common::Intent::InOut) {
-    reason = "INTENT(IN OUT)";
-  }
-  if (reason && scope) {
-    // Problems with polymorphism are caught in the callee's definition.
-    DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
-    if (isElemental) { // 15.5.2.4(21)
-      flags.set(DefinabilityFlag::VectorSubscriptIsOk);
-    }
-    if (actualIsPointer && dummyIsPointer) { // 19.6.8
-      flags.set(DefinabilityFlag::PointerDefinition);
-    }
-    if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
-      if (auto *msg{messages.Say(
-              "Actual argument associated with %s %s is not definable"_err_en_US,
-              reason, dummyName)}) {
-        msg->Attach(std::move(*whyNot));
+  if (scope) {
+    std::optional<parser::MessageFixedText> undefinableMessage;
+    if (dummy.intent == common::Intent::Out) {
+      undefinableMessage =
+          "Actual argument associated with INTENT(OUT) %s is not definable"_err_en_US;
+    } else if (dummy.intent == common::Intent::InOut) {
+      undefinableMessage =
+          "Actual argument associated with INTENT(IN OUT) %s is not definable"_err_en_US;
+    } else if (context.ShouldWarn(common::LanguageFeature::
+                       UndefinableAsynchronousOrVolatileActual)) {
+      if (dummy.attrs.test(
+              characteristics::DummyDataObject::Attr::Asynchronous)) {
+        undefinableMessage =
+            "Actual argument associated with ASYNCHRONOUS %s is not definable"_warn_en_US;
+      } else if (dummy.attrs.test(
+                     characteristics::DummyDataObject::Attr::Volatile)) {
+        undefinableMessage =
+            "Actual argument associated with VOLATILE %s is not definable"_warn_en_US;
       }
     }
-  }
-
-  // technically legal but worth emitting a warning
-  // llvm-project issue #58973: constant actual argument passed in where dummy
-  // argument is marked volatile
-  if (dummyIsVolatile && !actualIsVariable &&
-      context.ShouldWarn(common::UsageWarning::ExprPassedToVolatile)) {
-    messages.Say(
-        "actual argument associated with VOLATILE %s is not a variable"_warn_en_US,
-        dummyName);
+    if (undefinableMessage) {
+      // Problems with polymorphism are caught in the callee's definition.
+      DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
+      if (isElemental) { // 15.5.2.4(21)
+        flags.set(DefinabilityFlag::VectorSubscriptIsOk);
+      }
+      if (actualIsPointer && dummyIsPointer) { // 19.6.8
+        flags.set(DefinabilityFlag::PointerDefinition);
+      }
+      if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
+        if (auto *msg{
+                messages.Say(std::move(*undefinableMessage), dummyName)}) {
+          msg->Attach(std::move(*whyNot));
+        }
+      }
+    }
   }
 
   // Cases when temporaries might be needed but must not be permitted.
@@ -876,7 +887,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         dummyName, actual.AsFortran());
   }
 
-  // Warn about dubious actual argument association with a TARGET dummy argument
+  // Warn about dubious actual argument association with a TARGET dummy
+  // argument
   if (dummy.attrs.test(characteristics::DummyDataObject::Attr::Target) &&
       context.ShouldWarn(common::UsageWarning::NonTargetPassedToTarget)) {
     bool actualIsTemp{!actualIsVariable || HasVectorSubscript(actual) ||
@@ -939,10 +951,24 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   }
 
-  // Breaking change warnings
+  // Warning for breaking F'2023 change with character allocatables
   if (intrinsic && dummy.intent != common::Intent::In) {
     WarnOnDeferredLengthCharacterScalar(
         context, &actual, messages.at(), dummyName.c_str());
+  }
+
+  // %VAL() and %REF() checking for explicit interface
+  if ((arg.isPercentRef() || arg.isPercentVal()) &&
+      dummy.IsPassedByDescriptor(procedure.IsBindC())) {
+    messages.Say(
+        "%VAL or %REF are not allowed for %s that must be passed by means of a descriptor"_err_en_US,
+        dummyName);
+  }
+  if (arg.isPercentVal() &&
+      (!actualType.type().IsLengthlessIntrinsicType() ||
+          actualType.Rank() != 0)) {
+    messages.Say(
+        "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
 }
 
@@ -1152,7 +1178,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                       object.type.Rank() == 0 && proc.IsElemental()};
                   CheckExplicitDataArg(object, dummyName, *expr, *type,
                       isElemental, context, foldingContext, scope, intrinsic,
-                      allowActualArgumentConversions, extentErrors, proc);
+                      allowActualArgumentConversions, extentErrors, proc, arg);
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                     IsBOZLiteral(*expr)) {
                   // ok
