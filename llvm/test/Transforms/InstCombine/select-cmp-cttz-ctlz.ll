@@ -49,10 +49,9 @@ define i16 @test4(i16 %x) {
   ret i16 %cond
 }
 
-; FIXME: This is a miscompile.
 define i16 @test4_with_range(i16 %x) {
 ; CHECK-LABEL: @test4_with_range(
-; CHECK-NEXT:    [[CT:%.*]] = call range(i16 0, 16) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CT:%.*]] = call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret i16 [[CT]]
 ;
   %ct = call range(i16 0, 16) i16 @llvm.ctlz.i16(i16 %x, i1 true)
@@ -127,10 +126,9 @@ define i16 @test4b(i16 %x) {
   ret i16 %cond
 }
 
-; FIXME: This is a miscompile.
 define i16 @test4b_with_range(i16 %x) {
 ; CHECK-LABEL: @test4b_with_range(
-; CHECK-NEXT:    [[CT:%.*]] = call range(i16 0, 16) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CT:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret i16 [[CT]]
 ;
   %ct = call range(i16 0, 16) i16 @llvm.cttz.i16(i16 %x, i1 true)
