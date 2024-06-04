@@ -1295,6 +1295,9 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
       getCommonMembersWithInitAliases(common);
   mlir::Location loc = converter.genLocation(common.name());
   mlir::StringAttr linkage = builder.createCommonLinkage();
+  const auto *details =
+      common.detailsIf<Fortran::semantics::CommonBlockDetails>();
+  assert(details && "Expect CommonBlockDetails on the common symbol");
   if (!commonBlockHasInit(cmnBlkMems)) {
     // A COMMON block sans initializers is initialized to zero.
     // mlir::Vector types must have a strictly positive size, so at least
@@ -1308,9 +1311,7 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
     mlir::Attribute zero = builder.getIntegerAttr(i8Ty, 0);
     auto init = mlir::DenseElementsAttr::get(vecTy, llvm::ArrayRef(zero));
     global = builder.createGlobal(loc, commonTy, commonName, linkage, init);
-    if (const auto *details =
-            common.detailsIf<Fortran::semantics::CommonBlockDetails>())
-      global.setAlignment(details->alignment());
+    global.setAlignment(details->alignment());
     // No need to add any initial value later.
     return std::nullopt;
   }
@@ -1323,9 +1324,7 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
       getTypeOfCommonWithInit(converter, cmnBlkMems, commonSize);
   // Create the global object, the initial value will be added later.
   global = builder.createGlobal(loc, commonTy, commonName);
-  if (const auto *details =
-          common.detailsIf<Fortran::semantics::CommonBlockDetails>())
-    global.setAlignment(details->alignment());
+  global.setAlignment(details->alignment());
   return std::make_tuple(global, std::move(cmnBlkMems), loc);
 }
 
