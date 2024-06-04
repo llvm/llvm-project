@@ -57,3 +57,26 @@ module m5
   subroutine t
   end
 end module
+
+module m6a
+  integer :: i = 7
+end module
+
+module m6b
+  interface
+    module subroutine sub(arg)
+      interface
+        integer function arg(x)
+          use m6a, only: i
+          real :: x(i) ! ok
+        end
+      end interface
+    end
+  end interface
+end module
+
+submodule (m6b) m6bs1
+  contains
+    module procedure sub
+    end
+end submodule
