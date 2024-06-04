@@ -30,9 +30,11 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <iterator>
 #include <numeric>
 #include <queue>
 
@@ -1740,15 +1742,12 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
                                    Ty, IdentityLeafs, SplatLeafs, Builder);
   }
 
-  FastMathFlags FMF;
-  FMF.setFast();
-  for_each(Item, [&FMF, Lane = FrontLane](const InstLane &E) {
-    if (E.second != Lane)
-      return;
-    auto *I = cast<Instruction>(E.first);
-    if (isa<FPMathOperator>(I))
-      FMF &= I->getFastMathFlags();
-  });
+  SmallVector<Value *, 8> ValueList;
+  for (const auto &Lane : Item) {
+    if (Lane.second != FrontLane || !Lane.first)
+      continue;
+    ValueList.push_back(Lane.first);
+  }
 
   Builder.SetInsertPoint(I);
   Type *DstTy =
@@ -1756,46 +1755,34 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
   if (auto *BI = dyn_cast<BinaryOperator>(I)) {
     auto *Value = Builder.CreateBinOp((Instruction::BinaryOps)BI->getOpcode(),
                                       Ops[0], Ops[1]);
-    if (auto *Inst = dyn_cast<Instruction>(Value); isa<FPMathOperator>(Inst)) {
-      Inst->setFastMathFlags(FMF);
-    }
+    propagateIRFlags(Value, ValueList);
     return Value;
   }
   if (auto *CI = dyn_cast<CmpInst>(I)) {
     auto *Value = Builder.CreateCmp(CI->getPredicate(), Ops[0], Ops[1]);
-    if (auto *Inst = dyn_cast<Instruction>(Value); isa<FPMathOperator>(Inst)) {
-      Inst->setFastMathFlags(FMF);
-    }
+    propagateIRFlags(Value, ValueList);
     return Value;
   }
   if (auto *SI = dyn_cast<SelectInst>(I)) {
     auto *Value = Builder.CreateSelect(Ops[0], Ops[1], Ops[2], "", SI);
-    if (auto *Inst = dyn_cast<Instruction>(Value); isa<FPMathOperator>(Inst)) {
-      Inst->setFastMathFlags(FMF);
-    }
+    propagateIRFlags(Value, ValueList);
     return Value;
   }
   if (auto *CI = dyn_cast<CastInst>(I)) {
     auto *Value = Builder.CreateCast((Instruction::CastOps)CI->getOpcode(),
                                      Ops[0], DstTy);
-    if (auto *Inst = dyn_cast<Instruction>(Value); isa<FPMathOperator>(Inst)) {
-      Inst->setFastMathFlags(FMF);
-    }
+    propagateIRFlags(Value, ValueList);
     return Value;
   }
   if (II) {
     auto *Value = Builder.CreateIntrinsic(DstTy, II->getIntrinsicID(), Ops);
-    if (auto *Inst = dyn_cast<Instruction>(Value); isa<FPMathOperator>(Inst)) {
-      Inst->setFastMathFlags(FMF);
-    }
+    propagateIRFlags(Value, ValueList);
     return Value;
   }
   assert(isa<UnaryInstruction>(I) && "Unexpected instruction type in Generate");
   auto *Value =
       Builder.CreateUnOp((Instruction::UnaryOps)I->getOpcode(), Ops[0]);
-  if (auto *Inst = dyn_cast<Instruction>(Value); isa<FPMathOperator>(Inst)) {
-    Inst->setFastMathFlags(FMF);
-  }
+  propagateIRFlags(Value, ValueList);
   return Value;
 }
 
