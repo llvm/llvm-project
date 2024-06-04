@@ -56,6 +56,7 @@
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "LoopVectorizationPlanner.h"
 #include "VPRecipeBuilder.h"
+#include "VPlanPatternMatch.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanHCFGBuilder.h"
@@ -606,8 +607,8 @@ protected:
                     BasicBlock *MiddleBlock, BasicBlock *VectorHeader,
                     VPlan &Plan, VPTransformState &State);
 
-  /// Create the exit value of first order recurrences in the middle block and
-  /// update their users.
+  /// Create the phi node for the resume value of first order recurrences in the scalar preheader and
+  /// update the users in the scalar loop.
   void fixFixedOrderRecurrence(VPLiveOut *LO, VPTransformState &State);
 
   /// Iteratively sink the scalarized operands of a predicated instruction into
@@ -3392,8 +3393,8 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
   // At this point every instruction in the original loop is widened to a
   // vector form. Note that fixing reduction phis, as well as extracting the
   // exit and resume values for fixed-order recurrences are already modeled in
-  // VPlan. All that remains to do here is creating a phi in the scalar
-  // pre-header for each fixed-rder recurrence resume value.
+  // VPlan. All that remains to do here is to create a phi in the scalar
+  // pre-header for each fixed-order recurrence resume value.
   // TODO: Also model creating phis in the scalar pre-header in VPlan.
   for (const auto &[_, LO] : to_vector(Plan.getLiveOuts())) {
     if (!Legal->isFixedOrderRecurrence(LO->getPhi()))
@@ -3473,21 +3474,24 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(VPLiveOut *LO,
                                                   VPTransformState &State) {
   // Extract the last vector element in the middle block. This will be the
   // initial value for the recurrence when jumping to the scalar loop.
-  Value *ExtractForScalar = State.get(LO->getOperand(0), UF - 1, true);
+  VPValue *VPExtract = LO->getOperand(0);
+using namespace llvm::VPlanPatternMatch;
+  assert(match(VPExtract, m_VPInstruction<VPInstruction::ExtractFromEnd>(m_VPValue(), m_VPValue())) && "FOR LiveOut expects to use an extract from end.");
+  Value *ResumeScalarFOR = State.get(VPExtract, UF - 1, true);
 
   // Fix the initial value of the original recurrence in the scalar loop.
   Builder.SetInsertPoint(LoopScalarPreHeader, LoopScalarPreHeader->begin());
-  PHINode *Phi = LO->getPhi();
-  auto *Start = Builder.CreatePHI(Phi->getType(), 2, "scalar.recur.init");
-  auto *ScalarInit =
-      LO->getPhi()->getIncomingValueForBlock(LoopScalarPreHeader);
+  PHINode *ScalarHeaderPhi = LO->getPhi();
+  auto *NewScalarHeaderPhi = Builder.CreatePHI(ScalarHeaderPhi->getType(), 2, "scalar.recur.init");
+  auto *InitScalarFOR =
+      ScalarHeaderPhi->getIncomingValueForBlock(LoopScalarPreHeader);
   for (auto *BB : predecessors(LoopScalarPreHeader)) {
-    auto *Incoming = BB == LoopMiddleBlock ? ExtractForScalar : ScalarInit;
-    Start->addIncoming(Incoming, BB);
+    auto *Incoming = BB == LoopMiddleBlock ? ResumeScalarFOR : InitScalarFOR;
+    NewScalarHeaderPhi ->addIncoming(Incoming, BB);
   }
 
-  Phi->setIncomingValueForBlock(LoopScalarPreHeader, Start);
-  Phi->setName("scalar.recur");
+  ScalarHeaderPhi->setIncomingValueForBlock(LoopScalarPreHeader, NewScalarHeaderPhi );
+  ScalarHeaderPhi->setName("scalar.recur");
 }
 
 void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {

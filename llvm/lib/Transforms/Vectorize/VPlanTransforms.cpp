@@ -886,30 +886,44 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     //     br cond, vector.body, middle.block
     //
     //   middle.block:
-    //     x = v2(3)
-    //     br scalar.ph
+    //     s_penultimate = v2(2) = v3(3)
+		//     s_resume = v2(3)
+    //     br cond, scalar.ph, exit.block
     //
     //   scalar.ph:
-    //     s_init = phi [x, middle.block], [a[-1], otherwise]
+    //     s_init' = phi [s_resume, middle.block], [s_init, otherwise]
     //     br scalar.body
     //
+    //   scalar.body:
+    //     i = phi [0, scalar.ph], [i+1, scalar.body]
+    //     s1 = phi [s_init', scalar.ph], [s2, scalar.body]
+    //     s2 = a[i]
+    //     b[i] = s2 - s1
+    //     br cond, scalar.body, exit.block
+    //
+    //   exit.block:
+    //     lo = lcssa.phi [s1, scalar.body], [s.penultimate, middle.block]
+     //
     // After execution completes the vector loop, we extract the next value of
     // the recurrence (x) to use as the initial value in the scalar loop. This
-    // is modeled by ExtractRecurrenceResume.
+    // is modeled by ExtractFromEnd.
     Type *IntTy = Plan.getCanonicalIV()->getScalarType();
-    auto *Result = cast<VPInstruction>(MiddleBuilder.createNaryOp(
+
+    // Extract the penultimate value of the recurrence and update VPLiveOut users of the recurrence splice.
+    auto *Penultimate = cast<VPInstruction>(MiddleBuilder.createNaryOp(
         VPInstruction::ExtractFromEnd,
         {FOR->getBackedgeValue(),
          Plan.getOrAddLiveIn(ConstantInt::get(IntTy, 2))},
         {}, "vector.recur.extract.for.phi"));
     RecurSplice->replaceUsesWithIf(
-        Result, [](VPUser &U, unsigned) { return isa<VPLiveOut>(&U); });
+        Penultimate, [](VPUser &U, unsigned) { return isa<VPLiveOut>(&U); });
+
+    // Extract the resume value and create a new VPLiveOut for it.
     auto *Resume = MiddleBuilder.createNaryOp(
         VPInstruction::ExtractFromEnd,
         {FOR->getBackedgeValue(),
          Plan.getOrAddLiveIn(ConstantInt::get(IntTy, 1))},
         {}, "vector.recur.extract");
-    // Introduce VPUsers modeling the exit values.
     Plan.addLiveOut(cast<PHINode>(FOR->getUnderlyingInstr()), Resume);
   }
   return true;
