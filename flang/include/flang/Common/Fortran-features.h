@@ -50,14 +50,14 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     EmptySequenceType, NonSequenceCrayPointee, BranchIntoConstruct,
     BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize,
     NonBindCInteroperability, CudaManaged, CudaUnified,
-    PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy)
+    PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
+    UndefinableAsynchronousOrVolatileActual)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NonTargetPassedToTarget, PointerToPossibleNoncontiguous,
-    ShortCharacterActual, ShortArrayActual, ExprPassedToVolatile,
-    ImplicitInterfaceActual, PolymorphicTransferArg,
-    PointerComponentTransferArg, TransferSizePresence,
+    ShortCharacterActual, ShortArrayActual, ImplicitInterfaceActual,
+    PolymorphicTransferArg, PointerComponentTransferArg, TransferSizePresence,
     F202XAllocatableBreakingChange, OptionalMustBePresent, CommonBlockPadding,
     LogicalVsCBool, BindCCharLength, ProcDummyArgShapes, ExternalNameConflict,
     FoldingException, FoldingAvoidsRuntimeCrash, FoldingValueChecks,
