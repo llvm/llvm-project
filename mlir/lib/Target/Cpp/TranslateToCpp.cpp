@@ -384,6 +384,14 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return emitter.emitOperand(assignOp.getValue());
 }
 
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::LValueLoadOp lValueLoadOp) {
+  if (failed(emitter.emitAssignPrefix(*lValueLoadOp)))
+    return failure();
+
+  return emitter.emitOperand(lValueLoadOp.getOperand());
+}
+
 static LogicalResult printBinaryOperation(CppEmitter &emitter,
                                           Operation *operation,
                                           StringRef binaryOperator) {
@@ -1544,10 +1552,10 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::ConditionalOp, emitc::ConstantOp, emitc::DeclareFuncOp,
                 emitc::DivOp, emitc::ExpressionOp, emitc::ForOp, emitc::FuncOp,
                 emitc::GlobalOp, emitc::IfOp, emitc::IncludeOp,
-                emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
-                emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
-                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
-                emitc::VariableOp, emitc::VerbatimOp>(
+                emitc::LValueLoadOp, emitc::LogicalAndOp, emitc::LogicalNotOp,
+                emitc::LogicalOrOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
+                emitc::SubOp, emitc::SwitchOp, emitc::UnaryMinusOp,
+                emitc::UnaryPlusOp, emitc::VariableOp, emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
@@ -1675,6 +1683,8 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
       os << "[" << dim << "]";
     return success();
   }
+  if (auto lType = dyn_cast<emitc::LValueType>(type))
+    return emitType(loc, lType.getValue());
   if (auto pType = dyn_cast<emitc::PointerType>(type)) {
     if (isa<ArrayType>(pType.getPointee()))
       return emitError(loc, "cannot emit pointer to array type ") << type;
