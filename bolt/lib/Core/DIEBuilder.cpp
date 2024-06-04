@@ -478,9 +478,9 @@ DIEBuilder::finalizeDIEs(DWARFUnit &CU, DIE &Die,
   // index entry (that is, one that cannot be reached from any entry in the name
   // table), or it may point to the nearest ancestor that does have an index
   // entry.
-  // Although as discussed in https://github.com/llvm/llvm-project/pull/91808
-  // skipping entry is not very useful. So this follows clang where children of
-  // forward declaration won't have DW_IDX_parent.
+  // Skipping entry is not very useful for LLDB. This follows clang where
+  // children of forward declaration won't have DW_IDX_parent.
+  // https://github.com/llvm/llvm-project/pull/91808
 
   // If Parent is nullopt and NumberParentsInChain is not zero, then forward
   // declaration was encountered in this DF traversal. Propagating nullopt for
