@@ -13,7 +13,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long long, llroundf16, (float16 x)) {
-  return fputil::round_to_signed_integer<float128, long long>(x);
+  return fputil::round_to_signed_integer<float16, long long>(x);
 }
 
 } // namespace LIBC_NAMESPACE
