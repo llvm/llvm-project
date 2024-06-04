@@ -389,9 +389,8 @@ define ptr @test15(i64 %X) {
   ret ptr %A
 }
 
-
-define ptr @test16(ptr %X, i32 %Idx) {
-; CHECK-LABEL: @test16(
+define ptr @test_index_canon(ptr %X, i32 %Idx) {
+; CHECK-LABEL: @test_index_canon(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[X:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[R]]
@@ -400,6 +399,39 @@ define ptr @test16(ptr %X, i32 %Idx) {
   ret ptr %R
 }
 
+define ptr @test_index_canon_inbounds(ptr %X, i32 %Idx) {
+; CHECK-LABEL: @test_index_canon_inbounds(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %R = getelementptr inbounds i32, ptr %X, i32 %Idx
+  ret ptr %R
+}
+
+define ptr @test_index_canon_nusw_nuw(ptr %X, i32 %Idx) {
+; CHECK-LABEL: @test_index_canon_nusw_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = getelementptr nusw nuw i32, ptr [[X:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %R = getelementptr nusw nuw i32, ptr %X, i32 %Idx
+  ret ptr %R
+}
+
+define ptr @test_index_canon_const_expr_inbounds(ptr %X, i32 %Idx) {
+; CHECK-LABEL: @test_index_canon_const_expr_inbounds(
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @Global, i64 123)
+;
+  ret ptr getelementptr inbounds (i8, ptr @Global, i32 123)
+}
+
+define ptr @test_index_canon_const_expr_nuw_nusw(ptr %X, i32 %Idx) {
+; CHECK-LABEL: @test_index_canon_const_expr_nuw_nusw(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @Global, i64 123)
+;
+  ret ptr getelementptr nusw nuw (i8, ptr @Global, i32 123)
+}
 
 define i1 @test17(ptr %P, i32 %I, i32 %J) {
 ; CHECK-LABEL: @test17(
