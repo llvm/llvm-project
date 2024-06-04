@@ -522,6 +522,12 @@ Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
     V = B.CreateCall(UpdateDPP,
                      {Identity, V, B.getInt32(DPP::WAVE_SHR1), B.getInt32(0xf),
                       B.getInt32(0xf), B.getFalse()});
+  } else if (ST->hasPermlaneUp()) {
+    V = B.CreateIntrinsic(
+        AtomicTy, Intrinsic::amdgcn_permlane_up,
+        {V, B.getInt32(1), B.getInt32(ST->getWavefrontSize())});
+    V = B.CreateIntrinsic(IntNTy, Intrinsic::amdgcn_writelane,
+                          {Identity, B.getInt32(0), V});
   } else {
     Function *ReadLane =
         Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, {});
