@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_FMAXF_H
-#define LLVM_LIBC_SRC_MATH_FMAXF_H
+#ifndef LLVM_LIBC_SRC_MATH_FMAXF16_H
+#define LLVM_LIBC_SRC_MATH_FMAXF16_H
 
 #include "src/__support/macros/properties/types.h"
 
