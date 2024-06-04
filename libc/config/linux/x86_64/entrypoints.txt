@@ -748,12 +748,11 @@ if(LLVM_LIBC_FULL_BUILD)
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
     libc.src.stdlib.abort
+    libc.src.stdlib.at_quick_exit
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
-    libc.src.stdlib.quick_exit
-    libc.src.stdlib.at_quick_exit
-
     libc.src.stdlib.getenv
+    libc.src.stdlib.quick_exit
 
     # signal.h entrypoints
     libc.src.signal.raise

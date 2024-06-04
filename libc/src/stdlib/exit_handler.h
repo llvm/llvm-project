@@ -24,8 +24,9 @@ constexpr size_t CALLBACK_LIST_SIZE_FOR_TESTS = 1024;
 struct AtExitUnit {
   AtExitCallback *callback = nullptr;
   void *payload = nullptr;
-  constexpr AtExitUnit() = default;
-  constexpr AtExitUnit(AtExitCallback *c, void *p) : callback(c), payload(p) {}
+  LIBC_INLINE constexpr AtExitUnit() = default;
+  LIBC_INLINE constexpr AtExitUnit(AtExitCallback *c, void *p)
+      : callback(c), payload(p) {}
 };
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)

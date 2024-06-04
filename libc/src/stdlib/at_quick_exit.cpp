@@ -7,11 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/at_quick_exit.h"
-#include "src/__support/CPP/mutex.h" // lock_guard
-#include "src/__support/blockstore.h"
 #include "src/__support/common.h"
-#include "src/__support/fixedvector.h"
-#include "src/__support/threads/mutex.h"
 #include "src/stdlib/exit_handler.h"
 namespace LIBC_NAMESPACE {
 
