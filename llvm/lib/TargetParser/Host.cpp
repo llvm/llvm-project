@@ -1999,72 +1999,64 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   return true;
 }
 #elif defined(__linux__) && defined(__riscv)
-#ifdef __has_include
-#if __has_include(<asm/hwprobe.h>)
-#include <asm/hwprobe.h>
-#endif
-#endif
+// struct riscv_hwprobe
+struct RISCVHwProbe {
+  int64_t Key;
+  uint64_t Value;
+};
 bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
-#ifdef RISCV_HWPROBE_KEY_MVENDORID
-  riscv_hwprobe Query[2]{
-      {RISCV_HWPROBE_KEY_IMA_EXT_0, 0},
-      {RISCV_HWPROBE_KEY_CPUPERF_0, 0},
-  };
-  int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/&Query,
-                    /*pair_count=*/1, /*cpu_count=*/0, /*cpus=*/0, /*flags=*/0);
+  RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0}};
+  int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
+                    /*pair_count=*/std::size(Query), /*cpu_count=*/0,
+                    /*cpus=*/0, /*flags=*/0);
   if (Ret != 0)
     return false;
 
-  uint64_t ExtMask = Query[0].value;
-  Features["f"] = ExtMask & RISCV_HWPROBE_IMA_FD;
-  Features["d"] = ExtMask & RISCV_HWPROBE_IMA_FD;
-  Features["c"] = ExtMask & RISCV_HWPROBE_IMA_C;
-  Features["v"] = ExtMask & RISCV_HWPROBE_IMA_V;
-  Features["zba"] = ExtMask & RISCV_HWPROBE_IMA_ZBA;
-  Features["zbb"] = ExtMask & RISCV_HWPROBE_IMA_ZBB;
-  Features["zbs"] = ExtMask & RISCV_HWPROBE_IMA_ZBS;
-  Features["zicboz"] = ExtMask & RISCV_HWPROBE_IMA_ZICBOZ;
-  Features["zbc"] = ExtMask & RISCV_HWPROBE_IMA_ZBC;
-  Features["zbkb"] = ExtMask & RISCV_HWPROBE_IMA_ZBKB;
-  Features["zbkc"] = ExtMask & RISCV_HWPROBE_IMA_ZBKC;
-  Features["zbkx"] = ExtMask & RISCV_HWPROBE_IMA_ZBKX;
-  Features["zknd"] = ExtMask & RISCV_HWPROBE_IMA_ZKND;
-  Features["zkne"] = ExtMask & RISCV_HWPROBE_IMA_ZKNE;
-  Features["zknh"] = ExtMask & RISCV_HWPROBE_IMA_ZKNH;
-  Features["zksed"] = ExtMask & RISCV_HWPROBE_IMA_ZKSED;
-  Features["zksh"] = ExtMask & RISCV_HWPROBE_IMA_ZKSH;
-  Features["zkt"] = ExtMask & RISCV_HWPROBE_IMA_ZKT;
-  Features["zvbb"] = ExtMask & RISCV_HWPROBE_IMA_ZVBB;
-  Features["zvbc"] = ExtMask & RISCV_HWPROBE_IMA_ZVBC;
-  Features["zvkb"] = ExtMask & RISCV_HWPROBE_IMA_ZVKB;
-  Features["zvkg"] = ExtMask & RISCV_HWPROBE_IMA_ZVKG;
-  Features["zvkned"] = ExtMask & RISCV_HWPROBE_IMA_ZVKNED;
-  Features["zvknha"] = ExtMask & RISCV_HWPROBE_IMA_ZVKNHA;
-  Features["zvknhb"] = ExtMask & RISCV_HWPROBE_IMA_ZVKNHB;
-  Features["zvksed"] = ExtMask & RISCV_HWPROBE_IMA_ZVKSED;
-  Features["zvksh"] = ExtMask & RISCV_HWPROBE_IMA_ZVKSH;
-  Features["zvkt"] = ExtMask & RISCV_HWPROBE_IMA_ZVKT;
-  Features["zfh"] = ExtMask & RISCV_HWPROBE_IMA_ZFH;
-  Features["zfhmin"] = ExtMask & RISCV_HWPROBE_IMA_ZFHMIN;
-  Features["zihintntl"] = ExtMask & RISCV_HWPROBE_IMA_ZIHINTNTL;
-  Features["zvfh"] = ExtMask & RISCV_HWPROBE_IMA_ZVFH;
-  Features["zvfhmin"] = ExtMask & RISCV_HWPROBE_IMA_ZVFHMIN;
-  Features["zfa"] = ExtMask & RISCV_HWPROBE_IMA_ZFA;
-  Features["ztso"] = ExtMask & RISCV_HWPROBE_IMA_ZTSO;
-  Features["zacas"] = ExtMask & RISCV_HWPROBE_IMA_ZACAS;
-  Features["zicond"] = ExtMask & RISCV_HWPROBE_IMA_ZICOND;
-  Features["zihintpause"] = ExtMask & RISCV_HWPROBE_IMA_ZIHINTPAUSE;
+  uint64_t ExtMask = Query[0].Value;
+  Features["f"] = ExtMask & (1 << 0);           // RISCV_HWPROBE_IMA_FD
+  Features["d"] = ExtMask & (1 << 0);           // RISCV_HWPROBE_IMA_FD
+  Features["c"] = ExtMask & (1 << 1);           // RISCV_HWPROBE_IMA_C
+  Features["v"] = ExtMask & (1 << 2);           // RISCV_HWPROBE_IMA_V
+  Features["zba"] = ExtMask & (1 << 3);         // RISCV_HWPROBE_EXT_ZBA
+  Features["zbb"] = ExtMask & (1 << 4);         // RISCV_HWPROBE_EXT_ZBB
+  Features["zbs"] = ExtMask & (1 << 5);         // RISCV_HWPROBE_EXT_ZBS
+  Features["zicboz"] = ExtMask & (1 << 6);      // RISCV_HWPROBE_EXT_ZICBOZ
+  Features["zbc"] = ExtMask & (1 << 7);         // RISCV_HWPROBE_EXT_ZBC
+  Features["zbkb"] = ExtMask & (1 << 8);        // RISCV_HWPROBE_EXT_ZBKB
+  Features["zbkc"] = ExtMask & (1 << 9);        // RISCV_HWPROBE_EXT_ZBKC
+  Features["zbkx"] = ExtMask & (1 << 10);       // RISCV_HWPROBE_EXT_ZBKX
+  Features["zknd"] = ExtMask & (1 << 11);       // RISCV_HWPROBE_EXT_ZKND
+  Features["zkne"] = ExtMask & (1 << 12);       // RISCV_HWPROBE_EXT_ZKNE
+  Features["zknh"] = ExtMask & (1 << 13);       // RISCV_HWPROBE_EXT_ZKNH
+  Features["zksed"] = ExtMask & (1 << 14);      // RISCV_HWPROBE_EXT_ZKSED
+  Features["zksh"] = ExtMask & (1 << 15);       // RISCV_HWPROBE_EXT_ZKSH
+  Features["zkt"] = ExtMask & (1 << 16);        // RISCV_HWPROBE_EXT_ZKT
+  Features["zvbb"] = ExtMask & (1 << 17);       // RISCV_HWPROBE_EXT_ZVBB
+  Features["zvbc"] = ExtMask & (1 << 18);       // RISCV_HWPROBE_EXT_ZVBC
+  Features["zvkb"] = ExtMask & (1 << 19);       // RISCV_HWPROBE_EXT_ZVKB
+  Features["zvkg"] = ExtMask & (1 << 20);       // RISCV_HWPROBE_EXT_ZVKG
+  Features["zvkned"] = ExtMask & (1 << 21);     // RISCV_HWPROBE_EXT_ZVKNED
+  Features["zvknha"] = ExtMask & (1 << 22);     // RISCV_HWPROBE_EXT_ZVKNHA
+  Features["zvknhb"] = ExtMask & (1 << 23);     // RISCV_HWPROBE_EXT_ZVKNHB
+  Features["zvksed"] = ExtMask & (1 << 24);     // RISCV_HWPROBE_EXT_ZVKSED
+  Features["zvksh"] = ExtMask & (1 << 25);      // RISCV_HWPROBE_EXT_ZVKSH
+  Features["zvkt"] = ExtMask & (1 << 26);       // RISCV_HWPROBE_EXT_ZVKT
+  Features["zfh"] = ExtMask & (1 << 27);        // RISCV_HWPROBE_EXT_ZFH
+  Features["zfhmin"] = ExtMask & (1 << 28);     // RISCV_HWPROBE_EXT_ZFHMIN
+  Features["zihintntl"] = ExtMask & (1 << 29);  // RISCV_HWPROBE_EXT_ZIHINTNTL
+  Features["zvfh"] = ExtMask & (1 << 30);       // RISCV_HWPROBE_EXT_ZVFH
+  Features["zvfhmin"] = ExtMask & (1ULL << 31); // RISCV_HWPROBE_EXT_ZVFHMIN
+  Features["zfa"] = ExtMask & (1ULL << 32);     // RISCV_HWPROBE_EXT_ZFA
+  Features["ztso"] = ExtMask & (1ULL << 33);    // RISCV_HWPROBE_EXT_ZTSO
+  Features["zacas"] = ExtMask & (1ULL << 34);   // RISCV_HWPROBE_EXT_ZACAS
+  Features["zicond"] = ExtMask & (1ULL << 35);  // RISCV_HWPROBE_EXT_ZICOND
+  Features["zihintpause"] =
+      ExtMask & (1ULL << 36); // RISCV_HWPROBE_EXT_ZIHINTPAUSE
 
-  uint64_t MisalignedMask = Query[1].value;
-  if (MisalignedMask == RISCV_HWPROBE_MISALIGNED_FAST) {
-    Features["unaligned-scalar-mem"] = true;
-    Features["unaligned-vector-mem"] = true;
-  }
+  // TODO: set unaligned-scalar-mem if RISCV_HWPROBE_KEY_MISALIGNED_PERF returns
+  // RISCV_HWPROBE_MISALIGNED_FAST.
 
   return true;
-#else
-  return false;
-#endif
 }
 #else
 bool sys::getHostCPUFeatures(StringMap<bool> &Features) { return false; }
