@@ -85,6 +85,9 @@ class ilist_iterator : ilist_detail::SpecificNodeAccess<OptionsT>,
   friend ilist_iterator<OptionsT, IsReverse, !IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, !IsConst>;
+  friend ilist_detail::iterator_parent_access<
+                           ilist_iterator<OptionsT, IsReverse, IsConst>,
+                           typename OptionsT::parent_ptr_ty, IsConst>;
 
   using Traits = ilist_detail::IteratorTraits<OptionsT, IsConst>;
   using Access = ilist_detail::SpecificNodeAccess<OptionsT>;
@@ -216,6 +219,9 @@ class ilist_iterator_w_bits
   friend ilist_iterator_w_bits<OptionsT, IsReverse, !IsConst>;
   friend ilist_iterator_w_bits<OptionsT, !IsReverse, IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, !IsConst>;
+  friend ilist_detail::iterator_parent_access<
+                           ilist_iterator_w_bits<OptionsT, IsReverse, IsConst>,
+                           typename OptionsT::parent_ptr_ty, IsConst>;
 
   using Traits = ilist_detail::IteratorTraits<OptionsT, IsConst>;
   using Access = ilist_detail::SpecificNodeAccess<OptionsT>;
