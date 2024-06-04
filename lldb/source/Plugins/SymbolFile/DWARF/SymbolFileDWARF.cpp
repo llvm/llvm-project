@@ -1761,7 +1761,8 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
     if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile()) {
       symbol_file = debug_map->GetSymbolFileByOSOIndex(*file_index); // OSO case
       if (symbol_file)
-        return symbol_file->DebugInfo().GetDIE(die_ref);
+        return symbol_file->DebugInfo().GetDIE(die_ref.section(),
+                                               die_ref.die_offset());
       return DWARFDIE();
     }
 
@@ -1778,7 +1779,7 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
   if (symbol_file)
     return symbol_file->GetDIE(die_ref);
 
-  return DebugInfo().GetDIE(die_ref);
+  return DebugInfo().GetDIE(die_ref.section(), die_ref.die_offset());
 }
 
 /// Return the DW_AT_(GNU_)dwo_id.
@@ -3786,7 +3787,7 @@ SymbolFileDWARF::FindBlockContainingSpecification(
   // Give the concrete function die specified by "func_die_offset", find the
   // concrete block whose DW_AT_specification or DW_AT_abstract_origin points
   // to "spec_block_die_offset"
-  return FindBlockContainingSpecification(DebugInfo().GetDIE(func_die_ref),
+  return FindBlockContainingSpecification(GetDIE(func_die_ref),
                                           spec_block_die_offset);
 }
 

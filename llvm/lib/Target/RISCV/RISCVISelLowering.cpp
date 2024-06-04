@@ -16230,17 +16230,37 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   };
 
+  SDLoc DL(N);
+
   auto DetectUSatPattern = [&](SDValue V) {
-    // Src must be a UMIN or UMIN_VL.
-    APInt C;
-    SDValue UMin = MatchMinMax(V, ISD::UMIN, RISCVISD::UMIN_VL, C);
-    if (!UMin)
-      return SDValue();
+    APInt LoC, HiC;
 
-    if (!C.isMask(VT.getScalarSizeInBits()))
-      return SDValue();
+    // Simple case, V is a UMIN.
+    if (SDValue UMinOp = MatchMinMax(V, ISD::UMIN, RISCVISD::UMIN_VL, HiC))
+      if (HiC.isMask(VT.getScalarSizeInBits()))
+        return UMinOp;
 
-    return UMin;
+    // If we have an SMAX that removes negative numbers first, then we can match
+    // SMIN instead of UMIN.
+    if (SDValue SMinOp = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+      if (SDValue SMaxOp =
+              MatchMinMax(SMinOp, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+        if (LoC.isNonNegative() && HiC.isMask(VT.getScalarSizeInBits()))
+          return SMinOp;
+
+    // If we have an SMIN before an SMAX and the SMAX constant is less than or
+    // equal to the SMIN constant, we can use vnclipu if we insert a new SMAX
+    // first.
+    if (SDValue SMaxOp = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+      if (SDValue SMinOp =
+              MatchMinMax(SMaxOp, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+        if (LoC.isNonNegative() && HiC.isMask(VT.getScalarSizeInBits()) &&
+            HiC.uge(LoC))
+          return DAG.getNode(RISCVISD::SMAX_VL, DL, V.getValueType(), SMinOp,
+                             V.getOperand(1), DAG.getUNDEF(V.getValueType()),
+                             Mask, VL);
+
+    return SDValue();
   };
 
   auto DetectSSatPattern = [&](SDValue V) {
@@ -16249,36 +16269,53 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
     APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
     APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
 
-    APInt CMin, CMax;
-    if (SDValue SMin = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, CMin))
-      if (SDValue SMax = MatchMinMax(SMin, ISD::SMAX, RISCVISD::SMAX_VL, CMax))
-        if (CMin == SignedMax && CMax == SignedMin)
-          return SMax;
+    APInt HiC, LoC;
+    if (SDValue SMinOp = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+      if (SDValue SMaxOp =
+              MatchMinMax(SMinOp, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+        if (HiC == SignedMax && LoC == SignedMin)
+          return SMaxOp;
 
-    if (SDValue SMax = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, CMax))
-      if (SDValue SMin = MatchMinMax(SMax, ISD::SMIN, RISCVISD::SMIN_VL, CMin))
-        if (CMin == SignedMax && CMax == SignedMin)
-          return SMin;
+    if (SDValue SMaxOp = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+      if (SDValue SMinOp =
+              MatchMinMax(SMaxOp, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+        if (HiC == SignedMax && LoC == SignedMin)
+          return SMinOp;
 
     return SDValue();
   };
 
+  SDValue Src = N->getOperand(0);
+
+  // Look through multiple layers of truncates.
+  while (Src.getOpcode() == RISCVISD::TRUNCATE_VECTOR_VL &&
+         Src.getOperand(1) == Mask && Src.getOperand(2) == VL &&
+         Src.hasOneUse())
+    Src = Src.getOperand(0);
+
   SDValue Val;
   unsigned ClipOpc;
-  if ((Val = DetectUSatPattern(N->getOperand(0))))
+  if ((Val = DetectUSatPattern(Src)))
     ClipOpc = RISCVISD::VNCLIPU_VL;
-  else if ((Val = DetectSSatPattern(N->getOperand(0))))
+  else if ((Val = DetectSSatPattern(Src)))
     ClipOpc = RISCVISD::VNCLIP_VL;
   else
     return SDValue();
 
-  SDLoc DL(N);
-  // Rounding mode here is arbitrary since we aren't shifting out any bits.
-  return DAG.getNode(
-      ClipOpc, DL, VT,
-      {Val, DAG.getConstant(0, DL, VT), DAG.getUNDEF(VT), Mask,
-       DAG.getTargetConstant(RISCVVXRndMode::RNU, DL, Subtarget.getXLenVT()),
-       VL});
+  MVT ValVT = Val.getSimpleValueType();
+
+  do {
+    MVT ValEltVT = MVT::getIntegerVT(ValVT.getScalarSizeInBits() / 2);
+    ValVT = ValVT.changeVectorElementType(ValEltVT);
+    // Rounding mode here is arbitrary since we aren't shifting out any bits.
+    Val = DAG.getNode(
+        ClipOpc, DL, ValVT,
+        {Val, DAG.getConstant(0, DL, ValVT), DAG.getUNDEF(VT), Mask,
+         DAG.getTargetConstant(RISCVVXRndMode::RNU, DL, Subtarget.getXLenVT()),
+         VL});
+  } while (ValVT != VT);
+
+  return Val;
 }
 
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,

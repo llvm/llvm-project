@@ -552,13 +552,13 @@ private:
                       const DenseSet<uint32_t> &AllocContextIds);
 
   /// Map from each context ID to the AllocationType assigned to that context.
-  std::map<uint32_t, AllocationType> ContextIdToAllocationType;
+  DenseMap<uint32_t, AllocationType> ContextIdToAllocationType;
 
   /// Identifies the context node created for a stack id when adding the MIB
   /// contexts to the graph. This is used to locate the context nodes when
   /// trying to assign the corresponding callsites with those stack ids to these
   /// nodes.
-  std::map<uint64_t, ContextNode *> StackEntryIdToContextNodeMap;
+  DenseMap<uint64_t, ContextNode *> StackEntryIdToContextNodeMap;
 
   /// Maps to track the calls to their corresponding nodes in the graph.
   MapVector<CallInfo, ContextNode *> AllocationCallToContextNodeMap;
