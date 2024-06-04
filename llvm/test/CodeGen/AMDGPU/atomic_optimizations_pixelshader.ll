@@ -744,22 +744,21 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1364-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
 ; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1364-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
-; GFX1364-NEXT:    v_readlane_b32 s12, v1, 31
-; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1364-NEXT:    v_mov_b32_e32 v2, s12
+; GFX1364-NEXT:    v_permlane_bcast_b32 v2, v1, 31, 64
+; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1364-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
 ; GFX1364-NEXT:    s_mov_b64 exec, s[10:11]
-; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1364-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1364-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1364-NEXT:    v_readlane_b32 s12, v1, 63
 ; GFX1364-NEXT:    v_permlane_up_b32 v2, v1, 1, 64
 ; GFX1364-NEXT:    s_mov_b64 exec, s[10:11]
-; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX1364-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1364-NEXT:    s_or_saveexec_b64 s[10:11], -1
 ; GFX1364-NEXT:    v_writelane_b32 v2, 0, 0
 ; GFX1364-NEXT:    s_mov_b64 exec, s[10:11]
+; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1364-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1364-NEXT:    ; implicit-def: $vgpr0
 ; GFX1364-NEXT:    s_and_saveexec_b64 s[10:11], vcc

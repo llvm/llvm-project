@@ -493,8 +493,15 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
     if (!ST->isWave32()) {
       // Combine lane 31 into lanes 32..63.
       V = B.CreateBitCast(V, IntNTy);
-      Value *const Lane31 = B.CreateIntrinsic(
-          V->getType(), Intrinsic::amdgcn_readlane, {V, B.getInt32(31)});
+      Value *Lane31 = nullptr;
+      if (ST->hasPermlaneBcast()) {
+        Lane31 =
+            B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_permlane_bcast,
+                              {V, B.getInt32(31), B.getInt32(64)});
+      } else {
+        Lane31 = B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_readlane,
+                                   {V, B.getInt32(31)});
+      }
 
       Value *UpdateDPPCall = B.CreateCall(
           UpdateDPP, {Identity, Lane31, B.getInt32(DPP::QUAD_PERM_ID),
