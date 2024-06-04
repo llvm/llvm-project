@@ -12063,7 +12063,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return false;
 
   // Variables in other module units shouldn't be forced to be emitted.
-  if (VD->isInAnotherModuleUnit())
+  if (VD->shouldEmitInExternalSource())
     return false;
 
   // Variables that can be needed in other TUs are required.
