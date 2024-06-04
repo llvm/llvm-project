@@ -568,10 +568,9 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
   assert(!Loops.empty() && "Expecting a non-empty loop vector.");
 
   for (const Loop *L : Loops) {
-    std::optional<unsigned> TripCount = SE.getSmallConstantTripCount(L);
-    if (!TripCount)
-      TripCount = DefaultTripCount;
-    TripCounts.push_back({L, *TripCount});
+    unsigned TripCount =
+        SE.getSmallConstantTripCount(L).value_or(DefaultTripCount);
+    TripCounts.push_back({L, TripCount});
   }
 
   calculateCacheFootprint();
