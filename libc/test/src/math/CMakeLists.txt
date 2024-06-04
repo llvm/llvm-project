@@ -549,6 +549,7 @@ add_fp_unittest(
     RIntTest.h
   DEPENDS
     libc.src.math.rint
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -564,6 +565,7 @@ add_fp_unittest(
     RIntTest.h
   DEPENDS
     libc.src.math.rintf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -579,6 +581,23 @@ add_fp_unittest(
     RIntTest.h
   DEPENDS
     libc.src.math.rintl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  rintf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    rintf16_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.src.math.rintf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )

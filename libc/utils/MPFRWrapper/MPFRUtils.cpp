@@ -1104,6 +1104,7 @@ template <typename T> T round(T x, RoundingMode mode) {
 template float round<float>(float, RoundingMode);
 template double round<double>(double, RoundingMode);
 template long double round<long double>(long double, RoundingMode);
+template float16 round<float16>(float16, RoundingMode);
 
 } // namespace mpfr
 } // namespace testing

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
@@ -101,8 +102,10 @@ public:
   }
 
   void testSubnormalRange(RIntFunc func) {
-    constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    constexpr int COUNT = 100'001;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
+        StorageType(1));
     for (StorageType i = MIN_SUBNORMAL; i <= MAX_SUBNORMAL; i += STEP) {
       T x = FPBits(i).get_val();
       for (int mode : ROUNDING_MODES) {
@@ -114,13 +117,16 @@ public:
   }
 
   void testNormalRange(RIntFunc func) {
-    constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    constexpr int COUNT = 100'001;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>((MAX_NORMAL - MIN_NORMAL) / COUNT),
+        StorageType(1));
     for (StorageType i = MIN_NORMAL; i <= MAX_NORMAL; i += STEP) {
-      T x = FPBits(i).get_val();
+      FPBits xbits(i);
+      T x = xbits.get_val();
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.
-      if (isnan(x)) {
+      if (xbits.is_nan()) {
         continue;
       }
 
