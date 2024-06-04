@@ -442,15 +442,9 @@ add_entrypoint_object(
   CXX_STANDARD
     20 # For constinit of the atexit callback list.
   DEPENDS
-    libc.src.__support.CPP.mutex
-    libc.src.__support.CPP.new
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.blockstore
-    libc.src.__support.fixedvector
-    libc.src.__support.threads.mutex
     .exit_handler
-    libc.include.stdlib
 )
+
 add_entrypoint_object(
   at_quick_exit
   SRCS
@@ -458,14 +452,7 @@ add_entrypoint_object(
   HDRS
     at_quick_exit.h
   DEPENDS
-    libc.src.__support.CPP.mutex
-    libc.src.__support.CPP.new
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.blockstore
-    libc.src.__support.fixedvector
-    libc.src.__support.threads.mutex
     .exit_handler
-    libc.include.stdlib
 )
 
 add_entrypoint_object(
@@ -479,7 +466,6 @@ add_entrypoint_object(
     .atexit
     libc.src.__support.OSUtil.osutil
     .exit_handler
-    libc.include.stdlib
 )
 
 add_entrypoint_object(
