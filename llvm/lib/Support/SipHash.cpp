@@ -58,20 +58,6 @@
     v2 = ROTL(v2, 32);                                                         \
   } while (0)
 
-#ifdef DEBUG_SIPHASH
-#include <stdio.h>
-
-#define TRACE                                                                  \
-  do {                                                                         \
-    printf("(%3zu) v0 %016" PRIx64 "\n", inlen, v0);                           \
-    printf("(%3zu) v1 %016" PRIx64 "\n", inlen, v1);                           \
-    printf("(%3zu) v2 %016" PRIx64 "\n", inlen, v2);                           \
-    printf("(%3zu) v3 %016" PRIx64 "\n", inlen, v3);                           \
-  } while (0)
-#else
-#define TRACE
-#endif
-
 /*
     Computes a SipHash value
     *in: pointer to input data (read-only)
@@ -110,7 +96,6 @@ int siphash(const void *in, const size_t inlen, const void *k, uint8_t *out,
     m = U8TO64_LE(ni);
     v3 ^= m;
 
-    TRACE;
     for (i = 0; i < cROUNDS; ++i)
       SIPROUND;
 
@@ -145,7 +130,6 @@ int siphash(const void *in, const size_t inlen, const void *k, uint8_t *out,
 
   v3 ^= b;
 
-  TRACE;
   for (i = 0; i < cROUNDS; ++i)
     SIPROUND;
 
@@ -156,7 +140,6 @@ int siphash(const void *in, const size_t inlen, const void *k, uint8_t *out,
   else
     v2 ^= 0xff;
 
-  TRACE;
   for (i = 0; i < dROUNDS; ++i)
     SIPROUND;
 
@@ -168,7 +151,6 @@ int siphash(const void *in, const size_t inlen, const void *k, uint8_t *out,
 
   v1 ^= 0xdd;
 
-  TRACE;
   for (i = 0; i < dROUNDS; ++i)
     SIPROUND;
 
