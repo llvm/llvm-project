@@ -5827,8 +5827,10 @@ struct AANonConvergent : public StateWrapper<BooleanState, AbstractAttribute> {
 
 /// An abstract interface for struct information.
 struct AAPointerInfo : public AbstractAttribute {
+protected:
   AAPointerInfo(const IRPosition &IRP) : AbstractAttribute(IRP) {}
 
+public:
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
     if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
@@ -6385,6 +6387,9 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual int64_t numOffsetBins() const = 0;
   virtual bool reachesReturn() const = 0;
   virtual void addReturnedOffsetsTo(OffsetInfo &) const = 0;
+  virtual void dumpState(raw_ostream &O) const = 0;
+  virtual const Access &getBinAccess(unsigned Index) const = 0;
+  virtual const DenseMap<Value *, OffsetInfo> &getOffsetInfoMap() const = 0;
 
   /// Call \p CB on all accesses that might interfere with \p Range and return
   /// true if all such accesses were known and the callback returned true for
@@ -6638,6 +6643,9 @@ struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
                                                       Attributor &A);
 
   virtual std::optional<TypeSize> getAllocatedSize() const = 0;
+
+  using NewOffsetsTy = DenseMap<AA::RangeTy, AA::RangeTy>;
+  virtual const NewOffsetsTy &getNewOffsets() const = 0;
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAAllocationInfo"; }

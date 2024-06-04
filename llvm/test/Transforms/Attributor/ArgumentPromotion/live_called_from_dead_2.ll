@@ -52,10 +52,9 @@ define internal i32 @caller(ptr %B) {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
-; CGSCC-SAME: (ptr noalias nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
-; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    [[A1:%.*]] = alloca i8, i32 0, align 4
-; CGSCC-NEXT:    [[C:%.*]] = call i32 @test(ptr noalias nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[B]]) #[[ATTR2:[0-9]+]]
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    [[A1:%.*]] = alloca [0 x i8], align 1
+; CGSCC-NEXT:    [[C:%.*]] = call i32 @test(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 0
 ;
   %A = alloca i32
