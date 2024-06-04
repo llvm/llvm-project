@@ -1910,45 +1910,21 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
   IdentifierInfo *Name = Tok.getIdentifierInfo();
   SourceLocation NameLoc = ConsumeToken();
   SecondTypeName.setIdentifier(Name, NameLoc);
-// SecondTypeName.setDestructorName(TildeLoc, nullptr, NameLoc);
 
-// If there is a '<', the second type name is a template-id. Parse
-// it as such.
-//
-// FIXME: This is not a context in which a '<' is assumed to start a template
-// argument list. This affects examples such as
-//   void f(auto *p) { p->~X<int>(); }
-// ... but there's no ambiguity, and nowhere to write 'template' in such an
-// example, so we accept it anyway.
-#if 1
+  // If there is a '<', the second type name is a template-id. Parse
+  // it as such.
+  //
+  // FIXME: This is not a context in which a '<' is assumed to start a template
+  // argument list. This affects examples such as
+  //   void f(auto *p) { p->~X<int>(); }
+  // ... but there's no ambiguity, and nowhere to write 'template' in such an
+  // example, so we accept it anyway
   if (Tok.is(tok::less) && ParseUnqualifiedIdTemplateId(
                                SS, ObjectType, Base && Base->containsErrors(),
                                /*TemplateKWLoc=*/SourceLocation(), TildeLoc,
                                Name, NameLoc, false, SecondTypeName,
                                /*AssumeTemplateId=*/true))
     return ExprError();
-#endif
-#if 0
-  if (Tok.is(tok::less)) {
-    TemplateTy Template;
-    TemplateNameKind TNK = Actions.ActOnTemplateName(
-        getCurScope(), SS, /*TemplateKWLoc=*/SourceLocation(),
-        SecondTypeName, ObjectType,
-        /*EnteringContext=*/false, Template,
-        /*AllowInjectedClassName*/true,
-        /*MayBeNNS=*/true);
-    if (TNK == TNK_Non_template)
-      return ExprError();
-
-    if (AnnotateTemplateIdToken(Template, TNK, SS,
-                                /*TemplateKWLoc=*/SourceLocation(),
-                                SecondTypeName, /*AllowTypeAnnotation=*/false))
-      return ExprError();
-    assert(Tok.is(tok::annot_template_id));
-    SecondTypeName.setTemplateId(takeTemplateIdAnnotation(Tok));
-    ConsumeAnnotationToken();
-  }
-#endif
 
   return Actions.ActOnPseudoDestructorExpr(getCurScope(), Base, OpLoc, OpKind,
                                            SS, FirstTypeName, CCLoc, TildeLoc,
