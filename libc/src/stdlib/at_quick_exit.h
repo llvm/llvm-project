@@ -1,4 +1,4 @@
-//===-- Implementation header for atexit ------------------------*- C++ -*-===//
+//===-- Implementation header for at_quick_exit -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDLIB_ATEXIT_H
-#define LLVM_LIBC_SRC_STDLIB_ATEXIT_H
+#ifndef LLVM_LIBC_SRC_STDLIB_AT_QUICK_EXIT_H
+#define LLVM_LIBC_SRC_STDLIB_AT_QUICK_EXIT_H
+
 namespace LIBC_NAMESPACE {
 
-int atexit(void (*function)());
-
+int at_quick_exit(void (*function)());
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_STDLIB_ATEXIT_H
+#endif // LLVM_LIBC_SRC_STDLIB_AT_QUICK_EXIT_H

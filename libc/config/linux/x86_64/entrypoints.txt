@@ -174,6 +174,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.bsearch
     libc.src.stdlib.div
     libc.src.stdlib.quick_exit
+    libc.src.stdlib.at_quick_exit
     libc.src.stdlib.labs
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs

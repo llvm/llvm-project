@@ -1083,6 +1083,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"exit", RetValSpec<NoReturn>, [ArgSpec<IntType>]>,
           FunctionSpec<"atexit", RetValSpec<IntType>, [ArgSpec<AtexitHandlerT>]>,
           FunctionSpec<"quick_exit", RetValSpec<NoReturn>, [ArgSpec<IntType>]>,
+          FunctionSpec<"at_quick_exit", RetValSpec<IntType>, [ArgSpec<IntType>]>,
       ]
   >;
 
