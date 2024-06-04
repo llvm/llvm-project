@@ -577,7 +577,7 @@ CallInst *IRBuilderBase::CreateConditionalStore(Value *Val, Value *Ptr,
   auto *PtrTy = cast<PointerType>(Ptr->getType());
   Type *DataTy = Val->getType();
   Type *OverloadedTypes[] = {DataTy, PtrTy};
-  Value *Ops[] = {Val, Ptr, getInt32(Alignment.value()), Condition};
+  Value *Ops[] = {Val, Ptr, Condition};
   return CreateMaskedIntrinsic(Intrinsic::conditional_store, Ops,
                                OverloadedTypes);
 }

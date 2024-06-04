@@ -34,29 +34,22 @@ using namespace llvm;
 //  br label block.remaining
 // block.remaining:
 
-static bool isCondStoreIntr(Instruction &Instr) {
-  CallInst *CI = dyn_cast<CallInst>(&Instr);
-  if (!CI)
-    return false;
-
-  Function *Fn = CI->getCalledFunction();
-  if (Fn && Fn->getIntrinsicID() == Intrinsic::conditional_store)
-    return true;
-  return false;
+static bool isCondStoreIntr(const Instruction &Instr) {
+  const CallInst *CI = dyn_cast<const CallInst>(&Instr);
+  return CI && CI->getIntrinsicID() == Intrinsic::conditional_store;
 }
 
-static void lowerCondStoreIntr(Instruction &Instr, BasicBlock &BB) {
-  LLVM_DEBUG(dbgs() << "Found basic with conditional store: " << BB.getName()
-                    << "\n");
-  auto *Val = Instr.getOperand(0);
-  auto *Ptr = Instr.getOperand(1);
-  auto *AlignmentVal = dyn_cast<ConstantInt>(Instr.getOperand(2));
-  auto Alignment = MaybeAlign(AlignmentVal->getValue().getLimitedValue());
-  assert(AlignmentVal && "Invalid intrinsic operands");
-  auto *Cond = Instr.getOperand(3);
+static void lowerCondStoreIntr(Instruction &Instr) {
+  LLVM_DEBUG(dbgs() << "Found basic with conditional store: "
+                    << Instr.getParent()->getName() << "\n");
+  auto *CallInstr = dyn_cast<CallInst>(&Instr);
+  auto *Val = CallInstr->getOperand(0);
+  auto *Ptr = CallInstr->getOperand(1);
+  auto Alignment = CallInstr->getParamAlign(1);
+  auto *Cond = CallInstr->getOperand(3);
 
   Instruction *ThenBlock =
-      SplitBlockAndInsertIfThen(Cond, &Instr, /*Unreachable*/ false);
+      SplitBlockAndInsertIfThen(Cond, CallInstr, /*Unreachable*/ false);
 
   IRBuilder<> IB(ThenBlock);
   IB.CreateAlignedStore(Val, Ptr, Alignment);

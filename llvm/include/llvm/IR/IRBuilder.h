@@ -819,8 +819,7 @@ public:
   CallInst *CreateThreadLocalAddress(Value *Ptr);
 
   // Create a call to a Conditional Store intrinsic
-  CallInst *CreateConditionalStore(Value *Val, Value *Ptr, Align Alignment,
-                                   Value *Condition);
+  CallInst *CreateConditionalStore(Value *Val, Value *Ptr, Value *Condition);
 
   /// Create a call to Masked Load intrinsic
   CallInst *CreateMaskedLoad(Type *Ty, Value *Ptr, Align Alignment, Value *Mask,

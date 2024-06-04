@@ -158,7 +158,7 @@ cl::opt<unsigned> llvm::SetLicmMssaOptCap(
              "for faster compile. Caps the MemorySSA clobbering calls."));
 
 cl::opt<bool> SetLicmConditionalAccessPromotion(
-    "licm-conditional-access-promotion", cl::Hidden, cl::init(true),
+    "licm-conditional-access-promotion", cl::Hidden, cl::init(false),
     cl::desc("Enable promotion of conditional accesses of loop-invariant"
              " locations"));
 
@@ -1858,7 +1858,7 @@ class LoopPromoter : public LoadAndStorePromoter {
     Type *DataType = LiveInValue->getType();
     Value *Ptr = Builder.CreatePointerCast(PtrToExitBB,
                                            PointerType::getUnqual(DataType));
-    Builder.CreateConditionalStore(LiveInValue, Ptr, Alignment, FlagValue);
+    Builder.CreateConditionalStore(LiveInValue, Ptr, FlagValue);
   }
 
 public:
