@@ -584,7 +584,7 @@ void MachineOutliner::findCandidates(
   LLVM_DEBUG(dbgs() << "*** Discarding overlapping candidates *** \n");
   LLVM_DEBUG(
       dbgs() << "Searching for overlaps in all repeated sequences...\n");
-  for (const SuffixTree::RepeatedSubstring &RS : ST) {
+  for (SuffixTree::RepeatedSubstring &RS : ST) {
     CandidatesForRepeatedSeq.clear();
     unsigned StringLen = RS.Length;
     LLVM_DEBUG(dbgs() << "  Sequence length: " << StringLen << "\n");
@@ -593,6 +593,9 @@ void MachineOutliner::findCandidates(
     unsigned NumDiscarded = 0;
     unsigned NumKept = 0;
 #endif
+    // Sort the start indices so that we can efficiently check if candidates
+    // overlap with the ones we've already found for this sequence.
+    llvm::sort(RS.StartIndices);
     for (const unsigned &StartIdx : RS.StartIndices) {
       // Trick: Discard some candidates that would be incompatible with the
       // ones we've already found for this sequence. This will save us some
@@ -616,17 +619,15 @@ void MachineOutliner::findCandidates(
       // * End before the other starts
       // * Start after the other ends
       unsigned EndIdx = StartIdx + StringLen - 1;
-      auto FirstOverlap = find_if(
-          CandidatesForRepeatedSeq, [StartIdx, EndIdx](const Candidate &C) {
-            return EndIdx >= C.getStartIdx() && StartIdx <= C.getEndIdx();
-          });
-      if (FirstOverlap != CandidatesForRepeatedSeq.end()) {
+      if (!CandidatesForRepeatedSeq.empty() &&
+          StartIdx <= CandidatesForRepeatedSeq.back().getEndIdx()) {
 #ifndef NDEBUG
         ++NumDiscarded;
-        LLVM_DEBUG(dbgs() << "    .. DISCARD candidate @ [" << StartIdx
-                          << ", " << EndIdx << "]; overlaps with candidate @ ["
-                          << FirstOverlap->getStartIdx() << ", "
-                          << FirstOverlap->getEndIdx() << "]\n");
+        LLVM_DEBUG(dbgs() << "    .. DISCARD candidate @ [" << StartIdx << ", "
+                          << EndIdx << "]; overlaps with candidate @ ["
+                          << CandidatesForRepeatedSeq.back().getStartIdx()
+                          << ", " << CandidatesForRepeatedSeq.back().getEndIdx()
+                          << "]\n");
 #endif
         continue;
       }
