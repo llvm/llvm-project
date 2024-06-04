@@ -5418,9 +5418,13 @@ struct AANoFPClass
     return false;
   }
 
-  /// Return true if we assume that the underlying value is nofpclass.
+  /// Return the underlying assumed nofpclass.
   FPClassTest getAssumedNoFPClass() const {
     return static_cast<FPClassTest>(getAssumed());
+  }
+  /// Return the underlying known nofpclass.
+  FPClassTest getKnownNoFPClass() const {
+    return static_cast<FPClassTest>(getKnown());
   }
 
   /// Create an abstract attribute view for the position \p IRP.
