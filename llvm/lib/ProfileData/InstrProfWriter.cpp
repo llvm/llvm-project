@@ -491,11 +491,12 @@ static uint64_t writeMemProfFrames(
 
 // Serialize MemProfFrameData.  Return the mapping from FrameIds to their
 // indexes within the frame array.
-static llvm::DenseMap<memprof::FrameId, uint32_t> writeMemProfFrameArray(
+static llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
+writeMemProfFrameArray(
     ProfOStream &OS,
     llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
   // Mappings from FrameIds to array indexes.
-  llvm::DenseMap<memprof::FrameId, uint32_t> MemProfFrameIndexes;
+  llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId> MemProfFrameIndexes;
 
   // Sort the FrameIDs for stability.
   std::vector<std::pair<memprof::FrameId, const memprof::Frame *>> FrameIdOrder;
@@ -541,7 +542,8 @@ writeMemProfCallStackArray(
     ProfOStream &OS,
     llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
         &MemProfCallStackData,
-    llvm::DenseMap<memprof::FrameId, uint32_t> &MemProfFrameIndexes) {
+    llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
+        &MemProfFrameIndexes) {
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
       MemProfCallStackIndexes;
 
@@ -710,7 +712,7 @@ static Error writeMemProfV3(ProfOStream &OS,
     Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
-  llvm::DenseMap<memprof::FrameId, uint32_t> MemProfFrameIndexes =
+  llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId> MemProfFrameIndexes =
       writeMemProfFrameArray(OS, MemProfData.FrameData);
 
   uint64_t CallStackPayloadOffset = OS.tell();

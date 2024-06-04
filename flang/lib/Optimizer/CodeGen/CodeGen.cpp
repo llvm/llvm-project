@@ -2742,6 +2742,9 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         loc, tyAttr, isConst, linkage, global.getSymName(), initAttr, 0, 0,
         false, false, comdat, attrs, dbgExpr);
 
+    if (global.getAlignment() && *global.getAlignment() > 0)
+      g.setAlignment(*global.getAlignment());
+
     auto module = global->getParentOfType<mlir::ModuleOp>();
     // Add comdat if necessary
     if (fir::getTargetTriple(module).supportsCOMDAT() &&

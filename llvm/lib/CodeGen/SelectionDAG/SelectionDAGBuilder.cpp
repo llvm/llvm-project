@@ -3617,12 +3617,8 @@ void SelectionDAGBuilder::visitSDiv(const User &I) {
                            Op2, Flags));
 }
 
-void SelectionDAGBuilder::visitICmp(const User &I) {
-  ICmpInst::Predicate predicate = ICmpInst::BAD_ICMP_PREDICATE;
-  if (const ICmpInst *IC = dyn_cast<ICmpInst>(&I))
-    predicate = IC->getPredicate();
-  else if (const ConstantExpr *IC = dyn_cast<ConstantExpr>(&I))
-    predicate = ICmpInst::Predicate(IC->getPredicate());
+void SelectionDAGBuilder::visitICmp(const ICmpInst &I) {
+  ICmpInst::Predicate predicate = I.getPredicate();
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
   ISD::CondCode Opcode = getICmpCondCode(predicate);
@@ -3644,12 +3640,8 @@ void SelectionDAGBuilder::visitICmp(const User &I) {
   setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Opcode));
 }
 
-void SelectionDAGBuilder::visitFCmp(const User &I) {
-  FCmpInst::Predicate predicate = FCmpInst::BAD_FCMP_PREDICATE;
-  if (const FCmpInst *FC = dyn_cast<FCmpInst>(&I))
-    predicate = FC->getPredicate();
-  else if (const ConstantExpr *FC = dyn_cast<ConstantExpr>(&I))
-    predicate = FCmpInst::Predicate(FC->getPredicate());
+void SelectionDAGBuilder::visitFCmp(const FCmpInst &I) {
+  FCmpInst::Predicate predicate = I.getPredicate();
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
 
@@ -7844,9 +7836,19 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Ptr = getValue(I.getOperand(0));
     SDValue Mask = getValue(I.getOperand(1));
 
-    EVT PtrVT = Ptr.getValueType();
-    assert(PtrVT == Mask.getValueType() &&
-           "Pointers with different index type are not supported by SDAG");
+    // On arm64_32, pointers are 32 bits when stored in memory, but
+    // zero-extended to 64 bits when in registers.  Thus the mask is 32 bits to
+    // match the index type, but the pointer is 64 bits, so the the mask must be
+    // zero-extended up to 64 bits to match the pointer.
+    EVT PtrVT =
+        TLI.getValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
+    EVT MemVT =
+        TLI.getMemValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
+    assert(PtrVT == Ptr.getValueType());
+    assert(MemVT == Mask.getValueType());
+    if (MemVT != PtrVT)
+      Mask = DAG.getPtrExtOrTrunc(Mask, sdl, PtrVT);
+
     setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
   }
