@@ -3897,8 +3897,7 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
 
       // Write out identifiers if either the ID is local or the identifier has
       // changed since it was loaded.
-      if (ID >= FirstIdentID || !Chain || !II->isFromAST() ||
-          II->hasChangedSinceDeserialization() ||
+      if (ID >= FirstIdentID || II->hasChangedSinceDeserialization() ||
           (Trait.needDecls() &&
            II->hasFETokenInfoChangedSinceDeserialization()))
         Generator.insert(II, ID, Trait);
@@ -6509,10 +6508,12 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
     // computed.
     Record->push_back(D->getODRHash());
 
-  bool ModulesDebugInfo =
-      Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();
-  Record->push_back(ModulesDebugInfo);
-  if (ModulesDebugInfo)
+  bool ModulesCodegen =
+      !D->isDependentType() &&
+     (Writer->Context->getLangOpts().ModulesDebugInfo ||
+      D->isInNamedModule());
+  Record->push_back(ModulesCodegen);
+  if (ModulesCodegen)
     Writer->AddDeclRef(D, Writer->ModularCodegenDecls);
 
   // IsLambda bit is already saved.

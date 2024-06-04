@@ -57,6 +57,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
            "unexpected scalar type inferred for operand");
     return ResTy;
   }
+  case VPInstruction::LogicalAnd:
+    return IntegerType::get(Ctx, 1);
   case VPInstruction::PtrAdd:
     // Return the type based on the pointer argument (i.e. first operand).
     return inferScalarType(R->getOperand(0));
