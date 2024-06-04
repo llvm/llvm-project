@@ -483,7 +483,7 @@ DIEBuilder::finalizeDIEs(DWARFUnit &CU, DIE &Die,
   // forward declaration won't have DW_IDX_parent.
 
   // If Parent is nullopt and NumberParentsInChain is not zero, then forward
-  // declaration was encountered in this DF traversal. Propogating nullopt for
+  // declaration was encountered in this DF traversal. Propagating nullopt for
   // Parent to children.
   if (!Parent && NumberParentsInChain)
     NameEntry = std::nullopt;
