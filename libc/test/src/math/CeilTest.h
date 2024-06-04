@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_CEILTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_CEILTEST_H
+
 #include "src/__support/CPP/algorithm.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -88,3 +91,5 @@ public:
   TEST_F(LlvmLibcCeilTest, RoundedNubmers) { testRoundedNumbers(&func); }      \
   TEST_F(LlvmLibcCeilTest, Fractions) { testFractions(&func); }                \
   TEST_F(LlvmLibcCeilTest, Range) { testRange(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_CEILTEST_H
