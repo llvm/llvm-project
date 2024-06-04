@@ -141,6 +141,7 @@ add_fp_unittest(
     TruncTest.h
   DEPENDS
     libc.src.math.trunc
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -155,6 +156,7 @@ add_fp_unittest(
     TruncTest.h
   DEPENDS
     libc.src.math.truncf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -169,6 +171,22 @@ add_fp_unittest(
     TruncTest.h
   DEPENDS
     libc.src.math.truncl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  truncf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    truncf16_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.truncf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
