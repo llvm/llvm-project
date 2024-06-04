@@ -2321,9 +2321,17 @@ bool OmpStructureChecker::CheckReductionOperators(
   common::visit(
       common::visitors{
           [&](const parser::DefinedOperator &dOpr) {
-            const auto &intrinsicOp{
-                std::get<parser::DefinedOperator::IntrinsicOperator>(dOpr.u)};
-            ok = CheckIntrinsicOperator(intrinsicOp);
+            const auto *intrinsicOp{
+                std::get_if<parser::DefinedOperator::IntrinsicOperator>(
+                    &dOpr.u)};
+            if (intrinsicOp) {
+              ok = CheckIntrinsicOperator(*intrinsicOp);
+            } else {
+              context_.Say(GetContext().clauseSource,
+                  "Invalid reduction operator in REDUCTION "
+                  "clause."_err_en_US,
+                  ContextDirectiveAsFortran());
+            }
           },
           [&](const parser::ProcedureDesignator &procD) {
             const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
