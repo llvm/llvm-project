@@ -448,6 +448,9 @@ void PPCMIPeephole::convertUnprimedAccPHIs(
       if (MRI->isSSA())
         addRegToUpdate(RegMBB.first.getReg());
     }
+    // The liveness of old PHI and new PHI have to be updated.
+    addRegToUpdate(PHI->getOperand(0).getReg());
+    addRegToUpdate(AccReg);
     ChangedPHIMap[PHI] = NewPHI.getInstr();
     LLVM_DEBUG(dbgs() << "Converting PHI: ");
     LLVM_DEBUG(PHI->dump());
