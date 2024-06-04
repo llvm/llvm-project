@@ -27,14 +27,10 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include <iterator>
 #include <numeric>
 #include <queue>
 
@@ -1743,11 +1739,9 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
   }
 
   SmallVector<Value *, 8> ValueList;
-  for (const auto &Lane : Item) {
-    if (Lane.second != FrontLane || !Lane.first)
-      continue;
-    ValueList.push_back(Lane.first);
-  }
+  for (const auto &Lane : Item)
+    if (Lane.first)
+      ValueList.push_back(Lane.first);
 
   Builder.SetInsertPoint(I);
   Type *DstTy =
