@@ -1,13 +1,20 @@
 // RUN: rm -rf %t
+// RUN: mkdir %t
+// RUN: mkdir %t/Inputs
+// RUN: cp -R %S/Inputs/frameworks %t/Inputs/frameworks
 // RUN: split-file %s %t
 
 //--- module.modulemap
 module root { header "root.h" }
 module direct { header "direct.h" }
-module transitive { header "transitive.h" }
+module transitive {
+  header "transitive.h"
+  link framework "libTransitive"
+}
 //--- root.h
 #include "direct.h"
 #include "root/textual.h"
+#include "Framework/Framework.h"
 //--- direct.h
 #include "transitive.h"
 //--- transitive.h
@@ -21,7 +28,7 @@ module transitive { header "transitive.h" }
 [{
   "file": "",
   "directory": "DIR",
-  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -I DIR -x c"
+  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -FDIR/Inputs/frameworks -I DIR -x c"
 }]
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
@@ -30,6 +37,25 @@ module transitive { header "transitive.h" }
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "clang-module-deps": [],
+// CHECK-NEXT:       "clang-modulemap-file": "{{.*}}/__inferred_module.map",
+// CHECK-NEXT:       "command-line": [
+// CHECK:            ],
+// CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "file-deps": [
+// CHECK-NEXT:         "{{.*}}/Framework.h"
+// CHECK-NEXT:         "{{.*}}/__inferred_module.map"
+// CHECK-NEXT:         "{{.*}}/module.modulemap"
+// CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "isFramework": true,
+// CHECK-NEXT:           "link-name": "Framework"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
+// CHECK-NEXT:       "name": "Framework"
+// CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
@@ -52,6 +78,10 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "{{.*}}",
+// CHECK-NEXT:           "module-name": "Framework"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "context-hash": "{{.*}}",
 // CHECK-NEXT:           "module-name": "direct"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
@@ -60,6 +90,7 @@ module transitive { header "transitive.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/module.modulemap"
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:         "[[PREFIX]]/root.h"
 // CHECK-NEXT:         "[[PREFIX]]/root/textual.h"
@@ -77,7 +108,12 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:         "[[PREFIX]]/transitive.h"
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "link-libraries": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "isFramework": true,
+// CHECK-NEXT:           "link-name": "libTransitive"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "name": "transitive"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
