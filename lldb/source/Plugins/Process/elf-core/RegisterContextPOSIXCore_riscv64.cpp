@@ -16,11 +16,9 @@ std::unique_ptr<RegisterContextCorePOSIX_riscv64>
 RegisterContextCorePOSIX_riscv64::Create(Thread &thread, const ArchSpec &arch,
                                          const DataExtractor &gpregset,
                                          llvm::ArrayRef<CoreNote> notes) {
-  Flags flags = 0;
-
   return std::unique_ptr<RegisterContextCorePOSIX_riscv64>(
       new RegisterContextCorePOSIX_riscv64(
-          thread, std::make_unique<RegisterInfoPOSIX_riscv64>(arch, flags),
+          thread, std::make_unique<RegisterInfoPOSIX_riscv64>(arch, Flags()),
           gpregset, notes));
 }
 
