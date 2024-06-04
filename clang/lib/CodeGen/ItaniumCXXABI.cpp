@@ -4656,14 +4656,14 @@ static void InitCatchParam(CodeGenFunction &CGF,
   auto catchRD = CatchType->getAsCXXRecordDecl();
   CharUnits caughtExnAlignment = CGF.CGM.getClassPointerAlignment(catchRD);
 
-  llvm::Type *PtrTy = CGF.UnqualPtrTy; // addrspace 0 ok
+  llvm::Type *PtrTy = CGF.UnqualPtrTy; // unqualified is ok
 
   // Check for a copy expression.  If we don't have a copy expression,
   // that means a trivial copy is okay.
   const Expr *copyExpr = CatchParam.getInit();
   if (!copyExpr) {
     llvm::Value *rawAdjustedExn = CallBeginCatch(CGF, Exn, true);
-    Address adjustedExn(CGF.Builder.CreateBitCast(rawAdjustedExn, PtrTy),
+    Address adjustedExn(CGF.Builder.CreatePointerCast(rawAdjustedExn, PtrTy),
                         LLVMCatchTy, caughtExnAlignment);
     LValue Dest = CGF.MakeAddrLValue(ParamAddr, CatchType);
     LValue Src = CGF.MakeAddrLValue(adjustedExn, CatchType);
@@ -4677,7 +4677,7 @@ static void InitCatchParam(CodeGenFunction &CGF,
     CGF.EmitNounwindRuntimeCall(getGetExceptionPtrFn(CGF.CGM), Exn);
 
   // Cast that to the appropriate type.
-  Address adjustedExn(CGF.Builder.CreateBitCast(rawAdjustedExn, PtrTy),
+  Address adjustedExn(CGF.Builder.CreatePointerCast(rawAdjustedExn, PtrTy),
                       LLVMCatchTy, caughtExnAlignment);
 
   // The copy expression is defined in terms of an OpaqueValueExpr.
