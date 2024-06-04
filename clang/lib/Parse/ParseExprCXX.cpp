@@ -1912,6 +1912,7 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
   IdentifierInfo *Name = Tok.getIdentifierInfo();
   SourceLocation NameLoc = ConsumeToken();
   SecondTypeName.setIdentifier(Name, NameLoc);
+  // SecondTypeName.setDestructorName(TildeLoc, nullptr, NameLoc);
 
   // If there is a '<', the second type name is a template-id. Parse
   // it as such.
@@ -1924,9 +1925,10 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
   #if 1
   if (Tok.is(tok::less) &&
       ParseUnqualifiedIdTemplateId(
-          SS, ObjectType, Base && Base->containsErrors(), SourceLocation(),
+          SS, ObjectType, Base && Base->containsErrors(),
+          /*TemplateKWLoc=*/SourceLocation(), TildeLoc,
           Name, NameLoc, false, SecondTypeName,
-          /*AssumeTemplateId=*/true, /*ForDestructor=*/true))
+          /*AssumeTemplateId=*/true))
     return ExprError();
   #endif
   #if 0
@@ -2555,9 +2557,9 @@ bool Parser::ParseCXXTypeSpecifierSeq(DeclSpec &DS, DeclaratorContext Context) {
 /// \returns true if a parse error occurred, false otherwise.
 bool Parser::ParseUnqualifiedIdTemplateId(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
-    SourceLocation TemplateKWLoc, IdentifierInfo *Name, SourceLocation NameLoc,
-    bool EnteringContext, UnqualifiedId &Id, bool AssumeTemplateId,
-    bool ForDestructor) {
+    SourceLocation TemplateKWLoc, SourceLocation TildeLoc,
+    IdentifierInfo *Name, SourceLocation NameLoc, bool EnteringContext,
+    UnqualifiedId &Id, bool AssumeTemplateId) {
   assert(Tok.is(tok::less) && "Expected '<' to finish parsing a template-id");
 
   TemplateTy Template;
@@ -2572,7 +2574,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(
       TNK = Actions.ActOnTemplateName(getCurScope(), SS, TemplateKWLoc, Id,
                                       ObjectType, EnteringContext, Template,
                                       /*AllowInjectedClassName=*/true,
-                                      ForDestructor);
+                                      TildeLoc.isValid());
     } else {
       bool MemberOfUnknownSpecialization;
       TNK = Actions.isTemplateName(getCurScope(), SS,
@@ -2580,7 +2582,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(
                                    ObjectType, EnteringContext, Template,
                                    MemberOfUnknownSpecialization,
                                    /*Disambiguation=*/false,
-                                   ForDestructor);
+                                   TildeLoc.isValid());
       // If lookup found nothing but we're assuming that this is a template
       // name, double-check that makes sense syntactically before committing
       // to it.
@@ -2613,7 +2615,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(
         }
         TNK = Actions.ActOnTemplateName(
             getCurScope(), SS, TemplateKWLoc, Id, ObjectType, EnteringContext,
-            Template, /*AllowInjectedClassName=*/true, ForDestructor);
+            Template, /*AllowInjectedClassName=*/true, TildeLoc.isValid());
       } else if (TNK == TNK_Non_template) {
         return false;
       }
@@ -2710,7 +2712,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(
   if (Id.getKind() == UnqualifiedIdKind::IK_ConstructorName)
     Id.setConstructorName(Type.get(), NameLoc, RAngleLoc);
   else
-    Id.setDestructorName(Id.StartLocation, Type.get(), RAngleLoc);
+    Id.setDestructorName(TildeLoc, Type.get(), RAngleLoc);
 
   return false;
 }
@@ -3058,8 +3060,9 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
     if (Tok.is(tok::less))
       return ParseUnqualifiedIdTemplateId(
           SS, ObjectType, ObjectHadErrors,
-          TemplateKWLoc ? *TemplateKWLoc : SourceLocation(), Id, IdLoc,
-          EnteringContext, Result, TemplateSpecified, /*ForDestructor=*/false);
+          TemplateKWLoc ? *TemplateKWLoc : SourceLocation(),
+          /*TildeLoc=*/SourceLocation(), Id, IdLoc,
+          EnteringContext, Result, TemplateSpecified);
 
     if (TemplateSpecified) {
       TemplateNameKind TNK =
@@ -3154,9 +3157,9 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
         Tok.is(tok::less))
       return ParseUnqualifiedIdTemplateId(
           SS, ObjectType, ObjectHadErrors,
-          TemplateKWLoc ? *TemplateKWLoc : SourceLocation(), nullptr,
-          SourceLocation(), EnteringContext, Result, TemplateSpecified,
-          /*ForDestructor=*/false);
+          TemplateKWLoc ? *TemplateKWLoc : SourceLocation(),
+          /*TildeLoc=*/SourceLocation(), /*Name=*/nullptr,
+          /*NameLoc=*/SourceLocation(), EnteringContext, Result, TemplateSpecified);
     else if (TemplateSpecified &&
              Actions.ActOnTemplateName(
                  getCurScope(), SS, *TemplateKWLoc, Result, ObjectType,
@@ -3251,9 +3254,8 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
       Result.setDestructorName(TildeLoc, nullptr, ClassNameLoc);
       return ParseUnqualifiedIdTemplateId(
           SS, ObjectType, ObjectHadErrors,
-          TemplateKWLoc ? *TemplateKWLoc : SourceLocation(), ClassName,
-          ClassNameLoc, EnteringContext, Result, TemplateSpecified,
-          /*ForDestructor=*/true);
+          TemplateKWLoc ? *TemplateKWLoc : SourceLocation(),
+          TildeLoc, ClassName, ClassNameLoc, EnteringContext, Result, TemplateSpecified);
     }
 
     // Note that this is a destructor name.

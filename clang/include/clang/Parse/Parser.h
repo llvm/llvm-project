@@ -3372,12 +3372,12 @@ private:
                                     ParsedType ObjectType,
                                     bool ObjectHadErrors,
                                     SourceLocation TemplateKWLoc,
+                                    SourceLocation TildeLoc,
                                     IdentifierInfo *Name,
                                     SourceLocation NameLoc,
                                     bool EnteringContext,
                                     UnqualifiedId &Id,
-                                    bool AssumeTemplateId,
-                                    bool ForDestructor);
+                                    bool AssumeTemplateId);
   bool ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
                                   ParsedType ObjectType,
                                   UnqualifiedId &Result);
