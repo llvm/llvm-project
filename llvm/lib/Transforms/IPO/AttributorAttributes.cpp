@@ -10338,48 +10338,25 @@ struct AANoFPClassImpl : AANoFPClass {
   /// See followUsesInMBEC
   bool followUseInMBEC(Attributor &A, const Use *U, const Instruction *I,
                        AANoFPClass::StateType &State) {
-    const Value *UseV = U->get();
-    const DominatorTree *DT = nullptr;
-    AssumptionCache *AC = nullptr;
-    const TargetLibraryInfo *TLI = nullptr;
-    InformationCache &InfoCache = A.getInfoCache();
-
-    if (Function *F = getAnchorScope()) {
-      DT = InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
-      AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
-      TLI = InfoCache.getTargetLibraryInfoForFunction(*F);
-    }
-
-    const DataLayout &DL = A.getDataLayout();
-
-    KnownFPClass KnownFPClass =
-        computeKnownFPClass(UseV, DL,
-                            /*InterestedClasses=*/fcAllFlags,
-                            /*Depth=*/0, TLI, AC, I, DT);
-    State.addKnownBits(~KnownFPClass.KnownFPClasses);
-
-    if (auto *CI = dyn_cast<CallInst>(UseV)) {
-      // Special case FP intrinsic with struct return type.
-      switch (CI->getIntrinsicID()) {
-      case Intrinsic::frexp:
-        return true;
-      case Intrinsic::not_intrinsic:
-        // TODO: Could recognize math libcalls
-        return false;
-      default:
-        break;
-      }
-    }
-
-    if (!UseV->getType()->isFPOrFPVectorTy())
+    // TODO: Determine what instructions can be looked through.
+    auto *CB = dyn_cast<CallBase>(I);
+    if (!CB)
       return false;
-    return !isa<LoadInst, AtomicRMWInst>(UseV);
+
+    if (!CB->isArgOperand(U))
+      return false;
+
+    unsigned ArgNo = CB->getArgOperandNo(U);
+    IRPosition IRP = IRPosition::callsite_argument(*CB, ArgNo);
+    if (auto *NoFPAA = A.getAAFor<AANoFPClass>(*this, IRP, DepClassTy::NONE))
+      State.addKnownBits(NoFPAA->getState().getKnown());
+    return false;
   }
 
   const std::string getAsStr(Attributor *A) const override {
     std::string Result = "nofpclass";
     raw_string_ostream OS(Result);
-    OS << getAssumedNoFPClass();
+    OS << getKnownNoFPClass() << '/' << getAssumedNoFPClass();
     return Result;
   }
 
