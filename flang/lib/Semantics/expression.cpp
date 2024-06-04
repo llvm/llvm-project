@@ -4187,13 +4187,13 @@ void ArgumentAnalyzer::Analyze(
           },
           [&](const parser::AltReturnSpec &label) {
             if (!isSubroutine) {
-              context_.Say("alternate return specification may not appear on"
-                           " function reference"_err_en_US);
+              context_.Say(
+                  "alternate return specification may not appear on function reference"_err_en_US);
             }
             actual = ActualArgument(label.v);
           },
           [&](const parser::ActualArg::PercentRef &percentRef) {
-            actual = AnalyzeVariable(percentRef.v);
+            actual = AnalyzeExpr(percentRef.v);
             if (actual.has_value()) {
               actual->set_isPercentRef();
             }
@@ -4202,12 +4202,6 @@ void ArgumentAnalyzer::Analyze(
             actual = AnalyzeExpr(percentVal.v);
             if (actual.has_value()) {
               actual->set_isPercentVal();
-              std::optional<DynamicType> type{actual->GetType()};
-              if (!type || !type->IsLengthlessIntrinsicType() ||
-                  actual->Rank() != 0) {
-                context_.SayAt(percentVal.v,
-                    "%VAL argument must be a scalar numerical or logical expression"_err_en_US);
-              }
             }
           },
       },
