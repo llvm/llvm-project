@@ -323,6 +323,10 @@ Non-comprehensive list of changes in this release
 - Builtins ``__builtin_shufflevector()`` and ``__builtin_convertvector()`` may
   now be used within constant expressions.
 
+- The floating point comparison builtins (``__builtin_isgreater``,
+  ``__builtin_isgreaterequal``, ``__builtin_isless``, etc.) and
+  ``__builtin_signbit`` can now be used in constant expressions.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
