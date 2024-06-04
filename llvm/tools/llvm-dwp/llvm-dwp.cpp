@@ -188,8 +188,10 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
                         std::make_move_iterator(DWOs->end()));
   }
 
-  if (DWOFilenames.empty())
+  if (DWOFilenames.empty()) {
+    WithColor::defaultWarningHandler(make_error<DWPError>("No dwo files found!\n"));
     return 0;
+  }
 
   std::string ErrorStr;
   StringRef Context = "dwarf streamer init";
