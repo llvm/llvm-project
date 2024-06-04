@@ -858,6 +858,13 @@ MLIR_CAPI_EXPORTED MlirValue mlirBlockAddArgument(MlirBlock block,
                                                   MlirType type,
                                                   MlirLocation loc);
 
+/// Erase the argument at 'index' and remove it from the argument list.
+MLIR_CAPI_EXPORTED void mlirBlockEraseArgument(MlirBlock block, unsigned index);
+
+/// Erases 'num' arguments from the index 'start'.
+MLIR_CAPI_EXPORTED void mlirBlockEraseArguments(MlirBlock block, unsigned start,
+                                                unsigned num);
+
 /// Inserts an argument of the specified type at a specified index to the block.
 /// Returns the newly added argument.
 MLIR_CAPI_EXPORTED MlirValue mlirBlockInsertArgument(MlirBlock block,
