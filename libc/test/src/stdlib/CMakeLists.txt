@@ -354,7 +354,6 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.stdlib.exit
       libc.src.stdlib.atexit
       libc.src.__support.CPP.array
-      .exit_handler
       libc.src.__support.CPP.utility
   )
 
