@@ -32,6 +32,11 @@ define i64 @test_sme_calling_convention_x1() nounwind {
 ; CHECK-NEXT:    bl __arm_get_current_vg
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
+; DARWIN-LABEL: test_sme_calling_convention_x1:
+; DARWIN:    stp        x29, x30, [sp, #-16]!
+; DARWIN:    bl ___arm_get_current_vg
+; DARWIN:    ldp        x29, x30, [sp], #16
+; DARWIN:    ret
 ;
 ; CHECK-CSRMASK-LABEL: name: test_sme_calling_convention_x1
 ; CHECK-CSRMASK: BL @__arm_get_current_vg, csr_aarch64_sme_abi_support_routines_preservemost_from_x1
