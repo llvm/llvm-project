@@ -12,8 +12,8 @@ namespace FoundNothing {
   struct A {
     void f1() {
       this->x<0; // expected-error {{no member named 'x' in 'A<T>'}}
-      this->x<0>; // expected-error {{expected expression}}
-                  // expected-error@-1 {{no member named 'x' in 'A<T>'}}
+      this->x<0>; // expected-error {{no member named 'x' in 'A<T>'}}
+                  // expected-error@-1 {{expected expression}}
       this->x<0>1; // expected-error {{no member named 'x' in 'A<T>'}}
     }
   };
@@ -43,23 +43,23 @@ namespace FoundSingleNonTemplate {
 
     void g1() {
       this->f0<0; // expected-error {{no member named 'f0' in 'B<T>'}}
-      this->f0<0>; // expected-error {{expected expression}}
-                   // expected-error@-1 {{no member named 'f0' in 'B<T>'}}
+      this->f0<0>; // expected-error {{no member named 'f0' in 'B<T>'}}
+                   // expected-error@-1 {{expected expression}}
       this->f0<0>1; // expected-error {{no member named 'f0' in 'B<T>'}}
 
       this->A0<0; // expected-error {{no member named 'A0' in 'B<T>'}}
-      this->A0<0>; // expected-error {{expected expression}}
-                   // expected-error@-1 {{no member named 'A0' in 'B<T>'}}
+      this->A0<0>; // expected-error {{no member named 'A0' in 'B<T>'}}
+                   // expected-error@-1 {{expected expression}}
       this->A0<0>1; // expected-error {{no member named 'A0' in 'B<T>'}}
 
       this->f1<0; // expected-error {{reference to non-static member function must be called}}
-      this->f1<0>; // expected-error {{expected expression}}
-                   // expected-error@-1 {{reference to non-static member function must be called}}
+      this->f1<0>; // expected-error {{reference to non-static member function must be called}}
+                   // expected-error@-1 {{expected expression}}
       this->f1<0>1; // expected-error {{reference to non-static member function must be called}}
 
       this->A1<0; // expected-error {{cannot refer to type member 'A1' in 'B<T>' with '->'}}
-      this->A1<0>; // expected-error {{expected expression}}
-                   // expected-error@-1 {{cannot refer to type member 'A1' in 'B<T>' with '->'}}
+      this->A1<0>; // expected-error {{cannot refer to type member 'A1' in 'B<T>' with '->'}}
+                   // expected-error@-1 {{expected expression}}
       this->A1<0>1; // expected-error {{cannot refer to type member 'A1' in 'B<T>' with '->'}}
     }
   };
@@ -148,23 +148,23 @@ namespace FoundAmbiguousNonTemplate {
 
     void g1() {
       this->f0<0; // expected-error {{no member named 'f0' in 'B<T>'}}
-      this->f0<0>; // expected-error {{expected expression}}
-                   // expected-error@-1 {{no member named 'f0' in 'B<T>'}}
+      this->f0<0>; // expected-error {{no member named 'f0' in 'B<T>'}}
+                   // expected-error@-1 {{expected expression}}
       this->f0<0>1; // expected-error {{no member named 'f0' in 'B<T>'}}
 
       this->A0<0; // expected-error {{no member named 'A0' in 'B<T>'}}
-      this->A0<0>; // expected-error {{expected expression}}
-                   // expected-error@-1 {{no member named 'A0' in 'B<T>'}}
+      this->A0<0>; // expected-error {{no member named 'A0' in 'B<T>'}}
+                   // expected-error@-1 {{expected expression}}
       this->A0<0>1; // expected-error {{no member named 'A0' in 'B<T>'}}
 
       this->f1<0; // expected-error {{reference to non-static member function must be called}}
-      this->f1<0>; // expected-error {{expected expression}}
-                   // expected-error@-1 {{reference to non-static member function must be called}}
+      this->f1<0>; // expected-error {{reference to non-static member function must be called}}
+                   // expected-error@-1 {{expected expression}}
       this->f1<0>1; // expected-error {{reference to non-static member function must be called}}
 
       this->A1<0; // expected-error {{cannot refer to type member 'A1' in 'B<T>' with '->'}}
-      this->A1<0>; // expected-error {{expected expression}}
-                   // expected-error@-1 {{cannot refer to type member 'A1' in 'B<T>' with '->'}}
+      this->A1<0>; // expected-error {{cannot refer to type member 'A1' in 'B<T>' with '->'}}
+                   // expected-error@-1 {{expected expression}}
       this->A1<0>1; // expected-error {{cannot refer to type member 'A1' in 'B<T>' with '->'}}
     }
   };
