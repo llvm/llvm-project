@@ -977,10 +977,10 @@ struct IndexedMemProfData {
 // "CallStackId 1 -> 11".
 class CallStackRadixTreeBuilder {
   // The radix tree array.
-  std::vector<uint32_t> RadixArray;
+  std::vector<LinearFrameId> RadixArray;
 
   // Mapping from CallStackIds to indexes into RadixArray.
-  llvm::DenseMap<CallStackId, uint32_t> CallStackPos;
+  llvm::DenseMap<CallStackId, LinearCallStackId> CallStackPos;
 
   // In build, we partition a given call stack into two parts -- the prefix
   // that's common with the previously encoded call stack and the frames beyond
@@ -1000,7 +1000,7 @@ class CallStackRadixTreeBuilder {
   // the call stack with the previously encoded call stack,
   // RadixArray[Indexes[0]] is the root frame of the common prefix.
   // RadixArray[Indexes[5 - 1]] is the last frame of the common prefix.
-  std::vector<uint32_t> Indexes;
+  std::vector<LinearCallStackId> Indexes;
 
   using CSIdPair = std::pair<CallStackId, llvm::SmallVector<FrameId>>;
 
@@ -1019,9 +1019,10 @@ public:
                  &&MemProfCallStackData,
              const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes);
 
-  const std::vector<uint32_t> &getRadixArray() const { return RadixArray; }
+  const std::vector<LinearFrameId> &getRadixArray() const { return RadixArray; }
 
-  const llvm::DenseMap<CallStackId, uint32_t> &getCallStackPos() const {
+  const llvm::DenseMap<CallStackId, LinearCallStackId> &
+  getCallStackPos() const {
     return CallStackPos;
   }
 };

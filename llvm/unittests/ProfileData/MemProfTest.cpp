@@ -665,7 +665,7 @@ TEST(MemProf, MissingFrameId) {
 
 // Verify CallStackRadixTreeBuilder can handle empty inputs.
 TEST(MemProf, RadixTreeBuilderEmpty) {
-  llvm::DenseMap<FrameId, uint32_t> MemProfFrameIndexes;
+  llvm::DenseMap<FrameId, llvm::memprof::LinearFrameId> MemProfFrameIndexes;
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
   llvm::memprof::CallStackRadixTreeBuilder Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes);
@@ -676,7 +676,7 @@ TEST(MemProf, RadixTreeBuilderEmpty) {
 
 // Verify CallStackRadixTreeBuilder can handle one trivial call stack.
 TEST(MemProf, RadixTreeBuilderOne) {
-  llvm::DenseMap<FrameId, uint32_t> MemProfFrameIndexes = {
+  llvm::DenseMap<FrameId, llvm::memprof::LinearFrameId> MemProfFrameIndexes = {
       {11, 1}, {12, 2}, {13, 3}};
   llvm::SmallVector<llvm::memprof::FrameId> CS1 = {13, 12, 11};
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
@@ -697,7 +697,7 @@ TEST(MemProf, RadixTreeBuilderOne) {
 
 // Verify CallStackRadixTreeBuilder can form a link between two call stacks.
 TEST(MemProf, RadixTreeBuilderTwo) {
-  llvm::DenseMap<FrameId, uint32_t> MemProfFrameIndexes = {
+  llvm::DenseMap<FrameId, llvm::memprof::LinearFrameId> MemProfFrameIndexes = {
       {11, 1}, {12, 2}, {13, 3}};
   llvm::SmallVector<llvm::memprof::FrameId> CS1 = {12, 11};
   llvm::SmallVector<llvm::memprof::FrameId> CS2 = {13, 12, 11};
@@ -726,7 +726,7 @@ TEST(MemProf, RadixTreeBuilderTwo) {
 // Verify CallStackRadixTreeBuilder can form a jump to a prefix that itself has
 // another jump to another prefix.
 TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
-  llvm::DenseMap<FrameId, uint32_t> MemProfFrameIndexes = {
+  llvm::DenseMap<FrameId, llvm::memprof::LinearFrameId> MemProfFrameIndexes = {
       {11, 1}, {12, 2}, {13, 3}, {14, 4}, {15, 5}, {16, 6}, {17, 7}, {18, 8},
   };
   llvm::SmallVector<llvm::memprof::FrameId> CS1 = {14, 13, 12, 11};
