@@ -569,13 +569,12 @@ set(files
   __numeric/transform_reduce.h
   __ostream/basic_ostream.h
   __ostream/print.h
+  __pstl/backend.h
   __pstl/backend_fwd.h
   __pstl/backends/default.h
   __pstl/backends/libdispatch.h
   __pstl/backends/serial.h
   __pstl/backends/std_thread.h
-  __pstl/configuration.h
-  __pstl/configuration_fwd.h
   __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h
   __pstl/cpu_algos/fill.h

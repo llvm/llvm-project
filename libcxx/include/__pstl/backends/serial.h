@@ -18,7 +18,6 @@
 #include <__config>
 #include <__numeric/transform_reduce.h>
 #include <__pstl/backend_fwd.h>
-#include <__pstl/configuration_fwd.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>

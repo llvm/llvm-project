@@ -20,7 +20,6 @@
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__pstl/backend_fwd.h>
-#include <__pstl/configuration_fwd.h>
 #include <__pstl/dispatch.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
@@ -115,7 +114,7 @@ struct __find_if_not<__default_backend_tag, _ExecutionPolicy> {
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     using _FindIf = __dispatch<__find_if, __current_configuration, _ExecutionPolicy>;
-    return _FindIf()(__policy, __first, __last, std::not_fn(__pred));
+    return _FindIf()(__policy, __first, __last, std::not_fn(std::forward<_Pred>(__pred)));
   }
 };
 
@@ -125,7 +124,7 @@ struct __any_of<__default_backend_tag, _ExecutionPolicy> {
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     using _FindIf = __dispatch<__find_if, __current_configuration, _ExecutionPolicy>;
-    auto __res    = _FindIf()(__policy, __first, __last, __pred);
+    auto __res    = _FindIf()(__policy, __first, __last, std::forward<_Pred>(__pred));
     if (!__res)
       return nullopt;
     return *__res != __last;
@@ -153,7 +152,7 @@ struct __none_of<__default_backend_tag, _ExecutionPolicy> {
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     using _AnyOf = __dispatch<__any_of, __current_configuration, _ExecutionPolicy>;
-    auto __res   = _AnyOf()(__policy, __first, __last, __pred);
+    auto __res   = _AnyOf()(__policy, __first, __last, std::forward<_Pred>(__pred));
     if (!__res)
       return nullopt;
     return !*__res;

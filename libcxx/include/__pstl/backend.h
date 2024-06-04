@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_CONFIGURATION_H
-#define _LIBCPP___PSTL_CONFIGURATION_H
+#ifndef _LIBCPP___PSTL_BACKEND_H
+#define _LIBCPP___PSTL_BACKEND_H
 
 #include <__config>
-#include <__pstl/configuration_fwd.h>
+#include <__pstl/backend_fwd.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -32,4 +32,4 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_CONFIGURATION_H
+#endif // _LIBCPP___PSTL_BACKEND_H

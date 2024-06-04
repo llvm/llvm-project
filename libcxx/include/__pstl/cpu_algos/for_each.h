@@ -38,9 +38,9 @@ _LIBCPP_HIDE_FROM_ABI _Iterator __simd_walk(_Iterator __first, _DifferenceType _
 
 template <class _Backend, class _RawExecutionPolicy>
 struct __cpu_parallel_for_each {
-  template <class _Policy, class _ForwardIterator, class _Functor>
+  template <class _Policy, class _ForwardIterator, class _Function>
   _LIBCPP_HIDE_FROM_ABI optional<__empty>
-  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Functor __func) const noexcept {
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Function __func) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
       return __pstl::__cpu_traits<_Backend>::__for_each(

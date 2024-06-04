@@ -13,8 +13,7 @@
 #include <__functional/operations.h>
 #include <__iterator/cpp17_iterator_concepts.h>
 #include <__iterator/iterator_traits.h>
-#include <__pstl/backend_fwd.h>
-#include <__pstl/configuration.h>
+#include <__pstl/backend.h>
 #include <__pstl/dispatch.h>
 #include <__pstl/run_backend.h>
 #include <__type_traits/enable_if.h>

@@ -1578,7 +1578,14 @@ module std_private_numeric_transform_exclusive_scan [system] { header "__numeric
 module std_private_numeric_transform_inclusive_scan [system] { header "__numeric/transform_inclusive_scan.h" }
 module std_private_numeric_transform_reduce         [system] { header "__numeric/transform_reduce.h" }
 
-module std_private_pstl_backend_fwd                [system] { header "__pstl/backend_fwd.h" }
+module std_private_pstl_backend                    [system] {
+  header "__pstl/backend.h"
+  export *
+}
+module std_private_pstl_backend_fwd                [system] {
+  header "__pstl/backend_fwd.h"
+  export *
+}
 module std_private_pstl_backends_default           [system] {
   header "__pstl/backends/default.h"
   export *
@@ -1604,14 +1611,6 @@ module std_private_pstl_cpu_algos_merge            [system] { header "__pstl/cpu
 module std_private_pstl_cpu_algos_stable_sort      [system] { header "__pstl/cpu_algos/stable_sort.h" }
 module std_private_pstl_cpu_algos_transform        [system] { header "__pstl/cpu_algos/transform.h" }
 module std_private_pstl_cpu_algos_transform_reduce [system] { header "__pstl/cpu_algos/transform_reduce.h" }
-module std_private_pstl_configuration_fwd          [system] {
-  header "__pstl/configuration_fwd.h"
-  export *
-}
-module std_private_pstl_configuration              [system] {
-  header "__pstl/configuration.h"
-  export *
-}
 module std_private_pstl_dispatch                   [system] { header "__pstl/dispatch.h" }
 module std_private_pstl_run_backend                [system] { header "__pstl/run_backend.h" }
 

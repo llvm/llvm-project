@@ -10,7 +10,7 @@
 #define _LIBCPP___PSTL_DISPATCH_H
 
 #include <__config>
-#include <__pstl/configuration_fwd.h>
+#include <__pstl/backend_fwd.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>

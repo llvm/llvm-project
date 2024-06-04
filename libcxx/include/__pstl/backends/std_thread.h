@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__pstl/backend_fwd.h>
-#include <__pstl/configuration_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__pstl/cpu_algos/fill.h>
