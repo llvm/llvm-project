@@ -91,7 +91,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyMCLowerPrePassPass(PR);
   initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
   initializeWebAssemblyFixBrTableDefaultsPass(PR);
-  initializeWebAssemblyDAGToDAGISelPass(PR);
+  initializeWebAssemblyDAGToDAGISelLegacyPass(PR);
   initializeWebAssemblyGlobalsTaggingPass(PR);
 }
 
