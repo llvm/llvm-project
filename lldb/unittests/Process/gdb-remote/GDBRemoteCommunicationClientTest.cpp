@@ -596,7 +596,7 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteMemoryTags) {
 // Prior to this verison, constructing a std::future for a type without a
 // default constructor is not possible.
 // https://developercommunity.visualstudio.com/t/c-shared-state-futuresstate-default-constructs-the/60897
-#if _MSC_VER >= 1932
+#if !defined(_MSC_VER) || _MSC_VER >= 1932
 TEST_F(GDBRemoteCommunicationClientTest, CalculateMD5) {
   FileSpec file_spec("/foo/bar", FileSpec::Style::posix);
   std::future<ErrorOr<MD5::MD5Result>> async_result = std::async(
