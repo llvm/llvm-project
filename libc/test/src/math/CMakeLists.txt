@@ -363,6 +363,7 @@ add_fp_unittest(
   RoundEvenTest.h
   DEPENDS
     libc.src.math.roundeven
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -377,6 +378,7 @@ add_fp_unittest(
   RoundEvenTest.h
   DEPENDS
     libc.src.math.roundevenf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -391,6 +393,22 @@ add_fp_unittest(
   RoundEvenTest.h
   DEPENDS
     libc.src.math.roundevenl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    roundevenf16_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.src.math.roundevenf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
