@@ -950,10 +950,8 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                              : DiscardType::Locals;
   }
 
-  const bool ShouldVerifyNoteSectionsByDefault = true;
   ELFConfig.VerifyNoteSections = InputArgs.hasFlag(
-      OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections,
-      ShouldVerifyNoteSectionsByDefault);
+      OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections, true);
 
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
   ELFConfig.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);

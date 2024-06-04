@@ -1,28 +1,28 @@
 ## Verify that --add-section warns on invalid note sections.
 
-# Add [namesz, descsz, type, name, desc] for a build id.
+## Add [namesz, descsz, type, name, desc] for a build id.
 
-## Notes should be padded on 8 bits
+## Notes should be padded on 8 bytes.
 # RUN: echo -e -n "\x04\x00\x00\x00" >  %t-miss-padding-note.bin
 # RUN: echo -e -n "\x07\x00\x00\x00" >> %t-miss-padding-note.bin
 # RUN: echo -e -n "\x03\x00\x00\x00" >> %t-miss-padding-note.bin
 # RUN: echo -e -n "GNU\x00"          >> %t-miss-padding-note.bin
 # RUN: echo -e -n "\x0c\x0d\x0e"     >> %t-miss-padding-note.bin
 
-## The namesz field bit is incorrect
+## The namesz field bit is incorrect.
 # RUN: echo -e -n "\x08\x00\x00\x00" >  %t-invalid-size-note.bin
 # RUN: echo -e -n "\x07\x00\x00\x00" >> %t-invalid-size-note.bin
 # RUN: echo -e -n "\x03\x00\x00\x00" >> %t-invalid-size-note.bin
 # RUN: echo -e -n "GNU\x00"          >> %t-invalid-size-note.bin
 # RUN: echo -e -n "\x0c\x0d\x0e\x00" >> %t-invalid-size-note.bin
 
-## Missing type field
+## Missing type field.
 # RUN: echo -e -n "\x08\x00\x00\x00" >  %t-short-note.bin
 # RUN: echo -e -n "\x07\x00\x00\x00" >> %t-short-note.bin
 
 # RUN: yaml2obj %s -o %t.o
 
-## test each invalid note
+## Test each invalid note.
 # RUN: not llvm-objcopy --add-section=.note.miss.padding=%t-miss-padding-note.bin %t.o %t-with-note.o 2>&1 | FileCheck --check-prefix=CHECK-MISS-PADDING %s
 # CHECK-MISS-PADDING: .note.miss.padding data size must be a multiple of 4 bytes
 

@@ -5,7 +5,6 @@ multiclass B<string name, string help1, string help2> {
   def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
 }
 
-
 defm binary_architecture
     : Eq<"binary-architecture", "Ignored for compatibility">;
 def B : JoinedOrSeparate<["-"], "B">,

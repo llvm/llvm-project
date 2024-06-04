@@ -512,11 +512,14 @@ them.
  specified format. See `SUPPORTED FORMATS`_ for a list of valid ``<format>``
  values.
 
-.. option:: --verify-note-sections, --no-verify-note-sections
+.. option:: --verify-note-sections
 
- When adding note sections, verify if the section format is valid. Defaults to
- ``--verify-note-sections``
+ When adding note sections, verify if the section format is valid. This flag is
+ turned on by default for ELF files.
 
+.. option:: --no-verify-note-sections
+
+ When adding note sections, do not verify if the section format is valid.
 
 .. option:: --weaken-symbol <symbol>, -W
 
