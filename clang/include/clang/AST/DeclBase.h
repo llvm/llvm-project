@@ -670,6 +670,13 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
+  /// Whether the definition of the declaration should be emitted in external
+  /// sources.
+  bool shouldEmitInExternalSource() const;
+
+  /// Whether this declaration comes from a named module;
+  bool isInNamedModule() const;
+
   /// Whether this declaration comes from explicit global module.
   bool isFromExplicitGlobalModule() const;
 
@@ -2146,6 +2153,10 @@ public:
   bool isRecord() const {
     return getDeclKind() >= Decl::firstRecord &&
            getDeclKind() <= Decl::lastRecord;
+  }
+
+  bool isRequiresExprBody() const {
+    return getDeclKind() == Decl::RequiresExprBody;
   }
 
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }
