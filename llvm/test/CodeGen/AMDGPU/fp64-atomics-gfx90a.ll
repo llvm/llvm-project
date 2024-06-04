@@ -2308,15 +2308,13 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat(ptr %ptr) #1 {
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1210-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1210-NEXT:    v_dual_mov_b64 v[4:5], s[0:1] :: v_dual_mov_b32 v0, 0
+; GFX1210-NEXT:    flat_load_b64 v[2:3], v0, s[0:1]
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_mov_b32 s0, 0
-; GFX1210-NEXT:    flat_load_b64 v[2:3], v[0:1]
 ; GFX1210-NEXT:  .LBB50_1: ; %atomicrmw.start
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_add_f64_e32 v[0:1], 4.0, v[2:3]
 ; GFX1210-NEXT:    flat_atomic_cmpswap_b64 v[0:1], v[4:5], v[0:3] th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -2419,15 +2417,13 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_system(ptr %ptr) #1 {
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1210-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1210-NEXT:    v_dual_mov_b64 v[4:5], s[0:1] :: v_dual_mov_b32 v0, 0
+; GFX1210-NEXT:    flat_load_b64 v[2:3], v0, s[0:1]
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_mov_b32 s0, 0
-; GFX1210-NEXT:    flat_load_b64 v[2:3], v[0:1]
 ; GFX1210-NEXT:  .LBB52_1: ; %atomicrmw.start
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_add_f64_e32 v[0:1], 4.0, v[2:3]
 ; GFX1210-NEXT:    flat_atomic_cmpswap_b64 v[0:1], v[4:5], v[0:3] th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
@@ -2736,15 +2732,13 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent_safe(ptr %ptr) {
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1210-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1210-NEXT:    v_dual_mov_b64 v[4:5], s[0:1] :: v_dual_mov_b32 v0, 0
+; GFX1210-NEXT:    flat_load_b64 v[2:3], v0, s[0:1]
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_mov_b32 s0, 0
-; GFX1210-NEXT:    flat_load_b64 v[2:3], v[0:1]
 ; GFX1210-NEXT:  .LBB58_1: ; %atomicrmw.start
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_add_f64_e32 v[0:1], 4.0, v[2:3]
 ; GFX1210-NEXT:    flat_atomic_cmpswap_b64 v[0:1], v[4:5], v[0:3] th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
