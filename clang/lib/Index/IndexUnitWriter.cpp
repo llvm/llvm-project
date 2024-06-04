@@ -245,7 +245,7 @@ std::optional<bool> IndexUnitWriter::isUnitUpToDateForOutputFile(
 
   llvm::sys::fs::file_status UnitStat;
   if (std::error_code EC = llvm::sys::fs::status(UnitPath.c_str(), UnitStat)) {
-    if (EC != llvm::errc::no_such_file_or_directory) {
+    if (EC != llvm::errc::no_such_file_or_directory && EC != llvm::errc::delete_pending) {
       llvm::raw_string_ostream Err(Error);
       Err << "could not access path '" << UnitPath
           << "': " << EC.message();
@@ -259,7 +259,7 @@ std::optional<bool> IndexUnitWriter::isUnitUpToDateForOutputFile(
 
   llvm::sys::fs::file_status CompareStat;
   if (std::error_code EC = llvm::sys::fs::status(*TimeCompareFilePath, CompareStat)) {
-    if (EC != llvm::errc::no_such_file_or_directory) {
+    if (EC != llvm::errc::no_such_file_or_directory && EC != llvm::errc::delete_pending) {
       llvm::raw_string_ostream Err(Error);
       Err << "could not access path '" << *TimeCompareFilePath
           << "': " << EC.message();
