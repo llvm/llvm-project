@@ -25,7 +25,7 @@
 ;   - `SequenceSize=12` and `OccurrenceCount=4`
 ;   - each Candidate has `CallOverhead=4` and `FrameOverhead=0`
 ;   - `NotOutlinedCost=12*4=48` and `OutliningCost=4*4+12+0=28`
-;   - `Benefit=120-96=20` and `Priority=48/28=1.71`
+;   - `Benefit=48-28=20` and `Priority=48/28=1.71`
 ;
 ; Note that the first one has higher benefit, but lower priority.
 ; Hence, when outlining per priority, the second one will be outlined first.
