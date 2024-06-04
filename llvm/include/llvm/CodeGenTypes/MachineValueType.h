@@ -45,15 +45,10 @@ namespace llvm {
 #undef GET_VT_RANGES
 
       VALUETYPE_SIZE = LAST_VALUETYPE + 1,
-
-      // This is the current maximum for LAST_VALUETYPE.
-      // MVT::MAX_ALLOWED_VALUETYPE is used for asserts and to size bit vectors
-      // This value must be a multiple of 32.
-      MAX_ALLOWED_VALUETYPE = 224,
     };
 
     static_assert(FIRST_VALUETYPE > 0);
-    static_assert(LAST_VALUETYPE < MAX_ALLOWED_VALUETYPE);
+    static_assert(LAST_VALUETYPE < token);
 
     SimpleValueType SimpleTy = INVALID_SIMPLE_VALUE_TYPE;
 
@@ -476,9 +471,11 @@ namespace llvm {
       return getVectorVT(VT, EC.getKnownMinValue());
     }
 
-    /// Return the value type corresponding to the specified type.  This returns
-    /// all pointers as iPTR.  If HandleUnknown is true, unknown types are
-    /// returned as Other, otherwise they are invalid.
+    /// Return the value type corresponding to the specified type.
+    /// If HandleUnknown is true, unknown types are returned as Other,
+    /// otherwise they are invalid.
+    /// NB: This includes pointer types, which require a DataLayout to convert
+    /// to a concrete value type.
     static MVT getVT(Type *Ty, bool HandleUnknown = false);
 
   public:

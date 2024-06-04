@@ -28,3 +28,26 @@ subroutine omp_critical()
 !CHECK: omp.terminator
 !$OMP END CRITICAL
 end subroutine omp_critical
+
+
+! Tests that privatization for pre-determined variables (here `i`) is properly
+! handled.
+subroutine predetermined_privatization()
+  integer :: a(10), i
+
+  !CHECK: omp.parallel
+  !$omp parallel do
+
+  !CHECK: %[[PRIV_I_ALLOC:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
+  !CHECK: %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I_ALLOC]]
+  do i = 2, 10
+    !CHECK: omp.wsloop
+    !CHECK: omp.loop_nest (%[[IV:[^[:space:]]+]])
+    !CHECK: fir.store %[[IV]] to %[[PRIV_I_DECL]]#1
+    !CHECK: omp.critical
+    !$omp critical
+    a(i) = a(i-1) + 1
+    !$omp end critical
+  end do
+  !$omp end parallel do
+end

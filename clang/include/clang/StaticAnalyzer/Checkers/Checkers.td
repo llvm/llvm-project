@@ -509,6 +509,10 @@ def UnixAPIMisuseChecker : Checker<"API">,
   HelpText<"Check calls to various UNIX/Posix functions">,
   Documentation<HasDocumentation>;
 
+def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
+  HelpText<"Check for calls to blocking functions inside a critical section">,
+  Documentation<HasDocumentation>;
+
 def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
   HelpText<"The base of several malloc() related checkers. On it's own it "
            "emits no reports, but adds valuable information to the analysis "
@@ -617,10 +621,6 @@ def PthreadLockChecker : Checker<"PthreadLock">,
 
 def SimpleStreamChecker : Checker<"SimpleStream">,
   HelpText<"Check for misuses of stream APIs">,
-  Documentation<HasDocumentation>;
-
-def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
-  HelpText<"Check for calls to blocking functions inside a critical section">,
   Documentation<HasDocumentation>;
 
 } // end "alpha.unix"
@@ -1011,6 +1011,11 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
+def PutenvStackArray : Checker<"PutenvStackArray">,
+  HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
+           "an automatic (stack-allocated) array as the argument.">,
+  Documentation<HasDocumentation>;
+
 def SetgidSetuidOrderChecker : Checker<"SetgidSetuidOrder">,
   HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
            "'setuid(getuid())' (CERT: POS36-C)">,
@@ -1035,15 +1040,6 @@ let ParentPackage = ENV in {
 
 } // end "security.cert.env"
 
-let ParentPackage = POSAlpha in {
-
-  def PutenvWithAuto : Checker<"34c">,
-  HelpText<"Finds calls to the 'putenv' function which pass a pointer to "
-           "an automatic variable as the argument.">,
-  Documentation<HasDocumentation>;
-
-} // end "alpha.cert.pos"
-
 let ParentPackage = SecurityAlpha in {
 
 def ArrayBoundChecker : Checker<"ArrayBound">,
@@ -1052,10 +1048,6 @@ def ArrayBoundChecker : Checker<"ArrayBound">,
 
 def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
   HelpText<"Warn about buffer overflows (newer checker)">,
-  Documentation<HasDocumentation>;
-
-def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
-  HelpText<"Check for an out-of-bound pointer being returned to callers">,
   Documentation<HasDocumentation>;
 
 def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
@@ -1076,6 +1068,10 @@ def MmapWriteExecChecker : Checker<"MmapWriteExec">,
                   "0x01",
                   Released>
   ]>,
+  Documentation<HasDocumentation>;
+
+def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
+  HelpText<"Check for an out-of-bound pointer being returned to callers">,
   Documentation<HasDocumentation>;
 
 } // end "alpha.security"

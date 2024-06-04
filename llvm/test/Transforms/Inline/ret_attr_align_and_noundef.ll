@@ -5,10 +5,12 @@
 
 declare ptr @foo()
 declare void @use.ptr(ptr) willreturn nounwind
+declare void @use.val(i8) willreturn nounwind
 declare void @bar()
 declare void @baz()
 declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
 declare i1 @val()
+declare i8 @val8()
 
 define ptr @callee0123() {
 ; CHECK-LABEL: define ptr @callee0123() {
@@ -336,4 +338,75 @@ define ptr @caller12_todo() {
 ;
   %r = call nonnull ptr @callee12()
   ret ptr %r
+}
+
+define i8 @callee13() {
+; CHECK-LABEL: define i8 @callee13() {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @val8()
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @val8()
+  ret i8 %r
+}
+
+define i8 @caller13_okay_use_after_poison_anyways() {
+; CHECK-LABEL: define i8 @caller13_okay_use_after_poison_anyways() {
+; CHECK-NEXT:    [[R_I:%.*]] = call range(i8 0, 10) i8 @val8()
+; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
+; CHECK-NEXT:    ret i8 [[R_I]]
+;
+  %r = call range(i8 0, 10) i8 @callee13()
+  call void @use.val(i8 %r)
+  ret i8 %r
+}
+
+define i8 @callee14() {
+; CHECK-LABEL: define i8 @callee14() {
+; CHECK-NEXT:    [[R:%.*]] = call noundef i8 @val8()
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call noundef i8 @val8()
+  ret i8 %r
+}
+
+define i8 @caller14_fail_creates_ub() {
+; CHECK-LABEL: define i8 @caller14_fail_creates_ub() {
+; CHECK-NEXT:    [[R_I:%.*]] = call noundef i8 @val8()
+; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
+; CHECK-NEXT:    ret i8 [[R_I]]
+;
+  %r = call range(i8 0, 10) i8 @callee14()
+  call void @use.val(i8 %r)
+  ret i8 %r
+}
+
+define i8 @caller14_okay_is_ub_anyways() {
+; CHECK-LABEL: define i8 @caller14_okay_is_ub_anyways() {
+; CHECK-NEXT:    [[R_I:%.*]] = call noundef range(i8 0, 10) i8 @val8()
+; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
+; CHECK-NEXT:    ret i8 [[R_I]]
+;
+  %r = call noundef range(i8 0, 10) i8 @callee14()
+  call void @use.val(i8 %r)
+  ret i8 %r
+}
+
+define i8 @callee15() {
+; CHECK-LABEL: define i8 @callee15() {
+; CHECK-NEXT:    [[R:%.*]] = call range(i8 5, 10) i8 @val8()
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call range(i8 5, 10) i8 @val8()
+  ret i8 %r
+}
+
+define i8 @caller15_okay_intersect_ranges() {
+; CHECK-LABEL: define i8 @caller15_okay_intersect_ranges() {
+; CHECK-NEXT:    [[R_I:%.*]] = call range(i8 5, 7) i8 @val8()
+; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
+; CHECK-NEXT:    ret i8 [[R_I]]
+;
+  %r = call range(i8 0, 7) i8 @callee15()
+  call void @use.val(i8 %r)
+  ret i8 %r
 }

@@ -351,6 +351,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
             } else {
               Ok &= Composite(FieldTy, FP, Value);
             }
+            ActiveField = FP.getFieldDesc()->asFieldDecl();
             break;
           }
         }

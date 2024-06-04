@@ -721,6 +721,7 @@ cc_binary(
         ":TargetParser",
         ":config",
         ":llvm-tblgen-headers",
+        ":vt_gen",
     ],
 )
 
@@ -1881,6 +1882,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":MCParser",
+        ":ObjCARC",
         ":Object",
         ":ProfileData",
         ":Remarks",
@@ -2230,7 +2232,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-callingconv", "lib/Target/X86/X86GenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/X86/X86GenSubtargetInfo.inc"),
             ("-gen-x86-fold-tables -asmwriternum=1", "lib/Target/X86/X86GenFoldTables.inc"),
-            ("-gen-x86-compress-evex-tables", "lib/Target/X86/X86GenCompressEVEXTables.inc"),
+            ("-gen-x86-instr-mapping", "lib/Target/X86/X86GenInstrMapping.inc"),
             ("-gen-exegesis", "lib/Target/X86/X86GenExegesis.inc"),
             ("-gen-x86-mnemonic-tables -asmwriternum=1", "lib/Target/X86/X86GenMnemonicTables.inc"),
         ],

@@ -1340,7 +1340,7 @@ private:
   bool ParseDirectiveAMDGCNTarget();
   bool ParseDirectiveAMDHSACodeObjectVersion();
   bool ParseDirectiveAMDHSAKernel();
-  bool ParseAMDKernelCodeTValue(StringRef ID, amd_kernel_code_t &Header);
+  bool ParseAMDKernelCodeTValue(StringRef ID, AMDGPUMCKernelCodeT &Header);
   bool ParseDirectiveAMDKernelCodeT();
   // TODO: Possibly make subtargetHasRegister const.
   bool subtargetHasRegister(const MCRegisterInfo &MRI, unsigned RegNo);
@@ -5863,7 +5863,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSACodeObjectVersion() {
 }
 
 bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
-                                               amd_kernel_code_t &Header) {
+                                               AMDGPUMCKernelCodeT &C) {
   // max_scratch_backing_memory_byte_size is deprecated. Ignore it while parsing
   // assembly for backwards compatibility.
   if (ID == "max_scratch_backing_memory_byte_size") {
@@ -5873,25 +5873,13 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
 
   SmallString<40> ErrStr;
   raw_svector_ostream Err(ErrStr);
-  if (!parseAmdKernelCodeField(ID, getParser(), Header, Err)) {
+  if (!C.ParseKernelCodeT(ID, getParser(), Err)) {
     return TokError(Err.str());
   }
   Lex();
 
-  if (ID == "enable_dx10_clamp") {
-    if (G_00B848_DX10_CLAMP(Header.compute_pgm_resource_registers) &&
-        isGFX12Plus())
-      return TokError("enable_dx10_clamp=1 is not allowed on GFX12+");
-  }
-
-  if (ID == "enable_ieee_mode") {
-    if (G_00B848_IEEE_MODE(Header.compute_pgm_resource_registers) &&
-        isGFX12Plus())
-      return TokError("enable_ieee_mode=1 is not allowed on GFX12+");
-  }
-
   if (ID == "enable_wavefront_size32") {
-    if (Header.code_properties & AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32) {
+    if (C.code_properties & AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32) {
       if (!isGFX10Plus())
         return TokError("enable_wavefront_size32=1 is only allowed on GFX10+");
       if (!getFeatureBits()[AMDGPU::FeatureWavefrontSize32])
@@ -5903,41 +5891,23 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
   }
 
   if (ID == "wavefront_size") {
-    if (Header.wavefront_size == 5) {
+    if (C.wavefront_size == 5) {
       if (!isGFX10Plus())
         return TokError("wavefront_size=5 is only allowed on GFX10+");
       if (!getFeatureBits()[AMDGPU::FeatureWavefrontSize32])
         return TokError("wavefront_size=5 requires +WavefrontSize32");
-    } else if (Header.wavefront_size == 6) {
+    } else if (C.wavefront_size == 6) {
       if (!getFeatureBits()[AMDGPU::FeatureWavefrontSize64])
         return TokError("wavefront_size=6 requires +WavefrontSize64");
     }
-  }
-
-  if (ID == "enable_wgp_mode") {
-    if (G_00B848_WGP_MODE(Header.compute_pgm_resource_registers) &&
-        !isGFX10Plus())
-      return TokError("enable_wgp_mode=1 is only allowed on GFX10+");
-  }
-
-  if (ID == "enable_mem_ordered") {
-    if (G_00B848_MEM_ORDERED(Header.compute_pgm_resource_registers) &&
-        !isGFX10Plus())
-      return TokError("enable_mem_ordered=1 is only allowed on GFX10+");
-  }
-
-  if (ID == "enable_fwd_progress") {
-    if (G_00B848_FWD_PROGRESS(Header.compute_pgm_resource_registers) &&
-        !isGFX10Plus())
-      return TokError("enable_fwd_progress=1 is only allowed on GFX10+");
   }
 
   return false;
 }
 
 bool AMDGPUAsmParser::ParseDirectiveAMDKernelCodeT() {
-  amd_kernel_code_t Header;
-  AMDGPU::initDefaultAMDKernelCodeT(Header, &getSTI());
+  AMDGPUMCKernelCodeT KernelCode;
+  KernelCode.initDefault(&getSTI(), getContext());
 
   while (true) {
     // Lex EndOfStatement.  This is in a while loop, because lexing a comment
@@ -5951,11 +5921,12 @@ bool AMDGPUAsmParser::ParseDirectiveAMDKernelCodeT() {
     if (ID == ".end_amd_kernel_code_t")
       break;
 
-    if (ParseAMDKernelCodeTValue(ID, Header))
+    if (ParseAMDKernelCodeTValue(ID, KernelCode))
       return true;
   }
 
-  getTargetStreamer().EmitAMDKernelCodeT(Header);
+  KernelCode.validate(&getSTI(), getContext());
+  getTargetStreamer().EmitAMDKernelCodeT(KernelCode);
 
   return false;
 }

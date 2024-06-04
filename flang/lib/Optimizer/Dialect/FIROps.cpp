@@ -676,6 +676,20 @@ mlir::Type fir::BoxDimsOp::getTupleType() {
 }
 
 //===----------------------------------------------------------------------===//
+// BoxRankOp
+//===----------------------------------------------------------------------===//
+
+void fir::BoxRankOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  mlir::Value inputBox = getBox();
+  if (fir::isBoxAddress(inputBox.getType()))
+    effects.emplace_back(mlir::MemoryEffects::Read::get(), inputBox,
+                         mlir::SideEffects::DefaultResource::get());
+}
+
+//===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
 
@@ -2413,6 +2427,52 @@ mlir::LogicalResult fir::ReboxOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReboxAssumedRankOp
+//===----------------------------------------------------------------------===//
+
+static bool areCompatibleAssumedRankElementType(mlir::Type inputEleTy,
+                                                mlir::Type outEleTy) {
+  if (inputEleTy == outEleTy)
+    return true;
+  // Output is unlimited polymorphic -> output dynamic type is the same as input
+  // type.
+  if (mlir::isa<mlir::NoneType>(outEleTy))
+    return true;
+  // Output/Input are derived types. Assuming input extends output type, output
+  // dynamic type is the output static type, unless output is polymorphic.
+  if (mlir::isa<fir::RecordType>(inputEleTy) &&
+      mlir::isa<fir::RecordType>(outEleTy))
+    return true;
+  if (areCompatibleCharacterTypes(inputEleTy, outEleTy))
+    return true;
+  return false;
+}
+
+mlir::LogicalResult fir::ReboxAssumedRankOp::verify() {
+  mlir::Type inputType = getBox().getType();
+  if (!mlir::isa<fir::BaseBoxType>(inputType) && !fir::isBoxAddress(inputType))
+    return emitOpError("input must be a box or box address");
+  mlir::Type inputEleTy =
+      mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(inputType))
+          .unwrapInnerType();
+  mlir::Type outEleTy =
+      mlir::cast<fir::BaseBoxType>(getType()).unwrapInnerType();
+  if (!areCompatibleAssumedRankElementType(inputEleTy, outEleTy))
+    return emitOpError("input and output element types are incompatible");
+  return mlir::success();
+}
+
+void fir::ReboxAssumedRankOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  mlir::Value inputBox = getBox();
+  if (fir::isBoxAddress(inputBox.getType()))
+    effects.emplace_back(mlir::MemoryEffects::Read::get(), inputBox,
+                         mlir::SideEffects::DefaultResource::get());
+}
+
+//===----------------------------------------------------------------------===//
 // ResultOp
 //===----------------------------------------------------------------------===//
 
@@ -3846,6 +3906,16 @@ std::optional<std::int64_t> fir::getIntIfConstant(mlir::Value value) {
         return attr.getValue().getSExtValue();
   }
   return {};
+}
+
+bool fir::isDummyArgument(mlir::Value v) {
+  auto blockArg{mlir::dyn_cast<mlir::BlockArgument>(v)};
+  if (!blockArg)
+    return false;
+
+  auto *owner{blockArg.getOwner()};
+  return owner->isEntryBlock() &&
+         mlir::isa<mlir::FunctionOpInterface>(owner->getParentOp());
 }
 
 mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {

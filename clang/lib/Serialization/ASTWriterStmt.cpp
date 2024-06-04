@@ -2847,6 +2847,7 @@ void ASTStmtWriter::VisitOpenACCConstructStmt(OpenACCConstructStmt *S) {
   Record.push_back(S->clauses().size());
   Record.writeEnum(S->Kind);
   Record.AddSourceRange(S->Range);
+  Record.AddSourceLocation(S->DirectiveLoc);
   Record.writeOpenACCClauseList(S->clauses());
 }
 

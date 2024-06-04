@@ -648,7 +648,6 @@ func.func @foo(%lb : index, %ub : index, %step : index) {
   omp.wsloop reduction(@foo %0 -> %prv : !llvm.ptr) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       %2 = arith.constant 2.0 : f32
-      omp.reduction %2, %1 : f32, !llvm.ptr
       omp.yield
     }
     omp.terminator
@@ -678,7 +677,6 @@ func.func @foo(%lb : index, %ub : index, %step : index) {
   omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr, @add_f32 %0 -> %prv1 : !llvm.ptr) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       %2 = arith.constant 2.0 : f32
-      omp.reduction %2, %0 : f32, !llvm.ptr
       omp.yield
     }
     omp.terminator
@@ -713,7 +711,6 @@ func.func @foo(%lb : index, %ub : index, %step : index, %mem : memref<1xf32>) {
   omp.wsloop reduction(@add_f32 %mem -> %prv : memref<1xf32>) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       %2 = arith.constant 2.0 : f32
-      omp.reduction %2, %mem : f32, memref<1xf32>
       omp.yield
     }
     omp.terminator

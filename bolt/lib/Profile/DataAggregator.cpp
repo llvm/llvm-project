@@ -613,8 +613,6 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
         if (std::error_code EC = writeBATYAML(BC, opts::SaveProfile))
           report_error("cannot create output data file", EC);
     }
-    PrintProgramStats PPS(BAT);
-    BC.logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(BC));
   }
 
   return Error::success();
@@ -2351,11 +2349,11 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           BAT->getBBHashMap(FuncAddress);
       YamlBF.Blocks.resize(YamlBF.NumBasicBlocks);
 
-      for (auto &&[Idx, YamlBB] : llvm::enumerate(YamlBF.Blocks))
-        YamlBB.Index = Idx;
-
-      for (auto BI = BlockMap.begin(), BE = BlockMap.end(); BI != BE; ++BI)
-        YamlBF.Blocks[BI->second.getBBIndex()].Hash = BI->second.getBBHash();
+      for (auto &&[Entry, YamlBB] : llvm::zip(BlockMap, YamlBF.Blocks)) {
+        const auto &Block = Entry.second;
+        YamlBB.Hash = Block.Hash;
+        YamlBB.Index = Block.Index;
+      }
 
       // Lookup containing basic block offset and index
       auto getBlock = [&BlockMap](uint32_t Offset) {
@@ -2365,7 +2363,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           exit(1);
         }
         --BlockIt;
-        return std::pair(BlockIt->first, BlockIt->second.getBBIndex());
+        return std::pair(BlockIt->first, BlockIt->second.Index);
       };
 
       for (const BranchInfo &BI : Branches.Data) {

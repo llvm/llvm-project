@@ -38,7 +38,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_scopes_variables_setVariable_evaluate(self):
         """
         Tests that the "scopes" request causes the currently selected
@@ -82,7 +81,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         self.check_lldb_command("frame select", "frame #1", "frame 1 is selected")
 
     @skipIfWindows
-    @skipIfRemote
     def test_custom_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, commandEscapePrefix="::")
@@ -99,7 +97,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_empty_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, commandEscapePrefix="")
@@ -116,7 +113,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_exit_status_message_sigterm(self):
         source = "main.cpp"
         program = self.getBuildArtifact("a.out")
@@ -154,7 +150,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_exit_status_message_ok(self):
         source = "main.cpp"
         program = self.getBuildArtifact("a.out")

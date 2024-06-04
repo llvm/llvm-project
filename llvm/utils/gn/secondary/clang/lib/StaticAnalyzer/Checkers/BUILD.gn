@@ -104,6 +104,7 @@ static_library("Checkers") {
     "PointerSortingChecker.cpp",
     "PointerSubChecker.cpp",
     "PthreadLockChecker.cpp",
+    "PutenvStackArrayChecker.cpp",
     "RetainCountChecker/RetainCountChecker.cpp",
     "RetainCountChecker/RetainCountDiagnostics.cpp",
     "ReturnPointerRangeChecker.cpp",
@@ -148,6 +149,5 @@ static_library("Checkers") {
     "WebKit/UncountedLambdaCapturesChecker.cpp",
     "WebKit/UncountedLocalVarsChecker.cpp",
     "cert/InvalidPtrChecker.cpp",
-    "cert/PutenvWithAutoChecker.cpp",
   ]
 }

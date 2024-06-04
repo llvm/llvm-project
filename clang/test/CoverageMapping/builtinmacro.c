@@ -4,7 +4,7 @@
 
 // CHECK: filename
 const char *filename (const char *name) { // CHECK-NEXT: File 0, [[@LINE]]:41 -> [[@LINE+3]]:2 = #0
-  static const char this_file[] = __FILE__;
+  static const char this_file[] = __FILE__; // CHECK-NEXT: File 0, [[@LINE]]:35 -> [[@LINE]]:35 = #0
   return this_file;
 }
 
