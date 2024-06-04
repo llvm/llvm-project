@@ -97,7 +97,6 @@ public:
   using iterator_category = std::bidirectional_iterator_tag;
   using const_pointer = typename OptionsT::const_pointer;
   using const_reference = typename OptionsT::const_reference;
-  using parent_ptr_ty = typename OptionsT::parent_ptr_ty;
 
 private:
   using node_pointer = typename Traits::node_pointer;
@@ -209,7 +208,11 @@ public:
 /// but with the addition of two bits recording whether this position (when in
 /// a range) is half or fully open.
 template <class OptionsT, bool IsReverse, bool IsConst>
-class ilist_iterator_w_bits : ilist_detail::SpecificNodeAccess<OptionsT> {
+class ilist_iterator_w_bits
+    : ilist_detail::SpecificNodeAccess<OptionsT>,
+      public ilist_detail::iterator_parent_access<
+          ilist_iterator_w_bits<OptionsT, IsReverse, IsConst>,
+          typename OptionsT::parent_ptr_ty, IsConst> {
   friend ilist_iterator_w_bits<OptionsT, IsReverse, !IsConst>;
   friend ilist_iterator_w_bits<OptionsT, !IsReverse, IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, !IsConst>;
@@ -225,7 +228,6 @@ public:
   using iterator_category = std::bidirectional_iterator_tag;
   using const_pointer = typename OptionsT::const_pointer;
   using const_reference = typename OptionsT::const_reference;
-  using parent_ptr_ty = typename OptionsT::parent_ptr_ty;
 
 private:
   using node_pointer = typename Traits::node_pointer;
@@ -349,8 +351,6 @@ public:
     ++*this;
     return tmp;
   }
-
-  parent_ptr_ty getNodeParent() { return NodePtr->getNodeBaseParent(); }
 
   bool isValid() const { return NodePtr; }
 
