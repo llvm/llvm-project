@@ -572,7 +572,6 @@ Instruction *IRBuilderBase::CreateNoAliasScopeDeclaration(Value *Scope) {
 /// \p Alignment - alignment of the destination location
 /// \p Condition - boolean that indicates if store should be performed
 CallInst *IRBuilderBase::CreateConditionalStore(Value *Val, Value *Ptr,
-                                                Align Alignment,
                                                 Value *Condition) {
   auto *PtrTy = cast<PointerType>(Ptr->getType());
   Type *DataTy = Val->getType();
