@@ -2,13 +2,6 @@ revert: breaks MIOpen composableKernel build
 [clang][Sema] Add -Wswitch-default warning option (#73077)  
    https://ontrack-internal.amd.com/browse/SWDEV-436625
 
-Revert: breaks build of hipCUB
-commit 55783bd0 [HIP] fix host min/max in header (#82956)
-
-Revert :breaks hip catch tests.
-1de7e6c8cba2 [clang] move -Wcast-function-type under -Wextra (#77178)
-999d4f840777 Split -Wcast-function-type into a separate group (#86131)   
-
 ---
 Revert: 8009bbe
   Commit title:
@@ -47,29 +40,9 @@ Revert: 41f9c78
   Contacts:
     Konstantin
 ---
-
-Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpAndBinOp` to work for more binops" (3rd Try)"
-
-    Backup fix for SWDEV-454675
-
-    This reverts commit 54ec8bcaf85e3a3341c97640331d58e24ac0d2cd.
-
-contact: Selehov
-
----
-Revert: breaks ipBlender*
-0e73bbd3450c   [AMDGPU][PromoteAlloca] Don't stop when an alloca is too big to promote (#93466) 
-
-contact: Pierre
-
----
 Revert: temaplate breaks ComposableKernel build
 f46d1463b835 [clang] require template arg list after template kw (#80801) 
 contact : RonL
----
-Revert: Breaks check-clang test 'clang/test/Modules/pr60085.cppm'
-99873b35da7e [NFC] [AST] Introduce Decl::isInAnotherModuleUnit and Decl::shouldEmitInExternalSource
-contact : mhalk (Michael Halkenhaeuser)
 ---
 Revert:  breaks composableKernel
 53d2f4d96783 [CUDA][HIP] warn incompatible redeclare (#77359)     
@@ -95,6 +68,8 @@ Revert: more Sema:
 9e1f1cfa59c4 [Clang][Sema] Handle class member access expressions with valid nested-name-specifiers that become invalid after lookup (#98167)
 RonL
 ---
+============== above are sema/mipopen/composable-kernel related
+---
 Revert: breaks devIO for openmp
 dfeb3991fb48 Remove the `x86_mmx` IR type. (#98505)
 b7e4fba6e5dc Cleanup x86_mmx after removing IR type  (#100646) (Reason: dependent on dfeb3991fb48)
@@ -104,4 +79,20 @@ revert:  1ca9fe6db334  Reapply "[Attributor][AMDGPU] Enable AAIndirectCallInfo f
 ---
 revert : breaks build of amdgpu flat intrinsics
 ee08d9cba561 AMDGPU: Remove global/flat atomic fadd intrinics (#97051) 
+---
+Revert: breaks build of hipCUB
+commit 55783bd0 [HIP] fix host min/max in header (#82956)
+---
+Revert :breaks hip catch tests.
+1de7e6c8cba2 [clang] move -Wcast-function-type under -Wextra (#77178)
+999d4f840777 Split -Wcast-function-type into a separate group (#86131)   
+---
+Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpAndBinOp` to work for more binops" (3rd Try)"
+    Backup fix for SWDEV-454675
+    This reverts commit 54ec8bcaf85e3a3341c97640331d58e24ac0d2cd.
+contact: Selehov
+---
+Revert: breaks hipBlender*
+0e73bbd3450c   [AMDGPU][PromoteAlloca] Don't stop when an alloca is too big to promote (#93466) 
+contact: Pierre
 ---
