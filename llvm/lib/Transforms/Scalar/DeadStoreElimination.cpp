@@ -620,7 +620,7 @@ static bool tryToSplitMiddle(Instruction *DeadI,
 
   Instruction *RearDestGEP = GetElementPtrInst::CreateInBounds(
       Type::getInt8Ty(DeadIntrinsic->getContext()), DeadDest,
-      ConstantInt::get(DeadWriteLength->getType(), RearStart), "", DeadI);
+      ConstantInt::get(DeadWriteLength->getType(), RearStart), "rear", DeadI);
   auto *Rear = cast<AnyMemIntrinsic>(DeadIntrinsic->clone());
   Rear->setDest(RearDestGEP);
   Rear->setLength(ConstantInt::get(DeadWriteLength->getType(), RearSize));
@@ -633,6 +633,14 @@ static bool tryToSplitMiddle(Instruction *DeadI,
 
   IntervalMap.erase(OII);
   DeadSize = FrontSize;
+
+  // Make sure that the other transforms operate on the correct intrinsic after splitting.
+  if (!IntervalMap.empty() && IntervalMap.begin()->second >= RearStart) {
+    DeadI = Rear;
+    DeadSize = RearSize;
+    DeadStart = RearStart;
+  }
+
   return true;
 }
 

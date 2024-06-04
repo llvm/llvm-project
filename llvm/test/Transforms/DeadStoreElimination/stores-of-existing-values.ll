@@ -411,8 +411,8 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
 
 define void @test12_memset_simple(ptr %ptr) {
 ; CHECK-LABEL: @test12_memset_simple(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 5
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(5) [[TMP1]], i8 0, i64 5, i1 false)
+; CHECK-NEXT:    [[REAR:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 5
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(5) [[REAR]], i8 0, i64 5, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr dereferenceable(4) [[PTR]], i8 0, i64 4, i1 false)
 ; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
 ; CHECK-NEXT:    store i8 0, ptr [[PTR_5]], align 1
@@ -426,8 +426,8 @@ define void @test12_memset_simple(ptr %ptr) {
 
 define void @test12_memset_other_store_in_between(ptr %ptr) {
 ; CHECK-LABEL: @test12_memset_other_store_in_between(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 6
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(4) [[TMP1]], i8 0, i64 4, i1 false)
+; CHECK-NEXT:    [[REAR:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 6
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(4) [[REAR]], i8 0, i64 4, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr dereferenceable(4) [[PTR]], i8 0, i64 4, i1 false)
 ; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
 ; CHECK-NEXT:    store i8 8, ptr [[PTR_4]], align 1
@@ -514,8 +514,8 @@ define void @test12_memset_chk_other_store_in_between_stack_obj_escape_before(i6
 
 define void @test12_memset_other_store_in_between_partial_overlap(ptr %ptr) {
 ; CHECK-LABEL: @test12_memset_other_store_in_between_partial_overlap(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 7
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(3) [[TMP1]], i8 0, i64 3, i1 false)
+; CHECK-NEXT:    [[REAR:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 7
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(3) [[REAR]], i8 0, i64 3, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr dereferenceable(4) [[PTR]], i8 0, i64 4, i1 false)
 ; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
 ; CHECK-NEXT:    store i16 8, ptr [[PTR_4]], align 2
@@ -533,9 +533,9 @@ define void @test12_memset_other_store_in_between_partial_overlap(ptr %ptr) {
 
 define void @test12_memset_later_store_exceeds_memset(ptr %ptr) {
 ; CHECK-LABEL: @test12_memset_later_store_exceeds_memset(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 5
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(5) [[TMP1]], i8 0, i64 5, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr dereferenceable(4) [[PTR]], i8 0, i64 4, i1 false)
+; CHECK-NEXT:    [[REAR:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 5
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(5) [[REAR]], i8 0, i64 5, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 dereferenceable(4) [[PTR]], i8 0, i64 3, i1 false)
 ; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
 ; CHECK-NEXT:    store i8 8, ptr [[PTR_4]], align 1
 ; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr i8, ptr [[PTR]], i64 8
