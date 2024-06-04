@@ -60,8 +60,8 @@ getTransposeOpPermutation(linalg::LinalgOp linalgOp) {
   if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1)
     return failure();
   auto mapRange = linalgOp.getIndexingMapsArray();
-  if (mapRange.size() != 2 || !mapRange.front().isPermutation() ||
-      !mapRange.back().isPermutation() || mapRange.front() == mapRange.back()) {
+  if (!mapRange.front().isPermutation() || !mapRange.back().isPermutation() ||
+      mapRange.front() == mapRange.back()) {
     return failure();
   }
   if (!llvm::hasSingleElement(linalgOp.getBlock()->getOperations()))
@@ -299,9 +299,8 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
 
     FailureOr<SmallVector<int64_t>> maybePerm =
         getTransposeOpPermutation(linalgOp);
-    if (failed(maybePerm)) {
+    if (failed(maybePerm))
       return failure();
-    }
 
     auto innerDimsPos = packOp.getInnerDimsPos();
     auto mixedInnerTiles = packOp.getMixedTiles();
@@ -352,9 +351,8 @@ struct FoldConsumerPackWithProducerLinalgTransposeOp
 
     FailureOr<SmallVector<int64_t>> maybePerm =
         getTransposeOpPermutation(linalgOp);
-    if (failed(maybePerm)) {
+    if (failed(maybePerm))
       return failure();
-    }
 
     auto transposePermutation = maybePerm.value();
     auto outerDimsPerm = packOp.getOuterDimsPerm();
@@ -398,25 +396,22 @@ struct FoldProducerUnPackWithConsumerLinalgTransposeOp
 
     FailureOr<SmallVector<int64_t>> maybePerm =
         getTransposeOpPermutation(linalgOp);
-    if (failed(maybePerm)) {
+    if (failed(maybePerm))
       return failure();
-    }
 
-    auto transposePermutation = maybePerm.value();
-    SmallVector<int64_t> inverseTransposePerm =
-        invertPermutationVector(transposePermutation);
     auto outerDimsPerm = unPackOp.getOuterDimsPerm();
     auto innerDimsPos = unPackOp.getInnerDimsPos();
     SmallVector<int64_t> newInnerDimsPosVec;
-    SmallVector<int64_t> newOuterDimsPermVec = inverseTransposePerm;
-
-    if (!outerDimsPerm.empty())
-      applyPermutationToVector(newOuterDimsPermVec, outerDimsPerm);
+    SmallVector<int64_t> newOuterDimsPermVec =
+        invertPermutationVector(maybePerm.value());
 
     // Can't use applyPermutationToVector for newInnerDimsPosVec since input and
     // permutation rank won't necessarily be equal in all cases.
     for (auto dim : innerDimsPos)
-      newInnerDimsPosVec.push_back(inverseTransposePerm[dim]);
+      newInnerDimsPosVec.push_back(newOuterDimsPermVec[dim]);
+
+    if (!outerDimsPerm.empty())
+      applyPermutationToVector(newOuterDimsPermVec, outerDimsPerm);
 
     // Reuse the destination of the transpose op.
     rewriter.replaceOpWithNewOp<UnPackOp>(
@@ -441,13 +436,11 @@ struct FoldConsumerUnPackWithProducerLinalgTransposeOp
 
     FailureOr<SmallVector<int64_t>> maybePerm =
         getTransposeOpPermutation(linalgOp);
-    if (failed(maybePerm)) {
+    if (failed(maybePerm))
       return failure();
-    }
 
-    auto transposePermutation = maybePerm.value();
     SmallVector<int64_t> inverseTransposePerm =
-        invertPermutationVector(transposePermutation);
+        invertPermutationVector(maybePerm.value());
     auto outerDimsPerm = unPackOp.getOuterDimsPerm();
     auto innerDimsPos = unPackOp.getInnerDimsPos();
     int64_t destRank = unPackOp.getSourceRank() - innerDimsPos.size();
