@@ -1639,20 +1639,16 @@ static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
 /// required to be rank > 1.
 ///
 /// Ex:
-/// ```
 ///  %mul = arith.mulf %B_row, %A_row : vector<1x[4]xf32>
 ///  %cast = vector.shape_cast %mul : vector<1x[4]xf32> to vector<[4]xf32>
-/// ```
 ///
 /// gets converted to:
 ///
-/// ```
 ///  %B_row_sc = vector.shape_cast %B_row : vector<1x[4]xf32> to vector<[4]xf32>
 ///  %A_row_sc = vector.shape_cast %A_row : vector<1x[4]xf32> to vector<[4]xf32>
 ///  %mul = arith.mulf %B_row_sc, %A_row_sc : vector<[4]xf32>
 ///  %cast_new = vector.shape_cast %mul : vector<[4]xf32> to vector<1x[4]xf32>
 ///  %cast = vector.shape_cast %cast_new : vector<1x[4]xf32> to vector<[4]xf32>
-/// ```
 ///
 /// Patterns for folding shape_casts should instantly eliminate `%cast_new` and
 /// `%cast`.
@@ -1689,12 +1685,12 @@ struct DropUnitDimFromElementwiseOps final
 
     VectorType newResultVectorType =
         dropNonScalableUnitDimFromType(resultVectorType);
-    // Create an updated elementwise Op without unit dim
+    // Create an updated elementwise Op without unit dim.
     Operation *elementwiseOp =
         rewriter.create(loc, op->getName().getIdentifier(), newOperands,
                         newResultVectorType, op->getAttrs());
 
-    // Restore the unit dim by applying vector.shape_cast to the result
+    // Restore the unit dim by applying vector.shape_cast to the result.
     rewriter.replaceOpWithNewOp<ShapeCastOp>(op, resultVectorType,
                                              elementwiseOp->getResult(0));
 
