@@ -194,7 +194,7 @@ enum PrmtMode {
 };
 }
 }
-void initializeNVPTXDAGToDAGISelPass(PassRegistry &);
+void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 } // namespace llvm
 
 // Defines symbolic names for NVPTX registers.  This defines a mapping from

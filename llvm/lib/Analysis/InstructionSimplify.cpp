@@ -71,8 +71,8 @@ static Value *simplifyXorInst(Value *, Value *, const SimplifyQuery &,
                               unsigned);
 static Value *simplifyCastInst(unsigned, Value *, Type *, const SimplifyQuery &,
                                unsigned);
-static Value *simplifyGEPInst(Type *, Value *, ArrayRef<Value *>, bool,
-                              const SimplifyQuery &, unsigned);
+static Value *simplifyGEPInst(Type *, Value *, ArrayRef<Value *>,
+                              GEPNoWrapFlags, const SimplifyQuery &, unsigned);
 static Value *simplifySelectInst(Value *, Value *, Value *,
                                  const SimplifyQuery &, unsigned);
 static Value *simplifyInstructionWithOperands(Instruction *I,
@@ -4943,7 +4943,7 @@ Value *llvm::simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
 /// Given operands for an GetElementPtrInst, see if we can fold the result.
 /// If not, this returns null.
 static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
-                              ArrayRef<Value *> Indices, bool InBounds,
+                              ArrayRef<Value *> Indices, GEPNoWrapFlags NW,
                               const SimplifyQuery &Q, unsigned) {
   // The type of the GEP pointer operand.
   unsigned AS =
@@ -5068,17 +5068,18 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
     return nullptr;
 
   if (!ConstantExpr::isSupportedGetElementPtr(SrcTy))
-    return ConstantFoldGetElementPtr(SrcTy, cast<Constant>(Ptr), InBounds,
-                                     std::nullopt, Indices);
+    // TODO(gep_nowrap): Pass on the whole GEPNoWrapFlags.
+    return ConstantFoldGetElementPtr(SrcTy, cast<Constant>(Ptr),
+                                     NW.isInBounds(), std::nullopt, Indices);
 
-  auto *CE = ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ptr), Indices,
-                                            InBounds);
+  auto *CE =
+      ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ptr), Indices, NW);
   return ConstantFoldConstant(CE, Q.DL);
 }
 
 Value *llvm::simplifyGEPInst(Type *SrcTy, Value *Ptr, ArrayRef<Value *> Indices,
-                             bool InBounds, const SimplifyQuery &Q) {
-  return ::simplifyGEPInst(SrcTy, Ptr, Indices, InBounds, Q, RecursionLimit);
+                             GEPNoWrapFlags NW, const SimplifyQuery &Q) {
+  return ::simplifyGEPInst(SrcTy, Ptr, Indices, NW, Q, RecursionLimit);
 }
 
 /// Given operands for an InsertValueInst, see if we can fold the result.
@@ -7077,7 +7078,7 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
   case Instruction::GetElementPtr: {
     auto *GEPI = cast<GetElementPtrInst>(I);
     return simplifyGEPInst(GEPI->getSourceElementType(), NewOps[0],
-                           ArrayRef(NewOps).slice(1), GEPI->isInBounds(), Q,
+                           ArrayRef(NewOps).slice(1), GEPI->getNoWrapFlags(), Q,
                            MaxRecurse);
   }
   case Instruction::InsertValue: {
