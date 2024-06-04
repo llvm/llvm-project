@@ -13681,6 +13681,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     }
 
     Init = Result.getAs<Expr>();
+    assert (Init && "Init must not be null");
+
     IsParenListInit = !InitSeq.steps().empty() &&
                       InitSeq.step_begin()->Kind ==
                           InitializationSequence::SK_ParenthesizedListInit;
@@ -13728,8 +13730,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // paths through the function. This should be revisited if
     // -Wrepeated-use-of-weak is made flow-sensitive.
     if (FunctionScopeInfo *FSI = getCurFunction())
-      if (Init &&
-          (VDecl->getType().getObjCLifetime() == Qualifiers::OCL_Strong ||
+      if ((VDecl->getType().getObjCLifetime() == Qualifiers::OCL_Strong ||
            VDecl->getType().isNonWeakInMRRWithObjCWeak(Context)) &&
           !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak,
                            Init->getBeginLoc()))
