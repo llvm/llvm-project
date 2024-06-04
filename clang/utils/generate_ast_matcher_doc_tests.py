@@ -709,13 +709,6 @@ class TestCase:
             res += "\n#endif\n"
         return res
 
-
-# FIXME: add support in the html gen script to differentiate between overloads examples
-
-# FIXME: should verify that all polymorphic ast nodes have a test
-# FIXME: better diag messages during parsing, user does not need to know about parsing contexts
-
-
 class ParsingContext(Enum):
     NoneCtx = 0
     Code = 1
@@ -1161,6 +1154,10 @@ def main():
             print(f"\t{key: <30}: {value: >5}")
 
         exit(1)
+
+
+# FIXME: add support in the html gen script to differentiate between overloads examples
+# FIXME: should verify that all polymorphic ast nodes have a test
 
 
 if __name__ == "__main__":
