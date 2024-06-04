@@ -201,6 +201,81 @@ define <8 x i32> @combine_v8i32_abs_pos(<8 x i32> %a) {
   ret <8 x i32> %2
 }
 
+; TODO: (abs x) upper bits are known zero if x has extra sign bits
+define i32 @combine_i32_abs_zerosign(i32 %a) {
+; CHECK-LABEL: combine_i32_abs_zerosign:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sarl $15, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    cmovsl %edi, %eax
+; CHECK-NEXT:    andl $-524288, %eax # imm = 0xFFF80000
+; CHECK-NEXT:    retq
+  %1 = ashr i32 %a, 15
+  %2 = call i32 @llvm.abs.i32(i32 %1, i1 false)
+  %3 = and i32 %2, -524288 ; 0xFFF80000
+  ret i32 %3
+}
+
+define <8 x i16> @combine_v8i16_abs_zerosign(<8 x i16> %a) {
+; SSE2-LABEL: combine_v8i16_abs_zerosign:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    psubw %xmm0, %xmm1
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: combine_v8i16_abs_zerosign:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    pabsw %xmm0, %xmm0
+; SSE42-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX2-LABEL: combine_v8i16_abs_zerosign:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpabsw %xmm0, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: combine_v8i16_abs_zerosign:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vpabsw %xmm0, %xmm0
+; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: combine_v8i16_abs_zerosign:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpabsw %xmm0, %xmm0
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    retq
+  %1 = ashr <8 x i16> %a, <i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14>
+  %2 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %1, i1 false)
+  %3 = and <8 x i16> %2, <i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768>
+  ret <8 x i16> %3
+}
+
+; negative test - mask extends beyond known zero bits
+define i32 @combine_i32_abs_zerosign_negative(i32 %a) {
+; CHECK-LABEL: combine_i32_abs_zerosign_negative:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sarl $3, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    cmovsl %edi, %eax
+; CHECK-NEXT:    andl $-524288, %eax # imm = 0xFFF80000
+; CHECK-NEXT:    retq
+  %1 = ashr i32 %a, 3
+  %2 = call i32 @llvm.abs.i32(i32 %1, i1 false)
+  %3 = and i32 %2, -524288 ; 0xFFF80000
+  ret i32 %3
+}
+
 declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1) nounwind readnone
 declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1) nounwind readnone
 declare <8 x i16> @llvm.abs.v8i16(<8 x i16>, i1) nounwind readnone
