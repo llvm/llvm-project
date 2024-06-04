@@ -2148,6 +2148,10 @@ public:
            getDeclKind() <= Decl::lastRecord;
   }
 
+  bool isRequiresExprBody() const {
+    return getDeclKind() == Decl::RequiresExprBody;
+  }
+
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }
 
   bool isStdNamespace() const;
