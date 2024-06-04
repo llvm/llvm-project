@@ -772,7 +772,7 @@ private:
         shiftedIndices.push_back(sub);
       }
 
-      return std::move(shiftedIndices);
+      return shiftedIndices;
     };
 
     if (auto shiftOp =
