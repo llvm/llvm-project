@@ -26,6 +26,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// NOTE: This Pass matches a really specific loop pattern because it's only
+// supposed to be a temporary solution until our LoopVectorizer is powerful
+// enought to vectorize it automatically.
+//
 // TODO List:
 //
 // * Add support for the inverse case where we scan for a matching element.
