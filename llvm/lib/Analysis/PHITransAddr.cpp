@@ -214,7 +214,7 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     // Simplify the GEP to handle 'gep x, 0' -> x etc.
     if (Value *V = simplifyGEPInst(GEP->getSourceElementType(), GEPOps[0],
                                    ArrayRef<Value *>(GEPOps).slice(1),
-                                   GEP->isInBounds(), {DL, TLI, DT, AC})) {
+                                   GEP->getNoWrapFlags(), {DL, TLI, DT, AC})) {
       for (unsigned i = 0, e = GEPOps.size(); i != e; ++i)
         RemoveInstInputs(GEPOps[i], InstInputs);
 
