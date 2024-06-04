@@ -485,6 +485,8 @@ def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2
                                       "Neoverse V2 ARM processors", [
                                       FeatureFuseAES,
                                       FeatureFuseAdrpAdd,
+                                      FeatureCmpBccFusion,
+                                      FeatureFuseCCSelect,
                                       FeatureALULSLFast,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
