@@ -58,7 +58,7 @@ private:
     return RetType();
   }
 
-  // Helper function for creating VP intrinsic call.
+  /// Helper function for creating VP intrinsic call.
   Value *createVectorInstructionImpl(Intrinsic::ID VPID, Type *ReturnTy,
                                      ArrayRef<Value *> VecOpArray,
                                      const Twine &Name = Twine());
