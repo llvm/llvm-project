@@ -505,9 +505,6 @@ private:
   ContextNode *getNodeForAlloc(const CallInfo &C);
   ContextNode *getNodeForStackId(uint64_t StackId);
 
-  /// Removes the node information recorded for the given call.
-  void unsetNodeForInst(const CallInfo &C);
-
   /// Computes the alloc type corresponding to the given context ids, by
   /// unioning their recorded alloc types.
   uint8_t computeAllocType(DenseSet<uint32_t> &ContextIds);
@@ -811,15 +808,6 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::getNodeForStackId(
   if (StackEntryNode != StackEntryIdToContextNodeMap.end())
     return StackEntryNode->second;
   return nullptr;
-}
-
-template <typename DerivedCCG, typename FuncTy, typename CallTy>
-void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::unsetNodeForInst(
-    const CallInfo &C) {
-  AllocationCallToContextNodeMap.erase(C) ||
-      NonAllocationCallToContextNodeMap.erase(C);
-  assert(!AllocationCallToContextNodeMap.count(C) &&
-         !NonAllocationCallToContextNodeMap.count(C));
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
@@ -1694,11 +1682,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
   MapVector<CallInfo, ContextNode *> TailCallToContextNodeMap;
 
   for (auto Entry = NonAllocationCallToContextNodeMap.begin();
-       Entry != NonAllocationCallToContextNodeMap.end();) {
+       Entry != NonAllocationCallToContextNodeMap.end(); Entry++) {
     auto *Node = Entry->second;
     assert(Node->Clones.empty());
     // Check all node callees and see if in the same function.
-    bool Removed = false;
     auto Call = Node->Call.call();
     for (auto EI = Node->CalleeEdges.begin(); EI != Node->CalleeEdges.end();) {
       auto Edge = *EI;
@@ -1714,14 +1701,17 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
       // Work around by setting Node to have a null call, so it gets
       // skipped during cloning. Otherwise assignFunctions will assert
       // because its data structures are not designed to handle this case.
-      Entry = NonAllocationCallToContextNodeMap.erase(Entry);
       Node->setCall(CallInfo());
-      Removed = true;
       break;
     }
-    if (!Removed)
-      Entry++;
   }
+
+  // Remove all mismatched nodes identified in the above loop from the node map
+  // (checking whether they have a null call which is set above). For a
+  // MapVector like NonAllocationCallToContextNodeMap it is much more efficient
+  // to do the removal via remove_if than by individually erasing entries above.
+  NonAllocationCallToContextNodeMap.remove_if(
+      [](const auto &it) { return !it.second->hasCall(); });
 
   // Add the new nodes after the above loop so that the iteration is not
   // invalidated.
