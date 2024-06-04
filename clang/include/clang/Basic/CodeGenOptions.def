@@ -218,6 +218,7 @@ ENUM_CODEGENOPT(ProfileUse, ProfileInstrKind, 2, ProfileNone)
 /// instrumented. Selected group numbers can be 0 to N-1 inclusive.
 VALUE_CODEGENOPT(ProfileTotalFunctionGroups, 32, 1)
 VALUE_CODEGENOPT(ProfileSelectedFunctionGroup, 32, 0)
+CODEGENOPT(InstrProfileThreadLocal, 1, 0) ///< Counters are updated on a per-thread basis
 CODEGENOPT(CoverageMapping , 1, 0) ///< Generate coverage mapping regions to
                                    ///< enable code coverage analysis.
 CODEGENOPT(DumpCoverageMapping , 1, 0) ///< Dump the generated coverage mapping

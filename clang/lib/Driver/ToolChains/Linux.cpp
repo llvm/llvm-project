@@ -843,6 +843,13 @@ void Linux::addProfileRTLibs(const llvm::opt::ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
   ToolChain::addProfileRTLibs(Args, CmdArgs);
+
+  if (needsProfileRT(Args) && Args.hasArg(options::OPT_fprofile_thread_local)) {
+    CmdArgs.push_back(Args.MakeArgString(Twine(
+        "-u",
+        llvm::StringRef("__llvm_profile_tls_register_thread_exit_handler"))));
+  }
+  ToolChain::addThreadLocalProfileRTLibs(Args, CmdArgs);
 }
 
 void Linux::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {

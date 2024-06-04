@@ -752,6 +752,12 @@ public:
   virtual void addProfileRTLibs(const llvm::opt::ArgList &Args,
                                 llvm::opt::ArgStringList &CmdArgs) const;
 
+  /// addThreadLocalProfileRTLibs - With -fprofile-threadlocal, add the
+  /// threadlocal profile runtime static + shared library pair.
+  virtual void
+  addThreadLocalProfileRTLibs(const llvm::opt::ArgList &Args,
+                              llvm::opt::ArgStringList &CmdArgs) const;
+
   /// Add arguments to use system-specific CUDA includes.
   virtual void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args) const;

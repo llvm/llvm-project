@@ -312,6 +312,9 @@ INSTR_PROF_SECT_ENTRY(IPSK_data, \
 INSTR_PROF_SECT_ENTRY(IPSK_cnts, \
                       INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), \
                       INSTR_PROF_CNTS_COFF, "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_tls_cnts, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_TLS_CNTS_COMMON), \
+                      INSTR_PROF_CNTS_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_bitmap, \
                       INSTR_PROF_QUOTE(INSTR_PROF_BITS_COMMON), \
                       INSTR_PROF_BITS_COFF, "__DATA,")
@@ -750,6 +753,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_NAME_COMMON __llvm_prf_names
 #define INSTR_PROF_VNAME_COMMON __llvm_prf_vns
 #define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
+#define INSTR_PROF_TLS_CNTS_COMMON __llvm_tls_prf_cnts
 #define INSTR_PROF_BITS_COMMON __llvm_prf_bits
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds

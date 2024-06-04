@@ -1,0 +1,48 @@
+// All threadlocal
+
+RUN: mkdir -p %t.tls.d
+RUN: %clang_profgen -fcoverage-mapping -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.tls.d/lib.shared -fPIC -shared %S/../Inputs/instrprof-tls-dlclose-lib.c
+
+RUN: %clang_profgen -fcoverage-mapping -lpthread -DDLOPEN_FUNC_DIR=\"%t.tls.d\" -DDLOPEN_FLAGS="RTLD_LAZY | RTLD_NODELETE" -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-tls -rpath %t.tls.d %S/../Inputs/instrprof-tls-dlclose-main.c
+
+// All atomic
+
+RUN: mkdir -p %t.atomic.d
+RUN: %clang_profgen -fcoverage-mapping -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.atomic.d/lib.shared -fPIC -shared %S/../Inputs/instrprof-tls-dlclose-lib.c
+
+RUN: %clang_profgen -fcoverage-mapping -lpthread -DDLOPEN_FUNC_DIR=\"%t.atomic.d\" -DDLOPEN_FLAGS="RTLD_LAZY | RTLD_NODELETE" -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-atomic -rpath %t.atomic.d %S/../Inputs/instrprof-tls-dlclose-main.c
+
+// Atomic lib, threadlocal exe
+
+RUN: mkdir -p %t.atomic-tl.d
+RUN: %clang_profgen -fcoverage-mapping -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.atomic-tl.d/lib.shared -fPIC -shared %S/../Inputs/instrprof-tls-dlclose-lib.c
+
+RUN: %clang_profgen -fcoverage-mapping -lpthread -DDLOPEN_FUNC_DIR=\"%t.atomic-tl.d\" -DDLOPEN_FLAGS="RTLD_LAZY | RTLD_NODELETE" -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-atomic-tl -rpath %t.atomic-tl.d %S/../Inputs/instrprof-tls-dlclose-main.c
+
+// Atomic exe, threadlocal lib
+
+RUN: mkdir -p %t.tl-atomic.d
+RUN: %clang_profgen -fcoverage-mapping -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.tl-atomic.d/lib.shared -fPIC -shared %S/../Inputs/instrprof-tls-dlclose-lib.c
+
+RUN: %clang_profgen -fcoverage-mapping -lpthread -DDLOPEN_FUNC_DIR=\"%t.tl-atomic.d\" -DDLOPEN_FLAGS="RTLD_LAZY | RTLD_NODELETE" -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-tl-atomic -rpath %t.tl-atomic.d %S/../Inputs/instrprof-tls-dlclose-main.c
+
+
+RUN: env LLVM_PROFILE_FILE=%t-atomic.profraw    %run %t-atomic
+RUN: env LLVM_PROFILE_FILE=%t-tls.profraw       %run %t-tls
+RUN: env LLVM_PROFILE_FILE=%t-atomic-tl.profraw %run %t-atomic-tl
+RUN: env LLVM_PROFILE_FILE=%t-tl-atomic.profraw %run %t-tl-atomic
+
+RUN: llvm-profdata merge -o %t-tls.profdata %t-tls.profraw
+RUN: llvm-profdata merge -o %t-atomic.profdata %t-atomic.profraw
+RUN: llvm-profdata merge -o %t-atomic-tl.profdata %t-atomic-tl.profraw
+RUN: llvm-profdata merge -o %t-tl-atomic.profdata %t-tl-atomic.profraw
+RUN: %clang_profuse=%t-tls.profdata         -o %t-main.tls.ll       -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-main.c
+RUN: %clang_profuse=%t-atomic.profdata      -o %t-main.atomic.ll    -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-main.c
+RUN: %clang_profuse=%t-atomic-tl.profdata   -o %t-main.atomic-tl.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-main.c
+RUN: %clang_profuse=%t-tl-atomic.profdata   -o %t-main.tl-atomic.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-main.c
+RUN: diff %t-main.tls.ll        %t-main.atomic.ll
+RUN: diff %t-main.atomic-tl.ll  %t-main.atomic.ll
+RUN: diff %t-main.tl-atomic.ll  %t-main.atomic.ll
+
+// Atomic exe, threadlocal lib does not pass.
+XFAIL: target={{.*}}

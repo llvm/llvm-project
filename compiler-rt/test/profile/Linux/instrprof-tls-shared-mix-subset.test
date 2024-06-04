@@ -1,0 +1,35 @@
+// All threadlocal
+
+RUN: mkdir -p %t.tls.d
+RUN: %clang_profgen -fcoverage-mapping -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.tls.d/liblib.so -fPIC -shared %S/../Inputs/instrprof-tls-dlclose-lib.c
+
+RUN: %clang_profgen -fcoverage-mapping -lpthread -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-tls -rpath %t.tls.d -L%t.tls.d -llib %S/../Inputs/instrprof-tls-dlclose-main.c
+
+// All atomic
+
+RUN: mkdir -p %t.atomic.d
+RUN: %clang_profgen -fcoverage-mapping -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.atomic.d/liblib.so -fPIC -shared %S/../Inputs/instrprof-tls-dlclose-lib.c
+
+RUN: %clang_profgen -fcoverage-mapping -lpthread -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-atomic -rpath %t.atomic.d -L%t.atomic.d -llib %S/../Inputs/instrprof-tls-dlclose-main.c
+
+// Atomic lib, threadlocal exe
+
+RUN: mkdir -p %t.atomic-tl.d
+RUN: %clang_profgen -fcoverage-mapping -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.atomic-tl.d/liblib.so -fPIC -shared %S/../Inputs/instrprof-tls-dlclose-lib.c
+
+RUN: %clang_profgen -fcoverage-mapping -lpthread -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-atomic-tl -rpath %t.atomic-tl.d -L%t.atomic-tl.d -llib %S/../Inputs/instrprof-tls-dlclose-main.c
+
+// Atomic exe, threadlocal lib
+
+RUN: env LLVM_PROFILE_FILE=%t-atomic.profraw    %run %t-atomic
+RUN: env LLVM_PROFILE_FILE=%t-tls.profraw       %run %t-tls
+RUN: env LLVM_PROFILE_FILE=%t-atomic-tl.profraw %run %t-atomic-tl
+
+RUN: llvm-profdata merge -o %t-tls.profdata %t-tls.profraw
+RUN: llvm-profdata merge -o %t-atomic.profdata %t-atomic.profraw
+RUN: llvm-profdata merge -o %t-atomic-tl.profdata %t-atomic-tl.profraw
+RUN: %clang_profuse=%t-tls.profdata         -o %t-main.tls.ll       -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-main.c
+RUN: %clang_profuse=%t-atomic.profdata      -o %t-main.atomic.ll    -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-main.c
+RUN: %clang_profuse=%t-atomic-tl.profdata   -o %t-main.atomic-tl.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-main.c
+RUN: diff %t-main.tls.ll        %t-main.atomic.ll
+RUN: diff %t-main.atomic-tl.ll  %t-main.atomic.ll

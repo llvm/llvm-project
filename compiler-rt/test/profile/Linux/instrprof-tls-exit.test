@@ -1,0 +1,17 @@
+RUN: %clang_profgen -fcoverage-mapping -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-atomic %S/../Inputs/instrprof-tls-exit.c
+
+RUN: %clang_profgen -fcoverage-mapping -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-tls %S/../Inputs/instrprof-tls-exit.c
+
+RUN: env LLVM_PROFILE_FILE=%t-tls.profraw %run %t-tls
+RUN: env LLVM_PROFILE_FILE=%t-atomic.profraw %run %t-atomic
+
+RUN: llvm-profdata merge -o %t-tls.profdata %t-tls.profraw
+RUN: llvm-profdata merge -o %t-atomic.profdata %t-atomic.profraw
+
+RUN: %clang_profuse=%t-tls.profdata    -o %t-tls.ll    -S -emit-llvm %S/../Inputs/instrprof-tls-exit.c
+RUN: %clang_profuse=%t-atomic.profdata -o %t-atomic.ll -S -emit-llvm %S/../Inputs/instrprof-tls-exit.c
+RUN: diff %t-tls.ll %t-atomic.ll
+
+# With the first iteration of this change, it is understood that only exiting via the main thread will cause
+# expected coverage outputs.
+XFAIL: target={{.*}}
