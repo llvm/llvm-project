@@ -8389,8 +8389,9 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":EmitCDialect",
-        ":PDLLAST",
+        ":IR",
         ":Pass",
+        ":Support",
         ":TransformUtils",
     ],
 )
