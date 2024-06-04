@@ -15560,12 +15560,20 @@ static bool shouldSinkVectorOfPtrs(Value *Ptrs, SmallVectorImpl<Use *> &Ops) {
 }
 
 /// We want to sink following cases:
-/// (add|sub|gep) A, ((mul|shl) vscale, imm); (add|sub|gep) A, vscale
+/// (add|sub|gep) A, ((mul|shl) vscale, imm); (add|sub|gep) A, vscale;
+/// (add|sub|gep) A, ((mul|shl) zext(vscale), imm);
 static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   if (match(Op, m_VScale()))
     return true;
   if (match(Op, m_Shl(m_VScale(), m_ConstantInt())) ||
       match(Op, m_Mul(m_VScale(), m_ConstantInt()))) {
+    Ops.push_back(&cast<Instruction>(Op)->getOperandUse(0));
+    return true;
+  }
+  if (match(Op, m_Shl(m_ZExt(m_VScale()), m_ConstantInt())) ||
+      match(Op, m_Mul(m_ZExt(m_VScale()), m_ConstantInt()))) {
+    Value *ZExtOp = cast<Instruction>(Op)->getOperand(0);
+    Ops.push_back(&cast<Instruction>(ZExtOp)->getOperandUse(0));
     Ops.push_back(&cast<Instruction>(Op)->getOperandUse(0));
     return true;
   }
