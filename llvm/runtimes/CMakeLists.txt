@@ -430,7 +430,17 @@ function(runtime_register_target name)
   endforeach()
 endfunction()
 
+# Check if we have any runtimes to build.
 if(runtimes)
+  set(build_runtimes TRUE)
+endif()
+foreach(name ${LLVM_RUNTIME_TARGETS})
+  if(RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES)
+    set(build_runtimes TRUE)
+  endif()
+endforeach()
+
+if(build_runtimes)
   # Create a runtimes target that uses this file as its top-level CMake file.
   # The runtimes target is a configuration of all the runtime libraries
   # together in a single CMake invocation.
