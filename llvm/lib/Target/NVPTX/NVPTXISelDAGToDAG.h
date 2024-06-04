@@ -39,8 +39,6 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   bool doRsqrtOpt() const;
 
 public:
-  static char ID;
-
   NVPTXDAGToDAGISel() = delete;
 
   explicit NVPTXDAGToDAGISel(NVPTXTargetMachine &tm, CodeGenOptLevel OptLevel);
@@ -100,6 +98,13 @@ private:
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 
   static unsigned GetConvertOpcode(MVT DestTy, MVT SrcTy, LoadSDNode *N);
+};
+
+class NVPTXDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit NVPTXDAGToDAGISelLegacy(NVPTXTargetMachine &tm,
+                                   CodeGenOptLevel OptLevel);
 };
 } // end namespace llvm
 
