@@ -536,7 +536,7 @@ void SelectionDAGISel::initializeAnalysisResults(
 
   SP = &FAM.getResult<SSPLayoutAnalysis>(Fn);
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   TTI = &FAM.getResult<TargetIRAnalysis>(Fn);
 #endif
 }
@@ -590,7 +590,7 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
 
   SP = &MFP.getAnalysis<StackProtector>().getLayoutInfo();
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   TTI = &MFP.getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn);
 #endif
 }
