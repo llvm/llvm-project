@@ -262,6 +262,15 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   }
 }
 
+static bool mayHavePrivatizations(const lower::pft::Evaluation &eval) {
+  if (const parser::OpenMPConstruct *construct =
+          eval.getIf<parser::OpenMPConstruct>()) {
+    if (std::holds_alternative<parser::OpenMPCriticalConstruct>(construct->u))
+      return false;
+  }
+  return true;
+}
+
 static const parser::CharBlock *
 getSource(const semantics::SemanticsContext &semaCtx,
           const lower::pft::Evaluation &eval) {
@@ -305,7 +314,7 @@ void DataSharingProcessor::collectSymbolsInNestedRegions(
     llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions) {
   for (lower::pft::Evaluation &nestedEval : eval.getNestedEvaluations()) {
     if (nestedEval.hasNestedEvaluations()) {
-      if (nestedEval.isConstruct())
+      if (nestedEval.isConstruct() || !mayHavePrivatizations(nestedEval))
         // Recursively look for OpenMP constructs within `nestedEval`'s region
         collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
       else {
