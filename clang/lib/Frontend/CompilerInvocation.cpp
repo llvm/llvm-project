@@ -593,12 +593,6 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   CodeGenOpts.CodeModel = TargetOpts.CodeModel;
   CodeGenOpts.LargeDataThreshold = TargetOpts.LargeDataThreshold;
 
-  // -Winvalid-constexpr is enabled by default. We want to disable it in C++23
-  // mode, but only if `-Winvalid-constexpr` is not specified on the command
-  // line.
-  LangOpts.CheckConstexprFunctionBodies = Args.hasFlagNoClaim(
-      OPT_Winvalid_constexpr, OPT_Wno_invalid_constexpr, !LangOpts.CPlusPlus23);
-
   if (LangOpts.getExceptionHandling() !=
           LangOptions::ExceptionHandlingKind::None &&
       T.isWindowsMSVCEnvironment())
@@ -2412,6 +2406,9 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
   for (const auto &Warning : Opts.Warnings) {
     // This option is automatically generated from UndefPrefixes.
     if (Warning == "undef-prefix")
+      continue;
+    // This option is automatically generated from CheckConstexprFunctionBodies.
+    if (Warning == "invalid-constexpr" || Warning == "no-invalid-constexpr")
       continue;
     Consumer(StringRef("-W") + Warning);
   }
