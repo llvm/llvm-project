@@ -113,6 +113,7 @@ static isa_features_t IsaFeatures[] = {
   {"amdgcn-amd-amdhsa--gfx10-1-generic", false,     false,     none,       true,      none,       true},
   {"amdgcn-amd-amdhsa--gfx10-3-generic", false,     false,     none,       false,     none,       true},
   {"amdgcn-amd-amdhsa--gfx11-generic",   false,     false,     none,       false,     none,       true},
+  {"amdgcn-amd-amdhsa--gfx12-generic",   false,     false,     none,       false,     none,       true},
     // clang-format on
 };
 
