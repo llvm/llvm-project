@@ -610,7 +610,10 @@ class TestCase:
             res += "#if LLVM_HAS_NVPTX_TARGET\n"
 
         res += f"""TEST_P(ASTMatchersDocTest, docs_{self.line + 1}) {{
-    const StringRef Code = R"cpp(\n{"\t#include \"cuda.h\"\n" if has_cuda else ""}{self.code})cpp";\n"""
+    const StringRef Code = R"cpp(\n"""
+        if has_cuda:
+            res += '\t#include "cuda.h"\n'
+        res += f'{self.code})cpp";\n'
 
         if self.has_headers():
             res += f"\tconst FileContentMappings VirtualMappedFiles = {{{self.get_formated_headers()}}};"
@@ -1058,6 +1061,7 @@ def group_doc_comment_and_followed_code(
 
     return result
 
+
 test_file_begin = """
 // unittests/ASTMatchers/ASTMatchersNarrowingTest.cpp - AST matcher unit tests//
 //
@@ -1117,6 +1121,7 @@ INSTANTIATE_TEST_SUITE_P(
 } // namespace clang
 """
 
+
 def main():
     args = parse_arguments()
 
@@ -1161,6 +1166,7 @@ def main():
             print(f"\t{key: <30}: {value: >5}")
 
         exit(1)
+
 
 if __name__ == "__main__":
     main()
