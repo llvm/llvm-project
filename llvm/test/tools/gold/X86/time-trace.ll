@@ -2,19 +2,19 @@
 
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 --plugin-opt=time-trace=%t2.json \
-; RUN:    -shared %t.o -o %t3.s
+; RUN:    -shared %t.o -o /dev/null
 ; RUN: FileCheck --input-file %t2.json %s
 
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 --plugin-opt=time-trace=%t2.json \
 ; RUN:    --plugin-opt=time-trace-granularity=250  \
-; RUN:    -shared %t.o -o %t3.s
+; RUN:    -shared %t.o -o /dev/null
 ; RUN: FileCheck --input-file %t2.json %s
 
 ; RUN: not %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 --plugin-opt=time-trace=%t2.json \
 ; RUN:    --plugin-opt=time-trace-granularity=hello  \
-; RUN:    -shared %t.o -o %t3.s 2> %t4.txt
+; RUN:    -shared %t.o -o /dev/null 2> %t4.txt
 ; RUN: FileCheck --input-file %t4.txt %s --check-prefix=ERR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
