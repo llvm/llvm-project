@@ -375,6 +375,18 @@ void Symbol::SetIsExplicitBindName(bool yes) {
       details_);
 }
 
+void Symbol::SetIsCDefined(bool yes) {
+  common::visit(
+      [&](auto &x) {
+        if constexpr (HasBindName<decltype(&x)>) {
+          x.set_isCDefined(yes);
+        } else {
+          DIE("CDEFINED not allowed on this kind of symbol");
+        }
+      },
+      details_);
+}
+
 bool Symbol::IsFuncResult() const {
   return common::visit(
       common::visitors{[](const EntityDetails &x) { return x.isFuncResult(); },
@@ -422,6 +434,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const EntityDetails &x) {
     os << " type: " << *x.type();
   }
   DumpOptional(os, "bindName", x.bindName());
+  DumpBool(os, "CDEFINED", x.isCDefined());
   return os;
 }
 

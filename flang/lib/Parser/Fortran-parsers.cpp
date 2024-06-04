@@ -735,7 +735,8 @@ TYPE_PARSER(construct<AccessSpec>("PUBLIC" >> pure(AccessSpec::Kind::Public)) ||
 //        BIND ( C [, NAME = scalar-default-char-constant-expr] )
 // R1528 proc-language-binding-spec -> language-binding-spec
 TYPE_PARSER(construct<LanguageBindingSpec>(
-    "BIND ( C" >> maybe(", NAME =" >> scalarDefaultCharConstantExpr) / ")"))
+    "BIND ( C" >> maybe(", NAME =" >> scalarDefaultCharConstantExpr),
+    (", CDEFINED" >> pure(true) || pure(false)) / ")"))
 
 // R809 coarray-spec -> deferred-coshape-spec-list | explicit-coshape-spec
 // N.B. Bracketed here rather than around references, for consistency with
