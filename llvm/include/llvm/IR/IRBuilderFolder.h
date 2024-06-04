@@ -52,7 +52,7 @@ public:
                          Value *RHS) const = 0;
 
   virtual Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                         bool IsInBounds = false) const = 0;
+                         GEPNoWrapFlags NW) const = 0;
 
   virtual Value *FoldSelect(Value *C, Value *True, Value *False) const = 0;
 

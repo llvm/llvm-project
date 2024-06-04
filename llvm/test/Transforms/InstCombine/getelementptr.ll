@@ -1724,4 +1724,13 @@ define ptr @constexpr_gep_of_gep_with_narrow_type() {
   ret ptr getelementptr (i8, ptr getelementptr (i8, ptr @g, i8 127), i8 127)
 }
 
+define ptr @gep_to_i8_nusw_nuw(ptr %p) {
+; CHECK-LABEL: @gep_to_i8_nusw_nuw(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw nuw i8, ptr [[P:%.*]], i64 4
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nusw nuw i32, ptr %p, i64 1
+  ret ptr %gep
+}
+
 !0 = !{!"branch_weights", i32 2, i32 10}
