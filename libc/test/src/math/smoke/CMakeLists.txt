@@ -1107,6 +1107,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fromfpf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpf16_test.cpp
+  HDRS
+    FromfpTest.h
+  DEPENDS
+    libc.src.math.fromfpf16
+)
+
+add_fp_unittest(
   fromfpf128_test
   SUITE
     libc-math-smoke-tests
@@ -1152,6 +1164,18 @@ add_fp_unittest(
     FromfpxTest.h
   DEPENDS
     libc.src.math.fromfpxl
+)
+
+add_fp_unittest(
+  fromfpxf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fromfpxf16_test.cpp
+  HDRS
+    FromfpxTest.h
+  DEPENDS
+    libc.src.math.fromfpxf16
 )
 
 add_fp_unittest(
@@ -1203,6 +1227,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ufromfpf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpf16_test.cpp
+  HDRS
+    UfromfpTest.h
+  DEPENDS
+    libc.src.math.ufromfpf16
+)
+
+add_fp_unittest(
   ufromfpf128_test
   SUITE
     libc-math-smoke-tests
@@ -1248,6 +1284,18 @@ add_fp_unittest(
     UfromfpxTest.h
   DEPENDS
     libc.src.math.ufromfpxl
+)
+
+add_fp_unittest(
+  ufromfpxf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ufromfpxf16_test.cpp
+  HDRS
+    UfromfpxTest.h
+  DEPENDS
+    libc.src.math.ufromfpxf16
 )
 
 add_fp_unittest(
