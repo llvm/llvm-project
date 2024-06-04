@@ -119,7 +119,7 @@ class ToolSubst(object):
 
         if command_str:
             if self.extra_args:
-                command_str = " ".join([command_str] + self.extra_args)
+                command_str = " ".join(str(a) for a in [command_str] + self.extra_args)
         else:
             if self.unresolved == "warn":
                 # Warn, but still provide a substitution.
