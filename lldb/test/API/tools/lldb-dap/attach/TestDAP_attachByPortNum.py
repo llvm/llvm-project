@@ -39,8 +39,10 @@ class Pipe(object):
     def close(self):
         os.close(self._fd)
 
+
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     default_timeout = 20
+
     def set_and_hit_breakpoint(self, continueToExit=True):
         source = "main.c"
         main_source_path = os.path.join(os.getcwd(), source)
@@ -58,7 +60,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     def get_debug_server_command_line_args(self):
         args = []
         if lldbplatformutil.getPlatform() == "linux":
-            args = ["gdbserver"]    
+            args = ["gdbserver"]
         elif lldbplatformutil.getPlatform() == "macosx":
             args = ["--listen"]
         if lldb.remote_platform:
@@ -72,33 +74,34 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         self.addTearDownHook(lambda: pipe.close())
         pipe.finish_connection(self.default_timeout)
         return pipe
-        
+
     @skipIfWindows
     @skipIfNetBSD
     def test_by_port(self):
         """
         Tests attaching to a process by port.
         """
-        
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")
-        
+
         debug_server_tool = self.getBuiltinDebugServerTool()
 
         pipe = self.get_debug_server_pipe()
         args = self.get_debug_server_command_line_args()
         args += [program]
         args += ["--named-pipe", pipe.name]
-        
+
         self.process = self.spawnSubprocess(
             debug_server_tool, args, install_remote=False
         )
-        
+
         # Read the port number from the debug server pipe.
-        port = pipe.read(10, 30)
+        port = pipe.read(10, self.default_timeout)
         # Trim null byte, convert to int
         port = int(port[:-1])
-        self.assertIsNotNone(port, " Failed to read the port number from debug server pipe")
+        self.assertIsNotNone(
+            port, " Failed to read the port number from debug server pipe"
+        )
 
         self.attach(program=program, gdbRemotePort=port, sourceInitFile=True)
         self.set_and_hit_breakpoint(continueToExit=True)
@@ -118,19 +121,21 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         args = self.get_debug_server_command_line_args()
         args += [program]
         args += ["--named-pipe", pipe.name]
-        
+
         self.process = self.spawnSubprocess(
             debug_server_tool, args, install_remote=False
         )
-        
+
         # Read the port number from the debug server pipe.
-        port = pipe.read(10, 30)
+        port = pipe.read(10, self.default_timeout)
         # Trim null byte, convert to int
         port = int(port[:-1])
-        self.assertIsNotNone(port, " Failed to read the port number from debug server pipe")
-        
+        self.assertIsNotNone(
+            port, " Failed to read the port number from debug server pipe"
+        )
+
         pid = self.process.pid
-        
+
         response = self.attach(
             program=program,
             pid=pid,
