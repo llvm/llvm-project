@@ -961,6 +961,10 @@ def Wdeprecated : Flag<["-"], "Wdeprecated">, Group<W_Group>,
   HelpText<"Enable warnings for deprecated constructs and define __DEPRECATED">;
 def Wno_deprecated : Flag<["-"], "Wno-deprecated">, Group<W_Group>,
   Visibility<[ClangOption, CC1Option]>;
+def Winvalid_constexpr : Flag<["-"], "Winvalid-constexpr">, Group<W_Group>,
+  Visibility<[ClangOption, CC1Option]>;
+def Wno_invalid_constexpr : Flag<["-"], "Wno-invalid-constexpr">,
+  Group<W_Group>, Visibility<[ClangOption, CC1Option]>;
 def Wl_COMMA : CommaJoined<["-"], "Wl,">, Visibility<[ClangOption, FlangOption]>,
   Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass the comma separated arguments in <arg> to the linker">,

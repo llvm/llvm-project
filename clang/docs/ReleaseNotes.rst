@@ -207,6 +207,9 @@ C++23 Feature Support
 - Implemented `P1774R8: Portable assumptions <https://wg21.link/P1774R8>`_.
 
 - Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
+  Note, the ``-Winvalid-constexpr`` diagnostic is now disabled in C++23 mode,
+  but can be explicitly specified to retain the old diagnostic checking
+  behavior.
 
 - Added a ``__reference_converts_from_temporary`` builtin, completing the necessary compiler support for
   `P2255R2: Type trait to determine if a reference binds to a temporary <https://wg21.link/P2255R2>`_.

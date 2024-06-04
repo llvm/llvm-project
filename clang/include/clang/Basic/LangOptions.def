@@ -505,6 +505,9 @@ COMPATIBLE_LANGOPT(IncrementalExtensions, 1, 0, " True if we want to process sta
 
 BENIGN_LANGOPT(CheckNew, 1, 0, "Do not assume C++ operator new may not return NULL")
 
+BENIGN_LANGOPT(CheckConstexprFunctionBodies, 1, 1,
+               "True if we want to emit a diagnostics for a constexpr function "
+               "body if it can never be used in a constant expression.")
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

@@ -2474,7 +2474,7 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   // disabled, the function is declared in a system header, or we're in C++23
   // or later mode (see https://wg21.link/P2448).
   auto SkipCheck = [&SemaRef, Dcl] {
-    return SemaRef.getLangOpts().CPlusPlus23 ||
+    return !SemaRef.getLangOpts().CheckConstexprFunctionBodies ||
            SemaRef.getSourceManager().isInSystemHeader(Dcl->getLocation()) ||
            SemaRef.getDiagnostics().isIgnored(
                diag::ext_constexpr_function_never_constant_expr,
