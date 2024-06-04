@@ -128,5 +128,3 @@ void testall() {
   test<long double>();
   // + TODO extended floating-point types
 }
-
-int main(int, char**) { return 0; }
