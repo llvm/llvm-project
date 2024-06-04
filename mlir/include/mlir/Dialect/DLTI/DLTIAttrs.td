@@ -116,24 +116,21 @@ def DLTI_TargetSystemSpecAttr :
   }];
   let description = [{
     A system specification describes the overall system containing
-    multiple devices, with each device having a unique ID
+    multiple devices, with each device having a unique ID (string)
     and its corresponding TargetDeviceSpec object.
 
     Example:
           dlti.target_system_spec =
-            #dlti.target_device_spec<
-              #dlti.dl_entry<"dlti.device_id", 0: ui32>,
-              #dlti.dl_entry<"dlti.device_type", "CPU">>,
-            #dlti.target_device_spec<
-              #dlti.dl_entry<"dlti.device_id", 1: ui32>,
-              #dlti.dl_entry<"dlti.device_type", "GPU">,
-              #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>,
-            #dlti.target_device_spec<
-              #dlti.dl_entry<"dlti.device_id", 2: ui32>,
-              #dlti.dl_entry<"dlti.device_type", "XPU">>>
+           #dlti.target_system_spec<
+            "CPU": #dlti.target_device_spec<
+                    #dlti.dl_entry<"dlti.L1_cache_size_in_bytes", 4096: ui32>>,
+            "GPU": #dlti.target_device_spec<
+                    #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>,
+            "XPU": #dlti.target_device_spec<
+                    #dlti.dl_entry<"dlti.max_vector_op_width", 4096 : ui32>>>
   }];
   let parameters = (ins
-    ArrayRefParameter<"TargetDeviceSpecInterface", "">:$entries
+    ArrayRefParameter<"DeviceIDTargetDeviceSpecPair", "">:$entries
   );
   let mnemonic = "target_system_spec";
   let genVerifyDecl = 1;
@@ -142,15 +139,15 @@ def DLTI_TargetSystemSpecAttr :
     /// Return the device specification that matches the given device ID
     std::optional<TargetDeviceSpecInterface>
     getDeviceSpecForDeviceID(
-      TargetDeviceSpecInterface::DeviceID deviceID);
+      TargetSystemSpecInterface::DeviceID deviceID);
   }];
   let extraClassDefinition = [{
     std::optional<TargetDeviceSpecInterface>
     $cppClass::getDeviceSpecForDeviceID(
-        TargetDeviceSpecInterface::DeviceID deviceID) {
-      for (TargetDeviceSpecInterface entry : getEntries()) {
-        if (entry.getDeviceID() == deviceID)
-          return entry;
+        TargetSystemSpecInterface::DeviceID deviceID) {
+      for (const auto& entry : getEntries()) {
+        if (entry.first == deviceID)
+          return entry.second;
       }
       return std::nullopt;
     }
@@ -173,15 +170,12 @@ def DLTI_TargetDeviceSpecAttr :
   }];
   let description = [{
     Each device specification describes a single device and its
-    hardware properties. Each device specification must have a device_id
-    and a device_type. In addition, the specification can contain any number
+    hardware properties. Each device specification can contain any number
     of optional hardware properties (e.g., max_vector_op_width below).
 
     Example:
       #dlti.target_device_spec<
-            #dlti.dl_entry<"dlti.device_id", 1: ui32>,
-            #dlti.dl_entry<"dlti.device_type", "GPU">,
-            #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>
+        #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>
   }];
   let parameters = (ins
     ArrayRefParameter<"DataLayoutEntryInterface", "">:$entries
@@ -190,27 +184,11 @@ def DLTI_TargetDeviceSpecAttr :
   let genVerifyDecl = 1;
   let assemblyFormat = "`<` $entries `>`";
   let extraClassDeclaration = [{
-    /// Returns the device ID identifier.
-    StringAttr getDeviceIDIdentifier();
-
-    /// Returns the device type identifier.
-    StringAttr getDeviceTypeIdentifier();
-
     /// Returns max vector op width identifier.
     StringAttr getMaxVectorOpWidthIdentifier();
 
     /// Returns L1 cache size identifier
     StringAttr getL1CacheSizeInBytesIdentifier();
-
-    /// Returns the interface spec for device ID
-    /// Since we verify that the spec contains device ID the function
-    /// will return a valid spec.
-    DataLayoutEntryInterface getSpecForDeviceID();
-
-    /// Returns the interface spec for device type
-    /// Since we verify that the spec contains device type the function
-    /// will return a valid spec.
-    DataLayoutEntryInterface getSpecForDeviceType();
 
     /// Returns the interface spec for max vector op width
     /// Since max vector op width is an optional property, this function will
@@ -223,9 +201,6 @@ def DLTI_TargetDeviceSpecAttr :
     /// return a valid spec if the property is defined, otherwise it
     /// will return an empty spec.
     DataLayoutEntryInterface getSpecForL1CacheSizeInBytes();
-
-    /// Return the value of device ID
-    TargetDeviceSpecInterface::DeviceID getDeviceID();
   }];
 }
 

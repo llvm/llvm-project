@@ -31,6 +31,10 @@ using DataLayoutEntryKey = llvm::PointerUnion<Type, StringAttr>;
 using DataLayoutEntryList = llvm::SmallVector<DataLayoutEntryInterface, 4>;
 using DataLayoutEntryListRef = llvm::ArrayRef<DataLayoutEntryInterface>;
 using TargetDeviceSpecListRef = llvm::ArrayRef<TargetDeviceSpecInterface>;
+using DeviceIDTargetDeviceSpecPair =
+    std::pair<StringAttr, TargetDeviceSpecInterface>;
+using DeviceIDTargetDeviceSpecPairListRef =
+    llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>;
 class DataLayoutOpInterface;
 class DataLayoutSpecInterface;
 class ModuleOp;
@@ -246,12 +250,12 @@ public:
   /// Returns for max vector op width if the property is defined for the given
   /// device ID, otherwise return std::nullopt.
   std::optional<uint32_t>
-      getMaxVectorOpWidth(TargetDeviceSpecInterface::DeviceID) const;
+      getMaxVectorOpWidth(TargetSystemSpecInterface::DeviceID) const;
 
   /// Returns for L1 cache size if the property is defined for the given
   /// device ID, otherwise return std::nullopt.
   std::optional<uint32_t>
-      getL1CacheSizeInBytes(TargetDeviceSpecInterface::DeviceID) const;
+      getL1CacheSizeInBytes(TargetSystemSpecInterface::DeviceID) const;
 
 private:
   /// Combined layout spec at the given scope.

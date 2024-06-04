@@ -239,20 +239,6 @@ def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface"> {
       /*defaultImplementation=*/[{ return ::mlir::success(); }]
     >,
     InterfaceMethod<
-      /*description=*/"Returns the entry related to Device ID. The function"
-                      "will crash if the entry is missing.",
-      /*retTy=*/"::mlir::DataLayoutEntryInterface",
-      /*methodName=*/"getSpecForDeviceID",
-      /*args=*/(ins)
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns the entry related to Device Type. "
-                      "The function will crash if the entry is missing.",
-      /*retTy=*/"::mlir::DataLayoutEntryInterface",
-      /*methodName=*/"getSpecForDeviceType",
-      /*args=*/(ins)
-    >,
-    InterfaceMethod<
       /*description=*/"Returns the entry related to the given identifier, if "
                       "present. Otherwise, return empty spec.",
       /*retTy=*/"::mlir::DataLayoutEntryInterface",
@@ -265,19 +251,8 @@ def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface"> {
       /*retTy=*/"::mlir::DataLayoutEntryInterface",
       /*methodName=*/"getSpecForL1CacheSizeInBytes",
       /*args=*/(ins)
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns the entry related to the given identifier, if "
-                      "present.",
-      /*retTy=*/"uint32_t",
-      /*methodName=*/"getDeviceID",
-      /*args=*/(ins)
-    >,
+    >
   ];
-
-  let extraClassDeclaration = [{
-    using DeviceID = uint32_t;
-  }];
 }
 
 def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface"> {
@@ -300,7 +275,7 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface"> {
   let methods = [
     InterfaceMethod<
       /*description=*/"Returns the list of layout entries.",
-      /*retTy=*/"llvm::ArrayRef<::mlir::TargetDeviceSpecInterface>",
+      /*retTy=*/"llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>",
       /*methodName=*/"getEntries",
       /*args=*/(ins)
     >,
@@ -309,7 +284,7 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface"> {
                       "ID",
       /*retTy=*/"std::optional<::mlir::TargetDeviceSpecInterface>",
       /*methodName=*/"getDeviceSpecForDeviceID",
-      /*args=*/(ins "TargetDeviceSpecInterface::DeviceID":$deviceID)
+      /*args=*/(ins "StringAttr":$deviceID)
     >,
     InterfaceMethod<
       /*description=*/"Verifies the validity of the specification and "
@@ -323,6 +298,10 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface"> {
       }]
     >
   ];
+
+  let extraClassDeclaration = [{
+    using DeviceID = StringAttr;
+  }];
 }
 
 //===----------------------------------------------------------------------===//

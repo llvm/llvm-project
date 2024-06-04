@@ -58,12 +58,6 @@ def DLTI_Dialect : Dialect {
 
     // Constants used in target description part of DLTI.
     constexpr const static ::llvm::StringLiteral
-    kTargetDeviceIDKey = "dlti.device_id";
-
-    constexpr const static ::llvm::StringLiteral
-    kTargetDeviceTypeKey = "dlti.device_type";
-
-    constexpr const static ::llvm::StringLiteral
     kTargetDeviceMaxVectorOpWidthKey = "dlti.max_vector_op_width";
 
     constexpr const static ::llvm::StringLiteral

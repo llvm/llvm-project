@@ -678,7 +678,7 @@ uint64_t mlir::DataLayout::getStackAlignment() const {
 }
 
 std::optional<uint32_t> mlir::DataLayout::getMaxVectorOpWidth(
-    TargetDeviceSpecInterface::DeviceID deviceID) const {
+    TargetSystemSpecInterface::DeviceID deviceID) const {
   checkValid();
   DataLayoutEntryInterface entry;
   if (originalTargetSystemDesc) {
@@ -697,7 +697,7 @@ std::optional<uint32_t> mlir::DataLayout::getMaxVectorOpWidth(
 }
 
 std::optional<uint32_t> mlir::DataLayout::getL1CacheSizeInBytes(
-    TargetDeviceSpecInterface::DeviceID deviceID) const {
+    TargetSystemSpecInterface::DeviceID deviceID) const {
   checkValid();
   DataLayoutEntryInterface entry;
   if (originalTargetSystemDesc) {
@@ -823,15 +823,16 @@ LogicalResult
 mlir::detail::verifyTargetSystemSpec(TargetSystemSpecInterface spec,
                                      Location loc) {
   DenseMap<StringAttr, DataLayoutEntryInterface> device_desc_keys;
-  DenseSet<TargetDeviceSpecInterface::DeviceID> device_ids;
-  for (TargetDeviceSpecInterface tdd_spec : spec.getEntries()) {
+  DenseSet<TargetSystemSpecInterface::DeviceID> device_ids;
+  for (const auto &entry : spec.getEntries()) {
+    TargetDeviceSpecInterface tdd_spec = entry.second;
     // First, verify individual target device desc specs.
     if (failed(tdd_spec.verifyEntry(loc)))
       return failure();
 
     // Check that device IDs are unique across all entries.
     MLIRContext *context = tdd_spec.getContext();
-    TargetDeviceSpecInterface::DeviceID device_id = tdd_spec.getDeviceID();
+    TargetSystemSpecInterface::DeviceID device_id = entry.first;
     if (!device_ids.insert(device_id).second) {
       return failure();
     }

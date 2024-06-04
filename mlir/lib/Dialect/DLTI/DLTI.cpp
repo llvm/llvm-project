@@ -239,6 +239,35 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
   return DataLayoutSpecAttr::get(getContext(), entries);
 }
 
+StringAttr
+DataLayoutSpecAttr::getEndiannessIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(DLTIDialect::kDataLayoutEndiannessKey);
+}
+
+StringAttr
+DataLayoutSpecAttr::getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutAllocaMemorySpaceKey);
+}
+
+StringAttr DataLayoutSpecAttr::getProgramMemorySpaceIdentifier(
+    MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutProgramMemorySpaceKey);
+}
+
+StringAttr
+DataLayoutSpecAttr::getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutGlobalMemorySpaceKey);
+}
+
+StringAttr
+DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutStackAlignmentKey);
+}
+
 /// Parses an attribute with syntax
 ///   attr ::= `#target.` `dl_spec` `<` attr-list? `>`
 ///   attr-list ::= attr
@@ -271,14 +300,48 @@ void DataLayoutSpecAttr::print(AsmPrinter &os) const {
 // TargetDeviceSpecAttr
 //===----------------------------------------------------------------------===//
 
+namespace mlir {
+template <>
+struct FieldParser<DeviceIDTargetDeviceSpecPair> {
+  static FailureOr<DeviceIDTargetDeviceSpecPair> parse(AsmParser &parser) {
+    std::string deviceID;
+
+    if (failed(parser.parseString(&deviceID))) {
+      parser.emitError(parser.getCurrentLocation())
+          << "DeviceID is missing, or is not of string type";
+      return failure();
+    }
+
+    if (failed(parser.parseColon())) {
+      parser.emitError(parser.getCurrentLocation()) << "Missing colon";
+      return failure();
+    }
+
+    auto target_device_spec =
+        FieldParser<TargetDeviceSpecInterface>::parse(parser);
+    if (failed(target_device_spec)) {
+      parser.emitError(parser.getCurrentLocation())
+          << "Error in parsing target device spec";
+      return failure();
+    }
+
+    return std::make_pair(parser.getBuilder().getStringAttr(deviceID),
+                          *target_device_spec);
+  }
+};
+
+inline AsmPrinter &operator<<(AsmPrinter &printer,
+                              DeviceIDTargetDeviceSpecPair param) {
+  return printer << param.first << " : " << param.second;
+}
+
+} // namespace mlir
+
 LogicalResult
 TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                              ArrayRef<DataLayoutEntryInterface> entries) {
   // Entries in tdd_spec can only have StringAttr as key. It does not support
   // type as a key. Hence not reusing DataLayoutEntryInterface::verify.
-  bool targetDeviceIDKeyPresentAndValid = false;
-  bool targetDeviceTypeKeyPresentAndValid = false;
-
   DenseSet<StringAttr> ids;
   for (DataLayoutEntryInterface entry : entries) {
     if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
@@ -291,21 +354,9 @@ TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
         return emitError() << "repeated layout entry key: " << id.getValue();
     }
 
-    // check that Device ID and Device Type are present.
+    // Check that required keys are of right type.
     StringRef entryName = entry.getKey().get<StringAttr>().strref();
-    if (entryName == DLTIDialect::kTargetDeviceIDKey) {
-      // Also check the type of the value.
-      IntegerAttr value =
-          llvm::dyn_cast_if_present<IntegerAttr>(entry.getValue());
-      if (value && value.getType().isUnsignedInteger(32)) {
-        targetDeviceIDKeyPresentAndValid = true;
-      }
-    } else if (entryName == DLTIDialect::kTargetDeviceTypeKey) {
-      // Also check the type of the value.
-      if (auto value = llvm::dyn_cast<StringAttr>(entry.getValue())) {
-        targetDeviceTypeKeyPresentAndValid = true;
-      }
-    } else if (entryName == DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey) {
+    if (entryName == DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey) {
       IntegerAttr value =
           llvm::dyn_cast_if_present<IntegerAttr>(entry.getValue());
       if (!value || !value.getType().isUnsignedInteger(32))
@@ -325,28 +376,7 @@ TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     }
   }
 
-  // check that both DeviceID and DeviceType are present
-  // and are of correct type.
-  if (!targetDeviceIDKeyPresentAndValid) {
-    return emitError() << "target_device_spec requires key: "
-                       << DLTIDialect::kTargetDeviceIDKey
-                       << " and its value of ui32 type";
-  }
-  if (!targetDeviceTypeKeyPresentAndValid) {
-    return emitError() << "target_device_spec requires key: "
-                       << DLTIDialect::kTargetDeviceTypeKey
-                       << " and its value of string type";
-  }
-
   return success();
-}
-
-StringAttr TargetDeviceSpecAttr::getDeviceIDIdentifier() {
-  return Builder(getContext()).getStringAttr(DLTIDialect::kTargetDeviceIDKey);
-}
-
-StringAttr TargetDeviceSpecAttr::getDeviceTypeIdentifier() {
-  return Builder(getContext()).getStringAttr(DLTIDialect::kTargetDeviceTypeKey);
 }
 
 StringAttr TargetDeviceSpecAttr::getMaxVectorOpWidthIdentifier() {
@@ -359,14 +389,6 @@ StringAttr TargetDeviceSpecAttr::getL1CacheSizeInBytesIdentifier() {
       .getStringAttr(DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey);
 }
 
-DataLayoutEntryInterface TargetDeviceSpecAttr::getSpecForDeviceID() {
-  return getSpecForIdentifier(getDeviceIDIdentifier());
-}
-
-DataLayoutEntryInterface TargetDeviceSpecAttr::getSpecForDeviceType() {
-  return getSpecForIdentifier(getDeviceTypeIdentifier());
-}
-
 DataLayoutEntryInterface TargetDeviceSpecAttr::getSpecForMaxVectorOpWidth() {
   return getSpecForIdentifier(getMaxVectorOpWidthIdentifier());
 }
@@ -375,62 +397,30 @@ DataLayoutEntryInterface TargetDeviceSpecAttr::getSpecForL1CacheSizeInBytes() {
   return getSpecForIdentifier(getL1CacheSizeInBytesIdentifier());
 }
 
-TargetDeviceSpecInterface::DeviceID TargetDeviceSpecAttr::getDeviceID() {
-  DataLayoutEntryInterface entry = getSpecForDeviceID();
-  return llvm::cast<IntegerAttr>(entry.getValue()).getValue().getZExtValue();
-}
-
 //===----------------------------------------------------------------------===//
 // TargetSystemSpecAttr
 //===----------------------------------------------------------------------===//
 
 LogicalResult
 TargetSystemSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                             ArrayRef<TargetDeviceSpecInterface> entries) {
-  DenseSet<uint32_t> device_ids;
+                             ArrayRef<DeviceIDTargetDeviceSpecPair> entries) {
+  DenseSet<TargetSystemSpecInterface::DeviceID> device_ids;
 
-  for (TargetDeviceSpecInterface tdd_spec : entries) {
+  for (const auto &entry : entries) {
+    TargetDeviceSpecInterface tdd_spec = entry.second;
+
     // First verify that a target device spec is valid.
     if (failed(TargetDeviceSpecAttr::verify(emitError, tdd_spec.getEntries())))
       return failure();
 
     // Check that device IDs are unique across all entries.
-    uint32_t device_id = tdd_spec.getDeviceID();
+    TargetSystemSpecInterface::DeviceID device_id = entry.first;
     if (!device_ids.insert(device_id).second) {
       return emitError() << "repeated Device ID in dlti.target_system_spec: "
                          << device_id;
     }
   }
   return success();
-}
-
-StringAttr
-DataLayoutSpecAttr::getEndiannessIdentifier(MLIRContext *context) const {
-  return Builder(context).getStringAttr(DLTIDialect::kDataLayoutEndiannessKey);
-}
-
-StringAttr
-DataLayoutSpecAttr::getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
-  return Builder(context).getStringAttr(
-      DLTIDialect::kDataLayoutAllocaMemorySpaceKey);
-}
-
-StringAttr DataLayoutSpecAttr::getProgramMemorySpaceIdentifier(
-    MLIRContext *context) const {
-  return Builder(context).getStringAttr(
-      DLTIDialect::kDataLayoutProgramMemorySpaceKey);
-}
-
-StringAttr
-DataLayoutSpecAttr::getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
-  return Builder(context).getStringAttr(
-      DLTIDialect::kDataLayoutGlobalMemorySpaceKey);
-}
-
-StringAttr
-DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
-  return Builder(context).getStringAttr(
-      DLTIDialect::kDataLayoutStackAlignmentKey);
 }
 
 //===----------------------------------------------------------------------===//
@@ -483,9 +473,7 @@ public:
       StringRef entryName = dl_entry.getKey().get<StringAttr>().strref();
       // Check that the key name is known to us. Although, we may allow keys
       // unknown to us.
-      if (entryName != DLTIDialect::kTargetDeviceIDKey &&
-          entryName != DLTIDialect::kTargetDeviceTypeKey &&
-          entryName != DLTIDialect::kTargetDeviceMaxVectorOpWidthKey &&
+      if (entryName != DLTIDialect::kTargetDeviceMaxVectorOpWidthKey &&
           entryName != DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey)
         return emitError(loc) << "unknown target desc key name: " << entryName;
     }
