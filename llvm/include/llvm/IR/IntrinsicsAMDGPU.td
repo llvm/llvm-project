@@ -3290,6 +3290,37 @@ class AMDGPUDiscard : DefaultAttrsIntrinsic<
 foreach size = ["b32", "b128", "b1024"] in
   def int_amdgcn_discard_#size : AMDGPUDiscard;
 
+def int_amdgcn_wconv_3x3 :
+  DefaultAttrsIntrinsic<
+    [llvm_any_ty],      // %out
+    [
+      llvm_any_ty,      // %accumulator
+      llvm_any_ty,      // %weights
+      llvm_any_ty,      // %tensor_col_center
+      LLVMMatchType<3>, // %tensor_col_left
+      LLVMMatchType<3>, // %tensor_col_right
+      llvm_i32_ty,      // %aux_data
+      llvm_i1_ty        // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>]
+  >;
+
+def int_amdgcn_wconv_1x1 :
+  DefaultAttrsIntrinsic<
+    [llvm_any_ty], // %out
+    [
+      llvm_any_ty,      // %accumulator
+      llvm_any_ty,      // %weights
+      llvm_any_ty,      // %tensor_0
+      LLVMMatchType<3>, // %tensor_1
+      LLVMMatchType<3>, // %tensor_2
+      LLVMMatchType<3>, // %tensor_3
+      llvm_i32_ty,      // %aux_data
+      llvm_i1_ty        // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>]
+  >;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//

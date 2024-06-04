@@ -19364,6 +19364,41 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return Dest0;
   }
 
+  case AMDGPU::BI__builtin_amdgcn_wconv_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_1x1_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_1x1_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_3x3_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_3x3_8x4: {
+    unsigned IntrinsicID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_wconv_1x1_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_1x1_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_1x1_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_3x3_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_3x3_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_3x3_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_3x3;
+      break;
+    }
+
+    SmallVector<Value *, 10> Args;
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+
+    SmallVector<llvm::Type *, 7> ArgTypes;
+    llvm::Type *ResultType = ConvertType(E->getType());
+    ArgTypes.push_back(ResultType);
+    for (int i = 0, e = 3; i != e; ++i)
+      ArgTypes.push_back(Args[i]->getType());
+
+    Function *F = CGM.getIntrinsic(IntrinsicID, ArgTypes);
+
+    return Builder.CreateCall(F, Args);
+  }
+
   // amdgcn workitem
   case AMDGPU::BI__builtin_amdgcn_workitem_id_x:
     return emitRangedBuiltin(*this, Intrinsic::amdgcn_workitem_id_x, 0, 1024);
