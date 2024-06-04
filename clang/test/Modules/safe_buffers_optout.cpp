@@ -1,8 +1,10 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodule-name=safe_buffers_test_base -x c++ %S/Inputs/SafeBuffers/safe_buffers_test.modulemap -std=c++20\
 // RUN:     -o %t/safe_buffers_test_base.pcm -Wunsafe-buffer-usage
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodule-name=safe_buffers_test_module -x c++ %S/Inputs/SafeBuffers/safe_buffers_test.modulemap -std=c++20\
+// RUN:     -o %t/safe_buffers_test_module.pcm
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodule-name=safe_buffers_test_optout -x c++ %S/Inputs/SafeBuffers/safe_buffers_test.modulemap -std=c++20\
-// RUN:     -o %t/safe_buffers_test_optout.pcm -fmodule-file=%t/safe_buffers_test_base.pcm -Wunsafe-buffer-usage
+// RUN:     -o %t/safe_buffers_test_optout.pcm -fmodule-file=%t/safe_buffers_test_base.pcm -fmodule-file=%t/safe_buffers_test_module.pcm -Wunsafe-buffer-usage
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -verify -fmodule-file=%t/safe_buffers_test_optout.pcm -I %S/Inputs/SafeBuffers %s\
 // RUN:     -std=c++20 -Wunsafe-buffer-usage
 
@@ -33,3 +35,7 @@ int foo(int * p) {
   sub1_T(p); // instantiate template
   return base(p) + sub1(p) + sub2(p);
 }
+
+#pragma clang unsafe_buffer_usage begin
+#include "test_module.h"         // This module header is textually included (i.e., it is in the same TU as %s), so warnings are suppressed
+#pragma clang unsafe_buffer_usage end

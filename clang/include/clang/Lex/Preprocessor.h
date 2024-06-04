@@ -2883,15 +2883,46 @@ private:
   /// otherwise.
   SourceLocation CurrentSafeBufferOptOutStart; // It is used to report the start location of an never-closed region.
 
-  using SafeBufferOptOutMapTy =
+  using SafeBufferOptOutRegionsTy =
       SmallVector<std::pair<SourceLocation, SourceLocation>, 16>;
   // An ordered sequence of "-Wunsafe-buffer-usage" opt-out regions in this
   // translation unit. Each region is represented by a pair of start and
-  // end locations.  A region is "open" if its' start and end locations are
-  // identical.
-  SafeBufferOptOutMapTy SafeBufferOptOutMap;
-  // `SafeBufferOptOutMap`s of loaded files:
-  llvm::DenseMap<FileID, SafeBufferOptOutMapTy> LoadedSafeBufferOptOutMap;
+  // end locations.
+  SafeBufferOptOutRegionsTy SafeBufferOptOutMap;
+  // The "-Wunsafe-buffer-usage" opt-out regions in loaded ASTs.  We use the
+  // following structure to manage them by their ASTs.
+  struct {
+    // The first FileID of a loaded AST can be used to represent the
+    // loaded AST.  (By the exact words on
+    // `SourceManager::LoadedSLocEntryAllocBegin`, first FileIDs can be used
+    // to tell if they are from the same loaded AST.)
+    //
+    // The map below is from such FileIDs to the opt-out regions associated to
+    // their loaded ASTs.
+    llvm::DenseMap<FileID, SafeBufferOptOutRegionsTy> FirstFID2Regions;
+
+    // Returns a reference to the safe buffer opt-out regions of the loaded
+    // AST where `Loc` belongs to. (Construct if absent)
+    SafeBufferOptOutRegionsTy &
+    findAndConsLoadedOptOutMap(SourceLocation Loc, SourceManager &SrcMgr) {
+      FileID FID = SrcMgr.getFirstFIDOfLoadedAST(Loc);
+      return FirstFID2Regions.FindAndConstruct(FID).second;
+    }
+
+    // Returns a reference to the safe buffer opt-out regions of the loaded
+    // AST where `Loc` belongs to. (This const function returns nullptr if
+    // absent.)
+    const SafeBufferOptOutRegionsTy *
+    lookupLoadedOptOutMap(SourceLocation Loc,
+                          const SourceManager &SrcMgr) const {
+      FileID FID = SrcMgr.getFirstFIDOfLoadedAST(Loc);
+      auto Iter = FirstFID2Regions.find_as(FID);
+
+      if (Iter == FirstFID2Regions.end())
+        return nullptr;
+      return &Iter->getSecond();
+    }
+  } LoadedSafeBufferOptOutMap;
 
 public:
   /// \return true iff the given `Loc` is in a "-Wunsafe-buffer-usage" opt-out
@@ -2929,10 +2960,9 @@ public:
 
   /// \param SrcLocSeqs a sequence of SourceLocations deserialized from a
   /// record of code `PP_UNSAFE_BUFFER_USAGE`.
-  /// \return `std::nullopt` iff deserialization succeeds and this PP has been
-  /// properly set; Otherwise, a StringRef carrying the message of why
-  /// serialization fails with this PP being untouched.
-  std::optional<StringRef> setDeserializedSafeBufferOptOutMap(
+  /// \return true iff the `Preprocessor` has been updated; false `Preprocessor`
+  /// is same as itself before the call.
+  bool setDeserializedSafeBufferOptOutMap(
       const SmallVectorImpl<SourceLocation> &SrcLocSeqs);
 
 private:

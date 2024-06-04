@@ -3592,9 +3592,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         unsigned Idx = 0;
         while (Idx < Record.size())
           SrcLocs.push_back(ReadSourceLocation(F, Record, Idx));
-        if (auto ErrMsg = PP.setDeserializedSafeBufferOptOutMap(SrcLocs))
-          return llvm::createStringError(std::errc::invalid_argument,
-                                         ErrMsg->data());
+        PP.setDeserializedSafeBufferOptOutMap(SrcLocs);
       }
       break;
     }

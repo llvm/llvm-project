@@ -1487,7 +1487,7 @@ bool Preprocessor::isSafeBufferOptOut(const SourceManager &SourceMgr,
                                       const SourceLocation &Loc) const {
   // The lambda that tests if a `Loc` is in an opt-out region given one opt-out
   // region map:
-  auto TestInMap = [&SourceMgr](const SafeBufferOptOutMapTy &Map,
+  auto TestInMap = [&SourceMgr](const SafeBufferOptOutRegionsTy &Map,
                                 const SourceLocation &Loc) -> bool {
     // Try to find a region in `SafeBufferOptOutMap` where `Loc` is in:
     auto FirstRegionEndingAfterLoc = llvm::partition_point(
@@ -1511,14 +1511,13 @@ bool Preprocessor::isSafeBufferOptOut(const SourceManager &SourceMgr,
   if (SourceMgr.isLocalSourceLocation(Loc))
     return TestInMap(SafeBufferOptOutMap, Loc);
 
-  // Expand macros (if any) until it gets to a file location:
-  SourceLocation FLoc = SourceMgr.getFileLoc(Loc);
-  FileID FlocFID = SourceMgr.getDecomposedLoc(FLoc).first;
-  auto LoadedMap = LoadedSafeBufferOptOutMap.find(FlocFID);
+  // If Loc is from a loaded AST:
+  const SafeBufferOptOutRegionsTy *LoadedRegions =
+      LoadedSafeBufferOptOutMap.lookupLoadedOptOutMap(Loc, SourceMgr);
 
-  if (LoadedMap != LoadedSafeBufferOptOutMap.end())
-    return TestInMap(LoadedMap->getSecond(), Loc);
-  // FIXME: think out if this is unreachable?
+  if (LoadedRegions)
+    return TestInMap(*LoadedRegions, Loc);
+  // The loaded AST has no opt-out region:
   return false;
 }
 
@@ -1587,39 +1586,25 @@ Preprocessor::serializeSafeBufferOptOutMap() const {
   return SrcSeq;
 }
 
-std::optional<StringRef> Preprocessor::setDeserializedSafeBufferOptOutMap(
+bool Preprocessor::setDeserializedSafeBufferOptOutMap(
     const SmallVectorImpl<SourceLocation> &SourceLocations) {
-  auto It = SourceLocations.begin();
-  decltype(LoadedSafeBufferOptOutMap)
-      TmpMap; // temporarily hold data for `LoadedSafeBufferOptOutMap`
+  if (SourceLocations.size() == 0)
+    return false;
 
   assert(SourceLocations.size() % 2 == 0 &&
          "ill-formed SourceLocation sequence");
-  while (It != SourceLocations.end()) {
-    SourceLocation begin = *It++;
-    SourceLocation end = *It++;
-    SourceLocation FileLoc = SourceMgr.getFileLoc(begin);
-    FileID FID = SourceMgr.getDecomposedLoc(FileLoc).first;
 
-    assert(!FID.isInvalid() &&
-           "Attempted to read a safe buffer opt-out region whose "
-           "begin location is associated to an invalid File ID.");
-    assert(!SourceMgr.isLocalFileID(FID) && "Expected a pch/module file");
-    // Here we require that
-    // `SourceMgr.getFileLoc(begin) == SourceMgr.getFileLoc(end)`.
-    // Though it may not hold in very rare and strange cases, i.e., a pair of
-    // opt-out pragams written in different files but are always used in a way
-    // that they match in a TU (otherwise PP will complaint).
-    // FIXME: PP should complaint about cross file safe buffer opt-out pragmas.
-    if (FID != SourceMgr.getDecomposedLoc(SourceMgr.getFileLoc(end)).first) {
-      return "Cannot de-serialize a safe buffer opt-out region that begins and "
-             "ends at different files";
-    }
-    TmpMap[FID].emplace_back(begin, end);
-  }
-  for (auto [K, V] : TmpMap)
-    LoadedSafeBufferOptOutMap[K].append(V);
-  return std::nullopt;
+  auto It = SourceLocations.begin();
+  SafeBufferOptOutRegionsTy &Regions =
+      LoadedSafeBufferOptOutMap.findAndConsLoadedOptOutMap(*It, SourceMgr);
+
+  do {
+    SourceLocation Begin = *It++;
+    SourceLocation End = *It++;
+
+    Regions.emplace_back(Begin, End);
+  } while (It != SourceLocations.end());
+  return true;
 }
 
 ModuleLoader::~ModuleLoader() = default;
