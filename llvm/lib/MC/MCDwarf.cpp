@@ -11,6 +11,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -1869,6 +1870,8 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   // label differences will be evaluate at write time.
   assert(Streamer.getUseAssemblerInfoForParsing());
   Streamer.setUseAssemblerInfoForParsing(false);
+  auto Enable = llvm::make_scope_exit(
+      [&]() { Streamer.setUseAssemblerInfoForParsing(true); });
 
   // Emit the compact unwind info if available.
   bool NeedsEHFrameSection = !MOFI->getSupportsCompactUnwindWithoutEHFrame();
@@ -1936,7 +1939,6 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
 
     Emitter.EmitFDE(*CIEStart, Frame, I == E, *SectionStart);
   }
-  Streamer.setUseAssemblerInfoForParsing(true);
 }
 
 void MCDwarfFrameEmitter::encodeAdvanceLoc(MCContext &Context,
