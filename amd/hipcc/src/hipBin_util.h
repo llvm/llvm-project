@@ -341,7 +341,7 @@ SystemCmdOut HipBinUtil::exec(const char* cmd,
       sysOut.exitCode =  WEXITSTATUS(closeStatus);
     #endif
     if (printConsole == true) {
-      cout << result << endl;
+      cout << result;
     }
     sysOut.out = result;
   }
