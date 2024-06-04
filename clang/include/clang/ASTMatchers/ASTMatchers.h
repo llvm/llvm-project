@@ -10292,7 +10292,7 @@ AST_MATCHER_P(CaseStmt, hasCaseConstant, internal::Matcher<Expr>,
 /// \code
 ///   __attribute__((device)) void f() {}
 /// \endcode
-/// \compile_args{--cuda-gpu-arch=sm_70}
+/// \compile_args{--cuda-gpu-arch=sm_70;-std=c++}
 /// The matcher \matcher{decl(hasAttr(clang::attr::CUDADevice))}
 /// matches \match{type=name$f}.
 /// If the matcher is used from clang-query, attr::Kind
@@ -10331,12 +10331,12 @@ AST_MATCHER_P(ReturnStmt, hasReturnValue, internal::Matcher<Expr>,
 /// \code
 ///   __global__ void kernel() {}
 ///   void f() {
-///     kernel<<<32,32>>>();
+///     kernel<<<32, 32>>>();
 ///   }
 /// \endcode
-/// \compile_args{--cuda-gpu-arch=sm_70}
+/// \compile_args{--cuda-gpu-arch=sm_70;-std=c++}
 /// The matcher \matcher{cudaKernelCallExpr()}
-/// matches \match{kernel<<<i, k>>>()}
+/// matches \match{kernel<<<32, 32>>>()}
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CUDAKernelCallExpr>
     cudaKernelCallExpr;
 

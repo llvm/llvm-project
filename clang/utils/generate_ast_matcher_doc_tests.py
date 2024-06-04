@@ -341,6 +341,13 @@ class CompileArgs:
         self.lang_spec = TestLanguage(get_lang_spec_and_remove_from_list(args))
         self.args = args
 
+        if any(("cuda" in arg for arg in self.args)) and not any(
+            "-x" in arg for arg in self.args
+        ):
+            self.args.append("-xcuda")
+            self.args.append("-nocudainc")
+            self.args.append("-nocudalib")
+
     def is_cuda(self) -> bool:
         return any("cuda" in cmd for cmd in self.args)
 
@@ -397,7 +404,7 @@ def get_with_lang_spec(args: CompileArgs) -> list[str]:
 
 
 cuda_header: str = """
-    typedef unsigned int size_t;
+    typedef unsigned long long size_t;
     #define __constant__ __attribute__((constant))
     #define __device__ __attribute__((device))
     #define __global__ __attribute__((global))
@@ -595,18 +602,15 @@ class TestCase:
     def build_test_case(self):
         self.code = self.code.strip("\n")
         has_cuda = self.compile_args and self.compile_args.is_cuda()
+        if has_cuda:
+            self.headers.append(("cuda.h", cuda_header))
+
         res = ""
         if has_cuda:
             res += "#if LLVM_HAS_NVPTX_TARGET\n"
 
         res += f"""TEST_P(ASTMatchersDocTest, docs_{self.line + 1}) {{
-    const StringRef Code = R"cpp(\n{self.code})cpp";\n"""
-
-        if has_cuda:
-            res += f"""
-    const StringRef CudaHeader = R"cuda({cuda_header}
-    )cuda";
-"""
+    const StringRef Code = R"cpp(\n{"\t#include \"cuda.h\"\n" if has_cuda else ""}{self.code})cpp";\n"""
 
         if self.has_headers():
             res += f"\tconst FileContentMappings VirtualMappedFiles = {{{self.get_formated_headers()}}};"
@@ -687,7 +691,7 @@ class TestCase:
 {code_adding_matches}
 
     EXPECT_TRUE({match_function}(
-        {"CudaHeader + " if has_cuda else ""}Code,
+        Code,
         {matcher.matcher}.bind("match"),
         std::make_unique<Verifier>("match", Matches)"""
 
