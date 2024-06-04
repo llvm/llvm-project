@@ -604,6 +604,20 @@ static llvm::json::Array toJSONSorted(std::vector<ModuleID> V) {
   return Ret;
 }
 
+static llvm::json::Array
+toJSONSorted(llvm::SmallVector<Module::LinkLibrary, 2> &LinkLibs) {
+  llvm::sort(LinkLibs, [](const Module::LinkLibrary &lhs,
+                          const Module::LinkLibrary &rhs) {
+    return lhs.Library < rhs.Library;
+  });
+
+  llvm::json::Array Ret;
+  for (const Module::LinkLibrary &LL : LinkLibs)
+    Ret.push_back(llvm::json::Object(
+        {{"link-name", LL.Library}, {"isFramework", LL.IsFramework}}));
+  return Ret;
+}
+
 // Thread safe.
 class FullDeps {
 public:
@@ -704,6 +718,7 @@ public:
           {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
           {"clang-modulemap-file", MD.ClangModuleMapFile},
           {"command-line", MD.getBuildArguments()},
+          {"link-libraries", toJSONSorted(MD.LinkLibraries)}};
       };
       if (MD.ModuleCacheKey)
         O.try_emplace("cache-key", MD.ModuleCacheKey);

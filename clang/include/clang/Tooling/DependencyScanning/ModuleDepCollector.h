@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
@@ -149,6 +150,10 @@ struct ModuleDeps {
 
   /// The \c ActionCache key for this module, if any.
   std::optional<std::string> ModuleCacheKey;
+
+  /// The set of libraries or frameworks to link against when
+  /// an entity from this module is used.
+  llvm::SmallVector<Module::LinkLibrary, 2> LinkLibraries;
 
   /// Get (or compute) the compiler invocation that can be used to build this
   /// module. Does not include argv[0].
