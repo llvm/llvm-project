@@ -322,6 +322,7 @@ DEFAULT_FEATURES = [
             cfg,
             """
             export module test;
+            int main(int, char**) { return 0; }
           """,
         ),
     ),
