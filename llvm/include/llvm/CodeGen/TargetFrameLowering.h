@@ -328,6 +328,11 @@ public:
   insertFrameLocation(const MachineFunction &MF, DIExprBuilder &Builder,
                       DIExprBuilder::Iterator BI, Type *ResultType) const;
 
+  virtual DIExpression *lowerFIArgToFPArg(const MachineFunction &MF,
+                                          const DIExpression *Expr,
+                                          uint64_t ArgIndex,
+                                          StackOffset Offset) const;
+
   /// Same as \c getFrameIndexReference, except that the stack pointer (as
   /// opposed to the frame pointer) will be the preferred value for \p
   /// FrameReg. This is generally used for emitting statepoint or EH tables that

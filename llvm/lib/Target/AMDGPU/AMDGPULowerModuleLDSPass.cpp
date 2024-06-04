@@ -1190,11 +1190,19 @@ private:
 
     performOptimizedStructLayout(LayoutFields);
 
-    struct VarInfo {
+    struct DIExprVarInfo {
       GlobalVariable *Var;
       uint64_t Offset;
     };
-    DenseMap<DIFragment*, VarInfo> Fragment2VarInfo;
+    DenseMap<DIFragment *, DIExprVarInfo> Fragment2VarInfo;
+
+    struct DIExpressionVarInfo {
+      GlobalVariable *Var;
+      Metadata *DIVar;
+      DIExpression::NewElementsRef Expr;
+      uint64_t Offset;
+    };
+    SmallVector<DIExpressionVarInfo> DIExpressionVarInfos;
 
     std::vector<GlobalVariable *> LocalVars;
     BitVector IsPaddingField;
@@ -1224,8 +1232,21 @@ private:
           CurrentOffset += Padding;
         }
 
-        if (isHeterogeneousDebug(M))
-          Fragment2VarInfo[FGV->getDbgDef()] = VarInfo{ FGV, CurrentOffset };
+        if (isHeterogeneousDebug(M)) {
+          Fragment2VarInfo[FGV->getDbgDef()] =
+              DIExprVarInfo{FGV, CurrentOffset};
+        } else {
+          SmallVector<DIGlobalVariableExpression *, 1> OriginalGVEs;
+          FGV->getDebugInfo(OriginalGVEs);
+          for (const auto *OriginalGVE : OriginalGVEs) {
+            if (auto NewElementsRef =
+                    OriginalGVE->getExpression()->getNewElementsRef()) {
+              DIExpressionVarInfos.push_back({FGV,
+                                              OriginalGVE->getRawVariable(),
+                                              *NewElementsRef, CurrentOffset});
+            }
+          }
+        }
 
         LocalVars.push_back(FGV);
         IsPaddingField.push_back(false);
@@ -1285,6 +1306,36 @@ private:
           L->setLocation(ExprBuilder.intoExpr());
           L->replaceOperandWith(2, DbgVarFragment);
         }
+      }
+    } else {
+      for (auto VarInfo : DIExpressionVarInfos) {
+        DIExprBuilder ExprBuilder(Ctx);
+        for (auto Op : VarInfo.Expr) {
+          if (auto *ArgOp = std::get_if<DIOp::Arg>(&Op)) {
+            assert(ArgOp->getIndex() == 0u &&
+                   "DIOp-based DIExpression in DIGlobalVariableExpression must "
+                   "have only one argument");
+            Type *ArgTy = SGV->getType();
+            assert(isa<PointerType>(ArgTy));
+            Type *ResultTy = VarInfo.Var->getType();
+            assert(isa<PointerType>(ResultTy));
+            assert(ArgTy->getPointerAddressSpace() ==
+                   ResultTy->getPointerAddressSpace());
+            unsigned PointerSizeInBits =
+                DL.getPointerSizeInBits(ArgTy->getPointerAddressSpace());
+            auto *IntTy = IntegerType::get(Ctx, PointerSizeInBits);
+            ConstantData *C = ConstantInt::get(IntTy, VarInfo.Offset, true);
+            ExprBuilder.append<DIOp::Arg>(0u, ArgTy);
+            ExprBuilder.append<DIOp::Reinterpret>(IntTy);
+            ExprBuilder.append<DIOp::Constant>(C);
+            ExprBuilder.append<DIOp::Add>();
+            ExprBuilder.append<DIOp::Reinterpret>(ResultTy);
+          } else {
+            ExprBuilder.append(Op);
+          }
+        }
+        SGV->addDebugInfo(DIGlobalVariableExpression::get(
+            Ctx, VarInfo.DIVar, ExprBuilder.intoExpression()));
       }
     }
 

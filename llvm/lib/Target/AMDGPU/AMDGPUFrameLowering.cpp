@@ -88,3 +88,33 @@ DIExprBuilder::Iterator AMDGPUFrameLowering::insertFrameLocation(
         DIOp::Deref(ResultType) });
   return Builder.insert(BI, FL) + FL.size();
 }
+
+DIExpression *AMDGPUFrameLowering::lowerFIArgToFPArg(const MachineFunction &MF,
+                                                     const DIExpression *Expr,
+                                                     uint64_t ArgIndex,
+                                                     StackOffset Offset) const {
+  const DataLayout &DL = MF.getDataLayout();
+  LLVMContext &Context = MF.getMMI().getModule()->getContext();
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
+  DIExprBuilder Builder(*Expr);
+  for (auto &&I = Builder.begin(); I != Builder.end(); ++I) {
+    if (auto *Arg = std::get_if<DIOp::Arg>(&*I)) {
+      if (Arg->getIndex() != ArgIndex)
+        continue;
+      Type *ResultType = Arg->getResultType();
+      unsigned PointerSizeInBits =
+          DL.getPointerSizeInBits(ResultType->getPointerAddressSpace());
+      auto *IntTy = IntegerType::get(Context, PointerSizeInBits);
+      ConstantData *WavefrontSizeLog2 = static_cast<ConstantData *>(
+          ConstantInt::get(IntTy, ST.getWavefrontSizeLog2(), false));
+      ConstantData *C = ConstantInt::get(IntTy, Offset.getFixed(), true);
+      SmallVector<DIOp::Variant> FL = {DIOp::Reinterpret(IntTy)};
+      if (!ST.enableFlatScratch())
+        FL.append({DIOp::Constant(WavefrontSizeLog2), DIOp::Shr()});
+      FL.append(
+          {DIOp::Constant(C), DIOp::Add(), DIOp::Reinterpret(ResultType)});
+      I = Builder.insert(++I, FL);
+    }
+  }
+  return Builder.intoExpression();
+}
