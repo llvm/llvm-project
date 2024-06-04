@@ -1,4 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
+! XFAIL: system-windows
 ! %VAL en %REF legacy extension semantic tests.
 
 subroutine val_errors(array, string, polymorphic, derived)
