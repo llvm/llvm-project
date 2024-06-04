@@ -189,8 +189,9 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   }
 
   if (DWOFilenames.empty()) {
-    WithColor::defaultWarningHandler(make_error<DWPError>("No dwo files found!\n"));
-    return 0;
+    WithColor::defaultWarningHandler(
+        make_error<DWPError>("No dwo files found!"));
+      return 0;
   }
 
   std::string ErrorStr;
