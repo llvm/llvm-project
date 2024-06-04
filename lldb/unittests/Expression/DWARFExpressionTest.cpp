@@ -95,6 +95,34 @@ public:
   }
 };
 
+// NB: This class doesn't use the override keyword to avoid
+// -Winconsistent-missing-override warnings from the compiler. The
+// inconsistency comes from the overriding definitions in the MOCK_*** macros.
+class MockTarget : public Target {
+public:
+  MockTarget(Debugger &debugger, const ArchSpec &target_arch,
+             const lldb::PlatformSP &platform_sp)
+      : Target(debugger, target_arch, platform_sp, true) {}
+
+  MOCK_METHOD2(ReadMemory,
+               llvm::Expected<std::vector<uint8_t>>(lldb::addr_t addr,
+                                                    size_t size));
+
+  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                    Status &error, bool force_live_memory = false,
+                    lldb::addr_t *load_addr_ptr = nullptr) /*override*/ {
+    auto expected_memory = this->ReadMemory(addr.GetOffset(), dst_len);
+    if (!expected_memory) {
+      llvm::consumeError(expected_memory.takeError());
+      return 0;
+    }
+    const size_t bytes_read = expected_memory->size();
+    assert(bytes_read <= dst_len);
+    std::memcpy(dst, expected_memory->data(), bytes_read);
+    return bytes_read;
+  }
+};
+
 TEST(DWARFExpression, DW_OP_pick) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1, DW_OP_lit0, DW_OP_pick, 0}),
                        llvm::HasValue(0));
@@ -767,4 +795,45 @@ Sections:
   auto *dwo_dwarf_unit = dwo_symfile.DebugInfo().GetUnitAtIndex(0);
 
   testExpressionVendorExtensions(dwo_module_sp, *dwo_dwarf_unit);
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
+  using ::testing::ByMove;
+  using ::testing::ElementsAre;
+  using ::testing::Return;
+
+  // Set up a mock process.
+  ArchSpec arch("i386-pc-linux");
+  Platform::SetHostPlatform(
+      platform_linux::PlatformLinux::CreateInstance(true, &arch));
+  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  lldb::PlatformSP platform_sp;
+  auto target_sp =
+      std::make_shared<MockTarget>(*debugger_sp, arch, platform_sp);
+  ASSERT_TRUE(target_sp);
+  ASSERT_TRUE(target_sp->GetArchitecture().IsValid());
+
+  EXPECT_CALL(*target_sp, ReadMemory(0x40, 1))
+      .WillOnce(Return(ByMove(std::vector<uint8_t>{0x11})));
+  EXPECT_CALL(*target_sp, ReadMemory(0x50, 1))
+      .WillOnce(Return(ByMove(std::vector<uint8_t>{0x22})));
+
+  ExecutionContext exe_ctx(static_cast<lldb::TargetSP>(target_sp), false);
+
+  uint8_t expr[] = {DW_OP_addr, 0x40, 0x0, 0x0, 0x0, DW_OP_piece, 1,
+                    DW_OP_addr, 0x50, 0x0, 0x0, 0x0, DW_OP_piece, 1};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 4);
+  Value result;
+  Status status;
+  ASSERT_TRUE(DWARFExpression::Evaluate(
+      &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor,
+      /*unit*/ nullptr, lldb::eRegisterKindLLDB,
+      /*initial_value_ptr*/ nullptr,
+      /*object_address_ptr*/ nullptr, result, &status))
+      << status.ToError();
+
+  ASSERT_EQ(result.GetValueType(), Value::ValueType::HostAddress);
+  ASSERT_THAT(result.GetBuffer().GetData(), ElementsAre(0x11, 0x22));
 }
