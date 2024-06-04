@@ -78,11 +78,6 @@ std::unique_ptr<mlir::Pass> createLLVMDialectToLLVMPass(
     LLVMIRLoweringPrinter printer =
         [](llvm::Module &m, llvm::raw_ostream &out) { m.print(out, nullptr); });
 
-/// Convert boxproc values to a lower level representation. The default is to
-/// use function pointers and thunks.
-std::unique_ptr<mlir::Pass> createBoxedProcedurePass();
-std::unique_ptr<mlir::Pass> createBoxedProcedurePass(bool useThunks);
-
 /// Populate the given list with patterns that convert from FIR to LLVM.
 void populateFIRToLLVMConversionPatterns(fir::LLVMTypeConverter &converter,
                                          mlir::RewritePatternSet &patterns,
