@@ -1581,7 +1581,10 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                       TrailingReturnTypeLoc, &DS),
                   std::move(Attributes), DeclEndLoc);
 
-    Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
+    // We have called ActOnLambdaClosureQualifiers for parentheses-less cases
+    // above.
+    if (HasParentheses)
+      Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
 
     if (HasParentheses && Tok.is(tok::kw_requires))
       ParseTrailingRequiresClause(D);
