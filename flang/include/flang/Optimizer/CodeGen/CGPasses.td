@@ -85,7 +85,6 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
 }
 
 def BoxedProcedurePass : Pass<"boxed-procedure", "mlir::ModuleOp"> {
-  let constructor = "::fir::createBoxedProcedurePass()";
   let options = [
     Option<"useThunks", "use-thunks",
            "bool", /*default=*/"true",
