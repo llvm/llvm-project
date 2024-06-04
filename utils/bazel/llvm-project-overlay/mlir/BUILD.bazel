@@ -10071,20 +10071,13 @@ gentbl_cc_library(
 
 cc_library(
     name = "OpenACCDialect",
-    srcs = glob(
-        [
-            "lib/Dialect/OpenACC/IR/*.cpp",
-        ],
-    ),
+    srcs = glob(["lib/Dialect/OpenACC/IR/*.cpp"]),
     hdrs = glob(
-        [
-            "include/mlir/Dialect/OpenACC/*.h",
-        ],
-        exclude =
-            [
-                "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
-            ],
-    ),
+        include = ["include/mlir/Dialect/OpenACC/*.h"],
+        exclude = ["include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"],
+    ) + [
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h",
+    ],
     includes = ["include"],
     textual_hdrs = [
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
