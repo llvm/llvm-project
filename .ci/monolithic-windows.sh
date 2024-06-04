@@ -38,6 +38,7 @@ targets="${2}"
 
 echo "--- cmake"
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
+pip install -q -r "${MONOREPO_ROOT}"/lldb/test/requirements.txt
 
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
 # on fixing a build reliability issue on the build server, please
