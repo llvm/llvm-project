@@ -18768,11 +18768,21 @@ bool Sema::tryCaptureVariable(
   DeclContext *VarDC = Var->getDeclContext();
   DeclContext *DC = CurContext;
 
+  // Skip past RequiresExprBodys because they don't constitute function scopes.
+  while (DC->isRequiresExprBody())
+    DC = DC->getParent();
+
   // tryCaptureVariable is called every time a DeclRef is formed,
   // it can therefore have non-negigible impact on performances.
   // For local variables and when there is no capturing scope,
   // we can bailout early.
   if (CapturingFunctionScopes == 0 && (!BuildAndDiagnose || VarDC == DC))
+    return true;
+
+  // Exception: Function parameters are not tied to the function's DeclContext
+  // until we enter the function definition. Capturing them anyway would result
+  // in an out-of-bounds error while traversing DC and its parents.
+  if (isa<ParmVarDecl>(Var) && !VarDC->isFunctionOrMethod())
     return true;
 
   const auto *VD = dyn_cast<VarDecl>(Var);
