@@ -2308,12 +2308,7 @@ Instruction *InstCombinerImpl::narrowMathIfNoOverflow(BinaryOperator &BO) {
 }
 
 static bool isMergedGEPInBounds(GEPOperator &GEP1, GEPOperator &GEP2) {
-  // At least one GEP must be inbounds.
-  if (!GEP1.isInBounds() && !GEP2.isInBounds())
-    return false;
-
-  return (GEP1.isInBounds() || GEP1.hasAllZeroIndices()) &&
-         (GEP2.isInBounds() || GEP2.hasAllZeroIndices());
+  return GEP1.isInBounds() && GEP2.isInBounds();
 }
 
 /// Thread a GEP operation with constant indices through the constant true/false
@@ -2714,8 +2709,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value *, 8> Indices(GEP.indices());
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
-  if (Value *V = simplifyGEPInst(GEPEltType, PtrOp, Indices, GEP.isInBounds(),
-                                 SQ.getWithInstruction(&GEP)))
+  if (Value *V =
+          simplifyGEPInst(GEPEltType, PtrOp, Indices, GEP.getNoWrapFlags(),
+                          SQ.getWithInstruction(&GEP)))
     return replaceInstUsesWith(GEP, V);
 
   // For vector geps, use the generic demanded vector support.

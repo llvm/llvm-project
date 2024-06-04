@@ -72,3 +72,7 @@ Revert: temaplate breaks ComposableKernel build
 f46d1463b835 [clang] require template arg list after template kw (#80801) 
 contact : RonL
 ---
+Revert: Breaks check-clang test 'clang/test/Modules/pr60085.cppm'
+99873b35da7e [NFC] [AST] Introduce Decl::isInAnotherModuleUnit and Decl::shouldEmitInExternalSource
+contact : mhalk (Michael Halkenhaeuser)
+---
