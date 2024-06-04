@@ -360,6 +360,10 @@ public:
   static TemplateName getFromVoidPointer(void *Ptr) {
     return TemplateName(Ptr);
   }
+
+  /// Structural equality.
+  bool operator==(TemplateName Other) const { return Storage == Other.Storage; }
+  bool operator!=(TemplateName Other) const { return !operator==(Other); }
 };
 
 /// Insertion operator for diagnostics.  This allows sending TemplateName's

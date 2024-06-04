@@ -720,13 +720,19 @@ def : Pat<(vector_insert (v2f64 V128:$vec), F64:$x, undef),
 // Comparisons
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDCondition<Vec vec, string name, CondCode cond, bits<32> simdop> {
+multiclass SIMDCondition<Vec vec, string name, CondCode cond, bits<32> simdop,
+                         list<Predicate> reqs = []> {
   defm _#vec :
     SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
            [(set (vec.int_vt V128:$dst),
              (setcc (vec.vt V128:$lhs), (vec.vt V128:$rhs), cond))],
            vec.prefix#"."#name#"\t$dst, $lhs, $rhs",
-           vec.prefix#"."#name, simdop>;
+           vec.prefix#"."#name, simdop, reqs>;
+}
+
+multiclass HalfPrecisionCondition<Vec vec, string name, CondCode cond,
+                                  bits<32> simdop> {
+  defm "" : SIMDCondition<vec, name, cond, simdop, [HasHalfPrecision]>;
 }
 
 multiclass SIMDConditionInt<string name, CondCode cond, bits<32> baseInst> {
@@ -738,6 +744,7 @@ multiclass SIMDConditionInt<string name, CondCode cond, bits<32> baseInst> {
 multiclass SIMDConditionFP<string name, CondCode cond, bits<32> baseInst> {
   defm "" : SIMDCondition<F32x4, name, cond, baseInst>;
   defm "" : SIMDCondition<F64x2, name, cond, !add(baseInst, 6)>;
+  defm "" : HalfPrecisionCondition<F16x8, name, cond, !add(baseInst, 255)>;
 }
 
 // Equality: eq

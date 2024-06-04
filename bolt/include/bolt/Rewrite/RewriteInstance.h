@@ -598,7 +598,7 @@ private:
   NameResolver NR;
 
   // Regex object matching split function names.
-  const Regex ColdFragment{"(.*)\\.(cold|warm)(\\.[0-9]+)?"};
+  const Regex FunctionFragmentTemplate{"(.*)\\.(cold|warm)(\\.[0-9]+)?"};
 
   friend class RewriteInstanceDiff;
 };
