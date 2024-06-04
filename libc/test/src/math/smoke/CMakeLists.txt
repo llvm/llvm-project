@@ -93,6 +93,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fabsf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fabsf16_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.math.fabsf16
+)
+
+add_fp_unittest(
   fabsf128_test
   SUITE
     libc-math-smoke-tests
@@ -142,6 +154,18 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.truncl
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  truncf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    truncf16_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.truncf16
 )
 
 add_fp_unittest(
@@ -257,6 +281,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ceilf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ceilf16_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceilf16
+)
+
+add_fp_unittest(
   ceilf128_test
   SUITE
     libc-math-smoke-tests
@@ -306,6 +342,18 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.floorl
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  floorf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    floorf16_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorf16
 )
 
 add_fp_unittest(
@@ -361,6 +409,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  roundf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundf16_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.math.roundf16
+)
+
+add_fp_unittest(
   roundf128_test
   SUITE
     libc-math-smoke-tests
@@ -410,6 +470,18 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.roundevenl
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundevenf16_test.cpp
+  HDRS
+    RoundEvenTest.h
+  DEPENDS
+    libc.src.math.roundevenf16
 )
 
 add_fp_unittest(

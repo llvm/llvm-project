@@ -1,7 +1,6 @@
 import("//llvm/lib/Target/targets_string.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
-import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
@@ -36,7 +35,7 @@ write_cmake_config("BuildVariables.inc") {
     lib = ""
   }
 
-  # Windows doesn't use any of libxml2, terminfo, zlib by default.
+  # Windows doesn't use any of libxml2, zlib by default.
   # Make GN not warn about these variables being unused.
   not_needed([
                "l",
@@ -62,9 +61,6 @@ write_cmake_config("BuildVariables.inc") {
   }
   if (llvm_enable_libxml2) {
     system_libs += " ${l}xml2${lib}"
-  }
-  if (llvm_enable_terminfo) {
-    system_libs += " ${l}ncurses${lib}"
   }
   if (llvm_enable_zlib) {
     system_libs += " ${l}z${lib}"

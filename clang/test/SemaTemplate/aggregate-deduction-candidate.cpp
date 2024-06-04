@@ -76,7 +76,7 @@ namespace Basic {
   // CHECK: |-InjectedClassNameType {{.*}} 'C<T>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'C'
   // CHECK: |-ElaboratedType {{.*}} 'S<T>' sugar dependent
-  // CHECK: | `-TemplateSpecializationType {{.*}} 'S<T>' dependent S
+  // CHECK: | `-TemplateSpecializationType {{.*}} 'S<T>' dependent
   // CHECK: |   `-TemplateArgument type 'T'
   // CHECK: |     `-TemplateTypeParmType {{.*}} 'T' dependent depth 0 index 0
   // CHECK: |       `-TemplateTypeParm {{.*}} 'T'
@@ -354,7 +354,7 @@ namespace DeduceArity {
   // CHECK: |-InjectedClassNameType {{.*}} 'F<T...>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'F'
   // CHECK: |-ElaboratedType {{.*}} 'Types<T...>' sugar dependent
-  // CHECK: | `-TemplateSpecializationType {{.*}} 'Types<T...>' dependent Types
+  // CHECK: | `-TemplateSpecializationType {{.*}} 'Types<T...>' dependent
   // CHECK: |   `-TemplateArgument type 'T...'
   // CHECK: |     `-PackExpansionType {{.*}} 'T...' dependent
   // CHECK: |       `-TemplateTypeParmType {{.*}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
