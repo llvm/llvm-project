@@ -120,7 +120,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
   CallInst *KernArgSegment =
       Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {}, {},
                               nullptr, F.getName() + ".kernarg.segment");
-
   KernArgSegment->addRetAttr(Attribute::NonNull);
   KernArgSegment->addRetAttr(
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));

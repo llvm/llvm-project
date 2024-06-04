@@ -6,6 +6,7 @@
 declare void @bar1(ptr %p)
 declare void @bar2(ptr %p, ptr %p2)
 declare void @bar3(ptr writable %p)
+declare void @bar4(ptr byval([4 x i32]) %p)
 define dso_local void @foo1_rdonly(ptr readonly %p) {
 ; CHECK-LABEL: define {{[^@]+}}@foo1_rdonly
 ; CHECK-SAME: (ptr readonly [[P:%.*]]) {
@@ -183,6 +184,15 @@ define dso_local void @foo2_through_obj(ptr %p, ptr %p2) {
   %pp = getelementptr i8, ptr %p, i64 9
   %p2p = getelementptr i8, ptr %p2, i64 123
   call void @bar2(ptr %p2p, ptr %pp)
+  ret void
+}
+
+define dso_local void @foo_byval_readonly(ptr readonly %p) {
+; CHECK-LABEL: define {{[^@]+}}@foo_byval_readonly
+; CHECK-SAME: (ptr readonly [[P:%.*]])
+; CHECK-NEXT:   call void @bar4(ptr byval([4 x i32]) [[P]])
+; CHECK-NEXT:   ret void
+  call void @bar4(ptr byval([4 x i32]) %p)
   ret void
 }
 
@@ -539,3 +549,11 @@ define void @prop_no_conflict_writable2(ptr %p) {
   ret void
 }
 
+define void @prop_byval_readonly(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@prop_byval_readonly
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:   call void @bar4(ptr byval([4 x i32]) [[P]])
+; CHECK-NEXT:   ret void
+  call void @foo_byval_readonly(ptr %p)
+  ret void
+}

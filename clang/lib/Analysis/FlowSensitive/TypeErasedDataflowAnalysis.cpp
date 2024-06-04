@@ -476,7 +476,7 @@ runTypeErasedDataflowAnalysis(
   PrettyStackTraceAnalysis CrashInfo(ACFG, "runTypeErasedDataflowAnalysis");
 
   std::optional<Environment> MaybeStartingEnv;
-  if (InitEnv.callStackSize() == 1) {
+  if (InitEnv.callStackSize() == 0) {
     MaybeStartingEnv = InitEnv.fork();
     MaybeStartingEnv->initialize();
   }

@@ -544,8 +544,7 @@ struct SalvageDebugInfoTest : ::testing::Test {
     const auto &CI = *cast<ConstantInt>(DI.getVariableLocationOp(0));
     if (CI.isZero())
       return DI.getExpression()->getElements().equals(
-          {dwarf::DW_OP_plus_uconst, 1, dwarf::DW_OP_plus_uconst, 2,
-           dwarf::DW_OP_stack_value});
+          {dwarf::DW_OP_plus_uconst, 3, dwarf::DW_OP_stack_value});
     else if (CI.isOneValue())
       return DI.getExpression()->getElements().equals(
           {dwarf::DW_OP_plus_uconst, 2, dwarf::DW_OP_stack_value});

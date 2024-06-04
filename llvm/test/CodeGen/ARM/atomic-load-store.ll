@@ -439,3 +439,539 @@ define void @test_old_store_64bit(ptr %p, i64 %v) {
   store atomic i64 %v, ptr %p seq_cst, align 8
   ret void
 }
+
+define half @load_atomic_f16__seq_cst(ptr %ptr) {
+; ARM-LABEL: load_atomic_f16__seq_cst:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    ldrh r0, [r0]
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    bx lr
+;
+; ARMOPTNONE-LABEL: load_atomic_f16__seq_cst:
+; ARMOPTNONE:       @ %bb.0:
+; ARMOPTNONE-NEXT:    ldrh r0, [r0]
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    bx lr
+;
+; THUMBTWO-LABEL: load_atomic_f16__seq_cst:
+; THUMBTWO:       @ %bb.0:
+; THUMBTWO-NEXT:    ldrh r0, [r0]
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    bx lr
+;
+; THUMBONE-LABEL: load_atomic_f16__seq_cst:
+; THUMBONE:       @ %bb.0:
+; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    movs r1, #0
+; THUMBONE-NEXT:    mov r2, r1
+; THUMBONE-NEXT:    bl __sync_val_compare_and_swap_2
+; THUMBONE-NEXT:    pop {r7, pc}
+;
+; ARMV4-LABEL: load_atomic_f16__seq_cst:
+; ARMV4:       @ %bb.0:
+; ARMV4-NEXT:    push {r11, lr}
+; ARMV4-NEXT:    mov r1, #5
+; ARMV4-NEXT:    bl __atomic_load_2
+; ARMV4-NEXT:    pop {r11, lr}
+; ARMV4-NEXT:    mov pc, lr
+;
+; ARMV6-LABEL: load_atomic_f16__seq_cst:
+; ARMV6:       @ %bb.0:
+; ARMV6-NEXT:    ldrh r0, [r0]
+; ARMV6-NEXT:    mov r1, #0
+; ARMV6-NEXT:    mcr p15, #0, r1, c7, c10, #5
+; ARMV6-NEXT:    bx lr
+;
+; THUMBM-LABEL: load_atomic_f16__seq_cst:
+; THUMBM:       @ %bb.0:
+; THUMBM-NEXT:    ldrh r0, [r0]
+; THUMBM-NEXT:    dmb sy
+; THUMBM-NEXT:    bx lr
+  %val = load atomic half, ptr %ptr seq_cst, align 2
+  ret half %val
+}
+
+define bfloat @load_atomic_bf16__seq_cst(ptr %ptr) {
+; ARM-LABEL: load_atomic_bf16__seq_cst:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    ldrh r0, [r0]
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    bx lr
+;
+; ARMOPTNONE-LABEL: load_atomic_bf16__seq_cst:
+; ARMOPTNONE:       @ %bb.0:
+; ARMOPTNONE-NEXT:    ldrh r0, [r0]
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    bx lr
+;
+; THUMBTWO-LABEL: load_atomic_bf16__seq_cst:
+; THUMBTWO:       @ %bb.0:
+; THUMBTWO-NEXT:    ldrh r0, [r0]
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    bx lr
+;
+; THUMBONE-LABEL: load_atomic_bf16__seq_cst:
+; THUMBONE:       @ %bb.0:
+; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    movs r1, #0
+; THUMBONE-NEXT:    mov r2, r1
+; THUMBONE-NEXT:    bl __sync_val_compare_and_swap_2
+; THUMBONE-NEXT:    pop {r7, pc}
+;
+; ARMV4-LABEL: load_atomic_bf16__seq_cst:
+; ARMV4:       @ %bb.0:
+; ARMV4-NEXT:    push {r11, lr}
+; ARMV4-NEXT:    mov r1, #5
+; ARMV4-NEXT:    bl __atomic_load_2
+; ARMV4-NEXT:    pop {r11, lr}
+; ARMV4-NEXT:    mov pc, lr
+;
+; ARMV6-LABEL: load_atomic_bf16__seq_cst:
+; ARMV6:       @ %bb.0:
+; ARMV6-NEXT:    ldrh r0, [r0]
+; ARMV6-NEXT:    mov r1, #0
+; ARMV6-NEXT:    mcr p15, #0, r1, c7, c10, #5
+; ARMV6-NEXT:    bx lr
+;
+; THUMBM-LABEL: load_atomic_bf16__seq_cst:
+; THUMBM:       @ %bb.0:
+; THUMBM-NEXT:    ldrh r0, [r0]
+; THUMBM-NEXT:    dmb sy
+; THUMBM-NEXT:    bx lr
+  %val = load atomic bfloat, ptr %ptr seq_cst, align 2
+  ret bfloat %val
+}
+
+define float @load_atomic_f32__seq_cst(ptr %ptr) {
+; ARM-LABEL: load_atomic_f32__seq_cst:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    ldr r0, [r0]
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    bx lr
+;
+; ARMOPTNONE-LABEL: load_atomic_f32__seq_cst:
+; ARMOPTNONE:       @ %bb.0:
+; ARMOPTNONE-NEXT:    ldr r0, [r0]
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    vmov s0, r0
+; ARMOPTNONE-NEXT:    bx lr
+;
+; THUMBTWO-LABEL: load_atomic_f32__seq_cst:
+; THUMBTWO:       @ %bb.0:
+; THUMBTWO-NEXT:    ldr r0, [r0]
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    bx lr
+;
+; THUMBONE-LABEL: load_atomic_f32__seq_cst:
+; THUMBONE:       @ %bb.0:
+; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    movs r1, #0
+; THUMBONE-NEXT:    mov r2, r1
+; THUMBONE-NEXT:    bl __sync_val_compare_and_swap_4
+; THUMBONE-NEXT:    pop {r7, pc}
+;
+; ARMV4-LABEL: load_atomic_f32__seq_cst:
+; ARMV4:       @ %bb.0:
+; ARMV4-NEXT:    push {r11, lr}
+; ARMV4-NEXT:    mov r1, #5
+; ARMV4-NEXT:    bl __atomic_load_4
+; ARMV4-NEXT:    pop {r11, lr}
+; ARMV4-NEXT:    mov pc, lr
+;
+; ARMV6-LABEL: load_atomic_f32__seq_cst:
+; ARMV6:       @ %bb.0:
+; ARMV6-NEXT:    ldr r0, [r0]
+; ARMV6-NEXT:    mov r1, #0
+; ARMV6-NEXT:    mcr p15, #0, r1, c7, c10, #5
+; ARMV6-NEXT:    bx lr
+;
+; THUMBM-LABEL: load_atomic_f32__seq_cst:
+; THUMBM:       @ %bb.0:
+; THUMBM-NEXT:    ldr r0, [r0]
+; THUMBM-NEXT:    dmb sy
+; THUMBM-NEXT:    bx lr
+  %val = load atomic float, ptr %ptr seq_cst, align 4
+  ret float %val
+}
+
+define double @load_atomic_f64__seq_cst(ptr %ptr) {
+; ARM-LABEL: load_atomic_f64__seq_cst:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    ldrexd r0, r1, [r0]
+; ARM-NEXT:    clrex
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    bx lr
+;
+; ARMOPTNONE-LABEL: load_atomic_f64__seq_cst:
+; ARMOPTNONE:       @ %bb.0:
+; ARMOPTNONE-NEXT:    ldrexd r2, r3, [r0]
+; ARMOPTNONE-NEXT:    mov r1, r3
+; ARMOPTNONE-NEXT:    mov r0, r2
+; ARMOPTNONE-NEXT:    clrex
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    vmov d16, r0, r1
+; ARMOPTNONE-NEXT:    bx lr
+;
+; THUMBTWO-LABEL: load_atomic_f64__seq_cst:
+; THUMBTWO:       @ %bb.0:
+; THUMBTWO-NEXT:    ldrexd r0, r1, [r0]
+; THUMBTWO-NEXT:    clrex
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    bx lr
+;
+; THUMBONE-LABEL: load_atomic_f64__seq_cst:
+; THUMBONE:       @ %bb.0:
+; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    sub sp, #8
+; THUMBONE-NEXT:    movs r2, #0
+; THUMBONE-NEXT:    str r2, [sp]
+; THUMBONE-NEXT:    str r2, [sp, #4]
+; THUMBONE-NEXT:    mov r3, r2
+; THUMBONE-NEXT:    bl __sync_val_compare_and_swap_8
+; THUMBONE-NEXT:    add sp, #8
+; THUMBONE-NEXT:    pop {r7, pc}
+;
+; ARMV4-LABEL: load_atomic_f64__seq_cst:
+; ARMV4:       @ %bb.0:
+; ARMV4-NEXT:    push {r11, lr}
+; ARMV4-NEXT:    mov r1, #5
+; ARMV4-NEXT:    bl __atomic_load_8
+; ARMV4-NEXT:    pop {r11, lr}
+; ARMV4-NEXT:    mov pc, lr
+;
+; ARMV6-LABEL: load_atomic_f64__seq_cst:
+; ARMV6:       @ %bb.0:
+; ARMV6-NEXT:    ldrexd r0, r1, [r0]
+; ARMV6-NEXT:    mov r2, #0
+; ARMV6-NEXT:    mcr p15, #0, r2, c7, c10, #5
+; ARMV6-NEXT:    bx lr
+;
+; THUMBM-LABEL: load_atomic_f64__seq_cst:
+; THUMBM:       @ %bb.0:
+; THUMBM-NEXT:    push {r7, lr}
+; THUMBM-NEXT:    movs r1, #5
+; THUMBM-NEXT:    bl __atomic_load_8
+; THUMBM-NEXT:    pop {r7, pc}
+  %val = load atomic double, ptr %ptr seq_cst, align 8
+  ret double %val
+}
+
+define void @store_atomic_f16__seq_cst(ptr %ptr, half %val1) {
+; ARM-LABEL: store_atomic_f16__seq_cst:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    strh r1, [r0]
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    bx lr
+;
+; ARMOPTNONE-LABEL: store_atomic_f16__seq_cst:
+; ARMOPTNONE:       @ %bb.0:
+; ARMOPTNONE-NEXT:    sub sp, sp, #4
+; ARMOPTNONE-NEXT:    str r1, [sp] @ 4-byte Spill
+; ARMOPTNONE-NEXT:    mov r1, r0
+; ARMOPTNONE-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; ARMOPTNONE-NEXT:    vmov s0, r0
+; ARMOPTNONE-NEXT:    vmov r0, s0
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    strh r0, [r1]
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    add sp, sp, #4
+; ARMOPTNONE-NEXT:    bx lr
+;
+; THUMBTWO-LABEL: store_atomic_f16__seq_cst:
+; THUMBTWO:       @ %bb.0:
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    strh r1, [r0]
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    bx lr
+;
+; THUMBONE-LABEL: store_atomic_f16__seq_cst:
+; THUMBONE:       @ %bb.0:
+; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    bl __sync_lock_test_and_set_2
+; THUMBONE-NEXT:    pop {r7, pc}
+;
+; ARMV4-LABEL: store_atomic_f16__seq_cst:
+; ARMV4:       @ %bb.0:
+; ARMV4-NEXT:    push {r11, lr}
+; ARMV4-NEXT:    mov r2, #5
+; ARMV4-NEXT:    bl __atomic_store_2
+; ARMV4-NEXT:    pop {r11, lr}
+; ARMV4-NEXT:    mov pc, lr
+;
+; ARMV6-LABEL: store_atomic_f16__seq_cst:
+; ARMV6:       @ %bb.0:
+; ARMV6-NEXT:    mov r2, #0
+; ARMV6-NEXT:    mcr p15, #0, r2, c7, c10, #5
+; ARMV6-NEXT:    strh r1, [r0]
+; ARMV6-NEXT:    mcr p15, #0, r2, c7, c10, #5
+; ARMV6-NEXT:    bx lr
+;
+; THUMBM-LABEL: store_atomic_f16__seq_cst:
+; THUMBM:       @ %bb.0:
+; THUMBM-NEXT:    dmb sy
+; THUMBM-NEXT:    strh r1, [r0]
+; THUMBM-NEXT:    dmb sy
+; THUMBM-NEXT:    bx lr
+  store atomic half %val1, ptr %ptr seq_cst, align 2
+  ret void
+}
+
+define void @store_atomic_bf16__seq_cst(ptr %ptr, bfloat %val1) {
+; ARM-LABEL: store_atomic_bf16__seq_cst:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    strh r1, [r0]
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    bx lr
+;
+; ARMOPTNONE-LABEL: store_atomic_bf16__seq_cst:
+; ARMOPTNONE:       @ %bb.0:
+; ARMOPTNONE-NEXT:    sub sp, sp, #4
+; ARMOPTNONE-NEXT:    str r1, [sp] @ 4-byte Spill
+; ARMOPTNONE-NEXT:    mov r1, r0
+; ARMOPTNONE-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; ARMOPTNONE-NEXT:    vmov s0, r0
+; ARMOPTNONE-NEXT:    vmov r0, s0
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    strh r0, [r1]
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    add sp, sp, #4
+; ARMOPTNONE-NEXT:    bx lr
+;
+; THUMBTWO-LABEL: store_atomic_bf16__seq_cst:
+; THUMBTWO:       @ %bb.0:
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    strh r1, [r0]
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    bx lr
+;
+; THUMBONE-LABEL: store_atomic_bf16__seq_cst:
+; THUMBONE:       @ %bb.0:
+; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    bl __sync_lock_test_and_set_2
+; THUMBONE-NEXT:    pop {r7, pc}
+;
+; ARMV4-LABEL: store_atomic_bf16__seq_cst:
+; ARMV4:       @ %bb.0:
+; ARMV4-NEXT:    push {r11, lr}
+; ARMV4-NEXT:    mov r2, #5
+; ARMV4-NEXT:    bl __atomic_store_2
+; ARMV4-NEXT:    pop {r11, lr}
+; ARMV4-NEXT:    mov pc, lr
+;
+; ARMV6-LABEL: store_atomic_bf16__seq_cst:
+; ARMV6:       @ %bb.0:
+; ARMV6-NEXT:    mov r2, #0
+; ARMV6-NEXT:    mcr p15, #0, r2, c7, c10, #5
+; ARMV6-NEXT:    strh r1, [r0]
+; ARMV6-NEXT:    mcr p15, #0, r2, c7, c10, #5
+; ARMV6-NEXT:    bx lr
+;
+; THUMBM-LABEL: store_atomic_bf16__seq_cst:
+; THUMBM:       @ %bb.0:
+; THUMBM-NEXT:    dmb sy
+; THUMBM-NEXT:    strh r1, [r0]
+; THUMBM-NEXT:    dmb sy
+; THUMBM-NEXT:    bx lr
+  store atomic bfloat %val1, ptr %ptr seq_cst, align 2
+  ret void
+}
+
+define void @store_atomic_f32__seq_cst(ptr %ptr, float %val1) {
+; ARM-LABEL: store_atomic_f32__seq_cst:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    str r1, [r0]
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    bx lr
+;
+; ARMOPTNONE-LABEL: store_atomic_f32__seq_cst:
+; ARMOPTNONE:       @ %bb.0:
+; ARMOPTNONE-NEXT:    sub sp, sp, #4
+; ARMOPTNONE-NEXT:    str r1, [sp] @ 4-byte Spill
+; ARMOPTNONE-NEXT:    mov r1, r0
+; ARMOPTNONE-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; ARMOPTNONE-NEXT:    vmov s0, r0
+; ARMOPTNONE-NEXT:    vmov r0, s0
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    str r0, [r1]
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    add sp, sp, #4
+; ARMOPTNONE-NEXT:    bx lr
+;
+; THUMBTWO-LABEL: store_atomic_f32__seq_cst:
+; THUMBTWO:       @ %bb.0:
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    str r1, [r0]
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    bx lr
+;
+; THUMBONE-LABEL: store_atomic_f32__seq_cst:
+; THUMBONE:       @ %bb.0:
+; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    bl __sync_lock_test_and_set_4
+; THUMBONE-NEXT:    pop {r7, pc}
+;
+; ARMV4-LABEL: store_atomic_f32__seq_cst:
+; ARMV4:       @ %bb.0:
+; ARMV4-NEXT:    push {r11, lr}
+; ARMV4-NEXT:    mov r2, #5
+; ARMV4-NEXT:    bl __atomic_store_4
+; ARMV4-NEXT:    pop {r11, lr}
+; ARMV4-NEXT:    mov pc, lr
+;
+; ARMV6-LABEL: store_atomic_f32__seq_cst:
+; ARMV6:       @ %bb.0:
+; ARMV6-NEXT:    mov r2, #0
+; ARMV6-NEXT:    mcr p15, #0, r2, c7, c10, #5
+; ARMV6-NEXT:    str r1, [r0]
+; ARMV6-NEXT:    mcr p15, #0, r2, c7, c10, #5
+; ARMV6-NEXT:    bx lr
+;
+; THUMBM-LABEL: store_atomic_f32__seq_cst:
+; THUMBM:       @ %bb.0:
+; THUMBM-NEXT:    dmb sy
+; THUMBM-NEXT:    str r1, [r0]
+; THUMBM-NEXT:    dmb sy
+; THUMBM-NEXT:    bx lr
+  store atomic float %val1, ptr %ptr seq_cst, align 4
+  ret void
+}
+
+define void @store_atomic_f64__seq_cst(ptr %ptr, double %val1) {
+; ARM-LABEL: store_atomic_f64__seq_cst:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    push {r4, r5, lr}
+; ARM-NEXT:    mov r3, r2
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    mov r2, r1
+; ARM-NEXT:  LBB13_1: @ %atomicrmw.start
+; ARM-NEXT:    @ =>This Inner Loop Header: Depth=1
+; ARM-NEXT:    ldrexd r4, r5, [r0]
+; ARM-NEXT:    strexd r1, r2, r3, [r0]
+; ARM-NEXT:    cmp r1, #0
+; ARM-NEXT:    bne LBB13_1
+; ARM-NEXT:  @ %bb.2: @ %atomicrmw.end
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    pop {r4, r5, pc}
+;
+; ARMOPTNONE-LABEL: store_atomic_f64__seq_cst:
+; ARMOPTNONE:       @ %bb.0:
+; ARMOPTNONE-NEXT:    push {r4, r5, r7, lr}
+; ARMOPTNONE-NEXT:    add r7, sp, #8
+; ARMOPTNONE-NEXT:    push {r8, r10, r11}
+; ARMOPTNONE-NEXT:    sub sp, sp, #20
+; ARMOPTNONE-NEXT:    str r0, [sp] @ 4-byte Spill
+; ARMOPTNONE-NEXT:    vmov d16, r1, r2
+; ARMOPTNONE-NEXT:    vmov r1, r2, d16
+; ARMOPTNONE-NEXT:    str r2, [sp, #4] @ 4-byte Spill
+; ARMOPTNONE-NEXT:    str r1, [sp, #8] @ 4-byte Spill
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    ldr r1, [r0]
+; ARMOPTNONE-NEXT:    ldr r0, [r0, #4]
+; ARMOPTNONE-NEXT:    str r1, [sp, #12] @ 4-byte Spill
+; ARMOPTNONE-NEXT:    str r0, [sp, #16] @ 4-byte Spill
+; ARMOPTNONE-NEXT:    b LBB13_1
+; ARMOPTNONE-NEXT:  LBB13_1: @ %atomicrmw.start
+; ARMOPTNONE-NEXT:    @ =>This Loop Header: Depth=1
+; ARMOPTNONE-NEXT:    @ Child Loop BB13_2 Depth 2
+; ARMOPTNONE-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
+; ARMOPTNONE-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; ARMOPTNONE-NEXT:    ldr r3, [sp] @ 4-byte Reload
+; ARMOPTNONE-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
+; ARMOPTNONE-NEXT:    ldr r10, [sp, #8] @ 4-byte Reload
+; ARMOPTNONE-NEXT:    @ kill: def $r10 killed $r10 def $r10_r11
+; ARMOPTNONE-NEXT:    mov r11, r0
+; ARMOPTNONE-NEXT:    mov r8, r2
+; ARMOPTNONE-NEXT:    mov r9, r1
+; ARMOPTNONE-NEXT:  LBB13_2: @ %atomicrmw.start
+; ARMOPTNONE-NEXT:    @ Parent Loop BB13_1 Depth=1
+; ARMOPTNONE-NEXT:    @ => This Inner Loop Header: Depth=2
+; ARMOPTNONE-NEXT:    ldrexd r4, r5, [r3]
+; ARMOPTNONE-NEXT:    cmp r4, r8
+; ARMOPTNONE-NEXT:    cmpeq r5, r9
+; ARMOPTNONE-NEXT:    bne LBB13_4
+; ARMOPTNONE-NEXT:  @ %bb.3: @ %atomicrmw.start
+; ARMOPTNONE-NEXT:    @ in Loop: Header=BB13_2 Depth=2
+; ARMOPTNONE-NEXT:    strexd r0, r10, r11, [r3]
+; ARMOPTNONE-NEXT:    cmp r0, #0
+; ARMOPTNONE-NEXT:    bne LBB13_2
+; ARMOPTNONE-NEXT:  LBB13_4: @ %atomicrmw.start
+; ARMOPTNONE-NEXT:    @ in Loop: Header=BB13_1 Depth=1
+; ARMOPTNONE-NEXT:    mov r0, r5
+; ARMOPTNONE-NEXT:    eor r3, r0, r1
+; ARMOPTNONE-NEXT:    mov r1, r4
+; ARMOPTNONE-NEXT:    eor r2, r1, r2
+; ARMOPTNONE-NEXT:    orr r2, r2, r3
+; ARMOPTNONE-NEXT:    cmp r2, #0
+; ARMOPTNONE-NEXT:    str r1, [sp, #12] @ 4-byte Spill
+; ARMOPTNONE-NEXT:    str r0, [sp, #16] @ 4-byte Spill
+; ARMOPTNONE-NEXT:    bne LBB13_1
+; ARMOPTNONE-NEXT:    b LBB13_5
+; ARMOPTNONE-NEXT:  LBB13_5: @ %atomicrmw.end
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    sub sp, r7, #20
+; ARMOPTNONE-NEXT:    pop {r8, r10, r11}
+; ARMOPTNONE-NEXT:    pop {r4, r5, r7, pc}
+;
+; THUMBTWO-LABEL: store_atomic_f64__seq_cst:
+; THUMBTWO:       @ %bb.0:
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:  LBB13_1: @ %atomicrmw.start
+; THUMBTWO-NEXT:    @ =>This Inner Loop Header: Depth=1
+; THUMBTWO-NEXT:    ldrexd r3, r9, [r0]
+; THUMBTWO-NEXT:    strexd r3, r1, r2, [r0]
+; THUMBTWO-NEXT:    cmp r3, #0
+; THUMBTWO-NEXT:    bne LBB13_1
+; THUMBTWO-NEXT:  @ %bb.2: @ %atomicrmw.end
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    bx lr
+;
+; THUMBONE-LABEL: store_atomic_f64__seq_cst:
+; THUMBONE:       @ %bb.0:
+; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    bl __sync_lock_test_and_set_8
+; THUMBONE-NEXT:    pop {r7, pc}
+;
+; ARMV4-LABEL: store_atomic_f64__seq_cst:
+; ARMV4:       @ %bb.0:
+; ARMV4-NEXT:    push {r11, lr}
+; ARMV4-NEXT:    sub sp, sp, #8
+; ARMV4-NEXT:    mov r1, #5
+; ARMV4-NEXT:    str r1, [sp]
+; ARMV4-NEXT:    bl __atomic_store_8
+; ARMV4-NEXT:    add sp, sp, #8
+; ARMV4-NEXT:    pop {r11, lr}
+; ARMV4-NEXT:    mov pc, lr
+;
+; ARMV6-LABEL: store_atomic_f64__seq_cst:
+; ARMV6:       @ %bb.0:
+; ARMV6-NEXT:    push {r4, r5, r11, lr}
+; ARMV6-NEXT:    @ kill: def $r3 killed $r3 killed $r2_r3 def $r2_r3
+; ARMV6-NEXT:    mov r1, #0
+; ARMV6-NEXT:    @ kill: def $r2 killed $r2 killed $r2_r3 def $r2_r3
+; ARMV6-NEXT:    mcr p15, #0, r1, c7, c10, #5
+; ARMV6-NEXT:  .LBB13_1: @ %atomicrmw.start
+; ARMV6-NEXT:    @ =>This Inner Loop Header: Depth=1
+; ARMV6-NEXT:    ldrexd r4, r5, [r0]
+; ARMV6-NEXT:    strexd r1, r2, r3, [r0]
+; ARMV6-NEXT:    cmp r1, #0
+; ARMV6-NEXT:    bne .LBB13_1
+; ARMV6-NEXT:  @ %bb.2: @ %atomicrmw.end
+; ARMV6-NEXT:    mov r0, #0
+; ARMV6-NEXT:    mcr p15, #0, r0, c7, c10, #5
+; ARMV6-NEXT:    pop {r4, r5, r11, pc}
+;
+; THUMBM-LABEL: store_atomic_f64__seq_cst:
+; THUMBM:       @ %bb.0:
+; THUMBM-NEXT:    push {r7, lr}
+; THUMBM-NEXT:    sub sp, #8
+; THUMBM-NEXT:    movs r1, #5
+; THUMBM-NEXT:    str r1, [sp]
+; THUMBM-NEXT:    bl __atomic_store_8
+; THUMBM-NEXT:    add sp, #8
+; THUMBM-NEXT:    pop {r7, pc}
+  store atomic double %val1, ptr %ptr seq_cst, align 8
+  ret void
+}

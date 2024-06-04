@@ -87,10 +87,10 @@ struct StokeFuncInfo {
               << "," << NumBlocks << "," << IsLoopFree << "," << NumLoops << ","
               << MaxLoopDepth << "," << HotSize << "," << TotalSize << ","
               << Score << "," << HasCall << ",\"{ ";
-      for (std::string S : DefIn)
+      for (const std::string &S : DefIn)
         Outfile << "%" << S << " ";
       Outfile << "}\",\"{ ";
-      for (std::string S : LiveOut)
+      for (const std::string &S : LiveOut)
         Outfile << "%" << S << " ";
       Outfile << "}\"," << HeapOut << "," << StackOut << "," << HasRipAddr
               << "," << Omitted << "\n";

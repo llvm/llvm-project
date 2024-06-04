@@ -28,22 +28,7 @@ define void @store_fp128(ptr %fptr, fp128 %v) {
 ;
 ; X64-AVX-LABEL: store_fp128:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    pushq %rbx
-; X64-AVX-NEXT:    .cfi_def_cfa_offset 16
-; X64-AVX-NEXT:    .cfi_offset %rbx, -16
-; X64-AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rbx
-; X64-AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-AVX-NEXT:    movq (%rdi), %rax
-; X64-AVX-NEXT:    movq 8(%rdi), %rdx
-; X64-AVX-NEXT:    .p2align 4, 0x90
-; X64-AVX-NEXT:  .LBB0_1: # %atomicrmw.start
-; X64-AVX-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-AVX-NEXT:    lock cmpxchg16b (%rdi)
-; X64-AVX-NEXT:    jne .LBB0_1
-; X64-AVX-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-AVX-NEXT:    popq %rbx
-; X64-AVX-NEXT:    .cfi_def_cfa_offset 8
+; X64-AVX-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
   store atomic fp128 %v, ptr %fptr unordered, align 16
   ret void
@@ -69,19 +54,9 @@ define fp128 @load_fp128(ptr %fptr) {
 ;
 ; X64-AVX-LABEL: load_fp128:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    pushq %rbx
-; X64-AVX-NEXT:    .cfi_def_cfa_offset 16
-; X64-AVX-NEXT:    .cfi_offset %rbx, -16
-; X64-AVX-NEXT:    xorl %eax, %eax
-; X64-AVX-NEXT:    xorl %edx, %edx
-; X64-AVX-NEXT:    xorl %ecx, %ecx
-; X64-AVX-NEXT:    xorl %ebx, %ebx
-; X64-AVX-NEXT:    lock cmpxchg16b (%rdi)
-; X64-AVX-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
-; X64-AVX-NEXT:    popq %rbx
-; X64-AVX-NEXT:    .cfi_def_cfa_offset 8
 ; X64-AVX-NEXT:    retq
   %v = load atomic fp128, ptr %fptr unordered, align 16
   ret fp128 %v

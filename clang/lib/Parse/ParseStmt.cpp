@@ -22,6 +22,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/TypoCorrection.h"
@@ -191,7 +192,8 @@ Retry:
 
   case tok::code_completion:
     cutOffParsing();
-    Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Statement);
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), SemaCodeCompletion::PCC_Statement);
     return StmtError();
 
   case tok::identifier:
@@ -237,7 +239,15 @@ Retry:
     auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
     bool AllAttrsAreStmtAttrs = llvm::all_of(CXX11Attrs, IsStmtAttr) &&
                                 llvm::all_of(GNUAttrs, IsStmtAttr);
-    if (((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
+    // In C, the grammar production for statement (C23 6.8.1p1) does not allow
+    // for declarations, which is different from C++ (C++23 [stmt.pre]p1). So
+    // in C++, we always allow a declaration, but in C we need to check whether
+    // we're in a statement context that allows declarations. e.g., in C, the
+    // following is invalid: if (1) int x;
+    if ((getLangOpts().CPlusPlus || getLangOpts().MicrosoftExt ||
+         (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) !=
+             ParsedStmtContext()) &&
+        ((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
          isDeclarationStatement())) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       DeclGroupPtrTy Decl;
@@ -843,7 +853,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
 
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompleteCase(getCurScope());
+      Actions.CodeCompletion().CodeCompleteCase(getCurScope());
       return StmtError();
     }
 
@@ -1649,7 +1659,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     InnerScope.Exit();
   } else if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteAfterIf(getCurScope(), IsBracedThen);
+    Actions.CodeCompletion().CodeCompleteAfterIf(getCurScope(), IsBracedThen);
     return StmtError();
   } else if (InnerStatementTrailingElseLoc.isValid()) {
     Diag(InnerStatementTrailingElseLoc, diag::warn_dangling_else);
@@ -2040,9 +2050,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteOrdinaryName(getCurScope(),
-                                     C99orCXXorObjC? Sema::PCC_ForInit
-                                                   : Sema::PCC_Expression);
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), C99orCXXorObjC ? SemaCodeCompletion::PCC_ForInit
+                                      : SemaCodeCompletion::PCC_Expression);
     return StmtError();
   }
 
@@ -2117,7 +2127,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
         if (Tok.is(tok::code_completion)) {
           cutOffParsing();
-          Actions.CodeCompleteObjCForCollection(getCurScope(), DG);
+          Actions.CodeCompletion().CodeCompleteObjCForCollection(getCurScope(),
+                                                                 DG);
           return StmtError();
         }
         Collection = ParseExpression();
@@ -2154,7 +2165,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompleteObjCForCollection(getCurScope(), nullptr);
+        Actions.CodeCompletion().CodeCompleteObjCForCollection(getCurScope(),
+                                                               nullptr);
         return StmtError();
       }
       Collection = ParseExpression();
@@ -2431,8 +2443,8 @@ StmtResult Parser::ParseReturnStatement() {
     // FIXME: Code completion for co_return.
     if (Tok.is(tok::code_completion) && !IsCoreturn) {
       cutOffParsing();
-      Actions.CodeCompleteExpression(getCurScope(),
-                                     PreferredType.get(Tok.getLocation()));
+      Actions.CodeCompletion().CodeCompleteExpression(
+          getCurScope(), PreferredType.get(Tok.getLocation()));
       return StmtError();
     }
 

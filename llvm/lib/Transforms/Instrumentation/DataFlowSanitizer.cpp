@@ -1546,7 +1546,8 @@ bool DataFlowSanitizer::runImpl(
   SmallPtrSet<Constant *, 1> PersonalityFns;
   for (Function &F : M)
     if (!F.isIntrinsic() && !DFSanRuntimeFunctions.contains(&F) &&
-        !LibAtomicFunction(F)) {
+        !LibAtomicFunction(F) &&
+        !F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation)) {
       FnsToInstrument.push_back(&F);
       if (F.hasPersonalityFn())
         PersonalityFns.insert(F.getPersonalityFn()->stripPointerCasts());
@@ -1803,8 +1804,8 @@ Value *DFSanFunction::getRetvalTLS(Type *T, IRBuilder<> &IRB) {
 Value *DFSanFunction::getRetvalOriginTLS() { return DFS.RetvalOriginTLS; }
 
 Value *DFSanFunction::getArgOriginTLS(unsigned ArgNo, IRBuilder<> &IRB) {
-  return IRB.CreateConstGEP2_64(DFS.ArgOriginTLSTy, DFS.ArgOriginTLS, 0, ArgNo,
-                                "_dfsarg_o");
+  return IRB.CreateConstInBoundsGEP2_64(DFS.ArgOriginTLSTy, DFS.ArgOriginTLS, 0,
+                                        ArgNo, "_dfsarg_o");
 }
 
 Value *DFSanFunction::getOrigin(Value *V) {

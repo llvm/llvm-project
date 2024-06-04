@@ -5865,14 +5865,14 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *SrcVTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind,
     const Instruction *I = nullptr) {
-  if (((Opcode == Instruction::Load &&
-        (!isLegalMaskedGather(SrcVTy, Align(Alignment)) ||
-         forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
-                                    Align(Alignment)))) ||
-       (Opcode == Instruction::Store &&
-        (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
-         forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
-                                     Align(Alignment))))))
+  if ((Opcode == Instruction::Load &&
+       (!isLegalMaskedGather(SrcVTy, Align(Alignment)) ||
+        forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
+                                   Align(Alignment)))) ||
+      (Opcode == Instruction::Store &&
+       (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
+        forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
+                                    Align(Alignment)))))
     return BaseT::getGatherScatterOpCost(Opcode, SrcVTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
 
@@ -6257,7 +6257,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
                                 AddressSpace, CostKind);
 
   unsigned VF = VecTy->getNumElements() / Factor;
-  MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);
+  MVT VT =
+      MVT::getVectorVT(TLI->getSimpleValueType(DL, VecTy->getScalarType()), VF);
 
   InstructionCost MaskCost;
   if (UseMaskedMemOp) {

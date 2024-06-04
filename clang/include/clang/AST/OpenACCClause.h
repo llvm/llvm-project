@@ -677,6 +677,35 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
+class OpenACCReductionClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCReductionClause, Expr *> {
+  OpenACCReductionOperator Op;
+
+  OpenACCReductionClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                         OpenACCReductionOperator Operator,
+                         ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Reduction, BeginLoc,
+                                 LParenLoc, EndLoc),
+        Op(Operator) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Reduction;
+  }
+
+  static OpenACCReductionClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
+         SourceLocation EndLoc);
+
+  OpenACCReductionOperator getReductionOp() const { return Op; }
+};
+
 template <class Impl> class OpenACCClauseVisitor {
   Impl &getDerived() { return static_cast<Impl &>(*this); }
 

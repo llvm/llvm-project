@@ -1,5 +1,5 @@
-# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes DEBUG-LABEL,CHECK
-# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes NODEBUG-LABEL,CHECK
+# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,DEBUG
+# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,NODEBUG
 #
 # This was generated from:
 #
@@ -202,8 +202,8 @@ body:             |
     MOVAPSmr %1, 1, $noreg, 0, $noreg, killed %2 :: (store (s128) into %ir.p2)
     RET 0
 
-    ; DEBUG-LABEL: name: debug
-    ; NODEBUG-LABEL: name: nodebug
+    ; DEBUG: name: debug
+    ; NODEBUG: name: nodebug
     ; CHECK: %1:gr64 = COPY
     ; CHECK: %0:gr64 = COPY
     ; CHECK: MOV8mi
@@ -218,5 +218,5 @@ body:             |
     ; CHECK: %7:gr8 = MOV8rm
     ; CHECK: MOV8mr
     ; CHECK: RET 0
-    ; DEBUG-LABEL: name: nodebug
+    ; DEBUG: name: nodebug
 ...

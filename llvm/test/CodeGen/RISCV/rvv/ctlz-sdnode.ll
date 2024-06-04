@@ -3341,16 +3341,16 @@ define <vscale x 8 x i64> @ctlz_zero_undef_nxv8i64(<vscale x 8 x i64> %va) {
 ;
 ; RV32F-LABEL: ctlz_zero_undef_nxv8i64:
 ; RV32F:       # %bb.0:
-; RV32F-NEXT:    vmv8r.v v16, v8
 ; RV32F-NEXT:    li a0, 190
 ; RV32F-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; RV32F-NEXT:    vmv.v.x v8, a0
+; RV32F-NEXT:    vmv.v.x v16, a0
 ; RV32F-NEXT:    fsrmi a0, 1
 ; RV32F-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32F-NEXT:    vfncvt.f.xu.w v24, v16
-; RV32F-NEXT:    vsrl.vi v16, v24, 23
-; RV32F-NEXT:    vwsubu.wv v8, v8, v16
+; RV32F-NEXT:    vfncvt.f.xu.w v24, v8
+; RV32F-NEXT:    vsrl.vi v8, v24, 23
+; RV32F-NEXT:    vwsubu.wv v16, v16, v8
 ; RV32F-NEXT:    fsrm a0
+; RV32F-NEXT:    vmv8r.v v8, v16
 ; RV32F-NEXT:    ret
 ;
 ; RV64F-LABEL: ctlz_zero_undef_nxv8i64:

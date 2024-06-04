@@ -265,7 +265,6 @@ getPushPopEncodingAndNum(const Register MaxReg) {
   default:
     llvm_unreachable("Unexpected Reg for Push/Pop Inst");
   case RISCV::X27: /*s11*/
-  case RISCV::X26: /*s10*/
     return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S11, 13);
   case RISCV::X25: /*s9*/
     return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S9, 11);
@@ -302,9 +301,7 @@ static Register getMaxPushPopReg(const MachineFunction &MF,
         }) != std::end(FixedCSRFIMap))
       MaxPushPopReg = std::max(MaxPushPopReg.id(), CS.getReg().id());
   }
-  // if rlist is {rs, s0-s10}, then s11 will also be included
-  if (MaxPushPopReg == RISCV::X26)
-    MaxPushPopReg = RISCV::X27;
+  assert(MaxPushPopReg != RISCV::X26 && "x26 requires x27 to also be pushed");
   return MaxPushPopReg;
 }
 
@@ -1047,6 +1044,11 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Mark BP as used if function has dedicated base pointer.
   if (hasBP(MF))
     SavedRegs.set(RISCVABI::getBPReg());
+
+  // When using cm.push/pop we must save X27 if we save X26.
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  if (RVFI->isPushable(MF) && SavedRegs.test(RISCV::X26))
+    SavedRegs.set(RISCV::X27);
 }
 
 std::pair<int64_t, Align>

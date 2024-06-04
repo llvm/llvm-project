@@ -15,7 +15,7 @@
 
 namespace lldb_private {
 
-class StreamString;
+class Stream;
 class Log;
 
 class RegisterFlags {
@@ -56,7 +56,7 @@ public:
     /// Output XML that describes this field, to be inserted into a target XML
     /// file. Reserved characters in field names like "<" are replaced with
     /// their XML safe equivalents like "&gt;".
-    void ToXML(StreamString &strm) const;
+    void ToXML(Stream &strm) const;
 
     bool operator<(const Field &rhs) const {
       return GetStart() < rhs.GetStart();
@@ -119,7 +119,7 @@ public:
   std::string AsTable(uint32_t max_width) const;
 
   // Output XML that describes this set of flags.
-  void ToXML(StreamString &strm) const;
+  void ToXML(Stream &strm) const;
 
 private:
   const std::string m_id;

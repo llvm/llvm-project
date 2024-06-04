@@ -47,13 +47,15 @@ void UseStdFormatCheck::registerPPCallbacks(const SourceManager &SM,
 }
 
 void UseStdFormatCheck::registerMatchers(MatchFinder *Finder) {
+  auto CharPointerType =
+      hasType(pointerType(pointee(matchers::isSimpleChar())));
   Finder->addMatcher(
-      callExpr(argumentCountAtLeast(1),
-               hasArgument(0, stringLiteral(isOrdinary())),
-               callee(functionDecl(unless(cxxMethodDecl()),
-                                   matchers::matchesAnyListedName(
-                                       StrFormatLikeFunctions))
-                          .bind("func_decl")))
+      callExpr(
+          argumentCountAtLeast(1), hasArgument(0, stringLiteral(isOrdinary())),
+          callee(functionDecl(
+                     unless(cxxMethodDecl()), hasParameter(0, CharPointerType),
+                     matchers::matchesAnyListedName(StrFormatLikeFunctions))
+                     .bind("func_decl")))
           .bind("strformat"),
       this);
 }

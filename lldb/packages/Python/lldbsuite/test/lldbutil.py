@@ -809,7 +809,7 @@ def is_thread_crashed(test, thread):
             thread.GetStopReason() == lldb.eStopReasonException
             and "EXC_BAD_ACCESS" in thread.GetStopDescription(100)
         )
-    elif test.getPlatform() == "linux":
+    elif test.getPlatform() in ["linux", "freebsd"]:
         return (
             thread.GetStopReason() == lldb.eStopReasonSignal
             and thread.GetStopReasonDataAtIndex(0)

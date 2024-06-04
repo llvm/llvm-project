@@ -264,10 +264,18 @@ enum NodeType : unsigned {
   SSUBSAT_VL,
   USUBSAT_VL,
 
+  // Averaging adds of signed integers.
+  AVGFLOORS_VL,
   // Averaging adds of unsigned integers.
   AVGFLOORU_VL,
+  // Rounding averaging adds of signed integers.
+  AVGCEILS_VL,
   // Rounding averaging adds of unsigned integers.
   AVGCEILU_VL,
+
+  // Operands are (source, shift, merge, mask, roundmode, vl)
+  VNCLIPU_VL,
+  VNCLIP_VL,
 
   MULHS_VL,
   MULHU_VL,
@@ -566,6 +574,8 @@ public:
   bool
   shouldExpandBuildVectorWithShuffles(EVT VT,
                                       unsigned DefinedValues) const override;
+
+  bool shouldExpandCttzElements(EVT VT) const override;
 
   /// Return the cost of LMUL for linear operations.
   InstructionCost getLMULCost(MVT VT) const;
@@ -957,7 +967,6 @@ private:
   SDValue lowerFixedLengthVectorSelectToRVV(SDValue Op,
                                             SelectionDAG &DAG) const;
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerUnsignedAvgFloor(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
@@ -1000,8 +1009,6 @@ private:
 
   bool shouldExpandGetVectorLength(EVT TripCountVT, unsigned VF,
                                    bool IsScalable) const override;
-
-  bool shouldExpandCttzElements(EVT VT) const override;
 
   /// RVV code generation for fixed length vectors does not lower all
   /// BUILD_VECTORs. This makes BUILD_VECTOR legalisation a source of stores to

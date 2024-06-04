@@ -29,6 +29,7 @@ module m
   real, external, external :: externFunc
   !WARNING: Attribute 'INTRINSIC' cannot be used more than once
   !ERROR: 'cos' may not have both the BIND(C) and INTRINSIC attributes
+  !ERROR: An interface name with the BIND attribute must appear if the BIND attribute appears in a procedure declaration
   real, intrinsic, bind(c), intrinsic :: cos
   !WARNING: Attribute 'BIND(C)' cannot be used more than once
   integer, bind(c), volatile, bind(c) :: bindVar
