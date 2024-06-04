@@ -433,9 +433,8 @@ define <2 x i1> @test_select_inverse_vec_fail(<2 x i64> %x, i1 %y) {
 
 define i1 @test_select_inverse_nonconst1(i64 %x, i64 %y, i1 %cond) {
 ; CHECK-LABEL: @test_select_inverse_nonconst1(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[CMP2]], [[COND:%.*]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %cmp1 = icmp ne i64 %x, %y
@@ -446,9 +445,8 @@ define i1 @test_select_inverse_nonconst1(i64 %x, i64 %y, i1 %cond) {
 
 define i1 @test_select_inverse_nonconst2(i64 %x, i64 %y, i1 %cond) {
 ; CHECK-LABEL: @test_select_inverse_nonconst2(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[Y]], [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[CMP2]], [[COND:%.*]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %cmp1 = icmp ne i64 %x, %y
@@ -459,9 +457,8 @@ define i1 @test_select_inverse_nonconst2(i64 %x, i64 %y, i1 %cond) {
 
 define i1 @test_select_inverse_nonconst3(i64 %x, i64 %y, i1 %cond) {
 ; CHECK-LABEL: @test_select_inverse_nonconst3(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[CMP2]], [[COND:%.*]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %cmp1 = icmp ult i64 %x, %y

@@ -3508,20 +3508,19 @@ static bool matchFMulByZeroIfResultEqZero(InstCombinerImpl &IC, Value *Cmp0,
 /// 3. X is false implies Y is true.
 /// Otherwise, return false.
 static bool isKnownInversion(Value *X, Value *Y) {
-  // Handle X = icmp pred V, C1, Y = icmp pred V, C2.
-  Value *V;
-  Constant *C1, *C2;
+  // Handle X = icmp pred A, B, Y = icmp pred A, C.
+  Value *A, *B, *C;
   ICmpInst::Predicate Pred1, Pred2;
-  if (!match(X, m_ICmp(Pred1, m_Value(V), m_Constant(C1))) ||
-      !match(Y, m_ICmp(Pred2, m_Specific(V), m_Constant(C2))))
+  if (!match(X, m_ICmp(Pred1, m_Value(A), m_Value(B))) ||
+      !match(Y, m_c_ICmp(Pred2, m_Specific(A), m_Value(C))))
     return false;
 
-  if (C1 == C2)
+  if (B == C)
     return Pred1 == ICmpInst::getInversePredicate(Pred2);
 
   // Try to infer the relationship from constant ranges.
   const APInt *RHSC1, *RHSC2;
-  if (!match(C1, m_APInt(RHSC1)) || !match(C2, m_APInt(RHSC2)))
+  if (!match(B, m_APInt(RHSC1)) || !match(C, m_APInt(RHSC2)))
     return false;
 
   const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);
