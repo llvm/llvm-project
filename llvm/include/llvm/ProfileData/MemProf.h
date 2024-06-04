@@ -947,6 +947,10 @@ struct IndexedMemProfData {
 //
 // - JN indicates a pointer to the parent, encoded as -N.
 //
+// The radix tree allows us to reconstruct call stacks in the leaf-to-root
+// order as we scan the array from left ro right while following pointers to
+// parents along the way
+//
 // For example, if we are decoding CallStackId 2, we start a forward traversal
 // at Index 7, noting the call stack length of 4 and obtaining f5 and f4.  When
 // we see J3 at Index 10, we resume a forward traversal at Index 13 = 10 + 3,
@@ -963,20 +967,27 @@ class CallStackRadixTreeBuilder {
   // Mapping from CallStackIds to indexes into RadixArray.
   llvm::DenseMap<CallStackId, uint32_t> CallStackPos;
 
-  // The indexes within RadixArray of the last call stack's frames encoded
-  // satisfying:
+  // In build, we partition a given call stack into two parts -- the prefix
+  // that's common with the previously encoded call stack and the frames beyond
+  // the common prefix -- the unique portion.  Then we want to find out where
+  // the common prefix is stored in RadixArray so that we can link the unique
+  // portion to the common prefix.  Indexes, declared below, helps with our
+  // needs.  Intuitively, Indexes tells us where each of the previously encoded
+  // call stack is stored in RadixArray.  More formally, Indexes satisfies:
   //
-  //   RadixArray[Indexes[I]] == (*Prev)[Prev->size() - I - 1]
+  //   RadixArray[Indexes[I]] == Prev[I]
   //
-  // where Prev is one of the parameters to build.
+  // for every I, where Prev is the the call stack in the root-to-leaf order
+  // previously encoded by build.  (Note that Prev, as passed to
+  // encodeCallStack, is in the leaf-to-root order.)
+  //
+  // For example, if the call stack being encoded shares 5 frames at the root of
+  // the call stack with the previously encoded call stack,
+  // RadixArray[Indexes[0]] is the root frame of the common prefix.
+  // RadixArray[Indexes[5 - 1]] is the last frame of the common prefix.
   std::vector<uint32_t> Indexes;
 
-  using CSIdPair = std::pair<CallStackId, llvm::SmallVector<FrameId> *>;
-
-  // Returns the sorted list of call stacks.
-  std::vector<CSIdPair>
-  sortCallStacks(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
-                     &MemProfCallStackData);
+  using CSIdPair = std::pair<CallStackId, llvm::SmallVector<FrameId>>;
 
   // Encode a call stack into RadixArray.  Return the starting index within
   // RadixArray.
@@ -988,8 +999,9 @@ class CallStackRadixTreeBuilder {
 public:
   CallStackRadixTreeBuilder() = default;
 
+  // Build a radix tree array.
   void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
-                 &MemProfCallStackData,
+                 &&MemProfCallStackData,
              const llvm::DenseMap<FrameId, uint32_t> &MemProfFrameIndexes);
 
   const std::vector<uint32_t> &getRadixArray() const { return RadixArray; }
@@ -998,12 +1010,6 @@ public:
     return CallStackPos;
   }
 };
-
-llvm::DenseMap<CallStackId, uint32_t>
-writeCallStackRadixTree(raw_ostream &OS,
-                        llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
-                            &MemProfCallStackData,
-                        llvm::DenseMap<FrameId, uint32_t> &MemProfFrameIndexes);
 
 // Verify that each CallStackId is computed with hashCallStack.  This function
 // is intended to help transition from CallStack to CSId in

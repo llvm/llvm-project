@@ -668,7 +668,7 @@ TEST(MemProf, RadixTreeBuilderEmpty) {
   llvm::DenseMap<FrameId, uint32_t> MemProfFrameIndexes;
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
   llvm::memprof::CallStackRadixTreeBuilder Builder;
-  Builder.build(MemProfCallStackData, MemProfFrameIndexes);
+  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes);
   ASSERT_THAT(Builder.getRadixArray(), testing::IsEmpty());
   const auto &Mappings = Builder.getCallStackPos();
   ASSERT_THAT(Mappings, testing::IsEmpty());
@@ -682,7 +682,7 @@ TEST(MemProf, RadixTreeBuilderOne) {
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS1), CS1});
   llvm::memprof::CallStackRadixTreeBuilder Builder;
-  Builder.build(MemProfCallStackData, MemProfFrameIndexes);
+  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes);
   EXPECT_THAT(Builder.getRadixArray(), testing::ElementsAreArray({
                                            3U, // Size of CS1,
                                            3U, // MemProfFrameIndexes[13]
@@ -705,7 +705,7 @@ TEST(MemProf, RadixTreeBuilderTwo) {
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS1), CS1});
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS2), CS2});
   llvm::memprof::CallStackRadixTreeBuilder Builder;
-  Builder.build(MemProfCallStackData, MemProfFrameIndexes);
+  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes);
   EXPECT_THAT(Builder.getRadixArray(),
               testing::ElementsAreArray({
                   2U,                        // Size of CS1
@@ -739,7 +739,7 @@ TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS3), CS3});
   MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS4), CS4});
   llvm::memprof::CallStackRadixTreeBuilder Builder;
-  Builder.build(MemProfCallStackData, MemProfFrameIndexes);
+  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes);
   EXPECT_THAT(Builder.getRadixArray(),
               testing::ElementsAreArray({
                   4U,                        // Size of CS1
