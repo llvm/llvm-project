@@ -11,19 +11,6 @@
 #include "src/stdlib/exit_handler.h"
 namespace LIBC_NAMESPACE {
 
-extern "C" {
-
-int __cxa_at_quick_exit(AtExitCallback *callback, void *payload, void *) {
-  return add_atexit_unit(at_quick_exit_callbacks, {callback, payload});
-}
-
-void __cxa_finalize_quick_exit(void *dso) {
-  if (!dso)
-    call_exit_callbacks(at_quick_exit_callbacks);
-}
-
-} // extern "C"
-
 LLVM_LIBC_FUNCTION(int, at_quick_exit, (StdCAtExitCallback * callback)) {
   return add_atexit_unit(
       at_quick_exit_callbacks,
