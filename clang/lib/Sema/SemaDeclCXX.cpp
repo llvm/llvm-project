@@ -2481,11 +2481,13 @@ static bool CheckConstexprMissingReturn(Sema &SemaRef,
                                         const FunctionDecl *Dcl) {
   bool IsVoidOrDependentType = Dcl->getReturnType()->isVoidType() ||
                                Dcl->getReturnType()->isDependentType();
-
+  // Skip emitting a missing return error diagnostic for non-void functions
+  // since C++23 no longer mandates constexpr functions to yield constant
+  // expressions.
   if (SemaRef.getLangOpts().CPlusPlus23 && !IsVoidOrDependentType)
     return true;
 
-  // C++1y doesn't require constexpr functions to contain a 'return'
+  // C++14 doesn't require constexpr functions to contain a 'return'
   // statement. We still do, unless the return type might be void, because
   // otherwise if there's no return statement, the function cannot
   // be used in a core constant expression.
