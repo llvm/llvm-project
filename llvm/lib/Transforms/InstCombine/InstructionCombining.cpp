@@ -2782,7 +2782,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (GEP.accumulateConstantOffset(DL, Offset))
       return replaceInstUsesWith(
           GEP, Builder.CreatePtrAdd(PtrOp, Builder.getInt(Offset), "",
-                                    GEP.isInBounds()));
+                                    GEP.getNoWrapFlags()));
   }
 
   // Canonicalize scalable GEPs to an explicit offset using the llvm.vscale
