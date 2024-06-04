@@ -13681,7 +13681,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     }
 
     Init = Result.getAs<Expr>();
-    assert (Init && "Init must not be null");
+    assert(Init && "Init must not be null");
 
     IsParenListInit = !InitSeq.steps().empty() &&
                       InitSeq.step_begin()->Kind ==
