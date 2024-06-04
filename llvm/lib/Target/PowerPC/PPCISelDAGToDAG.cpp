@@ -147,12 +147,10 @@ namespace {
     unsigned GlobalBaseReg = 0;
 
   public:
-    static char ID;
-
     PPCDAGToDAGISel() = delete;
 
     explicit PPCDAGToDAGISel(PPCTargetMachine &tm, CodeGenOptLevel OptLevel)
-        : SelectionDAGISel(ID, tm, OptLevel), TM(tm) {}
+        : SelectionDAGISel(tm, OptLevel), TM(tm) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
       // Make sure we re-emit a set of the global base reg if necessary
@@ -447,11 +445,19 @@ private:
     void transferMemOperands(SDNode *N, SDNode *Result);
   };
 
+  class PPCDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+  public:
+    static char ID;
+    explicit PPCDAGToDAGISelLegacy(PPCTargetMachine &tm,
+                                   CodeGenOptLevel OptLevel)
+        : SelectionDAGISelLegacy(
+              ID, std::make_unique<PPCDAGToDAGISel>(tm, OptLevel)) {}
+  };
 } // end anonymous namespace
 
-char PPCDAGToDAGISel::ID = 0;
+char PPCDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(PPCDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(PPCDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// getGlobalBaseReg - Output the instructions required to put the
 /// base address to use for accessing globals into a register.
@@ -7921,5 +7927,5 @@ void PPCDAGToDAGISel::PeepholePPC64() {
 ///
 FunctionPass *llvm::createPPCISelDag(PPCTargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new PPCDAGToDAGISel(TM, OptLevel);
+  return new PPCDAGToDAGISelLegacy(TM, OptLevel);
 }

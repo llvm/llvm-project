@@ -67,7 +67,7 @@ void initializeWebAssemblyArgumentMovePass(PassRegistry &);
 void initializeWebAssemblyCleanCodeAfterTrapPass(PassRegistry &);
 void initializeWebAssemblyCFGSortPass(PassRegistry &);
 void initializeWebAssemblyCFGStackifyPass(PassRegistry &);
-void initializeWebAssemblyDAGToDAGISelPass(PassRegistry &);
+void initializeWebAssemblyDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeWebAssemblyDebugFixupPass(PassRegistry &);
 void initializeWebAssemblyExceptionInfoPass(PassRegistry &);
 void initializeWebAssemblyExplicitLocalsPass(PassRegistry &);
