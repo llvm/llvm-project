@@ -57185,7 +57185,8 @@ static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
     //                                        v4f32 (xint_to_fp v4i64))))
     // into (v8f16 vector_shuffle(v8f16 (CVTXI2P v4i64),
     //                            v8f16 (CVTXI2P v4i64)))
-    if (NumElts == 8 && Src.getOpcode() == ISD::CONCAT_VECTORS && Src.getNumOperands() == 2) {
+    if (NumElts == 8 && Src.getOpcode() == ISD::CONCAT_VECTORS &&
+        Src.getNumOperands() == 2) {
       SDValue Cvt0, Cvt1;
       SDValue Op0 = Src.getOperand(0);
       SDValue Op1 = Src.getOperand(1);
