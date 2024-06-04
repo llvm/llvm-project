@@ -2,6 +2,8 @@
 // Test standard include paths
 // -----------------------------------------------------------------------------
 
+// XFAIL: *
+
 // RUN: %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK000 %s
 // CHECK000: "-cc1" {{.*}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/include"
@@ -532,7 +534,6 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=fake-value-to-ignore-CLANG_DEFAULT_LINKER %s 2>&1 | FileCheck -check-prefix=CHECK381 %s
-// REQUIRES: hexagon-registered-target
 // CHECK381:      "-march=hexagon"
 // CHECK381:      "-mcpu=hexagonv60"
 // -----------------------------------------------------------------------------

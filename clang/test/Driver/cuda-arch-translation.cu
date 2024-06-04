@@ -1,8 +1,5 @@
 // Tests that "sm_XX" gets correctly converted to "compute_YY" when we invoke
 // fatbinary.
-//
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
 
 // RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CUDA,SM20 %s

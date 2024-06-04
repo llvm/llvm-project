@@ -44,3 +44,13 @@ void fir::runtime::genCopyAndUpdateDescriptor(fir::FirOpBuilder &builder,
   }
   builder.create<fir::CallOp>(loc, func, args);
 }
+
+mlir::Value fir::runtime::genIsAssumedSize(fir::FirOpBuilder &builder,
+                                           mlir::Location loc,
+                                           mlir::Value box) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(IsAssumedSize)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto args = fir::runtime::createArguments(builder, loc, fTy, box);
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}

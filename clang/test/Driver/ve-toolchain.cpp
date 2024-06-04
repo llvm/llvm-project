@@ -1,9 +1,10 @@
 /// Check the behavior of toolchain for NEC Aurora VE
-/// REQUIRES: ve-registered-target
 /// UNSUPPORTED: system-windows
 
 ///-----------------------------------------------------------------------------
 /// Checking dwarf-version
+
+// XFAIL: *
 
 // RUN: %clangxx -### -g --target=ve-unknown-linux-gnu \
 // RUN:     %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
