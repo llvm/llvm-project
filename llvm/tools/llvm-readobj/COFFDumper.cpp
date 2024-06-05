@@ -27,6 +27,7 @@
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
+#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
@@ -793,7 +794,9 @@ void COFFDumper::printCOFFDebugDirectory() {
       DictScope PDBScope(W, "PDBInfo");
       W.printHex("PDBSignature", DebugInfo->Signature.CVSignature);
       if (DebugInfo->Signature.CVSignature == OMF::Signature::PDB70) {
-        W.printBinary("PDBGUID", ArrayRef(DebugInfo->PDB70.Signature));
+        W.printString(
+            "PDBGUID",
+            formatv("{0}", fmt_guid(DebugInfo->PDB70.Signature)).str());
         W.printNumber("PDBAge", DebugInfo->PDB70.Age);
         W.printString("PDBFileName", PDBFileName);
       }
