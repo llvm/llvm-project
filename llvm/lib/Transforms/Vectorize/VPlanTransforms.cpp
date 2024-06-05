@@ -1462,30 +1462,39 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
 
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
+      VPRecipeBase *NewRecipe = nullptr;
+      auto *CurRecipe = dyn_cast<VPRecipeBase>(U);
+      if (!CurRecipe || CurRecipe->getNumDefinedValues() > 1)
+        continue;
+
       auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
         assert(OrigMask && "Unmasked recipe when folding tail");
         return HeaderMask == OrigMask ? nullptr : OrigMask;
       };
-      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(CurRecipe)) {
         VPValue *NewMask = GetNewMask(MemR->getMask());
-        if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
-          auto *N = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
-          N->insertBefore(L);
-          L->replaceAllUsesWith(N);
-          L->eraseFromParent();
-        } else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR)) {
-          auto *N = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
-          N->insertBefore(S);
-          S->eraseFromParent();
-        } else {
+        if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR))
+          NewRecipe = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
+        else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR))
+          NewRecipe = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
+        else
           llvm_unreachable("unsupported recipe");
+      } else if (auto *RedR = dyn_cast<VPReductionRecipe>(CurRecipe)) {
+        NewRecipe = new VPReductionEVLRecipe(RedR, VPEVL,
+                                             GetNewMask(RedR->getCondOp()));
+      }
+
+      if (NewRecipe) {
+        unsigned NumDefVal = NewRecipe->getNumDefinedValues();
+        assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
+               "New recipe must define the same number of values as the "
+               "original.");
+        NewRecipe->insertBefore(CurRecipe);
+        if (NumDefVal > 0) {
+          VPValue *CurVPV = CurRecipe->getVPSingleValue();
+          CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
         }
-      } else if (auto *RedR = dyn_cast<VPReductionRecipe>(U)) {
-        auto *N = new VPReductionEVLRecipe(RedR, VPEVL,
-                                           GetNewMask(RedR->getCondOp()));
-        N->insertBefore(RedR);
-        RedR->replaceAllUsesWith(N);
-        RedR->eraseFromParent();
+        CurRecipe->eraseFromParent();
       }
     }
     recursivelyDeleteDeadRecipes(HeaderMask);
