@@ -1354,6 +1354,8 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
 
         ReferencesResult::Reference Result;
         const auto *Token = AST.getTokens().spelledTokenAt(Loc);
+        if (!Token)
+          return;
         Result.Loc.range = Range{sourceLocToPosition(SM, Token->location()),
                                  sourceLocToPosition(SM, Token->endLocation())};
         Result.Loc.uri = URIMainFile;
@@ -2012,15 +2014,15 @@ static QualType typeForNode(const SelectionTree::Node *N) {
   return QualType();
 }
 
-// Given a type targeted by the cursor, return one or more types that are more interesting
-// to target.
-static void unwrapFindType(
-    QualType T, const HeuristicResolver* H, llvm::SmallVector<QualType>& Out) {
+// Given a type targeted by the cursor, return one or more types that are more
+// interesting to target.
+static void unwrapFindType(QualType T, const HeuristicResolver *H,
+                           llvm::SmallVector<QualType> &Out) {
   if (T.isNull())
     return;
 
   // If there's a specific type alias, point at that rather than unwrapping.
-  if (const auto* TDT = T->getAs<TypedefType>())
+  if (const auto *TDT = T->getAs<TypedefType>())
     return Out.push_back(QualType(TDT, 0));
 
   // Pointers etc => pointee type.
@@ -2044,17 +2046,18 @@ static void unwrapFindType(
 
   // For smart pointer types, add the underlying type
   if (H)
-    if (const auto* PointeeType = H->getPointeeType(T.getNonReferenceType().getTypePtr())) {
-        unwrapFindType(QualType(PointeeType, 0), H, Out);
-        return Out.push_back(T);
+    if (const auto *PointeeType =
+            H->getPointeeType(T.getNonReferenceType().getTypePtr())) {
+      unwrapFindType(QualType(PointeeType, 0), H, Out);
+      return Out.push_back(T);
     }
 
   return Out.push_back(T);
 }
 
 // Convenience overload, to allow calling this without the out-parameter
-static llvm::SmallVector<QualType> unwrapFindType(
-    QualType T, const HeuristicResolver* H) {
+static llvm::SmallVector<QualType> unwrapFindType(QualType T,
+                                                  const HeuristicResolver *H) {
   llvm::SmallVector<QualType> Result;
   unwrapFindType(T, H, Result);
   return Result;
@@ -2076,10 +2079,11 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
     std::vector<LocatedSymbol> LocatedSymbols;
 
     // NOTE: unwrapFindType might return duplicates for something like
-    // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you some
-    // information about the type you may have not known before
-    // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
-    for (const QualType& Type : unwrapFindType(typeForNode(N), AST.getHeuristicResolver()))
+    // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you
+    // some information about the type you may have not known before (since
+    // unique_ptr<unique_ptr<T>> != unique_ptr<T>).
+    for (const QualType &Type :
+         unwrapFindType(typeForNode(N), AST.getHeuristicResolver()))
       llvm::copy(locateSymbolForType(AST, Type, Index),
                  std::back_inserter(LocatedSymbols));
 

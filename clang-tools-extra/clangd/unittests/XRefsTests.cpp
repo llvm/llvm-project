@@ -2358,7 +2358,14 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
 
       R"cpp([[#in^clude <vector>]]
         std::[[vector]]<int> vec;
-      )cpp"};
+      )cpp",
+
+      R"cpp(
+        [[#include ^"operator_qoutes.h"]]
+        using ::operator_qoutes::[[operator]]"" _b;
+        auto x = 1_b;
+      )cpp",
+  };
   for (const char *Test : Tests) {
     Annotations T(Test);
     auto TU = TestTU::withCode(T.code());
@@ -2373,6 +2380,11 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
       namespace std {
         template<typename>
         class vector{};
+      }
+    )cpp");
+    TU.AdditionalFiles["operator_qoutes.h"] = guard(R"cpp(
+      namespace operator_qoutes {
+        bool operator"" _b(unsigned long long value);
       }
     )cpp");
     TU.ExtraArgs.push_back("-isystem" + testPath("system"));
