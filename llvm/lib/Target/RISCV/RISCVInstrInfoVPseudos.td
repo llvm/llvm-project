@@ -6306,7 +6306,7 @@ foreach vti = AllIntegerVectors in {
                                                       vti.RegClass:$rs1,
                                                       (NegImm simm5_plus1:$rs2),
                                                       GPR:$vl,
-                                                      vti.Log2SEW, TA_MA)>;
+                                                      vti.Log2SEW, TU_MU)>;
     def : Pat<(vti.Vector (int_riscv_vsub_mask (vti.Vector vti.RegClass:$merge),
                                                (vti.Vector vti.RegClass:$rs1),
                                                (vti.Scalar simm5_plus1:$rs2),
