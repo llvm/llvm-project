@@ -86,8 +86,8 @@ built with and the default hardening mode that users will build with. If set to
 ``none``, the precompiled library will not contain any assertions, and user code
 will default to building without assertions.
 
-Vendors can also override the termination handler by :ref:`providing a custom
-header <override-assertion-handler>`.
+Vendors can also override the way the program is terminated when an assertion
+fails by :ref:`providing a custom header <override-assertion-handler>`.
 
 Assertion categories
 ====================
@@ -96,6 +96,11 @@ Inside the library, individual assertions are grouped into different
 *categories*. Each hardening mode enables a different set of assertion
 categories; categories provide an additional layer of abstraction that makes it
 easier to reason about the high-level semantics of a hardening mode.
+
+.. note::
+
+  Users are not intended to interact with these categories directly -- the
+  categories are considered internal to the library and subject to change.
 
 - ``valid-element-access`` -- checks that any attempts to access a container
   element, whether through the container object or through an iterator, are
@@ -151,7 +156,7 @@ easier to reason about the high-level semantics of a hardening mode.
   code.
 
 - ``pedantic`` -- checks preconditions that are imposed by the Standard, but
-  violating which happens to be benign in our implementation.
+  violating which happens to be benign in libc++.
 
 - ``semantic-requirement`` -- checks that the given argument satisfies the
   semantic requirements imposed by the Standard. Typically, there is no simple
@@ -232,6 +237,13 @@ Mapping between the hardening modes and the assertion categories
   assertion categories without disabling any), but this won't necessarily be
   true for any hardening modes that might be added in the future.
 
+.. note::
+
+  The categories enabled by each mode are subject to change and users should not
+  rely on the precise assertions enabled by a mode at a given point in time.
+  However, the library does guarantee to keep the hardening modes stable and
+  to fulfill the semantics documented here.
+
 Hardening assertion failure
 ===========================
 
@@ -248,15 +260,15 @@ In the ``debug`` mode, an assertion failure terminates the program in an
 unspecified manner and also outputs the associated error message to the error
 output. This is less secure and increases the size of the binary (among other
 things, it has to store the error message strings) but makes the failure easier
-to debug. It also allows us to test the error messages in our test suite.
+to debug. It also allows testing the error messages in our test suite.
 
 .. _override-assertion-handler:
 
 Overriding the assertion failure handler
 ----------------------------------------
 
-Vendors can override the default termination handler mechanism by following
-these steps:
+Vendors can override the default assertion handler mechanism by following these
+steps:
 
 - create a header file that provides a definition of a macro called
   ``_LIBCPP_ASSERTION_HANDLER``. The macro will be invoked when a hardening
@@ -266,7 +278,17 @@ these steps:
   the root of the repository) via the CMake variable
   ``LIBCXX_ASSERTION_HANDLER_FILE``.
 
-There is no existing mechanism for users to override the termination handler.
+Note that almost all libc++ headers include the assertion handler header which
+means it should not include anything from the standard library to avoid creating
+circular dependencies.
+
+There is no existing mechanism for users to override the assertion handler
+because the ability to do the override other than at configure-time carries an
+unavoidable code size penalty that would otherwise be imposed on all users,
+whether they require such customization or not. Instead, we let vendors decide
+what's right on their platform for their users -- a vendor who wishes to provide
+this capability is free to do so, e.g. by declaring the assertion handler as an
+overridable function.
 
 ABI
 ===
@@ -369,43 +391,7 @@ TODO(hardening): make this table exhaustive.
 Testing
 =======
 
-Each hardening assertion should be tested using death tests (via the
-``TEST_LIBCPP_ASSERT_FAILURE`` macro). Use the ``libcpp-hardening-mode`` Lit
-feature to make sure the assertion is enabled in (and only in) the intended
-modes. The convention is to use `assert.` in the name of the test file to make
-it easier to identify as a hardening test, e.g. ``assert.my_func.pass.cpp``.
-A toy example:
-
-.. code-block:: cpp
-
-  // Note: the following three annotations are currently needed to use the
-  // `TEST_LIBCPP_ASSERT_FAILURE`.
-  // REQUIRES: has-unix-headers
-  // UNSUPPORTED: c++03
-  // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
-
-  // Example: only run this test in `fast`/`extensive`/`debug` modes.
-  // UNSUPPORTED: libcpp-hardening-mode=none
-  // Example: only run this test in the `debug` mode.
-  // REQUIRES: libcpp-hardening-mode=debug
-  // Example: only run this test in `extensive`/`debug` modes.
-  // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-
-  #include <header_being_tested>
-
-  #include "check_assertion.h" // Contains the `TEST_LIBCPP_ASSERT_FAILURE` macro
-
-  int main(int, char**) {
-    std::type_being_tested foo;
-    int bad_input = -1;
-    TEST_LIBCPP_ASSERT_FAILURE(foo.some_function_that_asserts(bad_input),
-        "The expected assertion message");
-
-    return 0;
-  }
-
-Note that error messages are only tested (matched) if the ``debug``
-hardening mode is used.
+Please see :ref:`Testing documentation <testing-hardening-assertions>`.
 
 Further reading
 ===============
