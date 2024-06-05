@@ -36,12 +36,16 @@ def CoreAlpha : Package<"core">, ParentPackage<Alpha>;
 // Note: OptIn is *not* intended for checkers that are too noisy to be on by
 // default. Such checkers belong in the alpha package.
 def OptIn : Package<"optin">;
+
 def CoreOptIn : Package<"core">, ParentPackage<OptIn>;
 
 // In the Portability package reside checkers for finding code that relies on
 // implementation-defined behavior. Such checks are wanted for cross-platform
 // development, but unwanted for developers who target only a single platform.
 def PortabilityOptIn : Package<"portability">, ParentPackage<OptIn>;
+
+// Optional checkers related to taint security analysis.
+def TaintOptIn : Package<"taint">, ParentPackage<OptIn>;
 
 def Nullability : Package<"nullability">,
   PackageOptions<[
@@ -1717,6 +1721,23 @@ def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
   Documentation<NotDocumented>;
 
 } // end optin.portability
+
+
+//===----------------------------------------------------------------------===//
+// Taint checkers.
+//===----------------------------------------------------------------------===//
+
+let ParentPackage = TaintOptIn in {
+
+def TaintedAllocChecker: Checker<"TaintedAlloc">,
+  HelpText<"Check for memory allocations, where the size parameter "
+           "might be a tainted (attacker controlled) value.">,
+  Dependencies<[DynamicMemoryModeling]>,
+  //FIXME: GenericTaintChecker should be a dependency, but only after it
+  //is transformed into a modeling checker
+  Documentation<HasDocumentation>;
+
+} // end "optin.taint"
 
 //===----------------------------------------------------------------------===//
 // NonDeterminism checkers.
