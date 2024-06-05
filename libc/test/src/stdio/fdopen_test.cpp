@@ -16,7 +16,6 @@
 #include "src/stdio/fputs.h"
 #include "src/unistd/close.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
 #include <sys/stat.h> // For S_IRWXU

@@ -15,8 +15,6 @@
 #include "src/fcntl/fcntl.h"
 #include "src/stdio/fseek.h"
 
-#include <stdio.h>
-
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(::FILE *, fdopen, (int fd, const char *mode)) {
