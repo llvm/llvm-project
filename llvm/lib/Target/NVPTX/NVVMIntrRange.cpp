@@ -28,30 +28,22 @@ using namespace llvm;
 
 namespace llvm { void initializeNVVMIntrRangePass(PassRegistry &); }
 
-// Add range attributes based on limits of given SM variant.
-static cl::opt<unsigned> NVVMIntrRangeSM("nvvm-intr-range-sm", cl::init(20),
-                                         cl::Hidden, cl::desc("SM variant"));
-
 namespace {
 class NVVMIntrRange : public FunctionPass {
   unsigned SmVersion;
 
 public:
   static char ID;
-  NVVMIntrRange() : NVVMIntrRange(NVVMIntrRangeSM) {}
-  NVVMIntrRange(unsigned int SmVersion)
-      : FunctionPass(ID), SmVersion(SmVersion) {
+  NVVMIntrRange() : FunctionPass(ID) {
 
     initializeNVVMIntrRangePass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnFunction(Function &) override;
 };
-}
+} // namespace
 
-FunctionPass *llvm::createNVVMIntrRangePass(unsigned int SmVersion) {
-  return new NVVMIntrRange(SmVersion);
-}
+FunctionPass *llvm::createNVVMIntrRangePass() { return new NVVMIntrRange(); }
 
 char NVVMIntrRange::ID = 0;
 INITIALIZE_PASS(NVVMIntrRange, "nvvm-intr-range",
@@ -73,7 +65,7 @@ static bool addRangeAttr(uint64_t Low, uint64_t High, IntrinsicInst *II) {
   return true;
 }
 
-static bool runNVVMIntrRange(Function &F, unsigned SmVersion) {
+static bool runNVVMIntrRange(Function &F) {
   struct {
     unsigned x, y, z;
   } MaxBlockSize, MaxGridSize;
@@ -85,7 +77,7 @@ static bool runNVVMIntrRange(Function &F, unsigned SmVersion) {
   MaxBlockSize.y = std::min(1024u, MetadataNTID);
   MaxBlockSize.z = std::min(64u, MetadataNTID);
 
-  MaxGridSize.x = SmVersion >= 30 ? 0x7fffffff : 0xffff;
+  MaxGridSize.x = 0x7fffffff;
   MaxGridSize.y = 0xffff;
   MaxGridSize.z = 0xffff;
 
@@ -159,14 +151,10 @@ static bool runNVVMIntrRange(Function &F, unsigned SmVersion) {
   return Changed;
 }
 
-bool NVVMIntrRange::runOnFunction(Function &F) {
-  return runNVVMIntrRange(F, SmVersion);
-}
-
-NVVMIntrRangePass::NVVMIntrRangePass() : NVVMIntrRangePass(NVVMIntrRangeSM) {}
+bool NVVMIntrRange::runOnFunction(Function &F) { return runNVVMIntrRange(F); }
 
 PreservedAnalyses NVVMIntrRangePass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
-  return runNVVMIntrRange(F, SmVersion) ? PreservedAnalyses::none()
-                                        : PreservedAnalyses::all();
+  return runNVVMIntrRange(F) ? PreservedAnalyses::none()
+                             : PreservedAnalyses::all();
 }

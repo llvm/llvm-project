@@ -235,7 +235,7 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(
         FPM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
         // Note: NVVMIntrRangePass was causing numerical discrepancies at one
         // point, if issues crop up, consider disabling.
-        FPM.addPass(NVVMIntrRangePass(Subtarget.getSmVersion()));
+        FPM.addPass(NVVMIntrRangePass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 }

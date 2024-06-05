@@ -1,15 +1,15 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck -allow-deprecated-dag-overlap %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck -allow-deprecated-dag-overlap %s
 ; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda -passes=nvvm-intr-range \
-; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE --check-prefix=RANGE_20 %s
+; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE %s
 ; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda -passes=nvvm-intr-range \
-; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE --check-prefix=RANGE_20 %s
+; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE %s
 ; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda \
-; RUN:    -passes=nvvm-intr-range -nvvm-intr-range-sm=30 \
-; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE --check-prefix=RANGE_30 %s
+; RUN:    -passes=nvvm-intr-range \
+; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE %s
 ; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda \
-; RUN:    -passes=nvvm-intr-range -nvvm-intr-range-sm=30 \
-; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE --check-prefix=RANGE_30 %s
+; RUN:    -passes=nvvm-intr-range \
+; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE %s
 ; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
@@ -123,8 +123,7 @@ define ptx_device i32 @test_ctaid_z() {
 
 define ptx_device i32 @test_ctaid_x() {
 ; CHECK: mov.u32 %r{{[0-9]+}}, %ctaid.x;
-; RANGE_30: call range(i32 0, 2147483647) i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
-; RANGE_20: call range(i32 0, 65535) i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
+; RANGE: call range(i32 0, 2147483647) i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 ; CHECK: ret;
 	%x = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 	ret i32 %x
@@ -155,8 +154,7 @@ define ptx_device i32 @test_nctaid_z() {
 
 define ptx_device i32 @test_nctaid_x() {
 ; CHECK: mov.u32 %r{{[0-9]+}}, %nctaid.x;
-; RANGE_30: call range(i32 1, -2147483648) i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
-; RANGE_20: call range(i32 1, 65536) i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
+; RANGE: call range(i32 1, -2147483648) i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
 ; CHECK: ret;
 	%x = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
 	ret i32 %x
