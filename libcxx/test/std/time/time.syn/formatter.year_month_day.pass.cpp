@@ -9,9 +9,6 @@
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT This test should not require std::to_chars(floating-point)
-// XFAIL: availability-fp_to_chars-missing
-
 // TODO FMT Investigate Windows issues.
 // XFAIL: msvc
 

@@ -12,9 +12,6 @@
 
 // REQUIRES: locale.fr_FR.UTF-8
 
-// TODO FMT This test should not require std::to_chars(floating-point)
-// XFAIL: availability-fp_to_chars-missing
-
 // <thread>
 
 // class thread::id
