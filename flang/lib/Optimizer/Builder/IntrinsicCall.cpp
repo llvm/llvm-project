@@ -4965,10 +4965,6 @@ fir::ExtendedValue
 IntrinsicLibrary::genIsContiguous(mlir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  if (const auto *boxValue = args[0].getBoxOf<fir::BoxValue>())
-    if (boxValue->hasAssumedRank())
-      TODO(loc, "intrinsic: is_contiguous with assumed rank argument");
-
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genIsContiguous(builder, loc, fir::getBase(args[0])));
