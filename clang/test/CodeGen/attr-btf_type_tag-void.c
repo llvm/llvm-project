@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 \
 // RUN:   -triple %itanium_abi_triple -debug-info-kind=limited \
-// RUN:   -mllvm -btf-type-tag-v2 -S -emit-llvm -o - %s | FileCheck %s
+// RUN:   -mllvm -btf-type-tag-v2 -emit-llvm -o - %s | FileCheck %s
 
 #define __tag1 __attribute__((btf_type_tag("tag1")))
 void __tag1 *g;

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 \
 // RUN:   -triple %itanium_abi_triple -debug-info-kind=limited \
-// RUN:   -mllvm -btf-type-tag-v2 -S -emit-llvm -o - %s | FileCheck %s
+// RUN:   -mllvm -btf-type-tag-v2 -emit-llvm -o - %s | FileCheck %s
 
 // Check that BTF type tags are not attached to DW_TAG_const_type DIEs
 // in presence of "sugar" expressions that are transparent for
