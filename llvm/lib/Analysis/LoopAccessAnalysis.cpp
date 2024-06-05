@@ -2389,6 +2389,22 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   return true;
 }
 
+/// Returns whether \p I is a known math library call that has attribute
+/// 'memory(argmem: write)' set.
+static bool isMathLibCallMemWriteOnly(const TargetLibraryInfo *TLI,
+                                      const Instruction &I) {
+  auto *Call = dyn_cast<CallInst>(&I);
+  if (!Call)
+    return false;
+
+  auto ME = Call->getMemoryEffects();
+  LibFunc Func;
+  TLI->getLibFunc(*Call, Func);
+  return ME.onlyWritesMemory() && ME.onlyAccessesArgPointees() &&
+         (Func == LibFunc::LibFunc_modf || Func == LibFunc::LibFunc_modff ||
+          Func == LibFunc::LibFunc_frexp || Func == LibFunc::LibFunc_frexpf);
+}
+
 void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
                                  const TargetLibraryInfo *TLI,
                                  DominatorTree *DT) {
@@ -2485,6 +2501,15 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
 
       // Save 'store' instructions. Abort if other instructions write to memory.
       if (I.mayWriteToMemory()) {
+        // We can safety handle math functions that have vectorized
+        // counterparts and have the memory write-only attribute set.
+        if (isMathLibCallMemWriteOnly(TLI, I)) {
+          LLVM_DEBUG(dbgs() << "LAA: Allow to vectorize math function with "
+                               "write-only attribute:"
+                            << I << "\n");
+          continue;
+        }
+
         auto *St = dyn_cast<StoreInst>(&I);
         if (!St) {
           recordAnalysis("CantVectorizeInstruction", St)
