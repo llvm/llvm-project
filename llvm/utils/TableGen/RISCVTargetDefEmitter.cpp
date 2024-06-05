@@ -226,7 +226,7 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B,
 static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
 
   std::vector<Record *> Extensions =
-      RK.getAllDerivedDefinitionsIfDefined("RISCVExtensionBitmask");
+      RK.getAllDerivedDefinitionsIfDefined("RISCVExtension");
   llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
     return getExtensionName(Rec1) < getExtensionName(Rec2);
   });
@@ -239,6 +239,10 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
 
     assert(GroupIDBits);
     assert(BitmaskBits);
+
+    // For the extension without bitmask, skip it.
+    if (!getValueFromBitsInit(BitmaskBits, *Rec))
+      continue;
 
     OS << "    {"
        << "\"" << Rec->getValueAsString("Name") << "\""
