@@ -978,8 +978,9 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF) {
   return B.CreateElementCount(Ty, VF);
 }
 
-const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE,
-                                Loop *OrigLoop) {
+static const SCEV *createTripCountSCEV(Type *IdxTy,
+                                       PredicatedScalarEvolution &PSE,
+                                       Loop *OrigLoop) {
   const SCEV *BackedgeTakenCount = PSE.getBackedgeTakenCount();
   assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCount) && "Invalid loop count");
 
