@@ -1,5 +1,4 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s
 
 ; CHECK-DAG: OpEntryPoint Kernel %[[#test_func:]] "test"
 ; CHECK-DAG: OpDecorate %[[#f2_decl:]] LinkageAttributes "BuiltInGlobalOffset" Import

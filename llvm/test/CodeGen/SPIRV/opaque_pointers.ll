@@ -1,5 +1,4 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK
-; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefix=CHECK
 
 ; CHECK-DAG: %[[#Int32Ty:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#PtrInt32Ty:]] = OpTypePointer Function %[[#Int32Ty]]

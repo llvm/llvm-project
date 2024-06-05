@@ -1,5 +1,4 @@
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s
-; RUN: not llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - 2>&1 | FileCheck %s
 
 ; CHECK: LLVM ERROR: Type mismatch {{.*}}
 

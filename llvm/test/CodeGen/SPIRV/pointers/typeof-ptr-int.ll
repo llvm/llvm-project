@@ -2,9 +2,7 @@
 ; definitions, even though their LLVM function types are identical.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName %[[Fun32:.*]] "tp_arg_i32"
 ; CHECK-DAG: OpName %[[Fun64:.*]] "tp_arg_i64"

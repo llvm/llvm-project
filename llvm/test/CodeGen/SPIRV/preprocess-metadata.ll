@@ -1,5 +1,4 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ;; The purpose of this test is to check that some of OpenCL metadata are consumed
 ;; even if 'opencl.ocl.version' metadata is missed (i.e. LLVM IR was produced not

@@ -1,7 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#TYCHAR:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#TYCHARPTR:]] = OpTypePointer Function %[[#TYCHAR]]

@@ -1,9 +1,7 @@
 ; RUN: llc -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_expect_assume < %s | FileCheck --check-prefixes=CHECK,EXT %s
 ; RUN: llc -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_expect_assume < %s | FileCheck --check-prefixes=CHECK,EXT %s
-; RUN: llc -mtriple=spirv64-amd-amdhsa --spirv-ext=+SPV_KHR_expect_assume < %s | FileCheck --check-prefixes=CHECK,EXT %s
 ; RUN: llc -mtriple=spirv32-unknown-unknown < %s | FileCheck --check-prefixes=CHECK,NOEXT %s
 ; RUN: llc -mtriple=spirv64-unknown-unknown < %s | FileCheck --check-prefixes=CHECK,NOEXT %s
-; RUN: llc -mtriple=spirv64-amd-amdhsa < %s | FileCheck --check-prefixes=CHECK,NOEXT %s
 
 ; EXT:      OpCapability ExpectAssumeKHR
 ; EXT-NEXT: OpExtension "SPV_KHR_expect_assume"
