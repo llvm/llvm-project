@@ -47,17 +47,10 @@ jobs:
         run: |
           apt-get update
           apt-get -y install \
-            wget \
-            gnupg
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | tee -a /etc/apt/sources.list.d/llvm.list
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-          apt-get update
-          apt-get -y install \
             cmake \
             ninja-build \
             perl \
-            clang-tools-$LLVM_VERSION \
-            clang-$LLVM_VERSION
+            clang-tools
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1
@@ -76,33 +69,26 @@ jobs:
 
       - name: Configure
         run: |
-          scan-build-$LLVM_VERSION \
-              --use-c++='clang++' \
-              --use-cc='clang' \
-              -analyzer-config max-nodes=75000 \
               cmake -B build -S llvm -G Ninja \
                   -DLLVM_ENABLE_ASSERTIONS=ON \
                   -DLLVM_ENABLE_PROJECTS=clang \
                   -DLLVM_BUILD_LLVM_DYLIB=ON \
                   -DLLVM_LINK_LLVM_DYLIB=ON \
+                  -DCMAKE_CXX_COMPILER=clang++ \
+                  -DCMAKE_C_COMPILER=clang \
+                  -DCMAKE_CXX_COMPILER_LAUNCHER=`pwd`/.github/workflows/ci-post-commit-analyzer-launcher.sh \
+                  -DCMAKE_C_COMPILER_LAUNCHER=`pwd`/.github/workflows/ci-post-commit-analyzer-launcher.sh \
                   -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: |
-          # Create symlinks for use with ccache.
-          ln -s /usr/bin/ccache /usr/local/bin/clang++
-          ln -s /usr/bin/ccache /usr/local/bin/clang
-          scan-build-$LLVM_VERSION \
-              -o analyzer-results \
-              --use-c++=/usr/local/bin/clang++ \
-              --use-cc=/usr/local/bin/clang \
-              -analyzer-config max-nodes=75000 \
-              ninja -v -C build
+          ninja -v -C build
+          scan-build --generate-index-only build/analyzer-results
 
       - name: Upload Results
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
         if: always()
         with:
           name: analyzer-results
-          path: 'analyzer-results/**/*'
+          path: 'build/analyzer-results/**/*'
 
