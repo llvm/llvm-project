@@ -19,6 +19,7 @@ target triple = "thumbv8.1m.main-none-unknown-eabi"
 ; '(i * (n + 1))' vs '(i * n)'.
 
 ; DEBUG-LABEL: 'diff_checks'
+; DEBUG:      LAA: Found a loop: inner.loop
 ; DEBUG:      LAA: Not creating diff runtime check, since these  cannot be hoisted out of the outer loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting

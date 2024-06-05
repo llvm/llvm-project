@@ -18,6 +18,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; '(i * (n + 1))' vs '(i * n)'.
 
 ; DEBUG-LABEL: 'diff_checks'
+; DEBUG:      LAA: Found a loop: inner.loop
 ; DEBUG:      LAA: Not creating diff runtime check, since these  cannot be hoisted out of the outer loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
@@ -150,6 +151,7 @@ outer.exit:
 ; the additional load of 'dst[(i * n) + j]' in the loop.
 
 ; DEBUG-LABEL: 'full_checks'
+; DEBUG: LAA: Found a loop: inner.loop
 ; DEBUG-NOT: LAA: Creating diff runtime check for:
 ; DEBUG: LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
@@ -273,6 +275,7 @@ outer.exit:
 ; runtime checks will vary for each outer loop iteration.
 
 ; DEBUG-LABEL: 'full_checks_diff_strides'
+; DEBUG: LAA: Found a loop: inner.loop
 ; DEBUG-NOT: LAA: Creating diff runtime check for:
 ; DEBUG: LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
@@ -403,6 +406,7 @@ outer.exit:
 ; }
 
 ; DEBUG-LABEL: 'diff_checks_src_start_invariant'
+; DEBUG: LAA: Found a loop: inner.loop
 ; DEBUG-NOT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
 
 define void @diff_checks_src_start_invariant(ptr nocapture noundef writeonly %dst, ptr nocapture noundef readonly %src, i32 noundef %m, i32 noundef %n) {
@@ -509,6 +513,7 @@ outer.loop.exit:
 ; }
 
 ; DEBUG-LABEL: 'full_checks_src_start_invariant'
+; DEBUG:      LAA: Found a loop: inner.loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
 ; DEBUG-NEXT: Start: %dst End: ((4 * (zext i32 %m to i64) * (zext i32 %n to i64)) + %dst)
@@ -630,6 +635,7 @@ outer.loop.exit:
 ; innermost loop. Hence we don't expand `src`, although in theory we could do.
 
 ; DEBUG-LABEL: 'triple_nested_loop_mixed_access'
+; DEBUG:      LAA: Found a loop: inner.loop
 ; DEBUG-NOT:  LAA: Creating diff runtime check for:
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
@@ -796,6 +802,7 @@ exit:
 ; Outer loop trip count is uncomputable so we shouldn't expand the ranges.
 
 ; DEBUG-LABEL: 'uncomputable_outer_tc'
+; DEBUG:      LAA: Found a loop: inner.loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: Start: {%dst,+,(4 * (zext i32 (1 + %n) to i64))<nuw><nsw>}<%outer.loop> End: {((4 * (zext i32 %n to i64))<nuw><nsw> + %dst),+,(4 * (zext i32 (1 + %n) to i64))<nuw><nsw>}<%outer.loop>
 ; DEBUG-NEXT: LAA: Adding RT check for range:
@@ -946,6 +953,7 @@ while.end:
 ; runtime checks correctly to cover the whole loop.
 
 ; DEBUG-LABEL: 'decreasing_inner_iv'
+; DEBUG:      LAA: Found a loop: inner.loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
 ; DEBUG-NEXT: LAA: ... but need to check stride is positive: (4 * (sext i32 %stride1 to i64))<nsw>
@@ -1112,6 +1120,7 @@ exit:
 ; upon the signedness of stride1.
 
 ; DEBUG-LABEL: 'decreasing_outer_iv'
+; DEBUG:      LAA: Found a loop: inner.loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
 ; DEBUG-NEXT: LAA: ... but need to check stride is positive: (-4 * (sext i32 %stride1 to i64))<nsw>
@@ -1272,6 +1281,7 @@ exit:
 
 
 ; DEBUG-LABEL: 'unknown_inner_stride'
+; DEBUG:      LAA: Found a loop: inner.loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting
 ; DEBUG-NEXT: Start: %dst End: ((4 * (zext i32 %n to i64))<nuw><nsw> + (4 * (zext i32 (1 + %n) to i64) * (-1 + (zext i32 %m to i64))<nsw>) + %dst)
