@@ -863,22 +863,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       if (CI2->isMinusOne())
         return C2; // X | -1 == -1
       break;
-    case Instruction::Xor:
-      if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
-        switch (CE1->getOpcode()) {
-        default:
-          break;
-        case Instruction::ICmp:
-        case Instruction::FCmp:
-          // cmp pred ^ true -> cmp !pred
-          assert(CI2->isOne());
-          CmpInst::Predicate pred = (CmpInst::Predicate)CE1->getPredicate();
-          pred = CmpInst::getInversePredicate(pred);
-          return ConstantExpr::getCompare(pred, CE1->getOperand(0),
-                                          CE1->getOperand(1));
-        }
-      }
-      break;
     }
   } else if (isa<ConstantInt>(C1)) {
     // If C1 is a ConstantInt and C2 is not, swap the operands.

@@ -1711,6 +1711,7 @@ def fir_ArrayCoorOp : fir_Op<"array_coor",
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
@@ -2800,7 +2801,8 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     OptionalAttr<UnitAttr>:$constant,
     OptionalAttr<UnitAttr>:$target,
     OptionalAttr<StrAttr>:$linkName,
-    OptionalAttr<cuf_DataAttributeAttr>:$data_attr
+    OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
+    OptionalAttr<I64Attr>:$alignment
   );
 
   let regions = (region AtMostRegion<1>:$region);
