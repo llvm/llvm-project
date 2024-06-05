@@ -83,8 +83,8 @@ public:
     return std::nullopt;
   }
 
-  static uint32_t isDwarfBaseDiscriminatorEncoded(uint32_t Value) {
-    return (Value >> 28) & 0x1;
+  static bool isDwarfBaseDiscriminatorEncoded(uint32_t Value) {
+    return Value & 0x10000000;
   }
 
   static uint32_t extractProbeType(uint32_t Value) {
