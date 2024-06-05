@@ -3,7 +3,7 @@
 ! 2.15.3.6 Reduction Clause
 program omp_reduction
   integer :: k
-  ! miss-spelling. Should be "min"
+  ! misspelling. Should be "min"
   !ERROR: Invalid reduction operator in REDUCTION clause.
   !$omp parallel reduction(.min.:k)
   !$omp end parallel
