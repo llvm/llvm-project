@@ -832,7 +832,6 @@ Bug Fixes to AST Handling
 - Fixed malformed AST generated for anonymous union access in templates. (#GH90842)
 - Improved preservation of qualifiers and sugar in `TemplateNames`, including
   template keyword.
-- ``forCallable`` now properly preserves binding on successful match. (#GH89657)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -981,6 +980,7 @@ AST Matchers
 - Fixed ``forEachArgumentWithParam`` and ``forEachArgumentWithParamType`` to
   not skip the explicit object parameter for operator calls.
 - Fixed captureVars assertion failure if not capturesVariables. (#GH76425)
+- ``forCallable`` now properly preserves binding on successful match. (#GH89657)
 
 clang-format
 ------------
