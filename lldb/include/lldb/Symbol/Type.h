@@ -286,6 +286,9 @@ public:
   std::vector<lldb_private::CompilerContext> &GetContextRef() {
     return m_context;
   }
+  const std::vector<lldb_private::CompilerContext> &GetContextRef() const {
+    return m_context;
+  }
 
 protected:
   /// A full or partial compiler context array where the parent declaration

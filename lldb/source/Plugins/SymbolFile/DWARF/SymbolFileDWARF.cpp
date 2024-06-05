@@ -2787,15 +2787,20 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
             return true; // Keep iterating over index types, language mismatch.
         }
 
-        std::string R;
-        llvm::raw_string_ostream OS(R);
-        llvm::DWARFTypePrinter<DWARFDIE> p(OS);
+        bool Success = true;
+        const auto &Context = query.GetContextRef();
+        assert(Context.size() == 1);
+        llvm::StringRef remaining = Context.front().name;
+        auto Visitor = [&](llvm::StringRef S) {
+          Success &= remaining.consume_front(S);
+        };
+        llvm::DWARFTypePrinter<DWARFDIE, decltype(Visitor)> p(Visitor);
         p.appendQualifiedName(die);
 
-        TypeQuery die_query(R, TypeQueryOptions::e_exact_match);
-        if (query.ContextMatches(die_query.GetContextRef()))
+        if (Success && remaining.empty())
           if (Type *matching_type = ResolveType(die, true, true))
             results.InsertUnique(matching_type->shared_from_this());
+
         return !results.Done(query); // Keep iterating if we aren't done.
       });
       if (results.Done(query))
