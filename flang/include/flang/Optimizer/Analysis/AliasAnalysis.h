@@ -142,16 +142,15 @@ struct AliasAnalysis {
     /// Return true, if Target or Pointer attribute is set.
     bool isTargetOrPointer() const;
 
-    /// Return true, if the memory source's `valueType` is a reference type
-    /// to an object of derived type that contains a component with POINTER
-    /// attribute.
-    bool isRecordWithPointerComponent() const;
-
     bool isDummyArgument() const;
     bool isData() const;
     bool isBoxData() const;
 
     mlir::Type getType() const;
+
+    /// Return true, if `ty` is a reference type to an object of derived type
+    /// that contains a component with POINTER attribute.
+    static bool isRecordWithPointerComponent(mlir::Type ty);
 
     /// Return true, if `ty` is a reference type to a boxed
     /// POINTER object or a raw fir::PointerType.

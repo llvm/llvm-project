@@ -70,6 +70,14 @@ void AliasAnalysis::Source::print(llvm::raw_ostream &os) const {
   attributes.Dump(os, EnumToString);
 }
 
+bool AliasAnalysis::Source::isRecordWithPointerComponent(mlir::Type ty) {
+  auto eleTy = fir::dyn_cast_ptrEleTy(ty);
+  if (!eleTy)
+    return false;
+  // TO DO: Look for pointer components
+  return mlir::isa<fir::RecordType>(eleTy);
+}
+
 bool AliasAnalysis::Source::isPointerReference(mlir::Type ty) {
   auto eleTy = fir::dyn_cast_ptrEleTy(ty);
   if (!eleTy)
@@ -96,14 +104,6 @@ bool AliasAnalysis::Source::isBoxData() const {
          origin.isData;
 }
 
-bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
-  auto eleTy = fir::dyn_cast_ptrEleTy(valueType);
-  if (!eleTy)
-    return false;
-  // TO DO: Look for pointer components
-  return mlir::isa<fir::RecordType>(eleTy);
-}
-
 AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   auto lhsSrc = getSource(lhs);
   auto rhsSrc = getSource(rhs);
@@ -126,14 +126,6 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     // either source is approximate.  Approximate sources are for parts of the
     // origin, but we don't have info here on which parts and whether they
     // overlap, so we normally return MayAlias in that case.
-    //
-    // There is an exceptional case: The origins might compare unequal because
-    // only one has !isData().  If that source is approximate and the other is
-    // not, then the former is the source for the address *of* a pointer
-    // component in a composite, and the latter is for the address of that
-    // composite.  As for the address of any composite vs. the address of one of
-    // its components, a store to one can affect a load from the other, so the
-    // result is MayAlias.
     if (lhsSrc.origin == rhsSrc.origin) {
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing because same source kind and origin\n");
@@ -141,11 +133,32 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
         return AliasResult::MayAlias;
       return AliasResult::MustAlias;
     }
+    // If one value is the address of a composite, and if the other value is the
+    // address of a pointer/allocatable component of that composite, their
+    // origins compare unequal because the latter has !isData().  As for the
+    // address of any component vs. the address of the composite, a store to one
+    // can affect a load from the other, so the result should be MayAlias.  To
+    // catch this case, we conservatively return MayAlias when one value is the
+    // address of a composite, the other value is non-data, and they have the
+    // same origin value.
+    //
+    // TODO: That logic does not check that the latter is actually a component
+    // of the former, so it can return MayAlias when unnecessary.  For example,
+    // they might both be addresses of components of a larger composite.
+    //
+    // FIXME: Actually, we should generalize from
+    // Source::isRecordWithPointerComponent to any composite because a component
+    // with !isData() is not always a pointer.  However,
+    // Source::isRecordWithPointerComponent currently doesn't actually check for
+    // pointer components, so it's fine for now.
     if (lhsSrc.origin.u == rhsSrc.origin.u &&
-        ((lhsSrc.approximateSource && !lhsSrc.isData() && !rhsSrc.approximateSource) ||
-         (rhsSrc.approximateSource && !rhsSrc.isData() && !lhsSrc.approximateSource))) {
+        ((Source::isRecordWithPointerComponent(lhs.getType()) &&
+          !rhsSrc.isData()) ||
+         (Source::isRecordWithPointerComponent(rhs.getType()) &&
+          !lhsSrc.isData()))) {
       LLVM_DEBUG(llvm::dbgs()
-                 << "  aliasing between composite and non-data component\n");
+                 << "  aliasing between composite and non-data component with "
+                 << "same source kind and origin value\n");
       return AliasResult::MayAlias;
     }
 
@@ -157,12 +170,17 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   }
 
   Source *src1, *src2;
+  Value *val1, *val2;
   if (lhsSrc.kind < rhsSrc.kind) {
     src1 = &lhsSrc;
     src2 = &rhsSrc;
+    val1 = &lhs;
+    val2 = &rhs;
   } else {
     src1 = &rhsSrc;
     src2 = &lhsSrc;
+    val1 = &rhs;
+    val2 = &lhs;
   }
 
   if (src1->kind == SourceKind::Argument &&
@@ -192,7 +210,10 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     return AliasResult::MayAlias;
   }
 
-  // A pointer dummy arg may alias a global composite with a pointer component.
+  // A pointer dummy arg (but not a pointer component of a dummy arg) may alias
+  // a pointer component and thus the associated composite.  That composite
+  // might be a global or another dummy arg.  This is an example of the global
+  // composite case:
   //
   // module m
   //   type t
@@ -219,13 +240,19 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   //
   // The dummy argument p is an alias for a%p, even for the purposes of pointer
   // association during the assignment a = b.  Thus, the program should print 2.
-  if (src1->kind == SourceKind::Global &&
-      src1->isRecordWithPointerComponent() &&
-      src2->kind == SourceKind::Argument &&
-      src2->attributes.test(Attribute::Pointer)) {
+  if ((Source::isRecordWithPointerComponent(val1->getType()) &&
+       src1->kind != SourceKind::Allocate &&
+       src2->kind == SourceKind::Argument &&
+       src2->attributes.test(Attribute::Pointer) && !src2->isData() &&
+       !Source::isRecordWithPointerComponent(src2->valueType)) ||
+      (Source::isRecordWithPointerComponent(val2->getType()) &&
+       src2->kind != SourceKind::Allocate &&
+       src1->kind == SourceKind::Argument &&
+       src1->attributes.test(Attribute::Pointer) && !src1->isData() &&
+       !Source::isRecordWithPointerComponent(src1->valueType))) {
     LLVM_DEBUG(llvm::dbgs()
-               << "  aliasing because of pointer arg and global composite with "
-               << "pointer component\n");
+               << "  aliasing between pointer arg and composite with pointer "
+               << "component\n");
     return AliasResult::MayAlias;
   }
 
@@ -395,6 +422,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
           defOp = v.getDefiningOp();
         })
         .Case<hlfir::DesignateOp>([&](auto op) {
+          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
+          attributes |= getAttrsFromVariable(varIf);
           // Track further through the memory indexed into
           // => if the source arrays/structures don't alias then nor do the
           //    results of hlfir.designate
