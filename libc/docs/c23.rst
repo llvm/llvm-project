@@ -61,7 +61,7 @@ Additions:
   * ufromfpx* |check|
   * nextup*
   * nextdown*
-  * canonicalize*
+  * canonicalize* |check|
   * fmaximum*
   * fminimum*
   * fmaximum_mag*
