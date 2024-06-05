@@ -2075,6 +2075,7 @@ multiclass VPseudoVSFS_M {
       def "_M_" # mti.BX : VPseudoUnaryNoMaskNoPolicy<VR, VR, constraint>,
                            SchedUnary<"WriteVMSFSV", "ReadVMSFSV", mx,
                                       forceMergeOpRead=true>;
+      let ForceTailAgnostic = true in
       def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMask<VR, VR, constraint>,
                                      SchedUnary<"WriteVMSFSV", "ReadVMSFSV", mx,
                                                 forceMergeOpRead=true>;
