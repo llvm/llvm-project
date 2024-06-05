@@ -156,6 +156,13 @@ Loops tilePerfectlyNested(scf::ForOp rootForOp, ArrayRef<Value> sizes);
 void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
                              scf::ForOp root);
 
+//===----------------------------------------------------------------------===//
+// Fusion related helpers
+//===----------------------------------------------------------------------===//
+
+template <typename LoopTy>
+bool checkFusionStructuralLegality(Operation *target, Operation *source);
+
 /// Prepends operations of firstPloop's body into secondPloop's body.
 /// Updates secondPloop with new loop.
 void fuseIfLegal(scf::ParallelOp firstPloop, scf::ParallelOp &secondPloop,

@@ -1184,11 +1184,37 @@ static bool equalIterationSpaces(scf::ParallelOp firstPloop,
          matchOperands(firstPloop.getStep(), secondPloop.getStep());
 }
 
+//===----------------------------------------------------------------------===//
+// Fusion related helpers
+//===----------------------------------------------------------------------===//
+
 /// Verify there are no nested ParallelOps.
 static bool hasNestedParallelOp(scf::ParallelOp ploop) {
   auto walkResult = ploop.getBody()->walk(
       [](scf::ParallelOp) { return WalkResult::interrupt(); });
   return walkResult.wasInterrupted();
+}
+
+template <typename LoopTy>
+static bool checkFusionStructuralLegality(Operation *target,
+                                             Operation *source) {
+  static_assert(llvm::is_one_of<LoopTy, scf::ForallOp, scf::ForOp,
+                                scf::ParallelOp>::value,
+                "applies to only `forall`, `for` and `parallel`");
+  auto targetOp = dyn_cast<LoopTy>(target);
+  auto sourceOp = dyn_cast<LoopTy>(source);
+  if (!targetOp || !sourceOp)
+    return false;
+
+  if constexpr (std::is_same_v<LoopTy, scf::ForallOp>)
+    return targetOp.getMixedLowerBound() == sourceOp.getMixedLowerBound() &&
+           targetOp.getMixedUpperBound() == sourceOp.getMixedUpperBound() &&
+           targetOp.getMixedStep() == sourceOp.getMixedStep() &&
+           targetOp.getMapping() == sourceOp.getMapping();
+  else
+    return targetOp.getLowerBound() == sourceOp.getLowerBound() &&
+           targetOp.getUpperBound() == sourceOp.getUpperBound() &&
+           targetOp.getStep() == sourceOp.getStep();
 }
 
 static bool isFusionLegal(scf::ParallelOp firstPloop,
