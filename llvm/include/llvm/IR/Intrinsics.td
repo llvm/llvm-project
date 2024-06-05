@@ -321,6 +321,7 @@ def IIT_I4 : IIT_Int<4, 58>;
 def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
 def IIT_V6 : IIT_Vec<6, 60>;
 def IIT_V10 : IIT_Vec<10, 61>;
+def IIT_QUARTER_VEC_ARG : IIT_Base<62>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -456,6 +457,9 @@ class LLVMVectorElementType<int num> : LLVMMatchType<num, IIT_VEC_ELEMENT>;
 // vector type, but change the element count to be half as many.
 class LLVMHalfElementsVectorType<int num>
   : LLVMMatchType<num, IIT_HALF_VEC_ARG>;
+
+class LLVMQuarterElementsVectorType<int num>
+  : LLVMMatchType<num, IIT_QUARTER_VEC_ARG>;
 
 // Match the type of another intrinsic parameter that is expected to be a
 // vector type (i.e. <N x iM>) but with each element subdivided to
@@ -2634,6 +2638,12 @@ def int_vector_deinterleave2 : DefaultAttrsIntrinsic<[LLVMHalfElementsVectorType
                                                       LLVMHalfElementsVectorType<0>],
                                                      [llvm_anyvector_ty],
                                                      [IntrNoMem]>;
+
+//===-------------- Intrinsics to perform partial reduction ---------------===//
+
+def int_experimental_vector_partial_reduce_add : DefaultAttrsIntrinsic<[LLVMQuarterElementsVectorType<0>],
+                                                                       [llvm_anyvector_ty],
+                                                                       [IntrNoMem]>;
 
 //===----------------- Pointer Authentication Intrinsics ------------------===//
 //

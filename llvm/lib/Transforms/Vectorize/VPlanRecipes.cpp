@@ -254,6 +254,76 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
   insertBefore(BB, I);
 }
 
+void VPPartialReductionRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
+  auto &Builder = State.Builder;
+
+  switch(Opcode) {
+  case Instruction::Add: {
+
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
+      Value* Mul = nullptr;
+      Value* Phi = nullptr;
+      SmallVector<Value*, 2> Ops;
+      for (VPValue *VPOp : operands()) {
+        auto *Op = State.get(VPOp, Part);
+        Ops.push_back(Op);
+        if(isa<PHINode>(Op))
+          Phi = Op;
+        else
+          Mul = Op;
+      }
+
+      assert(Phi && Mul && "Phi and Mul must be set");
+      assert(isa<ScalableVectorType>(Ops[0]->getType()) && "Type must be a scalable vector");
+
+      ScalableVectorType *FullTy = cast<ScalableVectorType>(Ops[0]->getType());
+      Type *RetTy = ScalableVectorType::get(FullTy->getScalarType(), 4);
+
+      Intrinsic::ID PartialIntrinsic = Intrinsic::not_intrinsic;
+      switch(Opcode) {
+      case Instruction::Add:
+        PartialIntrinsic =
+            Intrinsic::experimental_vector_partial_reduce_add;
+        break;
+      default:
+        llvm_unreachable("Opcode not handled");
+      }
+
+      assert(PartialIntrinsic != Intrinsic::not_intrinsic);
+
+      Value *V = Builder.CreateIntrinsic(RetTy, PartialIntrinsic, Mul, nullptr, Twine("partial.reduce"));
+      V = Builder.CreateNAryOp(Opcode, {V, Phi});
+      if (auto *VecOp = dyn_cast<Instruction>(V))
+        setFlags(VecOp);
+
+      // Use this vector value for all users of the original instruction.
+      State.set(this, V, Part);
+      State.addMetadata(V, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+    }
+    break;
+  }
+  default:
+    LLVM_DEBUG(dbgs() << "LV: Found an unhandled opcode : " << Instruction::getOpcodeName(Opcode));
+    llvm_unreachable("Unhandled instruction!");
+  }
+}
+
+void VPPartialReductionRecipe::postInsertionOp() {
+  cast<VPReductionPHIRecipe>(this->getOperand(1))->SetVFScaleFactor(4);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPPartialReductionRecipe::print(raw_ostream &O, const Twine &Indent,
+  VPSlotTracker &SlotTracker) const {
+  O << Indent << "PARTIAL-REDUCE ";
+  printAsOperand(O, SlotTracker);
+  O << " = " << Instruction::getOpcodeName(Opcode);
+  printFlags(O);
+  printOperands(O, SlotTracker);
+}
+#endif
+
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   assert(OpType == OperationType::FPMathOp &&
          "recipe doesn't have fast math flags");
@@ -2007,6 +2077,8 @@ void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPReductionPHIRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
 
+  auto VF = State.VF.divideCoefficientBy(VFScaleFactor);
+
   // Reductions do not have to start at zero. They can start with
   // any loop invariant values.
   VPValue *StartVPV = getStartValue();
@@ -2016,9 +2088,9 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
   // this value when we vectorize all of the instructions that use the PHI.
-  bool ScalarPHI = State.VF.isScalar() || IsInLoop;
+  bool ScalarPHI = VF.isScalar() || IsInLoop;
   Type *VecTy = ScalarPHI ? StartV->getType()
-                          : VectorType::get(StartV->getType(), State.VF);
+                          : VectorType::get(StartV->getType(), VF);
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
   assert(State.CurrentVectorLoop->getHeader() == HeaderBB &&
@@ -2043,14 +2115,14 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
       IRBuilderBase::InsertPointGuard IPBuilder(Builder);
       Builder.SetInsertPoint(VectorPH->getTerminator());
       StartV = Iden =
-          Builder.CreateVectorSplat(State.VF, StartV, "minmax.ident");
+          Builder.CreateVectorSplat(VF, StartV, "minmax.ident");
     }
   } else {
     Iden = RdxDesc.getRecurrenceIdentity(RK, VecTy->getScalarType(),
                                          RdxDesc.getFastMathFlags());
 
     if (!ScalarPHI) {
-      Iden = Builder.CreateVectorSplat(State.VF, Iden);
+      Iden = Builder.CreateVectorSplat(VF, Iden);
       IRBuilderBase::InsertPointGuard IPBuilder(Builder);
       Builder.SetInsertPoint(VectorPH->getTerminator());
       Constant *Zero = Builder.getInt32(0);
