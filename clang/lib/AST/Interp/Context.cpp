@@ -46,6 +46,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
 
   if (Res.isInvalid()) {
+    C.cleanup();
     Stk.clear();
     return false;
   }
@@ -70,6 +71,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
 
   auto Res = C.interpretExpr(E);
   if (Res.isInvalid()) {
+    C.cleanup();
     Stk.clear();
     return false;
   }
@@ -97,6 +99,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
       (VD->getType()->isRecordType() || VD->getType()->isArrayType());
   auto Res = C.interpretDecl(VD, CheckGlobalInitialized);
   if (Res.isInvalid()) {
+    C.cleanup();
     Stk.clear();
     return false;
   }
