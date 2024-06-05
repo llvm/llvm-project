@@ -1438,24 +1438,6 @@ class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
   let UsesVXRM = 0;
 }
 
-// Like VPseudoBinaryNoMask, but output can be V0.
-class VPseudoBinaryMOutNoMask<VReg RetClass,
-                              VReg Op1Class,
-                              DAGOperand Op2Class,
-                              string Constraint,
-                              int TargetConstraintType = 1> :
-      Pseudo<(outs RetClass:$rd),
-             (ins Op1Class:$rs2, Op2Class:$rs1, AVL:$vl, ixlenimm:$sew), []>,
-      RISCVVPseudo {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let Constraints = Constraint;
-  let TargetOverlapConstraintType = TargetConstraintType;
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
-}
-
 // Like VPseudoBinaryMask, but output can be V0.
 class VPseudoBinaryMOutMask<VReg RetClass,
                             RegisterClass Op1Class,
@@ -2189,8 +2171,8 @@ multiclass VPseudoBinaryM<VReg RetClass,
                           int TargetConstraintType = 1,
                           bit Commutable = 0> {
   let VLMul = MInfo.value, isCommutable = Commutable in {
-    def "_" # MInfo.MX : VPseudoBinaryMOutNoMask<RetClass, Op1Class, Op2Class,
-                                                 Constraint, TargetConstraintType>;
+    def "_" # MInfo.MX : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
+                                             Constraint, TargetConstraintType>;
     let ForceTailAgnostic = true in
     def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMOutMask<RetClass, Op1Class,
                                                          Op2Class, Constraint, TargetConstraintType>,
