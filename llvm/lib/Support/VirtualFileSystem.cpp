@@ -893,6 +893,10 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
     }
 
     if (auto *NewDir = dyn_cast<detail::InMemoryDirectory>(Node)) {
+      // Trying to insert a file in place of a directory.
+      if (I == E)
+        return false;
+
       Dir = NewDir;
     } else {
       assert((isa<detail::InMemoryFile>(Node) ||

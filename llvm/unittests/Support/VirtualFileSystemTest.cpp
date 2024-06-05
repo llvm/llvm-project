@@ -1138,6 +1138,8 @@ TEST_F(InMemoryFileSystemTest, DuplicatedFile) {
   ASSERT_FALSE(FS.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("a")));
   ASSERT_TRUE(FS.addFile("/a", 0, MemoryBuffer::getMemBuffer("a")));
   ASSERT_FALSE(FS.addFile("/a", 0, MemoryBuffer::getMemBuffer("b")));
+  ASSERT_TRUE(FS.addFile("/b/c/d", 0, MemoryBuffer::getMemBuffer("a")));
+  ASSERT_FALSE(FS.addFile("/b/c", 0, MemoryBuffer::getMemBuffer("a")));
 }
 
 TEST_F(InMemoryFileSystemTest, DirectoryIteration) {
