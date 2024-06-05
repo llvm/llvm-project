@@ -285,6 +285,30 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
 
+  case OpenACCClauseKind::Seq:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::Routine:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+
+  case OpenACCClauseKind::Independent:
+  case OpenACCClauseKind::Auto:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+
   case OpenACCClauseKind::Reduction:
     switch (DirectiveKind) {
     case OpenACCDirectiveKind::Parallel:
@@ -865,6 +889,102 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
         getASTContext(), Clause.getClauseKind(), Clause.getBeginLoc(),
         Clause.getLParenLoc(), Clause.getDeviceTypeArchitectures(),
         Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Auto: {
+    // Restrictions only properly implemented on 'loop' constructs, and it is
+    // the only construct that can do anything with this, so skip/treat as
+    // unimplemented for the combined constructs.
+    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
+      break;
+
+    // OpenACC 3.3 2.9:
+    // Only one of the seq, independent, and auto clauses may appear.
+    const auto *Itr = llvm::find_if(
+        ExistingClauses,
+        llvm::IsaPred<OpenACCIndependentClause, OpenACCSeqClause>);
+    if (Itr != ExistingClauses.end()) {
+      Diag(Clause.getBeginLoc(), diag::err_acc_loop_spec_conflict)
+          << Clause.getClauseKind() << Clause.getDirectiveKind();
+      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    }
+
+    return OpenACCAutoClause::Create(getASTContext(), Clause.getBeginLoc(),
+                                     Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Independent: {
+    // Restrictions only properly implemented on 'loop' constructs, and it is
+    // the only construct that can do anything with this, so skip/treat as
+    // unimplemented for the combined constructs.
+    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
+      break;
+
+    // OpenACC 3.3 2.9:
+    // Only one of the seq, independent, and auto clauses may appear.
+    const auto *Itr = llvm::find_if(
+        ExistingClauses, llvm::IsaPred<OpenACCAutoClause, OpenACCSeqClause>);
+    if (Itr != ExistingClauses.end()) {
+      Diag(Clause.getBeginLoc(), diag::err_acc_loop_spec_conflict)
+          << Clause.getClauseKind() << Clause.getDirectiveKind();
+      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    }
+
+    return OpenACCIndependentClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Seq: {
+    // Restrictions only properly implemented on 'loop' constructs, and it is
+    // the only construct that can do anything with this, so skip/treat as
+    // unimplemented for the combined constructs.
+    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
+      break;
+
+    // OpenACC 3.3 2.9:
+    // Only one of the seq, independent, and auto clauses may appear.
+    const auto *Itr = llvm::find_if(
+        ExistingClauses,
+        llvm::IsaPred<OpenACCAutoClause, OpenACCIndependentClause>);
+    if (Itr != ExistingClauses.end()) {
+      Diag(Clause.getBeginLoc(), diag::err_acc_loop_spec_conflict)
+          << Clause.getClauseKind() << Clause.getDirectiveKind();
+      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    }
+
+    // OpenACC 3.3 2.9:
+    // A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
+    // appears.
+    Itr = llvm::find_if(ExistingClauses,
+                        llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
+                                      OpenACCVectorClause>);
+
+    if (Itr != ExistingClauses.end()) {
+      Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
+          << Clause.getClauseKind() << (*Itr)->getClauseKind();
+      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    }
+
+    // TODO OpenACC: 2.9 ~ line 2010 specifies that the associated loop has some
+    // restrictions when there is a 'seq' clause in place. We probably need to
+    // implement that.
+    return OpenACCSeqClause::Create(getASTContext(), Clause.getBeginLoc(),
+                                    Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Gang:
+  case OpenACCClauseKind::Worker:
+  case OpenACCClauseKind::Vector: {
+    // OpenACC 3.3 2.9:
+    // A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
+    // appears.
+    const auto *Itr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSeqClause>);
+
+    if (Itr != ExistingClauses.end()) {
+      Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
+          << Clause.getClauseKind() << (*Itr)->getClauseKind();
+      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    }
+    // Not yet implemented, so immediately drop to the 'not yet implemented'
+    // diagnostic.
+    break;
   }
   case OpenACCClauseKind::Reduction: {
     // Restrictions only properly implemented on 'compute' constructs, and
@@ -1461,6 +1581,9 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(SourceLocation DirectiveLoc,
       Diag(DirectiveLoc, diag::note_acc_construct_here) << K;
       return StmtError();
     }
+    // TODO OpenACC: 2.9 ~ line 2010 specifies that the associated loop has some
+    // restrictions when there is a 'seq' clause in place. We probably need to
+    // implement that, including piping in the clauses here.
     return AssocStmt;
   }
   llvm_unreachable("Invalid associated statement application");
