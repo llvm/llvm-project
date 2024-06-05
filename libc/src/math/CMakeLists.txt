@@ -165,6 +165,7 @@ add_math_entrypoint_object(fminimumf128)
 add_math_entrypoint_object(fminimum_num)
 add_math_entrypoint_object(fminimum_numf)
 add_math_entrypoint_object(fminimum_numl)
+add_math_entrypoint_object(fminimum_numf16)
 add_math_entrypoint_object(fminimum_numf128)
 
 add_math_entrypoint_object(fminimum_mag)

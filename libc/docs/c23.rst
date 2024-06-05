@@ -67,6 +67,7 @@ Additions:
   * fmaximum_mag* |check|
   * fminimum_mag* |check|
   * fmaximum_num* |check|
+  * fminimum_num* |check|
   * fmaximum_mag_num* |check|
   * fminimum_mag_num* |check|
   * fadd*
