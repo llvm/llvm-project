@@ -93,7 +93,7 @@ float fmul(double x, double y) {
        x_bits.is_inf() || x_bits.is_nan()) &&
       y_bits.is_nan())
     return fputil::FPBits<float>::quiet_nan().get_val();
-  
+
   if ((y_bits.is_zero() || y_bits.is_normal() || y_bits.is_subnormal() ||
        y_bits.is_inf() || y_bits.is_nan()) &&
       x_bits.is_nan())
@@ -113,7 +113,7 @@ float fmul(double x, double y) {
 
   int32_t dm1;
   uint64_t mpx, mpy, highs, lows, b;
-  uint64_t g, hight, lowt, c, m; //morlowt
+  uint64_t g, hight, lowt, c, m; // morlowt
   mpx = (x_u << mx) | 0x8000000000000000;
   mpy = (y_u << my) | 0x8000000000000000;
   highs = mul(mpx, mpy);
@@ -121,7 +121,6 @@ float fmul(double x, double y) {
   lows = mullow(mpx, mpy);
 
   lowt = (lows != 0);
-
 
   int32_t exint = static_cast<int32_t>(exponent_x);
   int32_t eyint = static_cast<int32_t>(exponent_y);
@@ -133,8 +132,8 @@ float fmul(double x, double y) {
   int round_mode = fputil::quick_get_round();
   if (dm1 >= 255) {
     if ((round_mode == FE_TOWARDZERO) ||
-	(round_mode == FE_UPWARD && prod_sign.is_neg())||
-	 (round_mode == FE_DOWNWARD && prod_sign.is_pos())) {
+        (round_mode == FE_UPWARD && prod_sign.is_neg()) ||
+        (round_mode == FE_DOWNWARD && prod_sign.is_pos())) {
       return fputil::FPBits<float>::max_normal(prod_sign).get_val();
     }
     return fputil::FPBits<float>::inf().get_val();
@@ -147,48 +146,44 @@ float fmul(double x, double y) {
     m = static_cast<uint32_t>(highs >> (39 + c));
     g = (highs >> (38 + c)) & 1;
     hight = (highs << (55 - c)) != 0;
-
   }
   // morlowt = m | lowt;
 
-   if (round_mode == FE_TONEAREST) {
-     b = g && ((hight && lowt) || ((m & 1) != 0));
-   } else if (round_mode == FE_TOWARDZERO || FE_DOWNWARD) {
-     b = 0;
-   } else if (round_mode == FE_UPWARD) {
-     b = (g == 0 && (hight && lowt) == 0) ? 0 : 1;
-   }
-	       
-				   
-   //   b = g & (morlowt | hight);
+  if (round_mode == FE_TONEAREST) {
+    b = g && ((hight && lowt) || ((m & 1) != 0));
+  } else if (round_mode == FE_TOWARDZERO || FE_DOWNWARD) {
+    b = 0;
+  } else if (round_mode == FE_UPWARD) {
+    b = (g == 0 && (hight && lowt) == 0) ? 0 : 1;
+  }
+
+  //   b = g & (morlowt | hight);
 
   uint32_t exp16 = sr | (dm1 << 23);
- 
-  
+
     constexpr uint32_t FLOAT32_MANTISSA_MASK =
         0b00000000011111111111111111111111;
     uint32_t m2 = static_cast<uint32_t>(m) & FLOAT32_MANTISSA_MASK;
 
-   uint32_t result =
+    uint32_t result =
         (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
 
-    //float result16 = cpp::bit_cast<float>(result);
+    // float result16 = cpp::bit_cast<float>(result);
 
-    //return result16;
-  
+    // return result16;
 
-  if (round_mode == FE_TONEAREST) {
-    if (g && ((hight && lowt) || ((result & 1) != 0)))
-      ++result;
-  } else if ((round_mode == FE_UPWARD && prod_sign.is_pos()) ||
-	     (round_mode == FE_DOWNWARD && prod_sign.is_neg())) {
-    if (g || (hight && lowt))
-      ++result;
-  }
+    if (round_mode == FE_TONEAREST) {
+      if (g && ((hight && lowt) || ((result & 1) != 0)))
+        ++result;
+    } else if ((round_mode == FE_UPWARD && prod_sign.is_pos()) ||
+               (round_mode == FE_DOWNWARD && prod_sign.is_neg())) {
+      if (g || (hight && lowt))
+        ++result;
+    }
 
-  float result32 = cpp::bit_cast<float>(result);
+    float result32 = cpp::bit_cast<float>(result);
 
-  return result32;
+    return result32;
 }
 } // namespace Fmul
 
