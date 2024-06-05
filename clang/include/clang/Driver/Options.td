@@ -4471,8 +4471,8 @@ def gheterogeneous_dwarf_EQ : Joined<["-"], "gheterogeneous-dwarf=">,
   NormalizedValues<["Disabled","DIExpr","DIExpression"]>,
   MarshallingInfoEnum<CodeGenOpts<"HeterogeneousDwarfMode">, "Disabled">;
 def gheterogeneous_dwarf : Flag<["-"], "gheterogeneous-dwarf">, Group<g_Group>,
-  HelpText<"Enable DIExpr-based DWARF extensions for heterogeneous debugging">,
-  Alias<gheterogeneous_dwarf_EQ>, AliasArgs<["diexpr"]>;
+  HelpText<"Enable DIExpression-based DWARF extensions for heterogeneous debugging">,
+  Alias<gheterogeneous_dwarf_EQ>, AliasArgs<["diexpression"]>;
 def gno_heterogeneous_dwarf : Flag<["-"], "gno-heterogeneous-dwarf">,
   Group<g_Group>,
   HelpText<"Disable DWARF extensions for heterogeneous debugging">,
