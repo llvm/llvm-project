@@ -26,6 +26,10 @@ bool declaresIntrinsics(const Module &M,
                         const std::initializer_list<StringRef>);
 void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
 
+void suppressCoroAllocs(CoroIdInst *CoroId);
+void suppressCoroAllocs(LLVMContext &Context,
+                        ArrayRef<CoroAllocInst *> CoroAllocs);
+
 /// Attempts to rewrite the location operand of debug intrinsics in terms of
 /// the coroutine frame pointer, folding pointer offsets into the DIExpression
 /// of the intrinsic.

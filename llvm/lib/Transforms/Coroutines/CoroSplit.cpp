@@ -25,6 +25,7 @@
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/CFG.h"
@@ -1179,6 +1180,14 @@ static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
   Shape.AsyncLowering.AsyncFuncPointer->setInitializer(NewFuncPtrStruct);
 }
 
+static TypeSize getFrameSizeForShape(coro::Shape &Shape) {
+  // In the same function all coro.sizes should have the same result type.
+  auto *SizeIntrin = Shape.CoroSizes.back();
+  Module *M = SizeIntrin->getModule();
+  const DataLayout &DL = M->getDataLayout();
+  return DL.getTypeAllocSize(Shape.FrameTy);
+}
+
 static void replaceFrameSizeAndAlignment(coro::Shape &Shape) {
   if (Shape.ABI == coro::ABI::Async)
     updateAsyncFuncPointerContextSize(Shape);
@@ -1194,10 +1203,8 @@ static void replaceFrameSizeAndAlignment(coro::Shape &Shape) {
 
   // In the same function all coro.sizes should have the same result type.
   auto *SizeIntrin = Shape.CoroSizes.back();
-  Module *M = SizeIntrin->getModule();
-  const DataLayout &DL = M->getDataLayout();
-  auto Size = DL.getTypeAllocSize(Shape.FrameTy);
-  auto *SizeConstant = ConstantInt::get(SizeIntrin->getType(), Size);
+  auto *SizeConstant =
+      ConstantInt::get(SizeIntrin->getType(), getFrameSizeForShape(Shape));
 
   for (CoroSizeInst *CS : Shape.CoroSizes) {
     CS->replaceAllUsesWith(SizeConstant);
@@ -2077,6 +2084,46 @@ static void addPrepareFunction(const Module &M,
     Fns.push_back(PrepareFn);
 }
 
+static Function *createNoAllocVariant(Function &F, ValueToValueMapTy &VMap,
+                                      coro::Shape &Shape) {
+  auto *OrigFnTy = F.getFunctionType();
+  auto OldParams = OrigFnTy->params();
+
+  SmallVector<Type *> NewParams;
+  NewParams.reserve(OldParams.size() + 1);
+  for (Type *T : OldParams) {
+    NewParams.push_back(T);
+  }
+  NewParams.push_back(PointerType::getUnqual(Shape.FrameTy));
+
+  auto *NewFnTy = FunctionType::get(OrigFnTy->getReturnType(), NewParams,
+                                    OrigFnTy->isVarArg());
+  Function *NoAllocF =
+      Function::Create(NewFnTy, F.getLinkage(), F.getName() + ".noalloc");
+  unsigned int Idx = 0;
+  for (const auto &I : F.args()) {
+    VMap[&I] = NoAllocF->getArg(Idx++);
+  }
+  SmallVector<ReturnInst *, 4> Returns;
+  CloneFunctionInto(NoAllocF, &F, VMap,
+                    CloneFunctionChangeType::LocalChangesOnly, Returns);
+
+  if (Shape.CoroBegin) {
+    auto *NewCoroBegin = cast_if_present<CoroBeginInst>(VMap[Shape.CoroBegin]);
+    auto *NewCoroId = cast<CoroIdInst>(NewCoroBegin->getId());
+    coro::replaceCoroFree(NewCoroId, /*Elide=*/true);
+    coro::suppressCoroAllocs(NewCoroId);
+    NewCoroBegin->replaceAllUsesWith(NoAllocF->getArg(Idx));
+    NewCoroBegin->eraseFromParent();
+  }
+
+  Module *M = F.getParent();
+  M->getFunctionList().insert(M->end(), NoAllocF);
+
+  removeUnreachableBlocks(*NoAllocF);
+  return NoAllocF;
+}
+
 CoroSplitPass::CoroSplitPass(bool OptimizeFrame)
     : MaterializableCallback(coro::defaultMaterializable),
       OptimizeFrame(OptimizeFrame) {}
@@ -2108,13 +2155,14 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   // Split all the coroutines.
   for (LazyCallGraph::Node *N : Coroutines) {
     Function &F = N->getFunction();
+
     LLVM_DEBUG(dbgs() << "CoroSplit: Processing coroutine '" << F.getName()
                       << "\n");
     F.setSplittedCoroutine();
 
     SmallVector<Function *, 4> Clones;
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-    const coro::Shape Shape =
+    coro::Shape Shape =
         splitCoroutine(F, Clones, FAM.getResult<TargetIRAnalysis>(F),
                        OptimizeFrame, MaterializableCallback);
     removeCoroEndsFromRampFunction(Shape);
@@ -2133,11 +2181,28 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
       for (Function *Clone : Clones)
         UR.CWorklist.insert(CG.lookupSCC(CG.get(*Clone)));
     }
+
+    if (Shape.ABI == coro::ABI::Switch) {
+      ValueToValueMapTy VMap;
+      auto *NoAllocF = createNoAllocVariant(F, VMap, Shape);
+      NoAllocF->addFnAttr("elided-coro");
+      auto NewAttrs = NoAllocF->getAttributes();
+      // We just appended the frame pointer as the last argument of the new
+      // function.
+      auto FrameIdx = NoAllocF->arg_size() - 1;
+      // When we elide allocation, we read these attributes to determine the
+      // frame size and alignment.
+      addFramePointerAttrs(NewAttrs, NoAllocF->getContext(), FrameIdx,
+                           Shape.FrameSize, Shape.FrameAlign,
+                           /*NoAlias=*/false);
+
+      NoAllocF->setAttributes(NewAttrs);
+    }
   }
 
-    for (auto *PrepareFn : PrepareFns) {
-      replaceAllPrepares(PrepareFn, CG, C);
-    }
+  for (auto *PrepareFn : PrepareFns) {
+    replaceAllPrepares(PrepareFn, CG, C);
+  }
 
   return PreservedAnalyses::none();
 }

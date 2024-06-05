@@ -1703,6 +1703,22 @@ void Instruction::addAnnotationMetadata(StringRef Name) {
   setMetadata(LLVMContext::MD_annotation, MD);
 }
 
+bool Instruction::hasAnnotationMetadata(StringRef Name) const {
+  auto *Metadata = getMetadata(LLVMContext::MD_annotation);
+  if (!Metadata)
+    return false;
+
+  auto *Tuple = cast<MDTuple>(Metadata);
+  for (auto &N : Tuple->operands()) {
+    if (auto *S = dyn_cast<MDString>(N.get())) {
+      if (S->getString() == Name) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 AAMDNodes Instruction::getAAMetadata() const {
   AAMDNodes Result;
   // Not using Instruction::hasMetadata() because we're not interested in
