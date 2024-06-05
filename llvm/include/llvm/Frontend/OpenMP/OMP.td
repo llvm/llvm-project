@@ -1315,21 +1315,6 @@ def OMP_ForSimd : Directive<"for simd"> {
   let leafConstructs = [OMP_For, OMP_Simd];
   let category = CA_Executable;
 }
-def OMP_MaskedTaskloop : Directive<"masked taskloop"> {
-  let allowedClauses = [
-    VersionedClause<OMPC_Allocate>,
-    VersionedClause<OMPC_Collapse>,
-    VersionedClause<OMPC_Default>,
-    VersionedClause<OMPC_Filter>,
-    VersionedClause<OMPC_Final>,
-    VersionedClause<OMPC_FirstPrivate>,
-    VersionedClause<OMPC_GrainSize>,
-    VersionedClause<OMPC_NumTeams>,
-    VersionedClause<OMPC_Order>,
-    VersionedClause<OMPC_ThreadLimit>,
-  ];
-  let leafConstructs = [OMP_Teams, OMP_loop];
-}
 def OMP_target_loop : Directive<"target loop"> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
@@ -1358,9 +1343,17 @@ def OMP_target_loop : Directive<"target loop"> {
     VersionedClause<OMPC_NoWait>,
   ];
   let leafConstructs = [OMP_Target, OMP_loop];
+  let category = CA_Executable;
 }
-def OMP_target_teams_loop : Directive<"target teams loop"> {
+def OMP_MaskedTaskloop : Directive<"masked taskloop"> {
   let allowedClauses = [
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Filter>,
+    VersionedClause<OMPC_Final>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_GrainSize>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_InReduction>,
     VersionedClause<OMPC_LastPrivate>,

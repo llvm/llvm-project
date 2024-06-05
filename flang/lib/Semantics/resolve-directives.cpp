@@ -1633,6 +1633,12 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   default:
     break;
   }
+  if (beginDir.v == llvm::omp::Directive::OMPD_target_loop)
+    if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
+      context_.Say(beginDir.source,
+          "Usage of directive %s is non-confirming to OpenMP standard"_warn_en_US,
+          llvm::omp::getOpenMPDirectiveName(beginDir.v).str());
+    }
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
 
