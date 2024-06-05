@@ -50,10 +50,9 @@ struct CombinerInfo {
   /// Whether we're optimizing for minsize (-Oz).
   bool EnableMinSize;
 
-  /// Whether the Combiner repeatedly iterates over all instructions until no
-  /// combine can be applied. Disabling this improves compile-time, but the IR
-  /// might not get transformed completely.
-  bool EnableFixedPointIteration = true;
+  /// The maximum number of times the Combiner will iterate over the
+  /// MachineFunction. Setting this to 0 enables fixed-point iteration.
+  unsigned MaxIterations = 0;
 };
 } // namespace llvm
 

@@ -165,7 +165,7 @@ bool AArch64O0PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, /*EnableOpt*/ false,
                      F.hasOptSize(), F.hasMinSize());
-  CInfo.EnableFixedPointIteration = false;
+  CInfo.MaxIterations = 1;
 
   AArch64O0PreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *KB,
                                          /*CSEInfo*/ nullptr, RuleConfig, ST);
