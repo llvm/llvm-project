@@ -1775,10 +1775,13 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
 
   if (SpillToVGPR) {
 
+    // Since stack slot coloring pass is trying to optimize SGPR spills,
+    // VGPR lanes (mapped from spill stack slot) may be shared for unequal SGPR
+    // spills. This accounts for number of VGPR lanes alloted equal to the
+    // largest SGPR being spilled in them.
     assert(SB.NumSubRegs <= VGPRSpills.size() &&
-           "Num of VGPR lanes should be greater or equal to num of SGPRs "
-           "spilled, as Stack Slot Coloring pass assigns different SGPR spills "
-           "into same stack slots");
+           "Num of VGPR lanes mapped should be greater or equal to num of "
+           "SGPRs spilled");
 
     for (unsigned i = 0, e = SB.NumSubRegs; i < e; ++i) {
       Register SubReg =
