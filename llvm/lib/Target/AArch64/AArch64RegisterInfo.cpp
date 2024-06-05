@@ -107,19 +107,22 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction().getCallingConv() ==
           CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0)
     report_fatal_error(
-        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 is "
-        "only supported to improve calls to SME ACLE save/restore/disable-za "
+        "Calling convention "
+        "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 is only "
+        "supported to improve calls to SME ACLE save/restore/disable-za "
         "functions, and is not intended to be used beyond that scope.");
   if (MF->getFunction().getCallingConv() ==
-          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1)
+      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1)
     report_fatal_error(
-        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1 is "
-        "only supported to improve calls to SME ACLE __arm_get_current_vg function, "
-        "and is not intended to be used beyond that scope.");
+        "Calling convention "
+        "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1 is "
+        "only supported to improve calls to SME ACLE __arm_get_current_vg "
+        "function, and is not intended to be used beyond that scope.");
   if (MF->getFunction().getCallingConv() ==
           CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
     report_fatal_error(
-        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 is "
+        "Calling convention "
+        "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 is "
         "only supported to improve calls to SME ACLE __arm_sme_state "
         "and is not intended to be used beyond that scope.");
   if (MF->getSubtarget<AArch64Subtarget>().getTargetLowering()
@@ -159,19 +162,22 @@ AArch64RegisterInfo::getDarwinCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction().getCallingConv() ==
           CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0)
     report_fatal_error(
-        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 is "
+        "Calling convention "
+        "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 is "
         "only supported to improve calls to SME ACLE save/restore/disable-za "
         "functions, and is not intended to be used beyond that scope.");
   if (MF->getFunction().getCallingConv() ==
-          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1)
+      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1)
     report_fatal_error(
-        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1 is "
-        "only supported to improve calls to SME ACLE __arm_get_current_vg function, "
-        "and is not intended to be used beyond that scope.");
+        "Calling convention "
+        "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1 is "
+        "only supported to improve calls to SME ACLE __arm_get_current_vg "
+        "function, and is not intended to be used beyond that scope.");
   if (MF->getFunction().getCallingConv() ==
           CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
     report_fatal_error(
-        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 is "
+        "Calling convention "
+        "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 is "
         "only supported to improve calls to SME ACLE __arm_sme_state "
         "and is not intended to be used beyond that scope.");
   if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS)
