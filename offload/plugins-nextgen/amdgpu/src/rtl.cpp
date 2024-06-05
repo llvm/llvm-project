@@ -4387,7 +4387,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   }
 
   /// Check whether the image is compatible with an AMDGPU device.
-  Expected<bool> isELFCompatible(StringRef Image) const override {
+  Expected<bool> isELFCompatible(uint32_t DeviceId,
+                                 StringRef Image) const override {
     // Get the associated architecture and flags from the ELF.
     auto ElfOrErr =
         ELF64LEObjectFile::create(MemoryBufferRef(Image, /*Identifier=*/""),
@@ -4395,19 +4396,16 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (!ElfOrErr)
       return ElfOrErr.takeError();
     std::optional<StringRef> Processor = ElfOrErr->tryGetCPUName();
+    if (!Processor)
+      return false;
 
-    for (hsa_agent_t Agent : KernelAgents) {
-      auto TargeTripleAndFeaturesOrError =
-          utils::getTargetTripleAndFeatures(Agent);
-      if (!TargeTripleAndFeaturesOrError)
-        return TargeTripleAndFeaturesOrError.takeError();
-      if (!utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
+    auto TargeTripleAndFeaturesOrError =
+        utils::getTargetTripleAndFeatures(getKernelAgent(DeviceId));
+    if (!TargeTripleAndFeaturesOrError)
+      return TargeTripleAndFeaturesOrError.takeError();
+    return utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
                                            ElfOrErr->getPlatformFlags(),
-                                           *TargeTripleAndFeaturesOrError))
-        return false;
-    }
-
-    return true;
+                                           *TargeTripleAndFeaturesOrError);
   }
 
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
