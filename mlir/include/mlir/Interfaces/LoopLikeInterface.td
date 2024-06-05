@@ -93,51 +93,47 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        If there is a single induction variable return it, otherwise return
-        std::nullopt.
+        Return all induction variables.
       }],
-      /*retTy=*/"::std::optional<::mlir::Value>",
-      /*methodName=*/"getSingleInductionVar",
+      /*retTy=*/"::mlir::ValueRange",
+      /*methodName=*/"getInductionVars",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return {};
       }]
     >,
     InterfaceMethod<[{
-        Return the single lower bound value or attribute if it exists, otherwise
-        return std::nullopt.
+        Return all lower bounds.
       }],
-      /*retTy=*/"::std::optional<::mlir::OpFoldResult>",
-      /*methodName=*/"getSingleLowerBound",
+      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
+      /*methodName=*/"getMixedLowerBound",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return {};
       }]
     >,
     InterfaceMethod<[{
-        Return the single step value or attribute if it exists, otherwise
-        return std::nullopt.
+        Return all steps.
       }],
-      /*retTy=*/"::std::optional<::mlir::OpFoldResult>",
-      /*methodName=*/"getSingleStep",
+      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
+      /*methodName=*/"getMixedStep",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return {};
       }]
     >,
     InterfaceMethod<[{
-        Return the single upper bound value or attribute if it exists, otherwise
-        return std::nullopt.
+        Return all upper bounds.
       }],
-      /*retTy=*/"::std::optional<::mlir::OpFoldResult>",
-      /*methodName=*/"getSingleUpperBound",
+      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
+      /*methodName=*/"getMixedUpperBound",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return {};
       }]
     >,
     InterfaceMethod<[{
@@ -235,6 +231,35 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
   }];
 
   let extraSharedClassDeclaration = [{
+    /// If there is a single induction variable return it, otherwise return
+    /// std::nullopt.
+    ::std::optional<::mlir::Value> getSingleInductionVar() {
+      if (this->getInductionVars().size() == 1)
+          return this->getInductionVars()[0];
+        return std::nullopt;
+    }
+    /// Return the single lower bound value or attribute if it exists, otherwise
+    /// return std::nullopt.
+    ::std::optional<::mlir::OpFoldResult> getSingleLowerBound() {
+      if (this->getMixedLowerBound().size() == 1)
+          return this->getMixedLowerBound()[0];
+        return std::nullopt;
+    }
+    /// Return the single step value or attribute if it exists, otherwise
+    /// return std::nullopt.
+    ::std::optional<::mlir::OpFoldResult> getSingleStep() {
+      if (this->getMixedStep().size() == 1)
+          return this->getMixedStep()[0];
+        return std::nullopt;
+    }
+    /// Return the single upper bound value or attribute if it exists, otherwise
+    /// return std::nullopt.
+    ::std::optional<::mlir::OpFoldResult> getSingleUpperBound() {
+      if (this->getMixedUpperBound().size() == 1)
+          return this->getMixedUpperBound()[0];
+        return std::nullopt;
+    }
+
     /// Append the specified additional "init" operands: replace this loop with
     /// a new loop that has the additional init operands. The loop body of this
     /// loop is moved over to the new loop.

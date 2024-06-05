@@ -36,6 +36,10 @@ protected:
     std::optional<OpFoldResult> maybeIndVar =
         loopLikeOp.getSingleInductionVar();
     EXPECT_TRUE(maybeIndVar.has_value());
+    EXPECT_EQ(loopLikeOp.getInductionVars().size(), 1u);
+    EXPECT_EQ(loopLikeOp.getMixedLowerBound().size(), 1u);
+    EXPECT_EQ(loopLikeOp.getMixedStep().size(), 1u);
+    EXPECT_EQ(loopLikeOp.getMixedLowerBound().size(), 1u);
   }
 
   void checkMultidimensional(LoopLikeOpInterface loopLikeOp) {
@@ -48,6 +52,10 @@ protected:
     std::optional<OpFoldResult> maybeIndVar =
         loopLikeOp.getSingleInductionVar();
     EXPECT_FALSE(maybeIndVar.has_value());
+    EXPECT_EQ(loopLikeOp.getInductionVars().size(), 2u);
+    EXPECT_EQ(loopLikeOp.getMixedLowerBound().size(), 2u);
+    EXPECT_EQ(loopLikeOp.getMixedStep().size(), 2u);
+    EXPECT_EQ(loopLikeOp.getMixedLowerBound().size(), 2u);
   }
 
   MLIRContext context;
