@@ -791,6 +791,13 @@ public:
     return 1;
   }
 
+  InstructionCost getPartialReductionCost(unsigned Opcode, bool IsUnsigned,
+                                           VectorType *ResTy, VectorType *Ty,
+                                           FastMathFlags FMF,
+                                           TTI::TargetCostKind CostKind) const {
+    return InstructionCost::getMax();
+  }
+
   InstructionCost getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
                                          VectorType *Ty,
                                          TTI::TargetCostKind CostKind) const {

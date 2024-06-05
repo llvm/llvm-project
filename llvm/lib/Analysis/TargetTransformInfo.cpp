@@ -1154,6 +1154,12 @@ InstructionCost TargetTransformInfo::getExtendedReductionCost(
                                            CostKind);
 }
 
+InstructionCost TargetTransformInfo::getPartialReductionCost(
+  unsigned Opcode, bool IsUnsigned, VectorType *ResTy, VectorType *Ty,
+  FastMathFlags FMF, TargetCostKind CostKind) const {
+  return TTIImpl->getPartialReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF, CostKind);
+}
+
 InstructionCost TargetTransformInfo::getMulAccReductionCost(
     bool IsUnsigned, Type *ResTy, VectorType *Ty,
     TTI::TargetCostKind CostKind) const {

@@ -8653,7 +8653,19 @@ VPRecipeBase *VPRecipeBuilder::tryToCreatePartialReduction(
     auto EC = ElementCount::getScalable(16);
     if(std::find(Range.begin(), Range.end(), EC) == Range.end())
       return nullptr;
-    return new VPPartialReductionRecipe(*Instr, make_range(Operands.begin(), Operands.end()), 4);
+
+    // Scale factor of 4 for sdot/udot.
+    unsigned Scale = 4;
+    VectorType* ResTy = ScalableVectorType::get(Instr->getType(), Scale);
+    VectorType* ValTy = ScalableVectorType::get(Instr->getType(), EC.getKnownMinValue());
+    using namespace llvm::PatternMatch;
+    bool IsUnsigned = match(Instr, m_Add(m_Mul(m_ZExt(m_Value()), m_ZExt(m_Value())), m_Value()));
+    auto RecipeCost = this->CM.TTI.getPartialReductionCost(Instr->getOpcode(), IsUnsigned, ResTy, ValTy, FastMathFlags::getFast());
+    // TODO replace with more informed cost check
+    if(RecipeCost == InstructionCost::getMax())
+      return nullptr;
+
+    return new VPPartialReductionRecipe(*Instr, make_range(Operands.begin(), Operands.end()), Scale);
   }
   return nullptr;
 }

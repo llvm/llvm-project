@@ -1516,6 +1516,10 @@ public:
       FastMathFlags FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
+  InstructionCost getPartialReductionCost(
+    unsigned Opcode, bool IsUnsigned, VectorType *ResTy, VectorType *Ty,
+    FastMathFlags FMF, TargetCostKind CostKind = TCK_RecipThroughput) const;
+
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
   /// Three cases are handled: 1. scalar instruction 2. vector instruction
   /// 3. scalar instruction which is to be vectorized.
@@ -2078,6 +2082,9 @@ public:
       unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
       FastMathFlags FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) = 0;
+  virtual InstructionCost getPartialReductionCost(
+      unsigned Opcode, bool IsUnsigned, VectorType *ResTy, VectorType *Ty,
+      FastMathFlags FMF, TargetCostKind CostKind = TCK_RecipThroughput) = 0;
   virtual InstructionCost getMulAccReductionCost(
       bool IsUnsigned, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) = 0;
@@ -2751,6 +2758,12 @@ public:
                            TTI::TargetCostKind CostKind) override {
     return Impl.getExtendedReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
                                          CostKind);
+  }
+  InstructionCost getPartialReductionCost(unsigned Opcode, bool IsUnsigned,
+      VectorType *ResTy, VectorType *Ty, FastMathFlags FMF,
+      TargetCostKind CostKind = TCK_RecipThroughput) override {
+      return Impl.getPartialReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
+          CostKind);
   }
   InstructionCost
   getMulAccReductionCost(bool IsUnsigned, Type *ResTy, VectorType *Ty,
