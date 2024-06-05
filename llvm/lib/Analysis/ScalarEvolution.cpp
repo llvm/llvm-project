@@ -10422,17 +10422,6 @@ SolveQuadraticAddRecRange(const SCEVAddRecExpr *AddRec,
   return TruncIfPossible(MinOptional(SL.first, SU.first), BitWidth);
 }
 
-/// Return true if this is (C * vscale).  This is the canonical form
-/// of the step for loops vectorized with scalable vectors.
-static bool matchScaledVScale(const SCEV *S) {
-  const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(S);
-  if (!Mul || Mul->getNumOperands() != 2)
-    return false;
-
-  return isa<SCEVConstant>(Mul->getOperand(0)) &&
-         Mul->getOperand(1)->getSCEVType() == scVScale;
-}
-
 ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
                                                          const Loop *L,
                                                          bool ControlsOnlyExit,
@@ -10495,12 +10484,6 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   const SCEV *Start = getSCEVAtScope(AddRec->getStart(), L->getParentLoop());
   const SCEV *Step = getSCEVAtScope(AddRec->getOperand(1), L->getParentLoop());
   const SCEVConstant *StepC = dyn_cast<SCEVConstant>(Step);
-  // The code below is correct for arbitrary non-constant steps, but we won't be
-  // able to prove useful properties given the lack of use dependenct reasoning
-  // here.  To avoid spending compile time for no value, bail early unless the
-  // step is a "useful" non-constant value.
-  if (!StepC && !matchScaledVScale(Step))
-    return getCouldNotCompute();
 
   if (!isLoopInvariant(Step, L) || !isKnownNonZero(Step))
     return getCouldNotCompute();
