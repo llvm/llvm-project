@@ -1468,11 +1468,12 @@ def CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
 def CaseOpKind_DT : I32EnumAttrCase<"Default", 1, "default">;
 def CaseOpKind_EQ : I32EnumAttrCase<"Equal", 2, "equal">;
 def CaseOpKind_AO : I32EnumAttrCase<"Anyof", 3, "anyof">;
+def CaseOpKind_RG : I32EnumAttrCase<"Range", 4, "range">;
 
 def CaseOpKind : I32EnumAttr<
     "CaseOpKind",
     "case kind",
-    [CaseOpKind_DT, CaseOpKind_EQ, CaseOpKind_AO]> {
+    [CaseOpKind_DT, CaseOpKind_EQ, CaseOpKind_AO, CaseOpKind_RG]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -1510,6 +1511,7 @@ def SwitchOp : CIR_Op<"switch",
     condition.
     - `anyof, [constant-list]`: equals to any of the values in a subsequent
     following list.
+    - `range, [lower-bound, upper-bound]`: the condition is within the closed interval.
     - `default`: any other value.
 
     Each case region must be explicitly terminated.
@@ -1526,6 +1528,10 @@ def SwitchOp : CIR_Op<"switch",
         ...
         cir.return ...
       }
+      case (range, [10, 15]) {
+        ...
+        cir.yield break
+      },
       case (default) {
         ...
         cir.yield fallthrough

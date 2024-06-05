@@ -259,6 +259,43 @@ public:
                                                  destination);
   }
 
+  // Return the new defaultDestination block.
+  Block *condBrToRangeDestination(mlir::cir::SwitchOp op,
+                                  mlir::PatternRewriter &rewriter,
+                                  mlir::Block *rangeDestination,
+                                  mlir::Block *defaultDestination,
+                                  APInt lowerBound, APInt upperBound) const {
+    assert(lowerBound.sle(upperBound) && "Invalid range");
+    auto resBlock = rewriter.createBlock(defaultDestination);
+    auto sIntType = mlir::cir::IntType::get(op.getContext(), 32, true);
+    auto uIntType = mlir::cir::IntType::get(op.getContext(), 32, false);
+
+    auto rangeLength = rewriter.create<mlir::cir::ConstantOp>(
+        op.getLoc(), sIntType,
+        mlir::cir::IntAttr::get(op.getContext(), sIntType,
+                                upperBound - lowerBound));
+
+    auto lowerBoundValue = rewriter.create<mlir::cir::ConstantOp>(
+        op.getLoc(), sIntType,
+        mlir::cir::IntAttr::get(op.getContext(), sIntType, lowerBound));
+    auto diffValue = rewriter.create<mlir::cir::BinOp>(
+        op.getLoc(), sIntType, mlir::cir::BinOpKind::Sub, op.getCondition(),
+        lowerBoundValue);
+
+    // Use unsigned comparison to check if the condition is in the range.
+    auto uDiffValue = rewriter.create<mlir::cir::CastOp>(
+        op.getLoc(), uIntType, CastKind::integral, diffValue);
+    auto uRangeLength = rewriter.create<mlir::cir::CastOp>(
+        op.getLoc(), uIntType, CastKind::integral, rangeLength);
+
+    auto cmpResult = rewriter.create<mlir::cir::CmpOp>(
+        op.getLoc(), mlir::cir::BoolType::get(op.getContext()),
+        mlir::cir::CmpOpKind::le, uDiffValue, uRangeLength);
+    rewriter.create<mlir::cir::BrCondOp>(op.getLoc(), cmpResult,
+                                         rangeDestination, defaultDestination);
+    return resBlock;
+  }
+
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::SwitchOp op,
                   mlir::PatternRewriter &rewriter) const override {
@@ -279,6 +316,10 @@ public:
     llvm::SmallVector<mlir::Block *, 8> caseDestinations;
     llvm::SmallVector<mlir::ValueRange, 8> caseOperands;
 
+    llvm::SmallVector<std::pair<APInt, APInt>> rangeValues;
+    llvm::SmallVector<mlir::Block *> rangeDestinations;
+    llvm::SmallVector<mlir::ValueRange> rangeOperands;
+
     // Initialize default case as optional.
     mlir::Block *defaultDestination = exitBlock;
     mlir::ValueRange defaultOperands = exitBlock->getArguments();
@@ -292,16 +333,31 @@ public:
       auto caseAttr = op.getCases()->getValue()[i].cast<mlir::cir::CaseAttr>();
 
       // Found default case: save destination and operands.
-      if (caseAttr.getKind().getValue() == mlir::cir::CaseOpKind::Default) {
+      switch (caseAttr.getKind().getValue()) {
+      case mlir::cir::CaseOpKind::Default:
         defaultDestination = &region.front();
         defaultOperands = region.getArguments();
-      } else {
+        break;
+      case mlir::cir::CaseOpKind::Range:
+        assert(caseAttr.getValue().size() == 2 &&
+               "Case range should have 2 case value");
+        rangeValues.push_back(
+            {caseAttr.getValue()[0].cast<mlir::cir::IntAttr>().getValue(),
+             caseAttr.getValue()[1].cast<mlir::cir::IntAttr>().getValue()});
+        rangeDestinations.push_back(&region.front());
+        rangeOperands.push_back(region.getArguments());
+        break;
+      case mlir::cir::CaseOpKind::Anyof:
+      case mlir::cir::CaseOpKind::Equal:
         // AnyOf cases kind can have multiple values, hence the loop below.
         for (auto &value : caseAttr.getValue()) {
           caseValues.push_back(value.cast<mlir::cir::IntAttr>().getValue());
           caseOperands.push_back(region.getArguments());
           caseDestinations.push_back(&region.front());
         }
+        break;
+      default:
+        llvm_unreachable("unsupported case kind");
       }
 
       // Previous case is a fallthrough: branch it to this case.
@@ -334,6 +390,33 @@ public:
     if (fallthroughYieldOp) {
       rewriteYieldOp(rewriter, fallthroughYieldOp, exitBlock);
       fallthroughYieldOp = nullptr;
+    }
+
+    for (size_t index = 0; index < rangeValues.size(); ++index) {
+      auto lowerBound = rangeValues[index].first;
+      auto upperBound = rangeValues[index].second;
+
+      // The case range is unreachable, skip it.
+      if (lowerBound.sgt(upperBound))
+        continue;
+
+      // If range is small, add multiple switch instruction cases.
+      // This magical number is from the original CGStmt code.
+      constexpr int kSmallRangeThreshold = 64;
+      if ((upperBound - lowerBound)
+              .ult(llvm::APInt(32, kSmallRangeThreshold))) {
+        for (auto iValue = lowerBound; iValue.sle(upperBound); iValue++) {
+          caseValues.push_back(iValue);
+          caseOperands.push_back(rangeOperands[index]);
+          caseDestinations.push_back(rangeDestinations[index]);
+        }
+        continue;
+      }
+
+      defaultDestination =
+          condBrToRangeDestination(op, rewriter, rangeDestinations[index],
+                                   defaultDestination, lowerBound, upperBound);
+      defaultOperands = rangeOperands[index];
     }
 
     // Set switch op to branch to the newly created blocks.
