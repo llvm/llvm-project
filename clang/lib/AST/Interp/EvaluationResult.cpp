@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "EvaluationResult.h"
-#include "Context.h"
 #include "InterpState.h"
 #include "Record.h"
 #include "clang/AST/ExprCXX.h"
@@ -157,46 +156,6 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
   const auto *CAT =
       cast<ConstantArrayType>(Ptr.getType()->getAsArrayTypeUnsafe());
   return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
-}
-
-void EvaluationResult::dump() const {
-  assert(Ctx);
-  auto &OS = llvm::errs();
-  const ASTContext &ASTCtx = Ctx->getASTContext();
-
-  switch (Kind) {
-  case Empty:
-    OS << "Empty\n";
-    break;
-  case RValue:
-    OS << "RValue: ";
-    std::get<APValue>(Value).dump(OS, ASTCtx);
-    break;
-  case LValue: {
-    assert(Source);
-    QualType SourceType;
-    if (const auto *D = Source.dyn_cast<const Decl *>()) {
-      if (const auto *VD = dyn_cast<ValueDecl>(D))
-        SourceType = VD->getType();
-    } else if (const auto *E = Source.dyn_cast<const Expr *>()) {
-      SourceType = E->getType();
-    }
-
-    OS << "LValue: ";
-    if (const auto *P = std::get_if<Pointer>(&Value))
-      P->toAPValue().printPretty(OS, ASTCtx, SourceType);
-    else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
-      FP->toAPValue().printPretty(OS, ASTCtx, SourceType);
-    OS << "\n";
-    break;
-  }
-  case Invalid:
-    OS << "Invalid\n";
-  break;
-  case Valid:
-    OS << "Valid\n";
-  break;
-  }
 }
 
 } // namespace interp
