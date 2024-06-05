@@ -7,7 +7,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestRedefinitionsInInlines(TestBase):
-
     # https://github.com/llvm/llvm-project/issues/28219
     @skipIf(compiler="clang", compiler_version=["<", "3.5"])
     def test(self):
