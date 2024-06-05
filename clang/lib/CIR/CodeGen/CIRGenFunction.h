@@ -1291,8 +1291,9 @@ public:
   /// inside a function, including static vars etc.
   void buildVarDecl(const clang::VarDecl &D);
 
-  mlir::cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &D,
-                                                    mlir::cir::GlobalOp GV);
+  mlir::cir::GlobalOp
+  addInitializerToStaticVarDecl(const VarDecl &D, mlir::cir::GlobalOp GV,
+                                mlir::cir::GetGlobalOp GVAddr);
 
   void buildStaticVarDecl(const VarDecl &D,
                           mlir::cir::GlobalLinkageKind Linkage);

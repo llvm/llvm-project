@@ -2735,6 +2735,7 @@ mlir::cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
     // Replace occurrences of the old variable if needed.
     GV.setName(OldGV.getName());
     if (!OldGV->use_empty()) {
+      // TODO(cir): remove erase call above and use replaceGlobal here.
       llvm_unreachable("NYI");
     }
     OldGV->erase();

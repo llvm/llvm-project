@@ -684,6 +684,15 @@ public:
   // FIXME(cir): Track a list of globals, or at least the last one inserted, so
   // that we can insert globals in the same order they are defined by CIRGen.
 
+  [[nodiscard]] mlir::cir::GlobalOp
+  createGlobal(mlir::ModuleOp module, mlir::Location loc, mlir::StringRef name,
+               mlir::Type type, bool isConst,
+               mlir::cir::GlobalLinkageKind linkage) {
+    mlir::OpBuilder::InsertionGuard guard(*this);
+    setInsertionPointToStart(module.getBody());
+    return create<mlir::cir::GlobalOp>(loc, name, type, isConst, linkage);
+  }
+
   /// Creates a versioned global variable. If the symbol is already taken, an ID
   /// will be appended to the symbol. The returned global must always be queried
   /// for its name so it can be referenced correctly.
@@ -691,9 +700,6 @@ public:
   createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
                         mlir::StringRef name, mlir::Type type, bool isConst,
                         mlir::cir::GlobalLinkageKind linkage) {
-    mlir::OpBuilder::InsertionGuard guard(*this);
-    setInsertionPointToStart(module.getBody());
-
     // Create a unique name if the given name is already taken.
     std::string uniqueName;
     if (unsigned version = GlobalsVersioning[name.str()]++)
@@ -701,7 +707,7 @@ public:
     else
       uniqueName = name.str();
 
-    return create<mlir::cir::GlobalOp>(loc, uniqueName, type, isConst, linkage);
+    return createGlobal(module, loc, uniqueName, type, isConst, linkage);
   }
 
   mlir::Value createGetGlobal(mlir::cir::GlobalOp global,

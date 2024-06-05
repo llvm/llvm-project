@@ -529,9 +529,8 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &D,
 /// Add the initializer for 'D' to the global variable that has already been
 /// created for it. If the initializer has a different type than GV does, this
 /// may free GV and return a different one. Otherwise it just returns GV.
-mlir::cir::GlobalOp
-CIRGenFunction::addInitializerToStaticVarDecl(const VarDecl &D,
-                                              mlir::cir::GlobalOp GV) {
+mlir::cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
+    const VarDecl &D, mlir::cir::GlobalOp GV, mlir::cir::GetGlobalOp GVAddr) {
   ConstantEmitter emitter(*this);
   mlir::TypedAttr Init =
       emitter.tryEmitForInitializer(D).dyn_cast<mlir::TypedAttr>();
@@ -566,7 +565,27 @@ CIRGenFunction::addInitializerToStaticVarDecl(const VarDecl &D,
   // because some types, like unions, can't be completely represented
   // in the LLVM type system.)
   if (GV.getSymType() != Init.getType()) {
-    llvm_unreachable("static decl initializer type mismatch is NYI");
+    mlir::cir::GlobalOp OldGV = GV;
+    GV = builder.createGlobal(CGM.getModule(), getLoc(D.getSourceRange()),
+                              OldGV.getName(), Init.getType(),
+                              OldGV.getConstant(), GV.getLinkage());
+    // FIXME(cir): OG codegen inserts new GV before old one, we probably don't
+    // need that?
+    GV.setVisibility(OldGV.getVisibility());
+    GV.setInitialValueAttr(Init);
+    GV.setTlsModelAttr(OldGV.getTlsModelAttr());
+    assert(!MissingFeatures::setDSOLocal());
+    assert(!MissingFeatures::setComdat());
+    assert(!MissingFeatures::addressSpaceInGlobalVar());
+
+    // Normally this should be done with a call to CGM.replaceGlobal(OldGV, GV),
+    // but since at this point the current block hasn't been really attached,
+    // there's no visibility into the GetGlobalOp corresponding to this Global.
+    // Given those constraints, thread in the GetGlobalOp and update it
+    // directly.
+    GVAddr.getAddr().setType(
+        mlir::cir::PointerType::get(builder.getContext(), Init.getType()));
+    OldGV->erase();
   }
 
   bool NeedsDtor =
@@ -597,6 +616,8 @@ void CIRGenFunction::buildStaticVarDecl(const VarDecl &D,
   // TODO(cir): we should have a way to represent global ops as values without
   // having to emit a get global op. Sometimes these emissions are not used.
   auto addr = getBuilder().createGetGlobal(globalOp);
+  auto getAddrOp = mlir::cast<mlir::cir::GetGlobalOp>(addr.getDefiningOp());
+
   CharUnits alignment = getContext().getDeclAlign(&D);
 
   // Store into LocalDeclMap before generating initializer to handle
@@ -623,7 +644,7 @@ void CIRGenFunction::buildStaticVarDecl(const VarDecl &D,
                          D.hasAttr<CUDASharedAttr>();
   // If this value has an initializer, emit it.
   if (D.getInit() && !isCudaSharedVar)
-    var = addInitializerToStaticVarDecl(D, var);
+    var = addInitializerToStaticVarDecl(D, var, getAddrOp);
 
   var.setAlignment(alignment.getAsAlign().value());
 
@@ -647,15 +668,18 @@ void CIRGenFunction::buildStaticVarDecl(const VarDecl &D,
   else if (D.hasAttr<UsedAttr>())
     llvm_unreachable("llvm.compiler.used metadata is NYI");
 
+  // From traditional codegen:
   // We may have to cast the constant because of the initializer
   // mismatch above.
   //
   // FIXME: It is really dangerous to store this in the map; if anyone
   // RAUW's the GV uses of this constant will be invalid.
-  // TODO(cir): its suppose to be possible that the initializer does not match
-  // the static var type. When this happens, there should be a cast here.
-  assert(var.getSymType() != expectedType &&
-         "static var init type mismatch is NYI");
+  //
+  // Since in CIR the address materialization is done over cir.get_global
+  // and that's already updated, update the map directly instead of using
+  // casts.
+  LocalDeclMap.find(&D)->second =
+      Address(getAddrOp.getAddr(), elemTy, alignment);
   CGM.setStaticLocalDeclAddress(&D, var);
 
   assert(!MissingFeatures::reportGlobalToASan());
