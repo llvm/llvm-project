@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/RISCVISAUtils.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -231,6 +232,8 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
     return getExtensionName(Rec1) < getExtensionName(Rec2);
   });
 
+  llvm::DenseMap<std::pair<uint64_t, uint64_t>, bool> Seen;
+
   OS << "#ifdef GET_RISCVExtensionBitmaskTable_IMPL\n";
   OS << "static const RISCVExtensionBitmask ExtensionBitmask[]={\n";
   for (const Record *Rec : Extensions) {
@@ -244,10 +247,18 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
     if (!getValueFromBitsInit(BitmaskBits, *Rec))
       continue;
 
+    StringRef ExtName = Rec->getValueAsString("Name");
+    ExtName.consume_front("experimental-");
+    uint64_t GroupIDVal = getValueFromBitsInit(GroupIDBits, *Rec);
+    uint64_t BitmaskVal = getValueFromBitsInit(BitmaskBits, *Rec);
+
+    assert(!Seen[std::make_pair(GroupIDVal, BitmaskVal)] &&
+           "duplicated bitmask");
+    Seen[std::make_pair(GroupIDVal, BitmaskVal)] = true;
+
     OS << "    {"
-       << "\"" << Rec->getValueAsString("Name") << "\""
-       << ", " << getValueFromBitsInit(GroupIDBits, *Rec) << ", "
-       << getValueFromBitsInit(BitmaskBits, *Rec) << "ULL"
+       << "\"" << ExtName << "\""
+       << ", " << GroupIDVal << ", " << BitmaskVal << "ULL"
        << "},\n";
   }
   OS << "};\n";
