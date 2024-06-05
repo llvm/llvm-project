@@ -240,9 +240,9 @@ function(add_properties_for_swift_modules target reldir)
     if (SWIFT_BUILD_SWIFT_SYNTAX)
       if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
         set_property(TARGET ${target}
-          APPEND PROPERTY BUILD_RPATH "@loader_path/${build_reldir}lib/swift/host")
+          APPEND PROPERTY BUILD_RPATH "@loader_path/${build_reldir}lib/swift/host/compiler")
         set_property(TARGET ${target}
-          APPEND PROPERTY INSTALL_RPATH "@loader_path/${reldir}lib/swift/host")
+          APPEND PROPERTY INSTALL_RPATH "@loader_path/${reldir}lib/swift/host/compiler")
         if(SWIFT_ALLOW_LINKING_SWIFT_CONTENT_IN_DARWIN_TOOLCHAIN)
           get_filename_component(TOOLCHAIN_BIN_DIR ${CMAKE_Swift_COMPILER} DIRECTORY)
           get_filename_component(TOOLCHAIN_LIB_DIR "${TOOLCHAIN_BIN_DIR}/../lib/swift/macosx" ABSOLUTE)
@@ -250,9 +250,9 @@ function(add_properties_for_swift_modules target reldir)
         endif()
       elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android|OpenBSD|FreeBSD")
         set_property(TARGET ${target}
-          APPEND PROPERTY BUILD_RPATH "$ORIGIN/${build_reldir}lib/swift/host")
+          APPEND PROPERTY BUILD_RPATH "$ORIGIN/${build_reldir}lib/swift/host/compiler")
         set_property(TARGET ${target}
-          APPEND PROPERTY INSTALL_RPATH "$ORIGIN/${reldir}lib/swift/host")
+          APPEND PROPERTY INSTALL_RPATH "$ORIGIN/${reldir}lib/swift/host/compiler")
       endif()
     endif()
   endif()
