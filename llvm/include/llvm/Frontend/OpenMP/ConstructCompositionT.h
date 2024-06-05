@@ -343,11 +343,29 @@ template <typename C> void ConstructCompositionT<C>::mergeDSA() {
     }
   }
 
-  // Check reductions as well, clear "shared" if set.
+  // Check other privatizing clauses as well, clear "shared" if set.
+  for (auto &clause : clauseSets[llvm::omp::Clause::OMPC_in_reduction]) {
+    using InReductionTy = tomp::clause::InReductionT<TypeTy, IdTy, ExprTy>;
+    using ListTy = typename InReductionTy::List;
+    for (auto &object : std::get<ListTy>(std::get<InReductionTy>(clause.u).t))
+      getDsa(object).second &= ~DSA::Shared;
+  }
+  for (auto &clause : clauseSets[llvm::omp::Clause::OMPC_linear]) {
+    using LinearTy = tomp::clause::LinearT<TypeTy, IdTy, ExprTy>;
+    using ListTy = typename LinearTy::List;
+    for (auto &object : std::get<ListTy>(std::get<LinearTy>(clause.u).t))
+      getDsa(object).second &= ~DSA::Shared;
+  }
   for (auto &clause : clauseSets[llvm::omp::Clause::OMPC_reduction]) {
     using ReductionTy = tomp::clause::ReductionT<TypeTy, IdTy, ExprTy>;
     using ListTy = typename ReductionTy::List;
     for (auto &object : std::get<ListTy>(std::get<ReductionTy>(clause.u).t))
+      getDsa(object).second &= ~DSA::Shared;
+  }
+  for (auto &clause : clauseSets[llvm::omp::Clause::OMPC_task_reduction]) {
+    using TaskReductionTy = tomp::clause::TaskReductionT<TypeTy, IdTy, ExprTy>;
+    using ListTy = typename TaskReductionTy::List;
+    for (auto &object : std::get<ListTy>(std::get<TaskReductionTy>(clause.u).t))
       getDsa(object).second &= ~DSA::Shared;
   }
 

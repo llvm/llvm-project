@@ -9,7 +9,7 @@
 ; DBG-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
-; DBG-NEXT: ph:
+; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1000 + (-1 * %start))
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
@@ -179,7 +179,7 @@ exit:
 ; DBG-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
-; DBG-NEXT: ph:
+; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 (1 smax %n) to i64)
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
@@ -202,7 +202,10 @@ exit:
 ; DBG-NEXT: Successor(s): middle.block
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
+; DBG-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end vp<[[SCALAR_STEPS]]>, ir<1>
 ; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_1]]>
 ; DBG-NEXT: }
 
 define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {

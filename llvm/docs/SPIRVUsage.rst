@@ -141,8 +141,16 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
+   * - ``SPV_INTEL_cache_controls``
+     - Allows cache control information to be applied to memory access instructions.
    * - ``SPV_INTEL_function_pointers``
      - Allows translation of function pointers.
+   * - ``SPV_INTEL_inline_assembly``
+     - Allows to use inline assembly.
+   * - ``SPV_INTEL_global_variable_host_access``
+     - Adds decorations that can be applied to global (module scope) variables.
+   * - ``SPV_INTEL_global_variable_fpga_decorations``
+     - Adds decorations that can be applied to global (module scope) variables to help code generation for FPGA devices.
    * - ``SPV_INTEL_optnone``
      - Adds OptNoneINTEL value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_INTEL_subgroups``
@@ -161,6 +169,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Allows to use the LinkOnceODR linkage type that lets a function or global variable to be merged with other functions or global variables of the same name when linkage occurs.
    * - ``SPV_KHR_no_integer_wrap_decoration``
      - Adds decorations to indicate that a given instruction does not cause integer wrapping.
+   * - ``SPV_KHR_shader_clock``
+     - Adds the extension cl_khr_kernel_clock that adds the ability for a kernel to sample the value from clocks provided by compute units.
    * - ``SPV_KHR_subgroup_rotate``
      - Adds a new instruction that enables rotating values across invocations within a subgroup.
    * - ``SPV_KHR_uniform_group_instructions``
@@ -253,6 +263,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - None
      - `[Type, Vararg]`
      - Assigns names to types or values, enhancing readability and debuggability of SPIR-V code. Not emitted directly but used for metadata enrichment.
+   * - `int_spv_assign_decoration`
+     - None
+     - `[Type, Metadata]`
+     - Assigns decoration to values by associating them with metadatas. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_track_constant`
      - Type
      - `[Type, Metadata]`
@@ -294,7 +308,7 @@ SPIR-V backend, along with their descriptions and argument details.
      - `[Type, Type, Any Integer]`
      - Inserts an element into an aggregate type at a specified index. Allows for building and modifying arrays and vectors.
    * - `int_spv_const_composite`
-     - 32-bit Integer
+     - Type
      - `[Vararg]`
      - Constructs a composite type from given elements. Key for creating arrays, structs, and vectors from individual components.
    * - `int_spv_bitcast`
@@ -329,6 +343,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - 32-bit Integer
      - `[]`
      - Generates an undefined value. Useful for optimizations and indicating uninitialized variables.
+   * - `int_spv_inline_asm`
+     - None
+     - `[Metadata, Metadata, Vararg]`
+     - Associates inline assembly features to inline assembly call instances by creating metadatas and preserving original arguments. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_assume`
      - None
      - `[1-bit Integer]`

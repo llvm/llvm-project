@@ -150,9 +150,8 @@ Object makeObject(const parser::OmpObject &object,
   return makeObject(std::get<parser::Designator>(object.u), semaCtx);
 }
 
-std::optional<Object>
-getBaseObject(const Object &object,
-              Fortran::semantics::SemanticsContext &semaCtx) {
+std::optional<Object> getBaseObject(const Object &object,
+                                    semantics::SemanticsContext &semaCtx) {
   // If it's just the symbol, then there is no base.
   if (!object.id())
     return std::nullopt;
@@ -1211,7 +1210,7 @@ UsesAllocators make(const parser::OmpClause::UsesAllocators &inp,
 // Write: empty
 } // namespace clause
 
-Clause makeClause(const Fortran::parser::OmpClause &cls,
+Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx) {
   return std::visit(
       [&](auto &&s) {

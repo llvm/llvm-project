@@ -371,9 +371,8 @@ ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
 // anything and return false, otherwise return true.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyToUnique(const ClauseTy *node) {
-  auto unique = detail::find_unique(leafs, [=](const auto &dirInfo) {
-    return llvm::omp::isAllowedClauseForDirective(dirInfo.id, node->id,
-                                                  version);
+  auto unique = detail::find_unique(leafs, [=](const auto &leaf) {
+    return llvm::omp::isAllowedClauseForDirective(leaf.id, node->id, version);
   });
 
   if (unique != leafs.end()) {
@@ -438,8 +437,8 @@ bool ConstructDecompositionT<C, H>::applyToAll(const ClauseTy *node) {
 }
 
 template <typename C, typename H>
-template <typename Clause>
-bool ConstructDecompositionT<C, H>::applyClause(Clause &&clause,
+template <typename Specific>
+bool ConstructDecompositionT<C, H>::applyClause(Specific &&specific,
                                                 const ClauseTy *node) {
   // The default behavior is to find the unique directive to which the
   // given clause may be applied. If there are no such directives, or
@@ -793,9 +792,14 @@ bool ConstructDecompositionT<C, H>::applyClause(
   // [5.2:340:33]
   auto canMakePrivateCopy = [](llvm::omp::Clause id) {
     switch (id) {
+    // Clauses with "privatization" property:
     case llvm::omp::Clause::OMPC_firstprivate:
+    case llvm::omp::Clause::OMPC_in_reduction:
     case llvm::omp::Clause::OMPC_lastprivate:
+    case llvm::omp::Clause::OMPC_linear:
     case llvm::omp::Clause::OMPC_private:
+    case llvm::omp::Clause::OMPC_reduction:
+    case llvm::omp::Clause::OMPC_task_reduction:
       return true;
     default:
       return false;
@@ -930,7 +934,8 @@ bool ConstructDecompositionT<C, H>::applyClause(
       // Apply clause without modifier.
       leaf.clauses.push_back(unmodified);
     }
-    applied = true;
+    // The modifier must be applied to some construct.
+    applied = effectiveApplied;
   }
 
   if (!applied)

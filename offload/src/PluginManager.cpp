@@ -34,15 +34,8 @@ void PluginManager::init() {
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    auto Plugin = std::unique_ptr<GenericPluginTy>(createPlugin_##Name());     \
-    if (auto Err = Plugin->init()) {                                           \
-      [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));         \
-      DP("Failed to init plugin: %s\n", InfoMsg.c_str());                      \
-    } else {                                                                   \
-      DP("Registered plugin %s with %d visible device(s)\n",                   \
-         Plugin->getName(), Plugin->number_of_devices());                      \
-      Plugins.emplace_back(std::move(Plugin));                                 \
-    }                                                                          \
+    Plugins.emplace_back(                                                      \
+        std::unique_ptr<GenericPluginTy>(createPlugin_##Name()));              \
   } while (false);
 #include "Shared/Targets.def"
 
@@ -160,6 +153,27 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     if (Entry.flags == OMP_REGISTER_REQUIRES)
       PM->addRequirements(Entry.data);
 
+  // Initialize all the plugins that have associated images.
+  for (auto &Plugin : Plugins) {
+    // Extract the exectuable image and extra information if availible.
+    for (int32_t i = 0; i < Desc->NumDeviceImages; ++i) {
+      if (Plugin->is_initialized())
+        continue;
+
+      if (!Plugin->is_valid_binary(&Desc->DeviceImages[i],
+                                   /*Initialized=*/false))
+        continue;
+
+      if (auto Err = Plugin->init()) {
+        [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+        DP("Failed to init plugin: %s\n", InfoMsg.c_str());
+      } else {
+        DP("Registered plugin %s with %d visible device(s)\n",
+           Plugin->getName(), Plugin->number_of_devices());
+      }
+    }
+  }
+
   // Extract the exectuable image and extra information if availible.
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
     PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
@@ -177,7 +191,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
       if (!R.number_of_devices())
         continue;
 
-      if (!R.is_valid_binary(Img)) {
+      if (!R.is_valid_binary(Img, /*Initialized=*/true)) {
         DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
            DPxPTR(Img->ImageStart), R.getName());
         continue;

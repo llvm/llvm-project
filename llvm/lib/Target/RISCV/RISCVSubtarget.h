@@ -121,9 +121,7 @@ public:
   }
   bool enableMachineScheduler() const override { return true; }
 
-  bool enablePostRAScheduler() const override {
-    return getSchedModel().PostRAScheduler || UsePostRAScheduler;
-  }
+  bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
   Align getPrefFunctionAlignment() const {
     return Align(TuneInfo->PrefFunctionAlignment);

@@ -15,28 +15,28 @@ declare void @common()
 define void @merge_simple(i1 %cond) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @merge_simple(
 ; CHECK-NEXT:    invoke void @maybe_throws()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    invoke void @maybe_throws()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD2:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD2:%.*]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    invoke void @maybe_throws()
-; CHECK-NEXT:    to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD3:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD3:%.*]]
 ; CHECK:       invoke.cont3:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[RESUME0:%.*]], label [[RESUME1:%.*]]
 ; CHECK:       lpad2:
 ; CHECK-NEXT:    [[LP2:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[RESUME2:%.*]]
 ; CHECK:       lpad3:
 ; CHECK-NEXT:    [[LP3:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @baz()
 ; CHECK-NEXT:    br label [[RESUME2]]
 ; CHECK:       common.resume:

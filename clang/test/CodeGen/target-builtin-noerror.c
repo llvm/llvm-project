@@ -68,8 +68,6 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("avx512bw");
   (void)__builtin_cpu_supports("avx512dq");
   (void)__builtin_cpu_supports("avx512cd");
-  (void)__builtin_cpu_supports("avx512er");
-  (void)__builtin_cpu_supports("avx512pf");
   (void)__builtin_cpu_supports("avx512vbmi");
   (void)__builtin_cpu_supports("avx512ifma");
   (void)__builtin_cpu_supports("avx5124vnniw");

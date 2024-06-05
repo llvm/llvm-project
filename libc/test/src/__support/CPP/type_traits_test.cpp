@@ -112,6 +112,15 @@ TEST(LlvmLibcTypeTraitsTest, add_rvalue_reference_void) {
                          const volatile void>));
 }
 
+TEST(LlvmLibcTypeTraitsTest, aligned_storage) {
+  struct S {
+    int a, b;
+  };
+  aligned_storage_t<sizeof(S), alignof(S)> buf;
+  EXPECT_EQ(alignof(buf), alignof(S));
+  EXPECT_EQ(sizeof(buf), sizeof(S));
+}
+
 TEST(LlvmLibcTypeTraitsTest, bool_constant) {
   EXPECT_TRUE((bool_constant<true>::value));
   EXPECT_FALSE((bool_constant<false>::value));

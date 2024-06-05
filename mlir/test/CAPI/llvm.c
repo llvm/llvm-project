@@ -296,12 +296,14 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   mlirAttributeDump(mlirLLVMDILocalVariableAttrGet(ctx, compile_unit, foo, file,
                                                    1, 0, 8, di_type));
   // CHECK: #llvm.di_derived_type<{{.*}}>
-  mlirAttributeDump(
-      mlirLLVMDIDerivedTypeAttrGet(ctx, 0, bar, di_type, 64, 8, 0, di_type));
+  // CHECK-NOT: dwarfAddressSpace
+  mlirAttributeDump(mlirLLVMDIDerivedTypeAttrGet(
+      ctx, 0, bar, di_type, 64, 8, 0, MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL,
+      di_type));
 
-  // CHECK: #llvm.di_composite_type<{{.*}}>
-  mlirAttributeDump(mlirLLVMDICompositeTypeAttrGet(
-      ctx, 0, id, foo, file, 1, compile_unit, di_type, 0, 64, 8, 1, &di_type));
+  // CHECK: #llvm.di_derived_type<{{.*}} dwarfAddressSpace = 3{{.*}}>
+  mlirAttributeDump(
+      mlirLLVMDIDerivedTypeAttrGet(ctx, 0, bar, di_type, 64, 8, 0, 3, di_type));
 
   MlirAttribute subroutine_type =
       mlirLLVMDISubroutineTypeAttrGet(ctx, 0x0, 1, &di_type);
@@ -330,8 +332,15 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm<di_expression_elem(1)>
   mlirAttributeDump(expression_elem);
 
+  MlirAttribute expression =
+      mlirLLVMDIExpressionAttrGet(ctx, 1, &expression_elem);
   // CHECK: #llvm.di_expression<[(1)]>
-  mlirAttributeDump(mlirLLVMDIExpressionAttrGet(ctx, 1, &expression_elem));
+  mlirAttributeDump(expression);
+
+  // CHECK: #llvm.di_composite_type<{{.*}}>
+  mlirAttributeDump(mlirLLVMDICompositeTypeAttrGet(
+      ctx, 0, id, foo, file, 1, compile_unit, di_type, 0, 64, 8, 1, &di_type,
+      expression, expression, expression, expression));
 }
 
 int main(void) {

@@ -11,9 +11,10 @@ define i32 @illegal_preserve_vl(<vscale x 2 x i32> %a, <vscale x 4 x i64> %x, pt
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vadd.vv v12, v12, v12
-; CHECK-NEXT:    vs4r.v v12, (a0)
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vs4r.v v12, (a0)
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    ret
   %index = add <vscale x 4 x i64> %x, %x
   store <vscale x 4 x i64> %index, ptr %y
