@@ -840,6 +840,8 @@ Bug Fixes to C++ Support
 - Fix a crash caused by improper use of ``__array_extent``. (#GH80474)
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
   (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
+- Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
+  forward-declared class. (#GH93512).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
