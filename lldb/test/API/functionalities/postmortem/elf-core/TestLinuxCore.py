@@ -677,11 +677,25 @@ class LinuxCoreTestCase(TestBase):
         values["t5"] = "0x0000000000000020"
         values["t6"] = "0x0000002ae919f1b0"
         values["zero"] = "0x0"
+        values["fcsr"] = "0x00000000"
+
+        fpr_names = {"ft0", "ft1", "ft2", "ft3", "ft4", "ft5", "ft6", "ft7",
+                     "ft8", "ft9", "ft10", "ft11",
+                     "fa0", "fa1", "fa2", "fa3", "fa4", "fa5", "fa6", "fa7",
+                     "fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7",
+                     "fs8", "fs9", "fs10", "fs11"}
+        fpr_value = "0x0000000000000000"
 
         for regname, value in values.items():
             self.expect(
                 "register read {}".format(regname),
                 substrs=["{} = {}".format(regname, value)],
+            )
+
+        for regname in fpr_names:
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, fpr_value)],
             )
 
         self.expect("register read --all")
