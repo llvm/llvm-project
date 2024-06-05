@@ -20,10 +20,10 @@
 # CHECK-NEXT: liveins: $lr
 # CHECK-NEXT: {{ $}}
 # CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
-# CHECK-NEXT: BL @OUTLINED_FUNCTION_1, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $w0, implicit-def $w1, implicit-def $w2, implicit-def $w3, implicit-def $w4, implicit $sp, implicit $xzr, implicit $x5
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
 # CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
 # CHECK-NEXT: $w5 = MOVZWi 11, 0
-# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w7, implicit-def $w6, implicit $sp, implicit $w0, implicit $w1, implicit $w2, implicit $w3, implicit $w4, implicit $w5
+# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
 name:            f1
 tracksRegLiveness: true
 frameInfo:
@@ -49,10 +49,10 @@ body:             |
 # CHECK-NEXT: liveins: $lr
 # CHECK-NEXT: {{ $}}
 # CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
-# CHECK-NEXT: BL @OUTLINED_FUNCTION_1, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $w0, implicit-def $w1, implicit-def $w2, implicit-def $w3, implicit-def $w4, implicit $sp, implicit $xzr, implicit $x5
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
 # CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
 # CHECK-NEXT: $w5 = MOVZWi 12, 0
-# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w7, implicit-def $w6, implicit $sp, implicit $w0, implicit $w1, implicit $w2, implicit $w3, implicit $w4, implicit $w5
+# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
 name:            f2
 tracksRegLiveness: true
 frameInfo:
@@ -78,10 +78,10 @@ body:             |
 # CHECK-NEXT: liveins: $lr
 # CHECK-NEXT: {{ $}}
 # CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
-# CHECK-NEXT: BL @OUTLINED_FUNCTION_1, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $w0, implicit-def $w1, implicit-def $w2, implicit-def $w3, implicit-def $w4, implicit $sp, implicit $xzr, implicit $x5
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
 # CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
 # CHECK-NEXT: $w5 = MOVZWi 13, 0
-# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w7, implicit-def $w6, implicit $sp, implicit $w0, implicit $w1, implicit $w2, implicit $w3, implicit $w4, implicit $w5
+# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
 name:            f3
 tracksRegLiveness: true
 frameInfo:
@@ -107,10 +107,10 @@ body:             |
 # CHECK-NEXT: liveins: $lr
 # CHECK-NEXT: {{ $}}
 # CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
-# CHECK-NEXT: BL @OUTLINED_FUNCTION_1, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $w0, implicit-def $w1, implicit-def $w2, implicit-def $w3, implicit-def $w4, implicit $sp, implicit $xzr, implicit $x5
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
 # CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
 # CHECK-NEXT: $w5 = MOVZWi 14, 0
-# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w7, implicit-def $w6, implicit $sp, implicit $w0, implicit $w1, implicit $w2, implicit $w3, implicit $w4, implicit $w5
+# CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
 name:            f4
 tracksRegLiveness: true
 frameInfo:
@@ -136,9 +136,9 @@ body:             |
 # CHECK-NEXT: liveins: $lr
 # CHECK-NEXT: {{ $}}
 # CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
-# CHECK-NEXT: BL @OUTLINED_FUNCTION_1, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $w0, implicit-def $w1, implicit-def $w2, implicit-def $w3, implicit-def $w4, implicit $sp, implicit $xzr, implicit $x5
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
 # CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
-# CHECK-NO: @OUTLINED_FUNCTION_0
+# CHECK-NOT: @OUTLINED_FUNCTION_0
 name:            f5
 tracksRegLiveness: true
 frameInfo:
@@ -164,9 +164,9 @@ body:             |
 # CHECK-NEXT: liveins: $lr
 # CHECK-NEXT: {{ $}}
 # CHECK-NEXT: $x5 = ORRXrs $xzr, $lr, 0
-# CHECK-NEXT: BL @OUTLINED_FUNCTION_1, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $w0, implicit-def $w1, implicit-def $w2, implicit-def $w3, implicit-def $w4, implicit $sp, implicit $xzr, implicit $x5
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_1
 # CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
-# CHECK-NO: @OUTLINED_FUNCTION_0
+# CHECK-NOT: @OUTLINED_FUNCTION_0
 name:            f6
 tracksRegLiveness: true
 frameInfo:
