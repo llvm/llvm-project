@@ -1703,10 +1703,10 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
 
   // Shader is simple does not need any state changes or any complex lowering
   if (!(GlobalFlags & (StateWQM | StateStrict)) && LowerToCopyInstrs.empty() &&
-      LowerToMovInstrs.empty() && KillInstrs.empty() &&
-      InitExecInstrs.empty()) {
+      LowerToMovInstrs.empty() && KillInstrs.empty()) {
+    lowerInitExecInstrs();
     lowerLiveMaskQueries();
-    return !LiveMaskQueries.empty();
+    return !InitExecInstrs.empty() || !LiveMaskQueries.empty();
   }
 
   lowerInitExecInstrs();
