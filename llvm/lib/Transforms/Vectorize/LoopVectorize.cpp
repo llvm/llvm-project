@@ -3482,19 +3482,18 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(VPLiveOut *LO,
   Value *ResumeScalarFOR = State.get(VPExtract, UF - 1, true);
 
   // Fix the initial value of the original recurrence in the scalar loop.
-  Builder.SetInsertPoint(LoopScalarPreHeader, LoopScalarPreHeader->begin());
   PHINode *ScalarHeaderPhi = LO->getPhi();
-  auto *NewScalarHeaderPhi =
-      Builder.CreatePHI(ScalarHeaderPhi->getType(), 2, "scalar.recur.init");
   auto *InitScalarFOR =
       ScalarHeaderPhi->getIncomingValueForBlock(LoopScalarPreHeader);
+  Builder.SetInsertPoint(LoopScalarPreHeader, LoopScalarPreHeader->begin());
+  auto *ScalarPreheaderPhi =
+      Builder.CreatePHI(ScalarHeaderPhi->getType(), 2, "scalar.recur.init");
   for (auto *BB : predecessors(LoopScalarPreHeader)) {
     auto *Incoming = BB == LoopMiddleBlock ? ResumeScalarFOR : InitScalarFOR;
-    NewScalarHeaderPhi->addIncoming(Incoming, BB);
+    ScalarPreheaderPhi->addIncoming(Incoming, BB);
   }
-
   ScalarHeaderPhi->setIncomingValueForBlock(LoopScalarPreHeader,
-                                            NewScalarHeaderPhi);
+                                            ScalarPreheaderPhi);
   ScalarHeaderPhi->setName("scalar.recur");
 }
 

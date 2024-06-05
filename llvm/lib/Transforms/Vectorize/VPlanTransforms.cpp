@@ -849,10 +849,13 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
 
     // This is the second phase of vectorizing first-order recurrences. An
     // overview of the transformation is described below. Suppose we have the
-    // following loop.
+    // following loop with some use after the loop of the last a[i-1],
     //
-    //   for (int i = 0; i < n; ++i)
-    //     b[i] = a[i] - a[i - 1];
+    //   for (int i = 0; i < n; ++i) {
+    //     t = a[i - 1];
+    //     b[i] = a[i] - t;
+    //   }
+    //   use t;
     //
     // There is a first-order recurrence on "a". For this loop, the shorthand
     // scalar IR looks like:
@@ -866,7 +869,10 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     //     s1 = phi [s_init, scalar.ph], [s2, scalar.body]
     //     s2 = a[i]
     //     b[i] = s2 - s1
-    //     br cond, scalar.body, ...
+    //     br cond, scalar.body, exit.block
+    //
+    //   exit.block:
+    //     use = lcssa.phi [s1, scalar.body]
     //
     // In this example, s1 is a recurrence because it's value depends on the
     // previous iteration. In the first phase of vectorization, we created a
