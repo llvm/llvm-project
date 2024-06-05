@@ -2838,8 +2838,7 @@ define <2 x i8> @select_replacement_add_eq_vec_undef_okay_todo(<2 x i8> %x, <2 x
 define <2 x i8> @select_replacement_xor_eq_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @select_replacement_xor_eq_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = xor <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> [[Z:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> zeroinitializer, <2 x i8> [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
   %cmp = icmp eq <2 x i8> %x, %y
@@ -2905,8 +2904,7 @@ define i8 @select_replacement_sub_noundef_but_may_be_poison(i8 %x, i8 noundef %y
 define i8 @select_replacement_sub(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @select_replacement_sub(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[SUB]], i8 [[Z:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 0, i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %cmp = icmp eq i8 %x, %y
