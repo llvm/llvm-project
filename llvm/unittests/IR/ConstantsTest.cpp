@@ -221,9 +221,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   CHECK(ConstantExpr::getShl(P0, P0, false, true),
         "shl nsw i32 " P0STR ", " P0STR);
 
-  CHECK(ConstantExpr::getICmp(CmpInst::ICMP_EQ, P0, P4),
-        "icmp eq i32 " P0STR ", " P4STR);
-
   std::vector<Constant *> V;
   V.push_back(One);
   // FIXME: getGetElementPtr() actually creates an inbounds ConstantGEP,

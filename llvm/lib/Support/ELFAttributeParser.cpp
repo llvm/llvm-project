@@ -154,7 +154,7 @@ Error ELFAttributeParser::parseSubsection(uint32_t length) {
                                    Twine::utohexstr(cursor.tell() - 5));
 
     StringRef scopeName, indexName;
-    SmallVector<uint8_t, 8> indicies;
+    SmallVector<uint8_t, 8> indices;
     switch (tag) {
     case ELFAttrs::File:
       scopeName = "FileAttributes";
@@ -162,12 +162,12 @@ Error ELFAttributeParser::parseSubsection(uint32_t length) {
     case ELFAttrs::Section:
       scopeName = "SectionAttributes";
       indexName = "Sections";
-      parseIndexList(indicies);
+      parseIndexList(indices);
       break;
     case ELFAttrs::Symbol:
       scopeName = "SymbolAttributes";
       indexName = "Symbols";
-      parseIndexList(indicies);
+      parseIndexList(indices);
       break;
     default:
       return createStringError(errc::invalid_argument,
@@ -178,8 +178,8 @@ Error ELFAttributeParser::parseSubsection(uint32_t length) {
 
     if (sw) {
       DictScope scope(*sw, scopeName);
-      if (!indicies.empty())
-        sw->printList(indexName, indicies);
+      if (!indices.empty())
+        sw->printList(indexName, indices);
       if (Error e = parseAttributeList(size - 5))
         return e;
     } else if (Error e = parseAttributeList(size - 5))

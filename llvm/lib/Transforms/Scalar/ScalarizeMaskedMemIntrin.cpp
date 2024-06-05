@@ -1006,7 +1006,7 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
                                            CI->getArgOperand(1)->getType()))
         return false;
       scalarizeMaskedVectorHistogram(DL, CI, DTU, ModifiedDT);
-      break;
+      return true;
     case Intrinsic::masked_load:
       // Scalarize unsupported vector masked load
       if (TTI.isLegalMaskedLoad(

@@ -273,3 +273,20 @@ int test3(void) {
 /// This tests that we have full type info, even for values we cannot read.
 int dummyarray[5];
 _Static_assert(&dummyarray[0] < &dummyarray[1], ""); // pedantic-warning {{GNU extension}}
+
+void addrlabelexpr(void) {
+ a0: ;
+  static void *ps[] = { &&a0 }; // pedantic-warning {{use of GNU address-of-label extension}}
+}
+
+extern void cv2;
+void *foo5 (void)
+{
+  return &cv2; // pedantic-warning{{address of an expression of type 'void'}}
+}
+
+__attribute__((weak)) const unsigned int test10_bound = 10;
+char test10_global[test10_bound]; // all-error {{variable length array declaration not allowed at file scope}}
+void test10(void) {
+  char test10_local[test10_bound] = "help"; // all-error {{variable-sized object may not be initialized}}
+}
