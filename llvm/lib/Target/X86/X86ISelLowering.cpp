@@ -32308,6 +32308,55 @@ bool X86TargetLowering::isInlineAsmTargetBranch(
   return Inst.equals_insensitive("call") || Inst.equals_insensitive("jmp");
 }
 
+static SDValue getFlagsOfCmpZeroFori1(SelectionDAG &DAG, const SDLoc &DL,
+                                      SDValue V) {
+  assert(V.getValueType() == MVT::i1 && "assume i1 value");
+  EVT Ty = MVT::i8;
+  SDValue VE = DAG.getZExtOrTrunc(V, DL, Ty);
+  SDValue Zero = DAG.getConstant(0, DL, Ty);
+  SDVTList X86SubVTs = DAG.getVTList(Ty, MVT::i32);
+  SDValue CmpZero = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Zero, VE);
+  return SDValue(CmpZero.getNode(), 1);
+}
+
+SDValue X86TargetLowering::visitMaskedLoad(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, MachineMemOperand *MMO,
+    SDValue &NewLoad, SDValue Ptr, SDValue PassThru, SDValue Mask) const {
+  // @llvm.masked.load.*(ptr, alignment, mask, passthru)
+  // ->
+  // _, flags = SUB 0, mask
+  // res, chain = CLOAD inchain, ptr, (bit_cast_to_scalar passthru), cond, flags
+  // bit_cast_to_vector<res>
+  EVT VTy = PassThru.getValueType();
+  EVT Ty = VTy.getVectorElementType();
+  SDVTList Tys = DAG.getVTList(Ty, MVT::Other);
+  SDValue ScalarPassThru = DAG.getBitcast(Ty, PassThru);
+  SDValue ScalarMask = DAG.getBitcast(MVT::i1, Mask);
+  SDValue Flags = getFlagsOfCmpZeroFori1(DAG, DL, ScalarMask);
+  SDValue COND_NE = DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8);
+  SDValue Ops[] = {Chain, Ptr, ScalarPassThru, COND_NE, Flags};
+  NewLoad = DAG.getMemIntrinsicNode(X86ISD::CLOAD, DL, Tys, Ops, Ty, MMO);
+  return DAG.getBitcast(VTy, NewLoad);
+}
+
+SDValue X86TargetLowering::visitMaskedStore(SelectionDAG &DAG, const SDLoc &DL,
+                                            SDValue Chain,
+                                            MachineMemOperand *MMO, SDValue Ptr,
+                                            SDValue Val, SDValue Mask) const {
+  // llvm.masked.store.*(Src0, Ptr, alignment, Mask)
+  // ->
+  // _, flags = SUB 0, mask
+  // chain = CSTORE inchain, (bit_cast_to_scalar val), ptr, cond, flags
+  EVT Ty = Val.getValueType().getVectorElementType();
+  SDVTList Tys = DAG.getVTList(MVT::Other);
+  SDValue ScalarVal = DAG.getBitcast(Ty, Val);
+  SDValue ScalarMask = DAG.getBitcast(MVT::i1, Mask);
+  SDValue Flags = getFlagsOfCmpZeroFori1(DAG, DL, ScalarMask);
+  SDValue COND_NE = DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8);
+  SDValue Ops[] = {Chain, ScalarVal, Ptr, COND_NE, Flags};
+  return DAG.getMemIntrinsicNode(X86ISD::CSTORE, DL, Tys, Ops, Ty, MMO);
+}
+
 /// Provide custom lowering hooks for some operations.
 SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -34024,6 +34073,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_FP80_ADD)
   NODE_NAME_CASE(CCMP)
   NODE_NAME_CASE(CTEST)
+  NODE_NAME_CASE(CLOAD)
+  NODE_NAME_CASE(CSTORE)
   }
   return nullptr;
 #undef NODE_NAME_CASE
@@ -55633,6 +55684,36 @@ static SDValue combineSubSetcc(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
+  // res, flags2 = sub 0, (setcc cc, flag)
+  // cload/cstore ..., cond_ne, flag2
+  // ->
+  // cload/cstore cc, flag
+  //
+  // if res has no users, where op is cload/cstore.
+  if (N->getConstantOperandVal(3) != X86::COND_NE)
+    return SDValue();
+
+  SDNode *Sub = N->getOperand(4).getNode();
+  if (Sub->getOpcode() != X86ISD::SUB)
+    return SDValue();
+
+  SDValue Op1 = Sub->getOperand(1);
+
+  if (Sub->hasAnyUseOfValue(0) || !X86::isZeroNode(Sub->getOperand(0)) ||
+      Op1.getOpcode() != X86ISD::SETCC)
+    return SDValue();
+
+
+  SmallVector<SDValue> Ops(N->op_values());
+  Ops[3] = Op1.getOperand(0);
+  Ops[4] = Op1.getOperand(1);
+
+  return DAG.getMemIntrinsicNode(N->getOpcode(), SDLoc(N), N->getVTList(), Ops,
+                                 cast<MemSDNode>(N)->getMemoryVT(),
+                                 cast<MemSDNode>(N)->getMemOperand());
+}
+
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -57340,6 +57421,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SUB:            return combineSub(N, DAG, DCI, Subtarget);
   case X86ISD::ADD:
   case X86ISD::SUB:         return combineX86AddSub(N, DAG, DCI, Subtarget);
+  case X86ISD::CLOAD:
+  case X86ISD::CSTORE:      return combineX86CloadCstore(N, DAG);
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
