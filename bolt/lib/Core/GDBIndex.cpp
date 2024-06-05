@@ -19,7 +19,7 @@ void GDBIndex::addGDBTypeUnitEntry(const GDBIndexTUEntry &&Entry) {
 }
 
 void GDBIndex::updateGdbIndexSection(
-    CUOffsetMap &CUMap, uint32_t NumCUs,
+    const CUOffsetMap &CUMap, const uint32_t NumCUs,
     DebugARangesSectionWriter &ARangesSectionWriter) {
   if (!BC.getGdbIndexSection())
     return;
