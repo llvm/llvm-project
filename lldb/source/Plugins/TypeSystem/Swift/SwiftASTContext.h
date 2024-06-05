@@ -78,10 +78,15 @@ namespace llvm {
 class LLVMContext;
 }
 
-class DWARFASTParser;
 class SwiftEnumDescriptor;
 
 namespace lldb_private {
+
+namespace plugin {
+namespace dwarf {
+class DWARFASTParser;
+} // namespace dwarf
+} // namespace plugin
 
 struct SourceModule;
 class SwiftASTContext;
@@ -552,7 +557,7 @@ public:
 
   bool IsFixedSize(CompilerType compiler_type);
 
-  DWARFASTParser *GetDWARFParser() override;
+  plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
 
   // CompilerDecl functions
   ConstString DeclGetName(void *opaque_decl) override {

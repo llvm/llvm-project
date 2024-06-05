@@ -96,11 +96,11 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -1597,7 +1597,7 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
       continue;
     }
     // Drop -Werror; it would only cause trouble in the debugger.
-    if (clang_argument.startswith("-Werror"))
+    if (clang_argument.starts_with("-Werror"))
       continue;
 
     // Drop `--`. This might be coming from the user-provided setting
@@ -5241,7 +5241,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
     const llvm::Target *llvm_target =
         llvm::TargetRegistry::lookupTarget(llvm_triple.str(), error_str);
 
-    llvm::CodeGenOpt::Level optimization_level = llvm::CodeGenOpt::Level::None;
+    llvm::CodeGenOptLevel optimization_level = llvm::CodeGenOptLevel::None;
 
     // Create a target machine.
     llvm::TargetMachine *target_machine = llvm_target->createTargetMachine(
@@ -9226,7 +9226,7 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
   }
   
   std::string category = "Importing Swift module dependencies for ";
-  category += compile_unit->GetPrimaryFile().GetFilename();
+  category += compile_unit->GetPrimaryFile().GetFilename().GetString();
   Progress progress(category, "", cu_imports.size());
   size_t completion = 0;
   for (const SourceModule &module : cu_imports) {

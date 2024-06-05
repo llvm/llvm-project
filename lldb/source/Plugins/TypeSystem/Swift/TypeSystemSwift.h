@@ -187,13 +187,6 @@ public:
   /// For example, int is converted to Int32.
   virtual CompilerType ConvertClangTypeToSwiftType(CompilerType clang_type) = 0;
 
-  void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                 Stream &s, lldb::Format format, const DataExtractor &data,
-                 lldb::offset_t data_offset, size_t data_byte_size,
-                 uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                 bool show_types, bool show_summary, bool verbose,
-                 uint32_t depth) override;
-
   /// \see lldb_private::TypeSystem::Dump
   void Dump(llvm::raw_ostream &output) override;
 
@@ -231,10 +224,6 @@ public:
     return {};
   }
   bool IsScalarType(lldb::opaque_compiler_type_t type) override;
-  bool IsCStringType(lldb::opaque_compiler_type_t type,
-                     uint32_t &length) override {
-    return false;
-  }
   bool IsVectorType(lldb::opaque_compiler_type_t type,
                     CompilerType *element_type, uint64_t *size) override {
     return false;
@@ -322,12 +311,6 @@ public:
 
   CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override {
     return {};
-  }
-
-  // TODO: This method appear unused. Should they be removed?
-  void DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                   Stream &s, const DataExtractor &data,
-                   lldb::offset_t data_offset, size_t data_byte_size) override {
   }
   /// \}
 protected:

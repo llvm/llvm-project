@@ -133,10 +133,10 @@ struct StmtIterator : public StmtIteratorImpl<StmtIterator, Stmt*&> {
   StmtIterator(const VariableArrayType *t)
       : StmtIteratorImpl<StmtIterator, Stmt*&>(t) {}
 
-private:
   StmtIterator(const StmtIteratorBase &RHS)
       : StmtIteratorImpl<StmtIterator, Stmt *&>(RHS) {}
 
+private:
   inline friend StmtIterator
   cast_away_const(const ConstStmtIterator &RHS);
 };

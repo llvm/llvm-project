@@ -66,7 +66,7 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:    .uleb128 .Ltmp0-.Lfunc_begin0  # >> Call Site 1 <<
 ; CHECK-NEXT:    .uleb128 .Ltmp1-.Ltmp0         #   Call between .Ltmp0 and .Ltmp1
 ; CHECK-NEXT:    .uleb128 .Ltmp2-main.cold      #     jumps to .Ltmp2
-; CHECK-NEXT:    .byte	3                       #   On action: 2
+; CHECK-NEXT:    .byte	5                       #   On action: 3
 ; CHECK-NEXT:    .p2align	2
 ; CHECK-NEXT:  .Lexception1:
 ; CHECK-NEXT:    .byte	0                       # @LPStart Encoding = absptr
@@ -85,9 +85,12 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:    .byte	0                       # >> Action Record 1 <<
 ; CHECK-NEXT:                                   #   Cleanup
 ; CHECK-NEXT:    .byte	0                       #   No further actions
-; CHECK-NEXT:    .byte	1                       # >> Action Record 2 <<
-; CHECK-NEXT:                                   #   Catch TypeInfo 1
+; CHECK-NEXT:    .byte	0                       # >> Action Record 2 <<
+; CHECK-NEXT:                                   #   Cleanup
 ; CHECK-NEXT:    .byte	125                     #   Continue to action 1
+; CHECK-NEXT:    .byte  1                       # >> Action Record 3 <<
+; CHECK-NEXT:                                   #   Catch TypeInfo 1
+; CHECK-NEXT:    .byte	125                     #   Continue to action 2
 ; CHECK-NEXT:    .p2align	2
 ; CHECK-NEXT:                                   # >> Catch TypeInfos <<
 ; CHECK-NEXT:    .long	_ZTIi                   # TypeInfo 1

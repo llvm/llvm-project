@@ -177,7 +177,7 @@ SwiftMetadataCache::generateHashTableBlob(
   }
 
   // Make sure that no bucket is at offset 0.
-  llvm::support::endian::write<uint32_t>(blobStream, 0, llvm::support::little);
+  llvm::support::endian::write<uint32_t>(blobStream, 0, llvm::endianness::little);
   uint32_t table_control_offset = table_generator.Emit(blobStream, m_info);
   return {{std::move(table_control_offset), std::move(hash_table_blob)}};
 }

@@ -24,7 +24,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Core/StreamFile.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
@@ -1980,8 +1980,6 @@ void TypeSystemSwiftTypeRef::SetTriple(const llvm::Triple triple) {
   // This function appears to be only called via Module::SetArchitecture(ArchSpec).
   if (auto *swift_ast_context = GetSwiftASTContextOrNull(nullptr))
     swift_ast_context->SetTriple(triple);
-  else
-    m_swift_ast_context_triple = triple;
 }
 
 void TypeSystemSwiftTypeRef::ClearModuleDependentCaches() {
