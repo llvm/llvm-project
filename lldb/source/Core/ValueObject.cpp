@@ -1093,7 +1093,9 @@ llvm::Expected<llvm::APSInt> ValueObject::GetValueAsAPSInt() {
   // Make sure the type can be converted to an APSInt.
   if (!GetCompilerType().IsInteger() &&
       !GetCompilerType().IsScopedEnumerationType() &&
+      !GetCompilerType().IsEnumerationType() &&
       !GetCompilerType().IsPointerType() &&
+      !GetCompilerType().IsNullPtrType() &&
       !GetCompilerType().IsReferenceType() && !GetCompilerType().IsBoolean())
     return llvm::make_error<llvm::StringError>(
         "type cannot be converted to APSInt", llvm::inconvertibleErrorCode());
@@ -3015,11 +3017,12 @@ llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
 
   lldb::TargetSP target = GetTargetSP();
   // The `value` can be a pointer, but GetChildAtIndex works for pointers too.
-  lldb::ValueObjectSP inner_value;
+  lldb::ValueObjectSP inner_value = GetSP();
 
   for (const uint32_t i : base_type_indices)
     // Force static value, otherwise we can end up with the "real" type.
-    inner_value = GetChildAtIndex(i, /*can_create_synthetic*/ false);
+    inner_value =
+        inner_value->GetChildAtIndex(i, /*can_create_synthetic*/ true);
 
   // At this point type of `inner_value` should be the dereferenced target
   // type.
@@ -3138,13 +3141,13 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
     val_byte_size = temp.value();
 
   if (is_pointer) {
-    if (type.IsBoolean() && type_byte_size < val_byte_size) {
+    if (!type.IsBoolean() && type_byte_size < val_byte_size) {
       m_error.SetErrorString(
           "target type cannot be smaller than the pointer type");
       return GetSP();
     }
     if (!type.IsInteger()) {
-      m_error.SetErrorString("target tyep must be an integer");
+      m_error.SetErrorString("target type must be an integer");
       return GetSP();
     }
   }
@@ -3159,7 +3162,9 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         return ValueObject::CreateValueObjectFromBool(
             target, !float_value_or_err->isZero(), "result");
       else {
-        m_error.SetErrorString("cannot get value as APFloat");
+        m_error.SetErrorStringWithFormat(
+            "cannot get value as APFloat: %s",
+            llvm::toString(float_value_or_err.takeError()).c_str());
         return GetSP();
       }
     }
@@ -3176,7 +3181,10 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         return ValueObject::CreateValueObjectFromAPInt(target, ext, type,
                                                        "result");
       } else {
-        m_error.SetErrorString("cannot get value as APSInt");
+        m_error.SetErrorStringWithFormat(
+            "cannot get value as APSInt: %s",
+            llvm::toString(int_value_or_err.takeError()).c_str());
+        ;
         return GetSP();
       }
     } else if (is_scalar && is_float) {
@@ -3191,7 +3199,9 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         // Casting floating point values that are out of bounds of the target
         // type is undefined behaviour.
         if (status & llvm::APFloatBase::opInvalidOp) {
-          m_error.SetErrorString("invalid type cast detected");
+          m_error.SetErrorStringWithFormat(
+              "invalid type cast detected: %s",
+              llvm::toString(float_value_or_err.takeError()).c_str());
           return GetSP();
         }
         return ValueObject::CreateValueObjectFromAPInt(target, integer, type,
@@ -3212,7 +3222,9 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                          "result");
       } else {
-        m_error.SetErrorString("cannot get value as APSInt");
+        m_error.SetErrorStringWithFormat(
+            "cannot get value as APSInt: %s",
+            llvm::toString(int_value_or_err.takeError()).c_str());
         return GetSP();
       }
     } else {
@@ -3225,7 +3237,9 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                            "result");
         } else {
-          m_error.SetErrorString("cannot get value as APSInt");
+          m_error.SetErrorStringWithFormat(
+              "cannot get value as APSInt: %s",
+              llvm::toString(int_value_or_err.takeError()).c_str());
           return GetSP();
         }
       }
@@ -3238,7 +3252,9 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                            "result");
         } else {
-          m_error.SetErrorString("cannot get value as APFloat");
+          m_error.SetErrorStringWithFormat(
+              "cannot get value as APFloat: %s",
+              llvm::toString(float_value_or_err.takeError()).c_str());
           return GetSP();
         }
       }
@@ -3280,7 +3296,9 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
       // Casting floating point values that are out of bounds of the target
       // type is undefined behaviour.
       if (status & llvm::APFloatBase::opInvalidOp) {
-        m_error.SetErrorString("invalid type cast detected");
+        m_error.SetErrorStringWithFormat(
+            "invalid type cast detected: %s",
+            llvm::toString(value_or_err.takeError()).c_str());
         return GetSP();
       }
       return ValueObject::CreateValueObjectFromAPInt(target, integer, type,
@@ -3297,7 +3315,9 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
       return ValueObject::CreateValueObjectFromAPInt(target, ext, type,
                                                      "result");
     } else {
-      m_error.SetErrorString("cannot get value as APSInt");
+      m_error.SetErrorStringWithFormat(
+          "cannot get value as APSInt: %s",
+          llvm::toString(value_or_err.takeError()).c_str());
       return GetSP();
     }
   }
