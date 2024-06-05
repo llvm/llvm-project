@@ -53,6 +53,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
     class CrashLogOptions:
         load_all_images = False
         crashed_only = True
+        no_parallel_image_loading = False
 
     def __init__(self, exe_ctx: lldb.SBExecutionContext, args: lldb.SBStructuredData):
         super().__init__(exe_ctx, args)
@@ -83,6 +84,13 @@ class CrashLogScriptedProcess(ScriptedProcess):
         if crashed_only and crashed_only.IsValid():
             if crashed_only.GetType() == lldb.eStructuredDataTypeBoolean:
                 self.options.crashed_only = crashed_only.GetBooleanValue()
+
+        no_parallel_image_loading = args.GetValueForKey("no_parallel_image_loading")
+        if no_parallel_image_loading and no_parallel_image_loading.IsValid():
+            if no_parallel_image_loading.GetType() == lldb.eStructuredDataTypeBoolean:
+                self.options.no_parallel_image_loading = (
+                    no_parallel_image_loading.GetBooleanValue()
+                )
 
         self.pid = super().get_process_id()
         self.crashed_thread_idx = 0
