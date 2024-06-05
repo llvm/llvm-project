@@ -90,5 +90,5 @@ jobs:
         if: always()
         with:
           name: analyzer-results
-          path: 'build/analyzer-results/**/*'
+          path: 'build/analyzer-results/*'
 
