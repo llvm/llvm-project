@@ -171,35 +171,34 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX11-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
   ; GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX11-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 [[COPY4]], [[COPY5]], implicit $exec
-  ; GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
+  ; GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
   ; GFX11-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
   ; GFX11-NEXT:   [[V_SET_INACTIVE_B32_:%[0-9]+]]:vgpr_32 = V_SET_INACTIVE_B32 [[COPY2]], [[COPY6]], implicit-def dead $scc, implicit $exec
-  ; GFX11-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-  ; GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_2]]
+  ; GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
   ; GFX11-NEXT:   [[V_MOV_B32_dpp:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[COPY7]], [[V_SET_INACTIVE_B32_]], 273, 15, 15, 0, implicit $exec
   ; GFX11-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_SET_INACTIVE_B32_]], 0, [[V_MOV_B32_dpp]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_2]]
+  ; GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
   ; GFX11-NEXT:   [[V_MOV_B32_dpp1:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[COPY8]], [[V_ADD_F32_e64_]], 274, 15, 15, 0, implicit $exec
   ; GFX11-NEXT:   [[V_ADD_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_]], 0, [[V_MOV_B32_dpp1]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_2]]
+  ; GFX11-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
   ; GFX11-NEXT:   [[V_MOV_B32_dpp2:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[COPY9]], [[V_ADD_F32_e64_1]], 276, 15, 15, 0, implicit $exec
   ; GFX11-NEXT:   [[V_ADD_F32_e64_2:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_1]], 0, [[V_MOV_B32_dpp2]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_2]]
+  ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
   ; GFX11-NEXT:   [[V_MOV_B32_dpp3:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[COPY10]], [[V_ADD_F32_e64_2]], 280, 15, 15, 0, implicit $exec
   ; GFX11-NEXT:   [[V_ADD_F32_e64_3:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_2]], 0, [[V_MOV_B32_dpp3]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-  ; GFX11-NEXT:   [[V_PERMLANEX16_B32_e64_:%[0-9]+]]:vgpr_32 = V_PERMLANEX16_B32_e64 0, [[V_ADD_F32_e64_3]], 0, [[S_MOV_B32_3]], 0, [[S_MOV_B32_3]], [[V_ADD_F32_e64_3]], 0, implicit $exec
-  ; GFX11-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_2]]
+  ; GFX11-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+  ; GFX11-NEXT:   [[V_PERMLANEX16_B32_e64_:%[0-9]+]]:vgpr_32 = V_PERMLANEX16_B32_e64 0, [[V_ADD_F32_e64_3]], 0, [[S_MOV_B32_2]], 0, [[S_MOV_B32_2]], [[V_ADD_F32_e64_3]], 0, implicit $exec
+  ; GFX11-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
   ; GFX11-NEXT:   [[V_MOV_B32_dpp4:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[COPY11]], [[V_PERMLANEX16_B32_e64_]], 228, 10, 15, 0, implicit $exec
   ; GFX11-NEXT:   [[V_ADD_F32_e64_4:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_3]], 0, [[V_MOV_B32_dpp4]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_2]]
+  ; GFX11-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
   ; GFX11-NEXT:   [[V_MOV_B32_dpp5:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[COPY12]], [[V_ADD_F32_e64_4]], 273, 15, 15, 0, implicit $exec
-  ; GFX11-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 15
-  ; GFX11-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32 = V_READLANE_B32 [[V_ADD_F32_e64_4]], [[S_MOV_B32_4]]
-  ; GFX11-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-  ; GFX11-NEXT:   [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 [[V_READLANE_B32_]], [[S_MOV_B32_5]], [[V_MOV_B32_dpp5]]
-  ; GFX11-NEXT:   [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 31
-  ; GFX11-NEXT:   [[V_READLANE_B32_1:%[0-9]+]]:sreg_32 = V_READLANE_B32 [[V_ADD_F32_e64_4]], [[S_MOV_B32_6]]
+  ; GFX11-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 15
+  ; GFX11-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32 = V_READLANE_B32 [[V_ADD_F32_e64_4]], [[S_MOV_B32_3]]
+  ; GFX11-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; GFX11-NEXT:   [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 [[V_READLANE_B32_]], [[S_MOV_B32_4]], [[V_MOV_B32_dpp5]]
+  ; GFX11-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 31
+  ; GFX11-NEXT:   [[V_READLANE_B32_1:%[0-9]+]]:sreg_32 = V_READLANE_B32 [[V_ADD_F32_e64_4]], [[S_MOV_B32_5]]
   ; GFX11-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[V_READLANE_B32_1]]
   ; GFX11-NEXT:   [[STRICT_WWM:%[0-9]+]]:vgpr_32 = STRICT_WWM [[COPY13]], implicit $exec
   ; GFX11-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
@@ -207,7 +206,7 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX11-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[V_CMP_EQ_U32_e64_]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX11-NEXT:   S_BRANCH %bb.3
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT: bb.3 (%ir-block.36):
+  ; GFX11-NEXT: bb.3 (%ir-block.29):
   ; GFX11-NEXT:   successors: %bb.5(0x80000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -217,11 +216,11 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX11-NEXT: bb.4.Flow:
   ; GFX11-NEXT:   successors: %bb.6(0x80000000)
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI %41, %bb.5, [[DEF]], %bb.1
+  ; GFX11-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI %40, %bb.5, [[DEF]], %bb.1
   ; GFX11-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX11-NEXT:   S_BRANCH %bb.6
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT: bb.5 (%ir-block.39):
+  ; GFX11-NEXT: bb.5 (%ir-block.32):
   ; GFX11-NEXT:   successors: %bb.4(0x80000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN]], %bb.3, [[DEF]], %bb.2
@@ -232,7 +231,7 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX11-NEXT:   [[V_ADD_F32_e64_5:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[COPY15]], 0, [[STRICT_WWM1]], 0, 0, implicit $mode, implicit $exec
   ; GFX11-NEXT:   S_BRANCH %bb.4
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT: bb.6 (%ir-block.47):
+  ; GFX11-NEXT: bb.6 (%ir-block.37):
   ; GFX11-NEXT:   $vgpr0 = COPY [[PHI]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("wavefront") monotonic
