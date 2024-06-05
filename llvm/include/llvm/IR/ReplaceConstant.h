@@ -21,7 +21,8 @@ class Constant;
 
 /// Replace constant expressions users of the given constants with
 /// instructions. Return whether anything was changed.
-bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts);
+bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
+                                           bool RemoveDeadConstants = true);
 
 } // end namespace llvm
 

@@ -66,9 +66,11 @@ module attributes {omp.is_target_device = false} {
 
 // CHECK: define void @_QQmain()
 // CHECK: %[[SCALAR_ALLOCA:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1, align 8
-// CHECK: %[[FULL_ARR_SIZE5:.*]] = load i64, ptr getelementptr ({ ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @[[FULL_ARR_GLOB]], i32 0, i32 7, i64 0, i32 1), align 4
+// CHECK: %[[FULL_ARR_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @[[FULL_ARR_GLOB]], i32 0, i32 7, i64 0, i32 1
+// CHECK: %[[FULL_ARR_SIZE5:.*]] = load i64, ptr %[[FULL_ARR_GEP]], align 4
 // CHECK: %[[FULL_ARR_SIZE4:.*]] = sub i64 %[[FULL_ARR_SIZE5]], 1
-// CHECK: %[[ARR_SECT_OFFSET3:.*]] = load i64, ptr getelementptr ({ ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @[[ARR_SECT_GLOB]], i32 0, i32 7, i64 0, i32 0), align 4
+// CHECK: %[[ARR_SECT_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @[[ARR_SECT_GLOB]], i32 0, i32 7, i64 0, i32 0
+// CHECK: %[[ARR_SECT_OFFSET3:.*]] = load i64, ptr %[[ARR_SECT_GEP]], align 4
 // CHECK: %[[ARR_SECT_OFFSET2:.*]] = sub i64 2, %[[ARR_SECT_OFFSET3]]
 // CHECK: %[[ARR_SECT_SIZE4:.*]] = sub i64 5, %[[ARR_SECT_OFFSET3]]
 // CHECK: %[[SCALAR_BASE:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8 }, ptr %[[SCALAR_ALLOCA]], i32 0, i32 0

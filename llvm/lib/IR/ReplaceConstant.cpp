@@ -49,7 +49,8 @@ static SmallVector<Instruction *, 4> expandUser(BasicBlock::iterator InsertPt,
   return NewInsts;
 }
 
-bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
+bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
+                                           bool RemoveDeadConstants) {
   // Find all expandable direct users of Consts.
   SmallVector<Constant *> Stack;
   for (Constant *C : Consts)
@@ -102,8 +103,9 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
     }
   }
 
-  for (Constant *C : Consts)
-    C->removeDeadConstantUsers();
+  if (RemoveDeadConstants)
+    for (Constant *C : Consts)
+      C->removeDeadConstantUsers();
 
   return Changed;
 }
