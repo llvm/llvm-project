@@ -718,9 +718,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> AppleA13 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureFullFP16,
                                      FeatureFP16FML, FeatureSHA3];
-  // Apple A14 and M1 chips are based on Armv8.5-a but without BTI. Since there
-  // is no mechanism for removing dependent features in tablegen, we use 8.4
-  // instead and manually specify all additional 8.5 features.
   list<SubtargetFeature> AppleA14 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon,
                                      FeatureFullFP16, FeatureFP16FML, FeatureSHA3,
