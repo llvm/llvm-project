@@ -201,6 +201,9 @@ build:ci --keep_going
 # Show test errors.
 build:ci --test_output=errors
 
+# Only show failing tests to reduce output
+build:ci --test_summary=terse
+
 ###############################################################################
 
 # The user.bazelrc file is not checked in but available for local mods.
