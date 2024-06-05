@@ -33,6 +33,7 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::Loop:
     if (!IsStmt)
       return S.Diag(StartLoc, diag::err_acc_construct_appertainment) << K;
     break;
@@ -340,35 +341,92 @@ bool checkAlreadyHasClauseOfKind(
   return false;
 }
 
-/// Implement check from OpenACC3.3: section 2.5.4:
-/// Only the async, wait, num_gangs, num_workers, and vector_length clauses may
-/// follow a device_type clause.
 bool checkValidAfterDeviceType(
     SemaOpenACC &S, const OpenACCDeviceTypeClause &DeviceTypeClause,
     const SemaOpenACC::OpenACCParsedClause &NewClause) {
-  // This is only a requirement on compute constructs so far, so this is fine
-  // otherwise.
-  if (!isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind()))
+  // This is only a requirement on compute and loop constructs so far, so this
+  // is fine otherwise.
+  if (!isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind()) &&
+      NewClause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
     return false;
-  switch (NewClause.getClauseKind()) {
-  case OpenACCClauseKind::Async:
-  case OpenACCClauseKind::Wait:
-  case OpenACCClauseKind::NumGangs:
-  case OpenACCClauseKind::NumWorkers:
-  case OpenACCClauseKind::VectorLength:
-  case OpenACCClauseKind::DType:
-  case OpenACCClauseKind::DeviceType:
+
+  // OpenACC3.3: Section 2.4: Clauses that precede any device_type clause are
+  // default clauses.  Clauses that follow a device_type clause up to the end of
+  // the directive or up to the next device_type clause are device-specific
+  // clauses for the device types specified in the device_type argument.
+  //
+  // The above implies that despite what the individual text says, these are
+  // valid.
+  if (NewClause.getClauseKind() == OpenACCClauseKind::DType ||
+      NewClause.getClauseKind() == OpenACCClauseKind::DeviceType)
     return false;
-  default:
-    S.Diag(NewClause.getBeginLoc(), diag::err_acc_clause_after_device_type)
-        << NewClause.getClauseKind() << DeviceTypeClause.getClauseKind();
-    S.Diag(DeviceTypeClause.getBeginLoc(), diag::note_acc_previous_clause_here);
-    return true;
+
+  // Implement check from OpenACC3.3: section 2.5.4:
+  // Only the async, wait, num_gangs, num_workers, and vector_length clauses may
+  // follow a device_type clause.
+  if (isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind())) {
+    switch (NewClause.getClauseKind()) {
+    case OpenACCClauseKind::Async:
+    case OpenACCClauseKind::Wait:
+    case OpenACCClauseKind::NumGangs:
+    case OpenACCClauseKind::NumWorkers:
+    case OpenACCClauseKind::VectorLength:
+      return false;
+    default:
+      break;
+    }
+  } else if (NewClause.getDirectiveKind() == OpenACCDirectiveKind::Loop) {
+    // Implement check from OpenACC3.3: section 2.9:
+    // Only the collapse, gang, worker, vector, seq, independent, auto, and tile
+    // clauses may follow a device_type clause.
+    switch (NewClause.getClauseKind()) {
+    case OpenACCClauseKind::Collapse:
+    case OpenACCClauseKind::Gang:
+    case OpenACCClauseKind::Worker:
+    case OpenACCClauseKind::Vector:
+    case OpenACCClauseKind::Seq:
+    case OpenACCClauseKind::Independent:
+    case OpenACCClauseKind::Auto:
+    case OpenACCClauseKind::Tile:
+      return false;
+    default:
+      break;
+    }
   }
+  S.Diag(NewClause.getBeginLoc(), diag::err_acc_clause_after_device_type)
+      << NewClause.getClauseKind() << DeviceTypeClause.getClauseKind()
+      << isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind())
+      << NewClause.getDirectiveKind();
+  S.Diag(DeviceTypeClause.getBeginLoc(), diag::note_acc_previous_clause_here);
+  return true;
 }
 } // namespace
 
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
+
+SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(SemaOpenACC &S,
+                                                    OpenACCDirectiveKind DK)
+    : SemaRef(S), WasInsideComputeConstruct(S.InsideComputeConstruct),
+      DirKind(DK) {
+  // Compute constructs end up taking their 'loop'.
+  if (DirKind == OpenACCDirectiveKind::Parallel ||
+      DirKind == OpenACCDirectiveKind::Serial ||
+      DirKind == OpenACCDirectiveKind::Kernels) {
+    SemaRef.InsideComputeConstruct = true;
+    SemaRef.ParentlessLoopConstructs.swap(ParentlessLoopConstructs);
+  }
+}
+
+SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
+  SemaRef.InsideComputeConstruct = WasInsideComputeConstruct;
+  if (DirKind == OpenACCDirectiveKind::Parallel ||
+      DirKind == OpenACCDirectiveKind::Serial ||
+      DirKind == OpenACCDirectiveKind::Kernels) {
+    assert(SemaRef.ParentlessLoopConstructs.empty() &&
+           "Didn't consume loop construct list?");
+    SemaRef.ParentlessLoopConstructs.swap(ParentlessLoopConstructs);
+  }
+}
 
 OpenACCClause *
 SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
@@ -791,10 +849,12 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   }
   case OpenACCClauseKind::DType:
   case OpenACCClauseKind::DeviceType: {
-    // Restrictions only properly implemented on 'compute' constructs, and
-    // 'compute' constructs are the only construct that can do anything with
-    // this yet, so skip/treat as unimplemented in this case.
-    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+    // Restrictions only properly implemented on 'compute' and 'loop'
+    // constructs, and 'compute'/'loop' constructs are the only construct that
+    // can do anything with this yet, so skip/treat as unimplemented in this
+    // case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+        Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
       break;
 
     // TODO OpenACC: Once we get enough of the CodeGen implemented that we have
@@ -927,6 +987,7 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::Loop:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
     break;
@@ -1348,16 +1409,34 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
     return StmtError();
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
-  case OpenACCDirectiveKind::Kernels:
-    // TODO OpenACC: Add clauses to the construct here.
-    return OpenACCComputeConstruct::Create(
+  case OpenACCDirectiveKind::Kernels: {
+    auto *ComputeConstruct = OpenACCComputeConstruct::Create(
         getASTContext(), K, StartLoc, DirLoc, EndLoc, Clauses,
+        AssocStmt.isUsable() ? AssocStmt.get() : nullptr,
+        ParentlessLoopConstructs);
+
+    ParentlessLoopConstructs.clear();
+    return ComputeConstruct;
+  }
+  case OpenACCDirectiveKind::Loop: {
+    auto *LoopConstruct = OpenACCLoopConstruct::Create(
+        getASTContext(), StartLoc, DirLoc, EndLoc, Clauses,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
+
+    // If we are in the scope of a compute construct, add this to the list of
+    // loop constructs that need assigning to the next closing compute
+    // construct.
+    if (InsideComputeConstruct)
+      ParentlessLoopConstructs.push_back(LoopConstruct);
+
+    return LoopConstruct;
+  }
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
 
-StmtResult SemaOpenACC::ActOnAssociatedStmt(OpenACCDirectiveKind K,
+StmtResult SemaOpenACC::ActOnAssociatedStmt(SourceLocation DirectiveLoc,
+                                            OpenACCDirectiveKind K,
                                             StmtResult AssocStmt) {
   switch (K) {
   default:
@@ -1374,6 +1453,14 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(OpenACCDirectiveKind K,
     // FIXME: Should we reject DeclStmt's here? The standard isn't clear, and
     // an interpretation of it is to allow this and treat the initializer as
     // the 'structured block'.
+    return AssocStmt;
+  case OpenACCDirectiveKind::Loop:
+    if (AssocStmt.isUsable() &&
+        !isa<CXXForRangeStmt, ForStmt>(AssocStmt.get())) {
+      Diag(AssocStmt.get()->getBeginLoc(), diag::err_acc_loop_not_for_loop);
+      Diag(DirectiveLoc, diag::note_acc_construct_here) << K;
+      return StmtError();
+    }
     return AssocStmt;
   }
   llvm_unreachable("Invalid associated statement application");

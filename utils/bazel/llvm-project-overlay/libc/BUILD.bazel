@@ -319,6 +319,7 @@ libc_support_library(
     name = "__support_cpp_expected",
     hdrs = ["src/__support/CPP/expected.h"],
     deps = [
+        ":__support_macros_attributes",
     ],
 )
 
