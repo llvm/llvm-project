@@ -47,6 +47,7 @@
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
+#include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ExternalSemaSource.h"
@@ -171,21 +172,26 @@ class PseudoObjectExpr;
 class QualType;
 class SemaAMDGPU;
 class SemaARM;
+class SemaAVR;
 class SemaBPF;
 class SemaCodeCompletion;
 class SemaCUDA;
 class SemaHLSL;
 class SemaHexagon;
 class SemaLoongArch;
+class SemaM68k;
 class SemaMIPS;
+class SemaMSP430;
 class SemaNVPTX;
 class SemaObjC;
 class SemaOpenACC;
+class SemaOpenCL;
 class SemaOpenMP;
 class SemaPPC;
 class SemaPseudoObject;
 class SemaRISCV;
 class SemaSYCL;
+class SemaSwift;
 class SemaSystemZ;
 class SemaWasm;
 class SemaX86;
@@ -1011,6 +1017,11 @@ public:
     return *ARMPtr;
   }
 
+  SemaAVR &AVR() {
+    assert(AVRPtr);
+    return *AVRPtr;
+  }
+
   SemaBPF &BPF() {
     assert(BPFPtr);
     return *BPFPtr;
@@ -1041,9 +1052,19 @@ public:
     return *LoongArchPtr;
   }
 
+  SemaM68k &M68k() {
+    assert(M68kPtr);
+    return *M68kPtr;
+  }
+
   SemaMIPS &MIPS() {
     assert(MIPSPtr);
     return *MIPSPtr;
+  }
+
+  SemaMSP430 &MSP430() {
+    assert(MSP430Ptr);
+    return *MSP430Ptr;
   }
 
   SemaNVPTX &NVPTX() {
@@ -1059,6 +1080,11 @@ public:
   SemaOpenACC &OpenACC() {
     assert(OpenACCPtr);
     return *OpenACCPtr;
+  }
+
+  SemaOpenCL &OpenCL() {
+    assert(OpenCLPtr);
+    return *OpenCLPtr;
   }
 
   SemaOpenMP &OpenMP() {
@@ -1084,6 +1110,11 @@ public:
   SemaSYCL &SYCL() {
     assert(SYCLPtr);
     return *SYCLPtr;
+  }
+
+  SemaSwift &Swift() {
+    assert(SwiftPtr);
+    return *SwiftPtr;
   }
 
   SemaSystemZ &SystemZ() {
@@ -1133,21 +1164,26 @@ private:
 
   std::unique_ptr<SemaAMDGPU> AMDGPUPtr;
   std::unique_ptr<SemaARM> ARMPtr;
+  std::unique_ptr<SemaAVR> AVRPtr;
   std::unique_ptr<SemaBPF> BPFPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaHexagon> HexagonPtr;
   std::unique_ptr<SemaLoongArch> LoongArchPtr;
+  std::unique_ptr<SemaM68k> M68kPtr;
   std::unique_ptr<SemaMIPS> MIPSPtr;
+  std::unique_ptr<SemaMSP430> MSP430Ptr;
   std::unique_ptr<SemaNVPTX> NVPTXPtr;
   std::unique_ptr<SemaObjC> ObjCPtr;
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
+  std::unique_ptr<SemaOpenCL> OpenCLPtr;
   std::unique_ptr<SemaOpenMP> OpenMPPtr;
   std::unique_ptr<SemaPPC> PPCPtr;
   std::unique_ptr<SemaPseudoObject> PseudoObjectPtr;
   std::unique_ptr<SemaRISCV> RISCVPtr;
   std::unique_ptr<SemaSYCL> SYCLPtr;
+  std::unique_ptr<SemaSwift> SwiftPtr;
   std::unique_ptr<SemaSystemZ> SystemZPtr;
   std::unique_ptr<SemaWasm> WasmPtr;
   std::unique_ptr<SemaX86> X86Ptr;
@@ -3711,8 +3747,6 @@ public:
                                           const AttributeCommonInfo &CI,
                                           const IdentifierInfo *Ident);
   MinSizeAttr *mergeMinSizeAttr(Decl *D, const AttributeCommonInfo &CI);
-  SwiftNameAttr *mergeSwiftNameAttr(Decl *D, const SwiftNameAttr &SNA,
-                                    StringRef Name);
   OptimizeNoneAttr *mergeOptimizeNoneAttr(Decl *D,
                                           const AttributeCommonInfo &CI);
   InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D, const ParsedAttr &AL);
@@ -3726,8 +3760,6 @@ public:
       const ParsedAttr &attr, CallingConv &CC, const FunctionDecl *FD = nullptr,
       CUDAFunctionTarget CFT = CUDAFunctionTarget::InvalidTarget);
 
-  void AddParameterABIAttr(Decl *D, const AttributeCommonInfo &CI,
-                           ParameterABI ABI);
   bool CheckRegparmAttr(const ParsedAttr &attr, unsigned &value);
 
   /// Create an CUDALaunchBoundsAttr attribute.
@@ -3742,20 +3774,6 @@ public:
                            Expr *MaxThreads, Expr *MinBlocks, Expr *MaxBlocks);
 
   enum class RetainOwnershipKind { NS, CF, OS };
-  void AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
-                        RetainOwnershipKind K, bool IsTemplateInstantiation);
-
-  bool checkNSReturnsRetainedReturnType(SourceLocation loc, QualType type);
-
-  /// Do a check to make sure \p Name looks like a legal argument for the
-  /// swift_name attribute applied to decl \p D.  Raise a diagnostic if the name
-  /// is invalid for the given declaration.
-  ///
-  /// \p AL is used to provide caret diagnostics in case of a malformed name.
-  ///
-  /// \returns true if the name is a valid swift name for \p D, false otherwise.
-  bool DiagnoseSwiftName(Decl *D, StringRef Name, SourceLocation Loc,
-                         const ParsedAttr &AL, bool IsAsync);
 
   UuidAttr *mergeUuidAttr(Decl *D, const AttributeCommonInfo &CI,
                           StringRef UuidAsWritten, MSGuidDecl *GuidDecl);
@@ -3824,6 +3842,52 @@ public:
   void PopParsingDeclaration(ParsingDeclState state, Decl *decl);
 
   void redelayDiagnostics(sema::DelayedDiagnosticPool &pool);
+
+  /// Check if IdxExpr is a valid parameter index for a function or
+  /// instance method D.  May output an error.
+  ///
+  /// \returns true if IdxExpr is a valid index.
+  template <typename AttrInfo>
+  bool checkFunctionOrMethodParameterIndex(const Decl *D, const AttrInfo &AI,
+                                           unsigned AttrArgNum,
+                                           const Expr *IdxExpr, ParamIdx &Idx,
+                                           bool CanIndexImplicitThis = false) {
+    assert(isFunctionOrMethodOrBlockForAttrSubject(D));
+
+    // In C++ the implicit 'this' function parameter also counts.
+    // Parameters are counted from one.
+    bool HP = hasFunctionProto(D);
+    bool HasImplicitThisParam = isInstanceMethod(D);
+    bool IV = HP && isFunctionOrMethodVariadic(D);
+    unsigned NumParams =
+        (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
+
+    std::optional<llvm::APSInt> IdxInt;
+    if (IdxExpr->isTypeDependent() ||
+        !(IdxInt = IdxExpr->getIntegerConstantExpr(Context))) {
+      Diag(getAttrLoc(AI), diag::err_attribute_argument_n_type)
+          << &AI << AttrArgNum << AANT_ArgumentIntegerConstant
+          << IdxExpr->getSourceRange();
+      return false;
+    }
+
+    unsigned IdxSource = IdxInt->getLimitedValue(UINT_MAX);
+    if (IdxSource < 1 || (!IV && IdxSource > NumParams)) {
+      Diag(getAttrLoc(AI), diag::err_attribute_argument_out_of_bounds)
+          << &AI << AttrArgNum << IdxExpr->getSourceRange();
+      return false;
+    }
+    if (HasImplicitThisParam && !CanIndexImplicitThis) {
+      if (IdxSource == 1) {
+        Diag(getAttrLoc(AI), diag::err_attribute_invalid_implicit_this_argument)
+            << &AI << IdxExpr->getSourceRange();
+        return false;
+      }
+    }
+
+    Idx = ParamIdx(IdxSource, D);
+    return true;
+  }
 
   ///@}
 
