@@ -3263,7 +3263,7 @@ SDValue SITargetLowering::LowerCallResult(
         if (TRI->isSGPRReg(MRI, VA.getLocReg())) {
           Register TmpVReg = MRI.createVirtualRegister(TRI->getBoolRC());
           SDValue TmpCopyTo = DAG.getCopyToReg(Chain, DL, TmpVReg, Val);
-          Val = DAG.getCopyFromReg(TmpCopyTo, DL, TmpVReg, MVT::i1);
+          Val = DAG.getCopyFromReg(TmpCopyTo, DL, VA.getLocReg(), MVT::i1);
         }
       }
     } else if (VA.isMemLoc()) {
@@ -16022,26 +16022,6 @@ static bool isCopyFromRegOfInlineAsm(const SDNode *N) {
   return false;
 }
 
-LLVM_ATTRIBUTE_UNUSED
-static bool isCopyFromRegForI1Return(const SDNode *N) {
-  assert(N->getOpcode() == ISD::CopyFromReg);
-  SDNode *N1 = N->getOperand(0).getNode();
-  if (N1->getOpcode() != ISD::CopyToReg)
-    return false;
-  SDNode *N2 = N1->getOperand(0).getNode();
-  if (N2->getOpcode() != ISD::CopyFromReg)
-    return false;
-
-  // Possibly multiple CopyFromReg nodes before getting to CALLSEQ_END,
-  // e.g., when the return value is an array.
-  SDNode *N3 = N2;
-  do {
-    N3 = N3->getOperand(0).getNode();
-  } while (N3->getOpcode() == ISD::CopyFromReg);
-
-  return N3->getOpcode() == ISD::CALLSEQ_END;
-}
-
 bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
                                                   FunctionLoweringInfo *FLI,
                                                   UniformityInfo *UA) const {
@@ -16059,8 +16039,7 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
     if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
       return UA->isDivergent(V);
 
-    assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N) ||
-           isCopyFromRegForI1Return(N));
+    assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N));
     return !TRI->isSGPRReg(MRI, Reg);
   }
   case ISD::LOAD: {
