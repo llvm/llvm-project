@@ -572,6 +572,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 static std::optional<uint32_t>
 ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
                           ModuleSP module_sp) {
+  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
+
   // With DWARF 3 and later, if the value is an integer constant,
   // this form value is the offset in bytes from the beginning of
   // the containing entity.
@@ -579,21 +581,23 @@ ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
     return form_value.Unsigned();
 
   Value initialValue(0);
-  Value memberOffset(0);
   const DWARFDataExtractor &debug_info_data = die.GetData();
   uint32_t block_length = form_value.Unsigned();
   uint32_t block_offset =
       form_value.BlockData() - debug_info_data.GetDataStart();
-  if (!DWARFExpression::Evaluate(
-          nullptr, // ExecutionContext *
-          nullptr, // RegisterContext *
-          module_sp, DataExtractor(debug_info_data, block_offset, block_length),
-          die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr, memberOffset,
-          nullptr)) {
+
+  llvm::Expected<Value> memberOffset = DWARFExpression::Evaluate(
+      /*ExecutionContext=*/nullptr,
+      /*RegisterContext=*/nullptr, module_sp,
+      DataExtractor(debug_info_data, block_offset, block_length), die.GetCU(),
+      eRegisterKindDWARF, &initialValue, nullptr);
+  if (!memberOffset) {
+    LLDB_LOG_ERROR(log, memberOffset.takeError(),
+                   "ExtractDataMemberLocation failed: {0}");
     return {};
   }
 
-  return memberOffset.ResolveValue(nullptr).UInt();
+  return memberOffset->ResolveValue(nullptr).UInt();
 }
 
 static TypePayloadClang GetPtrAuthMofidierPayload(const DWARFDIE &die) {
