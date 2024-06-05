@@ -955,12 +955,7 @@ std::optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
   if (eti->projectEnumValue(*GetMemoryReader(), addr, &case_index))
     return eti->getCases()[case_index].Name;
 
-  // FIXME: Enabling this fails TestSwiftNestedCEnums.py: The test
-  // nests a C-style enum inside of a payload-carrying enum and most
-  // likely we're not stripping off the outer enum's discriminator
-  // before reading the value of the inner one.
-  
-  // LogUnimplementedTypeKind(__FUNCTION__, type);
+  LogUnimplementedTypeKind(__FUNCTION__, type);
   return {};
 }
 
