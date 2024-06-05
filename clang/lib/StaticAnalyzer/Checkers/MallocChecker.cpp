@@ -323,7 +323,7 @@ public:
     CK_NewDeleteLeaksChecker,
     CK_MismatchedDeallocatorChecker,
     CK_InnerPointerChecker,
-    CK_TaintAllocChecker,
+    CK_TaintedAllocChecker,
     CK_NumCheckKinds
   };
 
@@ -1810,7 +1810,7 @@ void MallocChecker::reportTaintBug(StringRef Msg, ProgramStateRef State,
                                    AllocationFamily Family) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State, this)) {
     if (!BT_TaintedAlloc)
-      BT_TaintedAlloc.reset(new BugType(CheckNames[CK_TaintAllocChecker],
+      BT_TaintedAlloc.reset(new BugType(CheckNames[CK_TaintedAllocChecker],
                                         "Tainted Memory Allocation",
                                         categories::TaintedData));
     auto R = std::make_unique<PathSensitiveBugReport>(*BT_TaintedAlloc, Msg, N);
@@ -1824,7 +1824,7 @@ void MallocChecker::reportTaintBug(StringRef Msg, ProgramStateRef State,
 void MallocChecker::checkTaintedness(CheckerContext &C, const CallEvent &Call,
                                      const SVal SizeSVal, ProgramStateRef State,
                                      AllocationFamily Family) const {
-  if (!ChecksEnabled[CK_TaintAllocChecker])
+  if (!ChecksEnabled[CK_TaintedAllocChecker])
     return;
   std::vector<SymbolRef> TaintedSyms =
       taint::getTaintedSymbols(State, SizeSVal);
@@ -3805,4 +3805,4 @@ REGISTER_CHECKER(MallocChecker)
 REGISTER_CHECKER(NewDeleteChecker)
 REGISTER_CHECKER(NewDeleteLeaksChecker)
 REGISTER_CHECKER(MismatchedDeallocatorChecker)
-REGISTER_CHECKER(TaintAllocChecker)
+REGISTER_CHECKER(TaintedAllocChecker)

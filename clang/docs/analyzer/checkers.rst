@@ -938,9 +938,9 @@ optin.portability.UnixAPI
 """""""""""""""""""""""""
 Finds implementation-defined behavior in UNIX/Posix functions.
 
-.. _optin-taint-TaintAlloc:
+.. _optin-taint-TaintedAlloc:
 
-optin.taint.TaintAlloc (C, C++)
+optin.taint.TaintedAlloc (C, C++)
 """""""""""""""""""""""""""""""
 
 This checker warns for cases when the ``size`` parameter of the ``malloc`` ,

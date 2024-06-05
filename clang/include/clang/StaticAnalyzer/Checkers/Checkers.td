@@ -1729,7 +1729,7 @@ def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
 
 let ParentPackage = TaintOptIn in {
 
-def TaintAllocChecker: Checker<"TaintAlloc">,
+def TaintedAllocChecker: Checker<"TaintedAlloc">,
   HelpText<"Check for memory allocations, where the size parameter "
            "might be a tainted (attacker controlled) value.">,
   Dependencies<[DynamicMemoryModeling]>,
