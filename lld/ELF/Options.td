@@ -69,6 +69,7 @@ defm compress_debug_sections:
 
 defm compress_sections: EEq<"compress-sections",
   "Compress output sections that match the glob and do not have the SHF_ALLOC flag. "
+  "The sections remain uncompressed if compressed content would be larger. "
   "The compression level is <level> (if specified) or a default speed-focused level">,
   MetaVarName<"<section-glob>={none,zlib,zstd}[:level]">;
 
@@ -196,6 +197,9 @@ def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
 
 def enable_new_dtags: F<"enable-new-dtags">,
   HelpText<"Enable new dynamic tags (default)">;
+
+def enable_non_contiguous_regions : FF<"enable-non-contiguous-regions">,
+  HelpText<"Spill input sections to later matching output sections to avoid memory region overflow">;
 
 def end_group: F<"end-group">,
   HelpText<"Ignored for compatibility with GNU unless you pass --warn-backrefs">;

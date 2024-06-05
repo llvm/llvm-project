@@ -46,6 +46,9 @@ ConstructQueue buildConstructQueue(mlir::ModuleOp modOp,
                                    const parser::CharBlock &source,
                                    llvm::omp::Directive compound,
                                    const List<Clause> &clauses);
+
+bool isLastItemInQueue(ConstructQueue::iterator item,
+                       const ConstructQueue &queue);
 } // namespace Fortran::lower::omp
 
 #endif // FORTRAN_LOWER_OPENMP_DECOMPOSER_H

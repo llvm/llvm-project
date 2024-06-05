@@ -695,8 +695,8 @@ define zeroext i1 @test17(i32 %flag, i32 %blksA, i32 %blksB, i32 %nblks) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[FLAG:%.*]], label [[IF_END:%.*]] [
-; CHECK-NEXT:    i32 0, label [[IF_THEN:%.*]]
-; CHECK-NEXT:    i32 1, label [[IF_THEN2:%.*]]
+; CHECK-NEXT:      i32 0, label [[IF_THEN:%.*]]
+; CHECK-NEXT:      i32 1, label [[IF_THEN2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[BLKSA:%.*]], [[NBLKS:%.*]]
@@ -746,8 +746,8 @@ define zeroext i1 @test18(i32 %flag, i32 %blksA, i32 %blksB, i32 %nblks) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[FLAG:%.*]], label [[IF_THEN3:%.*]] [
-; CHECK-NEXT:    i32 0, label [[IF_THEN:%.*]]
-; CHECK-NEXT:    i32 1, label [[IF_THEN2:%.*]]
+; CHECK-NEXT:      i32 0, label [[IF_THEN:%.*]]
+; CHECK-NEXT:      i32 1, label [[IF_THEN2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[BLKSA:%.*]], [[NBLKS:%.*]]
@@ -1287,11 +1287,11 @@ define void @test_sink_void_calls(i32 %x) {
 ; CHECK-LABEL: @test_sink_void_calls(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i32 2, label [[BB2:%.*]]
-; CHECK-NEXT:    i32 3, label [[BB3:%.*]]
-; CHECK-NEXT:    i32 4, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 0, label [[RETURN:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i32 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3:%.*]]
+; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -1565,7 +1565,7 @@ end:
 define void @nontemporal(ptr %ptr, i1 %cond) {
 ; CHECK-LABEL: @nontemporal(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8, !nontemporal !7
+; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8, !nontemporal [[META7:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1601,6 +1601,104 @@ if.else:
   br label %if.end
 
 if.end:
+  ret void
+}
+
+define void @loop_use_in_different_bb(i32 %n) {
+; CHECK-LABEL: @loop_use_in_different_bb(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[N:%.*]], 1
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV]], [[ADD]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN:%.*]], label [[FOR_BODY]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INC]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %add = add i32 %n, 1
+  br label %for.cond
+
+for.cond:
+  %iv = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %exitcond = icmp eq i32 %iv, %add
+  br i1 %exitcond, label %return, label %for.body
+
+for.body:
+  %inc = add i32 %iv, 1
+  br label %for.cond
+
+return:
+  ret void
+}
+
+define void @loop_use_in_different_bb_phi(i32 %n) {
+; CHECK-LABEL: @loop_use_in_different_bb_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[N:%.*]], 1
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV]], 42
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN:%.*]], label [[FOR_BODY]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[DUMMY:%.*]] = phi i32 [ [[ADD]], [[FOR_COND]] ]
+; CHECK-NEXT:    [[INC]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %add = add i32 %n, 1
+  br label %for.cond
+
+for.cond:
+  %iv = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %exitcond = icmp eq i32 %iv, 42
+  br i1 %exitcond, label %return, label %for.body
+
+for.body:
+  %dummy = phi i32 [ %add, %for.cond ]
+  %inc = add i32 %iv, 1
+  br label %for.cond
+
+return:
+  ret void
+}
+
+define void @loop_use_in_wrong_phi_operand(i32 %n) {
+; CHECK-LABEL: @loop_use_in_wrong_phi_operand(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[N:%.*]], 1
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV]], 42
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN:%.*]], label [[FOR_BODY]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INC:%.*]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %add = add i32 %n, 1
+  br label %for.cond
+
+for.cond:
+  %iv = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %exitcond = icmp eq i32 %iv, 42
+  br i1 %exitcond, label %return, label %for.body
+
+for.body:
+  %inc = add i32 %iv, 1
+  br label %for.cond
+
+return:
   ret void
 }
 

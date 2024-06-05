@@ -209,6 +209,7 @@ template <class T, class Tuple>
 static constexpr bool can_make_from_tuple =
     std::is_same_v<decltype(test_make_from_tuple<T, Tuple>(T{}, Tuple{})), uint8_t>;
 
+#ifdef _LIBCPP_VERSION
 template <class T, class Tuple>
 auto test_make_from_tuple_impl(T&&, Tuple&& t)
     -> decltype(std::__make_from_tuple_impl<T>(
@@ -224,6 +225,7 @@ uint32_t test_make_from_tuple_impl(...) {
 template <class T, class Tuple>
 static constexpr bool can_make_from_tuple_impl =
     std::is_same_v<decltype(test_make_from_tuple_impl<T, Tuple>(T{}, Tuple{})), uint8_t>;
+#endif // _LIBCPP_VERSION
 
 struct A {
   int a;
@@ -263,23 +265,23 @@ static_assert(can_make_from_tuple<float, std::tuple<double>>);
 // Test std::__make_from_tuple_impl constraints.
 
 // reinterpret_cast
-static_assert(!can_make_from_tuple_impl<int*, std::tuple<A*>>);
-static_assert(can_make_from_tuple_impl<A*, std::tuple<A*>>);
+LIBCPP_STATIC_ASSERT(!can_make_from_tuple_impl<int*, std::tuple<A*>>);
+LIBCPP_STATIC_ASSERT(can_make_from_tuple_impl<A*, std::tuple<A*>>);
 
 // const_cast
-static_assert(!can_make_from_tuple_impl<char*, std::tuple<const char*>>);
-static_assert(!can_make_from_tuple_impl<volatile char*, std::tuple<const volatile char*>>);
-static_assert(can_make_from_tuple_impl<volatile char*, std::tuple<volatile char*>>);
-static_assert(can_make_from_tuple_impl<char*, std::tuple<char*>>);
-static_assert(can_make_from_tuple_impl<const char*, std::tuple<char*>>);
-static_assert(can_make_from_tuple_impl<const volatile char*, std::tuple<volatile char*>>);
+LIBCPP_STATIC_ASSERT(!can_make_from_tuple_impl<char*, std::tuple<const char*>>);
+LIBCPP_STATIC_ASSERT(!can_make_from_tuple_impl<volatile char*, std::tuple<const volatile char*>>);
+LIBCPP_STATIC_ASSERT(can_make_from_tuple_impl<volatile char*, std::tuple<volatile char*>>);
+LIBCPP_STATIC_ASSERT(can_make_from_tuple_impl<char*, std::tuple<char*>>);
+LIBCPP_STATIC_ASSERT(can_make_from_tuple_impl<const char*, std::tuple<char*>>);
+LIBCPP_STATIC_ASSERT(can_make_from_tuple_impl<const volatile char*, std::tuple<volatile char*>>);
 
 // static_cast
-static_assert(!can_make_from_tuple_impl<int, std::tuple<D>>);
-static_assert(!can_make_from_tuple_impl<D, std::tuple<int>>);
-static_assert(can_make_from_tuple_impl<long, std::tuple<int>>);
-static_assert(can_make_from_tuple_impl<double, std::tuple<float>>);
-static_assert(can_make_from_tuple_impl<float, std::tuple<double>>);
+LIBCPP_STATIC_ASSERT(!can_make_from_tuple_impl<int, std::tuple<D>>);
+LIBCPP_STATIC_ASSERT(!can_make_from_tuple_impl<D, std::tuple<int>>);
+LIBCPP_STATIC_ASSERT(can_make_from_tuple_impl<long, std::tuple<int>>);
+LIBCPP_STATIC_ASSERT(can_make_from_tuple_impl<double, std::tuple<float>>);
+LIBCPP_STATIC_ASSERT(can_make_from_tuple_impl<float, std::tuple<double>>);
 
 } // namespace LWG3528
 

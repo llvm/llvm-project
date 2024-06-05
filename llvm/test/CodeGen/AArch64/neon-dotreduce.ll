@@ -1709,289 +1709,289 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    fmov s4, w0
 ; CHECK-NEXT:    ldr b0, [sp, #80]
 ; CHECK-NEXT:    add x8, sp, #88
-; CHECK-NEXT:    ldr b2, [sp, #144]
-; CHECK-NEXT:    fmov s4, w0
+; CHECK-NEXT:    ldr b1, [sp, #144]
 ; CHECK-NEXT:    add x10, sp, #152
-; CHECK-NEXT:    ldr b3, [sp, #16]
+; CHECK-NEXT:    ldr b6, [sp, #16]
 ; CHECK-NEXT:    ld1 { v0.b }[1], [x8]
-; CHECK-NEXT:    ld1 { v2.b }[1], [x10]
-; CHECK-NEXT:    add x10, sp, #24
-; CHECK-NEXT:    ldr b1, [sp, #344]
 ; CHECK-NEXT:    add x9, sp, #96
-; CHECK-NEXT:    ld1 { v3.b }[1], [x10]
-; CHECK-NEXT:    add x10, sp, #352
+; CHECK-NEXT:    ldr b2, [sp, #344]
 ; CHECK-NEXT:    mov v4.b[1], w1
+; CHECK-NEXT:    ld1 { v1.b }[1], [x10]
+; CHECK-NEXT:    add x10, sp, #24
+; CHECK-NEXT:    ld1 { v6.b }[1], [x10]
+; CHECK-NEXT:    add x10, sp, #352
 ; CHECK-NEXT:    add x8, sp, #104
 ; CHECK-NEXT:    ld1 { v0.b }[2], [x9]
 ; CHECK-NEXT:    add x9, sp, #160
-; CHECK-NEXT:    ld1 { v1.b }[1], [x10]
-; CHECK-NEXT:    ld1 { v2.b }[2], [x9]
-; CHECK-NEXT:    add x9, sp, #32
-; CHECK-NEXT:    add x12, sp, #360
-; CHECK-NEXT:    ld1 { v3.b }[2], [x9]
+; CHECK-NEXT:    ld1 { v2.b }[1], [x10]
+; CHECK-NEXT:    ld1 { v1.b }[2], [x9]
+; CHECK-NEXT:    add x10, sp, #32
 ; CHECK-NEXT:    add x11, sp, #112
-; CHECK-NEXT:    add x10, sp, #120
-; CHECK-NEXT:    ld1 { v1.b }[2], [x12]
-; CHECK-NEXT:    add x12, sp, #168
-; CHECK-NEXT:    ld1 { v0.b }[3], [x8]
 ; CHECK-NEXT:    mov v4.b[2], w2
-; CHECK-NEXT:    ld1 { v2.b }[3], [x12]
-; CHECK-NEXT:    add x12, sp, #40
-; CHECK-NEXT:    ld1 { v3.b }[3], [x12]
-; CHECK-NEXT:    add x13, sp, #176
-; CHECK-NEXT:    ldr b16, [sp, #216]
+; CHECK-NEXT:    ld1 { v6.b }[2], [x10]
+; CHECK-NEXT:    add x10, sp, #168
+; CHECK-NEXT:    ld1 { v0.b }[3], [x8]
+; CHECK-NEXT:    ldr b5, [sp, #216]
+; CHECK-NEXT:    add x13, sp, #224
+; CHECK-NEXT:    ld1 { v1.b }[3], [x10]
+; CHECK-NEXT:    add x10, sp, #40
+; CHECK-NEXT:    add x12, sp, #120
+; CHECK-NEXT:    ld1 { v6.b }[3], [x10]
+; CHECK-NEXT:    add x10, sp, #176
+; CHECK-NEXT:    ld1 { v5.b }[1], [x13]
+; CHECK-NEXT:    mov v4.b[3], w3
 ; CHECK-NEXT:    ld1 { v0.b }[4], [x11]
 ; CHECK-NEXT:    add x11, sp, #48
-; CHECK-NEXT:    add x12, sp, #368
-; CHECK-NEXT:    ld1 { v2.b }[4], [x13]
-; CHECK-NEXT:    add x13, sp, #224
-; CHECK-NEXT:    add x9, sp, #128
-; CHECK-NEXT:    mov v4.b[3], w3
-; CHECK-NEXT:    ld1 { v3.b }[4], [x11]
-; CHECK-NEXT:    ld1 { v16.b }[1], [x13]
-; CHECK-NEXT:    ld1 { v0.b }[5], [x10]
-; CHECK-NEXT:    add x10, sp, #56
-; CHECK-NEXT:    ld1 { v1.b }[3], [x12]
-; CHECK-NEXT:    add x12, sp, #184
-; CHECK-NEXT:    ldr b5, [sp, #280]
-; CHECK-NEXT:    add x11, sp, #376
-; CHECK-NEXT:    ld1 { v3.b }[5], [x10]
-; CHECK-NEXT:    ld1 { v2.b }[5], [x12]
-; CHECK-NEXT:    add x10, sp, #232
+; CHECK-NEXT:    add x8, sp, #360
+; CHECK-NEXT:    ld1 { v1.b }[4], [x10]
+; CHECK-NEXT:    add x13, sp, #56
+; CHECK-NEXT:    ld1 { v6.b }[4], [x11]
+; CHECK-NEXT:    ldr b7, [sp, #280]
+; CHECK-NEXT:    ld1 { v2.b }[2], [x8]
+; CHECK-NEXT:    add x15, sp, #232
+; CHECK-NEXT:    ld1 { v0.b }[5], [x12]
+; CHECK-NEXT:    add x14, sp, #184
 ; CHECK-NEXT:    mov v4.b[4], w4
+; CHECK-NEXT:    ld1 { v5.b }[2], [x15]
+; CHECK-NEXT:    add x9, sp, #128
+; CHECK-NEXT:    ld1 { v6.b }[5], [x13]
+; CHECK-NEXT:    add x13, sp, #288
+; CHECK-NEXT:    add x10, sp, #368
+; CHECK-NEXT:    ld1 { v7.b }[1], [x13]
+; CHECK-NEXT:    ld1 { v1.b }[5], [x14]
+; CHECK-NEXT:    ld1 { v2.b }[3], [x10]
+; CHECK-NEXT:    add x15, sp, #240
 ; CHECK-NEXT:    ld1 { v0.b }[6], [x9]
-; CHECK-NEXT:    add x9, sp, #288
-; CHECK-NEXT:    add x15, sp, #64
-; CHECK-NEXT:    ld1 { v16.b }[2], [x10]
-; CHECK-NEXT:    ldr b17, [sp, #408]
-; CHECK-NEXT:    ld1 { v5.b }[1], [x9]
-; CHECK-NEXT:    add x14, sp, #192
-; CHECK-NEXT:    ld1 { v1.b }[4], [x11]
-; CHECK-NEXT:    ld1 { v3.b }[6], [x15]
-; CHECK-NEXT:    add x15, sp, #416
-; CHECK-NEXT:    ld1 { v2.b }[6], [x14]
-; CHECK-NEXT:    add x14, sp, #240
-; CHECK-NEXT:    ld1 { v17.b }[1], [x15]
 ; CHECK-NEXT:    add x9, sp, #296
-; CHECK-NEXT:    add x8, sp, #136
 ; CHECK-NEXT:    mov v4.b[5], w5
-; CHECK-NEXT:    add x13, sp, #384
-; CHECK-NEXT:    ld1 { v16.b }[3], [x14]
-; CHECK-NEXT:    ld1 { v5.b }[2], [x9]
-; CHECK-NEXT:    ld1 { v1.b }[5], [x13]
-; CHECK-NEXT:    ld1 { v0.b }[7], [x8]
-; CHECK-NEXT:    add x8, sp, #424
-; CHECK-NEXT:    add x9, sp, #248
-; CHECK-NEXT:    ld1 { v17.b }[2], [x8]
-; CHECK-NEXT:    add x8, sp, #304
-; CHECK-NEXT:    add x10, sp, #392
-; CHECK-NEXT:    ld1 { v16.b }[4], [x9]
-; CHECK-NEXT:    ld1 { v5.b }[3], [x8]
+; CHECK-NEXT:    add x11, sp, #192
+; CHECK-NEXT:    ld1 { v5.b }[3], [x15]
+; CHECK-NEXT:    ldr b3, [sp, #408]
+; CHECK-NEXT:    ld1 { v7.b }[2], [x9]
+; CHECK-NEXT:    add x12, sp, #64
+; CHECK-NEXT:    add x13, sp, #376
+; CHECK-NEXT:    ld1 { v1.b }[6], [x11]
+; CHECK-NEXT:    add x11, sp, #416
+; CHECK-NEXT:    ld1 { v6.b }[6], [x12]
+; CHECK-NEXT:    add x12, sp, #248
+; CHECK-NEXT:    ld1 { v3.b }[1], [x11]
 ; CHECK-NEXT:    mov v4.b[6], w6
-; CHECK-NEXT:    ld1 { v1.b }[6], [x10]
-; CHECK-NEXT:    add x10, sp, #432
-; CHECK-NEXT:    add x9, sp, #256
-; CHECK-NEXT:    ld1 { v17.b }[3], [x10]
-; CHECK-NEXT:    add x10, sp, #312
-; CHECK-NEXT:    ldr b22, [sp, #608]
-; CHECK-NEXT:    add x8, sp, #400
-; CHECK-NEXT:    ld1 { v16.b }[5], [x9]
-; CHECK-NEXT:    ld1 { v5.b }[4], [x10]
-; CHECK-NEXT:    add x9, sp, #616
-; CHECK-NEXT:    ld1 { v1.b }[7], [x8]
-; CHECK-NEXT:    add x8, sp, #440
-; CHECK-NEXT:    ld1 { v22.b }[1], [x9]
+; CHECK-NEXT:    ld1 { v2.b }[4], [x13]
+; CHECK-NEXT:    add x11, sp, #304
+; CHECK-NEXT:    ld1 { v5.b }[4], [x12]
+; CHECK-NEXT:    ld1 { v7.b }[3], [x11]
+; CHECK-NEXT:    add x8, sp, #136
+; CHECK-NEXT:    add x15, sp, #384
+; CHECK-NEXT:    add x9, sp, #424
+; CHECK-NEXT:    ld1 { v0.b }[7], [x8]
+; CHECK-NEXT:    ld1 { v3.b }[2], [x9]
+; CHECK-NEXT:    ld1 { v2.b }[5], [x15]
+; CHECK-NEXT:    add x8, sp, #312
 ; CHECK-NEXT:    mov v4.b[7], w7
-; CHECK-NEXT:    ld1 { v17.b }[4], [x8]
+; CHECK-NEXT:    add x9, sp, #256
+; CHECK-NEXT:    add x10, sp, #200
+; CHECK-NEXT:    ld1 { v7.b }[4], [x8]
+; CHECK-NEXT:    ld1 { v5.b }[5], [x9]
+; CHECK-NEXT:    add x14, sp, #72
+; CHECK-NEXT:    ld1 { v1.b }[7], [x10]
+; CHECK-NEXT:    add x10, sp, #432
+; CHECK-NEXT:    add x8, sp, #392
+; CHECK-NEXT:    ld1 { v6.b }[7], [x14]
+; CHECK-NEXT:    ld1 { v3.b }[3], [x10]
+; CHECK-NEXT:    ld1 { v2.b }[6], [x8]
 ; CHECK-NEXT:    add x8, sp, #320
-; CHECK-NEXT:    add x10, sp, #448
-; CHECK-NEXT:    ldr b6, [sp, #208]
-; CHECK-NEXT:    ld1 { v5.b }[5], [x8]
-; CHECK-NEXT:    add x8, sp, #624
-; CHECK-NEXT:    ldr b7, [sp, #472]
-; CHECK-NEXT:    ld1 { v22.b }[2], [x8]
-; CHECK-NEXT:    ld1 { v17.b }[5], [x10]
-; CHECK-NEXT:    add x10, sp, #328
-; CHECK-NEXT:    sshll v20.8h, v4.8b, #0
-; CHECK-NEXT:    ldr b4, [sp, #480]
-; CHECK-NEXT:    add x8, sp, #456
-; CHECK-NEXT:    ld1 { v5.b }[6], [x10]
-; CHECK-NEXT:    add x10, sp, #632
-; CHECK-NEXT:    sshll v6.8h, v6.8b, #0
-; CHECK-NEXT:    ld1 { v22.b }[3], [x10]
-; CHECK-NEXT:    add x10, sp, #488
-; CHECK-NEXT:    ld1 { v17.b }[6], [x8]
-; CHECK-NEXT:    add x8, sp, #336
-; CHECK-NEXT:    ld1 { v4.b }[1], [x10]
-; CHECK-NEXT:    sshll v7.8h, v7.8b, #0
-; CHECK-NEXT:    ld1 { v5.b }[7], [x8]
-; CHECK-NEXT:    add x8, sp, #640
 ; CHECK-NEXT:    add x9, sp, #264
-; CHECK-NEXT:    ld1 { v22.b }[4], [x8]
-; CHECK-NEXT:    add x8, sp, #496
-; CHECK-NEXT:    ld1 { v16.b }[6], [x9]
-; CHECK-NEXT:    ld1 { v4.b }[2], [x8]
-; CHECK-NEXT:    add x8, sp, #648
-; CHECK-NEXT:    smull v18.4s, v6.4h, v7.4h
-; CHECK-NEXT:    ldr b7, [sp, #544]
-; CHECK-NEXT:    add x9, sp, #272
-; CHECK-NEXT:    movi v6.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v22.b }[5], [x8]
-; CHECK-NEXT:    add x8, sp, #504
-; CHECK-NEXT:    ld1 { v16.b }[7], [x9]
-; CHECK-NEXT:    ld1 { v4.b }[3], [x8]
-; CHECK-NEXT:    add x8, sp, #552
-; CHECK-NEXT:    add x9, sp, #656
-; CHECK-NEXT:    ld1 { v7.b }[1], [x8]
-; CHECK-NEXT:    add x8, sp, #512
-; CHECK-NEXT:    ldr b21, [sp, #672]
-; CHECK-NEXT:    ld1 { v22.b }[6], [x9]
-; CHECK-NEXT:    mov v6.s[0], v18.s[0]
-; CHECK-NEXT:    add x9, sp, #664
-; CHECK-NEXT:    ld1 { v4.b }[4], [x8]
-; CHECK-NEXT:    add x8, sp, #560
-; CHECK-NEXT:    sshll v23.8h, v16.8b, #0
-; CHECK-NEXT:    ld1 { v7.b }[2], [x8]
-; CHECK-NEXT:    add x8, sp, #520
-; CHECK-NEXT:    movi v19.2d, #0000000000000000
-; CHECK-NEXT:    ld1 { v22.b }[7], [x9]
-; CHECK-NEXT:    add x9, sp, #528
-; CHECK-NEXT:    add x10, sp, #464
-; CHECK-NEXT:    ld1 { v4.b }[5], [x8]
-; CHECK-NEXT:    add x8, sp, #568
-; CHECK-NEXT:    smull2 v18.4s, v20.8h, v23.8h
-; CHECK-NEXT:    ld1 { v7.b }[3], [x8]
-; CHECK-NEXT:    add x8, sp, #680
-; CHECK-NEXT:    smlal v6.4s, v20.4h, v23.4h
-; CHECK-NEXT:    ld1 { v21.b }[1], [x8]
-; CHECK-NEXT:    sshll v20.8h, v22.8b, #0
-; CHECK-NEXT:    ldr b22, [sp, #736]
-; CHECK-NEXT:    ld1 { v4.b }[6], [x9]
-; CHECK-NEXT:    add x9, sp, #576
-; CHECK-NEXT:    ldr b23, [sp, #1000]
-; CHECK-NEXT:    ld1 { v7.b }[4], [x9]
-; CHECK-NEXT:    add x9, sp, #688
-; CHECK-NEXT:    sshll v24.8h, v22.8b, #0
-; CHECK-NEXT:    ld1 { v21.b }[2], [x9]
-; CHECK-NEXT:    add x9, sp, #696
-; CHECK-NEXT:    sshll v25.8h, v23.8b, #0
-; CHECK-NEXT:    add x8, sp, #536
-; CHECK-NEXT:    ldr b22, [sp, #872]
-; CHECK-NEXT:    ldr b23, [sp, #936]
-; CHECK-NEXT:    ld1 { v4.b }[7], [x8]
-; CHECK-NEXT:    add x8, sp, #584
-; CHECK-NEXT:    ld1 { v17.b }[7], [x10]
-; CHECK-NEXT:    ld1 { v21.b }[3], [x9]
+; CHECK-NEXT:    sshll v21.8h, v4.8b, #0
+; CHECK-NEXT:    ldr b4, [sp, #208]
 ; CHECK-NEXT:    ld1 { v7.b }[5], [x8]
-; CHECK-NEXT:    add x8, sp, #880
-; CHECK-NEXT:    add x9, sp, #704
-; CHECK-NEXT:    smull v25.4s, v24.4h, v25.4h
-; CHECK-NEXT:    ldr b24, [sp, #744]
-; CHECK-NEXT:    ld1 { v22.b }[1], [x8]
-; CHECK-NEXT:    add x8, sp, #944
-; CHECK-NEXT:    add x10, sp, #888
-; CHECK-NEXT:    ld1 { v21.b }[4], [x9]
-; CHECK-NEXT:    add x9, sp, #752
-; CHECK-NEXT:    ld1 { v23.b }[1], [x8]
-; CHECK-NEXT:    ld1 { v24.b }[1], [x9]
-; CHECK-NEXT:    add x8, sp, #712
-; CHECK-NEXT:    add x9, sp, #760
-; CHECK-NEXT:    ld1 { v22.b }[2], [x10]
-; CHECK-NEXT:    add x10, sp, #952
-; CHECK-NEXT:    mov v19.s[0], v25.s[0]
-; CHECK-NEXT:    ldr b25, [sp, #808]
-; CHECK-NEXT:    ld1 { v23.b }[2], [x10]
-; CHECK-NEXT:    ld1 { v21.b }[5], [x8]
-; CHECK-NEXT:    ld1 { v24.b }[2], [x9]
-; CHECK-NEXT:    add x8, sp, #816
-; CHECK-NEXT:    add x9, sp, #896
-; CHECK-NEXT:    ld1 { v25.b }[1], [x8]
-; CHECK-NEXT:    add x8, sp, #960
-; CHECK-NEXT:    ld1 { v22.b }[3], [x9]
-; CHECK-NEXT:    add x9, sp, #768
-; CHECK-NEXT:    ld1 { v23.b }[3], [x8]
-; CHECK-NEXT:    add x10, sp, #904
-; CHECK-NEXT:    ld1 { v24.b }[3], [x9]
-; CHECK-NEXT:    add x9, sp, #824
-; CHECK-NEXT:    add x8, sp, #720
-; CHECK-NEXT:    ld1 { v25.b }[2], [x9]
-; CHECK-NEXT:    add x9, sp, #968
-; CHECK-NEXT:    ld1 { v22.b }[4], [x10]
-; CHECK-NEXT:    add x10, sp, #776
-; CHECK-NEXT:    ld1 { v23.b }[4], [x9]
-; CHECK-NEXT:    ld1 { v21.b }[6], [x8]
-; CHECK-NEXT:    ld1 { v24.b }[4], [x10]
-; CHECK-NEXT:    add x8, sp, #832
-; CHECK-NEXT:    add x9, sp, #912
-; CHECK-NEXT:    ld1 { v25.b }[3], [x8]
-; CHECK-NEXT:    add x8, sp, #976
-; CHECK-NEXT:    ld1 { v22.b }[5], [x9]
-; CHECK-NEXT:    add x9, sp, #784
-; CHECK-NEXT:    ld1 { v23.b }[5], [x8]
-; CHECK-NEXT:    add x10, sp, #920
-; CHECK-NEXT:    ld1 { v24.b }[5], [x9]
-; CHECK-NEXT:    add x9, sp, #840
-; CHECK-NEXT:    add x8, sp, #728
-; CHECK-NEXT:    ld1 { v25.b }[4], [x9]
-; CHECK-NEXT:    add x9, sp, #984
-; CHECK-NEXT:    ld1 { v22.b }[6], [x10]
-; CHECK-NEXT:    add x10, sp, #792
-; CHECK-NEXT:    ld1 { v23.b }[6], [x9]
-; CHECK-NEXT:    ld1 { v21.b }[7], [x8]
-; CHECK-NEXT:    ld1 { v24.b }[6], [x10]
-; CHECK-NEXT:    add x8, sp, #848
-; CHECK-NEXT:    add x9, sp, #928
-; CHECK-NEXT:    ld1 { v25.b }[5], [x8]
-; CHECK-NEXT:    add x12, sp, #72
-; CHECK-NEXT:    add x8, sp, #992
-; CHECK-NEXT:    ld1 { v22.b }[7], [x9]
-; CHECK-NEXT:    add x9, sp, #800
-; CHECK-NEXT:    ld1 { v3.b }[7], [x12]
-; CHECK-NEXT:    ld1 { v23.b }[7], [x8]
-; CHECK-NEXT:    add x8, sp, #592
-; CHECK-NEXT:    ld1 { v24.b }[7], [x9]
-; CHECK-NEXT:    add x9, sp, #856
-; CHECK-NEXT:    ld1 { v7.b }[6], [x8]
-; CHECK-NEXT:    add x11, sp, #200
-; CHECK-NEXT:    ld1 { v25.b }[6], [x9]
-; CHECK-NEXT:    sshll v3.8h, v3.8b, #0
-; CHECK-NEXT:    sshll v5.8h, v5.8b, #0
-; CHECK-NEXT:    sshll v4.8h, v4.8b, #0
+; CHECK-NEXT:    ld1 { v5.b }[6], [x9]
+; CHECK-NEXT:    add x10, sp, #440
+; CHECK-NEXT:    add x8, sp, #400
+; CHECK-NEXT:    sshll v16.8h, v6.8b, #0
+; CHECK-NEXT:    sshll v6.8h, v4.8b, #0
+; CHECK-NEXT:    ld1 { v3.b }[4], [x10]
+; CHECK-NEXT:    ld1 { v2.b }[7], [x8]
+; CHECK-NEXT:    add x8, sp, #272
+; CHECK-NEXT:    add x9, sp, #328
+; CHECK-NEXT:    ldr b4, [sp, #608]
+; CHECK-NEXT:    ld1 { v7.b }[6], [x9]
+; CHECK-NEXT:    ld1 { v5.b }[7], [x8]
+; CHECK-NEXT:    add x8, sp, #616
+; CHECK-NEXT:    add x10, sp, #448
+; CHECK-NEXT:    ld1 { v4.b }[1], [x8]
+; CHECK-NEXT:    ldr b18, [sp, #480]
+; CHECK-NEXT:    ld1 { v3.b }[5], [x10]
+; CHECK-NEXT:    add x9, sp, #336
+; CHECK-NEXT:    ldr b17, [sp, #472]
+; CHECK-NEXT:    add x8, sp, #488
+; CHECK-NEXT:    ld1 { v7.b }[7], [x9]
+; CHECK-NEXT:    add x9, sp, #624
+; CHECK-NEXT:    ld1 { v18.b }[1], [x8]
+; CHECK-NEXT:    sshll v22.8h, v5.8b, #0
+; CHECK-NEXT:    add x8, sp, #456
+; CHECK-NEXT:    sshll v5.8h, v17.8b, #0
+; CHECK-NEXT:    ld1 { v4.b }[2], [x9]
+; CHECK-NEXT:    ld1 { v3.b }[6], [x8]
+; CHECK-NEXT:    add x8, sp, #496
+; CHECK-NEXT:    sshll v17.8h, v7.8b, #0
+; CHECK-NEXT:    add x10, sp, #632
+; CHECK-NEXT:    ld1 { v18.b }[2], [x8]
+; CHECK-NEXT:    add x9, sp, #464
+; CHECK-NEXT:    add x8, sp, #504
+; CHECK-NEXT:    smull v19.4s, v6.4h, v5.4h
+; CHECK-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-NEXT:    ld1 { v4.b }[3], [x10]
+; CHECK-NEXT:    ld1 { v3.b }[7], [x9]
+; CHECK-NEXT:    smull v6.4s, v16.4h, v17.4h
+; CHECK-NEXT:    add x9, sp, #640
+; CHECK-NEXT:    ld1 { v18.b }[3], [x8]
+; CHECK-NEXT:    smull2 v16.4s, v16.8h, v17.8h
+; CHECK-NEXT:    ldr b17, [sp, #672]
+; CHECK-NEXT:    ld1 { v4.b }[4], [x9]
+; CHECK-NEXT:    add x9, sp, #680
+; CHECK-NEXT:    ldr b20, [sp, #544]
+; CHECK-NEXT:    mov v5.s[0], v19.s[0]
+; CHECK-NEXT:    add x8, sp, #512
+; CHECK-NEXT:    ld1 { v17.b }[1], [x9]
+; CHECK-NEXT:    add x11, sp, #552
+; CHECK-NEXT:    add x10, sp, #648
+; CHECK-NEXT:    ld1 { v18.b }[4], [x8]
+; CHECK-NEXT:    ld1 { v20.b }[1], [x11]
+; CHECK-NEXT:    ld1 { v4.b }[5], [x10]
+; CHECK-NEXT:    add x10, sp, #688
+; CHECK-NEXT:    add x9, sp, #520
+; CHECK-NEXT:    ld1 { v17.b }[2], [x10]
+; CHECK-NEXT:    add x10, sp, #560
+; CHECK-NEXT:    smull2 v7.4s, v21.8h, v22.8h
+; CHECK-NEXT:    ld1 { v18.b }[5], [x9]
+; CHECK-NEXT:    smlal v5.4s, v21.4h, v22.4h
+; CHECK-NEXT:    ld1 { v20.b }[2], [x10]
+; CHECK-NEXT:    ldr b21, [sp, #736]
+; CHECK-NEXT:    ldr b22, [sp, #1000]
+; CHECK-NEXT:    add x8, sp, #656
+; CHECK-NEXT:    add x9, sp, #696
+; CHECK-NEXT:    add x11, sp, #568
+; CHECK-NEXT:    ld1 { v4.b }[6], [x8]
+; CHECK-NEXT:    add x8, sp, #528
+; CHECK-NEXT:    ld1 { v17.b }[3], [x9]
 ; CHECK-NEXT:    sshll v21.8h, v21.8b, #0
+; CHECK-NEXT:    sshll v24.8h, v22.8b, #0
+; CHECK-NEXT:    ld1 { v18.b }[6], [x8]
+; CHECK-NEXT:    ld1 { v20.b }[3], [x11]
+; CHECK-NEXT:    add x10, sp, #704
+; CHECK-NEXT:    ldr b23, [sp, #808]
+; CHECK-NEXT:    movi v19.2d, #0000000000000000
+; CHECK-NEXT:    add x9, sp, #536
+; CHECK-NEXT:    ld1 { v17.b }[4], [x10]
+; CHECK-NEXT:    add x10, sp, #576
+; CHECK-NEXT:    ldr b22, [sp, #744]
+; CHECK-NEXT:    add x11, sp, #816
+; CHECK-NEXT:    smull v24.4s, v21.4h, v24.4h
+; CHECK-NEXT:    ld1 { v18.b }[7], [x9]
+; CHECK-NEXT:    ld1 { v20.b }[4], [x10]
+; CHECK-NEXT:    add x10, sp, #752
+; CHECK-NEXT:    ld1 { v23.b }[1], [x11]
+; CHECK-NEXT:    add x9, sp, #712
+; CHECK-NEXT:    ld1 { v22.b }[1], [x10]
+; CHECK-NEXT:    ld1 { v17.b }[5], [x9]
+; CHECK-NEXT:    add x9, sp, #584
+; CHECK-NEXT:    add x10, sp, #824
+; CHECK-NEXT:    sshll v21.8h, v18.8b, #0
+; CHECK-NEXT:    ld1 { v20.b }[5], [x9]
+; CHECK-NEXT:    add x9, sp, #760
+; CHECK-NEXT:    ldr b18, [sp, #936]
+; CHECK-NEXT:    ld1 { v23.b }[2], [x10]
+; CHECK-NEXT:    mov v19.s[0], v24.s[0]
+; CHECK-NEXT:    ldr b24, [sp, #872]
+; CHECK-NEXT:    ld1 { v22.b }[2], [x9]
+; CHECK-NEXT:    add x9, sp, #944
+; CHECK-NEXT:    add x11, sp, #880
+; CHECK-NEXT:    add x10, sp, #768
+; CHECK-NEXT:    ld1 { v18.b }[1], [x9]
+; CHECK-NEXT:    add x9, sp, #832
+; CHECK-NEXT:    ld1 { v24.b }[1], [x11]
+; CHECK-NEXT:    ld1 { v23.b }[3], [x9]
+; CHECK-NEXT:    ld1 { v22.b }[3], [x10]
+; CHECK-NEXT:    add x10, sp, #952
+; CHECK-NEXT:    add x12, sp, #888
+; CHECK-NEXT:    add x9, sp, #592
+; CHECK-NEXT:    add x11, sp, #776
+; CHECK-NEXT:    ld1 { v18.b }[2], [x10]
+; CHECK-NEXT:    add x10, sp, #840
+; CHECK-NEXT:    ld1 { v24.b }[2], [x12]
+; CHECK-NEXT:    ld1 { v23.b }[4], [x10]
+; CHECK-NEXT:    ld1 { v22.b }[4], [x11]
+; CHECK-NEXT:    ld1 { v20.b }[6], [x9]
+; CHECK-NEXT:    add x9, sp, #960
+; CHECK-NEXT:    add x11, sp, #896
+; CHECK-NEXT:    add x10, sp, #784
+; CHECK-NEXT:    ld1 { v18.b }[3], [x9]
+; CHECK-NEXT:    add x9, sp, #848
+; CHECK-NEXT:    ld1 { v24.b }[3], [x11]
+; CHECK-NEXT:    ld1 { v23.b }[5], [x9]
+; CHECK-NEXT:    ld1 { v22.b }[5], [x10]
+; CHECK-NEXT:    add x10, sp, #968
+; CHECK-NEXT:    add x12, sp, #904
+; CHECK-NEXT:    add x9, sp, #600
+; CHECK-NEXT:    add x11, sp, #792
+; CHECK-NEXT:    ld1 { v18.b }[4], [x10]
+; CHECK-NEXT:    add x10, sp, #856
+; CHECK-NEXT:    ld1 { v24.b }[4], [x12]
+; CHECK-NEXT:    ld1 { v23.b }[6], [x10]
+; CHECK-NEXT:    ld1 { v22.b }[6], [x11]
+; CHECK-NEXT:    ld1 { v20.b }[7], [x9]
+; CHECK-NEXT:    add x9, sp, #976
+; CHECK-NEXT:    add x11, sp, #912
+; CHECK-NEXT:    add x10, sp, #800
+; CHECK-NEXT:    ld1 { v18.b }[5], [x9]
+; CHECK-NEXT:    add x9, sp, #864
+; CHECK-NEXT:    ld1 { v24.b }[5], [x11]
+; CHECK-NEXT:    ld1 { v23.b }[7], [x9]
+; CHECK-NEXT:    add x9, sp, #720
+; CHECK-NEXT:    ld1 { v22.b }[7], [x10]
+; CHECK-NEXT:    add x10, sp, #984
+; CHECK-NEXT:    ld1 { v17.b }[6], [x9]
+; CHECK-NEXT:    add x9, sp, #920
+; CHECK-NEXT:    ld1 { v18.b }[6], [x10]
+; CHECK-NEXT:    ld1 { v24.b }[6], [x9]
+; CHECK-NEXT:    add x10, sp, #728
+; CHECK-NEXT:    add x8, sp, #664
+; CHECK-NEXT:    sshll v20.8h, v20.8b, #0
 ; CHECK-NEXT:    sshll v22.8h, v22.8b, #0
 ; CHECK-NEXT:    sshll v23.8h, v23.8b, #0
-; CHECK-NEXT:    add x8, sp, #600
-; CHECK-NEXT:    sshll v24.8h, v24.8b, #0
-; CHECK-NEXT:    add x9, sp, #864
-; CHECK-NEXT:    ld1 { v2.b }[7], [x11]
-; CHECK-NEXT:    ld1 { v7.b }[7], [x8]
-; CHECK-NEXT:    ld1 { v25.b }[7], [x9]
-; CHECK-NEXT:    smull v16.4s, v3.4h, v5.4h
-; CHECK-NEXT:    smull2 v3.4s, v3.8h, v5.8h
-; CHECK-NEXT:    smull v5.4s, v21.4h, v23.4h
-; CHECK-NEXT:    smull2 v21.4s, v21.8h, v23.8h
-; CHECK-NEXT:    smull2 v23.4s, v20.8h, v22.8h
-; CHECK-NEXT:    smlal v19.4s, v4.4h, v24.4h
-; CHECK-NEXT:    sshll v2.8h, v2.8b, #0
-; CHECK-NEXT:    sshll v17.8h, v17.8b, #0
+; CHECK-NEXT:    add x9, sp, #992
+; CHECK-NEXT:    ld1 { v17.b }[7], [x10]
+; CHECK-NEXT:    add x10, sp, #928
+; CHECK-NEXT:    ld1 { v18.b }[7], [x9]
+; CHECK-NEXT:    ld1 { v4.b }[7], [x8]
+; CHECK-NEXT:    ld1 { v24.b }[7], [x10]
+; CHECK-NEXT:    smlal v19.4s, v21.4h, v22.4h
+; CHECK-NEXT:    smull2 v21.4s, v21.8h, v22.8h
+; CHECK-NEXT:    smull v22.4s, v20.4h, v23.4h
+; CHECK-NEXT:    smull2 v20.4s, v20.8h, v23.8h
 ; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-NEXT:    sshll v7.8h, v7.8b, #0
-; CHECK-NEXT:    sshll v25.8h, v25.8b, #0
-; CHECK-NEXT:    smlal2 v3.4s, v2.8h, v17.8h
-; CHECK-NEXT:    smlal v16.4s, v2.4h, v17.4h
-; CHECK-NEXT:    smlal2 v23.4s, v4.8h, v24.8h
-; CHECK-NEXT:    smlal2 v18.4s, v0.8h, v1.8h
-; CHECK-NEXT:    smlal v6.4s, v0.4h, v1.4h
-; CHECK-NEXT:    smlal v19.4s, v20.4h, v22.4h
-; CHECK-NEXT:    smlal2 v21.4s, v7.8h, v25.8h
-; CHECK-NEXT:    smlal v5.4s, v7.4h, v25.4h
-; CHECK-NEXT:    add v0.4s, v18.4s, v3.4s
-; CHECK-NEXT:    add v1.4s, v6.4s, v16.4s
-; CHECK-NEXT:    add v2.4s, v23.4s, v21.4s
-; CHECK-NEXT:    add v3.4s, v19.4s, v5.4s
+; CHECK-NEXT:    sshll v3.8h, v3.8b, #0
+; CHECK-NEXT:    sshll v2.8h, v2.8b, #0
+; CHECK-NEXT:    sshll v17.8h, v17.8b, #0
+; CHECK-NEXT:    sshll v18.8h, v18.8b, #0
+; CHECK-NEXT:    sshll v4.8h, v4.8b, #0
+; CHECK-NEXT:    sshll v23.8h, v24.8b, #0
+; CHECK-NEXT:    smlal2 v16.4s, v1.8h, v3.8h
+; CHECK-NEXT:    smlal v6.4s, v1.4h, v3.4h
+; CHECK-NEXT:    smlal2 v7.4s, v0.8h, v2.8h
+; CHECK-NEXT:    smlal v5.4s, v0.4h, v2.4h
+; CHECK-NEXT:    smlal2 v20.4s, v17.8h, v18.8h
+; CHECK-NEXT:    smlal v22.4s, v17.4h, v18.4h
+; CHECK-NEXT:    smlal2 v21.4s, v4.8h, v23.8h
+; CHECK-NEXT:    smlal v19.4s, v4.4h, v23.4h
+; CHECK-NEXT:    add v0.4s, v7.4s, v16.4s
+; CHECK-NEXT:    add v1.4s, v5.4s, v6.4s
+; CHECK-NEXT:    add v2.4s, v21.4s, v20.4s
+; CHECK-NEXT:    add v3.4s, v19.4s, v22.4s
 ; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    add v1.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
@@ -2050,10 +2050,10 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-NEXT:    ld1 { v3.b }[2], [x10]
 ; CHECK-NEXT:    ld1 { v5.b }[2], [x8]
 ; CHECK-NEXT:    add x8, sp, #176
-; CHECK-NEXT:    ldr b6, [sp, #544]
+; CHECK-NEXT:    ldr b6, [sp, #672]
 ; CHECK-NEXT:    ld1 { v0.b }[4], [x12]
-; CHECK-NEXT:    add x14, sp, #552
-; CHECK-NEXT:    ldr b7, [sp, #672]
+; CHECK-NEXT:    add x14, sp, #680
+; CHECK-NEXT:    ldr b7, [sp, #544]
 ; CHECK-NEXT:    ld1 { v2.b }[4], [x8]
 ; CHECK-NEXT:    add x13, sp, #40
 ; CHECK-NEXT:    ld1 { v6.b }[1], [x14]
@@ -2061,7 +2061,7 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-NEXT:    add x11, sp, #128
 ; CHECK-NEXT:    ld1 { v3.b }[3], [x13]
 ; CHECK-NEXT:    ld1 { v0.b }[5], [x9]
-; CHECK-NEXT:    add x9, sp, #680
+; CHECK-NEXT:    add x9, sp, #552
 ; CHECK-NEXT:    add x13, sp, #184
 ; CHECK-NEXT:    ld1 { v7.b }[1], [x9]
 ; CHECK-NEXT:    ld1 { v2.b }[5], [x13]
@@ -2070,26 +2070,26 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-NEXT:    ld1 { v4.b }[2], [x13]
 ; CHECK-NEXT:    add x10, sp, #136
 ; CHECK-NEXT:    ld1 { v0.b }[6], [x11]
-; CHECK-NEXT:    add x11, sp, #560
+; CHECK-NEXT:    add x11, sp, #688
 ; CHECK-NEXT:    ld1 { v5.b }[3], [x15]
 ; CHECK-NEXT:    ld1 { v6.b }[2], [x11]
-; CHECK-NEXT:    add x11, sp, #688
+; CHECK-NEXT:    add x11, sp, #560
 ; CHECK-NEXT:    mov v1.b[3], w3
 ; CHECK-NEXT:    ld1 { v7.b }[2], [x11]
 ; CHECK-NEXT:    add x9, sp, #632
 ; CHECK-NEXT:    add x11, sp, #512
 ; CHECK-NEXT:    ld1 { v0.b }[7], [x10]
 ; CHECK-NEXT:    ld1 { v4.b }[3], [x9]
-; CHECK-NEXT:    add x9, sp, #568
-; CHECK-NEXT:    add x10, sp, #696
+; CHECK-NEXT:    add x9, sp, #696
+; CHECK-NEXT:    add x10, sp, #568
 ; CHECK-NEXT:    ld1 { v6.b }[3], [x9]
 ; CHECK-NEXT:    ld1 { v5.b }[4], [x11]
 ; CHECK-NEXT:    ld1 { v7.b }[3], [x10]
 ; CHECK-NEXT:    add x9, sp, #640
 ; CHECK-NEXT:    mov v1.b[4], w4
 ; CHECK-NEXT:    ld1 { v4.b }[4], [x9]
-; CHECK-NEXT:    add x9, sp, #576
-; CHECK-NEXT:    add x10, sp, #704
+; CHECK-NEXT:    add x9, sp, #704
+; CHECK-NEXT:    add x10, sp, #576
 ; CHECK-NEXT:    add x11, sp, #520
 ; CHECK-NEXT:    ld1 { v6.b }[4], [x9]
 ; CHECK-NEXT:    ldr b18, [sp, #736]
@@ -2101,8 +2101,8 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-NEXT:    add x9, sp, #648
 ; CHECK-NEXT:    ld1 { v3.b }[4], [x8]
 ; CHECK-NEXT:    add x10, sp, #528
-; CHECK-NEXT:    add x11, sp, #584
-; CHECK-NEXT:    add x12, sp, #712
+; CHECK-NEXT:    add x11, sp, #712
+; CHECK-NEXT:    add x12, sp, #584
 ; CHECK-NEXT:    sshll v18.8h, v18.8b, #0
 ; CHECK-NEXT:    mov v1.b[5], w5
 ; CHECK-NEXT:    ld1 { v6.b }[5], [x11]
@@ -2114,8 +2114,8 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-NEXT:    ld1 { v3.b }[5], [x14]
 ; CHECK-NEXT:    add x9, sp, #656
 ; CHECK-NEXT:    add x10, sp, #536
-; CHECK-NEXT:    add x11, sp, #592
-; CHECK-NEXT:    add x12, sp, #720
+; CHECK-NEXT:    add x11, sp, #720
+; CHECK-NEXT:    add x12, sp, #592
 ; CHECK-NEXT:    sshll v18.4s, v18.4h, #0
 ; CHECK-NEXT:    ldr b16, [sp, #208]
 ; CHECK-NEXT:    ld1 { v6.b }[6], [x11]
@@ -2127,8 +2127,8 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-NEXT:    sshll v16.8h, v16.8b, #0
 ; CHECK-NEXT:    ld1 { v3.b }[6], [x8]
 ; CHECK-NEXT:    add x8, sp, #664
-; CHECK-NEXT:    add x9, sp, #600
-; CHECK-NEXT:    add x10, sp, #728
+; CHECK-NEXT:    add x9, sp, #728
+; CHECK-NEXT:    add x10, sp, #600
 ; CHECK-NEXT:    mov v17.s[0], v18.s[0]
 ; CHECK-NEXT:    ld1 { v6.b }[7], [x9]
 ; CHECK-NEXT:    ld1 { v7.b }[7], [x10]
@@ -2151,7 +2151,7 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-NEXT:    sshll v2.8h, v2.8b, #0
 ; CHECK-NEXT:    sshll v3.8h, v3.8b, #0
 ; CHECK-NEXT:    saddl2 v16.4s, v7.8h, v6.8h
-; CHECK-NEXT:    saddl2 v5.4s, v4.8h, v5.8h
+; CHECK-NEXT:    saddl2 v5.4s, v5.8h, v4.8h
 ; CHECK-NEXT:    saddl v6.4s, v7.4h, v6.4h
 ; CHECK-NEXT:    saddw v4.4s, v17.4s, v4.4h
 ; CHECK-NEXT:    saddl2 v17.4s, v1.8h, v0.8h

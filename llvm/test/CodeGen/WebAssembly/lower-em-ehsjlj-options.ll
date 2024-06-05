@@ -1,7 +1,6 @@
 ; RUN: llc < %s -enable-emscripten-cxx-exceptions | FileCheck %s --check-prefix=EH
 ; RUN: llc < %s -enable-emscripten-sjlj | FileCheck %s --check-prefix=SJLJ
 ; RUN: llc < %s | FileCheck %s --check-prefix=NONE
-; RUN: not --crash llc < %s -enable-emscripten-cxx-exceptions -exception-model=wasm 2>&1 | FileCheck %s --check-prefix=WASM-EH-EM-EH
 
 target triple = "wasm32-unknown-unknown"
 
@@ -97,5 +96,3 @@ declare void @free(ptr)
 attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
-
-; WASM-EH-EM-EH: LLVM ERROR: -exception-model=wasm not allowed with -enable-emscripten-cxx-exceptions

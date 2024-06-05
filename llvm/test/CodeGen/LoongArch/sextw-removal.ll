@@ -257,8 +257,7 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    addi.w $a0, $fp, 0
 ; CHECK-NEXT:    bl %plt(baz)
-; CHECK-NEXT:    bstrpick.d $s0, $a0, 31, 0
-; CHECK-NEXT:    move $a0, $s0
+; CHECK-NEXT:    move $s0, $a0
 ; CHECK-NEXT:    bl %plt(__fixsfsi)
 ; CHECK-NEXT:    move $fp, $a0
 ; CHECK-NEXT:    move $a0, $s0
@@ -284,8 +283,7 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NORMV-NEXT:    addi.w $a0, $fp, 0
 ; NORMV-NEXT:    bl %plt(baz)
-; NORMV-NEXT:    bstrpick.d $s0, $a0, 31, 0
-; NORMV-NEXT:    move $a0, $s0
+; NORMV-NEXT:    move $s0, $a0
 ; NORMV-NEXT:    bl %plt(__fixsfsi)
 ; NORMV-NEXT:    move $fp, $a0
 ; NORMV-NEXT:    move $a0, $s0
@@ -562,7 +560,6 @@ define void @test10(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    addi.w $a0, $fp, 0
 ; CHECK-NEXT:    bl %plt(baz)
 ; CHECK-NEXT:    move $fp, $a0
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; CHECK-NEXT:    move $a1, $zero
 ; CHECK-NEXT:    bl %plt(__nesf2)
 ; CHECK-NEXT:    bnez $a0, .LBB9_1
@@ -584,7 +581,6 @@ define void @test10(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    addi.w $a0, $fp, 0
 ; NORMV-NEXT:    bl %plt(baz)
 ; NORMV-NEXT:    move $fp, $a0
-; NORMV-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; NORMV-NEXT:    move $a1, $zero
 ; NORMV-NEXT:    bl %plt(__nesf2)
 ; NORMV-NEXT:    bnez $a0, .LBB9_1
@@ -797,7 +793,9 @@ define signext i32 @test14(i32 signext %0, i32 signext %1) {
 ; NORMV-NEXT:    blt $a4, $a5, .LBB13_5
 ; NORMV-NEXT:  # %bb.3: # in Loop: Header=BB13_2 Depth=1
 ; NORMV-NEXT:    add.d $a0, $a3, $a0
-; NORMV-NEXT:    addi.w $a3, $a3, 1
+; NORMV-NEXT:    addi.d $a3, $a3, 1
+; NORMV-NEXT:    addi.w $a3, $a3, 0
+; NORMV-NEXT:    addi.d $a0, $a0, 0
 ; NORMV-NEXT:    blt $a3, $a1, .LBB13_2
 ; NORMV-NEXT:  .LBB13_4:
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
@@ -865,7 +863,9 @@ define signext i32 @test14b(i32 %0, i32 signext %1) {
 ; NORMV-NEXT:    blt $a4, $a5, .LBB14_5
 ; NORMV-NEXT:  # %bb.3: # in Loop: Header=BB14_2 Depth=1
 ; NORMV-NEXT:    add.d $a0, $a3, $a0
-; NORMV-NEXT:    addi.w $a3, $a3, 1
+; NORMV-NEXT:    addi.d $a3, $a3, 1
+; NORMV-NEXT:    addi.w $a3, $a3, 0
+; NORMV-NEXT:    addi.d $a0, $a0, 0
 ; NORMV-NEXT:    blt $a3, $a1, .LBB14_2
 ; NORMV-NEXT:  .LBB14_4:
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
@@ -933,7 +933,9 @@ define signext i32 @test14c(i32 zeroext %0, i32 signext %1) {
 ; NORMV-NEXT:    blt $a4, $a5, .LBB15_5
 ; NORMV-NEXT:  # %bb.3: # in Loop: Header=BB15_2 Depth=1
 ; NORMV-NEXT:    add.d $a0, $a3, $a0
-; NORMV-NEXT:    addi.w $a3, $a3, 1
+; NORMV-NEXT:    addi.d $a3, $a3, 1
+; NORMV-NEXT:    addi.w $a3, $a3, 0
+; NORMV-NEXT:    addi.d $a0, $a0, 0
 ; NORMV-NEXT:    blt $a3, $a1, .LBB15_2
 ; NORMV-NEXT:  .LBB15_4:
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
@@ -1000,7 +1002,9 @@ define signext i32 @test14d(i31 zeroext %0, i32 signext %1) {
 ; NORMV-NEXT:    blt $a4, $a5, .LBB16_5
 ; NORMV-NEXT:  # %bb.3: # in Loop: Header=BB16_2 Depth=1
 ; NORMV-NEXT:    add.d $a0, $a3, $a0
-; NORMV-NEXT:    addi.w $a3, $a3, 1
+; NORMV-NEXT:    addi.d $a3, $a3, 1
+; NORMV-NEXT:    addi.w $a3, $a3, 0
+; NORMV-NEXT:    addi.d $a0, $a0, 0
 ; NORMV-NEXT:    blt $a3, $a1, .LBB16_2
 ; NORMV-NEXT:  .LBB16_4:
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
@@ -1126,8 +1130,8 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:    masknez $a1, $a1, $a2
 ; CHECK-NEXT:    maskeqz $a2, $a4, $a2
 ; CHECK-NEXT:    or $a1, $a2, $a1
-; CHECK-NEXT:    srai.d $a0, $a0, 31
 ; CHECK-NEXT:    nor $a0, $a0, $zero
+; CHECK-NEXT:    srli.d $a0, $a0, 31
 ; CHECK-NEXT:    add.w $a0, $a1, $a0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB18_2:
@@ -1180,13 +1184,13 @@ define signext i32 @bug(i32 signext %x) {
 ; NORMV-NEXT:    masknez $a1, $a1, $a2
 ; NORMV-NEXT:    maskeqz $a2, $a4, $a2
 ; NORMV-NEXT:    or $a1, $a2, $a1
-; NORMV-NEXT:    srai.d $a0, $a0, 31
 ; NORMV-NEXT:    nor $a0, $a0, $zero
+; NORMV-NEXT:    srli.d $a0, $a0, 31
 ; NORMV-NEXT:    add.d $a0, $a1, $a0
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    ret
 ; NORMV-NEXT:  .LBB18_2:
-; NORMV-NEXT:    addi.w $a0, $zero, 0
+; NORMV-NEXT:    move $a0, $zero
 ; NORMV-NEXT:    ret
 entry:
   %tobool.not = icmp eq i32 %x, 0
@@ -1349,7 +1353,7 @@ declare zeroext i16 @bat(i32 signext)
 define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 signext %3, i32 signext %4) {
 ; CHECK-LABEL: sextw_sh2add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    alsl.d $a2, $a2, $a3, 2
+; CHECK-NEXT:    alsl.w $a2, $a2, $a3, 2
 ; CHECK-NEXT:    beqz $a0, .LBB21_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    st.w $a2, $a1, 0
@@ -1359,12 +1363,13 @@ define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 sign
 ;
 ; NORMV-LABEL: sextw_sh2add:
 ; NORMV:       # %bb.0:
-; NORMV-NEXT:    alsl.d $a2, $a2, $a3, 2
+; NORMV-NEXT:    alsl.w $a2, $a2, $a3, 2
 ; NORMV-NEXT:    beqz $a0, .LBB21_2
 ; NORMV-NEXT:  # %bb.1:
 ; NORMV-NEXT:    st.w $a2, $a1, 0
 ; NORMV-NEXT:  .LBB21_2:
-; NORMV-NEXT:    add.w $a0, $a2, $a4
+; NORMV-NEXT:    add.d $a0, $a2, $a4
+; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    ret
   %6 = shl i32 %2, 2
   %7 = add i32 %6, %3
