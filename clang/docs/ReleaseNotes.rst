@@ -214,6 +214,9 @@ C++23 Feature Support
 - Added a ``__reference_converts_from_temporary`` builtin, completing the necessary compiler support for
   `P2255R2: Type trait to determine if a reference binds to a temporary <https://wg21.link/P2255R2>`_.
 
+- Implemented `P2797R0: Static and explicit object member functions with the same parameter-type-lists <https://wg21.link/P2797R0>`_.
+  This completes the support for "deducing this".
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
