@@ -431,8 +431,8 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
       // and type of a callsite probe. This gets rid of the dependency on
       // plumbing a customized metadata through the codegen pipeline.
       uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
-          Index, Type, 0,
-          PseudoProbeDwarfDiscriminator::FullDistributionFactor);
+          Index, Type, 0, PseudoProbeDwarfDiscriminator::FullDistributionFactor,
+          DIL->getBaseDiscriminator());
       DIL = DIL->cloneWithDiscriminator(V);
       Call->setDebugLoc(DIL);
     }
