@@ -37,5 +37,5 @@ add_entrypoint_object(
     libc.src.errno.errno
     libc.src.fcntl.fcntl
     libc.src.stdio.fseek
-    libc.src.__support.File.linux.file
+    libc.src.__support.File.platform_file
 )
