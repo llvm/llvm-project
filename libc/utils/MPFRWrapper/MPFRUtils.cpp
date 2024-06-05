@@ -543,14 +543,8 @@ public:
     // If the control reaches here, it means that this number and input are
     // of the same sign but different exponent. In such a case, ULP error is
     // calculated as sum of two parts.
-#ifdef LIBC_TYPES_HAS_FLOAT16
-    // TODO: This will no longer be needed once std::abs supports float16.
-    using U = cpp::conditional_t<cpp::is_same_v<T, float16>, float, T>;
-#else
-    using U = T;
-#endif
-    thisAsT = std::abs(static_cast<U>(thisAsT));
-    input = std::abs(static_cast<U>(input));
+    thisAsT = FPBits<T>(thisAsT).abs().get_val();
+    input = FPBits<T>(input).abs().get_val();
     T min = thisAsT > input ? input : thisAsT;
     T max = thisAsT > input ? thisAsT : input;
     int minExponent = FPBits<T>(min).get_exponent();
