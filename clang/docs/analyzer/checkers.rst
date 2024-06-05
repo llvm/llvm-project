@@ -941,7 +941,7 @@ Finds implementation-defined behavior in UNIX/Posix functions.
 .. _optin-taint-TaintedAlloc:
 
 optin.taint.TaintedAlloc (C, C++)
-"""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""
 
 This checker warns for cases when the ``size`` parameter of the ``malloc`` ,
 ``calloc``, ``realloc``, ``alloca`` or the size parameter of the
