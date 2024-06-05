@@ -429,6 +429,9 @@ private:
   FileManager &FileMgr;
   const PCHContainerReader &PCHContainerRdr;
   DiagnosticsEngine &Diags;
+  // Sema has duplicate logic, but SemaObj can sometimes be null so ASTReader
+  // has its own version.
+  bool WarnedStackExhausted = false;
 
   /// The semantic analysis object that will be processing the
   /// AST files and the translation unit that uses it.
@@ -601,11 +604,11 @@ private:
 
   /// An array of lexical contents of a declaration context, as a sequence of
   /// Decl::Kind, DeclID pairs.
-  using unalighed_decl_id_t =
+  using unaligned_decl_id_t =
       llvm::support::detail::packed_endian_specific_integral<
           serialization::DeclID, llvm::endianness::native,
           llvm::support::unaligned>;
-  using LexicalContents = ArrayRef<unalighed_decl_id_t>;
+  using LexicalContents = ArrayRef<unaligned_decl_id_t>;
 
   /// Map from a DeclContext to its lexical contents.
   llvm::DenseMap<const DeclContext*, std::pair<ModuleFile*, LexicalContents>>
@@ -667,7 +670,7 @@ private:
   std::vector<IdentifierInfo *> IdentifiersLoaded;
 
   using GlobalIdentifierMapType =
-      ContinuousRangeMap<serialization::IdentID, ModuleFile *, 4>;
+      ContinuousRangeMap<serialization::IdentifierID, ModuleFile *, 4>;
 
   /// Mapping from global identifier IDs to the module in which the
   /// identifier resides along with the offset that should be added to the
@@ -2135,6 +2138,8 @@ public:
   /// Report a diagnostic.
   DiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID) const;
 
+  void warnStackExhausted(SourceLocation Loc);
+
   IdentifierInfo *DecodeIdentifierInfo(serialization::IdentifierID ID);
 
   IdentifierInfo *readIdentifier(ModuleFile &M, const RecordData &Record,
@@ -2246,7 +2251,7 @@ public:
 
     auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw, Seq);
     ModuleFile *OwningModuleFile =
-        ModuleFileIndex == 0 ? &MF : MF.DependentModules[ModuleFileIndex - 1];
+        ModuleFileIndex == 0 ? &MF : MF.TransitiveImports[ModuleFileIndex - 1];
 
     assert(!SourceMgr.isLoadedSourceLocation(Loc) &&
            "Run out source location space");

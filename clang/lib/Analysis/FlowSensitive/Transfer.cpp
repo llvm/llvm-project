@@ -68,6 +68,14 @@ static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
     if (auto *RHSBool = dyn_cast_or_null<BoolValue>(RHSValue))
       return Env.makeIff(*LHSBool, *RHSBool);
 
+  if (auto *LHSPtr = dyn_cast_or_null<PointerValue>(LHSValue))
+    if (auto *RHSPtr = dyn_cast_or_null<PointerValue>(RHSValue))
+      // If the storage locations are the same, the pointers definitely compare
+      // the same. If the storage locations are different, they may still alias,
+      // so we fall through to the case below that returns an atom.
+      if (&LHSPtr->getPointeeLoc() == &RHSPtr->getPointeeLoc())
+        return Env.getBoolLiteralValue(true);
+
   return Env.makeAtomicBoolValue();
 }
 
@@ -138,6 +146,13 @@ public:
 
     const Expr *RHS = S->getRHS();
     assert(RHS != nullptr);
+
+    // Do compound assignments up-front, as there are so many of them and we
+    // don't want to list all of them in the switch statement below.
+    // To avoid generating unnecessary values, we don't create a new value but
+    // instead leave it to the specific analysis to do this if desired.
+    if (S->isCompoundAssignmentOp())
+      propagateStorageLocation(*S->getLHS(), *S, Env);
 
     switch (S->getOpcode()) {
     case BO_Assign: {
@@ -374,6 +389,20 @@ public:
       Env.setValue(*S, Env.makeNot(*SubExprVal));
       break;
     }
+    case UO_PreInc:
+    case UO_PreDec:
+      // Propagate the storage location, but don't create a new value; to
+      // avoid generating unnecessary values, we leave it to the specific
+      // analysis to do this if desired.
+      propagateStorageLocation(*S->getSubExpr(), *S, Env);
+      break;
+    case UO_PostInc:
+    case UO_PostDec:
+      // Propagate the old value, but don't create a new value; to avoid
+      // generating unnecessary values, we leave it to the specific analysis
+      // to do this if desired.
+      propagateValue(*S->getSubExpr(), *S, Env);
+      break;
     default:
       break;
     }

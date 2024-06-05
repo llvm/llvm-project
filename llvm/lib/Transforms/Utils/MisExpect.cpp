@@ -59,9 +59,10 @@ static cl::opt<bool> PGOWarnMisExpect(
     cl::desc("Use this option to turn on/off "
              "warnings about incorrect usage of llvm.expect intrinsics."));
 
+// Command line option for setting the diagnostic tolerance threshold
 static cl::opt<uint32_t> MisExpectTolerance(
     "misexpect-tolerance", cl::init(0),
-    cl::desc("Prevents emiting diagnostics when profile counts are "
+    cl::desc("Prevents emitting diagnostics when profile counts are "
              "within N% of the threshold.."));
 
 } // namespace llvm

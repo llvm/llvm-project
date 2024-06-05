@@ -25,6 +25,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -218,7 +219,7 @@ VPTransformState::VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
                                    InnerLoopVectorizer *ILV, VPlan *Plan,
                                    LLVMContext &Ctx)
-    : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ILV(ILV), Plan(Plan),
+    : VF(VF), UF(UF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
       LVer(nullptr),
       TypeAnalysis(Plan->getCanonicalIV()->getScalarType(), Ctx) {}
 
@@ -246,7 +247,7 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
 
 Value *VPTransformState::get(VPValue *Def, unsigned Part, bool NeedsScalar) {
   if (NeedsScalar) {
-    assert((VF.isScalar() || Def->isLiveIn() ||
+    assert((VF.isScalar() || Def->isLiveIn() || hasVectorValue(Def, Part) ||
             (hasScalarValue(Def, VPIteration(Part, 0)) &&
              Data.PerPartScalars[Def][Part].size() == 1)) &&
            "Trying to access a single scalar per part but has multiple scalars "
@@ -436,8 +437,19 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
              "Trying to reset an existing successor block.");
       TermBr->setSuccessor(idx, NewBB);
     }
+    CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});
   }
   return NewBB;
+}
+
+void VPIRBasicBlock::execute(VPTransformState *State) {
+  assert(getHierarchicalPredecessors().empty() &&
+         "VPIRBasicBlock cannot have predecessors at the moment");
+  assert(getHierarchicalSuccessors().empty() &&
+         "VPIRBasicBlock cannot have successors at the moment");
+
+  State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
+  executeRecipes(State, getIRBasicBlock());
 }
 
 void VPBasicBlock::execute(VPTransformState *State) {
@@ -467,6 +479,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     // The Exit block of a loop is always set to be successor 0 of the Exiting
     // block.
     cast<BranchInst>(ExitingBB->getTerminator())->setSuccessor(0, NewBB);
+    State->CFG.DTU.applyUpdates({{DominatorTree::Insert, ExitingBB, NewBB}});
   } else if (PrevVPBB && /* A */
              !((SingleHPred = getSingleHierarchicalPredecessor()) &&
                SingleHPred->getExitingBasicBlock() == PrevVPBB &&
@@ -496,16 +509,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
   }
 
   // 2. Fill the IR basic block with IR instructions.
-  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
-                    << " in BB:" << NewBB->getName() << '\n');
-
-  State->CFG.VPBB2IRBB[this] = NewBB;
-  State->CFG.PrevVPBB = this;
-
-  for (VPRecipeBase &Recipe : Recipes)
-    Recipe.execute(*State);
-
-  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *NewBB);
+  executeRecipes(State, NewBB);
 }
 
 void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
@@ -516,6 +520,19 @@ void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
     for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
       R.setOperand(I, NewValue);
   }
+}
+
+void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
+  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
+                    << " in BB:" << BB->getName() << '\n');
+
+  State->CFG.VPBB2IRBB[this] = BB;
+  State->CFG.PrevVPBB = this;
+
+  for (VPRecipeBase &Recipe : Recipes)
+    Recipe.execute(*State);
+
+  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *BB);
 }
 
 VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
@@ -766,8 +783,9 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE) {
-  VPBasicBlock *Preheader = new VPBasicBlock("ph");
+VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
+                                   BasicBlock *PH) {
+  VPIRBasicBlock *Preheader = new VPIRBasicBlock(PH);
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
   Plan->TripCount =
@@ -828,6 +846,11 @@ void VPlan::execute(VPTransformState *State) {
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
   BasicBlock *VectorPreHeader = State->CFG.PrevBB;
   State->Builder.SetInsertPoint(VectorPreHeader->getTerminator());
+
+  // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
+  cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
+  State->CFG.DTU.applyUpdates(
+      {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
   // Generate code in the loop pre-header and body.
   for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
@@ -891,13 +914,10 @@ void VPlan::execute(VPTransformState *State) {
     }
   }
 
-  // We do not attempt to preserve DT for outer loop vectorization currently.
-  if (!EnableVPlanNativePath) {
-    BasicBlock *VectorHeaderBB = State->CFG.VPBB2IRBB[Header];
-    State->DT->addNewBlock(VectorHeaderBB, VectorPreHeader);
-    updateDominatorTree(State->DT, VectorHeaderBB, VectorLatchBB,
-                        State->CFG.ExitBB);
-  }
+  State->CFG.DTU.flush();
+  assert(State->CFG.DTU.getDomTree().verify(
+             DominatorTree::VerificationLevel::Fast) &&
+         "DT not preserved correctly");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -993,44 +1013,6 @@ void VPlan::dump() const { print(dbgs()); }
 void VPlan::addLiveOut(PHINode *PN, VPValue *V) {
   assert(LiveOuts.count(PN) == 0 && "an exit value for PN already exists");
   LiveOuts.insert({PN, new VPLiveOut(PN, V)});
-}
-
-void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopHeaderBB,
-                                BasicBlock *LoopLatchBB,
-                                BasicBlock *LoopExitBB) {
-  // The vector body may be more than a single basic-block by this point.
-  // Update the dominator tree information inside the vector body by propagating
-  // it from header to latch, expecting only triangular control-flow, if any.
-  BasicBlock *PostDomSucc = nullptr;
-  for (auto *BB = LoopHeaderBB; BB != LoopLatchBB; BB = PostDomSucc) {
-    // Get the list of successors of this block.
-    std::vector<BasicBlock *> Succs(succ_begin(BB), succ_end(BB));
-    assert(Succs.size() <= 2 &&
-           "Basic block in vector loop has more than 2 successors.");
-    PostDomSucc = Succs[0];
-    if (Succs.size() == 1) {
-      assert(PostDomSucc->getSinglePredecessor() &&
-             "PostDom successor has more than one predecessor.");
-      DT->addNewBlock(PostDomSucc, BB);
-      continue;
-    }
-    BasicBlock *InterimSucc = Succs[1];
-    if (PostDomSucc->getSingleSuccessor() == InterimSucc) {
-      PostDomSucc = Succs[1];
-      InterimSucc = Succs[0];
-    }
-    assert(InterimSucc->getSingleSuccessor() == PostDomSucc &&
-           "One successor of a basic block does not lead to the other.");
-    assert(InterimSucc->getSinglePredecessor() &&
-           "Interim successor has more than one predecessor.");
-    assert(PostDomSucc->hasNPredecessors(2) &&
-           "PostDom successor has more than two predecessors.");
-    DT->addNewBlock(InterimSucc, BB);
-    DT->addNewBlock(PostDomSucc, BB);
-  }
-  // Latch block is a new dominator for the loop exit.
-  DT->changeImmediateDominator(LoopExitBB, LoopLatchBB);
-  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 }
 
 static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,

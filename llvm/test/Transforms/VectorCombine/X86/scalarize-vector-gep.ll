@@ -85,8 +85,8 @@ define void @both_operands_need_extraction.4elts(<4 x ptr> %baseptrs, <4 x i64> 
 
 ;-------------------------------------------------------------------------------
 
-define void @indicies_need_extraction.2elts(ptr %baseptr, <2 x i64> %indices) {
-; CHECK-LABEL: @indicies_need_extraction.2elts(
+define void @indices_need_extraction.2elts(ptr %baseptr, <2 x i64> %indices) {
+; CHECK-LABEL: @indices_need_extraction.2elts(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr inbounds i64, ptr [[BASEPTR:%.*]], <2 x i64> [[INDICES:%.*]]
 ; CHECK-NEXT:    [[PTR_0:%.*]] = extractelement <2 x ptr> [[PTRS]], i64 0
 ; CHECK-NEXT:    call void @use(ptr [[PTR_0]])
@@ -105,8 +105,8 @@ define void @indicies_need_extraction.2elts(ptr %baseptr, <2 x i64> %indices) {
   ret void
 }
 
-define void @indicies_need_extraction.3elts(ptr %baseptr, <3 x i64> %indices) {
-; CHECK-LABEL: @indicies_need_extraction.3elts(
+define void @indices_need_extraction.3elts(ptr %baseptr, <3 x i64> %indices) {
+; CHECK-LABEL: @indices_need_extraction.3elts(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr inbounds i64, ptr [[BASEPTR:%.*]], <3 x i64> [[INDICES:%.*]]
 ; CHECK-NEXT:    [[PTR_0:%.*]] = extractelement <3 x ptr> [[PTRS]], i64 0
 ; CHECK-NEXT:    call void @use(ptr [[PTR_0]])
@@ -130,8 +130,8 @@ define void @indicies_need_extraction.3elts(ptr %baseptr, <3 x i64> %indices) {
   ret void
 }
 
-define void @indicies_need_extraction.4elts(ptr %baseptr, <4 x i64> %indices) {
-; CHECK-LABEL: @indicies_need_extraction.4elts(
+define void @indices_need_extraction.4elts(ptr %baseptr, <4 x i64> %indices) {
+; CHECK-LABEL: @indices_need_extraction.4elts(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr inbounds i64, ptr [[BASEPTR:%.*]], <4 x i64> [[INDICES:%.*]]
 ; CHECK-NEXT:    [[PTR_0:%.*]] = extractelement <4 x ptr> [[PTRS]], i64 0
 ; CHECK-NEXT:    call void @use(ptr [[PTR_0]])

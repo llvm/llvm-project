@@ -30,7 +30,8 @@ struct NameUniquer;
 
 /// Prerequiste pass for code gen. Perform intermediate rewrites to perform
 /// the code gen (to LLVM-IR dialect) conversion.
-std::unique_ptr<mlir::Pass> createFirCodeGenRewritePass();
+std::unique_ptr<mlir::Pass> createFirCodeGenRewritePass(
+    CodeGenRewriteOptions Options = CodeGenRewriteOptions{});
 
 /// FirTargetRewritePass options.
 struct TargetRewriteOptions {
@@ -77,18 +78,14 @@ std::unique_ptr<mlir::Pass> createLLVMDialectToLLVMPass(
     LLVMIRLoweringPrinter printer =
         [](llvm::Module &m, llvm::raw_ostream &out) { m.print(out, nullptr); });
 
-/// Convert boxproc values to a lower level representation. The default is to
-/// use function pointers and thunks.
-std::unique_ptr<mlir::Pass> createBoxedProcedurePass();
-std::unique_ptr<mlir::Pass> createBoxedProcedurePass(bool useThunks);
-
 /// Populate the given list with patterns that convert from FIR to LLVM.
 void populateFIRToLLVMConversionPatterns(fir::LLVMTypeConverter &converter,
                                          mlir::RewritePatternSet &patterns,
                                          fir::FIRToLLVMPassOptions &options);
 
 /// Populate the pattern set with the PreCGRewrite patterns.
-void populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns);
+void populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,
+                                  bool preserveDeclare);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

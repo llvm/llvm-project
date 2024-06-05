@@ -18,14 +18,22 @@ namespace std {
 
 namespace N {
   struct A {
-    friend constexpr std::strong_ordering operator<=>(const A&, const A&) = default;
+    friend constexpr std::strong_ordering operator<=>(const A&, const A&) = default; // expected-note 2{{declared here}}
   };
 
-  constexpr bool (*test_a_not_found)(const A&, const A&) = &operator==; // expected-error {{undeclared}}
+  constexpr std::strong_ordering (*test_a_threeway_not_found)(const A&, const A&) = &operator<=>; // expected-error {{undeclared}}
+
+  constexpr std::strong_ordering operator<=>(const A&, const A&) noexcept;
+  constexpr std::strong_ordering (*test_a_threeway)(const A&, const A&) = &operator<=>;
+  static_assert(!(*test_a_threeway)(A(), A())); // expected-error {{static assertion expression is not an integral constant expression}}
+                                               // expected-note@-1 {{undefined function 'operator<=>' cannot be used in a constant expression}}
+
+  constexpr bool (*test_a_equal_not_found)(const A&, const A&) = &operator==; // expected-error {{undeclared}}
 
   constexpr bool operator==(const A&, const A&) noexcept;
-  constexpr bool (*test_a)(const A&, const A&) noexcept = &operator==;
-  static_assert((*test_a)(A(), A()));
+  constexpr bool (*test_a_equal)(const A&, const A&) noexcept = &operator==;
+  static_assert((*test_a_equal)(A(), A())); // expected-error {{static assertion expression is not an integral constant expression}}
+                                            // expected-note@-1 {{undefined function 'operator==' cannot be used in a constant expression}}
 }
 
 struct B1 {
@@ -160,4 +168,15 @@ struct non_constexpr_type {
 };
 
 my_struct<non_constexpr_type> obj; // cxx2a-note {{in instantiation of template class 'GH61238::my_struct<GH61238::non_constexpr_type>' requested here}}
+}
+
+namespace Constrained {
+  template<typename T>
+  struct A {
+    std::strong_ordering operator<=>(const A&) const requires true = default;
+  };
+
+  bool f(A<int> a) {
+    return a != A<int>();
+  }
 }

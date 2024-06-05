@@ -318,7 +318,7 @@ public:
       mlir::Value shape = builder.genShape(loc, extents);
       declare = builder.create<hlfir::DeclareOp>(
           loc, tempStorage, tempName, shape, lengths,
-          fir::FortranVariableFlagsAttr{});
+          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
       initialBoxValue =
           builder.createBox(loc, boxType, declare->getOriginalBase(), shape,
                             /*slice=*/mlir::Value{}, lengths, /*tdesc=*/{});

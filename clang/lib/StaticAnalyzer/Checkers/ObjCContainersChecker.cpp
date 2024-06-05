@@ -82,7 +82,7 @@ void ObjCContainersChecker::checkPostStmt(const CallExpr *CE,
     return;
 
   // Add array size information to the state.
-  if (Name.equals("CFArrayCreate")) {
+  if (Name == "CFArrayCreate") {
     if (CE->getNumArgs() < 3)
       return;
     // Note, we can visit the Create method in the post-visit because
@@ -92,7 +92,7 @@ void ObjCContainersChecker::checkPostStmt(const CallExpr *CE,
     return;
   }
 
-  if (Name.equals("CFArrayGetCount")) {
+  if (Name == "CFArrayGetCount") {
     addSizeInfo(CE->getArg(0), CE, C);
     return;
   }
@@ -105,7 +105,7 @@ void ObjCContainersChecker::checkPreStmt(const CallExpr *CE,
     return;
 
   // Check the array access.
-  if (Name.equals("CFArrayGetValueAtIndex")) {
+  if (Name == "CFArrayGetValueAtIndex") {
     ProgramStateRef State = C.getState();
     // Retrieve the size.
     // Find out if we saw this array symbol before and have information about

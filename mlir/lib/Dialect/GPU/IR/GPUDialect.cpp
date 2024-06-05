@@ -152,8 +152,7 @@ LogicalResult
 MMAMatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
                       ArrayRef<int64_t> shape, Type elementType,
                       StringRef operand) {
-  if (!operand.equals("AOp") && !operand.equals("BOp") &&
-      !operand.equals("COp"))
+  if (operand != "AOp" && operand != "BOp" && operand != "COp")
     return emitError() << "operand expected to be one of AOp, BOp or COp";
 
   if (shape.size() != 2)
@@ -1941,8 +1940,7 @@ LogicalResult SubgroupMmaLoadMatrixOp::verify() {
     return emitError(
         "expected source memref most minor dim must have unit stride");
 
-  if (!operand.equals("AOp") && !operand.equals("BOp") &&
-      !operand.equals("COp"))
+  if (operand != "AOp" && operand != "BOp" && operand != "COp")
     return emitError("only AOp, BOp and COp can be loaded");
 
   return success();
@@ -1962,7 +1960,7 @@ LogicalResult SubgroupMmaStoreMatrixOp::verify() {
     return emitError(
         "expected destination memref most minor dim must have unit stride");
 
-  if (!srcMatrixType.getOperand().equals("COp"))
+  if (srcMatrixType.getOperand() != "COp")
     return emitError(
         "expected the operand matrix being stored to have 'COp' operand type");
 
@@ -1980,9 +1978,8 @@ LogicalResult SubgroupMmaComputeOp::verify() {
   opTypes.push_back(llvm::cast<MMAMatrixType>(getOpB().getType()));
   opTypes.push_back(llvm::cast<MMAMatrixType>(getOpC().getType()));
 
-  if (!opTypes[A].getOperand().equals("AOp") ||
-      !opTypes[B].getOperand().equals("BOp") ||
-      !opTypes[C].getOperand().equals("COp"))
+  if (opTypes[A].getOperand() != "AOp" || opTypes[B].getOperand() != "BOp" ||
+      opTypes[C].getOperand() != "COp")
     return emitError("operands must be in the order AOp, BOp, COp");
 
   ArrayRef<int64_t> aShape, bShape, cShape;

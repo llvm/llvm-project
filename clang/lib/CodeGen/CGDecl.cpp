@@ -738,18 +738,17 @@ static bool tryEmitARCCopyWeakInit(CodeGenFunction &CGF,
       LValue srcLV = CGF.EmitLValue(srcExpr);
 
       // Handle a formal type change to avoid asserting.
-      auto srcAddr = srcLV.getAddress(CGF);
+      auto srcAddr = srcLV.getAddress();
       if (needsCast) {
-        srcAddr =
-            srcAddr.withElementType(destLV.getAddress(CGF).getElementType());
+        srcAddr = srcAddr.withElementType(destLV.getAddress().getElementType());
       }
 
       // If it was an l-value, use objc_copyWeak.
       if (srcExpr->isLValue()) {
-        CGF.EmitARCCopyWeak(destLV.getAddress(CGF), srcAddr);
+        CGF.EmitARCCopyWeak(destLV.getAddress(), srcAddr);
       } else {
         assert(srcExpr->isXValue());
-        CGF.EmitARCMoveWeak(destLV.getAddress(CGF), srcAddr);
+        CGF.EmitARCMoveWeak(destLV.getAddress(), srcAddr);
       }
       return true;
     }
@@ -767,7 +766,7 @@ static bool tryEmitARCCopyWeakInit(CodeGenFunction &CGF,
 static void drillIntoBlockVariable(CodeGenFunction &CGF,
                                    LValue &lvalue,
                                    const VarDecl *var) {
-  lvalue.setAddress(CGF.emitBlockByrefAddress(lvalue.getAddress(CGF), var));
+  lvalue.setAddress(CGF.emitBlockByrefAddress(lvalue.getAddress(), var));
 }
 
 void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
@@ -826,18 +825,17 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
     if (capturedByInit) {
       // We can use a simple GEP for this because it can't have been
       // moved yet.
-      tempLV.setAddress(emitBlockByrefAddress(tempLV.getAddress(*this),
+      tempLV.setAddress(emitBlockByrefAddress(tempLV.getAddress(),
                                               cast<VarDecl>(D),
                                               /*follow*/ false));
     }
 
-    auto ty =
-        cast<llvm::PointerType>(tempLV.getAddress(*this).getElementType());
+    auto ty = cast<llvm::PointerType>(tempLV.getAddress().getElementType());
     llvm::Value *zero = CGM.getNullPointer(ty, tempLV.getType());
 
     // If __weak, we want to use a barrier under certain conditions.
     if (lifetime == Qualifiers::OCL_Weak)
-      EmitARCInitWeak(tempLV.getAddress(*this), zero);
+      EmitARCInitWeak(tempLV.getAddress(), zero);
 
     // Otherwise just do a simple store.
     else
@@ -880,9 +878,9 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
 
     if (capturedByInit) drillIntoBlockVariable(*this, lvalue, cast<VarDecl>(D));
     if (accessedByInit)
-      EmitARCStoreWeak(lvalue.getAddress(*this), value, /*ignored*/ true);
+      EmitARCStoreWeak(lvalue.getAddress(), value, /*ignored*/ true);
     else
-      EmitARCInitWeak(lvalue.getAddress(*this), value);
+      EmitARCInitWeak(lvalue.getAddress(), value);
     return;
   }
 
@@ -1620,7 +1618,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         LValue Base = MakeAddrLValue(AddrSizePair.first, D.getType(),
                                      CGM.getContext().getDeclAlign(&D),
                                      AlignmentSource::Decl);
-        address = Base.getAddress(*this);
+        address = Base.getAddress();
 
         // Push a cleanup block to emit the call to __kmpc_free_shared in the
         // appropriate location at the end of the scope of the
@@ -2034,10 +2032,10 @@ void CodeGenFunction::EmitExprAsInit(const Expr *init, const ValueDecl *D,
       else if (auto *FD = dyn_cast<FieldDecl>(D))
         Overlap = getOverlapForFieldInit(FD);
       // TODO: how can we delay here if D is captured by its initializer?
-      EmitAggExpr(init, AggValueSlot::forLValue(
-                            lvalue, *this, AggValueSlot::IsDestructed,
-                            AggValueSlot::DoesNotNeedGCBarriers,
-                            AggValueSlot::IsNotAliased, Overlap));
+      EmitAggExpr(init,
+                  AggValueSlot::forLValue(lvalue, AggValueSlot::IsDestructed,
+                                          AggValueSlot::DoesNotNeedGCBarriers,
+                                          AggValueSlot::IsNotAliased, Overlap));
     }
     return;
   }
@@ -2683,7 +2681,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
             // objc_storeStrong attempts to release its old value.
             llvm::Value *Null = CGM.EmitNullConstant(D.getType());
             EmitStoreOfScalar(Null, lv, /* isInitialization */ true);
-            EmitARCStoreStrongCall(lv.getAddress(*this), ArgVal, true);
+            EmitARCStoreStrongCall(lv.getAddress(), ArgVal, true);
             DoStore = false;
           }
           else

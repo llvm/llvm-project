@@ -544,11 +544,24 @@ static void denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
 static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
                                        ArrayRef<Value> values) {
   assert(!values.empty() && "unexpected empty list");
-  Value productOf = values.front();
-  for (auto v : values.drop_front()) {
-    productOf = rewriter.create<arith::MulIOp>(loc, productOf, v);
+  std::optional<Value> productOf;
+  for (auto v : values) {
+    auto vOne = getConstantIntValue(v);
+    if (vOne && vOne.value() == 1)
+      continue;
+    if (productOf)
+      productOf =
+          rewriter.create<arith::MulIOp>(loc, productOf.value(), v).getResult();
+    else
+      productOf = v;
   }
-  return productOf;
+  if (!productOf) {
+    productOf = rewriter
+                    .create<arith::ConstantOp>(
+                        loc, rewriter.getOneAttr(values.front().getType()))
+                    .getResult();
+  }
+  return productOf.value();
 }
 
 /// For each original loop, the value of the
@@ -562,19 +575,43 @@ static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
 static std::pair<SmallVector<Value>, SmallPtrSet<Operation *, 2>>
 delinearizeInductionVariable(RewriterBase &rewriter, Location loc,
                              Value linearizedIv, ArrayRef<Value> ubs) {
-  Value previous = linearizedIv;
   SmallVector<Value> delinearizedIvs(ubs.size());
   SmallPtrSet<Operation *, 2> preservedUsers;
-  for (unsigned i = 0, e = ubs.size(); i < e; ++i) {
-    unsigned idx = ubs.size() - i - 1;
-    if (i != 0) {
+
+  llvm::BitVector isUbOne(ubs.size());
+  for (auto [index, ub] : llvm::enumerate(ubs)) {
+    auto ubCst = getConstantIntValue(ub);
+    if (ubCst && ubCst.value() == 1)
+      isUbOne.set(index);
+  }
+
+  // Prune the lead ubs that are all ones.
+  unsigned numLeadingOneUbs = 0;
+  for (auto [index, ub] : llvm::enumerate(ubs)) {
+    if (!isUbOne.test(index)) {
+      break;
+    }
+    delinearizedIvs[index] = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getZeroAttr(ub.getType()));
+    numLeadingOneUbs++;
+  }
+
+  Value previous = linearizedIv;
+  for (unsigned i = numLeadingOneUbs, e = ubs.size(); i < e; ++i) {
+    unsigned idx = ubs.size() - (i - numLeadingOneUbs) - 1;
+    if (i != numLeadingOneUbs && !isUbOne.test(idx + 1)) {
       previous = rewriter.create<arith::DivSIOp>(loc, previous, ubs[idx + 1]);
       preservedUsers.insert(previous.getDefiningOp());
     }
     Value iv = previous;
     if (i != e - 1) {
-      iv = rewriter.create<arith::RemSIOp>(loc, previous, ubs[idx]);
-      preservedUsers.insert(iv.getDefiningOp());
+      if (!isUbOne.test(idx)) {
+        iv = rewriter.create<arith::RemSIOp>(loc, previous, ubs[idx]);
+        preservedUsers.insert(iv.getDefiningOp());
+      } else {
+        iv = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getZeroAttr(ubs[idx].getType()));
+      }
     }
     delinearizedIvs[idx] = iv;
   }

@@ -1159,7 +1159,7 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
   }
 
   if (isAnyIdentifier(Result.getKind())) {
-    if (Result.getRawIdentifier().equals("nil")) {
+    if (Result.getRawIdentifier() == "nil") {
       reportEmptyContextError(ME);
       return;
     }
