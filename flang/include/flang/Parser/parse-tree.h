@@ -3212,7 +3212,7 @@ WRAPPER_CLASS(AltReturnSpec, Label);
 //         expr | variable | procedure-name | proc-component-ref |
 //         alt-return-spec
 struct ActualArg {
-  WRAPPER_CLASS(PercentRef, Variable); // %REF(v) extension
+  WRAPPER_CLASS(PercentRef, Expr); // %REF(x) extension
   WRAPPER_CLASS(PercentVal, Expr); // %VAL(x) extension
   UNION_CLASS_BOILERPLATE(ActualArg);
   ActualArg(Expr &&x) : u{common::Indirection<Expr>(std::move(x))} {}

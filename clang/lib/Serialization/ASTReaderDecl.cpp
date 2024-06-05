@@ -49,6 +49,7 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTRecordReader.h"
@@ -3244,10 +3245,11 @@ bool ASTReader::isConsumerInterestedIn(Decl *D) {
 /// Get the correct cursor and offset for loading a declaration.
 ASTReader::RecordLocation ASTReader::DeclCursorForID(GlobalDeclID ID,
                                                      SourceLocation &Loc) {
-  ModuleFile *M = getOwningModuleFile(ID);
-  assert(M);
-  unsigned LocalDeclIndex = ID.getLocalDeclIndex();
-  const DeclOffset &DOffs = M->DeclOffsets[LocalDeclIndex];
+  GlobalDeclMapType::iterator I = GlobalDeclMap.find(ID);
+  assert(I != GlobalDeclMap.end() && "Corrupted global declaration map");
+  ModuleFile *M = I->second;
+  const DeclOffset &DOffs =
+      M->DeclOffsets[ID.get() - M->BaseDeclID - NUM_PREDEF_DECL_IDS];
   Loc = ReadSourceLocation(*M, DOffs.getRawLoc());
   return RecordLocation(M, DOffs.getBitOffset(M->DeclsBlockStartOffset));
 }
@@ -3790,6 +3792,7 @@ void ASTReader::markIncompleteDeclChain(Decl *D) {
 
 /// Read the declaration at the given offset from the AST file.
 Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
+  unsigned Index = ID.get() - NUM_PREDEF_DECL_IDS;
   SourceLocation DeclLoc;
   RecordLocation Loc = DeclCursorForID(ID, DeclLoc);
   llvm::BitstreamCursor &DeclsCursor = Loc.F->DeclsCursor;
@@ -4120,12 +4123,15 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   }
 
   assert(D && "Unknown declaration reading AST file");
-  LoadedDecl(translateGlobalDeclIDToIndex(ID), D);
+  LoadedDecl(Index, D);
   // Set the DeclContext before doing any deserialization, to make sure internal
   // calls to Decl::getASTContext() by Decl's methods will find the
   // TranslationUnitDecl without crashing.
   D->setDeclContext(Context.getTranslationUnitDecl());
-  Reader.Visit(D);
+
+  // Reading some declarations can result in deep recursion.
+  clang::runWithSufficientStackSpace([&] { warnStackExhausted(DeclLoc); },
+                                     [&] { Reader.Visit(D); });
 
   // If this declaration is also a declaration context, get the
   // offsets for its tables of lexical and visible declarations.

@@ -45,7 +45,7 @@ namespace serialization {
 /// Manages the set of modules loaded by an AST reader.
 class ModuleManager {
   /// The chain of AST files, in the order in which we started to load
-  /// them.
+  /// them (this order isn't really useful for anything).
   SmallVector<std::unique_ptr<ModuleFile>, 2> Chain;
 
   /// The chain of non-module PCH files. The first entry is the one named
