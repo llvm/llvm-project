@@ -175,7 +175,7 @@ static void addUseDeviceClause(
     useDeviceLocs.push_back(operand.getLoc());
   }
   for (const omp::Object &object : objects)
-    useDeviceSyms.push_back(object.id());
+    useDeviceSyms.push_back(object.sym());
 }
 
 static void convertLoopBounds(lower::AbstractConverter &converter,
@@ -525,7 +525,7 @@ bool ClauseProcessor::processCopyin() const {
   bool hasCopyin = findRepeatableClause<omp::clause::Copyin>(
       [&](const omp::clause::Copyin &clause, const parser::CharBlock &) {
         for (const omp::Object &object : clause.v) {
-          semantics::Symbol *sym = object.id();
+          semantics::Symbol *sym = object.sym();
           assert(sym && "Expecting symbol");
           if (const auto *commonDetails =
                   sym->detailsIf<semantics::CommonBlockDetails>()) {
@@ -698,7 +698,7 @@ bool ClauseProcessor::processCopyprivate(
   bool hasCopyPrivate = findRepeatableClause<clause::Copyprivate>(
       [&](const clause::Copyprivate &clause, const parser::CharBlock &) {
         for (const Object &object : clause.v) {
-          semantics::Symbol *sym = object.id();
+          semantics::Symbol *sym = object.sym();
           if (const auto *commonDetails =
                   sym->detailsIf<semantics::CommonBlockDetails>()) {
             for (const auto &mem : commonDetails->objects())
@@ -739,7 +739,7 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
                  "array sections not supported for task depend");
           }
 
-          semantics::Symbol *sym = object.id();
+          semantics::Symbol *sym = object.sym();
           const mlir::Value variable = converter.getSymbolAddress(*sym);
           result.dependVars.push_back(variable);
         }
@@ -870,11 +870,11 @@ bool ClauseProcessor::processMap(
           lower::AddrAndBoundsInfo info =
               lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                                     mlir::omp::MapBoundsType>(
-                  converter, firOpBuilder, semaCtx, stmtCtx, *object.id(),
+                  converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
                   object.ref(), clauseLocation, asFortran, bounds,
                   treatIndexAsSection);
 
-          auto origSymbol = converter.getSymbolAddress(*object.id());
+          auto origSymbol = converter.getSymbolAddress(*object.sym());
           mlir::Value symAddr = info.addr;
           if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
             symAddr = origSymbol;
@@ -894,12 +894,12 @@ bool ClauseProcessor::processMap(
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          if (object.id()->owner().IsDerivedType()) {
+          if (object.sym()->owner().IsDerivedType()) {
             addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
                                         semaCtx);
           } else {
             result.mapVars.push_back(mapOp);
-            ptrMapSyms->push_back(object.id());
+            ptrMapSyms->push_back(object.sym());
             if (mapSymTypes)
               mapSymTypes->push_back(symAddr.getType());
             if (mapSymLocs)
