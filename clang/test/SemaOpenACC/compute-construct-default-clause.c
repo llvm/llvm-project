@@ -43,18 +43,16 @@ void SingleOnly() {
   #pragma acc data default(none)
   while(0);
 
-  // expected-warning@+2{{OpenACC construct 'loop' not yet implemented}}
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
   #pragma acc loop default(none)
-  while(0);
+  for(;;);
 
   // expected-warning@+2{{OpenACC construct 'wait' not yet implemented}}
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'wait' directive}}
   #pragma acc wait default(none)
   while(0);
 
-  // expected-error@+2{{OpenACC 'default' clause is not valid on 'loop' directive}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+  // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
 #pragma acc loop default(present)
   for(;;);
 }
