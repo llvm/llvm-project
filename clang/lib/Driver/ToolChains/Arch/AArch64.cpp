@@ -81,7 +81,7 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
       D.Diag(clang::diag::err_drv_no_neon_modifier);
       continue;
     }
-    if (!Extensions.parseModifier(Feature))
+    if (!Extensions.parseCmdLineOptModifier(Feature))
       return false;
   }
 

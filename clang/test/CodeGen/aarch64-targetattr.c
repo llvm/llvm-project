@@ -75,16 +75,9 @@ void all() {}
 __attribute__((target("cpu=neoverse-n1,tune=cortex-a710,arch=armv8.6-a+sve2,branch-protection=standard")))
 void allplusbranchprotection() {}
 
-// These tests check that the user facing and internal llvm name are both accepted.
-// CHECK-LABEL: @plusnoneon() #16
-__attribute__((target("+noneon")))
-void plusnoneon() {}
 // CHECK-LABEL: @plusnosimd() #16
 __attribute__((target("+nosimd")))
 void plusnosimd() {}
-// CHECK-LABEL: @noneon() #16
-__attribute__((target("no-neon")))
-void noneon() {}
 // CHECK-LABEL: @nosimd() #16
 __attribute__((target("no-simd")))
 void nosimd() {}

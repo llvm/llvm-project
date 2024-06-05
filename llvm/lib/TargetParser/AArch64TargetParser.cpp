@@ -220,6 +220,9 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
   Touched.set(E);
   Enabled.reset(E);
 
+  if (E == AEK_SIMD)
+    disable(AEK_FP);
+
   // Recursively disable all features that depends on this one.
   for (auto Dep : ExtensionDependencies)
     if (E == Dep.Earlier)
@@ -245,20 +248,39 @@ void AArch64::ExtensionSet::addArchDefaults(const ArchInfo &Arch) {
       enable(E.ID);
 }
 
-bool AArch64::ExtensionSet::parseModifier(StringRef Modifier) {
-  LLVM_DEBUG(llvm::dbgs() << "parseModifier(" << Modifier << ")\n");
+bool AArch64::ExtensionSet::parseCmdLineOptModifier(StringRef Modifier) {
+  LLVM_DEBUG(llvm::dbgs() << "parseCmdLineOptModifier(" << Modifier << ")\n");
+
+  bool IsNegated = Modifier.starts_with("no");
+  StringRef ArchExt = IsNegated ? Modifier.drop_front(2) : Modifier;
+
+  if (auto AE = parseArchExtension(ArchExt)) {
+    if (AE->Feature.empty() || AE->NegFeature.empty())
+      return false;
+    if (IsNegated)
+      disable(AE->ID);
+    else
+      enable(AE->ID);
+    return true;
+  }
+  return false;
+}
+
+bool AArch64::ExtensionSet::parseAttributeModifier(StringRef Modifier) {
+  LLVM_DEBUG(llvm::dbgs() << "parseAttributeModifier(" << Modifier << ")\n");
 
   size_t NChars = 0;
   if (Modifier.starts_with("no-"))
     NChars = 3;
   else if (Modifier.starts_with("no"))
     NChars = 2;
+  bool IsNegated = NChars != 0;
   StringRef ArchExt = Modifier.drop_front(NChars);
 
   if (auto AE = parseArchExtension(ArchExt)) {
     if (AE->Feature.empty() || AE->NegFeature.empty())
       return false;
-    if (NChars)
+    if (IsNegated)
       disable(AE->ID);
     else
       enable(AE->ID);
@@ -268,7 +290,7 @@ bool AArch64::ExtensionSet::parseModifier(StringRef Modifier) {
 }
 
 void AArch64::ExtensionSet::reconstructFromParsedFeatures(
-    std::vector<std::string> &Features) {
+    const std::vector<std::string> &Features) {
   assert(Touched.none() && "Bitset already initialized");
   for (auto &F : Features) {
     bool IsNegated = F[0] == '-';

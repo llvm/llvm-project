@@ -571,10 +571,20 @@ struct ExtensionSet {
   // Add or remove a feature based on a modifier string. The string must be of
   // the form "<name>" to enable a feature or "no<name>" to disable it. This
   // will also enable or disable any features as required by the dependencies
-  // between them.
-  bool parseModifier(StringRef Modifier);
+  // between them. The function is used for command line option parsing.
+  bool parseCmdLineOptModifier(StringRef Modifier);
 
-  void reconstructFromParsedFeatures(std::vector<std::string> &Features);
+  // Add or remove a feature based on a modifier string. The string must be of
+  // the form "<name>" to enable a feature or "no(-)<name>" to disable it. This
+  // will also enable or disable any features as required by the dependencies
+  // between them. The function is used for target(_version/_clones) attribute
+  // parsing.
+  bool parseAttributeModifier(StringRef Modifier);
+
+  // Constructs a new ExtensionSet by toggling the corresponding bits for every
+  // feature in the \p Features list without expanding their dependencies. Used
+  // for reconstructing an ExtensionSet from the output of toLLVMFeatures().
+  void reconstructFromParsedFeatures(const std::vector<std::string> &Features);
 
   // Convert the set of enabled extension to an LLVM feature list, appending
   // them to Features.

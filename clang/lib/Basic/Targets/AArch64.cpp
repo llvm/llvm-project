@@ -1056,6 +1056,12 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 //  "tune=<cpu>" - TuneCPU set to <cpu>
 //  "feature", "no-feature" - Add (or remove) feature.
 //  "+feature", "+nofeature" - Add (or remove) feature.
+//
+// A feature may correspond to an Extension (anything with a corresponding
+// AEK_), in which case an ExtensionSet is used to parse it and expand its
+// dependencies. Otherwise the feature is passed through (e.g. +v8.1a,
+// +outline-atomics, -fmv, etc). Features coming from the command line are
+// already parsed, therefore their dependencies do not need expansion.
 ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
   ParsedTargetAttr Ret;
   if (Features == "default")
@@ -1070,10 +1076,10 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
     SmallVector<StringRef, 8> SplitFeatures;
     FeatString.split(SplitFeatures, StringRef("+"), -1, false);
     for (StringRef Feature : SplitFeatures) {
-      if (FeatureBits.parseModifier(Feature))
+      if (FeatureBits.parseAttributeModifier(Feature))
         continue;
-      // Pushing the original feature string to give a sema error later on
-      // when they get checked.
+      // Pass through features that are not extensions, e.g. +v8.1a,
+      // +outline-atomics, -fmv, etc.
       if (Feature.starts_with("no"))
         Features.push_back("-" + Feature.drop_front(2).str());
       else
@@ -1132,10 +1138,10 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
     } else if (Feature.starts_with("+")) {
       SplitAndAddFeatures(Feature, Ret.Features, FeatureBits);
     } else {
-      if (FeatureBits.parseModifier(Feature))
+      if (FeatureBits.parseAttributeModifier(Feature))
         continue;
-      // Pushing the original feature string to give a sema error later on
-      // when they get checked.
+      // Pass through features that are not extensions, e.g. +v8.1a,
+      // +outline-atomics, -fmv, etc.
       if (Feature.starts_with("no-"))
         Ret.Features.push_back("-" + Feature.drop_front(3).str());
       else

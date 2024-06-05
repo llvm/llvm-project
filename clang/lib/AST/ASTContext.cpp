@@ -13665,9 +13665,9 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
 }
 
 // Given a list of FMV features, add each of their backend features to the list.
-static void
-getFMVBackendFeaturesFor(const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings,
-                         std::vector<std::string> &BackendFeats) {
+static std::vector<std::string>
+getFMVBackendFeaturesFor(const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
+  std::vector<std::string> BackendFeats;
   for (StringRef F : FMVFeatStrings) {
     if (auto FMVExt = llvm::AArch64::parseArchExtension(F)) {
       SmallVector<StringRef, 8> Feats;
@@ -13676,6 +13676,7 @@ getFMVBackendFeaturesFor(const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings,
         BackendFeats.push_back(F.str());
     }
   }
+  return BackendFeats;
 }
 
 ParsedTargetAttr
@@ -13736,27 +13737,27 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                     Target->getTargetOpts().FeaturesAsWritten.end());
     Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else if (const auto *TC = FD->getAttr<TargetClonesAttr>()) {
-    std::vector<std::string> Features;
     if (Target->getTriple().isAArch64()) {
       llvm::SmallVector<StringRef, 8> Feats;
       TC->getFeatures(Feats, GD.getMultiVersionIndex());
-      getFMVBackendFeaturesFor(Feats, Features);
+      std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
       Features.insert(Features.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.end());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     } else {
+      std::vector<std::string> Features;
       StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
       if (VersionStr.starts_with("arch="))
         TargetCPU = VersionStr.drop_front(sizeof("arch=") - 1);
       else if (VersionStr != "default")
         Features.push_back((StringRef{"+"} + VersionStr).str());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     }
-    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else if (const auto *TV = FD->getAttr<TargetVersionAttr>()) {
     llvm::SmallVector<StringRef, 8> Feats;
     TV->getFeatures(Feats);
-    std::vector<std::string> Features;
-    getFMVBackendFeaturesFor(Feats, Features);
+    std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
     Features.insert(Features.begin(),
                     Target->getTargetOpts().FeaturesAsWritten.begin(),
                     Target->getTargetOpts().FeaturesAsWritten.end());
