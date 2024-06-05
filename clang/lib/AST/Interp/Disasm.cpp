@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Boolean.h"
+#include "Context.h"
+#include "EvaluationResult.h"
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
@@ -304,4 +306,44 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   OS << "  Static: " << IsStatic << "\n";
   OS << "  Extern: " << IsExtern << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
+}
+
+LLVM_DUMP_METHOD void EvaluationResult::dump() const {
+  assert(Ctx);
+  auto &OS = llvm::errs();
+  const ASTContext &ASTCtx = Ctx->getASTContext();
+
+  switch (Kind) {
+  case Empty:
+    OS << "Empty\n";
+    break;
+  case RValue:
+    OS << "RValue: ";
+    std::get<APValue>(Value).dump(OS, ASTCtx);
+    break;
+  case LValue: {
+    assert(Source);
+    QualType SourceType;
+    if (const auto *D = Source.dyn_cast<const Decl *>()) {
+      if (const auto *VD = dyn_cast<ValueDecl>(D))
+        SourceType = VD->getType();
+    } else if (const auto *E = Source.dyn_cast<const Expr *>()) {
+      SourceType = E->getType();
+    }
+
+    OS << "LValue: ";
+    if (const auto *P = std::get_if<Pointer>(&Value))
+      P->toAPValue().printPretty(OS, ASTCtx, SourceType);
+    else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
+      FP->toAPValue().printPretty(OS, ASTCtx, SourceType);
+    OS << "\n";
+    break;
+  }
+  case Invalid:
+    OS << "Invalid\n";
+    break;
+  case Valid:
+    OS << "Valid\n";
+    break;
+  }
 }
