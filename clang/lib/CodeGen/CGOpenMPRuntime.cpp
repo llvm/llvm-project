@@ -8025,6 +8025,19 @@ private:
       MapCombinedInfoTy StructBaseCurInfo;
       const Decl *D = Data.first;
       const ValueDecl *VD = cast_or_null<ValueDecl>(D);
+      bool HasMapBasePtr = false;
+      bool HasMapArraySec = false;
+      for (const auto &M : Data.second) {
+        for (const MapInfo &L : M) {
+          const Expr *E = L.VarRef;
+          if (VD && E && VD->getType()->isAnyPointerType() &&
+            isa<DeclRefExpr>(E))
+            HasMapBasePtr = true;
+          if (VD && E && VD->getType()->isAnyPointerType() &&
+              (isa<ArraySectionExpr>(E) || isa<ArraySubscriptExpr>(E)))
+             HasMapArraySec = true;
+        }
+      }
       for (const auto &M : Data.second) {
         for (const MapInfo &L : M) {
           assert(!L.Components.empty() &&
@@ -8041,7 +8054,8 @@ private:
               CurInfo, StructBaseCurInfo, PartialStruct,
               /*IsFirstComponentList=*/false, L.IsImplicit,
               /*GenerateAllInfoForClauses*/ true, L.Mapper, L.ForDeviceAddr, VD,
-              L.VarRef);
+              L.VarRef, /*OverlappedElements*/ std::nullopt,
+              HasMapBasePtr && HasMapArraySec);
 
           // If this entry relates to a device pointer, set the relevant
           // declaration and add the 'return pointer' flag.
