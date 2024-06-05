@@ -27,6 +27,7 @@
 // CHECK-NEXT:         "[[PREFIX]]/build/A.h",
 // CHECK-NEXT:         "[[PREFIX]]/build/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "A"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -40,6 +41,7 @@
 // CHECK-NEXT:         "[[PREFIX]]/modules/B/B.h",
 // CHECK-NEXT:         "[[PREFIX]]/modules/B/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "B"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -59,6 +61,7 @@
 // CHECK-NEXT:         "[[PREFIX]]/modules/C/C.h",
 // CHECK-NEXT:         "[[PREFIX]]/modules/C/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "C"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

@@ -284,6 +284,9 @@ protected:
 class AMDGPUISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
   AMDGPUISelDAGToDAGPass(TargetMachine &TM);
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 class AMDGPUDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -292,6 +295,7 @@ public:
 
   AMDGPUDAGToDAGISelLegacy(TargetMachine &TM, CodeGenOptLevel OptLevel);
 
+  bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   StringRef getPassName() const override;
 };

@@ -55,7 +55,7 @@ public:
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   SSPLayoutInfo *SP = nullptr;
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   TargetTransformInfo *TTI = nullptr;
 #endif
   CodeGenOptLevel OptLevel;

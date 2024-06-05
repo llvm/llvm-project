@@ -126,13 +126,6 @@ AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(TargetMachine &TM,
 }
 
 bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
-#ifdef EXPENSIVE_CHECKS
-  DominatorTree & DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LoopInfo * LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  for (auto &L : LI->getLoopsInPreorder()) {
-    assert(L->isLCSSAForm(DT));
-  }
-#endif
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
   Mode = SIModeRegisterDefaults(MF.getFunction(), *Subtarget);
@@ -200,6 +193,17 @@ bool AMDGPUDAGToDAGISel::fp16SrcZerosHighBits(unsigned Opc) const {
     // which don't zero the high bits.
     return false;
   }
+}
+
+bool AMDGPUDAGToDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
+#ifdef EXPENSIVE_CHECKS
+  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  for (auto &L : LI->getLoopsInPreorder()) {
+    assert(L->isLCSSAForm(DT));
+  }
+#endif
+  return SelectionDAGISelLegacy::runOnMachineFunction(MF);
 }
 
 void AMDGPUDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -780,6 +784,21 @@ StringRef AMDGPUDAGToDAGISelLegacy::getPassName() const {
 AMDGPUISelDAGToDAGPass::AMDGPUISelDAGToDAGPass(TargetMachine &TM)
     : SelectionDAGISelPass(
           std::make_unique<AMDGPUDAGToDAGISel>(TM, TM.getOptLevel())) {}
+
+PreservedAnalyses
+AMDGPUISelDAGToDAGPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+#ifdef EXPENSIVE_CHECKS
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  auto &F = MF.getFunction();
+  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
+  for (auto &L : LI.getLoopsInPreorder())
+    assert(L->isLCSSAForm(DT) && "Loop is not in LCSSA form!");
+#endif
+  return SelectionDAGISelPass::run(MF, MFAM);
+}
 
 //===----------------------------------------------------------------------===//
 // Complex Patterns

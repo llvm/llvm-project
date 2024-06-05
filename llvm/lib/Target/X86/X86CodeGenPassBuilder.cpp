@@ -43,8 +43,8 @@ void X86CodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
 }
 
 Error X86CodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
-  // TODO: Add instruction selector.
-  addPass(X86ISelDAGToDAGPass(static_cast<X86TargetMachine &>(TM)));
+  // TODO: Add instruction selector related passes.
+  addPass(X86ISelDAGToDAGPass(TM));
   return Error::success();
 }
 

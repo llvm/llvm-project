@@ -55,9 +55,10 @@ Additions:
   * powr*
   * rootn*
   * roundeven* |check|
-  * fromfp*
-  * ufromfp*
-  * fromfpx*
+  * fromfp* |check|
+  * ufromfp* |check|
+  * fromfpx* |check|
+  * ufromfpx* |check|
   * nextup*
   * nextdown*
   * canonicalize*

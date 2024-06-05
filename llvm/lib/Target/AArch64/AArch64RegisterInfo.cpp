@@ -75,6 +75,8 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     // GHC set of callee saved regs is empty as all those regs are
     // used for passing STG regs around
     return CSR_AArch64_NoRegs_SaveList;
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveNone)
+    return CSR_AArch64_NoneRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_SaveList;
 
@@ -260,6 +262,9 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   if (CC == CallingConv::GHC)
     // This is academic because all GHC calls are (supposed to be) tail calls
     return SCS ? CSR_AArch64_NoRegs_SCS_RegMask : CSR_AArch64_NoRegs_RegMask;
+  if (CC == CallingConv::PreserveNone)
+    return SCS ? CSR_AArch64_NoneRegs_SCS_RegMask
+               : CSR_AArch64_NoneRegs_RegMask;
   if (CC == CallingConv::AnyReg)
     return SCS ? CSR_AArch64_AllRegs_SCS_RegMask : CSR_AArch64_AllRegs_RegMask;
 
@@ -294,12 +299,11 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   if (CC == CallingConv::PreserveMost)
     return SCS ? CSR_AArch64_RT_MostRegs_SCS_RegMask
                : CSR_AArch64_RT_MostRegs_RegMask;
-  else if (CC == CallingConv::PreserveAll)
+  if (CC == CallingConv::PreserveAll)
     return SCS ? CSR_AArch64_RT_AllRegs_SCS_RegMask
                : CSR_AArch64_RT_AllRegs_RegMask;
 
-  else
-    return SCS ? CSR_AArch64_AAPCS_SCS_RegMask : CSR_AArch64_AAPCS_RegMask;
+  return SCS ? CSR_AArch64_AAPCS_SCS_RegMask : CSR_AArch64_AAPCS_RegMask;
 }
 
 const uint32_t *AArch64RegisterInfo::getCustomEHPadPreservedMask(
@@ -585,6 +589,8 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
     report_fatal_error("Unsupported calling convention.");
   case CallingConv::GHC:
     return HasReg(CC_AArch64_GHC_ArgRegs, Reg);
+  case CallingConv::PreserveNone:
+    return HasReg(CC_AArch64_Preserve_None_ArgRegs, Reg);
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::PreserveMost:
