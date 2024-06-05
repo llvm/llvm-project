@@ -37,7 +37,6 @@ class RISCVExtension<string name, int major, int minor, string desc,
   bit Experimental = false;
 
   // For Bitmask table
-  string Name = !subst("experimental-", "", name);
   bits<3> GroupID = groupID;
   bits<64> Bitmask = !if(!eq(bitmaskShift, -1), 0, !shl(1, bitmaskShift));
 }
