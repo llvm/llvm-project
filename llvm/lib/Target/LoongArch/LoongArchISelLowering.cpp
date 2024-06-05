@@ -171,6 +171,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // Set operations for 'F' feature.
 
   if (Subtarget.hasBasicF()) {
+    setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
+    setTruncStoreAction(MVT::f32, MVT::f16, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
 
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
@@ -186,6 +188,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
     setOperationAction(ISD::FPOW, MVT::f32, Expand);
     setOperationAction(ISD::FREM, MVT::f32, Expand);
+    setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
+    setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
 
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FRINT, MVT::f32, Legal);
@@ -202,7 +206,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // Set operations for 'D' feature.
 
   if (Subtarget.hasBasicD()) {
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
+    setTruncStoreAction(MVT::f64, MVT::f16, Expand);
     setTruncStoreAction(MVT::f64, MVT::f32, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
 
@@ -219,6 +225,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
     setOperationAction(ISD::FPOW, MVT::f64, Expand);
     setOperationAction(ISD::FREM, MVT::f64, Expand);
+    setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+    setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
 
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FRINT, MVT::f64, Legal);
