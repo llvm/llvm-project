@@ -280,9 +280,8 @@ public:
       F x = xbits.get_val();
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.
-      if (xbits.is_nan()) {
+      if (xbits.is_nan())
         continue;
-      }
 
       if (TestModes) {
         for (int m : ROUNDING_MODES) {
