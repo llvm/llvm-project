@@ -2119,11 +2119,11 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
                           var_sp->GetType()->GetByteSize(nullptr).value_or(0);
                     m_global_aranges_up->Append(GlobalVariableMap::Entry(
                         file_addr, byte_size, var_sp.get()));
-                  } else {
-                    LLDB_LOG_ERROR(
-                        GetLog(LLDBLog::Symbols), location_result.takeError(),
-                        "location expression failed to execute: {0}");
                   }
+                } else {
+                  LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols),
+                                 location_result.takeError(),
+                                 "location expression failed to execute: {0}");
                 }
               }
             }
