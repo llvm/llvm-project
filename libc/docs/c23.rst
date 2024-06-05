@@ -60,7 +60,7 @@ Additions:
   * fromfpx* |check|
   * ufromfpx* |check|
   * nextup* |check|
-  * nextdown*
+  * nextdown* |check|
   * canonicalize* |check|
   * fmaximum*
   * fminimum*

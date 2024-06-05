@@ -281,6 +281,7 @@ add_math_entrypoint_object(nexttowardf16)
 add_math_entrypoint_object(nextdown)
 add_math_entrypoint_object(nextdownf)
 add_math_entrypoint_object(nextdownl)
+add_math_entrypoint_object(nextdownf16)
 add_math_entrypoint_object(nextdownf128)
 
 add_math_entrypoint_object(nextup)

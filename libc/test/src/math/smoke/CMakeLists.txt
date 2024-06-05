@@ -2663,7 +2663,6 @@ add_fp_unittest(
     NextDownTest.h
   DEPENDS
     libc.src.math.nextdown
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_fp_unittest(
@@ -2676,7 +2675,6 @@ add_fp_unittest(
     NextDownTest.h
   DEPENDS
     libc.src.math.nextdownf
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_fp_unittest(
@@ -2689,7 +2687,18 @@ add_fp_unittest(
     NextDownTest.h
   DEPENDS
     libc.src.math.nextdownl
-    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextdownf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdownf16_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.src.math.nextdownf16
 )
 
 add_fp_unittest(
@@ -2702,7 +2711,6 @@ add_fp_unittest(
     NextDownTest.h
   DEPENDS
     libc.src.math.nextdownf128
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_fp_unittest(
