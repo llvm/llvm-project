@@ -125,6 +125,7 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PI
 #endif
 MACHINE_FUNCTION_PASS("dead-mi-elimination", DeadMachineInstructionElimPass())
 MACHINE_FUNCTION_PASS("finalize-isel", FinalizeISelPass())
+MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotAllocationPass())
 MACHINE_FUNCTION_PASS("no-op-machine-function", NoOpMachineFunctionPass())
 MACHINE_FUNCTION_PASS("print", PrintMIRPass())
 MACHINE_FUNCTION_PASS("require-all-machine-function-properties",
@@ -182,7 +183,6 @@ DUMMY_MACHINE_FUNCTION_PASS("kcfi", MachineKCFIPass)
 DUMMY_MACHINE_FUNCTION_PASS("legalizer", LegalizerPass)
 DUMMY_MACHINE_FUNCTION_PASS("livedebugvalues", LiveDebugValuesPass)
 DUMMY_MACHINE_FUNCTION_PASS("liveintervals", LiveIntervalsPass)
-DUMMY_MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotPass)
 DUMMY_MACHINE_FUNCTION_PASS("lrshrink", LiveRangeShrinkPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-combiner", MachineCombinerPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-cp", MachineCopyPropagationPass)
