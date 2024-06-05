@@ -2,6 +2,8 @@
 ; RUN: llc -o - %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefixes=CHECK,NORMAL
 ; RUN: llc -o - %s -mtriple=x86_64-scei-ps4 | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
 ; RUN: llc -o - %s -mtriple=x86_64-apple-darwin | FileCheck %s --check-prefixes=CHECK,NO_TRAP_AFTER_NORETURN
+; RUN: llc --trap-unreachable -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc --trap-unreachable -global-isel -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
 
 ; CHECK-LABEL: call_exit:
 ; CHECK: callq {{_?}}exit
@@ -15,11 +17,19 @@ define i32 @call_exit() noreturn nounwind {
 
 ; CHECK-LABEL: trap:
 ; CHECK: ud2
+; CHECK-NOT: ud2
+define i32 @trap() noreturn nounwind {
+  tail call void @llvm.trap()
+  unreachable
+}
+
+; CHECK-LABEL: trap_fn_attr:
+; CHECK: callq {{_?}}trap_func
 ; TRAP_AFTER_NORETURN: ud2
 ; NO_TRAP_AFTER_NORETURN-NOT: ud2
 ; NORMAL-NOT: ud2
-define i32 @trap() noreturn nounwind {
-  tail call void @llvm.trap()
+define i32 @trap_fn_attr() noreturn nounwind {
+  tail call void @llvm.trap() #0
   unreachable
 }
 
@@ -34,3 +44,5 @@ define i32 @unreachable() noreturn nounwind {
 
 declare void @llvm.trap() nounwind noreturn
 declare void @exit(i32 %rc) nounwind noreturn
+
+attributes #0 = { "trap-func-name"="trap_func" }
