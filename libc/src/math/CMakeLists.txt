@@ -170,6 +170,7 @@ add_math_entrypoint_object(fminimum_numf128)
 add_math_entrypoint_object(fminimum_mag)
 add_math_entrypoint_object(fminimum_magf)
 add_math_entrypoint_object(fminimum_magl)
+add_math_entrypoint_object(fminimum_magf16)
 add_math_entrypoint_object(fminimum_magf128)
 
 add_math_entrypoint_object(fminimum_mag_num)

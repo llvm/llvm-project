@@ -2254,6 +2254,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fminimum_magf16
+  SRCS
+    fminimum_magf16.cpp
+  HDRS
+    ../fminimum_magf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fminimum_magf128
   SRCS
     fminimum_magf128.cpp
@@ -2265,7 +2278,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
 )
-
 
 add_entrypoint_object(
   fminimum_mag_num

@@ -2242,6 +2242,7 @@ add_fp_unittest(
     FMinimumMagTest.h
   DEPENDS
     libc.src.math.fminimum_magf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2255,6 +2256,7 @@ add_fp_unittest(
     FMinimumMagTest.h
   DEPENDS
     libc.src.math.fminimum_mag
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2268,6 +2270,21 @@ add_fp_unittest(
     FMinimumMagTest.h
   DEPENDS
     libc.src.math.fminimum_magl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_magf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_magf16_test.cpp
+  HDRS
+    FMinimumMagTest.h
+  DEPENDS
+    libc.src.math.fminimum_magf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2281,9 +2298,9 @@ add_fp_unittest(
     FMinimumMagTest.h
   DEPENDS
     libc.src.math.fminimum_magf128
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
-
 
 add_fp_unittest(
   fminimum_mag_numf_test
