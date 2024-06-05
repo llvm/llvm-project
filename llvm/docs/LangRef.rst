@@ -14250,7 +14250,7 @@ Arguments:
 """"""""""
 The first 4 arguments are similar to ``llvm.instrprof.increment``. The indexing
 is specific to callsites, meaning callsites are indexed from 0, independent from
-the indexes used by the other intrinsics (such as 
+the indexes used by the other intrinsics (such as
 ``llvm.instrprof.increment[.step]``).
 
 The last argument is the called value of the callsite this intrinsic precedes.
@@ -14264,7 +14264,7 @@ a buffer LLVM can use to perform counter increments (i.e. the lowering of
 ``llvm.instrprof.increment[.step]``. The address range following the counter
 buffer, ``<num-counters>`` x ``sizeof(ptr)`` - sized, is expected to contain
 pointers to contexts of functions called from this function ("subcontexts").
-LLVM does not dereference into that memory region, just calculates GEPs. 
+LLVM does not dereference into that memory region, just calculates GEPs.
 
 The lowering of ``llvm.instrprof.callsite`` consists of:
 
@@ -19208,6 +19208,35 @@ will be on any later loop iteration.
 
 This intrinsic will only return 0 if the input count is also 0. A non-zero input
 count will produce a non-zero result.
+
+'``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v2i32.v8i32(<8 x i32> %in)
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<16 x i32> %in)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv2i32.nxv8i32(<vscale x 8 x i32> %in)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 16 x i32> %in)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics do an integer
+``ADD`` reduction of subvectors within a vector, returning each scalar result as
+a lane within a vector. The return type is a vector type with an
+element-type of the vector input and a width a factor of the vector input
+(typically either half or quarter).
+
+Arguments:
+""""""""""
+
+The argument to this intrinsic must be a vector of integer values.
+
 
 '``llvm.experimental.vector.histogram.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

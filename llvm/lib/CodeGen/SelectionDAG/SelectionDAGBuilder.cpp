@@ -7914,6 +7914,27 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, Trunc);
     return;
   }
+  case Intrinsic::experimental_vector_partial_reduce_add: {
+    auto DL = getCurSDLoc();
+    auto ReducedTy = EVT::getEVT(I.getType());
+    auto OpNode = getValue(I.getOperand(0));
+    auto Index = DAG.getVectorIdxConstant(0, DL);
+    auto FullTy = OpNode.getValueType();
+
+    auto ResultVector = DAG.getSplat(ReducedTy, DL, DAG.getConstant(0, DL, ReducedTy.getScalarType()));
+    unsigned ScaleFactor = FullTy.getVectorMinNumElements() / ReducedTy.getVectorMinNumElements();
+
+    for(unsigned i = 0; i < ScaleFactor; i++) {
+      auto SourceIndex = DAG.getVectorIdxConstant(i * ScaleFactor, DL);
+      auto TargetIndex = DAG.getVectorIdxConstant(i, DL);
+      auto N = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {OpNode, SourceIndex});
+      N = DAG.getNode(ISD::VECREDUCE_ADD, DL, ReducedTy.getScalarType(), N);
+      ResultVector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ReducedTy, {ResultVector, N, TargetIndex});
+    }
+
+    setValue(&I, ResultVector);
+    return;
+  }
   case Intrinsic::experimental_cttz_elts: {
     auto DL = getCurSDLoc();
     SDValue Op = getValue(I.getOperand(0));
