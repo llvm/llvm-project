@@ -43,7 +43,6 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
   let description = [{
     Fuse specific subgraphs into single Ops for code generation.
   }];
-  let constructor = "::fir::createFirCodeGenRewritePass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
   ];

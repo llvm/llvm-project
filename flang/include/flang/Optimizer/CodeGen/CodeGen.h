@@ -28,11 +28,6 @@ struct NameUniquer;
 #define GEN_PASS_DECL_BOXEDPROCEDUREPASS
 #include "flang/Optimizer/CodeGen/CGPasses.h.inc"
 
-/// Prerequiste pass for code gen. Perform intermediate rewrites to perform
-/// the code gen (to LLVM-IR dialect) conversion.
-std::unique_ptr<mlir::Pass> createFirCodeGenRewritePass(
-    CodeGenRewriteOptions Options = CodeGenRewriteOptions{});
-
 /// FirTargetRewritePass options.
 struct TargetRewriteOptions {
   bool noCharacterConversion{};
