@@ -170,8 +170,9 @@ void PPCMergeStringPool::collectCandidateConstants(Module &M) {
     LLVM_DEBUG(dbgs() << "hasInitializer() " << Global.hasInitializer()
                       << "\n");
 
-    // We can only pool constants.
-    if (!Global.isConstant() || !Global.hasInitializer())
+    // We can only pool non-thread-local constants.
+    if (!Global.isConstant() || !Global.hasInitializer() ||
+        Global.isThreadLocal())
       continue;
 
     // If a global constant has a section we do not try to pool it because
@@ -213,11 +214,6 @@ void PPCMergeStringPool::collectCandidateConstants(Module &M) {
     // Make sure that the global is only visible inside the compilation unit.
     if (Global.getLinkage() != GlobalValue::PrivateLinkage &&
         Global.getLinkage() != GlobalValue::InternalLinkage)
-      continue;
-
-    // Do not pool thread-local constants, as the pooled strings can contain
-    // non-thread-local constants, and these should not be mixed together.
-    if (Global.isThreadLocal())
       continue;
 
     LLVM_DEBUG(dbgs() << "Constant data of Global: ");
