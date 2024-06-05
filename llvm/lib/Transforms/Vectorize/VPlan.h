@@ -3166,7 +3166,9 @@ class VPlan {
   /// definitions are VPValues that hold a pointer to their underlying IR.
   SmallVector<VPValue *, 16> VPLiveInsToFree;
 
-  /// Values used outside the plan.
+  /// Values used outside the plan. It contains live-outs that need fixing. Any
+  /// live-out that is fixed outside VPlan needs to be removed. The remaining
+  /// live-outs are fixed via VPLiveOut::fixPhi.
   MapVector<PHINode *, VPLiveOut *> LiveOuts;
 
   /// Mapping from SCEVs to the VPValues representing their expansions.
