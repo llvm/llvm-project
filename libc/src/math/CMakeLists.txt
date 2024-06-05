@@ -276,6 +276,7 @@ add_math_entrypoint_object(nextafterf128)
 add_math_entrypoint_object(nexttoward)
 add_math_entrypoint_object(nexttowardf)
 add_math_entrypoint_object(nexttowardl)
+add_math_entrypoint_object(nexttowardf16)
 
 add_math_entrypoint_object(nextdown)
 add_math_entrypoint_object(nextdownf)

@@ -2597,8 +2597,10 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
     HDRS
       NextTowardTest.h
     DEPENDS
+      libc.hdr.fenv_macros
       libc.src.math.nexttoward
-      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.CPP.bit
+      libc.src.__support.FPUtil.fenv_impl
       libc.src.__support.FPUtil.fp_bits
   )
 
@@ -2611,8 +2613,10 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
     HDRS
       NextTowardTest.h
     DEPENDS
+      libc.hdr.fenv_macros
       libc.src.math.nexttowardf
-      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.CPP.bit
+      libc.src.__support.FPUtil.fenv_impl
       libc.src.__support.FPUtil.fp_bits
   )
 endif()
@@ -2626,8 +2630,26 @@ add_fp_unittest(
   HDRS
     NextTowardTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nexttowardl
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  nexttowardf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nexttowardf16_test.cpp
+  HDRS
+    NextTowardTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nexttowardf16
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
