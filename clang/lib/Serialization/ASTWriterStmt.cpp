@@ -444,7 +444,8 @@ void ASTStmtWriter::VisitCoroutineSuspendExpr(CoroutineSuspendExpr *E) {
   Record.AddSourceLocation(E->getKeywordLoc());
   for (Stmt *S : E->children())
     Record.AddStmt(S);
-  Record.AddStmt(E->getOpaqueValue());
+  Record.AddStmt(E->getCommonExprOpaqueValue());
+  Record.AddStmt(E->getInplaceCallOpaqueValue());
 }
 
 void ASTStmtWriter::VisitCoawaitExpr(CoawaitExpr *E) {
