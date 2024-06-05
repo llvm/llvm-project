@@ -48,6 +48,7 @@ add_entrypoint_object(
     libc.hdr.types.struct_timespec
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.sanitizer
     libc.src.errno.errno
 )
 
@@ -65,6 +66,7 @@ add_entrypoint_object(
     libc.hdr.signal_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.sanitizer
     libc.src.errno.errno
 )
 
@@ -82,5 +84,6 @@ add_entrypoint_object(
     libc.hdr.signal_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.sanitizer
     libc.src.errno.errno
 )
