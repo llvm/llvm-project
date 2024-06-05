@@ -234,29 +234,33 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// If there is a single induction variable return it, otherwise return
     /// std::nullopt.
     ::std::optional<::mlir::Value> getSingleInductionVar() {
-      if (this->getInductionVars().size() == 1)
-          return this->getInductionVars()[0];
+      auto inductionVars = this->getInductionVars();
+      if (inductionVars.size() == 1)
+          return inductionVars[0];
         return std::nullopt;
     }
     /// Return the single lower bound value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleLowerBound() {
-      if (this->getMixedLowerBound().size() == 1)
-          return this->getMixedLowerBound()[0];
+      auto lowerBounds = this->getMixedLowerBound();
+      if (lowerBounds.size() == 1)
+          return lowerBounds[0];
         return std::nullopt;
     }
     /// Return the single step value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleStep() {
-      if (this->getMixedStep().size() == 1)
-          return this->getMixedStep()[0];
+      auto steps = this->getMixedStep(); 
+      if (steps.size() == 1)
+          return steps[0];
         return std::nullopt;
     }
     /// Return the single upper bound value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleUpperBound() {
-      if (this->getMixedUpperBound().size() == 1)
-          return this->getMixedUpperBound()[0];
+      auto upperBounds = this->getMixedUpperBound();
+      if (upperBounds.size() == 1)
+          return upperBounds[0];
         return std::nullopt;
     }
 
