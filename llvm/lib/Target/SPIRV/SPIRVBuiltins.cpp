@@ -24,7 +24,6 @@
 #define DEBUG_TYPE "spirv-builtins"
 
 namespace llvm {
-
 namespace SPIRV {
 #define GET_BuiltinGroup_DECL
 #include "SPIRVGenTables.inc"
