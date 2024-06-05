@@ -1,4 +1,4 @@
-//===-------- LoopIdiomVectorize.cpp - Loop idiom recognition -------------===//
+//===-------- LoopIdiomVectorize.cpp - Loop idiom vectorization -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,7 +40,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -58,32 +57,26 @@ using namespace PatternMatch;
 
 static cl::opt<bool> DisableAll("disable-loop-idiom-vectorize-all", cl::Hidden,
                                 cl::init(false),
-                                cl::desc("Disable Loop Idiom Transform Pass."));
+                                cl::desc("Disable Loop Idiom Vectorize Pass."));
 
 static cl::opt<bool>
     DisableByteCmp("disable-loop-idiom-vectorize-bytecmp", cl::Hidden,
                    cl::init(false),
-                   cl::desc("Proceed with Loop Idiom Transform Pass, but do "
+                   cl::desc("Proceed with Loop Idiom Vectorize Pass, but do "
                             "not convert byte-compare loop(s)."));
 
 static cl::opt<bool>
-    VerifyLoops("verify-loop-idiom-vectorize", cl::Hidden, cl::init(false),
-                cl::desc("Verify loops generated Loop Idiom Transform Pass."));
+    VerifyLoops("loop-idiom-vectorize-verify", cl::Hidden, cl::init(false),
+                cl::desc("Verify loops generated Loop Idiom Vectorize Pass."));
 
 namespace {
+
 class LoopIdiomVectorize {
   Loop *CurLoop = nullptr;
   DominatorTree *DT;
   LoopInfo *LI;
   const TargetTransformInfo *TTI;
   const DataLayout *DL;
-
-  // Blocks that will be used for inserting vectorized code.
-  BasicBlock *EndBlock = nullptr;
-  BasicBlock *VectorLoopPreheaderBlock = nullptr;
-  BasicBlock *VectorLoopStartBlock = nullptr;
-  BasicBlock *VectorLoopMismatchBlock = nullptr;
-  BasicBlock *VectorLoopIncBlock = nullptr;
 
 public:
   explicit LoopIdiomVectorize(DominatorTree *DT, LoopInfo *LI,
@@ -102,15 +95,9 @@ private:
                       SmallVectorImpl<BasicBlock *> &ExitBlocks);
 
   bool recognizeByteCompare();
-
   Value *expandFindMismatch(IRBuilder<> &Builder, DomTreeUpdater &DTU,
                             GetElementPtrInst *GEPA, GetElementPtrInst *GEPB,
                             Instruction *Index, Value *Start, Value *MaxLen);
-
-  Value *createMaskedFindMismatch(IRBuilder<> &Builder, GetElementPtrInst *GEPA,
-                                  GetElementPtrInst *GEPB, Value *ExtStart,
-                                  Value *ExtEnd);
-
   void transformByteCompare(GetElementPtrInst *GEPA, GetElementPtrInst *GEPB,
                             PHINode *IndPhi, Value *MaxLen, Instruction *Index,
                             Value *Start, bool IncIdx, BasicBlock *FoundBB,
@@ -344,106 +331,6 @@ bool LoopIdiomVectorize::recognizeByteCompare() {
   return true;
 }
 
-Value *LoopIdiomVectorize::createMaskedFindMismatch(IRBuilder<> &Builder,
-                                                    GetElementPtrInst *GEPA,
-                                                    GetElementPtrInst *GEPB,
-                                                    Value *ExtStart,
-                                                    Value *ExtEnd) {
-  Type *I64Type = Builder.getInt64Ty();
-  Type *ResType = Builder.getInt32Ty();
-  Type *LoadType = Builder.getInt8Ty();
-  Value *PtrA = GEPA->getPointerOperand();
-  Value *PtrB = GEPB->getPointerOperand();
-
-  // At this point we know two things must be true:
-  //  1. Start <= End
-  //  2. ExtMaxLen <= MinPageSize due to the page checks.
-  // Therefore, we know that we can use a 64-bit induction variable that
-  // starts from 0 -> ExtMaxLen and it will not overflow.
-  ScalableVectorType *PredVTy =
-      ScalableVectorType::get(Builder.getInt1Ty(), 16);
-
-  Value *InitialPred = Builder.CreateIntrinsic(
-      Intrinsic::get_active_lane_mask, {PredVTy, I64Type}, {ExtStart, ExtEnd});
-
-  Value *VecLen = Builder.CreateIntrinsic(Intrinsic::vscale, {I64Type}, {});
-  VecLen = Builder.CreateMul(VecLen, ConstantInt::get(I64Type, 16), "",
-                             /*HasNUW=*/true, /*HasNSW=*/true);
-
-  Value *PFalse = Builder.CreateVectorSplat(PredVTy->getElementCount(),
-                                            Builder.getInt1(false));
-
-  BranchInst *JumpToVectorLoop = BranchInst::Create(VectorLoopStartBlock);
-  Builder.Insert(JumpToVectorLoop);
-
-  // Set up the first vector loop block by creating the PHIs, doing the vector
-  // loads and comparing the vectors.
-  Builder.SetInsertPoint(VectorLoopStartBlock);
-  PHINode *LoopPred = Builder.CreatePHI(PredVTy, 2, "mismatch_vec_loop_pred");
-  LoopPred->addIncoming(InitialPred, VectorLoopPreheaderBlock);
-  PHINode *VectorIndexPhi = Builder.CreatePHI(I64Type, 2, "mismatch_vec_index");
-  VectorIndexPhi->addIncoming(ExtStart, VectorLoopPreheaderBlock);
-  Type *VectorLoadType = ScalableVectorType::get(Builder.getInt8Ty(), 16);
-  Value *Passthru = ConstantInt::getNullValue(VectorLoadType);
-
-  Value *VectorLhsGep =
-      Builder.CreateGEP(LoadType, PtrA, VectorIndexPhi, "", GEPA->isInBounds());
-  Value *VectorLhsLoad = Builder.CreateMaskedLoad(VectorLoadType, VectorLhsGep,
-                                                  Align(1), LoopPred, Passthru);
-
-  Value *VectorRhsGep =
-      Builder.CreateGEP(LoadType, PtrB, VectorIndexPhi, "", GEPB->isInBounds());
-  Value *VectorRhsLoad = Builder.CreateMaskedLoad(VectorLoadType, VectorRhsGep,
-                                                  Align(1), LoopPred, Passthru);
-
-  Value *VectorMatchCmp = Builder.CreateICmpNE(VectorLhsLoad, VectorRhsLoad);
-  VectorMatchCmp = Builder.CreateSelect(LoopPred, VectorMatchCmp, PFalse);
-  Value *VectorMatchHasActiveLanes = Builder.CreateOrReduce(VectorMatchCmp);
-  BranchInst *VectorEarlyExit = BranchInst::Create(
-      VectorLoopMismatchBlock, VectorLoopIncBlock, VectorMatchHasActiveLanes);
-  Builder.Insert(VectorEarlyExit);
-
-  // Increment the index counter and calculate the predicate for the next
-  // iteration of the loop. We branch back to the start of the loop if there
-  // is at least one active lane.
-  Builder.SetInsertPoint(VectorLoopIncBlock);
-  Value *NewVectorIndexPhi =
-      Builder.CreateAdd(VectorIndexPhi, VecLen, "",
-                        /*HasNUW=*/true, /*HasNSW=*/true);
-  VectorIndexPhi->addIncoming(NewVectorIndexPhi, VectorLoopIncBlock);
-  Value *NewPred =
-      Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
-                              {PredVTy, I64Type}, {NewVectorIndexPhi, ExtEnd});
-  LoopPred->addIncoming(NewPred, VectorLoopIncBlock);
-
-  Value *PredHasActiveLanes =
-      Builder.CreateExtractElement(NewPred, uint64_t(0));
-  BranchInst *VectorLoopBranchBack =
-      BranchInst::Create(VectorLoopStartBlock, EndBlock, PredHasActiveLanes);
-  Builder.Insert(VectorLoopBranchBack);
-
-  // If we found a mismatch then we need to calculate which lane in the vector
-  // had a mismatch and add that on to the current loop index.
-  Builder.SetInsertPoint(VectorLoopMismatchBlock);
-  PHINode *FoundPred = Builder.CreatePHI(PredVTy, 1, "mismatch_vec_found_pred");
-  FoundPred->addIncoming(VectorMatchCmp, VectorLoopStartBlock);
-  PHINode *LastLoopPred =
-      Builder.CreatePHI(PredVTy, 1, "mismatch_vec_last_loop_pred");
-  LastLoopPred->addIncoming(LoopPred, VectorLoopStartBlock);
-  PHINode *VectorFoundIndex =
-      Builder.CreatePHI(I64Type, 1, "mismatch_vec_found_index");
-  VectorFoundIndex->addIncoming(VectorIndexPhi, VectorLoopStartBlock);
-
-  Value *PredMatchCmp = Builder.CreateAnd(LastLoopPred, FoundPred);
-  Value *Ctz = Builder.CreateIntrinsic(
-      Intrinsic::experimental_cttz_elts, {ResType, PredMatchCmp->getType()},
-      {PredMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(true)});
-  Ctz = Builder.CreateZExt(Ctz, I64Type);
-  Value *VectorLoopRes64 = Builder.CreateAdd(VectorFoundIndex, Ctz, "",
-                                             /*HasNUW=*/true, /*HasNSW=*/true);
-  return Builder.CreateTrunc(VectorLoopRes64, ResType);
-}
-
 Value *LoopIdiomVectorize::expandFindMismatch(
     IRBuilder<> &Builder, DomTreeUpdater &DTU, GetElementPtrInst *GEPA,
     GetElementPtrInst *GEPB, Instruction *Index, Value *Start, Value *MaxLen) {
@@ -458,7 +345,8 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   Type *ResType = Builder.getInt32Ty();
 
   // Split block in the original loop preheader.
-  EndBlock = SplitBlock(Preheader, PHBranch, DT, LI, nullptr, "mismatch_end");
+  BasicBlock *EndBlock =
+      SplitBlock(Preheader, PHBranch, DT, LI, nullptr, "mismatch_end");
 
   // Create the blocks that we're going to need:
   //  1. A block for checking the zero-extended length exceeds 0
@@ -482,17 +370,17 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   BasicBlock *MemCheckBlock = BasicBlock::Create(
       Ctx, "mismatch_mem_check", EndBlock->getParent(), EndBlock);
 
-  VectorLoopPreheaderBlock = BasicBlock::Create(
+  BasicBlock *VectorLoopPreheaderBlock = BasicBlock::Create(
       Ctx, "mismatch_vec_loop_preheader", EndBlock->getParent(), EndBlock);
 
-  VectorLoopStartBlock = BasicBlock::Create(Ctx, "mismatch_vec_loop",
-                                            EndBlock->getParent(), EndBlock);
+  BasicBlock *VectorLoopStartBlock = BasicBlock::Create(
+      Ctx, "mismatch_vec_loop", EndBlock->getParent(), EndBlock);
 
-  VectorLoopIncBlock = BasicBlock::Create(Ctx, "mismatch_vec_loop_inc",
-                                          EndBlock->getParent(), EndBlock);
+  BasicBlock *VectorLoopIncBlock = BasicBlock::Create(
+      Ctx, "mismatch_vec_loop_inc", EndBlock->getParent(), EndBlock);
 
-  VectorLoopMismatchBlock = BasicBlock::Create(Ctx, "mismatch_vec_loop_found",
-                                               EndBlock->getParent(), EndBlock);
+  BasicBlock *VectorLoopMismatchBlock = BasicBlock::Create(
+      Ctx, "mismatch_vec_loop_found", EndBlock->getParent(), EndBlock);
 
   BasicBlock *LoopPreHeaderBlock = BasicBlock::Create(
       Ctx, "mismatch_loop_pre", EndBlock->getParent(), EndBlock);
@@ -548,6 +436,10 @@ Value *LoopIdiomVectorize::expandFindMismatch(
       MDBuilder(MinItCheckBr->getContext()).createBranchWeights(99, 1));
   Builder.Insert(MinItCheckBr);
 
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, MinItCheckBlock, MemCheckBlock},
+       {DominatorTree::Insert, MinItCheckBlock, LoopPreHeaderBlock}});
+
   // For each of the arrays, check the start/end addresses are on the same
   // page.
   Builder.SetInsertPoint(MemCheckBlock);
@@ -590,19 +482,125 @@ Value *LoopIdiomVectorize::expandFindMismatch(
                                 .createBranchWeights(10, 90));
   Builder.Insert(CombinedPageCmpCmpBr);
 
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, MemCheckBlock, LoopPreHeaderBlock},
+       {DominatorTree::Insert, MemCheckBlock, VectorLoopPreheaderBlock}});
+
   // Set up the vector loop preheader, i.e. calculate initial loop predicate,
   // zero-extend MaxLen to 64-bits, determine the number of vector elements
   // processed in each iteration, etc.
   Builder.SetInsertPoint(VectorLoopPreheaderBlock);
 
-  Value *VectorLoopRes =
-      createMaskedFindMismatch(Builder, GEPA, GEPB, ExtStart, ExtEnd);
+  // At this point we know two things must be true:
+  //  1. Start <= End
+  //  2. ExtMaxLen <= MinPageSize due to the page checks.
+  // Therefore, we know that we can use a 64-bit induction variable that
+  // starts from 0 -> ExtMaxLen and it will not overflow.
+  ScalableVectorType *PredVTy =
+      ScalableVectorType::get(Builder.getInt1Ty(), 16);
+
+  Value *InitialPred = Builder.CreateIntrinsic(
+      Intrinsic::get_active_lane_mask, {PredVTy, I64Type}, {ExtStart, ExtEnd});
+
+  Value *VecLen = Builder.CreateIntrinsic(Intrinsic::vscale, {I64Type}, {});
+  VecLen = Builder.CreateMul(VecLen, ConstantInt::get(I64Type, 16), "",
+                             /*HasNUW=*/true, /*HasNSW=*/true);
+
+  Value *PFalse = Builder.CreateVectorSplat(PredVTy->getElementCount(),
+                                            Builder.getInt1(false));
+
+  BranchInst *JumpToVectorLoop = BranchInst::Create(VectorLoopStartBlock);
+  Builder.Insert(JumpToVectorLoop);
+
+  DTU.applyUpdates({{DominatorTree::Insert, VectorLoopPreheaderBlock,
+                     VectorLoopStartBlock}});
+
+  // Set up the first vector loop block by creating the PHIs, doing the vector
+  // loads and comparing the vectors.
+  Builder.SetInsertPoint(VectorLoopStartBlock);
+  PHINode *LoopPred = Builder.CreatePHI(PredVTy, 2, "mismatch_vec_loop_pred");
+  LoopPred->addIncoming(InitialPred, VectorLoopPreheaderBlock);
+  PHINode *VectorIndexPhi = Builder.CreatePHI(I64Type, 2, "mismatch_vec_index");
+  VectorIndexPhi->addIncoming(ExtStart, VectorLoopPreheaderBlock);
+  Type *VectorLoadType = ScalableVectorType::get(Builder.getInt8Ty(), 16);
+  Value *Passthru = ConstantInt::getNullValue(VectorLoadType);
+
+  Value *VectorLhsGep =
+      Builder.CreateGEP(LoadType, PtrA, VectorIndexPhi, "", GEPA->isInBounds());
+  Value *VectorLhsLoad = Builder.CreateMaskedLoad(VectorLoadType, VectorLhsGep,
+                                                  Align(1), LoopPred, Passthru);
+
+  Value *VectorRhsGep =
+      Builder.CreateGEP(LoadType, PtrB, VectorIndexPhi, "", GEPB->isInBounds());
+  Value *VectorRhsLoad = Builder.CreateMaskedLoad(VectorLoadType, VectorRhsGep,
+                                                  Align(1), LoopPred, Passthru);
+
+  Value *VectorMatchCmp = Builder.CreateICmpNE(VectorLhsLoad, VectorRhsLoad);
+  VectorMatchCmp = Builder.CreateSelect(LoopPred, VectorMatchCmp, PFalse);
+  Value *VectorMatchHasActiveLanes = Builder.CreateOrReduce(VectorMatchCmp);
+  BranchInst *VectorEarlyExit = BranchInst::Create(
+      VectorLoopMismatchBlock, VectorLoopIncBlock, VectorMatchHasActiveLanes);
+  Builder.Insert(VectorEarlyExit);
+
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, VectorLoopStartBlock, VectorLoopMismatchBlock},
+       {DominatorTree::Insert, VectorLoopStartBlock, VectorLoopIncBlock}});
+
+  // Increment the index counter and calculate the predicate for the next
+  // iteration of the loop. We branch back to the start of the loop if there
+  // is at least one active lane.
+  Builder.SetInsertPoint(VectorLoopIncBlock);
+  Value *NewVectorIndexPhi =
+      Builder.CreateAdd(VectorIndexPhi, VecLen, "",
+                        /*HasNUW=*/true, /*HasNSW=*/true);
+  VectorIndexPhi->addIncoming(NewVectorIndexPhi, VectorLoopIncBlock);
+  Value *NewPred =
+      Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
+                              {PredVTy, I64Type}, {NewVectorIndexPhi, ExtEnd});
+  LoopPred->addIncoming(NewPred, VectorLoopIncBlock);
+
+  Value *PredHasActiveLanes =
+      Builder.CreateExtractElement(NewPred, uint64_t(0));
+  BranchInst *VectorLoopBranchBack =
+      BranchInst::Create(VectorLoopStartBlock, EndBlock, PredHasActiveLanes);
+  Builder.Insert(VectorLoopBranchBack);
+
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, VectorLoopIncBlock, VectorLoopStartBlock},
+       {DominatorTree::Insert, VectorLoopIncBlock, EndBlock}});
+
+  // If we found a mismatch then we need to calculate which lane in the vector
+  // had a mismatch and add that on to the current loop index.
+  Builder.SetInsertPoint(VectorLoopMismatchBlock);
+  PHINode *FoundPred = Builder.CreatePHI(PredVTy, 1, "mismatch_vec_found_pred");
+  FoundPred->addIncoming(VectorMatchCmp, VectorLoopStartBlock);
+  PHINode *LastLoopPred =
+      Builder.CreatePHI(PredVTy, 1, "mismatch_vec_last_loop_pred");
+  LastLoopPred->addIncoming(LoopPred, VectorLoopStartBlock);
+  PHINode *VectorFoundIndex =
+      Builder.CreatePHI(I64Type, 1, "mismatch_vec_found_index");
+  VectorFoundIndex->addIncoming(VectorIndexPhi, VectorLoopStartBlock);
+
+  Value *PredMatchCmp = Builder.CreateAnd(LastLoopPred, FoundPred);
+  Value *Ctz = Builder.CreateIntrinsic(
+      Intrinsic::experimental_cttz_elts, {ResType, PredMatchCmp->getType()},
+      {PredMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(true)});
+  Ctz = Builder.CreateZExt(Ctz, I64Type);
+  Value *VectorLoopRes64 = Builder.CreateAdd(VectorFoundIndex, Ctz, "",
+                                             /*HasNUW=*/true, /*HasNSW=*/true);
+  Value *VectorLoopRes = Builder.CreateTrunc(VectorLoopRes64, ResType);
 
   Builder.Insert(BranchInst::Create(EndBlock));
+
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, VectorLoopMismatchBlock, EndBlock}});
 
   // Generate code for scalar loop.
   Builder.SetInsertPoint(LoopPreHeaderBlock);
   Builder.Insert(BranchInst::Create(LoopStartBlock));
+
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, LoopPreHeaderBlock, LoopStartBlock}});
 
   Builder.SetInsertPoint(LoopStartBlock);
   PHINode *IndexPhi = Builder.CreatePHI(ResType, 2, "mismatch_index");
@@ -625,6 +623,9 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   BranchInst *MatchCmpBr = BranchInst::Create(LoopIncBlock, EndBlock, MatchCmp);
   Builder.Insert(MatchCmpBr);
 
+  DTU.applyUpdates({{DominatorTree::Insert, LoopStartBlock, LoopIncBlock},
+                    {DominatorTree::Insert, LoopStartBlock, EndBlock}});
+
   // Have we reached the maximum permitted length for the loop?
   Builder.SetInsertPoint(LoopIncBlock);
   Value *PhiInc = Builder.CreateAdd(IndexPhi, ConstantInt::get(ResType, 1), "",
@@ -634,6 +635,9 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   Value *IVCmp = Builder.CreateICmpEQ(PhiInc, MaxLen);
   BranchInst *IVCmpBr = BranchInst::Create(EndBlock, LoopStartBlock, IVCmp);
   Builder.Insert(IVCmpBr);
+
+  DTU.applyUpdates({{DominatorTree::Insert, LoopIncBlock, EndBlock},
+                    {DominatorTree::Insert, LoopIncBlock, LoopStartBlock}});
 
   // In the end block we need to insert a PHI node to deal with three cases:
   //  1. We didn't find a mismatch in the scalar loop, so we return MaxLen.
@@ -678,11 +682,6 @@ void LoopIdiomVectorize::transformByteCompare(GetElementPtrInst *GEPA,
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Builder.SetCurrentDebugLocation(PHBranch->getDebugLoc());
 
-  // Safeguard to check if we build the correct DomTree with DTU.
-  auto CheckDTU = llvm::make_scope_exit([&]() {
-    assert(DTU.getDomTree().verify() && "Ill-formed DomTree built by DTU");
-  });
-
   // Increment the pointer if this was done before the loads in the loop.
   if (IncIdx)
     Start = Builder.CreateAdd(Start, ConstantInt::get(Start->getType(), 1));
@@ -718,8 +717,12 @@ void LoopIdiomVectorize::transformByteCompare(GetElementPtrInst *GEPA,
   if (FoundBB != EndBB) {
     Value *FoundCmp = Builder.CreateICmpEQ(ByteCmpRes, MaxLen);
     Builder.CreateCondBr(FoundCmp, EndBB, FoundBB);
+    DTU.applyUpdates({{DominatorTree::Insert, CmpBB, FoundBB},
+                      {DominatorTree::Insert, CmpBB, EndBB}});
+
   } else {
     Builder.CreateBr(FoundBB);
+    DTU.applyUpdates({{DominatorTree::Insert, CmpBB, FoundBB}});
   }
 
   auto fixSuccessorPhis = [&](BasicBlock *SuccBB) {
