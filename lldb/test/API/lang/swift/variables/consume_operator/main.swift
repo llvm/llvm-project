@@ -34,7 +34,8 @@ public func copyableValueTest() {
     print("stop here") // Set breakpoint
     let k = Klass()
     k.doSomething()
-    let m = consume k // Set breakpoint
+    print("stop here") // Set breakpoint
+    let m = consume k
     m.doSomething() // Set breakpoint
 }
 
@@ -76,7 +77,8 @@ public func addressOnlyVarTest<T : P>(_ x: T) {
 public func copyableValueArgTest(_ k: __owned Klass) {
     print("stop here") // Set breakpoint
     k.doSomething()
-    let m = consume k // Set breakpoint
+    print("stop here") // Set breakpoint
+    let m = consume k
     m.doSomething() // Set breakpoint
 }
 
@@ -116,7 +118,8 @@ public func copyableValueCCFTrueTest() {
     let k = Klass() // Set breakpoint
     k.doSomething() // Set breakpoint
     if trueBoolValue {
-        let m = consume k // Set breakpoint
+        print("stop here") // Set breakpoint
+        let m = consume k
         m.doSomething() // Set breakpoint
     }
     // Set breakpoint
@@ -126,6 +129,7 @@ public func copyableValueCCFFalseTest() {
     let k = Klass() // Set breakpoint
     k.doSomething() // Set breakpoint
     if falseBoolValue {
+        print("stop here") // Set breakpoint
         let m = consume k
         m.doSomething()
     }
