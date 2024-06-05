@@ -1778,6 +1778,57 @@ bb6:                                              ; preds = %start, %bb3, %bb4, 
   ret i32 %.sroa.0.0
 }
 
+; This is the same as @signed_overflow2 except that the default case calls @exit(), so it
+; isn't treated as unreachable
+define i32 @signed_overflow3(i8 %n) {
+; CHECK-LABEL: @signed_overflow3(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i2
+; CHECK-NEXT:    switch i2 [[TRUNC]], label [[START_UNREACHABLEDEFAULT:%.*]] [
+; CHECK-NEXT:      i2 1, label [[BB6:%.*]]
+; CHECK-NEXT:      i2 -2, label [[BB4:%.*]]
+; CHECK-NEXT:      i2 -1, label [[BB5:%.*]]
+; CHECK-NEXT:      i2 0, label [[BB1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       start.unreachabledefault:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @exit(i32 1)
+; CHECK-NEXT:    unreachable
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB6]]
+; CHECK:       bb5:
+; CHECK-NEXT:    br label [[BB6]]
+; CHECK:       bb6:
+; CHECK-NEXT:    [[DOTSROA_0_0:%.*]] = phi i32 [ 4444, [[BB5]] ], [ 3333, [[BB4]] ], [ 2222, [[START:%.*]] ]
+; CHECK-NEXT:    ret i32 [[DOTSROA_0_0]]
+;
+start:
+  %trunc = trunc i8 %n to i2
+  switch i2 %trunc, label %bb1 [
+  i2 1, label %bb3
+  i2 -2, label %bb4
+  i2 -1, label %bb5
+  ]
+
+bb1:                                              ; preds = %start
+  call void @exit(i32 1)
+  unreachable
+
+bb3:                                              ; preds = %start
+  br label %bb6
+
+bb4:                                              ; preds = %start
+  br label %bb6
+
+bb5:                                              ; preds = %start
+  br label %bb6
+
+bb6:                                              ; preds = %start, %bb3, %bb4, %bb5
+  %.sroa.0.0 = phi i32 [ 4444, %bb5 ], [ 3333, %bb4 ], [ 2222, %bb3 ]
+  ret i32 %.sroa.0.0
+}
+
 define i32 @signed_overflow_negative(i8 %n) {
 ; CHECK-LABEL: @signed_overflow_negative(
 ; CHECK-NEXT:  start:
