@@ -3544,11 +3544,10 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       return false;
 
     static const RTLIB::Libcall LibCallTable[4][2] = {
-      { RTLIB::SIN_F32, RTLIB::SIN_F64 },
-      { RTLIB::COS_F32, RTLIB::COS_F64 },
-      { RTLIB::TAN_F32, RTLIB::TAN_F64 },
-      { RTLIB::POW_F32, RTLIB::POW_F64 }
-    };
+        {RTLIB::SIN_F32, RTLIB::SIN_F64},
+        {RTLIB::COS_F32, RTLIB::COS_F64},
+        {RTLIB::TAN_F32, RTLIB::TAN_F64},
+        {RTLIB::POW_F32, RTLIB::POW_F64}};
     RTLIB::Libcall LC;
     bool Is64Bit = RetVT == MVT::f64;
     switch (II->getIntrinsicID()) {
