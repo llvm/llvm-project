@@ -25,3 +25,6 @@
 
 // RUN: %clang --target=x86_64-apple-tvos-simulator -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-TVOSSIMULATOR
 // CHECK-RTSAN-X86-64-TVOSSIMULATOR-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-LINUX
+// CHECK-RTSAN-X86-64-LINUX-NOT: unsupported option
