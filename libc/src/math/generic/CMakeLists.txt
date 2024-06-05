@@ -2398,6 +2398,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fdimf16
+  SRCS
+    fdimf16.cpp
+  HDRS
+    ../fdimf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
   fdimf128
   SRCS
     fdimf128.cpp
