@@ -13665,8 +13665,8 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
 }
 
 // Given a list of FMV features, add each of their backend features to the list.
-static std::vector<std::string>
-getFMVBackendFeaturesFor(const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
+static std::vector<std::string> getFMVBackendFeaturesFor(
+    const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
   std::vector<std::string> BackendFeats;
   for (StringRef F : FMVFeatStrings) {
     if (auto FMVExt = llvm::AArch64::parseArchExtension(F)) {

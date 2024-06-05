@@ -174,11 +174,6 @@ void AArch64::ExtensionSet::enable(ArchExtKind E) {
   Touched.set(E);
   Enabled.set(E);
 
-  // These depend on each other, meaning you can't have one without the other.
-  // We don't want this to be in ExtensionDependencies to avoid infinite loops.
-  if (E == AEK_FP)
-    enable(AEK_SIMD);
-
   // Recursively enable all features that this one depends on. This handles all
   // of the simple cases, where the behaviour doesn't depend on the base
   // architecture version.
@@ -219,9 +214,6 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
 
   Touched.set(E);
   Enabled.reset(E);
-
-  if (E == AEK_SIMD)
-    disable(AEK_FP);
 
   // Recursively disable all features that depends on this one.
   for (auto Dep : ExtensionDependencies)
