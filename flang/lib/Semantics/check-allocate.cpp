@@ -418,15 +418,19 @@ static bool HaveCompatibleTypeParameters(
   }
 }
 
-static bool HaveCompatibleLengths(
-    const DeclTypeSpec &type1, const DeclTypeSpec &type2) {
-  if (type1.category() == DeclTypeSpec::Character &&
-      type2.category() == DeclTypeSpec::Character) {
-    auto v1{
-        evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
-    auto v2{
-        evaluate::ToInt64(type2.characterTypeSpec().length().GetExplicit())};
-    return !v1 || !v2 || *v1 == *v2;
+static bool HaveCompatibleLengths(const DeclTypeSpec &type,
+    const DeclTypeSpec &typeSpec, const Symbol &symbol) {
+  if (type.category() == DeclTypeSpec::Character &&
+      typeSpec.category() == DeclTypeSpec::Character) {
+    auto typeLength{
+        evaluate::ToInt64(type.characterTypeSpec().length().GetExplicit())};
+    auto typeSpecLength{
+        evaluate::ToInt64(typeSpec.characterTypeSpec().length().GetExplicit())};
+    if (!type.characterTypeSpec().length().isDeferred() && IsPointer(symbol) &&
+        !typeLength && typeSpecLength) {
+      return false;
+    }
+    return !typeLength || !typeSpecLength || *typeLength == *typeSpecLength;
   } else {
     return true;
   }
@@ -495,21 +499,22 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           "Allocatable object in ALLOCATE must be type compatible with type-spec"_err_en_US);
       return false;
     }
+    if (!HaveSameAssumedTypeParameters(*type_, *allocateInfo_.typeSpec)) {
+      // F'2023 C939
+      context.Say(name_.source,
+          "Type parameters in type-spec must be assumed if and only if they are assumed for allocatable object in ALLOCATE"_err_en_US);
+      return false;
+    }
     if (!HaveCompatibleTypeParameters(*type_, *allocateInfo_.typeSpec)) {
       context.Say(name_.source,
           // C936
           "Type parameters of allocatable object in ALLOCATE must be the same as the corresponding ones in type-spec"_err_en_US);
       return false;
     }
-    if (!HaveCompatibleLengths(*type_, *allocateInfo_.typeSpec)) { // C934
+    if (!HaveCompatibleLengths(
+            *type_, *allocateInfo_.typeSpec, *ultimate_)) { // C934
       context.Say(name_.source,
           "Character length of allocatable object in ALLOCATE must be the same as the type-spec"_err_en_US);
-      return false;
-    }
-    if (!HaveSameAssumedTypeParameters(*type_, *allocateInfo_.typeSpec)) {
-      // C935
-      context.Say(name_.source,
-          "Type parameters in type-spec must be assumed if and only if they are assumed for allocatable object in ALLOCATE"_err_en_US);
       return false;
     }
   } else if (allocateInfo_.gotSource || allocateInfo_.gotMold) {
