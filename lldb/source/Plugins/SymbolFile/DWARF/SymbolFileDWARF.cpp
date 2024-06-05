@@ -481,6 +481,13 @@ static ConstString GetDWARFMachOSegmentName() {
   return g_dwarf_section_name;
 }
 
+llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
+SymbolFileDWARF::GetForwardDeclCompilerTypeToDIE() {
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
+    return debug_map_symfile->GetForwardDeclCompilerTypeToDIE();
+  return m_forward_decl_compiler_type_to_die;
+}
+
 UniqueDWARFASTTypeMap &SymbolFileDWARF::GetUniqueDWARFASTTypeMap() {
   SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
   if (debug_map_symfile)
@@ -1754,7 +1761,8 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
     if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile()) {
       symbol_file = debug_map->GetSymbolFileByOSOIndex(*file_index); // OSO case
       if (symbol_file)
-        return symbol_file->DebugInfo().GetDIE(die_ref);
+        return symbol_file->DebugInfo().GetDIE(die_ref.section(),
+                                               die_ref.die_offset());
       return DWARFDIE();
     }
 
@@ -1771,7 +1779,7 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
   if (symbol_file)
     return symbol_file->GetDIE(die_ref);
 
-  return DebugInfo().GetDIE(die_ref);
+  return DebugInfo().GetDIE(die_ref.section(), die_ref.die_offset());
 }
 
 /// Return the DW_AT_(GNU_)dwo_id.
@@ -2097,16 +2105,14 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
               if (var_sp && !var_sp->GetLocationIsConstantValueData()) {
                 const DWARFExpressionList &location =
                     var_sp->LocationExpressionList();
-                Value location_result;
-                Status error;
                 ExecutionContext exe_ctx;
-                if (location.Evaluate(&exe_ctx, nullptr, LLDB_INVALID_ADDRESS,
-                                      nullptr, nullptr, location_result,
-                                      &error)) {
-                  if (location_result.GetValueType() ==
+                llvm::Expected<Value> location_result = location.Evaluate(
+                    &exe_ctx, nullptr, LLDB_INVALID_ADDRESS, nullptr, nullptr);
+                if (location_result) {
+                  if (location_result->GetValueType() ==
                       Value::ValueType::FileAddress) {
                     lldb::addr_t file_addr =
-                        location_result.GetScalar().ULongLong();
+                        location_result->GetScalar().ULongLong();
                     lldb::addr_t byte_size = 1;
                     if (var_sp->GetType())
                       byte_size =
@@ -2114,6 +2120,10 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
                     m_global_aranges_up->Append(GlobalVariableMap::Entry(
                         file_addr, byte_size, var_sp.get()));
                   }
+                } else {
+                  LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols),
+                                 location_result.takeError(),
+                                 "location expression failed to execute: {0}");
                 }
               }
             }
@@ -3779,7 +3789,7 @@ SymbolFileDWARF::FindBlockContainingSpecification(
   // Give the concrete function die specified by "func_die_offset", find the
   // concrete block whose DW_AT_specification or DW_AT_abstract_origin points
   // to "spec_block_die_offset"
-  return FindBlockContainingSpecification(DebugInfo().GetDIE(func_die_ref),
+  return FindBlockContainingSpecification(GetDIE(func_die_ref),
                                           spec_block_die_offset);
 }
 

@@ -506,11 +506,10 @@ LogicalResult TosaValidation::applyVariableCheck(Operation *op) {
 }
 
 bool TosaValidation::isValidElementType(Type type) {
-  if ((profile == TosaProfileEnum::BaseInference) && isa<FloatType>(type)) {
-    return false;
-  }
-  if (type.isF64()) {
-    return false;
+  if (isa<FloatType>(type)) {
+    if (profile == TosaProfileEnum::BaseInference)
+      return false;
+    return type.isF32() || type.isF16() || type.isBF16();
   }
   if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isUnsigned()) {

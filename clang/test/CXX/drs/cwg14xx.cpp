@@ -86,6 +86,23 @@ struct A {
 };
 }
 
+namespace cwg1458 { // cwg1458: 3.1
+#if __cplusplus >= 201103L
+struct A;
+
+void f() {
+  constexpr A* a = nullptr;
+  constexpr int p = &*a;
+  // expected-error@-1 {{cannot initialize a variable of type 'const int' with an rvalue of type 'A *'}}
+  constexpr A *p2 = &*a;
+}
+
+struct A {
+  int operator&();
+};
+#endif
+} // namespace cwg1458
+
 namespace cwg1460 { // cwg1460: 3.5
 #if __cplusplus >= 201103L
   namespace DRExample {

@@ -164,6 +164,11 @@ void SPIRVPassConfig::addIRPasses() {
     //  - all loop exits are dominated by the loop pre-header.
     //  - loops have a single back-edge.
     addPass(createLoopSimplifyPass());
+
+    // 2. Merge the convergence region exit nodes into one. After this step,
+    // regions are single-entry, single-exit. This will help determine the
+    // correct merge block.
+    addPass(createSPIRVMergeRegionExitTargetsPass());
   }
 
   TargetPassConfig::addIRPasses();

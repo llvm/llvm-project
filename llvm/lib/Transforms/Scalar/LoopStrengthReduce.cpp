@@ -193,8 +193,8 @@ static cl::opt<cl::boolOrDefault> AllowTerminatingConditionFoldingAfterLSR(
     "lsr-term-fold", cl::Hidden,
     cl::desc("Attempt to replace primary IV with other IV."));
 
-static cl::opt<bool> AllowDropSolutionIfLessProfitable(
-    "lsr-drop-solution", cl::Hidden, cl::init(false),
+static cl::opt<cl::boolOrDefault> AllowDropSolutionIfLessProfitable(
+    "lsr-drop-solution", cl::Hidden,
     cl::desc("Attempt to drop solution if it is less profitable"));
 
 STATISTIC(NumTermFold,
@@ -5250,10 +5250,20 @@ void LSRInstance::Solve(SmallVectorImpl<const Formula *> &Solution) const {
 
   assert(Solution.size() == Uses.size() && "Malformed solution!");
 
+  const bool EnableDropUnprofitableSolution = [&] {
+    switch (AllowDropSolutionIfLessProfitable) {
+    case cl::BOU_TRUE:
+      return true;
+    case cl::BOU_FALSE:
+      return false;
+    case cl::BOU_UNSET:
+      return TTI.shouldDropLSRSolutionIfLessProfitable();
+    }
+    llvm_unreachable("Unhandled cl::boolOrDefault enum");
+  }();
+
   if (BaselineCost.isLess(SolutionCost)) {
-    LLVM_DEBUG(dbgs() << "The baseline solution requires ";
-               BaselineCost.print(dbgs()); dbgs() << "\n");
-    if (!AllowDropSolutionIfLessProfitable)
+    if (!EnableDropUnprofitableSolution)
       LLVM_DEBUG(
           dbgs() << "Baseline is more profitable than chosen solution, "
                     "add option 'lsr-drop-solution' to drop LSR solution.\n");
@@ -5931,6 +5941,8 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
 
   LLVM_DEBUG(dbgs() << "LSR found " << Uses.size() << " uses:\n";
              print_uses(dbgs()));
+  LLVM_DEBUG(dbgs() << "The baseline solution requires ";
+             BaselineCost.print(dbgs()); dbgs() << "\n");
 
   // Now use the reuse data to generate a bunch of interesting ways
   // to formulate the values needed for the uses.

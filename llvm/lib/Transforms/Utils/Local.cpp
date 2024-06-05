@@ -2230,6 +2230,8 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
   assert(!SalvagedExpr->getFragmentInfo().has_value() &&
          "address-expression shouldn't have fragment info");
 
+  SalvagedExpr = SalvagedExpr->foldConstantMath();
+
   // Salvage succeeds if no additional values are required.
   if (AdditionalValues.empty()) {
     Assign->setAddress(NewV);
@@ -2290,6 +2292,7 @@ void llvm::salvageDebugInfoForDbgValues(
     if (!Op0)
       break;
 
+    SalvagedExpr = SalvagedExpr->foldConstantMath();
     DII->replaceVariableLocationOp(&I, Op0);
     bool IsValidSalvageExpr = SalvagedExpr->getNumElements() <= MaxExpressionSize;
     if (AdditionalValues.empty() && IsValidSalvageExpr) {
@@ -2351,6 +2354,7 @@ void llvm::salvageDebugInfoForDbgValues(
     if (!Op0)
       break;
 
+    SalvagedExpr = SalvagedExpr->foldConstantMath();
     DVR->replaceVariableLocationOp(&I, Op0);
     bool IsValidSalvageExpr =
         SalvagedExpr->getNumElements() <= MaxExpressionSize;

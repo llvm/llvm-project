@@ -1,26 +1,14 @@
-##===----------------------------------------------------------------------===##
-#
-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-# See https://llvm.org/LICENSE.txt for license information.
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-##===----------------------------------------------------------------------===##
-#
-# Build the DeviceRTL for all toolchains that are available
-#
-##===----------------------------------------------------------------------===##
-
 set(LIBOMPTARGET_BUILD_DEVICERTL_BCLIB TRUE CACHE BOOL
   "Can be set to false to disable building this library.")
 
 if (NOT LIBOMPTARGET_BUILD_DEVICERTL_BCLIB)
-  libomptarget_say("Not building DeviceRTL: Disabled by LIBOMPTARGET_BUILD_DEVICERTL_BCLIB")
+  message(STATUS "Not building DeviceRTL: Disabled by LIBOMPTARGET_BUILD_DEVICERTL_BCLIB")
   return()
 endif()
 
 # Check to ensure the host system is a supported host architecture.
 if(NOT ${CMAKE_SIZEOF_VOID_P} EQUAL "8")
-  libomptarget_say("Not building DeviceRTL: Runtime does not support 32-bit hosts")
+  message(STATUS "Not building DeviceRTL: Runtime does not support 32-bit hosts")
   return()
 endif()
 
@@ -32,10 +20,10 @@ if (LLVM_DIR)
   find_program(LINK_TOOL llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
   find_program(OPT_TOOL opt PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
   if ((NOT CLANG_TOOL) OR (NOT LINK_TOOL) OR (NOT OPT_TOOL) OR (NOT PACKAGER_TOOL))
-    libomptarget_say("Not building DeviceRTL. Missing clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL}, opt: ${OPT_TOOL}, or clang-offload-packager: ${PACKAGER_TOOL}")
+    message(STATUS "Not building DeviceRTL. Missing clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL}, opt: ${OPT_TOOL}, or clang-offload-packager: ${PACKAGER_TOOL}")
     return()
   else()
-    libomptarget_say("Building DeviceRTL. Using clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL} and opt: ${OPT_TOOL}")
+    message(STATUS "Building DeviceRTL. Using clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL} and opt: ${OPT_TOOL}")
   endif()
 elseif (LLVM_TOOL_CLANG_BUILD AND NOT CMAKE_CROSSCOMPILING AND NOT OPENMP_STANDALONE_BUILD)
   # LLVM in-tree builds may use CMake target names to discover the tools.
@@ -44,9 +32,9 @@ elseif (LLVM_TOOL_CLANG_BUILD AND NOT CMAKE_CROSSCOMPILING AND NOT OPENMP_STANDA
   set(PACKAGER_TOOL $<TARGET_FILE:clang-offload-packager>)
   set(LINK_TOOL $<TARGET_FILE:llvm-link>)
   set(OPT_TOOL $<TARGET_FILE:opt>)
-  libomptarget_say("Building DeviceRTL. Using clang from in-tree build")
+  message(STATUS "Building DeviceRTL. Using clang from in-tree build")
 else()
-  libomptarget_say("Not building DeviceRTL. No appropriate clang found")
+  message(STATUS "Not building DeviceRTL. No appropriate clang found")
   return()
 endif()
 
@@ -116,7 +104,7 @@ set(src_files
 # vectorized accesses to the shared state. Generally, those are "good" but
 # the optimizer pipeline (esp. Attributor) does not fully support vectorized
 # instructions yet and we end up missing out on way more important constant
-# propagation. That said, we will run the vectorizer again after the runtime 
+# propagation. That said, we will run the vectorizer again after the runtime
 # has been linked into the user program.
 set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512 -mllvm -vectorize-slp=false )
 set(link_opt_flags  -O3        -openmp-opt-disable -attributor-enable=module -vectorize-slp=false )

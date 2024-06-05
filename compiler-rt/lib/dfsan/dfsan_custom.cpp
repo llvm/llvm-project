@@ -1901,17 +1901,27 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfso_nanosleep(
   return __dfsw_nanosleep(req, rem, req_label, rem_label, ret_label);
 }
 
-static void clear_msghdr_labels(size_t bytes_written, struct msghdr *msg) {
+static void clear_msghdr_labels(size_t bytes_written, struct msghdr *msg,
+                                int flags) {
   dfsan_set_label(0, msg, sizeof(*msg));
   dfsan_set_label(0, msg->msg_name, msg->msg_namelen);
   dfsan_set_label(0, msg->msg_control, msg->msg_controllen);
-  for (size_t i = 0; bytes_written > 0; ++i) {
-    assert(i < msg->msg_iovlen);
+  for (size_t i = 0; i < msg->msg_iovlen; ++i) {
     struct iovec *iov = &msg->msg_iov[i];
-    size_t iov_written =
-        bytes_written < iov->iov_len ? bytes_written : iov->iov_len;
+    size_t iov_written = iov->iov_len;
+
+    // When MSG_TRUNC is not set, we want to avoid setting 0 label on bytes that
+    // may not have changed, using bytes_written to bound the 0 label write.
+    // When MSG_TRUNC flag is set, bytes_written may be larger than the buffer,
+    // and should not be used as a bound.
+    if (!(MSG_TRUNC & flags)) {
+      if (bytes_written < iov->iov_len) {
+        iov_written = bytes_written;
+      }
+      bytes_written -= iov_written;
+    }
+
     dfsan_set_label(0, iov->iov_base, iov_written);
-    bytes_written -= iov_written;
   }
 }
 
@@ -1923,7 +1933,7 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_recvmmsg(
   int ret = recvmmsg(sockfd, msgvec, vlen, flags, timeout);
   for (int i = 0; i < ret; ++i) {
     dfsan_set_label(0, &msgvec[i].msg_len, sizeof(msgvec[i].msg_len));
-    clear_msghdr_labels(msgvec[i].msg_len, &msgvec[i].msg_hdr);
+    clear_msghdr_labels(msgvec[i].msg_len, &msgvec[i].msg_hdr, flags);
   }
   *ret_label = 0;
   return ret;
@@ -1947,7 +1957,7 @@ SANITIZER_INTERFACE_ATTRIBUTE ssize_t __dfsw_recvmsg(
     dfsan_label msg_label, dfsan_label flags_label, dfsan_label *ret_label) {
   ssize_t ret = recvmsg(sockfd, msg, flags);
   if (ret >= 0)
-    clear_msghdr_labels(ret, msg);
+    clear_msghdr_labels(ret, msg, flags);
   *ret_label = 0;
   return ret;
 }

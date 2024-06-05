@@ -512,7 +512,14 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
   // Call the function passed to the thunk.
   Value *Callee = Thunk->getArg(0);
   Callee = IRB.CreateBitCast(Callee, PtrTy);
-  Value *Call = IRB.CreateCall(Arm64Ty, Callee, Args);
+  CallInst *Call = IRB.CreateCall(Arm64Ty, Callee, Args);
+
+  auto SRetAttr = F->getAttributes().getParamAttr(0, Attribute::StructRet);
+  auto InRegAttr = F->getAttributes().getParamAttr(0, Attribute::InReg);
+  if (SRetAttr.isValid() && !InRegAttr.isValid()) {
+    Thunk->addParamAttr(1, SRetAttr);
+    Call->addParamAttr(0, SRetAttr);
+  }
 
   Value *RetVal = Call;
   if (TransformDirectToSRet) {

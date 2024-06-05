@@ -111,6 +111,14 @@ def warn_cxx98_compat_raw_string_literal : Warning<
   "raw string literals are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
+def warn_cxx26_compat_raw_string_literal_character_set : Warning<
+  " '%0' in a raw string literal delimiter is incompatible "
+  "with standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
+def ext_cxx26_raw_string_literal_character_set : Extension<
+  " '%0' in a raw string literal delimiter is a C++2c extension">,
+  InGroup<CXX26>, DefaultIgnore;
+
 def warn_multichar_character_literal : Warning<
   "multi-character character constant">, InGroup<MultiChar>;
 def warn_four_char_character_literal : Warning<
@@ -991,5 +999,5 @@ def err_pp_unclosed_pragma_unsafe_buffer_usage :
 Error<"'#pragma unsafe_buffer_usage' was not ended">;
 
 def err_pp_pragma_unsafe_buffer_usage_syntax :
-Error<"Expected 'begin' or 'end'">;
+Error<"expected 'begin' or 'end'">;
 }

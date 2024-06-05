@@ -357,17 +357,14 @@ namespace N0 {
       a->A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
       a->B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      // FIXME: An overloaded unary 'operator*' is built for these
-      // even though the operand is a pointer (to a dependent type).
-      // Type::isOverloadableType should return false for such cases.
-      (*this).x4;
-      (*this).B::x4;
-      (*this).A::x4;
-      (*this).B::A::x4;
-      (*this).f4();
-      (*this).B::f4();
-      (*this).A::f4();
-      (*this).B::A::f4();
+      (*this).x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      (*this).B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      (*this).A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      (*this).B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      (*this).f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      (*this).B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      (*this).A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
+      (*this).B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
       b.x4; // expected-error{{no member named 'x4' in 'B<T>'}}
       b.B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
@@ -399,15 +396,13 @@ namespace N1 {
       f<0>();
       this->f<0>();
       a->f<0>();
-      // FIXME: This should not require 'template'!
-      (*this).f<0>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f'}}
+      (*this).f<0>();
       b.f<0>();
 
       x.f<0>();
       this->x.f<0>();
       a->x.f<0>();
-      // FIXME: This should not require 'template'!
-      (*this).x.f<0>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f'}}
+      (*this).x.f<0>();
       b.x.f<0>();
 
       // FIXME: None of these should require 'template'!

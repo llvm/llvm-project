@@ -1084,35 +1084,77 @@ func.func @fastmath(%x: vector<42xf32>) -> f32 {
 
 // CHECK-LABEL: @interleave_0d
 func.func @interleave_0d(%a: vector<f32>, %b: vector<f32>) -> vector<2xf32> {
-  // CHECK: vector.interleave %{{.*}}, %{{.*}} : vector<f32>
-  %0 = vector.interleave %a, %b : vector<f32>
+  // CHECK: vector.interleave %{{.*}}, %{{.*}} : vector<f32> -> vector<2xf32>
+  %0 = vector.interleave %a, %b : vector<f32> -> vector<2xf32>
   return %0 : vector<2xf32>
 }
 
 // CHECK-LABEL: @interleave_1d
 func.func @interleave_1d(%a: vector<4xf32>, %b: vector<4xf32>) -> vector<8xf32> {
   // CHECK: vector.interleave %{{.*}}, %{{.*}} : vector<4xf32>
-  %0 = vector.interleave %a, %b : vector<4xf32>
+  %0 = vector.interleave %a, %b : vector<4xf32> -> vector<8xf32>
   return %0 : vector<8xf32>
 }
 
 // CHECK-LABEL: @interleave_1d_scalable
 func.func @interleave_1d_scalable(%a: vector<[8]xi16>, %b: vector<[8]xi16>) -> vector<[16]xi16> {
   // CHECK: vector.interleave %{{.*}}, %{{.*}} : vector<[8]xi16>
-  %0 = vector.interleave %a, %b : vector<[8]xi16>
+  %0 = vector.interleave %a, %b : vector<[8]xi16> -> vector<[16]xi16>
   return %0 : vector<[16]xi16>
 }
 
 // CHECK-LABEL: @interleave_2d
 func.func @interleave_2d(%a: vector<2x8xf32>, %b: vector<2x8xf32>) -> vector<2x16xf32> {
   // CHECK: vector.interleave %{{.*}}, %{{.*}} : vector<2x8xf32>
-  %0 = vector.interleave %a, %b : vector<2x8xf32>
+  %0 = vector.interleave %a, %b : vector<2x8xf32> -> vector<2x16xf32>
   return %0 : vector<2x16xf32>
 }
 
 // CHECK-LABEL: @interleave_2d_scalable
 func.func @interleave_2d_scalable(%a: vector<2x[2]xf64>, %b: vector<2x[2]xf64>) -> vector<2x[4]xf64> {
   // CHECK: vector.interleave %{{.*}}, %{{.*}} : vector<2x[2]xf64>
-  %0 = vector.interleave %a, %b : vector<2x[2]xf64>
+  %0 = vector.interleave %a, %b : vector<2x[2]xf64> -> vector<2x[4]xf64>
   return %0 : vector<2x[4]xf64>
+}
+
+// CHECK-LABEL: @deinterleave_1d
+func.func @deinterleave_1d(%arg: vector<4xf32>) -> (vector<2xf32>, vector<2xf32>) {
+  // CHECK: vector.deinterleave %{{.*}} : vector<4xf32> -> vector<2xf32>
+  %0, %1 = vector.deinterleave %arg : vector<4xf32> -> vector<2xf32>
+  return %0, %1 : vector<2xf32>, vector<2xf32>
+}
+
+// CHECK-LABEL: @deinterleave_1d_scalable
+func.func @deinterleave_1d_scalable(%arg: vector<[4]xf32>) -> (vector<[2]xf32>, vector<[2]xf32>) {
+  // CHECK: vector.deinterleave %{{.*}} : vector<[4]xf32> -> vector<[2]xf32>
+  %0, %1 = vector.deinterleave %arg : vector<[4]xf32> -> vector<[2]xf32>
+  return %0, %1 : vector<[2]xf32>, vector<[2]xf32>
+}
+
+// CHECK-LABEL: @deinterleave_2d
+func.func @deinterleave_2d(%arg: vector<3x4xf32>) -> (vector<3x2xf32>, vector<3x2xf32>) {
+  // CHECK: vector.deinterleave %{{.*}} : vector<3x4xf32> -> vector<3x2xf32>
+  %0, %1 = vector.deinterleave %arg : vector<3x4xf32> -> vector<3x2xf32>
+  return %0, %1 : vector<3x2xf32>, vector<3x2xf32>
+}
+
+// CHECK-LABEL: @deinterleave_2d_scalable
+func.func @deinterleave_2d_scalable(%arg: vector<3x[4]xf32>) -> (vector<3x[2]xf32>, vector<3x[2]xf32>) {
+  // CHECK: vector.deinterleave %{{.*}} : vector<3x[4]xf32> -> vector<3x[2]xf32>
+  %0, %1 = vector.deinterleave %arg : vector<3x[4]xf32> -> vector<3x[2]xf32>
+  return %0, %1 : vector<3x[2]xf32>, vector<3x[2]xf32>
+}
+
+// CHECK-LABEL: @deinterleave_nd
+func.func @deinterleave_nd(%arg: vector<2x3x4x6xf32>) -> (vector<2x3x4x3xf32>, vector<2x3x4x3xf32>) {
+  // CHECK: vector.deinterleave %{{.*}} : vector<2x3x4x6xf32> -> vector<2x3x4x3xf32>
+  %0, %1 = vector.deinterleave %arg : vector<2x3x4x6xf32> -> vector<2x3x4x3xf32>
+  return %0, %1 : vector<2x3x4x3xf32>, vector<2x3x4x3xf32>
+}
+
+// CHECK-LABEL: @deinterleave_nd_scalable
+func.func @deinterleave_nd_scalable(%arg:vector<2x3x4x[6]xf32>) -> (vector<2x3x4x[3]xf32>, vector<2x3x4x[3]xf32>) {
+  // CHECK: vector.deinterleave %{{.*}} : vector<2x3x4x[6]xf32> -> vector<2x3x4x[3]xf32>
+  %0, %1 = vector.deinterleave %arg : vector<2x3x4x[6]xf32> -> vector<2x3x4x[3]xf32>
+  return %0, %1 : vector<2x3x4x[3]xf32>, vector<2x3x4x[3]xf32>
 }

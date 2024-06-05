@@ -26,9 +26,12 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -562,7 +565,7 @@ static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
     return;
   Expr *MaxExpr = Result.getAs<Expr>();
 
-  S.addAMDGPUFlatWorkGroupSizeAttr(New, Attr, MinExpr, MaxExpr);
+  S.AMDGPU().addAMDGPUFlatWorkGroupSizeAttr(New, Attr, MinExpr, MaxExpr);
 }
 
 ExplicitSpecifier Sema::instantiateExplicitSpecifier(
@@ -606,7 +609,7 @@ static void instantiateDependentAMDGPUWavesPerEUAttr(
     MaxExpr = Result.getAs<Expr>();
   }
 
-  S.addAMDGPUWavesPerEUAttr(New, Attr, MinExpr, MaxExpr);
+  S.AMDGPU().addAMDGPUWavesPerEUAttr(New, Attr, MinExpr, MaxExpr);
 }
 
 static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
@@ -629,7 +632,7 @@ static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
   Expr *YExpr = ResultY.getAs<Expr>();
   Expr *ZExpr = ResultZ.getAs<Expr>();
 
-  S.addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
+  S.AMDGPU().addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
 }
 
 // This doesn't take any template parameters, but we have a custom action that
@@ -838,14 +841,15 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     }
 
     if (const auto *ABIAttr = dyn_cast<ParameterABIAttr>(TmplAttr)) {
-      AddParameterABIAttr(New, *ABIAttr, ABIAttr->getABI());
+      Swift().AddParameterABIAttr(New, *ABIAttr, ABIAttr->getABI());
       continue;
     }
 
     if (isa<NSConsumedAttr>(TmplAttr) || isa<OSConsumedAttr>(TmplAttr) ||
         isa<CFConsumedAttr>(TmplAttr)) {
-      AddXConsumedAttr(New, *TmplAttr, attrToRetainOwnershipKind(TmplAttr),
-                       /*template instantiation=*/true);
+      ObjC().AddXConsumedAttr(New, *TmplAttr,
+                              attrToRetainOwnershipKind(TmplAttr),
+                              /*template instantiation=*/true);
       continue;
     }
 
@@ -1217,7 +1221,7 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
 
   // In ARC, infer 'retaining' for variables of retainable type.
   if (SemaRef.getLangOpts().ObjCAutoRefCount &&
-      SemaRef.inferObjCARCLifetime(Var))
+      SemaRef.ObjC().inferObjCARCLifetime(Var))
     Var->setInvalidDecl();
 
   if (SemaRef.getLangOpts().OpenCL)
@@ -2955,11 +2959,10 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
     }
   }
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
-    TypeSourceInfo *InstantiatedDefaultArg =
-        SemaRef.SubstType(D->getDefaultArgumentInfo(), TemplateArgs,
-                          D->getDefaultArgumentLoc(), D->getDeclName());
-    if (InstantiatedDefaultArg)
-      Inst->setDefaultArgument(InstantiatedDefaultArg);
+    TemplateArgumentLoc Output;
+    if (!SemaRef.SubstTemplateArgument(D->getDefaultArgument(), TemplateArgs,
+                                       Output))
+      Inst->setDefaultArgument(SemaRef.getASTContext(), Output);
   }
 
   // Introduce this template parameter's instantiation into the instantiation
@@ -3123,9 +3126,10 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
     EnterExpressionEvaluationContext ConstantEvaluated(
         SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-    ExprResult Value = SemaRef.SubstExpr(D->getDefaultArgument(), TemplateArgs);
-    if (!Value.isInvalid())
-      Param->setDefaultArgument(Value.get());
+    TemplateArgumentLoc Result;
+    if (!SemaRef.SubstTemplateArgument(D->getDefaultArgument(), TemplateArgs,
+                                       Result))
+      Param->setDefaultArgument(SemaRef.Context, Result);
   }
 
   // Introduce this template parameter's instantiation into the instantiation
@@ -3860,15 +3864,16 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
 
   // Substitute into the template arguments of the class template explicit
   // specialization.
-  TemplateSpecializationTypeLoc Loc = D->getTypeAsWritten()->getTypeLoc().
-                                        castAs<TemplateSpecializationTypeLoc>();
-  TemplateArgumentListInfo InstTemplateArgs(Loc.getLAngleLoc(),
-                                            Loc.getRAngleLoc());
-  SmallVector<TemplateArgumentLoc, 4> ArgLocs;
-  for (unsigned I = 0; I != Loc.getNumArgs(); ++I)
-    ArgLocs.push_back(Loc.getArgLoc(I));
-  if (SemaRef.SubstTemplateArguments(ArgLocs, TemplateArgs, InstTemplateArgs))
-    return nullptr;
+  TemplateArgumentListInfo InstTemplateArgs;
+  if (const ASTTemplateArgumentListInfo *TemplateArgsInfo =
+          D->getTemplateArgsAsWritten()) {
+    InstTemplateArgs.setLAngleLoc(TemplateArgsInfo->getLAngleLoc());
+    InstTemplateArgs.setRAngleLoc(TemplateArgsInfo->getRAngleLoc());
+
+    if (SemaRef.SubstTemplateArguments(TemplateArgsInfo->arguments(),
+                                       TemplateArgs, InstTemplateArgs))
+      return nullptr;
+  }
 
   // Check that the template argument list is well-formed for this
   // class template.
@@ -3922,6 +3927,7 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
       ClassTemplateSpecializationDecl::Create(
           SemaRef.Context, D->getTagKind(), Owner, D->getBeginLoc(),
           D->getLocation(), InstClassTemplate, CanonicalConverted, PrevDecl);
+  InstD->setTemplateArgsAsWritten(InstTemplateArgs);
 
   // Add this partial specialization to the set of class template partial
   // specializations.
@@ -3932,28 +3938,10 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
   if (SubstQualifier(D, InstD))
     return nullptr;
 
-  // Build the canonical type that describes the converted template
-  // arguments of the class template explicit specialization.
-  QualType CanonType = SemaRef.Context.getTemplateSpecializationType(
-      TemplateName(InstClassTemplate), CanonicalConverted,
-      SemaRef.Context.getRecordType(InstD));
-
-  // Build the fully-sugared type for this class template
-  // specialization as the user wrote in the specialization
-  // itself. This means that we'll pretty-print the type retrieved
-  // from the specialization's declaration the way that the user
-  // actually wrote the specialization, rather than formatting the
-  // name based on the "canonical" representation used to store the
-  // template arguments in the specialization.
-  TypeSourceInfo *WrittenTy = SemaRef.Context.getTemplateSpecializationTypeInfo(
-      TemplateName(InstClassTemplate), D->getLocation(), InstTemplateArgs,
-      CanonType);
-
   InstD->setAccess(D->getAccess());
   InstD->setInstantiationOfMemberClass(D, TSK_ImplicitInstantiation);
   InstD->setSpecializationKind(D->getSpecializationKind());
-  InstD->setTypeAsWritten(WrittenTy);
-  InstD->setExternLoc(D->getExternLoc());
+  InstD->setExternKeywordLoc(D->getExternKeywordLoc());
   InstD->setTemplateKeywordLoc(D->getTemplateKeywordLoc());
 
   Owner->addDecl(InstD);
@@ -3987,7 +3975,7 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
 
   // Substitute the current template arguments.
   if (const ASTTemplateArgumentListInfo *TemplateArgsInfo =
-          D->getTemplateArgsInfo()) {
+          D->getTemplateArgsAsWritten()) {
     VarTemplateArgsInfo.setLAngleLoc(TemplateArgsInfo->getLAngleLoc());
     VarTemplateArgsInfo.setRAngleLoc(TemplateArgsInfo->getRAngleLoc());
 
@@ -4045,7 +4033,7 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
   VarTemplateSpecializationDecl *Var = VarTemplateSpecializationDecl::Create(
       SemaRef.Context, Owner, D->getInnerLocStart(), D->getLocation(),
       VarTemplate, DI->getType(), DI, D->getStorageClass(), Converted);
-  Var->setTemplateArgsInfo(TemplateArgsInfo);
+  Var->setTemplateArgsAsWritten(TemplateArgsInfo);
   if (!PrevDecl) {
     void *InsertPos = nullptr;
     VarTemplate->findSpecialization(Converted, InsertPos);
@@ -4287,19 +4275,21 @@ TemplateDeclInstantiator::InstantiateClassTemplatePartialSpecialization(
   QualType CanonType = SemaRef.Context.getTemplateSpecializationType(
       TemplateName(ClassTemplate), CanonicalConverted);
 
-  // Build the fully-sugared type for this class template
-  // specialization as the user wrote in the specialization
-  // itself. This means that we'll pretty-print the type retrieved
-  // from the specialization's declaration the way that the user
-  // actually wrote the specialization, rather than formatting the
-  // name based on the "canonical" representation used to store the
-  // template arguments in the specialization.
-  TypeSourceInfo *WrittenTy
-    = SemaRef.Context.getTemplateSpecializationTypeInfo(
-                                                    TemplateName(ClassTemplate),
-                                                    PartialSpec->getLocation(),
-                                                    InstTemplateArgs,
-                                                    CanonType);
+  // Create the class template partial specialization declaration.
+  ClassTemplatePartialSpecializationDecl *InstPartialSpec =
+      ClassTemplatePartialSpecializationDecl::Create(
+          SemaRef.Context, PartialSpec->getTagKind(), Owner,
+          PartialSpec->getBeginLoc(), PartialSpec->getLocation(), InstParams,
+          ClassTemplate, CanonicalConverted, CanonType,
+          /*PrevDecl=*/nullptr);
+
+  InstPartialSpec->setTemplateArgsAsWritten(InstTemplateArgs);
+
+  // Substitute the nested name specifier, if any.
+  if (SubstQualifier(PartialSpec, InstPartialSpec))
+    return nullptr;
+
+  InstPartialSpec->setInstantiatedFromMember(PartialSpec);
 
   if (PrevDecl) {
     // We've already seen a partial specialization with the same template
@@ -4317,27 +4307,13 @@ TemplateDeclInstantiator::InstantiateClassTemplatePartialSpecialization(
     //
     //   Outer<int, int> outer; // error: the partial specializations of Inner
     //                          // have the same signature.
-    SemaRef.Diag(PartialSpec->getLocation(), diag::err_partial_spec_redeclared)
-      << WrittenTy->getType();
+    SemaRef.Diag(InstPartialSpec->getLocation(),
+                 diag::err_partial_spec_redeclared)
+        << InstPartialSpec;
     SemaRef.Diag(PrevDecl->getLocation(), diag::note_prev_partial_spec_here)
       << SemaRef.Context.getTypeDeclType(PrevDecl);
     return nullptr;
   }
-
-
-  // Create the class template partial specialization declaration.
-  ClassTemplatePartialSpecializationDecl *InstPartialSpec =
-      ClassTemplatePartialSpecializationDecl::Create(
-          SemaRef.Context, PartialSpec->getTagKind(), Owner,
-          PartialSpec->getBeginLoc(), PartialSpec->getLocation(), InstParams,
-          ClassTemplate, CanonicalConverted, InstTemplateArgs, CanonType,
-          nullptr);
-  // Substitute the nested name specifier, if any.
-  if (SubstQualifier(PartialSpec, InstPartialSpec))
-    return nullptr;
-
-  InstPartialSpec->setInstantiatedFromMember(PartialSpec);
-  InstPartialSpec->setTypeAsWritten(WrittenTy);
 
   // Check the completed partial specialization.
   SemaRef.CheckTemplatePartialSpecialization(InstPartialSpec);
@@ -4407,46 +4383,6 @@ TemplateDeclInstantiator::InstantiateVarTemplatePartialSpecialization(
       VarTemplate->findPartialSpecialization(CanonicalConverted, InstParams,
                                              InsertPos);
 
-  // Build the canonical type that describes the converted template
-  // arguments of the variable template partial specialization.
-  QualType CanonType = SemaRef.Context.getTemplateSpecializationType(
-      TemplateName(VarTemplate), CanonicalConverted);
-
-  // Build the fully-sugared type for this variable template
-  // specialization as the user wrote in the specialization
-  // itself. This means that we'll pretty-print the type retrieved
-  // from the specialization's declaration the way that the user
-  // actually wrote the specialization, rather than formatting the
-  // name based on the "canonical" representation used to store the
-  // template arguments in the specialization.
-  TypeSourceInfo *WrittenTy = SemaRef.Context.getTemplateSpecializationTypeInfo(
-      TemplateName(VarTemplate), PartialSpec->getLocation(), InstTemplateArgs,
-      CanonType);
-
-  if (PrevDecl) {
-    // We've already seen a partial specialization with the same template
-    // parameters and template arguments. This can happen, for example, when
-    // substituting the outer template arguments ends up causing two
-    // variable template partial specializations of a member variable template
-    // to have identical forms, e.g.,
-    //
-    //   template<typename T, typename U>
-    //   struct Outer {
-    //     template<typename X, typename Y> pair<X,Y> p;
-    //     template<typename Y> pair<T, Y> p;
-    //     template<typename Y> pair<U, Y> p;
-    //   };
-    //
-    //   Outer<int, int> outer; // error: the partial specializations of Inner
-    //                          // have the same signature.
-    SemaRef.Diag(PartialSpec->getLocation(),
-                 diag::err_var_partial_spec_redeclared)
-        << WrittenTy->getType();
-    SemaRef.Diag(PrevDecl->getLocation(),
-                 diag::note_var_prev_partial_spec_here);
-    return nullptr;
-  }
-
   // Do substitution on the type of the declaration
   TypeSourceInfo *DI = SemaRef.SubstType(
       PartialSpec->getTypeSourceInfo(), TemplateArgs,
@@ -4466,16 +4402,39 @@ TemplateDeclInstantiator::InstantiateVarTemplatePartialSpecialization(
       VarTemplatePartialSpecializationDecl::Create(
           SemaRef.Context, Owner, PartialSpec->getInnerLocStart(),
           PartialSpec->getLocation(), InstParams, VarTemplate, DI->getType(),
-          DI, PartialSpec->getStorageClass(), CanonicalConverted,
-          InstTemplateArgs);
+          DI, PartialSpec->getStorageClass(), CanonicalConverted);
+
+  InstPartialSpec->setTemplateArgsAsWritten(InstTemplateArgs);
 
   // Substitute the nested name specifier, if any.
   if (SubstQualifier(PartialSpec, InstPartialSpec))
     return nullptr;
 
   InstPartialSpec->setInstantiatedFromMember(PartialSpec);
-  InstPartialSpec->setTypeAsWritten(WrittenTy);
 
+  if (PrevDecl) {
+    // We've already seen a partial specialization with the same template
+    // parameters and template arguments. This can happen, for example, when
+    // substituting the outer template arguments ends up causing two
+    // variable template partial specializations of a member variable template
+    // to have identical forms, e.g.,
+    //
+    //   template<typename T, typename U>
+    //   struct Outer {
+    //     template<typename X, typename Y> pair<X,Y> p;
+    //     template<typename Y> pair<T, Y> p;
+    //     template<typename Y> pair<U, Y> p;
+    //   };
+    //
+    //   Outer<int, int> outer; // error: the partial specializations of Inner
+    //                          // have the same signature.
+    SemaRef.Diag(PartialSpec->getLocation(),
+                 diag::err_var_partial_spec_redeclared)
+        << InstPartialSpec;
+    SemaRef.Diag(PrevDecl->getLocation(),
+                 diag::note_var_prev_partial_spec_here);
+    return nullptr;
+  }
   // Check the completed partial specialization.
   SemaRef.CheckTemplatePartialSpecialization(InstPartialSpec);
 
@@ -5099,6 +5058,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setLocation(PatternDecl->getLocation());
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
   Function->setRangeEnd(PatternDecl->getEndLoc());
+  Function->setDeclarationNameLoc(PatternDecl->getNameInfo().getInfo());
 
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
@@ -5737,7 +5697,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
 
     TemplateArgumentListInfo TemplateArgInfo;
     if (const ASTTemplateArgumentListInfo *ArgInfo =
-            VarSpec->getTemplateArgsInfo()) {
+            VarSpec->getTemplateArgsAsWritten()) {
       TemplateArgInfo.setLAngleLoc(ArgInfo->getLAngleLoc());
       TemplateArgInfo.setRAngleLoc(ArgInfo->getRAngleLoc());
       for (const TemplateArgumentLoc &Arg : ArgInfo->arguments())

@@ -666,12 +666,29 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   // Make sure that this declaration has already been introduced.
   if (!A->getIntroduced().empty() &&
       EnclosingVersion < A->getIntroduced()) {
-    if (Message) {
-      Message->clear();
-      llvm::raw_string_ostream Out(*Message);
-      VersionTuple VTI(A->getIntroduced());
-      Out << "introduced in " << PrettyPlatformName << ' '
-          << VTI << HintMessage;
+    IdentifierInfo *IIEnv = A->getEnvironment();
+    StringRef TargetEnv =
+        Context.getTargetInfo().getTriple().getEnvironmentName();
+    StringRef EnvName = AvailabilityAttr::getPrettyEnviromentName(
+        Context.getTargetInfo().getTriple().getEnvironment());
+    // Matching environment or no environment on attribute
+    if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
+      if (Message) {
+        Message->clear();
+        llvm::raw_string_ostream Out(*Message);
+        VersionTuple VTI(A->getIntroduced());
+        Out << "introduced in " << PrettyPlatformName << " " << VTI << " "
+            << EnvName << HintMessage;
+      }
+    }
+    // Non-matching environment or no environment on target
+    else {
+      if (Message) {
+        Message->clear();
+        llvm::raw_string_ostream Out(*Message);
+        Out << "not available on " << PrettyPlatformName << " " << EnvName
+            << HintMessage;
+      }
     }
 
     return A->getStrict() ? AR_Unavailable : AR_NotYetIntroduced;
@@ -1083,23 +1100,22 @@ bool Decl::isInExportDeclContext() const {
 bool Decl::isInAnotherModuleUnit() const {
   auto *M = getOwningModule();
 
-  if (!M)
+  if (!M || !M->isNamedModule())
     return false;
 
-  M = M->getTopLevelModule();
-  // FIXME: It is problematic if the header module lives in another module
-  // unit. Consider to fix this by techniques like
-  // ExternalASTSource::hasExternalDefinitions.
-  if (M->isHeaderLikeModule())
-    return false;
-
-  // A global module without parent implies that we're parsing the global
-  // module. So it can't be in another module unit.
-  if (M->isGlobalModule())
-    return false;
-
-  assert(M->isNamedModule() && "New module kind?");
   return M != getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::shouldEmitInExternalSource() const {
+  ExternalASTSource *Source = getASTContext().getExternalSource();
+  if (!Source)
+    return false;
+
+  return Source->hasExternalDefinitions(this) == ExternalASTSource::EK_Always;
+}
+
+bool Decl::isInNamedModule() const {
+  return getOwningModule() && getOwningModule()->isNamedModule();
 }
 
 bool Decl::isFromExplicitGlobalModule() const {

@@ -651,7 +651,7 @@ public:
 
   // Modifiers
   LIBC_INLINE constexpr RetT abs() const {
-    return RetT(bits & UP::EXP_SIG_MASK);
+    return RetT(static_cast<StorageType>(bits & UP::EXP_SIG_MASK));
   }
 
   // Observers
