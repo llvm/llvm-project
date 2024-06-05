@@ -93,6 +93,17 @@ static void test_dne_path()
     }
 }
 
+static void test_empty_path() {
+  std::error_code ec = GetTestEC();
+  {
+    const path ret = canonical(path{}, ec);
+    assert(ec != GetTestEC());
+    assert(ec);
+    assert(ret == path{});
+  }
+  { TEST_THROWS_TYPE(filesystem_error, canonical(path{})); }
+}
+
 static void test_exception_contains_paths()
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -122,6 +133,7 @@ int main(int, char**) {
     signature_test();
     test_canonical();
     test_dne_path();
+    test_empty_path();
     test_exception_contains_paths();
 
     return 0;

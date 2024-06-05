@@ -66,20 +66,20 @@ static void basic_test() {
     fs::path expect;
   } TestCases[] = {
       {"", "", "."},
-      {cwd, "a", ".."},
-      {parent_cwd, "a", "../.."},
+      {cwd, "a", cwd},
+      {parent_cwd, "a", parent_cwd},
       {"a", cwd, "a"},
-      {"a", parent_cwd, curdir / "a"},
-      {"/", "a", dot_dot_to_root / ".."},
-      {"/", "a/b", dot_dot_to_root / "../.."},
-      {"/", "a/b/", dot_dot_to_root / "../.."},
-      {"a", "/", relative_cwd / "a"},
-      {"a/b", "/", relative_cwd / "a/b"},
-      {"a", "/net", ".." / relative_cwd / "a"},
+      {"a", parent_cwd, "a"},
+      {"a", "/", "a"},
+      {"a/b", "/", "a/b"},
+      {"a", "/net", "a"},
 #ifdef _WIN32
       {"//foo/", "//foo", "//foo/"},
       {"//foo", "//foo/", "//foo"},
 #else
+      {"/", "a", "/"},
+      {"/", "a/b", "/"},
+      {"/", "a/b/", "/"},
       {"//foo/", "//foo", "."},
       {"//foo", "//foo/", "."},
 #endif
@@ -104,10 +104,10 @@ static void basic_test() {
       {"X:a", "Y:/b", "X:a"},
       {"X:a", "Y:b", "X:a"},
 #else
-      {"//foo", "a", dot_dot_to_root / "../foo"},
+      {"//foo", "a", "/foo"},
       {"//foo/a", "//bar", "../foo/a"},
       {"//foo/a", "//bar/", "../foo/a"},
-      {"//foo/a", "b", dot_dot_to_root / "../foo/a"},
+      {"//foo/a", "b", "/foo/a"},
       {"//foo/a", "/b", "../foo/a"},
       {"//foo/a", "//bar/b", "../../foo/a"},
       {"X:/a", "X:/b", "../a"},

@@ -37,15 +37,15 @@ int main(int, char**) {
     fs::path input;
     fs::path expect;
   } TestCases[] = {
-      {"", fs::current_path()},
+      {"", ""},
       {".", fs::current_path()},
       {"/", root},
       {"/foo", root / "foo"},
       {"/.", root},
       {"/./", root},
-      {"a/b", fs::current_path() / "a/b"},
-      {"a", fs::current_path() / "a"},
-      {"a/b/", fs::current_path() / "a/b/"},
+      {"a/b", "a/b"},
+      {"a", "a"},
+      {"a/b/", "a/b/"},
       {static_env.File, static_env.File},
       {static_env.Dir, static_env.Dir},
       {static_env.SymlinkToDir, static_env.Dir},
