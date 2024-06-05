@@ -23,6 +23,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  canonicalizef16
+  SRCS
+    canonicalizef16.cpp
+  HDRS
+    ../canonicalizef16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
   canonicalizef128
   SRCS
     canonicalizef128.cpp
@@ -31,6 +44,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
 )
 
@@ -1220,6 +1234,19 @@ add_entrypoint_object(
   HDRS
     ../copysignl.h
   DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  copysignf16
+  SRCS
+    copysignf16.cpp
+  HDRS
+    ../copysignf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -2686,7 +2713,7 @@ add_entrypoint_object(
   HDRS
     ../fromfp.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2698,7 +2725,7 @@ add_entrypoint_object(
   HDRS
     ../fromfpf.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2710,7 +2737,20 @@ add_entrypoint_object(
   HDRS
     ../fromfpl.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fromfpf16
+  SRCS
+    fromfpf16.cpp
+  HDRS
+    ../fromfpf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2723,7 +2763,7 @@ add_entrypoint_object(
     ../fromfpf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2735,7 +2775,7 @@ add_entrypoint_object(
   HDRS
     ../fromfpx.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2747,7 +2787,7 @@ add_entrypoint_object(
   HDRS
     ../fromfpxf.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2759,7 +2799,20 @@ add_entrypoint_object(
   HDRS
     ../fromfpxl.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fromfpxf16
+  SRCS
+    fromfpxf16.cpp
+  HDRS
+    ../fromfpxf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2772,7 +2825,7 @@ add_entrypoint_object(
     ../fromfpxf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2784,7 +2837,7 @@ add_entrypoint_object(
   HDRS
     ../ufromfp.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2796,7 +2849,7 @@ add_entrypoint_object(
   HDRS
     ../ufromfpf.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2808,7 +2861,20 @@ add_entrypoint_object(
   HDRS
     ../ufromfpl.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  ufromfpf16
+  SRCS
+    ufromfpf16.cpp
+  HDRS
+    ../ufromfpf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2821,7 +2887,7 @@ add_entrypoint_object(
     ../ufromfpf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2833,7 +2899,7 @@ add_entrypoint_object(
   HDRS
     ../ufromfpx.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2845,7 +2911,7 @@ add_entrypoint_object(
   HDRS
     ../ufromfpxf.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2857,7 +2923,20 @@ add_entrypoint_object(
   HDRS
     ../ufromfpxl.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  ufromfpxf16
+  SRCS
+    ufromfpxf16.cpp
+  HDRS
+    ../ufromfpxf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
@@ -2870,7 +2949,7 @@ add_entrypoint_object(
     ../ufromfpxf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
     -O3
 )
