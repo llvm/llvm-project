@@ -15,6 +15,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   ResolveShapedTypeResultDims.cpp
   RuntimeOpVerification.cpp
   MergeAlloc.cpp
+  MergeAllocTickBased.cpp
   StaticMemoryPlanning.cpp
 
   ADDITIONAL_HEADER_DIRS
