@@ -15,13 +15,14 @@
 ; CHECK-INTERESTINGNESS-DAG: [[SUBPROG]] = distinct !DISubprogram(name: "test",
 
 
+
 ; CHECK: define void @test() !dbg [[SUBPROG:![0-9]+]]
 ; CHECK: !llvm.module.flags = !{
 
 ; CHECK: !llvm.dbg.cu = !{[[CU:.+]]}
 
 ; CHECK-DAG: [[CU]] = distinct !DICompileUnit(language: DW_LANG_C99,{{.*}}, retainedTypes: [[TYPES:![0-9]+]], globals: [[EMPTY:![0-9]+]]
-; CHECK-DAG: [[EMPTY:![0-9]+]] = !{}
+; CHECK-DAG: [[EMPTY]] = !{}
 ; CHECK-DAG: [[TYPES]] = !{[[T0:![0-9]+]]
 ; CHECK-DAG: [[T0]] = !DIBasicType(name: "unsigned int",
 ; CHECK-DAG: [[SUBPROG]] = distinct !DISubprogram(name: "test", {{.*}}retainedNodes: [[EMPTY]])
