@@ -3324,10 +3324,6 @@ bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
             Opcode != AMDGPU::V_LSHLREV_B64_dpp_gfx13 &&
             Opcode != AMDGPU::V_LSHLREV_B64_e64_dpp_gfx13 &&
             Opcode != AMDGPU::V_LSHRREV_B64_e64_dpp_gfx13 &&
-            Opcode != AMDGPU::V_MAX_NUM_F64_dpp_gfx13 &&
-            Opcode != AMDGPU::V_MAX_NUM_F64_e64_dpp_gfx13 &&
-            Opcode != AMDGPU::V_MIN_NUM_F64_dpp_gfx13 &&
-            Opcode != AMDGPU::V_MIN_NUM_F64_e64_dpp_gfx13 &&
             Opcode != AMDGPU::V_MUL_F64_dpp_gfx13 &&
             Opcode != AMDGPU::V_MUL_F64_e64_dpp_gfx13 &&
             Opcode != AMDGPU::V_SUB_U64_dpp_gfx13 &&
