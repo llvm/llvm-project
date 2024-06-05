@@ -284,7 +284,9 @@ class CrashLog(symbolication.Symbolicator):
         """Class that represents a binary images in a darwin crash log"""
 
         dsymForUUIDBinary = "/usr/local/bin/dsymForUUID"
-        if not os.path.exists(dsymForUUIDBinary):
+        if "LLDB_APPLE_DSYMFORUUID_EXECUTABLE" in os.environ:
+            dsymForUUIDBinary = os.environ["LLDB_APPLE_DSYMFORUUID_EXECUTABLE"]
+        elif not os.path.exists(dsymForUUIDBinary):
             try:
                 dsymForUUIDBinary = (
                     subprocess.check_output("which dsymForUUID", shell=True)
