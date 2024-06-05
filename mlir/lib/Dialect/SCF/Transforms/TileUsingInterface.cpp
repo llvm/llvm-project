@@ -1294,7 +1294,7 @@ fixTerminatorSCFInParallel(RewriterBase &rewriter, scf::ForallOp newForallOp,
 ///     ...
 /// }
 static SmallVector<tensor::ExtractSliceOp> fixLoopInitFromSharedOutSCFForall(
-    RewriterBase &rewriter, Operation *loop, ValueRange newSharedOuts,
+    RewriterBase &rewriter, Operation *loop, ArrayRef<Value> newSharedOuts,
     ArrayRef<SmallVector<OpFoldResult>> resultOffsets,
     ArrayRef<SmallVector<OpFoldResult>> resultSizes) {
   rewriter.setInsertionPoint(loop);
@@ -1507,7 +1507,7 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
         consumerOp,
         "consumer op taking the result of scf.for as init is not supported");
   }
-  ValueRange newInitAppend = dpsInits;
+  SmallVector<Value> newInitAppend = dpsInits;
 
   // 4.a. Reconstruct nested loop from outer to inner.
   SmallVector<OffsetSizeAndStrideOpInterface> candidateSliceOpList =
@@ -1548,13 +1548,30 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
         newInitAppend = llvm::map_to_vector(
             newExtractOps,
             [](tensor::ExtractSliceOp op) -> Value { return op.getResult(); });
+        for (auto init : newInitAppend) {
+          llvm::dbgs() << "init: " << init << "\n";
+        }
       }
     }
     LoopLikeOpInterface newLoopOp;
     // 4.d. Create a new loop with the new init values for this loop.
     if (auto forOp = dyn_cast<scf::ForOp>(loop.getOperation())) {
+      llvm::dbgs() << "index: " << index << "\n";
+      for (auto init : newInitAppend) {
+        llvm::dbgs() << "init: " << init << "\n";
+      }
       newOuts = llvm::to_vector(forOp.getInits());
+      llvm::dbgs() << "before append: \n";
+      for (auto out : newOuts) {
+        llvm::dbgs() << "newOut: " << out << "\n";
+      }
+      for (auto init : newInitAppend) {
+        llvm::dbgs() << "init: " << init << "\n";
+      }
       newOuts.append(newInitAppend.begin(), newInitAppend.end());
+      for (auto out : newOuts) {
+        llvm::dbgs() << "newOut: " << out << "\n";
+      }
       auto newLoop = rewriter.create<scf::ForOp>(
           forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
           forOp.getStep(), newOuts);
@@ -1573,13 +1590,17 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
       oldLoopBody = forallOp.getBody();
       newLoopBody = newLoop.getBody();
     }
-    newInitAppend = newLoopBody->getArguments().take_back(newInitAppend.size());
+    newInitAppend = llvm::map_to_vector(
+        newLoopBody->getArguments().take_back(newInitAppend.size()),
+        [](BlockArgument bArg) -> Value { return bArg; });
     rewriter.mergeBlocks(
         oldLoopBody, newLoopBody,
         newLoopBody->getArguments().take_front(oldLoopBody->getNumArguments()));
     rewriter.replaceOp(
         loop, newLoopOp->getResults().take_front(loop->getNumResults()));
     newOuterLoops.push_back(newLoopOp);
+    llvm::dbgs() << "newLoop: " << *newLoopOp << "\n";
+    llvm::dbgs() << "outerLoop: " << newOuterLoops.front() << "\n";
   }
 
   // 5.a. Reconstruct inner-most loop.
