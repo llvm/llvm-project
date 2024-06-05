@@ -90,7 +90,7 @@ const char *BeginHeader =
 
 const char *CSSForCoverage =
     R"(.red {
-  background-color: #ffd0d0;
+  background-color: #f004;
 }
 .cyan {
   background-color: cyan;
@@ -104,38 +104,35 @@ pre {
 }
 .source-name-title {
   padding: 5px 10px;
-  border-bottom: 1px solid #dbdbdb;
-  background-color: #eee;
+  border-bottom: 1px solid #8888;
+  background-color: #0002;
   line-height: 35px;
 }
 .centered {
   display: table;
   margin-left: left;
   margin-right: auto;
-  border: 1px solid #dbdbdb;
+  border: 1px solid #8888;
   border-radius: 3px;
 }
 .expansion-view {
-  background-color: rgba(0, 0, 0, 0);
   margin-left: 0px;
   margin-top: 5px;
   margin-right: 5px;
   margin-bottom: 5px;
-  border: 1px solid #dbdbdb;
+  border: 1px solid #8888;
   border-radius: 3px;
 }
 table {
   border-collapse: collapse;
 }
 .light-row {
-  background: #ffffff;
-  border: 1px solid #dbdbdb;
+  border: 1px solid #8888;
   border-left: none;
   border-right: none;
 }
 .light-row-bold {
-  background: #ffffff;
-  border: 1px solid #dbdbdb;
+  border: 1px solid #8888;
   border-left: none;
   border-right: none;
   font-weight: bold;
@@ -149,48 +146,35 @@ table {
 }
 .column-entry-yellow {
   text-align: left;
-  background-color: #ffffd0;
-}
-.column-entry-yellow:hover, tr:hover .column-entry-yellow {
-  background-color: #fffff0;
+  background-color: #ff06;
 }
 .column-entry-red {
   text-align: left;
-  background-color: #ffd0d0;
-}
-.column-entry-red:hover, tr:hover .column-entry-red {
-  background-color: #fff0f0;
+  background-color: #f004;
 }
 .column-entry-gray {
   text-align: left;
-  background-color: #fbfbfb;
-}
-.column-entry-gray:hover, tr:hover .column-entry-gray {
-  background-color: #f0f0f0;
+  background-color: #fff4;
 }
 .column-entry-green {
   text-align: left;
-  background-color: #d0ffd0;
-}
-.column-entry-green:hover, tr:hover .column-entry-green {
-  background-color: #f0fff0;
+  background-color: #0f04;
 }
 .line-number {
   text-align: right;
-  color: #aaa;
 }
 .covered-line {
   text-align: right;
-  color: #0080ff;
+  color: #06d;
 }
 .uncovered-line {
   text-align: right;
-  color: #ff3300;
+  color: #d00;
 }
 .tooltip {
   position: relative;
   display: inline;
-  background-color: #b3e6ff;
+  background-color: #bef;
   text-decoration: none;
 }
 .tooltip span.tooltip-content {
@@ -227,12 +211,13 @@ th, td {
   vertical-align: top;
   padding: 2px 8px;
   border-collapse: collapse;
-  border-right: solid 1px #eee;
-  border-left: solid 1px #eee;
+  border-right: 1px solid #8888;
+  border-left: 1px solid #8888;
   text-align: left;
 }
 td pre {
   display: inline-block;
+  text-decoration: inherit;
 }
 td:first-child {
   border-left: none;
@@ -241,13 +226,34 @@ td:last-child {
   border-right: none;
 }
 tr:hover {
-  background-color: #f0f0f0;
+  background-color: #eee;
 }
 tr:last-child {
   border-bottom: none;
 }
-tr:has(> td >a:target) > td.code > pre {
-  background-color: #ffa;
+tr:has(> td >a:target) {
+  background-color: #50f6;
+}
+a {
+  color: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #222;
+    color: whitesmoke;
+  }
+  tr:hover {
+    background-color: #111;
+  }
+  .covered-line {
+    color: #39f;
+  }
+  .uncovered-line {
+    color: #f55;
+  }
+  .tooltip {
+    background-color: #068;
+  }
 }
 )";
 
