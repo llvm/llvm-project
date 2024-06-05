@@ -2120,6 +2120,21 @@ add_fp_unittest(
     FMinimumTest.h
   DEPENDS
     libc.src.math.fminimuml
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimumf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimumf16_test.cpp
+  HDRS
+    FMinimumTest.h
+  DEPENDS
+    libc.src.math.fminimumf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2133,6 +2148,7 @@ add_fp_unittest(
     FMinimumTest.h
   DEPENDS
     libc.src.math.fminimumf128
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2146,6 +2162,7 @@ add_fp_unittest(
     FMinimumTest.h
   DEPENDS
     libc.src.math.fminimum
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2159,6 +2176,7 @@ add_fp_unittest(
     FMinimumTest.h
   DEPENDS
     libc.src.math.fminimumf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 

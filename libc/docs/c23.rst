@@ -63,7 +63,7 @@ Additions:
   * nextdown* |check|
   * canonicalize* |check|
   * fmaximum* |check|
-  * fminimum*
+  * fminimum* |check|
   * fmaximum_mag* |check|
   * fminimum_mag*
   * fmaximum_num* |check|

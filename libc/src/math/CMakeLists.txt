@@ -159,6 +159,7 @@ add_math_entrypoint_object(fmaximum_mag_numf128)
 add_math_entrypoint_object(fminimum)
 add_math_entrypoint_object(fminimumf)
 add_math_entrypoint_object(fminimuml)
+add_math_entrypoint_object(fminimumf16)
 add_math_entrypoint_object(fminimumf128)
 
 add_math_entrypoint_object(fminimum_num)
