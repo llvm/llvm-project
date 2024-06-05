@@ -10488,15 +10488,16 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   if (!isLoopInvariant(Step, L))
     return getCouldNotCompute();
 
+  // Specialize step for this loop so we get context sensative facts below.
+  const SCEV *StepWLG = applyLoopGuards(Step, L);
+
   // For positive steps (counting up until unsigned overflow):
   //   N = -Start/Step (as unsigned)
   // For negative steps (counting down to zero):
   //   N = Start/-Step
   // First compute the unsigned distance from zero in the direction of Step.
-  const SCEV *Zero = getZero(AddRec->getType());
-  bool CountDown = isLoopEntryGuardedByCond(L, ICmpInst::ICMP_SLT, Step, Zero);
-  if (!CountDown &&
-      !isLoopEntryGuardedByCond(L, ICmpInst::ICMP_SGE, Step, Zero))
+  bool CountDown = isKnownNegative(StepWLG);
+  if (!CountDown && !isKnownNonNegative(StepWLG))
     return getCouldNotCompute();
 
   const SCEV *Distance = CountDown ? Start : getNegativeSCEV(Start);
@@ -10515,6 +10516,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
     // Explicitly handling this here is necessary because getUnsignedRange
     // isn't context-sensitive; it doesn't know that we only care about the
     // range inside the loop.
+    const SCEV *Zero = getZero(Distance->getType());
     const SCEV *One = getOne(Distance->getType());
     const SCEV *DistancePlusOne = getAddExpr(Distance, One);
     if (isLoopEntryGuardedByCond(L, ICmpInst::ICMP_NE, DistancePlusOne, Zero)) {
@@ -10538,8 +10540,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
     // If the stride is zero, the loop must be infinite.  Most loops are
     // finite by assumption, in which case the step being zero implies UB
     // must execute if the loop is entered.
-    if (!loopIsFiniteByAssumption(L) &&
-        !isLoopEntryGuardedByCond(L, ICmpInst::ICMP_NE, Step, Zero))
+    if (!loopIsFiniteByAssumption(L) && !isKnownNonZero(StepWLG))
       return getCouldNotCompute();
 
     const SCEV *Exact =
