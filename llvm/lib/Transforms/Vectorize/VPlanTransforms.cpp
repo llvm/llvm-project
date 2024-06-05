@@ -887,7 +887,7 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     //
     //   middle.block:
     //     s_penultimate = v2(2) = v3(3)
-		//     s_resume = v2(3)
+    //     s_resume = v2(3)
     //     br cond, scalar.ph, exit.block
     //
     //   scalar.ph:
@@ -903,13 +903,14 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     //
     //   exit.block:
     //     lo = lcssa.phi [s1, scalar.body], [s.penultimate, middle.block]
-     //
+    //
     // After execution completes the vector loop, we extract the next value of
     // the recurrence (x) to use as the initial value in the scalar loop. This
     // is modeled by ExtractFromEnd.
     Type *IntTy = Plan.getCanonicalIV()->getScalarType();
 
-    // Extract the penultimate value of the recurrence and update VPLiveOut users of the recurrence splice.
+    // Extract the penultimate value of the recurrence and update VPLiveOut
+    // users of the recurrence splice.
     auto *Penultimate = cast<VPInstruction>(MiddleBuilder.createNaryOp(
         VPInstruction::ExtractFromEnd,
         {FOR->getBackedgeValue(),

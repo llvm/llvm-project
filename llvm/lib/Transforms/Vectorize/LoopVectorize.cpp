@@ -56,10 +56,10 @@
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "LoopVectorizationPlanner.h"
 #include "VPRecipeBuilder.h"
-#include "VPlanPatternMatch.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanHCFGBuilder.h"
+#include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/APInt.h"
@@ -607,8 +607,8 @@ protected:
                     BasicBlock *MiddleBlock, BasicBlock *VectorHeader,
                     VPlan &Plan, VPTransformState &State);
 
-  /// Create the phi node for the resume value of first order recurrences in the scalar preheader and
-  /// update the users in the scalar loop.
+  /// Create the phi node for the resume value of first order recurrences in the
+  /// scalar preheader and update the users in the scalar loop.
   void fixFixedOrderRecurrence(VPLiveOut *LO, VPTransformState &State);
 
   /// Iteratively sink the scalarized operands of a predicated instruction into
@@ -3475,22 +3475,26 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(VPLiveOut *LO,
   // Extract the last vector element in the middle block. This will be the
   // initial value for the recurrence when jumping to the scalar loop.
   VPValue *VPExtract = LO->getOperand(0);
-using namespace llvm::VPlanPatternMatch;
-  assert(match(VPExtract, m_VPInstruction<VPInstruction::ExtractFromEnd>(m_VPValue(), m_VPValue())) && "FOR LiveOut expects to use an extract from end.");
+  using namespace llvm::VPlanPatternMatch;
+  assert(match(VPExtract, m_VPInstruction<VPInstruction::ExtractFromEnd>(
+                              m_VPValue(), m_VPValue())) &&
+         "FOR LiveOut expects to use an extract from end.");
   Value *ResumeScalarFOR = State.get(VPExtract, UF - 1, true);
 
   // Fix the initial value of the original recurrence in the scalar loop.
   Builder.SetInsertPoint(LoopScalarPreHeader, LoopScalarPreHeader->begin());
   PHINode *ScalarHeaderPhi = LO->getPhi();
-  auto *NewScalarHeaderPhi = Builder.CreatePHI(ScalarHeaderPhi->getType(), 2, "scalar.recur.init");
+  auto *NewScalarHeaderPhi =
+      Builder.CreatePHI(ScalarHeaderPhi->getType(), 2, "scalar.recur.init");
   auto *InitScalarFOR =
       ScalarHeaderPhi->getIncomingValueForBlock(LoopScalarPreHeader);
   for (auto *BB : predecessors(LoopScalarPreHeader)) {
     auto *Incoming = BB == LoopMiddleBlock ? ResumeScalarFOR : InitScalarFOR;
-    NewScalarHeaderPhi ->addIncoming(Incoming, BB);
+    NewScalarHeaderPhi->addIncoming(Incoming, BB);
   }
 
-  ScalarHeaderPhi->setIncomingValueForBlock(LoopScalarPreHeader, NewScalarHeaderPhi );
+  ScalarHeaderPhi->setIncomingValueForBlock(LoopScalarPreHeader,
+                                            NewScalarHeaderPhi);
   ScalarHeaderPhi->setName("scalar.recur");
 }
 
