@@ -8585,14 +8585,15 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange)) {
+      bool IsScalarVPlan = Plan->hasVF(ElementCount::getFixed(1));
       // Now optimize the initial VPlan.
-      if (!Plan->hasVF(ElementCount::getFixed(1)))
+      if (!IsScalarVPlan)
         VPlanTransforms::truncateToMinimalBitwidths(
             *Plan, CM.getMinimalBitwidths(), PSE.getSE()->getContext());
       VPlanTransforms::optimize(*Plan, *PSE.getSE());
       // TODO: try to put it close to addActiveLaneMask().
       // Discard the plan if it is not EVL-compatible
-      if (CM.foldTailWithEVL() &&
+      if (!IsScalarVPlan && CM.foldTailWithEVL() &&
           !VPlanTransforms::tryAddExplicitVectorLength(*Plan))
         break;
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");

@@ -2,12 +2,12 @@
 ; RUN: opt -passes=loop-vectorize \
 ; RUN: -force-tail-folding-style=data-with-evl \
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
-; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s --check-prefix=IF-EVL
+; RUN: -mtriple=riscv64 -mattr=+v -S %s | FileCheck %s --check-prefix=IF-EVL
 
 ; RUN: opt -passes=loop-vectorize \
 ; RUN: -force-tail-folding-style=none \
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
-; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s --check-prefix=NO-VP
+; RUN: -mtriple=riscv64 -mattr=+v -S %s | FileCheck %s --check-prefix=NO-VP
 
 
 define void @test_and(ptr nocapture %a, ptr nocapture readonly %b) {

@@ -1320,6 +1320,8 @@ void VPlanTransforms::addActiveLaneMask(
 
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
   DenseSet<VPRecipeBase *> ToRemove;
 
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
@@ -1348,7 +1350,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 if (!Instruction::isBinaryOp(Opcode) &&
                     !Instruction::isUnaryOp(Opcode))
                   return nullptr;
-                return VPWidenEVLRecipe::create(W, EVL);
+                return new VPWidenEVLRecipe(W, EVL);
               })
               .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
                 return new VPReductionEVLRecipe(
