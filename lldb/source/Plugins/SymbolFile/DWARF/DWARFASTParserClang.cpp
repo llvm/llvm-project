@@ -587,10 +587,10 @@ ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
       form_value.BlockData() - debug_info_data.GetDataStart();
 
   llvm::Expected<Value> memberOffset = DWARFExpression::Evaluate(
-      nullptr, // ExecutionContext *
-      nullptr, // RegisterContext *
-      module_sp, DataExtractor(debug_info_data, block_offset, block_length),
-      die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr);
+      /*ExecutionContext=*/nullptr,
+      /*RegisterContext=*/nullptr, module_sp,
+      DataExtractor(debug_info_data, block_offset, block_length), die.GetCU(),
+      eRegisterKindDWARF, &initialValue, nullptr);
   if (!memberOffset) {
     LLDB_LOG_ERROR(log, memberOffset.takeError(),
                    "ExtractDataMemberLocation failed: {0}");
