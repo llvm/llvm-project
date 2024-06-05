@@ -52,6 +52,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -2918,7 +2919,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   } else if (const auto *MA = dyn_cast<MinSizeAttr>(Attr))
     NewAttr = S.mergeMinSizeAttr(D, *MA);
   else if (const auto *SNA = dyn_cast<SwiftNameAttr>(Attr))
-    NewAttr = S.mergeSwiftNameAttr(D, *SNA, SNA->getName());
+    NewAttr = S.Swift().mergeNameAttr(D, *SNA, SNA->getName());
   else if (const auto *OA = dyn_cast<OptimizeNoneAttr>(Attr))
     NewAttr = S.mergeOptimizeNoneAttr(D, *OA);
   else if (const auto *InternalLinkageA = dyn_cast<InternalLinkageAttr>(Attr))
