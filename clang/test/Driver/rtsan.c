@@ -28,3 +28,6 @@
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-X86-64-LINUX
 // CHECK-RTSAN-X86-64-LINUX-NOT: unsupported option
+
+// RUN: not %clang --target=i386-pc-openbsd -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-OPENBSD
+// CHECK-RTSAN-OPENBSD: unsupported option '-fsanitize=realtime' for target 'i386-pc-openbsd'
