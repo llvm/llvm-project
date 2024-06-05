@@ -3162,6 +3162,38 @@ private:
 };
 
 template <typename CIROp, typename LLVMOp>
+class CIRUnaryFPToFPBuiltinOpLowering
+    : public mlir::OpConversionPattern<CIROp> {
+public:
+  using mlir::OpConversionPattern<CIROp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(CIROp op,
+                  typename mlir::OpConversionPattern<CIROp>::OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto resTy = this->getTypeConverter()->convertType(op.getType());
+    rewriter.replaceOpWithNewOp<LLVMOp>(op, resTy, adaptor.getSrc());
+    return mlir::success();
+  }
+};
+
+using CIRCeilOpLowering =
+    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::CeilOp, mlir::LLVM::FCeilOp>;
+using CIRFloorOpLowering =
+    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::FloorOp, mlir::LLVM::FFloorOp>;
+using CIRFabsOpLowering =
+    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::FAbsOp, mlir::LLVM::FAbsOp>;
+using CIRNearbyintOpLowering =
+    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::NearbyintOp,
+                                    mlir::LLVM::NearbyintOp>;
+using CIRRintOpLowering =
+    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::RintOp, mlir::LLVM::RintOp>;
+using CIRRoundOpLowering =
+    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::RoundOp, mlir::LLVM::RoundOp>;
+using CIRTruncOpLowering =
+    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::TruncOp, mlir::LLVM::FTruncOp>;
+
+template <typename CIROp, typename LLVMOp>
 class CIRBinaryFPToFPBuiltinOpLowering
     : public mlir::OpConversionPattern<CIROp> {
 public:
@@ -3210,8 +3242,10 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRStackRestoreLowering, CIRUnreachableLowering, CIRTrapLowering,
       CIRInlineAsmOpLowering, CIRSetBitfieldLowering, CIRGetBitfieldLowering,
       CIRPrefetchLowering, CIRObjSizeOpLowering, CIRIsConstantOpLowering,
-      CIRCmpThreeWayOpLowering, CIRCopysignOpLowering, CIRFMaxOpLowering,
-      CIRFMinOpLowering>(converter, patterns.getContext());
+      CIRCmpThreeWayOpLowering, CIRCeilOpLowering, CIRFloorOpLowering,
+      CIRFAbsOpLowering, CIRNearbyintOpLowering, CIRRintOpLowering,
+      CIRRoundOpLowering, CIRTruncOpLowering, CIRCopysignOpLowering,
+      CIRFMaxOpLowering, CIRFMinOpLowering>(converter, patterns.getContext());
 }
 
 namespace {

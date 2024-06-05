@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 
@@ -71,6 +72,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void runOnOperation() override;
 
   void runOnOp(Operation *op);
+  void runOnMathOp(Operation *op);
   void lowerThreeWayCmpOp(CmpThreeWayOp op);
   void lowerVAArgOp(VAArgOp op);
   void lowerGlobalOp(GlobalOp op);
@@ -80,8 +82,6 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerIterEndOp(IterEndOp op);
   void lowerArrayDtor(ArrayDtor op);
   void lowerArrayCtor(ArrayCtor op);
-  void lowerFModOp(FModOp op);
-  void lowerPowOp(PowOp op);
 
   /// Build the function that initializes the specified global
   FuncOp buildCXXGlobalVarDeclInitFunc(GlobalOp op);
@@ -627,49 +627,6 @@ void LoweringPreparePass::lowerIterEndOp(IterEndOp op) {
   op.erase();
 }
 
-static void lowerBinaryFPToFPBuiltinOp(LoweringPreparePass &pass,
-                                       mlir::Operation *op,
-                                       llvm::StringRef floatRtFuncName,
-                                       llvm::StringRef doubleRtFuncName,
-                                       llvm::StringRef longDoubleRtFuncName) {
-  mlir::Type ty = op->getResult(0).getType();
-
-  llvm::StringRef rtFuncName;
-  if (ty.isa<mlir::cir::SingleType>())
-    rtFuncName = floatRtFuncName;
-  else if (ty.isa<mlir::cir::DoubleType>())
-    rtFuncName = doubleRtFuncName;
-  else if (ty.isa<mlir::cir::LongDoubleType>())
-    rtFuncName = longDoubleRtFuncName;
-  else
-    llvm_unreachable("unknown binary fp2fp builtin operand type");
-
-  CIRBaseBuilderTy builder(*pass.theModule.getContext());
-  builder.setInsertionPointToStart(pass.theModule.getBody());
-
-  auto rtFuncTy = mlir::cir::FuncType::get({ty, ty}, ty);
-  FuncOp rtFunc =
-      pass.buildRuntimeFunction(builder, rtFuncName, op->getLoc(), rtFuncTy);
-
-  auto lhs = op->getOperand(0);
-  auto rhs = op->getOperand(1);
-
-  builder.setInsertionPointAfter(op);
-  auto call = builder.create<mlir::cir::CallOp>(op->getLoc(), rtFunc,
-                                                mlir::ValueRange{lhs, rhs});
-
-  op->replaceAllUsesWith(call);
-  op->erase();
-}
-
-void LoweringPreparePass::lowerFModOp(FModOp op) {
-  lowerBinaryFPToFPBuiltinOp(*this, op, "fmodf", "fmod", "fmodl");
-}
-
-void LoweringPreparePass::lowerPowOp(PowOp op) {
-  lowerBinaryFPToFPBuiltinOp(*this, op, "powf", "pow", "powl");
-}
-
 void LoweringPreparePass::runOnOp(Operation *op) {
   if (auto threeWayCmp = dyn_cast<CmpThreeWayOp>(op)) {
     lowerThreeWayCmpOp(threeWayCmp);
@@ -695,11 +652,71 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     } else if (auto globalDtor = fnOp.getGlobalDtorAttr()) {
       globalDtorList.push_back(globalDtor);
     }
-  } else if (auto fmodOp = dyn_cast<FModOp>(op)) {
-    lowerFModOp(fmodOp);
-  } else if (auto powOp = dyn_cast<PowOp>(op)) {
-    lowerPowOp(powOp);
   }
+}
+
+void LoweringPreparePass::runOnMathOp(Operation *op) {
+  struct MathOpFunctionNames {
+    llvm::StringRef floatVer;
+    llvm::StringRef doubleVer;
+    llvm::StringRef longDoubleVer;
+  };
+
+  mlir::Type ty = op->getResult(0).getType();
+
+  MathOpFunctionNames rtFuncNames =
+      llvm::TypeSwitch<Operation *, MathOpFunctionNames>(op)
+          .Case<FModOp>([](auto) {
+            return MathOpFunctionNames{"fmodf", "fmod", "fmodl"};
+          })
+          .Case<PowOp>(
+              [](auto) { return MathOpFunctionNames{"powf", "pow", "powl"}; })
+          .Case<CosOp>(
+              [](auto) { return MathOpFunctionNames{"cosf", "cos", "cosl"}; })
+          .Case<ExpOp>(
+              [](auto) { return MathOpFunctionNames{"expf", "exp", "expl"}; })
+          .Case<Exp2Op>([](auto) {
+            return MathOpFunctionNames{"exp2f", "exp2", "exp2l"};
+          })
+          .Case<LogOp>(
+              [](auto) { return MathOpFunctionNames{"logf", "log", "logl"}; })
+          .Case<Log10Op>([](auto) {
+            return MathOpFunctionNames{"log10f", "log10", "log10l"};
+          })
+          .Case<Log2Op>([](auto) {
+            return MathOpFunctionNames{"log2f", "log2", "log2l"};
+          })
+          .Case<SinOp>(
+              [](auto) { return MathOpFunctionNames{"sinf", "sin", "sinl"}; })
+          .Case<SqrtOp>([](auto) {
+            return MathOpFunctionNames{"sqrtf", "sqrt", "sqrtl"};
+          });
+  llvm::StringRef rtFuncName = llvm::TypeSwitch<mlir::Type, llvm::StringRef>(ty)
+                                   .Case<mlir::cir::SingleType>([&](auto) {
+                                     return rtFuncNames.floatVer;
+                                   })
+                                   .Case<mlir::cir::DoubleType>([&](auto) {
+                                     return rtFuncNames.doubleVer;
+                                   })
+                                   .Case<mlir::cir::LongDoubleType>([&](auto) {
+                                     return rtFuncNames.longDoubleVer;
+                                   });
+
+  CIRBaseBuilderTy builder(*theModule.getContext());
+  builder.setInsertionPointToStart(theModule.getBody());
+
+  llvm::SmallVector<mlir::Type, 2> operandTypes(op->getNumOperands(), ty);
+  auto rtFuncTy =
+      mlir::cir::FuncType::get(operandTypes, op->getResult(0).getType());
+  FuncOp rtFunc =
+      buildRuntimeFunction(builder, rtFuncName, op->getLoc(), rtFuncTy);
+
+  builder.setInsertionPointAfter(op);
+  auto call = builder.create<mlir::cir::CallOp>(op->getLoc(), rtFunc,
+                                                op->getOperands());
+
+  op->replaceAllUsesWith(call);
+  op->erase();
 }
 
 void LoweringPreparePass::runOnOperation() {
@@ -710,15 +727,22 @@ void LoweringPreparePass::runOnOperation() {
   }
 
   SmallVector<Operation *> opsToTransform;
+  SmallVector<Operation *> mathOpsToTransform;
+
   op->walk([&](Operation *op) {
     if (isa<CmpThreeWayOp, VAArgOp, GlobalOp, DynamicCastOp, StdFindOp,
-            IterEndOp, IterBeginOp, ArrayCtor, ArrayDtor, mlir::cir::FuncOp,
-            FModOp, PowOp>(op))
+            IterEndOp, IterBeginOp, ArrayCtor, ArrayDtor, mlir::cir::FuncOp>(
+            op))
       opsToTransform.push_back(op);
+    else if (isa<CosOp, ExpOp, Exp2Op, LogOp, Log10Op, Log2Op, SinOp, SqrtOp,
+                 FModOp, PowOp>(op))
+      mathOpsToTransform.push_back(op);
   });
 
   for (auto *o : opsToTransform)
     runOnOp(o);
+  for (auto *o : mathOpsToTransform)
+    runOnMathOp(o);
 
   buildCXXGlobalInitFunc();
   buildGlobalCtorDtorList();
