@@ -863,22 +863,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       if (CI2->isMinusOne())
         return C2; // X | -1 == -1
       break;
-    case Instruction::Xor:
-      if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
-        switch (CE1->getOpcode()) {
-        default:
-          break;
-        case Instruction::ICmp:
-        case Instruction::FCmp:
-          // cmp pred ^ true -> cmp !pred
-          assert(CI2->isOne());
-          CmpInst::Predicate pred = (CmpInst::Predicate)CE1->getPredicate();
-          pred = CmpInst::getInversePredicate(pred);
-          return ConstantExpr::getCompare(pred, CE1->getOperand(0),
-                                          CE1->getOperand(1));
-        }
-      }
-      break;
     }
   } else if (isa<ConstantInt>(C1)) {
     // If C1 is a ConstantInt and C2 is not, swap the operands.
@@ -1282,9 +1266,9 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
     // Fast path for splatted constants.
     if (Constant *C1Splat = C1->getSplatValue())
       if (Constant *C2Splat = C2->getSplatValue())
-        return ConstantVector::getSplat(
-            C1VTy->getElementCount(),
-            ConstantExpr::getCompare(Predicate, C1Splat, C2Splat));
+        if (Constant *Elt =
+                ConstantFoldCompareInstruction(Predicate, C1Splat, C2Splat))
+          return ConstantVector::getSplat(C1VTy->getElementCount(), Elt);
 
     // Do not iterate on scalable vector. The number of elements is unknown at
     // compile-time.
@@ -1302,8 +1286,11 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
           ConstantExpr::getExtractElement(C1, ConstantInt::get(Ty, I));
       Constant *C2E =
           ConstantExpr::getExtractElement(C2, ConstantInt::get(Ty, I));
+      Constant *Elt = ConstantFoldCompareInstruction(Predicate, C1E, C2E);
+      if (!Elt)
+        return nullptr;
 
-      ResElts.push_back(ConstantExpr::getCompare(Predicate, C1E, C2E));
+      ResElts.push_back(Elt);
     }
 
     return ConstantVector::get(ResElts);
@@ -1411,7 +1398,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
       // other way if possible.
       // Also, if C1 is null and C2 isn't, flip them around.
       Predicate = ICmpInst::getSwappedPredicate(Predicate);
-      return ConstantExpr::getICmp(Predicate, C2, C1);
+      return ConstantFoldCompareInstruction(Predicate, C2, C1);
     }
   }
   return nullptr;

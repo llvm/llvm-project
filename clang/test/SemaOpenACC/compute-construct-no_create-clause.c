@@ -51,4 +51,8 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel no_create((float)ArrayParam[2])
   while(1);
+
+  // expected-error@+1{{OpenACC 'no_create' clause is not valid on 'loop' directive}}
+#pragma acc loop no_create(LocalInt)
+  for(;;);
 }
