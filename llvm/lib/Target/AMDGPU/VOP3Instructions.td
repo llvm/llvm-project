@@ -1327,11 +1327,18 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
                (V_CVT_PK_BF16_F32_e64 0, (f32 (V_CVT_F32_F64_e64 $src0_modifiers, $src0)), 0, (f32 (IMPLICIT_DEF)))>;
 }
 
+class Cvt_Scale_Sr_F32ToBF16F16_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
+    (DstTy (node DstTy:$vdst_in, f32:$src0, i32:$src1, timm:$word_sel)),
+    (inst (DstSelToOpSelXForm $word_sel), $src0, 0, $src1, VGPR_32:$vdst_in)
+>;
+
 let SubtargetPredicate = HasF32ToF16BF16ConversionSRInsts in {
   let Constraints = "$vdst = $vdst_in", DisableEncoding = "$vdst_in" in {
     defm V_CVT_SR_F16_F32   : VOP3Inst<"v_cvt_sr_f16_f32", VOP3_CVT_SR_FP16_TiedInput_Profile<VOP_F16_F32_I32>>;
     defm V_CVT_SR_BF16_F32  : VOP3Inst<"v_cvt_sr_bf16_f32", VOP3_CVT_SR_FP16_TiedInput_Profile<VOP_BF16_F32_I32>>;
   }
+  def : Cvt_Scale_Sr_F32ToBF16F16_Pat<int_amdgcn_cvt_sr_bf16_f32, V_CVT_SR_BF16_F32_e64, v2bf16>;
+  def : Cvt_Scale_Sr_F32ToBF16F16_Pat<int_amdgcn_cvt_sr_f16_f32, V_CVT_SR_F16_F32_e64, v2f16>;
 }
 
 let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {

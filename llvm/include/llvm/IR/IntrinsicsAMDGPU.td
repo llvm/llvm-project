@@ -677,6 +677,18 @@ class AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<LLVMType Src0Ty, st
   [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<4>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
+class AMDGPUCvtScaleSRF32ToBF16F16TiedInputIntrinsic<LLVMType DstTy, string name> : DefaultAttrsIntrinsic<
+  [DstTy],
+  [DstTy,         // old_vdst
+   llvm_float_ty, // src0
+   llvm_i32_ty,   // seed
+   llvm_i1_ty],   // dst_lo_hi_sel[true false]
+  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>]
+>, ClangBuiltin<"__builtin_amdgcn_"#name>;
+
+def int_amdgcn_cvt_sr_bf16_f32: AMDGPUCvtScaleSRF32ToBF16F16TiedInputIntrinsic<llvm_v2bf16_ty, "cvt_sr_bf16_f32">;
+def int_amdgcn_cvt_sr_f16_f32 : AMDGPUCvtScaleSRF32ToBF16F16TiedInputIntrinsic<llvm_v2f16_ty, "cvt_sr_f16_f32">;
+
 // llvm.amdgcn.cvt.scalef32.fp16.fp8 v2f16 old_vdst, int src, float scale, int src_sel_index [0..3], bool dst_lo_hi_sel
 def int_amdgcn_cvt_scalef32_f16_fp8  : AMDGPUCvtScaleFP8BF8ToF16TiedInputIntrinsic<llvm_v2f16_ty, "cvt_scalef32_f16_fp8">;
 def int_amdgcn_cvt_scalef32_f16_bf8  : AMDGPUCvtScaleFP8BF8ToF16TiedInputIntrinsic<llvm_v2f16_ty, "cvt_scalef32_f16_bf8">;
