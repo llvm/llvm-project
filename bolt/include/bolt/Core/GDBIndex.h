@@ -40,7 +40,7 @@ private:
 public:
   GDBIndex(BinaryContext &BC) : BC(BC) {}
 
-  std::mutex DWARFRewriterMutex;
+  std::mutex GDBIndexMutex;
 
   /// Adds an GDBIndexTUEntry if .gdb_index section exists.
   void addGDBTypeUnitEntry(const GDBIndexTUEntry &Entry);

@@ -12,7 +12,7 @@ using namespace llvm::bolt;
 using namespace llvm::support::endian;
 
 void GDBIndex::addGDBTypeUnitEntry(const GDBIndexTUEntry &Entry) {
-  std::lock_guard<std::mutex> Lock(DWARFRewriterMutex);
+  std::lock_guard<std::mutex> Lock(GDBIndexMutex);
   if (!BC.getGdbIndexSection())
     return;
   GDBIndexTUEntryVector.push_back(Entry);
