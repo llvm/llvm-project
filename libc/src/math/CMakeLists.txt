@@ -61,8 +61,9 @@ add_math_entrypoint_object(atanhf)
 
 add_math_entrypoint_object(canonicalize)
 add_math_entrypoint_object(canonicalizef)
-add_math_entrypoint_object(canonicalizef128)
 add_math_entrypoint_object(canonicalizel)
+add_math_entrypoint_object(canonicalizef16)
+add_math_entrypoint_object(canonicalizef128)
 
 add_math_entrypoint_object(ceil)
 add_math_entrypoint_object(ceilf)
@@ -73,6 +74,7 @@ add_math_entrypoint_object(ceilf128)
 add_math_entrypoint_object(copysign)
 add_math_entrypoint_object(copysignf)
 add_math_entrypoint_object(copysignl)
+add_math_entrypoint_object(copysignf16)
 add_math_entrypoint_object(copysignf128)
 
 add_math_entrypoint_object(cos)
