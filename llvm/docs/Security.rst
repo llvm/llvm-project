@@ -54,7 +54,7 @@ username for an individual isn't available, the brackets will be empty.
 * Pietro Albini (Ferrous Systems; Rust) [@pietroalbini]
 * Serge Guelton (Mozilla) [@serge-sans-paille]
 * Shayne Hiet-Block (Microsoft) [@GreatKeeper]
-* Tim Penge (Sony) []
+* Tim Penge (Sony) [@tpenge]
 * Tulio Magno Quites Machado Filho (Red Hat) [@tuliom]
 * Will Huhn (Intel) [@wphuhn-intel]
 * Yvan Roux (ST) [@yroux]
