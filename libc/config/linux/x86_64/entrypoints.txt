@@ -535,6 +535,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ceilf16
     libc.src.math.fabsf16
     libc.src.math.floorf16
+    libc.src.math.fromfpf16
+    libc.src.math.fromfpxf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
     libc.src.math.lrintf16
@@ -544,6 +546,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.roundf16
     libc.src.math.roundevenf16
     libc.src.math.truncf16
+    libc.src.math.ufromfpf16
+    libc.src.math.ufromfpxf16
   )
 endif()
 
