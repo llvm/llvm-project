@@ -40,7 +40,9 @@ public:
   SemanticsContext &context() { return context_; }
   void Check() { Check(context_.globalScope()); }
   void Check(const ParamValue &, bool canBeAssumed);
-  void Check(const Bound &bound) { CheckSpecExpr(bound.GetExplicit()); }
+  void Check(const Bound &bound) {
+    CheckSpecExpr(bound.GetExplicit(), /*forElementalFunctionResult=*/false);
+  }
   void Check(const ShapeSpec &spec) {
     Check(spec.lbound());
     Check(spec.ubound());
@@ -53,8 +55,10 @@ public:
   const Procedure *Characterize(const Symbol &);
 
 private:
-  template <typename A> void CheckSpecExpr(const A &x) {
-    evaluate::CheckSpecificationExpr(x, DEREF(scope_), foldingContext_);
+  template <typename A>
+  void CheckSpecExpr(const A &x, bool forElementalFunctionResult) {
+    evaluate::CheckSpecificationExpr(
+        x, DEREF(scope_), foldingContext_, forElementalFunctionResult);
   }
   void CheckValue(const Symbol &, const DerivedTypeSpec *);
   void CheckVolatile(const Symbol &, const DerivedTypeSpec *);
@@ -222,7 +226,7 @@ void CheckHelper::Check(const ParamValue &value, bool canBeAssumed) {
           "An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result"_err_en_US);
     }
   } else {
-    CheckSpecExpr(value.GetExplicit());
+    CheckSpecExpr(value.GetExplicit(), /*forElementalFunctionResult=*/false);
   }
 }
 
@@ -378,23 +382,30 @@ void CheckHelper::Check(const Symbol &symbol) {
     } else {
       Check(*type, canHaveAssumedParameter);
     }
-    if (InPure() && InFunction() && IsFunctionResult(symbol)) {
-      if (type->IsPolymorphic() && IsAllocatable(symbol)) { // C1585
-        messages_.Say(
-            "Result of pure function may not be both polymorphic and ALLOCATABLE"_err_en_US);
-      }
-      if (derived) {
-        // These cases would be caught be the general validation of local
-        // variables in a pure context, but these messages are more specific.
-        if (HasImpureFinal(symbol)) { // C1584
+    if (InFunction() && IsFunctionResult(symbol)) {
+      if (InPure()) {
+        if (type->IsPolymorphic() && IsAllocatable(symbol)) { // C1585
           messages_.Say(
-              "Result of pure function may not have an impure FINAL subroutine"_err_en_US);
+              "Result of pure function may not be both polymorphic and ALLOCATABLE"_err_en_US);
         }
-        if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
-          SayWithDeclaration(*bad,
-              "Result of pure function may not have polymorphic ALLOCATABLE ultimate component '%s'"_err_en_US,
-              bad.BuildResultDesignatorName());
+        if (derived) {
+          // These cases would be caught be the general validation of local
+          // variables in a pure context, but these messages are more specific.
+          if (HasImpureFinal(symbol)) { // C1584
+            messages_.Say(
+                "Result of pure function may not have an impure FINAL subroutine"_err_en_US);
+          }
+          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
+            SayWithDeclaration(*bad,
+                "Result of pure function may not have polymorphic ALLOCATABLE ultimate component '%s'"_err_en_US,
+                bad.BuildResultDesignatorName());
+          }
         }
+      }
+      if (InElemental() && isChar) { // F'2023 C15121
+        CheckSpecExpr(type->characterTypeSpec().length().GetExplicit(),
+            /*forElementalFunctionResult=*/true);
+        // TODO: check PDT LEN parameters
       }
     }
   }
