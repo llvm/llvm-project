@@ -718,14 +718,17 @@ private:
     // operation into multiple loads (in order to avoid a memory access
     // straddling an alignment boundary on a CPU that disallows such things).
     //
-    // For now we are going to reject any load that has an alignment value not
-    // the same as the natural alignment of the type of the data being loaded.
+    // For now we let through only loads with an alignment greater-than or
+    // equal-to the size of the type of the data being loaded. Such cases are
+    // trivially safe, since the codegen will never have to face an unaligned
+    // load for these.
+    //
     // Eventually we will have to encode the alignment of the load into our IR
     // and have the trace code generator split up the loads where necessary.
     // The same will have to be done for store instructions.
     if (I->isVolatile() || (I->getOrdering() != AtomicOrdering::NotAtomic) ||
         (I->getPointerAddressSpace() != 0) ||
-        (I->getAlign() != DL.getPrefTypeAlign(I->getType()))) {
+        (I->getAlign() < DL.getTypeSizeInBits(I->getType()) / 8)) {
       serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
       return;
     }
@@ -753,8 +756,8 @@ private:
     // accesses.
     if (I->isVolatile() || (I->getOrdering() != AtomicOrdering::NotAtomic) ||
         (I->getPointerAddressSpace() != 0) ||
-        (I->getAlign() !=
-         DL.getPrefTypeAlign(I->getValueOperand()->getType()))) {
+        (I->getAlign() <
+         DL.getTypeSizeInBits(I->getValueOperand()->getType()) / 8)) {
       serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
       return;
     }
