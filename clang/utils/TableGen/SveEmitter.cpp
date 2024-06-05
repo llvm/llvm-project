@@ -1385,17 +1385,14 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
         SVEType ToV(To.BaseType, N);
         for (const ReinterpretTypeInfo &From : Reinterprets) {
           SVEType FromV(From.BaseType, N);
-          if (ShortForm) {
-            OS << "__aio __attribute__((target(\"sve\"))) " << ToV.str()
-               << " svreinterpret_" << To.Suffix;
-            OS << "(" << FromV.str() << " op) __arm_streaming_compatible {\n";
-            OS << "  return __builtin_sve_reinterpret_" << To.Suffix << "_"
-               << From.Suffix << Suffix << "(op);\n";
-            OS << "}\n\n";
-          } else
-            OS << "#define svreinterpret_" << To.Suffix << "_" << From.Suffix
-               << Suffix << "(...) __builtin_sve_reinterpret_" << To.Suffix
-               << "_" << From.Suffix << Suffix << "(__VA_ARGS__)\n";
+          OS << "__aio "
+                "__attribute__((__clang_arm_builtin_alias(__builtin_sve_"
+                "reinterpret_"
+             << To.Suffix << "_" << From.Suffix << Suffix << ")))\n"
+             << ToV.str() << " svreinterpret_" << To.Suffix;
+          if (!ShortForm)
+            OS << "_" << From.Suffix << Suffix;
+          OS << "(" << FromV.str() << " op);\n";
         }
       }
   }
@@ -1453,7 +1450,7 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
         SVEType FromV(From.BaseType, N);
         OS << "TARGET_BUILTIN(__builtin_sve_reinterpret_" << To.Suffix << "_"
            << From.Suffix << Suffix << +", \"" << ToV.builtin_str()
-           << FromV.builtin_str() << "\", \"n\", \"sve\")\n";
+           << FromV.builtin_str() << "\", \"n\", \"sme|sve\")\n";
       }
     }
   }

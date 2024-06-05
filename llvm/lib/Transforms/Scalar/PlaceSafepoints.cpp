@@ -288,6 +288,8 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
     // with for the moment.
     legacy::FunctionPassManager FPM(F.getParent());
     bool CanAssumeCallSafepoints = enableCallSafepoints(F);
+
+    FPM.add(new TargetLibraryInfoWrapperPass(TLI));
     auto *PBS = new PlaceBackedgeSafepointsLegacyPass(CanAssumeCallSafepoints);
     FPM.add(PBS);
     FPM.run(F);

@@ -25,7 +25,7 @@ config.mlir_cmake_dir = "@MLIR_CMAKE_DIR@"
 config.mlir_lib_dir = "@MLIR_LIB_DIR@"
 
 config.build_examples = @LLVM_BUILD_EXAMPLES@
-config.run_cuda_tests = @MLIR_ENABLE_CUDA_CONVERSIONS@
+config.run_nvptx_tests = @LLVM_HAS_NVPTX_TARGET@
 config.enable_cuda_runner = @MLIR_ENABLE_CUDA_RUNNER@
 config.run_rocm_tests = @MLIR_ENABLE_ROCM_CONVERSIONS@
 config.enable_rocm_runner = @MLIR_ENABLE_ROCM_RUNNER@

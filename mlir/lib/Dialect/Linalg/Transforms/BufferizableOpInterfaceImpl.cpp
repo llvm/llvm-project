@@ -76,10 +76,16 @@ bufferizeDestinationStyleOpInterface(RewriterBase &rewriter,
   // new op. Since the new op does not have any tensor results, it does not
   // return anything.
   assert(op->getNumRegions() == 1 && "expected that op has 1 region");
-  auto newOp = cast<DestinationStyleOpInterface>(cloneWithoutRegions(
-      rewriter, op, /*newResultTypes=*/TypeRange{}, newOperands));
-  rewriter.inlineRegionBefore(op->getRegion(0), newOp->getRegion(0),
-                              newOp->getRegion(0).begin());
+  OperationState state(op->getLoc(), op->getName(), newOperands, TypeRange{},
+                       op->getAttrs());
+  state.addRegion();
+  Operation *newOp = Operation::create(state);
+  newOp->getRegion(0).getBlocks().splice(newOp->getRegion(0).begin(),
+                                         op->getRegion(0).getBlocks());
+
+  // We don't want the rewriter tracks an incomplete operation, so insert new
+  // operation after op was fully constructed.
+  rewriter.insert(newOp);
 
   // Replace the results of the old op with the new output buffers.
   replaceOpWithBufferizedValues(rewriter, op, newOutputBuffers);

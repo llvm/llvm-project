@@ -1,11 +1,11 @@
-# Test performs a BB reordering with unsupported
-# instruction jrcxz. Reordering works correctly with the
-# follow options: None, Normal or Reverse. Other strategies
-# are completed with Assertion `isIntN(Size * 8 + 1, Value).
-# The cause is the distance between BB where one contains
-# jrcxz instruction.
-# Example: OpenSSL
-# https://github.com/openssl/openssl/blob/master/crypto/bn/asm/x86_64-mont5.pl#L3319
+## Test performs a BB reordering with unsupported
+## instruction jrcxz. Reordering works correctly with the
+## follow options: None, Normal or Reverse. Other strategies
+## are completed with Assertion `isIntN(Size * 8 + 1, Value).
+## The cause is the distance between BB where one contains
+## jrcxz instruction.
+## Example: OpenSSL
+## https://github.com/openssl/openssl/blob/master/crypto/bn/asm/x86_64-mont5.pl#L3319
 
 # REQUIRES: system-linux
 

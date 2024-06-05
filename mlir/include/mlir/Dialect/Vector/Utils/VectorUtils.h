@@ -157,7 +157,14 @@ private:
     if (failed(newOp))
       return failure();
 
-    rewriter.replaceOp(rootOp, *newOp);
+    // Rewriting succeeded but there are no values to replace.
+    if (rootOp->getNumResults() == 0) {
+      rewriter.eraseOp(rootOp);
+    } else {
+      assert(*newOp != Value() &&
+             "Cannot replace an op's use with an empty value.");
+      rewriter.replaceOp(rootOp, *newOp);
+    }
     return success();
   }
 

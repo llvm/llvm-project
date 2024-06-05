@@ -20,6 +20,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -28,6 +29,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -99,7 +101,7 @@ Operation *MeshDialect::materializeConstant(OpBuilder &builder, Attribute value,
 static FailureOr<MeshOp> getMeshAndVerify(Operation *op,
                                           FlatSymbolRefAttr meshSymbol,
                                           SymbolTableCollection &symbolTable) {
-  mesh::MeshOp mesh = getMesh(op, meshSymbol, symbolTable);
+  mesh::MeshOp mesh = getMeshOrNull(op, meshSymbol, symbolTable);
   if (!mesh) {
     return op->emitError() << "Undefined required mesh symbol \""
                            << meshSymbol.getValue() << "\".";
@@ -176,6 +178,88 @@ Type mesh::shardType(Type type, MeshOp mesh, MeshShardingAttr sharding) {
 
   assert(!sharding);
   return type;
+}
+
+void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshShardingAttr sharding,
+                                                     OpOperand &operand,
+                                                     OpBuilder &builder) {
+  OpBuilder::InsertionGuard insertionGuard(builder);
+  Value operandValue = operand.get();
+  Operation *operandOp = operand.getOwner();
+  builder.setInsertionPointAfterValue(operandValue);
+  ShardOp shardOp = dyn_cast<ShardOp>(operandOp);
+  if (shardOp && shardOp.getShard() == sharding &&
+      !shardOp.getAnnotateForUsers()) {
+    // No need for anything the correct sharding is already set.
+    return;
+  }
+
+  auto newShardOp =
+      builder.create<ShardOp>(operandValue.getLoc(), operandValue, sharding,
+                              /*annotate_for_users*/ false);
+  IRRewriter rewriter(builder);
+  rewriter.replaceUsesWithIf(
+      operandValue, newShardOp, [operandOp, operandValue](OpOperand &use) {
+        return use.getOwner() == operandOp && use.get() == operandValue;
+      });
+
+  if (!shardOp || shardOp.getAnnotateForUsers()) {
+    return;
+  }
+
+  auto newShardOp2 = builder.create<ShardOp>(
+      operandValue.getLoc(), newShardOp, sharding, /*annotate_for_users*/ true);
+  rewriter.replaceAllUsesExcept(newShardOp, newShardOp2, newShardOp2);
+}
+
+void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshShardingAttr sharding,
+                                                     OpResult result,
+                                                     OpBuilder &builder) {
+  for (auto &use : llvm::make_early_inc_range(result.getUses())) {
+    maybeInsertTargetShardingAnnotation(sharding, use, builder);
+  }
+}
+
+void mlir::mesh::maybeInsertSourceShardingAnnotation(MeshShardingAttr sharding,
+                                                     OpOperand &operand,
+                                                     OpBuilder &builder) {
+  OpBuilder::InsertionGuard insertionGuard(builder);
+  Value operandValue = operand.get();
+  Operation *operandOp = operand.getOwner();
+  Operation *operandSrcOp = operandValue.getDefiningOp();
+  bool isBlockArg = !operandSrcOp;
+  ShardOp shardOp = dyn_cast_or_null<ShardOp>(operandSrcOp);
+
+  if (shardOp && shardOp.getShard() == sharding &&
+      shardOp.getAnnotateForUsers()) {
+    // No need for anything the correct sharding is already set.
+    return;
+  }
+
+  builder.setInsertionPoint(operandOp);
+  auto newShardOp =
+      builder.create<ShardOp>(operandValue.getLoc(), operandValue, sharding,
+                              /*annotate_for_users*/ true);
+  IRRewriter rewriter(builder);
+  rewriter.replaceUsesWithIf(
+      operandValue, newShardOp, [operandOp, operandValue](OpOperand &use) {
+        return use.getOwner() == operandOp && use.get() == operandValue;
+      });
+
+  if (isBlockArg || !shardOp || !shardOp.getAnnotateForUsers()) {
+    // No need for resharding.
+    return;
+  }
+
+  builder.setInsertionPoint(newShardOp);
+  auto newPreceedingShardOp =
+      builder.create<ShardOp>(operandValue.getLoc(), operandValue, sharding,
+                              /*annotate_for_users*/ false);
+  rewriter.replaceUsesWithIf(newShardOp.getOperand(), newPreceedingShardOp,
+                             [&newShardOp](OpOperand &use) {
+                               return use.getOwner() ==
+                                      newShardOp.getOperation();
+                             });
 }
 
 //===----------------------------------------------------------------------===//
@@ -286,6 +370,10 @@ bool MeshShardingAttr::operator==(Attribute rhs) const {
   return rhsAsMeshShardingAttr && *this == rhsAsMeshShardingAttr;
 }
 
+bool MeshShardingAttr::operator!=(Attribute rhs) const {
+  return !(*this == rhs);
+}
+
 bool MeshShardingAttr::operator==(MeshShardingAttr rhs) const {
   if (getMesh() != rhs.getMesh() || getPartialAxes() != rhs.getPartialAxes()) {
     return false;
@@ -309,6 +397,10 @@ bool MeshShardingAttr::operator==(MeshShardingAttr rhs) const {
          llvm::all_of(llvm::make_range(rhs.getSplitAxes().begin() + minSize,
                                        rhs.getSplitAxes().end()),
                       std::mem_fn(&MeshAxesAttr::empty));
+}
+
+bool MeshShardingAttr::operator!=(MeshShardingAttr rhs) const {
+  return !(*this == rhs);
 }
 
 //===----------------------------------------------------------------------===//

@@ -127,14 +127,14 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
                              mlir::ValueRange typeparams,
                              mlir::Value dummy_scope,
                              fir::FortranVariableFlagsAttr fortran_attrs,
-                             fir::CUDADataAttributeAttr cuda_attr) {
+                             cuf::DataAttributeAttr data_attr) {
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
-        typeparams, dummy_scope, nameAttr, fortran_attrs, cuda_attr);
+        typeparams, dummy_scope, nameAttr, fortran_attrs, data_attr);
 }
 
 mlir::LogicalResult hlfir::DeclareOp::verify() {
@@ -1115,7 +1115,7 @@ mlir::LogicalResult
 hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
                               mlir::PatternRewriter &rewriter) {
   // the only two uses of the transposed matrix should be for the hlfir.matmul
-  // and hlfir.destory
+  // and hlfir.destroy
   auto isOtherwiseUnused = [&](hlfir::TransposeOp transposeOp) -> bool {
     std::size_t numUses = 0;
     for (mlir::Operation *user : transposeOp.getResult().getUsers()) {

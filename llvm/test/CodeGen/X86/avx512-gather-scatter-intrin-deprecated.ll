@@ -268,30 +268,6 @@ define void @gather_qps(<8 x i64> %ind, <8 x float> %src, ptr %base, ptr %stbuf)
   ret void
 }
 
-declare  void @llvm.x86.avx512.gatherpf.qps.512(i8, <8 x i64>, ptr , i32, i32);
-declare  void @llvm.x86.avx512.scatterpf.qps.512(i8, <8 x i64>, ptr , i32, i32);
-define void @prefetch(<8 x i64> %ind, ptr %base) {
-; CHECK-LABEL: prefetch:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherpf0qps (%rdi,%zmm0,4) {%k1}
-; CHECK-NEXT:    kxorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherpf1qps (%rdi,%zmm0,4) {%k1}
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vscatterpf0qps (%rdi,%zmm0,2) {%k1}
-; CHECK-NEXT:    movb $120, %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vscatterpf1qps (%rdi,%zmm0,2) {%k1}
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
-  call void @llvm.x86.avx512.gatherpf.qps.512(i8 -1, <8 x i64> %ind, ptr %base, i32 4, i32 3)
-  call void @llvm.x86.avx512.gatherpf.qps.512(i8 0, <8 x i64> %ind, ptr %base, i32 4, i32 2)
-  call void @llvm.x86.avx512.scatterpf.qps.512(i8 1, <8 x i64> %ind, ptr %base, i32 2, i32 3)
-  call void @llvm.x86.avx512.scatterpf.qps.512(i8 120, <8 x i64> %ind, ptr %base, i32 2, i32 2)
-  ret void
-}
-
 declare <2 x double> @llvm.x86.avx512.gather3div2.df(<2 x double>, ptr, <2 x i64>, i8, i32)
 
 define <2 x double>@test_int_x86_avx512_gather3div2_df(<2 x double> %x0, ptr %x1, <2 x i64> %x2, i8 %x3) {
