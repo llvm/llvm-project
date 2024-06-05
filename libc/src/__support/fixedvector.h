@@ -63,6 +63,10 @@ public:
     return reverse_iterator{&store[item_count]};
   }
   LIBC_INLINE constexpr reverse_iterator rend() { return store.rend(); }
+
+  using iterator = typename cpp::array<T, CAPACITY>::iterator;
+  LIBC_INLINE constexpr iterator begin() { return store.begin(); }
+  LIBC_INLINE constexpr iterator end() { return iterator{&store[item_count]}; }
 };
 
 } // namespace LIBC_NAMESPACE

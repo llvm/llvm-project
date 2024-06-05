@@ -58,4 +58,14 @@ TEST(LlvmLibcFixedVectorTest, Iteration) {
   ASSERT_TRUE(++it == v.rend());
   for (auto it = v.rbegin(), e = v.rend(); it != e; ++it)
     ASSERT_GT(*it, -1);
+
+  auto forward_it = v.begin();
+  ASSERT_EQ(*forward_it, 0);
+  ASSERT_EQ(*++forward_it, 1);
+  ASSERT_EQ(*++forward_it, 2);
+  ASSERT_TRUE(++forward_it == v.end());
+  for (auto it = v.begin(), e = v.end(); it != e; ++it)
+    ASSERT_GT(*it, -1);
+  for (int &x : v)
+    ASSERT_GE(x, 0);
 }
