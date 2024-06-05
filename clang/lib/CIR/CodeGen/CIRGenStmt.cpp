@@ -608,37 +608,55 @@ mlir::LogicalResult CIRGenFunction::buildBreakStmt(const clang::BreakStmt &S) {
 const CaseStmt *
 CIRGenFunction::foldCaseStmt(const clang::CaseStmt &S, mlir::Type condType,
                              SmallVector<mlir::Attribute, 4> &caseAttrs) {
+  auto *ctxt = builder.getContext();
+
   const CaseStmt *caseStmt = &S;
   const CaseStmt *lastCase = &S;
   SmallVector<mlir::Attribute, 4> caseEltValueListAttr;
+
+  int caseAttrCount = 0;
 
   // Fold cascading cases whenever possible to simplify codegen a bit.
   while (caseStmt) {
     lastCase = caseStmt;
 
-    auto startVal = caseStmt->getLHS()->EvaluateKnownConstInt(getContext());
-    auto endVal = startVal;
+    auto intVal = caseStmt->getLHS()->EvaluateKnownConstInt(getContext());
+
     if (auto *rhs = caseStmt->getRHS()) {
-      endVal = rhs->EvaluateKnownConstInt(getContext());
-    }
-    for (auto intVal = startVal; intVal <= endVal; ++intVal) {
+      auto endVal = rhs->EvaluateKnownConstInt(getContext());
+      SmallVector<mlir::Attribute, 4> rangeCaseAttr = {
+          mlir::cir::IntAttr::get(condType, intVal),
+          mlir::cir::IntAttr::get(condType, endVal)};
+      auto caseAttr = mlir::cir::CaseAttr::get(
+          ctxt, builder.getArrayAttr(rangeCaseAttr),
+          CaseOpKindAttr::get(ctxt, mlir::cir::CaseOpKind::Range));
+      caseAttrs.push_back(caseAttr);
+      ++caseAttrCount;
+    } else {
       caseEltValueListAttr.push_back(mlir::cir::IntAttr::get(condType, intVal));
     }
 
     caseStmt = dyn_cast_or_null<CaseStmt>(caseStmt->getSubStmt());
   }
 
-  assert(!caseEltValueListAttr.empty() && "empty case value NYI");
+  if (!caseEltValueListAttr.empty()) {
+    auto caseOpKind = caseEltValueListAttr.size() > 1
+                          ? mlir::cir::CaseOpKind::Anyof
+                          : mlir::cir::CaseOpKind::Equal;
+    auto caseAttr = mlir::cir::CaseAttr::get(
+        ctxt, builder.getArrayAttr(caseEltValueListAttr),
+        CaseOpKindAttr::get(ctxt, caseOpKind));
+    caseAttrs.push_back(caseAttr);
+    ++caseAttrCount;
+  }
 
-  auto *ctxt = builder.getContext();
+  assert(caseAttrCount > 0 && "there should be at least one valid case attr");
 
-  auto caseAttr = mlir::cir::CaseAttr::get(
-      ctxt, builder.getArrayAttr(caseEltValueListAttr),
-      CaseOpKindAttr::get(ctxt, caseEltValueListAttr.size() > 1
-                                    ? mlir::cir::CaseOpKind::Anyof
-                                    : mlir::cir::CaseOpKind::Equal));
-
-  caseAttrs.push_back(caseAttr);
+  for (int i = 1; i < caseAttrCount; ++i) {
+    // If there are multiple case attributes, we need to create a new region
+    auto *region = currLexScope->createSwitchRegion();
+    auto *block = builder.createBlock(region);
+  }
 
   return lastCase;
 }

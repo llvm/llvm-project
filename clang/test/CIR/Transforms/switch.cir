@@ -156,7 +156,7 @@ module {
 // CHECK:   }
 
 
-   cir.func @shouldFlatNestedBreak(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+  cir.func @shouldFlatNestedBreak(%arg0: !s32i, %arg1: !s32i) -> !s32i {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
     %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
@@ -203,5 +203,68 @@ module {
 // CHECK:  ^bb8:  // pred: ^bb7
 // CHECK:    cir.return %9 : !s32i
 // CHECK:  }
+
+
+  cir.func @flatCaseRange(%arg0: !s32i) -> !s32i {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+    %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    %3 = cir.const #cir.int<0> : !s32i
+    cir.store %3, %2 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %6 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.switch (%6 : !s32i) [
+      case (equal, -100) {
+        %7 = cir.const #cir.int<1> : !s32i
+        cir.store %7, %2 : !s32i, !cir.ptr<!s32i>
+        cir.break
+      },
+      case (range, [1, 100] : !s32i) {
+        %7 = cir.const #cir.int<2> : !s32i
+        cir.store %7, %2 : !s32i, !cir.ptr<!s32i>
+        cir.break
+      },
+      case (default) {
+        %7 = cir.const #cir.int<3> : !s32i
+        cir.store %7, %2 : !s32i, !cir.ptr<!s32i>
+        cir.break
+      }
+      ]
+    }
+    %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+    cir.store %4, %1 : !s32i, !cir.ptr<!s32i>
+    %5 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.return %5 : !s32i
+  }
+//      CHECK:  cir.func @flatCaseRange(%arg0: !s32i) -> !s32i {
+//      CHECK:    cir.switch.flat %[[X:[0-9]+]] : !s32i, ^[[JUDGE_RANGE:bb[0-9]+]] [
+// CHECK-NEXT:      -100: ^[[CASE_EQUAL:bb[0-9]+]]
+// CHECK-NEXT:    ]
+// CHECK-NEXT:  ^[[CASE_EQUAL]]:
+// CHECK-NEXT:    cir.int<1>
+// CHECK-NEXT:    cir.store
+// CHECK-NEXT:    cir.br ^[[EPILOG:bb[0-9]+]]
+// CHECK-NEXT:  ^[[CASE_RANGE:bb[0-9]+]]:
+// CHECK-NEXT:    cir.int<2>
+// CHECK-NEXT:    cir.store
+// CHECK-NEXT:    cir.br ^[[EPILOG]]
+// CHECK-NEXT:  ^[[JUDGE_RANGE]]:
+// CHECK-NEXT:     %[[RANGE:[0-9]+]] = cir.const #cir.int<99>
+// CHECK-NEXT:     %[[LOWER_BOUND:[0-9]+]] = cir.const #cir.int<1>
+// CHECK-NEXT:     %[[DIFF:[0-9]+]] = cir.binop(sub, %[[X]], %[[LOWER_BOUND]])
+// CHECK-NEXT:     %[[U_DIFF:[0-9]+]] = cir.cast(integral, %[[DIFF]] : !s32i), !u32i
+// CHECK-NEXT:     %[[U_RANGE:[0-9]+]] = cir.cast(integral, %[[RANGE]] : !s32i), !u32i
+// CHECK-NEXT:     %[[CMP_RESULT:[0-9]+]] = cir.cmp(le, %[[U_DIFF]], %[[U_RANGE]])
+// CHECK-NEXT:     cir.brcond %[[CMP_RESULT]] ^[[CASE_RANGE]], ^[[CASE_DEFAULT:bb[0-9]+]]
+// CHECK-NEXT:  ^[[CASE_DEFAULT]]:
+// CHECK-NEXT:    cir.int<3>
+// CHECK-NEXT:    cir.store
+// CHECK-NEXT:    cir.br ^[[EPILOG]]
+// CHECK-NEXT:  ^[[EPILOG]]:
+// CHECK-NEXT:    cir.br ^[[EPILOG_END:bb[0-9]+]]
+// CHECK-NEXT:  ^[[EPILOG_END]]:
+//      CHECK:    cir.return
+//      CHECK:  }
 
 }
