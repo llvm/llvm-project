@@ -141,6 +141,7 @@ add_math_entrypoint_object(fmaximumf128)
 add_math_entrypoint_object(fmaximum_num)
 add_math_entrypoint_object(fmaximum_numf)
 add_math_entrypoint_object(fmaximum_numl)
+add_math_entrypoint_object(fmaximum_numf16)
 add_math_entrypoint_object(fmaximum_numf128)
 
 add_math_entrypoint_object(fmaximum_mag)

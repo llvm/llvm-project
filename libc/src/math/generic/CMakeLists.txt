@@ -1957,6 +1957,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmaximum_numf16
+  SRCS
+    fmaximum_numf16.cpp
+  HDRS
+    ../fmaximum_numf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fmaximum_numf128
   SRCS
     fmaximum_numf128.cpp
