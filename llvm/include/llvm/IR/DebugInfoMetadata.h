@@ -2148,16 +2148,18 @@ public:
   getBaseDiscriminatorFromDiscriminator(unsigned D,
                                         bool IsFSDiscriminator = false) {
     // Extract the dwarf base discriminator if it's encoded in the pseudo probe
-    // discriminator. Otherwise, return the probe id instead of zero for a
-    // pseudo probe discriminator. This should help differenciate callsites with
-    // same line numbers to achieve a decent AutoFDO profile under
-    // -fpseudo-probe-for-profiling, where the original callsite dwarf
-    // discriminator is overwritten by callsite probe information.
+    // discriminator.
     if (isPseudoProbeDiscriminator(D)) {
-      if (PseudoProbeDwarfDiscriminator::isDwarfBaseDiscriminatorEncoded(D))
-        return PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(D);
-      else
-        return PseudoProbeDwarfDiscriminator::extractProbeIndex(D);
+      auto DwarfBaseDiscriminator =
+          PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(D);
+      if (DwarfBaseDiscriminator)
+        return *DwarfBaseDiscriminator;
+      // Return the probe id instead of zero for a pseudo probe discriminator.
+      // This should help differenciate callsites with same line numbers to
+      // achieve a decent AutoFDO profile under -fpseudo-probe-for-profiling,
+      // where the original callsite dwarf discriminator is overwritten by
+      // callsite probe information.
+      return PseudoProbeDwarfDiscriminator::extractProbeIndex(D);
     }
 
     if (IsFSDiscriminator)

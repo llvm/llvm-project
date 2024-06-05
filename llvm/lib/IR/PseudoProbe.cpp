@@ -95,9 +95,6 @@ void setProbeDistributionFactor(Instruction &Inst, float Factor) {
             PseudoProbeDwarfDiscriminator::extractProbeType(Discriminator);
         auto Attr = PseudoProbeDwarfDiscriminator::extractProbeAttributes(
             Discriminator);
-        auto IsDwarfBaseDiscriminatorEncoded =
-            PseudoProbeDwarfDiscriminator::isDwarfBaseDiscriminatorEncoded(
-                Discriminator);
         auto DwarfBaseDiscriminator =
             PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(
                 Discriminator);
@@ -107,9 +104,7 @@ void setProbeDistributionFactor(Instruction &Inst, float Factor) {
         if (Factor < 1)
           IntFactor *= Factor;
         uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
-            Index, Type, Attr, IntFactor,
-            IsDwarfBaseDiscriminatorEncoded ? DwarfBaseDiscriminator
-                                            : 0xFFFFFFFF);
+            Index, Type, Attr, IntFactor, DwarfBaseDiscriminator);
         DIL = DIL->cloneWithDiscriminator(V);
         Inst.setDebugLoc(DIL);
       }
