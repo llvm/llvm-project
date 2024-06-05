@@ -2608,7 +2608,9 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
           symbol->details());
     }
 
-    MlirRequires mlirFlags = MlirRequires::none;
+    // Use pre-populated omp.requires module attribute if it was set, so that
+    // the "-fopenmp-force-usm" compiler option is honored.
+    MlirRequires mlirFlags = offloadMod.getRequires();
     if (semaFlags.test(SemaRequires::ReverseOffload))
       mlirFlags = mlirFlags | MlirRequires::reverse_offload;
     if (semaFlags.test(SemaRequires::UnifiedAddress))
