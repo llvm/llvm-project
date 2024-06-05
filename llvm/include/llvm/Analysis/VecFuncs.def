@@ -49,6 +49,7 @@ TLI_DEFINE_VECFUNC("llvm.sin.f32", "vsinf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("cosf", "vcosf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("llvm.cos.f32", "vcosf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("tanf", "vtanf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.tan.f32", "vtanf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("asinf", "vasinf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("acosf", "vacosf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("atanf", "vatanf", FIXED(4), "_ZGV_LLVM_N4v")
@@ -141,6 +142,18 @@ TLI_DEFINE_VECFUNC("llvm.cos.f64", "_ZGVdN4v_cos", FIXED(4), "_ZGV_LLVM_N4v")
 
 TLI_DEFINE_VECFUNC("llvm.cos.f32", "_ZGVbN4v_cosf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("llvm.cos.f32", "_ZGVdN8v_cosf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("tan", "_ZGVbN2v_tan", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("tan", "_ZGVdN4v_tan", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("tanf", "_ZGVbN4v_tanf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("tanf", "_ZGVdN8v_tanf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "_ZGVbN2v_tan", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "_ZGVdN4v_tan", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.tan.f32", "_ZGVbN4v_tanf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.tan.f32", "_ZGVdN8v_tanf", FIXED(8), "_ZGV_LLVM_N8v")
 
 TLI_DEFINE_VECFUNC("pow", "_ZGVbN2vv_pow", FIXED(2), "_ZGV_LLVM_N2vv")
 TLI_DEFINE_VECFUNC("pow", "_ZGVdN4vv_pow", FIXED(4), "_ZGV_LLVM_N4vv")
@@ -302,6 +315,22 @@ TLI_DEFINE_VECFUNC("llvm.cos.f64", "__svml_cos8", FIXED(8), "_ZGV_LLVM_N8v")
 TLI_DEFINE_VECFUNC("llvm.cos.f32", "__svml_cosf4", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("llvm.cos.f32", "__svml_cosf8", FIXED(8), "_ZGV_LLVM_N8v")
 TLI_DEFINE_VECFUNC("llvm.cos.f32", "__svml_cosf16", FIXED(16), "_ZGV_LLVM_N16v")
+
+TLI_DEFINE_VECFUNC("tan", "__svml_tan2", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("tan", "__svml_tan4", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("tan", "__svml_tan8", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("tanf", "__svml_tanf4", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("tanf", "__svml_tanf8", FIXED(8), "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("tanf", "__svml_tanf16", FIXED(16), "_ZGV_LLVM_N16v")
+
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "__svml_tan2", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "__svml_tan4", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "__svml_tan8", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.tan.f32", "__svml_tanf4", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.tan.f32", "__svml_tanf8", FIXED(8), "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.tan.f32", "__svml_tanf16", FIXED(16), "_ZGV_LLVM_N16v")
 
 TLI_DEFINE_VECFUNC("pow", "__svml_pow2", FIXED(2), "_ZGV_LLVM_N2vv")
 TLI_DEFINE_VECFUNC("pow", "__svml_pow4", FIXED(4), "_ZGV_LLVM_N4vv")
@@ -1236,6 +1265,13 @@ TLI_DEFINE_VECFUNC("tan", "amd_vrd8_tan", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 TLI_DEFINE_VECFUNC("tanf", "amd_vrs4_tanf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("tanf", "amd_vrs8_tanf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 TLI_DEFINE_VECFUNC("tanf", "amd_vrs16_tanf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+
+TLI_DEFINE_VECFUNC("llvm.tan.f32", "amd_vrs16_tanf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("llvm.tan.f32", "amd_vrs8_tanf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.tan.f32", "amd_vrs4_tanf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "amd_vrd8_tan", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "amd_vrd4_tan", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "amd_vrd2_tan", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
 
 TLI_DEFINE_VECFUNC("asin", "amd_vrd8_asin", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 TLI_DEFINE_VECFUNC("asinf", "amd_vrs4_asinf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
