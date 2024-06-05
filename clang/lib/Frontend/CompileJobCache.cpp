@@ -51,6 +51,11 @@ public:
 
   void stopDiagnosticsCapture();
 
+  /// This is for an output file that was written directly on the file system.
+  /// It's a workaround until all compilation consumers adopt
+  /// \c llvm::vfs::OutputBackend.
+  virtual Error addNonVirtualOutputFile(StringRef FilePath) = 0;
+
   /// Finish writing outputs from a computed result, after a cache miss.
   /// If SkipCache is true, it should not insert the ResultCacheKey into
   /// Cache for future uses.
@@ -105,6 +110,8 @@ private:
 
   bool prepareOutputCollection() override;
 
+  Error addNonVirtualOutputFile(StringRef FilePath) override;
+
   Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
                              bool SkipCache) override;
 
@@ -143,6 +150,11 @@ public:
     KindMaps.push_back({Saver.save(Kind), Saver.save(Path)});
   }
 
+  void addOutput(StringRef Path) {
+    StringRef Name = tryRemapPath(Path);
+    OutputNames.push_back(Name.str());
+  }
+
 private:
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver{Alloc};
@@ -166,8 +178,7 @@ private:
   Expected<std::unique_ptr<llvm::vfs::OutputFileImpl>>
   createFileImpl(StringRef Path,
                  std::optional<llvm::vfs::OutputConfig> Config) override {
-    StringRef Name = tryRemapPath(Path);
-    OutputNames.push_back(Name.str());
+    addOutput(Path);
     return ProxyOutputBackend::createFileImpl(Path, std::move(Config));
   }
 
@@ -197,6 +208,8 @@ private:
   tryReplayCachedResult(const llvm::cas::CASID &ResultCacheKey) override;
 
   bool prepareOutputCollection() override;
+
+  Error addNonVirtualOutputFile(StringRef FilePath) override;
 
   Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
                              bool SkipCache) override;
@@ -514,9 +527,18 @@ bool CompileJobCache::finishComputedResult(CompilerInstance &Clang,
 
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
 
+  bool UnsupportedOutput;
+  if (Error E = maybeIngestNonVirtualOutputFromFileSystem(Clang).moveInto(
+          UnsupportedOutput)) {
+    reportCachingBackendError(Diags, std::move(E));
+    return false;
+  }
+
   // Check if we encounter any source that would generate non-reproducible
   // outputs.
-  bool SkipCache = Clang.hasPreprocessor() && Clang.isSourceNonReproducible();
+  bool SkipCache =
+      (Clang.hasPreprocessor() && Clang.isSourceNonReproducible()) ||
+      UnsupportedOutput;
   if (SkipCache) {
     switch (Clang.getPreprocessorOpts().CachingDiagOption) {
     case CachingDiagKind::None:
@@ -536,6 +558,31 @@ bool CompileJobCache::finishComputedResult(CompilerInstance &Clang,
     return false;
   }
   return true;
+}
+
+Expected<bool> CompileJobCache::maybeIngestNonVirtualOutputFromFileSystem(
+    CompilerInstance &Clang) {
+  // FIXME: All consumers should adopt \c llvm::vfs::OutputBackend and this
+  // function should go away.
+
+  const auto &FrontendOpts = Clang.getFrontendOpts();
+  if (FrontendOpts.ProgramAction == frontend::RunAnalysis) {
+    StringRef OutputPath = FrontendOpts.OutputFile;
+    if (OutputPath.empty())
+      return false;
+    if (llvm::sys::fs::is_directory(OutputPath)) {
+      // FIXME: A directory is produced for the 'html' output of the analyzer,
+      // support it for caching purposes.
+      Clang.getDiagnostics().Report(diag::warn_clang_cache_disabled_caching)
+          << "analyzer output is not supported";
+      return true;
+    }
+    if (Error E = CacheBackend->addNonVirtualOutputFile(OutputPath))
+      return std::move(E);
+    return false;
+  }
+
+  return false;
 }
 
 Expected<std::optional<int>> CompileJobCache::replayCachedResult(
@@ -631,6 +678,20 @@ Expected<llvm::cas::ObjectRef> ObjectStoreCachingOutputs::writeOutputs(
 
   // Cache the result.
   return CachedResultBuilder.build(*CAS);
+}
+
+Error ObjectStoreCachingOutputs::addNonVirtualOutputFile(StringRef FilePath) {
+  auto F = llvm::sys::fs::openNativeFileForRead(FilePath);
+  if (!F)
+    return F.takeError();
+  auto CloseOnExit =
+      llvm::make_scope_exit([&F]() { llvm::sys::fs::closeFile(*F); });
+
+  std::optional<llvm::cas::ObjectRef> ObjRef;
+  if (Error E = CAS->storeFromOpenFile(*F).moveInto(ObjRef))
+    return E;
+  CASOutputs->addObject(FilePath, *ObjRef);
+  return Error::success();
 }
 
 Error ObjectStoreCachingOutputs::finishComputedResult(
@@ -1015,6 +1076,11 @@ RemoteCachingOutputs::saveOutputs(const llvm::cas::CASID &ResultCacheKey) {
   }
 
   return std::move(CompResult);
+}
+
+Error RemoteCachingOutputs::addNonVirtualOutputFile(StringRef FilePath) {
+  CollectingOutputs->addOutput(FilePath);
+  return Error::success();
 }
 
 Error RemoteCachingOutputs::finishComputedResult(
