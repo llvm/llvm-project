@@ -1778,14 +1778,14 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   llvm::StringMap<std::set<std::string>> StreamingMap;
 
   uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
-  uint64_t IsSVEOrStreamingSVEFlag = getEnumValueForFlag("IsSVEOrStreamingSVE");
+  uint64_t VerifyRuntimeMode = getEnumValueForFlag("VerifyRuntimeMode");
   uint64_t IsStreamingCompatibleFlag =
       getEnumValueForFlag("IsStreamingCompatible");
   for (auto &Def : Defs) {
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());
-    else if (Def->isFlagSet(IsSVEOrStreamingSVEFlag))
-      StreamingMap["ArmStreamingOrHasSVE"].insert(Def->getMangledName());
+    else if (Def->isFlagSet(VerifyRuntimeMode))
+      StreamingMap["VerifyRuntimeMode"].insert(Def->getMangledName());
     else if (Def->isFlagSet(IsStreamingCompatibleFlag))
       StreamingMap["ArmStreamingCompatible"].insert(Def->getMangledName());
     else

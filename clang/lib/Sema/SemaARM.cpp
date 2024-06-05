@@ -559,8 +559,8 @@ SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
   return SemaARM::ArmNonStreaming;
 }
 
-static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
-                                     const FunctionDecl *FD,
+static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
+                                     FunctionDecl *FD,
                                      SemaARM::ArmStreamingType BuiltinType,
                                      unsigned BuiltinID) {
   SemaARM::ArmStreamingType FnType = getArmStreamingFnType(FD);
@@ -569,66 +569,74 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   // * When compiling for SME only, the caller must be in streaming mode.
   // * When compiling for SVE only, the caller must be in non-streaming mode.
   // * When compiling for both SVE and SME, the caller can be in either mode.
-  if (BuiltinType == SemaARM::ArmStreamingOrHasSVE) {
-    static const FunctionDecl *CachedFD = nullptr;
-    bool SatisfiesSVE = false, SatisfiesSME = false;
+  if (BuiltinType == SemaARM::VerifyRuntimeMode) {
+    static llvm::StringMap<bool> CallerFeatureMapWithoutSVE,
+        CallerFeatureMapWithoutSME;
 
-    if (FD != CachedFD) {
-      // We know the builtin requires either some combination of SVE flags, or
-      // some combination of SME flags, but we need to figure out which part
-      // of the required features is satisfied by the target features.
-      //
-      // For a builtin with target guard 'sve2p1|sme2', if we compile with
-      // '+sve2p1,+sme', then we know that it satisfies the 'sve2p1' part if we
-      // evaluate the features for '+sve2p1,+sme,+nosme'.
-      //
-      // Similarly, if we compile with '+sve2,+sme2', then we know it satisfies
-      // the 'sme2' part if we evaluate the features for '+sve2,+sme2,+nosve'.
-      llvm::StringMap<bool> CallerFeatureMap;
-      auto DisableFeatures = [&CallerFeatureMap](StringRef S) {
-        for (StringRef K : CallerFeatureMap.keys())
+    // Cache the feature maps, to avoid having to recalculate this for each
+    // builtin call.
+    static unsigned CachedODRHash = 0;
+    if (FD->getODRHash() != CachedODRHash) {
+      auto DisableFeatures = [](llvm::StringMap<bool> &Map, StringRef S) {
+        for (StringRef K : Map.keys())
           if (K.starts_with(S))
-            CallerFeatureMap[K] = false;
+            Map[K] = false;
       };
 
-      StringRef BuiltinTargetGuards(
-          S.Context.BuiltinInfo.getRequiredFeatures(BuiltinID));
+      CallerFeatureMapWithoutSME.clear();
+      S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSME, FD);
+      DisableFeatures(CallerFeatureMapWithoutSME, "sme");
 
-      S.Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      DisableFeatures("sme");
-      SatisfiesSVE = Builtin::evaluateRequiredTargetFeatures(
-          BuiltinTargetGuards, CallerFeatureMap);
+      CallerFeatureMapWithoutSVE.clear();
+      S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSVE, FD);
+      DisableFeatures(CallerFeatureMapWithoutSVE, "sve");
 
-      S.Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      DisableFeatures("sve");
-      SatisfiesSME = Builtin::evaluateRequiredTargetFeatures(
-          BuiltinTargetGuards, CallerFeatureMap);
-
-      CachedFD = FD;
+      CachedODRHash = FD->getODRHash();
     }
 
-    if (SatisfiesSVE && SatisfiesSME)
-      BuiltinType = SemaARM::ArmStreamingCompatible;
+    // Avoid emitting diagnostics for a function that can never compile.
+    if (FnType == SemaARM::ArmStreaming && !CallerFeatureMapWithoutSVE["sme"])
+      return false;
+
+    // We know the builtin requires either some combination of SVE flags, or
+    // some combination of SME flags, but we need to figure out which part
+    // of the required features is satisfied by the target features.
+    //
+    // For a builtin with target guard 'sve2p1|sme2', if we compile with
+    // '+sve2p1,+sme', then we know that it satisfies the 'sve2p1' part if we
+    // evaluate the features for '+sve2p1,+sme,+nosme'.
+    //
+    // Similarly, if we compile with '+sve2,+sme2', then we know it satisfies
+    // the 'sme2' part if we evaluate the features for '+sve2,+sme2,+nosve'.
+    StringRef BuiltinTargetGuards(
+        S.Context.BuiltinInfo.getRequiredFeatures(BuiltinID));
+    bool SatisfiesSVE = Builtin::evaluateRequiredTargetFeatures(
+        BuiltinTargetGuards, CallerFeatureMapWithoutSME);
+    bool SatisfiesSME = Builtin::evaluateRequiredTargetFeatures(
+        BuiltinTargetGuards, CallerFeatureMapWithoutSVE);
+
+    if ((SatisfiesSVE && SatisfiesSME) ||
+        (SatisfiesSVE && FnType == SemaARM::ArmStreamingCompatible))
+      return false;
     else if (SatisfiesSVE)
       BuiltinType = SemaARM::ArmNonStreaming;
     else if (SatisfiesSME)
       BuiltinType = SemaARM::ArmStreaming;
     else
       // This should be diagnosed by CodeGen
-      return;
+      return false;
   }
 
-  if (FnType == SemaARM::ArmStreaming &&
-      BuiltinType == SemaARM::ArmNonStreaming)
-    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
-        << TheCall->getSourceRange() << "streaming";
-  else if (FnType == SemaARM::ArmNonStreaming && BuiltinType == SemaARM::ArmStreaming)
-    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
+  if (FnType != SemaARM::ArmNonStreaming && BuiltinType == SemaARM::ArmNonStreaming)
+    S.Diag(TheCall->getBeginLoc(), diag::err_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "non-streaming";
-  else if (FnType == SemaARM::ArmStreamingCompatible &&
-           BuiltinType != SemaARM::ArmStreamingCompatible)
-    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
-        << TheCall->getSourceRange() << "streaming compatible";
+  else if (FnType != SemaARM::ArmStreaming && BuiltinType == SemaARM::ArmStreaming)
+    S.Diag(TheCall->getBeginLoc(), diag::err_attribute_arm_sm_incompat_builtin)
+        << TheCall->getSourceRange() << "streaming";
+  else
+    return false;
+
+  return true;
 }
 
 static bool hasArmZAState(const FunctionDecl *FD) {
@@ -657,7 +665,9 @@ static ArmSMEState getSMEState(unsigned BuiltinID) {
 
 bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  bool HasError = false;
+
+  if (FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
     std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
@@ -667,7 +677,8 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
     }
 
     if (BuiltinType)
-      checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID);
+      HasError |= checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType,
+                                           BuiltinID);
 
     if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD))
       Diag(TheCall->getBeginLoc(),
@@ -691,12 +702,14 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SME_IMMEDIATE_CHECK
   }
 
-  return ParseSVEImmChecks(TheCall, ImmChecks);
+  HasError |= ParseSVEImmChecks(TheCall, ImmChecks);
+  return HasError;
 }
 
 bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  bool HasError = false;
+  if (FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
     std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
@@ -705,7 +718,8 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SVE_STREAMING_ATTRS
     }
     if (BuiltinType)
-      checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID);
+      HasError |= checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType,
+                                           BuiltinID);
   }
   // Range check SVE intrinsics that take immediate values.
   SmallVector<std::tuple<int, int, int>, 3> ImmChecks;
@@ -718,13 +732,15 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SVE_IMMEDIATE_CHECK
   }
 
-  return ParseSVEImmChecks(TheCall, ImmChecks);
+  HasError |= ParseSVEImmChecks(TheCall, ImmChecks);
+  return HasError;
 }
 
 bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
                                            unsigned BuiltinID,
                                            CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  bool HasError = false;
+  if (FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
 
     switch (BuiltinID) {
     default:
@@ -733,8 +749,8 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 #define TARGET_BUILTIN(id, ...) case NEON::BI##id:
 #define BUILTIN(id, ...) case NEON::BI##id:
 #include "clang/Basic/arm_neon.inc"
-      checkArmStreamingBuiltin(SemaRef, TheCall, FD, ArmNonStreaming,
-                               BuiltinID);
+      HasError |= checkArmStreamingBuiltin(SemaRef, TheCall, FD,
+                                           ArmNonStreaming, BuiltinID);
       break;
 #undef TARGET_BUILTIN
 #undef BUILTIN
@@ -799,14 +815,15 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
   unsigned i = 0, l = 0, u = 0;
   switch (BuiltinID) {
   default:
-    return false;
+    return HasError;
 #define GET_NEON_IMMEDIATE_CHECK
 #include "clang/Basic/arm_fp16.inc"
 #include "clang/Basic/arm_neon.inc"
 #undef GET_NEON_IMMEDIATE_CHECK
   }
 
-  return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);
+  HasError |= SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);
+  return HasError;
 }
 
 bool SemaARM::CheckMVEBuiltinFunctionCall(unsigned BuiltinID,

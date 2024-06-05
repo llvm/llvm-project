@@ -30,8 +30,9 @@ public:
     ArmStreaming,    /// Intrinsic is only available in Streaming-SVE mode.
     ArmStreamingCompatible, /// Intrinsic is available both in normal and
                             /// Streaming-SVE mode.
-    ArmStreamingOrHasSVE /// Intrinsic is available in normal mode with +sve, or
-                         /// in Streaming-SVE mode with +sme.
+    VerifyRuntimeMode       /// Intrinsic is available in normal mode with
+                            /// SVE flags, or in Streaming-SVE mode with SME
+                            /// flags. Do Sema checks for the runtime mode.
   };
 
   bool CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall,
