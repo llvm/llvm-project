@@ -61,8 +61,9 @@ add_math_entrypoint_object(atanhf)
 
 add_math_entrypoint_object(canonicalize)
 add_math_entrypoint_object(canonicalizef)
-add_math_entrypoint_object(canonicalizef128)
 add_math_entrypoint_object(canonicalizel)
+add_math_entrypoint_object(canonicalizef16)
+add_math_entrypoint_object(canonicalizef128)
 
 add_math_entrypoint_object(ceil)
 add_math_entrypoint_object(ceilf)
