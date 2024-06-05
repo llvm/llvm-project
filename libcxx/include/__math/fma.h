@@ -23,6 +23,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __math {
 
+// fma
+
+#undef fma
+
 inline _LIBCPP_HIDE_FROM_ABI float fma(float __x, float __y, float __z) _NOEXCEPT {
   return __builtin_fmaf(__x, __y, __z);
 }

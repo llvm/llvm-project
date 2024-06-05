@@ -23,6 +23,8 @@ namespace __math {
 
 // fabs
 
+#undef fabs
+
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI float fabs(float __x) _NOEXCEPT { return __builtin_fabsf(__x); }
 
 template <class = int>

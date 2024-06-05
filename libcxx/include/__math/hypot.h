@@ -23,6 +23,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __math {
 
+// hypot
+
+#undef hypot
+
 inline _LIBCPP_HIDE_FROM_ABI float hypot(float __x, float __y) _NOEXCEPT { return __builtin_hypotf(__x, __y); }
 
 template <class = int>

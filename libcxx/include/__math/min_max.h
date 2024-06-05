@@ -25,6 +25,8 @@ namespace __math {
 
 // fmax
 
+#undef fmax
+
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI float fmax(float __x, float __y) _NOEXCEPT {
   return __builtin_fmaxf(__x, __y);
 }
@@ -46,6 +48,8 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::typ
 }
 
 // fmin
+
+#undef fmin
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI float fmin(float __x, float __y) _NOEXCEPT {
   return __builtin_fminf(__x, __y);

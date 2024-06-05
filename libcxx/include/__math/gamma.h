@@ -23,6 +23,8 @@ namespace __math {
 
 // lgamma
 
+#undef lgamma
+
 inline _LIBCPP_HIDE_FROM_ABI float lgamma(float __x) _NOEXCEPT { return __builtin_lgammaf(__x); }
 
 template <class = int>
@@ -40,6 +42,8 @@ inline _LIBCPP_HIDE_FROM_ABI double lgamma(_A1 __x) _NOEXCEPT {
 // nan
 
 // tgamma
+
+#undef tgamma
 
 inline _LIBCPP_HIDE_FROM_ABI float tgamma(float __x) _NOEXCEPT { return __builtin_tgammaf(__x); }
 

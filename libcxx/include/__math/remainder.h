@@ -26,6 +26,8 @@ namespace __math {
 
 // remainder
 
+#undef remainder
+
 inline _LIBCPP_HIDE_FROM_ABI float remainder(float __x, float __y) _NOEXCEPT { return __builtin_remainderf(__x, __y); }
 
 template <class = int>
@@ -45,6 +47,8 @@ inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type remainder(_A1 __
 }
 
 // remquo
+
+#undef remquo
 
 inline _LIBCPP_HIDE_FROM_ABI float remquo(float __x, float __y, int* __z) _NOEXCEPT {
   return __builtin_remquof(__x, __y, __z);

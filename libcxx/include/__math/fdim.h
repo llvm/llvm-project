@@ -23,6 +23,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __math {
 
+// fdim
+
+#undef fdim
+
 inline _LIBCPP_HIDE_FROM_ABI float fdim(float __x, float __y) _NOEXCEPT { return __builtin_fdimf(__x, __y); }
 
 template <class = int>

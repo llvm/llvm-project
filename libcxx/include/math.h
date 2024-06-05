@@ -307,75 +307,6 @@ long double    truncl(long double x);
 // back to C++ linkage before including these C++ headers.
 extern "C++" {
 
-#    undef acos
-#    undef acosh
-#    undef asin
-#    undef asinh
-#    undef atan
-#    undef atan2
-#    undef atanh
-#    undef cbrt
-#    undef ceil
-#    undef copysign
-#    undef cos
-#    undef cosh
-#    undef erf
-#    undef erfc
-#    undef exp
-#    undef exp2
-#    undef expm1
-#    undef fabs
-#    undef fdim
-#    undef floor
-#    undef fma
-#    undef fmax
-#    undef fmin
-#    undef fmod
-#    undef fpclassify
-#    undef frexp
-#    undef hypot
-#    undef ilogb
-#    undef isfinite
-#    undef isgreater
-#    undef isgreaterequal
-#    undef isinf
-#    undef isless
-#    undef islessequal
-#    undef islessgreater
-#    undef isnan
-#    undef isnormal
-#    undef isunordered
-#    undef ldexp
-#    undef lgamma
-#    undef llrint
-#    undef llround
-#    undef log
-#    undef log10
-#    undef log1p
-#    undef log2
-#    undef logb
-#    undef lrint
-#    undef lround
-#    undef modf
-#    undef nearbyint
-#    undef nextafter
-#    undef nexttoward
-#    undef pow
-#    undef remainder
-#    undef remquo
-#    undef rint
-#    undef round
-#    undef scalbln
-#    undef scalbn
-#    undef signbit
-#    undef sin
-#    undef sinh
-#    undef sqrt
-#    undef tan
-#    undef tanh
-#    undef tgamma
-#    undef trunc
-
 #    include <__math/abs.h>
 #    include <__math/copysign.h>
 #    include <__math/error_functions.h>
@@ -406,6 +337,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __math {
 
 // fpclassify
+
+#    undef fpclassify
 
 // template on non-double overloads to make them weaker than same overloads from MSVC runtime
 template <class = int>

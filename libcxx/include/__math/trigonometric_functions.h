@@ -23,6 +23,8 @@ namespace __math {
 
 // cos
 
+#undef cos
+
 inline _LIBCPP_HIDE_FROM_ABI float cos(float __x) _NOEXCEPT { return __builtin_cosf(__x); }
 
 template <class = int>
@@ -39,6 +41,8 @@ inline _LIBCPP_HIDE_FROM_ABI double cos(_A1 __x) _NOEXCEPT {
 
 // sin
 
+#undef sin
+
 inline _LIBCPP_HIDE_FROM_ABI float sin(float __x) _NOEXCEPT { return __builtin_sinf(__x); }
 
 template <class = int>
@@ -54,6 +58,8 @@ inline _LIBCPP_HIDE_FROM_ABI double sin(_A1 __x) _NOEXCEPT {
 }
 
 // tan
+
+#undef tan
 
 inline _LIBCPP_HIDE_FROM_ABI float tan(float __x) _NOEXCEPT { return __builtin_tanf(__x); }
 
