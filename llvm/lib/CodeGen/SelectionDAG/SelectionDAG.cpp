@@ -4051,6 +4051,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ABS: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known = Known2.abs();
+    Known.Zero.setHighBits(
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1) - 1);
     break;
   }
   case ISD::USUBSAT: {
