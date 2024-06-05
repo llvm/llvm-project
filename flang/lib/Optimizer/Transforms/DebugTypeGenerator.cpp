@@ -13,6 +13,10 @@
 #define DEBUG_TYPE "flang-debug-type-generator"
 
 #include "DebugTypeGenerator.h"
+#include "flang/Optimizer/CodeGen/DescriptorModel.h"
+#include "flang/Optimizer/CodeGen/TypeConverter.h"
+#include "flang/Optimizer/Support/DataLayout.h"
+#include "mlir/Pass/Pass.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Debug.h"
@@ -22,6 +26,60 @@ namespace fir {
 DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m)
     : module(m), kindMapping(getKindMapping(m)) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
+
+  std::optional<mlir::DataLayout> dl =
+      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/true);
+  if (!dl)
+    mlir::emitError(module.getLoc(), "Missing data layout attribute in module");
+
+  mlir::MLIRContext *context = module.getContext();
+
+  // The debug information requires the offset of certain fields in the
+  // descriptors like lower_bound and extent for each dimension. The code
+  // below uses getDescFieldTypeModel to get the type representing each field
+  // and then use data layout to get its size. It adds the size to get the
+  // offset.
+  // As has been mentioned in DescriptorModel.h that code may be confusing
+  // host for the target in calculating the type of the descriptor fields. But
+  // debug info is using similar logic to what codegen is doing so it will
+  // atleast be representing the generated code correctly.
+  // My testing for a 32-bit shows that base_addr* is correctly given as a
+  // 32-bit entity. The index types are 64-bit so I am a bit uncertain how
+  // the alignment will effect the calculation of offsets in that case.
+
+  // base_addr*
+  dimsOffset =
+      dl->getTypeSizeInBits(getDescFieldTypeModel<kAddrPosInBox>()(context));
+
+  // elem_len
+  dimsOffset +=
+      dl->getTypeSizeInBits(getDescFieldTypeModel<kElemLenPosInBox>()(context));
+
+  // version
+  dimsOffset +=
+      dl->getTypeSizeInBits(getDescFieldTypeModel<kVersionPosInBox>()(context));
+
+  // rank
+  dimsOffset +=
+      dl->getTypeSizeInBits(getDescFieldTypeModel<kRankPosInBox>()(context));
+
+  // type
+  dimsOffset +=
+      dl->getTypeSizeInBits(getDescFieldTypeModel<kTypePosInBox>()(context));
+
+  // attribute
+  dimsOffset += dl->getTypeSizeInBits(
+      getDescFieldTypeModel<kAttributePosInBox>()(context));
+
+  // f18Addendum
+  dimsOffset += dl->getTypeSizeInBits(
+      getDescFieldTypeModel<kF18AddendumPosInBox>()(context));
+
+  // dims
+  dimsSize =
+      dl->getTypeSizeInBits(getDescFieldTypeModel<kDimsPosInBox>()(context));
+  dimsOffset /= 8;
+  dimsSize /= 8;
 }
 
 static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
@@ -37,10 +95,82 @@ static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
                       llvm::dwarf::DW_ATE_signed);
 }
 
+mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
+    fir::SequenceType seqTy, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scope, mlir::Location loc, bool genAllocated,
+    bool genAssociated) {
+
+  mlir::MLIRContext *context = module.getContext();
+  // FIXME: Assumed rank arrays not supported yet
+  if (seqTy.hasUnknownShape())
+    return genPlaceholderType(context);
+
+  llvm::SmallVector<mlir::LLVM::DIExpressionElemAttr> ops;
+  auto addOp = [&](unsigned opc, llvm::ArrayRef<uint64_t> vals) {
+    ops.push_back(mlir::LLVM::DIExpressionElemAttr::get(context, opc, vals));
+  };
+
+  addOp(llvm::dwarf::DW_OP_push_object_address, {});
+  addOp(llvm::dwarf::DW_OP_deref, {});
+
+  // dataLocation = *base_addr
+  mlir::LLVM::DIExpressionAttr dataLocation =
+      mlir::LLVM::DIExpressionAttr::get(context, ops);
+  addOp(llvm::dwarf::DW_OP_lit0, {});
+  addOp(llvm::dwarf::DW_OP_ne, {});
+
+  // allocated = associated = (*base_addr != 0)
+  mlir::LLVM::DIExpressionAttr valid =
+      mlir::LLVM::DIExpressionAttr::get(context, ops);
+  mlir::LLVM::DIExpressionAttr associated = genAllocated ? valid : nullptr;
+  mlir::LLVM::DIExpressionAttr allocated = genAssociated ? valid : nullptr;
+  ops.clear();
+
+  llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
+  mlir::LLVM::DITypeAttr elemTy =
+      convertType(seqTy.getEleTy(), fileAttr, scope, loc);
+  unsigned offset = dimsOffset;
+  const unsigned indexSize = dimsSize / 3;
+  for ([[maybe_unused]] auto _ : seqTy.getShape()) {
+    // For each dimension, find the offset of count and lower bound in the
+    // descriptor and generate the dwarf expression to extract it.
+    // FIXME: If `indexSize` happens to be bigger than address size on the
+    // system then we may have to change 'DW_OP_deref' here.
+    addOp(llvm::dwarf::DW_OP_push_object_address, {});
+    addOp(llvm::dwarf::DW_OP_plus_uconst,
+          {offset + (indexSize * kDimExtentPos)});
+    addOp(llvm::dwarf::DW_OP_deref, {});
+    // count[i] = *(base_addr + offset + (indexSize * kDimExtentPos))
+    // where 'offset' is dimsOffset + (i * dimsSize)
+    mlir::LLVM::DIExpressionAttr countAttr =
+        mlir::LLVM::DIExpressionAttr::get(context, ops);
+    ops.clear();
+
+    addOp(llvm::dwarf::DW_OP_push_object_address, {});
+    addOp(llvm::dwarf::DW_OP_plus_uconst,
+          {offset + (indexSize * kDimLowerBoundPos)});
+    addOp(llvm::dwarf::DW_OP_deref, {});
+    // lower_bound[i] = *(base_addr + offset + (indexSize * kDimLowerBoundPos))
+    mlir::LLVM::DIExpressionAttr lowerAttr =
+        mlir::LLVM::DIExpressionAttr::get(context, ops);
+    ops.clear();
+
+    offset += dimsSize;
+    mlir::LLVM::DISubrangeAttr subrangeTy = mlir::LLVM::DISubrangeAttr::get(
+        context, nullptr, lowerAttr, countAttr, nullptr);
+    elements.push_back(subrangeTy);
+  }
+  return mlir::LLVM::DICompositeTypeAttr::get(
+      context, llvm::dwarf::DW_TAG_array_type, /*recursive id*/ {},
+      /* name */ nullptr, /* file */ nullptr, /* line */ 0,
+      /* scope */ nullptr, elemTy, mlir::LLVM::DIFlags::Zero,
+      /* sizeInBits */ 0, /*alignInBits*/ 0, elements, dataLocation,
+      /* rank */ nullptr, allocated, associated);
+}
+
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
     fir::SequenceType seqTy, mlir::LLVM::DIFileAttr fileAttr,
     mlir::LLVM::DIScopeAttr scope, mlir::Location loc) {
-
   mlir::MLIRContext *context = module.getContext();
   // FIXME: Only fixed sizes arrays handled at the moment.
   if (seqTy.hasDynamicExtents())
@@ -112,6 +242,12 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                         bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(Ty)) {
     return convertSequenceType(seqTy, fileAttr, scope, loc);
+  } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
+    auto elTy = boxTy.getElementType();
+    if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
+      return convertBoxedSequenceType(seqTy, fileAttr, scope, loc, false,
+                                      false);
+    return genPlaceholderType(context);
   } else {
     // FIXME: These types are currently unhandled. We are generating a
     // placeholder type to allow us to test supported bits.
