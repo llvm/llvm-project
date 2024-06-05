@@ -87,7 +87,7 @@ jobs:
         with:
           name: libcxx-install
           path: |
-            install/**
+            build/generic-cxx26/install/**
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-runners-8-set
