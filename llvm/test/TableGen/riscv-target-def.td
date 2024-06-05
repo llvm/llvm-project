@@ -5,38 +5,41 @@ include "llvm/Target/Target.td"
 class RISCVExtension<string name, int major, int minor, string desc,
                      list<SubtargetFeature> implies = [],
                      string fieldname = !subst("Feature", "Has", NAME),
-                     string value = "true">
+                     string value = "true", bits<3> groupID=0, int bitmaskShift=-1>
     : SubtargetFeature<name, fieldname, value, desc, implies> {
   int MajorVersion = major;
   int MinorVersion = minor;
   bit Experimental = false;
+
+  bits<3> GroupID = groupID;
+  bits<64> Bitmask = !if(!eq(bitmaskShift, -1), 0, !shl(1, bitmaskShift));
 }
 
 class RISCVExperimentalExtension<string name, int major, int minor, string desc,
                                  list<RISCVExtension> implies = [],
                                  string fieldname = !subst("Feature", "Has", NAME),
-                                 string value = "true">
+                                 string value = "true", bits<3> groupID=0, int bitmaskShift=-1>
     : RISCVExtension<"experimental-"#name, major, minor, desc, implies,
-                     fieldname, value> {
+                     fieldname, value, groupID, bitmaskShift> {
   let Experimental = true;
 }
 
 def FeatureStdExtI
     : RISCVExtension<"i", 2, 1,
-                     "'I' (Base Integer Instruction Set)">;
+                     "'I' (Base Integer Instruction Set)", groupID=0, bitmaskShift=0>;
 
 def FeatureStdExtZicsr
     : RISCVExtension<"zicsr", 2, 0,
-                     "'zicsr' (CSRs)">;
+                     "'zicsr' (CSRs)", groupID=0, bitmaskShift=10>;
 
 def FeatureStdExtZifencei
     : RISCVExtension<"zifencei", 2, 0,
-                     "'Zifencei' (fence.i)">;
+                     "'Zifencei' (fence.i)", groupID=0, bitmaskShift=13>;
 
 def FeatureStdExtF
     : RISCVExtension<"f", 2, 2,
                      "'F' (Single-Precision Floating-Point)",
-                     [FeatureStdExtZicsr]>;
+                     [FeatureStdExtZicsr], groupID=0, bitmaskShift=33>;
 
 def FeatureStdExtZidummy
     : RISCVExperimentalExtension<"zidummy", 0, 1,
@@ -171,3 +174,12 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK-NEXT: TUNE_PROC(ROCKET, "rocket")
 
 // CHECK: #undef TUNE_PROC
+
+// CHECK: #ifdef GET_RISCVExtensionBitmaskTable_IMPL
+// CHECK-NEXT: static const RISCVExtensionBitmask ExtensionBitmask[]={
+// CHECK-NEXT:     {"f", 0, 8589934592ULL},
+// CHECK-NEXT:     {"i", 0, 1ULL},
+// CHECK-NEXT:     {"zicsr", 0, 1024ULL},
+// CHECK-NEXT:     {"zifencei", 0, 8192ULL},
+// CHECK-NEXT: };
+// CHECK-NEXT: #endif
