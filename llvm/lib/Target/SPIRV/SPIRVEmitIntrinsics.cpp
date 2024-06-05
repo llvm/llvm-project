@@ -50,7 +50,6 @@ void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
 } // namespace llvm
 
 namespace {
-
 class SPIRVEmitIntrinsics
     : public ModulePass,
       public InstVisitor<SPIRVEmitIntrinsics, Instruction *> {
