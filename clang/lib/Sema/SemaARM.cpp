@@ -627,10 +627,12 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
       return false;
   }
 
-  if (FnType != SemaARM::ArmNonStreaming && BuiltinType == SemaARM::ArmNonStreaming)
+  if (FnType != SemaARM::ArmNonStreaming &&
+      BuiltinType == SemaARM::ArmNonStreaming)
     S.Diag(TheCall->getBeginLoc(), diag::err_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "non-streaming";
-  else if (FnType != SemaARM::ArmStreaming && BuiltinType == SemaARM::ArmStreaming)
+  else if (FnType != SemaARM::ArmStreaming &&
+           BuiltinType == SemaARM::ArmStreaming)
     S.Diag(TheCall->getBeginLoc(), diag::err_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming";
   else
