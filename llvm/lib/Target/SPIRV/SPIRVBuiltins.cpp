@@ -24,6 +24,13 @@
 #define DEBUG_TYPE "spirv-builtins"
 
 namespace llvm {
+
+//  Defined in SPIRVPreLegalizer.cpp.
+extern Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
+                                  SPIRVGlobalRegistry *GR,
+                                  MachineIRBuilder &MIB,
+                                  MachineRegisterInfo &MRI);
+
 namespace SPIRV {
 #define GET_BuiltinGroup_DECL
 #include "SPIRVGenTables.inc"
@@ -1451,11 +1458,22 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
         Component == 3 ? NumActualRetComponents - 1 : Component;
     assert(ExtractedComposite < NumActualRetComponents &&
            "Invalid composite index!");
+    Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+    SPIRVType *NewType = nullptr;
+    if (QueryResultType->getOpcode() == SPIRV::OpTypeVector) {
+      Register NewTypeReg = QueryResultType->getOperand(1).getReg();
+      if (TypeReg != NewTypeReg &&
+          (NewType = GR->getSPIRVTypeForVReg(NewTypeReg)) != nullptr)
+        TypeReg = NewTypeReg;
+    }
     MIRBuilder.buildInstr(SPIRV::OpCompositeExtract)
         .addDef(Call->ReturnRegister)
-        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+        .addUse(TypeReg)
         .addUse(QueryResult)
         .addImm(ExtractedComposite);
+    if (NewType != nullptr)
+      insertAssignInstr(Call->ReturnRegister, nullptr, NewType, GR, MIRBuilder,
+                        MIRBuilder.getMF().getRegInfo());
   } else {
     // More than 1 component is expected, fill a new vector.
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpVectorShuffle)
