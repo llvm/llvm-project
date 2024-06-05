@@ -7,6 +7,7 @@ static_library("Support") {
     "//llvm/lib/Demangle",
     "//llvm/utils/gn/build/libs/pthread",
     "//llvm/utils/gn/build/libs/zlib",
+    "//llvm/utils/gn/build/libs/zstd",
   ]
 
   # public_deps are used for depending on targets that generate headers

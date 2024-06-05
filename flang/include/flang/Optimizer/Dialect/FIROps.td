@@ -1171,6 +1171,23 @@ def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
+def fir_IsAssumedSizeOp : fir_SimpleOp<"is_assumed_size", [NoMemoryEffect]> {
+  let summary = "detect if a boxed value is an assumed-size array";
+
+  let description = [{
+    Fir box SSA values may describe assumed-size arrays. This operation
+    allows detecting this, even for assumed-rank box.
+
+    ```
+      %a = fir.is_assumed_size %b : (!fir.box<!fir.array<*:f64>>) -> i1
+    ```
+  }];
+
+  let arguments = (ins BoxOrClassType:$val);
+
+  let results = (outs BoolLike);
+}
+
 def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoMemoryEffect]> {
   let summary = "is the boxed value a POINTER?";
 
@@ -1694,6 +1711,7 @@ def fir_ArrayCoorOp : fir_Op<"array_coor",
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
@@ -2376,7 +2394,8 @@ def fir_CallOp : fir_Op<"call",
     OptionalAttr<SymbolRefAttr>:$callee,
     Variadic<AnyType>:$args,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::mlir::arith::FastMathFlags::none">:$fastmath,
+    UnitAttr:$is_bind_c
   );
   let results = (outs Variadic<AnyType>);
 
@@ -2782,7 +2801,8 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     OptionalAttr<UnitAttr>:$constant,
     OptionalAttr<UnitAttr>:$target,
     OptionalAttr<StrAttr>:$linkName,
-    OptionalAttr<cuf_DataAttributeAttr>:$data_attr
+    OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
+    OptionalAttr<I64Attr>:$alignment
   );
 
   let regions = (region AtMostRegion<1>:$region);

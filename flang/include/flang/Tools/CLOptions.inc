@@ -178,7 +178,7 @@ inline void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
   fir::CodeGenRewriteOptions options;
   options.preserveDeclare = preserveDeclare;
   addPassConditionally(pm, disableCodeGenRewrite,
-      [&]() { return fir::createFirCodeGenRewritePass(options); });
+      [&]() { return fir::createCodeGenRewrite(options); });
 }
 
 inline void addTargetRewritePass(mlir::PassManager &pm) {
@@ -349,7 +349,7 @@ inline void createOpenMPFIRPassPipeline(
       pm, fir::createOMPMapInfoFinalizationPass);
   pm.addPass(fir::createOMPMarkDeclareTargetPass());
   if (isTargetDevice)
-    pm.addPass(fir::createOMPFunctionFilteringPass());
+    pm.addPass(fir::createOMPFunctionFiltering());
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)

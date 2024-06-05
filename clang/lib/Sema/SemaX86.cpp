@@ -13,6 +13,8 @@
 #include "clang/Sema/SemaX86.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Sema/Attr.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/TargetParser/Triple.h"
@@ -873,6 +875,98 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   // make any sense. We use a warning that defaults to an error.
   return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u,
                                          /*RangeIsError*/ false);
+}
+
+void SemaX86::handleAnyInterruptAttr(Decl *D, const ParsedAttr &AL) {
+  // Semantic checks for a function with the 'interrupt' attribute.
+  // a) Must be a function.
+  // b) Must have the 'void' return type.
+  // c) Must take 1 or 2 arguments.
+  // d) The 1st argument must be a pointer.
+  // e) The 2nd argument (if any) must be an unsigned integer.
+  ASTContext &Context = getASTContext();
+
+  if (!isFuncOrMethodForAttrSubject(D) || !hasFunctionProto(D) ||
+      isInstanceMethod(D) ||
+      CXXMethodDecl::isStaticOverloadedOperator(
+          cast<NamedDecl>(D)->getDeclName().getCXXOverloadedOperator())) {
+    Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute()
+        << ExpectedFunctionWithProtoType;
+    return;
+  }
+  // Interrupt handler must have void return type.
+  if (!getFunctionOrMethodResultType(D)->isVoidType()) {
+    Diag(getFunctionOrMethodResultSourceRange(D).getBegin(),
+         diag::err_anyx86_interrupt_attribute)
+        << (SemaRef.Context.getTargetInfo().getTriple().getArch() ==
+                    llvm::Triple::x86
+                ? 0
+                : 1)
+        << 0;
+    return;
+  }
+  // Interrupt handler must have 1 or 2 parameters.
+  unsigned NumParams = getFunctionOrMethodNumParams(D);
+  if (NumParams < 1 || NumParams > 2) {
+    Diag(D->getBeginLoc(), diag::err_anyx86_interrupt_attribute)
+        << (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86
+                ? 0
+                : 1)
+        << 1;
+    return;
+  }
+  // The first argument must be a pointer.
+  if (!getFunctionOrMethodParamType(D, 0)->isPointerType()) {
+    Diag(getFunctionOrMethodParamRange(D, 0).getBegin(),
+         diag::err_anyx86_interrupt_attribute)
+        << (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86
+                ? 0
+                : 1)
+        << 2;
+    return;
+  }
+  // The second argument, if present, must be an unsigned integer.
+  unsigned TypeSize =
+      Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86_64
+          ? 64
+          : 32;
+  if (NumParams == 2 &&
+      (!getFunctionOrMethodParamType(D, 1)->isUnsignedIntegerType() ||
+       Context.getTypeSize(getFunctionOrMethodParamType(D, 1)) != TypeSize)) {
+    Diag(getFunctionOrMethodParamRange(D, 1).getBegin(),
+         diag::err_anyx86_interrupt_attribute)
+        << (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86
+                ? 0
+                : 1)
+        << 3 << Context.getIntTypeForBitwidth(TypeSize, /*Signed=*/false);
+    return;
+  }
+  D->addAttr(::new (Context) AnyX86InterruptAttr(Context, AL));
+  D->addAttr(UsedAttr::CreateImplicit(Context));
+}
+
+void SemaX86::handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL) {
+  // If we try to apply it to a function pointer, don't warn, but don't
+  // do anything, either. It doesn't matter anyway, because there's nothing
+  // special about calling a force_align_arg_pointer function.
+  const auto *VD = dyn_cast<ValueDecl>(D);
+  if (VD && VD->getType()->isFunctionPointerType())
+    return;
+  // Also don't warn on function pointer typedefs.
+  const auto *TD = dyn_cast<TypedefNameDecl>(D);
+  if (TD && (TD->getUnderlyingType()->isFunctionPointerType() ||
+             TD->getUnderlyingType()->isFunctionType()))
+    return;
+  // Attribute can only be applied to function types.
+  if (!isa<FunctionDecl>(D)) {
+    Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
+    return;
+  }
+
+  D->addAttr(::new (getASTContext())
+                 X86ForceAlignArgPointerAttr(getASTContext(), AL));
 }
 
 } // namespace clang

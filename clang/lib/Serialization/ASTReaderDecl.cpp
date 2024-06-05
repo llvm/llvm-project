@@ -49,6 +49,7 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTRecordReader.h"
@@ -4127,7 +4128,10 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   // calls to Decl::getASTContext() by Decl's methods will find the
   // TranslationUnitDecl without crashing.
   D->setDeclContext(Context.getTranslationUnitDecl());
-  Reader.Visit(D);
+
+  // Reading some declarations can result in deep recursion.
+  clang::runWithSufficientStackSpace([&] { warnStackExhausted(DeclLoc); },
+                                     [&] { Reader.Visit(D); });
 
   // If this declaration is also a declaration context, get the
   // offsets for its tables of lexical and visible declarations.

@@ -210,6 +210,7 @@ exit:
 ; DBG-NEXT: Successor(s): middle.block
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
+; DBG-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end vp<[[SCALAR_STEPS]]>, ir<1>
 ; DBG-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
 ; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; DBG-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
@@ -219,6 +220,8 @@ exit:
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<loop>
 ; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_1]]>
 ; DBG-NEXT: }
 
 define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {

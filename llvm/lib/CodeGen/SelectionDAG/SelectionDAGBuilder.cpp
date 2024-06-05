@@ -3307,12 +3307,12 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
   const BasicBlock *EHPadBB = I.getSuccessor(1);
   MachineBasicBlock *EHPadMBB = FuncInfo.MBBMap[EHPadBB];
 
-  // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
+  // Deopt and ptrauth bundles are lowered in helper functions, and we don't
   // have to do anything here to lower funclet bundles.
   assert(!I.hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
               LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
-              LLVMContext::OB_cfguardtarget,
+              LLVMContext::OB_cfguardtarget, LLVMContext::OB_ptrauth,
               LLVMContext::OB_clang_arc_attachedcall}) &&
          "Cannot lower invokes with arbitrary operand bundles yet!");
 
@@ -3363,6 +3363,8 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     // intrinsic, and right now there are no plans to support other intrinsics
     // with deopt state.
     LowerCallSiteWithDeoptBundle(&I, getValue(Callee), EHPadBB);
+  } else if (I.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+    LowerCallSiteWithPtrAuthBundle(cast<CallBase>(I), EHPadBB);
   } else {
     LowerCallTo(I, getValue(Callee), false, false, EHPadBB);
   }
@@ -3615,12 +3617,8 @@ void SelectionDAGBuilder::visitSDiv(const User &I) {
                            Op2, Flags));
 }
 
-void SelectionDAGBuilder::visitICmp(const User &I) {
-  ICmpInst::Predicate predicate = ICmpInst::BAD_ICMP_PREDICATE;
-  if (const ICmpInst *IC = dyn_cast<ICmpInst>(&I))
-    predicate = IC->getPredicate();
-  else if (const ConstantExpr *IC = dyn_cast<ConstantExpr>(&I))
-    predicate = ICmpInst::Predicate(IC->getPredicate());
+void SelectionDAGBuilder::visitICmp(const ICmpInst &I) {
+  ICmpInst::Predicate predicate = I.getPredicate();
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
   ISD::CondCode Opcode = getICmpCondCode(predicate);
@@ -3642,12 +3640,8 @@ void SelectionDAGBuilder::visitICmp(const User &I) {
   setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Opcode));
 }
 
-void SelectionDAGBuilder::visitFCmp(const User &I) {
-  FCmpInst::Predicate predicate = FCmpInst::BAD_FCMP_PREDICATE;
-  if (const FCmpInst *FC = dyn_cast<FCmpInst>(&I))
-    predicate = FC->getPredicate();
-  else if (const ConstantExpr *FC = dyn_cast<ConstantExpr>(&I))
-    predicate = FCmpInst::Predicate(FC->getPredicate());
+void SelectionDAGBuilder::visitFCmp(const FCmpInst &I) {
+  FCmpInst::Predicate predicate = I.getPredicate();
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
 
@@ -7842,9 +7836,19 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Ptr = getValue(I.getOperand(0));
     SDValue Mask = getValue(I.getOperand(1));
 
-    EVT PtrVT = Ptr.getValueType();
-    assert(PtrVT == Mask.getValueType() &&
-           "Pointers with different index type are not supported by SDAG");
+    // On arm64_32, pointers are 32 bits when stored in memory, but
+    // zero-extended to 64 bits when in registers.  Thus the mask is 32 bits to
+    // match the index type, but the pointer is 64 bits, so the the mask must be
+    // zero-extended up to 64 bits to match the pointer.
+    EVT PtrVT =
+        TLI.getValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
+    EVT MemVT =
+        TLI.getMemValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
+    assert(PtrVT == Ptr.getValueType());
+    assert(MemVT == Mask.getValueType());
+    if (MemVT != PtrVT)
+      Mask = DAG.getPtrExtOrTrunc(Mask, sdl, PtrVT);
+
     setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
   }
@@ -8598,9 +8602,9 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
 }
 
 void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
-                                      bool isTailCall,
-                                      bool isMustTailCall,
-                                      const BasicBlock *EHPadBB) {
+                                      bool isTailCall, bool isMustTailCall,
+                                      const BasicBlock *EHPadBB,
+                                      const TargetLowering::PtrAuthInfo *PAI) {
   auto &DL = DAG.getDataLayout();
   FunctionType *FTy = CB.getFunctionType();
   Type *RetTy = CB.getType();
@@ -8707,6 +8711,15 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
           CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
       .setCFIType(CFIType)
       .setConvergenceControlToken(ConvControlToken);
+
+  // Set the pointer authentication info if we have it.
+  if (PAI) {
+    if (!TLI.supportPtrAuthBundles())
+      report_fatal_error(
+          "This target doesn't support calls with ptrauth operand bundles.");
+    CLI.setPtrAuth(*PAI);
+  }
+
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   if (Result.first.getNode()) {
@@ -9252,6 +9265,11 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     }
   }
 
+  if (I.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+    LowerCallSiteWithPtrAuthBundle(cast<CallBase>(I), /*EHPadBB=*/nullptr);
+    return;
+  }
+
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
   // CFGuardTarget bundles are lowered in LowerCallTo.
@@ -9271,6 +9289,31 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     // is be done within LowerCallTo, after more information about the call is
     // known.
     LowerCallTo(I, Callee, I.isTailCall(), I.isMustTailCall());
+}
+
+void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
+    const CallBase &CB, const BasicBlock *EHPadBB) {
+  auto PAB = CB.getOperandBundle("ptrauth");
+  const Value *CalleeV = CB.getCalledOperand();
+
+  // Gather the call ptrauth data from the operand bundle:
+  //   [ i32 <key>, i64 <discriminator> ]
+  const auto *Key = cast<ConstantInt>(PAB->Inputs[0]);
+  const Value *Discriminator = PAB->Inputs[1];
+
+  assert(Key->getType()->isIntegerTy(32) && "Invalid ptrauth key");
+  assert(Discriminator->getType()->isIntegerTy(64) &&
+         "Invalid ptrauth discriminator");
+
+  // Functions should never be ptrauth-called directly.
+  assert(!isa<Function>(CalleeV) && "invalid direct ptrauth call");
+
+  // Otherwise, do an authenticated indirect call.
+  TargetLowering::PtrAuthInfo PAI = {Key->getZExtValue(),
+                                     getValue(Discriminator)};
+
+  LowerCallTo(CB, getValue(CalleeV), CB.isTailCall(), CB.isMustTailCall(),
+              EHPadBB, &PAI);
 }
 
 namespace {

@@ -43,7 +43,6 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
   let description = [{
     Fuse specific subgraphs into single Ops for code generation.
   }];
-  let constructor = "::fir::createFirCodeGenRewritePass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
   ];
@@ -85,7 +84,6 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
 }
 
 def BoxedProcedurePass : Pass<"boxed-procedure", "mlir::ModuleOp"> {
-  let constructor = "::fir::createBoxedProcedurePass()";
   let options = [
     Option<"useThunks", "use-thunks",
            "bool", /*default=*/"true",
