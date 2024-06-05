@@ -1303,6 +1303,19 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
 
   if (config->emachine == EM_MIPS)
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
+
+  // LoongArch does not yet implemented TLSDESC transition of DESC to LE/IE.
+  // Generates TLSDESC dynamic relocation for the symbol that is handled by the
+  // dynamic linker.
+  if (config->emachine == EM_LOONGARCH &&
+      oneof<R_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_CALL>(expr)) {
+    if (expr != R_TLSDESC_CALL) {
+      sym.setFlags(NEEDS_TLSDESC);
+      c.addReloc({expr, type, offset, addend, &sym});
+    }
+    return 1;
+  }
+
   bool isRISCV = config->emachine == EM_RISCV;
 
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
