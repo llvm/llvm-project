@@ -363,7 +363,8 @@ public:
   ///
   /// Returns true if the directive tokens are populated for this file entry,
   /// false if not (i.e. this entry is not a file or its scan fails).
-  bool ensureDirectiveTokensArePopulated(EntryRef Entry);
+  bool ensureDirectiveTokensArePopulated(EntryRef Entry,
+                                         const LangOptions &LangOpts);
 
   /// Check whether \p Path exists. By default checks cached result of \c
   /// status(), and falls back on FS if unable to do so.

@@ -274,9 +274,7 @@ def nxv4f64  : VTScalableVec<4,  f64, 188>;  // n x  4 x  f64 vector value
 def nxv8f64  : VTScalableVec<8,  f64, 189>;  // n x  8 x  f64 vector value
 
 def x86mmx    : ValueType<64,   190>;  // X86 MMX value
-def FlagVT    : ValueType<0,    191> { // Pre-RA sched glue
-  let LLVMName = "Glue";
-}
+def Glue      : ValueType<0,    191>;  // Pre-RA sched glue
 def isVoid    : ValueType<0,    192>;  // Produces no value
 def untyped   : ValueType<8,    193> { // Produces an untyped value
   let LLVMName = "Untyped";

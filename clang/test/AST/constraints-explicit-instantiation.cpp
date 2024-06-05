@@ -21,17 +21,17 @@ struct A {
 
 // This checks that `canary1<1>` and `canaray2<2>` are instantiated, thus
 // indirectly validating that the correct candidates of `A::f` were really
-// instantiated each time. 
+// instantiated each time.
 // The `static_assert`s validate we don't instantiate wrong candidates.
 
 // CHECK:{{.*}}FunctionTemplateDecl {{.*}} canary1
 // CHECK:      {{.*}}TemplateArgument integral
-// CHECK-SAME: {{1$}}
+// CHECK-SAME: {{'1'$}}
 template struct A<1>;
 
 // CHECK:      {{.*}}FunctionTemplateDecl {{.*}} canary2
 // CHECK:      {{.*}}TemplateArgument integral
-// CHECK-SAME: {{2$}}
+// CHECK-SAME: {{'2'$}}
 template struct A<2>;
 
 template struct A<3>;

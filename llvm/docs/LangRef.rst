@@ -462,7 +462,7 @@ added in the future:
     registers to pass arguments. This attribute doesn't impact non-general
     purpose registers (e.g. floating point registers, on X86 XMMs/YMMs).
     Non-general purpose registers still follow the standard c calling
-    convention. Currently it is for x86_64 only.
+    convention. Currently it is for x86_64 and AArch64 only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style TLS. The access
     function generally has an entry block, an exit block and an initialization
@@ -4821,10 +4821,6 @@ The following is the syntax for constant expressions:
     required to make sense for the type of "pointer to TY". These indexes
     may be implicitly sign-extended or truncated to match the index size
     of CSTPTR's address space.
-``icmp COND (VAL1, VAL2)``
-    Perform the :ref:`icmp operation <i_icmp>` on constants.
-``fcmp COND (VAL1, VAL2)``
-    Perform the :ref:`fcmp operation <i_fcmp>` on constants.
 ``extractelement (VAL, IDX)``
     Perform the :ref:`extractelement operation <i_extractelement>` on
     constants.
@@ -5428,10 +5424,12 @@ X86:
 - ``Z``: An immediate 32-bit unsigned integer.
 - ``q``: An 8, 16, 32, or 64-bit register which can be accessed as an 8-bit
   ``l`` integer register. On X86-32, this is the ``a``, ``b``, ``c``, and ``d``
-  registers, and on X86-64, it is all of the integer registers.
+  registers, and on X86-64, it is all of the integer registers. When feature
+  `egpr` and `inline-asm-use-gpr32` are both on, it will be extended to gpr32.
 - ``Q``: An 8, 16, 32, or 64-bit register which can be accessed as an 8-bit
   ``h`` integer register. This is the ``a``, ``b``, ``c``, and ``d`` registers.
-- ``r`` or ``l``: An 8, 16, 32, or 64-bit integer register.
+- ``r`` or ``l``: An 8, 16, 32, or 64-bit integer register. When feature
+  `egpr` and `inline-asm-use-gpr32` are both on, it will be extended to gpr32.
 - ``R``: An 8, 16, 32, or 64-bit "legacy" integer register -- one which has
   existed since i386, and can be accessed without the REX prefix.
 - ``f``: A 32, 64, or 80-bit '387 FPU stack pseudo-register.
@@ -5452,6 +5450,10 @@ X86:
   operand will get allocated only to RAX -- if two 32-bit operands are needed,
   you're better off splitting it yourself, before passing it to the asm
   statement.
+- ``jr``: An 8, 16, 32, or 64-bit integer gpr16. It won't be extended to gpr32
+  when feature `egpr` or `inline-asm-use-gpr32` is on.
+- ``jR``: An 8, 16, 32, or 64-bit integer gpr32 when feature `egpr`` is on.
+  Otherwise, same as ``r``.
 
 XCore:
 
@@ -26229,42 +26231,6 @@ same values as the libm ``cos`` functions would, and handles error
 conditions in the same way.
 
 
-'``llvm.experimental.constrained.tan``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.tan(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.tan``' intrinsic returns the tangent of the
-first operand.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the tangent of the specified operand, returning the
-same values as the libm ``tan`` functions would, and handles error
-conditions in the same way.
-
-
 '``llvm.experimental.constrained.exp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -27965,7 +27931,7 @@ Syntax:
 
 ::
 
-      declare {ptr, i1} @llvm.type.checked.load.relative(ptr %ptr, i32 %offset, metadata %type) argmemonly nounwind readonly
+      declare {ptr, i1} @llvm.type.checked.load.relative(ptr %ptr, i32 %offset, metadata %type) nounwind memory(argmem: read)
 
 Overview:
 """""""""

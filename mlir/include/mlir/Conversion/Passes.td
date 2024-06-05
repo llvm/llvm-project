@@ -509,6 +509,24 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GPUToLLVMSPV
+//===----------------------------------------------------------------------===//
+
+def ConvertGpuOpsToLLVMSPVOps : Pass<"convert-gpu-to-llvm-spv", "gpu::GPUModuleOp"> {
+  let summary =
+    "Generate LLVM operations to be ingested by a SPIR-V backend for gpu operations";
+  let dependentDialects = [
+    "LLVM::LLVMDialect",
+    "spirv::SPIRVDialect",
+  ];
+  let options = [
+    Option<"indexBitwidth", "index-bitwidth", "unsigned",
+           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
+           "Bitwidth of the index type, 0 to use size of machine word">,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // GPUToNVVM
 //===----------------------------------------------------------------------===//
 

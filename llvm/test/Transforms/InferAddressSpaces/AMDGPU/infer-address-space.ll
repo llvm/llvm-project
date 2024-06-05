@@ -93,7 +93,7 @@ bb:
 define amdgpu_kernel void @nested_const_expr() #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @nested_const_expr(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    store i32 1, ptr addrspace(3) getelementptr inbounds ([10 x float], ptr addrspace(3) @array, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i32 1, ptr addrspace(3) getelementptr ([10 x float], ptr addrspace(3) @array, i64 0, i64 1), align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, ptr bitcast (ptr getelementptr ([10 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i64 0, i64 1) to ptr), align 4
@@ -191,12 +191,14 @@ exit:                                             ; preds = %loop
 define void @select_bug() #0 {
 ; CHECK-LABEL: define void @select_bug(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 icmp ne (ptr inttoptr (i64 4873 to ptr), ptr null), i64 73, i64 93
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr inttoptr (i64 4873 to ptr), null
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 73, i64 93
 ; CHECK-NEXT:    [[ADD_PTR157:%.*]] = getelementptr inbounds i64, ptr undef, i64 [[SEL]]
 ; CHECK-NEXT:    [[CMP169:%.*]] = icmp uge ptr undef, [[ADD_PTR157]]
 ; CHECK-NEXT:    unreachable
 ;
-  %sel = select i1 icmp ne (ptr inttoptr (i64 4873 to ptr), ptr null), i64 73, i64 93
+  %cmp = icmp ne ptr inttoptr (i64 4873 to ptr), null
+  %sel = select i1 %cmp, i64 73, i64 93
   %add.ptr157 = getelementptr inbounds i64, ptr undef, i64 %sel
   %cmp169 = icmp uge ptr undef, %add.ptr157
   unreachable

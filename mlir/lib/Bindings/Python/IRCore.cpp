@@ -697,6 +697,17 @@ void PyMlirContext::clearOperationsInside(MlirOperation op) {
   clearOperationsInside(opRef->getOperation());
 }
 
+void PyMlirContext::clearOperationAndInside(PyOperationBase &op) {
+  MlirOperationWalkCallback invalidatingCallback = [](MlirOperation op,
+                                                      void *userData) {
+    PyMlirContextRef &contextRef = *static_cast<PyMlirContextRef *>(userData);
+    contextRef->clearOperation(op);
+    return MlirWalkResult::MlirWalkResultAdvance;
+  };
+  mlirOperationWalk(op.getOperation(), invalidatingCallback,
+                    &op.getOperation().getContext(), MlirWalkPreOrder);
+}
+
 size_t PyMlirContext::getLiveModuleCount() { return liveModules.size(); }
 
 pybind11::object PyMlirContext::contextEnter() {
@@ -1125,12 +1136,16 @@ PyOperation::~PyOperation() {
   // If the operation has already been invalidated there is nothing to do.
   if (!valid)
     return;
-  auto &liveOperations = getContext()->liveOperations;
-  assert(liveOperations.count(operation.ptr) == 1 &&
-         "destroying operation not in live map");
-  liveOperations.erase(operation.ptr);
-  if (!isAttached()) {
-    mlirOperationDestroy(operation);
+
+  // Otherwise, invalidate the operation and remove it from live map when it is
+  // attached.
+  if (isAttached()) {
+    getContext()->clearOperation(*this);
+  } else {
+    // And destroy it when it is detached, i.e. owned by Python, in which case
+    // all nested operations must be invalidated at removed from the live map as
+    // well.
+    erase();
   }
 }
 
@@ -1540,14 +1555,8 @@ py::object PyOperation::createOpView() {
 
 void PyOperation::erase() {
   checkValid();
-  // TODO: Fix memory hazards when erasing a tree of operations for which a deep
-  // Python reference to a child operation is live. All children should also
-  // have their `valid` bit set to false.
-  auto &liveOperations = getContext()->liveOperations;
-  if (liveOperations.count(operation.ptr))
-    liveOperations.erase(operation.ptr);
+  getContext()->clearOperationAndInside(*this);
   mlirOperationDestroy(operation);
-  valid = false;
 }
 
 //------------------------------------------------------------------------------

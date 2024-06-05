@@ -12239,6 +12239,13 @@ def err_hlsl_param_qualifier_mismatch :
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;
 
+def warn_hlsl_availability : Warning<
+  "%0 is only available %select{|in %4 environment }3on %1 %2 or newer">,
+  InGroup<HLSLAvailability>, DefaultError;
+def warn_hlsl_availability_unavailable :
+  Warning<err_unavailable.Summary>,
+  InGroup<HLSLAvailability>, DefaultError;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;
@@ -12406,6 +12413,9 @@ def err_acc_reduction_composite_type
 def err_acc_reduction_composite_member_type :Error<
     "OpenACC 'reduction' composite variable must not have non-scalar field">;
 def note_acc_reduction_composite_member_loc : Note<"invalid field is here">;
+def err_acc_loop_not_for_loop
+    : Error<"OpenACC 'loop' construct can only be applied to a 'for' loop">;
+def note_acc_construct_here : Note<"'%0' construct is here">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

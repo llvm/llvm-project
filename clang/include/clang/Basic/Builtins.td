@@ -482,11 +482,11 @@ def SqrtF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
-def TanF16F128 : Builtin, F16F128MathTemplate {
-  let Spellings = ["__builtin_tan"];
+def TanF128 : Builtin {
+  let Spellings = ["__builtin_tanf128"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "T(T)";
+  let Prototype = "__float128(__float128)";
 }
 
 def TanhF128 : Builtin {
