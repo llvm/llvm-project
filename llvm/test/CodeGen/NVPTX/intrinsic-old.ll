@@ -2,14 +2,6 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck -allow-deprecated-dag-overlap %s
 ; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda -passes=nvvm-intr-range \
 ; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE %s
-; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda -passes=nvvm-intr-range \
-; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE %s
-; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda \
-; RUN:    -passes=nvvm-intr-range \
-; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE %s
-; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda \
-; RUN:    -passes=nvvm-intr-range \
-; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE %s
 ; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
