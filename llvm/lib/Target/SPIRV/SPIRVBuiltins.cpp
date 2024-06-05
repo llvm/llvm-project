@@ -1020,9 +1020,17 @@ static bool generateIntelSubgroupsInst(const SPIRV::IncomingCall *Call,
   }
   const SPIRV::IntelSubgroupsBuiltin *IntelSubgroups =
       SPIRV::lookupIntelSubgroupsBuiltin(Builtin->Name);
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
 
   uint32_t OpCode = IntelSubgroups->Opcode;
+  if (Call->isSpirvOp()) {
+    bool IsSet = OpCode != SPIRV::OpSubgroupBlockWriteINTEL &&
+                 OpCode != SPIRV::OpSubgroupImageBlockWriteINTEL;
+    return buildOpFromWrapper(MIRBuilder, OpCode, Call,
+                              IsSet ? GR->getSPIRVTypeID(Call->ReturnType)
+                                    : Register(0));
+  }
+
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (IntelSubgroups->IsBlock) {
     // Minimal number or arguments set in TableGen records is 1
     if (SPIRVType *Arg0Type = GR->getSPIRVTypeForVReg(Call->Arguments[0])) {
@@ -1114,6 +1122,39 @@ static bool generateGroupUniformInst(const SPIRV::IncomingCall *Call,
                  .addUse(ScopeReg);
   addNumImm(ConstOperand.getCImm()->getValue(), MIB);
   MIB.addUse(ValueReg);
+
+  return true;
+}
+
+static bool generateKernelClockInst(const SPIRV::IncomingCall *Call,
+                                    MachineIRBuilder &MIRBuilder,
+                                    SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  MachineFunction &MF = MIRBuilder.getMF();
+  const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
+  if (!ST->canUseExtension(SPIRV::Extension::SPV_KHR_shader_clock)) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: SPV_KHR_shader_clock";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
+
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  Register ResultReg = Call->ReturnRegister;
+  MRI->setRegClass(ResultReg, &SPIRV::IDRegClass);
+
+  // Deduce the `Scope` operand from the builtin function name.
+  SPIRV::Scope::Scope ScopeArg =
+      StringSwitch<SPIRV::Scope::Scope>(Builtin->Name)
+          .EndsWith("device", SPIRV::Scope::Scope::Device)
+          .EndsWith("work_group", SPIRV::Scope::Scope::Workgroup)
+          .EndsWith("sub_group", SPIRV::Scope::Scope::Subgroup);
+  Register ScopeReg = buildConstantIntReg(ScopeArg, MIRBuilder, GR);
+
+  MIRBuilder.buildInstr(SPIRV::OpReadClockKHR)
+      .addDef(ResultReg)
+      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+      .addUse(ScopeReg);
 
   return true;
 }
@@ -2290,6 +2331,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateIntelSubgroupsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::GroupUniform:
     return generateGroupUniformInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::KernelClock:
+    return generateKernelClockInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

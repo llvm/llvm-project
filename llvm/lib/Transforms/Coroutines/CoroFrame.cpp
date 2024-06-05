@@ -2756,11 +2756,10 @@ static void sinkSpillUsesAfterCoroBegin(Function &F,
 /// after the suspend block. Doing so minimizes the lifetime of each variable,
 /// hence minimizing the amount of data we end up putting on the frame.
 static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
-                                     SuspendCrossingInfo &Checker) {
+                                     SuspendCrossingInfo &Checker,
+                                     const DominatorTree &DT) {
   if (F.hasOptNone())
     return;
-
-  DominatorTree DT(F);
 
   // Collect all possible basic blocks which may dominate all uses of allocas.
   SmallPtrSet<BasicBlock *, 4> DomSet;
@@ -2974,10 +2973,12 @@ void coro::salvageDebugInfo(
     std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-      // Update DILocation only in O0 since it is easy to get out of sync in
-      // optimizations. See https://github.com/llvm/llvm-project/pull/75104 for
-      // an example.
-      if (!OptimizeFrame && I->getDebugLoc())
+      // Update DILocation only if variable was not inlined.
+      DebugLoc ILoc = I->getDebugLoc();
+      DebugLoc DVILoc = DVI.getDebugLoc();
+      if (ILoc && DVILoc &&
+          DVILoc->getScope()->getSubprogram() ==
+              ILoc->getScope()->getSubprogram())
         DVI.setDebugLoc(I->getDebugLoc());
     } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
@@ -3014,11 +3015,13 @@ void coro::salvageDebugInfo(
     std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-      // Update DILocation only in O0 since it is easy to get out of sync in
-      // optimizations. See https://github.com/llvm/llvm-project/pull/75104 for
-      // an example.
-      if (!OptimizeFrame && I->getDebugLoc())
-        DVR.setDebugLoc(I->getDebugLoc());
+      // Update DILocation only if variable was not inlined.
+      DebugLoc ILoc = I->getDebugLoc();
+      DebugLoc DVRLoc = DVR.getDebugLoc();
+      if (ILoc && DVRLoc &&
+          DVRLoc->getScope()->getSubprogram() ==
+              ILoc->getScope()->getSubprogram())
+        DVR.setDebugLoc(ILoc);
     } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt) {
@@ -3145,12 +3148,13 @@ void coro::buildCoroutineFrame(
 
   doRematerializations(F, Checker, MaterializableCallback);
 
+  const DominatorTree DT(F);
   FrameDataInfo FrameData;
   SmallVector<CoroAllocaAllocInst*, 4> LocalAllocas;
   SmallVector<Instruction*, 4> DeadInstructions;
   if (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
       Shape.ABI != coro::ABI::RetconOnce)
-    sinkLifetimeStartMarkers(F, Shape, Checker);
+    sinkLifetimeStartMarkers(F, Shape, Checker, DT);
 
   // Collect the spills for arguments and other not-materializable values.
   for (Argument &A : F.args())
@@ -3158,7 +3162,6 @@ void coro::buildCoroutineFrame(
       if (Checker.isDefinitionAcrossSuspend(A, U))
         FrameData.Spills[&A].push_back(cast<Instruction>(U));
 
-  const DominatorTree DT(F);
   for (Instruction &I : instructions(F)) {
     // Values returned from coroutine structure intrinsics should not be part
     // of the Coroutine Frame.

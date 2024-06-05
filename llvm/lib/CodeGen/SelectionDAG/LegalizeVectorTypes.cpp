@@ -108,6 +108,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FROUNDEVEN:
   case ISD::FSIN:
   case ISD::FSQRT:
+  case ISD::FTAN:
   case ISD::FTRUNC:
   case ISD::SIGN_EXTEND:
   case ISD::SINT_TO_FP:
@@ -1140,6 +1141,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_FROUNDEVEN:
   case ISD::FSIN:
   case ISD::FSQRT: case ISD::VP_SQRT:
+  case ISD::FTAN:
   case ISD::FTRUNC:
   case ISD::VP_FROUNDTOZERO:
   case ISD::SINT_TO_FP:
@@ -1174,8 +1176,12 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FADD: case ISD::VP_FADD:
   case ISD::FSUB: case ISD::VP_FSUB:
   case ISD::FMUL: case ISD::VP_FMUL:
-  case ISD::FMINNUM: case ISD::VP_FMINNUM:
-  case ISD::FMAXNUM: case ISD::VP_FMAXNUM:
+  case ISD::FMINNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::VP_FMINNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::VP_FMAXNUM:
   case ISD::FMINIMUM:
   case ISD::VP_FMINIMUM:
   case ISD::FMAXIMUM:
@@ -1188,8 +1194,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::OR: case ISD::VP_OR:
   case ISD::XOR: case ISD::VP_XOR:
   case ISD::SHL: case ISD::VP_SHL:
-  case ISD::SRA: case ISD::VP_ASHR:
-  case ISD::SRL: case ISD::VP_LSHR:
+  case ISD::SRA: case ISD::VP_SRA:
+  case ISD::SRL: case ISD::VP_SRL:
   case ISD::UREM: case ISD::VP_UREM:
   case ISD::SREM: case ISD::VP_SREM:
   case ISD::FREM: case ISD::VP_FREM:
@@ -4235,10 +4241,14 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SUB: case ISD::VP_SUB:
   case ISD::XOR: case ISD::VP_XOR:
   case ISD::SHL: case ISD::VP_SHL:
-  case ISD::SRA: case ISD::VP_ASHR:
-  case ISD::SRL: case ISD::VP_LSHR:
-  case ISD::FMINNUM: case ISD::VP_FMINNUM:
-  case ISD::FMAXNUM: case ISD::VP_FMAXNUM:
+  case ISD::SRA: case ISD::VP_SRA:
+  case ISD::SRL: case ISD::VP_SRL:
+  case ISD::FMINNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::VP_FMINNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::VP_FMAXNUM:
   case ISD::FMINIMUM:
   case ISD::VP_FMINIMUM:
   case ISD::FMAXIMUM:
@@ -4392,6 +4402,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FROUNDEVEN:
   case ISD::FSIN:
   case ISD::FSQRT:
+  case ISD::FTAN:
   case ISD::FTRUNC:
     if (unrollExpandedOp())
       break;

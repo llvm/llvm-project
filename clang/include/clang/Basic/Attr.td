@@ -1060,18 +1060,10 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("ShaderModel", "shadermodel")
              .Default(Platform);
 }
-static llvm::StringRef getPrettyEnviromentName(llvm::StringRef Environment) {
-    return llvm::StringSwitch<llvm::StringRef>(Environment)
-             .Case("pixel", "pixel shader")
-             .Case("vertex", "vertex shader")
-             .Case("geometry", "geometry shader")
-             .Case("hull", "hull shader")
-             .Case("domain", "domain shader")
-             .Case("compute", "compute shader")
-             .Case("mesh", "mesh shader")
-             .Case("amplification", "amplification shader")
-             .Case("library", "shader library")
-             .Default(Environment);
+static llvm::StringRef getPrettyEnviromentName(llvm::Triple::EnvironmentType EnvironmentType) {
+  if (EnvironmentType >= llvm::Triple::Pixel && EnvironmentType <= llvm::Triple::Amplification)
+    return llvm::Triple::getEnvironmentTypeName(EnvironmentType);
+  return "";
 }
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
     return llvm::StringSwitch<llvm::Triple::EnvironmentType>(Environment)
@@ -1081,6 +1073,12 @@ static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environm
              .Case("hull", llvm::Triple::Hull)
              .Case("domain", llvm::Triple::Domain)
              .Case("compute", llvm::Triple::Compute)
+             .Case("raygeneration", llvm::Triple::RayGeneration)
+             .Case("intersection", llvm::Triple::Intersection)
+             .Case("anyhit", llvm::Triple::AnyHit)
+             .Case("closesthit", llvm::Triple::ClosestHit)
+             .Case("miss", llvm::Triple::Miss)
+             .Case("callable", llvm::Triple::Callable)
              .Case("mesh", llvm::Triple::Mesh)
              .Case("amplification", llvm::Triple::Amplification)
              .Case("library", llvm::Triple::Library)
@@ -1640,10 +1638,11 @@ def Unlikely : StmtAttr {
 def : MutualExclusions<[Likely, Unlikely]>;
 
 def CXXAssume : StmtAttr {
-  let Spellings = [CXX11<"", "assume", 202207>];
+  let Spellings = [CXX11<"", "assume", 202207>, Clang<"assume">];
   let Subjects = SubjectList<[NullStmt], ErrorDiag, "empty statements">;
   let Args = [ExprArgument<"Assumption">];
   let Documentation = [CXXAssumeDocs];
+  let HasCustomParsing = 1;
 }
 
 def NoMerge : DeclOrStmtAttr {
@@ -2024,9 +2023,12 @@ def Convergent : InheritableAttr {
 def NoInline : DeclOrStmtAttr {
   let Spellings = [CustomKeyword<"__noinline__">, GCC<"noinline">,
                    CXX11<"clang", "noinline">, C23<"clang", "noinline">,
+                   CXX11<"msvc", "noinline">, C23<"msvc", "noinline">,
                    Declspec<"noinline">];
-  let Accessors = [Accessor<"isClangNoInline", [CXX11<"clang", "noinline">,
-                                                C23<"clang", "noinline">]>];
+  let Accessors = [Accessor<"isStmtNoInline", [CXX11<"clang", "noinline">,
+                                               C23<"clang", "noinline">,
+                                               CXX11<"msvc", "noinline">,
+                                               C23<"msvc", "noinline">]>];
   let Documentation = [NoInlineDocs];
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
@@ -2256,7 +2258,8 @@ def TypeNullUnspecified : TypeAttr {
 def CountedBy : DeclOrTypeAttr {
   let Spellings = [Clang<"counted_by">];
   let Subjects = SubjectList<[Field], ErrorDiag>;
-  let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel">];
+  let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
+  let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
   let Documentation = [CountedByDocs];
   let LangOpts = [COnly];
@@ -3065,7 +3068,8 @@ def M68kRTD: DeclOrTypeAttr {
   let Documentation = [M68kRTDDocs];
 }
 
-def PreserveNone : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86> {
+def PreserveNone : DeclOrTypeAttr,
+                   TargetSpecificAttr<TargetArch<!listconcat(TargetAArch64.Arches, TargetAnyX86.Arches)>> {
   let Spellings = [Clang<"preserve_none">];
   let Subjects = SubjectList<[FunctionLike]>;
   let Documentation = [PreserveNoneDocs];
@@ -4255,7 +4259,7 @@ def OMPDeclareVariant : InheritableAttr {
 }
 
 def OMPAssume : InheritableAttr {
-  let Spellings = [Clang<"assume">, CXX11<"omp", "assume">];
+  let Spellings = [CXX11<"omp", "assume">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
   let InheritEvenIfAlreadyPresent = 1;
   let Documentation = [OMPAssumeDocs];
@@ -4475,6 +4479,30 @@ def HLSLShader : InheritableAttr {
                   "Miss", "Callable", "Mesh", "Amplification"]>
   ];
   let Documentation = [HLSLSV_ShaderTypeAttrDocs];
+  let AdditionalMembers =
+[{
+  static const unsigned ShaderTypeMaxValue = (unsigned)HLSLShaderAttr::Amplification;
+
+  static llvm::Triple::EnvironmentType getTypeAsEnvironment(HLSLShaderAttr::ShaderType ShaderType) {
+    switch (ShaderType) {
+      case HLSLShaderAttr::Pixel:         return llvm::Triple::Pixel;
+      case HLSLShaderAttr::Vertex:        return llvm::Triple::Vertex;
+      case HLSLShaderAttr::Geometry:      return llvm::Triple::Geometry;
+      case HLSLShaderAttr::Hull:          return llvm::Triple::Hull;
+      case HLSLShaderAttr::Domain:        return llvm::Triple::Domain;
+      case HLSLShaderAttr::Compute:       return llvm::Triple::Compute;
+      case HLSLShaderAttr::RayGeneration: return llvm::Triple::RayGeneration;
+      case HLSLShaderAttr::Intersection:  return llvm::Triple::Intersection;
+      case HLSLShaderAttr::AnyHit:        return llvm::Triple::AnyHit;
+      case HLSLShaderAttr::ClosestHit:    return llvm::Triple::ClosestHit;
+      case HLSLShaderAttr::Miss:          return llvm::Triple::Miss;
+      case HLSLShaderAttr::Callable:      return llvm::Triple::Callable;
+      case HLSLShaderAttr::Mesh:          return llvm::Triple::Mesh;
+      case HLSLShaderAttr::Amplification: return llvm::Triple::Amplification;
+    }
+    llvm_unreachable("unknown enumeration value");
+  }
+}];
 }
 
 def HLSLResource : InheritableAttr {

@@ -110,6 +110,9 @@ public:
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
   ModuleDependences &moduleDependences() { return moduleDependences_; }
+  std::map<const Symbol *, SourceName> &moduleFileOutputRenamings() {
+    return moduleFileOutputRenamings_;
+  }
 
   SemanticsContext &set_location(
       const std::optional<parser::CharBlock> &location) {
@@ -299,6 +302,7 @@ private:
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
   ModuleDependences moduleDependences_;
+  std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
 };
 
 class Semantics {

@@ -52,8 +52,8 @@ def Polynomial_AddOp : Polynomial_BinaryOp<"add", [Commutative]> {
     // add two polynomials modulo x^1024 - 1
     #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
-    %1 = polynomial.constant #polynomial.int_polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
+    %0 = polynomial.constant int<1 + x**2> : !polynomial.polynomial<#ring>
+    %1 = polynomial.constant int<x**5 - x + 1> : !polynomial.polynomial<#ring>
     %2 = polynomial.add %0, %1 : !polynomial.polynomial<#ring>
     ```
   }];
@@ -76,8 +76,8 @@ def Polynomial_SubOp : Polynomial_BinaryOp<"sub"> {
     // subtract two polynomials modulo x^1024 - 1
     #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
-    %1 = polynomial.constant #polynomial.int_polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
+    %0 = polynomial.constant int<1 + x**2> : !polynomial.polynomial<#ring>
+    %1 = polynomial.constant int<x**5 - x + 1> : !polynomial.polynomial<#ring>
     %2 = polynomial.sub %0, %1 : !polynomial.polynomial<#ring>
     ```
   }];
@@ -101,8 +101,8 @@ def Polynomial_MulOp : Polynomial_BinaryOp<"mul", [Commutative]> {
     // multiply two polynomials modulo x^1024 - 1
     #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
-    %1 = polynomial.constant #polynomial.int_polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
+    %0 = polynomial.constant int<1 + x**2> : !polynomial.polynomial<#ring>
+    %1 = polynomial.constant int<x**5 - x + 1> : !polynomial.polynomial<#ring>
     %2 = polynomial.mul %0, %1 : !polynomial.polynomial<#ring>
     ```
   }];
@@ -126,7 +126,7 @@ def Polynomial_MulScalarOp : Polynomial_Op<"mul_scalar", [
     // multiply two polynomials modulo x^1024 - 1
     #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %0 = polynomial.constant int<1 + x**2> : !polynomial.polynomial<#ring>
     %1 = arith.constant 3 : i32
     %2 = polynomial.mul_scalar %0, %1 : !polynomial.polynomial<#ring>, i32
     ```
@@ -157,7 +157,7 @@ def Polynomial_LeadingTermOp: Polynomial_Op<"leading_term"> {
     ```mlir
     #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %0 = polynomial.constant int<1 + x**2> : !polynomial.polynomial<#ring>
     %1, %2 = polynomial.leading_term %0 : !polynomial.polynomial<#ring> -> (index, i32)
     ```
   }];
@@ -272,29 +272,28 @@ def Polynomial_ToTensorOp : Polynomial_Op<"to_tensor", [Pure]> {
   let hasVerifier = 1;
 }
 
-def Polynomial_AnyPolynomialAttr : AnyAttrOf<[
-  Polynomial_FloatPolynomialAttr,
-  Polynomial_IntPolynomialAttr
+def Polynomial_AnyTypedPolynomialAttr : AnyAttrOf<[
+  Polynomial_TypedFloatPolynomialAttr,
+  Polynomial_TypedIntPolynomialAttr
 ]>;
 
-// Not deriving from Polynomial_Op due to need for custom assembly format
-def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant", [Pure]> {
+def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant",
+    [Pure, InferTypeOpAdaptor]> {
   let summary = "Define a constant polynomial via an attribute.";
   let description = [{
     Example:
 
     ```mlir
-    #poly = #polynomial.int_polynomial<x**1024 - 1>
-    #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    !int_poly_ty = !polynomial.polynomial<ring=<coefficientType=i32>>
+    %0 = polynomial.constant int<1 + x**2> : !int_poly_ty
 
-    #float_ring = #polynomial.ring<coefficientType=f32>
-    %0 = polynomial.constant #polynomial.float_polynomial<0.5 + 1.3e06 x**2> : !polynomial.polynomial<#float_ring>
+    !float_poly_ty = !polynomial.polynomial<ring=<coefficientType=f32>>
+    %1 = polynomial.constant float<0.5 + 1.3e06 x**2> : !float_poly_ty
     ```
   }];
-  let arguments = (ins Polynomial_AnyPolynomialAttr:$value);
+  let arguments = (ins Polynomial_AnyTypedPolynomialAttr:$value);
   let results = (outs Polynomial_PolynomialType:$output);
-  let assemblyFormat = "attr-dict `:` type($output)";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def Polynomial_NTTOp : Polynomial_Op<"ntt", [Pure]> {
@@ -312,9 +311,12 @@ def Polynomial_NTTOp : Polynomial_Op<"ntt", [Pure]> {
 
       `f[k] = F(omega[n]^k) ; k = {0, ..., n-1}`
 
-    The choice of primitive root is determined by subsequent lowerings.
+    The choice of primitive root may be optionally specified.
   }];
-  let arguments = (ins Polynomial_PolynomialType:$input);
+  let arguments = (ins
+    Polynomial_PolynomialType:$input,
+    OptionalAttr<Polynomial_PrimitiveRootAttr>:$root
+  );
   let results = (outs RankedTensorOf<[AnyInteger]>:$output);
   let assemblyFormat = "$input attr-dict `:` qualified(type($input)) `->` type($output)";
   let hasCanonicalizer = 1;
@@ -332,8 +334,13 @@ def Polynomial_INTTOp : Polynomial_Op<"intt", [Pure]> {
     output polynomial at powers of a primitive `n`-th root of unity (see
     `polynomial.ntt`). The ring of the polynomial is taken from the required
     encoding attribute of the tensor.
+
+    The choice of primitive root may be optionally specified.
   }];
-  let arguments = (ins RankedTensorOf<[AnyInteger]>:$input);
+  let arguments = (
+    ins RankedTensorOf<[AnyInteger]>:$input,
+    OptionalAttr<Polynomial_PrimitiveRootAttr>:$root
+  );
   let results = (outs Polynomial_PolynomialType:$output);
   let assemblyFormat = "$input attr-dict `:` qualified(type($input)) `->` type($output)";
   let hasCanonicalizer = 1;

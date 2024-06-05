@@ -271,8 +271,9 @@ struct IntrinsicLibrary {
   mlir::Value genIeeeSignalingCompare(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeSignbit(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeSupportFlagOrHalting(mlir::Type,
-                                          llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue
+      genIeeeSupportFlagOrHalting(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeSupportRounding(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <mlir::arith::CmpIPredicate pred>
   mlir::Value genIeeeTypeCompare(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -333,7 +334,10 @@ struct IntrinsicLibrary {
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSelectedCharKind(mlir::Type,
+                                         llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSelectedIntKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genSelectedLogicalKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSelectedRealKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);

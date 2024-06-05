@@ -176,9 +176,9 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4(ptr addrspace(1) %ptr, i1
   ret i16 %res
 }
 
-; Preserve unknown metadata
-define i16 @test_atomicrmw_and_i16_global_agent_preserve_md(ptr addrspace(1) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_preserve_md(
+; Drop unknown metadata and noundef
+define i16 @test_atomicrmw_and_i16_global_agent_drop_md(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_drop_md(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -198,9 +198,9 @@ define i16 @test_atomicrmw_and_i16_global_agent_preserve_md(ptr addrspace(1) %pt
   ret i16 %res
 }
 
-; Preserve unknown metadata
-define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_md(ptr addrspace(1) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_md(
+; Drop unknown metadata
+define i16 @test_atomicrmw_and_i16_global_agent_align4_drop_md(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_drop_md(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
 ; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
@@ -208,6 +208,89 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_md(ptr addrspace
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !noundef !0, !some.unknown.md !0
+  ret i16 %res
+}
+
+; Drop noundef, preserve mmra
+define i16 @test_atomicrmw_and_i16_global_agent_preserve_mmra(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_preserve_mmra(
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !mmra [[META0:![0-9]+]]
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, !noundef !0, !mmra !1
+  ret i16 %res
+}
+
+; Drop noundef, preserve mmra
+define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_mmra(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_mmra(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !mmra [[META0]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !noundef !0, !mmra !1
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_alias_scope(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_alias_scope(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !alias.scope [[META1:![0-9]+]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !alias.scope !2
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_noalias(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_noalias(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !noalias [[META1]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !noalias !2
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa_struct(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa_struct(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !tbaa.struct [[TBAA_STRUCT4:![0-9]+]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !tbaa.struct !5
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !tbaa [[TBAA5:![0-9]+]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !tbaa !6
   ret i16 %res
 }
 
@@ -223,7 +306,7 @@ define i16 @test_atomicrmw_and_i16_global_agent__amdgpu_no_remote_memory(ptr add
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META8:![0-9]+]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
@@ -236,7 +319,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_remote_memory(
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_remote_memory(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META8]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
@@ -256,7 +339,7 @@ define i16 @test_atomicrmw_and_i16_global_agent__amdgpu_no_fine_grained_memory(p
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META8]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
@@ -269,7 +352,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_fine_grained_m
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_fine_grained_memory(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META8]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
@@ -1180,6 +1263,15 @@ define bfloat @test_atomicrmw_xchg_bf16_global_agent_align4(ptr addrspace(1) %pt
 }
 
 !0 = !{}
+!1 = !{!"foo", !"bar"}
+!2 = !{!3}
+!3 = distinct !{!3, !4}
+!4 = distinct !{!4}
+!5 = !{i64 0, i64 4, !1, i64 8, i64 4}
+!6 = !{!7, !7, i64 0}
+!7 = !{!"omnipotent char", !8, i64 0}
+!8 = !{!"Simple C/C++ TBAA"}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; BASE: {{.*}}
 ; GCN: {{.*}}

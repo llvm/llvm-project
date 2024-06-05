@@ -22,7 +22,7 @@
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : i32, !fir.ref<i32>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_5:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFsimple_int_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 100 : i32

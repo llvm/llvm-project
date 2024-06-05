@@ -244,8 +244,7 @@ struct BlockPackMatmul<linalg::GenericOp>
   LogicalResult matchAndRewrite(linalg::GenericOp linalgOp,
                                 PatternRewriter &rewriter) const override {
     // Match suitable generics.
-    if (failed(linalg::detail::verifyContractionInterface(
-            linalgOp.getOperation()))) {
+    if (!linalg::isaContractionOpInterface(linalgOp)) {
       return rewriter.notifyMatchFailure(linalgOp, "not a contraction");
     }
 

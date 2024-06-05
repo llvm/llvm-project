@@ -939,6 +939,8 @@ static void finalizeIndirectFunctionTable() {
     limits.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
     limits.Maximum = limits.Minimum;
   }
+  if (config->is64.value_or(false))
+    limits.Flags |= WASM_LIMITS_FLAG_IS_64;
   WasmSym::indirectFunctionTable->setLimits(limits);
 }
 
@@ -1691,12 +1693,8 @@ void Writer::createSyntheticSectionsPostLayout() {
 void Writer::run() {
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
-  if (!ctx.isPic) {
-    if (WasmSym::definedTableBase)
-      WasmSym::definedTableBase->setVA(config->tableBase);
-    if (WasmSym::definedTableBase32)
-      WasmSym::definedTableBase32->setVA(config->tableBase);
-  }
+  if (!ctx.isPic && WasmSym::definedTableBase)
+    WasmSym::definedTableBase->setVA(config->tableBase);
 
   log("-- createOutputSegments");
   createOutputSegments();

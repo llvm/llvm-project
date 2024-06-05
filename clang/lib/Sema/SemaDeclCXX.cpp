@@ -2469,11 +2469,18 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   //     base class sub-objects shall be a constexpr constructor.
   //
   // Note that this rule is distinct from the "requirements for a constexpr
-  // function", so is not checked in CheckValid mode.
+  // function", so is not checked in CheckValid mode. Because the check for
+  // constexpr potential is expensive, skip the check if the diagnostic is
+  // disabled, the function is declared in a system header, or we're in C++23
+  // or later mode (see https://wg21.link/P2448).
+  bool SkipCheck =
+      !SemaRef.getLangOpts().CheckConstexprFunctionBodies ||
+      SemaRef.getSourceManager().isInSystemHeader(Dcl->getLocation()) ||
+      SemaRef.getDiagnostics().isIgnored(
+          diag::ext_constexpr_function_never_constant_expr, Dcl->getLocation());
   SmallVector<PartialDiagnosticAt, 8> Diags;
-  if (Kind == Sema::CheckConstexprKind::Diagnose &&
-      !Expr::isPotentialConstantExpr(Dcl, Diags) &&
-      !SemaRef.getLangOpts().CPlusPlus23) {
+  if (Kind == Sema::CheckConstexprKind::Diagnose && !SkipCheck &&
+      !Expr::isPotentialConstantExpr(Dcl, Diags)) {
     SemaRef.Diag(Dcl->getLocation(),
                  diag::ext_constexpr_function_never_constant_expr)
         << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval()
@@ -11547,12 +11554,12 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
       TemplateName SpecifiedName = RetTST.getTypePtr()->getTemplateName();
       bool TemplateMatches =
           Context.hasSameTemplateName(SpecifiedName, GuidedTemplate);
-      auto TKind = SpecifiedName.getKind();
-      // A Using TemplateName can't actually be valid (either it's qualified, or
-      // we're in the wrong scope). But we have diagnosed these problems
-      // already.
-      bool SimplyWritten = TKind == TemplateName::Template ||
-                           TKind == TemplateName::UsingTemplate;
+
+      const QualifiedTemplateName *Qualifiers =
+          SpecifiedName.getAsQualifiedTemplateName();
+      assert(Qualifiers && "expected QualifiedTemplate");
+      bool SimplyWritten = !Qualifiers->hasTemplateKeyword() &&
+                           Qualifiers->getQualifier() == nullptr;
       if (SimplyWritten && TemplateMatches)
         AcceptableReturnType = true;
       else {
@@ -17580,11 +17587,12 @@ DeclResult Sema::ActOnTemplatedFriendTag(
       if (Invalid)
         return true;
 
-      return CheckClassTemplate(S, TagSpec, TUK_Friend, TagLoc, SS, Name,
-                                NameLoc, Attr, TemplateParams, AS_public,
+      return CheckClassTemplate(S, TagSpec, TagUseKind::Friend, TagLoc, SS,
+                                Name, NameLoc, Attr, TemplateParams, AS_public,
                                 /*ModulePrivateLoc=*/SourceLocation(),
                                 FriendLoc, TempParamLists.size() - 1,
-                                TempParamLists.data()).get();
+                                TempParamLists.data())
+          .get();
     } else {
       // The "template<>" header is extraneous.
       Diag(TemplateParams->getTemplateLoc(), diag::err_template_tag_noparams)
@@ -17612,8 +17620,8 @@ DeclResult Sema::ActOnTemplatedFriendTag(
     if (SS.isEmpty()) {
       bool Owned = false;
       bool IsDependent = false;
-      return ActOnTag(S, TagSpec, TUK_Friend, TagLoc, SS, Name, NameLoc, Attr,
-                      AS_public,
+      return ActOnTag(S, TagSpec, TagUseKind::Friend, TagLoc, SS, Name, NameLoc,
+                      Attr, AS_public,
                       /*ModulePrivateLoc=*/SourceLocation(),
                       MultiTemplateParamsArg(), Owned, IsDependent,
                       /*ScopedEnumKWLoc=*/SourceLocation(),
@@ -17728,7 +17736,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
 
   // Try to convert the decl specifier to a type.  This works for
   // friend templates because ActOnTag never produces a ClassTemplateDecl
-  // for a TUK_Friend.
+  // for a TagUseKind::Friend.
   Declarator TheDeclarator(DS, ParsedAttributesView::none(),
                            DeclaratorContext::Member);
   TypeSourceInfo *TSI = GetTypeForDeclarator(TheDeclarator);

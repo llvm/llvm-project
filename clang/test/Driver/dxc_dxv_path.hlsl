@@ -1,7 +1,7 @@
 // RUN: %clang_dxc -I test -Tlib_6_3  -### %s 2>&1 | FileCheck %s
 
 // Make sure report warning.
-// CHECK:dxv not found.
+// CHECK:dxv not found
 
 // RUN: echo "dxv" > %T/dxv && chmod 754 %T/dxv && %clang_dxc --dxv-path=%T %s -Tlib_6_3 -### 2>&1 | FileCheck %s --check-prefix=DXV_PATH
 // DXV_PATH:dxv{{(.exe)?}}" "-" "-o" "-"

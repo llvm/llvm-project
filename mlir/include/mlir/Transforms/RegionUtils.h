@@ -87,10 +87,6 @@ LogicalResult eraseUnreachableBlocks(RewriterBase &rewriter,
 LogicalResult runRegionDCE(RewriterBase &rewriter,
                            MutableArrayRef<Region> regions);
 
-/// Get a list of blocks that is sorted according to dominance. This sort is
-/// stable.
-SetVector<Block *> getBlocksSortedByDominance(Region &region);
-
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_REGIONUTILS_H_

@@ -209,8 +209,8 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    mv a1, s3
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV32I-NEXT:    addi s4, a0, %lo(.LCPI3_0)
+; RV32I-NEXT:    lui s4, %hi(.LCPI3_0)
+; RV32I-NEXT:    addi s4, s4, %lo(.LCPI3_0)
 ; RV32I-NEXT:    neg a0, s2
 ; RV32I-NEXT:    and a0, s2, a0
 ; RV32I-NEXT:    mv a1, s3

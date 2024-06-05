@@ -416,6 +416,12 @@ public:
     Flags &= ~((uint32_t)Flag);
   }
 
+  void clearFlags(unsigned flags) {
+    assert(isUInt<LLVM_MI_FLAGS_BITS>(flags) &&
+           "flags to be cleared are out of range for the Flags field");
+    Flags &= ~flags;
+  }
+
   /// Return true if MI is in a bundle (but not the first MI in a bundle).
   ///
   /// A bundle looks like this before it's finalized:

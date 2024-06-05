@@ -46,6 +46,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Liveness.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"

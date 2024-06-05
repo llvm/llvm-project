@@ -2027,9 +2027,6 @@ Different optimisers are likely to react differently to the presence of
 this attribute; in some cases, adding ``assume`` may affect performance
 negatively. It should be used with parsimony and care.
 
-Note that `clang::assume` is a different attribute. Always write ``assume``
-without a namespace if you intend to use the standard C++ attribute.
-
 Example:
 
 .. code-block:: c++
@@ -4740,7 +4737,7 @@ def OMPAssumeDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "assume";
   let Content = [{
-Clang supports the ``__attribute__((assume("assumption")))`` attribute to
+Clang supports the ``[[omp::assume("assumption")]]`` attribute to
 provide additional information to the optimizer. The string-literal, here
 "assumption", will be attached to the function declaration such that later
 analysis and optimization passes can assume the "assumption" to hold.
@@ -4752,7 +4749,7 @@ A function can have multiple assume attributes and they propagate from prior
 declarations to later definitions. Multiple assumptions are aggregated into a
 single comma separated string. Thus, one can provide multiple assumptions via
 a comma separated string, i.a.,
-``__attribute__((assume("assumption1,assumption2")))``.
+``[[omp::assume("assumption1,assumption2")]]``.
 
 While LLVM plugins might provide more assumption strings, the default LLVM
 optimization passes are aware of the following assumptions:
@@ -5663,18 +5660,21 @@ experimental at this time.
 def PreserveNoneDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
-On X86-64 target, this attribute changes the calling convention of a function.
+On X86-64 and AArch64 targets, this attribute changes the calling convention of a function.
 The ``preserve_none`` calling convention tries to preserve as few general
 registers as possible. So all general registers are caller saved registers. It
 also uses more general registers to pass arguments. This attribute doesn't
-impact floating-point registers (XMMs/YMMs). Floating-point registers still
-follow the c calling convention. ``preserve_none``'s ABI is still unstable, and
+impact floating-point registers. ``preserve_none``'s ABI is still unstable, and
 may be changed in the future.
 
-- Only RSP and RBP are preserved by callee.
-
-- Register R12, R13, R14, R15, RDI, RSI, RDX, RCX, R8, R9, R11, and RAX now can
-  be used to pass function arguments.
+- On X86-64, only RSP and RBP are preserved by the callee.
+  Registers R12, R13, R14, R15, RDI, RSI, RDX, RCX, R8, R9, R11, and RAX now can
+  be used to pass function arguments. Floating-point registers (XMMs/YMMs) still
+  follow the C calling convention.
+- On AArch64, only LR and FP are preserved by the callee.
+  Registers X19-X28, X0-X7, and X9-X15 are used to pass function arguments.
+  X8, X16-X18, SIMD and floating-point registers follow the AAPCS calling
+  convention.
   }];
 }
 
