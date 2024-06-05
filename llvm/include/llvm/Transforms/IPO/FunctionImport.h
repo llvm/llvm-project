@@ -212,15 +212,11 @@ bool convertToDeclaration(GlobalValue &GV);
 /// \p ModuleToSummariesForIndex will be populated with the needed summaries
 /// from each required module path. Use a std::map instead of StringMap to get
 /// stable order for bitcode emission.
-///
-/// \p DecSummaries will be popluated with the subset of of summary pointers
-/// that have 'declaration' import type among all summaries the module need.
 void gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
-    GVSummaryPtrSet &DecSummaries);
+    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
 std::error_code EmitImportsFiles(
