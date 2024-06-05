@@ -121,6 +121,11 @@ enum class CudaArch {
   GFX1151,
   GFX1200,
   GFX1201,
+  GFX9_GENERIC,
+  GFX10_1_GENERIC,
+  GFX10_3_GENERIC,
+  GFX11_GENERIC,
+  GFX12_GENERIC,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.
   LAST,
