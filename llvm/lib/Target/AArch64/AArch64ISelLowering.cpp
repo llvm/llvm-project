@@ -1664,22 +1664,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           addTypeForFixedLengthSVE(VT);
       }
 
-      // If a truncating store gets expanded we need to lower it correctly.
-      if (Subtarget->hasBF16()) {
-        setTruncStoreAction(MVT::f32, MVT::bf16, Custom);
-        setTruncStoreAction(MVT::f64, MVT::bf16, Custom);
-      }
-
-      // FIXME: useSVEForFixedLengthVectorVT currently doesn't return for 'bf16'
-      // elements and if it would, then the code in addTypeForFixedLengthSVE
-      // isn't able to handle it. To support wider types than just NEON-sized
-      // vectors, more work is needed.
-      if (Subtarget->hasBF16() && !Subtarget->isNeonAvailable()) {
-        // We can use SVE BFCVT for these operations.
-        setTruncStoreAction(MVT::v2f32, MVT::v2bf16, Custom);
-        setTruncStoreAction(MVT::v4f32, MVT::v4bf16, Custom);
-      }
-
       // 64bit results can mean a bigger than NEON input.
       for (auto VT : {MVT::v8i8, MVT::v4i16})
         setOperationAction(ISD::TRUNCATE, VT, Custom);
@@ -6302,14 +6286,6 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
     }
   } else if (MemVT == MVT::i128 && StoreNode->isVolatile()) {
     return LowerStore128(Op, DAG);
-  } else if (StoreNode->isTruncatingStore() && MemVT == MVT::bf16) {
-    assert(Subtarget->hasBF16() && "Should have chosen Expand for bf16");
-    SDValue FPRound = DAG.getNode(ISD::FP_ROUND, Dl, MVT::bf16, Value,
-                                  DAG.getIntPtrConstant(0, Dl));
-    SDValue FPRoundBC = DAG.getNode(ISD::BITCAST, Dl, MVT::f16, FPRound);
-    return DAG.getStore(StoreNode->getChain(), Dl, FPRoundBC,
-                        StoreNode->getBasePtr(), StoreNode->getPointerInfo(),
-                        StoreNode->getOriginalAlign());
   } else if (MemVT == MVT::i64x8) {
     SDValue Value = StoreNode->getValue();
     assert(Value->getValueType(0) == MVT::i64x8);
@@ -22339,9 +22315,10 @@ static SDValue performSTORECombine(SDNode *N,
   SDValue Ptr = ST->getBasePtr();
   EVT ValueVT = Value.getValueType();
 
-  auto hasValidElementTypeForFPTruncStore = [](EVT VT) {
+  auto hasValidElementTypeForFPTruncStore = [](EVT VT, EVT MemVT) {
     EVT EltVT = VT.getVectorElementType();
-    return EltVT == MVT::f32 || EltVT == MVT::f64;
+    EVT MemEltVT = MemVT.getVectorElementType();
+    return MemEltVT != MVT::bf16 && (EltVT == MVT::f32 || EltVT == MVT::f64);
   };
 
   if (SDValue Res = combineI8TruncStore(ST, DAG, Subtarget))
@@ -22356,8 +22333,8 @@ static SDValue performSTORECombine(SDNode *N,
       Subtarget->useSVEForFixedLengthVectors() &&
       ValueVT.isFixedLengthVector() &&
       ValueVT.getFixedSizeInBits() >= Subtarget->getMinSVEVectorSizeInBits() &&
-      hasValidElementTypeForFPTruncStore(Value.getOperand(0).getValueType()) &&
-      (ST->getMemoryVT().getScalarType() != MVT::bf16 || Subtarget->hasBF16()))
+      hasValidElementTypeForFPTruncStore(Value.getOperand(0).getValueType(),
+                                         ST->getMemoryVT()))
     return DAG.getTruncStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
                              ST->getMemoryVT(), ST->getMemOperand());
 

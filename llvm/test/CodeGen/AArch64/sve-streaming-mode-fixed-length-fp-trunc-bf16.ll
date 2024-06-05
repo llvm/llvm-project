@@ -98,14 +98,20 @@ define void @fcvt_v2f64_v2bf16(ptr %a, ptr %b) {
 ;
 ; BF16-SVE-NONEON-LABEL: fcvt_v2f64_v2bf16:
 ; BF16-SVE-NONEON:       // %bb.0:
+; BF16-SVE-NONEON-NEXT:    sub sp, sp, #16
+; BF16-SVE-NONEON-NEXT:    .cfi_def_cfa_offset 16
 ; BF16-SVE-NONEON-NEXT:    ldr q0, [x0]
 ; BF16-SVE-NONEON-NEXT:    mov z1.d, z0.d[1]
 ; BF16-SVE-NONEON-NEXT:    fcvtxn s0, d0
 ; BF16-SVE-NONEON-NEXT:    fcvtxn s1, d1
 ; BF16-SVE-NONEON-NEXT:    bfcvt h0, s0
 ; BF16-SVE-NONEON-NEXT:    bfcvt h1, s1
-; BF16-SVE-NONEON-NEXT:    str h0, [x1]
-; BF16-SVE-NONEON-NEXT:    str h1, [x1, #2]
+; BF16-SVE-NONEON-NEXT:    str h0, [sp, #8]
+; BF16-SVE-NONEON-NEXT:    str h1, [sp, #10]
+; BF16-SVE-NONEON-NEXT:    ldr d0, [sp, #8]
+; BF16-SVE-NONEON-NEXT:    fmov w8, s0
+; BF16-SVE-NONEON-NEXT:    str w8, [x1]
+; BF16-SVE-NONEON-NEXT:    add sp, sp, #16
 ; BF16-SVE-NONEON-NEXT:    ret
   %op1 = load <2 x double>, ptr %a
   %res = fptrunc <2 x double> %op1 to <2 x bfloat>
@@ -254,10 +260,23 @@ define void @fcvt_v4f34_v4bf16(ptr %a, ptr %b) {
 ;
 ; BF16-SVE-NONEON-LABEL: fcvt_v4f34_v4bf16:
 ; BF16-SVE-NONEON:       // %bb.0:
-; BF16-SVE-NONEON-NEXT:    ptrue p0.s, vl4
+; BF16-SVE-NONEON-NEXT:    sub sp, sp, #16
+; BF16-SVE-NONEON-NEXT:    .cfi_def_cfa_offset 16
 ; BF16-SVE-NONEON-NEXT:    ldr q0, [x0]
-; BF16-SVE-NONEON-NEXT:    bfcvt z0.h, p0/m, z0.s
-; BF16-SVE-NONEON-NEXT:    st1h { z0.s }, p0, [x1]
+; BF16-SVE-NONEON-NEXT:    mov z1.s, z0.s[3]
+; BF16-SVE-NONEON-NEXT:    mov z2.s, z0.s[2]
+; BF16-SVE-NONEON-NEXT:    bfcvt h3, s0
+; BF16-SVE-NONEON-NEXT:    mov z0.s, z0.s[1]
+; BF16-SVE-NONEON-NEXT:    bfcvt h1, s1
+; BF16-SVE-NONEON-NEXT:    bfcvt h2, s2
+; BF16-SVE-NONEON-NEXT:    bfcvt h0, s0
+; BF16-SVE-NONEON-NEXT:    str h3, [sp, #8]
+; BF16-SVE-NONEON-NEXT:    str h1, [sp, #14]
+; BF16-SVE-NONEON-NEXT:    str h2, [sp, #12]
+; BF16-SVE-NONEON-NEXT:    str h0, [sp, #10]
+; BF16-SVE-NONEON-NEXT:    ldr d0, [sp, #8]
+; BF16-SVE-NONEON-NEXT:    str d0, [x1]
+; BF16-SVE-NONEON-NEXT:    add sp, sp, #16
 ; BF16-SVE-NONEON-NEXT:    ret
   %op1 = load <4 x float>, ptr %a
   %res = fptrunc <4 x float> %op1 to <4 x bfloat>
@@ -363,10 +382,18 @@ define void @fcvt_v2f32_v2bf16(ptr %a, ptr %b) {
 ;
 ; BF16-SVE-NONEON-LABEL: fcvt_v2f32_v2bf16:
 ; BF16-SVE-NONEON:       // %bb.0:
-; BF16-SVE-NONEON-NEXT:    ptrue p0.s, vl2
+; BF16-SVE-NONEON-NEXT:    sub sp, sp, #16
+; BF16-SVE-NONEON-NEXT:    .cfi_def_cfa_offset 16
 ; BF16-SVE-NONEON-NEXT:    ldr d0, [x0]
-; BF16-SVE-NONEON-NEXT:    bfcvt z0.h, p0/m, z0.s
-; BF16-SVE-NONEON-NEXT:    st1h { z0.s }, p0, [x1]
+; BF16-SVE-NONEON-NEXT:    mov z1.s, z0.s[1]
+; BF16-SVE-NONEON-NEXT:    bfcvt h0, s0
+; BF16-SVE-NONEON-NEXT:    bfcvt h1, s1
+; BF16-SVE-NONEON-NEXT:    str h0, [sp, #8]
+; BF16-SVE-NONEON-NEXT:    str h1, [sp, #10]
+; BF16-SVE-NONEON-NEXT:    ldr d0, [sp, #8]
+; BF16-SVE-NONEON-NEXT:    fmov w8, s0
+; BF16-SVE-NONEON-NEXT:    str w8, [x1]
+; BF16-SVE-NONEON-NEXT:    add sp, sp, #16
 ; BF16-SVE-NONEON-NEXT:    ret
   %op1 = load <2 x float>, ptr %a
   %res = fptrunc <2 x float> %op1 to <2 x bfloat>
