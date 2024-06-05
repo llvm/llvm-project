@@ -66,7 +66,7 @@ class TestCase(TestBase):
     # any other architectures.
     @expectedFailureAll(
         triple=re.compile("^(x86|i386)"),
-        oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56084"
+        oslist=["freebsd", "linux"], bugnumber="github.com/llvm/llvm-project/issues/56084"
     )
     def test_vectorcall(self):
         if not self.build_and_run("vectorcall.c"):
