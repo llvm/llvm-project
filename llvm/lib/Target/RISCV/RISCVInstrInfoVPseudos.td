@@ -6939,12 +6939,12 @@ defm : VPatBinaryV_VV_VX_VI<"int_riscv_vsra", "PseudoVSRA", AllIntegerVectors,
 foreach vti = AllIntegerVectors in {
   // Emit shift by 1 as an add since it might be faster.
   let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(vti.Vector (int_riscv_vsll (vti.Vector undef),
+    def : Pat<(vti.Vector (int_riscv_vsll (vti.Vector vti.RegClass:$merge),
                                           (vti.Vector vti.RegClass:$rs1),
                                           (XLenVT 1), VLOpFrag)),
               (!cast<Instruction>("PseudoVADD_VV_"#vti.LMul.MX)
-                 (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1,
-                 vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW, TA_MA)>;
+                 vti.RegClass:$merge, vti.RegClass:$rs1,
+                 vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
     def : Pat<(vti.Vector (int_riscv_vsll_mask (vti.Vector vti.RegClass:$merge),
                                                (vti.Vector vti.RegClass:$rs1),
                                                (XLenVT 1),
