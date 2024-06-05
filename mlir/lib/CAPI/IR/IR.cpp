@@ -910,10 +910,6 @@ void mlirBlockEraseArgument(MlirBlock block, unsigned index) {
   return unwrap(block)->eraseArgument(index);
 }
 
-void mlirBlockEraseArguments(MlirBlock block, unsigned start, unsigned num) {
-  return unwrap(block)->eraseArguments(start, num);
-}
-
 MlirValue mlirBlockInsertArgument(MlirBlock block, intptr_t pos, MlirType type,
                                   MlirLocation loc) {
   return wrap(unwrap(block)->insertArgument(pos, unwrap(type), unwrap(loc)));

@@ -171,12 +171,9 @@ def testBlockEraseArgs():
         f32 = F32Type.get()
         op = Operation.create("test", regions=1, loc=Location.unknown())
         blocks = op.regions[0].blocks
-        blocks.append(f32, f32, f32)
-        # CHECK: ^bb0(%{{.+}}: f32 loc(unknown), %{{.+}}: f32 loc(unknown), %{{.+}}: f32 loc(unknown)):
+        blocks.append(f32)
+        # CHECK: ^bb0(%{{.+}}: f32 loc(unknown)):
         op.print(enable_debug_info=True)
         blocks[0].erase_argument(0)
-        # CHECK: ^bb0(%{{.+}}: f32 loc(unknown), %{{.+}}: f32 loc(unknown)):
-        op.print(enable_debug_info=True)
-        blocks[0].erase_arguments(0, 2)
         # CHECK: ^bb0:
         op.print(enable_debug_info=True)

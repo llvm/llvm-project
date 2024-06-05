@@ -3251,12 +3251,6 @@ void mlir::python::populateIRCore(py::module &m) {
             return mlirBlockEraseArgument(self.get(), index);
           },
           "Erase the argument at 'index' and remove it from the argument list.")
-      .def(
-          "erase_arguments",
-          [](PyBlock &self, unsigned start, unsigned num) {
-            return mlirBlockEraseArguments(self.get(), start, num);
-          },
-          "Erases 'num' arguments from the index 'start'.")
       .def_property_readonly(
           "operations",
           [](PyBlock &self) {
