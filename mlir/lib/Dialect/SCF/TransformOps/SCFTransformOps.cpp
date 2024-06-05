@@ -261,8 +261,8 @@ loopScheduling(scf::ForOp forOp,
     return 1;
   };
 
-  auto ubConstant = getConstantIntValue(forOp.getUpperBound());
-  auto lbConstant = getConstantIntValue(forOp.getLowerBound());
+  std::optional<int64_t> ubConstant = getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> lbConstant = getConstantIntValue(forOp.getLowerBound());
   DenseMap<Operation *, unsigned> opCycles;
   std::map<unsigned, std::vector<Operation *>> wrappedSchedule;
   for (Operation &op : forOp.getBody()->getOperations()) {
