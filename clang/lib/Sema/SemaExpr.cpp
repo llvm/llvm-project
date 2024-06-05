@@ -5826,11 +5826,11 @@ static bool isParenthetizedAndQualifiedAddressOfExpr(Expr *Fn) {
   if (!UO || UO->getOpcode() != clang::UO_AddrOf)
     return false;
   if (auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParens())) {
+    assert(isa<FunctionDecl>(DRE->getDecl()) && "expected a function");
     return DRE->hasQualifier();
   }
-  if (auto *OVL = dyn_cast<OverloadExpr>(UO->getSubExpr()->IgnoreParens())) {
+  if (auto *OVL = dyn_cast<OverloadExpr>(UO->getSubExpr()->IgnoreParens()))
     return OVL->getQualifier();
-  }
   return false;
 }
 

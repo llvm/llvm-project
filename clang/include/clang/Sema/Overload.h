@@ -1002,6 +1002,8 @@ class Sema;
       /// using either a parenthesized or braced list of arguments.
       CSK_InitByConstructor,
 
+      /// C++ [over.match.call.general]
+      /// Resolve a call through the address of an overload set.
       CSK_AddressOfOverloadSet,
     };
 
