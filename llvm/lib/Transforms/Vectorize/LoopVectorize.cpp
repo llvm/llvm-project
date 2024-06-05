@@ -2215,6 +2215,9 @@ static void getPartialReductionInstrChain(Instruction *Instr, SmallVector<Value*
 }
 
 
+/// Checks if the given instruction the root of a partial reduction chain
+///
+/// Note: This currently only supports udot/sdot chains
 /// @param Instr The root instruction to scan
 static bool isInstrPartialReduction(Instruction *Instr) {
   Value *ExpectedPhi;
@@ -2224,12 +2227,12 @@ static bool isInstrPartialReduction(Instruction *Instr) {
   using namespace llvm::PatternMatch;
   auto Pattern = m_Add(
     m_OneUse(m_Mul(
-      m_OneUse(m_ZExt(
+      m_OneUse(m_ZExtOrSExt(
         m_OneUse(m_Load(
           m_GEP(
               m_Value(A),
               m_Value(InductionA)))))),
-      m_OneUse(m_ZExt(
+      m_OneUse(m_ZExtOrSExt(
         m_OneUse(m_Load(
           m_GEP(
               m_Value(B),
@@ -2248,8 +2251,13 @@ static bool isInstrPartialReduction(Instruction *Instr) {
   }
 
   Instruction *Mul = cast<Instruction>(Instr->getOperand(0));
-  Instruction *Ext0 = cast<ZExtInst>(Mul->getOperand(0));
-  Instruction *Ext1 = cast<ZExtInst>(Mul->getOperand(1));
+  Instruction *Ext0 = cast<CastInst>(Mul->getOperand(0));
+  Instruction *Ext1 = cast<CastInst>(Mul->getOperand(1));
+
+  if(Ext0->getOpcode() != Ext1->getOpcode()) {
+    LLVM_DEBUG(dbgs() << "Extends aren't of the same type, cannot create a partial reduction.\n");
+    return false;
+  }
 
   // Check that the extends extend to i32
   if(!Ext0->getType()->isIntegerTy(32) || !Ext1->getType()->isIntegerTy(32)) {
@@ -8650,6 +8658,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreatePartialReduction(
     VFRange &Range, Instruction *Instr, ArrayRef<VPValue *> Operands) {
 
   if(isInstrPartialReduction(Instr)) {
+    // Restricting this case to 16x means that, using a scale of 4, we avoid
+    // trying to generate illegal types such as <vscale x 2 x i32>
     auto EC = ElementCount::getScalable(16);
     if(std::find(Range.begin(), Range.end(), EC) == Range.end())
       return nullptr;
