@@ -150,7 +150,7 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     }
     Desc->dump(OS);
     OS << "\n";
-    if (Desc->isPrimitive() && !Desc->isDummy()) {
+    if (GP.isInitialized() && Desc->isPrimitive() && !Desc->isDummy()) {
       OS << "   ";
       {
         ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_CYAN, false});
