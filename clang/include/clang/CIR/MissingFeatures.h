@@ -186,6 +186,27 @@ struct MissingFeatures {
   static bool supportisHomogeneousAggregateQueryForAArch64() { return false; }
   static bool supportisEndianQueryForAArch64() { return false; }
   static bool supportisAggregateTypeForABIAArch64() { return false; }
+
+  //===--- ABI lowering --===//
+
+  // Parameters may have additional attributes (e.g. [[noescape]]) that affect
+  // the compiler. This is not yet supported in CIR.
+  static bool extParamInfo() { return true; }
+
+  // LangOpts may affect lowering, but we do not carry this information into CIR
+  // just yet. Right now, it only instantiates the default lang options.
+  static bool langOpts() { return true; }
+
+  // Several type qualifiers are not yet supported in CIR, but important when
+  // evaluating ABI-specific lowering.
+  static bool qualifiedTypes() { return true; }
+
+  // We're ignoring several details regarding ABI-halding for Swift.
+  static bool swift() { return true; }
+
+  // Despite carrying some information about variadics, we are currently
+  // ignoring this to focus only on the code necessary to lower non-variadics.
+  static bool variadicFunctions() { return true; }
 };
 
 } // namespace cir

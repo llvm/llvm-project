@@ -177,11 +177,15 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
     sob = sob::SignedOverflowBehavior::trapping;
     break;
   }
+
+  // FIXME(cir): Implement a custom CIR Module Op and attributes to leverage
+  // MLIR features.
   theModule->setAttr("cir.sob",
                      mlir::cir::SignedOverflowBehaviorAttr::get(&context, sob));
   auto lang = SourceLanguageAttr::get(&context, getCIRSourceLanguage());
   theModule->setAttr(
       "cir.lang", mlir::cir::LangAttr::get(&context, lang));
+  theModule->setAttr("cir.triple", builder.getStringAttr(getTriple().str()));
   // Set the module name to be the name of the main file. TranslationUnitDecl
   // often contains invalid source locations and isn't a reliable source for the
   // module location.
