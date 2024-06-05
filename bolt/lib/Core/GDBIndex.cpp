@@ -1,4 +1,4 @@
-//===- bolt/Rewrite/GDBIndex.cpp -------------------------------------===//
+//===- bolt/Core/GDBIndex.cpp  - GDB Index support ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,9 @@ using namespace llvm::bolt;
 using namespace llvm::support::endian;
 
 void GDBIndex::addGDBTypeUnitEntry(const GDBIndexTUEntry &Entry) {
+  std::lock_guard<std::mutex> Lock(DWARFRewriterMutex);
+  if (!BC.getGdbIndexSection())
+    return;
   GDBIndexTUEntryVector.push_back(Entry);
 }
 

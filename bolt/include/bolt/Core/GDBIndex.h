@@ -1,4 +1,4 @@
-//===-- bolt/Core/GDBIndex.h - GDB Index support -------*- C++ -*-===//
+//===-- bolt/Core/GDBIndex.h - GDB Index support ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,13 +33,15 @@ public:
 private:
   BinaryContext &BC;
 
-  /// Entries for GDB Index Types CU List
+  /// Entries for GDB Index Types CU List.
   using GDBIndexTUEntryType = std::vector<GDBIndexTUEntry>;
   GDBIndexTUEntryType GDBIndexTUEntryVector;
 
 public:
   GDBIndex(BinaryContext &BC) : BC(BC) {}
-
+  
+  std::mutex DWARFRewriterMutex;
+  
   /// Adds an GDBIndexTUEntry if .gdb_index section exists.
   void addGDBTypeUnitEntry(const GDBIndexTUEntry &Entry);
 
@@ -48,7 +50,7 @@ public:
       CUOffsetMap &CUMap, uint32_t NumCUs,
       std::unique_ptr<DebugARangesSectionWriter> &ARangesSectionWriter);
 
-  /// Returns all entries needed for Types CU list
+  /// Returns all entries needed for Types CU list.
   const GDBIndexTUEntryType &getGDBIndexTUEntryVector() const {
     return GDBIndexTUEntryVector;
   }
