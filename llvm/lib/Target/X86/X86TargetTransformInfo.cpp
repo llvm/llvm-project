@@ -176,6 +176,23 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 8;
 }
 
+bool X86TTIImpl::hasConditionalFaultingLoadStoreForType(Type *Ty) const {
+  // Conditional faulting is supported by CFCMOV, which only accepts
+  // 16/32/64-bit operands.
+  // NOTE: Though VMOVSS/VMOVSD suppresses memory fault with zero mask, it has
+  // performance penalty.
+  if (!ST->hasCF() || !Ty || !Ty->isIntegerTy())
+    return false;
+  switch (cast<IntegerType>(Ty)->getBitWidth()) {
+  default:
+    return false;
+  case 16:
+  case 32:
+  case 64:
+    return true;
+  }
+}
+
 TypeSize
 X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   unsigned PreferVectorWidth = ST->getPreferVectorWidth();
@@ -5891,14 +5908,21 @@ bool X86TTIImpl::canMacroFuseCmp() {
 }
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
+  bool IsSingleElementVector =
+      isa<VectorType>(DataTy) &&
+      cast<FixedVectorType>(DataTy)->getNumElements() == 1;
+  Type *ScalarTy = DataTy->getScalarType();
+
+  if (ST->hasCF() && IsSingleElementVector &&
+      hasConditionalFaultingLoadStoreForType(ScalarTy))
+    return true;
+
   if (!ST->hasAVX())
     return false;
 
-  // The backend can't handle a single element vector.
-  if (isa<VectorType>(DataTy) &&
-      cast<FixedVectorType>(DataTy)->getNumElements() == 1)
+  // The backend can't handle a single element vector w/o CFCMOV.
+  if (IsSingleElementVector)
     return false;
-  Type *ScalarTy = DataTy->getScalarType();
 
   if (ScalarTy->isPointerTy())
     return true;
