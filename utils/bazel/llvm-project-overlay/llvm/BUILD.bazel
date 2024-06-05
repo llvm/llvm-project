@@ -287,6 +287,7 @@ cc_library(
     linkopts = select({
         "@platforms//os:windows": [
             "ws2_32.lib",
+            "ntdll.lib",
         ],
         "@platforms//os:freebsd": [
             "-pthread",
