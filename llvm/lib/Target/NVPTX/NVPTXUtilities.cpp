@@ -131,8 +131,7 @@ bool findOneNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
 static std::optional<unsigned>
 findOneNVVMAnnotation(const GlobalValue &GV, const std::string &PropName) {
   unsigned RetVal;
-  bool Found = findOneNVVMAnnotation(&GV, PropName, RetVal);
-  if (Found)
+  if (findOneNVVMAnnotation(&GV, PropName, RetVal))
     return RetVal;
   return std::nullopt;
 }
