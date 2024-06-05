@@ -35,7 +35,7 @@ class Module;
 void SplitModule(
     Module &M, unsigned N,
     function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback,
-    bool PreserveLocals = false);
+    bool PreserveLocals = false, bool TryToAvoidEmptyModules = false);
 
 } // end namespace llvm
 
