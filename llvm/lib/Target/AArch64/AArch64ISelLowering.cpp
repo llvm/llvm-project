@@ -716,8 +716,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FSIN, MVT::f64, Expand);
   setOperationAction(ISD::FCOS, MVT::f32, Expand);
   setOperationAction(ISD::FCOS, MVT::f64, Expand);
-  setOperationAction(ISD::FTAN, MVT::f32, Expand);
-  setOperationAction(ISD::FTAN, MVT::f64, Expand);
   setOperationAction(ISD::FPOW, MVT::f32, Expand);
   setOperationAction(ISD::FPOW, MVT::f64, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::f64, Custom);
