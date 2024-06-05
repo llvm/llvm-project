@@ -174,7 +174,7 @@ public:
       return nullptr;
 
     auto start =
-        m_reflection_ctx.computeUnalignedFieldStartOffset(type_ref);
+        m_reflection_ctx.computeUnalignedFieldStartOffset(type_ref, provider);
     if (!start) {
       if (auto *log = GetLog(LLDBLog::Types)) {
         std::stringstream ss;

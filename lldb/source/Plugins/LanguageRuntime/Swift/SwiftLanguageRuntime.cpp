@@ -235,7 +235,7 @@ public:
 
   ThreadSafeReflectionContext GetReflectionContext() {
     STUB_LOG();
-    return ThreadSafeReflectionContext::MakeInvalid();
+    return ThreadSafeReflectionContext();
   }
 
   bool GetDynamicTypeAndAddress(ValueObject &in_value,

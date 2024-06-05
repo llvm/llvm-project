@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Memory.h"
+#include "LockGuarded.h"
 
 namespace swift {
 namespace Demangle {
@@ -146,31 +147,6 @@ public:
   StripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) = 0;
 };
 
-/// A wrapper around TargetReflectionContext, which holds a lock to ensure
-/// exclusive access.
-struct ThreadSafeReflectionContext {
-  ThreadSafeReflectionContext(ReflectionContextInterface *reflection_ctx,
-                              std::recursive_mutex &mutex)
-      : m_reflection_ctx(reflection_ctx), m_lock(mutex, std::adopt_lock) {}
-
-  static ThreadSafeReflectionContext MakeInvalid() {
-    // This exists so we can create an "empty" reflection context in the stub
-    // language runtime.
-    static std::recursive_mutex mutex;
-    return ThreadSafeReflectionContext(nullptr, mutex);
-  }
-
-  ReflectionContextInterface *operator->() const { return m_reflection_ctx; }
-
-  operator bool() const { return m_reflection_ctx != nullptr; }
-
-private:
-  ReflectionContextInterface *m_reflection_ctx;
-  // This lock operates on a recursive mutex because the initialization
-  // of ReflectionContext recursive calls itself (see
-  // SwiftLanguageRuntimeImpl::SetupReflection).
-  std::lock_guard<std::recursive_mutex> m_lock;
-};
-
+using ThreadSafeReflectionContext = LockGuarded<ReflectionContextInterface>;
 } // namespace lldb_private
 #endif

@@ -51,11 +51,14 @@ class TypeBase;
 } // namespace swift
 
 namespace lldb_private {
-struct ThreadSafeReflectionContext;
+template <typename T>
+struct LockGuarded;
 
 class SwiftLanguageRuntimeStub;
 class SwiftLanguageRuntimeImpl;
 class ReflectionContextInterface;
+
+using ThreadSafeReflectionContext = LockGuarded<ReflectionContextInterface>;
 
 class SwiftLanguageRuntime : public LanguageRuntime {
 protected:

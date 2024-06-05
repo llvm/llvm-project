@@ -13,9 +13,11 @@
 #ifndef liblldb_SwiftExpressionParser_h_
 #define liblldb_SwiftExpressionParser_h_
 
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "SwiftASTManipulator.h"
 
 #include "Plugins/ExpressionParser/Clang/IRForTarget.h"
+#include "SwiftPersistentExpressionState.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Expression/ExpressionParser.h"
@@ -24,6 +26,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/lldb-public.h"
 
+#include "swift/SIL/SILDebuggerClient.h"
 #include <string>
 #include <vector>
 
@@ -31,6 +34,7 @@ namespace lldb_private {
 
 class IRExecutionUnit;
 class SwiftLanguageRuntime;
+class LLDBNameLookup;
 //----------------------------------------------------------------------
 /// @class SwiftExpressionParser SwiftExpressionParser.h
 /// "lldb/Expression/SwiftExpressionParser.h"
@@ -178,6 +182,27 @@ public:
   typedef std::map<const char *, SILVariableInfo> SILVariableMap;
 
 private:
+  /// This holds the result of ParseAndImport.
+  struct ParsedExpression {
+    std::unique_ptr<SwiftASTManipulator> code_manipulator;
+    swift::ModuleDecl &module;
+    LLDBNameLookup &external_lookup;
+    swift::SourceFile &source_file;
+    std::string main_filename;
+    unsigned buffer_id;
+  };
+
+  /// Attempt to parse an expression and import all the Swift modules
+  /// the expression and its context depend on.
+  llvm::Expected<ParsedExpression>
+  ParseAndImport(SwiftASTContext::ScopedDiagnostics &expr_diagnostics,
+                 SwiftExpressionParser::SILVariableMap &variable_map,
+                 unsigned &buffer_id, DiagnosticManager &diagnostic_manager);
+
+  /// Initialize the SwiftASTContext and return the wrapped
+  /// ThreadSafeASTContext when successful.
+  ThreadSafeASTContext GetASTContext(DiagnosticManager &diagnostic_manager);
+
   /// The expression to be parsed.
   Expression &m_expr;
   /// The context to use for IR generation.
@@ -206,7 +231,41 @@ private:
 
   /// Indicates whether the call to Parse of this type is cacheable.
   bool m_is_cacheable;
+
+  /// Once token to initialize the swift::ASTContext.
+  llvm::once_flag m_ast_init_once_flag;
+
+  /// Indicates if the ThreadSafeASTContext was initialized correctly.
+  bool m_ast_init_successful;
 };
+
+class LLDBNameLookup : public swift::SILDebuggerClient {
+public:
+  LLDBNameLookup(swift::SourceFile &source_file,
+                 SwiftExpressionParser::SILVariableMap &variable_map,
+                 SymbolContext &sc, ExecutionContextScope &exe_scope);
+
+  swift::SILValue emitLValueForVariable(swift::VarDecl *var,
+                                        swift::SILBuilder &builder) override;
+
+  SwiftPersistentExpressionState::SwiftDeclMap &GetStagedDecls();
+
+  void RegisterTypeAliases(
+      llvm::SmallVectorImpl<swift::TypeAliasDecl *> &type_aliases);
+
+protected:
+  Log *m_log;
+  swift::SourceFile &m_source_file;
+  SwiftExpressionParser::SILVariableMap &m_variable_map;
+  SymbolContext m_sc;
+  SwiftPersistentExpressionState *m_persistent_vars = nullptr;
+
+  // Subclasses stage globalized decls in this map. They get copied
+  // over to the SwiftPersistentVariable store if the parse succeeds.
+  SwiftPersistentExpressionState::SwiftDeclMap m_staged_decls;
+  llvm::SmallVector<swift::TypeAliasDecl *> m_type_aliases;
+};
+
 } // namespace lldb_private
 
 #endif // liblldb_SwiftExpressionParser_h_

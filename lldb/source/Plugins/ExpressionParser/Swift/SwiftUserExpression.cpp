@@ -394,7 +394,7 @@ static llvm::Error AddVariableInfo(
       ss.flush();
       log->Printf("Adding injected self: type (%p) context(%p) is: %s",
                   static_cast<void *>(swift_type.getPointer()),
-                  static_cast<void *>(ast_context.GetASTContext()), s.c_str());
+                  static_cast<void *>(*ast_context.GetASTContext()), s.c_str());
     }
   // A one-off clone of variable_sp with the type replaced by target_type.
   auto patched_variable_sp = std::make_shared<lldb_private::Variable>(

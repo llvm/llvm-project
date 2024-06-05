@@ -13,6 +13,7 @@
 #ifndef liblldb_SwiftASTContext_h_
 #define liblldb_SwiftASTContext_h_
 
+#include "Plugins/LanguageRuntime/Swift/LockGuarded.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 
@@ -120,6 +121,8 @@ template <> struct hash<lldb_private::detail::SwiftLibraryLookupRequest> {
 } // end namespace std
 
 namespace lldb_private {
+
+using ThreadSafeASTContext = LockGuarded<swift::ASTContext>;
 
 /// This "middle" class between TypeSystemSwiftTypeRef and
 /// SwiftASTContextForExpressions will eventually go away, as more and
@@ -257,7 +260,7 @@ public:
 
   swift::SILOptions &GetSILOptions();
 
-  swift::ASTContext *GetASTContext();
+  ThreadSafeASTContext GetASTContext();
 
   swift::IRGenDebugInfoLevel GetGenerateDebugInfo();
 
@@ -913,6 +916,7 @@ protected:
   // CompilerInvocation, SourceMgr, and DiagEngine must come before
   // the ASTContext, so they get deallocated *after* the ASTContext.
   std::unique_ptr<swift::ASTContext> m_ast_context_ap;
+  std::recursive_mutex m_ast_context_mutex;
   std::unique_ptr<llvm::TargetOptions> m_target_options_ap;
   std::unique_ptr<swift::irgen::IRGenerator> m_ir_generator_ap;
   std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_ap;
