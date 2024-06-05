@@ -451,28 +451,6 @@ std::string getEnvWin(const wchar_t *Var) {
   }
   return expected;
 }
-#else
-// RAII helper to set and restore an environment variable.
-class WithEnv {
-  const char *Var;
-  std::optional<std::string> OriginalValue;
-
-public:
-  WithEnv(const char *Var, const char *Value) : Var(Var) {
-    if (const char *V = ::getenv(Var))
-      OriginalValue.emplace(V);
-    if (Value)
-      ::setenv(Var, Value, 1);
-    else
-      ::unsetenv(Var);
-  }
-  ~WithEnv() {
-    if (OriginalValue)
-      ::setenv(Var, OriginalValue->c_str(), 1);
-    else
-      ::unsetenv(Var);
-  }
-};
 #endif
 
 TEST(Support, HomeDirectory) {
@@ -496,7 +474,7 @@ TEST(Support, HomeDirectory) {
 // Apple has their own solution for this.
 #if defined(LLVM_ON_UNIX) && !defined(__APPLE__)
 TEST(Support, HomeDirectoryWithNoEnv) {
-  WithEnv Env("HOME", nullptr);
+  unittest::WithEnv Env("HOME", nullptr);
 
   // Don't run the test if we have nothing to compare against.
   struct passwd *pw = getpwuid(getuid());
@@ -510,7 +488,7 @@ TEST(Support, HomeDirectoryWithNoEnv) {
 }
 
 TEST(Support, ConfigDirectoryWithEnv) {
-  WithEnv Env("XDG_CONFIG_HOME", "/xdg/config");
+  unittest::WithEnv Env("XDG_CONFIG_HOME", "/xdg/config");
 
   SmallString<128> ConfigDir;
   EXPECT_TRUE(path::user_config_directory(ConfigDir));
@@ -518,7 +496,7 @@ TEST(Support, ConfigDirectoryWithEnv) {
 }
 
 TEST(Support, ConfigDirectoryNoEnv) {
-  WithEnv Env("XDG_CONFIG_HOME", nullptr);
+  unittest::WithEnv Env("XDG_CONFIG_HOME", nullptr);
 
   SmallString<128> Fallback;
   ASSERT_TRUE(path::home_directory(Fallback));
@@ -530,7 +508,7 @@ TEST(Support, ConfigDirectoryNoEnv) {
 }
 
 TEST(Support, CacheDirectoryWithEnv) {
-  WithEnv Env("XDG_CACHE_HOME", "/xdg/cache");
+  unittest::WithEnv Env("XDG_CACHE_HOME", "/xdg/cache");
 
   SmallString<128> CacheDir;
   EXPECT_TRUE(path::cache_directory(CacheDir));
@@ -538,7 +516,7 @@ TEST(Support, CacheDirectoryWithEnv) {
 }
 
 TEST(Support, CacheDirectoryNoEnv) {
-  WithEnv Env("XDG_CACHE_HOME", nullptr);
+  unittest::WithEnv Env("XDG_CACHE_HOME", nullptr);
 
   SmallString<128> Fallback;
   ASSERT_TRUE(path::home_directory(Fallback));

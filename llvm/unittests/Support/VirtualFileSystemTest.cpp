@@ -479,6 +479,23 @@ TEST(VirtualFileSystemTest, BasicRealFSIteration) {
 }
 
 #ifdef LLVM_ON_UNIX
+TEST(VirtualFileSystemTest, ChangeCWDToDirFromASymbolicLinkToDir) {
+  // r/
+  // |- a/
+  // `- b -> a/
+  TempDir Root("r", /*Unique=*/true);
+  TempDir ADir(Root.path("a"));
+  TempLink B(ADir.path(), Root.path("b"));
+
+  // PWD points to `/r/b`
+  unittest::WithEnv Env("PWD", B.path().str().c_str());
+
+  // Navigate to `/r/a` from `/r/b`
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem();
+  ASSERT_FALSE(FS->setCurrentWorkingDirectory(ADir.path()));
+  EXPECT_EQ(ADir.path(), *FS->getCurrentWorkingDirectory());
+}
+
 TEST(VirtualFileSystemTest, MultipleWorkingDirs) {
   // Our root contains a/aa, b/bb, c, where c is a link to a/.
   // Run tests both in root/b/ and root/c/ (to test "normal" and symlink dirs).

@@ -248,6 +248,30 @@ public:
   StringRef path() const { return Path; }
 };
 
+#ifndef _WIN32
+// RAII helper to set and restore an environment variable.
+class WithEnv {
+  const char *Var;
+  std::optional<std::string> OriginalValue;
+
+public:
+  WithEnv(const char *Var, const char *Value) : Var(Var) {
+    if (const char *V = ::getenv(Var))
+      OriginalValue.emplace(V);
+    if (Value)
+      ::setenv(Var, Value, 1);
+    else
+      ::unsetenv(Var);
+  }
+  ~WithEnv() {
+    if (OriginalValue)
+      ::setenv(Var, OriginalValue->c_str(), 1);
+    else
+      ::unsetenv(Var);
+  }
+};
+#endif
+
 } // namespace unittest
 } // namespace llvm
 
