@@ -64,7 +64,7 @@ Additions:
   * canonicalize* |check|
   * fmaximum* |check|
   * fminimum*
-  * fmaximum_mag*
+  * fmaximum_mag* |check|
   * fminimum_mag*
   * fmaximum_mag_num*
   * fminimum_mag_num*

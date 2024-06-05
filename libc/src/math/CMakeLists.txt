@@ -146,6 +146,7 @@ add_math_entrypoint_object(fmaximum_numf128)
 add_math_entrypoint_object(fmaximum_mag)
 add_math_entrypoint_object(fmaximum_magf)
 add_math_entrypoint_object(fmaximum_magl)
+add_math_entrypoint_object(fmaximum_magf16)
 add_math_entrypoint_object(fmaximum_magf128)
 
 add_math_entrypoint_object(fmaximum_mag_num)
