@@ -4153,27 +4153,6 @@ class VPatBinaryNoMaskTU<string intrinsic_name,
                    (op2_type op2_kind:$rs2),
                    GPR:$vl, sew, TU_MU)>;
 
-class VPatBinaryNoMaskRoundingMode<string intrinsic_name,
-                                   string inst,
-                                   ValueType result_type,
-                                   ValueType op1_type,
-                                   ValueType op2_type,
-                                   int sew,
-                                   VReg op1_reg_class,
-                                   DAGOperand op2_kind> :
-  Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
-                   (result_type (undef)),
-                   (op1_type op1_reg_class:$rs1),
-                   (op2_type op2_kind:$rs2),
-                   (XLenVT timm:$round),
-                   VLOpFrag)),
-                   (!cast<Instruction>(inst)
-                   (result_type (IMPLICIT_DEF)),
-                   (op1_type op1_reg_class:$rs1),
-                   (op2_type op2_kind:$rs2),
-                   (XLenVT timm:$round),
-                   GPR:$vl, sew, TA_MA)>;
-
 class VPatBinaryNoMaskTURoundingMode<string intrinsic_name,
                                      string inst,
                                      ValueType result_type,
@@ -4827,8 +4806,6 @@ multiclass VPatBinaryRoundingMode<string intrinsic,
                                   VReg result_reg_class,
                                   VReg op1_reg_class,
                                   DAGOperand op2_kind> {
-  def : VPatBinaryNoMaskRoundingMode<intrinsic, inst, result_type, op1_type, op2_type,
-                                       sew, op1_reg_class, op2_kind>;
   def : VPatBinaryNoMaskTURoundingMode<intrinsic, inst, result_type, op1_type, op2_type,
                                        sew, result_reg_class, op1_reg_class, op2_kind>;
   def : VPatBinaryMaskTARoundingMode<intrinsic, inst, result_type, op1_type, op2_type,
@@ -6306,7 +6283,7 @@ foreach vti = AllIntegerVectors in {
                                                       vti.RegClass:$rs1,
                                                       (NegImm simm5_plus1:$rs2),
                                                       GPR:$vl,
-                                                      vti.Log2SEW, TA_MA)>;
+                                                      vti.Log2SEW, TU_MU)>;
     def : Pat<(vti.Vector (int_riscv_vsub_mask (vti.Vector vti.RegClass:$merge),
                                                (vti.Vector vti.RegClass:$rs1),
                                                (vti.Scalar simm5_plus1:$rs2),
@@ -6962,12 +6939,12 @@ defm : VPatBinaryV_VV_VX_VI<"int_riscv_vsra", "PseudoVSRA", AllIntegerVectors,
 foreach vti = AllIntegerVectors in {
   // Emit shift by 1 as an add since it might be faster.
   let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(vti.Vector (int_riscv_vsll (vti.Vector undef),
+    def : Pat<(vti.Vector (int_riscv_vsll (vti.Vector vti.RegClass:$merge),
                                           (vti.Vector vti.RegClass:$rs1),
                                           (XLenVT 1), VLOpFrag)),
               (!cast<Instruction>("PseudoVADD_VV_"#vti.LMul.MX)
-                 (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1,
-                 vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW, TA_MA)>;
+                 vti.RegClass:$merge, vti.RegClass:$rs1,
+                 vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
     def : Pat<(vti.Vector (int_riscv_vsll_mask (vti.Vector vti.RegClass:$merge),
                                                (vti.Vector vti.RegClass:$rs1),
                                                (XLenVT 1),
