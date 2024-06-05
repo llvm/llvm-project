@@ -160,8 +160,8 @@ void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
 // Fusion related helpers
 //===----------------------------------------------------------------------===//
 
-template <typename LoopTy>
-bool checkFusionStructuralLegality(Operation *target, Operation *source);
+bool checkFusionStructuralLegality(LoopLikeOpInterface &target,
+                                   LoopLikeOpInterface &source);
 
 /// Prepends operations of firstPloop's body into secondPloop's body.
 /// Updates secondPloop with new loop.

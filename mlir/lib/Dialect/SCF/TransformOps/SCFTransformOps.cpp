@@ -442,34 +442,6 @@ static DiagnosedSilenceableFailure isOpSibling(Operation *target,
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Check if `target` scf loop can be fused into `source` scf loop.
-/// Applies for scf.for, scf.forall, and scf.parallel.
-///
-/// This simply checks if both loops have the same bounds, steps and mapping.
-/// No attempt is made at checking that the side effects of `target` and
-/// `source` are independent of each other.
-template <typename LoopTy>
-static bool isLoopWithIdenticalConfiguration(Operation *target,
-                                             Operation *source) {
-  static_assert(llvm::is_one_of<LoopTy, scf::ForallOp, scf::ForOp,
-                                scf::ParallelOp>::value,
-                "applies to only `forall`, `for` and `parallel`");
-  auto targetOp = dyn_cast<LoopTy>(target);
-  auto sourceOp = dyn_cast<LoopTy>(source);
-  if (!targetOp || !sourceOp)
-    return false;
-
-  if constexpr (std::is_same_v<LoopTy, scf::ForallOp>)
-    return targetOp.getMixedLowerBound() == sourceOp.getMixedLowerBound() &&
-           targetOp.getMixedUpperBound() == sourceOp.getMixedUpperBound() &&
-           targetOp.getMixedStep() == sourceOp.getMixedStep() &&
-           targetOp.getMapping() == sourceOp.getMapping();
-  else
-    return targetOp.getLowerBound() == sourceOp.getLowerBound() &&
-           targetOp.getUpperBound() == sourceOp.getUpperBound() &&
-           targetOp.getStep() == sourceOp.getStep();
-}
-
 DiagnosedSilenceableFailure
 transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
                                     transform::TransformResults &results,
@@ -485,29 +457,37 @@ transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
            << "source handle (got " << llvm::range_size(sourceOps) << ")";
   }
 
-  Operation *target = *targetOps.begin();
-  Operation *source = *sourceOps.begin();
+  LoopLikeOpInterface target =
+      dyn_cast<LoopLikeOpInterface>(*targetOps.begin());
+  LoopLikeOpInterface source =
+      dyn_cast<LoopLikeOpInterface>(*sourceOps.begin());
+  if (!target || !source)
+    return emitSilenceableFailure(target->getLoc())
+           << "target or source is not a loop op";
 
   // Check if the target and source are siblings.
   DiagnosedSilenceableFailure diag = isOpSibling(target, source);
   if (!diag.succeeded())
     return diag;
 
+  if (!mlir::checkFusionStructuralLegality(target, source))
+    return emitSilenceableFailure(target->getLoc())
+           << "operations cannot be fused";
+
   Operation *fusedLoop;
   /// TODO: Support fusion for loop-like ops besides scf.for and scf.forall.
-  if (isLoopWithIdenticalConfiguration<scf::ForOp>(target, source)) {
+  if (isa<scf::ForOp>(target) && isa<scf::ForOp>(source)) {
     fusedLoop = fuseIndependentSiblingForLoops(
         cast<scf::ForOp>(target), cast<scf::ForOp>(source), rewriter);
-  } else if (isLoopWithIdenticalConfiguration<scf::ForallOp>(target, source)) {
+  } else if (isa<scf::ForallOp>(target) && isa<scf::ForallOp>(source)) {
     fusedLoop = fuseIndependentSiblingForallLoops(
         cast<scf::ForallOp>(target), cast<scf::ForallOp>(source), rewriter);
-  } else if (isLoopWithIdenticalConfiguration<scf::ParallelOp>(target,
-                                                               source)) {
+  } else if (isa<scf::ParallelOp>(target) && isa<scf::ParallelOp>(source)) {
     fusedLoop = fuseIndependentSiblingParallelLoops(
         cast<scf::ParallelOp>(target), cast<scf::ParallelOp>(source), rewriter);
   } else
     return emitSilenceableFailure(target->getLoc())
-           << "operations cannot be fused";
+           << "unsupported loop type for fusion";
 
   assert(fusedLoop && "failed to fuse operations");
 
