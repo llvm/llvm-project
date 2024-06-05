@@ -22,7 +22,7 @@ def ScratchSVAddr : ComplexPattern<iPTR, 4, "SelectScratchSVAddr", [], [SDNPWant
 class FLAT_Pseudo<string opName, dag outs, dag ins,
                   string asmOps, list<dag> pattern=[]> :
   InstSI<outs, ins, "", pattern>,
-  SIMCInstr<opName, SIEncodingFamily.NONE> {
+  SIMCInstr<NAME, SIEncodingFamily.NONE> {
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
@@ -221,7 +221,6 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   let mayLoad = 1;
   let has_saddr = HasSaddr;
   let enabled_saddr = EnableSaddr;
-  let PseudoInstr = opName#!if(!and(HasSaddr, EnableSaddr), "_SADDR", "");
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
@@ -242,7 +241,6 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
   let has_vdst = 0;
   let has_saddr = HasSaddr;
   let enabled_saddr = EnableSaddr;
-  let PseudoInstr = opName#!if(!and(HasSaddr, EnableSaddr), "_SADDR", "");
 }
 
 multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
@@ -268,7 +266,6 @@ class FLAT_Global_Load_AddTid_Pseudo <string opName, RegisterClass regClass,
   let has_vaddr = 0;
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
-  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
@@ -344,7 +341,6 @@ class FLAT_Global_STORE_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_P
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
   let VALU = 1;
-  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
   let Uses = [EXEC, ASYNCcnt];
   let Defs = [ASYNCcnt];
   let SchedRW = [WriteVMEM, WriteLDS];
@@ -371,7 +367,6 @@ class FLAT_Global_Store_AddTid_Pseudo <string opName, RegisterClass vdataClass,
   let has_vaddr = 0;
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
-  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
 }
 
 multiclass FLAT_Global_Store_AddTid_Pseudo<string opName, RegisterClass regClass> {
@@ -480,7 +475,6 @@ class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
   let has_vaddr = EnableVaddr;
   let has_sve = EnableSVE;
   let sve = EnableVaddr;
-  let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
@@ -509,7 +503,6 @@ class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit En
   let has_vaddr = EnableVaddr;
   let has_sve = EnableSVE;
   let sve = EnableVaddr;
-  let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
 }
 
 multiclass FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedOutput = 0> {
@@ -569,7 +562,6 @@ class FLAT_Scratch_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0,
   let has_sve = EnableSVE;
   let sve = EnableVaddr;
   let VALU = 1;
-  let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
   let Uses = [M0, EXEC];
   let SchedRW = [WriteVMEM, WriteLDS];
 }
@@ -647,7 +639,6 @@ class FLAT_AtomicRet_Pseudo<string opName, dag outs, dag ins,
   let sccbValue = 0;
   let IsAtomicNoRet = 0;
   let IsAtomicRet = 1;
-  let PseudoInstr = NAME # "_RTN";
 }
 
 multiclass FLAT_Atomic_Pseudo_NO_RTN<
@@ -662,7 +653,6 @@ multiclass FLAT_Atomic_Pseudo_NO_RTN<
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
     " $vaddr, $vdata$offset$cpol">,
     GlobalSaddrTable<0, opName> {
-    let PseudoInstr = NAME;
     let FPAtomic = data_vt.isFP;
     let AddedComplexity = -1; // Prefer global atomics if available
   }
@@ -711,7 +701,6 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
       " $vaddr, $vdata, off$offset$cpol">,
       GlobalSaddrTable<0, opName> {
       let has_saddr = 1;
-      let PseudoInstr = NAME;
       let FPAtomic = data_vt.isFP;
     }
 
@@ -722,7 +711,6 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
       GlobalSaddrTable<1, opName> {
       let has_saddr = 1;
       let enabled_saddr = 1;
-      let PseudoInstr = NAME#"_SADDR";
       let FPAtomic = data_vt.isFP;
     }
   }
@@ -754,7 +742,6 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
       GlobalSaddrTable<1, opName#"_rtn"> {
        let has_saddr = 1;
        let enabled_saddr = 1;
-       let PseudoInstr = NAME#"_SADDR_RTN";
        let FPAtomic = data_vt.isFP;
     }
   }
@@ -2381,7 +2368,7 @@ multiclass FLAT_Real_AllAddr_SVE_vi<bits<7> op> {
 }
 
 multiclass FLAT_Real_AllAddr_LDS<bits<7> op, bits<7> pre_gfx940_op,
-  string pre_gfx940_name = !subst("_lds", "", !cast<FLAT_Pseudo>(NAME).PseudoInstr),
+  string pre_gfx940_name = !subst("_lds", "", !cast<FLAT_Pseudo>(NAME).Mnemonic),
   bit has_sccb = !cast<FLAT_Pseudo>(NAME).has_sccb> {
 
   let OtherPredicates = [isGFX8GFX9NotGFX940] in {
@@ -2681,7 +2668,7 @@ multiclass FLAT_Real_ScratchAllAddr_gfx10<bits<7> op> :
   FLAT_Real_ST_gfx10<op>;
 
 multiclass FLAT_Real_AllAddr_LDS_gfx10<bits<7> op,
-  string opname = !subst("_lds", "", !cast<FLAT_Pseudo>(NAME).PseudoInstr)> {
+  string opname = !subst("_lds", "", !cast<FLAT_Pseudo>(NAME).Mnemonic)> {
   let AsmString = opname # !cast<FLAT_Pseudo>(NAME).AsmOperands # " lds" in
   defm "" : FLAT_Real_Base_gfx10<op>;
 
@@ -2690,7 +2677,7 @@ multiclass FLAT_Real_AllAddr_LDS_gfx10<bits<7> op,
 }
 
 multiclass FLAT_Real_ScratchAllAddr_LDS_gfx10<bits<7> op,
-  string opname = !subst("_lds", "", !cast<FLAT_Pseudo>(NAME).PseudoInstr)> {
+  string opname = !subst("_lds", "", !cast<FLAT_Pseudo>(NAME).Mnemonic)> {
   defm "" : FLAT_Real_AllAddr_LDS_gfx10<op>;
 
   let AsmString = opname # !cast<FLAT_Pseudo>(NAME#"_ST").AsmOperands # " lds" in
