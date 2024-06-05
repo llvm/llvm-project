@@ -182,9 +182,8 @@ struct OffloadModuleOpts {
           Opts.OpenMPThreadSubscription, Opts.OpenMPNoThreadState,
           Opts.OpenMPNoNestedParallelism, Opts.OpenMPVersion, Opts.NoGPULib);
 
-      if (!Opts.OMPHostIRFile.empty()) {
+      if (!Opts.OMPHostIRFile.empty())
         offloadMod.setHostIRFilePath(Opts.OMPHostIRFile);
-      }
     }
   }
 }

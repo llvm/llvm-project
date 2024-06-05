@@ -765,9 +765,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fopenmp");
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
 
-      // FIXME: Clang supports a whole bunch more flags here.
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
+
+      // FIXME: Clang supports a whole bunch more flags here.
       break;
     default:
       // By default, if Clang doesn't know how to generate useful OpenMP code
