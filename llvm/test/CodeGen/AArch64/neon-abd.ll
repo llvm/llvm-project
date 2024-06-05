@@ -554,19 +554,11 @@ define <16 x i8> @umaxmin_v16i8_com1(<16 x i8> %0, <16 x i8> %1) {
   ret <16 x i8> %sub
 }
 
-; TODO: (abds x, y) upper bits are known zero if x and y have extra sign bits
+; (abds x, y) upper bits are known zero if x and y have extra sign bits
 define <4 x i16> @combine_sabd_4h_zerosign(<4 x i16> %a, <4 x i16> %b) #0 {
 ; CHECK-LABEL: combine_sabd_4h_zerosign:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI41_0
-; CHECK-NEXT:    adrp x9, .LCPI41_1
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI41_0]
-; CHECK-NEXT:    ldr d3, [x9, :lo12:.LCPI41_1]
-; CHECK-NEXT:    sshl v0.4h, v0.4h, v2.4h
-; CHECK-NEXT:    sshl v1.4h, v1.4h, v3.4h
-; CHECK-NEXT:    movi v2.4h, #128, lsl #8
-; CHECK-NEXT:    sabd v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   %a.ext = ashr <4 x i16> %a, <i16 7, i16 8, i16 9, i16 10>
   %b.ext = ashr <4 x i16> %b, <i16 11, i16 12, i16 13, i16 14>
