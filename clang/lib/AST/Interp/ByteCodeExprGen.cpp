@@ -3080,12 +3080,22 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
     }
   }
 
-  // Return the value
-  if (VarT)
-    return this->emitRet(*VarT, VD);
-
-  // Return non-primitive values as pointers here.
-  return this->emitRet(PT_Ptr, VD);
+  // Return the value.
+  if (!this->emitRet(VarT.value_or(PT_Ptr), VD)) {
+    // If the Ret above failed and this is a global variable, mark it as
+    // uninitialized, even everything else succeeded.
+    if (Context::shouldBeGloballyIndexed(VD)) {
+      auto GlobalIndex = P.getGlobal(VD);
+      assert(GlobalIndex);
+      Block *GlobalBlock = P.getGlobal(*GlobalIndex);
+      InlineDescriptor &ID =
+          *reinterpret_cast<InlineDescriptor *>(GlobalBlock->rawData());
+      ID.IsInitialized = false;
+      GlobalBlock->invokeDtor();
+    }
+    return false;
+  }
+  return true;
 }
 
 template <class Emitter>
