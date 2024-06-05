@@ -158,6 +158,26 @@ void RawBufferAtomicFAddOp::print(mlir::OpAsmPrinter &p) {
 }
 
 // <operation> ::=
+//     `llvm.amdgcn.global.atomic.fadd.* %vdata, %ptr
+ParseResult GlobalAtomicFAddOp::parse(OpAsmParser &parser,
+                                      OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
+  Type type;
+  if (parser.parseOperandList(ops, 2) || parser.parseColonType(type))
+    return failure();
+
+  auto ptrType = LLVM::LLVMPointerType::get(parser.getContext());
+  if (parser.resolveOperands(ops, {ptrType, type}, parser.getNameLoc(),
+                             result.operands))
+    return failure();
+  return success();
+}
+
+void GlobalAtomicFAddOp::print(mlir::OpAsmPrinter &p) {
+  p << " " << getOperands() << " : " << getVdata().getType();
+}
+
+// <operation> ::=
 //     `llvm.amdgcn.raw.buffer.atomic.fmax.* %vdata, %rsrc,  %offset,
 //     %soffset, %aux : result_type`
 ParseResult RawBufferAtomicFMaxOp::parse(OpAsmParser &parser,

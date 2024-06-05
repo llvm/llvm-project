@@ -165,7 +165,7 @@ def ROCDL_BallotOp :
   let summary = "Vote across thread group";
 
   let description = [{
-      Ballot provides a bit mask containing the 1-bit predicate value from each lane. 
+      Ballot provides a bit mask containing the 1-bit predicate value from each lane.
       The nth bit of the result contains the 1 bit contributed by the nth warp lane.
   }];
 
@@ -516,7 +516,7 @@ def ROCDL_RawBufferAtomicCmpSwap :
 }
 
 //===---------------------------------------------------------------------===//
-// MI-100 and MI-200 buffer atomic floating point add intrinsic
+// MI-100, MI-200 and MI-300 global/buffer atomic floating point add intrinsic
 
 def ROCDL_RawBufferAtomicFAddOp :
   ROCDL_Op<"raw.buffer.atomic.fadd">,
@@ -530,6 +530,19 @@ def ROCDL_RawBufferAtomicFAddOp :
       createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_fadd, {$vdata, $rsrc,
             $offset, $soffset, $aux}, {vdataType});
+  }];
+  let hasCustomAssemblyFormat = 1;
+}
+
+def ROCDL_GlobalAtomicFAddOp :
+  ROCDL_Op<"global.atomic.fadd">,
+  Arguments<(ins LLVM_Type:$ptr,
+                 LLVM_Type:$vdata)>{
+  string llvmBuilder = [{
+      auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+      auto ptrType = moduleTranslation.convertType(op.getPtr().getType());
+      createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_global_atomic_fadd, {$ptr, $vdata}, {vdataType, ptrType, vdataType});
   }];
   let hasCustomAssemblyFormat = 1;
 }

@@ -494,6 +494,15 @@ llvm.func @rocdl.raw.buffer.atomic.f32(%rsrc : vector<4xi32>,
   llvm.return
 }
 
+// CHECK-LABEL: rocdl.global.atomic
+llvm.func @rocdl.global.atomic(%vdata0 : f32, %vdata1 : vector<2xf16>, %ptr : !llvm.ptr) {
+  // CHECK: call float @llvm.amdgcn.global.atomic.fadd.f32.p0.f32(ptr %{{.*}}, float %{{.*}}
+  rocdl.global.atomic.fadd %ptr, %vdata0: f32
+  // CHECK: call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p0.v2f16(ptr %{{.*}}, <2 x half> %{{.*}})
+  rocdl.global.atomic.fadd %ptr, %vdata1: vector<2xf16>
+  llvm.return
+}
+
 llvm.func @rocdl.raw.buffer.atomic.i32(%rsrc : vector<4xi32>,
                         %offset : i32, %soffset : i32,
                         %vdata1 : i32) {
