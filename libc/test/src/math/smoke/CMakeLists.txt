@@ -2515,8 +2515,10 @@ add_fp_unittest(
   HDRS
     NextAfterTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nextafter
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2529,8 +2531,10 @@ add_fp_unittest(
   HDRS
     NextAfterTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nextafterf
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2543,8 +2547,26 @@ add_fp_unittest(
   HDRS
     NextAfterTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nextafterl
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  nextafterf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafterf16_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nextafterf16
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2557,8 +2579,10 @@ add_fp_unittest(
   HDRS
     NextAfterTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nextafterf128
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
