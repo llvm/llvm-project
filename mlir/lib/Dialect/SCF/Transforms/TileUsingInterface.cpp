@@ -941,7 +941,7 @@ LogicalResult mlir::scf::yieldReplacementForFusedProducer(
     RewriterBase &rewriter, tensor::ExtractSliceOp sliceOp,
     scf::SCFFuseProducerOfSliceResult fusedProducerInfo,
     MutableArrayRef<LoopLikeOpInterface> loops,
-    std::optional<ArrayRef<unsigned>> yieldResultNumber) {
+    ArrayRef<unsigned> yieldResultNumber) {
   if (loops.empty())
     return success();
 
@@ -951,9 +951,9 @@ LogicalResult mlir::scf::yieldReplacementForFusedProducer(
   Location loc = originalOwner->getLoc();
   // a. collect all init Value to be appended
   ArrayRef<unsigned> initNumberList =
-      yieldResultNumber ? yieldResultNumber.value()
-                        : llvm::to_vector(llvm::seq<unsigned>(
-                              0, originalOwner->getNumResults()));
+      yieldResultNumber.empty() ? llvm::to_vector(llvm::seq<unsigned>(
+                                      0, originalOwner->getNumResults()))
+                                : yieldResultNumber;
   SmallVector<Value> initValueList;
   for (const auto &resultNumber : initNumberList) {
     FailureOr<Value> initValue = tensor::getOrCreateDestination(

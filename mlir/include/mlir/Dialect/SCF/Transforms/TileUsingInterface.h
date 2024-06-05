@@ -198,7 +198,7 @@ LogicalResult yieldReplacementForFusedProducer(
     RewriterBase &rewriter, tensor::ExtractSliceOp sliceOp,
     scf::SCFFuseProducerOfSliceResult fusedProducerInfo,
     MutableArrayRef<LoopLikeOpInterface> loops,
-    std::optional<ArrayRef<unsigned>> yieldResultNumber = std::nullopt);
+    ArrayRef<unsigned> yieldResultNumber = ArrayRef<unsigned>{});
 
 /// Transformation information returned after tile and fuse.
 struct SCFTileAndFuseResult {
