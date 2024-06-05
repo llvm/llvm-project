@@ -240,29 +240,13 @@ void AArch64::ExtensionSet::addArchDefaults(const ArchInfo &Arch) {
       enable(E.ID);
 }
 
-bool AArch64::ExtensionSet::parseCmdLineOptModifier(StringRef Modifier) {
-  LLVM_DEBUG(llvm::dbgs() << "parseCmdLineOptModifier(" << Modifier << ")\n");
-
-  bool IsNegated = Modifier.starts_with("no");
-  StringRef ArchExt = IsNegated ? Modifier.drop_front(2) : Modifier;
-
-  if (auto AE = parseArchExtension(ArchExt)) {
-    if (AE->Feature.empty() || AE->NegFeature.empty())
-      return false;
-    if (IsNegated)
-      disable(AE->ID);
-    else
-      enable(AE->ID);
-    return true;
-  }
-  return false;
-}
-
-bool AArch64::ExtensionSet::parseAttributeModifier(StringRef Modifier) {
-  LLVM_DEBUG(llvm::dbgs() << "parseAttributeModifier(" << Modifier << ")\n");
+bool AArch64::ExtensionSet::parseModifier(StringRef Modifier,
+                                          const bool AllowNoDashForm) {
+  LLVM_DEBUG(llvm::dbgs() << "parseModifier(" << Modifier << ")\n");
 
   size_t NChars = 0;
-  if (Modifier.starts_with("no-"))
+  // The "no-feat" form is allowed in the target attribute but nowhere else.
+  if (AllowNoDashForm && Modifier.starts_with("no-"))
     NChars = 3;
   else if (Modifier.starts_with("no"))
     NChars = 2;

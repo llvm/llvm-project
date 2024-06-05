@@ -571,15 +571,8 @@ struct ExtensionSet {
   // Add or remove a feature based on a modifier string. The string must be of
   // the form "<name>" to enable a feature or "no<name>" to disable it. This
   // will also enable or disable any features as required by the dependencies
-  // between them. The function is used for command line option parsing.
-  bool parseCmdLineOptModifier(StringRef Modifier);
-
-  // Add or remove a feature based on a modifier string. The string must be of
-  // the form "<name>" to enable a feature or "no(-)<name>" to disable it. This
-  // will also enable or disable any features as required by the dependencies
-  // between them. The function is used for target(_version/_clones) attribute
-  // parsing.
-  bool parseAttributeModifier(StringRef Modifier);
+  // between them.
+  bool parseModifier(StringRef Modifier, const bool AllowNoDashForm = false);
 
   // Constructs a new ExtensionSet by toggling the corresponding bits for every
   // feature in the \p Features list without expanding their dependencies. Used

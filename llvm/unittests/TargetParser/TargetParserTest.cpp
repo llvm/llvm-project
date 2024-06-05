@@ -2303,7 +2303,7 @@ TEST_P(AArch64ExtensionDependenciesBaseArchTestFixture,
   llvm::AArch64::ExtensionSet Extensions;
   Extensions.addArchDefaults(Params.Arch);
   for (auto M : Params.Modifiers) {
-    bool success = Extensions.parseCmdLineOptModifier(M);
+    bool success = Extensions.parseModifier(M);
     EXPECT_TRUE(success);
   }
   std::vector<StringRef> Features;
@@ -2337,7 +2337,7 @@ TEST_P(AArch64ExtensionDependenciesBaseCPUTestFixture,
   EXPECT_TRUE(CPU);
   Extensions.addCPUDefaults(*CPU);
   for (auto M : Params.Modifiers) {
-    bool success = Extensions.parseCmdLineOptModifier(M);
+    bool success = Extensions.parseModifier(M);
     EXPECT_TRUE(success);
   }
   std::vector<StringRef> Features;

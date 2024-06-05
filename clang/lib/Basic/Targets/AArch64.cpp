@@ -1076,7 +1076,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
     SmallVector<StringRef, 8> SplitFeatures;
     FeatString.split(SplitFeatures, StringRef("+"), -1, false);
     for (StringRef Feature : SplitFeatures) {
-      if (FeatureBits.parseAttributeModifier(Feature))
+      if (FeatureBits.parseModifier(Feature, /* AllowNoDashForm = */ true))
         continue;
       // Pass through features that are not extensions, e.g. +v8.1a,
       // +outline-atomics, -fmv, etc.
@@ -1138,7 +1138,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
     } else if (Feature.starts_with("+")) {
       SplitAndAddFeatures(Feature, Ret.Features, FeatureBits);
     } else {
-      if (FeatureBits.parseAttributeModifier(Feature))
+      if (FeatureBits.parseModifier(Feature, /* AllowNoDashForm = */ true))
         continue;
       // Pass through features that are not extensions, e.g. +v8.1a,
       // +outline-atomics, -fmv, etc.
