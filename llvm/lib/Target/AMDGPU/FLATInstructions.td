@@ -1291,8 +1291,8 @@ class GlobalLoadSaddrPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueTy
   (inst $saddr, $voffset, $offset, $cpol)
 >;
 
-class GlobalStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
-                           ValueType vt> : GCNPat <
+class FlatStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
+                         ValueType vt> : GCNPat <
   (node vt:$data, (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol)),
   (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset, $cpol)
 >;
@@ -1547,7 +1547,7 @@ multiclass GlobalFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
     let AddedComplexity = 10;
   }
 
-  def : GlobalStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+  def : FlatStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
     let AddedComplexity = 11;
   }
 }
@@ -1668,6 +1668,15 @@ multiclass FlatLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, ValueType 
   }
 }
 
+multiclass FlatStorePats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatStorePat <inst, node, vt>;
+
+  def : FlatStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 9;
+    let SubtargetPredicate = HasFlatGVSMode;
+  }
+}
+
 let OtherPredicates = [HasFlatAddressSpace] in {
 
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
@@ -1689,32 +1698,32 @@ defm : FlatLoadPats <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
 defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_32_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_DWORDX2, atomic_load_64_flat, i64>;
 
-def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i32>;
-def : FlatStorePat <FLAT_STORE_SHORT, truncstorei16_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_SHORT, truncstorei16_flat, i32>;
 
 foreach vt = Reg32Types.types in {
 defm : FlatLoadPats <FLAT_LOAD_DWORD, load_flat, vt>;
-def : FlatStorePat <FLAT_STORE_DWORD, store_flat, vt>;
+defm : FlatStorePats <FLAT_STORE_DWORD, store_flat, vt>;
 }
 
 foreach vt = VReg_64.RegTypes in {
-def : FlatStorePat <FLAT_STORE_DWORDX2, store_flat, vt>;
+defm : FlatStorePats <FLAT_STORE_DWORDX2, store_flat, vt>;
 defm : FlatLoadPats <FLAT_LOAD_DWORDX2, load_flat, vt>;
 }
 
-def : FlatStorePat <FLAT_STORE_DWORDX3, store_flat, v3i32>;
+defm : FlatStorePats <FLAT_STORE_DWORDX3, store_flat, v3i32>;
 
 foreach vt = VReg_128.RegTypes in {
 defm : FlatLoadPats <FLAT_LOAD_DWORDX4, load_flat, vt>;
-def : FlatStorePat <FLAT_STORE_DWORDX4, store_flat, vt>;
+defm : FlatStorePats <FLAT_STORE_DWORDX4, store_flat, vt>;
 }
 
-def : FlatStorePat <FLAT_STORE_DWORD, atomic_store_32_flat, i32>;
-def : FlatStorePat <FLAT_STORE_DWORDX2, atomic_store_64_flat, i64>;
-def : FlatStorePat <FLAT_STORE_BYTE, atomic_store_8_flat, i32>;
-def : FlatStorePat <FLAT_STORE_BYTE, atomic_store_8_flat, i16>;
-def : FlatStorePat <FLAT_STORE_SHORT, atomic_store_16_flat, i32>;
-def : FlatStorePat <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
+defm : FlatStorePats <FLAT_STORE_DWORD, atomic_store_32_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_DWORDX2, atomic_store_64_flat, i64>;
+defm : FlatStorePats <FLAT_STORE_BYTE, atomic_store_8_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_BYTE, atomic_store_8_flat, i16>;
+defm : FlatStorePats <FLAT_STORE_SHORT, atomic_store_16_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
 
 foreach as = [ "flat", "global" ] in {
 defm : FlatAtomicPat <"FLAT_ATOMIC_ADD", "atomic_load_add_"#as, i32>;
@@ -1753,12 +1762,12 @@ let SubtargetPredicate = isGFX12Plus in {
     defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
 }
 
-def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
-def : FlatStorePat <FLAT_STORE_SHORT, store_flat, i16>;
+defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
+defm : FlatStorePats <FLAT_STORE_SHORT, store_flat, i16>;
 
 let OtherPredicates = [HasD16LoadStore] in {
-def : FlatStorePat <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;
-def : FlatStorePat <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;
+defm : FlatStorePats <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
 }
 
 let OtherPredicates = [D16PreservesUnusedBits] in {

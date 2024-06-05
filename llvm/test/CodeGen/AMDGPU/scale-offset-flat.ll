@@ -308,25 +308,11 @@ entry:
 }
 
 define amdgpu_ps void @flat_store_b32_idxprom(ptr align 4 inreg %p, i32 %idx) {
-; SDAG-LABEL: flat_store_b32_idxprom:
-; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    v_dual_mov_b32 v2, 1.0 :: v_dual_ashrrev_i32 v1, 31, v0
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 2, s[0:1]
-; SDAG-NEXT:    flat_store_b32 v[0:1], v2
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: flat_store_b32_idxprom:
-; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    v_dual_mov_b64 v[2:3], s[0:1] :: v_dual_ashrrev_i32 v1, 31, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
-; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
-; GISEL-NEXT:    v_mov_b32_e32 v2, 1.0
-; GISEL-NEXT:    flat_store_b32 v[0:1], v2
-; GISEL-NEXT:    s_endpgm
+; GCN-LABEL: flat_store_b32_idxprom:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_mov_b32_e32 v1, 1.0
+; GCN-NEXT:    flat_store_b32 v0, v1, s[0:1] scale_offset
+; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds float, ptr %p, i64 %idxprom
@@ -335,25 +321,11 @@ entry:
 }
 
 define amdgpu_ps void @flat_store_b16_idxprom(ptr align 2 inreg %p, i32 %idx) {
-; SDAG-LABEL: flat_store_b16_idxprom:
-; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    v_dual_mov_b32 v2, 1 :: v_dual_ashrrev_i32 v1, 31, v0
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 1, s[0:1]
-; SDAG-NEXT:    flat_store_b16 v[0:1], v2
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: flat_store_b16_idxprom:
-; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    v_dual_mov_b64 v[2:3], s[0:1] :: v_dual_ashrrev_i32 v1, 31, v0
-; GISEL-NEXT:    v_mov_b32_e32 v4, 1
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 1, v[0:1]
-; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
-; GISEL-NEXT:    flat_store_b16 v[0:1], v4
-; GISEL-NEXT:    s_endpgm
+; GCN-LABEL: flat_store_b16_idxprom:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    flat_store_b16 v0, v1, s[0:1] scale_offset
+; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds i16, ptr %p, i64 %idxprom
@@ -362,25 +334,11 @@ entry:
 }
 
 define amdgpu_ps void @flat_store_b64_idxprom(ptr align 4 inreg %p, i32 %idx) {
-; SDAG-LABEL: flat_store_b64_idxprom:
-; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    v_dual_mov_b64 v[2:3], 1.0 :: v_dual_ashrrev_i32 v1, 31, v0
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 3, s[0:1]
-; SDAG-NEXT:    flat_store_b64 v[0:1], v[2:3]
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: flat_store_b64_idxprom:
-; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    v_dual_mov_b64 v[2:3], s[0:1] :: v_dual_ashrrev_i32 v1, 31, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[0:1]
-; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], 1.0
-; GISEL-NEXT:    flat_store_b64 v[0:1], v[2:3]
-; GISEL-NEXT:    s_endpgm
+; GCN-LABEL: flat_store_b64_idxprom:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_mov_b64_e32 v[2:3], 1.0
+; GCN-NEXT:    flat_store_b64 v0, v[2:3], s[0:1] scale_offset
+; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds double, ptr %p, i64 %idxprom
