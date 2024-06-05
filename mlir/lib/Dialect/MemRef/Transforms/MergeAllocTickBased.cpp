@@ -226,9 +226,9 @@ struct TickCollecter {
     complexScopeStack.emplace_back(op, curTick);
   }
 
-  FailureOr<MemoryTraces> getTrace() {
+  FailureOr<MemoryTraceScopes> getTrace() {
     struct TraceWithTick {
-      Operation* op;
+      Operation *op;
       int64_t tick;
       memoryplan::MemoryTrace trace;
       TraceWithTick(int64_t tick, uintptr_t bufferId, size_t size)
@@ -255,7 +255,7 @@ struct TickCollecter {
       raw[scope].emplace_back(tick.lastAccess * 2 + 1,
                               reinterpret_cast<uintptr_t>(op), 0);
     }
-    MemoryTraces ret;
+    MemoryTraceScopes ret;
     for (auto &[scope, trace] : raw) {
       std::stable_sort(trace.begin(), trace.end(),
                        [](const TraceWithTick &a, const TraceWithTick &b) {
@@ -273,10 +273,10 @@ struct TickCollecter {
 };
 } // namespace
 
-FailureOr<MemoryTraces>
+FailureOr<MemoryTraceScopes>
 tickBasedCollectMemoryTrace(Operation *root,
                             const mlir::BufferViewFlowAnalysis &aliasAnaly,
-                            const MergeAllocOptions &option) {
+                            const MergeAllocationOptions &option) {
   TickCollecter collecter{aliasAnaly};
   LogicalResult result = success();
   root->walk<WalkOrder::PreOrder>([&](Operation *op) {
@@ -303,7 +303,7 @@ tickBasedCollectMemoryTrace(Operation *root,
   if (failed(collecter.popScopeIfNecessary(nullptr))) {
     return failure();
   }
-  if (option.optionCheck) {
+  if (option.checkOnly) {
     for (auto &[alloc, tick] : collecter.allocTicks) {
       auto allocscope = getAllocScope(alloc);
       alloc->setAttr(
@@ -316,14 +316,14 @@ tickBasedCollectMemoryTrace(Operation *root,
           IntegerAttr::get(mlir::IntegerType::get(root->getContext(), 64),
                            reinterpret_cast<int64_t>(allocscope)));
     }
-    return MemoryTraces();
+    return MemoryTraceScopes();
   }
   return collecter.getTrace();
 }
 
 FailureOr<MemorySchedule> tickBasedPlanMemory(Operation *op,
                                               const LifetimeTrace &tr,
-                                              const MergeAllocOptions &o) {
+                                              const MergeAllocationOptions &o) {
   auto traceObj = dyn_cast<TickTraceResult>(&tr);
   if (!traceObj) {
     return failure();
@@ -335,7 +335,7 @@ FailureOr<MemorySchedule> tickBasedPlanMemory(Operation *op,
   std::unordered_map<uintptr_t, std::size_t> outSchedule;
   std::unordered_map<uintptr_t, std::vector<uintptr_t>> dummy;
   auto total = memoryplan::scheduleMemoryAllocations(
-      traces, 64, !o.optionNoLocality, memoryplan::InplaceInfoMap(),
+      traces, 64, !o.noLocalityFirst, memoryplan::InplaceInfoMap(),
       outSchedule, dummy);
   MemorySchedule ret;
   ret.totalSize = total;
@@ -348,7 +348,7 @@ FailureOr<MemorySchedule> tickBasedPlanMemory(Operation *op,
 
 LogicalResult tickBasedMutateAllocations(Operation *op, Operation *scope,
                                          const MemorySchedule &schedule,
-                                         const MergeAllocOptions &o) {
+                                         const MergeAllocationOptions &o) {
   if (schedule.allocToOffset.empty()) {
     return success();
   }

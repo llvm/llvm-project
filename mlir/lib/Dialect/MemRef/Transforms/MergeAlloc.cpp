@@ -27,23 +27,22 @@ namespace memref {
 
 namespace {
 
-LogicalResult passDriver(Operation *op, const memref::MergeAllocOptions &o,
-                         TraceCollectorFunc tracer, MemoryPlannerFunc planner,
-                         MemoryMergeMutatorFunc mutator) {
+LogicalResult passDriver(Operation *op,
+                         const memref::MergeAllocationOptions &o) {
   BufferViewFlowAnalysis aliasAnaly{op};
-  auto tracesOrFail = tracer(op, aliasAnaly, o);
+  auto tracesOrFail = o.tracer(op, aliasAnaly, o);
   if (failed(tracesOrFail)) {
     return failure();
   }
-  if (o.optionCheck) {
+  if (o.checkOnly) {
     return success();
   }
   for (auto &[scope, traces] : (*tracesOrFail).scopeToTraces) {
-    auto schedule = planner(op, *traces, o);
+    auto schedule = o.planner(op, *traces, o);
     if (failed(schedule)) {
       return failure();
     }
-    if (failed(mutator(op, scope, *schedule, o))) {
+    if (failed(o.mutator(op, scope, *schedule, o))) {
       return failure();
     }
   }
@@ -54,24 +53,41 @@ LogicalResult passDriver(Operation *op, const memref::MergeAllocOptions &o,
 } // namespace memref
 
 using namespace mlir;
-struct MergeAllocPass : memref::impl::MergeAllocBase<MergeAllocPass> {
+class MergeAllocPass : public memref::impl::MergeAllocBase<MergeAllocPass> {
   using parent = memref::impl::MergeAllocBase<MergeAllocPass>;
   void runOnOperation() override {
+    memref::MergeAllocationOptions opt;
+    if (!options) {
+      opt.checkOnly = optionCheck;
+      opt.noLocalityFirst = optionNoLocality;
+      opt.tracer = memref::tickBasedCollectMemoryTrace;
+      opt.planner = memref::tickBasedPlanMemory;
+      opt.mutator = memref::tickBasedMutateAllocations;
+    } else {
+      opt = options.value();
+      if (!opt.tracer)
+        opt.tracer = memref::tickBasedCollectMemoryTrace;
+      if (!opt.planner)
+        opt.planner = memref::tickBasedPlanMemory;
+      if (!opt.mutator)
+        opt.mutator = memref::tickBasedMutateAllocations;
+    }
     auto op = getOperation();
-    if (failed(memref::passDriver(
-            op, memref::MergeAllocOptions{optionCheck, optionNoLocality},
-            memref::tickBasedCollectMemoryTrace, memref::tickBasedPlanMemory,
-            memref::tickBasedMutateAllocations))) {
-        signalPassFailure();
+    if (failed(memref::passDriver(op, opt))) {
+      signalPassFailure();
     }
   }
 
+  std::optional<memref::MergeAllocationOptions> options;
+
 public:
-  MergeAllocPass(const memref::MergeAllocOptions &o) : parent{o} {}
+  MergeAllocPass() = default;
+  explicit MergeAllocPass(const memref::MergeAllocationOptions &o)
+      : options{std::move(o)} {}
 };
 } // namespace mlir
 
 std::unique_ptr<mlir::Pass>
-mlir::memref::createMergeAllocPass(const memref::MergeAllocOptions &o) {
+mlir::memref::createMergeAllocPass(const memref::MergeAllocationOptions &o) {
   return std::make_unique<MergeAllocPass>(o);
 }

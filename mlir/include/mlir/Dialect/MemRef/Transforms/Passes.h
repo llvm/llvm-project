@@ -36,6 +36,7 @@ namespace vector {
 class VectorDialect;
 } // namespace vector
 
+class BufferViewFlowAnalysis;
 namespace memref {
 //===----------------------------------------------------------------------===//
 // Passes
@@ -77,9 +78,58 @@ std::unique_ptr<Pass> createExpandStridedMetadataPass();
 /// components.
 std::unique_ptr<Pass> createExpandReallocPass(bool emitDeallocs = true);
 
+// abstract base class for lifetime of different buffers. It should hold the
+// lifetime informantion of buffers that are to be merged in the same allocation
+// in an "allocation scope". TraceCollectorFunc decides which buffers are put
+// into which "allocation scope".
+class LifetimeTrace {
+public:
+  enum TraceKind { TK_TICK };
+  virtual ~LifetimeTrace() = default;
+  LifetimeTrace(TraceKind kind) : kind{kind} {}
+  TraceKind getKind() const { return kind; }
+
+private:
+  TraceKind kind;
+};
+
+// top level memory trace info for multiple scopes. Each key-value is the
+// traces and location for buffers in the same "allocation scope"
+struct MemoryTraceScopes {
+  llvm::DenseMap<Operation *, std::unique_ptr<LifetimeTrace>> scopeToTraces;
+  MemoryTraceScopes() = default;
+};
+
+// the memory scheduling result for allocations in the same merged buffer.
+// allocation => offset map. All Operation* in the map should be memref::AllocOp
+// which are in the same LifetimeTrace.
+struct MemorySchedule {
+  size_t totalSize;
+  llvm::DenseMap<Operation *, int64_t> allocToOffset;
+  MemorySchedule() : totalSize{0} {}
+};
+
+struct MergeAllocationOptions;
+using TraceCollectorFunc = std::function<FailureOr<MemoryTraceScopes>(
+    Operation *, const BufferViewFlowAnalysis &,
+    const MergeAllocationOptions &)>;
+using MemoryPlannerFunc = std::function<FailureOr<MemorySchedule>(
+    Operation *, const LifetimeTrace &, const MergeAllocationOptions &)>;
+using MemoryMergeMutatorFunc = std::function<LogicalResult(
+    Operation *toplevel, Operation *scope, const MemorySchedule &,
+    const MergeAllocationOptions &)>;
+
+struct MergeAllocationOptions {
+  bool checkOnly;
+  bool noLocalityFirst;
+  TraceCollectorFunc tracer;
+  MemoryPlannerFunc planner;
+  MemoryMergeMutatorFunc mutator;
+};
+
 /// Creates an operation pass to merge the local memref allocations
 std::unique_ptr<Pass>
-createMergeAllocPass(const memref::MergeAllocOptions &o = {});
+createMergeAllocPass(const MergeAllocationOptions &o = {});
 
 //===----------------------------------------------------------------------===//
 // Registration
