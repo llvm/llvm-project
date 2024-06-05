@@ -544,6 +544,7 @@ public:
     // of the same sign but different exponent. In such a case, ULP error is
     // calculated as sum of two parts.
 #ifdef LIBC_TYPES_HAS_FLOAT16
+    // TODO: This will no longer be needed once std::abs supports float16.
     using U = cpp::conditional_t<cpp::is_same_v<T, float16>, float, T>;
 #else
     using U = T;
