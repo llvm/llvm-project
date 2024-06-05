@@ -679,6 +679,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"canonicalize", RetValSpec<IntType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"canonicalizef", RetValSpec<IntType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"canonicalizel", RetValSpec<IntType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"canonicalizef16", RetValSpec<IntType>, [ArgSpec<Float16Type>, ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"canonicalizef128", RetValSpec<IntType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
       ]
   >;
