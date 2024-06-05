@@ -593,15 +593,13 @@ static llvm::Error Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
 
   // 1. Find the function which pushed the current frame onto the stack.
   if ((!exe_ctx || !exe_ctx->HasTargetScope()) || !reg_ctx) {
-    return llvm::createStringError(
-        "Evaluate_DW_OP_entry_value: no exe/reg context");
+    return llvm::createStringError("no exe/reg context");
   }
 
   StackFrame *current_frame = exe_ctx->GetFramePtr();
   Thread *thread = exe_ctx->GetThreadPtr();
   if (!current_frame || !thread)
-    return llvm::createStringError(
-        "Evaluate_DW_OP_entry_value: no current frame/thread");
+    return llvm::createStringError("no current frame/thread");
 
   Target &target = exe_ctx->GetTargetRef();
   StackFrameSP parent_frame = nullptr;
@@ -619,9 +617,7 @@ static llvm::Error Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
     // parent frame.
     if (return_pc == LLDB_INVALID_ADDRESS) {
       return_pc = parent_frame->GetFrameCodeAddress().GetLoadAddress(&target);
-      LLDB_LOG(log,
-               "Evaluate_DW_OP_entry_value: immediate ancestor with pc = {0:x}",
-               return_pc);
+      LLDB_LOG(log, "immediate ancestor with pc = {0:x}", return_pc);
     }
 
     // If we've found an inlined frame, skip it (these have no call site
@@ -633,23 +629,20 @@ static llvm::Error Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
     break;
   }
   if (!parent_frame || !parent_frame->GetRegisterContext()) {
-    return llvm::createStringError(
-        "Evaluate_DW_OP_entry_value: no parent frame with reg ctx");
+    return llvm::createStringError("no parent frame with reg ctx");
   }
 
   Function *parent_func =
       parent_frame->GetSymbolContext(eSymbolContextFunction).function;
   if (!parent_func)
-    return llvm::createStringError(
-        "Evaluate_DW_OP_entry_value: no parent function");
+    return llvm::createStringError("no parent function");
 
   // 2. Find the call edge in the parent function responsible for creating the
   //    current activation.
   Function *current_func =
       current_frame->GetSymbolContext(eSymbolContextFunction).function;
   if (!current_func)
-    return llvm::createStringError(
-        "Evaluate_DW_OP_entry_value: no current function");
+    return llvm::createStringError("no current function");
 
   CallEdge *call_edge = nullptr;
   ModuleList &modlist = target.GetImages();
@@ -660,16 +653,14 @@ static llvm::Error Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
     // produced by an ambiguous tail call. In this case, refuse to proceed.
     call_edge = parent_func->GetCallEdgeForReturnAddress(return_pc, target);
     if (!call_edge) {
-      return llvm::createStringError(llvm::formatv(
-          "Evaluate_DW_OP_entry_value: no call edge for retn-pc = {0:x} "
-          "in parent frame {1}",
-          return_pc, parent_func->GetName()));
+      return llvm::createStringError(
+          llvm::formatv("no call edge for retn-pc = {0:x} in parent frame {1}",
+                        return_pc, parent_func->GetName()));
     }
     Function *callee_func = call_edge->GetCallee(modlist, parent_exe_ctx);
     if (callee_func != current_func) {
       return llvm::createStringError(
-          "Evaluate_DW_OP_entry_value: ambiguous call sequence, "
-          "can't find real parent frame");
+          "ambiguous call sequence, can't find real parent frame");
     }
   } else {
     // The StackFrameList solver machinery has deduced that an unambiguous tail
@@ -683,9 +674,8 @@ static llvm::Error Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
     }
   }
   if (!call_edge)
-    return llvm::createStringError(
-        "Evaluate_DW_OP_entry_value: no unambiguous edge from parent "
-        "to current function");
+    return llvm::createStringError("no unambiguous edge from parent "
+                                   "to current function");
 
   // 3. Attempt to locate the DW_OP_entry_value expression in the set of
   //    available call site parameters. If found, evaluate the corresponding
@@ -693,8 +683,7 @@ static llvm::Error Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   const uint32_t subexpr_len = opcodes.GetULEB128(&opcode_offset);
   const void *subexpr_data = opcodes.GetData(&opcode_offset, subexpr_len);
   if (!subexpr_data)
-    return llvm::createStringError(
-        "Evaluate_DW_OP_entry_value: subexpr could not be read");
+    return llvm::createStringError("subexpr could not be read");
 
   const CallSiteParameter *matched_param = nullptr;
   for (const CallSiteParameter &param : call_edge->GetCallSiteParameters()) {
@@ -721,8 +710,7 @@ static llvm::Error Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
     }
   }
   if (!matched_param)
-    return llvm::createStringError(
-        "Evaluate_DW_OP_entry_value: no matching call site param found");
+    return llvm::createStringError("no matching call site param found");
 
   // TODO: Add support for DW_OP_push_object_address within a DW_OP_entry_value
   // subexpresion whenever llvm does.
@@ -2418,7 +2406,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_entry_value: {
       if (llvm::Error err = Evaluate_DW_OP_entry_value(stack, exe_ctx, reg_ctx,
                                                        opcodes, offset, log))
-        return err;
+        return llvm::createStringError(
+            "could not evaluate DW_OP_entry_value: %s",
+            llvm::toString(std::move(err)).c_str());
       break;
     }
 
