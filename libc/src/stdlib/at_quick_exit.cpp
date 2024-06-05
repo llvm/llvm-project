@@ -9,6 +9,7 @@
 #include "src/stdlib/at_quick_exit.h"
 #include "src/__support/common.h"
 #include "src/stdlib/exit_handler.h"
+
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, at_quick_exit, (StdCAtExitCallback * callback)) {
