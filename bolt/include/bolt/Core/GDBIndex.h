@@ -46,9 +46,8 @@ public:
   void addGDBTypeUnitEntry(const GDBIndexTUEntry &&Entry);
 
   /// Rewrite .gdb_index section if present.
-  void updateGdbIndexSection(
-      CUOffsetMap &CUMap, uint32_t NumCUs,
-      DebugARangesSectionWriter &ARangesSectionWriter);
+  void updateGdbIndexSection(CUOffsetMap &CUMap, uint32_t NumCUs,
+                             DebugARangesSectionWriter &ARangesSectionWriter);
 
   /// Returns all entries needed for Types CU list.
   const GDBIndexTUEntryType &getGDBIndexTUEntryVector() const {
