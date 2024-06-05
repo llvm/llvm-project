@@ -342,6 +342,7 @@ def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4", [1]
 //===---------------------------------------------------------------------===//
 
 def ROCDLBufferRsrc : LLVM_PointerInAddressSpace<8>;
+def ROCDLGlobalPtr: LLVM_PointerInAddressSpace<1>;
 
 def ROCDL_MakeBufferRsrcOp :
   ROCDL_IntrOp<"make.buffer.rsrc", [], [0], [Pure], 1>,
@@ -516,7 +517,7 @@ def ROCDL_RawBufferAtomicCmpSwap :
 }
 
 //===---------------------------------------------------------------------===//
-// MI-100, MI-200 and MI-300 global/buffer atomic floating point add intrinsic
+// gfx9x global/buffer atomic floating point add intrinsics
 
 def ROCDL_RawBufferAtomicFAddOp :
   ROCDL_Op<"raw.buffer.atomic.fadd">,
@@ -536,7 +537,7 @@ def ROCDL_RawBufferAtomicFAddOp :
 
 def ROCDL_GlobalAtomicFAddOp :
   ROCDL_Op<"global.atomic.fadd">,
-  Arguments<(ins LLVM_Type:$ptr,
+  Arguments<(ins ROCDLGlobalPtr:$ptr,
                  LLVM_Type:$vdata)>{
   string llvmBuilder = [{
       auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
@@ -544,7 +545,7 @@ def ROCDL_GlobalAtomicFAddOp :
       createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_global_atomic_fadd, {$ptr, $vdata}, {vdataType, ptrType, vdataType});
   }];
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "operands attr-dict `:` type($vdata)";
 }
 
 //===---------------------------------------------------------------------===//
