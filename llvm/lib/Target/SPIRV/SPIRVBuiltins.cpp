@@ -1020,9 +1020,17 @@ static bool generateIntelSubgroupsInst(const SPIRV::IncomingCall *Call,
   }
   const SPIRV::IntelSubgroupsBuiltin *IntelSubgroups =
       SPIRV::lookupIntelSubgroupsBuiltin(Builtin->Name);
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
 
   uint32_t OpCode = IntelSubgroups->Opcode;
+  if (Call->isSpirvOp()) {
+    bool IsSet = OpCode != SPIRV::OpSubgroupBlockWriteINTEL &&
+                 OpCode != SPIRV::OpSubgroupImageBlockWriteINTEL;
+    return buildOpFromWrapper(MIRBuilder, OpCode, Call,
+                              IsSet ? GR->getSPIRVTypeID(Call->ReturnType)
+                                    : Register(0));
+  }
+
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (IntelSubgroups->IsBlock) {
     // Minimal number or arguments set in TableGen records is 1
     if (SPIRVType *Arg0Type = GR->getSPIRVTypeForVReg(Call->Arguments[0])) {
