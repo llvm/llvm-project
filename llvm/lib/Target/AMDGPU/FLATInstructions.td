@@ -1227,118 +1227,6 @@ class ScratchLoadSVaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueT
   (inst $vaddr, $saddr, $offset, 0, $in)
 >;
 
-let OtherPredicates = [HasFlatAddressSpace] in {
-
-def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i16>;
-def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i16>;
-def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_UBYTE, zextloadi8_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i16>;
-def : FlatLoadPat <FLAT_LOAD_UBYTE, zextloadi8_flat, i16>;
-def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i16>;
-def : FlatLoadPat <FLAT_LOAD_USHORT, extloadi16_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_USHORT, zextloadi16_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_USHORT, load_flat, i16>;
-def : FlatLoadPat <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
-
-def : FlatLoadPat <FLAT_LOAD_DWORD, atomic_load_32_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_DWORDX2, atomic_load_64_flat, i64>;
-
-def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i32>;
-def : FlatStorePat <FLAT_STORE_SHORT, truncstorei16_flat, i32>;
-
-foreach vt = Reg32Types.types in {
-def : FlatLoadPat <FLAT_LOAD_DWORD, load_flat, vt>;
-def : FlatStorePat <FLAT_STORE_DWORD, store_flat, vt>;
-}
-
-foreach vt = VReg_64.RegTypes in {
-def : FlatStorePat <FLAT_STORE_DWORDX2, store_flat, vt>;
-def : FlatLoadPat <FLAT_LOAD_DWORDX2, load_flat, vt>;
-}
-
-def : FlatStorePat <FLAT_STORE_DWORDX3, store_flat, v3i32>;
-
-foreach vt = VReg_128.RegTypes in {
-def : FlatLoadPat <FLAT_LOAD_DWORDX4, load_flat, vt>;
-def : FlatStorePat <FLAT_STORE_DWORDX4, store_flat, vt>;
-}
-
-def : FlatStorePat <FLAT_STORE_DWORD, atomic_store_32_flat, i32>;
-def : FlatStorePat <FLAT_STORE_DWORDX2, atomic_store_64_flat, i64>;
-def : FlatStorePat <FLAT_STORE_BYTE, atomic_store_8_flat, i32>;
-def : FlatStorePat <FLAT_STORE_BYTE, atomic_store_8_flat, i16>;
-def : FlatStorePat <FLAT_STORE_SHORT, atomic_store_16_flat, i32>;
-def : FlatStorePat <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
-
-foreach as = [ "flat", "global" ] in {
-defm : FlatAtomicPat <"FLAT_ATOMIC_ADD", "atomic_load_add_"#as, i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_SUB", "atomic_load_sub_"#as, i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_INC", "atomic_load_uinc_wrap_"#as, i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_DEC", "atomic_load_udec_wrap_"#as, i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_AND", "atomic_load_and_"#as, i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_SMAX", "atomic_load_max_"#as, i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_UMAX", "atomic_load_umax_"#as, i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_SMIN", "atomic_load_min_"#as, i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_UMIN", "atomic_load_umin_"#as, i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_OR", "atomic_load_or_"#as, i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_SWAP", "atomic_swap_"#as, i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_CMPSWAP", "AMDGPUatomic_cmp_swap_"#as, i32, v2i32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_XOR", "atomic_load_xor_"#as, i32>;
-
-defm : FlatAtomicPat <"FLAT_ATOMIC_ADD_X2", "atomic_load_add_"#as, i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_SUB_X2", "atomic_load_sub_"#as, i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_INC_X2", "atomic_load_uinc_wrap_"#as, i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_DEC_X2", "atomic_load_udec_wrap_"#as, i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_AND_X2", "atomic_load_and_"#as, i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_SMAX_X2", "atomic_load_max_"#as, i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_UMAX_X2", "atomic_load_umax_"#as, i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_SMIN_X2", "atomic_load_min_"#as, i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_UMIN_X2", "atomic_load_umin_"#as, i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_OR_X2", "atomic_load_or_"#as, i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_SWAP_X2", "atomic_swap_"#as, i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_CMPSWAP_X2", "AMDGPUatomic_cmp_swap_"#as, i64, v2i64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_XOR_X2", "atomic_load_xor_"#as, i64>;
-} // end foreach as
-
-let SubtargetPredicate = isGFX12Plus in {
-  defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32 >;
-
-  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-    defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
-}
-
-def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
-def : FlatStorePat <FLAT_STORE_SHORT, store_flat, i16>;
-
-let OtherPredicates = [HasD16LoadStore] in {
-def : FlatStorePat <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;
-def : FlatStorePat <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
-}
-
-let OtherPredicates = [D16PreservesUnusedBits] in {
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2f16>;
-
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2f16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2i16>;
-def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
-}
-
-} // End OtherPredicates = [HasFlatAddressSpace]
-
-
 multiclass GlobalFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
   def : FlatLoadSignedPat <inst, node, vt> {
     let AddedComplexity = 10;
@@ -1466,6 +1354,117 @@ multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, Val
     let AddedComplexity = 27;
   }
 }
+
+let OtherPredicates = [HasFlatAddressSpace] in {
+
+def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, zextloadi8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, zextloadi8_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, extloadi16_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, zextloadi16_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, load_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
+
+def : FlatLoadPat <FLAT_LOAD_DWORD, atomic_load_32_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_DWORDX2, atomic_load_64_flat, i64>;
+
+def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i32>;
+def : FlatStorePat <FLAT_STORE_SHORT, truncstorei16_flat, i32>;
+
+foreach vt = Reg32Types.types in {
+def : FlatLoadPat <FLAT_LOAD_DWORD, load_flat, vt>;
+def : FlatStorePat <FLAT_STORE_DWORD, store_flat, vt>;
+}
+
+foreach vt = VReg_64.RegTypes in {
+def : FlatStorePat <FLAT_STORE_DWORDX2, store_flat, vt>;
+def : FlatLoadPat <FLAT_LOAD_DWORDX2, load_flat, vt>;
+}
+
+def : FlatStorePat <FLAT_STORE_DWORDX3, store_flat, v3i32>;
+
+foreach vt = VReg_128.RegTypes in {
+def : FlatLoadPat <FLAT_LOAD_DWORDX4, load_flat, vt>;
+def : FlatStorePat <FLAT_STORE_DWORDX4, store_flat, vt>;
+}
+
+def : FlatStorePat <FLAT_STORE_DWORD, atomic_store_32_flat, i32>;
+def : FlatStorePat <FLAT_STORE_DWORDX2, atomic_store_64_flat, i64>;
+def : FlatStorePat <FLAT_STORE_BYTE, atomic_store_8_flat, i32>;
+def : FlatStorePat <FLAT_STORE_BYTE, atomic_store_8_flat, i16>;
+def : FlatStorePat <FLAT_STORE_SHORT, atomic_store_16_flat, i32>;
+def : FlatStorePat <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
+
+foreach as = [ "flat", "global" ] in {
+defm : FlatAtomicPat <"FLAT_ATOMIC_ADD", "atomic_load_add_"#as, i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_SUB", "atomic_load_sub_"#as, i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_INC", "atomic_load_uinc_wrap_"#as, i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_DEC", "atomic_load_udec_wrap_"#as, i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_AND", "atomic_load_and_"#as, i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_SMAX", "atomic_load_max_"#as, i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_UMAX", "atomic_load_umax_"#as, i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_SMIN", "atomic_load_min_"#as, i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_UMIN", "atomic_load_umin_"#as, i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_OR", "atomic_load_or_"#as, i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_SWAP", "atomic_swap_"#as, i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_CMPSWAP", "AMDGPUatomic_cmp_swap_"#as, i32, v2i32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_XOR", "atomic_load_xor_"#as, i32>;
+
+defm : FlatAtomicPat <"FLAT_ATOMIC_ADD_X2", "atomic_load_add_"#as, i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_SUB_X2", "atomic_load_sub_"#as, i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_INC_X2", "atomic_load_uinc_wrap_"#as, i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_DEC_X2", "atomic_load_udec_wrap_"#as, i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_AND_X2", "atomic_load_and_"#as, i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_SMAX_X2", "atomic_load_max_"#as, i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_UMAX_X2", "atomic_load_umax_"#as, i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_SMIN_X2", "atomic_load_min_"#as, i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_UMIN_X2", "atomic_load_umin_"#as, i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_OR_X2", "atomic_load_or_"#as, i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_SWAP_X2", "atomic_swap_"#as, i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_CMPSWAP_X2", "AMDGPUatomic_cmp_swap_"#as, i64, v2i64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_XOR_X2", "atomic_load_xor_"#as, i64>;
+} // end foreach as
+
+let SubtargetPredicate = isGFX12Plus in {
+  defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32 >;
+
+  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
+    defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
+}
+
+def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
+def : FlatStorePat <FLAT_STORE_SHORT, store_flat, i16>;
+
+let OtherPredicates = [HasD16LoadStore] in {
+def : FlatStorePat <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;
+def : FlatStorePat <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
+}
+
+let OtherPredicates = [D16PreservesUnusedBits] in {
+def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2i16>;
+def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2f16>;
+def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2i16>;
+def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2f16>;
+def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2i16>;
+def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16_HI, load_d16_hi_flat, v2f16>;
+
+def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2i16>;
+def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_d16_lo_flat, v2f16>;
+def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2i16>;
+def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16, sextloadi8_d16_lo_flat, v2f16>;
+def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2i16>;
+def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
+}
+
+} // End OtherPredicates = [HasFlatAddressSpace]
 
 let OtherPredicates = [HasFlatGlobalInsts] in {
 
