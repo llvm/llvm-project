@@ -595,7 +595,9 @@ template <> long double MPFRNumber::as<long double>() const {
 }
 
 template <> float16 MPFRNumber::as<float16>() const {
-  return static_cast<float16>(mpfr_get_flt(value, mpfr_rounding));
+  // TODO: Either prove that this cast won't cause double-rounding errors, or
+  // find a better way to get a float16.
+  return static_cast<float16>(mpfr_get_d(value, mpfr_rounding));
 }
 
 namespace internal {
