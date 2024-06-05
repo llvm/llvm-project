@@ -966,26 +966,24 @@ define i64 @fcvt_lu_s_sat(float %a) nounwind {
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lui a1, 391168
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    call __gtsf2
-; RV64I-NEXT:    sgtz a0, a0
-; RV64I-NEXT:    neg s1, a0
-; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __gesf2
 ; RV64I-NEXT:    slti a0, a0, 0
-; RV64I-NEXT:    addi s2, a0, -1
+; RV64I-NEXT:    addi s1, a0, -1
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call __fixunssfdi
-; RV64I-NEXT:    and a0, s2, a0
-; RV64I-NEXT:    or a0, s1, a0
+; RV64I-NEXT:    and s1, s1, a0
+; RV64I-NEXT:    lui a1, 391168
+; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    call __gtsf2
+; RV64I-NEXT:    sgtz a0, a0
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    or a0, a0, s1
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 start:

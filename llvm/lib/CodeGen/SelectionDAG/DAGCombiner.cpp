@@ -15592,6 +15592,20 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   if (DAG.isGuaranteedNotToBeUndefOrPoison(N0, /*PoisonOnly*/ false))
     return N0;
 
+  // AssertSext/AssertZext nodes are a bit special and need custom
+  // hendling. They are used in contexts when the result is poison only if the
+  // input is poison, but they are still modelled as "canCreateUndefOrPoison" as
+  // the value range for the result is constrained by assumptions that wouldn't
+  // hold if the input is poison (and we can't drop poison-generating flags for
+  // AssertSext/AssertZext in the regular fold below).
+  if (N0.getOpcode() == ISD::AssertSext || N0.getOpcode() == ISD::AssertZext) {
+    // Fold freeze(assertext(x, ...)) -> assertext(x, ...),
+    // iff x is known not to be poison/undef.
+    if (DAG.isGuaranteedNotToBeUndefOrPoison(N0.getOperand(0),
+                                             /*PoisonOnly*/ false))
+      return N0;
+  }
+
   // We currently avoid folding freeze over SRA/SRL, due to the problems seen
   // with (freeze (assert ext)) blocking simplifications of SRA/SRL. See for
   // example https://reviews.llvm.org/D136529#4120959.
