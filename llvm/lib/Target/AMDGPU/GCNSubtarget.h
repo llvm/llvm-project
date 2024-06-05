@@ -202,6 +202,7 @@ protected:
   bool FlatInstOffsets = false;
   bool FlatGlobalInsts = false;
   bool FlatScratchInsts = false;
+  bool FlatGVSMode = false;
   bool ScalarFlatScratchInsts = false;
   bool HasArchitectedFlatScratch = false;
   bool EnableFlatScratch = false;
@@ -1130,6 +1131,8 @@ public:
 
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return GFX12_10Insts; }
+
+  bool hasFlatGVSMode() const { return FlatGVSMode; }
 
   // FLAT GLOBAL VOffset is signed
   bool hasSignedGVSOffset() const { return GFX12_10Insts; }
