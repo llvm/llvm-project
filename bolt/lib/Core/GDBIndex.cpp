@@ -11,16 +11,16 @@
 using namespace llvm::bolt;
 using namespace llvm::support::endian;
 
-void GDBIndex::addGDBTypeUnitEntry(const GDBIndexTUEntry &Entry) {
+void GDBIndex::addGDBTypeUnitEntry(const GDBIndexTUEntry &&Entry) {
   std::lock_guard<std::mutex> Lock(GDBIndexMutex);
   if (!BC.getGdbIndexSection())
     return;
-  GDBIndexTUEntryVector.push_back(Entry);
+  GDBIndexTUEntryVector.emplace_back(Entry);
 }
 
 void GDBIndex::updateGdbIndexSection(
     CUOffsetMap &CUMap, uint32_t NumCUs,
-    std::unique_ptr<DebugARangesSectionWriter> &ARangesSectionWriter) {
+    DebugARangesSectionWriter &ARangesSectionWriter) {
   if (!BC.getGdbIndexSection())
     return;
 
@@ -101,7 +101,7 @@ void GDBIndex::updateGdbIndexSection(
 
   // Calculate the size of the new address table.
   uint32_t NewAddressTableSize = 0;
-  for (const auto &CURangesPair : ARangesSectionWriter->getCUAddressRanges()) {
+  for (const auto &CURangesPair : ARangesSectionWriter.getCUAddressRanges()) {
     const SmallVector<DebugAddressRange, 2> &Ranges = CURangesPair.second;
     NewAddressTableSize += Ranges.size() * 20;
   }
@@ -160,7 +160,7 @@ void GDBIndex::updateGdbIndexSection(
 
   // Generate new address table.
   for (const std::pair<const uint64_t, DebugAddressRangesVector> &CURangesPair :
-       ARangesSectionWriter->getCUAddressRanges()) {
+       ARangesSectionWriter.getCUAddressRanges()) {
     const uint32_t CUIndex = OffsetToIndexMap[CURangesPair.first];
     const DebugAddressRangesVector &Ranges = CURangesPair.second;
     for (const DebugAddressRange &Range : Ranges) {

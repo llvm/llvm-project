@@ -43,12 +43,12 @@ public:
   std::mutex GDBIndexMutex;
 
   /// Adds an GDBIndexTUEntry if .gdb_index section exists.
-  void addGDBTypeUnitEntry(const GDBIndexTUEntry &Entry);
+  void addGDBTypeUnitEntry(const GDBIndexTUEntry &&Entry);
 
   /// Rewrite .gdb_index section if present.
   void updateGdbIndexSection(
       CUOffsetMap &CUMap, uint32_t NumCUs,
-      std::unique_ptr<DebugARangesSectionWriter> &ARangesSectionWriter);
+      DebugARangesSectionWriter &ARangesSectionWriter);
 
   /// Returns all entries needed for Types CU list.
   const GDBIndexTUEntryType &getGDBIndexTUEntryVector() const {
