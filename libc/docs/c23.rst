@@ -59,7 +59,7 @@ Additions:
   * ufromfp* |check|
   * fromfpx* |check|
   * ufromfpx* |check|
-  * nextup*
+  * nextup* |check|
   * nextdown*
   * canonicalize* |check|
   * fmaximum*

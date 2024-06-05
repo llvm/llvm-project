@@ -2684,6 +2684,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nextupf16
+  SRCS
+    nextupf16.cpp
+  HDRS
+    ../nextupf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   nextupf128
   SRCS
     nextupf128.cpp

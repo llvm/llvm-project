@@ -2715,7 +2715,6 @@ add_fp_unittest(
     NextUpTest.h
   DEPENDS
     libc.src.math.nextup
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_fp_unittest(
@@ -2728,7 +2727,6 @@ add_fp_unittest(
     NextUpTest.h
   DEPENDS
     libc.src.math.nextupf
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_fp_unittest(
@@ -2741,7 +2739,18 @@ add_fp_unittest(
     NextUpTest.h
   DEPENDS
     libc.src.math.nextupl
-    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextupf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextupf16_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.src.math.nextupf16
 )
 
 add_fp_unittest(
@@ -2754,7 +2763,6 @@ add_fp_unittest(
     NextUpTest.h
   DEPENDS
     libc.src.math.nextupf128
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 # TODO(lntue): The current implementation of fputil::general::fma<float> is only
