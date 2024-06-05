@@ -11,7 +11,9 @@
 
 #ifdef LIBC_FULL_BUILD
 
-#include "include/llvm-libc-types/atexithandler_t.h"
+#include "include/llvm-libc-types/__atexithandler_t.h"
+
+#else // overlay mode
 
 #error // type not available in overlay mode
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/atexit.h"
+#include "hdr/types/atexithandler_t.h"
 #include "src/__support/common.h"
 #include "src/stdlib/exit_handler.h"
 
@@ -25,7 +26,7 @@ void __cxa_finalize(void *dso) {
 
 } // extern "C"
 
-LLVM_LIBC_FUNCTION(int, atexit, (StdCAtExitCallback * callback)) {
+LLVM_LIBC_FUNCTION(int, atexit, (__atexithandler_t callback)) {
   return add_atexit_unit(
       atexit_callbacks,
       {&stdc_at_exit_func, reinterpret_cast<void *>(callback)});

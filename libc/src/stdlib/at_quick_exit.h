@@ -9,9 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_AT_QUICK_EXIT_H
 #define LLVM_LIBC_SRC_STDLIB_AT_QUICK_EXIT_H
 
+#include "hdr/types/atexithandler_t.h"
+
 namespace LIBC_NAMESPACE {
 
-int at_quick_exit(void (*function)());
+int at_quick_exit(__atexithandler_t);
+
 } // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_AT_QUICK_EXIT_H
