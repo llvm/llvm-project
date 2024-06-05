@@ -51,6 +51,14 @@
 #endif
 static const long SPINLOCK_MASK = SPINLOCK_COUNT - 1;
 
+#ifndef CACHE_LINE_SIZE
+#define CACHE_LINE_SIZE 64
+#endif
+
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wgnu-designator"
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // Platform-specific lock implementation.  Falls back to spinlocks if none is
 // defined.  Each platform should define the Lock type, and corresponding
@@ -95,13 +103,17 @@ static Lock locks[SPINLOCK_COUNT]; // initialized to OS_SPINLOCK_INIT which is 0
 _Static_assert(__atomic_always_lock_free(sizeof(uintptr_t), 0),
                "Implementation assumes lock-free pointer-size cmpxchg");
 #include <pthread.h>
-typedef pthread_mutex_t Lock;
+#include <stdalign.h>
+typedef struct {
+  alignas(CACHE_LINE_SIZE) pthread_mutex_t m;
+} Lock;
 /// Unlock a lock.  This is a release operation.
-__inline static void unlock(Lock *l) { pthread_mutex_unlock(l); }
+__inline static void unlock(Lock *l) { pthread_mutex_unlock(&l->m); }
 /// Locks a lock.
-__inline static void lock(Lock *l) { pthread_mutex_lock(l); }
+__inline static void lock(Lock *l) { pthread_mutex_lock(&l->m); }
 /// locks for atomic operations
-static Lock locks[SPINLOCK_COUNT];
+static Lock locks[SPINLOCK_COUNT] = {
+    [0 ... SPINLOCK_COUNT - 1] = {PTHREAD_MUTEX_INITIALIZER}};
 #endif
 
 /// Returns a lock to use for a given pointer.
