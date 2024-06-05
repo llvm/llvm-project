@@ -31,3 +31,6 @@
 
 // RUN: not %clang --target=i386-pc-openbsd -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-OPENBSD
 // CHECK-RTSAN-OPENBSD: unsupported option '-fsanitize=realtime' for target 'i386-pc-openbsd'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,thread  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-TSAN
+// CHECK-REALTIME-TSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=thread'
