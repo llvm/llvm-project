@@ -38,13 +38,6 @@ config.test_source_root = os.path.dirname(__file__)
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = os.path.join(config.lldb_obj_root, "test", "Shell")
 
-# Begin Swift mod.
-# Swift's libReflection builds without ASAN, which causes a known
-# false positive in std::vector. If sanitizers are off, this is just
-# a no-op
-config.environment['ASAN_OPTIONS'] = 'detect_container_overflow=0'
-# End Swift mod.
-
 # Propagate environment vars.
 llvm_config.with_system_environment(
     [
@@ -58,7 +51,14 @@ llvm_config.with_system_environment(
 
 # Enable sanitizer runtime flags.
 if "Address" in config.llvm_use_sanitizer:
-    config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
+    # Begin Swift mod.
+    # Swift's libReflection builds without ASAN, which causes a known
+    # false positive in std::vector. We also want to support testing a sanitized
+    # lldb using unsanitized llvm, clang, and swift libraries.
+    config.environment[
+        "ASAN_OPTIONS"
+    ] = "detect_container_overflow=0:detect_stack_use_after_return=1"
+    # End Swift mod.
     if platform.system() == "Darwin":
         config.environment["MallocNanoZone"] = "0"
 
