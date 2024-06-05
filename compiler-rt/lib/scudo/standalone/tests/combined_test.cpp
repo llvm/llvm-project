@@ -462,14 +462,14 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, ReallocateSame) {
     EXPECT_EQ(NewP, P);
 
     // Verify that existing contents have been preserved.
-    for (scudo::uptr I = 0; I < CurrentSize; I++)
+    for (scudo::uptr I = 0; I < scudo::Min(CurrentSize, NewSize); I++)
       EXPECT_EQ((reinterpret_cast<char *>(NewP))[I], Marker);
 
-    // Verify that, if we have grown the allocation, new bytes have been set
-    // according to FillContentsMode.
-    for (scudo::uptr I = CurrentSize; I < NewSize; I++)
+    // Verify that new bytes are set according to FillContentsMode.
+    for (scudo::uptr I = CurrentSize; I < NewSize; I++) {
       EXPECT_EQ((reinterpret_cast<unsigned char *>(NewP))[I],
                 scudo::PatternFillByte);
+    }
 
     checkMemoryTaggingMaybe(Allocator, NewP, NewSize, 0);
     CurrentSize = NewSize;

@@ -566,15 +566,16 @@ public:
           }
         }
 
-        // If we've increased the size, fill the extra bytes.
-        if (NewSize > OldSize) {
+        // If we have reduced the size, set the extra bytes to the fill value
+        // so that we are ready to grow it again in the future.
+        if (NewSize < OldSize) {
           const FillContentsMode FillContents =
               TSDRegistry.getDisableMemInit() ? NoFill
                                               : Options.getFillContentsMode();
           if (FillContents != NoFill) {
-            memset(reinterpret_cast<char *>(OldTaggedPtr) + OldSize,
+            memset(reinterpret_cast<char *>(OldTaggedPtr) + NewSize,
                    FillContents == ZeroFill ? 0 : PatternFillByte,
-                   NewSize - OldSize);
+                   OldSize - NewSize);
           }
         }
 
