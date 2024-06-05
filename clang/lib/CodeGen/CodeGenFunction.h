@@ -4062,6 +4062,13 @@ public:
     EmitStmt(S.getStructuredBlock());
   }
 
+  void EmitOpenACCLoopConstruct(const OpenACCLoopConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its loop, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getLoop());
+  }
+
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission
   //===--------------------------------------------------------------------===//

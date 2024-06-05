@@ -2871,3 +2871,10 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
 void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
   OS << " " << S->getDirectiveKind();
 }
+void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
+
+  if (S->isOrphanedLoopConstruct())
+    OS << " <orphan>";
+  else
+    OS << " parent: " << S->getParentComputeConstruct();
+}
