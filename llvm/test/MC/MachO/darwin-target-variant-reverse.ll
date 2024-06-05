@@ -3,7 +3,7 @@
 target triple = "x86_64-apple-ios13.1-macabi";
 !llvm.module.flags = !{!0, !1, !2};
 !0 = !{i32 2, !"SDK Version", [2 x i32] [ i32 13, i32 1 ] };
-!1 = !{i32 1, !"darwin.target_variant.triple", !"x86_64-apple-macos10.15"};
+!1 = !{i32 2, !"darwin.target_variant.triple", !"x86_64-apple-macos10.15"};
 !2 = !{i32 2, !"darwin.target_variant.SDK Version", [2 x i32] [ i32 10, i32 15 ] };
 
 define void @foo() {

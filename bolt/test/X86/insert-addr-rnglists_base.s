@@ -6,8 +6,8 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks we correctly insert DW_AT_addr_base, when converting DW_AT_low_pc into DW_AT_ranges.
-# PRECHECK-NOT: DW_AT_addr_base
+## This test checks we correctly insert DW_AT_addr_base, when converting DW_AT_low_pc into DW_AT_ranges.
+## PRECHECK-NOT: DW_AT_addr_base
 
 # POSTCHECK: DW_AT_ranges [DW_FORM_rnglistx]
 # POSTCHECK: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x0000000c)

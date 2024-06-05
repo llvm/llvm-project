@@ -1038,7 +1038,6 @@ class OptimizedBufferizationPass
           OptimizedBufferizationPass> {
 public:
   void runOnOperation() override {
-    mlir::func::FuncOp func = getOperation();
     mlir::MLIRContext *context = &getContext();
 
     mlir::GreedyRewriteConfig config;
@@ -1062,15 +1061,11 @@ public:
     patterns.insert<MinMaxlocElementalConversion<hlfir::MaxlocOp>>(context);
 
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
-            func, std::move(patterns), config))) {
-      mlir::emitError(func.getLoc(),
+            getOperation(), std::move(patterns), config))) {
+      mlir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR optimized bufferization");
       signalPassFailure();
     }
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createOptimizedBufferizationPass() {
-  return std::make_unique<OptimizedBufferizationPass>();
-}

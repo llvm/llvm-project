@@ -9,6 +9,8 @@ function(_add_capi_test_executable name)
   add_llvm_executable(${name}
     PARTIAL_SOURCES_INTENDED
     ${ARG_UNPARSED_ARGUMENTS})
+  set_target_properties(${name} PROPERTIES FOLDER "MLIR/Tests")
+
   llvm_update_compile_flags(${name})
   if(MLIR_BUILD_MLIR_C_DYLIB)
     target_link_libraries(${name} PRIVATE

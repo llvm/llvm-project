@@ -28,18 +28,18 @@ declare void @sink(ptr, ptr)
 ; to D + strnlen(D, N) or, equivalently, D + (*D != '\0'), when N < 2.
 
 ;.
-; ANY: @[[A4:[a-zA-Z0-9_$"\\.-]+]] = constant [4 x i8] c"1234"
-; ANY: @[[S4:[a-zA-Z0-9_$"\\.-]+]] = constant [5 x i8] c"1234\00"
-; ANY: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private constant [4 x i8] c"4\00\00\00"
-; ANY: @[[STR_1:[a-zA-Z0-9_$"\\.-]+]] = private constant [10 x i8] c"4\00\00\00\00\00\00\00\00\00"
-; ANY: @[[STR_2:[a-zA-Z0-9_$"\\.-]+]] = private constant [10 x i8] c"1234\00\00\00\00\00\00"
-; ANY: @[[STR_3:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [4 x i8] c"4\00\00\00", align 1
-; ANY: @[[STR_4:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [10 x i8] c"4\00\00\00\00\00\00\00\00\00", align 1
-; ANY: @[[STR_5:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
-; ANY: @[[STR_6:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [4 x i8] c"4\00\00\00", align 1
-; ANY: @[[STR_7:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [10 x i8] c"4\00\00\00\00\00\00\00\00\00", align 1
-; ANY: @[[STR_8:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
-; ANY: @[[STR_9:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
+; ANY: @a4 = constant [4 x i8] c"1234"
+; ANY: @s4 = constant [5 x i8] c"1234\00"
+; ANY: @str = private constant [4 x i8] c"4\00\00\00"
+; ANY: @str.1 = private constant [10 x i8] c"4\00\00\00\00\00\00\00\00\00"
+; ANY: @str.2 = private constant [10 x i8] c"1234\00\00\00\00\00\00"
+; ANY: @str.3 = private unnamed_addr constant [4 x i8] c"4\00\00\00", align 1
+; ANY: @str.4 = private unnamed_addr constant [10 x i8] c"4\00\00\00\00\00\00\00\00\00", align 1
+; ANY: @str.5 = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
+; ANY: @str.6 = private unnamed_addr constant [4 x i8] c"4\00\00\00", align 1
+; ANY: @str.7 = private unnamed_addr constant [10 x i8] c"4\00\00\00\00\00\00\00\00\00", align 1
+; ANY: @str.8 = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
+; ANY: @str.9 = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
 ;.
 define void @fold_stpncpy_overlap(ptr %dst, i64 %n) {
 ; ANY-LABEL: @fold_stpncpy_overlap(
@@ -273,11 +273,11 @@ define void @fold_stpncpy_s4(ptr %dst, i64 %n) {
 
 define void @call_stpncpy_xx_n(ptr %dst, i64 %n) {
 ; ANY-LABEL: @call_stpncpy_xx_n(
-; ANY-NEXT:    [[EA1_N:%.*]] = call ptr @stpncpy(ptr [[DST:%.*]], ptr nonnull dereferenceable(2) getelementptr inbounds ([4 x i8], ptr @a4, i64 0, i64 3), i64 [[N:%.*]])
+; ANY-NEXT:    [[EA1_N:%.*]] = call ptr @stpncpy(ptr [[DST:%.*]], ptr nonnull dereferenceable(2) getelementptr inbounds (i8, ptr @a4, i64 3), i64 [[N:%.*]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[EA1_N]])
 ; ANY-NEXT:    [[EA4_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(5) @a4, i64 [[N]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[EA4_N]])
-; ANY-NEXT:    [[ES1_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(2) getelementptr inbounds ([5 x i8], ptr @s4, i64 0, i64 3), i64 [[N]])
+; ANY-NEXT:    [[ES1_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(2) getelementptr inbounds (i8, ptr @s4, i64 3), i64 [[N]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[ES1_N]])
 ; ANY-NEXT:    [[ES4_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(5) @s4, i64 [[N]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[ES4_N]])
@@ -448,6 +448,9 @@ define void @call_stpncpy_s(ptr %dst, ptr %src, i64 %n) {
   ret void
 }
 ;.
-; ANY: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; ANY: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; BE: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; BE: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+;.
+; LE: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; LE: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.

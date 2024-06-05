@@ -468,7 +468,24 @@ bool GIMatchTableExecutor::executeMatchTable(
         if (handleReject() == RejectAndGiveUp)
           return false;
       }
+      break;
+    }
+    case GIM_CheckHasOneUse: {
+      uint64_t InsnID = readULEB();
 
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckHasOneUse(MIs["
+                             << InsnID << "]\n");
+
+      const MachineInstr *MI = State.MIs[InsnID];
+      assert(MI && "Used insn before defined");
+      assert(MI->getNumDefs() > 0 && "No defs");
+      const Register Res = MI->getOperand(0).getReg();
+
+      if (!MRI.hasOneNonDBGUse(Res)) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
       break;
     }
     case GIM_CheckAtomicOrdering: {
@@ -652,17 +669,17 @@ bool GIMatchTableExecutor::executeMatchTable(
       MachineMemOperand *MMO =
           *(State.MIs[InsnID]->memoperands_begin() + MMOIdx);
 
-      unsigned Size = MRI.getType(MO.getReg()).getSizeInBits();
+      const TypeSize Size = MRI.getType(MO.getReg()).getSizeInBits();
       if (MatcherOpcode == GIM_CheckMemorySizeEqualToLLT &&
-          MMO->getSizeInBits().getValue() != Size) {
+          MMO->getSizeInBits() != Size) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeLessThanLLT &&
-                 MMO->getSizeInBits().getValue() >= Size) {
+                 TypeSize::isKnownGE(MMO->getSizeInBits().getValue(), Size)) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeGreaterThanLLT &&
-                 MMO->getSizeInBits().getValue() <= Size)
+                 TypeSize::isKnownLE(MMO->getSizeInBits().getValue(), Size))
         if (handleReject() == RejectAndGiveUp)
           return false;
 
@@ -1335,13 +1352,19 @@ bool GIMatchTableExecutor::executeMatchTable(
           -1); // Not a source operand of the old instruction.
       break;
     }
-    case GIR_CustomAction: {
+    case GIR_DoneWithCustomAction: {
       uint16_t FnID = readU16();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx << ": GIR_CustomAction(FnID=" << FnID
-                             << ")\n");
+                      dbgs() << CurrentIdx << ": GIR_DoneWithCustomAction(FnID="
+                             << FnID << ")\n");
       assert(FnID > GICXXCustomAction_Invalid && "Expected a valid FnID");
-      runCustomAction(FnID, State, OutMIs);
+      if (runCustomAction(FnID, State, OutMIs)) {
+        propagateFlags();
+        return true;
+      }
+
+      if (handleReject() == RejectAndGiveUp)
+        return false;
       break;
     }
     case GIR_CustomOperandRenderer: {

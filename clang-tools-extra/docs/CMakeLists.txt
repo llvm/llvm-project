@@ -77,6 +77,7 @@ if (DOXYGEN_FOUND)
       COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Generating clang doxygen documentation." VERBATIM)
+    set_target_properties(doxygen-clang-tools PROPERTIES FOLDER "Clang Tools Extra/Docs")
 
     if (LLVM_BUILD_DOCS)
       add_dependencies(doxygen doxygen-clang-tools)
