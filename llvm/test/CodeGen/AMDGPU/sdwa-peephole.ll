@@ -1557,7 +1557,8 @@ define amdgpu_kernel void @mac_v2half(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX89-NEXT:    s_waitcnt vmcnt(1)
 ; GFX89-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
-; GFX89-NEXT:    v_mac_f16_sdwa v4, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX89-NEXT:    v_lshrrev_b32_e32 v5, 16, v3
+; GFX89-NEXT:    v_mac_f16_sdwa v4, v5, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX89-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX89-NEXT:    v_mac_f16_e32 v2, v3, v2
 ; GFX89-NEXT:    v_or_b32_e32 v2, v2, v4
@@ -1718,18 +1719,16 @@ define amdgpu_kernel void @mulmul_v2i16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX89-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX89-NEXT:    v_add_u32_e32 v2, vcc, s0, v2
 ; GFX89-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; GFX89-NEXT:    flat_load_dword v4, v[0:1]
 ; GFX89-NEXT:    flat_load_dword v2, v[2:3]
-; GFX89-NEXT:    flat_load_dword v3, v[0:1]
 ; GFX89-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX89-NEXT:    v_mov_b32_e32 v1, s5
-; GFX89-NEXT:    s_waitcnt vmcnt(1)
-; GFX89-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
-; GFX89-NEXT:    v_mul_lo_u16_e32 v5, v3, v2
-; GFX89-NEXT:    v_mul_lo_u16_sdwa v3, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX89-NEXT:    v_mul_lo_u16_e32 v2, v5, v2
-; GFX89-NEXT:    v_mul_lo_u16_sdwa v3, v3, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX89-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX89-NEXT:    v_mul_lo_u16_sdwa v3, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX89-NEXT:    v_mul_lo_u16_e32 v4, v4, v2
+; GFX89-NEXT:    v_mul_lo_u16_e32 v4, v4, v2
+; GFX89-NEXT:    v_mul_lo_u16_sdwa v2, v3, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX89-NEXT:    v_or_b32_e32 v2, v4, v2
 ; GFX89-NEXT:    flat_store_dword v[0:1], v2
 ; GFX89-NEXT:    s_endpgm
 ;
