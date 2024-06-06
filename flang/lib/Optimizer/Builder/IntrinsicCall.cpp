@@ -280,6 +280,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"trim_name", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"getcwd",
+     &I::genGetCwd,
+     {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"getpid", &I::genGetPID},
     {"iachar", &I::genIchar},
     {"iall",
@@ -3476,6 +3480,37 @@ mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
       fir::runtime::genFraction(builder, loc, fir::getBase(args[0])));
 }
 
+// GETCWD
+fir::ExtendedValue
+IntrinsicLibrary::genGetCwd(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 1 && resultType.has_value()) ||
+         (args.size() >= 1 && !resultType.has_value()));
+
+  mlir::Value cwd = fir::getBase(args[0]);
+  mlir::Value statusValue = fir::runtime::genGetCwd(builder, loc, cwd);
+
+  if (resultType.has_value()) {
+    // Function form, return status.
+    return statusValue;
+  } else {
+    // Subroutine form, store status and return none.
+    const fir::ExtendedValue &status = args[1];
+    if (!isStaticallyAbsent(status)) {
+      mlir::Value statusAddr = fir::getBase(status);
+      mlir::Value statusIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, statusAddr);
+      builder.genIfThen(loc, statusIsPresentAtRuntime)
+          .genThen([&]() {
+            builder.createStoreWithConvert(loc, statusValue, statusAddr);
+          })
+          .end();
+    }
+  }
+
+  return {};
+}
+
 // GET_COMMAND
 void IntrinsicLibrary::genGetCommand(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
@@ -4965,10 +5000,6 @@ fir::ExtendedValue
 IntrinsicLibrary::genIsContiguous(mlir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  if (const auto *boxValue = args[0].getBoxOf<fir::BoxValue>())
-    if (boxValue->hasAssumedRank())
-      TODO(loc, "intrinsic: is_contiguous with assumed rank argument");
-
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genIsContiguous(builder, loc, fir::getBase(args[0])));

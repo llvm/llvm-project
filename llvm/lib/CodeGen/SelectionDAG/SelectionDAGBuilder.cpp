@@ -1684,7 +1684,7 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
           if (!FragmentExpr)
             continue;
           SDDbgValue *SDV = DAG.getVRegDbgValue(
-              Var, *FragmentExpr, RegAndSize.first, false, DbgLoc, SDNodeOrder);
+              Var, *FragmentExpr, RegAndSize.first, false, DbgLoc, Order);
           DAG.AddDbgValue(SDV, false);
           Offset += RegisterSize;
         }
@@ -1699,11 +1699,10 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
   }
 
   // We have created a SDDbgOperand for each Value in Values.
-  // Should use Order instead of SDNodeOrder?
   assert(!LocationOps.empty());
-  SDDbgValue *SDV = DAG.getDbgValueList(Var, Expr, LocationOps, Dependencies,
-                                        /*IsIndirect=*/false, DbgLoc,
-                                        SDNodeOrder, IsVariadic);
+  SDDbgValue *SDV =
+      DAG.getDbgValueList(Var, Expr, LocationOps, Dependencies,
+                          /*IsIndirect=*/false, DbgLoc, Order, IsVariadic);
   DAG.AddDbgValue(SDV, /*isParameter=*/false);
   return true;
 }
@@ -6742,6 +6741,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::fabs:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::tan:
   case Intrinsic::exp10:
   case Intrinsic::floor:
   case Intrinsic::ceil:
@@ -6759,6 +6759,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     case Intrinsic::fabs:         Opcode = ISD::FABS;          break;
     case Intrinsic::sin:          Opcode = ISD::FSIN;          break;
     case Intrinsic::cos:          Opcode = ISD::FCOS;          break;
+    case Intrinsic::tan:          Opcode = ISD::FTAN;          break;
     case Intrinsic::exp10:        Opcode = ISD::FEXP10;        break;
     case Intrinsic::floor:        Opcode = ISD::FFLOOR;        break;
     case Intrinsic::ceil:         Opcode = ISD::FCEIL;         break;
@@ -9163,6 +9164,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_cosf:
       case LibFunc_cosl:
         if (visitUnaryFloatCall(I, ISD::FCOS))
+          return;
+        break;
+      case LibFunc_tan:
+      case LibFunc_tanf:
+      case LibFunc_tanl:
+        if (visitUnaryFloatCall(I, ISD::FTAN))
           return;
         break;
       case LibFunc_sqrt:

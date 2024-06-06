@@ -1294,8 +1294,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   // X == Y ? X : Z with X == Y ? Y : Z, as that would lead to an infinite
   // replacement cycle.
   Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
-  if (TrueVal != CmpLHS &&
-      isGuaranteedNotToBeUndefOrPoison(CmpRHS, SQ.AC, &Sel, &DT)) {
+  if (TrueVal != CmpLHS && isGuaranteedNotToBeUndef(CmpRHS, SQ.AC, &Sel, &DT)) {
     if (Value *V = simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, SQ,
                                           /* AllowRefinement */ true))
       // Require either the replacement or the simplification result to be a
@@ -1316,8 +1315,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
       if (replaceInInstruction(TrueVal, CmpLHS, CmpRHS))
         return &Sel;
   }
-  if (TrueVal != CmpRHS &&
-      isGuaranteedNotToBeUndefOrPoison(CmpLHS, SQ.AC, &Sel, &DT))
+  if (TrueVal != CmpRHS && isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, &Sel, &DT))
     if (Value *V = simplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, SQ,
                                           /* AllowRefinement */ true))
       if (isa<Constant>(CmpLHS) || isa<Constant>(V))

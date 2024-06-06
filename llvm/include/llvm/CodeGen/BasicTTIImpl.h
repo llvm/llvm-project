@@ -1977,6 +1977,9 @@ public:
     case Intrinsic::cos:
       ISD = ISD::FCOS;
       break;
+    case Intrinsic::tan:
+      ISD = ISD::FTAN;
+      break;
     case Intrinsic::exp:
       ISD = ISD::FEXP;
       break;
