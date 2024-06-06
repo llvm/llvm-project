@@ -522,8 +522,8 @@ static constexpr IntrinsicHandler handlers[]{
        {"operation", asAddr},
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional},
-       {"identity", asAddr},
-       {"ordered", asValue}}},
+       {"identity", asAddr, handleDynamicOptional},
+       {"ordered", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"repeat",
      &I::genRepeat,
@@ -5718,7 +5718,7 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
   mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
 
   // Handle optional arguments
-  bool absentDim = isStaticallyAbsent(args[1]);
+  bool absentDim = isStaticallyAbsent(args[2]);
 
   auto mask = isStaticallyAbsent(args[3])
                   ? builder.create<fir::AbsentOp>(
@@ -5731,7 +5731,7 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
           : fir::getBase(args[4]);
 
   mlir::Value ordered = isStaticallyAbsent(args[5])
-                            ? builder.createBool(loc, true)
+                            ? builder.createBool(loc, false)
                             : fir::getBase(args[5]);
 
   // We call the type specific versions because the result is scalar
@@ -5756,10 +5756,8 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
       // Handle cleanup of allocatable result descriptor and return
       return readAndAddCleanUp(resultMutableBox, resultType, "REDUCE");
     }
-    auto resultBox = builder.create<fir::AbsentOp>(
-        loc, fir::BoxType::get(builder.getI1Type()));
     return fir::runtime::genReduce(builder, loc, array, operation, mask,
-                                   identity, ordered, resultBox);
+                                   identity, ordered);
   }
   TODO(loc, "reduce with array result");
 }

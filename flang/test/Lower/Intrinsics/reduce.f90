@@ -22,7 +22,7 @@ subroutine integer1(a, id)
 
   res = reduce(a, red_int1, identity=id)
   
-  res = reduce(a, red_int1, identity=id, ordered = .false.)
+  res = reduce(a, red_int1, identity=id, ordered = .true.)
 
   res = reduce(a, red_int1, [.true., .true., .false.])
 end subroutine
@@ -40,7 +40,7 @@ end subroutine
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_PROC]] : (!fir.boxproc<() -> ()>) -> ((!fir.ref<i8>, !fir.ref<i8>) -> !fir.ref<i8>)
 ! CHECK: %[[A_NONE:.*]] = fir.convert %[[A]]#1 : (!fir.box<!fir.array<?xi8>>) -> !fir.box<none>
 ! CHECK: %[[MASK_NONE:.*]] = fir.convert %[[MASK]] : (!fir.box<i1>) -> !fir.box<none>
-! CHECK: %[[REDUCE_RES:.*]] = fir.call @_FortranAReduceInteger1(%[[A_NONE]], %[[BOX_ADDR]], %{{.*}}, %{{.*}}, %c1{{.*}}, %[[MASK_NONE]], %[[IDENTITY]], %true) fastmath<contract> : (!fir.box<none>, (!fir.ref<i8>, !fir.ref<i8>) -> !fir.ref<i8>, !fir.ref<i8>, i32, i32, !fir.box<none>, !fir.ref<i8>, i1) -> i8
+! CHECK: %[[REDUCE_RES:.*]] = fir.call @_FortranAReduceInteger1(%[[A_NONE]], %[[BOX_ADDR]], %{{.*}}, %{{.*}}, %c1{{.*}}, %[[MASK_NONE]], %[[IDENTITY]], %false) fastmath<contract> : (!fir.box<none>, (!fir.ref<i8>, !fir.ref<i8>) -> !fir.ref<i8>, !fir.ref<i8>, i32, i32, !fir.box<none>, !fir.ref<i8>, i1) -> i8
 ! CHECK: hlfir.assign %[[REDUCE_RES]] to %[[RES]]#0 : i8, !fir.ref<i8>
 ! CHECK: %[[ADDR_OP:.*]] = fir.address_of(@_QMreduce_modPred_int1) : (!fir.ref<i8>, !fir.ref<i8>) -> i8
 ! CHECK: %[[BOX_PROC:.*]] = fir.emboxproc %[[ADDR_OP]] : ((!fir.ref<i8>, !fir.ref<i8>) -> i8) -> !fir.boxproc<() -> ()>
@@ -48,13 +48,13 @@ end subroutine
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_PROC]] : (!fir.boxproc<() -> ()>) -> ((!fir.ref<i8>, !fir.ref<i8>) -> !fir.ref<i8>)
 ! CHECK: %[[A_NONE:.*]] = fir.convert %[[A]]#1 : (!fir.box<!fir.array<?xi8>>) -> !fir.box<none>
 ! CHECK: %[[MASK_NONE:.*]] = fir.convert %[[MASK]] : (!fir.box<i1>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAReduceInteger1(%[[A_NONE]], %[[BOX_ADDR]], %{{.*}}, %{{.*}}, %c1{{.*}}, %[[MASK_NONE]], %[[ID]]#1, %true{{.*}}) fastmath<contract> : (!fir.box<none>, (!fir.ref<i8>, !fir.ref<i8>) -> !fir.ref<i8>, !fir.ref<i8>, i32, i32, !fir.box<none>, !fir.ref<i8>, i1) -> i8
-! CHECK: fir.call @_FortranAReduceInteger1(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}#1, %false)
+! CHECK: %{{.*}} = fir.call @_FortranAReduceInteger1(%[[A_NONE]], %[[BOX_ADDR]], %{{.*}}, %{{.*}}, %c1{{.*}}, %[[MASK_NONE]], %[[ID]]#1, %false{{.*}}) fastmath<contract> : (!fir.box<none>, (!fir.ref<i8>, !fir.ref<i8>) -> !fir.ref<i8>, !fir.ref<i8>, i32, i32, !fir.box<none>, !fir.ref<i8>, i1) -> i8
+! CHECK: fir.call @_FortranAReduceInteger1(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}#1, %true)
 ! CHECK: %[[MASK:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3xl4.0"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
 ! CHECK: %[[SHAPE_C3:.*]] = fir.shape %c3{{.*}} : (index) -> !fir.shape<1>
 ! CHECK: %[[BOXED_MASK:.*]] = fir.embox %[[MASK]]#1(%[[SHAPE_C3]]) : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<3x!fir.logical<4>>>
 ! CHECK: %[[CONV_MASK:.*]] = fir.convert %[[BOXED_MASK]] : (!fir.box<!fir.array<3x!fir.logical<4>>>) -> !fir.box<none>
-! CHECK: fir.call @_FortranAReduceInteger1(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[CONV_MASK]], %{{.*}}, %true{{.*}})
+! CHECK: fir.call @_FortranAReduceInteger1(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[CONV_MASK]], %{{.*}}, %false{{.*}})
 
 pure function red_int2(a,b)
   integer(2), intent(in) :: a, b
@@ -261,8 +261,24 @@ end function
 subroutine complex10(a)
   complex(10), intent(in) :: a(:)
   complex(10) :: res
-!  res = reduce(a, red_complex10)
+  res = reduce(a, red_complex10)
 end subroutine
+
+! CHECK: fir.call @_FortranACppReduceComplex10
+
+pure function red_complex16(a,b)
+  complex(16), intent(in) :: a, b
+  complex(16) :: red_complex16
+  red_complex16 = a + b
+end function
+
+subroutine complex16(a)
+  complex(16), intent(in) :: a(:)
+  complex(16) :: res
+  res = reduce(a, red_complex16)
+end subroutine
+
+! CHECK: fir.call @_FortranACppReduceComplex16
 
 pure function red_log1(a,b)
   logical(1), intent(in) :: a, b
