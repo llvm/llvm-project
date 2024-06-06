@@ -106,34 +106,34 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     InterfaceMethod<[{
         Return all lower bounds.
       }],
-      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
-      /*methodName=*/"getMixedLowerBound",
+      /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
+      /*methodName=*/"getLowerBounds",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return {};
+        return std::nullopt;
       }]
     >,
     InterfaceMethod<[{
         Return all steps.
       }],
-      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
-      /*methodName=*/"getMixedStep",
+      /*retTy=*/"std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
+      /*methodName=*/"getSteps",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return {};
+        return std::nullopt;
       }]
     >,
     InterfaceMethod<[{
         Return all upper bounds.
       }],
-      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
-      /*methodName=*/"getMixedUpperBound",
+      /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
+      /*methodName=*/"getUpperBounds",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return {};
+        return std::nullopt;
       }]
     >,
     InterfaceMethod<[{
@@ -242,26 +242,26 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// Return the single lower bound value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleLowerBound() {
-      auto lowerBounds = this->getMixedLowerBound();
-      if (lowerBounds.size() == 1)
-          return lowerBounds[0];
-        return std::nullopt;
+      auto lowerBounds = this->getLowerBounds();
+      if (lowerBounds.has_value() && (*lowerBounds).size() == 1)
+          return (*lowerBounds)[0];
+      return std::nullopt;
     }
     /// Return the single step value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleStep() {
-      auto steps = this->getMixedStep(); 
-      if (steps.size() == 1)
-          return steps[0];
-        return std::nullopt;
+      auto steps = this->getSteps(); 
+      if (steps.has_value() && (*steps).size() == 1)
+          return (*steps)[0];
+      return std::nullopt;
     }
     /// Return the single upper bound value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleUpperBound() {
-      auto upperBounds = this->getMixedUpperBound();
-      if (upperBounds.size() == 1)
-          return upperBounds[0];
-        return std::nullopt;
+      auto upperBounds = this->getUpperBounds();
+      if (upperBounds.has_value() && (*upperBounds).size() == 1)
+          return (*upperBounds)[0];
+      return std::nullopt;
     }
 
     /// Append the specified additional "init" operands: replace this loop with

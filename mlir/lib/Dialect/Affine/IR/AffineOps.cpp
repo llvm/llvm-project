@@ -2456,23 +2456,26 @@ SmallVector<Region *> AffineForOp::getLoopRegions() { return {&getRegion()}; }
 
 ValueRange AffineForOp::getInductionVars() { return {getInductionVar()}; }
 
-SmallVector<OpFoldResult> AffineForOp::getMixedLowerBound() {
+std::optional<SmallVector<OpFoldResult>> AffineForOp::getLowerBounds() {
   if (!hasConstantLowerBound())
-    return {};
+    return std::nullopt;
   OpBuilder b(getContext());
-  return {OpFoldResult(b.getI64IntegerAttr(getConstantLowerBound()))};
+  return SmallVector<OpFoldResult>{
+      OpFoldResult(b.getI64IntegerAttr(getConstantLowerBound()))};
 }
 
-SmallVector<OpFoldResult> AffineForOp::getMixedStep() {
+std::optional<SmallVector<OpFoldResult>> AffineForOp::getSteps() {
   OpBuilder b(getContext());
-  return {OpFoldResult(b.getI64IntegerAttr(getStepAsInt()))};
+  return SmallVector<OpFoldResult>{
+      OpFoldResult(b.getI64IntegerAttr(getStepAsInt()))};
 }
 
-SmallVector<OpFoldResult> AffineForOp::getMixedUpperBound() {
+std::optional<SmallVector<OpFoldResult>> AffineForOp::getUpperBounds() {
   if (!hasConstantUpperBound())
     return {};
   OpBuilder b(getContext());
-  return {OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()))};
+  return SmallVector<OpFoldResult>{
+      OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()))};
 }
 
 FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
@@ -3753,7 +3756,7 @@ SmallVector<Region *> AffineParallelOp::getLoopRegions() {
   return {&getRegion()};
 }
 
-unsigned AffineParallelOp::getNumDims() { return getSteps().size(); }
+unsigned AffineParallelOp::getNumDims() { return getStep().size(); }
 
 AffineParallelOp::operand_range AffineParallelOp::getLowerBoundsOperands() {
   return getOperands().take_front(getLowerBoundsMap().getNumInputs());
@@ -3838,7 +3841,7 @@ void AffineParallelOp::setUpperBounds(ValueRange ubOperands, AffineMap map) {
 }
 
 void AffineParallelOp::setSteps(ArrayRef<int64_t> newSteps) {
-  setStepsAttr(getBodyBuilder().getI64ArrayAttr(newSteps));
+  setStepAttr(getBodyBuilder().getI64ArrayAttr(newSteps));
 }
 
 // check whether resultType match op or not in affine.parallel
@@ -3888,14 +3891,14 @@ LogicalResult AffineParallelOp::verify() {
   auto numDims = getNumDims();
   if (getLowerBoundsGroups().getNumElements() != numDims ||
       getUpperBoundsGroups().getNumElements() != numDims ||
-      getSteps().size() != numDims || getBody()->getNumArguments() != numDims) {
+      getStep().size() != numDims || getBody()->getNumArguments() != numDims) {
     return emitOpError() << "the number of region arguments ("
                          << getBody()->getNumArguments()
                          << ") and the number of map groups for lower ("
                          << getLowerBoundsGroups().getNumElements()
                          << ") and upper bound ("
                          << getUpperBoundsGroups().getNumElements()
-                         << "), and the number of steps (" << getSteps().size()
+                         << "), and the number of steps (" << getStep().size()
                          << ") must all match";
   }
 
@@ -4013,7 +4016,7 @@ void AffineParallelOp::print(OpAsmPrinter &p) {
   printMinMaxBound(p, getUpperBoundsMapAttr(), getUpperBoundsGroupsAttr(),
                    getUpperBoundsOperands(), "min");
   p << ')';
-  SmallVector<int64_t, 8> steps = getSteps();
+  SmallVector<int64_t, 8> steps = getStep();
   bool elideSteps = llvm::all_of(steps, [](int64_t step) { return step == 1; });
   if (!elideSteps) {
     p << " step (";

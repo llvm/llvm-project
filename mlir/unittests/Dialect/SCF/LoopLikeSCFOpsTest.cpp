@@ -27,35 +27,57 @@ protected:
   }
 
   void checkUnidimensional(LoopLikeOpInterface loopLikeOp) {
-    std::optional<OpFoldResult> maybeLb = loopLikeOp.getSingleLowerBound();
-    EXPECT_TRUE(maybeLb.has_value());
-    std::optional<OpFoldResult> maybeUb = loopLikeOp.getSingleUpperBound();
-    EXPECT_TRUE(maybeUb.has_value());
-    std::optional<OpFoldResult> maybeStep = loopLikeOp.getSingleStep();
-    EXPECT_TRUE(maybeStep.has_value());
-    std::optional<OpFoldResult> maybeIndVar =
+    std::optional<OpFoldResult> maybeSingleLb =
+        loopLikeOp.getSingleLowerBound();
+    EXPECT_TRUE(maybeSingleLb.has_value());
+    std::optional<OpFoldResult> maybeSingleUb =
+        loopLikeOp.getSingleUpperBound();
+    EXPECT_TRUE(maybeSingleUb.has_value());
+    std::optional<OpFoldResult> maybeSingleStep = loopLikeOp.getSingleStep();
+    EXPECT_TRUE(maybeSingleStep.has_value());
+    std::optional<OpFoldResult> maybeSingleIndVar =
         loopLikeOp.getSingleInductionVar();
-    EXPECT_TRUE(maybeIndVar.has_value());
+    EXPECT_TRUE(maybeSingleIndVar.has_value());
+
+    std::optional<SmallVector<OpFoldResult>> maybeLb =
+        loopLikeOp.getLowerBounds();
+    EXPECT_TRUE(maybeLb.has_value());
+    EXPECT_EQ((*maybeLb).size(), 1u);
+    std::optional<SmallVector<OpFoldResult>> maybeUb =
+        loopLikeOp.getUpperBounds();
+    EXPECT_TRUE(maybeUb.has_value());
+    EXPECT_EQ((*maybeUb).size(), 1u);
+    std::optional<SmallVector<OpFoldResult>> maybeStep = loopLikeOp.getSteps();
+    EXPECT_TRUE(maybeStep.has_value());
+    EXPECT_EQ((*maybeStep).size(), 1u);
     EXPECT_EQ(loopLikeOp.getInductionVars().size(), 1u);
-    EXPECT_EQ(loopLikeOp.getMixedLowerBound().size(), 1u);
-    EXPECT_EQ(loopLikeOp.getMixedStep().size(), 1u);
-    EXPECT_EQ(loopLikeOp.getMixedLowerBound().size(), 1u);
   }
 
   void checkMultidimensional(LoopLikeOpInterface loopLikeOp) {
-    std::optional<OpFoldResult> maybeLb = loopLikeOp.getSingleLowerBound();
-    EXPECT_FALSE(maybeLb.has_value());
-    std::optional<OpFoldResult> maybeUb = loopLikeOp.getSingleUpperBound();
-    EXPECT_FALSE(maybeUb.has_value());
-    std::optional<OpFoldResult> maybeStep = loopLikeOp.getSingleStep();
-    EXPECT_FALSE(maybeStep.has_value());
-    std::optional<OpFoldResult> maybeIndVar =
+    std::optional<OpFoldResult> maybeSingleLb =
+        loopLikeOp.getSingleLowerBound();
+    EXPECT_FALSE(maybeSingleLb.has_value());
+    std::optional<OpFoldResult> maybeSingleUb =
+        loopLikeOp.getSingleUpperBound();
+    EXPECT_FALSE(maybeSingleUb.has_value());
+    std::optional<OpFoldResult> maybeSingleStep = loopLikeOp.getSingleStep();
+    EXPECT_FALSE(maybeSingleStep.has_value());
+    std::optional<OpFoldResult> maybeSingleIndVar =
         loopLikeOp.getSingleInductionVar();
-    EXPECT_FALSE(maybeIndVar.has_value());
+    EXPECT_FALSE(maybeSingleIndVar.has_value());
+
+    std::optional<SmallVector<OpFoldResult>> maybeLb =
+        loopLikeOp.getLowerBounds();
+    EXPECT_TRUE(maybeLb.has_value());
+    EXPECT_EQ((*maybeLb).size(), 2u);
+    std::optional<SmallVector<OpFoldResult>> maybeUb =
+        loopLikeOp.getUpperBounds();
+    EXPECT_TRUE(maybeUb.has_value());
+    EXPECT_EQ((*maybeUb).size(), 2u);
+    std::optional<SmallVector<OpFoldResult>> maybeStep = loopLikeOp.getSteps();
+    EXPECT_TRUE(maybeStep.has_value());
+    EXPECT_EQ((*maybeStep).size(), 2u);
     EXPECT_EQ(loopLikeOp.getInductionVars().size(), 2u);
-    EXPECT_EQ(loopLikeOp.getMixedLowerBound().size(), 2u);
-    EXPECT_EQ(loopLikeOp.getMixedStep().size(), 2u);
-    EXPECT_EQ(loopLikeOp.getMixedLowerBound().size(), 2u);
   }
 
   MLIRContext context;

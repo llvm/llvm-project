@@ -118,8 +118,8 @@ def AffineForOp : Affine_Op<"for",
     [AttrSizedOperandSegments, AutomaticAllocationScope,
      ImplicitAffineTerminator, ConditionallySpeculatable,
      RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface,
-     ["getInductionVars", "getMixedLowerBound", "getMixedStep",
-      "getMixedUpperBound", "getYieldedValuesMutable",
+     ["getInductionVars", "getLowerBounds", "getSteps",
+      "getUpperBounds", "getYieldedValuesMutable",
       "replaceWithAdditionalYields"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
      ["getEntrySuccessorOperands"]>]> {
@@ -671,7 +671,7 @@ def AffineParallelOp : Affine_Op<"parallel",
      I32ElementsAttr:$lowerBoundsGroups,
      AffineMapAttr:$upperBoundsMap,
      I32ElementsAttr:$upperBoundsGroups,
-     I64SmallVectorArrayAttr:$steps,
+     I64SmallVectorArrayAttr:$step,
      Variadic<Index>:$mapOperands);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
@@ -682,7 +682,7 @@ def AffineParallelOp : Affine_Op<"parallel",
     OpBuilder<(ins "TypeRange":$resultTypes,
       "ArrayRef<arith::AtomicRMWKind>":$reductions, "ArrayRef<AffineMap>":$lbMaps,
       "ValueRange":$lbArgs, "ArrayRef<AffineMap>":$ubMaps, "ValueRange":$ubArgs,
-      "ArrayRef<int64_t>":$steps)>
+      "ArrayRef<int64_t>":$step)>
   ];
 
   let extraClassDeclaration = [{
@@ -727,7 +727,7 @@ def AffineParallelOp : Affine_Op<"parallel",
     static StringRef getUpperBoundsGroupsAttrStrName() {
       return "upperBoundsGroups";
     }
-    static StringRef getStepsAttrStrName() { return "steps"; }
+    static StringRef getStepsAttrStrName() { return "step"; }
 
     /// Returns `true` if the loop bounds have min/max expressions.
     bool hasMinMaxBounds() {

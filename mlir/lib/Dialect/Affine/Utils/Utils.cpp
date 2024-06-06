@@ -494,7 +494,7 @@ void mlir::affine::normalizeAffineParallel(AffineParallelOp op) {
     return;
 
   AffineMap lbMap = op.getLowerBoundsMap();
-  SmallVector<int64_t, 8> steps = op.getSteps();
+  SmallVector<int64_t, 8> steps = op.getStep();
   // No need to do any work if the parallel op is already normalized.
   bool isAlreadyNormalized =
       llvm::all_of(llvm::zip(steps, lbMap.getResults()), [](auto tuple) {
