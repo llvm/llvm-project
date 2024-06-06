@@ -2541,8 +2541,10 @@ add_fp_unittest(
   HDRS
     NextAfterTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nextafter
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2555,8 +2557,10 @@ add_fp_unittest(
   HDRS
     NextAfterTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nextafterf
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2569,8 +2573,26 @@ add_fp_unittest(
   HDRS
     NextAfterTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nextafterl
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  nextafterf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafterf16_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nextafterf16
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2583,8 +2605,10 @@ add_fp_unittest(
   HDRS
     NextAfterTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nextafterf128
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2599,8 +2623,10 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
     HDRS
       NextTowardTest.h
     DEPENDS
+      libc.hdr.fenv_macros
       libc.src.math.nexttoward
-      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.CPP.bit
+      libc.src.__support.FPUtil.fenv_impl
       libc.src.__support.FPUtil.fp_bits
   )
 
@@ -2613,8 +2639,10 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
     HDRS
       NextTowardTest.h
     DEPENDS
+      libc.hdr.fenv_macros
       libc.src.math.nexttowardf
-      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.CPP.bit
+      libc.src.__support.FPUtil.fenv_impl
       libc.src.__support.FPUtil.fp_bits
   )
 endif()
@@ -2628,8 +2656,26 @@ add_fp_unittest(
   HDRS
     NextTowardTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.nexttowardl
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  nexttowardf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nexttowardf16_test.cpp
+  HDRS
+    NextTowardTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nexttowardf16
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2643,7 +2689,6 @@ add_fp_unittest(
     NextDownTest.h
   DEPENDS
     libc.src.math.nextdown
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_fp_unittest(
@@ -2656,7 +2701,6 @@ add_fp_unittest(
     NextDownTest.h
   DEPENDS
     libc.src.math.nextdownf
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_fp_unittest(
@@ -2669,7 +2713,18 @@ add_fp_unittest(
     NextDownTest.h
   DEPENDS
     libc.src.math.nextdownl
-    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextdownf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdownf16_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.src.math.nextdownf16
 )
 
 add_fp_unittest(
@@ -2682,7 +2737,6 @@ add_fp_unittest(
     NextDownTest.h
   DEPENDS
     libc.src.math.nextdownf128
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_fp_unittest(
@@ -2695,7 +2749,6 @@ add_fp_unittest(
     NextUpTest.h
   DEPENDS
     libc.src.math.nextup
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_fp_unittest(
@@ -2708,7 +2761,6 @@ add_fp_unittest(
     NextUpTest.h
   DEPENDS
     libc.src.math.nextupf
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_fp_unittest(
@@ -2721,7 +2773,18 @@ add_fp_unittest(
     NextUpTest.h
   DEPENDS
     libc.src.math.nextupl
-    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextupf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextupf16_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.src.math.nextupf16
 )
 
 add_fp_unittest(
@@ -2734,7 +2797,6 @@ add_fp_unittest(
     NextUpTest.h
   DEPENDS
     libc.src.math.nextupf128
-    libc.src.__support.FPUtil.manipulation_functions
 )
 
 # TODO(lntue): The current implementation of fputil::general::fma<float> is only
