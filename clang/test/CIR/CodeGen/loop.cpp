@@ -205,3 +205,55 @@ void l6() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
+
+void unreachable_after_break() {
+  for (;;) {
+    break;
+    int x = 1;
+  }
+}
+
+// CHECK-NEXT: cir.func @_Z23unreachable_after_breakv()
+// CHECK-NEXT:   cir.scope {
+// CHECK-NEXT:     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+// CHECK-NEXT:     cir.for : cond {
+// CHECK-NEXT:       %1 = cir.const #true
+// CHECK-NEXT:       cir.condition(%1)
+// CHECK-NEXT:     } body {
+// CHECK-NEXT:       cir.break
+// CHECK-NEXT:     ^bb1:  // no predecessors
+// CHECK-NEXT:       %1 = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:       cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT:       cir.yield
+// CHECK-NEXT:     } step {
+// CHECK-NEXT:       cir.yield
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: }
+
+void unreachable_after_continue() {
+  for (;;) {
+    continue;
+    int x = 1;
+  }
+}
+
+// CHECK-NEXT: cir.func @_Z26unreachable_after_continuev()
+// CHECK-NEXT:   cir.scope {
+// CHECK-NEXT:     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+// CHECK-NEXT:     cir.for : cond {
+// CHECK-NEXT:       %1 = cir.const #true
+// CHECK-NEXT:       cir.condition(%1)
+// CHECK-NEXT:     } body {
+// CHECK-NEXT:       cir.continue
+// CHECK-NEXT:     ^bb1:  // no predecessors
+// CHECK-NEXT:       %1 = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:       cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT:       cir.yield
+// CHECK-NEXT:     } step {
+// CHECK-NEXT:       cir.yield
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: }

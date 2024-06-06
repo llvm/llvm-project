@@ -101,26 +101,6 @@ err:
 // NOFLAT:  ^bb1:  
 // NOFLAT:    cir.label "err"
 
-int shouldCreateBlkForGoto(int a) {
-  switch (a) {
-    case(42):
-      break;
-      goto exit;
-    default:
-      return 0;
-  };
-
-exit:
-  return -1;
-
-}
-// NOFLAT: cir.func @_Z22shouldCreateBlkForGotoi
-// NOFLAT:   case (equal, 42) {
-// NOFLAT:     cir.break
-// NOFLAT:   ^bb1:  // no predecessors
-// NOFLAT:     cir.goto "exit"
-// NOFLAT:   }
-
 void severalLabelsInARow(int a) {
   int b = a;
   goto end1;
