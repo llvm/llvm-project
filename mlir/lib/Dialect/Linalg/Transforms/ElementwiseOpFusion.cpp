@@ -974,6 +974,11 @@ public:
     if (!reshapeOp->hasOneUse())
       return failure();
 
+    if (!controlFoldingReshapes(&padOp.getSourceMutable())) {
+      return rewriter.notifyMatchFailure(padOp,
+                                         "fusion blocked by control function");
+    }
+
     ArrayRef<int64_t> low = padOp.getStaticLow();
     ArrayRef<int64_t> high = padOp.getStaticHigh();
     SmallVector<ReassociationIndices> reassociations =
@@ -1777,6 +1782,11 @@ public:
       return failure();
     if (!reshapeOp->hasOneUse())
       return failure();
+
+    if (!controlFoldingReshapes(&padOp.getSourceMutable())) {
+      return rewriter.notifyMatchFailure(padOp,
+                                         "fusion blocked by control function");
+    }
 
     ArrayRef<int64_t> low = padOp.getStaticLow();
     ArrayRef<int64_t> high = padOp.getStaticHigh();
