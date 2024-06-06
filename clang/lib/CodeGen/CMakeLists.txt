@@ -53,13 +53,6 @@ if(MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES Clang
   endif()
 endif()
 
-set(conditional_link_libs)
-if(CLANG_ENABLE_CIR)
-list(APPEND conditional_link_libs
-    clangCIRFrontendAction
-    )
-endif()
-
 add_clang_library(clangCodeGen
   ABIInfo.cpp
   ABIInfoImpl.cpp
@@ -162,5 +155,4 @@ add_clang_library(clangCodeGen
   clangFrontend
   clangLex
   clangSerialization
-  ${conditional_link_libs}
   )
