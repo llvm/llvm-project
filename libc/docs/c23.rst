@@ -59,9 +59,9 @@ Additions:
   * ufromfp* |check|
   * fromfpx* |check|
   * ufromfpx* |check|
-  * nextup*
-  * nextdown*
-  * canonicalize*
+  * nextup* |check|
+  * nextdown* |check|
+  * canonicalize* |check|
   * fmaximum*
   * fminimum*
   * fmaximum_mag*
