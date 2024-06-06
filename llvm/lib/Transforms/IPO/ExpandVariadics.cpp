@@ -423,7 +423,8 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
   if (!expansionApplicableToFunction(M, OriginalFunction))
     return Changed;
 
-  const bool OriginalFunctionIsDeclaration = OriginalFunction->isDeclaration();
+  [[maybe_unused]] const bool OriginalFunctionIsDeclaration =
+      OriginalFunction->isDeclaration();
   assert(rewriteABI() || !OriginalFunctionIsDeclaration);
 
   // Declare a new function and redirect every use to that new function
@@ -442,7 +443,7 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
   assert(VariadicWrapper->isDeclaration());
 
   // Create a single block forwarding wrapper that turns a ... into a va_list
-  Function *VariadicWrapperDefine =
+  [[maybe_unused]] Function *VariadicWrapperDefine =
       defineVariadicWrapper(M, Builder, VariadicWrapper, FixedArityReplacement);
   assert(VariadicWrapperDefine == VariadicWrapper);
   assert(!VariadicWrapper->isDeclaration());
