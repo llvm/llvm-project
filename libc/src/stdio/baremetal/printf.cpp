@@ -14,7 +14,9 @@
 
 #include <stdarg.h>
 
-// This is intended to be provided by the vendor. Name TBD
+// TODO(https://github.com/llvm/llvm-project/issues/94685) unify baremetal hooks
+
+// This is intended to be provided by the vendor.
 extern "C" size_t __llvm_libc_raw_write(const char *s, size_t size);
 
 namespace LIBC_NAMESPACE {
