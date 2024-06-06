@@ -5717,7 +5717,7 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
   mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
   mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
 
-  // Handle optional mask argument
+  // Handle optional arguments
   bool absentDim = isStaticallyAbsent(args[1]);
 
   auto mask = isStaticallyAbsent(args[3])
