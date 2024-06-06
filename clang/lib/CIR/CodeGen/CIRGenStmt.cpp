@@ -655,7 +655,7 @@ CIRGenFunction::foldCaseStmt(const clang::CaseStmt &S, mlir::Type condType,
   for (int i = 1; i < caseAttrCount; ++i) {
     // If there are multiple case attributes, we need to create a new region
     auto *region = currLexScope->createSwitchRegion();
-    auto *block = builder.createBlock(region);
+    builder.createBlock(region);
   }
 
   return lastCase;
