@@ -66,7 +66,12 @@ namespace ScalarTypes {
     First = 0,
   };
   static_assert(getScalar<E>() == First, "");
-  /// FIXME: Member pointers.
+
+  struct S {
+    int v;
+  };
+  constexpr int S::* MemberPtr = &S::v;
+  static_assert(getScalar<decltype(MemberPtr)>() == nullptr, "");
 
 #if __cplusplus >= 201402L
   constexpr void Void(int n) {
