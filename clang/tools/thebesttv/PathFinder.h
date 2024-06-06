@@ -408,13 +408,17 @@ struct DfsPathFinder : public ICFGPathFinder {
 
             struct Node {
                 int v;           // u 可以到达的过程内节点
+                int dv;          // 从 u 到 v 的距离
                 ICFG::Edge edge; // 过程间边（调用边或返回边）
                 int d; // 从 edge.target 到 target 的距离，从而强制 v
                        // 走过程间边另一个函数
 
-                Node(int v, ICFG::Edge edge, int d) : v(v), edge(edge), d(d) {}
+                Node(int v, int dv, ICFG::Edge edge, int d)
+                    : v(v), dv(dv), edge(edge), d(d) {}
 
-                bool operator<(const Node &b) const { return d < b.d; }
+                bool operator<(const Node &b) const {
+                    return d != b.d ? d < b.d : dv < b.dv;
+                }
             };
 
             std::vector<Node> nodes;
@@ -432,7 +436,7 @@ struct DfsPathFinder : public ICFGPathFinder {
 
                     auto d = dij.distance(e.target);
                     if (d.has_value()) {
-                        nodes.emplace_back(v, e, d.value());
+                        nodes.emplace_back(v, bfs.distance(v), e, d.value());
                     }
                 }
             }
