@@ -9887,6 +9887,13 @@ AArch64InstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   // * One operand of the compare is an induction variable and the other is a
   //   loop invariant value
   // * The induction variable is incremented/decremented by a single instruction
+  // * Does not contain CALL or instructions which have unmodeled side effects
+
+  for (MachineInstr &MI : *LoopBB)
+    if (MI.isCall() || MI.hasUnmodeledSideEffects())
+      // This instruction may use NZCV, which interferes with the instruction to
+      // be inserted for loop control.
+      return nullptr;
 
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
