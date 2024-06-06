@@ -17,6 +17,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
+#include "llvm/TargetParser/Host.h"
 
 #include <cassert>
 
@@ -411,6 +412,13 @@ void Flang::addTargetOptions(const ArgList &Args,
   }
 
   // TODO: Add target specific flags, ABI, mtune option etc.
+  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+    CmdArgs.push_back("-tune-cpu");
+    if (strcmp(A->getValue(), "native") == 0)
+      CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
+    else
+      CmdArgs.push_back(A->getValue());
+  }
 }
 
 void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
