@@ -378,7 +378,9 @@ LogicalResult ForOp::verifyRegions() {
   return success();
 }
 
-SmallVector<Value> ForOp::getLoopInductionVars() { return {getInductionVar()}; }
+std::optional<SmallVector<Value>> ForOp::getLoopInductionVars() {
+  return SmallVector<Value, 1>{getInductionVar()};
+}
 
 std::optional<SmallVector<OpFoldResult>> ForOp::getLoopLowerBounds() {
   return SmallVector<OpFoldResult, 1>{OpFoldResult(getLowerBound())};
@@ -1426,7 +1428,7 @@ SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
   return storeOps;
 }
 
-SmallVector<Value> ForallOp::getLoopInductionVars() {
+std::optional<SmallVector<Value>> ForallOp::getLoopInductionVars() {
   return SmallVector<Value>{getBody()->getArguments().take_front(getRank())};
 }
 
@@ -3004,7 +3006,7 @@ void ParallelOp::print(OpAsmPrinter &p) {
 
 SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
 
-SmallVector<Value> ParallelOp::getLoopInductionVars() {
+std::optional<SmallVector<Value>> ParallelOp::getLoopInductionVars() {
   return SmallVector<Value>{getBody()->getArguments()};
 }
 

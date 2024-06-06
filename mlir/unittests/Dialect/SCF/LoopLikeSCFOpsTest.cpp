@@ -51,7 +51,10 @@ protected:
         loopLikeOp.getLoopSteps();
     EXPECT_TRUE(maybeStep.has_value());
     EXPECT_EQ((*maybeStep).size(), 1u);
-    EXPECT_EQ(loopLikeOp.getLoopInductionVars().size(), 1u);
+    std::optional<SmallVector<Value>> maybeInductionVars =
+        loopLikeOp.getLoopInductionVars();
+    EXPECT_TRUE(maybeInductionVars.has_value());
+    EXPECT_EQ((*maybeInductionVars).size(), 1u);
   }
 
   void checkMultidimensional(LoopLikeOpInterface loopLikeOp) {
@@ -79,7 +82,10 @@ protected:
         loopLikeOp.getLoopSteps();
     EXPECT_TRUE(maybeStep.has_value());
     EXPECT_EQ((*maybeStep).size(), 2u);
-    EXPECT_EQ(loopLikeOp.getLoopInductionVars().size(), 2u);
+    std::optional<SmallVector<Value>> maybeInductionVars =
+        loopLikeOp.getLoopInductionVars();
+    EXPECT_TRUE(maybeInductionVars.has_value());
+    EXPECT_EQ((*maybeInductionVars).size(), 2u);
   }
 
   MLIRContext context;

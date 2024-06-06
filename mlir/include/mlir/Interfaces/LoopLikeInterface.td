@@ -95,12 +95,12 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     InterfaceMethod<[{
         Return all induction variables.
       }],
-      /*retTy=*/"::llvm::SmallVector<::mlir::Value>",
+      /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::Value>>",
       /*methodName=*/"getLoopInductionVars",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return {};
+        return std::nullopt;
       }]
     >,
     InterfaceMethod<[{
@@ -235,8 +235,8 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// std::nullopt.
     ::std::optional<::mlir::Value> getSingleInductionVar() {
       auto inductionVars = this->getLoopInductionVars();
-      if (inductionVars.size() == 1)
-          return inductionVars[0];
+      if (inductionVars.has_value() && (*inductionVars).size() == 1)
+          return (*inductionVars)[0];
         return std::nullopt;
     }
     /// Return the single lower bound value or attribute if it exists, otherwise

@@ -511,7 +511,9 @@ def ForallOp : SCF_Op<"forall", [
 
   let extraClassDeclaration = [{
     SmallVector<Value> getInductionVars() {
-      return getLoopInductionVars();
+      auto maybeInductionVars = getLoopInductionVars();;
+      assert(maybeInductionVars.has_value() && "expected values");
+      return *maybeInductionVars;
     }
     // Get lower bounds as OpFoldResult.
     SmallVector<OpFoldResult> getMixedLowerBound() {
@@ -591,7 +593,7 @@ def ForallOp : SCF_Op<"forall", [
     }
 
     ::mlir::Value getInductionVar(int64_t idx) {
-      return getLoopInductionVars()[idx];
+      return getInductionVars()[idx];
     }
 
     ::mlir::Block::BlockArgListType getRegionOutArgs() {
@@ -850,7 +852,9 @@ def ParallelOp : SCF_Op<"parallel",
   let extraClassDeclaration = [{
     // Get induction variables.
     SmallVector<Value> getInductionVars() {
-      return getLoopInductionVars();
+      auto maybeInductionVars = getLoopInductionVars();;
+      assert(maybeInductionVars.has_value() && "expected values");
+      return *maybeInductionVars;
     }
     unsigned getNumLoops() { return getStep().size(); }
     unsigned getNumReductions() { return getInitVals().size(); }
