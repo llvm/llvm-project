@@ -30,9 +30,8 @@ using namespace llvm;
 
 STATISTIC(NumOneIteration, "Number of functions with one iteration");
 STATISTIC(NumTwoIterations, "Number of functions with two iterations");
-STATISTIC(NumThreeIterations, "Number of functions with three iterations");
-STATISTIC(NumFourOrMoreIterations,
-          "Number of functions with four or more iterations");
+STATISTIC(NumThreeOrMoreIterations,
+          "Number of functions with three or more iterations");
 
 namespace llvm {
 cl::OptionCategory GICombinerOptionCategory(
@@ -197,10 +196,8 @@ bool Combiner::combineMachineInstrs() {
     ++NumOneIteration;
   else if (Iteration == 2)
     ++NumTwoIterations;
-  else if (Iteration == 3)
-    ++NumThreeIterations;
   else
-    ++NumFourOrMoreIterations;
+    ++NumThreeOrMoreIterations;
 
 #ifndef NDEBUG
   if (CSEInfo) {
