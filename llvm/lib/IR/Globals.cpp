@@ -335,6 +335,14 @@ bool GlobalObject::canIncreaseAlignment() const {
   if (isELF && !isDSOLocal())
     return false;
 
+  bool isXCOFF =
+      (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatXCOFF());
+  if (isXCOFF)
+    if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
+      // GV with toc-data attribute is put in the region same as toc entry.
+      // Its alignment should be the same as toc entry.
+      return !GV->hasAttribute("toc-data");
+
   return true;
 }
 
