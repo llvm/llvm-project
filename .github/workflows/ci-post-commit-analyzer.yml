@@ -41,17 +41,6 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Install Dependencies
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          apt-get update
-          apt-get -y install \
-            cmake \
-            ninja-build \
-            perl \
-            clang-tools
-
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1
         with:
@@ -83,7 +72,8 @@ jobs:
       - name: Build
         run: |
           ninja -v -C build
-          scan-build --generate-index-only build/analyzer-results
+          # TODO: Use scan-build from container once we have new container builds with scan-build.
+          ./clang/tools/scan-build/bin/scan-build --generate-index-only build/analyzer-results
 
       - name: Upload Results
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
