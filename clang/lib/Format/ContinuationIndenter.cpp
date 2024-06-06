@@ -1457,6 +1457,11 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       !Current.isOneOf(tok::colon, tok::comment)) {
     return ContinuationIndent;
   }
+  if (Style.isCpp() && Current.is(tok::arrow) &&
+      Previous.isOneOf(tok::kw_noexcept, tok::kw_mutable, tok::kw_constexpr,
+                       tok::kw_consteval, tok::kw_static)) {
+    return ContinuationIndent;
+  }
   if (Current.is(TT_ProtoExtensionLSquare))
     return CurrentState.Indent;
   if (Current.isBinaryOperator() && CurrentState.UnindentOperator) {

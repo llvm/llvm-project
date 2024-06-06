@@ -22858,6 +22858,31 @@ TEST_F(FormatTest, FormatsLambdas) {
       "      //\n"
       "    });");
 
+  verifyFormat("int main() {\n"
+               "  very_long_function_name_yes_it_is_really_long(\n"
+               "      [](auto n)\n"
+               "          -> std::unordered_map<very_long_type_name_A, "
+               "very_long_type_name_B> {\n"
+               "        really_do_something();\n"
+               "      });\n"
+               "}");
+  verifyFormat("int main() {\n"
+               "  very_long_function_name_yes_it_is_really_long(\n"
+               "      [](auto n) noexcept\n"
+               "          -> std::unordered_map<very_long_type_name_A, "
+               "very_long_type_name_B> {\n"
+               "        really_do_something();\n"
+               "      });\n"
+               "}");
+  verifyFormat("int main() {\n"
+               "  very_long_function_name_yes_it_is_really_long(\n"
+               "      [](auto n) constexpr\n"
+               "          -> std::unordered_map<very_long_type_name_A, "
+               "very_long_type_name_B> {\n"
+               "        really_do_something();\n"
+               "      });\n"
+               "}");
+
   FormatStyle DoNotMerge = getLLVMStyle();
   DoNotMerge.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
   verifyFormat("auto c = []() {\n"
