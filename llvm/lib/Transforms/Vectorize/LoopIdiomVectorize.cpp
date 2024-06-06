@@ -40,6 +40,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -391,6 +392,14 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   BasicBlock *LoopIncBlock = BasicBlock::Create(
       Ctx, "mismatch_loop_inc", EndBlock->getParent(), EndBlock);
 
+  // This is actually one of the only two DTU updates we need. The reason being
+  // that we're splitting `mismatch_end` out of the preheader and put
+  // most of the stuff we create later between the preheader and
+  // `mismatch_end`. Now when DTU removes an edge, it simply recalculates
+  // everything in between. In this case, it will be the prehedaer and
+  // `mismatch_end`, along with the aforementioned content. Therefore we don't
+  // need to insert additional DTU updates for new control flow edges
+  // added in this region.
   DTU.applyUpdates({{DominatorTree::Insert, Preheader, MinItCheckBlock},
                     {DominatorTree::Delete, Preheader, EndBlock}});
 
@@ -436,10 +445,6 @@ Value *LoopIdiomVectorize::expandFindMismatch(
       MDBuilder(MinItCheckBr->getContext()).createBranchWeights(99, 1));
   Builder.Insert(MinItCheckBr);
 
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, MinItCheckBlock, MemCheckBlock},
-       {DominatorTree::Insert, MinItCheckBlock, LoopPreHeaderBlock}});
-
   // For each of the arrays, check the start/end addresses are on the same
   // page.
   Builder.SetInsertPoint(MemCheckBlock);
@@ -482,10 +487,6 @@ Value *LoopIdiomVectorize::expandFindMismatch(
                                 .createBranchWeights(10, 90));
   Builder.Insert(CombinedPageCmpCmpBr);
 
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, MemCheckBlock, LoopPreHeaderBlock},
-       {DominatorTree::Insert, MemCheckBlock, VectorLoopPreheaderBlock}});
-
   // Set up the vector loop preheader, i.e. calculate initial loop predicate,
   // zero-extend MaxLen to 64-bits, determine the number of vector elements
   // processed in each iteration, etc.
@@ -511,9 +512,6 @@ Value *LoopIdiomVectorize::expandFindMismatch(
 
   BranchInst *JumpToVectorLoop = BranchInst::Create(VectorLoopStartBlock);
   Builder.Insert(JumpToVectorLoop);
-
-  DTU.applyUpdates({{DominatorTree::Insert, VectorLoopPreheaderBlock,
-                     VectorLoopStartBlock}});
 
   // Set up the first vector loop block by creating the PHIs, doing the vector
   // loads and comparing the vectors.
@@ -542,10 +540,6 @@ Value *LoopIdiomVectorize::expandFindMismatch(
       VectorLoopMismatchBlock, VectorLoopIncBlock, VectorMatchHasActiveLanes);
   Builder.Insert(VectorEarlyExit);
 
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, VectorLoopStartBlock, VectorLoopMismatchBlock},
-       {DominatorTree::Insert, VectorLoopStartBlock, VectorLoopIncBlock}});
-
   // Increment the index counter and calculate the predicate for the next
   // iteration of the loop. We branch back to the start of the loop if there
   // is at least one active lane.
@@ -564,10 +558,6 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   BranchInst *VectorLoopBranchBack =
       BranchInst::Create(VectorLoopStartBlock, EndBlock, PredHasActiveLanes);
   Builder.Insert(VectorLoopBranchBack);
-
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, VectorLoopIncBlock, VectorLoopStartBlock},
-       {DominatorTree::Insert, VectorLoopIncBlock, EndBlock}});
 
   // If we found a mismatch then we need to calculate which lane in the vector
   // had a mismatch and add that on to the current loop index.
@@ -592,15 +582,9 @@ Value *LoopIdiomVectorize::expandFindMismatch(
 
   Builder.Insert(BranchInst::Create(EndBlock));
 
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, VectorLoopMismatchBlock, EndBlock}});
-
   // Generate code for scalar loop.
   Builder.SetInsertPoint(LoopPreHeaderBlock);
   Builder.Insert(BranchInst::Create(LoopStartBlock));
-
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, LoopPreHeaderBlock, LoopStartBlock}});
 
   Builder.SetInsertPoint(LoopStartBlock);
   PHINode *IndexPhi = Builder.CreatePHI(ResType, 2, "mismatch_index");
@@ -623,9 +607,6 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   BranchInst *MatchCmpBr = BranchInst::Create(LoopIncBlock, EndBlock, MatchCmp);
   Builder.Insert(MatchCmpBr);
 
-  DTU.applyUpdates({{DominatorTree::Insert, LoopStartBlock, LoopIncBlock},
-                    {DominatorTree::Insert, LoopStartBlock, EndBlock}});
-
   // Have we reached the maximum permitted length for the loop?
   Builder.SetInsertPoint(LoopIncBlock);
   Value *PhiInc = Builder.CreateAdd(IndexPhi, ConstantInt::get(ResType, 1), "",
@@ -635,9 +616,6 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   Value *IVCmp = Builder.CreateICmpEQ(PhiInc, MaxLen);
   BranchInst *IVCmpBr = BranchInst::Create(EndBlock, LoopStartBlock, IVCmp);
   Builder.Insert(IVCmpBr);
-
-  DTU.applyUpdates({{DominatorTree::Insert, LoopIncBlock, EndBlock},
-                    {DominatorTree::Insert, LoopIncBlock, LoopStartBlock}});
 
   // In the end block we need to insert a PHI node to deal with three cases:
   //  1. We didn't find a mismatch in the scalar loop, so we return MaxLen.
@@ -679,7 +657,12 @@ void LoopIdiomVectorize::transformByteCompare(GetElementPtrInst *GEPA,
   BasicBlock *Header = CurLoop->getHeader();
   BranchInst *PHBranch = cast<BranchInst>(Preheader->getTerminator());
   IRBuilder<> Builder(PHBranch);
+
+  // Safeguard to check if we build the correct DomTree with DTU.
+  auto CheckDTU = llvm::make_scope_exit(
+      [this]() { assert(DT->verify() && "Ill-formed DomTree built by DTU"); });
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
   Builder.SetCurrentDebugLocation(PHBranch->getDebugLoc());
 
   // Increment the pointer if this was done before the loads in the loop.
@@ -708,6 +691,9 @@ void LoopIdiomVectorize::transformByteCompare(GetElementPtrInst *GEPA,
   Builder.CreateCondBr(Builder.getTrue(), CmpBB, Header);
   PHBranch->eraseFromParent();
 
+  // Previously we take care of the DTU updates between the preheader and
+  // `mismatch_end`. Now we need to make sure edges and blocks appended after
+  // `mismatch_end` are also being properly accounted for.
   BasicBlock *MismatchEnd = cast<Instruction>(ByteCmpRes)->getParent();
   DTU.applyUpdates({{DominatorTree::Insert, MismatchEnd, CmpBB}});
 
@@ -717,12 +703,8 @@ void LoopIdiomVectorize::transformByteCompare(GetElementPtrInst *GEPA,
   if (FoundBB != EndBB) {
     Value *FoundCmp = Builder.CreateICmpEQ(ByteCmpRes, MaxLen);
     Builder.CreateCondBr(FoundCmp, EndBB, FoundBB);
-    DTU.applyUpdates({{DominatorTree::Insert, CmpBB, FoundBB},
-                      {DominatorTree::Insert, CmpBB, EndBB}});
-
   } else {
     Builder.CreateBr(FoundBB);
-    DTU.applyUpdates({{DominatorTree::Insert, CmpBB, FoundBB}});
   }
 
   auto fixSuccessorPhis = [&](BasicBlock *SuccBB) {
