@@ -243,10 +243,6 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
     assert(GroupIDBits);
     assert(BitmaskBits);
 
-    // For the extension without bitmask, skip it.
-    if (!getValueFromBitsInit(BitmaskBits, *Rec))
-      continue;
-
     StringRef ExtName = Rec->getValueAsString("Name");
     ExtName.consume_front("experimental-");
     uint64_t GroupIDVal = getValueFromBitsInit(GroupIDBits, *Rec);
