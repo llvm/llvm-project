@@ -86,8 +86,8 @@ add_libc_test(
     libc.src.__support.uint128
 )
 
-# NVPTX does not support varargs currently.
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+# The GPU does not support varargs currently.
+if(NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
     arg_list_test
     SUITE
