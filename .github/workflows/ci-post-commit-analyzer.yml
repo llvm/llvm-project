@@ -19,6 +19,7 @@ on:
       - closed
     paths:
       - '.github/workflows/ci-post-commit-analyzer.yml'
+      - '.github/workflows/ci-post-commit-analyzer-run.py'
   schedule:
     - cron: '30 0 * * *'
 
