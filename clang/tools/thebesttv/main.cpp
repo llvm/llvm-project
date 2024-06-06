@@ -115,7 +115,8 @@ struct VarLocResult {
  */
 VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                             int line, int column, bool isStmt,
-                            bool requireExact, bool succFirst) {
+                            bool requireExact, bool succFirst,
+                            int previousFid) {
     FindVarVisitor visitor;
 
     for (const auto &fi : functionsInFile.at(file)) {
@@ -170,24 +171,77 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
             return std::nullopt;
         };
 
+        // 分别获取，succ / pred 优先的匹配结果
+
+        VarLocResult succFirstResult;
+        const Stmt *succFirstStmt = nullptr;
+        // 优先访问 succ，也就是根据 Block ID 从小到大遍历
+        for (auto it = fi->stmtBlockPairs.cbegin();
+             it != fi->stmtBlockPairs.cend(); it++) {
+            const auto &[stmt, block] = *it;
+            auto result = locate(stmt, block);
+            if (result) {
+                succFirstResult = result.value();
+                succFirstStmt = stmt;
+                break;
+            }
+        }
+
+        VarLocResult predFirstResult;
+        const Stmt *predFirstStmt = nullptr;
+        // 优先访问 pred，即从大到小，反向遍历
+        for (auto it = fi->stmtBlockPairs.crbegin();
+             it != fi->stmtBlockPairs.crend(); it++) {
+            const auto &[stmt, block] = *it;
+            auto result = locate(stmt, block);
+            if (result) {
+                predFirstResult = result.value();
+                predFirstStmt = stmt;
+                break;
+            }
+        }
+
+        // 如果有一个找不到，另一个也应该找不到
+        if (!succFirstResult.isValid() || !predFirstResult.isValid())
+            continue;
+
+        // succ 优先匹配到了 CallExpr，说明语句形如 p = foo() 或 foo()
+        // 此时如果能确定这条语句是 foo() 返回后指向的，就对应处理
+        // 1. 对于 p = foo()，应该匹配 succ 的 p = foo()
+        // 2. 对于 foo()，在 succ 中不会再有语句，应该返回空值，跳过这条
+        if (const CallExpr *callExpr = dyn_cast<CallExpr>(predFirstStmt)) {
+            std::string calleeSignature =
+                getFullSignature(callExpr->getDirectCallee());
+            int calleeFid = Global.getIdOfFunction(calleeSignature);
+            if (succFirstResult != predFirstResult) {
+                logger.info("Stmt in form of 'p = foo()'");
+                if (calleeFid == previousFid) {
+                    // 应该是 foo() 返回后的那条语句
+                    logger.info("  Succ first");
+                    return succFirstResult;
+                } else {
+                    // 进入 foo() 之前的那条语句
+                    // logger.info("  Pred first");
+                    // return predFirstResult;
+                }
+            } else {
+                logger.info("Stmt in form of 'foo()'");
+                if (calleeFid == previousFid) {
+                    // 由于 foo() 只在 pred 有 CallExpr，succ 就没有了
+                    // 所以直接返回非法值，跳过这条语句
+                    logger.info("  Skip this stmt");
+                    return VarLocResult();
+                } else {
+                    // logger.info("  Pred first");
+                    // return predFirstResult;
+                }
+            }
+        }
+
         if (succFirst) {
-            // 优先访问 succ，也就是根据 Block ID 从小到大遍历
-            for (auto it = fi->stmtBlockPairs.cbegin();
-                 it != fi->stmtBlockPairs.cend(); it++) {
-                const auto &[stmt, block] = *it;
-                auto result = locate(stmt, block);
-                if (result)
-                    return result.value();
-            }
+            return succFirstResult;
         } else {
-            // 优先访问 pred，即从大到小，反向遍历
-            for (auto it = fi->stmtBlockPairs.crbegin();
-                 it != fi->stmtBlockPairs.crend(); it++) {
-                const auto &[stmt, block] = *it;
-                auto result = locate(stmt, block);
-                if (result)
-                    return result.value();
-            }
+            return predFirstResult;
         }
     }
     return VarLocResult();
@@ -226,7 +280,7 @@ struct FunctionLocator {
 };
 
 VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
-                            bool succFirst) {
+                            bool succFirst, int previousFid) {
     int fid = locator.getFid(loc);
     if (fid == -1) {
         return VarLocResult();
@@ -255,8 +309,9 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
     logger.warn("Unable to find exact match! Trying inexact matching...");
     logger.warn("  {}:{}:{}", loc.file, loc.line, loc.column);
     */
-    auto result = locateVariable(functionsInFile, loc.file, loc.line,
-                                 loc.column, true, false, succFirst);
+    auto result =
+        locateVariable(functionsInFile, loc.file, loc.line, loc.column, true,
+                       false, succFirst, previousFid);
     return result;
 }
 
@@ -532,6 +587,7 @@ void generatePathFromOneEntry(const ordered_json &result,
     VarLocResult from, to;
     int fromLine, toLine;
     std::vector<VarLocResult> path;
+    int previousFid = -1;
     for (const ordered_json &loc : locations) {
         std::string type = loc["type"].template get<std::string>();
         if (type != "source" && type != "sink" && type != "stmt") {
@@ -552,7 +608,8 @@ void generatePathFromOneEntry(const ordered_json &result,
             continue;
         }
 
-        VarLocResult varLoc = locateVariable(locator, jsonLoc, succFirst);
+        VarLocResult varLoc =
+            locateVariable(locator, jsonLoc, succFirst, previousFid);
         if (!varLoc.isValid()) {
             logger.error("Error: cannot locate {} at {}", type, loc);
             // 跳过无法定位的中间路径
@@ -576,6 +633,7 @@ void generatePathFromOneEntry(const ordered_json &result,
                 continue;
             path.emplace_back(varLoc);
         }
+        previousFid = varLoc.fid;
     }
 
     handleInputEntry(from, fromLine, to, toLine, path, type, output["results"]);
