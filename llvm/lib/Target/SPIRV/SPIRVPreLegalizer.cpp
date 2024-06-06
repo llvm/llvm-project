@@ -453,6 +453,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           Ty = TargetExtIt == TargetExtConstTypes.end()
                    ? MI.getOperand(1).getCImm()->getType()
                    : TargetExtIt->second;
+          GR->add(MI.getOperand(1).getCImm(), &MF, Reg);
         } else if (MIOp == TargetOpcode::G_FCONSTANT) {
           Ty = MI.getOperand(1).getFPImm()->getType();
         } else {
