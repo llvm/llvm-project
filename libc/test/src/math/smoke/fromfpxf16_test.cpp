@@ -1,4 +1,4 @@
-//===- llvm/unittest/ADT/MoveOnly.cpp - Optional unit tests ---------------===//
+//===-- Unittests for fromfpxf16 ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MoveOnly.h"
+#include "FromfpxTest.h"
 
-using namespace llvm;
+#include "src/math/fromfpxf16.h"
 
-unsigned MoveOnly::MoveConstructions = 0;
-unsigned MoveOnly::Destructions = 0;
-unsigned MoveOnly::MoveAssignments = 0;
+LIST_FROMFPX_TESTS(float16, LIBC_NAMESPACE::fromfpxf16)
