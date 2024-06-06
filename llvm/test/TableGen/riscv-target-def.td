@@ -5,41 +5,43 @@ include "llvm/Target/Target.td"
 class RISCVExtension<string name, int major, int minor, string desc,
                      list<SubtargetFeature> implies = [],
                      string fieldname = !subst("Feature", "Has", NAME),
-                     string value = "true", bits<3> groupID=0, int bitmaskShift=-1>
+                     string value = "true">
     : SubtargetFeature<name, fieldname, value, desc, implies> {
   int MajorVersion = major;
   int MinorVersion = minor;
   bit Experimental = false;
+}
 
-  bits<3> GroupID = groupID;
-  bits<64> Bitmask = !if(!eq(bitmaskShift, -1), 0, !shl(1, bitmaskShift));
+class RISCVExtensionBitmask<bits<3> groupID, int bitmaskShift> {
+    bits<3> GroupID = groupID;
+    bits<64> Bitmask = !shl(1, bitmaskShift);
 }
 
 class RISCVExperimentalExtension<string name, int major, int minor, string desc,
                                  list<RISCVExtension> implies = [],
                                  string fieldname = !subst("Feature", "Has", NAME),
-                                 string value = "true", bits<3> groupID=0, int bitmaskShift=-1>
+                                 string value = "true">
     : RISCVExtension<"experimental-"#name, major, minor, desc, implies,
-                     fieldname, value, groupID, bitmaskShift> {
+                     fieldname, value> {
   let Experimental = true;
 }
 
 def FeatureStdExtI
     : RISCVExtension<"i", 2, 1,
-                     "'I' (Base Integer Instruction Set)", groupID=0, bitmaskShift=0>;
+                     "'I' (Base Integer Instruction Set)">, RISCVExtensionBitmask<0, 0>;
 
 def FeatureStdExtZicsr
     : RISCVExtension<"zicsr", 2, 0,
-                     "'zicsr' (CSRs)", groupID=0, bitmaskShift=10>;
+                     "'zicsr' (CSRs)">, RISCVExtensionBitmask<0, 10>;
 
 def FeatureStdExtZifencei
     : RISCVExtension<"zifencei", 2, 0,
-                     "'Zifencei' (fence.i)", groupID=0, bitmaskShift=13>;
+                     "'Zifencei' (fence.i)">, RISCVExtensionBitmask<0, 13>;
 
 def FeatureStdExtF
     : RISCVExtension<"f", 2, 2,
                      "'F' (Single-Precision Floating-Point)",
-                     [FeatureStdExtZicsr], groupID=0, bitmaskShift=33>;
+                     [FeatureStdExtZicsr]>, RISCVExtensionBitmask<0, 33>;
 
 def FeatureStdExtZidummy
     : RISCVExperimentalExtension<"zidummy", 0, 1,
