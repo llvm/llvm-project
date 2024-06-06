@@ -96,7 +96,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         Return all induction variables.
       }],
       /*retTy=*/"::llvm::SmallVector<::mlir::Value>",
-      /*methodName=*/"getInductionVars",
+      /*methodName=*/"getLoopInductionVars",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -107,7 +107,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         Return all lower bounds.
       }],
       /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
-      /*methodName=*/"getLowerBounds",
+      /*methodName=*/"getLoopLowerBounds",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -118,7 +118,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         Return all steps.
       }],
       /*retTy=*/"std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
-      /*methodName=*/"getSteps",
+      /*methodName=*/"getLoopSteps",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -129,7 +129,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         Return all upper bounds.
       }],
       /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
-      /*methodName=*/"getUpperBounds",
+      /*methodName=*/"getLoopUpperBounds",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -234,7 +234,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// If there is a single induction variable return it, otherwise return
     /// std::nullopt.
     ::std::optional<::mlir::Value> getSingleInductionVar() {
-      auto inductionVars = this->getInductionVars();
+      auto inductionVars = this->getLoopInductionVars();
       if (inductionVars.size() == 1)
           return inductionVars[0];
         return std::nullopt;
@@ -242,7 +242,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// Return the single lower bound value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleLowerBound() {
-      auto lowerBounds = this->getLowerBounds();
+      auto lowerBounds = this->getLoopLowerBounds();
       if (lowerBounds.has_value() && (*lowerBounds).size() == 1)
           return (*lowerBounds)[0];
       return std::nullopt;
@@ -250,7 +250,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// Return the single step value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleStep() {
-      auto steps = this->getSteps(); 
+      auto steps = this->getLoopSteps(); 
       if (steps.has_value() && (*steps).size() == 1)
           return (*steps)[0];
       return std::nullopt;
@@ -258,7 +258,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// Return the single upper bound value or attribute if it exists, otherwise
     /// return std::nullopt.
     ::std::optional<::mlir::OpFoldResult> getSingleUpperBound() {
-      auto upperBounds = this->getUpperBounds();
+      auto upperBounds = this->getLoopUpperBounds();
       if (upperBounds.has_value() && (*upperBounds).size() == 1)
           return (*upperBounds)[0];
       return std::nullopt;

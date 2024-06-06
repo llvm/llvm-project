@@ -196,8 +196,8 @@ public:
         return rewriter.notifyMatchFailure(op, "couldn't convert upper bounds");
       upperBoundTuple.push_back(upper);
     }
-    steps.reserve(op.getStep().size());
-    for (int64_t step : op.getStep())
+    steps.reserve(op.getSteps().size());
+    for (int64_t step : op.getSteps())
       steps.push_back(rewriter.create<arith::ConstantIndexOp>(loc, step));
 
     // Get the terminator op.

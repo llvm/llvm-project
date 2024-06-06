@@ -378,17 +378,17 @@ LogicalResult ForOp::verifyRegions() {
   return success();
 }
 
-SmallVector<Value> ForOp::getInductionVars() { return {getInductionVar()}; }
+SmallVector<Value> ForOp::getLoopInductionVars() { return {getInductionVar()}; }
 
-std::optional<SmallVector<OpFoldResult>> ForOp::getLowerBounds() {
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopLowerBounds() {
   return SmallVector<OpFoldResult, 1>{OpFoldResult(getLowerBound())};
 }
 
-std::optional<SmallVector<OpFoldResult>> ForOp::getSteps() {
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopSteps() {
   return SmallVector<OpFoldResult, 1>{OpFoldResult(getStep())};
 }
 
-std::optional<SmallVector<OpFoldResult>> ForOp::getUpperBounds() {
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopUpperBounds() {
   return SmallVector<OpFoldResult, 1>{OpFoldResult(getUpperBound())};
 }
 
@@ -1426,24 +1426,24 @@ SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
   return storeOps;
 }
 
-SmallVector<Value> ForallOp::getInductionVars() {
+SmallVector<Value> ForallOp::getLoopInductionVars() {
   return SmallVector<Value>{getBody()->getArguments().take_front(getRank())};
 }
 
 // Get lower bounds as OpFoldResult.
-std::optional<SmallVector<OpFoldResult>> ForallOp::getLowerBounds() {
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopLowerBounds() {
   Builder b(getOperation()->getContext());
   return getMixedValues(getStaticLowerBound(), getDynamicLowerBound(), b);
 }
 
 // Get upper bounds as OpFoldResult.
-std::optional<SmallVector<OpFoldResult>> ForallOp::getUpperBounds() {
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopUpperBounds() {
   Builder b(getOperation()->getContext());
   return getMixedValues(getStaticUpperBound(), getDynamicUpperBound(), b);
 }
 
 // Get steps as OpFoldResult.
-std::optional<SmallVector<OpFoldResult>> ForallOp::getSteps() {
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopSteps() {
   Builder b(getOperation()->getContext());
   return getMixedValues(getStaticStep(), getDynamicStep(), b);
 }
@@ -3004,19 +3004,19 @@ void ParallelOp::print(OpAsmPrinter &p) {
 
 SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
 
-SmallVector<Value> ParallelOp::getInductionVars() {
+SmallVector<Value> ParallelOp::getLoopInductionVars() {
   return SmallVector<Value>{getBody()->getArguments()};
 }
 
-std::optional<SmallVector<OpFoldResult>> ParallelOp::getLowerBounds() {
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopLowerBounds() {
   return getLowerBound();
 }
 
-std::optional<SmallVector<OpFoldResult>> ParallelOp::getUpperBounds() {
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopUpperBounds() {
   return getUpperBound();
 }
 
-std::optional<SmallVector<OpFoldResult>> ParallelOp::getSteps() {
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopSteps() {
   return getStep();
 }
 
