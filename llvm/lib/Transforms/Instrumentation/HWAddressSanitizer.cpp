@@ -341,8 +341,8 @@ private:
   void instrumentMemIntrinsic(MemIntrinsic *MI);
   bool instrumentMemAccess(InterestingMemoryOperand &O, DomTreeUpdater &DTU,
                            LoopInfo *LI);
-  bool ignoreAccess(Instruction *Inst, Value *Ptr);
-  bool ignoreAccessWithRemark(OptimizationRemarkEmitter &ORE, Instruction *Inst,
+  bool ignoreAccessWithoutRemark(Instruction *Inst, Value *Ptr);
+  bool ignoreAccess(OptimizationRemarkEmitter &ORE, Instruction *Inst,
                               Value *Ptr);
 
   void getInterestingMemoryOperands(
@@ -769,7 +769,7 @@ Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
   return IRB.CreateLoad(PtrTy, GlobalDynamicAddress);
 }
 
-bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
+bool HWAddressSanitizer::ignoreAccessWithoutRemark(Instruction *Inst, Value *Ptr) {
   // Do not instrument accesses from different address spaces; we cannot deal
   // with them.
   Type *PtrTy = cast<PointerType>(Ptr->getType()->getScalarType());
@@ -799,9 +799,9 @@ bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   return false;
 }
 
-bool HWAddressSanitizer::ignoreAccessWithRemark(OptimizationRemarkEmitter &ORE,
+bool HWAddressSanitizer::ignoreAccess(OptimizationRemarkEmitter &ORE,
                                                 Instruction *Inst, Value *Ptr) {
-  bool Ignored = ignoreAccess(Inst, Ptr);
+  bool Ignored = ignoreAccessWithoutRemark(Inst, Ptr);
   if (Ignored) {
     ORE.emit(
         [&]() { return OptimizationRemark(DEBUG_TYPE, "ignoreAccess", Inst); });
@@ -827,25 +827,25 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     if (!ClInstrumentReads ||
-        ignoreAccessWithRemark(ORE, I, LI->getPointerOperand()))
+        ignoreAccess(ORE, I, LI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, LI->getPointerOperandIndex(), false,
                              LI->getType(), LI->getAlign());
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     if (!ClInstrumentWrites ||
-        ignoreAccessWithRemark(ORE, I, SI->getPointerOperand()))
+        ignoreAccess(ORE, I, SI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, SI->getPointerOperandIndex(), true,
                              SI->getValueOperand()->getType(), SI->getAlign());
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
     if (!ClInstrumentAtomics ||
-        ignoreAccessWithRemark(ORE, I, RMW->getPointerOperand()))
+        ignoreAccess(ORE, I, RMW->getPointerOperand()))
       return;
     Interesting.emplace_back(I, RMW->getPointerOperandIndex(), true,
                              RMW->getValOperand()->getType(), std::nullopt);
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
     if (!ClInstrumentAtomics ||
-        ignoreAccessWithRemark(ORE, I, XCHG->getPointerOperand()))
+        ignoreAccess(ORE, I, XCHG->getPointerOperand()))
       return;
     Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
                              XCHG->getCompareOperand()->getType(),
@@ -853,7 +853,7 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
   } else if (auto *CI = dyn_cast<CallInst>(I)) {
     for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
       if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
-          ignoreAccessWithRemark(ORE, I, CI->getArgOperand(ArgNo)))
+          ignoreAccess(ORE, I, CI->getArgOperand(ArgNo)))
         continue;
       Type *Ty = CI->getParamByValType(ArgNo);
       Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));
@@ -1062,13 +1062,13 @@ bool HWAddressSanitizer::ignoreMemIntrinsic(OptimizationRemarkEmitter &ORE,
                                             MemIntrinsic *MI) {
   if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
     return (!ClInstrumentWrites ||
-            ignoreAccessWithRemark(ORE, MTI, MTI->getDest())) &&
+            ignoreAccess(ORE, MTI, MTI->getDest())) &&
            (!ClInstrumentReads ||
-            ignoreAccessWithRemark(ORE, MTI, MTI->getSource()));
+            ignoreAccess(ORE, MTI, MTI->getSource()));
   }
   if (isa<MemSetInst>(MI))
     return !ClInstrumentWrites ||
-           ignoreAccessWithRemark(ORE, MI, MI->getDest());
+           ignoreAccess(ORE, MI, MI->getDest());
   return false;
 }
 
