@@ -2852,8 +2852,7 @@ define i8 @select_replacement_sub_noundef_but_may_be_poison(i8 %x, i8 noundef %y
 ; CHECK-LABEL: @select_replacement_sub_noundef_but_may_be_poison(
 ; CHECK-NEXT:    [[Y:%.*]] = shl nuw i8 [[YY:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[SUB]], i8 [[Z:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 0, i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %y = shl nuw i8 %yy, 1
