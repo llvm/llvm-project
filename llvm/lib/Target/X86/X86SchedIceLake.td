@@ -620,8 +620,8 @@ def : WriteRes<WriteNop, []>;
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : ICXWriteResPair<WriteFHAdd,  [ICXPort5,ICXPort015], 6, [2,1], 3, 6>;
-defm : ICXWriteResPair<WriteFHAddY, [ICXPort5,ICXPort015], 6, [2,1], 3, 7>;
+defm : ICXWriteResPair<WriteFHAdd,  [ICXPort5,ICXPort01], 6, [2,1], 3, 6>;
+defm : ICXWriteResPair<WriteFHAddY, [ICXPort5,ICXPort01], 6, [2,1], 3, 7>;
 defm : ICXWriteResPair<WritePHAdd,  [ICXPort5,ICXPort05],  3, [2,1], 3, 5>;
 defm : ICXWriteResPair<WritePHAddX, [ICXPort15,ICXPort015], 3, [2,1], 3, 6>;
 defm : ICXWriteResPair<WritePHAddY, [ICXPort15,ICXPort015], 3, [2,1], 3, 7>;
