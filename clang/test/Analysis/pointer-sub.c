@@ -6,7 +6,16 @@ void f1(void) {
   d = z - &y; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
   d = &x - &x; // no-warning (subtraction of any two identical pointers is allowed)
   d = (long *)&x - (long *)&x;
-  d = (&x + 1) - &x; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
+  d = (&x + 1) - &x; // no-warning ('&x' is like a single-element array)
+  d = &x - (&x + 1); // no-warning
+  d = (&x + 0) - &x; // no-warning
+  d = (&x - 1) - &x; // expected-warning{{Indexing the address of a variable with other than 1 at this place is undefined behavior}}
+  d = (&x + 2) - &x; // expected-warning{{Indexing the address of a variable with other than 1 at this place is undefined behavior}}
+
+  d = (z + 9) - z; // no-warning (pointers to same array)
+  d = (z + 10) - z; // no-warning (pointer to "one after the end")
+  d = (z + 11) - z; // expected-warning{{Using an array index greater than the array size at pointer subtraction is undefined behavior}}
+  d = (z - 1) - z; // expected-warning{{Using a negative array index at pointer subtraction is undefined behavior}}
 }
 
 void f2(void) {
@@ -21,7 +30,7 @@ void f2(void) {
   q = a + 10;
   d = q - p; // no warning (use of pointer to one after the end is allowed)
   q = a + 11;
-  d = q - a; // no-warning (no check for past-the-end array pointers in this checker)
+  d = q - a; // expected-warning{{Using an array index greater than the array size at pointer subtraction is undefined behavior}}
 
   d = &a[4] - a; // no-warning
   d = &a[2] - p; // no-warning
@@ -53,10 +62,10 @@ void f4(void) {
   int (*p)[m] = a; // p == &a[0]
   p += 1; // p == &a[1]
 
-  // FIXME: This warning is not needed
+  // FIXME: This is a known problem with -Wpointer-arith
   int d = p - a; // d == 1 // expected-warning{{subtraction of pointers to type 'int[m]' of zero size has undefined behavior}}
 
-  // FIXME: This warning is not needed
+  // FIXME: This is a known problem with -Wpointer-arith
   d = &(a[2]) - &(a[1]); // expected-warning{{subtraction of pointers to type 'int[m]' of zero size has undefined behavior}}
 
   d = a[2] - a[1]; // expected-warning{{Subtraction of two pointers that}}
@@ -103,4 +112,9 @@ void f6(void) {
 void f7(int *p) {
   int a[10];
   int d = &a[10] - p; // no-warning ('p' is unknown, even if it cannot point into 'a')
+}
+
+void f8(int n) {
+  int a[10];
+  int d = a[n] - a[0];
 }
