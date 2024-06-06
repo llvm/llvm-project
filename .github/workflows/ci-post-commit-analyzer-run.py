@@ -9,7 +9,7 @@ import sys
 def run_analyzer(data):
     os.chdir(data["directory"])
     command = (
-        data["command"] 
+        data["command"]
         + f" --analyze --analyzer-output html -o analyzer-results -Xclang -analyzer-config -Xclang max-nodes=75000"
     )
     print(command)
