@@ -535,17 +535,12 @@ def ROCDL_RawBufferAtomicFAddOp :
   let hasCustomAssemblyFormat = 1;
 }
 
-def ROCDL_GlobalAtomicFAddOp :
-  ROCDL_Op<"global.atomic.fadd">,
-  Arguments<(ins ROCDLGlobalPtr:$ptr,
-                 LLVM_Type:$vdata)>{
-  string llvmBuilder = [{
-      auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
-      auto ptrType = moduleTranslation.convertType(op.getPtr().getType());
-      createIntrinsicCall(builder,
-          llvm::Intrinsic::amdgcn_global_atomic_fadd, {$ptr, $vdata}, {vdataType, ptrType, vdataType});
-  }];
-  let assemblyFormat = "operands attr-dict `:` type($vdata)";
+def ROCDL_GlobalAtomicFAddOp:
+  ROCDL_IntrOp<"global.atomic.fadd",
+    [0], [0, 1], [AllTypesMatch<["res", "vdata"]>], 1>,
+    Arguments<(ins ROCDLGlobalPtr:$ptr,
+                  LLVM_Type:$vdata)>{
+  let assemblyFormat = "operands attr-dict `:` type($res)";
 }
 
 //===---------------------------------------------------------------------===//
