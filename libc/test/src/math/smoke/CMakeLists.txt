@@ -1705,6 +1705,7 @@ add_fp_unittest(
     FMinTest.h
   DEPENDS
     libc.src.math.fminf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1718,6 +1719,7 @@ add_fp_unittest(
     FMinTest.h
   DEPENDS
     libc.src.math.fmin
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1731,6 +1733,7 @@ add_fp_unittest(
     FMinTest.h
   DEPENDS
     libc.src.math.fminl
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1744,6 +1747,7 @@ add_fp_unittest(
     FMinTest.h
   DEPENDS
     libc.src.math.fminf128
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1757,6 +1761,7 @@ add_fp_unittest(
     FMinTest.h
   DEPENDS
     libc.src.math.fminf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1770,6 +1775,7 @@ add_fp_unittest(
     FMaxTest.h
   DEPENDS
     libc.src.math.fmaxf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1783,6 +1789,7 @@ add_fp_unittest(
     FMaxTest.h
   DEPENDS
     libc.src.math.fmax
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1796,6 +1803,7 @@ add_fp_unittest(
     FMaxTest.h
   DEPENDS
     libc.src.math.fmaxl
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1809,6 +1817,7 @@ add_fp_unittest(
     FMaxTest.h
   DEPENDS
     libc.src.math.fmaxf128
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1822,6 +1831,7 @@ add_fp_unittest(
     FMaxTest.h
   DEPENDS
     libc.src.math.fmaxf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
