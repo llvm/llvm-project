@@ -4041,17 +4041,11 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::ADD, DL, VT, N0, SExt);
   }
 
-  // fold Y = sra (X, size(X)-1); sub (xor (X, Y), Y) -> (abs X)
-  if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
-    if (N0.getOpcode() == ISD::XOR && N1.getOpcode() == ISD::SRA) {
-      SDValue X0 = N0.getOperand(0), X1 = N0.getOperand(1);
-      SDValue S0 = N1.getOperand(0);
-      if ((X0 == S0 && X1 == N1) || (X0 == N1 && X1 == S0))
-        if (ConstantSDNode *C = isConstOrConstSplat(N1.getOperand(1)))
-          if (C->getAPIntValue() == (BitWidth - 1))
-            return DAG.getNode(ISD::ABS, DL, VT, S0);
-    }
-  }
+  // fold B = sra (A, size(A)-1); sub (xor (A, B), B) -> (abs A)
+  if (hasOperation(ISD::ABS, VT) &&
+      sd_match(N1, m_Sra(m_Value(A), m_SpecificInt(BitWidth - 1))) &&
+      sd_match(N0, m_Xor(m_Specific(A), m_Specific(N1))))
+    return DAG.getNode(ISD::ABS, DL, VT, A);
 
   // If the relocation model supports it, consider symbol offsets.
   if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N0))
