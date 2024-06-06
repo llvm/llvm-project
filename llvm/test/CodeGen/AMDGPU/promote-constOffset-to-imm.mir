@@ -282,3 +282,168 @@ body:             |
     %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
     FLAT_STORE_DWORD %13, %0.sub1, 0, 0, implicit $exec, implicit $flat_scr
 ...
+
+---
+# GCN-LABEL: name: diffoporder_add_global_atomic_cmpswap
+# GFX9: GLOBAL_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 1000, 0,
+# GFX9: GLOBAL_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+
+# GFX8: GLOBAL_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+# GFX8: GLOBAL_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+
+name: diffoporder_add_global_atomic_cmpswap
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    GLOBAL_ATOMIC_CMPSWAP %6:vreg_64, %0:vreg_64, 0, 0, implicit $exec
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    GLOBAL_ATOMIC_CMPSWAP %13:vreg_64, %0:vreg_64, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: diffoporder_add_flat_atomic_cmpswap
+# GFX9: FLAT_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 1000, 0,
+# GFX9: FLAT_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+
+# GFX8: FLAT_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+# GFX8: FLAT_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+
+name: diffoporder_add_flat_atomic_cmpswap
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    FLAT_ATOMIC_CMPSWAP %6:vreg_64, %0:vreg_64, 0, 0, implicit $exec, implicit $flat_scr
+
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    FLAT_ATOMIC_CMPSWAP %13:vreg_64, %0:vreg_64, 0, 0, implicit $exec, implicit $flat_scr
+...
+
+---
+# GCN-LABEL: name: diffoporder_add_global_atomic_add
+# GFX9: GLOBAL_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 1000, 0,
+# GFX9: GLOBAL_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+
+# GFX8: GLOBAL_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+# GFX8: GLOBAL_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+
+name: diffoporder_add_global_atomic_add
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    GLOBAL_ATOMIC_ADD %6:vreg_64, %0.sub0, 0, 0, implicit $exec
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    GLOBAL_ATOMIC_ADD %13:vreg_64, %0.sub0, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: diffoporder_add_flat_atomic_add
+# GFX9: FLAT_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 1000, 0,
+# GFX9: FLAT_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+
+# GFX8: FLAT_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+# GFX8: FLAT_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+
+name: diffoporder_add_flat_atomic_add
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    FLAT_ATOMIC_ADD %6:vreg_64, %0.sub0, 0, 0, implicit $exec, implicit $flat_scr
+
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    FLAT_ATOMIC_ADD %13:vreg_64, %0.sub0, 0, 0, implicit $exec, implicit $flat_scr
+...
+
+---
+# GCN-LABEL: name: diffoporder_add_global_atomic_add_rtn
+# GFX9: GLOBAL_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 1000, 0,
+# GFX9: GLOBAL_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+
+# GFX8: GLOBAL_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+# GFX8: GLOBAL_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+
+name: diffoporder_add_global_atomic_add_rtn
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    %14:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN %6:vreg_64, %0.sub0, 0, 0, implicit $exec
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    %15:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN %13:vreg_64, %0.sub0, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: diffoporder_add_flat_atomic_add_rtn
+# GFX9: FLAT_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 1000, 0,
+# GFX9: FLAT_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+
+# GFX8: FLAT_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+# GFX8: FLAT_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+
+name: diffoporder_add_flat_atomic_add_rtn
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    %14:vgpr_32 = FLAT_ATOMIC_ADD_RTN %6:vreg_64, %0.sub0, 0, 0, implicit $exec, implicit $flat_scr
+
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    %15:vgpr_32 = FLAT_ATOMIC_ADD_RTN %13:vreg_64, %0.sub0, 0, 0, implicit $exec, implicit $flat_scr
+...

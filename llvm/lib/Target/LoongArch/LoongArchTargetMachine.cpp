@@ -46,7 +46,7 @@ static cl::opt<bool>
 
 static std::string computeDataLayout(const Triple &TT) {
   if (TT.isArch64Bit())
-    return "e-m:e-p:64:64-i64:64-i128:128-n64-S128";
+    return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
   assert(TT.isArch32Bit() && "only LA32 and LA64 are currently supported");
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
