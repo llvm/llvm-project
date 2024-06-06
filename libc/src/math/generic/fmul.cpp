@@ -152,13 +152,12 @@ float fmul(double x, double y) {
     hight = (highs << (55 - c)) != 0;
   }
   // morlowt = m | lowt;
-
   if (round_mode == FE_TONEAREST) {
     b = g && ((hight && lowt) || ((m & 1) != 0));
   } else if (round_mode == FE_TOWARDZERO) {
     b = 0;
-  } else if ((sr != 0 && round_mode == FE_DOWNWARD) ||
-             (sr == 1 && round_mode == FE_UPWARD)) {
+  } else if ((sr == 1 && round_mode == FE_DOWNWARD) ||
+             (sr == 0 && round_mode == FE_UPWARD)) {
     b = (g == 0 && (hight && lowt) == 0) ? 0 : 1;
   } else {
     b = 0;
@@ -178,15 +177,6 @@ float fmul(double x, double y) {
     // float result16 = cpp::bit_cast<float>(result);
 
     // return result16;
-
-    if (round_mode == FE_TONEAREST) {
-      if (g && ((hight && lowt) || ((result & 1) != 0)))
-        ++result;
-    } else if ((round_mode == FE_UPWARD && prod_sign.is_pos()) ||
-               (round_mode == FE_DOWNWARD && prod_sign.is_neg())) {
-      if (g || (hight && lowt))
-        ++result;
-    }
 
     float result32 = cpp::bit_cast<float>(result);
 
