@@ -26,7 +26,8 @@ class Operation;
 /// LLVMTranslationDialectInterface.
 std::unique_ptr<llvm::Module>
 translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
-                        llvm::StringRef name = "LLVMDialectModule");
+                        llvm::StringRef name = "LLVMDialectModule",
+                        bool disableVerification = false);
 } // namespace mlir
 
 #endif // MLIR_TARGET_LLVMIR_EXPORT_H
