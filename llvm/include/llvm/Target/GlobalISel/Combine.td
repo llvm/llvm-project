@@ -1675,6 +1675,75 @@ shl_of_vscale,
 sub_of_vscale,
 ]>;
 
+def PtrAddWithSub : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $right, $imm),
+          (G_SUB $offset, $left, $right),
+          (G_PTR_ADD $root, $base, $offset),
+   [{ return Helper.matchPtrAddWithSub(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def PtrAddWithAdd : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $right, $imm),
+          (G_ADD $offset, $left, $right),
+          (G_PTR_ADD $root, $base, $offset),
+   [{ return Helper.matchPtrAddWithAdd(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def PtrAdd2DistributedConstOffsets : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $const2, $imm2),
+          (G_CONSTANT $const1, $imm1),
+          (G_PTR_ADD $pointer1, $base, $const2),
+          (G_PTR_ADD $pointer, $pointer1, $nonconst),
+          (G_PTR_ADD $root, $pointer, $const1),
+   [{ return Helper.matchPtrAddWFoldDistributedConstants(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def PtrAdd2ConstOffsets : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $const2, $imm2),
+          (G_CONSTANT $const1, $imm1),
+          (G_PTR_ADD $pointer, $base, $const2),
+          (G_PTR_ADD $root, $pointer, $const1),
+   [{ return Helper.matchPtrAddsFoldConstants(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def PtrAddMoveInner : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $const, $imm),
+          (G_PTR_ADD $pointer, $base, $const),
+          (G_PTR_ADD $root, $pointer, $nonconst),
+   [{ return Helper.matchPtrAddMoveInner(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def PtrAddWithAddVScale : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_VSCALE $right, $imm),
+          (G_ADD $offset, $left, $right),
+          (G_PTR_ADD $root, $base, $offset),
+   [{ return Helper.matchPtrAddWithAddVScale(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def PtrSubWithSubVScale : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_VSCALE $right, $imm),
+          (G_SUB $offset, $left, $right),
+          (G_PTR_ADD $root, $base, $offset),
+   [{ return Helper.matchPtrAddWithSubVScale(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+
+def ptradd_combines: GICombineGroup<[
+PtrAddWithSub,
+PtrAddWithAdd,
+PtrAdd2ConstOffsets,
+PtrAdd2DistributedConstOffsets,
+PtrAddMoveInner,
+PtrAddWithAddVScale,
+PtrSubWithSubVScale
+]>;
 
 // fold ((0-A) + B) -> B-A
 def ZeroMinusAPlusB : GICombineRule<
@@ -1818,7 +1887,7 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
 def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
 
 def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
-    vector_ops_combines, freeze_combines,
+    vector_ops_combines, freeze_combines, ptradd_combines,
     insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
     combine_extracted_vector_load,
     undef_combines, identity_combines, phi_combines,

@@ -7437,3 +7437,212 @@ bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
 
   return false;
 }
+
+bool CombinerHelper::matchPtrAddWithSub(const MachineOperand &MO,
+                                        BuildFnTy &MatchInfo) {
+  GPtrAdd *Inner = cast<GPtrAdd>(MRI.getVRegDef(MO.getReg()));
+  GSub *Sub = cast<GSub>(MRI.getVRegDef(Inner->getOffsetReg()));
+
+  // sub(x, c) -> add(x, -c)
+
+  // one-use check
+  if (!MRI.hasOneNonDBGUse(Sub->getReg(0)))
+    return false;
+
+  // Cannot fail due to pattern.
+  std::optional<APInt> MaybeImm = getIConstantVRegVal(Sub->getRHSReg(), MRI);
+  if (!MaybeImm)
+    return false;
+
+  LLT ConstTy = MRI.getType(Inner->getOffsetReg());
+
+  if (!isConstantLegalOrBeforeLegalizer(ConstTy))
+    return false;
+
+  Register Dst = MO.getReg();
+  LLT DstTy = MRI.getType(Dst);
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto Base = B.buildConstant(ConstTy, -(*MaybeImm));
+    auto PtrAdd = B.buildPtrAdd(DstTy, Inner->getBaseReg(), Sub->getLHSReg());
+    B.buildPtrAdd(Dst, PtrAdd, Base);
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchPtrAddWithAdd(const MachineOperand &MO,
+                                        BuildFnTy &MatchInfo) {
+  GPtrAdd *Inner = cast<GPtrAdd>(MRI.getVRegDef(MO.getReg()));
+  GAdd *Add = cast<GAdd>(MRI.getVRegDef(Inner->getOffsetReg()));
+
+  // one-use check
+  if (!MRI.hasOneNonDBGUse(Add->getReg(0)))
+    return false;
+
+  Register Dst = MO.getReg();
+  LLT DstTy = MRI.getType(Dst);
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto PtrAdd = B.buildPtrAdd(DstTy, Inner->getBaseReg(), Add->getLHSReg());
+    B.buildPtrAdd(Dst, PtrAdd, Add->getRHSReg());
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchPtrAddsFoldConstants(MachineOperand &MO,
+                                               BuildFnTy &MatchInfo) {
+  GPtrAdd *Inner = cast<GPtrAdd>(MRI.getVRegDef(MO.getReg()));
+  GPtrAdd *Second = cast<GPtrAdd>(MRI.getVRegDef(Inner->getBaseReg()));
+
+  // one-use check
+  if (!MRI.hasOneNonDBGUse(Second->getReg(0)))
+    return false;
+
+  // Cannot fail due to pattern.
+  std::optional<APInt> MaybeImm1 =
+      getIConstantVRegVal(Inner->getOffsetReg(), MRI);
+  if (!MaybeImm1)
+    return false;
+
+  // Cannot fail due to pattern.
+  std::optional<APInt> MaybeImm2 =
+      getIConstantVRegVal(Second->getOffsetReg(), MRI);
+  if (!MaybeImm2)
+    return false;
+
+  // Check if we can combine the two offsets into a legal addressing mode.
+  // To do so, we first need to find a load/store user of the pointer to get
+  // the access type. We cannot put the memory access into the MIR pattern.
+  Type *AccessTy = nullptr;
+  auto &MF = *MO.getParent()->getMF();
+  for (auto &UseMI :
+       MRI.use_nodbg_instructions(Inner->getOperand(0).getReg())) {
+    if (auto *LdSt = dyn_cast<GLoadStore>(&UseMI)) {
+      AccessTy = getTypeForLLT(LdSt->getMMO().getMemoryType(),
+                               MF.getFunction().getContext());
+      break;
+    }
+  }
+
+  // Did we found a memory access?
+  if (!AccessTy)
+    return false;
+
+  TargetLoweringBase::AddrMode AM;
+  AM.HasBaseReg = true;
+  AM.BaseOffs = (*MaybeImm1 + *MaybeImm2).getSExtValue();
+
+  Register Dst = MO.getReg();
+  LLT DstTy = MRI.getType(Dst);
+
+  unsigned AS = DstTy.getAddressSpace();
+
+  const auto &TLI = getTargetLowering();
+
+  // Can we combine the two offsets?
+  if (!TLI.isLegalAddressingMode(MF.getDataLayout(), AM, AccessTy, AS))
+    return false;
+
+  LLT ConstTy = MRI.getType(Second->getOffsetReg());
+
+  if (!isConstantLegalOrBeforeLegalizer(ConstTy))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto Offset = B.buildConstant(ConstTy, AM.BaseOffs);
+    B.buildPtrAdd(Dst, Second->getBaseReg(), Offset);
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchPtrAddWFoldDistributedConstants(
+    const MachineOperand &MO, BuildFnTy &MatchInfo) {
+  GPtrAdd *Inner = cast<GPtrAdd>(MRI.getVRegDef(MO.getReg()));
+  GPtrAdd *Second = cast<GPtrAdd>(MRI.getVRegDef(Inner->getBaseReg()));
+  GPtrAdd *Third = cast<GPtrAdd>(MRI.getVRegDef(Second->getBaseReg()));
+
+  if (!MRI.hasOneNonDBGUse(Second->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Third->getReg(0)))
+    return false;
+
+  // Cannot fail due to pattern.
+  std::optional<APInt> MaybeImm1 =
+      getIConstantVRegVal(Inner->getOffsetReg(), MRI);
+  if (!MaybeImm1)
+    return false;
+
+  // Cannot fail due to pattern.
+  std::optional<APInt> MaybeImm2 =
+      getIConstantVRegVal(Third->getOffsetReg(), MRI);
+  if (!MaybeImm2)
+    return false;
+
+  // Check if we can combine the two offsets into a legal addressing mode.
+  // To do so, we first need to find a load/store user of the pointer to get
+  // the access type. We cannot put the memory access into the MIR pattern.
+  Type *AccessTy = nullptr;
+  auto &MF = *MO.getParent()->getMF();
+  for (auto &UseMI :
+       MRI.use_nodbg_instructions(Inner->getOperand(0).getReg())) {
+    if (auto *LdSt = dyn_cast<GLoadStore>(&UseMI)) {
+      AccessTy = getTypeForLLT(LdSt->getMMO().getMemoryType(),
+                               MF.getFunction().getContext());
+      break;
+    }
+  }
+
+  // Did we found a memory access?
+  if (!AccessTy)
+    return false;
+
+  TargetLoweringBase::AddrMode AM;
+  AM.HasBaseReg = true;
+  AM.BaseOffs = (*MaybeImm1 + *MaybeImm2).getSExtValue();
+
+  Register Dst = MO.getReg();
+  LLT DstTy = MRI.getType(Dst);
+  unsigned AS = DstTy.getAddressSpace();
+
+  const auto &TLI = getTargetLowering();
+
+  // Can we combine the two offsets?
+  if (!TLI.isLegalAddressingMode(MF.getDataLayout(), AM, AccessTy, AS))
+    return false;
+
+  LLT ConstTy = MRI.getType(Third->getOffsetReg());
+
+  if (!isConstantLegalOrBeforeLegalizer(ConstTy))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto Offset = B.buildConstant(ConstTy, AM.BaseOffs);
+    auto PtrAdd =
+        B.buildPtrAdd(DstTy, Third->getBaseReg(), Second->getOffsetReg());
+    B.buildPtrAdd(Dst, PtrAdd, Offset);
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchPtrAddMoveInner(MachineOperand &MO,
+                                          BuildFnTy &MatchInfo) {
+  GPtrAdd *Inner = cast<GPtrAdd>(MRI.getVRegDef(MO.getReg()));
+  GPtrAdd *Second = cast<GPtrAdd>(MRI.getVRegDef(Inner->getBaseReg()));
+
+  if (!MRI.hasOneNonDBGUse(Second->getReg(0)))
+    return false;
+
+  Register Dst = MO.getReg();
+  LLT DstTy = MRI.getType(Dst);
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto PtrAdd =
+        B.buildPtrAdd(DstTy, Second->getBaseReg(), Inner->getOffsetReg());
+    B.buildPtrAdd(Dst, PtrAdd, Second->getOffsetReg());
+  };
+
+  return true;
+}

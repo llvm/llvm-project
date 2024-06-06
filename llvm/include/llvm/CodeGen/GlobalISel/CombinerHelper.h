@@ -879,6 +879,16 @@ public:
 
   bool matchShlOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
+  bool matchPtrAddWithSub(const MachineOperand &MO, BuildFnTy &MatchInfo);
+  bool matchPtrAddWithAdd(const MachineOperand &MO, BuildFnTy &MatchInfo);
+  bool matchPtrAddsFoldConstants(MachineOperand &MO, BuildFnTy &MatchInfo);
+  bool matchPtrAddWFoldDistributedConstants(const MachineOperand &MO,
+                                            BuildFnTy &MatchInfo);
+  bool matchPtrAddMoveInner(MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchPtrAddWithAddVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+  bool matchPtrAddWithSubVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;

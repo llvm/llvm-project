@@ -111,3 +111,51 @@ body:             |
     %shl:_(s64) = nuw G_SHL %lhs(s64), %rhs(s64)
     $x0 = COPY %shl(s64)
     RET_ReallyLR implicit $x0
+...
+---
+name:            ptradd_add_vscale
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: ptradd_add_vscale
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %p:_(p0) = COPY $x0
+    ; CHECK-NEXT: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %vs:_(s64) = G_VSCALE i64 11
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %p, %opaque(s64)
+    ; CHECK-NEXT: %ptradd:_(p0) = G_PTR_ADD [[PTR_ADD]], %vs(s64)
+    ; CHECK-NEXT: $x0 = COPY %ptradd(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %p:_(p0) = COPY $x0
+    %opaque:_(s64) = COPY $x0
+    %cons:_(s64) = G_CONSTANT i64 2
+    %vs:_(s64) = G_VSCALE i64 11
+    %rhs:_(s64) = G_ADD  %opaque(s64), %vs(s64)
+    %ptradd:_(p0) = nuw G_PTR_ADD %p(p0), %rhs(s64)
+    $x0 = COPY %ptradd(p0)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            ptradd_sub_vscale
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: ptradd_sub_vscale
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %p:_(p0) = COPY $x0
+    ; CHECK-NEXT: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[VSCALE:%[0-9]+]]:_(s64) = G_VSCALE i64 -11
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %p, %opaque(s64)
+    ; CHECK-NEXT: %ptradd:_(p0) = G_PTR_ADD [[PTR_ADD]], [[VSCALE]](s64)
+    ; CHECK-NEXT: $x0 = COPY %ptradd(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %p:_(p0) = COPY $x0
+    %opaque:_(s64) = COPY $x0
+    %cons:_(s64) = G_CONSTANT i64 2
+    %vs:_(s64) = G_VSCALE i64 11
+    %rhs:_(s64) = G_SUB %opaque(s64), %vs(s64)
+    %ptradd:_(p0) = nuw G_PTR_ADD %p(p0), %rhs(s64)
+    $x0 = COPY %ptradd(p0)
+    RET_ReallyLR implicit $x0

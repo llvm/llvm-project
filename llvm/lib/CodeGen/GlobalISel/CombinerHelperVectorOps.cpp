@@ -484,3 +484,52 @@ bool CombinerHelper::matchShlOfVScale(const MachineOperand &MO,
 
   return true;
 }
+
+bool CombinerHelper::matchPtrAddWithAddVScale(const MachineOperand &MO,
+                                              BuildFnTy &MatchInfo) {
+  GPtrAdd *Inner = cast<GPtrAdd>(MRI.getVRegDef(MO.getReg()));
+  GAdd *Add = cast<GAdd>(MRI.getVRegDef(Inner->getOffsetReg()));
+  GVScale *VScale = cast<GVScale>(MRI.getVRegDef(Add->getRHSReg()));
+
+  // one-use check
+  if (!MRI.hasOneNonDBGUse(Add->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(VScale->getReg(0)))
+    return false;
+
+  Register Dst = MO.getReg();
+  LLT DstTy = MRI.getType(Dst);
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto PtrAdd = B.buildPtrAdd(DstTy, Inner->getBaseReg(), Add->getLHSReg());
+    B.buildPtrAdd(Dst, PtrAdd, Add->getRHSReg());
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchPtrAddWithSubVScale(const MachineOperand &MO,
+                                              BuildFnTy &MatchInfo) {
+  GPtrAdd *Inner = cast<GPtrAdd>(MRI.getVRegDef(MO.getReg()));
+  GSub *Sub = cast<GSub>(MRI.getVRegDef(Inner->getOffsetReg()));
+  GVScale *VScale = cast<GVScale>(MRI.getVRegDef(Sub->getRHSReg()));
+
+  // one-use check
+  if (!MRI.hasOneNonDBGUse(Sub->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(VScale->getReg(0)))
+    return false;
+
+  Register Dst = MO.getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT VScaleTy = MRI.getType(Inner->getOffsetReg());
+
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_VSCALE, VScaleTy}))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto VScaleMI = B.buildVScale(VScaleTy, -VScale->getSrc());
+    auto PtrAdd = B.buildPtrAdd(DstTy, Inner->getBaseReg(), Sub->getLHSReg());
+    B.buildPtrAdd(Dst, PtrAdd, VScaleMI);
+  };
+
+  return true;
+}
