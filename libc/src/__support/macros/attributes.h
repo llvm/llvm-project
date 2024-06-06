@@ -30,4 +30,10 @@
 #define LIBC_THREAD_LOCAL thread_local
 #endif
 
+#if __has_attribute(__using_if_exists__)
+#define LIBC_USING_IF_EXISTS __attribute__((__using_if_exists__))
+#else
+#define LIBC_USING_IF_EXISTS
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
