@@ -2797,6 +2797,19 @@ define <2 x i8> @select_replacement_add_eq_vec_poison(<2 x i8> %x, <2 x i8> %y) 
   ret <2 x i8> %sel
 }
 
+define <2 x i8> @select_replacement_add_eq_vec_undef(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @select_replacement_add_eq_vec_undef(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 undef>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %cmp = icmp eq <2 x i8> %x, <i8 1, i8 undef>
+  %add = add <2 x i8> %x, <i8 1, i8 1>
+  %sel = select <2 x i1> %cmp, <2 x i8> %add, <2 x i8> %y
+  ret <2 x i8> %sel
+}
+
 define i8 @select_replacement_add_ne(i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_replacement_add_ne(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], 1
@@ -2829,6 +2842,21 @@ define i8 @select_replacement_sub_noundef(i8 %x, i8 noundef %y, i8 %z) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 0, i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
+  %cmp = icmp eq i8 %x, %y
+  %sub = sub i8 %x, %y
+  %sel = select i1 %cmp, i8 %sub, i8 %z
+  ret i8 %sel
+}
+
+define i8 @select_replacement_sub_noundef_but_may_be_poison(i8 %x, i8 noundef %yy, i8 %z) {
+; CHECK-LABEL: @select_replacement_sub_noundef_but_may_be_poison(
+; CHECK-NEXT:    [[Y:%.*]] = shl nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[SUB]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %y = shl nuw i8 %yy, 1
   %cmp = icmp eq i8 %x, %y
   %sub = sub i8 %x, %y
   %sel = select i1 %cmp, i8 %sub, i8 %z
