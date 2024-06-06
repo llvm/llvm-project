@@ -867,7 +867,7 @@ public:
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
     Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
     return;
-#define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME)                                  \
+#define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME, DEPRECATED)                      \
   case OpenACCClauseKind::ALIAS_NAME:                                          \
     Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
     return;
