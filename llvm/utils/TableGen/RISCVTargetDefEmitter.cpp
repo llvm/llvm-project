@@ -227,7 +227,7 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B,
 static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
 
   std::vector<Record *> Extensions =
-      RK.getAllDerivedDefinitionsIfDefined("RISCVExtension");
+      RK.getAllDerivedDefinitionsIfDefined("RISCVExtensionBitmask");
   llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
     return getExtensionName(Rec1) < getExtensionName(Rec2);
   });
