@@ -367,6 +367,7 @@ struct DLTestDialect : Dialect {
   }
 };
 
+/// A dialect to test DLTI's target system spec and related attributes
 struct DLTargetSystemDescTestDialect : public Dialect {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DLTargetSystemDescTestDialect)
 

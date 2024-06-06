@@ -239,19 +239,19 @@ def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface"> {
       /*defaultImplementation=*/[{ return ::mlir::success(); }]
     >,
     InterfaceMethod<
-      /*description=*/"Returns the entry related to the given identifier, if "
-                      "present. Otherwise, return empty spec.",
-      /*retTy=*/"::mlir::DataLayoutEntryInterface",
-      /*methodName=*/"getSpecForMaxVectorOpWidth",
-      /*args=*/(ins)
+      /*description=*/"Returns max vector op width identifier. ",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getMaxVectorOpWidthIdentifier",
+      /*args=*/(ins),
+      /*methodBody=*/""
     >,
     InterfaceMethod<
-      /*description=*/"Returns the entry related to the given identifier, if "
-                      "present. Otherwise, return empty spec.",
-      /*retTy=*/"::mlir::DataLayoutEntryInterface",
-      /*methodName=*/"getSpecForL1CacheSizeInBytes",
-      /*args=*/(ins)
-    >
+      /*description=*/"Returns L1 cache size identifier identifier. ",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getL1CacheSizeInBytesIdentifier",
+      /*args=*/(ins),
+      /*methodBody=*/""
+    >,
   ];
 }
 

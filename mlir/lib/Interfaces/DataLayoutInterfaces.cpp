@@ -684,7 +684,8 @@ std::optional<uint32_t> mlir::DataLayout::getMaxVectorOpWidth(
   if (originalTargetSystemDesc) {
     if (auto device =
             originalTargetSystemDesc.getDeviceSpecForDeviceID(deviceID))
-      entry = device->getSpecForMaxVectorOpWidth();
+      entry =
+          device->getSpecForIdentifier(device->getMaxVectorOpWidthIdentifier());
   }
   // Currently I am not caching the results because we do not return
   // default values of these properties. Instead if the property is
@@ -703,7 +704,8 @@ std::optional<uint32_t> mlir::DataLayout::getL1CacheSizeInBytes(
   if (originalTargetSystemDesc) {
     if (auto device =
             originalTargetSystemDesc.getDeviceSpecForDeviceID(deviceID))
-      entry = device->getSpecForL1CacheSizeInBytes();
+      entry = device->getSpecForIdentifier(
+          device->getL1CacheSizeInBytesIdentifier());
   }
   // Currently I am not caching the results because we do not return
   // default values of these properties. Instead if the property is
@@ -831,7 +833,6 @@ mlir::detail::verifyTargetSystemSpec(TargetSystemSpecInterface spec,
       return failure();
 
     // Check that device IDs are unique across all entries.
-    MLIRContext *context = tdd_spec.getContext();
     TargetSystemSpecInterface::DeviceID device_id = entry.first;
     if (!device_ids.insert(device_id).second) {
       return failure();
@@ -842,8 +843,9 @@ mlir::detail::verifyTargetSystemSpec(TargetSystemSpecInterface spec,
       if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
         // tdd_spec does not support Type as a key.
         return failure();
-      } else
+      } else {
         device_desc_keys[entry.getKey().get<StringAttr>()] = entry;
+      }
     }
   }
 

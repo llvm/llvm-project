@@ -24,7 +24,7 @@ using namespace mlir;
 #include "mlir/Dialect/DLTI/DLTIDialect.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include <mlir/Dialect/DLTI/DLTIAttrs.cpp.inc>
+#include "mlir/Dialect/DLTI/DLTIAttrs.cpp.inc"
 
 #define DEBUG_TYPE "dlti"
 
@@ -301,6 +301,8 @@ void DataLayoutSpecAttr::print(AsmPrinter &os) const {
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
+/// A FieldParser for key-value pairs of DeviceID-target device spec pairs that
+/// make up a target system spec.
 template <>
 struct FieldParser<DeviceIDTargetDeviceSpecPair> {
   static FailureOr<DeviceIDTargetDeviceSpecPair> parse(AsmParser &parser) {
@@ -340,8 +342,9 @@ inline AsmPrinter &operator<<(AsmPrinter &printer,
 LogicalResult
 TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                              ArrayRef<DataLayoutEntryInterface> entries) {
-  // Entries in tdd_spec can only have StringAttr as key. It does not support
-  // type as a key. Hence not reusing DataLayoutEntryInterface::verify.
+  // Entries in a target device spec can only have StringAttr as key. It does
+  // not support type as a key. Hence not reusing
+  // DataLayoutEntryInterface::verify.
   DenseSet<StringAttr> ids;
   for (DataLayoutEntryInterface entry : entries) {
     if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
@@ -389,14 +392,6 @@ StringAttr TargetDeviceSpecAttr::getL1CacheSizeInBytesIdentifier() {
       .getStringAttr(DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey);
 }
 
-DataLayoutEntryInterface TargetDeviceSpecAttr::getSpecForMaxVectorOpWidth() {
-  return getSpecForIdentifier(getMaxVectorOpWidthIdentifier());
-}
-
-DataLayoutEntryInterface TargetDeviceSpecAttr::getSpecForL1CacheSizeInBytes() {
-  return getSpecForIdentifier(getL1CacheSizeInBytesIdentifier());
-}
-
 //===----------------------------------------------------------------------===//
 // TargetSystemSpecAttr
 //===----------------------------------------------------------------------===//
@@ -407,10 +402,11 @@ TargetSystemSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   DenseSet<TargetSystemSpecInterface::DeviceID> device_ids;
 
   for (const auto &entry : entries) {
-    TargetDeviceSpecInterface tdd_spec = entry.second;
+    TargetDeviceSpecInterface target_device_spec = entry.second;
 
     // First verify that a target device spec is valid.
-    if (failed(TargetDeviceSpecAttr::verify(emitError, tdd_spec.getEntries())))
+    if (failed(TargetDeviceSpecAttr::verify(emitError,
+                                            target_device_spec.getEntries())))
       return failure();
 
     // Check that device IDs are unique across all entries.
@@ -462,6 +458,7 @@ public:
 } // namespace
 
 namespace {
+/// An interface to check entries of a target device spec.
 class SystemDescSpecInterface : public DataLayoutDialectInterface {
 public:
   using DataLayoutDialectInterface::DataLayoutDialectInterface;
@@ -485,7 +482,7 @@ public:
 void DLTIDialect::initialize() {
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include <mlir/Dialect/DLTI/DLTIAttrs.cpp.inc>
+#include "mlir/Dialect/DLTI/DLTIAttrs.cpp.inc"
       >();
   addInterfaces<TargetDataLayoutInterface, SystemDescSpecInterface>();
 }

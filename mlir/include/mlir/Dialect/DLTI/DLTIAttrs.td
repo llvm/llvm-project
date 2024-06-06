@@ -189,18 +189,6 @@ def DLTI_TargetDeviceSpecAttr :
 
     /// Returns L1 cache size identifier
     StringAttr getL1CacheSizeInBytesIdentifier();
-
-    /// Returns the interface spec for max vector op width
-    /// Since max vector op width is an optional property, this function will
-    /// return a valid spec if the property is defined, otherwise it
-    /// will return an empty spec.
-    DataLayoutEntryInterface getSpecForMaxVectorOpWidth();
-
-    /// Returns the interface spec for L1 cache size
-    /// Since L1 cache size is an optional property, this function will
-    /// return a valid spec if the property is defined, otherwise it
-    /// will return an empty spec.
-    DataLayoutEntryInterface getSpecForL1CacheSizeInBytes();
   }];
 }
 
