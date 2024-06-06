@@ -104,11 +104,6 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
   if (srcType != resultType)
     return nullptr;
 
-  // If the reshapes are expanding and then collapsing, the ops can be folded
-  // despite multiple dynamic dimensions.
-  if (srcType.getRank() < reshapeSrcOp.getResultType().getRank())
-    return reshapeSrcOp.getSrc();
-  // Otherwise, only 1 dynamic dimension is allowed.
   if (srcType == resultType &&
       llvm::count_if(srcType.getShape(), ShapedType::isDynamic) < 2) {
     return reshapeSrcOp.getSrc();
@@ -124,6 +119,10 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
   auto inverseReassociations = reshapeSrcOp.getReassociationIndices();
   if (reassociations != inverseReassociations)
     return nullptr;
+  // If the reshapes are expanding and then collapsing, the ops can be folded
+  // despite multiple dynamic dimensions.
+  if (srcType.getRank() < reshapeSrcOp.getResultType().getRank())
+    return reshapeSrcOp.getSrc();
   ArrayRef<int64_t> expandedSrcShape = srcType.getShape();
   ArrayRef<int64_t> expandedResultShape = resultType.getShape();
   if (llvm::none_of(reassociations, [&](auto reInd) {
