@@ -74,18 +74,17 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Context,
                          GlobalDeclID ID, std::size_t Extra) {
   // Allocate an extra 8 bytes worth of storage, which ensures that the
   // resulting pointer will still be 8-byte aligned.
-  static_assert(sizeof(unsigned) * 2 >= alignof(Decl),
-                "Decl won't be misaligned");
+  static_assert(sizeof(uint64_t) >= alignof(Decl), "Decl won't be misaligned");
   void *Start = Context.Allocate(Size + Extra + 8);
   void *Result = (char*)Start + 8;
 
-  unsigned *PrefixPtr = (unsigned *)Result - 2;
+  uint64_t *PrefixPtr = (uint64_t *)Result - 1;
 
-  // Zero out the first 4 bytes; this is used to store the owning module ID.
-  PrefixPtr[0] = 0;
+  *PrefixPtr = ID.get();
 
-  // Store the global declaration ID in the second 4 bytes.
-  PrefixPtr[1] = ID.get();
+  // We leave the upper 16 bits to store the module IDs. 48 bits should be
+  // sufficient to store a declaration ID.
+  assert(*PrefixPtr < llvm::maskTrailingOnes<uint64_t>(48));
 
   return Result;
 }
@@ -109,6 +108,29 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Ctx,
     return new (Buffer) Module*(ParentModule) + 1;
   }
   return ::operator new(Size + Extra, Ctx);
+}
+
+GlobalDeclID Decl::getGlobalID() const {
+  if (!isFromASTFile())
+    return GlobalDeclID();
+  // See the comments in `Decl::operator new` for details.
+  uint64_t ID = *((const uint64_t *)this - 1);
+  return GlobalDeclID(ID & llvm::maskTrailingOnes<uint64_t>(48));
+}
+
+unsigned Decl::getOwningModuleID() const {
+  if (!isFromASTFile())
+    return 0;
+
+  uint64_t ID = *((const uint64_t *)this - 1);
+  return ID >> 48;
+}
+
+void Decl::setOwningModuleID(unsigned ID) {
+  assert(isFromASTFile() && "Only works on a deserialized declaration");
+  uint64_t *IDAddress = (uint64_t *)this - 1;
+  *IDAddress &= llvm::maskTrailingOnes<uint64_t>(48);
+  *IDAddress |= (uint64_t)ID << 48;
 }
 
 Module *Decl::getOwningModuleSlow() const {
@@ -2162,4 +2184,8 @@ DependentDiagnostic *DependentDiagnostic::Create(ASTContext &C,
   Map->FirstDiagnostic = DD;
 
   return DD;
+}
+
+unsigned DeclIDBase::getLocalDeclIndex() const {
+  return ID & llvm::maskTrailingOnes<DeclID>(32);
 }
