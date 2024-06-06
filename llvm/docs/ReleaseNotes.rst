@@ -214,7 +214,7 @@ Changes to the C API
   * ``LLVMConstICmp``
   * ``LLVMConstFCmp``
 
-* Added ``LLVMPositionBuilder2`` and ``LLVMPositionBuilderBefore2``. Same as ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` with a new ``BeforeDbgRecords`` parameter which indicates whether or not the insertion position should also be before the debug records that precede the instruction. See the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_ for more info. ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` are unchanged. They insert before the indicated instruction but after any attached debug records (equivalent to calling the new variants with ``BeforeDbgRecords`` set to ``false``).
+* Added ``LLVMPositionBuilderBeforeDbgRecords`` and ``LLVMPositionBuilderBeforeInstrAndDbgRecords``. Same as ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` except the insertion position is set to before the debug records that precede the target instruction. See the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_ for more info. ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` are unchanged; they insert before the indicated instruction but after any attached debug records.
 
 Changes to the CodeGen infrastructure
 -------------------------------------

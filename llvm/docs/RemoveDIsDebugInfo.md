@@ -63,16 +63,16 @@ LLVMDIBuilderInsertDbgValueAtEnd   # Same as above.
 
 New functions (no plans to deprecate)
 ----------------------------------
-LLVMPositionBuilder2               # LLVMPositionBuilder but with BeforeDbgRecords parameter. See info below.
-LLVMPositionBuilderBefore2         # Same as above.
+LLVMPositionBuilderBeforeDbgRecords          # See info below.
+LLVMPositionBuilderBeforeInstrAndDbgRecords  # See info below.
 ```
 
-`LLVMPositionBuilder2` and `LLVMPositionBuilderBefore2` have a parameter `BeforeDbgRecords` which indicates whether or not the insertion position should also be before the debug records that precede the instruction. Note that this doesn't mean that debug intrinsics before the chosen instruction are skipped, only debug records (which unlike debug records are not themselves instructions).
+`LLVMPositionBuilderBeforeDbgRecords` and `LLVMPositionBuilderBeforeInstrAndDbgRecords` behave the same as `LLVMPositionBuilder` and `LLVMPositionBuilderBefore` except the insition position is set before the debug records that precede the target instruction. Note that this doesn't mean that debug intrinsics before the chosen instruction are skipped, only debug records (which unlike debug records are not themselves instructions).
 
-If you don't know whether it should be true or false then follow this rule:
-If you are trying to insert at the start of a block, or purposfully skip debug intrinsics to determine the insertion point for any other reason, then set it to true. Otherwise set it to false.
+If you don't know which function to call then follow this rule:
+If you are trying to insert at the start of a block, or purposfully skip debug intrinsics to determine the insertion point for any other reason, then call the new functions.
 
-`LLVMPositionBuilder` and `LLVMPositionBuilderBefore` are unchanged. They insert before the indicated instruction but after any attached debug records (equivalent to calling the new variants with `BeforeDbgRecords` set to `false`).
+`LLVMPositionBuilder` and `LLVMPositionBuilderBefore` are unchanged. They insert before the indicated instruction but after any attached debug records.
 
 # The new "Debug Record" model
 
