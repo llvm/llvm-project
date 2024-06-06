@@ -84,8 +84,7 @@ jobs:
           # Run the analyzer.
           python3 .github/workflows/ci-post-commit-analyzer-run.py build/compile_commands.json
 
-          # TODO: Use scan-build from container once we have new container builds with scan-build.
-          ./clang/tools/scan-build/bin/scan-build --generate-index-only build/analyzer-results
+          scan-build --generate-index-only build/analyzer-results
 
       - name: Upload Results
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
