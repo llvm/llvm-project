@@ -769,7 +769,6 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 ///
 /// \param exe_ctx Pointer to the execution context
 /// \param module_sp shared_ptr contains the module if we have one
-/// \param error_ptr pointer to Status object if we have one
 /// \param dw_op_type C-style string used to vary the error output
 /// \param file_addr the file address we are trying to resolve and turn into a
 ///                  load address
@@ -780,32 +779,22 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 ///          the load address succeed or an empty Optinal otherwise. If
 ///          check_sectionoffset is true we consider LLDB_INVALID_ADDRESS a
 ///          success if so_addr.IsSectionOffset() is true.
-static std::optional<lldb::addr_t>
+static llvm::Expected<lldb::addr_t>
 ResolveLoadAddress(ExecutionContext *exe_ctx, lldb::ModuleSP &module_sp,
-                   Status *error_ptr, const char *dw_op_type,
-                   lldb::addr_t file_addr, Address &so_addr,
-                   bool check_sectionoffset = false) {
-  if (!module_sp) {
-    if (error_ptr)
-      error_ptr->SetErrorStringWithFormat(
-          "need module to resolve file address for %s", dw_op_type);
-    return {};
-  }
+                   const char *dw_op_type, lldb::addr_t file_addr,
+                   Address &so_addr, bool check_sectionoffset = false) {
+  if (!module_sp)
+    return llvm::createStringError("need module to resolve file address for %s",
+                                   dw_op_type);
 
-  if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
-    if (error_ptr)
-      error_ptr->SetErrorString("failed to resolve file address in module");
-    return {};
-  }
+  if (!module_sp->ResolveFileAddress(file_addr, so_addr))
+    return llvm::createStringError("failed to resolve file address in module");
 
-  addr_t load_addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
+  const addr_t load_addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
 
   if (load_addr == LLDB_INVALID_ADDRESS &&
-      (check_sectionoffset && !so_addr.IsSectionOffset())) {
-    if (error_ptr)
-      error_ptr->SetErrorString("failed to resolve load address");
-    return {};
-  }
+      (check_sectionoffset && !so_addr.IsSectionOffset()))
+    return llvm::createStringError("failed to resolve load address");
 
   return load_addr;
 }
@@ -975,12 +964,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
             LLDB_INVALID_ADDRESS);
 
         Address so_addr;
-        Status load_err;
         auto maybe_load_addr = ResolveLoadAddress(
-            exe_ctx, module_sp, &load_err, "DW_OP_deref", file_addr, so_addr);
+            exe_ctx, module_sp, "DW_OP_deref", file_addr, so_addr);
 
         if (!maybe_load_addr)
-          return load_err.ToError();
+          return maybe_load_addr.takeError();
 
         stack.back().GetScalar() = *maybe_load_addr;
         // Fall through to load address promotion code below.
@@ -1092,14 +1080,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         auto file_addr =
             stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
         Address so_addr;
-        Status resolve_err;
-        auto maybe_load_addr =
-            ResolveLoadAddress(exe_ctx, module_sp, &resolve_err,
-                               "DW_OP_deref_size", file_addr, so_addr,
-                               /*check_sectionoffset=*/true);
+        auto maybe_load_addr = ResolveLoadAddress(
+            exe_ctx, module_sp, "DW_OP_deref_size", file_addr, so_addr,
+            /*check_sectionoffset=*/true);
 
         if (!maybe_load_addr)
-          return resolve_err.ToError();
+          return maybe_load_addr.takeError();
 
         addr_t load_addr = *maybe_load_addr;
 
