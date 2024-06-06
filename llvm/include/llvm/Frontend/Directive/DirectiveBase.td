@@ -203,6 +203,6 @@ class Directive<string d> {
   // What the directive is associated with.
   Association association = AS_FromLeaves;
 
-  // The category if the directive.
+  // The category of the directive.
   Category category = ?;
 }
