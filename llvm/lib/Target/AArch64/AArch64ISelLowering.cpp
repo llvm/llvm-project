@@ -1174,24 +1174,23 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // silliness like this:
     // clang-format off
     for (auto Op :
-         {ISD::SELECT,         ISD::SELECT_CC,
-          ISD::BR_CC,          ISD::FADD,           ISD::FSUB,
-          ISD::FMUL,           ISD::FDIV,           ISD::FMA,
-          ISD::FNEG,           ISD::FABS,           ISD::FCEIL,
-          ISD::FSQRT,          ISD::FFLOOR,         ISD::FNEARBYINT,
-          ISD::FSIN,           ISD::FCOS,           ISD::FTAN,
-          ISD::FPOW,
-          ISD::FLOG,           ISD::FLOG2,          ISD::FLOG10,
-          ISD::FEXP,           ISD::FEXP2,          ISD::FEXP10,
-          ISD::FRINT,          ISD::FROUND,         ISD::FROUNDEVEN,
-          ISD::FTRUNC,         ISD::FMINNUM,        ISD::FMAXNUM,
-          ISD::FMINIMUM,       ISD::FMAXIMUM,       ISD::STRICT_FADD,
-          ISD::STRICT_FSUB,    ISD::STRICT_FMUL,    ISD::STRICT_FDIV,
-          ISD::STRICT_FMA,     ISD::STRICT_FCEIL,   ISD::STRICT_FFLOOR,
-          ISD::STRICT_FSQRT,   ISD::STRICT_FRINT,   ISD::STRICT_FNEARBYINT,
-          ISD::STRICT_FROUND,  ISD::STRICT_FTRUNC,  ISD::STRICT_FROUNDEVEN,
-          ISD::STRICT_FMINNUM, ISD::STRICT_FMAXNUM, ISD::STRICT_FMINIMUM,
-          ISD::STRICT_FMAXIMUM})
+         {ISD::SELECT,            ISD::SELECT_CC,
+          ISD::BR_CC,             ISD::FADD,           ISD::FSUB,
+          ISD::FMUL,              ISD::FDIV,           ISD::FMA,
+          ISD::FNEG,              ISD::FABS,           ISD::FCEIL,
+          ISD::FSQRT,             ISD::FFLOOR,         ISD::FNEARBYINT,
+          ISD::FSIN,              ISD::FCOS,           ISD::FTAN,
+          ISD::FPOW,              ISD::FLOG,           ISD::FLOG2,          
+          ISD::FLOG10,            ISD::FEXP,           ISD::FEXP2,
+          ISD::FEXP10,            ISD::FRINT,          ISD::FROUND,
+          ISD::FROUNDEVEN,        ISD::FTRUNC,         ISD::FMINNUM,
+          ISD::FMAXNUM,           ISD::FMINIMUM,       ISD::FMAXIMUM,
+          ISD::STRICT_FADD,       ISD::STRICT_FSUB,    ISD::STRICT_FMUL,
+          ISD::STRICT_FDIV,       ISD::STRICT_FMA,     ISD::STRICT_FCEIL,
+          ISD::STRICT_FFLOOR,     ISD::STRICT_FSQRT,   ISD::STRICT_FRINT,
+          ISD::STRICT_FNEARBYINT, ISD::STRICT_FROUND,  ISD::STRICT_FTRUNC,  
+          ISD::STRICT_FROUNDEVEN, ISD::STRICT_FMINNUM, ISD::STRICT_FMAXNUM,
+          ISD::STRICT_FMINIMUM,   ISD::STRICT_FMAXIMUM})
       setOperationAction(Op, MVT::v1f64, Expand);
     // clang-format on
     for (auto Op :
