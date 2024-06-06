@@ -121,11 +121,9 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
   // despite multiple dynamic dimensions.
   if (srcType.getRank() < reshapeSrcOp.getResultType().getRank())
     return reshapeSrcOp.getSrc();
-  ArrayRef<int64_t> expandedSrcShape = srcType.getShape();
-  ArrayRef<int64_t> expandedResultShape = resultType.getShape();
   if (llvm::all_of(reassociations, [&](auto reInd) {
         ArrayRef<int64_t> srcSlice =
-            expandedSrcShape.slice(reInd.front(), reInd.size());
+            srcType.getShape().slice(reInd.front(), reInd.size());
         return llvm::count_if(srcSlice, ShapedType::isDynamic) < 2;
       })) {
     return reshapeSrcOp.getSrc();
