@@ -34,6 +34,11 @@
 # RUN: ld.lld -T %t/b.lds %t.o -o %tb
 # RUN: llvm-readelf -S -l %tb | FileCheck %s --check-prefix=CHECK1
 
+## --section-start causes the orphan other3 to be considered before .data3.
+## The non-alloc other3 does not disable the placement of .data3.
+# RUN: ld.lld -T %t/b.lds %t.o -o %tb --section-start=other3=0
+# RUN: llvm-readelf -S -l %tb | FileCheck %s --check-prefix=CHECK1
+
 # CHECK1:      [Nr] Name      Type     Address          Off    Size   ES Flg Lk
 # CHECK1-NEXT: [ 0]           NULL     0000000000000000 000000 000000 00      0
 # CHECK1-NEXT: [ 1] .text     PROGBITS 00000000000000b0 0000b0 000001 00  AX  0
