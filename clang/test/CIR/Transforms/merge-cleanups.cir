@@ -126,4 +126,13 @@ module  {
     cir.return %0 : !cir.ptr<!s32i>
   }
 
+  // Should remove redundant address space casts.
+  // CHECK-LABEL: @addrspacecastfold
+  //       CHECK:  %[[ARG0:.+]]: !cir.ptr<!s32i, addrspace(2)>
+  //       CHECK:  cir.return %[[ARG0]] : !cir.ptr<!s32i, addrspace(2)>
+  cir.func @addrspacecastfold(%arg0: !cir.ptr<!s32i, addrspace(2)>) -> !cir.ptr<!s32i, addrspace(2)> {
+    %0 = cir.cast(address_space, %arg0: !cir.ptr<!s32i, addrspace(2)>), !cir.ptr<!s32i, addrspace(2)>
+    cir.return %0 : !cir.ptr<!s32i, addrspace(2)>
+  }
+
 }

@@ -17,6 +17,7 @@
 #include "CIRGenModule.h"
 #include "CIRGenOpenMPRuntime.h"
 #include "CIRGenValue.h"
+#include "TargetInfo.h"
 
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
@@ -1953,7 +1954,15 @@ LValue CIRGenFunction::buildCastLValue(const CastExpr *E) {
     assert(0 && "NYI");
   }
   case CK_AddressSpaceConversion: {
-    assert(0 && "NYI");
+    LValue LV = buildLValue(E->getSubExpr());
+    QualType DestTy = getContext().getPointerType(E->getType());
+    mlir::Value V = getTargetHooks().performAddrSpaceCast(
+        *this, LV.getPointer(), E->getSubExpr()->getType().getAddressSpace(),
+        E->getType().getAddressSpace(), ConvertType(DestTy));
+    assert(!MissingFeatures::tbaa());
+    return makeAddrLValue(Address(V, getTypes().convertTypeForMem(E->getType()),
+                                  LV.getAddress().getAlignment()),
+                          E->getType(), LV.getBaseInfo());
   }
   case CK_ObjCObjectLValueCast: {
     assert(0 && "NYI");

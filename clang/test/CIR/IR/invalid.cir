@@ -301,6 +301,31 @@ cir.func @cast24(%p : !u32i) {
 // -----
 
 !u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
+cir.func @cast25(%p : !cir.ptr<!u32i, addrspace(1)>) {
+  %0 = cir.cast(address_space, %p : !cir.ptr<!u32i, addrspace(1)>), !cir.ptr<!u64i, addrspace(2)> // expected-error {{requires two types differ in addrspace only}}
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+cir.func @cast26(%p : !cir.ptr<!u64i, addrspace(1)>) {
+  %0 = cir.cast(address_space, %p : !cir.ptr<!u64i, addrspace(1)>), !u64i // expected-error {{requires !cir.ptr type for source and result}}
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+cir.func @cast27(%p : !u64i) {
+  %0 = cir.cast(address_space, %p : !u64i), !cir.ptr<!u64i, addrspace(1)> // expected-error {{requires !cir.ptr type for source and result}}
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
 !u8i = !cir.int<u, 8>
 module {
   // expected-error@+1 {{constant array element should match array element type}}
