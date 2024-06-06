@@ -357,13 +357,15 @@ void test_whole_elements_read(void) {
   if (fp) {
     // 3*20: 60 bytes read; which is basically 15 integers.
     if (20 == fread(buffer + 1, 3, 20, fp)) {
-      clang_analyzer_dump(buffer[0]); // expected-warning{{1 S32b}}
-      clang_analyzer_dump(buffer[20]); // expected-warning{{conj_}}
-      clang_analyzer_dump(buffer[21]); // expected-warning{{1st function call argument is an uninitialized value}}
+      clang_analyzer_dump(buffer[0]);  // expected-warning{{1 S32b}}
+      clang_analyzer_dump(buffer[15]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[16]); // expected-warning{{3 S32b}}
+      clang_analyzer_dump(buffer[17]); // expected-warning{{1st function call argument is an uninitialized value}}
     } else {
-      clang_analyzer_dump(buffer[0]); // expected-warning{{1 S32b}}
-      clang_analyzer_dump(buffer[20]); // expected-warning{{conj_}}
-      clang_analyzer_dump(buffer[21]); // expected-warning{{1st function call argument is an uninitialized value}}
+      clang_analyzer_dump(buffer[0]);  // expected-warning{{1 S32b}}
+      clang_analyzer_dump(buffer[15]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[16]); // expected-warning{{3 S32b}}
+      clang_analyzer_dump(buffer[17]); // expected-warning{{1st function call argument is an uninitialized value}}
     }
     fclose(fp);
   }

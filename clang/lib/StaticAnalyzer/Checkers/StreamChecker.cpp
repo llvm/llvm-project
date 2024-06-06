@@ -1006,7 +1006,8 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
     constexpr int MaxInvalidatedElementsLimit = 64;
     if (DivisibleAccessSpan && NumElementsRead <= MaxInvalidatedElementsLimit) {
       return escapeByStartIndexAndCount(State, Call, C.blockCount(), Buffer,
-                                        *ElemTy, *StartIndexVal, *CountVal);
+                                        *ElemTy, *StartIndexVal,
+                                        NumElementsRead);
     }
   }
   return nullptr;
