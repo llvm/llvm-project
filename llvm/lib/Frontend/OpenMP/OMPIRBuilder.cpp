@@ -1583,6 +1583,10 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     } else {
       Builder.restoreIP(
           PrivCB(InnerAllocaIP, Builder.saveIP(), V, *Inner, ReplacementValue));
+      InnerAllocaIP = {
+          InnerAllocaIP.getBlock(),
+          InnerAllocaIP.getBlock()->getTerminator()->getIterator()};
+
       assert(ReplacementValue &&
              "Expected copy/create callback to set replacement value!");
       if (ReplacementValue == &V)
