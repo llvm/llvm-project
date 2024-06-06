@@ -71,7 +71,9 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
               ofClass(matchers::matchesAnyListedName(OptionalTypes)))),
           hasType(ConstructTypeMatcher),
           hasArgument(0U, ignoringImpCasts(anyOf(OptionalDereferenceMatcher,
-                                                 StdMoveCallMatcher))))
+                                                 StdMoveCallMatcher))),
+          unless(anyOf(hasAncestor(typeLoc()),
+                       hasAncestor(expr(matchers::hasUnevaluatedContext())))))
           .bind("expr"),
       this);
 }

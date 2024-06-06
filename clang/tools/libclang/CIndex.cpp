@@ -743,14 +743,10 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
   }
 
   // Visit the template arguments used in the specialization.
-  if (TypeSourceInfo *SpecType = D->getTypeAsWritten()) {
-    TypeLoc TL = SpecType->getTypeLoc();
-    if (TemplateSpecializationTypeLoc TSTLoc =
-            TL.getAs<TemplateSpecializationTypeLoc>()) {
-      for (unsigned I = 0, N = TSTLoc.getNumArgs(); I != N; ++I)
-        if (VisitTemplateArgumentLoc(TSTLoc.getArgLoc(I)))
-          return true;
-    }
+  if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {
+    for (const TemplateArgumentLoc &Arg : ArgsWritten->arguments())
+      if (VisitTemplateArgumentLoc(Arg))
+        return true;
   }
 
   return ShouldVisitBody && VisitCXXRecordDecl(D);
@@ -780,10 +776,9 @@ bool CursorVisitor::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   }
 
   // Visit the default argument.
-  if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
-    if (TypeSourceInfo *DefArg = D->getDefaultArgumentInfo())
-      if (Visit(DefArg->getTypeLoc()))
-        return true;
+  if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited() &&
+      VisitTemplateArgumentLoc(D->getDefaultArgument()))
+    return true;
 
   return false;
 }
@@ -950,8 +945,9 @@ bool CursorVisitor::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
     return true;
 
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
-    if (Expr *DefArg = D->getDefaultArgument())
-      return Visit(MakeCXCursor(DefArg, StmtParent, TU, RegionOfInterest));
+    if (D->hasDefaultArgument() &&
+        VisitTemplateArgumentLoc(D->getDefaultArgument()))
+      return true;
 
   return false;
 }
@@ -2174,6 +2170,7 @@ public:
   void VisitRequiresExpr(const RequiresExpr *E);
   void VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
   void VisitOpenACCComputeConstruct(const OpenACCComputeConstruct *D);
+  void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -2857,6 +2854,16 @@ void OpenACCClauseEnqueue::VisitWaitClause(const OpenACCWaitClause &C) {
   for (Expr *QE : C.getQueueIdExprs())
     Visitor.AddStmt(QE);
 }
+void OpenACCClauseEnqueue::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {}
+void OpenACCClauseEnqueue::VisitReductionClause(
+    const OpenACCReductionClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
+void OpenACCClauseEnqueue::VisitIndependentClause(
+    const OpenACCIndependentClause &C) {}
+void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {
@@ -3489,6 +3496,12 @@ void EnqueueVisitor::VisitOMPTargetTeamsDistributeSimdDirective(
 
 void EnqueueVisitor::VisitOpenACCComputeConstruct(
     const OpenACCComputeConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *C) {
   EnqueueChildren(C);
   for (auto *Clause : C->clauses())
     EnqueueChildren(Clause);
@@ -5665,16 +5678,19 @@ CXString clang_getCursorDisplayName(CXCursor C) {
 
   if (const ClassTemplateSpecializationDecl *ClassSpec =
           dyn_cast<ClassTemplateSpecializationDecl>(D)) {
-    // If the type was explicitly written, use that.
-    if (TypeSourceInfo *TSInfo = ClassSpec->getTypeAsWritten())
-      return cxstring::createDup(TSInfo->getType().getAsString(Policy));
-
     SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
     OS << *ClassSpec;
-    printTemplateArgumentList(
-        OS, ClassSpec->getTemplateArgs().asArray(), Policy,
-        ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    // If the template arguments were written explicitly, use them..
+    if (const auto *ArgsWritten = ClassSpec->getTemplateArgsAsWritten()) {
+      printTemplateArgumentList(
+          OS, ArgsWritten->arguments(), Policy,
+          ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    } else {
+      printTemplateArgumentList(
+          OS, ClassSpec->getTemplateArgs().asArray(), Policy,
+          ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    }
     return cxstring::createDup(OS.str());
   }
 
@@ -6229,6 +6245,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("ConceptDecl");
   case CXCursor_OpenACCComputeConstruct:
     return cxstring::createRef("OpenACCComputeConstruct");
+  case CXCursor_OpenACCLoopConstruct:
+    return cxstring::createRef("OpenACCLoopConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");

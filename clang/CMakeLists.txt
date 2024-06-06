@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "Clang")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -349,10 +350,7 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wno-long-long")
   endif ()
 
-  check_cxx_compiler_flag("-Werror -Wnested-anon-types" CXX_SUPPORTS_NO_NESTED_ANON_TYPES_FLAG)
-  if( CXX_SUPPORTS_NO_NESTED_ANON_TYPES_FLAG )
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
-  endif()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
 endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
@@ -394,7 +392,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   # Installing the headers needs to depend on generating any public
   # tablegen'd headers.
   add_custom_target(clang-headers DEPENDS clang-tablegen-targets)
-  set_target_properties(clang-headers PROPERTIES FOLDER "Misc")
+  set_target_properties(clang-headers PROPERTIES FOLDER "Clang/Resources")
   if(NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-clang-headers
                              DEPENDS clang-headers
@@ -402,6 +400,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   endif()
 
   add_custom_target(bash-autocomplete DEPENDS utils/bash-autocomplete.sh)
+  set_target_properties(bash-autocomplete PROPERTIES FOLDER "Clang/Misc")
   install(FILES utils/bash-autocomplete.sh
           DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
           COMPONENT bash-autocomplete)
@@ -482,7 +481,7 @@ add_custom_target(clang-tablegen-targets
   omp_gen
   ClangDriverOptions
   ${CLANG_TABLEGEN_TARGETS})
-set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "Misc")
+set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "Clang/Tablegenning/Targets")
 list(APPEND LLVM_COMMON_DEPENDS clang-tablegen-targets)
 
 # Force target to be built as soon as possible. Clang modules builds depend
@@ -547,7 +546,7 @@ endif()
 
 # Custom target to install all clang libraries.
 add_custom_target(clang-libraries)
-set_target_properties(clang-libraries PROPERTIES FOLDER "Misc")
+set_target_properties(clang-libraries PROPERTIES FOLDER "Clang/Install")
 
 if(NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-clang-libraries

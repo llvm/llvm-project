@@ -350,16 +350,14 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
         continue;
       }
       StringRef AnnotationName = *AnnotationNameOrErr;
-      if (AnnotationName.compare(
-              InstrProfCorrelator::FunctionNameAttributeName) == 0) {
+      if (AnnotationName == InstrProfCorrelator::FunctionNameAttributeName) {
         if (auto EC =
                 AnnotationFormValue->getAsCString().moveInto(FunctionName))
           consumeError(std::move(EC));
-      } else if (AnnotationName.compare(
-                     InstrProfCorrelator::CFGHashAttributeName) == 0) {
+      } else if (AnnotationName == InstrProfCorrelator::CFGHashAttributeName) {
         CFGHash = AnnotationFormValue->getAsUnsignedConstant();
-      } else if (AnnotationName.compare(
-                     InstrProfCorrelator::NumCountersAttributeName) == 0) {
+      } else if (AnnotationName ==
+                 InstrProfCorrelator::NumCountersAttributeName) {
         NumCounters = AnnotationFormValue->getAsUnsignedConstant();
       }
     }

@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -arm-add-build-attributes -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld --hash-style=sysv %t --shared -o %t2
 // RUN: llvm-readobj --relocations %t2 | FileCheck %s
-// RUN: llvm-objdump -s --triple=armv7a-none-linux-gnueabi %t2 | FileCheck --check-prefix=CHECK-EXTAB-NEXT %s
+// RUN: llvm-objdump -s --triple=armv7a-none-linux-gnueabi %t2 | FileCheck --check-prefix=CHECK-EXTAB %s
 
 // Check that the relative R_ARM_PREL31 relocation can access a PLT entry
 // for when the personality routine is referenced from a shared library.

@@ -1,6 +1,7 @@
 # lldb test suite imports
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
+from lldbsuite.test import lldbutil
 
 # gdb-remote-specific imports
 import lldbgdbserverutils
@@ -117,6 +118,7 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         temp_file = self.getBuildArtifact("test")
         with open(temp_file, "wb"):
             pass
+        temp_file = lldbutil.install_to_target(self, temp_file)
 
         # attempt to open the file with O_CREAT|O_EXCL
         self.do_handshake()
@@ -140,6 +142,7 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         test_data = b"test data of some length"
         with open(temp_path, "wb") as temp_file:
             temp_file.write(test_data)
+        temp_path = lldbutil.install_to_target(self, temp_path)
 
         self.do_handshake()
         self.test_sequence.add_log_lines(
@@ -167,7 +170,11 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         test_mode = 0o751
 
         with open(temp_path, "wb") as temp_file:
-            os.chmod(temp_file.fileno(), test_mode)
+            if lldbplatformutil.getHostPlatform() == "windows":
+                test_mode = 0o700
+            else:
+                os.chmod(temp_file.fileno(), test_mode)
+        temp_path = lldbutil.install_to_target(self, temp_path)
 
         self.do_handshake()
         self.test_sequence.add_log_lines(
@@ -213,6 +220,7 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         temp_path = self.getBuildArtifact("test")
         with open(temp_path, "wb"):
             pass
+        temp_path = lldbutil.install_to_target(self, temp_path)
 
         self.do_handshake()
         self.test_sequence.add_log_lines(
@@ -244,6 +252,10 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         self.expect_gdbremote_sequence()
 
     @skipIfWindows
+    # FIXME: lldb.remote_platform.Install() cannot copy opened temp file on Windows.
+    # It is possible to use tempfile.NamedTemporaryFile(..., delete=False) and
+    # delete the temp file manually at the end.
+    @skipIf(hostoslist=["windows"])
     @add_test_categories(["llgs"])
     def test_platform_file_fstat(self):
         server = self.connect_to_debug_monitor()
@@ -252,12 +264,13 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         with tempfile.NamedTemporaryFile() as temp_file:
             temp_file.write(b"some test data for stat")
             temp_file.flush()
+            temp_path = lldbutil.install_to_target(self, temp_file.name)
 
             self.do_handshake()
             self.test_sequence.add_log_lines(
                 [
                     "read packet: $vFile:open:%s,0,0#00"
-                    % (binascii.b2a_hex(temp_file.name.encode()).decode(),),
+                    % (binascii.b2a_hex(temp_path.encode()).decode(),),
                     {
                         "direction": "send",
                         "regex": r"^\$F([0-9a-fA-F]+)#[0-9a-fA-F]{2}$",
@@ -295,19 +308,26 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
             )
             sys_stat = os.fstat(temp_file.fileno())
 
-            self.assertEqual(gdb_stat.st_dev, uint32_or_zero(sys_stat.st_dev))
-            self.assertEqual(gdb_stat.st_ino, uint32_or_zero(sys_stat.st_ino))
             self.assertEqual(gdb_stat.st_mode, uint32_trunc(sys_stat.st_mode))
             self.assertEqual(gdb_stat.st_nlink, uint32_or_max(sys_stat.st_nlink))
-            self.assertEqual(gdb_stat.st_uid, uint32_or_zero(sys_stat.st_uid))
-            self.assertEqual(gdb_stat.st_gid, uint32_or_zero(sys_stat.st_gid))
             self.assertEqual(gdb_stat.st_rdev, uint32_or_zero(sys_stat.st_rdev))
             self.assertEqual(gdb_stat.st_size, sys_stat.st_size)
-            self.assertEqual(gdb_stat.st_blksize, sys_stat.st_blksize)
-            self.assertEqual(gdb_stat.st_blocks, sys_stat.st_blocks)
-            self.assertEqual(gdb_stat.st_atime, uint32_or_zero(int(sys_stat.st_atime)))
-            self.assertEqual(gdb_stat.st_mtime, uint32_or_zero(int(sys_stat.st_mtime)))
-            self.assertEqual(gdb_stat.st_ctime, uint32_or_zero(int(sys_stat.st_ctime)))
+            if not lldb.remote_platform:
+                self.assertEqual(gdb_stat.st_dev, uint32_or_zero(sys_stat.st_dev))
+                self.assertEqual(gdb_stat.st_ino, uint32_or_zero(sys_stat.st_ino))
+                self.assertEqual(gdb_stat.st_uid, uint32_or_zero(sys_stat.st_uid))
+                self.assertEqual(gdb_stat.st_gid, uint32_or_zero(sys_stat.st_gid))
+                self.assertEqual(gdb_stat.st_blksize, sys_stat.st_blksize)
+                self.assertEqual(gdb_stat.st_blocks, sys_stat.st_blocks)
+                self.assertEqual(
+                    gdb_stat.st_atime, uint32_or_zero(int(sys_stat.st_atime))
+                )
+                self.assertEqual(
+                    gdb_stat.st_mtime, uint32_or_zero(int(sys_stat.st_mtime))
+                )
+                self.assertEqual(
+                    gdb_stat.st_ctime, uint32_or_zero(int(sys_stat.st_ctime))
+                )
 
             self.reset_test_sequence()
             self.test_sequence.add_log_lines(
@@ -359,9 +379,12 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
 
         if creat:
             self.assertFalse(os.path.exists(temp_path))
+            if lldb.remote_platform:
+                temp_path = lldbutil.append_to_process_working_directory(self, "test")
         else:
             with open(temp_path, "wb") as temp_file:
                 temp_file.write(test_data.encode())
+            temp_path = lldbutil.install_to_target(self, temp_path)
 
         # open the file for reading
         self.do_handshake()
@@ -448,8 +471,19 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
 
         if write:
             # check if the data was actually written
+            if lldb.remote_platform:
+                local_path = self.getBuildArtifact("file_from_target")
+                error = lldb.remote_platform.Get(
+                    lldb.SBFileSpec(temp_path, False), lldb.SBFileSpec(local_path, True)
+                )
+                self.assertTrue(
+                    error.Success(),
+                    "Reading file {0} failed: {1}".format(temp_path, error),
+                )
+                temp_path = local_path
+
             with open(temp_path, "rb") as temp_file:
-                if creat:
+                if creat and lldbplatformutil.getHostPlatform() != "windows":
                     self.assertEqual(
                         os.fstat(temp_file.fileno()).st_mode & 0o7777, 0o640
                     )

@@ -139,6 +139,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
+                            options::OPT_flang_experimental_integer_overflow,
                             options::OPT_fno_ppc_native_vec_elem_order,
                             options::OPT_fppc_native_vec_elem_order});
 }
@@ -763,6 +764,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       // Clang can generate useful OpenMP code for these two runtime libraries.
       CmdArgs.push_back("-fopenmp");
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
+
+      if (Args.hasArg(options::OPT_fopenmp_force_usm))
+        CmdArgs.push_back("-fopenmp-force-usm");
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;

@@ -41,7 +41,7 @@ static bool isVectorArgExpansion(Function &F) {
 }
 
 static SmallVector<Value *> populateOperands(Value *Arg, IRBuilder<> &Builder) {
-  SmallVector<Value *, 4> ExtractedElements;
+  SmallVector<Value *> ExtractedElements;
   auto *VecArg = dyn_cast<FixedVectorType>(Arg->getType());
   for (unsigned I = 0; I < VecArg->getNumElements(); ++I) {
     Value *Index = ConstantInt::get(Type::getInt32Ty(Arg->getContext()), I);

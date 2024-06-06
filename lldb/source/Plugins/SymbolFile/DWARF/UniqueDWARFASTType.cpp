@@ -13,12 +13,18 @@
 using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
 
+static bool IsStructOrClassTag(llvm::dwarf::Tag Tag) {
+  return Tag == llvm::dwarf::Tag::DW_TAG_class_type ||
+         Tag == llvm::dwarf::Tag::DW_TAG_structure_type;
+}
+
 UniqueDWARFASTType *UniqueDWARFASTTypeList::Find(
     const DWARFDIE &die, const lldb_private::Declaration &decl,
     const int32_t byte_size, bool is_forward_declaration) {
   for (UniqueDWARFASTType &udt : m_collection) {
     // Make sure the tags match
-    if (udt.m_die.Tag() == die.Tag()) {
+    if (udt.m_die.Tag() == die.Tag() || (IsStructOrClassTag(udt.m_die.Tag()) &&
+                                         IsStructOrClassTag(die.Tag()))) {
       // If they are not both definition DIEs or both declaration DIEs, then
       // don't check for byte size and declaration location, because declaration
       // DIEs usually don't have those info.
@@ -39,7 +45,9 @@ UniqueDWARFASTType *UniqueDWARFASTTypeList::Find(
       while (!done && match && parent_arg_die && parent_pos_die) {
         const dw_tag_t parent_arg_tag = parent_arg_die.Tag();
         const dw_tag_t parent_pos_tag = parent_pos_die.Tag();
-        if (parent_arg_tag == parent_pos_tag) {
+        if (parent_arg_tag == parent_pos_tag ||
+            (IsStructOrClassTag(parent_arg_tag) &&
+             IsStructOrClassTag(parent_pos_tag))) {
           switch (parent_arg_tag) {
           case DW_TAG_class_type:
           case DW_TAG_structure_type:

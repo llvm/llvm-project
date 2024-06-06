@@ -107,3 +107,16 @@ auto FooFunc(C auto V) -> C decltype(auto) {
 }
 
 }
+
+namespace constraint_auto_params {
+
+template <class T, class K>
+concept C = true;
+
+template<class T>
+void g(C<T> auto Foo) {}
+
+// CHECK: TemplateTypeParmDecl {{.*}} depth 0 index 1 Foo:auto
+// CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:8, col:11>
+
+}

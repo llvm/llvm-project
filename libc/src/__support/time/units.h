@@ -15,22 +15,22 @@
 namespace LIBC_NAMESPACE {
 namespace time_units {
 LIBC_INLINE constexpr time_t operator""_s_ns(unsigned long long s) {
-  return s * 1'000'000'000;
+  return static_cast<time_t>(s * 1'000'000'000);
 }
 LIBC_INLINE constexpr time_t operator""_s_us(unsigned long long s) {
-  return s * 1'000'000;
+  return static_cast<time_t>(s * 1'000'000);
 }
 LIBC_INLINE constexpr time_t operator""_s_ms(unsigned long long s) {
-  return s * 1'000;
+  return static_cast<time_t>(s * 1'000);
 }
 LIBC_INLINE constexpr time_t operator""_ms_ns(unsigned long long ms) {
-  return ms * 1'000'000;
+  return static_cast<time_t>(ms * 1'000'000);
 }
 LIBC_INLINE constexpr time_t operator""_ms_us(unsigned long long ms) {
-  return ms * 1'000;
+  return static_cast<time_t>(ms * 1'000);
 }
 LIBC_INLINE constexpr time_t operator""_us_ns(unsigned long long us) {
-  return us * 1'000;
+  return static_cast<time_t>(us * 1'000);
 }
 } // namespace time_units
 } // namespace LIBC_NAMESPACE
