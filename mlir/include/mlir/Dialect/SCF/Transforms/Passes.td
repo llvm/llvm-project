@@ -125,6 +125,11 @@ def SCFForallToForLoop : Pass<"scf-forall-to-for"> {
   let constructor = "mlir::createForallToForLoopPass()";
 }
 
+def SCFForallToParallelLoop : Pass<"scf-forall-to-parallel"> {
+  let summary = "Convert SCF forall loops to SCF parallel loops";
+  let constructor = "mlir::createForallToParallelLoopPass()";
+}
+
 def SCFForToWhileLoop : Pass<"scf-for-to-while"> {
   let summary = "Convert SCF for loops to SCF while loops";
   let constructor = "mlir::createForToWhileLoopPass()";
