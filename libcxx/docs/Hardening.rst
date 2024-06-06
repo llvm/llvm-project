@@ -411,6 +411,7 @@ Hardened containers status
       - N/A
     * - ``function``
       - N/A
+      - N/A
     * - ``variant``
       - N/A
       - N/A
