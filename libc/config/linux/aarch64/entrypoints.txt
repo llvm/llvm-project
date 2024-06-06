@@ -503,7 +503,10 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     libc.src.math.fabsf16
+    libc.src.math.fdimf16
     libc.src.math.floorf16
+    libc.src.math.fmaxf16
+    libc.src.math.fminf16
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
     libc.src.math.llrintf16
@@ -511,6 +514,13 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.lrintf16
     libc.src.math.lroundf16
     libc.src.math.nearbyintf16
+    libc.src.math.nextafterf16
+    libc.src.math.nextdownf16
+    # Temporarily disable nexttowardf16 on aarch64 because the conversion
+    # between _Float16 and long double will crash clang-11.  This is fixed in
+    # clang-12 and after: https://godbolt.org/z/8ceT9454c
+    # libc.src.math.nexttowardf16
+    libc.src.math.nextupf16
     libc.src.math.rintf16
     libc.src.math.roundf16
     libc.src.math.roundevenf16

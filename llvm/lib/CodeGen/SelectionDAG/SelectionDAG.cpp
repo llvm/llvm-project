@@ -5375,6 +5375,7 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FREM:
   case ISD::FSIN:
   case ISD::FCOS:
+  case ISD::FTAN:
   case ISD::FMA:
   case ISD::FMAD: {
     if (SNaN)
