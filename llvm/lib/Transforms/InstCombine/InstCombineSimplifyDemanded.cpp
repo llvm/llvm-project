@@ -471,12 +471,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       CastInst *NewCast = new ZExtInst(I->getOperand(0), VTy);
       NewCast->takeName(I);
       return InsertNewInstWith(NewCast, I->getIterator());
-     }
+    }
 
     // If the sign bit of the input is known set or clear, then we know the
     // top bits of the result.
-     Known = InputKnown.sext(BitWidth);
-     break;
+    Known = InputKnown.sext(BitWidth);
+    break;
   }
   case Instruction::Add: {
     if ((DemandedMask & 1) == 0) {
