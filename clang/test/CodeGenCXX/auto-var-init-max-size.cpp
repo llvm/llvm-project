@@ -15,7 +15,7 @@ struct Foo {
 
 int foo(unsigned n) {
   bool var_size_1;
-  long var_size_8 = 123;
+  long var_size_8;
   void *var_size_8p;
   int var_size_1024[256];
   Foo var_size_1028;
