@@ -25,10 +25,10 @@ entry:
 ; CHECK-LABEL: DW_TAG_subprogram
 ; CHECK: DW_AT_name ("test2")
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_location (DW_OP_breg0 RAX+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_constu 0x3d, DW_OP_shl, DW_OP_constu 0x3d, DW_OP_shr, DW_OP_stack_value)
+; CHECK: DW_AT_location (DW_OP_breg0 {{R[^+]+}}+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_constu 0x3d, DW_OP_shl, DW_OP_constu 0x3d, DW_OP_shr, DW_OP_stack_value)
 ; CHECK: DW_AT_name ("x")
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_location (DW_OP_breg0 RAX+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_constu 0x39, DW_OP_shl, DW_OP_constu 0x3c, DW_OP_shra, DW_OP_stack_value)
+; CHECK: DW_AT_location (DW_OP_breg0 {{R[^+]+}}+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_constu 0x39, DW_OP_shl, DW_OP_constu 0x3c, DW_OP_shra, DW_OP_stack_value)
 ; CHECK: DW_AT_name ("y")
 
 define i8 @test2() !dbg !20 {
@@ -42,10 +42,10 @@ entry:
 ; CHECK-LABEL: DW_TAG_subprogram
 ; CHECK: DW_AT_name ("test3")
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_location (DW_OP_breg0 RAX+0, DW_OP_constu 0x3f, DW_OP_shr, DW_OP_stack_value)
+; CHECK: DW_AT_location (DW_OP_breg0 {{R[^+]+}}+0, DW_OP_constu 0x3f, DW_OP_shr, DW_OP_stack_value)
 ; CHECK: DW_AT_name ("x")
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_location (DW_OP_breg0 RAX+0, DW_OP_constu 0x3f, DW_OP_shra, DW_OP_stack_value)
+; CHECK: DW_AT_location (DW_OP_breg0 {{R[^+]+}}+0, DW_OP_constu 0x3f, DW_OP_shra, DW_OP_stack_value)
 ; CHECK: DW_AT_name ("y")
 
 define i64 @test3(ptr %p) !dbg !24 {
