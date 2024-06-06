@@ -133,6 +133,7 @@ bool hasBranchWeightProvenance(const MDNode *ProfileData) {
   // NOTE: if we ever have more types of branch weight provenance,
   // we need to check the string value is "expected". For now, we
   // supply a more generic API, and avoid the spurious comparisons.
+  assert(ProfDataName->getString() == "expected");
   return ProfDataName;
 }
 
