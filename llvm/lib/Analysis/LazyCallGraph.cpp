@@ -211,6 +211,14 @@ LazyCallGraph::LazyCallGraph(LazyCallGraph &&G)
   updateGraphPtrs();
 }
 
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
+void LazyCallGraph::verify() {
+  for (RefSCC &RC : postorder_ref_sccs()) {
+    RC.verify();
+  }
+}
+#endif
+
 bool LazyCallGraph::invalidate(Module &, const PreservedAnalyses &PA,
                                ModuleAnalysisManager::Invalidator &) {
   // Check whether the analysis, all analyses on functions, or the function's
