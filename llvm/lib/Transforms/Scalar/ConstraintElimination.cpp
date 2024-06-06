@@ -1031,6 +1031,23 @@ void State::addInfoForInductions(BasicBlock &BB) {
   WorkList.push_back(FactOrCheck::getConditionFact(
       DTN, CmpInst::ICMP_SLT, PN, B,
       ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
+
+  assert(!StepOffset.isNegative() && "induction must be increasing");
+  // Try to add condition from header to the unique exit block, if there is one.
+  // When exiting either with EQ or NE, we know that the induction value must be
+  // u<= B, as a different exit may exit earlier.
+  if (Pred == CmpInst::ICMP_EQ) {
+    BasicBlock *EB = cast<BranchInst>(BB.getTerminator())->getSuccessor(0);
+    if (L->getUniqueExitBlock() == EB)
+      WorkList.emplace_back(FactOrCheck::getConditionFact(
+          DT.getNode(EB), CmpInst::ICMP_ULE, A, B));
+  }
+  if (Pred == CmpInst::ICMP_NE) {
+    BasicBlock *EB = cast<BranchInst>(BB.getTerminator())->getSuccessor(1);
+    if (L->getUniqueExitBlock() == EB)
+      WorkList.emplace_back(FactOrCheck::getConditionFact(
+          DT.getNode(EB), CmpInst::ICMP_ULE, A, B));
+  }
 }
 
 void State::addInfoFor(BasicBlock &BB) {

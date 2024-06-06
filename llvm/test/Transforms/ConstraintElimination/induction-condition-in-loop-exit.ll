@@ -19,8 +19,7 @@ define i1 @multi_exiting_loop_eq_same_unique_exit_const_compare_known(ptr %s) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LATCH_C]], label %[[LOOP_HEADER]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[IV]], 1235
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %loop.header
@@ -341,8 +340,7 @@ define i1 @multi_exiting_loop_eq_same_unique_exit_var_compare_known(ptr %s, i32 
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LATCH_C]], label %[[LOOP_HEADER]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[T:%.*]] = icmp ule i32 [[IV]], [[N]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %loop.header
@@ -419,8 +417,7 @@ define i1 @multi_exiting_loop_ne_same_unique_exit_const_compare_known(ptr %s) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LATCH_C]], label %[[LOOP_HEADER]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[IV]], 1235
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %loop.header
