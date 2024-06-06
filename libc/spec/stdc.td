@@ -487,6 +487,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"frexp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"frexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"frexpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntPtr>]>,
+          GuardedFunctionSpec<"frexpf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>, ArgSpec<IntPtr>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"frexpf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntPtr>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fromfp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,

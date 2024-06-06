@@ -1302,6 +1302,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  frexpf16
+  SRCS
+    frexpf16.cpp
+  HDRS
+    ../frexpf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
   frexpf128
   SRCS
     frexpf128.cpp
