@@ -341,13 +341,37 @@ void test_partial_elements_read(void) {
   clang_analyzer_dump(sizeof(int)); // expected-warning {{4 S32b}}
 
   int buffer[100];
+  buffer[0] = 1;
+  buffer[1] = 2;
+  buffer[2] = 3;
+  buffer[3] = 4;
+  buffer[4] = 5;
   FILE *fp = fopen("/home/test", "rb+");
   if (fp) {
     // 3*5: 15 bytes read; which is not exactly 4 integers, thus we invalidate the whole buffer.
     if (5 == fread(buffer + 1, 3, 5, fp)) {
-      clang_analyzer_dump(buffer[0]); // expected-warning{{derived_}}
+      void clang_analyzer_printState(void);
+      clang_analyzer_printState();
+      clang_analyzer_dump(buffer[0]); // expected-warning{{1 S32b}}
+      clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[2]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[3]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[4]); // expected-warning{{conj_}}
+
+      char *c = (char*)buffer;
+      clang_analyzer_dump(c[4+12]); // expected-warning{{conj_}} 16th byte of buffer, which is the beginning of the 4th 'int' in the buffer.
+
+      // FIXME: The store should have returned a partial binding for the 17th byte of the buffer, which is the 2nd byte of the previous int.
+      // This byte should have been initialized by the 'fread' earlier. However, the Store lies to us and says it's uninitialized.
+      clang_analyzer_dump(c[4+13]); // expected-warning{{1st function call argument is an uninitialized value}} should be initialized.
+      clang_analyzer_dump(c[4+16]); // This should be the first byte that 'fread' leaves uninitialized. This should raise the uninit read diag.
     } else {
-      clang_analyzer_dump(buffer[0]); // expected-warning{{derived_}}
+      clang_analyzer_dump(buffer[0]); // expected-warning{{1 S32b}} ok
+      clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}} ok
+      clang_analyzer_dump(buffer[2]); // expected-warning{{conj_}} ok
+      clang_analyzer_dump(buffer[3]); // expected-warning{{conj_}} ok
+      clang_analyzer_dump(buffer[4]); // expected-warning{{conj_}} ok, but an uninit warning would be also fine.
+      clang_analyzer_dump(buffer[5]); // expected-warning{{1st function call argument is an uninitialized value}} ok
     }
     fclose(fp);
   }

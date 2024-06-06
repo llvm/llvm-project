@@ -1001,13 +1001,15 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
     int64_t NumBytesRead = Size.value() * CountVal.value();
     int64_t ElemSizeInChars =
         C.getASTContext().getTypeSizeInChars(*ElemTy).getQuantity();
-    bool DivisibleAccessSpan = (NumBytesRead % ElemSizeInChars) == 0;
-    int64_t NumElementsRead = NumBytesRead / ElemSizeInChars;
+    bool IncompleteLastElement = (NumBytesRead % ElemSizeInChars) != 0;
+    int64_t NumCompleteOrIncompleteElementsRead =
+        NumBytesRead / ElemSizeInChars + IncompleteLastElement;
+
     constexpr int MaxInvalidatedElementsLimit = 64;
-    if (DivisibleAccessSpan && NumElementsRead <= MaxInvalidatedElementsLimit) {
+    if (NumCompleteOrIncompleteElementsRead <= MaxInvalidatedElementsLimit) {
       return escapeByStartIndexAndCount(State, Call, C.blockCount(), Buffer,
                                         *ElemTy, *StartIndexVal,
-                                        NumElementsRead);
+                                        NumCompleteOrIncompleteElementsRead);
     }
   }
   return nullptr;
