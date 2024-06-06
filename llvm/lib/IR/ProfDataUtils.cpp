@@ -121,24 +121,24 @@ bool hasValidBranchWeightMD(const Instruction &I) {
   return getValidBranchWeightMDNode(I);
 }
 
-bool hasBranchWeightProvenance(const Instruction &I) {
+bool hasBranchWeightOrigin(const Instruction &I) {
   auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
-  return hasBranchWeightProvenance(ProfileData);
+  return hasBranchWeightOrigin(ProfileData);
 }
 
-bool hasBranchWeightProvenance(const MDNode *ProfileData) {
+bool hasBranchWeightOrigin(const MDNode *ProfileData) {
   if (!isBranchWeightMD(ProfileData))
     return false;
   auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(1));
   // NOTE: if we ever have more types of branch weight provenance,
   // we need to check the string value is "expected". For now, we
   // supply a more generic API, and avoid the spurious comparisons.
-  assert(ProfDataName->getString() == "expected");
-  return ProfDataName;
+  assert(ProfDataName == nullptr || ProfDataName->getString() == "expected");
+  return ProfDataName != nullptr;
 }
 
 unsigned getBranchWeightOffset(const MDNode *ProfileData) {
-  return hasBranchWeightProvenance(ProfileData) ? 2 : 1;
+  return hasBranchWeightOrigin(ProfileData) ? 2 : 1;
 }
 
 unsigned getNumBranchWeights(const MDNode &ProfileData) {
@@ -212,7 +212,7 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalVal) {
   if (!ProfDataName)
     return false;
 
-  if (ProfDataName->getString().equals("branch_weights")) {
+  if (ProfDataName->getString() == "branch_weights") {
     unsigned Offset = getBranchWeightOffset(ProfileData);
     for (unsigned Idx = Offset; Idx < ProfileData->getNumOperands(); ++Idx) {
       auto *V = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(Idx));

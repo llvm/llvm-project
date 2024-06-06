@@ -185,7 +185,7 @@ void checkBackendInstrumentation(Instruction &I,
   // times, leading to an invalid assumption in our checking. Backend checks
   // should only operate on branch weights that carry the "!expected" field,
   // since they are guaranteed to be added by the LowerExpectIntrinsic pass.
-  if (!hasBranchWeightProvenance(I))
+  if (!hasBranchWeightOrigin(I))
     return;
   SmallVector<uint32_t> ExpectedWeights;
   if (!extractBranchWeights(I, ExpectedWeights))

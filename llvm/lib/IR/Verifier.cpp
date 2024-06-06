@@ -4808,7 +4808,7 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   StringRef ProfName = MDS->getString();
 
   // Check consistency of !prof branch_weights metadata.
-  if (ProfName.equals("branch_weights")) {
+  if (ProfName == "branch_weights") {
     unsigned NumBranchWeights = getNumBranchWeights(*MD);
     if (isa<InvokeInst>(&I)) {
       Check(NumBranchWeights == 1 || NumBranchWeights == 2,
@@ -4831,8 +4831,8 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
         CheckFailed("!prof branch_weights are not allowed for this instruction",
                     MD);
 
-      Check(NumBranchWeights == ExpectedNumOperands,
-            "Wrong number of operands", MD);
+      Check(NumBranchWeights == ExpectedNumOperands, "Wrong number of operands",
+            MD);
     }
     for (unsigned i = getBranchWeightOffset(MD); i < MD->getNumOperands();
          ++i) {

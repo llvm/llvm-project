@@ -1196,10 +1196,10 @@ MDNode *MDNode::mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
   StringRef AProfName = AMDS->getString();
   StringRef BProfName = BMDS->getString();
   if (AProfName == "branch_weights" && BProfName == "branch_weights") {
-    ConstantInt *AInstrWeight =
-        mdconst::dyn_extract<ConstantInt>(A->getOperand(1));
-    ConstantInt *BInstrWeight =
-        mdconst::dyn_extract<ConstantInt>(B->getOperand(1));
+    ConstantInt *AInstrWeight = mdconst::dyn_extract<ConstantInt>(
+        A->getOperand(getBranchWeightOffset(A)));
+    ConstantInt *BInstrWeight = mdconst::dyn_extract<ConstantInt>(
+        B->getOperand(getBranchWeightOffset(B)));
     assert(AInstrWeight && BInstrWeight && "verified by LLVM verifier");
     return MDNode::get(Ctx,
                        {MDHelper.createString("branch_weights"),
