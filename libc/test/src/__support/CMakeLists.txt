@@ -132,6 +132,7 @@ add_libc_test(
   SRCS
     fixedvector_test.cpp
   DEPENDS
+    libc.src.__support.CPP.array
     libc.src.__support.fixedvector
 )
 
