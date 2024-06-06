@@ -8,7 +8,7 @@
 // RUN:   FileCheck --check-prefix=CHECK-RV64 %s
 
 #include <stdint.h>
-#include <riscv_atomics.h>
+#include <riscv_atomic.h>
 
 // CHECK-RV32-LABEL: define dso_local i32 @zalrsc_lr_w_none
 // CHECK-RV32-SAME: (ptr noundef [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -23,7 +23,7 @@
 // CHECK-RV64-NEXT:    ret i32 [[TMP0]]
 //
 int zalrsc_lr_w_none(int* ptr) {
-  return __riscv_lr_w(ptr, __RISCV_ORDER_NONE);
+  return __riscv_lr_w(ptr, __RISCV_ORDERING_NONE);
 }
 
 // CHECK-RV32-LABEL: define dso_local i32 @zalrsc_lr_w_aq
@@ -39,7 +39,7 @@ int zalrsc_lr_w_none(int* ptr) {
 // CHECK-RV64-NEXT:    ret i32 [[TMP0]]
 //
 int zalrsc_lr_w_aq(int* ptr) {
-  return __riscv_lr_w(ptr, __RISCV_ORDER_AQ);
+  return __riscv_lr_w(ptr, __RISCV_ORDERING_AQ);
 }
 
 // CHECK-RV32-LABEL: define dso_local i32 @zalrsc_lr_w_rl
@@ -55,7 +55,7 @@ int zalrsc_lr_w_aq(int* ptr) {
 // CHECK-RV64-NEXT:    ret i32 [[TMP0]]
 //
 int zalrsc_lr_w_rl(int* ptr) {
-  return __riscv_lr_w(ptr, __RISCV_ORDER_RL);
+  return __riscv_lr_w(ptr, __RISCV_ORDERING_RL);
 }
 
 // CHECK-RV32-LABEL: define dso_local i32 @zalrsc_lr_w_aqrl
@@ -71,7 +71,7 @@ int zalrsc_lr_w_rl(int* ptr) {
 // CHECK-RV64-NEXT:    ret i32 [[TMP0]]
 //
 int zalrsc_lr_w_aqrl(int* ptr) {
-  return __riscv_lr_w(ptr, __RISCV_ORDER_AQ_RL);
+  return __riscv_lr_w(ptr, __RISCV_ORDERING_AQ_RL);
 }
 
 // CHECK-RV32-LABEL: define dso_local i32 @zalrsc_sc_w_none
@@ -87,7 +87,7 @@ int zalrsc_lr_w_aqrl(int* ptr) {
 // CHECK-RV64-NEXT:    ret i32 [[TMP0]]
 //
 int zalrsc_sc_w_none(int v, int* ptr) {
-  return __riscv_sc_w(v, ptr, __RISCV_ORDER_NONE);
+  return __riscv_sc_w(v, ptr, __RISCV_ORDERING_NONE);
 }
 
 // CHECK-RV32-LABEL: define dso_local i32 @zalrsc_sc_w_aq
@@ -103,7 +103,7 @@ int zalrsc_sc_w_none(int v, int* ptr) {
 // CHECK-RV64-NEXT:    ret i32 [[TMP0]]
 //
 int zalrsc_sc_w_aq(int v, int* ptr) {
-  return __riscv_sc_w(v, ptr, __RISCV_ORDER_AQ);
+  return __riscv_sc_w(v, ptr, __RISCV_ORDERING_AQ);
 }
 
 // CHECK-RV32-LABEL: define dso_local i32 @zalrsc_sc_w_rl
@@ -119,7 +119,7 @@ int zalrsc_sc_w_aq(int v, int* ptr) {
 // CHECK-RV64-NEXT:    ret i32 [[TMP0]]
 //
 int zalrsc_sc_w_rl(int v, int* ptr) {
-  return __riscv_sc_w(v, ptr, __RISCV_ORDER_RL);
+  return __riscv_sc_w(v, ptr, __RISCV_ORDERING_RL);
 }
 
 // CHECK-RV32-LABEL: define dso_local i32 @zalrsc_sc_w_aqrl
@@ -135,7 +135,7 @@ int zalrsc_sc_w_rl(int v, int* ptr) {
 // CHECK-RV64-NEXT:    ret i32 [[TMP0]]
 //
 int zalrsc_sc_w_aqrl(int v, int* ptr) {
-  return __riscv_sc_w(v, ptr, __RISCV_ORDER_AQ_RL);
+  return __riscv_sc_w(v, ptr, __RISCV_ORDERING_AQ_RL);
 }
 
 #if __riscv_xlen == 64
@@ -146,7 +146,7 @@ int zalrsc_sc_w_aqrl(int v, int* ptr) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 int64_t zalrsc_lr_d_none(int64_t* ptr) {
-  return __riscv_lr_d(ptr, __RISCV_ORDER_NONE);
+  return __riscv_lr_d(ptr, __RISCV_ORDERING_NONE);
 }
 
 // CHECK-RV64-LABEL: define dso_local i64 @zalrsc_lr_d_aq
@@ -156,7 +156,7 @@ int64_t zalrsc_lr_d_none(int64_t* ptr) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 int64_t zalrsc_lr_d_aq(int64_t* ptr) {
-  return __riscv_lr_d(ptr, __RISCV_ORDER_AQ);
+  return __riscv_lr_d(ptr, __RISCV_ORDERING_AQ);
 }
 
 // CHECK-RV64-LABEL: define dso_local i64 @zalrsc_lr_d_rl
@@ -166,7 +166,7 @@ int64_t zalrsc_lr_d_aq(int64_t* ptr) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 int64_t zalrsc_lr_d_rl(int64_t* ptr) {
-  return __riscv_lr_d(ptr, __RISCV_ORDER_RL);
+  return __riscv_lr_d(ptr, __RISCV_ORDERING_RL);
 }
 
 // CHECK-RV64-LABEL: define dso_local i64 @zalrsc_lr_d_aqrl
@@ -176,7 +176,7 @@ int64_t zalrsc_lr_d_rl(int64_t* ptr) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 int64_t zalrsc_lr_d_aqrl(int64_t* ptr) {
-  return __riscv_lr_d(ptr, __RISCV_ORDER_AQ_RL);
+  return __riscv_lr_d(ptr, __RISCV_ORDERING_AQ_RL);
 }
 
 // CHECK-RV64-LABEL: define dso_local i64 @zalrsc_sc_d_none
@@ -186,7 +186,7 @@ int64_t zalrsc_lr_d_aqrl(int64_t* ptr) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 int64_t zalrsc_sc_d_none(int64_t v, int64_t* ptr) {
-  return __riscv_sc_d(v, ptr, __RISCV_ORDER_NONE);
+  return __riscv_sc_d(v, ptr, __RISCV_ORDERING_NONE);
 }
 
 // CHECK-RV64-LABEL: define dso_local i64 @zalrsc_sc_d_aq
@@ -196,7 +196,7 @@ int64_t zalrsc_sc_d_none(int64_t v, int64_t* ptr) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 int64_t zalrsc_sc_d_aq(int64_t v, int64_t* ptr) {
-  return __riscv_sc_d(v, ptr, __RISCV_ORDER_AQ);
+  return __riscv_sc_d(v, ptr, __RISCV_ORDERING_AQ);
 }
 
 // CHECK-RV64-LABEL: define dso_local i64 @zalrsc_sc_d_rl
@@ -206,7 +206,7 @@ int64_t zalrsc_sc_d_aq(int64_t v, int64_t* ptr) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 int64_t zalrsc_sc_d_rl(int64_t v, int64_t* ptr) {
-  return __riscv_sc_d(v, ptr, __RISCV_ORDER_RL);
+  return __riscv_sc_d(v, ptr, __RISCV_ORDERING_RL);
 }
 
 // CHECK-RV64-LABEL: define dso_local i64 @zalrsc_sc_d_aqrl
@@ -216,7 +216,7 @@ int64_t zalrsc_sc_d_rl(int64_t v, int64_t* ptr) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 int64_t zalrsc_sc_d_aqrl(int64_t v, int64_t* ptr) {
-  return __riscv_sc_d(v, ptr, __RISCV_ORDER_AQ_RL);
+  return __riscv_sc_d(v, ptr, __RISCV_ORDERING_AQ_RL);
 }
 
 #endif

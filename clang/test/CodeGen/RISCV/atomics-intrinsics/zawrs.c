@@ -7,7 +7,7 @@
 // RUN:   -emit-llvm %s -o - | opt -S -passes=mem2reg | \
 // RUN:   FileCheck --check-prefix=CHECK-RV64 %s
 
-#include <riscv_atomics.h>
+#include <riscv_atomic.h>
 
 // CHECK-RV32-LABEL: define dso_local void @zawrs_nto
 // CHECK-RV32-SAME: () #[[ATTR0:[0-9]+]] {
