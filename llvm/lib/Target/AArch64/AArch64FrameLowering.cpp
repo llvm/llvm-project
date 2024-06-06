@@ -3187,9 +3187,12 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
                 .addReg(AArch64::X0, RegState::Implicit)
                 .setMIFlag(MachineInstr::FrameSetup);
 
-          // FIXME: Add PreserveMost_From_X1 regmask from PR #93963
+          const uint32_t *RegMask = TRI->getCallPreservedMask(
+              MF, CallingConv::
+                      AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1);
           BuildMI(MBB, MI, DL, TII.get(AArch64::BL))
               .addExternalSymbol("__arm_get_current_vg")
+              .addRegMask(RegMask)
               .addReg(AArch64::X0, RegState::ImplicitDefine)
               .setMIFlag(MachineInstr::FrameSetup);
           Reg1 = AArch64::X0;
