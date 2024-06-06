@@ -131,6 +131,8 @@ class LLVMConfig(object):
             features.add("msan")
         if "undefined" in sanitizers:
             features.add("ubsan")
+        if "thread" in sanitizers:
+            features.add("tsan")
 
         have_zlib = getattr(config, "have_zlib", None)
         if have_zlib:
