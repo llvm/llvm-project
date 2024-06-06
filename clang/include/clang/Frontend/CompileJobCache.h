@@ -92,6 +92,10 @@ public:
   class CachingOutputs;
 
 private:
+  /// \returns true if the output from the compilation is not supported for
+  /// caching.
+  Expected<bool>
+  maybeIngestNonVirtualOutputFromFileSystem(CompilerInstance &Clang);
   int reportCachingBackendError(DiagnosticsEngine &Diag, llvm::Error &&E);
 
   bool CacheCompileJob = false;

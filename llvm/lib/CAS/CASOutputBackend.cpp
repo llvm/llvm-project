@@ -60,8 +60,12 @@ CASOutputBackend::createFileImpl(StringRef ResolvedPath,
         if (Error E =
                 CAS.storeFromString(std::nullopt, Bytes).moveInto(BytesRef))
           return E;
-        // FIXME: Should there be a lock taken before modifying Outputs?
-        Outputs.push_back({std::string(Path), *BytesRef});
+        addObject(Path, *BytesRef);
         return Error::success();
       });
+}
+
+void CASOutputBackend::addObject(StringRef Path, ObjectRef Object) {
+  // FIXME: Should there be a lock taken before modifying Outputs?
+  Outputs.push_back({std::string(Path), Object});
 }
