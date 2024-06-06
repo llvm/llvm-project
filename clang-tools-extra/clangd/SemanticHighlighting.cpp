@@ -447,7 +447,7 @@ public:
     if (!RLoc.isValid())
       return;
 
-    const auto *RTok = TB.spelledTokenAt(RLoc);
+    const auto *RTok = TB.spelledTokenContaining(RLoc);
     // Handle `>>`. RLoc is always pointing at the right location, just change
     // the end to be offset by 1.
     // We'll either point at the beginning of `>>`, hence get a proper spelled
@@ -577,7 +577,7 @@ private:
       return std::nullopt;
     // We might have offsets in the main file that don't correspond to any
     // spelled tokens.
-    const auto *Tok = TB.spelledTokenAt(Loc);
+    const auto *Tok = TB.spelledTokenContaining(Loc);
     if (!Tok)
       return std::nullopt;
     return halfOpenToRange(SourceMgr,
