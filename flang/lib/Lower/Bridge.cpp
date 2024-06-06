@@ -1977,12 +1977,13 @@ private:
   void addLoopAnnotationAttr(IncrementLoopInfo &info) {
     mlir::BoolAttr f = mlir::BoolAttr::get(builder->getContext(), false);
     mlir::LLVM::LoopVectorizeAttr va = mlir::LLVM::LoopVectorizeAttr::get(
-        builder->getContext(), f, {}, {}, {}, {}, {}, {});
+        builder->getContext(), /*disable=*/f, {}, {}, {}, {}, {}, {});
+    // Create distinct access group
     mlir::LLVM::AccessGroupAttr ag =
         mlir::LLVM::AccessGroupAttr::get(builder->getContext());
     mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
-        builder->getContext(), {}, va, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-        {}, {}, {ag});
+        builder->getContext(), {}, /*vectorize=*/va, {}, {}, {}, {}, {}, {}, {},
+        {}, {}, {}, {}, {}, /*parallelAccess=*/{ag});
     info.doLoop.setLoopAnnotationAttr(la);
   }
 

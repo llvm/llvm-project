@@ -8886,10 +8886,8 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 }
 
 void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
-  //if (const auto *dir{
-  //        std::get_if<parser::CompilerDirective::VectorAlways>(&x.u)})
-
-  if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u)) {
+  if (const auto *dir{
+          std::get_if<parser::CompilerDirective::VectorAlways>(&x.u)}) {
     return;
   }
   if (const auto *tkr{
