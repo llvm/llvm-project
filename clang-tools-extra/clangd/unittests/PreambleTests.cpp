@@ -512,9 +512,10 @@ TEST(PreamblePatchTest, RefsToMacros) {
       ExpectedLocations.push_back(referenceRangeIs(R));
 
     for (const auto &P : Modified.points()) {
-      auto *MacroTok = AST->getTokens().spelledTokenContaining(SM.getComposedLoc(
-          SM.getMainFileID(),
-          llvm::cantFail(positionToOffset(Modified.code(), P))));
+      auto *MacroTok =
+          AST->getTokens().spelledTokenContaining(SM.getComposedLoc(
+              SM.getMainFileID(),
+              llvm::cantFail(positionToOffset(Modified.code(), P))));
       ASSERT_TRUE(MacroTok);
       EXPECT_THAT(findReferences(*AST, P, 0).References,
                   testing::ElementsAreArray(ExpectedLocations));
