@@ -15,6 +15,9 @@
 define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX7-LABEL: flat_nontemporal_load_0:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s11
+; GFX7-NEXT:    s_add_i32 s10, s10, s15
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
 ; GFX7-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x2
@@ -30,6 +33,10 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ;
 ; GFX10-WGP-LABEL: flat_nontemporal_load_0:
 ; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_add_u32 s10, s10, s15
+; GFX10-WGP-NEXT:    s_addc_u32 s11, s11, 0
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-WGP-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX10-WGP-NEXT:    s_nop 0
@@ -46,6 +53,10 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ;
 ; GFX10-CU-LABEL: flat_nontemporal_load_0:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_add_u32 s10, s10, s15
+; GFX10-CU-NEXT:    s_addc_u32 s11, s11, 0
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-CU-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX10-CU-NEXT:    s_nop 0
@@ -77,6 +88,8 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ;
 ; GFX90A-NOTTGSPLIT-LABEL: flat_nontemporal_load_0:
 ; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; GFX90A-NOTTGSPLIT-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX90A-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_nop 0
@@ -91,6 +104,8 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ;
 ; GFX90A-TGSPLIT-LABEL: flat_nontemporal_load_0:
 ; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; GFX90A-TGSPLIT-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX90A-TGSPLIT-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX90A-TGSPLIT-NEXT:    s_nop 0
@@ -200,6 +215,9 @@ entry:
 define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX7-LABEL: flat_nontemporal_load_1:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s11
+; GFX7-NEXT:    s_add_i32 s10, s10, s15
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x2
 ; GFX7-NEXT:    s_mov_b32 s6, 2
@@ -228,6 +246,10 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ;
 ; GFX10-WGP-LABEL: flat_nontemporal_load_1:
 ; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_add_u32 s10, s10, s15
+; GFX10-WGP-NEXT:    s_addc_u32 s11, s11, 0
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x8
 ; GFX10-WGP-NEXT:    s_mov_b32 s6, 2
@@ -255,6 +277,10 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ;
 ; GFX10-CU-LABEL: flat_nontemporal_load_1:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_add_u32 s10, s10, s15
+; GFX10-CU-NEXT:    s_addc_u32 s11, s11, 0
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x8
 ; GFX10-CU-NEXT:    s_mov_b32 s6, 2
@@ -310,6 +336,8 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ;
 ; GFX90A-NOTTGSPLIT-LABEL: flat_nontemporal_load_1:
 ; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; GFX90A-NOTTGSPLIT-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x8
 ; GFX90A-NOTTGSPLIT-NEXT:    s_mov_b32 s6, 0x3ff
@@ -339,6 +367,8 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ;
 ; GFX90A-TGSPLIT-LABEL: flat_nontemporal_load_1:
 ; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; GFX90A-TGSPLIT-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[8:9], s[6:7], 0x0
 ; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x8
 ; GFX90A-TGSPLIT-NEXT:    s_mov_b32 s6, 0x3ff
@@ -539,6 +569,9 @@ entry:
 define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX7-LABEL: flat_nontemporal_store_0:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s11
+; GFX7-NEXT:    s_add_i32 s10, s10, s15
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
 ; GFX7-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x2
@@ -554,6 +587,10 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ;
 ; GFX10-WGP-LABEL: flat_nontemporal_store_0:
 ; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_add_u32 s10, s10, s15
+; GFX10-WGP-NEXT:    s_addc_u32 s11, s11, 0
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-WGP-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX10-WGP-NEXT:    s_nop 0
@@ -570,6 +607,10 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ;
 ; GFX10-CU-LABEL: flat_nontemporal_store_0:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_add_u32 s10, s10, s15
+; GFX10-CU-NEXT:    s_addc_u32 s11, s11, 0
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-CU-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX10-CU-NEXT:    s_nop 0
@@ -601,6 +642,8 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ;
 ; GFX90A-NOTTGSPLIT-LABEL: flat_nontemporal_store_0:
 ; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; GFX90A-NOTTGSPLIT-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX90A-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_nop 0
@@ -615,6 +658,8 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ;
 ; GFX90A-TGSPLIT-LABEL: flat_nontemporal_store_0:
 ; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; GFX90A-TGSPLIT-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX90A-TGSPLIT-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX90A-TGSPLIT-NEXT:    s_nop 0
@@ -724,6 +769,9 @@ entry:
 define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX7-LABEL: flat_nontemporal_store_1:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s11
+; GFX7-NEXT:    s_add_i32 s10, s10, s15
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -752,6 +800,10 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ;
 ; GFX10-WGP-LABEL: flat_nontemporal_store_1:
 ; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_add_u32 s10, s10, s15
+; GFX10-WGP-NEXT:    s_addc_u32 s11, s11, 0
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x0
 ; GFX10-WGP-NEXT:    s_nop 0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x8
@@ -780,6 +832,10 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ;
 ; GFX10-CU-LABEL: flat_nontemporal_store_1:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_add_u32 s10, s10, s15
+; GFX10-CU-NEXT:    s_addc_u32 s11, s11, 0
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x0
 ; GFX10-CU-NEXT:    s_nop 0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x8
@@ -836,6 +892,8 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ;
 ; GFX90A-NOTTGSPLIT-LABEL: flat_nontemporal_store_1:
 ; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; GFX90A-NOTTGSPLIT-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x8
@@ -866,6 +924,8 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ;
 ; GFX90A-TGSPLIT-LABEL: flat_nontemporal_store_1:
 ; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; GFX90A-TGSPLIT-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x0
 ; GFX90A-TGSPLIT-NEXT:    s_nop 0
 ; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x8
@@ -1067,6 +1127,9 @@ entry:
 define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ; GFX7-LABEL: flat_nontemporal_volatile_load:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s11
+; GFX7-NEXT:    s_add_i32 s10, s10, s15
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
 ; GFX7-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x2
@@ -1083,6 +1146,10 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ;
 ; GFX10-WGP-LABEL: flat_nontemporal_volatile_load:
 ; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_add_u32 s10, s10, s15
+; GFX10-WGP-NEXT:    s_addc_u32 s11, s11, 0
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-WGP-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX10-WGP-NEXT:    s_nop 0
@@ -1100,6 +1167,10 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ;
 ; GFX10-CU-LABEL: flat_nontemporal_volatile_load:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_add_u32 s10, s10, s15
+; GFX10-CU-NEXT:    s_addc_u32 s11, s11, 0
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX10-CU-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX10-CU-NEXT:    s_nop 0
@@ -1133,6 +1204,8 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ;
 ; GFX90A-NOTTGSPLIT-LABEL: flat_nontemporal_volatile_load:
 ; GFX90A-NOTTGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-NOTTGSPLIT-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; GFX90A-NOTTGSPLIT-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX90A-NOTTGSPLIT-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_nop 0
@@ -1148,6 +1221,8 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ;
 ; GFX90A-TGSPLIT-LABEL: flat_nontemporal_volatile_load:
 ; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; GFX90A-TGSPLIT-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; GFX90A-TGSPLIT-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX90A-TGSPLIT-NEXT:    s_nop 0

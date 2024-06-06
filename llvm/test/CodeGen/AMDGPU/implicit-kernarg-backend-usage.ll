@@ -10,9 +10,11 @@
 define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addrspace(3) %ptr.local) {
 ; GFX8V4-LABEL: addrspacecast:
 ; GFX8V4:       ; %bb.0:
-; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX8V4-NEXT:    s_load_dwordx2 s[2:3], s[6:7], 0x40
-; GFX8V4-NEXT:    v_mov_b32_e32 v4, 1
+; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX8V4-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x40
+; GFX8V4-NEXT:    s_add_i32 s8, s8, s11
+; GFX8V4-NEXT:    s_lshr_b32 flat_scratch_hi, s8, 8
+; GFX8V4-NEXT:    s_mov_b32 flat_scratch_lo, s9
 ; GFX8V4-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V4-NEXT:    s_cmp_lg_u32 s0, -1
 ; GFX8V4-NEXT:    s_cselect_b32 s3, s3, 0
@@ -22,6 +24,7 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ; GFX8V4-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8V4-NEXT:    s_cselect_b32 s0, s2, 0
 ; GFX8V4-NEXT:    s_cselect_b32 s1, s1, 0
+; GFX8V4-NEXT:    v_mov_b32_e32 v4, 1
 ; GFX8V4-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX8V4-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX8V4-NEXT:    flat_store_dword v[0:1], v4
@@ -33,9 +36,11 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ;
 ; GFX8V5-LABEL: addrspacecast:
 ; GFX8V5:       ; %bb.0:
-; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; GFX8V5-NEXT:    s_load_dwordx2 s[2:3], s[6:7], 0xc8
-; GFX8V5-NEXT:    v_mov_b32_e32 v4, 1
+; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX8V5-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0xc8
+; GFX8V5-NEXT:    s_add_i32 s6, s6, s9
+; GFX8V5-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
+; GFX8V5-NEXT:    s_mov_b32 flat_scratch_lo, s7
 ; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V5-NEXT:    s_cmp_lg_u32 s0, -1
 ; GFX8V5-NEXT:    s_cselect_b32 s2, s2, 0
@@ -45,6 +50,7 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ; GFX8V5-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX8V5-NEXT:    s_cselect_b32 s0, s3, 0
 ; GFX8V5-NEXT:    s_cselect_b32 s1, s1, 0
+; GFX8V5-NEXT:    v_mov_b32_e32 v4, 1
 ; GFX8V5-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX8V5-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX8V5-NEXT:    flat_store_dword v[0:1], v4
@@ -56,10 +62,11 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ;
 ; GFX9V4-LABEL: addrspacecast:
 ; GFX9V4:       ; %bb.0:
-; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX9V4-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
+; GFX9V4-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; GFX9V4-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX9V4-NEXT:    s_mov_b64 s[4:5], src_shared_base
-; GFX9V4-NEXT:    v_mov_b32_e32 v4, 1
 ; GFX9V4-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9V4-NEXT:    s_cmp_lg_u32 s0, -1
 ; GFX9V4-NEXT:    s_cselect_b32 s2, s3, 0
@@ -69,6 +76,7 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ; GFX9V4-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9V4-NEXT:    s_cselect_b32 s0, s5, 0
 ; GFX9V4-NEXT:    s_cselect_b32 s1, s1, 0
+; GFX9V4-NEXT:    v_mov_b32_e32 v4, 1
 ; GFX9V4-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX9V4-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX9V4-NEXT:    flat_store_dword v[0:1], v4
@@ -80,10 +88,11 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ;
 ; GFX9V5-LABEL: addrspacecast:
 ; GFX9V5:       ; %bb.0:
-; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX9V5-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
+; GFX9V5-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; GFX9V5-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX9V5-NEXT:    s_mov_b64 s[4:5], src_shared_base
-; GFX9V5-NEXT:    v_mov_b32_e32 v4, 1
 ; GFX9V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9V5-NEXT:    s_cmp_lg_u32 s0, -1
 ; GFX9V5-NEXT:    s_cselect_b32 s2, s3, 0
@@ -93,6 +102,7 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ; GFX9V5-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9V5-NEXT:    s_cselect_b32 s0, s5, 0
 ; GFX9V5-NEXT:    s_cselect_b32 s1, s1, 0
+; GFX9V5-NEXT:    v_mov_b32_e32 v4, 1
 ; GFX9V5-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX9V5-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX9V5-NEXT:    flat_store_dword v[0:1], v4
@@ -101,6 +111,7 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ; GFX9V5-NEXT:    flat_store_dword v[2:3], v0
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    s_endpgm
+
   %flat.private = addrspacecast ptr addrspace(5) %ptr.private to ptr
   %flat.local = addrspacecast ptr addrspace(3) %ptr.local to ptr
   store volatile i32 1, ptr %flat.private
