@@ -968,6 +968,7 @@ define amdgpu_kernel void @shuffle8i8(ptr addrspace(1) %in0, ptr addrspace(1) %i
 ;
 ; GFX13-LABEL: shuffle8i8:
 ; GFX13:       ; %bb.0: ; %bb
+; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
@@ -5463,6 +5464,7 @@ define hidden void @extract_v6i16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_clause 0x3
 ; GFX13-NEXT:    global_load_u16 v2, v[0:1], off offset:6
 ; GFX13-NEXT:    global_load_u16 v3, v[0:1], off
 ; GFX13-NEXT:    global_load_u16 v8, v[0:1], off offset:2
@@ -5589,6 +5591,7 @@ define hidden void @extract_v13i8(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    global_load_b64 v[2:3], v[0:1], off
 ; GFX13-NEXT:    global_load_u16 v0, v[0:1], off offset:8
 ; GFX13-NEXT:    s_wait_loadcnt 0x1
@@ -5662,6 +5665,7 @@ define hidden void @extract_v13i64(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_clause 0x2
 ; GFX13-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
 ; GFX13-NEXT:    global_load_b128 v[12:15], v[0:1], off
 ; GFX13-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:64
@@ -5725,6 +5729,7 @@ define hidden void @trunc_vector(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    global_load_u16 v2, v[0:1], off
 ; GFX13-NEXT:    global_load_u16 v0, v[0:1], off offset:4
 ; GFX13-NEXT:    s_wait_loadcnt 0x0

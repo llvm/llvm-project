@@ -134,6 +134,7 @@ define amdgpu_kernel void @sadd64rr(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ;
 ; GFX1300-LABEL: sadd64rr:
 ; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
@@ -603,6 +604,7 @@ define amdgpu_kernel void @suaddo32(ptr addrspace(1) %out, ptr addrspace(1) %car
 ;
 ; GFX1300-LABEL: suaddo32:
 ; GFX1300:       ; %bb.0:
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b64 s[2:3], s[0:1], 0x34
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
@@ -753,6 +755,7 @@ define amdgpu_kernel void @uaddo32_vcc_user(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX1300-LABEL: uaddo32_vcc_user:
 ; GFX1300:       ; %bb.0:
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
 ; GFX1300-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, 0
@@ -760,6 +763,7 @@ define amdgpu_kernel void @uaddo32_vcc_user(ptr addrspace(1) %out, ptr addrspace
 ; GFX1300-NEXT:    v_add_co_u32 v1, s4, s4, s5
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s4
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1300-NEXT:    global_store_b8 v0, v2, s[2:3]
 ; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -927,6 +931,7 @@ define amdgpu_kernel void @suaddo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    v_dual_mov_b64 v[0:1], s[6:7] :: v_dual_mov_b32 v2, 0
 ; GFX1300-NEXT:    v_cmp_lt_u64_e64 s4, s[6:7], s[4:5]
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-NEXT:    global_store_b8 v2, v3, s[2:3]
 ; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1084,6 +1089,7 @@ define amdgpu_kernel void @vuaddo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ;
 ; GFX1300-LABEL: vuaddo64:
 ; GFX1300:       ; %bb.0:
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
 ; GFX1300-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, 0
@@ -1092,6 +1098,7 @@ define amdgpu_kernel void @vuaddo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    v_add_nc_u64_e32 v[2:3], s[4:5], v[0:1]
 ; GFX1300-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[4:5], v[2:3]
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    global_store_b64 v1, v[2:3], s[0:1]
 ; GFX1300-NEXT:    global_store_b8 v1, v0, s[2:3]
 ; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1228,6 +1235,7 @@ define amdgpu_kernel void @ssub64rr(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ;
 ; GFX1300-LABEL: ssub64rr:
 ; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
@@ -1698,6 +1706,7 @@ define amdgpu_kernel void @susubo32(ptr addrspace(1) %out, ptr addrspace(1) %car
 ;
 ; GFX1300-LABEL: susubo32:
 ; GFX1300:       ; %bb.0:
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b64 s[2:3], s[0:1], 0x34
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
@@ -1848,6 +1857,7 @@ define amdgpu_kernel void @usubo32_vcc_user(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX1300-LABEL: usubo32_vcc_user:
 ; GFX1300:       ; %bb.0:
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
 ; GFX1300-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, 0
@@ -1855,6 +1865,7 @@ define amdgpu_kernel void @usubo32_vcc_user(ptr addrspace(1) %out, ptr addrspace
 ; GFX1300-NEXT:    v_sub_co_u32 v1, s4, s4, s5
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s4
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1300-NEXT:    global_store_b8 v0, v2, s[2:3]
 ; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -2022,6 +2033,7 @@ define amdgpu_kernel void @susubo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    v_dual_mov_b64 v[0:1], s[6:7] :: v_dual_mov_b32 v2, 0
 ; GFX1300-NEXT:    v_cmp_gt_u64_e64 s4, s[6:7], s[4:5]
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-NEXT:    global_store_b8 v2, v3, s[2:3]
 ; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -2179,6 +2191,7 @@ define amdgpu_kernel void @vusubo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ;
 ; GFX1300-LABEL: vusubo64:
 ; GFX1300:       ; %bb.0:
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
 ; GFX1300-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, 0
@@ -2187,6 +2200,7 @@ define amdgpu_kernel void @vusubo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    v_sub_nc_u64_e32 v[2:3], s[4:5], v[0:1]
 ; GFX1300-NEXT:    v_cmp_lt_u64_e32 vcc_lo, s[4:5], v[2:3]
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    global_store_b64 v1, v[2:3], s[0:1]
 ; GFX1300-NEXT:    global_store_b8 v1, v0, s[2:3]
 ; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -3552,6 +3566,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ;
 ; GFX1300-LABEL: sudiv64:
 ; GFX1300:       ; %bb.0:
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
 ; GFX1300-NEXT:    s_load_b64 s[2:3], s[0:1], 0x34
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0

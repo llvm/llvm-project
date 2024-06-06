@@ -2833,7 +2833,7 @@ defm S_SET_VGPR_MSB   : SOPP_Real_32_gfx12<0x006>;
 defm S_SETPRIO_INC_WG : SOPP_Real_32_gfx12_gfx13<0x03e>;
 defm S_WAIT_XCNT      : SOPP_Real_32_gfx12<0x045>;
 defm S_WAIT_ASYNCCNT  : SOPP_Real_32_gfx12_gfx13<0x04a>;
-defm S_WAIT_TENSORCNT : SOPP_Real_32_gfx12<0x04b>;
+defm S_WAIT_TENSORCNT : SOPP_Real_32_gfx12_gfx13<0x04b>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX11, GFX12.
