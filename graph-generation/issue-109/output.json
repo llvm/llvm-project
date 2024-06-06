@@ -1,0 +1,123 @@
+{
+    "root": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109",
+    "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109/compile_commands.json",
+    "results": [
+        {
+            "type": "npe-bug",
+            "nodes": [
+                7,
+                6,
+                4,
+                3,
+                17,
+                16,
+                15,
+                2,
+                1
+            ],
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109/test_1.c",
+                    "beginLine": 15,
+                    "beginColumn": 9,
+                    "endLine": 15,
+                    "endColumn": 20,
+                    "content": "rbd != NULL",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109/test_1.c",
+                    "beginLine": 16,
+                    "beginColumn": 9,
+                    "endLine": 16,
+                    "endColumn": 15,
+                    "content": "Log1()",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109/test_1.c",
+                    "beginLine": 20,
+                    "beginColumn": 5,
+                    "endLine": 20,
+                    "endColumn": 15,
+                    "content": "return rbd",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109/test_1.c",
+                    "beginLine": 12,
+                    "beginColumn": 1,
+                    "endLine": 21,
+                    "endColumn": 2,
+                    "content": "int *allocMem()\n{\n    int *rbd = (int *)AllocBuff();\n    if (rbd != NULL) {\n     ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109/test_1.c",
+                    "beginLine": 29,
+                    "beginColumn": 9,
+                    "endLine": 29,
+                    "endColumn": 25,
+                    "content": "rbd = allocMem()",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109/test_1.c",
+                    "beginLine": 30,
+                    "beginColumn": 12,
+                    "endLine": 30,
+                    "endColumn": 13,
+                    "content": "1",
+                    "stmtKind": "IntegerLiteral"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109/test_1.c",
+                    "beginLine": 32,
+                    "beginColumn": 15,
+                    "endLine": 32,
+                    "endColumn": 27,
+                    "content": "GetData(rbd)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109/test_1.c",
+                    "beginLine": 7,
+                    "beginColumn": 1,
+                    "endLine": 10,
+                    "endColumn": 2,
+                    "content": "int GetData(int *data)\n{\n\treturn data[0];\n}"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109/test_1.c",
+                    "beginLine": 9,
+                    "beginColumn": 2,
+                    "endLine": 9,
+                    "endColumn": 16,
+                    "content": "return data[0]",
+                    "stmtKind": "ReturnStmt"
+                }
+            ]
+        },
+        {
+            "type": "npe-good-source",
+            "locations": [
+                {
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-109/test_1.c",
+                    "beginLine": 25,
+                    "beginColumn": 5,
+                    "endLine": 25,
+                    "endColumn": 20,
+                    "content": "int *rbd = NULL"
+                }
+            ]
+        }
+    ]
+}
