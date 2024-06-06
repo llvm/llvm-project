@@ -8642,9 +8642,11 @@ The '``llvm.used``' Global Variable
 The ``@llvm.used`` global is an array which has
 :ref:`appending linkage <linkage_appending>`. This array contains a list of
 pointers to named global variables, functions and aliases which may optionally
-have a pointer cast formed of bitcast or getelementptr. The pointers are
-intentionally left unqualified to underline their ephemeral nature. For example,
-a legal use of it is:
+have a pointer cast formed of bitcast or getelementptr. The address space of the
+pointers is always unspecified, rather than the globals address space, since
+these are not real global references but rather a special marker for the code
+emission logic.
+For example, a legal use of it is:
 
 .. code-block:: llvm
 
