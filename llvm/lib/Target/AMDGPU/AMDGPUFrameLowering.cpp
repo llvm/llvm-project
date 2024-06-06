@@ -82,7 +82,7 @@ DIExprBuilder::Iterator AMDGPUFrameLowering::insertFrameLocation(
 
   SmallVector<DIOp::Variant> FL = { DIOp::Referrer(IntPtrTy) };
   if (!ST.enableFlatScratch())
-    FL.append({ DIOp::Constant(WavefrontSizeLog2), DIOp::Shr() });
+    FL.append({DIOp::Constant(WavefrontSizeLog2), DIOp::LShr()});
   FL.append(
       { DIOp::Reinterpret(PointerType::get(ResultType, AllocaAddrSpace)),
         DIOp::Deref(ResultType) });
@@ -110,7 +110,7 @@ DIExpression *AMDGPUFrameLowering::lowerFIArgToFPArg(const MachineFunction &MF,
       ConstantData *C = ConstantInt::get(IntTy, Offset.getFixed(), true);
       SmallVector<DIOp::Variant> FL = {DIOp::Reinterpret(IntTy)};
       if (!ST.enableFlatScratch())
-        FL.append({DIOp::Constant(WavefrontSizeLog2), DIOp::Shr()});
+        FL.append({DIOp::Constant(WavefrontSizeLog2), DIOp::LShr()});
       FL.append(
           {DIOp::Constant(C), DIOp::Add(), DIOp::Reinterpret(ResultType)});
       I = Builder.insert(++I, FL);

@@ -183,6 +183,8 @@ void TypeFinder::incorporateMDNode(const MDNode *V) {
             [&](DIOp::TypeObject T) { incorporateType(T.getResultType()); },
             [&](DIOp::Constant C) { incorporateValue(C.getLiteralValue()); },
             [&](DIOp::Convert C) { incorporateType(C.getResultType()); },
+            [&](DIOp::ZExt C) { incorporateType(C.getResultType()); },
+            [&](DIOp::SExt C) { incorporateType(C.getResultType()); },
             [&](DIOp::Reinterpret R) { incorporateType(R.getResultType()); },
             [&](DIOp::BitOffset B) { incorporateType(B.getResultType()); },
             [&](DIOp::ByteOffset B) { incorporateType(B.getResultType()); },

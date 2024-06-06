@@ -401,6 +401,8 @@ public:
                                    ChildrenT Children);
   std::optional<OpResult> traverse(DIOp::AddrOf AddrOf, ChildrenT Children);
   std::optional<OpResult> traverse(DIOp::Convert Convert, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::ZExt ZExt, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::SExt SExt, ChildrenT Children);
   std::optional<OpResult> traverse(DIOp::Deref Deref, ChildrenT Children);
   std::optional<OpResult> traverse(DIOp::Extend Extend, ChildrenT Children);
   std::optional<OpResult> traverse(DIOp::Read Read, ChildrenT Children);
@@ -423,8 +425,11 @@ public:
   std::optional<OpResult> traverse(DIOp::Shl Op, ChildrenT Children) {
     return traverseMathOp(dwarf::DW_OP_shl, Children);
   }
-  std::optional<OpResult> traverse(DIOp::Shr Op, ChildrenT Children) {
+  std::optional<OpResult> traverse(DIOp::LShr Op, ChildrenT Children) {
     return traverseMathOp(dwarf::DW_OP_shr, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::AShr Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_shra, Children);
   }
   std::optional<OpResult> traverse(DIOp::Sub Op, ChildrenT Children) {
     return traverseMathOp(dwarf::DW_OP_minus, Children);
@@ -625,6 +630,8 @@ public:
                                    ChildrenT Children);
   std::optional<OpResult> traverse(DIOp::AddrOf AddrOf, ChildrenT Children);
   std::optional<OpResult> traverse(DIOp::Convert Convert, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::ZExt ZExt, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::SExt SExt, ChildrenT Children);
   std::optional<OpResult> traverse(DIOp::Deref Deref, ChildrenT Children);
   std::optional<OpResult> traverse(DIOp::Extend Extend, ChildrenT Children);
   std::optional<OpResult> traverse(DIOp::Read Read, ChildrenT Children);
@@ -647,8 +654,11 @@ public:
   std::optional<OpResult> traverse(DIOp::Shl Op, ChildrenT Children) {
     return traverseMathOp(dwarf::DW_OP_shl, Children);
   }
-  std::optional<OpResult> traverse(DIOp::Shr Op, ChildrenT Children) {
+  std::optional<OpResult> traverse(DIOp::LShr Op, ChildrenT Children) {
     return traverseMathOp(dwarf::DW_OP_shr, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::AShr Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_shra, Children);
   }
   std::optional<OpResult> traverse(DIOp::Sub Op, ChildrenT Children) {
     return traverseMathOp(dwarf::DW_OP_minus, Children);

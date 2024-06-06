@@ -1330,6 +1330,26 @@ Error MetadataLoader::MetadataLoaderImpl::appendDIOpsToBuilder(
       Elems = Elems.slice(1);
       break;
     }
+    case DIOp::ZExt::getBitcodeID(): {
+      if (Elems.size() < 1)
+        return error("Invalid record");
+      Type *Ty = Callbacks.GetTypeByID(Elems[0]);
+      if (!Ty || !Ty->isFirstClassType())
+        return error("Invalid record");
+      Builder.template append<DIOp::ZExt>(Ty);
+      Elems = Elems.slice(1);
+      break;
+    }
+    case DIOp::SExt::getBitcodeID(): {
+      if (Elems.size() < 1)
+        return error("Invalid record");
+      Type *Ty = Callbacks.GetTypeByID(Elems[0]);
+      if (!Ty || !Ty->isFirstClassType())
+        return error("Invalid record");
+      Builder.template append<DIOp::SExt>(Ty);
+      Elems = Elems.slice(1);
+      break;
+    }
     case DIOp::Reinterpret::getBitcodeID(): {
       if (Elems.size() < 1)
         return error("Invalid record");

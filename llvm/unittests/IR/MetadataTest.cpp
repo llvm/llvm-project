@@ -4018,7 +4018,8 @@ TEST_F(DIExpressionTest, createNewFragmentExpression) {
 
   using VarTy = DIOp::Variant;
   for (auto Op : {VarTy(DIOp::Add()), VarTy(DIOp::Sub()), VarTy(DIOp::Mul()),
-                  VarTy(DIOp::Div()), VarTy(DIOp::Shl()), VarTy(DIOp::Shr())}) {
+                  VarTy(DIOp::Div()), VarTy(DIOp::Shl()), VarTy(DIOp::LShr()),
+                  VarTy(DIOp::AShr())}) {
     EXPECT_INVALID_FRAGMENT(0, 16, DIOp::Arg(0, IntTy),
                             DIOp::Constant(ConstInt), Op);
   }

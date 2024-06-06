@@ -89,14 +89,14 @@ define i16 @t5(i1 %cond) !dbg !29 {
 ; CHECK-SAME: i1 [[COND:%.*]]) !dbg [[DBG29:![0-9]+]] {
 ; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:      #dbg_value(i16 42, [[META30:![0-9]+]], !DIExpression(DIOpArg(0, i16), DIOpConvert(i32)), [[META31:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i16 42, [[META30:![0-9]+]], !DIExpression(DIOpArg(0, i16), DIOpSExt(i32)), [[META31:![0-9]+]])
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:      #dbg_value(i16 43, [[META30]], !DIExpression(DIOpArg(0, i16), DIOpConvert(i32)), [[META31]])
+; CHECK-NEXT:      #dbg_value(i16 43, [[META30]], !DIExpression(DIOpArg(0, i16), DIOpSExt(i32)), [[META31]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[LOCAL_0:%.*]] = phi i16 [ 42, [[THEN]] ], [ 43, [[ELSE]] ]
-; CHECK-NEXT:      #dbg_value(i16 [[LOCAL_0]], [[META30]], !DIExpression(DIOpArg(0, i16), DIOpConvert(i32)), [[META31]])
+; CHECK-NEXT:      #dbg_value(i16 [[LOCAL_0]], [[META30]], !DIExpression(DIOpArg(0, i16), DIOpSExt(i32)), [[META31]])
 ; CHECK-NEXT:    ret i16 [[LOCAL_0]]
 ;
 
@@ -105,7 +105,7 @@ define i16 @t5(i1 %cond) !dbg !29 {
   ;; support.
 
   %local = alloca i16, align 4
-  tail call void @llvm.dbg.declare(metadata ptr %local, metadata !30, metadata !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(i16), DIOpConvert(i32))), !dbg !31
+  tail call void @llvm.dbg.declare(metadata ptr %local, metadata !30, metadata !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(i16), DIOpSExt(i32))), !dbg !31
   br i1 %cond, label %then, label %else
 
 then:                                             ; preds = %0

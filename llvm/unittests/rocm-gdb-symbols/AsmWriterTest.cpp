@@ -66,6 +66,16 @@ TEST_F(DIExprAsmWriterTest, Convert) {
   EXPECT_EQ("!DIExpr(DIOpConvert(i64))", OS.str());
 }
 
+TEST_F(DIExprAsmWriterTest, ZExt) {
+  Builder.append<DIOp::ZExt>(Int64Ty).intoExpr()->print(OS);
+  EXPECT_EQ("!DIExpr(DIOpZExt(i64))", OS.str());
+}
+
+TEST_F(DIExprAsmWriterTest, SExt) {
+  Builder.append<DIOp::SExt>(Int64Ty).intoExpr()->print(OS);
+  EXPECT_EQ("!DIExpr(DIOpSExt(i64))", OS.str());
+}
+
 TEST_F(DIExprAsmWriterTest, Reinterpret) {
   Builder.append<DIOp::Reinterpret>(Int64Ty).intoExpr()->print(OS);
   EXPECT_EQ("!DIExpr(DIOpReinterpret(i64))", OS.str());
@@ -131,9 +141,14 @@ TEST_F(DIExprAsmWriterTest, Div) {
   EXPECT_EQ("!DIExpr(DIOpDiv())", OS.str());
 }
 
-TEST_F(DIExprAsmWriterTest, Shr) {
-  Builder.append<DIOp::Shr>().intoExpr()->print(OS);
-  EXPECT_EQ("!DIExpr(DIOpShr())", OS.str());
+TEST_F(DIExprAsmWriterTest, LShr) {
+  Builder.append<DIOp::LShr>().intoExpr()->print(OS);
+  EXPECT_EQ("!DIExpr(DIOpLShr())", OS.str());
+}
+
+TEST_F(DIExprAsmWriterTest, AShr) {
+  Builder.append<DIOp::AShr>().intoExpr()->print(OS);
+  EXPECT_EQ("!DIExpr(DIOpAShr())", OS.str());
 }
 
 TEST_F(DIExprAsmWriterTest, Shl) {
@@ -268,9 +283,14 @@ TEST_F(DIExpressionAsmWriterTest, Div) {
   EXPECT_EQ("!DIExpression(DIOpDiv())", OS.str());
 }
 
-TEST_F(DIExpressionAsmWriterTest, Shr) {
-  Builder.append<DIOp::Shr>().intoExpression()->print(OS);
-  EXPECT_EQ("!DIExpression(DIOpShr())", OS.str());
+TEST_F(DIExpressionAsmWriterTest, LShr) {
+  Builder.append<DIOp::LShr>().intoExpression()->print(OS);
+  EXPECT_EQ("!DIExpression(DIOpLShr())", OS.str());
+}
+
+TEST_F(DIExpressionAsmWriterTest, AShr) {
+  Builder.append<DIOp::AShr>().intoExpression()->print(OS);
+  EXPECT_EQ("!DIExpression(DIOpAShr())", OS.str());
 }
 
 TEST_F(DIExpressionAsmWriterTest, Shl) {

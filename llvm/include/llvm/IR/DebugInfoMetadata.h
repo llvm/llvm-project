@@ -2871,10 +2871,13 @@ DEFINE_BC_ID(Add, 15u)
 DEFINE_BC_ID(Sub, 16u)
 DEFINE_BC_ID(Mul, 17u)
 DEFINE_BC_ID(Div, 18u)
-DEFINE_BC_ID(Shr, 19u)
+DEFINE_BC_ID(LShr, 19u)
 DEFINE_BC_ID(Shl, 20u)
 DEFINE_BC_ID(PushLane, 21u)
 DEFINE_BC_ID(Fragment, 22u)
+DEFINE_BC_ID(ZExt, 23u)
+DEFINE_BC_ID(SExt, 24u)
+DEFINE_BC_ID(AShr, 25u)
 #undef DEFINE_BC_ID
 
 unsigned getBitcodeID(const Variant &V);

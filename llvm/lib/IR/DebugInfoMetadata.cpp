@@ -2080,7 +2080,7 @@ static bool canFragmentNewDIExpression(RIter &It, RIter Last) {
     return true;
 
   if (isDIOpVariantOneOf<DIOp::Add, DIOp::Sub, DIOp::Mul, DIOp::Div, DIOp::Shl,
-                         DIOp::Shr>(Op))
+                         DIOp::LShr, DIOp::AShr>(Op))
     return false;
 
   if (isDIOpVariantOneOf<DIOp::BitOffset, DIOp::ByteOffset>(Op)) {
@@ -2089,7 +2089,8 @@ static bool canFragmentNewDIExpression(RIter &It, RIter Last) {
     return canFragmentNewDIExpression(It, Last);
   }
 
-  if (isDIOpVariantOneOf<DIOp::Reinterpret, DIOp::Convert, DIOp::Read>(Op))
+  if (isDIOpVariantOneOf<DIOp::Reinterpret, DIOp::Convert, DIOp::ZExt,
+                         DIOp::SExt, DIOp::Read>(Op))
     return canFragmentNewDIExpression(It, Last);
 
   // FIXME: Missing DIOpComposite, DIOpExtend, DIOpSelect.
@@ -2395,6 +2396,8 @@ unsigned DIOp::getNumInputs(Variant V) {
       [](DIOp::TypeObject) -> R { return 0; },
       [](DIOp::AddrOf) -> R { return 1; },
       [](DIOp::Convert) -> R { return 1; },
+      [](DIOp::ZExt) -> R { return 1; },
+      [](DIOp::SExt) -> R { return 1; },
       [](DIOp::Deref) -> R { return 1; },
       [](DIOp::Extend) -> R { return 1; },
       [](DIOp::Read) -> R { return 1; },
@@ -2405,7 +2408,8 @@ unsigned DIOp::getNumInputs(Variant V) {
       [](DIOp::Div) -> R { return 2; },
       [](DIOp::Mul) -> R { return 2; },
       [](DIOp::Shl) -> R { return 2; },
-      [](DIOp::Shr) -> R { return 2; },
+      [](DIOp::LShr) -> R { return 2; },
+      [](DIOp::AShr) -> R { return 2; },
       [](DIOp::Sub) -> R { return 2; },
       [](DIOp::Select) -> R { return 3; },
       [](DIOp::Composite C) -> R { return C.getCount(); },

@@ -12,11 +12,11 @@
 ; AFTER-RA-DAG: ![[STACK_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32)))
 ; AFTER-RA-DAG: ![[STACK_LIFETIME_VAR_R:[0-9]+]] = distinct !DILifetime(object: ![[VAR_R]], location: !DIExpr(DIOpReferrer(i32)))
 ; AFTER-PEI-DAG: ![[ENTRY_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32)))
-; AFTER-PEI-DAG: ![[STACK_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 4), DIOpByteOffset(i32)))
-; AFTER-PEI-DAG: ![[STACK_LIFETIME_VAR_R:[0-9]+]] = distinct !DILifetime(object: ![[VAR_R]], location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 8), DIOpByteOffset(i32)))
+; AFTER-PEI-DAG: ![[STACK_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpLShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 4), DIOpByteOffset(i32)))
+; AFTER-PEI-DAG: ![[STACK_LIFETIME_VAR_R:[0-9]+]] = distinct !DILifetime(object: ![[VAR_R]], location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpLShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 8), DIOpByteOffset(i32)))
 ; AFTER-LDV-DAG: ![[ENTRY_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32)))
-; AFTER-LDV-DAG: ![[STACK_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 4), DIOpByteOffset(i32)))
-; AFTER-LDV-DAG: ![[STACK_LIFETIME_VAR_R:[0-9]+]] = distinct !DILifetime(object: ![[VAR_R]], location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 8), DIOpByteOffset(i32)))
+; AFTER-LDV-DAG: ![[STACK_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpLShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 4), DIOpByteOffset(i32)))
+; AFTER-LDV-DAG: ![[STACK_LIFETIME_VAR_R:[0-9]+]] = distinct !DILifetime(object: ![[VAR_R]], location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpLShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 8), DIOpByteOffset(i32)))
 ; COMMON-LABEL: bb.{{[0-9]}}.entry:
 ; COMMON: {{^$}}
 ; AFTER-ISEL-NOT: DBG_

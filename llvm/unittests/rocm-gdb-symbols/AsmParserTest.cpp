@@ -81,6 +81,28 @@ TEST_F(DIExprAsmParserTest, Constant) {
                 {DIOp::Constant(ConstantFP::get(Context, APFloat(2.0f)))}));
 }
 
+TEST_F(DIExprAsmParserTest, Convert) {
+  parseNamedDIExpr(R"(!named = !{!DIExpr(DIOpConvert(ptr addrspace(5)))})");
+  ASSERT_EQ(SmallVector<DIOp::Variant>(Expr->builder().range()),
+            SmallVector<DIOp::Variant>(
+                {DIOp::Convert(PointerType::get(Context, 5))}));
+}
+
+TEST_F(DIExprAsmParserTest, ZExt) {
+  assert(false);
+  parseNamedDIExpr(R"(!named = !{!DIExpr(DIOpZExt(i32))})");
+  ASSERT_EQ(
+      SmallVector<DIOp::Variant>(Expr->builder().range()),
+      SmallVector<DIOp::Variant>({DIOp::ZExt(IntegerType::get(Context, 32))}));
+}
+
+TEST_F(DIExprAsmParserTest, SExt) {
+  parseNamedDIExpr(R"(!named = !{!DIExpr(DIOpSExt(i32))})");
+  ASSERT_EQ(
+      SmallVector<DIOp::Variant>(Expr->builder().range()),
+      SmallVector<DIOp::Variant>({DIOp::SExt(IntegerType::get(Context, 32))}));
+}
+
 TEST_F(DIExprAsmParserTest, Reinterpret) {
   parseNamedDIExpr(
       R"(!named = !{!DIExpr(DIOpReinterpret(i32 addrspace(5)*))})");
@@ -161,10 +183,16 @@ TEST_F(DIExprAsmParserTest, Div) {
             SmallVector<DIOp::Variant>({DIOp::Div()}));
 }
 
-TEST_F(DIExprAsmParserTest, Shr) {
-  parseNamedDIExpr(R"(!named = !{!DIExpr(DIOpShr())})");
+TEST_F(DIExprAsmParserTest, LShr) {
+  parseNamedDIExpr(R"(!named = !{!DIExpr(DIOpLShr())})");
   ASSERT_EQ(SmallVector<DIOp::Variant>(Expr->builder().range()),
-            SmallVector<DIOp::Variant>({DIOp::Shr()}));
+            SmallVector<DIOp::Variant>({DIOp::LShr()}));
+}
+
+TEST_F(DIExprAsmParserTest, AShr) {
+  parseNamedDIExpr(R"(!named = !{!DIExpr(DIOpAShr())})");
+  ASSERT_EQ(SmallVector<DIOp::Variant>(Expr->builder().range()),
+            SmallVector<DIOp::Variant>({DIOp::AShr()}));
 }
 
 TEST_F(DIExprAsmParserTest, Shl) {
@@ -354,11 +382,18 @@ TEST_F(DIExpressionAsmParserTest, Div) {
             SmallVector<DIOp::Variant>({DIOp::Div()}));
 }
 
-TEST_F(DIExpressionAsmParserTest, Shr) {
-  parseNamedDIExpression(R"(!named = !{!DIExpression(DIOpShr())})");
+TEST_F(DIExpressionAsmParserTest, LShr) {
+  parseNamedDIExpression(R"(!named = !{!DIExpression(DIOpLShr())})");
   ASSERT_TRUE(Expr->holdsNewElements());
   ASSERT_EQ(SmallVector<DIOp::Variant>(*Expr->getNewElementsRef()),
-            SmallVector<DIOp::Variant>({DIOp::Shr()}));
+            SmallVector<DIOp::Variant>({DIOp::LShr()}));
+}
+
+TEST_F(DIExpressionAsmParserTest, AShr) {
+  parseNamedDIExpression(R"(!named = !{!DIExpression(DIOpAShr())})");
+  ASSERT_TRUE(Expr->holdsNewElements());
+  ASSERT_EQ(SmallVector<DIOp::Variant>(*Expr->getNewElementsRef()),
+            SmallVector<DIOp::Variant>({DIOp::AShr()}));
 }
 
 TEST_F(DIExpressionAsmParserTest, Shl) {

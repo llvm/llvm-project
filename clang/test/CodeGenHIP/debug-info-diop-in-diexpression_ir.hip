@@ -141,8 +141,8 @@ __device__ void func1(int Arg) {
 }
 //.
 // DIEXPR-IR: [[META8:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META9:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// DIEXPR-IR: [[META9]] = !DIFile(filename: "clang/test/CodeGenHIP/<stdin>", directory: {{.*}})
-// DIEXPR-IR: [[META12:![0-9]+]] = !DIFile(filename: "clang/test/CodeGenHIP/debug-info-diop-in-diexpression_ir.hip", directory: {{.*}})
+// DIEXPR-IR: [[META9]] = !DIFile(filename: "{{.*}}", directory: {{.*}})
+// DIEXPR-IR: [[META12:![0-9]+]] = !DIFile(filename: "{{.*}}", directory: {{.*}})
 // DIEXPR-IR: [[META13:![0-9]+]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 // DIEXPR-IR: [[META26:![0-9]+]] = distinct !DISubprogram(name: "kernel1", linkageName: "_Z7kernel1i", scope: [[META12]], file: [[META12]], line: 79, type: [[META27:![0-9]+]], scopeLine: 79, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META8]], retainedNodes: [[META29:![0-9]+]])
 // DIEXPR-IR: [[META27]] = !DISubroutineType(types: [[META28:![0-9]+]])
@@ -193,11 +193,11 @@ __device__ void func1(int Arg) {
 // DIEXPRESSION-IR: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(3)), DIOpDeref(i32)))
 // DIEXPRESSION-IR: [[META1]] = distinct !DIGlobalVariable(name: "GlobalSharedA", scope: [[META2:![0-9]+]], file: [[META7:![0-9]+]], line: 12, type: [[META8:![0-9]+]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_group)
 // DIEXPRESSION-IR: [[META2]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META3:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META4:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// DIEXPRESSION-IR: [[META3]] = !DIFile(filename: "clang/test/CodeGenHIP/<stdin>", directory: {{.*}})
+// DIEXPRESSION-IR: [[META3]] = !DIFile(filename: "{{.*}}", directory: {{.*}})
 // DIEXPRESSION-IR: [[META4]] = !{[[META0]], [[META5:![0-9]+]], [[META9:![0-9]+]], [[META11:![0-9]+]], [[META13:![0-9]+]], [[META15:![0-9]+]], [[META17:![0-9]+]], [[META31:![0-9]+]]}
 // DIEXPRESSION-IR: [[META5]] = !DIGlobalVariableExpression(var: [[META6:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(3)), DIOpDeref(i32)))
 // DIEXPRESSION-IR: [[META6]] = distinct !DIGlobalVariable(name: "GlobalSharedB", scope: [[META2]], file: [[META7]], line: 13, type: [[META8]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_group)
-// DIEXPRESSION-IR: [[META7]] = !DIFile(filename: "clang/test/CodeGenHIP/debug-info-diop-in-diexpression_ir.hip", directory: {{.*}})
+// DIEXPRESSION-IR: [[META7]] = !DIFile(filename: "{{.*}}", directory: {{.*}})
 // DIEXPRESSION-IR: [[META8]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 // DIEXPRESSION-IR: [[META9]] = !DIGlobalVariableExpression(var: [[META10:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpDeref(i32)))
 // DIEXPRESSION-IR: [[META10]] = distinct !DIGlobalVariable(name: "GlobalDeviceA", scope: [[META2]], file: [[META7]], line: 14, type: [[META8]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_global)

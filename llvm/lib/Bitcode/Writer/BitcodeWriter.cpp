@@ -2284,6 +2284,12 @@ void ModuleBitcodeWriter::writeOneDIOpToRecord(
           [&](DIOp::Convert Convert) {
             Record.push_back(VE.getTypeID(Convert.getResultType()));
           },
+          [&](DIOp::ZExt ZExt) {
+            Record.push_back(VE.getTypeID(ZExt.getResultType()));
+          },
+          [&](DIOp::SExt SExt) {
+            Record.push_back(VE.getTypeID(SExt.getResultType()));
+          },
           [&](DIOp::Reinterpret Reinterpret) {
             Record.push_back(VE.getTypeID(Reinterpret.getResultType()));
           },

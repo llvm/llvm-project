@@ -2541,6 +2541,12 @@ static void writeDIExpressionImpl(raw_ostream &Out, const DIExpression *N,
             [&](DIOp::Convert Convert) {
               WriterCtx.TypePrinter->print(Convert.getResultType(), Out);
             },
+            [&](DIOp::ZExt ZExt) {
+              WriterCtx.TypePrinter->print(ZExt.getResultType(), Out);
+            },
+            [&](DIOp::SExt SExt) {
+              WriterCtx.TypePrinter->print(SExt.getResultType(), Out);
+            },
             [&](DIOp::Reinterpret Reinterpret) {
               WriterCtx.TypePrinter->print(Reinterpret.getResultType(), Out);
             },
@@ -2623,6 +2629,12 @@ static void writeDIExpr(raw_ostream &Out, const DIExpr *N,
             },
             [&](DIOp::Convert Convert) {
               WriterCtx.TypePrinter->print(Convert.getResultType(), Out);
+            },
+            [&](DIOp::ZExt ZExt) {
+              WriterCtx.TypePrinter->print(ZExt.getResultType(), Out);
+            },
+            [&](DIOp::SExt SExt) {
+              WriterCtx.TypePrinter->print(SExt.getResultType(), Out);
             },
             [&](DIOp::Reinterpret Reinterpret) {
               WriterCtx.TypePrinter->print(Reinterpret.getResultType(), Out);

@@ -747,6 +747,8 @@ const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F, const Metadata 
             [&](DIOp::TypeObject T) { EnumerateType(T.getResultType()); },
             [&](DIOp::Constant C) { EnumerateValue(C.getLiteralValue()); },
             [&](DIOp::Convert C) { EnumerateType(C.getResultType()); },
+            [&](DIOp::ZExt C) { EnumerateType(C.getResultType()); },
+            [&](DIOp::SExt C) { EnumerateType(C.getResultType()); },
             [&](DIOp::Reinterpret R) { EnumerateType(R.getResultType()); },
             [&](DIOp::BitOffset B) { EnumerateType(B.getResultType()); },
             [&](DIOp::ByteOffset B) { EnumerateType(B.getResultType()); },

@@ -988,6 +988,16 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Convert Convert,
   return std::nullopt;
 }
 
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::ZExt ZExt,
+                                                     ChildrenT Children) {
+  return std::nullopt;
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::SExt SExt,
+                                                     ChildrenT Children) {
+  return std::nullopt;
+}
+
 std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Deref Deref,
                                                      ChildrenT Children) {
   auto Child = traverse(Children[0].get(), ValueKind::LocationDesc);
@@ -1292,6 +1302,16 @@ std::optional<OpResult> DwarfExprAST::traverse(DIOp::AddrOf AddrOf,
 }
 
 std::optional<OpResult> DwarfExprAST::traverse(DIOp::Convert Convert,
+                                               ChildrenT Children) {
+  return std::nullopt;
+}
+
+std::optional<OpResult> DwarfExprAST::traverse(DIOp::ZExt ZExt,
+                                               ChildrenT Children) {
+  return std::nullopt;
+}
+
+std::optional<OpResult> DwarfExprAST::traverse(DIOp::SExt SExt,
                                                ChildrenT Children) {
   return std::nullopt;
 }

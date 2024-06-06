@@ -5948,6 +5948,16 @@ bool LLParser::parseDIOpExpression(MDNode *&Result, bool IsDIExpr) {
         if (parseFirstClassType(Ty))
           return true;
         Builder.append<DIOp::Convert>(Ty);
+      } else if (Name == DIOp::ZExt::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::ZExt>(Ty);
+      } else if (Name == DIOp::SExt::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::SExt>(Ty);
       } else if (Name == DIOp::Reinterpret::getAsmName()) {
         Type *Ty = nullptr;
         if (parseFirstClassType(Ty))

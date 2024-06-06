@@ -513,6 +513,18 @@ TEST_F(DIExprOpsTest, Convert) {
   ASSERT_EQ(std::get<DIOp::Convert>(V).getResultType(), Int64Ty);
 }
 
+TEST_F(DIExprOpsTest, ZExt) {
+  DIOp::Variant V{std::in_place_type<DIOp::ZExt>, Int64Ty};
+  ASSERT_TRUE(std::holds_alternative<DIOp::ZExt>(V));
+  ASSERT_EQ(std::get<DIOp::ZExt>(V).getResultType(), Int64Ty);
+}
+
+TEST_F(DIExprOpsTest, SExt) {
+  DIOp::Variant V{std::in_place_type<DIOp::SExt>, Int64Ty};
+  ASSERT_TRUE(std::holds_alternative<DIOp::SExt>(V));
+  ASSERT_EQ(std::get<DIOp::SExt>(V).getResultType(), Int64Ty);
+}
+
 TEST_F(DIExprOpsTest, Reinterpret) {
   DIOp::Variant V{std::in_place_type<DIOp::Reinterpret>, Int64Ty};
   ASSERT_TRUE(std::holds_alternative<DIOp::Reinterpret>(V));
@@ -586,9 +598,14 @@ TEST_F(DIExprOpsTest, Div) {
   ASSERT_TRUE(std::holds_alternative<DIOp::Div>(V));
 }
 
-TEST_F(DIExprOpsTest, Shr) {
-  DIOp::Variant V{std::in_place_type<DIOp::Shr>};
-  ASSERT_TRUE(std::holds_alternative<DIOp::Shr>(V));
+TEST_F(DIExprOpsTest, LShr) {
+  DIOp::Variant V{std::in_place_type<DIOp::LShr>};
+  ASSERT_TRUE(std::holds_alternative<DIOp::LShr>(V));
+}
+
+TEST_F(DIExprOpsTest, AShr) {
+  DIOp::Variant V{std::in_place_type<DIOp::AShr>};
+  ASSERT_TRUE(std::holds_alternative<DIOp::AShr>(V));
 }
 
 TEST_F(DIExprOpsTest, Shl) {
