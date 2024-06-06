@@ -104,8 +104,7 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
   if (srcType != resultType)
     return nullptr;
 
-  if (srcType == resultType &&
-      llvm::count_if(srcType.getShape(), ShapedType::isDynamic) < 2) {
+  if (llvm::count_if(srcType.getShape(), ShapedType::isDynamic) < 2) {
     return reshapeSrcOp.getSrc();
   }
 
@@ -116,8 +115,7 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
   //   3) No reassociations have more than 1 dynamic dimension, and reassociated
   //      shapes are equal for each reassociation.
   auto reassociations = reshapeOp.getReassociationIndices();
-  auto inverseReassociations = reshapeSrcOp.getReassociationIndices();
-  if (reassociations != inverseReassociations)
+  if (reassociations != reshapeSrcOp.getReassociationIndices())
     return nullptr;
   // If the reshapes are expanding and then collapsing, the ops can be folded
   // despite multiple dynamic dimensions.
@@ -125,11 +123,10 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
     return reshapeSrcOp.getSrc();
   ArrayRef<int64_t> expandedSrcShape = srcType.getShape();
   ArrayRef<int64_t> expandedResultShape = resultType.getShape();
-  if (llvm::none_of(reassociations, [&](auto reInd) {
-        auto srcSlice = expandedSrcShape.slice(reInd.front(), reInd.size());
-        auto resSlice = expandedResultShape.slice(reInd.front(), reInd.size());
-        return srcSlice == resSlice &&
-               llvm::count_if(srcSlice, ShapedType::isDynamic) > 1;
+  if (llvm::all_of(reassociations, [&](auto reInd) {
+        ArrayRef<int64_t> srcSlice =
+            expandedSrcShape.slice(reInd.front(), reInd.size());
+        return llvm::count_if(srcSlice, ShapedType::isDynamic) < 2;
       })) {
     return reshapeSrcOp.getSrc();
   }
