@@ -1,6 +1,7 @@
 # REQUIRES: x86-registered-target
 
-# RUN: llvm-mc -g -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -g -filetype=obj -triple=x86_64-pc-linux --fdebug-prefix-map=%t="" %s -o %t.o
 # RUN: llvm-symbolizer --obj=%t.o 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-DISABLE %s
 # RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-ENABLE %s
 # RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0xa 0x10 | FileCheck --strict-whitespace --match-full-lines --check-prefixes=APPROX-ENABLE,NO-APPROX %s
@@ -8,34 +9,35 @@
 # RUN: llvm-symbolizer --obj=%t.o --skip-line-zero --output-style=JSON 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-JSON %s
 
 # APPROX-DISABLE:main
-# APPROX-DISABLE-NEXT:{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}main.c:0:6
+# APPROX-DISABLE-NEXT:main.c:0:5
 # APPROX-ENABLE:main
-# APPROX-ENABLE-NEXT:{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}main.c:4:6 (approximate)
+# APPROX-ENABLE-NEXT:main.c:4:5 (approximate)
 # NO-APPROX:main
-# NO-APPROX-NEXT:{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}main.c:8:2
+# NO-APPROX-NEXT:main.c:8:2
 
 # APPROX-VERBOSE:main
-# APPROX-VERBOSE-NEXT:  Filename: /tmp/test{{[/|\]}}main.c
+# APPROX-VERBOSE-NEXT:  Filename: main.c
 # APPROX-VERBOSE-NEXT:  Function start address: 0x0
 # APPROX-VERBOSE-NEXT:  Line: 4
-# APPROX-VERBOSE-NEXT:  Column: 6
-# APPROX-VERBOSE-NEXT:  Approximate: 1
+# APPROX-VERBOSE-NEXT:  Column: 5
+# APPROX-VERBOSE-NEXT:  Approximate: true
 
-# APPROX-JSON:[{"Address":"0xa","ModuleName":"{{.*}}{{[/|\]+}}test{{[/|\]+}}tools{{[/|\]+}}llvm-symbolizer{{[/|\]+}}Output{{[/|\]+}}approximate-line-generated.s.tmp.o","Symbol":[{"Approximate":true,"Column":6,"Discriminator":0,"FileName":"{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}main.c","FunctionName":"main","Line":4,"StartAddress":"0x0","StartFileName":"","StartLine":0}]}]
+# APPROX-JSON:[{"Address":"0xa","ModuleName":"{{.*}}{{[/|\]+}}test{{[/|\]+}}tools{{[/|\]+}}llvm-symbolizer{{[/|\]+}}Output{{[/|\]+}}approximate-line-generated.s.tmp.o","Symbol":[{"Approximate":true,"Column":5,"Discriminator":0,"FileName":"main.c","FunctionName":"main","Line":4,"StartAddress":"0x0","StartFileName":"","StartLine":0}]}]
 
-## Generated from C Code
-##
-## int foo = 0;
-## int x=89;
-## int main() {
-## if(x)
-##  return foo;
-## else
-##  return x;
-## }
-##
-## clang -S -O3 -gline-tables-only --target=x86_64-pc-linux
+#--- main.c
+# int foo = 0;
+# int x=89;
+# int main() {
+# if(x)
+# return foo;
+# else
+# return x;
+# }
 
+#--- gen
+# clang -S -O3 -gline-tables-only --target=x86_64-pc-linux -fdebug-prefix-map=/proc/self/cwd="" main.c -o -
+
+#--- main.s
 	.text
 	.file	"main.c"
 	.globl	main                            # -- Begin function main
@@ -43,15 +45,15 @@
 	.type	main,@function
 main:                                   # @main
 .Lfunc_begin0:
-	.file	0 "/tmp/test" "main.c" md5 0x26c3fbaea8e6febaf09ef44d37ec5ecc
+	.file	0 "main.c" md5 0xa99460eaaac6063133b23c51b216280a
 	.cfi_startproc
 # %bb.0:                                # %entry
-	.loc	0 4 6 prologue_end              # main.c:4:6
+	.loc	0 4 5 prologue_end              # main.c:4:5
 	movl	x(%rip), %eax
 	testl	%eax, %eax
 	je	.LBB0_2
 # %bb.1:                                # %entry
-	.loc	0 0 6 is_stmt 0                 # main.c:0:6
+	.loc	0 0 5 is_stmt 0                 # main.c:0:5
 	movl	foo(%rip), %eax
 .LBB0_2:                                # %entry
 	.loc	0 8 2 is_stmt 1                 # main.c:8:2
@@ -91,8 +93,6 @@ x:
 	.byte	23                              # DW_FORM_sec_offset
 	.byte	16                              # DW_AT_stmt_list
 	.byte	23                              # DW_FORM_sec_offset
-	.byte	27                              # DW_AT_comp_dir
-	.byte	37                              # DW_FORM_strx1
 	.byte	17                              # DW_AT_low_pc
 	.byte	27                              # DW_FORM_addrx
 	.byte	18                              # DW_AT_high_pc
@@ -110,33 +110,29 @@ x:
 	.byte	1                               # DWARF Unit Type
 	.byte	8                               # Address Size (in bytes)
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
-	.byte	1                               # Abbrev [1] 0xc:0x17 DW_TAG_compile_unit
+	.byte	1                               # Abbrev [1] 0xc:0x16 DW_TAG_compile_unit
 	.byte	0                               # DW_AT_producer
 	.short	29                              # DW_AT_language
 	.byte	1                               # DW_AT_name
 	.long	.Lstr_offsets_base0             # DW_AT_str_offsets_base
 	.long	.Lline_table_start0             # DW_AT_stmt_list
-	.byte	2                               # DW_AT_comp_dir
 	.byte	0                               # DW_AT_low_pc
 	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
 	.long	.Laddr_table_base0              # DW_AT_addr_base
 .Ldebug_info_end0:
 	.section	.debug_str_offsets,"",@progbits
-	.long	16                              # Length of String Offsets Set
+	.long	12                              # Length of String Offsets Set
 	.short	5
 	.short	0
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 19.0.0git (git@github.com:ampandey-1995/llvm-project.git 6751baed8d1ee8c5fd12fe5a06aa67275fc1ebf6)" # string offset=0
+	.byte	0                               # string offset=0
 .Linfo_string1:
-	.asciz	"main.c"                        # string offset=113
-.Linfo_string2:
-	.asciz	"/tmp/test"       # string offset=120
+	.asciz	"main.c"                        # string offset=1
 	.section	.debug_str_offsets,"",@progbits
 	.long	.Linfo_string0
 	.long	.Linfo_string1
-	.long	.Linfo_string2
 	.section	.debug_addr,"",@progbits
 	.long	.Ldebug_addr_end0-.Ldebug_addr_start0 # Length of contribution
 .Ldebug_addr_start0:
@@ -146,7 +142,6 @@ x:
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
 .Ldebug_addr_end0:
-	.ident	"clang version 19.0.0git (git@github.com:ampandey-1995/llvm-project.git 6751baed8d1ee8c5fd12fe5a06aa67275fc1ebf6)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.section	.debug_line,"",@progbits

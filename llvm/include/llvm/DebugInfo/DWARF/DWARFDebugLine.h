@@ -27,13 +27,6 @@ class raw_ostream;
 
 class DWARFDebugLine {
 public:
-  struct Approximate {
-    Approximate(bool EnableReport) : Report(EnableReport) {}
-
-    bool Report = false;
-    bool IsApproximateLine = false;
-  };
-
   struct FileNameEntry {
     FileNameEntry() = default;
 
@@ -247,9 +240,8 @@ public:
 
     /// Returns the index of the row with file/line info for a given address,
     /// or UnknownRowIndex if there is no such row.
-    uint32_t
-    lookupAddress(object::SectionedAddress Address,
-                  DWARFDebugLine::Approximate *Approximation = nullptr) const;
+    uint32_t lookupAddress(object::SectionedAddress Address, bool Approximate,
+                           bool *IsApproximateLine = nullptr) const;
 
     bool lookupAddressRange(object::SectionedAddress Address, uint64_t Size,
                             std::vector<uint32_t> &Result) const;
@@ -276,8 +268,7 @@ public:
     /// Fills the Result argument with the file and line information
     /// corresponding to Address. Returns true on success.
     bool getFileLineInfoForAddress(object::SectionedAddress Address,
-                                   DWARFDebugLine::Approximate Approximation,
-                                   const char *CompDir,
+                                   bool Approximate, const char *CompDir,
                                    DILineInfoSpecifier::FileLineInfoKind Kind,
                                    DILineInfo &Result) const;
 
@@ -311,9 +302,9 @@ public:
     getSourceByIndex(uint64_t FileIndex,
                      DILineInfoSpecifier::FileLineInfoKind Kind) const;
 
-    uint32_t
-    lookupAddressImpl(object::SectionedAddress Address,
-                      DWARFDebugLine::Approximate *Approximate = nullptr) const;
+    uint32_t lookupAddressImpl(object::SectionedAddress Address,
+                               bool Approximate,
+                               bool *IsApproximateLine = nullptr) const;
 
     bool lookupAddressRangeImpl(object::SectionedAddress Address, uint64_t Size,
                                 std::vector<uint32_t> &Result) const;

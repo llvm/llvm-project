@@ -162,7 +162,8 @@ void PlainPrinterBase::printVerbose(StringRef Filename,
   if (Info.Discriminator)
     OS << "  Discriminator: " << Info.Discriminator << '\n';
   if (Info.IsApproximatedLine)
-    OS << "  Approximate: " << Info.IsApproximatedLine << '\n';
+    OS << "  Approximate: "
+       << "true" << '\n';
 }
 
 void LLVMPrinter::printStartAddress(const DILineInfo &Info) {
