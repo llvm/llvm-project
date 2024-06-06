@@ -50,6 +50,7 @@ add_entrypoint_object(
     quick_exit.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
+    .exit_handler
 )
 
 add_entrypoint_object(
@@ -415,14 +416,14 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
 )
 
-add_entrypoint_object(
-  atexit
+add_object_library(
+  exit_handler
   SRCS
-    atexit.cpp
+    exit_handler.cpp
   HDRS
-    atexit.h
+    exit_handler.h
   CXX_STANDARD
-    20 # For constinit of the atexit callback list.
+    20 # For constinit 
   DEPENDS
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
@@ -430,6 +431,26 @@ add_entrypoint_object(
     libc.src.__support.blockstore
     libc.src.__support.fixedvector
     libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  atexit
+  SRCS
+    atexit.cpp
+  HDRS
+    atexit.h
+  DEPENDS
+    .exit_handler
+)
+
+add_entrypoint_object(
+  at_quick_exit
+  SRCS
+    at_quick_exit.cpp
+  HDRS
+    at_quick_exit.h
+  DEPENDS
+    .exit_handler
 )
 
 add_entrypoint_object(
@@ -442,6 +463,7 @@ add_entrypoint_object(
     ._Exit
     .atexit
     libc.src.__support.OSUtil.osutil
+    .exit_handler
 )
 
 add_entrypoint_object(
