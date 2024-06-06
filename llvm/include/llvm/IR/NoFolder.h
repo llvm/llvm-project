@@ -24,6 +24,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"

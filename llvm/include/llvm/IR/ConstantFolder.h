@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Operator.h"
