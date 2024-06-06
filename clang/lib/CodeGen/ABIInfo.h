@@ -153,6 +153,9 @@ public:
 
   /// Returns true if swifterror is lowered to a register by the target ABI.
   bool isSwiftErrorInRegister() const { return SwiftErrorInRegister; };
+
+  virtual bool
+  shouldReturnTypedErrorIndirectly(ArrayRef<llvm::Type *> ComponentTys) const;
 };
 } // end namespace CodeGen
 } // end namespace clang

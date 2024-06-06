@@ -275,6 +275,15 @@ bool SwiftABIInfo::shouldPassIndirectly(ArrayRef<llvm::Type *> ComponentTys,
   return occupiesMoreThan(ComponentTys, /*total=*/4);
 }
 
+bool SwiftABIInfo::shouldReturnTypedErrorIndirectly(
+    ArrayRef<llvm::Type *> ComponentTys) const {
+  for (llvm::Type *type : ComponentTys) {
+    if (!type->isIntegerTy() && !type->isPointerTy())
+      return true;
+  }
+  return shouldPassIndirectly(ComponentTys, /*AsReturnValue=*/true);
+}
+
 bool SwiftABIInfo::isLegalVectorType(CharUnits VectorSize, llvm::Type *EltTy,
                                      unsigned NumElts) const {
   // The default implementation of this assumes that the target guarantees
