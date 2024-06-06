@@ -184,7 +184,10 @@ public:
   // Declare Traverse*() and friends for all concrete Stmt classes.
 #define ABSTRACT_STMT(STMT)
 #define STMT(CLASS, PARENT)                                                    \
-  virtual bool Traverse##CLASS(CLASS *S);                                      \
+  virtual bool Traverse##CLASS(CLASS *S);
+#include "clang/AST/StmtNodes.inc"
+
+#define STMT(CLASS, PARENT)                                                    \
   virtual bool WalkUpFrom##CLASS(CLASS *S);                                    \
   virtual bool Visit##CLASS(CLASS *S) { return true; }
 #include "clang/AST/StmtNodes.inc"
@@ -199,7 +202,10 @@ public:
 
 #define ABSTRACT_TYPELOC(CLASS, BASE)
 #define TYPELOC(CLASS, BASE)                                                   \
-  virtual bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL);                    \
+  virtual bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL);
+#include "clang/AST/TypeLocNodes.def"
+
+#define TYPELOC(CLASS, BASE)                                                   \
   virtual bool WalkUpFrom##CLASS##TypeLoc(CLASS##TypeLoc TL);                  \
   virtual bool Visit##CLASS##TypeLoc(CLASS##TypeLoc TL) { return true; }
 #include "clang/AST/TypeLocNodes.def"

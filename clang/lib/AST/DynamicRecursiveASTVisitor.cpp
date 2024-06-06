@@ -132,7 +132,10 @@ struct Impl : RecursiveASTVisitor<Impl> {
 
 #define ABSTRACT_STMT(STMT)
 #define STMT(CLASS, PARENT)                                                    \
-  bool Traverse##CLASS(CLASS *S) { return Visitor.Traverse##CLASS(S); }        \
+  bool Traverse##CLASS(CLASS *S) { return Visitor.Traverse##CLASS(S); }
+#include "clang/AST/StmtNodes.inc"
+
+#define STMT(CLASS, PARENT)                                                    \
   bool WalkUpFrom##CLASS(CLASS *S) { return Visitor.WalkUpFrom##CLASS(S); }    \
   bool Visit##CLASS(CLASS *S) { return Visitor.Visit##CLASS(S); }
 #include "clang/AST/StmtNodes.inc"
@@ -155,7 +158,10 @@ struct Impl : RecursiveASTVisitor<Impl> {
 #define TYPELOC(CLASS, BASE)                                                   \
   bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL) {                           \
     return Visitor.Traverse##CLASS##TypeLoc(TL);                               \
-  }                                                                            \
+  }
+#include "clang/AST/TypeLocNodes.def"
+
+#define TYPELOC(CLASS, BASE)                                                   \
   bool WalkUpFrom##CLASS##TypeLoc(CLASS##TypeLoc TL) {                         \
     return Visitor.WalkUpFrom##CLASS##TypeLoc(TL);                             \
   }                                                                            \
@@ -296,7 +302,10 @@ bool DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(
 #define STMT(CLASS, PARENT)                                                    \
   bool DynamicRecursiveASTVisitor::Traverse##CLASS(CLASS *S) {                 \
     return Impl(*this).RecursiveASTVisitor<Impl>::Traverse##CLASS(S);          \
-  }                                                                            \
+  }
+#include "clang/AST/StmtNodes.inc"
+
+#define STMT(CLASS, PARENT)                                                    \
   bool DynamicRecursiveASTVisitor::WalkUpFrom##CLASS(CLASS *S) {               \
     return Impl(*this).RecursiveASTVisitor<Impl>::WalkUpFrom##CLASS(S);        \
   }
@@ -319,7 +328,10 @@ bool DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(
       CLASS##TypeLoc TL) {                                                     \
     return Impl(*this).RecursiveASTVisitor<Impl>::Traverse##CLASS##TypeLoc(    \
         TL);                                                                   \
-  }                                                                            \
+  }
+#include "clang/AST/TypeLocNodes.def"
+
+#define TYPELOC(CLASS, BASE)                                                   \
   bool DynamicRecursiveASTVisitor::WalkUpFrom##CLASS##TypeLoc(                 \
       CLASS##TypeLoc TL) {                                                     \
     return Impl(*this).RecursiveASTVisitor<Impl>::WalkUpFrom##CLASS##TypeLoc(  \
