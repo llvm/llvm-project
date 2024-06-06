@@ -60,19 +60,19 @@ DAP::~DAP() = default;
 
 void DAP::PopulateExceptionBreakpoints() {
   exception_breakpoints = {};
-  if (debugger.SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
+  if (SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
     exception_breakpoints->emplace_back("cpp_catch", "C++ Catch",
                                         lldb::eLanguageTypeC_plus_plus);
     exception_breakpoints->emplace_back("cpp_throw", "C++ Throw",
                                         lldb::eLanguageTypeC_plus_plus);
   }
-  if (debugger.SupportsLanguage(lldb::eLanguageTypeObjC)) {
+  if (SBDebugger::SupportsLanguage(lldb::eLanguageTypeObjC)) {
     exception_breakpoints->emplace_back("objc_catch", "Objective-C Catch",
                                         lldb::eLanguageTypeObjC);
     exception_breakpoints->emplace_back("objc_throw", "Objective-C Throw",
                                         lldb::eLanguageTypeObjC);
   }
-  if (debugger.SupportsLanguage(lldb::eLanguageTypeSwift)) {
+  if (SBDebugger::SupportsLanguage(lldb::eLanguageTypeSwift)) {
     exception_breakpoints->emplace_back("swift_catch", "Swift Catch",
                                         lldb::eLanguageTypeSwift);
     exception_breakpoints->emplace_back("swift_throw", "Swift Throw",
@@ -81,8 +81,24 @@ void DAP::PopulateExceptionBreakpoints() {
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
-  assert(exception_breakpoints.has_value() &&
-         "PopulateExceptionBreakpoints must be called first");
+  // PopulateExceptionBreakpoints() is called after g_dap.debugger is created
+  // in a request-initialize.
+  //
+  // But this GetExceptionBreakpoint() method may be called before attaching, in
+  // which case, we may not have populated the filter yet.
+  //
+  // We also cannot call PopulateExceptionBreakpoints() in DAP::DAP() because
+  // we need SBDebugger::Initialize() to have been called before this.
+  //
+  // So just checking the filter list and do lazy-populating seems easiest.
+  // Two other options include:
+  //  + call g_dap.PopulateExceptionBreakpoints() in lldb-dap.cpp::main()
+  //    right after the call to SBDebugger::Initialize()
+  //  + Just call PopulateExceptionBreakpoints() to get a fresh list  everytime
+  //    we query (a bit overkill since it's not likely to change?)
+  if (!exception_breakpoints.has_value)
+    PopulateExceptionBreakpoints();
+
   for (auto &bp : *exception_breakpoints) {
     if (bp.filter == filter)
       return &bp;
@@ -91,8 +107,10 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
-  assert(exception_breakpoints.has_value() &&
-         "PopulateExceptionBreakpoints must be called first");
+  // See comment in the other GetExceptionBreakpoint().
+  if (!exception_breakpoints.has_value)
+    PopulateExceptionBreakpoints();
+
   for (auto &bp : *exception_breakpoints) {
     if (bp.bp.GetID() == bp_id)
       return &bp;
