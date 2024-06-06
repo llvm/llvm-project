@@ -32,8 +32,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     llvm::APSInt Size;
     Expr *ArgExpr = TheCall->getArg(SizeIdx);
     ExprResult R = SemaRef.VerifyIntegerConstantExpression(ArgExpr, &Size);
-    if (R.isInvalid())
-      return true;
+    assert(!R.isInvalid());
     switch (Size.getSExtValue()) {
     case 1:
     case 2:
