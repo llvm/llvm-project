@@ -46,6 +46,7 @@ template <int Indirections> void RunTest(StringRef Snippet) {
   StringRef CommonCode = R"(
     struct ConstTag{};
     struct NonConstTag{};
+    struct Tag1{};
 
     struct S {
       void constMethod() const;
@@ -61,6 +62,10 @@ template <int Indirections> void RunTest(StringRef Snippet) {
 
       int& at(int);
       const int& at(int) const;
+      const int& at(Tag1);
+
+      int& weird_overload();
+      const double& weird_overload() const;
 
       bool operator==(const S&) const;
 
@@ -194,7 +199,7 @@ TEST(ConstReferenceDeclRefExprsTest, ValueVar) {
       /*const*/target(ConstTag{});
       /*const*/target[42];
       /*const*/target(ConstTag{});
-      /*const*/target(NonConstTag{});
+      target(NonConstTag{});
       useRef(target);
       usePtr(&target);
       useConstRef((/*const*/target));
@@ -222,6 +227,8 @@ TEST(ConstReferenceDeclRefExprsTest, ValueVar) {
       const int civ = /*const*/target.at(3);
       const int& cir = /*const*/target.at(3);
       int& ir = target.at(3);
+      target.at(Tag1{});
+      target.weird_overload();
     }
 )");
 }
@@ -266,6 +273,8 @@ TEST(ConstReferenceDeclRefExprsTest, RefVar) {
       const int civ = /*const*/target.at(3);
       const int& cir = /*const*/target.at(3);
       int& ir = target.at(3);
+      target.at(Tag1{});
+      target.weird_overload();
     }
 )");
 }
@@ -308,6 +317,8 @@ TEST(ConstReferenceDeclRefExprsTest, PtrVar) {
       const int civ = /*const*/target->at(3);
       const int& cir = /*const*/target->at(3);
       int& ir = target->at(3);
+      target->at(Tag1{});
+      target->weird_overload();
     }
 )");
 }

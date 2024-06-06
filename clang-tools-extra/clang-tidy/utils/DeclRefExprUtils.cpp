@@ -36,28 +36,7 @@ void extractNodesByIdTo(ArrayRef<BoundNodes> Matches, StringRef ID,
     Nodes.insert(Match.getNodeAs<Node>(ID));
 }
 
-// If `D` has a const-qualified overload with otherwise identical
-// ref-qualifiers, returns that overload.
-const CXXMethodDecl *findConstOverload(const CXXMethodDecl &D) {
-  assert(!D.isConst());
-
-  DeclContext::lookup_result lookup_result =
-      D.getParent()->lookup(D.getNameInfo().getName());
-  if (lookup_result.isSingleResult()) {
-    // No overload.
-    return nullptr;
-  }
-  for (const Decl *overload : lookup_result) {
-    const CXXMethodDecl *candidate = dyn_cast<CXXMethodDecl>(overload);
-    if (candidate && !candidate->isDeleted() && candidate->isConst() &&
-        candidate->getRefQualifier() == D.getRefQualifier()) {
-      return candidate;
-    }
-  }
-  return nullptr;
-}
-
-// Returns true if both types refer to the same to the same type,
+// Returns true if both types refer to the same type,
 // ignoring the const-qualifier.
 bool isSameTypeIgnoringConst(QualType A, QualType B) {
   A = A.getCanonicalType();
@@ -65,6 +44,39 @@ bool isSameTypeIgnoringConst(QualType A, QualType B) {
   A.addConst();
   B.addConst();
   return A == B;
+}
+
+// Returns true if `D` and `O` have the same parameter types.
+bool hasSameParameterTypes(const CXXMethodDecl &D, const CXXMethodDecl &O) {
+  if (D.getNumParams() != O.getNumParams())
+    return false;
+  for (int I = 0, E = D.getNumParams(); I < E; ++I) {
+    if (!isSameTypeIgnoringConst(D.getParamDecl(I)->getType(),
+                                 O.getParamDecl(I)->getType()))
+      return false;
+  }
+  return true;
+}
+
+// If `D` has a const-qualified overload with otherwise identical
+// ref-qualifiers and parameter types, returns that overload.
+const CXXMethodDecl *findConstOverload(const CXXMethodDecl &D) {
+  assert(!D.isConst());
+
+  DeclContext::lookup_result LookupResult =
+      D.getParent()->lookup(D.getNameInfo().getName());
+  if (LookupResult.isSingleResult()) {
+    // No overload.
+    return nullptr;
+  }
+  for (const Decl *Overload : LookupResult) {
+    const CXXMethodDecl *O = dyn_cast<CXXMethodDecl>(Overload);
+    if (O && !O->isDeleted() && O->isConst() &&
+        O->getRefQualifier() == D.getRefQualifier() &&
+        hasSameParameterTypes(D, *O))
+      return O;
+  }
+  return nullptr;
 }
 
 // Returns true if both types are pointers or reference to the same type,
@@ -124,21 +136,14 @@ bool isLikelyShallowConst(const CXXMethodDecl &M) {
   const QualType CallTy = M.getReturnType().getCanonicalType();
   const QualType OverloadTy = ConstOverload->getReturnType().getCanonicalType();
   if (CallTy->isReferenceType()) {
-    if (!(OverloadTy->isReferenceType() &&
-          pointsToSameTypeIgnoringConst(CallTy, OverloadTy))) {
-      return false;
-    }
-  } else if (CallTy->isPointerType()) {
-    if (!(OverloadTy->isPointerType() &&
-          pointsToSameTypeIgnoringConst(CallTy, OverloadTy))) {
-      return false;
-    }
-  } else {
-    if (!isSameTypeIgnoringConst(CallTy, OverloadTy)) {
-      return false;
-    }
+    return OverloadTy->isReferenceType() &&
+           pointsToSameTypeIgnoringConst(CallTy, OverloadTy);
   }
-  return true;
+  if (CallTy->isPointerType()) {
+    return OverloadTy->isPointerType() &&
+           pointsToSameTypeIgnoringConst(CallTy, OverloadTy);
+  }
+  return isSameTypeIgnoringConst(CallTy, OverloadTy);
 }
 
 // A matcher that matches DeclRefExprs that are used in ways such that the
@@ -268,7 +273,7 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
             // the method's return value (C).
             const auto MemberParents = Ctx.getParents(*Member);
             assert(MemberParents.size() == 1);
-            const CallExpr *Call = MemberParents[0].get<CallExpr>();
+            const auto *Call = MemberParents[0].get<CallExpr>();
             // If `o` is an object of class type and `f` is a member function,
             // then `o.f` has to be used as part of a call expression.
             assert(Call != nullptr && "member function has to be called");
