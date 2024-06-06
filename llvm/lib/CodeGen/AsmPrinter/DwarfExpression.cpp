@@ -547,10 +547,10 @@ bool DwarfExpression::addExpression(
       LocationKind = Unknown;
       return true;
     }
-    case dwarf::DW_OP_LLVM_extract_bits: {
+    case dwarf::DW_OP_LLVM_extract_bits_sext:
+    case dwarf::DW_OP_LLVM_extract_bits_zext: {
       unsigned SizeInBits = Op->getArg(1);
       unsigned BitOffset = Op->getArg(0);
-      dwarf::TypeKind Encoding = static_cast<dwarf::TypeKind>(Op->getArg(2));
 
       // If we have a memory location then dereference to get the value
       if (isMemoryLocation())
@@ -570,8 +570,8 @@ bool DwarfExpression::addExpression(
       }
       emitOp(dwarf::DW_OP_constu);
       emitUnsigned(RightShift);
-      emitOp(Encoding == dwarf::DW_ATE_signed ? dwarf::DW_OP_shra
-                                              : dwarf::DW_OP_shr);
+      emitOp(OpNum == dwarf::DW_OP_LLVM_extract_bits_sext ? dwarf::DW_OP_shra
+                                                          : dwarf::DW_OP_shr);
 
       // The value is now at the top of the stack, so set the location to
       // implicit so that we get a stack_value at the end.

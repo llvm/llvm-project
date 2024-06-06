@@ -17,8 +17,8 @@
 define i32 @test1() !dbg !13 {
 entry:
   %0 = alloca %struct.struct_t, align 1
-  tail call void @llvm.dbg.declare(metadata ptr %0, metadata !16, metadata !DIExpression(DW_OP_LLVM_extract_bits, 0, 3, DW_ATE_unsigned)), !dbg !17
-  tail call void @llvm.dbg.declare(metadata ptr %0, metadata !18, metadata !DIExpression(DW_OP_LLVM_extract_bits, 3, 4, DW_ATE_signed)), !dbg !17
+  tail call void @llvm.dbg.declare(metadata ptr %0, metadata !16, metadata !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 3)), !dbg !17
+  tail call void @llvm.dbg.declare(metadata ptr %0, metadata !18, metadata !DIExpression(DW_OP_LLVM_extract_bits_sext, 3, 4)), !dbg !17
   ret i32 0, !dbg !17
 }
 
@@ -34,8 +34,8 @@ entry:
 define i8 @test2() !dbg !20 {
 entry:
   %0 = load i8, ptr @g, align 1
-  tail call void @llvm.dbg.value(metadata i8 %0, metadata !21, metadata !DIExpression(DW_OP_LLVM_extract_bits, 0, 3, DW_ATE_unsigned)), !dbg !22
-  tail call void @llvm.dbg.value(metadata i8 %0, metadata !23, metadata !DIExpression(DW_OP_LLVM_extract_bits, 3, 4, DW_ATE_signed)), !dbg !22
+  tail call void @llvm.dbg.value(metadata i8 %0, metadata !21, metadata !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 3)), !dbg !22
+  tail call void @llvm.dbg.value(metadata i8 %0, metadata !23, metadata !DIExpression(DW_OP_LLVM_extract_bits_sext, 3, 4)), !dbg !22
   ret i8 %0, !dbg !22
 }
 
@@ -51,8 +51,8 @@ entry:
 define i64 @test3(ptr %p) !dbg !24 {
 entry:
   %0 = load i64, ptr %p, align 8
-  tail call void @llvm.dbg.value(metadata i64 %0, metadata !25, metadata !DIExpression(DW_OP_LLVM_extract_bits, 63, 1, DW_ATE_unsigned)), !dbg !26
-  tail call void @llvm.dbg.value(metadata i64 %0, metadata !27, metadata !DIExpression(DW_OP_LLVM_extract_bits, 63, 1, DW_ATE_signed)), !dbg !26
+  tail call void @llvm.dbg.value(metadata i64 %0, metadata !25, metadata !DIExpression(DW_OP_LLVM_extract_bits_zext, 63, 1)), !dbg !26
+  tail call void @llvm.dbg.value(metadata i64 %0, metadata !27, metadata !DIExpression(DW_OP_LLVM_extract_bits_sext, 63, 1)), !dbg !26
   ret i64 %0, !dbg !26
 }
 
