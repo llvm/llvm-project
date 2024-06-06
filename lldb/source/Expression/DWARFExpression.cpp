@@ -94,51 +94,38 @@ void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
   m_reg_kind = reg_kind;
 }
 
+static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+                                             lldb::RegisterKind reg_kind,
+                                             uint32_t reg_num, Value &value) {
+  if (reg_ctx == nullptr)
+    return llvm::createStringError("no register context in frame");
 
-static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
-                                      lldb::RegisterKind reg_kind,
-                                      uint32_t reg_num, Status *error_ptr,
-                                      Value &value) {
-  if (reg_ctx == nullptr) {
-    if (error_ptr)
-      error_ptr->SetErrorString("No register context in frame.\n");
-  } else {
-    uint32_t native_reg =
-        reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
-    if (native_reg == LLDB_INVALID_REGNUM) {
-      if (error_ptr)
-        error_ptr->SetErrorStringWithFormat("Unable to convert register "
-                                            "kind=%u reg_num=%u to a native "
-                                            "register number.\n",
-                                            reg_kind, reg_num);
-    } else {
-      const RegisterInfo *reg_info =
-          reg_ctx->GetRegisterInfoAtIndex(native_reg);
-      RegisterValue reg_value;
-      if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        if (reg_value.GetScalarValue(value.GetScalar())) {
-          value.SetValueType(Value::ValueType::Scalar);
-          value.SetContext(Value::ContextType::RegisterInfo,
-                           const_cast<RegisterInfo *>(reg_info));
-          if (error_ptr)
-            error_ptr->Clear();
-          return true;
-        } else {
-          // If we get this error, then we need to implement a value buffer in
-          // the dwarf expression evaluation function...
-          if (error_ptr)
-            error_ptr->SetErrorStringWithFormat(
-                "register %s can't be converted to a scalar value",
-                reg_info->name);
-        }
-      } else {
-        if (error_ptr)
-          error_ptr->SetErrorStringWithFormat("register %s is not available",
-                                              reg_info->name);
-      }
+  const uint32_t native_reg =
+      reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
+  if (native_reg == LLDB_INVALID_REGNUM)
+    return llvm::createStringError(
+        "unable to convert register kind=%u reg_num=%u to a native "
+        "register number",
+        reg_kind, reg_num);
+
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(native_reg);
+  RegisterValue reg_value;
+  if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+    if (reg_value.GetScalarValue(value.GetScalar())) {
+      value.SetValueType(Value::ValueType::Scalar);
+      value.SetContext(Value::ContextType::RegisterInfo,
+                       const_cast<RegisterInfo *>(reg_info));
+      return llvm::Error::success();
     }
+
+    // If we get this error, then we need to implement a value buffer in
+    // the dwarf expression evaluation function...
+    return llvm::createStringError(
+        "register %s can't be converted to a scalar value", reg_info->name);
   }
-  return false;
+
+  return llvm::createStringError("register %s is not available",
+                                 reg_info->name);
 }
 
 /// Return the length in bytes of the set of operands for \p op. No guarantees
@@ -782,7 +769,6 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 ///
 /// \param exe_ctx Pointer to the execution context
 /// \param module_sp shared_ptr contains the module if we have one
-/// \param error_ptr pointer to Status object if we have one
 /// \param dw_op_type C-style string used to vary the error output
 /// \param file_addr the file address we are trying to resolve and turn into a
 ///                  load address
@@ -793,32 +779,22 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 ///          the load address succeed or an empty Optinal otherwise. If
 ///          check_sectionoffset is true we consider LLDB_INVALID_ADDRESS a
 ///          success if so_addr.IsSectionOffset() is true.
-static std::optional<lldb::addr_t>
+static llvm::Expected<lldb::addr_t>
 ResolveLoadAddress(ExecutionContext *exe_ctx, lldb::ModuleSP &module_sp,
-                   Status *error_ptr, const char *dw_op_type,
-                   lldb::addr_t file_addr, Address &so_addr,
-                   bool check_sectionoffset = false) {
-  if (!module_sp) {
-    if (error_ptr)
-      error_ptr->SetErrorStringWithFormat(
-          "need module to resolve file address for %s", dw_op_type);
-    return {};
-  }
+                   const char *dw_op_type, lldb::addr_t file_addr,
+                   Address &so_addr, bool check_sectionoffset = false) {
+  if (!module_sp)
+    return llvm::createStringError("need module to resolve file address for %s",
+                                   dw_op_type);
 
-  if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
-    if (error_ptr)
-      error_ptr->SetErrorString("failed to resolve file address in module");
-    return {};
-  }
+  if (!module_sp->ResolveFileAddress(file_addr, so_addr))
+    return llvm::createStringError("failed to resolve file address in module");
 
-  addr_t load_addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
+  const addr_t load_addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
 
   if (load_addr == LLDB_INVALID_ADDRESS &&
-      (check_sectionoffset && !so_addr.IsSectionOffset())) {
-    if (error_ptr)
-      error_ptr->SetErrorString("failed to resolve load address");
-    return {};
-  }
+      (check_sectionoffset && !so_addr.IsSectionOffset()))
+    return llvm::createStringError("failed to resolve load address");
 
   return load_addr;
 }
@@ -973,7 +949,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_deref: {
       if (stack.empty())
         return llvm::createStringError(
-            "Expression stack empty for DW_OP_deref.");
+            "expression stack empty for DW_OP_deref");
       Value::ValueType value_type = stack.back().GetValueType();
       switch (value_type) {
       case Value::ValueType::HostAddress: {
@@ -988,12 +964,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
             LLDB_INVALID_ADDRESS);
 
         Address so_addr;
-        Status load_err;
         auto maybe_load_addr = ResolveLoadAddress(
-            exe_ctx, module_sp, &load_err, "DW_OP_deref", file_addr, so_addr);
+            exe_ctx, module_sp, "DW_OP_deref", file_addr, so_addr);
 
         if (!maybe_load_addr)
-          return load_err.ToError();
+          return maybe_load_addr.takeError();
 
         stack.back().GetScalar() = *maybe_load_addr;
         // Fall through to load address promotion code below.
@@ -1023,16 +998,16 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
                   pointer_addr, error.AsCString());
             }
           } else {
-            return llvm::createStringError("NULL process for DW_OP_deref.\n");
+            return llvm::createStringError("NULL process for DW_OP_deref");
           }
         } else {
           return llvm::createStringError(
-              "NULL execution context for DW_OP_deref.\n");
+              "NULL execution context for DW_OP_deref");
         }
         break;
 
       case Value::ValueType::Invalid:
-        return llvm::createStringError("Invalid value type for DW_OP_deref.\n");
+        return llvm::createStringError("invalid value type for DW_OP_deref");
       }
 
     } break;
@@ -1052,7 +1027,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_deref_size: {
       if (stack.empty()) {
         return llvm::createStringError(
-            "Expression stack empty for DW_OP_deref_size.");
+            "expression stack empty for DW_OP_deref_size");
       }
       uint8_t size = opcodes.GetU8(&offset);
       if (size > 8) {
@@ -1105,14 +1080,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         auto file_addr =
             stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
         Address so_addr;
-        Status resolve_err;
-        auto maybe_load_addr =
-            ResolveLoadAddress(exe_ctx, module_sp, &resolve_err,
-                               "DW_OP_deref_size", file_addr, so_addr,
-                               /*check_sectionoffset=*/true);
+        auto maybe_load_addr = ResolveLoadAddress(
+            exe_ctx, module_sp, "DW_OP_deref_size", file_addr, so_addr,
+            /*check_sectionoffset=*/true);
 
         if (!maybe_load_addr)
-          return resolve_err.ToError();
+          return maybe_load_addr.takeError();
 
         addr_t load_addr = *maybe_load_addr;
 
@@ -1164,18 +1137,17 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
             }
           } else {
 
-            return llvm::createStringError(
-                "NULL process for DW_OP_deref_size.\n");
+            return llvm::createStringError("NULL process for DW_OP_deref_size");
           }
         } else {
           return llvm::createStringError(
-              "NULL execution context for DW_OP_deref_size.\n");
+              "NULL execution context for DW_OP_deref_size");
         }
         break;
 
       case Value::ValueType::Invalid:
 
-        return llvm::createStringError("Invalid value for DW_OP_deref_size.\n");
+        return llvm::createStringError("invalid value for DW_OP_deref_size");
       }
 
     } break;
@@ -1196,9 +1168,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // extended to the size of an address on the target machine before being
     // pushed on the expression stack.
     case DW_OP_xderef_size:
-
-      return llvm::createStringError(
-          "Unimplemented opcode: DW_OP_xderef_size.");
+      return llvm::createStringError("unimplemented opcode: DW_OP_xderef_size");
     // OPCODE: DW_OP_xderef
     // OPERANDS: none
     // DESCRIPTION: Provides an extended dereference mechanism. The entry at
@@ -1210,7 +1180,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // retrieved from the dereferenced address is the size of an address on the
     // target machine.
     case DW_OP_xderef:
-      return llvm::createStringError("Unimplemented opcode: DW_OP_xderef.");
+      return llvm::createStringError("unimplemented opcode: DW_OP_xderef");
 
     // All DW_OP_constXXX opcodes have a single operand as noted below:
     //
@@ -1263,7 +1233,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: duplicates the value at the top of the stack
     case DW_OP_dup:
       if (stack.empty()) {
-        return llvm::createStringError("Expression stack empty for DW_OP_dup.");
+        return llvm::createStringError("expression stack empty for DW_OP_dup");
       } else
         stack.push_back(stack.back());
       break;
@@ -1273,8 +1243,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: pops the value at the top of the stack
     case DW_OP_drop:
       if (stack.empty()) {
-        return llvm::createStringError(
-            "Expression stack empty for DW_OP_drop.");
+        return llvm::createStringError("expression stack empty for DW_OP_drop");
       } else
         stack.pop_back();
       break;
@@ -1286,7 +1255,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_over:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_over.");
+            "expression stack needs at least 2 items for DW_OP_over");
       } else
         stack.push_back(stack[stack.size() - 2]);
       break;
@@ -1313,7 +1282,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_swap:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_swap.");
+            "expression stack needs at least 2 items for DW_OP_swap");
       } else {
         tmp = stack.back();
         stack.back() = stack[stack.size() - 2];
@@ -1330,7 +1299,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_rot:
       if (stack.size() < 3) {
         return llvm::createStringError(
-            "Expression stack needs at least 3 items for DW_OP_rot.");
+            "expression stack needs at least 3 items for DW_OP_rot");
       } else {
         size_t last_idx = stack.size() - 1;
         Value old_top = stack[last_idx];
@@ -1348,10 +1317,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_abs:
       if (stack.empty()) {
         return llvm::createStringError(
-            "Expression stack needs at least 1 item for DW_OP_abs.");
+            "expression stack needs at least 1 item for DW_OP_abs");
       } else if (!stack.back().ResolveValue(exe_ctx).AbsoluteValue()) {
         return llvm::createStringError(
-            "Failed to take the absolute value of the first stack item.");
+            "failed to take the absolute value of the first stack item");
       }
       break;
 
@@ -1362,7 +1331,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_and:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_and.");
+            "expression stack needs at least 2 items for DW_OP_and");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1379,23 +1348,22 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_div:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_div.");
+            "expression stack needs at least 2 items for DW_OP_div");
       } else {
         tmp = stack.back();
-        if (tmp.ResolveValue(exe_ctx).IsZero()) {
-          return llvm::createStringError("Divide by zero.");
-        } else {
-          stack.pop_back();
-          Scalar divisor, dividend;
-          divisor = tmp.ResolveValue(exe_ctx);
-          dividend = stack.back().ResolveValue(exe_ctx);
-          divisor.MakeSigned();
-          dividend.MakeSigned();
-          stack.back() = dividend / divisor;
-          if (!stack.back().ResolveValue(exe_ctx).IsValid()) {
-            return llvm::createStringError("Divide failed.");
-          }
-        }
+        if (tmp.ResolveValue(exe_ctx).IsZero())
+          return llvm::createStringError("divide by zero");
+
+        stack.pop_back();
+        Scalar divisor, dividend;
+        divisor = tmp.ResolveValue(exe_ctx);
+        dividend = stack.back().ResolveValue(exe_ctx);
+        divisor.MakeSigned();
+        dividend.MakeSigned();
+        stack.back() = dividend / divisor;
+
+        if (!stack.back().ResolveValue(exe_ctx).IsValid())
+          return llvm::createStringError("divide failed");
       }
       break;
 
@@ -1406,7 +1374,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_minus:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_minus.");
+            "expression stack needs at least 2 items for DW_OP_minus");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1423,7 +1391,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_mod:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_mod.");
+            "expression stack needs at least 2 items for DW_OP_mod");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1439,7 +1407,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_mul:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_mul.");
+            "expression stack needs at least 2 items for DW_OP_mul");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1454,10 +1422,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_neg:
       if (stack.empty()) {
         return llvm::createStringError(
-            "Expression stack needs at least 1 item for DW_OP_neg.");
+            "expression stack needs at least 1 item for DW_OP_neg");
       } else {
         if (!stack.back().ResolveValue(exe_ctx).UnaryNegate())
-          return llvm::createStringError("Unary negate failed.");
+          return llvm::createStringError("unary negate failed");
       }
       break;
 
@@ -1468,10 +1436,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_not:
       if (stack.empty()) {
         return llvm::createStringError(
-            "Expression stack needs at least 1 item for DW_OP_not.");
+            "expression stack needs at least 1 item for DW_OP_not");
       } else {
         if (!stack.back().ResolveValue(exe_ctx).OnesComplement()) {
-          return llvm::createStringError("Logical NOT failed.");
+          return llvm::createStringError("logical NOT failed");
         }
       }
       break;
@@ -1483,7 +1451,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_or:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_or.");
+            "expression stack needs at least 2 items for DW_OP_or");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1499,7 +1467,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_plus:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_plus.");
+            "expression stack needs at least 2 items for DW_OP_plus");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1514,15 +1482,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_plus_uconst:
       if (stack.empty()) {
         return llvm::createStringError(
-            "Expression stack needs at least 1 item for DW_OP_plus_uconst.");
+            "expression stack needs at least 1 item for DW_OP_plus_uconst");
       } else {
         const uint64_t uconst_value = opcodes.GetULEB128(&offset);
         // Implicit conversion from a UINT to a Scalar...
         stack.back().GetScalar() += uconst_value;
-        if (!stack.back().GetScalar().IsValid()) {
-
-          return llvm::createStringError("DW_OP_plus_uconst failed.");
-        }
+        if (!stack.back().GetScalar().IsValid())
+          return llvm::createStringError("DW_OP_plus_uconst failed");
       }
       break;
 
@@ -1534,7 +1500,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_shl:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_shl.");
+            "expression stack needs at least 2 items for DW_OP_shl");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1550,13 +1516,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_shr:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_shr.");
+            "expression stack needs at least 2 items for DW_OP_shr");
       } else {
         tmp = stack.back();
         stack.pop_back();
         if (!stack.back().ResolveValue(exe_ctx).ShiftRightLogical(
                 tmp.ResolveValue(exe_ctx))) {
-          return llvm::createStringError("DW_OP_shr failed.");
+          return llvm::createStringError("DW_OP_shr failed");
         }
       }
       break;
@@ -1570,7 +1536,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_shra:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_shra.");
+            "expression stack needs at least 2 items for DW_OP_shra");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1585,7 +1551,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_xor:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_xor.");
+            "expression stack needs at least 2 items for DW_OP_xor");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1625,7 +1591,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_bra:
       if (stack.empty()) {
         return llvm::createStringError(
-            "Expression stack needs at least 1 item for DW_OP_bra.");
+            "expression stack needs at least 1 item for DW_OP_bra");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1657,7 +1623,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_eq:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_eq.");
+            "expression stack needs at least 2 items for DW_OP_eq");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1676,7 +1642,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_ge:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_ge.");
+            "expression stack needs at least 2 items for DW_OP_ge");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1695,7 +1661,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_gt:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_gt.");
+            "expression stack needs at least 2 items for DW_OP_gt");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1714,7 +1680,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_le:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_le.");
+            "expression stack needs at least 2 items for DW_OP_le");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1733,7 +1699,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_lt:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_lt.");
+            "expression stack needs at least 2 items for DW_OP_lt");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1752,7 +1718,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_ne:
       if (stack.size() < 2) {
         return llvm::createStringError(
-            "Expression stack needs at least 2 items for DW_OP_ne.");
+            "expression stack needs at least 2 items for DW_OP_ne");
       } else {
         tmp = stack.back();
         stack.pop_back();
@@ -1839,11 +1805,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       dwarf4_location_description_kind = Register;
       reg_num = op - DW_OP_reg0;
 
-      Status read_err;
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, &read_err, tmp))
-        stack.push_back(tmp);
-      else
-        return read_err.ToError();
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
+      stack.push_back(tmp);
     } break;
     // OPCODE: DW_OP_regx
     // OPERANDS:
@@ -1853,10 +1818,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       dwarf4_location_description_kind = Register;
       reg_num = opcodes.GetULEB128(&offset);
       Status read_err;
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, &read_err, tmp))
-        stack.push_back(tmp);
-      else
-        return read_err.ToError();
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
+      stack.push_back(tmp);
     } break;
 
     // OPCODE: DW_OP_bregN
@@ -1897,17 +1862,15 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_breg30:
     case DW_OP_breg31: {
       reg_num = op - DW_OP_breg0;
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
 
-      Status read_err;
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, &read_err,
-                                    tmp)) {
-        int64_t breg_offset = opcodes.GetSLEB128(&offset);
-        tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
-        tmp.ClearContext();
-        stack.push_back(tmp);
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-      } else
-        return read_err.ToError();
+      int64_t breg_offset = opcodes.GetSLEB128(&offset);
+      tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
+      tmp.ClearContext();
+      stack.push_back(tmp);
+      stack.back().SetValueType(Value::ValueType::LoadAddress);
     } break;
     // OPCODE: DW_OP_bregx
     // OPERANDS: 2
@@ -1917,17 +1880,15 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // N plus an offset.
     case DW_OP_bregx: {
       reg_num = opcodes.GetULEB128(&offset);
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
 
-      Status read_err;
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, &read_err,
-                                    tmp)) {
-        int64_t breg_offset = opcodes.GetSLEB128(&offset);
-        tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
-        tmp.ClearContext();
-        stack.push_back(tmp);
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-      } else
-        return read_err.ToError();
+      int64_t breg_offset = opcodes.GetSLEB128(&offset);
+      tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
+      tmp.ClearContext();
+      stack.push_back(tmp);
+      stack.back().SetValueType(Value::ValueType::LoadAddress);
     } break;
 
     case DW_OP_fbreg:
@@ -1944,11 +1905,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
             return fb_err.ToError();
         } else {
           return llvm::createStringError(
-              "Invalid stack frame in context for DW_OP_fbreg opcode.");
+              "invalid stack frame in context for DW_OP_fbreg opcode");
         }
       } else {
         return llvm::createStringError(
-            "NULL execution context for DW_OP_fbreg.\n");
+            "NULL execution context for DW_OP_fbreg");
       }
 
       break;
@@ -2098,7 +2059,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         // Reset for the next piece.
         dwarf4_location_description_kind = Memory;
         return llvm::createStringError(
-            "Expression stack needs at least 1 item for DW_OP_bit_piece.");
+            "expression stack needs at least 1 item for DW_OP_bit_piece");
       } else {
         UpdateValueTypeFromLocationDescription(
             log, dwarf_cu, dwarf4_location_description_kind, &stack.back());
@@ -2109,7 +2070,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         switch (stack.back().GetValueType()) {
         case Value::ValueType::Invalid:
           return llvm::createStringError(
-              "unable to extract bit value from invalid value.");
+              "unable to extract bit value from invalid value");
         case Value::ValueType::Scalar: {
           if (!stack.back().GetScalar().ExtractBitfield(piece_bit_size,
                                                         piece_bit_offset)) {
@@ -2147,7 +2108,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
       if (!data) {
         LLDB_LOG(log, "Evaluate_DW_OP_implicit_value: could not be read data");
-        return llvm::createStringError("Could not evaluate %s.",
+        return llvm::createStringError("could not evaluate %s",
                                        DW_OP_value_to_name(op));
       }
 
@@ -2198,7 +2159,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // the stack by the called expression may be used as return values by prior
     // agreement between the calling and called expressions.
     case DW_OP_call2:
-      return llvm::createStringError("Unimplemented opcode DW_OP_call2.");
+      return llvm::createStringError("unimplemented opcode DW_OP_call2");
     // OPCODE: DW_OP_call4
     // OPERANDS: 1
     //      uint32_t compile unit relative offset of a DIE
@@ -2219,8 +2180,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // the stack by the called expression may be used as return values by prior
     // agreement between the calling and called expressions.
     case DW_OP_call4:
-
-      return llvm::createStringError("Unimplemented opcode DW_OP_call4.");
+      return llvm::createStringError("unimplemented opcode DW_OP_call4");
 
     // OPCODE: DW_OP_stack_value
     // OPERANDS: None
@@ -2229,10 +2189,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // value to be used.  This is the actual object value and not the location.
     case DW_OP_stack_value:
       dwarf4_location_description_kind = Implicit;
-      if (stack.empty()) {
+      if (stack.empty())
         return llvm::createStringError(
-            "Expression stack needs at least 1 item for DW_OP_stack_value.");
-      }
+            "expression stack needs at least 1 item for DW_OP_stack_value");
       stack.back().SetValueType(Value::ValueType::Scalar);
       break;
 
@@ -2246,7 +2205,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_convert: {
       if (stack.size() < 1) {
         return llvm::createStringError(
-            "Expression stack needs at least 1 item for DW_OP_convert.");
+            "expression stack needs at least 1 item for DW_OP_convert");
       }
       const uint64_t die_offset = opcodes.GetULEB128(&offset);
       uint64_t bit_size;
@@ -2256,7 +2215,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         // machine and an unspecified signedness. Scalar has no
         // "unspecified signedness", so we use unsigned types.
         if (!module_sp)
-          return llvm::createStringError("No module");
+          return llvm::createStringError("no module");
         sign = false;
         bit_size = module_sp->GetArchitecture().GetAddressByteSize() * 8;
         if (!bit_size)
@@ -2269,7 +2228,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         DWARFDIE die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(abs_die_offset);
         if (!die)
           return llvm::createStringError(
-              "Cannot resolve DW_OP_convert type DIE");
+              "cannot resolve DW_OP_convert type DIE");
         uint64_t encoding =
             die.GetAttributeValueAsUnsigned(DW_AT_encoding, DW_ATE_hi_user);
         bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
@@ -2277,7 +2236,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
         if (!bit_size)
           return llvm::createStringError(
-              "Unsupported type size in DW_OP_convert");
+              "unsupported type size in DW_OP_convert");
         switch (encoding) {
         case DW_ATE_signed:
         case DW_ATE_signed_char:
@@ -2289,7 +2248,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           break;
         default:
           return llvm::createStringError(
-              "Unsupported encoding in DW_OP_convert");
+              "unsupported encoding in DW_OP_convert");
         }
       }
       Scalar &top = stack.back().ResolveValue(exe_ctx);
@@ -2313,13 +2272,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           stack.back().SetValueType(Value::ValueType::LoadAddress);
         } else {
           return llvm::createStringError(
-              "Stack frame does not include a canonical "
+              "stack frame does not include a canonical "
               "frame address for DW_OP_call_frame_cfa "
-              "opcode.");
+              "opcode");
         }
       } else {
-        return llvm::createStringError("Invalid stack frame in context for "
-                                       "DW_OP_call_frame_cfa opcode.");
+        return llvm::createStringError("unvalid stack frame in context for "
+                                       "DW_OP_call_frame_cfa opcode");
       }
       break;
 
@@ -2334,18 +2293,18 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (stack.size() < 1) {
         if (op == DW_OP_form_tls_address)
           return llvm::createStringError(
-              "DW_OP_form_tls_address needs an argument.");
+              "DW_OP_form_tls_address needs an argument");
         else
           return llvm::createStringError(
-              "DW_OP_GNU_push_tls_address needs an argument.");
+              "DW_OP_GNU_push_tls_address needs an argument");
       }
 
       if (!exe_ctx || !module_sp)
-        return llvm::createStringError("No context to evaluate TLS within.");
+        return llvm::createStringError("no context to evaluate TLS within");
 
       Thread *thread = exe_ctx->GetThreadPtr();
       if (!thread)
-        return llvm::createStringError("No thread to evaluate TLS within.");
+        return llvm::createStringError("no thread to evaluate TLS within");
 
       // Lookup the TLS block address for this thread and module.
       const addr_t tls_file_addr =
@@ -2355,7 +2314,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
       if (tls_load_addr == LLDB_INVALID_ADDRESS)
         return llvm::createStringError(
-            "No TLS data currently exists for this thread.");
+            "no TLS data currently exists for this thread");
 
       stack.back().GetScalar() = tls_load_addr;
       stack.back().SetValueType(Value::ValueType::LoadAddress);
@@ -2430,7 +2389,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     if (pieces.GetBuffer().GetByteSize())
       return pieces;
 
-    return llvm::createStringError("Stack empty after evaluation.");
+    return llvm::createStringError("stack empty after evaluation");
   }
 
   UpdateValueTypeFromLocationDescription(

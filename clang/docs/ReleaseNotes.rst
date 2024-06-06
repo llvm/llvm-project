@@ -340,6 +340,9 @@ Non-comprehensive list of changes in this release
   ``-Winvalid-constexpr`` is not enabled for the function definition, which
   should result in mild compile-time performance improvements.
 
+- Added ``__is_bitwise_cloneable`` which is used to check whether a type
+  can be safely copied by memcpy/memmove.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
