@@ -4016,6 +4016,30 @@ Note that the `size` argument must be a compile time constant.
 
 Note that this intrinsic cannot yet be called in a ``constexpr`` context.
 
+``__is_bitwise_cloneable``
+--------------------------
+
+A type trait is used to check whether a type can be safely copied by memcpy.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  bool __is_bitwise_cloneable(Type)
+
+**Description**:
+
+Objects of bitwise cloneable types can be bitwise copied by memcpy/memmove. The
+Clang compiler warrants that this behavior is well defined, and won't be
+broken by compiler optimizations and sanitizers.
+
+For implicit-lifetime types, the lifetime of the new object is implicitly
+started after the copy. For other types (e.g., classes with virtual methods),
+the lifetime isn't started, and using the object results in undefined behavior
+according to the C++ Standard.
+
+This builtin can be used in constant expressions.
+
 Atomic Min/Max builtins with memory ordering
 --------------------------------------------
 
