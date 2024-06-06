@@ -188,7 +188,7 @@ void addChildIndexAndMapToParent(
     std::map<const semantics::Symbol *,
              llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
     mlir::omp::MapInfoOp &mapOp, semantics::SemanticsContext &semaCtx) {
-  std::optional<evaluate::DataRef> dataRef = ExtractDataRef(object.designator);
+  std::optional<evaluate::DataRef> dataRef = ExtractDataRef(object.ref());
   assert(dataRef.has_value() &&
          "DataRef could not be extracted during mapping of derived type "
          "cannot proceed");

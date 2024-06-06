@@ -124,9 +124,7 @@ enum class CudaArch {
   GFX1103,
   GFX1150,
   GFX1151,
-#if LLPC_BUILD_GFX12
   GFX1152,
-#endif /* LLPC_BUILD_GFX12 */
   GFX12_GENERIC,
   GFX1200,
   GFX1201,

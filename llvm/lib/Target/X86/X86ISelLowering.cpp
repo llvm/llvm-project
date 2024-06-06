@@ -26790,7 +26790,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     case Intrinsic::swift_async_context_addr: {
       SDLoc dl(Op);
       auto &MF = DAG.getMachineFunction();
-      auto X86FI = MF.getInfo<X86MachineFunctionInfo>();
+      auto *X86FI = MF.getInfo<X86MachineFunctionInfo>();
       if (X86::isExtendedSwiftAsyncFrameSupported(Subtarget, MF)) {
         MF.getFrameInfo().setFrameAddressIsTaken(true);
         X86FI->setHasSwiftAsyncContext(true);
@@ -36795,7 +36795,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case TargetOpcode::PREALLOCATED_SETUP: {
     assert(Subtarget.is32Bit() && "preallocated only used in 32-bit");
-    auto MFI = MF->getInfo<X86MachineFunctionInfo>();
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
     MFI->setHasPreallocatedCall(true);
     int64_t PreallocatedId = MI.getOperand(0).getImm();
     size_t StackAdjustment = MFI->getPreallocatedStackSize(PreallocatedId);
@@ -36812,7 +36812,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     assert(Subtarget.is32Bit() && "preallocated calls only used in 32-bit");
     int64_t PreallocatedId = MI.getOperand(1).getImm();
     int64_t ArgIdx = MI.getOperand(2).getImm();
-    auto MFI = MF->getInfo<X86MachineFunctionInfo>();
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
     size_t ArgOffset = MFI->getPreallocatedArgOffsets(PreallocatedId)[ArgIdx];
     LLVM_DEBUG(dbgs() << "PREALLOCATED_ARG arg index " << ArgIdx
                       << ", arg offset " << ArgOffset << "\n");
@@ -36855,6 +36855,13 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned Imm = MI.getOperand(0).getImm();
     BuildMI(*BB, MI, MIMD, TII->get(X86::TILEZERO), TMMImmToTMMReg(Imm));
     MI.eraseFromParent(); // The pseudo is gone now.
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+    MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
+    return BB;
+  }
+  case X86::PTILEZEROV: {
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+    MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
     return BB;
   }
   case X86::PTILELOADD:
