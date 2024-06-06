@@ -139,8 +139,10 @@ public:
 
     auto CurrentIt = Files.rbegin();
     do {
-      Check.diag(CurrentIt->Loc, "'%0' included from here", DiagnosticIDs::Note)
-          << CurrentIt->Name;
+      if (CurrentIt->Loc.isValid())
+        Check.diag(CurrentIt->Loc, "'%0' included from here",
+                   DiagnosticIDs::Note)
+            << CurrentIt->Name;
     } while (CurrentIt++ != It);
   }
 
