@@ -3141,8 +3141,8 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
     val_byte_size = temp.value();
 
   if (is_pointer) {
-    if (!type.IsInteger()) {
-      m_error.SetErrorString("target type must be an integer");
+    if (!type.IsInteger() && !type.IsBoolean()) {
+      m_error.SetErrorString("target type must be an integer or boolean");
       return GetSP();
     }
     if (!type.IsBoolean() && type_byte_size < val_byte_size) {
