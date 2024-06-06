@@ -58,7 +58,6 @@ void test_nonscalar_call() {
 }
 
 // Scalar with a self-reference: does need auto-init.
-// UNINIT
 // UNINIT-LABEL:  test_self_ptr(
 // ZERO-LABEL:    test_self_ptr(
 // ZERO: store ptr null, ptr %self, align 8, !annotation [[AUTO_INIT:!.+]]
@@ -70,7 +69,6 @@ void test_self_ptr() {
 }
 
 // Scalar without a self-reference: no auto-init needed.
-// UNINIT
 // UNINIT-LABEL:  test_nonself_ptr(
 // ZERO-LABEL:    test_nonself_ptr(
 // ZERO-NOT: !annotation [[AUTO_INIT:!.+]]
@@ -83,7 +81,6 @@ void test_nonself_ptr() {
 }
 
 // Scalar with a self-reference: does need auto-init.
-// UNINIT
 // UNINIT-LABEL:  test_self_complex(
 // ZERO-LABEL:    test_self_complex(
 // ZERO: call void @llvm.memset{{.*}} !annotation [[AUTO_INIT:!.+]]
@@ -95,7 +92,6 @@ void test_self_complex() {
 }
 
 // Scalar without a self-reference: no auto-init needed.
-// UNINIT
 // UNINIT-LABEL:  test_nonself_complex(
 // ZERO-LABEL:    test_nonself_complex(
 // ZERO-NOT: !annotation [[AUTO_INIT:!.+]]
@@ -109,4 +105,6 @@ void test_nonself_complex() {
 
 } // extern "C"
 
-// CHECK: [[AUTO_INIT]] = !{ !"auto-init" }
+// ZERO: [[AUTO_INIT]] = !{!"auto-init"}
+// PATTERN: [[AUTO_INIT]] = !{!"auto-init"}
+
