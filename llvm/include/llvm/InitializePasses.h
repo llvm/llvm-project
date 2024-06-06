@@ -106,6 +106,7 @@ void initializeExpandLargeDivRemLegacyPassPass(PassRegistry&);
 void initializeExpandMemCmpLegacyPassPass(PassRegistry &);
 void initializeExpandPostRAPass(PassRegistry&);
 void initializeExpandReductionsPass(PassRegistry&);
+void initializeExpandVariadicsPass(PassRegistry &);
 void initializeExpandVectorPredicationPass(PassRegistry &);
 void initializeExternalAAWrapperPassPass(PassRegistry&);
 void initializeFEntryInserterPass(PassRegistry&);

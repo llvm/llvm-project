@@ -2128,6 +2128,15 @@ public:
     return Attrs.getParamStackAlignment(ArgNo);
   }
 
+  /// Extract the byref type for a call or parameter.
+  Type *getParamByRefType(unsigned ArgNo) const {
+    if (auto *Ty = Attrs.getParamByRefType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamByRefType(ArgNo);
+    return nullptr;
+  }
+
   /// Extract the byval type for a call or parameter.
   Type *getParamByValType(unsigned ArgNo) const {
     if (auto *Ty = Attrs.getParamByValType(ArgNo))
