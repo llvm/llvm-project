@@ -44,7 +44,9 @@ private:
     void Post(const T &) {}
 
     bool Pre(const parser::OpenMPConstruct &omp) {
-      currentConstruct = &omp;
+      // Skip constructs that may not have privatizations.
+      if (!std::holds_alternative<parser::OpenMPCriticalConstruct>(omp.u))
+        currentConstruct = &omp;
       return true;
     }
 
