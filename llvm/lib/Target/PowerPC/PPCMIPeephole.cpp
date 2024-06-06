@@ -156,11 +156,11 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveVariables>();
-    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachinePostDominatorTree>();
     AU.addRequired<MachineBlockFrequencyInfo>();
     AU.addPreserved<LiveVariables>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTree>();
     AU.addPreserved<MachineBlockFrequencyInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -200,7 +200,7 @@ void PPCMIPeephole::addRegToUpdateWithLine(Register Reg, int Line) {
 void PPCMIPeephole::initialize(MachineFunction &MFParm) {
   MF = &MFParm;
   MRI = &MF->getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MPDT = &getAnalysis<MachinePostDominatorTree>();
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   LV = &getAnalysis<LiveVariables>();
@@ -2029,7 +2029,7 @@ bool PPCMIPeephole::combineSEXTAndSHL(MachineInstr &MI,
 INITIALIZE_PASS_BEGIN(PPCMIPeephole, DEBUG_TYPE,
                       "PowerPC MI Peephole Optimization", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(LiveVariables)
 INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,

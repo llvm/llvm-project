@@ -139,7 +139,7 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LiveVariables>();
   AU.addPreserved<SlotIndexes>();
   AU.addPreserved<LiveIntervals>();
-  AU.addPreserved<MachineDominatorTree>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineLoopInfo>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -216,8 +216,8 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
 
   // TODO: we should use the incremental DomTree updater here.
   if (Changed)
-    if (auto *MDT = getAnalysisIfAvailable<MachineDominatorTree>())
-      MDT->getBase().recalculate(MF);
+    if (auto *MDT = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
+      MDT->getDomTree().getBase().recalculate(MF);
 
   LoweredPHIs.clear();
   ImpDefs.clear();

@@ -59,8 +59,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfo>();
     AU.addPreserved<MachineLoopInfo>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -93,7 +93,7 @@ INITIALIZE_PASS_BEGIN(MVETPAndVPTOptimisations, DEBUG_TYPE,
                       "ARM MVE TailPred and VPT Optimisations pass", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MVETPAndVPTOptimisations, DEBUG_TYPE,
                     "ARM MVE TailPred and VPT Optimisations pass", false, false)
 
@@ -1065,7 +1065,8 @@ bool MVETPAndVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
   TII = static_cast<const Thumb2InstrInfo *>(STI.getInstrInfo());
   MRI = &Fn.getRegInfo();
   MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfo>();
-  MachineDominatorTree *DT = &getAnalysis<MachineDominatorTree>();
+  MachineDominatorTree *DT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   LLVM_DEBUG(dbgs() << "********** ARM MVE VPT Optimisations **********\n"
                     << "********** Function: " << Fn.getName() << '\n');

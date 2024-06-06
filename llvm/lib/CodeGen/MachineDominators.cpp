@@ -37,53 +37,63 @@ static cl::opt<bool, true> VerifyMachineDomInfoX(
 namespace llvm {
 template class DomTreeNodeBase<MachineBasicBlock>;
 template class DominatorTreeBase<MachineBasicBlock, false>; // DomTreeBase
+
+namespace DomTreeBuilder {
+template void Calculate<MBBDomTree>(MBBDomTree &DT);
+template void CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT, MBBUpdates U);
+
+template void InsertEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
+                                     MachineBasicBlock *To);
+
+template void DeleteEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
+                                     MachineBasicBlock *To);
+
+template void ApplyUpdates<MBBDomTree>(MBBDomTree &DT, MBBDomTreeGraphDiff &,
+                                       MBBDomTreeGraphDiff *);
+
+template bool Verify<MBBDomTree>(const MBBDomTree &DT,
+                                 MBBDomTree::VerificationLevel VL);
+} // namespace DomTreeBuilder
 }
 
-char MachineDominatorTree::ID = 0;
+char MachineDominatorTreeWrapperPass::ID = 0;
 
-INITIALIZE_PASS(MachineDominatorTree, "machinedomtree",
+INITIALIZE_PASS(MachineDominatorTreeWrapperPass, "machinedomtree",
                 "MachineDominator Tree Construction", true, true)
 
-char &llvm::MachineDominatorsID = MachineDominatorTree::ID;
-
-void MachineDominatorTree::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
-  MachineFunctionPass::getAnalysisUsage(AU);
+MachineDominatorTreeWrapperPass::MachineDominatorTreeWrapperPass()
+    : MachineFunctionPass(ID) {
+  initializeMachineDominatorTreeWrapperPassPass(
+      *PassRegistry::getPassRegistry());
 }
 
-bool MachineDominatorTree::runOnMachineFunction(MachineFunction &F) {
-  calculate(F);
+char &llvm::MachineDominatorsID = MachineDominatorTreeWrapperPass::ID;
+
+bool MachineDominatorTreeWrapperPass::runOnMachineFunction(MachineFunction &F) {
+  DT.calculate(F);
   return false;
 }
 
 void MachineDominatorTree::calculate(MachineFunction &F) {
   CriticalEdgesToSplit.clear();
   NewBBs.clear();
-  DT.reset(new DomTreeBase<MachineBasicBlock>());
-  DT->recalculate(F);
+  recalculate(F);
 }
 
-MachineDominatorTree::MachineDominatorTree()
-    : MachineFunctionPass(ID) {
-  initializeMachineDominatorTreePass(*PassRegistry::getPassRegistry());
+void MachineDominatorTreeWrapperPass::releaseMemory() {
+  DT.CriticalEdgesToSplit.clear();
+  DT.reset();
 }
 
-void MachineDominatorTree::releaseMemory() {
-  CriticalEdgesToSplit.clear();
-  DT.reset(nullptr);
+void MachineDominatorTreeWrapperPass::verifyAnalysis() const {
+  if (VerifyMachineDomInfo)
+    if (!DT.verify(MachineDominatorTree::VerificationLevel::Basic))
+      report_fatal_error("MachineDominatorTree verification failed!");
 }
 
-void MachineDominatorTree::verifyAnalysis() const {
-  if (DT && VerifyMachineDomInfo)
-    if (!DT->verify(MachineDomTree::VerificationLevel::Basic)) {
-      errs() << "MachineDominatorTree verification failed\n";
-      abort();
-    }
-}
-
-void MachineDominatorTree::print(raw_ostream &OS, const Module*) const {
-  if (DT)
-    DT->print(OS);
+void MachineDominatorTreeWrapperPass::print(raw_ostream &OS,
+                                            const Module *) const {
+  DT.print(OS);
 }
 
 void MachineDominatorTree::applySplitCriticalEdges() const {
@@ -103,7 +113,7 @@ void MachineDominatorTree::applySplitCriticalEdges() const {
   for (CriticalEdge &Edge : CriticalEdgesToSplit) {
     // Update dominator information.
     MachineBasicBlock *Succ = Edge.ToBB;
-    MachineDomTreeNode *SuccDTNode = DT->getNode(Succ);
+    MachineDomTreeNode *SuccDTNode = Base::getNode(Succ);
 
     for (MachineBasicBlock *PredBB : Succ->predecessors()) {
       if (PredBB == Edge.NewBB)
@@ -126,7 +136,7 @@ void MachineDominatorTree::applySplitCriticalEdges() const {
                                            "than one predecessor!");
         PredBB = *PredBB->pred_begin();
       }
-      if (!DT->dominates(SuccDTNode, DT->getNode(PredBB))) {
+      if (!Base::dominates(SuccDTNode, Base::getNode(PredBB))) {
         IsNewIDom[Idx] = false;
         break;
       }
@@ -136,15 +146,19 @@ void MachineDominatorTree::applySplitCriticalEdges() const {
 
   // Now, update DT with the collected dominance properties info.
   Idx = 0;
+  dbgs() << "critical Edge to split: " << CriticalEdgesToSplit.size();
   for (CriticalEdge &Edge : CriticalEdgesToSplit) {
     // We know FromBB dominates NewBB.
-    MachineDomTreeNode *NewDTNode = DT->addNewBlock(Edge.NewBB, Edge.FromBB);
+    MachineDomTreeNode *NewDTNode =
+        const_cast<MachineDominatorTree *>(this)->Base::addNewBlock(
+            Edge.NewBB, Edge.FromBB);
 
     // If all the other predecessors of "Succ" are dominated by "Succ" itself
     // then the new block is the new immediate dominator of "Succ". Otherwise,
     // the new block doesn't dominate anything.
     if (IsNewIDom[Idx])
-      DT->changeImmediateDominator(DT->getNode(Edge.ToBB), NewDTNode);
+      const_cast<MachineDominatorTree *>(this)->Base::changeImmediateDominator(
+          Base::getNode(Edge.ToBB), NewDTNode);
     ++Idx;
   }
   NewBBs.clear();

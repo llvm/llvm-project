@@ -184,7 +184,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       MachineFunctionPass::getAnalysisUsage(AU);
       AU.addRequired<AAResultsWrapperPass>();
-      AU.addRequired<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<MachinePostDominatorTree>();
       AU.addRequired<MachineCycleInfoWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfo>();
@@ -274,7 +274,7 @@ char &llvm::MachineSinkingID = MachineSinking::ID;
 INITIALIZE_PASS_BEGIN(MachineSinking, DEBUG_TYPE,
                       "Machine code sinking", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineSinking, DEBUG_TYPE,
@@ -708,7 +708,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   MRI = &MF.getRegInfo();
-  DT = &getAnalysis<MachineDominatorTree>();
+  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   PDT = &getAnalysis<MachinePostDominatorTree>();
   CI = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
   MBFI = UseBlockFreqInfo ? &getAnalysis<MachineBlockFrequencyInfo>() : nullptr;

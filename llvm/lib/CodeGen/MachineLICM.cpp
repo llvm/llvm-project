@@ -191,7 +191,7 @@ namespace {
       AU.addRequired<MachineLoopInfo>();
       if (DisableHoistingToHotterBlocks != UseBFI::None)
         AU.addRequired<MachineBlockFrequencyInfo>();
-      AU.addRequired<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addPreserved<MachineLoopInfo>();
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -325,7 +325,7 @@ INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
                       "Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
                     "Machine Loop Invariant Code Motion", false, false)
@@ -334,7 +334,7 @@ INITIALIZE_PASS_BEGIN(EarlyMachineLICM, "early-machinelicm",
                       "Early Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(EarlyMachineLICM, "early-machinelicm",
                     "Early Machine Loop Invariant Code Motion", false, false)
@@ -375,7 +375,7 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   if (DisableHoistingToHotterBlocks != UseBFI::None)
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   MLI = &getAnalysis<MachineLoopInfo>();
-  DT  = &getAnalysis<MachineDominatorTree>();
+  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   if (HoistConstLoads)
