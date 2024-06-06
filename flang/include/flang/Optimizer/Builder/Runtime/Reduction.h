@@ -228,9 +228,8 @@ void genIParityDim(fir::FirOpBuilder &builder, mlir::Location loc,
 /// that does not take a dim argument.
 mlir::Value genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value arrayBox, mlir::Value operation,
-                      mlir::Value dim, mlir::Value maskBox,
-                      mlir::Value identity, mlir::Value ordered,
-                      mlir::Value resultBox);
+                      mlir::Value maskBox, mlir::Value identity,
+                      mlir::Value ordered, mlir::Value resultBox);
 
 } // namespace fir::runtime
 

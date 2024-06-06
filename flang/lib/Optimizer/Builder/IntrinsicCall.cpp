@@ -5718,9 +5718,7 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
   mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
 
   // Handle optional mask argument
-  auto dim = isStaticallyAbsent(args[3])
-                 ? builder.createIntegerConstant(loc, builder.getI32Type(), 1)
-                 : fir::getBase(args[2]);
+  bool absentDim = isStaticallyAbsent(args[1]);
 
   auto mask = isStaticallyAbsent(args[3])
                   ? builder.create<fir::AbsentOp>(
@@ -5738,11 +5736,11 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
 
   // We call the type specific versions because the result is scalar
   // in the case below.
-  if (rank == 1) {
+  if (absentDim || rank == 1) {
     if (fir::isa_complex(eleTy) || fir::isa_derived(eleTy)) {
       mlir::Value result = builder.createTemporary(loc, eleTy);
-      fir::runtime::genReduce(builder, loc, array, operation, dim, mask,
-                              identity, ordered, result);
+      fir::runtime::genReduce(builder, loc, array, operation, mask, identity,
+                              ordered, result);
       if (fir::isa_derived(eleTy))
         return result;
       return builder.create<fir::LoadOp>(loc, result);
@@ -5753,18 +5751,17 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
           fir::factory::createTempMutableBox(builder, loc, eleTy);
       mlir::Value resultIrBox =
           fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
-      fir::runtime::genReduce(builder, loc, array, operation, dim, mask,
-                              identity, ordered, resultIrBox);
+      fir::runtime::genReduce(builder, loc, array, operation, mask, identity,
+                              ordered, resultIrBox);
       // Handle cleanup of allocatable result descriptor and return
       return readAndAddCleanUp(resultMutableBox, resultType, "REDUCE");
     }
     auto resultBox = builder.create<fir::AbsentOp>(
         loc, fir::BoxType::get(builder.getI1Type()));
-    return fir::runtime::genReduce(builder, loc, array, operation, dim, mask,
+    return fir::runtime::genReduce(builder, loc, array, operation, mask,
                                    identity, ordered, resultBox);
   }
-
-  TODO(loc, "intrinsic: reduce with non scalar result");
+  TODO(loc, "reduce with array result");
 }
 
 // REPEAT

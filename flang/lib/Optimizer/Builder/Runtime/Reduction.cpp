@@ -1322,14 +1322,14 @@ GEN_IALL_IANY_IPARITY(IParity)
 /// that does have a scalar result.
 mlir::Value fir::runtime::genReduce(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value arrayBox,
-                                    mlir::Value operation, mlir::Value dim,
-                                    mlir::Value maskBox, mlir::Value identity,
-                                    mlir::Value ordered,
+                                    mlir::Value operation, mlir::Value maskBox,
+                                    mlir::Value identity, mlir::Value ordered,
                                     mlir::Value resultBox) {
   mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
   auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto dim = builder.createIntegerConstant(loc, builder.getI32Type(), 1);
 
   mlir::MLIRContext *ctx = builder.getContext();
   fir::factory::CharacterExprHelper charHelper{builder, loc};

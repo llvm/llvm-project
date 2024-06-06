@@ -20,11 +20,11 @@ subroutine integer1(a, id)
 
   res = reduce(a, red_int1)
 
-  res = reduce(a, red_int1, 1, identity=id)
+  res = reduce(a, red_int1, identity=id)
   
-  res = reduce(a, red_int1, 1, identity=id, ordered = .false.)
+  res = reduce(a, red_int1, identity=id, ordered = .false.)
 
-  res = reduce(a, red_int1, 1, [.true., .true., .false.])
+  res = reduce(a, red_int1, [.true., .true., .false.])
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMreduce_modPinteger1(
@@ -65,7 +65,7 @@ end function
 subroutine integer2(a)
   integer(2), intent(in) :: a(:)
   integer(2) :: res
-  res = reduce(a, red_int2, 1)
+  res = reduce(a, red_int2)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceInteger2
@@ -79,7 +79,7 @@ end function
 subroutine integer4(a)
   integer(4), intent(in) :: a(:)
   integer(4) :: res
-  res = reduce(a, red_int4, 1)
+  res = reduce(a, red_int4)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceInteger4
@@ -93,7 +93,7 @@ end function
 subroutine integer8(a)
   integer(8), intent(in) :: a(:)
   integer(8) :: res
-  res = reduce(a, red_int8, 1)
+  res = reduce(a, red_int8)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceInteger8
@@ -107,7 +107,7 @@ end function
 subroutine integer16(a)
   integer(16), intent(in) :: a(:)
   integer(16) :: res
-  res = reduce(a, red_int16, 1)
+  res = reduce(a, red_int16)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceInteger16
@@ -121,7 +121,7 @@ end function
 subroutine real2(a)
   real(2), intent(in) :: a(:)
   real(2) :: res
-  res = reduce(a, red_real2, 1)
+  res = reduce(a, red_real2)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceReal2
@@ -135,7 +135,7 @@ end function
 subroutine real3(a)
   real(3), intent(in) :: a(:)
   real(3) :: res
-  res = reduce(a, red_real3, 1)
+  res = reduce(a, red_real3)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceReal3
@@ -149,7 +149,7 @@ end function
 subroutine real4(a)
   real(4), intent(in) :: a(:)
   real(4) :: res
-  res = reduce(a, red_real4, 1)
+  res = reduce(a, red_real4)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceReal4
@@ -163,7 +163,7 @@ end function
 subroutine real8(a)
   real(8), intent(in) :: a(:)
   real(8) :: res
-  res = reduce(a, red_real8, 1)
+  res = reduce(a, red_real8)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceReal8
@@ -177,7 +177,7 @@ end function
 subroutine real10(a)
   real(10), intent(in) :: a(:)
   real(10) :: res
-  res = reduce(a, red_real10, 1)
+  res = reduce(a, red_real10)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceReal10
@@ -191,7 +191,7 @@ end function
 subroutine real16(a)
   real(16), intent(in) :: a(:)
   real(16) :: res
-  res = reduce(a, red_real16, 1)
+  res = reduce(a, red_real16)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceReal16
@@ -205,7 +205,7 @@ end function
 subroutine complex2(a)
   complex(2), intent(in) :: a(:)
   complex(2) :: res
-  res = reduce(a, red_complex2, 1)
+  res = reduce(a, red_complex2)
 end subroutine
 
 ! CHECK: fir.call @_FortranACppReduceComplex2
@@ -219,7 +219,7 @@ end function
 subroutine complex3(a)
   complex(3), intent(in) :: a(:)
   complex(3) :: res
-  res = reduce(a, red_complex3, 1)
+  res = reduce(a, red_complex3)
 end subroutine
 
 ! CHECK: fir.call @_FortranACppReduceComplex3
@@ -233,7 +233,7 @@ end function
 subroutine complex4(a)
   complex(4), intent(in) :: a(:)
   complex(4) :: res
-  res = reduce(a, red_complex4, 1)
+  res = reduce(a, red_complex4)
 end subroutine
 
 ! CHECK: fir.call @_FortranACppReduceComplex4
@@ -247,7 +247,7 @@ end function
 subroutine complex8(a)
   complex(8), intent(in) :: a(:)
   complex(8) :: res
-  res = reduce(a, red_complex8, 1)
+  res = reduce(a, red_complex8)
 end subroutine
 
 ! CHECK: fir.call @_FortranACppReduceComplex8
@@ -261,7 +261,7 @@ end function
 subroutine complex10(a)
   complex(10), intent(in) :: a(:)
   complex(10) :: res
-!  res = reduce(a, red_complex10, 1)
+!  res = reduce(a, red_complex10)
 end subroutine
 
 pure function red_log1(a,b)
@@ -273,7 +273,7 @@ end function
 subroutine log1(a)
   logical(1), intent(in) :: a(:)
   logical(1) :: res
-  res = reduce(a, red_log1, 1)
+  res = reduce(a, red_log1)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceLogical1
@@ -287,7 +287,7 @@ end function
 subroutine log2(a)
   logical(2), intent(in) :: a(:)
   logical(2) :: res
-  res = reduce(a, red_log2, 1)
+  res = reduce(a, red_log2)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceLogical2
@@ -301,7 +301,7 @@ end function
 subroutine log4(a)
   logical(4), intent(in) :: a(:)
   logical(4) :: res
-  res = reduce(a, red_log4, 1)
+  res = reduce(a, red_log4)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceLogical4
@@ -315,7 +315,7 @@ end function
 subroutine log8(a)
   logical(8), intent(in) :: a(:)
   logical(8) :: res
-  res = reduce(a, red_log8, 1)
+  res = reduce(a, red_log8)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceLogical8
@@ -329,7 +329,7 @@ end function
 subroutine char1(a)
   character(1), intent(in) :: a(:)
   character(1) :: res
-  res = reduce(a, red_char1, 1)
+  res = reduce(a, red_char1)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceChar1
@@ -343,7 +343,7 @@ end function
 subroutine char2(a)
   character(kind=2), intent(in) :: a(:)
   character(kind=2) :: res
-  res = reduce(a, red_char2, 1)
+  res = reduce(a, red_char2)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceChar2
@@ -357,7 +357,7 @@ end function
 subroutine char4(a)
   character(kind=4), intent(in) :: a(:)
   character(kind=4) :: res
-  res = reduce(a, red_char4, 1)
+  res = reduce(a, red_char4)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceChar4
@@ -371,7 +371,7 @@ end function
 subroutine testtype(a)
   type(t1), intent(in) :: a(:)
   type(t1) :: res
-  res = reduce(a, red_type, 1)
+  res = reduce(a, red_type)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceDerivedType
