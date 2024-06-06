@@ -183,6 +183,7 @@ add_math_entrypoint_object(fminimum_mag_numf128)
 add_math_entrypoint_object(fmod)
 add_math_entrypoint_object(fmodf)
 add_math_entrypoint_object(fmodl)
+add_math_entrypoint_object(fmodf16)
 add_math_entrypoint_object(fmodf128)
 
 add_math_entrypoint_object(frexp)

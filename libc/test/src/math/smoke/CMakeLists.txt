@@ -3111,10 +3111,10 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.fmodf
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
   UNIT_TEST_ONLY
 )
@@ -3128,10 +3128,10 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.fmod
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
   UNIT_TEST_ONLY
 )
@@ -3145,10 +3145,27 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.fmodl
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.FPUtil.fenv_impl
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  fmodf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmodf16_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.errno.errno
+    libc.src.math.fmodf16
+    libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
   UNIT_TEST_ONLY
 )
@@ -3162,10 +3179,10 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.fmodf128
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
   UNIT_TEST_ONLY
 )
