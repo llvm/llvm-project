@@ -321,6 +321,7 @@ Vendors can use the following ABI options to enable additional hardening checks:
   ABI impact: changes the iterator type of the relevant containers.
 
   Supported containers:
+
   - ``span``;
   - ``string_view``.
 
@@ -410,7 +411,7 @@ Hardened containers status
       - ✅
       - N/A
     * - ``function``
-      - N/A
+      - ❌
       - N/A
     * - ``variant``
       - N/A
