@@ -13,7 +13,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float16, fmodf16, (float16 x, float16 y)) {
-  return fputil::generic::FMod<float16>::eval(x, y);
+  return fputil::generic::FMod<float16, uint32_t>::eval(x, y);
 }
 
 } // namespace LIBC_NAMESPACE
