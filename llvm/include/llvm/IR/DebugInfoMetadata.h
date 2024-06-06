@@ -3314,6 +3314,15 @@ public:
                                       ArrayRef<uint64_t> Ops, unsigned ArgNo,
                                       bool StackValue = false);
 
+  /// Create a copy of \p Expr by appending the given list of \p Ops to each
+  /// instance of the operand `DIOpArg(ArgNo, OldArgType)`, updating OldArgType
+  /// to \p NewArgType if non-null. This is used to modify a specific location
+  /// used by \p Expr, such as when salvaging that location.
+  static DIExpression *appendNewOpsToArg(const DIExpression *Expr,
+                                         ArrayRef<DIOp::Variant> Ops,
+                                         unsigned ArgNo,
+                                         Type *NewArgType = nullptr);
+
   /// Create a copy of \p Expr with each instance of
   /// `DW_OP_LLVM_arg, \p OldArg` replaced with `DW_OP_LLVM_arg, \p NewArg`,
   /// and each instance of `DW_OP_LLVM_arg, Arg` with `DW_OP_LLVM_arg, Arg - 1`

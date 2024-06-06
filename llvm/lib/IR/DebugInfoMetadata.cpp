@@ -1930,6 +1930,28 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
   return DIExpression::get(Expr->getContext(), NewOps);
 }
 
+DIExpression *DIExpression::appendNewOpsToArg(const DIExpression *Expr,
+                                              ArrayRef<DIOp::Variant> Ops,
+                                              unsigned ArgNo,
+                                              Type *NewArgType) {
+  assert(Expr && "Can't add ops to this expression");
+
+  DIExprBuilder Builder(Expr->getContext());
+  auto ExprOps = Expr->getNewElementsRef();
+  for (auto Op : *ExprOps) {
+    DIOp::Arg *AsArg = std::get_if<DIOp::Arg>(&Op);
+    if (AsArg && AsArg->getIndex() == ArgNo) {
+      Builder.append<DIOp::Arg>(
+          AsArg->getIndex(), NewArgType ? NewArgType : AsArg->getResultType());
+      Builder.insert(Builder.end(), Ops.begin(), Ops.end());
+    } else {
+      Builder.append(Op);
+    }
+  }
+
+  return Builder.intoExpression();
+}
+
 DIExpression *DIExpression::replaceArg(const DIExpression *Expr,
                                        uint64_t OldArg, uint64_t NewArg) {
   assert(Expr && "Can't replace args in this expression");

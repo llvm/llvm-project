@@ -2794,6 +2794,93 @@ static bool isBitCastSemanticsPreserving(const DataLayout &DL, Type *FromTy,
   return false;
 }
 
+/// Generate new DIOps for a conversion from \param SourceTy to \param DestTy.
+/// Returns true if the conversion was successful.
+static bool getNewDIConversionOps(const DataLayout &DL, Type *SourceTy,
+                                  Type *DestTy,
+                                  std::optional<DIBasicType::Signedness> Sign,
+                                  SmallVectorImpl<DIOp::Variant> &Ops) {
+  if (SourceTy == DestTy)
+    return true; // No conversion necessary.
+
+  TypeSize SourceBits = DL.getTypeSizeInBits(SourceTy);
+  TypeSize DestBits = DL.getTypeSizeInBits(DestTy);
+
+  if (SourceBits == DestBits && !DL.isNonIntegralPointerType(SourceTy) &&
+      !DL.isNonIntegralPointerType(DestTy) &&
+      ((SourceTy->isPointerTy() && DestTy->isIntegerTy()) ||
+       (SourceTy->isIntegerTy() && DestTy->isPointerTy()))) {
+    Ops.emplace_back(DIOp::Reinterpret(DestTy));
+    return true;
+  }
+
+  if (!SourceTy->isIntegerTy() || !DestTy->isIntegerTy())
+    return false;
+
+  if (SourceBits < DestBits) {
+    if (!Sign)
+      return false;
+
+    if (*Sign == DIBasicType::Signedness::Signed)
+      Ops.emplace_back(DIOp::SExt(DestTy));
+    else
+      Ops.emplace_back(DIOp::ZExt(DestTy));
+    return true;
+  }
+
+  Ops.emplace_back(DIOp::Convert(DestTy));
+  return true;
+}
+
+/// Convert the type of all DIOpArgs that refer to \param LocOp to \param NewTy.
+/// This is done by replacing the DIOpArg type and adding an appropriate
+/// conversion operator back to the original type. e.g, the following
+/// expression:
+///
+///   DIExpression(DIOpArg(ptr), DIOpDeref(i32))
+///
+/// Becomes:
+///
+///   DIExpression(DIOpArg(i64), DIOpReinterpret(ptr), DIOpDeref(i32))
+///
+/// If NewTy is i64. After this function returns, DII must be updated with a new
+/// value of the correct type.
+template <class IntrinsicOrRecord>
+static std::optional<DIExpression *>
+updateNewDIExpressionArgType(IntrinsicOrRecord &DII, Value *LocOp,
+                             Type *NewTy) {
+  DIExpression *Expr = DII.getExpression();
+  assert(Expr->holdsNewElements() && "expected a new DIExpression!");
+
+  // If the types are the same, then the expression is already correct.
+  if (LocOp->getType() == NewTy)
+    return Expr;
+
+  const DataLayout &DL = DII.getModule()->getDataLayout();
+  auto LocOps = DII.location_ops();
+  for (auto Iter = LocOps.begin(); Iter != LocOps.end(); ++Iter) {
+    Value *V = *Iter;
+    if (V != LocOp)
+      continue;
+
+    // Use the signedness of the variable to determine whether we should use
+    // ZExt/SExt for integer promotions. This isn't necessarily correct, but
+    // it's probably the best we can do given replaceAllDbgUsesWith()'s API.
+    SmallVector<DIOp::Variant, 1> ConversionOps;
+    if (!getNewDIConversionOps(DL, NewTy, LocOp->getType(),
+                               DII.getVariable()->getSignedness(),
+                               ConversionOps))
+      return std::nullopt;
+
+    unsigned LocNo = std::distance(LocOps.begin(), Iter);
+    Expr = DIExpression::appendNewOpsToArg(Expr, ConversionOps, LocNo, NewTy);
+    if (!Expr)
+      return std::nullopt;
+  }
+
+  return Expr;
+}
+
 bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
                                  Instruction &DomPoint, DominatorTree &DT) {
   // Exit early if From has no debug users.
@@ -2806,9 +2893,13 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
   Type *ToTy = To.getType();
 
   auto Identity = [&](DbgVariableIntrinsic &DII) -> DbgValReplacement {
+    if (DII.getExpression()->holdsNewElements())
+      return updateNewDIExpressionArgType(DII, &From, ToTy);
     return DII.getExpression();
   };
   auto IdentityDVR = [&](DbgVariableRecord &DVR) -> DbgValReplacement {
+    if (DVR.getExpression()->holdsNewElements())
+      return updateNewDIExpressionArgType(DVR, &From, ToTy);
     return DVR.getExpression();
   };
 
@@ -2833,6 +2924,9 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
     // The width of the result has shrunk. Use sign/zero extension to describe
     // the source variable's high bits.
     auto SignOrZeroExt = [&](DbgVariableIntrinsic &DII) -> DbgValReplacement {
+      if (DII.getExpression()->holdsNewElements())
+        return updateNewDIExpressionArgType(DII, &From, ToTy);
+
       DILocalVariable *Var = DII.getVariable();
 
       // Without knowing signedness, sign/zero extension isn't possible.
@@ -2847,6 +2941,9 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
     // RemoveDIs: duplicate implementation working on DbgVariableRecords rather
     // than on dbg.value intrinsics.
     auto SignOrZeroExtDVR = [&](DbgVariableRecord &DVR) -> DbgValReplacement {
+      if (DVR.getExpression()->holdsNewElements())
+        return updateNewDIExpressionArgType(DVR, &From, ToTy);
+
       DILocalVariable *Var = DVR.getVariable();
 
       // Without knowing signedness, sign/zero extension isn't possible.
