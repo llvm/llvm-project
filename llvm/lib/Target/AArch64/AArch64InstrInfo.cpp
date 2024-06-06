@@ -9808,6 +9808,17 @@ static bool getIndVarInfo(Register Reg, const MachineBasicBlock *LoopBB,
                           MachineInstr *&UpdateInst,
                           unsigned &UpdateCounterOprNum, Register &InitReg,
                           bool &IsUpdatePriorComp) {
+  // Example:
+  //
+  // Preheader:
+  //   InitReg = ...
+  // LoopBB:
+  //   Reg0 = PHI (InitReg, Preheader), (Reg1, LoopBB)
+  //   Reg = COPY Reg0 ; COPY is ignored.
+  //   Reg1 = ADD Reg, #1; UpdateInst. Incremented by a loop invariant value.
+  //                     ; Reg is the value calculated in the previous
+  //                     ; iteration, so IsUpdatePriorComp == false.
+
   if (LoopBB->pred_size() != 2)
     return false;
   if (!Reg.isVirtual())
@@ -9823,6 +9834,9 @@ static bool getIndVarInfo(Register Reg, const MachineBasicBlock *LoopBB,
     if (Def->getParent() != LoopBB)
       return false;
     if (Def->isCopy()) {
+      // Ignore copy instructions unless they contain subregisters
+      if (Def->getOperand(0).getSubReg() || Def->getOperand(1).getSubReg())
+        return false;
       CurReg = Def->getOperand(1).getReg();
     } else if (Def->isPHI()) {
       if (InitReg != 0)
