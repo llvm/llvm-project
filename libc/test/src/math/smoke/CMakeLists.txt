@@ -212,6 +212,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  canonicalizef16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    canonicalizef16_test.cpp
+  HDRS
+    CanonicalizeTest.h
+  DEPENDS
+    libc.src.math.canonicalizef16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.integer_literals
+)
+
+add_fp_unittest(
   canonicalizef128_test
   SUITE
     libc-math-smoke-tests
@@ -980,6 +995,7 @@ add_fp_unittest(
     CopySignTest.h
   DEPENDS
     libc.src.math.copysign
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -993,6 +1009,7 @@ add_fp_unittest(
     CopySignTest.h
   DEPENDS
     libc.src.math.copysignf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1006,6 +1023,21 @@ add_fp_unittest(
     CopySignTest.h
   DEPENDS
     libc.src.math.copysignl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  copysignf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    copysignf16_test.cpp
+  HDRS
+    CopySignTest.h
+  DEPENDS
+    libc.src.math.copysignf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1019,6 +1051,7 @@ add_fp_unittest(
     CopySignTest.h
   DEPENDS
     libc.src.math.copysignf128
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
