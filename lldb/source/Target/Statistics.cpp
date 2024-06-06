@@ -355,14 +355,14 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   }
   global_stats.try_emplace("targets", std::move(json_targets));
 
+  ConstStringStats const_string_stats;
+  json::Object json_memory{
+      {"strings", const_string_stats.ToJSON()},
+  };
+  global_stats.try_emplace("memory", std::move(json_memory));
   if (!summary_only) {
-    ConstStringStats const_string_stats;
-    json::Object json_memory{
-        {"strings", const_string_stats.ToJSON()},
-    };
     json::Value cmd_stats = debugger.GetCommandInterpreter().GetStatistics();
     global_stats.try_emplace("modules", std::move(json_modules));
-    global_stats.try_emplace("memory", std::move(json_memory));
     global_stats.try_emplace("commands", std::move(cmd_stats));
   }
 
