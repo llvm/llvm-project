@@ -1086,7 +1086,11 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
 
   // don't generate a cast between identical storage classes
   if (SrcSC == DstSC)
-    return true;
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(TargetOpcode::COPY))
+        .addDef(ResVReg)
+        .addUse(SrcPtr)
+        .constrainAllUses(TII, TRI, RBI);
 
   // Casting from an eligible pointer to Generic.
   if (DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC))
