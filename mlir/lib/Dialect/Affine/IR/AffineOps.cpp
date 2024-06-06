@@ -2454,7 +2454,9 @@ bool AffineForOp::matchingBoundOperandList() {
 
 SmallVector<Region *> AffineForOp::getLoopRegions() { return {&getRegion()}; }
 
-ValueRange AffineForOp::getInductionVars() { return {getInductionVar()}; }
+SmallVector<Value> AffineForOp::getInductionVars() {
+  return {getInductionVar()};
+}
 
 std::optional<SmallVector<OpFoldResult>> AffineForOp::getLowerBounds() {
   if (!hasConstantLowerBound())

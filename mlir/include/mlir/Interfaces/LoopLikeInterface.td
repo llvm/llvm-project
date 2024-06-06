@@ -95,7 +95,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     InterfaceMethod<[{
         Return all induction variables.
       }],
-      /*retTy=*/"::mlir::ValueRange",
+      /*retTy=*/"::llvm::SmallVector<::mlir::Value>",
       /*methodName=*/"getInductionVars",
       /*args=*/(ins),
       /*methodBody=*/"",
