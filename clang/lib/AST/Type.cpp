@@ -4481,7 +4481,6 @@ static CachedProperties computeCachedProperties(const Type *T) {
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class,Base) case Type::Class:
 #include "clang/AST/TypeNodes.inc"
     // Treat instantiation-dependent types as external.
-    if (!T->isInstantiationDependentType()) T->dump();
     assert(T->isInstantiationDependentType());
     return CachedProperties(Linkage::External, false);
 
