@@ -266,6 +266,7 @@ public:
 /// \brief Analysis pass which computes a \c MachineDominatorTree.
 class MachineDominatorTreeWrapperPass : public MachineFunctionPass {
   MachineDominatorTree DT;
+  bool IsDomTreeEmpty = true;
 
 public:
   static char ID;

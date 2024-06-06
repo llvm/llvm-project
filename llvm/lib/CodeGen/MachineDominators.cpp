@@ -70,6 +70,7 @@ MachineDominatorTreeWrapperPass::MachineDominatorTreeWrapperPass()
 char &llvm::MachineDominatorsID = MachineDominatorTreeWrapperPass::ID;
 
 bool MachineDominatorTreeWrapperPass::runOnMachineFunction(MachineFunction &F) {
+  IsDomTreeEmpty = false;
   DT.calculate(F);
   return false;
 }
@@ -83,10 +84,11 @@ void MachineDominatorTree::calculate(MachineFunction &F) {
 void MachineDominatorTreeWrapperPass::releaseMemory() {
   DT.CriticalEdgesToSplit.clear();
   DT.reset();
+  IsDomTreeEmpty = true;
 }
 
 void MachineDominatorTreeWrapperPass::verifyAnalysis() const {
-  if (VerifyMachineDomInfo)
+  if (VerifyMachineDomInfo && !IsDomTreeEmpty)
     if (!DT.verify(MachineDominatorTree::VerificationLevel::Basic))
       report_fatal_error("MachineDominatorTree verification failed!");
 }
