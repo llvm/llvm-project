@@ -1588,6 +1588,14 @@ public:
   static CallBase *removeOperandBundle(CallBase *CB, uint32_t ID,
                                        BasicBlock::iterator InsertPt);
 
+  /// Return the convergence control token for this call, if it exists.
+  Value *getConvergenceControlToken() const {
+    if (auto Bundle = getOperandBundle(llvm::LLVMContext::OB_convergencectrl)) {
+      return Bundle->Inputs[0].get();
+    }
+    return nullptr;
+  }
+
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Call ||
            I->getOpcode() == Instruction::Invoke ||
