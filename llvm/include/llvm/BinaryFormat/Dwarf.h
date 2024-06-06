@@ -134,7 +134,7 @@ enum Form : uint16_t {
 };
 
 enum LocationAtom {
-#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR) DW_OP_##NAME = ID,
+#define HANDLE_DW_OP(ID, NAME, OPERANDS, VERSION, VENDOR) DW_OP_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_OP_lo_user = 0xe0,
   DW_OP_hi_user = 0xff,
@@ -1046,6 +1046,9 @@ unsigned OperationVendor(LocationAtom O);
 unsigned AttributeEncodingVendor(TypeKind E);
 unsigned LanguageVendor(SourceLanguage L);
 /// @}
+
+/// The number of operands for the given LocationAtom.
+std::optional<unsigned> OperationOperands(LocationAtom O);
 
 std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 
