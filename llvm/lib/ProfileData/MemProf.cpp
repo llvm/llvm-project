@@ -491,6 +491,13 @@ void CallStackRadixTreeBuilder::build(
   // what we need to sort.  Also, we no longer need its lookup capability.
   llvm::SmallVector<CSIdPair, 0> CallStacks = MemProfCallStackData.takeVector();
 
+  // Return early if we have no work to do.
+  if (CallStacks.empty()) {
+    RadixArray.clear();
+    CallStackPos.clear();
+    return;
+  }
+
   // Sort the list of call stacks in the dictionary order to maximize the length
   // of the common prefix between two adjacent call stacks.
   llvm::sort(CallStacks, [&](const CSIdPair &L, const CSIdPair &R) {
@@ -508,6 +515,10 @@ void CallStackRadixTreeBuilder::build(
   // Indexes will grow as long as the longest call stack.
   Indexes.clear();
   Indexes.reserve(512);
+
+  // CallStackPos will grow to exactly CallStacks.size() entries.
+  CallStackPos.clear();
+  CallStackPos.reserve(CallStacks.size());
 
   // Compute the radix array.  We encode one call stack at a time, computing the
   // longest prefix that's shared with the previous call stack we encode.  For
@@ -543,18 +554,19 @@ void CallStackRadixTreeBuilder::build(
     Prev = &CallStack;
   }
 
-  if (RadixArray.size() >= 2) {
-    // Reverse the radix array in place.  We do so mostly for intuitive
-    // deserialization where we would read the length field and then the call
-    // stack frames proper just like any other array deserialization, except
-    // that we have occasional jumps to take advantage of prefixes.
-    for (size_t I = 0, J = RadixArray.size() - 1; I < J; ++I, --J)
-      std::swap(RadixArray[I], RadixArray[J]);
+  // "RadixArray.size() - 1" below is problematic if RadixArray is empty.
+  assert(!RadixArray.empty());
 
-    // "Reverse" the indexes stored in CallStackPos.
-    for (auto &[K, V] : CallStackPos)
-      V = RadixArray.size() - 1 - V;
-  }
+  // Reverse the radix array in place.  We do so mostly for intuitive
+  // deserialization where we would read the length field and then the call
+  // stack frames proper just like any other array deserialization, except
+  // that we have occasional jumps to take advantage of prefixes.
+  for (size_t I = 0, J = RadixArray.size() - 1; I < J; ++I, --J)
+    std::swap(RadixArray[I], RadixArray[J]);
+
+  // "Reverse" the indexes stored in CallStackPos.
+  for (auto &[K, V] : CallStackPos)
+    V = RadixArray.size() - 1 - V;
 }
 
 void verifyIndexedMemProfRecord(const IndexedMemProfRecord &Record) {
