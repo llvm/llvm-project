@@ -1304,9 +1304,8 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   if (config->emachine == EM_MIPS)
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
 
-  // LoongArch does not yet implemented TLSDESC transition of DESC to LE/IE.
-  // Generates TLSDESC dynamic relocation for the symbol that is handled by the
-  // dynamic linker.
+  // LoongArch does not yet implement transition from TLS DESC to LE/IE, so
+  // generate TLSDESC dynamic relocation for the dynamic linker to handle.
   if (config->emachine == EM_LOONGARCH &&
       oneof<R_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_CALL>(expr)) {
     if (expr != R_TLSDESC_CALL) {
