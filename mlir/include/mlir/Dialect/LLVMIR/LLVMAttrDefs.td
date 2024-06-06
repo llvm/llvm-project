@@ -676,6 +676,10 @@ def LLVM_DILabelAttr : LLVM_Attr<"DILabel", "di_label",
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+//===----------------------------------------------------------------------===//
+// DIStringTypeAttr
+//===----------------------------------------------------------------------===//
+
 def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
                                      /*traits=*/[], "DITypeAttr"> {
   let parameters = (ins
