@@ -164,6 +164,10 @@ td_library(
     includes = ["include"],
 )
 
+llvm_config_target_defines = [
+  "LLVM_HAS_{}_TARGET=1".format(t) for t in llvm_targets
+]
+
 cc_library(
     name = "config",
     hdrs = [
@@ -171,7 +175,7 @@ cc_library(
         "include/llvm/Config/llvm-config.h",
     ],
     copts = llvm_copts,
-    defines = llvm_config_defines,
+    defines = llvm_config_defines + llvm_config_target_defines,
     includes = ["include"],
     textual_hdrs = [
         "include/llvm/Config/AsmParsers.def",
