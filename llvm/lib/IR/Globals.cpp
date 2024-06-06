@@ -339,8 +339,8 @@ bool GlobalObject::canIncreaseAlignment() const {
       (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatXCOFF());
   if (isXCOFF)
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
-      // GV with toc-data attribute is defined in a TOC entry which 
-      // has a fixed alignment and cannot be arbitrarily increased.
+      // GV with toc-data attribute is defined in a TOC entry which has a fixed
+      // alignment and cannot be arbitrarily increased.
       return !GV->hasAttribute("toc-data");
 
   return true;
