@@ -368,7 +368,8 @@ class TargetRegisterInfo;
     /// Returns the representative SDNode for this SUnit. This may be used
     /// during pre-regalloc scheduling.
     SDNode *getNode() const {
-      assert(!isInst && (isNode || !Instr) && "Reading SDNode of SUnit without SDNode!");
+      assert(!isInst && (isNode || !Instr) &&
+             "Reading SDNode of SUnit without SDNode!");
       return Node;
     }
 
@@ -387,7 +388,8 @@ class TargetRegisterInfo;
     /// Returns the representative MachineInstr for this SUnit. This may be used
     /// during post-regalloc scheduling.
     MachineInstr *getInstr() const {
-      assert(!isNode && (isInst || !Node) && "Reading MachineInstr of SUnit without MachineInstr!");
+      assert(!isNode && (isInst || !Node) &&
+             "Reading MachineInstr of SUnit without MachineInstr!");
       return Instr;
     }
 
