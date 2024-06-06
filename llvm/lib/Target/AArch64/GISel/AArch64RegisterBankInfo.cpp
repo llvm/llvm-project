@@ -495,6 +495,22 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   }
 }
 
+bool AArch64RegisterBankInfo::isPHIWithFPContraints(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI, const unsigned Depth) const {
+  if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
+    return false;
+
+  if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+             [&](const MachineInstr &UseMI) {
+               if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
+                 return true;
+               return isPHIWithFPContraints(UseMI, MRI, TRI, Depth + 1);
+             }))
+    return true;
+  return false;
+}
+
 bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
                                                const MachineRegisterInfo &MRI,
                                                const TargetRegisterInfo &TRI,
@@ -526,18 +542,6 @@ bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
   // based off of its inputs.
   if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
     return false;
-
-  if (MI.getNumDefs() == 1 && MI.getFlag(MachineInstr::DefinesFP)) {
-    // If the instruction defines an FP register, e.g.
-    // %4 = phi float [ %2, %1 ], [ %7, %3 ]
-    // and the defined register %4 is used by any instruction that only takes
-    // FP operand, then assign it to FPR.
-    if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
-               [&](const MachineInstr &UseMI) {
-                 return onlyUsesFP(UseMI, MRI, TRI, Depth + 1);
-               }))
-      return true;
-  }
 
   return any_of(MI.explicit_uses(), [&](const MachineOperand &Op) {
     return Op.isReg() &&
@@ -859,13 +863,18 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // instead of blind map every scalar to GPR.
     if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
                [&](const MachineInstr &UseMI) {
-                 // If we have at least one direct use in a FP instruction,
+                 // If we have at least one direct or indirect use
+                 // in a FP instruction,
                  // assume this was a floating point load in the IR. If it was
                  // not, we would have had a bitcast before reaching that
                  // instruction.
                  //
                  // Int->FP conversion operations are also captured in
                  // onlyDefinesFP().
+
+                 if (isPHIWithFPContraints(UseMI, MRI, TRI))
+                   return true;
+
                  return onlyUsesFP(UseMI, MRI, TRI) ||
                         onlyDefinesFP(UseMI, MRI, TRI);
                }))

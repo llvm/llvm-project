@@ -3174,9 +3174,6 @@ bool IRTranslator::translatePHI(const User &U, MachineIRBuilder &MIRBuilder) {
   SmallVector<MachineInstr *, 4> Insts;
   for (auto Reg : getOrCreateVRegs(PI)) {
     auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_PHI, {Reg}, {});
-    if (PI.getType()->isFloatingPointTy())
-      MIB.setMIFlag(MachineInstr::DefinesFP);
-
     Insts.push_back(MIB.getInstr());
   }
 
