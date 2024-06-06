@@ -14,6 +14,8 @@ class ExprCommandCallFunctionTestCase(TestBase):
     )
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     @skipIf(compiler="clang", compiler_version=["<", "9.0"])
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'),
+                        oslist=["linux"])
     def test_with(self):
         """Test calling std::String member function."""
         self.build()
