@@ -243,7 +243,7 @@ static void calculateTileOffsetsAndSizes(
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPointToStart(forallOp.getBody(0));
 
-  auto threadIds = forallOp.getInductionVars();
+  SmallVector<Value> threadIds = forallOp.getInductionVars();
   SmallVector<OpFoldResult> nonZeroNumThreads =
       llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
         return !isConstantIntValue(ofr, 0);

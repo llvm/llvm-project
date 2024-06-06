@@ -1427,7 +1427,7 @@ SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
 }
 
 SmallVector<Value> ForallOp::getInductionVars() {
-  return SmallVector<Value>(getBody()->getArguments().take_front(getRank()));
+  return SmallVector<Value>{getBody()->getArguments().take_front(getRank())};
 }
 
 // Get lower bounds as OpFoldResult.
@@ -3005,7 +3005,7 @@ void ParallelOp::print(OpAsmPrinter &p) {
 SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
 
 SmallVector<Value> ParallelOp::getInductionVars() {
-  return SmallVector<Value>(getBody()->getArguments());
+  return SmallVector<Value>{getBody()->getArguments()};
 }
 
 std::optional<SmallVector<OpFoldResult>> ParallelOp::getLowerBounds() {
