@@ -121,6 +121,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // Set operations for LA64 only.
 
   if (Subtarget.is64Bit()) {
+    setOperationAction(ISD::ADD, MVT::i32, Custom);
+    setOperationAction(ISD::SUB, MVT::i32, Custom);
     setOperationAction(ISD::SHL, MVT::i32, Custom);
     setOperationAction(ISD::SRA, MVT::i32, Custom);
     setOperationAction(ISD::SRL, MVT::i32, Custom);
@@ -139,6 +141,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
     setOperationAction(ISD::BSWAP, MVT::i32, Custom);
+    setOperationAction({ISD::UDIV, ISD::UREM}, MVT::i32, Custom);
   }
 
   // Set operations for LA32 only.
@@ -935,7 +938,7 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   assert(N->getOffset() == 0 && "unexpected offset in global node");
 
   if (DAG.getTarget().useEmulatedTLS())
-    return LowerToTLSEmulatedModel(N, DAG);
+    DAG.getContext()->emitError("the emulated TLS is prohibited.");
 
   bool IsDesc = DAG.getTarget().useTLSDESC();
 
@@ -1668,6 +1671,10 @@ static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case ISD::UDIV:
+    return LoongArchISD::DIV_WU;
+  case ISD::UREM:
+    return LoongArchISD::MOD_WU;
   case ISD::SHL:
     return LoongArchISD::SLL_W;
   case ISD::SRA:
@@ -1719,6 +1726,18 @@ static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG, int NumOp,
   // ReplaceNodeResults requires we maintain the same type for the return
   // value.
   return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewRes);
+}
+
+// Converts the given 32-bit operation to a i64 operation with signed extension
+// semantic to reduce the signed extension instructions.
+static SDValue customLegalizeToWOpWithSExt(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+  SDValue NewOp1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+  SDValue NewWOp = DAG.getNode(N->getOpcode(), DL, MVT::i64, NewOp0, NewOp1);
+  SDValue NewRes = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, NewWOp,
+                               DAG.getValueType(MVT::i32));
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
 }
 
 // Helper function that emits error message for intrinsics with/without chain
@@ -1844,6 +1863,18 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Don't know how to legalize this operation");
+  case ISD::ADD:
+  case ISD::SUB:
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    Results.push_back(customLegalizeToWOpWithSExt(N, DAG));
+    break;
+  case ISD::UDIV:
+  case ISD::UREM:
+    assert(VT == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    Results.push_back(customLegalizeToWOp(N, DAG, 2, ISD::SIGN_EXTEND));
+    break;
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
@@ -3448,6 +3479,8 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(BITREV_W)
     NODE_NAME_CASE(ROTR_W)
     NODE_NAME_CASE(ROTL_W)
+    NODE_NAME_CASE(DIV_WU)
+    NODE_NAME_CASE(MOD_WU)
     NODE_NAME_CASE(CLZ_W)
     NODE_NAME_CASE(CTZ_W)
     NODE_NAME_CASE(DBAR)
@@ -4972,6 +5005,10 @@ bool LoongArchTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
 bool LoongArchTargetLowering::isSExtCheaperThanZExt(EVT SrcVT,
                                                     EVT DstVT) const {
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
+}
+
+bool LoongArchTargetLowering::signExtendConstant(const ConstantInt *CI) const {
+  return Subtarget.is64Bit() && CI->getType()->isIntegerTy(32);
 }
 
 bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {

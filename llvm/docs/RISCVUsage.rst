@@ -119,7 +119,10 @@ on support follow.
      ``V``             Supported
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zaamo``         Assembly Support
+     ``Zabha``         Supported
      ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
+     ``Zalrsc``        Assembly Support
      ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zawrs``         Assembly Support
      ``Zba``           Supported
@@ -260,9 +263,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-ssqosid``
   LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-ssqosid/releases/tag/v1.0-rc1>`_.
 
-``experimental-zabha``
-  LLVM implements the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-zabha/tree/v1.0-rc1>`__.
-
 ``experimental-zalasr``
   LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.
 
@@ -274,9 +274,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-ztso``
   LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
-
-``experimental-zaamo``, ``experimental-zalrsc``
-  LLVM implements the `v0.2 proposed specification <https://github.com/riscv/riscv-zaamo-zalrsc/releases/tag/v0.2>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 

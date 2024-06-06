@@ -49,6 +49,7 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTRecordReader.h"
@@ -2695,7 +2696,8 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   }
 
   if (Record.readInt())
-    D->setDefaultArgument(readTypeSourceInfo());
+    D->setDefaultArgument(Reader.getContext(),
+                          Record.readTemplateArgumentLoc());
 }
 
 void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
@@ -2716,7 +2718,8 @@ void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
     // Rest of NonTypeTemplateParmDecl.
     D->ParameterPack = Record.readInt();
     if (Record.readInt())
-      D->setDefaultArgument(Record.readExpr());
+      D->setDefaultArgument(Reader.getContext(),
+                            Record.readTemplateArgumentLoc());
   }
 }
 
@@ -4125,7 +4128,10 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   // calls to Decl::getASTContext() by Decl's methods will find the
   // TranslationUnitDecl without crashing.
   D->setDeclContext(Context.getTranslationUnitDecl());
-  Reader.Visit(D);
+
+  // Reading some declarations can result in deep recursion.
+  clang::runWithSufficientStackSpace([&] { warnStackExhausted(DeclLoc); },
+                                     [&] { Reader.Visit(D); });
 
   // If this declaration is also a declaration context, get the
   // offsets for its tables of lexical and visible declarations.
@@ -4186,12 +4192,35 @@ void ASTReader::PassInterestingDeclsToConsumer() {
     GetDecl(ID);
   EagerlyDeserializedDecls.clear();
 
-  while (!PotentiallyInterestingDecls.empty()) {
-    Decl *D = PotentiallyInterestingDecls.front();
-    PotentiallyInterestingDecls.pop_front();
+  auto ConsumingPotentialInterestingDecls = [this]() {
+    while (!PotentiallyInterestingDecls.empty()) {
+      Decl *D = PotentiallyInterestingDecls.front();
+      PotentiallyInterestingDecls.pop_front();
+      if (isConsumerInterestedIn(D))
+        PassInterestingDeclToConsumer(D);
+    }
+  };
+  std::deque<Decl *> MaybeInterestingDecls =
+      std::move(PotentiallyInterestingDecls);
+  assert(PotentiallyInterestingDecls.empty());
+  while (!MaybeInterestingDecls.empty()) {
+    Decl *D = MaybeInterestingDecls.front();
+    MaybeInterestingDecls.pop_front();
+    // Since we load the variable's initializers lazily, it'd be problematic
+    // if the initializers dependent on each other. So here we try to load the
+    // initializers of static variables to make sure they are passed to code
+    // generator by order. If we read anything interesting, we would consume
+    // that before emitting the current declaration.
+    if (auto *VD = dyn_cast<VarDecl>(D);
+        VD && VD->isFileVarDecl() && !VD->isExternallyVisible())
+      VD->getInit();
+    ConsumingPotentialInterestingDecls();
     if (isConsumerInterestedIn(D))
       PassInterestingDeclToConsumer(D);
   }
+
+  // If we add any new potential interesting decl in the last call, consume it.
+  ConsumingPotentialInterestingDecls();
 }
 
 void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {

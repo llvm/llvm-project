@@ -4,7 +4,7 @@
 namespace issue1 {
   template<class T, class U = T> class B {};
   template<template<class> class P, class T> void f(P<T>);
-  // new-note@-1 {{deduced type 'B<[...], (default) int>' of 1st parameter does not match adjusted type 'B<[...], float>' of argument [with P = issue1::B, T = int]}}
+  // new-note@-1 {{deduced type 'B<[...], (default) int>' of 1st parameter does not match adjusted type 'B<[...], float>' of argument [with P = B, T = int]}}
   // old-note@-2 2{{template template argument has different template parameters}}
 
   void g() {
@@ -58,6 +58,21 @@ namespace templ {
 
   template struct C<B<int>>;
 } // namespace templ
+
+namespace class_template {
+  template <class T1, class T2 = float> struct A;
+
+  template <class T3> struct B;
+
+  template <template <class T4> class TT1, class T5> struct B<TT1<T5>>;
+  // new-note@-1 {{partial specialization matches}}
+
+  template <class T6, class T7> struct B<A<T6, T7>> {};
+  // new-note@-1 {{partial specialization matches}}
+
+  template struct B<A<int>>;
+  // new-error@-1 {{ambiguous partial specialization}}
+} // namespace class_template
 
 namespace type_pack1 {
   template<class T2> struct A;

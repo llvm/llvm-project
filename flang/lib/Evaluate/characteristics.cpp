@@ -1333,16 +1333,21 @@ bool Procedure::IsCompatibleWith(const Procedure &actual,
   return false;
 }
 
-int Procedure::FindPassIndex(std::optional<parser::CharBlock> name) const {
+std::optional<int> Procedure::FindPassIndex(
+    std::optional<parser::CharBlock> name) const {
   int argCount{static_cast<int>(dummyArguments.size())};
-  int index{0};
   if (name) {
-    while (index < argCount && *name != dummyArguments[index].name.c_str()) {
-      ++index;
+    for (int index{0}; index < argCount; ++index) {
+      if (*name == dummyArguments[index].name.c_str()) {
+        return index;
+      }
     }
+    return std::nullopt;
+  } else if (argCount > 0) {
+    return 0;
+  } else {
+    return std::nullopt;
   }
-  CHECK(index < argCount);
-  return index;
 }
 
 bool Procedure::CanOverride(

@@ -87,6 +87,8 @@
    `(,(regexp-opt '("extractvalue" "insertvalue") 'symbols) . font-lock-keyword-face)
    ;; Metadata types
    `(,(regexp-opt '("distinct") 'symbols) . font-lock-keyword-face)
+   ;; Debug records
+   `(,(concat "#" (regexp-opt '("dbg_assign" "dbg_declare" "dbg_label" "dbg_value") 'symbols)) . font-lock-keyword-face)
    ;; Atomic memory ordering constraints
    `(,(regexp-opt '("unordered" "monotonic" "acquire" "release" "acq_rel" "seq_cst") 'symbols) . font-lock-keyword-face)
    ;; Fast-math flags

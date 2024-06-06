@@ -40,9 +40,11 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/AST/UnresolvedSet.h"
+#include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticError.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
@@ -1264,7 +1266,7 @@ bool ASTReader::ReadLexicalDeclContextStorage(ModuleFile &M,
   if (!Lex.first) {
     Lex = std::make_pair(
         &M, llvm::ArrayRef(
-                reinterpret_cast<const unalighed_decl_id_t *>(Blob.data()),
+                reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
                 Blob.size() / sizeof(DeclID)));
   }
   DC->setHasExternalLexicalStorage(true);
@@ -1649,8 +1651,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
       FileCharacter = (SrcMgr::CharacteristicKind)Record[2];
     FileID FID = SourceMgr.createFileID(*File, IncludeLoc, FileCharacter, ID,
                                         BaseOffset + Record[0]);
-    SrcMgr::FileInfo &FileInfo =
-          const_cast<SrcMgr::FileInfo&>(SourceMgr.getSLocEntry(FID).getFile());
+    SrcMgr::FileInfo &FileInfo = SourceMgr.getSLocEntry(FID).getFile();
     FileInfo.NumCreatedFIDs = Record[5];
     if (Record[3])
       FileInfo.setHasLineDirectives();
@@ -1693,8 +1694,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
     FileID FID = SourceMgr.createFileID(std::move(Buffer), FileCharacter, ID,
                                         BaseOffset + Offset, IncludeLoc);
     if (Record[3]) {
-      auto &FileInfo =
-          const_cast<SrcMgr::FileInfo &>(SourceMgr.getSLocEntry(FID).getFile());
+      auto &FileInfo = SourceMgr.getSLocEntry(FID).getFile();
       FileInfo.setHasLineDirectives();
     }
     break;
@@ -3403,7 +3403,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case TU_UPDATE_LEXICAL: {
       DeclContext *TU = ContextObj->getTranslationUnitDecl();
       LexicalContents Contents(
-          reinterpret_cast<const unalighed_decl_id_t *>(Blob.data()),
+          reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
           static_cast<unsigned int>(Blob.size() / sizeof(DeclID)));
       TULexicalDecls.push_back(std::make_pair(&F, Contents));
       TU->setHasExternalLexicalStorage(true);
@@ -4061,7 +4061,7 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
   RemapBuilder DeclRemap(F.DeclRemap);
   RemapBuilder TypeRemap(F.TypeRemap);
 
-  auto &ImportedModuleVector = F.DependentModules;
+  auto &ImportedModuleVector = F.TransitiveImports;
   assert(ImportedModuleVector.empty());
 
   while (Data < DataEnd) {
@@ -9405,6 +9405,20 @@ DiagnosticBuilder ASTReader::Diag(SourceLocation Loc, unsigned DiagID) const {
   return Diags.Report(Loc, DiagID);
 }
 
+void ASTReader::warnStackExhausted(SourceLocation Loc) {
+  // When Sema is available, avoid duplicate errors.
+  if (SemaObj) {
+    SemaObj->warnStackExhausted(Loc);
+    return;
+  }
+
+  if (WarnedStackExhausted)
+    return;
+  WarnedStackExhausted = true;
+
+  Diag(Loc, diag::warn_stack_exhausted);
+}
+
 /// Retrieve the identifier table associated with the
 /// preprocessor.
 IdentifierTable &ASTReader::getIdentifierTable() {
@@ -11923,12 +11937,22 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCDeviceTypeClause::Create(getContext(), ClauseKind, BeginLoc,
                                            LParenLoc, Archs, EndLoc);
   }
+  case OpenACCClauseKind::Reduction: {
+    SourceLocation LParenLoc = readSourceLocation();
+    OpenACCReductionOperator Op = readEnum<OpenACCReductionOperator>();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCReductionClause::Create(getContext(), BeginLoc, LParenLoc, Op,
+                                          VarList, EndLoc);
+  }
+  case OpenACCClauseKind::Seq:
+    return OpenACCSeqClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::Independent:
+    return OpenACCIndependentClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::Auto:
+    return OpenACCAutoClause::Create(getContext(), BeginLoc, EndLoc);
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
-  case OpenACCClauseKind::Seq:
-  case OpenACCClauseKind::Independent:
-  case OpenACCClauseKind::Auto:
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
@@ -11939,7 +11963,6 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:

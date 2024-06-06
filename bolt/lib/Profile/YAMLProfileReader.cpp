@@ -99,11 +99,17 @@ bool YAMLProfileReader::parseFunctionProfile(
       FuncRawBranchCount += YamlSI.Count;
   BF.setRawBranchCount(FuncRawBranchCount);
 
-  if (!opts::IgnoreHash &&
-      YamlBF.Hash != BF.computeHash(IsDFSOrder, HashFunction)) {
-    if (opts::Verbosity >= 1)
-      errs() << "BOLT-WARNING: function hash mismatch\n";
-    ProfileMatched = false;
+  if (BF.empty())
+    return true;
+
+  if (!opts::IgnoreHash) {
+    if (!BF.getHash())
+      BF.computeHash(IsDFSOrder, HashFunction);
+    if (YamlBF.Hash != BF.getHash()) {
+      if (opts::Verbosity >= 1)
+        errs() << "BOLT-WARNING: function hash mismatch\n";
+      ProfileMatched = false;
+    }
   }
 
   if (YamlBF.NumBasicBlocks != BF.size()) {
@@ -250,10 +256,8 @@ bool YAMLProfileReader::parseFunctionProfile(
     if (BB.getExecutionCount() == BinaryBasicBlock::COUNT_NO_PROFILE)
       BB.setExecutionCount(0);
 
-  if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE) {
+  if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE)
     BF.setExecutionCount(FunctionExecutionCount);
-    estimateEdgeCounts(BF);
-  }
 
   ProfileMatched &= !MismatchedBlocks && !MismatchedCalls && !MismatchedEdges;
 

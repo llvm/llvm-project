@@ -600,19 +600,8 @@ def X86Vpdpbusds : SDNode<"X86ISD::VPDPBUSDS", SDTVnni>;
 def X86Vpdpwssd  : SDNode<"X86ISD::VPDPWSSD", SDTVnni>;
 def X86Vpdpwssds : SDNode<"X86ISD::VPDPWSSDS", SDTVnni>;
 
-def X86rsqrt28   : SDNode<"X86ISD::RSQRT28",     SDTFPUnaryOp>;
-def X86rsqrt28SAE: SDNode<"X86ISD::RSQRT28_SAE", SDTFPUnaryOp>;
-def X86rcp28     : SDNode<"X86ISD::RCP28",       SDTFPUnaryOp>;
-def X86rcp28SAE  : SDNode<"X86ISD::RCP28_SAE",   SDTFPUnaryOp>;
-def X86exp2      : SDNode<"X86ISD::EXP2",        SDTFPUnaryOp>;
-def X86exp2SAE   : SDNode<"X86ISD::EXP2_SAE",    SDTFPUnaryOp>;
-
 def X86rsqrt14s  : SDNode<"X86ISD::RSQRT14S",   SDTFPBinOp>;
 def X86rcp14s    : SDNode<"X86ISD::RCP14S",     SDTFPBinOp>;
-def X86rsqrt28s  : SDNode<"X86ISD::RSQRT28S",   SDTFPBinOp>;
-def X86rsqrt28SAEs : SDNode<"X86ISD::RSQRT28S_SAE", SDTFPBinOp>;
-def X86rcp28s    : SDNode<"X86ISD::RCP28S",     SDTFPBinOp>;
-def X86rcp28SAEs : SDNode<"X86ISD::RCP28S_SAE", SDTFPBinOp>;
 def X86Ranges    : SDNode<"X86ISD::VRANGES",    SDTFPBinOpImm>;
 def X86RndScales : SDNode<"X86ISD::VRNDSCALES", SDTFPBinOpImm>;
 def X86Reduces   : SDNode<"X86ISD::VREDUCES",   SDTFPBinOpImm>;

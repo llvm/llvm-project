@@ -1269,8 +1269,9 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI,
     Register DefReg = MI.getOperand(0).getReg();
     if (DefReg.isVirtual() &&
         all_of(MI.uses(),
-               [](const MachineOperand &UseOp) {
-                 return !UseOp.isReg() || UseOp.getReg().isVirtual();
+               [this](const MachineOperand &UseOp) {
+                 return !UseOp.isReg() || UseOp.getReg().isVirtual() ||
+                        MRI->isConstantPhysReg(UseOp.getReg());
                }) &&
         IsLoopInvariantInst(MI, CurLoop) &&
         any_of(MRI->use_nodbg_instructions(DefReg),

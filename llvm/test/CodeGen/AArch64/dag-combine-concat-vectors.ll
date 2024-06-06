@@ -8,62 +8,65 @@ declare void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8>, <vscale x 
 define fastcc i8 @allocno_reload_assign() {
 ; CHECK-LABEL: allocno_reload_assign:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.b, #0 // =0x0
-; CHECK-NEXT:    mov z16.d, #0 // =0x0
+; CHECK-NEXT:    fmov d0, xzr
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    mov z16.d, #0 // =0x0
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p0.s
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p0.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p0.b
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov z0.b, #0 // =0x0
+; CHECK-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
 ; CHECK-NEXT:    uunpkhi z0.h, z0.b
+; CHECK-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-NEXT:    not p0.b, p0/z, p1.b
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpkhi z3.s, z1.h
 ; CHECK-NEXT:    uunpklo z5.s, z0.h
 ; CHECK-NEXT:    uunpkhi z7.s, z0.h
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p2.h, p1.b
 ; CHECK-NEXT:    uunpklo z0.d, z2.s
 ; CHECK-NEXT:    uunpkhi z1.d, z2.s
+; CHECK-NEXT:    punpkhi p3.h, p1.b
 ; CHECK-NEXT:    uunpklo z2.d, z3.s
 ; CHECK-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEXT:    punpklo p5.h, p0.b
 ; CHECK-NEXT:    uunpklo z4.d, z5.s
 ; CHECK-NEXT:    uunpkhi z5.d, z5.s
+; CHECK-NEXT:    punpkhi p7.h, p0.b
 ; CHECK-NEXT:    uunpklo z6.d, z7.s
 ; CHECK-NEXT:    uunpkhi z7.d, z7.s
+; CHECK-NEXT:    punpklo p0.h, p2.b
+; CHECK-NEXT:    punpkhi p1.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p3.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    punpklo p4.h, p5.b
+; CHECK-NEXT:    punpkhi p5.h, p5.b
+; CHECK-NEXT:    punpklo p6.h, p7.b
+; CHECK-NEXT:    punpkhi p7.h, p7.b
 ; CHECK-NEXT:  .LBB0_1: // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    fmov d17, xzr
-; CHECK-NEXT:    cmpeq p2.d, p0/z, z17.d, #0
-; CHECK-NEXT:    uzp1 p2.s, p2.s, p0.s
-; CHECK-NEXT:    uzp1 p2.h, p2.h, p0.h
-; CHECK-NEXT:    uzp1 p2.b, p2.b, p0.b
-; CHECK-NEXT:    mov z17.b, p2/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s17
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    whilelo p2.b, xzr, x8
-; CHECK-NEXT:    not p2.b, p1/z, p2.b
-; CHECK-NEXT:    punpklo p3.h, p2.b
-; CHECK-NEXT:    punpkhi p2.h, p2.b
-; CHECK-NEXT:    punpklo p4.h, p3.b
-; CHECK-NEXT:    punpkhi p3.h, p3.b
-; CHECK-NEXT:    punpklo p5.h, p4.b
-; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    st1b { z0.d }, p5, [z16.d]
-; CHECK-NEXT:    st1b { z1.d }, p4, [z16.d]
-; CHECK-NEXT:    punpklo p4.h, p3.b
-; CHECK-NEXT:    punpkhi p3.h, p3.b
-; CHECK-NEXT:    st1b { z2.d }, p4, [z16.d]
+; CHECK-NEXT:    st1b { z0.d }, p0, [z16.d]
+; CHECK-NEXT:    st1b { z1.d }, p1, [z16.d]
+; CHECK-NEXT:    st1b { z2.d }, p2, [z16.d]
 ; CHECK-NEXT:    st1b { z3.d }, p3, [z16.d]
-; CHECK-NEXT:    punpklo p3.h, p2.b
-; CHECK-NEXT:    punpkhi p2.h, p2.b
-; CHECK-NEXT:    punpklo p4.h, p3.b
-; CHECK-NEXT:    punpkhi p3.h, p3.b
 ; CHECK-NEXT:    st1b { z4.d }, p4, [z16.d]
-; CHECK-NEXT:    st1b { z5.d }, p3, [z16.d]
-; CHECK-NEXT:    punpklo p3.h, p2.b
-; CHECK-NEXT:    punpkhi p2.h, p2.b
-; CHECK-NEXT:    st1b { z6.d }, p3, [z16.d]
-; CHECK-NEXT:    st1b { z7.d }, p2, [z16.d]
+; CHECK-NEXT:    st1b { z5.d }, p5, [z16.d]
+; CHECK-NEXT:    st1b { z6.d }, p6, [z16.d]
+; CHECK-NEXT:    st1b { z7.d }, p7, [z16.d]
 ; CHECK-NEXT:    b .LBB0_1
   br label %1
 
 1:                                                ; preds = %1, %0
-  call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x ptr> zeroinitializer, i32 0, <vscale x 16 x i1> xor (<vscale x 16 x i1> shufflevector (<vscale x 16 x i1> icmp eq (<vscale x 16 x ptr> insertelement (<vscale x 16 x ptr> poison, ptr null, i64 0), <vscale x 16 x ptr> zeroinitializer), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i1> splat (i1 true)))
+  %constexpr = icmp eq <vscale x 16 x ptr> insertelement (<vscale x 16 x ptr> poison, ptr null, i64 0), zeroinitializer
+  %constexpr1 = shufflevector <vscale x 16 x i1> %constexpr, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
+  %constexpr2 = xor <vscale x 16 x i1> %constexpr1, shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer)
+  call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x ptr> zeroinitializer, i32 0, <vscale x 16 x i1> %constexpr2)
   br label %1
 }
 

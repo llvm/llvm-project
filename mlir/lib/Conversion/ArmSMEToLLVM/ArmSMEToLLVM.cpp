@@ -248,8 +248,8 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
       return failure();
 
     tileOp->emitWarning(
-        "failed to allocate SME virtual tile to operation, all tile "
-        "operations will go through memory, expect degraded performance");
+        "failed to allocate SME virtual tile to operation, tile value will go "
+        "through memory, expect degraded performance");
 
     // Step 1. Create an alloca for the tile at the top of the function (if one
     // does not already exist).
