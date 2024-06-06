@@ -26,23 +26,28 @@ public:
     EXPECT_FP_EQ_ALL_ROUNDING(T(15.0), func(3.0, 5.0));
     EXPECT_FP_EQ_ALL_ROUNDING(T(0x1.0p-130), func(0x1.0p1, 0x1.0p-131));
     EXPECT_FP_EQ_ALL_ROUNDING(T(0x1.0p-127), func(0x1.0p2, 0x1.0p-129));
-    EXPECT_FP_EQ_ALL_ROUNDING(T(1.0), func(1.0,1.0));
-    
+    EXPECT_FP_EQ_ALL_ROUNDING(T(1.0), func(1.0, 1.0));
+
     EXPECT_FP_EQ_ROUNDING_NEAREST(inf, func(0x1.0p100, 0x1.0p100));
     EXPECT_FP_EQ_ROUNDING_UPWARD(inf, func(0x1.0p100, 0x1.0p100));
     EXPECT_FP_EQ_ROUNDING_DOWNWARD(max_normal, func(0x1.0p100, 0x1.0p100));
     EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(max_normal, func(0x1.0p100, 0x1.0p100));
 
-    EXPECT_FP_EQ_ROUNDING_NEAREST(0x1p0, func(1.0, 1.0 + 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
-    EXPECT_FP_EQ_ROUNDING_DOWNWARD(0x1p0, func(1.0, 1.0 + 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
-    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(0x1p0, func(1.0, 1.0 + 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
-    EXPECT_FP_EQ_ROUNDING_UPWARD(0x1p0, func(1.0, 1.0 + 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
-    
+    EXPECT_FP_EQ_ROUNDING_NEAREST(
+        0x1p0, func(1.0, 1.0 + 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD(
+        0x1p0, func(1.0, 1.0 + 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
+    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(
+        0x1p0, func(1.0, 1.0 + 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
+    EXPECT_FP_EQ_ROUNDING_UPWARD(
+        0x1p0, func(1.0, 1.0 + 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
 
     EXPECT_FP_EQ_ROUNDING_NEAREST(
         0x1.0p-128f + 0x1.0p-148f,
         func(1.0, 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
-    EXPECT_FP_EQ_ROUNDING_UPWARD(0x1.0p-128f + 0x1.0p-148f, func(1.0, 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
+    EXPECT_FP_EQ_ROUNDING_UPWARD(
+        0x1.0p-128f + 0x1.0p-148f,
+        func(1.0, 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
     EXPECT_FP_EQ_ROUNDING_DOWNWARD(
         0x1.0p-128f + 0x1.0p-149f,
         func(1.0, 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150));
@@ -68,8 +73,7 @@ public:
 
     EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, func(neg_inf, 0x1.0p-129));
     EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, func(0x1.0p-129, neg_inf));
-    
-    
+
     EXPECT_FP_EQ_ALL_ROUNDING(0.0, func(0.0, 0x1.0p-129));
     EXPECT_FP_EQ_ALL_ROUNDING(aNaN, func(inf, 0.0));
     EXPECT_FP_EQ_ALL_ROUNDING(aNaN, func(0.0, inf));
