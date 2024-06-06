@@ -373,6 +373,26 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
+bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   uint32_t Offset) {
+  uint32_t MinOffset = Ptr.getDeclDesc()->getMetadataSize();
+  uint32_t PtrOffset = Ptr.getByteOffset();
+
+  // We subtract Offset from PtrOffset. The result must be at least
+  // MinOffset.
+  if (Offset < PtrOffset && (PtrOffset - Offset) >= MinOffset)
+    return true;
+
+  const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
+  QualType TargetQT = E->getType()->getPointeeType();
+  QualType MostDerivedQT = Ptr.getDeclPtr().getType();
+
+  S.CCEDiag(E, diag::note_constexpr_invalid_downcast)
+      << MostDerivedQT << TargetQT;
+
+  return false;
+}
+
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
   if (!Ptr.isConst())
@@ -493,10 +513,12 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
     return false;
-  if (!CheckExtern(S, OpPC, Ptr))
-    return false;
-  if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
-    return false;
+  if (!Ptr.isDummy()) {
+    if (!CheckExtern(S, OpPC, Ptr))
+      return false;
+    if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
+      return false;
+  }
   return true;
 }
 
