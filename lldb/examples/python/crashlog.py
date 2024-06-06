@@ -547,9 +547,9 @@ class CrashLog(symbolication.Symbolicator):
             for image in self.images:
                 image.resolve = True
         elif options.crashed_only:
+            images_to_load = []
             for thread in self.threads:
-                if thread.did_crash():
-                    images_to_load = []
+                if thread.did_crash() or thread.app_specific_backtrace:
                     for ident in thread.idents:
                         for image in self.find_images_with_identifier(ident):
                             image.resolve = True
@@ -864,7 +864,7 @@ class JSONCrashLogParser(CrashLogParser):
         thread = self.crashlog.Thread(
             len(self.crashlog.threads), True, self.crashlog.process_arch
         )
-        thread.queue = "Application Specific Backtrace"
+        thread.name = "Application Specific Backtrace"
         if self.parse_asi_backtrace(thread, json_app_specific_bts[0]):
             self.crashlog.threads.append(thread)
         else:
@@ -874,7 +874,7 @@ class JSONCrashLogParser(CrashLogParser):
         thread = self.crashlog.Thread(
             len(self.crashlog.threads), True, self.crashlog.process_arch
         )
-        thread.queue = "Last Exception Backtrace"
+        thread.name = "Last Exception Backtrace"
         self.parse_frames(thread, json_last_exc_bts)
         self.crashlog.threads.append(thread)
 
@@ -1174,11 +1174,13 @@ class TextCrashLogParser(CrashLogParser):
                 self.thread = self.crashlog.Thread(
                     idx, True, self.crashlog.process_arch
                 )
+                self.thread.name = "Application Specific Backtrace"
         elif line.startswith("Last Exception Backtrace:"):  # iOS
             self.parse_mode = self.CrashLogParseMode.THREAD
             self.app_specific_backtrace = True
             idx = 1
             self.thread = self.crashlog.Thread(idx, True, self.crashlog.process_arch)
+            self.thread.name = "Last Exception Backtrace"
         self.crashlog.info_lines.append(line.strip())
 
     def parse_thread(self, line):
