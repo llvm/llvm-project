@@ -406,27 +406,26 @@ Hardened containers status
     * - ``mdspan``
       - ✅
       - ❌
-
-.. list-table::
-    :header-rows: 1
-    :widths: auto
-
-    * - Name
-      - Member functions
     * - ``optional``
       - ✅
+      - N/A
     * - ``function``
-      - ❌
+      - N/A
     * - ``variant``
+      - N/A
       - N/A
     * - ``any``
       - N/A
+      - N/A
     * - ``expected``
       - ✅
+      - N/A
     * - ``valarray``
       - Partial
+      - N/A
     * - ``bitset``
       - ❌
+      - N/A
 
 Testing
 =======
