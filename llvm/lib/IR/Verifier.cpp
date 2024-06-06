@@ -4808,7 +4808,7 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   StringRef ProfName = MDS->getString();
 
   // Check consistency of !prof branch_weights metadata.
-  if (ProfName.equals("branch_weights")) {
+  if (ProfName == "branch_weights") {
     unsigned int Offset = getBranchWeightOffset(MD);
     if (isa<InvokeInst>(&I)) {
       Check(MD->getNumOperands() == (1 + Offset) ||
