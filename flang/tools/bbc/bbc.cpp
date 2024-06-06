@@ -144,6 +144,11 @@ static llvm::cl::opt<bool>
                     llvm::cl::desc("enable openmp GPU target codegen"),
                     llvm::cl::init(false));
 
+static llvm::cl::opt<bool> enableOpenMPForceUSM(
+    "fopenmp-force-usm",
+    llvm::cl::desc("force openmp unified shared memory mode"),
+    llvm::cl::init(false));
+
 // A simplified subset of the OpenMP RTL Flags from Flang, only the primary
 // positive options are available, no negative options e.g. fopen_assume* vs
 // fno_open_assume*
@@ -374,11 +379,11 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
                       "-fopenmp-is-target-device is also set";
       return mlir::failure();
     }
-    auto offloadModuleOpts =
-        OffloadModuleOpts(setOpenMPTargetDebug, setOpenMPTeamSubscription,
-                          setOpenMPThreadSubscription, setOpenMPNoThreadState,
-                          setOpenMPNoNestedParallelism, enableOpenMPDevice,
-                          enableOpenMPGPU, setOpenMPVersion, "", setNoGPULib);
+    auto offloadModuleOpts = OffloadModuleOpts(
+        setOpenMPTargetDebug, setOpenMPTeamSubscription,
+        setOpenMPThreadSubscription, setOpenMPNoThreadState,
+        setOpenMPNoNestedParallelism, enableOpenMPDevice, enableOpenMPGPU,
+        enableOpenMPForceUSM, setOpenMPVersion, "", setNoGPULib);
     setOffloadModuleInterfaceAttributes(mlirModule, offloadModuleOpts);
     setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
   }

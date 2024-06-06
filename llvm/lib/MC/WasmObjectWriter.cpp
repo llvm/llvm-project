@@ -877,7 +877,7 @@ void WasmObjectWriter::writeImportSection(ArrayRef<wasm::WasmImport> Imports,
       break;
     case wasm::WASM_EXTERNAL_TABLE:
       W->OS << char(Import.Table.ElemType);
-      encodeULEB128(0, W->OS);           // flags
+      encodeULEB128(Import.Table.Limits.Flags, W->OS);
       encodeULEB128(NumElements, W->OS); // initial
       break;
     case wasm::WASM_EXTERNAL_TAG:
@@ -1022,7 +1022,8 @@ void WasmObjectWriter::writeElemSection(
     encodeULEB128(TableNumber, W->OS); // the table number
 
   // init expr for starting offset
-  W->OS << char(wasm::WASM_OPCODE_I32_CONST);
+  W->OS << char(is64Bit() ? wasm::WASM_OPCODE_I64_CONST
+                          : wasm::WASM_OPCODE_I32_CONST);
   encodeSLEB128(InitialTableOffset, W->OS);
   W->OS << char(wasm::WASM_OPCODE_END);
 

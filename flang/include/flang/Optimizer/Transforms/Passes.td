@@ -163,7 +163,6 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   let description = [{
     Demangle FIR internal name and mangle them for external interoperability.
   }];
-  let constructor = "::fir::createExternalNameConversionPass()";
   let options = [
     Option<"appendUnderscoreOpt", "append-underscore",
            "bool", /*default=*/"true",

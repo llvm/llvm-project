@@ -11,10 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaObjC.h"
+#include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Attr.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -1481,6 +1484,775 @@ bool SemaObjC::isCFError(RecordDecl *RD) {
   }
 
   return false;
+}
+
+bool SemaObjC::isNSStringType(QualType T, bool AllowNSAttributedString) {
+  const auto *PT = T->getAs<ObjCObjectPointerType>();
+  if (!PT)
+    return false;
+
+  ObjCInterfaceDecl *Cls = PT->getObjectType()->getInterface();
+  if (!Cls)
+    return false;
+
+  IdentifierInfo *ClsName = Cls->getIdentifier();
+
+  if (AllowNSAttributedString &&
+      ClsName == &getASTContext().Idents.get("NSAttributedString"))
+    return true;
+  // FIXME: Should we walk the chain of classes?
+  return ClsName == &getASTContext().Idents.get("NSString") ||
+         ClsName == &getASTContext().Idents.get("NSMutableString");
+}
+
+bool SemaObjC::isCFStringType(QualType T) {
+  const auto *PT = T->getAs<PointerType>();
+  if (!PT)
+    return false;
+
+  const auto *RT = PT->getPointeeType()->getAs<RecordType>();
+  if (!RT)
+    return false;
+
+  const RecordDecl *RD = RT->getDecl();
+  if (RD->getTagKind() != TagTypeKind::Struct)
+    return false;
+
+  return RD->getIdentifier() == &getASTContext().Idents.get("__CFString");
+}
+
+static bool checkIBOutletCommon(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // The IBOutlet/IBOutletCollection attributes only apply to instance
+  // variables or properties of Objective-C classes.  The outlet must also
+  // have an object reference type.
+  if (const auto *VD = dyn_cast<ObjCIvarDecl>(D)) {
+    if (!VD->getType()->getAs<ObjCObjectPointerType>()) {
+      S.Diag(AL.getLoc(), diag::warn_iboutlet_object_type)
+          << AL << VD->getType() << 0;
+      return false;
+    }
+  } else if (const auto *PD = dyn_cast<ObjCPropertyDecl>(D)) {
+    if (!PD->getType()->getAs<ObjCObjectPointerType>()) {
+      S.Diag(AL.getLoc(), diag::warn_iboutlet_object_type)
+          << AL << PD->getType() << 1;
+      return false;
+    }
+  } else {
+    S.Diag(AL.getLoc(), diag::warn_attribute_iboutlet) << AL;
+    return false;
+  }
+
+  return true;
+}
+
+void SemaObjC::handleIBOutlet(Decl *D, const ParsedAttr &AL) {
+  if (!checkIBOutletCommon(SemaRef, D, AL))
+    return;
+
+  D->addAttr(::new (getASTContext()) IBOutletAttr(getASTContext(), AL));
+}
+
+void SemaObjC::handleIBOutletCollection(Decl *D, const ParsedAttr &AL) {
+
+  ASTContext &Context = getASTContext();
+  // The iboutletcollection attribute can have zero or one arguments.
+  if (AL.getNumArgs() > 1) {
+    Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
+    return;
+  }
+
+  if (!checkIBOutletCommon(SemaRef, D, AL))
+    return;
+
+  ParsedType PT;
+
+  if (AL.hasParsedType())
+    PT = AL.getTypeArg();
+  else {
+    PT = SemaRef.getTypeName(
+        Context.Idents.get("NSObject"), AL.getLoc(),
+        SemaRef.getScopeForContext(D->getDeclContext()->getParent()));
+    if (!PT) {
+      Diag(AL.getLoc(), diag::err_iboutletcollection_type) << "NSObject";
+      return;
+    }
+  }
+
+  TypeSourceInfo *QTLoc = nullptr;
+  QualType QT = SemaRef.GetTypeFromParser(PT, &QTLoc);
+  if (!QTLoc)
+    QTLoc = Context.getTrivialTypeSourceInfo(QT, AL.getLoc());
+
+  // Diagnose use of non-object type in iboutletcollection attribute.
+  // FIXME. Gnu attribute extension ignores use of builtin types in
+  // attributes. So, __attribute__((iboutletcollection(char))) will be
+  // treated as __attribute__((iboutletcollection())).
+  if (!QT->isObjCIdType() && !QT->isObjCObjectType()) {
+    Diag(AL.getLoc(), QT->isBuiltinType()
+                          ? diag::err_iboutletcollection_builtintype
+                          : diag::err_iboutletcollection_type)
+        << QT;
+    return;
+  }
+
+  D->addAttr(::new (Context) IBOutletCollectionAttr(Context, AL, QTLoc));
+}
+
+void SemaObjC::handleSuppresProtocolAttr(Decl *D, const ParsedAttr &AL) {
+  if (!cast<ObjCProtocolDecl>(D)->isThisDeclarationADefinition()) {
+    Diag(AL.getLoc(), diag::err_objc_attr_protocol_requires_definition)
+        << AL << AL.getRange();
+    return;
+  }
+
+  D->addAttr(::new (getASTContext())
+                 ObjCExplicitProtocolImplAttr(getASTContext(), AL));
+}
+
+void SemaObjC::handleDirectAttr(Decl *D, const ParsedAttr &AL) {
+  // objc_direct cannot be set on methods declared in the context of a protocol
+  if (isa<ObjCProtocolDecl>(D->getDeclContext())) {
+    Diag(AL.getLoc(), diag::err_objc_direct_on_protocol) << false;
+    return;
+  }
+
+  if (getLangOpts().ObjCRuntime.allowsDirectDispatch()) {
+    handleSimpleAttribute<ObjCDirectAttr>(*this, D, AL);
+  } else {
+    Diag(AL.getLoc(), diag::warn_objc_direct_ignored) << AL;
+  }
+}
+
+void SemaObjC::handleDirectMembersAttr(Decl *D, const ParsedAttr &AL) {
+  if (getLangOpts().ObjCRuntime.allowsDirectDispatch()) {
+    handleSimpleAttribute<ObjCDirectMembersAttr>(*this, D, AL);
+  } else {
+    Diag(AL.getLoc(), diag::warn_objc_direct_ignored) << AL;
+  }
+}
+
+void SemaObjC::handleMethodFamilyAttr(Decl *D, const ParsedAttr &AL) {
+  const auto *M = cast<ObjCMethodDecl>(D);
+  if (!AL.isArgIdent(0)) {
+    Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
+        << AL << 1 << AANT_ArgumentIdentifier;
+    return;
+  }
+
+  IdentifierLoc *IL = AL.getArgAsIdent(0);
+  ObjCMethodFamilyAttr::FamilyKind F;
+  if (!ObjCMethodFamilyAttr::ConvertStrToFamilyKind(IL->Ident->getName(), F)) {
+    Diag(IL->Loc, diag::warn_attribute_type_not_supported) << AL << IL->Ident;
+    return;
+  }
+
+  if (F == ObjCMethodFamilyAttr::OMF_init &&
+      !M->getReturnType()->isObjCObjectPointerType()) {
+    Diag(M->getLocation(), diag::err_init_method_bad_return_type)
+        << M->getReturnType();
+    // Ignore the attribute.
+    return;
+  }
+
+  D->addAttr(new (getASTContext())
+                 ObjCMethodFamilyAttr(getASTContext(), AL, F));
+}
+
+void SemaObjC::handleNSObject(Decl *D, const ParsedAttr &AL) {
+  if (const auto *TD = dyn_cast<TypedefNameDecl>(D)) {
+    QualType T = TD->getUnderlyingType();
+    if (!T->isCARCBridgableType()) {
+      Diag(TD->getLocation(), diag::err_nsobject_attribute);
+      return;
+    }
+  } else if (const auto *PD = dyn_cast<ObjCPropertyDecl>(D)) {
+    QualType T = PD->getType();
+    if (!T->isCARCBridgableType()) {
+      Diag(PD->getLocation(), diag::err_nsobject_attribute);
+      return;
+    }
+  } else {
+    // It is okay to include this attribute on properties, e.g.:
+    //
+    //  @property (retain, nonatomic) struct Bork *Q __attribute__((NSObject));
+    //
+    // In this case it follows tradition and suppresses an error in the above
+    // case.
+    Diag(D->getLocation(), diag::warn_nsobject_attribute);
+  }
+  D->addAttr(::new (getASTContext()) ObjCNSObjectAttr(getASTContext(), AL));
+}
+
+void SemaObjC::handleIndependentClass(Decl *D, const ParsedAttr &AL) {
+  if (const auto *TD = dyn_cast<TypedefNameDecl>(D)) {
+    QualType T = TD->getUnderlyingType();
+    if (!T->isObjCObjectPointerType()) {
+      Diag(TD->getLocation(), diag::warn_ptr_independentclass_attribute);
+      return;
+    }
+  } else {
+    Diag(D->getLocation(), diag::warn_independentclass_attribute);
+    return;
+  }
+  D->addAttr(::new (getASTContext())
+                 ObjCIndependentClassAttr(getASTContext(), AL));
+}
+
+void SemaObjC::handleBlocksAttr(Decl *D, const ParsedAttr &AL) {
+  if (!AL.isArgIdent(0)) {
+    Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
+        << AL << 1 << AANT_ArgumentIdentifier;
+    return;
+  }
+
+  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
+  BlocksAttr::BlockType type;
+  if (!BlocksAttr::ConvertStrToBlockType(II->getName(), type)) {
+    Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << II;
+    return;
+  }
+
+  D->addAttr(::new (getASTContext()) BlocksAttr(getASTContext(), AL, type));
+}
+
+static bool isValidSubjectOfNSReturnsRetainedAttribute(QualType QT) {
+  return QT->isDependentType() || QT->isObjCRetainableType();
+}
+
+static bool isValidSubjectOfNSAttribute(QualType QT) {
+  return QT->isDependentType() || QT->isObjCObjectPointerType() ||
+         QT->isObjCNSObjectType();
+}
+
+static bool isValidSubjectOfCFAttribute(QualType QT) {
+  return QT->isDependentType() || QT->isPointerType() ||
+         isValidSubjectOfNSAttribute(QT);
+}
+
+static bool isValidSubjectOfOSAttribute(QualType QT) {
+  if (QT->isDependentType())
+    return true;
+  QualType PT = QT->getPointeeType();
+  return !PT.isNull() && PT->getAsCXXRecordDecl() != nullptr;
+}
+
+void SemaObjC::AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
+                                Sema::RetainOwnershipKind K,
+                                bool IsTemplateInstantiation) {
+  ValueDecl *VD = cast<ValueDecl>(D);
+  switch (K) {
+  case Sema::RetainOwnershipKind::OS:
+    handleSimpleAttributeOrDiagnose<OSConsumedAttr>(
+        *this, VD, CI, isValidSubjectOfOSAttribute(VD->getType()),
+        diag::warn_ns_attribute_wrong_parameter_type,
+        /*ExtraArgs=*/CI.getRange(), "os_consumed", /*pointers*/ 1);
+    return;
+  case Sema::RetainOwnershipKind::NS:
+    handleSimpleAttributeOrDiagnose<NSConsumedAttr>(
+        *this, VD, CI, isValidSubjectOfNSAttribute(VD->getType()),
+
+        // These attributes are normally just advisory, but in ARC, ns_consumed
+        // is significant.  Allow non-dependent code to contain inappropriate
+        // attributes even in ARC, but require template instantiations to be
+        // set up correctly.
+        ((IsTemplateInstantiation && getLangOpts().ObjCAutoRefCount)
+             ? diag::err_ns_attribute_wrong_parameter_type
+             : diag::warn_ns_attribute_wrong_parameter_type),
+        /*ExtraArgs=*/CI.getRange(), "ns_consumed", /*objc pointers*/ 0);
+    return;
+  case Sema::RetainOwnershipKind::CF:
+    handleSimpleAttributeOrDiagnose<CFConsumedAttr>(
+        *this, VD, CI, isValidSubjectOfCFAttribute(VD->getType()),
+        diag::warn_ns_attribute_wrong_parameter_type,
+        /*ExtraArgs=*/CI.getRange(), "cf_consumed", /*pointers*/ 1);
+    return;
+  }
+}
+
+Sema::RetainOwnershipKind
+SemaObjC::parsedAttrToRetainOwnershipKind(const ParsedAttr &AL) {
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_CFConsumed:
+  case ParsedAttr::AT_CFReturnsRetained:
+  case ParsedAttr::AT_CFReturnsNotRetained:
+    return Sema::RetainOwnershipKind::CF;
+  case ParsedAttr::AT_OSConsumesThis:
+  case ParsedAttr::AT_OSConsumed:
+  case ParsedAttr::AT_OSReturnsRetained:
+  case ParsedAttr::AT_OSReturnsNotRetained:
+  case ParsedAttr::AT_OSReturnsRetainedOnZero:
+  case ParsedAttr::AT_OSReturnsRetainedOnNonZero:
+    return Sema::RetainOwnershipKind::OS;
+  case ParsedAttr::AT_NSConsumesSelf:
+  case ParsedAttr::AT_NSConsumed:
+  case ParsedAttr::AT_NSReturnsRetained:
+  case ParsedAttr::AT_NSReturnsNotRetained:
+  case ParsedAttr::AT_NSReturnsAutoreleased:
+    return Sema::RetainOwnershipKind::NS;
+  default:
+    llvm_unreachable("Wrong argument supplied");
+  }
+}
+
+bool SemaObjC::checkNSReturnsRetainedReturnType(SourceLocation Loc,
+                                                QualType QT) {
+  if (isValidSubjectOfNSReturnsRetainedAttribute(QT))
+    return false;
+
+  Diag(Loc, diag::warn_ns_attribute_wrong_return_type)
+      << "'ns_returns_retained'" << 0 << 0;
+  return true;
+}
+
+/// \return whether the parameter is a pointer to OSObject pointer.
+bool SemaObjC::isValidOSObjectOutParameter(const Decl *D) {
+  const auto *PVD = dyn_cast<ParmVarDecl>(D);
+  if (!PVD)
+    return false;
+  QualType QT = PVD->getType();
+  QualType PT = QT->getPointeeType();
+  return !PT.isNull() && isValidSubjectOfOSAttribute(PT);
+}
+
+void SemaObjC::handleXReturnsXRetainedAttr(Decl *D, const ParsedAttr &AL) {
+  QualType ReturnType;
+  Sema::RetainOwnershipKind K = parsedAttrToRetainOwnershipKind(AL);
+
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+    ReturnType = MD->getReturnType();
+  } else if (getLangOpts().ObjCAutoRefCount && hasDeclarator(D) &&
+             (AL.getKind() == ParsedAttr::AT_NSReturnsRetained)) {
+    return; // ignore: was handled as a type attribute
+  } else if (const auto *PD = dyn_cast<ObjCPropertyDecl>(D)) {
+    ReturnType = PD->getType();
+  } else if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    ReturnType = FD->getReturnType();
+  } else if (const auto *Param = dyn_cast<ParmVarDecl>(D)) {
+    // Attributes on parameters are used for out-parameters,
+    // passed as pointers-to-pointers.
+    unsigned DiagID = K == Sema::RetainOwnershipKind::CF
+                          ? /*pointer-to-CF-pointer*/ 2
+                          : /*pointer-to-OSObject-pointer*/ 3;
+    ReturnType = Param->getType()->getPointeeType();
+    if (ReturnType.isNull()) {
+      Diag(D->getBeginLoc(), diag::warn_ns_attribute_wrong_parameter_type)
+          << AL << DiagID << AL.getRange();
+      return;
+    }
+  } else if (AL.isUsedAsTypeAttr()) {
+    return;
+  } else {
+    AttributeDeclKind ExpectedDeclKind;
+    switch (AL.getKind()) {
+    default:
+      llvm_unreachable("invalid ownership attribute");
+    case ParsedAttr::AT_NSReturnsRetained:
+    case ParsedAttr::AT_NSReturnsAutoreleased:
+    case ParsedAttr::AT_NSReturnsNotRetained:
+      ExpectedDeclKind = ExpectedFunctionOrMethod;
+      break;
+
+    case ParsedAttr::AT_OSReturnsRetained:
+    case ParsedAttr::AT_OSReturnsNotRetained:
+    case ParsedAttr::AT_CFReturnsRetained:
+    case ParsedAttr::AT_CFReturnsNotRetained:
+      ExpectedDeclKind = ExpectedFunctionMethodOrParameter;
+      break;
+    }
+    Diag(D->getBeginLoc(), diag::warn_attribute_wrong_decl_type)
+        << AL.getRange() << AL << AL.isRegularKeywordAttribute()
+        << ExpectedDeclKind;
+    return;
+  }
+
+  bool TypeOK;
+  bool Cf;
+  unsigned ParmDiagID = 2; // Pointer-to-CF-pointer
+  switch (AL.getKind()) {
+  default:
+    llvm_unreachable("invalid ownership attribute");
+  case ParsedAttr::AT_NSReturnsRetained:
+    TypeOK = isValidSubjectOfNSReturnsRetainedAttribute(ReturnType);
+    Cf = false;
+    break;
+
+  case ParsedAttr::AT_NSReturnsAutoreleased:
+  case ParsedAttr::AT_NSReturnsNotRetained:
+    TypeOK = isValidSubjectOfNSAttribute(ReturnType);
+    Cf = false;
+    break;
+
+  case ParsedAttr::AT_CFReturnsRetained:
+  case ParsedAttr::AT_CFReturnsNotRetained:
+    TypeOK = isValidSubjectOfCFAttribute(ReturnType);
+    Cf = true;
+    break;
+
+  case ParsedAttr::AT_OSReturnsRetained:
+  case ParsedAttr::AT_OSReturnsNotRetained:
+    TypeOK = isValidSubjectOfOSAttribute(ReturnType);
+    Cf = true;
+    ParmDiagID = 3; // Pointer-to-OSObject-pointer
+    break;
+  }
+
+  if (!TypeOK) {
+    if (AL.isUsedAsTypeAttr())
+      return;
+
+    if (isa<ParmVarDecl>(D)) {
+      Diag(D->getBeginLoc(), diag::warn_ns_attribute_wrong_parameter_type)
+          << AL << ParmDiagID << AL.getRange();
+    } else {
+      // Needs to be kept in sync with warn_ns_attribute_wrong_return_type.
+      enum : unsigned { Function, Method, Property } SubjectKind = Function;
+      if (isa<ObjCMethodDecl>(D))
+        SubjectKind = Method;
+      else if (isa<ObjCPropertyDecl>(D))
+        SubjectKind = Property;
+      Diag(D->getBeginLoc(), diag::warn_ns_attribute_wrong_return_type)
+          << AL << SubjectKind << Cf << AL.getRange();
+    }
+    return;
+  }
+
+  switch (AL.getKind()) {
+  default:
+    llvm_unreachable("invalid ownership attribute");
+  case ParsedAttr::AT_NSReturnsAutoreleased:
+    handleSimpleAttribute<NSReturnsAutoreleasedAttr>(*this, D, AL);
+    return;
+  case ParsedAttr::AT_CFReturnsNotRetained:
+    handleSimpleAttribute<CFReturnsNotRetainedAttr>(*this, D, AL);
+    return;
+  case ParsedAttr::AT_NSReturnsNotRetained:
+    handleSimpleAttribute<NSReturnsNotRetainedAttr>(*this, D, AL);
+    return;
+  case ParsedAttr::AT_CFReturnsRetained:
+    handleSimpleAttribute<CFReturnsRetainedAttr>(*this, D, AL);
+    return;
+  case ParsedAttr::AT_NSReturnsRetained:
+    handleSimpleAttribute<NSReturnsRetainedAttr>(*this, D, AL);
+    return;
+  case ParsedAttr::AT_OSReturnsRetained:
+    handleSimpleAttribute<OSReturnsRetainedAttr>(*this, D, AL);
+    return;
+  case ParsedAttr::AT_OSReturnsNotRetained:
+    handleSimpleAttribute<OSReturnsNotRetainedAttr>(*this, D, AL);
+    return;
+  };
+}
+
+void SemaObjC::handleReturnsInnerPointerAttr(Decl *D, const ParsedAttr &Attrs) {
+  const int EP_ObjCMethod = 1;
+  const int EP_ObjCProperty = 2;
+
+  SourceLocation loc = Attrs.getLoc();
+  QualType resultType;
+  if (isa<ObjCMethodDecl>(D))
+    resultType = cast<ObjCMethodDecl>(D)->getReturnType();
+  else
+    resultType = cast<ObjCPropertyDecl>(D)->getType();
+
+  if (!resultType->isReferenceType() &&
+      (!resultType->isPointerType() || resultType->isObjCRetainableType())) {
+    Diag(D->getBeginLoc(), diag::warn_ns_attribute_wrong_return_type)
+        << SourceRange(loc) << Attrs
+        << (isa<ObjCMethodDecl>(D) ? EP_ObjCMethod : EP_ObjCProperty)
+        << /*non-retainable pointer*/ 2;
+
+    // Drop the attribute.
+    return;
+  }
+
+  D->addAttr(::new (getASTContext())
+                 ObjCReturnsInnerPointerAttr(getASTContext(), Attrs));
+}
+
+void SemaObjC::handleRequiresSuperAttr(Decl *D, const ParsedAttr &Attrs) {
+  const auto *Method = cast<ObjCMethodDecl>(D);
+
+  const DeclContext *DC = Method->getDeclContext();
+  if (const auto *PDecl = dyn_cast_if_present<ObjCProtocolDecl>(DC)) {
+    Diag(D->getBeginLoc(), diag::warn_objc_requires_super_protocol)
+        << Attrs << 0;
+    Diag(PDecl->getLocation(), diag::note_protocol_decl);
+    return;
+  }
+  if (Method->getMethodFamily() == OMF_dealloc) {
+    Diag(D->getBeginLoc(), diag::warn_objc_requires_super_protocol)
+        << Attrs << 1;
+    return;
+  }
+
+  D->addAttr(::new (getASTContext())
+                 ObjCRequiresSuperAttr(getASTContext(), Attrs));
+}
+
+void SemaObjC::handleNSErrorDomain(Decl *D, const ParsedAttr &Attr) {
+  if (!isa<TagDecl>(D)) {
+    Diag(D->getBeginLoc(), diag::err_nserrordomain_invalid_decl) << 0;
+    return;
+  }
+
+  IdentifierLoc *IdentLoc =
+      Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : nullptr;
+  if (!IdentLoc || !IdentLoc->Ident) {
+    // Try to locate the argument directly.
+    SourceLocation Loc = Attr.getLoc();
+    if (Attr.isArgExpr(0) && Attr.getArgAsExpr(0))
+      Loc = Attr.getArgAsExpr(0)->getBeginLoc();
+
+    Diag(Loc, diag::err_nserrordomain_invalid_decl) << 0;
+    return;
+  }
+
+  // Verify that the identifier is a valid decl in the C decl namespace.
+  LookupResult Result(SemaRef, DeclarationName(IdentLoc->Ident),
+                      SourceLocation(),
+                      Sema::LookupNameKind::LookupOrdinaryName);
+  if (!SemaRef.LookupName(Result, SemaRef.TUScope) ||
+      !Result.getAsSingle<VarDecl>()) {
+    Diag(IdentLoc->Loc, diag::err_nserrordomain_invalid_decl)
+        << 1 << IdentLoc->Ident;
+    return;
+  }
+
+  D->addAttr(::new (getASTContext())
+                 NSErrorDomainAttr(getASTContext(), Attr, IdentLoc->Ident));
+}
+
+void SemaObjC::handleBridgeAttr(Decl *D, const ParsedAttr &AL) {
+  IdentifierLoc *Parm = AL.isArgIdent(0) ? AL.getArgAsIdent(0) : nullptr;
+
+  if (!Parm) {
+    Diag(D->getBeginLoc(), diag::err_objc_attr_not_id) << AL << 0;
+    return;
+  }
+
+  // Typedefs only allow objc_bridge(id) and have some additional checking.
+  if (const auto *TD = dyn_cast<TypedefNameDecl>(D)) {
+    if (!Parm->Ident->isStr("id")) {
+      Diag(AL.getLoc(), diag::err_objc_attr_typedef_not_id) << AL;
+      return;
+    }
+
+    // Only allow 'cv void *'.
+    QualType T = TD->getUnderlyingType();
+    if (!T->isVoidPointerType()) {
+      Diag(AL.getLoc(), diag::err_objc_attr_typedef_not_void_pointer);
+      return;
+    }
+  }
+
+  D->addAttr(::new (getASTContext())
+                 ObjCBridgeAttr(getASTContext(), AL, Parm->Ident));
+}
+
+void SemaObjC::handleBridgeMutableAttr(Decl *D, const ParsedAttr &AL) {
+  IdentifierLoc *Parm = AL.isArgIdent(0) ? AL.getArgAsIdent(0) : nullptr;
+
+  if (!Parm) {
+    Diag(D->getBeginLoc(), diag::err_objc_attr_not_id) << AL << 0;
+    return;
+  }
+
+  D->addAttr(::new (getASTContext())
+                 ObjCBridgeMutableAttr(getASTContext(), AL, Parm->Ident));
+}
+
+void SemaObjC::handleBridgeRelatedAttr(Decl *D, const ParsedAttr &AL) {
+  IdentifierInfo *RelatedClass =
+      AL.isArgIdent(0) ? AL.getArgAsIdent(0)->Ident : nullptr;
+  if (!RelatedClass) {
+    Diag(D->getBeginLoc(), diag::err_objc_attr_not_id) << AL << 0;
+    return;
+  }
+  IdentifierInfo *ClassMethod =
+      AL.getArgAsIdent(1) ? AL.getArgAsIdent(1)->Ident : nullptr;
+  IdentifierInfo *InstanceMethod =
+      AL.getArgAsIdent(2) ? AL.getArgAsIdent(2)->Ident : nullptr;
+  D->addAttr(::new (getASTContext()) ObjCBridgeRelatedAttr(
+      getASTContext(), AL, RelatedClass, ClassMethod, InstanceMethod));
+}
+
+void SemaObjC::handleDesignatedInitializer(Decl *D, const ParsedAttr &AL) {
+  DeclContext *Ctx = D->getDeclContext();
+
+  // This attribute can only be applied to methods in interfaces or class
+  // extensions.
+  if (!isa<ObjCInterfaceDecl>(Ctx) &&
+      !(isa<ObjCCategoryDecl>(Ctx) &&
+        cast<ObjCCategoryDecl>(Ctx)->IsClassExtension())) {
+    Diag(D->getLocation(), diag::err_designated_init_attr_non_init);
+    return;
+  }
+
+  ObjCInterfaceDecl *IFace;
+  if (auto *CatDecl = dyn_cast<ObjCCategoryDecl>(Ctx))
+    IFace = CatDecl->getClassInterface();
+  else
+    IFace = cast<ObjCInterfaceDecl>(Ctx);
+
+  if (!IFace)
+    return;
+
+  IFace->setHasDesignatedInitializers();
+  D->addAttr(::new (getASTContext())
+                 ObjCDesignatedInitializerAttr(getASTContext(), AL));
+}
+
+void SemaObjC::handleRuntimeName(Decl *D, const ParsedAttr &AL) {
+  StringRef MetaDataName;
+  if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, MetaDataName))
+    return;
+  D->addAttr(::new (getASTContext())
+                 ObjCRuntimeNameAttr(getASTContext(), AL, MetaDataName));
+}
+
+// When a user wants to use objc_boxable with a union or struct
+// but they don't have access to the declaration (legacy/third-party code)
+// then they can 'enable' this feature with a typedef:
+// typedef struct __attribute((objc_boxable)) legacy_struct legacy_struct;
+void SemaObjC::handleBoxable(Decl *D, const ParsedAttr &AL) {
+  bool notify = false;
+
+  auto *RD = dyn_cast<RecordDecl>(D);
+  if (RD && RD->getDefinition()) {
+    RD = RD->getDefinition();
+    notify = true;
+  }
+
+  if (RD) {
+    ObjCBoxableAttr *BoxableAttr =
+        ::new (getASTContext()) ObjCBoxableAttr(getASTContext(), AL);
+    RD->addAttr(BoxableAttr);
+    if (notify) {
+      // we need to notify ASTReader/ASTWriter about
+      // modification of existing declaration
+      if (ASTMutationListener *L = SemaRef.getASTMutationListener())
+        L->AddedAttributeToRecord(BoxableAttr, RD);
+    }
+  }
+}
+
+void SemaObjC::handleOwnershipAttr(Decl *D, const ParsedAttr &AL) {
+  if (hasDeclarator(D))
+    return;
+
+  Diag(D->getBeginLoc(), diag::err_attribute_wrong_decl_type)
+      << AL.getRange() << AL << AL.isRegularKeywordAttribute()
+      << ExpectedVariable;
+}
+
+void SemaObjC::handlePreciseLifetimeAttr(Decl *D, const ParsedAttr &AL) {
+  const auto *VD = cast<ValueDecl>(D);
+  QualType QT = VD->getType();
+
+  if (!QT->isDependentType() && !QT->isObjCLifetimeType()) {
+    Diag(AL.getLoc(), diag::err_objc_precise_lifetime_bad_type) << QT;
+    return;
+  }
+
+  Qualifiers::ObjCLifetime Lifetime = QT.getObjCLifetime();
+
+  // If we have no lifetime yet, check the lifetime we're presumably
+  // going to infer.
+  if (Lifetime == Qualifiers::OCL_None && !QT->isDependentType())
+    Lifetime = QT->getObjCARCImplicitLifetime();
+
+  switch (Lifetime) {
+  case Qualifiers::OCL_None:
+    assert(QT->isDependentType() &&
+           "didn't infer lifetime for non-dependent type?");
+    break;
+
+  case Qualifiers::OCL_Weak:   // meaningful
+  case Qualifiers::OCL_Strong: // meaningful
+    break;
+
+  case Qualifiers::OCL_ExplicitNone:
+  case Qualifiers::OCL_Autoreleasing:
+    Diag(AL.getLoc(), diag::warn_objc_precise_lifetime_meaningless)
+        << (Lifetime == Qualifiers::OCL_Autoreleasing);
+    break;
+  }
+
+  D->addAttr(::new (getASTContext())
+                 ObjCPreciseLifetimeAttr(getASTContext(), AL));
+}
+
+static bool tryMakeVariablePseudoStrong(Sema &S, VarDecl *VD,
+                                        bool DiagnoseFailure) {
+  QualType Ty = VD->getType();
+  if (!Ty->isObjCRetainableType()) {
+    if (DiagnoseFailure) {
+      S.Diag(VD->getBeginLoc(), diag::warn_ignored_objc_externally_retained)
+          << 0;
+    }
+    return false;
+  }
+
+  Qualifiers::ObjCLifetime LifetimeQual = Ty.getQualifiers().getObjCLifetime();
+
+  // SemaObjC::inferObjCARCLifetime must run after processing decl attributes
+  // (because __block lowers to an attribute), so if the lifetime hasn't been
+  // explicitly specified, infer it locally now.
+  if (LifetimeQual == Qualifiers::OCL_None)
+    LifetimeQual = Ty->getObjCARCImplicitLifetime();
+
+  // The attributes only really makes sense for __strong variables; ignore any
+  // attempts to annotate a parameter with any other lifetime qualifier.
+  if (LifetimeQual != Qualifiers::OCL_Strong) {
+    if (DiagnoseFailure) {
+      S.Diag(VD->getBeginLoc(), diag::warn_ignored_objc_externally_retained)
+          << 1;
+    }
+    return false;
+  }
+
+  // Tampering with the type of a VarDecl here is a bit of a hack, but we need
+  // to ensure that the variable is 'const' so that we can error on
+  // modification, which can otherwise over-release.
+  VD->setType(Ty.withConst());
+  VD->setARCPseudoStrong(true);
+  return true;
+}
+
+void SemaObjC::handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL) {
+  if (auto *VD = dyn_cast<VarDecl>(D)) {
+    assert(!isa<ParmVarDecl>(VD) && "should be diagnosed automatically");
+    if (!VD->hasLocalStorage()) {
+      Diag(D->getBeginLoc(), diag::warn_ignored_objc_externally_retained) << 0;
+      return;
+    }
+
+    if (!tryMakeVariablePseudoStrong(SemaRef, VD, /*DiagnoseFailure=*/true))
+      return;
+
+    handleSimpleAttribute<ObjCExternallyRetainedAttr>(*this, D, AL);
+    return;
+  }
+
+  // If D is a function-like declaration (method, block, or function), then we
+  // make every parameter psuedo-strong.
+  unsigned NumParams =
+      hasFunctionProto(D) ? getFunctionOrMethodNumParams(D) : 0;
+  for (unsigned I = 0; I != NumParams; ++I) {
+    auto *PVD = const_cast<ParmVarDecl *>(getFunctionOrMethodParam(D, I));
+    QualType Ty = PVD->getType();
+
+    // If a user wrote a parameter with __strong explicitly, then assume they
+    // want "real" strong semantics for that parameter. This works because if
+    // the parameter was written with __strong, then the strong qualifier will
+    // be non-local.
+    if (Ty.getLocalUnqualifiedType().getQualifiers().getObjCLifetime() ==
+        Qualifiers::OCL_Strong)
+      continue;
+
+    tryMakeVariablePseudoStrong(SemaRef, PVD, /*DiagnoseFailure=*/false);
+  }
+  handleSimpleAttribute<ObjCExternallyRetainedAttr>(*this, D, AL);
 }
 
 } // namespace clang
