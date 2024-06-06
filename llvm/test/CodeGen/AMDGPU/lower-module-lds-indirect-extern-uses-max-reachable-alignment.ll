@@ -181,7 +181,7 @@ attributes #0 = { noinline }
 ; CHECK: declare void @llvm.donothing() #2
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-; CHECK: declare i32 @llvm.amdgcn.lds.kernel.id() #3
+; CHECK: declare noundef i32 @llvm.amdgcn.lds.kernel.id() #3
 
 ; CHECK: attributes #0 = { noinline }
 ; CHECK: attributes #1 = { "amdgpu-lds-size"="4,4" }

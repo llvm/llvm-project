@@ -14,6 +14,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Parse/ParseDiagnostic.h"
@@ -1580,7 +1581,10 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                       TrailingReturnTypeLoc, &DS),
                   std::move(Attributes), DeclEndLoc);
 
-    Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
+    // We have called ActOnLambdaClosureQualifiers for parentheses-less cases
+    // above.
+    if (HasParentheses)
+      Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
 
     if (HasParentheses && Tok.is(tok::kw_requires))
       ParseTrailingRequiresClause(D);
@@ -3026,13 +3030,23 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
           SS, ObjectType, ObjectHadErrors,
           TemplateKWLoc ? *TemplateKWLoc : SourceLocation(), Id, IdLoc,
           EnteringContext, Result, TemplateSpecified);
-    else if (TemplateSpecified &&
-             Actions.ActOnTemplateName(
-                 getCurScope(), SS, *TemplateKWLoc, Result, ObjectType,
-                 EnteringContext, Template,
-                 /*AllowInjectedClassName*/ true) == TNK_Non_template)
-      return true;
 
+    if (TemplateSpecified) {
+      TemplateNameKind TNK =
+          Actions.ActOnTemplateName(getCurScope(), SS, *TemplateKWLoc, Result,
+                                    ObjectType, EnteringContext, Template,
+                                    /*AllowInjectedClassName=*/true);
+      if (TNK == TNK_Non_template)
+        return true;
+
+      // C++2c [tem.names]p6
+      // A name prefixed by the keyword template shall be followed by a template
+      // argument list or refer to a class template or an alias template.
+      if ((TNK == TNK_Function_template || TNK == TNK_Dependent_template_name ||
+           TNK == TNK_Var_template) &&
+          !Tok.is(tok::less))
+        Diag(IdLoc, diag::missing_template_arg_list_after_template_kw);
+    }
     return false;
   }
 
@@ -3999,6 +4013,9 @@ ExprResult Parser::ParseArrayTypeTrait() {
 
     ExprResult DimExpr = ParseExpression();
     T.consumeClose();
+
+    if (DimExpr.isInvalid())
+      return ExprError();
 
     return Actions.ActOnArrayTypeTrait(ATT, Loc, Ty.get(), DimExpr.get(),
                                        T.getCloseLocation());

@@ -42,6 +42,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/APInt.h"
@@ -931,7 +932,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
 
   // PPC MMA non-pointer types are not allowed as throw expr types.
   if (Ex && Context.getTargetInfo().getTriple().isPPC64())
-    CheckPPCMMAType(Ex->getType(), Ex->getBeginLoc());
+    PPC().CheckPPCMMAType(Ex->getType(), Ex->getBeginLoc());
 
   return new (Context)
       CXXThrowExpr(Ex, Context.VoidTy, OpLoc, IsThrownVarInScope);
@@ -1554,6 +1555,9 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
                                 bool ListInitialization) {
   QualType Ty = TInfo->getType();
   SourceLocation TyBeginLoc = TInfo->getTypeLoc().getBeginLoc();
+
+  assert((!ListInitialization || Exprs.size() == 1) &&
+         "List initialization must have exactly one expression.");
   SourceRange FullRange = SourceRange(TyBeginLoc, RParenOrBraceLoc);
 
   InitializedEntity Entity =
@@ -5125,6 +5129,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsStandardLayout:
   case UTT_IsPOD:
   case UTT_IsLiteral:
+  case UTT_IsBitwiseCloneable:
   // By analogy, is_trivially_relocatable and is_trivially_equality_comparable
   // impose the same constraints.
   case UTT_IsTriviallyRelocatable:
@@ -5618,6 +5623,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return C.hasUniqueObjectRepresentations(T);
   case UTT_IsTriviallyRelocatable:
     return T.isTriviallyRelocatableType(C);
+  case UTT_IsBitwiseCloneable:
+    return T.isBitwiseCloneableType(C);
   case UTT_IsReferenceable:
     return T.isReferenceable();
   case UTT_CanPassInRegs:

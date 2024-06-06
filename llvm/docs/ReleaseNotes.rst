@@ -56,6 +56,11 @@ Changes to the LLVM IR
 * Renamed ``llvm.experimental.vector.splice`` intrinsic to ``llvm.vector.splice``.
 * Renamed ``llvm.experimental.vector.interleave2`` intrinsic to ``llvm.vector.interleave2``.
 * Renamed ``llvm.experimental.vector.deinterleave2`` intrinsic to ``llvm.vector.deinterleave2``.
+* The constant expression variants of the following instructions have been
+  removed:
+
+  * ``icmp``
+  * ``fcmp``
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -111,6 +116,10 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
+* i32 is now a native type in the datalayout string. This enables
+  LoopStrengthReduce for loops with i32 induction variables, among other
+  optimizations.
+
 Changes to the MIPS Backend
 ---------------------------
 
@@ -136,6 +145,7 @@ Changes to the RISC-V Backend
 * Added smstateen extension to -march. CSR names for smstateen were already supported.
 * Zaamo and Zalrsc are no longer experimental.
 * Processors that enable post reg-alloc scheduling (PostMachineScheduler) by default should use the `UsePostRAScheduler` subtarget feature. Setting `PostRAScheduler = 1` in the scheduler model will have no effect on the enabling of the PostMachineScheduler.
+* Zabha is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -189,6 +199,14 @@ Changes to the C API
   * ``LLVMGetCallBrDefaultDest``
   * ``LLVMGetCallBrNumIndirectDests``
   * ``LLVMGetCallBrIndirectDest``
+
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
+
+  * ``LLVMConstICmp``
+  * ``LLVMConstFCmp``
 
 Changes to the CodeGen infrastructure
 -------------------------------------

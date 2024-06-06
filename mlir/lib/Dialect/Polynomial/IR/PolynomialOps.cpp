@@ -34,24 +34,25 @@ void FromTensorOp::build(OpBuilder &builder, OperationState &result,
 LogicalResult FromTensorOp::verify() {
   ArrayRef<int64_t> tensorShape = getInput().getType().getShape();
   RingAttr ring = getOutput().getType().getRing();
-  unsigned polyDegree = ring.getPolynomialModulus().getPolynomial().getDegree();
-  bool compatible = tensorShape.size() == 1 && tensorShape[0] <= polyDegree;
-  if (!compatible) {
-    InFlightDiagnostic diag = emitOpError()
-                              << "input type " << getInput().getType()
-                              << " does not match output type "
-                              << getOutput().getType();
-    diag.attachNote() << "the input type must be a tensor of shape [d] where d "
-                         "is at most the degree of the polynomialModulus of "
-                         "the output type's ring attribute";
-    return diag;
+  IntPolynomialAttr polyMod = ring.getPolynomialModulus();
+  if (polyMod) {
+    unsigned polyDegree = polyMod.getPolynomial().getDegree();
+    bool compatible = tensorShape.size() == 1 && tensorShape[0] <= polyDegree;
+    if (!compatible) {
+      InFlightDiagnostic diag = emitOpError()
+                                << "input type " << getInput().getType()
+                                << " does not match output type "
+                                << getOutput().getType();
+      diag.attachNote()
+          << "the input type must be a tensor of shape [d] where d "
+             "is at most the degree of the polynomialModulus of "
+             "the output type's ring attribute";
+      return diag;
+    }
   }
 
-  APInt coefficientModulus = ring.getCoefficientModulus().getValue();
-  unsigned cmodBitWidth = coefficientModulus.ceilLogBase2();
   unsigned inputBitWidth = getInput().getType().getElementTypeBitWidth();
-
-  if (inputBitWidth > cmodBitWidth) {
+  if (inputBitWidth > ring.getCoefficientType().getIntOrFloatBitWidth()) {
     InFlightDiagnostic diag = emitOpError()
                               << "input tensor element type "
                               << getInput().getType().getElementType()
@@ -67,24 +68,27 @@ LogicalResult FromTensorOp::verify() {
 
 LogicalResult ToTensorOp::verify() {
   ArrayRef<int64_t> tensorShape = getOutput().getType().getShape();
-  unsigned polyDegree = getInput()
-                            .getType()
-                            .getRing()
-                            .getPolynomialModulus()
-                            .getPolynomial()
-                            .getDegree();
-  bool compatible = tensorShape.size() == 1 && tensorShape[0] == polyDegree;
+  IntPolynomialAttr polyMod =
+      getInput().getType().getRing().getPolynomialModulus();
+  if (polyMod) {
+    unsigned polyDegree = polyMod.getPolynomial().getDegree();
+    bool compatible = tensorShape.size() == 1 && tensorShape[0] == polyDegree;
 
-  if (compatible)
-    return success();
+    if (compatible)
+      return success();
 
-  InFlightDiagnostic diag =
-      emitOpError() << "input type " << getInput().getType()
-                    << " does not match output type " << getOutput().getType();
-  diag.attachNote() << "the output type must be a tensor of shape [d] where d "
-                       "is at most the degree of the polynomialModulus of "
-                       "the input type's ring attribute";
-  return diag;
+    InFlightDiagnostic diag = emitOpError()
+                              << "input type " << getInput().getType()
+                              << " does not match output type "
+                              << getOutput().getType();
+    diag.attachNote()
+        << "the output type must be a tensor of shape [d] where d "
+           "is at most the degree of the polynomialModulus of "
+           "the input type's ring attribute";
+    return diag;
+  }
+
+  return success();
 }
 
 LogicalResult MulScalarOp::verify() {
@@ -108,17 +112,22 @@ LogicalResult MulScalarOp::verify() {
 }
 
 /// Test if a value is a primitive nth root of unity modulo cmod.
-bool isPrimitiveNthRootOfUnity(const APInt &root, const unsigned n,
+bool isPrimitiveNthRootOfUnity(const APInt &root, const APInt &n,
                                const APInt &cmod) {
-  // Root bitwidth may be 1 less then cmod.
-  APInt r = APInt(root).zext(cmod.getBitWidth());
-  assert(r.ule(cmod) && "root must be less than cmod");
+  // The first or subsequent multiplications, may overflow the input bit width,
+  // so scale them up to ensure they do not overflow.
+  unsigned requiredBitWidth =
+      std::max(root.getActiveBits() * 2, cmod.getActiveBits() * 2);
+  APInt r = APInt(root).zextOrTrunc(requiredBitWidth);
+  APInt cmodExt = APInt(cmod).zextOrTrunc(requiredBitWidth);
+  assert(r.ule(cmodExt) && "root must be less than cmod");
+  uint64_t upperBound = n.getZExtValue();
 
   APInt a = r;
-  for (size_t k = 1; k < n; k++) {
+  for (size_t k = 1; k < upperBound; k++) {
     if (a.isOne())
       return false;
-    a = (a * r).urem(cmod);
+    a = (a * r).urem(cmodExt);
   }
   return a.isOne();
 }
@@ -126,7 +135,8 @@ bool isPrimitiveNthRootOfUnity(const APInt &root, const unsigned n,
 /// Verify that the types involved in an NTT or INTT operation are
 /// compatible.
 static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
-                                 RankedTensorType tensorType) {
+                                 RankedTensorType tensorType,
+                                 std::optional<PrimitiveRootAttr> root) {
   Attribute encoding = tensorType.getEncoding();
   if (!encoding) {
     return op->emitOpError()
@@ -157,33 +167,30 @@ static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
     return diag;
   }
 
-  if (!ring.getPrimitiveRoot()) {
-    return op->emitOpError()
-           << "ring type " << ring << " does not provide a primitive root "
-           << "of unity, which is required to express an NTT";
-  }
-
-  if (!isPrimitiveNthRootOfUnity(ring.getPrimitiveRoot().getValue(), polyDegree,
-                                 ring.getCoefficientModulus().getValue())) {
-    return op->emitOpError()
-           << "ring type " << ring << " has a primitiveRoot attribute '"
-           << ring.getPrimitiveRoot()
-           << "' that is not a primitive root of the coefficient ring";
+  if (root.has_value()) {
+    APInt rootValue = root.value().getValue().getValue();
+    APInt rootDegree = root.value().getDegree().getValue();
+    APInt cmod = ring.getCoefficientModulus().getValue();
+    if (!isPrimitiveNthRootOfUnity(rootValue, rootDegree, cmod)) {
+      return op->emitOpError()
+             << "provided root " << rootValue.getZExtValue()
+             << " is not a primitive root "
+             << "of unity mod " << cmod.getZExtValue()
+             << ", with the specified degree " << rootDegree.getZExtValue();
+    }
   }
 
   return success();
 }
 
 LogicalResult NTTOp::verify() {
-  auto ring = getInput().getType().getRing();
-  auto tensorType = getOutput().getType();
-  return verifyNTTOp(this->getOperation(), ring, tensorType);
+  return verifyNTTOp(this->getOperation(), getInput().getType().getRing(),
+                     getOutput().getType(), getRoot());
 }
 
 LogicalResult INTTOp::verify() {
-  auto tensorType = getInput().getType();
-  auto ring = getOutput().getType().getRing();
-  return verifyNTTOp(this->getOperation(), ring, tensorType);
+  return verifyNTTOp(this->getOperation(), getOutput().getType().getRing(),
+                     getInput().getType(), getRoot());
 }
 
 ParseResult ConstantOp::parse(OpAsmParser &parser, OperationState &result) {

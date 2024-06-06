@@ -136,6 +136,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // X86-SSE is even stranger. It uses -1 or 0 for vector masks.
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
+  // X86 instruction cache is coherent with its data cache so we can use the
+  // default expansion to a no-op.
+  setOperationAction(ISD::CLEAR_CACHE, MVT::Other, Expand);
+
   // For 64-bit, since we have so many registers, use the ILP scheduler.
   // For 32-bit, use the register pressure specific scheduling.
   // For Atom, always use ILP scheduling.
@@ -611,6 +615,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSIN, VT, Action);
     setOperationAction(ISD::FCOS, VT, Action);
     setOperationAction(ISD::FSINCOS, VT, Action);
+    setOperationAction(ISD::FTAN, VT, Action);
     setOperationAction(ISD::FSQRT, VT, Action);
     setOperationAction(ISD::FPOW, VT, Action);
     setOperationAction(ISD::FLOG, VT, Action);
@@ -829,9 +834,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     // Always expand sin/cos functions even though x87 has an instruction.
+    // clang-format off
     setOperationAction(ISD::FSIN   , MVT::f80, Expand);
     setOperationAction(ISD::FCOS   , MVT::f80, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f80, Expand);
+    setOperationAction(ISD::FTAN   , MVT::f80, Expand);
+    // clang-format on
 
     setOperationAction(ISD::FFLOOR, MVT::f80, Expand);
     setOperationAction(ISD::FCEIL,  MVT::f80, Expand);
@@ -884,11 +892,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEG, MVT::f128, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::f128, Custom);
 
+    // clang-format off
     setOperationAction(ISD::FSIN,         MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FSIN,  MVT::f128, LibCall);
     setOperationAction(ISD::FCOS,         MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FCOS,  MVT::f128, LibCall);
     setOperationAction(ISD::FSINCOS,      MVT::f128, LibCall);
+    setOperationAction(ISD::FTAN,         MVT::f128, LibCall);
+    setOperationAction(ISD::STRICT_FTAN,  MVT::f128, LibCall);
+    // clang-format on
     // No STRICT_FSINCOS
     setOperationAction(ISD::FSQRT,        MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f128, LibCall);
@@ -940,9 +952,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   for (auto VT : { MVT::v8f16, MVT::v16f16, MVT::v32f16,
                    MVT::v4f32, MVT::v8f32,  MVT::v16f32,
                    MVT::v2f64, MVT::v4f64,  MVT::v8f64 }) {
+    // clang-format off
     setOperationAction(ISD::FSIN,      VT, Expand);
     setOperationAction(ISD::FSINCOS,   VT, Expand);
     setOperationAction(ISD::FCOS,      VT, Expand);
+    setOperationAction(ISD::FTAN,      VT, Expand);
     setOperationAction(ISD::FREM,      VT, Expand);
     setOperationAction(ISD::FCOPYSIGN, VT, Expand);
     setOperationAction(ISD::FPOW,      VT, Expand);
@@ -952,6 +966,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FEXP,      VT, Expand);
     setOperationAction(ISD::FEXP2,     VT, Expand);
     setOperationAction(ISD::FEXP10,    VT, Expand);
+    // clang-format on
   }
 
   // First set operation action for all vector types to either promote
@@ -2469,7 +2484,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // function casting to f64 and calling `fmod`.
   if (Subtarget.is32Bit() &&
       (Subtarget.isTargetWindowsMSVC() || Subtarget.isTargetWindowsItanium()))
-    for (ISD::NodeType Op :
+    // clang-format off
+   for (ISD::NodeType Op :
          {ISD::FCEIL,  ISD::STRICT_FCEIL,
           ISD::FCOS,   ISD::STRICT_FCOS,
           ISD::FEXP,   ISD::STRICT_FEXP,
@@ -2478,9 +2494,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
           ISD::FLOG,   ISD::STRICT_FLOG,
           ISD::FLOG10, ISD::STRICT_FLOG10,
           ISD::FPOW,   ISD::STRICT_FPOW,
-          ISD::FSIN,   ISD::STRICT_FSIN})
+          ISD::FSIN,   ISD::STRICT_FSIN,
+          ISD::FTAN,   ISD::STRICT_FTAN})
       if (isOperationExpand(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
+  // clang-format on
 
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine({ISD::VECTOR_SHUFFLE,
@@ -17842,6 +17860,22 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::VSELECT, dl, VT, Cond, LHS, RHS);
   }
 
+  // v16i16/v32i8 selects without AVX2, if the condition and another operand
+  // are free to split, then better to split before expanding the
+  // select. Don't bother with XOP as it has the fast VPCMOV instruction.
+  // TODO: This is very similar to narrowVectorSelect.
+  // TODO: Add Load splitting to isFreeToSplitVector ?
+  if (EltSize < 32 && VT.is256BitVector() && !Subtarget.hasAVX2() &&
+      !Subtarget.hasXOP()) {
+    bool FreeCond = isFreeToSplitVector(Cond.getNode(), DAG);
+    bool FreeLHS = isFreeToSplitVector(LHS.getNode(), DAG) ||
+                   (ISD::isNormalLoad(LHS.getNode()) && LHS.hasOneUse());
+    bool FreeRHS = isFreeToSplitVector(RHS.getNode(), DAG) ||
+                   (ISD::isNormalLoad(RHS.getNode()) && RHS.hasOneUse());
+    if (FreeCond && (FreeLHS || FreeRHS))
+      return splitVectorOp(Op, DAG, dl);
+  }
+
   // Only some types will be legal on some subtargets. If we can emit a legal
   // VSELECT-matching blend, return Op, and but if we need to expand, return
   // a null value.
@@ -20499,7 +20533,7 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   // the truncation then we can use PACKSS by converting the srl to a sra.
   // SimplifyDemandedBits often relaxes sra to srl so we need to reverse it.
   if (In.getOpcode() == ISD::SRL && In->hasOneUse())
-    if (const APInt *ShAmt = DAG.getValidShiftAmountConstant(In)) {
+    if (std::optional<uint64_t> ShAmt = DAG.getValidShiftAmount(In)) {
       if (*ShAmt == MinSignBits) {
         PackOpcode = X86ISD::PACKSS;
         return DAG.getNode(ISD::SRA, DL, SrcVT, In->ops());
@@ -26756,7 +26790,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     case Intrinsic::swift_async_context_addr: {
       SDLoc dl(Op);
       auto &MF = DAG.getMachineFunction();
-      auto X86FI = MF.getInfo<X86MachineFunctionInfo>();
+      auto *X86FI = MF.getInfo<X86MachineFunctionInfo>();
       if (X86::isExtendedSwiftAsyncFrameSupported(Subtarget, MF)) {
         MF.getFrameInfo().setFrameAddressIsTaken(true);
         X86FI->setHasSwiftAsyncContext(true);
@@ -36761,7 +36795,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case TargetOpcode::PREALLOCATED_SETUP: {
     assert(Subtarget.is32Bit() && "preallocated only used in 32-bit");
-    auto MFI = MF->getInfo<X86MachineFunctionInfo>();
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
     MFI->setHasPreallocatedCall(true);
     int64_t PreallocatedId = MI.getOperand(0).getImm();
     size_t StackAdjustment = MFI->getPreallocatedStackSize(PreallocatedId);
@@ -36778,7 +36812,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     assert(Subtarget.is32Bit() && "preallocated calls only used in 32-bit");
     int64_t PreallocatedId = MI.getOperand(1).getImm();
     int64_t ArgIdx = MI.getOperand(2).getImm();
-    auto MFI = MF->getInfo<X86MachineFunctionInfo>();
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
     size_t ArgOffset = MFI->getPreallocatedArgOffsets(PreallocatedId)[ArgIdx];
     LLVM_DEBUG(dbgs() << "PREALLOCATED_ARG arg index " << ArgIdx
                       << ", arg offset " << ArgOffset << "\n");
@@ -36821,6 +36855,13 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned Imm = MI.getOperand(0).getImm();
     BuildMI(*BB, MI, MIMD, TII->get(X86::TILEZERO), TMMImmToTMMReg(Imm));
     MI.eraseFromParent(); // The pseudo is gone now.
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+    MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
+    return BB;
+  }
+  case X86::PTILEZEROV: {
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+    MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
     return BB;
   }
   case X86::PTILELOADD:
@@ -50823,10 +50864,82 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
+                                        SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const X86Subtarget &Subtarget) {
+  auto *Ld = cast<LoadSDNode>(N);
+  EVT RegVT = Ld->getValueType(0);
+  SDValue Ptr = Ld->getBasePtr();
+  SDValue Chain = Ld->getChain();
+  ISD::LoadExtType Ext = Ld->getExtensionType();
+
+  if (Ext != ISD::NON_EXTLOAD || !Subtarget.hasAVX() || !Ld->isSimple())
+    return SDValue();
+
+  if (!(RegVT.is128BitVector() || RegVT.is256BitVector()))
+    return SDValue();
+
+  auto MatchingBits = [](const APInt &Undefs, const APInt &UserUndefs,
+                         ArrayRef<APInt> Bits, ArrayRef<APInt> UserBits) {
+    for (unsigned I = 0, E = Undefs.getBitWidth(); I != E; ++I) {
+      if (Undefs[I])
+        continue;
+      if (UserUndefs[I] || Bits[I] != UserBits[I])
+        return false;
+    }
+    return true;
+  };
+
+  // Look through all other loads/broadcasts in the chain for another constant
+  // pool entry.
+  for (SDNode *User : Chain->uses()) {
+    auto *UserLd = dyn_cast<MemSDNode>(User);
+    if (User != N && UserLd &&
+        (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
+         User->getOpcode() == X86ISD::VBROADCAST_LOAD ||
+         ISD::isNormalLoad(User)) &&
+        UserLd->getChain() == Chain && !User->hasAnyUseOfValue(1) &&
+        User->getValueSizeInBits(0).getFixedValue() >
+            RegVT.getFixedSizeInBits()) {
+      EVT UserVT = User->getValueType(0);
+      SDValue UserPtr = UserLd->getBasePtr();
+      const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
+      const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
+
+      // See if we are loading a constant that matches in the lower
+      // bits of a longer constant (but from a different constant pool ptr).
+      if (LdC && UserC && UserPtr != Ptr) {
+        unsigned LdSize = LdC->getType()->getPrimitiveSizeInBits();
+        unsigned UserSize = UserC->getType()->getPrimitiveSizeInBits();
+        if (LdSize < UserSize || !ISD::isNormalLoad(User)) {
+          APInt Undefs, UserUndefs;
+          SmallVector<APInt> Bits, UserBits;
+          unsigned NumBits = std::min(RegVT.getScalarSizeInBits(),
+                                      UserVT.getScalarSizeInBits());
+          if (getTargetConstantBitsFromNode(SDValue(N, 0), NumBits, Undefs,
+                                            Bits) &&
+              getTargetConstantBitsFromNode(SDValue(User, 0), NumBits,
+                                            UserUndefs, UserBits)) {
+            if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
+              SDValue Extract = extractSubVector(
+                  SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
+              Extract = DAG.getBitcast(RegVT, Extract);
+              return DCI.CombineTo(N, Extract, SDValue(User, 1));
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI,
                            const X86Subtarget &Subtarget) {
-  LoadSDNode *Ld = cast<LoadSDNode>(N);
+  auto *Ld = cast<LoadSDNode>(N);
   EVT RegVT = Ld->getValueType(0);
   EVT MemVT = Ld->getMemoryVT();
   SDLoc dl(Ld);
@@ -50885,7 +50998,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // If we also load/broadcast this to a wider type, then just extract the
+  // If we also broadcast this vector to a wider type, then just extract the
   // lowest subvector.
   if (Ext == ISD::NON_EXTLOAD && Subtarget.hasAVX() && Ld->isSimple() &&
       (RegVT.is128BitVector() || RegVT.is256BitVector())) {
@@ -50894,60 +51007,22 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     for (SDNode *User : Chain->uses()) {
       auto *UserLd = dyn_cast<MemSDNode>(User);
       if (User != N && UserLd &&
-          (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
-           User->getOpcode() == X86ISD::VBROADCAST_LOAD ||
-           ISD::isNormalLoad(User)) &&
-          UserLd->getChain() == Chain && !User->hasAnyUseOfValue(1) &&
+          User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
+          UserLd->getChain() == Chain && UserLd->getBasePtr() == Ptr &&
+          UserLd->getMemoryVT().getSizeInBits() == MemVT.getSizeInBits() &&
+          !User->hasAnyUseOfValue(1) &&
           User->getValueSizeInBits(0).getFixedValue() >
               RegVT.getFixedSizeInBits()) {
-        if (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
-            UserLd->getBasePtr() == Ptr &&
-            UserLd->getMemoryVT().getSizeInBits() == MemVT.getSizeInBits()) {
-          SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
-                                             RegVT.getSizeInBits());
-          Extract = DAG.getBitcast(RegVT, Extract);
-          return DCI.CombineTo(N, Extract, SDValue(User, 1));
-        }
-        auto MatchingBits = [](const APInt &Undefs, const APInt &UserUndefs,
-                               ArrayRef<APInt> Bits, ArrayRef<APInt> UserBits) {
-          for (unsigned I = 0, E = Undefs.getBitWidth(); I != E; ++I) {
-            if (Undefs[I])
-              continue;
-            if (UserUndefs[I] || Bits[I] != UserBits[I])
-              return false;
-          }
-          return true;
-        };
-        // See if we are loading a constant that matches in the lower
-        // bits of a longer constant (but from a different constant pool ptr).
-        EVT UserVT = User->getValueType(0);
-        SDValue UserPtr = UserLd->getBasePtr();
-        const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
-        const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
-        if (LdC && UserC && UserPtr != Ptr) {
-          unsigned LdSize = LdC->getType()->getPrimitiveSizeInBits();
-          unsigned UserSize = UserC->getType()->getPrimitiveSizeInBits();
-          if (LdSize < UserSize || !ISD::isNormalLoad(User)) {
-            APInt Undefs, UserUndefs;
-            SmallVector<APInt> Bits, UserBits;
-            unsigned NumBits = std::min(RegVT.getScalarSizeInBits(),
-                                        UserVT.getScalarSizeInBits());
-            if (getTargetConstantBitsFromNode(SDValue(N, 0), NumBits, Undefs,
-                                              Bits) &&
-                getTargetConstantBitsFromNode(SDValue(User, 0), NumBits,
-                                              UserUndefs, UserBits)) {
-              if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
-                SDValue Extract = extractSubVector(
-                    SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
-                Extract = DAG.getBitcast(RegVT, Extract);
-                return DCI.CombineTo(N, Extract, SDValue(User, 1));
-              }
-            }
-          }
-        }
+        SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
+                                           RegVT.getSizeInBits());
+        Extract = DAG.getBitcast(RegVT, Extract);
+        return DCI.CombineTo(N, Extract, SDValue(User, 1));
       }
     }
   }
+
+  if (SDValue V = combineConstantPoolLoads(Ld, dl, DAG, DCI, Subtarget))
+    return V;
 
   // Cast ptr32 and ptr64 pointers to the default address space before a load.
   unsigned AddrSpace = Ld->getAddressSpace();
@@ -57127,9 +57202,12 @@ static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
   SDValue Cvt, Chain;
   unsigned NumElts = VT.getVectorNumElements();
   if (Subtarget.hasFP16()) {
-    // Combine (v8f16 fp_round(concat_vectors(v4f32 (xint_to_fp v4i64), ..)))
-    // into (v8f16 vector_shuffle(v8f16 (CVTXI2P v4i64), ..))
-    if (NumElts == 8 && Src.getOpcode() == ISD::CONCAT_VECTORS) {
+    // Combine (v8f16 fp_round(concat_vectors(v4f32 (xint_to_fp v4i64),
+    //                                        v4f32 (xint_to_fp v4i64))))
+    // into (v8f16 vector_shuffle(v8f16 (CVTXI2P v4i64),
+    //                            v8f16 (CVTXI2P v4i64)))
+    if (NumElts == 8 && Src.getOpcode() == ISD::CONCAT_VECTORS &&
+        Src.getNumOperands() == 2) {
       SDValue Cvt0, Cvt1;
       SDValue Op0 = Src.getOperand(0);
       SDValue Op1 = Src.getOperand(1);
@@ -57806,6 +57884,15 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
       case '2':
         return C_RegisterClass;
       }
+      break;
+    case 'j':
+      switch (Constraint[1]) {
+      default:
+        break;
+      case 'r':
+      case 'R':
+        return C_RegisterClass;
+      }
     }
   } else if (parseConstraintCode(Constraint) != X86::COND_INVALID)
     return C_Other;
@@ -57882,6 +57969,19 @@ X86TargetLowering::getSingleConstraintMatchWeight(
     case '2':
       if (!Subtarget.hasSSE2())
         return CW_Invalid;
+      break;
+    }
+    break;
+  case 'j':
+    if (StringRef(Constraint).size() != 2)
+      break;
+    switch (Constraint[1]) {
+    default:
+      return CW_Invalid;
+    case 'r':
+    case 'R':
+      if (CallOperandVal->getType()->isIntegerTy())
+        Wt = CW_SpecificReg;
       break;
     }
     break;
@@ -58184,6 +58284,10 @@ static bool isVKClass(const TargetRegisterClass &RC) {
          RC.hasSuperClassEq(&X86::VK64RegClass);
 }
 
+static bool useEGPRInlineAsm(const X86Subtarget &Subtarget) {
+  return Subtarget.hasEGPR() && Subtarget.useInlineAsmGPR32();
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                 StringRef Constraint,
@@ -58224,13 +58328,21 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'q':   // GENERAL_REGS in 64-bit mode, Q_REGS in 32-bit mode.
       if (Subtarget.is64Bit()) {
         if (VT == MVT::i8 || VT == MVT::i1)
-          return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
+          return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                        ? &X86::GR8RegClass
+                                        : &X86::GR8_NOREX2RegClass);
         if (VT == MVT::i16)
-          return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
+          return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                        ? &X86::GR16RegClass
+                                        : &X86::GR16_NOREX2RegClass);
         if (VT == MVT::i32 || VT == MVT::f32)
-          return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
+          return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                        ? &X86::GR32RegClass
+                                        : &X86::GR32_NOREX2RegClass);
         if (VT != MVT::f80 && !VT.isVector())
-          return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
+          return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                        ? &X86::GR64RegClass
+                                        : &X86::GR64_NOREX2RegClass);
         break;
       }
       [[fallthrough]];
@@ -58249,14 +58361,22 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'r':   // GENERAL_REGS
     case 'l':   // INDEX_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
-        return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
+        return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                      ? &X86::GR8RegClass
+                                      : &X86::GR8_NOREX2RegClass);
       if (VT == MVT::i16)
-        return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
+        return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                      ? &X86::GR16RegClass
+                                      : &X86::GR16_NOREX2RegClass);
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
-        return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
+        return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                      ? &X86::GR32RegClass
+                                      : &X86::GR32_NOREX2RegClass);
       if (VT != MVT::f80 && !VT.isVector())
-        return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
+        return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
+                                      ? &X86::GR64RegClass
+                                      : &X86::GR64_NOREX2RegClass);
       break;
     case 'R':   // LEGACY_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
@@ -58478,6 +58598,31 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (VT == MVT::v64i1 || VT == MVT::i64)
           return std::make_pair(0U, &X86::VK64WMRegClass);
       }
+      break;
+    }
+  } else if (Constraint.size() == 2 && Constraint[0] == 'j') {
+    switch (Constraint[1]) {
+    default:
+      break;
+    case 'r':
+      if (VT == MVT::i8 || VT == MVT::i1)
+        return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
+      if (VT == MVT::i16)
+        return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
+      if (VT == MVT::i32 || VT == MVT::f32)
+        return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
+      if (VT != MVT::f80 && !VT.isVector())
+        return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
+      break;
+    case 'R':
+      if (VT == MVT::i8 || VT == MVT::i1)
+        return std::make_pair(0U, &X86::GR8RegClass);
+      if (VT == MVT::i16)
+        return std::make_pair(0U, &X86::GR16RegClass);
+      if (VT == MVT::i32 || VT == MVT::f32)
+        return std::make_pair(0U, &X86::GR32RegClass);
+      if (VT != MVT::f80 && !VT.isVector())
+        return std::make_pair(0U, &X86::GR64RegClass);
       break;
     }
   }

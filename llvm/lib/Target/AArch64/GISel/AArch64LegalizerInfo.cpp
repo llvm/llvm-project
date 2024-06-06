@@ -61,6 +61,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT v2s64 = LLT::fixed_vector(2, 64);
   const LLT v2p0 = LLT::fixed_vector(2, p0);
 
+  const LLT nxv16s8 = LLT::scalable_vector(16, s8);
+  const LLT nxv8s16 = LLT::scalable_vector(8, s16);
+  const LLT nxv4s32 = LLT::scalable_vector(4, s32);
+  const LLT nxv2s64 = LLT::scalable_vector(2, s64);
+
   std::initializer_list<LLT> PackedVectorAllTypeList = {/* Begin 128bit types */
                                                         v16s8, v8s16, v4s32,
                                                         v2s64, v2p0,
@@ -328,7 +333,31 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     return ValTy.isPointerVector() && ValTy.getAddressSpace() == 0;
   };
 
-  getActionDefinitionsBuilder(G_LOAD)
+  auto &LoadActions = getActionDefinitionsBuilder(G_LOAD);
+  auto &StoreActions = getActionDefinitionsBuilder(G_STORE);
+
+  if (ST.hasSVE()) {
+    LoadActions.legalForTypesWithMemDesc({
+        // 128 bit base sizes
+        {nxv16s8, p0, nxv16s8, 8},
+        {nxv8s16, p0, nxv8s16, 8},
+        {nxv4s32, p0, nxv4s32, 8},
+        {nxv2s64, p0, nxv2s64, 8},
+    });
+
+    // TODO: Add nxv2p0. Consider bitcastIf.
+    //       See #92130
+    //       https://github.com/llvm/llvm-project/pull/92130#discussion_r1616888461
+    StoreActions.legalForTypesWithMemDesc({
+        // 128 bit base sizes
+        {nxv16s8, p0, nxv16s8, 8},
+        {nxv8s16, p0, nxv8s16, 8},
+        {nxv4s32, p0, nxv4s32, 8},
+        {nxv2s64, p0, nxv2s64, 8},
+    });
+  }
+
+  LoadActions
       .customIf([=](const LegalityQuery &Query) {
         return HasRCPC3 && Query.Types[0] == s128 &&
                Query.MMODescrs[0].Ordering == AtomicOrdering::Acquire;
@@ -378,7 +407,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeInSet(0, {v2s16, v2s8}), 0);
 
-  getActionDefinitionsBuilder(G_STORE)
+  StoreActions
       .customIf([=](const LegalityQuery &Query) {
         return HasRCPC3 && Query.Types[0] == s128 &&
                Query.MMODescrs[0].Ordering == AtomicOrdering::Release;

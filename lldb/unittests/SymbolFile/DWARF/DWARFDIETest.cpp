@@ -10,6 +10,8 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "lldb/Core/dwarf.h"
+#include "lldb/Symbol/Type.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/STLExtras.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -186,4 +188,73 @@ DWARF:
 
   dw_offset_t fifth_die_offset = 26;
   EXPECT_EQ(unit->PeekDIEName(fifth_die_offset), "NameType2");
+}
+
+TEST(DWARFDIETest, GetContext) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_namespace
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x3
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x000000000000000C
+        - AbbrCode:        0x2
+          Values:
+            - CStr:            NAMESPACE
+        - AbbrCode:        0x3
+          Values:
+            - CStr:            STRUCT
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+)";
+
+  YAMLModuleTester t(yamldata);
+  auto *symbol_file =
+      llvm::cast<SymbolFileDWARF>(t.GetModule()->GetSymbolFile());
+  DWARFUnit *unit = symbol_file->DebugInfo().GetUnitAtIndex(0);
+  ASSERT_TRUE(unit);
+
+  auto make_namespace = [](llvm::StringRef name) {
+    return CompilerContext(CompilerContextKind::Namespace, ConstString(name));
+  };
+  auto make_struct = [](llvm::StringRef name) {
+    return CompilerContext(CompilerContextKind::Struct, ConstString(name));
+  };
+  DWARFDIE struct_die = unit->DIE().GetFirstChild().GetFirstChild();
+  ASSERT_TRUE(struct_die);
+  EXPECT_THAT(
+      struct_die.GetDeclContext(),
+      testing::ElementsAre(make_namespace("NAMESPACE"), make_struct("STRUCT")));
+  EXPECT_THAT(
+      struct_die.GetTypeLookupContext(),
+      testing::ElementsAre(make_namespace("NAMESPACE"), make_struct("STRUCT")));
 }

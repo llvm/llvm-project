@@ -108,3 +108,22 @@ body:             |
     $rax = ADC64rr_ND $r16, $rdi, implicit-def dead $eflags, implicit $eflags
     RET64 $rax
 ...
+---
+name:            cfcmov_no_convert
+body:             |
+  bb.0.entry:
+    liveins: $eflags, $rax, $rbx
+    ; CHECK: cfcmovew %bx, %ax, %ax                  # encoding: [0x62,0xf4,0x7d,0x1c,0x44,0xc3]
+    ; CHECK: cfcmovsw 24(%rax), %bx, %bx             # encoding: [0x62,0xf4,0x65,0x1c,0x48,0x58,0x18]
+    ; CHECK: cfcmovel %ebx, %eax, %eax               # encoding: [0x62,0xf4,0x7c,0x1c,0x44,0xc3]
+    ; CHECK: cfcmovsl 24(%rax), %ebx, %ebx           # encoding: [0x62,0xf4,0x64,0x1c,0x48,0x58,0x18]
+    ; CHECK: cfcmoveq %rbx, %rax, %rax               # encoding: [0x62,0xf4,0xfc,0x1c,0x44,0xc3]
+    ; CHECK: cfcmovsq 24(%rax), %rbx, %rbx           # encoding: [0x62,0xf4,0xe4,0x1c,0x48,0x58,0x18]
+    $ax = CFCMOV16rr_ND $ax, $bx, 4, implicit $eflags
+    $bx = CFCMOV16rm_ND $bx, $rax, 1, $noreg, 24, $noreg, 8, implicit $eflags
+    $eax = CFCMOV32rr_ND $eax, $ebx, 4, implicit $eflags
+    $ebx = CFCMOV32rm_ND $ebx, $rax, 1, $noreg, 24, $noreg, 8, implicit $eflags
+    $rax = CFCMOV64rr_ND $rax, $rbx, 4, implicit $eflags
+    $rbx = CFCMOV64rm_ND $rbx, $rax, 1, $noreg, 24, $noreg, 8, implicit $eflags
+    RET64 $rax
+...
