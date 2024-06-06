@@ -543,7 +543,13 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   };
 
   // Lambda to extract all the DIEs using the helper function
-  auto ExtractAllDies = [this, &Result]() { Result = extractAllDIEsHelper(); };
+  auto ExtractAllDies = [this, &Result]() {
+    if (Error E = extractAllDIEsHelper()) {
+      // Consume the success placeholder and save the actual error
+      consumeError(std::move(Result));
+      Result = std::move(E);
+    }
+  };
 
   // Safely check if *all* the DIEs have been parsed already. If not, then parse
   // them.
