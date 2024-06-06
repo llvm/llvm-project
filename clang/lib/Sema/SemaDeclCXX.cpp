@@ -19,11 +19,11 @@
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
@@ -2511,10 +2511,7 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
   assert(FD->isImmediateEscalating() && !FD->isConsteval() &&
          "expected an immediate function");
   assert(FD->hasBody() && "expected the function to have a body");
-  struct ImmediateEscalatingExpressionsVisitor
-      : public RecursiveASTVisitor<ImmediateEscalatingExpressionsVisitor> {
-
-    using Base = RecursiveASTVisitor<ImmediateEscalatingExpressionsVisitor>;
+  struct ImmediateEscalatingExpressionsVisitor : DynamicRecursiveASTVisitor {
     Sema &SemaRef;
 
     const FunctionDecl *ImmediateFn;
@@ -2524,10 +2521,10 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
 
     ImmediateEscalatingExpressionsVisitor(Sema &SemaRef, FunctionDecl *FD)
         : SemaRef(SemaRef), ImmediateFn(FD),
-          ImmediateFnIsConstructor(isa<CXXConstructorDecl>(FD)) {}
-
-    bool shouldVisitImplicitCode() const { return true; }
-    bool shouldVisitLambdaBody() const { return false; }
+          ImmediateFnIsConstructor(isa<CXXConstructorDecl>(FD)) {
+      ShouldVisitImplicitCode = true;
+      ShouldVisitLambdaBody = false;
+    }
 
     void Diag(const Expr *E, const FunctionDecl *Fn, bool IsCall) {
       SourceLocation Loc = E->getBeginLoc();
@@ -2547,7 +2544,7 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
           << (CurrentInit && !CurrentInit->isWritten())
           << InitializedField << Range;
     }
-    bool TraverseCallExpr(CallExpr *E) {
+    bool TraverseCallExpr(CallExpr *E) override {
       if (const auto *DR =
               dyn_cast<DeclRefExpr>(E->getCallee()->IgnoreImplicit());
           DR && DR->isImmediateEscalating()) {
@@ -2556,13 +2553,13 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
       }
 
       for (Expr *A : E->arguments())
-        if (!getDerived().TraverseStmt(A))
+        if (!TraverseStmt(A))
           return false;
 
       return true;
     }
 
-    bool VisitDeclRefExpr(DeclRefExpr *E) {
+    bool VisitDeclRefExpr(DeclRefExpr *E) override {
       if (const auto *ReferencedFn = dyn_cast<FunctionDecl>(E->getDecl());
           ReferencedFn && E->isImmediateEscalating()) {
         Diag(E, ReferencedFn, /*IsCall=*/false);
@@ -2572,7 +2569,7 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
       return true;
     }
 
-    bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    bool VisitCXXConstructExpr(CXXConstructExpr *E) override {
       CXXConstructorDecl *D = E->getConstructor();
       if (E->isImmediateEscalating()) {
         Diag(E, D, /*IsCall=*/true);
@@ -2581,18 +2578,18 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
       return true;
     }
 
-    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) override {
       llvm::SaveAndRestore RAII(CurrentInit, Init);
-      return Base::TraverseConstructorInitializer(Init);
+      return DynamicRecursiveASTVisitor::TraverseConstructorInitializer(Init);
     }
 
-    bool TraverseCXXConstructorDecl(CXXConstructorDecl *Ctr) {
+    bool TraverseCXXConstructorDecl(CXXConstructorDecl *Ctr) override {
       llvm::SaveAndRestore RAII(CurrentConstructor, Ctr);
-      return Base::TraverseCXXConstructorDecl(Ctr);
+      return DynamicRecursiveASTVisitor::TraverseCXXConstructorDecl(Ctr);
     }
 
-    bool TraverseType(QualType T) { return true; }
-    bool VisitBlockExpr(BlockExpr *T) { return true; }
+    bool TraverseType(QualType T) override { return true; }
+    bool VisitBlockExpr(BlockExpr *T) override { return true; }
 
   } Visitor(*this, FD);
   Visitor.TraverseDecl(FD);
@@ -18876,18 +18873,18 @@ void Sema::CheckDelegatingCtorCycles() {
 
 namespace {
   /// AST visitor that finds references to the 'this' expression.
-  class FindCXXThisExpr : public RecursiveASTVisitor<FindCXXThisExpr> {
-    Sema &S;
+class FindCXXThisExpr : public DynamicRecursiveASTVisitor {
+  Sema &S;
 
-  public:
-    explicit FindCXXThisExpr(Sema &S) : S(S) { }
+public:
+  explicit FindCXXThisExpr(Sema &S) : S(S) {}
 
-    bool VisitCXXThisExpr(CXXThisExpr *E) {
-      S.Diag(E->getLocation(), diag::err_this_static_member_func)
+  bool VisitCXXThisExpr(CXXThisExpr *E) override {
+    S.Diag(E->getLocation(), diag::err_this_static_member_func)
         << E->isImplicit();
-      return false;
-    }
-  };
+    return false;
+  }
+};
 }
 
 bool Sema::checkThisInStaticMemberFunctionType(CXXMethodDecl *Method) {

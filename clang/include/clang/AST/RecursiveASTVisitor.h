@@ -327,11 +327,11 @@ public:
   bool VisitAttr(Attr *A) { return true; }
 
 // Declare Traverse* and empty Visit* for all Attr classes.
-#define ATTR_VISITOR_DECLS_ONLY
+#define ATTR_VISITOR_DECLS
 #include "clang/AST/AttrVisitor.inc"
-#undef ATTR_VISITOR_DECLS_ONLY
+#undef ATTR_VISITOR_DECLS
 
-// ---- Methods on Stmts ----
+  // ---- Methods on Stmts ----
 
   Stmt::child_range getStmtChildren(Stmt *S) { return S->children(); }
 
@@ -727,9 +727,11 @@ bool RecursiveASTVisitor<Derived>::TraverseTypeLoc(TypeLoc TL) {
 }
 
 // Define the Traverse*Attr(Attr* A) methods
+#define ATTR_VISITOR_IMPL
 #define VISITORCLASS RecursiveASTVisitor
 #include "clang/AST/AttrVisitor.inc"
 #undef VISITORCLASS
+#undef ATTR_VISITOR_IMPL
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseDecl(Decl *D) {

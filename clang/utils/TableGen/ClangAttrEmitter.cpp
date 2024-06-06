@@ -3822,7 +3822,7 @@ void EmitClangAttrSpellingListIndex(RecordKeeper &Records, raw_ostream &OS) {
   OS << "  return 0;\n";
 }
 
-// Emits code used by RecursiveASTVisitor to visit attributes
+// Emits code used by (Dynamic)RecursiveASTVisitor to visit attributes
 void EmitClangAttrASTVisitor(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Used by RecursiveASTVisitor to visit attributes.", OS,
                        Records);
@@ -3832,7 +3832,7 @@ void EmitClangAttrASTVisitor(RecordKeeper &Records, raw_ostream &OS) {
   // Write method declarations for Traverse* methods.
   // We emit this here because we only generate methods for attributes that
   // are declared as ASTNodes.
-  OS << "#ifdef ATTR_VISITOR_DECLS_ONLY\n\n";
+  OS << "#ifdef ATTR_VISITOR_DECLS\n\n";
   for (const auto *Attr : Attrs) {
     const Record &R = *Attr;
     if (!R.getValueAsBit("ASTNode"))
@@ -3844,9 +3844,10 @@ void EmitClangAttrASTVisitor(RecordKeeper &Records, raw_ostream &OS) {
        << "    return true; \n"
        << "  }\n";
   }
-  OS << "\n#else // ATTR_VISITOR_DECLS_ONLY\n\n";
+  OS << "\n#endif // ATTR_VISITOR_DECLS\n\n";
 
   // Write individual Traverse* methods for each attribute class.
+  OS << "#ifdef ATTR_VISITOR_IMPL\n\n";
   for (const auto *Attr : Attrs) {
     const Record &R = *Attr;
     if (!R.getValueAsBit("ASTNode"))
@@ -3892,7 +3893,40 @@ void EmitClangAttrASTVisitor(RecordKeeper &Records, raw_ostream &OS) {
   OS << "  }\n";  // end switch
   OS << "  llvm_unreachable(\"bad attribute kind\");\n";
   OS << "}\n";  // end function
-  OS << "#endif  // ATTR_VISITOR_DECLS_ONLY\n";
+  OS << "#endif  // ATTR_VISITOR_IMPL\n";
+
+  // Write virtual function declarations / trivial definitions.
+  OS << "#ifdef DYNAMIC_ATTR_VISITOR_DECLS\n\n";
+  for (const auto *Attr : Attrs) {
+    const Record &R = *Attr;
+    if (!R.getValueAsBit("ASTNode"))
+      continue;
+    OS << "  virtual bool Traverse" << R.getName() << "Attr(" << R.getName()
+       << "Attr *A);\n";
+    OS << "  virtual bool Visit" << R.getName() << "Attr(" << R.getName()
+       << "Attr *A) {\n"
+       << "    return true; \n"
+       << "  }\n";
+  }
+  OS << "\n#endif // DYNAMIC_ATTR_VISITOR_DECLS\n\n";
+
+  // Write traversal functions that dispatch to the appropriate visitor.
+  OS << "#ifdef DYNAMIC_ATTR_VISITOR_IMPL\n\n";
+  for (const auto *Attr : Attrs) {
+    const Record &R = *Attr;
+    if (!R.getValueAsBit("ASTNode"))
+      continue;
+    OS << "bool Impl::Traverse" << R.getName() << "Attr(" << R.getName()
+       << "Attr *A) {\n"
+       << "  return Visitor.Traverse" << R.getName() << "Attr(A);\n"
+       << "}\n";
+    OS << "bool DynamicRecursiveASTVisitor::Traverse" << R.getName() << "Attr("
+       << R.getName() << "Attr *A) {\n"
+       << "  return Impl(*this).RecursiveASTVisitor<Impl>::Traverse"
+       << R.getName() << "Attr(A);\n"
+       << "}\n";
+  }
+  OS << "\n#endif // DYNAMIC_ATTR_VISITOR_IMPL\n\n";
 }
 
 void EmitClangAttrTemplateInstantiateHelper(const std::vector<Record *> &Attrs,

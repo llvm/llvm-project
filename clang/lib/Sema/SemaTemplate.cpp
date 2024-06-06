@@ -14,9 +14,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
@@ -2691,27 +2691,26 @@ private:
 SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     ArrayRef<NamedDecl *> TemplateParams,
     ArrayRef<TemplateArgument> DeducedArgs) {
-  struct TemplateParamsReferencedFinder
-      : public RecursiveASTVisitor<TemplateParamsReferencedFinder> {
+  struct TemplateParamsReferencedFinder : DynamicRecursiveASTVisitor {
     llvm::DenseSet<NamedDecl *> TemplateParams;
     llvm::DenseSet<const NamedDecl *> ReferencedTemplateParams;
 
     TemplateParamsReferencedFinder(ArrayRef<NamedDecl *> TemplateParams)
         : TemplateParams(TemplateParams.begin(), TemplateParams.end()) {}
 
-    bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
+    bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) override {
       MarkAppeared(TTP->getDecl());
       return true;
     }
-    bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
       MarkAppeared(DRE->getFoundDecl());
       return true;
     }
 
-    bool TraverseTemplateName(TemplateName Template) {
+    bool TraverseTemplateName(TemplateName Template) override {
       if (auto *TD = Template.getAsTemplateDecl())
         MarkAppeared(TD);
-      return RecursiveASTVisitor::TraverseTemplateName(Template);
+      return DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
     }
 
     void MarkAppeared(NamedDecl *ND) {
@@ -3806,9 +3805,7 @@ namespace {
 
 /// A class which looks for a use of a certain level of template
 /// parameter.
-struct DependencyChecker : RecursiveASTVisitor<DependencyChecker> {
-  typedef RecursiveASTVisitor<DependencyChecker> super;
-
+struct DependencyChecker : DynamicRecursiveASTVisitor {
   unsigned Depth;
 
   // Whether we're looking for a use of a template parameter that makes the
@@ -3846,7 +3843,7 @@ struct DependencyChecker : RecursiveASTVisitor<DependencyChecker> {
     return false;
   }
 
-  bool TraverseStmt(Stmt *S, DataRecursionQueue *Q = nullptr) {
+  bool TraverseStmt(Stmt *S, DataRecursionQueue *Q = nullptr) override {
     // Prune out non-type-dependent expressions if requested. This can
     // sometimes result in us failing to find a template parameter reference
     // (if a value-dependent expression creates a dependent type), but this
@@ -3854,51 +3851,51 @@ struct DependencyChecker : RecursiveASTVisitor<DependencyChecker> {
     if (auto *E = dyn_cast_or_null<Expr>(S))
       if (IgnoreNonTypeDependent && !E->isTypeDependent())
         return true;
-    return super::TraverseStmt(S, Q);
+    return DynamicRecursiveASTVisitor::TraverseStmt(S, Q);
   }
 
-  bool TraverseTypeLoc(TypeLoc TL) {
+  bool TraverseTypeLoc(TypeLoc TL) override {
     if (IgnoreNonTypeDependent && !TL.isNull() &&
         !TL.getType()->isDependentType())
       return true;
-    return super::TraverseTypeLoc(TL);
+    return DynamicRecursiveASTVisitor::TraverseTypeLoc(TL);
   }
 
-  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
+  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) override {
     return !Matches(TL.getTypePtr()->getDepth(), TL.getNameLoc());
   }
 
-  bool VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
+  bool VisitTemplateTypeParmType(TemplateTypeParmType *T) override {
     // For a best-effort search, keep looking until we find a location.
     return IgnoreNonTypeDependent || !Matches(T->getDepth());
   }
 
-  bool TraverseTemplateName(TemplateName N) {
+  bool TraverseTemplateName(TemplateName N) override {
     if (TemplateTemplateParmDecl *PD =
           dyn_cast_or_null<TemplateTemplateParmDecl>(N.getAsTemplateDecl()))
       if (Matches(PD->getDepth()))
         return false;
-    return super::TraverseTemplateName(N);
+    return DynamicRecursiveASTVisitor::TraverseTemplateName(N);
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *E) {
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
     if (NonTypeTemplateParmDecl *PD =
           dyn_cast<NonTypeTemplateParmDecl>(E->getDecl()))
       if (Matches(PD->getDepth(), E->getExprLoc()))
         return false;
-    return super::VisitDeclRefExpr(E);
+    return DynamicRecursiveASTVisitor::VisitDeclRefExpr(E);
   }
 
-  bool VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
+  bool VisitSubstTemplateTypeParmType(SubstTemplateTypeParmType *T) override {
     return TraverseType(T->getReplacementType());
   }
 
-  bool
-  VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T) {
+  bool VisitSubstTemplateTypeParmPackType(
+      SubstTemplateTypeParmPackType *T) override {
     return TraverseTemplateArgument(T->getArgumentPack());
   }
 
-  bool TraverseInjectedClassNameType(const InjectedClassNameType *T) {
+  bool TraverseInjectedClassNameType(InjectedClassNameType *T) override {
     return TraverseType(T->getInjectedSpecializationType());
   }
 };
