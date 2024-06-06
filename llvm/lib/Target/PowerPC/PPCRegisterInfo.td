@@ -17,6 +17,7 @@ def sub_un : SubRegIndex<1, 3>;
 def sub_32 : SubRegIndex<32>;
 def sub_32_hi_phony : SubRegIndex<32,32>;
 def sub_64 : SubRegIndex<64>;
+def sub_64_hi_phony : SubRegIndex<64,64>;
 def sub_vsx0 : SubRegIndex<128>;
 def sub_vsx1 : SubRegIndex<128, 128>;
 def sub_gp8_x0 : SubRegIndex<64>;
@@ -77,19 +78,19 @@ class VF<bits<5> num, string n> : PPCReg<n> {
 }
 
 // VR - One of the 32 128-bit vector registers
-class VR<VF SubReg, string n> : PPCReg<n> {
+class VR<VF SubReg, VF SubRegH, string n> : PPCReg<n> {
   let HWEncoding{4-0} = SubReg.HWEncoding{4-0};
   let HWEncoding{5} = 0;
-  let SubRegs = [SubReg];
-  let SubRegIndices = [sub_64];
+  let SubRegs = [SubReg, SubRegH];
+  let SubRegIndices = [sub_64, sub_64_hi_phony];
 }
 
 // VSRL - One of the 32 128-bit VSX registers that overlap with the scalar
 // floating-point registers.
-class VSRL<FPR SubReg, string n> : PPCReg<n> {
+class VSRL<FPR SubReg, FPR SubRegH, string n> : PPCReg<n> {
   let HWEncoding = SubReg.HWEncoding;
-  let SubRegs = [SubReg];
-  let SubRegIndices = [sub_64];
+  let SubRegs = [SubReg, SubRegH];
+  let SubRegIndices = [sub_64, sub_64_hi_phony];
 }
 
 // VSXReg - One of the VSX registers in the range vs32-vs63 with numbering
@@ -155,6 +156,12 @@ foreach Index = 0-31 in {
                 DwarfRegNum<[!add(Index, 32), !add(Index, 32)]>;
 }
 
+let isArtificial = 1 in {
+  foreach Index = 0-31 in {
+    def FH#Index : FPR<-1, "">;
+  }
+}
+
 // Floating-point pair registers
 foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in {
   def Fpair#Index : FPPair<"fp"#Index, Index>;
@@ -168,15 +175,21 @@ foreach Index = 0-31 in {
                  DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
 }
 
+let isArtificial = 1 in {
+  foreach Index = 0-31 in {
+    def VFH#Index : VF<-1, "">;
+  }
+}
+
 // Vector registers
 foreach Index = 0-31 in {
-  def V#Index : VR<!cast<VF>("VF"#Index), "v"#Index>,
-                DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
+  def V#Index : VR<!cast<VF>("VF"#Index), !cast<VF>("VFH"#Index), "v"#Index>,
+                DwarfRegNum<[!add(Index, 77)]>;
 }
 
 // VSX registers
 foreach Index = 0-31 in {
-  def VSL#Index : VSRL<!cast<FPR>("F"#Index), "vs"#Index>,
+  def VSL#Index : VSRL<!cast<FPR>("F"#Index), !cast<FPR>("FH"#Index), "vs"#Index>,
                   DwarfRegAlias<!cast<FPR>("F"#Index)>;
 }
 

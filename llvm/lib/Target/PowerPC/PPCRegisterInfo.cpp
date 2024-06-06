@@ -435,7 +435,91 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     }
   }
 
-  assert(checkAllSuperRegsMarked(Reserved));
+  // Mark phony regsiters for the VSR high bits as reserved so that they are
+  // not used.
+  Reserved.set(PPC::FH0);
+  Reserved.set(PPC::FH1);
+  Reserved.set(PPC::FH2);
+  Reserved.set(PPC::FH3);
+  Reserved.set(PPC::FH4);
+  Reserved.set(PPC::FH5);
+  Reserved.set(PPC::FH6);
+  Reserved.set(PPC::FH7);
+  Reserved.set(PPC::FH8);
+  Reserved.set(PPC::FH9);
+  Reserved.set(PPC::FH10);
+  Reserved.set(PPC::FH11);
+  Reserved.set(PPC::FH12);
+  Reserved.set(PPC::FH13);
+  Reserved.set(PPC::FH14);
+  Reserved.set(PPC::FH15);
+  Reserved.set(PPC::FH16);
+  Reserved.set(PPC::FH17);
+  Reserved.set(PPC::FH18);
+  Reserved.set(PPC::FH19);
+  Reserved.set(PPC::FH20);
+  Reserved.set(PPC::FH21);
+  Reserved.set(PPC::FH22);
+  Reserved.set(PPC::FH23);
+  Reserved.set(PPC::FH24);
+  Reserved.set(PPC::FH25);
+  Reserved.set(PPC::FH26);
+  Reserved.set(PPC::FH27);
+  Reserved.set(PPC::FH28);
+  Reserved.set(PPC::FH29);
+  Reserved.set(PPC::FH30);
+  Reserved.set(PPC::FH31);
+
+  Reserved.set(PPC::VFH0);
+  Reserved.set(PPC::VFH1);
+  Reserved.set(PPC::VFH2);
+  Reserved.set(PPC::VFH3);
+  Reserved.set(PPC::VFH4);
+  Reserved.set(PPC::VFH5);
+  Reserved.set(PPC::VFH6);
+  Reserved.set(PPC::VFH7);
+  Reserved.set(PPC::VFH8);
+  Reserved.set(PPC::VFH9);
+  Reserved.set(PPC::VFH10);
+  Reserved.set(PPC::VFH11);
+  Reserved.set(PPC::VFH12);
+  Reserved.set(PPC::VFH13);
+  Reserved.set(PPC::VFH14);
+  Reserved.set(PPC::VFH15);
+  Reserved.set(PPC::VFH16);
+  Reserved.set(PPC::VFH17);
+  Reserved.set(PPC::VFH18);
+  Reserved.set(PPC::VFH19);
+  Reserved.set(PPC::VFH20);
+  Reserved.set(PPC::VFH21);
+  Reserved.set(PPC::VFH22);
+  Reserved.set(PPC::VFH23);
+  Reserved.set(PPC::VFH24);
+  Reserved.set(PPC::VFH25);
+  Reserved.set(PPC::VFH26);
+  Reserved.set(PPC::VFH27);
+  Reserved.set(PPC::VFH28);
+  Reserved.set(PPC::VFH29);
+  Reserved.set(PPC::VFH30);
+  Reserved.set(PPC::VFH31);
+
+  assert(checkAllSuperRegsMarked(Reserved,
+			         {PPC::FH0,  PPC::FH1,  PPC::FH2,  PPC::FH3,
+				  PPC::FH4,  PPC::FH5,  PPC::FH6,  PPC::FH7,
+				  PPC::FH8,  PPC::FH9,  PPC::FH10, PPC::FH11,
+				  PPC::FH12, PPC::FH13, PPC::FH14, PPC::FH15, 
+				  PPC::FH16, PPC::FH17, PPC::FH18, PPC::FH19,
+				  PPC::FH20, PPC::FH21, PPC::FH22, PPC::FH23,
+				  PPC::FH24, PPC::FH25, PPC::FH26, PPC::FH27,
+				  PPC::FH28, PPC::FH29, PPC::FH30, PPC::FH31, 
+				  PPC::VFH0,  PPC::VFH1,  PPC::VFH2,  PPC::VFH3,
+				  PPC::VFH4,  PPC::VFH5,  PPC::VFH6,  PPC::VFH7,
+				  PPC::VFH8,  PPC::VFH9,  PPC::VFH10, PPC::VFH11,
+				  PPC::VFH12, PPC::VFH13, PPC::VFH14, PPC::VFH15, 
+				  PPC::VFH16, PPC::VFH17, PPC::VFH18, PPC::VFH19,
+				  PPC::VFH20, PPC::VFH21, PPC::VFH22, PPC::VFH23,
+				  PPC::VFH24, PPC::VFH25, PPC::VFH26, PPC::VFH27,
+				  PPC::VFH28, PPC::VFH29, PPC::VFH30, PPC::VFH31}));
   return Reserved;
 }
 
