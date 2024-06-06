@@ -810,7 +810,10 @@ void AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
 void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
   if (Dest.isPotentiallyAliased() && E->getType().isPODType(CGF.getContext())) {
-    llvm_unreachable("NYI");
+    // For a POD type, just emit a load of the lvalue + a copy, because our
+    // compound literal might alias the destination.
+    buildAggLoadOfLValue(E);
+    return;
   }
 
   AggValueSlot Slot = EnsureSlot(CGF.getLoc(E->getSourceRange()), E->getType());
