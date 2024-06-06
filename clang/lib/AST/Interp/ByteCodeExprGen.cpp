@@ -3188,7 +3188,7 @@ bool ByteCodeExprGen<Emitter>::visitAPValueInitializer(const APValue &Val,
       const APValue &F = Val.getStructField(I);
       const Record::Field *RF = R->getField(I);
 
-      if (F.isInt()) {
+      if (F.isInt() || F.isLValue()) {
         PrimType T = classifyPrim(RF->Decl->getType());
         if (!this->visitAPValue(F, T, E))
           return false;
