@@ -779,7 +779,7 @@ define void @string_type(ptr %arg1) {
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !4 = !DILocalVariable(scope: !5, name: "string_size", file: !2, type: !3);
-!5 = distinct !DISubprogram(name: "class_field", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!5 = distinct !DISubprogram(name: "test", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
 !6 = !DIStringType(name: "character(*)", stringLength: !4, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !7)
 !7 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
 !8 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
