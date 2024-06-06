@@ -825,7 +825,7 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
   if (PointerElemTy == ExpectedElementType)
     return;
 
-  setInsertPointSkippingPhis(B, I); // PoisonValue::get(ElemTy);
+  setInsertPointSkippingPhis(B, I);
   MetadataAsValue *VMD = buildMD(PoisonValue::get(ExpectedElementType));
   unsigned AddressSpace = getPointerAddressSpace(Pointer->getType());
   bool FirstPtrCastOrAssignPtrType = true;
