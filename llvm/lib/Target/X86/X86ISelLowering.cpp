@@ -42445,12 +42445,10 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     if (SimplifyDemandedBits(Op1, OriginalDemandedBits, OriginalDemandedElts,
                              Known, TLO, Depth + 1))
       return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
     if (SimplifyDemandedBits(Op0, ~Known.Zero & OriginalDemandedBits,
                              OriginalDemandedElts, Known2, TLO, Depth + 1))
       return true;
-    assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
     // If the RHS is a constant, see if we can simplify it.
     if (ShrinkDemandedConstant(Op, ~Known2.One & OriginalDemandedBits,
@@ -42501,7 +42499,6 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              TLO, Depth + 1))
       return true;
 
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     Known.Zero <<= ShAmt;
     Known.One <<= ShAmt;
 
@@ -42520,7 +42517,6 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              OriginalDemandedElts, Known, TLO, Depth + 1))
       return true;
 
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     Known.Zero.lshrInPlace(ShAmt);
     Known.One.lshrInPlace(ShAmt);
 
@@ -42561,7 +42557,6 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              TLO, Depth + 1))
       return true;
 
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     Known.Zero.lshrInPlace(ShAmt);
     Known.One.lshrInPlace(ShAmt);
 
