@@ -439,6 +439,19 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       indicatePessimisticFixpoint();
       return;
     }
+
+    bool HasAllocaOrASCast = false;
+    for (BasicBlock &BB : *F) {
+      for (Instruction &I : BB) {
+        if (isa<AllocaInst>(I) || isa<AddrSpaceCastInst>(I)) {
+          HasAllocaOrASCast = true;
+          removeAssumedBits(FLAT_SCRATCH_INIT);
+          break;
+        }
+      }
+      if (HasAllocaOrASCast)
+        break;
+    }
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -524,6 +537,9 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
 
     if (isAssumed(COMPLETION_ACTION) && funcRetrievesCompletionAction(A, COV))
       removeAssumedBits(COMPLETION_ACTION);
+
+    if (isAssumed(FLAT_SCRATCH_INIT) && needFlatScratchInit(A))
+      removeAssumedBits(FLAT_SCRATCH_INIT);
 
     return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED
                                        : ChangeStatus::UNCHANGED;
@@ -681,6 +697,33 @@ private:
     };
     bool UsedAssumedInformation = false;
     return !A.checkForAllCallLikeInstructions(DoesNotRetrieve, *this,
+                                              UsedAssumedInformation);
+  }
+
+  // Returns true if FlatScratchInit is needed, i.e., no-flat-scratch-init is
+  // not to be set.
+  bool needFlatScratchInit(Attributor &A) {
+    // This is called on each callee; false means callee shouldn't have
+    // no-flat-scratch-init.
+    auto CheckForNoFlatScratchInit = [&](Instruction &I) {
+      const auto &CB = cast<CallBase>(I);
+      const Value *CalleeOp = CB.getCalledOperand();
+      const Function *Callee = dyn_cast<Function>(CalleeOp);
+      if (!Callee) // indirect call
+        return CB.isInlineAsm();
+
+      if (Callee->isIntrinsic())
+        return true;
+
+      const auto *CalleeInfo = A.getAAFor<AAAMDAttributes>(
+          *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
+      return CalleeInfo && CalleeInfo->isAssumed(FLAT_SCRATCH_INIT);
+    };
+
+    bool UsedAssumedInformation = false;
+    // If any callee is false (i.e. need FlatScratchInit),
+    // checkForAllCallLikeInstructions returns false
+    return !A.checkForAllCallLikeInstructions(CheckForNoFlatScratchInit, *this,
                                               UsedAssumedInformation);
   }
 };

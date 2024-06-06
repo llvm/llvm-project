@@ -30,7 +30,7 @@ define hidden void @func() #1 {
 ; GCN-NOT: writelane
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
 
-; GCN: ; TotalNumSgprs: 37
+; GCN: ; NumSgprs: 33
 ; GCN: ; NumVgprs: 9
 define amdgpu_kernel void @kernel_call() #0 {
   %vgpr = load volatile i32, ptr addrspace(1) undef
