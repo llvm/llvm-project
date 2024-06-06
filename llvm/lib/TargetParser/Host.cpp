@@ -302,6 +302,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0x805", "cortex-a76") // Kryo 4xx/5xx Silver
         .Case("0xc00", "falkor")
         .Case("0xc01", "saphira")
+        .Case("0x001", "oryon-1")
         .Default("generic");
   if (Implementer == "0x53") { // Samsung Electronics Co., Ltd.
     // The Exynos chips have a convoluted ID scheme that doesn't seem to follow
