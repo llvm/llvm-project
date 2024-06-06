@@ -68,21 +68,19 @@ float fmul(double x, double y) {
   auto y_bits = fputil::FPBits<double>(y);
   uint64_t y_u = y_bits.uintval();
 
-
   if ((x_bits.is_inf() && x_bits.is_neg()) && y_bits.is_nan())
     return fputil::FPBits<float>::quiet_nan().get_val();
 
   if ((y_bits.is_inf() && y_bits.is_neg()) && x_bits.is_nan())
     return fputil::FPBits<float>::quiet_nan().get_val();
 
-  if ((x_bits.is_inf() && x_bits.is_neg()) && (y_bits.is_inf() && y_bits.is_neg()))
+  if ((x_bits.is_inf() && x_bits.is_neg()) &&
+      (y_bits.is_inf() && y_bits.is_neg()))
     return x_bits.inf().get_val();
-
 
   if ((x_bits.is_inf() && x_bits.is_neg()) && y_bits.is_zero())
     return fputil::FPBits<float>::quiet_nan().get_val();
 
-  
   if ((y_bits.is_inf() && y_bits.is_neg()) && x_bits.is_zero())
     return fputil::FPBits<float>::quiet_nan().get_val();
 
@@ -92,23 +90,28 @@ float fmul(double x, double y) {
   if (y_bits.is_inf() && x_bits.is_zero())
     return fputil::FPBits<float>::quiet_nan().get_val();
 
-  if ((x_bits.is_subnormal() || x_bits.is_normal()) && (y_bits.is_inf() && y_bits.is_neg()))
+  if ((x_bits.is_subnormal() || x_bits.is_normal()) &&
+      (y_bits.is_inf() && y_bits.is_neg()))
     return y_bits.inf(Sign::NEG).get_val();
 
-  if ((x_bits.is_inf() && x_bits.is_neg()) && (y_bits.is_subnormal() || y_bits.is_normal()))
+  if ((x_bits.is_inf() && x_bits.is_neg()) &&
+      (y_bits.is_subnormal() || y_bits.is_normal()))
     return x_bits.inf(Sign::NEG).get_val();
 
-   if (x_bits.is_inf() && (y_bits.is_normal() || y_bits.is_subnormal()))
+  if (x_bits.is_inf() && (y_bits.is_normal() || y_bits.is_subnormal()))
     return x_bits.inf().get_val();
 
   if (y_bits.is_inf() && (x_bits.is_normal() || x_bits.is_subnormal()))
     return y_bits.inf().get_val();
-  
 
-  if (((x_bits.is_subnormal() && x_bits.is_neg()) || (x_bits.is_normal() && x_bits.is_neg())) && (y_bits.is_inf() && y_bits.is_neg()))
+  if (((x_bits.is_subnormal() && x_bits.is_neg()) ||
+       (x_bits.is_normal() && x_bits.is_neg())) &&
+      (y_bits.is_inf() && y_bits.is_neg()))
     return y_bits.inf().get_val();
 
-   if (((y_bits.is_subnormal() && y_bits.is_neg()) || (y_bits.is_normal() && y_bits.is_neg())) && (x_bits.is_inf() && x_bits.is_neg()))
+  if (((y_bits.is_subnormal() && y_bits.is_neg()) ||
+       (y_bits.is_normal() && y_bits.is_neg())) &&
+      (x_bits.is_inf() && x_bits.is_neg()))
     return y_bits.inf().get_val();
 
   if ((x_bits.is_subnormal() || x_bits.is_normal()) && y_bits.is_zero())
