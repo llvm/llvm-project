@@ -96,7 +96,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
   //    right after the call to SBDebugger::Initialize()
   //  + Just call PopulateExceptionBreakpoints() to get a fresh list  everytime
   //    we query (a bit overkill since it's not likely to change?)
-  if (!exception_breakpoints.has_value)
+  if (!exception_breakpoints.has_value())
     PopulateExceptionBreakpoints();
 
   for (auto &bp : *exception_breakpoints) {
@@ -108,7 +108,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
   // See comment in the other GetExceptionBreakpoint().
-  if (!exception_breakpoints.has_value)
+  if (!exception_breakpoints.has_value())
     PopulateExceptionBreakpoints();
 
   for (auto &bp : *exception_breakpoints) {
