@@ -219,6 +219,10 @@ llvm::DILocalScope *DebugTranslation::translateImpl(DILocalScopeAttr attr) {
   return cast<llvm::DILocalScope>(translate(DINodeAttr(attr)));
 }
 
+llvm::DIVariable *DebugTranslation::translateImpl(DIVariableAttr attr) {
+  return cast<llvm::DIVariable>(translate(DINodeAttr(attr)));
+}
+
 llvm::DILocalVariable *
 DebugTranslation::translateImpl(DILocalVariableAttr attr) {
   return llvm::DILocalVariable::get(

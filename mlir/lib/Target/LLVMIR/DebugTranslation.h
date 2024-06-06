@@ -81,6 +81,7 @@ private:
   llvm::DILocalScope *translateImpl(DILocalScopeAttr attr);
   llvm::DILocalVariable *translateImpl(DILocalVariableAttr attr);
   llvm::DIGlobalVariable *translateImpl(DIGlobalVariableAttr attr);
+  llvm::DIVariable *translateImpl(DIVariableAttr attr);
   llvm::DIModule *translateImpl(DIModuleAttr attr);
   llvm::DINamespace *translateImpl(DINamespaceAttr attr);
   llvm::DIScope *translateImpl(DIScopeAttr attr);

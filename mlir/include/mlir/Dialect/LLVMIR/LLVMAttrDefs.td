@@ -687,7 +687,7 @@ def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
     "StringAttr":$name,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint32_t">:$alignInBits,
-    OptionalParameter<"DINodeAttr">:$stringLength,
+    OptionalParameter<"DIVariableAttr">:$stringLength,
     OptionalParameter<"DIExpressionAttr">:$stringLengthExp,
     OptionalParameter<"DIExpressionAttr">:$stringLocationExp,
     LLVM_DIEncodingParameter:$encoding

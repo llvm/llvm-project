@@ -202,7 +202,7 @@ MlirAttribute mlirLLVMDIStringTypeAttrGet(
     MlirLLVMTypeEncoding encoding) {
   return wrap(DIStringTypeAttr::get(
       unwrap(ctx), tag, cast<StringAttr>(unwrap(name)), sizeInBits, alignInBits,
-      cast<DINodeAttr>(unwrap(stringLength)),
+      cast<DIVariableAttr>(unwrap(stringLength)),
       cast<DIExpressionAttr>(unwrap(stringLengthExp)),
       cast<DIExpressionAttr>(unwrap(stringLocationExp)), encoding));
 }

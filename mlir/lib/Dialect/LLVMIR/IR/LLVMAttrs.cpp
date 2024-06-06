@@ -83,6 +83,14 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
+// DIVariableAttr
+//===----------------------------------------------------------------------===//
+
+bool DIVariableAttr::classof(Attribute attr) {
+  return llvm::isa<DILocalVariableAttr, DIGlobalVariableAttr>(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // DITypeAttr
 //===----------------------------------------------------------------------===//
 

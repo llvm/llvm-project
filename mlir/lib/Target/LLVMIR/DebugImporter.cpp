@@ -114,14 +114,10 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
 }
 
 DIStringTypeAttr DebugImporter::translateImpl(llvm::DIStringType *node) {
-  llvm::DINode *stringLength =
-      TypeSwitch<llvm::DIVariable *, llvm::DINode *>(node->getStringLength())
-          .Case([&](llvm::DILocalVariable *local) { return local; })
-          .Case([&](llvm::DIGlobalVariable *global) { return global; })
-          .Default([&](llvm::DIVariable *) { return nullptr; });
   return DIStringTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
-      node->getSizeInBits(), node->getAlignInBits(), translate(stringLength),
+      node->getSizeInBits(), node->getAlignInBits(),
+      translate(node->getStringLength()),
       translateExpression(node->getStringLengthExp()),
       translateExpression(node->getStringLocationExp()), node->getEncoding());
 }
@@ -185,6 +181,10 @@ DILocalVariableAttr DebugImporter::translateImpl(llvm::DILocalVariable *node) {
       context, scope, getStringAttrOrNull(node->getRawName()),
       translate(node->getFile()), node->getLine(), node->getArg(),
       node->getAlignInBits(), translate(node->getType()));
+}
+
+DIVariableAttr DebugImporter::translateImpl(llvm::DIVariable *node) {
+  return cast<DIVariableAttr>(translate(static_cast<llvm::DINode *>(node)));
 }
 
 DIScopeAttr DebugImporter::translateImpl(llvm::DIScope *node) {

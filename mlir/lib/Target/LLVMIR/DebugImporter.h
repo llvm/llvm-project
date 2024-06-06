@@ -70,6 +70,7 @@ private:
   DILexicalBlockFileAttr translateImpl(llvm::DILexicalBlockFile *node);
   DIGlobalVariableAttr translateImpl(llvm::DIGlobalVariable *node);
   DILocalVariableAttr translateImpl(llvm::DILocalVariable *node);
+  DIVariableAttr translateImpl(llvm::DIVariable *node);
   DIModuleAttr translateImpl(llvm::DIModule *node);
   DINamespaceAttr translateImpl(llvm::DINamespace *node);
   DIScopeAttr translateImpl(llvm::DIScope *node);
