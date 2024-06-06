@@ -609,3 +609,9 @@ namespace ArrayMemberAccess {
     bool cond = a->x;
   }
 }
+
+namespace OnePastEndSub {
+  struct A {};
+  constexpr A a[3][3];
+  constexpr int diff2 = &a[1][3] - &a[1][0]; /// Used to crash.
+}

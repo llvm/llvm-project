@@ -1773,8 +1773,10 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
     return true;
   }
 
-  T A = T::from(LHS.getIndex());
-  T B = T::from(RHS.getIndex());
+  T A = LHS.isElementPastEnd() ? T::from(LHS.getNumElems())
+                               : T::from(LHS.getIndex());
+  T B = RHS.isElementPastEnd() ? T::from(RHS.getNumElems())
+                               : T::from(RHS.getIndex());
   return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, A.bitWidth(), A, B);
 }
 
