@@ -13,7 +13,7 @@ void test() {
 }
 // CHECK: -CXXDefaultInitExpr 0x{{[^ ]*}} <{{.*}}> 'const A' lvalue has rewritten init
 // CHECK-NEXT:  `-ExprWithCleanups 0x{{[^ ]*}} <{{.*}}> 'const A' lvalue
-// CHECK-NEXT:    `-MaterializeTemporaryExpr 0x{{[^ ]*}} <{{.*}}> 'const A' lvalue extended by Var 0x{{[^ ]*}} 'b' 'B'
+// CHECK-NEXT:    `-MaterializeTemporaryExpr 0x{{[^ ]*}} <{{.*}}> 'const A' lvalue extended by Field 0x{{[^ ]*}} 'a' 'const A &'
 // CHECK-NEXT:      `-ImplicitCastExpr 0x{{[^ ]*}} <{{.*}}> 'const A' <NoOp>
 // CHECK-NEXT:        `-CXXFunctionalCastExpr 0x{{[^ ]*}} <{{.*}}> 'A' functional cast to A <NoOp>
 // CHECK-NEXT:          `-InitListExpr 0x{{[^ ]*}} <{{.*}}> 'A'

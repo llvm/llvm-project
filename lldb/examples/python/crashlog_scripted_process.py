@@ -173,10 +173,7 @@ class CrashLogScriptedThread(ScriptedThread):
         self.backing_thread = crashlog_thread
         self.idx = self.backing_thread.index
         self.tid = self.backing_thread.id
-        if self.backing_thread.app_specific_backtrace:
-            self.name = "Application Specific Backtrace"
-        else:
-            self.name = self.backing_thread.name
+        self.name = self.backing_thread.name
         self.queue = self.backing_thread.queue
         self.has_crashed = self.originating_process.crashed_thread_idx == self.idx
         self.create_stackframes()

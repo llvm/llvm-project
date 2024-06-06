@@ -14152,13 +14152,6 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
     if (TransformExprs(E->getArgs(), E->getNumArgs(), true, Args,
                        &ArgumentChanged))
       return ExprError();
-
-    if (E->isListInitialization() && !E->isStdInitListInitialization()) {
-      ExprResult Res = RebuildInitList(E->getBeginLoc(), Args, E->getEndLoc());
-      if (Res.isInvalid())
-        return ExprError();
-      Args = {Res.get()};
-    }
   }
 
   if (!getDerived().AlwaysRebuild() &&
@@ -14170,9 +14163,12 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
     return SemaRef.MaybeBindToTemporary(E);
   }
 
+  // FIXME: We should just pass E->isListInitialization(), but we're not
+  // prepared to handle list-initialization without a child InitListExpr.
   SourceLocation LParenLoc = T->getTypeLoc().getEndLoc();
   return getDerived().RebuildCXXTemporaryObjectExpr(
-      T, LParenLoc, Args, E->getEndLoc(), E->isListInitialization());
+      T, LParenLoc, Args, E->getEndLoc(),
+      /*ListInitialization=*/LParenLoc.isInvalid());
 }
 
 template<typename Derived>
