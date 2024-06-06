@@ -207,7 +207,8 @@ private:
   unsigned Alignment;
   mlir::Value V;
   mlir::Type ElementType;
-  mlir::Value VectorIdx; // Index for vector subscript
+  mlir::Value VectorIdx;      // Index for vector subscript
+  mlir::Attribute VectorElts; // ExtVector element subset: V.xyx
   LValueBaseInfo BaseInfo;
   const CIRGenBitFieldInfo *BitFieldInfo{0};
 
@@ -316,6 +317,20 @@ public:
     return VectorIdx;
   }
 
+  // extended vector elements.
+  Address getExtVectorAddress() const {
+    assert(isExtVectorElt());
+    return Address(getExtVectorPointer(), ElementType, getAlignment());
+  }
+  mlir::Value getExtVectorPointer() const {
+    assert(isExtVectorElt());
+    return V;
+  }
+  mlir::ArrayAttr getExtVectorElts() const {
+    assert(isExtVectorElt());
+    return mlir::cast<mlir::ArrayAttr>(VectorElts);
+  }
+
   static LValue MakeVectorElt(Address vecAddress, mlir::Value Index,
                               clang::QualType type, LValueBaseInfo BaseInfo) {
     LValue R;
@@ -325,6 +340,19 @@ public:
     R.VectorIdx = Index;
     R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
                  BaseInfo);
+    return R;
+  }
+
+  static LValue MakeExtVectorElt(Address vecAddress, mlir::ArrayAttr elts,
+                                 clang::QualType type,
+                                 LValueBaseInfo baseInfo) {
+    LValue R;
+    R.LVType = ExtVectorElt;
+    R.V = vecAddress.getPointer();
+    R.ElementType = vecAddress.getElementType();
+    R.VectorElts = elts;
+    R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
+                 baseInfo);
     return R;
   }
 

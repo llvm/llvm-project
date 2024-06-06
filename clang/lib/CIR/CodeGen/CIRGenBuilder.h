@@ -802,6 +802,34 @@ public:
     return CIRBaseBuilderTy::createStore(loc, flag, dst);
   }
 
+  mlir::cir::VecShuffleOp
+  createVecShuffle(mlir::Location loc, mlir::Value vec1, mlir::Value vec2,
+                   llvm::ArrayRef<mlir::Attribute> maskAttrs) {
+    auto vecType = mlir::cast<mlir::cir::VectorType>(vec1.getType());
+    auto resultTy = mlir::cir::VectorType::get(
+        getContext(), vecType.getEltType(), maskAttrs.size());
+    return CIRBaseBuilderTy::create<mlir::cir::VecShuffleOp>(
+        loc, resultTy, vec1, vec2, getArrayAttr(maskAttrs));
+  }
+
+  mlir::cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                           mlir::Value vec2,
+                                           llvm::ArrayRef<int64_t> mask) {
+    llvm::SmallVector<mlir::Attribute, 4> maskAttrs;
+    for (int32_t idx : mask) {
+      maskAttrs.push_back(mlir::cir::IntAttr::get(getSInt32Ty(), idx));
+    }
+
+    return createVecShuffle(loc, vec1, vec2, maskAttrs);
+  }
+
+  mlir::cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                           llvm::ArrayRef<int64_t> mask) {
+    // FIXME(cir): Support use cir.vec.shuffle with single vec
+    // Workaround: pass Vec as both vec1 and vec2
+    return createVecShuffle(loc, vec1, vec1, mask);
+  }
+
   mlir::cir::StoreOp
   createAlignedStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
                      clang::CharUnits align = clang::CharUnits::One(),
