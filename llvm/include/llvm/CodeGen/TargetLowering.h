@@ -104,7 +104,8 @@ enum Preference : uint8_t {
   ILP,         // Scheduling for ILP in low register pressure mode.
   VLIW,        // Scheduling for VLIW targets.
   Fast,        // Fast suboptimal list scheduling
-  Linearize    // Linearize DAG, no scheduling
+  Linearize,   // Linearize DAG, no scheduling
+  Last = Linearize  // Marker for the last Sched::Preference
 };
 
 } // end namespace Sched
