@@ -210,39 +210,46 @@ void dynamic_random_access_write(int startIndex) {
     long buffer[10];
     // Cannot reason about index.
     size_t res = fread(buffer + startIndex, sizeof(long), 5, fp);
+    long *p = &buffer[startIndex];
+    long v = 0;
+
+    // If all 5 elements were successfully read, then all 5 elements should be tainted and considered initialized.
     if (5 == res) {
-      long p = buffer[startIndex];
-      clang_analyzer_isTainted(p); // expected-warning {{NO}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
+      // FIXME: These should be tainted.
+      clang_analyzer_isTainted((v = p[0])); // expected-warning {{NO}}
+      clang_analyzer_isTainted((v = p[1])); // expected-warning {{NO}}
+      clang_analyzer_isTainted((v = p[2])); // expected-warning {{NO}}
+      clang_analyzer_isTainted((v = p[3])); // expected-warning {{NO}}
+      clang_analyzer_isTainted((v = p[4])); // expected-warning {{NO}}
+      clang_analyzer_dump((v = p[0])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[1])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[2])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[3])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[4])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[5])); // expected-warning {{conj_}} FIXME: This should raise an uninit read.
     } else if (res == 4) {
-      long p = buffer[startIndex];
-      clang_analyzer_isTainted(p); // expected-warning {{NO}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
-      p = buffer[startIndex + 1];
-      clang_analyzer_isTainted(p); // expected-warning {{NO}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
-      p = buffer[startIndex + 2];
-      clang_analyzer_isTainted(p); // expected-warning {{NO}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
-      p = buffer[startIndex + 3];
-      clang_analyzer_isTainted(p); // expected-warning {{NO}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
-      p = buffer[startIndex + 4];
-      clang_analyzer_isTainted(p); // expected-warning {{NO}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
-      p = buffer[startIndex + 5];
-      clang_analyzer_isTainted(p); // expected-warning {{NO}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
-      p = buffer[0];
-      clang_analyzer_isTainted(p); // expected-warning {{NO}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
+      // If only the first 4 elements were successfully read,
+      // then only the first 4 elements should be tainted and considered initialized.
+      // FIXME: These should be tainted.
+      clang_analyzer_isTainted((v = p[0])); // expected-warning {{NO}}
+      clang_analyzer_isTainted((v = p[1])); // expected-warning {{NO}}
+      clang_analyzer_isTainted((v = p[2])); // expected-warning {{NO}}
+      clang_analyzer_isTainted((v = p[3])); // expected-warning {{NO}}
+      clang_analyzer_dump((v = p[0])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[1])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[2])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[3])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[4])); // expected-warning {{conj_}} FIXME: This should raise an uninit read.
     } else {
-      long p = buffer[startIndex];
-      clang_analyzer_isTainted(p); // expected-warning {{NO}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
-      p = buffer[0];
-      clang_analyzer_isTainted(p); // expected-warning {{NO}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
+      // Neither 5, or 4 elements were successfully read, so we must have read from 0 up to 3 elements.
+      // FIXME: These should be tainted.
+      clang_analyzer_isTainted((v = p[0])); // expected-warning {{NO}}
+      clang_analyzer_isTainted((v = p[1])); // expected-warning {{NO}}
+      clang_analyzer_isTainted((v = p[2])); // expected-warning {{NO}}
+      clang_analyzer_dump((v = p[0])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[1])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[2])); // expected-warning {{conj_}} ok
+      clang_analyzer_dump((v = p[3])); // expected-warning {{conj_}} FIXME: This should raise an uninit read.
     }
     fclose(fp);
   }
