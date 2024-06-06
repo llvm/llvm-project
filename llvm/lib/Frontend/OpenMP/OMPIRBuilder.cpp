@@ -2557,7 +2557,7 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
       getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca());
 
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
@@ -3120,7 +3120,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyDynamicWorkshareLoop(
   FunctionCallee DynamicNext = getKmpcForDynamicNextForType(IVTy, M, *this);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca());
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
