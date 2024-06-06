@@ -31,20 +31,20 @@
 // MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zks" "-target-feature" "+zksed" "-target-feature" "+zksh" "-target-feature" "+svinval"
 // MCPU-XIANGSHAN-NANHU-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-k1 | FileCheck -check-prefix=MCPU-SPACEMIT-K1 %s
-// MCPU-SPACEMIT-K1: "-nostdsysteminc" "-target-cpu" "spacemit-k1"
-// MCPU-SPACEMIT-K1: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+c"
-// MCPU-SPACEMIT-K1: "-target-feature" "+v" "-target-feature" "+zic64b" "-target-feature" "+zicbom" "-target-feature" "+zicbop"
-// MCPU-SPACEMIT-K1: "-target-feature" "+zicboz" "-target-feature" "+ziccamoa" "-target-feature" "+ziccif" "-target-feature" "+zicclsm"
-// MCPU-SPACEMIT-K1: "-target-feature" "+ziccrse" "-target-feature" "+zicntr" "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SPACEMIT-K1: "-target-feature" "+zihintpause" "-target-feature" "+zihpm" "-target-feature" "+za64rs" "-target-feature" "+zfhmin"
-// MCPU-SPACEMIT-K1: "-target-feature" "+zba" "-target-feature" "+zbb" "-target-feature" "+zbs" "-target-feature" "+zkt"
-// MCPU-SPACEMIT-K1: "-target-feature" "+zve32f" "-target-feature" "+zve32x" "-target-feature" "+zve64d" "-target-feature" "+zve64f"
-// MCPU-SPACEMIT-K1: "-target-feature" "+zve64x" "-target-feature" "+zvfh" "-target-feature" "+zvfhmin" "-target-feature" "+zvl128b"
-// MCPU-SPACEMIT-K1: "-target-feature" "+zvl256b" "-target-feature" "+zvl32b" "-target-feature" "+zvl64b" "-target-feature" "+ssccptr"
-// MCPU-SPACEMIT-K1: "-target-feature" "+sscounterenw" "-target-feature" "+sstvala" "-target-feature" "+sstvecd" "-target-feature" "+svade"
-// MCPU-SPACEMIT-K1: "-target-feature" "+svbare" "-target-feature" "+svinval" "-target-feature" "+svpbmt"
-// MCPU-SPACEMIT-K1-SAME: "-target-abi" "lp64d"
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-x60 | FileCheck -check-prefix=MCPU-SPACEMIT-X60 %s
+// MCPU-SPACEMIT-X60: "-nostdsysteminc" "-target-cpu" "spacemit-x60"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+c"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+v" "-target-feature" "+zic64b" "-target-feature" "+zicbom" "-target-feature" "+zicbop"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zicboz" "-target-feature" "+ziccamoa" "-target-feature" "+ziccif" "-target-feature" "+zicclsm"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+ziccrse" "-target-feature" "+zicntr" "-target-feature" "+zicsr" "-target-feature" "+zifencei"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zihintpause" "-target-feature" "+zihpm" "-target-feature" "+za64rs" "-target-feature" "+zfhmin"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zba" "-target-feature" "+zbb" "-target-feature" "+zbs" "-target-feature" "+zkt"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zve32f" "-target-feature" "+zve32x" "-target-feature" "+zve64d" "-target-feature" "+zve64f"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zve64x" "-target-feature" "+zvfh" "-target-feature" "+zvfhmin" "-target-feature" "+zvl128b"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zvl256b" "-target-feature" "+zvl32b" "-target-feature" "+zvl64b" "-target-feature" "+ssccptr"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+sscounterenw" "-target-feature" "+sstvala" "-target-feature" "+sstvecd" "-target-feature" "+svade"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svbare" "-target-feature" "+svinval" "-target-feature" "+svpbmt"
+// MCPU-SPACEMIT-X60-SAME: "-target-abi" "lp64d"
 
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
 // RUN: %clang --target=riscv64 -### -c %s -mcpu=native 2> %t.err || true

@@ -382,13 +382,13 @@ def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                             TuneZExtWFusion,
                                             TuneShiftedZExtWFusion]>;
 
-def SPACEMIT_K1 : RISCVProcessorModel<"spacemit-k1",
-                                   NoSchedModel,
-                                   !listconcat(RVA22S64Features,
-                                   [FeatureStdExtV,
-                                    FeatureStdExtZvfh,
-                                    FeatureStdExtZvfhmin,
-                                    FeatureStdExtZvl32b,
-                                    FeatureStdExtZvl64b,
-                                    FeatureStdExtZvl128b,
-                                    FeatureStdExtZvl256b])>;
+def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
+                                       NoSchedModel,
+                                       !listconcat(RVA22S64Features,
+                                       [FeatureStdExtV,
+                                        FeatureStdExtZvfh,
+                                        FeatureStdExtZvfhmin,
+                                        FeatureStdExtZvl32b,
+                                        FeatureStdExtZvl64b,
+                                        FeatureStdExtZvl128b,
+                                        FeatureStdExtZvl256b])>;
