@@ -46,7 +46,7 @@ MISSING: Creating 'a.c.gcov'
 RUN: llvm-cov gcov -p test_paths.cpp 2>/dev/null | FileCheck %s --check-prefix=PRESERVE
 RUN: ls src#a.c.gcov
 PRESERVE: File 'src{{[/\]}}a.c'
-PRESERVE: Creating 'src#a.c.gcov'
+PRESERVE: Creating 'src{{[#\]}}a.c.gcov'
 
 # Long file names.
 RUN: llvm-cov gcov -l test_paths.cpp
