@@ -1230,7 +1230,6 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
       uint64_t num_bits = 0;
       if (auto temp = new_val_sp->GetCompilerType().GetBitSize(target.get()))
         num_bits = temp.value();
-      // SetValueFromInteger(llvm::APInt(64, int_val), error);
       SetValueFromInteger(llvm::APInt(num_bits, int_val), error);
     } else
       error.SetErrorString("error converting new_val_sp to integer");
