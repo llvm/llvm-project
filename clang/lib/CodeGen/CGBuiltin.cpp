@@ -616,8 +616,7 @@ static Value *emitTernaryBuiltin(CodeGenFunction &CGF,
 }
 
 // Emit an intrinsic that has 4 operands of the same type as its result.
-static Value *emitQuaternaryBuiltin(CodeGenFunction &CGF,
-                                    const CallExpr *E,
+static Value *emitQuaternaryBuiltin(CodeGenFunction &CGF, const CallExpr *E,
                                     unsigned IntrinsicID) {
   llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
   llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
@@ -625,7 +624,7 @@ static Value *emitQuaternaryBuiltin(CodeGenFunction &CGF,
   llvm::Value *Src3 = CGF.EmitScalarExpr(E->getArg(3));
 
   Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-  return CGF.Builder.CreateCall(F, { Src0, Src1, Src2, Src3 });
+  return CGF.Builder.CreateCall(F, {Src0, Src1, Src2, Src3});
 }
 
 // Emit an intrinsic that has 1 float or double operand, and 1 integer.

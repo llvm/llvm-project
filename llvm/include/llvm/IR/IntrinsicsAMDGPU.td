@@ -835,6 +835,11 @@ def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
 
+def int_amdgcn_bitop3 :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
+                        [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
+
 } // TargetPrefix = "amdgcn"
 
 // New-style image intrinsics
@@ -3773,11 +3778,6 @@ def int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 :
   Intrinsic<[llvm_i64_ty], [local_ptr_ty, llvm_i64_ty],
             [IntrConvergent, IntrWillReturn, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
             "", [SDNPMemOperand]>;
-
-def int_amdgcn_bitop3 :
-  DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
-                        [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
 
 def int_amdgcn_s_monitor_sleep :
   ClangBuiltin<"__builtin_amdgcn_s_monitor_sleep">,
