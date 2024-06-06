@@ -1036,17 +1036,21 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // Try to add condition from header to the unique exit block, if there is one.
   // When exiting either with EQ or NE, we know that the induction value must be
   // u<= B, as a different exit may exit earlier.
+  ConditionTy Precond;
+  if (!MonotonicallyIncreasingUnsigned)
+    Precond = {CmpInst::ICMP_ULE, StartValue, B};
   if (Pred == CmpInst::ICMP_EQ) {
     BasicBlock *EB = cast<BranchInst>(BB.getTerminator())->getSuccessor(0);
-    if (L->getUniqueExitBlock() == EB)
+    if (L->getUniqueExitBlock() == EB) {
       WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(EB), CmpInst::ICMP_ULE, A, B));
+          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
+    }
   }
   if (Pred == CmpInst::ICMP_NE) {
     BasicBlock *EB = cast<BranchInst>(BB.getTerminator())->getSuccessor(1);
     if (L->getUniqueExitBlock() == EB)
       WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(EB), CmpInst::ICMP_ULE, A, B));
+          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
   }
 }
 
