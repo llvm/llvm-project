@@ -278,6 +278,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmodf16_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    fmodf16_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.fmodf16
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   coshf_test
   NO_RUN_POSTBUILD
   NEED_MPFR
