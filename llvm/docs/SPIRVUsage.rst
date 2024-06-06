@@ -118,7 +118,7 @@ Example:
 
 ``-target spirv64v1.0`` can be used to compile for SPIR-V version 1.0 with 64-bit pointer width.
 
-``-target spirv64-amd-amdhsa`` can be used to compile for AMDGCN flavoured SPIR-V version 1.6 with 64-bit pointer width
+``-target spirv64-amd-amdhsa`` can be used to compile for AMDGCN flavoured SPIR-V with 64-bit pointer width.
 
 .. _spirv-extensions:
 
