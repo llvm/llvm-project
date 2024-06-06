@@ -30,6 +30,7 @@ def IntAPS : Type;
 def Float : Type;
 def Ptr : Type;
 def FnPtr : Type;
+def MemberPtr : Type;
 
 //===----------------------------------------------------------------------===//
 // Types transferred to the interpreter.
@@ -61,6 +62,7 @@ def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
 def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
 def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgCCI : ArgType { let Name = "const ComparisonCategoryInfo *"; }
+def ArgDecl : ArgType { let Name = "const Decl*"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -93,7 +95,7 @@ def AluTypeClass : TypeClass {
 }
 
 def PtrTypeClass : TypeClass {
-  let Types = [Ptr, FnPtr];
+  let Types = [Ptr, FnPtr, MemberPtr];
 }
 
 def BoolTypeClass : TypeClass {
@@ -208,7 +210,6 @@ def CallBI : Opcode {
 
 def CallPtr : Opcode {
   let Args = [ArgUint32, ArgCallExpr];
-  let Types = [];
 }
 
 def CallVar : Opcode {
@@ -327,6 +328,11 @@ def GetPtrBasePop : Opcode {
   // Offset of field, which is a base.
   let Args = [ArgUint32];
 }
+def GetMemberPtrBasePop : Opcode {
+  // Offset of field, which is a base.
+  let Args = [ArgSint32];
+}
+
 
 def FinishInitPop : Opcode;
 def FinishInit    : Opcode;
@@ -750,6 +756,14 @@ def CheckNonNullArg : Opcode {
 }
 
 def Memcpy : Opcode;
+
+def ToMemberPtr : Opcode;
+def CastMemberPtrPtr : Opcode;
+def GetMemberPtr : Opcode {
+  let Args = [ArgDecl];
+}
+def GetMemberPtrBase : Opcode;
+def GetMemberPtrDecl : Opcode;
 
 //===----------------------------------------------------------------------===//
 // Debugging.
