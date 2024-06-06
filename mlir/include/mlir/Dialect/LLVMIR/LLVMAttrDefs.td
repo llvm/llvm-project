@@ -59,6 +59,15 @@ def FramePointerKindAttr : LLVM_Attr<"FramePointerKind", "framePointerKind"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TuneCPUAttr
+//===----------------------------------------------------------------------===//
+
+//def TuneCPUAttr : LLVM_Attr<"TuneCPU", "tuneCPU"> {
+  //let parameters = (ins "tuneCPU::tuneCPU":$tuneCPU);
+  //let assemblyFormat = "`<` $tuneCPU `>`";
+//}
+
+//===----------------------------------------------------------------------===//
 // Loop Attributes
 //===----------------------------------------------------------------------===//
 

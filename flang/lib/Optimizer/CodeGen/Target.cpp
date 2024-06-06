@@ -1113,3 +1113,14 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
 }
+
+std::unique_ptr<fir::CodeGenSpecifics> fir::CodeGenSpecifics::get(
+    mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
+    llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
+    const mlir::DataLayout &dl, llvm::StringRef tuneCPU) {
+  std::unique_ptr<fir::CodeGenSpecifics> CGS = fir::CodeGenSpecifics::get(
+      ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+
+  CGS->tuneCPU = tuneCPU;
+  return CGS;
+}

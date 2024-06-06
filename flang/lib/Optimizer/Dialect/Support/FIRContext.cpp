@@ -77,6 +77,24 @@ llvm::StringRef fir::getTargetCPU(mlir::ModuleOp mod) {
   return {};
 }
 
+static constexpr const char *tuneCpuName = "fir.tune_cpu";
+
+void fir::setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
+  if (cpu.empty())
+    return;
+
+  auto *ctx = mod.getContext();
+
+  mod->setAttr(tuneCpuName, mlir::StringAttr::get(ctx, cpu));
+}
+
+llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(tuneCpuName))
+    return attr.getValue();
+
+  return {};
+}
+
 static constexpr const char *targetFeaturesName = "fir.target_features";
 
 void fir::setTargetFeatures(mlir::ModuleOp mod, llvm::StringRef features) {

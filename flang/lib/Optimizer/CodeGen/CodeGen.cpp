@@ -3597,6 +3597,9 @@ public:
     if (!forcedTargetCPU.empty())
       fir::setTargetCPU(mod, forcedTargetCPU);
 
+    if (!forcedTuneCPU.empty())
+      fir::setTuneCPU(mod, forcedTuneCPU);
+
     if (!forcedTargetFeatures.empty())
       fir::setTargetFeatures(mod, forcedTargetFeatures);
 
@@ -3693,7 +3696,8 @@ public:
       signalPassFailure();
     }
 
-    // Run pass to add comdats to functions that have weak linkage on relevant platforms
+    // Run pass to add comdats to functions that have weak linkage on relevant
+    // platforms
     if (fir::getTargetTriple(mod).supportsCOMDAT()) {
       mlir::OpPassManager comdatPM("builtin.module");
       comdatPM.addPass(mlir::LLVM::createLLVMAddComdats());
