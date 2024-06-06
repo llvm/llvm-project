@@ -9784,15 +9784,15 @@ void AArch64PipelinerLoopInfo::createRemainingIterationsGreaterCondition(
 }
 
 static void extractPhiReg(const MachineInstr &Phi, const MachineBasicBlock *MBB,
-                          Register *RegMBB, Register *RegOther) {
+                          Register &RegMBB, Register &RegOther) {
   assert(Phi.getNumOperands() == 5);
   if (Phi.getOperand(2).getMBB() == MBB) {
-    *RegMBB = Phi.getOperand(1).getReg();
-    *RegOther = Phi.getOperand(3).getReg();
+    RegMBB = Phi.getOperand(1).getReg();
+    RegOther = Phi.getOperand(3).getReg();
   } else {
     assert(Phi.getOperand(4).getMBB() == MBB);
-    *RegMBB = Phi.getOperand(3).getReg();
-    *RegOther = Phi.getOperand(1).getReg();
+    RegMBB = Phi.getOperand(3).getReg();
+    RegOther = Phi.getOperand(1).getReg();
   }
 }
 
@@ -9806,17 +9806,17 @@ static bool isDefinedOutside(Register Reg, const MachineBasicBlock *BB) {
 /// If Reg is an induction variable, return true and set some parameters
 static bool getIndVarInfo(Register Reg, const MachineBasicBlock *LoopBB,
                           MachineInstr *&UpdateInst,
-                          unsigned *UpdateCounterOprNum, Register *InitReg,
-                          bool *IsUpdatePriorComp) {
+                          unsigned &UpdateCounterOprNum, Register &InitReg,
+                          bool &IsUpdatePriorComp) {
   if (LoopBB->pred_size() != 2)
     return false;
   if (!Reg.isVirtual())
     return false;
   const MachineRegisterInfo &MRI = LoopBB->getParent()->getRegInfo();
   UpdateInst = nullptr;
-  *UpdateCounterOprNum = 0;
-  *InitReg = 0;
-  *IsUpdatePriorComp = true;
+  UpdateCounterOprNum = 0;
+  InitReg = 0;
+  IsUpdatePriorComp = true;
   Register CurReg = Reg;
   while (true) {
     MachineInstr *Def = MRI.getVRegDef(CurReg);
@@ -9825,11 +9825,11 @@ static bool getIndVarInfo(Register Reg, const MachineBasicBlock *LoopBB,
     if (Def->isCopy()) {
       CurReg = Def->getOperand(1).getReg();
     } else if (Def->isPHI()) {
-      if (*InitReg != 0)
+      if (InitReg != 0)
         return false;
       if (!UpdateInst)
-        *IsUpdatePriorComp = false;
-      extractPhiReg(*Def, LoopBB, &CurReg, InitReg);
+        IsUpdatePriorComp = false;
+      extractPhiReg(*Def, LoopBB, CurReg, InitReg);
     } else {
       if (UpdateInst)
         return false;
@@ -9843,7 +9843,7 @@ static bool getIndVarInfo(Register Reg, const MachineBasicBlock *LoopBB,
       case AArch64::SUBXri:
       case AArch64::SUBWri:
         UpdateInst = Def;
-        *UpdateCounterOprNum = 1;
+        UpdateCounterOprNum = 1;
         break;
       case AArch64::ADDSXrr:
       case AArch64::ADDSWrr:
@@ -9855,16 +9855,16 @@ static bool getIndVarInfo(Register Reg, const MachineBasicBlock *LoopBB,
       case AArch64::SUBWrr:
         UpdateInst = Def;
         if (isDefinedOutside(Def->getOperand(2).getReg(), LoopBB))
-          *UpdateCounterOprNum = 1;
+          UpdateCounterOprNum = 1;
         else if (isDefinedOutside(Def->getOperand(1).getReg(), LoopBB))
-          *UpdateCounterOprNum = 2;
+          UpdateCounterOprNum = 2;
         else
           return false;
         break;
       default:
         return false;
       }
-      CurReg = Def->getOperand(*UpdateCounterOprNum).getReg();
+      CurReg = Def->getOperand(UpdateCounterOprNum).getReg();
     }
 
     if (!CurReg.isVirtual())
@@ -9962,7 +9962,7 @@ AArch64InstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   bool IsUpdatePriorComp;
   unsigned UpdateCounterOprNum;
   if (!getIndVarInfo(Comp->getOperand(CompCounterOprNum).getReg(), LoopBB,
-                     Update, &UpdateCounterOprNum, &Init, &IsUpdatePriorComp))
+                     Update, UpdateCounterOprNum, Init, IsUpdatePriorComp))
     return nullptr;
 
   return std::make_unique<AArch64PipelinerLoopInfo>(
