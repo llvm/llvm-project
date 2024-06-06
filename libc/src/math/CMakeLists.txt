@@ -124,11 +124,13 @@ add_math_entrypoint_object(fmax)
 add_math_entrypoint_object(fmaxf)
 add_math_entrypoint_object(fmaxl)
 add_math_entrypoint_object(fmaxf128)
+add_math_entrypoint_object(fmaxf16)
 
 add_math_entrypoint_object(fmin)
 add_math_entrypoint_object(fminf)
 add_math_entrypoint_object(fminl)
 add_math_entrypoint_object(fminf128)
+add_math_entrypoint_object(fminf16)
 
 add_math_entrypoint_object(fmaximum)
 add_math_entrypoint_object(fmaximumf)
