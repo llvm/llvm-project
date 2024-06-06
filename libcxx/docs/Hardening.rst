@@ -279,8 +279,8 @@ steps:
   ``LIBCXX_ASSERTION_HANDLER_FILE``.
 
 Note that almost all libc++ headers include the assertion handler header which
-means it should not include anything from the standard library to avoid creating
-circular dependencies.
+means it should not include anything non-trivial from the standard library to
+avoid creating circular dependencies.
 
 There is no existing mechanism for users to override the assertion handler
 because the ability to do the override other than at configure-time carries an
@@ -379,14 +379,54 @@ Hardened containers status
     * - ``deque``
       - ✅
       - ❌
+    * - ``map``
+      - ❌
+      - ❌
+    * - ``set``
+      - ❌
+      - ❌
+    * - ``multimap``
+      - ❌
+      - ❌
+    * - ``multiset``
+      - ❌
+      - ❌
+    * - ``unordered_map``
+      - Partial
+      - Partial
+    * - ``unordered_set``
+      - Partial
+      - Partial
+    * - ``unordered_multimap``
+      - Partial
+      - Partial
+    * - ``unordered_multiset``
+      - Partial
+      - Partial
     * - ``mdspan``
       - ✅
       - ❌
+
+.. list-table::
+    :header-rows: 1
+    :widths: auto
+
+    * - Name
+      - Member functions
     * - ``optional``
       - ✅
+    * - ``function``
+      - ❌
+    * - ``variant``
       - N/A
-
-TODO(hardening): make this table exhaustive.
+    * - ``any``
+      - N/A
+    * - ``expected``
+      - ✅
+    * - ``valarray``
+      - Partial
+    * - ``bitset``
+      - ❌
 
 Testing
 =======
