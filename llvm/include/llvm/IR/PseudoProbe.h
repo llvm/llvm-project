@@ -63,8 +63,8 @@ public:
     uint32_t V = (Index << 3) | (Factor << 19) | (Type << 26) | 0x7;
     // If both the probe id and dwarf base discriminator is small, the probe id
     // space is shared with the dwarf base discriminator, this is to make the
-    // probe-based build to be compatible with the dwarf-based profile. Pack the
-    // dwarf base discriminator into [18:16] and set the [28:28] bit.
+    // probe-based build compatible with the dwarf-based profile.
+    // Pack the dwarf base discriminator into [18:16] and set the [28:28] bit.
     if (Index <= 0x1FFF && DwarfBaseDiscriminator &&
         *DwarfBaseDiscriminator <= 0x7)
       V |= (1 << 28) | (*DwarfBaseDiscriminator << 16);
