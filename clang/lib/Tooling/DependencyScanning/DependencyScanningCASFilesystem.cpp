@@ -176,8 +176,7 @@ void DependencyScanningCASFilesystem::scanForDirectives(
   StringRef InputData =
       reportAsFatalIfError(CAS.getProxy(InputDataID)).getData();
 
-  if (scanSourceForDependencyDirectives(InputData, Tokens, Directives,
-                                        LangOptions())) {
+  if (scanSourceForDependencyDirectives(InputData, Tokens, Directives)) {
     // FIXME: Propagate the diagnostic if desired by the client.
     // Failure. Cache empty directives.
     Tokens.clear();
