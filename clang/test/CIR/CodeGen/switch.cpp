@@ -327,3 +327,23 @@ void fallthrough(int x) {
 // CHECK-NEXT:      }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:    }
+
+int unreachable_after_break_1(int a) {
+  switch (a) {
+    case(42):
+      break;
+      goto exit;
+    default:
+      return 0;
+  };
+
+exit:
+  return -1;
+
+}
+// CHECK: cir.func @_Z25unreachable_after_break_1i
+// CHECK:   case (equal, 42) {
+// CHECK:     cir.break
+// CHECK:   ^bb1:  // no predecessors
+// CHECK:     cir.goto "exit"
+// CHECK:   }
