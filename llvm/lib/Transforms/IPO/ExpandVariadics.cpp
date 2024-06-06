@@ -53,7 +53,6 @@
 
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -61,7 +60,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -425,7 +423,8 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
   if (!expansionApplicableToFunction(M, OriginalFunction))
     return Changed;
 
-  const bool OriginalFunctionIsDeclaration = OriginalFunction->isDeclaration();
+  [[maybe_unused]] const bool OriginalFunctionIsDeclaration =
+      OriginalFunction->isDeclaration();
   assert(rewriteABI() || !OriginalFunctionIsDeclaration);
 
   // Declare a new function and redirect every use to that new function
@@ -444,7 +443,7 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
   assert(VariadicWrapper->isDeclaration());
 
   // Create a single block forwarding wrapper that turns a ... into a va_list
-  Function *VariadicWrapperDefine =
+  [[maybe_unused]] Function *VariadicWrapperDefine =
       defineVariadicWrapper(M, Builder, VariadicWrapper, FixedArityReplacement);
   assert(VariadicWrapperDefine == VariadicWrapper);
   assert(!VariadicWrapper->isDeclaration());
