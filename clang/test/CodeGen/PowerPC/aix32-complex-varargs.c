@@ -11,14 +11,13 @@ void testva (int n, ...)
 // CHECK:  %[[VAR40:[A-Za-z0-9.]+]] = load ptr, ptr %[[VAR100:[A-Za-z0-9.]+]]
 // CHECK-NEXT:  %[[VAR41:[A-Za-z0-9.]+]] = getelementptr inbounds i8, ptr %[[VAR40]]
 // CHECK-NEXT:  store ptr %[[VAR41]], ptr %[[VAR100]], align 4
-// CHECK-NEXT:  %[[VAR6:[A-Za-z0-9.]+]] = getelementptr inbounds { i32, i32 }, ptr %[[VAR40]], i32 0, i32 0
-// CHECK-NEXT:  %[[VAR7:[A-Za-z0-9.]+]] = load i32, ptr %[[VAR6]]
-// CHECK-NEXT:  %[[VAR8:[A-Za-z0-9.]+]] = getelementptr inbounds { i32, i32 }, ptr %[[VAR40]], i32 0, i32 1
-// CHECK-NEXT:  %[[VAR9:[A-Za-z0-9.]+]] = load i32, ptr %[[VAR8]]
+// CHECK-NEXT:  %[[VAR6:[A-Za-z0-9.]+]] = load { i32, i32 }, ptr %[[VAR40]], align 4
+// CHECK-NEXT:  %[[VAR7:[A-Za-z0-9.]+]] = extractvalue { i32, i32 } %[[VAR6]], 0
+// CHECK-NEXT:  %[[VAR8:[A-Za-z0-9.]+]] = extractvalue { i32, i32 } %[[VAR6]], 1
 // CHECK-NEXT:  %[[VAR10:[A-Za-z0-9.]+]] = getelementptr inbounds { i32, i32 }, ptr %[[VARINT:[A-Za-z0-9.]+]], i32 0, i32 0
 // CHECK-NEXT:  %[[VAR11:[A-Za-z0-9.]+]] = getelementptr inbounds { i32, i32 }, ptr %[[VARINT]], i32 0, i32 1
 // CHECK-NEXT:  store i32 %[[VAR7]], ptr %[[VAR10]]
-// CHECK-NEXT:  store i32 %[[VAR9]], ptr %[[VAR11]]
+// CHECK-NEXT:  store i32 %[[VAR8]], ptr %[[VAR11]]
 
   _Complex short s = va_arg(ap, _Complex short);
 // CHECK:  %[[VAR50:[A-Za-z0-9.]+]] = load ptr, ptr %[[VAR100:[A-Za-z0-9.]+]]
@@ -51,12 +50,11 @@ void testva (int n, ...)
   _Complex float f = va_arg(ap, _Complex float);
 // CHECK:  %[[VAR70:[A-Za-z0-9.]+]] = getelementptr inbounds i8, ptr %[[VAR71:[A-Za-z0-9.]+]], i32 8
 // CHECK-NEXT:  store ptr %[[VAR70]], ptr %[[VAR100:[A-Za-z0-9.]+]]
-// CHECK-NEXT:  %[[VAR29:[A-Za-z0-9.]+]] = getelementptr inbounds { float, float }, ptr %[[VAR71]], i32 0, i32 0
-// CHECK-NEXT:  %[[VAR30:[A-Za-z0-9.]+]] = load float, ptr %[[VAR29]]
-// CHECK-NEXT:  %[[VAR31:[A-Za-z0-9.]+]] = getelementptr inbounds { float, float }, ptr %[[VAR71]], i32 0, i32 1
-// CHECK-NEXT:  %[[VAR32:[A-Za-z0-9.]+]] = load float, ptr %[[VAR31]]
+// CHECK-NEXT:  %[[VAR29:[A-Za-z0-9.]+]] = load { float, float }, ptr %[[VAR71]], align 4
+// CHECK-NEXT:  %[[VAR30:[A-Za-z0-9.]+]] = extractvalue { float, float } %[[VAR29]], 0
+// CHECK-NEXT:  %[[VAR31:[A-Za-z0-9.]+]] = extractvalue { float, float } %[[VAR29]], 1
 // CHECK-NEXT:  %[[VAR33:[A-Za-z0-9.]+]] = getelementptr inbounds { float, float }, ptr %f, i32 0, i32 0
 // CHECK-NEXT:  %[[VAR34:[A-Za-z0-9.]+]] = getelementptr inbounds { float, float }, ptr %f, i32 0, i32 1
 // CHECK-NEXT:  store float %[[VAR30]], ptr %[[VAR33]]
-// CHECK-NEXT:  store float %[[VAR32]], ptr %[[VAR34]]
+// CHECK-NEXT:  store float %[[VAR31]], ptr %[[VAR34]]
 }

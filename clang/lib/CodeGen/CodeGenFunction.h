@@ -3016,7 +3016,7 @@ public:
   /// \returns A pointer to the argument.
   // FIXME: We should be able to get rid of this method and use the va_arg
   // instruction in LLVM instead once it works well enough.
-  Address EmitVAArg(VAArgExpr *VE, Address &VAListAddr);
+  RValue EmitVAArg(VAArgExpr *VE, Address &VAListAddr);
 
   /// emitArrayLength - Compute the length of an array, even if it's a
   /// VLA, and drill down to the base element type.
