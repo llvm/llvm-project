@@ -356,8 +356,6 @@ public:
           caseDestinations.push_back(&region.front());
         }
         break;
-      default:
-        llvm_unreachable("unsupported case kind");
       }
 
       // Previous case is a fallthrough: branch it to this case.
@@ -405,7 +403,7 @@ public:
       constexpr int kSmallRangeThreshold = 64;
       if ((upperBound - lowerBound)
               .ult(llvm::APInt(32, kSmallRangeThreshold))) {
-        for (auto iValue = lowerBound; iValue.sle(upperBound); iValue++) {
+        for (auto iValue = lowerBound; iValue.sle(upperBound); (void)iValue++) {
           caseValues.push_back(iValue);
           caseOperands.push_back(rangeOperands[index]);
           caseDestinations.push_back(rangeDestinations[index]);

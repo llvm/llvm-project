@@ -631,9 +631,6 @@ void CIRGenFunction::buildStaticVarDecl(const VarDecl &D,
   if (D.getType()->isVariablyModifiedType())
     llvm_unreachable("VLAs are NYI");
 
-  // Save the type in case adding the initializer forces a type change.
-  mlir::Type expectedType = addr.getType();
-
   auto var = globalOp;
 
   // CUDA's local and local static __shared__ variables should not
