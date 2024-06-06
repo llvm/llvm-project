@@ -223,8 +223,8 @@ namespace {
     void HoistPostRA(MachineInstr *MI, unsigned Def, MachineLoop *CurLoop,
                      MachineBasicBlock *CurPreheader);
 
-    void ProcessMI(MachineInstr *MI, BitVector &RUDefs,
-                   BitVector &RUClobbers, SmallSet<int, 32> &StoredFIs,
+    void ProcessMI(MachineInstr *MI, BitVector &RUDefs, BitVector &RUClobbers,
+                   SmallSet<int, 32> &StoredFIs,
                    SmallVectorImpl<CandidateInfo> &Candidates,
                    MachineLoop *CurLoop);
 
@@ -423,11 +423,13 @@ static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
   return false;
 }
 
-static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo *TRI, BitVector &RUs, const uint32_t *Mask) {
+static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo *TRI,
+                                                BitVector &RUs,
+                                                const uint32_t *Mask) {
   // FIXME: Use RUs better here
   BitVector MaskedRegs(TRI->getNumRegs());
   MaskedRegs.setBitsNotInMask(Mask);
-  for(const auto &Set: MaskedRegs.set_bits()) {
+  for (const auto &Set : MaskedRegs.set_bits()) {
     if (!Set)
       continue;
 
@@ -536,7 +538,7 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
     return;
 
   unsigned NumRegUnits = TRI->getNumRegUnits();
-  BitVector RUDefs(NumRegUnits); // RUs defined once in the loop.
+  BitVector RUDefs(NumRegUnits);     // RUs defined once in the loop.
   BitVector RUClobbers(NumRegUnits); // RUs defined more than once.
 
   SmallVector<CandidateInfo, 32> Candidates;
@@ -565,8 +567,7 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
 
     SpeculationState = SpeculateUnknown;
     for (MachineInstr &MI : *BB)
-      ProcessMI(&MI, RUDefs, RUClobbers, StoredFIs, Candidates,
-                CurLoop);
+      ProcessMI(&MI, RUDefs, RUClobbers, StoredFIs, Candidates, CurLoop);
   }
 
   // Gather the registers read / clobbered by the terminator.
@@ -600,7 +601,7 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
     unsigned Def = Candidate.Def;
     bool Safe = true;
     for (MCRegUnitIterator RUI(Def, TRI); RUI.isValid(); ++RUI) {
-      if(RUClobbers.test(*RUI) || TermRUs.test(*RUI)) {
+      if (RUClobbers.test(*RUI) || TermRUs.test(*RUI)) {
         Safe = false;
         break;
       }
@@ -614,8 +615,7 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
       if (!MO.getReg())
         continue;
       for (MCRegUnitIterator RUI(MO.getReg(), TRI); RUI.isValid(); ++RUI) {
-        if (RUDefs.test(*RUI) ||
-            RUClobbers.test(*RUI)) {
+        if (RUDefs.test(*RUI) || RUClobbers.test(*RUI)) {
           // If it's using a non-loop-invariant register, then it's obviously
           // not safe to hoist.
           Safe = false;
