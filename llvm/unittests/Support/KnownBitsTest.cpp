@@ -77,8 +77,7 @@ static void testUnaryOpExhaustive(StringRef Name, UnaryBitsFn BitsFn,
 
 static void testBinaryOpExhaustive(StringRef Name, BinaryBitsFn BitsFn,
                                    BinaryIntFn IntFn,
-                                   bool CheckOptimality = true,
-                                   bool RefinePoisonToZero = false) {
+                                   bool CheckOptimality = true) {
   for (unsigned Bits : {1, 4}) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
       ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
@@ -395,7 +394,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           return std::nullopt;
         return N1.shl(N2);
       },
-      /*CheckOptimality=*/true, /* RefinePoisonToZero */ true);
+      /*CheckOptimality=*/true);
   testBinaryOpExhaustive(
       "ushl_ov",
       [](const KnownBits &Known1, const KnownBits &Known2) {
@@ -408,7 +407,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           return std::nullopt;
         return Res;
       },
-      /*CheckOptimality=*/true, /* RefinePoisonToZero */ true);
+      /*CheckOptimality=*/true);
   testBinaryOpExhaustive(
       "shl nsw",
       [](const KnownBits &Known1, const KnownBits &Known2) {
@@ -421,7 +420,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           return std::nullopt;
         return Res;
       },
-      /*CheckOptimality=*/true, /* RefinePoisonToZero */ true);
+      /*CheckOptimality=*/true);
   testBinaryOpExhaustive(
       "shl nuw",
       [](const KnownBits &Known1, const KnownBits &Known2) {
@@ -435,7 +434,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           return std::nullopt;
         return Res;
       },
-      /*CheckOptimality=*/true, /* RefinePoisonToZero */ true);
+      /*CheckOptimality=*/true);
 
   testBinaryOpExhaustive(
       "lshr",
@@ -447,7 +446,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           return std::nullopt;
         return N1.lshr(N2);
       },
-      /*CheckOptimality=*/true, /* RefinePoisonToZero */ true);
+      /*CheckOptimality=*/true);
   testBinaryOpExhaustive(
       "lshr exact",
       [](const KnownBits &Known1, const KnownBits &Known2) {
@@ -461,7 +460,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           return std::nullopt;
         return N1.lshr(N2);
       },
-      /*CheckOptimality=*/true, /* RefinePoisonToZero */ true);
+      /*CheckOptimality=*/true);
   testBinaryOpExhaustive(
       "ashr",
       [](const KnownBits &Known1, const KnownBits &Known2) {
@@ -472,7 +471,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           return std::nullopt;
         return N1.ashr(N2);
       },
-      /*CheckOptimality=*/true, /* RefinePoisonToZero */ true);
+      /*CheckOptimality=*/true);
   testBinaryOpExhaustive(
       "ashr exact",
       [](const KnownBits &Known1, const KnownBits &Known2) {
@@ -486,7 +485,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           return std::nullopt;
         return N1.ashr(N2);
       },
-      /*CheckOptimality=*/true, /* RefinePoisonToZero */ true);
+      /*CheckOptimality=*/true);
   testBinaryOpExhaustive(
       "mul",
       [](const KnownBits &Known1, const KnownBits &Known2) {
