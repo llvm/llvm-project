@@ -744,6 +744,11 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return getOrCreateStructPtrType("opencl_" #ExtType, Id##Ty);
 #include "clang/Basic/OpenCLExtensionTypes.def"
 
+  case BuiltinType::HLSLResource:
+    // TODO: We probably need a valid name here, which means we'll also want to
+    // update `BuiltinType::getName`...
+    return getOrCreateStructPtrType("<hlsl resource>", HLSLResourceTy);
+
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
     {

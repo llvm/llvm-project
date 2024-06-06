@@ -2576,6 +2576,11 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     break;
 #include "clang/Basic/OpenCLExtensionTypes.def"
 
+  case BuiltinType::HLSLResource:
+    // TODO: Do we need a mangling scheme here?
+    llvm_unreachable("mangling an HLSL handle type?");
+    break;
+
   case BuiltinType::NullPtr:
     Out << "$$T";
     break;

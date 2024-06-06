@@ -111,6 +111,8 @@ public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
   virtual ~CGHLSLRuntime() {}
 
+  llvm::Type *convertHLSLSpecificType(const Type *T);
+
   void annotateHLSLResource(const VarDecl *D, llvm::GlobalVariable *GV);
   void generateGlobalCtorDtorCalls();
 

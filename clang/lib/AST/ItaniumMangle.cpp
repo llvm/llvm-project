@@ -3374,6 +3374,10 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << type_name.size() << type_name; \
     break;
 #include "clang/Basic/OpenCLExtensionTypes.def"
+  case BuiltinType::HLSLResource:
+    // TODO: Do we need a mangling scheme here?
+    llvm_unreachable("mangling an HLSL handle type?");
+    break;
   // The SVE types are effectively target-specific.  The mangling scheme
   // is defined in the appendices to the Procedure Call Standard for the
   // Arm Architecture.

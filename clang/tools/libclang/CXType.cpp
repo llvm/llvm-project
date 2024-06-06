@@ -77,6 +77,7 @@ static CXTypeKind GetBuiltinTypeKind(const BuiltinType *BT) {
     BTCASE(OCLEvent);
     BTCASE(OCLQueue);
     BTCASE(OCLReserveID);
+    BTCASE(HLSLResource);
   default:
     return CXType_Unexposed;
   }
@@ -628,6 +629,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(OCLEvent);
     TKIND(OCLQueue);
     TKIND(OCLReserveID);
+    TKIND(HLSLResource);
     TKIND(Atomic);
   }
 #undef TKIND

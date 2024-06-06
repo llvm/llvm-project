@@ -1358,6 +1358,8 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
+  InitBuiltinType(HLSLResourceTy, BuiltinType::HLSLResource);
+
   if (Target.hasAArch64SVETypes()) {
 #define SVE_TYPE(Name, Id, SingletonId) \
     InitBuiltinType(SingletonId, BuiltinType::Id);
@@ -2158,6 +2160,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       AS = Target->getOpenCLTypeAddrSpace(getOpenCLTypeKind(T));
       Width = Target->getPointerWidth(AS);
       Align = Target->getPointerAlign(AS);
+      break;
+    case BuiltinType::HLSLResource:
+      // TODO: What should we do here? Matching `void *` for now...
+      Width = 0;
+      Align = 8;
       break;
     // The SVE types are effectively target-specific.  The length of an
     // SVE_VECTOR_TYPE is only known at runtime, but it is always a multiple
@@ -8210,6 +8217,7 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
     case BuiltinType::OCLQueue:
     case BuiltinType::OCLReserveID:
     case BuiltinType::OCLSampler:
+    case BuiltinType::HLSLResource:
     case BuiltinType::Dependent:
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id:

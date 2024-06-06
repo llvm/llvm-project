@@ -2626,6 +2626,10 @@ public:
   bool isBitIntType() const;                    // Bit-precise integer type
   bool isOpenCLSpecificType() const;            // Any OpenCL specific type
 
+  bool isHLSLResourceType() const;                // HLSL resource type
+  bool isHLSLSpecificType() const;              // Any HLSL specific type
+
+
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
   /// than implicitly __strong.
@@ -7885,6 +7889,14 @@ inline bool Type::isOCLExtOpaqueType() const {
 inline bool Type::isOpenCLSpecificType() const {
   return isSamplerT() || isEventT() || isImageType() || isClkEventT() ||
          isQueueT() || isReserveIDT() || isPipeType() || isOCLExtOpaqueType();
+}
+
+inline bool Type::isHLSLResourceType() const {
+  return isSpecificBuiltinType(BuiltinType::HLSLResource);
+}
+
+inline bool Type::isHLSLSpecificType() const {
+  return isHLSLResourceType();
 }
 
 inline bool Type::isTemplateTypeParmType() const {

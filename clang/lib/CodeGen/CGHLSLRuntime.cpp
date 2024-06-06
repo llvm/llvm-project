@@ -15,6 +15,7 @@
 #include "CGHLSLRuntime.h"
 #include "CGDebugInfo.h"
 #include "CodeGenModule.h"
+#include "TargetInfo.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/IR/Metadata.h"
@@ -114,6 +115,18 @@ GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
 }
 
 } // namespace
+
+llvm::Type *CGHLSLRuntime::convertHLSLSpecificType(const Type *T) {
+  assert(T->isHLSLSpecificType() && "Not an HLSL specific type!");
+
+  // Check if the target has a specific translation for this type first.
+  if (llvm::Type *TargetTy = CGM.getTargetCodeGenInfo().getHLSLType(CGM, T))
+    return TargetTy;
+
+  // TODO: What do we actually want to do generically here? OpenCL uses a
+  // pointer in a particular address space.
+  llvm_unreachable("Generic handling of HLSL types is not implemented yet");
+}
 
 llvm::Triple::ArchType CGHLSLRuntime::getArch() {
   return CGM.getTarget().getTriple().getArch();

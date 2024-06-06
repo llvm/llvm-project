@@ -758,6 +758,8 @@ void USRGenerator::VisitType(QualType T) {
           Out << "@BT@OCLReserveID"; break;
         case BuiltinType::OCLSampler:
           Out << "@BT@OCLSampler"; break;
+        case BuiltinType::HLSLResource:
+          Out << "@BT@HLSLResource"; break;
 #define SVE_TYPE(Name, Id, SingletonId) \
         case BuiltinType::Id: \
           Out << "@BT@" << Name; break;

@@ -13,6 +13,7 @@
 #include "CodeGenTypes.h"
 #include "CGCXXABI.h"
 #include "CGCall.h"
+#include "CGHLSLRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
 #include "TargetInfo.h"
@@ -442,6 +443,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::OCLQueue:
     case BuiltinType::OCLReserveID:
       ResultType = CGM.getOpenCLRuntime().convertOpenCLSpecificType(Ty);
+      break;
+    case BuiltinType::HLSLResource:
+      ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
       break;
     case BuiltinType::SveInt8:
     case BuiltinType::SveUint8:

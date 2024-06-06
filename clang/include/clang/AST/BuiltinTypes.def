@@ -257,6 +257,9 @@ BUILTIN_TYPE(OCLQueue, OCLQueueTy)
 // OpenCL reserve_id_t.
 BUILTIN_TYPE(OCLReserveID, OCLReserveIDTy)
 
+// HLSL resource type
+BUILTIN_TYPE(HLSLResource, HLSLResourceTy)
+
 // This represents the type of an expression whose type is
 // totally unknown, e.g. 'T::foo'.  It is permitted for this to
 // appear in situations where the structure of the type is
