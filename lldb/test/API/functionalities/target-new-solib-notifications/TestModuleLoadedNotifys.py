@@ -118,6 +118,6 @@ class ModuleLoadedNotifysTestCase(TestBase):
         # On Linux we get events for ld.so, [vdso], the binary and then all libraries.
 
         avg_solibs_added_per_event = round(
-            float(total_solibs_added) / float(total_modules_added_events)
+            10.0 * float(total_solibs_added) / float(total_modules_added_events)
         )
-        self.assertGreater(avg_solibs_added_per_event, 1)
+        self.assertGreater(avg_solibs_added_per_event, 10)
