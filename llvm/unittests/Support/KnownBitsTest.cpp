@@ -68,8 +68,9 @@ static void testUnaryOpExhaustive(StringRef Name, UnaryBitsFn BitsFn,
         }
       });
 
-      EXPECT_TRUE(!Computed.hasConflict());
-      EXPECT_TRUE(checkResult(Name, Exact, Computed, Known, CheckOptimality));
+      if (!Exact.hasConflict()) {
+        EXPECT_TRUE(checkResult(Name, Exact, Computed, Known, CheckOptimality));
+      }
     });
   }
 }
@@ -95,13 +96,9 @@ static void testBinaryOpExhaustive(StringRef Name, BinaryBitsFn BitsFn,
           });
         });
 
-        EXPECT_TRUE(!Computed.hasConflict());
-        EXPECT_TRUE(checkResult(Name, Exact, Computed, {Known1, Known2},
-                                CheckOptimality));
-        // In some cases we choose to return zero if the result is always
-        // poison.
-        if (RefinePoisonToZero && Exact.hasConflict()) {
-          EXPECT_TRUE(Computed.isZero());
+        if (!Exact.hasConflict()) {
+          EXPECT_TRUE(checkResult(Name, Exact, Computed, {Known1, Known2},
+                                  CheckOptimality));
         }
       });
     });
@@ -135,7 +132,9 @@ TEST(KnownBitsTest, AddCarryExhaustive) {
 
         KnownBits Computed =
             KnownBits::computeForAddCarry(Known1, Known2, KnownCarry);
-        EXPECT_EQ(Exact, Computed);
+        if (!Exact.hasConflict()) {
+          EXPECT_EQ(Exact, Computed);
+        }
       });
     });
   });
@@ -246,7 +245,9 @@ TEST(KnownBitsTest, SubBorrowExhaustive) {
 
         KnownBits Computed =
             KnownBits::computeForSubBorrow(Known1, Known2, KnownBorrow);
-        EXPECT_EQ(Exact, Computed);
+        if (!Exact.hasConflict()) {
+          EXPECT_EQ(Exact, Computed);
+        }
       });
     });
   });
@@ -561,6 +562,9 @@ TEST(KnownBitsTest, ICmpExhaustive) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      if (Known1.hasConflict() || Known2.hasConflict())
+        return;
+
       bool AllEQ = true, NoneEQ = true;
       bool AllNE = true, NoneNE = true;
       bool AllUGT = true, NoneUGT = true;
@@ -647,6 +651,9 @@ TEST(KnownBitsTest, ICmpExhaustive) {
 TEST(KnownBitsTest, GetMinMaxVal) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    if (Known.hasConflict())
+      return;
+
     APInt Min = APInt::getMaxValue(Bits);
     APInt Max = APInt::getMinValue(Bits);
     ForeachNumInKnownBits(Known, [&](const APInt &N) {
@@ -661,6 +668,9 @@ TEST(KnownBitsTest, GetMinMaxVal) {
 TEST(KnownBitsTest, GetSignedMinMaxVal) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    if (Known.hasConflict())
+      return;
+
     APInt Min = APInt::getSignedMaxValue(Bits);
     APInt Max = APInt::getSignedMinValue(Bits);
     ForeachNumInKnownBits(Known, [&](const APInt &N) {
@@ -675,6 +685,9 @@ TEST(KnownBitsTest, GetSignedMinMaxVal) {
 TEST(KnownBitsTest, CountMaxActiveBits) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    if (Known.hasConflict())
+      return;
+
     unsigned Expected = 0;
     ForeachNumInKnownBits(Known, [&](const APInt &N) {
       Expected = std::max(Expected, N.getActiveBits());
@@ -686,6 +699,9 @@ TEST(KnownBitsTest, CountMaxActiveBits) {
 TEST(KnownBitsTest, CountMaxSignificantBits) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    if (Known.hasConflict())
+      return;
+
     unsigned Expected = 0;
     ForeachNumInKnownBits(Known, [&](const APInt &N) {
       Expected = std::max(Expected, N.getSignificantBits());
@@ -726,6 +742,9 @@ TEST(KnownBitsTest, SExtInReg) {
   unsigned Bits = 4;
   for (unsigned FromBits = 1; FromBits <= Bits; ++FromBits) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+      if (Known.hasConflict())
+        return;
+
       APInt CommonOne = APInt::getAllOnes(Bits);
       APInt CommonZero = APInt::getAllOnes(Bits);
       unsigned ExtBits = Bits - FromBits;
@@ -746,6 +765,9 @@ TEST(KnownBitsTest, CommonBitsSet) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      if (Known1.hasConflict() || Known2.hasConflict())
+        return;
+
       bool HasCommonBitsSet = false;
       ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
         ForeachNumInKnownBits(Known2, [&](const APInt &N2) {

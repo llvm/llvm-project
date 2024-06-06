@@ -18,11 +18,8 @@
 
 using namespace llvm;
 
-static KnownBits computeForAddCarry(
-    const KnownBits &LHS, const KnownBits &RHS,
-    bool CarryZero, bool CarryOne) {
-  assert(!(CarryZero && CarryOne) &&
-         "Carry can't be zero and one at the same time");
+static KnownBits computeForAddCarry(const KnownBits &LHS, const KnownBits &RHS,
+                                    bool CarryZero, bool CarryOne) {
 
   APInt PossibleSumZero = LHS.getMaxValue() + RHS.getMaxValue() + !CarryZero;
   APInt PossibleSumOne = LHS.getMinValue() + RHS.getMinValue() + CarryOne;
@@ -36,9 +33,6 @@ static KnownBits computeForAddCarry(
   APInt RHSKnownUnion = RHS.Zero | RHS.One;
   APInt CarryKnownUnion = std::move(CarryKnownZero) | CarryKnownOne;
   APInt Known = std::move(LHSKnownUnion) & RHSKnownUnion & CarryKnownUnion;
-
-  assert((PossibleSumZero & Known) == (PossibleSumOne & Known) &&
-         "known bits of sum differ");
 
   // Compute known bits of the result.
   KnownBits KnownOut;
@@ -134,9 +128,6 @@ KnownBits KnownBits::computeForAddSub(bool Add, bool NSW, bool NUW,
     }
   }
 
-  // Just return 0 if the nsw/nuw is violated and we have poison.
-  if (KnownOut.hasConflict())
-    KnownOut.setAllZero();
   return KnownOut;
 }
 
@@ -367,9 +358,6 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
       break;
   }
 
-  // All shift amounts may result in poison.
-  if (Known.hasConflict())
-    Known.setAllZero();
   return Known;
 }
 
@@ -403,8 +391,7 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
   if (Exact) {
     unsigned FirstOne = LHS.countMaxTrailingZeros();
     if (FirstOne < MinShiftAmount) {
-      // Always poison. Return zero because we don't like returning conflict.
-      Known.setAllZero();
+      // Always poison.
       return Known;
     }
     MaxShiftAmount = std::min(MaxShiftAmount, FirstOne);
@@ -425,9 +412,6 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
       break;
   }
 
-  // All shift amounts may result in poison.
-  if (Known.hasConflict())
-    Known.setAllZero();
   return Known;
 }
 
@@ -448,8 +432,7 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
     MinShiftAmount = 1;
   if (LHS.isUnknown()) {
     if (MinShiftAmount == BitWidth) {
-      // Always poison. Return zero because we don't like returning conflict.
-      Known.setAllZero();
+      // Always poison.
       return Known;
     }
     return Known;
@@ -463,8 +446,7 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   if (Exact) {
     unsigned FirstOne = LHS.countMaxTrailingZeros();
     if (FirstOne < MinShiftAmount) {
-      // Always poison. Return zero because we don't like returning conflict.
-      Known.setAllZero();
+      // Always poison.
       return Known;
     }
     MaxShiftAmount = std::min(MaxShiftAmount, FirstOne);
@@ -485,9 +467,6 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
       break;
   }
 
-  // All shift amounts may result in poison.
-  if (Known.hasConflict())
-    Known.setAllZero();
   return Known;
 }
 
@@ -936,15 +915,7 @@ static KnownBits divComputeLowBit(KnownBits Known, const KnownBits &LHS,
       // Result has exactly MinTZ trailing zeros.
       Known.One.setBit(MinTZ);
     }
-  } else if (MaxTZ < 0) {
-    // Poison Result
-    Known.setAllZero();
   }
-
-  // In the KnownBits exhaustive tests, we have poison inputs for exact values
-  // a LOT. If we have a conflict, just return all zeros.
-  if (Known.hasConflict())
-    Known.setAllZero();
 
   return Known;
 }
@@ -959,9 +930,7 @@ KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
   KnownBits Known(BitWidth);
 
   if (LHS.isZero() || RHS.isZero()) {
-    // Result is either known Zero or UB. Return Zero either way.
-    // Checking this earlier saves us a lot of special cases later on.
-    Known.setAllZero();
+    // Result is either known Zero or UB.
     return Known;
   }
 
@@ -1011,9 +980,7 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
   KnownBits Known(BitWidth);
 
   if (LHS.isZero() || RHS.isZero()) {
-    // Result is either known Zero or UB. Return Zero either way.
-    // Checking this earlier saves us a lot of special cases later on.
-    Known.setAllZero();
+    // Result is either known Zero or UB.
     return Known;
   }
 
