@@ -31,9 +31,10 @@ InstrBuilder::InstrBuilder(const llvm::MCSubtargetInfo &sti,
                            const llvm::MCInstrInfo &mcii,
                            const llvm::MCRegisterInfo &mri,
                            const llvm::MCInstrAnalysis *mcia,
-                           const mca::InstrumentManager &im, unsigned cl)
+                           const mca::InstrumentManager &im, unsigned cl,
+                           bool ull)
     : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia), IM(im), FirstCallInst(true),
-      FirstReturnInst(true), CallLatency(cl) {
+      FirstReturnInst(true), CallLatency(cl), UseLoadLatency(ull) {
   const MCSchedModel &SM = STI.getSchedModel();
   ProcResourceMasks.resize(SM.getNumProcResourceKinds());
   computeProcResourceMasks(STI.getSchedModel(), ProcResourceMasks);
@@ -220,8 +221,8 @@ static void initializeUsedResources(InstrDesc &ID,
 
 static void computeMaxLatency(InstrDesc &ID, const MCInstrDesc &MCDesc,
                               const MCSchedClassDesc &SCDesc,
-                              const MCSubtargetInfo &STI,
-                              unsigned CallLatency) {
+                              const MCSubtargetInfo &STI, unsigned CallLatency,
+                              bool UseLoadLatency) {
   if (MCDesc.isCall()) {
     // We cannot estimate how long this call will take.
     // Artificially set an arbitrarily high latency.
@@ -230,6 +231,13 @@ static void computeMaxLatency(InstrDesc &ID, const MCInstrDesc &MCDesc,
   }
 
   int Latency = MCSchedModel::computeInstrLatency(STI, SCDesc);
+
+  // If `UseLoadLatency` is set, we use the value in `MCSchedModel::LoadLatency`
+  // for load instructions.
+  if (MCDesc.mayLoad() && UseLoadLatency) {
+    const auto &SM = STI.getSchedModel();
+    Latency = std::max(int(SM.LoadLatency), Latency);
+  }
   // If latency is unknown, then conservatively assume the MaxLatency set for
   // calls.
   ID.MaxLatency = Latency < 0 ? CallLatency : static_cast<unsigned>(Latency);
@@ -582,7 +590,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
   }
 
   initializeUsedResources(*ID, SCDesc, STI, ProcResourceMasks);
-  computeMaxLatency(*ID, MCDesc, SCDesc, STI, CallLatency);
+  computeMaxLatency(*ID, MCDesc, SCDesc, STI, CallLatency, UseLoadLatency);
 
   if (Error Err = verifyOperands(MCDesc, MCI))
     return std::move(Err);
