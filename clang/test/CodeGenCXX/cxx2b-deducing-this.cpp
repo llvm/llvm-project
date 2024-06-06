@@ -245,3 +245,23 @@ void f() {
   d();
 }
 }
+
+
+namespace P2797 {
+struct C {
+  void c(this const C&);    // #first
+  void c() &;               // #second
+  static void c(int = 0);   // #third
+
+  void d() {
+    (&C::c)(C{});
+    (&C::c)();
+  }
+};
+void test() {
+    (void)C{}.d();
+}
+// CHECK-LABEL: {{.*}} @_ZN5P27971C1dEv
+// CHECK: call void @_ZNH5P27971C1cERKS0_
+// CHECK: call void @_ZN5P27971C1cEi
+}

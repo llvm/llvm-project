@@ -341,31 +341,64 @@ bool checkAlreadyHasClauseOfKind(
   return false;
 }
 
-/// Implement check from OpenACC3.3: section 2.5.4:
-/// Only the async, wait, num_gangs, num_workers, and vector_length clauses may
-/// follow a device_type clause.
 bool checkValidAfterDeviceType(
     SemaOpenACC &S, const OpenACCDeviceTypeClause &DeviceTypeClause,
     const SemaOpenACC::OpenACCParsedClause &NewClause) {
-  // This is only a requirement on compute constructs so far, so this is fine
-  // otherwise.
-  if (!isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind()))
+  // This is only a requirement on compute and loop constructs so far, so this
+  // is fine otherwise.
+  if (!isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind()) &&
+      NewClause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
     return false;
-  switch (NewClause.getClauseKind()) {
-  case OpenACCClauseKind::Async:
-  case OpenACCClauseKind::Wait:
-  case OpenACCClauseKind::NumGangs:
-  case OpenACCClauseKind::NumWorkers:
-  case OpenACCClauseKind::VectorLength:
-  case OpenACCClauseKind::DType:
-  case OpenACCClauseKind::DeviceType:
+
+  // OpenACC3.3: Section 2.4: Clauses that precede any device_type clause are
+  // default clauses.  Clauses that follow a device_type clause up to the end of
+  // the directive or up to the next device_type clause are device-specific
+  // clauses for the device types specified in the device_type argument.
+  //
+  // The above implies that despite what the individual text says, these are
+  // valid.
+  if (NewClause.getClauseKind() == OpenACCClauseKind::DType ||
+      NewClause.getClauseKind() == OpenACCClauseKind::DeviceType)
     return false;
-  default:
-    S.Diag(NewClause.getBeginLoc(), diag::err_acc_clause_after_device_type)
-        << NewClause.getClauseKind() << DeviceTypeClause.getClauseKind();
-    S.Diag(DeviceTypeClause.getBeginLoc(), diag::note_acc_previous_clause_here);
-    return true;
+
+  // Implement check from OpenACC3.3: section 2.5.4:
+  // Only the async, wait, num_gangs, num_workers, and vector_length clauses may
+  // follow a device_type clause.
+  if (isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind())) {
+    switch (NewClause.getClauseKind()) {
+    case OpenACCClauseKind::Async:
+    case OpenACCClauseKind::Wait:
+    case OpenACCClauseKind::NumGangs:
+    case OpenACCClauseKind::NumWorkers:
+    case OpenACCClauseKind::VectorLength:
+      return false;
+    default:
+      break;
+    }
+  } else if (NewClause.getDirectiveKind() == OpenACCDirectiveKind::Loop) {
+    // Implement check from OpenACC3.3: section 2.9:
+    // Only the collapse, gang, worker, vector, seq, independent, auto, and tile
+    // clauses may follow a device_type clause.
+    switch (NewClause.getClauseKind()) {
+    case OpenACCClauseKind::Collapse:
+    case OpenACCClauseKind::Gang:
+    case OpenACCClauseKind::Worker:
+    case OpenACCClauseKind::Vector:
+    case OpenACCClauseKind::Seq:
+    case OpenACCClauseKind::Independent:
+    case OpenACCClauseKind::Auto:
+    case OpenACCClauseKind::Tile:
+      return false;
+    default:
+      break;
+    }
   }
+  S.Diag(NewClause.getBeginLoc(), diag::err_acc_clause_after_device_type)
+      << NewClause.getClauseKind() << DeviceTypeClause.getClauseKind()
+      << isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind())
+      << NewClause.getDirectiveKind();
+  S.Diag(DeviceTypeClause.getBeginLoc(), diag::note_acc_previous_clause_here);
+  return true;
 }
 } // namespace
 
@@ -816,10 +849,12 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   }
   case OpenACCClauseKind::DType:
   case OpenACCClauseKind::DeviceType: {
-    // Restrictions only properly implemented on 'compute' constructs, and
-    // 'compute' constructs are the only construct that can do anything with
-    // this yet, so skip/treat as unimplemented in this case.
-    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+    // Restrictions only properly implemented on 'compute' and 'loop'
+    // constructs, and 'compute'/'loop' constructs are the only construct that
+    // can do anything with this yet, so skip/treat as unimplemented in this
+    // case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
+        Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
       break;
 
     // TODO OpenACC: Once we get enough of the CodeGen implemented that we have
