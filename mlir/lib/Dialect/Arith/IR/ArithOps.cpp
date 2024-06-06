@@ -1410,6 +1410,39 @@ bool arith::ExtFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 
 LogicalResult arith::ExtFOp::verify() { return verifyExtOp<FloatType>(*this); }
 
+struct SimplifyExtFTruncFOpPair : public OpRewritePattern<ExtFOp> {
+  using OpRewritePattern<ExtFOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtFOp extFOp,
+                                PatternRewriter &rewriter) const override {
+    if (auto truncFOp = extFOp.getOperand().getDefiningOp<TruncFOp>()) {
+      Value input = truncFOp.getOperand();
+      Type inTy = getElementTypeOrSelf(input.getType());
+      Type outTy = getElementTypeOrSelf(extFOp.getType());
+      Type shortTy = getElementTypeOrSelf(truncFOp.getType());
+      if (isa<Float32Type>(inTy) && isa<Float32Type>(outTy) &&
+          (isa<Float16Type, BFloat16Type>(shortTy))) {
+        arith::FastMathFlags truncFMF = truncFOp.getFastmathAttr().getValue();
+        bool isTruncContract =
+            bitEnumContainsAll(truncFMF, arith::FastMathFlags::contract);
+        arith::FastMathFlags extFMF = extFOp.getFastmathAttr().getValue();
+        bool isExtContract =
+            bitEnumContainsAll(extFMF, arith::FastMathFlags::contract);
+        if (isTruncContract && isExtContract) {
+          rewriter.replaceOp(extFOp, truncFOp.getOperand());
+          return success();
+        }
+      }
+    }
+    return failure();
+  }
+};
+
+void arith::ExtFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<SimplifyExtFTruncFOpPair>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // TruncIOp
 //===----------------------------------------------------------------------===//

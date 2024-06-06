@@ -1195,6 +1195,14 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf"> {
   }];
   let hasVerifier = 1;
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
+
+  let arguments = (ins FloatLike:$in, DefaultValuedAttr<
+                       Arith_FastMathAttr,
+                       "::mlir::arith::FastMathFlags::contract">:$fastmath);
+  let results = (outs FloatLike:$out);
+
+  let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1235,7 +1243,10 @@ def Arith_TruncFOp :
        DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
        DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins FloatLike:$in,
-                   OptionalAttr<Arith_RoundingModeAttr>:$roundingmode)>,
+                   OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
+                       DefaultValuedAttr<
+                       Arith_FastMathAttr,
+                       "::mlir::arith::FastMathFlags::contract">:$fastmath)>,
     Results<(outs FloatLike:$out)> {
   let summary = "cast from floating-point to narrower floating-point";
   let description = [{
