@@ -102,7 +102,7 @@ void read_many_bytes(char *buffer) {
   }
 }
 
-void random_access_write1(int index) {
+void random_access_read1(int index) {
   FILE *fp = fopen("/home/test", "rb+");
   if (fp) {
     long c[4];
@@ -157,7 +157,7 @@ void random_access_write1(int index) {
   }
 }
 
-void random_access_write2(int b) {
+void random_access_read2(int b) {
   FILE *fp = fopen("/home/test", "rb+");
   if (fp) {
     int buffer[10];
@@ -177,7 +177,7 @@ void random_access_write2(int b) {
   }
 }
 
-void random_access_write_symbolic_count(size_t count) {
+void random_access_read_symbolic_count(size_t count) {
   // Cover a case that used to crash (symbolic count).
   if (count > 2)
     return;
@@ -204,7 +204,7 @@ void random_access_write_symbolic_count(size_t count) {
   }
 }
 
-void dynamic_random_access_write(int startIndex) {
+void dynamic_random_access_read(int startIndex) {
   FILE *fp = fopen("/home/test", "rb+");
   if (fp) {
     long buffer[10];
@@ -260,7 +260,7 @@ struct S {
   long b;
 };
 
-void compound_write1(void) {
+void compound_read1(void) {
   FILE *fp = fopen("/home/test", "rb+");
   if (fp) {
     struct S s; // s.a is not touched by fread.
@@ -277,7 +277,7 @@ void compound_write1(void) {
   }
 }
 
-void compound_write2(void) {
+void compound_read2(void) {
   FILE *fp = fopen("/home/test", "rb+");
   if (fp) {
     struct S s; // s.a is not touched by fread.
@@ -290,7 +290,7 @@ void compound_write2(void) {
   }
 }
 
-void var_write(void) {
+void var_read(void) {
   FILE *fp = fopen("/home/test", "rb+");
   if (fp) {
     int a, b; // 'a' is not touched by fread.
