@@ -21,10 +21,6 @@
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Config/config.h"
-#if CLANG_ENABLE_CIR
-#include "clang/CIRFrontendAction/CIRGenAction.h"
-#endif
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -993,25 +989,14 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     CI.getPreprocessor().addPPCallbacks(std::move(Callbacks));
   }
 
-  std::vector<std::unique_ptr<ASTConsumer>> AdditionalConsumers;
-  AdditionalConsumers.reserve(2);
-
   if (CI.getFrontendOpts().GenReducedBMI &&
       !CI.getFrontendOpts().ModuleOutputPath.empty()) {
-
-    AdditionalConsumers.push_back(std::make_unique<ReducedBMIGenerator>(
+    std::vector<std::unique_ptr<ASTConsumer>> Consumers(2);
+    Consumers[0] = std::make_unique<ReducedBMIGenerator>(
         CI.getPreprocessor(), CI.getModuleCache(),
-        CI.getFrontendOpts().ModuleOutputPath));
-  }
-
-#if CLANG_ENABLE_CIR
-  if (CI.getFrontendOpts().ClangIRAnalysisOnly)
-    AdditionalConsumers.push_back(cir::createCIRAnalysisOnlyConsumer(CI));
-#endif
-
-  if (!AdditionalConsumers.empty()) {
-    AdditionalConsumers.push_back(std::move(Result));
-    return std::make_unique<MultiplexConsumer>(std::move(AdditionalConsumers));
+        CI.getFrontendOpts().ModuleOutputPath);
+    Consumers[1] = std::move(Result);
+    return std::make_unique<MultiplexConsumer>(std::move(Consumers));
   }
 
   return std::move(Result);

@@ -451,10 +451,6 @@ public:
   // Enable Clang IR call conv lowering pass.
   unsigned ClangIREnableCallConvLowering : 1;
 
-  // Enable Clang IR analysis only pipeline that uses tranditional code gen
-  // pipeline.
-  unsigned ClangIRAnalysisOnly : 1;
-
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -654,8 +650,7 @@ public:
         ClangIRDisablePasses(false), ClangIRDisableCIRVerifier(false),
         ClangIRDisableEmitCXXDefault(false), ClangIRLifetimeCheck(false),
         ClangIRIdiomRecognizer(false), ClangIRLibOpt(false),
-        ClangIRAnalysisOnly(false), TimeTraceGranularity(500),
-        TimeTraceVerbose(false) {}
+        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

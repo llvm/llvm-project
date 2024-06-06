@@ -120,9 +120,6 @@ public:
   EmitObjAction(mlir::MLIRContext *mlirCtx = nullptr);
 };
 
-std::unique_ptr<clang::ASTConsumer>
-createCIRAnalysisOnlyConsumer(clang::CompilerInstance &);
-
 } // namespace cir
 
 #endif

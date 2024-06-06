@@ -5263,15 +5263,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fclangir-idiom-recognizer");
   }
 
-  if (Args.hasArg(options::OPT_fclangir_analysis_only)) {
-    CmdArgs.push_back("-fclangir-analysis-only");
-
-    // TODO: We should pass some default analysis configuration here.
-
-    // TODO2: Should we emit some diagnostics if the configurations conflict
-    // with each other?
-  }
-
   if (IsOpenMPDevice) {
     // We have to pass the triple of the host if compiling for an OpenMP device.
     std::string NormalizedTriple =
