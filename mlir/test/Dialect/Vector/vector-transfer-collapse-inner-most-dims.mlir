@@ -61,7 +61,7 @@ func.func @negative_scalable_unit_dim(%in: memref<1x1x8x1xf32, strided<[3072, 8,
   %0 = vector.transfer_read %in[%c0, %c0, %c0, %c0], %cst {in_bounds = [true, true, true]} : memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, vector<1x8x[1]xf32>
   return %0 : vector<1x8x[1]xf32>
 }
-//  CHECK-LABEL: func @scalable_unit_dim
+//  CHECK-LABEL: func @negative_scalable_unit_dim
 //    CHECK-NOT: memref.subview
 //    CHECK-NOT: vector.shape_cast
 
@@ -257,3 +257,16 @@ func.func @leading_scalable_dimension_transfer_write(%dest : memref<24x1xf32>, %
 // CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[DEST]][0, 0] [24, 1] [1, 1] : memref<24x1xf32> to memref<24xf32, strided<[1]>>
 // CHECK:        %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<[4]x1xf32> to vector<[4]xf32>
 // CHECK:        vector.transfer_write %[[CAST]], %[[SUBVIEW]]{{.*}} {in_bounds = [true]} : vector<[4]xf32>, memref<24xf32, strided<[1]>>
+
+// -----
+
+// Negative test: [1] (scalable 1) is _not_ a unit dimension.
+func.func @trailing_scalable_one_dim_transfer_write(%dest : memref<24x1xf32>, %vec: vector<4x[1]xf32>, %index: index) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %dest[%index, %c0] {in_bounds = [true, true]} : vector<4x[1]xf32>,  memref<24x1xf32>
+  return
+}
+// CHECK:      func.func @trailing_scalable_one_dim_transfer_write
+// CHECK-NOT:    vector.shape_cast
+// CHECK:        vector.transfer_write {{.*}} : vector<4x[1]xf32>,  memref<24x1xf32>
+// CHECK-NOT:    vector.shape_cast
