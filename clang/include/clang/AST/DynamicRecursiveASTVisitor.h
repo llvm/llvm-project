@@ -65,12 +65,41 @@ public:
   /// \returns false if the visitation was terminated early, true otherwise.
   virtual bool TraverseConstructorInitializer(CXXCtorInitializer *Init);
 
+  /// Recursively visit a base specifier. This can be overridden by a
+  /// subclass.
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  virtual bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base);
+
   /// Recursively visit a declaration, by dispatching to
   /// Traverse*Decl() based on the argument's dynamic type.
   ///
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is NULL).
   virtual bool TraverseDecl(Decl *D);
+
+  /// Recursively visit a name with its location information.
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  virtual bool TraverseDeclarationNameInfo(DeclarationNameInfo NameInfo);
+
+  /// Recursively visit a lambda capture. \c Init is the expression that
+  /// will be used to initialize the capture.
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  virtual bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
+                                     Expr *Init);
+
+  /// Recursively visit a C++ nested-name-specifier.
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  virtual bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS);
+
+  /// Recursively visit a C++ nested-name-specifier with location
+  /// information.
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  virtual bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS);
 
   /// Recursively visit a statement or expression, by
   /// dispatching to Traverse*() based on the argument's dynamic type.
@@ -85,6 +114,12 @@ public:
   /// \returns false if the visitation was terminated early, true otherwise.
   // FIXME: migrate callers to TemplateArgumentLoc instead.
   virtual bool TraverseTemplateArgument(const TemplateArgument &Arg);
+
+  /// Recursively visit a template argument location and dispatch to the
+  /// appropriate method for the argument type.
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  virtual bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc);
 
   /// Recursively visit a set of template arguments.
   ///

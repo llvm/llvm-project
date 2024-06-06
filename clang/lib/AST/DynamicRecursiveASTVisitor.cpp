@@ -55,6 +55,10 @@ struct Impl : RecursiveASTVisitor<Impl> {
     return Visitor.TraverseTemplateArgument(Arg);
   }
 
+  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
+    return Visitor.TraverseTemplateArgumentLoc(ArgLoc);
+  }
+
   bool TraverseTemplateName(TemplateName Template) {
     return Visitor.TraverseTemplateName(Template);
   }
@@ -73,6 +77,27 @@ struct Impl : RecursiveASTVisitor<Impl> {
   }
   bool TraverseConceptNestedRequirement(concepts::NestedRequirement *R) {
     return Visitor.TraverseConceptNestedRequirement(R);
+  }
+
+  bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base) {
+    return Visitor.TraverseCXXBaseSpecifier(Base);
+  }
+
+  bool TraverseDeclarationNameInfo(DeclarationNameInfo NameInfo) {
+    return Visitor.TraverseDeclarationNameInfo(NameInfo);
+  }
+
+  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
+                             Expr *Init) {
+    return Visitor.TraverseLambdaCapture(LE, C, Init);
+  }
+
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) {
+    return Visitor.TraverseNestedNameSpecifier(NNS);
+  }
+
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
+    return Visitor.TraverseNestedNameSpecifierLoc(NNS);
   }
 
   /// Visit a node.
@@ -162,6 +187,13 @@ bool DynamicRecursiveASTVisitor::TraverseDecl(Decl *D) {
   return Impl(*this).RecursiveASTVisitor<Impl>::TraverseDecl(D);
 }
 
+bool DynamicRecursiveASTVisitor::TraverseLambdaCapture(LambdaExpr *LE,
+                                                       const LambdaCapture *C,
+                                                       Expr *Init) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseLambdaCapture(LE, C,
+                                                                      Init);
+}
+
 bool DynamicRecursiveASTVisitor::TraverseStmt(Stmt *S,
                                               DataRecursionQueue *Queue) {
   return Impl(*this).RecursiveASTVisitor<Impl>::TraverseStmt(S, Queue);
@@ -175,6 +207,12 @@ bool DynamicRecursiveASTVisitor::TraverseTemplateArgument(
 bool DynamicRecursiveASTVisitor::TraverseTemplateArguments(
     ArrayRef<TemplateArgument> Args) {
   return Impl(*this).RecursiveASTVisitor<Impl>::TraverseTemplateArguments(Args);
+}
+
+bool DynamicRecursiveASTVisitor::TraverseTemplateArgumentLoc(
+    const TemplateArgumentLoc &ArgLoc) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseTemplateArgumentLoc(
+      ArgLoc);
 }
 
 bool DynamicRecursiveASTVisitor::TraverseTemplateName(TemplateName Template) {
@@ -211,6 +249,29 @@ bool DynamicRecursiveASTVisitor::TraverseConceptNestedRequirement(
     concepts::NestedRequirement *R) {
   return Impl(*this)
       .RecursiveASTVisitor<Impl>::TraverseConceptNestedRequirement(R);
+}
+
+bool DynamicRecursiveASTVisitor::TraverseCXXBaseSpecifier(
+    const CXXBaseSpecifier &Base) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseCXXBaseSpecifier(Base);
+}
+
+bool DynamicRecursiveASTVisitor::TraverseDeclarationNameInfo(
+    DeclarationNameInfo NameInfo) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseDeclarationNameInfo(
+      NameInfo);
+}
+
+bool DynamicRecursiveASTVisitor::TraverseNestedNameSpecifier(
+    NestedNameSpecifier *NNS) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseNestedNameSpecifier(
+      NNS);
+}
+
+bool DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(
+    NestedNameSpecifierLoc NNS) {
+  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseNestedNameSpecifierLoc(
+      NNS);
 }
 
 /*
