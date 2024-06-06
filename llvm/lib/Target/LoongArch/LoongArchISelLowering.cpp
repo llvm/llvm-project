@@ -5004,6 +5004,10 @@ bool LoongArchTargetLowering::isSExtCheaperThanZExt(EVT SrcVT,
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
 }
 
+bool LoongArchTargetLowering::signExtendConstant(const ConstantInt *CI) const {
+  return Subtarget.is64Bit() && CI->getType()->isIntegerTy(32);
+}
+
 bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
   // TODO: Support vectors.
   if (Y.getValueType().isVector())
