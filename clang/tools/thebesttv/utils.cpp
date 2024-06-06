@@ -14,6 +14,8 @@ void requireTrue(bool condition, std::string message) {
 }
 
 std::string getFullSignature(const FunctionDecl *D) {
+    if (!D)
+        return "";
     // 问题: parameter type 里没有 namespace 的信息
     std::string fullSignature = D->getQualifiedNameAsString();
     fullSignature += "(";
