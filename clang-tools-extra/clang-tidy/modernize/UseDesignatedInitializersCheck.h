@@ -29,10 +29,19 @@ public:
     return TK_IgnoreUnlessSpelledInSource;
   }
 
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus20 || LangOpts.C99 ||
+           (LangOpts.CPlusPlus && !StrictCppStandardCompliance) ||
+           (!LangOpts.CPlusPlus && !LangOpts.ObjC &&
+            !StrictCStandardCompliance);
+  }
+
 private:
   bool IgnoreSingleElementAggregates;
   bool RestrictToPODTypes;
   bool IgnoreMacros;
+  bool StrictCStandardCompliance;
+  bool StrictCppStandardCompliance;
 };
 
 } // namespace clang::tidy::modernize
