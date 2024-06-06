@@ -6,6 +6,7 @@ import os
 import unittest2
 
 class TestSwiftFModuleFlags(TestBase):
+    @skipIf(macos_version=["<", "14.0"])
     @skipIfDarwinEmbedded
     @swiftTest
     def test(self):
