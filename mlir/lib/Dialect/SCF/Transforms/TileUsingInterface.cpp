@@ -950,10 +950,10 @@ LogicalResult mlir::scf::yieldReplacementForFusedProducer(
 
   Location loc = originalOwner->getLoc();
   // a. collect all init Value to be appended
-  ArrayRef<unsigned> initNumberList =
+  SmallVector<unsigned> initNumberList =
       yieldResultNumber.empty() ? llvm::to_vector(llvm::seq<unsigned>(
                                       0, originalOwner->getNumResults()))
-                                : yieldResultNumber;
+                                : llvm::to_vector(yieldResultNumber);
   SmallVector<Value> initValueList;
   for (const auto &resultNumber : initNumberList) {
     FailureOr<Value> initValue = tensor::getOrCreateDestination(
@@ -1000,7 +1000,7 @@ LogicalResult mlir::scf::yieldReplacementForFusedProducer(
     // on iteration Domain Tile
     SmallVector<SmallVector<OpFoldResult>> offsetList, sizesList;
     for (const auto &resultNumber : initNumberList) {
-      if (resultNumber == fusedProducerInfo.origProducer.getResultNumber()) {
+      if (resultNumber == sliceResultNumber) {
         offsetList.push_back(sliceOffset);
         sizesList.push_back(sliceSizes);
       } else {
