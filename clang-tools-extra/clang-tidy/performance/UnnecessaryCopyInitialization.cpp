@@ -75,7 +75,8 @@ void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
   }
 }
 
-AST_MATCHER_FUNCTION_P(StatementMatcher, isRefReturningMethodCall,
+AST_MATCHER_FUNCTION_P(StatementMatcher,
+                       isRefReturningMethodCallWithConstOverloads,
                        std::vector<StringRef>, ExcludedContainerTypes) {
   // Match method call expressions where the `this` argument is only used as
   // const, this will be checked in `check()` part. This returned reference is
@@ -120,7 +121,7 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
       declRefExpr(to(varDecl(hasLocalStorage()).bind(OldVarDeclId)));
   return expr(
       anyOf(isConstRefReturningFunctionCall(),
-            isRefReturningMethodCall(ExcludedContainerTypes),
+            isRefReturningMethodCallWithConstOverloads(ExcludedContainerTypes),
             ignoringImpCasts(OldVarDeclRef),
             ignoringImpCasts(unaryOperator(hasOperatorName("&"),
                                            hasUnaryOperand(OldVarDeclRef)))));
@@ -258,10 +259,11 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
         .bind("blockStmt");
   };
 
-  Finder->addMatcher(LocalVarCopiedFrom(anyOf(
-                         isConstRefReturningFunctionCall(),
-                         isRefReturningMethodCall(ExcludedContainerTypes))),
-                     this);
+  Finder->addMatcher(
+      LocalVarCopiedFrom(anyOf(
+          isConstRefReturningFunctionCall(),
+          isRefReturningMethodCallWithConstOverloads(ExcludedContainerTypes))),
+      this);
 
   Finder->addMatcher(LocalVarCopiedFrom(declRefExpr(
                          to(varDecl(hasLocalStorage()).bind(OldVarDeclId)))),
