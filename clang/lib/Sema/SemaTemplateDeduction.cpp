@@ -593,9 +593,15 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
 
       TemplateParameterList *As = TempArg->getTemplateParameters();
       if (DefaultArguments.size() != 0) {
-        assert(DefaultArguments.size() <= As->size());
+        if ((DefaultArguments.size() > As->size()) &&
+            (DefaultArguments.size() != As->size() + 1 ||
+             DefaultArguments.back().getKind() != TemplateArgument::Type ||
+             !isa<PackExpansionType>(DefaultArguments.back().getAsType()))) {
+          return TemplateDeductionResult::TooFewArguments;
+        }
         SmallVector<NamedDecl *, 4> Params(As->size());
-        for (unsigned I = 0; I < DefaultArguments.size(); ++I)
+        for (unsigned I = 0;
+             I < std::min((size_t)As->size(), DefaultArguments.size()); ++I)
           Params[I] = getTemplateParameterWithDefault(S, As->getParam(I),
                                                       DefaultArguments[I]);
         for (unsigned I = DefaultArguments.size(); I < As->size(); ++I)
