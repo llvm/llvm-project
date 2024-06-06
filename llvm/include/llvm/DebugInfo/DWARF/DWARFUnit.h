@@ -585,8 +585,16 @@ private:
   /// hasn't already been done
   void extractDIEsIfNeeded(bool CUDieOnly);
 
+  /// extracCUDieIfNeeded - Parse CU DIE if it hasn't already been done.
+  /// Only to be used from extractDIEsIfNeeded, which holds the correct locks.
+  bool extractCUDieIfNeeded(bool CUDieOnly, bool &HasCUDie);
+
+  /// extractAllDIEsIfNeeded - Parses non-CU DIE's for a given CU if needed.
+  /// Only to be used from extractDIEsIfNeeded, which holds the correct locks.
+  Error extractAllDIEsIfNeeded(bool HasCUDie);
+
   /// extractAllDIEsHelper - helper to be invoked *only* from inside
-  /// tryExtractDIEsIfNeeded, which holds correct locks.
+  /// tryExtractDIEsIfNeeded, which holds the correct locks.
   Error extractAllDIEsHelper();
 
   /// extractDIEsToVector - Appends all parsed DIEs to a vector.

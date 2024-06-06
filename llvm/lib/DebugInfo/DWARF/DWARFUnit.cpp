@@ -514,48 +514,49 @@ static bool DoubleCheckedRWLocker(llvm::sys::RWMutex &Mutex,
   return false;
 }
 
-Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
-  llvm::sys::ScopedReader FreeLock(CUDieFreeMutex);
-  bool HasCUDie = false;
-  Error Result = Error::success();
-
-  // Lambda to check if the CU DIE has been extracted already.
-  auto CheckIfCUDieExtracted = [this, CUDieOnly]() {
-    // True means already parsed.
-    return ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1);
-  };
-
-  // Lambda to extract the CU DIE.
-  auto ExtractCUDie = [this, CUDieOnly, &HasCUDie]() {
-    HasCUDie = !DieArray.empty();
-    extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
-  };
-
+bool DWARFUnit::extractCUDieIfNeeded(bool CUDieOnly, bool &HasCUDie) {
   // Safely check if the CU DIE has been extract already. If not, then extract
   // it.
-  if (DoubleCheckedRWLocker(CUDieArrayMutex, CheckIfCUDieExtracted,
-                            ExtractCUDie))
-    return Result;
+  return DoubleCheckedRWLocker(
+      CUDieArrayMutex,
+      // Calculate if the CU DIE has been extracted already.
+      [&]() {
+        return ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1);
+      },
+      // Lambda to extract the CU DIE.
+      [&]() {
+        HasCUDie = !DieArray.empty();
+        extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
+      });
+}
 
-  // Lambda to check if all DIEs have been extract already.
-  auto CheckIfAllDiesExtracted = [this, HasCUDie]() {
-    return (DieArray.empty() || HasCUDie);
-  };
-
-  // Lambda to extract all the DIEs using the helper function
-  auto ExtractAllDies = [this, &Result]() {
-    if (Error E = extractAllDIEsHelper()) {
-      // Consume the success placeholder and save the actual error
-      consumeError(std::move(Result));
-      Result = std::move(E);
-    }
-  };
-
+Error DWARFUnit::extractAllDIEsIfNeeded(bool HasCUDie) {
   // Safely check if *all* the DIEs have been parsed already. If not, then parse
   // them.
-  DoubleCheckedRWLocker(AllDieArrayMutex, CheckIfAllDiesExtracted,
-                        ExtractAllDies);
+  Error Result = Error::success();
+  DoubleCheckedRWLocker(
+      AllDieArrayMutex,
+      // Lambda to check if all DIEs have been extracted already.
+      [=]() { return (DieArray.empty() || HasCUDie); },
+      // Lambda to extract all the DIEs using the helper function
+      [&]() {
+        if (Error E = extractAllDIEsHelper()) {
+          // Consume the success placeholder and save the actual error
+          consumeError(std::move(Result));
+          Result = std::move(E);
+        }
+      });
   return Result;
+}
+
+Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
+  // Take the CUDieFreeMutex lock to prevent the CU DIE from being freed
+  // after it was just parsed, but before the rest of the DIES are parsed.
+  llvm::sys::ScopedReader FreeLock(CUDieFreeMutex);
+  bool HasCUDie = false;
+  if (extractCUDieIfNeeded(CUDieOnly, HasCUDie))
+    return Error::success();
+  return extractAllDIEsIfNeeded(HasCUDie);
 }
 
 // This should only be used from the tryExtractDIEsIfNeeded function:
