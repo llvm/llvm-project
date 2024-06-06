@@ -2323,6 +2323,135 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
   }
 }
 
+/// This is a port of getSalvageOpsForBinOp() to DIOp-based DIExpressions.
+static Value *
+getNewSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
+                         SmallVectorImpl<DIOp::Variant> &Ops,
+                         SmallVectorImpl<Value *> &AdditionalValues) {
+  // Handle binary operations with constant integer operands as a special case.
+  auto *ConstInt = dyn_cast<ConstantInt>(BI->getOperand(1));
+
+  if (ConstInt) {
+    // Values wider than 64 bits cannot be represented within a DIExpression.
+    if (ConstInt->getBitWidth() > 64)
+      return nullptr;
+    Ops.emplace_back(DIOp::Constant(ConstInt));
+  } else {
+    Ops.emplace_back(DIOp::Arg(CurrentLocOps, BI->getOperand(1)->getType()));
+    AdditionalValues.push_back(BI->getOperand(1));
+  }
+
+  switch (BI->getOpcode()) {
+  default:
+    // FIXME: Some binary operators aren't representable in DIOp-based
+    // DIExpressions.
+    return nullptr;
+  case Instruction::Add:
+    Ops.emplace_back(DIOp::Add());
+    break;
+  case Instruction::Sub:
+    Ops.emplace_back(DIOp::Sub());
+    break;
+  case Instruction::Mul:
+    Ops.emplace_back(DIOp::Mul());
+    break;
+  case Instruction::SDiv:
+    Ops.emplace_back(DIOp::Div());
+    break;
+  case Instruction::Shl:
+    Ops.emplace_back(DIOp::Shl());
+    break;
+  case Instruction::LShr:
+    Ops.emplace_back(DIOp::LShr());
+    break;
+  case Instruction::AShr:
+    Ops.emplace_back(DIOp::AShr());
+    break;
+  }
+
+  return BI->getOperand(0);
+}
+
+/// This is a port of getSalvageOpsForGEP() to DIOp-based DIExpressions.
+static Value *
+getNewSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
+                       uint64_t CurrentLocOps,
+                       SmallVectorImpl<DIOp::Variant> &Ops,
+                       SmallVectorImpl<Value *> &AdditionalValues) {
+  LLVMContext &Ctx = GEP->getContext();
+  Type *PointerTy = GEP->getPointerOperand()->getType();
+  auto *IntPtrTy = IntegerType::get(Ctx, DL.getPointerTypeSizeInBits(PointerTy));
+  unsigned BitWidth = DL.getIndexSizeInBits(GEP->getPointerAddressSpace());
+
+  // Rewrite a GEP into a DIExpression.
+  MapVector<Value *, APInt> VariableOffsets;
+  APInt ConstantOffset(BitWidth, 0);
+  if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
+    return nullptr;
+
+  Ops.emplace_back(DIOp::Reinterpret(IntPtrTy));
+
+  for (const auto &Offset : VariableOffsets) {
+    AdditionalValues.push_back(Offset.first);
+    assert(Offset.second.isStrictlyPositive() &&
+           "Expected strictly positive multiplier for offset.");
+    ConstantInt *ConstOffset =
+        ConstantInt::get(IntPtrTy, Offset.second.getZExtValue());
+    DIOp::Variant NewOps[] = {
+        DIOp::Arg(CurrentLocOps++, ConstOffset->getType()),
+        DIOp::Constant(ConstOffset), DIOp::Mul(), DIOp::Add()};
+    Ops.append(std::begin(NewOps), std::end(NewOps));
+  }
+
+  Ops.emplace_back(DIOp::Constant(
+      ConstantInt::get(IntPtrTy, ConstantOffset.getZExtValue())));
+  Ops.emplace_back(DIOp::Add());
+  Ops.emplace_back(DIOp::Reinterpret(PointerTy));
+  return GEP->getOperand(0);
+}
+
+/// This is a port of salvageDebugInfoImpl() to DIOp-based DIExpressions.
+///
+/// \param I is an instruction that's about to be deleted, used as a location op
+/// to a debug intrinsic. \p Ops will be populated with DIOps that have the same
+/// semantics as I.
+/// \param CurrentLocOps is the number of location ops the debug intrinsic
+/// currently uses.
+/// \param AdditionalValues is populated with any additional location ops we
+/// need to add to the intrinsic to salvage this instruction.
+/// \returns a Value to replace I with in the debug intrinsic's location ops.
+static Value *salvageNewDebugInfo(Instruction &I, uint64_t CurrentLocOps,
+                                  SmallVectorImpl<Value *> &AdditionalValues,
+                                  SmallVectorImpl<DIOp::Variant> &Ops) {
+  auto &M = *I.getModule();
+  auto &DL = M.getDataLayout();
+
+  if (auto *CI = dyn_cast<CastInst>(&I)) {
+    Value *FromValue = CI->getOperand(0);
+    Type *Type = CI->getType();
+
+    if (CI->isNoopCast(DL))
+      Ops.emplace_back(DIOp::Reinterpret(Type));
+    else if (isa<SExtInst>(&I))
+      Ops.emplace_back(DIOp::SExt(Type));
+    else if (isa<ZExtInst>(&I))
+      Ops.emplace_back(DIOp::ZExt(Type));
+    else if (isa<TruncInst>(&I))
+      Ops.emplace_back(DIOp::Convert(Type));
+    else
+      return nullptr;
+
+    return FromValue;
+  }
+
+  if (auto *BI = dyn_cast<BinaryOperator>(&I))
+    return getNewSalvageOpsForBinOp(BI, CurrentLocOps, Ops, AdditionalValues);
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
+    return getNewSalvageOpsForGEP(GEP, DL, CurrentLocOps, Ops, AdditionalValues);
+
+  return nullptr;
+}
+
 void llvm::salvageDebugInfoForDbgValues(
     Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers,
     ArrayRef<DbgVariableRecord *> DPUsers) {
@@ -2358,6 +2487,25 @@ void llvm::salvageDebugInfoForDbgValues(
     Value *Op0 = nullptr;
     DIExpression *SalvagedExpr = DII->getExpression();
     auto LocItr = find(DIILocation, &I);
+
+    if (SalvagedExpr->holdsNewElements()) {
+      while (SalvagedExpr && LocItr != DIILocation.end()) {
+        SmallVector<DIOp::Variant, 16> Ops;
+        unsigned LocNo = std::distance(DIILocation.begin(), LocItr);
+        uint64_t CurrentLocOps = SalvagedExpr->getNewNumLocationOperands();
+        Op0 = salvageNewDebugInfo(I, CurrentLocOps, AdditionalValues, Ops);
+        if (!Op0)
+          break;
+        SalvagedExpr = DIExpression::appendNewOpsToArg(SalvagedExpr, Ops, LocNo,
+                                                       Op0->getType());
+        LocItr = std::find(++LocItr, DIILocation.end(), &I);
+      }
+      // salvageDebugInfoImpl should fail on examining the first element of
+      // DbgUsers, or none of them.
+      if (!Op0)
+        break;
+    }
+
     while (SalvagedExpr && LocItr != DIILocation.end()) {
       SmallVector<uint64_t, 16> Ops;
       unsigned LocNo = std::distance(DIILocation.begin(), LocItr);
@@ -2420,6 +2568,25 @@ void llvm::salvageDebugInfoForDbgValues(
     Value *Op0 = nullptr;
     DIExpression *SalvagedExpr = DVR->getExpression();
     auto LocItr = find(DVRLocation, &I);
+
+    if (SalvagedExpr->holdsNewElements()) {
+      while (SalvagedExpr && LocItr != DVRLocation.end()) {
+        SmallVector<DIOp::Variant, 16> Ops;
+        unsigned LocNo = std::distance(DVRLocation.begin(), LocItr);
+        uint64_t CurrentLocOps = SalvagedExpr->getNewNumLocationOperands();
+        Op0 = salvageNewDebugInfo(I, CurrentLocOps, AdditionalValues, Ops);
+        if (!Op0)
+          break;
+        SalvagedExpr = DIExpression::appendNewOpsToArg(SalvagedExpr, Ops, LocNo,
+                                                       Op0->getType());
+        LocItr = std::find(++LocItr, DVRLocation.end(), &I);
+      }
+      // salvageDebugInfoImpl should fail on examining the first element of
+      // DbgUsers, or none of them.
+      if (!Op0)
+        break;
+    }
+
     while (SalvagedExpr && LocItr != DVRLocation.end()) {
       SmallVector<uint64_t, 16> Ops;
       unsigned LocNo = std::distance(DVRLocation.begin(), LocItr);

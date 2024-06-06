@@ -3037,6 +3037,10 @@ public:
   /// (0 and 1).
   uint64_t getNumLocationOperands() const;
 
+  /// Return the number of unique location operands referred to (via DIOpArg) in
+  /// this expression. Like getNumLocationOperands, but for DIOp-DIExpressions.
+  uint64_t getNewNumLocationOperands() const;
+
   using element_iterator = ArrayRef<uint64_t>::iterator;
 
   element_iterator elements_begin() const { return getElements().begin(); }

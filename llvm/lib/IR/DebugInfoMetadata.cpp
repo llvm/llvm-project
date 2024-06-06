@@ -2358,6 +2358,15 @@ uint64_t DIExpression::getNumLocationOperands() const {
   return Result;
 }
 
+uint64_t DIExpression::getNewNumLocationOperands() const {
+  uint64_t Result = 0;
+  auto Ops = getNewElementsRef();
+  for (DIOp::Variant Op : *Ops)
+    if (auto *Arg = std::get_if<DIOp::Arg>(&Op))
+      Result = std::max(Result, static_cast<uint64_t>(Arg->getIndex() + 1));
+  return Result;
+}
+
 std::optional<DIExpression::SignedOrUnsignedConstant>
 DIExpression::isConstant() const {
 
