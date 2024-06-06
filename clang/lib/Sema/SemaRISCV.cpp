@@ -1303,7 +1303,7 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vfwnmsac_vf_rm_mu:
     return SemaRef.BuiltinConstantArgRange(TheCall, 4, 0, 4);
   case RISCV::BI__builtin_riscv_ntl_load:
-  case RISCV::BI__builtin_riscv_ntl_store:
+  case RISCV::BI__builtin_riscv_ntl_store: {
     DeclRefExpr *DRE =
         cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
     assert((BuiltinID == RISCV::BI__builtin_riscv_ntl_store ||
@@ -1366,6 +1366,14 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     TheCall->setArg(1, ValArg.get());
     TheCall->setType(Context.VoidTy);
     return false;
+  }
+
+  case RISCV::BI__builtin_riscv_lr_w:
+  case RISCV::BI__builtin_riscv_lr_d:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 3);
+  case RISCV::BI__builtin_riscv_sc_w:
+  case RISCV::BI__builtin_riscv_sc_d:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 3);
   }
 
   return false;

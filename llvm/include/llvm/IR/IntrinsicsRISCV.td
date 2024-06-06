@@ -125,6 +125,38 @@ let TargetPrefix = "riscv" in {
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
+// 'Zawrs' (Wait on Reservation Set)
+
+let TargetPrefix = "riscv" in {
+  def int_riscv_wrs_nto
+      : DefaultAttrsIntrinsic<[], [], [IntrHasSideEffects]>;
+  def int_riscv_wrs_sto
+      : DefaultAttrsIntrinsic<[], [], [IntrHasSideEffects]>;
+} // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
+// 'Zalrsc' (Load-Reserved/Store-Conditional)
+
+let TargetPrefix = "riscv" in {
+  def int_riscv_lr_w
+      : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                              [llvm_ptr_ty, llvm_i32_ty],
+                              [IntrReadMem, ImmArg<ArgIndex<1>>]>;
+  def int_riscv_lr_d
+      : DefaultAttrsIntrinsic<[llvm_i64_ty],
+                              [llvm_ptr_ty, llvm_i32_ty],
+                              [IntrReadMem, ImmArg<ArgIndex<1>>]>;
+  def int_riscv_sc_w
+      : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                              [llvm_i32_ty, llvm_ptr_ty, llvm_i32_ty],
+                              [IntrWriteMem, ImmArg<ArgIndex<2>>]>;
+  def int_riscv_sc_d
+      : DefaultAttrsIntrinsic<[llvm_i64_ty],
+                              [llvm_i64_ty, llvm_ptr_ty, llvm_i32_ty],
+                              [IntrWriteMem, ImmArg<ArgIndex<2>>]>;
+} // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
 // Vectors
 
 // The intrinsic does not have any operand that must be extended.

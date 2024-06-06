@@ -136,6 +136,31 @@ let Predicates = [HasAtomicLdSt, IsRV64] in {
   def : StPat<atomic_store_64, SD, GPR, i64>;
 }
 
+/// LR/SC intrinsics patterns
+multiclass LRPat<Intrinsic intrinsic, string inst> {
+  def : Pat<(intrinsic GPR:$src, 0), (!cast<Instruction>(inst) GPR:$src)>;
+  def : Pat<(intrinsic GPR:$src, 1), (!cast<Instruction>(inst # "_AQ") GPR:$src)>;
+  def : Pat<(intrinsic GPR:$src, 2), (!cast<Instruction>(inst # "_RL") GPR:$src)>;
+  def : Pat<(intrinsic GPR:$src, 3), (!cast<Instruction>(inst # "_AQ_RL") GPR:$src)>;
+}
+
+multiclass SCPat<Intrinsic intrinsic, string inst> {
+  def : Pat<(intrinsic GPR:$src, GPR:$dst, 0), (!cast<Instruction>(inst) GPR:$src, GPR:$dst)>;
+  def : Pat<(intrinsic GPR:$src, GPR:$dst, 1), (!cast<Instruction>(inst # "_AQ") GPR:$src, GPR:$dst)>;
+  def : Pat<(intrinsic GPR:$src, GPR:$dst, 2), (!cast<Instruction>(inst # "_RL") GPR:$src, GPR:$dst)>;
+  def : Pat<(intrinsic GPR:$src, GPR:$dst, 3), (!cast<Instruction>(inst # "_AQ_RL") GPR:$src, GPR:$dst)>;
+}
+
+let Predicates = [HasStdExtAOrZalrsc] in {
+  defm : LRPat<int_riscv_lr_w, "LR_W">;
+  defm : SCPat<int_riscv_sc_w, "SC_W">;
+} // Predicates = [HasStdExtAOrZalrsc]
+
+let Predicates = [HasStdExtAOrZalrsc, IsRV64] in {
+  defm : LRPat<int_riscv_lr_d, "LR_D">;
+  defm : SCPat<int_riscv_sc_d, "SC_D">;
+} // Predicates = [HasStdExtAOrZalrsc, IsRV64]
+
 /// AMOs
 
 multiclass AMOPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,

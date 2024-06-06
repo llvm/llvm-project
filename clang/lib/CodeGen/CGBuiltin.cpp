@@ -21769,6 +21769,28 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_sm3p1;
     break;
 
+  // Zawrs
+  case RISCV::BI__builtin_riscv_wrs_nto:
+    ID = Intrinsic::riscv_wrs_nto;
+    break;
+  case RISCV::BI__builtin_riscv_wrs_sto:
+    ID = Intrinsic::riscv_wrs_sto;
+    break;
+
+  // Zalrsc
+  case RISCV::BI__builtin_riscv_lr_w:
+    ID = Intrinsic::riscv_lr_w;
+    break;
+  case RISCV::BI__builtin_riscv_lr_d:
+    ID = Intrinsic::riscv_lr_d;
+    break;
+  case RISCV::BI__builtin_riscv_sc_w:
+    ID = Intrinsic::riscv_sc_w;
+    break;
+  case RISCV::BI__builtin_riscv_sc_d:
+    ID = Intrinsic::riscv_sc_d;
+    break;
+
   // Zihintntl
   case RISCV::BI__builtin_riscv_ntl_load: {
     llvm::Type *ResTy = ConvertType(E->getType());
