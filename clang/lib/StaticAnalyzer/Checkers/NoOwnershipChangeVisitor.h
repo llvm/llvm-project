@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
+#include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 
 namespace clang {
@@ -37,18 +37,16 @@ protected:
 
   virtual PathDiagnosticPieceRef emitNote(const ExplodedNode *N) = 0;
 
-  PathDiagnosticPieceRef
-  maybeEmitNoteForObjCSelf(PathSensitiveBugReport &R,
-                           const ObjCMethodCall &Call,
-                           const ExplodedNode *N) final {
+  PathDiagnosticPieceRef maybeEmitNoteForObjCSelf(PathSensitiveBugReport &R,
+                                                  const ObjCMethodCall &Call,
+                                                  const ExplodedNode *N) final {
     // TODO: Implement.
     return nullptr;
   }
 
-  PathDiagnosticPieceRef
-  maybeEmitNoteForCXXThis(PathSensitiveBugReport &R,
-                          const CXXConstructorCall &Call,
-                          const ExplodedNode *N) final {
+  PathDiagnosticPieceRef maybeEmitNoteForCXXThis(PathSensitiveBugReport &R,
+                                                 const CXXConstructorCall &Call,
+                                                 const ExplodedNode *N) final {
     // TODO: Implement.
     return nullptr;
   }
@@ -57,6 +55,7 @@ protected:
   PathDiagnosticPieceRef
   maybeEmitNoteForParameters(PathSensitiveBugReport &R, const CallEvent &Call,
                              const ExplodedNode *N) final;
+
 public:
   using OwnerSet = llvm::SmallPtrSet<const MemRegion *, 8>;
 

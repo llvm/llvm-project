@@ -731,7 +731,6 @@ private:
 namespace {
 class NoMemOwnershipChangeVisitor final : public NoOwnershipChangeVisitor {
 protected:
-
   /// Syntactically checks whether the callee is a deallocating function. Since
   /// we have no path-sensitive information on this call (we would need a
   /// CallEvent instead of a CallExpr for that), its possible that a
@@ -796,7 +795,6 @@ protected:
 public:
   NoMemOwnershipChangeVisitor(SymbolRef Sym, const MallocChecker *Checker)
       : NoOwnershipChangeVisitor(Sym, Checker) {}
-
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int Tag = 0;
