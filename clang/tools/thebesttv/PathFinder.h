@@ -74,11 +74,13 @@ struct ICFGPathFinder {
 
 struct IntraProceduralBfs {
   private:
+    const int INF = 0x3f3f3f3f;
+
     const ICFG &icfg;
     const int fid;
     const std::pair<int, int> nodeRange;
     const int n; // number of nodes
-    std::vector<int> visited, fa;
+    std::vector<int> d, fa;
 
     static std::pair<int, int> getNodeRange(const ICFG &icfg, int fid) {
         auto [entry, exit] = icfg.entryExitOfFunction.at(fid);
@@ -100,8 +102,8 @@ struct IntraProceduralBfs {
         std::queue<int> q;
         q.push(u);
 
-        std::fill(visited.begin(), visited.end(), false);
-        visited[getIndex(u)] = true;
+        std::fill(d.begin(), d.end(), INF);
+        d[getIndex(u)] = 0;
         fa[getIndex(u)] = -1;
 
         while (!q.empty()) {
@@ -115,10 +117,10 @@ struct IntraProceduralBfs {
                 if (e.type != ICFG::Edge::Type::INTRA_PROC)
                     continue;
                 requireTrue(inFunction(v));
-                if (visited[vi])
+                if (d[vi] != INF)
                     continue;
                 q.push(v);
-                visited[vi] = true;
+                d[vi] = d[getIndex(u)] + 1;
                 fa[vi] = u;
             }
         }
@@ -128,20 +130,26 @@ struct IntraProceduralBfs {
     IntraProceduralBfs(const ICFG &icfg, const std::set<int> &pointsToAvoid,
                        int fid, int u)
         : icfg(icfg), fid(fid), nodeRange(getNodeRange(icfg, fid)),
-          n(nodeRange.second - nodeRange.first + 1), visited(n), fa(n) {
+          n(nodeRange.second - nodeRange.first + 1), d(n), fa(n) {
         bfs(u, pointsToAvoid);
     }
 
     bool reachable(int v) const {
         if (!inFunction(v))
             return false;
-        return visited[getIndex(v)];
+        return d[getIndex(v)] != INF;
+    }
+
+    int distance(int v) const {
+        if (!inFunction(v))
+            return INF;
+        return d[getIndex(v)];
     }
 
     std::vector<int> getAllReachableNodes() const {
         std::vector<int> res;
         for (int i = nodeRange.first; i <= nodeRange.second; i++) {
-            if (visited[getIndex(i)]) {
+            if (d[getIndex(i)] != INF) {
                 res.push_back(i);
             }
         }
