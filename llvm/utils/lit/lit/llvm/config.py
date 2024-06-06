@@ -588,7 +588,7 @@ class LLVMConfig(object):
             if getattr(self.config, pp, None)
         ]
 
-        if sys.platform.startswith("aix"):
+        if platform.system() == "AIX":
             self.with_environment("LIBPATH", lib_paths, append_path=True)
         else:
             self.with_environment("LD_LIBRARY_PATH", lib_paths, append_path=True)
