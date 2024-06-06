@@ -2160,10 +2160,9 @@ bool RISCVAsmParser::parseVTypeToken(const AsmToken &Tok, VTypeState &State,
       unsigned ELEN = STI->hasFeature(RISCV::FeatureStdExtZve64x) ? 64 : 32;
       unsigned MinLMUL = ELEN / 8;
       if (Lmul > MinLMUL)
-        Warning(
-            Tok.getLoc(),
-            Twine("The use of vtype encodings with LMUL < SEWMIN/ELEN == mf") +
-                Twine(MinLMUL) + Twine(" is reserved"));
+        Warning(Tok.getLoc(),
+                "use of vtype encodings with LMUL < SEWMIN/ELEN == mf" +
+                    Twine(MinLMUL) + " is reserved");
     }
 
     State = VTypeState_TailPolicy;
@@ -2228,12 +2227,10 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
       unsigned MaxSEW = ELEN / Lmul;
       // If MaxSEW < 8, we should have printed warning about reserved LMUL.
       if (MaxSEW >= 8 && Sew > MaxSEW)
-        Warning(
-            SEWLoc,
-            Twine("The use of vtype encodings with SEW > ") + Twine(MaxSEW) +
-                Twine(" and LMUL == ") + Twine(Fractional ? "mf" : "m") +
-                Twine(Lmul) +
-                Twine(" may not be compatible with all RVV implementations"));
+        Warning(SEWLoc,
+                "use of vtype encodings with SEW > " + Twine(MaxSEW) +
+                    " and LMUL == " + (Fractional ? "mf" : "m") + Twine(Lmul) +
+                    " may not be compatible with all RVV implementations");
     }
 
     unsigned VTypeI =
