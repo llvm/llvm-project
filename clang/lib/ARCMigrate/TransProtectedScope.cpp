@@ -23,14 +23,14 @@ using namespace trans;
 
 namespace {
 
-class LocalRefsCollector : public RecursiveASTVisitor<LocalRefsCollector> {
+class LocalRefsCollector : public DynamicRecursiveASTVisitor {
   SmallVectorImpl<DeclRefExpr *> &Refs;
 
 public:
   LocalRefsCollector(SmallVectorImpl<DeclRefExpr *> &refs)
     : Refs(refs) { }
 
-  bool VisitDeclRefExpr(DeclRefExpr *E) {
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
     if (ValueDecl *D = E->getDecl())
       if (D->getDeclContext()->getRedeclContext()->isFunctionOrMethod())
         Refs.push_back(E);
@@ -52,7 +52,7 @@ struct CaseInfo {
     : SC(S), Range(Range), State(St_Unchecked) {}
 };
 
-class CaseCollector : public RecursiveASTVisitor<CaseCollector> {
+class CaseCollector : public DynamicRecursiveASTVisitor {
   ParentMap &PMap;
   SmallVectorImpl<CaseInfo> &Cases;
 
@@ -60,7 +60,7 @@ public:
   CaseCollector(ParentMap &PMap, SmallVectorImpl<CaseInfo> &Cases)
     : PMap(PMap), Cases(Cases) { }
 
-  bool VisitSwitchStmt(SwitchStmt *S) {
+  bool VisitSwitchStmt(SwitchStmt *S) override {
     SwitchCase *Curr = S->getSwitchCaseList();
     if (!Curr)
       return true;

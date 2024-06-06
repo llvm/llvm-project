@@ -22,10 +22,7 @@ using namespace trans;
 
 namespace {
 
-class ZeroOutInDeallocRemover :
-                           public RecursiveASTVisitor<ZeroOutInDeallocRemover> {
-  typedef RecursiveASTVisitor<ZeroOutInDeallocRemover> base;
-
+class ZeroOutInDeallocRemover : public DynamicRecursiveASTVisitor {
   MigrationPass &Pass;
 
   llvm::DenseMap<ObjCPropertyDecl*, ObjCPropertyImplDecl*> SynthesizedProperties;
@@ -39,7 +36,7 @@ public:
         Pass.Ctx.Selectors.getNullarySelector(&Pass.Ctx.Idents.get("finalize"));
   }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *ME) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *ME) override {
     ASTContext &Ctx = Pass.Ctx;
     TransformActions &TA = Pass.TA;
 
@@ -78,7 +75,7 @@ public:
     return true;
   }
 
-  bool VisitPseudoObjectExpr(PseudoObjectExpr *POE) {
+  bool VisitPseudoObjectExpr(PseudoObjectExpr *POE) override {
     if (isZeroingPropIvar(POE) && isRemovable(POE)) {
       Transaction Trans(Pass.TA);
       Pass.TA.removeStmt(POE);
@@ -87,7 +84,7 @@ public:
     return true;
   }
 
-  bool VisitBinaryOperator(BinaryOperator *BOE) {
+  bool VisitBinaryOperator(BinaryOperator *BOE) override {
     if (isZeroingPropIvar(BOE) && isRemovable(BOE)) {
       Transaction Trans(Pass.TA);
       Pass.TA.removeStmt(BOE);
@@ -96,7 +93,7 @@ public:
     return true;
   }
 
-  bool TraverseObjCMethodDecl(ObjCMethodDecl *D) {
+  bool TraverseObjCMethodDecl(ObjCMethodDecl *D) override {
     if (D->getMethodFamily() != OMF_dealloc &&
         !(D->isInstanceMethod() && D->getSelector() == FinalizeSel))
       return true;
@@ -128,7 +125,7 @@ public:
     }
 
     // Now, remove all zeroing of ivars etc.
-    base::TraverseObjCMethodDecl(D);
+    DynamicRecursiveASTVisitor::TraverseObjCMethodDecl(D);
 
     // clear out for next method.
     SynthesizedProperties.clear();
@@ -137,9 +134,9 @@ public:
     return true;
   }
 
-  bool TraverseFunctionDecl(FunctionDecl *D) { return true; }
-  bool TraverseBlockDecl(BlockDecl *block) { return true; }
-  bool TraverseBlockExpr(BlockExpr *block) { return true; }
+  bool TraverseFunctionDecl(FunctionDecl *D) override { return true; }
+  bool TraverseBlockDecl(BlockDecl *block) override { return true; }
+  bool TraverseBlockExpr(BlockExpr *block) override { return true; }
 
 private:
   bool isRemovable(Expr *E) const {

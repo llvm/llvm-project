@@ -27,7 +27,7 @@ using namespace trans;
 
 namespace {
 
-class APIChecker : public RecursiveASTVisitor<APIChecker> {
+class APIChecker : public DynamicRecursiveASTVisitor {
   MigrationPass &Pass;
 
   Selector getReturnValueSel, setReturnValueSel;
@@ -51,7 +51,7 @@ public:
     zoneSel = sels.getNullarySelector(&ids.get("zone"));
   }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *E) override {
     // NSInvocation.
     if (E->isInstanceMessage() &&
         E->getReceiverInterface() &&

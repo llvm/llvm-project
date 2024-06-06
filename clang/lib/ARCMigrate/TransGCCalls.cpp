@@ -17,8 +17,7 @@ using namespace trans;
 
 namespace {
 
-class GCCollectableCallsChecker :
-                         public RecursiveASTVisitor<GCCollectableCallsChecker> {
+class GCCollectableCallsChecker : public DynamicRecursiveASTVisitor {
   MigrationContext &MigrateCtx;
   IdentifierInfo *NSMakeCollectableII;
   IdentifierInfo *CFMakeCollectableII;
@@ -29,11 +28,10 @@ public:
     IdentifierTable &Ids = MigrateCtx.Pass.Ctx.Idents;
     NSMakeCollectableII = &Ids.get("NSMakeCollectable");
     CFMakeCollectableII = &Ids.get("CFMakeCollectable");
+    ShouldWalkTypesOfTypeLocs = false;
   }
 
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-  bool VisitCallExpr(CallExpr *E) {
+  bool VisitCallExpr(CallExpr *E) override {
     TransformActions &TA = MigrateCtx.Pass.TA;
 
     if (MigrateCtx.isGCOwnedNonObjC(E->getType())) {

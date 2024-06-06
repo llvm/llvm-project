@@ -39,7 +39,7 @@ using namespace trans;
 
 namespace {
 
-class ReleaseCollector : public RecursiveASTVisitor<ReleaseCollector> {
+class ReleaseCollector : public DynamicRecursiveASTVisitor {
   Decl *Dcl;
   SmallVectorImpl<ObjCMessageExpr *> &Releases;
 
@@ -47,7 +47,7 @@ public:
   ReleaseCollector(Decl *D, SmallVectorImpl<ObjCMessageExpr *> &releases)
     : Dcl(D), Releases(releases) { }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *E) override {
     if (!E->isInstanceMessage())
       return true;
     if (E->getMethodFamily() != OMF_release)
@@ -60,7 +60,6 @@ public:
     return true;
   }
 };
-
 }
 
 namespace {
@@ -245,7 +244,7 @@ private:
     }
   };
 
-  class NameReferenceChecker : public RecursiveASTVisitor<NameReferenceChecker>{
+  class NameReferenceChecker : public DynamicRecursiveASTVisitor {
     ASTContext &Ctx;
     SourceRange ScopeRange;
     SourceLocation &referenceLoc, &declarationLoc;
@@ -260,15 +259,15 @@ private:
                                (*scope.End)->getBeginLoc());
     }
 
-    bool VisitDeclRefExpr(DeclRefExpr *E) {
+    bool VisitDeclRefExpr(DeclRefExpr *E) override {
       return checkRef(E->getLocation(), E->getDecl()->getLocation());
     }
 
-    bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+    bool VisitTypedefTypeLoc(TypedefTypeLoc TL) override {
       return checkRef(TL.getBeginLoc(), TL.getTypedefNameDecl()->getLocation());
     }
 
-    bool VisitTagTypeLoc(TagTypeLoc TL) {
+    bool VisitTagTypeLoc(TagTypeLoc TL) override {
       return checkRef(TL.getBeginLoc(), TL.getDecl()->getLocation());
     }
 

@@ -36,18 +36,16 @@ using namespace trans;
 
 namespace {
 
-class RootBlockObjCVarRewriter :
-                          public RecursiveASTVisitor<RootBlockObjCVarRewriter> {
+class RootBlockObjCVarRewriter : public DynamicRecursiveASTVisitor {
   llvm::DenseSet<VarDecl *> &VarsToChange;
 
-  class BlockVarChecker : public RecursiveASTVisitor<BlockVarChecker> {
+  class BlockVarChecker : public DynamicRecursiveASTVisitor {
     VarDecl *Var;
 
-    typedef RecursiveASTVisitor<BlockVarChecker> base;
   public:
     BlockVarChecker(VarDecl *var) : Var(var) { }
 
-    bool TraverseImplicitCastExpr(ImplicitCastExpr *castE) {
+    bool TraverseImplicitCastExpr(ImplicitCastExpr *castE) override {
       if (DeclRefExpr *
             ref = dyn_cast<DeclRefExpr>(castE->getSubExpr())) {
         if (ref->getDecl() == Var) {
@@ -59,10 +57,10 @@ class RootBlockObjCVarRewriter :
         }
       }
 
-      return base::TraverseImplicitCastExpr(castE);
+      return DynamicRecursiveASTVisitor::TraverseImplicitCastExpr(castE);
     }
 
-    bool VisitDeclRefExpr(DeclRefExpr *E) {
+    bool VisitDeclRefExpr(DeclRefExpr *E) override {
       if (E->getDecl() == Var)
         return false; // The reference of the variable, and not just its value,
                       //  is needed.
@@ -74,7 +72,7 @@ public:
   RootBlockObjCVarRewriter(llvm::DenseSet<VarDecl *> &VarsToChange)
     : VarsToChange(VarsToChange) { }
 
-  bool VisitBlockDecl(BlockDecl *block) {
+  bool VisitBlockDecl(BlockDecl *block) override {
     SmallVector<VarDecl *, 4> BlockVars;
 
     for (const auto &I : block->captures()) {
@@ -108,14 +106,14 @@ private:
   }
 };
 
-class BlockObjCVarRewriter : public RecursiveASTVisitor<BlockObjCVarRewriter> {
+class BlockObjCVarRewriter : public DynamicRecursiveASTVisitor {
   llvm::DenseSet<VarDecl *> &VarsToChange;
 
 public:
   BlockObjCVarRewriter(llvm::DenseSet<VarDecl *> &VarsToChange)
     : VarsToChange(VarsToChange) { }
 
-  bool TraverseBlockDecl(BlockDecl *block) {
+  bool TraverseBlockDecl(BlockDecl *block) override {
     RootBlockObjCVarRewriter(VarsToChange).TraverseDecl(block);
     return true;
   }

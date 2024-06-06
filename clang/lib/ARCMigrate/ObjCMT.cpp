@@ -308,67 +308,68 @@ namespace {
     return true;
   }
 
-class ObjCMigrator : public RecursiveASTVisitor<ObjCMigrator> {
-  ObjCMigrateASTConsumer &Consumer;
-  ParentMap &PMap;
+  class ObjCMigrator : public DynamicRecursiveASTVisitor {
+    ObjCMigrateASTConsumer &Consumer;
+    ParentMap &PMap;
 
-public:
-  ObjCMigrator(ObjCMigrateASTConsumer &consumer, ParentMap &PMap)
-    : Consumer(consumer), PMap(PMap) { }
-
-  bool shouldVisitTemplateInstantiations() const { return false; }
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
-    if (Consumer.ASTMigrateActions & FrontendOptions::ObjCMT_Literals) {
-      edit::Commit commit(*Consumer.Editor);
-      edit::rewriteToObjCLiteralSyntax(E, *Consumer.NSAPIObj, commit, &PMap);
-      Consumer.Editor->commit(commit);
+  public:
+    ObjCMigrator(ObjCMigrateASTConsumer &consumer, ParentMap &PMap)
+        : Consumer(consumer), PMap(PMap) {
+      ShouldVisitTemplateInstantiations = false;
+      ShouldWalkTypesOfTypeLocs = false;
     }
 
-    if (Consumer.ASTMigrateActions & FrontendOptions::ObjCMT_Subscripting) {
-      edit::Commit commit(*Consumer.Editor);
-      edit::rewriteToObjCSubscriptSyntax(E, *Consumer.NSAPIObj, commit);
-      Consumer.Editor->commit(commit);
+    bool VisitObjCMessageExpr(ObjCMessageExpr *E) override {
+      if (Consumer.ASTMigrateActions & FrontendOptions::ObjCMT_Literals) {
+        edit::Commit commit(*Consumer.Editor);
+        edit::rewriteToObjCLiteralSyntax(E, *Consumer.NSAPIObj, commit, &PMap);
+        Consumer.Editor->commit(commit);
+      }
+
+      if (Consumer.ASTMigrateActions & FrontendOptions::ObjCMT_Subscripting) {
+        edit::Commit commit(*Consumer.Editor);
+        edit::rewriteToObjCSubscriptSyntax(E, *Consumer.NSAPIObj, commit);
+        Consumer.Editor->commit(commit);
+      }
+
+      if (Consumer.ASTMigrateActions &
+          FrontendOptions::ObjCMT_PropertyDotSyntax) {
+        edit::Commit commit(*Consumer.Editor);
+        rewriteToPropertyDotSyntax(E, Consumer.PP, *Consumer.NSAPIObj, commit,
+                                   &PMap);
+        Consumer.Editor->commit(commit);
+      }
+
+      return true;
     }
 
-    if (Consumer.ASTMigrateActions & FrontendOptions::ObjCMT_PropertyDotSyntax) {
-      edit::Commit commit(*Consumer.Editor);
-      rewriteToPropertyDotSyntax(E, Consumer.PP, *Consumer.NSAPIObj,
-                                 commit, &PMap);
-      Consumer.Editor->commit(commit);
+    bool TraverseObjCMessageExpr(ObjCMessageExpr *E) override {
+      // Do depth first; we want to rewrite the subexpressions first so that if
+      // we have to move expressions we will move them already rewritten.
+      for (Stmt *SubStmt : E->children())
+        if (!TraverseStmt(SubStmt))
+          return false;
+
+      return WalkUpFromObjCMessageExpr(E);
+    }
+  };
+
+  class BodyMigrator : public DynamicRecursiveASTVisitor {
+    ObjCMigrateASTConsumer &Consumer;
+    std::unique_ptr<ParentMap> PMap;
+
+  public:
+    BodyMigrator(ObjCMigrateASTConsumer &consumer) : Consumer(consumer) {
+      ShouldVisitTemplateInstantiations = false;
+      ShouldWalkTypesOfTypeLocs = false;
     }
 
-    return true;
-  }
-
-  bool TraverseObjCMessageExpr(ObjCMessageExpr *E) {
-    // Do depth first; we want to rewrite the subexpressions first so that if
-    // we have to move expressions we will move them already rewritten.
-    for (Stmt *SubStmt : E->children())
-      if (!TraverseStmt(SubStmt))
-        return false;
-
-    return WalkUpFromObjCMessageExpr(E);
-  }
-};
-
-class BodyMigrator : public RecursiveASTVisitor<BodyMigrator> {
-  ObjCMigrateASTConsumer &Consumer;
-  std::unique_ptr<ParentMap> PMap;
-
-public:
-  BodyMigrator(ObjCMigrateASTConsumer &consumer) : Consumer(consumer) { }
-
-  bool shouldVisitTemplateInstantiations() const { return false; }
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-  bool TraverseStmt(Stmt *S) {
-    PMap.reset(new ParentMap(S));
-    ObjCMigrator(Consumer, *PMap).TraverseStmt(S);
-    return true;
-  }
-};
+    bool TraverseStmt(Stmt *S, DataRecursionQueue * = nullptr) override {
+      PMap.reset(new ParentMap(S));
+      ObjCMigrator(Consumer, *PMap).TraverseStmt(S);
+      return true;
+    }
+  };
 } // end anonymous namespace
 
 void ObjCMigrateASTConsumer::migrateDecl(Decl *D) {
@@ -1671,12 +1672,14 @@ void ObjCMigrateASTConsumer::migrateAddMethodAnnotation(
 }
 
 namespace {
-class SuperInitChecker : public RecursiveASTVisitor<SuperInitChecker> {
+class SuperInitChecker : public DynamicRecursiveASTVisitor {
 public:
-  bool shouldVisitTemplateInstantiations() const { return false; }
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
+  SuperInitChecker() {
+    ShouldVisitTemplateInstantiations = false;
+    ShouldWalkTypesOfTypeLocs = false;
+  }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *E) override {
     if (E->getReceiverKind() == ObjCMessageExpr::SuperInstance) {
       if (E->getMethodFamily() == OMF_init)
         return false;
