@@ -547,6 +547,10 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.lrintf16
     libc.src.math.lroundf16
     libc.src.math.nearbyintf16
+    libc.src.math.nextafterf16
+    libc.src.math.nextdownf16
+    libc.src.math.nexttowardf16
+    libc.src.math.nextupf16
     libc.src.math.rintf16
     libc.src.math.roundf16
     libc.src.math.roundevenf16
