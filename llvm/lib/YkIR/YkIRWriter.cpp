@@ -707,7 +707,6 @@ private:
   void serialiseLoadInst(LoadInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
     // We don't yet support:
-    //  - volatile loads
     //  - atomic loads
     //  - loads from exotic address spaces
     //  - potentially misaligned loads
@@ -726,7 +725,7 @@ private:
     // Eventually we will have to encode the alignment of the load into our IR
     // and have the trace code generator split up the loads where necessary.
     // The same will have to be done for store instructions.
-    if (I->isVolatile() || (I->getOrdering() != AtomicOrdering::NotAtomic) ||
+    if ((I->getOrdering() != AtomicOrdering::NotAtomic) ||
         (I->getPointerAddressSpace() != 0) ||
         (I->getAlign() < DL.getTypeSizeInBits(I->getType()) / 8)) {
       serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
@@ -739,6 +738,8 @@ private:
     serialiseOperand(I, FLCtxt, I->getPointerOperand());
     // type_idx:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
+    // volatile:
+    OutStreamer.emitInt8(I->isVolatile());
 
     FLCtxt.updateVLMap(I, InstIdx);
     InstIdx++;
@@ -747,14 +748,13 @@ private:
   void serialiseStoreInst(StoreInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                           unsigned &InstIdx) {
     // We don't yet support:
-    //  - volatile store
     //  - atomic store
     //  - stores into exotic address spaces
     //  - potentially misaligned stores
     //
     // See the comment in `serialiseLoadInst()` for context on misaligned memory
     // accesses.
-    if (I->isVolatile() || (I->getOrdering() != AtomicOrdering::NotAtomic) ||
+    if ((I->getOrdering() != AtomicOrdering::NotAtomic) ||
         (I->getPointerAddressSpace() != 0) ||
         (I->getAlign() <
          DL.getTypeSizeInBits(I->getValueOperand()->getType()) / 8)) {
@@ -768,6 +768,8 @@ private:
     serialiseOperand(I, FLCtxt, I->getValueOperand());
     // ptr:
     serialiseOperand(I, FLCtxt, I->getPointerOperand());
+    // volatile:
+    OutStreamer.emitInt8(I->isVolatile());
 
     InstIdx++;
   }
