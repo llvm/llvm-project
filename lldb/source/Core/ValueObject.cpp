@@ -216,7 +216,7 @@ bool ValueObject::UpdateFormatsIfNeeded() {
     m_last_format_mgr_revision = DataVisualization::GetCurrentRevision();
     any_change = true;
 
-    SetValueFormat(DataVisualization::GetFormat(*this, eNoDynamicValues));
+    SetValueFormat(DataVisualization::GetFormat(*this, GetDynamicValueType()));
     SetSummaryFormat(
         DataVisualization::GetSummaryFormat(*this, GetDynamicValueType()));
     SetSyntheticChildren(
