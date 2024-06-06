@@ -21,6 +21,10 @@
 #include <type_traits>
 #include <utility>
 
+namespace Fortran::semantics {
+class Symbol;
+}
+
 namespace Fortran::lower::omp {
 using namespace Fortran;
 using SomeExpr = semantics::SomeExpr;
@@ -45,7 +49,8 @@ struct ObjectT<Fortran::lower::omp::IdTy, Fortran::lower::omp::ExprTy> {
   using IdTy = Fortran::lower::omp::IdTy;
   using ExprTy = Fortran::lower::omp::ExprTy;
 
-  const IdTy &id() const { return symbol; }
+  IdTy id() const { return symbol; }
+  Fortran::semantics::Symbol *sym() const { return symbol; }
   const std::optional<ExprTy> &ref() const { return designator; }
 
   IdTy symbol;

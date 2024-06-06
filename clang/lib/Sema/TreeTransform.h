@@ -11497,6 +11497,31 @@ void OpenACCClauseTransform<Derived>::VisitDeviceTypeClause(
 }
 
 template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitAutoClause(
+    const OpenACCAutoClause &C) {
+  // Nothing to do, so just create a new node.
+  NewClause = OpenACCAutoClause::Create(Self.getSema().getASTContext(),
+                                        ParsedClause.getBeginLoc(),
+                                        ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitIndependentClause(
+    const OpenACCIndependentClause &C) {
+  NewClause = OpenACCIndependentClause::Create(Self.getSema().getASTContext(),
+                                               ParsedClause.getBeginLoc(),
+                                               ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitSeqClause(
+    const OpenACCSeqClause &C) {
+  NewClause = OpenACCSeqClause::Create(Self.getSema().getASTContext(),
+                                       ParsedClause.getBeginLoc(),
+                                       ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitReductionClause(
     const OpenACCReductionClause &C) {
   SmallVector<Expr *> TransformedVars = VisitVarList(C.getVarList());

@@ -2105,16 +2105,14 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
               if (var_sp && !var_sp->GetLocationIsConstantValueData()) {
                 const DWARFExpressionList &location =
                     var_sp->LocationExpressionList();
-                Value location_result;
-                Status error;
                 ExecutionContext exe_ctx;
-                if (location.Evaluate(&exe_ctx, nullptr, LLDB_INVALID_ADDRESS,
-                                      nullptr, nullptr, location_result,
-                                      &error)) {
-                  if (location_result.GetValueType() ==
+                llvm::Expected<Value> location_result = location.Evaluate(
+                    &exe_ctx, nullptr, LLDB_INVALID_ADDRESS, nullptr, nullptr);
+                if (location_result) {
+                  if (location_result->GetValueType() ==
                       Value::ValueType::FileAddress) {
                     lldb::addr_t file_addr =
-                        location_result.GetScalar().ULongLong();
+                        location_result->GetScalar().ULongLong();
                     lldb::addr_t byte_size = 1;
                     if (var_sp->GetType())
                       byte_size =
@@ -2122,6 +2120,10 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
                     m_global_aranges_up->Append(GlobalVariableMap::Entry(
                         file_addr, byte_size, var_sp.get()));
                   }
+                } else {
+                  LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols),
+                                 location_result.takeError(),
+                                 "location expression failed to execute: {0}");
                 }
               }
             }
