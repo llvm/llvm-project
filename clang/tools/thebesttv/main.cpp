@@ -94,6 +94,13 @@ struct VarLocResult {
         : fid(Global.getIdOfFunction(fi->signature, fi->file)),
           bid(block->getBlockID()) {}
 
+    bool operator==(const VarLocResult &other) const {
+        return fid == other.fid && bid == other.bid;
+    }
+    bool operator!=(const VarLocResult &other) const {
+        return !(*this == other);
+    }
+
     bool isValid() const { return fid != -1; }
 };
 
