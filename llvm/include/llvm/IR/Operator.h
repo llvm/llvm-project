@@ -330,8 +330,6 @@ public:
     unsigned Opcode;
     if (auto *I = dyn_cast<Instruction>(V))
       Opcode = I->getOpcode();
-    else if (auto *CE = dyn_cast<ConstantExpr>(V))
-      Opcode = CE->getOpcode();
     else
       return false;
 
