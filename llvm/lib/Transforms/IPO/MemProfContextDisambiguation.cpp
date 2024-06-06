@@ -270,7 +270,7 @@ public:
       // callers (i.e. if this is the leaf allocation node).
       if (!CalleeEdges.empty())
         return &CalleeEdges;
-      else if (!CallerEdges.empty()) {
+      if (!CallerEdges.empty()) {
         // A node with caller edges but no callee edges must be the allocation
         // node.
         assert(IsAllocation);
@@ -1175,12 +1175,9 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
   // Node's context ids should be the union of both its callee and caller edge
   // context ids.
   if (Node->CallerEdges.size()) {
-    auto EI = Node->CallerEdges.begin();
-    auto &FirstEdge = *EI;
-    EI++;
-    DenseSet<uint32_t> CallerEdgeContextIds(FirstEdge->ContextIds);
-    for (; EI != Node->CallerEdges.end(); EI++) {
-      const auto &Edge = *EI;
+    DenseSet<uint32_t> CallerEdgeContextIds(
+        Node->CallerEdges.front()->ContextIds);
+    for (const auto &Edge : llvm::drop_begin(Node->CallerEdges)) {
       if (CheckEdges)
         checkEdge<DerivedCCG, FuncTy, CallTy>(Edge);
       set_union(CallerEdgeContextIds, Edge->ContextIds);
@@ -1191,12 +1188,9 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
            set_is_subset(CallerEdgeContextIds, NodeContextIds));
   }
   if (Node->CalleeEdges.size()) {
-    auto EI = Node->CalleeEdges.begin();
-    auto &FirstEdge = *EI;
-    EI++;
-    DenseSet<uint32_t> CalleeEdgeContextIds(FirstEdge->ContextIds);
-    for (; EI != Node->CalleeEdges.end(); EI++) {
-      const auto &Edge = *EI;
+    DenseSet<uint32_t> CalleeEdgeContextIds(
+        Node->CalleeEdges.front()->ContextIds);
+    for (const auto &Edge : llvm::drop_begin(Node->CalleeEdges)) {
       if (CheckEdges)
         checkEdge<DerivedCCG, FuncTy, CallTy>(Edge);
       set_union(CalleeEdgeContextIds, Edge->getContextIds());
@@ -2512,9 +2506,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     set_subtract(Edge->ContextIds, ContextIdsToMove);
     Edge->AllocTypes = computeAllocType(Edge->ContextIds);
   }
-  // Now perform some updates that are common to all cases: the NewCallee gets
-  // the moved ids added, and we need to remove those ids from OldCallee and
-  // update its alloc type (NewCallee alloc type updates handled above).
   // Now walk the old callee node's callee edges and move Edge's context ids
   // over to the corresponding edge into the clone (which is created here if
   // this is a newly created clone).
