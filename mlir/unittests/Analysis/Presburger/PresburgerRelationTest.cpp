@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
-#include "Parser.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include "mlir/Analysis/Presburger/Parser.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 
 #include <gmock/gmock.h>

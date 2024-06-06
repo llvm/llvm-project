@@ -6,11 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Parser.h"
-#include "Utils.h"
-
 #include "mlir/Analysis/Presburger/Simplex.h"
-#include "mlir/IR/MLIRContext.h"
+#include "mlir/Analysis/Presburger/Parser.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
