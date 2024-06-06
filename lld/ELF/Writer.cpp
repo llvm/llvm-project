@@ -1320,8 +1320,8 @@ template <class ELFT> void Writer<ELFT>::sortOrphanSections() {
   i = firstSectionOrDotAssignment;
 
   while (nonScriptI != e) {
-    OutputSection *orphan = &cast<OutputDesc>(*nonScriptI)->osec;
     auto pos = findOrphanPos(i, nonScriptI);
+    OutputSection *orphan = &cast<OutputDesc>(*nonScriptI)->osec;
 
     // As an optimization, find all sections with the same sort rank
     // and insert them with one rotate.
