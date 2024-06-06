@@ -55,7 +55,7 @@ jobs:
           # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
           max-size: 2G
           key: post-commit-analyzer
-          variant: ccache
+          variant: sccache
 
       - name: Configure
         run: |
@@ -66,13 +66,23 @@ jobs:
                   -DLLVM_LINK_LLVM_DYLIB=ON \
                   -DCMAKE_CXX_COMPILER=clang++ \
                   -DCMAKE_C_COMPILER=clang \
-                  -DCMAKE_CXX_COMPILER_LAUNCHER=`pwd`/.github/workflows/ci-post-commit-analyzer-launcher.sh \
-                  -DCMAKE_C_COMPILER_LAUNCHER=`pwd`/.github/workflows/ci-post-commit-analyzer-launcher.sh \
+                  -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+                  -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+                  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                  -DLLVM_INCLUDE_TESTS=OFF \
+                  -DCLANG_INCLUDE_TESTS=OFF \
                   -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: |
-          ninja -v -C build
+          # FIXME: We need to build all the generated header files in order to be able to run
+          # the analyzer on every file.  Building libLLVM and libclang is probably overkill for
+          # this, but it's better than building every target.
+          ninja -v -C build libLLVM.so libclang.so
+
+          # Run the analyzer.
+          python3 .github/workflows/ci-post-commit-analyzer-run.py build/compile_commands.json
+
           # TODO: Use scan-build from container once we have new container builds with scan-build.
           ./clang/tools/scan-build/bin/scan-build --generate-index-only build/analyzer-results
 
