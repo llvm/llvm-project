@@ -602,7 +602,7 @@ public:
   void parsePerfTraces() override;
   // Generate perf script from perf data
   static PerfInputFile convertPerfDataToTrace(ProfiledBinary *Binary,
-                                              PerfInputFile &File,
+                                              bool SkipPID, PerfInputFile &File,
                                               std::optional<int32_t> PIDFilter);
   // Extract perf script type by peaking at the input
   static PerfContent checkPerfScriptType(StringRef FileName);

@@ -331,9 +331,10 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
   }
 
   // For perf data input, we need to convert them into perf script first.
+  // If this is a kernel perf file, there is no need for retrieving PIDs.
   if (PerfInput.Format == PerfFormat::PerfData)
-    PerfInput =
-        PerfScriptReader::convertPerfDataToTrace(Binary, PerfInput, PIDFilter);
+    PerfInput = PerfScriptReader::convertPerfDataToTrace(
+        Binary, Binary->isKernel(), PerfInput, PIDFilter);
 
   assert((PerfInput.Format == PerfFormat::PerfScript) &&
          "Should be a perfscript!");
@@ -353,7 +354,7 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
 }
 
 PerfInputFile
-PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
+PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
                                          PerfInputFile &File,
                                          std::optional<int32_t> PIDFilter) {
   StringRef PerfData = File.InputFile;
@@ -373,10 +374,8 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
   PerfScriptReader::TempFileCleanups.emplace_back(PerfTraceFile);
   PerfScriptReader::TempFileCleanups.emplace_back(ErrorFile);
 
-  // For a kernel perf file, we assume --branch_filter=k is used. So there is
-  // no need for PIDs.
   std::string PIDs;
-  if (!Binary->isKernel()) {
+  if (!SkipPID) {
     StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
                                   "-F",     "comm,pid", "-i",
                                   PerfData};

@@ -433,7 +433,7 @@ public:
   bool useFSDiscriminator() const { return UseFSDiscriminator; }
   bool isKernel() const { return IsKernel; }
 
-  bool isKernelImageName(StringRef BinaryName) const {
+  static bool isKernelImageName(StringRef BinaryName) {
     return BinaryName == "[kernel.kallsyms]" ||
            BinaryName == "[kernel.kallsyms]_stext" ||
            BinaryName == "[kernel.kallsyms]_text";
