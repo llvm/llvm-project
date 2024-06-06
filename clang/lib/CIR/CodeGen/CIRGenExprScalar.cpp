@@ -328,8 +328,12 @@ public:
                                  E->getSrcExpr()->getType(), E->getType(),
                                  E->getSourceRange().getBegin());
   }
+
+  mlir::Value VisitExtVectorElementExpr(Expr *E) {
+    return buildLoadOfLValue(E);
+  }
+
   mlir::Value VisitMemberExpr(MemberExpr *E);
-  mlir::Value VisitExtVectorelementExpr(Expr *E) { llvm_unreachable("NYI"); }
   mlir::Value VisitCompoundLiteralEpxr(CompoundLiteralExpr *E) {
     llvm_unreachable("NYI");
   }
