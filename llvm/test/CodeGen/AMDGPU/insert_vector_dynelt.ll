@@ -110,13 +110,13 @@ define amdgpu_kernel void @float8_inselt(ptr addrspace(1) %out, <8 x float> %vec
 ; GCN-LABEL: float8_inselt:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x44
-; GCN-NEXT:    s_load_dword s2, s[0:1], 0x64
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dword s1, s[0:1], 0x64
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    s_mov_b32 m0, s2
-; GCN-NEXT:    s_add_u32 s2, s0, 16
-; GCN-NEXT:    s_addc_u32 s3, s1, 0
+; GCN-NEXT:    s_add_u32 s0, s2, 16
+; GCN-NEXT:    s_mov_b32 m0, s1
+; GCN-NEXT:    s_addc_u32 s1, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    v_mov_b32_e32 v2, s6
 ; GCN-NEXT:    v_mov_b32_e32 v3, s7
@@ -124,13 +124,13 @@ define amdgpu_kernel void @float8_inselt(ptr addrspace(1) %out, <8 x float> %vec
 ; GCN-NEXT:    v_mov_b32_e32 v5, s9
 ; GCN-NEXT:    v_mov_b32_e32 v6, s10
 ; GCN-NEXT:    v_mov_b32_e32 v7, s11
-; GCN-NEXT:    v_mov_b32_e32 v9, s3
+; GCN-NEXT:    v_mov_b32_e32 v9, s1
 ; GCN-NEXT:    v_movreld_b32_e32 v0, 1.0
-; GCN-NEXT:    v_mov_b32_e32 v8, s2
+; GCN-NEXT:    v_mov_b32_e32 v8, s0
 ; GCN-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
 ; GCN-NEXT:    s_nop 0
-; GCN-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-NEXT:    v_mov_b32_e32 v4, s0
+; GCN-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-NEXT:    v_mov_b32_e32 v4, s2
 ; GCN-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GCN-NEXT:    s_endpgm
 entry:

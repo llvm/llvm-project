@@ -85,7 +85,7 @@
 ; GCN-DAG:  s_or_b64            [[EXIT0]], [[EXIT0]], [[TMP0]]
 ; GCN-DAG:  s_or_b64            [[EXIT1]], [[EXIT1]], [[TMP1]]
 
-; GCN: ; %Flow4
+; GCN: ; %Flow3
 ; GCN-NEXT: s_or_b64            exec, exec,
 ; GCN-NEXT: s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, [[EXIT1]]
 ; GCN-NEXT: s_xor_b64
@@ -94,7 +94,7 @@
 ; GCN-DAG:  ds_write_b32
 ; GCN-DAG:  s_andn2_b64         [[EXIT0]], [[EXIT0]], exec
 
-; GCN: ; %Flow5
+; GCN: ; %Flow4
 ; GCN-NEXT: s_or_b64            exec, exec,
 ; GCN-NEXT: s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, [[EXIT0]]
 

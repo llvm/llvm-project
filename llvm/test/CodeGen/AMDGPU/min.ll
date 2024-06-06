@@ -2804,7 +2804,8 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32
 ;
 ; CI-LABEL: s_test_umin_ult_v8i32:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x8
+; CI-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x8
+; CI-NEXT:    s_load_dwordx8 s[16:23], s[4:5], 0x10
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_min_u32 s4, s11, s19
@@ -2835,7 +2836,8 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32
 ;
 ; VI-LABEL: s_test_umin_ult_v8i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x20
+; VI-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x20
+; VI-NEXT:    s_load_dwordx8 s[16:23], s[4:5], 0x40
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_min_u32 s4, s11, s19
@@ -2866,7 +2868,8 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32
 ;
 ; GFX9-LABEL: s_test_umin_ult_v8i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x20
+; GFX9-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x20
+; GFX9-NEXT:    s_load_dwordx8 s[16:23], s[4:5], 0x40
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2893,8 +2896,9 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32
 ;
 ; GFX10-LABEL: s_test_umin_ult_v8i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x20
+; GFX10-NEXT:    s_clause 0x2
+; GFX10-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x20
+; GFX10-NEXT:    s_load_dwordx8 s[16:23], s[4:5], 0x40
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2920,8 +2924,9 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32
 ;
 ; GFX11-LABEL: s_test_umin_ult_v8i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b512 s[4:19], s[0:1], 0x20
+; GFX11-NEXT:    s_clause 0x2
+; GFX11-NEXT:    s_load_b256 s[4:11], s[0:1], 0x20
+; GFX11-NEXT:    s_load_b256 s[12:19], s[0:1], 0x40
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)

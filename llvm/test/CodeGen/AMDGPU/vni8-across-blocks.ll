@@ -5,7 +5,6 @@ define amdgpu_kernel void @v3i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-LABEL: v3i8_liveout:
 ; GFX906:       ; %bb.0: ; %entry
 ; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX906-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v5, 2, v0
 ; GFX906-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
@@ -14,7 +13,7 @@ define amdgpu_kernel void @v3i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v4, 8, v2
-; GFX906-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX906-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX906-NEXT:  ; %bb.1: ; %bb.1
 ; GFX906-NEXT:    global_load_dword v2, v5, s[6:7]
@@ -22,11 +21,13 @@ define amdgpu_kernel void @v3i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v4, 8, v2
 ; GFX906-NEXT:  .LBB0_2: ; %bb.2
-; GFX906-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v0, 8, v4
 ; GFX906-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_byte v1, v3, s[2:3] offset:2
-; GFX906-NEXT:    global_store_short v1, v0, s[2:3]
+; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX906-NEXT:    global_store_byte v1, v3, s[0:1] offset:2
+; GFX906-NEXT:    global_store_short v1, v0, s[0:1]
 ; GFX906-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -49,7 +50,6 @@ define amdgpu_kernel void @v4i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-LABEL: v4i8_liveout:
 ; GFX906:       ; %bb.0: ; %entry
 ; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX906-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v6, 2, v0
 ; GFX906-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
@@ -59,7 +59,7 @@ define amdgpu_kernel void @v4i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v5, 8, v2
-; GFX906-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX906-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX906-NEXT:  ; %bb.1: ; %bb.1
 ; GFX906-NEXT:    global_load_dword v2, v6, s[6:7]
@@ -68,13 +68,15 @@ define amdgpu_kernel void @v4i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v5, 8, v2
 ; GFX906-NEXT:  .LBB1_2: ; %bb.2
-; GFX906-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v0, 8, v5
 ; GFX906-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v2, 8, v3
 ; GFX906-NEXT:    v_or_b32_sdwa v2, v4, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dword v1, v0, s[2:3]
+; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX906-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX906-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -97,7 +99,6 @@ define amdgpu_kernel void @v5i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-LABEL: v5i8_liveout:
 ; GFX906:       ; %bb.0: ; %entry
 ; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX906-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v7, 3, v0
 ; GFX906-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
@@ -107,7 +108,7 @@ define amdgpu_kernel void @v5i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    v_lshrrev_b64 v[3:4], 24, v[1:2]
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v6, 8, v1
-; GFX906-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX906-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX906-NEXT:  ; %bb.1: ; %bb.1
 ; GFX906-NEXT:    global_load_dwordx2 v[1:2], v7, s[6:7]
@@ -116,14 +117,16 @@ define amdgpu_kernel void @v5i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v6, 8, v1
 ; GFX906-NEXT:  .LBB2_2: ; %bb.2
-; GFX906-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v0, 8, v6
+; GFX906-NEXT:    v_lshlrev_b16_e32 v3, 8, v3
 ; GFX906-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX906-NEXT:    v_lshlrev_b16_e32 v1, 8, v3
-; GFX906-NEXT:    v_or_b32_sdwa v1, v4, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX906-NEXT:    v_or_b32_sdwa v1, v4, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_byte v5, v2, s[2:3] offset:4
-; GFX906-NEXT:    global_store_dword v5, v0, s[2:3]
+; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX906-NEXT:    global_store_byte v5, v2, s[0:1] offset:4
+; GFX906-NEXT:    global_store_dword v5, v0, s[0:1]
 ; GFX906-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -146,7 +149,6 @@ define amdgpu_kernel void @v8i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-LABEL: v8i8_liveout:
 ; GFX906:       ; %bb.0: ; %entry
 ; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX906-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v10, 3, v0
 ; GFX906-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
@@ -159,7 +161,7 @@ define amdgpu_kernel void @v8i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v7, 24, v1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v9, 8, v1
-; GFX906-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX906-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX906-NEXT:  ; %bb.1: ; %bb.1
 ; GFX906-NEXT:    global_load_dwordx2 v[1:2], v10, s[6:7]
@@ -171,10 +173,11 @@ define amdgpu_kernel void @v8i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v9, 8, v1
 ; GFX906-NEXT:  .LBB3_2: ; %bb.2
-; GFX906-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v0, 8, v9
 ; GFX906-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v1, 8, v7
+; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX906-NEXT:    v_or_b32_sdwa v1, v8, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v1, 8, v6
@@ -182,7 +185,8 @@ define amdgpu_kernel void @v8i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v2, 8, v4
 ; GFX906-NEXT:    v_or_b32_sdwa v2, v5, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx2 v3, v[0:1], s[2:3]
+; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX906-NEXT:    global_store_dwordx2 v3, v[0:1], s[0:1]
 ; GFX906-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -205,7 +209,6 @@ define amdgpu_kernel void @v16i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1
 ; GFX906-LABEL: v16i8_liveout:
 ; GFX906:       ; %bb.0: ; %entry
 ; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX906-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v18, 4, v0
 ; GFX906-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
@@ -224,7 +227,7 @@ define amdgpu_kernel void @v16i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v15, 24, v1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v16, 16, v1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v17, 8, v1
-; GFX906-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX906-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX906-NEXT:  ; %bb.1: ; %bb.1
 ; GFX906-NEXT:    global_load_dwordx4 v[1:4], v18, s[6:7]
@@ -242,7 +245,7 @@ define amdgpu_kernel void @v16i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v16, 16, v1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v17, 8, v1
 ; GFX906-NEXT:  .LBB4_2: ; %bb.2
-; GFX906-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v0, 8, v17
 ; GFX906-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v1, 8, v15
@@ -256,6 +259,7 @@ define amdgpu_kernel void @v16i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v2, 8, v11
 ; GFX906-NEXT:    v_or_b32_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v3, 8, v9
+; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v10, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v2, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v3, 8, v8
@@ -263,7 +267,8 @@ define amdgpu_kernel void @v16i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v4, 8, v6
 ; GFX906-NEXT:    v_or_b32_sdwa v4, v7, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v5, v[0:3], s[2:3]
+; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX906-NEXT:    global_store_dwordx4 v5, v[0:3], s[0:1]
 ; GFX906-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -286,13 +291,12 @@ define amdgpu_kernel void @v32i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1
 ; GFX906-LABEL: v32i8_liveout:
 ; GFX906:       ; %bb.0: ; %entry
 ; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX906-NEXT:    v_lshlrev_b32_e32 v31, 5, v0
-; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; GFX906-NEXT:    v_lshlrev_b32_e32 v33, 5, v0
 ; GFX906-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    global_load_dwordx4 v[1:4], v31, s[4:5] offset:16
-; GFX906-NEXT:    global_load_dwordx4 v[5:8], v31, s[4:5]
+; GFX906-NEXT:    global_load_dwordx4 v[1:4], v33, s[4:5] offset:16
+; GFX906-NEXT:    global_load_dwordx4 v[5:8], v33, s[4:5]
 ; GFX906-NEXT:    s_waitcnt vmcnt(1)
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v0, 24, v4
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v10, 16, v4
@@ -317,13 +321,13 @@ define amdgpu_kernel void @v32i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v28, 16, v6
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v29, 8, v6
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v30, 24, v5
-; GFX906-NEXT:    v_lshrrev_b32_e32 v32, 16, v5
-; GFX906-NEXT:    v_lshrrev_b32_e32 v33, 8, v5
+; GFX906-NEXT:    v_lshrrev_b32_e32 v31, 16, v5
+; GFX906-NEXT:    v_lshrrev_b32_e32 v32, 8, v5
 ; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX906-NEXT:    s_cbranch_execz .LBB5_2
 ; GFX906-NEXT:  ; %bb.1: ; %bb.1
-; GFX906-NEXT:    global_load_dwordx4 v[1:4], v31, s[6:7] offset:16
-; GFX906-NEXT:    global_load_dwordx4 v[5:8], v31, s[6:7]
+; GFX906-NEXT:    global_load_dwordx4 v[1:4], v33, s[6:7] offset:16
+; GFX906-NEXT:    global_load_dwordx4 v[5:8], v33, s[6:7]
 ; GFX906-NEXT:    s_waitcnt vmcnt(1)
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v0, 24, v4
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v10, 16, v4
@@ -348,19 +352,20 @@ define amdgpu_kernel void @v32i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v28, 16, v6
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v29, 8, v6
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v30, 24, v5
-; GFX906-NEXT:    v_lshrrev_b32_e32 v32, 16, v5
-; GFX906-NEXT:    v_lshrrev_b32_e32 v33, 8, v5
+; GFX906-NEXT:    v_lshrrev_b32_e32 v31, 16, v5
+; GFX906-NEXT:    v_lshrrev_b32_e32 v32, 8, v5
 ; GFX906-NEXT:  .LBB5_2: ; %bb.2
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v30, 8, v30
-; GFX906-NEXT:    v_lshlrev_b16_e32 v31, 8, v33
+; GFX906-NEXT:    v_or_b32_sdwa v30, v31, v30 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX906-NEXT:    v_lshlrev_b16_e32 v31, 8, v32
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v29, 8, v29
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v27, 8, v27
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v26, 8, v26
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v24, 8, v24
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v23, 8, v23
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v21, 8, v21
-; GFX906-NEXT:    v_or_b32_sdwa v30, v32, v30 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v5, v5, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v6, v6, v29 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v27, v28, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
@@ -372,6 +377,7 @@ define amdgpu_kernel void @v32i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1
 ; GFX906-NEXT:    v_or_b32_sdwa v6, v6, v27 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v7, v7, v24 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v8, v8, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    global_store_dwordx4 v9, v[5:8], s[0:1]
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v0, 8, v0
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v5, 8, v20
@@ -415,20 +421,19 @@ bb.2:
 define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1) %src2, ptr addrspace(1) nocapture %dst) {
 ; GFX906-LABEL: v256i8_liveout:
 ; GFX906:       ; %bb.0: ; %entry
+; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX906-NEXT:    v_lshlrev_b32_e32 v63, 3, v0
 ; GFX906-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX906-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
 ; GFX906-NEXT:    s_mov_b32 s10, -1
-; GFX906-NEXT:    s_mov_b32 s11, 0xe00000
-; GFX906-NEXT:    s_add_u32 s8, s8, s3
-; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX906-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
-; GFX906-NEXT:    v_lshlrev_b32_e32 v63, 3, v0
-; GFX906-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    global_load_dwordx4 v[17:20], v63, s[4:5] offset:240
 ; GFX906-NEXT:    global_load_dwordx4 v[5:8], v63, s[4:5] offset:224
 ; GFX906-NEXT:    global_load_dwordx4 v[9:12], v63, s[4:5] offset:208
 ; GFX906-NEXT:    global_load_dwordx4 v[13:16], v63, s[4:5] offset:192
+; GFX906-NEXT:    s_mov_b32 s11, 0xe00000
+; GFX906-NEXT:    s_add_u32 s8, s8, s3
+; GFX906-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
 ; GFX906-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX906-NEXT:    s_waitcnt vmcnt(3)
@@ -844,7 +849,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v61, 8, v1
 ; GFX906-NEXT:    buffer_store_dword v62, off, s[8:11], 0 offset:772 ; 4-byte Folded Spill
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v62, 8, v0
-; GFX906-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX906-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX906-NEXT:  ; %bb.1: ; %bb.1
 ; GFX906-NEXT:    global_load_dwordx4 v[0:3], v63, s[6:7] offset:240
@@ -1265,7 +1270,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    buffer_store_dword v62, off, s[8:11], 0 offset:772 ; 4-byte Folded Spill
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v62, 8, v0
 ; GFX906-NEXT:  .LBB6_2: ; %bb.2
-; GFX906-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v61, 8, v61
 ; GFX906-NEXT:    v_or_b32_sdwa v1, v1, v61 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    buffer_load_dword v61, off, s[8:11], 0 offset:764 ; 4-byte Folded Reload
@@ -1273,6 +1278,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    v_or_b32_sdwa v0, v0, v62 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    buffer_load_dword v62, off, s[8:11], 0 offset:772 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v63, off, s[8:11], 0 offset:760 ; 4-byte Folded Reload
+; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX906-NEXT:    s_waitcnt vmcnt(2)
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v61, 8, v61
 ; GFX906-NEXT:    v_or_b32_sdwa v2, v2, v61 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
@@ -1304,7 +1310,8 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v61, v62, v61 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v61 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:732 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:728 ; 4-byte Folded Reload
@@ -1348,7 +1355,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v57, v58, v57 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v57 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:16
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:16
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:684 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:680 ; 4-byte Folded Reload
@@ -1392,7 +1399,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v53, v54, v53 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v53 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:32
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:32
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:636 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:632 ; 4-byte Folded Reload
@@ -1436,7 +1443,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v49, v50, v49 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v49 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:48
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:48
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:588 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:584 ; 4-byte Folded Reload
@@ -1480,7 +1487,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v45, v46, v45 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v45 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:64
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:64
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:540 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:536 ; 4-byte Folded Reload
@@ -1524,7 +1531,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v41, v42, v41 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v41 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:80
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:80
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:492 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:488 ; 4-byte Folded Reload
@@ -1568,7 +1575,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v37, v38, v37 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v37 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:96
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:96
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:444 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:440 ; 4-byte Folded Reload
@@ -1612,7 +1619,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v33, v34, v33 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v33 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:112
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:112
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:396 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:392 ; 4-byte Folded Reload
@@ -1656,7 +1663,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v29, v30, v29 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v29 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:128
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:128
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:348 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:344 ; 4-byte Folded Reload
@@ -1700,7 +1707,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v25, v26, v25 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v25 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:144
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:144
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:300 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:296 ; 4-byte Folded Reload
@@ -1744,7 +1751,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v21, v22, v21 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:160
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:160
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:252 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:248 ; 4-byte Folded Reload
@@ -1788,7 +1795,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_or_b32_sdwa v17, v18, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v17 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:176
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:176
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:200 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[8:11], 0 offset:204 ; 4-byte Folded Reload
@@ -1831,7 +1838,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v3, 8, v3
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v16, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:192
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:192
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:156 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v2, off, s[8:11], 0 offset:152 ; 4-byte Folded Reload
@@ -1873,7 +1880,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v12, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v9, v10, v9 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:208
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:208
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:108 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v2, off, s[8:11], 0 offset:104 ; 4-byte Folded Reload
@@ -1915,7 +1922,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v8, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v5, v6, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:224
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:224
 ; GFX906-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:60 ; 4-byte Folded Reload
 ; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    buffer_load_dword v5, off, s[8:11], 0 ; 4-byte Folded Reload
@@ -1963,7 +1970,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v8, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v5, v6, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX906-NEXT:    v_or_b32_sdwa v3, v3, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] offset:240
+; GFX906-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:240
 ; GFX906-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()

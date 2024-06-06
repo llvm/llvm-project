@@ -364,19 +364,14 @@ unsigned GCNTTIImpl::getStoreVectorFactor(unsigned VF, unsigned StoreSize,
 }
 
 unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
-  if (AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
-      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
-      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
-      AddrSpace == AMDGPUAS::BUFFER_RESOURCE ||
-      AddrSpace == AMDGPUAS::BUFFER_STRIDED_POINTER) {
-    return 512;
-  }
-
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return 8 * ST->getMaxPrivateElementSize();
 
-  // Common to flat, global, local and region. Assume for unknown addrspace.
+  // Common to other address spaces: flat, global, buffer, local and region.
+  // Assume for unknown addrspace. For constant, we also return 128 here despite
+  // support for wide scalar loads, because very large vectors can cause
+  // problems in the backend: high register pressure or increased
+  // fragmentation.
   return 128;
 }
 

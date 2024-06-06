@@ -111,8 +111,7 @@ define protected amdgpu_kernel void @InferMixed(i32 %a, ptr addrspace(1) %b, dou
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_ashr_i32 s3, s2, 31
 ; CHECK-NEXT:    s_lshl_b64 s[0:1], s[2:3], 3
-; CHECK-NEXT:    v_mov_b32_e32 v0, s8
-; CHECK-NEXT:    v_mov_b32_e32 v1, s9
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
 ; CHECK-NEXT:    s_add_u32 s0, s4, s0
 ; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[6:7], s[6:7] op_sel:[0,1]
 ; CHECK-NEXT:    s_addc_u32 s1, s5, s1

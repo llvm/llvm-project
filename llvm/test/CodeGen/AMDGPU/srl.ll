@@ -286,7 +286,8 @@ define amdgpu_kernel void @lshr_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[16:19], s[0:1], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_load_dwordx16 s[0:15], s[18:19], 0x0
+; VI-NEXT:    s_load_dwordx8 s[0:7], s[18:19], 0x0
+; VI-NEXT:    s_load_dwordx8 s[8:15], s[18:19], 0x20
 ; VI-NEXT:    s_mov_b32 s19, 0xf000
 ; VI-NEXT:    s_mov_b32 s18, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
