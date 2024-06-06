@@ -214,6 +214,9 @@ C++23 Feature Support
 - Added a ``__reference_converts_from_temporary`` builtin, completing the necessary compiler support for
   `P2255R2: Type trait to determine if a reference binds to a temporary <https://wg21.link/P2255R2>`_.
 
+- Implemented `P2797R0: Static and explicit object member functions with the same parameter-type-lists <https://wg21.link/P2797R0>`_.
+  This completes the support for "deducing this".
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -336,6 +339,9 @@ Non-comprehensive list of changes in this release
   bodies when the function is defined in a system header file or when
   ``-Winvalid-constexpr`` is not enabled for the function definition, which
   should result in mild compile-time performance improvements.
+
+- Added ``__is_bitwise_cloneable`` which is used to check whether a type
+  can be safely copied by memcpy/memmove.
 
 New Compiler Flags
 ------------------
@@ -951,7 +957,7 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
-- Clang now supports CUDA SDK up to 12.4
+- Clang now supports CUDA SDK up to 12.5
 
 AIX Support
 ^^^^^^^^^^^
