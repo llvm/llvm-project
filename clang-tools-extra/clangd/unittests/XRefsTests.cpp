@@ -2173,6 +2173,11 @@ TEST(FindReferences, WithinAST) {
         using $def[[MyTypeD^ef]] = int;
         enum MyEnum : $(MyEnum)[[MyTy^peDef]] { };
       )cpp",
+      // UDL
+      R"cpp(
+        bool $decl[[operator]]"" _u^dl(unsigned long long value);
+        bool x = $(x)[[1_udl]];
+      )cpp",
   };
   for (const char *Test : Tests)
     checkFindRefs(Test);
@@ -2361,9 +2366,8 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
       )cpp",
 
       R"cpp(
-        [[#include ^"operator_qoutes.h"]]
-        using ::operator_qoutes::[[operator]]"" _b;
-        auto x = 1_b;
+        [[#include ^"udl_header.h"]]
+        auto x = [[1_b]];
       )cpp",
   };
   for (const char *Test : Tests) {
@@ -2382,10 +2386,8 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
         class vector{};
       }
     )cpp");
-    TU.AdditionalFiles["operator_qoutes.h"] = guard(R"cpp(
-      namespace operator_qoutes {
-        bool operator"" _b(unsigned long long value);
-      }
+    TU.AdditionalFiles["udl_header.h"] = guard(R"cpp(
+      bool operator"" _b(unsigned long long value);
     )cpp");
     TU.ExtraArgs.push_back("-isystem" + testPath("system"));
 

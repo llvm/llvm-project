@@ -387,8 +387,8 @@ const syntax::Token *TokenBuffer::spelledTokenAt(SourceLocation Loc) const {
   assert(Loc.isFileID());
   const auto *Tok = llvm::partition_point(
       spelledTokens(SourceMgr->getFileID(Loc)),
-      [&](const syntax::Token &Tok) { return Tok.location() < Loc; });
-  if (!Tok || Tok->location() != Loc)
+      [&](const syntax::Token &Tok) { return Tok.endLocation() <= Loc; });
+  if (!Tok || Tok->location() > Loc || Loc >= Tok->endLocation())
     return nullptr;
   return Tok;
 }
