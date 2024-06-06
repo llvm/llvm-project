@@ -233,9 +233,8 @@ inline void addBoxedProcedurePass(mlir::PassManager &pm) {
 
 inline void addExternalNameConversionPass(
     mlir::PassManager &pm, bool appendUnderscore = true) {
-  addPassConditionally(pm, disableExternalNameConversion, [&]() {
-    return fir::createExternalNameConversionPass(appendUnderscore);
-  });
+  addPassConditionally(pm, disableExternalNameConversion,
+      [&]() { return fir::createExternalNameConversion({appendUnderscore}); });
 }
 
 // Use inliner extension point callback to register the default inliner pass.
