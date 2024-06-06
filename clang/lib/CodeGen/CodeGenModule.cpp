@@ -34,8 +34,8 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
@@ -3890,13 +3890,12 @@ namespace {
   };
 
   // Make sure we're not referencing non-imported vars or functions.
-  struct DLLImportFunctionVisitor
-      : public RecursiveASTVisitor<DLLImportFunctionVisitor> {
+  struct DLLImportFunctionVisitor : DynamicRecursiveASTVisitor {
     bool SafeToInline = true;
 
-    bool shouldVisitImplicitCode() const { return true; }
+    DLLImportFunctionVisitor() { ShouldVisitImplicitCode = true; }
 
-    bool VisitVarDecl(VarDecl *VD) {
+    bool VisitVarDecl(VarDecl *VD) override {
       if (VD->getTLSKind()) {
         // A thread-local variable cannot be imported.
         SafeToInline = false;
@@ -3910,13 +3909,13 @@ namespace {
       return SafeToInline;
     }
 
-    bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
+    bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) override {
       if (const auto *D = E->getTemporary()->getDestructor())
         SafeToInline = D->hasAttr<DLLImportAttr>();
       return SafeToInline;
     }
 
-    bool VisitDeclRefExpr(DeclRefExpr *E) {
+    bool VisitDeclRefExpr(DeclRefExpr *E) override {
       ValueDecl *VD = E->getDecl();
       if (isa<FunctionDecl>(VD))
         SafeToInline = VD->hasAttr<DLLImportAttr>();
@@ -3925,12 +3924,12 @@ namespace {
       return SafeToInline;
     }
 
-    bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    bool VisitCXXConstructExpr(CXXConstructExpr *E) override {
       SafeToInline = E->getConstructor()->hasAttr<DLLImportAttr>();
       return SafeToInline;
     }
 
-    bool VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
+    bool VisitCXXMemberCallExpr(CXXMemberCallExpr *E) override {
       CXXMethodDecl *M = E->getMethodDecl();
       if (!M) {
         // Call through a pointer to member function. This is safe to inline.
@@ -3941,12 +3940,12 @@ namespace {
       return SafeToInline;
     }
 
-    bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    bool VisitCXXDeleteExpr(CXXDeleteExpr *E) override {
       SafeToInline = E->getOperatorDelete()->hasAttr<DLLImportAttr>();
       return SafeToInline;
     }
 
-    bool VisitCXXNewExpr(CXXNewExpr *E) {
+    bool VisitCXXNewExpr(CXXNewExpr *E) override {
       SafeToInline = E->getOperatorNew()->hasAttr<DLLImportAttr>();
       return SafeToInline;
     }
