@@ -1401,6 +1401,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ilogbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ilogbf16_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbf16
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
   ilogbf128_test
   SUITE
     libc-math-smoke-tests

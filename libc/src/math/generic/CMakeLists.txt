@@ -1364,6 +1364,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ilogbf16
+  SRCS
+    ilogbf16.cpp
+  HDRS
+    ../ilogbf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
   ilogbf128
   SRCS
     ilogbf128.cpp

@@ -212,6 +212,7 @@ add_math_entrypoint_object(hypotf)
 add_math_entrypoint_object(ilogb)
 add_math_entrypoint_object(ilogbf)
 add_math_entrypoint_object(ilogbl)
+add_math_entrypoint_object(ilogbf16)
 add_math_entrypoint_object(ilogbf128)
 
 add_math_entrypoint_object(llogb)
