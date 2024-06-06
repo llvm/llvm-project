@@ -3020,7 +3020,7 @@ llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
   lldb::ValueObjectSP inner_value = GetSP();
 
   for (const uint32_t i : base_type_indices)
-    // Force static value, otherwise we can end up with the "real" type.
+    // Create synthetic value if needed.
     inner_value =
         inner_value->GetChildAtIndex(i, /*can_create_synthetic*/ true);
 
