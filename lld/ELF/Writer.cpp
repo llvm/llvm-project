@@ -921,7 +921,11 @@ static bool shouldSkip(SectionCommand *cmd) {
 static SmallVectorImpl<SectionCommand *>::iterator
 findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
               SmallVectorImpl<SectionCommand *>::iterator e) {
+  // Place non-alloc orphan sections at the end. This matches how we assign file
+  // offsets to non-alloc sections.
   OutputSection *sec = &cast<OutputDesc>(*e)->osec;
+  if (!(sec->flags & SHF_ALLOC))
+    return e;
 
   // As a special case, place .relro_padding before the SymbolAssignment using
   // DATA_SEGMENT_RELRO_END, if present.
