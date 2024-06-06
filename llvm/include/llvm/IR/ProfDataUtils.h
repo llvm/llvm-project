@@ -57,11 +57,11 @@ MDNode *getValidBranchWeightMDNode(const Instruction &I);
 
 /// Check if Branch Weight Metadata has an "expected" field from an llvm.expect*
 /// intrinsic
-bool hasBranchWeightProvenance(const Instruction &I);
+bool hasBranchWeightOrigin(const Instruction &I);
 
 /// Check if Branch Weight Metadata has an "expected" field from an llvm.expect*
 /// intrinsic
-bool hasBranchWeightProvenance(const MDNode *ProfileData);
+bool hasBranchWeightOrigin(const MDNode *ProfileData);
 
 /// Return the offset to the first branch weight data
 unsigned getBranchWeightOffset(const MDNode *ProfileData);
