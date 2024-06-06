@@ -207,7 +207,7 @@ struct alignas(Types) TestUnexpandedDecls : T{ // expected-error{{expression con
     struct default_template_args_1;
   template<int = static_cast<Types>(0)> // expected-error{{default argument contains unexpanded parameter pack 'Types'}}
     struct default_template_args_2;
-  template<template<typename> class = Types::template apply> // expected-error{{default argument contains unexpanded parameter pack 'Types'}}
+  template<template<typename> class = Types::template apply> // expected-error{{default argument contains unexpanded parameter pack 'Types'}} // expected-warning{{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
     struct default_template_args_3;
 
   template<Types value> // expected-error{{non-type template parameter type contains unexpanded parameter pack 'Types'}}

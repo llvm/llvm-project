@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify
-// expected-no-diagnostics
 
 // This test attempts to ensure that the below template parameter pack
 // splitting technique executes in linear time in the number of template
@@ -33,7 +32,7 @@ struct SplitAtIndex;
 template<typename ...T, unsigned N, typename ...NUnsigneds>
 struct SplitAtIndex<TypeList<T...>, N, TypeList<NUnsigneds...>> :
   detail::Splitter<NUnsigneds...>::
-    template Split<detail::TypeWrapper<T>::template AsTemplate...> {};
+    template Split<detail::TypeWrapper<T>::template AsTemplate...> {}; // expected-warning {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
 
 template<typename T, int N> struct Rep : Rep<typename Rep<T, N-1>::type, 1> {};
 template<typename ...T> struct Rep<TypeList<T...>, 1> { typedef TypeList<T..., T...> type; };

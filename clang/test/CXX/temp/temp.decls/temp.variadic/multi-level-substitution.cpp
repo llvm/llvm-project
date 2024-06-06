@@ -118,6 +118,7 @@ namespace PacksAtDifferentLevels {
     template<typename ...Types2>
     struct Inner<tuple<pair<Types1, Types2>...>,
                  metafun_tuple<some_function_object<Types1, Types2>::template result_of...> > {
+    // expected-warning@-1 {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
       static const unsigned value = 1;
     };
   };

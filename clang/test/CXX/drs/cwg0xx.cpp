@@ -1422,6 +1422,7 @@ namespace cwg96 { // cwg96: sup P1787
     // expected-error@-1 {{a template argument list is expected after a name prefixed by the template keyword}}
     A::template S<int> s;
     B<A::template S> b;
+    // expected-warning@-1 {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
   }
 }
 

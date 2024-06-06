@@ -23,7 +23,7 @@ template<typename T> struct A {
 
     //   as a template-argument for a template template-parameter,
     TempTemp<A> a_as_temp;
-    TempTemp<B::template C> c_as_temp;
+    TempTemp<B::template C> c_as_temp; // expected-warning {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
 
     //   or as the final identifier in the elaborated-type-specifier of a friend
     //   class template declaration,
@@ -42,7 +42,7 @@ template<typename T> struct A {
     void f(T &t) {
       use<A>(t); // expected-error {{no matching function}}
       if constexpr (&id<T> != &id<int>)
-        use<B::template C>(t); // expected-error {{no matching function}}
+        use<B::template C>(t); // expected-error {{no matching function}} // expected-warning {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
     }
   };
 };

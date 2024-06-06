@@ -10,7 +10,7 @@ template<typename T2, typename T1> using B = T1; // expected-error {{type alias 
 
 template<typename> struct S;
 template<template<typename> class F> using FInt = F<int>;
-template<typename X> using SXRInt = FInt<S<X>::template R>;
+template<typename X> using SXRInt = FInt<S<X>::template R>; // expected-warning {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
 template<typename X> using SXRInt = typename S<X>::template R<int>; // ok, redeclaration.
 
 template<template<typename> class> struct TT;

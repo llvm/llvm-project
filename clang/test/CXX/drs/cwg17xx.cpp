@@ -237,5 +237,6 @@ using Instantiate = Template<Arg>;
 
 template <template <typename> class Template, typename Argument>
 using Bind = Instantiate<Internal<Template>::template Bind, Argument>;
+// expected-warning@-1 {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
 #endif
 } // namespace cwg1794
