@@ -9,6 +9,13 @@ template<class T>
 void func_template() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'func_template'
 
+void func_cpp_inc();
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'func_cpp_inc'
+
+#include "func_cpp.inc"
+
+void func_h_inc();
+
 struct S {
   void method();
 };

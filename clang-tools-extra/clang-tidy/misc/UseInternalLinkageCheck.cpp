@@ -24,12 +24,28 @@ namespace {
 
 AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
 
-AST_MATCHER_P(Decl, isInMainFile, FileExtensionsSet, HeaderFileExtensions) {
+static bool isInMainFile(SourceLocation L, SourceManager &SM,
+                         const FileExtensionsSet &HeaderFileExtensions) {
+  for (;;) {
+    if (utils::isSpellingLocInHeaderFile(L, SM, HeaderFileExtensions))
+      return false;
+    if (SM.isInMainFile(L))
+      return true;
+    // not in header file but not in main file
+    L = SM.getIncludeLoc(SM.getFileID(L));
+    if (L.isValid())
+      continue;
+    // Conservative about the unknown
+    return false;
+  }
+}
+
+AST_MATCHER_P(Decl, isAllRedeclsInMainFile, FileExtensionsSet,
+              HeaderFileExtensions) {
   return llvm::all_of(Node.redecls(), [&](const Decl *D) {
-    SourceManager &SM = Finder->getASTContext().getSourceManager();
-    const SourceLocation L = D->getLocation();
-    return SM.isInMainFile(L) &&
-           !utils::isSpellingLocInHeaderFile(L, SM, HeaderFileExtensions);
+    return isInMainFile(D->getLocation(),
+                        Finder->getASTContext().getSourceManager(),
+                        HeaderFileExtensions);
   });
 }
 
@@ -42,16 +58,17 @@ AST_POLYMORPHIC_MATCHER(isExternStorageClass,
 } // namespace
 
 void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
-  auto Common = allOf(isFirstDecl(), isInMainFile(HeaderFileExtensions),
-                      unless(anyOf(
-                          // 1. internal linkage
-                          isStaticStorageClass(), isInAnonymousNamespace(),
-                          // 2. explicit external linkage
-                          isExternStorageClass(), isExternC(),
-                          // 3. template
-                          isExplicitTemplateSpecialization(),
-                          // 4. friend
-                          hasAncestor(friendDecl()))));
+  auto Common =
+      allOf(isFirstDecl(), isAllRedeclsInMainFile(HeaderFileExtensions),
+            unless(anyOf(
+                // 1. internal linkage
+                isStaticStorageClass(), isInAnonymousNamespace(),
+                // 2. explicit external linkage
+                isExternStorageClass(), isExternC(),
+                // 3. template
+                isExplicitTemplateSpecialization(),
+                // 4. friend
+                hasAncestor(friendDecl()))));
   Finder->addMatcher(
       functionDecl(Common, unless(cxxMethodDecl()), unless(isMain()))
           .bind("fn"),
