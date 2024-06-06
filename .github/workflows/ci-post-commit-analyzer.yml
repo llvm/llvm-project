@@ -8,6 +8,7 @@ on:
     branches:
       - 'release/**'
     paths:
+      - 'clang/**'
       - 'llvm/**'
       - '.github/workflows/ci-post-commit-analyzer.yml'
   pull_request:
