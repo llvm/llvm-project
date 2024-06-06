@@ -15,7 +15,7 @@
 #include <string.h>
 #include <unwind.h>
 
-// Using __attribute__((section("main_func"))) is Linux specific, but then
+// Using __attribute__((section("main_func"))) is ELF specific, but then
 // this entire test is marked as requiring Linux, so we should be good.
 //
 // We don't use dladdr() because on musl it's a no-op when statically linked.
