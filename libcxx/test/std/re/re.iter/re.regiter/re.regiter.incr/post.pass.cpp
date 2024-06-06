@@ -17,6 +17,54 @@
 #include <iterator>
 #include "test_macros.h"
 
+void validate_prefixes(const std::regex& empty_matching_pattern) {
+  const char source[] = "abc";
+
+  std::cregex_iterator i(source, source + 3, empty_matching_pattern);
+  assert(!i->prefix().matched);
+  assert(i->prefix().length() == 0);
+  assert(i->prefix().first == source);
+  assert(i->prefix().second == source);
+
+  ++i;
+  assert(i->prefix().matched);
+  assert(i->prefix().length() == 1);
+  assert(i->prefix().first == source);
+  assert(i->prefix().second == source + 1);
+  assert(i->prefix().str() == "a");
+
+  ++i;
+  assert(i->prefix().matched);
+  assert(i->prefix().length() == 1);
+  assert(i->prefix().first == source + 1);
+  assert(i->prefix().second == source + 2);
+  assert(i->prefix().str() == "b");
+
+  ++i;
+  assert(i->prefix().matched);
+  assert(i->prefix().length() == 1);
+  assert(i->prefix().first == source + 2);
+  assert(i->prefix().second == source + 3);
+  assert(i->prefix().str() == "c");
+
+  ++i;
+  assert(i == std::cregex_iterator());
+}
+
+void test_prefix_adjustment() {
+  // Check that we correctly adjust the match prefix when dealing with zero-length matches -- this is explicitly
+  // required by the Standard ([re.regiter.incr]: "In all cases in which the call to `regex_search` returns true,
+  // `match.prefix().first` shall be equal to the previous value of `match[0].second`"). For a pattern that matches
+  // empty sequences, there is an implicit zero-length match between every character in a string -- make sure the
+  // prefix of each of these matches (except the first one) is the preceding character.
+
+  // An empty pattern produces zero-length matches.
+  validate_prefixes(std::regex(""));
+  // Any character repeated zero or more times can produce zero-length matches.
+  validate_prefixes(std::regex("X*"));
+  validate_prefixes(std::regex("X{0,3}"));
+}
+
 int main(int, char**) {
   {
     std::regex phone_numbers("\\d{3}-\\d{4}");
@@ -113,53 +161,7 @@ int main(int, char**) {
     assert(i == e);
   }
 
-  {
-    // Check that we correctly adjust the match prefix when dealing with zero-length matches -- this is explicitly
-    // required by the Standard ([re.regiter.incr]: "In all cases in which the call to `regex_search` returns true,
-    // `match.prefix().first` shall be equal to the previous value of `match[0].second`"). For a pattern that matches
-    // empty sequences, there is an implicit zero-length match between every character in a string -- make sure the
-    // prefix of each of these matches (except the first one) is the preceding character.
-
-    auto validate = [](const std::regex& empty_matching_pattern) {
-      const char source[] = "abc";
-
-      std::cregex_iterator i(source, source + 3, empty_matching_pattern);
-      assert(!i->prefix().matched);
-      assert(i->prefix().length() == 0);
-      assert(i->prefix().first == source);
-      assert(i->prefix().second == source);
-
-      ++i;
-      assert(i->prefix().matched);
-      assert(i->prefix().length() == 1);
-      assert(i->prefix().first == source);
-      assert(i->prefix().second == source + 1);
-      assert(i->prefix().str() == "a");
-
-      ++i;
-      assert(i->prefix().matched);
-      assert(i->prefix().length() == 1);
-      assert(i->prefix().first == source + 1);
-      assert(i->prefix().second == source + 2);
-      assert(i->prefix().str() == "b");
-
-      ++i;
-      assert(i->prefix().matched);
-      assert(i->prefix().length() == 1);
-      assert(i->prefix().first == source + 2);
-      assert(i->prefix().second == source + 3);
-      assert(i->prefix().str() == "c");
-
-      ++i;
-      assert(i == std::cregex_iterator());
-    };
-
-    // An empty pattern produces zero-length matches.
-    validate(std::regex(""));
-    // Any character repeated zero or more times can produce zero-length matches.
-    validate(std::regex("X*"));
-    validate(std::regex("X{0,3}"));
-  }
+  test_prefix_adjustment();
 
   return 0;
 }
