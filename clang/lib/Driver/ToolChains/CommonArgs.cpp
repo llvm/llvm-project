@@ -166,7 +166,7 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
 
 static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
   if (Triple.isAArch64() || Triple.isPS() || Triple.isVE() ||
-                        (Triple.isAndroid() && Triple.isRISCV64()))
+      (Triple.isAndroid() && Triple.isRISCV64()))
     return false;
 
   return true;
