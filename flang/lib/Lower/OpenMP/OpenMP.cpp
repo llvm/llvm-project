@@ -1434,7 +1434,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       mlir::OpBuilder::InsertPoint insp = builder.saveInsertionPoint();
       const auto &objList = std::get<ObjectList>(lastp->t);
       for (const Object &object : objList) {
-        semantics::Symbol *sym = object.id();
+        semantics::Symbol *sym = object.sym();
         converter.copyHostAssociateVar(*sym, &insp);
       }
     }
