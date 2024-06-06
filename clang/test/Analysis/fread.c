@@ -383,8 +383,6 @@ void test_unaligned_start_read(void) {
     // We have an 'int' binding at offset 0 of value 3.
     // We read 4 bytes at byte offset: 1,2,3,4.
     if (4 == fread(asChar + 1, 1, 4, fp)) {
-      void clang_analyzer_printState(void);
-      clang_analyzer_printState();
       clang_analyzer_dump(buffer[0]); // expected-warning{{3 S32b}} FIXME Reading a 'char' should not result in a 'S32b' value.
       clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}}
       clang_analyzer_dump(buffer[2]); // expected-warning{{5 S32b}}
