@@ -384,8 +384,10 @@ bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
     SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
     CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
   }
-  return determineAndHandleAssignments(RetHandler, Assigner, SplitRetInfos, B,
-                                       CCInfo, ArgLocs);
+  if (!determineAssignments(Assigner, SplitRetInfos, CCInfo))
+    return false;
+
+  return handleAssignments(RetHandler, SplitRetInfos, CCInfo, ArgLocs, B);
 }
 
 bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
@@ -1559,8 +1561,11 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
       CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
     }
-    if (!determineAndHandleAssignments(Handler, Assigner, InArgs, MIRBuilder,
-                                       CCInfo, ArgLocs))
+
+    if (!determineAssignments(Assigner, InArgs, CCInfo))
+      return false;
+
+    if (!handleAssignments(Handler, InArgs, CCInfo, ArgLocs, MIRBuilder))
       return false;
   }
 
