@@ -77,6 +77,9 @@ Optionally,
 may be enabled during development via `-DADDRESS_SANITIZER=On` during the Comgr
 `cmake` step.
 
+Comgr can be built as a static library by passing
+`-DCOMGR_BUILD_SHARED_LIBS=OFF` during the Comgr `cmake` step.
+
 Depending on the Code Object Manager
 ------------------------------------
 
