@@ -14,6 +14,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenOpenMPRuntime.h"
+#include "TargetInfo.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/AST/StmtVisitor.h"
@@ -1514,8 +1515,24 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return CGF.getBuilder().createBitcast(CGF.getLoc(E->getSourceRange()), Src,
                                           DstTy);
   }
-  case CK_AddressSpaceConversion:
-    llvm_unreachable("NYI");
+  case CK_AddressSpaceConversion: {
+    Expr::EvalResult Result;
+    if (E->EvaluateAsRValue(Result, CGF.getContext()) &&
+        Result.Val.isNullPointer()) {
+      // If E has side effect, it is emitted even if its final result is a
+      // null pointer. In that case, a DCE pass should be able to
+      // eliminate the useless instructions emitted during translating E.
+      if (Result.HasSideEffects) {
+        llvm_unreachable("NYI");
+      }
+      return CGF.CGM.buildNullConstant(DestTy, CGF.getLoc(E->getExprLoc()));
+    }
+    // Since target may map different address spaces in AST to the same address
+    // space, an address space conversion may end up as a bitcast.
+    return CGF.CGM.getTargetCIRGenInfo().performAddrSpaceCast(
+        CGF, Visit(E), E->getType()->getPointeeType().getAddressSpace(),
+        DestTy->getPointeeType().getAddressSpace(), ConvertType(DestTy));
+  }
   case CK_AtomicToNonAtomic:
     llvm_unreachable("NYI");
   case CK_NonAtomicToAtomic:

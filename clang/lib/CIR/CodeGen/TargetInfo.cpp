@@ -419,6 +419,17 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   return ABIArgInfo::getDirect(ResType);
 }
 
+mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
+    CIRGenFunction &CGF, mlir::Value Src, clang::LangAS SrcAddr,
+    clang::LangAS DestAddr, mlir::Type DestTy, bool IsNonNull) const {
+  // Since target may map different address spaces in AST to the same address
+  // space, an address space conversion may end up as a bitcast.
+  if (auto globalOp = Src.getDefiningOp<mlir::cir::GlobalOp>())
+    llvm_unreachable("Global ops addrspace cast NYI");
+  // Try to preserve the source's name to make IR more readable.
+  return CGF.getBuilder().createAddrSpaceCast(Src, DestTy);
+}
+
 const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
   if (TheTargetCIRGenInfo)
     return *TheTargetCIRGenInfo;

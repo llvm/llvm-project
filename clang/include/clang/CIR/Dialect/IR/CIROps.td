@@ -69,6 +69,7 @@ def CK_FloatToBoolean : I32EnumAttrCase<"float_to_bool", 10>;
 def CK_BooleanToIntegral : I32EnumAttrCase<"bool_to_int", 11>;
 def CK_IntegralToFloat : I32EnumAttrCase<"int_to_float", 12>;
 def CK_BooleanToFloat : I32EnumAttrCase<"bool_to_float", 13>;
+def CK_AddressSpaceConversion : I32EnumAttrCase<"address_space", 14>;
 
 def CastKind : I32EnumAttr<
     "CastKind",
@@ -76,7 +77,8 @@ def CastKind : I32EnumAttr<
     [CK_IntegralToBoolean, CK_ArrayToPointerDecay, CK_IntegralCast,
      CK_BitCast, CK_FloatingCast, CK_PtrToBoolean, CK_FloatToIntegral,
      CK_IntegralToPointer, CK_PointerToIntegral, CK_FloatToBoolean,
-     CK_BooleanToIntegral, CK_IntegralToFloat, CK_BooleanToFloat]> {
+     CK_BooleanToIntegral, CK_IntegralToFloat, CK_BooleanToFloat,
+     CK_AddressSpaceConversion]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -98,6 +100,7 @@ def CastOp : CIR_Op<"cast", [Pure]> {
     - `ptr_to_bool`
     - `bool_to_int`
     - `bool_to_float`
+    - `address_space`
 
     This is effectively a subset of the rules from
     `llvm-project/clang/include/clang/AST/OperationKinds.def`; but note that some

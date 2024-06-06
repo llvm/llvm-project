@@ -15,10 +15,19 @@ module  {
     %2 = cir.cast(bitcast, %p : !cir.ptr<!s32i>), !cir.ptr<f32>
     cir.return
   }
+
+  cir.func @addrspace_cast(%arg0: !cir.ptr<!s32i>) {
+    %0 = cir.cast(address_space, %arg0 : !cir.ptr<!s32i>), !cir.ptr<!s32i, addrspace(2)>
+    cir.return
+  }
 }
 
 // CHECK: cir.func @yolo(%arg0: !s32i)
 // CHECK: %1 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
 // CHECK: %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!s32i x 10>>), !cir.ptr<!s32i>
+
 // CHECK: cir.func @bitcast
 // CHECK: %0 = cir.cast(bitcast, %arg0 : !cir.ptr<!s32i>), !cir.ptr<f32>
+
+// CHECK: cir.func @addrspace_cast
+// CHECK: %0 = cir.cast(address_space, %arg0 : !cir.ptr<!s32i>), !cir.ptr<!s32i, addrspace(2)>
