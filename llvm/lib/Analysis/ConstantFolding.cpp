@@ -827,7 +827,7 @@ Constant *SymbolicallyEvaluateBinop(unsigned Opc, Constant *Op0, Constant *Op1,
 /// If array indices are not pointer-sized integers, explicitly cast them so
 /// that they aren't implicitly casted by the getelementptr.
 Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
-                         Type *ResultTy, bool InBounds,
+                         Type *ResultTy, GEPNoWrapFlags NW,
                          std::optional<ConstantRange> InRange,
                          const DataLayout &DL, const TargetLibraryInfo *TLI) {
   Type *IntIdxTy = DL.getIndexType(ResultTy);
@@ -856,8 +856,8 @@ Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
   if (!Any)
     return nullptr;
 
-  Constant *C = ConstantExpr::getGetElementPtr(SrcElemTy, Ops[0], NewIdxs,
-                                               InBounds, InRange);
+  Constant *C =
+      ConstantExpr::getGetElementPtr(SrcElemTy, Ops[0], NewIdxs, NW, InRange);
   return ConstantFoldConstant(C, DL, TLI);
 }
 
@@ -873,7 +873,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   if (!SrcElemTy->isSized() || isa<ScalableVectorType>(SrcElemTy))
     return nullptr;
 
-  if (Constant *C = CastGEPIndices(SrcElemTy, Ops, ResTy, GEP->isInBounds(),
+  if (Constant *C = CastGEPIndices(SrcElemTy, Ops, ResTy, GEP->getNoWrapFlags(),
                                    GEP->getInRange(), DL, TLI))
     return C;
 
@@ -1005,15 +1005,12 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
       return C;
 
     return ConstantExpr::getGetElementPtr(SrcElemTy, Ops[0], Ops.slice(1),
-                                          GEP->isInBounds(), GEP->getInRange());
+                                          GEP->getNoWrapFlags(),
+                                          GEP->getInRange());
   }
 
-  if (auto *CE = dyn_cast<ConstantExpr>(InstOrCE)) {
-    if (CE->isCompare())
-      return ConstantFoldCompareInstOperands(CE->getPredicate(), Ops[0], Ops[1],
-                                             DL, TLI);
+  if (auto *CE = dyn_cast<ConstantExpr>(InstOrCE))
     return CE->getWithOperands(Ops);
-  }
 
   switch (Opcode) {
   default: return nullptr;
@@ -1268,7 +1265,7 @@ Constant *llvm::ConstantFoldCompareInstOperands(
   if (!Ops1)
     return nullptr;
 
-  return ConstantExpr::getCompare(Predicate, Ops0, Ops1);
+  return ConstantFoldCompareInstruction(Predicate, Ops0, Ops1);
 }
 
 Constant *llvm::ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
@@ -1503,6 +1500,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::smin:
   case Intrinsic::umax:
   case Intrinsic::umin:
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp:
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::ssub_with_overflow:
@@ -2085,6 +2084,17 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     if (IntrinsicID == Intrinsic::canonicalize)
       return constantFoldCanonicalize(Ty, Call, U);
+
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
+    if (Ty->isFP128Ty()) {
+      switch (IntrinsicID) {
+      default:
+        return nullptr;
+      case Intrinsic::log:
+        return ConstantFP::get(Ty, logf128(Op->getValueAPF().convertToQuad()));
+      }
+    }
+#endif
 
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
       return nullptr;
@@ -2760,6 +2770,21 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
                                 MinMaxIntrinsic::getPredicate(IntrinsicID))
                   ? *C0
                   : *C1);
+
+    case Intrinsic::scmp:
+    case Intrinsic::ucmp:
+      if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
+        return PoisonValue::get(Ty);
+
+      if (!C0 || !C1)
+        return ConstantInt::get(Ty, 0);
+
+      int Res;
+      if (IntrinsicID == Intrinsic::scmp)
+        Res = C0->sgt(*C1) ? 1 : C0->slt(*C1) ? -1 : 0;
+      else
+        Res = C0->ugt(*C1) ? 1 : C0->ult(*C1) ? -1 : 0;
+      return ConstantInt::get(Ty, Res, /*IsSigned=*/true);
 
     case Intrinsic::usub_with_overflow:
     case Intrinsic::ssub_with_overflow:

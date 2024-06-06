@@ -51,7 +51,8 @@ ASM_FUNCTION_AARCH64_RE = re.compile(
 )
 
 ASM_FUNCTION_AMDGPU_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*;+[ \t]*@"?(?P=func)"?\n[^:]*?'
+    r"\.type\s+_?(?P<func>[^,\n]+),@function\n"
+    r'^_?(?P=func):(?:[ \t]*;+[ \t]*@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"  # (body of the function)
     # This list is incomplete
     r"^\s*(\.Lfunc_end[0-9]+:\n|\.section)",
@@ -533,11 +534,7 @@ def get_run_handler(triple):
         "i686": (scrub_asm_x86, ASM_FUNCTION_X86_RE),
         "x86": (scrub_asm_x86, ASM_FUNCTION_X86_RE),
         "i386": (scrub_asm_x86, ASM_FUNCTION_X86_RE),
-        "arm64_32-apple-ios": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
-        "arm64_32-apple-watchos2.0.0": (
-            scrub_asm_arm_eabi,
-            ASM_FUNCTION_AARCH64_DARWIN_RE,
-        ),
+        "arm64_32": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "aarch64": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
         "aarch64-apple-darwin": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "aarch64-apple-ios": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),

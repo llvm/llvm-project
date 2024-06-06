@@ -58,7 +58,7 @@ public:
   std::optional<bool> HasSpecializedDelete(CXXMethodDecl *Decl) {
     if (auto *Body = Decl->getBody())
       return VisitBody(Body);
-    if (auto *Tmpl = Decl->getTemplateInstantiationPattern())
+    if (Decl->getTemplateInstantiationPattern())
       return std::nullopt; // Indeterminate. There was no concrete instance.
     return false;
   }

@@ -1211,6 +1211,10 @@ struct Header {
   // Returns the size of the header in bytes for all valid fields based on the
   // version. I.e a older version header will return a smaller size.
   size_t size() const;
+
+  // Return the indexed profile version, i.e., the least significant 32 bits
+  // in Header.Version.
+  uint64_t getIndexedProfileVersion() const;
 };
 
 // Profile summary data recorded in the profile data file in indexed

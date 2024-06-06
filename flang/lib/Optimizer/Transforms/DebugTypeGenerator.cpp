@@ -73,7 +73,9 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
       context, llvm::dwarf::DW_TAG_array_type, /*recursive id*/ {},
       /* name */ nullptr, /* file */ nullptr, /* line */ 0, /* scope */ nullptr,
       elemTy, mlir::LLVM::DIFlags::Zero, /* sizeInBits */ 0,
-      /*alignInBits*/ 0, elements);
+      /*alignInBits*/ 0, elements, /* dataLocation */ nullptr,
+      /* rank */ nullptr, /* allocated */ nullptr,
+      /* associated */ nullptr);
 }
 
 mlir::LLVM::DITypeAttr

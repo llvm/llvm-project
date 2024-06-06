@@ -98,6 +98,8 @@ ABI Changes in This Version
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
+- The text ast-dumper has improved printing of TemplateArguments.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Removed support for constructing on-stack ``TemplateArgumentList``\ s; interfaces should instead
@@ -205,9 +207,15 @@ C++23 Feature Support
 - Implemented `P1774R8: Portable assumptions <https://wg21.link/P1774R8>`_.
 
 - Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
+  Note, the ``-Winvalid-constexpr`` diagnostic is now disabled in C++23 mode,
+  but can be explicitly specified to retain the old diagnostic checking
+  behavior.
 
 - Added a ``__reference_converts_from_temporary`` builtin, completing the necessary compiler support for
   `P2255R2: Type trait to determine if a reference binds to a temporary <https://wg21.link/P2255R2>`_.
+
+- Implemented `P2797R0: Static and explicit object member functions with the same parameter-type-lists <https://wg21.link/P2797R0>`_.
+  This completes the support for "deducing this".
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -248,6 +256,9 @@ Resolutions to C++ Defect Reports
 
 - P0522 implementation is enabled by default in all language versions, and
   provisional wording for CWG2398 is implemented.
+
+- Clang now requires a template argument list after a template keyword.
+  (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
 
 C Language Changes
 ------------------
@@ -317,6 +328,20 @@ Non-comprehensive list of changes in this release
 
 - Builtins ``__builtin_shufflevector()`` and ``__builtin_convertvector()`` may
   now be used within constant expressions.
+
+- When compiling a constexpr function, Clang will check to see whether the
+  function can *never* be used in a constant expression context and issues a
+  diagnostic under the ``-Winvalid-constexpr`` diagostic flag (which defaults
+  to an error). This check can be expensive because the mere presence of a
+  function marked ``constexpr`` will cause us to undergo constant expression
+  evaluation, even if the function is not called within the translation unit
+  being compiled. Due to the expense, Clang no longer checks constexpr function
+  bodies when the function is defined in a system header file or when
+  ``-Winvalid-constexpr`` is not enabled for the function definition, which
+  should result in mild compile-time performance improvements.
+
+- Added ``__is_bitwise_cloneable`` which is used to check whether a type
+  can be safely copied by memcpy/memmove.
 
 New Compiler Flags
 ------------------
@@ -541,6 +566,9 @@ Improvements to Clang's diagnostics
 - Clang emits a ``-Wparentheses`` warning for expressions with consecutive comparisons like ``x < y < z``.
   Fixes #GH20456.
 
+- Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
+  Fixes #GH93369.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -629,8 +657,13 @@ Bug Fixes in This Version
 - ``__is_array`` and ``__is_bounded_array`` no longer return ``true`` for
   zero-sized arrays. Fixes (#GH54705).
 
+- Correctly reject declarations where a statement is required in C.
+  Fixes #GH92775
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix crash when atomic builtins are called with pointer to zero-size struct (#GH90330)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -734,7 +767,6 @@ Bug Fixes to C++ Support
   from being explicitly specialized for a given implicit instantiation of the class template.
 - Fixed a crash when ``this`` is used in a dependent class scope function template specialization
   that instantiates to a static member function.
-
 - Fix crash when inheriting from a cv-qualified type. Fixes #GH35603
 - Fix a crash when the using enum declaration uses an anonymous enumeration. Fixes (#GH86790).
 - Handled an edge case in ``getFullyPackExpandedSize`` so that we now avoid a false-positive diagnostic. (#GH84220)
@@ -796,12 +828,32 @@ Bug Fixes to C++ Support
   Fixes (#GH91308).
 - Fix a crash caused by a regression in the handling of ``source_location``
   in dependent contexts. Fixes (#GH92680).
+- Fixed a crash when diagnosing failed conversions involving template parameter
+  packs. (#GH93076)
+- Fixed a regression introduced in Clang 18 causing a static function overloading a non-static function
+  with the same parameters not to be diagnosed. (Fixes #GH93456).
+- Clang now diagnoses unexpanded parameter packs in attributes. (Fixes #GH93269).
+- Clang now allows ``@$``` in raw string literals. Fixes (#GH93130).
+- Fix an assertion failure when checking invalid ``this`` usage in the wrong context. (Fixes #GH91536).
+- Clang no longer models dependent NTTP arguments as ``TemplateParamObjectDecl`` s. Fixes (#GH84052).
+- Fix incorrect merging of modules which contain using declarations which shadow
+  other declarations. This could manifest as ODR checker false positives.
+  Fixes (`#80252 <https://github.com/llvm/llvm-project/issues/80252>`_)
+- Fix a regression introduced in Clang 18 causing incorrect overload resolution in the presence of functions only
+  differering by their constraints when only one of these function was variadic.
+- Fix a crash when a variable is captured by a block nested inside a lambda. (Fixes #GH93625).
+- Fixed a type constraint substitution issue involving a generic lambda expression. (#GH93821)
+- Fix a crash caused by improper use of ``__array_extent``. (#GH80474)
+- Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
+  (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
 - The presence of the ``typename`` keyword is now stored in ``TemplateTemplateParmDecl``.
 - Fixed malformed AST generated for anonymous union access in templates. (#GH90842)
+- Improved preservation of qualifiers and sugar in `TemplateNames`, including
+  template keyword.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -905,7 +957,7 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
-- Clang now supports CUDA SDK up to 12.4
+- Clang now supports CUDA SDK up to 12.5
 
 AIX Support
 ^^^^^^^^^^^
@@ -950,6 +1002,7 @@ AST Matchers
 - Fixed ``forEachArgumentWithParam`` and ``forEachArgumentWithParamType`` to
   not skip the explicit object parameter for operator calls.
 - Fixed captureVars assertion failure if not capturesVariables. (#GH76425)
+- ``forCallable`` now properly preserves binding on successful match. (#GH89657)
 
 clang-format
 ------------
@@ -958,9 +1011,10 @@ clang-format
   ``BreakTemplateDeclarations``.
 - ``AlwaysBreakAfterReturnType`` is deprecated and renamed to
   ``BreakAfterReturnType``.
-- Handles Java ``switch`` expressions.
+- Handles Java switch expressions.
 - Adds ``AllowShortCaseExpressionOnASingleLine`` option.
 - Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
+- Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
 
 libclang
 --------

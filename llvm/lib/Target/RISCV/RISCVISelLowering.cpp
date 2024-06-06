@@ -3125,7 +3125,7 @@ lowerVectorStrictFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   Chain = Unorder.getValue(1);
   Src = DAG.getNode(RISCVISD::STRICT_FADD_VL, DL,
                     DAG.getVTList(ContainerVT, MVT::Other),
-                    {Chain, Src, Src, DAG.getUNDEF(ContainerVT), Unorder, VL});
+                    {Chain, Src, Src, Src, Unorder, VL});
   Chain = Src.getValue(1);
 
   // We do the conversion on the absolute value and fix the sign at the end.
@@ -5960,7 +5960,7 @@ static bool hasMergeOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    128 &&
+                    130 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -5986,7 +5986,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    128 &&
+                    130 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -13704,6 +13704,44 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Combine vXi32 (mul (and (lshr X, 15), 0x10001), 0xffff) ->
+// (bitcast (sra (v2Xi16 (bitcast X)), 15))
+// Same for other equivalent types with other equivalent constants.
+static SDValue combineVectorMulToSraBitcast(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // Do this for legal vectors unless they are i1 or i8 vectors.
+  if (!VT.isVector() || !TLI.isTypeLegal(VT) || VT.getScalarSizeInBits() < 16)
+    return SDValue();
+
+  if (N->getOperand(0).getOpcode() != ISD::AND ||
+      N->getOperand(0).getOperand(0).getOpcode() != ISD::SRL)
+    return SDValue();
+
+  SDValue And = N->getOperand(0);
+  SDValue Srl = And.getOperand(0);
+
+  APInt V1, V2, V3;
+  if (!ISD::isConstantSplatVector(N->getOperand(1).getNode(), V1) ||
+      !ISD::isConstantSplatVector(And.getOperand(1).getNode(), V2) ||
+      !ISD::isConstantSplatVector(Srl.getOperand(1).getNode(), V3))
+    return SDValue();
+
+  unsigned HalfSize = VT.getScalarSizeInBits() / 2;
+  if (!V1.isMask(HalfSize) || V2 != (1ULL | 1ULL << HalfSize) ||
+      V3 != (HalfSize - 1))
+    return SDValue();
+
+  EVT HalfVT = EVT::getVectorVT(*DAG.getContext(),
+                                EVT::getIntegerVT(*DAG.getContext(), HalfSize),
+                                VT.getVectorElementCount() * 2);
+  SDLoc DL(N);
+  SDValue Cast = DAG.getNode(ISD::BITCAST, DL, HalfVT, Srl.getOperand(0));
+  SDValue Sra = DAG.getNode(ISD::SRA, DL, HalfVT, Cast,
+                            DAG.getConstant(HalfSize - 1, DL, HalfVT));
+  return DAG.getNode(ISD::BITCAST, DL, VT, Sra);
+}
 
 static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
@@ -13746,6 +13784,9 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue V = combineBinOpOfZExt(N, DAG))
+    return V;
+
+  if (SDValue V = combineVectorMulToSraBitcast(N, DAG))
     return V;
 
   return SDValue();
@@ -16087,6 +16128,195 @@ static bool matchIndexAsWiderOp(EVT VT, SDValue Index, SDValue Mask,
   return true;
 }
 
+// trunc (sra sext (X), zext (Y)) -> sra (X, smin (Y, scalarsize(Y) - 1))
+// This would be benefit for the cases where X and Y are both the same value
+// type of low precision vectors. Since the truncate would be lowered into
+// n-levels TRUNCATE_VECTOR_VL to satisfy RVV's SEW*2->SEW truncate
+// restriction, such pattern would be expanded into a series of "vsetvli"
+// and "vnsrl" instructions later to reach this point.
+static SDValue combineTruncOfSraSext(SDNode *N, SelectionDAG &DAG) {
+  SDValue Mask = N->getOperand(1);
+  SDValue VL = N->getOperand(2);
+
+  bool IsVLMAX = isAllOnesConstant(VL) ||
+                 (isa<RegisterSDNode>(VL) &&
+                  cast<RegisterSDNode>(VL)->getReg() == RISCV::X0);
+  if (!IsVLMAX || Mask.getOpcode() != RISCVISD::VMSET_VL ||
+      Mask.getOperand(0) != VL)
+    return SDValue();
+
+  auto IsTruncNode = [&](SDValue V) {
+    return V.getOpcode() == RISCVISD::TRUNCATE_VECTOR_VL &&
+           V.getOperand(1) == Mask && V.getOperand(2) == VL;
+  };
+
+  SDValue Op = N->getOperand(0);
+
+  // We need to first find the inner level of TRUNCATE_VECTOR_VL node
+  // to distinguish such pattern.
+  while (IsTruncNode(Op)) {
+    if (!Op.hasOneUse())
+      return SDValue();
+    Op = Op.getOperand(0);
+  }
+
+  if (Op.getOpcode() != ISD::SRA || !Op.hasOneUse())
+    return SDValue();
+
+  SDValue N0 = Op.getOperand(0);
+  SDValue N1 = Op.getOperand(1);
+  if (N0.getOpcode() != ISD::SIGN_EXTEND || !N0.hasOneUse() ||
+      N1.getOpcode() != ISD::ZERO_EXTEND || !N1.hasOneUse())
+    return SDValue();
+
+  SDValue N00 = N0.getOperand(0);
+  SDValue N10 = N1.getOperand(0);
+  if (!N00.getValueType().isVector() ||
+      N00.getValueType() != N10.getValueType() ||
+      N->getValueType(0) != N10.getValueType())
+    return SDValue();
+
+  unsigned MaxShAmt = N10.getValueType().getScalarSizeInBits() - 1;
+  SDValue SMin =
+      DAG.getNode(ISD::SMIN, SDLoc(N1), N->getValueType(0), N10,
+                  DAG.getConstant(MaxShAmt, SDLoc(N1), N->getValueType(0)));
+  return DAG.getNode(ISD::SRA, SDLoc(N), N->getValueType(0), N00, SMin);
+}
+
+// Combine (truncate_vector_vl (umin X, C)) -> (vnclipu_vl X) if C is the
+// maximum value for the truncated type.
+// Combine (truncate_vector_vl (smin (smax X, C2), C1)) -> (vnclip_vl X) if C1
+// is the signed maximum value for the truncated type and C2 is the signed
+// minimum value.
+static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
+                                    const RISCVSubtarget &Subtarget) {
+  assert(N->getOpcode() == RISCVISD::TRUNCATE_VECTOR_VL);
+
+  MVT VT = N->getSimpleValueType(0);
+
+  SDValue Mask = N->getOperand(1);
+  SDValue VL = N->getOperand(2);
+
+  auto MatchMinMax = [&VL, &Mask](SDValue V, unsigned Opc, unsigned OpcVL,
+                                  APInt &SplatVal) {
+    if (V.getOpcode() != Opc &&
+        !(V.getOpcode() == OpcVL && V.getOperand(2).isUndef() &&
+          V.getOperand(3) == Mask && V.getOperand(4) == VL))
+      return SDValue();
+
+    SDValue Op = V.getOperand(1);
+
+    // Peek through conversion between fixed and scalable vectors.
+    if (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef() &&
+        isNullConstant(Op.getOperand(2)) &&
+        Op.getOperand(1).getValueType().isFixedLengthVector() &&
+        Op.getOperand(1).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        Op.getOperand(1).getOperand(0).getValueType() == Op.getValueType() &&
+        isNullConstant(Op.getOperand(1).getOperand(1)))
+      Op = Op.getOperand(1).getOperand(0);
+
+    if (ISD::isConstantSplatVector(Op.getNode(), SplatVal))
+      return V.getOperand(0);
+
+    if (Op.getOpcode() == RISCVISD::VMV_V_X_VL && Op.getOperand(0).isUndef() &&
+        Op.getOperand(2) == VL) {
+      if (auto *Op1 = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+        SplatVal =
+            Op1->getAPIntValue().sextOrTrunc(Op.getScalarValueSizeInBits());
+        return V.getOperand(0);
+      }
+    }
+
+    return SDValue();
+  };
+
+  SDLoc DL(N);
+
+  auto DetectUSatPattern = [&](SDValue V) {
+    APInt LoC, HiC;
+
+    // Simple case, V is a UMIN.
+    if (SDValue UMinOp = MatchMinMax(V, ISD::UMIN, RISCVISD::UMIN_VL, HiC))
+      if (HiC.isMask(VT.getScalarSizeInBits()))
+        return UMinOp;
+
+    // If we have an SMAX that removes negative numbers first, then we can match
+    // SMIN instead of UMIN.
+    if (SDValue SMinOp = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+      if (SDValue SMaxOp =
+              MatchMinMax(SMinOp, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+        if (LoC.isNonNegative() && HiC.isMask(VT.getScalarSizeInBits()))
+          return SMinOp;
+
+    // If we have an SMIN before an SMAX and the SMAX constant is less than or
+    // equal to the SMIN constant, we can use vnclipu if we insert a new SMAX
+    // first.
+    if (SDValue SMaxOp = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+      if (SDValue SMinOp =
+              MatchMinMax(SMaxOp, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+        if (LoC.isNonNegative() && HiC.isMask(VT.getScalarSizeInBits()) &&
+            HiC.uge(LoC))
+          return DAG.getNode(RISCVISD::SMAX_VL, DL, V.getValueType(), SMinOp,
+                             V.getOperand(1), DAG.getUNDEF(V.getValueType()),
+                             Mask, VL);
+
+    return SDValue();
+  };
+
+  auto DetectSSatPattern = [&](SDValue V) {
+    unsigned NumDstBits = VT.getScalarSizeInBits();
+    unsigned NumSrcBits = V.getScalarValueSizeInBits();
+    APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
+    APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
+
+    APInt HiC, LoC;
+    if (SDValue SMinOp = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+      if (SDValue SMaxOp =
+              MatchMinMax(SMinOp, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+        if (HiC == SignedMax && LoC == SignedMin)
+          return SMaxOp;
+
+    if (SDValue SMaxOp = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+      if (SDValue SMinOp =
+              MatchMinMax(SMaxOp, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+        if (HiC == SignedMax && LoC == SignedMin)
+          return SMinOp;
+
+    return SDValue();
+  };
+
+  SDValue Src = N->getOperand(0);
+
+  // Look through multiple layers of truncates.
+  while (Src.getOpcode() == RISCVISD::TRUNCATE_VECTOR_VL &&
+         Src.getOperand(1) == Mask && Src.getOperand(2) == VL &&
+         Src.hasOneUse())
+    Src = Src.getOperand(0);
+
+  SDValue Val;
+  unsigned ClipOpc;
+  if ((Val = DetectUSatPattern(Src)))
+    ClipOpc = RISCVISD::VNCLIPU_VL;
+  else if ((Val = DetectSSatPattern(Src)))
+    ClipOpc = RISCVISD::VNCLIP_VL;
+  else
+    return SDValue();
+
+  MVT ValVT = Val.getSimpleValueType();
+
+  do {
+    MVT ValEltVT = MVT::getIntegerVT(ValVT.getScalarSizeInBits() / 2);
+    ValVT = ValVT.changeVectorElementType(ValEltVT);
+    // Rounding mode here is arbitrary since we aren't shifting out any bits.
+    Val = DAG.getNode(
+        ClipOpc, DL, ValVT,
+        {Val, DAG.getConstant(0, DL, ValVT), DAG.getUNDEF(VT), Mask,
+         DAG.getTargetConstant(RISCVVXRndMode::RNU, DL, Subtarget.getXLenVT()),
+         VL});
+  } while (ValVT != VT);
+
+  return Val;
+}
 
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
@@ -16304,56 +16534,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       }
     }
     return SDValue();
-  case RISCVISD::TRUNCATE_VECTOR_VL: {
-    // trunc (sra sext (X), zext (Y)) -> sra (X, smin (Y, scalarsize(Y) - 1))
-    // This would be benefit for the cases where X and Y are both the same value
-    // type of low precision vectors. Since the truncate would be lowered into
-    // n-levels TRUNCATE_VECTOR_VL to satisfy RVV's SEW*2->SEW truncate
-    // restriction, such pattern would be expanded into a series of "vsetvli"
-    // and "vnsrl" instructions later to reach this point.
-    auto IsTruncNode = [](SDValue V) {
-      if (V.getOpcode() != RISCVISD::TRUNCATE_VECTOR_VL)
-        return false;
-      SDValue VL = V.getOperand(2);
-      auto *C = dyn_cast<ConstantSDNode>(VL);
-      // Assume all TRUNCATE_VECTOR_VL nodes use VLMAX for VMSET_VL operand
-      bool IsVLMAXForVMSET = (C && C->isAllOnes()) ||
-                             (isa<RegisterSDNode>(VL) &&
-                              cast<RegisterSDNode>(VL)->getReg() == RISCV::X0);
-      return V.getOperand(1).getOpcode() == RISCVISD::VMSET_VL &&
-             IsVLMAXForVMSET;
-    };
-
-    SDValue Op = N->getOperand(0);
-
-    // We need to first find the inner level of TRUNCATE_VECTOR_VL node
-    // to distinguish such pattern.
-    while (IsTruncNode(Op)) {
-      if (!Op.hasOneUse())
-        return SDValue();
-      Op = Op.getOperand(0);
-    }
-
-    if (Op.getOpcode() == ISD::SRA && Op.hasOneUse()) {
-      SDValue N0 = Op.getOperand(0);
-      SDValue N1 = Op.getOperand(1);
-      if (N0.getOpcode() == ISD::SIGN_EXTEND && N0.hasOneUse() &&
-          N1.getOpcode() == ISD::ZERO_EXTEND && N1.hasOneUse()) {
-        SDValue N00 = N0.getOperand(0);
-        SDValue N10 = N1.getOperand(0);
-        if (N00.getValueType().isVector() &&
-            N00.getValueType() == N10.getValueType() &&
-            N->getValueType(0) == N10.getValueType()) {
-          unsigned MaxShAmt = N10.getValueType().getScalarSizeInBits() - 1;
-          SDValue SMin = DAG.getNode(
-              ISD::SMIN, SDLoc(N1), N->getValueType(0), N10,
-              DAG.getConstant(MaxShAmt, SDLoc(N1), N->getValueType(0)));
-          return DAG.getNode(ISD::SRA, SDLoc(N), N->getValueType(0), N00, SMin);
-        }
-      }
-    }
-    break;
-  }
+  case RISCVISD::TRUNCATE_VECTOR_VL:
+    if (SDValue V = combineTruncOfSraSext(N, DAG))
+      return V;
+    return combineTruncToVnclip(N, DAG, Subtarget);
   case ISD::TRUNCATE:
     return performTRUNCATECombine(N, DAG, Subtarget);
   case ISD::SELECT:
@@ -19972,6 +20156,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(UADDSAT_VL)
   NODE_NAME_CASE(SSUBSAT_VL)
   NODE_NAME_CASE(USUBSAT_VL)
+  NODE_NAME_CASE(VNCLIP_VL)
+  NODE_NAME_CASE(VNCLIPU_VL)
   NODE_NAME_CASE(FADD_VL)
   NODE_NAME_CASE(FSUB_VL)
   NODE_NAME_CASE(FMUL_VL)

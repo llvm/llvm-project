@@ -181,6 +181,7 @@ std::string EVT::getEVTString() const {
   case MVT::Metadata:  return "Metadata";
   case MVT::Untyped:   return "Untyped";
   case MVT::funcref:   return "funcref";
+  case MVT::exnref:    return "exnref";
   case MVT::externref: return "externref";
   case MVT::aarch64svcount:
     return "aarch64svcount";

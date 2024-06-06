@@ -53,7 +53,6 @@ add_clang_library(clangTidyMiscModule
   genconfusable
   ClangDriverOptions
   )
-set_target_properties(clangTidyMiscModule PROPERTIES FOLDER "Clang Tools Extra/Libraries")
 
 clang_target_link_libraries(clangTidyMiscModule
   PRIVATE

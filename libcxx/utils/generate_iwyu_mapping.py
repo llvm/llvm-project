@@ -22,6 +22,8 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["bits"]
     elif header in ("__bit_reference", "__fwd/bit_reference.h"):
         return ["bitset", "vector"]
+    elif re.match("__configuration/.+", header) or header == "__config":
+        return ["version"]
     elif header == "__hash_table":
         return ["unordered_map", "unordered_set"]
     elif header == "__locale":

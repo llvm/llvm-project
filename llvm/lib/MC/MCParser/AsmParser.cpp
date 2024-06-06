@@ -2580,7 +2580,7 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
         OS << NumOfMacroInstantiations;
         Pos += 2;
       } else if (Argument == "+") {
-        OS << Macro.Count++;
+        OS << Macro.Count;
         Pos += 2;
       } else {
         for (; Index < NParameters; ++Index)
@@ -2629,6 +2629,7 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
     Body = Body.substr(Pos);
   }
 
+  ++Macro.Count;
   return false;
 }
 

@@ -15,7 +15,9 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
-#include "mlir/Tools/PDLL/AST/Types.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -37,6 +39,179 @@ public:
     rewriter.replaceOpWithNewOp<emitc::ConstantOp>(
         arithConst, arithConst.getType(), adaptor.getValue());
     return success();
+  }
+};
+
+/// Get the signed or unsigned type corresponding to \p ty.
+Type adaptIntegralTypeSignedness(Type ty, bool needsUnsigned) {
+  if (isa<IntegerType>(ty)) {
+    if (ty.isUnsignedInteger() != needsUnsigned) {
+      auto signedness = needsUnsigned
+                            ? IntegerType::SignednessSemantics::Unsigned
+                            : IntegerType::SignednessSemantics::Signed;
+      return IntegerType::get(ty.getContext(), ty.getIntOrFloatBitWidth(),
+                              signedness);
+    }
+  }
+  return ty;
+}
+
+/// Insert a cast operation to type \p ty if \p val does not have this type.
+Value adaptValueType(Value val, ConversionPatternRewriter &rewriter, Type ty) {
+  return rewriter.createOrFold<emitc::CastOp>(val.getLoc(), ty, val);
+}
+
+class CmpFOpConversion : public OpConversionPattern<arith::CmpFOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    if (!isa<FloatType>(adaptor.getRhs().getType())) {
+      return rewriter.notifyMatchFailure(op.getLoc(),
+                                         "cmpf currently only supported on "
+                                         "floats, not tensors/vectors thereof");
+    }
+
+    bool unordered = false;
+    emitc::CmpPredicate predicate;
+    switch (op.getPredicate()) {
+    case arith::CmpFPredicate::AlwaysFalse: {
+      auto constant = rewriter.create<emitc::ConstantOp>(
+          op.getLoc(), rewriter.getI1Type(),
+          rewriter.getBoolAttr(/*value=*/false));
+      rewriter.replaceOp(op, constant);
+      return success();
+    }
+    case arith::CmpFPredicate::OEQ:
+      unordered = false;
+      predicate = emitc::CmpPredicate::eq;
+      break;
+    case arith::CmpFPredicate::OGT:
+      unordered = false;
+      predicate = emitc::CmpPredicate::gt;
+      break;
+    case arith::CmpFPredicate::OGE:
+      unordered = false;
+      predicate = emitc::CmpPredicate::ge;
+      break;
+    case arith::CmpFPredicate::OLT:
+      unordered = false;
+      predicate = emitc::CmpPredicate::lt;
+      break;
+    case arith::CmpFPredicate::OLE:
+      unordered = false;
+      predicate = emitc::CmpPredicate::le;
+      break;
+    case arith::CmpFPredicate::ONE:
+      unordered = false;
+      predicate = emitc::CmpPredicate::ne;
+      break;
+    case arith::CmpFPredicate::ORD: {
+      // ordered, i.e. none of the operands is NaN
+      auto cmp = createCheckIsOrdered(rewriter, op.getLoc(), adaptor.getLhs(),
+                                      adaptor.getRhs());
+      rewriter.replaceOp(op, cmp);
+      return success();
+    }
+    case arith::CmpFPredicate::UEQ:
+      unordered = true;
+      predicate = emitc::CmpPredicate::eq;
+      break;
+    case arith::CmpFPredicate::UGT:
+      unordered = true;
+      predicate = emitc::CmpPredicate::gt;
+      break;
+    case arith::CmpFPredicate::UGE:
+      unordered = true;
+      predicate = emitc::CmpPredicate::ge;
+      break;
+    case arith::CmpFPredicate::ULT:
+      unordered = true;
+      predicate = emitc::CmpPredicate::lt;
+      break;
+    case arith::CmpFPredicate::ULE:
+      unordered = true;
+      predicate = emitc::CmpPredicate::le;
+      break;
+    case arith::CmpFPredicate::UNE:
+      unordered = true;
+      predicate = emitc::CmpPredicate::ne;
+      break;
+    case arith::CmpFPredicate::UNO: {
+      // unordered, i.e. either operand is nan
+      auto cmp = createCheckIsUnordered(rewriter, op.getLoc(), adaptor.getLhs(),
+                                        adaptor.getRhs());
+      rewriter.replaceOp(op, cmp);
+      return success();
+    }
+    case arith::CmpFPredicate::AlwaysTrue: {
+      auto constant = rewriter.create<emitc::ConstantOp>(
+          op.getLoc(), rewriter.getI1Type(),
+          rewriter.getBoolAttr(/*value=*/true));
+      rewriter.replaceOp(op, constant);
+      return success();
+    }
+    }
+
+    // Compare the values naively
+    auto cmpResult =
+        rewriter.create<emitc::CmpOp>(op.getLoc(), op.getType(), predicate,
+                                      adaptor.getLhs(), adaptor.getRhs());
+
+    // Adjust the results for unordered/ordered semantics
+    if (unordered) {
+      auto isUnordered = createCheckIsUnordered(
+          rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs());
+      rewriter.replaceOpWithNewOp<emitc::LogicalOrOp>(op, op.getType(),
+                                                      isUnordered, cmpResult);
+      return success();
+    }
+
+    auto isOrdered = createCheckIsOrdered(rewriter, op.getLoc(),
+                                          adaptor.getLhs(), adaptor.getRhs());
+    rewriter.replaceOpWithNewOp<emitc::LogicalAndOp>(op, op.getType(),
+                                                     isOrdered, cmpResult);
+    return success();
+  }
+
+private:
+  /// Return a value that is true if \p operand is NaN.
+  Value isNaN(ConversionPatternRewriter &rewriter, Location loc,
+              Value operand) const {
+    // A value is NaN exactly when it compares unequal to itself.
+    return rewriter.create<emitc::CmpOp>(
+        loc, rewriter.getI1Type(), emitc::CmpPredicate::ne, operand, operand);
+  }
+
+  /// Return a value that is true if \p operand is not NaN.
+  Value isNotNaN(ConversionPatternRewriter &rewriter, Location loc,
+                 Value operand) const {
+    // A value is not NaN exactly when it compares equal to itself.
+    return rewriter.create<emitc::CmpOp>(
+        loc, rewriter.getI1Type(), emitc::CmpPredicate::eq, operand, operand);
+  }
+
+  /// Return a value that is true if the operands \p first and \p second are
+  /// unordered (i.e., at least one of them is NaN).
+  Value createCheckIsUnordered(ConversionPatternRewriter &rewriter,
+                               Location loc, Value first, Value second) const {
+    auto firstIsNaN = isNaN(rewriter, loc, first);
+    auto secondIsNaN = isNaN(rewriter, loc, second);
+    return rewriter.create<emitc::LogicalOrOp>(loc, rewriter.getI1Type(),
+                                               firstIsNaN, secondIsNaN);
+  }
+
+  /// Return a value that is true if the operands \p first and \p second are
+  /// both ordered (i.e., none one of them is NaN).
+  Value createCheckIsOrdered(ConversionPatternRewriter &rewriter, Location loc,
+                             Value first, Value second) const {
+    auto firstIsNotNaN = isNotNaN(rewriter, loc, first);
+    auto secondIsNotNaN = isNotNaN(rewriter, loc, second);
+    return rewriter.create<emitc::LogicalAndOp>(loc, rewriter.getI1Type(),
+                                                firstIsNotNaN, secondIsNotNaN);
   }
 };
 
@@ -265,6 +440,46 @@ public:
   }
 };
 
+template <typename ArithOp, typename EmitCOp>
+class BitwiseOpConversion : public OpConversionPattern<ArithOp> {
+public:
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type type = this->getTypeConverter()->convertType(op.getType());
+    if (!isa_and_nonnull<IntegerType>(type)) {
+      return rewriter.notifyMatchFailure(
+          op,
+          "expected integer type, vector/tensor support not yet implemented");
+    }
+
+    // Bitwise ops can be performed directly on booleans
+    if (type.isInteger(1)) {
+      rewriter.replaceOpWithNewOp<EmitCOp>(op, type, adaptor.getLhs(),
+                                           adaptor.getRhs());
+      return success();
+    }
+
+    // Bitwise ops are defined by the C standard on unsigned operands.
+    Type arithmeticType =
+        adaptIntegralTypeSignedness(type, /*needsUnsigned=*/true);
+
+    Value lhs = adaptValueType(adaptor.getLhs(), rewriter, arithmeticType);
+    Value rhs = adaptValueType(adaptor.getRhs(), rewriter, arithmeticType);
+
+    Value arithmeticResult = rewriter.template create<EmitCOp>(
+        op.getLoc(), arithmeticType, lhs, rhs);
+
+    Value result = adaptValueType(arithmeticResult, rewriter, type);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 class SelectOpConversion : public OpConversionPattern<arith::SelectOp> {
 public:
   using OpConversionPattern<arith::SelectOp>::OpConversionPattern;
@@ -394,11 +609,17 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ArithConstantOpConversionPattern,
     ArithOpConversion<arith::AddFOp, emitc::AddOp>,
     ArithOpConversion<arith::DivFOp, emitc::DivOp>,
+    ArithOpConversion<arith::DivSIOp, emitc::DivOp>,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,
+    ArithOpConversion<arith::RemSIOp, emitc::RemOp>,
     ArithOpConversion<arith::SubFOp, emitc::SubOp>,
     IntegerOpConversion<arith::AddIOp, emitc::AddOp>,
     IntegerOpConversion<arith::MulIOp, emitc::MulOp>,
     IntegerOpConversion<arith::SubIOp, emitc::SubOp>,
+    BitwiseOpConversion<arith::AndIOp, emitc::BitwiseAndOp>,
+    BitwiseOpConversion<arith::OrIOp, emitc::BitwiseOrOp>,
+    BitwiseOpConversion<arith::XOrIOp, emitc::BitwiseXorOp>,
+    CmpFOpConversion,
     CmpIOpConversion,
     SelectOpConversion,
     // Truncation is guaranteed for unsigned types.
