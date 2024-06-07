@@ -71,9 +71,9 @@ define i1 @not_only_unreachable(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: @not_only_unreachable(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i64 [[A:%.*]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i64 0, label [[BB0:%.*]]
-; CHECK-NEXT:    i64 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i64 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i64 0, label [[BB0:%.*]]
+; CHECK-NEXT:      i64 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i64 2, label [[BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    call void @no_return()

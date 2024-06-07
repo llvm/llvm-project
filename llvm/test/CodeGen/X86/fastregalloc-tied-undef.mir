@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=x86_64-- -run-pass=regallocfast -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -passes=regallocfast -o - %s | FileCheck %s
 
 # If the tied use is undef value, fastregalloc should free the def register.
 # There is no reload needed for the undef value.

@@ -828,10 +828,10 @@ define void @v8f64interleave(i64 %0, ptr %1, ptr %x, double %z) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[Z:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x double>, ptr [[TMP1:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <16 x double> [[WIDE_VEC]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <16 x double> [[WIDE_VEC]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[X:%.*]], i64 [[TMP0:%.*]]
 ; CHECK-NEXT:    [[WIDE_VEC34:%.*]] = load <16 x double>, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd <16 x double> [[WIDE_VEC34]], [[TMP3]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <16 x double> [[WIDE_VEC34]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[TMP0]], 7
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 -56
@@ -937,5 +937,48 @@ define <4 x float> @fadd_mismatched_types(<4 x float> %x, <4 x float> %y) {
   ret <4 x float> %extshuf
 }
 
+define void @maximal_legal_fpmath(ptr %addr1, ptr %addr2, ptr %result, float %val) {
+; CHECK-LABEL: define void @maximal_legal_fpmath(
+; CHECK-SAME: ptr [[ADDR1:%.*]], ptr [[ADDR2:%.*]], ptr [[RESULT:%.*]], float [[VAL:%.*]]) {
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[VAL]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[SPLATINSERT]], <4 x float> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC1:%.*]] = load <16 x float>, ptr [[ADDR1]], align 4
+; CHECK-NEXT:    [[VEC2:%.*]] = load <16 x float>, ptr [[ADDR2]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <16 x float> [[TMP1]], [[VEC2]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd reassoc contract <16 x float> [[VEC1]], [[TMP2]]
+; CHECK-NEXT:    store <16 x float> [[INTERLEAVED_VEC]], ptr [[RESULT]], align 4
+; CHECK-NEXT:    ret void
+;
+  %splatinsert = insertelement <4 x float> poison, float %val, i64 0
+  %incoming.vec = shufflevector <4 x float> %splatinsert, <4 x float> poison, <4 x i32> zeroinitializer
+
+  %vec1 = load <16 x float>, ptr %addr1, align 4
+  %strided.vec1 = shufflevector <16 x float> %vec1, <16 x float> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+  %strided.vec2 = shufflevector <16 x float> %vec1, <16 x float> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+  %strided.vec3 = shufflevector <16 x float> %vec1, <16 x float> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+  %strided.vec4 = shufflevector <16 x float> %vec1, <16 x float> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+
+  %vec2 = load <16 x float>, ptr %addr2, align 4
+  %strided.vec6 = shufflevector <16 x float> %vec2, <16 x float> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+  %strided.vec7 = shufflevector <16 x float> %vec2, <16 x float> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+  %strided.vec8 = shufflevector <16 x float> %vec2, <16 x float> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+  %strided.vec9 = shufflevector <16 x float> %vec2, <16 x float> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+
+  %1 = fmul fast <4 x float> %incoming.vec, %strided.vec6
+  %2 = fadd fast <4 x float> %strided.vec1, %1
+  %3 = fmul contract <4 x float> %incoming.vec, %strided.vec7
+  %4 = fadd fast <4 x float> %strided.vec2, %3
+  %5 = fmul contract reassoc <4 x float> %incoming.vec, %strided.vec8
+  %6 = fadd fast <4 x float> %strided.vec3, %5
+  %7 = fmul contract reassoc <4 x float> %incoming.vec, %strided.vec9
+  %8 = fadd contract reassoc <4 x float> %strided.vec4, %7
+
+  %9 = shufflevector <4 x float> %2, <4 x float> %4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %10 = shufflevector <4 x float> %6, <4 x float> %8, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %interleaved.vec = shufflevector <8 x float> %9, <8 x float> %10, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+  store <16 x float> %interleaved.vec, ptr %result, align 4
+
+  ret void
+}
 
 declare void @use(<4 x i8>)

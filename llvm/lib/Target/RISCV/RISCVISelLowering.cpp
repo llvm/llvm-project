@@ -1102,6 +1102,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::EXTRACT_SUBVECTOR},
                            VT, Custom);
         setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+        if (Subtarget.hasStdExtZfbfmin()) {
+          if (Subtarget.hasVInstructionsF16())
+            setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+          else if (Subtarget.hasVInstructionsF16Minimal())
+            setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+        }
+        setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
+                           Custom);
+        setOperationAction(ISD::SELECT_CC, VT, Expand);
         // TODO: Promote to fp32.
       }
     }
@@ -1331,6 +1340,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::EXTRACT_SUBVECTOR},
                              VT, Custom);
           setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+          if (Subtarget.hasStdExtZfbfmin()) {
+            if (Subtarget.hasVInstructionsF16())
+              setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+            else if (Subtarget.hasVInstructionsF16Minimal())
+              setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          }
+          setOperationAction(
+              {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
+              Custom);
           // TODO: Promote to fp32.
           continue;
         }
@@ -1431,6 +1449,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setIndexedStoreAction(im, MVT::i64, Legal);
       }
     }
+  }
+
+  if (Subtarget.hasVendorXCVmem()) {
+    setIndexedLoadAction(ISD::POST_INC, MVT::i8, Legal);
+    setIndexedLoadAction(ISD::POST_INC, MVT::i16, Legal);
+    setIndexedLoadAction(ISD::POST_INC, MVT::i32, Legal);
+
+    setIndexedStoreAction(ISD::POST_INC, MVT::i8, Legal);
+    setIndexedStoreAction(ISD::POST_INC, MVT::i16, Legal);
+    setIndexedStoreAction(ISD::POST_INC, MVT::i32, Legal);
   }
 
   // Function alignments.
@@ -6704,10 +6732,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG, Subtarget);
   case ISD::SPLAT_VECTOR:
-    if (Op.getValueType().getScalarType() == MVT::f16 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16())) {
-      if (Op.getValueType() == MVT::nxv32f16)
+    if ((Op.getValueType().getScalarType() == MVT::f16 &&
+         (Subtarget.hasVInstructionsF16Minimal() &&
+          Subtarget.hasStdExtZfhminOrZhinxmin() &&
+          !Subtarget.hasVInstructionsF16())) ||
+        (Op.getValueType().getScalarType() == MVT::bf16 &&
+         (Subtarget.hasVInstructionsBF16() && Subtarget.hasStdExtZfbfmin() &&
+          Subtarget.hasVInstructionsF16Minimal() &&
+          !Subtarget.hasVInstructionsF16()))) {
+      if (Op.getValueType() == MVT::nxv32f16 ||
+          Op.getValueType() == MVT::nxv32bf16)
         return SplitVectorOp(Op, DAG);
       SDLoc DL(Op);
       SDValue NewScalar =
@@ -20909,6 +20943,26 @@ bool RISCVTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                      SDValue &Offset,
                                                      ISD::MemIndexedMode &AM,
                                                      SelectionDAG &DAG) const {
+  if (Subtarget.hasVendorXCVmem()) {
+    if (Op->getOpcode() != ISD::ADD)
+      return false;
+
+    if (LSBaseSDNode *LS = dyn_cast<LSBaseSDNode>(N))
+      Base = LS->getBasePtr();
+    else
+      return false;
+
+    if (Base == Op->getOperand(0))
+      Offset = Op->getOperand(1);
+    else if (Base == Op->getOperand(1))
+      Offset = Op->getOperand(0);
+    else
+      return false;
+
+    AM = ISD::POST_INC;
+    return true;
+  }
+
   EVT VT;
   SDValue Ptr;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {

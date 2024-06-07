@@ -1,4 +1,3 @@
-# REQUIRES: shell
 # Ensure that no realpath assumptions are made about .gnu_debuglink paths.
 
 # Copy inputs to some other location with arbitrary names, with the original

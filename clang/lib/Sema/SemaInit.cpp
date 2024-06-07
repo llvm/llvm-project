@@ -814,19 +814,13 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
 
   if (const RecordType *RType = ILE->getType()->getAs<RecordType>()) {
     const RecordDecl *RDecl = RType->getDecl();
-    if (RDecl->isUnion() && ILE->getInitializedFieldInUnion())
-      FillInEmptyInitForField(0, ILE->getInitializedFieldInUnion(),
-                              Entity, ILE, RequiresSecondPass, FillWithNoInit);
-    else if (RDecl->isUnion() && isa<CXXRecordDecl>(RDecl) &&
-             cast<CXXRecordDecl>(RDecl)->hasInClassInitializer()) {
-      for (auto *Field : RDecl->fields()) {
-        if (Field->hasInClassInitializer()) {
-          FillInEmptyInitForField(0, Field, Entity, ILE, RequiresSecondPass,
-                                  FillWithNoInit);
-          break;
-        }
-      }
+    if (RDecl->isUnion() && ILE->getInitializedFieldInUnion()) {
+      FillInEmptyInitForField(0, ILE->getInitializedFieldInUnion(), Entity, ILE,
+                              RequiresSecondPass, FillWithNoInit);
     } else {
+      assert((!RDecl->isUnion() || !isa<CXXRecordDecl>(RDecl) ||
+              !cast<CXXRecordDecl>(RDecl)->hasInClassInitializer()) &&
+             "We should have computed initialized fields already");
       // The fields beyond ILE->getNumInits() are default initialized, so in
       // order to leave them uninitialized, the ILE is expanded and the extra
       // fields are then filled with NoInitExpr.
@@ -2164,12 +2158,15 @@ void InitListChecker::CheckStructUnionTypes(
         return;
       for (RecordDecl::field_iterator FieldEnd = RD->field_end();
            Field != FieldEnd; ++Field) {
-        if (Field->hasInClassInitializer()) {
+        if (Field->hasInClassInitializer() ||
+            (Field->isAnonymousStructOrUnion() &&
+             Field->getType()->getAsCXXRecordDecl()->hasInClassInitializer())) {
           StructuredList->setInitializedFieldInUnion(*Field);
           // FIXME: Actually build a CXXDefaultInitExpr?
           return;
         }
       }
+      llvm_unreachable("Couldn't find in-class initializer");
     }
 
     // Value-initialize the first member of the union that isn't an unnamed
@@ -8066,6 +8063,11 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
 enum PathLifetimeKind {
   /// Lifetime-extend along this path.
   Extend,
+  /// We should lifetime-extend, but we don't because (due to technical
+  /// limitations) we can't. This happens for default member initializers,
+  /// which we don't clone for every use, so we don't have a unique
+  /// MaterializeTemporaryExpr to update.
+  ShouldExtend,
   /// Do not lifetime extend along this path.
   NoExtend
 };
@@ -8077,7 +8079,7 @@ shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
   PathLifetimeKind Kind = PathLifetimeKind::Extend;
   for (auto Elem : Path) {
     if (Elem.Kind == IndirectLocalPathEntry::DefaultInit)
-      Kind = PathLifetimeKind::Extend;
+      Kind = PathLifetimeKind::ShouldExtend;
     else if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
       return PathLifetimeKind::NoExtend;
   }
@@ -8197,6 +8199,18 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
                               ExtendingEntity->allocateManglingNumber());
         // Also visit the temporaries lifetime-extended by this initializer.
         return true;
+
+      case PathLifetimeKind::ShouldExtend:
+        // We're supposed to lifetime-extend the temporary along this path (per
+        // the resolution of DR1815), but we don't support that yet.
+        //
+        // FIXME: Properly handle this situation. Perhaps the easiest approach
+        // would be to clone the initializer expression on each use that would
+        // lifetime extend its temporaries.
+        Diag(DiagLoc, diag::warn_unsupported_lifetime_extension)
+            << RK << DiagRange;
+        break;
+
       case PathLifetimeKind::NoExtend:
         // If the path goes through the initialization of a variable or field,
         // it can't possibly reach a temporary created in this full-expression.
