@@ -79,6 +79,73 @@ private:
   int64_t targetRank = 1;
 };
 
+/// A one-shot unrolling of vector.deinterleave to the `targetRank`.
+///
+/// Example:
+///
+/// ```mlir
+/// %0, %1 = vector.deinterleave %a : vector<1x2x3x8xi64> -> vector<1x2x3x4xi64>
+/// ```
+/// Would be unrolled to:
+/// ```mlir
+/// %result = arith.constant dense<0> : vector<1x2x3x4xi64>
+/// %0 = vector.extract %a[0, 0, 0]                  ─┐
+///        : vector<8xi64> from vector<1x2x3x8xi64>   |
+/// %1, %2 = vector.deinterleave %0                   |
+///        : vector<8xi64> -> vector<4xi64>           | -- Initial deinterleave
+/// %3 = vector.insert %1, %result [0, 0, 0]          |    operation unrolled.
+///        : vector<4xi64> into vector<1x2x3x4xi64>   |
+/// %4 = vector.insert %2, %result [0, 0, 0]          |
+///        : vector<4xi64> into vector<1x2x3x4xi64>   ┘
+/// %5 = vector.extract %a[0, 0, 1]                  ─┐
+///        : vector<8xi64> from vector<1x2x3x8xi64>   |
+/// %6, %7 = vector.deinterleave %5                   |
+///        : vector<8xi64> -> vector<4xi64>           | -- Recursive pattern for
+/// %8 = vector.insert %6, %3 [0, 0, 1]               |    subsequent unrolled
+///        : vector<4xi64> into vector<1x2x3x4xi64>   |    deinterleave
+/// %9 = vector.insert %7, %4 [0, 0, 1]               |    operations. Repeated
+///        : vector<4xi64> into vector<1x2x3x4xi64>   ┘    5x in this case.
+/// ```
+///
+/// Note: If any leading dimension before the `targetRank` is scalable the
+/// unrolling will stop before the scalable dimension.
+class UnrollDeinterleaveOp final
+    : public OpRewritePattern<vector::DeinterleaveOp> {
+public:
+  UnrollDeinterleaveOp(int64_t targetRank, MLIRContext *context,
+                       PatternBenefit benefit = 1)
+      : OpRewritePattern(context, benefit), targetRank(targetRank) {};
+
+  LogicalResult matchAndRewrite(vector::DeinterleaveOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType resultType = op.getResultVectorType();
+    auto unrollIterator = vector::createUnrollIterator(resultType, targetRank);
+    if (!unrollIterator)
+      return failure();
+
+    auto loc = op.getLoc();
+    Value emptyResult = rewriter.create<arith::ConstantOp>(
+        loc, resultType, rewriter.getZeroAttr(resultType));
+    Value evenResult = emptyResult;
+    Value oddResult = emptyResult;
+
+    for (auto position : *unrollIterator) {
+      auto extractSrc =
+          rewriter.create<vector::ExtractOp>(loc, op.getSource(), position);
+      auto deinterleave =
+          rewriter.create<vector::DeinterleaveOp>(loc, extractSrc);
+      evenResult = rewriter.create<vector::InsertOp>(
+          loc, deinterleave.getRes1(), evenResult, position);
+      oddResult = rewriter.create<vector::InsertOp>(loc, deinterleave.getRes2(),
+                                                    oddResult, position);
+    }
+    rewriter.replaceOp(op, ValueRange{evenResult, oddResult});
+    return success();
+  }
+
+private:
+  int64_t targetRank = 1;
+};
 /// Rewrite vector.interleave op into an equivalent vector.shuffle op, when
 /// applicable: `sourceType` must be 1D and non-scalable.
 ///
@@ -116,7 +183,8 @@ struct InterleaveToShuffle final : OpRewritePattern<vector::InterleaveOp> {
 
 void mlir::vector::populateVectorInterleaveLoweringPatterns(
     RewritePatternSet &patterns, int64_t targetRank, PatternBenefit benefit) {
-  patterns.add<UnrollInterleaveOp>(targetRank, patterns.getContext(), benefit);
+  patterns.add<UnrollInterleaveOp, UnrollDeinterleaveOp>(
+      targetRank, patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateVectorInterleaveToShufflePatterns(

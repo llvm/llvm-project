@@ -359,7 +359,6 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
            "std::pair<unsigned, unsigned>", /*default=*/"std::pair<unsigned, unsigned>{}",
            "vector scale range">,
   ];
-  let constructor = "::fir::createVScaleAttrPass()";
 }
 
 def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
