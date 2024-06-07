@@ -1,9 +1,17 @@
 # REQUIRES: amdgpu-registered-target
 # RUN: llc -mtriple=amdgcn --passes='regallocfast<filter=sgpr>' --print-pipeline-passes %s | FileCheck %s --check-prefix=PASS
 # RUN: not llc -mtriple=amdgcn --passes='regallocfast<filter=bad-filter>' --print-pipeline-passes --filetype=null %s 2>&1 | FileCheck %s --check-prefix=BAD-FILTER
+# RUN: llc -mtriple=amdgcn-- -enable-new-pm -print-pipeline-passes --filetype=null -O0 %s | FileCheck %s --check-prefix=DEFAULT-O0-REG-ALLOC
+# RUN: llc -mtriple=amdgcn-- --regalloc-npm='regallocfast<filter=sgpr>' -enable-new-pm -print-pipeline-passes --filetype=null -O0 %s | FileCheck %s --check-prefix=REG-ALLOC-NPM
 
 # PASS: regallocfast<filter=sgpr>
 # BAD-FILTER: invalid regallocfast register filter 'bad-filter'
+
+# DEFAULT-O0-REG-ALLOC: regallocfast<filter=sgpr;no-clear-vregs>
+# DEFAULT-O0-REG-ALLOC: regallocfast<filter=vgpr>
+
+# REG-ALLOC-NPM: regallocfast<filter=sgpr>
+# REG-ALLOC-NPM: regallocfast<filter=vgpr>
 
 ---
 name: f

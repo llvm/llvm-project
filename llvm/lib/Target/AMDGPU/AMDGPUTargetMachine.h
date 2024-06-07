@@ -56,7 +56,7 @@ public:
                              raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
                              const CGPassBuilderOption &Opts,
-                             PassInstrumentationCallbacks *PIC) override;
+                             PassBuilder &PB) override;
 
   void registerPassBuilderCallbacks(PassBuilder &PB,
                                     bool PopulateClassToPassNames) override;

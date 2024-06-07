@@ -20,12 +20,12 @@ class AMDGPUCodeGenPassBuilder
     : public CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, AMDGPUTargetMachine> {
 public:
   AMDGPUCodeGenPassBuilder(AMDGPUTargetMachine &TM,
-                           const CGPassBuilderOption &Opts,
-                           PassInstrumentationCallbacks *PIC);
+                           const CGPassBuilderOption &Opts, PassBuilder &PB);
 
   void addPreISel(AddIRPass &addPass) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
   Error addInstSelector(AddMachinePass &) const;
+  Error addRegAssignmentFast(AddMachinePass &addPass) const;
 };
 
 } // namespace llvm

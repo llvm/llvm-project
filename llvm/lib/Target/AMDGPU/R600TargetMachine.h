@@ -42,7 +42,7 @@ public:
                              raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
                              const CGPassBuilderOption &Opt,
-                             PassInstrumentationCallbacks *PIC) override;
+                             PassBuilder &PB) override;
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override;
 

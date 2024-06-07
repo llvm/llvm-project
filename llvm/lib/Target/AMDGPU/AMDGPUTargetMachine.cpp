@@ -46,6 +46,7 @@
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -650,11 +651,13 @@ parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
   return make_error<StringError>("invalid parameter", inconvertibleErrorCode());
 }
 
-Error AMDGPUTargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC) {
-  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
+Error AMDGPUTargetMachine::buildCodeGenPipeline(ModulePassManager &MPM,
+                                                raw_pwrite_stream &Out,
+                                                raw_pwrite_stream *DwoOut,
+                                                CodeGenFileType FileType,
+                                                const CGPassBuilderOption &Opts,
+                                                PassBuilder &PB) {
+  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PB);
   return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
 
@@ -748,6 +751,30 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(
         if (FilterName == "vgpr")
           return onlyAllocateVGPRs;
         return nullptr;
+      });
+
+  PB.setDefaultRegAllocBuilder(
+      [TM = this](StringMap<MachineFunctionPassManager> &RegAllocMap) {
+        auto Opts = getCGPassBuilderOption();
+        if (Opts.OptimizeRegAlloc.value_or(TM->getOptLevel() !=
+                                           CodeGenOptLevel::None)) {
+          // TODO: Add greedy register allocator.
+        } else {
+          RegAllocFastPassOptions Opts;
+          Opts.Filter = onlyAllocateSGPRs;
+          Opts.FilterName = "sgpr";
+          Opts.ClearVRegs = false;
+          MachineFunctionPassManager MFPM;
+          MFPM.addPass(RegAllocFastPass(Opts));
+          RegAllocMap["sgpr"] = std::move(MFPM);
+
+          Opts.Filter = onlyAllocateVGPRs;
+          Opts.FilterName = "vgpr";
+          Opts.ClearVRegs = true;
+          MFPM = MachineFunctionPassManager();
+          MFPM.addPass(RegAllocFastPass(Opts));
+          RegAllocMap["vgpr"] = std::move(MFPM);
+        }
       });
 }
 

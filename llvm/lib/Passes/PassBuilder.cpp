@@ -409,13 +409,33 @@ public:
 
 } // namespace
 
+static void defaultRegAllocBuilder(TargetMachine *TM,
+                                   StringMap<MachineFunctionPassManager> &M) {
+  if (!TM)
+    return;
+
+  MachineFunctionPassManager MFPM;
+  auto Opts = getCGPassBuilderOption();
+  if (Opts.OptimizeRegAlloc.value_or(TM->getOptLevel() !=
+                                     CodeGenOptLevel::None)) {
+    // TODO: Add greedy register allocator.
+  } else {
+    MFPM.addPass(RegAllocFastPass());
+  }
+  M["all"] = std::move(MFPM);
+}
+
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC)
     : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
   bool ShouldPopulateClassToPassNames = PIC && shouldPopulateClassToPassNames();
-  if (TM)
+  if (TM) {
+    DefaultRegAllocBuilder = [TM](StringMap<MachineFunctionPassManager> &M) {
+      defaultRegAllocBuilder(TM, M);
+    };
     TM->registerPassBuilderCallbacks(*this, ShouldPopulateClassToPassNames);
+  }
   if (ShouldPopulateClassToPassNames) {
 #define MODULE_PASS(NAME, CREATE_PASS)                                         \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
@@ -2219,6 +2239,18 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   return Error::success();
 }
 
+static StringRef getFilterName(StringRef PassName) {
+  PassName = PassName.drop_until([](char C) { return C == '<'; });
+  StringRef Params = PassName.drop_front().drop_back();
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+    if (ParamName.consume_front("filter="))
+      return ParamName;
+  }
+  return "all";
+}
+
 RegClassFilterFunc PassBuilder::parseRegAllocFilter(StringRef FilterName) {
   if (FilterName == "all")
     return allocateAllRegClasses;
@@ -2226,6 +2258,45 @@ RegClassFilterFunc PassBuilder::parseRegAllocFilter(StringRef FilterName) {
     if (auto F = C(FilterName))
       return F;
   return nullptr;
+}
+
+Error PassBuilder::parseRegAllocOpt(StringRef Text) {
+  assert(TM && "Need target machine to parse this option!");
+  if (RegAllocMap.empty())
+    DefaultRegAllocBuilder(RegAllocMap);
+
+  MachineFunctionPassManager MFPM;
+  if (Text == "default") {
+    // Add nothing when target inserts "none" into the map.
+    if (RegAllocMap.contains("none"))
+      RegAllocMap["all"] = MachineFunctionPassManager();
+    return Error::success();
+  }
+
+  if (RegAllocMap.contains("none")) {
+    return make_error<StringError>(
+        "Target doesn't support register allocation!",
+        inconvertibleErrorCode());
+  }
+
+  bool IsOptimized = TM->getOptLevel() != CodeGenOptLevel::None;
+  while (!Text.empty()) {
+    StringRef PassName;
+    std::tie(PassName, Text) = Text.split(',');
+    if (!IsOptimized &&
+        !PassBuilder::checkParametrizedPassName(PassName, "regallocfast")) {
+      return make_error<StringError>(
+          "Must use fast (default) register allocator for "
+          "unoptimized regalloc.",
+          inconvertibleErrorCode());
+    }
+    // FIXME: Should only accept reg-alloc passes.
+    if (auto Err = parsePassPipeline(MFPM, PassName))
+      return Err;
+    RegAllocMap[getFilterName(PassName)] = std::move(MFPM);
+    MFPM = MachineFunctionPassManager();
+  }
+  return Error::success();
 }
 
 static void printPassName(StringRef PassName, raw_ostream &OS) {

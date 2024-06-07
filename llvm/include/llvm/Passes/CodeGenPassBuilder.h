@@ -59,10 +59,12 @@
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/CFGuard.h"
@@ -116,9 +118,8 @@ namespace llvm {
 template <typename DerivedT, typename TargetMachineT> class CodeGenPassBuilder {
 public:
   explicit CodeGenPassBuilder(TargetMachineT &TM,
-                              const CGPassBuilderOption &Opts,
-                              PassInstrumentationCallbacks *PIC)
-      : TM(TM), Opt(Opts), PIC(PIC) {
+                              const CGPassBuilderOption &Opts, PassBuilder &PB)
+      : TM(TM), Opt(Opts), PB(PB), PIC(PB.getPassInstrumentationCallbacks()) {
     // Target could set CGPassBuilderOption::MISchedPostRA to true to achieve
     //     substitutePass(&PostRASchedulerID, &PostMachineSchedulerID)
 
@@ -253,6 +254,7 @@ protected:
 
   TargetMachineT &TM;
   CGPassBuilderOption Opt;
+  PassBuilder &PB;
   PassInstrumentationCallbacks *PIC;
 
   template <typename TMC> TMC &getTM() const { return static_cast<TMC &>(TM); }
@@ -453,13 +455,9 @@ protected:
   /// Utilities for targets to add passes to the pass manager.
   ///
 
-  /// createTargetRegisterAllocator - Create the register allocator pass for
-  /// this target at the current optimization level.
-  void addTargetRegisterAllocator(AddMachinePass &, bool Optimized) const;
-
   /// addMachinePasses helper to create the target-selected or overriden
   /// regalloc pass.
-  void addRegAllocPass(AddMachinePass &, bool Optimized) const;
+  Error addRegAllocPass(AddMachinePass &, StringRef FilterName = "all") const;
 
   /// Add core register alloator passes which do the actual register assignment
   /// and rewriting. \returns true if any passes were added.
@@ -520,6 +518,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   if (!StartStopInfo)
     return StartStopInfo.takeError();
   setStartStopPasses(*StartStopInfo);
+
+  if (auto Err = PB.parseRegAllocOpt(Opt.RegAlloc))
+    return Err;
 
   bool PrintAsm = TargetPassConfig::willCompleteCodeGenPipeline();
   bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
@@ -1025,45 +1026,40 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineSSAOptimization(
 /// Register Allocation Pass Configuration
 //===---------------------------------------------------------------------===//
 
-/// Instantiate the default register allocator pass for this target for either
-/// the optimized or unoptimized allocation path. This will be added to the pass
-/// manager by addFastRegAlloc in the unoptimized case or addOptimizedRegAlloc
-/// in the optimized case.
-///
-/// A target that uses the standard regalloc pass order for fast or optimized
-/// allocation may still override this for per-target regalloc
-/// selection. But -regalloc=... always takes precedence.
-template <typename Derived, typename TargetMachineT>
-void CodeGenPassBuilder<Derived, TargetMachineT>::addTargetRegisterAllocator(
-    AddMachinePass &addPass, bool Optimized) const {
-  if (Optimized)
-    addPass(RAGreedyPass());
-  else
-    addPass(RegAllocFastPass());
-}
-
 /// Find and instantiate the register allocation pass requested by this target
 /// at the current optimization level.  Different register allocators are
 /// defined as separate passes because they may require different analysis.
 template <typename Derived, typename TargetMachineT>
-void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
-    AddMachinePass &addPass, bool Optimized) const {
-  // TODO: Parse Opt.RegAlloc to add register allocator.
+Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
+    AddMachinePass &addPass, StringRef FilterName) const {
+  auto &RegAllocMap = PB.getRegAllocMap();
+  if (RegAllocMap.contains("none"))
+    return Error::success();
+
+  if (!RegAllocMap.contains(FilterName)) {
+    return make_error<StringError>(
+        formatv("No register allocator for register class filter '{0}'",
+                FilterName)
+            .str(),
+        inconvertibleErrorCode());
+  }
+
+  addPass(std::move(RegAllocMap[FilterName]));
+  return Error::success();
 }
 
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentFast(
     AddMachinePass &addPass) const {
-  // TODO: Ensure allocator is default or fast.
-  addRegAllocPass(addPass, false);
-  return Error::success();
+  return addRegAllocPass(addPass);
 }
 
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentOptimized(
     AddMachinePass &addPass) const {
   // Add the selected register allocation pass.
-  addRegAllocPass(addPass, true);
+  if (auto Err = addRegAllocPass(addPass))
+    return Err;
 
   // Allow targets to change the register assignments before rewriting.
   derived().addPreRewrite(addPass);

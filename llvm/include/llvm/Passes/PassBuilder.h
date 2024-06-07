@@ -107,6 +107,7 @@ class PassBuilder {
   PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;
   PassInstrumentationCallbacks *PIC;
+  StringMap<MachineFunctionPassManager> RegAllocMap;
 
 public:
   /// A struct to capture parsed pass pipeline names.
@@ -582,10 +583,26 @@ public:
 
   /// Register callbacks to parse target specific filter field if regalloc pass
   /// needs it. E.g. AMDGPU requires regalloc passes can handle sgpr and vgpr
-  /// separately.
+  /// separately. Currently "all" and "none" are preserved filter name.
   void registerRegClassFilterParsingCallback(
       const std::function<RegClassFilterFunc(StringRef)> &C) {
     RegClassFilterParsingCallbacks.push_back(C);
+  }
+
+  /// Parse command line option `--regalloc-npm`
+  /// Should only be called by CodeGenPassBuilder.
+  Error parseRegAllocOpt(StringRef Text);
+
+  /// Target hook to set default regalloc.
+  void setDefaultRegAllocBuilder(
+      const std::function<void(StringMap<MachineFunctionPassManager> &)> &C) {
+    DefaultRegAllocBuilder = C;
+  }
+
+  /// Used by CodeGenPassBuilder to add correct regalloc pass.
+  /// Should only be called by CodeGenPassBuilder.
+  StringMap<MachineFunctionPassManager> &getRegAllocMap() {
+    return RegAllocMap;
   }
 
   /// Register a callback for a top-level pipeline entry.
@@ -807,6 +824,8 @@ private:
   // Callbacks to parse `filter` parameter in register allocation passes
   SmallVector<std::function<RegClassFilterFunc(StringRef)>, 2>
       RegClassFilterParsingCallbacks;
+  std::function<void(StringMap<MachineFunctionPassManager> &)>
+      DefaultRegAllocBuilder;
 };
 
 /// This utility template takes care of adding require<> and invalidate<>

@@ -11,10 +11,10 @@
 
 using namespace llvm;
 
-R600CodeGenPassBuilder::R600CodeGenPassBuilder(
-    R600TargetMachine &TM, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC)
-    : CodeGenPassBuilder(TM, Opts, PIC) {
+R600CodeGenPassBuilder::R600CodeGenPassBuilder(R600TargetMachine &TM,
+                                               const CGPassBuilderOption &Opts,
+                                               PassBuilder &PB)
+    : CodeGenPassBuilder(TM, Opts, PB) {
   Opt.RequiresCodeGenSCCOrder = true;
 }
 
