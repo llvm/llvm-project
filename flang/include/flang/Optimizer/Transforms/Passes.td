@@ -163,7 +163,6 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   let description = [{
     Demangle FIR internal name and mangle them for external interoperability.
   }];
-  let constructor = "::fir::createExternalNameConversionPass()";
   let options = [
     Option<"appendUnderscoreOpt", "append-underscore",
            "bool", /*default=*/"true",
@@ -337,14 +336,12 @@ def OMPMapInfoFinalizationPass
 def OMPMarkDeclareTargetPass
     : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
   let summary = "Marks all functions called by an OpenMP declare target function as declare target";
-  let constructor = "::fir::createOMPMarkDeclareTargetPass()";
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
 def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
   let summary = "Filters out functions intended for the host when compiling "
                 "for the target device.";
-  let constructor = "::fir::createOMPFunctionFilteringPass()";
   let dependentDialects = [
     "mlir::func::FuncDialect",
     "fir::FIROpsDialect"
@@ -362,7 +359,6 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
            "std::pair<unsigned, unsigned>", /*default=*/"std::pair<unsigned, unsigned>{}",
            "vector scale range">,
   ];
-  let constructor = "::fir::createVScaleAttrPass()";
 }
 
 def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {

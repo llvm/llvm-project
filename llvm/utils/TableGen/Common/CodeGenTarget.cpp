@@ -250,7 +250,7 @@ std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R) const {
 
   // Remove duplicates.
   llvm::sort(Result);
-  Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
+  Result.erase(llvm::unique(Result), Result.end());
   return Result;
 }
 
@@ -260,9 +260,7 @@ void CodeGenTarget::ReadLegalValueTypes() const {
 
   // Remove duplicates.
   llvm::sort(LegalValueTypes);
-  LegalValueTypes.erase(
-      std::unique(LegalValueTypes.begin(), LegalValueTypes.end()),
-      LegalValueTypes.end());
+  LegalValueTypes.erase(llvm::unique(LegalValueTypes), LegalValueTypes.end());
 }
 
 CodeGenSchedModels &CodeGenTarget::getSchedModels() const {

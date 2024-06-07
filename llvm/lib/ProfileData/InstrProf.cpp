@@ -1176,16 +1176,6 @@ void ValueProfData::deserializeTo(InstrProfRecord &Record,
   }
 }
 
-template <class T>
-static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
-  using namespace support;
-
-  if (Orig == llvm::endianness::little)
-    return endian::readNext<T, llvm::endianness::little>(D);
-  else
-    return endian::readNext<T, llvm::endianness::big>(D);
-}
-
 static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
   return std::unique_ptr<ValueProfData>(new (::operator new(TotalSize))
                                             ValueProfData());
@@ -1224,7 +1214,8 @@ ValueProfData::getValueProfData(const unsigned char *D,
     return make_error<InstrProfError>(instrprof_error::truncated);
 
   const unsigned char *Header = D;
-  uint32_t TotalSize = swapToHostOrder<uint32_t>(Header, Endianness);
+  uint32_t TotalSize = endian::readNext<uint32_t>(Header, Endianness);
+
   if (D + TotalSize > BufferEnd)
     return make_error<InstrProfError>(instrprof_error::too_large);
 

@@ -863,22 +863,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       if (CI2->isMinusOne())
         return C2; // X | -1 == -1
       break;
-    case Instruction::Xor:
-      if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
-        switch (CE1->getOpcode()) {
-        default:
-          break;
-        case Instruction::ICmp:
-        case Instruction::FCmp:
-          // cmp pred ^ true -> cmp !pred
-          assert(CI2->isOne());
-          CmpInst::Predicate pred = (CmpInst::Predicate)CE1->getPredicate();
-          pred = CmpInst::getInversePredicate(pred);
-          return ConstantExpr::getCompare(pred, CE1->getOperand(0),
-                                          CE1->getOperand(1));
-        }
-      }
-      break;
     }
   } else if (isa<ConstantInt>(C1)) {
     // If C1 is a ConstantInt and C2 is not, swap the operands.
@@ -1432,16 +1416,64 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
   if (GEP->getInRange())
     return nullptr;
 
-  // Only handle simple case with leading zero index. We cannot perform an
-  // actual addition as we don't know the correct index type size to use.
   Constant *Idx0 = cast<Constant>(Idxs[0]);
-  if (!Idx0->isNullValue())
+  if (Idx0->isNullValue()) {
+    // Handle the simple case of a zero index.
+    SmallVector<Value*, 16> NewIndices;
+    NewIndices.reserve(Idxs.size() + GEP->getNumIndices());
+    NewIndices.append(GEP->idx_begin(), GEP->idx_end());
+    NewIndices.append(Idxs.begin() + 1, Idxs.end());
+    return ConstantExpr::getGetElementPtr(
+        GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
+        NewIndices, InBounds && GEP->isInBounds());
+  }
+
+  gep_type_iterator LastI = gep_type_end(GEP);
+  for (gep_type_iterator I = gep_type_begin(GEP), E = gep_type_end(GEP);
+       I != E; ++I)
+    LastI = I;
+
+  // We can't combine GEPs if the last index is a struct type.
+  if (!LastI.isSequential())
+    return nullptr;
+  // We could perform the transform with non-constant index, but prefer leaving
+  // it as GEP of GEP rather than GEP of add for now.
+  ConstantInt *CI = dyn_cast<ConstantInt>(Idx0);
+  if (!CI)
+    return nullptr;
+
+  // TODO: This code may be extended to handle vectors as well.
+  auto *LastIdx = cast<Constant>(GEP->getOperand(GEP->getNumOperands()-1));
+  Type *LastIdxTy = LastIdx->getType();
+  if (LastIdxTy->isVectorTy())
     return nullptr;
 
   SmallVector<Value*, 16> NewIndices;
   NewIndices.reserve(Idxs.size() + GEP->getNumIndices());
-  NewIndices.append(GEP->idx_begin(), GEP->idx_end());
+  NewIndices.append(GEP->idx_begin(), GEP->idx_end() - 1);
+
+  // Add the last index of the source with the first index of the new GEP.
+  // Make sure to handle the case when they are actually different types.
+  if (LastIdxTy != Idx0->getType()) {
+    unsigned CommonExtendedWidth =
+        std::max(LastIdxTy->getIntegerBitWidth(),
+                 Idx0->getType()->getIntegerBitWidth());
+    CommonExtendedWidth = std::max(CommonExtendedWidth, 64U);
+
+    Type *CommonTy =
+        Type::getIntNTy(LastIdxTy->getContext(), CommonExtendedWidth);
+    if (Idx0->getType() != CommonTy)
+      Idx0 = ConstantFoldCastInstruction(Instruction::SExt, Idx0, CommonTy);
+    if (LastIdx->getType() != CommonTy)
+      LastIdx =
+          ConstantFoldCastInstruction(Instruction::SExt, LastIdx, CommonTy);
+    if (!Idx0 || !LastIdx)
+      return nullptr;
+  }
+
+  NewIndices.push_back(ConstantExpr::get(Instruction::Add, Idx0, LastIdx));
   NewIndices.append(Idxs.begin() + 1, Idxs.end());
+
   return ConstantExpr::getGetElementPtr(
       GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
       NewIndices, InBounds && GEP->isInBounds());

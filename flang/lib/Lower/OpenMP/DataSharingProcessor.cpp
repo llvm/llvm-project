@@ -139,7 +139,7 @@ void DataSharingProcessor::collectOmpObjectListSymbol(
     const omp::ObjectList &objects,
     llvm::SetVector<const semantics::Symbol *> &symbolSet) {
   for (const omp::Object &object : objects)
-    symbolSet.insert(object.id());
+    symbolSet.insert(object.sym());
 }
 
 void DataSharingProcessor::collectSymbolsForPrivatization() {

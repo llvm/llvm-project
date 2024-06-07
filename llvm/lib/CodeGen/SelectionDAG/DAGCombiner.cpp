@@ -170,15 +170,10 @@ namespace {
     /// back and when processing we pop off of the back.
     ///
     /// The worklist will not contain duplicates but may contain null entries
-    /// due to nodes being deleted from the underlying DAG.
+    /// due to nodes being deleted from the underlying DAG. For fast lookup and
+    /// deduplication, the index of the node in this vector is stored in the
+    /// node in SDNode::CombinerWorklistIndex.
     SmallVector<SDNode *, 64> Worklist;
-
-    /// Mapping from an SDNode to its position on the worklist.
-    ///
-    /// This is used to find and remove nodes from the worklist (by nulling
-    /// them) when they are deleted from the underlying DAG. It relies on
-    /// stable indices of nodes within the worklist.
-    DenseMap<SDNode *, unsigned> WorklistMap;
 
     /// This records all nodes attempted to be added to the worklist since we
     /// considered a new worklist entry. As we keep do not add duplicate nodes
@@ -238,10 +233,9 @@ namespace {
       }
 
       if (N) {
-        bool GoodWorklistEntry = WorklistMap.erase(N);
-        (void)GoodWorklistEntry;
-        assert(GoodWorklistEntry &&
+        assert(N->getCombinerWorklistIndex() >= 0 &&
                "Found a worklist entry without a corresponding map entry!");
+        N->setCombinerWorklistIndex(-1);
       }
       return N;
     }
@@ -285,8 +279,10 @@ namespace {
       if (IsCandidateForPruning)
         ConsiderForPruning(N);
 
-      if (WorklistMap.insert(std::make_pair(N, Worklist.size())).second)
+      if (N->getCombinerWorklistIndex() == -1) {
+        N->setCombinerWorklistIndex(Worklist.size());
         Worklist.push_back(N);
+      }
     }
 
     /// Remove all instances of N from the worklist.
@@ -295,13 +291,13 @@ namespace {
       PruningList.remove(N);
       StoreRootCountMap.erase(N);
 
-      auto It = WorklistMap.find(N);
-      if (It == WorklistMap.end())
+      int WorklistIndex = N->getCombinerWorklistIndex();
+      if (WorklistIndex == -1)
         return; // Not in the worklist.
 
       // Null out the entry rather than erasing it to avoid a linear operation.
-      Worklist[It->second] = nullptr;
-      WorklistMap.erase(It);
+      Worklist[WorklistIndex] = nullptr;
+      N->setCombinerWorklistIndex(-1);
     }
 
     void deleteAndRecombine(SDNode *N);
@@ -4045,17 +4041,11 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::ADD, DL, VT, N0, SExt);
   }
 
-  // fold Y = sra (X, size(X)-1); sub (xor (X, Y), Y) -> (abs X)
-  if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
-    if (N0.getOpcode() == ISD::XOR && N1.getOpcode() == ISD::SRA) {
-      SDValue X0 = N0.getOperand(0), X1 = N0.getOperand(1);
-      SDValue S0 = N1.getOperand(0);
-      if ((X0 == S0 && X1 == N1) || (X0 == N1 && X1 == S0))
-        if (ConstantSDNode *C = isConstOrConstSplat(N1.getOperand(1)))
-          if (C->getAPIntValue() == (BitWidth - 1))
-            return DAG.getNode(ISD::ABS, DL, VT, S0);
-    }
-  }
+  // fold B = sra (A, size(A)-1); sub (xor (A, B), B) -> (abs A)
+  if ((!LegalOperations || hasOperation(ISD::ABS, VT)) &&
+      sd_match(N1, m_Sra(m_Value(A), m_SpecificInt(BitWidth - 1))) &&
+      sd_match(N0, m_Xor(m_Specific(A), m_Specific(N1))))
+    return DAG.getNode(ISD::ABS, DL, VT, A);
 
   // If the relocation model supports it, consider symbol offsets.
   if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N0))
@@ -9536,7 +9526,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   }
 
   // fold Y = sra (X, size(X)-1); xor (add (X, Y), Y) -> (abs X)
-  if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
+  if (!LegalOperations || hasOperation(ISD::ABS, VT)) {
     SDValue A = N0Opcode == ISD::ADD ? N0 : N1;
     SDValue S = N0Opcode == ISD::SRA ? N0 : N1;
     if (A.getOpcode() == ISD::ADD && S.getOpcode() == ISD::SRA) {
@@ -10120,13 +10110,16 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
 
   // fold (shl X, cttz(Y)) -> (mul (Y & -Y), X) if cttz is unsupported on the
   // target.
-  if ((N1.getOpcode() == ISD::CTTZ || N1.getOpcode() == ISD::CTTZ_ZERO_UNDEF) &&
-      N1.hasOneUse() && !TLI.isOperationLegalOrCustom(ISD::CTTZ, VT) &&
+  if (((N1.getOpcode() == ISD::CTTZ &&
+        VT.getScalarSizeInBits() >= ShiftVT.getScalarSizeInBits()) ||
+       N1.getOpcode() == ISD::CTTZ_ZERO_UNDEF) &&
+      N1.hasOneUse() && !TLI.isOperationLegalOrCustom(ISD::CTTZ, ShiftVT) &&
       TLI.isOperationLegalOrCustom(ISD::MUL, VT)) {
     SDValue Y = N1.getOperand(0);
     SDLoc DL(N);
-    SDValue NegY = DAG.getNegative(Y, DL, VT);
-    SDValue And = DAG.getNode(ISD::AND, DL, VT, Y, NegY);
+    SDValue NegY = DAG.getNegative(Y, DL, ShiftVT);
+    SDValue And =
+        DAG.getZExtOrTrunc(DAG.getNode(ISD::AND, DL, ShiftVT, Y, NegY), DL, VT);
     return DAG.getNode(ISD::MUL, DL, VT, And, N0);
   }
 
@@ -15816,8 +15809,6 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
-  bool CanReassociate =
-      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
   bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
                               Options.UnsafeFPMath || HasFMAD);
   // If the addition is not contractable, do not combine.
@@ -15877,6 +15868,8 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   // fadd (G, (fma A, B, (fma (C, D, (fmul (E, F)))))) -->
   // fma A, B, (fma C, D, fma (E, F, G)).
   // This requires reassociation because it changes the order of operations.
+  bool CanReassociate =
+      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
   if (CanReassociate) {
     SDValue FMA, E;
     if (isFusedOp(N0) && N0.hasOneUse()) {
@@ -17033,9 +17026,6 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
   MatchContextClass matcher(DAG, TLI, N);
 
-  bool CanReassociate =
-      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
-
   // Constant fold FMA.
   if (isa<ConstantFPSDNode>(N0) &&
       isa<ConstantFPSDNode>(N1) &&
@@ -17078,6 +17068,8 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
      !DAG.isConstantFPBuildVectorOrConstantFP(N1))
     return matcher.getNode(ISD::FMA, SDLoc(N), VT, N1, N0, N2);
 
+  bool CanReassociate =
+      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
   if (CanReassociate) {
     // (fma x, c1, (fmul x, c2)) -> (fmul x, c1+c2)
     if (matcher.match(N2, ISD::FMUL) && N0 == N2.getOperand(0) &&

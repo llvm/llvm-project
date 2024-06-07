@@ -1181,10 +1181,10 @@ void UnwrappedLineParser::parsePPDefine() {
   Line->InMacroBody = true;
 
   if (Style.SkipMacroDefinitionBody) {
-    do {
+    while (!eof()) {
       FormatTok->Finalized = true;
-      nextToken();
-    } while (!eof());
+      FormatTok = Tokens->getNextToken();
+    }
     addUnwrappedLine();
     return;
   }
@@ -2236,7 +2236,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
   bool InTemplateParameterList = false;
 
   while (FormatTok->isNot(tok::l_brace)) {
-    if (FormatTok->isTypeName(LangOpts)) {
+    if (FormatTok->isTypeName(LangOpts) || FormatTok->isAttribute()) {
       nextToken();
       continue;
     }
@@ -3993,8 +3993,10 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     case tok::coloncolon:
       break;
     default:
-      if (!ClassName && Previous->is(tok::identifier))
+      if (!ClassName && Previous->is(tok::identifier) &&
+          Previous->isNot(TT_AttributeMacro)) {
         ClassName = Previous;
+      }
     }
   }
 

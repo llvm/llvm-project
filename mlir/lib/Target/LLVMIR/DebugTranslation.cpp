@@ -182,6 +182,15 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*Flags=*/llvm::DINode::FlagZero, translate(attr.getExtraData()));
 }
 
+llvm::DIStringType *DebugTranslation::translateImpl(DIStringTypeAttr attr) {
+  return llvm::DIStringType::get(
+      llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
+      translate(attr.getStringLength()),
+      getExpressionAttrOrNull(attr.getStringLengthExp()),
+      getExpressionAttrOrNull(attr.getStringLocationExp()),
+      attr.getSizeInBits(), attr.getAlignInBits(), attr.getEncoding());
+}
+
 llvm::DIFile *DebugTranslation::translateImpl(DIFileAttr attr) {
   return llvm::DIFile::get(llvmCtx, getMDStringOrNull(attr.getName()),
                            getMDStringOrNull(attr.getDirectory()));
@@ -208,6 +217,10 @@ DebugTranslation::translateImpl(DILexicalBlockFileAttr attr) {
 
 llvm::DILocalScope *DebugTranslation::translateImpl(DILocalScopeAttr attr) {
   return cast<llvm::DILocalScope>(translate(DINodeAttr(attr)));
+}
+
+llvm::DIVariable *DebugTranslation::translateImpl(DIVariableAttr attr) {
+  return cast<llvm::DIVariable>(translate(DINodeAttr(attr)));
 }
 
 llvm::DILocalVariable *
@@ -314,11 +327,27 @@ llvm::DINamespace *DebugTranslation::translateImpl(DINamespaceAttr attr) {
 }
 
 llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
-  auto getMetadataOrNull = [&](IntegerAttr attr) -> llvm::Metadata * {
+  auto getMetadataOrNull = [&](Attribute attr) -> llvm::Metadata * {
     if (!attr)
       return nullptr;
-    return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
-        llvm::Type::getInt64Ty(llvmCtx), attr.getInt()));
+
+    llvm::Metadata *metadata =
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(attr)
+            .Case([&](IntegerAttr intAttr) {
+              return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+                  llvm::Type::getInt64Ty(llvmCtx), intAttr.getInt()));
+            })
+            .Case([&](LLVM::DIExpressionAttr expr) {
+              return translateExpression(expr);
+            })
+            .Case([&](LLVM::DILocalVariableAttr local) {
+              return translate(local);
+            })
+            .Case<>([&](LLVM::DIGlobalVariableAttr global) {
+              return translate(global);
+            })
+            .Default([&](Attribute attr) { return nullptr; });
+    return metadata;
   };
   return llvm::DISubrange::get(llvmCtx, getMetadataOrNull(attr.getCount()),
                                getMetadataOrNull(attr.getLowerBound()),
@@ -361,8 +390,8 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
                      DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
                      DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
                      DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
-                     DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
-                     DISubroutineTypeAttr>(
+                     DINullTypeAttr, DIStringTypeAttr, DISubprogramAttr,
+                     DISubrangeAttr, DISubroutineTypeAttr>(
                    [&](auto attr) { return translateImpl(attr); });
 
   if (node && !node->isTemporary())
