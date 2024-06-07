@@ -220,7 +220,7 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
         MIB.setInsertPt(*MI->getParent(), MI);
         const GlobalValue *Global = MI->getOperand(1).getGlobal();
         Type *ElementTy = GR->getDeducedGlobalValueType(Global);
-        auto *Ty = TypedPointerType::get(ElementTy,
+        auto *Ty = TypedPointerType::get(toTypedPointer(ElementTy),
                                          Global->getType()->getAddressSpace());
         SpirvTy = GR->getOrCreateSPIRVType(Ty, MIB);
         break;

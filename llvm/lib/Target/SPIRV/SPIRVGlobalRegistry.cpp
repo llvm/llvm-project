@@ -743,7 +743,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(const StructType *Ty,
   SmallVector<Register, 4> FieldTypes;
   for (const auto &Elem : Ty->elements()) {
     SPIRVType *ElemTy =
-        findSPIRVType(toTypedPointer(Elem, Ty->getContext()), MIRBuilder);
+        findSPIRVType(toTypedPointer(Elem), MIRBuilder);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
            "Invalid struct element type");
     FieldTypes.push_back(getSPIRVTypeID(ElemTy));
