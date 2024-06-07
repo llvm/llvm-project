@@ -649,7 +649,9 @@ private:
   /// Return a pointer to the specified value type.
   static const EVT *getValueTypeList(EVT VT);
 
-  /// Index in worklist of DAGCombiner, or -1.
+  /// Index in worklist of DAGCombiner, or negative if the node is not in the
+  /// worklist. -1 = not in worklist; -2 = not in worklist, but has already been
+  /// combined at least once.
   int CombinerWorklistIndex = -1;
 
   uint32_t CFIType = 0;

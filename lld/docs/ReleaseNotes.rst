@@ -47,6 +47,7 @@ ELF Improvements
 * ``--force-group-allocation`` is implemented to discard ``SHT_GROUP`` sections
   and combine relocation sections if their relocated section group members are
   placed to the same output section.
+  (`#94704 <https://github.com/llvm/llvm-project/pull/94704>`_)
 
 Breaking changes
 ----------------

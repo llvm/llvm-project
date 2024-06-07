@@ -41,6 +41,7 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
                                             bool ConvertResultToRValue) {
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue;
+  this->CheckFullyInitialized = isa<ConstantExpr>(E);
   EvalResult.setSource(E);
 
   if (!this->visitExpr(E)) {
@@ -175,6 +176,10 @@ bool EvalEmitter::emitRetVoid(const SourceInfo &Info) {
 
 bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
+
+  if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+
   if (std::optional<APValue> APV = Ptr.toRValue(S.getCtx())) {
     EvalResult.setValue(*APV);
     return true;
