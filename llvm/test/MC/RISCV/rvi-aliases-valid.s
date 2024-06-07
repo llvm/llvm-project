@@ -198,7 +198,7 @@ jr (x27)
 jalr (x28)
 # CHECK-S-OBJ-NOALIAS: jalr t4, 0(t5)
 # CHECK-S-OBJ: jalr t4, t5
-jalr x29, x30
+jalr x29, (x30)
 
 # TODO call
 # TODO tail
