@@ -24,6 +24,7 @@
 #include "llvm/Support/GenericDomTreeConstruction.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 
 namespace llvm {
 class AnalysisUsage;
@@ -72,7 +73,6 @@ extern template bool Verify<MBBDomTree>(const MBBDomTree &DT,
 /// compute a normal dominator tree.
 ///
 class MachineDominatorTree : public DomTreeBase<MachineBasicBlock> {
-  friend class MachineDominatorTreeWrapperPass;
   /// Helper structure used to hold all the basic blocks
   /// involved in the split of a critical edge.
   struct CriticalEdge {
@@ -265,16 +265,17 @@ public:
 
 /// \brief Analysis pass which computes a \c MachineDominatorTree.
 class MachineDominatorTreeWrapperPass : public MachineFunctionPass {
-  MachineDominatorTree DT;
-  bool IsDomTreeEmpty = true;
+  // MachineFunctionPass may verify the analysis result without running pass,
+  // e.g. when `F.hasAvailableExternallyLinkage` is true.
+  std::optional<MachineDominatorTree> DT;
 
 public:
   static char ID;
 
   MachineDominatorTreeWrapperPass();
 
-  MachineDominatorTree &getDomTree() { return DT; }
-  const MachineDominatorTree &getDomTree() const { return DT; }
+  MachineDominatorTree &getDomTree() { return *DT; }
+  const MachineDominatorTree &getDomTree() const { return *DT; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

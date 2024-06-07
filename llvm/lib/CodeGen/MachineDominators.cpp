@@ -67,35 +67,31 @@ MachineDominatorTreeWrapperPass::MachineDominatorTreeWrapperPass()
       *PassRegistry::getPassRegistry());
 }
 
-char &llvm::MachineDominatorsID = MachineDominatorTreeWrapperPass::ID;
-
-bool MachineDominatorTreeWrapperPass::runOnMachineFunction(MachineFunction &F) {
-  IsDomTreeEmpty = false;
-  DT.calculate(F);
-  return false;
-}
-
 void MachineDominatorTree::calculate(MachineFunction &F) {
   CriticalEdgesToSplit.clear();
   NewBBs.clear();
   recalculate(F);
 }
 
-void MachineDominatorTreeWrapperPass::releaseMemory() {
-  DT.CriticalEdgesToSplit.clear();
-  DT.reset();
-  IsDomTreeEmpty = true;
+char &llvm::MachineDominatorsID = MachineDominatorTreeWrapperPass::ID;
+
+bool MachineDominatorTreeWrapperPass::runOnMachineFunction(MachineFunction &F) {
+  DT = MachineDominatorTree(F);
+  return false;
 }
 
+void MachineDominatorTreeWrapperPass::releaseMemory() { DT.reset(); }
+
 void MachineDominatorTreeWrapperPass::verifyAnalysis() const {
-  if (VerifyMachineDomInfo && !IsDomTreeEmpty)
-    if (!DT.verify(MachineDominatorTree::VerificationLevel::Basic))
+  if (VerifyMachineDomInfo && DT)
+    if (!DT->verify(MachineDominatorTree::VerificationLevel::Basic))
       report_fatal_error("MachineDominatorTree verification failed!");
 }
 
 void MachineDominatorTreeWrapperPass::print(raw_ostream &OS,
                                             const Module *) const {
-  DT.print(OS);
+  if (DT)
+    DT->print(OS);
 }
 
 void MachineDominatorTree::applySplitCriticalEdges() const {
@@ -148,7 +144,6 @@ void MachineDominatorTree::applySplitCriticalEdges() const {
 
   // Now, update DT with the collected dominance properties info.
   Idx = 0;
-  dbgs() << "critical Edge to split: " << CriticalEdgesToSplit.size();
   for (CriticalEdge &Edge : CriticalEdgesToSplit) {
     // We know FromBB dominates NewBB.
     MachineDomTreeNode *NewDTNode =
