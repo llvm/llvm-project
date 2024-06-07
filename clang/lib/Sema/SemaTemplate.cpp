@@ -2236,14 +2236,16 @@ public:
 
   TypeSourceInfo *transform(TypeSourceInfo *TSI) { return TransformType(TSI); }
 
+  /// Returns true if it's safe to substitute \p Typedef with
+  /// \p OuterInstantiationArgs.
   bool mightReferToOuterTemplateParameters(TypedefNameDecl *Typedef) {
     if (!NestedPattern)
       return false;
 
     static auto WalkUp = [](DeclContext *DC, DeclContext *TargetDC) {
-      if (DC == TargetDC)
+      if (DC->Equals(TargetDC))
         return true;
-      while (!DC->isTranslationUnit()) {
+      while (DC->isRecord()) {
         if (DC->Equals(TargetDC))
           return true;
         DC = DC->getParent();
