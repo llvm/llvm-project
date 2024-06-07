@@ -9419,6 +9419,17 @@ def : Pat<(v16i8 (add (AArch64uzp1 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)),
                       (AArch64uzp2 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)))),
           (v16i8 (ADDPv16i8 $Rn, $Rm))>;
 
+def : Pat<(v2f64 (fadd (AArch64zip1 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)),
+                       (AArch64zip2 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)))),
+          (v2f64 (FADDPv2f64 $Rn, $Rm))>;
+def : Pat<(v4f32 (fadd (AArch64uzp1 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)),
+                       (AArch64uzp2 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)))),
+          (v4f32 (FADDPv4f32 $Rn, $Rm))>;
+let Predicates = [HasFullFP16] in
+def : Pat<(v8f16 (fadd (AArch64uzp1 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)),
+                       (AArch64uzp2 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)))),
+          (v8f16 (FADDPv8f16 $Rn, $Rm))>;
+
 // Scalar 64-bit shifts in FPR64 registers.
 def : Pat<(i64 (int_aarch64_neon_sshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
           (SSHLv1i64 FPR64:$Rn, FPR64:$Rm)>;
