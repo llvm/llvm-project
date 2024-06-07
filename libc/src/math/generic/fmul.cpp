@@ -201,20 +201,19 @@ float fmul(double x, double y) {
 
   uint32_t exp16 = sr | (dm1 << 23);
 
-    constexpr uint32_t FLOAT32_MANTISSA_MASK =
-        0b00000000011111111111111111111111;
-    uint32_t m2 = static_cast<uint32_t>(m) & FLOAT32_MANTISSA_MASK;
+  constexpr uint32_t FLOAT32_MANTISSA_MASK = 0b00000000011111111111111111111111;
+  uint32_t m2 = static_cast<uint32_t>(m) & FLOAT32_MANTISSA_MASK;
 
-    uint32_t result =
-        (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
+  uint32_t result =
+      (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
 
-    // float result16 = cpp::bit_cast<float>(result);
+  // float result16 = cpp::bit_cast<float>(result);
 
-    // return result16;
+  // return result16;
 
-    float result32 = cpp::bit_cast<float>(result);
+  float result32 = cpp::bit_cast<float>(result);
 
-    return result32;
+  return result32;
 }
 } // namespace Fmul
 
