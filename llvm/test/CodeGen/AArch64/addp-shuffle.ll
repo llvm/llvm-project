@@ -76,9 +76,7 @@ define <4 x i64> @deinterleave_shuffle_v8i64(<8 x i64> %a) {
 define <4 x float> @deinterleave_shuffle_v8f32(<8 x float> %a) {
 ; CHECK-LABEL: deinterleave_shuffle_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    fadd v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    faddp v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %r1 = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -89,9 +87,7 @@ define <4 x float> @deinterleave_shuffle_v8f32(<8 x float> %a) {
 define <4 x float> @deinterleave_shuffle_v8f32_c(<8 x float> %a) {
 ; CHECK-LABEL: deinterleave_shuffle_v8f32_c:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    faddp v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %r1 = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -116,9 +112,7 @@ define <8 x half> @deinterleave_shuffle_v16f16(<16 x half> %a) {
 ;
 ; CHECK-FP16-LABEL: deinterleave_shuffle_v16f16:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    uzp1 v2.8h, v0.8h, v1.8h
-; CHECK-FP16-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
-; CHECK-FP16-NEXT:    fadd v0.8h, v2.8h, v0.8h
+; CHECK-FP16-NEXT:    faddp v0.8h, v0.8h, v1.8h
 ; CHECK-FP16-NEXT:    ret
   %r0 = shufflevector <16 x half> %a, <16 x half> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %r1 = shufflevector <16 x half> %a, <16 x half> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -129,12 +123,9 @@ define <8 x half> @deinterleave_shuffle_v16f16(<16 x half> %a) {
 define <4 x double> @deinterleave_shuffle_v8f64(<8 x double> %a) {
 ; CHECK-LABEL: deinterleave_shuffle_v8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v4.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip1 v5.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    fadd v1.2d, v4.2d, v2.2d
-; CHECK-NEXT:    fadd v0.2d, v5.2d, v0.2d
+; CHECK-NEXT:    faddp v2.2d, v2.2d, v3.2d
+; CHECK-NEXT:    faddp v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <8 x double> %a, <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %r1 = shufflevector <8 x double> %a, <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>

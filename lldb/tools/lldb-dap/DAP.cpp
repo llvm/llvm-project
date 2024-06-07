@@ -32,7 +32,14 @@ namespace lldb_dap {
 DAP g_dap;
 
 DAP::DAP()
-    : broadcaster("lldb-dap"), exception_breakpoints(),
+    : broadcaster("lldb-dap"),
+      exception_breakpoints(
+          {{"cpp_catch", "C++ Catch", lldb::eLanguageTypeC_plus_plus},
+           {"cpp_throw", "C++ Throw", lldb::eLanguageTypeC_plus_plus},
+           {"objc_catch", "Objective-C Catch", lldb::eLanguageTypeObjC},
+           {"objc_throw", "Objective-C Throw", lldb::eLanguageTypeObjC},
+           {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
+           {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
@@ -58,51 +65,8 @@ DAP::DAP()
 
 DAP::~DAP() = default;
 
-void DAP::PopulateExceptionBreakpoints() {
-  llvm::call_once(initExceptionBreakpoints, [this]() {
-    exception_breakpoints = {};
-    if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
-      exception_breakpoints->emplace_back("cpp_catch", "C++ Catch",
-                                          lldb::eLanguageTypeC_plus_plus);
-      exception_breakpoints->emplace_back("cpp_throw", "C++ Throw",
-                                          lldb::eLanguageTypeC_plus_plus);
-    }
-    if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeObjC)) {
-      exception_breakpoints->emplace_back("objc_catch", "Objective-C Catch",
-                                          lldb::eLanguageTypeObjC);
-      exception_breakpoints->emplace_back("objc_throw", "Objective-C Throw",
-                                          lldb::eLanguageTypeObjC);
-    }
-    if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeSwift)) {
-      exception_breakpoints->emplace_back("swift_catch", "Swift Catch",
-                                          lldb::eLanguageTypeSwift);
-      exception_breakpoints->emplace_back("swift_throw", "Swift Throw",
-                                          lldb::eLanguageTypeSwift);
-    }
-  });
-}
-
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
-  // PopulateExceptionBreakpoints() is called after g_dap.debugger is created
-  // in a request-initialize.
-  //
-  // But this GetExceptionBreakpoint() method may be called before attaching, in
-  // which case, we may not have populated the filter yet.
-  //
-  // We also cannot call PopulateExceptionBreakpoints() in DAP::DAP() because
-  // we need SBDebugger::Initialize() to have been called before this.
-  //
-  // So just calling PopulateExceptionBreakoints(),which does lazy-populating
-  // seems easiest. Two other options include:
-  //  + call g_dap.PopulateExceptionBreakpoints() in lldb-dap.cpp::main()
-  //    right after the call to SBDebugger::Initialize()
-  //  + Just call PopulateExceptionBreakpoints() to get a fresh list  everytime
-  //    we query (a bit overkill since it's not likely to change?)
-  PopulateExceptionBreakpoints();
-  assert(exception_breakpoints.has_value() &&
-         "exception_breakpoints must have been populated");
-
-  for (auto &bp : *exception_breakpoints) {
+  for (auto &bp : exception_breakpoints) {
     if (bp.filter == filter)
       return &bp;
   }
@@ -110,12 +74,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
-  // See comment in the other GetExceptionBreakpoint().
-  PopulateExceptionBreakpoints();
-  assert(exception_breakpoints.has_value() &&
-         "exception_breakpoints must have been populated");
-
-  for (auto &bp : *exception_breakpoints) {
+  for (auto &bp : exception_breakpoints) {
     if (bp.bp.GetID() == bp_id)
       return &bp;
   }
