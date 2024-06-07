@@ -81,11 +81,11 @@ static llvm::cl::list<std::string> UserStylesheets(
     llvm::cl::desc("CSS stylesheets to extend the default styles."),
     llvm::cl::cat(ClangDocCategory));
 
-static llvm::cl::opt<std::string>
-    UserAssetPath("asset",
-                  llvm::cl::desc("User supplied asset path to "
-                                 "override the default css and js files for html output"),
-                  llvm::cl::cat(ClangDocCategory));
+static llvm::cl::opt<std::string> UserAssetPath(
+    "asset",
+    llvm::cl::desc("User supplied asset path to "
+                   "override the default css and js files for html output"),
+    llvm::cl::cat(ClangDocCategory));
 
 static llvm::cl::opt<std::string> SourceRoot("source-root", llvm::cl::desc(R"(
 Directory where processed files are stored.
@@ -144,7 +144,7 @@ llvm::Error GetAssetFiles(clang::doc::ClangDocContext &CDCtx) {
        !Code && DirIt != DirEnd; DirIt.increment(Code)) {
     llvm::SmallString<128> FilePath = llvm::SmallString<128>(DirIt->path());
     if (!Code) {
-        return llvm::createFileError(FilePath, Code);
+      return llvm::createFileError(FilePath, Code);
     }
     if (llvm::sys::fs::is_regular_file(FilePath)) {
       if (llvm::sys::path::extension(FilePath) == ".css") {
@@ -158,7 +158,7 @@ llvm::Error GetAssetFiles(clang::doc::ClangDocContext &CDCtx) {
 }
 
 llvm::Error GetDefaultAssetFiles(const char *Argv0,
-                          clang::doc::ClangDocContext &CDCtx) {
+                                 clang::doc::ClangDocContext &CDCtx) {
   void *MainAddr = (void *)(intptr_t)GetExecutablePath;
   std::string ClangDocPath = GetExecutablePath(Argv0, MainAddr);
   llvm::SmallString<128> NativeClangDocPath;
@@ -177,32 +177,37 @@ llvm::Error GetDefaultAssetFiles(const char *Argv0,
 
   if (!llvm::sys::fs::is_regular_file(IndexJS)) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "error default index.js file at " + IndexJS + "\n");
+                                   "error default index.js file at " + IndexJS +
+                                       "\n");
   }
 
   if (!llvm::sys::fs::is_regular_file(DefaultStylesheet)) {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "error default clang-doc-default-stylesheet.css file at " + DefaultStylesheet + "\n");
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "error default clang-doc-default-stylesheet.css file at " +
+            DefaultStylesheet + "\n");
   }
 
   CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
                                std::string(DefaultStylesheet));
   CDCtx.FilesToCopy.emplace_back(IndexJS.str());
 
-  llvm::outs() << "Using default asset: "
-               << AssetsPath << "\n";
+  llvm::outs() << "Using default asset: " << AssetsPath << "\n";
 
   return llvm::Error::success();
 }
 
-llvm::Error GetHTMLAssetFiles(const char *Argv0, clang::doc::ClangDocContext &CDCtx) {
-    if (!UserAssetPath.empty() && !llvm::sys::fs::is_directory(std::string(UserAssetPath))) {
-        llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath << " falling back to default\n";
-    }
-    if (llvm::sys::fs::is_directory(std::string(UserAssetPath))) {
-        return GetAssetFiles(CDCtx);
-    }
-    return GetDefaultAssetFiles(Argv0, CDCtx);
+llvm::Error GetHTMLAssetFiles(const char *Argv0,
+                              clang::doc::ClangDocContext &CDCtx) {
+  if (!UserAssetPath.empty() &&
+      !llvm::sys::fs::is_directory(std::string(UserAssetPath))) {
+    llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
+                 << " falling back to default\n";
+  }
+  if (llvm::sys::fs::is_directory(std::string(UserAssetPath))) {
+    return GetAssetFiles(CDCtx);
+  }
+  return GetDefaultAssetFiles(Argv0, CDCtx);
 }
 
 int main(int argc, const char **argv) {
@@ -256,11 +261,11 @@ Example usage for a project using a compile commands database:
       {"index.js", "index_json.js"}};
 
   if (Format == "html") {
-      auto Err = GetHTMLAssetFiles(argv[0], CDCtx);
-      if (Err) {
-          llvm::errs() << toString(std::move(Err)) << "\n";
-    return 1;
-  }
+    auto Err = GetHTMLAssetFiles(argv[0], CDCtx);
+    if (Err) {
+      llvm::errs() << toString(std::move(Err)) << "\n";
+      return 1;
+    }
   }
 
   // Mapping phase
