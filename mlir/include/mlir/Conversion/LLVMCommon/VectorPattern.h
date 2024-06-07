@@ -10,6 +10,7 @@
 #define MLIR_CONVERSION_LLVMCOMMON_VECTORPATTERN_H
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
@@ -98,6 +99,15 @@ public:
     static_assert(
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
+
+    // Check if the operation is remove the fastMathAttr on ExtFOp  / TruncFOp.
+    if (isa<arith::ExtFOp>(op.getOperation()) ||
+        isa<arith::TruncFOp>(op.getOperation())) {
+      if (op->hasAttr("fastmath")) {
+        op->removeAttr("fastmath");
+      }
+    }
+
     // Determine attributes for the target op
     AttrConvert<SourceOp, TargetOp> attrConvert(op);
 
