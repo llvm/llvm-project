@@ -4738,7 +4738,6 @@ void UnwrappedLineParser::distributeComments(
   // the two lines about b form a maximal trail, so there are two sections, the
   // first one consisting of the single comment "// line about a" and the
   // second one consisting of the next two comments.
-
   if (Comments.empty())
     return;
   bool ShouldPushCommentsInCurrentLine = true;
@@ -4835,9 +4834,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         Line->Level += PPBranchLevel;
       }
 
-      if (!UnBracedBodyDepth) {
+      if (!UnBracedBodyDepth)
         flushComments(isOnNewLine(*FormatTok));
-      }
 
       parsePPDirective();
       PreviousWasComment = FormatTok->is(tok::comment);

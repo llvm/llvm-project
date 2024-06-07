@@ -796,22 +796,42 @@ TEST_F(FormatTestComments, ParsesCommentsAdjacentToPPDirectives) {
             format("namespace {}\n   /* Test */    #define A"));
 }
 
-
 TEST_F(FormatTestComments, DeIdentsCommentBeforeIfdefAfterBracelessIf) {
-  EXPECT_EQ("void f() {\n"
-            "  if (true)\n"
-            "    int i;\n"
-            "  /* comment */\n"
-            "#ifdef A\n"
-            "  int j;\n"
-            "}",
-            format("void f() {\n"
-                   "  if (true)\n"
-                   "    int i;\n"
-                   "    /* comment */\n"
-                   "#ifdef A\n"
-                   "  int j;\n"
-                   "}"));
+  verifyFormat("void f() {\n"
+               "  if (true)\n"
+               "    int i;\n"
+               "  /* comment */\n"
+               "#ifdef A\n"
+               "  int j;\n"
+               "#endif\n"
+               "}",
+               "void f() {\n"
+               "  if (true)\n"
+               "    int i;\n"
+               "    /* comment */\n"
+               "#ifdef A\n"
+               "  int j;\n"
+               "#endif\n"
+               "}");
+
+  verifyFormat("void f() {\n"
+               "  if (true)\n"
+               "    int i;\n"
+               "  /* comment */\n"
+               "\n"
+               "#ifdef A\n"
+               "  int j;\n"
+               "#endif\n"
+               "}",
+               "void f() {\n"
+               "  if (true)\n"
+               "    int i;\n"
+               "    /* comment */\n"
+               "\n"
+               "#ifdef A\n"
+               "  int j;\n"
+               "#endif\n"
+               "}");
 }
 
 TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
