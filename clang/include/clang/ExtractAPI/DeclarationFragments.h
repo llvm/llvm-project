@@ -199,7 +199,8 @@ public:
     return *this;
   }
 
-  DeclarationFragments &replace(std::string NewSpelling, unsigned Position) {
+  DeclarationFragments &replace(const std::string &NewSpelling,
+                                unsigned Position) {
     Fragments.at(Position).Spelling = NewSpelling;
     return *this;
   }
@@ -240,7 +241,7 @@ private:
 
 class AccessControl {
 public:
-  AccessControl(std::string Access) : Access(Access) {}
+  AccessControl(const std::string &Access) : Access(Access) {}
   AccessControl() : Access("public") {}
 
   const std::string &getAccess() const { return Access; }
@@ -262,7 +263,7 @@ public:
     std::string Name;
     DeclarationFragments Fragments;
 
-    Parameter(StringRef Name, DeclarationFragments Fragments)
+    Parameter(StringRef Name, const DeclarationFragments &Fragments)
         : Name(Name), Fragments(Fragments) {}
   };
 
@@ -275,7 +276,7 @@ public:
     return *this;
   }
 
-  void setReturnType(DeclarationFragments RT) { ReturnType = RT; }
+  void setReturnType(const DeclarationFragments &RT) { ReturnType = RT; }
 
   /// Determine if the FunctionSignature is empty.
   ///
