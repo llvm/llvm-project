@@ -43,9 +43,7 @@ class SDWAOperand;
 class SDWADstOperand;
 
 using SDWAOperandsVector = SmallVector<SDWAOperand *, 4>;
-
-// helper typedef to make code cleaner
-typedef MapVector<MachineInstr *, SDWAOperandsVector> SDWAOperandsMap;
+using SDWAOperandsMap = MapVector<MachineInstr *, SDWAOperandsVector>;
 
 class SIPeepholeSDWA : public MachineFunctionPass {
 private:
@@ -347,13 +345,14 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
       return nullptr;
     }
 
-    for (MachineOperand &UseMO : getMRI()->use_nodbg_operands(Reg->getReg())) {
+
+    for (MachineInstr &UseMI : getMRI()->use_nodbg_instructions(Reg->getReg())) {
       // If there exist use of subreg of Reg then return nullptr
       if (!isSameReg(UseMO, *Reg))
         return nullptr;
 
       // Check that all instructions the use Reg can be converted
-      if (!isConvertibleToSDWA(*(UseMO.getParent()), ST, TII)) {
+      if (!isConvertibleToSDWA(UseMI, ST, TII)) {
         return nullptr;
       }
     }
