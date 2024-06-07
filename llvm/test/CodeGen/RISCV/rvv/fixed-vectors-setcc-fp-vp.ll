@@ -22,7 +22,7 @@ define <7 x i1> @fcmp_oeq_vv_v7f16(<7 x half> %va, <7 x half> %vb, <7 x i1> %m, 
 ;
 ; ZVFHMIN-LABEL: fcmp_oeq_vv_v7f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetivli zero, 7, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma

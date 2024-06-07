@@ -640,45 +640,15 @@ define <8 x double> @reverse_v8f64(<8 x double> %a) {
 
 
 define <3 x i64> @reverse_v3i64(<3 x i64> %a) {
-; RV32-LABEL: reverse_v3i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(.LCPI44_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI44_0)
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle16.v v12, (a0)
-; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-NEXT:    vmv.v.v v8, v10
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: reverse_v3i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vid.v v10
-; RV64-NEXT:    vrsub.vi v12, v10, 2
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV64-NEXT:    vmv.v.v v8, v10
-; RV64-NEXT:    ret
-;
-; RV32-ZVBB-LABEL: reverse_v3i64:
-; RV32-ZVBB:       # %bb.0:
-; RV32-ZVBB-NEXT:    lui a0, %hi(.LCPI44_0)
-; RV32-ZVBB-NEXT:    addi a0, a0, %lo(.LCPI44_0)
-; RV32-ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-ZVBB-NEXT:    vle16.v v12, (a0)
-; RV32-ZVBB-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-ZVBB-NEXT:    vmv.v.v v8, v10
-; RV32-ZVBB-NEXT:    ret
-;
-; RV64-ZVBB-LABEL: reverse_v3i64:
-; RV64-ZVBB:       # %bb.0:
-; RV64-ZVBB-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-ZVBB-NEXT:    vid.v v10
-; RV64-ZVBB-NEXT:    vrsub.vi v12, v10, 2
-; RV64-ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-ZVBB-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV64-ZVBB-NEXT:    vmv.v.v v8, v10
-; RV64-ZVBB-NEXT:    ret
+; CHECK-LABEL: reverse_v3i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
+; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    vrsub.vi v12, v10, 2
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
   %res = shufflevector <3 x i64> %a, <3 x i64> poison, <3 x i32> <i32 2, i32 1, i32 0>
   ret <3 x i64> %res
 }

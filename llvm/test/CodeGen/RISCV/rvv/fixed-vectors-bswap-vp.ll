@@ -780,7 +780,7 @@ define <15 x i64> @vp_bswap_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroext %ev
 ; RV32-NEXT:    addi a4, a4, 16
 ; RV32-NEXT:    vs8r.v v16, (a4) # Unknown-size Folded Spill
 ; RV32-NEXT:    addi a4, sp, 8
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV32-NEXT:    vsetivli zero, 15, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a4), zero
 ; RV32-NEXT:    csrr a4, vlenb
 ; RV32-NEXT:    slli a4, a4, 3
@@ -917,7 +917,7 @@ define <15 x i64> @vp_bswap_v15i64_unmasked(<15 x i64> %va, i32 zeroext %evl) {
 ; RV32-NEXT:    addi a4, sp, 16
 ; RV32-NEXT:    vs8r.v v16, (a4) # Unknown-size Folded Spill
 ; RV32-NEXT:    addi a4, sp, 8
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV32-NEXT:    vsetivli zero, 15, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a4), zero
 ; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma

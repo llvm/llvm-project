@@ -2584,9 +2584,14 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
   if (LMul > Subtarget.getMaxLMULForFixedLengthVectors())
     return false;
 
-  // TODO: Perhaps an artificial restriction, but worth having whilst getting
-  // the base fixed length RVV support in place.
-  if (!VT.isPow2VectorType())
+  // Only support non-power-of-2 fixed length vector types with lengths 3, 5, 7,
+  // or 15.
+  // In theory, we could support any length, but we want to prevent the
+  // number of MVTs from growing too quickly. Therefore, we only add these
+  // specific types.
+  unsigned NumElems = VT.getVectorNumElements();
+  if (!VT.isPow2VectorType() && NumElems != 3 && NumElems != 5 &&
+      NumElems != 7 && NumElems != 15)
     return false;
 
   return true;
@@ -2623,10 +2628,14 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
     // We prefer to use LMUL=1 for VLEN sized types. Use fractional lmuls for
     // narrower types. The smallest fractional LMUL we support is 8/ELEN. Within
     // each fractional LMUL we support SEW between 8 and LMUL*ELEN.
+    unsigned NumVLSElts = VT.getVectorNumElements();
+    if (!isPowerOf2_32(NumVLSElts))
+       NumVLSElts = llvm::NextPowerOf2 (NumVLSElts);
+
     unsigned NumElts =
-        (VT.getVectorNumElements() * RISCV::RVVBitsPerBlock) / MinVLen;
+        (NumVLSElts * RISCV::RVVBitsPerBlock) / MinVLen;
     NumElts = std::max(NumElts, RISCV::RVVBitsPerBlock / MaxELen);
-    assert(isPowerOf2_32(NumElts) && "Expected power of 2 NumElts");
+
     return MVT::getScalableVectorVT(EltVT, NumElts);
   }
   }
@@ -3573,6 +3582,8 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
     // XLenVT if we're producing a v8i1. This results in more consistent
     // codegen across RV32 and RV64.
     unsigned NumViaIntegerBits = std::clamp(NumElts, 8u, Subtarget.getXLen());
+    if (!isPowerOf2_32(NumViaIntegerBits))
+       NumViaIntegerBits = llvm::NextPowerOf2 (NumViaIntegerBits);
     NumViaIntegerBits = std::min(NumViaIntegerBits, Subtarget.getELen());
     // If we have to use more than one INSERT_VECTOR_ELT then this
     // optimization is likely to increase code size; avoid peforming it in
@@ -3616,10 +3627,16 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
       // If we're producing a smaller vector than our minimum legal integer
       // type, bitcast to the equivalent (known-legal) mask type, and extract
       // our final mask.
-      assert(IntegerViaVecVT == MVT::v1i8 && "Unexpected mask vector type");
-      Vec = DAG.getBitcast(MVT::v8i1, Vec);
-      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
-                        DAG.getConstant(0, DL, XLenVT));
+      if (IntegerViaVecVT == MVT::v1i8){
+        assert(IntegerViaVecVT == MVT::v1i8 && "Unexpected mask vector type");
+        Vec = DAG.getBitcast(MVT::v8i1, Vec);
+        Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
+                          DAG.getConstant(0, DL, XLenVT));
+      } else if (IntegerViaVecVT == MVT::v1i16) {
+        Vec = DAG.getBitcast(MVT::v16i1, Vec);
+        Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
+                          DAG.getConstant(0, DL, XLenVT));
+      }
     } else {
       // Else we must have produced an integer type with the same size as the
       // mask type; bitcast for the final result.
@@ -4873,6 +4890,10 @@ static bool isLegalBitRotate(ShuffleVectorSDNode *SVN,
 
   EVT VT = SVN->getValueType(0);
   unsigned NumElts = VT.getVectorNumElements();
+  // We don't handle non-power-of-2 here.
+  if (!isPowerOf2_32(NumElts))
+    return false;
+
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
   unsigned NumSubElts;
   if (!ShuffleVectorInst::isBitRotateMask(SVN->getMask(), EltSizeInBits, 2,

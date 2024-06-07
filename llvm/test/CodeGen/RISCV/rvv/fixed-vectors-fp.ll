@@ -1181,79 +1181,33 @@ declare <4 x half> @llvm.copysign.v4f16(<4 x half>, <4 x half>)
 define void @copysign_neg_trunc_v3f16_v3f32(ptr %x, ptr %y) {
 ; ZVFH-LABEL: copysign_neg_trunc_v3f16_v3f32:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
+; ZVFH-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vle32.v v8, (a1)
 ; ZVFH-NEXT:    vle16.v v9, (a0)
-; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vfncvt.f.f.w v10, v8
-; ZVFH-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vfsgnjn.vv v8, v9, v10
 ; ZVFH-NEXT:    vse16.v v8, (a0)
 ; ZVFH-NEXT:    ret
 ;
-; ZVFHMIN-RV32-LABEL: copysign_neg_trunc_v3f16_v3f32:
-; ZVFHMIN-RV32:       # %bb.0:
-; ZVFHMIN-RV32-NEXT:    addi sp, sp, -16
-; ZVFHMIN-RV32-NEXT:    .cfi_def_cfa_offset 16
-; ZVFHMIN-RV32-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; ZVFHMIN-RV32-NEXT:    vle16.v v8, (a0)
-; ZVFHMIN-RV32-NEXT:    vsetivli zero, 3, e32, mf2, ta, ma
-; ZVFHMIN-RV32-NEXT:    vle32.v v9, (a1)
-; ZVFHMIN-RV32-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; ZVFHMIN-RV32-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-RV32-NEXT:    vfncvt.f.f.w v8, v9
-; ZVFHMIN-RV32-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-RV32-NEXT:    vfneg.v v8, v9
-; ZVFHMIN-RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; ZVFHMIN-RV32-NEXT:    vfncvt.f.f.w v9, v8
-; ZVFHMIN-RV32-NEXT:    vfwcvt.f.f.v v8, v9
-; ZVFHMIN-RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-RV32-NEXT:    vfsgnj.vv v8, v10, v8
-; ZVFHMIN-RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; ZVFHMIN-RV32-NEXT:    vfncvt.f.f.w v9, v8
-; ZVFHMIN-RV32-NEXT:    addi a1, sp, 8
-; ZVFHMIN-RV32-NEXT:    vse16.v v9, (a1)
-; ZVFHMIN-RV32-NEXT:    flh fa5, 12(sp)
-; ZVFHMIN-RV32-NEXT:    fsh fa5, 4(a0)
-; ZVFHMIN-RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; ZVFHMIN-RV32-NEXT:    vse32.v v9, (a0)
-; ZVFHMIN-RV32-NEXT:    addi sp, sp, 16
-; ZVFHMIN-RV32-NEXT:    ret
-;
-; ZVFHMIN-RV64-LABEL: copysign_neg_trunc_v3f16_v3f32:
-; ZVFHMIN-RV64:       # %bb.0:
-; ZVFHMIN-RV64-NEXT:    addi sp, sp, -16
-; ZVFHMIN-RV64-NEXT:    .cfi_def_cfa_offset 16
-; ZVFHMIN-RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; ZVFHMIN-RV64-NEXT:    vle64.v v8, (a0)
-; ZVFHMIN-RV64-NEXT:    mv a2, sp
-; ZVFHMIN-RV64-NEXT:    vse64.v v8, (a2)
-; ZVFHMIN-RV64-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; ZVFHMIN-RV64-NEXT:    vle16.v v8, (a2)
-; ZVFHMIN-RV64-NEXT:    vsetivli zero, 3, e32, mf2, ta, ma
-; ZVFHMIN-RV64-NEXT:    vle32.v v9, (a1)
-; ZVFHMIN-RV64-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; ZVFHMIN-RV64-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-RV64-NEXT:    vfncvt.f.f.w v8, v9
-; ZVFHMIN-RV64-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-RV64-NEXT:    vfneg.v v8, v9
-; ZVFHMIN-RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; ZVFHMIN-RV64-NEXT:    vfncvt.f.f.w v9, v8
-; ZVFHMIN-RV64-NEXT:    vfwcvt.f.f.v v8, v9
-; ZVFHMIN-RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-RV64-NEXT:    vfsgnj.vv v8, v10, v8
-; ZVFHMIN-RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; ZVFHMIN-RV64-NEXT:    vfncvt.f.f.w v9, v8
-; ZVFHMIN-RV64-NEXT:    addi a1, sp, 8
-; ZVFHMIN-RV64-NEXT:    vse16.v v9, (a1)
-; ZVFHMIN-RV64-NEXT:    flh fa5, 12(sp)
-; ZVFHMIN-RV64-NEXT:    fsh fa5, 4(a0)
-; ZVFHMIN-RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; ZVFHMIN-RV64-NEXT:    vse32.v v9, (a0)
-; ZVFHMIN-RV64-NEXT:    addi sp, sp, 16
-; ZVFHMIN-RV64-NEXT:    ret
+; ZVFHMIN-LABEL: copysign_neg_trunc_v3f16_v3f32:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    vsetivli zero, 3, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vle16.v v8, (a0)
+; ZVFHMIN-NEXT:    vle32.v v9, (a1)
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vfneg.v v8, v9
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v9
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vfsgnj.vv v8, v10, v8
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v9, v8
+; ZVFHMIN-NEXT:    vse16.v v9, (a0)
+; ZVFHMIN-NEXT:    ret
   %a = load <3 x half>, ptr %x
   %b = load <3 x float>, ptr %y
   %c = fneg <3 x float> %b
