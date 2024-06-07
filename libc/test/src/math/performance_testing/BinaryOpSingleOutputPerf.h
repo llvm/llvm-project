@@ -66,7 +66,8 @@ public:
     runner(otherFunc);
     timer.stop();
 
-    double other_average = static_cast<double>(timer.nanoseconds()) / N / rounds;
+    double other_average =
+        static_cast<double>(timer.nanoseconds()) / N / rounds;
     log << "-- Other function --\n";
     log << "     Total time      : " << timer.nanoseconds() << " ns \n";
     log << "     Average runtime : " << other_average << " ns/op \n";
