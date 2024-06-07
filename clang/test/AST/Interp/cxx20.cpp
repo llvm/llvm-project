@@ -774,3 +774,26 @@ void overflowInSwitchCase(int n) {
     break;
   }
 }
+
+namespace APValues {
+  int g;
+  struct A { union { int n, m; }; int *p; int A::*q; char buffer[32]; };
+  template<A a> constexpr const A &get = a;
+  constexpr const A &v = get<A{}>;
+  constexpr const A &w = get<A{1, &g, &A::n, "hello"}>;
+}
+
+namespace self_referencing {
+  struct S {
+    S* ptr = nullptr;
+    constexpr S(int i) : ptr(this) {
+      if (this == ptr && i)
+        ptr = nullptr;
+    }
+    constexpr ~S() {}
+  };
+
+  void test() {
+    S s(1);
+  }
+}

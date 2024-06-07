@@ -156,6 +156,8 @@ jobs:
         rm build.tar.zst
 
     - name: Build Stage 2
+      # Re-enable once PGO builds are supported.
+      if: false
       run: |
         ninja -C /mnt/build stage2-instrumented
 
@@ -214,7 +216,7 @@ jobs:
 
     - id: package-info
       run: |
-        filename="LLVM-${{ needs.prepare.outputs.release-version }}-Linux.tar.gz"
+        filename="LLVM-${{ needs.prepare.outputs.release-version }}-Linux.tar.xz"
         echo "filename=$filename" >> $GITHUB_OUTPUT
         echo "path=/mnt/build/tools/clang/stage2-bins/$filename" >> $GITHUB_OUTPUT
 

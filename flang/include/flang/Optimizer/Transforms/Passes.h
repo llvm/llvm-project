@@ -54,15 +54,13 @@ namespace fir {
 #define GEN_PASS_DECL_OMPMAPINFOFINALIZATIONPASS
 #define GEN_PASS_DECL_OMPMARKDECLARETARGETPASS
 #define GEN_PASS_DECL_OMPFUNCTIONFILTERING
+#define GEN_PASS_DECL_VSCALEATTR
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 std::unique_ptr<mlir::Pass>
 createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
 std::unique_ptr<mlir::Pass> createCFGConversionPassWithNSW();
-std::unique_ptr<mlir::Pass> createExternalNameConversionPass();
-std::unique_ptr<mlir::Pass>
-createExternalNameConversionPass(bool appendUnderscore);
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 std::unique_ptr<mlir::Pass>

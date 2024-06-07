@@ -589,6 +589,14 @@ def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0
                                                  (sequence "X%u",19, 28),
                                                  LR, FP)>;
 
+// SME ABI support routines such as __arm_get_current_vg preserve most registers.
+def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1
+                          : CalleeSavedRegs<(add (sequence "Z%u", 0, 31),
+                                                 (sequence "P%u", 0, 15),
+                                                 (sequence "X%u", 1, 15),
+                                                 (sequence "X%u",19, 28),
+                                                 LR, FP)>;
+
 // SME ABI support routines __arm_sme_state preserves most registers.
 def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2
                           : CalleeSavedRegs<(add (sequence "Z%u", 0, 31),

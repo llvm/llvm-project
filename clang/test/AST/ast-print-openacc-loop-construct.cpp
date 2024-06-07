@@ -32,4 +32,29 @@ void foo() {
 // CHECK-NEXT: ;
 #pragma acc loop dtype(AnotherIdent)
   for(;;);
+
+// CHECK: #pragma acc loop independent
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop independent
+  for(;;);
+// CHECK: #pragma acc loop seq
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop seq
+  for(;;);
+// CHECK: #pragma acc loop auto
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop auto
+  for(;;);
+
+  int i;
+  float array[5];
+
+// CHECK: #pragma acc loop private(i, array[1], array, array[1:2])
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop private(i, array[1], array, array[1:2])
+  for(;;);
 }
