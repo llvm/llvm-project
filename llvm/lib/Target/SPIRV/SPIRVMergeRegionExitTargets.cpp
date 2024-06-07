@@ -106,7 +106,7 @@ public:
                             const std::unordered_set<BasicBlock *> ToReplace,
                             BasicBlock *NewTarget) {
     auto *T = BB->getTerminator();
-    if (auto *RI = dyn_cast<ReturnInst>(T))
+    if (isa<ReturnInst>(T))
       return;
 
     if (auto *BI = dyn_cast<BranchInst>(T)) {

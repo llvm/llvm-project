@@ -127,7 +127,20 @@ void transform::ApplyReassociativeReshapeFoldingPatternsOp::populatePatterns(
 
 void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  tensor::populateRewriteAsConstantPatterns(patterns);
+  ControlFoldFn defaultControlFn = [](OpOperand *fusedOperand) {
+    Operation *producer = fusedOperand->get().getDefiningOp();
+    return producer && producer->hasOneUse();
+  };
+
+  ControlFoldFn aggressiveControlFn = [](OpOperand *fusedOperand) {
+    return true;
+  };
+
+  // Add folding with reshape by expansion patterns.
+  if (getAggressive())
+    tensor::populateRewriteAsConstantPatterns(patterns, aggressiveControlFn);
+  else
+    tensor::populateRewriteAsConstantPatterns(patterns, defaultControlFn);
 }
 
 //===----------------------------------------------------------------------===//
