@@ -1,4 +1,4 @@
-//===-- Unittest for fcntl ------------------------------------------------===//
+//===-- Unittest for fdopen -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/linux/fcntl-macros.h"
 #include "src/stdio/fdopen.h"
 
+#include "include/llvm-libc-macros/fcntl-macros.h"
 #include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/fclose.h"
@@ -37,6 +37,8 @@ TEST(LlvmLibcStdioFdopenTest, WriteAppendRead) {
   constexpr const char LLVM[] = "LLVM";
   int fd2 = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_RDWR);
   auto *fp2 = LIBC_NAMESPACE::fdopen(fd2, "a");
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_TRUE(nullptr != fp2);
   LIBC_NAMESPACE::fputs(LLVM, fp2);
   LIBC_NAMESPACE::fclose(fp2);
   ASSERT_ERRNO_SUCCESS();

@@ -32,10 +32,9 @@ add_entrypoint_object(
   HDRS
     ../fdopen.h
   DEPENDS
-    libc.include.fcntl
     libc.include.stdio
     libc.src.errno.errno
-    libc.src.fcntl.fcntl
     libc.src.stdio.fseek
     libc.src.__support.File.platform_file
+    libc.src.__support.OSUtil.osutil
 )

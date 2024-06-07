@@ -1,4 +1,4 @@
-//===-- Implementation of fprintf -------------------------------*- C++ -*-===//
+//===-- Implementation of fdopen --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,12 +8,11 @@
 
 #include "src/stdio/fdopen.h"
 
-#include "include/llvm-libc-macros/generic-error-number-macros.h"
-#include "include/llvm-libc-macros/linux/fcntl-macros.h"
+#include "hdr/errno_macros.h"
+#include "include/llvm-libc-macros/fcntl-macros.h"
 #include "src/__support/File/linux/file.h"
+#include "src/__support/OSUtil/fcntl.h"
 #include "src/errno/libc_errno.h"
-#include "src/fcntl/fcntl.h"
-#include "src/stdio/fseek.h"
 
 namespace LIBC_NAMESPACE {
 
@@ -25,7 +24,7 @@ LLVM_LIBC_FUNCTION(::FILE *, fdopen, (int fd, const char *mode)) {
     return nullptr;
   }
 
-  int fd_flags = LIBC_NAMESPACE::fcntl(fd, F_GETFL);
+  int fd_flags = internal::fcntl(fd, F_GETFL);
   if (fd_flags == -1) {
     return nullptr;
   }
@@ -43,7 +42,8 @@ LLVM_LIBC_FUNCTION(::FILE *, fdopen, (int fd, const char *mode)) {
   if ((modeflags & static_cast<ModeFlags>(OpenMode::APPEND)) &&
       !(fd_flags & O_APPEND)) {
     do_seek = true;
-    if (LIBC_NAMESPACE::fcntl(fd, F_SETFL, fd_flags | O_APPEND) == -1) {
+    if (internal::fcntl(fd, F_SETFL,
+                        reinterpret_cast<void *>(fd_flags | O_APPEND)) == -1) {
       return nullptr;
     }
   }
@@ -58,19 +58,22 @@ LLVM_LIBC_FUNCTION(::FILE *, fdopen, (int fd, const char *mode)) {
     }
   }
   AllocChecker ac;
-  auto *linux_file = new (ac)
+  auto *file = new (ac)
       LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, modeflags);
   if (!ac) {
     libc_errno = ENOMEM;
     return nullptr;
   }
-  auto *file = reinterpret_cast<::FILE *>(linux_file);
-  if (do_seek && LIBC_NAMESPACE::fseek(file, 0, SEEK_END) != 0) {
-    free(linux_file);
-    return nullptr;
+  if (do_seek) {
+    auto result = file->seek(0, SEEK_END);
+    if (!result.has_value()) {
+      libc_errno = result.error();
+      free(file);
+      return nullptr;
+    }
   }
 
-  return file;
+  return reinterpret_cast<::FILE *>(file);
 }
 
 } // namespace LIBC_NAMESPACE
