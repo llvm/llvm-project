@@ -286,7 +286,7 @@ public:
               raw_pwrite_stream &OutFile,
               DWARFLinkerBase::MessageHandlerTy Warning)
       : DwarfStreamer(OutFileType, OutFile, Warning), DIEBldr(DIEBldr),
-        Rewriter(Rewriter), GDBIndexSection(GDBIndexSection){};
+        Rewriter(Rewriter), GDBIndexSection(GDBIndexSection) {};
 
   using DwarfStreamer::emitCompileUnitHeader;
 
