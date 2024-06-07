@@ -442,7 +442,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::MGATHER:
-  case ISD::MCOMPRESS:
+  case ISD::MASKED_COMPRESS:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -1102,8 +1102,8 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
 
     break;
-  case ISD::MCOMPRESS:
-    Results.push_back(TLI.expandMCOMPRESS(Node, DAG));
+  case ISD::MASKED_COMPRESS:
+    Results.push_back(TLI.expandMASKED_COMPRESS(Node, DAG));
     return;
   }
 

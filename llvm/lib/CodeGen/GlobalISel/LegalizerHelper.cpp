@@ -3946,8 +3946,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerExtractInsertVectorElt(MI);
   case G_SHUFFLE_VECTOR:
     return lowerShuffleVector(MI);
-  case G_MCOMPRESS:
-    return lowerMCOMPRESS(MI);
+  case G_MASKED_COMPRESS:
+    return lowerMASKED_COMPRESS(MI);
   case G_DYN_STACKALLOC:
     return lowerDynStackAlloc(MI);
   case G_STACKSAVE:
@@ -7505,7 +7505,7 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerMCOMPRESS(llvm::MachineInstr &MI) {
+LegalizerHelper::lowerMASKED_COMPRESS(llvm::MachineInstr &MI) {
   auto [Dst, DstTy, Vec, VecTy, Mask, MaskTy] = MI.getFirst3RegLLTs();
 
   MachinePointerInfo PtrInfo;

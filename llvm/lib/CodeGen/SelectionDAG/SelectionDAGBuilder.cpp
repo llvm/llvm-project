@@ -6719,7 +6719,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitMaskedStore(I, true /* IsCompressing */);
     return;
   case Intrinsic::masked_compress:
-    setValue(&I, DAG.getNode(ISD::MCOMPRESS, sdl,
+    setValue(&I, DAG.getNode(ISD::MASKED_COMPRESS, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));

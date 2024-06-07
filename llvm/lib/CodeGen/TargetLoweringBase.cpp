@@ -957,7 +957,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::VECTOR_SPLICE, VT, Expand);
 
     // Only some target support this vector operation. Most need to expand it.
-    setOperationAction(ISD::MCOMPRESS, VT, Expand);
+    setOperationAction(ISD::MASKED_COMPRESS, VT, Expand);
 
     // VP operations default to expand.
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \

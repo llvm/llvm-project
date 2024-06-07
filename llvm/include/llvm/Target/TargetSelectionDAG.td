@@ -735,7 +735,7 @@ def masked_gather : SDNode<"ISD::MGATHER", SDTMaskedGather,
 def masked_scatter : SDNode<"ISD::MSCATTER", SDTMaskedScatter,
                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
-def masked_compress : SDNode<"ISD::MCOMPRESS", SDTMaskedCompress>;
+def masked_compress : SDNode<"ISD::MASKED_COMPRESS", SDTMaskedCompress>;
 
 // Do not use ld, st directly. Use load, extload, sextload, zextload, store,
 // and truncst (see below).

@@ -6279,10 +6279,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // We can't create a scalar CONCAT_VECTORS so skip it. It will break
   // for concats involving SPLAT_VECTOR. Concats of BUILD_VECTORS are handled by
   // foldCONCAT_VECTORS in getNode before this is called.
-  // MCOMPRESS is not defined for scalars. We handle constants before this call.
+  // MASKED_COMPRESS is not defined for scalars. We handle constants before this call.
   // TODO: Make this aware of vector-only opcodes and skip all of them.
   if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS ||
-      Opcode == ISD::MCOMPRESS)
+      Opcode == ISD::MASKED_COMPRESS)
     return SDValue();
 
   unsigned NumOps = Ops.size();
@@ -7200,7 +7200,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return N1.getOperand(1);
     break;
   }
-  case ISD::MCOMPRESS: {
+  case ISD::MASKED_COMPRESS: {
     EVT VecVT = N1.getValueType();
     [[maybe_unused]] EVT MaskVT = N2.getValueType();
     assert(VT == VecVT && "Vector and result type don't match.");

@@ -1987,7 +1987,7 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
     case Intrinsic::vector_reduce_umin:
       return TargetOpcode::G_VECREDUCE_UMIN;
     case Intrinsic::masked_compress:
-      return TargetOpcode::G_MCOMPRESS;
+      return TargetOpcode::G_MASKED_COMPRESS;
     case Intrinsic::lround:
       return TargetOpcode::G_LROUND;
     case Intrinsic::llround:

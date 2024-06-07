@@ -540,7 +540,7 @@ namespace {
     SDValue visitVECTOR_SHUFFLE(SDNode *N);
     SDValue visitSCALAR_TO_VECTOR(SDNode *N);
     SDValue visitINSERT_SUBVECTOR(SDNode *N);
-    SDValue visitMCOMPRESS(SDNode *N);
+    SDValue visitMASKED_COMPRESS(SDNode *N);
     SDValue visitMLOAD(SDNode *N);
     SDValue visitMSTORE(SDNode *N);
     SDValue visitMGATHER(SDNode *N);
@@ -1961,7 +1961,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::MLOAD:              return visitMLOAD(N);
   case ISD::MSCATTER:           return visitMSCATTER(N);
   case ISD::MSTORE:             return visitMSTORE(N);
-  case ISD::MCOMPRESS:          return visitMCOMPRESS(N);
+  case ISD::MASKED_COMPRESS:    return visitMASKED_COMPRESS(N);
   case ISD::LIFETIME_END:       return visitLIFETIME_END(N);
   case ISD::FP_TO_FP16:         return visitFP_TO_FP16(N);
   case ISD::FP16_TO_FP:         return visitFP16_TO_FP(N);
@@ -12017,7 +12017,7 @@ SDValue DAGCombiner::visitVP_STRIDED_STORE(SDNode *N) {
   return SDValue();
 }
 
-SDValue DAGCombiner::visitMCOMPRESS(SDNode *N) {
+SDValue DAGCombiner::visitMASKED_COMPRESS(SDNode *N) {
   SDLoc DL(N);
   SDValue Vec = N->getOperand(0);
   SDValue Mask = N->getOperand(1);

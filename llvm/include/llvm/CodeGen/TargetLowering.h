@@ -5472,9 +5472,9 @@ public:
   /// method accepts vectors as its arguments.
   SDValue expandVectorSplice(SDNode *Node, SelectionDAG &DAG) const;
 
-  /// Expand a vector MCOMPRESS into a sequence of extract element, store
+  /// Expand a vector MASKED_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
-  SDValue expandMCOMPRESS(SDNode *Node, SelectionDAG &DAG) const;
+  SDValue expandMASKED_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Legalize a SETCC or VP_SETCC with given LHS and RHS and condition code CC
   /// on the current target. A VP_SETCC will additionally be given a Mask

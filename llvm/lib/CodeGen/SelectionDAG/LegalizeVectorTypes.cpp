@@ -1058,8 +1058,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_GATHER:
     SplitVecRes_Gather(cast<MemSDNode>(N), Lo, Hi, /*SplitSETCC*/ true);
     break;
-  case ISD::MCOMPRESS:
-    SplitVecRes_MCOMPRESS(N, Lo, Hi);
+  case ISD::MASKED_COMPRESS:
+    SplitVecRes_MASKED_COMPRESS(N, Lo, Hi);
     break;
   case ISD::SETCC:
   case ISD::VP_SETCC:
@@ -2307,14 +2307,14 @@ void DAGTypeLegalizer::SplitVecRes_Gather(MemSDNode *N, SDValue &Lo,
   ReplaceValueWith(SDValue(N, 1), Ch);
 }
 
-void DAGTypeLegalizer::SplitVecRes_MCOMPRESS(SDNode *N, SDValue &Lo,
+void DAGTypeLegalizer::SplitVecRes_MASKED_COMPRESS(SDNode *N, SDValue &Lo,
                                              SDValue &Hi) {
   // This is not "trivial", as there is a dependency between the two subvectors.
   // Depending on the number of 1s in the mask, the elements from the Hi vector
   // need to be moved to the Lo vector. So we just perform this as one "big"
   // operation and then extract the Lo and Hi vectors from that. This gets rid
-  // of MCOMPRESS and all other operands can be legalized later.
-  SDValue Compressed = TLI.expandMCOMPRESS(N, DAG);
+  // of MASKED_COMPRESS and all other operands can be legalized later.
+  SDValue Compressed = TLI.expandMASKED_COMPRESS(N, DAG);
   std::tie(Lo, Hi) = DAG.SplitVector(Compressed, SDLoc(N));
 }
 
@@ -4227,8 +4227,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     Res = WidenVecRes_VP_STRIDED_LOAD(cast<VPStridedLoadSDNode>(N));
     break;
-  case ISD::MCOMPRESS:
-    Res = WidenVecRes_MCOMPRESS(N);
+  case ISD::MASKED_COMPRESS:
+    Res = WidenVecRes_MASKED_COMPRESS(N);
     break;
   case ISD::MLOAD:
     Res = WidenVecRes_MLOAD(cast<MaskedLoadSDNode>(N));
@@ -5612,7 +5612,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *N) {
   return Res;
 }
 
-SDValue DAGTypeLegalizer::WidenVecRes_MCOMPRESS(SDNode *N) {
+SDValue DAGTypeLegalizer::WidenVecRes_MASKED_COMPRESS(SDNode *N) {
   SDValue Vec = N->getOperand(0);
   SDValue Mask = N->getOperand(1);
   EVT WideVecVT =
@@ -5623,7 +5623,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_MCOMPRESS(SDNode *N) {
 
   SDValue WideVec = ModifyToType(Vec, WideVecVT);
   SDValue WideMask = ModifyToType(Mask, WideMaskVT);
-  return DAG.getNode(ISD::MCOMPRESS, SDLoc(N), WideVecVT, WideVec, WideMask);
+  return DAG.getNode(ISD::MASKED_COMPRESS, SDLoc(N), WideVecVT, WideVec, WideMask);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
