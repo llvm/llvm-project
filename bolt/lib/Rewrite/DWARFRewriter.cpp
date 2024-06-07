@@ -12,7 +12,6 @@
 #include "bolt/Core/DIEBuilder.h"
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/DynoStats.h"
-#include "bolt/Core/GDBIndex.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/ADT/STLExtras.h"
