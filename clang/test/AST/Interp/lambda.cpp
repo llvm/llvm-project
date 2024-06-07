@@ -267,3 +267,16 @@ namespace CaptureDefaults {
 
 constexpr auto t4 = ([x=42]() consteval { return x; }());
 static_assert(t4 == 42, "");
+
+namespace InvalidCapture {
+
+  int &f(int *p);
+  char &f(...);
+  void g() {
+    int n = -1;   // both-note {{declared here}}
+    [=] {
+      int arr[n]; // both-warning {{variable length arrays in C++ are a Clang extension}} \
+                     both-note {{read of non-const variable 'n' is not allowed in a constant expression}}
+    } ();
+  }
+}
