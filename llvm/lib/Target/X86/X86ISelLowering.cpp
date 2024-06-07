@@ -615,6 +615,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSIN, VT, Action);
     setOperationAction(ISD::FCOS, VT, Action);
     setOperationAction(ISD::FSINCOS, VT, Action);
+    setOperationAction(ISD::FTAN, VT, Action);
     setOperationAction(ISD::FSQRT, VT, Action);
     setOperationAction(ISD::FPOW, VT, Action);
     setOperationAction(ISD::FLOG, VT, Action);
@@ -833,9 +834,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     // Always expand sin/cos functions even though x87 has an instruction.
+    // clang-format off
     setOperationAction(ISD::FSIN   , MVT::f80, Expand);
     setOperationAction(ISD::FCOS   , MVT::f80, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f80, Expand);
+    setOperationAction(ISD::FTAN   , MVT::f80, Expand);
+    // clang-format on
 
     setOperationAction(ISD::FFLOOR, MVT::f80, Expand);
     setOperationAction(ISD::FCEIL,  MVT::f80, Expand);
@@ -888,11 +892,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEG, MVT::f128, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::f128, Custom);
 
+    // clang-format off
     setOperationAction(ISD::FSIN,         MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FSIN,  MVT::f128, LibCall);
     setOperationAction(ISD::FCOS,         MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FCOS,  MVT::f128, LibCall);
     setOperationAction(ISD::FSINCOS,      MVT::f128, LibCall);
+    setOperationAction(ISD::FTAN,         MVT::f128, LibCall);
+    setOperationAction(ISD::STRICT_FTAN,  MVT::f128, LibCall);
+    // clang-format on
     // No STRICT_FSINCOS
     setOperationAction(ISD::FSQRT,        MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f128, LibCall);
@@ -944,9 +952,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   for (auto VT : { MVT::v8f16, MVT::v16f16, MVT::v32f16,
                    MVT::v4f32, MVT::v8f32,  MVT::v16f32,
                    MVT::v2f64, MVT::v4f64,  MVT::v8f64 }) {
+    // clang-format off
     setOperationAction(ISD::FSIN,      VT, Expand);
     setOperationAction(ISD::FSINCOS,   VT, Expand);
     setOperationAction(ISD::FCOS,      VT, Expand);
+    setOperationAction(ISD::FTAN,      VT, Expand);
     setOperationAction(ISD::FREM,      VT, Expand);
     setOperationAction(ISD::FCOPYSIGN, VT, Expand);
     setOperationAction(ISD::FPOW,      VT, Expand);
@@ -956,6 +966,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FEXP,      VT, Expand);
     setOperationAction(ISD::FEXP2,     VT, Expand);
     setOperationAction(ISD::FEXP10,    VT, Expand);
+    // clang-format on
   }
 
   // First set operation action for all vector types to either promote
@@ -2473,7 +2484,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // function casting to f64 and calling `fmod`.
   if (Subtarget.is32Bit() &&
       (Subtarget.isTargetWindowsMSVC() || Subtarget.isTargetWindowsItanium()))
-    for (ISD::NodeType Op :
+    // clang-format off
+   for (ISD::NodeType Op :
          {ISD::FCEIL,  ISD::STRICT_FCEIL,
           ISD::FCOS,   ISD::STRICT_FCOS,
           ISD::FEXP,   ISD::STRICT_FEXP,
@@ -2482,9 +2494,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
           ISD::FLOG,   ISD::STRICT_FLOG,
           ISD::FLOG10, ISD::STRICT_FLOG10,
           ISD::FPOW,   ISD::STRICT_FPOW,
-          ISD::FSIN,   ISD::STRICT_FSIN})
+          ISD::FSIN,   ISD::STRICT_FSIN,
+          ISD::FTAN,   ISD::STRICT_FTAN})
       if (isOperationExpand(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
+  // clang-format on
 
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine({ISD::VECTOR_SHUFFLE,
@@ -26776,7 +26790,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     case Intrinsic::swift_async_context_addr: {
       SDLoc dl(Op);
       auto &MF = DAG.getMachineFunction();
-      auto X86FI = MF.getInfo<X86MachineFunctionInfo>();
+      auto *X86FI = MF.getInfo<X86MachineFunctionInfo>();
       if (X86::isExtendedSwiftAsyncFrameSupported(Subtarget, MF)) {
         MF.getFrameInfo().setFrameAddressIsTaken(true);
         X86FI->setHasSwiftAsyncContext(true);
@@ -36781,7 +36795,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case TargetOpcode::PREALLOCATED_SETUP: {
     assert(Subtarget.is32Bit() && "preallocated only used in 32-bit");
-    auto MFI = MF->getInfo<X86MachineFunctionInfo>();
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
     MFI->setHasPreallocatedCall(true);
     int64_t PreallocatedId = MI.getOperand(0).getImm();
     size_t StackAdjustment = MFI->getPreallocatedStackSize(PreallocatedId);
@@ -36798,7 +36812,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     assert(Subtarget.is32Bit() && "preallocated calls only used in 32-bit");
     int64_t PreallocatedId = MI.getOperand(1).getImm();
     int64_t ArgIdx = MI.getOperand(2).getImm();
-    auto MFI = MF->getInfo<X86MachineFunctionInfo>();
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
     size_t ArgOffset = MFI->getPreallocatedArgOffsets(PreallocatedId)[ArgIdx];
     LLVM_DEBUG(dbgs() << "PREALLOCATED_ARG arg index " << ArgIdx
                       << ", arg offset " << ArgOffset << "\n");
@@ -36841,6 +36855,13 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned Imm = MI.getOperand(0).getImm();
     BuildMI(*BB, MI, MIMD, TII->get(X86::TILEZERO), TMMImmToTMMReg(Imm));
     MI.eraseFromParent(); // The pseudo is gone now.
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+    MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
+    return BB;
+  }
+  case X86::PTILEZEROV: {
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+    MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
     return BB;
   }
   case X86::PTILELOADD:
@@ -57181,9 +57202,12 @@ static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
   SDValue Cvt, Chain;
   unsigned NumElts = VT.getVectorNumElements();
   if (Subtarget.hasFP16()) {
-    // Combine (v8f16 fp_round(concat_vectors(v4f32 (xint_to_fp v4i64), ..)))
-    // into (v8f16 vector_shuffle(v8f16 (CVTXI2P v4i64), ..))
-    if (NumElts == 8 && Src.getOpcode() == ISD::CONCAT_VECTORS) {
+    // Combine (v8f16 fp_round(concat_vectors(v4f32 (xint_to_fp v4i64),
+    //                                        v4f32 (xint_to_fp v4i64))))
+    // into (v8f16 vector_shuffle(v8f16 (CVTXI2P v4i64),
+    //                            v8f16 (CVTXI2P v4i64)))
+    if (NumElts == 8 && Src.getOpcode() == ISD::CONCAT_VECTORS &&
+        Src.getNumOperands() == 2) {
       SDValue Cvt0, Cvt1;
       SDValue Op0 = Src.getOperand(0);
       SDValue Op1 = Src.getOperand(1);

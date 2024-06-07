@@ -332,8 +332,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"associated",
         {{"pointer", AnyPointer, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::In, {ArgFlag::canBeNull}},
-            {"target", Addressable, Rank::known, Optionality::optional,
-                common::Intent::In, {ArgFlag::canBeNull}}},
+            {"target", Addressable, Rank::anyOrAssumedRank,
+                Optionality::optional, common::Intent::In,
+                {ArgFlag::canBeNull}}},
         DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"atan", {{"x", SameFloating}}, SameFloating},
     {"atan", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
@@ -513,6 +514,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"gamma", {{"x", SameReal}}, SameReal},
     {"get_team", {{"level", DefaultInt, Rank::scalar, Optionality::optional}},
         TeamType, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"getcwd",
+        {{"c", DefaultChar, Rank::scalar, Optionality::required,
+            common::Intent::Out}},
+        TypePattern{IntType, KindCode::greaterOrEqualToKind, 4}},
     {"getpid", {}, DefaultInt},
     {"huge",
         {{"x", SameIntOrReal, Rank::anyOrAssumedRank, Optionality::required,
@@ -1404,6 +1409,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"trim_name", AnyLogical, Rank::scalar, Optionality::optional},
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"getcwd",
+        {{"c", DefaultChar, Rank::scalar, Optionality::required,
+             common::Intent::Out},
+            {"status", TypePattern{IntType, KindCode::greaterOrEqualToKind, 4},
+                Rank::scalar, Optionality::optional, common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"move_alloc",
         {{"from", SameType, Rank::known, Optionality::required,
@@ -2573,7 +2584,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
-  static const std::string dualIntrinsic[]{{"etime"}};
+  static const std::string dualIntrinsic[]{{"etime"}, {"getcwd"}};
 
   return std::find_if(std::begin(dualIntrinsic), std::end(dualIntrinsic),
              [&name](const std::string &dualName) {
