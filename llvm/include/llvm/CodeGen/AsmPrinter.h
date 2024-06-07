@@ -586,7 +586,6 @@ public:
     emitGlobalConstant(DL, CV);
   }
 
-  /// Lower the specified ptrauth constant to an MCExpr.
   virtual const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
     report_fatal_error("ptrauth constant lowering not implemented");
   }

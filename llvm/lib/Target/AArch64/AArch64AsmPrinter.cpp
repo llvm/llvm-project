@@ -43,8 +43,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
@@ -1611,12 +1609,14 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   // We later rely on valid KeyID value in AArch64PACKeyIDToString call from
   // AArch64AuthMCExpr::printImpl, so fail fast.
   if (KeyID > AArch64PACKey::LAST)
-    report_fatal_error("invalid AArch64 PAC Key ID '" + Twine(KeyID) + "'");
+    report_fatal_error("AArch64 PAC Key ID '" + Twine(KeyID) +
+                       "' out of range [0, " +
+                       Twine((unsigned)AArch64PACKey::LAST) + "]");
 
   uint64_t Disc = CPA.getDiscriminator()->getZExtValue();
   if (!isUInt<16>(Disc))
-    report_fatal_error("invalid AArch64 PAC Discriminator '" + Twine(Disc) +
-                       "'");
+    report_fatal_error("AArch64 PAC Discriminator '" + Twine(Disc) +
+                       "' out of range [0, 0xFFFF]");
 
   // Finally build the complete @AUTH expr.
   return AArch64AuthMCExpr::create(Sym, Disc, AArch64PACKey::ID(KeyID),
