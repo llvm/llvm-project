@@ -6,17 +6,23 @@
 define ptr @main() #0 {
 ; AIX32-LABEL: main:
 ; AIX32:       # %bb.0: # %entry
+; AIX32-NEXT:    stwu 1, -32(1)
 ; AIX32-NEXT:    mr 3, 1
+; AIX32-NEXT:    addi 1, 1, 32
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: main:
 ; AIX64:       # %bb.0: # %entry
+; AIX64-NEXT:    stdu 1, -48(1)
 ; AIX64-NEXT:    mr 3, 1
+; AIX64-NEXT:    addi 1, 1, 48
 ; AIX64-NEXT:    blr
 ;
 ; LE-LABEL: main:
 ; LE:       # %bb.0: # %entry
+; LE-NEXT:    stdu 1, -32(1)
 ; LE-NEXT:    mr 3, 1
+; LE-NEXT:    addi 1, 1, 32
 ; LE-NEXT:    blr
 entry:
   %0 = call ptr @llvm.frameaddress(i32 0)
@@ -46,17 +52,23 @@ entry:
 define ptr @foo1() #0 {
 ; AIX32-LABEL: foo1:
 ; AIX32:       # %bb.0: # %entry
+; AIX32-NEXT:    stwu 1, -32(1)
 ; AIX32-NEXT:    lwz 3, 0(1)
+; AIX32-NEXT:    addi 1, 1, 32
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: foo1:
 ; AIX64:       # %bb.0: # %entry
+; AIX64-NEXT:    stdu 1, -48(1)
 ; AIX64-NEXT:    ld 3, 0(1)
+; AIX64-NEXT:    addi 1, 1, 48
 ; AIX64-NEXT:    blr
 ;
 ; LE-LABEL: foo1:
 ; LE:       # %bb.0: # %entry
+; LE-NEXT:    stdu 1, -32(1)
 ; LE-NEXT:    ld 3, 0(1)
+; LE-NEXT:    addi 1, 1, 32
 ; LE-NEXT:    blr
 entry:
   %0 = call ptr @llvm.frameaddress(i32 1)
@@ -66,20 +78,26 @@ entry:
 define ptr @foo2() #0 {
 ; AIX32-LABEL: foo2:
 ; AIX32:       # %bb.0: # %entry
+; AIX32-NEXT:    stwu 1, -32(1)
 ; AIX32-NEXT:    lwz 3, 0(1)
 ; AIX32-NEXT:    lwz 3, 0(3)
+; AIX32-NEXT:    addi 1, 1, 32
 ; AIX32-NEXT:    blr
 ;
 ; AIX64-LABEL: foo2:
 ; AIX64:       # %bb.0: # %entry
+; AIX64-NEXT:    stdu 1, -48(1)
 ; AIX64-NEXT:    ld 3, 0(1)
 ; AIX64-NEXT:    ld 3, 0(3)
+; AIX64-NEXT:    addi 1, 1, 48
 ; AIX64-NEXT:    blr
 ;
 ; LE-LABEL: foo2:
 ; LE:       # %bb.0: # %entry
+; LE-NEXT:    stdu 1, -32(1)
 ; LE-NEXT:    ld 3, 0(1)
 ; LE-NEXT:    ld 3, 0(3)
+; LE-NEXT:    addi 1, 1, 32
 ; LE-NEXT:    blr
 entry:
   %0 = call ptr @llvm.frameaddress(i32 2)
