@@ -354,7 +354,6 @@ bool UnwrappedLineParser::precededByCommentOrPPDirective() const {
 bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
                                      IfStmtKind *IfKind,
                                      FormatToken **IfLeftBrace) {
-
   const bool InRequiresExpression =
       OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
   const bool IsPrecededByCommentOrPPDirective =
@@ -386,7 +385,6 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
     };
 
     switch (Kind) {
-
     case tok::comment:
       nextToken();
       addUnwrappedLine();
@@ -1421,7 +1419,6 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 void UnwrappedLineParser::parseStructuralElement(
     const FormatToken *OpeningBrace, IfStmtKind *IfKind,
     FormatToken **IfLeftBrace, bool *HasDoWhile, bool *HasLabel) {
-
   if (Style.Language == FormatStyle::LK_TableGen &&
       FormatTok->is(tok::pp_include)) {
     nextToken();
@@ -1699,7 +1696,6 @@ void UnwrappedLineParser::parseStructuralElement(
 
   const bool InRequiresExpression =
       OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
-
   do {
     const FormatToken *Previous = FormatTok->Previous;
     switch (FormatTok->Tok.getKind()) {
@@ -2724,6 +2720,7 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
     assert(Tok);
     ++Tok->BraceCount;
   }
+
   if (CheckEOF && eof())
     addUnwrappedLine();
 
@@ -4817,6 +4814,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
            (!Style.isVerilog() ||
             Keywords.isVerilogPPDirective(*Tokens->peekNextToken())) &&
            FirstNonCommentOnLine) {
+
       if (!UnBracedBodyDepth) {
         distributeComments(Comments, FormatTok);
         Comments.clear();
@@ -4836,6 +4834,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
           PPBranchLevel > 0) {
         Line->Level += PPBranchLevel;
       }
+
       if (!UnBracedBodyDepth) {
         flushComments(isOnNewLine(*FormatTok));
       }
