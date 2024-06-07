@@ -47,8 +47,8 @@ private:
                            bool genAllocated, bool genAssociated);
   mlir::ModuleOp module;
   KindMapping kindMapping;
-  size_t dimsSize;
-  size_t dimsOffset;
+  std::uint64_t dimsSize;
+  std::uint64_t dimsOffset;
 };
 
 } // namespace fir

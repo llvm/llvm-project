@@ -23,63 +23,45 @@
 
 namespace fir {
 
+/// Calculate offset of any field in the descriptor.
+template <int DescriptorField>
+std::uint64_t getComponentOffset(const mlir::DataLayout &dl,
+                                 mlir::MLIRContext *context,
+                                 mlir::Type llvmFieldType) {
+  assert(DescriptorField > 0 && DescriptorField < 10);
+  mlir::Type previousFieldType =
+      getDescFieldTypeModel<DescriptorField - 1>()(context);
+  std::uint64_t previousOffset =
+      getComponentOffset<DescriptorField - 1>(dl, context, previousFieldType);
+  std::uint64_t offset = previousOffset + dl.getTypeSize(previousFieldType);
+  std::uint64_t fieldAlignment = dl.getTypeABIAlignment(llvmFieldType);
+  return llvm::alignTo(offset, fieldAlignment);
+}
+template <>
+std::uint64_t getComponentOffset<0>(const mlir::DataLayout &dl,
+                                    mlir::MLIRContext *context,
+                                    mlir::Type llvmFieldType) {
+  return 0;
+}
+
 DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m)
     : module(m), kindMapping(getKindMapping(m)) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 
   std::optional<mlir::DataLayout> dl =
       fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/true);
-  if (!dl)
+  if (!dl) {
     mlir::emitError(module.getLoc(), "Missing data layout attribute in module");
+    return;
+  }
 
   mlir::MLIRContext *context = module.getContext();
 
   // The debug information requires the offset of certain fields in the
-  // descriptors like lower_bound and extent for each dimension. The code
-  // below uses getDescFieldTypeModel to get the type representing each field
-  // and then use data layout to get its size. It adds the size to get the
-  // offset.
-  // As has been mentioned in DescriptorModel.h that code may be confusing
-  // host for the target in calculating the type of the descriptor fields. But
-  // debug info is using similar logic to what codegen is doing so it will
-  // atleast be representing the generated code correctly.
-  // My testing for a 32-bit shows that base_addr* is correctly given as a
-  // 32-bit entity. The index types are 64-bit so I am a bit uncertain how
-  // the alignment will effect the calculation of offsets in that case.
-
-  // base_addr*
-  dimsOffset =
-      dl->getTypeSizeInBits(getDescFieldTypeModel<kAddrPosInBox>()(context));
-
-  // elem_len
-  dimsOffset +=
-      dl->getTypeSizeInBits(getDescFieldTypeModel<kElemLenPosInBox>()(context));
-
-  // version
-  dimsOffset +=
-      dl->getTypeSizeInBits(getDescFieldTypeModel<kVersionPosInBox>()(context));
-
-  // rank
-  dimsOffset +=
-      dl->getTypeSizeInBits(getDescFieldTypeModel<kRankPosInBox>()(context));
-
-  // type
-  dimsOffset +=
-      dl->getTypeSizeInBits(getDescFieldTypeModel<kTypePosInBox>()(context));
-
-  // attribute
-  dimsOffset += dl->getTypeSizeInBits(
-      getDescFieldTypeModel<kAttributePosInBox>()(context));
-
-  // f18Addendum
-  dimsOffset += dl->getTypeSizeInBits(
-      getDescFieldTypeModel<kF18AddendumPosInBox>()(context));
-
-  // dims
-  dimsSize =
-      dl->getTypeSizeInBits(getDescFieldTypeModel<kDimsPosInBox>()(context));
-  dimsOffset /= 8;
-  dimsSize /= 8;
+  // descriptors like lower_bound and extent for each dimension.
+  mlir::Type llvmDimsType = getDescFieldTypeModel<kDimsPosInBox>()(context);
+  dimsOffset = getComponentOffset<kDimsPosInBox>(*dl, context, llvmDimsType);
+  dimsSize = dl->getTypeSize(getDescFieldTypeModel<kDimsPosInBox>()(context));
 }
 
 static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
