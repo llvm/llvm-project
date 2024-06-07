@@ -232,7 +232,7 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
     return getExtensionName(Rec1) < getExtensionName(Rec2);
   });
 
-  llvm::DenseMap<std::pair<uint64_t, uint64_t>, bool> Seen;
+  llvm::DenseSet<std::pair<uint64_t, uint64_t>> Seen;
 
   OS << "#ifdef GET_RISCVExtensionBitmaskTable_IMPL\n";
   OS << "static const RISCVExtensionBitmask ExtensionBitmask[]={\n";
@@ -245,9 +245,9 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
     uint64_t GroupIDVal = getValueFromBitsInit(GroupIDBits, *Rec);
     uint64_t BitmaskVal = getValueFromBitsInit(BitmaskBits, *Rec);
 
-    assert(!Seen[std::make_pair(GroupIDVal, BitmaskVal)] &&
+    assert(!Seen.contains(std::make_pair(GroupIDVal, BitmaskVal)) &&
            "duplicated bitmask");
-    Seen[std::make_pair(GroupIDVal, BitmaskVal)] = true;
+    Seen.insert(std::make_pair(GroupIDVal, BitmaskVal));
 
     OS << "    {"
        << "\"" << ExtName << "\""
