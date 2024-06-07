@@ -118,12 +118,12 @@ def EnableArmStreaming
            )}]>,
     Option<"ifRequiredByOps", "if-required-by-ops", "bool",
            /*default=*/"false",
-           "Apply the selected streaming/ZA modes if the function contains ops "
-           "that require them.">,
+           "Only apply the selected streaming/ZA modes if the function contains"
+           " ops that implement the ArmSMETileOpInterface.">,
     Option<"ifContainsScalableVectors", "if-contains-scalable-vectors",
            "bool", /*default=*/"false",
-           "Apply the selected streaming/ZA modes if the function contains "
-           "operations that use scalable vector types.">
+           "Only apply the selected streaming/ZA modes if the function contains"
+           " operations that use scalable vector types.">
   ];
   let dependentDialects = ["func::FuncDialect"];
 }
