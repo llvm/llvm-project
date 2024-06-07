@@ -242,6 +242,7 @@ add_math_entrypoint_object(logf)
 add_math_entrypoint_object(logb)
 add_math_entrypoint_object(logbf)
 add_math_entrypoint_object(logbl)
+add_math_entrypoint_object(logbf16)
 add_math_entrypoint_object(logbf128)
 
 add_math_entrypoint_object(llrint)

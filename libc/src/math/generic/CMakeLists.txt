@@ -1725,6 +1725,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  logbf16
+  SRCS
+    logbf16.cpp
+  HDRS
+    ../logbf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
   logbf128
   SRCS
     logbf128.cpp
@@ -1733,6 +1746,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
 )
 

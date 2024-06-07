@@ -1586,8 +1586,11 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     logb_test.cpp
+  HDRS
+    LogbTest.h
   DEPENDS
     libc.src.math.logb
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -1597,8 +1600,11 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     logbf_test.cpp
+  HDRS
+    LogbTest.h
   DEPENDS
     libc.src.math.logbf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -1612,6 +1618,21 @@ add_fp_unittest(
     LogbTest.h
   DEPENDS
     libc.src.math.logbl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  logbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    logbf16_test.cpp
+  HDRS
+    LogbTest.h
+  DEPENDS
+    libc.src.math.logbf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -1621,8 +1642,11 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     logbf128_test.cpp
+  HDRS
+    LogbTest.h
   DEPENDS
     libc.src.math.logbf128
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.manipulation_functions
 )
 

@@ -139,7 +139,7 @@ LIBC_INLINE constexpr T logb(T x) {
     return FPBits<T>::inf().get_val();
   }
 
-  DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
+  DyadicFloat<cpp::max(FPBits<T>::STORAGE_LEN, 32)> normal(bits.get_val());
   return static_cast<T>(normal.get_unbiased_exponent());
 }
 
