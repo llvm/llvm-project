@@ -467,7 +467,6 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     TC.AddLinkRuntimeLib(Args, CmdArgs);
   }
 
-
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
     // Find the first filename InputInfo object.
