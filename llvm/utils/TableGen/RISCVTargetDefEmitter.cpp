@@ -248,10 +248,9 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
     uint64_t BitmaskVal = getValueFromBitsInit(BitmaskBits, *Rec);
 
 #ifndef NDEBUG
-    assert(!Seen.contains(std::make_pair(GroupIDVal, BitmaskVal)) &&
+    assert(Seen.insert(std::make_pair(GroupIDVal, BitmaskVal)).second &&
            "duplicated bitmask");
 #endif
-    Seen.insert(std::make_pair(GroupIDVal, BitmaskVal));
 
     OS << "    {"
        << "\"" << ExtName << "\""
