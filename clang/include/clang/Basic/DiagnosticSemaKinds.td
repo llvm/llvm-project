@@ -607,6 +607,8 @@ def note_using_decl_class_member_workaround : Note<
   "a const variable|a constexpr variable}0 instead">;
 def err_using_decl_can_not_refer_to_namespace : Error<
   "using declaration cannot refer to a namespace">;
+def note_namespace_using_decl : Note<
+  "did you mean 'using namespace'?">;
 def warn_cxx17_compat_using_decl_scoped_enumerator: Warning<
   "using declaration naming a scoped enumerator is incompatible with "
   "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
