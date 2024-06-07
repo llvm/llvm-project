@@ -391,7 +391,8 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
   if (Exact) {
     unsigned FirstOne = LHS.countMaxTrailingZeros();
     if (FirstOne < MinShiftAmount) {
-      // Always poison.
+      // Always poison. Return zero because we don't like returning conflict.
+        Known.setAllZero();
       return Known;
     }
     MaxShiftAmount = std::min(MaxShiftAmount, FirstOne);
@@ -980,7 +981,8 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
   KnownBits Known(BitWidth);
 
   if (LHS.isZero() || RHS.isZero()) {
-    // Result is either known Zero or UB.
+      // Result is either known Zero or UB. Return Zero either way.
+      Known.setAllZero();
     return Known;
   }
 
