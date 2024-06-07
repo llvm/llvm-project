@@ -386,6 +386,33 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
 
   Found.setTemplateNameLookup(true);
 
+  // Template names cannot appear inside an Objective-C class or object type
+  // or a vector type.
+  //
+  // FIXME: This is wrong. For example:
+  //
+  //   template<typename T> using Vec = T __attribute__((ext_vector_type(4)));
+  //   Vec<int> vi;
+  //   vi.Vec<int>::~Vec<int>();
+  //
+  // ... should be accepted but we will not treat 'Vec' as a template name
+  // here. The right thing to do would be to check if the name is a valid
+  // vector component name, and look up a template name if not. And similarly
+  // for lookups into Objective-C class and object types, where the same
+  // problem can arise.
+  if (!ObjectType.isNull() &&
+      (ObjectType->isVectorType() || ObjectType->isObjCObjectOrInterfaceType())) {
+    Found.clear();
+    return false;
+  }
+
+  LookupParsedName(Found, S, &SS, ObjectType,
+                   /*AllowBuiltinCreation=*/false, EnteringContext);
+
+  if (Found.wasNotFoundInCurrentInstantiation())
+    return false;
+
+  #if 0
   // Determine where to perform name lookup
   DeclContext *LookupCtx = nullptr;
   bool IsDependent = false;
@@ -448,10 +475,13 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     // unknown specialization when we come to instantiate the template.
     IsDependent |= Found.wasNotFoundInCurrentInstantiation();
   }
+  #endif
 
+
+  #if 0
+  bool ObjectTypeSearchedInScope = false;
   bool LookupFirstQualifierInScope =
       MayBeNNS && Found.empty() && !ObjectType.isNull() && !IsDependent;
-
   // FIXME: We should still do the lookup if the object expression is dependent,
   // but instead of using them we should store them via
   // setFirstQualifierFoundInScope and pretend we found nothing.
@@ -478,6 +508,21 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
 
     IsDependent |= Found.wasNotFoundInCurrentInstantiation();
   }
+  #endif
+
+  bool ObjectTypeSearchedInScope = false;
+  bool LookupFirstQualifierInScope =
+      MayBeNNS && Found.empty() && !ObjectType.isNull();
+
+  if (LookupFirstQualifierInScope) {
+    if (S) {
+      LookupName(Found, S);
+    } else if (!SS.getUnqualifiedLookups().empty()) {
+      Found.addAllDecls(SS.getUnqualifiedLookups());
+      Found.resolveKind();
+    }
+    ObjectTypeSearchedInScope = true;
+  }
 
   if (Found.isAmbiguous())
     return false;
@@ -496,7 +541,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
         getLangOpts().CPlusPlus20 && llvm::all_of(Found, [](NamedDecl *ND) {
           return isa<FunctionDecl>(ND->getUnderlyingDecl());
         });
-    if (AllFunctions || (Found.empty() && !IsDependent)) {
+    if (AllFunctions || Found.empty()) {
       // If lookup found any functions, or if this is a name that can only be
       // used for a function, then strongly assume this is a function
       // template-id.
@@ -508,11 +553,14 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     }
   }
 
-  if (Found.empty() && !IsDependent && AllowTypoCorrection) {
+  if (Found.empty() && AllowTypoCorrection) {
     // If we did not find any names, and this is not a disambiguation, attempt
     // to correct any typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
+    DeclContext *LookupCtx = SS.isSet()
+        ? computeDeclContext(SS, EnteringContext)
+        : (!ObjectType.isNull() ? computeDeclContext(ObjectType) : nullptr);
     // Simple filter callback that, for keywords, only accepts the C++ *_cast
     DefaultFilterCCC FilterCCC{};
     FilterCCC.WantTypeSpecifiers = false;
@@ -547,11 +595,6 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
       Found.empty() ? nullptr : Found.getRepresentativeDecl();
   FilterAcceptableTemplateNames(Found);
   if (Found.empty()) {
-    if (IsDependent) {
-      Found.setNotFoundInCurrentInstantiation();
-      return false;
-    }
-
     // If a 'template' keyword was used, a lookup that finds only non-template
     // names is an error.
     if (ExampleLookupResult && RequiredTemplate) {

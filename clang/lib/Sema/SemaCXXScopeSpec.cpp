@@ -422,6 +422,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                        bool ErrorRecoveryLookup,
                                        bool *IsCorrectedToColon,
                                        bool OnlyNamespace) {
+ #if 0
   if (IdInfo.Identifier->isEditorPlaceholder())
     return true;
   LookupResult Found(*this, IdInfo.Identifier, IdInfo.IdentifierLoc,
@@ -515,16 +516,25 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     LookupName(Found, S);
   }
 #endif
+#endif
 
-  if (Found.isAmbiguous())
+
+  if (IdInfo.Identifier->isEditorPlaceholder())
     return true;
+  if (IsCorrectedToColon)
+    *IsCorrectedToColon = false;
+
+  QualType ObjectType = GetTypeFromParser(IdInfo.ObjectType);
+  LookupResult Found(*this, IdInfo.Identifier, IdInfo.IdentifierLoc,
+                     OnlyNamespace ? LookupNamespaceName
+                                   : LookupNestedNameSpecifierName);
+
+  LookupParsedName(Found, S, &SS, ObjectType,
+                   /*AllowBuiltinCreation=*/false, EnteringContext);
 
   // If we performed lookup into a dependent context and did not find anything,
   // that's fine: just build a dependent nested-name-specifier.
-  if (Found.empty() && isDependent &&
-      !(LookupCtx && LookupCtx->isRecord() &&
-        (!cast<CXXRecordDecl>(LookupCtx)->hasDefinition() ||
-         !cast<CXXRecordDecl>(LookupCtx)->hasAnyDependentBases()))) {
+  if (Found.wasNotFoundInCurrentInstantiation()) {
     // Don't speculate if we're just trying to improve error recovery.
     if (ErrorRecoveryLookup)
       return true;
@@ -537,13 +547,35 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     return false;
   }
 
+  bool ObjectTypeSearchedInScope = false;
+  bool LookupFirstQualifierInScope =
+      Found.empty() && !ObjectType.isNull();
+
+  if (LookupFirstQualifierInScope) {
+    if (S) {
+      LookupName(Found, S);
+    } else if (!SS.getUnqualifiedLookups().empty()) {
+      Found.addAllDecls(SS.getUnqualifiedLookups());
+      Found.resolveKind();
+    }
+    ObjectTypeSearchedInScope = true;
+  }
+
+  if (Found.isAmbiguous())
+    return true;
+
+  DeclContext *LookupCtx = SS.isSet()
+      ? computeDeclContext(SS, EnteringContext)
+      : (!ObjectType.isNull() ? computeDeclContext(ObjectType) : nullptr);
+
+
   if (Found.empty() && !ErrorRecoveryLookup) {
     // If identifier is not found as class-name-or-namespace-name, but is found
     // as other entity, don't look for typos.
     LookupResult R(*this, Found.getLookupNameInfo(), LookupOrdinaryName);
     if (LookupCtx)
       LookupQualifiedName(R, LookupCtx);
-    else if (S && !isDependent)
+    else if (S)
       LookupName(R, S);
     if (!R.empty()) {
       // Don't diagnose problems with this speculative lookup.
