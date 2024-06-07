@@ -23,21 +23,53 @@
 // RUN:   -fdebug-types-section -gpubnames -c %s -o %t.foo.o
 // RUN: ld.lld %t.main.o %t.foo.o -o %t
 
-// First we check when we make the .dwp file with %t.main.dwo first so it will
+// Check when have no .dwp file that we can find the types in both .dwo files.
+// RUN: rm -f %t.dwp
+// RUN: %lldb \
+// RUN:   -o "type lookup IntegerType" \
+// RUN:   -o "type lookup FloatType" \
+// RUN:   -o "type lookup CustomType" \
+// RUN:   -b %t | FileCheck %s --check-prefix=NODWP
+// NODWP: (lldb) type lookup IntegerType
+// NODWP-NEXT: int
+// NODWP-NEXT: unsigned int
+// NODWP: (lldb) type lookup FloatType
+// NODWP-NEXT: double
+// NODWP-NEXT: float
+// NODWP: (lldb) type lookup CustomType
+// NODWP-NEXT: struct CustomType {
+// NODWP-NEXT:     typedef int IntegerType;
+// NODWP-NEXT:     typedef double FloatType;
+// NODWP-NEXT:     CustomType::IntegerType x;
+// NODWP-NEXT:     CustomType::FloatType y;
+// NODWP-NEXT: }
+// NODWP-NEXT: struct CustomType {
+// NODWP-NEXT:     typedef unsigned int IntegerType;
+// NODWP-NEXT:     typedef float FloatType;
+// NODWP-NEXT:     CustomType::IntegerType x;
+// NODWP-NEXT:     CustomType::FloatType y;
+// NODWP-NEXT: }
+
+// Check when we make the .dwp file with %t.main.dwo first so it will
 // pick the type unit from %t.main.dwo. Verify we find only the types from
 // %t.main.dwo's type unit.
 // RUN: llvm-dwp %t.main.dwo %t.foo.dwo -o %t.dwp
 // RUN: %lldb \
 // RUN:   -o "type lookup IntegerType" \
 // RUN:   -o "type lookup FloatType" \
-// RUN:   -o "type lookup IntegerType" \
-// RUN:   -b %t | FileCheck %s
-// CHECK: (lldb) type lookup IntegerType
-// CHECK-NEXT: int
-// CHECK-NEXT: (lldb) type lookup FloatType
-// CHECK-NEXT: double
-// CHECK-NEXT: (lldb) type lookup IntegerType
-// CHECK-NEXT: int
+// RUN:   -o "type lookup CustomType" \
+// RUN:   -b %t | FileCheck %s --check-prefix=DWPMAIN
+// DWPMAIN: (lldb) type lookup IntegerType
+// DWPMAIN-NEXT: int
+// DWPMAIN: (lldb) type lookup FloatType
+// DWPMAIN-NEXT: double
+// DWPMAIN: (lldb) type lookup CustomType
+// DWPMAIN-NEXT: struct CustomType {
+// DWPMAIN-NEXT:     typedef int IntegerType;
+// DWPMAIN-NEXT:     typedef double FloatType;
+// DWPMAIN-NEXT:     CustomType::IntegerType x;
+// DWPMAIN-NEXT:     CustomType::FloatType y;
+// DWPMAIN-NEXT: }
 
 // Next we check when we make the .dwp file with %t.foo.dwo first so it will
 // pick the type unit from %t.main.dwo. Verify we find only the types from
@@ -46,15 +78,20 @@
 // RUN: %lldb \
 // RUN:   -o "type lookup IntegerType" \
 // RUN:   -o "type lookup FloatType" \
-// RUN:   -o "type lookup IntegerType" \
-// RUN:   -b %t | FileCheck %s --check-prefix=VARIANT
+// RUN:   -o "type lookup CustomType" \
+// RUN:   -b %t | FileCheck %s --check-prefix=DWPFOO
 
-// VARIANT: (lldb) type lookup IntegerType
-// VARIANT-NEXT: unsigned int
-// VARIANT-NEXT: (lldb) type lookup FloatType
-// VARIANT-NEXT: float
-// VARIANT-NEXT: (lldb) type lookup IntegerType
-// VARIANT-NEXT: unsigned int
+// DWPFOO: (lldb) type lookup IntegerType
+// DWPFOO-NEXT: unsigned int
+// DWPFOO: (lldb) type lookup FloatType
+// DWPFOO-NEXT: float
+// DWPFOO: (lldb) type lookup CustomType
+// DWPFOO-NEXT: struct CustomType {
+// DWPFOO-NEXT:     typedef unsigned int IntegerType;
+// DWPFOO-NEXT:     typedef float FloatType;
+// DWPFOO-NEXT:     CustomType::IntegerType x;
+// DWPFOO-NEXT:     CustomType::FloatType y;
+// DWPFOO-NEXT: }
 
 
 // We need to do this so we end with a type unit in each .dwo file and that has
