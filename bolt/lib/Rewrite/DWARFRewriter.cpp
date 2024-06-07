@@ -187,6 +187,7 @@ class DIEStreamer : public DwarfStreamer {
   DIEBuilder *DIEBldr;
   DWARFRewriter &Rewriter;
   GDBIndex &GDBIndexSection;
+
 private:
   /// Emit the compilation unit header for \p Unit in the debug_info
   /// section.
@@ -242,7 +243,8 @@ private:
     }
   }
 
-  void emitTypeUnitHeader(DWARFUnit &Unit, DIE &UnitDIE, unsigned DwarfVersion) {
+  void emitTypeUnitHeader(DWARFUnit &Unit, DIE &UnitDIE,
+                          unsigned DwarfVersion) {
     AsmPrinter &Asm = getAsmPrinter();
     const uint64_t TypeSignature = cast<DWARFTypeUnit>(Unit).getTypeHash();
     DIE *TypeDIE = DIEBldr->getTypeDIE(Unit);
@@ -278,12 +280,13 @@ private:
   }
 
 public:
-  DIEStreamer(DIEBuilder *DIEBldr, DWARFRewriter &Rewriter, GDBIndex &GDBIndexSection,
+  DIEStreamer(DIEBuilder *DIEBldr, DWARFRewriter &Rewriter,
+              GDBIndex &GDBIndexSection,
               DWARFLinkerBase::OutputFileType OutFileType,
               raw_pwrite_stream &OutFile,
               DWARFLinkerBase::MessageHandlerTy Warning)
-      : DwarfStreamer(OutFileType, OutFile, Warning), DIEBldr(DIEBldr), Rewriter(Rewriter),
-        GDBIndexSection(GDBIndexSection){};
+      : DwarfStreamer(OutFileType, OutFile, Warning), DIEBldr(DIEBldr),
+        Rewriter(Rewriter), GDBIndexSection(GDBIndexSection){};
 
   using DwarfStreamer::emitCompileUnitHeader;
 
@@ -462,7 +465,8 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
                   DWARFRewriter &Rewriter, GDBIndex &GDBIndexSection) {
 
   std::unique_ptr<DIEStreamer> Streamer = std::make_unique<DIEStreamer>(
-      &DIEBldr, Rewriter, GDBIndexSection, DWARFLinkerBase::OutputFileType::Object, OutFile,
+      &DIEBldr, Rewriter, GDBIndexSection,
+      DWARFLinkerBase::OutputFileType::Object, OutFile,
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {});
   Error Err = Streamer->init(TheTriple, Swift5ReflectionSegmentName);
   if (Err)
@@ -472,8 +476,8 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
   return Streamer;
 }
 
-static DWARFRewriter::UnitMeta emitUnit(DIEBuilder &DIEBldr,
-                                        DIEStreamer &Streamer, DWARFUnit &Unit) {
+static DWARFRewriter::UnitMeta
+emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer, DWARFUnit &Unit) {
   DIE *UnitDIE = DIEBldr.getUnitDIEbyUnit(Unit);
   const DIEBuilder::DWARFUnitInfo &U = DIEBldr.getUnitInfoByDwarfUnit(Unit);
   Streamer.emitUnit(Unit, *UnitDIE);
@@ -498,8 +502,9 @@ emitDWOBuilder(const std::string &DWOName, DIEBuilder &DWODIEBuilder,
       std::make_shared<raw_svector_ostream>(OutBuffer);
   const object::ObjectFile *File = SplitCU.getContext().getDWARFObj().getFile();
   auto TheTriple = std::make_unique<Triple>(File->makeTriple());
-  std::unique_ptr<DIEStreamer> Streamer = createDIEStreamer(
-      *TheTriple, *ObjOS, "DwoStreamerInitAug2", DWODIEBuilder, Rewriter, GDBIndexSection);
+  std::unique_ptr<DIEStreamer> Streamer =
+      createDIEStreamer(*TheTriple, *ObjOS, "DwoStreamerInitAug2",
+                        DWODIEBuilder, Rewriter, GDBIndexSection);
   DWARFRewriter::UnitMetaVectorType TUMetaVector;
   DWARFRewriter::UnitMeta CUMI = {0, 0, 0};
   if (SplitCU.getContext().getMaxDWOVersion() >= 5) {
@@ -519,8 +524,7 @@ emitDWOBuilder(const std::string &DWOName, DIEBuilder &DWODIEBuilder,
 
     // emit debug_types sections for dwarf4
     for (DWARFUnit *CU : DWODIEBuilder.getDWARF4TUVector()) {
-      DWARFRewriter::UnitMeta MI =
-          emitUnit(DWODIEBuilder, *Streamer, *CU);
+      DWARFRewriter::UnitMeta MI = emitUnit(DWODIEBuilder, *Streamer, *CU);
       TUMetaVector.emplace_back(MI);
     }
   }
@@ -704,7 +708,8 @@ void DWARFRewriter::updateDebugInfo() {
         TempRangesSectionWriter->finalizeSection();
 
       emitDWOBuilder(DWOName, DWODIEBuilder, *this, **SplitCU, *Unit, State,
-                     DebugLocDWoWriter, DWOStrOffstsWriter, DWOStrWriter, GDBIndexSection);
+                     DebugLocDWoWriter, DWOStrOffstsWriter, DWOStrWriter,
+                     GDBIndexSection);
     }
 
     if (Unit->getVersion() >= 5) {
@@ -729,8 +734,8 @@ void DWARFRewriter::updateDebugInfo() {
       std::make_unique<raw_svector_ostream>(OutBuffer);
   const object::ObjectFile *File = BC.DwCtx->getDWARFObj().getFile();
   auto TheTriple = std::make_unique<Triple>(File->makeTriple());
-  std::unique_ptr<DIEStreamer> Streamer =
-      createDIEStreamer(*TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this, GDBIndexSection);
+  std::unique_ptr<DIEStreamer> Streamer = createDIEStreamer(
+      *TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this, GDBIndexSection);
   CUOffsetMap OffsetMap =
       finalizeTypeSections(DIEBlder, *Streamer, GDBIndexSection);
 
@@ -1452,8 +1457,8 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
       std::make_shared<raw_svector_ostream>(OutBuffer);
   const object::ObjectFile *File = BC.DwCtx->getDWARFObj().getFile();
   auto TheTriple = std::make_unique<Triple>(File->makeTriple());
-  std::unique_ptr<DIEStreamer> TypeStreamer =
-      createDIEStreamer(*TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this, GDBIndexSection);
+  std::unique_ptr<DIEStreamer> TypeStreamer = createDIEStreamer(
+      *TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this, GDBIndexSection);
 
   // generate debug_info and CUMap
   CUOffsetMap CUMap;
