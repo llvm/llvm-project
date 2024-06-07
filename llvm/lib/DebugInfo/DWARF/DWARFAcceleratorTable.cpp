@@ -662,14 +662,13 @@ DWARFDebugNames::Entry::getForeignTUTypeSignature() const {
   std::optional<uint64_t> Index = getLocalTUIndex();
   const uint32_t NumLocalTUs = NameIdx->getLocalTUCount();
   if (!Index || *Index < NumLocalTUs)
-    return std::nullopt;  // Invalid TU index or TU index is for a local TU
+    return std::nullopt; // Invalid TU index or TU index is for a local TU
   // The foreign TU index is the TU index minus the number of local TUs.
   const uint64_t ForeignTUIndex = *Index - NumLocalTUs;
   if (ForeignTUIndex >= NameIdx->getForeignTUCount())
-    return std::nullopt;  // Invalid foreign TU index.
+    return std::nullopt; // Invalid foreign TU index.
   return NameIdx->getForeignTUSignature(ForeignTUIndex);
 }
-
 
 std::optional<uint64_t>
 DWARFDebugNames::Entry::getForeignTUSkeletonCUOffset() const {

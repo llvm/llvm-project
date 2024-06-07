@@ -1753,7 +1753,7 @@ SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
   if (file_index) {
     SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile();
     if (debug_map) {
-        // We have a SymbolFileDWARFDebugMap, so let it find the right file
+      // We have a SymbolFileDWARFDebugMap, so let it find the right file
       return debug_map->GetSymbolFileByOSOIndex(*file_index);
     } else {
       // Handle the .dwp file case correctly
@@ -1761,8 +1761,9 @@ SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
         return GetDwpSymbolFile().get(); // DWP case
 
       // Handle the .dwo file case correctly
-      return DebugInfo().GetUnitAtIndex(*die_ref.file_index())
-                        ->GetDwoSymbolFile(); // DWO case
+      return DebugInfo()
+          .GetUnitAtIndex(*die_ref.file_index())
+          ->GetDwoSymbolFile(); // DWO case
     }
   }
   return this;
