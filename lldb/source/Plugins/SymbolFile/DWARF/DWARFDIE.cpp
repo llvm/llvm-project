@@ -564,3 +564,10 @@ std::optional<DWARFFormValue> DWARFDIE::find(const dw_attr_t attr) const {
     return form_value;
   return std::nullopt;
 }
+
+std::optional<uint64_t> llvm::getLanguage(lldb_private::plugin::dwarf::DWARFDIE D) {
+  if (auto I = D.GetCU()->GetDWARFLanguageType())
+    return I;
+  return std::nullopt;
+}
+

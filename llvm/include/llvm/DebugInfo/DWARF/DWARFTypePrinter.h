@@ -19,12 +19,20 @@ namespace llvm {
 
 class raw_ostream;
 
+inline std::optional<uint64_t> getLanguage(DWARFDie D) {
+  if (std::optional<DWARFFormValue> LV =
+          D.getDwarfUnit()->getUnitDIE().find(dwarf::DW_AT_language))
+    return LV->getAsUnsignedConstant();
+  return std::nullopt;
+}
+
 namespace detail {
 struct DefaultVisitor {
   raw_ostream &OS;
   DefaultVisitor(raw_ostream &OS) : OS(OS) { }
-  void operator()(StringRef S) const {
+  bool operator()(StringRef S) const {
     OS << S;
+    return true;
   }
 };
 
@@ -33,14 +41,16 @@ inline llvm::SmallString<128> toString(const llvm::format_object_base &Fmt) {
   llvm::SmallString<128> V;
 
   while (true) {
-    V.resize(NextBufferSize);
+    V.resize_for_overwrite(NextBufferSize);
 
     // Try formatting into the SmallVector.
     size_t BytesUsed = Fmt.print(V.data(), NextBufferSize);
 
     // If BytesUsed fit into the vector, we win.
-    if (BytesUsed <= NextBufferSize)
+    if (BytesUsed <= NextBufferSize) {
+      V.resize(BytesUsed);
       return V;
+    }
 
     // Otherwise, try again with a new size.
     assert(BytesUsed > NextBufferSize && "Didn't grow buffer!?");
@@ -48,6 +58,9 @@ inline llvm::SmallString<128> toString(const llvm::format_object_base &Fmt) {
   }
 }
 }
+
+#define LLVM_QUICK_EXIT(expr) if (!(expr)) return false
+#define LLVM_QUICK_EXIT_NONE(expr) if (!(expr)) return std::nullopt
 
 // FIXME: We should have pretty printers per language. Currently we print
 // everything as if it was C++ and fall back to the TAG type name.
@@ -63,99 +76,105 @@ struct DWARFTypePrinter {
   DWARFTypePrinter(T &&V) : V(std::forward<T>(V)) {}
 
   /// Dump the name encoded in the type tag.
-  void appendTypeTagName(dwarf::Tag T);
+  bool appendTypeTagName(dwarf::Tag T);
 
-  void appendArrayType(const DieType &D);
+  bool appendArrayType(const DieType &D);
 
   DieType skipQualifiers(DieType D);
 
   bool needsParens(DieType D);
 
-  void appendPointerLikeTypeBefore(DieType D, DieType Inner, StringRef Ptr);
+  bool appendPointerLikeTypeBefore(DieType D, DieType Inner, StringRef Ptr);
 
-  DieType appendUnqualifiedNameBefore(DieType D,
-                                      std::string *OriginalFullName = nullptr);
+  std::optional<DieType>
+  appendUnqualifiedNameBefore(DieType D,
+                              std::string *OriginalFullName = nullptr);
 
-  void appendUnqualifiedNameAfter(DieType D, DieType Inner,
+  bool appendUnqualifiedNameAfter(DieType D, DieType Inner,
                                   bool SkipFirstParamIfArtificial = false);
-  void appendQualifiedName(DieType D);
-  DieType appendQualifiedNameBefore(DieType D);
-  bool appendTemplateParameters(DieType D, bool *FirstParameter = nullptr);
-  void appendAndTerminateTemplateParameters(DieType D);
+  bool appendQualifiedName(DieType D);
+  std::optional<DieType> appendQualifiedNameBefore(DieType D);
+  std::optional<bool> appendTemplateParameters(DieType D, bool *FirstParameter = nullptr);
+  bool appendAndTerminateTemplateParameters(DieType D);
   void decomposeConstVolatile(DieType &N, DieType &T, DieType &C, DieType &V);
-  void appendConstVolatileQualifierAfter(DieType N);
-  void appendConstVolatileQualifierBefore(DieType N);
+  bool appendConstVolatileQualifierAfter(DieType N);
+  bool appendConstVolatileQualifierBefore(DieType N);
 
   /// Recursively append the DIE type name when applicable.
-  void appendUnqualifiedName(DieType D,
+  bool appendUnqualifiedName(DieType D,
                              std::string *OriginalFullName = nullptr);
 
-  void appendSubroutineNameAfter(DieType D, DieType Inner,
+  bool appendSubroutineNameAfter(DieType D, DieType Inner,
                                  bool SkipFirstParamIfArtificial, bool Const,
                                  bool Volatile);
-  void appendScopes(DieType D);
+  bool appendScopes(DieType D);
 };
 
 template <typename DieType, typename Visitor>
-void DWARFTypePrinter<DieType, Visitor>::appendTypeTagName(dwarf::Tag T) {
+bool DWARFTypePrinter<DieType, Visitor>::appendTypeTagName(dwarf::Tag T) {
   StringRef TagStr = TagString(T);
   static constexpr StringRef Prefix = "dwarf::DW_TAG_";
   static constexpr StringRef Suffix = "_type";
   if (!TagStr.starts_with(Prefix) || !TagStr.ends_with(Suffix))
-    return;
-  V(TagStr.substr(Prefix.size(),
-                      TagStr.size() - (Prefix.size() + Suffix.size())));
-  V(" ");
+    return true;
+  LLVM_QUICK_EXIT(V(TagStr.substr(
+      Prefix.size(), TagStr.size() - (Prefix.size() + Suffix.size()))));
+  LLVM_QUICK_EXIT(V(" "));
+  return true;
 }
 
 template <typename DieType, typename Visitor>
-void DWARFTypePrinter<DieType, Visitor>::appendArrayType(const DieType &D) {
+bool DWARFTypePrinter<DieType, Visitor>::appendArrayType(const DieType &D) {
   for (const DieType &C : D.children()) {
     if (C.getTag() != dwarf::DW_TAG_subrange_type)
       continue;
     std::optional<uint64_t> LB;
     std::optional<uint64_t> Count;
     std::optional<uint64_t> UB;
-    std::optional<unsigned> DefaultLB;
+    std::optional<uint64_t> DefaultLB;
     if (std::optional<typename DieType::DWARFFormValue> L = C.find(dwarf::DW_AT_lower_bound))
       LB = L->getAsUnsignedConstant();
     if (std::optional<typename DieType::DWARFFormValue> CountV = C.find(dwarf::DW_AT_count))
       Count = CountV->getAsUnsignedConstant();
     if (std::optional<typename DieType::DWARFFormValue> UpperV = C.find(dwarf::DW_AT_upper_bound))
       UB = UpperV->getAsUnsignedConstant();
-    /*
-    if (std::optional<typename DieType::DWARFFormValue> LV =
-            D.getDwarfUnit()->getUnitDIE().find(dwarf::DW_AT_language))
-      if (std::optional<uint64_t> LC = LV->getAsUnsignedConstant())
-        if ((DefaultLB =
-                 LanguageLowerBound(static_cast<dwarf::SourceLanguage>(*LC))))
-          if (LB && *LB == *DefaultLB)
-            LB = std::nullopt;
-            */
-    if (!LB && !Count && !UB)
-      V("[]");
-    else if (!LB && (Count || UB) && DefaultLB)
-      V("["), V(Twine(Count ? *Count : *UB - *DefaultLB + 1).str()), V("]");
-    else {
-      V("[[");
-      if (LB)
-        V(Twine(*LB).str());
-      else
-        V("?");
-      V(", ");
-      if (Count)
-        if (LB)
-          V(Twine(*LB + *Count).str());
-        else
-          V("? + "), V(Twine(*Count).str());
-      else if (UB)
-        V(Twine(*UB + 1).str());
-      else
-        V("?");
-      V(")]");
+
+    if (std::optional<uint64_t> LC = getLanguage(D))
+        DefaultLB =
+                 LanguageLowerBound(static_cast<dwarf::SourceLanguage>(*LC));
+
+    if (DefaultLB == LB)
+      LB = std::nullopt;
+    if (!LB && !Count && !UB) {
+      LLVM_QUICK_EXIT(V("[]"));
+    } else if (!LB && (Count || UB) && DefaultLB) {
+      LLVM_QUICK_EXIT(V("[") &&
+                      V(Twine(Count ? *Count : *UB - *DefaultLB + 1).str()) &&
+                      V("]"));
+    } else {
+      LLVM_QUICK_EXIT(V("[["));
+      if (LB) {
+        LLVM_QUICK_EXIT(V(Twine(*LB).str()));
+      } else {
+        LLVM_QUICK_EXIT(V("?"));
+      }
+      LLVM_QUICK_EXIT(V(", "));
+      if (Count) {
+        if (LB) {
+          LLVM_QUICK_EXIT(V(Twine(*LB + *Count).str()));
+        } else {
+          LLVM_QUICK_EXIT(V("? + ") && V(Twine(*Count).str()));
+        }
+      } else if (UB) {
+        LLVM_QUICK_EXIT(V(Twine(*UB + 1).str()));
+      } else {
+        LLVM_QUICK_EXIT(V("?"));
+      }
+      LLVM_QUICK_EXIT(V(")]"));
     }
   }
   EndedWithTemplate = false;
+  return true;
 }
 
 namespace detail {
@@ -186,25 +205,25 @@ bool DWARFTypePrinter<DieType, Visitor>::needsParens(DieType D) {
 }
 
 template <typename DieType, typename Visitor>
-void DWARFTypePrinter<DieType, Visitor>::appendPointerLikeTypeBefore(DieType D,
-                                                            DieType Inner,
-                                                            StringRef Ptr) {
-  appendQualifiedNameBefore(Inner);
+bool DWARFTypePrinter<DieType, Visitor>::appendPointerLikeTypeBefore(
+    DieType D, DieType Inner, StringRef Ptr) {
+  LLVM_QUICK_EXIT(appendQualifiedNameBefore(Inner));
   if (Word)
-    V(" ");
+    LLVM_QUICK_EXIT(V(" "));
   if (needsParens(Inner))
-    V("(");
-  V(Ptr);
+    LLVM_QUICK_EXIT(V("("));
+  LLVM_QUICK_EXIT(V(Ptr));
   Word = false;
   EndedWithTemplate = false;
+  return true;
 }
 
 template <typename DieType, typename Visitor>
-DieType DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedNameBefore(
+std::optional<DieType> DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedNameBefore(
     DieType D, std::string *OriginalFullName) {
   Word = true;
   if (!D) {
-    V("void");
+    LLVM_QUICK_EXIT_NONE(V("void"));
     return DieType();
   }
   DieType InnerDIE;
@@ -212,54 +231,55 @@ DieType DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedNameBefore(
   const dwarf::Tag T = D.getTag();
   switch (T) {
   case dwarf::DW_TAG_pointer_type: {
-    appendPointerLikeTypeBefore(D, Inner(), "*");
+    LLVM_QUICK_EXIT_NONE(appendPointerLikeTypeBefore(D, Inner(), "*"));
     break;
   }
   case dwarf::DW_TAG_subroutine_type: {
-    appendQualifiedNameBefore(Inner());
+    LLVM_QUICK_EXIT_NONE(appendQualifiedNameBefore(Inner()));
     if (Word) {
-      V(" ");
+      LLVM_QUICK_EXIT_NONE(V(" "));
     }
     Word = false;
     break;
   }
   case dwarf::DW_TAG_array_type: {
-    appendQualifiedNameBefore(Inner());
+    LLVM_QUICK_EXIT_NONE(appendQualifiedNameBefore(Inner()));
     break;
   }
   case dwarf::DW_TAG_reference_type:
-    appendPointerLikeTypeBefore(D, Inner(), "&");
+    LLVM_QUICK_EXIT_NONE(appendPointerLikeTypeBefore(D, Inner(), "&"));
     break;
   case dwarf::DW_TAG_rvalue_reference_type:
-    appendPointerLikeTypeBefore(D, Inner(), "&&");
+    LLVM_QUICK_EXIT_NONE(appendPointerLikeTypeBefore(D, Inner(), "&&"));
     break;
   case dwarf::DW_TAG_ptr_to_member_type: {
-    appendQualifiedNameBefore(Inner());
-    if (needsParens(InnerDIE))
-      V("(");
-    else if (Word)
-      V(" ");
-    if (DieType Cont = detail::resolveReferencedType(D, dwarf::DW_AT_containing_type)) {
+    LLVM_QUICK_EXIT_NONE(appendQualifiedNameBefore(Inner()));
+    if (needsParens(InnerDIE)) {
+      LLVM_QUICK_EXIT_NONE(V("("));
+    } else if (Word) {
+      LLVM_QUICK_EXIT_NONE(V(" "));
+    } if (DieType Cont = detail::resolveReferencedType(D, dwarf::DW_AT_containing_type)) {
       appendQualifiedName(Cont);
       EndedWithTemplate = false;
-      V("::");
+      LLVM_QUICK_EXIT_NONE(V("::"));
     }
-    V("*");
+    LLVM_QUICK_EXIT_NONE(V("*"));
     Word = false;
     break;
   }
   case dwarf::DW_TAG_LLVM_ptrauth_type:
-    appendQualifiedNameBefore(Inner());
+    LLVM_QUICK_EXIT_NONE(appendQualifiedNameBefore(Inner()));
     break;
   case dwarf::DW_TAG_const_type:
   case dwarf::DW_TAG_volatile_type:
-    appendConstVolatileQualifierBefore(D);
+    LLVM_QUICK_EXIT_NONE(appendConstVolatileQualifierBefore(D));
     break;
   case dwarf::DW_TAG_namespace: {
-    if (const char *Name = toString(D.find(dwarf::DW_AT_name), nullptr))
-      V(Name);
-    else
-      V("(anonymous namespace)");
+    if (const char *Name = toString(D.find(dwarf::DW_AT_name), nullptr)) {
+      LLVM_QUICK_EXIT_NONE(V(Name));
+    } else {
+      LLVM_QUICK_EXIT_NONE(V("(anonymous namespace)"));
+    }
     break;
   }
   case dwarf::DW_TAG_unspecified_type: {
@@ -267,7 +287,7 @@ DieType DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedNameBefore(
     if (TypeName == "decltype(nullptr)")
       TypeName = "std::nullptr_t";
     Word = true;
-    V(TypeName);
+    LLVM_QUICK_EXIT_NONE(V(TypeName));
     EndedWithTemplate = false;
     break;
   }
@@ -280,7 +300,7 @@ DieType DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedNameBefore(
   default: {
     const char *NamePtr = toString(D.find(dwarf::DW_AT_name), nullptr);
     if (!NamePtr) {
-      appendTypeTagName(D.getTag());
+      LLVM_QUICK_EXIT_NONE(appendTypeTagName(D.getTag()));
       return DieType();
     }
     Word = true;
@@ -296,13 +316,13 @@ DieType DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedNameBefore(
       Name = BaseName;
     } else
       EndedWithTemplate = Name.ends_with(">");
-    V(Name);
+    LLVM_QUICK_EXIT_NONE(V(Name));
     // This check would be insufficient for operator overloads like
     // "operator>>" - but for now Clang doesn't try to simplify them, so this
     // is OK. Add more nuanced operator overload handling here if/when needed.
     if (Name.ends_with(">"))
       break;
-    appendAndTerminateTemplateParameters(D);
+    LLVM_QUICK_EXIT_NONE(appendAndTerminateTemplateParameters(D));
     break;
   }
   }
@@ -310,42 +330,46 @@ DieType DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedNameBefore(
 }
 
 template <typename DieType, typename Visitor>
-void DWARFTypePrinter<DieType, Visitor>::appendAndTerminateTemplateParameters(DieType D) {
-  if (!appendTemplateParameters(D))
-    return;
+bool DWARFTypePrinter<DieType, Visitor>::appendAndTerminateTemplateParameters(DieType D) {
+  std::optional<bool> R = appendTemplateParameters(D);
+  if (!R)
+    return false;
+  if (!*R)
+    return true;
 
   if (EndedWithTemplate)
-    V(" ");
-  V(">");
+    LLVM_QUICK_EXIT(V(" "));
+  LLVM_QUICK_EXIT(V(">"));
   EndedWithTemplate = true;
   Word = true;
+  return true;
 }
 
 template <typename DieType, typename Visitor>
-void DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedNameAfter(
+bool DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedNameAfter(
     DieType D, DieType Inner, bool SkipFirstParamIfArtificial) {
   if (!D)
-    return;
+    return true;
   switch (D.getTag()) {
   case dwarf::DW_TAG_subroutine_type: {
-    appendSubroutineNameAfter(D, Inner, SkipFirstParamIfArtificial, false,
-                              false);
+    LLVM_QUICK_EXIT(appendSubroutineNameAfter(
+        D, Inner, SkipFirstParamIfArtificial, false, false));
     break;
   }
   case dwarf::DW_TAG_array_type: {
-    appendArrayType(D);
+    LLVM_QUICK_EXIT(appendArrayType(D));
     break;
   }
   case dwarf::DW_TAG_const_type:
   case dwarf::DW_TAG_volatile_type:
-    appendConstVolatileQualifierAfter(D);
+    LLVM_QUICK_EXIT(appendConstVolatileQualifierAfter(D));
     break;
   case dwarf::DW_TAG_ptr_to_member_type:
   case dwarf::DW_TAG_reference_type:
   case dwarf::DW_TAG_rvalue_reference_type:
   case dwarf::DW_TAG_pointer_type: {
     if (needsParens(Inner))
-      V(")");
+      LLVM_QUICK_EXIT(V(")"));
     appendUnqualifiedNameAfter(Inner, detail::resolveReferencedType(Inner),
                                /*SkipFirstParamIfArtificial=*/D.getTag() ==
                                    dwarf::DW_TAG_ptr_to_member_type);
@@ -392,7 +416,7 @@ void DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedNameAfter(
         << getValOrNull(dwarf::DW_AT_LLVM_ptrauth_address_discriminated) << ", 0x0"
         << utohexstr(getValOrNull(dwarf::DW_AT_LLVM_ptrauth_extra_discriminator), true)
         << options << ")";
-    V(PtrauthStream.str());
+    LLVM_QUICK_EXIT(V(PtrauthStream.str()));
     break;
   }
     /*
@@ -405,6 +429,7 @@ void DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedNameAfter(
   default:
     break;
   }
+  return true;
 }
 
 namespace detail {
@@ -424,33 +449,37 @@ inline bool scopedTAGs(dwarf::Tag Tag) {
 }
 } // namespace detail
 template <typename DieType, typename Visitor>
-void DWARFTypePrinter<DieType, Visitor>::appendQualifiedName(DieType D) {
+bool DWARFTypePrinter<DieType, Visitor>::appendQualifiedName(DieType D) {
   if (D && detail::scopedTAGs(D.getTag()))
-    appendScopes(D.getParent());
-  appendUnqualifiedName(D);
+    LLVM_QUICK_EXIT(appendScopes(D.getParent()));
+  LLVM_QUICK_EXIT(appendUnqualifiedName(D));
+  return true;
 }
 template <typename DieType, typename Visitor>
-DieType DWARFTypePrinter<DieType, Visitor>::appendQualifiedNameBefore(DieType D) {
+std::optional<DieType> DWARFTypePrinter<DieType, Visitor>::appendQualifiedNameBefore(DieType D) {
   if (D && detail::scopedTAGs(D.getTag()))
-    appendScopes(D.getParent());
+    LLVM_QUICK_EXIT_NONE(appendScopes(D.getParent()));
   return appendUnqualifiedNameBefore(D);
 }
 template <typename DieType, typename Visitor>
-bool DWARFTypePrinter<DieType, Visitor>::appendTemplateParameters(DieType D,
-                                                         bool *FirstParameter) {
+std::optional<bool>
+DWARFTypePrinter<DieType, Visitor>::appendTemplateParameters(
+    DieType D, bool *FirstParameter) {
   bool FirstParameterValue = true;
   bool IsTemplate = false;
   if (!FirstParameter)
     FirstParameter = &FirstParameterValue;
   for (const DieType &C : D) {
     auto Sep = [&] {
-      if (*FirstParameter)
-        V("<");
-      else
-        V(", ");
+      if (*FirstParameter) {
+        LLVM_QUICK_EXIT(V("<"));
+      } else {
+        LLVM_QUICK_EXIT(V(", "));
+      }
       IsTemplate = true;
       EndedWithTemplate = false;
       *FirstParameter = false;
+      return true;
     };
     if (C.getTag() == dwarf::DW_TAG_GNU_template_parameter_pack) {
       IsTemplate = true;
@@ -458,13 +487,13 @@ bool DWARFTypePrinter<DieType, Visitor>::appendTemplateParameters(DieType D,
     }
     if (C.getTag() == dwarf::DW_TAG_template_value_parameter) {
       DieType T = detail::resolveReferencedType(C);
-      Sep();
+      LLVM_QUICK_EXIT_NONE(Sep());
       if (T.getTag() == dwarf::DW_TAG_enumeration_type) {
-        V("(");
+        LLVM_QUICK_EXIT_NONE(V("("));
         appendQualifiedName(T);
-        V(")");
+        LLVM_QUICK_EXIT_NONE(V(")"));
         auto Value = C.find(dwarf::DW_AT_const_value);
-        V(std::to_string(*Value->getAsSignedConstant()));
+        LLVM_QUICK_EXIT_NONE(V(std::to_string(*Value->getAsSignedConstant())));
         continue;
       }
       // /Maybe/ we could do pointer type parameters, looking for the
@@ -478,30 +507,30 @@ bool DWARFTypePrinter<DieType, Visitor>::appendTemplateParameters(DieType D,
       auto Value = C.find(dwarf::DW_AT_const_value);
       bool IsQualifiedChar = false;
       if (Name == "bool") {
-        V((*Value->getAsUnsignedConstant() ? "true" : "false"));
+        LLVM_QUICK_EXIT_NONE(V((*Value->getAsUnsignedConstant() ? "true" : "false")));
       } else if (Name == "short") {
-        V("(short)");
-        V(std::to_string(*Value->getAsSignedConstant()));
+        LLVM_QUICK_EXIT_NONE(V("(short)"));
+        LLVM_QUICK_EXIT_NONE(V(std::to_string(*Value->getAsSignedConstant())));
       } else if (Name == "unsigned short") {
-        V("(unsigned short)");
-        V(std::to_string(*Value->getAsSignedConstant()));
-      } else if (Name == "int")
-        V(std::to_string(*Value->getAsSignedConstant()));
-      else if (Name == "long") {
-        V(std::to_string(*Value->getAsSignedConstant()));
-        V("L");
+        LLVM_QUICK_EXIT_NONE(V("(unsigned short)"));
+        LLVM_QUICK_EXIT_NONE(V(std::to_string(*Value->getAsSignedConstant())));
+      } else if (Name == "int") {
+        LLVM_QUICK_EXIT_NONE(V(std::to_string(*Value->getAsSignedConstant())));
+      } else if (Name == "long") {
+        LLVM_QUICK_EXIT_NONE(V(std::to_string(*Value->getAsSignedConstant())));
+        LLVM_QUICK_EXIT_NONE(V("L"));
       } else if (Name == "long long") {
-        V(std::to_string(*Value->getAsSignedConstant()));
-        V("LL");
+        LLVM_QUICK_EXIT_NONE(V(std::to_string(*Value->getAsSignedConstant())));
+        LLVM_QUICK_EXIT_NONE(V("LL"));
       } else if (Name == "unsigned int") {
-        V(std::to_string(*Value->getAsUnsignedConstant()));
-        V("U");
+        LLVM_QUICK_EXIT_NONE(V(std::to_string(*Value->getAsUnsignedConstant())));
+        LLVM_QUICK_EXIT_NONE(V("U"));
       } else if (Name == "unsigned long") {
-        V(std::to_string(*Value->getAsUnsignedConstant()));
-        V("UL");
+        LLVM_QUICK_EXIT_NONE(V(std::to_string(*Value->getAsUnsignedConstant())));
+        LLVM_QUICK_EXIT_NONE(V("UL"));
       } else if (Name == "unsigned long long") {
-        V(std::to_string(*Value->getAsUnsignedConstant()));
-        V("ULL");
+        LLVM_QUICK_EXIT_NONE(V(std::to_string(*Value->getAsUnsignedConstant())));
+        LLVM_QUICK_EXIT_NONE(V("ULL"));
       } else if (Name == "char" ||
                  (IsQualifiedChar =
                       (Name == "unsigned char" || Name == "signed char"))) {
@@ -513,52 +542,55 @@ bool DWARFTypePrinter<DieType, Visitor>::appendTemplateParameters(DieType D,
         // handling's not done, and doesn't correctly test if a character is
         // printable or needs to use a numeric escape sequence instead)
         if (IsQualifiedChar) {
-          V("(");
-          V(Name);
-          V(")");
+          LLVM_QUICK_EXIT_NONE(V("("));
+          LLVM_QUICK_EXIT_NONE(V(Name));
+          LLVM_QUICK_EXIT_NONE(V(")"));
         }
         switch (Val) {
         case '\\':
-          V("'\\\\'");
+          LLVM_QUICK_EXIT_NONE(V("'\\\\'"));
           break;
         case '\'':
-          V("'\\''");
+          LLVM_QUICK_EXIT_NONE(V("'\\''"));
           break;
         case '\a':
           // TODO: K&R: the meaning of '\\a' is different in traditional C
-          V("'\\a'");
+          LLVM_QUICK_EXIT_NONE(V("'\\a'"));
           break;
         case '\b':
-          V("'\\b'");
+          LLVM_QUICK_EXIT_NONE(V("'\\b'"));
           break;
         case '\f':
-          V("'\\f'");
+          LLVM_QUICK_EXIT_NONE(V("'\\f'"));
           break;
         case '\n':
-          V("'\\n'");
+          LLVM_QUICK_EXIT_NONE(V("'\\n'"));
           break;
         case '\r':
-          V("'\\r'");
+          LLVM_QUICK_EXIT_NONE(V("'\\r'"));
           break;
         case '\t':
-          V("'\\t'");
+          LLVM_QUICK_EXIT_NONE(V("'\\t'"));
           break;
         case '\v':
-          V("'\\v'");
+          LLVM_QUICK_EXIT_NONE(V("'\\v'"));
           break;
         default:
           if ((Val & ~0xFFu) == ~0xFFu)
             Val &= 0xFFu;
           if (Val < 127 && Val >= 32) {
-            V("'");
-            V(Twine((char)Val).str());
-            V("'");
-          } else if (Val < 256)
-            V(detail::toString(llvm::format("'\\x%02" PRIx64 "'", Val)));
-          else if (Val <= 0xFFFF)
-            V(detail::toString(llvm::format("'\\u%04" PRIx64 "'", Val)));
-          else
-            V(detail::toString(llvm::format("'\\U%08" PRIx64 "'", Val)));
+            LLVM_QUICK_EXIT_NONE(V("'"));
+            LLVM_QUICK_EXIT_NONE(V(Twine((char)Val).str()));
+            LLVM_QUICK_EXIT_NONE(V("'"));
+          } else if (Val < 256) {
+            LLVM_QUICK_EXIT_NONE(V(detail::toString(llvm::format("'\\x%02" PRIx64 "'", Val))));
+          } else if (Val <= 0xFFFF) {
+            LLVM_QUICK_EXIT_NONE(
+                V(detail::toString(llvm::format("'\\u%04" PRIx64 "'", Val))));
+          } else {
+            LLVM_QUICK_EXIT_NONE(
+                V(detail::toString(llvm::format("'\\U%08" PRIx64 "'", Val))));
+          }
         }
       }
       continue;
@@ -568,19 +600,19 @@ bool DWARFTypePrinter<DieType, Visitor>::appendTemplateParameters(DieType D,
           toString(C.find(dwarf::DW_AT_GNU_template_name), nullptr);
       assert(RawName);
       StringRef Name = RawName;
-      Sep();
-      V(Name);
+      LLVM_QUICK_EXIT_NONE(Sep());
+      LLVM_QUICK_EXIT_NONE(V(Name));
       continue;
     }
     if (C.getTag() != dwarf::DW_TAG_template_type_parameter)
       continue;
     auto TypeAttr = C.find(dwarf::DW_AT_type);
-    Sep();
+    LLVM_QUICK_EXIT_NONE(Sep());
     appendQualifiedName(TypeAttr ? detail::resolveReferencedType(C, *TypeAttr)
                                  : DieType());
   }
   if (IsTemplate && *FirstParameter && FirstParameter == &FirstParameterValue) {
-    V("<");
+    LLVM_QUICK_EXIT_NONE(V("<"));
     EndedWithTemplate = false;
   }
   return IsTemplate;
@@ -602,19 +634,21 @@ void DWARFTypePrinter<DieType, Visitor>::decomposeConstVolatile(DieType &N, DieT
   }
 }
 template <typename DieType, typename Visitor>
-void DWARFTypePrinter<DieType, Visitor>::appendConstVolatileQualifierAfter(DieType N) {
+bool DWARFTypePrinter<DieType, Visitor>::appendConstVolatileQualifierAfter(DieType N) {
   DieType C;
   DieType V;
   DieType T;
   decomposeConstVolatile(N, T, C, V);
-  if (T && T.getTag() == dwarf::DW_TAG_subroutine_type)
-    appendSubroutineNameAfter(T, detail::resolveReferencedType(T), false, C.isValid(),
-                              V.isValid());
-  else
-    appendUnqualifiedNameAfter(T, detail::resolveReferencedType(T));
+  if (T && T.getTag() == dwarf::DW_TAG_subroutine_type) {
+    LLVM_QUICK_EXIT(appendSubroutineNameAfter(T, detail::resolveReferencedType(T), false, C.isValid(),
+                              V.isValid()));
+  } else {
+    LLVM_QUICK_EXIT(appendUnqualifiedNameAfter(T, detail::resolveReferencedType(T)));
+  }
+  return true;
 }
 template <typename DieType, typename Visitor>
-void DWARFTypePrinter<DieType, Visitor>::appendConstVolatileQualifierBefore(DieType N) {
+bool DWARFTypePrinter<DieType, Visitor>::appendConstVolatileQualifierBefore(DieType N) {
   DieType C;
   DieType Vol;
   DieType T;
@@ -628,44 +662,52 @@ void DWARFTypePrinter<DieType, Visitor>::appendConstVolatileQualifierBefore(DieT
               A.getTag() != llvm::dwarf::DW_TAG_ptr_to_member_type)) &&
       !Subroutine;
   if (Leading) {
-    if (C)
-      V("const ");
-    if (Vol)
-      V("volatile ");
+    if (C) {
+      LLVM_QUICK_EXIT(V("const "));
+    }
+    if (Vol) {
+      LLVM_QUICK_EXIT(V("volatile "));
+    }
   }
   appendQualifiedNameBefore(T);
   if (!Leading && !Subroutine) {
     Word = true;
-    if (C)
-      V("const");
+    if (C) {
+      LLVM_QUICK_EXIT(V("const"));
+    }
     if (Vol) {
-      if (C)
-        V(" ");
-      V("volatile");
+      if (C) {
+        LLVM_QUICK_EXIT(V(" "));
+      }
+      LLVM_QUICK_EXIT(V("volatile"));
     }
   }
+  return true;
 }
 template <typename DieType, typename Visitor>
-void DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedName(
+bool DWARFTypePrinter<DieType, Visitor>::appendUnqualifiedName(
     DieType D, std::string *OriginalFullName) {
   // FIXME: We should have pretty printers per language. Currently we print
   // everything as if it was C++ and fall back to the TAG type name.
-  DieType Inner = appendUnqualifiedNameBefore(D, OriginalFullName);
-  appendUnqualifiedNameAfter(D, Inner);
+  std::optional<DieType> Inner =
+      appendUnqualifiedNameBefore(D, OriginalFullName);
+  LLVM_QUICK_EXIT(Inner);
+  LLVM_QUICK_EXIT(appendUnqualifiedNameAfter(D, *Inner));
+  return true;
 }
 template <typename DieType, typename Visitor>
-void DWARFTypePrinter<DieType, Visitor>::appendSubroutineNameAfter(
+bool DWARFTypePrinter<DieType, Visitor>::appendSubroutineNameAfter(
     DieType D, DieType Inner, bool SkipFirstParamIfArtificial, bool Const,
     bool Volatile) {
   DieType FirstParamIfArtificial;
-  V("(");
+  LLVM_QUICK_EXIT(V("("));
   EndedWithTemplate = false;
   bool First = true;
   bool RealFirst = true;
   for (DieType P : D) {
     if (P.getTag() != dwarf::DW_TAG_formal_parameter &&
         P.getTag() != dwarf::DW_TAG_unspecified_parameters)
-      return;
+      return true;
     DieType T = detail::resolveReferencedType(P);
     if (SkipFirstParamIfArtificial && RealFirst && P.find(dwarf::DW_AT_artificial)) {
       FirstParamIfArtificial = T;
@@ -673,16 +715,17 @@ void DWARFTypePrinter<DieType, Visitor>::appendSubroutineNameAfter(
       continue;
     }
     if (!First) {
-      V(", ");
+      LLVM_QUICK_EXIT(V(", "));
     }
     First = false;
-    if (P.getTag() == dwarf::DW_TAG_unspecified_parameters)
-      V("...");
-    else
-      appendQualifiedName(T);
+    if (P.getTag() == dwarf::DW_TAG_unspecified_parameters) {
+      LLVM_QUICK_EXIT(V("..."));
+    } else {
+      LLVM_QUICK_EXIT(appendQualifiedName(T));
+    }
   }
   EndedWithTemplate = false;
-  V(")");
+  LLVM_QUICK_EXIT(V(")"));
   if (FirstParamIfArtificial) {
     if (DieType P = FirstParamIfArtificial) {
       if (P.getTag() == dwarf::DW_TAG_pointer_type) {
@@ -704,35 +747,35 @@ void DWARFTypePrinter<DieType, Visitor>::appendSubroutineNameAfter(
   if (auto CC = D.find(dwarf::DW_AT_calling_convention)) {
     switch (*CC->getAsUnsignedConstant()) {
     case dwarf::CallingConvention::DW_CC_BORLAND_stdcall:
-      V(" __attribute__((stdcall))");
+      LLVM_QUICK_EXIT(V(" __attribute__((stdcall))"));
       break;
     case dwarf::CallingConvention::DW_CC_BORLAND_msfastcall:
-      V(" __attribute__((fastcall))");
+      LLVM_QUICK_EXIT(V(" __attribute__((fastcall))"));
       break;
     case dwarf::CallingConvention::DW_CC_BORLAND_thiscall:
-      V(" __attribute__((thiscall))");
+      LLVM_QUICK_EXIT(V(" __attribute__((thiscall))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_vectorcall:
-      V(" __attribute__((vectorcall))");
+      LLVM_QUICK_EXIT(V(" __attribute__((vectorcall))"));
       break;
     case dwarf::CallingConvention::DW_CC_BORLAND_pascal:
-      V(" __attribute__((pascal))");
+      LLVM_QUICK_EXIT(V(" __attribute__((pascal))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_Win64:
-      V(" __attribute__((ms_abi))");
+      LLVM_QUICK_EXIT(V(" __attribute__((ms_abi))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_X86_64SysV:
-      V(" __attribute__((sysv_abi))");
+      LLVM_QUICK_EXIT(V(" __attribute__((sysv_abi))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_AAPCS:
       // AArch64VectorCall missing?
-      V(" __attribute__((pcs(\"aapcs\")))");
+      LLVM_QUICK_EXIT(V(" __attribute__((pcs(\"aapcs\")))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_AAPCS_VFP:
-      V(" __attribute__((pcs(\"aapcs-vfp\")))");
+      LLVM_QUICK_EXIT(V(" __attribute__((pcs(\"aapcs-vfp\")))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_IntelOclBicc:
-      V(" __attribute__((intel_ocl_bicc))");
+      LLVM_QUICK_EXIT(V(" __attribute__((intel_ocl_bicc))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_SpirFunction:
     case dwarf::CallingConvention::DW_CC_LLVM_OpenCLKernel:
@@ -744,55 +787,66 @@ void DWARFTypePrinter<DieType, Visitor>::appendSubroutineNameAfter(
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_Swift:
       // SwiftAsync missing
-      V(" __attribute__((swiftcall))");
+      LLVM_QUICK_EXIT(V(" __attribute__((swiftcall))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_PreserveMost:
-      V(" __attribute__((preserve_most))");
+      LLVM_QUICK_EXIT(V(" __attribute__((preserve_most))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_PreserveAll:
-      V(" __attribute__((preserve_all))");
+      LLVM_QUICK_EXIT(V(" __attribute__((preserve_all))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_PreserveNone:
-      V(" __attribute__((preserve_none))");
+      LLVM_QUICK_EXIT(V(" __attribute__((preserve_none))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_X86RegCall:
-      V(" __attribute__((regcall))");
+      LLVM_QUICK_EXIT(V(" __attribute__((regcall))"));
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_M68kRTD:
-      V(" __attribute__((m68k_rtd))");
+      LLVM_QUICK_EXIT(V(" __attribute__((m68k_rtd))"));
       break;
     }
   }
 
-  if (Const)
-    V(" const");
-  if (Volatile)
-    V(" volatile");
-  if (D.find(dwarf::DW_AT_reference))
-    V(" &");
-  if (D.find(dwarf::DW_AT_rvalue_reference))
-    V(" &&");
+  if (Const) {
+    LLVM_QUICK_EXIT(V(" const"));
+  }
+  if (Volatile) {
+    LLVM_QUICK_EXIT(V(" volatile"));
+  }
+  if (D.find(dwarf::DW_AT_reference)) {
+    LLVM_QUICK_EXIT(V(" &"));
+  }
+  if (D.find(dwarf::DW_AT_rvalue_reference)) {
+    LLVM_QUICK_EXIT(V(" &&"));
+  }
 
-  appendUnqualifiedNameAfter(Inner, detail::resolveReferencedType(Inner));
+  LLVM_QUICK_EXIT(
+      appendUnqualifiedNameAfter(Inner, detail::resolveReferencedType(Inner)));
+  return true;
 }
 template <typename DieType, typename Visitor>
-void DWARFTypePrinter<DieType, Visitor>::appendScopes(DieType D) {
+bool DWARFTypePrinter<DieType, Visitor>::appendScopes(DieType D) {
   if (D.getTag() == dwarf::DW_TAG_compile_unit)
-    return;
+    return true;
   if (D.getTag() == dwarf::DW_TAG_type_unit)
-    return;
+    return true;
   if (D.getTag() == dwarf::DW_TAG_skeleton_unit)
-    return;
+    return true;
   if (D.getTag() == dwarf::DW_TAG_subprogram)
-    return;
+    return true;
   if (D.getTag() == dwarf::DW_TAG_lexical_block)
-    return;
+    return true;
   //D = D.resolveTypeUnitReference();
-  if (DieType P = D.getParent())
-    appendScopes(P);
-  appendUnqualifiedName(D);
-  V("::");
+  if (DieType P = D.getParent()) {
+    LLVM_QUICK_EXIT(appendScopes(P));
+  }
+  LLVM_QUICK_EXIT(appendUnqualifiedName(D));
+  LLVM_QUICK_EXIT(V("::"));
+  return true;
 }
 } // namespace llvm
+
+#undef LLVM_QUICK_EXIT
+#undef LLVM_QUICK_EXIT_NONE
 
 #endif // LLVM_DEBUGINFO_DWARF_DWARFTYPEPRINTER_H

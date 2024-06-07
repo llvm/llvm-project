@@ -2793,6 +2793,7 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
         llvm::StringRef remaining = Context.front().name;
         auto Visitor = [&](llvm::StringRef S) {
           Success &= remaining.consume_front(S);
+          return Success;
         };
         llvm::DWARFTypePrinter<DWARFDIE, decltype(Visitor)> p(Visitor);
         p.appendQualifiedName(die);

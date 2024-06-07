@@ -156,4 +156,8 @@ public:
 } // namespace dwarf
 } // namespace lldb_private::plugin
 
+namespace llvm {
+std::optional<uint64_t> getLanguage(lldb_private::plugin::dwarf::DWARFDIE D);
+}
+
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H
