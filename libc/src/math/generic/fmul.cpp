@@ -68,8 +68,6 @@ float fmul(double x, double y) {
   auto y_bits = fputil::FPBits<double>(y);
   uint64_t y_u = y_bits.uintval();
 
-  
-
   if (x_bits.is_nan() || y_bits.is_nan())
     return fputil::FPBits<float>::quiet_nan().get_val();
 
@@ -88,15 +86,15 @@ float fmul(double x, double y) {
       return fputil::FPBits<float>::zero(Sign::NEG).get_val();
     return fputil::FPBits<float>::zero().get_val();
   }
-  
+
   if ((y_bits.is_inf() && y_bits.is_neg())) {
-    if (x_bits.is_neg()) 
+    if (x_bits.is_neg())
       return fputil::FPBits<float>::inf().get_val();
     return fputil::FPBits<float>::inf(Sign::NEG).get_val();
   }
 
-   if ((x_bits.is_inf() && x_bits.is_neg())) {
-    if (y_bits.is_neg()) 
+  if ((x_bits.is_inf() && x_bits.is_neg())) {
+    if (y_bits.is_neg())
       return fputil::FPBits<float>::inf().get_val();
     return fputil::FPBits<float>::inf(Sign::NEG).get_val();
   }
@@ -107,13 +105,12 @@ float fmul(double x, double y) {
     return fputil::FPBits<float>::inf().get_val();
   }
 
-    if (y_bits.is_inf()) {
-      if (x_bits.is_neg())
-	return fputil::FPBits<float>::inf(Sign::NEG).get_val();
-      return fputil::FPBits<float>::inf().get_val();
+  if (y_bits.is_inf()) {
+    if (x_bits.is_neg())
+      return fputil::FPBits<float>::inf(Sign::NEG).get_val();
+    return fputil::FPBits<float>::inf().get_val();
   }
-  
-  
+
   uint64_t absx = x_u & 0x7FFFFFFFFFFFFFFF;
   uint64_t absy = y_u & 0x7FFFFFFFFFFFFFFF;
 
@@ -182,20 +179,19 @@ float fmul(double x, double y) {
 
   uint32_t exp16 = sr | (dm1 << 23);
 
-    constexpr uint32_t FLOAT32_MANTISSA_MASK =
-        0b00000000011111111111111111111111;
-    uint32_t m2 = static_cast<uint32_t>(m) & FLOAT32_MANTISSA_MASK;
+  constexpr uint32_t FLOAT32_MANTISSA_MASK = 0b00000000011111111111111111111111;
+  uint32_t m2 = static_cast<uint32_t>(m) & FLOAT32_MANTISSA_MASK;
 
-    uint32_t result =
-        (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
+  uint32_t result =
+      (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
 
-    // float result16 = cpp::bit_cast<float>(result);
+  // float result16 = cpp::bit_cast<float>(result);
 
-    // return result16;
+  // return result16;
 
-    float result32 = cpp::bit_cast<float>(result);
+  float result32 = cpp::bit_cast<float>(result);
 
-    return result32;
+  return result32;
 }
 } // namespace Fmul
 
