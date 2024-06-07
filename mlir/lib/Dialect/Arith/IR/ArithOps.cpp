@@ -1390,6 +1390,22 @@ LogicalResult arith::ExtSIOp::verify() {
 /// Fold extension of float constants when there is no information loss due the
 /// difference in fp semantics.
 OpFoldResult arith::ExtFOp::fold(FoldAdaptor adaptor) {
+  if (auto truncFOp = getOperand().getDefiningOp<TruncFOp>()) {
+    if (truncFOp.getOperand().getType() == getType()) {
+      arith::FastMathFlags truncFMF =
+          truncFOp.getFastmath().value_or(arith::FastMathFlags::none);
+      bool isTruncContract =
+          bitEnumContainsAll(truncFMF, arith::FastMathFlags::contract);
+      arith::FastMathFlags extFMF =
+          getFastmath().value_or(arith::FastMathFlags::none);
+      bool isExtContract =
+          bitEnumContainsAll(extFMF, arith::FastMathFlags::contract);
+      if (isTruncContract && isExtContract) {
+        return truncFOp.getOperand();
+      }
+    }
+  }
+
   auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
   const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
   return constFoldCastOp<FloatAttr, FloatAttr>(
@@ -1409,38 +1425,6 @@ bool arith::ExtFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 LogicalResult arith::ExtFOp::verify() { return verifyExtOp<FloatType>(*this); }
-
-struct SimplifyExtFTruncFOpPair : public OpRewritePattern<ExtFOp> {
-  using OpRewritePattern<ExtFOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExtFOp extFOp,
-                                PatternRewriter &rewriter) const override {
-    if (auto truncFOp = extFOp.getOperand().getDefiningOp<TruncFOp>()) {
-      if (truncFOp.getOperand().getType() == extFOp.getType()) {
-        // RoundingMode roundingMode =
-        //     getRoundingmode().value_or(RoundingMode::to_nearest_even);
-        arith::FastMathFlags truncFMF =
-            truncFOp.getFastmath().value_or(arith::FastMathFlags::none);
-        bool isTruncContract =
-            bitEnumContainsAll(truncFMF, arith::FastMathFlags::contract);
-        arith::FastMathFlags extFMF =
-            extFOp.getFastmath().value_or(arith::FastMathFlags::none);
-        bool isExtContract =
-            bitEnumContainsAll(extFMF, arith::FastMathFlags::contract);
-        if (isTruncContract && isExtContract) {
-          rewriter.replaceOp(extFOp, truncFOp.getOperand());
-          return success();
-        }
-      }
-    }
-    return failure();
-  }
-};
-
-void arith::ExtFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
-                                                MLIRContext *context) {
-  patterns.add<SimplifyExtFTruncFOpPair>(context);
-}
 
 //===----------------------------------------------------------------------===//
 // TruncIOp

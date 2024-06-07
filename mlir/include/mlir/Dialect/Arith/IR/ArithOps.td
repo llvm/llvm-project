@@ -1195,7 +1195,6 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf", [DeclareOpInterfaceMethods<ArithFast
   }];
   let hasVerifier = 1;
   let hasFolder = 1;
-  let hasCanonicalizer = 1;
 
   let arguments = (ins FloatLike:$in, OptionalAttr<Arith_FastMathAttr>:$fastmath);
   let results = (outs FloatLike:$out);
