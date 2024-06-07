@@ -2708,7 +2708,7 @@ enum {
   eHandleCommandFlagPrintResult = (1u << 4),
   eHandleCommandFlagPrintErrors = (1u << 5),
   eHandleCommandFlagStopOnCrash = (1u << 6),
-  eHandleCommandFlagAllowRepeats  = (1u << 7)
+  eHandleCommandFlagAllowRepeats = (1u << 7)
 };
 
 void CommandInterpreter::HandleCommandsFromFile(
@@ -3130,8 +3130,9 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       return;
 
   const bool is_interactive = io_handler.GetIsInteractive();
-  bool allow_repeats = io_handler.GetFlags().Test(eHandleCommandFlagAllowRepeats);
-  
+  bool allow_repeats =
+      io_handler.GetFlags().Test(eHandleCommandFlagAllowRepeats);
+
   if (!is_interactive && !allow_repeats) {
     // When we are not interactive, don't execute blank lines. This will happen
     // sourcing a commands file. We don't want blank lines to repeat the

@@ -48,18 +48,23 @@ class CommandRunInterpreterAPICase(TestBase):
 
         self.stdin_path = self.getBuildArtifact("stdin.txt")
         self.stdout_path = self.getBuildArtifact("stdout.txt")
-    def run_commands_string(self, command_string, options = lldb.SBCommandInterpreterRunOptions()):
+
+    def run_commands_string(
+        self, command_string, options=lldb.SBCommandInterpreterRunOptions()
+    ):
         """Run the commands in command_string through RunCommandInterpreter.
-           Returns (n_errors, quit_requested, has_crashed, result_string)."""
-        
+        Returns (n_errors, quit_requested, has_crashed, result_string)."""
+
         with open(self.stdin_path, "w") as input_handle:
             input_handle.write(command_string)
 
         n_errors = 0
         quit_requested = False
         has_crashed = False
-        
-        with open(self.stdin_path, "r") as in_fileH, open(self.stdout_path, "w") as out_fileH:
+
+        with open(self.stdin_path, "r") as in_fileH, open(
+            self.stdout_path, "w"
+        ) as out_fileH:
             self.dbg.SetInputFile(in_fileH)
 
             self.dbg.SetOutputFile(out_fileH)
@@ -75,32 +80,34 @@ class CommandRunInterpreterAPICase(TestBase):
 
         print(f"Command: '{command_string}'\nResult:\n{result_string}")
         return (n_errors, quit_requested, has_crashed, result_string)
-       
 
     def test_run_session_with_error_and_quit(self):
         """Run non-existing and quit command returns appropriate values"""
 
         n_errors, quit_requested, has_crashed, _ = self.run_commands_string(
-            "nonexistingcommand\nquit\n")
+            "nonexistingcommand\nquit\n"
+        )
         self.assertGreater(n_errors, 0)
         self.assertTrue(quit_requested)
         self.assertFalse(has_crashed)
 
     def test_allow_repeat(self):
         """Try auto-repeat of process launch - the command will fail and
-           the auto-repeat will fail because of no auto-repeat."""
+        the auto-repeat will fail because of no auto-repeat."""
         options = lldb.SBCommandInterpreterRunOptions()
         options.SetEchoCommands(False)
         options.SetAllowRepeats(True)
-            
+
         n_errors, quit_requested, has_crashed, result_str = self.run_commands_string(
-            "process launch\n\n", options)
+            "process launch\n\n", options
+        )
         self.assertEqual(n_errors, 2)
         self.assertFalse(quit_requested)
         self.assertFalse(has_crashed)
 
         self.assertIn("invalid target", result_str)
-        self.assertIn("No auto repeat", result_str)        
+        self.assertIn("No auto repeat", result_str)
+
 
 class SBCommandInterpreterRunOptionsCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True

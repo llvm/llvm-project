@@ -100,7 +100,8 @@ public:
                                LazyBool stop_on_error, LazyBool stop_on_crash,
                                LazyBool echo_commands, LazyBool echo_comments,
                                LazyBool print_results, LazyBool print_errors,
-                               LazyBool add_to_history, LazyBool process_repeats)
+                               LazyBool add_to_history,
+                               LazyBool process_repeats)
       : m_stop_on_continue(stop_on_continue), m_stop_on_error(stop_on_error),
         m_stop_on_crash(stop_on_crash), m_echo_commands(echo_commands),
         m_echo_comment_commands(echo_comments), m_print_results(print_results),
