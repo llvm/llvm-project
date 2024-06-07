@@ -318,6 +318,9 @@ namespace {
       if (Diags.hasUnrecoverableErrorOccurred())
         return;
 
+      if (RD->shouldEmitInExternalSource())
+        return;
+
       Builder->EmitVTable(RD);
     }
   };
