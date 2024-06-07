@@ -81,7 +81,7 @@ public:
         static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
         StorageType(1));
     for (StorageType v = MIN_SUBNORMAL; v <= MAX_SUBNORMAL; v += STEP) {
-      FPBits x_bits = FPBits(v);
+      FPBits x_bits(v);
       if (x_bits.is_zero() || x_bits.is_inf_or_nan())
         continue;
 
@@ -101,7 +101,7 @@ public:
         static_cast<StorageType>((MAX_NORMAL - MIN_NORMAL) / COUNT),
         StorageType(1));
     for (StorageType v = MIN_NORMAL; v <= MAX_NORMAL; v += STEP) {
-      FPBits x_bits = FPBits(v);
+      FPBits x_bits(v);
       if (x_bits.is_zero() || x_bits.is_inf_or_nan())
         continue;
 

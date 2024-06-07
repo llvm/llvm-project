@@ -75,7 +75,7 @@ public:
         static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
     StorageType v = 0;
     for (int i = 0; i <= COUNT; ++i, v += STEP) {
-      FPBits x_bits = FPBits(v);
+      FPBits x_bits(v);
       if (x_bits.is_zero() || x_bits.is_inf_or_nan())
         continue;
 
