@@ -114,7 +114,7 @@ Correctness improvements (bug fixes)
 
 Entry point functions & ``static`` keyword
 ------------------------------------------
-Marking a shader entry point function as ``static`` will result in an error.
+Marking a shader entry point function ``static`` will result in an error.
 
 This is idential to DXC behavior when an entry point is specified as compiler
 argument. However, DXC does not report an error when compiling a shader library
