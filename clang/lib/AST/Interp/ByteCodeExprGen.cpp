@@ -1104,14 +1104,9 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       if (!this->visit(Init))
         return false;
 
-      if (FieldToInit->isBitField()) {
-        if (!this->emitInitBitField(T, FieldToInit, E))
-          return false;
-      } else {
-        if (!this->emitInitField(T, FieldToInit->Offset, E))
-          return false;
-      }
-      return this->emitPopPtr(E);
+      if (FieldToInit->isBitField())
+        return this->emitInitBitField(T, FieldToInit, E);
+      return this->emitInitField(T, FieldToInit->Offset, E);
     };
 
     auto initCompositeField = [=](const Record::Field *FieldToInit,
@@ -1147,9 +1142,6 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
         else
           FToInit = cast<CXXParenListInitExpr>(E)->getInitializedFieldInUnion();
 
-        if (!this->emitDupPtr(E))
-          return false;
-
         const Record::Field *FieldToInit = R->getField(FToInit);
         if (std::optional<PrimType> T = classify(Init)) {
           if (!initPrimitiveField(FieldToInit, Init, *T))
@@ -1169,8 +1161,6 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       while (InitIndex < R->getNumFields() &&
              R->getField(InitIndex)->Decl->isUnnamedBitField())
         ++InitIndex;
-      if (!this->emitDupPtr(E))
-        return false;
 
       if (std::optional<PrimType> T = classify(Init)) {
         const Record::Field *FieldToInit = R->getField(InitIndex);
@@ -1180,7 +1170,7 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       } else {
         // Initializer for a direct base class.
         if (const Record::Base *B = R->getBase(Init->getType())) {
-          if (!this->emitGetPtrBasePop(B->Offset, Init))
+          if (!this->emitGetPtrBase(B->Offset, Init))
             return false;
 
           if (!this->visitInitializer(Init))
@@ -1513,7 +1503,7 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     // Leave a pointer to the field on the stack.
     if (F->Decl->getType()->isReferenceType())
       return this->emitGetFieldPop(PT_Ptr, F->Offset, E) && maybeLoadValue();
-    return this->emitGetPtrField(F->Offset, E) && maybeLoadValue();
+    return this->emitGetPtrFieldPop(F->Offset, E) && maybeLoadValue();
   }
 
   return false;
@@ -2147,9 +2137,6 @@ bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
       if (!this->emitInitField(*T, F.Offset, E))
         return false;
     } else {
-      if (!this->emitDupPtr(E))
-        return false;
-
       if (!this->emitGetPtrField(F.Offset, E))
         return false;
 
@@ -2846,9 +2833,6 @@ bool ByteCodeExprGen<Emitter>::visitZeroRecordInitializer(const Record *R,
       continue;
     }
 
-    // TODO: Add GetPtrFieldPop and get rid of this dup.
-    if (!this->emitDupPtr(E))
-      return false;
     if (!this->emitGetPtrField(Field.Offset, E))
       return false;
 
@@ -3258,8 +3242,6 @@ bool ByteCodeExprGen<Emitter>::visitAPValueInitializer(const APValue &Val,
         PrimType ElemT = classifyPrim(ArrType->getElementType());
         assert(ArrType);
 
-        if (!this->emitDupPtr(E))
-          return false;
         if (!this->emitGetPtrField(RF->Offset, E))
           return false;
 
@@ -3273,8 +3255,6 @@ bool ByteCodeExprGen<Emitter>::visitAPValueInitializer(const APValue &Val,
         if (!this->emitPopPtr(E))
           return false;
       } else if (F.isStruct() || F.isUnion()) {
-        if (!this->emitDupPtr(E))
-          return false;
         if (!this->emitGetPtrField(RF->Offset, E))
           return false;
         if (!this->visitAPValueInitializer(F, E))
@@ -4201,8 +4181,6 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Record *R) {
   for (const Record::Field &Field : llvm::reverse(R->fields())) {
     const Descriptor *D = Field.Desc;
     if (!D->isPrimitive() && !D->isPrimitiveArray()) {
-      if (!this->emitDupPtr(SourceInfo{}))
-        return false;
       if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
         return false;
       if (!this->emitDestruction(D))
