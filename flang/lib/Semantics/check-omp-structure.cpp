@@ -2378,19 +2378,18 @@ bool OmpStructureChecker::CheckIntrinsicOperator(
   return false;
 }
 
-static bool isReductionAllowedForType(
-    const parser::OmpClause::Reduction &x, const DeclTypeSpec *type) {
-  assert(type && "no type for reduction symbol");
+static bool IsReductionAllowedForType(
+    const parser::OmpClause::Reduction &x, const DeclTypeSpec &type) {
   const auto &definedOp{std::get<parser::OmpReductionOperator>(x.v.t)};
   // TODO: user defined reduction operators. Just allow everything for now.
   bool ok{true};
 
-  auto isLogical = [](const DeclTypeSpec *type) -> bool {
-    return type->category() == DeclTypeSpec::Logical;
-  };
-  auto isCharacter = [](const DeclTypeSpec *type) -> bool {
-    return type->category() == DeclTypeSpec::Character;
-  };
+  auto IsLogical{[](const DeclTypeSpec &type) -> bool {
+    return type.category() == DeclTypeSpec::Logical;
+  }};
+  auto IsCharacter{[](const DeclTypeSpec &type) -> bool {
+    return type.category() == DeclTypeSpec::Character;
+  }};
 
   common::visit(
       common::visitors{
@@ -2409,9 +2408,9 @@ static bool isReductionAllowedForType(
               case parser::DefinedOperator::IntrinsicOperator::Add:
                 [[fallthrough]];
               case parser::DefinedOperator::IntrinsicOperator::Subtract:
-                ok = type->IsNumeric(TypeCategory::Integer) ||
-                    type->IsNumeric(TypeCategory::Real) ||
-                    type->IsNumeric(TypeCategory::Complex);
+                ok = type.IsNumeric(TypeCategory::Integer) ||
+                    type.IsNumeric(TypeCategory::Real) ||
+                    type.IsNumeric(TypeCategory::Complex);
                 break;
 
               case parser::DefinedOperator::IntrinsicOperator::AND:
@@ -2421,12 +2420,12 @@ static bool isReductionAllowedForType(
               case parser::DefinedOperator::IntrinsicOperator::EQV:
                 [[fallthrough]];
               case parser::DefinedOperator::IntrinsicOperator::NEQV:
-                ok = isLogical(type);
+                ok = IsLogical(type);
                 break;
 
               // Reduction identifier is not in OMP5.2 Table 5.2
               default:
-                assert(false &&
+                CHECK(false &&
                     "This should have been caught in CheckIntrinsicOperator");
                 ok = false;
                 break;
@@ -2444,14 +2443,14 @@ static bool isReductionAllowedForType(
                 // IAND: arguments must be integers: F2023 16.9.100
                 // IEOR: arguments must be integers: F2023 16.9.106
                 // IOR: arguments must be integers: F2023 16.9.111
-                ok = type->IsNumeric(TypeCategory::Integer);
+                ok = type.IsNumeric(TypeCategory::Integer);
               } else if (realName == "max" || realName == "min") {
                 // MAX: arguments must be integer, real, or character:
                 // F2023 16.9.135
                 // MIN: arguments must be integer, real, or character:
                 // F2023 16.9.141
-                ok = type->IsNumeric(TypeCategory::Integer) ||
-                    type->IsNumeric(TypeCategory::Real) || isCharacter(type);
+                ok = type.IsNumeric(TypeCategory::Integer) ||
+                    type.IsNumeric(TypeCategory::Real) || IsCharacter(type);
               }
             }
           },
@@ -2480,7 +2479,7 @@ void OmpStructureChecker::CheckReductionTypeList(
       context_.Say(source,
           "A procedure pointer '%s' must not appear in a REDUCTION clause."_err_en_US,
           symbol->name());
-    } else if (!isReductionAllowedForType(x, symbol->GetType())) {
+    } else if (!IsReductionAllowedForType(x, DEREF(symbol->GetType()))) {
       context_.Say(source,
           "The type of '%s' is incompatible with the reduction operator."_err_en_US,
           symbol->name());
