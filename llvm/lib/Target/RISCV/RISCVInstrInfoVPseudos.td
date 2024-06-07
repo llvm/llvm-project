@@ -382,7 +382,20 @@ class GetIntVTypeInfo<VTypeInfo vti> {
   // Equivalent integer vector type. Eg.
   //   VI8M1 → VI8M1 (identity)
   //   VF64M4 → VI64M4
-  VTypeInfo Vti = !cast<VTypeInfo>(!subst("VF", "VI", !cast<string>(vti)));
+  VTypeInfo Vti = !cast<VTypeInfo>(!subst("VBF", "VI",
+                                          !subst("VF", "VI",
+                                                 !cast<string>(vti))));
+}
+
+// This functor is used to obtain the fp vector type that has the same SEW and
+// multiplier as the input parameter type.
+class GetFpVTypeInfo<VTypeInfo vti> {
+  // Equivalent integer vector type. Eg.
+  //   VF16M1 → VF16M1 (identity)
+  //   VBF16M1 → VF16M1
+  VTypeInfo Vti = !cast<VTypeInfo>(!subst("VBF", "VF",
+                                          !subst("VI", "VF",
+                                                 !cast<string>(vti))));
 }
 
 class MTypeInfo<ValueType Mas, LMULInfo M, string Bx> {
@@ -1033,6 +1046,22 @@ class VPseudoUnaryNoMask<DAGOperand RetClass,
   let HasVecPolicyOp = 1;
 }
 
+class VPseudoUnaryNoMaskNoPolicy<DAGOperand RetClass,
+                                 DAGOperand OpClass,
+                                 string Constraint = "",
+                                 int TargetConstraintType = 1> :
+      Pseudo<(outs RetClass:$rd),
+             (ins OpClass:$rs2, AVL:$vl, ixlenimm:$sew), []>,
+      RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let Constraints = Constraint;
+  let TargetOverlapConstraintType = TargetConstraintType;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+}
+
 class VPseudoUnaryNoMaskRoundingMode<DAGOperand RetClass,
                                      DAGOperand OpClass,
                                      string Constraint = "",
@@ -1420,24 +1449,6 @@ class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
-}
-
-// Like VPseudoBinaryNoMask, but output can be V0.
-class VPseudoBinaryMOutNoMask<VReg RetClass,
-                              VReg Op1Class,
-                              DAGOperand Op2Class,
-                              string Constraint,
-                              int TargetConstraintType = 1> :
-      Pseudo<(outs RetClass:$rd),
-             (ins Op1Class:$rs2, Op2Class:$rs1, AVL:$vl, ixlenimm:$sew), []>,
-      RISCVVPseudo {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let Constraints = Constraint;
-  let TargetOverlapConstraintType = TargetConstraintType;
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
 }
 
 // Like VPseudoBinaryMask, but output can be V0.
@@ -2056,9 +2067,10 @@ multiclass VPseudoVSFS_M {
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
     let VLMul = mti.LMul.value in {
-      def "_M_" # mti.BX : VPseudoUnaryNoMask<VR, VR, constraint>,
+      def "_M_" # mti.BX : VPseudoUnaryNoMaskNoPolicy<VR, VR, constraint>,
                            SchedUnary<"WriteVMSFSV", "ReadVMSFSV", mx,
                                       forceMergeOpRead=true>;
+      let ForceTailAgnostic = true in
       def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMask<VR, VR, constraint>,
                                      SchedUnary<"WriteVMSFSV", "ReadVMSFSV", mx,
                                                 forceMergeOpRead=true>;
@@ -2172,8 +2184,8 @@ multiclass VPseudoBinaryM<VReg RetClass,
                           int TargetConstraintType = 1,
                           bit Commutable = 0> {
   let VLMul = MInfo.value, isCommutable = Commutable in {
-    def "_" # MInfo.MX : VPseudoBinaryMOutNoMask<RetClass, Op1Class, Op2Class,
-                                                 Constraint, TargetConstraintType>;
+    def "_" # MInfo.MX : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
+                                             Constraint, TargetConstraintType>;
     let ForceTailAgnostic = true in
     def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMOutMask<RetClass, Op1Class,
                                                          Op2Class, Constraint, TargetConstraintType>,
@@ -4078,9 +4090,8 @@ class VPatMaskUnaryNoMask<string intrinsic_name,
                 (mti.Mask VR:$rs2),
                 VLOpFrag)),
                 (!cast<Instruction>(inst#"_M_"#mti.BX)
-                (mti.Mask (IMPLICIT_DEF)),
                 (mti.Mask VR:$rs2),
-                GPR:$vl, mti.Log2SEW, TA_MA)>;
+                GPR:$vl, mti.Log2SEW)>;
 
 class VPatMaskUnaryMask<string intrinsic_name,
                         string inst,

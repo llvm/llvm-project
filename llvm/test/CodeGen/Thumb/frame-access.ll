@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=none %s -o - --verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP,CHECK-ATPCS
 ; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=all %s -o - --verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-FP-ATPCS,CHECK-ATPCS
-; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=none -mattr=+aapcs-frame-chain-leaf %s -o - --verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP,CHECK-AAPCS
-; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=all -mattr=+aapcs-frame-chain-leaf %s -o - --verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-FP-AAPCS,CHECK-AAPCS
+; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=none -mattr=+aapcs-frame-chain %s -o - --verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP,CHECK-AAPCS
+; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=all -mattr=+aapcs-frame-chain %s -o - --verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-FP-AAPCS,CHECK-AAPCS
 
 ; struct S { int x[128]; } s;
 ; int f(int *, int, int, int, struct S);

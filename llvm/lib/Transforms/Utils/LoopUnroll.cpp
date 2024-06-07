@@ -419,6 +419,26 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
   }
 }
 
+// Loops containing convergent instructions that are uncontrolled or controlled
+// from outside the loop must have a count that divides their TripMultiple.
+LLVM_ATTRIBUTE_USED
+static bool canHaveUnrollRemainder(const Loop *L) {
+  if (getLoopConvergenceHeart(L))
+    return false;
+
+  // Check for uncontrolled convergent operations.
+  for (auto &BB : L->blocks()) {
+    for (auto &I : *BB) {
+      if (isa<ConvergenceControlInst>(I))
+        return true;
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (CB->isConvergent())
+          return CB->getConvergenceControlToken();
+    }
+  }
+  return true;
+}
+
 /// Unroll the given loop by Count. The loop must be in LCSSA form.  Unrolling
 /// can only fail when the loop's latch block is not terminated by a conditional
 /// branch instruction. However, if the trip count (and multiple) are not known,
@@ -564,19 +584,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     return LoopUnrollResult::Unmodified;
   }
 
-  // Loops containing convergent instructions cannot use runtime unrolling,
-  // as the prologue/epilogue may add additional control-dependencies to
-  // convergent operations.
-  LLVM_DEBUG(
-      {
-        bool HasConvergent = false;
-        for (auto &BB : L->blocks())
-          for (auto &I : *BB)
-            if (auto *CB = dyn_cast<CallBase>(&I))
-              HasConvergent |= CB->isConvergent();
-        assert((!HasConvergent || !ULO.Runtime) &&
-               "Can't runtime unroll if loop contains a convergent operation.");
-      });
+  assert((!ULO.Runtime || canHaveUnrollRemainder(L)) &&
+         "Can't runtime unroll if loop contains a convergent operation.");
 
   bool EpilogProfitability =
       UnrollRuntimeEpilog.getNumOccurrences() ? UnrollRuntimeEpilog
@@ -722,7 +731,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       if (OldLoop)
         LoopsToSimplify.insert(NewLoops[OldLoop]);
 
-      if (*BB == Header)
+      if (*BB == Header) {
         // Loop over all of the PHI nodes in the block, changing them to use
         // the incoming values from the previous block.
         for (PHINode *OrigPHI : OrigPHINode) {
@@ -734,6 +743,16 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           VMap[OrigPHI] = InVal;
           NewPHI->eraseFromParent();
         }
+
+        // Eliminate copies of the loop heart intrinsic, if any.
+        if (ULO.Heart) {
+          auto it = VMap.find(ULO.Heart);
+          assert(it != VMap.end());
+          Instruction *heartCopy = cast<Instruction>(it->second);
+          heartCopy->eraseFromParent();
+          VMap.erase(it);
+        }
+      }
 
       // Update our running map of newest clones
       LastValueMap[*BB] = New;

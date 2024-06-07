@@ -180,12 +180,6 @@ namespace {
     /// in the worklist, this is different from the tail of the worklist.
     SmallSetVector<SDNode *, 32> PruningList;
 
-    /// Set of nodes which have been combined (at least once).
-    ///
-    /// This is used to allow us to reliably add any operands of a DAG node
-    /// which have not yet been combined to the worklist.
-    SmallPtrSet<SDNode *, 32> CombinedNodes;
-
     /// Map from candidate StoreNode to the pair of RootNode and count.
     /// The count is used to track how many times we have seen the StoreNode
     /// with the same RootNode bail out in dependence check. If we have seen
@@ -235,7 +229,8 @@ namespace {
       if (N) {
         assert(N->getCombinerWorklistIndex() >= 0 &&
                "Found a worklist entry without a corresponding map entry!");
-        N->setCombinerWorklistIndex(-1);
+        // Set to -2 to indicate that we combined the node.
+        N->setCombinerWorklistIndex(-2);
       }
       return N;
     }
@@ -267,7 +262,8 @@ namespace {
 
     /// Add to the worklist making sure its instance is at the back (next to be
     /// processed.)
-    void AddToWorklist(SDNode *N, bool IsCandidateForPruning = true) {
+    void AddToWorklist(SDNode *N, bool IsCandidateForPruning = true,
+                       bool SkipIfCombinedBefore = false) {
       assert(N->getOpcode() != ISD::DELETED_NODE &&
              "Deleted Node added to Worklist");
 
@@ -276,10 +272,13 @@ namespace {
       if (N->getOpcode() == ISD::HANDLENODE)
         return;
 
+      if (SkipIfCombinedBefore && N->getCombinerWorklistIndex() == -2)
+        return;
+
       if (IsCandidateForPruning)
         ConsiderForPruning(N);
 
-      if (N->getCombinerWorklistIndex() == -1) {
+      if (N->getCombinerWorklistIndex() < 0) {
         N->setCombinerWorklistIndex(Worklist.size());
         Worklist.push_back(N);
       }
@@ -287,12 +286,14 @@ namespace {
 
     /// Remove all instances of N from the worklist.
     void removeFromWorklist(SDNode *N) {
-      CombinedNodes.erase(N);
       PruningList.remove(N);
       StoreRootCountMap.erase(N);
 
       int WorklistIndex = N->getCombinerWorklistIndex();
-      if (WorklistIndex == -1)
+      // If not in the worklist, the index might be -1 or -2 (was combined
+      // before). As the node gets deleted anyway, there's no need to update
+      // the index.
+      if (WorklistIndex < 0)
         return; // Not in the worklist.
 
       // Null out the entry rather than erasing it to avoid a linear operation.
@@ -1768,13 +1769,13 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     LLVM_DEBUG(dbgs() << "\nCombining: "; N->dump(&DAG));
 
     // Add any operands of the new node which have not yet been combined to the
-    // worklist as well. Because the worklist uniques things already, this
-    // won't repeatedly process the same operand.
+    // worklist as well. getNextWorklistEntry flags nodes that have been
+    // combined before. Because the worklist uniques things already, this won't
+    // repeatedly process the same operand.
     for (const SDValue &ChildN : N->op_values())
-      if (!CombinedNodes.count(ChildN.getNode()))
-        AddToWorklist(ChildN.getNode());
+      AddToWorklist(ChildN.getNode(), /*IsCandidateForPruning=*/true,
+                    /*SkipIfCombinedBefore=*/true);
 
-    CombinedNodes.insert(N);
     SDValue RV = combine(N);
 
     if (!RV.getNode())
@@ -4041,17 +4042,11 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::ADD, DL, VT, N0, SExt);
   }
 
-  // fold Y = sra (X, size(X)-1); sub (xor (X, Y), Y) -> (abs X)
-  if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
-    if (N0.getOpcode() == ISD::XOR && N1.getOpcode() == ISD::SRA) {
-      SDValue X0 = N0.getOperand(0), X1 = N0.getOperand(1);
-      SDValue S0 = N1.getOperand(0);
-      if ((X0 == S0 && X1 == N1) || (X0 == N1 && X1 == S0))
-        if (ConstantSDNode *C = isConstOrConstSplat(N1.getOperand(1)))
-          if (C->getAPIntValue() == (BitWidth - 1))
-            return DAG.getNode(ISD::ABS, DL, VT, S0);
-    }
-  }
+  // fold B = sra (A, size(A)-1); sub (xor (A, B), B) -> (abs A)
+  if ((!LegalOperations || hasOperation(ISD::ABS, VT)) &&
+      sd_match(N1, m_Sra(m_Value(A), m_SpecificInt(BitWidth - 1))) &&
+      sd_match(N0, m_Xor(m_Specific(A), m_Specific(N1))))
+    return DAG.getNode(ISD::ABS, DL, VT, A);
 
   // If the relocation model supports it, consider symbol offsets.
   if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N0))
@@ -9532,7 +9527,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   }
 
   // fold Y = sra (X, size(X)-1); xor (add (X, Y), Y) -> (abs X)
-  if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
+  if (!LegalOperations || hasOperation(ISD::ABS, VT)) {
     SDValue A = N0Opcode == ISD::ADD ? N0 : N1;
     SDValue S = N0Opcode == ISD::SRA ? N0 : N1;
     if (A.getOpcode() == ISD::ADD && S.getOpcode() == ISD::SRA) {
