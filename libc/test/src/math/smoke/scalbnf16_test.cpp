@@ -10,4 +10,4 @@
 
 #include "src/math/scalbnf16.h"
 
-LIST_SCALBN_TESTS(float16, LIBC_NAMESPACE::scalbnf16)
+LIST_SCALBN_TESTS(float16, int, LIBC_NAMESPACE::scalbnf16)

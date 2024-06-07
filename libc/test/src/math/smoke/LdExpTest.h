@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 
-template <typename T>
+template <typename T, typename U = int>
 class LdExpTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using NormalFloat = LIBC_NAMESPACE::fputil::NormalFloat<T>;
@@ -34,11 +34,22 @@ class LdExpTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   static constexpr StorageType MANTISSA = NormalFloat::ONE + 0x123;
 
 public:
-  typedef T (*LdExpFunc)(T, int);
+  typedef T (*LdExpFunc)(T, U);
 
   void testSpecialNumbers(LdExpFunc func) {
-    int exp_array[5] = {-INT_MAX - 1, -10, 0, 10, INT_MAX};
+    int exp_array[5] = {INT_MIN, -10, 0, 10, INT_MAX};
     for (int exp : exp_array) {
+      ASSERT_FP_EQ(zero, func(zero, exp));
+      ASSERT_FP_EQ(neg_zero, func(neg_zero, exp));
+      ASSERT_FP_EQ(inf, func(inf, exp));
+      ASSERT_FP_EQ(neg_inf, func(neg_inf, exp));
+      ASSERT_FP_EQ(nan, func(nan, exp));
+    }
+
+    if constexpr (sizeof(U) < sizeof(long) || sizeof(long) == sizeof(int))
+      return;
+    long long_exp_array[4] = {LONG_MIN, INT_MIN - 1L, INT_MAX + 1L, LONG_MAX};
+    for (long exp : long_exp_array) {
       ASSERT_FP_EQ(zero, func(zero, exp));
       ASSERT_FP_EQ(neg_zero, func(neg_zero, exp));
       ASSERT_FP_EQ(inf, func(inf, exp));

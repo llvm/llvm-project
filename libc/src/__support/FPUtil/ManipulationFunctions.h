@@ -143,7 +143,7 @@ LIBC_INLINE constexpr T logb(T x) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE constexpr T ldexp(T x, int exp) {
+LIBC_INLINE constexpr T ldexp(T x, long exp) {
   FPBits<T> bits(x);
   if (LIBC_UNLIKELY((exp == 0) || bits.is_zero() || bits.is_inf_or_nan()))
     return x;
@@ -186,7 +186,9 @@ LIBC_INLINE constexpr T ldexp(T x, int exp) {
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   DyadicFloat<cpp::max(FPBits<T>::STORAGE_LEN, 32)> normal(bits.get_val());
-  normal.exponent += exp;
+  // Make sure that exp fits into an int when not taking the fast paths above.
+  static_assert(EXP_LIMIT <= INT_MAX && -EXP_LIMIT >= INT_MIN);
+  normal.exponent += static_cast<int>(exp);
   return static_cast<T>(normal);
 }
 
