@@ -3382,8 +3382,7 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  // Currently this is 128 for all subtargets
-  return 128;
+  return ST.hasFeature(AMDGPU::FeatureLocalMemorySize393216) ? 256 : 128;
 }
 
 } // namespace AMDGPU
