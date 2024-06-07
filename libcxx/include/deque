@@ -482,10 +482,10 @@ public:
                 "original allocator");
   static_assert(is_nothrow_default_constructible<allocator_type>::value ==
                     is_nothrow_default_constructible<__pointer_allocator>::value,
-                "rebinding an allocator should not change excpetion guarantees");
+                "rebinding an allocator should not change exception guarantees");
   static_assert(is_nothrow_move_constructible<allocator_type>::value ==
                     is_nothrow_move_constructible<typename __map::allocator_type>::value,
-                "rebinding an allocator should not change excpetion guarantees");
+                "rebinding an allocator should not change exception guarantees");
 
 private:
   struct __deque_block_range {
