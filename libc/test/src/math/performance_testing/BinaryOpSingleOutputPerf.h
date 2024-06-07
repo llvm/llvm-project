@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/src/math/performance_testing/Timer.h"
 
+#include <cstddef>
 #include <fstream>
 
 namespace LIBC_NAMESPACE {
@@ -25,7 +27,12 @@ public:
 
   static void run_perf_in_range(Func myFunc, Func otherFunc,
                                 StorageType startingBit, StorageType endingBit,
-                                StorageType N, std::ofstream &log) {
+                                size_t N, size_t rounds, std::ofstream &log) {
+    if (endingBit - startingBit < N)
+      N = endingBit - startingBit;
+
+    size_t total_ops = N * rounds;
+
     auto runner = [=](Func func) {
       volatile T result;
       if (endingBit < startingBit) {
@@ -33,7 +40,7 @@ public:
       }
 
       StorageType step = (endingBit - startingBit) / N;
-      for (int i = 0; i < 5000; i++) {
+      for (size_t i = 0; i < rounds; i++) {
         for (StorageType bitsX = startingBit, bitsY = endingBit;;
              bitsX += step, bitsY -= step) {
           T x = FPBits(bitsX).get_val();
@@ -51,7 +58,7 @@ public:
     runner(myFunc);
     timer.stop();
 
-    double my_average = static_cast<double>(timer.nanoseconds()) / (N * 5000);
+    double my_average = static_cast<double>(timer.nanoseconds()) / total_ops;
     log << "-- My function --\n";
     log << "     Total time      : " << timer.nanoseconds() << " ns \n";
     log << "     Average runtime : " << my_average << " ns/op \n";
@@ -62,7 +69,7 @@ public:
     runner(otherFunc);
     timer.stop();
 
-    double other_average = static_cast<double>(timer.nanoseconds()) / (N * 5000);
+    double other_average = static_cast<double>(timer.nanoseconds()) / total_ops;
     log << "-- Other function --\n";
     log << "     Total time      : " << timer.nanoseconds() << " ns \n";
     log << "     Average runtime : " << other_average << " ns/op \n";
@@ -73,22 +80,24 @@ public:
     log << "     Mine / Other's  : " << my_average / other_average << " \n";
   }
 
-  static void run_perf(Func myFunc, Func otherFunc, const char *logFile) {
+  static void run_perf(Func myFunc, Func otherFunc, int rounds,
+                       const char *logFile) {
     std::ofstream log(logFile);
     log << " Performance tests with inputs in denormal range:\n";
     run_perf_in_range(myFunc, otherFunc, /* startingBit= */ StorageType(0),
                       /* endingBit= */ FPBits::max_subnormal().uintval(),
-                      FPBits::max_subnormal().uintval(), log);
+                      10'000'001, rounds, log);
     log << "\n Performance tests with inputs in normal range:\n";
     run_perf_in_range(myFunc, otherFunc,
                       /* startingBit= */ FPBits::min_normal().uintval(),
                       /* endingBit= */ FPBits::max_normal().uintval(),
-                      FPBits::max_normal().uintval() - FPBits::min_normal().uintval(), log);
+                      10'000'001, rounds, log);
     log << "\n Performance tests with inputs in normal range with exponents "
            "close to each other:\n";
-    run_perf_in_range(
-        myFunc, otherFunc, /* startingBit= */ FPBits(T(0x1.0p-10)).uintval(),
-        /* endingBit= */ FPBits(T(0x1.0p+10)).uintval(), FPBits(T(0x1.0p+10)).uintval() - FPBits(T(0x1.0p-10)).uintval(), log);
+    run_perf_in_range(myFunc, otherFunc,
+                      /* startingBit= */ FPBits(T(0x1.0p-10)).uintval(),
+                      /* endingBit= */ FPBits(T(0x1.0p+10)).uintval(),
+                      1'001'001, rounds, log);
   }
 
   static void run_diff(Func myFunc, Func otherFunc, const char *logFile) {
@@ -117,9 +126,17 @@ public:
 } // namespace LIBC_NAMESPACE
 
 #define BINARY_OP_SINGLE_OUTPUT_PERF(T, myFunc, otherFunc, filename)           \
-  {                                                                 \
+  int main() {                                                                 \
     LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T>::run_perf(            \
-        &myFunc, &otherFunc, filename);                                        \
+        &myFunc, &otherFunc, 1, filename);                                     \
+    return 0;                                                                  \
+  }
+
+#define BINARY_OP_SINGLE_OUTPUT_PERF_EX(T, myFunc, otherFunc, rounds,          \
+                                        filename)                              \
+  {                                                                            \
     LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T>::run_perf(            \
-        &myFunc, &otherFunc, filename);                                        \
+        &myFunc, &otherFunc, rounds, filename);                                \
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T>::run_perf(            \
+        &myFunc, &otherFunc, rounds, filename);                                \
   }
