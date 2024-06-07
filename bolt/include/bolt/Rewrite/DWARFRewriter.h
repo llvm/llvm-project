@@ -138,8 +138,7 @@ private:
   /// Process and write out CUs that are passsed in.
   void finalizeCompileUnits(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
                             CUOffsetMap &CUMap,
-                            const std::list<DWARFUnit *> &CUs,
-                            GDBIndex &GDBIndexSection);
+                            const std::list<DWARFUnit *> &CUs);
 
   /// Finalize debug sections in the main binary.
   void finalizeDebugSections(DIEBuilder &DIEBlder,
