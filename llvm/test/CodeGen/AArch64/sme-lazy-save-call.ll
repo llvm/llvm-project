@@ -13,9 +13,8 @@ define void @test_lazy_save_1_callee() nounwind "aarch64_inout_za" {
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    mul x9, x8, x8
-; CHECK-NEXT:    sub x9, x10, x9
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    stur x9, [x29, #-16]
 ; CHECK-NEXT:    sub x9, x29, #16
@@ -50,9 +49,8 @@ define void @test_lazy_save_2_callees() nounwind "aarch64_inout_za" {
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x20, #1
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    mul x8, x20, x20
-; CHECK-NEXT:    sub x8, x9, x8
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    msub x8, x20, x20, x8
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    sub x21, x29, #16
 ; CHECK-NEXT:    stur x8, [x29, #-16]
@@ -99,9 +97,8 @@ define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_inou
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    mul x9, x8, x8
-; CHECK-NEXT:    sub x9, x10, x9
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    stur x9, [x29, #-16]
 ; CHECK-NEXT:    sub x9, x29, #16
@@ -141,9 +138,8 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_inout_za
 ; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    mul x9, x8, x8
-; CHECK-NEXT:    sub x9, x10, x9
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    stur x9, [x29, #-80]
 ; CHECK-NEXT:    sub x9, x29, #80

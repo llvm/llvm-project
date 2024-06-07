@@ -234,7 +234,6 @@ define double  @za_new_caller_to_za_shared_callee(double %x) nounwind noinline o
 ; CHECK-COMMON:       // %bb.0: // %prelude
 ; CHECK-COMMON-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
-; CHECK-COMMON-NEXT:    mul x8, x8, x8
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-COMMON-NEXT:    cbz x8, .LBB6_2
 ; CHECK-COMMON-NEXT:    b .LBB6_1
@@ -266,9 +265,8 @@ define double  @za_shared_caller_to_za_none_callee(double %x) nounwind noinline 
 ; CHECK-COMMON-NEXT:    mov x29, sp
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
-; CHECK-COMMON-NEXT:    mul x9, x8, x8
-; CHECK-COMMON-NEXT:    mov x10, sp
-; CHECK-COMMON-NEXT:    sub x9, x10, x9
+; CHECK-COMMON-NEXT:    mov x9, sp
+; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
 ; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
 ; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
@@ -309,9 +307,8 @@ define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_inout_za" nounwind {
 ; CHECK-COMMON-NEXT:    mov x29, sp
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
-; CHECK-COMMON-NEXT:    mov x10, sp
-; CHECK-COMMON-NEXT:    mul x9, x8, x8
-; CHECK-COMMON-NEXT:    sub x9, x10, x9
+; CHECK-COMMON-NEXT:    mov x9, sp
+; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
 ; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
 ; CHECK-COMMON-NEXT:    sub x9, x29, #16
@@ -375,9 +372,8 @@ define double @frem_call_za(double %a, double %b) "aarch64_inout_za" nounwind {
 ; CHECK-COMMON-NEXT:    mov x29, sp
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
-; CHECK-COMMON-NEXT:    mov x10, sp
-; CHECK-COMMON-NEXT:    mul x9, x8, x8
-; CHECK-COMMON-NEXT:    sub x9, x10, x9
+; CHECK-COMMON-NEXT:    mov x9, sp
+; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
 ; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
 ; CHECK-COMMON-NEXT:    sub x9, x29, #16

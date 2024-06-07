@@ -11,9 +11,8 @@ define void @disable_tailcallopt() "aarch64_inout_za" nounwind {
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    mul x9, x8, x8
-; CHECK-NEXT:    sub x9, x10, x9
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    stur x9, [x29, #-16]
 ; CHECK-NEXT:    sub x9, x29, #16
@@ -45,9 +44,8 @@ define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_inout_za" nounwind {
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    mul x9, x8, x8
-; CHECK-NEXT:    sub x9, x10, x9
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    stur x9, [x29, #-16]
 ; CHECK-NEXT:    sub x9, x29, #16

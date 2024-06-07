@@ -38,9 +38,8 @@ define void @za_zt0_shared_caller_no_state_callee() "aarch64_inout_za" "aarch64_
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #80
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    mul x9, x8, x8
-; CHECK-NEXT:    sub x9, x10, x9
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    stur x9, [x29, #-16]
 ; CHECK-NEXT:    sub x9, x29, #16
