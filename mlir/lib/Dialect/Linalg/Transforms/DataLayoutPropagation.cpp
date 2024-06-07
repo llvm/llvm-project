@@ -734,8 +734,8 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
   // TODO: Handle outer_dims_perm variants.
   ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
   if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
-    return rewriter.notifyMatchFailure(
-        packOp, "expects outer_dims_perm is empty or an identity permutation");
+    return rewriter.notifyMatchFailure(packOp,
+                                       "non-identity outer dims perm NYI");
   }
 
   // Validate dimensions' relations between shape expansion and packing.
