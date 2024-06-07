@@ -676,7 +676,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         symtab.comdatGroups.try_emplace(CachedHashStringRef(signature), this)
             .second;
     if (keepGroup) {
-      if (config->relocatable)
+      if (!config->resolveGroups)
         this->sections[i] = createInputSection(
             i, sec, check(obj.getSectionName(sec, shstrtab)));
       continue;

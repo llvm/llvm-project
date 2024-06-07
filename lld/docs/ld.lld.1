@@ -278,6 +278,10 @@ Set the
 field to the specified value.
 .It Fl -fini Ns = Ns Ar symbol
 Specify a finalizer function.
+.It Fl -force-group-allocation
+Only meaningful for -r. Section groups are discarded. If two section group members are combined into the same output section, combine their relocations as well.
+.It Fl -inhibit-group-allocation
+This is the default for -r. Section groups are retained. Section group members' relocations are not combined.
 .It Fl -format Ns = Ns Ar input-format , Fl b Ar input-format
 Specify the format of the inputs following this option.
 .Ar input-format
