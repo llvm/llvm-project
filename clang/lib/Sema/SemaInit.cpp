@@ -10892,8 +10892,6 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     // FIXME: The "second phase of [over.match.list] case can also
     // theoretically happen here, but it's not clear whether we can
     // ever have a parameter of the right type.
-    bool SuppressUserConversions = Kind.isCopyInit();
-
     if (TD) {
       SmallVector<Expr *, 8> TmpInits;
       for (Expr *E : Inits)
@@ -10903,12 +10901,12 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
           TmpInits.push_back(E);
       AddTemplateOverloadCandidate(
           TD, FoundDecl, /*ExplicitArgs=*/nullptr, TmpInits, Candidates,
-          SuppressUserConversions,
+          /*SuppressUserConversions=*/false,
           /*PartialOverloading=*/false, AllowExplicit, ADLCallKind::NotADL,
           /*PO=*/{}, AllowAggregateDeductionCandidate);
     } else {
       AddOverloadCandidate(GD, FoundDecl, Inits, Candidates,
-                           SuppressUserConversions,
+                           /*SuppressUserConversions=*/false,
                            /*PartialOverloading=*/false, AllowExplicit);
     }
   };
