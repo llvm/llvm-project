@@ -37,7 +37,7 @@ def AArch64VGSave : SDNode<"AArch64ISD::VG_SAVE", SDTypeProfile<0, 0, []>,
 def AArch64VGRestore : SDNode<"AArch64ISD::VG_RESTORE", SDTypeProfile<0, 0, []>,
                               [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
 
-def AArch64ExpandZABuffer : SDNode<"AArch64ISD::EXPAND_ZA_BUFFER", SDTypeProfile<1, 1,
+def AArch64ExpandZABuffer : SDNode<"AArch64ISD::ALLOCATE_ZA_BUFFER", SDTypeProfile<1, 1,
                               [SDTCisInt<0>, SDTCisInt<1>]>,
                               [SDNPHasChain, SDNPSideEffect]>;
 let usesCustomInserter = 1, Defs = [SP], Uses = [SP] in {

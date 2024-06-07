@@ -2492,7 +2492,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((AArch64ISD::NodeType)Opcode) {
   case AArch64ISD::FIRST_NUMBER:
     break;
-    MAKE_CASE(AArch64ISD::EXPAND_ZA_BUFFER)
+    MAKE_CASE(AArch64ISD::ALLOCATE_ZA_BUFFER)
     MAKE_CASE(AArch64ISD::INIT_TPIDR2OBJ)
     MAKE_CASE(AArch64ISD::COALESCER_BARRIER)
     MAKE_CASE(AArch64ISD::VG_SAVE)
@@ -7533,7 +7533,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
 
     SDValue Buffer;
     if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
-      Buffer = DAG.getNode(AArch64ISD::EXPAND_ZA_BUFFER, DL,
+      Buffer = DAG.getNode(AArch64ISD::ALLOCATE_ZA_BUFFER, DL,
                            DAG.getVTList(MVT::i64, MVT::Other), {Chain, SVL});
     } else {
       SDValue Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
