@@ -4170,4 +4170,3 @@ define i32 @fold_zext_nneg_add_const_fail2(i8 %x) {
 
 declare void @llvm.assume(i1)
 declare void @fake_func(i32)
-

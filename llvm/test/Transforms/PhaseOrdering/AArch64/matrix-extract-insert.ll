@@ -537,4 +537,3 @@ define <4 x float> @reverse_hadd_v4f32(<4 x float> %a, <4 x float> %b) {
   %shuffle = shufflevector <4 x float> %vecinit13, <4 x float> %a, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x float> %shuffle
 }
-
