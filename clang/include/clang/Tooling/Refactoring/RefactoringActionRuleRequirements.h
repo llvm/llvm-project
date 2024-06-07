@@ -88,6 +88,15 @@ public:
   }
 };
 
+/// An AST statement requirement is satisfied when location is surrounded by statement.
+///
+/// The requirement will be evaluated only once during the initiation and
+/// search of matching refactoring action rules.
+class ASTStatementRequirement : public SourceLocationRequirement {
+public:
+  Expected<Stmt *> evaluate(RefactoringRuleContext &Context) const;
+};
+
 /// A base class for any requirement that requires some refactoring options.
 class RefactoringOptionsRequirement : public RefactoringActionRuleRequirement {
 public:

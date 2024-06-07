@@ -30,6 +30,8 @@ def err_refactor_extract_prohibited_expression : Error<"the selected "
 
 def err_refactor_no_location : Error<"refactoring action can't be initiated "
   "without a location">;
+def err_refactor_location_no_statement : Error<"the provided location is not "
+  "surrouded by an AST statement">;
 }
 
 } // end of Refactoring diagnostics
