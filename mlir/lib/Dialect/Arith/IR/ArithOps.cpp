@@ -1416,16 +1416,15 @@ struct SimplifyExtFTruncFOpPair : public OpRewritePattern<ExtFOp> {
   LogicalResult matchAndRewrite(ExtFOp extFOp,
                                 PatternRewriter &rewriter) const override {
     if (auto truncFOp = extFOp.getOperand().getDefiningOp<TruncFOp>()) {
-      Value input = truncFOp.getOperand();
-      Type inTy = getElementTypeOrSelf(input.getType());
-      Type outTy = getElementTypeOrSelf(extFOp.getType());
-      Type shortTy = getElementTypeOrSelf(truncFOp.getType());
-      if (isa<Float32Type>(inTy) && isa<Float32Type>(outTy) &&
-          (isa<Float16Type, BFloat16Type>(shortTy))) {
-        arith::FastMathFlags truncFMF = truncFOp.getFastmathAttr().getValue();
+      if (truncFOp.getOperand().getType() == extFOp.getType()) {
+        // RoundingMode roundingMode =
+        //     getRoundingmode().value_or(RoundingMode::to_nearest_even);
+        arith::FastMathFlags truncFMF =
+            truncFOp.getFastmath().value_or(arith::FastMathFlags::none);
         bool isTruncContract =
             bitEnumContainsAll(truncFMF, arith::FastMathFlags::contract);
-        arith::FastMathFlags extFMF = extFOp.getFastmathAttr().getValue();
+        arith::FastMathFlags extFMF =
+            extFOp.getFastmath().value_or(arith::FastMathFlags::none);
         bool isExtContract =
             bitEnumContainsAll(extFMF, arith::FastMathFlags::contract);
         if (isTruncContract && isExtContract) {
