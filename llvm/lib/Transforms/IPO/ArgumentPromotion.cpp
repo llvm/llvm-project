@@ -612,7 +612,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     }
 
     auto *CB = dyn_cast<CallBase>(V);
-    Value *PtrArg = dyn_cast<Value>(U);
+    Value *PtrArg = cast<Value>(U);
     if (IsRecursive && CB && PtrArg) {
       Type *PtrTy = PtrArg->getType();
       Align PtrAlign = PtrArg->getPointerAlignment(DL);
@@ -664,7 +664,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     return false;
   }
 
-  // Incase of functions with recursive calls, this check will fail when it
+  // In case of functions with recursive calls, this check will fail when it
   // tries to look at the first caller of this function. The caller may or may
   // not have a load, incase it doesn't load the pointer being passed, this
   // check will fail. So, it's safe to skip the check incase we know that we
