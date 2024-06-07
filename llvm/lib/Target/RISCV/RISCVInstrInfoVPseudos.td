@@ -3303,12 +3303,6 @@ multiclass VPseudoTernaryV_VX_AAXA<LMULInfo m, string Constraint = ""> {
                                         Constraint, Commutable=1>;
 }
 
-multiclass VPseudoTernaryV_VF_AAXA<LMULInfo m, FPR_Info f, string Constraint = ""> {
-  defm "_V" # f.FX : VPseudoTernaryWithPolicy<m.vrclass, f.fprclass,
-                                              m.vrclass, m, Constraint,
-                                              Commutable=1>;
-}
-
 multiclass VPseudoTernaryV_VF_AAXA_RM<LMULInfo m, FPR_Info f,
                                       string Constraint = "", int sew = 0> {
   defm "_V" # f.FX : VPseudoTernaryWithPolicyRoundingMode<m.vrclass, f.fprclass,
@@ -3333,12 +3327,6 @@ multiclass VPseudoTernaryW_VX<LMULInfo m> {
   defvar constraint = "@earlyclobber $rd";
   defm "_VX" : VPseudoTernaryWithPolicy<m.wvrclass, GPR, m.vrclass, m,
                                         constraint, /*Commutable*/ 0, TargetConstraintType=3>;
-}
-
-multiclass VPseudoTernaryW_VF<LMULInfo m, FPR_Info f, int TargetConstraintType = 1> {
-  defvar constraint = "@earlyclobber $rd";
-  defm "_V" # f.FX : VPseudoTernaryWithPolicy<m.wvrclass, f.fprclass,
-                                              m.vrclass, m, constraint, /*Commutable*/ 0, TargetConstraintType>;
 }
 
 multiclass VPseudoTernaryW_VF_RM<LMULInfo m, FPR_Info f, int sew = 0> {
