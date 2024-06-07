@@ -61,7 +61,7 @@ void ManualDWARFIndex::Index() {
   if (dwp_info && dwp_info->ContainsTypeUnits()) {
     for (size_t U = 0; U < dwp_info->GetNumUnits(); ++U) {
       if (auto *tu = llvm::dyn_cast<DWARFTypeUnit>(dwp_info->GetUnitAtIndex(U))) {
-        if (m_type_sigs_to_avoid.count(tu->GetTypeHash()) == 0)
+        if (!m_type_sigs_to_avoid.contains(tu->GetTypeHash()))
           units_to_index.push_back(tu);
       }
     }

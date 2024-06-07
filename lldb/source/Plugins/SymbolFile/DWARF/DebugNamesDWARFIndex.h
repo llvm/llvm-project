@@ -71,7 +71,7 @@ private:
         m_debug_names_data(debug_names_data), m_debug_str_data(debug_str_data),
         m_debug_names_up(std::move(debug_names_up)),
         m_fallback(module, dwarf, GetUnits(*m_debug_names_up),
-                   GetTypeUnitSigs(*m_debug_names_up)) {}
+                   GetTypeUnitSignatures(*m_debug_names_up)) {}
 
   DWARFDebugInfo &m_debug_info;
 
@@ -87,15 +87,14 @@ private:
   DWARFUnit *GetNonSkeletonUnit(const DebugNames::Entry &entry) const;
   DWARFDIE GetDIE(const DebugNames::Entry &entry) const;
 
-  // std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry) const;
-
   /// Checks if an entry is a foreign TU and fetch the type unit.
   ///
   /// This function checks if the DebugNames::Entry refers to a foreign TU and
-  /// returns true or false to indicate this. The \a foreign_tu pointer will be
-  /// filled in if this entry matches the type unit's originating .dwo file by
-  /// verifying that the DW_TAG_type_unit DIE has a DW_AT_dwo_name that matches
-  /// the DWO name from the originating skeleton compile unit.
+  /// returns an optional with a value of the \a entry is a foreign type unit
+  /// entry. A valid pointer will be returned if this entry is from a .dwo file
+  /// or if it is from a .dwp file and it matches the type unit's originating
+  /// .dwo file by verifying that the DW_TAG_type_unit DIE has a DW_AT_dwo_name
+  /// that matches the DWO name from the originating skeleton compile unit.
   ///
   /// \param[in] entry
   ///   The accelerator table entry to check.
@@ -112,9 +111,6 @@ private:
   std::optional<DWARFTypeUnit *>
   IsForeignTypeUnit(const DebugNames::Entry &entry) const;
 
-  DWARFTypeUnit *GetForeignTypeUnit(const DebugNames::Entry &entry) const;
-
-  std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry) const;
   bool ProcessEntry(const DebugNames::Entry &entry,
                     llvm::function_ref<bool(DWARFDIE die)> callback);
 
@@ -127,7 +123,7 @@ private:
                                   llvm::StringRef name);
 
   static llvm::DenseSet<dw_offset_t> GetUnits(const DebugNames &debug_names);
-  static llvm::DenseSet<uint64_t> GetTypeUnitSigs(const DebugNames &debug_names);
+  static llvm::DenseSet<uint64_t> GetTypeUnitSignatures(const DebugNames &debug_names);
 };
 
 } // namespace dwarf
