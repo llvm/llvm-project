@@ -448,10 +448,9 @@ public:
       return;
 
     const auto *RTok = TB.spelledTokenContaining(RLoc);
-    // Handle `>>`. RLoc is always pointing at the right location, just change
-    // the end to be offset by 1.
-    // We'll either point at the beginning of `>>`, hence get a proper spelled
-    // or point in the middle of `>>` hence get no spelled tok.
+    // Handle `>>`. RLoc is either part of `>>` or a spelled token on its own
+    // `>`. If it's the former, slice to have length of 1, if latter use the
+    // token as-is.
     if (!RTok || RTok->kind() == tok::greatergreater) {
       Position Begin = sourceLocToPosition(SourceMgr, RLoc);
       Position End = sourceLocToPosition(SourceMgr, RLoc.getLocWithOffset(1));
