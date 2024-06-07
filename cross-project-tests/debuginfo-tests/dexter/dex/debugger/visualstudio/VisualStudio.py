@@ -37,6 +37,7 @@ def _load_com_module():
 # properties we set through dexter currently.
 VSBreakpoint = namedtuple("VSBreakpoint", "path, line, col, cond")
 
+
 # Visual Studio events.
 # https://learn.microsoft.com/en-us/dotnet/api/envdte.dbgeventreason?view=visualstudiosdk-2022
 class DbgEvent(IntEnum):
