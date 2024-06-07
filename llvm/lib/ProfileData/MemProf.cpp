@@ -194,7 +194,8 @@ static void serializeV3(
 
 void IndexedMemProfRecord::serialize(
     const MemProfSchema &Schema, raw_ostream &OS, IndexedVersion Version,
-    llvm::DenseMap<CallStackId, LinearCallStackId> *MemProfCallStackIndexes) {
+    llvm::DenseMap<CallStackId, LinearCallStackId> *MemProfCallStackIndexes)
+    const {
   switch (Version) {
   case Version0:
   case Version1:

@@ -1,4 +1,4 @@
-//===- AArch64LoopIdiomTransform.h --------------------------------------===//
+//===----------LoopIdiomVectorize.h -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AARCH64_AARCH64LOOPIDIOMTRANSFORM_H
-#define LLVM_LIB_TARGET_AARCH64_AARCH64LOOPIDIOMTRANSFORM_H
+#ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_LOOPIDIOMVECTORIZE_H
+#define LLVM_LIB_TRANSFORMS_VECTORIZE_LOOPIDIOMVECTORIZE_H
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
-
-struct AArch64LoopIdiomTransformPass
-    : PassInfoMixin<AArch64LoopIdiomTransformPass> {
+struct LoopIdiomVectorizePass : PassInfoMixin<LoopIdiomVectorizePass> {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
 };
-
 } // namespace llvm
-
-#endif // LLVM_LIB_TARGET_AARCH64_AARCH64LOOPIDIOMTRANSFORM_H
+#endif // LLVM_LIB_TRANSFORMS_VECTORIZE_LOOPIDIOMVECTORIZE_H
