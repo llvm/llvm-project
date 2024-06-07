@@ -1,0 +1,277 @@
+# Customization options:                                -*- Makefile -*-
+# SWIFTFLAGS_EXTRAS :=
+# SWIFT_BRIDGING_HEADER :=
+# SWIFT_PRECOMPILE_BRIDGING_HEADER := NO
+# SWIFT_OBJC_HEADER := Foo-Swift.h
+
+#----------------------------------------------------------------------
+# SWIFTC defaults to swift.
+# TODO:
+# If you change the defaults of SWIFTC, be sure to also change it in the file
+# test/plugins/builder_base.py, which provides a Python way to return the
+# value of the make variable SWIFTC -- getSwiftCompiler().
+#
+# See also these functions:
+#   o cxx_compiler
+#   o cxx_linker
+#----------------------------------------------------------------------
+SWIFTC ?= $(shell $(VPATH)/$(LEVEL)/find-swift.py)
+ifeq "$(SDKROOT)" ""
+	SWIFTSDKROOT = $(shell $(VPATH)/$(LEVEL)/find-swift.py -s)
+else
+	SWIFTSDKROOT = $(SDKROOT)
+endif
+PYTHON ?= python3
+
+SWIFTFLAGS ?= $(DEBUG_INFO_FLAG) -Onone -Xfrontend -serialize-debugging-options
+
+SWIFTFLAGS += $(SWIFTFLAGS_EXTRAS)
+SWIFTFLAGS += $(FRAMEWORK_INCLUDES)
+ifeq "$(findstring -target,$(SWIFTFLAGS))" ""
+  SWIFTFLAGS += $(TARGET_SWIFTFLAGS)
+endif
+
+ifneq "$(SWIFT_ENABLE_EXPLICIT_MODULES)" ""
+SWIFTFLAGS += -explicit-module-build
+endif
+
+# Swift bridging headers.
+ifneq "$(SWIFT_BRIDGING_HEADER)" ""
+# These are incompatible.
+DISABLE_SWIFT_INTERFACE = YES
+ifneq "$(SWIFT_PRECOMPILE_BRIDGING_HEADER)" "NO"
+# With PCH.
+SWIFT_HFLAGS = -import-objc-header $(SRCDIR)/$(SWIFT_BRIDGING_HEADER) -enable-bridging-pch -pch-output-dir $(BUILDDIR)
+else
+# From source.
+SWIFT_HFLAGS = -import-objc-header $(SRCDIR)/$(SWIFT_BRIDGING_HEADER) -disable-bridging-pch
+endif
+else
+# No bridging header.
+SWIFT_HFLAGS :=
+endif
+
+# Clang headers generated from Swift sources.
+ifneq "$(SWIFT_OBJC_HEADER)" ""
+SWIFTFLAGS += -emit-objc-header-path $(SWIFT_OBJC_HEADER)
+endif
+ifneq "$(SWIFT_CXX_HEADER)" ""
+SWIFTFLAGS += -emit-clang-header-path $(SWIFT_CXX_HEADER)
+$(SWIFT_CXX_HEADER): $(strip $(SWIFT_SOURCES:.swift=.swift.o))
+endif
+
+ifeq "$(OS)" "Linux"
+SWIFT_HOSTDIR = $(shell dirname $(SWIFTC))/../lib/swift/linux
+else
+SWIFT_HOSTDIR = $(shell dirname $(SWIFTC))/../lib/swift/host
+endif
+
+SWIFT_MODULE_CACHE_FLAGS ?= -module-cache-path $(THE_CLANG_MODULE_CACHE_DIR)
+SWIFTFLAGS += $(SWIFT_MODULE_CACHE_FLAGS)
+
+ifeq "$(SWIFT_CXX_INTEROP)" "1"
+CXXFLAGS += -std=c++17 
+endif
+
+# If C++ interop is enabled, the generated header file will try to include 
+# SWIFT_LIBS_DIR/swiftToCxx/_SwiftCxxInteroperability.h
+ifneq "$(SWIFT_CXX_INTEROP)" ""
+  CFLAGS += -I$(SWIFT_LIBS_DIR)
+endif
+
+
+#----------------------------------------------------------------------
+# Check if we have any Swift source files
+#----------------------------------------------------------------------
+ifneq "$(strip $(SWIFT_SOURCES))" ""
+	OBJECTS +=$(strip $(SWIFT_SOURCES:.swift=.swift.o))
+	USESWIFTDRIVER = 1
+endif
+
+ifneq "$(strip $(DYLIB_SWIFT_SOURCES))" ""
+	DYLIB_OBJECTS +=$(strip $(DYLIB_SWIFT_SOURCES:.swift=.swift.o))
+	USESWIFTDRIVER = 1
+endif
+
+ifneq "$(strip $(SWIFT_SOURCES_FOR_CXX_HEADER))" ""
+	SWIFT_CXX_HEADER =$(strip $(SWIFT_SOURCES:.swift=.swift.o))
+	USESWIFTDRIVER = 1
+endif
+
+ifeq "$(USESWIFTDRIVER)" "1"
+	LDFLAGS +=-L"$(SWIFTLIBS)"
+	ifeq "$(OS)" "Darwin"
+		SWIFTFLAGS += -sdk "$(SWIFTSDKROOT)"
+	endif
+	SWIFTFLAGS += -tools-directory "$(shell dirname $(CC))"
+endif
+
+#----------------------------------------------------------------------
+# Check if we need the Swift/ObjC interop features
+#----------------------------------------------------------------------
+ifeq "$(SWIFT_OBJC_INTEROP)" "1"
+        ifeq "$(OS)" "Darwin"
+		SWIFTFLAGS += -link-objc-runtime -framework Foundation -framework CoreGraphics
+		LDFLAGS += -lswiftObjectiveC -lswiftFoundation -framework Foundation -framework CoreGraphics
+        else
+                # CFLAGS_EXTRAS is used via "dotest.py -E" to pass the -I and -L paths
+                # for Foundation and libdispatch on Linux.
+                SWIFTFLAGS += $(CFLAGS_EXTRAS)
+                LDFLAGS += $(CFLAGS_EXTRAS)
+        endif
+
+endif
+
+#----------------------------------------------------------------------
+# Check if we need the Swift/C++ interop features
+#----------------------------------------------------------------------
+ifeq "$(SWIFT_CXX_INTEROP)" "1"
+	SWIFTFLAGS += -Xfrontend -enable-experimental-cxx-interop -Xfrontend -validate-tbd-against-ir=none 
+	SWIFTFLAGS += -Xcc -std=c++17
+endif
+
+#----------------------------------------------------------------------
+# Check if we should compile in Swift embedded mode
+#----------------------------------------------------------------------
+ifeq "$(SWIFT_EMBEDDED_MODE)" "1"
+	SWIFTFLAGS += -gdwarf-types -enable-experimental-feature Embedded -Xfrontend -disable-objc-interop -runtime-compatibility-version none
+	ifeq "$(OS)" "Darwin"
+		SWIFTFLAGS += -target $(ARCH)-apple-macos14
+	endif
+	SWIFT_WMO = 1
+endif
+
+#----------------------------------------------------------------------
+# Set up variables to run the Swift frontend directly.
+#----------------------------------------------------------------------
+SWIFT=$(shell dirname $(SWIFTC))/swift
+SWIFT_FEFLAGS = $(shell echo $(patsubst -Xfrontend,,$(SWIFTFLAGS)) | sed -e 's/-Xlinker [^ ]*//g')
+SWIFT_FE=$(SWIFT) -frontend
+
+ifeq "$(USESWIFTDRIVER)" "1"
+#----------------------------------------------------------------------
+ifeq "$(DYLIB_NAME)" ""
+MODULENAME?=$(shell basename $(EXE) .out)
+else
+EXE = $(DYLIB_FILENAME)
+MODULENAME?=$(DYLIB_NAME)
+PARSE_AS_LIBRARY = -parse-as-library
+endif
+
+VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES)) $(patsubst %,$(VPATH)/%,$(DYLIB_SWIFT_SOURCES))
+
+ALL_SWIFT_SOURCES = $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)
+SWIFT_OBJECTS = $(strip $(ALL_SWIFT_SOURCES:.swift=.swift.o))
+
+ifeq "$(DISABLE_SWIFT_INTERFACE)" ""
+SWIFT_INTERFACE_FLAGS=-emit-module-interface-path $(BUILDDIR)/$(MODULENAME).swiftinterface
+endif
+
+ifeq "$(SWIFT_WMO)" "1"
+SWIFTC_OUTPUT=-wmo -o $@
+else
+SWIFTC_OUTPUT=-output-file-map $(BUILDDIR)/$(MODULENAME)-output-file-map.json
+endif
+
+# The Swift object files are named .swift.o so they don't conflict
+# with the wrapped Swift module $(MODULENAME).o
+$(SWIFT_OBJECTS): $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)
+ifneq "$(SWIFT_WMO)" "1"
+	@echo "### Generating output file map"
+	$(PYTHON) $(THIS_FILE_DIR)/gen-output-map.py $^ $(patsubst %,$(BUILDDIR)/%,$(SWIFT_OBJECTS)) >$(BUILDDIR)/$(MODULENAME)-output-file-map.json
+endif
+	@echo "### Compiling" $^
+	@echo "### Swift driver expanded incovation will be:"
+	$(SWIFTC) -emit-object $^ $(SWIFTC_OUTPUT) \
+	  $(SWIFTFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
+	  -module-name $(MODULENAME) \
+          -emit-module-path $(BUILDDIR)/$(MODULENAME).swiftmodule \
+	  $(SWIFT_INTERFACE_FLAGS) -###
+	@echo "### Swift driver invocation:"
+	$(SWIFTC) -emit-object $^ $(SWIFTC_OUTPUT) \
+	  $(SWIFTFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
+	  -module-name $(MODULENAME) \
+          -emit-module-path $(BUILDDIR)/$(MODULENAME).swiftmodule \
+	  $(SWIFT_INTERFACE_FLAGS)
+ifneq "$(OS)" "Darwin"
+	@echo "### Wrapping Swift module:"
+	$(SWIFT) -modulewrap $(BUILDDIR)/$(MODULENAME).swiftmodule \
+	  -o $(BUILDDIR)/$(MODULENAME).o
+endif
+
+ifeq "$(OS)" "Darwin"
+ifeq "$(HIDE_SWIFTMODULE)" ""
+SWIFTMODULE = $(MODULENAME).swiftmodule
+LD_SWIFTFLAGS = -Xlinker -add_ast_path -Xlinker $(SWIFTMODULE)
+else
+SWIFTMODULE =
+LD_SWIFTFLAGS =
+endif
+$(EXE): $(OBJECTS)
+	@echo "### Linking" $(EXE)
+	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(OBJECTS) $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$(EXE)"
+endif
+ifneq "$(HIDE_SWIFTMODULE)" ""
+	rm -f $(MODULENAME).swiftmodule
+endif
+else # OS = Linux
+ifeq "$(HIDE_SWIFTMODULE)" ""
+WRAPPED_SWIFTMODULE = $(MODULENAME).o
+endif
+
+$(EXE): $(OBJECTS)
+	@echo "### Linking" $(EXE)
+	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(WRAPPED_SWIFTMODULE) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+ifneq "$(HIDE_SWIFTMODULE)" ""
+	rm -f $(MODULENAME).swiftmodule
+endif
+
+endif # Darwin
+
+ifeq "$(OS)" "Darwin"
+DYLIB_SWIFT_FLAGS=  \
+        -Xlinker -dylib \
+        -Xlinker -install_name -Xlinker "$(DYLIB_INSTALL_NAME)" \
+        $(LD_EXTRAS)
+ifeq "$(DYLIB_HIDE_SWIFTMODULE)" ""
+DYLIB_SWIFT_FLAGS+= -Xlinker -add_ast_path -Xlinker $(MODULENAME).swiftmodule
+endif
+
+else # !Darwin
+
+DYLIB_SWIFT_FLAGS=$(LD_EXTRAS)
+ifeq "$(DYLIB_HIDE_SWIFTMODULE)" ""
+DYLIB_OBJECTS += $(BUILDDIR)/$(MODULENAME).o
+endif
+endif # Darwin
+
+$(DYLIB_FILENAME) : $(DYLIB_OBJECTS) $(MODULE_INTERFACE)
+	@echo "### Linking dynamic library $(DYLIB_NAME)"
+ifneq "$(FRAMEWORK)" ""
+	mkdir -p $(FRAMEWORK).framework/Versions/A/Headers
+	mkdir -p $(FRAMEWORK).framework/Versions/A/Modules
+	mkdir -p $(FRAMEWORK).framework/Versions/A/Resources
+ifneq "$(MODULENAME)" ""
+	mkdir -p $(FRAMEWORK).framework/Versions/A/Modules/$(MODULENAME).swiftmodule
+	cp -r $(MODULENAME).swiftmodule $(FRAMEWORK).framework/Versions/A/Modules/$(MODULENAME).swiftmodule/$(ARCH).swiftmodule
+endif
+	(cd $(FRAMEWORK).framework/Versions; ln -sf A Current)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Headers Headers)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Modules Modules)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Resources Resources)
+	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/$(FRAMEWORK) $(FRAMEWORK))
+endif
+	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) \
+            -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $(DYLIB_OBJECTS)
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$(DYLIB_FILENAME)"
+endif
+ifneq "$(MAKE_DSYM)" "NO"
+ifneq "$(DS)" ""
+	"$(DS)" $(DSFLAGS) "$(DYLIB_FILENAME)"
+endif
+endif
+
+endif # USESWIFTDRIVER
