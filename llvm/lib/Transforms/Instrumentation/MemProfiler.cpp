@@ -662,7 +662,7 @@ static uint64_t computeStackId(const memprof::Frame &Frame) {
 // Helper to generate a single hash id for a given callstack, used for emitting
 // matching statistics and useful for uniquing such statistics across modules.
 static uint64_t
-computeFullStackId(const SmallVectorImpl<memprof::Frame> &CallStack) {
+computeFullStackId(const std::vector<memprof::Frame> &CallStack) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
       HashBuilder;
   for (auto &F : CallStack)
