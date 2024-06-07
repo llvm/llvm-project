@@ -65,8 +65,7 @@ private:
                                   uint32_t TotalNumVGPR, uint32_t NumSGPR,
                                   uint64_t ScratchSize, uint64_t CodeSize,
                                   const AMDGPUMachineFunction *MFI);
-  void emitCommonFunctionComments(const MCExpr *NumVGPR,
-                                  std::optional<const MCExpr *> NumAGPR,
+  void emitCommonFunctionComments(const MCExpr *NumVGPR, const MCExpr *NumAGPR,
                                   const MCExpr *TotalNumVGPR,
                                   const MCExpr *NumSGPR,
                                   const MCExpr *ScratchSize, uint64_t CodeSize,
@@ -85,7 +84,7 @@ private:
   void initTargetStreamer(Module &M);
 
   static uint64_t getMCExprValue(const MCExpr *Value, MCContext &Ctx);
-  std::string getMCExprStr(const MCExpr *Value);
+  StringRef getMCExprStr(const MCExpr *Value);
 
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,

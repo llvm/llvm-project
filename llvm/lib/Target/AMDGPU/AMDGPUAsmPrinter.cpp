@@ -400,28 +400,27 @@ void AMDGPUAsmPrinter::emitCommonFunctionComments(
                               false);
 }
 
-std::string AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
-  std::string Str;
-  raw_string_ostream OSS(Str);
+StringRef AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
+  SmallString<128> Str;
+  raw_svector_ostream OSS(Str);
   int64_t IVal;
   if (Value->evaluateAsAbsolute(IVal)) {
     OSS << static_cast<uint64_t>(IVal);
   } else {
     Value->print(OSS, MAI);
   }
-  return Str;
+  return OSS.str();
 }
 
 void AMDGPUAsmPrinter::emitCommonFunctionComments(
-    const MCExpr *NumVGPR, std::optional<const MCExpr *> NumAGPR,
-    const MCExpr *TotalNumVGPR, const MCExpr *NumSGPR,
-    const MCExpr *ScratchSize, uint64_t CodeSize,
+    const MCExpr *NumVGPR, const MCExpr *NumAGPR, const MCExpr *TotalNumVGPR,
+    const MCExpr *NumSGPR, const MCExpr *ScratchSize, uint64_t CodeSize,
     const AMDGPUMachineFunction *MFI) {
   OutStreamer->emitRawComment(" codeLenInByte = " + Twine(CodeSize), false);
   OutStreamer->emitRawComment(" NumSgprs: " + getMCExprStr(NumSGPR), false);
   OutStreamer->emitRawComment(" NumVgprs: " + getMCExprStr(NumVGPR), false);
-  if (NumAGPR) {
-    OutStreamer->emitRawComment(" NumAgprs: " + getMCExprStr(*NumAGPR), false);
+  if (NumAGPR && TotalNumVGPR) {
+    OutStreamer->emitRawComment(" NumAgprs: " + getMCExprStr(NumAGPR), false);
     OutStreamer->emitRawComment(" TotalNumVgprs: " + getMCExprStr(TotalNumVGPR),
                                 false);
   }
@@ -586,8 +585,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->emitRawComment(" Kernel info:", false);
     emitCommonFunctionComments(
         CurrentProgramInfo.NumArchVGPR,
-        STM.hasMAIInsts() ? CurrentProgramInfo.NumAccVGPR
-                          : std::optional<const MCExpr *>(),
+        STM.hasMAIInsts() ? CurrentProgramInfo.NumAccVGPR : nullptr,
         CurrentProgramInfo.NumVGPR, CurrentProgramInfo.NumSGPR,
         CurrentProgramInfo.ScratchSize, getFunctionCodeSize(MF), MFI);
 
