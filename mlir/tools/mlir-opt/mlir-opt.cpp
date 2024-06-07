@@ -97,7 +97,6 @@ void registerTestExpandMathPass();
 void registerTestFooAnalysisPass();
 void registerTestComposeSubView();
 void registerTestMultiBuffering();
-void registerTestIntRangeInference();
 void registerTestIRVisitorsPass();
 void registerTestGenericIRVisitorsPass();
 void registerTestInterfaces();
@@ -226,7 +225,6 @@ void registerTestPasses() {
   mlir::test::registerTestFooAnalysisPass();
   mlir::test::registerTestComposeSubView();
   mlir::test::registerTestMultiBuffering();
-  mlir::test::registerTestIntRangeInference();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestGenericIRVisitorsPass();
   mlir::test::registerTestInterfaces();

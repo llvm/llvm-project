@@ -13,7 +13,8 @@
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/IR/Matchers.h"
+#include "mlir/Transforms/FoldUtils.h"
 
 namespace mlir::arith {
 #define GEN_PASS_DEF_ARITHINTRANGEOPTS
@@ -24,155 +25,145 @@ using namespace mlir;
 using namespace mlir::arith;
 using namespace mlir::dataflow;
 
-/// Returns true if 2 integer ranges have intersection.
-static bool intersects(const ConstantIntRanges &lhs,
-                       const ConstantIntRanges &rhs) {
-  return !((lhs.smax().slt(rhs.smin()) || lhs.smin().sgt(rhs.smax())) &&
-           (lhs.umax().ult(rhs.umin()) || lhs.umin().ugt(rhs.umax())));
+/// Patterned after SCCP
+static LogicalResult replaceWithConstant(DataFlowSolver &solver,
+                                         RewriterBase &rewriter,
+                                         OperationFolder &folder, Value value) {
+  auto *maybeInferredRange =
+      solver.lookupState<IntegerValueRangeLattice>(value);
+  if (!maybeInferredRange || maybeInferredRange->getValue().isUninitialized())
+    return failure();
+  const ConstantIntRanges &inferredRange =
+      maybeInferredRange->getValue().getValue();
+  std::optional<APInt> maybeConstValue = inferredRange.getConstantValue();
+  if (!maybeConstValue.has_value())
+    return failure();
+
+  Operation *maybeDefiningOp = value.getDefiningOp();
+  Dialect *valueDialect =
+      maybeDefiningOp ? maybeDefiningOp->getDialect()
+                      : value.getParentRegion()->getParentOp()->getDialect();
+  Attribute constAttr =
+      rewriter.getIntegerAttr(value.getType(), *maybeConstValue);
+  Value constant = folder.getOrCreateConstant(
+      rewriter.getInsertionBlock(), valueDialect, constAttr, value.getType());
+  // Fall back to arith.constant if the dialect materializer doesn't know what
+  // to do with an integer constant.
+  if (!constant)
+    constant = folder.getOrCreateConstant(
+        rewriter.getInsertionBlock(),
+        rewriter.getContext()->getLoadedDialect<ArithDialect>(), constAttr,
+        value.getType());
+  if (!constant)
+    return failure();
+
+  rewriter.replaceAllUsesWith(value, constant);
+  return success();
 }
 
-static FailureOr<bool> handleEq(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  if (!intersects(lhs, rhs))
-    return false;
+/// Rewrite any results of `op` that were inferred to be constant integers to
+/// and replace their uses with that constant. Return success() if all results
+/// where thus replaced and the operation is erased.
+static LogicalResult foldResultsToConstants(DataFlowSolver &solver,
+                                            RewriterBase &rewriter,
+                                            OperationFolder &folder,
+                                            Operation &op) {
+  bool replacedAll = op.getNumResults() != 0;
+  for (Value res : op.getResults())
+    replacedAll &=
+        succeeded(replaceWithConstant(solver, rewriter, folder, res));
 
+  // If all of the results of the operation were replaced, try to erase
+  // the operation completely.
+  if (replacedAll && wouldOpBeTriviallyDead(&op)) {
+    assert(op.use_empty() && "expected all uses to be replaced");
+    rewriter.eraseOp(&op);
+    return success();
+  }
   return failure();
 }
 
-static FailureOr<bool> handleNe(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  if (!intersects(lhs, rhs))
-    return true;
+/// This function hasn't come from anywhere and is relying on the overall
+/// tests of the integer range inference implementation for its correctness.
+static LogicalResult deleteTrivialRemainder(DataFlowSolver &solver,
+                                            RewriterBase &rewriter,
+                                            Operation &op) {
+  if (!isa<RemSIOp, RemUIOp>(op))
+    return failure();
+  Value lhs = op.getOperand(0);
+  Value rhs = op.getOperand(1);
+  auto rhsConstVal = rhs.getDefiningOp<arith::ConstantIntOp>();
+  if (!rhsConstVal)
+    return failure();
+  int64_t modulus = rhsConstVal.value();
+  if (modulus <= 0)
+    return failure();
+  auto *maybeLhsRange = solver.lookupState<IntegerValueRangeLattice>(lhs);
+  if (!maybeLhsRange || maybeLhsRange->getValue().isUninitialized())
+    return failure();
+  const ConstantIntRanges &lhsRange = maybeLhsRange->getValue().getValue();
+  const APInt &min = llvm::isa<RemUIOp>(op) ? lhsRange.umin() : lhsRange.smin();
+  const APInt &max = llvm::isa<RemUIOp>(op) ? lhsRange.umax() : lhsRange.smax();
+  // The minima and maxima here are given as closed ranges, we must be strictly
+  // less than the modulus.
+  if (min.isNegative() || min.uge(modulus))
+    return failure();
+  if (max.isNegative() || max.uge(modulus))
+    return failure();
+  if (!min.ule(max))
+    return failure();
 
-  return failure();
+  // With all those conditions out of the way, we know thas this invocation of
+  // a remainder is a noop because the input is strictly within the range
+  // [0, modulus), so get rid of it.
+  rewriter.replaceOp(&op, ValueRange{lhs});
+  return success();
 }
 
-static FailureOr<bool> handleSlt(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  if (lhs.smax().slt(rhs.smin()))
-    return true;
+static void doRewrites(DataFlowSolver &solver, MLIRContext *context,
+                       MutableArrayRef<Region> initialRegions) {
+  SmallVector<Block *> worklist;
+  auto addToWorklist = [&](MutableArrayRef<Region> regions) {
+    for (Region &region : regions)
+      for (Block &block : llvm::reverse(region))
+        worklist.push_back(&block);
+  };
 
-  if (lhs.smin().sge(rhs.smax()))
-    return false;
+  IRRewriter rewriter(context);
+  OperationFolder folder(context, rewriter.getListener());
 
-  return failure();
-}
+  addToWorklist(initialRegions);
+  while (!worklist.empty()) {
+    Block *block = worklist.pop_back_val();
 
-static FailureOr<bool> handleSle(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  if (lhs.smax().sle(rhs.smin()))
-    return true;
+    for (Operation &op : llvm::make_early_inc_range(*block)) {
+      if (matchPattern(&op, m_Constant())) {
+        if (auto arithConstant = dyn_cast<ConstantOp>(op))
+          folder.insertKnownConstant(&op, arithConstant.getValue());
+        else
+          folder.insertKnownConstant(&op);
+        continue;
+      }
+      rewriter.setInsertionPoint(&op);
 
-  if (lhs.smin().sgt(rhs.smax()))
-    return false;
+      // Try rewrites. Success means that the underlying operation was erased.
+      if (succeeded(foldResultsToConstants(solver, rewriter, folder, op)))
+        continue;
+      if (isa<RemSIOp, RemUIOp>(op) &&
+          succeeded(deleteTrivialRemainder(solver, rewriter, op)))
+        continue;
+      // Add any the regions of this operation to the worklist.
+      addToWorklist(op.getRegions());
+    }
 
-  return failure();
-}
-
-static FailureOr<bool> handleSgt(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  return handleSlt(std::move(rhs), std::move(lhs));
-}
-
-static FailureOr<bool> handleSge(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  return handleSle(std::move(rhs), std::move(lhs));
-}
-
-static FailureOr<bool> handleUlt(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  if (lhs.umax().ult(rhs.umin()))
-    return true;
-
-  if (lhs.umin().uge(rhs.umax()))
-    return false;
-
-  return failure();
-}
-
-static FailureOr<bool> handleUle(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  if (lhs.umax().ule(rhs.umin()))
-    return true;
-
-  if (lhs.umin().ugt(rhs.umax()))
-    return false;
-
-  return failure();
-}
-
-static FailureOr<bool> handleUgt(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  return handleUlt(std::move(rhs), std::move(lhs));
-}
-
-static FailureOr<bool> handleUge(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  return handleUle(std::move(rhs), std::move(lhs));
+    // Replace any block arguments with constants.
+    rewriter.setInsertionPointToStart(block);
+    for (BlockArgument arg : block->getArguments())
+      (void)replaceWithConstant(solver, rewriter, folder, arg);
+  }
 }
 
 namespace {
-/// This class listens on IR transformations performed during a pass relying on
-/// information from a `DataflowSolver`. It erases state associated with the
-/// erased operation and its results from the `DataFlowSolver` so that Patterns
-/// do not accidentally query old state information for newly created Ops.
-class DataFlowListener : public RewriterBase::Listener {
-public:
-  DataFlowListener(DataFlowSolver &s) : s(s) {}
-
-protected:
-  void notifyOperationErased(Operation *op) override {
-    s.eraseState(op);
-    for (Value res : op->getResults())
-      s.eraseState(res);
-  }
-
-  DataFlowSolver &s;
-};
-
-struct ConvertCmpOp : public OpRewritePattern<arith::CmpIOp> {
-
-  ConvertCmpOp(MLIRContext *context, DataFlowSolver &s)
-      : OpRewritePattern<arith::CmpIOp>(context), solver(s) {}
-
-  LogicalResult matchAndRewrite(arith::CmpIOp op,
-                                PatternRewriter &rewriter) const override {
-    auto *lhsResult =
-        solver.lookupState<dataflow::IntegerValueRangeLattice>(op.getLhs());
-    if (!lhsResult || lhsResult->getValue().isUninitialized())
-      return failure();
-
-    auto *rhsResult =
-        solver.lookupState<dataflow::IntegerValueRangeLattice>(op.getRhs());
-    if (!rhsResult || rhsResult->getValue().isUninitialized())
-      return failure();
-
-    using HandlerFunc =
-        FailureOr<bool> (*)(ConstantIntRanges, ConstantIntRanges);
-    std::array<HandlerFunc, arith::getMaxEnumValForCmpIPredicate() + 1>
-        handlers{};
-    using Pred = arith::CmpIPredicate;
-    handlers[static_cast<size_t>(Pred::eq)] = &handleEq;
-    handlers[static_cast<size_t>(Pred::ne)] = &handleNe;
-    handlers[static_cast<size_t>(Pred::slt)] = &handleSlt;
-    handlers[static_cast<size_t>(Pred::sle)] = &handleSle;
-    handlers[static_cast<size_t>(Pred::sgt)] = &handleSgt;
-    handlers[static_cast<size_t>(Pred::sge)] = &handleSge;
-    handlers[static_cast<size_t>(Pred::ult)] = &handleUlt;
-    handlers[static_cast<size_t>(Pred::ule)] = &handleUle;
-    handlers[static_cast<size_t>(Pred::ugt)] = &handleUgt;
-    handlers[static_cast<size_t>(Pred::uge)] = &handleUge;
-
-    HandlerFunc handler = handlers[static_cast<size_t>(op.getPredicate())];
-    if (!handler)
-      return failure();
-
-    ConstantIntRanges lhsValue = lhsResult->getValue().getValue();
-    ConstantIntRanges rhsValue = rhsResult->getValue().getValue();
-    FailureOr<bool> result = handler(lhsValue, rhsValue);
-
-    if (failed(result))
-      return failure();
-
-    rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(
-        op, static_cast<int64_t>(*result), /*width*/ 1);
-    return success();
-  }
-
-private:
-  DataFlowSolver &solver;
-};
-
 struct IntRangeOptimizationsPass
     : public arith::impl::ArithIntRangeOptsBase<IntRangeOptimizationsPass> {
 
@@ -185,24 +176,10 @@ struct IntRangeOptimizationsPass
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 
-    DataFlowListener listener(solver);
-
-    RewritePatternSet patterns(ctx);
-    populateIntRangeOptimizationsPatterns(patterns, solver);
-
-    GreedyRewriteConfig config;
-    config.listener = &listener;
-
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
-      signalPassFailure();
+    doRewrites(solver, ctx, op->getRegions());
   }
 };
 } // namespace
-
-void mlir::arith::populateIntRangeOptimizationsPatterns(
-    RewritePatternSet &patterns, DataFlowSolver &solver) {
-  patterns.add<ConvertCmpOp>(patterns.getContext(), solver);
-}
 
 std::unique_ptr<Pass> mlir::arith::createIntRangeOptimizationsPass() {
   return std::make_unique<IntRangeOptimizationsPass>();

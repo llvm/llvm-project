@@ -64,10 +64,6 @@ void populateArithExpandOpsPatterns(RewritePatternSet &patterns);
 /// equivalent.
 std::unique_ptr<Pass> createArithUnsignedWhenEquivalentPass();
 
-/// Add patterns for int range based optimizations.
-void populateIntRangeOptimizationsPatterns(RewritePatternSet &patterns,
-                                           DataFlowSolver &solver);
-
 /// Create a pass which do optimizations based on integer range analysis.
 std::unique_ptr<Pass> createIntRangeOptimizationsPass();
 
