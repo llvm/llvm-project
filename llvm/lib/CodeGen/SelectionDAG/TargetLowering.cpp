@@ -11245,13 +11245,12 @@ SDValue TargetLowering::expandMASKED_COMPRESS(SDNode *Node,
   SDValue Chain = DAG.getEntryNode();
   SDValue OutPos = DAG.getConstant(0, DL, MVT::i32);
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned NumElms = VecVT.getVectorNumElements();
   for (unsigned I = 0; I < NumElms; I++) {
     SDValue Idx = DAG.getVectorIdxConstant(I, DL);
 
     SDValue ValI = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Vec, Idx);
-    SDValue OutPtr = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, OutPos);
+    SDValue OutPtr = getVectorElementPointer(DAG, StackPtr, VecVT, OutPos);
     Chain = DAG.getStore(
         Chain, DL, ValI, OutPtr,
         MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
