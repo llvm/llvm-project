@@ -418,6 +418,7 @@ declare double @llvm.experimental.constrained.pow.f64(double, double, metadata, 
 declare double @llvm.experimental.constrained.powi.f64(double, i32, metadata, metadata)
 declare double @llvm.experimental.constrained.sin.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.cos.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.tan.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.exp.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.exp2.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.log.f64(double, metadata, metadata)
