@@ -68,8 +68,8 @@ void LazyASTUnresolvedSet::getFromExternalSource(ASTContext &C) const {
   assert(Source && "getFromExternalSource with no external source");
 
   for (ASTUnresolvedSet::iterator I = Impl.begin(); I != Impl.end(); ++I)
-    I.setDecl(
-        cast<NamedDecl>(Source->GetExternalDecl(GlobalDeclID(I.getDeclID()))));
+    I.setDecl(cast<NamedDecl>(Source->GetExternalDecl(
+        GlobalDeclID(reinterpret_cast<uintptr_t>(I.getDecl()) >> 2))));
   Impl.Decls.setLazy(false);
 }
 
