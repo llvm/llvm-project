@@ -1475,6 +1475,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ldexpf16
+  SRCS
+    ldexpf16.cpp
+  HDRS
+    ../ldexpf16.h
+  COMPILE_OPTIONS
+    -O0 -ggdb3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
   ldexpf128
   SRCS
     ldexpf128.cpp

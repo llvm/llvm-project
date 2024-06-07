@@ -186,7 +186,7 @@ LIBC_INLINE constexpr T ldexp(T x, int exp) {
   }
 
   // For all other values, NormalFloat to T conversion handles it the right way.
-  DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
+  DyadicFloat<cpp::max(FPBits<T>::STORAGE_LEN, 32)> normal(bits.get_val());
   normal.exponent += exp;
   return static_cast<T>(normal);
 }

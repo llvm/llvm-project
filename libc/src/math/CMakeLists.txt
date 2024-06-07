@@ -223,6 +223,7 @@ add_math_entrypoint_object(llogbf128)
 add_math_entrypoint_object(ldexp)
 add_math_entrypoint_object(ldexpf)
 add_math_entrypoint_object(ldexpl)
+add_math_entrypoint_object(ldexpf16)
 add_math_entrypoint_object(ldexpf128)
 
 add_math_entrypoint_object(log10)
