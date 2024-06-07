@@ -903,6 +903,12 @@ def FeatureFlatAtomicFaddF32Inst
   "Has flat_atomic_add_f32 instruction"
 >;
 
+def FeatureGFX12_10DGEMMInsts : SubtargetFeature<"gfx1210-dgemm-insts",
+  "HasGFX12_10DGEMMInsts",
+  "true",
+  "Has v_wmma_f64_16x16x4_f64, v_wmma_f64_16x16x8_f64 instructions"
+>;
+
 def FeatureDefaultComponentZero : SubtargetFeature<"default-component-zero",
   "HasDefaultComponentZero",
   "true",
@@ -1854,6 +1860,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeaturePrngInst,
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
+   FeatureGFX12_10DGEMMInsts,
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
    FeatureWaitXcnt,
@@ -2515,6 +2522,10 @@ def HasAtomicBufferPkAddBF16Inst
 def HasFlatAtomicFaddF32Inst
   : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
   AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
+
+def HasGFX12_10DGEMMInsts
+  : Predicate<"Subtarget->hasGFX12_10DGEMMInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX12_10DGEMMInsts)>;
 
 def HasDefaultComponentZero
   : Predicate<"Subtarget->hasDefaultComponentZero()">,
