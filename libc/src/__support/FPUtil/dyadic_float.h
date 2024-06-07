@@ -14,7 +14,6 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/big_int.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/__support/macros/properties/types.h" // float16
 
 #include <stddef.h>
 
@@ -182,10 +181,6 @@ template <size_t Bits> struct DyadicFloat {
     }
 
     return r;
-  }
-
-  LIBC_INLINE explicit constexpr operator float16() const {
-    return static_cast<float16>(static_cast<float>(*this));
   }
 
   LIBC_INLINE explicit constexpr operator MantissaType() const {
