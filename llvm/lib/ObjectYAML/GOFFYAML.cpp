@@ -71,26 +71,26 @@ void CustomMappingTraits<GOFFYAML::RecordPtr>::inputOne(
     Elem = std::make_unique<GOFFYAML::EndOfModule>(std::move(End));
   } else if (Key == "RelocationDirectory" || Key == "Symbol" || Key == "Text" ||
              Key == "Length")
-    IO.setError(Twine("Not yet implemented ").concat(Key));
+    IO.setError(Twine("not yet implemented ").concat(Key));
   else
-    IO.setError(Twine("Unknown record type name ").concat(Key));
+    IO.setError(Twine("unknown record type name ").concat(Key));
 }
 
 void CustomMappingTraits<GOFFYAML::RecordPtr>::output(
     IO &IO, GOFFYAML::RecordPtr &Elem) {
   switch (Elem->getKind()) {
-  case GOFFYAML::RecordBase::RBK_ModuleHeader:
+  case GOFFYAML::RecordBase::Kind::ModuleHeader:
     IO.mapRequired("ModuleHeader",
                    *static_cast<GOFFYAML::ModuleHeader *>(Elem.get()));
     break;
-  case GOFFYAML::RecordBase::RBK_EndOfModule:
+  case GOFFYAML::RecordBase::Kind::EndOfModule:
     IO.mapRequired("End", *static_cast<GOFFYAML::EndOfModule *>(Elem.get()));
     break;
-  case GOFFYAML::RecordBase::RBK_RelocationDirectory:
-  case GOFFYAML::RecordBase::RBK_Symbol:
-  case GOFFYAML::RecordBase::RBK_Text:
-  case GOFFYAML::RecordBase::RBK_DeferredLength:
-    llvm_unreachable(("Not yet implemented"));
+  case GOFFYAML::RecordBase::Kind::RelocationDirectory:
+  case GOFFYAML::RecordBase::Kind::Symbol:
+  case GOFFYAML::RecordBase::Kind::Text:
+  case GOFFYAML::RecordBase::Kind::DeferredLength:
+    llvm_unreachable(("not yet implemented"));
   }
 }
 

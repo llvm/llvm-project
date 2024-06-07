@@ -33,40 +33,40 @@ LLVM_YAML_STRONG_TYPEDEF(uint8_t, GOFF_ENDFLAGS)
 // forward references to records, etc.). However, to be able to specify invalid
 // GOFF files, we treat all records the same way.
 struct RecordBase {
-  enum RecordBaseKind {
-    RBK_ModuleHeader,
-    RBK_RelocationDirectory,
-    RBK_Symbol,
-    RBK_Text,
-    RBK_DeferredLength,
-    RBK_EndOfModule
+  enum class Kind {
+    ModuleHeader,
+    RelocationDirectory,
+    Symbol,
+    Text,
+    DeferredLength,
+    EndOfModule
   };
 
 private:
-  const RecordBaseKind Kind;
+  const Kind RecordKind;
 
 protected:
-  RecordBase(RecordBaseKind Kind) : Kind(Kind) {}
+  RecordBase(Kind RecordKind) : RecordKind(RecordKind) {}
 
 public:
-  RecordBaseKind getKind() const { return Kind; }
+  Kind getKind() const { return RecordKind; }
 };
 using RecordPtr = std::unique_ptr<RecordBase>;
 
 struct ModuleHeader : public RecordBase {
-  ModuleHeader() : RecordBase(RBK_ModuleHeader) {}
+  ModuleHeader() : RecordBase(Kind::ModuleHeader) {}
 
   uint32_t ArchitectureLevel;
   uint16_t PropertiesLength;
   std::optional<yaml::BinaryRef> Properties;
 
   static bool classof(const RecordBase *S) {
-    return S->getKind() == RBK_ModuleHeader;
+    return S->getKind() == Kind::ModuleHeader;
   }
 };
 
 struct EndOfModule : public RecordBase {
-  EndOfModule() : RecordBase(RBK_EndOfModule) {}
+  EndOfModule() : RecordBase(Kind::EndOfModule) {}
 
   GOFF_ENDFLAGS Flags;
   GOFF_AMODE AMODE;
@@ -77,7 +77,7 @@ struct EndOfModule : public RecordBase {
   StringRef EntryName;
 
   static bool classof(const RecordBase *S) {
-    return S->getKind() == RBK_EndOfModule;
+    return S->getKind() == Kind::EndOfModule;
   }
 };
 

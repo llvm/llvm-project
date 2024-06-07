@@ -69,8 +69,7 @@ ZerosImpl zeros(const size_t NumBytes) { return ZerosImpl{NumBytes}; }
 // The implementation aims at simplicity, not speed.
 class GOFFOStream {
 public:
-  explicit GOFFOStream(raw_ostream &OS)
-      : OS(OS), CurrentType(GOFF::RecordType(-1)) {}
+  explicit GOFFOStream(raw_ostream &OS) : OS(OS), CurrentType() {}
 
   GOFFOStream &operator<<(StringRef Str) {
     write(Str);
@@ -95,35 +94,37 @@ private:
 };
 
 void GOFFOStream::writeRecordPrefix(uint8_t Flags) {
+  // See https://www.ibm.com/docs/en/zos/3.1.0?topic=conventions-record-prefix.
   uint8_t TypeAndFlags = Flags | (CurrentType << 4);
-  OS << binaryBe(static_cast<unsigned char>(GOFF::PTVPrefix))
-     << binaryBe(static_cast<unsigned char>(TypeAndFlags))
-     << binaryBe(static_cast<unsigned char>(0));
+  OS << binaryBe(uint8_t(GOFF::PTVPrefix)) // The prefix value.
+     << binaryBe(uint8_t(TypeAndFlags))    // The record type and the flags.
+     << binaryBe(uint8_t(0));              // The version.
 }
 
 void GOFFOStream::write(StringRef Str) {
   // The flags are determined by the flags of the prvious record, and by the
-  // remaining size of data.
-  uint8_t Flags = 0;
-  size_t Ptr = 0;
+  // size of the remaining data.
+  size_t Pos = 0;
   size_t Size = Str.size();
-  while (Size >= GOFF::RecordContentLength) {
-    if (Flags) {
+  bool Continuation = false;
+  while (Size > 0) {
+    uint8_t Flags = 0;
+    if (Continuation)
       Flags |= Rec_Continuation;
-      if (Size == GOFF::RecordContentLength)
-        Flags &= ~Rec_Continued;
-    } else
-      Flags |= (Size == GOFF::RecordContentLength) ? 0 : Rec_Continued;
+    if (Size > GOFF::RecordContentLength) {
+      Flags |= Rec_Continued;
+      Continuation = true;
+    }
     writeRecordPrefix(Flags);
-    OS.write(&Str.data()[Ptr], GOFF::RecordContentLength);
-    Size -= GOFF::RecordContentLength;
-    Ptr += GOFF::RecordContentLength;
-  }
-  if (Size) {
-    Flags &= ~Rec_Continued;
-    writeRecordPrefix(Flags);
-    OS.write(&Str.data()[Ptr], Size);
-    OS.write_zeros(GOFF::RecordContentLength - Size);
+    if (Size < GOFF::RecordContentLength) {
+      OS.write(&Str.data()[Pos], Size);
+      OS.write_zeros(GOFF::RecordContentLength - Size);
+      Size = 0;
+    } else {
+      OS.write(&Str.data()[Pos], GOFF::RecordContentLength);
+      Size -= GOFF::RecordContentLength;
+    }
+    Pos += GOFF::RecordContentLength;
   }
 }
 
@@ -145,8 +146,8 @@ public:
 };
 
 class GOFFState {
-  void writeHeader(GOFFYAML::ModuleHeader &ModHdr);
-  void writeEnd(GOFFYAML::EndOfModule &EndMod);
+  void writeHeader(const GOFFYAML::ModuleHeader &ModHdr);
+  void writeEnd(const GOFFYAML::EndOfModule &EndMod);
 
   void reportError(const Twine &Msg) {
     ErrHandler(Msg);
@@ -170,7 +171,9 @@ private:
   bool HasError;
 };
 
-void GOFFState::writeHeader(GOFFYAML::ModuleHeader &ModHdr) {
+void GOFFState::writeHeader(const GOFFYAML::ModuleHeader &ModHdr) {
+  // See
+  // https://www.ibm.com/docs/en/zos/3.1.0?topic=formats-module-header-record.
   GW.newRecord(GOFF::RT_HDR);
   LogicalRecord LR(GW);
   LR << zeros(45)                          // Reserved.
@@ -181,11 +184,12 @@ void GOFFState::writeHeader(GOFFYAML::ModuleHeader &ModHdr) {
     LR << *ModHdr.Properties; // Module properties.
 }
 
-void GOFFState::writeEnd(GOFFYAML::EndOfModule &EndMod) {
+void GOFFState::writeEnd(const GOFFYAML::EndOfModule &EndMod) {
+  // See https://www.ibm.com/docs/en/zos/3.1.0?topic=formats-end-module-record.
   SmallString<16> EntryName;
   if (std::error_code EC =
           ConverterEBCDIC::convertToEBCDIC(EndMod.EntryName, EntryName))
-    reportError("Conversion error on " + EndMod.EntryName);
+    reportError("conversion to EBCDIC 1047 failed on " + EndMod.EntryName);
 
   GW.newRecord(GOFF::RT_END);
   LogicalRecord LR(GW);
@@ -201,20 +205,20 @@ void GOFFState::writeEnd(GOFFYAML::EndOfModule &EndMod) {
 }
 
 bool GOFFState::writeObject() {
-  for (auto &RecPtr : Doc.Records) {
-    auto *Rec = RecPtr.get();
+  for (const std::unique_ptr<GOFFYAML::RecordBase> &RecPtr : Doc.Records) {
+    const GOFFYAML::RecordBase *Rec = RecPtr.get();
     switch (Rec->getKind()) {
-    case GOFFYAML::RecordBase::RBK_ModuleHeader:
-      writeHeader(*static_cast<GOFFYAML::ModuleHeader *>(Rec));
+    case GOFFYAML::RecordBase::Kind::ModuleHeader:
+      writeHeader(*static_cast<const GOFFYAML::ModuleHeader *>(Rec));
       break;
-    case GOFFYAML::RecordBase::RBK_EndOfModule:
-      writeEnd(*static_cast<GOFFYAML::EndOfModule *>(Rec));
+    case GOFFYAML::RecordBase::Kind::EndOfModule:
+      writeEnd(*static_cast<const GOFFYAML::EndOfModule *>(Rec));
       break;
-    case GOFFYAML::RecordBase::RBK_RelocationDirectory:
-    case GOFFYAML::RecordBase::RBK_Symbol:
-    case GOFFYAML::RecordBase::RBK_Text:
-    case GOFFYAML::RecordBase::RBK_DeferredLength:
-      llvm_unreachable(("Not yet implemented"));
+    case GOFFYAML::RecordBase::Kind::RelocationDirectory:
+    case GOFFYAML::RecordBase::Kind::Symbol:
+    case GOFFYAML::RecordBase::Kind::Text:
+    case GOFFYAML::RecordBase::Kind::DeferredLength:
+      llvm_unreachable("not yet implemented");
     }
     if (HasError)
       return false;
