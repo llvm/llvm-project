@@ -100,15 +100,17 @@ private:
   /// \param[in] entry
   ///   The accelerator table entry to check.
   ///
-  /// \param[out] foreign_tu
-  ///   A reference to the foreign type unit pointer that will be filled in
-  ///   with a valid type unit if the entry matches the type unit, or filled in
-  ///   with NULL if the entry isn't valid for the type unit that ended up in
-  ///   the .dwp file.
-  ///
   /// \returns
-  ///   True if \a entry represents a foreign type unit, false otherwise.
-  bool IsForeignTypeUnit(const DebugNames::Entry &entry, DWARFTypeUnit *&foreign_tu) const;
+  ///   A std::optional that has a value if this entry represents a foreign type
+  ///   unit. If the pointer is valid, then we were able to find and match the
+  ///   entry to the type unit in the .dwo or .dwp file. The returned value can
+  ///   have a valid, yet contain NULL in the following cases:
+  ///   - we were not able to load the .dwo file (missing or DWO ID mismatch)
+  ///   - we were able to load the .dwp file, but the type units DWO name
+  ///     doesn't match the originating skeleton compile unit's entry
+  ///   Returns std::nullopt if this entry is not a foreign type unit entry.
+  std::optional<DWARFTypeUnit *>
+  IsForeignTypeUnit(const DebugNames::Entry &entry) const;
 
   DWARFTypeUnit *GetForeignTypeUnit(const DebugNames::Entry &entry) const;
 

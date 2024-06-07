@@ -678,15 +678,19 @@ DWARFDebugNames::Entry::getForeignTUSkeletonCUOffset() const {
     return std::nullopt;
   // Lookup the DW_IDX_compile_unit and make sure we have one, if we don't
   // we don't default to returning the first compile unit like getCUOffset().
+  std::optional<uint64_t> CUIndex;
   std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit);
-  if (!Off)
-    return std::nullopt;
-  // Extract the CU index and return the right CU offset.
-  if (std::optional<uint64_t> CUIndex = Off->getAsUnsignedConstant()) {
-    if (*CUIndex >= NameIdx->getCUCount())
-      return std::nullopt;
-    return NameIdx->getCUOffset(*CUIndex);
+  if (Off) {
+    CUIndex = Off->getAsUnsignedConstant();
+  } else {
+    // Check if there is only 1 CU and return that. Most .o files generate one
+    // .debug_names table per source file where there is 1 CU and many TUs.
+    if (NameIdx->getCUCount() == 1)
+      CUIndex = 0;
   }
+  // Extract the CU index and return the right CU offset.
+  if (CUIndex && *CUIndex < NameIdx->getCUCount())
+    return NameIdx->getCUOffset(*CUIndex);
   return std::nullopt;
 }
 
