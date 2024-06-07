@@ -470,6 +470,7 @@ static bool LinearizeExprTree(Instruction *I,
 
         // Update the number of paths to the leaf.
         It->second += Weight;
+        assert(It->second >= Weight && "Weight overflows");
 
         // If we still have uses that are not accounted for by the expression
         // then it is not safe to modify the value.
