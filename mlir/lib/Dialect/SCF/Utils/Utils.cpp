@@ -1198,9 +1198,9 @@ static bool hasNestedParallelOp(scf::ParallelOp ploop) {
 bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface &target,
                                          LoopLikeOpInterface &source) {
   auto iterSpaceEq =
-      target.getMixedLowerBound() == source.getMixedLowerBound() &&
-      target.getMixedUpperBound() == source.getMixedUpperBound() &&
-      target.getMixedStep() == source.getMixedStep();
+      target.getLoopLowerBounds() == source.getLoopLowerBounds() &&
+      target.getLoopUpperBounds() == source.getLoopUpperBounds() &&
+      target.getLoopSteps() == source.getLoopSteps();
   auto forAllTarget = dyn_cast<scf::ForallOp>(*target);
   auto forAllSource = dyn_cast<scf::ForallOp>(*source);
   if (forAllTarget && forAllSource)
