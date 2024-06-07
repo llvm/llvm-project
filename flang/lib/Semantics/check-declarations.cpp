@@ -143,7 +143,7 @@ private:
   void CheckProcedureAssemblyName(const Symbol &symbol);
   void CheckExplicitSave(const Symbol &);
   parser::Messages WhyNotInteroperableDerivedType(const Symbol &);
-  parser::Messages WhyNotInteroperableObject(const Symbol &, bool isError);
+  parser::Messages WhyNotInteroperableObject(const Symbol &);
   parser::Messages WhyNotInteroperableFunctionResult(const Symbol &);
   parser::Messages WhyNotInteroperableProcedure(const Symbol &, bool isError);
   void CheckBindC(const Symbol &);
@@ -3012,15 +3012,13 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
   return msgs;
 }
 
-parser::Messages CheckHelper::WhyNotInteroperableObject(
-    const Symbol &symbol, bool isError) {
+parser::Messages CheckHelper::WhyNotInteroperableObject(const Symbol &symbol) {
   parser::Messages msgs;
   if (examinedByWhyNotInteroperable_.find(symbol) !=
       examinedByWhyNotInteroperable_.end()) {
     return msgs;
   }
   bool isExplicitBindC{symbol.attrs().test(Attr::BIND_C)};
-  isError |= isExplicitBindC;
   examinedByWhyNotInteroperable_.insert(symbol);
   CHECK(symbol.has<ObjectEntityDetails>());
   if (isExplicitBindC && !symbol.owner().IsModule()) {
@@ -3049,11 +3047,11 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
   }
   if (const auto *type{symbol.GetType()}) {
     const auto *derived{type->AsDerived()};
-    if (derived) {
-      if (derived->typeSymbol().attrs().test(Attr::BIND_C)) {
-      } else if (isError) {
+    if (derived && !derived->typeSymbol().attrs().test(Attr::BIND_C)) {
+      if (!context_.IsEnabled(
+              common::LanguageFeature::NonBindCInteroperability)) {
         msgs.Say(symbol.name(),
-                "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)
+                "The derived type of an interoperable object must be BIND(C)"_err_en_US)
             .Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
       } else if (auto bad{
                      WhyNotInteroperableDerivedType(derived->typeSymbol())};
@@ -3186,7 +3184,7 @@ parser::Messages CheckHelper::WhyNotInteroperableProcedure(
                 "A dummy procedure of an interoperable procedure should be BIND(C)"_warn_en_US);
           }
         } else if (dummy->has<ObjectEntityDetails>()) {
-          dummyMsgs = WhyNotInteroperableObject(*dummy, /*isError=*/false);
+          dummyMsgs = WhyNotInteroperableObject(*dummy);
         } else {
           CheckBindC(*dummy);
         }
@@ -3256,7 +3254,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
     }
   }
   if (symbol.has<ObjectEntityDetails>()) {
-    whyNot = WhyNotInteroperableObject(symbol, /*isError=*/isExplicitBindC);
+    whyNot = WhyNotInteroperableObject(symbol);
   } else if (symbol.has<ProcEntityDetails>() ||
       symbol.has<SubprogramDetails>()) {
     whyNot = WhyNotInteroperableProcedure(symbol, /*isError=*/isExplicitBindC);
