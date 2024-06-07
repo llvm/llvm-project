@@ -1283,9 +1283,32 @@ inline bool GetPtrGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
-/// 1) Pops a Pointer from the stack
+/// 1) Peeks a Pointer
 /// 2) Pushes Pointer.atField(Off) on the stack
 inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
+      !CheckNull(S, OpPC, Ptr, CSK_Field))
+    return false;
+
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
+    return false;
+
+  if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
+    return false;
+
+  S.Stk.push<Pointer>(Ptr.atField(Off));
+  return true;
+}
+
+inline bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
   if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
