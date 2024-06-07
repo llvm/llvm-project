@@ -55,6 +55,7 @@ enum OpCode {
   OpCodeSwitch,
   OpCodePHI,
   OpCodeIndirectCall,
+  OpCodeSelect,
   OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -1102,6 +1103,19 @@ private:
     InstIdx++;
   }
 
+  void serialiseSelectInst(SelectInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
+                           unsigned &InstIdx) {
+
+    // opcode:
+    serialiseOpcode(OpCodeSelect);
+    serialiseOperand(I, FLCtxt, I->getCondition());
+    serialiseOperand(I, FLCtxt, I->getTrueValue());
+    serialiseOperand(I, FLCtxt, I->getFalseValue());
+
+    FLCtxt.updateVLMap(I, InstIdx);
+    InstIdx++;
+  }
+
   void serialiseInst(Instruction *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                      unsigned &InstIdx) {
     // Catch unsupported pointer operands in non-zero address spaces.
@@ -1134,6 +1148,7 @@ private:
     INST_SERIALISE(I, CastInst, serialiseCastInst);
     INST_SERIALISE(I, StoreInst, serialiseStoreInst);
     INST_SERIALISE(I, SwitchInst, serialiseSwitchInst);
+    INST_SERIALISE(I, SelectInst, serialiseSelectInst);
 
     // INST_SERIALISE does an early return upon a match, so if we get here then
     // the instruction wasn't handled.
