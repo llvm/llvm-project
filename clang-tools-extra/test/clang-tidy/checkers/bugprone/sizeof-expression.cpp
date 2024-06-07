@@ -245,14 +245,11 @@ int Test5() {
   sum += sizeof(PtrArray) / sizeof(PtrArray[1]);
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(A10) / sizeof(PtrArray[0]);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(PC) / sizeof(PtrArray[0]);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   // CHECK-MESSAGES: :[[@LINE-2]]:21: warning: suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'
-  // CHECK-MESSAGES: :[[@LINE-3]]:23: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(ArrayC) / sizeof(PtrArray[0]);
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator
-  // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
 
   // These pointers do not point to aggregate types, so they are not reported in this mode:
   sum += sizeof(PChar);
@@ -312,6 +309,8 @@ void GenericFunctionTest() {
   // a generic function which emulates dynamic typing within C.
   some_generic_function(IntPP, sizeof(*IntPP));
   some_generic_function(ClassPP, sizeof(*ClassPP));
+  some_generic_function(IntPP, sizeof(IntPP[0]));
+  some_generic_function(ClassPP, sizeof(ClassPP[0]));
 }
 
 int ValidExpressions() {

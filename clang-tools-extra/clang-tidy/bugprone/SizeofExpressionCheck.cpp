@@ -145,11 +145,11 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // than other sizeof(ptr) expressions because they can appear as distorted
   // forms of the common sizeof(aggregate) expressions.)
   //
-  // To avoid false positives, some idiomatic constructs are accepted:
-  //  + the RHS of a 'sizeof(arr) / sizeof(arr[0])' expression;
-  //  + 'sizeof(*pp)' where 'pp' a pointer-to-pointer value, because this is
-  //    a natural solution when dynamical typing is emulated by passing
-  //    arguments as `generic_function(..., (void *)pp, sizeof(*pp))`.
+  // To avoid false positives, the check doesn't report expressions like
+  // 'sizeof(pp[0])' and 'sizeof(*pp)' where `pp` is a pointer-to-pointer or
+  // array of pointers. (This filters out both `sizeof(arr) / sizeof(arr[0])`
+  // expressions and other cases like `p = realloc(p, newsize * sizeof(*p));`.)
+  //
   // Moreover this generic message is suppressed in cases that are also matched
   // by the more concrete matchers 'sizeof-this' and 'sizeof-charp'.
   if (WarnOnSizeOfPointerToAggregate || WarnOnSizeOfPointer) {
@@ -175,31 +175,20 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
             : expr(anyOf(ArrayCastExpr, PointerToArrayExpr,
                          PointerToStructExpr));
 
-    const auto ArrayOfPointersExpr = ignoringParenImpCasts(
-        hasType(hasCanonicalType(arrayType(hasElementType(pointerType()))
-                                     .bind("type-of-array-of-pointers"))));
-    const auto ArrayOfSamePointersExpr =
-        ignoringParenImpCasts(hasType(hasCanonicalType(
-            arrayType(equalsBoundNode("type-of-array-of-pointers")))));
     const auto ZeroLiteral = ignoringParenImpCasts(integerLiteral(equals(0)));
-    const auto ArrayOfSamePointersZeroSubscriptExpr =
-        ignoringParenImpCasts(arraySubscriptExpr(
-            hasBase(ArrayOfSamePointersExpr), hasIndex(ZeroLiteral)));
-    const auto ArrayLengthExprDenom =
-        expr(hasParent(binaryOperator(hasOperatorName("/"),
-                                      hasLHS(ignoringParenImpCasts(sizeOfExpr(
-                                          has(ArrayOfPointersExpr)))))),
-             sizeOfExpr(has(ArrayOfSamePointersZeroSubscriptExpr)));
+    const auto SubscriptExprWithZeroIndex =
+        arraySubscriptExpr(
+            hasIndex(ZeroLiteral));
     const auto DerefExpr =
         ignoringParenImpCasts(unaryOperator(hasOperatorName("*")));
 
     Finder->addMatcher(
         expr(sizeOfExpr(anyOf(has(ignoringParenImpCasts(
                                   expr(PointerToDetectedExpr, unless(DerefExpr),
+                                       unless(SubscriptExprWithZeroIndex),
                                        unless(VarWithConstStrLiteralDecl),
                                        unless(cxxThisExpr())))),
-                              has(PointerToStructTypeWithBinding))),
-             unless(ArrayLengthExprDenom))
+                              has(PointerToStructTypeWithBinding))))
             .bind("sizeof-pointer"),
         this);
   }
