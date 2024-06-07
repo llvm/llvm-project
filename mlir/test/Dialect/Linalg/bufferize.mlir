@@ -209,30 +209,4 @@ func.func @bufferize_dot(%in: tensor<4xf32>, %out: tensor<f32>) -> tensor<f32> {
 func.func @gen_grouped_3D_channel_first_tensor(%arg0: tensor<64x2x16x26x26x26xf32>, %arg1: tensor<2x20x16x3x3x3xf32>, %arg2: tensor<64x2x20x8x8x8xf32>) -> tensor<64x2x20x8x8x8xf32> {
     %0 = linalg.grouped_conv_nd {strides = dense<3> : tensor<3xi64>, dilations = dense<2> : tensor<3xi64>} ins(%arg0, %arg1: tensor<64x2x16x26x26x26xf32>, tensor<2x20x16x3x3x3xf32>) outs(%arg2: tensor<64x2x20x8x8x8xf32>) -> tensor<64x2x20x8x8x8xf32>
     return %0 : tensor<64x2x20x8x8x8xf32> 
-// This is a regression test. The linalg-bufferize pass should ignore all func
-// dialect ops.
-
-// -----
-
-// CHECK-LABEL: func private @csum(tensor<6xi64>) -> tensor<6xi64>
-func.func private @csum(%arg0: tensor<6xi64>) -> tensor<6xi64>
-
-// CHECK: func public @main(%[[arg0:.*]]: tensor<2x3xi1>)
-// CHECK:   %[[collapse:.*]] = tensor.collapse_shape %[[arg0]]
-// CHECK:   %[[collapse_m:.*]] = bufferization.to_memref %[[collapse]]
-// CHECK:   %[[alloc:.*]] = memref.alloc()
-// CHECK:   linalg.generic {{.*}} ins(%[[collapse_m]] : memref<6xi1>) outs(%[[alloc]] : memref<6xi64>)
-// CHECK:   %[[generic_t:.*]] = bufferization.to_tensor %[[alloc]]
-// CHECK:   %[[call:.*]] = call @csum(%[[generic_t]])
-// CHECK:   return %[[call]]
-func.func public @main(%arg0: tensor<2x3xi1>) -> tensor<6xi64> {
-  %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<2x3xi1> into tensor<6xi1>
-  %1 = tensor.empty() : tensor<6xi64>
-  %2 = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>], iterator_types = ["parallel"]} ins(%0 : tensor<6xi1>) outs(%1 : tensor<6xi64>) {
-  ^bb0(%arg1: i1, %arg2: i64):
-    %4 = arith.extui %arg1 : i1 to i64
-    linalg.yield %4 : i64
-  } -> tensor<6xi64>
-  %3 = func.call @csum(%2) : (tensor<6xi64>) -> tensor<6xi64>
-  return %3 : tensor<6xi64>
 }

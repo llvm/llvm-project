@@ -1811,8 +1811,7 @@ void mlir::linalg::detail::convolution_impl::getEffects(
   if (LinalgOp linalgOp = dyn_cast<LinalgOp>(op)) {
     if (linalgOp.hasPureTensorSemantics())
       return;
-    getGenericEffectsImpl(effects, linalgOp.getOperation()->getResults(),
-                          linalgOp.getDpsInputs(), linalgOp.getDpsInits());
+    getGenericEffectsImpl(effects, linalgOp);
   }
 }
 
