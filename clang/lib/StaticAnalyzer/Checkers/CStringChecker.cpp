@@ -56,7 +56,7 @@ static ErrorMessage createOutOfBoundErrorMsg(StringRef FunctionDescription,
      << &FunctionDescription.data()[1];
 
   if (Access == AccessKind::write) {
-    Os << " overflows the destination buffer";
+    Os << " overflows the destination buffer"; // testtest
   } else { // read access
     Os << " accesses out-of-bound array element";
   }
