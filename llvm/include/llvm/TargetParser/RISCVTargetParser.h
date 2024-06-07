@@ -28,7 +28,7 @@ namespace RISCVExtensionBitmaskTable {
 struct RISCVExtensionBitmask {
   const char *Name;
   unsigned GroupID;
-  unsigned long long Bitmask;
+  uint64_t Bitmask;
 };
 } // namespace RISCVExtensionBitmaskTable
 
