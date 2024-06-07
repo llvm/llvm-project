@@ -28,20 +28,24 @@ class RISCVExperimentalExtension<string name, int major, int minor, string desc,
 
 def FeatureStdExtI
     : RISCVExtension<"i", 2, 1,
-                     "'I' (Base Integer Instruction Set)">, RISCVExtensionBitmask<0, 0>;
+                     "'I' (Base Integer Instruction Set)">,
+      RISCVExtensionBitmask<0, 0>;
 
 def FeatureStdExtZicsr
     : RISCVExtension<"zicsr", 2, 0,
-                     "'zicsr' (CSRs)">, RISCVExtensionBitmask<0, 10>;
+                     "'zicsr' (CSRs)">,
+      RISCVExtensionBitmask<0, 10>;
 
 def FeatureStdExtZifencei
     : RISCVExtension<"zifencei", 2, 0,
-                     "'Zifencei' (fence.i)">, RISCVExtensionBitmask<0, 13>;
+                     "'Zifencei' (fence.i)">,
+      RISCVExtensionBitmask<0, 13>;
 
 def FeatureStdExtF
     : RISCVExtension<"f", 2, 2,
                      "'F' (Single-Precision Floating-Point)",
-                     [FeatureStdExtZicsr]>, RISCVExtensionBitmask<0, 33>;
+                     [FeatureStdExtZicsr]>,
+      RISCVExtensionBitmask<0, 33>;
 
 def FeatureStdExtZidummy
     : RISCVExperimentalExtension<"zidummy", 0, 1,
