@@ -4137,5 +4137,25 @@ define i32 @fold_zext_nneg_add_const_fail2(i8 %x) {
   ret i32 %r
 }
 
+define i8 @fold_add_constant_preserve_nsw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_preserve_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], -120
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, -128
+  %add = add nsw i8 %or, 8
+  ret i8 %add
+}
+
+define i8 @fold_add_constant_no_nsw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_no_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 120
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, -128
+  %add = add nsw i8 %or, -8
+  ret i8 %add
+}
+
 declare void @llvm.assume(i1)
 declare void @fake_func(i32)
