@@ -1770,8 +1770,7 @@ private:
     case Fortran::parser::ReductionOperator::Operator::Ieor:
       return fir::ReduceOperationEnum::EIOR;
     }
-    fir::emitFatalError(toLocation(), "illegal reduction operator");
-    return fir::ReduceOperationEnum::Add;
+    llvm_unreachable("illegal reduction operator");
   }
 
   /// Collect DO CONCURRENT or FORALL loop control information.
