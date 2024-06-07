@@ -37,7 +37,7 @@ DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
 
 
 llvm::DenseSet<uint64_t>
-DebugNamesDWARFIndex::GetTypeUnitSigs(const DebugNames &debug_names) {
+DebugNamesDWARFIndex::GetTypeUnitSignatures(const DebugNames &debug_names) {
   llvm::DenseSet<uint64_t> result;
   for (const DebugNames::NameIndex &ni : debug_names) {
     const uint32_t num_tus = ni.getForeignTUCount();

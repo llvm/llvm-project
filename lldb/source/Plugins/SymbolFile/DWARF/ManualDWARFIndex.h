@@ -25,7 +25,7 @@ public:
                    llvm::DenseSet<uint64_t> type_sigs_to_avoid = {})
       : DWARFIndex(module), m_dwarf(&dwarf),
         m_units_to_avoid(std::move(units_to_avoid)),
-        m_type_sigs_to_avoid(type_sigs_to_avoid) {}
+        m_type_sigs_to_avoid(std::move(type_sigs_to_avoid)) {}
 
   void Preload() override { Index(); }
 

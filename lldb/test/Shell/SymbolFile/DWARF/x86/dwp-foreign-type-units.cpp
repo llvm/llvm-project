@@ -2,19 +2,19 @@
 
 // This test will make a type that will be compiled differently into two
 // different .dwo files in a type unit with the same type hash, but with
-// differing contents. I have discovered that the hash for the type unit is
-// simply based off of the typename and doesn't seem to differ when the contents
-// differ, so that will help us test foreign type units in the .debug_names
-// section of the main executable. When a DWP file is made, only one type unit
-// will be kept and the type unit that is kept has the .dwo file name that it
-// came from. When LLDB loads the foreign type units, it needs to verify that
-// any entries from foreign type units come from the right .dwo file. We test
-// this since the contents of type units are not always the same even though
-// they have the same type hash. We don't want invalid accelerator table entries
-// to come from one .dwo file and be used on a type unit from another since this
-// could cause invalid lookups to happen. LLDB knows how to track down which
-// .dwo file a type unit comes from by looking at the DW_AT_dwo_name attribute
-// in the DW_TAG_type_unit.
+// differing contents. Clang's type unit signature is based only on the mangled
+// name of the type, regardless of the contents of the type, so that will help
+// us test foreign type units in the .debug_names section of the main
+// executable. When a DWP file is made, only one type unit will be kept and the
+// type unit that is kept has the .dwo file name that it came from. When LLDB
+// loads the foreign type units, it needs to verify that any entries from
+// foreign type units come from the right .dwo file. We test this since the
+// contents of type units are not always the same even though they have the same
+// type hash. We don't want invalid accelerator table entries to come from one
+// .dwo file and be used on a type unit from another since this could cause
+// invalid lookups to happen. LLDB knows how to track down which .dwo file a
+// type unit comes from by looking at the DW_AT_dwo_name attribute in the
+// DW_TAG_type_unit.
 
 // Now test with DWARF5
 // RUN: %clang -target x86_64-pc-linux -gdwarf-5 -gsplit-dwarf \
