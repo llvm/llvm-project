@@ -515,6 +515,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fminimum_magf16
     libc.src.math.fminimum_mag_numf16
     libc.src.math.fminimum_numf16
+    libc.src.math.fmodf16
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
     libc.src.math.llrintf16
