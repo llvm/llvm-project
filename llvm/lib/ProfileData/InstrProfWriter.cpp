@@ -55,7 +55,7 @@ public:
   ProfOStream(raw_string_ostream &STR)
       : IsFDOStream(false), OS(STR), LE(STR, llvm::endianness::little) {}
 
-  uint64_t tell() { return OS.tell(); }
+  [[nodiscard]] uint64_t tell() const { return OS.tell(); }
   void write(uint64_t V) { LE.write<uint64_t>(V); }
   void write32(uint32_t V) { LE.write<uint32_t>(V); }
   void writeByte(uint8_t V) { LE.write<uint8_t>(V); }
@@ -894,7 +894,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   BinaryIds.erase(std::unique(BinaryIds.begin(), BinaryIds.end()),
                   BinaryIds.end());
 
-  for (auto BI : BinaryIds) {
+  for (const auto &BI : BinaryIds) {
     // Increment by binary id length data type size.
     BinaryIdsSectionSize += sizeof(uint64_t);
     // Increment by binary id data length, aligned to 8 bytes.
@@ -903,7 +903,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // Write binary ids section size.
   OS.write(BinaryIdsSectionSize);
 
-  for (auto BI : BinaryIds) {
+  for (const auto &BI : BinaryIds) {
     uint64_t BILen = BI.size();
     // Write binary id length.
     OS.write(BILen);
