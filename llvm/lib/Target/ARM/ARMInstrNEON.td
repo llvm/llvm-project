@@ -5670,22 +5670,6 @@ def : Pat<(v2i64 (zext (abdu (v2i32 DPR:$opA), (v2i32 DPR:$opB)))),
           (VABDLuv2i64 DPR:$opA, DPR:$opB)>;
 }
 
-// ISD::ABS is not legal for v2i64, so VABDL needs to be matched from the
-// shift/xor pattern for ABS.
-// TODO: Remove me.
-def abd_shr :
-    PatFrag<(ops node:$in1, node:$in2, node:$shift),
-            (ARMvshrsImm (sub (zext node:$in1),
-                            (zext node:$in2)), (i32 $shift))>;
-
-let Predicates = [HasNEON] in {
-def : Pat<(xor (v2i64 (abd_shr (v2i32 DPR:$opA), (v2i32 DPR:$opB), 63)),
-               (v2i64 (add (sub (zext (v2i32 DPR:$opA)),
-                                (zext (v2i32 DPR:$opB))),
-                           (abd_shr (v2i32 DPR:$opA), (v2i32 DPR:$opB), 63)))),
-          (VABDLuv2i64 DPR:$opA, DPR:$opB)>;
-}
-
 //   VABA     : Vector Absolute Difference and Accumulate
 defm VABAs    : N3VIntOp_QHS<0,0,0b0111,1, IIC_VABAD, IIC_VABAQ,
                              "vaba", "s", abds, add>;
