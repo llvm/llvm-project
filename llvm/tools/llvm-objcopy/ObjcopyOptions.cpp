@@ -552,6 +552,33 @@ static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
   return Error::success();
 }
 
+static Expected<int64_t> parseAdjustSectionLMA(StringRef ArgValue,
+                                               StringRef OptionName) {
+  StringRef StringValue;
+  if (ArgValue.starts_with("*+")) {
+    StringValue = ArgValue.slice(2, StringRef::npos);
+  } else if (ArgValue.starts_with("*-")) {
+    StringValue = ArgValue.slice(1, StringRef::npos);
+  } else {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": it is required that all sections "
+                                 "are either incremented, or decremented at "
+                                 "the same time; use *+val, "
+                                 "or *-val");
+  }
+  if (StringValue.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": missing offset of LMA");
+
+  auto SLMAV = getAsInteger<int64_t>(StringValue);
+  if (!SLMAV)
+    return createStringError(SLMAV.getError(),
+                             "Unable to parse adjustment value");
+  return *SLMAV;
+}
+
 // parseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
@@ -831,6 +858,14 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       return createStringError(Addr.getError(), "--pad-to: bad number: %s",
                                A->getValue());
     Config.PadTo = *Addr;
+  }
+
+  if (const auto *Arg = InputArgs.getLastArg(OBJCOPY_adjust_section_lma)) {
+    Expected<int64_t> SLMAV =
+        parseAdjustSectionLMA(Arg->getValue(), Arg->getSpelling());
+    if (!SLMAV)
+      return SLMAV.takeError();
+    Config.ChangeSectionLMAValAll = *SLMAV;
   }
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {

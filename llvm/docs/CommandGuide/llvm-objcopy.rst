@@ -528,6 +528,10 @@ them.
 
  Mark all defined global symbols as weak in the output.
 
+.. option:: --change-section-lma \*{+-}<offset>
+
+ Currently only supports changing LMA for all sections by the same offset.
+
 MACH-O-SPECIFIC OPTIONS
 -----------------------
 

@@ -670,6 +670,13 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     }
   }
 
+  if (Config.ChangeSectionLMAValAll != 0) {
+    for (auto &Seg : Obj.segments()) {
+      if (Seg.FileSize > 0)
+        Seg.PAddr += Config.ChangeSectionLMAValAll;
+    }
+  }
+
   if (Config.OnlyKeepDebug)
     for (auto &Sec : Obj.sections())
       if (Sec.Flags & SHF_ALLOC && Sec.Type != SHT_NOTE)
