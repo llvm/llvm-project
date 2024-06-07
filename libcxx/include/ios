@@ -224,7 +224,6 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #include <__system_error/error_code.h>
 #include <__system_error/error_condition.h>
 #include <__system_error/system_error.h>
-#include <__type_traits/conditional.h>
 #include <__utility/swap.h>
 #include <__verbose_abort>
 #include <version>
