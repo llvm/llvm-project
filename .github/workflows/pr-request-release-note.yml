@@ -11,7 +11,6 @@ on:
 jobs:
   request-release-note:
     if: >-
-      github.repository_owner == 'llvm' &&
       startsWith(github.ref, 'refs/heads/release')
 
     runs-on: ubuntu-latest
