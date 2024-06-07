@@ -1,4 +1,4 @@
-# REQUIRES: python, native && target-aarch64 && system-darwin
+# REQUIRES: python, native && system-darwin
 
 # RUN: %lldb -o 'command script import lldb.macosx.crashlog' \
 # RUN: -o 'crashlog -V' \
