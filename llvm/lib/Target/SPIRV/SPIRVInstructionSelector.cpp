@@ -1125,10 +1125,13 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
   if (SrcSC == SPIRV::StorageClass::CrossWorkgroup && isUSMStorageClass(DstSC))
     return selectUnOp(ResVReg, ResType, I,
                       SPIRV::OpCrossWorkgroupCastToPtrINTEL);
+  if (isUSMStorageClass(SrcSC) && DstSC == SPIRV::StorageClass::Generic)
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpPtrCastToGeneric);
+  if (SrcSC == SPIRV::StorageClass::Generic && isUSMStorageClass(DstSC))
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpGenericCastToPtr);
 
-  // TODO Should this case just be disallowed completely?
-  // We're casting 2 other arbitrary address spaces, so have to bitcast.
-  return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
+  // Bitcast for pointers requires that the address spaces must match
+  return false;
 }
 
 static unsigned getFCmpOpcode(unsigned PredNum) {
