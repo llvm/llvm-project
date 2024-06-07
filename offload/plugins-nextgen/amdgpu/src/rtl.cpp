@@ -3272,19 +3272,13 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (ArgsSize < KernelArgsSize)
     return Plugin::error("Mismatch of kernel arguments size");
 
-  // The args size reported by HSA may or may not contain the implicit args.
-  // For now, assume that HSA does not consider the implicit arguments when
-  // reporting the arguments of a kernel. In the worst case, we can waste
-  // 56 bytes per allocation.
-  uint32_t AllArgsSize = KernelArgsSize + ImplicitArgsSize;
-
   AMDGPUPluginTy &AMDGPUPlugin =
       static_cast<AMDGPUPluginTy &>(GenericDevice.Plugin);
   AMDHostDeviceTy &HostDevice = AMDGPUPlugin.getHostDevice();
   AMDGPUMemoryManagerTy &ArgsMemoryManager = HostDevice.getArgsMemoryManager();
 
   void *AllArgs = nullptr;
-  if (auto Err = ArgsMemoryManager.allocate(AllArgsSize, &AllArgs))
+  if (auto Err = ArgsMemoryManager.allocate(ArgsSize, &AllArgs))
     return Err;
 
   // Account for user requested dynamic shared memory.

@@ -504,6 +504,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -591,11 +598,13 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                          - ``gfx1102``                        - Packed          hazards specific to some targets
                                          - ``gfx1103``                          work-item       within this family.
                                          - ``gfx1150``                          IDs
-                                         - ``gfx1151``                                          Not all VGPRs can be used on:
+                                         - ``gfx1151``
+                                         - ``gfx1152``                                          Not all VGPRs can be used on:
 
                                                                                                 - ``gfx1100``
                                                                                                 - ``gfx1101``
                                                                                                 - ``gfx1151``
+                                                                                                - ``gfx1152``
 
                                                                                                 SALU floating point instructions
                                                                                                 and single-use VGPR hint
@@ -604,12 +613,14 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
 
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
+                                                                                                - ``gfx1152``
 
                                                                                                 SGPRs are not supported for src1
                                                                                                 in dpp instructions for:
 
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
+                                                                                                - ``gfx1152``
 
 
      ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
@@ -1979,7 +1990,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10-1-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10-3-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC``    0x054      ``gfx11-generic``
-     *reserved*                                 0x055      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1152``          0x055      ``gfx1152``.
      *reserved*                                 0x056      Reserved.
      *reserved*                                 0x057      Reserved.
      *reserved*                                 0x058      Reserved.

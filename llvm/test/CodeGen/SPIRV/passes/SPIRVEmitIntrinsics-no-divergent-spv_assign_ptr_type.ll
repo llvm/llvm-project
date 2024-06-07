@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -print-after-all -o - 2>&1 | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -print-after-all -o - 2>&1 | FileCheck %s
 
 ; CHECK: *** IR Dump After SPIRV emit intrinsics (emit-intrinsics) ***
 
