@@ -83,8 +83,8 @@ static llvm::cl::list<std::string> UserStylesheets(
 
 static llvm::cl::opt<std::string>
     UserAssetPath("asset",
-                  llvm::cl::desc("User supplied asset path for html output to "
-                                 "override the default css and js files"),
+                  llvm::cl::desc("User supplied asset path to "
+                                 "override the default css and js files for html output"),
                   llvm::cl::cat(ClangDocCategory));
 
 static llvm::cl::opt<std::string> SourceRoot("source-root", llvm::cl::desc(R"(
@@ -137,25 +137,27 @@ std::string GetExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
-void GetAssetFiles(clang::doc::ClangDocContext &CDCtx) {
+llvm::Error GetAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   std::error_code Code;
-  for (auto DirIt = llvm::sys::fs::directory_iterator(
-                std::string(UserAssetPath), Code),
-            dir_end = llvm::sys::fs::directory_iterator();
-       !Code && DirIt != dir_end; DirIt.increment(Code)) {
-    llvm::SmallString<128> filePath = llvm::SmallString<128>(DirIt->path());
-    if (llvm::sys::fs::is_regular_file(filePath)) {
-      if (filePath.ends_with(".css")) {
+  for (auto DirIt = llvm::sys::fs::directory_iterator(UserAssetPath, Code),
+            DirEnd = llvm::sys::fs::directory_iterator();
+       !Code && DirIt != DirEnd; DirIt.increment(Code)) {
+    llvm::SmallString<128> FilePath = llvm::SmallString<128>(DirIt->path());
+    if (!Code) {
+        return llvm::createFileError(FilePath, Code);
+    }
+    if (llvm::sys::fs::is_regular_file(FilePath)) {
+      if (llvm::sys::path::extension(FilePath) == ".css") {
         CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
-                                     std::string(filePath));
-      } else if (filePath.ends_with(".js")) {
-        CDCtx.FilesToCopy.emplace_back(filePath.str());
+                                     std::string(FilePath));
+      } else if (llvm::sys::path::extension(FilePath) == ".js") {
+        CDCtx.FilesToCopy.emplace_back(FilePath.str());
       }
     }
   }
 }
 
-void GetDefaultAssetFiles(const char *Argv0,
+llvm::Error GetDefaultAssetFiles(const char *Argv0,
                           clang::doc::ClangDocContext &CDCtx) {
   void *MainAddr = (void *)(intptr_t)GetExecutablePath;
   std::string ClangDocPath = GetExecutablePath(Argv0, MainAddr);
@@ -172,12 +174,35 @@ void GetDefaultAssetFiles(const char *Argv0,
   llvm::SmallString<128> IndexJS;
   llvm::sys::path::native(AssetsPath, IndexJS);
   llvm::sys::path::append(IndexJS, "index.js");
+
+  if (!llvm::sys::fs::is_regular_file(IndexJS)) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "error default index.js file at " + IndexJS + "\n");
+  }
+
+  if (!llvm::sys::fs::is_regular_file(DefaultStylesheet)) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "error default clang-doc-default-stylesheet.css file at " + DefaultStylesheet + "\n");
+  }
+
   CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
                                std::string(DefaultStylesheet));
   CDCtx.FilesToCopy.emplace_back(IndexJS.str());
 
-  llvm::outs() << "No default asset path found using default asset path: "
+  llvm::outs() << "Using default asset: "
                << AssetsPath << "\n";
+
+  return llvm::Error::success();
+}
+
+llvm::Error GetHTMLAssetFiles(const char *Argv0, clang::doc::ClangDocContext &CDCtx) {
+    if (!UserAssetPath.empty() && !llvm::sys::fs::is_directory(std::string(UserAssetPath))) {
+        llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath << " falling back to default\n";
+    }
+    if (llvm::sys::fs::is_directory(std::string(UserAssetPath))) {
+        return GetAssetFiles(CDCtx);
+    }
+    return GetDefaultAssetFiles(Argv0, CDCtx);
 }
 
 int main(int argc, const char **argv) {
@@ -231,12 +256,11 @@ Example usage for a project using a compile commands database:
       {"index.js", "index_json.js"}};
 
   if (Format == "html") {
-    if (!UserAssetPath.empty() &&
-        llvm::sys::fs::is_directory(std::string(UserAssetPath))) {
-      GetAssetFiles(CDCtx);
-    } else {
-      GetDefaultAssetFiles(argv[0], CDCtx);
-    }
+      auto Err = GetHTMLAssetFiles(argv[0], CDCtx);
+      if (Err) {
+          llvm::errs() << toString(std::move(Err)) << "\n";
+    return 1;
+  }
   }
 
   // Mapping phase
