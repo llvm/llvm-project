@@ -108,3 +108,16 @@ behavior between Clang and DXC. Some examples include:
   diagnostic notifying the user of the conversion rather than silently altering
   precision relative to the other overloads (as FXC does) or generating code
   that will fail validation (as DXC does).
+
+Correctness improvements (bug fixes)
+====================================
+
+Entry point functions & ``static`` keyword
+------------------------------------------
+Marking a shader entry point function as ``static`` will result in an error.
+
+This is idential to DXC behavior when an entry point is specified as compiler
+argument. However, DXC does not report an error when compiling a shader library
+that has an entry point function with ``[shader("stage")]`` attribute that is
+also marked ``static``. Additionally, this function definition is not included
+in the final DXIL.
