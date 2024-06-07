@@ -5,6 +5,7 @@ on:
     workflows:
       - "Check code formatting"
       - "Check for private emails used in PRs"
+      - "PR Request Release Note"
     types:
       - completed
 
