@@ -264,3 +264,6 @@ namespace CaptureDefaults {
   };
   static_assert(f2() == 3, "");
 }
+
+constexpr auto t4 = ([x=42]() consteval { return x; }());
+static_assert(t4 == 42, "");
