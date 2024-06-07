@@ -131,6 +131,8 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FSQRT:       R = SoftenFloatRes_FSQRT(N); break;
     case ISD::STRICT_FSUB:
     case ISD::FSUB:        R = SoftenFloatRes_FSUB(N); break;
+    case ISD::STRICT_FTAN:
+    case ISD::FTAN:        R = SoftenFloatRes_FTAN(N); break;
     case ISD::STRICT_FTRUNC:
     case ISD::FTRUNC:      R = SoftenFloatRes_FTRUNC(N); break;
     case ISD::LOAD:        R = SoftenFloatRes_LOAD(N); break;
@@ -774,6 +776,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSUB(SDNode *N) {
                                                RTLIB::SUB_PPCF128));
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatRes_FTAN(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::TAN_F32, RTLIB::TAN_F64,
+                      RTLIB::TAN_F80, RTLIB::TAN_F128, RTLIB::TAN_PPCF128));
+}
+
 SDValue DAGTypeLegalizer::SoftenFloatRes_FTRUNC(SDNode *N) {
   return SoftenFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
                                               RTLIB::TRUNC_F32,
@@ -1330,7 +1338,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
 #endif
     report_fatal_error("Do not know how to expand the result of this "
                        "operator!");
-
+    // clang-format off
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
@@ -1399,6 +1407,8 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::FSQRT:      ExpandFloatRes_FSQRT(N, Lo, Hi); break;
   case ISD::STRICT_FSUB:
   case ISD::FSUB:       ExpandFloatRes_FSUB(N, Lo, Hi); break;
+  case ISD::STRICT_FTAN:
+  case ISD::FTAN:       ExpandFloatRes_FTAN(N, Lo, Hi); break;
   case ISD::STRICT_FTRUNC:
   case ISD::FTRUNC:     ExpandFloatRes_FTRUNC(N, Lo, Hi); break;
   case ISD::LOAD:       ExpandFloatRes_LOAD(N, Lo, Hi); break;
@@ -1408,6 +1418,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP: ExpandFloatRes_XINT_TO_FP(N, Lo, Hi); break;
   case ISD::STRICT_FREM:
   case ISD::FREM:       ExpandFloatRes_FREM(N, Lo, Hi); break;
+    // clang-format on
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -1766,6 +1777,15 @@ void DAGTypeLegalizer::ExpandFloatRes_FSUB(SDNode *N, SDValue &Lo,
                                         RTLIB::SUB_F80,
                                         RTLIB::SUB_F128,
                                         RTLIB::SUB_PPCF128), Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FTAN(SDNode *N, SDValue &Lo,
+                                           SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::TAN_F32,
+                                    RTLIB::TAN_F64, RTLIB::TAN_F80,
+                                    RTLIB::TAN_F128, RTLIB::TAN_PPCF128),
+                       Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FTRUNC(SDNode *N,
@@ -2479,6 +2499,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FSIN:
     case ISD::FSQRT:
     case ISD::FTRUNC:
+    case ISD::FTAN:
     case ISD::FCANONICALIZE: R = PromoteFloatRes_UnaryOp(N); break;
 
     // Binary FP Operations
@@ -2488,6 +2509,8 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FMINIMUM:
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
+    case ISD::FMAXNUM_IEEE:
+    case ISD::FMINNUM_IEEE:
     case ISD::FMUL:
     case ISD::FPOW:
     case ISD::FREM:
@@ -2912,6 +2935,7 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FSIN:
   case ISD::FSQRT:
   case ISD::FTRUNC:
+  case ISD::FTAN:
   case ISD::FCANONICALIZE: R = SoftPromoteHalfRes_UnaryOp(N); break;
 
   // Binary FP Operations

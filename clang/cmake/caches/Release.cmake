@@ -91,4 +91,6 @@ endif()
 # Final Stage Config (stage2)
 set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRING)
 set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRING)
+set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
+set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 

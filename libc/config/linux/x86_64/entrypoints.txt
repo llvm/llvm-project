@@ -528,6 +528,45 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpxl
 )
 
+if(LIBC_TYPES_HAS_FLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float16 entrypoints
+    libc.src.math.canonicalizef16
+    libc.src.math.ceilf16
+    libc.src.math.copysignf16
+    libc.src.math.fabsf16
+    libc.src.math.fdimf16
+    libc.src.math.floorf16
+    libc.src.math.fmaxf16
+    libc.src.math.fmaximumf16
+    libc.src.math.fmaximum_magf16
+    libc.src.math.fmaximum_mag_numf16
+    libc.src.math.fmaximum_numf16
+    libc.src.math.fminf16
+    libc.src.math.fminimumf16
+    libc.src.math.fminimum_magf16
+    libc.src.math.fminimum_mag_numf16
+    libc.src.math.fminimum_numf16
+    libc.src.math.fromfpf16
+    libc.src.math.fromfpxf16
+    libc.src.math.llrintf16
+    libc.src.math.llroundf16
+    libc.src.math.lrintf16
+    libc.src.math.lroundf16
+    libc.src.math.nearbyintf16
+    libc.src.math.nextafterf16
+    libc.src.math.nextdownf16
+    libc.src.math.nexttowardf16
+    libc.src.math.nextupf16
+    libc.src.math.rintf16
+    libc.src.math.roundf16
+    libc.src.math.roundevenf16
+    libc.src.math.truncf16
+    libc.src.math.ufromfpf16
+    libc.src.math.ufromfpxf16
+  )
+endif()
+
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
@@ -673,8 +712,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_settype
     libc.src.pthread.pthread_once
     libc.src.pthread.pthread_rwlockattr_destroy
+    libc.src.pthread.pthread_rwlockattr_getkind_np
     libc.src.pthread.pthread_rwlockattr_getpshared
     libc.src.pthread.pthread_rwlockattr_init
+    libc.src.pthread.pthread_rwlockattr_setkind_np
     libc.src.pthread.pthread_rwlockattr_setpshared
     libc.src.pthread.pthread_setspecific
 
@@ -728,9 +769,11 @@ if(LLVM_LIBC_FULL_BUILD)
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
     libc.src.stdlib.abort
+    libc.src.stdlib.at_quick_exit
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.quick_exit
 
     # signal.h entrypoints
     libc.src.signal.raise

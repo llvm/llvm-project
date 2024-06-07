@@ -241,6 +241,14 @@ void llvm::AArch64PAuth::checkAuthenticatedRegister(
   const AArch64InstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MBBI->getDebugLoc();
 
+  // All terminator instructions should be grouped at the end of the machine
+  // basic block, with no non-terminator instructions between them. Depending on
+  // the method requested, we will insert some regular instructions, maybe
+  // followed by a conditional branch instruction, which is a terminator, before
+  // MBBI. Thus, MBBI is expected to be the first terminator of its MBB.
+  assert(MBBI->isTerminator() && MBBI == MBB.getFirstTerminator() &&
+         "MBBI should be the first terminator in MBB");
+
   // First, handle the methods not requiring creating extra MBBs.
   switch (Method) {
   default:
@@ -257,21 +265,12 @@ void llvm::AArch64PAuth::checkAuthenticatedRegister(
 
   // Control flow has to be changed, so arrange new MBBs.
 
-  // At now, at least an AUT* instruction is expected before MBBI
-  assert(MBBI != MBB.begin() &&
-         "Cannot insert the check at the very beginning of MBB");
-  // The block to insert check into.
-  MachineBasicBlock *CheckBlock = &MBB;
-  // The remaining part of the original MBB that is executed on success.
-  MachineBasicBlock *SuccessBlock = MBB.splitAt(*std::prev(MBBI));
-
   // The block that explicitly generates a break-point exception on failure.
   MachineBasicBlock *BreakBlock =
       MF.CreateMachineBasicBlock(MBB.getBasicBlock());
   MF.push_back(BreakBlock);
-  MBB.splitSuccessor(SuccessBlock, BreakBlock);
+  MBB.addSuccessor(BreakBlock);
 
-  assert(CheckBlock->getFallThrough() == SuccessBlock);
   BuildMI(BreakBlock, DL, TII->get(AArch64::BRK)).addImm(BrkImm);
 
   switch (Method) {
@@ -279,11 +278,11 @@ void llvm::AArch64PAuth::checkAuthenticatedRegister(
   case AuthCheckMethod::DummyLoad:
     llvm_unreachable("Should be handled above");
   case AuthCheckMethod::HighBitsNoTBI:
-    BuildMI(CheckBlock, DL, TII->get(AArch64::EORXrs), TmpReg)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::EORXrs), TmpReg)
         .addReg(AuthenticatedReg)
         .addReg(AuthenticatedReg)
         .addImm(1);
-    BuildMI(CheckBlock, DL, TII->get(AArch64::TBNZX))
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::TBNZX))
         .addReg(TmpReg)
         .addImm(62)
         .addMBB(BreakBlock);
@@ -292,16 +291,16 @@ void llvm::AArch64PAuth::checkAuthenticatedRegister(
     assert(AuthenticatedReg == AArch64::LR &&
            "XPACHint mode is only compatible with checking the LR register");
     assert(UseIKey && "XPACHint mode is only compatible with I-keys");
-    BuildMI(CheckBlock, DL, TII->get(AArch64::ORRXrs), TmpReg)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), TmpReg)
         .addReg(AArch64::XZR)
         .addReg(AArch64::LR)
         .addImm(0);
-    BuildMI(CheckBlock, DL, TII->get(AArch64::XPACLRI));
-    BuildMI(CheckBlock, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::XPACLRI));
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
         .addReg(TmpReg)
         .addReg(AArch64::LR)
         .addImm(0);
-    BuildMI(CheckBlock, DL, TII->get(AArch64::Bcc))
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::Bcc))
         .addImm(AArch64CC::NE)
         .addMBB(BreakBlock);
     return;

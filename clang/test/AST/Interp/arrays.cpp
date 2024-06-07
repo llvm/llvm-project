@@ -609,3 +609,17 @@ namespace ArrayMemberAccess {
     bool cond = a->x;
   }
 }
+
+namespace OnePastEndSub {
+  struct A {};
+  constexpr A a[3][3];
+  constexpr int diff2 = &a[1][3] - &a[1][0]; /// Used to crash.
+}
+
+static int same_entity_2[3];
+constexpr int *get2() {
+  // This is a redeclaration of the same entity, even though it doesn't
+  // inherit the type of the prior declaration.
+  extern int same_entity_2[];
+  return same_entity_2;
+}

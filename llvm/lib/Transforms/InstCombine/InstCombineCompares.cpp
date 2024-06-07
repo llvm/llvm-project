@@ -2417,14 +2417,34 @@ Instruction *InstCombinerImpl::foldICmpShlConstant(ICmpInst &Cmp,
   // free on the target. It has the additional benefit of comparing to a
   // smaller constant that may be more target-friendly.
   unsigned Amt = ShiftAmt->getLimitedValue(TypeBits - 1);
-  if (Shl->hasOneUse() && Amt != 0 && C.countr_zero() >= Amt &&
-      DL.isLegalInteger(TypeBits - Amt)) {
-    Type *TruncTy = IntegerType::get(Cmp.getContext(), TypeBits - Amt);
-    if (auto *ShVTy = dyn_cast<VectorType>(ShType))
-      TruncTy = VectorType::get(TruncTy, ShVTy->getElementCount());
-    Constant *NewC =
-        ConstantInt::get(TruncTy, C.ashr(*ShiftAmt).trunc(TypeBits - Amt));
-    return new ICmpInst(Pred, Builder.CreateTrunc(X, TruncTy), NewC);
+  if (Shl->hasOneUse() && Amt != 0 &&
+      shouldChangeType(ShType->getScalarSizeInBits(), TypeBits - Amt)) {
+    ICmpInst::Predicate CmpPred = Pred;
+    APInt RHSC = C;
+
+    if (RHSC.countr_zero() < Amt && ICmpInst::isStrictPredicate(CmpPred)) {
+      // Try the flipped strictness predicate.
+      // e.g.:
+      // icmp ult i64 (shl X, 32), 8589934593 ->
+      // icmp ule i64 (shl X, 32), 8589934592 ->
+      // icmp ule i32 (trunc X, i32), 2 ->
+      // icmp ult i32 (trunc X, i32), 3
+      if (auto FlippedStrictness =
+              InstCombiner::getFlippedStrictnessPredicateAndConstant(
+                  Pred, ConstantInt::get(ShType->getContext(), C))) {
+        CmpPred = FlippedStrictness->first;
+        RHSC = cast<ConstantInt>(FlippedStrictness->second)->getValue();
+      }
+    }
+
+    if (RHSC.countr_zero() >= Amt) {
+      Type *TruncTy = ShType->getWithNewBitWidth(TypeBits - Amt);
+      Constant *NewC =
+          ConstantInt::get(TruncTy, RHSC.ashr(*ShiftAmt).trunc(TypeBits - Amt));
+      return new ICmpInst(
+          CmpPred, Builder.CreateTrunc(X, TruncTy, "", Shl->hasNoSignedWrap()),
+          NewC);
+    }
   }
 
   return nullptr;
@@ -4710,6 +4730,44 @@ static Instruction *foldICmpAndXX(ICmpInst &I, const SimplifyQuery &Q,
   if (Pred == ICmpInst::ICMP_UGE)
     return new ICmpInst(ICmpInst::ICMP_EQ, Op0, Op1);
 
+  if (ICmpInst::isEquality(Pred) && Op0->hasOneUse()) {
+    // icmp (X & Y) eq/ne Y --> (X | ~Y) eq/ne -1 if Y is freely invertible and
+    // Y is non-constant. If Y is constant the `X & C == C` form is preferable
+    // so don't do this fold.
+    if (!match(Op1, m_ImmConstant()))
+      if (auto *NotOp1 =
+              IC.getFreelyInverted(Op1, !Op1->hasNUsesOrMore(3), &IC.Builder))
+        return new ICmpInst(Pred, IC.Builder.CreateOr(A, NotOp1),
+                            Constant::getAllOnesValue(Op1->getType()));
+    // icmp (X & Y) eq/ne Y --> (~X & Y) eq/ne 0 if X  is freely invertible.
+    if (auto *NotA = IC.getFreelyInverted(A, A->hasOneUse(), &IC.Builder))
+      return new ICmpInst(Pred, IC.Builder.CreateAnd(Op1, NotA),
+                          Constant::getNullValue(Op1->getType()));
+  }
+
+  if (!ICmpInst::isSigned(Pred))
+    return nullptr;
+
+  KnownBits KnownY = IC.computeKnownBits(A, /*Depth=*/0, &I);
+  // (X & NegY) spred X --> (X & NegY) upred X
+  if (KnownY.isNegative())
+    return new ICmpInst(ICmpInst::getUnsignedPredicate(Pred), Op0, Op1);
+
+  if (Pred != ICmpInst::ICMP_SLE && Pred != ICmpInst::ICMP_SGT)
+    return nullptr;
+
+  if (KnownY.isNonNegative())
+    // (X & PosY) s<= X --> X s>= 0
+    // (X & PosY) s> X --> X s< 0
+    return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                        Constant::getNullValue(Op1->getType()));
+
+  if (isKnownNegative(Op1, IC.getSimplifyQuery().getWithInstruction(&I)))
+    // (NegX & Y) s<= NegX --> Y s< 0
+    // (NegX & Y) s> NegX --> Y s>= 0
+    return new ICmpInst(ICmpInst::getFlippedStrictnessPredicate(Pred), A,
+                        Constant::getNullValue(A->getType()));
+
   return nullptr;
 }
 
@@ -4737,7 +4795,7 @@ static Instruction *foldICmpOrXX(ICmpInst &I, const SimplifyQuery &Q,
   if (ICmpInst::isEquality(Pred) && Op0->hasOneUse()) {
     // icmp (X | Y) eq/ne Y --> (X & ~Y) eq/ne 0 if Y is freely invertible
     if (Value *NotOp1 =
-            IC.getFreelyInverted(Op1, Op1->hasOneUse(), &IC.Builder))
+            IC.getFreelyInverted(Op1, !Op1->hasNUsesOrMore(3), &IC.Builder))
       return new ICmpInst(Pred, IC.Builder.CreateAnd(A, NotOp1),
                           Constant::getNullValue(Op1->getType()));
     // icmp (X | Y) eq/ne Y --> (~X | Y) eq/ne -1 if X  is freely invertible.
@@ -5483,21 +5541,6 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
       if (B == D)
         return new ICmpInst(Pred, A, C);
     }
-  }
-
-  // canoncalize:
-  // (icmp eq/ne (and X, C), X)
-  //    -> (icmp eq/ne (and X, ~C), 0)
-  {
-    Constant *CMask;
-    A = nullptr;
-    if (match(Op0, m_OneUse(m_And(m_Specific(Op1), m_ImmConstant(CMask)))))
-      A = Op1;
-    else if (match(Op1, m_OneUse(m_And(m_Specific(Op0), m_ImmConstant(CMask)))))
-      A = Op0;
-    if (A)
-      return new ICmpInst(Pred, Builder.CreateAnd(A, Builder.CreateNot(CMask)),
-                          Constant::getNullValue(A->getType()));
   }
 
   if (match(Op1, m_Xor(m_Value(A), m_Value(B))) && (A == Op0 || B == Op0)) {

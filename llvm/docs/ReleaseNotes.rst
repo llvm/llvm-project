@@ -51,10 +51,16 @@ Changes to the LLVM IR
 ----------------------
 
 * Added Memory Model Relaxation Annotations (MMRAs).
+* Added ``nusw`` and ``nuw`` flags to ``getelementptr`` instruction.
 * Renamed ``llvm.experimental.vector.reverse`` intrinsic to ``llvm.vector.reverse``.
 * Renamed ``llvm.experimental.vector.splice`` intrinsic to ``llvm.vector.splice``.
 * Renamed ``llvm.experimental.vector.interleave2`` intrinsic to ``llvm.vector.interleave2``.
 * Renamed ``llvm.experimental.vector.deinterleave2`` intrinsic to ``llvm.vector.deinterleave2``.
+* The constant expression variants of the following instructions have been
+  removed:
+
+  * ``icmp``
+  * ``fcmp``
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -95,6 +101,7 @@ Changes to the AMDGPU Backend
 Changes to the ARM Backend
 --------------------------
 
+* Added support for Cortex-R52+ CPU.
 * FEAT_F32MM is no longer activated by default when using `+sve` on v8.6-A or greater. The feature is still available and can be used by adding `+f32mm` to the command line options.
 * armv8-r now implies only fp-armv8d16sp, rather than neon and full fp-armv8. These features are still included by default for cortex-r52. The default cpu for armv8-r is now "generic", for compatibility with variants that do not include neon, fp64, and d32.
 
@@ -109,6 +116,10 @@ Changes to the Hexagon Backend
 
 Changes to the LoongArch Backend
 --------------------------------
+
+* i32 is now a native type in the datalayout string. This enables
+  LoopStrengthReduce for loops with i32 induction variables, among other
+  optimizations.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -135,6 +146,7 @@ Changes to the RISC-V Backend
 * Added smstateen extension to -march. CSR names for smstateen were already supported.
 * Zaamo and Zalrsc are no longer experimental.
 * Processors that enable post reg-alloc scheduling (PostMachineScheduler) by default should use the `UsePostRAScheduler` subtarget feature. Setting `PostRAScheduler = 1` in the scheduler model will have no effect on the enabling of the PostMachineScheduler.
+* Zabha is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -188,6 +200,14 @@ Changes to the C API
   * ``LLVMGetCallBrDefaultDest``
   * ``LLVMGetCallBrNumIndirectDests``
   * ``LLVMGetCallBrIndirectDest``
+
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
+
+  * ``LLVMConstICmp``
+  * ``LLVMConstFCmp``
 
 Changes to the CodeGen infrastructure
 -------------------------------------

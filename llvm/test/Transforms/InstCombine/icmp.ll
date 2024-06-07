@@ -5198,3 +5198,100 @@ define i1 @icmp_freeze_sext(i16 %x, i16 %y) {
   %cmp2 = icmp uge i16 %ext.fr, %y
   ret i1 %cmp2
 }
+
+define i1 @test_icmp_shl(i64 %x) {
+; CHECK-LABEL: @test_icmp_shl(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl i64 %x, 32
+  %cmp = icmp ult i64 %shl, 8589934593
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_shl_multiuse(i64 %x) {
+; CHECK-LABEL: @test_icmp_shl_multiuse(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X:%.*]], 32
+; CHECK-NEXT:    call void @use_i64(i64 [[SHL]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SHL]], 8589934593
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl i64 %x, 32
+  call void @use_i64(i64 %shl)
+  %cmp = icmp ult i64 %shl, 8589934593
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_shl_illegal_length(i64 %x) {
+; CHECK-LABEL: @test_icmp_shl_illegal_length(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X:%.*]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SHL]], 8589934593
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl i64 %x, 31
+  %cmp = icmp ult i64 %shl, 8589934593
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_shl_invalid_rhsc(i64 %x) {
+; CHECK-LABEL: @test_icmp_shl_invalid_rhsc(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X:%.*]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SHL]], 8589934595
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl i64 %x, 32
+  %cmp = icmp ult i64 %shl, 8589934595
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_shl_nuw(i64 %x) {
+; CHECK-LABEL: @test_icmp_shl_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i64 %x, 32
+  %cmp = icmp ult i64 %shl, 8589934593
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_shl_nsw(i64 %x) {
+; CHECK-LABEL: @test_icmp_shl_nsw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i64 %x, 32
+  %cmp = icmp ult i64 %shl, 8589934593
+  ret i1 %cmp
+}
+
+define <2 x i1> @test_icmp_shl_vec(<2 x i64> %x) {
+; CHECK-LABEL: @test_icmp_shl_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 3, i32 3>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i64> %x, splat(i64 32)
+  %cmp = icmp ult <2 x i64> %shl, splat(i64 8589934593)
+  ret <2 x i1> %cmp
+}
+
+define i1 @test_icmp_shl_eq(i64 %x) {
+; CHECK-LABEL: @test_icmp_shl_eq(
+; CHECK-NEXT:    ret i1 false
+;
+  %shl = shl i64 %x, 32
+  %cmp = icmp eq i64 %shl, 8589934593
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_shl_sgt(i64 %x) {
+; CHECK-LABEL: @test_icmp_shl_sgt(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl i64 %x, 32
+  %cmp = icmp sgt i64 %shl, 8589934591
+  ret i1 %cmp
+}

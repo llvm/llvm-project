@@ -266,6 +266,13 @@ def parseOptionsAndInitTestdirs():
                     configuration.compiler = candidate
                     break
 
+    if args.make:
+        configuration.make_path = args.make
+    elif platform_system == "FreeBSD" or platform_system == "NetBSD":
+        configuration.make_path = "gmake"
+    else:
+        configuration.make_path = "make"
+
     if args.dsymutil:
         configuration.dsymutil = args.dsymutil
     elif platform_system == "Darwin":
@@ -304,7 +311,9 @@ def parseOptionsAndInitTestdirs():
         lldbtest_config.out_of_tree_debugserver = args.out_of_tree_debugserver
 
     # Set SDKROOT if we are using an Apple SDK
-    if platform_system == "Darwin" and args.apple_sdk:
+    if args.sysroot is not None:
+        configuration.sdkroot = args.sysroot
+    elif platform_system == "Darwin" and args.apple_sdk:
         configuration.sdkroot = seven.get_command_output(
             'xcrun --sdk "%s" --show-sdk-path 2> /dev/null' % (args.apple_sdk)
         )

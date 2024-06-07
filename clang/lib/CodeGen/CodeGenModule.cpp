@@ -1328,6 +1328,9 @@ void CodeGenModule::Release() {
   case CodeGenOptions::FramePointerKind::None:
     // 0 ("none") is the default.
     break;
+  case CodeGenOptions::FramePointerKind::Reserved:
+    getModule().setFramePointer(llvm::FramePointerKind::Reserved);
+    break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     getModule().setFramePointer(llvm::FramePointerKind::NonLeaf);
     break;
@@ -1853,18 +1856,24 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
         break;
       case MultiVersionKind::Target: {
         auto *Attr = FD->getAttr<TargetAttr>();
+        assert(Attr && "Expected TargetAttr to be present "
+                       "for attribute mangling");
         const ABIInfo &Info = CGM.getTargetCodeGenInfo().getABIInfo();
         Info.appendAttributeMangling(Attr, Out);
         break;
       }
       case MultiVersionKind::TargetVersion: {
         auto *Attr = FD->getAttr<TargetVersionAttr>();
+        assert(Attr && "Expected TargetVersionAttr to be present "
+                       "for attribute mangling");
         const ABIInfo &Info = CGM.getTargetCodeGenInfo().getABIInfo();
         Info.appendAttributeMangling(Attr, Out);
         break;
       }
       case MultiVersionKind::TargetClones: {
         auto *Attr = FD->getAttr<TargetClonesAttr>();
+        assert(Attr && "Expected TargetClonesAttr to be present "
+                       "for attribute mangling");
         unsigned Index = GD.getMultiVersionIndex();
         const ABIInfo &Info = CGM.getTargetCodeGenInfo().getABIInfo();
         Info.appendAttributeMangling(Attr, Index, Out);
@@ -5341,6 +5350,18 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       !IsDefinitionAvailableExternally &&
       D->needsDestruction(getContext()) == QualType::DK_cxx_destructor;
 
+  // It is helpless to emit the definition for an available_externally variable
+  // which can't be marked as const.
+  // We don't need to check if it needs global ctor or dtor. See the above
+  // comment for ideas.
+  if (IsDefinitionAvailableExternally &&
+      (!D->hasConstantInitialization() ||
+       // TODO: Update this when we have interface to check constexpr
+       // destructor.
+       D->needsDestruction(getContext()) ||
+       !D->getType().isConstantStorage(getContext(), true, true)))
+    return;
+
   const VarDecl *InitDecl;
   const Expr *InitExpr = D->getAnyInitializer(InitDecl);
 
@@ -6119,9 +6140,6 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
     return ConstantAddress(
         C, C->getValueType(), CharUnits::fromQuantity(C->getAlignment()));
 
-  llvm::Constant *Zero = llvm::Constant::getNullValue(Int32Ty);
-  llvm::Constant *Zeros[] = { Zero, Zero };
-
   const ASTContext &Context = getContext();
   const llvm::Triple &Triple = getTriple();
 
@@ -6192,8 +6210,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
 
     // Decay array -> ptr
     CFConstantStringClassRef =
-        IsSwiftABI ? llvm::ConstantExpr::getPtrToInt(C, Ty)
-                   : llvm::ConstantExpr::getGetElementPtr(Ty, C, Zeros);
+        IsSwiftABI ? llvm::ConstantExpr::getPtrToInt(C, Ty) : C;
   }
 
   QualType CFTy = Context.getCFConstantStringType();
@@ -6249,10 +6266,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
     GV->setSection(".rodata");
 
   // String.
-  llvm::Constant *Str =
-      llvm::ConstantExpr::getGetElementPtr(GV->getValueType(), GV, Zeros);
-
-  Fields.add(Str);
+  Fields.add(GV);
 
   // String length.
   llvm::IntegerType *LengthTy =

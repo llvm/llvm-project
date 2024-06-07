@@ -306,7 +306,8 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     cl::init(memprof::Version0),
     cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
                clEnumValN(memprof::Version1, "1", "version 1"),
-               clEnumValN(memprof::Version2, "2", "version 2")));
+               clEnumValN(memprof::Version2, "2", "version 2"),
+               clEnumValN(memprof::Version3, "3", "version 3")));
 
 cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
