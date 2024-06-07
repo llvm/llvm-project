@@ -97,6 +97,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
@@ -1164,6 +1165,38 @@ Expected<SmallVector<std::string, 0>> parseInternalizeGVs(StringRef Params) {
   return Expected<SmallVector<std::string, 0>>(std::move(PreservedGVs));
 }
 
+Expected<RegAllocFastPassOptions>
+parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
+  RegAllocFastPassOptions Opts;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("filter=")) {
+      RegClassFilterFunc Filter = PB.parseRegAllocFilter(ParamName);
+      if (!Filter) {
+        return make_error<StringError>(
+            formatv("invalid regallocfast register filter '{0}' ", ParamName)
+                .str(),
+            inconvertibleErrorCode());
+      }
+      Opts.Filter = Filter;
+      Opts.FilterName = ParamName;
+      continue;
+    }
+
+    if (ParamName == "no-clear-vregs") {
+      Opts.ClearVRegs = false;
+      continue;
+    }
+
+    return make_error<StringError>(
+        formatv("invalid regallocfast pass parameter '{0}' ", ParamName).str(),
+        inconvertibleErrorCode());
+  }
+  return Opts;
+}
+
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
@@ -1297,6 +1330,11 @@ static bool isMachineFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)                               \
   if (Name == NAME)                                                            \
     return true;
+#define MACHINE_FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER,    \
+                                          PARAMS)                              \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME))                      \
+    return true;
+
 #define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                           \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
     return true;
@@ -1926,6 +1964,15 @@ Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
     MFPM.addPass(CREATE_PASS);                                                 \
     return Error::success();                                                   \
   }
+#define MACHINE_FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER,    \
+                                          PARAMS)                              \
+  if (checkParametrizedPassName(Name, NAME)) {                                 \
+    auto Params = parsePassParameters(PARSER, Name, NAME);                     \
+    if (!Params)                                                               \
+      return Params.takeError();                                               \
+    MFPM.addPass(CREATE_PASS(Params.get()));                                   \
+    return Error::success();                                                   \
+  }
 #include "llvm/Passes/MachinePassRegistry.def"
 
   for (auto &C : MachineFunctionPipelineParsingCallbacks)
@@ -2175,6 +2222,15 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
 
 void PassBuilder::setEnableHotColdSplitting(bool Enabled) {
   SplitColdCode = Enabled;
+}
+
+RegClassFilterFunc PassBuilder::parseRegAllocFilter(StringRef FilterName) {
+  if (FilterName == "all")
+    return allocateAllRegClasses;
+  for (auto &C : RegClassFilterParsingCallbacks)
+    if (auto F = C(FilterName))
+      return F;
+  return nullptr;
 }
 
 static void printPassName(StringRef PassName, raw_ostream &OS) {
