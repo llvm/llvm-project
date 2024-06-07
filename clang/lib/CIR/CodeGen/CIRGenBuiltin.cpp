@@ -245,6 +245,29 @@ static RValue buildBinaryAtomic(CIRGenFunction &CGF,
   return RValue::get(makeBinaryAtomicValue(CGF, kind, E));
 }
 
+static mlir::Value MakeAtomicCmpXchgValue(CIRGenFunction &cgf,
+                                          const CallExpr *expr,
+                                          bool returnBool) {
+  QualType typ = returnBool ? expr->getArg(1)->getType() : expr->getType();
+  Address destAddr = checkAtomicAlignment(cgf, expr);
+  auto &builder = cgf.getBuilder();
+
+  auto intType = builder.getSIntNTy(cgf.getContext().getTypeSize(typ));
+  auto cmpVal = cgf.buildScalarExpr(expr->getArg(1));
+  auto valueType = cmpVal.getType();
+  cmpVal = buildToInt(cgf, cmpVal, typ, intType);
+  auto newVal =
+      buildToInt(cgf, cgf.buildScalarExpr(expr->getArg(2)), typ, intType);
+
+  auto op = builder.create<mlir::cir::AtomicCmpXchg>(
+      cgf.getLoc(expr->getSourceRange()), cmpVal.getType(), builder.getBoolTy(),
+      destAddr.getPointer(), cmpVal, newVal,
+      mlir::cir::MemOrder::SequentiallyConsistent,
+      mlir::cir::MemOrder::SequentiallyConsistent);
+
+  return returnBool ? op.getResult(1) : op.getResult(0);
+}
+
 RValue CIRGenFunction::buildRotate(const CallExpr *E, bool IsRotateRight) {
   auto src = buildScalarExpr(E->getArg(0));
   auto shiftAmt = buildScalarExpr(E->getArg(1));
@@ -996,6 +1019,20 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_fetch_and_add_16: {
     return buildBinaryAtomic(*this, mlir::cir::AtomicFetchKind::Add, E);
   }
+
+  case Builtin::BI__sync_val_compare_and_swap_1:
+  case Builtin::BI__sync_val_compare_and_swap_2:
+  case Builtin::BI__sync_val_compare_and_swap_4:
+  case Builtin::BI__sync_val_compare_and_swap_8:
+  case Builtin::BI__sync_val_compare_and_swap_16:
+    return RValue::get(MakeAtomicCmpXchgValue(*this, E, false));
+
+  case Builtin::BI__sync_bool_compare_and_swap_1:
+  case Builtin::BI__sync_bool_compare_and_swap_2:
+  case Builtin::BI__sync_bool_compare_and_swap_4:
+  case Builtin::BI__sync_bool_compare_and_swap_8:
+  case Builtin::BI__sync_bool_compare_and_swap_16:
+    return RValue::get(MakeAtomicCmpXchgValue(*this, E, true));
 
   case Builtin::BI__builtin_add_overflow:
   case Builtin::BI__builtin_sub_overflow:

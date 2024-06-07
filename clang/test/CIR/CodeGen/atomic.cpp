@@ -379,3 +379,95 @@ void inc_short(short* a, short b) {
 void inc_byte(char* a, char b) {
   char c = __sync_fetch_and_add(a, b);
 }
+
+
+// CHECK-LABEL: @_Z12cmp_bool_int
+// CHECK: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK: %[[CMP:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
+// CHECK: %[[UPD:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
+// CHECK: %[[OLD:.*]], %[[RES:.*]] = cir.atomic.cmp_xchg(%[[PTR]] : !cir.ptr<!s32i>, %[[CMP]] : !s32i, %[[UPD]] : !s32i, success = seq_cst, failure = seq_cst) : (!s32i, !cir.bool)
+// CHECK: cir.store %[[RES]], {{.*}} : !cir.bool, !cir.ptr<!cir.bool>
+
+// LLVM-LABEL: @_Z12cmp_bool_int
+// LLVM: %[[PTR:.*]] = load ptr
+// LLVM: %[[CMP:.*]] = load i32
+// LLVM: %[[UPD:.*]] = load i32
+// LLVM: %[[RES:.*]] = cmpxchg ptr %[[PTR]], i32 %[[CMP]], i32 %[[UPD]] seq_cst seq_cst
+// LLVM: %[[TMP:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+// LLVM: %[[EXT:.*]] = zext i1 %[[TMP]] to i8
+// LLVM: store i8 %[[EXT]], ptr {{.*}}
+void cmp_bool_int(int* p, int x, int u) {
+  bool r = __sync_bool_compare_and_swap(p, x, u);
+}
+
+// CHECK-LABEL: @_Z13cmp_bool_long
+// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s64i>, {{.*}} : !s64i, {{.*}} : !s64i, success = seq_cst, failure = seq_cst) : (!s64i, !cir.bool)
+
+// LLVM-LABEL: @_Z13cmp_bool_long
+// LLVM: cmpxchg ptr {{.*}}, i64 {{.*}}, i64 {{.*}} seq_cst seq_cst
+void cmp_bool_long(long* p, long x, long u) {
+  bool r = __sync_bool_compare_and_swap(p, x, u);
+}
+
+// CHECK-LABEL: @_Z14cmp_bool_short
+// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s16i>, {{.*}} : !s16i, {{.*}} : !s16i, success = seq_cst, failure = seq_cst) : (!s16i, !cir.bool)
+
+// LLVM-LABEL: @_Z14cmp_bool_short
+// LLVM: cmpxchg ptr {{.*}}, i16 {{.*}}, i16 {{.*}} seq_cst seq_cst
+void cmp_bool_short(short* p, short x, short u) {
+  bool r = __sync_bool_compare_and_swap(p, x, u);
+}
+
+// CHECK-LABEL: @_Z13cmp_bool_byte
+// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s8i>, {{.*}} : !s8i, {{.*}} : !s8i, success = seq_cst, failure = seq_cst) : (!s8i, !cir.bool)
+
+// LLVM-LABEL: @_Z13cmp_bool_byte
+// LLVM: cmpxchg ptr {{.*}}, i8 {{.*}}, i8 {{.*}} seq_cst seq_cst
+void cmp_bool_byte(char* p, char x, char u) {
+  bool r = __sync_bool_compare_and_swap(p, x, u);
+}
+
+// CHECK-LABEL: @_Z11cmp_val_int
+// CHECK: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK: %[[CMP:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
+// CHECK: %[[UPD:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
+// CHECK: %[[OLD:.*]], %[[RES:.*]] = cir.atomic.cmp_xchg(%[[PTR]] : !cir.ptr<!s32i>, %[[CMP]] : !s32i, %[[UPD]] : !s32i, success = seq_cst, failure = seq_cst) : (!s32i, !cir.bool)
+// CHECK: cir.store %[[OLD]], {{.*}} : !s32i, !cir.ptr<!s32i>
+
+// LLVM-LABEL: @_Z11cmp_val_int
+// LLVM: %[[PTR:.*]] = load ptr
+// LLVM: %[[CMP:.*]] = load i32
+// LLVM: %[[UPD:.*]] = load i32
+// LLVM: %[[RES:.*]] = cmpxchg ptr %[[PTR]], i32 %[[CMP]], i32 %[[UPD]] seq_cst seq_cst
+// LLVM: %[[TMP:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+// LLVM: store i32 %[[TMP]], ptr {{.*}}
+void cmp_val_int(int* p, int x, int u) {
+  int r = __sync_val_compare_and_swap(p, x, u);  
+}
+
+// CHECK-LABEL: @_Z12cmp_val_long
+// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s64i>, {{.*}} : !s64i, {{.*}} : !s64i, success = seq_cst, failure = seq_cst) : (!s64i, !cir.bool)
+
+// LLVM-LABEL: @_Z12cmp_val_long
+// LLVM: cmpxchg ptr {{.*}}, i64 {{.*}}, i64 {{.*}} seq_cst seq_cst
+void cmp_val_long(long* p, long x, long u) {
+  long r = __sync_val_compare_and_swap(p, x, u);
+}
+
+// CHECK-LABEL: @_Z13cmp_val_short
+// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s16i>, {{.*}} : !s16i, {{.*}} : !s16i, success = seq_cst, failure = seq_cst) : (!s16i, !cir.bool)
+
+// LLVM-LABEL: @_Z13cmp_val_short
+// LLVM: cmpxchg ptr {{.*}}, i16 {{.*}}, i16 {{.*}} seq_cst seq_cst
+void cmp_val_short(short* p, short x, short u) {
+  short r = __sync_val_compare_and_swap(p, x, u);
+}
+
+// CHECK-LABEL: @_Z12cmp_val_byte
+// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s8i>, {{.*}} : !s8i, {{.*}} : !s8i, success = seq_cst, failure = seq_cst) : (!s8i, !cir.bool)
+
+// LLVM-LABEL: @_Z12cmp_val_byte 
+// LLVM: cmpxchg ptr {{.*}}, i8 {{.*}}, i8 {{.*}} seq_cst seq_cst
+void cmp_val_byte(char* p, char x, char u) {
+  char r = __sync_val_compare_and_swap(p, x, u);
+}
