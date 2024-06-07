@@ -9405,6 +9405,20 @@ def : Pat<(AArch64faddp (v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 0))),
                         (v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 4)))),
           (v4f16 (EXTRACT_SUBREG (FADDPv8f16 $Rn, $Rn), dsub))>;
 
+// add(uzp1(X, Y), uzp2(X, Y)) -> addp(X, Y)
+def : Pat<(v2i64 (add (AArch64zip1 (v2i64 FPR128:$Rn), (v2i64 FPR128:$Rm)),
+                      (AArch64zip2 (v2i64 FPR128:$Rn), (v2i64 FPR128:$Rm)))),
+          (v2i64 (ADDPv2i64 $Rn, $Rm))>;
+def : Pat<(v4i32 (add (AArch64uzp1 (v4i32 FPR128:$Rn), (v4i32 FPR128:$Rm)),
+                      (AArch64uzp2 (v4i32 FPR128:$Rn), (v4i32 FPR128:$Rm)))),
+          (v4i32 (ADDPv4i32 $Rn, $Rm))>;
+def : Pat<(v8i16 (add (AArch64uzp1 (v8i16 FPR128:$Rn), (v8i16 FPR128:$Rm)),
+                      (AArch64uzp2 (v8i16 FPR128:$Rn), (v8i16 FPR128:$Rm)))),
+          (v8i16 (ADDPv8i16 $Rn, $Rm))>;
+def : Pat<(v16i8 (add (AArch64uzp1 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)),
+                      (AArch64uzp2 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)))),
+          (v16i8 (ADDPv16i8 $Rn, $Rm))>;
+
 // Scalar 64-bit shifts in FPR64 registers.
 def : Pat<(i64 (int_aarch64_neon_sshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
           (SSHLv1i64 FPR64:$Rn, FPR64:$Rm)>;
