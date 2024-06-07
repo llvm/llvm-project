@@ -7,63 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fmul.h"
-#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/common.h"
 #include "src/__support/uint128.h"
+#include "src/__support/common.h"
+#include "src/__support/CPP/bit.h"
 
 namespace LIBC_NAMESPACE {
 
 namespace Fmul {
-uint64_t maxu(uint64_t A, uint64_t B) { return A > B ? A : B; }
-/*
-uint64_t mul(uint64_t a, uint64_t b) {
-__uint128_t product =
-    static_cast<__uint128_t>(a) * static_cast<__uint128_t>(b);
-return static_cast<uint64_t>(product >> 64);
-}
-
-uint64_t mullow(uint64_t a, uint64_t b) {
-__uint128_t product =
-    static_cast<__uint128_t>(a) * static_cast<__uint128_t>(b);
-return static_cast<uint64_t>(product);
-}
-*/
-/*
-uint64_t nlz(uint64_t x) {
-uint64_t z = 0;
-
-if (x == 0)
-  return 64;
-if (x <= 0x00000000FFFFFFFF) {
-  z = z + 32;
-  x = x << 32;
-}
-if (x <= 0x0000FFFFFFFFFFFF) {
-  z = z + 16;
-  x = x << 16;
-}
-if (x <= 0x00FFFFFFFFFFFFFF) {
-  z = z + 8;
-  x = x << 8;
-}
-if (x <= 0x0FFFFFFFFFFFFFFF) {
-  z = z + 4;
-  x = x << 4;
-}
-if (x <= 0x3FFFFFFFFFFFFFFF) {
-  z = z + 2;
-  x = x << 2;
-}
-if (x <= 0x7FFFFFFFFFFFFFFF) {
-  z = z + 1;
-}
-return z;
-}
-*/
-
+  
 float fmul(double x, double y) {
 
   auto x_bits = fputil::FPBits<double>(x);
@@ -74,24 +28,19 @@ float fmul(double x, double y) {
 
   auto output_sign = (x_bits.sign() != y_bits.sign()) ? Sign::NEG : Sign::POS;
 
-  if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() ||
-                    x_bits.is_zero() || y_bits.is_zero())) {
-    if (x_bits.is_nan())
-      return static_cast<float>(x);
-    if (y_bits.is_nan())
-      return static_cast<float>(y);
-    if (x_bits.is_inf())
-      return y_bits.is_zero()
-                 ? fputil::FPBits<float>::quiet_nan().get_val()
-                 : fputil::FPBits<float>::inf(output_sign).get_val();
-    if (y_bits.is_inf())
-      return x_bits.is_zero()
-                 ? fputil::FPBits<float>::quiet_nan().get_val()
-                 : fputil::FPBits<float>::inf(output_sign).get_val();
+    if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() || x_bits.is_zero() || y_bits.is_zero())) {
+      if (x_bits.is_nan())
+	return static_cast<float>(x);
+      if (y_bits.is_nan())
+	return static_cast<float>(y);
+      if (x_bits.is_inf())
+	return y_bits.is_zero() ? fputil::FPBits<float>::quiet_nan().get_val() : fputil::FPBits<float>::inf(output_sign).get_val();
+      if (y_bits.is_inf())
+	return x_bits.is_zero() ? fputil::FPBits<float>::quiet_nan().get_val() : fputil::FPBits<float>::inf(output_sign).get_val();
     // Now either x or y is zero, and the other one is finite.
-    return fputil::FPBits<float>::zero(output_sign).get_val();
+      return fputil::FPBits<float>::zero(output_sign).get_val();
   }
-
+ 
   uint64_t mx, my;
 
   // Get mantissa and append the hidden bit if needed.
@@ -105,20 +54,17 @@ float fmul(double x, double y) {
   // Count the number of leading zeros of the explicit mantissas.
   int nx = cpp::countl_zero(mx);
   int ny = cpp::countl_zero(my);
-
   // Shift the leading 1 bit to the most significant bit.
   mx <<= nx;
   my <<= ny;
 
-  // Adjust exponent accordingly: If x or y are normal, we will only need to
-  // shift by (exponent length + sign bit = 11 bits. If x or y are denormal, we
-  // will need to shift more than 11 bits.
+  // Adjust exponent accordingly: If x or y are normal, we will only need to shift by (exponent length + sign bit = 11 bits. If x or y are denormal, we will need to shift more than 11 bits.
   ex -= (nx - 11);
   ey -= (ny - 11);
-
+  
   UInt128 product = static_cast<UInt128>(mx) * static_cast<UInt128>(my);
   int32_t dm1;
-  uint64_t highs, lows, b;
+  uint64_t  highs, lows, b;
   uint64_t g, hight, lowt, m;
   bool c;
 
@@ -173,11 +119,12 @@ float fmul(double x, double y) {
   uint32_t m2 = static_cast<uint32_t>(m) & FLOAT32_MANTISSA_MASK;
 
   uint32_t result =
-      (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
+        (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
 
-  float result32 = cpp::bit_cast<float>(result);
 
-  return result32;
+    float result32 = cpp::bit_cast<float>(result);
+
+    return result32;
 }
 } // namespace Fmul
 
