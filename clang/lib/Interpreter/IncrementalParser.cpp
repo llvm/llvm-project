@@ -413,7 +413,8 @@ void IncrementalParser::CleanUpPTU(PartialTranslationUnit &PTU) {
     if (!ND)
       continue;
     // Check if we need to clean up the IdResolver chain.
-    if (ND->getDeclName().getFETokenInfo())
+    if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
+        !D->getLangOpts().CPlusPlus)
       getCI()->getSema().IdResolver.RemoveDecl(ND);
   }
 }

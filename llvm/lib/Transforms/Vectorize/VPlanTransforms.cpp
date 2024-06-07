@@ -1037,8 +1037,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  if (match(&R, m_CombineOr(m_Mul(m_VPValue(A), m_SpecificInt(1)),
-                            m_Mul(m_SpecificInt(1), m_VPValue(A)))))
+  if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
 }
 

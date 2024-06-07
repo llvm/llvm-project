@@ -1111,7 +1111,7 @@ libc_support_library(
     ],
     defines = [
         "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY",
-        "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT"
+        "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT",
     ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -1119,9 +1119,9 @@ libc_support_library(
     }),
     deps = [
         ":__support_cpp_optional",
-        ":__support_time_linux",
         ":__support_threads_linux_futex_utils",
         ":__support_threads_sleep",
+        ":__support_time_linux",
         ":types_pid_t",
     ],
 )
@@ -3580,6 +3580,7 @@ libc_function(
     }),
     weak = True,
     deps = [
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_signal_macros",
@@ -3599,6 +3600,7 @@ libc_function(
     }),
     weak = True,
     deps = [
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_signal_macros",
@@ -3620,6 +3622,7 @@ libc_function(
 #     }),
 #     weak = True,
 #     deps = [
+#         ":__support_macros_sanitizer",
 #         ":__support_osutil_syscall",
 #         ":errno",
 #         ":hdr_signal_macros",
