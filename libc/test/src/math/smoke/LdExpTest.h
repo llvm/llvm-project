@@ -31,7 +31,7 @@ class LdExpTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   const T nan = FPBits::quiet_nan().get_val();
 
   // A normalized mantissa to be used with tests.
-  static constexpr StorageType MANTISSA = NormalFloat::ONE + 0x1234;
+  static constexpr StorageType MANTISSA = NormalFloat::ONE + 0x123;
 
 public:
   typedef T (*LdExpFunc)(T, int);
@@ -60,7 +60,7 @@ public:
 
   void testOverflow(LdExpFunc func) {
     NormalFloat x(Sign::POS, FPBits::MAX_BIASED_EXPONENT - 10,
-                  NormalFloat::ONE + 0xF00BA);
+                  NormalFloat::ONE + 0xF00);
     for (int32_t exp = 10; exp < 100; ++exp) {
       ASSERT_FP_EQ(inf, func(T(x), exp));
       ASSERT_FP_EQ(neg_inf, func(-T(x), exp));
@@ -95,10 +95,10 @@ public:
 
   void testNormalOperation(LdExpFunc func) {
     T val_array[] = {// Normal numbers
-                     NormalFloat(Sign::POS, 100, MANTISSA),
-                     NormalFloat(Sign::POS, -100, MANTISSA),
-                     NormalFloat(Sign::NEG, 100, MANTISSA),
-                     NormalFloat(Sign::NEG, -100, MANTISSA),
+                     NormalFloat(Sign::POS, 10, MANTISSA),
+                     NormalFloat(Sign::POS, -10, MANTISSA),
+                     NormalFloat(Sign::NEG, 10, MANTISSA),
+                     NormalFloat(Sign::NEG, -10, MANTISSA),
                      // Subnormal numbers
                      NormalFloat(Sign::POS, -FPBits::EXP_BIAS, MANTISSA),
                      NormalFloat(Sign::NEG, -FPBits::EXP_BIAS, MANTISSA)};
@@ -114,8 +114,8 @@ public:
         NormalFloat two_to_exp = NormalFloat(static_cast<T>(1.L));
         two_to_exp = two_to_exp.mul2(exp);
 
-        ASSERT_FP_EQ(func(x, exp), x * two_to_exp);
-        ASSERT_FP_EQ(func(x, -exp), x / two_to_exp);
+        ASSERT_FP_EQ(func(x, exp), x * static_cast<T>(two_to_exp));
+        ASSERT_FP_EQ(func(x, -exp), x / static_cast<T>(two_to_exp));
       }
     }
 
