@@ -1046,7 +1046,101 @@ define void @streaming_compatible_no_sve(i32 noundef %x) #4 {
   ret void
 }
 
+; Ensure we still emit async unwind information with -fno-asynchronous-unwind-tables
+; if the function contains a streaming-mode change.
+
+define void @vg_unwind_noasync() #5 {
+; CHECK-LABEL: vg_unwind_noasync:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    .cfi_offset vg, -8
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    .cfi_restore vg
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore b8
+; CHECK-NEXT:    .cfi_restore b9
+; CHECK-NEXT:    .cfi_restore b10
+; CHECK-NEXT:    .cfi_restore b11
+; CHECK-NEXT:    .cfi_restore b12
+; CHECK-NEXT:    .cfi_restore b13
+; CHECK-NEXT:    .cfi_restore b14
+; CHECK-NEXT:    .cfi_restore b15
+; CHECK-NEXT:    ret
+;
+; FP-CHECK-LABEL: vg_unwind_noasync:
+; FP-CHECK:       // %bb.0:
+; FP-CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; FP-CHECK-NEXT:    .cfi_def_cfa_offset 96
+; FP-CHECK-NEXT:    cntd x9
+; FP-CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str x9, [sp, #80] // 8-byte Folded Spill
+; FP-CHECK-NEXT:    add x29, sp, #64
+; FP-CHECK-NEXT:    .cfi_def_cfa w29, 32
+; FP-CHECK-NEXT:    .cfi_offset w30, -24
+; FP-CHECK-NEXT:    .cfi_offset w29, -32
+; FP-CHECK-NEXT:    .cfi_offset b8, -40
+; FP-CHECK-NEXT:    .cfi_offset b9, -48
+; FP-CHECK-NEXT:    .cfi_offset b10, -56
+; FP-CHECK-NEXT:    .cfi_offset b11, -64
+; FP-CHECK-NEXT:    .cfi_offset b12, -72
+; FP-CHECK-NEXT:    .cfi_offset b13, -80
+; FP-CHECK-NEXT:    .cfi_offset b14, -88
+; FP-CHECK-NEXT:    .cfi_offset b15, -96
+; FP-CHECK-NEXT:    .cfi_offset vg, -16
+; FP-CHECK-NEXT:    smstop sm
+; FP-CHECK-NEXT:    bl callee
+; FP-CHECK-NEXT:    smstart sm
+; FP-CHECK-NEXT:    .cfi_restore vg
+; FP-CHECK-NEXT:    .cfi_def_cfa wsp, 96
+; FP-CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; FP-CHECK-NEXT:    .cfi_def_cfa_offset 0
+; FP-CHECK-NEXT:    .cfi_restore w30
+; FP-CHECK-NEXT:    .cfi_restore w29
+; FP-CHECK-NEXT:    .cfi_restore b8
+; FP-CHECK-NEXT:    .cfi_restore b9
+; FP-CHECK-NEXT:    .cfi_restore b10
+; FP-CHECK-NEXT:    .cfi_restore b11
+; FP-CHECK-NEXT:    .cfi_restore b12
+; FP-CHECK-NEXT:    .cfi_restore b13
+; FP-CHECK-NEXT:    .cfi_restore b14
+; FP-CHECK-NEXT:    .cfi_restore b15
+; FP-CHECK-NEXT:    ret
+  call void @callee();
+  ret void;
+}
+
 attributes #0 = { "aarch64_pstate_sm_enabled" uwtable(async) }
 attributes #1 = { "probe-stack"="inline-asm" "aarch64_pstate_sm_enabled" uwtable(async) }
 attributes #3 = { "aarch64_pstate_sm_body" uwtable(async) }
 attributes #4 = { "aarch64_pstate_sm_compatible" uwtable(async) }
+attributes #5 = { "aarch64_pstate_sm_enabled" }

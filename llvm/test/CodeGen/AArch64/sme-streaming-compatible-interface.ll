@@ -469,6 +469,7 @@ define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr
 ; CHECK-LABEL: call_to_non_streaming_pass_args:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #128
+; CHECK-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp d15, d14, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #48] // 16-byte Folded Spill
@@ -476,7 +477,6 @@ define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr
 ; CHECK-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x9, [sp, #96] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x19, [sp, #112] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK-NEXT:    .cfi_offset w19, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    .cfi_offset b8, -40
@@ -515,6 +515,17 @@ define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr
 ; CHECK-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #128
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore b8
+; CHECK-NEXT:    .cfi_restore b9
+; CHECK-NEXT:    .cfi_restore b10
+; CHECK-NEXT:    .cfi_restore b11
+; CHECK-NEXT:    .cfi_restore b12
+; CHECK-NEXT:    .cfi_restore b13
+; CHECK-NEXT:    .cfi_restore b14
+; CHECK-NEXT:    .cfi_restore b15
 ; CHECK-NEXT:    ret
 entry:
   call void @bar(ptr noundef nonnull %ptr, i64 %long1, i64 %long2, i32 %int1, i32 %int2, float %float1, float %float2, double %double1, double %double2)
