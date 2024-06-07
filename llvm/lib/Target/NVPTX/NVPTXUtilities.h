@@ -48,13 +48,15 @@ std::string getTextureName(const Value &);
 std::string getSurfaceName(const Value &);
 std::string getSamplerName(const Value &);
 
-bool getMaxNTIDx(const Function &, unsigned &);
-bool getMaxNTIDy(const Function &, unsigned &);
-bool getMaxNTIDz(const Function &, unsigned &);
+std::optional<unsigned> getMaxNTIDx(const Function &);
+std::optional<unsigned> getMaxNTIDy(const Function &);
+std::optional<unsigned> getMaxNTIDz(const Function &);
+std::optional<unsigned> getMaxNTID(const Function &F);
 
-bool getReqNTIDx(const Function &, unsigned &);
-bool getReqNTIDy(const Function &, unsigned &);
-bool getReqNTIDz(const Function &, unsigned &);
+std::optional<unsigned> getReqNTIDx(const Function &);
+std::optional<unsigned> getReqNTIDy(const Function &);
+std::optional<unsigned> getReqNTIDz(const Function &);
+std::optional<unsigned> getReqNTID(const Function &);
 
 bool getMaxClusterRank(const Function &, unsigned &);
 bool getMinCTASm(const Function &, unsigned &);

@@ -12,6 +12,7 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -46,6 +47,10 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
   // Check each AvailabilityAttr to find the one for this platform.
   // For multiple attributes with the same platform try to find one for this
   // environment.
+  // The attribute is always on the FunctionDecl, not on the
+  // FunctionTemplateDecl.
+  if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    D = FTD->getTemplatedDecl();
   for (const auto *A : D->attrs()) {
     if (const auto *Avail = dyn_cast<AvailabilityAttr>(A)) {
       // FIXME: this is copied from CheckAvailability. We should try to
