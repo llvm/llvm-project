@@ -433,7 +433,8 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
     MinShiftAmount = 1;
   if (LHS.isUnknown()) {
     if (MinShiftAmount == BitWidth) {
-      // Always poison.
+      // Always poison. Return zero because we don't like returning conflict.
+      Known.setAllZero();
       return Known;
     }
     return Known;
@@ -447,7 +448,8 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   if (Exact) {
     unsigned FirstOne = LHS.countMaxTrailingZeros();
     if (FirstOne < MinShiftAmount) {
-      // Always poison.
+      // Always poison. Return zero because we don't like returning conflict.
+      Known.setAllZero();
       return Known;
     }
     MaxShiftAmount = std::min(MaxShiftAmount, FirstOne);
