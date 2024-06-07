@@ -945,14 +945,6 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
         {}, "vector.recur.extract.for.phi"));
     RecurSplice->replaceUsesWithIf(
         Penultimate, [](VPUser &U, unsigned) { return isa<VPLiveOut>(&U); });
-
-    // Extract the resume value and create a new VPLiveOut for it.
-    auto *Resume = MiddleBuilder.createNaryOp(
-        VPInstruction::ExtractFromEnd,
-        {FOR->getBackedgeValue(),
-         Plan.getOrAddLiveIn(ConstantInt::get(IntTy, 1))},
-        {}, "vector.recur.extract");
-    Plan.addLiveOut(cast<PHINode>(FOR->getUnderlyingInstr()), Resume);
   }
   return true;
 }

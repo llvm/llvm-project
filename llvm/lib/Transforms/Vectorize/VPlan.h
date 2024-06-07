@@ -686,9 +686,13 @@ public:
 class VPLiveOut : public VPUser {
   PHINode *Phi;
 
+  /// Predecessor in VPlan of this live-out. Used to as block to set the
+  /// incoming value for.
+  VPBasicBlock *Pred;
+
 public:
-  VPLiveOut(PHINode *Phi, VPValue *Op)
-      : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi) {}
+  VPLiveOut(PHINode *Phi, VPValue *Op, VPBasicBlock *Pred)
+      : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi), Pred(Pred) {}
 
   static inline bool classof(const VPUser *U) {
     return U->getVPUserID() == VPUser::VPUserID::LiveOut;
@@ -709,6 +713,11 @@ public:
   }
 
   PHINode *getPhi() const { return Phi; }
+
+  /// Returns to incoming block for which to set the value.
+  VPBasicBlock *getPred() const { return Pred; }
+
+  void setPred(VPBasicBlock *Pred) { this->Pred = Pred; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the VPLiveOut to \p O.
@@ -1191,6 +1200,10 @@ public:
     SLPStore,
     ActiveLaneMask,
     ExplicitVectorLength,
+    /// Creates a scalar phi in a leaf VPBB with a single predecessor in VPlan.
+    /// The first operand is the incoming value from the predecessor in VPlan,
+    /// the second operand is the incoming value for all other predecessors.
+    ExitPhi,
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
@@ -3333,7 +3346,7 @@ public:
     return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
   }
 
-  void addLiveOut(PHINode *PN, VPValue *V);
+  void addLiveOut(PHINode *PN, VPValue *V, VPBasicBlock *Pred);
 
   void removeLiveOut(PHINode *PN) {
     delete LiveOuts[PN];

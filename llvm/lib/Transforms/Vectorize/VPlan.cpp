@@ -909,6 +909,11 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 /// VPBB, if any, are rewired to the new VPIRBasicBlock.
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   VPIRBasicBlock *IRMiddleVPBB = new VPIRBasicBlock(IRBB);
+  for (auto &[_, LO] : VPBB->getPlan()->getLiveOuts()) {
+    if (LO->getPred() == VPBB)
+      LO->setPred(IRMiddleVPBB);
+  }
+
   for (auto &R : make_early_inc_range(*VPBB))
     R.moveBefore(*IRMiddleVPBB, IRMiddleVPBB->end());
   VPBlockBase *PredVPBB = VPBB->getSinglePredecessor();
@@ -1124,9 +1129,9 @@ LLVM_DUMP_METHOD
 void VPlan::dump() const { print(dbgs()); }
 #endif
 
-void VPlan::addLiveOut(PHINode *PN, VPValue *V) {
+void VPlan::addLiveOut(PHINode *PN, VPValue *V, VPBasicBlock *Pred) {
   assert(LiveOuts.count(PN) == 0 && "an exit value for PN already exists");
-  LiveOuts.insert({PN, new VPLiveOut(PN, V)});
+  LiveOuts.insert({PN, new VPLiveOut(PN, V, Pred)});
 }
 
 static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
@@ -1195,9 +1200,18 @@ VPlan *VPlan::duplicate() {
   remapOperands(Preheader, NewPreheader, Old2NewVPValues);
   remapOperands(Entry, NewEntry, Old2NewVPValues);
 
+  DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
+  VPBlockBase *OldMiddle = getVectorLoopRegion()->getSingleSuccessor();
+  VPBlockBase *NewMiddle = NewPlan->getVectorLoopRegion()->getSingleSuccessor();
+  Old2NewVPBlocks[OldMiddle] = NewMiddle;
+  for (const auto &[Old, New] :
+       zip(OldMiddle->getSuccessors(), NewMiddle->getSuccessors()))
+    Old2NewVPBlocks[Old] = New;
+
   // Clone live-outs.
   for (const auto &[_, LO] : LiveOuts)
-    NewPlan->addLiveOut(LO->getPhi(), Old2NewVPValues[LO->getOperand(0)]);
+    NewPlan->addLiveOut(LO->getPhi(), Old2NewVPValues[LO->getOperand(0)],
+                        cast<VPBasicBlock>(Old2NewVPBlocks[LO->getPred()]));
 
   // Initialize remaining fields of cloned VPlan.
   NewPlan->VFs = VFs;

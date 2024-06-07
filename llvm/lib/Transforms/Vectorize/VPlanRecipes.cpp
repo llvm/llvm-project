@@ -193,11 +193,12 @@ void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   VPValue *ExitValue = getOperand(0);
   if (vputils::isUniformAfterVectorization(ExitValue))
     Lane = VPLane::getFirstLane();
-  VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-  BasicBlock *MiddleBB = State.CFG.VPBB2IRBB[MiddleVPBB];
-  Phi->addIncoming(State.get(ExitValue, VPIteration(State.UF - 1, Lane)),
-                   MiddleBB);
+  BasicBlock *PredBB = State.CFG.VPBB2IRBB[Pred];
+  Value *V = State.get(ExitValue, VPIteration(State.UF - 1, Lane));
+  if (Phi->getBasicBlockIndex(PredBB) != -1)
+    Phi->setIncomingValueForBlock(PredBB, V);
+  else
+    Phi->addIncoming(V, PredBB);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -303,6 +304,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::ExitPhi:
     return true;
   default:
     return false;
@@ -593,6 +595,23 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     Value *Addend = State.get(getOperand(1), Part, /* IsScalar */ true);
     return Builder.CreatePtrAdd(Ptr, Addend, Name);
   }
+  case VPInstruction::ExitPhi: {
+    if (Part != 0)
+      return State.get(this, 0, /*IsScalar*/ true);
+    Value *IncomingFromVPlanPred =
+        State.get(getOperand(0), Part, /* IsScalar */ true);
+    Value *IncomingFromOtherPred =
+        State.get(getOperand(1), Part, /* IsScalar */ true);
+    auto *NewPhi = Builder.CreatePHI(IncomingFromOtherPred->getType(), 2, Name);
+    BasicBlock *VPlanPred =
+        State.CFG
+            .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getSinglePredecessor())];
+    NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
+    for (auto *BB : predecessors(Builder.GetInsertBlock()))
+      NewPhi->addIncoming(IncomingFromOtherPred, BB);
+    return NewPhi;
+  }
+
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -600,6 +619,7 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
+         getOpcode() == VPInstruction::ExitPhi ||
          getOpcode() == VPInstruction::ComputeReductionResult;
 }
 
@@ -728,6 +748,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
+    break;
+  case VPInstruction::ExitPhi:
+    O << "exit-phi";
     break;
   case VPInstruction::ExplicitVectorLength:
     O << "EXPLICIT-VECTOR-LENGTH";
