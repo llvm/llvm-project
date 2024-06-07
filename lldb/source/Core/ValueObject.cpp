@@ -382,7 +382,7 @@ ValueObjectSP ValueObject::GetChildAtIndex(uint32_t idx, bool can_create) {
     if (can_create && !m_children.HasChildAtIndex(idx)) {
       // No we haven't created the child at this index, so lets have our
       // subclass do it and cache the result for quick future access.
-      m_children.SetChildAtIndex(idx, CreateChildAtIndex(idx, false, 0));
+      m_children.SetChildAtIndex(idx, CreateChildAtIndex(idx));
     }
 
     ValueObject *child = m_children.GetChildAtIndex(idx);
@@ -488,14 +488,10 @@ void ValueObject::SetNumChildren(uint32_t num_children) {
   m_children.SetChildrenCount(num_children);
 }
 
-ValueObject *ValueObject::CreateChildAtIndex(size_t idx,
-                                             bool synthetic_array_member,
-                                             int32_t synthetic_index) {
-  ValueObject *valobj = nullptr;
-
+ValueObject *ValueObject::CreateChildAtIndex(size_t idx) {
   bool omit_empty_base_classes = true;
-  bool ignore_array_bounds = synthetic_array_member;
-  std::string child_name_str;
+  bool ignore_array_bounds = false;
+  std::string child_name;
   uint32_t child_byte_size = 0;
   int32_t child_byte_offset = 0;
   uint32_t child_bitfield_bit_size = 0;
@@ -503,51 +499,74 @@ ValueObject *ValueObject::CreateChildAtIndex(size_t idx,
   bool child_is_base_class = false;
   bool child_is_deref_of_parent = false;
   uint64_t language_flags = 0;
-
-  const bool transparent_pointers = !synthetic_array_member;
+  const bool transparent_pointers = true;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   auto child_compiler_type_or_err =
       GetCompilerType().GetChildCompilerTypeAtIndex(
           &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name_str, child_byte_size,
-          child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
+          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+          child_bitfield_bit_size, child_bitfield_bit_offset,
           child_is_base_class, child_is_deref_of_parent, this, language_flags);
-  CompilerType child_compiler_type;
-  if (!child_compiler_type_or_err)
+  if (!child_compiler_type_or_err || !child_compiler_type_or_err->IsValid()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
                    child_compiler_type_or_err.takeError(),
                    "could not find child: {0}");
-  else
-    child_compiler_type = *child_compiler_type_or_err;
+    return nullptr;
+  }
 
-  if (child_compiler_type) {
-    if (synthetic_index)
-      child_byte_offset += child_byte_size * synthetic_index;
+  return new ValueObjectChild(
+      *this, *child_compiler_type_or_err, ConstString(child_name),
+      child_byte_size, child_byte_offset, child_bitfield_bit_size,
+      child_bitfield_bit_offset, child_is_base_class, child_is_deref_of_parent,
+      eAddressTypeInvalid, language_flags);
+}
 
-    ConstString child_name;
-    if (!child_name_str.empty())
-      child_name.SetCString(child_name_str.c_str());
+ValueObject *ValueObject::CreateSyntheticArrayMember(size_t idx) {
+  bool omit_empty_base_classes = true;
+  bool ignore_array_bounds = true;
+  std::string child_name;
+  uint32_t child_byte_size = 0;
+  int32_t child_byte_offset = 0;
+  uint32_t child_bitfield_bit_size = 0;
+  uint32_t child_bitfield_bit_offset = 0;
+  bool child_is_base_class = false;
+  bool child_is_deref_of_parent = false;
+  uint64_t language_flags = 0;
+  const bool transparent_pointers = false;
 
-    valobj = new ValueObjectChild(
-        *this, child_compiler_type, child_name, child_byte_size,
-        child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-        child_is_base_class, child_is_deref_of_parent, eAddressTypeInvalid,
-        language_flags);
+  ExecutionContext exe_ctx(GetExecutionContextRef());
+
+  auto child_compiler_type_or_err =
+      GetCompilerType().GetChildCompilerTypeAtIndex(
+          &exe_ctx, 0, transparent_pointers, omit_empty_base_classes,
+          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+          child_bitfield_bit_size, child_bitfield_bit_offset,
+          child_is_base_class, child_is_deref_of_parent, this, language_flags);
+  if (!child_compiler_type_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
+                   child_compiler_type_or_err.takeError(),
+                   "could not find child: {0}");
+    return nullptr;
+  }
+
+  if (child_compiler_type_or_err->IsValid()) {
+    child_byte_offset += child_byte_size * idx;
+
+    return new ValueObjectChild(
+        *this, *child_compiler_type_or_err, ConstString(child_name),
+        child_byte_size, child_byte_offset, child_bitfield_bit_size,
+        child_bitfield_bit_offset, child_is_base_class,
+        child_is_deref_of_parent, eAddressTypeInvalid, language_flags);
   }
 
   // In case of an incomplete type, try to use the ValueObject's
   // synthetic value to create the child ValueObject.
-  if (!valobj && synthetic_array_member) {
-    if (ValueObjectSP synth_valobj_sp = GetSyntheticValue()) {
-      valobj = synth_valobj_sp
-                   ->GetChildAtIndex(synthetic_index, synthetic_array_member)
-                   .get();
-    }
-  }
+  if (ValueObjectSP synth_valobj_sp = GetSyntheticValue())
+    return synth_valobj_sp->GetChildAtIndex(idx, /*can_create=*/true).get();
 
-  return valobj;
+  return nullptr;
 }
 
 bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
@@ -1616,7 +1635,7 @@ ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
       ValueObject *synthetic_child;
       // We haven't made a synthetic array member for INDEX yet, so lets make
       // one and cache it for any future reference.
-      synthetic_child = CreateChildAtIndex(0, true, index);
+      synthetic_child = CreateSyntheticArrayMember(index);
 
       // Cache the value if we got one back...
       if (synthetic_child) {

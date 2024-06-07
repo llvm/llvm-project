@@ -4042,7 +4042,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   }
 
   // fold B = sra (A, size(A)-1); sub (xor (A, B), B) -> (abs A)
-  if (hasOperation(ISD::ABS, VT) &&
+  if ((!LegalOperations || hasOperation(ISD::ABS, VT)) &&
       sd_match(N1, m_Sra(m_Value(A), m_SpecificInt(BitWidth - 1))) &&
       sd_match(N0, m_Xor(m_Specific(A), m_Specific(N1))))
     return DAG.getNode(ISD::ABS, DL, VT, A);
@@ -9526,7 +9526,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   }
 
   // fold Y = sra (X, size(X)-1); xor (add (X, Y), Y) -> (abs X)
-  if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
+  if (!LegalOperations || hasOperation(ISD::ABS, VT)) {
     SDValue A = N0Opcode == ISD::ADD ? N0 : N1;
     SDValue S = N0Opcode == ISD::SRA ? N0 : N1;
     if (A.getOpcode() == ISD::ADD && S.getOpcode() == ISD::SRA) {
