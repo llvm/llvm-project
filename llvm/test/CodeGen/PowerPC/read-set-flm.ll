@@ -63,14 +63,14 @@ define double @in_strict(double %a, double %b, double %c, double %d) #0 {
 ; LOG-NEXT: in_strict:%bb.0 entry
 ; LOG: ExitSU: MTFSF 255, renamable $f{{[0-9]+}}, 0, 0
 entry:
-  %0 = tail call double @llvm.ppc.readflm()
-  %1 = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  %2 = call double @llvm.experimental.constrained.fadd.f64(double %1, double %c, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  %3 = call double @llvm.experimental.constrained.fadd.f64(double %2, double %0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  call double @llvm.ppc.setflm(double %d)
-  %5 = call double @llvm.experimental.constrained.fdiv.f64(double %c, double %d, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  %6 = call double @llvm.experimental.constrained.fadd.f64(double %5, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  %7 = call double @llvm.experimental.constrained.fadd.f64(double %3, double %6, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %0 = tail call double @llvm.ppc.readflm() #0
+  %1 = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %2 = call double @llvm.experimental.constrained.fadd.f64(double %1, double %c, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %3 = call double @llvm.experimental.constrained.fadd.f64(double %2, double %0, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  call double @llvm.ppc.setflm(double %d) #0
+  %5 = call double @llvm.experimental.constrained.fdiv.f64(double %c, double %d, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %6 = call double @llvm.experimental.constrained.fadd.f64(double %5, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %7 = call double @llvm.experimental.constrained.fadd.f64(double %3, double %6, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %7
 }
 
@@ -102,12 +102,12 @@ define void @cse_nomerge(ptr %f1, ptr %f2, double %f3) #0 {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = call double @llvm.ppc.readflm()
+  %0 = call double @llvm.ppc.readflm() #0
   store double %0, ptr %f1, align 8
-  call void @effect_func()
-  %1 = call double @llvm.ppc.readflm()
+  call void @effect_func() #0
+  %1 = call double @llvm.ppc.readflm() #0
   store double %1, ptr %f2, align 8
-  %2 = call contract double @llvm.ppc.setflm(double %f3)
+  %2 = call contract double @llvm.ppc.setflm(double %f3) #0
   ret void
 }
 
@@ -139,12 +139,12 @@ define void @cse_nomerge_readonly(ptr %f1, ptr %f2, double %f3) #0 {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = call double @llvm.ppc.readflm()
+  %0 = call double @llvm.ppc.readflm() #0
   store double %0, ptr %f1, align 8
-  call void @readonly_func()
-  %1 = call double @llvm.ppc.readflm()
+  call void @readonly_func() #0
+  %1 = call double @llvm.ppc.readflm() #0
   store double %1, ptr %f2, align 8
-  %2 = call contract double @llvm.ppc.setflm(double %f3)
+  %2 = call contract double @llvm.ppc.setflm(double %f3) #0
   ret void
 }
 
