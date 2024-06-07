@@ -74,7 +74,7 @@ function compute-projects-to-test() {
       fi
     ;;
     clang)
-      for p in clang-tools-extra compiler-rt cross-project-tests; do
+      for p in clang-tools-extra compiler-rt cross-project-tests lldb; do
         echo $p
       done
     ;;
