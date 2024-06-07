@@ -354,6 +354,7 @@ bool UnwrappedLineParser::precededByCommentOrPPDirective() const {
 bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
                                      IfStmtKind *IfKind,
                                      FormatToken **IfLeftBrace) {
+
   const bool InRequiresExpression =
       OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
   const bool IsPrecededByCommentOrPPDirective =
@@ -385,6 +386,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
     };
 
     switch (Kind) {
+
     case tok::comment:
       nextToken();
       addUnwrappedLine();
@@ -1419,6 +1421,7 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 void UnwrappedLineParser::parseStructuralElement(
     const FormatToken *OpeningBrace, IfStmtKind *IfKind,
     FormatToken **IfLeftBrace, bool *HasDoWhile, bool *HasLabel) {
+
   if (Style.Language == FormatStyle::LK_TableGen &&
       FormatTok->is(tok::pp_include)) {
     nextToken();
@@ -1696,6 +1699,7 @@ void UnwrappedLineParser::parseStructuralElement(
 
   const bool InRequiresExpression =
       OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
+
   do {
     const FormatToken *Previous = FormatTok->Previous;
     switch (FormatTok->Tok.getKind()) {
@@ -2705,6 +2709,7 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
 
   addUnwrappedLine();
   ++Line->Level;
+  ++UnBracedBodyDepth;
   parseStructuralElement();
 
   if (Tok) {
@@ -2719,11 +2724,11 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
     assert(Tok);
     ++Tok->BraceCount;
   }
-
   if (CheckEOF && eof())
     addUnwrappedLine();
 
   --Line->Level;
+  --UnBracedBodyDepth;
 }
 
 static void markOptionalBraces(FormatToken *LeftBrace) {
@@ -4736,6 +4741,7 @@ void UnwrappedLineParser::distributeComments(
   // the two lines about b form a maximal trail, so there are two sections, the
   // first one consisting of the single comment "// line about a" and the
   // second one consisting of the next two comments.
+
   if (Comments.empty())
     return;
   bool ShouldPushCommentsInCurrentLine = true;
@@ -4811,8 +4817,10 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
            (!Style.isVerilog() ||
             Keywords.isVerilogPPDirective(*Tokens->peekNextToken())) &&
            FirstNonCommentOnLine) {
-      distributeComments(Comments, FormatTok);
-      Comments.clear();
+      if (!UnBracedBodyDepth) {
+        distributeComments(Comments, FormatTok);
+        Comments.clear();
+      }
       // If there is an unfinished unwrapped line, we flush the preprocessor
       // directives only after that unwrapped line was finished later.
       bool SwitchToPreprocessorLines = !Line->Tokens.empty();
@@ -4828,7 +4836,10 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
           PPBranchLevel > 0) {
         Line->Level += PPBranchLevel;
       }
-      flushComments(isOnNewLine(*FormatTok));
+      if (!UnBracedBodyDepth) {
+        flushComments(isOnNewLine(*FormatTok));
+      }
+
       parsePPDirective();
       PreviousWasComment = FormatTok->is(tok::comment);
       FirstNonCommentOnLine = IsFirstNonCommentOnLine(

@@ -338,6 +338,8 @@ private:
   // `decltype(auto)`.
   bool IsDecltypeAutoFunction = false;
 
+  int UnBracedBodyDepth = 0;
+
   // Represents preprocessor branch type, so we can find matching
   // #if/#else/#endif directives.
   enum PPBranchKind {
