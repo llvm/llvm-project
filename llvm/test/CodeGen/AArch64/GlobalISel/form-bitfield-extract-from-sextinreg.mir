@@ -60,7 +60,6 @@ legalized: true
 body:             |
   bb.0:
     liveins: $w0
-    ; AArch64 needs a constant on the shift for this combine.
 
     ; CHECK-LABEL: name: dont_apply_no_constant
     ; CHECK: liveins: $w0
@@ -87,7 +86,6 @@ body:             |
   bb.0:
     liveins: $w0
 
-    ; LSB must be in 0-31.
 
     ; CHECK-LABEL: name: dont_apply_shift_imm_too_large
     ; CHECK: liveins: $w0
@@ -95,7 +93,8 @@ body:             |
     ; CHECK-NEXT: %x:_(s32) = COPY $w0
     ; CHECK-NEXT: %lsb:_(s32) = G_CONSTANT i32 32
     ; CHECK-NEXT: %shift:_(s32) = G_ASHR %x, %lsb(s32)
-    ; CHECK-NEXT: $w0 = COPY %shift(s32)
+    ; CHECK-NEXT: %sext_inreg:_(s32) = G_SEXT_INREG %shift, 1
+    ; CHECK-NEXT: $w0 = COPY %sext_inreg(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %lsb:_(s32) = G_CONSTANT i32 32
@@ -113,7 +112,6 @@ body:             |
   bb.0:
     liveins: $w0
 
-    ; LSB must be in 0-31.
 
     ; CHECK-LABEL: name: dont_apply_negative_shift_imm
     ; CHECK: liveins: $w0
@@ -121,7 +119,8 @@ body:             |
     ; CHECK-NEXT: %x:_(s32) = COPY $w0
     ; CHECK-NEXT: %lsb:_(s32) = G_CONSTANT i32 -1
     ; CHECK-NEXT: %shift:_(s32) = G_ASHR %x, %lsb(s32)
-    ; CHECK-NEXT: $w0 = COPY %shift(s32)
+    ; CHECK-NEXT: %sext_inreg:_(s32) = G_SEXT_INREG %shift, 1
+    ; CHECK-NEXT: $w0 = COPY %sext_inreg(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %lsb:_(s32) = G_CONSTANT i32 -1

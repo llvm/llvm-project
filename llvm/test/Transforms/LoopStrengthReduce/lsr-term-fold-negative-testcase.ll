@@ -370,7 +370,7 @@ define i64 @alac_seek(ptr %0) {
 ; CHECK-SAME: (ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 1, 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[DIV]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[DIV]], 1
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 12
 ; CHECK-NEXT:    br label [[FOR_BODY_I:%.*]]
 ; CHECK:       for.body.i:
