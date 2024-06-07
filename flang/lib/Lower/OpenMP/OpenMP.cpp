@@ -463,7 +463,7 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
 /// \tparam InfoTy - the type of private info we want to merge; e.g. mlir::Type
 /// or mlir::Location fields of the private var list.
 ///
-/// \param [in] op                 - the op accpeting `omp.private` inputs.
+/// \param [in] op                 - the op accepting `omp.private` inputs.
 /// \param [in] currentList        - the current list of region info that we
 /// want to merge private info with. For example this could be the list of types
 /// or locations of previous arguments to \op's region.
