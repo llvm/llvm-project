@@ -123,7 +123,8 @@ private:
                                   llvm::StringRef name);
 
   static llvm::DenseSet<dw_offset_t> GetUnits(const DebugNames &debug_names);
-  static llvm::DenseSet<uint64_t> GetTypeUnitSignatures(const DebugNames &debug_names);
+  static llvm::DenseSet<uint64_t>
+  GetTypeUnitSignatures(const DebugNames &debug_names);
 };
 
 } // namespace dwarf

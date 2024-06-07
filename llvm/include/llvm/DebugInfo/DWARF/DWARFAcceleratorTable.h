@@ -90,7 +90,6 @@ public:
       return std::nullopt;
     }
 
-
     /// Returns the Tag of the Debug Info Entry associated with this
     /// Accelerator Entry or std::nullopt if the Tag is not recorded in this
     /// Accelerator Entry.

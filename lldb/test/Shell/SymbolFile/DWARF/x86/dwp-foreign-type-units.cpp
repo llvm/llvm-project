@@ -93,7 +93,6 @@
 // DWPFOO-NEXT:     CustomType::FloatType y;
 // DWPFOO-NEXT: }
 
-
 // We need to do this so we end with a type unit in each .dwo file and that has
 // the same signature but different contents. When we make the .dwp file, then
 // one of the type units will end up in the .dwp file and we will have

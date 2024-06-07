@@ -35,7 +35,6 @@ DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
       module, std::move(index_up), debug_names, debug_str, dwarf));
 }
 
-
 llvm::DenseSet<uint64_t>
 DebugNamesDWARFIndex::GetTypeUnitSignatures(const DebugNames &debug_names) {
   llvm::DenseSet<uint64_t> result;
@@ -77,8 +76,8 @@ DebugNamesDWARFIndex::IsForeignTypeUnit(const DebugNames::Entry &entry) const {
     std::optional<uint64_t> unit_offset = entry.getForeignTUSkeletonCUOffset();
     if (!unit_offset)
       return nullptr; // Return NULL, this is a type unit, but couldn't find it.
-    DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo,
-                                                 *unit_offset);
+    DWARFUnit *cu =
+        m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *unit_offset);
     if (!cu)
       return nullptr; // Return NULL, this is a type unit, but couldn't find it.
     DWARFUnit &dwo_cu = cu->GetNonSkeletonUnit();
@@ -86,7 +85,8 @@ DebugNamesDWARFIndex::IsForeignTypeUnit(const DebugNames::Entry &entry) const {
     // a .dwo file (not a .dwp), so we can just return the value here.
     if (!dwo_cu.IsDWOUnit())
       return nullptr; // We weren't able to load the .dwo file.
-    return dwo_cu.GetSymbolFileDWARF().DebugInfo().GetTypeUnitForHash(*type_sig);
+    return dwo_cu.GetSymbolFileDWARF().DebugInfo().GetTypeUnitForHash(
+        *type_sig);
   }
   // We have a .dwp file, just get the type unit from there. We need to verify
   // that the type unit that ended up in the final .dwp file is the right type
@@ -133,8 +133,8 @@ DebugNamesDWARFIndex::GetNonSkeletonUnit(const DebugNames::Entry &entry) const {
   if (!unit_offset)
     unit_offset = entry.getLocalTUOffset();
   if (unit_offset) {
-    if (DWARFUnit *cu =
-        m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *unit_offset))
+    if (DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo,
+                                                     *unit_offset))
       return &cu->GetNonSkeletonUnit();
   }
   return nullptr;
@@ -355,7 +355,7 @@ void DebugNamesDWARFIndex::GetFullyQualifiedType(
     // didn't match.
     std::optional<DWARFTypeUnit *> foreign_tu = IsForeignTypeUnit(entry);
     if (foreign_tu && foreign_tu.value() == nullptr)
-        continue;
+      continue;
 
     // Grab at most one extra parent, subsequent parents are not necessary to
     // test equality.
