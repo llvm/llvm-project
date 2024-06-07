@@ -796,6 +796,24 @@ TEST_F(FormatTestComments, ParsesCommentsAdjacentToPPDirectives) {
             format("namespace {}\n   /* Test */    #define A"));
 }
 
+
+TEST_F(FormatTestComments, DeIdentsCommentBeforeIfdefAfterBracelessIf) {
+  EXPECT_EQ("void f() {\n"
+            "  if (true)\n"
+            "    int i;\n"
+            "  /* comment */\n"
+            "#ifdef A\n"
+            "  int j;\n"
+            "}",
+            format("void f() {\n"
+                   "  if (true)\n"
+                   "    int i;\n"
+                   "    /* comment */\n"
+                   "#ifdef A\n"
+                   "  int j;\n"
+                   "}"));
+}
+
 TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
   // Keep the current level if the comment was originally not aligned with
   // the preprocessor directive.
