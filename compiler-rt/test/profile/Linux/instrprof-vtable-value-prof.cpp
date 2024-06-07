@@ -110,26 +110,40 @@
 // ICTEXT: _ZTV8Derived1:250
 
 // Test indirect call promotion transformation using vtable profiles.
-// Build with `-g` to enable debug information.
-// RUN: %clangxx -m64 -fprofile-use=test.profdata -fuse-ld=lld -g -flto=thin -fwhole-program-vtables -O2 -mllvm -enable-vtable-value-profiling -mllvm -icp-enable-vtable-cmp -Rpass=pgo-icall-prom -mllvm -print-after=pgo-icall-prom -mllvm -filter-print-funcs=main %s 2>&1 | FileCheck %s --check-prefixes=REMARK,IR --implicit-check-not="!VP"
+// - Build with `-g` to enable debug information.
+// - In real world settings, ICP pass is disabled in prelink pipeline. In
+//   the postlink pipeline, ICP is enabled after whole-program-devirtualization
+//   pass. Do the same thing in this test.
+// - Enable `-fwhole-program-vtables` generate type metadata and intrincis.
+// - Enable `-fno-split-lto-unit` and `-Wl,-lto-whole-program-visibility` to
+//   preserve type intrinsics for ICP pass.
+// RUN: %clangxx -m64  -fprofile-use=test.profdata -Wl,--lto-whole-program-visibility \
+// RUN:    -mllvm -disable-icp=true -Wl,-mllvm,-disable-icp=false -fuse-ld=lld \
+// RUN:    -g -flto=thin -fwhole-program-vtables -fno-split-lto-unit -O2 \
+// RUN:    -mllvm -enable-vtable-value-profiling -Wl,-mllvm,-enable-vtable-value-profiling \
+// RUN:    -mllvm -enable-vtable-profile-use \
+// RUN:    -Wl,-mllvm,-enable-vtable-profile-use -Rpass=pgo-icall-prom \
+// RUN:    -Wl,-mllvm,-print-after=pgo-icall-prom \
+// RUN:    -Wl,-mllvm,-filter-print-funcs=main %s 2>&1 \
+// RUN:    | FileCheck %s --check-prefixes=REMARK,IR --implicit-check-not="!VP"
 
 // For the indirect call site `ptr->func`
-// REMARK: instrprof-vtable-value-prof.cpp:191:19: remark: Promote indirect call to _ZN12_GLOBAL__N_18Derived24funcEii with count 150 out of 200, compare 1 vtables and sink 1 instructions
-// REMARK: instrprof-vtable-value-prof.cpp:191:19: remark: Promote indirect call to _ZN8Derived14funcEii with count 50 out of 50, compare 1 vtables and sink 1 instructions
+// REMARK: instrprof-vtable-value-prof.cpp:205:19: Promote indirect call to _ZN12_GLOBAL__N_18Derived24funcEii with count 150 out of 200, compare 1 vtables and sink 1 instructions
+// REMARK: instrprof-vtable-value-prof.cpp:205:19: Promote indirect call to _ZN8Derived14funcEii with count 50 out of 50, compare 1 vtables and sink 1 instructions
 //
 // For the indirect call site `delete ptr`
-// REMARK: instrprof-vtable-value-prof.cpp:193:5: remark: Promote indirect call to _ZN12_GLOBAL__N_18Derived2D0Ev with count 750 out of 1000, compare 1 vtables and sink 2 instructions
-// REMARK: instrprof-vtable-value-prof.cpp:193:5: remark: Promote indirect call to _ZN8Derived1D0Ev with count 250 out of 250, compare 1 vtables and sink 2 instructions
+// REMARK: instrprof-vtable-value-prof.cpp:207:5: Promote indirect call to _ZN12_GLOBAL__N_18Derived2D0Ev with count 750 out of 1000, compare 1 vtables and sink 2 instructions
+// REMARK: instrprof-vtable-value-prof.cpp:207:5: Promote indirect call to _ZN8Derived1D0Ev with count 250 out of 250, compare 1 vtables and sink 2 instructions
 
 // The IR matchers for indirect callsite `ptr->func`.
 // IR-LABEL: @main
-// IR:   [[OBJ:%.*]] = call {{.*}} @_Z10createTypei
+// IR:   [[OBJ:%.*]] = {{.*}}call {{.*}} @_Z10createTypei
 // IR:   [[VTABLE:%.*]] = load ptr, ptr [[OBJ]]
 // IR:   [[CMP1:%.*]] = icmp eq ptr [[VTABLE]], getelementptr inbounds (i8, ptr @_ZTVN12_GLOBAL__N_18Derived2E, i32 16)
 // IR:   br i1 [[CMP1]], label %[[BB1:.*]], label %[[BB2:[a-zA-Z0-9_.]+]],
 //
 // IR: [[BB1]]:
-// IR:   [[RESBB1:%.*]] = call {{.*}} @_ZN12_GLOBAL__N_18Derived24funcEii
+// IR:   [[RESBB1:%.*]] = {{.*}}call {{.*}} @_ZN12_GLOBAL__N_18Derived24funcEii
 // IR:   br label %[[MERGE0:[a-zA-Z0-9_.]+]]
 //
 // IR: [[BB2]]:
@@ -137,12 +151,12 @@
 // IR:   br i1 [[CMP2]], label %[[BB3:.*]], label %[[BB4:[a-zA-Z0-9_.]+]],
 //
 // IR: [[BB3]]:
-// IR:   [[RESBB3:%.*]] = call {{.*}} @_ZN8Derived14funcEii
+// IR:   [[RESBB3:%.*]] = {{.*}}call {{.*}} @_ZN8Derived14funcEii
 // IR:   br label %[[MERGE1:[a-zA-Z0-9_.]+]],
 //
 // IR: [[BB4]]:
 // IR:   [[FUNCPTR:%.*]] = load ptr, ptr [[VTABLE]]
-// IR:   [[RESBB4:%.*]] = call {{.*}} [[FUNCPTR]]
+// IR:   [[RESBB4:%.*]] = {{.*}}call {{.*}} [[FUNCPTR]]
 // IR:   br label %[[MERGE1]]
 //
 // IR: [[MERGE1]]:

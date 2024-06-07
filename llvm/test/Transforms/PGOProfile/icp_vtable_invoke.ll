@@ -1,10 +1,10 @@
-; RUN: opt < %s -passes='pgo-icall-prom' -icp-enable-vtable-cmp -S | FileCheck %s --check-prefix=VTABLE
+; RUN: opt < %s -passes='pgo-icall-prom' -enable-vtable-profile-use -S | FileCheck %s --check-prefix=VTABLE
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@_ZTV4Base = dso_local constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN4Base10get_ticketEv] }, !type !0, !type !1
-@_ZTV7Derived = dso_local constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN7Derived10get_ticketEv] }, !type !0, !type !1, !type !2, !type !3
+@_ZTV4Base = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN4Base10get_ticketEv] }, !type !0, !type !1
+@_ZTV7Derived = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN7Derived10get_ticketEv] }, !type !0, !type !1, !type !2, !type !3
 
 @.str = private constant [15 x i8] c"out of tickets\00"
 
@@ -109,11 +109,9 @@ lpad:
   resume { ptr, i32 } %0
 }
 
-declare i1 @llvm.type.test(ptr, metadata) #2
+declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.assume(i1)
 declare i32 @__gxx_personality_v0(...)
-
-attributes #2 = { mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !0 = !{i64 16, !"_ZTS4Base"}
 !1 = !{i64 16, !"_ZTSM4BaseFivE.virtual"}

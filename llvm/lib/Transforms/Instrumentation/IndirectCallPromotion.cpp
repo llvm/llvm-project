@@ -58,6 +58,10 @@ STATISTIC(NumOfPGOICallsites, "Number of indirect call candidate sites.");
 
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
+namespace llvm {
+extern cl::opt<bool> EnableVTableProfileUse;
+}
+
 // Command line option to disable indirect-call promotion with the default as
 // false. This is for debug purpose.
 static cl::opt<bool> DisableICP("disable-icp", cl::init(false), cl::Hidden,
@@ -110,29 +114,31 @@ static cl::opt<bool>
     ICPDUMPAFTER("icp-dumpafter", cl::init(false), cl::Hidden,
                  cl::desc("Dump IR after transformation happens"));
 
-// This option is meant to be used by LLVM regression test and test the
-// transformation that compares vtables.
-static cl::opt<bool> ICPEnableVTableCmp(
-    "icp-enable-vtable-cmp", cl::init(false), cl::Hidden,
-    cl::desc("If ThinLTO and WPD is enabled and this option is true, "
-             "indirect-call promotion pass will compare vtables rather than "
-             "functions for speculative devirtualization of virtual calls."
-             " If set to false, indirect-call promotion pass will always "
-             "compare functions."));
+// Indirect call promotion pass will fall back to function-based comparison if
+// vtable-count / function-count is smaller than this threshold.
+static cl::opt<float> ICPVTablePercentageThreshold(
+    "icp-vtable-percentage-threshold", cl::init(0.99), cl::Hidden,
+    cl::desc("The percentage threshold of vtable-count / function-count for "
+             "cost-benefit analysis. "));
 
-static cl::opt<float>
-    ICPVTableCountPercentage("icp-vtable-count-percentage", cl::init(0.99),
-                             cl::Hidden,
-                             cl::desc("Percentage of vtable count to compare"));
-
-static cl::opt<int> ICPNumAdditionalVTableLast(
-    "icp-num-additional-vtable-last", cl::init(0), cl::Hidden,
-    cl::desc("The number of additional instruction for the last candidate"));
+// Although comparing vtables can save a vtable load, we may need to compare
+// vtable pointer with multiple vtable address points due to class inheritance.
+// Comparing with multiple vtables inserts additional instructions on hot code
+// path; and doing so for earlier candidate of one icall can affect later
+// function candidate in an undesired way. We allow multiple vtable comparison
+// for the last function candidate and use the option below to cap the number
+// of vtables.
+static cl::opt<int> ICPMaxNumVTableLastCandidate(
+    "icp-max-num-vtable-last-candidate", cl::init(1), cl::Hidden,
+    cl::desc("The maximum number of vtable for the last candidate."));
 
 namespace {
 
+// The key is a vtable global variable, and the value is a map.
+// In the inner map, the key represents address point offsets and the value is a
+// constant for this address point.
 using VTableAddressPointOffsetValMap =
-    SmallDenseMap<const GlobalVariable *, SmallDenseMap<int, Constant *, 4>, 8>;
+    SmallDenseMap<const GlobalVariable *, SmallDenseMap<int, Constant *>>;
 
 // A struct to collect type information for a virtual call site.
 struct VirtualCallSiteInfo {
@@ -146,19 +152,25 @@ struct VirtualCallSiteInfo {
 
 // The key is a virtual call, and value is its type information.
 using VirtualCallSiteTypeInfoMap =
-    SmallDenseMap<const CallBase *, VirtualCallSiteInfo, 8>;
+    SmallDenseMap<const CallBase *, VirtualCallSiteInfo>;
 
-// Find the offset where type string is `CompatibleType`.
+// The key is vtable GUID, and value is its value profile count.
+using VTableGUIDCountsMap = SmallDenseMap<uint64_t, uint64_t>;
+
+// Returns the address point offset of the given compatible type.
+//
+// Type metadata of a vtable specifies the types that can container a pointer to
+// this vtable, for example, `Base*` can be a pointer to an instantiated type
+// but not vice versa. See also https://llvm.org/docs/TypeMetadata.html
 static std::optional<uint64_t>
-getCompatibleTypeOffset(const GlobalVariable &VTableVar,
-                        StringRef CompatibleType) {
-  SmallVector<MDNode *, 2> Types; // type metadata associated with a vtable.
+getAddressPointOffset(const GlobalVariable &VTableVar,
+                      StringRef CompatibleType) {
+  SmallVector<MDNode *> Types;
   VTableVar.getMetadata(LLVMContext::MD_type, Types);
 
   for (MDNode *Type : Types)
     if (auto *TypeId = dyn_cast<MDString>(Type->getOperand(1).get());
         TypeId && TypeId->getString() == CompatibleType)
-
       return cast<ConstantInt>(
                  cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
           ->getZExtValue();
@@ -181,7 +193,7 @@ static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
       llvm::ConstantInt::get(Type::getInt32Ty(Context), AddressPointOffset));
 }
 
-// Returns the basic block in which `Inst` by `Use`.
+// Returns the basic block in which `Inst` is used via its `UserInst`.
 static BasicBlock *getUserBasicBlock(Use &U, Instruction *UserInst) {
   if (PHINode *PN = dyn_cast<PHINode>(UserInst))
     return PN->getIncomingBlock(U);
@@ -199,7 +211,7 @@ static bool isDestBBSuitableForSink(Instruction *Inst, BasicBlock *DestBB) {
   BasicBlock *BB = Inst->getParent();
   assert(Inst->getParent() != DestBB &&
          BB->getTerminator()->getNumSuccessors() == 2 &&
-         "Caller should guarantee");
+         "Guaranteed by ICP transformation");
   // Do not sink across a critical edge for simplicity.
   if (DestBB->getUniquePredecessor() != BB)
     return false;
@@ -225,18 +237,14 @@ static bool isDestBBSuitableForSink(Instruction *Inst, BasicBlock *DestBB) {
 
 // For the virtual call dispatch sequence, try to sink vtable load instructions
 // to the cold indirect call fallback.
+// FIXME: Move the sink eligibility check below to a utility function in
+// Transforms/Utils/ directory.
 static bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
-  assert(!I->isTerminator());
   if (!isDestBBSuitableForSink(I, DestBlock))
     return false;
 
-  assert(DestBlock->getUniquePredecessor() == I->getParent());
-
-  // Do not move control-flow-involving, volatile loads, vaarg, etc.
-  // Do not sink static or dynamic alloca instructions. Static allocas must
-  // remain in the entry block, and dynamic allocas must not be sunk in between
-  // a stacksave / stackrestore pair, which would incorrectly shorten its
-  // lifetime.
+  // Do not move control-flow-involving, volatile loads, vaarg, alloca
+  // instructions, etc.
   if (isa<PHINode>(I) || I->isEHPad() || I->mayThrow() || !I->willReturn() ||
       isa<AllocaInst>(I))
     return false;
@@ -253,12 +261,16 @@ static bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   // We can only sink load instructions if there is nothing between the load and
   // the end of block that could change the value.
   if (I->mayReadFromMemory()) {
-    // We know that SrcBlock is the unique predecessor of DestBlock.
+    // We already know that SrcBlock is the unique predecessor of DestBlock.
     for (BasicBlock::iterator Scan = std::next(I->getIterator()),
                               E = I->getParent()->end();
-         Scan != E; ++Scan)
+         Scan != E; ++Scan) {
+      // Note analysis analysis can tell whether two pointers can point to the
+      // same object in memory or not thereby find further opportunities to
+      // sink.
       if (Scan->mayWriteToMemory())
         return false;
+    }
   }
 
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
@@ -273,12 +285,10 @@ static bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
 
 // Try to sink instructions after VPtr to the indirect call fallback.
 // Returns the number of sunk IR instructions.
-static int tryToSinkInstructions(Instruction *VPtr,
+static int tryToSinkInstructions(BasicBlock *OriginalBB,
                                  BasicBlock *IndirectCallBB) {
-  BasicBlock *OriginalBB = VPtr->getParent();
-
   int SinkCount = 0;
-  // FIXME: Find a way to bail out of the loop.
+  // Sink all eligible instructions in OriginalBB in reverse order.
   for (Instruction &I :
        llvm::make_early_inc_range(llvm::drop_begin(llvm::reverse(*OriginalBB))))
     if (tryToSinkInstruction(&I, IndirectCallBB))
@@ -314,15 +324,18 @@ private:
     Function *const TargetFunction;
     const uint64_t Count;
 
-    // The byte offset of TargetFunction starting from the vtable address point.
-    uint64_t FunctionOffset;
-    SmallVector<std::pair<uint64_t, uint64_t>, 2> VTableGUIDAndCounts;
-    SmallVector<Constant *, 2> AddressPoints;
+    // The following fields only exists for promotion candidates with vtable
+    // information.
+    //
+    // Due to class inheritance, one virtual call candidate can come from
+    // multiple vtables. `VTableGUIDAndCounts` tracks the vtable GUIDs and
+    // counts for 'TargetFunction'. `AddressPoints` stores the vtable address
+    // points for comparison.
+    VTableGUIDCountsMap VTableGUIDAndCounts;
+    SmallVector<Constant *> AddressPoints;
 
     PromotionCandidate(Function *F, uint64_t C) : TargetFunction(F), Count(C) {}
   };
-
-  using VTableGUIDCountsMap = SmallDenseMap<uint64_t, uint64_t, 4>;
 
   // Check if the indirect-call call site should be promoted. Return the number
   // of promotions. Inst is the candidate indirect call, ValueDataRef
@@ -356,9 +369,13 @@ private:
   bool isProfitableToCompareVTables(
       const std::vector<PromotionCandidate> &Candidates, uint64_t TotalCount);
 
-  // Populate `VTableGUIDCounts` vtable GUIDs and their counts and each
-  // candidate with vtable information. Returns the vtable instruction if not
-  // null.
+  // Given an indirect callsite and the list of function candidates, compute
+  // the following vtable information in output parameters and returns vtable
+  // pointer if type profiles exist.
+  // - Populate `VTableGUIDCounts` with <vtable-guid, count> with !prof metadata
+  // attached on the vtable pointer.
+  // - For each function candidate, finds out the vtables from which it get
+  // called and stores the <vtable-guid, count> there.
   Instruction *computeVTableInfos(const CallBase *CB,
                                   VTableGUIDCountsMap &VTableGUIDCounts,
                                   std::vector<PromotionCandidate> &Candidates);
@@ -490,8 +507,31 @@ Constant *IndirectCallPromoter::getOrCreateVTableAddressPointVar(
 Instruction *IndirectCallPromoter::computeVTableInfos(
     const CallBase *CB, VTableGUIDCountsMap &GUIDCountsMap,
     std::vector<PromotionCandidate> &Candidates) {
-  if (!ICPEnableVTableCmp)
+  if (!EnableVTableProfileUse)
     return nullptr;
+
+  // Take the following code sequence as an example, here is how the code works
+  //   @vtable1 = {[n x ptr] [... ptr @func1]}
+  //   @vtable2 = {[m x ptr] [... ptr @func2]}
+  //
+  //   %vptr = load ptr, ptr %d, !prof !0
+  //   %0 = tail call i1 @llvm.type.test(ptr %vptr, metadata !"vtable1")
+  //   tail call void @llvm.assume(i1 %0)
+  //   %vfn = getelementptr inbounds ptr, ptr %vptr, i64 1
+  //   %1 = load ptr, ptr %vfn
+  //   call void %1(ptr %d), !prof !1
+  //
+  //   !0 = !{!"VP", i32 2, i64 100, i64 123, i64 50, i64 456, i64 50}
+  //   !1 = !{!"VP", i32 0, i64 100, i64 789, i64 50, i64 579, i64 50}
+  //
+  // Step 1. Find out the %vptr instruction for indirect call and use its !prof
+  // to populate `GUIDCountsMap`.
+  // Step 2. For each vtable-guid, look up its definition from symtab. LTO can
+  // make vtable definitions visible across modules.
+  // Step 3. Compute the byte offset of the virtual call, by adding vtable
+  // address point offset and function's offset relative to vtable address
+  // point. For each function candidate, this step tells us the vtable from
+  // which it comes from, and the vtable address point to compare %vptr with.
 
   // Only virtual calls have virtual call site info.
   auto Iter = VirtualCSInfo.find(CB);
@@ -525,7 +565,7 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
     }
 
     std::optional<uint64_t> MaybeAddressPointOffset =
-        getCompatibleTypeOffset(*VTableVar, VirtualCallInfo.CompatibleTypeStr);
+        getAddressPointOffset(*VTableVar, VirtualCallInfo.CompatibleTypeStr);
     if (!MaybeAddressPointOffset)
       continue;
 
@@ -541,8 +581,9 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
       continue;
 
     auto &Candidate = Candidates[CalleeIndexIter->second];
-    Candidate.VTableGUIDAndCounts.push_back(
-        {VTableVal, VTableValueDataArray[j].Count});
+    // There shouldn't be duplicate GUIDs in one !prof metadata, so assign
+    // counters directly won't cause overwrite or counter loss.
+    Candidate.VTableGUIDAndCounts[VTableVal] = VTableValueDataArray[j].Count;
     Candidate.AddressPoints.push_back(
         getOrCreateVTableAddressPointVar(VTableVar, AddressPointOffset));
   }
@@ -550,23 +591,23 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
   return VPtr;
 }
 
-static MDNode *getBranchWeights(LLVMContext &Context, uint64_t IfCount,
-                                uint64_t ElseCount) {
+// Creates 'branch_weights' prof metadata using TrueWeight and FalseWeight.
+// Scales uint64_t counters down to uint32_t if necessary to prevent overflow.
+static MDNode *createBranchWeights(LLVMContext &Context, uint64_t TrueWeight,
+                                   uint64_t FalseWeight) {
   MDBuilder MDB(Context);
-  uint64_t Scale = calculateCountScale(std::max(IfCount, ElseCount));
-  return MDB.createBranchWeights(scaleBranchCount(IfCount, Scale),
-                                 scaleBranchCount(ElseCount, Scale));
+  uint64_t Scale = calculateCountScale(std::max(TrueWeight, FalseWeight));
+  return MDB.createBranchWeights(scaleBranchCount(TrueWeight, Scale),
+                                 scaleBranchCount(FalseWeight, Scale));
 }
 
 CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
                                          uint64_t Count, uint64_t TotalCount,
                                          bool AttachProfToDirectCall,
                                          OptimizationRemarkEmitter *ORE) {
-  MDNode *BranchWeights =
-      getBranchWeights(CB.getContext(), Count, TotalCount - Count);
-
-  CallBase &NewInst =
-      promoteCallWithIfThenElse(CB, DirectCallee, BranchWeights);
+  CallBase &NewInst = promoteCallWithIfThenElse(
+      CB, DirectCallee,
+      createBranchWeights(CB.getContext(), Count, TotalCount - Count));
 
   if (AttachProfToDirectCall)
     setBranchWeights(NewInst, {static_cast<uint32_t>(Count)});
@@ -600,10 +641,13 @@ bool IndirectCallPromoter::tryToPromoteWithFuncCmp(
     NumOfPGOICallPromotion++;
     NumPromoted++;
 
-    if (!ICPEnableVTableCmp || C.VTableGUIDAndCounts.empty())
+    if (!EnableVTableProfileUse || C.VTableGUIDAndCounts.empty())
       continue;
 
-    // Update VTableGUIDCounts
+    // After a virtual call candidate gets promoted, update the vtable's counts
+    // proportionally. Each vtable-guid in `C.VTableGUIDAndCounts` represents
+    // a vtable from which the virtual call is loaded. Compute the sum and use
+    // 128-bit APInt to improve accuracy.
     uint64_t SumVTableCount = 0;
     for (const auto &[GUID, VTableCount] : C.VTableGUIDAndCounts)
       SumVTableCount += VTableCount;
@@ -671,22 +715,20 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
     MutableArrayRef<InstrProfValueData> ICallProfDataRef,
     VTableGUIDCountsMap &VTableGUIDCounts) {
   SmallVector<uint64_t, 4> PromotedFuncCount;
-  for (const auto &Candidate : Candidates) {
-    uint64_t IfCount = 0;
-    for (auto &[GUID, Count] : Candidate.VTableGUIDAndCounts) {
-      IfCount += Count;
-      VTableGUIDCounts[GUID] -= Count;
-    }
 
-    // Use indirect call counters to compute branch weights.
+  for (const auto &Candidate : Candidates) {
+    for (auto &[GUID, Count] : Candidate.VTableGUIDAndCounts)
+      VTableGUIDCounts[GUID] -= Count;
+
+    // 'OriginalBB' is the basic block of indirect call before indirect call
+    // promotion.
     BasicBlock *OriginalBB = CB.getParent();
     promoteCallWithVTableCmp(
         CB, VPtr, Candidate.TargetFunction, Candidate.AddressPoints,
-        getBranchWeights(CB.getContext(), IfCount, TotalFuncCount - IfCount));
+        createBranchWeights(CB.getContext(), Candidate.Count,
+                            TotalFuncCount - Candidate.Count));
 
-    int SinkCount = tryToSinkInstructions(
-        PromotedFuncCount.empty() ? VPtr : OriginalBB->getFirstNonPHI(),
-        CB.getParent());
+    int SinkCount = tryToSinkInstructions(OriginalBB, CB.getParent());
 
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "Promoted", &CB)
@@ -700,9 +742,9 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
              << " instructions";
     });
 
-    PromotedFuncCount.push_back(IfCount);
+    PromotedFuncCount.push_back(Candidate.Count);
 
-    TotalFuncCount -= IfCount;
+    TotalFuncCount -= Candidate.Count;
     NumOfPGOICallPromotion++;
   }
 
@@ -711,8 +753,10 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
 
   // Update value profiles for 'CB' and 'VPtr', assuming that each 'CB' has a
   // a distinct 'VPtr'.
-  // TODO: Handle profile update properly when Clang `-fstrict-vtable-pointers`
-  // is enabled and a vtable is used to load multiple virtual functions.
+  // FIXME: When Clang `-fstrict-vtable-pointers` is enabled, a vtable might be
+  // used to load multiple virtual functions. The vtable profiles needs to be
+  // updated properly in that case (e.g, annotate type profiles per indirect
+  // call).
   for (size_t I = 0; I < PromotedFuncCount.size(); I++)
     ICallProfDataRef[I].Count -=
         std::max(PromotedFuncCount[I], ICallProfDataRef[I].Count);
@@ -770,7 +814,7 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
 // cannot sink to indirect fallback.
 bool IndirectCallPromoter::isProfitableToCompareVTables(
     const std::vector<PromotionCandidate> &Candidates, uint64_t TotalCount) {
-  if (!ICPEnableVTableCmp || Candidates.empty())
+  if (!EnableVTableProfileUse || Candidates.empty())
     return false;
   uint64_t RemainingVTableCount = TotalCount;
   for (size_t I = 0; I < Candidates.size(); I++) {
@@ -779,17 +823,16 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     for (auto &[GUID, Count] : Candidate.VTableGUIDAndCounts)
       VTableSumCount += Count;
 
-    if (VTableSumCount < Candidate.Count * ICPVTableCountPercentage)
+    if (VTableSumCount < Candidate.Count * ICPVTablePercentageThreshold)
       return false;
 
     RemainingVTableCount -= Candidate.Count;
 
-    int NumAdditionalVTable = 0;
+    int MaxNumVTable = 1;
     if (I == Candidates.size() - 1)
-      NumAdditionalVTable = ICPNumAdditionalVTableLast;
+      MaxNumVTable = ICPMaxNumVTableLastCandidate;
 
-    int ActualNumAdditionalInst = Candidate.AddressPoints.size() - 1;
-    if (ActualNumAdditionalInst > NumAdditionalVTable) {
+    if ((int)Candidate.AddressPoints.size() > MaxNumVTable) {
       return false;
     }
   }
@@ -810,45 +853,6 @@ computeVirtualCallSiteTypeInfoMap(Module &M, ModuleAnalysisManager &MAM,
     return FAM.getResult<DominatorTreeAnalysis>(F);
   };
 
-  auto compute = [&](Function *Func) {
-    if (!Func || Func->use_empty())
-      return;
-    // Iterate all type.test calls and find all indirect calls.
-    // TODO: Add llvm.public.type.test
-    for (Use &U : llvm::make_early_inc_range(Func->uses())) {
-      auto *CI = dyn_cast<CallInst>(U.getUser());
-      if (!CI)
-        continue;
-      auto *TypeMDVal = cast<MetadataAsValue>(CI->getArgOperand(1));
-      if (!TypeMDVal)
-        continue;
-      auto *CompatibleTypeId = dyn_cast<MDString>(TypeMDVal->getMetadata());
-      if (!CompatibleTypeId)
-        continue;
-
-      // Find out all devirtualizable call sites given a llvm.type.test
-      // intrinsic call.
-      SmallVector<DevirtCallSite, 1> DevirtCalls;
-      SmallVector<CallInst *, 1> Assumes;
-      auto &DT = LookupDomTree(*CI->getFunction());
-      findDevirtualizableCallsForTypeTest(DevirtCalls, Assumes, CI, DT);
-
-      // type-id, offset from the address point
-      // combined with type metadata to compute function offset
-      for (auto &DevirtCall : DevirtCalls) {
-        CallBase &CB = DevirtCall.CB;
-        // Given an indirect call, try find the instruction which loads a
-        // pointer to virtual table.
-        Instruction *VTablePtr =
-            PGOIndirectCallVisitor::tryGetVTableInstruction(&CB);
-        if (!VTablePtr)
-          continue;
-        VirtualCSInfo[&CB] = {DevirtCall.Offset, VTablePtr,
-                              CompatibleTypeId->getString()};
-      }
-    }
-  };
-
   // Right now only llvm.type.test is used to find out virtual call sites.
   // With ThinLTO and whole-program-devirtualization, llvm.type.test and
   // llvm.public.type.test are emitted, and llvm.public.type.test is either
@@ -859,12 +863,39 @@ computeVirtualCallSiteTypeInfoMap(Module &M, ModuleAnalysisManager &MAM,
   // that case.
   Function *TypeTestFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+  if (!TypeTestFunc || TypeTestFunc->use_empty())
+    return;
+  // Iterate all type.test calls and find all indirect calls.
+  for (Use &U : llvm::make_early_inc_range(TypeTestFunc->uses())) {
+    auto *CI = dyn_cast<CallInst>(U.getUser());
+    if (!CI)
+      continue;
+    auto *TypeMDVal = cast<MetadataAsValue>(CI->getArgOperand(1));
+    if (!TypeMDVal)
+      continue;
+    auto *CompatibleTypeId = dyn_cast<MDString>(TypeMDVal->getMetadata());
+    if (!CompatibleTypeId)
+      continue;
 
-  compute(TypeTestFunc);
+    // Find out all devirtualizable call sites given a llvm.type.test
+    // intrinsic call.
+    SmallVector<DevirtCallSite, 1> DevirtCalls;
+    SmallVector<CallInst *, 1> Assumes;
+    auto &DT = LookupDomTree(*CI->getFunction());
+    findDevirtualizableCallsForTypeTest(DevirtCalls, Assumes, CI, DT);
 
-  Function *PublicTypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
-  compute(PublicTypeTestFunc);
+    for (auto &DevirtCall : DevirtCalls) {
+      CallBase &CB = DevirtCall.CB;
+      // Given an indirect call, try find the instruction which loads a
+      // pointer to virtual table.
+      Instruction *VTablePtr =
+          PGOIndirectCallVisitor::tryGetVTableInstruction(&CB);
+      if (!VTablePtr)
+        continue;
+      VirtualCSInfo[&CB] = {DevirtCall.Offset, VTablePtr,
+                            CompatibleTypeId->getString()};
+    }
+  }
 }
 
 // A wrapper function that does the actual work.
@@ -883,11 +914,13 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
 
   computeVirtualCallSiteTypeInfoMap(M, MAM, VirtualCSInfo);
 
-  // This map records states across functions in an LLVM IR module.
-  // IndirectCallPromoter processes one
-  // function at a time and updates this map with new entries the first time
-  // the entry is needed in the module; the subsequent functions could re-use
-  // map entries inserted when processing prior functions.
+  // VTableAddressPointOffsetVal stores the vtable address points. The vtable
+  // address point of a given <vtable, address point offset> is static (doesn't
+  // change after being computed once).
+  // IndirectCallPromoter::getOrCreateVTableAddressPointVar creates the map
+  // entry the first time a <vtable, offset> pair is seen, as
+  // promoteIndirectCalls processes an IR module and calls IndirectCallPromoter
+  // repeatedly on each function.
   VTableAddressPointOffsetValMap VTableAddressPointOffsetVal;
 
   for (auto &F : M) {
