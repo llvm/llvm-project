@@ -34,10 +34,18 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> X(getTheLoongArch32Target());
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
+  initializeLoongArchDeadRegisterDefinitionsPass(*PR);
   initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
 }
+
+static cl::opt<bool> EnableLoongArchDeadRegisterElimination(
+    "loongarch-enable-dead-defs", cl::Hidden,
+    cl::desc("Enable the pass that removes dead"
+             " definitons and replaces stores to"
+             " them with stores to r0"),
+    cl::init(true));
 
 static cl::opt<bool>
     EnableLoopDataPrefetch("loongarch-enable-loop-data-prefetch", cl::Hidden,
@@ -148,6 +156,8 @@ public:
   void addPreEmitPass2() override;
   void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
+  bool addRegAssignAndRewriteFast() override;
+  bool addRegAssignAndRewriteOptimized() override;
 };
 } // end namespace
 
@@ -199,4 +209,18 @@ void LoongArchPassConfig::addMachineSSAOptimization() {
 
 void LoongArchPassConfig::addPreRegAlloc() {
   addPass(createLoongArchPreRAExpandPseudoPass());
+}
+
+bool LoongArchPassConfig::addRegAssignAndRewriteFast() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None &&
+      EnableLoongArchDeadRegisterElimination)
+    addPass(createLoongArchDeadRegisterDefinitionsPass());
+  return TargetPassConfig::addRegAssignAndRewriteFast();
+}
+
+bool LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None &&
+      EnableLoongArchDeadRegisterElimination)
+    addPass(createLoongArchDeadRegisterDefinitionsPass());
+  return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
