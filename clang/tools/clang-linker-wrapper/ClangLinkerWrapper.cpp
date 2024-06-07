@@ -1211,27 +1211,10 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
 
   // Set the subarchitecture and target triple for this compilation.
   const OptTable &Tbl = getOptTable();
-  StringRef Triple = Input.front().getBinary()->getTriple();
-  std::string AMDGPUFeatures;
-
-  if (llvm::Triple(Triple).isAMDGPU()) {
-    // Extract Features from the binary and append them in arch
-    auto Features = getTargetFeatures(Input);
-    for (auto feature : Features) {
-      AMDGPUFeatures.append(feature.substr(1, feature.size()) +
-                            feature.substr(0, 1) + ":");
-    }
-  }
+  DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_arch_EQ),
+                   Args.MakeArgString(Input.front().getBinary()->getArch()));
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_triple_EQ),
-                   Args.MakeArgString(Triple));
-  if (llvm::Triple(Triple).isAMDGPU() && !AMDGPUFeatures.empty())
-    DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_arch_EQ),
-                     Args.MakeArgString(
-                         Input.front().getBinary()->getArch() + ":" +
-                         AMDGPUFeatures.substr(0, AMDGPUFeatures.size() - 1)));
-  else
-    DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_arch_EQ),
-                     Args.MakeArgString(Input.front().getBinary()->getArch()));
+                   Args.MakeArgString(Input.front().getBinary()->getTriple()));
 
   // If every input file is bitcode we have whole program visibility as we
   // do only support static linking with bitcode.

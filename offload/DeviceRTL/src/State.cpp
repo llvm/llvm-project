@@ -267,10 +267,7 @@ void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
 }
 
 state::TeamStateTy SHARED(ompx::state::TeamState);
-
-__attribute__((loader_uninitialized))
-state::ThreadStateTy *ompx::state::ThreadStates[mapping::MaxThreadsPerTeam];
-#pragma omp allocate(ompx::state::ThreadStates) allocator(omp_pteam_mem_alloc)
+state::ThreadStateTy **SHARED(ompx::state::ThreadStates);
 
 namespace {
 
@@ -294,11 +291,10 @@ void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
   SharedMemorySmartStack.init(IsSPMD);
   if (mapping::isInitialThreadInLevel0(IsSPMD)) {
     TeamState.init(IsSPMD);
+    ThreadStates = nullptr;
     KernelEnvironmentPtr = &KernelEnvironment;
     KernelLaunchEnvironmentPtr = &KernelLaunchEnvironment;
   }
-
-  ThreadStates[mapping::getThreadIdInBlock()] = nullptr;
 }
 
 KernelEnvironmentTy &state::getKernelEnvironment() {
@@ -312,11 +308,12 @@ KernelLaunchEnvironmentTy &state::getKernelLaunchEnvironment() {
 void state::enterDataEnvironment(IdentTy *Ident) {
   ASSERT(config::mayUseThreadStates(),
          "Thread state modified while explicitly disabled!");
+  if (!config::mayUseThreadStates())
+    return;
 
   unsigned TId = mapping::getThreadIdInBlock();
   ThreadStateTy *NewThreadState = static_cast<ThreadStateTy *>(
       memory::allocGlobal(sizeof(ThreadStateTy), "ThreadStates alloc"));
-#ifdef FIXME // breaks snap_red nested_par3 nest_call_par2
   uintptr_t *ThreadStatesBitsPtr = reinterpret_cast<uintptr_t *>(&ThreadStates);
   if (!atomic::load(ThreadStatesBitsPtr, atomic::seq_cst)) {
     uint32_t Bytes =
@@ -332,7 +329,6 @@ void state::enterDataEnvironment(IdentTy *Ident) {
     ASSERT(atomic::load(ThreadStatesBitsPtr, atomic::seq_cst),
            "Expected valid thread states bit!");
   }
- #endif
   NewThreadState->init(ThreadStates[TId]);
   TeamState.HasThreadState = true;
   ThreadStates[TId] = NewThreadState;
@@ -347,6 +343,9 @@ void state::exitDataEnvironment() {
 }
 
 void state::resetStateForThread(uint32_t TId) {
+  if (!config::mayUseThreadStates())
+    return;
+
   if (OMP_LIKELY(!TeamState.HasThreadState || !ThreadStates[TId]))
     return;
 

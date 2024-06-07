@@ -1,4 +1,3 @@
-// XFAIL: amdgcn-amd-amdhsa
 // RUN: %libomptarget-compile-run-and-check-generic
 // RUN: %libomptarget-compileopt-run-and-check-generic
 

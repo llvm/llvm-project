@@ -402,8 +402,8 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   StringRef GPUArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
   assert(!GPUArch.empty() && "Must have an explicit GPU arch.");
 
-  CC1Args.push_back("-target-cpu");
-  CC1Args.push_back(DriverArgs.MakeArgStringRef(GPUArch));
+  assert(DeviceOffloadingKind == Action::OFK_OpenMP &&
+         "Only OpenMP offloading kinds are supported.");
 
   // Extract all the -m options
   std::vector<llvm::StringRef> Features;
@@ -435,7 +435,10 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
                          options::OPT_fno_gpu_allow_device_init, false))
     CC1Args.push_back("-fgpu-allow-device-init");
 
-  CC1Args.push_back("-fcuda-allow-variadic-functions");
+  // TODO: check if flag is needed for the opaque linker case
+  const char *UseLinkerWrapper = std::getenv("CLANG_USE_LINKER_WRAPPER");
+  if (!UseLinkerWrapper || atoi(UseLinkerWrapper) == 0)
+    CC1Args.push_back("-fcuda-allow-variadic-functions");
 
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
