@@ -12,11 +12,6 @@
 
 #ifndef OMPT_SUPPORT
 
-#include "Shared/Debug.h"
-#include "omp-tools.h"
-#include "private.h"
-
-#include "llvm/Support/DynamicLibrary.h"
 extern "C" {
 /// Dummy definition when OMPT is disabled
 void ompt_libomptarget_connect() {}

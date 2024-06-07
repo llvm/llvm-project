@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpenMP/OMPT/Interface.h"
+#include "OmptCommonDefs.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 #include "private.h"

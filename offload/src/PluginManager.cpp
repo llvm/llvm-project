@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginManager.h"
+#include "OmptCommonDefs.h"
 #include "OmptTracing.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "Shared/Debug.h"
@@ -260,7 +261,7 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
 
   // Flush in-process OMPT trace records and shut down helper threads
   // before unloading the library.
-  OMPT_TRACING_IF_ENABLED(llvm::omp::target::ompt::TraceRecordManager
+  OMPT_IF_TRACING_ENABLED(llvm::omp::target::ompt::TraceRecordManager
                               .flushAndShutdownHelperThreads(););
 
   PM->RTLsMtx.lock();

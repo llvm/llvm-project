@@ -21,6 +21,8 @@
 #include <unistd.h>
 #include <unordered_map>
 
+#include "OmptCommonDefs.h"
+
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/Utils.h"
@@ -3121,7 +3123,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    if (ompt::TracingActive || OMPX_ForceSyncRegions ||
+    if (OMPT_IF_BUILT(ompt::TracingActive ||) OMPX_ForceSyncRegions ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
@@ -3194,7 +3196,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    if (ompt::TracingActive || OMPX_ForceSyncRegions ||
+    if (OMPT_IF_BUILT(ompt::TracingActive ||) OMPX_ForceSyncRegions ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
@@ -3249,7 +3251,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    if (ompt::TracingActive || OMPX_ForceSyncRegions ||
+    if (OMPT_IF_BUILT(ompt::TracingActive ||) OMPX_ForceSyncRegions ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef OMPT_SUPPORT
+
 #include "Shared/Debug.h"
 #include "OmptTracing.h"
 #include "OmptTracingBuffer.h"
@@ -742,3 +744,4 @@ OmptTracingBufferMgr::OmptTracingBufferMgr() {
   // no need to hold locks for init() since object is getting constructed here
   init();
 }
+#endif

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OmptCommonDefs.h"
 #include "PluginManager.h"
 #include "device.h"
 #include "omptarget.h"
