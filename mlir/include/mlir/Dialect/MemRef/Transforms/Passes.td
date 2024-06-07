@@ -283,6 +283,9 @@ def MergeAlloc : Pass<"merge-alloc", "func::FuncOp">  {
        /*default=*/"false",
        "Don't consider the cache locality when reusing the buffers. "
        "This option may result in smaller total memory usage.">,
+    Option<"optionAlignment", "alignment", "int64_t",
+       /*default=*/"64",
+       "The alignment of the merged allocations">,
   ];
   let dependentDialects = ["memref::MemRefDialect", "arith::ArithDialect"];
   let constructor = "mlir::memref::createMergeAllocPass()";

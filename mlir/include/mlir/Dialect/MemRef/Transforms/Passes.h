@@ -120,8 +120,9 @@ using MemoryMergeMutatorFunc = std::function<LogicalResult(
     const MergeAllocationOptions &)>;
 
 struct MergeAllocationOptions {
-  bool checkOnly;
-  bool noLocalityFirst;
+  bool checkOnly = false;
+  bool noLocalityFirst = false;
+  int64_t alignment = 64;
   TraceCollectorFunc tracer;
   MemoryPlannerFunc planner;
   MemoryMergeMutatorFunc mutator;

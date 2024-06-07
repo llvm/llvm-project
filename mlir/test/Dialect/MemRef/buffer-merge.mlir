@@ -63,11 +63,11 @@ func.func @basic() -> memref<8x64xf32> {
 // CHECK-LABEL: @withloop
 func.func @withloop() {
   // CHECK-DAG: %[[BASE2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<6144xi8>
-  // CHECK-DAG: %[[C2048:.*]] = arith.constant 2048 : index
-  // CHECK-DAG: %[[F:.*]] = memref.view %[[BASE2]][%[[C2048]]][] : memref<6144xi8> to memref<8x64xf32>
-  %f = memref.alloc() : memref<8x64xf32>
   // CHECK-DAG: %[[C033:.*]] = arith.constant 0 : index
-  // CHECK-DAG: %[[G:.*]] = memref.view %[[BASE2]][%[[C033]]][] : memref<6144xi8> to memref<8x64xf32>
+  // CHECK-DAG: %[[F:.*]] = memref.view %[[BASE2]][%[[C033]]][] : memref<6144xi8> to memref<8x64xf32>
+  %f = memref.alloc() : memref<8x64xf32>
+  // CHECK-DAG: %[[C2048:.*]] = arith.constant 2048 : index
+  // CHECK-DAG: %[[G:.*]] = memref.view %[[BASE2]][%[[C2048]]][] : memref<6144xi8> to memref<8x64xf32>
   %g = memref.alloc() : memref<8x64xf32>
 
   %c0 = arith.constant 0 : index

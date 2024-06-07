@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MemRef/Transforms/MergeAlloc.h"
+#include "mlir/Dialect/MemRef/Transforms/MergeAllocTickBased.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/StaticMemoryPlanning.h"
 
@@ -60,17 +60,21 @@ class MergeAllocPass : public memref::impl::MergeAllocBase<MergeAllocPass> {
     if (!options) {
       opt.checkOnly = optionCheck;
       opt.noLocalityFirst = optionNoLocality;
-      opt.tracer = memref::tickBasedCollectMemoryTrace;
+      opt.alignment = optionAlignment;
+      opt.tracer = memref::TickCollecter();
       opt.planner = memref::tickBasedPlanMemory;
-      opt.mutator = memref::tickBasedMutateAllocations;
+      opt.mutator = memref::MergeAllocDefaultMutator();
     } else {
       opt = options.value();
       if (!opt.tracer)
-        opt.tracer = memref::tickBasedCollectMemoryTrace;
+        opt.tracer = memref::TickCollecter();
       if (!opt.planner)
         opt.planner = memref::tickBasedPlanMemory;
       if (!opt.mutator)
-        opt.mutator = memref::tickBasedMutateAllocations;
+        opt.mutator = memref::MergeAllocDefaultMutator();
+    }
+    if (opt.alignment <= 0) {
+      signalPassFailure();
     }
     auto op = getOperation();
     if (failed(memref::passDriver(op, opt))) {
