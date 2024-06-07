@@ -2947,10 +2947,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       }
     }
   }
+
   // We do not handle pointer-vector geps here.
   if (GEPType->isVectorTy())
     return nullptr;
 
+#if 0//<<<<<<< HEAD
   if (GEP.getNumIndices() == 1) {
     // We can only preserve inbounds if the original gep is inbounds, the add
     // is nsw, and the add operands are non-negative.
@@ -3002,6 +3004,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
+#endif//>>>>>>> parent of e13bed4c5f35 ([PATCH] [llvm] [InstCombine] Canonicalise ADD+GEP)
   if (!GEP.isInBounds()) {
     unsigned IdxWidth =
         DL.getIndexSizeInBits(PtrOp->getType()->getPointerAddressSpace());

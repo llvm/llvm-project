@@ -1123,8 +1123,8 @@ define i64 @test58(ptr %foo, i64 %i, i64 %j) {
 
 define i64 @test59(ptr %foo, i64 %i) {
 ; CHECK-LABEL: @test59(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 [[I:%.*]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4200
+; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nsw i64 [[I:%.*]], 4200
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 [[GEP1_OFFS]]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO]], i64 4200
 ; CHECK-NEXT:    store ptr [[GEP1]], ptr @dummy_global1, align 8
 ; CHECK-NEXT:    store ptr [[GEP2]], ptr @dummy_global2, align 8
