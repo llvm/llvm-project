@@ -76,14 +76,6 @@ Revert: Breaks check-clang test 'clang/test/Modules/pr60085.cppm'
 99873b35da7e [NFC] [AST] Introduce Decl::isInAnotherModuleUnit and Decl::shouldEmitInExternalSource
 contact : mhalk (Michael Halkenhaeuser)
 ---
-greaks aomp build of openmp
-688ffd0b405] Revert "[OpenMP][NFC] Fix warning for OpenMP standalone build (#93463)"
-contact: ethan stewart
----
-breaks targetid_multi_image
-374f6554c3e4 [OpenMP] Fix passing target id features to AMDGPU offloading (#94765)
-contact: ronl
----
 revert for now , need lldb person
 6d01a350ce9 [lldb] Encode operands and arity in Dwarf.def and use them in LLDB. (#94679)
 contact: scott
