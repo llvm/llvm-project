@@ -914,6 +914,7 @@ Bug Fixes to C++ Support
 - Clang now diagnoses explicit specializations with storage class specifiers in all contexts.
 - Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
   forward-declared class. (#GH93512).
+- Clang now transforms qualifier of template name. (#91677).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
