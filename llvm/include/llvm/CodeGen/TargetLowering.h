@@ -97,7 +97,7 @@ class Value;
 
 namespace Sched {
 
-enum Preference {
+enum Preference : uint8_t {
   None,        // No preference
   Source,      // Follow source order.
   RegPressure, // Scheduling for lowest register pressure.
