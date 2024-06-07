@@ -350,8 +350,6 @@ void test_partial_elements_read(void) {
   if (fp) {
     // 3*5: 15 bytes read; which is not exactly 4 integers, thus we invalidate the whole buffer.
     if (5 == fread(buffer + 1, 3, 5, fp)) {
-      void clang_analyzer_printState(void);
-      clang_analyzer_printState();
       clang_analyzer_dump(buffer[0]); // expected-warning{{1 S32b}}
       clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}}
       clang_analyzer_dump(buffer[2]); // expected-warning{{conj_}}
