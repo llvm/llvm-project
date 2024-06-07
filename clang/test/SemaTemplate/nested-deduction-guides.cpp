@@ -63,13 +63,13 @@ template <class T, class U> struct Outer {
     Inner(trouble_1, V v, Trouble trouble) {}
     Inner(trouble_2, V v, Trouble2<V> trouble) {}
     Inner(trouble_3, V v, Trouble3<V> trouble) {}
-    Inner(trouble_4, V v, Unrelated<U, T>::template Trouble2<V> trouble) {}
-    Inner(trouble_5, V v, Unrelated<U, T>::Trouble trouble) {}
-    Inner(trouble_6, V v, Unrelated<V, T>::Trouble trouble) {}
-    Inner(trouble_7, V v, Paranoid<V>::Trouble4 trouble) {}
-    Inner(trouble_8, V v, Paranoid<V>::template Trouble5<V> trouble) {}
+    Inner(trouble_4, V v, typename Unrelated<U, T>::template Trouble2<V> trouble) {}
+    Inner(trouble_5, V v, typename Unrelated<U, T>::Trouble trouble) {}
+    Inner(trouble_6, V v, typename Unrelated<V, T>::Trouble trouble) {}
+    Inner(trouble_7, V v, typename Paranoid<V>::Trouble4 trouble) {}
+    Inner(trouble_8, V v, typename Paranoid<V>::template Trouble5<V> trouble) {}
     template <class W>
-    Inner(trouble_9, V v, W w, Paranoid<V>::template Trouble5<W> trouble) {}
+    Inner(trouble_9, V v, W w, typename Paranoid<V>::template Trouble5<W> trouble) {}
   };
 };
 
