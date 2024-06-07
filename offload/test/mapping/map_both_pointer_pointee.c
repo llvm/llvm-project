@@ -43,8 +43,8 @@ int main() {
   a[1] = 111;
   int *p = &a[0];
   // CHECK: 111
-  printf("%d %p %p\n", p[1], p, &p);     // 111 hst_p1 hst_p2
-#pragma omp target data map(to:p[1:3]) map(p)
+  printf("%d %p %p\n", p[1], p, &p); // 111 hst_p1 hst_p2
+#pragma omp target data map(to : p[1 : 3]) map(p)
 #pragma omp target data use_device_addr(p)
   {
 #pragma omp target has_device_addr(p)
@@ -57,6 +57,6 @@ int main() {
     }
   }
   // CHECK: 111
-  printf("%d %p %p\n", p[1], p, &p);     // 111 hst_p1 hst_p2
+  printf("%d %p %p\n", p[1], p, &p); // 111 hst_p1 hst_p2
   return 0;
 }

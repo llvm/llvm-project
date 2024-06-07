@@ -8031,11 +8031,11 @@ private:
         for (const MapInfo &L : M) {
           const Expr *E = L.VarRef;
           if (VD && E && VD->getType()->isAnyPointerType() &&
-            isa<DeclRefExpr>(E))
+              isa<DeclRefExpr>(E))
             HasMapBasePtr = true;
           if (VD && E && VD->getType()->isAnyPointerType() &&
               (isa<ArraySectionExpr>(E) || isa<ArraySubscriptExpr>(E)))
-             HasMapArraySec = true;
+            HasMapArraySec = true;
         }
       }
       for (const auto &M : Data.second) {
