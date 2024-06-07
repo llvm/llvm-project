@@ -2376,7 +2376,13 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
       hasFloatVersion(M, Name))
     Ret = optimizeUnaryDoubleFP(CI, B, TLI, true);
 
-  const bool UseIntrinsic = CI->doesNotAccessMemory();
+  // If we have an llvm.exp2 intrinsic, emit the llvm.ldexp intrinsic. If we
+  // have the libcall, emit the libcall.
+  //
+  // TODO: In principle we should be able to just always use the intrinsic for
+  // any doesNotAccessMemory callsite.
+
+  const bool UseIntrinsic = Callee->isIntrinsic();
   // Bail out for vectors because the code below only expects scalars.
   Type *Ty = CI->getType();
   if (!UseIntrinsic && Ty->isVectorTy())
