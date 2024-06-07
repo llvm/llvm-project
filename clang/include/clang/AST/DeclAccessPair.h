@@ -19,6 +19,7 @@
 
 #include "clang/Basic/Specifiers.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Endian.h"
 
 namespace clang {
 
@@ -31,9 +32,9 @@ class DeclAccessPair {
   /// 61 bit to store the pointer to a NamedDecl or the DeclID to
   /// a NamedDecl. If the 3rd bit is set, storing the DeclID, otherwise
   /// storing the pointer.
-  //
-  // we'd use llvm::PointerUnion, but it isn't trivial
-  uint64_t Ptr;
+  llvm::support::detail::packed_endian_specific_integral<
+        uint64_t, llvm::endianness::native,
+        alignof(void *)> Ptr;
 
   enum { ASMask = 0x3, Mask = 0x7 };
 
@@ -76,6 +77,12 @@ public:
   operator NamedDecl*() const { return getDecl(); }
   NamedDecl *operator->() const { return getDecl(); }
 };
+
+// Make sure DeclAccessPair is pointer-aligned types.
+static_assert(alignof(DeclAccessPair) == alignof(void *));
+// Make sure DeclAccessPair is still POD.
+static_assert(std::is_standard_layout_v<DeclAccessPair> &&
+              std::is_trivial_v<DeclAccessPair>);
 }
 
 #endif
