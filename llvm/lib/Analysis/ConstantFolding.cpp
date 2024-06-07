@@ -1669,9 +1669,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "floor" || Name == "floorf" ||
            Name == "fmod" || Name == "fmodf";
   case 'l':
-    return Name == "log" || Name == "logf" ||
-           Name == "log2" || Name == "log2f" ||
-           Name == "log10" || Name == "log10f";
+    return Name == "log" || Name == "logf" || Name == "log2" ||
+           Name == "log2f" || Name == "log10" || Name == "log10f" ||
+           Name == "logl";
   case 'n':
     return Name == "nearbyint" || Name == "nearbyintf";
   case 'p':
@@ -2085,15 +2085,19 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (IntrinsicID == Intrinsic::canonicalize)
       return constantFoldCanonicalize(Ty, Call, U);
 
+      // Try to handle special fp128 cases before bailing
 #if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
     if (Ty->isFP128Ty()) {
-      switch (IntrinsicID) {
-      default:
-        return nullptr;
-      case Intrinsic::log:
-        return ConstantFP::get(Ty, logf128(Op->getValueAPF().convertToQuad()));
-      }
+      const APFloat &Fp128APF = Op->getValueAPF();
+      if (IntrinsicID == Intrinsic::log)
+        return ConstantFP::get(Ty, logf128(Fp128APF.convertToQuad()));
     }
+
+    LibFunc Fp128Func = NotLibFunc;
+    if (Ty->isFP128Ty() && TLI->getLibFunc(Name, Fp128Func) &&
+        TLI->has(Fp128Func) && Fp128Func == LibFunc_logl &&
+        !Op->getValueAPF().isNegative() && !Op->getValueAPF().isZero())
+      return ConstantFP::get(Ty, logf128(Op->getValueAPF().convertToQuad()));
 #endif
 
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
@@ -2356,6 +2360,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);
       break;
+    case LibFunc_logl:
+      return nullptr;
     case LibFunc_nearbyint:
     case LibFunc_nearbyintf:
     case LibFunc_rint:
