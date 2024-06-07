@@ -1796,9 +1796,11 @@ def : BitConvert <v5i32, v5f32, VReg_160>;
 def : BitConvert <v5f32, v5i32, VReg_160>;
 
 def : BitConvert <v5i32, v10f16, SReg_160>;
+def : BitConvert <v5i32, v10bf16, SReg_160>;
 def : BitConvert <v5f32, v10i16, SReg_160>;
 def : BitConvert <v10i16, v5f32, VReg_160>;
 def : BitConvert <v10f16, v5i32, VReg_160>;
+def : BitConvert <v10bf16, v5i32, VReg_160>;
 
 // 192-bit bitcast
 def : BitConvert <v6i32, v6f32, SReg_192>;
@@ -1890,9 +1892,11 @@ def : BitConvert <v9i32, v9f32, VReg_288>;
 def : BitConvert <v9f32, v9i32, VReg_288>;
 
 def : BitConvert <v9i32, v18f16, SReg_288>;
+def : BitConvert <v9i32, v18bf16, SReg_288>;
 def : BitConvert <v9f32, v18i16, SReg_288>;
 def : BitConvert <v18i16, v9f32, VReg_288>;
 def : BitConvert <v18f16, v9i32, VReg_288>;
+def : BitConvert <v18bf16, v9i32, VReg_288>;
 
 // 320-bit bitcast
 def : BitConvert <v10i32, v10f32, SReg_320>;

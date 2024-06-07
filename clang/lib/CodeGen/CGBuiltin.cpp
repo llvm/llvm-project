@@ -616,8 +616,7 @@ static Value *emitTernaryBuiltin(CodeGenFunction &CGF,
 }
 
 // Emit an intrinsic that has 4 operands of the same type as its result.
-static Value *emitQuaternaryBuiltin(CodeGenFunction &CGF,
-                                    const CallExpr *E,
+static Value *emitQuaternaryBuiltin(CodeGenFunction &CGF, const CallExpr *E,
                                     unsigned IntrinsicID) {
   llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
   llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
@@ -625,7 +624,7 @@ static Value *emitQuaternaryBuiltin(CodeGenFunction &CGF,
   llvm::Value *Src3 = CGF.EmitScalarExpr(E->getArg(3));
 
   Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-  return CGF.Builder.CreateCall(F, { Src0, Src1, Src2, Src3 });
+  return CGF.Builder.CreateCall(F, {Src0, Src1, Src2, Src3});
 }
 
 // Emit an intrinsic that has 1 float or double operand, and 1 integer.
@@ -19363,24 +19362,183 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Builder.CreateStore(Dest1, Dest1Ptr);
     return Dest0;
   }
-
-  case AMDGPU::BI__builtin_amdgcn_wconv_1x1_4x2:
-  case AMDGPU::BI__builtin_amdgcn_wconv_1x1_4x4:
-  case AMDGPU::BI__builtin_amdgcn_wconv_1x1_8x4:
-  case AMDGPU::BI__builtin_amdgcn_wconv_3x3_4x2:
-  case AMDGPU::BI__builtin_amdgcn_wconv_3x3_4x4:
-  case AMDGPU::BI__builtin_amdgcn_wconv_3x3_8x4: {
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_1x1_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_1x1_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_3x3_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_3x3_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_1x1_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_1x1_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_3x3_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_3x3_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_f32i32_iu4_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_f32i32_iu4_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_f32i32_iu8_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_f32i32_iu8_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_1x1_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_1x1_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_3x3_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_3x3_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_1x1_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_1x1_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_3x3_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_3x3_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_1x1_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_1x1_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_3x3_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_3x3_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_1x1_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_1x1_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_3x3_4x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_3x3_8x4:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_bf16_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_bf16_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_bf8_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_bf8_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_fp16_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_fp16_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_fp8_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_fp8_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_iu4_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_iu4_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_iu8_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_fp32_iu8_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_i32_iu4_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_i32_iu4_3x3_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_i32_iu8_1x1_4x2:
+  case AMDGPU::BI__builtin_amdgcn_wconv_i32_iu8_3x3_4x2: {
     unsigned IntrinsicID;
     switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_wconv_1x1_4x2:
-    case AMDGPU::BI__builtin_amdgcn_wconv_1x1_4x4:
-    case AMDGPU::BI__builtin_amdgcn_wconv_1x1_8x4:
-      IntrinsicID = Intrinsic::amdgcn_wconv_1x1;
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_1x1_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_1x1_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_1x1_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_bf16_bf16_1x1;
       break;
-    case AMDGPU::BI__builtin_amdgcn_wconv_3x3_4x2:
-    case AMDGPU::BI__builtin_amdgcn_wconv_3x3_4x4:
-    case AMDGPU::BI__builtin_amdgcn_wconv_3x3_8x4:
-      IntrinsicID = Intrinsic::amdgcn_wconv_3x3;
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_3x3_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_3x3_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf16_3x3_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_bf16_bf16_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_1x1_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_1x1_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_1x1_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_bf16_bf8_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_3x3_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_3x3_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_bf16_bf8_3x3_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_bf16_bf8_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_f32i32_iu4_1x1_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_f32i32_iu4_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_f32i32_iu4_3x3_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_f32i32_iu4_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_f32i32_iu8_1x1_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_f32i32_iu8_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_f32i32_iu8_3x3_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_f32i32_iu8_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_1x1_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_1x1_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_1x1_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp16_fp16_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_3x3_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_3x3_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp16_3x3_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp16_fp16_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_1x1_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_1x1_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_1x1_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp16_fp8_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_3x3_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_3x3_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_fp8_3x3_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp16_fp8_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_1x1_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_1x1_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_1x1_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp16_iu4_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_3x3_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_3x3_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu4_3x3_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp16_iu4_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_1x1_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_1x1_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_1x1_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp16_iu8_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_3x3_4x2:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_3x3_4x4:
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp16_iu8_3x3_8x4:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp16_iu8_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_bf16_1x1_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_bf16_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_bf16_3x3_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_bf16_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_bf8_1x1_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_bf8_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_bf8_3x3_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_bf8_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_fp16_1x1_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_fp16_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_fp16_3x3_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_fp16_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_fp8_1x1_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_fp8_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_fp8_3x3_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_fp8_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_iu4_1x1_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_iu4_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_iu4_3x3_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_iu4_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_iu8_1x1_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_iu8_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_fp32_iu8_3x3_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_fp32_iu8_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_i32_iu4_1x1_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_i32_iu4_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_i32_iu4_3x3_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_i32_iu4_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_i32_iu8_1x1_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_i32_iu8_1x1;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wconv_i32_iu8_3x3_4x2:
+      IntrinsicID = Intrinsic::amdgcn_wconv_i32_iu8_3x3;
       break;
     }
 

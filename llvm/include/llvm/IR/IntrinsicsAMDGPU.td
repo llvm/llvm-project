@@ -759,7 +759,7 @@ class AMDGPUCvtScaleF16ToFP4TiedInputIntrinsic<LLVMType SrcTy, string name> : De
   [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
-class AMDGPUCvtScaleF32SRToFP4TiedInputIntrinsic<LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
+class AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
   [llvm_i32_ty],
   [llvm_i32_ty,   // old_vdst
    Src0Ty,        // src0
@@ -821,13 +821,24 @@ def int_amdgcn_cvt_scalef32_pk_bf16_fp8   : AMDGPUCvtScale_pk_FromFP8BF8Intrinsi
 def int_amdgcn_cvt_scalef32_pk_fp4_f16 : AMDGPUCvtScaleF16ToFP4TiedInputIntrinsic<llvm_v2f16_ty, "cvt_scalef32_pk_fp4_f16">;
 def int_amdgcn_cvt_scalef32_pk_fp4_bf16: AMDGPUCvtScaleF16ToFP4TiedInputIntrinsic<llvm_v2bf16_ty, "cvt_scalef32_pk_fp4_bf16">;
 
-def int_amdgcn_cvt_scalef32_sr_pk_fp4_f16: AMDGPUCvtScaleF32SRToFP4TiedInputIntrinsic<llvm_v2f16_ty, "cvt_scalef32_sr_pk_fp4_f16">;
-def int_amdgcn_cvt_scalef32_sr_pk_fp4_bf16: AMDGPUCvtScaleF32SRToFP4TiedInputIntrinsic<llvm_v2bf16_ty, "cvt_scalef32_sr_pk_fp4_bf16">;
-def int_amdgcn_cvt_scalef32_sr_pk_fp4_f32: AMDGPUCvtScaleF32SRToFP4TiedInputIntrinsic<llvm_v2f32_ty, "cvt_scalef32_sr_pk_fp4_f32">;
+def int_amdgcn_cvt_scalef32_sr_pk_fp4_f16: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<llvm_v2f16_ty, "cvt_scalef32_sr_pk_fp4_f16">;
+def int_amdgcn_cvt_scalef32_sr_pk_fp4_bf16: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<llvm_v2bf16_ty, "cvt_scalef32_sr_pk_fp4_bf16">;
+def int_amdgcn_cvt_scalef32_sr_pk_fp4_f32: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<llvm_v2f32_ty, "cvt_scalef32_sr_pk_fp4_f32">;
+def int_amdgcn_cvt_scalef32_sr_bf8_bf16: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<llvm_bfloat_ty, "cvt_scalef32_sr_bf8_bf16">;
+def int_amdgcn_cvt_scalef32_sr_bf8_f16: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<llvm_half_ty, "cvt_scalef32_sr_bf8_f16">;
+def int_amdgcn_cvt_scalef32_sr_bf8_f32: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<llvm_float_ty, "cvt_scalef32_sr_bf8_f32">;
+def int_amdgcn_cvt_scalef32_sr_fp8_bf16: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<llvm_bfloat_ty, "cvt_scalef32_sr_fp8_bf16">;
+def int_amdgcn_cvt_scalef32_sr_fp8_f16: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<llvm_half_ty, "cvt_scalef32_sr_fp8_f16">;
+def int_amdgcn_cvt_scalef32_sr_fp8_f32: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<llvm_float_ty, "cvt_scalef32_sr_fp8_f32">;
 
 def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
+
+def int_amdgcn_bitop3 :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
+                        [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
 
 } // TargetPrefix = "amdgcn"
 
@@ -3290,13 +3301,13 @@ class AMDGPUDiscard : DefaultAttrsIntrinsic<
 foreach size = ["b32", "b128", "b1024"] in
   def int_amdgcn_discard_#size : AMDGPUDiscard;
 
-def int_amdgcn_wconv_3x3 :
+class Conv3x3<LLVMType outTy, LLVMType weightsTensorTy, LLVMType accinTy> :
   DefaultAttrsIntrinsic<
-    [llvm_any_ty],      // %out
+    [outTy],            // %out
     [
-      llvm_any_ty,      // %accumulator
-      llvm_any_ty,      // %weights
-      llvm_any_ty,      // %tensor_col_center
+      accinTy,          // %accumulator
+      weightsTensorTy,  // %weights
+      weightsTensorTy,  // %tensor_col_center
       LLVMMatchType<3>, // %tensor_col_left
       LLVMMatchType<3>, // %tensor_col_right
       llvm_i32_ty,      // %aux_data
@@ -3305,13 +3316,13 @@ def int_amdgcn_wconv_3x3 :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>]
   >;
 
-def int_amdgcn_wconv_1x1 :
+class Conv1x1<LLVMType outTy, LLVMType weightsTensorTy, LLVMType accinTy> :
   DefaultAttrsIntrinsic<
-    [llvm_any_ty], // %out
+    [outTy], // %out
     [
-      llvm_any_ty,      // %accumulator
-      llvm_any_ty,      // %weights
-      llvm_any_ty,      // %tensor_0
+      accinTy,          // %accumulator
+      weightsTensorTy,  // %weights
+      weightsTensorTy,  // %tensor_0
       LLVMMatchType<3>, // %tensor_1
       LLVMMatchType<3>, // %tensor_2
       LLVMMatchType<3>, // %tensor_3
@@ -3320,6 +3331,30 @@ def int_amdgcn_wconv_1x1 :
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>]
   >;
+
+multiclass Conv<LLVMType outTy, LLVMType weightsTensorTy, LLVMType accinTy = outTy> {
+  def _1x1 : Conv1x1<outTy, weightsTensorTy, accinTy>;
+  def _3x3 : Conv3x3<outTy, weightsTensorTy, accinTy>;
+}
+
+defm int_amdgcn_wconv_fp16_fp16 : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_wconv_bf16_bf16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_wconv_fp16_fp8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_bf16_bf8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_fp16_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_fp16_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+
+defm int_amdgcn_wconv_fp32_fp16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_wconv_fp32_bf16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_wconv_fp32_fp8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_fp32_bf8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_fp32_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_fp32_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_i32_iu8: Conv<llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_i32_iu4: Conv<llvm_anyint_ty, llvm_anyint_ty>;
+
+defm int_amdgcn_wconv_f32i32_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_f32i32_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
@@ -3830,11 +3865,6 @@ def int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 :
   Intrinsic<[llvm_i64_ty], [local_ptr_ty, llvm_i64_ty],
             [IntrConvergent, IntrWillReturn, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
             "", [SDNPMemOperand]>;
-
-def int_amdgcn_bitop3 :
-  DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
-                        [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
 
 def int_amdgcn_s_monitor_sleep :
   ClangBuiltin<"__builtin_amdgcn_s_monitor_sleep">,

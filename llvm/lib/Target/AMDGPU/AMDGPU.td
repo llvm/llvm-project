@@ -89,6 +89,12 @@ def FeatureEnableFlatScratch : SubtargetFeature<"enable-flat-scratch",
   "Use scratch_* flat memory instructions to access scratch"
 >;
 
+def FeatureFlatGVSMode : SubtargetFeature<"flat-gvs-mode",
+  "FlatGVSMode",
+  "true",
+  "Have GVS addressing mode with flat_* instructions"
+>;
+
 def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
   "AddNoCarryInsts",
   "true",
@@ -1865,6 +1871,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
+   FeatureFlatGVSMode,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicDsPkAdd16Insts,
@@ -2323,6 +2330,9 @@ def HasFlatScratchSTMode : Predicate<"Subtarget->hasFlatScratchSTMode()">,
   AssemblerPredicate<(any_of FeatureGFX10_3Insts, FeatureGFX940Insts)>;
 def HasFlatScratchSVSMode : Predicate<"Subtarget->hasFlatScratchSVSMode()">,
   AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX11Insts)>;
+
+def HasFlatGVSMode : Predicate<"Subtarget->hasFlatGVSMode()">,
+  AssemblerPredicate<(all_of FeatureFlatGVSMode)>;
 
 def HasGFX10_AEncoding : Predicate<"Subtarget->hasGFX10_AEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX10_AEncoding)>;

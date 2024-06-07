@@ -391,7 +391,7 @@ class VOP2eInstAlias <VOP2_Pseudo ps, Instruction inst, string opnd = ""> :
 class VOP2e64InstAlias <VOP3_Pseudo ps, Instruction inst> :
   InstAlias <ps.OpName#" "#ps.Pfl.Asm64,
              (inst ps.Pfl.DstRC:$vdst, VOPDstS64orS32:$sdst,
-                   ps.Pfl.Src0RC32:$src0, ps.Pfl.Src1RC32:$src1, clampmod:$clamp),
+                   ps.Pfl.Src0RC32:$src0, ps.Pfl.Src1RC32:$src1, Clamp:$clamp),
              1, inst.AsmVariantName>,
   PredicateControl;
 
@@ -508,7 +508,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
                      getVregSrcForVT<Src2VT>.ret:$src2, // stub argument
-                     clampmod:$clamp, omod:$omod,
+                     Clamp:$clamp, omod:$omod,
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
   let Asm32 = getAsm32<1, 2, vt0>.ret;
@@ -649,7 +649,7 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], /*EnableClamp=*/1>
 
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
-                     clampmod:$clamp,
+                     Clamp:$clamp,
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
 
@@ -700,7 +700,7 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let HasSrc1FloatMods = 1;
   let InsSDWA = (ins FP32SDWAInputMods:$src0_modifiers, SDWASrc_f32:$src0,
                      FP32SDWAInputMods:$src1_modifiers, SDWASrc_f32:$src1,
-                     clampmod:$clamp,
+                     Clamp:$clamp,
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
 
@@ -1650,15 +1650,18 @@ multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,
   }
 }
 
-multiclass VOP2_Real_with_DPP16_with_alias<GFXGen Gen, bits<6> op, string alias> {
+multiclass VOP2_Real_with_NO_DPP_with_alias<GFXGen Gen, bits<6> op, string alias> {
   defm NAME : VOP2_Real_e32<Gen, op>,
-              VOP2_Real_dpp<Gen, op>,
-              VOP2_Real_e64<Gen, op>,
-              VOP3_Real_dpp_Base<Gen, {0, 1, 0, 0, op{5-0}}>;
+              VOP2_Real_e64<Gen, op>;
   def Gen.Suffix#"_alias" : AMDGPUMnemonicAlias<alias, NAME> {
     let AssemblerPredicate = Gen.AssemblerPredicate;
   }
 }
+
+multiclass VOP2_Real_with_DPP16_with_alias<GFXGen Gen, bits<6> op, string alias> :
+  VOP2_Real_with_NO_DPP_with_alias<Gen, op, alias>,
+  VOP2_Real_dpp<Gen, op>,
+  VOP3_Real_dpp_Base<Gen, {0, 1, 0, 0, op{5-0}}>;
 
 //===----------------------------------------------------------------------===//
 // GFX12, GFX13.
@@ -1692,15 +1695,15 @@ multiclass VOP2_Real_FULL_t16_with_name_gfx12_gfx13<
   }
 }
 
-multiclass VOP2_Real_with_DPP16_with_alias_gfx12_gfx13<bits<6> op, string alias> :
+multiclass VOP2_Real_with_NO_DPP_gfx13_DPP16_with_alias_gfx12<bits<6> op, string alias> :
   VOP2_Real_with_DPP16_with_alias<GFX12Gen, op, alias>,
-  VOP2_Real_with_DPP16_with_alias<GFX13Gen, op, alias>;
+  VOP2_Real_with_NO_DPP_with_alias<GFX13Gen, op, alias>;
 
 defm V_ADD_F64     : VOP2_Real_FULL_with_name_gfx12_gfx13<0x02, 0x02, "V_ADD_F64_pseudo", "v_add_f64">;
 defm V_MUL_F64     : VOP2_Real_FULL_with_name_gfx12_gfx13<0x06, 0x06, "V_MUL_F64_pseudo", "v_mul_f64">;
 defm V_LSHLREV_B64 : VOP2_Real_FULL_with_name_gfx12_gfx13<0x1f, 0x22, "V_LSHLREV_B64_pseudo", "v_lshlrev_b64">;
-defm V_MIN_NUM_F64 : VOP2_Real_with_DPP16_with_alias_gfx12_gfx13<0x00d, "v_min_f64">;
-defm V_MAX_NUM_F64 : VOP2_Real_with_DPP16_with_alias_gfx12_gfx13<0x00e, "v_max_f64">;
+defm V_MIN_NUM_F64 : VOP2_Real_with_NO_DPP_gfx13_DPP16_with_alias_gfx12<0x00d, "v_min_f64">;
+defm V_MAX_NUM_F64 : VOP2_Real_with_NO_DPP_gfx13_DPP16_with_alias_gfx12<0x00e, "v_max_f64">;
 
 defm V_CNDMASK_B32 : VOP2e_Real_gfx12_gfx13<0x001, "V_CNDMASK_B32", "v_cndmask_b32">;
 defm V_ADD_CO_CI_U32 :
