@@ -797,3 +797,20 @@ namespace self_referencing {
     S s(1);
   }
 }
+
+namespace GH64949 {
+  struct f {
+    int g; // both-note {{subobject declared here}}
+    constexpr ~f() {}
+  };
+
+  class h {
+  public:
+    consteval h(char *) {}
+    f i;
+  };
+
+  void test() { h{nullptr}; } // both-error {{call to consteval function 'GH64949::h::h' is not a constant expression}} \
+                              // both-note {{subobject 'g' is not initialized}} \
+                              // both-warning {{expression result unused}}
+}
