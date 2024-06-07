@@ -10,13 +10,15 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/uint128.h"
 #include "src/__support/common.h"
+#include "src/__support/CPP/bit.h"
 
 namespace LIBC_NAMESPACE {
 
 namespace Fmul {
 uint64_t maxu(uint64_t A, uint64_t B) { return A > B ? A : B; }
-
+  /*
 uint64_t mul(uint64_t a, uint64_t b) {
   __uint128_t product =
       static_cast<__uint128_t>(a) * static_cast<__uint128_t>(b);
@@ -28,7 +30,8 @@ uint64_t mullow(uint64_t a, uint64_t b) {
       static_cast<__uint128_t>(a) * static_cast<__uint128_t>(b);
   return static_cast<uint64_t>(product);
 }
-
+  */
+  /*
 uint64_t nlz(uint64_t x) {
   uint64_t z = 0;
 
@@ -59,6 +62,7 @@ uint64_t nlz(uint64_t x) {
   }
   return z;
 }
+  */
 
 float fmul(double x, double y) {
 
@@ -68,76 +72,57 @@ float fmul(double x, double y) {
   auto y_bits = fputil::FPBits<double>(y);
   uint64_t y_u = y_bits.uintval();
 
-  if (x_bits.is_nan() || y_bits.is_nan())
-    return fputil::FPBits<float>::quiet_nan().get_val();
+  auto output_sign = (x_bits.sign() != y_bits.sign()) ? Sign::NEG : Sign::POS;
 
-  if (x_bits.is_zero()) {
-    if (y_bits.is_inf() || (y_bits.is_inf() && y_bits.is_neg()))
-      return fputil::FPBits<float>::quiet_nan().get_val();
-    if (y_bits.is_neg())
-      return fputil::FPBits<float>::zero(Sign::NEG).get_val();
-    return fputil::FPBits<float>::zero().get_val();
+    if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() || x_bits.is_zero() || y_bits.is_zero())) {
+      if (x_bits.is_nan())
+	return static_cast<float>(x);
+      if (y_bits.is_nan())
+	return static_cast<float>(y);
+      if (x_bits.is_inf())
+	return y_bits.is_zero() ? fputil::FPBits<float>::quiet_nan().get_val() : fputil::FPBits<float>::inf(output_sign).get_val();
+      if (y_bits.is_inf())
+	return x_bits.is_zero() ? fputil::FPBits<float>::quiet_nan().get_val() : fputil::FPBits<float>::inf(output_sign).get_val();
+    // Now either x or y is zero, and the other one is finite.
+      return fputil::FPBits<float>::zero(output_sign).get_val();
   }
-
-  if (y_bits.is_zero()) {
-    if (x_bits.is_inf() || (x_bits.is_inf() && x_bits.is_neg()))
-      return fputil::FPBits<float>::quiet_nan().get_val();
-    if (x_bits.is_neg())
-      return fputil::FPBits<float>::zero(Sign::NEG).get_val();
-    return fputil::FPBits<float>::zero().get_val();
-  }
-
-  if ((y_bits.is_inf() && y_bits.is_neg())) {
-    if (x_bits.is_neg())
-      return fputil::FPBits<float>::inf().get_val();
-    return fputil::FPBits<float>::inf(Sign::NEG).get_val();
-  }
-
-  if ((x_bits.is_inf() && x_bits.is_neg())) {
-    if (y_bits.is_neg())
-      return fputil::FPBits<float>::inf().get_val();
-    return fputil::FPBits<float>::inf(Sign::NEG).get_val();
-  }
-
-  if (x_bits.is_inf()) {
-    if (y_bits.is_neg())
-      return fputil::FPBits<float>::inf(Sign::NEG).get_val();
-    return fputil::FPBits<float>::inf().get_val();
-  }
-
-  if (y_bits.is_inf()) {
-    if (x_bits.is_neg())
-      return fputil::FPBits<float>::inf(Sign::NEG).get_val();
-    return fputil::FPBits<float>::inf().get_val();
-  }
-
-  uint64_t absx = x_u & 0x7FFFFFFFFFFFFFFF;
-  uint64_t absy = y_u & 0x7FFFFFFFFFFFFFFF;
-
-  uint64_t exponent_x = absx >> 52;
-  uint64_t exponent_y = absy >> 52;
-
+ 
   uint64_t mx, my;
 
-  mx = maxu(nlz(absx), 11);
+  // Get mantissa and append the hidden bit if needed.
+  mx = x_bits.get_explicit_mantissa();
+  my = y_bits.get_explicit_mantissa();
 
-  my = maxu(nlz(absy), 11);
+  // Get the corresponding biased exponent.
+  int ex = x_bits.get_explicit_exponent();
+  int ey = y_bits.get_explicit_exponent();
 
+  // Count the number of leading zeros of the explicit mantissas.
+  int nx = cpp::countl_zero(mx);
+  int ny = cpp::countl_zero(my);
+
+  // Shift the leading 1 bit to the most significant bit.
+  mx <<= nx;
+  my <<= ny;
+
+  // Adjust exponent accordingly: If x or y are normal, we will only need to shift by (exponent length + sign bit = 11 bits. If x or y are denormal, we will need to shift more than 11 bits.
+  ex -= (nx - 11);
+  ey -= (ny - 11);
+  
+  UInt128 product = static_cast<UInt128>(mx) * static_cast<UInt128>(my);
   int32_t dm1;
-  uint64_t mpx, mpy, highs, lows, b;
-  uint64_t g, hight, lowt, c, m; // morlowt
-  mpx = (x_u << mx) | 0x8000000000000000;
-  mpy = (y_u << my) | 0x8000000000000000;
-  highs = mul(mpx, mpy);
+  uint64_t  highs, lows, b;
+  uint64_t g, hight, lowt, m;
+  bool c;
+
+  highs = static_cast<uint64_t>(product >> 64);
   c = highs >= 0x8000000000000000;
-  lows = mullow(mpx, mpy);
+  lows = static_cast<uint64_t>(product);
 
   lowt = (lows != 0);
 
-  int32_t exint = static_cast<int32_t>(exponent_x);
-  int32_t eyint = static_cast<int32_t>(exponent_y);
   int32_t cint = static_cast<int32_t>(c);
-  dm1 = ((exint + eyint) - 1919) + cint;
+  dm1 = ex + ey + cint + fputil::FPBits<float>::EXP_BIAS;
 
   uint32_t sr = static_cast<uint32_t>((x_u ^ y_u) & 0x8000000000000000);
   Sign prod_sign = (sr == 1) ? Sign::NEG : Sign::POS;
@@ -163,7 +148,7 @@ float fmul(double x, double y) {
     g = (highs >> (38 + c)) & 1;
     hight = (highs << (55 - c)) != 0;
   }
-  // morlowt = m | lowt;
+
   if (round_mode == FE_TONEAREST) {
     b = g && ((hight && lowt) || ((m & 1) != 0));
   } else if (round_mode == FE_TOWARDZERO) {
@@ -175,23 +160,18 @@ float fmul(double x, double y) {
     b = 0;
   }
 
-  //   b = g & (morlowt | hight);
-
   uint32_t exp16 = sr | (dm1 << 23);
 
   constexpr uint32_t FLOAT32_MANTISSA_MASK = 0b00000000011111111111111111111111;
   uint32_t m2 = static_cast<uint32_t>(m) & FLOAT32_MANTISSA_MASK;
 
   uint32_t result =
-      (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
+        (static_cast<uint32_t>(exp16) + m2) + static_cast<uint32_t>(b);
 
-  // float result16 = cpp::bit_cast<float>(result);
 
-  // return result16;
+    float result32 = cpp::bit_cast<float>(result);
 
-  float result32 = cpp::bit_cast<float>(result);
-
-  return result32;
+    return result32;
 }
 } // namespace Fmul
 

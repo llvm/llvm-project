@@ -2050,8 +2050,10 @@ add_entrypoint_object(
     ../fmul.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.uint128
+    libc.src.__support.CPP.bit
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
