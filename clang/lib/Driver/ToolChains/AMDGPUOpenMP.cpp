@@ -402,8 +402,8 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   StringRef GPUArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
   assert(!GPUArch.empty() && "Must have an explicit GPU arch.");
 
-  CC1Args.push_back("-target-cpu");
-  CC1Args.push_back(DriverArgs.MakeArgStringRef(GPUArch));
+  assert(DeviceOffloadingKind == Action::OFK_OpenMP &&
+         "Only OpenMP offloading kinds are supported.");
 
   // Extract all the -m options
   std::vector<llvm::StringRef> Features;
