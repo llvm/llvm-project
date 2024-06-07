@@ -712,8 +712,6 @@ void DWARFUnit::clearDIEs(bool KeepCUDie) {
   // Create a new vector with a small capacity and assign it to the DieArray to
   // have previous contents freed.
   llvm::sys::ScopedWriter FreeLock(CUDieFreeMutex);
-  llvm::sys::ScopedWriter CULock(CUDieArrayMutex);
-  llvm::sys::ScopedWriter AllLock(AllDieArrayMutex);
   DieArray = (KeepCUDie && !DieArray.empty())
                  ? std::vector<DWARFDebugInfoEntry>({DieArray[0]})
                  : std::vector<DWARFDebugInfoEntry>();
