@@ -1787,6 +1787,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  modff16
+  SRCS
+    modff16.cpp
+  HDRS
+    ../modff16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   modff128
   SRCS
     modff128.cpp

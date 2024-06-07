@@ -1660,6 +1660,7 @@ add_fp_unittest(
     ModfTest.h
   DEPENDS
     libc.src.math.modf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
 )
@@ -1674,6 +1675,7 @@ add_fp_unittest(
     ModfTest.h
   DEPENDS
     libc.src.math.modff
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
 )
@@ -1688,6 +1690,22 @@ add_fp_unittest(
     ModfTest.h
   DEPENDS
     libc.src.math.modfl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_fp_unittest(
+  modff16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    modff16_test.cpp
+  HDRS
+    ModfTest.h
+  DEPENDS
+    libc.src.math.modff16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
 )
@@ -1702,6 +1720,7 @@ add_fp_unittest(
     ModfTest.h
   DEPENDS
     libc.src.math.modff128
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
 )
