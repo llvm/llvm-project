@@ -689,34 +689,34 @@ class StorageClass<string name, bits<32> value> {
   bits<32> Value = value;
 }
 
-multiclass StorageClassOperand<bits<32> value, list<Capability> reqCapabilities> {
+multiclass StorageClassOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def : StorageClass<NAME, value>;
-  defm : SymbolicOperandWithRequirements<StorageClassOperand, value, NAME, 0, 0, [], reqCapabilities>;
+  defm : SymbolicOperandWithRequirements<StorageClassOperand, value, NAME, 0, 0, reqExtensions, reqCapabilities>;
 }
 
-defm UniformConstant : StorageClassOperand<0, []>;
-defm Input : StorageClassOperand<1, []>;
-defm Uniform : StorageClassOperand<2, [Shader]>;
-defm Output : StorageClassOperand<3, [Shader]>;
-defm Workgroup : StorageClassOperand<4, []>;
-defm CrossWorkgroup : StorageClassOperand<5, []>;
-defm Private : StorageClassOperand<6, [Shader]>;
-defm Function : StorageClassOperand<7, []>;
-defm Generic : StorageClassOperand<8, [GenericPointer]>;
-defm PushConstant : StorageClassOperand<9, [Shader]>;
-defm AtomicCounter : StorageClassOperand<10, [AtomicStorage]>;
-defm Image : StorageClassOperand<11, []>;
-defm StorageBuffer : StorageClassOperand<12, [Shader]>;
-defm CallableDataNV : StorageClassOperand<5328, [RayTracingNV]>;
-defm IncomingCallableDataNV : StorageClassOperand<5329, [RayTracingNV]>;
-defm RayPayloadNV : StorageClassOperand<5338, [RayTracingNV]>;
-defm HitAttributeNV : StorageClassOperand<5339, [RayTracingNV]>;
-defm IncomingRayPayloadNV : StorageClassOperand<5342, [RayTracingNV]>;
-defm ShaderRecordBufferNV : StorageClassOperand<5343, [RayTracingNV]>;
-defm PhysicalStorageBufferEXT : StorageClassOperand<5349, [PhysicalStorageBufferAddressesEXT]>;
-defm CodeSectionINTEL : StorageClassOperand<5605, [FunctionPointersINTEL]>;
-defm DeviceOnlyINTEL : StorageClassOperand<5936, [USMStorageClassesINTEL]>;
-defm HostOnlyINTEL : StorageClassOperand<5937, [USMStorageClassesINTEL]>;
+defm UniformConstant : StorageClassOperand<0, [], []>;
+defm Input : StorageClassOperand<1, [], []>;
+defm Uniform : StorageClassOperand<2, [], [Shader]>;
+defm Output : StorageClassOperand<3, [], [Shader]>;
+defm Workgroup : StorageClassOperand<4, [], []>;
+defm CrossWorkgroup : StorageClassOperand<5, [], []>;
+defm Private : StorageClassOperand<6, [], [Shader]>;
+defm Function : StorageClassOperand<7, [], []>;
+defm Generic : StorageClassOperand<8, [], [GenericPointer]>;
+defm PushConstant : StorageClassOperand<9, [], [Shader]>;
+defm AtomicCounter : StorageClassOperand<10, [], [AtomicStorage]>;
+defm Image : StorageClassOperand<11, [], []>;
+defm StorageBuffer : StorageClassOperand<12, [], [Shader]>;
+defm CallableDataNV : StorageClassOperand<5328, [], [RayTracingNV]>;
+defm IncomingCallableDataNV : StorageClassOperand<5329, [], [RayTracingNV]>;
+defm RayPayloadNV : StorageClassOperand<5338, [], [RayTracingNV]>;
+defm HitAttributeNV : StorageClassOperand<5339, [], [RayTracingNV]>;
+defm IncomingRayPayloadNV : StorageClassOperand<5342, [], [RayTracingNV]>;
+defm ShaderRecordBufferNV : StorageClassOperand<5343, [], [RayTracingNV]>;
+defm PhysicalStorageBufferEXT : StorageClassOperand<5349, [], [PhysicalStorageBufferAddressesEXT]>;
+defm CodeSectionINTEL : StorageClassOperand<5605, [SPV_INTEL_function_pointers], [FunctionPointersINTEL]>;
+defm DeviceOnlyINTEL : StorageClassOperand<5936, [SPV_INTEL_usm_storage_classes], [USMStorageClassesINTEL]>;
+defm HostOnlyINTEL : StorageClassOperand<5937, [SPV_INTEL_usm_storage_classes], [USMStorageClassesINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Dim enum values and at the same time
