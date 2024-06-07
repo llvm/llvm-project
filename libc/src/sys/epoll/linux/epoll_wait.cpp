@@ -13,6 +13,7 @@
 #include "hdr/types/struct_epoll_event.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/sanitizer.h"
 #include "src/errno/libc_errno.h"
 
 #include <sys/syscall.h> // For syscall numbers.
@@ -38,6 +39,8 @@ LLVM_LIBC_FUNCTION(int, epoll_wait,
     libc_errno = -ret;
     return -1;
   }
+
+  MSAN_UNPOISON(events, ret * sizeof(struct epoll_event));
 
   return ret;
 }

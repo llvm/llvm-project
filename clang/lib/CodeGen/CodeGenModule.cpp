@@ -1328,6 +1328,9 @@ void CodeGenModule::Release() {
   case CodeGenOptions::FramePointerKind::None:
     // 0 ("none") is the default.
     break;
+  case CodeGenOptions::FramePointerKind::Reserved:
+    getModule().setFramePointer(llvm::FramePointerKind::Reserved);
+    break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     getModule().setFramePointer(llvm::FramePointerKind::NonLeaf);
     break;
@@ -1853,18 +1856,24 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
         break;
       case MultiVersionKind::Target: {
         auto *Attr = FD->getAttr<TargetAttr>();
+        assert(Attr && "Expected TargetAttr to be present "
+                       "for attribute mangling");
         const ABIInfo &Info = CGM.getTargetCodeGenInfo().getABIInfo();
         Info.appendAttributeMangling(Attr, Out);
         break;
       }
       case MultiVersionKind::TargetVersion: {
         auto *Attr = FD->getAttr<TargetVersionAttr>();
+        assert(Attr && "Expected TargetVersionAttr to be present "
+                       "for attribute mangling");
         const ABIInfo &Info = CGM.getTargetCodeGenInfo().getABIInfo();
         Info.appendAttributeMangling(Attr, Out);
         break;
       }
       case MultiVersionKind::TargetClones: {
         auto *Attr = FD->getAttr<TargetClonesAttr>();
+        assert(Attr && "Expected TargetClonesAttr to be present "
+                       "for attribute mangling");
         unsigned Index = GD.getMultiVersionIndex();
         const ABIInfo &Info = CGM.getTargetCodeGenInfo().getABIInfo();
         Info.appendAttributeMangling(Attr, Index, Out);

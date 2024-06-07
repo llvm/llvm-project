@@ -199,7 +199,7 @@ struct Frame {
   GlobalValue::GUID Function;
   // The symbol name for the function. Only populated in the Frame by the reader
   // if requested during initialization. This field should not be serialized.
-  std::optional<std::string> SymbolName;
+  std::unique_ptr<std::string> SymbolName;
   // The source line offset of the call from the beginning of parent function.
   uint32_t LineOffset;
   // The source column number of the call to help distinguish multiple calls
@@ -210,7 +210,9 @@ struct Frame {
 
   Frame(const Frame &Other) {
     Function = Other.Function;
-    SymbolName = Other.SymbolName;
+    SymbolName = Other.SymbolName
+                     ? std::make_unique<std::string>(*Other.SymbolName)
+                     : nullptr;
     LineOffset = Other.LineOffset;
     Column = Other.Column;
     IsInlineFrame = Other.IsInlineFrame;
@@ -228,7 +230,9 @@ struct Frame {
 
   Frame &operator=(const Frame &Other) {
     Function = Other.Function;
-    SymbolName = Other.SymbolName;
+    SymbolName = Other.SymbolName
+                     ? std::make_unique<std::string>(*Other.SymbolName)
+                     : nullptr;
     LineOffset = Other.LineOffset;
     Column = Other.Column;
     IsInlineFrame = Other.IsInlineFrame;
@@ -236,6 +240,17 @@ struct Frame {
   }
 
   bool operator!=(const Frame &Other) const { return !operator==(Other); }
+
+  bool hasSymbolName() const { return !!SymbolName; }
+
+  StringRef getSymbolName() const {
+    assert(hasSymbolName());
+    return *SymbolName;
+  }
+
+  std::string getSymbolNameOr(StringRef Alt) const {
+    return std::string(hasSymbolName() ? getSymbolName() : Alt);
+  }
 
   // Write the contents of the frame to the ostream \p OS.
   void serialize(raw_ostream &OS) const {
@@ -279,7 +294,7 @@ struct Frame {
   void printYAML(raw_ostream &OS) const {
     OS << "      -\n"
        << "        Function: " << Function << "\n"
-       << "        SymbolName: " << SymbolName.value_or("<None>") << "\n"
+       << "        SymbolName: " << getSymbolNameOr("<None>") << "\n"
        << "        LineOffset: " << LineOffset << "\n"
        << "        Column: " << Column << "\n"
        << "        Inline: " << IsInlineFrame << "\n";
@@ -353,7 +368,7 @@ struct IndexedAllocationInfo {
 // be used for temporary in-memory instances.
 struct AllocationInfo {
   // Same as IndexedAllocationInfo::CallStack with the frame contents inline.
-  llvm::SmallVector<Frame> CallStack;
+  std::vector<Frame> CallStack;
   // Same as IndexedAllocationInfo::Info;
   PortableMemInfoBlock Info;
 
@@ -435,8 +450,7 @@ struct IndexedMemProfRecord {
   // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
   // translate CallStackId to call stacks with frames inline.
   MemProfRecord toMemProfRecord(
-      llvm::function_ref<llvm::SmallVector<Frame>(const CallStackId)> Callback)
-      const;
+      llvm::function_ref<std::vector<Frame>(const CallStackId)> Callback) const;
 
   // Returns the GUID for the function name after canonicalization. For
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
@@ -451,7 +465,7 @@ struct MemProfRecord {
   // Same as IndexedMemProfRecord::AllocSites with frame contents inline.
   llvm::SmallVector<AllocationInfo> AllocSites;
   // Same as IndexedMemProfRecord::CallSites with frame contents inline.
-  llvm::SmallVector<llvm::SmallVector<Frame>> CallSites;
+  llvm::SmallVector<std::vector<Frame>> CallSites;
 
   MemProfRecord() = default;
   MemProfRecord(
@@ -461,7 +475,7 @@ struct MemProfRecord {
       AllocSites.emplace_back(IndexedAI, IdToFrameCallback);
     }
     for (const ArrayRef<FrameId> Site : Record.CallSites) {
-      llvm::SmallVector<Frame> Frames;
+      std::vector<Frame> Frames;
       for (const FrameId Id : Site) {
         Frames.push_back(IdToFrameCallback(Id));
       }
@@ -479,7 +493,7 @@ struct MemProfRecord {
 
     if (!CallSites.empty()) {
       OS << "    CallSites:\n";
-      for (const llvm::SmallVector<Frame> &Frames : CallSites) {
+      for (const std::vector<Frame> &Frames : CallSites) {
         for (const Frame &F : Frames) {
           OS << "    -\n";
           F.printYAML(OS);
@@ -833,8 +847,8 @@ template <typename MapTy> struct CallStackIdConverter {
   CallStackIdConverter(const CallStackIdConverter &) = delete;
   CallStackIdConverter &operator=(const CallStackIdConverter &) = delete;
 
-  llvm::SmallVector<Frame> operator()(CallStackId CSId) {
-    llvm::SmallVector<Frame> Frames;
+  std::vector<Frame> operator()(CallStackId CSId) {
+    std::vector<Frame> Frames;
     auto CSIter = Map.find(CSId);
     if (CSIter == Map.end()) {
       LastUnmappedId = CSId;
@@ -875,8 +889,8 @@ struct LinearCallStackIdConverter {
                              std::function<Frame(LinearFrameId)> FrameIdToFrame)
       : CallStackBase(CallStackBase), FrameIdToFrame(FrameIdToFrame) {}
 
-  llvm::SmallVector<Frame> operator()(LinearCallStackId LinearCSId) {
-    llvm::SmallVector<Frame> Frames;
+  std::vector<Frame> operator()(LinearCallStackId LinearCSId) {
+    std::vector<Frame> Frames;
 
     const unsigned char *Ptr =
         CallStackBase +
@@ -907,6 +921,113 @@ struct IndexedMemProfData {
 
   // A map to hold call stack id to call stacks.
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStackData;
+};
+
+// Construct a radix tree of call stacks.
+//
+// A set of call stacks might look like:
+//
+// CallStackId 1:  f1 -> f2 -> f3
+// CallStackId 2:  f1 -> f2 -> f4 -> f5
+// CallStackId 3:  f1 -> f2 -> f4 -> f6
+// CallStackId 4:  f7 -> f8 -> f9
+//
+// where each fn refers to a stack frame.
+//
+// Since we expect a lot of common prefixes, we can compress the call stacks
+// into a radix tree like:
+//
+// CallStackId 1:  f1 -> f2 -> f3
+//                       |
+// CallStackId 2:        +---> f4 -> f5
+//                             |
+// CallStackId 3:              +---> f6
+//
+// CallStackId 4:  f7 -> f8 -> f9
+//
+// Now, we are interested in retrieving call stacks for a given CallStackId, so
+// we just need a pointer from a given call stack to its parent.  For example,
+// CallStackId 2 would point to CallStackId 1 as a parent.
+//
+// We serialize the radix tree above into a single array along with the length
+// of each call stack and pointers to the parent call stacks.
+//
+// Index:              0  1  2  3  4  5  6  7  8  9 10 11 12 13 14
+// Array:             L3 f9 f8 f7 L4 f6 J3 L4 f5 f4 J3 L3 f3 f2 f1
+//                     ^           ^        ^           ^
+//                     |           |        |           |
+// CallStackId 4:  0 --+           |        |           |
+// CallStackId 3:  4 --------------+        |           |
+// CallStackId 2:  7 -----------------------+           |
+// CallStackId 1: 11 -----------------------------------+
+//
+// - LN indicates the length of a call stack, encoded as ordinary integer N.
+//
+// - JN indicates a pointer to the parent, encoded as -N.
+//
+// The radix tree allows us to reconstruct call stacks in the leaf-to-root
+// order as we scan the array from left ro right while following pointers to
+// parents along the way
+//
+// For example, if we are decoding CallStackId 2, we start a forward traversal
+// at Index 7, noting the call stack length of 4 and obtaining f5 and f4.  When
+// we see J3 at Index 10, we resume a forward traversal at Index 13 = 10 + 3,
+// picking up f2 and f1.  We are done after collecting 4 frames as indicated at
+// the beginning of the traversal.
+//
+// On-disk IndexedMemProfRecord will refer to call stacks by their indexes into
+// the radix tree array, so we do not explicitly encode mappings like:
+// "CallStackId 1 -> 11".
+class CallStackRadixTreeBuilder {
+  // The radix tree array.
+  std::vector<LinearFrameId> RadixArray;
+
+  // Mapping from CallStackIds to indexes into RadixArray.
+  llvm::DenseMap<CallStackId, LinearCallStackId> CallStackPos;
+
+  // In build, we partition a given call stack into two parts -- the prefix
+  // that's common with the previously encoded call stack and the frames beyond
+  // the common prefix -- the unique portion.  Then we want to find out where
+  // the common prefix is stored in RadixArray so that we can link the unique
+  // portion to the common prefix.  Indexes, declared below, helps with our
+  // needs.  Intuitively, Indexes tells us where each of the previously encoded
+  // call stack is stored in RadixArray.  More formally, Indexes satisfies:
+  //
+  //   RadixArray[Indexes[I]] == Prev[I]
+  //
+  // for every I, where Prev is the the call stack in the root-to-leaf order
+  // previously encoded by build.  (Note that Prev, as passed to
+  // encodeCallStack, is in the leaf-to-root order.)
+  //
+  // For example, if the call stack being encoded shares 5 frames at the root of
+  // the call stack with the previously encoded call stack,
+  // RadixArray[Indexes[0]] is the root frame of the common prefix.
+  // RadixArray[Indexes[5 - 1]] is the last frame of the common prefix.
+  std::vector<LinearCallStackId> Indexes;
+
+  using CSIdPair = std::pair<CallStackId, llvm::SmallVector<FrameId>>;
+
+  // Encode a call stack into RadixArray.  Return the starting index within
+  // RadixArray.
+  LinearCallStackId encodeCallStack(
+      const llvm::SmallVector<FrameId> *CallStack,
+      const llvm::SmallVector<FrameId> *Prev,
+      const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes);
+
+public:
+  CallStackRadixTreeBuilder() = default;
+
+  // Build a radix tree array.
+  void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+                 &&MemProfCallStackData,
+             const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes);
+
+  const std::vector<LinearFrameId> &getRadixArray() const { return RadixArray; }
+
+  const llvm::DenseMap<CallStackId, LinearCallStackId> &
+  getCallStackPos() const {
+    return CallStackPos;
+  }
 };
 
 // Verify that each CallStackId is computed with hashCallStack.  This function

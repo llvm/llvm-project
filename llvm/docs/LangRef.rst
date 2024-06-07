@@ -462,7 +462,7 @@ added in the future:
     registers to pass arguments. This attribute doesn't impact non-general
     purpose registers (e.g. floating point registers, on X86 XMMs/YMMs).
     Non-general purpose registers still follow the standard c calling
-    convention. Currently it is for x86_64 only.
+    convention. Currently it is for x86_64 and AArch64 only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style TLS. The access
     function generally has an entry block, an exit block and an initialization
@@ -1924,7 +1924,11 @@ example:
     even if this attribute says the frame pointer can be eliminated.
     The allowed string values are:
 
-     * ``"none"`` (default) - the frame pointer can be eliminated.
+     * ``"none"`` (default) - the frame pointer can be eliminated, and it's
+       register can be used for other purposes.
+     * ``"reserved"`` - the frame pointer register must either be updated to
+       point to a valid frame record for the current function, or not be
+       modified.
      * ``"non-leaf"`` - the frame pointer should be kept if the function calls
        other functions.
      * ``"all"`` - the frame pointer should be kept.
@@ -4821,10 +4825,6 @@ The following is the syntax for constant expressions:
     required to make sense for the type of "pointer to TY". These indexes
     may be implicitly sign-extended or truncated to match the index size
     of CSTPTR's address space.
-``icmp COND (VAL1, VAL2)``
-    Perform the :ref:`icmp operation <i_icmp>` on constants.
-``fcmp COND (VAL1, VAL2)``
-    Perform the :ref:`fcmp operation <i_fcmp>` on constants.
 ``extractelement (VAL, IDX)``
     Perform the :ref:`extractelement operation <i_extractelement>` on
     constants.
@@ -6312,6 +6312,15 @@ The current supported opcode vocabulary is limited:
   (``16`` and ``DW_ATE_signed`` here, respectively) to which the top of the
   expression stack is to be converted. Maps into a ``DW_OP_convert`` operation
   that references a base type constructed from the supplied values.
+- ``DW_OP_LLVM_extract_bits_sext, 16, 8,`` specifies the offset and size
+  (``16`` and ``8`` here, respectively) of bits that are to be extracted and
+  sign-extended from the value at the top of the expression stack. If the top of
+  the expression stack is a memory location then these bits are extracted from
+  the value pointed to by that memory location. Maps into a ``DW_OP_shl``
+  followed by ``DW_OP_shra``.
+- ``DW_OP_LLVM_extract_bits_zext`` behaves similarly to
+  ``DW_OP_LLVM_extract_bits_sext``, but zero-extends instead of sign-extending.
+  Maps into a ``DW_OP_shl`` followed by ``DW_OP_shr``.
 - ``DW_OP_LLVM_tag_offset, tag_offset`` specifies that a memory tag should be
   optionally applied to the pointer. The memory tag is derived from the
   given tag offset in an implementation-defined manner.
@@ -27935,7 +27944,7 @@ Syntax:
 
 ::
 
-      declare {ptr, i1} @llvm.type.checked.load.relative(ptr %ptr, i32 %offset, metadata %type) argmemonly nounwind readonly
+      declare {ptr, i1} @llvm.type.checked.load.relative(ptr %ptr, i32 %offset, metadata %type) nounwind memory(argmem: read)
 
 Overview:
 """""""""

@@ -60,16 +60,13 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc parallel copy((float)ArrayParam[2])
   while(1);
 
-  // expected-error@+2{{OpenACC 'copy' clause is not valid on 'loop' directive}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+  // expected-error@+1{{OpenACC 'copy' clause is not valid on 'loop' directive}}
 #pragma acc loop copy(LocalInt)
   for(;;);
-  // expected-error@+2{{OpenACC 'pcopy' clause is not valid on 'loop' directive}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+  // expected-error@+1{{OpenACC 'pcopy' clause is not valid on 'loop' directive}}
 #pragma acc loop pcopy(LocalInt)
   for(;;);
-  // expected-error@+2{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+  // expected-error@+1{{OpenACC 'present_or_copy' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_copy(LocalInt)
   for(;;);
 }
