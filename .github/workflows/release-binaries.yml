@@ -216,7 +216,7 @@ jobs:
 
     - id: package-info
       run: |
-        filename="LLVM-${{ needs.prepare.outputs.release-version }}-Linux.tar.gz"
+        filename="LLVM-${{ needs.prepare.outputs.release-version }}-Linux.tar.xz"
         echo "filename=$filename" >> $GITHUB_OUTPUT
         echo "path=/mnt/build/tools/clang/stage2-bins/$filename" >> $GITHUB_OUTPUT
 
