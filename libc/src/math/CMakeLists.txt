@@ -218,6 +218,7 @@ add_math_entrypoint_object(ilogbf128)
 add_math_entrypoint_object(llogb)
 add_math_entrypoint_object(llogbf)
 add_math_entrypoint_object(llogbl)
+add_math_entrypoint_object(llogbf16)
 add_math_entrypoint_object(llogbf128)
 
 add_math_entrypoint_object(ldexp)
