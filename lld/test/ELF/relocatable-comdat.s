@@ -50,8 +50,6 @@
 ## If --force-group-allocation is specified, discard .group and combine .rela.* if their relocated sections are combined.
 # RUN: ld.lld -r -T combine.lds a.o a.o --force-group-allocation -o combine-a.ro
 # RUN: llvm-readelf -g -S combine-a.ro | FileCheck %s --check-prefix=COMBINE-A
-## --inhibit-group-allocation restores the default behavior.
-# RUN: ld.lld -r -T combine.lds a.o a.o --force-group-allocation --inhibit-group-allocation -o - | cmp - combine.ro
 
 # COMBINE-A:      Name            Type     Address          Off    Size   ES Flg Lk    Inf   Al
 # COMBINE-A:      .rodata         PROGBITS 0000000000000000 {{.*}} 000002 00   A  0      0    1

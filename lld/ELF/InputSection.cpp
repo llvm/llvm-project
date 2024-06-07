@@ -77,9 +77,8 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
 }
 
 // SHF_INFO_LINK and SHF_GROUP are normally resolved and not copied to the
-// output section. However, for relocatable linking with the default
-// --inhibit-group-allocation, the SHF_GROUP marker and section groups are
-// retained.
+// output section. However, for relocatable linking without
+// --force-group-allocation, the SHF_GROUP flag and section groups are retained.
 static uint64_t getFlags(uint64_t flags) {
   flags &= ~(uint64_t)SHF_INFO_LINK;
   if (config->resolveGroups)
