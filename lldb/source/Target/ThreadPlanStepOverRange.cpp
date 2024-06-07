@@ -334,7 +334,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
     return false;
 }
 
-bool ThreadPlanStepOverRange::DoPlanExplainsStop(Event *event_ptr) {
+bool ThreadPlanStepRange::DoPlanExplainsStop(Event *event_ptr) {
   // For crashes, breakpoint hits, signals, etc,cd  let the base plan (or some
   // plan above us) handle the stop.  That way the user can see the stop, step
   // around, and then when they are done, continue and have their step
