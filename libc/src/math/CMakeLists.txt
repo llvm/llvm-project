@@ -315,6 +315,7 @@ add_math_entrypoint_object(powf)
 add_math_entrypoint_object(remainder)
 add_math_entrypoint_object(remainderf)
 add_math_entrypoint_object(remainderl)
+add_math_entrypoint_object(remainderf16)
 
 add_math_entrypoint_object(remquo)
 add_math_entrypoint_object(remquof)
