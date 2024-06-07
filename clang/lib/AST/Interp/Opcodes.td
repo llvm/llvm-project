@@ -281,53 +281,31 @@ def Null : Opcode {
 //===----------------------------------------------------------------------===//
 // Pointer generation
 //===----------------------------------------------------------------------===//
+class OffsetOpcode : Opcode {
+  let Args = [ArgUint32];
+}
 
 // [] -> [Pointer]
-def GetPtrLocal : Opcode {
-  // Offset of local.
-  let Args = [ArgUint32];
+def GetPtrLocal : OffsetOpcode {
   bit HasCustomEval = 1;
 }
 // [] -> [Pointer]
-def GetPtrParam : Opcode {
-  // Offset of parameter.
-  let Args = [ArgUint32];
-}
+def GetPtrParam : OffsetOpcode;
 // [] -> [Pointer]
-def GetPtrGlobal : Opcode {
-  // Index of global.
-  let Args = [ArgUint32];
-}
+def GetPtrGlobal : OffsetOpcode;
 // [Pointer] -> [Pointer]
-def GetPtrField : Opcode {
-  // Offset of field.
-  let Args = [ArgUint32];
-}
+def GetPtrField : OffsetOpcode;
+def GetPtrFieldPop : OffsetOpcode;
 // [Pointer] -> [Pointer]
-def GetPtrActiveField : Opcode {
-  // Offset of field.
-  let Args = [ArgUint32];
-}
+def GetPtrActiveField : OffsetOpcode;
 // [] -> [Pointer]
-def GetPtrActiveThisField : Opcode {
-  // Offset of field.
-  let Args = [ArgUint32];
-}
+def GetPtrActiveThisField : OffsetOpcode;
 // [] -> [Pointer]
-def GetPtrThisField : Opcode {
-  // Offset of field.
-  let Args = [ArgUint32];
-}
+def GetPtrThisField : OffsetOpcode;
 // [Pointer] -> [Pointer]
-def GetPtrBase : Opcode {
-  // Offset of field, which is a base.
-  let Args = [ArgUint32];
-}
+def GetPtrBase : OffsetOpcode;
 // [Pointer] -> [Pointer]
-def GetPtrBasePop : Opcode {
-  // Offset of field, which is a base.
-  let Args = [ArgUint32];
-}
+def GetPtrBasePop : OffsetOpcode;
 def GetMemberPtrBasePop : Opcode {
   // Offset of field, which is a base.
   let Args = [ArgSint32];
