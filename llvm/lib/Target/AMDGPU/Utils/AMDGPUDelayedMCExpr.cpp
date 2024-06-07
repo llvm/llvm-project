@@ -41,15 +41,12 @@ void DelayedMCExpr::assignDocNode(msgpack::DocNode &DN, msgpack::Type Type,
 }
 
 bool DelayedMCExpr::resolveDelayedExpressions() {
-  bool Success;
-
   while (!DelayedExprs.empty()) {
     DelayedExpr DE = DelayedExprs.front();
     MCValue Res;
 
-    Success = DE.Expr->evaluateAsRelocatable(Res, nullptr, nullptr);
-    Success &= Res.isAbsolute();
-    if (!Success)
+    if (!DE.Expr->evaluateAsRelocatable(Res, nullptr, nullptr) ||
+        !Res.isAbsolute())
       return false;
 
     DelayedExprs.pop_front();
