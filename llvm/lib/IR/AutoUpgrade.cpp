@@ -5368,8 +5368,8 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return DL.empty() ? std::string("G1") : (DL + "-G1").str();
   }
 
-  if (T.isRISCV64()) {
-    // Make i32 a native type for 64-bit RISC-V.
+  if (T.isLoongArch64() || T.isRISCV64()) {
+    // Make i32 a native type for 64-bit LoongArch and RISC-V.
     auto I = DL.find("-n64-");
     if (I != StringRef::npos)
       return (DL.take_front(I) + "-n32:64-" + DL.drop_front(I + 5)).str();

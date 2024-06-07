@@ -961,7 +961,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   if ((arg.isPercentRef() || arg.isPercentVal()) &&
       dummy.IsPassedByDescriptor(procedure.IsBindC())) {
     messages.Say(
-        "%VAL or %REF are not allowed for %s that must be passed by means of a descriptor"_err_en_US,
+        "%%VAL or %%REF are not allowed for %s that must be passed by means of a descriptor"_err_en_US,
         dummyName);
   }
   if (arg.isPercentVal() &&

@@ -564,3 +564,30 @@ llvm.func @subranges(%arg: !llvm.ptr) {
 // CHECK: ![[ELEMENTS2]] = !{![[ELEMENT2:[0-9]+]]}
 // CHECK: ![[ELEMENT2]] = !DISubrange(count: ![[LV:[0-9]+]], stride: ![[GV:[0-9]+]])
 // CHECK: ![[LV]] = !DILocalVariable(name: "size"{{.*}})
+
+// -----
+
+#bt = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32>
+#file = #llvm.di_file<"debug-info.ll" in "/">
+#cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C,
+ file = #file, isOptimized = false, emissionKind = Full>
+#sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "test",
+ file = #file, subprogramFlags = Definition>
+#var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt>
+#ty = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
+ sizeInBits = 32, alignInBits = 8, stringLength = #var,
+ stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>,
+ stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+#var1 = #llvm.di_local_variable<scope = #sp, name = "str", type = #ty>
+
+llvm.func @string_ty(%arg0: !llvm.ptr) {
+  llvm.intr.dbg.value #var1 = %arg0 : !llvm.ptr
+  llvm.intr.dbg.value #var = %arg0 : !llvm.ptr
+  llvm.return
+} loc(#loc2)
+
+#loc1 = loc("test.f90":1:1)
+#loc2 = loc(fused<#sp>[#loc1])
+
+// CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
+// CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}})

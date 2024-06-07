@@ -32,10 +32,16 @@ EvalEmitter::~EvalEmitter() {
   }
 }
 
+/// Clean up all our resources. This needs to done in failed evaluations before
+/// we call InterpStack::clear(), because there might be a Pointer on the stack
+/// pointing into a Block in the EvalEmitter.
+void EvalEmitter::cleanup() { S.cleanup(); }
+
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
                                             bool ConvertResultToRValue) {
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue;
+  this->CheckFullyInitialized = isa<ConstantExpr>(E);
   EvalResult.setSource(E);
 
   if (!this->visitExpr(E)) {
@@ -170,6 +176,10 @@ bool EvalEmitter::emitRetVoid(const SourceInfo &Info) {
 
 bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
+
+  if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+
   if (std::optional<APValue> APV = Ptr.toRValue(S.getCtx())) {
     EvalResult.setValue(*APV);
     return true;
