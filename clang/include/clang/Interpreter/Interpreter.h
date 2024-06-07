@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <vector>
@@ -129,7 +130,13 @@ protected:
 public:
   virtual ~Interpreter();
   static llvm::Expected<std::unique_ptr<Interpreter>>
-  create(std::unique_ptr<CompilerInstance> CI);
+  create(std::unique_ptr<CompilerInstance> CI,
+         std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr);
+  static llvm::Expected<std::unique_ptr<Interpreter>>
+  createWithOOPExecutor(
+      std::unique_ptr<CompilerInstance> CI,
+      std::unique_ptr<llvm::orc::ExecutorProcessControl> EI,
+      llvm::StringRef OrcRuntimePath);
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);

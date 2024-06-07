@@ -1167,6 +1167,9 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
 
   auto &ES = J.getExecutionSession();
   auto &PlatformJD = ES.createBareJITDylib("<Platform>");
+  if (auto DSGOrErr = EPCDynamicLibrarySearchGenerator::GetForTargetProcess(ES)) {
+    PlatformJD.addGenerator(std::move(*DSGOrErr));
+  }
   PlatformJD.addToLinkOrder(*ProcessSymbolsJD);
 
   J.setPlatformSupport(std::make_unique<ORCPlatformSupport>(J));

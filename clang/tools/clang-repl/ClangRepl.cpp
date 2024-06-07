@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "RemoteJITUtils.h"
+
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -26,6 +28,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include <optional>
 
+#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
+
 // Disable LSan for this test.
 // FIXME: Re-enable once we can assume GCC 13.2 or higher.
 // https://llvm.org/github.com/llvm/llvm-project/issues/67586.
@@ -37,7 +41,18 @@ LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return 1; }
 static llvm::cl::opt<bool> CudaEnabled("cuda", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> CudaPath("cuda-path", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> OffloadArch("offload-arch", llvm::cl::Hidden);
-
+static llvm::cl::OptionCategory OOPCategory("Out-of-process Execution Options (Only available on MachO)");
+static llvm::cl::opt<std::string> OOPExecutor(
+    "oop-executor",
+    llvm::cl::desc("Launch an out-of-process executor to run code"),
+    llvm::cl::ValueOptional, llvm::cl::cat(OOPCategory));
+static llvm::cl::opt<std::string> OOPExecutorConnectTCP(
+    "opp-connect",
+    llvm::cl::desc("Connect to an out-of-process executor through a TCP socket"),
+    llvm::cl::value_desc("<hostname>:<port>"));
+static llvm::cl::opt<std::string>
+    OrcRuntimePath("orc-runtime", llvm::cl::desc("Path to the ORC runtime"),
+                   llvm::cl::cat(OOPCategory));
 static llvm::cl::list<std::string>
     ClangArgs("Xcc",
               llvm::cl::desc("Argument to pass to the CompilerInvocation"),
@@ -46,6 +61,39 @@ static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
                                               llvm::cl::Hidden);
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
+
+
+static llvm::Error sanitizeOopArguments(const char *ArgV0) {
+  // Only one of -oop-executor and -oop-executor-connect can be used.
+  if (!!OOPExecutor.getNumOccurrences() &&
+      !!OOPExecutorConnectTCP.getNumOccurrences())
+    return llvm::make_error<llvm::StringError>(
+        "Only one of -" + OOPExecutor.ArgStr + " and -" +
+            OOPExecutorConnectTCP.ArgStr + " can be specified",
+        llvm::inconvertibleErrorCode());
+
+  // Out-of-process executors must run with the ORC runtime for destructor
+  // support.
+  if (OrcRuntimePath.empty() &&
+      (OOPExecutor.getNumOccurrences() ||
+       OOPExecutorConnectTCP.getNumOccurrences()))
+    return llvm::make_error<llvm::StringError>(
+        "ORC runtime required",
+        llvm::inconvertibleErrorCode());
+
+  // If -oop-executor was used but no value was specified then use a sensible
+  // default.
+  if (!!OOPExecutor.getNumOccurrences() &&
+      OOPExecutor.empty()) {
+    llvm::SmallString<256> OOPExecutorPath(llvm::sys::fs::getMainExecutable(
+        ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
+    llvm::sys::path::remove_filename(OOPExecutorPath);
+    llvm::sys::path::append(OOPExecutorPath, "llvm-jitlink-executor");
+    OOPExecutor = OOPExecutorPath.str().str();
+  }
+
+  return llvm::Error::success();
+}
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
@@ -181,6 +229,25 @@ int main(int argc, const char **argv) {
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
 
+  ExitOnErr(sanitizeOopArguments(argv[0]));
+
+
+  std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
+    // std::unique_ptr<llvm::orc::TaskDispatcher> D = nullptr;
+
+    // D = std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(std::nullopt);
+
+    // if (auto EPCOrErr =
+    //         llvm::orc::SelfExecutorProcessControl::Create(nullptr, std::move(D), nullptr))
+    //   EPC = std::move(*EPCOrErr);
+  if (OOPExecutor.getNumOccurrences()) {
+    // Launch an out-of-process executor locally in a child process.
+    int PID;
+    std::tie(EPC, PID) = ExitOnErr(launchLocalExecutor(OOPExecutor));
+    CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
+    llvm::outs() << "executor process id = " << PID << "\n";
+  }
+
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
   std::unique_ptr<clang::CompilerInstance> CI;
@@ -212,11 +279,15 @@ int main(int argc, const char **argv) {
       auto CudaRuntimeLibPath = CudaPath + "/lib/libcudart.so";
       ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
     }
+  } else if (EPC) {
+    Interp = ExitOnErr(
+        clang::Interpreter::createWithOOPExecutor(std::move(CI),
+                                                  std::move(EPC),
+                                                  OrcRuntimePath));
   } else
     Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
 
   bool HasError = false;
-
   for (const std::string &input : OptInputs) {
     if (auto Err = Interp->ParseAndExecute(input)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
