@@ -163,7 +163,6 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   let description = [{
     Demangle FIR internal name and mangle them for external interoperability.
   }];
-  let constructor = "::fir::createExternalNameConversionPass()";
   let options = [
     Option<"appendUnderscoreOpt", "append-underscore",
            "bool", /*default=*/"true",
@@ -343,7 +342,6 @@ def OMPMarkDeclareTargetPass
 def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
   let summary = "Filters out functions intended for the host when compiling "
                 "for the target device.";
-  let constructor = "::fir::createOMPFunctionFilteringPass()";
   let dependentDialects = [
     "mlir::func::FuncDialect",
     "fir::FIROpsDialect"

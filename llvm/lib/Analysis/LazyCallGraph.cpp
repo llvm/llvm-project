@@ -1503,9 +1503,7 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
          "Must not remove lib functions from the call graph!");
 
   auto NI = NodeMap.find(&F);
-  if (NI == NodeMap.end())
-    // Not in the graph at all!
-    return;
+  assert(NI != NodeMap.end() && "Removed function should be known!");
 
   Node &N = *NI->second;
 

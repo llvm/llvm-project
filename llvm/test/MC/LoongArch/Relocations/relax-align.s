@@ -63,17 +63,19 @@ ret
 ## Test the symbol index is different from .text.
 .section .text2, "ax"
 .p2align 4
+.p2align 4, , 4
 break 7
 
 # RELOC:            Relocations [
 # RELAX-RELOC-NEXT:   Section ({{.*}}) .rela.text {
-# RELAX-RELOC-NEXT:     0x24 R_LARCH_ALIGN .Lla-relax-align0 0x4
-# RELAX-RELOC-NEXT:     0x34 R_LARCH_ALIGN .Lla-relax-align0 0x5
-# RELAX-RELOC-NEXT:     0x50 R_LARCH_ALIGN .Lla-relax-align0 0x4
+# RELAX-RELOC-NEXT:     0x24 R_LARCH_ALIGN - 0xC
+# RELAX-RELOC-NEXT:     0x34 R_LARCH_ALIGN - 0x1C
+# RELAX-RELOC-NEXT:     0x50 R_LARCH_ALIGN - 0xC
 # RELAX-RELOC-NEXT:     0x60 R_LARCH_ALIGN .Lla-relax-align0 0xB04
-# RELAX-RELOC-NEXT:     0x70 R_LARCH_ALIGN .Lla-relax-align0 0x4
+# RELAX-RELOC-NEXT:     0x70 R_LARCH_ALIGN - 0xC
 # RELAX-RELOC-NEXT:   }
 # RELAX-RELOC-NEXT:   Section ({{.*}}) .rela.text2 {
-# RELAX-RELOC-NEXT:     0x0 R_LARCH_ALIGN .Lla-relax-align1 0x4
+# RELAX-RELOC-NEXT:     0x0 R_LARCH_ALIGN - 0xC
+# RELAX-RELOC-NEXT:     0xC R_LARCH_ALIGN .Lla-relax-align1 0x404
 # RELAX-RELOC-NEXT:   }
 # RELOC-NEXT:       ]
