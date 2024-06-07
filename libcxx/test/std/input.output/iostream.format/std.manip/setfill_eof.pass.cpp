@@ -9,7 +9,7 @@
 // Test that weof as a wchar_t value can be set as the fill character.
 
 // UNSUPPORTED: no-wide-characters
-// XFAIL: target=={{.+}}-windows-{{.+}} && stdlib=libc++ && libcpp-abi-version=1
+// REQUIRES: target=powerpc{{(64)?}}-ibm-aix || target=s390x-ibm-zos || libcpp-abi-version=2
 
 #include <iomanip>
 #include <ostream>

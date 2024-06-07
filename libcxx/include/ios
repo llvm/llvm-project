@@ -525,9 +525,9 @@ inline _LIBCPP_HIDE_FROM_ABI void ios_base::exceptions(iostate __iostate) {
 template <class _Traits>
 // Attribute 'packed' is used to keep the layout compatible with the previous
 // definition of the '__fill_' and '_set_' pair in basic_ios on AIX & z/OS.
-struct _LIBCPP_PACKED _OptionalFill {
-  _LIBCPP_HIDE_FROM_ABI _OptionalFill() : __set_(false) { }
-  _LIBCPP_HIDE_FROM_ABI _OptionalFill& operator=(typename _Traits::int_type __x) { __set_ = true; __fill_val_ = __x; return *this; }
+struct _LIBCPP_PACKED _FillHelper {
+  _LIBCPP_HIDE_FROM_ABI _FillHelper() : __set_(false) { }
+  _LIBCPP_HIDE_FROM_ABI _FillHelper& operator=(typename _Traits::int_type __x) { __set_ = true; __fill_val_ = __x; return *this; }
   _LIBCPP_HIDE_FROM_ABI bool __is_set() const { return __set_; }
   _LIBCPP_HIDE_FROM_ABI typename _Traits::int_type __fill() const { return __fill_val_; }
 
@@ -617,14 +617,8 @@ protected:
 private:
   basic_ostream<char_type, traits_type>* __tie_;
 
-#if defined(_LIBCXX_IOS_FORCE_OPTIONAL_FILL)
-  using _FillType = _OptionalFill<_Traits>;
-#elif defined(_LIBCXX_IOS_MAY_USE_OPTIONAL_FILL)
-  using _FillType = _If<
-      sizeof(char_type) >= sizeof(int_type),
-      _OptionalFill<_Traits>,
-      _SentinelValueFill<_Traits>
-  >;
+#if defined(_LIBCXX_IOS_USE_FILL_HELPER)
+  using _FillType = _FillHelper<_Traits>;
 #else
   using _FillType = _SentinelValueFill<_Traits>;
 #endif
@@ -643,7 +637,6 @@ template <class _CharT, class _Traits>
 inline _LIBCPP_HIDE_FROM_ABI void basic_ios<_CharT, _Traits>::init(basic_streambuf<char_type, traits_type>* __sb) {
   ios_base::init(__sb);
   __tie_  = nullptr;
-  __fill_ = widen(' ');
 }
 
 template <class _CharT, class _Traits>
