@@ -506,7 +506,15 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fdimf16
     libc.src.math.floorf16
     libc.src.math.fmaxf16
+    libc.src.math.fmaximumf16
+    libc.src.math.fmaximum_magf16
+    libc.src.math.fmaximum_mag_numf16
+    libc.src.math.fmaximum_numf16
     libc.src.math.fminf16
+    libc.src.math.fminimumf16
+    libc.src.math.fminimum_magf16
+    libc.src.math.fminimum_mag_numf16
+    libc.src.math.fminimum_numf16
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
     libc.src.math.llrintf16

@@ -46,6 +46,7 @@
 
 #include "AllocationState.h"
 #include "InterCheckerAPI.h"
+#include "NoOwnershipChangeVisitor.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
@@ -79,13 +80,11 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <climits>
 #include <functional>
 #include <optional>
 #include <utility>
@@ -414,7 +413,7 @@ private:
   bool isFreeingCall(const CallEvent &Call) const;
   static bool isFreeingOwnershipAttrCall(const FunctionDecl *Func);
 
-  friend class NoOwnershipChangeVisitor;
+  friend class NoMemOwnershipChangeVisitor;
 
   CallDescriptionMap<CheckFn> AllocatingMemFnMap{
       {{CDM::CLibrary, {"alloca"}, 1}, &MallocChecker::checkAlloca},
@@ -765,61 +764,8 @@ private:
 //===----------------------------------------------------------------------===//
 
 namespace {
-class NoOwnershipChangeVisitor final : public NoStateChangeFuncVisitor {
-  // The symbol whose (lack of) ownership change we are interested in.
-  SymbolRef Sym;
-  const MallocChecker &Checker;
-  using OwnerSet = llvm::SmallPtrSet<const MemRegion *, 8>;
-
-  // Collect which entities point to the allocated memory, and could be
-  // responsible for deallocating it.
-  class OwnershipBindingsHandler : public StoreManager::BindingsHandler {
-    SymbolRef Sym;
-    OwnerSet &Owners;
-
-  public:
-    OwnershipBindingsHandler(SymbolRef Sym, OwnerSet &Owners)
-        : Sym(Sym), Owners(Owners) {}
-
-    bool HandleBinding(StoreManager &SMgr, Store Store, const MemRegion *Region,
-                       SVal Val) override {
-      if (Val.getAsSymbol() == Sym)
-        Owners.insert(Region);
-      return true;
-    }
-
-    LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
-    LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &out) const {
-      out << "Owners: {\n";
-      for (const MemRegion *Owner : Owners) {
-        out << "  ";
-        Owner->dumpToStream(out);
-        out << ",\n";
-      }
-      out << "}\n";
-    }
-  };
-
+class NoMemOwnershipChangeVisitor final : public NoOwnershipChangeVisitor {
 protected:
-  OwnerSet getOwnersAtNode(const ExplodedNode *N) {
-    OwnerSet Ret;
-
-    ProgramStateRef State = N->getState();
-    OwnershipBindingsHandler Handler{Sym, Ret};
-    State->getStateManager().getStoreManager().iterBindings(State->getStore(),
-                                                            Handler);
-    return Ret;
-  }
-
-  LLVM_DUMP_METHOD static std::string
-  getFunctionName(const ExplodedNode *CallEnterN) {
-    if (const CallExpr *CE = llvm::dyn_cast_or_null<CallExpr>(
-            CallEnterN->getLocationAs<CallEnter>()->getCallExpr()))
-      if (const FunctionDecl *FD = CE->getDirectCallee())
-        return FD->getQualifiedNameAsString();
-    return "";
-  }
-
   /// Syntactically checks whether the callee is a deallocating function. Since
   /// we have no path-sensitive information on this call (we would need a
   /// CallEvent instead of a CallExpr for that), its possible that a
@@ -828,8 +774,9 @@ protected:
   /// See namespace `memory_passed_to_fn_call_free_through_fn_ptr` in
   /// clang/test/Analysis/NewDeleteLeaks.cpp.
   bool isFreeingCallAsWritten(const CallExpr &Call) const {
-    if (Checker.FreeingMemFnMap.lookupAsWritten(Call) ||
-        Checker.ReallocatingMemFnMap.lookupAsWritten(Call))
+    const auto *MallocChk = static_cast<const MallocChecker *>(&Checker);
+    if (MallocChk->FreeingMemFnMap.lookupAsWritten(Call) ||
+        MallocChk->ReallocatingMemFnMap.lookupAsWritten(Call))
       return true;
 
     if (const auto *Func =
@@ -839,22 +786,20 @@ protected:
     return false;
   }
 
+  bool hasResourceStateChanged(ProgramStateRef CallEnterState,
+                               ProgramStateRef CallExitEndState) final {
+    return CallEnterState->get<RegionState>(Sym) !=
+           CallExitEndState->get<RegionState>(Sym);
+  }
+
   /// Heuristically guess whether the callee intended to free memory. This is
   /// done syntactically, because we are trying to argue about alternative
   /// paths of execution, and as a consequence we don't have path-sensitive
   /// information.
-  bool doesFnIntendToHandleOwnership(const Decl *Callee, ASTContext &ACtx) {
+  bool doesFnIntendToHandleOwnership(const Decl *Callee,
+                                     ASTContext &ACtx) final {
     using namespace clang::ast_matchers;
     const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
-
-    // Given that the stack frame was entered, the body should always be
-    // theoretically obtainable. In case of body farms, the synthesized body
-    // is not attached to declaration, thus triggering the '!FD->hasBody()'
-    // branch. That said, would a synthesized body ever intend to handle
-    // ownership? As of today they don't. And if they did, how would we
-    // put notes inside it, given that it doesn't match any source locations?
-    if (!FD || !FD->hasBody())
-      return false;
 
     auto Matches = match(findAll(stmt(anyOf(cxxDeleteExpr().bind("delete"),
                                             callExpr().bind("call")))),
@@ -873,30 +818,7 @@ protected:
     return false;
   }
 
-  bool wasModifiedInFunction(const ExplodedNode *CallEnterN,
-                             const ExplodedNode *CallExitEndN) override {
-    if (!doesFnIntendToHandleOwnership(
-            CallExitEndN->getFirstPred()->getLocationContext()->getDecl(),
-            CallExitEndN->getState()->getAnalysisManager().getASTContext()))
-      return true;
-
-    if (CallEnterN->getState()->get<RegionState>(Sym) !=
-        CallExitEndN->getState()->get<RegionState>(Sym))
-      return true;
-
-    OwnerSet CurrOwners = getOwnersAtNode(CallEnterN);
-    OwnerSet ExitOwners = getOwnersAtNode(CallExitEndN);
-
-    // Owners in the current set may be purged from the analyzer later on.
-    // If a variable is dead (is not referenced directly or indirectly after
-    // some point), it will be removed from the Store before the end of its
-    // actual lifetime.
-    // This means that if the ownership status didn't change, CurrOwners
-    // must be a superset of, but not necessarily equal to ExitOwners.
-    return !llvm::set_is_subset(ExitOwners, CurrOwners);
-  }
-
-  static PathDiagnosticPieceRef emitNote(const ExplodedNode *N) {
+  PathDiagnosticPieceRef emitNote(const ExplodedNode *N) final {
     PathDiagnosticLocation L = PathDiagnosticLocation::create(
         N->getLocation(),
         N->getState()->getStateManager().getContext().getSourceManager());
@@ -905,42 +827,9 @@ protected:
            "later deallocation");
   }
 
-  PathDiagnosticPieceRef
-  maybeEmitNoteForObjCSelf(PathSensitiveBugReport &R,
-                           const ObjCMethodCall &Call,
-                           const ExplodedNode *N) override {
-    // TODO: Implement.
-    return nullptr;
-  }
-
-  PathDiagnosticPieceRef
-  maybeEmitNoteForCXXThis(PathSensitiveBugReport &R,
-                          const CXXConstructorCall &Call,
-                          const ExplodedNode *N) override {
-    // TODO: Implement.
-    return nullptr;
-  }
-
-  PathDiagnosticPieceRef
-  maybeEmitNoteForParameters(PathSensitiveBugReport &R, const CallEvent &Call,
-                             const ExplodedNode *N) override {
-    // TODO: Factor the logic of "what constitutes as an entity being passed
-    // into a function call" out by reusing the code in
-    // NoStoreFuncVisitor::maybeEmitNoteForParameters, maybe by incorporating
-    // the printing technology in UninitializedObject's FieldChainInfo.
-    ArrayRef<ParmVarDecl *> Parameters = Call.parameters();
-    for (unsigned I = 0; I < Call.getNumArgs() && I < Parameters.size(); ++I) {
-      SVal V = Call.getArgSVal(I);
-      if (V.getAsSymbol() == Sym)
-        return emitNote(N);
-    }
-    return nullptr;
-  }
-
 public:
-  NoOwnershipChangeVisitor(SymbolRef Sym, const MallocChecker *Checker)
-      : NoStateChangeFuncVisitor(bugreporter::TrackingKind::Thorough), Sym(Sym),
-        Checker(*Checker) {}
+  NoMemOwnershipChangeVisitor(SymbolRef Sym, const MallocChecker *Checker)
+      : NoOwnershipChangeVisitor(Sym, Checker) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int Tag = 0;
@@ -2949,7 +2838,7 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
   R->markInteresting(Sym);
   R->addVisitor<MallocBugVisitor>(Sym, true);
   if (ShouldRegisterNoOwnershipChangeVisitor)
-    R->addVisitor<NoOwnershipChangeVisitor>(Sym, this);
+    R->addVisitor<NoMemOwnershipChangeVisitor>(Sym, this);
   C.emitReport(std::move(R));
 }
 
