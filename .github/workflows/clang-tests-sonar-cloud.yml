@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   check_clang:
-    if: github.repository_owner == 'llvm'
+    if: github.repository_owner == 'steakhal'
     name: Test clang,lldb,libclc
     uses: ./.github/workflows/llvm-project-tests-sonar-cloud.yml
     with:
