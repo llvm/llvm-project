@@ -37,7 +37,7 @@ class AArch64Subtarget;
 class MachineInstr;
 
 struct TPIDR2Object {
-  unsigned FrameIndex = std::numeric_limits<int>::max();
+  int FrameIndex = std::numeric_limits<int>::max();
   unsigned Uses = 0;
 };
 
