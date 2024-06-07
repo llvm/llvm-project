@@ -9017,7 +9017,7 @@ def warn_offload_incompatible_redeclare : Warning<
   "target-attribute based function overloads are not supported by NVCC and will be treated as a function redeclaration:"
   "new declaration is %select{__device__|__global__|__host__|__host__ __device__}0 function, "
   "old declaration is %select{__device__|__global__|__host__|__host__ __device__}1 function">,
-  InGroup<DiagGroup<"offload-incompatible-redeclare">>, DefaultIgnore;
+  InGroup<DiagGroup<"nvcc-compat">>, DefaultIgnore;
 
 def err_cuda_device_builtin_surftex_cls_template : Error<
     "illegal device builtin %select{surface|texture}0 reference "

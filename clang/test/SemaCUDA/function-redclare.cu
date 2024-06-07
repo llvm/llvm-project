@@ -3,9 +3,9 @@
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fsyntax-only \
 // RUN:   -isystem %S/Inputs -fcuda-is-device -verify %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only \
-// RUN:   -isystem %S/Inputs -verify=redecl -Woffload-incompatible-redeclare %s
+// RUN:   -isystem %S/Inputs -verify=redecl -Wnvcc-compat %s
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fsyntax-only \
-// RUN:   -isystem %S/Inputs -fcuda-is-device -Woffload-incompatible-redeclare -verify=redecl %s
+// RUN:   -isystem %S/Inputs -fcuda-is-device -Wnvcc-compat -verify=redecl %s
 
 // expected-no-diagnostics
 #include "cuda.h"

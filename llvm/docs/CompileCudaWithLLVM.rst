@@ -427,7 +427,7 @@ To enable these warnings, use the following compiler flag:
 
 .. code-block:: console
 
-    -Woffload-incompatible-redeclare
+    -Wnvcc-compat
 
 Using a Different Class on Host/Device
 --------------------------------------
