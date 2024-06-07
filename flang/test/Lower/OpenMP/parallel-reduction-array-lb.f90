@@ -77,7 +77,7 @@ end program
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_5]]) {uniq_name = "_QFEi"} : (!fir.ref<!fir.array<3x2xi32>>, !fir.shapeshift<2>) -> (!fir.box<!fir.array<3x2xi32>>, !fir.ref<!fir.array<3x2xi32>>)
 ! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.box<!fir.array<3x2xi32>>
 ! CHECK:           fir.store %[[VAL_6]]#0 to %[[VAL_7]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
-! CHECK:           omp.parallel byref reduction(@add_reduction_byref_box_3x2xi32 %[[VAL_7]] -> %[[VAL_8:.*]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>) {
+! CHECK:           omp.parallel reduction(byref @add_reduction_byref_box_3x2xi32 %[[VAL_7]] -> %[[VAL_8:.*]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>) {
 ! CHECK:             %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFEi"} : (!fir.ref<!fir.box<!fir.array<3x2xi32>>>) -> (!fir.ref<!fir.box<!fir.array<3x2xi32>>>, !fir.ref<!fir.box<!fir.array<3x2xi32>>>)
 ! CHECK:             %[[VAL_10:.*]] = arith.constant 3 : i32
 ! CHECK:             %[[VAL_11:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<!fir.box<!fir.array<3x2xi32>>>

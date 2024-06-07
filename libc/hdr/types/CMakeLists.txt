@@ -108,3 +108,21 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.struct_timeval
     libc.include.sys_time
 )
+
+add_proxy_header_library(
+  pid_t
+  HDRS
+    pid_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pid_t
+    libc.include.sys_types
+)
+
+add_proxy_header_library(
+  atexithandler_t
+  HDRS
+    atexithandler_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.atexithandler_t
+    libc.include.stdlib
+)

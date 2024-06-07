@@ -35,6 +35,11 @@ llvm.func @func_no_debug() {
   // Specify the name parameter.
   tag = DW_TAG_pointer_type, name = "named", baseType = #si32
 >
+#ptrWithAddressSpace = #llvm.di_derived_type<
+  tag = DW_TAG_pointer_type, baseType = #si32,
+  sizeInBits = 64, alignInBits = 32, offsetInBits = 8,
+  dwarfAddressSpace = 3
+>
 #cu = #llvm.di_compile_unit<
   id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
   producer = "MLIR", isOptimized = true, emissionKind = Full,
@@ -51,7 +56,7 @@ llvm.func @func_no_debug() {
   elements = #llvm.di_subrange<lowerBound = 0, upperBound = 4, stride = 1>
 >
 #null = #llvm.di_null_type
-#spType0 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #null, #si64, #ptr, #named, #composite, #vector>
+#spType0 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #null, #si64, #ptr, #named, #ptrWithAddressSpace, #composite, #vector>
 #toplevel_namespace = #llvm.di_namespace<
   name = "toplevel", exportSymbols = true
 >
@@ -138,11 +143,12 @@ llvm.func @empty_types() {
 // CHECK: ![[NESTED_NAMESPACE]] = !DINamespace(name: "nested", scope: ![[TOPLEVEL_NAMESPACE:.*]])
 // CHECK: ![[TOPLEVEL_NAMESPACE]] = !DINamespace(name: "toplevel", scope: null, exportSymbols: true)
 // CHECK: ![[FUNC_TYPE]] = !DISubroutineType(cc: DW_CC_normal, types: ![[FUNC_ARGS:.*]])
-// CHECK: ![[FUNC_ARGS]] = !{null, ![[ARG_TYPE:.*]], ![[PTR_TYPE:.*]], ![[NAMED_TYPE:.*]], ![[COMPOSITE_TYPE:.*]], ![[VECTOR_TYPE:.*]]}
+// CHECK: ![[FUNC_ARGS]] = !{null, ![[ARG_TYPE:.*]], ![[PTR_TYPE:.*]], ![[NAMED_TYPE:.*]], ![[PTR_WITH_ADDR_SPACE:.*]], ![[COMPOSITE_TYPE:.*]], ![[VECTOR_TYPE:.*]]}
 // CHECK: ![[ARG_TYPE]] = !DIBasicType(name: "si64")
 // CHECK: ![[PTR_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, align: 32, offset: 8, extraData: ![[BASE_TYPE]])
 // CHECK: ![[BASE_TYPE]] = !DIBasicType(name: "si32", size: 32, encoding: DW_ATE_signed)
 // CHECK: ![[NAMED_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "named", baseType: ![[BASE_TYPE:.*]])
+// CHECK: ![[PTR_WITH_ADDR_SPACE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, align: 32, offset: 8, dwarfAddressSpace: 3)
 // CHECK: ![[COMPOSITE_TYPE]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "composite", file: ![[CU_FILE_LOC]], line: 42, size: 64, align: 32, elements: ![[COMPOSITE_ELEMENTS:.*]])
 // CHECK: ![[COMPOSITE_ELEMENTS]] = !{![[COMPOSITE_ELEMENT:.*]]}
 // CHECK: ![[COMPOSITE_ELEMENT]] = !DISubrange(count: 4)
@@ -228,7 +234,7 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
 // CHECK-DAG: ![[LEXICAL_BLOCK_FILE:.*]] = distinct !DILexicalBlockFile(scope: ![[INNER_FUNC]], file: ![[FILE]], discriminator: 0)
 // CHECK-DAG: ![[VAR_LOC0]] = !DILocalVariable(name: "a", scope: ![[OUTER_FUNC]], file: ![[FILE]]
 // CHECK-DAG: ![[VAR_LOC1]] = !DILocalVariable(name: "b", scope: ![[LEXICAL_BLOCK_FILE]], file: ![[FILE]]
-// CHECK-DAG  ![[LABEL]] = !DILabel(scope: ![[LEXICAL_BLOCK_FILE]], name: "label", file: ![[FILE]], line: 42)
+// CHECK-DAG: ![[LABEL]] = !DILabel(scope: ![[LEXICAL_BLOCK_FILE]], name: "label", file: ![[FILE]], line: 42)
 
 // -----
 
@@ -308,6 +314,25 @@ llvm.func @dbg_intrinsics_with_no_location(%arg0: i32) -> (i32) {
 #di_basic_type_2 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "uint64_t", sizeInBits = 64, encoding = DW_ATE_unsigned>
 llvm.mlir.global external @global_with_expr_1() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit_2, name = "global_with_expr_1", linkageName = "global_with_expr_1", file = #di_file_2, line = 370, type = #di_basic_type_2>, expr = <>>} : i64
 llvm.mlir.global external @global_with_expr_2() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit_2, name = "global_with_expr_2", linkageName = "global_with_expr_2", file = #di_file_2, line = 371, type = #di_basic_type_2, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <>>} : i64
+
+// -----
+
+// CHECK: @module_global = external global i64, !dbg {{.*}}
+// CHECK: !llvm.module.flags = !{{{.*}}}
+// CHECK: !llvm.dbg.cu = !{{{.*}}}
+// CHECK-DAG: ![[FILE:.*]] = !DIFile(filename: "test.f90", directory: "existence")
+// CHECK-DAG: ![[TYPE:.*]] = !DIBasicType(name: "integer", size: 64, encoding: DW_ATE_signed)
+// CHECK-DAG: ![[SCOPE:.*]] = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: ![[FILE]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: ![[GVALS:.*]])
+// CHECK-DAG: ![[SCOPE1:.*]] = !DIModule(scope: ![[SCOPE]], name: "module2", file: ![[FILE]], line: 120)
+// CHECK-DAG: ![[GVAR:.*]] = distinct !DIGlobalVariable(name: "module_global", linkageName: "module_global", scope: ![[SCOPE1]], file: ![[FILE]], line: 121, type: ![[TYPE]], isLocal: false, isDefinition: true)
+// CHECK-DAG: ![[GEXPR:.*]] = !DIGlobalVariableExpression(var: ![[GVAR]], expr: !DIExpression())
+// CHECK-DAG: ![[GVALS]] = !{![[GEXPR]]}
+
+#di_file = #llvm.di_file<"test.f90" in "existence">
+#di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, producer = "MLIR", isOptimized = true, emissionKind = Full>
+#di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
+#di_module = #llvm.di_module<file = #di_file, scope = #di_compile_unit, name = "module2", configMacros = "", includePath = "", apinotes = "", line = 120, isDecl = false >
+llvm.mlir.global external @module_global() {dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_module, name = "module_global", linkageName = "module_global", file = #di_file, line = 121, type = #di_basic_type, isLocalToUnit = false, isDefined = true>, expr = <>>} : i64
 
 // -----
 
@@ -459,3 +484,110 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 // CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
 // CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])
 // CHECK: ![[SR_TYPES]] = !{![[COMP]]}
+
+// -----
+
+#file = #llvm.di_file<"test.f90" in "">
+#cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95,
+  file = #file, producer = "", isOptimized = false, emissionKind = Full>
+#i32 = #llvm.di_basic_type<
+  tag = DW_TAG_base_type, name = "integer",
+  sizeInBits = 32, encoding = DW_ATE_signed
+>
+#null = #llvm.di_null_type
+#alloc = #llvm.di_expression<[DW_OP_lit0, DW_OP_ne]>
+#assoc = #llvm.di_expression<[DW_OP_lit0, DW_OP_eq]>
+#rank = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>
+#datal = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_deref]>
+#array = #llvm.di_composite_type<tag = DW_TAG_array_type,
+  baseType = #i32,
+  dataLocation = #datal, rank = #rank,
+  allocated = #alloc, associated = #assoc,
+  elements = #llvm.di_subrange<lowerBound = 1, count = 5>
+>
+#spType0 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #null, #array>
+#sp0 = #llvm.di_subprogram<
+  compileUnit = #cu, scope = #cu, name = "fn_with_composite", file = #file,
+  subprogramFlags = "Definition|Optimized", type = #spType0
+>
+llvm.func @fn_with_composite() {
+  llvm.return
+}loc(fused<#sp0>["foo.mlir":1:1])
+// CHECK-LABEL: define void @fn_with_composite()
+// CHECK: !DICompositeType(
+// CHECK-SAME: dataLocation: !DIExpression(DW_OP_push_object_address, DW_OP_deref)
+// CHECK-SAME: associated: !DIExpression(DW_OP_lit0, DW_OP_eq)
+// CHECK-SAME: allocated: !DIExpression(DW_OP_lit0, DW_OP_ne)
+// CHECK-SAME: rank: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 16, DW_OP_deref)
+
+// -----
+
+// Test that Subrange works with expression and variables.
+
+#bt = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
+#file = #llvm.di_file<"debug-info.ll" in "/">
+#cu = #llvm.di_compile_unit<id = distinct[1]<>,
+ sourceLanguage = DW_LANG_Fortran95, file = #file, isOptimized = false,
+ emissionKind = Full>
+#comp_ty1 = #llvm.di_composite_type<tag = DW_TAG_array_type,
+ name = "expr_elements", baseType = #bt, flags = Vector,
+ elements = #llvm.di_subrange<count = #llvm.di_expression<
+ [DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>>>
+#srty = #llvm.di_subroutine_type<types = #bt, #comp_ty1>
+#sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "subranges",
+  file = #file, subprogramFlags = Definition, type = #srty>
+#lvar = #llvm.di_local_variable<scope = #sp, name = "size">
+#gv = #llvm.di_global_variable<scope = #cu, name = "gv", file = #file,
+ line = 3, type = #bt>
+#gve = #llvm.di_global_variable_expression<var = #gv, expr = <>>
+#comp_ty2 = #llvm.di_composite_type<tag = DW_TAG_array_type,
+ name = "var_elements", baseType = #bt, flags = Vector,
+ elements = #llvm.di_subrange<count = #lvar, stride = #gv>>
+#lvar2 = #llvm.di_local_variable<scope = #sp, name = "var", type = #comp_ty2>
+#loc1 = loc("test.f90": 1:1)
+#loc2 = loc(fused<#sp>[#loc1])
+
+llvm.mlir.global external @gv() {dbg_expr = #gve} : i64
+
+llvm.func @subranges(%arg: !llvm.ptr) {
+  llvm.intr.dbg.declare #lvar2 = %arg : !llvm.ptr
+  llvm.return
+} loc(#loc2)
+
+// CHECK-LABEL: define void @subranges
+// CHECK: ![[GV:[0-9]+]] = {{.*}}!DIGlobalVariable(name: "gv"{{.*}})
+// CHECK: !DICompositeType(tag: DW_TAG_array_type, name: "expr_elements"{{.*}}elements: ![[ELEMENTS1:[0-9]+]])
+// CHECK: ![[ELEMENTS1]] = !{![[ELEMENT1:[0-9]+]]}
+// CHECK: ![[ELEMENT1]] = !DISubrange(count: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 16, DW_OP_deref))
+
+// CHECK: !DICompositeType(tag: DW_TAG_array_type, name: "var_elements"{{.*}}elements: ![[ELEMENTS2:[0-9]+]])
+// CHECK: ![[ELEMENTS2]] = !{![[ELEMENT2:[0-9]+]]}
+// CHECK: ![[ELEMENT2]] = !DISubrange(count: ![[LV:[0-9]+]], stride: ![[GV:[0-9]+]])
+// CHECK: ![[LV]] = !DILocalVariable(name: "size"{{.*}})
+
+// -----
+
+#bt = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32>
+#file = #llvm.di_file<"debug-info.ll" in "/">
+#cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C,
+ file = #file, isOptimized = false, emissionKind = Full>
+#sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "test",
+ file = #file, subprogramFlags = Definition>
+#var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt>
+#ty = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
+ sizeInBits = 32, alignInBits = 8, stringLength = #var,
+ stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>,
+ stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+#var1 = #llvm.di_local_variable<scope = #sp, name = "str", type = #ty>
+
+llvm.func @string_ty(%arg0: !llvm.ptr) {
+  llvm.intr.dbg.value #var1 = %arg0 : !llvm.ptr
+  llvm.intr.dbg.value #var = %arg0 : !llvm.ptr
+  llvm.return
+} loc(#loc2)
+
+#loc1 = loc("test.f90":1:1)
+#loc2 = loc(fused<#sp>[#loc1])
+
+// CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
+// CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}})

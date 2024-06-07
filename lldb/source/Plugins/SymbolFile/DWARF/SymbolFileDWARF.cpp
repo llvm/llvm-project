@@ -1632,33 +1632,27 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     return true;
   }
 
-  // Once we start resolving this type, remove it from the forward
-  // declaration map in case anyone's child members or other types require this
-  // type to get resolved.
-  DWARFDIE dwarf_die = GetDIE(die_it->second);
-  GetForwardDeclCompilerTypeToDIE().erase(die_it);
-  Type *type = nullptr;
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
-    type = dwarf_ast->FindDefinitionTypeForDIE(dwarf_die);
-  if (!type)
-    return false;
-
-  die_it = GetForwardDeclCompilerTypeToDIE().find(
-      compiler_type_no_qualifiers.GetOpaqueQualType());
-  if (die_it != GetForwardDeclCompilerTypeToDIE().end()) {
-    dwarf_die = GetDIE(die_it->getSecond());
+  DWARFDIE dwarf_die = GetDIE(die_it->getSecond());
+  if (dwarf_die) {
+    // Once we start resolving this type, remove it from the forward
+    // declaration map in case anyone child members or other types require this
+    // type to get resolved. The type will get resolved when all of the calls
+    // to SymbolFileDWARF::ResolveClangOpaqueTypeDefinition are done.
     GetForwardDeclCompilerTypeToDIE().erase(die_it);
-  }
 
-  if (Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion))
-    GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
-        log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
-        dwarf_die.GetID(), DW_TAG_value_to_name(dwarf_die.Tag()),
-        dwarf_die.Tag(), type->GetName().AsCString());
-  assert(compiler_type);
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
-    return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
-  return true;
+    Type *type = GetDIEToType().lookup(dwarf_die.GetDIE());
+
+    Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
+    if (log)
+      GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
+          log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
+          dwarf_die.GetID(), DW_TAG_value_to_name(dwarf_die.Tag()),
+          dwarf_die.Tag(), type->GetName().AsCString());
+    assert(compiler_type);
+    if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
+      return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
+  }
+  return false;
 }
 
 Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
@@ -1754,7 +1748,8 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
     if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile()) {
       symbol_file = debug_map->GetSymbolFileByOSOIndex(*file_index); // OSO case
       if (symbol_file)
-        return symbol_file->DebugInfo().GetDIE(die_ref);
+        return symbol_file->DebugInfo().GetDIE(die_ref.section(),
+                                               die_ref.die_offset());
       return DWARFDIE();
     }
 
@@ -1771,7 +1766,7 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
   if (symbol_file)
     return symbol_file->GetDIE(die_ref);
 
-  return DebugInfo().GetDIE(die_ref);
+  return DebugInfo().GetDIE(die_ref.section(), die_ref.die_offset());
 }
 
 /// Return the DW_AT_(GNU_)dwo_id.
@@ -2097,16 +2092,14 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
               if (var_sp && !var_sp->GetLocationIsConstantValueData()) {
                 const DWARFExpressionList &location =
                     var_sp->LocationExpressionList();
-                Value location_result;
-                Status error;
                 ExecutionContext exe_ctx;
-                if (location.Evaluate(&exe_ctx, nullptr, LLDB_INVALID_ADDRESS,
-                                      nullptr, nullptr, location_result,
-                                      &error)) {
-                  if (location_result.GetValueType() ==
+                llvm::Expected<Value> location_result = location.Evaluate(
+                    &exe_ctx, nullptr, LLDB_INVALID_ADDRESS, nullptr, nullptr);
+                if (location_result) {
+                  if (location_result->GetValueType() ==
                       Value::ValueType::FileAddress) {
                     lldb::addr_t file_addr =
-                        location_result.GetScalar().ULongLong();
+                        location_result->GetScalar().ULongLong();
                     lldb::addr_t byte_size = 1;
                     if (var_sp->GetType())
                       byte_size =
@@ -2114,6 +2107,10 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
                     m_global_aranges_up->Append(GlobalVariableMap::Entry(
                         file_addr, byte_size, var_sp.get()));
                   }
+                } else {
+                  LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols),
+                                 location_result.takeError(),
+                                 "location expression failed to execute: {0}");
                 }
               }
             }
@@ -3779,7 +3776,7 @@ SymbolFileDWARF::FindBlockContainingSpecification(
   // Give the concrete function die specified by "func_die_offset", find the
   // concrete block whose DW_AT_specification or DW_AT_abstract_origin points
   // to "spec_block_die_offset"
-  return FindBlockContainingSpecification(DebugInfo().GetDIE(func_die_ref),
+  return FindBlockContainingSpecification(GetDIE(func_die_ref),
                                           spec_block_die_offset);
 }
 

@@ -268,10 +268,9 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %x_wide:_(s32) = COPY $w0
     ; CHECK: %y_wide:_(s32) = COPY $w1
-    ; CHECK: %x:_(s1) = G_TRUNC %x_wide(s32)
-    ; CHECK: %y:_(s1) = G_TRUNC %y_wide(s32)
-    ; CHECK: [[OR:%[0-9]+]]:_(s1) = G_OR %x, %y
-    ; CHECK: %logic_op:_(s64) = G_SEXT [[OR]](s1)
+    ; CHECK: %8:_(s32) = G_OR %x_wide, %y_wide
+    ; CHECK: %7:_(s1) = G_TRUNC %8(s32)
+    ; CHECK: %logic_op:_(s64) = G_SEXT %7(s1)
     ; CHECK: $x0 = COPY %logic_op(s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %x_wide:_(s32) = COPY $w0

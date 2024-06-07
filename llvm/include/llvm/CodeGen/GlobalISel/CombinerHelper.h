@@ -56,9 +56,9 @@ struct IndexedLoadStoreMatchInfo {
   Register Addr;
   Register Base;
   Register Offset;
-  bool RematOffset; // True if Offset is a constant that needs to be
-                    // rematerialized before the new load/store.
-  bool IsPre;
+  bool RematOffset = false; // True if Offset is a constant that needs to be
+                            // rematerialized before the new load/store.
+  bool IsPre = false;
 };
 
 struct PtrAddChain {
@@ -816,11 +816,17 @@ public:
   /// Combine zext of trunc.
   bool matchZextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
+  /// Combine zext nneg to sext.
+  bool matchNonNegZext(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   /// Match constant LHS FP ops that should be commuted.
   bool matchCommuteFPConstantToRHS(MachineInstr &MI);
 
   // Given a binop \p MI, commute operands 1 and 2.
   void applyCommuteBinOpOperands(MachineInstr &MI);
+
+  /// Combine select to integer min/max.
+  bool matchSelectIMinMax(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
@@ -836,10 +842,6 @@ public:
 
   /// Combine extract vector element.
   bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
-
-  /// Combine extract vector element with freeze on the vector register.
-  bool matchExtractVectorElementWithFreeze(const MachineOperand &MO,
-                                           BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector on the vector register.
   bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
@@ -865,6 +867,17 @@ public:
 
   /// Combine insert vector element OOB.
   bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
+                                             BuildFnTy &MatchInfo);
+
+  bool matchAddOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchMulOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchSubOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchShlOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -961,9 +974,6 @@ private:
   bool tryFoldBoolSelectToLogic(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool tryFoldSelectOfConstants(GSelect *Select, BuildFnTy &MatchInfo);
-
-  /// Try to fold (icmp X, Y) ? X : Y -> integer minmax.
-  bool tryFoldSelectToIntMinMax(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool isOneOrOneSplat(Register Src, bool AllowUndefs);
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);

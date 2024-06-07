@@ -64,7 +64,7 @@ to specify the target triple:
      Vendor       Description
      ============ ==============================================================
      ``amd``      Can be used for all AMD GPU usage.
-     ``mesa3d``   Can be used if the OS is ``mesa3d``.
+     ``mesa``     Can be used if the OS is ``mesa3d``.
      ============ ==============================================================
 
   .. table:: AMDGPU Operating Systems
@@ -504,6 +504,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -591,11 +598,13 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                          - ``gfx1102``                        - Packed          hazards specific to some targets
                                          - ``gfx1103``                          work-item       within this family.
                                          - ``gfx1150``                          IDs
-                                         - ``gfx1151``                                          Not all VGPRs can be used on:
+                                         - ``gfx1151``
+                                         - ``gfx1152``                                          Not all VGPRs can be used on:
 
                                                                                                 - ``gfx1100``
                                                                                                 - ``gfx1101``
                                                                                                 - ``gfx1151``
+                                                                                                - ``gfx1152``
 
                                                                                                 SALU floating point instructions
                                                                                                 and single-use VGPR hint
@@ -604,12 +613,21 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
 
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
+                                                                                                - ``gfx1152``
 
                                                                                                 SGPRs are not supported for src1
                                                                                                 in dpp instructions for:
 
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
+                                                                                                - ``gfx1152``
+
+
+     ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
+                                         - ``gfx1201``     - cumode             flat scratch
+                                                                              - Packed
+                                                                                work-item
+                                                                                IDs
      ==================== ============== ================= ================== ================= =================================
 
 .. _amdgpu-generic-processor-versioning:
@@ -824,8 +842,8 @@ supported for the ``amdgcn`` target.
      Constant                              4               constant    *same as global* 64      0x0000000000000000
      Private                               5               private     scratch          32      0xFFFFFFFF
      Constant 32-bit                       6               *TODO*                               0x00000000
-     Buffer Fat Pointer (experimental)     7               *TODO*
-     Buffer Resource (experimental)        8               *TODO*
+     Buffer Fat Pointer                    7               N/A         N/A              160     0
+     Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
@@ -1388,8 +1406,11 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-no-workitem-id-x"               Indicates the function does not depend on the value of the
                                              llvm.amdgcn.workitem.id.x intrinsic. If a function is marked with this
-                                             attribute, or reached through a call site marked with this attribute,
-                                             the value returned by the intrinsic is undefined. The backend can
+                                             attribute, or reached through a call site marked with this attribute, and
+                                             that intrinsic is called, the behavior of the program is undefined. (Whole-program
+                                             undefined behavior is used here because, for example, the absence of a required workitem
+                                             ID in the preloaded register set can mean that all other preloaded registers
+                                             are earlier than the compilation assumed they would be.) The backend can
                                              generally infer this during code generation, so typically there is no
                                              benefit to frontends marking functions with this.
 
@@ -1969,7 +1990,11 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10-1-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10-3-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC``    0x054      ``gfx11-generic``
-     *reserved*                                 0x055      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1152``          0x055      ``gfx1152``.
+     *reserved*                                 0x056      Reserved.
+     *reserved*                                 0x057      Reserved.
+     *reserved*                                 0x058      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ========================================== ========== =============================
 
 Sections

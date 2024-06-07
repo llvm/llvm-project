@@ -144,6 +144,11 @@ static llvm::cl::opt<bool>
                     llvm::cl::desc("enable openmp GPU target codegen"),
                     llvm::cl::init(false));
 
+static llvm::cl::opt<bool> enableOpenMPForceUSM(
+    "fopenmp-force-usm",
+    llvm::cl::desc("force openmp unified shared memory mode"),
+    llvm::cl::init(false));
+
 // A simplified subset of the OpenMP RTL Flags from Flang, only the primary
 // positive options are available, no negative options e.g. fopen_assume* vs
 // fno_open_assume*
@@ -204,6 +209,10 @@ static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
 
+static llvm::cl::opt<std::string>
+    enableGPUMode("gpu", llvm::cl::desc("Enable GPU Mode managed|unified"),
+                  llvm::cl::init(""));
+
 static llvm::cl::opt<bool> fixedForm("ffixed-form",
                                      llvm::cl::desc("enable fixed form"),
                                      llvm::cl::init(false));
@@ -211,6 +220,11 @@ static llvm::cl::opt<std::string>
     targetTripleOverride("target",
                          llvm::cl::desc("Override host target triple"),
                          llvm::cl::init(""));
+
+static llvm::cl::opt<bool>
+    setNSW("integer-overflow",
+           llvm::cl::desc("add nsw flag to internal operations"),
+           llvm::cl::init(false));
 
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Tools/CLOptions.inc"
@@ -351,6 +365,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   Fortran::lower::LoweringOptions loweringOptions{};
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
+  loweringOptions.setNSWOnLoopVarInc(setNSW);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
@@ -364,11 +379,11 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
                       "-fopenmp-is-target-device is also set";
       return mlir::failure();
     }
-    auto offloadModuleOpts =
-        OffloadModuleOpts(setOpenMPTargetDebug, setOpenMPTeamSubscription,
-                          setOpenMPThreadSubscription, setOpenMPNoThreadState,
-                          setOpenMPNoNestedParallelism, enableOpenMPDevice,
-                          enableOpenMPGPU, setOpenMPVersion, "", setNoGPULib);
+    auto offloadModuleOpts = OffloadModuleOpts(
+        setOpenMPTargetDebug, setOpenMPTeamSubscription,
+        setOpenMPThreadSubscription, setOpenMPNoThreadState,
+        setOpenMPNoNestedParallelism, enableOpenMPDevice, enableOpenMPGPU,
+        enableOpenMPForceUSM, setOpenMPVersion, "", setNoGPULib);
     setOffloadModuleInterfaceAttributes(mlirModule, offloadModuleOpts);
     setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
   }
@@ -428,6 +443,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    config.NSWOnLoopVarInc = setNSW;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
   }
@@ -493,6 +509,12 @@ int main(int argc, char **argv) {
   // enable parsing of CUDA Fortran
   if (enableCUDA) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
+  }
+
+  if (enableGPUMode == "managed") {
+    options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
+  } else if (enableGPUMode == "unified") {
+    options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
   }
 
   if (fixedForm) {

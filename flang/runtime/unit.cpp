@@ -265,6 +265,7 @@ void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
     furthestPositionInRecord =
         std::max(furthestPositionInRecord, positionInRecord);
     frameOffsetInFile_ += recordOffsetInFrame_ + furthestPositionInRecord;
+    recordOffsetInFrame_ = 0;
   }
   BeginRecord();
 }

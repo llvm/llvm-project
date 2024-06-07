@@ -141,7 +141,7 @@ define i32 @memcpy_addrspacecast() nounwind {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_INC:%.*]], [[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[I]] to i16
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(2) getelementptr inbounds ([60 x i8], ptr addrspace(2) @const_array, i16 0, i16 4), i16 [[TMP0]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @const_array, i16 4), i16 [[TMP0]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(2) [[PTR]], align 1
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[LOAD]] to i32
 ; CHECK-NEXT:    [[SUM_INC]] = add i32 [[SUM]], [[EXT]]

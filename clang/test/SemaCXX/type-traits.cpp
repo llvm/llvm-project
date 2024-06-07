@@ -25,6 +25,7 @@ typedef Empty EmptyArMB[1][2];
 typedef int Int;
 typedef Int IntAr[10];
 typedef Int IntArNB[];
+typedef Int IntArZero[0];
 class Statics { static int priv; static NonPOD np; };
 union EmptyUnion {};
 union IncompleteUnion; // expected-note {{forward declaration of 'IncompleteUnion'}}
@@ -685,6 +686,7 @@ void is_array()
 {
   static_assert(__is_array(IntAr));
   static_assert(__is_array(IntArNB));
+  static_assert(!__is_array(IntArZero));
   static_assert(__is_array(UnionAr));
 
   static_assert(!__is_array(void));
@@ -714,6 +716,7 @@ void is_array()
 void is_bounded_array(int n) {
   static_assert(__is_bounded_array(IntAr));
   static_assert(!__is_bounded_array(IntArNB));
+  static_assert(!__is_bounded_array(IntArZero));
   static_assert(__is_bounded_array(UnionAr));
 
   static_assert(!__is_bounded_array(void));
@@ -746,6 +749,7 @@ void is_bounded_array(int n) {
 void is_unbounded_array(int n) {
   static_assert(!__is_unbounded_array(IntAr));
   static_assert(__is_unbounded_array(IntArNB));
+  static_assert(!__is_unbounded_array(IntArZero));
   static_assert(!__is_unbounded_array(UnionAr));
 
   static_assert(!__is_unbounded_array(void));

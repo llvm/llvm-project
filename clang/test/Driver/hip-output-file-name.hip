@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // Output bundled code objects for combined compilation.
 // RUN: %clang -### -c --target=x86_64-linux-gnu -fgpu-rdc --no-offload-new-driver \
 // RUN:   -nogpulib -nogpuinc --offload-arch=gfx803 --offload-arch=gfx900 %s \

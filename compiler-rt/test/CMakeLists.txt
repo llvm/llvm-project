@@ -113,6 +113,7 @@ endif()
 # introduce a rule to run to run all of them.
 get_property(LLVM_COMPILER_RT_LIT_DEPENDS GLOBAL PROPERTY LLVM_COMPILER_RT_LIT_DEPENDS)
 add_custom_target(compiler-rt-test-depends)
+set_target_properties(compiler-rt-test-depends PROPERTIES FOLDER "Compiler-RT/Tests")
 if(LLVM_COMPILER_RT_LIT_DEPENDS)
   add_dependencies(compiler-rt-test-depends ${LLVM_COMPILER_RT_LIT_DEPENDS})
 endif()
