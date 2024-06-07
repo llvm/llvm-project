@@ -201,3 +201,19 @@ namespace consistency {
     // new-error@-1 {{ambiguous partial specializations}}
   } // namespace t2
 } // namespace consistency
+
+namespace regression1 {
+  template <typename T, typename Y> struct map {};
+  template <typename T> class foo {};
+
+  template <template <typename...> class MapType, typename Value>
+  Value bar(MapType<int, Value> map);
+
+  template <template <typename...> class MapType, typename Value>
+  Value bar(MapType<int, foo<Value>> map);
+
+  void aux() {
+    map<int, foo<int>> input;
+    bar(input);
+  }
+} // namespace regression1
