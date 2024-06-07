@@ -2417,6 +2417,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  remquof128
+  SRCS
+    remquof128.cpp
+  HDRS
+    ../remquof128.h
+  DEPENDS
+    libc.src.__support.FPUtil.division_and_remainder_operations
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
   remquo
   SRCS
     remquo.cpp
