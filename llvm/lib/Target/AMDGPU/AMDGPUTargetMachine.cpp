@@ -760,19 +760,15 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(
                                            CodeGenOptLevel::None)) {
           // TODO: Add greedy register allocator.
         } else {
-          RegAllocFastPassOptions Opts;
-          Opts.Filter = onlyAllocateSGPRs;
-          Opts.FilterName = "sgpr";
-          Opts.ClearVRegs = false;
+          RegAllocFastPassOptions SGPRRunOpts{allocateAllRegClasses, "sgpr",
+                                              false};
           MachineFunctionPassManager MFPM;
-          MFPM.addPass(RegAllocFastPass(Opts));
+          MFPM.addPass(RegAllocFastPass(SGPRRunOpts));
           RegAllocMap["sgpr"] = std::move(MFPM);
 
-          Opts.Filter = onlyAllocateVGPRs;
-          Opts.FilterName = "vgpr";
-          Opts.ClearVRegs = true;
+          RegAllocFastPassOptions VGPRRunOpts{onlyAllocateVGPRs, "vgpr", true};
           MFPM = MachineFunctionPassManager();
-          MFPM.addPass(RegAllocFastPass(Opts));
+          MFPM.addPass(RegAllocFastPass(VGPRRunOpts));
           RegAllocMap["vgpr"] = std::move(MFPM);
         }
       });

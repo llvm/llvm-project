@@ -2240,8 +2240,9 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
 }
 
 static StringRef getFilterName(StringRef PassName) {
-  PassName = PassName.drop_until([](char C) { return C == '<'; });
-  StringRef Params = PassName.drop_front().drop_back();
+  StringRef Params = PassName.drop_until([](char C) { return C == '<'; });
+  if (!Params.empty())
+    Params = Params.drop_front().drop_back();
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
