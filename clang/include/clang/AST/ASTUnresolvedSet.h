@@ -16,7 +16,6 @@
 
 #include "clang/AST/ASTVector.h"
 #include "clang/AST/DeclAccessPair.h"
-#include "clang/AST/DeclID.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/Specifiers.h"
 #include <cassert>
@@ -55,10 +54,6 @@ public:
 
   void addDecl(ASTContext &C, NamedDecl *D, AccessSpecifier AS) {
     Decls.push_back(DeclAccessPair::make(D, AS), C);
-  }
-
-  void addLazyDecl(ASTContext &C, GlobalDeclID ID, AccessSpecifier AS) {
-    Decls.push_back(DeclAccessPair::makeLazy(ID.get(), AS), C);
   }
 
   /// Replaces the given declaration with the new one, once.
@@ -114,10 +109,10 @@ public:
 
   void reserve(ASTContext &C, unsigned N) { Impl.reserve(C, N); }
 
-  void addLazyDecl(ASTContext &C, GlobalDeclID ID, AccessSpecifier AS) {
+  void addLazyDecl(ASTContext &C, uintptr_t ID, AccessSpecifier AS) {
     assert(Impl.empty() || Impl.Decls.isLazy());
     Impl.Decls.setLazy(true);
-    Impl.addLazyDecl(C, ID, AS);
+    Impl.addDecl(C, reinterpret_cast<NamedDecl *>(ID << 2), AS);
   }
 };
 
