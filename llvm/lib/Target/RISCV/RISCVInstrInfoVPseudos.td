@@ -2369,12 +2369,6 @@ multiclass VPseudoBinaryW_VI<Operand ImmType, LMULInfo m> {
                              "@earlyclobber $rd", TargetConstraintType=3>;
 }
 
-multiclass VPseudoBinaryW_VF<LMULInfo m, FPR_Info f> {
-  defm "_V" # f.FX : VPseudoBinary<m.wvrclass, m.vrclass,
-                                   f.fprclass, m,
-                                   "@earlyclobber $rd">;
-}
-
 multiclass VPseudoBinaryW_VF_RM<LMULInfo m, FPR_Info f, int sew = 0> {
   defm "_V" # f.FX : VPseudoBinaryRoundingMode<m.wvrclass, m.vrclass,
                                                f.fprclass, m,
@@ -2401,11 +2395,6 @@ multiclass VPseudoBinaryW_WV_RM<LMULInfo m, int sew = 0> {
 
 multiclass VPseudoBinaryW_WX<LMULInfo m> {
   defm "_WX" : VPseudoBinary<m.wvrclass, m.wvrclass, GPR, m, /*Constraint*/ "", TargetConstraintType=3>;
-}
-
-multiclass VPseudoBinaryW_WF<LMULInfo m, FPR_Info f, int TargetConstraintType = 1> {
-  defm "_W" # f.FX : VPseudoBinary<m.wvrclass, m.wvrclass,
-                                   f.fprclass, m, /*Constraint*/ "", TargetConstraintType=TargetConstraintType>;
 }
 
 multiclass VPseudoBinaryW_WF_RM<LMULInfo m, FPR_Info f, int sew = 0> {
