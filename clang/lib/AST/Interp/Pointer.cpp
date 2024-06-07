@@ -80,6 +80,7 @@ void Pointer::operator=(const Pointer &P) {
 
   if (P.isBlockPointer()) {
     PointeeStorage.BS = P.PointeeStorage.BS;
+    PointeeStorage.BS.Pointee = P.PointeeStorage.BS.Pointee;
 
     if (PointeeStorage.BS.Pointee)
       PointeeStorage.BS.Pointee->addPointer(this);
@@ -107,6 +108,7 @@ void Pointer::operator=(Pointer &&P) {
 
   if (P.isBlockPointer()) {
     PointeeStorage.BS = P.PointeeStorage.BS;
+    PointeeStorage.BS.Pointee = P.PointeeStorage.BS.Pointee;
 
     if (PointeeStorage.BS.Pointee)
       PointeeStorage.BS.Pointee->addPointer(this);
