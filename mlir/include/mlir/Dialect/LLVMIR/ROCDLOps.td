@@ -165,7 +165,7 @@ def ROCDL_BallotOp :
   let summary = "Vote across thread group";
 
   let description = [{
-      Ballot provides a bit mask containing the 1-bit predicate value from each lane.
+      Ballot provides a bit mask containing the 1-bit predicate value from each lane. 
       The nth bit of the result contains the 1 bit contributed by the nth warp lane.
   }];
 
