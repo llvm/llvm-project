@@ -2792,6 +2792,22 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   return TryToNarrowDeduceFlags();
 }
 
+static FastMathFlags getCorrectFMFForFNeg(FastMathFlags F1, FastMathFlags F2) {
+
+  FastMathFlags NF1 = F1 & F2;
+  FastMathFlags NF2 = F1 | F2;
+  if (NF2.noNaNs())
+    return F2;
+
+  if (NF1.any() || (F1.none() && F2.none()))
+    return NF1;
+
+  if (F1.all() || F2.all())
+    return F2;
+
+  return NF1;
+}
+
 /// This eliminates floating-point negation in either 'fneg(X)' or
 /// 'fsub(-0.0, X)' form by combining into a constant operand.
 static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
@@ -2809,11 +2825,11 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
   // -(X * C) --> X * (-C)
   if (match(FNegOp, m_FMul(m_Value(X), m_Constant(C))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)) {
-      if (match(C, m_AnyZeroFP()) && I.getFastMathFlags().noInfs()) {
-        return BinaryOperator::CreateFMulFMF(
+      FastMathFlags FMF = cast<FPMathOperator>(I.getOperand(0))->getFastMathFlags();
+      if (I.getFastMathFlags().noInfs()) {
+          return BinaryOperator::CreateFMulFMF(
             X, NegC,
-            I.getFastMathFlags() &
-                cast<FPMathOperator>(I.getOperand(0))->getFastMathFlags());
+            getCorrectFMFForFNeg(I.getFastMathFlags(), FMF));
       }
       return BinaryOperator::CreateFMulFMF(X, NegC, &I);
     }
