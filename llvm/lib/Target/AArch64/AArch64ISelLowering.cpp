@@ -3049,17 +3049,15 @@ AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
         .addReg(AArch64::SP);
 
     // Allocate a lazy-save buffer object of the size given, normally SVL * SVL
-    Register BufferAddr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::SUBXrs), BufferAddr)
-        .addReg(SP)
-        .add(MI.getOperand(1))
-        .addImm(0);
+    auto Size = MI.getOperand(1).getReg();
+    auto Dest = MI.getOperand(0).getReg();
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::MSUBXrrr), Dest)
+        .addReg(Size)
+        .addReg(Size)
+        .addReg(SP);
     BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
             AArch64::SP)
-        .addReg(BufferAddr);
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
-            MI.getOperand(0).getReg())
-        .addReg(BufferAddr);
+        .addReg(Dest);
 
     // We have just allocated a variable sized object, tell this to PEI.
     MFI.CreateVariableSizedObject(Align(16), nullptr);
@@ -7532,13 +7530,13 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
     SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
                               DAG.getConstant(1, DL, MVT::i32));
-    SDValue Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
 
     SDValue Buffer;
     if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
       Buffer = DAG.getNode(AArch64ISD::EXPAND_ZA_BUFFER, DL,
-                           DAG.getVTList(MVT::i64, MVT::Other), {Chain, Size});
+                           DAG.getVTList(MVT::i64, MVT::Other), {Chain, SVL});
     } else {
+      SDValue Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
       Buffer = DAG.getNode(ISD::DYNAMIC_STACKALLOC, DL,
                            DAG.getVTList(MVT::i64, MVT::Other),
                            {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
