@@ -908,12 +908,9 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   if (match(Op0, m_DisjointOr(m_Value(X), m_ImmConstant(Op01C)))) {
     BinaryOperator *NewAdd =
         BinaryOperator::CreateAdd(X, ConstantExpr::getAdd(Op01C, Op1C));
-    // Preserve the nsw flag iff the sum of Op01C and Op1C will not overflow
-    // so that there is a chance to make some other transformations.
-    // For some cases, sdiv can be converted to udiv when the newly created add
-    // carrying the nsw flag is one of its operands.
     if (willNotOverflowSignedAdd(Op01C, Op1C, Add))
       NewAdd->setHasNoSignedWrap(Add.hasNoSignedWrap());
+    NewAdd->setHasNoUnsignedWrap(Add.hasNoUnsignedWrap());
     return NewAdd;
   }
 
