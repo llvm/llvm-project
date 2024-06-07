@@ -177,8 +177,7 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
     const auto ZeroLiteral = ignoringParenImpCasts(integerLiteral(equals(0)));
     const auto SubscriptExprWithZeroIndex =
-        arraySubscriptExpr(
-            hasIndex(ZeroLiteral));
+        arraySubscriptExpr(hasIndex(ZeroLiteral));
     const auto DerefExpr =
         ignoringParenImpCasts(unaryOperator(hasOperatorName("*")));
 
