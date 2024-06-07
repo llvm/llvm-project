@@ -309,15 +309,15 @@ class VisualStudio(
 
     def _translate_stop_reason(self, reason):
         # https://learn.microsoft.com/en-us/dotnet/api/envdte.dbgeventreason?view=visualstudiosdk-2022
-        if reason == 1: # dbgEventReasonNone
+        if reason == 1:  # dbgEventReasonNone
             return None
-        if reason == 9: # dbgEventReasonBreakpoint
+        if reason == 9:  # dbgEventReasonBreakpoint
             return StopReason.BREAKPOINT
-        if reason == 8: # dbgEventReasonStep
+        if reason == 8:  # dbgEventReasonStep
             return StopReason.STEP
-        if reason == 6: # dbgEventReasonEndProgram
+        if reason == 6:  # dbgEventReasonEndProgram
             return StopReason.PROGRAM_EXIT
-        if reason == 11: # dbgEventReasonExceptionNotHandled
+        if reason == 11:  # dbgEventReasonExceptionNotHandled
             return StopReason.ERROR
         # Others:
         # dbgEventReasonNone = 1
