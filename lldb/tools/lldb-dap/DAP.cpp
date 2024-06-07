@@ -59,8 +59,6 @@ DAP::DAP()
 DAP::~DAP() = default;
 
 void DAP::PopulateExceptionBreakpoints() {
-  if (exception_breakpoints.has_value())
-    return;
   llvm::call_once(initExceptionBreakpoints, [this]() {
     exception_breakpoints = {};
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
