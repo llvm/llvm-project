@@ -1118,7 +1118,7 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   printDatum(J, "#bytes with line information", LnStats.NumBytes.Value);
   printDatum(J, "#bytes with line-0 locations", LnStats.NumLineZeroBytes.Value);
   printDatum(J, "#line entries", LnStats.NumEntries.Value);
-  printDatum(J, "#line entries marked is_stmt", LnStats.NumIsStmtEntries.Value);
+  printDatum(J, "#line entries (is_stmt)", LnStats.NumIsStmtEntries.Value);
   printDatum(J, "#line entries (unique)", LnStats.NumUniqueEntries.Value);
   printDatum(J, "#line entries (unique non-0)",
              LnStats.NumUniqueNonZeroEntries.Value);

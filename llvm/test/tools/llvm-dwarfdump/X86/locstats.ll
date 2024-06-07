@@ -98,7 +98,7 @@
 ; CHECK-NEXT: "#bytes with line information": 51,
 ; CHECK-NEXT: "#bytes with line-0 locations": 3,
 ; CHECK-NEXT: "#line entries": 7,
-; CHECK-NEXT: "#line entries marked is_stmt": 5,
+; CHECK-NEXT: "#line entries (is_stmt)": 5,
 ; CHECK-NEXT: "#line entries (unique)": 6,
 ; CHECK-NEXT: "#line entries (unique non-0)": 5
 
