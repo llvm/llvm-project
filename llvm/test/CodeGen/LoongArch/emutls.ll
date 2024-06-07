@@ -1,9 +1,9 @@
 ; RUN: not llc --mtriple=loongarch64 -emulated-tls -mattr=+d \
 ; RUN:     -relocation-model=pic < %s 2>&1 | FileCheck %s
 
-; CHECK: error: the emulated TLS is prohibited.
-; CHECK: error: the emulated TLS is prohibited.
-; CHECK: error: the emulated TLS is prohibited.
+; CHECK: error: the emulated TLS is prohibited
+; CHECK: error: the emulated TLS is prohibited
+; CHECK: error: the emulated TLS is prohibited
 
 @external_x = external thread_local global i32, align 8
 @y = thread_local global i8 7, align 2

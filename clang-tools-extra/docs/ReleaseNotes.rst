@@ -317,6 +317,10 @@ Changes in existing checks
   Additionally, the option `UseHeaderFileExtensions` is removed, so that the
   check uses the `HeaderFileExtensions` option unconditionally.
 
+- Improved :doc:`misc-header-include-cycle
+  <clang-tidy/checks/misc/header-include-cycle>` check by avoiding crash for self
+  include cycles.
+
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
@@ -376,6 +380,7 @@ Changes in existing checks
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to prevent false
   positives when utilizing ``size`` or ``length`` methods that accept parameter.
+  Fixed crash when facing template user defined literals.
 
 - Improved :doc:`readability-duplicate-include
   <clang-tidy/checks/readability/duplicate-include>` check by excluding include
