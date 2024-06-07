@@ -3,7 +3,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftLateSwiftDylibClangDeps(TestBase):
-    @skipIf(macos_version=["<", "13.0"])
+    @skipIf(macos_version=["<", "14.0"])
     @skipUnlessDarwin
     @swiftTest
     @skipIfDarwinEmbedded 
