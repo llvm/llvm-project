@@ -495,7 +495,7 @@ static llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
 writeMemProfFrameArray(
     ProfOStream &OS,
     llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData,
-  llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
+    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
   // Mappings from FrameIds to array indexes.
   llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId> MemProfFrameIndexes;
 
