@@ -213,11 +213,11 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
 
 static inline uint64_t getValueFromBitsInit(const BitsInit *B,
                                             const Record &R) {
-  assert(B->getNumBits() <= sizeof(uint64_t) * 8 && "BitInits' too long!");
+  assert(B->getNumBits() <= 64 && "BitInits' too long!");
 
   uint64_t Value = 0;
   for (unsigned i = 0, e = B->getNumBits(); i != e; ++i) {
-    const auto *Bit = dyn_cast<BitInit>(B->getBit(i));
+    const auto *Bit = cast<BitInit>(B->getBit(i));
     if (Bit)
       Value |= uint64_t(Bit->getValue()) << i;
   }
