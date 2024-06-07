@@ -5,9 +5,7 @@
 define <4 x i32> @deinterleave_shuffle_v8i32(<8 x i32> %a) {
 ; CHECK-LABEL: deinterleave_shuffle_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    addp v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %r1 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -18,9 +16,7 @@ define <4 x i32> @deinterleave_shuffle_v8i32(<8 x i32> %a) {
 define <4 x i32> @deinterleave_shuffle_v8i32_c(<8 x i32> %a) {
 ; CHECK-LABEL: deinterleave_shuffle_v8i32_c:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    addp v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %r1 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -45,9 +41,7 @@ define <2 x i32> @deinterleave_shuffle_v4i32(<4 x i32> %a) {
 define <8 x i16> @deinterleave_shuffle_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: deinterleave_shuffle_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v2.8h, v0.8h, v1.8h
-; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    add v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    addp v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <16 x i16> %a, <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %r1 = shufflevector <16 x i16> %a, <16 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -58,9 +52,7 @@ define <8 x i16> @deinterleave_shuffle_v16i16(<16 x i16> %a) {
 define <16 x i8> @deinterleave_shuffle_v32i8(<32 x i8> %a) {
 ; CHECK-LABEL: deinterleave_shuffle_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    add v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <32 x i8> %a, <32 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
   %r1 = shufflevector <32 x i8> %a, <32 x i8> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
@@ -71,12 +63,9 @@ define <16 x i8> @deinterleave_shuffle_v32i8(<32 x i8> %a) {
 define <4 x i64> @deinterleave_shuffle_v8i64(<8 x i64> %a) {
 ; CHECK-LABEL: deinterleave_shuffle_v8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v4.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip1 v5.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    add v1.2d, v4.2d, v2.2d
-; CHECK-NEXT:    add v0.2d, v5.2d, v0.2d
+; CHECK-NEXT:    addp v2.2d, v2.2d, v3.2d
+; CHECK-NEXT:    addp v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %r0 = shufflevector <8 x i64> %a, <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %r1 = shufflevector <8 x i64> %a, <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -164,15 +153,9 @@ define <4 x i32> @udot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    umull v3.4s, v3.4h, v4.4h
 ; CHECK-NEXT:    umull2 v4.4s, v1.8h, v2.8h
 ; CHECK-NEXT:    umull v1.4s, v1.4h, v2.4h
-; CHECK-NEXT:    uzp1 v2.4s, v3.4s, v5.4s
-; CHECK-NEXT:    uzp2 v3.4s, v3.4s, v5.4s
-; CHECK-NEXT:    uzp1 v6.4s, v1.4s, v4.4s
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    add v2.4s, v2.4s, v3.4s
-; CHECK-NEXT:    add v1.4s, v6.4s, v1.4s
-; CHECK-NEXT:    uzp1 v3.4s, v2.4s, v1.4s
-; CHECK-NEXT:    uzp2 v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    add v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    addp v2.4s, v3.4s, v5.4s
+; CHECK-NEXT:    addp v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %za = zext <16 x i8> %a to <16 x i32>
@@ -199,15 +182,9 @@ define <4 x i32> @sdot(<4 x i32> %z, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    smull v3.4s, v3.4h, v4.4h
 ; CHECK-NEXT:    smull2 v4.4s, v1.8h, v2.8h
 ; CHECK-NEXT:    smull v1.4s, v1.4h, v2.4h
-; CHECK-NEXT:    uzp1 v2.4s, v3.4s, v5.4s
-; CHECK-NEXT:    uzp2 v3.4s, v3.4s, v5.4s
-; CHECK-NEXT:    uzp1 v6.4s, v1.4s, v4.4s
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    add v2.4s, v2.4s, v3.4s
-; CHECK-NEXT:    add v1.4s, v6.4s, v1.4s
-; CHECK-NEXT:    uzp1 v3.4s, v2.4s, v1.4s
-; CHECK-NEXT:    uzp2 v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    add v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    addp v2.4s, v3.4s, v5.4s
+; CHECK-NEXT:    addp v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    addp v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %za = sext <16 x i8> %a to <16 x i32>
