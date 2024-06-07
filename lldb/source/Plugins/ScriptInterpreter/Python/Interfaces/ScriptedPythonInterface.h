@@ -85,7 +85,7 @@ public:
     bool has_class_name = !class_name.empty();
     bool has_interpreter_dict =
         !(llvm::StringRef(m_interpreter.GetDictionaryName()).empty());
-    if (!has_class_name && !has_interpreter_dict && !script_obj) {
+    if (!has_class_name || !has_interpreter_dict || !script_obj) {
       if (!has_class_name)
         return create_error("Missing script class name.");
       else if (!has_interpreter_dict)
