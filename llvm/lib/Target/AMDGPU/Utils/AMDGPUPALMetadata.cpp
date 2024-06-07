@@ -204,10 +204,11 @@ void AMDGPUPALMetadata::setRegister(unsigned Reg, const MCExpr *Val,
       return;
   }
   auto &N = getRegisters()[MsgPackDoc.getNode(Reg)];
-  bool RegSeenInREM = REM.find(Reg) != REM.end();
+  auto ExprIt = REM.find(Reg);
+  bool RegSeenInREM = ExprIt != REM.end();
 
   if (RegSeenInREM) {
-    Val = MCBinaryExpr::createOr(Val, REM[Reg], Ctx);
+    Val = MCBinaryExpr::createOr(Val, ExprIt->getSecond(), Ctx);
     // This conditional may be redundant most of the time, but
     // setRegister(unsigned, unsigned) could've been called while RegSeenInREM
     // is true.
@@ -215,7 +216,7 @@ void AMDGPUPALMetadata::setRegister(unsigned Reg, const MCExpr *Val,
       const MCExpr *NExpr = MCConstantExpr::create(N.getUInt(), Ctx);
       Val = MCBinaryExpr::createOr(Val, NExpr, Ctx);
     }
-    REM[Reg] = Val;
+    ExprIt->getSecond() = Val;
   } else if (N.getKind() == msgpack::Type::UInt) {
     const MCExpr *NExpr = MCConstantExpr::create(N.getUInt(), Ctx);
     Val = MCBinaryExpr::createOr(Val, NExpr, Ctx);
