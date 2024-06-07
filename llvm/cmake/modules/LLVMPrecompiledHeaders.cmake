@@ -29,7 +29,14 @@ function(add_llvm_subdir_pch subdir)
 endfunction()
 
 function(llvm_lib_precompiled_headers)
+    # target_precompile_headers was introduced in 3.16
+    if(${CMAKE_VERSION} VERSION_LESS "3.16")
+        message(STATUS "LLVM Lib Precompiled Headers requires CMake version 3.16")
+        set(LLVM_ENABLE_LIB_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
+    endif()
+
     if (LLVM_ENABLE_LIB_PRECOMPILED_HEADERS)
+        message(STATUS "LLVM Lib Precompiled Headers are enabled")
         # Create a dummy source file to compile the PCH target.
         set(pch_dummy_cpp ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp)
         if (NOT EXISTS ${pch_dummy_cpp})
