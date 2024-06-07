@@ -7508,23 +7508,25 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerMASKED_COMPRESS(llvm::MachineInstr &MI) {
   auto [Dst, DstTy, Vec, VecTy, Mask, MaskTy] = MI.getFirst3RegLLTs();
 
+  Align VecAlign = getStackTemporaryAlignment(VecTy);
   MachinePointerInfo PtrInfo;
   Register StackPtr =
-      createStackTemporary(TypeSize::getFixed(VecTy.getSizeInBytes()),
-                           getStackTemporaryAlignment(VecTy), PtrInfo)
+      createStackTemporary(TypeSize::getFixed(VecTy.getSizeInBytes()), VecAlign,
+                           PtrInfo)
           .getReg(0);
 
   LLT IdxTy = LLT::scalar(32);
   LLT ValTy = VecTy.getElementType();
   Align ValAlign = getStackTemporaryAlignment(ValTy);
 
-  Register OutPos = MIRBuilder.buildConstant(IdxTy, 0).getReg(0);
+  auto OutPos = MIRBuilder.buildConstant(IdxTy, 0);
 
   unsigned NumElmts = VecTy.getNumElements();
   for (unsigned I = 0; I < NumElmts; ++I) {
     auto Idx = MIRBuilder.buildConstant(IdxTy, I);
     auto Val = MIRBuilder.buildExtractVectorElement(ValTy, Vec, Idx);
-    Register ElmtPtr = getVectorElementPointer(StackPtr, VecTy, OutPos);
+    Register ElmtPtr =
+        getVectorElementPointer(StackPtr, VecTy, OutPos.getReg(0));
     MIRBuilder.buildStore(Val, ElmtPtr, PtrInfo, ValAlign);
 
     if (I < NumElmts - 1) {
@@ -7534,13 +7536,12 @@ LegalizerHelper::lowerMASKED_COMPRESS(llvm::MachineInstr &MI) {
         MaskI = MIRBuilder.buildTrunc(LLT::scalar(1), MaskI);
 
       MaskI = MIRBuilder.buildZExt(IdxTy, MaskI);
-      OutPos = MIRBuilder.buildAdd(IdxTy, OutPos, MaskI).getReg(0);
+      OutPos = MIRBuilder.buildAdd(IdxTy, OutPos, MaskI);
     }
   }
 
-  MachineFrameInfo &MFI = MI.getMF()->getFrameInfo();
-  MIRBuilder.buildLoad(Dst, StackPtr, PtrInfo,
-                       MFI.getObjectAlign(PtrInfo.StackID));
+  // TODO: Use StackPtr's FrameIndex alignment.
+  MIRBuilder.buildLoad(Dst, StackPtr, PtrInfo, VecAlign);
 
   MI.eraseFromParent();
   return Legalized;
