@@ -25,6 +25,7 @@
 #include <initializer_list>
 
 namespace clang {
+class ParsedAttr;
 
 class SemaHLSL : public SemaBase {
 public:
@@ -50,6 +51,13 @@ public:
       const Attr *A, llvm::Triple::EnvironmentType Stage,
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
   void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
+
+  void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
+  void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
+  void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
+  void handleShaderAttr(Decl *D, const ParsedAttr &AL);
+  void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
+  void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
 };
 
 } // namespace clang

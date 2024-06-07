@@ -116,7 +116,9 @@ define fastcc { <8 x half>, <8 x half> } @f3() {
 
 define void @extract_insert(ptr %dst) optnone noinline {
 ; CHECK-LABEL: extract_insert:
-; CHECK: vmov.i32 d0, #0x0
+; CHECK: movs r1, #0
+; CHECK: vmov s0, r1
+; CHECK: vcvtb.f32.f16 s0, s0
 ; CHECK: vcvtb.f16.f32 s0, s0
 ; CHECK: vmov r1, s0
 ; CHECK: strh r1, [r0]

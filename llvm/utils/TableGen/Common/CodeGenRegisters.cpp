@@ -743,7 +743,7 @@ struct TupleExpander : SetTheory::Expander {
 
 static void sortAndUniqueRegisters(CodeGenRegister::Vec &M) {
   llvm::sort(M, deref<std::less<>>());
-  M.erase(std::unique(M.begin(), M.end(), deref<std::equal_to<>>()), M.end());
+  M.erase(llvm::unique(M, deref<std::equal_to<>>()), M.end());
 }
 
 CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)

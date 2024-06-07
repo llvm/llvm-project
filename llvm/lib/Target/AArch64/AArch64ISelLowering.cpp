@@ -338,6 +338,40 @@ static bool isZeroingInactiveLanes(SDValue Op) {
   }
 }
 
+static std::tuple<SDValue, SDValue>
+extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
+  SDLoc DL(Disc);
+  SDValue AddrDisc;
+  SDValue ConstDisc;
+
+  // If this is a blend, remember the constant and address discriminators.
+  // Otherwise, it's either a constant discriminator, or a non-blended
+  // address discriminator.
+  if (Disc->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+      Disc->getConstantOperandVal(0) == Intrinsic::ptrauth_blend) {
+    AddrDisc = Disc->getOperand(1);
+    ConstDisc = Disc->getOperand(2);
+  } else {
+    ConstDisc = Disc;
+  }
+
+  // If the constant discriminator (either the blend RHS, or the entire
+  // discriminator value) isn't a 16-bit constant, bail out, and let the
+  // discriminator be computed separately.
+  const auto *ConstDiscN = dyn_cast<ConstantSDNode>(ConstDisc);
+  if (!ConstDiscN || !isUInt<16>(ConstDiscN->getZExtValue()))
+    return std::make_tuple(DAG->getTargetConstant(0, DL, MVT::i64), Disc);
+
+  // If there's no address discriminator, use NoRegister, which we'll later
+  // replace with XZR, or directly use a Z variant of the inst. when available.
+  if (!AddrDisc)
+    AddrDisc = DAG->getRegister(AArch64::NoRegister, MVT::i64);
+
+  return std::make_tuple(
+      DAG->getTargetConstant(ConstDiscN->getZExtValue(), DL, MVT::i64),
+      AddrDisc);
+}
+
 AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                              const AArch64Subtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -509,6 +543,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FSINCOS, MVT::f128, Expand);
   setOperationAction(ISD::FSQRT, MVT::f128, Expand);
   setOperationAction(ISD::FSUB, MVT::f128, LibCall);
+  setOperationAction(ISD::FTAN, MVT::f128, Expand);
   setOperationAction(ISD::FTRUNC, MVT::f128, Expand);
   setOperationAction(ISD::SETCC, MVT::f128, Custom);
   setOperationAction(ISD::STRICT_FSETCC, MVT::f128, Custom);
@@ -693,14 +728,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Promote);
   }
 
-  for (auto Op : {ISD::FREM,        ISD::FPOW,         ISD::FPOWI,
-                  ISD::FCOS,        ISD::FSIN,         ISD::FSINCOS,
-                  ISD::FEXP,        ISD::FEXP2,        ISD::FEXP10,
-                  ISD::FLOG,        ISD::FLOG2,        ISD::FLOG10,
-                  ISD::STRICT_FREM,
-                  ISD::STRICT_FPOW, ISD::STRICT_FPOWI, ISD::STRICT_FCOS,
-                  ISD::STRICT_FSIN, ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
-                  ISD::STRICT_FLOG, ISD::STRICT_FLOG2, ISD::STRICT_FLOG10}) {
+  for (auto Op : {ISD::FREM,         ISD::FPOW,         ISD::FPOWI,
+                  ISD::FCOS,         ISD::FSIN,         ISD::FSINCOS,
+                  ISD::FTAN,         ISD::FEXP,         ISD::FEXP2,
+                  ISD::FEXP10,       ISD::FLOG,         ISD::FLOG2,
+                  ISD::FLOG10,       ISD::STRICT_FREM,  ISD::STRICT_FPOW,
+                  ISD::STRICT_FPOWI, ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
+                  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2, ISD::STRICT_FLOG,
+                  ISD::STRICT_FLOG2, ISD::STRICT_FLOG10}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::v4f16, Expand);
     setOperationAction(Op, MVT::v8f16, Expand);
@@ -1137,26 +1172,27 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   if (Subtarget->isNeonAvailable()) {
     // FIXME: v1f64 shouldn't be legal if we can avoid it, because it leads to
     // silliness like this:
+    // clang-format off
     for (auto Op :
-         {ISD::SELECT,         ISD::SELECT_CC,
-          ISD::BR_CC,          ISD::FADD,           ISD::FSUB,
-          ISD::FMUL,           ISD::FDIV,           ISD::FMA,
-          ISD::FNEG,           ISD::FABS,           ISD::FCEIL,
-          ISD::FSQRT,          ISD::FFLOOR,         ISD::FNEARBYINT,
-          ISD::FSIN,           ISD::FCOS,           ISD::FPOW,
-          ISD::FLOG,           ISD::FLOG2,          ISD::FLOG10,
-          ISD::FEXP,           ISD::FEXP2,          ISD::FEXP10,
-          ISD::FRINT,          ISD::FROUND,         ISD::FROUNDEVEN,
-          ISD::FTRUNC,         ISD::FMINNUM,        ISD::FMAXNUM,
-          ISD::FMINIMUM,       ISD::FMAXIMUM,       ISD::STRICT_FADD,
-          ISD::STRICT_FSUB,    ISD::STRICT_FMUL,    ISD::STRICT_FDIV,
-          ISD::STRICT_FMA,     ISD::STRICT_FCEIL,   ISD::STRICT_FFLOOR,
-          ISD::STRICT_FSQRT,   ISD::STRICT_FRINT,   ISD::STRICT_FNEARBYINT,
-          ISD::STRICT_FROUND,  ISD::STRICT_FTRUNC,  ISD::STRICT_FROUNDEVEN,
-          ISD::STRICT_FMINNUM, ISD::STRICT_FMAXNUM, ISD::STRICT_FMINIMUM,
-          ISD::STRICT_FMAXIMUM})
+         {ISD::SELECT,            ISD::SELECT_CC,
+          ISD::BR_CC,             ISD::FADD,           ISD::FSUB,
+          ISD::FMUL,              ISD::FDIV,           ISD::FMA,
+          ISD::FNEG,              ISD::FABS,           ISD::FCEIL,
+          ISD::FSQRT,             ISD::FFLOOR,         ISD::FNEARBYINT,
+          ISD::FSIN,              ISD::FCOS,           ISD::FTAN,
+          ISD::FPOW,              ISD::FLOG,           ISD::FLOG2,          
+          ISD::FLOG10,            ISD::FEXP,           ISD::FEXP2,
+          ISD::FEXP10,            ISD::FRINT,          ISD::FROUND,
+          ISD::FROUNDEVEN,        ISD::FTRUNC,         ISD::FMINNUM,
+          ISD::FMAXNUM,           ISD::FMINIMUM,       ISD::FMAXIMUM,
+          ISD::STRICT_FADD,       ISD::STRICT_FSUB,    ISD::STRICT_FMUL,
+          ISD::STRICT_FDIV,       ISD::STRICT_FMA,     ISD::STRICT_FCEIL,
+          ISD::STRICT_FFLOOR,     ISD::STRICT_FSQRT,   ISD::STRICT_FRINT,
+          ISD::STRICT_FNEARBYINT, ISD::STRICT_FROUND,  ISD::STRICT_FTRUNC,  
+          ISD::STRICT_FROUNDEVEN, ISD::STRICT_FMINNUM, ISD::STRICT_FMAXNUM,
+          ISD::STRICT_FMINIMUM,   ISD::STRICT_FMAXIMUM})
       setOperationAction(Op, MVT::v1f64, Expand);
-
+    // clang-format on
     for (auto Op :
          {ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP, ISD::UINT_TO_FP,
           ISD::FP_ROUND, ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT, ISD::MUL,
@@ -1588,6 +1624,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FCOS, VT, Expand);
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
+      setOperationAction(ISD::FTAN, VT, Expand);
       setOperationAction(ISD::FEXP, VT, Expand);
       setOperationAction(ISD::FEXP2, VT, Expand);
       setOperationAction(ISD::FEXP10, VT, Expand);
@@ -1769,6 +1806,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   if (VT == MVT::v2f32 || VT == MVT::v4f32 || VT == MVT::v2f64) {
     setOperationAction(ISD::FSIN, VT, Expand);
     setOperationAction(ISD::FCOS, VT, Expand);
+    setOperationAction(ISD::FTAN, VT, Expand);
     setOperationAction(ISD::FPOW, VT, Expand);
     setOperationAction(ISD::FLOG, VT, Expand);
     setOperationAction(ISD::FLOG2, VT, Expand);
@@ -2464,6 +2502,9 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::ADRP)
     MAKE_CASE(AArch64ISD::ADR)
     MAKE_CASE(AArch64ISD::ADDlow)
+    MAKE_CASE(AArch64ISD::AUTH_CALL)
+    MAKE_CASE(AArch64ISD::AUTH_TC_RETURN)
+    MAKE_CASE(AArch64ISD::AUTH_CALL_RVMARKER)
     MAKE_CASE(AArch64ISD::LOADgot)
     MAKE_CASE(AArch64ISD::RET_GLUE)
     MAKE_CASE(AArch64ISD::BRCOND)
@@ -6924,6 +6965,8 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
     report_fatal_error("Unsupported calling convention.");
   case CallingConv::GHC:
     return CC_AArch64_GHC;
+  case CallingConv::PreserveNone:
+    return CC_AArch64_Preserve_None;
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::PreserveMost:
@@ -7446,6 +7489,20 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     FuncInfo->setLazySaveTPIDR2Obj(TPIDR2Obj);
   }
 
+  if (CallConv == CallingConv::PreserveNone) {
+    for (const ISD::InputArg &I : Ins) {
+      if (I.Flags.isSwiftSelf() || I.Flags.isSwiftError() ||
+          I.Flags.isSwiftAsync()) {
+        MachineFunction &MF = DAG.getMachineFunction();
+        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+            MF.getFunction(),
+            "Swift attributes can't be used with preserve_none",
+            DL.getDebugLoc()));
+        break;
+      }
+    }
+  }
+
   return Chain;
 }
 
@@ -7617,6 +7674,7 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::AArch64_SVE_VectorCall:
   case CallingConv::PreserveMost:
   case CallingConv::PreserveAll:
+  case CallingConv::PreserveNone:
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
@@ -8507,15 +8565,55 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     InGlue = Chain.getValue(1);
   }
 
+  unsigned Opc = IsTailCall ? AArch64ISD::TC_RETURN : AArch64ISD::CALL;
+
   std::vector<SDValue> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
+
+  // Calls with operand bundle "clang.arc.attachedcall" are special. They should
+  // be expanded to the call, directly followed by a special marker sequence and
+  // a call to an ObjC library function.  Use CALL_RVMARKER to do that.
+  if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
+    assert(!IsTailCall &&
+           "tail calls cannot be marked with clang.arc.attachedcall");
+    Opc = AArch64ISD::CALL_RVMARKER;
+
+    // Add a target global address for the retainRV/claimRV runtime function
+    // just before the call target.
+    Function *ARCFn = *objcarc::getAttachedARCFunction(CLI.CB);
+    auto GA = DAG.getTargetGlobalAddress(ARCFn, DL, PtrVT);
+    Ops.insert(Ops.begin() + 1, GA);
+  } else if (CallConv == CallingConv::ARM64EC_Thunk_X64) {
+    Opc = AArch64ISD::CALL_ARM64EC_TO_X64;
+  } else if (GuardWithBTI) {
+    Opc = AArch64ISD::CALL_BTI;
+  }
 
   if (IsTailCall) {
     // Each tail call may have to adjust the stack by a different amount, so
     // this information must travel along with the operation for eventual
     // consumption by emitEpilogue.
     Ops.push_back(DAG.getTargetConstant(FPDiff, DL, MVT::i32));
+  }
+
+  if (CLI.PAI) {
+    const uint64_t Key = CLI.PAI->Key;
+    assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
+           "Invalid auth call key");
+
+    // Split the discriminator into address/integer components.
+    SDValue AddrDisc, IntDisc;
+    std::tie(IntDisc, AddrDisc) =
+        extractPtrauthBlendDiscriminators(CLI.PAI->Discriminator, &DAG);
+
+    if (Opc == AArch64ISD::CALL_RVMARKER)
+      Opc = AArch64ISD::AUTH_CALL_RVMARKER;
+    else
+      Opc = IsTailCall ? AArch64ISD::AUTH_TC_RETURN : AArch64ISD::AUTH_CALL;
+    Ops.push_back(DAG.getTargetConstant(Key, DL, MVT::i32));
+    Ops.push_back(IntDisc);
+    Ops.push_back(AddrDisc);
   }
 
   // Add argument registers to the end of the list so that they are known live
@@ -8555,8 +8653,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // actual call instruction.
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(AArch64ISD::TC_RETURN, DL, NodeTys, Ops);
-
+    SDValue Ret = DAG.getNode(Opc, DL, NodeTys, Ops);
     if (IsCFICall)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
@@ -8565,29 +8662,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     return Ret;
   }
 
-  unsigned CallOpc = AArch64ISD::CALL;
-  // Calls with operand bundle "clang.arc.attachedcall" are special. They should
-  // be expanded to the call, directly followed by a special marker sequence and
-  // a call to an ObjC library function.  Use CALL_RVMARKER to do that.
-  if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
-    assert(!IsTailCall &&
-           "tail calls cannot be marked with clang.arc.attachedcall");
-    CallOpc = AArch64ISD::CALL_RVMARKER;
-
-    // Add a target global address for the retainRV/claimRV runtime function
-    // just before the call target.
-    Function *ARCFn = *objcarc::getAttachedARCFunction(CLI.CB);
-    auto GA = DAG.getTargetGlobalAddress(ARCFn, DL, PtrVT);
-    Ops.insert(Ops.begin() + 1, GA);
-  } else if (CallConv == CallingConv::ARM64EC_Thunk_X64) {
-    CallOpc = AArch64ISD::CALL_ARM64EC_TO_X64;
-  } else if (GuardWithBTI) {
-    CallOpc = AArch64ISD::CALL_BTI;
-  }
-
   // Returns a chain and a flag for retval copy to use.
-  Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);
-
+  Chain = DAG.getNode(Opc, DL, NodeTys, Ops);
   if (IsCFICall)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
@@ -8670,6 +8746,20 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue X = DAG.getCopyToReg(Result, DL, Reg, InVals[I]);
       InVals[I] = DAG.getCopyFromReg(X, DL, Reg,
                                      InVals[I].getValueType());
+    }
+  }
+
+  if (CallConv == CallingConv::PreserveNone) {
+    for (const ISD::OutputArg &O : Outs) {
+      if (O.Flags.isSwiftSelf() || O.Flags.isSwiftError() ||
+          O.Flags.isSwiftAsync()) {
+        MachineFunction &MF = DAG.getMachineFunction();
+        DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+            MF.getFunction(),
+            "Swift attributes can't be used with preserve_none",
+            DL.getDebugLoc()));
+        break;
+      }
     }
   }
 
@@ -9571,13 +9661,17 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
           Attribute::NoImplicitFloat))
     return SDValue();
 
-  if (!Subtarget->hasNEON())
+  EVT VT = Op.getValueType();
+  if (VT.isScalableVector() ||
+      useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
+
+  if (!Subtarget->isNeonAvailable())
     return SDValue();
 
   bool IsParity = Op.getOpcode() == ISD::PARITY;
   SDValue Val = Op.getOperand(0);
   SDLoc DL(Op);
-  EVT VT = Op.getValueType();
 
   // for i32, general parity function using EORs is more efficient compared to
   // using floating point
@@ -9625,10 +9719,6 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   }
 
   assert(!IsParity && "ISD::PARITY of vector types not supported");
-
-  if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
 
   assert((VT == MVT::v1i64 || VT == MVT::v2i64 || VT == MVT::v2i32 ||
           VT == MVT::v4i32 || VT == MVT::v4i16 || VT == MVT::v8i16) &&
@@ -15474,12 +15564,20 @@ static bool shouldSinkVectorOfPtrs(Value *Ptrs, SmallVectorImpl<Use *> &Ops) {
 }
 
 /// We want to sink following cases:
-/// (add|sub|gep) A, ((mul|shl) vscale, imm); (add|sub|gep) A, vscale
+/// (add|sub|gep) A, ((mul|shl) vscale, imm); (add|sub|gep) A, vscale;
+/// (add|sub|gep) A, ((mul|shl) zext(vscale), imm);
 static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   if (match(Op, m_VScale()))
     return true;
   if (match(Op, m_Shl(m_VScale(), m_ConstantInt())) ||
       match(Op, m_Mul(m_VScale(), m_ConstantInt()))) {
+    Ops.push_back(&cast<Instruction>(Op)->getOperandUse(0));
+    return true;
+  }
+  if (match(Op, m_Shl(m_ZExt(m_VScale()), m_ConstantInt())) ||
+      match(Op, m_Mul(m_ZExt(m_VScale()), m_ConstantInt()))) {
+    Value *ZExtOp = cast<Instruction>(Op)->getOperand(0);
+    Ops.push_back(&cast<Instruction>(ZExtOp)->getOperandUse(0));
     Ops.push_back(&cast<Instruction>(Op)->getOperandUse(0));
     return true;
   }

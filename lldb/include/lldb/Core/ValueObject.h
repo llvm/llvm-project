@@ -959,9 +959,12 @@ protected:
   /// Should only be called by ValueObject::GetChildAtIndex().
   ///
   /// \return A ValueObject managed by this ValueObject's manager.
-  virtual ValueObject *CreateChildAtIndex(size_t idx,
-                                          bool synthetic_array_member,
-                                          int32_t synthetic_index);
+  virtual ValueObject *CreateChildAtIndex(size_t idx);
+
+  /// Should only be called by ValueObject::GetSyntheticArrayMember().
+  ///
+  /// \return A ValueObject managed by this ValueObject's manager.
+  virtual ValueObject *CreateSyntheticArrayMember(size_t idx);
 
   /// Should only be called by ValueObject::GetNumChildren().
   virtual llvm::Expected<uint32_t>

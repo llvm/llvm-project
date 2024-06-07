@@ -103,7 +103,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
   initializeNVPTXProxyRegErasurePass(PR);
-  initializeNVPTXDAGToDAGISelPass(PR);
+  initializeNVPTXDAGToDAGISelLegacyPass(PR);
   initializeNVPTXAAWrapperPassPass(PR);
   initializeNVPTXExternalAAWrapperPass(PR);
 }
@@ -233,9 +233,9 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         FunctionPassManager FPM;
         FPM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
-        // FIXME: NVVMIntrRangePass is causing numerical discrepancies,
-        // investigate and re-enable.
-        // FPM.addPass(NVVMIntrRangePass(Subtarget.getSmVersion()));
+        // Note: NVVMIntrRangePass was causing numerical discrepancies at one
+        // point, if issues crop up, consider disabling.
+        FPM.addPass(NVVMIntrRangePass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 }

@@ -1204,8 +1204,7 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
 
 Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
                                             const unsigned char *Ptr,
-                                            uint64_t FirstWord,
-                                            memprof::IndexedVersion Version) {
+                                            uint64_t FirstWord) {
   // The value returned from RecordTableGenerator.Emit.
   const uint64_t RecordTableOffset =
       Version == memprof::Version0
@@ -1259,17 +1258,10 @@ Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
 }
 
 Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
-                                          const unsigned char *Ptr,
-                                          memprof::IndexedVersion Version) {
-  // The value returned from FrameTableGenerator.Emit.
-  const uint64_t FrameTableOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+                                          const unsigned char *Ptr) {
   // The offset in the stream right before invoking
   // CallStackTableGenerator.Emit.
   const uint64_t CallStackPayloadOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  // The value returned from CallStackTableGenerator.Emit.
-  const uint64_t CallStackTableOffset =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   // The offset in the stream right before invoking RecordTableGenerator.Emit.
   const uint64_t RecordPayloadOffset =
@@ -1284,22 +1276,14 @@ Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
     return SchemaOr.takeError();
   Schema = SchemaOr.get();
 
-  // Initialize the frame table reader with the payload and bucket offsets.
-  MemProfFrameTable.reset(MemProfFrameHashTable::Create(
-      /*Buckets=*/Start + FrameTableOffset,
-      /*Payload=*/Ptr,
-      /*Base=*/Start));
-
-  MemProfCallStackTable.reset(MemProfCallStackHashTable::Create(
-      /*Buckets=*/Start + CallStackTableOffset,
-      /*Payload=*/Start + CallStackPayloadOffset,
-      /*Base=*/Start));
+  FrameBase = Ptr;
+  CallStackBase = Start + CallStackPayloadOffset;
 
   // Now initialize the table reader with a pointer into data buffer.
   MemProfRecordTable.reset(MemProfRecordHashTable::Create(
       /*Buckets=*/Start + RecordTableOffset,
       /*Payload=*/Start + RecordPayloadOffset,
-      /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
+      /*Base=*/Start, memprof::RecordLookupTrait(memprof::Version3, Schema)));
 
   return Error::success();
 }
@@ -1337,11 +1321,11 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   case memprof::Version0:
   case memprof::Version1:
   case memprof::Version2:
-    if (Error E = deserializeV012(Start, Ptr, FirstWord, Version))
+    if (Error E = deserializeV012(Start, Ptr, FirstWord))
       return E;
     break;
   case memprof::Version3:
-    if (Error E = deserializeV3(Start, Ptr, Version))
+    if (Error E = deserializeV3(Start, Ptr))
       return E;
     break;
   }
@@ -1605,6 +1589,16 @@ getMemProfRecordV2(const memprof::IndexedMemProfRecord &IndexedRecord,
   return Record;
 }
 
+static Expected<memprof::MemProfRecord>
+getMemProfRecordV3(const memprof::IndexedMemProfRecord &IndexedRecord,
+                   const unsigned char *FrameBase,
+                   const unsigned char *CallStackBase) {
+  memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
+  memprof::LinearCallStackIdConverter CSIdConv(CallStackBase, FrameIdConv);
+  memprof::MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
+  return Record;
+}
+
 Expected<memprof::MemProfRecord>
 IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
   // TODO: Add memprof specific errors.
@@ -1617,7 +1611,7 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
         instrprof_error::unknown_function,
         "memprof record not found for function hash " + Twine(FuncNameHash));
 
-  const memprof::IndexedMemProfRecord IndexedRecord = *Iter;
+  const memprof::IndexedMemProfRecord &IndexedRecord = *Iter;
   switch (Version) {
   case memprof::Version0:
   case memprof::Version1:
@@ -1626,11 +1620,17 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
            "MemProfCallStackTable must not be available");
     return getMemProfRecordV0(IndexedRecord, *MemProfFrameTable);
   case memprof::Version2:
-  case memprof::Version3:
     assert(MemProfFrameTable && "MemProfFrameTable must be available");
     assert(MemProfCallStackTable && "MemProfCallStackTable must be available");
     return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable,
                               *MemProfCallStackTable);
+  case memprof::Version3:
+    assert(!MemProfFrameTable && "MemProfFrameTable must not be available");
+    assert(!MemProfCallStackTable &&
+           "MemProfCallStackTable must not be available");
+    assert(FrameBase && "FrameBase must be available");
+    assert(CallStackBase && "CallStackBase must be available");
+    return getMemProfRecordV3(IndexedRecord, FrameBase, CallStackBase);
   }
 
   return make_error<InstrProfError>(

@@ -1102,6 +1102,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::EXTRACT_SUBVECTOR},
                            VT, Custom);
         setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+        if (Subtarget.hasStdExtZfbfmin()) {
+          if (Subtarget.hasVInstructionsF16())
+            setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+          else if (Subtarget.hasVInstructionsF16Minimal())
+            setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+        }
+        setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
+                           Custom);
+        setOperationAction(ISD::SELECT_CC, VT, Expand);
         // TODO: Promote to fp32.
       }
     }
@@ -1331,6 +1340,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::EXTRACT_SUBVECTOR},
                              VT, Custom);
           setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+          if (Subtarget.hasStdExtZfbfmin()) {
+            if (Subtarget.hasVInstructionsF16())
+              setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+            else if (Subtarget.hasVInstructionsF16Minimal())
+              setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          }
+          setOperationAction(
+              {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
+              Custom);
           // TODO: Promote to fp32.
           continue;
         }
@@ -1433,6 +1451,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
   }
 
+  if (Subtarget.hasVendorXCVmem()) {
+    setIndexedLoadAction(ISD::POST_INC, MVT::i8, Legal);
+    setIndexedLoadAction(ISD::POST_INC, MVT::i16, Legal);
+    setIndexedLoadAction(ISD::POST_INC, MVT::i32, Legal);
+
+    setIndexedStoreAction(ISD::POST_INC, MVT::i8, Legal);
+    setIndexedStoreAction(ISD::POST_INC, MVT::i16, Legal);
+    setIndexedStoreAction(ISD::POST_INC, MVT::i32, Legal);
+  }
+
   // Function alignments.
   const Align FunctionAlignment(Subtarget.hasStdExtCOrZca() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
@@ -1452,7 +1480,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZbb())
     setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
 
-  if (Subtarget.hasStdExtZbs() && Subtarget.is64Bit())
+  if ((Subtarget.hasStdExtZbs() && Subtarget.is64Bit()) ||
+      Subtarget.hasStdExtV())
     setTargetDAGCombine(ISD::TRUNCATE);
 
   if (Subtarget.hasStdExtZbkb())
@@ -6704,10 +6733,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG, Subtarget);
   case ISD::SPLAT_VECTOR:
-    if (Op.getValueType().getScalarType() == MVT::f16 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16())) {
-      if (Op.getValueType() == MVT::nxv32f16)
+    if ((Op.getValueType().getScalarType() == MVT::f16 &&
+         (Subtarget.hasVInstructionsF16Minimal() &&
+          Subtarget.hasStdExtZfhminOrZhinxmin() &&
+          !Subtarget.hasVInstructionsF16())) ||
+        (Op.getValueType().getScalarType() == MVT::bf16 &&
+         (Subtarget.hasVInstructionsBF16() && Subtarget.hasStdExtZfbfmin() &&
+          Subtarget.hasVInstructionsF16Minimal() &&
+          !Subtarget.hasVInstructionsF16()))) {
+      if (Op.getValueType() == MVT::nxv32f16 ||
+          Op.getValueType() == MVT::nxv32bf16)
         return SplitVectorOp(Op, DAG);
       SDLoc DL(Op);
       SDValue NewScalar =
@@ -13370,6 +13405,76 @@ static SDValue combineDeMorganOfBoolean(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::XOR, DL, VT, Logic, DAG.getConstant(1, DL, VT));
 }
 
+// Fold (vXi8 (trunc (vselect (setltu, X, 256), X, (sext (setgt X, 0))))) to
+// (vXi8 (trunc (smin (smax X, 0), 255))). This represents saturating a signed
+// value to an unsigned value. This will be lowered to vmax and series of
+// vnclipu instructions later. This can be extended to other truncated types
+// other than i8 by replacing 256 and 255 with the equivalent constants for the
+// type.
+static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  EVT SrcVT = N0.getValueType();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!VT.isVector() || !TLI.isTypeLegal(VT) || !TLI.isTypeLegal(SrcVT))
+    return SDValue();
+
+  if (N0.getOpcode() != ISD::VSELECT || !N0.hasOneUse())
+    return SDValue();
+
+  SDValue Cond = N0.getOperand(0);
+  SDValue True = N0.getOperand(1);
+  SDValue False = N0.getOperand(2);
+
+  if (Cond.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  // FIXME: Support the version of this pattern with the select operands
+  // swapped.
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  if (CCVal != ISD::SETULT)
+    return SDValue();
+
+  SDValue CondLHS = Cond.getOperand(0);
+  SDValue CondRHS = Cond.getOperand(1);
+
+  if (CondLHS != True)
+    return SDValue();
+
+  unsigned ScalarBits = VT.getScalarSizeInBits();
+
+  // FIXME: Support other constants.
+  ConstantSDNode *CondRHSC = isConstOrConstSplat(CondRHS);
+  if (!CondRHSC || CondRHSC->getAPIntValue() != (1ULL << ScalarBits))
+    return SDValue();
+
+  if (False.getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+
+  False = False.getOperand(0);
+
+  if (False.getOpcode() != ISD::SETCC || False.getOperand(0) != True)
+    return SDValue();
+
+  ConstantSDNode *FalseRHSC = isConstOrConstSplat(False.getOperand(1));
+  if (!FalseRHSC || !FalseRHSC->isZero())
+    return SDValue();
+
+  ISD::CondCode CCVal2 = cast<CondCodeSDNode>(False.getOperand(2))->get();
+  if (CCVal2 != ISD::SETGT)
+    return SDValue();
+
+  // Emit the signed to unsigned saturation pattern.
+  SDLoc DL(N);
+  SDValue Max =
+      DAG.getNode(ISD::SMAX, DL, SrcVT, True, DAG.getConstant(0, DL, SrcVT));
+  SDValue Min =
+      DAG.getNode(ISD::SMIN, DL, SrcVT, Max,
+                  DAG.getConstant((1ULL << ScalarBits) - 1, DL, SrcVT));
+  return DAG.getNode(ISD::TRUNCATE, DL, VT, Min);
+}
+
 static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
                                       const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
@@ -13390,7 +13495,7 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Srl);
   }
 
-  return SDValue();
+  return combineTruncSelectToSMaxUSat(N, DAG);
 }
 
 // Combines two comparison operation and logic operation to one selection
@@ -16230,17 +16335,37 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   };
 
+  SDLoc DL(N);
+
   auto DetectUSatPattern = [&](SDValue V) {
-    // Src must be a UMIN or UMIN_VL.
-    APInt C;
-    SDValue UMin = MatchMinMax(V, ISD::UMIN, RISCVISD::UMIN_VL, C);
-    if (!UMin)
-      return SDValue();
+    APInt LoC, HiC;
 
-    if (!C.isMask(VT.getScalarSizeInBits()))
-      return SDValue();
+    // Simple case, V is a UMIN.
+    if (SDValue UMinOp = MatchMinMax(V, ISD::UMIN, RISCVISD::UMIN_VL, HiC))
+      if (HiC.isMask(VT.getScalarSizeInBits()))
+        return UMinOp;
 
-    return UMin;
+    // If we have an SMAX that removes negative numbers first, then we can match
+    // SMIN instead of UMIN.
+    if (SDValue SMinOp = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+      if (SDValue SMaxOp =
+              MatchMinMax(SMinOp, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+        if (LoC.isNonNegative() && HiC.isMask(VT.getScalarSizeInBits()))
+          return SMinOp;
+
+    // If we have an SMIN before an SMAX and the SMAX constant is less than or
+    // equal to the SMIN constant, we can use vnclipu if we insert a new SMAX
+    // first.
+    if (SDValue SMaxOp = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+      if (SDValue SMinOp =
+              MatchMinMax(SMaxOp, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+        if (LoC.isNonNegative() && HiC.isMask(VT.getScalarSizeInBits()) &&
+            HiC.uge(LoC))
+          return DAG.getNode(RISCVISD::SMAX_VL, DL, V.getValueType(), SMinOp,
+                             V.getOperand(1), DAG.getUNDEF(V.getValueType()),
+                             Mask, VL);
+
+    return SDValue();
   };
 
   auto DetectSSatPattern = [&](SDValue V) {
@@ -16249,36 +16374,53 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
     APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
     APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
 
-    APInt CMin, CMax;
-    if (SDValue SMin = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, CMin))
-      if (SDValue SMax = MatchMinMax(SMin, ISD::SMAX, RISCVISD::SMAX_VL, CMax))
-        if (CMin == SignedMax && CMax == SignedMin)
-          return SMax;
+    APInt HiC, LoC;
+    if (SDValue SMinOp = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+      if (SDValue SMaxOp =
+              MatchMinMax(SMinOp, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+        if (HiC == SignedMax && LoC == SignedMin)
+          return SMaxOp;
 
-    if (SDValue SMax = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, CMax))
-      if (SDValue SMin = MatchMinMax(SMax, ISD::SMIN, RISCVISD::SMIN_VL, CMin))
-        if (CMin == SignedMax && CMax == SignedMin)
-          return SMin;
+    if (SDValue SMaxOp = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
+      if (SDValue SMinOp =
+              MatchMinMax(SMaxOp, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
+        if (HiC == SignedMax && LoC == SignedMin)
+          return SMinOp;
 
     return SDValue();
   };
 
+  SDValue Src = N->getOperand(0);
+
+  // Look through multiple layers of truncates.
+  while (Src.getOpcode() == RISCVISD::TRUNCATE_VECTOR_VL &&
+         Src.getOperand(1) == Mask && Src.getOperand(2) == VL &&
+         Src.hasOneUse())
+    Src = Src.getOperand(0);
+
   SDValue Val;
   unsigned ClipOpc;
-  if ((Val = DetectUSatPattern(N->getOperand(0))))
+  if ((Val = DetectUSatPattern(Src)))
     ClipOpc = RISCVISD::VNCLIPU_VL;
-  else if ((Val = DetectSSatPattern(N->getOperand(0))))
+  else if ((Val = DetectSSatPattern(Src)))
     ClipOpc = RISCVISD::VNCLIP_VL;
   else
     return SDValue();
 
-  SDLoc DL(N);
-  // Rounding mode here is arbitrary since we aren't shifting out any bits.
-  return DAG.getNode(
-      ClipOpc, DL, VT,
-      {Val, DAG.getConstant(0, DL, VT), DAG.getUNDEF(VT), Mask,
-       DAG.getTargetConstant(RISCVVXRndMode::RNU, DL, Subtarget.getXLenVT()),
-       VL});
+  MVT ValVT = Val.getSimpleValueType();
+
+  do {
+    MVT ValEltVT = MVT::getIntegerVT(ValVT.getScalarSizeInBits() / 2);
+    ValVT = ValVT.changeVectorElementType(ValEltVT);
+    // Rounding mode here is arbitrary since we aren't shifting out any bits.
+    Val = DAG.getNode(
+        ClipOpc, DL, ValVT,
+        {Val, DAG.getConstant(0, DL, ValVT), DAG.getUNDEF(VT), Mask,
+         DAG.getTargetConstant(RISCVVXRndMode::RNU, DL, Subtarget.getXLenVT()),
+         VL});
+  } while (ValVT != VT);
+
+  return Val;
 }
 
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
@@ -20872,6 +21014,26 @@ bool RISCVTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                      SDValue &Offset,
                                                      ISD::MemIndexedMode &AM,
                                                      SelectionDAG &DAG) const {
+  if (Subtarget.hasVendorXCVmem()) {
+    if (Op->getOpcode() != ISD::ADD)
+      return false;
+
+    if (LSBaseSDNode *LS = dyn_cast<LSBaseSDNode>(N))
+      Base = LS->getBasePtr();
+    else
+      return false;
+
+    if (Base == Op->getOperand(0))
+      Offset = Op->getOperand(1);
+    else if (Base == Op->getOperand(1))
+      Offset = Op->getOperand(0);
+    else
+      return false;
+
+    AM = ISD::POST_INC;
+    return true;
+  }
+
   EVT VT;
   SDValue Ptr;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {

@@ -1656,9 +1656,7 @@ private:
     DenseMap<const SCEV *, ConstantRange> &Cache =
         Hint == HINT_RANGE_UNSIGNED ? UnsignedRanges : SignedRanges;
 
-    auto Pair = Cache.try_emplace(S, std::move(CR));
-    if (!Pair.second)
-      Pair.first->second = std::move(CR);
+    auto Pair = Cache.insert_or_assign(S, std::move(CR));
     return Pair.first->second;
   }
 

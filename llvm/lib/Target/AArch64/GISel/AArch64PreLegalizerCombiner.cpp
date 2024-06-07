@@ -560,9 +560,9 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
 // i32 add(i32 ext i8, i32 ext i8) => i32 ext(i16 add(i16 ext i8, i16 ext i8))
 bool matchPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
                         Register DstReg, Register SrcReg1, Register SrcReg2) {
-  assert(MI.getOpcode() == TargetOpcode::G_ADD ||
-         MI.getOpcode() == TargetOpcode::G_SUB &&
-             "Expected a G_ADD or G_SUB instruction\n");
+  assert((MI.getOpcode() == TargetOpcode::G_ADD ||
+          MI.getOpcode() == TargetOpcode::G_SUB) &&
+         "Expected a G_ADD or G_SUB instruction\n");
 
   // Deal with vector types only
   LLT DstTy = MRI.getType(DstReg);
