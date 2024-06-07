@@ -161,6 +161,15 @@ end subroutine target_allocatable
 ! CHECK-SAME:       @[[COMP_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[COMP_ARG:.*]] : !fir.ref<!fir.complex<4>>,
 ! CHECK-SAME:       @[[CHAR_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[CHAR_ARG:.*]] : !fir.boxchar<1>) {
 ! CHECK-NOT:      fir.alloca
+! CHECK:          hlfir.declare %[[MAPPED_ARG]]
+! CHECK:          hlfir.declare %[[ALLOC_ARG]]
+! CHECK:          hlfir.declare %[[REAL_ARG]]
+! CHECK:          hlfir.declare %[[LB_ARG]]
+! CHECK:          %[[ARR_ARG_ADDR:.*]] = fir.box_addr %[[ARR_ARG]]
+! CHECK:          hlfir.declare %[[ARR_ARG_ADDR]]
+! CHECK:          hlfir.declare %[[COMP_ARG]]
+! CHECK:          %[[CHAR_ARG_UNBOX:.*]]:2 = fir.unboxchar %[[CHAR_ARG]]
+! CHECK:          hlfir.declare %[[CHAR_ARG_UNBOX]]
 ! CHECK:          omp.terminator
 ! CHECK-NEXT:   }
 
