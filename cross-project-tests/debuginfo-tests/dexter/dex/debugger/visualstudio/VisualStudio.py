@@ -10,6 +10,7 @@ import abc
 import imp
 import os
 import sys
+from enum import IntEnum
 from pathlib import PurePath, Path
 from collections import defaultdict, namedtuple
 
@@ -36,6 +37,25 @@ def _load_com_module():
 # properties we set through dexter currently.
 VSBreakpoint = namedtuple("VSBreakpoint", "path, line, col, cond")
 
+# Visual Studio events.
+# https://learn.microsoft.com/en-us/dotnet/api/envdte.dbgeventreason?view=visualstudiosdk-2022
+class DbgEvent(IntEnum):
+    dbgEventReasonNone = 1
+    dbgEventReasonGo = 2
+    dbgEventReasonAttachProgram = 3
+    dbgEventReasonDetachProgram = 4
+    dbgEventReasonLaunchProgram = 5
+    dbgEventReasonEndProgram = 6
+    dbgEventReasonStopDebugging = 7
+    dbgEventReasonStep = 8
+    dbgEventReasonBreakpoint = 9
+    dbgEventReasonExceptionThrown = 10
+    dbgEventReasonExceptionNotHandled = 11
+    dbgEventReasonUserBreak = 12
+    dbgEventReasonContextSwitch = 13
+
+    first = dbgEventReasonNone
+    last = dbgEventReasonContextSwitch
 
 class VisualStudio(
     DebuggerBase, metaclass=abc.ABCMeta
@@ -308,27 +328,17 @@ class VisualStudio(
             )
 
     def _translate_stop_reason(self, reason):
-        # https://learn.microsoft.com/en-us/dotnet/api/envdte.dbgeventreason?view=visualstudiosdk-2022
-        if reason == 1:  # dbgEventReasonNone
+        if reason == DbgEvent.dbgEventReasonNone:
             return None
-        if reason == 9:  # dbgEventReasonBreakpoint
+        if reason == DbgEvent.dbgEventReasonBreakpoint:
             return StopReason.BREAKPOINT
-        if reason == 8:  # dbgEventReasonStep
+        if reason == DbgEvent.dbgEventReasonStep:
             return StopReason.STEP
-        if reason == 6:  # dbgEventReasonEndProgram
+        if reason == DbgEvent.dbgEventReasonEndProgram:
             return StopReason.PROGRAM_EXIT
-        if reason == 11:  # dbgEventReasonExceptionNotHandled
+        if reason == DbgEvent.dbgEventReasonExceptionNotHandled:
             return StopReason.ERROR
-        # Others:
-        # dbgEventReasonNone = 1
-        # dbgEventReasonGo = 2
-        # dbgEventReasonAttachProgram = 3
-        # dbgEventReasonDetachProgram = 4
-        # dbgEventReasonLaunchProgram = 5
-        # dbgEventReasonStopDebugging = 7
-        # dbgEventReasonExceptionThrown = 10
-        # dbgEventReasonUserBreak = 12
-        # dbgEventReasonContextSwitch = 13
+        assert reason <= DbgEvent.last and reason >= DbgEvent.first
         return StopReason.OTHER
 
     def _get_step_info(self, watches, step_index):
