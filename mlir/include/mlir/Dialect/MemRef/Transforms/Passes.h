@@ -128,8 +128,8 @@ struct MergeAllocationOptions {
 };
 
 /// Creates an operation pass to merge the local memref allocations
-std::unique_ptr<Pass>
-createMergeAllocPass(const MergeAllocationOptions &o = {});
+std::unique_ptr<Pass> createMergeAllocPass(const MergeAllocationOptions &o);
+std::unique_ptr<Pass> createMergeAllocPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

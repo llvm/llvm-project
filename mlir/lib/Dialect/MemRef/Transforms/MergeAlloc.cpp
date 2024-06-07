@@ -91,3 +91,7 @@ std::unique_ptr<mlir::Pass>
 mlir::memref::createMergeAllocPass(const memref::MergeAllocationOptions &o) {
   return std::make_unique<MergeAllocPass>(o);
 }
+
+std::unique_ptr<mlir::Pass> mlir::memref::createMergeAllocPass() {
+  return std::make_unique<MergeAllocPass>();
+}
