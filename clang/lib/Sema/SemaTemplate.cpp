@@ -2220,15 +2220,73 @@ namespace {
 class ExtractTypeForDeductionGuide
   : public TreeTransform<ExtractTypeForDeductionGuide> {
   llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs;
+  ClassTemplateDecl *NestedPattern;
+  const MultiLevelTemplateArgumentList *OuterInstantiationArgs;
 
 public:
   typedef TreeTransform<ExtractTypeForDeductionGuide> Base;
   ExtractTypeForDeductionGuide(
       Sema &SemaRef,
-      llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs)
-      : Base(SemaRef), MaterializedTypedefs(MaterializedTypedefs) {}
+      llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs,
+      ClassTemplateDecl *NestedPattern,
+      const MultiLevelTemplateArgumentList *OuterInstantiationArgs)
+      : Base(SemaRef), MaterializedTypedefs(MaterializedTypedefs),
+        NestedPattern(NestedPattern),
+        OuterInstantiationArgs(OuterInstantiationArgs) {}
 
   TypeSourceInfo *transform(TypeSourceInfo *TSI) { return TransformType(TSI); }
+
+  bool mightReferToOuterTemplateParameters(TypedefNameDecl *Typedef) {
+    if (!NestedPattern)
+      return false;
+
+    static auto WalkUp = [](DeclContext *DC, DeclContext *TargetDC) {
+      if (DC == TargetDC)
+        return true;
+      while (!DC->isTranslationUnit()) {
+        if (DC->Equals(TargetDC))
+          return true;
+        DC = DC->getParent();
+      }
+      return false;
+    };
+
+    if (WalkUp(Typedef->getDeclContext(), NestedPattern->getTemplatedDecl()))
+      return true;
+    if (WalkUp(NestedPattern->getTemplatedDecl(), Typedef->getDeclContext()))
+      return true;
+    return false;
+  }
+
+  QualType
+  RebuildTemplateSpecializationType(TemplateName Template,
+                                    SourceLocation TemplateNameLoc,
+                                    TemplateArgumentListInfo &TemplateArgs) {
+    if (!OuterInstantiationArgs ||
+        !isa_and_present<TypeAliasTemplateDecl>(Template.getAsTemplateDecl()))
+      return Base::RebuildTemplateSpecializationType(Template, TemplateNameLoc,
+                                                     TemplateArgs);
+
+    auto *TATD = cast<TypeAliasTemplateDecl>(Template.getAsTemplateDecl());
+    auto *Pattern = TATD;
+    while (Pattern->getInstantiatedFromMemberTemplate())
+      Pattern = Pattern->getInstantiatedFromMemberTemplate();
+    if (!mightReferToOuterTemplateParameters(Pattern->getTemplatedDecl()))
+      return Base::RebuildTemplateSpecializationType(Template, TemplateNameLoc,
+                                                     TemplateArgs);
+
+    Decl *NewD = SemaRef.SubstDecl(
+        TATD, SemaRef.getASTContext().getTranslationUnitDecl(),
+        *OuterInstantiationArgs);
+    if (!NewD)
+      return QualType();
+
+    auto *NewTATD = cast<TypeAliasTemplateDecl>(NewD);
+    MaterializedTypedefs.push_back(NewTATD->getTemplatedDecl());
+
+    return Base::RebuildTemplateSpecializationType(
+        TemplateName(NewTATD), TemplateNameLoc, TemplateArgs);
+  }
 
   QualType TransformTypedefType(TypeLocBuilder &TLB, TypedefTypeLoc TL) {
     ASTContext &Context = SemaRef.getASTContext();
@@ -2236,7 +2294,27 @@ public:
     TypedefNameDecl *Decl = OrigDecl;
     // Transform the underlying type of the typedef and clone the Decl only if
     // the typedef has a dependent context.
-    if (OrigDecl->getDeclContext()->isDependentContext()) {
+    bool InDependentContext = OrigDecl->getDeclContext()->isDependentContext();
+
+    // A typedef/alias Decl within the NestedPattern may reference the outer
+    // template parameters. They're substituted with corresponding instantiation
+    // arguments here and in RebuildTemplateSpecializationType() above.
+    // Otherwise, we would have a CTAD guide with "dangling" template
+    // parameters.
+    // For example,
+    //   template <class T> struct Outer {
+    //     using Alias = S<T>;
+    //     template <class U> struct Inner {
+    //       Inner(Alias);
+    //     };
+    //   };
+    if (OuterInstantiationArgs && InDependentContext) {
+      Decl = cast_if_present<TypedefNameDecl>(SemaRef.SubstDecl(
+          OrigDecl, Context.getTranslationUnitDecl(), *OuterInstantiationArgs));
+      if (!Decl)
+        return QualType();
+      MaterializedTypedefs.push_back(Decl);
+    } else if (InDependentContext) {
       TypeLocBuilder InnerTLB;
       QualType Transformed =
           TransformType(InnerTLB, OrigDecl->getTypeSourceInfo()->getTypeLoc());
@@ -2577,8 +2655,9 @@ private:
       // defined outside of the surrounding class template. That is T in the
       // above example.
       if (NestedPattern) {
-        NewParam = transformFunctionTypeParam(NewParam, OuterInstantiationArgs,
-                                              MaterializedTypedefs);
+        NewParam = transformFunctionTypeParam(
+            NewParam, OuterInstantiationArgs, MaterializedTypedefs,
+            /*TransformingOuterPatterns=*/true);
         if (!NewParam)
           return QualType();
       }
@@ -2630,7 +2709,8 @@ private:
 
   ParmVarDecl *transformFunctionTypeParam(
       ParmVarDecl *OldParam, MultiLevelTemplateArgumentList &Args,
-      llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs) {
+      llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs,
+      bool TransformingOuterPatterns = false) {
     TypeSourceInfo *OldDI = OldParam->getTypeSourceInfo();
     TypeSourceInfo *NewDI;
     if (auto PackTL = OldDI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
@@ -2653,7 +2733,9 @@ private:
     // members of the current instantiations with the definitions of those
     // typedefs, avoiding triggering instantiation of the deduced type during
     // deduction.
-    NewDI = ExtractTypeForDeductionGuide(SemaRef, MaterializedTypedefs)
+    NewDI = ExtractTypeForDeductionGuide(
+                SemaRef, MaterializedTypedefs, NestedPattern,
+                TransformingOuterPatterns ? &Args : nullptr)
                 .transform(NewDI);
 
     // Resolving a wording defect, we also inherit default arguments from the

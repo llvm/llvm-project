@@ -823,6 +823,7 @@ Bug Fixes to C++ Support
   differering by their constraints when only one of these function was variadic.
 - Fix a crash when a variable is captured by a block nested inside a lambda. (Fixes #GH93625).
 - Fixed a type constraint substitution issue involving a generic lambda expression. (#GH93821)
+- Fixed a CTAD substitution bug involving type aliases that reference outer template parameters. (#GH94614).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
