@@ -440,7 +440,7 @@ struct IndexedMemProfRecord {
   void serialize(const MemProfSchema &Schema, raw_ostream &OS,
                  IndexedVersion Version,
                  llvm::DenseMap<memprof::CallStackId, LinearCallStackId>
-                     *MemProfCallStackIndexes = nullptr);
+                     *MemProfCallStackIndexes = nullptr) const;
 
   // Deserializes memprof records from the Buffer.
   static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
