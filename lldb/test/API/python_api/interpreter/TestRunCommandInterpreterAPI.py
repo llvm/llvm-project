@@ -78,7 +78,6 @@ class CommandRunInterpreterAPICase(TestBase):
         with open(self.stdout_path, "r") as out_fileH:
             result_string = out_fileH.read()
 
-        print(f"Command: '{command_string}'\nResult:\n{result_string}")
         return (n_errors, quit_requested, has_crashed, result_string)
 
     def test_run_session_with_error_and_quit(self):

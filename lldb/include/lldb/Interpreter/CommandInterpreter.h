@@ -187,6 +187,7 @@ public:
   void SetSpawnThread(bool spawn_thread) {
     m_spawn_thread = spawn_thread ? eLazyBoolYes : eLazyBoolNo;
   }
+
   bool GetAllowRepeats() const { return DefaultToNo(m_allow_repeats); }
 
   void SetAllowRepeats(bool allow_repeats) {

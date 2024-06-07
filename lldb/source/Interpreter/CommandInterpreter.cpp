@@ -3130,7 +3130,7 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       return;
 
   const bool is_interactive = io_handler.GetIsInteractive();
-  bool allow_repeats =
+  const bool allow_repeats =
       io_handler.GetFlags().Test(eHandleCommandFlagAllowRepeats);
 
   if (!is_interactive && !allow_repeats) {
