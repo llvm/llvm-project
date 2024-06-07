@@ -2705,7 +2705,7 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
 
   addUnwrappedLine();
   ++Line->Level;
-  ++UnBracedBodyDepth;
+  ++UnbracedBodyDepth;
   parseStructuralElement();
 
   if (Tok) {
@@ -2725,7 +2725,7 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
     addUnwrappedLine();
 
   --Line->Level;
-  --UnBracedBodyDepth;
+  --UnbracedBodyDepth;
 }
 
 static void markOptionalBraces(FormatToken *LeftBrace) {
@@ -4814,7 +4814,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
             Keywords.isVerilogPPDirective(*Tokens->peekNextToken())) &&
            FirstNonCommentOnLine) {
 
-      if (!UnBracedBodyDepth) {
+      if (!UnbracedBodyDepth) {
         distributeComments(Comments, FormatTok);
         Comments.clear();
       }
@@ -4834,7 +4834,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         Line->Level += PPBranchLevel;
       }
 
-      if (!UnBracedBodyDepth)
+      if (!UnbracedBodyDepth)
         flushComments(isOnNewLine(*FormatTok));
 
       parsePPDirective();
