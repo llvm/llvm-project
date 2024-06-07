@@ -25,3 +25,11 @@ struct MyType2 {
 MyType2 mt2;
 
 static_assert(alignof(MyType2) == 1, "alignof MyType2 is wrong");
+
+#pragma pack(1)
+struct MyType3 {
+  int m;
+};
+MyType3 mt3;
+
+static_assert(alignof(MyType3) == 1, "alignof MyType3 is wrong");
