@@ -816,13 +816,16 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
       RecurrencePhis.push_back(FOR);
 
-  VPBasicBlock *MiddleVPBB = cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+  VPBasicBlock *MiddleVPBB =
+      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
   VPBuilder MiddleBuilder;
-  // Set insert point so new recipes are inserted before terminator and condition, if there is either the former or both.
+  // Set insert point so new recipes are inserted before terminator and
+  // condition, if there is either the former or both.
   if (MiddleVPBB->getNumSuccessors() != 2)
     MiddleBuilder.setInsertPoint(MiddleVPBB);
   else if (isa<VPInstruction>(MiddleVPBB->getTerminator()->getOperand(0)))
-    MiddleBuilder.setInsertPoint(&*std::prev(MiddleVPBB->getTerminator()->getIterator()));
+    MiddleBuilder.setInsertPoint(
+        &*std::prev(MiddleVPBB->getTerminator()->getIterator()));
   else
     MiddleBuilder.setInsertPoint(MiddleVPBB->getTerminator());
 
