@@ -230,7 +230,7 @@ Changes in existing checks
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check by eliminating some
   false positives and adding a new (off-by-default) option
-  ``WarnOnSizeOfPointer`` that reports all ``sizeof(pointer)`` expressions
+  `WarnOnSizeOfPointer` that reports all ``sizeof(pointer)`` expressions
   (except for a few that are idiomatic).
 
 - Improved :doc:`bugprone-suspicious-include
