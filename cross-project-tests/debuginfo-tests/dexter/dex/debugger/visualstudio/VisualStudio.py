@@ -307,6 +307,30 @@ class VisualStudio(
                 )
             )
 
+    def _translate_stop_reason(self, reason):
+        # https://learn.microsoft.com/en-us/dotnet/api/envdte.dbgeventreason?view=visualstudiosdk-2022
+        if reason == 1: # dbgEventReasonNone
+            return None
+        if reason == 9: # dbgEventReasonBreakpoint
+            return StopReason.BREAKPOINT
+        if reason == 8: # dbgEventReasonStep
+            return StopReason.STEP
+        if reason == 6: # dbgEventReasonEndProgram
+            return StopReason.PROGRAM_EXIT
+        if reason == 11: # dbgEventReasonExceptionNotHandled
+            return StopReason.ERROR
+        # Others:
+        # dbgEventReasonNone = 1
+        # dbgEventReasonGo = 2
+        # dbgEventReasonAttachProgram = 3
+        # dbgEventReasonDetachProgram = 4
+        # dbgEventReasonLaunchProgram = 5
+        # dbgEventReasonStopDebugging = 7
+        # dbgEventReasonExceptionThrown = 10
+        # dbgEventReasonUserBreak = 12
+        # dbgEventReasonContextSwitch = 13
+        return StopReason.OTHER
+
     def _get_step_info(self, watches, step_index):
         thread = self._debugger.CurrentThread
         stackframes = thread.StackFrames
@@ -347,16 +371,13 @@ class VisualStudio(
             frames[0].loc = loc
             state_frames[0].location = SourceLocation(**self._location)
 
-        reason = StopReason.BREAKPOINT
-        if loc.path is None:  # pylint: disable=no-member
-            reason = StopReason.STEP
-
+        stop_reason = self._translate_stop_reason(self._debugger.LastBreakReason)
         program_state = ProgramState(frames=state_frames)
 
         return StepIR(
             step_index=step_index,
             frames=frames,
-            stop_reason=reason,
+            stop_reason=stop_reason,
             program_state=program_state,
         )
 
