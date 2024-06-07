@@ -240,9 +240,6 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
     BitsInit *GroupIDBits = Rec->getValueAsBitsInit("GroupID");
     BitsInit *BitmaskBits = Rec->getValueAsBitsInit("Bitmask");
 
-    assert(GroupIDBits);
-    assert(BitmaskBits);
-
     StringRef ExtName = Rec->getValueAsString("Name");
     ExtName.consume_front("experimental-");
     uint64_t GroupIDVal = getValueFromBitsInit(GroupIDBits, *Rec);
