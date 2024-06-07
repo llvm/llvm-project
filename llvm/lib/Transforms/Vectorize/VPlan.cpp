@@ -981,10 +981,7 @@ void VPlan::execute(VPTransformState *State) {
 }
 
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
-  InstructionCost Cost = 0;
-  for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
-    Cost += Block->cost(VF, Ctx);
-  return Cost;
+  return getVectorLoopRegion()->cost(VF, Ctx);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

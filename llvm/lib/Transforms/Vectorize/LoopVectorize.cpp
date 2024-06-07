@@ -7372,6 +7372,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
     }
   }
 
+  // Now compute and add the VPlan-based cost.
   Cost += Plan.cost(VF, CostCtx);
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost << "\n");
   return Cost;

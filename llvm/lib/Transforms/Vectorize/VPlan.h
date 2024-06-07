@@ -849,7 +849,7 @@ public:
   DebugLoc getDebugLoc() const { return DL; }
 
 protected:
-  /// Return the cost of this recipe using the legacy cost model and the
+  /// Compute the cost of this recipe using the legacy cost model and the
   /// underlying instructions.
   InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
 };
