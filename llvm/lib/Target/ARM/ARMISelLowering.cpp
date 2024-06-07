@@ -1623,9 +1623,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(Align(1ULL << Subtarget->getPrefLoopLogAlignment()));
 
   setMinFunctionAlignment(Subtarget->isThumb() ? Align(2) : Align(4));
-
-  if (Subtarget->isThumb() || Subtarget->isThumb2())
-    setTargetDAGCombine(ISD::ABS);
 }
 
 bool ARMTargetLowering::useSoftFloat() const {
@@ -13504,18 +13501,6 @@ static SDValue PerformVSetCCToVCTPCombine(SDNode *N,
                          DCI.DAG.getZExtOrTrunc(Op1S, DL, MVT::i32));
 }
 
-static SDValue PerformABSCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const ARMSubtarget *Subtarget) {
-  SelectionDAG &DAG = DCI.DAG;
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-
-  if (TLI.isOperationLegal(N->getOpcode(), N->getValueType(0)))
-    return SDValue();
-
-  return TLI.expandABS(N, DAG);
-}
-
 /// PerformADDECombine - Target-specific dag combine transform from
 /// ARMISD::ADDC, ARMISD::ADDE, and ISD::MUL_LOHI to MLAL or
 /// ARMISD::ADDC, ARMISD::ADDE and ARMISD::UMLAL to ARMISD::UMAAL
@@ -18879,7 +18864,6 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SELECT:     return PerformSELECTCombine(N, DCI, Subtarget);
   case ISD::VSELECT:    return PerformVSELECTCombine(N, DCI, Subtarget);
   case ISD::SETCC:      return PerformVSetCCToVCTPCombine(N, DCI, Subtarget);
-  case ISD::ABS:        return PerformABSCombine(N, DCI, Subtarget);
   case ARMISD::ADDE:    return PerformADDECombine(N, DCI, Subtarget);
   case ARMISD::UMLAL:   return PerformUMLALCombine(N, DCI.DAG, Subtarget);
   case ISD::ADD:        return PerformADDCombine(N, DCI, Subtarget);
