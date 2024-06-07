@@ -356,6 +356,11 @@ INSTANTIATE_TEST_SUITE_P(
                                        ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                                        ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "8-R"),
+        ARMCPUTestParams<uint64_t>("cortex-r52plus", "armv8-r", "neon-fp-armv8",
+                                   ARM::AEK_NONE | ARM::AEK_CRC | ARM::AEK_MP |
+                                       ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                                       ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
+                                   "8-R"),
         ARMCPUTestParams<uint64_t>("sc300", "armv7-m", "none",
                                    ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB, "7-M"),
         ARMCPUTestParams<uint64_t>("cortex-m3", "armv7-m", "none",
@@ -548,7 +553,7 @@ INSTANTIATE_TEST_SUITE_P(
                                    "7-S")),
     ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
-static constexpr unsigned NumARMCPUArchs = 91;
+static constexpr unsigned NumARMCPUArchs = 92;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -692,6 +697,8 @@ TEST(TargetParserTest, testARMExtension) {
   EXPECT_FALSE(
       testARMExtension("cortex-a75", ARM::ArchKind::INVALID, "fp16fml"));
   EXPECT_FALSE(testARMExtension("cortex-r52", ARM::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(
+      testARMExtension("cortex-r52plus", ARM::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testARMExtension("iwmmxt", ARM::ArchKind::INVALID, "crc"));
   EXPECT_FALSE(testARMExtension("xscale", ARM::ArchKind::INVALID, "crc"));
   EXPECT_FALSE(testARMExtension("swift", ARM::ArchKind::INVALID, "crc"));
