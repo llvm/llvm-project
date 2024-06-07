@@ -2229,7 +2229,7 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
       if (MaxSEW >= 8 && Sew > MaxSEW)
         Warning(SEWLoc,
                 "use of vtype encodings with SEW > " + Twine(MaxSEW) +
-                    " and LMUL == " + (Fractional ? "mf" : "m") + Twine(Lmul) +
+                    " and LMUL == mf" + Twine(Lmul) +
                     " may not be compatible with all RVV implementations");
     }
 
