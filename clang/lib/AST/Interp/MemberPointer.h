@@ -86,7 +86,7 @@ public:
   bool hasBase() const { return !Base.isZero(); }
 
   void print(llvm::raw_ostream &OS) const {
-    OS << "MemberPtr(" << Base << " " << (void *)Dcl << " + " << PtrOffset
+    OS << "MemberPtr(" << Base << " " << (const void *)Dcl << " + " << PtrOffset
        << ")";
   }
 
