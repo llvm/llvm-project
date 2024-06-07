@@ -345,20 +345,19 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
       return nullptr;
     }
 
-
     for (MachineInstr &UseMI : getMRI()->use_nodbg_instructions(Reg->getReg())) {
-      // If there exist use of subreg of Reg then return nullptr
-      if (!isSameReg(UseMO, *Reg))
-        return nullptr;
-
-      // Check that all instructions the use Reg can be converted
+      // Check that all instructions that use Reg can be converted
       if (!isConvertibleToSDWA(UseMI, ST, TII)) {
         return nullptr;
       }
     }
+
     // Now that it's guaranteed all uses are legal, iterate over the uses again
     // to add them for later conversion.
     for (MachineOperand &UseMO : getMRI()->use_nodbg_operands(Reg->getReg())) {
+      // Should not get a subregister here
+      assert(isSameReg(UseMO, *Reg));
+
       SDWAOperandsMap& potentialMatchesMap = *PotentialMatches;
       MachineInstr* UseMI = UseMO.getParent();
       potentialMatchesMap[UseMI].push_back(this);
