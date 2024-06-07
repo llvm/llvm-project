@@ -170,7 +170,7 @@ namespace cwg407 { // cwg407: 3.8
     {
       typedef struct S S; // #cwg407-typedef-S
       struct S *p;
-      // expected-error@-1 {{typedef 'S' cannot be referenced with a struct specifier}}
+      // expected-error@-1 {{typedef 'S' cannot be referenced with the 'struct' specifier}}
       //   expected-note@#cwg407-typedef-S {{declared here}}
     }
   }

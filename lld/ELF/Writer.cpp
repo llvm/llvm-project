@@ -783,13 +783,11 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   // __rela_iplt_{start,end} are initially defined relative to dummy section 0.
   // We'll override Out::elfHeader with relaDyn later when we are sure that
   // .rela.dyn will be present in the output.
-  ElfSym::relaIpltStart = addOptionalRegular(
-      config->isRela ? "__rela_iplt_start" : "__rel_iplt_start",
-      Out::elfHeader, 0, STV_HIDDEN);
-
-  ElfSym::relaIpltEnd = addOptionalRegular(
-      config->isRela ? "__rela_iplt_end" : "__rel_iplt_end",
-      Out::elfHeader, 0, STV_HIDDEN);
+  std::string name = config->isRela ? "__rela_iplt_start" : "__rel_iplt_start";
+  ElfSym::relaIpltStart =
+      addOptionalRegular(name, Out::elfHeader, 0, STV_HIDDEN);
+  name.replace(name.size() - 5, 5, "end");
+  ElfSym::relaIpltEnd = addOptionalRegular(name, Out::elfHeader, 0, STV_HIDDEN);
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or
@@ -921,7 +919,11 @@ static bool shouldSkip(SectionCommand *cmd) {
 static SmallVectorImpl<SectionCommand *>::iterator
 findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
               SmallVectorImpl<SectionCommand *>::iterator e) {
+  // Place non-alloc orphan sections at the end. This matches how we assign file
+  // offsets to non-alloc sections.
   OutputSection *sec = &cast<OutputDesc>(*e)->osec;
+  if (!(sec->flags & SHF_ALLOC))
+    return e;
 
   // As a special case, place .relro_padding before the SymbolAssignment using
   // DATA_SEGMENT_RELRO_END, if present.
@@ -935,19 +937,23 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
       return i;
   }
 
-  // Find the first element that has as close a rank as possible.
-  if (b == e)
-    return e;
-  int proximity = getRankProximity(sec, *b);
-  auto i = b;
-  for (auto j = b; ++j != e;) {
+  // Find the most similar output section as the anchor. Rank Proximity is a
+  // value in the range [-1, 32] where [0, 32] indicates potential anchors (0:
+  // least similar; 32: identical). -1 means not an anchor.
+  //
+  // In the event of proximity ties, we select the first or last section
+  // depending on whether the orphan's rank is smaller.
+  int maxP = 0;
+  auto i = e;
+  for (auto j = b; j != e; ++j) {
     int p = getRankProximity(sec, *j);
-    if (p > proximity) {
-      proximity = p;
+    if (p > maxP ||
+        (p == maxP && cast<OutputDesc>(*j)->osec.sortRank <= sec->sortRank)) {
+      maxP = p;
       i = j;
     }
   }
-  if (!isa<OutputDesc>(*i))
+  if (i == e)
     return e;
 
   auto isOutputSecWithInputSections = [](SectionCommand *cmd) {
@@ -955,7 +961,8 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
     return osd && osd->osec.hasInputSections;
   };
 
-  // If i's rank is larger, the orphan section can be placed before i.
+  // Then, scan backward or forward through the script for a suitable insertion
+  // point. If i's rank is larger, the orphan section can be placed before i.
   //
   // However, don't do this if custom program headers are defined. Otherwise,
   // adding the orphan to a previous segment can change its flags, for example,
@@ -967,7 +974,7 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
     for (auto j = ++i; j != e; ++j) {
       if (!isOutputSecWithInputSections(*j))
         continue;
-      if (getRankProximity(sec, *j) != proximity)
+      if (getRankProximity(sec, *j) != maxP)
         break;
       i = j + 1;
     }
@@ -2478,11 +2485,12 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
         lastRX->lastSec == sec)
       off = alignToPowerOf2(off, config->maxPageSize);
   }
-  for (OutputSection *osec : outputSections)
-    if (!(osec->flags & SHF_ALLOC)) {
-      osec->offset = alignToPowerOf2(off, osec->addralign);
-      off = osec->offset + osec->size;
-    }
+  for (OutputSection *osec : outputSections) {
+    if (osec->flags & SHF_ALLOC)
+      continue;
+    osec->offset = alignToPowerOf2(off, osec->addralign);
+    off = osec->offset + osec->size;
+  }
 
   sectionHeaderOff = alignToPowerOf2(off, config->wordsize);
   fileSize = sectionHeaderOff + (outputSections.size() + 1) * sizeof(Elf_Shdr);

@@ -43,7 +43,6 @@ add_clang_library(clangTidyMiscModule
   UseAnonymousNamespaceCheck.cpp
 
   LINK_LIBS
-  clangAnalysis
   clangTidy
   clangTidyUtils
 

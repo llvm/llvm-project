@@ -136,8 +136,8 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
 def ForOp : SCF_Op<"for",
       [AutomaticAllocationScope, DeclareOpInterfaceMethods<LoopLikeOpInterface,
        ["getInitsMutable", "getLoopResults", "getRegionIterArgs",
-        "getInductionVars", "getMixedLowerBound", "getMixedStep",
-        "getMixedUpperBound", "getYieldedValuesMutable",
+        "getLoopInductionVars", "getLoopLowerBounds", "getLoopSteps",
+        "getLoopUpperBounds", "getYieldedValuesMutable",
         "promoteIfSingleIteration", "replaceWithAdditionalYields",
         "yieldTiledValuesAndReplace"]>,
        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
@@ -301,8 +301,8 @@ def ForallOp : SCF_Op<"forall", [
        AttrSizedOperandSegments,
        AutomaticAllocationScope,
        DeclareOpInterfaceMethods<LoopLikeOpInterface,
-          ["getInitsMutable", "getRegionIterArgs", "getInductionVars", 
-           "getMixedLowerBound", "getMixedUpperBound", "getMixedStep",
+          ["getInitsMutable", "getRegionIterArgs", "getLoopInductionVars", 
+           "getLoopLowerBounds", "getLoopUpperBounds", "getLoopSteps",
            "promoteIfSingleIteration", "yieldTiledValuesAndReplace"]>,
        RecursiveMemoryEffects,
        SingleBlockImplicitTerminator<"scf::InParallelOp">,
@@ -510,6 +510,33 @@ def ForallOp : SCF_Op<"forall", [
   ];
 
   let extraClassDeclaration = [{
+    /// Get induction variables.
+    SmallVector<Value> getInductionVars() {
+      std::optional<SmallVector<Value>> maybeInductionVars = getLoopInductionVars();
+      assert(maybeInductionVars.has_value() && "expected values");
+      return *maybeInductionVars;
+    }
+    /// Get lower bounds as OpFoldResult.
+    SmallVector<OpFoldResult> getMixedLowerBound() {
+      std::optional<SmallVector<OpFoldResult>> maybeLowerBounds = getLoopLowerBounds();
+      assert(maybeLowerBounds.has_value() && "expected values");
+      return *maybeLowerBounds;
+    }
+
+    /// Get upper bounds as OpFoldResult.
+    SmallVector<OpFoldResult> getMixedUpperBound() {
+      std::optional<SmallVector<OpFoldResult>> maybeUpperBounds = getLoopUpperBounds();
+      assert(maybeUpperBounds.has_value() && "expected values");
+      return *maybeUpperBounds;
+    }
+
+    /// Get steps as OpFoldResult.
+    SmallVector<OpFoldResult> getMixedStep() {
+      std::optional<SmallVector<OpFoldResult>> maybeSteps = getLoopSteps();
+      assert(maybeSteps.has_value() && "expected values");
+      return *maybeSteps;
+    }
+
     /// Get lower bounds as values.
     SmallVector<Value> getLowerBound(OpBuilder &b) {
       return getValueOrCreateConstantIndexOp(b, getLoc(), getMixedLowerBound());
@@ -743,8 +770,8 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
 def ParallelOp : SCF_Op<"parallel",
     [AutomaticAllocationScope,
      AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface, ["getInductionVars",
-          "getMixedLowerBound", "getMixedUpperBound", "getMixedStep"]>,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface, ["getLoopInductionVars",
+          "getLoopLowerBounds", "getLoopUpperBounds", "getLoopSteps"]>,
      RecursiveMemoryEffects,
      DeclareOpInterfaceMethods<RegionBranchOpInterface>,
      SingleBlockImplicitTerminator<"scf::ReduceOp">,
@@ -824,6 +851,12 @@ def ParallelOp : SCF_Op<"parallel",
   ];
 
   let extraClassDeclaration = [{
+    /// Get induction variables.
+    SmallVector<Value> getInductionVars() {
+      std::optional<SmallVector<Value>> maybeInductionVars = getLoopInductionVars();;
+      assert(maybeInductionVars.has_value() && "expected values");
+      return *maybeInductionVars;
+    }
     unsigned getNumLoops() { return getStep().size(); }
     unsigned getNumReductions() { return getInitVals().size(); }
   }];

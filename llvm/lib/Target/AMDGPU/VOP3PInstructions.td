@@ -38,13 +38,13 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
                FPVRegInputMods:$src1_modifiers, VRegSrc_32:$src1,
                FP16InputMods:$src2_modifiers, VCSrc_f16:$src2);
 
-           // FIXME: clampmod0 misbehaves with the non-default vdst_in
+           // FIXME: Clamp0 misbehaves with the non-default vdst_in
            // following it. For now workaround this by requiring clamp
            // in tied patterns. This should use undef_tied_input, but it
            // seems underdeveloped and doesn't apply the right register
            // class constraints.
-    dag mods = !con(!if(UseTiedOutput, (ins clampmod:$clamp, VGPR_32:$vdst_in),
-                        (ins clampmod0:$clamp)),
+    dag mods = !con(!if(UseTiedOutput, (ins Clamp:$clamp, VGPR_32:$vdst_in),
+                        (ins Clamp0:$clamp)),
                     (ins op_sel0:$op_sel, op_sel_hi0:$op_sel_hi));
     // We use Ins64 because that is the one which populates InOperandList
     // due to the logic in class VOP3_Pseudo
@@ -1055,7 +1055,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag IndexKey = !cond(!eq(IndexType, 0) : (ins),
                        !eq(IndexType, 8) : (ins IndexKey8bit:$index_key_8bit),
                        !eq(IndexType, 16): (ins IndexKey16bit:$index_key_16bit));
-  dag Clamp = !if(IsIU, (ins clampmod0:$clamp), (ins));
+  dag Clamp = !if(IsIU, (ins Clamp0:$clamp), (ins));
   dag Neg = !cond(!and(NegLoAny, NegHiAny)             : (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi),
                   !and(NegLoAny, !not(NegHiAny))       : (ins neg_lo0:$neg_lo),
                   !and(!not(NegLoAny), !not(NegHiAny)) : (ins));

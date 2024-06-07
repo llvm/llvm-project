@@ -6,14 +6,21 @@
 # on Windows platform.
 #
 # NOTE: the build requires a development ARM Linux root filesystem to use
-# proper target platform depended library and header files.
+# proper target platform depended library and header files:
+#  - create <full-path-to-clang-configs> directory and put the clang configuration
+#    file named <TOOLCHAIN_TARGET_TRIPLE>.cfg into it.
+#  - add the `--sysroot=<path-to-develop-arm-linux-root-fs>` argument into
+#    this configuration file.
+#  - add other necessary target depended clang arguments there, 
+#    such as '-mcpu=cortex-a78' & etc.
+#
+# See more details here: https://clang.llvm.org/docs/UsersManual.html#configuration-files
 #
 # Configure:
 #  cmake -G Ninja ^
-#       -DTOOLCHAIN_TARGET_TRIPLE=armv7-unknown-linux-gnueabihf ^
+#       -DTOOLCHAIN_TARGET_TRIPLE=aarch64-unknown-linux-gnu ^
 #       -DCMAKE_INSTALL_PREFIX=../install ^
-#       -DDEFAULT_SYSROOT=<path-to-develop-arm-linux-root-fs> ^
-#       -DLLVM_AR=<llvm_obj_root>/bin/llvm-ar[.exe] ^
+#       -DCLANG_CONFIG_FILE_USER_DIR=<full-path-to-clang-configs> ^
 #       -DCMAKE_CXX_FLAGS="-D__OPTIMIZE__" ^
 #       -DREMOTE_TEST_HOST="<hostname>" ^
 #       -DREMOTE_TEST_USER="<ssh_user_name>" ^
@@ -42,10 +49,6 @@
 get_filename_component(LLVM_PROJECT_DIR
                        "${CMAKE_CURRENT_LIST_DIR}/../../../"
                        ABSOLUTE)
-
-if (NOT DEFINED DEFAULT_SYSROOT)
-  message(WARNING "DEFAULT_SYSROOT must be specified for the cross toolchain build.")
-endif()
 
 if (NOT DEFINED LLVM_ENABLE_ASSERTIONS)
   set(LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
@@ -136,7 +139,6 @@ endif()
 set(LLVM_BUILTIN_TARGETS                    "${TOOLCHAIN_TARGET_TRIPLE}" CACHE STRING "")
 
 set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_SYSTEM_NAME                         "Linux" CACHE STRING "")
-set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_SYSROOT                             "${DEFAULT_SYSROOT}"  CACHE STRING "")
 set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_INSTALL_RPATH                       "${RUNTIMES_INSTALL_RPATH}"  CACHE STRING "")
 set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_BUILD_WITH_INSTALL_RPATH            ON  CACHE BOOL "")
 set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_LLVM_CMAKE_DIR                            "${LLVM_PROJECT_DIR}/llvm/cmake/modules" CACHE PATH "")
@@ -156,7 +158,6 @@ set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR      ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LLVM_ENABLE_RUNTIMES                      "${LLVM_ENABLE_RUNTIMES}" CACHE STRING "")
 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_SYSTEM_NAME                         "Linux" CACHE STRING "")
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_SYSROOT                             "${DEFAULT_SYSROOT}"  CACHE STRING "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_INSTALL_RPATH                       "${RUNTIMES_INSTALL_RPATH}"  CACHE STRING "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_BUILD_WITH_INSTALL_RPATH            ON  CACHE BOOL "")
 

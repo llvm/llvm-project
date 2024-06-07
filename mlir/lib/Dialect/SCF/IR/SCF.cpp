@@ -378,18 +378,20 @@ LogicalResult ForOp::verifyRegions() {
   return success();
 }
 
-ValueRange ForOp::getInductionVars() { return {getInductionVar()}; }
-
-SmallVector<OpFoldResult> ForOp::getMixedLowerBound() {
-  return {OpFoldResult(getLowerBound())};
+std::optional<SmallVector<Value>> ForOp::getLoopInductionVars() {
+  return SmallVector<Value>{getInductionVar()};
 }
 
-SmallVector<OpFoldResult> ForOp::getMixedStep() {
-  return {OpFoldResult(getStep())};
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopLowerBounds() {
+  return SmallVector<OpFoldResult>{OpFoldResult(getLowerBound())};
 }
 
-SmallVector<OpFoldResult> ForOp::getMixedUpperBound() {
-  return {OpFoldResult(getUpperBound())};
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopSteps() {
+  return SmallVector<OpFoldResult>{OpFoldResult(getStep())};
+}
+
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopUpperBounds() {
+  return SmallVector<OpFoldResult>{OpFoldResult(getUpperBound())};
 }
 
 std::optional<ResultRange> ForOp::getLoopResults() { return getResults(); }
@@ -1426,24 +1428,24 @@ SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
   return storeOps;
 }
 
-ValueRange ForallOp::getInductionVars() {
-  return getBody()->getArguments().take_front(getRank());
+std::optional<SmallVector<Value>> ForallOp::getLoopInductionVars() {
+  return SmallVector<Value>{getBody()->getArguments().take_front(getRank())};
 }
 
 // Get lower bounds as OpFoldResult.
-SmallVector<OpFoldResult> ForallOp::getMixedLowerBound() {
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopLowerBounds() {
   Builder b(getOperation()->getContext());
   return getMixedValues(getStaticLowerBound(), getDynamicLowerBound(), b);
 }
 
 // Get upper bounds as OpFoldResult.
-SmallVector<OpFoldResult> ForallOp::getMixedUpperBound() {
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopUpperBounds() {
   Builder b(getOperation()->getContext());
   return getMixedValues(getStaticUpperBound(), getDynamicUpperBound(), b);
 }
 
 // Get steps as OpFoldResult.
-SmallVector<OpFoldResult> ForallOp::getMixedStep() {
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopSteps() {
   Builder b(getOperation()->getContext());
   return getMixedValues(getStaticStep(), getDynamicStep(), b);
 }
@@ -3004,17 +3006,21 @@ void ParallelOp::print(OpAsmPrinter &p) {
 
 SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
 
-ValueRange ParallelOp::getInductionVars() { return getBody()->getArguments(); }
+std::optional<SmallVector<Value>> ParallelOp::getLoopInductionVars() {
+  return SmallVector<Value>{getBody()->getArguments()};
+}
 
-SmallVector<OpFoldResult> ParallelOp::getMixedLowerBound() {
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopLowerBounds() {
   return getLowerBound();
 }
 
-SmallVector<OpFoldResult> ParallelOp::getMixedUpperBound() {
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopUpperBounds() {
   return getUpperBound();
 }
 
-SmallVector<OpFoldResult> ParallelOp::getMixedStep() { return getStep(); }
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopSteps() {
+  return getStep();
+}
 
 ParallelOp mlir::scf::getParallelForInductionVarOwner(Value val) {
   auto ivArg = llvm::dyn_cast<BlockArgument>(val);

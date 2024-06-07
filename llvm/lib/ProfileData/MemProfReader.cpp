@@ -690,7 +690,7 @@ Error RawMemProfReader::readNextRecord(
       return F;
     auto Iter = this->GuidToSymbolName.find(F.Function);
     assert(Iter != this->GuidToSymbolName.end());
-    F.SymbolName = Iter->getSecond();
+    F.SymbolName = std::make_unique<std::string>(Iter->getSecond());
     return F;
   };
   return MemProfReader::readNextRecord(GuidRecord, IdToFrameCallback);

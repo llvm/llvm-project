@@ -1495,6 +1495,8 @@ static bool isConstExprSupported(const BitcodeConstant *BC) {
   switch (Opcode) {
   case Instruction::FNeg:
   case Instruction::Select:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
     return false;
   default:
     return true;
@@ -1632,10 +1634,6 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           break;
         case BitcodeConstant::ConstantVectorOpcode:
           C = ConstantVector::get(ConstOps);
-          break;
-        case Instruction::ICmp:
-        case Instruction::FCmp:
-          C = ConstantExpr::getCompare(BC->Flags, ConstOps[0], ConstOps[1]);
           break;
         case Instruction::GetElementPtr:
           C = ConstantExpr::getGetElementPtr(

@@ -563,8 +563,8 @@ private:
   void visitShl (const User &I) { visitShift(I, ISD::SHL); }
   void visitLShr(const User &I) { visitShift(I, ISD::SRL); }
   void visitAShr(const User &I) { visitShift(I, ISD::SRA); }
-  void visitICmp(const User &I);
-  void visitFCmp(const User &I);
+  void visitICmp(const ICmpInst &I);
+  void visitFCmp(const FCmpInst &I);
   // Visit the conversion instructions
   void visitTrunc(const User &I);
   void visitZExt(const User &I);
