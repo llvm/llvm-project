@@ -748,13 +748,13 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #ifndef NDEBUG
   // Check that priorities are set properly in the .def file. We expect that
   // "compat" features are assigned non-duplicate consecutive priorities
-  // starting from one (1, ..., 35) and multiple zeros.
+  // starting from one (1, ..., 37) and multiple zeros.
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) PRIORITY,
   unsigned Priorities[] = {
 #include "llvm/TargetParser/X86TargetParser.def"
   };
   std::array<unsigned, std::size(Priorities)> HelperList;
-  const size_t MaxPriority = 35;
+  const size_t MaxPriority = 37;
   std::iota(HelperList.begin(), HelperList.begin() + MaxPriority + 1, 0);
   for (size_t i = MaxPriority + 1; i != std::size(Priorities); ++i)
     HelperList[i] = 0;
