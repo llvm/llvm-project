@@ -1528,6 +1528,15 @@ define i8 @fold_add_constant_no_nsw(i8 %x) {
   %add = add nsw i8 %or, -8
   ret i8 %add
 }
+define i8 @fold_add_constant_preserve_nuw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_preserve_nuw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, 128
+  %add = add nuw i8 %or, 129
+  ret i8 %add
+}
 define i32 @sdiv_to_udiv(i32 %arg0, i32 %arg1) {
 ; CHECK-LABEL: @sdiv_to_udiv(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nuw nsw i32 [[ARG0:%.*]], 8

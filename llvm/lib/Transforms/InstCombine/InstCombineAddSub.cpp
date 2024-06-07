@@ -908,8 +908,8 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   if (match(Op0, m_DisjointOr(m_Value(X), m_ImmConstant(Op01C)))) {
     BinaryOperator *NewAdd =
         BinaryOperator::CreateAdd(X, ConstantExpr::getAdd(Op01C, Op1C));
-    if (willNotOverflowSignedAdd(Op01C, Op1C, Add))
-      NewAdd->setHasNoSignedWrap(Add.hasNoSignedWrap());
+    NewAdd->setHasNoSignedWrap(Add.hasNoSignedWrap() &&
+                               willNotOverflowSignedAdd(Op01C, Op1C, Add));
     NewAdd->setHasNoUnsignedWrap(Add.hasNoUnsignedWrap());
     return NewAdd;
   }
