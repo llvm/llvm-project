@@ -7538,8 +7538,9 @@ LegalizerHelper::lowerMASKED_COMPRESS(llvm::MachineInstr &MI) {
     }
   }
 
-  Align VecAlign = getStackTemporaryAlignment(VecTy);
-  MIRBuilder.buildLoad(Dst, StackPtr, PtrInfo, VecAlign);
+  MachineFrameInfo &MFI = MI.getMF()->getFrameInfo();
+  MIRBuilder.buildLoad(Dst, StackPtr, PtrInfo,
+                       MFI.getObjectAlign(PtrInfo.StackID));
 
   MI.eraseFromParent();
   return Legalized;
