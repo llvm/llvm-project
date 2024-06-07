@@ -1451,6 +1451,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
   }
 
+  if (Subtarget.hasVendorXCVmem()) {
+    setIndexedLoadAction(ISD::POST_INC, MVT::i8, Legal);
+    setIndexedLoadAction(ISD::POST_INC, MVT::i16, Legal);
+    setIndexedLoadAction(ISD::POST_INC, MVT::i32, Legal);
+
+    setIndexedStoreAction(ISD::POST_INC, MVT::i8, Legal);
+    setIndexedStoreAction(ISD::POST_INC, MVT::i16, Legal);
+    setIndexedStoreAction(ISD::POST_INC, MVT::i32, Legal);
+  }
+
   // Function alignments.
   const Align FunctionAlignment(Subtarget.hasStdExtCOrZca() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
@@ -20933,6 +20943,26 @@ bool RISCVTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                      SDValue &Offset,
                                                      ISD::MemIndexedMode &AM,
                                                      SelectionDAG &DAG) const {
+  if (Subtarget.hasVendorXCVmem()) {
+    if (Op->getOpcode() != ISD::ADD)
+      return false;
+
+    if (LSBaseSDNode *LS = dyn_cast<LSBaseSDNode>(N))
+      Base = LS->getBasePtr();
+    else
+      return false;
+
+    if (Base == Op->getOperand(0))
+      Offset = Op->getOperand(1);
+    else if (Base == Op->getOperand(1))
+      Offset = Op->getOperand(0);
+    else
+      return false;
+
+    AM = ISD::POST_INC;
+    return true;
+  }
+
   EVT VT;
   SDValue Ptr;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
