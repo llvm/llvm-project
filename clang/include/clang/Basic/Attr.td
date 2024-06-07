@@ -158,10 +158,8 @@ def FunctionTmpl
 
 def HLSLEntry
     : SubsetSubject<Function,
-                    [{S->getDeclContext()->getRedeclContext()->isFileContext() &&
-                      S->getStorageClass() != SC_Static}],
+                    [{S->isExternallyVisible() && !isa<CXXMethodDecl>(S)}],
                     "global functions">;
-                    
 def HLSLBufferObj : SubsetSubject<HLSLBuffer,
                     [{isa<HLSLBufferDecl>(S)}],
                     "cbuffer/tbuffer">;
@@ -4502,7 +4500,6 @@ def HLSLShader : InheritableAttr {
       case HLSLShaderAttr::Mesh:          return llvm::Triple::Mesh;
       case HLSLShaderAttr::Amplification: return llvm::Triple::Amplification;
     }
-    llvm_unreachable("unknown enumeration value");
   }
 }];
 }
