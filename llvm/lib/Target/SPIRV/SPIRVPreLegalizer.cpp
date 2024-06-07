@@ -166,8 +166,7 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       }
       Register Def = MI.getOperand(0).getReg();
       Register Source = MI.getOperand(2).getReg();
-      Type *ElemTy =
-          toTypedPointer(getMDOperandAsType(MI.getOperand(3).getMetadata(), 0));
+      Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
       SPIRVType *BaseTy = GR->getOrCreateSPIRVType(ElemTy, MIB);
       SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
           BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
@@ -410,8 +409,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       if (isSpvIntrinsic(MI, Intrinsic::spv_assign_ptr_type)) {
         Register Reg = MI.getOperand(1).getReg();
         MIB.setInsertPt(*MI.getParent(), MI.getIterator());
-        Type *ElementTy = toTypedPointer(
-            getMDOperandAsType(MI.getOperand(2).getMetadata(), 0));
+        Type *ElementTy = getMDOperandAsType(MI.getOperand(2).getMetadata(), 0);
         SPIRVType *BaseTy = GR->getOrCreateSPIRVType(ElementTy, MIB);
         SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
             BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
