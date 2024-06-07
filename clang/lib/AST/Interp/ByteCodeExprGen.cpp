@@ -3218,9 +3218,18 @@ bool ByteCodeExprGen<Emitter>::visitAPValue(const APValue &Val,
     return this->emitConst(Val.getInt(), ValType, E);
 
   if (Val.isLValue()) {
+    if (Val.isNullPointer())
+      return this->emitNull(ValType, nullptr, E);
     APValue::LValueBase Base = Val.getLValueBase();
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
       return this->visit(BaseExpr);
+    else if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
+      return this->visitDeclRef(VD, E);
+    }
+  } else if (Val.isMemberPointer()) {
+    if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl())
+      return this->emitGetMemberPtr(MemberDecl, E);
+    return this->emitNullMemberPtr(nullptr, E);
   }
 
   return false;
@@ -3229,15 +3238,15 @@ bool ByteCodeExprGen<Emitter>::visitAPValue(const APValue &Val,
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitAPValueInitializer(const APValue &Val,
                                                        const Expr *E) {
+
   if (Val.isStruct()) {
     const Record *R = this->getRecord(E->getType());
     assert(R);
-
     for (unsigned I = 0, N = Val.getStructNumFields(); I != N; ++I) {
       const APValue &F = Val.getStructField(I);
       const Record::Field *RF = R->getField(I);
 
-      if (F.isInt() || F.isLValue()) {
+      if (F.isInt() || F.isLValue() || F.isMemberPointer()) {
         PrimType T = classifyPrim(RF->Decl->getType());
         if (!this->visitAPValue(F, T, E))
           return false;
@@ -3263,11 +3272,30 @@ bool ByteCodeExprGen<Emitter>::visitAPValueInitializer(const APValue &Val,
 
         if (!this->emitPopPtr(E))
           return false;
+      } else if (F.isStruct() || F.isUnion()) {
+        if (!this->emitDupPtr(E))
+          return false;
+        if (!this->emitGetPtrField(RF->Offset, E))
+          return false;
+        if (!this->visitAPValueInitializer(F, E))
+          return false;
+        if (!this->emitPopPtr(E))
+          return false;
       } else {
         assert(false && "I don't think this should be possible");
       }
     }
     return true;
+  } else if (Val.isUnion()) {
+    const FieldDecl *UnionField = Val.getUnionField();
+    const Record *R = this->getRecord(UnionField->getParent());
+    assert(R);
+    const APValue &F = Val.getUnionValue();
+    const Record::Field *RF = R->getField(UnionField);
+    PrimType T = classifyPrim(RF->Decl->getType());
+    if (!this->visitAPValue(F, T, E))
+      return false;
+    return this->emitInitElem(T, 0, E);
   }
   // TODO: Other types.
 
@@ -3827,11 +3855,9 @@ bool ByteCodeExprGen<Emitter>::VisitComplexUnaryOperator(
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
+bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (DiscardResult)
     return true;
-
-  const auto *D = E->getDecl();
 
   if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
     return this->emitConst(ECD->getInitVal(), E);
@@ -3900,7 +3926,7 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
         if (!this->visitVarDecl(VD))
           return false;
         // Retry.
-        return this->VisitDeclRefExpr(E);
+        return this->visitDeclRef(VD, E);
       }
     }
   } else {
@@ -3910,7 +3936,7 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
       if (!this->visitVarDecl(VD))
         return false;
       // Retry.
-      return this->VisitDeclRefExpr(E);
+      return this->visitDeclRef(VD, E);
     }
   }
 
@@ -3927,7 +3953,15 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     return true;
   }
 
-  return this->emitInvalidDeclRef(E, E);
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return this->emitInvalidDeclRef(DRE, E);
+  return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
+  const auto *D = E->getDecl();
+  return this->visitDeclRef(D, E);
 }
 
 template <class Emitter>
