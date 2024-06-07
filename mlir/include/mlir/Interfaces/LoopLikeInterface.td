@@ -93,47 +93,59 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Return all induction variables.
+        Return all induction variables, if they exist. If the op has no notion of
+        induction variable, then return std::nullopt. If it does have
+        a notion but an instance doesn't have induction variables, then
+        return empty vector.
       }],
       /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::Value>>",
       /*methodName=*/"getLoopInductionVars",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return ::std::nullopt;
       }]
     >,
     InterfaceMethod<[{
-        Return all lower bounds.
+        Return all lower bounds, if they exist. If the op has no notion of
+        lower bounds, then return std::nullopt. If it does have
+        a notion but an instance doesn't have lower bounds, then
+        return empty vector.
       }],
       /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
       /*methodName=*/"getLoopLowerBounds",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return ::std::nullopt;
       }]
     >,
     InterfaceMethod<[{
-        Return all steps.
+        Return all steps, if they exist. If the op has no notion of
+        steps, then return std::nullopt. If it does have
+        a notion but an instance doesn't have steps, then
+        return empty vector.
       }],
-      /*retTy=*/"std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
+      /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
       /*methodName=*/"getLoopSteps",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return ::std::nullopt;
       }]
     >,
     InterfaceMethod<[{
-        Return all upper bounds.
+        Return all upper bounds, if they exist. If the op has no notion of
+        lower bounds, then return std::nullopt. If it does have
+        a notion but an instance doesn't have lower bounds, then
+        return empty vector.
       }],
       /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
       /*methodName=*/"getLoopUpperBounds",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return ::std::nullopt;
       }]
     >,
     InterfaceMethod<[{

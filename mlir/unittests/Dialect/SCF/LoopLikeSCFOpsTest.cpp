@@ -41,19 +41,19 @@ protected:
 
     std::optional<SmallVector<OpFoldResult>> maybeLb =
         loopLikeOp.getLoopLowerBounds();
-    EXPECT_TRUE(maybeLb.has_value());
+    ASSERT_TRUE(maybeLb.has_value());
     EXPECT_EQ((*maybeLb).size(), 1u);
     std::optional<SmallVector<OpFoldResult>> maybeUb =
         loopLikeOp.getLoopUpperBounds();
-    EXPECT_TRUE(maybeUb.has_value());
+    ASSERT_TRUE(maybeUb.has_value());
     EXPECT_EQ((*maybeUb).size(), 1u);
     std::optional<SmallVector<OpFoldResult>> maybeStep =
         loopLikeOp.getLoopSteps();
-    EXPECT_TRUE(maybeStep.has_value());
+    ASSERT_TRUE(maybeStep.has_value());
     EXPECT_EQ((*maybeStep).size(), 1u);
     std::optional<SmallVector<Value>> maybeInductionVars =
         loopLikeOp.getLoopInductionVars();
-    EXPECT_TRUE(maybeInductionVars.has_value());
+    ASSERT_TRUE(maybeInductionVars.has_value());
     EXPECT_EQ((*maybeInductionVars).size(), 1u);
   }
 
@@ -72,19 +72,19 @@ protected:
 
     std::optional<SmallVector<OpFoldResult>> maybeLb =
         loopLikeOp.getLoopLowerBounds();
-    EXPECT_TRUE(maybeLb.has_value());
+    ASSERT_TRUE(maybeLb.has_value());
     EXPECT_EQ((*maybeLb).size(), 2u);
     std::optional<SmallVector<OpFoldResult>> maybeUb =
         loopLikeOp.getLoopUpperBounds();
-    EXPECT_TRUE(maybeUb.has_value());
+    ASSERT_TRUE(maybeUb.has_value());
     EXPECT_EQ((*maybeUb).size(), 2u);
     std::optional<SmallVector<OpFoldResult>> maybeStep =
         loopLikeOp.getLoopSteps();
-    EXPECT_TRUE(maybeStep.has_value());
+    ASSERT_TRUE(maybeStep.has_value());
     EXPECT_EQ((*maybeStep).size(), 2u);
     std::optional<SmallVector<Value>> maybeInductionVars =
         loopLikeOp.getLoopInductionVars();
-    EXPECT_TRUE(maybeInductionVars.has_value());
+    ASSERT_TRUE(maybeInductionVars.has_value());
     EXPECT_EQ((*maybeInductionVars).size(), 2u);
   }
 

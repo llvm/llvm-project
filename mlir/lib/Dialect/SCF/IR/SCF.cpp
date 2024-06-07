@@ -379,19 +379,19 @@ LogicalResult ForOp::verifyRegions() {
 }
 
 std::optional<SmallVector<Value>> ForOp::getLoopInductionVars() {
-  return SmallVector<Value, 1>{getInductionVar()};
+  return SmallVector<Value>{getInductionVar()};
 }
 
 std::optional<SmallVector<OpFoldResult>> ForOp::getLoopLowerBounds() {
-  return SmallVector<OpFoldResult, 1>{OpFoldResult(getLowerBound())};
+  return SmallVector<OpFoldResult>{OpFoldResult(getLowerBound())};
 }
 
 std::optional<SmallVector<OpFoldResult>> ForOp::getLoopSteps() {
-  return SmallVector<OpFoldResult, 1>{OpFoldResult(getStep())};
+  return SmallVector<OpFoldResult>{OpFoldResult(getStep())};
 }
 
 std::optional<SmallVector<OpFoldResult>> ForOp::getLoopUpperBounds() {
-  return SmallVector<OpFoldResult, 1>{OpFoldResult(getUpperBound())};
+  return SmallVector<OpFoldResult>{OpFoldResult(getUpperBound())};
 }
 
 std::optional<ResultRange> ForOp::getLoopResults() { return getResults(); }

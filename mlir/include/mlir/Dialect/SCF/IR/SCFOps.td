@@ -510,28 +510,29 @@ def ForallOp : SCF_Op<"forall", [
   ];
 
   let extraClassDeclaration = [{
+    /// Get induction variables.
     SmallVector<Value> getInductionVars() {
-      auto maybeInductionVars = getLoopInductionVars();;
+      std::optional<SmallVector<Value>> maybeInductionVars = getLoopInductionVars();
       assert(maybeInductionVars.has_value() && "expected values");
       return *maybeInductionVars;
     }
-    // Get lower bounds as OpFoldResult.
+    /// Get lower bounds as OpFoldResult.
     SmallVector<OpFoldResult> getMixedLowerBound() {
-      auto maybeLowerBounds = getLoopLowerBounds();
+      std::optional<SmallVector<OpFoldResult>> maybeLowerBounds = getLoopLowerBounds();
       assert(maybeLowerBounds.has_value() && "expected values");
       return *maybeLowerBounds;
     }
 
-    // Get upper bounds as OpFoldResult.
+    /// Get upper bounds as OpFoldResult.
     SmallVector<OpFoldResult> getMixedUpperBound() {
-      auto maybeUpperBounds = getLoopUpperBounds();
+      std::optional<SmallVector<OpFoldResult>> maybeUpperBounds = getLoopUpperBounds();
       assert(maybeUpperBounds.has_value() && "expected values");
       return *maybeUpperBounds;
     }
 
-    // Get steps as OpFoldResult.
+    /// Get steps as OpFoldResult.
     SmallVector<OpFoldResult> getMixedStep() {
-      auto maybeSteps = getLoopSteps();
+      std::optional<SmallVector<OpFoldResult>> maybeSteps = getLoopSteps();
       assert(maybeSteps.has_value() && "expected values");
       return *maybeSteps;
     }
@@ -850,9 +851,9 @@ def ParallelOp : SCF_Op<"parallel",
   ];
 
   let extraClassDeclaration = [{
-    // Get induction variables.
+    /// Get induction variables.
     SmallVector<Value> getInductionVars() {
-      auto maybeInductionVars = getLoopInductionVars();;
+      std::optional<SmallVector<Value>> maybeInductionVars = getLoopInductionVars();;
       assert(maybeInductionVars.has_value() && "expected values");
       return *maybeInductionVars;
     }
