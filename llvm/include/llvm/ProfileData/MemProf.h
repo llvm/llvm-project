@@ -900,9 +900,18 @@ struct LinearCallStackIdConverter {
     Frames.reserve(NumFrames);
     for (; NumFrames; --NumFrames) {
       LinearFrameId Elem =
-          support::endian::readNext<LinearFrameId, llvm::endianness::little>(
-              Ptr);
+          support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
+      // Follow a pointer to the parent, if any.  See comments below on
+      // CallStackRadixTreeBuilder for the description of the radix tree format.
+      if (static_cast<std::make_signed_t<LinearFrameId>>(Elem) < 0) {
+        Ptr += (-Elem) * sizeof(LinearFrameId);
+        Elem =
+            support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
+      }
+      // We shouldn't encounter another pointer.
+      assert(static_cast<std::make_signed_t<LinearFrameId>>(Elem) >= 0);
       Frames.push_back(FrameIdToFrame(Elem));
+      Ptr += sizeof(LinearFrameId);
     }
 
     return Frames;
@@ -1024,9 +1033,8 @@ public:
 
   const std::vector<LinearFrameId> &getRadixArray() const { return RadixArray; }
 
-  const llvm::DenseMap<CallStackId, LinearCallStackId> &
-  getCallStackPos() const {
-    return CallStackPos;
+  llvm::DenseMap<CallStackId, LinearCallStackId> takeCallStackPos() {
+    return std::move(CallStackPos);
   }
 };
 

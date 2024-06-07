@@ -670,7 +670,7 @@ TEST(MemProf, RadixTreeBuilderEmpty) {
   llvm::memprof::CallStackRadixTreeBuilder Builder;
   Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes);
   ASSERT_THAT(Builder.getRadixArray(), testing::IsEmpty());
-  const auto &Mappings = Builder.getCallStackPos();
+  const auto Mappings = Builder.takeCallStackPos();
   ASSERT_THAT(Mappings, testing::IsEmpty());
 }
 
@@ -689,7 +689,7 @@ TEST(MemProf, RadixTreeBuilderOne) {
                                            2U, // MemProfFrameIndexes[12]
                                            1U  // MemProfFrameIndexes[11]
                                        }));
-  const auto &Mappings = Builder.getCallStackPos();
+  const auto Mappings = Builder.takeCallStackPos();
   ASSERT_THAT(Mappings, SizeIs(1));
   EXPECT_THAT(Mappings, testing::Contains(testing::Pair(
                             llvm::memprof::hashCallStack(CS1), 0U)));
@@ -715,7 +715,7 @@ TEST(MemProf, RadixTreeBuilderTwo) {
                   2U,                        // MemProfFrameIndexes[12]
                   1U                         // MemProfFrameIndexes[11]
               }));
-  const auto &Mappings = Builder.getCallStackPos();
+  const auto Mappings = Builder.takeCallStackPos();
   ASSERT_THAT(Mappings, SizeIs(2));
   EXPECT_THAT(Mappings, testing::Contains(testing::Pair(
                             llvm::memprof::hashCallStack(CS1), 0U)));
@@ -758,7 +758,7 @@ TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
                   2U,                        // MemProfFrameIndexes[12]
                   1U                         // MemProfFrameIndexes[11]
               }));
-  const auto &Mappings = Builder.getCallStackPos();
+  const auto Mappings = Builder.takeCallStackPos();
   ASSERT_THAT(Mappings, SizeIs(4));
   EXPECT_THAT(Mappings, testing::Contains(testing::Pair(
                             llvm::memprof::hashCallStack(CS1), 0U)));
