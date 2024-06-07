@@ -4,14 +4,12 @@
 // RUN: %clang_cc1 -x c++ %s -fsyntax-only --embed-dir=%S/Inputs -verify=cxx -pedantic
 // none-no-diagnostics
 
-#if __has_embed("jk.txt") /* compat-warning {{'__has_embed' is incompatible with C standards before C23}}
-                             ext-warning {{'__has_embed' is a C23 extension}}
-                             cxx-warning {{'__has_embed' is a Clang extension}}
-                           */
+#if __has_embed("jk.txt")
+
 const char buffer[] = {
-#embed "jk.txt" /* compat-warning {{'#embed' is incompatible with C standards before C23}}
-                   ext-warning {{'#embed' is a C23 extension}}
-                   cxx-warning {{'#embed' is a Clang extension}}
+#embed "jk.txt" /* compat-warning {{#embed is incompatible with C standards before C23}}
+                   ext-warning {{#embed is a C23 extension}}
+                   cxx-warning {{#embed is a Clang extension}}
                  */
 };
 #endif

@@ -1283,13 +1283,6 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
 /// EvaluateHasEmbed - Process a '__has_embed("foo" params...)' expression.
 /// Returns a filled optional with the value if successful; otherwise, empty.
 EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
-  // Give the usual extension/compatibility warnings.
-  if (LangOpts.C23)
-    Diag(Tok, diag::warn_compat_pp_embed_directive) << /*__has_embed*/ 1;
-  else
-    Diag(Tok, diag::ext_pp_embed_directive)
-        << /*__has_embed*/ 1 << (LangOpts.CPlusPlus ? /*Clang*/ 1 : /*C23*/ 0);
-
   // These expressions are only allowed within a preprocessor directive.
   if (!this->isParsingIfOrElifDirective()) {
     Diag(Tok, diag::err_pp_directive_required) << II;
