@@ -774,3 +774,11 @@ void overflowInSwitchCase(int n) {
     break;
   }
 }
+
+namespace APValues {
+  int g;
+  struct A { union { int n, m; }; int *p; int A::*q; char buffer[32]; };
+  template<A a> constexpr const A &get = a;
+  constexpr const A &v = get<A{}>;
+  constexpr const A &w = get<A{1, &g, &A::n, "hello"}>;
+}
