@@ -22861,27 +22861,30 @@ TEST_F(FormatTest, FormatsLambdas) {
   verifyFormat("int main() {\n"
                "  very_long_function_name_yes_it_is_really_long(\n"
                "      [](auto n)\n"
-               "          -> std::unordered_map<very_long_type_name_A, "
-               "very_long_type_name_B> {\n"
+               "          -> std::unordered_map<very_long_type_name_A,\n"
+               "                                very_long_type_name_B> {\n"
                "        really_do_something();\n"
                "      });\n"
-               "}");
+               "}",
+               getLLVMStyleWithColumns(60));
   verifyFormat("int main() {\n"
                "  very_long_function_name_yes_it_is_really_long(\n"
                "      [](auto n) noexcept\n"
-               "          -> std::unordered_map<very_long_type_name_A, "
-               "very_long_type_name_B> {\n"
+               "          -> std::unordered_map<very_long_type_name_A,\n"
+               "                                very_long_type_name_B> {\n"
                "        really_do_something();\n"
                "      });\n"
-               "}");
+               "}",
+               getLLVMStyleWithColumns(60));
   verifyFormat("int main() {\n"
                "  very_long_function_name_yes_it_is_really_long(\n"
                "      [](auto n) constexpr\n"
-               "          -> std::unordered_map<very_long_type_name_A, "
-               "very_long_type_name_B> {\n"
+               "          -> std::unordered_map<very_long_type_name_A,\n"
+               "                                very_long_type_name_B> {\n"
                "        really_do_something();\n"
                "      });\n"
-               "}");
+               "}",
+               getLLVMStyleWithColumns(60));
 
   FormatStyle DoNotMerge = getLLVMStyle();
   DoNotMerge.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;

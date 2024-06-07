@@ -1457,7 +1457,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       !Current.isOneOf(tok::colon, tok::comment)) {
     return ContinuationIndent;
   }
-  if (Style.isCpp() && Current.is(tok::arrow) &&
+  if (Style.isCpp() && Current.is(TT_TrailingReturnArrow) &&
       Previous.isOneOf(tok::kw_noexcept, tok::kw_mutable, tok::kw_constexpr,
                        tok::kw_consteval, tok::kw_static)) {
     return ContinuationIndent;
