@@ -658,9 +658,9 @@ def request_release_note(token: str, repo_name: str, pr_number: int):
         pr.as_issue().create_comment(comment)
     except:
         # Failed to create comment so emit file instead
-        with open(comments, "w") as file:
+        with open("comments", "w") as file:
             data = [
-                {'body' : comment}
+                {"body" : comment}
             ]
             json.dump(data, file)
 
