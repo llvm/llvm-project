@@ -729,9 +729,7 @@ Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
 }
 
 GlobalVariable *InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) {
-  if (auto Iter = MD5VTableMap.find(MD5Hash); Iter != MD5VTableMap.end())
-    return Iter->second;
-  return nullptr;
+  return MD5VTableMap.lookup(MD5Hash);
 }
 
 // To store the sums of profile count values, or the percentage of
