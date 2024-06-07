@@ -384,7 +384,7 @@ void ScriptParser::readInclude() {
   StringRef tok = unquote(next());
 
   if (!seen.insert(tok).second) {
-    setError("there is a cycle in linker script INCLUDEs");
+    setError("multiple includes of the same file are not allowed");
     return;
   }
 
