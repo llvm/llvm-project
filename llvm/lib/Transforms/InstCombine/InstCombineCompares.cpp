@@ -3502,15 +3502,13 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
     break;
   }
   case Instruction::Xor:
-    if (BO->hasOneUse()) {
-      if (Constant *BOC = dyn_cast<Constant>(BOp1)) {
-        // For the xor case, we can xor two constants together, eliminating
-        // the explicit xor.
-        return new ICmpInst(Pred, BOp0, ConstantExpr::getXor(RHS, BOC));
-      } else if (C.isZero()) {
-        // Replace ((xor A, B) != 0) with (A != B)
-        return new ICmpInst(Pred, BOp0, BOp1);
-      }
+    if (Constant *BOC = dyn_cast<Constant>(BOp1)) {
+      // For the xor case, we can xor two constants together, eliminating
+      // the explicit xor.
+      return new ICmpInst(Pred, BOp0, ConstantExpr::getXor(RHS, BOC));
+    } else if (C.isZero()) {
+      // Replace ((xor A, B) != 0) with (A != B)
+      return new ICmpInst(Pred, BOp0, BOp1);
     }
     break;
   case Instruction::Or: {
