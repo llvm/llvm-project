@@ -716,12 +716,12 @@ define <vscale x 32 x bfloat> @vfmerge_fv_nxv32bf16(<vscale x 32 x bfloat> %va, 
 ; CHECK-ZVFHMIN:       # %bb.0:
 ; CHECK-ZVFHMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; CHECK-ZVFHMIN-NEXT:    vfmv.v.f v24, fa5
+; CHECK-ZVFHMIN-NEXT:    vfmv.v.f v16, fa5
 ; CHECK-ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-ZVFHMIN-NEXT:    vfncvtbf16.f.f.w v16, v24
-; CHECK-ZVFHMIN-NEXT:    vmv.v.v v20, v16
+; CHECK-ZVFHMIN-NEXT:    vfncvtbf16.f.f.w v24, v16
+; CHECK-ZVFHMIN-NEXT:    vmv.v.v v28, v24
 ; CHECK-ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
-; CHECK-ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v16, v0
+; CHECK-ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v24, v0
 ; CHECK-ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 32 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 32 x bfloat> %head, <vscale x 32 x bfloat> poison, <vscale x 32 x i32> zeroinitializer

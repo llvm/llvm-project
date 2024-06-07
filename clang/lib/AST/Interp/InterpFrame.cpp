@@ -12,6 +12,7 @@
 #include "Function.h"
 #include "InterpStack.h"
 #include "InterpState.h"
+#include "MemberPointer.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Program.h"

@@ -58,8 +58,8 @@ ConstantRange::ConstantRange(APInt L, APInt U)
 
 ConstantRange ConstantRange::fromKnownBits(const KnownBits &Known,
                                            bool IsSigned) {
-  assert(!Known.hasConflict() && "Expected valid KnownBits");
-
+  if (Known.hasConflict())
+    return getEmpty(Known.getBitWidth());
   if (Known.isUnknown())
     return getFull(Known.getBitWidth());
 

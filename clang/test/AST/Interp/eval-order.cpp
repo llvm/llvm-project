@@ -71,8 +71,8 @@ namespace EvalOrder {
   // Rules 1 and 2 have no effect ('b' is not an expression).
 
   // Rule 3: a->*b
-  // SEQ(A(ud).*B(&UserDefined::n)); FIXME
-  // SEQ(A(&ud)->*B(&UserDefined::n)); FIXME
+  SEQ(A(ud).*B(&UserDefined::n));
+  SEQ(A(&ud)->*B(&UserDefined::n));
 
   // Rule 4: a(b1, b2, b3)
   SEQ(A(f)(B(1), B(2), B(3))); // expected-error {{not an integral constant expression}} FIXME \

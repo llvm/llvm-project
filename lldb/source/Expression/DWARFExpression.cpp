@@ -94,51 +94,38 @@ void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
   m_reg_kind = reg_kind;
 }
 
+static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+                                             lldb::RegisterKind reg_kind,
+                                             uint32_t reg_num, Value &value) {
+  if (reg_ctx == nullptr)
+    return llvm::createStringError("no register context in frame");
 
-static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
-                                      lldb::RegisterKind reg_kind,
-                                      uint32_t reg_num, Status *error_ptr,
-                                      Value &value) {
-  if (reg_ctx == nullptr) {
-    if (error_ptr)
-      error_ptr->SetErrorString("No register context in frame.\n");
-  } else {
-    uint32_t native_reg =
-        reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
-    if (native_reg == LLDB_INVALID_REGNUM) {
-      if (error_ptr)
-        error_ptr->SetErrorStringWithFormat("Unable to convert register "
-                                            "kind=%u reg_num=%u to a native "
-                                            "register number.\n",
-                                            reg_kind, reg_num);
-    } else {
-      const RegisterInfo *reg_info =
-          reg_ctx->GetRegisterInfoAtIndex(native_reg);
-      RegisterValue reg_value;
-      if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        if (reg_value.GetScalarValue(value.GetScalar())) {
-          value.SetValueType(Value::ValueType::Scalar);
-          value.SetContext(Value::ContextType::RegisterInfo,
-                           const_cast<RegisterInfo *>(reg_info));
-          if (error_ptr)
-            error_ptr->Clear();
-          return true;
-        } else {
-          // If we get this error, then we need to implement a value buffer in
-          // the dwarf expression evaluation function...
-          if (error_ptr)
-            error_ptr->SetErrorStringWithFormat(
-                "register %s can't be converted to a scalar value",
-                reg_info->name);
-        }
-      } else {
-        if (error_ptr)
-          error_ptr->SetErrorStringWithFormat("register %s is not available",
-                                              reg_info->name);
-      }
+  const uint32_t native_reg =
+      reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
+  if (native_reg == LLDB_INVALID_REGNUM)
+    return llvm::createStringError(
+        "unable to convert register kind=%u reg_num=%u to a native "
+        "register number",
+        reg_kind, reg_num);
+
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(native_reg);
+  RegisterValue reg_value;
+  if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+    if (reg_value.GetScalarValue(value.GetScalar())) {
+      value.SetValueType(Value::ValueType::Scalar);
+      value.SetContext(Value::ContextType::RegisterInfo,
+                       const_cast<RegisterInfo *>(reg_info));
+      return llvm::Error::success();
     }
+
+    // If we get this error, then we need to implement a value buffer in
+    // the dwarf expression evaluation function...
+    return llvm::createStringError(
+        "register %s can't be converted to a scalar value", reg_info->name);
   }
-  return false;
+
+  return llvm::createStringError("register %s is not available",
+                                 reg_info->name);
 }
 
 /// Return the length in bytes of the set of operands for \p op. No guarantees
@@ -782,7 +769,6 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 ///
 /// \param exe_ctx Pointer to the execution context
 /// \param module_sp shared_ptr contains the module if we have one
-/// \param error_ptr pointer to Status object if we have one
 /// \param dw_op_type C-style string used to vary the error output
 /// \param file_addr the file address we are trying to resolve and turn into a
 ///                  load address
@@ -793,32 +779,22 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 ///          the load address succeed or an empty Optinal otherwise. If
 ///          check_sectionoffset is true we consider LLDB_INVALID_ADDRESS a
 ///          success if so_addr.IsSectionOffset() is true.
-static std::optional<lldb::addr_t>
+static llvm::Expected<lldb::addr_t>
 ResolveLoadAddress(ExecutionContext *exe_ctx, lldb::ModuleSP &module_sp,
-                   Status *error_ptr, const char *dw_op_type,
-                   lldb::addr_t file_addr, Address &so_addr,
-                   bool check_sectionoffset = false) {
-  if (!module_sp) {
-    if (error_ptr)
-      error_ptr->SetErrorStringWithFormat(
-          "need module to resolve file address for %s", dw_op_type);
-    return {};
-  }
+                   const char *dw_op_type, lldb::addr_t file_addr,
+                   Address &so_addr, bool check_sectionoffset = false) {
+  if (!module_sp)
+    return llvm::createStringError("need module to resolve file address for %s",
+                                   dw_op_type);
 
-  if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
-    if (error_ptr)
-      error_ptr->SetErrorString("failed to resolve file address in module");
-    return {};
-  }
+  if (!module_sp->ResolveFileAddress(file_addr, so_addr))
+    return llvm::createStringError("failed to resolve file address in module");
 
-  addr_t load_addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
+  const addr_t load_addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
 
   if (load_addr == LLDB_INVALID_ADDRESS &&
-      (check_sectionoffset && !so_addr.IsSectionOffset())) {
-    if (error_ptr)
-      error_ptr->SetErrorString("failed to resolve load address");
-    return {};
-  }
+      (check_sectionoffset && !so_addr.IsSectionOffset()))
+    return llvm::createStringError("failed to resolve load address");
 
   return load_addr;
 }
@@ -996,12 +972,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
             LLDB_INVALID_ADDRESS);
 
         Address so_addr;
-        Status load_err;
         auto maybe_load_addr = ResolveLoadAddress(
-            exe_ctx, module_sp, &load_err, "DW_OP_deref", file_addr, so_addr);
+            exe_ctx, module_sp, "DW_OP_deref", file_addr, so_addr);
 
         if (!maybe_load_addr)
-          return load_err.ToError();
+          return maybe_load_addr.takeError();
 
         stack.back().GetScalar() = *maybe_load_addr;
         // Fall through to load address promotion code below.
@@ -1113,14 +1088,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         auto file_addr =
             stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
         Address so_addr;
-        Status resolve_err;
-        auto maybe_load_addr =
-            ResolveLoadAddress(exe_ctx, module_sp, &resolve_err,
-                               "DW_OP_deref_size", file_addr, so_addr,
-                               /*check_sectionoffset=*/true);
+        auto maybe_load_addr = ResolveLoadAddress(
+            exe_ctx, module_sp, "DW_OP_deref_size", file_addr, so_addr,
+            /*check_sectionoffset=*/true);
 
         if (!maybe_load_addr)
-          return resolve_err.ToError();
+          return maybe_load_addr.takeError();
 
         addr_t load_addr = *maybe_load_addr;
 
@@ -1716,11 +1689,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       dwarf4_location_description_kind = Register;
       reg_num = op - DW_OP_reg0;
 
-      Status read_err;
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, &read_err, tmp))
-        stack.push_back(tmp);
-      else
-        return read_err.ToError();
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
+      stack.push_back(tmp);
     } break;
     // OPCODE: DW_OP_regx
     // OPERANDS:
@@ -1730,10 +1702,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       dwarf4_location_description_kind = Register;
       reg_num = opcodes.GetULEB128(&offset);
       Status read_err;
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, &read_err, tmp))
-        stack.push_back(tmp);
-      else
-        return read_err.ToError();
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
+      stack.push_back(tmp);
     } break;
 
     // OPCODE: DW_OP_bregN
@@ -1774,17 +1746,15 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_breg30:
     case DW_OP_breg31: {
       reg_num = op - DW_OP_breg0;
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
 
-      Status read_err;
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, &read_err,
-                                    tmp)) {
-        int64_t breg_offset = opcodes.GetSLEB128(&offset);
-        tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
-        tmp.ClearContext();
-        stack.push_back(tmp);
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-      } else
-        return read_err.ToError();
+      int64_t breg_offset = opcodes.GetSLEB128(&offset);
+      tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
+      tmp.ClearContext();
+      stack.push_back(tmp);
+      stack.back().SetValueType(Value::ValueType::LoadAddress);
     } break;
     // OPCODE: DW_OP_bregx
     // OPERANDS: 2
@@ -1794,17 +1764,15 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // N plus an offset.
     case DW_OP_bregx: {
       reg_num = opcodes.GetULEB128(&offset);
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
 
-      Status read_err;
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, &read_err,
-                                    tmp)) {
-        int64_t breg_offset = opcodes.GetSLEB128(&offset);
-        tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
-        tmp.ClearContext();
-        stack.push_back(tmp);
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-      } else
-        return read_err.ToError();
+      int64_t breg_offset = opcodes.GetSLEB128(&offset);
+      tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
+      tmp.ClearContext();
+      stack.push_back(tmp);
+      stack.back().SetValueType(Value::ValueType::LoadAddress);
     } break;
 
     case DW_OP_fbreg:

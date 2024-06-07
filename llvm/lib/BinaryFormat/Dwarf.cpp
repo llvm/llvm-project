@@ -155,6 +155,10 @@ StringRef llvm::dwarf::OperationEncodingString(unsigned Encoding) {
     return "DW_OP_LLVM_implicit_pointer";
   case DW_OP_LLVM_arg:
     return "DW_OP_LLVM_arg";
+  case DW_OP_LLVM_extract_bits_sext:
+    return "DW_OP_LLVM_extract_bits_sext";
+  case DW_OP_LLVM_extract_bits_zext:
+    return "DW_OP_LLVM_extract_bits_zext";
   }
 }
 
@@ -169,6 +173,8 @@ unsigned llvm::dwarf::getOperationEncoding(StringRef OperationEncodingString) {
       .Case("DW_OP_LLVM_entry_value", DW_OP_LLVM_entry_value)
       .Case("DW_OP_LLVM_implicit_pointer", DW_OP_LLVM_implicit_pointer)
       .Case("DW_OP_LLVM_arg", DW_OP_LLVM_arg)
+      .Case("DW_OP_LLVM_extract_bits_sext", DW_OP_LLVM_extract_bits_sext)
+      .Case("DW_OP_LLVM_extract_bits_zext", DW_OP_LLVM_extract_bits_zext)
       .Default(0);
 }
 

@@ -620,6 +620,7 @@ public:
 private:
   friend class Block;
   friend class DeadBlock;
+  friend class MemberPointer;
   friend struct InitMap;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);

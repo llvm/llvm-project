@@ -1436,11 +1436,9 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
                              Depth + 1))
       return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     if (SimplifyDemandedBits(Op0, ~Known.Zero & DemandedBits, DemandedElts,
                              Known2, TLO, Depth + 1))
       return true;
-    assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
     // If all of the demanded bits are known one on one side, return the other.
     // These bits cannot contribute to the result of the 'and'.
@@ -1488,7 +1486,7 @@ bool TargetLowering::SimplifyDemandedBits(
       }
       return true;
     }
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+
     if (SimplifyDemandedBits(Op0, ~Known.One & DemandedBits, DemandedElts,
                              Known2, TLO, Depth + 1)) {
       if (Flags.hasDisjoint()) {
@@ -1497,7 +1495,6 @@ bool TargetLowering::SimplifyDemandedBits(
       }
       return true;
     }
-    assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'or'.
@@ -1563,11 +1560,9 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
                              Depth + 1))
       return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     if (SimplifyDemandedBits(Op0, DemandedBits, DemandedElts, Known2, TLO,
                              Depth + 1))
       return true;
-    assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'xor'.
@@ -1663,8 +1658,6 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Op.getOperand(1), DemandedBits, DemandedElts,
                              Known2, TLO, Depth + 1))
       return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
     // If the operands are constants, see if we can simplify them.
     if (ShrinkDemandedConstant(Op, DemandedBits, DemandedElts, TLO))
@@ -1680,8 +1673,6 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Op.getOperand(1), DemandedBits, DemandedElts,
                              Known2, TLO, Depth + 1))
       return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
     // Only known if known in both the LHS and RHS.
     Known = Known.intersectWith(Known2);
@@ -1693,8 +1684,6 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Op.getOperand(2), DemandedBits, DemandedElts,
                              Known2, TLO, Depth + 1))
       return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
     // If the operands are constants, see if we can simplify them.
     if (ShrinkDemandedConstant(Op, DemandedBits, DemandedElts, TLO))
@@ -1819,7 +1808,6 @@ bool TargetLowering::SimplifyDemandedBits(
         }
         return true;
       }
-      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       Known.Zero <<= ShAmt;
       Known.One <<= ShAmt;
       // low bits known zero.
@@ -1993,7 +1981,6 @@ bool TargetLowering::SimplifyDemandedBits(
       if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
                                Depth + 1))
         return true;
-      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       Known.Zero.lshrInPlace(ShAmt);
       Known.One.lshrInPlace(ShAmt);
       // High bits known zero.
@@ -2090,7 +2077,6 @@ bool TargetLowering::SimplifyDemandedBits(
       if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
                                Depth + 1))
         return true;
-      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       Known.Zero.lshrInPlace(ShAmt);
       Known.One.lshrInPlace(ShAmt);
 
@@ -2385,7 +2371,6 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Op0, InputDemandedBits, DemandedElts, Known, TLO,
                              Depth + 1))
       return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
     // If the sign bit of the input is known set or clear, then we know the
     // top bits of the result.
@@ -2458,7 +2443,6 @@ bool TargetLowering::SimplifyDemandedBits(
       }
       return true;
     }
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     assert(Known.getBitWidth() == InBits && "Src width has changed?");
     Known = Known.zext(BitWidth);
 
@@ -2508,7 +2492,6 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Src, InDemandedBits, InDemandedElts, Known, TLO,
                              Depth + 1))
       return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     assert(Known.getBitWidth() == InBits && "Src width has changed?");
 
     // If the sign bit is known one, the top bits match.
@@ -2554,7 +2537,6 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Src, InDemandedBits, InDemandedElts, Known, TLO,
                              Depth + 1))
       return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     assert(Known.getBitWidth() == InBits && "Src width has changed?");
     Known = Known.anyext(BitWidth);
 
@@ -2620,7 +2602,6 @@ bool TargetLowering::SimplifyDemandedBits(
       break;
     }
 
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     break;
   }
   case ISD::AssertZext: {
@@ -2631,7 +2612,6 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Op.getOperand(0), ~InMask | DemandedBits, Known,
                              TLO, Depth + 1))
       return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
     Known.Zero |= ~InMask;
     Known.One &= (~Known.Zero);
@@ -8427,10 +8407,6 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   bool IsMax = Opc == ISD::FMAXIMUM;
   SDNodeFlags Flags = N->getFlags();
 
-  if (VT.isVector() &&
-      isOperationLegalOrCustomOrPromote(Opc, VT.getScalarType()))
-    return SDValue();
-
   // First, implement comparison not propagating NaN. If no native fmin or fmax
   // available, use plain select with setcc instead.
   SDValue MinMax;
@@ -8447,6 +8423,9 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   } else if (isOperationLegalOrCustom(CompOpc, VT)) {
     MinMax = DAG.getNode(CompOpc, DL, VT, LHS, RHS, Flags);
   } else {
+    if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
+      return DAG.UnrollVectorOp(N);
+
     // NaN (if exists) will be propagated later, so orderness doesn't matter.
     SDValue Compare =
         DAG.getSetCC(DL, CCVT, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT);
@@ -9159,6 +9138,7 @@ SDValue TargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
   if (!IsNegative && isOperationLegal(ISD::SUB, VT) &&
       isOperationLegal(ISD::SMAX, VT)) {
     SDValue Zero = DAG.getConstant(0, dl, VT);
+    Op = DAG.getFreeze(Op);
     return DAG.getNode(ISD::SMAX, dl, VT, Op,
                        DAG.getNode(ISD::SUB, dl, VT, Zero, Op));
   }
@@ -9175,8 +9155,8 @@ SDValue TargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
   // 0 - abs(x) -> smin(x, sub(0,x))
   if (IsNegative && isOperationLegal(ISD::SUB, VT) &&
       isOperationLegal(ISD::SMIN, VT)) {
-    Op = DAG.getFreeze(Op);
     SDValue Zero = DAG.getConstant(0, dl, VT);
+    Op = DAG.getFreeze(Op);
     return DAG.getNode(ISD::SMIN, dl, VT, Op,
                        DAG.getNode(ISD::SUB, dl, VT, Zero, Op));
   }
