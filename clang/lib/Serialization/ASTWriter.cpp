@@ -2442,7 +2442,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
 
   // Write the safe buffer opt-out region map in PP
   for (SourceLocation &S : PP.serializeSafeBufferOptOutMap())
-    AddSourceLocation(std::move(S), Record);
+    AddSourceLocation(S, Record);
   Stream.EmitRecord(PP_UNSAFE_BUFFER_USAGE, Record);
   Record.clear();
 
