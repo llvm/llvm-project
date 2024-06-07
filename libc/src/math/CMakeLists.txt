@@ -351,6 +351,7 @@ add_math_entrypoint_object(roundevenf128)
 add_math_entrypoint_object(scalbn)
 add_math_entrypoint_object(scalbnf)
 add_math_entrypoint_object(scalbnl)
+add_math_entrypoint_object(scalbnf16)
 add_math_entrypoint_object(scalbnf128)
 
 add_math_entrypoint_object(setpayloadf16)

@@ -3510,6 +3510,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  scalbnf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalbnf16_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalbnf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   scalbnf128_test
   SUITE
     libc-math-smoke-tests

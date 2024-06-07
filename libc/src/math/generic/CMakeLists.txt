@@ -3554,6 +3554,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  scalbnf16
+  SRCS
+    scalbnf16.cpp
+  HDRS
+    ../scalbnf16.h
+  DEPENDS
+    libc.hdr.float_macros
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   scalbnf128
   SRCS
     scalbnf128.cpp
