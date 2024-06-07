@@ -235,7 +235,7 @@ static void computeMaxLatency(InstrDesc &ID, const MCInstrDesc &MCDesc,
   // If `UseLoadLatency` is set, we use the value in `MCSchedModel::LoadLatency`
   // for load instructions.
   if (MCDesc.mayLoad() && UseLoadLatency) {
-    const auto &SM = STI.getSchedModel();
+    const MCSchedModel &SM = STI.getSchedModel();
     Latency = std::max(int(SM.LoadLatency), Latency);
   }
   // If latency is unknown, then conservatively assume the MaxLatency set for

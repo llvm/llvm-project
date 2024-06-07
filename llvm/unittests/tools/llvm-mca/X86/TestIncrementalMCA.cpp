@@ -34,7 +34,7 @@ TEST_F(X86TestBase, TestResumablePipeline) {
 
   auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, /*CallLatency=*/100,
-                       /*UseLoadLatency*/ false);
+                       /*UseLoadLatency=*/false);
 
   const SmallVector<mca::Instrument *> Instruments;
   // Tile size = 7
@@ -126,7 +126,7 @@ TEST_F(X86TestBase, TestInstructionRecycling) {
   auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
 
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, /*CallLatency=*/100,
-                       /*UseLoadLatency*/ false);
+                       /*UseLoadLatency=*/false);
   IB.setInstRecycleCallback(GetRecycledInst);
 
   const SmallVector<mca::Instrument *> Instruments;
