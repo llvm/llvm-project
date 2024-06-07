@@ -2347,7 +2347,8 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,
                               N->getIndexType(), TruncateStore);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_MASKED_COMPRESS(SDNode *N, unsigned OpNo) {
+SDValue DAGTypeLegalizer::PromoteIntOp_MASKED_COMPRESS(SDNode *N,
+                                                       unsigned OpNo) {
   assert(OpNo == 1 && "Can only promote MASKED_COMPRESS mask.");
   SDValue Vec = N->getOperand(0);
   EVT VT = Vec.getValueType();

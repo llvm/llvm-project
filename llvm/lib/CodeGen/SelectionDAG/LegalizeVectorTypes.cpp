@@ -2308,7 +2308,7 @@ void DAGTypeLegalizer::SplitVecRes_Gather(MemSDNode *N, SDValue &Lo,
 }
 
 void DAGTypeLegalizer::SplitVecRes_MASKED_COMPRESS(SDNode *N, SDValue &Lo,
-                                             SDValue &Hi) {
+                                                   SDValue &Hi) {
   // This is not "trivial", as there is a dependency between the two subvectors.
   // Depending on the number of 1s in the mask, the elements from the Hi vector
   // need to be moved to the Lo vector. So we just perform this as one "big"
@@ -5623,7 +5623,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_MASKED_COMPRESS(SDNode *N) {
 
   SDValue WideVec = ModifyToType(Vec, WideVecVT);
   SDValue WideMask = ModifyToType(Mask, WideMaskVT);
-  return DAG.getNode(ISD::MASKED_COMPRESS, SDLoc(N), WideVecVT, WideVec, WideMask);
+  return DAG.getNode(ISD::MASKED_COMPRESS, SDLoc(N), WideVecVT, WideVec,
+                     WideMask);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {

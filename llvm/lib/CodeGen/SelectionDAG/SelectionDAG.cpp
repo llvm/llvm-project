@@ -6279,7 +6279,8 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // We can't create a scalar CONCAT_VECTORS so skip it. It will break
   // for concats involving SPLAT_VECTOR. Concats of BUILD_VECTORS are handled by
   // foldCONCAT_VECTORS in getNode before this is called.
-  // MASKED_COMPRESS is not defined for scalars. We handle constants before this call.
+  // MASKED_COMPRESS is not defined for scalars. We handle constants before this
+  // call.
   // TODO: Make this aware of vector-only opcodes and skip all of them.
   if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS ||
       Opcode == ISD::MASKED_COMPRESS)
