@@ -783,13 +783,11 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   // __rela_iplt_{start,end} are initially defined relative to dummy section 0.
   // We'll override Out::elfHeader with relaDyn later when we are sure that
   // .rela.dyn will be present in the output.
-  ElfSym::relaIpltStart = addOptionalRegular(
-      config->isRela ? "__rela_iplt_start" : "__rel_iplt_start",
-      Out::elfHeader, 0, STV_HIDDEN);
-
-  ElfSym::relaIpltEnd = addOptionalRegular(
-      config->isRela ? "__rela_iplt_end" : "__rel_iplt_end",
-      Out::elfHeader, 0, STV_HIDDEN);
+  std::string name = config->isRela ? "__rela_iplt_start" : "__rel_iplt_start";
+  ElfSym::relaIpltStart =
+      addOptionalRegular(name, Out::elfHeader, 0, STV_HIDDEN);
+  name.replace(name.size() - 5, 5, "end");
+  ElfSym::relaIpltEnd = addOptionalRegular(name, Out::elfHeader, 0, STV_HIDDEN);
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or
@@ -2487,11 +2485,12 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
         lastRX->lastSec == sec)
       off = alignToPowerOf2(off, config->maxPageSize);
   }
-  for (OutputSection *osec : outputSections)
-    if (!(osec->flags & SHF_ALLOC)) {
-      osec->offset = alignToPowerOf2(off, osec->addralign);
-      off = osec->offset + osec->size;
-    }
+  for (OutputSection *osec : outputSections) {
+    if (osec->flags & SHF_ALLOC)
+      continue;
+    osec->offset = alignToPowerOf2(off, osec->addralign);
+    off = osec->offset + osec->size;
+  }
 
   sectionHeaderOff = alignToPowerOf2(off, config->wordsize);
   fileSize = sectionHeaderOff + (outputSections.size() + 1) * sizeof(Elf_Shdr);
