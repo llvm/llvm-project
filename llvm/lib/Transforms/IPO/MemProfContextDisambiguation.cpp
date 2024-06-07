@@ -262,8 +262,70 @@ public:
     // TODO: Should this be a map (from Caller node) for more efficient lookup?
     std::vector<std::shared_ptr<ContextEdge>> CallerEdges;
 
-    // The set of IDs for contexts including this node.
-    DenseSet<uint32_t> ContextIds;
+    // Get the list of edges from which we can compute allocation information
+    // such as the context ids and allocation type of this node.
+    const std::vector<std::shared_ptr<ContextEdge>> *
+    getEdgesWithAllocInfo() const {
+      // If node has any callees, compute from those, otherwise compute from
+      // callers (i.e. if this is the leaf allocation node).
+      if (!CalleeEdges.empty())
+        return &CalleeEdges;
+      if (!CallerEdges.empty()) {
+        // A node with caller edges but no callee edges must be the allocation
+        // node.
+        assert(IsAllocation);
+        return &CallerEdges;
+      }
+      return nullptr;
+    }
+
+    // Compute the context ids for this node from the union of its edge context
+    // ids.
+    DenseSet<uint32_t> getContextIds() const {
+      DenseSet<uint32_t> ContextIds;
+      auto *Edges = getEdgesWithAllocInfo();
+      if (!Edges)
+        return {};
+      unsigned Count = 0;
+      for (auto &Edge : *Edges)
+        Count += Edge->getContextIds().size();
+      ContextIds.reserve(Count);
+      for (auto &Edge : *Edges)
+        ContextIds.insert(Edge->getContextIds().begin(),
+                          Edge->getContextIds().end());
+      return ContextIds;
+    }
+
+    // Compute the allocation type for this node from the OR of its edge
+    // allocation types.
+    uint8_t computeAllocType() const {
+      auto *Edges = getEdgesWithAllocInfo();
+      if (!Edges)
+        return (uint8_t)AllocationType::None;
+      uint8_t BothTypes =
+          (uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold;
+      uint8_t AllocType = (uint8_t)AllocationType::None;
+      for (auto &Edge : *Edges) {
+        AllocType |= Edge->AllocTypes;
+        // Bail early if alloc type reached both, no further refinement.
+        if (AllocType == BothTypes)
+          return AllocType;
+      }
+      return AllocType;
+    }
+
+    // The context ids set for this node is empty if its edge context ids are
+    // also all empty.
+    bool emptyContextIds() const {
+      auto *Edges = getEdgesWithAllocInfo();
+      if (!Edges)
+        return true;
+      for (auto &Edge : *Edges) {
+        if (!Edge->getContextIds().empty())
+          return false;
+      }
+      return true;
+    }
 
     // List of clones of this ContextNode, initially empty.
     std::vector<ContextNode *> Clones;
@@ -308,15 +370,11 @@ public:
     void printCall(raw_ostream &OS) const { Call.print(OS); }
 
     // True if this node was effectively removed from the graph, in which case
-    // its context id set, caller edges, and callee edges should all be empty.
+    // it should have an allocation type of None and empty context ids.
     bool isRemoved() const {
-      // Note that we can have non-empty context ids with empty caller and
-      // callee edges if the graph ends up with a single node.
-      if (ContextIds.empty())
-        assert(CalleeEdges.empty() && CallerEdges.empty() &&
-               "Context ids empty but at least one of callee and caller edges "
-               "were not!");
-      return ContextIds.empty();
+      assert((AllocTypes == (uint8_t)AllocationType::None) ==
+             emptyContextIds());
+      return AllocTypes == (uint8_t)AllocationType::None;
     }
 
     void dump() const;
@@ -429,7 +487,8 @@ private:
   /// else to its callers. Also updates OrigNode's edges to remove any context
   /// ids moved to the newly created edge.
   void connectNewNode(ContextNode *NewNode, ContextNode *OrigNode,
-                      bool TowardsCallee);
+                      bool TowardsCallee,
+                      DenseSet<uint32_t> RemainingContextIds);
 
   /// Get the stack id corresponding to the given Id or Index (for IR this will
   /// return itself, for a summary index this will return the id recorded in the
@@ -958,7 +1017,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
 
   // Update alloc type and context ids for this MIB.
   AllocNode->AllocTypes |= (uint8_t)AllocType;
-  AllocNode->ContextIds.insert(LastContextId);
 
   // Now add or update nodes for each stack id in alloc's context.
   // Later when processing the stack ids on non-alloc callsites we will adjust
@@ -983,7 +1041,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
     auto Ins = StackIdSet.insert(StackId);
     if (!Ins.second)
       StackNode->Recursive = true;
-    StackNode->ContextIds.insert(LastContextId);
     StackNode->AllocTypes |= (uint8_t)AllocType;
     PrevNode->addOrUpdateCallerEdge(StackNode, AllocType, LastContextId);
     PrevNode = StackNode;
@@ -1034,7 +1091,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       // it resulted in any added ids to NextNode.
       if (!NewIdsToAdd.empty()) {
         Edge->getContextIds().insert(NewIdsToAdd.begin(), NewIdsToAdd.end());
-        NextNode->ContextIds.insert(NewIdsToAdd.begin(), NewIdsToAdd.end());
         UpdateCallers(NextNode, Visited, UpdateCallers);
       }
     }
@@ -1043,21 +1099,16 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   DenseSet<const ContextEdge *> Visited;
   for (auto &Entry : AllocationCallToContextNodeMap) {
     auto *Node = Entry.second;
-    // Update ids on the allocation nodes before calling the recursive
-    // update along caller edges, since this simplifies the logic during
-    // that traversal.
-    DenseSet<uint32_t> NewIdsToAdd = GetNewIds(Node->ContextIds);
-    Node->ContextIds.insert(NewIdsToAdd.begin(), NewIdsToAdd.end());
     UpdateCallers(Node, Visited, UpdateCallers);
   }
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
-    ContextNode *NewNode, ContextNode *OrigNode, bool TowardsCallee) {
-  // Make a copy of the context ids, since this will be adjusted below as they
-  // are moved.
-  DenseSet<uint32_t> RemainingContextIds = NewNode->ContextIds;
+    ContextNode *NewNode, ContextNode *OrigNode, bool TowardsCallee,
+    // This must be passed by value to make a copy since it will be adjusted
+    // as ids are moved.
+    DenseSet<uint32_t> RemainingContextIds) {
   auto &OrigEdges =
       TowardsCallee ? OrigNode->CalleeEdges : OrigNode->CallerEdges;
   // Increment iterator in loop so that we can remove edges as needed.
@@ -1100,6 +1151,51 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
       continue;
     }
     ++EI;
+  }
+}
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+static void checkEdge(
+    const std::shared_ptr<ContextEdge<DerivedCCG, FuncTy, CallTy>> &Edge) {
+  // Confirm that alloc type is not None and that we have at least one context
+  // id.
+  assert(Edge->AllocTypes != (uint8_t)AllocationType::None);
+  assert(!Edge->ContextIds.empty());
+}
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
+                      bool CheckEdges = true) {
+  if (Node->isRemoved())
+    return;
+#ifndef NDEBUG
+  // Compute node's context ids once for use in asserts.
+  auto NodeContextIds = Node->getContextIds();
+#endif
+  // Node's context ids should be the union of both its callee and caller edge
+  // context ids.
+  if (Node->CallerEdges.size()) {
+    DenseSet<uint32_t> CallerEdgeContextIds(
+        Node->CallerEdges.front()->ContextIds);
+    for (const auto &Edge : llvm::drop_begin(Node->CallerEdges)) {
+      if (CheckEdges)
+        checkEdge<DerivedCCG, FuncTy, CallTy>(Edge);
+      set_union(CallerEdgeContextIds, Edge->ContextIds);
+    }
+    // Node can have more context ids than callers if some contexts terminate at
+    // node and some are longer.
+    assert(NodeContextIds == CallerEdgeContextIds ||
+           set_is_subset(CallerEdgeContextIds, NodeContextIds));
+  }
+  if (Node->CalleeEdges.size()) {
+    DenseSet<uint32_t> CalleeEdgeContextIds(
+        Node->CalleeEdges.front()->ContextIds);
+    for (const auto &Edge : llvm::drop_begin(Node->CalleeEdges)) {
+      if (CheckEdges)
+        checkEdge<DerivedCCG, FuncTy, CallTy>(Edge);
+      set_union(CalleeEdgeContextIds, Edge->getContextIds());
+    }
+    assert(NodeContextIds == CalleeEdgeContextIds);
   }
 }
 
@@ -1178,7 +1274,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     // duplicated context ids. We have to recompute as we might have overlap
     // overlap between the saved context ids for different last nodes, and
     // removed them already during the post order traversal.
-    set_intersect(SavedContextIds, FirstNode->ContextIds);
+    set_intersect(SavedContextIds, FirstNode->getContextIds());
     ContextNode *PrevNode = nullptr;
     for (auto Id : Ids) {
       ContextNode *CurNode = getNodeForStackId(Id);
@@ -1211,18 +1307,17 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     ContextNode *NewNode = NodeOwner.back().get();
     NodeToCallingFunc[NewNode] = Func;
     NonAllocationCallToContextNodeMap[Call] = NewNode;
-    NewNode->ContextIds = SavedContextIds;
-    NewNode->AllocTypes = computeAllocType(NewNode->ContextIds);
+    NewNode->AllocTypes = computeAllocType(SavedContextIds);
 
     // Connect to callees of innermost stack frame in inlined call chain.
     // This updates context ids for FirstNode's callee's to reflect those
     // moved to NewNode.
-    connectNewNode(NewNode, FirstNode, /*TowardsCallee=*/true);
+    connectNewNode(NewNode, FirstNode, /*TowardsCallee=*/true, SavedContextIds);
 
     // Connect to callers of outermost stack frame in inlined call chain.
     // This updates context ids for FirstNode's caller's to reflect those
     // moved to NewNode.
-    connectNewNode(NewNode, LastNode, /*TowardsCallee=*/false);
+    connectNewNode(NewNode, LastNode, /*TowardsCallee=*/false, SavedContextIds);
 
     // Now we need to remove context ids from edges/nodes between First and
     // Last Node.
@@ -1234,17 +1329,31 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 
       // Remove the context ids moved to NewNode from CurNode, and the
       // edge from the prior node.
-      set_subtract(CurNode->ContextIds, NewNode->ContextIds);
       if (PrevNode) {
         auto *PrevEdge = CurNode->findEdgeFromCallee(PrevNode);
         assert(PrevEdge);
-        set_subtract(PrevEdge->getContextIds(), NewNode->ContextIds);
+        set_subtract(PrevEdge->getContextIds(), SavedContextIds);
         if (PrevEdge->getContextIds().empty()) {
           PrevNode->eraseCallerEdge(PrevEdge);
           CurNode->eraseCalleeEdge(PrevEdge);
         }
       }
+      // Since we update the edges from leaf to tail, only look at the callee
+      // edges. This isn't an alloc node, so if there are no callee edges, the
+      // alloc type is None.
+      CurNode->AllocTypes = CurNode->CalleeEdges.empty()
+                                ? (uint8_t)AllocationType::None
+                                : CurNode->computeAllocType();
       PrevNode = CurNode;
+    }
+    if (VerifyNodes) {
+      checkNode<DerivedCCG, FuncTy, CallTy>(NewNode, /*CheckEdges=*/true);
+      for (auto Id : Ids) {
+        ContextNode *CurNode = getNodeForStackId(Id);
+        // We should only have kept stack ids that had nodes.
+        assert(CurNode);
+        checkNode<DerivedCCG, FuncTy, CallTy>(CurNode, /*CheckEdges=*/true);
+      }
     }
   }
 }
@@ -1319,7 +1428,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
 
     // Initialize the context ids with the last node's. We will subsequently
     // refine the context ids by computing the intersection along all edges.
-    DenseSet<uint32_t> LastNodeContextIds = LastNode->ContextIds;
+    DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
     assert(!LastNodeContextIds.empty());
 
     for (unsigned I = 0; I < Calls.size(); I++) {
@@ -1442,6 +1551,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   DenseSet<const ContextNode *> Visited;
   for (auto &Entry : AllocationCallToContextNodeMap)
     assignStackNodesPostOrder(Entry.second, Visited, StackIdToMatchingCalls);
+  if (VerifyCCG)
+    check();
 }
 
 uint64_t ModuleCallsiteContextGraph::getLastStackId(Instruction *Call) {
@@ -1786,8 +1897,6 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
     // First check if we have already synthesized a node for this tail call.
     if (TailCallToContextNodeMap.count(NewCall)) {
       NewNode = TailCallToContextNodeMap[NewCall];
-      NewNode->ContextIds.insert(Edge->ContextIds.begin(),
-                                 Edge->ContextIds.end());
       NewNode->AllocTypes |= Edge->AllocTypes;
     } else {
       FuncToCallsWithMetadata[Func].push_back({NewCall});
@@ -1797,7 +1906,6 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
       NewNode = NodeOwner.back().get();
       NodeToCallingFunc[NewNode] = Func;
       TailCallToContextNodeMap[NewCall] = NewNode;
-      NewNode->ContextIds = Edge->ContextIds;
       NewNode->AllocTypes = Edge->AllocTypes;
     }
 
@@ -2091,6 +2199,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
   OS << "\n";
   OS << "\tAllocTypes: " << getAllocTypeString(AllocTypes) << "\n";
   OS << "\tContextIds:";
+  // Make a copy of the computed context ids that we can sort for stability.
+  auto ContextIds = getContextIds();
   std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
   std::sort(SortedIds.begin(), SortedIds.end());
   for (auto Id : SortedIds)
@@ -2147,53 +2257,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::print(
       continue;
     Node->print(OS);
     OS << "\n";
-  }
-}
-
-template <typename DerivedCCG, typename FuncTy, typename CallTy>
-static void checkEdge(
-    const std::shared_ptr<ContextEdge<DerivedCCG, FuncTy, CallTy>> &Edge) {
-  // Confirm that alloc type is not None and that we have at least one context
-  // id.
-  assert(Edge->AllocTypes != (uint8_t)AllocationType::None);
-  assert(!Edge->ContextIds.empty());
-}
-
-template <typename DerivedCCG, typename FuncTy, typename CallTy>
-static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
-                      bool CheckEdges = true) {
-  if (Node->isRemoved())
-    return;
-  // Node's context ids should be the union of both its callee and caller edge
-  // context ids.
-  if (Node->CallerEdges.size()) {
-    auto EI = Node->CallerEdges.begin();
-    auto &FirstEdge = *EI;
-    EI++;
-    DenseSet<uint32_t> CallerEdgeContextIds(FirstEdge->ContextIds);
-    for (; EI != Node->CallerEdges.end(); EI++) {
-      const auto &Edge = *EI;
-      if (CheckEdges)
-        checkEdge<DerivedCCG, FuncTy, CallTy>(Edge);
-      set_union(CallerEdgeContextIds, Edge->ContextIds);
-    }
-    // Node can have more context ids than callers if some contexts terminate at
-    // node and some are longer.
-    assert(Node->ContextIds == CallerEdgeContextIds ||
-           set_is_subset(CallerEdgeContextIds, Node->ContextIds));
-  }
-  if (Node->CalleeEdges.size()) {
-    auto EI = Node->CalleeEdges.begin();
-    auto &FirstEdge = *EI;
-    EI++;
-    DenseSet<uint32_t> CalleeEdgeContextIds(FirstEdge->ContextIds);
-    for (; EI != Node->CalleeEdges.end(); EI++) {
-      const auto &Edge = *EI;
-      if (CheckEdges)
-        checkEdge<DerivedCCG, FuncTy, CallTy>(Edge);
-      set_union(CalleeEdgeContextIds, Edge->ContextIds);
-    }
-    assert(Node->ContextIds == CalleeEdgeContextIds);
   }
 }
 
@@ -2284,7 +2347,7 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
 
   static std::string getNodeAttributes(NodeRef Node, GraphType) {
     std::string AttributeString = (Twine("tooltip=\"") + getNodeId(Node) + " " +
-                                   getContextIds(Node->ContextIds) + "\"")
+                                   getContextIds(Node->getContextIds()) + "\"")
                                       .str();
     AttributeString +=
         (Twine(",fillcolor=\"") + getColor(Node->AllocTypes) + "\"").str();
@@ -2443,16 +2506,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     set_subtract(Edge->ContextIds, ContextIdsToMove);
     Edge->AllocTypes = computeAllocType(Edge->ContextIds);
   }
-  // Now perform some updates that are common to all cases: the NewCallee gets
-  // the moved ids added, and we need to remove those ids from OldCallee and
-  // update its alloc type (NewCallee alloc type updates handled above).
-  NewCallee->ContextIds.insert(ContextIdsToMove.begin(),
-                               ContextIdsToMove.end());
-  set_subtract(OldCallee->ContextIds, ContextIdsToMove);
-  OldCallee->AllocTypes = computeAllocType(OldCallee->ContextIds);
-  // OldCallee alloc type should be None iff its context id set is now empty.
-  assert((OldCallee->AllocTypes == (uint8_t)AllocationType::None) ==
-         OldCallee->ContextIds.empty());
   // Now walk the old callee node's callee edges and move Edge's context ids
   // over to the corresponding edge into the clone (which is created here if
   // this is a newly created clone).
@@ -2484,6 +2537,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     NewCallee->CalleeEdges.push_back(NewEdge);
     NewEdge->Callee->CallerEdges.push_back(NewEdge);
   }
+  // Recompute the node alloc type now that its callee edges have been
+  // updated (since we will compute from those edges).
+  OldCallee->AllocTypes = OldCallee->computeAllocType();
+  // OldCallee alloc type should be None iff its context id set is now empty.
+  assert((OldCallee->AllocTypes == (uint8_t)AllocationType::None) ==
+         OldCallee->emptyContextIds());
   if (VerifyCCG) {
     checkNode<DerivedCCG, FuncTy, CallTy>(OldCallee, /*CheckEdges=*/false);
     checkNode<DerivedCCG, FuncTy, CallTy>(NewCallee, /*CheckEdges=*/false);
@@ -2528,7 +2587,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones() {
   DenseSet<const ContextNode *> Visited;
   for (auto &Entry : AllocationCallToContextNodeMap) {
     Visited.clear();
-    identifyClones(Entry.second, Visited, Entry.second->ContextIds);
+    identifyClones(Entry.second, Visited, Entry.second->getContextIds());
   }
   Visited.clear();
   for (auto &Entry : AllocationCallToContextNodeMap)
@@ -2714,7 +2773,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   }
 
   // We should still have some context ids on the original Node.
-  assert(!Node->ContextIds.empty());
+  assert(!Node->emptyContextIds());
 
   // Sanity check that no alloc types on node or edges are None.
   assert(Node->AllocTypes != (uint8_t)AllocationType::None);
@@ -2918,7 +2977,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       // find additional cloning is required.
       std::deque<ContextNode *> ClonesWorklist;
       // Ignore original Node if we moved all of its contexts to clones.
-      if (!Node->ContextIds.empty())
+      if (!Node->emptyContextIds())
         ClonesWorklist.push_back(Node);
       ClonesWorklist.insert(ClonesWorklist.end(), Node->Clones.begin(),
                             Node->Clones.end());
@@ -3258,7 +3317,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 
     // Skip if either no call to update, or if we ended up with no context ids
     // (we moved all edges onto other clones).
-    if (!Node->hasCall() || Node->ContextIds.empty())
+    if (!Node->hasCall() || Node->emptyContextIds())
       return;
 
     if (Node->IsAllocation) {

@@ -9241,6 +9241,14 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
                "        b));",
                Style);
 
+  Style.ColumnLimit = 30;
+  verifyFormat("for (int foo = 0; foo < FOO;\n"
+               "    ++foo) {\n"
+               "  bar(foo);\n"
+               "}",
+               Style);
+  Style.ColumnLimit = 80;
+
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
   Style.BinPackArguments = false;
   Style.BinPackParameters = false;
