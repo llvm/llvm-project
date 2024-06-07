@@ -41,7 +41,8 @@ void T2(void) {
   // LLVM-DAG: internal constant { i32, [3 x i32] } { i32 3, [3 x i32] [i32 10, i32 20, i32 30] }
   struct outer X = {ARRAY_PTR(10, 20, 30)};
 
-  // CIR-DAG: cir.cast(bitcast, %1 : !cir.ptr<!cir.ptr<![[sized_array]]>>), !cir.ptr<!cir.ptr<![[annon_struct]]>>
+  // CIR-DAG: %[[T2A:.*]] = cir.get_global @T2._a : !cir.ptr<![[annon_struct]]>
+  // CIR-DAG: cir.cast(bitcast, %[[T2A]] : !cir.ptr<![[annon_struct]]>), !cir.ptr<![[sized_array]]>
   escape(A);
   escape(&X);
 }
