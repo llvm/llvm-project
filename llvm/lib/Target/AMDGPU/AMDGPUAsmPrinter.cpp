@@ -400,7 +400,7 @@ void AMDGPUAsmPrinter::emitCommonFunctionComments(
                               false);
 }
 
-StringRef AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
+SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
   SmallString<128> Str;
   raw_svector_ostream OSS(Str);
   int64_t IVal;
@@ -409,7 +409,7 @@ StringRef AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
   } else {
     Value->print(OSS, MAI);
   }
-  return OSS.str();
+  return Str;
 }
 
 void AMDGPUAsmPrinter::emitCommonFunctionComments(

@@ -84,7 +84,7 @@ private:
   void initTargetStreamer(Module &M);
 
   static uint64_t getMCExprValue(const MCExpr *Value, MCContext &Ctx);
-  StringRef getMCExprStr(const MCExpr *Value);
+  SmallString<128> getMCExprStr(const MCExpr *Value);
 
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,
