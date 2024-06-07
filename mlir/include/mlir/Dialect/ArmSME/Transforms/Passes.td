@@ -116,10 +116,14 @@ def EnableArmStreaming
                             "not be used for input and/or output and the "
                             "function must return with ZA unchanged")
            )}]>,
-    Option<"onlyIfRequiredByOps", "only-if-required-by-ops", "bool",
+    Option<"ifRequiredByOps", "if-required-by-ops", "bool",
            /*default=*/"false",
-           "Only apply the selected streaming/ZA modes if the function "
-           " contains ops that require them.">
+           "Apply the selected streaming/ZA modes if the function contains ops "
+           "that require them.">,
+    Option<"ifContainsScalableVectors", "if-contains-scalable-vectors",
+           "bool", /*default=*/"false",
+           "Apply the selected streaming/ZA modes if the function contains "
+           "operations that use scalable vector types.">
   ];
   let dependentDialects = ["func::FuncDialect"];
 }
