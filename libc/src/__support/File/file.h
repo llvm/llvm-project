@@ -304,6 +304,8 @@ private:
 // library.
 ErrorOr<File *> openfile(const char *path, const char *mode);
 
+ErrorOr<File *> create_file_from_fd(int fd, const char *mode);
+
 // The platform_file library should implement it if it relevant for that
 // platform.
 int get_fileno(File *f);

@@ -33,8 +33,6 @@ add_entrypoint_object(
     ../fdopen.h
   DEPENDS
     libc.include.stdio
-    libc.src.errno.errno
-    libc.src.stdio.fseek
+    libc.src.__support.File.file
     libc.src.__support.File.platform_file
-    libc.src.__support.OSUtil.osutil
 )

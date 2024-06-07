@@ -8,7 +8,7 @@
 
 #include "src/stdio/fdopen.h"
 
-#include "include/llvm-libc-macros/fcntl-macros.h"
+#include "hdr/fcntl_macros.h"
 #include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/fclose.h"
@@ -47,8 +47,7 @@ TEST(LlvmLibcStdioFdopenTest, WriteAppendRead) {
   auto *fp3 = LIBC_NAMESPACE::fdopen(fd3, "r");
   char buffer[10];
   LIBC_NAMESPACE::fgets(buffer, sizeof(buffer), fp3);
-  EXPECT_EQ('H', buffer[0]);
-  EXPECT_EQ('M', buffer[8]);
+  ASSERT_STREQ("HelloLLVM", buffer);
   LIBC_NAMESPACE::fclose(fp3);
   ASSERT_ERRNO_SUCCESS();
 }
