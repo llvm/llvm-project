@@ -512,11 +512,13 @@ def CVrrAsmOperand : AsmOperandClass {
   let DiagnosticType = "InvalidRegReg";
 }
 
-def CVrr : Operand<OtherVT> {
+def CVrr : Operand<i32>,
+           ComplexPattern<i32, 2, "SelectAddrRegReg",[]> {
    let ParserMatchClass = CVrrAsmOperand;
    let EncoderMethod =  "getRegReg";
    let DecoderMethod = "decodeRegReg";
    let PrintMethod = "printRegReg";
+   let MIOperandInfo = (ops GPR:$base, GPR:$offset);
 }
 
 class CVLoad_ri_inc<bits<3> funct3, string opcodestr>
@@ -657,6 +659,47 @@ let Predicates = [HasVendorXCVelw, IsRV32], hasSideEffects = 0,
     mayLoad = 1, mayStore = 0 in {
   // Event load
   def CV_ELW : CVLoad_ri<0b011, "cv.elw">;
+}
+
+//===----------------------------------------------------------------------===//
+// Patterns for load & store operations
+//===----------------------------------------------------------------------===//
+class CVLdrrPat<PatFrag LoadOp, RVInst Inst>
+    : Pat<(XLenVT (LoadOp CVrr:$regreg)),
+          (Inst CVrr:$regreg)>;
+
+class CVStriPat<PatFrag StoreOp, RVInst Inst>
+    : Pat<(StoreOp (XLenVT GPR:$rs2), GPR:$rs1, simm12:$imm12),
+          (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12)>;
+
+class CVStrriPat<PatFrag StoreOp, RVInst Inst>
+    : Pat<(StoreOp (XLenVT GPR:$rs2), GPR:$rs1, GPR:$rs3),
+          (Inst GPR:$rs2, GPR:$rs1, GPR:$rs3)>;
+
+class CVStrrPat<PatFrag StoreOp, RVInst Inst>
+    : Pat<(StoreOp (XLenVT GPR:$rs2), CVrr:$regreg),
+          (Inst GPR:$rs2, CVrr:$regreg)>;
+
+let Predicates = [HasVendorXCVmem, IsRV32], AddedComplexity = 1 in {
+  def : CVLdrrPat<sextloadi8, CV_LB_rr>;
+  def : CVLdrrPat<zextloadi8, CV_LBU_rr>;
+  def : CVLdrrPat<extloadi8, CV_LBU_rr>;
+  def : CVLdrrPat<sextloadi16, CV_LH_rr>;
+  def : CVLdrrPat<zextloadi16, CV_LHU_rr>;
+  def : CVLdrrPat<extloadi16, CV_LHU_rr>;
+  def : CVLdrrPat<load, CV_LW_rr>;
+
+  def : CVStriPat<post_truncsti8, CV_SB_ri_inc>;
+  def : CVStriPat<post_truncsti16, CV_SH_ri_inc>;
+  def : CVStriPat<post_store, CV_SW_ri_inc>;
+
+  def : CVStrriPat<post_truncsti8, CV_SB_rr_inc>;
+  def : CVStrriPat<post_truncsti16, CV_SH_ri_inc>;
+  def : CVStrriPat<post_store, CV_SW_rr_inc>;
+
+  def : CVStrrPat<truncstorei8, CV_SB_rr>;
+  def : CVStrrPat<truncstorei16, CV_SH_rr>;
+  def : CVStrrPat<store, CV_SW_rr>;
 }
 
 def cv_tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
