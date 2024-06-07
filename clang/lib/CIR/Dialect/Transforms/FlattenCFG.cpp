@@ -438,9 +438,13 @@ public:
     auto *condBlock = rewriter.getInsertionBlock();
     auto opPosition = rewriter.getInsertionPoint();
     auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
-    auto *continueBlock = rewriter.createBlock(
-        remainingOpsBlock, op->getResultTypes(),
-        SmallVector<mlir::Location>(/* result number always 1 */ 1, loc));
+    SmallVector<mlir::Location, 2> locs;
+    // Ternary result is optional, make sure to populate the location only
+    // when relevant.
+    if (op->getResultTypes().size())
+      locs.push_back(loc);
+    auto *continueBlock =
+        rewriter.createBlock(remainingOpsBlock, op->getResultTypes(), locs);
     rewriter.create<mlir::cir::BrOp>(loc, remainingOpsBlock);
 
     auto &trueRegion = op.getTrueRegion();
