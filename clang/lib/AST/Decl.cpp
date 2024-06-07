@@ -621,6 +621,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // - a variable, variable template, function, or function template
     //   that is explicitly declared static; or
     // (This bullet corresponds to C99 6.2.2p3.)
+    // - also applies to HLSL
     return LinkageInfo::internal();
   }
 
@@ -657,6 +658,11 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
       if (PrevVar->getStorageClass() == SC_Static)
         return LinkageInfo::internal();
     }
+
+    if (Context.getLangOpts().HLSL &&
+        Var->hasAttr<HLSLGroupSharedAddressSpaceAttr>())
+      return LinkageInfo::internal();
+
   } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(D)) {
     //   - a data member of an anonymous union.
     const VarDecl *VD = IFD->getVarDecl();

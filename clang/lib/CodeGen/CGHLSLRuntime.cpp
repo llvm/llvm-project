@@ -361,10 +361,10 @@ void CGHLSLRuntime::emitFunctionProlog(const FunctionDecl *FD,
   if (FD->hasAttr<HLSLShaderAttr>()) {
     emitEntryFunction(FD, Fn);
   } else {
-    // HLSL functions that are not shader entry points or exported
-    // have internal linkage by default.
-    // FIXME: skip this for exported functions (Issue #92812)
-    Fn->setLinkage(GlobalValue::InternalLinkage);
+    // HLSL functions defined in the current translation unit that are not
+    // shader entry points or exported have internal linkage by default.
+    if (FD->isDefined())
+      Fn->setLinkage(GlobalValue::InternalLinkage);
   }
 }
 
