@@ -137,7 +137,7 @@ std::string GetExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
-void GetAssetFiles(clang::doc::ClangDocContext CDCtx) {
+void GetAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   std::error_code Code;
   for (auto DirIt = llvm::sys::fs::directory_iterator(
                 std::string(UserAssetPath), Code),
@@ -146,16 +146,17 @@ void GetAssetFiles(clang::doc::ClangDocContext CDCtx) {
     llvm::SmallString<128> filePath = llvm::SmallString<128>(DirIt->path());
     if (llvm::sys::fs::is_regular_file(filePath)) {
       if (filePath.ends_with(".css")) {
-        CDCtx.UserStylesheets.push_back(std::string(filePath));
+        CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
+                                     std::string(filePath));
       } else if (filePath.ends_with(".js")) {
-        CDCtx.FilesToCopy.push_back(std::string(filePath));
+        CDCtx.FilesToCopy.emplace_back(filePath.str());
       }
     }
   }
 }
 
 void GetDefaultAssetFiles(const char *Argv0,
-                          clang::doc::ClangDocContext CDCtx) {
+                          clang::doc::ClangDocContext &CDCtx) {
   void *MainAddr = (void *)(intptr_t)GetExecutablePath;
   std::string ClangDocPath = GetExecutablePath(Argv0, MainAddr);
   llvm::SmallString<128> NativeClangDocPath;
