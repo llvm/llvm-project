@@ -1924,7 +1924,11 @@ example:
     even if this attribute says the frame pointer can be eliminated.
     The allowed string values are:
 
-     * ``"none"`` (default) - the frame pointer can be eliminated.
+     * ``"none"`` (default) - the frame pointer can be eliminated, and it's
+       register can be used for other purposes.
+     * ``"reserved"`` - the frame pointer register must either be updated to
+       point to a valid frame record for the current function, or not be
+       modified.
      * ``"non-leaf"`` - the frame pointer should be kept if the function calls
        other functions.
      * ``"all"`` - the frame pointer should be kept.
