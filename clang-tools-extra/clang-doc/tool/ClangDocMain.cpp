@@ -81,6 +81,12 @@ static llvm::cl::list<std::string> UserStylesheets(
     llvm::cl::desc("CSS stylesheets to extend the default styles."),
     llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::opt<std::string>
+    UserAssetPath("asset",
+                  llvm::cl::desc("User supplied asset path for html output to "
+                                 "override the default css and js files"),
+                  llvm::cl::cat(ClangDocCategory));
+
 static llvm::cl::opt<std::string> SourceRoot("source-root", llvm::cl::desc(R"(
 Directory where processed files are stored.
 Links to definition locations will only be
@@ -131,12 +137,54 @@ std::string GetExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
+void GetAssetFiles(clang::doc::ClangDocContext CDCtx) {
+  std::error_code Code;
+  for (auto DirIt = llvm::sys::fs::directory_iterator(
+                std::string(UserAssetPath), Code),
+            dir_end = llvm::sys::fs::directory_iterator();
+       !Code && DirIt != dir_end; DirIt.increment(Code)) {
+    llvm::SmallString<128> filePath = llvm::SmallString<128>(DirIt->path());
+    if (llvm::sys::fs::is_regular_file(filePath)) {
+      if (filePath.ends_with(".css")) {
+        CDCtx.UserStylesheets.push_back(std::string(filePath));
+      } else if (filePath.ends_with(".js")) {
+        CDCtx.FilesToCopy.push_back(std::string(filePath));
+      }
+    }
+  }
+}
+
+void GetDefaultAssetFiles(const char *Argv0,
+                          clang::doc::ClangDocContext CDCtx) {
+  void *MainAddr = (void *)(intptr_t)GetExecutablePath;
+  std::string ClangDocPath = GetExecutablePath(Argv0, MainAddr);
+  llvm::SmallString<128> NativeClangDocPath;
+  llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
+
+  llvm::SmallString<128> AssetsPath;
+  AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
+  llvm::sys::path::append(AssetsPath, "..", "share", "clang");
+  llvm::SmallString<128> DefaultStylesheet;
+  llvm::sys::path::native(AssetsPath, DefaultStylesheet);
+  llvm::sys::path::append(DefaultStylesheet,
+                          "clang-doc-default-stylesheet.css");
+  llvm::SmallString<128> IndexJS;
+  llvm::sys::path::native(AssetsPath, IndexJS);
+  llvm::sys::path::append(IndexJS, "index.js");
+  CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
+                               std::string(DefaultStylesheet));
+  CDCtx.FilesToCopy.emplace_back(IndexJS.str());
+
+  llvm::outs() << "No default asset path found using default asset path: "
+               << AssetsPath << "\n";
+}
+
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
 
   const char *Overview =
-    R"(Generates documentation from source code and comments.
+      R"(Generates documentation from source code and comments.
 
 Example usage for files without flags (default):
 
@@ -182,23 +230,12 @@ Example usage for a project using a compile commands database:
       {"index.js", "index_json.js"}};
 
   if (Format == "html") {
-    void *MainAddr = (void *)(intptr_t)GetExecutablePath;
-    std::string ClangDocPath = GetExecutablePath(argv[0], MainAddr);
-    llvm::SmallString<128> NativeClangDocPath;
-    llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
-    llvm::SmallString<128> AssetsPath;
-    AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
-    llvm::sys::path::append(AssetsPath, "..", "share", "clang");
-    llvm::SmallString<128> DefaultStylesheet;
-    llvm::sys::path::native(AssetsPath, DefaultStylesheet);
-    llvm::sys::path::append(DefaultStylesheet,
-                            "clang-doc-default-stylesheet.css");
-    llvm::SmallString<128> IndexJS;
-    llvm::sys::path::native(AssetsPath, IndexJS);
-    llvm::sys::path::append(IndexJS, "index.js");
-    CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
-                                 std::string(DefaultStylesheet));
-    CDCtx.FilesToCopy.emplace_back(IndexJS.str());
+    if (!UserAssetPath.empty() &&
+        llvm::sys::fs::is_directory(std::string(UserAssetPath))) {
+      GetAssetFiles(CDCtx);
+    } else {
+      GetDefaultAssetFiles(argv[0], CDCtx);
+    }
   }
 
   // Mapping phase
