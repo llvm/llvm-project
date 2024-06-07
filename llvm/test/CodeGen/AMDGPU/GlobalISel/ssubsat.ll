@@ -279,11 +279,9 @@ define i16 @v_ssubsat_v2i8(i16 %lhs.arg, i16 %rhs.arg) {
 ; GFX8-NEXT:    v_max_i16_e32 v1, v1, v2
 ; GFX8-NEXT:    v_min_i16_e32 v1, v1, v4
 ; GFX8-NEXT:    v_sub_u16_e32 v1, v3, v1
-; GFX8-NEXT:    v_ashrrev_i16_e32 v1, 8, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0xff
-; GFX8-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX8-NEXT:    v_and_b32_sdwa v0, sext(v0), v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX8-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
+; GFX8-NEXT:    v_and_b32_sdwa v1, sext(v1), v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -300,9 +298,8 @@ define i16 @v_ssubsat_v2i8(i16 %lhs.arg, i16 %rhs.arg) {
 ; GFX9-NEXT:    v_pk_lshlrev_b16 v1, 8, v1 op_sel_hi:[0,1]
 ; GFX9-NEXT:    v_pk_sub_i16 v0, v0, v1 clamp
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 8, v0 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xff, v1
-; GFX9-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0xff
+; GFX9-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

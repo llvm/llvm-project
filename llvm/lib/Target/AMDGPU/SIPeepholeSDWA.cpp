@@ -45,7 +45,7 @@ class SDWADstOperand;
 using SDWAOperandsVector = SmallVector<SDWAOperand *, 4>;
 
 // helper typedef to make code cleaner
-typedef std::unordered_map<MachineInstr *, SDWAOperandsVector> SDWAOperandsMap;
+typedef MapVector<MachineInstr *, SDWAOperandsVector> SDWAOperandsMap;
 
 class SIPeepholeSDWA : public MachineFunctionPass {
 private:
@@ -53,7 +53,7 @@ private:
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
 
-  std::unordered_map<MachineInstr *, std::unique_ptr<SDWAOperand>> SDWAOperands;
+  MapVector<MachineInstr *, std::unique_ptr<SDWAOperand>> SDWAOperands;
   SDWAOperandsMap PotentialMatches;
   SmallVector<MachineInstr *, 8> ConvertedInstructions;
 
@@ -354,11 +354,6 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
 
       // Check that all instructions the use Reg can be converted
       if (!isConvertibleToSDWA(*(UseMO.getParent()), ST, TII)) {
-        return nullptr;
-      }
-
-      // Not handling the obscure case where the same use is in multiple operands
-      if (PotentialMatches->find(UseMO.getParent()) != PotentialMatches->end()) {
         return nullptr;
       }
     }

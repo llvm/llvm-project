@@ -679,7 +679,8 @@ define amdgpu_kernel void @fmuladd_v2f16(
 ; VI-FLUSH-NEXT:    s_waitcnt vmcnt(1)
 ; VI-FLUSH-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; VI-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; VI-FLUSH-NEXT:    v_mac_f16_sdwa v3, v2, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-FLUSH-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
+; VI-FLUSH-NEXT:    v_mac_f16_e32 v3, v5, v4
 ; VI-FLUSH-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-FLUSH-NEXT:    v_mac_f16_e32 v0, v2, v1
 ; VI-FLUSH-NEXT:    v_or_b32_e32 v0, v0, v3
