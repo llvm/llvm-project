@@ -8,6 +8,7 @@
 #define EOF (-1)
 
 void clang_analyzer_dump(int);
+void clang_analyzer_dump_char(char);
 void clang_analyzer_isTainted(int);
 void clang_analyzer_warnIfReached(void);
 
@@ -414,27 +415,27 @@ void test_unaligned_start_read(void) {
     // We have an 'int' binding at offset 0 of value 3.
     // We read 4 bytes at byte offset: 1,2,3,4.
     if (4 == fread(asChar + 1, 1, 4, fp)) {
-      clang_analyzer_dump(buffer[0]); // expected-warning{{3 S32b}} FIXME Reading a 8 bit 'char' should not result in a 'S32b' value.
+      clang_analyzer_dump(buffer[0]); // expected-warning{{3 S32b}} FIXME: The int binding should have been partially overwritten by the read call. This definitely should not be 3.
       clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}}
       clang_analyzer_dump(buffer[2]); // expected-warning{{5 S32b}}
 
-      clang_analyzer_dump(asChar[0]); // expected-warning{{3 S32b}} FIXME Reading a 8 bit 'char' should not result in a 'S32b' value.
-      clang_analyzer_dump(asChar[1]); // expected-warning{{conj_}} 1
-      clang_analyzer_dump(asChar[2]); // expected-warning{{conj_}} 2
-      clang_analyzer_dump(asChar[3]); // expected-warning{{conj_}} 3
-      clang_analyzer_dump(asChar[4]); // expected-warning{{conj_}} 4
-      clang_analyzer_dump(asChar[5]); // expected-warning{{1st function call argument is an uninitialized value}}
+      clang_analyzer_dump_char(asChar[0]); // expected-warning{{3 S8b}} This is technically true assuming x86 (little-endian) architecture.
+      clang_analyzer_dump_char(asChar[1]); // expected-warning{{conj_}} 1
+      clang_analyzer_dump_char(asChar[2]); // expected-warning{{conj_}} 2
+      clang_analyzer_dump_char(asChar[3]); // expected-warning{{conj_}} 3
+      clang_analyzer_dump_char(asChar[4]); // expected-warning{{conj_}} 4
+      clang_analyzer_dump_char(asChar[5]); // expected-warning{{1st function call argument is an uninitialized value}}
     } else {
-      clang_analyzer_dump(buffer[0]); // expected-warning{{3 S32b}} FIXME Reading a 8 bit 'char' should not result in a 'S32b' value.
+      clang_analyzer_dump(buffer[0]); // expected-warning{{3 S32b}} FIXME: The int binding should have been partially overwritten by the read call. This definitely should not be 3.
       clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}}
       clang_analyzer_dump(buffer[2]); // expected-warning{{5 S32b}}
 
-      clang_analyzer_dump(asChar[0]); // expected-warning{{3 S32b}} FIXME Reading a 8 bit 'char' should not result in a 'S32b' value.
-      clang_analyzer_dump(asChar[1]); // expected-warning{{conj_}} 1
-      clang_analyzer_dump(asChar[2]); // expected-warning{{conj_}} 2
-      clang_analyzer_dump(asChar[3]); // expected-warning{{conj_}} 3
-      clang_analyzer_dump(asChar[4]); // expected-warning{{conj_}} 4
-      clang_analyzer_dump(asChar[5]); // expected-warning{{1st function call argument is an uninitialized value}}
+      clang_analyzer_dump_char(asChar[0]); // expected-warning{{3 S8b}} This is technically true assuming x86 (little-endian) architecture.
+      clang_analyzer_dump_char(asChar[1]); // expected-warning{{conj_}} 1
+      clang_analyzer_dump_char(asChar[2]); // expected-warning{{conj_}} 2
+      clang_analyzer_dump_char(asChar[3]); // expected-warning{{conj_}} 3
+      clang_analyzer_dump_char(asChar[4]); // expected-warning{{conj_}} 4
+      clang_analyzer_dump_char(asChar[5]); // expected-warning{{1st function call argument is an uninitialized value}}
     }
     fclose(fp);
   }
