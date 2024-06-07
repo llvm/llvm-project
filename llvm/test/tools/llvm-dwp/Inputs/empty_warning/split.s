@@ -12,7 +12,7 @@
 
 	.text
 	.file	"main.c"
-	.file	1 "/xxx/xxx" "main.c"
+	.file	1 "/xxx/xxx/xxx" "main.c"
 	.globl	main                            # -- Begin function main
 	.p2align	4, 0x90
 	.type	main,@function
@@ -93,9 +93,9 @@ main:                                   # @main
 .Ldebug_info_end0:
 	.section	.debug_str,"MS",@progbits,1
 .Lskel_string0:
-	.asciz	"xxx/xxx" # string offset=0
+	.asciz	"xxx/xxx/xxx" # string offset=0
 .Lskel_string1:
-	.asciz	"main.dwo"                      # string offset=64
+	.asciz	"split_invalid.dwo"                      # string offset=64
 	.section	.debug_str.dwo,"eMS",@progbits,1
 .Linfo_string0:
 	.asciz	"char"                          # string offset=0
