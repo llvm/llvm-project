@@ -76,3 +76,7 @@ Revert: Breaks check-clang test 'clang/test/Modules/pr60085.cppm'
 99873b35da7e [NFC] [AST] Introduce Decl::isInAnotherModuleUnit and Decl::shouldEmitInExternalSource
 contact : mhalk (Michael Halkenhaeuser)
 ---
+greaks aomp build of openmp
+688ffd0b405] Revert "[OpenMP][NFC] Fix warning for OpenMP standalone build (#93463)"
+contact: ethan stewart
+---

@@ -54,6 +54,7 @@ namespace fir {
 #define GEN_PASS_DECL_OMPMAPINFOFINALIZATIONPASS
 #define GEN_PASS_DECL_OMPMARKDECLARETARGETPASS
 #define GEN_PASS_DECL_OMPFUNCTIONFILTERING
+#define GEN_PASS_DECL_VSCALEATTR
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
