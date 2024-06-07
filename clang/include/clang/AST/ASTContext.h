@@ -1278,7 +1278,8 @@ public:
   /// space.
   QualType removeAddrSpaceQualType(QualType T) const;
 
-  /// Return the "other" type-specific discriminator for the given type.
+  /// Return the "other" discriminator used for the pointer auth schema used for
+  /// vtable pointers in instances of the requested type.
   uint16_t
   getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *record);
 
