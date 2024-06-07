@@ -89,7 +89,6 @@ add_header_library(
   HDRS
     BinaryOpSingleOutputPerf.h
   DEPENDS
-    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
