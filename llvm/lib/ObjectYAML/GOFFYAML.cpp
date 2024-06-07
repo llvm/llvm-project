@@ -90,7 +90,7 @@ void CustomMappingTraits<GOFFYAML::RecordPtr>::output(
   case GOFFYAML::RecordBase::Kind::Symbol:
   case GOFFYAML::RecordBase::Kind::Text:
   case GOFFYAML::RecordBase::Kind::DeferredLength:
-    llvm_unreachable(("not yet implemented"));
+    llvm_unreachable("not yet implemented");
   }
 }
 
