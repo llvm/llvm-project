@@ -7540,7 +7540,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       Buffer = DAG.getNode(ISD::DYNAMIC_STACKALLOC, DL,
                            DAG.getVTList(MVT::i64, MVT::Other),
                            {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
-      MFI.CreateVariableSizedObject(Align(1), nullptr);
+      MFI.CreateVariableSizedObject(Align(16), nullptr);
     }
     Chain = DAG.getNode(
         AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
