@@ -320,7 +320,7 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
       if (auto *InternalChild =
               dyn_cast<SuffixTreeInternalNode>(ChildPair.second))
         InternalNodesToVisit.push_back(InternalChild);
-    
+
     // If length of repeated substring is below threshold, then skip it.
     if (Length < MinLength)
       continue;
@@ -332,7 +332,7 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
 
     // Collect leaf children or leaf descendants by OutlinerLeafDescendants.
     if (!OutlinerLeafDescendants) {
-      for (auto &ChildPair : Curr->Children) 
+      for (auto &ChildPair : Curr->Children)
         if (auto *Leaf = dyn_cast<SuffixTreeLeafNode>(ChildPair.second))
           RepeatedSubstringStarts.push_back(Leaf->getSuffixIdx());
     } else {
