@@ -33,13 +33,15 @@ public:
       }
 
       StorageType step = (endingBit - startingBit) / N;
-      for (StorageType bitsX = startingBit, bitsY = endingBit;;
-           bitsX += step, bitsY -= step) {
-        T x = FPBits(bitsX).get_val();
-        T y = FPBits(bitsY).get_val();
-        result = func(x, y);
-        if (endingBit - bitsX < step) {
-          break;
+      for (int i = 0; i < 5000; i++) {
+        for (StorageType bitsX = startingBit, bitsY = endingBit;;
+             bitsX += step, bitsY -= step) {
+          T x = FPBits(bitsX).get_val();
+          T y = FPBits(bitsY).get_val();
+          result = func(x, y);
+          if (endingBit - bitsX < step) {
+            break;
+          }
         }
       }
     };
@@ -49,7 +51,7 @@ public:
     runner(myFunc);
     timer.stop();
 
-    double my_average = static_cast<double>(timer.nanoseconds()) / N;
+    double my_average = static_cast<double>(timer.nanoseconds()) / (N * 5000);
     log << "-- My function --\n";
     log << "     Total time      : " << timer.nanoseconds() << " ns \n";
     log << "     Average runtime : " << my_average << " ns/op \n";
@@ -60,7 +62,7 @@ public:
     runner(otherFunc);
     timer.stop();
 
-    double other_average = static_cast<double>(timer.nanoseconds()) / N;
+    double other_average = static_cast<double>(timer.nanoseconds()) / (N * 5000);
     log << "-- Other function --\n";
     log << "     Total time      : " << timer.nanoseconds() << " ns \n";
     log << "     Average runtime : " << other_average << " ns/op \n";
@@ -76,17 +78,17 @@ public:
     log << " Performance tests with inputs in denormal range:\n";
     run_perf_in_range(myFunc, otherFunc, /* startingBit= */ StorageType(0),
                       /* endingBit= */ FPBits::max_subnormal().uintval(),
-                      10'000'001, log);
+                      FPBits::max_subnormal().uintval(), log);
     log << "\n Performance tests with inputs in normal range:\n";
     run_perf_in_range(myFunc, otherFunc,
                       /* startingBit= */ FPBits::min_normal().uintval(),
                       /* endingBit= */ FPBits::max_normal().uintval(),
-                      10'000'001, log);
+                      FPBits::max_normal().uintval() - FPBits::min_normal().uintval(), log);
     log << "\n Performance tests with inputs in normal range with exponents "
            "close to each other:\n";
     run_perf_in_range(
         myFunc, otherFunc, /* startingBit= */ FPBits(T(0x1.0p-10)).uintval(),
-        /* endingBit= */ FPBits(T(0x1.0p+10)).uintval(), 1'001'001, log);
+        /* endingBit= */ FPBits(T(0x1.0p+10)).uintval(), FPBits(T(0x1.0p+10)).uintval() - FPBits(T(0x1.0p-10)).uintval(), log);
   }
 
   static void run_diff(Func myFunc, Func otherFunc, const char *logFile) {
@@ -115,8 +117,9 @@ public:
 } // namespace LIBC_NAMESPACE
 
 #define BINARY_OP_SINGLE_OUTPUT_PERF(T, myFunc, otherFunc, filename)           \
-  int main() {                                                                 \
+  {                                                                 \
     LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T>::run_perf(            \
         &myFunc, &otherFunc, filename);                                        \
-    return 0;                                                                  \
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputPerf<T>::run_perf(            \
+        &myFunc, &otherFunc, filename);                                        \
   }
