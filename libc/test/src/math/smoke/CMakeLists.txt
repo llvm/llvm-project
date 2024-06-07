@@ -1365,7 +1365,7 @@ add_fp_unittest(
     ILogbTest.h
   DEPENDS
     libc.src.math.ilogb
-    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -1380,7 +1380,7 @@ add_fp_unittest(
     ILogbTest.h
   DEPENDS
     libc.src.math.ilogbf
-    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -1395,7 +1395,7 @@ add_fp_unittest(
     ILogbTest.h
   DEPENDS
     libc.src.math.ilogbl
-    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -1410,7 +1410,7 @@ add_fp_unittest(
     ILogbTest.h
   DEPENDS
     libc.src.math.ilogbf16
-    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -1425,7 +1425,7 @@ add_fp_unittest(
     ILogbTest.h
   DEPENDS
     libc.src.math.ilogbf128
-    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -1440,7 +1440,7 @@ add_fp_unittest(
     ILogbTest.h
   DEPENDS
     libc.src.math.llogb
-    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -1455,7 +1455,7 @@ add_fp_unittest(
     ILogbTest.h
   DEPENDS
     libc.src.math.llogbf
-    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -1470,7 +1470,7 @@ add_fp_unittest(
     ILogbTest.h
   DEPENDS
     libc.src.math.llogbl
-    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -1485,7 +1485,7 @@ add_fp_unittest(
     ILogbTest.h
   DEPENDS
     libc.src.math.llogbf16
-    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -1500,7 +1500,7 @@ add_fp_unittest(
     ILogbTest.h
   DEPENDS
     libc.src.math.llogbf128
-    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
