@@ -30,8 +30,6 @@ namespace llvm { void initializeNVVMIntrRangePass(PassRegistry &); }
 
 namespace {
 class NVVMIntrRange : public FunctionPass {
-  unsigned SmVersion;
-
 public:
   static char ID;
   NVVMIntrRange() : FunctionPass(ID) {
