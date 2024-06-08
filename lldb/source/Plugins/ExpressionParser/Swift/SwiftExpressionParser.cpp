@@ -1349,7 +1349,7 @@ SwiftExpressionParser::ParseAndImport(
   if (enable_bare_slash_regex_literals) {
     lang_opts.enableFeature(swift::Feature::BareSlashRegexLiterals);
   }
-  if (uint32_t version = m_expr.Language().version) {
+  if (uint32_t version = m_expr.Language().version)
     lang_opts.EffectiveLanguageVersion =
         llvm::VersionTuple(version / 100, version % 100);
   if (lang_opts.EffectiveLanguageVersion >= swift::version::Version({6}))
