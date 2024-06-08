@@ -500,17 +500,14 @@ writeMemProfFrameArray(
   llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId> MemProfFrameIndexes;
 
   // Compute the order in which we serialize Frames.  The order does not matter
-  // in terms of correctness, but we still compute it for two reasons:
-  //
-  // - Stability of the output: If we sort by FrameIds at least, then the output
-  //   will be stable regardless of the order in which Frames are added to
-  //   MemProfFrameData.
-  //
-  // - Deserialization performance: If we serialize frequently used Frames one
-  //   after another, we have better cache utilization.  For two Frames that
-  //   appear equally frequently, we break a tie by serializing the one tends to
-  //   appear earlier in call stacks.  We implement the tie-breaking mechanism
-  //   by computing the sum of indexes within call stacks for each Frame.
+  // in terms of correctness, but we still compute it for deserialization
+  // performance.  Specifically, if we serialize frequently used Frames one
+  // after another, we have better cache utilization.  For two Frames that
+  // appear equally frequently, we break a tie by serializing the one that tends
+  // to appear earlier in call stacks.  We implement the tie-breaking mechanism
+  // by computing the sum of indexes within call stacks for each Frame.  If we
+  // still have a tie, then we just resort to compare two FrameIds, which is
+  // just for stability of output.
   std::vector<std::pair<memprof::FrameId, const memprof::Frame *>> FrameIdOrder;
   FrameIdOrder.reserve(MemProfFrameData.size());
   for (const auto &[Id, Frame] : MemProfFrameData)

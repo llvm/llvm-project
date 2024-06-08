@@ -498,13 +498,11 @@ void CallStackRadixTreeBuilder::build(
     return;
   }
 
-  // Sort the list of call stacks in the dictionary order to maximize the length
-  // of the common prefix between two adjacent call stacks.
-  //
-  // Sorting the list in the dictionary order is sufficient to minimize the
-  // length of RadixArray, but we go one step further and try to reduce the
-  // number of times we follow pointers to parents during deserilization.
-  // Consider a poorly encoded radix tree:
+  // Sorting the list of call stacks in the dictionary order is sufficient to
+  // maximize the length of the common prefix between two adjacent call stacks
+  // and thus minimize the length of RadixArray.  However, we go one step
+  // further and try to reduce the number of times we follow pointers to parents
+  // during deserilization.  Consider a poorly encoded radix tree:
   //
   // CallStackId 1:  f1 -> f2 -> f3
   //                  |
