@@ -119,7 +119,7 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
   return file;
 }
 
-ErrorOr<File *> create_file_from_fd(int fd, const char *mode) {
+ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   using ModeFlags = File::ModeFlags;
   ModeFlags modeflags = File::mode_flags(mode);
   if (modeflags == 0) {

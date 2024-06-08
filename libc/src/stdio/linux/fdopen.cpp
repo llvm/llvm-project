@@ -8,7 +8,7 @@
 
 #include "src/stdio/fdopen.h"
 
-#include "src/__support/File/file.h"
+#include "src/__support/File/linux/file.h"
 #include "src/errno/libc_errno.h"
 
 namespace LIBC_NAMESPACE {
