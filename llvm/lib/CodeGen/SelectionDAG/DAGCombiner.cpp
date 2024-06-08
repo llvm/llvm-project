@@ -180,12 +180,6 @@ namespace {
     /// in the worklist, this is different from the tail of the worklist.
     SmallSetVector<SDNode *, 32> PruningList;
 
-    /// Set of nodes which have been combined (at least once).
-    ///
-    /// This is used to allow us to reliably add any operands of a DAG node
-    /// which have not yet been combined to the worklist.
-    SmallPtrSet<SDNode *, 32> CombinedNodes;
-
     /// Map from candidate StoreNode to the pair of RootNode and count.
     /// The count is used to track how many times we have seen the StoreNode
     /// with the same RootNode bail out in dependence check. If we have seen
@@ -235,7 +229,8 @@ namespace {
       if (N) {
         assert(N->getCombinerWorklistIndex() >= 0 &&
                "Found a worklist entry without a corresponding map entry!");
-        N->setCombinerWorklistIndex(-1);
+        // Set to -2 to indicate that we combined the node.
+        N->setCombinerWorklistIndex(-2);
       }
       return N;
     }
@@ -267,7 +262,8 @@ namespace {
 
     /// Add to the worklist making sure its instance is at the back (next to be
     /// processed.)
-    void AddToWorklist(SDNode *N, bool IsCandidateForPruning = true) {
+    void AddToWorklist(SDNode *N, bool IsCandidateForPruning = true,
+                       bool SkipIfCombinedBefore = false) {
       assert(N->getOpcode() != ISD::DELETED_NODE &&
              "Deleted Node added to Worklist");
 
@@ -276,10 +272,13 @@ namespace {
       if (N->getOpcode() == ISD::HANDLENODE)
         return;
 
+      if (SkipIfCombinedBefore && N->getCombinerWorklistIndex() == -2)
+        return;
+
       if (IsCandidateForPruning)
         ConsiderForPruning(N);
 
-      if (N->getCombinerWorklistIndex() == -1) {
+      if (N->getCombinerWorklistIndex() < 0) {
         N->setCombinerWorklistIndex(Worklist.size());
         Worklist.push_back(N);
       }
@@ -287,12 +286,14 @@ namespace {
 
     /// Remove all instances of N from the worklist.
     void removeFromWorklist(SDNode *N) {
-      CombinedNodes.erase(N);
       PruningList.remove(N);
       StoreRootCountMap.erase(N);
 
       int WorklistIndex = N->getCombinerWorklistIndex();
-      if (WorklistIndex == -1)
+      // If not in the worklist, the index might be -1 or -2 (was combined
+      // before). As the node gets deleted anyway, there's no need to update
+      // the index.
+      if (WorklistIndex < 0)
         return; // Not in the worklist.
 
       // Null out the entry rather than erasing it to avoid a linear operation.
@@ -1768,13 +1769,13 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     LLVM_DEBUG(dbgs() << "\nCombining: "; N->dump(&DAG));
 
     // Add any operands of the new node which have not yet been combined to the
-    // worklist as well. Because the worklist uniques things already, this
-    // won't repeatedly process the same operand.
+    // worklist as well. getNextWorklistEntry flags nodes that have been
+    // combined before. Because the worklist uniques things already, this won't
+    // repeatedly process the same operand.
     for (const SDValue &ChildN : N->op_values())
-      if (!CombinedNodes.count(ChildN.getNode()))
-        AddToWorklist(ChildN.getNode());
+      AddToWorklist(ChildN.getNode(), /*IsCandidateForPruning=*/true,
+                    /*SkipIfCombinedBefore=*/true);
 
-    CombinedNodes.insert(N);
     SDValue RV = combine(N);
 
     if (!RV.getNode())

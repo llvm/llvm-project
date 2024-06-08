@@ -179,7 +179,7 @@ template <template <typename> class D>
 class E {
   template class D<C>;  // expected-error {{expected '<' after 'template'}}
   template<> class D<C>;  // expected-error {{cannot specialize a template template parameter}}
-  friend class D<C>; // expected-error {{type alias template 'D' cannot be referenced with a class specifier}}
+  friend class D<C>; // expected-error {{alias template 'D' cannot be referenced with the 'class' specifier}}
 };
 #if __cplusplus <= 199711L
 // expected-warning@+2 {{extension}}

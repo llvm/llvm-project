@@ -1,3 +1,5 @@
+// REQUIRES: arm-emulator
+
 // DEFINE: %{entry_point} = main
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE: --pass-pipeline="builtin.module(func.func(convert-arm-sme-to-llvm),test-lower-to-llvm)"
