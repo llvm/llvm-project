@@ -1031,38 +1031,26 @@ multiclass VPatBinaryV_VV_VX_VI_VROR<string intrinsic, string instruction,
       VPatBinaryV_VX_VROTATE<intrinsic, instruction, vtilist>,
       VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType>;
 
-multiclass VPatBinaryW_VI_VWSLL<string intrinsic, string instruction,
-                                list<VTypeInfoToWide> vtilist> {
-  foreach VtiToWti = vtilist in {
-    defvar Vti = VtiToWti.Vti;
-    defvar Wti = VtiToWti.Wti;
-    defm : VPatBinary<intrinsic, instruction # "_VI_" # Vti.LMul.MX,
-                      Wti.Vector, Vti.Vector, XLenVT, Vti.Mask,
-                      Vti.Log2SEW, Wti.RegClass,
-                      Vti.RegClass, uimm5>;
-  }
-}
-
-multiclass VPatBinaryW_VX_VWSLL<string intrinsic, string instruction,
-                                list<VTypeInfoToWide> vtilist> {
+multiclass VPatBinaryW_VV_VX_VI_VWSLL<string intrinsic, string instruction,
+                                      list<VTypeInfoToWide> vtilist>
+    : VPatBinaryW_VV<intrinsic, instruction, vtilist> {
   foreach VtiToWti = vtilist in {
     defvar Vti = VtiToWti.Vti;
     defvar Wti = VtiToWti.Wti;
     defvar kind = "V"#Vti.ScalarSuffix;
     let Predicates = !listconcat(GetVTypePredicates<Vti>.Predicates,
-                                 GetVTypePredicates<Wti>.Predicates) in
-    defm : VPatBinary<intrinsic, instruction#"_"#kind#"_"#Vti.LMul.MX,
-                      Wti.Vector, Vti.Vector, XLenVT, Vti.Mask,
-                      Vti.Log2SEW, Wti.RegClass,
-                      Vti.RegClass, Vti.ScalarRegClass>;
+                                 GetVTypePredicates<Wti>.Predicates) in {
+      defm : VPatBinary<intrinsic, instruction#"_"#kind#"_"#Vti.LMul.MX,
+                        Wti.Vector, Vti.Vector, XLenVT, Vti.Mask,
+                        Vti.Log2SEW, Wti.RegClass,
+                        Vti.RegClass, Vti.ScalarRegClass>;
+      defm : VPatBinary<intrinsic, instruction # "_VI_" # Vti.LMul.MX,
+                        Wti.Vector, Vti.Vector, XLenVT, Vti.Mask,
+                        Vti.Log2SEW, Wti.RegClass,
+                        Vti.RegClass, uimm5>;
+    }
   }
 }
-
-multiclass VPatBinaryW_VV_VX_VI_VWSLL<string intrinsic, string instruction,
-                                      list<VTypeInfoToWide> vtilist>
-    : VPatBinaryW_VV<intrinsic, instruction, vtilist>,
-      VPatBinaryW_VX_VWSLL<intrinsic, instruction, vtilist>,
-      VPatBinaryW_VI_VWSLL<intrinsic, instruction, vtilist>;
 
 let Predicates = [HasStdExtZvbb] in {
   defm : VPatUnaryV_V<"int_riscv_vbrev", "PseudoVBREV", AllIntegerVectors>;
