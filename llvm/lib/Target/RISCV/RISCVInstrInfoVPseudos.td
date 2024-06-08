@@ -1234,11 +1234,11 @@ class VPseudoBinaryNoMask<VReg RetClass,
   let HasSEWOp = 1;
 }
 
-class VPseudoBinaryNoMaskTU<VReg RetClass,
-                            VReg Op1Class,
-                            DAGOperand Op2Class,
-                            string Constraint,
-                            int TargetConstraintType = 1> :
+class VPseudoBinaryNoMaskPolicy<VReg RetClass,
+                                VReg Op1Class,
+                                DAGOperand Op2Class,
+                                string Constraint,
+                                int TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$merge, Op1Class:$rs2, Op2Class:$rs1, AVL:$vl,
                   ixlenimm:$sew, ixlenimm:$policy), []>,
@@ -2138,8 +2138,8 @@ multiclass VPseudoBinary<VReg RetClass,
                          bit Commutable = 0> {
   let VLMul = MInfo.value, SEW=sew, isCommutable = Commutable in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
-    def suffix : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
-                                       Constraint, TargetConstraintType>;
+    def suffix : VPseudoBinaryNoMaskPolicy<RetClass, Op1Class, Op2Class,
+                                           Constraint, TargetConstraintType>;
     def suffix # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
                                                    Constraint, TargetConstraintType>,
                            RISCVMaskedPseudo<MaskIdx=3>;
@@ -2197,8 +2197,8 @@ multiclass VPseudoBinaryEmul<VReg RetClass,
                              int sew = 0> {
   let VLMul = lmul.value, SEW=sew in {
     defvar suffix = !if(sew, "_" # lmul.MX # "_E" # sew, "_" # lmul.MX);
-    def suffix # "_" # emul.MX : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
-                                                       Constraint>;
+    def suffix # "_" # emul.MX : VPseudoBinaryNoMaskPolicy<RetClass, Op1Class, Op2Class,
+                                                           Constraint>;
     def suffix # "_" # emul.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
                                                                           Constraint>,
                                                   RISCVMaskedPseudo<MaskIdx=3>;
@@ -4161,15 +4161,15 @@ class VPatBinaryNoMaskTURoundingMode<string intrinsic_name,
                    GPR:$vl, sew, TU_MU)>;
 
 
-// Same as above but source operands are swapped.
-class VPatBinaryNoMaskSwapped<string intrinsic_name,
-                              string inst,
-                              ValueType result_type,
-                              ValueType op1_type,
-                              ValueType op2_type,
-                              int sew,
-                              VReg op1_reg_class,
-                              DAGOperand op2_kind> :
+// Same as VPatBinaryM but source operands are swapped.
+class VPatBinaryMSwapped<string intrinsic_name,
+                         string inst,
+                         ValueType result_type,
+                         ValueType op1_type,
+                         ValueType op2_type,
+                         int sew,
+                         VReg op1_reg_class,
+                         DAGOperand op2_kind> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
                    (op2_type op2_kind:$rs2),
                    (op1_type op1_reg_class:$rs1),
@@ -4248,7 +4248,7 @@ class VPatBinaryMaskTARoundingMode<string intrinsic_name,
                    (XLenVT timm:$round),
                    GPR:$vl, sew, (XLenVT timm:$policy))>;
 
-// Same as above but source operands are swapped.
+// Same as VPatBinaryMask but source operands are swapped.
 class VPatBinaryMaskSwapped<string intrinsic_name,
                             string inst,
                             ValueType result_type,
@@ -4798,18 +4798,18 @@ multiclass VPatBinaryRoundingMode<string intrinsic,
                                      op2_kind>;
 }
 
-multiclass VPatBinarySwapped<string intrinsic,
-                      string inst,
-                      ValueType result_type,
-                      ValueType op1_type,
-                      ValueType op2_type,
-                      ValueType mask_type,
-                      int sew,
-                      VReg result_reg_class,
-                      VReg op1_reg_class,
-                      DAGOperand op2_kind> {
-  def : VPatBinaryNoMaskSwapped<intrinsic, inst, result_type, op1_type, op2_type,
-                                sew, op1_reg_class, op2_kind>;
+multiclass VPatBinaryMSwapped<string intrinsic,
+                              string inst,
+                              ValueType result_type,
+                              ValueType op1_type,
+                              ValueType op2_type,
+                              ValueType mask_type,
+                              int sew,
+                              VReg result_reg_class,
+                              VReg op1_reg_class,
+                              DAGOperand op2_kind> {
+  def : VPatBinaryMSwapped<intrinsic, inst, result_type, op1_type, op2_type,
+                           sew, op1_reg_class, op2_kind>;
   def : VPatBinaryMaskSwapped<intrinsic, inst, result_type, op1_type, op2_type,
                               mask_type, sew, result_reg_class, op1_reg_class,
                               op2_kind>;
@@ -5406,10 +5406,10 @@ multiclass VPatBinarySwappedM_VV<string intrinsic, string instruction,
                                  list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
     let Predicates = GetVTypePredicates<vti>.Predicates in
-    defm : VPatBinarySwapped<intrinsic, instruction # "_VV_" # vti.LMul.MX,
-                             vti.Mask, vti.Vector, vti.Vector, vti.Mask,
-                             vti.Log2SEW, VR,
-                             vti.RegClass, vti.RegClass>;
+    defm : VPatBinaryMSwapped<intrinsic, instruction # "_VV_" # vti.LMul.MX,
+                              vti.Mask, vti.Vector, vti.Vector, vti.Mask,
+                              vti.Log2SEW, VR,
+                              vti.RegClass, vti.RegClass>;
 }
 
 multiclass VPatBinaryM_VX<string intrinsic, string instruction,

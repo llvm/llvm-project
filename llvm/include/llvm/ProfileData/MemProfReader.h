@@ -76,8 +76,8 @@ public:
       Callback =
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
-    memprof::CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(
-        CSIdToCallStack, Callback);
+    CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(CSIdToCallStack,
+                                                             Callback);
 
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
     GuidRecord = {
