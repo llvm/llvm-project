@@ -1,4 +1,5 @@
 # RUN: llc -o - %s -mtriple=powerpc64-- -run-pass=regallocfast | FileCheck %s
+# RUN: llc -o - %s -mtriple=powerpc64-- -passes=regallocfast | FileCheck %s
 ---
 # CHECK-LABEL: name: func
 name: func

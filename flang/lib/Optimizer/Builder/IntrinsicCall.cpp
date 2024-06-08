@@ -6121,9 +6121,6 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
   // Note that the value of the KIND argument is already reflected in the
   // resultType
   assert(args.size() == 3);
-  if (const auto *boxValue = args[0].getBoxOf<fir::BoxValue>())
-    if (boxValue->hasAssumedRank())
-      TODO(loc, "intrinsic: size with assumed rank argument");
 
   // Get the ARRAY argument
   mlir::Value array = builder.createBox(loc, args[0]);
@@ -6137,13 +6134,15 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
 
   // Get the DIM argument.
   mlir::Value dim = fir::getBase(args[1]);
-  if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
-    // If it is a compile time constant, skip the runtime call.
-    return builder.createConvert(loc, resultType,
-                                 fir::factory::readExtent(builder, loc,
-                                                          fir::BoxValue{array},
-                                                          cstDim.value() - 1));
-  }
+  if (!args[0].hasAssumedRank())
+    if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
+      // If both DIM and the rank are compile time constants, skip the runtime
+      // call.
+      return builder.createConvert(
+          loc, resultType,
+          fir::factory::readExtent(builder, loc, fir::BoxValue{array},
+                                   cstDim.value() - 1));
+    }
   if (!fir::isa_ref_type(dim.getType()))
     return builder.createConvert(
         loc, resultType, fir::runtime::genSizeDim(builder, loc, array, dim));
