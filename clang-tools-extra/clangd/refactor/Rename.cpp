@@ -751,7 +751,7 @@ collectRenameIdentifierRanges(const tooling::SymbolName &Name,
 clangd::Range tokenRangeForLoc(ParsedAST &AST, SourceLocation TokLoc,
                                const SourceManager &SM,
                                const LangOptions &LangOpts) {
-  const auto *Token = AST.getTokens().spelledTokenAt(TokLoc);
+  const auto *Token = AST.getTokens().spelledTokenContaining(TokLoc);
   assert(Token && "rename expects spelled tokens");
   clangd::Range Result;
   Result.start = sourceLocToPosition(SM, Token->location());
