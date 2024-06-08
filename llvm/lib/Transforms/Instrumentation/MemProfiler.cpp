@@ -759,7 +759,7 @@ static void readMemprof(Module &M, Function &F,
   std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
   // For the callsites we need to record the index of the associated frame in
   // the frame array (see comments below where the map entries are added).
-  std::map<uint64_t, std::set<std::pair<const SmallVector<Frame> *, unsigned>>>
+  std::map<uint64_t, std::set<std::pair<const std::vector<Frame> *, unsigned>>>
       LocHashToCallSites;
   for (auto &AI : MemProfRec->AllocSites) {
     // Associate the allocation info with the leaf frame. The later matching
@@ -815,7 +815,7 @@ static void readMemprof(Module &M, Function &F,
       // and another callsite).
       std::map<uint64_t, std::set<const AllocationInfo *>>::iterator
           AllocInfoIter;
-      std::map<uint64_t, std::set<std::pair<const SmallVector<Frame> *,
+      std::map<uint64_t, std::set<std::pair<const std::vector<Frame> *,
                                             unsigned>>>::iterator CallSitesIter;
       for (const DILocation *DIL = I.getDebugLoc(); DIL != nullptr;
            DIL = DIL->getInlinedAt()) {

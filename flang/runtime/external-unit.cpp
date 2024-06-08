@@ -58,15 +58,13 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
     Direction dir, Fortran::common::optional<bool> isUnformatted,
-    const Terminator &terminator) {
-  // Make sure that the returned anonymous unit has been opened
+    IoErrorHandler &handler) {
+  // Make sure that the returned anonymous unit has been opened,
   // not just created in the unitMap.
   CriticalSection critical{createOpenLock};
   bool exists{false};
-  ExternalFileUnit *result{
-      GetUnitMap().LookUpOrCreate(unit, terminator, exists)};
+  ExternalFileUnit *result{GetUnitMap().LookUpOrCreate(unit, handler, exists)};
   if (result && !exists) {
-    IoErrorHandler handler{terminator};
     result->OpenAnonymousUnit(
         dir == Direction::Input ? OpenStatus::Unknown : OpenStatus::Replace,
         Action::ReadWrite, Position::Rewind, Convert::Unknown, handler);
@@ -143,6 +141,9 @@ bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
   }
   set_path(std::move(newPath), newPathLength);
   Open(status.value_or(OpenStatus::Unknown), action, position, handler);
+  if (handler.InError()) {
+    return impliedClose;
+  }
   auto totalBytes{knownSize()};
   if (access == Access::Direct) {
     if (!openRecl) {

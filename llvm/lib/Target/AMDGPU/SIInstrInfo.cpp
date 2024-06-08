@@ -6437,8 +6437,13 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
 
   // Save SCC. Waterfall Loop may overwrite SCC.
   Register SaveSCCReg;
-  bool SCCNotDead = (MBB.computeRegisterLiveness(TRI, AMDGPU::SCC, MI, 30) !=
-                     MachineBasicBlock::LQR_Dead);
+
+  // FIXME: We should maintain SCC liveness while doing the FixSGPRCopies walk
+  // rather than unlimited scan everywhere
+  bool SCCNotDead =
+      MBB.computeRegisterLiveness(TRI, AMDGPU::SCC, MI,
+                                  std::numeric_limits<unsigned>::max()) !=
+      MachineBasicBlock::LQR_Dead;
   if (SCCNotDead) {
     SaveSCCReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(MBB, Begin, DL, TII.get(AMDGPU::S_CSELECT_B32), SaveSCCReg)

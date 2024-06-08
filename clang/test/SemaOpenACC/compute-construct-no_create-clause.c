@@ -52,8 +52,7 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc parallel no_create((float)ArrayParam[2])
   while(1);
 
-  // expected-error@+2{{OpenACC 'no_create' clause is not valid on 'loop' directive}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+  // expected-error@+1{{OpenACC 'no_create' clause is not valid on 'loop' directive}}
 #pragma acc loop no_create(LocalInt)
   for(;;);
 }

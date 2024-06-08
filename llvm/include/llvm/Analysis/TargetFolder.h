@@ -115,7 +115,7 @@ public:
   }
 
   Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 bool IsInBounds = false) const override {
+                 GEPNoWrapFlags NW) const override {
     if (!ConstantExpr::isSupportedGetElementPtr(Ty))
       return nullptr;
 
@@ -123,10 +123,7 @@ public:
       // Every index must be constant.
       if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
         return nullptr;
-      if (IsInBounds)
-        return Fold(ConstantExpr::getInBoundsGetElementPtr(Ty, PC, IdxList));
-      else
-        return Fold(ConstantExpr::getGetElementPtr(Ty, PC, IdxList));
+      return Fold(ConstantExpr::getGetElementPtr(Ty, PC, IdxList, NW));
     }
     return nullptr;
   }

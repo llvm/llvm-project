@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=alpha.unix.BlockInCriticalSection \
+// RUN:   -analyzer-checker=unix.BlockInCriticalSection \
 // RUN:   -std=c++11 \
 // RUN:   -analyzer-output text \
 // RUN:   -verify %s
