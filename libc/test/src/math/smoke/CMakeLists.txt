@@ -2528,6 +2528,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  remquof128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    remquof128_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquof128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   remquo_test
   SUITE
     libc-math-smoke-tests
