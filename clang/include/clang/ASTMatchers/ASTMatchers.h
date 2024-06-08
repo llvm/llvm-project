@@ -39,6 +39,162 @@
 //  See ASTMatchFinder.h for how to use the generated matchers to run over
 //  an AST.
 //
+//  The doxygen comments on matchers are used to:
+//   - create the doxygen documentation
+//   - get information in the editor via signature help and goto definition
+//   - generate the AST matcher reference html file
+//   - test the documentation using a special syntax
+//
+//  TLDR:
+//
+//  The automatic testing uses doxygen commands (aliases) to extract the
+//  relevant information about an example of using a matcher from the
+//  documentation.
+//
+//      \header{a.h}
+//      \endheader     <- zero or more header
+//
+//      \code
+//        int a = 42;
+//      \endcode
+//      \compile_args{-std=c++,c23-or-later} <- optional, the std flag supports
+//      std ranges and
+//                                              whole languages
+//
+//      \matcher{expr()}              <- one or more matchers in succession
+//      \matcher{integerLiteral()}    <- one or more matchers in succession
+//                                    both matcher will have to match the
+//                                    following matches
+//      \match{42}                    <- one or more matches in succession
+//
+//      \matcher{varDecl()} <- new matcher resets the context, the above
+//                             \match will not count for this new
+//                             matcher(-group)
+//      \match{int a  = 42} <- only applies to the previous matcher (not to the
+//                             previous case)
+//
+//
+//  The above block can be repeated inside a doxygen command for multiple code
+//  examples for a single matcher. The test generation script will only look for
+//  these annotations and ignore anything else like `\c` or the sentences where
+//  these annotations are embedded into: `The matcher \matcher{expr()} matches
+//  the number \match{42}.`.
+//
+//  Language Grammar:
+//
+//    [] denotes an optional, and <> denotes user-input
+//
+//    compile_args j:= \compile_args{[<compile_arg>;]<compile_arg>}
+//    matcher_tag_key ::= type
+//    match_tag_key ::= type || std || count || sub
+//    matcher_tags ::= [matcher_tag_key=<value>;]matcher_tag_key=<value>
+//    match_tags ::= [match_tag_key=<value>;]match_tag_key=<value>
+//    matcher ::= \matcher{[matcher_tags$]<matcher>}
+//    matchers ::= [matcher] matcher
+//    match ::= \match{[match_tags$]<match>}
+//    matches ::= [match] match
+//    case ::= matchers matches
+//    cases ::= [case] case
+//    header-block ::= \header{<name>} <code> \endheader
+//    code-block ::= \code <code> \endcode
+//    testcase ::= code-block [compile_args] cases
+//
+//  Language Standard Versions:
+//
+//  The 'std' tag and '\compile_args' support specifying a specific language
+//  version, a whole language and all of its versions, and thresholds (implies
+//  ranges). Multiple arguments are passed with a ',' separator. For a language
+//  and version to execute a tested matcher, it has to match the specified
+//  '\compile_args' for the code, and the 'std' tag for the matcher. Predicates
+//  for the 'std' compiler flag are used with disjunction between languages
+//  (e.g. 'c || c++') and conjunction for all predicates specific to each
+//  language (e.g. 'c++11-or-later && c++23-or-earlier').
+//
+//  Examples:
+//   - `c`                                    all available versions of C
+//   - `c++11`                                only C++11
+//   - `c++11-or-later`                       C++11 or later
+//   - `c++11-or-earlier`                     C++11 or earlier
+//   - `c++11-or-later,c++23-or-earlier,c`    all of C and C++ between 11 and
+//                                            23 (inclusive)
+//   - `c++11-23,c`                             same as above
+//
+//  Tags
+//
+//  `type`:
+//  **Match types** are used to select where the string that is used to check if
+//  a node matches comes from. Available: `code`, `name`, `typestr`,
+//  `typeofstr`. The default is `code`.
+//
+//   - `code`: Forwards to `tooling::fixit::getText(...)` and should be the
+//   preferred way to show what matches.
+//   - `name`: Casts the match to a `NamedDecl` and returns the result of
+//   `getNameAsString`. Useful when the matched AST node is not easy to spell
+//   out (`code` type), e.g., namespaces or classes with many members.
+//   - `typestr`: Returns the result of `QualType::getAsString` for the type
+//   derived from `Type` (otherwise, if it is derived from `Decl`, recurses with
+//   `Node->getTypeForDecl()`)
+//
+//  **Matcher types** are used to mark matchers as sub-matcher with 'sub' or as
+//  deactivated using 'none'. Testing sub-matcher is not implemented.
+//
+//  `count`:
+//  Specifying a 'count=n' on a match will result in a test that requires that
+//  the specified match will be matched n times. Default is 1.
+//
+//  `std`:
+//  A match allows specifying if it matches only in specific language versions.
+//  This may be needed when the AST differs between language versions.
+//
+//  `sub`:
+//  The `sub` tag on a `\match` will indicate that the match is for a node of a
+//  bound sub-matcher. E.g., `\matcher{expr(expr().bind("inner"))}` has a
+//  sub-matcher that binds to `inner`, which is the value for the `sub` tag of
+//  the expected match for the sub-matcher `\match{sub=inner$...}`. Currently,
+//  sub-matchers are not tested in any way.
+//
+//
+//  What if ...?
+//
+//  ... I want to add a matcher?
+//
+//  Add a doxygen comment to the matcher with a code example, corresponding
+//  matchers and matches, that shows what the matcher is supposed to do. Specify
+//  the compile arguments/supported languages if required, and run `ninja
+//  check-clang-unit` to test the documentation.
+//
+//  ... the example I wrote is wrong?
+//
+//  The test-generation script will try to compile your example code before it
+//  continues. This makes finding issues with your example code easier because
+//  the test-failures are much more verbose.
+//
+//  The test-failure output of the generated test file will provide information
+//  about
+//   - where the generated test file is located
+//   - which line in `ASTMatcher.h` the example is from
+//   - which matches were: found, not-(yet)-found, expected
+//   - in case of an unexpected match: what the node looks like using the
+//   different `type`s
+//   - the language version and if the test ran with a windows `-target` flag
+//   (also in failure summary)
+//
+//  ... I don't adhere to the required order of the syntax?
+//
+//  The script will diagnose any found issues, such as `matcher is missing an
+//  example` with a `file:line:` prefix, which should provide enough information
+//  about the issue.
+//
+//  ... the script diagnoses a false-positive issue with a doxygen comment?
+//
+//  It hopefully shouldn't, but if you, e.g., added some non-matcher code and
+//  documented it with doxygen, then the script will consider that as a matcher
+//  documentation. As a result, the script will print that it detected a
+//  mismatch between the actual and the expected number of failures. If the
+//  diagnostic truly is a false-positive, change the
+//  `expected_failure_statistics` at the top of the
+//  `generate_ast_matcher_doc_tests.py` file.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_ASTMATCHERS_ASTMATCHERS_H
