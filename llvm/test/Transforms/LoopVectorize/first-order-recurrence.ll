@@ -912,7 +912,6 @@ define i32 @PR27246() {
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[STEP_ADD]] = add <4 x i32> [[VEC_IND]], <i32 -4, i32 -4, i32 -4, i32 -4>
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[VEC_IND]], <4 x i32> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD]], <i32 -4, i32 -4, i32 -4, i32 -4>
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -1121,7 +1120,6 @@ define i32 @PR30183(i32 %pre_load, ptr %a, ptr %b, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP41:%.*]] = insertelement <4 x i32> [[TMP40]], i32 [[VECTOR_RECUR_EXTRACT_FOR_PHI]], i32 2
 ; UNROLL-NO-IC-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> [[TMP41]], i32 [[VECTOR_RECUR_EXTRACT]], i32 3
 ; UNROLL-NO-IC-NEXT:    [[TMP43:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP34]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; UNROLL-NO-IC-NEXT:    [[TMP44:%.*]] = shufflevector <4 x i32> [[TMP34]], <4 x i32> [[TMP42]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[TMP45:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP45]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -1393,7 +1391,6 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = add <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; UNROLL-NO-IC-NEXT:    [[TMP1]] = add <4 x i32> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP0]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[STEP_ADD]], <i32 4, i32 4, i32 4, i32 4>
 ; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
@@ -2572,7 +2569,6 @@ define void @sink_dead_inst(ptr %a) {
 ; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i32>
 ; UNROLL-NO-IC-NEXT:    [[TMP5]] = zext <4 x i16> [[TMP3]] to <4 x i32>
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR2]], <4 x i32> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = add <4 x i16> [[TMP2]], <i16 5, i16 5, i16 5, i16 5>
 ; UNROLL-NO-IC-NEXT:    [[TMP9]] = add <4 x i16> [[TMP3]], <i16 5, i16 5, i16 5, i16 5>
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[TMP8]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
@@ -3491,7 +3487,6 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = zext <4 x i16> [[TMP4]] to <4 x i32>
 ; UNROLL-NO-IC-NEXT:    [[TMP7]] = zext <4 x i16> [[TMP5]] to <4 x i32>
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP6]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[A_PTR:%.*]], i16 [[TMP0]]
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[A_PTR]], i16 [[TMP1]]
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP10]], i32 0
@@ -3665,7 +3660,6 @@ define void @unused_recurrence(ptr %a) {
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = add <4 x i16> [[TMP0]], <i16 5, i16 5, i16 5, i16 5>
 ; UNROLL-NO-IC-NEXT:    [[TMP3]] = add <4 x i16> [[TMP1]], <i16 5, i16 5, i16 5, i16 5>
 ; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[TMP2]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> [[TMP3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[STEP_ADD]], <i16 4, i16 4, i16 4, i16 4>
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
