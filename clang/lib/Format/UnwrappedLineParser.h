@@ -338,7 +338,7 @@ private:
   // `decltype(auto)`.
   bool IsDecltypeAutoFunction = false;
 
-  // Current nesting depth within unbraced codeblocks.
+  // Nesting depth of unbraced body of a control statement.
   int UnbracedBodyDepth = 0;
 
   // Represents preprocessor branch type, so we can find matching
