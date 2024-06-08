@@ -140,6 +140,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::ExplicitVectorLengthMask:
     case VPInstruction::ExtractFromEnd:
     case VPInstruction::FirstOrderRecurrenceSplice:
     case VPInstruction::LogicalAnd:
@@ -486,6 +487,14 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     Value *EVL = GetEVL(State, AVL);
     return EVL;
   }
+  case VPInstruction::ExplicitVectorLengthMask: {
+    assert(Part == 0 && "No unrolling expected for predicated vectorization.");
+    // Compute step < splat(evl)
+    Value *EVL = State.get(getOperand(0), VPIteration(0, 0));
+    Value *SplatEVL = Builder.CreateVectorSplat(State.VF, EVL);
+    Value *Step = Builder.CreateStepVector(SplatEVL->getType());
+    return Builder.CreateICmpULT(Step, SplatEVL, "evl.mask");
+  }
   case VPInstruction::CanonicalIVIncrementForPart: {
     auto *IV = State.get(getOperand(0), VPIteration(0, 0));
     if (Part == 0)
@@ -758,6 +767,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::ExplicitVectorLengthMask:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
@@ -820,6 +830,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExplicitVectorLength:
     O << "EXPLICIT-VECTOR-LENGTH";
+    break;
+  case VPInstruction::ExplicitVectorLengthMask:
+    O << "EXPLICIT-VECTOR-LENGTH-MASK";
     break;
   case VPInstruction::FirstOrderRecurrenceSplice:
     O << "first-order splice";

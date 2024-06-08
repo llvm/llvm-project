@@ -1442,6 +1442,23 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
                                   {EVLPhi, Plan.getTripCount()});
   VPEVL->insertBefore(*Header, Header->getFirstNonPhi());
 
+  // Replace header mask pattern (ICmp::ule widen-canonical-IV, BTC) with a
+  // (ICmp::ult step-vector, EVL).
+  // TODO: Replace all users of the ExplicitVectorLengthMask recipe with
+  // EVL-series recipes wherever possible to ensure the final vplan does not use
+  // the mask. The ExplicitVectorLengthMask recipe is a temporary appoarch to
+  // handle situations requiring a header mask, such as out-loop (unordered)
+  // reductions. It is necessary to generate a mask different from the original
+  // header mask because the explict vector length of the second-to-last
+  // iteration may be smaller than VF*UF.
+  auto *EVLMask =
+      new VPInstruction(VPInstruction::ExplicitVectorLengthMask, {VPEVL});
+  EVLMask->insertAfter(VPEVL);
+  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
+    HeaderMask->replaceAllUsesWith(EVLMask);
+    recursivelyDeleteDeadRecipes(HeaderMask);
+  }
+
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
   VPSingleDefRecipe *OpVPEVL = VPEVL;
@@ -1460,45 +1477,44 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   NextEVLIV->insertBefore(CanonicalIVIncrement);
   EVLPhi->addOperand(NextEVLIV);
 
-  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
-    for (VPUser *U : collectUsersRecursively(HeaderMask)) {
-      VPRecipeBase *NewRecipe = nullptr;
-      auto *CurRecipe = dyn_cast<VPRecipeBase>(U);
-      if (!CurRecipe || CurRecipe->getNumDefinedValues() > 1)
-        continue;
+  for (VPUser *U : collectUsersRecursively(EVLMask)) {
+    VPRecipeBase *NewRecipe = nullptr;
+    auto *CurRecipe = dyn_cast<VPRecipeBase>(U);
+    if (!CurRecipe || CurRecipe->getNumDefinedValues() > 1)
+      continue;
 
-      auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
-        assert(OrigMask && "Unmasked recipe when folding tail");
-        return HeaderMask == OrigMask ? nullptr : OrigMask;
-      };
-      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(CurRecipe)) {
-        VPValue *NewMask = GetNewMask(MemR->getMask());
-        if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR))
-          NewRecipe = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
-        else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR))
-          NewRecipe = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
-        else
-          llvm_unreachable("unsupported recipe");
-      } else if (auto *RedR = dyn_cast<VPReductionRecipe>(CurRecipe)) {
-        NewRecipe = new VPReductionEVLRecipe(RedR, VPEVL,
-                                             GetNewMask(RedR->getCondOp()));
-      }
-
-      if (NewRecipe) {
-        unsigned NumDefVal = NewRecipe->getNumDefinedValues();
-        assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
-               "New recipe must define the same number of values as the "
-               "original.");
-        NewRecipe->insertBefore(CurRecipe);
-        if (NumDefVal > 0) {
-          VPValue *CurVPV = CurRecipe->getVPSingleValue();
-          CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
-        }
-        CurRecipe->eraseFromParent();
-      }
+    auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
+      assert(OrigMask && "Unmasked recipe when folding tail");
+      return EVLMask == OrigMask ? nullptr : OrigMask;
+    };
+    if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(CurRecipe)) {
+      VPValue *NewMask = GetNewMask(MemR->getMask());
+      if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR))
+        NewRecipe = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
+      else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR))
+        NewRecipe = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
+      else
+        llvm_unreachable("unsupported recipe");
+    } else if (auto *RedR = dyn_cast<VPReductionRecipe>(CurRecipe)) {
+      NewRecipe =
+          new VPReductionEVLRecipe(RedR, VPEVL, GetNewMask(RedR->getCondOp()));
     }
-    recursivelyDeleteDeadRecipes(HeaderMask);
+
+    if (NewRecipe) {
+      unsigned NumDefVal = NewRecipe->getNumDefinedValues();
+      assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
+             "New recipe must define the same number of values as the "
+             "original.");
+      NewRecipe->insertBefore(CurRecipe);
+      if (NumDefVal > 0) {
+        VPValue *CurVPV = CurRecipe->getVPSingleValue();
+        CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
+      }
+      CurRecipe->eraseFromParent();
+    }
   }
+  recursivelyDeleteDeadRecipes(EVLMask);
+
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
   CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
