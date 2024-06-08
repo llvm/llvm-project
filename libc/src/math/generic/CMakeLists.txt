@@ -2425,7 +2425,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.division_and_remainder_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
