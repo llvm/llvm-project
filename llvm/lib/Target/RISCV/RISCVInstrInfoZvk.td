@@ -251,11 +251,9 @@ multiclass VPseudoBinaryNoMaskPolicy_Zvk<VReg RetClass,
                                          VReg Op1Class,
                                          DAGOperand Op2Class,
                                          LMULInfo MInfo,
-                                         string Constraint = "",
-                                         int sew = 0> {
-  let VLMul = MInfo.value, SEW=sew in {
-    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
-    def suffix : VPseudoBinaryNoMaskPolicy<RetClass, Op1Class, Op2Class,
+                                         string Constraint = ""> {
+  let VLMul = MInfo.value in {
+    def "_" # MInfo.MX : VPseudoBinaryNoMaskPolicy<RetClass, Op1Class, Op2Class,
                                            Constraint>;
   }
 }
@@ -1025,11 +1023,10 @@ multiclass VPatBinaryV_VV_VX_VROL<string intrinsic, string instruction,
       VPatBinaryV_VI_VROL<intrinsic, instruction2, vtilist>;
 
 multiclass VPatBinaryV_VV_VX_VI_VROR<string intrinsic, string instruction,
-                                     list<VTypeInfo> vtilist,
-                                     Operand ImmType = uimm6>
+                                     list<VTypeInfo> vtilist>
     : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
       VPatBinaryV_VX_VROTATE<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType>;
+      VPatBinaryV_VI<intrinsic, instruction, vtilist, uimm6>;
 
 multiclass VPatBinaryW_VV_VX_VI_VWSLL<string intrinsic, string instruction,
                                       list<VTypeInfoToWide> vtilist>
