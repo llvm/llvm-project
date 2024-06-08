@@ -1025,11 +1025,10 @@ multiclass VPatBinaryV_VV_VX_VROL<string intrinsic, string instruction,
       VPatBinaryV_VI_VROL<intrinsic, instruction2, vtilist>;
 
 multiclass VPatBinaryV_VV_VX_VI_VROR<string intrinsic, string instruction,
-                                     list<VTypeInfo> vtilist,
-                                     Operand ImmType = uimm6>
+                                     list<VTypeInfo> vtilist>
     : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
       VPatBinaryV_VX_VROTATE<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType>;
+      VPatBinaryV_VI<intrinsic, instruction, vtilist, uimm6>;
 
 multiclass VPatBinaryW_VV_VX_VI_VWSLL<string intrinsic, string instruction,
                                       list<VTypeInfoToWide> vtilist>

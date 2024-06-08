@@ -2317,11 +2317,11 @@ multiclass VPseudoVSLD1_VF<string Constraint = ""> {
   }
 }
 
-multiclass VPseudoBinaryV_VI<Operand ImmType = simm5, LMULInfo m, string Constraint = ""> {
+multiclass VPseudoBinaryV_VI<Operand ImmType, LMULInfo m, string Constraint = ""> {
   defm _VI : VPseudoBinary<m.vrclass, m.vrclass, ImmType, m, Constraint>;
 }
 
-multiclass VPseudoBinaryV_VI_RM<Operand ImmType = simm5, LMULInfo m, string Constraint = ""> {
+multiclass VPseudoBinaryV_VI_RM<Operand ImmType, LMULInfo m, string Constraint = ""> {
   defm _VI : VPseudoBinaryRoundingMode<m.vrclass, m.vrclass, ImmType, m, Constraint>;
 }
 
@@ -2696,13 +2696,13 @@ multiclass VPseudoBinaryM_VI<LMULInfo m, int TargetConstraintType = 1> {
                             !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""), TargetConstraintType>;
 }
 
-multiclass VPseudoVGTR_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
+multiclass VPseudoVGTR_VV_VX_VI<string Constraint = ""> {
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VX<m, Constraint>,
               SchedBinary<"WriteVRGatherVX", "ReadVRGatherVX_data",
                           "ReadVRGatherVX_index", mx, forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryV_VI<ImmType, m, Constraint>,
+    defm "" : VPseudoBinaryV_VI<uimm5, m, Constraint>,
               SchedUnary<"WriteVRGatherVI", "ReadVRGatherVI_data", mx,
                          forceMergeOpRead=true>;
 
@@ -2715,8 +2715,7 @@ multiclass VPseudoVGTR_VV_VX_VI<Operand ImmType = simm5, string Constraint = "">
   }
 }
 
-multiclass VPseudoVSALU_VV_VX_VI<Operand ImmType = simm5, string Constraint = "",
-                                 bit Commutable = 0> {
+multiclass VPseudoVSALU_VV_VX_VI<string Constraint = "", bit Commutable = 0> {
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VV<m, Constraint, Commutable=Commutable>,
@@ -2725,13 +2724,13 @@ multiclass VPseudoVSALU_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""
     defm "" : VPseudoBinaryV_VX<m, Constraint>,
               SchedBinary<"WriteVSALUX", "ReadVSALUV", "ReadVSALUX", mx,
                           forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryV_VI<ImmType, m, Constraint>,
+    defm "" : VPseudoBinaryV_VI<simm5, m, Constraint>,
               SchedUnary<"WriteVSALUI", "ReadVSALUV", mx, forceMergeOpRead=true>;
   }
 }
 
 
-multiclass VPseudoVSHT_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
+multiclass VPseudoVSHT_VV_VX_VI<string Constraint = ""> {
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VV<m, Constraint>,
@@ -2740,12 +2739,12 @@ multiclass VPseudoVSHT_VV_VX_VI<Operand ImmType = simm5, string Constraint = "">
     defm "" : VPseudoBinaryV_VX<m, Constraint>,
               SchedBinary<"WriteVShiftX", "ReadVShiftV", "ReadVShiftX", mx,
                           forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryV_VI<ImmType, m, Constraint>,
+    defm "" : VPseudoBinaryV_VI<uimm5, m, Constraint>,
               SchedUnary<"WriteVShiftI", "ReadVShiftV", mx, forceMergeOpRead=true>;
   }
 }
 
-multiclass VPseudoVSSHT_VV_VX_VI_RM<Operand ImmType = simm5, string Constraint = ""> {
+multiclass VPseudoVSSHT_VV_VX_VI_RM<string Constraint = ""> {
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VV_RM<m, Constraint>,
@@ -2754,13 +2753,12 @@ multiclass VPseudoVSSHT_VV_VX_VI_RM<Operand ImmType = simm5, string Constraint =
     defm "" : VPseudoBinaryV_VX_RM<m, Constraint>,
               SchedBinary<"WriteVSShiftX", "ReadVSShiftV", "ReadVSShiftX", mx,
                           forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryV_VI_RM<ImmType, m, Constraint>,
+    defm "" : VPseudoBinaryV_VI_RM<uimm5, m, Constraint>,
               SchedUnary<"WriteVSShiftI", "ReadVSShiftV", mx, forceMergeOpRead=true>;
   }
 }
 
-multiclass VPseudoVALU_VV_VX_VI<Operand ImmType = simm5, string Constraint = "",
-                                bit Commutable = 0> {
+multiclass VPseudoVALU_VV_VX_VI<string Constraint = "", bit Commutable = 0> {
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VV<m, Constraint, Commutable=Commutable>,
@@ -2769,7 +2767,7 @@ multiclass VPseudoVALU_VV_VX_VI<Operand ImmType = simm5, string Constraint = "",
     defm "" : VPseudoBinaryV_VX<m, Constraint>,
             SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", mx,
                         forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryV_VI<ImmType, m, Constraint>,
+    defm "" : VPseudoBinaryV_VI<simm5, m, Constraint>,
             SchedUnary<"WriteVIALUI", "ReadVIALUV", mx, forceMergeOpRead=true>;
   }
 }
@@ -2962,13 +2960,13 @@ multiclass VPseudoVALU_VF_RM {
   }
 }
 
-multiclass VPseudoVALU_VX_VI<Operand ImmType = simm5> {
+multiclass VPseudoVALU_VX_VI {
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VX<m>,
               SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", mx,
                           forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryV_VI<ImmType, m>,
+    defm "" : VPseudoBinaryV_VI<simm5, m>,
               SchedUnary<"WriteVIALUI", "ReadVIALUV", mx, forceMergeOpRead=true>;
   }
 }
@@ -3333,8 +3331,8 @@ multiclass VPseudoVSLDV_VX<LMULInfo m, string Constraint = ""> {
   defm _VX : VPseudoVSLDVWithPolicy<m.vrclass, m.vrclass, GPR, m, Constraint>;
 }
 
-multiclass VPseudoVSLDV_VI<Operand ImmType = simm5, LMULInfo m, string Constraint = ""> {
-  defm _VI : VPseudoVSLDVWithPolicy<m.vrclass, m.vrclass, ImmType, m, Constraint>;
+multiclass VPseudoVSLDV_VI<LMULInfo m, string Constraint = ""> {
+  defm _VI : VPseudoVSLDVWithPolicy<m.vrclass, m.vrclass, uimm5, m, Constraint>;
 }
 
 multiclass VPseudoVMAC_VV_VX_AAXA<string Constraint = ""> {
@@ -3366,15 +3364,14 @@ multiclass VPseudoVMAC_VV_VF_AAXA_RM<string Constraint = ""> {
   }
 }
 
-multiclass VPseudoVSLD_VX_VI<Operand ImmType = simm5, bit slidesUp = false,
-                             string Constraint = ""> {
+multiclass VPseudoVSLD_VX_VI<bit slidesUp = false, string Constraint = ""> {
   defvar WriteSlideX = !if(slidesUp, "WriteVSlideUpX", "WriteVSlideDownX");
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoVSLDV_VX<m, Constraint>,
               SchedTernary<WriteSlideX, "ReadVISlideV", "ReadVISlideV",
                            "ReadVISlideX", mx>;
-    defm "" : VPseudoVSLDV_VI<ImmType, m, Constraint>,
+    defm "" : VPseudoVSLDV_VI<m, Constraint>,
               SchedBinary<"WriteVSlideI", "ReadVISlideV", "ReadVISlideV", mx>;
   }
 }
@@ -5441,7 +5438,7 @@ multiclass VPatBinaryV_VV_VX_VI<string intrinsic, string instruction,
       VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType>;
 
 multiclass VPatBinaryV_VV_VX_VI_RM<string intrinsic, string instruction,
-                                   list<VTypeInfo> vtilist, Operand ImmType = simm5>
+                                   list<VTypeInfo> vtilist, Operand ImmType>
     : VPatBinaryV_VV_RM<intrinsic, instruction, vtilist>,
       VPatBinaryV_VX_RM<intrinsic, instruction, vtilist>,
       VPatBinaryV_VI_RM<intrinsic, instruction, vtilist, ImmType>;
@@ -5777,7 +5774,7 @@ multiclass VPatTernaryV_VV_VX_AAXA_RM<string intrinsic, string instruction,
       VPatTernaryV_VX_AAXA_RM<intrinsic, instruction, vtilist, isSEWAware>;
 
 multiclass VPatTernaryV_VX_VI<string intrinsic, string instruction,
-                              list<VTypeInfo> vtilist, Operand Imm_type = simm5>
+                              list<VTypeInfo> vtilist, Operand Imm_type>
     : VPatTernaryV_VX<intrinsic, instruction, vtilist>,
       VPatTernaryV_VI<intrinsic, instruction, vtilist, Imm_type>;
 
@@ -5809,7 +5806,7 @@ multiclass VPatBinaryM_VX_VI<string intrinsic, string instruction,
       VPatBinaryM_VI<intrinsic, instruction, vtilist>;
 
 multiclass VPatBinaryV_VV_VX_VI_INT<string intrinsic, string instruction,
-                                    list<VTypeInfo> vtilist, Operand ImmType = simm5>
+                                    list<VTypeInfo> vtilist, Operand ImmType>
     : VPatBinaryV_VV_INT<intrinsic#"_vv", instruction, vtilist>,
       VPatBinaryV_VX_INT<intrinsic#"_vx", instruction, vtilist>,
       VPatBinaryV_VI<intrinsic#"_vx", instruction, vtilist, ImmType>;
@@ -6329,9 +6326,9 @@ defm PseudoVXOR : VPseudoVALU_VV_VX_VI<Commutable=1>;
 //===----------------------------------------------------------------------===//
 // 11.6. Vector Single-Width Bit Shift Instructions
 //===----------------------------------------------------------------------===//
-defm PseudoVSLL : VPseudoVSHT_VV_VX_VI<uimm5>;
-defm PseudoVSRL : VPseudoVSHT_VV_VX_VI<uimm5>;
-defm PseudoVSRA : VPseudoVSHT_VV_VX_VI<uimm5>;
+defm PseudoVSLL : VPseudoVSHT_VV_VX_VI;
+defm PseudoVSRL : VPseudoVSHT_VV_VX_VI;
+defm PseudoVSRA : VPseudoVSHT_VV_VX_VI;
 
 //===----------------------------------------------------------------------===//
 // 11.7. Vector Narrowing Integer Right Shift Instructions
@@ -6440,8 +6437,8 @@ let Defs = [VXSAT] in {
 //===----------------------------------------------------------------------===//
 // 12.4. Vector Single-Width Scaling Shift Instructions
 //===----------------------------------------------------------------------===//
-defm PseudoVSSRL : VPseudoVSSHT_VV_VX_VI_RM<uimm5>;
-defm PseudoVSSRA : VPseudoVSSHT_VV_VX_VI_RM<uimm5>;
+defm PseudoVSSRL : VPseudoVSSHT_VV_VX_VI_RM;
+defm PseudoVSSRA : VPseudoVSSHT_VV_VX_VI_RM;
 
 //===----------------------------------------------------------------------===//
 // 12.5. Vector Narrowing Fixed-Point Clip Instructions
@@ -6826,8 +6823,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 // 16.3. Vector Slide Instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVInstructions] in {
-  defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI<uimm5, /*slidesUp=*/true, "@earlyclobber $rd">;
-  defm PseudoVSLIDEDOWN  : VPseudoVSLD_VX_VI<uimm5, /*slidesUp=*/false>;
+  defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI</*slidesUp=*/true, "@earlyclobber $rd">;
+  defm PseudoVSLIDEDOWN  : VPseudoVSLD_VX_VI</*slidesUp=*/false>;
   defm PseudoVSLIDE1UP   : VPseudoVSLD1_VX<"@earlyclobber $rd">;
   defm PseudoVSLIDE1DOWN : VPseudoVSLD1_VX;
 } // Predicates = [HasVInstructions]
@@ -6841,7 +6838,7 @@ let Predicates = [HasVInstructionsAnyF] in {
 // 16.4. Vector Register Gather Instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVInstructions] in {
-defm PseudoVRGATHER     : VPseudoVGTR_VV_VX_VI<uimm5, "@earlyclobber $rd">;
+defm PseudoVRGATHER     : VPseudoVGTR_VV_VX_VI<"@earlyclobber $rd">;
 defm PseudoVRGATHEREI16 : VPseudoVGTR_EI16_VV<Constraint = "@earlyclobber $rd">;
 
 //===----------------------------------------------------------------------===//
