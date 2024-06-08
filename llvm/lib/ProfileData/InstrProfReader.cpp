@@ -145,11 +145,11 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
 
 static void
 printBinaryIdsInternal(raw_ostream &OS,
-                       std::vector<llvm::object::BuildID> &BinaryIds) {
+                       const std::vector<llvm::object::BuildID> &BinaryIds) {
   OS << "Binary IDs: \n";
-  for (auto BI : BinaryIds) {
-    for (uint64_t I = 0; I < BI.size(); I++)
-      OS << format("%02x", BI[I]);
+  for (const auto &BI : BinaryIds) {
+    for (auto I : BI)
+      OS << format("%02x", I);
     OS << "\n";
   }
 }
