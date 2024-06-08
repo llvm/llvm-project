@@ -324,9 +324,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
   if (Instruction::isBinaryOp(getOpcode())) {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    if (Part != 0 && vputils::onlyFirstPartUsed(this))
-      return State.get(this, 0, OnlyFirstLaneUsed);
-
     Value *A = State.get(getOperand(0), Part, OnlyFirstLaneUsed);
     Value *B = State.get(getOperand(1), Part, OnlyFirstLaneUsed);
     auto *Res =
@@ -628,6 +625,7 @@ void VPInstruction::execute(VPTransformState &State) {
       canGenerateScalarForFirstLane() &&
       (vputils::onlyFirstLaneUsed(this) || isVectorToScalar());
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
+  bool OnlyFirstPartUsed = vputils::onlyFirstPartUsed(this);
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     if (GeneratesPerAllLanes) {
       for (unsigned Lane = 0, NumLanes = State.VF.getKnownMinValue();
@@ -636,6 +634,13 @@ void VPInstruction::execute(VPTransformState &State) {
         assert(GeneratedValue && "generatePerLane must produce a value");
         State.set(this, GeneratedValue, VPIteration(Part, Lane));
       }
+      continue;
+    }
+
+    if (Part != 0 && OnlyFirstPartUsed && hasResult()) {
+      Value *Part0 = State.get(this, 0, /*IsScalar*/ GeneratesPerFirstLaneOnly);
+      State.set(this, Part0, Part,
+                /*IsScalar*/ GeneratesPerFirstLaneOnly);
       continue;
     }
 
