@@ -343,15 +343,15 @@ MemProfRecord IndexedMemProfRecord::toMemProfRecord(
   MemProfRecord Record;
 
   Record.AllocSites.reserve(AllocSites.size());
-  for (const memprof::IndexedAllocationInfo &IndexedAI : AllocSites) {
-    memprof::AllocationInfo AI;
+  for (const IndexedAllocationInfo &IndexedAI : AllocSites) {
+    AllocationInfo AI;
     AI.Info = IndexedAI.Info;
     AI.CallStack = Callback(IndexedAI.CSId);
     Record.AllocSites.push_back(std::move(AI));
   }
 
   Record.CallSites.reserve(CallSiteIds.size());
-  for (memprof::CallStackId CSId : CallSiteIds)
+  for (CallStackId CSId : CallSiteIds)
     Record.CallSites.push_back(Callback(CSId));
 
   return Record;
@@ -487,7 +487,7 @@ void CallStackRadixTreeBuilder::build(
     llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
         &&MemProfCallStackData,
     const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
-    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
+    llvm::DenseMap<FrameId, FrameStat> &FrameHistogram) {
   // Take the vector portion of MemProfCallStackData.  The vector is exactly
   // what we need to sort.  Also, we no longer need its lookup capability.
   llvm::SmallVector<CSIdPair, 0> CallStacks = MemProfCallStackData.takeVector();
