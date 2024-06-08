@@ -665,9 +665,8 @@ private:
   const unsigned char *CallStackBase = nullptr;
 
   Error deserializeV012(const unsigned char *Start, const unsigned char *Ptr,
-                        uint64_t FirstWord, memprof::IndexedVersion Version);
-  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr,
-                      memprof::IndexedVersion Version);
+                        uint64_t FirstWord);
+  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
 
 public:
   IndexedMemProfReader() = default;

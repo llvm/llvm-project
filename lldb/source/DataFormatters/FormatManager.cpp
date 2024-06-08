@@ -9,6 +9,7 @@
 #include "lldb/DataFormatters/FormatManager.h"
 
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/LanguageCategory.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -448,16 +449,19 @@ lldb::Format FormatManager::GetSingleItemFormat(lldb::Format vector_format) {
 }
 
 bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
+  TargetSP target_sp = valobj.GetTargetSP();
   // if settings say no oneline whatsoever
-  if (valobj.GetTargetSP().get() &&
-      !valobj.GetTargetSP()->GetDebugger().GetAutoOneLineSummaries())
+  if (target_sp && !target_sp->GetDebugger().GetAutoOneLineSummaries())
     return false; // then don't oneline
 
   // if this object has a summary, then ask the summary
   if (valobj.GetSummaryFormat().get() != nullptr)
     return valobj.GetSummaryFormat()->IsOneLiner();
 
-  auto num_children = valobj.GetNumChildren();
+  const size_t max_num_children =
+      (target_sp ? *target_sp : Target::GetGlobalProperties())
+          .GetMaximumNumberOfChildrenToDisplay();
+  auto num_children = valobj.GetNumChildren(max_num_children);
   if (!num_children) {
     llvm::consumeError(num_children.takeError());
     return true;

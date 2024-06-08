@@ -137,6 +137,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::ExtractFromEnd:
     case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
       return false;
@@ -293,13 +294,13 @@ bool VPInstruction::doesGeneratePerAllLanes() const {
 bool VPInstruction::canGenerateScalarForFirstLane() const {
   if (Instruction::isBinaryOp(getOpcode()))
     return true;
-
+  if (isVectorToScalar())
+    return true;
   switch (Opcode) {
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::ComputeReductionResult:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
     return true;
@@ -558,6 +559,29 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::ExtractFromEnd: {
+    if (Part != 0)
+      return State.get(this, 0, /*IsScalar*/ true);
+
+    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    unsigned Offset = CI->getZExtValue();
+    assert(Offset > 0 && "Offset from end must be positive");
+    Value *Res;
+    if (State.VF.isVector()) {
+      assert(Offset <= State.VF.getKnownMinValue() &&
+             "invalid offset to extract from");
+      // Extract lane VF - Offset from the operand.
+      Res = State.get(
+          getOperand(0),
+          VPIteration(State.UF - 1, VPLane::getLaneFromEnd(State.VF, Offset)));
+    } else {
+      assert(Offset <= State.UF && "invalid offset to extract from");
+      // When loop is unrolled without vectorizing, retrieve UF - Offset.
+      Res = State.get(getOperand(0), State.UF - Offset);
+    }
+    Res->setName(Name);
+    return Res;
+  }
   case VPInstruction::LogicalAnd: {
     Value *A = State.get(getOperand(0), Part);
     Value *B = State.get(getOperand(1), Part);
@@ -573,6 +597,11 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
+}
+
+bool VPInstruction::isVectorToScalar() const {
+  return getOpcode() == VPInstruction::ExtractFromEnd ||
+         getOpcode() == VPInstruction::ComputeReductionResult;
 }
 
 #if !defined(NDEBUG)
@@ -597,8 +626,7 @@ void VPInstruction::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   bool GeneratesPerFirstLaneOnly =
       canGenerateScalarForFirstLane() &&
-      (vputils::onlyFirstLaneUsed(this) ||
-       getOpcode() == VPInstruction::ComputeReductionResult);
+      (vputils::onlyFirstLaneUsed(this) || isVectorToScalar());
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     if (GeneratesPerAllLanes) {
@@ -691,6 +719,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BranchOnCount:
     O << "branch-on-count";
+    break;
+  case VPInstruction::ExtractFromEnd:
+    O << "extract-from-end";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
