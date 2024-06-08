@@ -28,7 +28,8 @@ enum IndexedVersion : uint64_t {
   Version1 = 1,
   // Version 2: Added a call stack table.
   Version2 = 2,
-  // Version 3: Under development.
+  // Version 3: Added a radix tree for call stacks.  Switched to linear IDs for
+  // frames and call stacks.
   Version3 = 3,
 };
 
