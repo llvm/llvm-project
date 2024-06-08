@@ -617,17 +617,14 @@ define void @v3i8store(ptr %p) {
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
-; CHECK-LE-NEXT:    vmov.i32 d16, #0xff
-; CHECK-LE-NEXT:    mov r1, sp
-; CHECK-LE-NEXT:    vmov.i32 d17, #0x0
-; CHECK-LE-NEXT:    movs r2, #0
-; CHECK-LE-NEXT:    vand d16, d17, d16
-; CHECK-LE-NEXT:    vst1.32 {d16[0]}, [r1:32]
-; CHECK-LE-NEXT:    vld1.32 {d16[0]}, [r1:32]
+; CHECK-LE-NEXT:    movs r1, #0
+; CHECK-LE-NEXT:    mov r2, sp
+; CHECK-LE-NEXT:    str r1, [sp]
+; CHECK-LE-NEXT:    vld1.32 {d16[0]}, [r2:32]
+; CHECK-LE-NEXT:    strb r1, [r0, #2]
 ; CHECK-LE-NEXT:    vmovl.u16 q8, d16
-; CHECK-LE-NEXT:    strb r2, [r0, #2]
-; CHECK-LE-NEXT:    vmov.32 r1, d16[0]
-; CHECK-LE-NEXT:    strh r1, [r0]
+; CHECK-LE-NEXT:    vmov.32 r2, d16[0]
+; CHECK-LE-NEXT:    strh r2, [r0]
 ; CHECK-LE-NEXT:    add sp, #4
 ; CHECK-LE-NEXT:    bx lr
 ;
