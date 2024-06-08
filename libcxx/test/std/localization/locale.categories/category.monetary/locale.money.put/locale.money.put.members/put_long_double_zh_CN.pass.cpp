@@ -363,11 +363,11 @@ int main(int, char**)
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, '*', v);
         std::wstring ex(str, base(iter));
-#ifdef _AIX
+#  ifdef _AIX
         assert(ex == L"-" + currency_symbol + L"0.01");
-#else
+#  else
         assert(ex == currency_symbol + L"-0.01");
-#endif
+#  endif
     }
     {   // positive, showbase
         long double v = 123456789;
@@ -383,11 +383,11 @@ int main(int, char**)
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, '*', v);
         std::wstring ex(str, base(iter));
-#ifdef _AIX
+#  ifdef _AIX
         assert(ex == L"-" + currency_symbol + L"1,234,567.89");
-#else
+#  else
         assert(ex == currency_symbol + L"-1,234,567.89");
-#endif
+#  endif
     }
     {   // negative, showbase, left
         long double v = -123456789;
@@ -397,11 +397,11 @@ int main(int, char**)
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, ' ', v);
         std::wstring ex(str, base(iter));
-#ifdef _AIX
+#  ifdef _AIX
         assert(ex == L"-" + currency_symbol + L"1,234,567.89      ");
-#else
+#  else
         assert(ex == currency_symbol + L"-1,234,567.89      ");
-#endif
+#  endif
         assert(ios.width() == 0);
     }
     {   // negative, showbase, internal
@@ -412,11 +412,11 @@ int main(int, char**)
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, ' ', v);
         std::wstring ex(str, base(iter));
-#ifdef _AIX
+#  ifdef _AIX
         assert(ex == L"-" + currency_symbol + L"      1,234,567.89");
-#else
+#  else
         assert(ex == currency_symbol + L"-      1,234,567.89");
-#endif
+#  endif
         assert(ios.width() == 0);
     }
     {   // negative, showbase, right
@@ -427,11 +427,11 @@ int main(int, char**)
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), false, ios, ' ', v);
         std::wstring ex(str, base(iter));
-#ifdef _AIX
+#  ifdef _AIX
         assert(ex == L"      -" + currency_symbol + L"1,234,567.89");
-#else
+#  else
         assert(ex == L"      " + currency_symbol + L"-1,234,567.89");
-#endif
+#  endif
         assert(ios.width() == 0);
     }
 
@@ -480,7 +480,7 @@ int main(int, char**)
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, '*', v);
         std::wstring ex(str, base(iter));
-#if defined(TEST_HAS_GLIBC) || defined(_AIX)
+#  if defined(TEST_HAS_GLIBC) || defined(_AIX)
         assert(ex == L"-" + currency_name + L"0.01");
 #else
         assert(ex == currency_name + L"-0.01");
@@ -500,7 +500,7 @@ int main(int, char**)
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, '*', v);
         std::wstring ex(str, base(iter));
-#if defined(TEST_HAS_GLIBC) || defined(_AIX)
+#  if defined(TEST_HAS_GLIBC) || defined(_AIX)
         assert(ex == L"-" + currency_name + L"1,234,567.89");
 #else
         assert(ex == currency_name + L"-1,234,567.89");
@@ -514,7 +514,7 @@ int main(int, char**)
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, ' ', v);
         std::wstring ex(str, base(iter));
-#if defined(TEST_HAS_GLIBC) || defined(_AIX)
+#  if defined(TEST_HAS_GLIBC) || defined(_AIX)
         assert(ex == L"-" + currency_name + L"1,234,567.89" + currency_name_padding);
 #else
         assert(ex == currency_name + L"-1,234,567.89" + currency_name_padding);
@@ -529,7 +529,7 @@ int main(int, char**)
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, ' ', v);
         std::wstring ex(str, base(iter));
-#if defined(TEST_HAS_GLIBC) || defined(_AIX)
+#  if defined(TEST_HAS_GLIBC) || defined(_AIX)
         assert(ex == L"-" + currency_name + currency_name_padding + L"1,234,567.89");
 #else
         assert(ex == currency_name + L"-" + currency_name_padding + L"1,234,567.89");
@@ -544,7 +544,7 @@ int main(int, char**)
         wchar_t str[100];
         cpp17_output_iterator<wchar_t*> iter = f.put(cpp17_output_iterator<wchar_t*>(str), true, ios, ' ', v);
         std::wstring ex(str, base(iter));
-#if defined(TEST_HAS_GLIBC) || defined(_AIX)
+#  if defined(TEST_HAS_GLIBC) || defined(_AIX)
         assert(ex == currency_name_padding + L"-" + currency_name + L"1,234,567.89");
 #else
         assert(ex == currency_name_padding + currency_name + L"-1,234,567.89");

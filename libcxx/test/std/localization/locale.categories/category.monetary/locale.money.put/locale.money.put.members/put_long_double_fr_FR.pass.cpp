@@ -32,9 +32,9 @@
 
 #ifdef _AIX
 // the AIX libc expects U202F as LC_MONETARY thousands_sep
-#define THOUSANDS_SEP L"\u202F"
+#  define THOUSANDS_SEP L"\u202F"
 #else
-#define THOUSANDS_SEP L" "
+#  define THOUSANDS_SEP L" "
 #endif
 
 typedef std::money_put<char, cpp17_output_iterator<char*> > Fn;

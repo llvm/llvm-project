@@ -32,9 +32,9 @@
 
 #ifdef _AIX
 // the AIX libc expects U202F as LC_MONETARY thousands_sep
-#define THOUSANDS_SEP L"\u202F"
+#  define THOUSANDS_SEP L"\u202F"
 #else
-#define THOUSANDS_SEP L" "
+#  define THOUSANDS_SEP L" "
 #endif
 
 typedef std::money_get<char, cpp17_input_iterator<const char*> > Fn;
@@ -437,26 +437,24 @@ int main(int, char**)
             assert(ex == -1);
         }
         {   // positive
-            std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 ");
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == 123456789);
+          std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 ");
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == 123456789);
         }
         {   // negative
-            std::wstring v = convert_thousands_sep(L"-1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89");
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -123456789);
+          std::wstring v = convert_thousands_sep(L"-1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89");
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -123456789);
         }
         {   // negative
             std::wstring v = L"-1234567,89";
@@ -517,64 +515,59 @@ int main(int, char**)
             assert(ex == -1);
         }
         {   // positive, showbase
-            std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 \u20ac");  // EURO SIGN
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == 123456789);
+          std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 \u20ac"); // EURO SIGN
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == 123456789);
         }
         {   // positive, showbase
-            std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 \u20ac");  // EURO SIGN
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == 123456789);
-            std::noshowbase(ios);
+          std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 \u20ac"); // EURO SIGN
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == 123456789);
+          std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = convert_thousands_sep(L"-1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 \u20ac");  // EURO SIGN
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -123456789);
-            std::noshowbase(ios);
+          std::wstring v = convert_thousands_sep(L"-1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 \u20ac"); // EURO SIGN
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -123456789);
+          std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 EUR -");
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + 13);
-            assert(err == std::ios_base::failbit);
-            std::noshowbase(ios);
+          std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 EUR -");
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + 13);
+          assert(err == std::ios_base::failbit);
+          std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 EUR -");
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                false, ios, err, ex);
-            assert(base(iter) == v.data() + 13);
-            assert(err == std::ios_base::goodbit);
-            assert(ex == 123456789);
+          std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 EUR -");
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+          assert(base(iter) == v.data() + 13);
+          assert(err == std::ios_base::goodbit);
+          assert(ex == 123456789);
         }
     }
     {
@@ -603,26 +596,24 @@ int main(int, char**)
             assert(ex == -1);
         }
         {   // positive
-            std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 ");
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                true, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == 123456789);
+          std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 ");
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), true, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == 123456789);
         }
         {   // negative
-            std::wstring v = convert_thousands_sep(L"-1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89");
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                true, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -123456789);
+          std::wstring v = convert_thousands_sep(L"-1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89");
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), true, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -123456789);
         }
         {   // negative
             std::wstring v = L"-1234567,89";
@@ -683,64 +674,59 @@ int main(int, char**)
             assert(ex == -1);
         }
         {   // positive, showbase
-            std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 EUR");
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                true, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == 123456789);
+          std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 EUR");
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), true, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == 123456789);
         }
         {   // positive, showbase
-            std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 EUR");
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                true, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == 123456789);
-            std::noshowbase(ios);
+          std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 EUR");
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), true, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == 123456789);
+          std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = convert_thousands_sep(L"-1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 EUR");
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                true, ios, err, ex);
-            assert(base(iter) == v.data() + v.size());
-            assert(err == std::ios_base::eofbit);
-            assert(ex == -123456789);
-            std::noshowbase(ios);
+          std::wstring v = convert_thousands_sep(L"-1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 EUR");
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), true, ios, err, ex);
+          assert(base(iter) == v.data() + v.size());
+          assert(err == std::ios_base::eofbit);
+          assert(ex == -123456789);
+          std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 Eu-");
-            std::showbase(ios);
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                true, ios, err, ex);
-            assert(base(iter) == v.data() + 14);
-            assert(err == std::ios_base::failbit);
-            std::noshowbase(ios);
+          std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 Eu-");
+          std::showbase(ios);
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), true, ios, err, ex);
+          assert(base(iter) == v.data() + 14);
+          assert(err == std::ios_base::failbit);
+          std::noshowbase(ios);
         }
         {   // negative, showbase
-            std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 Eu-");
-            typedef cpp17_input_iterator<const wchar_t*> I;
-            long double ex;
-            std::ios_base::iostate err = std::ios_base::goodbit;
-            I iter = f.get(I(v.data()), I(v.data() + v.size()),
-                                                true, ios, err, ex);
-            assert(base(iter) == v.data() + 13);
-            assert(err == std::ios_base::goodbit);
-            assert(ex == 123456789);
+          std::wstring v = convert_thousands_sep(L"1" THOUSANDS_SEP "234" THOUSANDS_SEP "567,89 Eu-");
+          typedef cpp17_input_iterator<const wchar_t*> I;
+          long double ex;
+          std::ios_base::iostate err = std::ios_base::goodbit;
+          I iter                     = f.get(I(v.data()), I(v.data() + v.size()), true, ios, err, ex);
+          assert(base(iter) == v.data() + 13);
+          assert(err == std::ios_base::goodbit);
+          assert(ex == 123456789);
         }
     }
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
