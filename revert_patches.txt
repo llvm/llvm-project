@@ -80,3 +80,7 @@ greaks aomp build of openmp
 688ffd0b405] Revert "[OpenMP][NFC] Fix warning for OpenMP standalone build (#93463)"
 contact: ethan stewart
 ---
+breaks targetid_multi_image
+374f6554c3e4 [OpenMP] Fix passing target id features to AMDGPU offloading (#94765)
+contact: ronl
+---

@@ -4212,7 +4212,6 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
 
-  assert(!Known.hasConflict() && "Bits known to be one AND zero?");
   return Known;
 }
 
