@@ -175,14 +175,13 @@ inline internal::TrueMatcher anything() { return internal::TrueMatcher(); }
 /// Given
 /// \code
 ///   int X;
-///   namespace NS {
-///     int Y;
-///   }  // namespace NS
+///   namespace NS { int Y; }
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{namedDecl(hasDeclContext(translationUnitDecl()))}
-/// matches \match{type=name$X} and \match{type=name$NS},
-/// but does not match \nomatch{type=name$Y}.
+/// matches \match{int X} and \match{namespace NS { int Y; }},
+/// but does not match \nomatch{int Y} because its decl-context is the
+/// namespace \c NS .
 extern const internal::VariadicDynCastAllOfMatcher<Decl, TranslationUnitDecl>
     translationUnitDecl;
 
@@ -386,8 +385,10 @@ AST_POLYMORPHIC_MATCHER_P(isExpandedFromMacro,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{decl()}
-/// matches \match{void X()}, \match{type=name;count=2$C}
-/// and \match{count=2$friend void X()}.
+/// matches \match{void X()} once, \match{type=name;count=2$C}
+/// twice, once for the definition and once for the implicit class declaration,
+/// and \match{count=2$friend void X()} twice, once for the declaration of the
+/// friend, and once for the redeclaration of the function itself.
 extern const internal::VariadicAllOfMatcher<Decl> decl;
 
 /// Matches decomposition-declarations.
@@ -412,11 +413,13 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, DecompositionDecl>
 /// \code
 ///   struct pair { int x; int y; };
 ///   pair make(int, int);
-///   auto [foo, bar] = make(42, 42);
+///   void f() {
+///     auto [foo, bar] = make(42, 42);
+///   }
 /// \endcode
 /// \compile_args{-std=c++17-or-later}
 /// The matcher \matcher{bindingDecl()}
-/// matches \match{type=name;count=2$foo} and \match{type=name;count=2$bar}.
+/// matches \match{type=name$foo} and \match{type=name$bar}.
 extern const internal::VariadicDynCastAllOfMatcher<Decl, BindingDecl>
     bindingDecl;
 
@@ -438,17 +441,15 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, LinkageSpecDecl>
 /// Given
 /// \code
 ///   typedef int X;
-///   struct S {
-///     union {
-///       int i;
-///     } U;
-///   };
+///   struct S { union { int i; } U; };
 /// \endcode
 /// The matcher \matcher{namedDecl()}
-/// matches \match{typedef int X}, \match{type=name;std=c$S}, \match{int i}
-/// \match{type=name$} and \match{type=name$U},
+/// matches \match{typedef int X},
+/// \match{std=c$struct S { union { int i; } U; }}, \match{int i},
+/// the unnamed union\match{type=name$} and the variable
+/// \match{union { int i; } U},
 /// with \match{type=name;count=2;std=c++$S} matching twice in C++.
-/// Once for the injected class name and once for the declaration itself.
+/// Once for the implicit class declaration and once for the declaration itself.
 extern const internal::VariadicDynCastAllOfMatcher<Decl, NamedDecl> namedDecl;
 
 /// Matches a declaration of label.
@@ -487,8 +488,8 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, NamespaceDecl>
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{namespaceAliasDecl()}
-/// matches \match{type=name$alias},
-/// but does not match \nomatch{type=name$test}.
+/// matches \match{namespace alias = ::test},
+/// but does not match \nomatch{namespace test {}}.
 extern const internal::VariadicDynCastAllOfMatcher<Decl, NamespaceAliasDecl>
     namespaceAliasDecl;
 
@@ -503,8 +504,10 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, NamespaceAliasDecl>
 /// \endcode
 /// \compile_args{-fno-delayed-template-parsing;-std=c++}
 /// The matcher \matcher{recordDecl()}
-/// matches \match{type=name$X}, \match{type=name;count=2$Z},
-/// \match{type=name;count=2$S} and \match{type=name;count=2$U}.
+/// matches \match{class X} once, and the rest of the declared records twice,
+/// once for their written definition and once for their implicit declaration:
+/// \match{type=name;count=2$Z}, \match{type=name;count=2$S} and
+/// \match{type=name;count=2$U}.
 extern const internal::VariadicDynCastAllOfMatcher<Decl, RecordDecl> recordDecl;
 
 /// Matches C++ class declarations.
@@ -516,7 +519,8 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, RecordDecl> recordDecl;
 /// \endcode
 /// \compile_args{-fno-delayed-template-parsing;-std=c++}
 /// The matcher \matcher{cxxRecordDecl()}
-/// matches \match{type=name$X} and \match{type=name;count=2$Z}.
+/// matches \match{class X} once, and \match{type=name;count=2$Z} twice,
+/// once for the written definition and once for the implicit declaration.
 extern const internal::VariadicDynCastAllOfMatcher<Decl, CXXRecordDecl>
     cxxRecordDecl;
 
@@ -528,7 +532,7 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, CXXRecordDecl>
 /// \endcode
 /// \compile_args{-fno-delayed-template-parsing;-std=c++}
 /// The matcher \matcher{classTemplateDecl()}
-/// matches \match{type=name$Z}.
+/// matches \match{template<class T> class Z {}}.
 extern const internal::VariadicDynCastAllOfMatcher<Decl, ClassTemplateDecl>
     classTemplateDecl;
 
@@ -612,11 +616,11 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, AccessSpecDecl>
 /// Given
 /// \code
 ///   class B {};
-///   class C : public virtual B {};
+///   class C : public B {};
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{cxxRecordDecl(hasDirectBase(cxxBaseSpecifier()))}
-/// matches \match{type=name$C}.
+/// matches \match{class C : public B {}}.
 extern const internal::VariadicAllOfMatcher<CXXBaseSpecifier> cxxBaseSpecifier;
 
 /// Matches constructor initializers.
@@ -729,7 +733,7 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{fieldDecl(isPublic())}
-/// matches \match{type=name$a}.
+/// matches \match{int a}.
 ///
 /// Given
 /// \code
@@ -740,7 +744,8 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl,
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{cxxRecordDecl(hasAnyBase(cxxBaseSpecifier(isPublic()).bind("base")))}
-/// matches \match{type=name$Derived1} and \match{type=name$Derived2},
+/// matches \match{class Derived1 : public Base {}} and
+/// \match{struct Derived2 : Base {}},
 /// with \matcher{type=sub$cxxBaseSpecifier(isPublic())} matching
 /// \match{sub=base$public Base} and \match{sub=base$Base}.
 AST_POLYMORPHIC_MATCHER(isPublic,
@@ -762,7 +767,7 @@ AST_POLYMORPHIC_MATCHER(isPublic,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{fieldDecl(isProtected())}
-/// matches \match{type=name$b}.
+/// matches \match{int b}.
 ///
 /// \code
 ///   class Base {};
@@ -771,7 +776,7 @@ AST_POLYMORPHIC_MATCHER(isPublic,
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{cxxRecordDecl(hasAnyBase(cxxBaseSpecifier(isProtected()).bind("base")))}
-/// matches \match{type=name$Derived}, with
+/// matches \match{class Derived : protected Base {}}, with
 /// \matcher{type=sub$cxxBaseSpecifier(isProtected())} matching
 /// \match{sub=base$Base}.
 AST_POLYMORPHIC_MATCHER(isProtected,
@@ -793,7 +798,7 @@ AST_POLYMORPHIC_MATCHER(isProtected,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{fieldDecl(isPrivate())}
-/// matches \match{type=name$c}.
+/// matches \match{int c}.
 ///
 /// \code
 ///   struct Base {};
@@ -803,7 +808,8 @@ AST_POLYMORPHIC_MATCHER(isProtected,
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{cxxRecordDecl(hasAnyBase(cxxBaseSpecifier(isPrivate()).bind("base")))}
-/// matches \match{type=name$Derived1} and \match{type=name$Derived2}, with
+/// matches \match{struct Derived1 : private Base {}} and
+/// \match{class Derived2 : Base {}}, with
 /// \matcher{type=sub$cxxBaseSpecifier(isPrivate())} matching
 /// \match{sub=base;count=2$Base}.
 AST_POLYMORPHIC_MATCHER(isPrivate,
@@ -823,8 +829,8 @@ AST_POLYMORPHIC_MATCHER(isPrivate,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{fieldDecl(isBitField())}
-/// matches \match{type=name$a},
-/// but does not match \nomatch{type=name$b}.
+/// matches \match{int a : 2},
+/// but does not match \nomatch{int b}.
 AST_MATCHER(FieldDecl, isBitField) { return Node.isBitField(); }
 
 /// Matches non-static data members that are bit-fields of the specified
@@ -840,8 +846,8 @@ AST_MATCHER(FieldDecl, isBitField) { return Node.isBitField(); }
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{fieldDecl(hasBitWidth(2))}
-/// matches \match{type=name$a} and \match{type=name$c},
-/// but not \nomatch{type=name$b}.
+/// matches \match{int a : 2} and \match{int c : 2},
+/// but not \nomatch{int b : 4}.
 AST_MATCHER_P(FieldDecl, hasBitWidth, unsigned, Width) {
   return Node.isBitField() &&
          Node.getBitWidthValue(Finder->getASTContext()) == Width;
@@ -860,11 +866,11 @@ AST_MATCHER_P(FieldDecl, hasBitWidth, unsigned, Width) {
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{fieldDecl(hasInClassInitializer(integerLiteral(equals(2))))}
-/// matches \match{type=name$a},
-/// but does not match \nomatch{type=name$b}.
+/// matches \match{int a = 2},
+/// but does not match \nomatch{int b = 3}.
 /// The matcher \matcher{fieldDecl(hasInClassInitializer(anything()))}
-/// matches \match{type=name$a} and \match{type=name$b},
-/// but does not match \nomatch{type=name$c}.
+/// matches \match{int a = 2} and \match{int b = 3},
+/// but does not match \nomatch{int c}.
 AST_MATCHER_P(FieldDecl, hasInClassInitializer, internal::Matcher<Expr>,
               InnerMatcher) {
   const Expr *Initializer = Node.getInClassInitializer();
@@ -951,7 +957,8 @@ AST_POLYMORPHIC_MATCHER(isImplicit,
 /// The matcher
 /// \matcher{functionDecl(hasAnyTemplateArgument(
 ///               refersToType(asString("int"))))}
-/// matches the instantiation of \match{type=name$f}.
+/// matches the instantiation of
+/// \match{void f() {}}.
 AST_POLYMORPHIC_MATCHER_P(
     hasAnyTemplateArgument,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
@@ -1087,18 +1094,24 @@ AST_MATCHER_P(Expr, ignoringImplicit, internal::Matcher<Expr>, InnerMatcher) {
 /// \endcode
 /// The matcher
 /// \matcher{varDecl(hasInitializer(ignoringImpCasts(integerLiteral())))}
-/// matches \match{type=name$a} and \match{type=name$b},
-/// but does not match \nomatch{type=name$e}.
+/// matches \match{const int a = 0} and \match{char b = 0},
+/// but does not match \nomatch{long e = (long) 0l} because of the c-style
+/// case.
+///
 /// The matcher
 /// \matcher{varDecl(hasInitializer(ignoringImpCasts(declRefExpr())))}
-/// matches \match{type=name$c} and \match{type=name$d}.
+/// matches \match{const int c = a} and \match{int *d = arr}.
 ///
 /// The matcher
 /// \matcher{varDecl(hasInitializer(integerLiteral()))}
-/// matches \match{type=name$a},
-/// but does not match \nomatch{type=name$b} or \nomatch{type=name$e}.
+/// matches \match{const int a = 0},
+/// but does not match \nomatch{char b = 0} because of the implicit cast to
+/// \c char or \nomatch{long e = (long) 0l} because of the c-style cast.
+///
 /// The matcher \matcher{varDecl(hasInitializer(declRefExpr()))}
-/// does not match \nomatch{type=name$c} or \nomatch{type=name$d}.
+/// does not match \nomatch{const int c = a} because \c a is cast from an
+/// l- to an r-value or \nomatch{int *d = arr} because the array-to-pointer
+/// decay.
 AST_MATCHER_P(Expr, ignoringImpCasts,
               internal::Matcher<Expr>, InnerMatcher) {
   return InnerMatcher.matches(*Node.IgnoreImpCasts(), Finder, Builder);
@@ -1118,11 +1131,12 @@ AST_MATCHER_P(Expr, ignoringImpCasts,
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{varDecl(hasInitializer(ignoringParenCasts(integerLiteral())))}
-/// matches \match{type=name$a}, \match{type=name$b}, \match{type=name$c}
-/// and \match{type=name$d}.
+/// matches \match{int a = 0}, \match{char b = (0)},
+/// \match{void* c = reinterpret_cast<char*>(0)} and \match{type=name$d}.
+///
 /// The matcher
 /// \matcher{varDecl(hasInitializer(integerLiteral()))}
-/// matches \match{type=name$a}.
+/// matches \match{int a = 0}.
 AST_MATCHER_P(Expr, ignoringParenCasts, internal::Matcher<Expr>, InnerMatcher) {
   return InnerMatcher.matches(*Node.IgnoreParenCasts(), Finder, Builder);
 }
@@ -1141,20 +1155,24 @@ AST_MATCHER_P(Expr, ignoringParenCasts, internal::Matcher<Expr>, InnerMatcher) {
 ///   long e = ((long) 0l);
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher
-/// \matcher{varDecl(hasInitializer(ignoringParenImpCasts(integerLiteral())))}
-/// matches \match{type=name$a} and \match{type=name$b},
-/// but does not match \nomatch{type=name$e}.
-/// The matcher
-/// \matcher{varDecl(hasInitializer(ignoringParenImpCasts(declRefExpr())))}
-/// matches \match{type=name$c} and \match{type=name$d}.
 ///
 /// The matcher
-/// \matcher{varDecl(hasInitializer(integerLiteral()))}
-/// matches \match{type=name$a},
-/// but does not match \nomatch{type=name$b} or \nomatch{type=name$e}.
+/// \matcher{varDecl(hasInitializer(ignoringParenImpCasts(integerLiteral())))}
+/// matches \match{int a = 0} and \match{char b = (0)},
+/// but does not match \nomatch{long e = ((long) 0l)} because of the c-style
+/// cast.
+///
+/// The matcher
+/// \matcher{varDecl(hasInitializer(ignoringParenImpCasts(declRefExpr())))}
+/// matches \match{const int c = a} and \match{int *d = (arr)}.
+///
+/// The matcher \matcher{varDecl(hasInitializer(integerLiteral()))} matches
+/// \match{int a = 0}, but does not match \nomatch{char b = (0)} or
+/// \nomatch{long e = ((long) 0l)} because of the casts.
+///
 /// The matcher \matcher{varDecl(hasInitializer(declRefExpr()))}
-/// does not match \nomatch{type=name$c}, or \nomatch{type=name$d}.
+/// does not match \nomatch{const int c = a} because of the l- to r-value cast,
+/// or \nomatch{int *d = (arr)} because of the array-to-pointer decay.
 AST_MATCHER_P(Expr, ignoringParenImpCasts,
               internal::Matcher<Expr>, InnerMatcher) {
   return InnerMatcher.matches(*Node.IgnoreParenImpCasts(), Finder, Builder);
@@ -1168,7 +1186,7 @@ AST_MATCHER_P(Expr, ignoringParenImpCasts,
 /// \endcode
 /// The matcher
 /// \matcher{varDecl(hasType(pointerType(pointee(ignoringParens(functionType())))))}
-/// matches \match{type=name$fp}.
+/// matches \match{void (*fp)(void)}.
 AST_MATCHER_P_OVERLOAD(QualType, ignoringParens, internal::Matcher<QualType>,
                        InnerMatcher, 0) {
   return InnerMatcher.matches(Node.IgnoreParens(), Finder, Builder);
@@ -1261,7 +1279,7 @@ AST_MATCHER(Expr, isValueDependent) { return Node.isValueDependent(); }
 ///
 /// The matcher \matcher{functionDecl(hasTemplateArgument(0,
 ///                         refersToType(asString("int"))))}
-/// matches the specialization of \match{type=name$f}.
+/// matches the specialization of \match{void f() {}}.
 AST_POLYMORPHIC_MATCHER_P2(
     hasTemplateArgument,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
@@ -1349,7 +1367,7 @@ AST_MATCHER_P(TemplateArgument, refersToTemplate,
 ///     refersToDeclaration(fieldDecl(hasName("next")).bind("next"))))}
 /// matches the specialization \match{type=typestr$struct A<&B::next>}
 /// with \matcher{type=sub$fieldDecl(hasName("next"))} matching
-/// \match{type=name;sub=next$B::next}.
+/// \match{sub=next$int next}.
 AST_MATCHER_P(TemplateArgument, refersToDeclaration,
               internal::Matcher<Decl>, InnerMatcher) {
   if (Node.getKind() == TemplateArgument::Declaration)
@@ -1371,7 +1389,7 @@ AST_MATCHER_P(TemplateArgument, refersToDeclaration,
 ///   isExpr(hasDescendant(declRefExpr(to(fieldDecl(hasName("next")).bind("next")))))))}
 /// matches the specialization \match{type=typestr$A<&struct B::next>}
 /// with \matcher{type=sub$fieldDecl(hasName("next"))} matching
-/// \match{type=name;sub=next$B::next}.
+/// \match{sub=next$int next}.
 AST_MATCHER_P(TemplateArgument, isExpr, internal::Matcher<Expr>, InnerMatcher) {
   if (Node.getKind() == TemplateArgument::Expression)
     return InnerMatcher.matches(*Node.getAsExpr(), Finder, Builder);
@@ -1508,13 +1526,11 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, CXXDestructorDecl>
 ///
 /// Given
 /// \code
-///   enum X {
-///     A, B, C
-///   };
+///   enum X { A, B, C };
 /// \endcode
 ///
 /// The matcher \matcher{enumDecl()}
-/// matches the enum \match{type=name$X}.
+/// matches the enum \match{enum X { A, B, C }}.
 extern const internal::VariadicDynCastAllOfMatcher<Decl, EnumDecl> enumDecl;
 
 /// Matches enum constants.
@@ -1543,10 +1559,10 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, EnumConstantDecl>
 /// \compile_args{-fno-delayed-template-parsing;-std=c++}
 ///
 /// The matcher \matcher{tagDecl()}
-/// matches \match{class X}, \match{class Z {}}, the injected class name
-/// \match{class Z}, \match{struct S {}},
-/// the injected class name \match{struct S}, \match{union U {}},
-/// the injected class name \match{union U}
+/// matches \match{class X}, \match{class Z {}}, the implicit class
+/// declaration \match{class Z}, \match{struct S {}},
+/// the implicit class declaration \match{struct S}, \match{union U {}},
+/// the implicit class declaration \match{union U}
 /// and \match{enum E { A, B, C }}.
 extern const internal::VariadicDynCastAllOfMatcher<Decl, TagDecl> tagDecl;
 
@@ -4331,9 +4347,11 @@ AST_MATCHER_P(CXXDependentScopeMemberExpr, memberHasSameNameAsBoundNode,
 /// \compile_args{-std=c++}
 ///
 /// The matcher \matcher{cxxRecordDecl(isDerivedFrom(hasName("X")))}
-/// matches \match{type=name$Y}, \match{type=name$Z} and \match{type=name$C}.
+/// matches \match{class Y : public X {}}, \match{class Z : public Y {}}
+/// and \match{class C : public B {}}.
+///
 /// The matcher \matcher{cxxRecordDecl(isDerivedFrom(hasName("Foo")))}
-/// matches \match{type=name$Bar}.
+/// matches \match{class Bar : public Alias {}}.
 ///
 /// In the following example, Bar matches isDerivedFrom(hasName("NSObject"))
 /// \code
@@ -4382,9 +4400,11 @@ AST_POLYMORPHIC_MATCHER_P(
 /// \compile_args{-std=c++}
 ///
 /// The matcher \matcher{cxxRecordDecl(isDerivedFrom("X"))}
-/// matches \match{type=name$Y}, \match{type=name$Z} and \match{type=name$C}.
+/// matches \match{class Y : public X {}}, \match{class Z : public Y {}}
+/// and \match{class C : public B {}}.
+///
 /// The matcher \matcher{cxxRecordDecl(isDerivedFrom("Foo"))}
-/// matches \match{type=name$Bar}.
+/// matches \match{class Bar : public Alias {}}.
 ///
 /// In the following example, Bar matches isDerivedFrom(hasName("NSObject"))
 /// \code
@@ -4426,7 +4446,8 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 ///
 /// The matcher
 /// \matcher{cxxRecordDecl(hasAnyBase(hasType(cxxRecordDecl(hasName("SpecialBase")))))}
-/// matches \match{type=name$Proxy} and \match{type=name$IndirectlyDerived}
+/// matches \match{class Proxy : SpecialBase {}} and
+/// \match{class IndirectlyDerived : Proxy {}}.
 // FIXME: Refactor this and isDerivedFrom to reuse implementation.
 AST_MATCHER_P(CXXRecordDecl, hasAnyBase, internal::Matcher<CXXBaseSpecifier>,
               BaseSpecMatcher) {
@@ -4447,7 +4468,7 @@ AST_MATCHER_P(CXXRecordDecl, hasAnyBase, internal::Matcher<CXXBaseSpecifier>,
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{cxxRecordDecl(hasDirectBase(hasType(cxxRecordDecl(hasName("SpecialBase")))))}
-/// matches \match{type=name$Proxy}
+/// matches \match{class Proxy : SpecialBase {}}.
 AST_MATCHER_P(CXXRecordDecl, hasDirectBase, internal::Matcher<CXXBaseSpecifier>,
               BaseSpecMatcher) {
   return Node.hasDefinition() &&
@@ -4539,7 +4560,8 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{cxxRecordDecl(isDirectlyDerivedFrom(namedDecl(hasName("X"))))}
-/// matches \match{type=name$Y} and \match{type=name$C} (Base == hasName("X")
+/// matches \match{class Y : public X {}} and \match{class C : public B {}}
+/// (Base == hasName("X").
 ///
 /// In the following example, Bar matches isDerivedFrom(hasName("X")):
 /// \code
@@ -4549,7 +4571,7 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{cxxRecordDecl(isDerivedFrom(hasName("X")))}
-/// matches \match{type=name$Bar}
+/// matches \match{class Bar : public Foo {}}.
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
     isDirectlyDerivedFrom,
     AST_POLYMORPHIC_SUPPORTED_TYPES(CXXRecordDecl, ObjCInterfaceDecl),
@@ -4575,8 +4597,8 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 /// \compile_args{-std=c++}
 ///
 /// The matcher \matcher{cxxRecordDecl(isDirectlyDerivedFrom("Base"))}
-/// matches \match{type=name$DirectlyDerived}, but not
-/// \nomatch{type=name$IndirectlyDerived}.
+/// matches \match{struct DirectlyDerived : public Base {}}, but not
+/// \nomatch{struct IndirectlyDerived : public DirectlyDerived {}}.
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
     isDirectlyDerivedFrom,
     AST_POLYMORPHIC_SUPPORTED_TYPES(CXXRecordDecl, ObjCInterfaceDecl),
@@ -4725,9 +4747,11 @@ extern const internal::ArgumentAdaptingMatcherFunc<internal::ForEachMatcher>
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{cxxRecordDecl(forEachDescendant(cxxRecordDecl(hasName("X"))))}
-/// matches \match{type=name;count=2$X}, \match{type=name$A},
-/// \match{type=name$B}, \match{type=typestr$class B::C}
-/// and \match{type=typestr$class B::C::X}
+/// matches \match{count=3$class X {}} three times, once for each of the
+/// declared classes \c X and their implicit class declaration,
+/// \match{class A { class X {}; }},
+/// \match{class B { class C { class X {}; }; }} and
+/// \match{class C { class X {}; }}.
 ///
 /// DescendantT must be an AST base type.
 ///
@@ -4749,41 +4773,49 @@ extern const internal::ArgumentAdaptingMatcherFunc<internal::ForEachMatcher>
 ///     forEachDescendant(cxxRecordDecl().bind("inner"))
 ///   ).bind("middle")))}
 /// will match 9 times:
+///
 /// It matches the definition of \match{type=name$A} with the definition of
-/// \match{sub=middle;type=name$B} in the middle and the injected class name of
-/// \match{sub=inner;type=name$B} as the innermost \c cxxRecordDecl.
+/// \match{sub=middle;type=name$B} in the middle and the implicit class
+/// declaration of \match{sub=inner;type=name$B} as the innermost \c
+/// cxxRecordDecl.
 ///
 /// It matches the definition of \match{type=name$A} with the definition of
 /// \match{sub=middle;type=name$C} in the middle and the definition of
 /// \match{sub=inner;type=name$B} as the innermost \c cxxRecordDecl.
 ///
 /// It matches the definition of \match{type=name$A} with the definition of
-/// \match{sub=middle;type=name$C} in the middle and the injected class name of
-/// \match{sub=inner;type=name$B} as the innermost \c cxxRecordDecl.
+/// \match{sub=middle;type=name$C} in the middle and the implicit class
+/// declaration of \match{sub=inner;type=name$B} as the innermost \c
+/// cxxRecordDecl.
 ///
 /// It matches the definition of \match{type=name$A} with the definition of
 /// \match{sub=middle;type=name$B} in the middle and the definition of
 /// \match{sub=inner;type=name$D} as the innermost \c cxxRecordDecl.
 ///
 /// It matches the definition of \match{type=name$A} with the definition of
-/// \match{sub=middle;type=name$B} in the middle and the injected class name of
-/// \match{sub=inner;type=name$D} as the innermost \c cxxRecordDecl.
+/// \match{sub=middle;type=name$B} in the middle and the implicit class
+/// declaration of \match{sub=inner;type=name$D} as the innermost \c
+/// cxxRecordDecl.
 ///
 /// It matches the definition of \match{type=name$A} with the definition of
-/// \match{sub=middle;type=name$C} in the middle and the injected class name of
-/// \match{sub=inner;type=name$C} as the innermost \c cxxRecordDecl.
+/// \match{sub=middle;type=name$C} in the middle and the implicit class
+/// declaration of \match{sub=inner;type=name$C} as the innermost \c
+/// cxxRecordDecl.
 ///
 /// It matches the definition of \match{type=name$A} with the definition of
-/// \match{sub=middle;type=name$D} in the middle and the injected class name of
-/// \match{sub=inner;type=name$D} as the innermost \c cxxRecordDecl.
+/// \match{sub=middle;type=name$D} in the middle and the implicit class
+/// declaration of \match{sub=inner;type=name$D} as the innermost \c
+/// cxxRecordDecl.
 ///
 /// It matches the definition of \match{type=name$B} with the definition of
-/// \match{sub=middle;type=name$C} in the middle and the injected class name of
-/// \match{sub=inner;type=name$C} as the innermost \c cxxRecordDecl.
+/// \match{sub=middle;type=name$C} in the middle and the implicit class
+/// declaration of \match{sub=inner;type=name$C} as the innermost \c
+/// cxxRecordDecl.
 ///
 /// It matches the definition of \match{type=name$B} with the definition of
-/// \match{sub=middle;type=name$D} in the middle and the injected class name of
-/// \match{sub=inner;type=name$D} as the innermost \c cxxRecordDecl.
+/// \match{sub=middle;type=name$D} in the middle and the implicit class
+/// declaration of \match{sub=inner;type=name$D} as the innermost \c
+/// cxxRecordDecl.
 ///
 /// Usable as: Any Matcher
 extern const internal::ArgumentAdaptingMatcherFunc<
@@ -4802,7 +4834,7 @@ extern const internal::ArgumentAdaptingMatcherFunc<
 /// The matcher
 /// \matcher{cxxRecordDecl(hasName("::A"),
 ///                 findAll(cxxRecordDecl(isDefinition()).bind("m")))}
-/// matches \match{type=name;count=3$A} three times,
+/// matches \match{count=3$class A { class B {}; class C {}; }} three times,
 /// with \matcher{type=sub$cxxRecordDecl(isDefinition()).bind("m")}
 /// matching \match{type=name;sub=m$A},
 /// \match{type=name;sub=m$B} and \match{type=name;sub=m$C}.
@@ -4860,7 +4892,8 @@ extern const internal::ArgumentAdaptingMatcherFunc<
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{cxxRecordDecl(unless(hasName("X")))}
-/// matches \match{type=name;count=2$Y}
+/// matches \match{type=name;count=2$Y} twice, once for the definition
+/// and once for the implicit class declaration.
 ///
 /// Usable as: Any Matcher
 extern const internal::VariadicOperatorMatcherFunc<1, 1> unless;
@@ -5278,7 +5311,7 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 /// The matcher \matcher{expr(hasType(cxxRecordDecl(hasName("X"))))}
 /// matches \match{x} and \match{z}.
 /// The matcher \matcher{varDecl(hasType(cxxRecordDecl(hasName("X"))))}
-/// matches \match{type=name$z}
+/// matches \match{X z}
 /// The matcher \matcher{typedefDecl(hasType(asString("int")))}
 /// matches \match{typedef int U}
 /// The matcher \matcher{friendDecl(hasType(asString("class X")))}
@@ -5317,7 +5350,7 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 /// The matcher \matcher{expr(hasType(cxxRecordDecl(hasName("X"))))}
 /// matches \match{x} and \match{z}.
 /// The matcher \matcher{varDecl(hasType(cxxRecordDecl(hasName("X"))))}
-/// matches \match{type=name$z}.
+/// matches \match{X z}.
 /// The matcher \matcher{friendDecl(hasType(asString("class X")))}
 /// matches \match{friend class X}.
 /// The matcher \matcher{cxxRecordDecl(hasAnyBase(cxxBaseSpecifier(hasType(
@@ -5716,7 +5749,7 @@ AST_MATCHER_P(DeclStmt, hasSingleDecl, internal::Matcher<Decl>, InnerMatcher) {
 ///   }
 /// \endcode
 /// The matcher \matcher{varDecl(hasInitializer(callExpr()))}
-/// matches \match{type=name$x}
+/// matches \match{int x = y()}
 AST_MATCHER_P(
     VarDecl, hasInitializer, internal::Matcher<Expr>,
     InnerMatcher) {
@@ -5783,7 +5816,7 @@ AST_MATCHER_P(LambdaExpr, forEachLambdaCapture,
 /// static int z;
 /// \endcode
 /// The matcher \matcher{varDecl(isStaticLocal())}
-/// matches \match{type=name$y}
+/// matches \match{static int y}.
 AST_MATCHER(VarDecl, isStaticLocal) {
   return Node.isStaticLocal();
 }
@@ -5800,7 +5833,7 @@ AST_MATCHER(VarDecl, isStaticLocal) {
 /// int z;
 /// \endcode
 /// The matcher \matcher{varDecl(hasLocalStorage())}
-/// matches \match{type=name$x}
+/// matches \match{int x}.
 AST_MATCHER(VarDecl, hasLocalStorage) {
   return Node.hasLocalStorage();
 }
@@ -5816,7 +5849,7 @@ AST_MATCHER(VarDecl, hasLocalStorage) {
 /// int z;
 /// \endcode
 /// The matcher \matcher{varDecl(hasGlobalStorage())}
-/// matches \match{type=name$y} and \match{type=name$z}
+/// matches \match{static int y} and \match{int z}.
 AST_MATCHER(VarDecl, hasGlobalStorage) {
   return Node.hasGlobalStorage();
 }
@@ -5834,9 +5867,9 @@ AST_MATCHER(VarDecl, hasGlobalStorage) {
 /// \endcode
 /// \compile_args{-std=c++11-or-later}
 /// The matcher \matcher{varDecl(hasAutomaticStorageDuration())}
-/// matches \match{type=name$x}
-/// but does not match \nomatch{type=name$y}, \nomatch{type=name$z} or
-/// \nomatch{type=name$a}
+/// matches \match{int x}
+/// but does not match \nomatch{static int y}, \nomatch{thread_local int z} or
+/// \nomatch{int a}
 AST_MATCHER(VarDecl, hasAutomaticStorageDuration) {
   return Node.getStorageDuration() == SD_Automatic;
 }
@@ -5857,8 +5890,8 @@ AST_MATCHER(VarDecl, hasAutomaticStorageDuration) {
 /// \endcode
 /// \compile_args{-std=c++11-or-later}
 /// The matcher \matcher{varDecl(hasStaticStorageDuration())}
-/// matches \match{type=name$y}, \match{type=name$a}, \match{type=name$b} and
-/// \match{type=name$c}
+/// matches \match{static int y}, \match{int a}, \match{static int b} and
+/// \match{extern int c}
 AST_MATCHER(VarDecl, hasStaticStorageDuration) {
   return Node.getStorageDuration() == SD_Static;
 }
@@ -5876,9 +5909,8 @@ AST_MATCHER(VarDecl, hasStaticStorageDuration) {
 /// \endcode
 /// \compile_args{-std=c++11-or-later}
 /// The matcher \matcher{varDecl(hasThreadStorageDuration())}
-/// matches \match{type=name$z}
-/// but does not match \nomatch{type=name$x}, \nomatch{type=name$z} or
-/// \nomatch{type=name$a}
+/// matches \match{thread_local int z}
+/// but does not match \nomatch{int x} or \nomatch{type=name$a}.
 AST_MATCHER(VarDecl, hasThreadStorageDuration) {
   return Node.getStorageDuration() == SD_Thread;
 }
@@ -5896,7 +5928,7 @@ AST_MATCHER(VarDecl, hasThreadStorageDuration) {
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{varDecl(isExceptionVariable())}
-/// matches \match{type=name$x}
+/// matches \match{int x}.
 AST_MATCHER(VarDecl, isExceptionVariable) {
   return Node.isExceptionVariable();
 }
@@ -5912,7 +5944,7 @@ AST_MATCHER(VarDecl, isExceptionVariable) {
 ///   }
 /// \endcode
 /// The matcher \matcher{callExpr(argumentCountIs(2))}
-/// matches \match{f(0, 0)}
+/// matches \match{f(0, 0)}.
 AST_POLYMORPHIC_MATCHER_P(argumentCountIs,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(
                               CallExpr, CXXConstructExpr,
@@ -6205,10 +6237,12 @@ AST_MATCHER(CXXCatchStmt, isCatchAll) {
 ///   };
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher \matcher{cxxRecordDecl(has(cxxConstructorDecl(
-///   hasAnyConstructorInitializer(anything())
-/// )))}
-/// matches \match{type=name$Foo}, hasAnyConstructorInitializer matches foo_(1)
+/// The matcher \matcher{cxxConstructorDecl(
+///   hasAnyConstructorInitializer(cxxCtorInitializer().bind("ctor_init"))
+/// )}
+/// matches \match{Foo() : foo_(1) { }},
+/// with \matcher{type=sub$cxxCtorInitializer()}
+/// matching \match{sub=ctor_init$foo_(1)}.
 AST_MATCHER_P(CXXConstructorDecl, hasAnyConstructorInitializer,
               internal::Matcher<CXXCtorInitializer>, InnerMatcher) {
   auto MatchIt = matchesFirstInPointerRange(InnerMatcher, Node.init_begin(),
@@ -6229,10 +6263,11 @@ AST_MATCHER_P(CXXConstructorDecl, hasAnyConstructorInitializer,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher
-/// \matcher{cxxRecordDecl(has(cxxConstructorDecl(hasAnyConstructorInitializer(
-///     forField(hasName("foo_"))))))}
-/// matches \match{type=name$Foo}
-/// with forField matching foo_
+/// \matcher{cxxConstructorDecl(hasAnyConstructorInitializer(
+///     forField(fieldDecl(hasName("foo_")).bind("field"))))}
+/// matches \match{Foo() : foo_(1) { }},
+/// with \matcher{type=sub$fieldDecl(hasName("foo_"))}
+/// matching \match{sub=field$foo_(1)}.
 AST_MATCHER_P(CXXCtorInitializer, forField,
               internal::Matcher<FieldDecl>, InnerMatcher) {
   const FieldDecl *NodeAsDecl = Node.getAnyMember();
@@ -6251,10 +6286,11 @@ AST_MATCHER_P(CXXCtorInitializer, forField,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher
-/// \matcher{cxxRecordDecl(has(cxxConstructorDecl(hasAnyConstructorInitializer(
-///     withInitializer(integerLiteral(equals(1)))))))}
-/// matches \match{type=name$Foo}
-/// with withInitializer matching (1)
+/// \matcher{cxxConstructorDecl(hasAnyConstructorInitializer(
+///     withInitializer(integerLiteral(equals(1)).bind("literal"))))}
+/// matches \match{Foo() : foo_(1) { }},
+/// with \matcher{type=sub$integerLiteral(equals(1))} matching
+/// \match{sub=literal$1}.
 AST_MATCHER_P(CXXCtorInitializer, withInitializer,
               internal::Matcher<Expr>, InnerMatcher) {
   const Expr* NodeAsExpr = Node.getInit();
@@ -6514,7 +6550,7 @@ AST_MATCHER(CXXConstructExpr, requiresZeroInitialization) {
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{cxxMethodDecl(hasParameter(0, hasType(asString("int"))))}
-/// matches \match{type=name$f}
+/// matches \match{void f(int x) {}}
 /// with hasParameter(...)
 /// matching int x.
 ///
@@ -6733,8 +6769,10 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
 /// \endcode
 ///
 /// The matcher \matcher{parmVarDecl(isAtPosition(0))} matches
-/// \match{type=name$a}. The matcher \matcher{parmVarDecl(isAtPosition(1))}
-/// matches \match{type=name$b}.
+/// \match{int a}.
+///
+/// The matcher \matcher{parmVarDecl(isAtPosition(1))}
+/// matches \match{int b}.
 AST_MATCHER_P(ParmVarDecl, isAtPosition, unsigned, N) {
   const clang::DeclContext *Context = Node.getParentFunctionOrMethod();
 
@@ -6758,10 +6796,12 @@ AST_MATCHER_P(ParmVarDecl, isAtPosition, unsigned, N) {
 ///   class X { void f(int x, int y, int z) {} };
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher \matcher{cxxMethodDecl(hasAnyParameter(hasName("y")))}
-///   matches \match{type=name$f}
-/// with hasAnyParameter(...)
-///   matching int y
+/// The matcher
+/// \matcher{cxxMethodDecl(hasAnyParameter(
+///   parmVarDecl(hasName("y")).bind("parm")))}
+/// matches \match{void f(int x, int y, int z) {}},
+/// with \matcher{type=sub$parmVarDecl(hasName("y"))}
+/// matching \match{sub=parm$int y}.
 ///
 /// For ObjectiveC, given
 /// \code
@@ -6805,7 +6845,7 @@ AST_POLYMORPHIC_MATCHER_P(hasAnyParameter,
 ///   void k(int x, int y, int z, ...);
 /// \endcode
 /// The matcher \matcher{functionDecl(parameterCountIs(2))}
-/// matches \match{type=name$g} and \match{type=name$h}
+/// matches \match{void g(int i, int j) {}} and \match{void h(int i, int j)}
 /// The matcher \matcher{functionProtoType(parameterCountIs(1))}
 /// matches the type \match{type=typestr;count=2$void (int)} of \c f and \c j.
 /// The matcher \matcher{functionProtoType(parameterCountIs(3))} matches the
@@ -6846,8 +6886,9 @@ AST_POLYMORPHIC_MATCHER_P(parameterCountIs,
 /// \match{sub=t_arg$R * 4}.
 /// The matcher
 /// \matcher{functionDecl(forEachTemplateArgument(refersToType(qualType().bind("type"))))}
-/// matches the specialization of \match{type=name;count=2$f} twice,
-/// with \matcher{type=sub$qualType()} matching
+/// matches the specialization of \match{count=2$void f(T&& t, U&& u) {}} twice
+/// for each of the template arguments, with \matcher{type=sub$qualType()}
+/// matching
 /// \match{sub=type;type=typestr$unsigned} and
 /// \match{sub=type;type=typestr$bool}.
 AST_POLYMORPHIC_MATCHER_P(
@@ -6878,13 +6919,12 @@ AST_POLYMORPHIC_MATCHER_P(
 ///   void nope();
 ///   [[noreturn]] void a();
 ///   __attribute__((noreturn)) void b();
-///   struct c { [[noreturn]] c(); };
+///   struct C { [[noreturn]] void c(); };
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{functionDecl(isNoReturn())}
-/// match \match{type=name$a}, \match{type=name$b}
-/// and \match{type=name$c}
-/// but do not match \nomatch{type=name$nope}
+/// matches \match{void a()}, \match{__attribute__((noreturn)) void b()} and
+/// \match{void c()} but does not match \nomatch{void nope()}.
 AST_MATCHER(FunctionDecl, isNoReturn) { return Node.isNoReturn(); }
 
 /// Matches the return type of a function declaration.
@@ -6895,7 +6935,7 @@ AST_MATCHER(FunctionDecl, isNoReturn) { return Node.isNoReturn(); }
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{cxxMethodDecl(returns(asString("int")))}
-///   matches \match{type=name$f}
+/// matches \match{int f() { return 1; }}.
 AST_MATCHER_P(FunctionDecl, returns,
               internal::Matcher<QualType>, InnerMatcher) {
   return InnerMatcher.matches(Node.getReturnType(), Finder, Builder);
@@ -6909,17 +6949,15 @@ AST_MATCHER_P(FunctionDecl, returns,
 ///   extern "C" { void g() {} }
 ///   void h() {}
 ///   extern "C" int x = 1;
-///   extern "C" int y = 2;
+///   extern "C" { int y = 2; }
 ///   int z = 3;
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{functionDecl(isExternC())}
-/// matches \match{type=name$f}
-/// and \match{type=name$g}.
+/// matches \match{void f() {}} and \match{void g() {}}.
 /// The matcher \matcher{varDecl(isExternC())}
-/// matches \match{type=name$x}
-/// and \match{type=name$y},
-/// but does not match \nomatch{type=name$z}.
+/// matches \match{int x = 1} and \match{int y = 2}, but does not
+/// match \nomatch{int z = 3}.
 AST_POLYMORPHIC_MATCHER(isExternC, AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
                                                                    VarDecl)) {
   return Node.isExternC();
@@ -6936,9 +6974,9 @@ AST_POLYMORPHIC_MATCHER(isExternC, AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
 ///   int k;
 /// \endcode
 /// The matcher \matcher{functionDecl(isStaticStorageClass())}
-///   matches \match{type=name$f}
+/// matches \match{static void f() {}}.
 /// The matcher \matcher{varDecl(isStaticStorageClass())}
-///   matches \match{type=name$i}
+/// matches \match{static int i = 0}.
 AST_POLYMORPHIC_MATCHER(isStaticStorageClass,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
                                                         VarDecl)) {
@@ -6954,8 +6992,8 @@ AST_POLYMORPHIC_MATCHER(isStaticStorageClass,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{functionDecl(isDeleted())}
-/// matches \match{type=name$DeletedFunc},
-/// but does not match \nomatch{type=name$Func}.
+/// matches \match{void DeletedFunc()},
+/// but does not match \nomatch{void Func()}.
 AST_MATCHER(FunctionDecl, isDeleted) {
   return Node.isDeleted();
 }
@@ -7081,7 +7119,7 @@ AST_POLYMORPHIC_MATCHER(isNoThrow,
 /// \endcode
 /// \compile_args{-std=c++23-or-later}
 /// The matcher \matcher{functionDecl(isConsteval())}
-/// matches \match{type=name$a}.
+/// matches \match{consteval int a()}.
 /// The matcher \matcher{ifStmt(isConsteval())}
 /// matches the if statements
 /// \match{if consteval {}}, \match{if ! consteval {}} and
@@ -7102,9 +7140,9 @@ AST_POLYMORPHIC_MATCHER(isConsteval,
 /// \endcode
 /// \compile_args{-std=c++11-or-later}
 /// The matcher \matcher{varDecl(isConstexpr())}
-/// matches \match{type=name$foo}.
+/// matches \match{constexpr int foo = 42}.
 /// The matcher \matcher{functionDecl(isConstexpr())}
-/// matches \match{type=name$bar}.
+/// matches \match{constexpr int bar()}.
 /// The matcher \matcher{ifStmt(isConstexpr())}
 /// matches \match{if constexpr(1 > 0) {}}.
 AST_POLYMORPHIC_MATCHER(isConstexpr,
@@ -7125,10 +7163,10 @@ AST_POLYMORPHIC_MATCHER(isConstexpr,
 /// \endcode
 /// \compile_args{-std=c++20-or-later}
 /// The matcher \matcher{varDecl(isConstinit())}
-/// matches the declaration of \match{type=name$foo}
-/// and \match{type=name$bar},
-/// but does not match \nomatch{type=name$baz} or
-/// \nomatch{xyz}.
+/// matches the declaration of \match{constinit int foo = 42}
+/// and \match{constinit const char* bar = "bar"},
+/// but does not match \nomatch{int baz = 42} or
+/// \nomatch{[[clang::require_constant_initialization]] int xyz = 42}.
 AST_MATCHER(VarDecl, isConstinit) {
   if (const auto *CIA = Node.getAttr<ConstInitAttr>())
     return CIA->isConstinit();
@@ -7238,7 +7276,8 @@ AST_MATCHER_P(IfStmt, hasElse, internal::Matcher<Stmt>, InnerMatcher) {
 /// The matcher \matcher{cxxRecordDecl(
 ///     has(fieldDecl(hasName("a"), hasType(type().bind("t")))),
 ///     has(fieldDecl(hasName("b"), hasType(type(equalsBoundNode("t"))))))}
-///   matches \match{type=name$X}, as \c a and \c b have the same type.
+///   matches \match{class X { int a; int b; }}, as \c a and \c b have the same
+///   type.
 ///
 /// Note that when multiple matches are involved via \c forEach* matchers,
 /// \c equalsBoundNodes acts as a filter.
@@ -7340,10 +7379,10 @@ AST_MATCHER_P(ArraySubscriptExpr, hasBase,
 ///   void f() {}
 /// \endcode
 /// The matcher \matcher{functionDecl(hasBody(compoundStmt().bind("compound")))}
-/// \match{type=name$f}
+/// \match{void f() {}}
 /// with \matcher{type=sub$compoundStmt()}
-/// matching \match{sub=compound${}}
-/// but does not match \nomatch{void f();}
+/// matching \match{sub=compound${}},
+/// but it does not match \nomatch{void f();}.
 AST_POLYMORPHIC_MATCHER_P(
     hasBody,
     AST_POLYMORPHIC_SUPPORTED_TYPES(DoStmt, ForStmt, WhileStmt, CXXForRangeStmt,
@@ -7366,12 +7405,10 @@ AST_POLYMORPHIC_MATCHER_P(
 ///   void f() {}
 ///   void g();
 /// \endcode
-/// The matcher \matcher{functionDecl(hasAnyBody(compoundStmt()))}
-///   matches \match{type=name$f}
-///   and \match{type=name$f}
-/// with \matcher{compoundStmt()}
-///   matching \match{{}}
-///   but does not match \nomatch{void g();}
+/// The matcher \matcher{functionDecl(hasAnyBody(compoundStmt().bind("body")))}
+/// matches \match{void f() {}} and the declaration \match{void f()},
+/// with \matcher{type=sub$compoundStmt()} matching \match{sub=body${}}, but it
+/// does not match \nomatch{void g()}.
 AST_MATCHER_P(FunctionDecl, hasAnyBody, internal::Matcher<Stmt>, InnerMatcher) {
   const Stmt *const Statement = Node.getBody();
   return (Statement != nullptr &&
@@ -7970,11 +8007,11 @@ AST_MATCHER_P(AbstractConditionalOperator, hasFalseExpression,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{tagDecl(isDefinition())}
-/// matches \match{type=name$A}
+/// matches \match{class A {}}.
 /// The matcher \matcher{varDecl(isDefinition())}
-/// matches \match{type=name$va}
+/// matches \match{int va}.
 /// The matcher \matcher{functionDecl(isDefinition())}
-/// matches \match{type=name$fa}
+/// matches \match{void fa() {}}.
 ///
 /// \code
 ///   @interface X
@@ -8106,7 +8143,7 @@ AST_MATCHER_P(CXXMethodDecl, forEachOverridden,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{cxxMethodDecl(isVirtual())}
-/// matches \match{type=name$x}.
+/// matches \match{virtual void x()}.
 ///
 /// Given
 /// \code
@@ -8117,7 +8154,7 @@ AST_MATCHER_P(CXXMethodDecl, forEachOverridden,
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{cxxRecordDecl(hasDirectBase(cxxBaseSpecifier(isVirtual())))}
-/// matches \match{type=name$DirectlyDerived}.
+/// matches \match{struct DirectlyDerived : virtual Base {}}.
 ///
 /// Usable as: Matcher<CXXMethodDecl>, Matcher<CXXBaseSpecifier>
 AST_POLYMORPHIC_MATCHER(isVirtual,
@@ -8167,11 +8204,11 @@ AST_MATCHER(CXXConstructorDecl, isInheritingConstructor) {
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{cxxRecordDecl(isFinal())}
-/// matches \match{type=name$A},
+/// matches \match{class A final {}},
 /// but does not match \nomatch{type=name$B} or \nomatch{type=name$C}.
 /// The matcher \matcher{cxxMethodDecl(isFinal())}
 /// matches \match{void f() final} in \c C ,
-/// but does not match \nomatch{virtual void f()} in \c B .
+/// but it does not match \nomatch{virtual void f()} in \c B .
 AST_POLYMORPHIC_MATCHER(isFinal,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(CXXRecordDecl,
                                                         CXXMethodDecl)) {
@@ -8204,7 +8241,7 @@ AST_MATCHER(CXXMethodDecl, isPure) { return Node.isPureVirtual(); }
 /// \compile_args{-std=c++}
 ///
 /// The matcher \matcher{cxxMethodDecl(isConst())}
-/// matches \match{type=name$foo} but not \nomatch{type=name$bar}
+/// matches \match{void foo() const} but not \nomatch{void bar()}.
 AST_MATCHER(CXXMethodDecl, isConst) {
   return Node.isConst();
 }
@@ -8335,7 +8372,7 @@ AST_POLYMORPHIC_MATCHER(
 ///   void c(double);
 /// \endcode
 /// The matcher \matcher{functionDecl(hasAnyParameter(hasType(isInteger())))}
-/// \match{type=name$a}, \match{type=name$b}, but not \nomatch{type=name$c}.
+/// \match{void a(int)}, \match{void b(long)}, but not \nomatch{void c(double)}.
 AST_MATCHER(QualType, isInteger) {
     return Node->isIntegerType();
 }
@@ -8350,8 +8387,8 @@ AST_MATCHER(QualType, isInteger) {
 /// \endcode
 /// The matcher
 /// \matcher{functionDecl(hasAnyParameter(hasType(isUnsignedInteger())))}
-/// matches \match{type=name$b},
-/// but does not match \nomatch{type=name$a} and \nomatch{type=name$c}.
+/// matches \match{void b(unsigned long)},
+/// but it does not match \nomatch{void a(int)} and \nomatch{void c(double)}.
 AST_MATCHER(QualType, isUnsignedInteger) {
     return Node->isUnsignedIntegerType();
 }
@@ -8366,8 +8403,8 @@ AST_MATCHER(QualType, isUnsignedInteger) {
 /// \endcode
 /// The matcher
 /// \matcher{functionDecl(hasAnyParameter(hasType(isSignedInteger())))} matches
-/// \match{type=name$a}, but not \notmatch{type=name$b} and not
-/// \notmatch{type=name$c}.
+/// \match{void a(int)}, but not \notmatch{void b(unsigned long)} or
+/// \notmatch{void c(double)}.
 AST_MATCHER(QualType, isSignedInteger) {
     return Node->isSignedIntegerType();
 }
@@ -8384,7 +8421,8 @@ AST_MATCHER(QualType, isSignedInteger) {
 ///
 /// The matcher
 /// \matcher{functionDecl(hasAnyParameter(hasType(isAnyCharacter())))}
-/// \match{type=name$a}, \match{type=name$b}, but not \notmatch{type=name$c}.
+/// \match{void a(char)}, \match{void b(wchar_t)}, but not
+/// \notmatch{void c(double)}.
 AST_MATCHER(QualType, isAnyCharacter) {
     return Node->isAnyCharacterType();
 }
@@ -8419,14 +8457,12 @@ AST_MATCHER(QualType, isAnyPointer) {
 ///   void b(int const);
 ///   void c(const int);
 ///   void d(const int*);
-///   void e(int const) {};
 /// \endcode
 /// The matcher
 /// \matcher{functionDecl(hasAnyParameter(hasType(isConstQualified())))}
-///   matches \match{type=name$b}, \match{type=name$c} and
-///   \match{type=name$e}.
-///   It does not match \notmatch{type=name$d} as there
-///   is no top-level const on the parameter type "const int *".
+/// matches \match{void b(int const)} and \match{void c(const int)}.
+/// It does not match \notmatch{void d(const int*)} as there
+/// is no top-level \c const on the parameter type \c{const int *}.
 AST_MATCHER(QualType, isConstQualified) {
   return Node.isConstQualified();
 }
@@ -8440,14 +8476,12 @@ AST_MATCHER(QualType, isConstQualified) {
 ///   void b(int volatile);
 ///   void c(volatile int);
 ///   void d(volatile int*);
-///   void e(int volatile) {};
 /// \endcode
 /// The matcher
 /// \matcher{functionDecl(hasAnyParameter(hasType(isVolatileQualified())))}
-///   matches \match{type=name$b}, \match{type=name$c} and
-///   \match{type=name$e}.
-///   It does not match \notmatch{type=name$d} as there
-///   is no top-level volatile on the parameter type "volatile int *".
+/// matches \match{void b(int volatile)} and \match{void c(volatile int)}.
+/// It does not match \notmatch{void d(volatile int*)} as there
+/// is no top-level volatile on the parameter type "volatile int *".
 AST_MATCHER(QualType, isVolatileQualified) {
   return Node.isVolatileQualified();
 }
@@ -8465,9 +8499,9 @@ AST_MATCHER(QualType, isVolatileQualified) {
 /// \endcode
 /// \compile_args{-std=c++11-or-later}
 ///
-/// The matcher \matcher{varDecl(hasType(hasLocalQualifiers()))} matches only
-/// \match{type=name$j} and \match{type=name$k}. \notmatch{type=name$i} is
-/// const-qualified but the qualifier is not local.
+/// The matcher \matcher{varDecl(hasType(hasLocalQualifiers()))} matches
+/// \match{int *const j = nullptr} and \match{int *volatile k},
+///  bot not \notmatch{const_int i} because the const qualifier is not local.
 AST_MATCHER(QualType, hasLocalQualifiers) {
   return Node.hasLocalQualifiers();
 }
@@ -8733,9 +8767,11 @@ AST_MATCHER_P(QualifiedTypeLoc, hasUnqualifiedLoc, internal::Matcher<TypeLoc>,
 ///   int f() { return 5; }
 ///   void g() {}
 /// \endcode
-/// The matcher \matcher{functionDecl(hasReturnTypeLoc(loc(asString("int"))))}
-///   matches the declaration of \match{type=name$f}, but not
-///   \notmatch{type=name$g}.
+/// The matcher
+/// \matcher{functionDecl(hasReturnTypeLoc(typeLoc(loc(asString("int")))))}
+/// matches the declaration of \match{int f() { return 5; }} with
+/// \matcher{type=sub$typeLoc(loc(asString("int")))} matching the spelling of
+/// \match{sub=loc$int}, but the matcher does not match \notmatch{void g() {}}.
 AST_MATCHER_P(FunctionDecl, hasReturnTypeLoc, internal::Matcher<TypeLoc>,
               ReturnMatcher) {
   auto Loc = Node.getFunctionTypeLoc();
@@ -8910,7 +8946,7 @@ AST_MATCHER_P(ElaboratedTypeLoc, hasNamedTypeLoc, internal::Matcher<TypeLoc>,
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{functionDecl(returns(booleanType()))}
-/// \match{type=name$func}
+/// \match{bool func()}.
 AST_MATCHER(Type, booleanType) {
   return Node.isBooleanType();
 }
@@ -8924,7 +8960,7 @@ AST_MATCHER(Type, booleanType) {
 /// \compile_args{-std=c++}
 ///
 /// The matcher \matcher{functionDecl(returns(voidType()))}
-/// \match{type=name$func}
+/// \match{void func()}.
 AST_MATCHER(Type, voidType) {
   return Node.isVoidType();
 }
@@ -9242,8 +9278,8 @@ extern const AstTypeMatcher<FunctionProtoType> functionProtoType;
 /// \endcode
 ///
 /// The matcher \matcher{varDecl(hasType(pointsTo(parenType())))}
-///   matches \match{type=name$ptr_to_array} but not
-///   \nomatch{type=name$array_of_ptrs}.
+/// matches \match{int (*ptr_to_array)[4]}, but not
+/// \nomatch{int *array_of_ptrs[4]}.
 extern const AstTypeMatcher<ParenType> parenType;
 
 /// Matches \c ParenType nodes where the inner type is a specific type.
@@ -9256,8 +9292,8 @@ extern const AstTypeMatcher<ParenType> parenType;
 ///
 /// The matcher
 /// \matcher{varDecl(hasType(pointsTo(parenType(innerType(functionType())))))}
-///   matches \match{type=name$ptr_to_func} but not
-///   \nomatch{type=name$ptr_to_array}.
+/// matches \match{int (*ptr_to_func)(int)} but not
+/// \nomatch{int (*ptr_to_array)[4]}.
 ///
 /// Usable as: Matcher<ParenType>
 AST_TYPE_TRAVERSE_MATCHER(innerType, getInnerType,
@@ -9735,7 +9771,7 @@ AST_MATCHER_P(DecayedType, hasDecayedType, internal::Matcher<QualType>,
 /// \compile_args{-std=c++}
 ///
 /// The matcher \matcher{cxxRecordDecl(hasDeclContext(namedDecl(hasName("M"))))}
-///   matches the declaration of \match{type=name$D}.
+/// matches the definition of \match{class D {}}.
 AST_MATCHER_P(Decl, hasDeclContext, internal::Matcher<Decl>, InnerMatcher) {
   const DeclContext *DC = Node.getDeclContext();
   if (!DC) return false;
@@ -9755,7 +9791,8 @@ AST_MATCHER_P(Decl, hasDeclContext, internal::Matcher<Decl>, InnerMatcher) {
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{nestedNameSpecifier()}
-/// matches \match{type=name$ns} and both \match{type=name;count=2$A}
+/// matches \match{type=name$ns} and both spellings of
+/// \match{type=name;count=2$A} in \c A::f() and \c ns::A .
 extern const internal::VariadicAllOfMatcher<NestedNameSpecifier>
     nestedNameSpecifier;
 
@@ -9814,7 +9851,7 @@ AST_MATCHER_FUNCTION_P_OVERLOAD(
 /// The matcher \matcher{nestedNameSpecifier(specifiesType(
 ///   hasDeclaration(cxxRecordDecl(hasName("A")))
 /// ))}
-/// matches \match{type=name$A}.
+/// matches the spelling of \match{type=name$A} in \c A::B::C .
 AST_MATCHER_P(NestedNameSpecifier, specifiesType,
               internal::Matcher<QualType>, InnerMatcher) {
   if (!Node.getAsType())
@@ -9891,7 +9928,7 @@ AST_MATCHER_P_OVERLOAD(NestedNameSpecifierLoc, hasPrefix,
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{nestedNameSpecifier(specifiesNamespace(hasName("ns")))} matches
-/// \match{type=name$ns}.
+/// the spelling of \match{type=name$ns} in \c ns::A .
 AST_MATCHER_P(NestedNameSpecifier, specifiesNamespace,
               internal::Matcher<NamespaceDecl>, InnerMatcher) {
   if (!Node.getAsNamespace())
@@ -9992,7 +10029,7 @@ AST_MATCHER_P(SwitchStmt, forEachSwitchCase, internal::Matcher<SwitchCase>,
 /// \compile_args{-std=c++}
 /// The matcher \matcher{cxxConstructorDecl(forEachConstructorInitializer(
 ///   forField(fieldDecl().bind("x"))))}
-/// matches the constructor of \match{type=name;count=2$A} twice, with
+/// matches the constructor of \match{count=2$A() : i(42), j(42) {}} twice, with
 /// \matcher{type=sub$fieldDecl()} matching \match{sub=field$i} and
 /// \match{sub=field$j} respectively.
 AST_MATCHER_P(CXXConstructorDecl, forEachConstructorInitializer,
@@ -10182,9 +10219,12 @@ AST_MATCHER_P(FunctionDecl, hasExplicitSpecifier, internal::Matcher<Expr>,
 ///   inline int Foo = 5;
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher \matcher{functionDecl(isInline())} matches \match{type=name$f}.
-/// The matcher \matcher{namespaceDecl(isInline())} matches \match{type=name$m}.
-/// The matcher \matcher{varDecl(isInline())} matches \match{type=name$Foo}
+/// The matcher \matcher{functionDecl(isInline())} matches
+/// \match{inline void f()}.
+/// The matcher \matcher{namespaceDecl(isInline())} matches
+/// \match{inline namespace m {}}.
+/// The matcher \matcher{varDecl(isInline())} matches
+/// \match{inline int Foo = 5}.
 AST_POLYMORPHIC_MATCHER(isInline, AST_POLYMORPHIC_SUPPORTED_TYPES(NamespaceDecl,
                                                                   FunctionDecl,
                                                                   VarDecl)) {
@@ -10261,7 +10301,8 @@ AST_MATCHER(Decl, isInStdNamespace) { return Node.isInStdNamespace(); }
 /// The matcher \matcher{cxxRecordDecl(hasName("vector"),
 ///                         isInAnonymousNamespace())}
 /// matches \match{type=name;count=6$vector},
-/// twice per declaration at #1, #2 and #3.
+/// two times for the definition and the implicit class declaration
+/// for each of the three definitions of \c vector .
 AST_MATCHER(Decl, isInAnonymousNamespace) {
   return Node.isInAnonymousNamespace();
 }
@@ -10294,7 +10335,7 @@ AST_MATCHER_P(CaseStmt, hasCaseConstant, internal::Matcher<Expr>,
 /// \endcode
 /// \compile_args{--cuda-gpu-arch=sm_70;-std=c++}
 /// The matcher \matcher{decl(hasAttr(clang::attr::CUDADevice))}
-/// matches \match{type=name$f}.
+/// matches \match{__attribute__((device)) void f() {}}.
 /// If the matcher is used from clang-query, attr::Kind
 /// parameter should be passed as a quoted string. e.g.,
 /// \c hasAttr("attr::CUDADevice").
@@ -10382,7 +10423,7 @@ AST_MATCHER_FUNCTION(internal::Matcher<Expr>, nullPointerConstant) {
 /// \compile_args{-std=c++11-or-later}
 /// The matcher \matcher{bindingDecl(hasName("f"),
 ///                 forDecomposition(decompositionDecl()))}
-/// matches \match{type=name$f} in 'auto &[f, s, t]'.
+/// matches \match{type=name$f} in \c{auto &[f, s, t]}.
 AST_MATCHER_P(BindingDecl, forDecomposition, internal::Matcher<ValueDecl>,
               InnerMatcher) {
   if (const ValueDecl *VD = Node.getDecomposedDecl())
