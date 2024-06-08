@@ -813,7 +813,8 @@ structs) are considered sized and can be used in loads, stores, allocas, but
 not GEPs.
 
 Globals with ``toc-data`` attribute set are stored in TOC of XCOFF. Their
-alignments are the same as that of a TOC entry.
+alignments are not larger than that of a TOC entry. Optimizations should not
+increase their alignments to prevent TOC overflow.
 
 Syntax::
 
