@@ -1204,8 +1204,7 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
 
 Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
                                             const unsigned char *Ptr,
-                                            uint64_t FirstWord,
-                                            memprof::IndexedVersion Version) {
+                                            uint64_t FirstWord) {
   // The value returned from RecordTableGenerator.Emit.
   const uint64_t RecordTableOffset =
       Version == memprof::Version0
@@ -1259,8 +1258,7 @@ Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
 }
 
 Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
-                                          const unsigned char *Ptr,
-                                          memprof::IndexedVersion Version) {
+                                          const unsigned char *Ptr) {
   // The offset in the stream right before invoking
   // CallStackTableGenerator.Emit.
   const uint64_t CallStackPayloadOffset =
@@ -1285,7 +1283,7 @@ Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
   MemProfRecordTable.reset(MemProfRecordHashTable::Create(
       /*Buckets=*/Start + RecordTableOffset,
       /*Payload=*/Start + RecordPayloadOffset,
-      /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
+      /*Base=*/Start, memprof::RecordLookupTrait(memprof::Version3, Schema)));
 
   return Error::success();
 }
@@ -1323,11 +1321,11 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   case memprof::Version0:
   case memprof::Version1:
   case memprof::Version2:
-    if (Error E = deserializeV012(Start, Ptr, FirstWord, Version))
+    if (Error E = deserializeV012(Start, Ptr, FirstWord))
       return E;
     break;
   case memprof::Version3:
-    if (Error E = deserializeV3(Start, Ptr, Version))
+    if (Error E = deserializeV3(Start, Ptr))
       return E;
     break;
   }

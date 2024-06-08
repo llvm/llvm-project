@@ -148,6 +148,12 @@ New checks
   to reading out-of-bounds data due to inadequate or incorrect string null
   termination.
 
+- New :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` check.
+
+  Detects variables and functions that can be marked as static or moved into
+  an anonymous namespace to enforce internal linkage.
+
 - New :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check.
 
@@ -316,6 +322,10 @@ Changes in existing checks
   option `HeaderFileExtensions` by the global option of the same name.
   Additionally, the option `UseHeaderFileExtensions` is removed, so that the
   check uses the `HeaderFileExtensions` option unconditionally.
+
+- Improved :doc:`misc-header-include-cycle
+  <clang-tidy/checks/misc/header-include-cycle>` check by avoiding crash for self
+  include cycles.
 
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check by replacing the local
