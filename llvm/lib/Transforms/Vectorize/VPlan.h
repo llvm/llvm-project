@@ -874,6 +874,7 @@ public:
     case VPRecipeBase::VPScalarCastSC:
       return true;
     case VPRecipeBase::VPInterleaveSC:
+    case VPRecipeBase::VPIntermediateStoreSC:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
@@ -1044,6 +1045,7 @@ protected:
 public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
+           R->getVPDefID() == VPRecipeBase::VPIntermediateStoreSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
@@ -2836,6 +2838,55 @@ public:
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+};
+
+/// A recipe to represent scalar stores that sink outside the vector loop.
+class VPIntermediateStoreRecipe : public VPRecipeBase {
+  StoreInst &SI;
+
+public:
+  VPIntermediateStoreRecipe(StoreInst &SI, VPValue *StoredVal, VPValue *Addr,
+                            DebugLoc DL)
+      : VPRecipeBase(VPDef::VPIntermediateStoreSC, {StoredVal, Addr}, DL),
+        SI(SI) {}
+
+  ~VPIntermediateStoreRecipe() override = default;
+
+  VPIntermediateStoreRecipe *clone() override {
+    return new VPIntermediateStoreRecipe(SI, getStoredVal(), getAddress(),
+                                         getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPIntermediateStoreSC)
+
+  /// Generate the scalar store instruction for intermediate store.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Return the value stored by this recipe.
+  VPValue *getStoredVal() const { return getOperand(0); }
+
+  /// Return the address accessed by this recipe.
+  VPValue *getAddress() const { return getOperand(1); }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  /// Returns true if the recipe only uses the first part of operand \p Op.
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;

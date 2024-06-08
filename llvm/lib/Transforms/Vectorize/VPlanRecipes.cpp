@@ -47,6 +47,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
+  case VPIntermediateStoreSC:
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
     return true;
@@ -99,6 +100,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBranchOnMaskSC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
+  case VPIntermediateStoreSC:
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
     return false;
@@ -547,14 +549,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
         ReducedPartRdx = RdxDesc.isSigned()
                              ? Builder.CreateSExt(ReducedPartRdx, PhiTy)
                              : Builder.CreateZExt(ReducedPartRdx, PhiTy);
-    }
-
-    // If there were stores of the reduction value to a uniform memory address
-    // inside the loop, create the final store here.
-    if (StoreInst *SI = RdxDesc.IntermediateStore) {
-      auto *NewSI = Builder.CreateAlignedStore(
-          ReducedPartRdx, SI->getPointerOperand(), SI->getAlign());
-      propagateMetadata(NewSI, SI);
     }
 
     return ReducedPartRdx;
@@ -1744,6 +1738,24 @@ void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
   O << " = " << Instruction::getOpcodeName(Opcode) << " ";
   printOperands(O, SlotTracker);
   O << " to " << *ResultTy;
+}
+#endif
+
+void VPIntermediateStoreRecipe::execute(VPTransformState &State) {
+  IRBuilderBase &Builder = State.Builder;
+  Value *StoredVal = State.get(getStoredVal(), 0, /*IsScalar*/ true);
+  Value *Addr = State.get(getAddress(), 0, /*IsScalar*/ true);
+  StoreInst *NewSI =
+      Builder.CreateAlignedStore(StoredVal, Addr, getLoadStoreAlignment(&SI));
+  NewSI->setDebugLoc(getDebugLoc());
+  State.addMetadata(NewSI, &SI);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPIntermediateStoreRecipe::print(raw_ostream &O, const Twine &Indent,
+                                      VPSlotTracker &SlotTracker) const {
+  O << Indent << "SINK store ";
+  printOperands(O, SlotTracker);
 }
 #endif
 

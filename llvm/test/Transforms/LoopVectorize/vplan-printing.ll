@@ -187,6 +187,7 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RES:.+]]> = compute-reduction-result ir<%red>, ir<%red.next>
+; CHECK-NEXT:   SINK store vp<[[RED_RES]]>, ir<%dst>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
