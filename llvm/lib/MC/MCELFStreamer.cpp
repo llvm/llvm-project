@@ -511,12 +511,6 @@ static void CheckBundleSubtargets(const MCSubtargetInfo *OldSTI,
 void MCELFStreamer::emitInstToData(const MCInst &Inst,
                                    const MCSubtargetInfo &STI) {
   MCAssembler &Assembler = getAssembler();
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  Assembler.getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  for (auto &Fixup : Fixups)
-    fixSymbolsInTLSFixups(Fixup.getValue());
 
   // There are several possibilities here:
   //
@@ -535,7 +529,16 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   //   the group, though.
   MCDataFragment *DF;
 
+  // When bundling is enabled, we can't just append to the data fragment, as it
+  // might need to be a MCCompactEncodedInstFragment for zero fixups.
   if (Assembler.isBundlingEnabled()) {
+    SmallVector<MCFixup, 4> Fixups;
+    SmallString<256> Code;
+    Assembler.getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
+
+    for (auto &Fixup : Fixups)
+      fixSymbolsInTLSFixups(Fixup.getValue());
+
     MCSection &Sec = *getCurrentSectionOnly();
     if (isBundleLocked() && !Sec.isBundleGroupBeforeFirstInst()) {
       // If we are bundle-locked, we re-use the current fragment.
@@ -546,6 +549,9 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
       // Optimize memory usage by emitting the instruction to a
       // MCCompactEncodedInstFragment when not in a bundle-locked group and
       // there are no fixups registered.
+      //
+      // Apparently, this is not just a performance optimization? Using an
+      // MCDataFragment at this point causes test failures.
       MCCompactEncodedInstFragment *CEIF =
           getContext().allocFragment<MCCompactEncodedInstFragment>();
       insert(CEIF);
@@ -567,21 +573,39 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
     // We're now emitting an instruction in a bundle group, so this flag has
     // to be turned off.
     Sec.setBundleGroupBeforeFirstInst(false);
-  } else {
-    DF = getOrCreateDataFragment(&STI);
+
+    for (auto &Fixup : Fixups) {
+      Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
+      DF->getFixups().push_back(Fixup);
+    }
+
+    DF->setHasInstructions(STI);
+    if (!Fixups.empty() && Fixups.back().getTargetKind() ==
+                               getAssembler().getBackend().RelaxFixupKind)
+      DF->setLinkerRelaxable();
+
+    DF->getContents().append(Code.begin(), Code.end());
+    return;
   }
 
-  // Add the fixups and data.
+  DF = getOrCreateDataFragment(&STI);
+
+  // Emit instruction directly into data fragment.
+  size_t FixupStartIndex = DF->getFixups().size();
+  size_t CodeOffset = DF->getContents().size();
+  Assembler.getEmitter().encodeInstruction(Inst, DF->getContents(),
+                                           DF->getFixups(), STI);
+
+  auto Fixups = MutableArrayRef(DF->getFixups()).slice(FixupStartIndex);
   for (auto &Fixup : Fixups) {
-    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixup);
+    Fixup.setOffset(Fixup.getOffset() + CodeOffset);
+    fixSymbolsInTLSFixups(Fixup.getValue());
   }
 
   DF->setHasInstructions(STI);
   if (!Fixups.empty() && Fixups.back().getTargetKind() ==
                              getAssembler().getBackend().RelaxFixupKind)
     DF->setLinkerRelaxable();
-  DF->getContents().append(Code.begin(), Code.end());
 }
 
 void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
