@@ -173,6 +173,7 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple spir64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple spirv32
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple spirv64
+// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple spirv64-amd-amdhsa
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm32
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm32-wasi
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm32-emscripten
