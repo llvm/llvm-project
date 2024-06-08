@@ -499,21 +499,21 @@ public:
     // Zero-extend, sign-extend or trunc the pointer value.
     auto index = adaptor.getStride();
     auto width = index.getType().cast<mlir::IntegerType>().getWidth();
-    mlir::DataLayout LLVMLayout(
-        index.getDefiningOp()->getParentOfType<mlir::ModuleOp>());
+    mlir::DataLayout LLVMLayout(ptrStrideOp->getParentOfType<mlir::ModuleOp>());
     auto layoutWidth =
         LLVMLayout.getTypeIndexBitwidth(adaptor.getBase().getType());
-    if (layoutWidth && width != *layoutWidth) {
+    auto indexOp = index.getDefiningOp();
+    if (indexOp && layoutWidth && width != *layoutWidth) {
       // If the index comes from a subtraction, make sure the extension happens
       // before it. To achieve that, look at unary minus, which already got
       // lowered to "sub 0, x".
-      auto sub = dyn_cast<mlir::LLVM::SubOp>(index.getDefiningOp());
+      auto sub = dyn_cast<mlir::LLVM::SubOp>(indexOp);
       auto unary =
           dyn_cast<mlir::cir::UnaryOp>(ptrStrideOp.getStride().getDefiningOp());
       bool rewriteSub =
           unary && unary.getKind() == mlir::cir::UnaryOpKind::Minus && sub;
       if (rewriteSub)
-        index = index.getDefiningOp()->getOperand(1);
+        index = indexOp->getOperand(1);
 
       // Handle the cast
       auto llvmDstType = mlir::IntegerType::get(ctx, *layoutWidth);

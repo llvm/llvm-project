@@ -12,6 +12,10 @@ module {
     %4 = cir.load %3 : !cir.ptr<!s32i>, !s32i
     cir.return
   }
+  cir.func @g(%arg0: !cir.ptr<!s32i>, %2 : !s32i) {
+    %3 = cir.ptr_stride(%arg0 : !cir.ptr<!s32i>, %2 : !s32i), !cir.ptr<!s32i>
+    cir.return
+  }
 }
 
 // MLIR-LABEL: @f
@@ -24,3 +28,6 @@ module {
 // MLIR:   %[[VAL_6:.*]] = llvm.getelementptr %[[VAL_3]]{{\[}}%[[VAL_5]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 // MLIR:   %[[VAL_7:.*]] = llvm.load %[[VAL_6]] {alignment = 4 : i64} : !llvm.ptr -> i32
 // MLIR:   llvm.return
+
+// MLIR-LABEL: @g
+// MLIR: llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i32) -> !llvm.ptr, i32
