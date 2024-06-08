@@ -26,9 +26,9 @@ BUILTIN(__builtin_wasm_memory_size, "zIi", "n")
 BUILTIN(__builtin_wasm_memory_grow, "zIiz", "n")
 
 // Memory Tagging
-BUILTIN(__builtin_wasm_memtag_status, "ziIi", "n")
-BUILTIN(__builtin_wasm_memtag_tagbits, "ziIi", "n")
-BUILTIN(__builtin_wasm_memtag_startbit, "ziIi", "n")
+BUILTIN(__builtin_wasm_memtag_status, "zIi", "n")
+BUILTIN(__builtin_wasm_memtag_tagbits, "zIi", "n")
+BUILTIN(__builtin_wasm_memtag_startbit, "zIi", "n")
 BUILTIN(__builtin_wasm_memtag_extract, "zIiv*", "n")
 BUILTIN(__builtin_wasm_memtag_insert, "v*Iiv*z", "n")
 BUILTIN(__builtin_wasm_memtag_copy, "v*Iiv*v*", "n")
