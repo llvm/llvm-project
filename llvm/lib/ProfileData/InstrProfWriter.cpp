@@ -494,17 +494,40 @@ static uint64_t writeMemProfFrames(
 static llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
 writeMemProfFrameArray(
     ProfOStream &OS,
-    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
+    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData,
+    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
   // Mappings from FrameIds to array indexes.
   llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId> MemProfFrameIndexes;
 
-  // Sort the FrameIDs for stability.
+  // Compute the order in which we serialize Frames.  The order does not matter
+  // in terms of correctness, but we still compute it for deserialization
+  // performance.  Specifically, if we serialize frequently used Frames one
+  // after another, we have better cache utilization.  For two Frames that
+  // appear equally frequently, we break a tie by serializing the one that tends
+  // to appear earlier in call stacks.  We implement the tie-breaking mechanism
+  // by computing the sum of indexes within call stacks for each Frame.  If we
+  // still have a tie, then we just resort to compare two FrameIds, which is
+  // just for stability of output.
   std::vector<std::pair<memprof::FrameId, const memprof::Frame *>> FrameIdOrder;
   FrameIdOrder.reserve(MemProfFrameData.size());
   for (const auto &[Id, Frame] : MemProfFrameData)
     FrameIdOrder.emplace_back(Id, &Frame);
   assert(MemProfFrameData.size() == FrameIdOrder.size());
-  llvm::sort(FrameIdOrder);
+  llvm::sort(FrameIdOrder,
+             [&](const std::pair<memprof::FrameId, const memprof::Frame *> &L,
+                 const std::pair<memprof::FrameId, const memprof::Frame *> &R) {
+               const auto &SL = FrameHistogram[L.first];
+               const auto &SR = FrameHistogram[R.first];
+               // Popular FrameIds should come first.
+               if (SL.Count != SR.Count)
+                 return SL.Count > SR.Count;
+               // If they are equally popular, then the one that tends to appear
+               // earlier in call stacks should come first.
+               if (SL.PositionSum != SR.PositionSum)
+                 return SL.PositionSum < SR.PositionSum;
+               // Compare their FrameIds for sort stability.
+               return L.first < R.first;
+             });
 
   // Serialize all frames while creating mappings from linear IDs to FrameIds.
   uint64_t Index = 0;
@@ -543,12 +566,14 @@ writeMemProfCallStackArray(
     llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
         &MemProfCallStackData,
     llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
-        &MemProfFrameIndexes) {
+        &MemProfFrameIndexes,
+    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
       MemProfCallStackIndexes;
 
   memprof::CallStackRadixTreeBuilder Builder;
-  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes);
+  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+                FrameHistogram);
   for (auto I : Builder.getRadixArray())
     OS.write32(I);
   MemProfCallStackIndexes = Builder.takeCallStackPos();
@@ -704,13 +729,17 @@ static Error writeMemProfV3(ProfOStream &OS,
     Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
+  llvm::DenseMap<memprof::FrameId, memprof::FrameStat> FrameHistogram =
+      memprof::computeFrameHistogram(MemProfData.CallStackData);
+  assert(MemProfData.FrameData.size() == FrameHistogram.size());
+
   llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId> MemProfFrameIndexes =
-      writeMemProfFrameArray(OS, MemProfData.FrameData);
+      writeMemProfFrameArray(OS, MemProfData.FrameData, FrameHistogram);
 
   uint64_t CallStackPayloadOffset = OS.tell();
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
       MemProfCallStackIndexes = writeMemProfCallStackArray(
-          OS, MemProfData.CallStackData, MemProfFrameIndexes);
+          OS, MemProfData.CallStackData, MemProfFrameIndexes, FrameHistogram);
 
   uint64_t RecordPayloadOffset = OS.tell();
   uint64_t RecordTableOffset =

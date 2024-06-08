@@ -2888,6 +2888,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmodf16
+  SRCS
+    fmodf16.cpp
+  HDRS
+    ../fmodf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.fmod
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fmodf128
   SRCS
     fmodf128.cpp
