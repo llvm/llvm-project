@@ -6743,8 +6743,25 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     TableSize =
         (MaxCaseVal->getValue() - MinCaseVal->getValue()).getLimitedValue() + 1;
 
+  // If the default destination is unreachable, or if the lookup table covers
+  // all values of the conditional variable, branch directly to the lookup table
+  // BB. Otherwise, check that the condition is within the case range.
+  bool DefaultIsReachable = !SI->defaultDestUndefined();
+
   bool TableHasHoles = (NumResults < TableSize);
-  bool NeedMask = (TableHasHoles && !HasDefaultResults);
+
+  // If the table has holes but the default destination doesn't produce any
+  // constant results, the lookup table entries corresponding to the holes will
+  // contain undefined values.
+  bool AllHolesAreUndefined = TableHasHoles && !HasDefaultResults;
+
+  // If the default destination doesn't produce a constant result but is still
+  // reachable, and the lookup table has holes, we need to use a mask to
+  // determine if the current index should load from the lookup table or jump
+  // to the default case.
+  // The mask is unnecessary if the table has holes but the default destination
+  // is unreachable, as in that case the holes must also be unreachable.
+  bool NeedMask = AllHolesAreUndefined && DefaultIsReachable;
   if (NeedMask) {
     // As an extra penalty for the validity test we require more cases.
     if (SI->getNumCases() < 4) // FIXME: Find best threshold value (benchmark).
@@ -6765,12 +6782,6 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   assert(MaxTableSize >= TableSize &&
          "It is impossible for a switch to have more entries than the max "
          "representable value of its input integer type's size.");
-
-  // If the default destination is unreachable, or if the lookup table covers
-  // all values of the conditional variable, branch directly to the lookup table
-  // BB. Otherwise, check that the condition is within the case range.
-  bool DefaultIsReachable =
-      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
 
   // Create the BB that does the lookups.
   Module &Mod = *CommonDest->getParent()->getParent();
@@ -6895,8 +6906,9 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
 
-    // If using a bitmask, use any value to fill the lookup table holes.
-    Constant *DV = NeedMask ? ResultLists[PHI][0].second : DefaultResults[PHI];
+    // Use any value to fill the lookup table holes.
+    Constant *DV =
+        AllHolesAreUndefined ? ResultLists[PHI][0].second : DefaultResults[PHI];
     StringRef FuncName = Fn->getName();
     SwitchLookupTable Table(Mod, TableSize, TableIndexOffset, ResultList, DV,
                             DL, FuncName);
