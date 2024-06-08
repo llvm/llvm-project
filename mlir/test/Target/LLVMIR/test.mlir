@@ -40,3 +40,18 @@ llvm.func @dialect_attr_translation_multi(%a: i64, %b: i64, %c: i64) -> i64 {
 // CHECK-DAG: ![[MD_ID_ADD]] = !{!"annotation_from_test: add"}
 // CHECK-DAG: ![[MD_ID_MUL]] = !{!"annotation_from_test: mul"}
 // CHECK-DAG: ![[MD_ID_RET]] = !{!"annotation_from_test: ret"}
+
+
+// -----
+
+// This is a regression test for a bug where, during an mlir-translate call the
+// parser would only load the dialect if the fully namespaced attribute was
+// present in the IR.
+#attr = #test.nested_polynomial<<1 + x**2>>
+llvm.func @parse_correctly() {
+  // CHECK: <1 + x**2>
+  test.containing_int_polynomial_attr #attr
+
+  return
+}
+
