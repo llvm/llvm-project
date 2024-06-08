@@ -27,7 +27,7 @@ llvm.func @rocdl_special_regs() -> i32 {
   // CHECK: call i64 @__ockl_get_num_groups(i32 2)
   %12 = rocdl.grid.dim.z : i64
 
-  // CHECK: call i32 @llvm.amdgcn.workitem.id.x(),{{.*}} !range ![[$RANGE:[0-9]+]]
+  // CHECK: call range(i32 0, 64) i32 @llvm.amdgcn.workitem.id.x()
   %13 = rocdl.workitem.id.x {range = array<i32: 0, 64>} : i32
 
   llvm.return %1 : i32
@@ -520,5 +520,4 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
 // CHECK-DAG: attributes #[[$KERNEL_WORKGROUP_ATTRS]] = { "amdgpu-flat-work-group-size"="1,1024"
 // CHECK-DAG: attributes #[[$KNOWN_BLOCK_SIZE_ATTRS]] = { "amdgpu-flat-work-group-size"="128,128"
 // CHECK-DAG: attributes #[[$KERNEL_NO_UNIFORM_WORK_GROUPS_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="false" }
-// CHECK-DAG: ![[$RANGE]] = !{i32 0, i32 64}
 // CHECK-DAG: ![[$REQD_WORK_GROUP_SIZE]] = !{i32 16, i32 4, i32 2}
