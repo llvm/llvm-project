@@ -708,7 +708,7 @@ private:
   const uint8_t *BinaryIdsStart = nullptr;
 
   // Index to the current record in the record array.
-  unsigned RecordIndex;
+  unsigned RecordIndex = 0;
 
   // Read the profile summary. Return a pointer pointing to one byte past the
   // end of the summary data if it exists or the input \c Cur.
@@ -721,7 +721,7 @@ public:
       std::unique_ptr<MemoryBuffer> DataBuffer,
       std::unique_ptr<MemoryBuffer> RemappingBuffer = nullptr)
       : DataBuffer(std::move(DataBuffer)),
-        RemappingBuffer(std::move(RemappingBuffer)), RecordIndex(0) {}
+        RemappingBuffer(std::move(RemappingBuffer)) {}
   IndexedInstrProfReader(const IndexedInstrProfReader &) = delete;
   IndexedInstrProfReader &operator=(const IndexedInstrProfReader &) = delete;
 
