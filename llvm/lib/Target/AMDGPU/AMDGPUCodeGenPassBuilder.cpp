@@ -49,3 +49,9 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentFast(
     return Err;
   return Error::success();
 }
+
+Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
+    AddMachinePass &addPass) const {
+  // TODO: Add greedy register allocator.
+  return Error::success();
+}

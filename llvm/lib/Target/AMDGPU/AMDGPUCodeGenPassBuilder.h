@@ -26,6 +26,7 @@ public:
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
   Error addInstSelector(AddMachinePass &) const;
   Error addRegAssignmentFast(AddMachinePass &addPass) const;
+  Error addRegAssignmentOptimized(AddMachinePass &) const;
 };
 
 } // namespace llvm

@@ -433,7 +433,7 @@ protected:
 
   /// addOptimizedRegAlloc - Add passes related to register allocation.
   /// LLVMTargetMachine provides standard regalloc passes for most targets.
-  void addOptimizedRegAlloc(AddMachinePass &) const;
+  Error addOptimizedRegAlloc(AddMachinePass &) const;
 
   /// Add passes that optimize machine instructions after register allocation.
   void addMachineLateOptimization(AddMachinePass &) const;
@@ -896,7 +896,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   // Run register allocation and passes that are tightly coupled with it,
   // including phi elimination and scheduling.
   if (*Opt.OptimizeRegAlloc) {
-    derived().addOptimizedRegAlloc(addPass);
+    if (auto Err = derived().addOptimizedRegAlloc(addPass))
+      return Err;
   } else {
     if (auto Err = derived().addFastRegAlloc(addPass))
       return Err;
@@ -1089,7 +1090,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addFastRegAlloc(
 /// optimized register allocation, including coalescing, machine instruction
 /// scheduling, and register allocation itself.
 template <typename Derived, typename TargetMachineT>
-void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
+Error CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
     AddMachinePass &addPass) const {
   addPass(DetectDeadLanesPass());
 
@@ -1115,20 +1116,23 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   // PreRA instruction scheduling.
   addPass(MachineSchedulerPass());
 
-  if (derived().addRegAssignmentOptimized(addPass)) {
-    // Allow targets to expand pseudo instructions depending on the choice of
-    // registers before MachineCopyPropagation.
-    derived().addPostRewrite(addPass);
+  if (auto Err = derived().addRegAssignmentOptimized(addPass))
+    return Err;
 
-    // Copy propagate to forward register uses and try to eliminate COPYs that
-    // were not coalesced.
-    addPass(MachineCopyPropagationPass());
+  // Allow targets to expand pseudo instructions depending on the choice of
+  // registers before MachineCopyPropagation.
+  derived().addPostRewrite(addPass);
 
-    // Run post-ra machine LICM to hoist reloads / remats.
-    //
-    // FIXME: can this move into MachineLateOptimization?
-    addPass(MachineLICMPass());
-  }
+  // Copy propagate to forward register uses and try to eliminate COPYs that
+  // were not coalesced.
+  addPass(MachineCopyPropagationPass());
+
+  // Run post-ra machine LICM to hoist reloads / remats.
+  //
+  // FIXME: can this move into MachineLateOptimization?
+  addPass(MachineLICMPass());
+
+  return Error::success();
 }
 
 //===---------------------------------------------------------------------===//
