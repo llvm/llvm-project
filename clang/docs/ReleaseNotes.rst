@@ -980,6 +980,8 @@ AST Matchers
 - Fixed ``forEachArgumentWithParam`` and ``forEachArgumentWithParamType`` to
   not skip the explicit object parameter for operator calls.
 - Fixed captureVars assertion failure if not capturesVariables. (#GH76425)
+- The examples in the AST matcher reference are now tested and additional
+  examples and descriptions were added.
 
 clang-format
 ------------
