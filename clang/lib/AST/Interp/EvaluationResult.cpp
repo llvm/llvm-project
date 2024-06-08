@@ -151,9 +151,12 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
 
   if (const Record *R = Ptr.getRecord())
     return CheckFieldsInitialized(S, InitLoc, Ptr, R);
-  const auto *CAT =
-      cast<ConstantArrayType>(Ptr.getType()->getAsArrayTypeUnsafe());
-  return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
+
+  if (const auto *CAT = dyn_cast_if_present<ConstantArrayType>(
+          Ptr.getType()->getAsArrayTypeUnsafe()))
+    return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
+
+  return true;
 }
 
 } // namespace interp
