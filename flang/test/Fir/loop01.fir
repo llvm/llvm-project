@@ -542,3 +542,22 @@ func.func @y5(%lo : index, %up : index) -> index {
 // NSW:           fir.call @f3(%[[VAL_7]]) : (i16) -> ()
 // NSW:           return %[[VAL_5]] : index
 // NSW:         }
+
+// -----
+
+func.func @alloca_in_loop(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index>) {
+  fir.do_loop %iv = %lb to %ub step %step unordered {
+    %0 = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>>
+  }
+  return
+}
+
+// CHECK-LABEL:  func.func @alloca_in_loop
+// CHECK: ^bb1
+// CHECK: ^bb2
+// CHECK:   %[[STACKPTR:.*]] = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
+// CHECK:   fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>>
+// CHECK:   fir.call @llvm.stackrestore.p0(%[[STACKPTR]]) : (!fir.ref<i8>) -> ()
+// CHECK:   cf.br ^bb1
+// CHECK: ^bb3:
+// CHECK:   return

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -51,6 +53,7 @@ public:
   matchAndRewrite(DoLoopOp loop,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = loop.getLoc();
+    bool hasAllocas = !loop.getBody()->getOps<fir::AllocaOp>().empty();
     mlir::arith::IntegerOverflowFlags flags{};
     if (setNSW)
       flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
@@ -71,6 +74,22 @@ public:
     auto *firstBlock =
         rewriter.splitBlock(conditionalBlock, conditionalBlock->begin());
     auto *lastBlock = &loop.getRegion().back();
+
+    // Insert stacksave/stackrestore if there is fir.alloca operation in the
+    // loop.
+    if (hasAllocas) {
+      auto mod = loop.getOperation()->getParentOfType<mlir::ModuleOp>();
+      fir::FirOpBuilder builder(rewriter, mod);
+      builder.setInsertionPointToStart(firstBlock);
+      mlir::func::FuncOp stackSave = fir::factory::getLlvmStackSave(builder);
+      mlir::func::FuncOp stackRestore =
+          fir::factory::getLlvmStackRestore(builder);
+      mlir::Value stackPtr =
+          builder.create<fir::CallOp>(loc, stackSave).getResult(0);
+      auto *terminator = lastBlock->getTerminator();
+      builder.setInsertionPoint(terminator);
+      builder.create<fir::CallOp>(loc, stackRestore, stackPtr);
+    }
 
     // Move the blocks from the DoLoopOp between initBlock and endBlock
     rewriter.inlineRegionBefore(loop.getRegion(), endBlock);
