@@ -23,7 +23,7 @@ def Ptr_Dialect : Dialect {
   let summary = "Pointer dialect";
   let cppNamespace = "::mlir::ptr";
   let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 0;
+  let useDefaultAttributePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -64,13 +64,6 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
     }]>
   ];
   let skipDefaultBuilders = 1;
-  let extraClassDeclaration = [{
-    /// Returns the default memory space.
-    Attribute getDefaultMemorySpace() const;
-
-    /// Returns the memory space as an unsigned number.
-    uint64_t getAddressSpace() const;
-  }];
 }
 
 //===----------------------------------------------------------------------===//

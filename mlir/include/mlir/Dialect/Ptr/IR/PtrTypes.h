@@ -16,21 +16,6 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 
-namespace mlir {
-namespace ptr {
-/// The positions of different values in the data layout entry for pointers.
-enum class PtrDLEntryPos { Size = 0, Abi = 1, Preferred = 2, Index = 3 };
-
-/// Returns the value that corresponds to named position `pos` from the
-/// data layout entry `attr` assuming it's a dense integer elements attribute.
-/// Returns `std::nullopt` if `pos` is not present in the entry.
-/// Currently only `PtrDLEntryPos::Index` is optional, and all other positions
-/// may be assumed to be present.
-std::optional<uint64_t> extractPointerSpecValue(Attribute attr,
-                                                PtrDLEntryPos pos);
-} // namespace ptr
-} // namespace mlir
-
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/Ptr/IR/PtrOpsTypes.h.inc"
 

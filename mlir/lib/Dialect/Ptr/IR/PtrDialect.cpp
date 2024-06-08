@@ -29,6 +29,10 @@ void PtrDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Ptr/IR/PtrOps.cpp.inc"
       >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/Ptr/IR/PtrOpsAttrs.cpp.inc"
+      >();
   addTypes<
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/Ptr/IR/PtrOpsTypes.cpp.inc"
@@ -40,6 +44,9 @@ void PtrDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Ptr/IR/PtrOpsDialect.cpp.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Ptr/IR/PtrOpsAttrs.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/Ptr/IR/PtrOpsTypes.cpp.inc"

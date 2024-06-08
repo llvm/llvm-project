@@ -1,9 +1,9 @@
 // RUN: mlir-opt --test-data-layout-query --split-input-file --verify-diagnostics %s | FileCheck %s
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!ptr.ptr, dense<[32, 32, 64]> : vector<3xi64>>,
-  #dlti.dl_entry<!ptr.ptr<5>, dense<[64, 64, 64]> : vector<3xi64>>,
-  #dlti.dl_entry<!ptr.ptr<4>, dense<[32, 64, 64, 24]> : vector<4xi64>>,
+  #dlti.dl_entry<!ptr.ptr, #ptr.spec<size = 32, abi = 32, preferred = 64>>,
+  #dlti.dl_entry<!ptr.ptr<5>,#ptr.spec<size = 64, abi = 64, preferred = 64>>,
+  #dlti.dl_entry<!ptr.ptr<4>, #ptr.spec<size = 32, abi = 64, preferred = 64, index = 24>>,
   #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>,
   #dlti.dl_entry<"dlti.global_memory_space", 2 : ui64>,
   #dlti.dl_entry<"dlti.program_memory_space", 3 : ui64>,
@@ -57,9 +57,9 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // -----
 
-// expected-error@below {{expected layout attribute for '!ptr.ptr' to be a dense integer elements attribute with 3 or 4 elements}}
+// expected-error@+2 {{preferred alignment is expected to be at least as large as ABI alignment}}
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!ptr.ptr, dense<[64.0, 64.0, 64.0]> : vector<3xf32>>
+  #dlti.dl_entry<!ptr.ptr, #ptr.spec<size = 64, abi = 64, preferred = 32>>
 >} {
   func.func @pointer() {
     return
@@ -68,20 +68,47 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // -----
 
-// expected-error@below {{preferred alignment is expected to be at least as large as ABI alignment}}
+// expected-error@+2 {{size entry must be divisible by 8}}
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!ptr.ptr, dense<[64, 64, 32]> : vector<3xi64>>
+  #dlti.dl_entry<!ptr.ptr, #ptr.spec<size = 33, abi = 32, preferred = 32>>
 >} {
   func.func @pointer() {
     return
   }
 }
 
+
 // -----
 
-// expected-error @below {{expected i64 parameters for '!ptr.ptr'}}
+// expected-error@+2 {{abi entry must be divisible by 8}}
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!ptr.ptr, dense<[32, 32, 64]> : vector<3xi32>>
+  #dlti.dl_entry<!ptr.ptr, #ptr.spec<size = 32, abi = 33, preferred = 64>>
 >} {
+  func.func @pointer() {
+    return
+  }
 }
 
+
+// -----
+
+// expected-error@+2 {{preferred entry must be divisible by 8}}
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!ptr.ptr, #ptr.spec<size = 32, abi = 32, preferred = 33>>
+>} {
+  func.func @pointer() {
+    return
+  }
+}
+
+
+// -----
+
+// expected-error@+2 {{index entry must be divisible by 8}}
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!ptr.ptr, #ptr.spec<size = 32, abi = 32, preferred = 32, index = 33>>
+>} {
+  func.func @pointer() {
+    return
+  }
+}

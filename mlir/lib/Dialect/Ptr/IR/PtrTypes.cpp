@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Ptr/IR/PtrTypes.h"
+#include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -24,54 +25,36 @@ constexpr const static unsigned kDefaultPointerSizeBits = 64;
 constexpr const static unsigned kBitsInByte = 8;
 constexpr const static unsigned kDefaultPointerAlignment = 8;
 
-/// Returns the part of the data layout entry that corresponds to `pos` for the
-/// given `type` by interpreting the list of entries `params`. For the pointer
-/// type in the default address space, returns the default value if the entries
-/// do not provide a custom one, for other address spaces returns std::nullopt.
-static std::optional<uint64_t>
-getPointerDataLayoutEntry(DataLayoutEntryListRef params, PtrType type,
-                          PtrDLEntryPos pos) {
-  // First, look for the entry for the pointer in the current address space.
-  Attribute currentEntry;
+static Attribute getDefaultMemorySpace(PtrType ptr) { return nullptr; }
+
+/// Searches the data layout for the pointer spec, returns nullptr if it is not
+/// found.
+static SpecAttr getPointerSpec(DataLayoutEntryListRef params, PtrType type) {
   for (DataLayoutEntryInterface entry : params) {
     if (!entry.isTypeEntry())
       continue;
     if (cast<PtrType>(entry.getKey().get<Type>()).getMemorySpace() ==
         type.getMemorySpace()) {
-      currentEntry = entry.getValue();
-      break;
+      if (auto spec = dyn_cast<SpecAttr>(entry.getValue()))
+        return spec;
     }
   }
-  bool isSizeOrIndex =
-      pos == PtrDLEntryPos::Size || pos == PtrDLEntryPos::Index;
-  if (currentEntry) {
-    std::optional<uint64_t> value = extractPointerSpecValue(currentEntry, pos);
-    // If the optional `PtrDLEntryPos::Index` entry is not available, use the
-    // pointer size as the index bitwidth.
-    if (!value && pos == PtrDLEntryPos::Index)
-      value = extractPointerSpecValue(currentEntry, PtrDLEntryPos::Size);
-    return *value / (isSizeOrIndex ? 1 : kBitsInByte);
-  }
-
   // If not found, and this is the pointer to the default memory space, assume
   // 64-bit pointers.
-  if (type.getMemorySpace() == type.getDefaultMemorySpace())
-    return isSizeOrIndex ? kDefaultPointerSizeBits : kDefaultPointerAlignment;
-
-  return std::nullopt;
+  if (type.getMemorySpace() == getDefaultMemorySpace(type))
+    return SpecAttr::get(type.getContext(), kDefaultPointerSizeBits,
+                         kDefaultPointerAlignment, kDefaultPointerAlignment,
+                         kDefaultPointerSizeBits);
+  return nullptr;
 }
-
-uint64_t PtrType::getAddressSpace() const { return 0; }
-
-Attribute PtrType::getDefaultMemorySpace() const { return nullptr; }
 
 bool PtrType::areCompatible(DataLayoutEntryListRef oldLayout,
                             DataLayoutEntryListRef newLayout) const {
   for (DataLayoutEntryInterface newEntry : newLayout) {
     if (!newEntry.isTypeEntry())
       continue;
-    unsigned size = kDefaultPointerSizeBits;
-    unsigned abi = kDefaultPointerAlignment;
+    uint32_t size = kDefaultPointerSizeBits;
+    uint32_t abi = kDefaultPointerAlignment;
     auto newType = llvm::cast<PtrType>(newEntry.getKey().get<Type>());
     const auto *it =
         llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
@@ -85,19 +68,20 @@ bool PtrType::areCompatible(DataLayoutEntryListRef oldLayout,
       it = llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
         if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
           auto ptrTy = llvm::cast<PtrType>(type);
-          return ptrTy.getMemorySpace() == ptrTy.getDefaultMemorySpace();
+          return ptrTy.getMemorySpace() == getDefaultMemorySpace(ptrTy);
         }
         return false;
       });
     }
     if (it != oldLayout.end()) {
-      size = *extractPointerSpecValue(*it, PtrDLEntryPos::Size);
-      abi = *extractPointerSpecValue(*it, PtrDLEntryPos::Abi);
+      auto spec = llvm::cast<SpecAttr>(*it);
+      size = spec.getSize();
+      abi = spec.getAbi();
     }
 
-    Attribute newSpec = llvm::cast<DenseIntElementsAttr>(newEntry.getValue());
-    unsigned newSize = *extractPointerSpecValue(newSpec, PtrDLEntryPos::Size);
-    unsigned newAbi = *extractPointerSpecValue(newSpec, PtrDLEntryPos::Abi);
+    auto newSpec = llvm::cast<SpecAttr>(newEntry.getValue());
+    uint32_t newSize = newSpec.getSize();
+    uint32_t newAbi = newSpec.getAbi();
     if (size != newSize || abi < newAbi || abi % newAbi != 0)
       return false;
   }
@@ -106,54 +90,43 @@ bool PtrType::areCompatible(DataLayoutEntryListRef oldLayout,
 
 uint64_t PtrType::getABIAlignment(const DataLayout &dataLayout,
                                   DataLayoutEntryListRef params) const {
-  if (std::optional<uint64_t> alignment =
-          getPointerDataLayoutEntry(params, *this, PtrDLEntryPos::Abi))
-    return *alignment;
+  if (SpecAttr spec = getPointerSpec(params, *this))
+    return spec.getAbi() / kBitsInByte;
 
   return dataLayout.getTypeABIAlignment(
-      get(getContext(), getDefaultMemorySpace()));
+      get(getContext(), getDefaultMemorySpace(*this)));
 }
 
 std::optional<uint64_t>
 PtrType::getIndexBitwidth(const DataLayout &dataLayout,
                           DataLayoutEntryListRef params) const {
-  if (std::optional<uint64_t> indexBitwidth =
-          getPointerDataLayoutEntry(params, *this, PtrDLEntryPos::Index))
-    return *indexBitwidth;
+  if (SpecAttr spec = getPointerSpec(params, *this)) {
+    return spec.getIndex() == SpecAttr::kOptionalSpecValue ? spec.getSize()
+                                                           : spec.getIndex();
+  }
 
   return dataLayout.getTypeIndexBitwidth(
-      get(getContext(), getDefaultMemorySpace()));
+      get(getContext(), getDefaultMemorySpace(*this)));
 }
 
 llvm::TypeSize PtrType::getTypeSizeInBits(const DataLayout &dataLayout,
                                           DataLayoutEntryListRef params) const {
-  if (std::optional<uint64_t> size =
-          getPointerDataLayoutEntry(params, *this, PtrDLEntryPos::Size))
-    return llvm::TypeSize::getFixed(*size);
+  if (SpecAttr spec = getPointerSpec(params, *this))
+    return llvm::TypeSize::getFixed(spec.getSize());
 
   // For other memory spaces, use the size of the pointer to the default memory
   // space.
   return dataLayout.getTypeSizeInBits(
-      get(getContext(), getDefaultMemorySpace()));
+      get(getContext(), getDefaultMemorySpace(*this)));
 }
 
 uint64_t PtrType::getPreferredAlignment(const DataLayout &dataLayout,
                                         DataLayoutEntryListRef params) const {
-  if (std::optional<uint64_t> alignment =
-          getPointerDataLayoutEntry(params, *this, PtrDLEntryPos::Preferred))
-    return *alignment;
+  if (SpecAttr spec = getPointerSpec(params, *this))
+    return spec.getPreferred() / kBitsInByte;
 
   return dataLayout.getTypePreferredAlignment(
-      get(getContext(), getDefaultMemorySpace()));
-}
-
-std::optional<uint64_t> mlir::ptr::extractPointerSpecValue(Attribute attr,
-                                                           PtrDLEntryPos pos) {
-  auto spec = cast<DenseIntElementsAttr>(attr);
-  auto idx = static_cast<int64_t>(pos);
-  if (idx >= spec.size())
-    return std::nullopt;
-  return spec.getValues<uint64_t>()[idx];
+      get(getContext(), getDefaultMemorySpace(*this)));
 }
 
 LogicalResult PtrType::verifyEntries(DataLayoutEntryListRef entries,
@@ -162,20 +135,9 @@ LogicalResult PtrType::verifyEntries(DataLayoutEntryListRef entries,
     if (!entry.isTypeEntry())
       continue;
     auto key = entry.getKey().get<Type>();
-    auto values = llvm::dyn_cast<DenseIntElementsAttr>(entry.getValue());
-    if (!values || (values.size() != 3 && values.size() != 4)) {
-      return emitError(loc)
-             << "expected layout attribute for " << key
-             << " to be a dense integer elements attribute with 3 or 4 "
-                "elements";
-    }
-    if (!values.getElementType().isInteger(64))
-      return emitError(loc) << "expected i64 parameters for " << key;
-
-    if (extractPointerSpecValue(values, PtrDLEntryPos::Abi) >
-        extractPointerSpecValue(values, PtrDLEntryPos::Preferred)) {
-      return emitError(loc) << "preferred alignment is expected to be at least "
-                               "as large as ABI alignment";
+    if (!llvm::isa<SpecAttr>(entry.getValue())) {
+      return emitError(loc) << "expected layout attribute for " << key
+                            << " to be a #ptr.spec attribute";
     }
   }
   return success();
