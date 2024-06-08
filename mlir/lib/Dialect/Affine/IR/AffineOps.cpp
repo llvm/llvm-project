@@ -2454,27 +2454,30 @@ bool AffineForOp::matchingBoundOperandList() {
 
 SmallVector<Region *> AffineForOp::getLoopRegions() { return {&getRegion()}; }
 
-std::optional<Value> AffineForOp::getSingleInductionVar() {
-  return getInductionVar();
+std::optional<SmallVector<Value>> AffineForOp::getLoopInductionVars() {
+  return SmallVector<Value>{getInductionVar()};
 }
 
-std::optional<OpFoldResult> AffineForOp::getSingleLowerBound() {
+std::optional<SmallVector<OpFoldResult>> AffineForOp::getLoopLowerBounds() {
   if (!hasConstantLowerBound())
     return std::nullopt;
   OpBuilder b(getContext());
-  return OpFoldResult(b.getI64IntegerAttr(getConstantLowerBound()));
+  return SmallVector<OpFoldResult>{
+      OpFoldResult(b.getI64IntegerAttr(getConstantLowerBound()))};
 }
 
-std::optional<OpFoldResult> AffineForOp::getSingleStep() {
+std::optional<SmallVector<OpFoldResult>> AffineForOp::getLoopSteps() {
   OpBuilder b(getContext());
-  return OpFoldResult(b.getI64IntegerAttr(getStepAsInt()));
+  return SmallVector<OpFoldResult>{
+      OpFoldResult(b.getI64IntegerAttr(getStepAsInt()))};
 }
 
-std::optional<OpFoldResult> AffineForOp::getSingleUpperBound() {
+std::optional<SmallVector<OpFoldResult>> AffineForOp::getLoopUpperBounds() {
   if (!hasConstantUpperBound())
-    return std::nullopt;
+    return {};
   OpBuilder b(getContext());
-  return OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()));
+  return SmallVector<OpFoldResult>{
+      OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()))};
 }
 
 FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(

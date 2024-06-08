@@ -47,6 +47,11 @@ Non-comprehensive list of changes in this release
 Update on required toolchains to build LLVM
 -------------------------------------------
 
+* The minimum Python version has been raised from 3.6 to 3.8 across all of LLVM.
+  This enables the use of many new Python features, aligning more closely with
+  modern Python best practices, and improves CI maintainability
+  See `#78828 <https://github.com/llvm/llvm-project/pull/78828>`_ for more info.
+
 Changes to the LLVM IR
 ----------------------
 
