@@ -116,7 +116,7 @@ Entry point functions & ``static`` keyword
 ------------------------------------------
 Marking a shader entry point function ``static`` will result in an error.
 
-This is idential to DXC behavior when an entry point is specified as compiler
+This is identical to DXC behavior when an entry point is specified as compiler
 argument. However, DXC does not report an error when compiling a shader library
 that has an entry point function with ``[shader("stage")]`` attribute that is
 also marked ``static``. Additionally, this function definition is not included
