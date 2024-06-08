@@ -396,6 +396,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["permlane16-swap"] = true;
       Features["ashr-pk-insts"] = true;
       Features["atomic-buffer-pk-add-bf16-inst"] = true;
+      Features["gfx1210-dgemm-insts"] = true;
       break;
     case GK_GFX1201:
     case GK_GFX1200:

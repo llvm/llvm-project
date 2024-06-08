@@ -175,6 +175,7 @@ protected:
   bool HasAtomicGlobalPkAddBF16Inst = false;
   bool HasAtomicBufferPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
+  bool HasGFX12_10DGEMMInsts = false;
   bool HasDefaultComponentZero = false;
   bool HasDefaultComponentBroadcast = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
@@ -897,6 +898,8 @@ public:
   }
 
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
+
+  bool hasGFX12_10DGEMMInsts() const { return HasGFX12_10DGEMMInsts; }
 
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
 
