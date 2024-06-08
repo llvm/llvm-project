@@ -22858,6 +22858,8 @@ TEST_F(FormatTest, FormatsLambdas) {
       "      //\n"
       "    });");
 
+  FormatStyle LLVMStyle = getLLVMStyleWithColumns(60);
+
   verifyFormat("int main() {\n"
                "  very_long_function_name_yes_it_is_really_long(\n"
                "      [](auto n)\n"
@@ -22866,7 +22868,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                "        really_do_something();\n"
                "      });\n"
                "}",
-               getLLVMStyleWithColumns(60));
+               LLVMStyle);
   verifyFormat("int main() {\n"
                "  very_long_function_name_yes_it_is_really_long(\n"
                "      [](auto n) noexcept\n"
@@ -22875,7 +22877,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                "        really_do_something();\n"
                "      });\n"
                "}",
-               getLLVMStyleWithColumns(60));
+               LLVMStyle);
   verifyFormat("int main() {\n"
                "  very_long_function_name_yes_it_is_really_long(\n"
                "      [](auto n) constexpr\n"
@@ -22884,7 +22886,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                "        really_do_something();\n"
                "      });\n"
                "}",
-               getLLVMStyleWithColumns(60));
+               LLVMStyle);
 
   FormatStyle DoNotMerge = getLLVMStyle();
   DoNotMerge.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
