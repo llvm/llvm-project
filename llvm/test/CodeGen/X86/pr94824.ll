@@ -4,10 +4,11 @@
 define i16 @pr94824(i8 %x1) {
 ; CHECK-LABEL: pr94824:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    negb %al
-; CHECK-NEXT:    andb %dil, %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    orl $256, %edi # imm = 0x100
+; CHECK-NEXT:    rep bsfl %edi, %ecx
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
