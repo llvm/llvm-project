@@ -121,7 +121,6 @@ define i64 @pointer_induction_only(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i32> [[WIDE_LOAD]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP9]] = zext <2 x i32> [[WIDE_LOAD4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[VECTOR_RECUR]], <2 x i64> [[TMP8]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> [[TMP9]], <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -186,7 +185,6 @@ define i64 @int_and_pointer_iv(ptr %start, i32 %N) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP5]] = zext <4 x i32> [[WIDE_LOAD3]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
