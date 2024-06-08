@@ -467,6 +467,25 @@ struct ForcedIParity16 {
   }
 };
 
+/// Placeholder for real*10 version of Reduce Intrinsic
+struct ForcedReduceReal10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ReduceReal10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refTy = fir::ReferenceType::get(ty);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
+    };
+  }
+};
+
 /// Placeholder for real*16 version of Reduce Intrinsic
 struct ForcedReduceReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ReduceReal16));
@@ -1408,7 +1427,7 @@ mlir::Value fir::runtime::genReduce(fir::FirOpBuilder &builder,
   else if (eleTy.isF64())
     func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal8)>(loc, builder);
   else if (eleTy.isF80())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal10)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<ForcedReduceReal10>(loc, builder);
   else if (eleTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedReduceReal16>(loc, builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
