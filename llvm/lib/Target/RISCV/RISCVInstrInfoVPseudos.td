@@ -2245,11 +2245,6 @@ multiclass VPseudoBinaryV_VV_RM<LMULInfo m, string Constraint = "", bit Commutab
                                        Commutable=Commutable>;
 }
 
-// Similar to VPseudoBinaryV_VV, but uses MxListF.
-multiclass VPseudoBinaryFV_VV<LMULInfo m, int sew> {
-  defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, "", sew>;
-}
-
 multiclass VPseudoBinaryFV_VV_RM<LMULInfo m, int sew> {
   defm _VV : VPseudoBinaryRoundingMode<m.vrclass, m.vrclass, m.vrclass, m,
                                        "", sew, UsesVXRM=0>;
@@ -2901,7 +2896,7 @@ multiclass VPseudoVALU_VV_VX {
 multiclass VPseudoVSGNJ_VV_VF {
   foreach m = MxListF in {
     foreach e = SchedSEWSet<m.MX, isF=1>.val in
-    defm "" : VPseudoBinaryFV_VV<m, sew=e>,
+    defm "" : VPseudoBinaryV_VV<m, sew=e>,
               SchedBinary<"WriteVFSgnjV", "ReadVFSgnjV", "ReadVFSgnjV", m.MX,
                           e, forceMergeOpRead=true>;
   }
@@ -2918,7 +2913,7 @@ multiclass VPseudoVSGNJ_VV_VF {
 multiclass VPseudoVMAX_VV_VF {
   foreach m = MxListF in {
     foreach e = SchedSEWSet<m.MX, isF=1>.val in
-      defm "" : VPseudoBinaryFV_VV<m, sew=e>,
+      defm "" : VPseudoBinaryV_VV<m, sew=e>,
                 SchedBinary<"WriteVFMinMaxV", "ReadVFMinMaxV", "ReadVFMinMaxV",
                             m.MX, e, forceMergeOpRead=true>;
   }
@@ -3296,21 +3291,21 @@ multiclass VPseudoTernaryW_VV<LMULInfo m, bit Commutable = 0> {
 multiclass VPseudoTernaryW_VV_RM<LMULInfo m, int sew> {
   defvar constraint = "@earlyclobber $rd";
   defm _VV : VPseudoTernaryWithPolicyRoundingMode<m.wvrclass, m.vrclass, m.vrclass, m,
-                                                  constraint, sew, /* Commutable */ 0,
+                                                  constraint, sew,
                                                   TargetConstraintType=3>;
 }
 
 multiclass VPseudoTernaryW_VX<LMULInfo m> {
   defvar constraint = "@earlyclobber $rd";
   defm "_VX" : VPseudoTernaryWithPolicy<m.wvrclass, GPR, m.vrclass, m,
-                                        constraint, /*Commutable*/ 0, TargetConstraintType=3>;
+                                        constraint, TargetConstraintType=3>;
 }
 
 multiclass VPseudoTernaryW_VF_RM<LMULInfo m, FPR_Info f, int sew> {
   defvar constraint = "@earlyclobber $rd";
   defm "_V" # f.FX : VPseudoTernaryWithPolicyRoundingMode<m.wvrclass, f.fprclass,
                                                           m.vrclass, m, constraint,
-                                                          sew, /* Commutable */ 0,
+                                                          sew,
                                                           TargetConstraintType=3>;
 }
 
