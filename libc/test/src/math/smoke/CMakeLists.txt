@@ -2401,6 +2401,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmul_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmul_test.cpp
+  HDRS
+    FMulTest.h
+  DEPENDS
+    libc.src.math.fmul
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   sqrtf_test
   SUITE
     libc-math-smoke-tests
