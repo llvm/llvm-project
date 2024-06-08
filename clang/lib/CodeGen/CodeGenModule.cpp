@@ -1335,6 +1335,9 @@ void CodeGenModule::Release() {
   case CodeGenOptions::FramePointerKind::None:
     // 0 ("none") is the default.
     break;
+  case CodeGenOptions::FramePointerKind::Reserved:
+    getModule().setFramePointer(llvm::FramePointerKind::Reserved);
+    break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     getModule().setFramePointer(llvm::FramePointerKind::NonLeaf);
     break;
