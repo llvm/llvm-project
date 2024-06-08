@@ -1142,11 +1142,12 @@ public:
 
   ScriptedCommandSynchronicity GetSynchronicity() { return m_synchro; }
 
-  std::optional<std::string> GetRepeatCommand(Args &args, uint32_t index) override {
+  std::optional<std::string> GetRepeatCommand(Args &args,
+                                              uint32_t index) override {
     ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
     if (!scripter)
       return std::nullopt;
-      
+
     return scripter->GetRepeatCommandForScriptedCommand(m_cmd_obj_sp, args);
   }
 
@@ -1596,9 +1597,9 @@ private:
       options.ForEach(add_element);
       return error;
     }
-    
+
     size_t GetNumOptions() { return m_num_options; }
-    
+
   private:
     struct EnumValueStorage {
       EnumValueStorage() {
@@ -1837,14 +1838,15 @@ public:
 
   ScriptedCommandSynchronicity GetSynchronicity() { return m_synchro; }
 
-  std::optional<std::string> GetRepeatCommand(Args &args, uint32_t index) override {
+  std::optional<std::string> GetRepeatCommand(Args &args,
+                                              uint32_t index) override {
     ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
     if (!scripter)
       return std::nullopt;
-      
+
     return scripter->GetRepeatCommandForScriptedCommand(m_cmd_obj_sp, args);
   }
-  
+
   llvm::StringRef GetHelp() override {
     if (m_fetched_help_short)
       return CommandObjectParsed::GetHelp();
@@ -1875,15 +1877,14 @@ public:
       SetHelpLong(docstring);
     return CommandObjectParsed::GetHelpLong();
   }
-  
+
   Options *GetOptions() override {
     // CommandObjectParsed requires that a command with no options return
     // nullptr.
     if (m_options.GetNumOptions() == 0)
       return nullptr;
-    return &m_options; 
+    return &m_options;
   }
-
 
 protected:
   void DoExecute(Args &args,

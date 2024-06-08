@@ -209,7 +209,7 @@ class TwoArgGroupsCommand(ReportingCmd):
         global two_arg_repeat
         two_arg_repeat = command
         return command + " THIRD_ARG"
-        
+
     def get_short_help(self):
         return "This is my short help string"
 

@@ -2818,8 +2818,9 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedParsedCommand(
   return ret_val;
 }
 
-std::optional<std::string> ScriptInterpreterPythonImpl::GetRepeatCommandForScriptedCommand(
-      StructuredData::GenericSP impl_obj_sp, Args &args) {
+std::optional<std::string>
+ScriptInterpreterPythonImpl::GetRepeatCommandForScriptedCommand(
+    StructuredData::GenericSP impl_obj_sp, Args &args) {
   if (!impl_obj_sp || !impl_obj_sp->IsValid())
     return std::nullopt;
 
@@ -2829,7 +2830,7 @@ std::optional<std::string> ScriptInterpreterPythonImpl::GetRepeatCommandForScrip
     return std::nullopt;
 
   std::optional<std::string> ret_val;
-  
+
   {
     Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN,
                    Locker::FreeLock);
@@ -2843,7 +2844,6 @@ std::optional<std::string> ScriptInterpreterPythonImpl::GetRepeatCommandForScrip
         static_cast<PyObject *>(impl_obj_sp->GetValue()), command);
   }
   return ret_val;
-      
 }
 
 /// In Python, a special attribute __doc__ contains the docstring for an object

@@ -480,9 +480,10 @@ public:
       const lldb_private::ExecutionContext &exe_ctx) {
     return false;
   }
-  
-  virtual std::optional<std::string> GetRepeatCommandForScriptedCommand(
-      StructuredData::GenericSP impl_obj_sp, Args &args) {
+
+  virtual std::optional<std::string>
+  GetRepeatCommandForScriptedCommand(StructuredData::GenericSP impl_obj_sp,
+                                     Args &args) {
     return std::nullopt;
   }
 

@@ -40,33 +40,34 @@ class ParsedCommandTestCase(TestBase):
     def run_one_repeat(self, commands, expected_num_errors):
         with open(self.stdin_path, "w") as input_handle:
             input_handle.write(commands)
-            
+
         in_fileH = open(self.stdin_path, "r")
         self.dbg.SetInputFileHandle(in_fileH, False)
-        
+
         out_fileH = open(self.stdout_path, "w")
         self.dbg.SetOutputFileHandle(out_fileH, False)
         self.dbg.SetErrorFileHandle(out_fileH, False)
-        
+
         options = lldb.SBCommandInterpreterRunOptions()
         options.SetEchoCommands(False)
         options.SetPrintResults(True)
         options.SetPrintErrors(True)
         options.SetAllowRepeats(True)
-        
+
         n_errors, quit_requested, has_crashed = self.dbg.RunCommandInterpreter(
-            True, False, options, 0, False, False)
-            
+            True, False, options, 0, False, False
+        )
+
         in_fileH.close()
         out_fileH.close()
-                
+
         results = None
         with open(self.stdout_path, "r") as out_fileH:
             results = out_fileH.read()
 
         print(f"RESULTS:\n{results}\nDONE")
         self.assertEqual(n_errors, expected_num_errors)
-                
+
         return results
 
     def pycmd_tests(self):
@@ -247,8 +248,10 @@ class ParsedCommandTestCase(TestBase):
 
         # two-args adds an argument:
         results = self.run_one_repeat("two-args FIRST_ARG SECOND_ARG\n\n", 0)
-        self.assertEqual(results.count("FIRST_ARG"), 2, "Passed first arg to both commands")
-        self.assertEqual(results.count("SECOND_ARG"), 2, "Passed second arg to both commands")
+        self.assertEqual(
+            results.count("FIRST_ARG"), 2, "Passed first arg to both commands"
+        )
+        self.assertEqual(
+            results.count("SECOND_ARG"), 2, "Passed second arg to both commands"
+        )
         self.assertEqual(results.count("THIRD_ARG"), 1, "Passed third arg in repeat")
-
-                    

@@ -212,7 +212,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
 
 std::optional<std::string>
 LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
-                                               std::string &command) {
+                                                 std::string &command) {
   return std::nullopt;
 }
 
