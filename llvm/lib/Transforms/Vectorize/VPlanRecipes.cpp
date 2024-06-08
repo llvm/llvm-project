@@ -138,6 +138,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
     case VPInstruction::ExtractFromEnd:
+    case VPInstruction::FirstOrderRecurrenceSplice:
     case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
       return false;
