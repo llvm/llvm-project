@@ -452,16 +452,16 @@ multiclass VPseudoVCPOP {
   }
 }
 
-multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> {
+multiclass VPseudoVWSLL {
   foreach m = MxListW in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryW_VV<m>,
               SchedBinary<"WriteVWSLLV", "ReadVWSLLV", "ReadVWSLLV", mx,
                           forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryW_VX<m>, 
+    defm "" : VPseudoBinaryW_VX<m>,
               SchedBinary<"WriteVWSLLX", "ReadVWSLLV", "ReadVWSLLX", mx,
                           forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryW_VI<ImmType, m>,
+    defm "" : VPseudoBinaryW_VI<uimm5, m>,
               SchedUnary<"WriteVWSLLI", "ReadVWSLLV", mx,
                          forceMergeOpRead=true>;
   }
@@ -525,7 +525,7 @@ let Predicates = [HasStdExtZvbb] in {
   defm PseudoVCLZ   : VPseudoVCLZ;
   defm PseudoVCTZ   : VPseudoVCTZ;
   defm PseudoVCPOP  : VPseudoVCPOP;
-  defm PseudoVWSLL : VPseudoVWALU_VV_VX_VI<uimm5>;
+  defm PseudoVWSLL : VPseudoVWSLL;
 } // Predicates = [HasStdExtZvbb]
 
 let Predicates = [HasStdExtZvbc] in {
