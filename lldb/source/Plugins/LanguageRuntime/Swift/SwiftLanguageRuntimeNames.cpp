@@ -635,9 +635,9 @@ bool SwiftLanguageRuntime::IsSwiftMangledName(llvm::StringRef name) {
   // ObjC classes and protocols. Classes are prefixed with either "_TtC" or
   // "_TtGC" (generic classes). Protocols are prefixed with "_TtP". Other "_T"
   // prefixed symbols are not considered to be Swift symbols.
-  if (name.startswith("_T"))
-    return name.startswith("_TtC") || name.startswith("_TtGC") ||
-           name.startswith("_TtP");
+  if (name.starts_with("_T"))
+    return name.starts_with("_TtC") || name.starts_with("_TtGC") ||
+           name.starts_with("_TtP");
   return swift::Demangle::isSwiftSymbol(name);
 }
 

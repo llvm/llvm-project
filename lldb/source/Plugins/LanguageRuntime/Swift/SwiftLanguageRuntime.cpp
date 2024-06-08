@@ -664,9 +664,9 @@ GetLikelySwiftImageNamesForModule(ModuleSP module) {
       module->GetFileSpec().GetFileNameStrippingExtension().GetStringRef();
   if (name == "libswiftCore")
     name = "Swift";
-  if (name.startswith("libswift"))
+  if (name.starts_with("libswift"))
     name = name.drop_front(8);
-  if (name.startswith("lib"))
+  if (name.starts_with("lib"))
     name = name.drop_front(3);
   return {name};
 }
@@ -1142,7 +1142,7 @@ static bool IsSwiftResultVariable(ConstString name) {
   if (name) {
     llvm::StringRef name_sr(name.GetStringRef());
     if (name_sr.size() > 2 &&
-        (name_sr.startswith("$R") || name_sr.startswith("$E")) &&
+        (name_sr.starts_with("$R") || name_sr.starts_with("$E")) &&
         ::isdigit(name_sr[2]))
       return true;
   }
@@ -2191,7 +2191,7 @@ protected:
         NodePointer node_ptr = nullptr;
         // Match the behavior of swift-demangle and accept Swift symbols without
         // the leading `$`. This makes symbol copy & paste more convenient.
-        if (name.startswith("S") || name.startswith("s")) {
+        if (name.starts_with("S") || name.starts_with("s")) {
           std::string correctedName = std::string("$") + name.str();
           node_ptr =
               SwiftLanguageRuntime::DemangleSymbolAsNode(correctedName, ctx);

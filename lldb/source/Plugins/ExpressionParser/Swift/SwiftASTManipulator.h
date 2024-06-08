@@ -109,15 +109,15 @@ public:
     swift::VarDecl *GetDecl() const { return m_decl; }
     swift::VarDecl::Introducer GetVarIntroducer() const;
     bool IsCaptureList() const;
-    bool IsMetadataPointer() const { return m_name.str().startswith("$τ"); }
+    bool IsMetadataPointer() const { return m_name.str().starts_with("$τ"); }
     bool IsOutermostMetadataPointer() const {
-      return m_name.str().startswith("$τ_0_");
+      return m_name.str().starts_with("$τ_0_");
     }
     bool IsSelf() const {
       return m_name.str().equals("$__lldb_injected_self");
     }
     bool IsPackCount() const {
-      return m_name.str().startswith("$pack_count_");
+      return m_name.str().starts_with("$pack_count_");
     }
     bool IsUnboundPack() const { return m_is_unbound_pack; }
 

@@ -3084,7 +3084,7 @@ void Target::DisplayFallbackSwiftContextErrors(
 
 bool Target::IsSwiftREPL() {
   return m_debugger.REPLIsActive() &&
-         GetProcessLaunchInfo().GetArg0().endswith("repl_swift");
+         GetProcessLaunchInfo().GetArg0().ends_with("repl_swift");
 }
 
 bool Target::IsSwiftCxxInteropEnabled() {
