@@ -225,7 +225,7 @@ private:
   void lowerCopyInstrs();
   void lowerKillInstrs(bool IsWQM);
   void lowerInitExec(MachineInstr &MI);
-  void lowerInitExecInstrs();
+  MachineBasicBlock::iterator lowerInitExecInstrs(MachineBasicBlock &Entry);
 
 public:
   static char ID;
@@ -1648,9 +1648,23 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
   LIS->createAndComputeVirtRegInterval(CountReg);
 }
 
-void SIWholeQuadMode::lowerInitExecInstrs() {
-  for (MachineInstr *MI : InitExecInstrs)
+/// Lower INIT_EXEC instructions. Return a suitable insert point in \p Entry
+/// for instructions that depend on EXEC.
+MachineBasicBlock::iterator
+SIWholeQuadMode::lowerInitExecInstrs(MachineBasicBlock &Entry) {
+  MachineBasicBlock::iterator InsertPt = Entry.getFirstNonPHI();
+
+  for (MachineInstr *MI : InitExecInstrs) {
+    // Try to handle undefined cases gracefully:
+    // - multiple INIT_EXEC instructions
+    // - INIT_EXEC instructions not in the entry block
+    if (MI->getParent() == &Entry)
+      InsertPt = std::next(MI->getIterator());
+
     lowerInitExec(*MI);
+  }
+
+  return InsertPt;
 }
 
 bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
@@ -1701,18 +1715,15 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
 
   LiveMaskReg = Exec;
 
+  MachineBasicBlock &Entry = MF.front();
+  MachineBasicBlock::iterator EntryMI = lowerInitExecInstrs(Entry);
+
   // Shader is simple does not need any state changes or any complex lowering
   if (!(GlobalFlags & (StateWQM | StateStrict)) && LowerToCopyInstrs.empty() &&
       LowerToMovInstrs.empty() && KillInstrs.empty()) {
-    lowerInitExecInstrs();
     lowerLiveMaskQueries();
     return !InitExecInstrs.empty() || !LiveMaskQueries.empty();
   }
-
-  lowerInitExecInstrs();
-
-  MachineBasicBlock &Entry = MF.front();
-  MachineBasicBlock::iterator EntryMI = Entry.getFirstNonPHI();
 
   // Store a copy of the original live mask when required
   if (NeedsLiveMask || (GlobalFlags & StateWQM)) {
