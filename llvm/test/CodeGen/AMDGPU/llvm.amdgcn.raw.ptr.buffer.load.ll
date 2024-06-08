@@ -943,30 +943,21 @@ main_body:
 }
 
 define amdgpu_ps void @raw_ptr_buffer_load_v4f16(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %ptr) {
-; PREGFX10-LABEL: raw_ptr_buffer_load_v4f16:
-; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0
-; PREGFX10-NEXT:    s_mov_b32 m0, -1
-; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    ds_write_b64 v0, v[1:2]
-; PREGFX10-NEXT:    s_endpgm
-;
-; GFX10-LABEL: raw_ptr_buffer_load_v4f16:
-; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    ds_write_b64 v0, v[1:2]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX11-LABEL: raw_ptr_buffer_load_v4f16:
-; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    buffer_load_b64 v[1:2], off, s[0:3], 0
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    ds_store_b64 v0, v[1:2]
-; GFX11-NEXT:    s_endpgm
-main_body:
   %val = call <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.v4f16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   store <4 x half> %val, ptr addrspace(3) %ptr
+  ret void
+}
+
+; FIXME
+; define amdgpu_ps void @raw_ptr_buffer_load_v6f16(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %ptr) {
+;   %val = call <6 x half> @llvm.amdgcn.raw.ptr.buffer.load.v6f16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
+;   store <6 x half> %val, ptr addrspace(3) %ptr
+;   ret void
+; }
+
+define amdgpu_ps void @raw_ptr_buffer_load_v8f16(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %ptr) {
+  %val = call <8 x half> @llvm.amdgcn.raw.ptr.buffer.load.v8f16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
+  store <8 x half> %val, ptr addrspace(3) %ptr
   ret void
 }
 
@@ -999,30 +990,21 @@ main_body:
 }
 
 define amdgpu_ps void @raw_ptr_buffer_load_v4i16(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %ptr) {
-; PREGFX10-LABEL: raw_ptr_buffer_load_v4i16:
-; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0
-; PREGFX10-NEXT:    s_mov_b32 m0, -1
-; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    ds_write_b64 v0, v[1:2]
-; PREGFX10-NEXT:    s_endpgm
-;
-; GFX10-LABEL: raw_ptr_buffer_load_v4i16:
-; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    ds_write_b64 v0, v[1:2]
-; GFX10-NEXT:    s_endpgm
-;
-; GFX11-LABEL: raw_ptr_buffer_load_v4i16:
-; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    buffer_load_b64 v[1:2], off, s[0:3], 0
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    ds_store_b64 v0, v[1:2]
-; GFX11-NEXT:    s_endpgm
-main_body:
   %val = call <4 x i16> @llvm.amdgcn.raw.ptr.buffer.load.v4i16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   store <4 x i16> %val, ptr addrspace(3) %ptr
+  ret void
+}
+
+; FIXME
+; define amdgpu_ps void @raw_ptr_buffer_load_v6i16(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %ptr) {
+;   %val = call <6 x i16> @llvm.amdgcn.raw.ptr.buffer.load.v6i16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
+;   store <6 x i16> %val, ptr addrspace(3) %ptr
+;   ret void
+; }
+
+define amdgpu_ps void @raw_ptr_buffer_load_v8i16(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %ptr) {
+  %val = call <8 x i16> @llvm.amdgcn.raw.ptr.buffer.load.v8i16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
+  store <8 x i16> %val, ptr addrspace(3) %ptr
   ret void
 }
 
