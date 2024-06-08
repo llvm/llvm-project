@@ -385,7 +385,8 @@ public:
 class RequireAllMachineFunctionPropertiesPass
     : public PassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
 public:
-  PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
+  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
+    MFPropsModifier _(*this, MF);
     return PreservedAnalyses::none();
   }
 
