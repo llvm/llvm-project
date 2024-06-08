@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fmul.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/uint128.h"
 #include "src/__support/common.h"
-#include "src/__support/CPP/bit.h"
+#include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE {
-  
+
 LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   auto x_bits = fputil::FPBits<double>(x);
 
@@ -23,19 +23,24 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
 
   auto output_sign = (x_bits.sign() != y_bits.sign()) ? Sign::NEG : Sign::POS;
 
-    if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() || x_bits.is_zero() || y_bits.is_zero())) {
-      if (x_bits.is_nan())
-	return static_cast<float>(x);
-      if (y_bits.is_nan())
-	return static_cast<float>(y);
-      if (x_bits.is_inf())
-	return y_bits.is_zero() ? fputil::FPBits<float>::quiet_nan().get_val() : fputil::FPBits<float>::inf(output_sign).get_val();
-      if (y_bits.is_inf())
-	return x_bits.is_zero() ? fputil::FPBits<float>::quiet_nan().get_val() : fputil::FPBits<float>::inf(output_sign).get_val();
+  if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() ||
+                    x_bits.is_zero() || y_bits.is_zero())) {
+    if (x_bits.is_nan())
+      return static_cast<float>(x);
+    if (y_bits.is_nan())
+      return static_cast<float>(y);
+    if (x_bits.is_inf())
+      return y_bits.is_zero()
+                 ? fputil::FPBits<float>::quiet_nan().get_val()
+                 : fputil::FPBits<float>::inf(output_sign).get_val();
+    if (y_bits.is_inf())
+      return x_bits.is_zero()
+                 ? fputil::FPBits<float>::quiet_nan().get_val()
+                 : fputil::FPBits<float>::inf(output_sign).get_val();
     // Now either x or y is zero, and the other one is finite.
-      return fputil::FPBits<float>::zero(output_sign).get_val();
+    return fputil::FPBits<float>::zero(output_sign).get_val();
   }
- 
+
   uint64_t mx, my;
 
   // Get mantissa and append the hidden bit if needed.
@@ -53,13 +58,15 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   mx <<= nx;
   my <<= ny;
 
-  // Adjust exponent accordingly: If x or y are normal, we will only need to shift by (exponent length + sign bit = 11 bits. If x or y are denormal, we will need to shift more than 11 bits.
+  // Adjust exponent accordingly: If x or y are normal, we will only need to
+  // shift by (exponent length + sign bit = 11 bits. If x or y are denormal, we
+  // will need to shift more than 11 bits.
   ex -= (nx - 11);
   ey -= (ny - 11);
-  
+
   UInt128 product = static_cast<UInt128>(mx) * static_cast<UInt128>(my);
   int32_t dm1;
-  uint64_t  highs, lows;
+  uint64_t highs, lows;
   uint64_t g, hight, lowt;
   uint32_t m;
   uint32_t b;
@@ -87,12 +94,10 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
     int g_shift = m_shift - 1;
     int h_shift = 64 - g_shift;
     m = (m_shift >= 64) ? 0 : static_cast<uint32_t>(highs >> m_shift);
-    
+
     g = g_shift >= 64 ? 0 : (highs >> ((39 + c) - dm1)) & 1;
-    hight = h_shift >= 64
-                ? highs
-                : (highs << h_shift) != 0;
-    
+    hight = h_shift >= 64 ? highs : (highs << h_shift) != 0;
+
     dm1 = 0;
   } else {
     m = static_cast<uint32_t>(highs >> (39 + c));
@@ -109,7 +114,6 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
     b = 0;
   }
 
-  
   uint32_t exp16 = (dm1 << 23);
 
   uint32_t m2 = m & fputil::FPBits<float>::FRACTION_MASK;
