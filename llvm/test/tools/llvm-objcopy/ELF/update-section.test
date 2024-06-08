@@ -160,7 +160,7 @@ ProgramHeaders:
 # LONG-SAME:   {{ }}9{{$}}
 # LONG:      SectionData (
 # LONG-NEXT:   |111122223|
-# LONT-NEXT: )
+# LONG-NEXT: )
 
 # ADD-UPDATE:      Name: .added
 # ADD-UPDATE:      Size:

@@ -55,11 +55,11 @@
 ## to bb.3, but not into bb.4 because of the intervening out-of-scope block.
 ## Disabled actual testing of this because it's just for comparison purposes.
 #
-# varloc-label: bb.1:
+# varloc-LABEL: bb.1:
 # varloc:       DBG_VALUE
-# varloc-label: bb.2:
+# varloc-LABEL: bb.2:
 ## No location here because it's out-of-scope.
-# varloc-label: bb.3:
+# varloc-LABEL: bb.3:
 # varloc:       DBG_VALUE
 #
 ## Common tail for 'test2' -- this is checking that the assignment of undef or

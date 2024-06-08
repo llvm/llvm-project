@@ -22,4 +22,4 @@ RUN: llvm-nm --print-armap %t/foo.lib | FileCheck %s --check-prefix=DUP
 # DUP-NEXT: a in abc.o
 # DUP-NEXT: b in bar.o
 # DUP-NEXT: c in abc.o
-# DUP-EMPTY
+# DUP-EMPTY:

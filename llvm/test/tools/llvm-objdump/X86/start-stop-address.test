@@ -16,7 +16,7 @@
 // CHECK-NEXT:         2b:	48 8b 45 f0 	movq	-16(%rbp), %rax
 // CHECK-NOT:          {{.}}
 
-// CROSSECTION-NOT:    Disassembly
+// CROSSSECTION-NOT:    Disassembly
 // CROSSSECTION:       Disassembly of section .text:
 // CROSSSECTION-EMPTY:
 // CROSSSECTION-NEXT:  <foo>:

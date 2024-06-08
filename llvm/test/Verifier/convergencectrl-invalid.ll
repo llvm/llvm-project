@@ -21,7 +21,7 @@ define void @wrong_token() {
 }
 
 ; CHECK: Convergence control token can only be used in a convergent call.
-; CHECK-NEXT  call void @g(){{.*}}%t05_tok1
+; CHECK-NEXT: call void @g(){{.*}}%t05_tok1
 define void @missing.attribute() {
   %t05_tok1 = call token @llvm.experimental.convergence.anchor()
   call void @g() [ "convergencectrl"(token %t05_tok1) ]
@@ -47,7 +47,7 @@ define void @multiple_bundles() {
 }
 
 ; CHECK: Cannot mix controlled and uncontrolled convergence in the same function
-; CHECK-NEXT  call void @f()
+; CHECK-NEXT: call void @f()
 define void @mixed1() {
   call void @g() ; not convergent
   %t10_tok1 = call token @llvm.experimental.convergence.anchor()

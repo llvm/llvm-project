@@ -58,18 +58,18 @@ def :MnemonicAlias<"InstB", "BInst">;
 // WRITER-NEXT: };
 
 // ALIAS: static void applyMnemonicAliases(StringRef &Mnemonic, const FeatureBitset &Features, unsigned VariantID) {
-// ALIAS-NEXT  switch (VariantID) {
-// ALIAS-NEXT  case 0:
-// ALIAS-NEXT      switch (Mnemonic.size()) {
-// ALIAS-NEXT      default: break;
-// ALIAS-NEXT      case 5:	 // 2 strings to match.
-// ALIAS-NEXT        if (memcmp(Mnemonic.data()+0, "inst", 4) != 0)
-// ALIAS-NEXT          break;
-// ALIAS-NEXT        switch (Mnemonic[4]) {
-// ALIAS-NEXT        default: break;
-// ALIAS-NEXT        case 'a':	 // 1 string to match.
-// ALIAS-NEXT          Mnemonic = "ainst";	 // "insta"
-// ALIAS-NEXT          return;
-// ALIAS-NEXT        case 'b':	 // 1 string to match.
-// ALIAS-NEXT          Mnemonic = "binst";	 // "instb"
-// ALIAS-NEXT          return;
+// ALIAS-NEXT:  switch (VariantID) {
+// ALIAS-NEXT:  case 0:
+// ALIAS-NEXT:      switch (Mnemonic.size()) {
+// ALIAS-NEXT:      default: break;
+// ALIAS-NEXT:      case 5:	 // 2 strings to match.
+// ALIAS-NEXT:        if (memcmp(Mnemonic.data()+0, "inst", 4) != 0)
+// ALIAS-NEXT:          break;
+// ALIAS-NEXT:        switch (Mnemonic[4]) {
+// ALIAS-NEXT:        default: break;
+// ALIAS-NEXT:        case 'a':	 // 1 string to match.
+// ALIAS-NEXT:          Mnemonic = "ainst";	 // "insta"
+// ALIAS-NEXT:          return;
+// ALIAS-NEXT:        case 'b':	 // 1 string to match.
+// ALIAS-NEXT:          Mnemonic = "binst";	 // "instb"
+// ALIAS-NEXT:          return;
