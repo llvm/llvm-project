@@ -811,7 +811,7 @@ AST_POLYMORPHIC_MATCHER(isProtected,
 /// matches \match{struct Derived1 : private Base {}} and
 /// \match{class Derived2 : Base {}}, with
 /// \matcher{type=sub$cxxBaseSpecifier(isPrivate())} matching
-/// \match{sub=base;count=2$Base}.
+/// \match{sub=base;count=2$Base} each time.
 AST_POLYMORPHIC_MATCHER(isPrivate,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Decl,
                                                         CXXBaseSpecifier)) {
@@ -1224,7 +1224,7 @@ AST_MATCHER_P_OVERLOAD(Expr, ignoringParens, internal::Matcher<Expr>,
 /// The matcher \matcher{expr(isInstantiationDependent())}
 /// matches \match{sizeof(T() + T())},
 /// \match{(T() + T())},
-/// \match{T() + T()} and \match{count=2$T()}.
+/// \match{T() + T()} and two time \match{count=2$T()}.
 AST_MATCHER(Expr, isInstantiationDependent) {
   return Node.isInstantiationDependent();
 }
@@ -2372,8 +2372,9 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBindTemporaryExpr>
 /// \compile_args{-std=c++}
 /// The matcher \matcher{materializeTemporaryExpr()} matches
 /// \match{std=c++14-or-earlier;count=3$f()} three times before C++17 and it
-/// matches \match{std=c++17-or-later$f()} time with C++17 and later, but
-/// it does not match the \nomatch{f()} in the last line in any version.
+/// matches \match{std=c++17-or-later$f()} one time with C++17 and later for
+/// \c f().func() , but it does not match the \nomatch{f()} in the last line in
+/// any version.
 extern const internal::VariadicDynCastAllOfMatcher<Stmt,
                                                    MaterializeTemporaryExpr>
     materializeTemporaryExpr;
@@ -4665,8 +4666,10 @@ AST_MATCHER(CXXRecordDecl, isLambda) {
 /// \endcode
 /// \compile_args{-std=c++}
 /// The matcher \matcher{cxxRecordDecl(has(cxxRecordDecl(hasName("X"))))}
-/// matches \match{count=3$class X {}} three times,
-/// and \match{count=2$class Y { class X {}; }} two times.
+/// matches \match{count=3$class X {}} three times for the definitions of \c X
+/// that contain the implicit class declarations of \c X ,
+/// and \match{count=2$class Y { class X {}; }} two times for the two different
+/// definitions of \c Y that contain \c X .
 ///
 /// ChildT must be an AST base type.
 ///
@@ -4698,8 +4701,10 @@ extern const internal::ArgumentAdaptingMatcherFunc<internal::HasMatcher> has;
 /// \compile_args{-std=c++}
 /// The matcher
 /// \matcher{cxxRecordDecl(hasDescendant(cxxRecordDecl(hasName("X"))))}
-/// matches \match{count=3$class X {}}, \match{count=2$class Y { class X {}; }}
-/// and \match{class Z { class Y { class X {}; }; }}.
+/// matches \match{count=3$class X {}} three times for the definitions of \c X
+/// that contain the implicit class declarations of \c X ,
+/// \match{count=2$class Y { class X {}; }} two times for the declaration of
+/// \c X they contain, and \match{class Z { class Y { class X {}; }; }}.
 ///
 /// DescendantT must be an AST base type.
 ///
@@ -4887,13 +4892,12 @@ extern const internal::ArgumentAdaptingMatcherFunc<
 ///
 /// Given
 /// \code
-///   class X {};
-///   class Y {};
+///   int x;
+///   int y = 0;
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher \matcher{cxxRecordDecl(unless(hasName("X")))}
-/// matches \match{type=name;count=2$Y} twice, once for the definition
-/// and once for the implicit class declaration.
+/// The matcher \matcher{varDecl(unless(hasInitializer(expr())))}
+/// matches \match{int x}, but not \nomatch{int y = 0}.
 ///
 /// Usable as: Any Matcher
 extern const internal::VariadicOperatorMatcherFunc<1, 1> unless;
@@ -7801,7 +7805,7 @@ AST_POLYMORPHIC_MATCHER_P(hasUnaryOperand,
 /// \matcher{opaqueValueExpr(hasSourceExpression(
 ///               implicitCastExpr(has(
 ///                 implicitCastExpr(has(declRefExpr()))))))}
-/// matches \match{count=2$b} twice, for the conditiona and the true expression.
+/// matches \match{count=2$b} twice, for the condition and the true expression.
 AST_POLYMORPHIC_MATCHER_P(hasSourceExpression,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(CastExpr,
                                                           OpaqueValueExpr),
@@ -7864,17 +7868,14 @@ AST_MATCHER_P(ImplicitCastExpr, hasImplicitDestinationType,
 ///
 /// Example matches S, but not C, U or E.
 /// \code
-///   struct S {};
-///   class C {};
-///   union U {};
-///   enum E { Ok };
+///   struct S;
+///   class C;
+///   union U;
+///   enum E;
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher \matcher{tagDecl(isStruct())}
-/// matches \match{type=typestr;count=2$struct S},
-/// but does not match \nomatch{type=typestr;count=2$class C},
-/// \nomatch{type=typestr;count=2$union U}
-/// or \nomatch{type=typestr;count=2$enum E}.
+/// The matcher \matcher{tagDecl(isStruct())} matches \match{struct S},
+/// but does not match \nomatch{class C}, \nomatch{union U} or \nomatch{enum E}.
 AST_MATCHER(TagDecl, isStruct) {
   return Node.isStruct();
 }
@@ -7883,17 +7884,14 @@ AST_MATCHER(TagDecl, isStruct) {
 ///
 /// Given
 /// \code
-///   struct S {};
-///   class C {};
-///   union U {};
-///   enum E { Ok };
+///   struct S;
+///   class C;
+///   union U;
+///   enum E;
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher \matcher{tagDecl(isUnion())}
-/// matches \match{type=typestr;count=2$union U},
-/// does not match \nomatch{type=typestr;count=2$struct S},
-/// \nomatch{type=typestr;count=2$class C}
-/// or \nomatch{type=typestr;count=2$enum E}.
+/// The matcher \matcher{tagDecl(isUnion())} matches \match{union U}, but does
+/// not match \nomatch{struct S}, \nomatch{class C} or \nomatch{enum E}.
 AST_MATCHER(TagDecl, isUnion) {
   return Node.isUnion();
 }
@@ -7902,17 +7900,14 @@ AST_MATCHER(TagDecl, isUnion) {
 ///
 /// Given
 /// \code
-///   struct S {};
-///   class C {};
-///   union U {};
-///   enum E { Ok };
+///   struct S;
+///   class C;
+///   union U;
+///   enum E;
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher \matcher{tagDecl(isClass())}
-/// matches \match{type=typestr;count=2$class C},
-/// but does not match \nomatch{type=typestr;count=2$struct S},
-/// \nomatch{type=typestr;count=2$union U}
-/// or \nomatch{type=typestr;count=2$enum E}.
+/// The matcher \matcher{tagDecl(isClass())} matches \match{class C}, but does
+/// not match \nomatch{struct S}, \nomatch{union U} or \nomatch{enum E}.
 AST_MATCHER(TagDecl, isClass) {
   return Node.isClass();
 }
@@ -7921,16 +7916,14 @@ AST_MATCHER(TagDecl, isClass) {
 ///
 /// Given
 /// \code
-///   struct S {};
-///   class C {};
-///   union U {};
-///   enum E { Ok };
+///   struct S;
+///   class C;
+///   union U;
+///   enum E;
 /// \endcode
 /// \compile_args{-std=c++}
-/// The matcher \matcher{tagDecl(isEnum())}
-/// matches \match{count=1$enum E { Ok }},
-/// but does not match \nomatch{count=2$struct S {}},
-/// \nomatch{count=2$class C {}} or \nomatch{count=2$union U {}}.
+/// The matcher \matcher{tagDecl(isEnum())} matches \match{enum E}, but does not
+/// match \nomatch{struct S}, \nomatch{class C} or \nomatch{union U}.
 AST_MATCHER(TagDecl, isEnum) {
   return Node.isEnum();
 }
@@ -9415,7 +9408,7 @@ extern const AstTypeMatcher<LValueReferenceType> lValueReferenceType;
 ///
 /// The matcher \matcher{rValueReferenceType()} matches the type
 /// \match{type=typestr$int &&} of \c c and the type
-/// \match{type=typestr;count=2$auto &&} of \c f.
+/// \match{type=typestr;count=2$auto &&} of \c e and \c f.
 extern const AstTypeMatcher<RValueReferenceType> rValueReferenceType;
 
 /// Narrows PointerType (and similar) matchers to those where the
@@ -9552,7 +9545,7 @@ extern const AstTypeMatcher<UnaryTransformType> unaryTransformType;
 /// declaration of \c s.
 /// Both of these types are matched three times, once for the type of the
 /// variable, once for the definition of the class, and once for the type of the
-/// injected class name.
+/// implicit class declaration.
 extern const AstTypeMatcher<RecordType> recordType;
 
 /// Matches tag types (record and enum types).
@@ -9571,7 +9564,7 @@ extern const AstTypeMatcher<RecordType> recordType;
 /// \match{type=typestr$enum E} of variable \c e and the type
 /// \match{type=typestr;count=3;std=c++$class C} three times, once for the type
 /// of the variable \c c , once for the type of the class definition and once of
-/// the type in the injected class name.
+/// the type in the implicit class declaration.
 extern const AstTypeMatcher<TagType> tagType;
 
 /// Matches types specified with an elaborated type keyword or with a
@@ -9594,10 +9587,10 @@ extern const AstTypeMatcher<TagType> tagType;
 /// The matcher \matcher{elaboratedType()} matches the type
 /// \match{type=typestr;count=3$C} three times. Once for the type of the
 /// variable \c c, once for the type of the class definition and once for the
-/// type in the injected class name. For \c{class D}, it matches
+/// type in the implicit class declaration. For \c{class D}, it matches
 /// \match{type=typestr$N::M::D} of variable \c d and its class definition and
-/// injected class name
-/// \match{type=typestr;count=2$D} one time respectively.
+/// implicit class declaration \match{type=typestr;count=2$D} one time
+/// respectively.
 extern const AstTypeMatcher<ElaboratedType> elaboratedType;
 
 /// Matches ElaboratedTypes whose qualifier, a NestedNameSpecifier,
@@ -9737,7 +9730,8 @@ extern const AstTypeMatcher<InjectedClassNameType> injectedClassNameType;
 /// matches \match{int i[]} in declaration of \c{f}.
 /// The matcher
 /// \matcher{expr(hasType(decayedType(hasDecayedType(pointerType()))))}
-/// matches \match{count=2$i} in \c{i[1]}.
+/// matches \match{count=2$i} twice, once for the \c DeclRefExpr and oncde for
+/// the cast from an l- to an r-value in \c{i[1]}.
 ///
 extern const AstTypeMatcher<DecayedType> decayedType;
 
@@ -9810,7 +9804,8 @@ extern const internal::VariadicAllOfMatcher<NestedNameSpecifier>
 /// \compile_args{-std=c++}
 ///
 /// The matcher \matcher{nestedNameSpecifierLoc()} matches
-/// \match{count=2$A::} twice, and \match{ns::} once.
+/// \match{count=2$A::} twice for the spellings in \c A::f() and \c ns::A ,
+/// and \match{ns::} once.
 extern const internal::VariadicAllOfMatcher<NestedNameSpecifierLoc>
     nestedNameSpecifierLoc;
 
@@ -9830,7 +9825,7 @@ extern const internal::VariadicAllOfMatcher<NestedNameSpecifierLoc>
 ///
 /// The matcher \matcher{nestedNameSpecifierLoc(loc(specifiesType(
 /// hasDeclaration(namedDecl(hasName("A"))))))} matches \match{count=2$A::}
-/// twice.
+/// twice for the spellings in \c A::f() and \c ns::A .
 AST_MATCHER_FUNCTION_P_OVERLOAD(
     internal::BindableMatcher<NestedNameSpecifierLoc>, loc,
     internal::Matcher<NestedNameSpecifier>, InnerMatcher, 1) {
@@ -9994,8 +9989,8 @@ AST_MATCHER_P_OVERLOAD(Type, equalsNode, const Type*, Other, 2) {
 /// \matcher{switchStmt(forEachSwitchCase(caseStmt().bind("c")))}
 /// matches four times, matching
 /// \match{count=2$switch (1) { case 1: case 2: default: switch (2) { case 3:
-/// case 4: ; } }} and
-/// \match{count=2$switch (2) { case 3: case 4: ; }}, with
+/// case 4: ; } }} twice and
+/// \match{count=2$switch (2) { case 3: case 4: ; }} twice, with
 /// \matcher{type=sub$caseStmt()} matching each of \match{sub=c$case 1:},
 /// \match{sub=c$case 2:}, \match{sub=c$case 3:}
 /// and \match{sub=c$case 4:}.
