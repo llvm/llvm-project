@@ -10,6 +10,13 @@
 // expected-no-diagnostics
 #endif
 
+namespace cwg820 { // cwg820: 2.7
+export template <class T> struct B {};
+// expected-warning@-1 {{exported templates are unsupported}}
+export template<typename T> void f() {}
+// expected-warning@-1 {{exported templates are unsupported}}
+}
+
 namespace cwg873 { // cwg873: 3.0
 #if __cplusplus >= 201103L
 template <typename T> void f(T &&);
