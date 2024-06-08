@@ -712,19 +712,18 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
     if (const auto *TD = TNA.getAsTemplateDecl(); TD && TD->isTypeAlias())
       return TemplateDeductionResult::Success;
 
-    // Perform template argument deduction for the template name.
-    if (auto Result =
-            DeduceTemplateArguments(S, TemplateParams, TNP, TNA, Info,
-                                    SA->template_arguments(), Deduced);
-        Result != TemplateDeductionResult::Success)
-      return Result;
-
     // FIXME: To preserve sugar, the TST needs to carry sugared resolved
     // arguments.
     ArrayRef<TemplateArgument> AResolved =
         SA->getCanonicalTypeInternal()
             ->castAs<TemplateSpecializationType>()
             ->template_arguments();
+
+    // Perform template argument deduction for the template name.
+    if (auto Result = DeduceTemplateArguments(S, TemplateParams, TNP, TNA, Info,
+                                              AResolved, Deduced);
+        Result != TemplateDeductionResult::Success)
+      return Result;
 
     // Perform template argument deduction on each template
     // argument. Ignore any missing/extra arguments, since they could be

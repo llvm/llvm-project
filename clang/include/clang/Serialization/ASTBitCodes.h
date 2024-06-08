@@ -1995,11 +1995,9 @@ struct ObjCCategoriesInfo {
 
   ObjCCategoriesInfo() = default;
   ObjCCategoriesInfo(LocalDeclID ID, unsigned Offset)
-    : DefinitionID(ID.get()), Offset(Offset) {}
+      : DefinitionID(ID.get()), Offset(Offset) {}
 
-  LocalDeclID getDefinitionID() const {
-    return LocalDeclID(DefinitionID);
-  }
+  LocalDeclID getDefinitionID() const { return LocalDeclID(DefinitionID); }
 
   friend bool operator<(const ObjCCategoriesInfo &X,
                         const ObjCCategoriesInfo &Y) {

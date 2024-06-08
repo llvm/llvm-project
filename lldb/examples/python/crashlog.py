@@ -1814,6 +1814,9 @@ def SymbolicateCrashLogs(debugger, command_args, result, is_command):
             )
         )
 
+    if "NO_PARALLEL_IMG_LOADING" in os.environ:
+        options.no_parallel_image_loading = True
+
     if options.version:
         print(debugger.GetVersionString())
         return
