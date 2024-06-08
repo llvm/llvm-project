@@ -494,7 +494,7 @@ multiclass VPseudoVREV8 {
   }
 }
 
-multiclass VPseudoVROL {
+multiclass VPseudoVROT_VV_VX {
  foreach m = MxList in {
     defm "" : VPseudoBinaryV_VV<m>,
               SchedBinary<"WriteVRotV", "ReadVRotV", "ReadVRotV", m.MX,
@@ -505,18 +505,12 @@ multiclass VPseudoVROL {
   }
 }
 
-multiclass VPseudoVROR<Operand ImmType> {
-  defvar Constraint = "";
+multiclass VPseudoVROT_VV_VX_VI
+   : VPseudoVROT_VV_VX {
   foreach m = MxList in {
-    defvar mx = m.MX;
-    defm "" : VPseudoBinaryV_VV<m>,
-              SchedBinary<"WriteVRotV", "ReadVRotV", "ReadVRotV", mx,
-                          forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryV_VX<m>,
-              SchedBinary<"WriteVRotX", "ReadVRotV", "ReadVRotX", mx,
-                          forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryV_VI<ImmType, m>,
-              SchedUnary<"WriteVRotI", "ReadVRotV", mx, forceMergeOpRead=true>;
+    defm "" : VPseudoBinaryV_VI<uimm6, m>,
+              SchedUnary<"WriteVRotI", "ReadVRotV", m.MX,
+                         forceMergeOpRead=true>;
   }
 }
 
@@ -537,8 +531,8 @@ let Predicates = [HasStdExtZvkb] in {
   defm PseudoVANDN  : VPseudoVANDN;
   defm PseudoVBREV8 : VPseudoVBREV8;
   defm PseudoVREV8  : VPseudoVREV8;
-  defm PseudoVROL   : VPseudoVROL;
-  defm PseudoVROR   : VPseudoVROR<uimm6>;
+  defm PseudoVROL   : VPseudoVROT_VV_VX;
+  defm PseudoVROR   : VPseudoVROT_VV_VX_VI;
 } // Predicates = [HasStdExtZvkb]
 
 let Predicates = [HasStdExtZvkg] in {
