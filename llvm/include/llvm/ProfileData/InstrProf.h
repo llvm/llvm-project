@@ -737,15 +737,14 @@ GlobalVariable *InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) {
 // To store the sums of profile count values, or the percentage of
 // the sums of the total count values.
 struct CountSumOrPercent {
-  uint64_t NumEntries;
-  double CountSum;
-  double ValueCounts[IPVK_Last - IPVK_First + 1];
-  CountSumOrPercent() : NumEntries(0), CountSum(0.0f), ValueCounts() {}
+  uint64_t NumEntries = 0;
+  double CountSum = 0.0f;
+  std::array<double, IPVK_Last - IPVK_First + 1> ValueCounts = {};
+  CountSumOrPercent() = default;
   void reset() {
     NumEntries = 0;
     CountSum = 0.0f;
-    for (double &VC : ValueCounts)
-      VC = 0.0f;
+    ValueCounts.fill(0.0f);
   }
 };
 
@@ -761,15 +760,13 @@ struct OverlapStats {
   CountSumOrPercent Mismatch;
   CountSumOrPercent Unique;
   OverlapStatsLevel Level;
-  const std::string *BaseFilename;
-  const std::string *TestFilename;
+  const std::string *BaseFilename = nullptr;
+  const std::string *TestFilename = nullptr;
   StringRef FuncName;
-  uint64_t FuncHash;
-  bool Valid;
+  uint64_t FuncHash = 0;
+  bool Valid = false;
 
-  OverlapStats(OverlapStatsLevel L = ProgramLevel)
-      : Level(L), BaseFilename(nullptr), TestFilename(nullptr), FuncHash(0),
-        Valid(false) {}
+  OverlapStats(OverlapStatsLevel L = ProgramLevel) : Level(L) {}
 
   void dump(raw_fd_ostream &OS) const;
 
