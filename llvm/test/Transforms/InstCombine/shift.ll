@@ -2242,7 +2242,7 @@ define i129 @shift_zext_not_nneg(i8 %arg) {
 
 define i8 @src_shl_nsw(i8 %x) {
 ; CHECK-LABEL: @src_shl_nsw(
-; CHECK-NEXT:    [[R:%.*]] = shl i8 32, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i8 32, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sh = shl nsw i8 1, %x
@@ -2262,7 +2262,7 @@ define i8 @src_shl_nsw_fail(i8 %x) {
 
 define i8 @src_shl_nuw(i8 %x) {
 ; CHECK-LABEL: @src_shl_nuw(
-; CHECK-NEXT:    [[R:%.*]] = shl i8 12, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i8 12, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sh = shl nuw i8 3, %x
@@ -2282,7 +2282,7 @@ define i8 @src_shl_nuw_fail(i8 %x) {
 
 define i8 @src_lshr_exact(i8 %x) {
 ; CHECK-LABEL: @src_lshr_exact(
-; CHECK-NEXT:    [[R:%.*]] = lshr i8 48, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 48, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sh = lshr exact i8 96, %x
@@ -2302,7 +2302,7 @@ define i8 @src_lshr_exact_fail(i8 %x) {
 
 define i8 @src_ashr_exact(i8 %x) {
 ; CHECK-LABEL: @src_ashr_exact(
-; CHECK-NEXT:    [[R:%.*]] = ashr i8 -8, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 -8, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sh = ashr exact i8 -32, %x
