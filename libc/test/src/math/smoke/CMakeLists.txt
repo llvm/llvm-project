@@ -2401,6 +2401,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmul_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmul_test.cpp
+  HDRS
+    FMulTest.h
+  DEPENDS
+    libc.src.math.fmul
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   sqrtf_test
   SUITE
     libc-math-smoke-tests
@@ -2510,6 +2523,20 @@ add_fp_unittest(
     RemQuoTest.h
   DEPENDS
     libc.src.math.remquof
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  remquof128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    remquof128_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquof128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
 )
