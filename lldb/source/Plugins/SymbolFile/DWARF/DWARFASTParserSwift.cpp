@@ -297,3 +297,8 @@ lldb_private::CompilerDeclContext
 DWARFASTParserSwift::GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) {
   return CompilerDeclContext();
 }
+
+lldb_private::Type *
+DWARFASTParserSwift::FindDefinitionTypeForDIE(const DWARFDIE &die) {
+  return nullptr;
+}
