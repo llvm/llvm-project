@@ -84,3 +84,7 @@ breaks targetid_multi_image
 374f6554c3e4 [OpenMP] Fix passing target id features to AMDGPU offloading (#94765)
 contact: ronl
 ---
+revert for now , need lldb person
+6d01a350ce9 [lldb] Encode operands and arity in Dwarf.def and use them in LLDB. (#94679)
+contact: scott
+---
