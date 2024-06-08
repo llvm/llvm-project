@@ -547,19 +547,11 @@ writeMemProfCallStackArray(
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
       MemProfCallStackIndexes;
 
-  MemProfCallStackIndexes.reserve(MemProfCallStackData.size());
-  uint64_t CallStackBase = OS.tell();
-  for (const auto &[CSId, CallStack] : MemProfCallStackData) {
-    memprof::LinearCallStackId CallStackIndex =
-        (OS.tell() - CallStackBase) / sizeof(memprof::LinearCallStackId);
-    MemProfCallStackIndexes.insert({CSId, CallStackIndex});
-    const llvm::SmallVector<memprof::FrameId> CS = CallStack;
-    OS.write32(CS.size());
-    for (const auto F : CS) {
-      assert(MemProfFrameIndexes.contains(F));
-      OS.write32(MemProfFrameIndexes[F]);
-    }
-  }
+  memprof::CallStackRadixTreeBuilder Builder;
+  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes);
+  for (auto I : Builder.getRadixArray())
+    OS.write32(I);
+  MemProfCallStackIndexes = Builder.takeCallStackPos();
 
   // Release the memory of this vector as it is no longer needed.
   MemProfCallStackData.clear();
@@ -695,8 +687,8 @@ static Error writeMemProfV2(ProfOStream &OS,
 // uint64_t Schema entry 1
 // ....
 // uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfFrameData
-// OnDiskChainedHashTable MemProfCallStackData
+// Frames serialized one after another
+// Call stacks encoded as a radix tree
 // OnDiskChainedHashTable MemProfRecordData
 static Error writeMemProfV3(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData,
