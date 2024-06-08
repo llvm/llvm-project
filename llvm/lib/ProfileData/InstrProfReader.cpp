@@ -113,12 +113,7 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
           instrprof_error::malformed,
           "not enough data to read binary id length");
 
-    uint64_t BILen = 0;
-    if (Endian == llvm::endianness::little)
-      BILen = endian::readNext<uint64_t, llvm::endianness::little>(BI);
-    else
-      BILen = endian::readNext<uint64_t, llvm::endianness::big>(BI);
-
+    uint64_t BILen = endian::readNext<uint64_t>(BI, Endian);
     if (BILen == 0)
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "binary id length is 0");
