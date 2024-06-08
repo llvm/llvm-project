@@ -831,6 +831,29 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
   return true;
 }
 
+std::optional<std::string>
+lldb_private::python::SWIGBridge::LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
+                                               std::string &command) {
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject self(PyRefType::Borrowed, implementor);
+  auto pfunc = self.ResolveName<PythonCallable>("get_repeat_command");
+  // If not implemented, repeat the exact command.
+  if (!pfunc.IsAllocated())
+    return std::nullopt;
+
+  PythonObject result;
+  PythonString command_str(command);
+  result = pfunc(command_str);
+
+  // A return of None is the equivalent of nullopt - means repeat
+  // the command as is:
+  if (result.IsNone())
+    return std::nullopt;
+
+  return result.Str().GetString().str();
+}
+
 #include "lldb/Interpreter/CommandReturnObject.h"
 
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
