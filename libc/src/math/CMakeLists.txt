@@ -312,6 +312,7 @@ add_math_entrypoint_object(remainderl)
 
 add_math_entrypoint_object(remquo)
 add_math_entrypoint_object(remquof)
+add_math_entrypoint_object(remquof128)
 add_math_entrypoint_object(remquol)
 
 add_math_entrypoint_object(rint)
