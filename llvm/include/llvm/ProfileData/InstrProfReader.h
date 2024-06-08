@@ -693,15 +693,10 @@ private:
   /// Context sensitive profile summary data.
   std::unique_ptr<ProfileSummary> CS_Summary;
   IndexedMemProfReader MemProfReader;
-  /// VTableNamePtr points to the beginning of compressed vtable names.
-  /// When a symtab is constructed from profiles by llvm-profdata, the list of
-  /// names could be decompressed based on `VTableNamePtr` and
-  /// `CompressedVTableNamesLen`.
+  /// The compressed vtable names, to be used for symtab construction.
   /// A compiler that reads indexed profiles could construct symtab from module
   /// IR so it doesn't need the decompressed names.
-  const char *VTableNamePtr = nullptr;
-  /// The length of compressed vtable names.
-  uint64_t CompressedVTableNamesLen = 0;
+  StringRef VTableName;
   /// Total size of binary ids.
   uint64_t BinaryIdsSize{0};
   /// Start address of binary id length and data pairs.
