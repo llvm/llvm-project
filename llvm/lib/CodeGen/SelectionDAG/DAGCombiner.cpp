@@ -10112,7 +10112,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   // fold (shl X, cttz(Y)) -> (mul (Y & -Y), X) if cttz is unsupported on the
   // target.
   if (((N1.getOpcode() == ISD::CTTZ &&
-        VT.getScalarSizeInBits() >= ShiftVT.getScalarSizeInBits()) ||
+        VT.getScalarSizeInBits() <= ShiftVT.getScalarSizeInBits()) ||
        N1.getOpcode() == ISD::CTTZ_ZERO_UNDEF) &&
       N1.hasOneUse() && !TLI.isOperationLegalOrCustom(ISD::CTTZ, ShiftVT) &&
       TLI.isOperationLegalOrCustom(ISD::MUL, VT)) {
