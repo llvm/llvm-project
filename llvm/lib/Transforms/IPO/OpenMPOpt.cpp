@@ -4238,7 +4238,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           ORA << "Value has potential side effects preventing SPMD-mode "
                  "execution";
           if (isa<CallBase>(NonCompatibleI)) {
-            ORA << ". Add `__attribute__((assume(\"ompx_spmd_amenable\")))` to "
+            ORA << ". Add `[[omp::assume(\"ompx_spmd_amenable\")]]` to "
                    "the called function to override";
           }
           return ORA << ".";
@@ -4380,7 +4380,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           continue;
         auto Remark = [&](OptimizationRemarkAnalysis ORA) {
           return ORA << "Call may contain unknown parallel regions. Use "
-                     << "`__attribute__((assume(\"omp_no_parallelism\")))` to "
+                     << "`[[omp::assume(\"omp_no_parallelism\")]]` to "
                         "override.";
         };
         A.emitRemark<OptimizationRemarkAnalysis>(UnknownParallelRegionCB,

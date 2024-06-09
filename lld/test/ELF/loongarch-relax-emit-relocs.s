@@ -25,7 +25,7 @@
 # CHECK-NEXT:     R_LARCH_PCALA_LO12 _start
 # CHECK-NEXT:     R_LARCH_RELAX *ABS*
 # CHECK-NEXT:   nop
-# CHECK-NEXT:     R_LARCH_ALIGN .Lla-relax-align0+0x4
+# CHECK-NEXT:     R_LARCH_ALIGN *ABS*+0xc
 # CHECK-NEXT:   nop
 # CHECK-NEXT:   ret
 
@@ -37,7 +37,7 @@
 # CHECKR-NEXT:     R_LARCH_PCALA_LO12 _start
 # CHECKR-NEXT:     R_LARCH_RELAX *ABS*
 # CHECKR-NEXT:   nop
-# CHECKR-NEXT:     R_LARCH_ALIGN .Lla-relax-align0+0x4
+# CHECKR-NEXT:     R_LARCH_ALIGN *ABS*+0xc
 # CHECKR-NEXT:   nop
 # CHECKR-NEXT:   nop
 # CHECKR-NEXT:   ret

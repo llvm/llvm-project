@@ -767,11 +767,20 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
   // (C2 >> X) >> C1 --> (C2 >> C1) >> X
   Constant *C2;
   Value *X;
-  if (match(Op0, m_BinOp(I.getOpcode(), m_ImmConstant(C2), m_Value(X))))
-    return BinaryOperator::Create(
-        I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), C2, C1), X);
-
   bool IsLeftShift = I.getOpcode() == Instruction::Shl;
+  if (match(Op0, m_BinOp(I.getOpcode(), m_ImmConstant(C2), m_Value(X)))) {
+    Instruction *R = BinaryOperator::Create(
+        I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), C2, C1), X);
+    BinaryOperator *BO0 = cast<BinaryOperator>(Op0);
+    if (IsLeftShift) {
+      R->setHasNoUnsignedWrap(I.hasNoUnsignedWrap() &&
+                              BO0->hasNoUnsignedWrap());
+      R->setHasNoSignedWrap(I.hasNoSignedWrap() && BO0->hasNoSignedWrap());
+    } else
+      R->setIsExact(I.isExact() && BO0->isExact());
+    return R;
+  }
+
   Type *Ty = I.getType();
   unsigned TypeBits = Ty->getScalarSizeInBits();
 
@@ -1174,7 +1183,11 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
         // X & (CC << C)
         Value *M = Builder.CreateAnd(X, ConstantInt::get(Ty, CC->shl(*C)),
                                      X->getName() + ".mask");
-        return BinaryOperator::Create(Op0BO->getOpcode(), M, YS);
+        auto *NewOp = BinaryOperator::Create(Op0BO->getOpcode(), M, YS);
+        if (auto *Disjoint = dyn_cast<PossiblyDisjointInst>(Op0BO);
+            Disjoint && Disjoint->isDisjoint())
+          cast<PossiblyDisjointInst>(NewOp)->setIsDisjoint(true);
+        return NewOp;
       }
     }
 
@@ -1266,6 +1279,17 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
                                    m_Value(Y))))) {
     Value *NewLshr = Builder.CreateLShr(Y, Op1, "", /*isExact=*/true);
     auto *NewSub = BinaryOperator::CreateNUWSub(X, NewLshr);
+    NewSub->setHasNoSignedWrap(
+        cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap());
+    return NewSub;
+  }
+
+  // (sub nuw X, (Y << nuw Z)) >>u exact Z --> (X >>u exact Z) sub nuw Y
+  if (I.isExact() &&
+      match(Op0, m_OneUse(m_NUWSub(m_Value(X),
+                                   m_NUWShl(m_Value(Y), m_Specific(Op1)))))) {
+    Value *NewLshr = Builder.CreateLShr(X, Op1, "", /*isExact=*/true);
+    auto *NewSub = BinaryOperator::CreateNUWSub(NewLshr, Y);
     NewSub->setHasNoSignedWrap(
         cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap());
     return NewSub;
@@ -1457,13 +1481,24 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
     const APInt *MulC;
     if (match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC)))) {
-      // Look for a "splat" mul pattern - it replicates bits across each half of
-      // a value, so a right shift is just a mask of the low bits:
-      // lshr i[2N] (mul nuw X, (2^N)+1), N --> and iN X, (2^N)-1
-      // TODO: Generalize to allow more than just half-width shifts?
-      if (BitWidth > 2 && ShAmtC * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
-          MulC->logBase2() == ShAmtC)
-        return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
+      if (BitWidth > 2 && (*MulC - 1).isPowerOf2() &&
+          MulC->logBase2() == ShAmtC) {
+        // Look for a "splat" mul pattern - it replicates bits across each half
+        // of a value, so a right shift simplifies back to just X:
+        // lshr i[2N] (mul nuw X, (2^N)+1), N --> X
+        if (ShAmtC * 2 == BitWidth)
+          return replaceInstUsesWith(I, X);
+
+        // lshr (mul nuw (X, 2^N + 1)), N -> add nuw (X, lshr(X, N))
+        if (Op0->hasOneUse()) {
+          auto *NewAdd = BinaryOperator::CreateNUWAdd(
+              X, Builder.CreateLShr(X, ConstantInt::get(Ty, ShAmtC), "",
+                                    I.isExact()));
+          NewAdd->setHasNoSignedWrap(
+              cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap());
+          return NewAdd;
+        }
+      }
 
       // The one-use check is not strictly necessary, but codegen may not be
       // able to invert the transform and perf may suffer with an extra mul
@@ -1480,6 +1515,16 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
           NewMul->setHasNoSignedWrap(true);
           return NewMul;
         }
+      }
+    }
+
+    // lshr (mul nsw (X, 2^N + 1)), N -> add nsw (X, lshr(X, N))
+    if (match(Op0, m_OneUse(m_NSWMul(m_Value(X), m_APInt(MulC))))) {
+      if (BitWidth > 2 && (*MulC - 1).isPowerOf2() &&
+          MulC->logBase2() == ShAmtC) {
+        return BinaryOperator::CreateNSWAdd(
+            X, Builder.CreateLShr(X, ConstantInt::get(Ty, ShAmtC), "",
+                                  I.isExact()));
       }
     }
 
@@ -1685,6 +1730,21 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       Value *Y;
       if (match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
         return new SExtInst(Builder.CreateICmpSLT(X, Y), Ty);
+    }
+
+    const APInt *MulC;
+    if (match(Op0, m_OneUse(m_NSWMul(m_Value(X), m_APInt(MulC)))) &&
+        (BitWidth > 2 && (*MulC - 1).isPowerOf2() &&
+         MulC->logBase2() == ShAmt &&
+         (ShAmt < BitWidth - 1))) /* Minus 1 for the sign bit */ {
+
+      // ashr (mul nsw (X, 2^N + 1)), N -> add nsw (X, ashr(X, N))
+      auto *NewAdd = BinaryOperator::CreateNSWAdd(
+          X,
+          Builder.CreateAShr(X, ConstantInt::get(Ty, ShAmt), "", I.isExact()));
+      NewAdd->setHasNoUnsignedWrap(
+          cast<OverflowingBinaryOperator>(Op0)->hasNoUnsignedWrap());
+      return NewAdd;
     }
   }
 

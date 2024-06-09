@@ -39,10 +39,6 @@
 /* If set, enables PDL usage. */
 #cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
-/* If set, enables CUDA-related features in CUDA-related transforms, pipelines,
-   and targets. */
-#cmakedefine01 MLIR_ENABLE_CUDA_CONVERSIONS
-
 /* If set, enables features that depend on the NVIDIA's PTX compiler. */
 #cmakedefine01 MLIR_ENABLE_NVPTXCOMPILER
 

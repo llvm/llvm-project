@@ -99,6 +99,8 @@ int main(int, char**)
     test_has_unique_object_representations<unsigned>();
     test_has_unique_object_representations<NonEmptyUnion>();
     test_has_unique_object_representations<char[3]>();
+    test_has_unique_object_representations<char[3][4]>();
+    test_has_unique_object_representations<char[3][4][5]>();
     test_has_unique_object_representations<char[]>();
 
 

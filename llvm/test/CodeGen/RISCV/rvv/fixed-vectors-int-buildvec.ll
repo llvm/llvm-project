@@ -669,13 +669,14 @@ define void @buildvec_seq_v9i8(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 3
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmv.v.i v9, 3
 ; CHECK-NEXT:    li a1, 146
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vmv.s.x v8, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v8, v9, 2, v0
 ; CHECK-NEXT:    vsetivli zero, 9, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -1214,11 +1215,11 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; CHECK-NEXT:    vslide1down.vx v8, v8, t4
 ; CHECK-NEXT:    vslide1down.vx v8, v8, t5
 ; CHECK-NEXT:    vslide1down.vx v8, v8, t6
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 255
+; CHECK-NEXT:    li a1, 255
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vslidedown.vi v8, v10, 8, v0.t
 ; CHECK-NEXT:    ret
   %p2 = getelementptr i8, ptr %p, i32 1
@@ -1308,11 +1309,11 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; CHECK-NEXT:    vslide1down.vx v8, v8, t4
 ; CHECK-NEXT:    vslide1down.vx v8, v8, t5
 ; CHECK-NEXT:    vslide1down.vx v8, v8, t6
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 255
+; CHECK-NEXT:    li a1, 255
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vslidedown.vi v8, v10, 8, v0.t
 ; CHECK-NEXT:    ret
   %p2 = getelementptr i8, ptr %p, i32 1
@@ -1488,11 +1489,11 @@ define <16 x i8> @buildvec_v16i8_undef_edges(ptr %p) {
 ; CHECK-NEXT:    vslide1down.vx v8, v9, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a7
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslidedown.vi v8, v8, 4
 ; CHECK-NEXT:    li a0, 255
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
 ; CHECK-NEXT:    vslidedown.vi v8, v10, 8, v0.t
 ; CHECK-NEXT:    ret
   %p4 = getelementptr i8, ptr %p, i32 31
@@ -1553,11 +1554,11 @@ define <16 x i8> @buildvec_v16i8_loads_undef_scattered(ptr %p) {
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a7
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, t0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    li a0, 255
+; CHECK-NEXT:    li a1, 255
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vslidedown.vi v8, v10, 8, v0.t
 ; CHECK-NEXT:    ret
   %p2 = getelementptr i8, ptr %p, i32 1

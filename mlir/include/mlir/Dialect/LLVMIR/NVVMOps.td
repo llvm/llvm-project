@@ -429,7 +429,7 @@ def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive">
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
       std::string ptx = "bar.arrive ";
-      if (getBarrierId()) { ptx += "%0, %1"; } 
+      if (getBarrierId()) { ptx += "%0, %1;"; } 
       else { ptx += "0, %0;"; }
       return ptx;
     }

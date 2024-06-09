@@ -78,6 +78,12 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::ConstantPool, PtrVT, Custom);
 
+  // Implement custom stack allocations
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);
+  // Implement custom stack save and restore
+  setOperationAction(ISD::STACKSAVE, MVT::Other, Custom);
+  setOperationAction(ISD::STACKRESTORE, MVT::Other, Custom);
+
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());
 }
@@ -534,6 +540,43 @@ SDValue XtensaTargetLowering::LowerConstantPool(ConstantPoolSDNode *CP,
   return getAddrPCRel(Result, DAG);
 }
 
+SDValue XtensaTargetLowering::LowerSTACKSAVE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  return DAG.getCopyFromReg(Op.getOperand(0), SDLoc(Op), Xtensa::SP,
+                            Op.getValueType());
+}
+
+SDValue XtensaTargetLowering::LowerSTACKRESTORE(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  return DAG.getCopyToReg(Op.getOperand(0), SDLoc(Op), Xtensa::SP,
+                          Op.getOperand(1));
+}
+
+SDValue XtensaTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0); // Legalize the chain.
+  SDValue Size = Op.getOperand(1);  // Legalize the size.
+  EVT VT = Size->getValueType(0);
+  SDLoc DL(Op);
+
+  // Round up Size to 32
+  SDValue SizeTmp =
+      DAG.getNode(ISD::ADD, DL, VT, Size, DAG.getConstant(31, DL, MVT::i32));
+  SDValue SizeRoundUp = DAG.getNode(ISD::AND, DL, VT, SizeTmp,
+                                    DAG.getConstant(~31, DL, MVT::i32));
+
+  unsigned SPReg = Xtensa::SP;
+  SDValue SP = DAG.getCopyFromReg(Chain, DL, SPReg, VT);
+  SDValue NewSP = DAG.getNode(ISD::SUB, DL, VT, SP, SizeRoundUp); // Value
+  Chain = DAG.getCopyToReg(SP.getValue(1), DL, SPReg, NewSP); // Output chain
+
+  SDValue NewVal = DAG.getCopyFromReg(Chain, DL, SPReg, MVT::i32);
+  Chain = NewVal.getValue(1);
+
+  SDValue Ops[2] = {NewVal, Chain};
+  return DAG.getMergeValues(Ops, DL);
+}
+
 SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
                                              SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -541,6 +584,12 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerImmediate(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(cast<ConstantPoolSDNode>(Op), DAG);
+  case ISD::STACKSAVE:
+    return LowerSTACKSAVE(Op, DAG);
+  case ISD::STACKRESTORE:
+    return LowerSTACKRESTORE(Op, DAG);
+  case ISD::DYNAMIC_STACKALLOC:
+    return LowerDYNAMIC_STACKALLOC(Op, DAG);
   default:
     report_fatal_error("Unexpected node to lower");
   }

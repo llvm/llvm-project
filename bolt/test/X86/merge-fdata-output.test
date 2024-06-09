@@ -1,4 +1,4 @@
-# Check merge-fdata tool correctly handles `-o` option.
+## Check merge-fdata tool correctly handles `-o` option.
 RUN: merge-fdata %S/Inputs/bat_profile_1.fdata \
 RUN:             %S/Inputs/bat_profile_2.fdata \
 RUN:   | FileCheck %s
