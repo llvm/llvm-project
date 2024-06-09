@@ -1397,14 +1397,16 @@ Error IndexedInstrProfReader::readHeader() {
   if (Header->getIndexedProfileVersion() >= 12) {
     const unsigned char *Ptr = Start + Header->VTableNamesOffset;
 
-    CompressedVTableNamesLen =
+    uint64_t CompressedVTableNamesLen =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
     // Writer first writes the length of compressed string, and then the actual
     // content.
-    VTableNamePtr = (const char *)Ptr;
+    const char *VTableNamePtr = (const char *)Ptr;
     if (VTableNamePtr > (const char *)DataBuffer->getBufferEnd())
       return make_error<InstrProfError>(instrprof_error::truncated);
+
+    VTableName = StringRef(VTableNamePtr, CompressedVTableNamesLen);
   }
 
   if (Header->getIndexedProfileVersion() >= 10 &&
@@ -1460,8 +1462,7 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
 
   auto NewSymtab = std::make_unique<InstrProfSymtab>();
 
-  if (Error E = NewSymtab->initVTableNamesFromCompressedStrings(
-          StringRef(VTableNamePtr, CompressedVTableNamesLen))) {
+  if (Error E = NewSymtab->initVTableNamesFromCompressedStrings(VTableName)) {
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
     consumeError(error(ErrCode, Msg));
   }
