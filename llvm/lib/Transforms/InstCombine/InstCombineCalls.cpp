@@ -2622,10 +2622,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *ExtSrc;
     if (match(Exp, m_ZExt(m_Value(ExtSrc))) &&
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
-      Value *Cmp = Builder.CreateICmp(
-          ICmpInst::ICMP_NE, ExtSrc, Constant::getNullValue(ExtSrc->getType()));
       Value *Select =
-          Builder.CreateSelect(Cmp, ConstantFP::get(II->getType(), 2.0),
+          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 2.0),
                                ConstantFP::get(II->getType(), 1.0));
       return BinaryOperator::CreateFMul(Src, Select);
     }
