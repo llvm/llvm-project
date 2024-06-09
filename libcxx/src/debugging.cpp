@@ -58,31 +58,31 @@ _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept {
 
 // `is_debugger_present()` implementation
 
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WEAK bool is_debugger_present() noexcept {
 #if defined(_LIBCPP_WIN32API)
 
-static bool __is_debugger_present() noexcept { return IsDebuggerPresent(); }
+  return IsDebuggerPresent();
 
 #elif defined(_AIX)
 
-static bool __is_debugger_present() noexcept {
   // Get the status information of a process by memory mapping the file /proc/PID/status.
   // https://www.ibm.com/docs/en/aix/7.3?topic=files-proc-file
   char __filename[] = "/proc/4294967295/status";
-  if (auto [__ptr, __ec] = to_chars(__filename + 6, __filename + 16, getpid()); __ec == errc()) {
-    strcpy(__ptr, "/status");
+  if (auto [__ptr, __ec] = std::to_chars(__filename + 6, __filename + 16, ::getpid()); __ec == std::errc()) {
+    ::strcpy(__ptr, "/status");
   } else {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not convert pid to cstring.");
     return false;
   }
 
-  int __fd = open(__filename, O_RDONLY);
+  int __fd = ::open(__filename, O_RDONLY);
   if (__fd < 0) {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not open '/proc/{pid}/status' for reading.");
     return false;
   }
 
   pstatus_t __status;
-  if (read(__fd, &__status, sizeof(pstatus_t)) < static_cast<ssize_t>(sizeof(pstatus_t))) {
+  if (::read(__fd, &__status, sizeof(pstatus_t)) < static_cast<ssize_t>(sizeof(pstatus_t))) {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not read from '/proc/{pid}/status'.");
     return false;
   }
@@ -91,19 +91,18 @@ static bool __is_debugger_present() noexcept {
     return true;
 
   return false;
-}
 
 #elif defined(__APPLE__) || defined(__FreeBSD__)
 
-// Returns true if the current process is being debugged (either
-// running under the debugger or has a debugger attached post facto).
-static bool __is_debugger_present() noexcept {
+  // Returns true if the current process is being debugged (either
+  // running under the debugger or has a debugger attached post facto).
+
   // Technical Q&A QA1361: Detecting the Debugger
   // https://developer.apple.com/library/archive/qa/qa1361/_index.html
 
   // Initialize mib, which tells 'sysctl' to fetch the information about the current process.
 
-  array __mib{CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()};
+  array __mib{CTL_KERN, KERN_PROC, KERN_PROC_PID, ::getpid()};
 
   // Initialize the flags so that, if 'sysctl' fails for some bizarre
   // reason, we get a predictable result.
@@ -114,7 +113,7 @@ static bool __is_debugger_present() noexcept {
   // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/sysctl.3.html
 
   size_t __info_size = sizeof(__info);
-  if (sysctl(__mib.data(), __mib.size(), &__info, &__info_size, nullptr, 0) != 0) {
+  if (::sysctl(__mib.data(), __mib.size(), &__info, &__info_size, nullptr, 0) != 0) {
     _LIBCPP_ASSERT_INTERNAL(false, "'sysctl' runtime error");
     return false;
   }
@@ -129,11 +128,9 @@ static bool __is_debugger_present() noexcept {
 #  endif
 
   return ((__p_flag & P_TRACED) != 0);
-}
 
 #elif defined(__linux__)
 
-static bool __is_debugger_present() noexcept {
 #  if defined(_LIBCPP_HAS_NO_FILESYSTEM)
   _LIBCPP_ASSERT_INTERNAL(false,
                           "Function is not available. Could not open '/proc/self/status' for reading, libc++ was "
@@ -144,7 +141,7 @@ static bool __is_debugger_present() noexcept {
 
   // Get the status information of a process by reading the file /proc/PID/status.
   // The link 'self' points to the process reading the file system.
-  FILE* __proc_status_fp = fopen("/proc/self/status", "r");
+  FILE* __proc_status_fp = ::fopen("/proc/self/status", "r");
   if (__proc_status_fp == nullptr) {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not open '/proc/self/status' for reading.");
     return false;
@@ -155,30 +152,29 @@ static bool __is_debugger_present() noexcept {
   const char* __tokenStr     = "TracerPid:";
   bool __is_debugger_present = false;
 
-  while ((getline(&__line, &__lineLen, __proc_status_fp)) != -1) {
+  while ((::getline(&__line, &__lineLen, __proc_status_fp)) != -1) {
     // If the process is being debugged "TracerPid"'s value is non-zero.
-    char* __tokenPos = strstr(__line, __tokenStr);
+    char* __tokenPos = ::strstr(__line, __tokenStr);
     if (__tokenPos == nullptr) {
       continue;
     }
 
-    __is_debugger_present = (atoi(__tokenPos + strlen(__tokenStr)) != 0);
+    __is_debugger_present = (::atoi(__tokenPos + ::strlen(__tokenStr)) != 0);
     break;
   }
 
-  free(__line);
-  fclose(__proc_status_fp);
+  ::free(__line);
+  ::fclose(__proc_status_fp);
 
   return __is_debugger_present;
 #  endif // _LIBCPP_HAS_NO_FILESYSTEM
-}
 
 #else
 
-static bool __is_debugger_present() noexcept { return false; }
+  // The implementation returns 'false' by default.
+  return false;
 
 #endif // defined(_LIBCPP_WIN32API)
-
-_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WEAK bool is_debugger_present() noexcept { return __is_debugger_present(); }
+}
 
 _LIBCPP_END_NAMESPACE_STD
