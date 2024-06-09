@@ -46,6 +46,8 @@ private:
   static constexpr bool __is_invocable_using = is_invocable_r_v<_Rp, _Tp..., _ArgTypes...>;
 #  endif
 
+  // use a union instead of a plain `void*` to avoid dropping const qualifiers and casting function pointers to data
+  // pointers
   union __storage_t {
     void* __obj_ptr;
     void const* __obj_const_ptr;
@@ -82,18 +84,17 @@ private:
     }
   }
 
-  using __vtable_call_t = _Rp (*)(__storage_t, _ArgTypes&&...) noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT);
-  __vtable_call_t __vtable_call_;
+  using __call_t = _Rp (*)(__storage_t, _ArgTypes&&...) noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT);
+  __call_t __call_;
 
 public:
   template <class _Fp>
     requires is_function_v<_Fp> && __is_invocable_using<_Fp>
   _LIBCPP_HIDE_FROM_ABI function_ref(_Fp* __fn_ptr) noexcept
       : __storage_(__fn_ptr),
-        __vtable_call_(
-            [](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
-              return __get<_Fp>(__storage)(std::forward<_ArgTypes>(__args)...);
-            }) {
+        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
+          return __get<_Fp>(__storage)(std::forward<_ArgTypes>(__args)...);
+        }) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__fn_ptr != nullptr, "the function pointer should not be a nullptr");
   }
 
@@ -102,16 +103,15 @@ public:
              __is_invocable_using<_LIBCPP_FUNCTION_REF_CV _Tp&>)
   _LIBCPP_HIDE_FROM_ABI function_ref(_Fp&& __obj) noexcept
       : __storage_(std::addressof(__obj)),
-        __vtable_call_(
-            [](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
-              _LIBCPP_FUNCTION_REF_CV _Tp& __obj = *__get<_Tp>(__storage);
-              return __obj(std::forward<_ArgTypes>(__args)...);
-            }) {}
+        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
+          _LIBCPP_FUNCTION_REF_CV _Tp& __obj = *__get<_Tp>(__storage);
+          return __obj(std::forward<_ArgTypes>(__args)...);
+        }) {}
 
   template <auto _Fn>
     requires __is_invocable_using<decltype(_Fn)>
   constexpr function_ref(nontype_t<_Fn>) noexcept
-      : __vtable_call_([](__storage_t, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
+      : __call_([](__storage_t, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
           return std::invoke_r<_Rp>(_Fn, std::forward<_ArgTypes>(__args)...);
         }) {
     if constexpr (is_pointer_v<decltype(_Fn)> || is_member_pointer_v<decltype(_Fn)>) {
@@ -123,11 +123,10 @@ public:
     requires(!is_rvalue_reference_v<_Up &&>) && __is_invocable_using<decltype(_Fn), _LIBCPP_FUNCTION_REF_CV _Tp&>
   constexpr function_ref(nontype_t<_Fn>, _Up&& __obj) noexcept
       : __storage_(std::addressof(__obj)),
-        __vtable_call_(
-            [](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
-              _LIBCPP_FUNCTION_REF_CV _Tp& __obj = *__get<_Tp>(__storage);
-              return std::invoke_r<_Rp>(_Fn, __obj, std::forward<_ArgTypes>(__args)...);
-            }) {
+        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
+          _LIBCPP_FUNCTION_REF_CV _Tp& __obj = *__get<_Tp>(__storage);
+          return std::invoke_r<_Rp>(_Fn, __obj, std::forward<_ArgTypes>(__args)...);
+        }) {
     if constexpr (is_pointer_v<decltype(_Fn)> || is_member_pointer_v<decltype(_Fn)>) {
       static_assert(_Fn != nullptr, "the function pointer should not be a nullptr");
     }
@@ -137,11 +136,10 @@ public:
     requires __is_invocable_using<decltype(_Fn), _LIBCPP_FUNCTION_REF_CV _Tp*>
   constexpr function_ref(nontype_t<_Fn>, _LIBCPP_FUNCTION_REF_CV _Tp* __obj_ptr) noexcept
       : __storage_(__obj_ptr),
-        __vtable_call_(
-            [](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
-              auto __obj = __get<_LIBCPP_FUNCTION_REF_CV _Tp>(__storage);
-              return std::invoke_r<_Rp>(_Fn, __obj, std::forward<_ArgTypes>(__args)...);
-            }) {
+        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
+          auto __obj = __get<_LIBCPP_FUNCTION_REF_CV _Tp>(__storage);
+          return std::invoke_r<_Rp>(_Fn, __obj, std::forward<_ArgTypes>(__args)...);
+        }) {
     if constexpr (is_pointer_v<decltype(_Fn)> || is_member_pointer_v<decltype(_Fn)>) {
       static_assert(_Fn != nullptr, "the function pointer should not be a nullptr");
     }
@@ -160,17 +158,17 @@ public:
   function_ref& operator=(_Tp) = delete;
 
   constexpr _Rp operator()(_ArgTypes... __args) const noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) {
-    return __vtable_call_(__storage_, std::forward<_ArgTypes>(__args)...);
+    return __call_(__storage_, std::forward<_ArgTypes>(__args)...);
   }
 };
 
-template <class _Tp, class _Rp, class _Gp, class _ArgTypes>
+template <class _Tp, class _Rp, class _Gp, class... _ArgTypes>
 struct __function_ref_bind<_Rp (_Gp::*)(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT),
                            _Tp> {
   using type = _Rp(_ArgTypes...) noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT);
 };
 
-template <class _Tp, class _Rp, class _Gp, class _ArgTypes>
+template <class _Tp, class _Rp, class _Gp, class... _ArgTypes>
 struct __function_ref_bind<_Rp (_Gp::*)(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV & noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT),
                            _Tp> {
   using type = _Rp(_ArgTypes...) noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT);

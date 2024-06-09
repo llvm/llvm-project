@@ -33,14 +33,14 @@ template <class _Rp, class... _ArgTypes>
 inline constexpr bool __is_function_ref<function_ref<_Rp, _ArgTypes...>> = true;
 
 template <class _Fp, class _Tp>
-struct __function_ref_bind;
+struct __function_ref_bind {};
 
-template <class _Tp, class _Rp, class _Gp, class _ArgTypes>
+template <class _Tp, class _Rp, class _Gp, class... _ArgTypes>
 struct __function_ref_bind<_Rp (*)(_Gp, _ArgTypes...), _Tp> {
   using type = _Rp(_ArgTypes...);
 };
 
-template <class _Tp, class _Rp, class _Gp, class _ArgTypes>
+template <class _Tp, class _Rp, class _Gp, class... _ArgTypes>
 struct __function_ref_bind<_Rp (*)(_Gp, _ArgTypes...) noexcept, _Tp> {
   using type = _Rp(_ArgTypes...) noexcept;
 };
@@ -48,7 +48,7 @@ struct __function_ref_bind<_Rp (*)(_Gp, _ArgTypes...) noexcept, _Tp> {
 template <class _Tp, class _Mp, class _Gp>
   requires is_object_v<_Mp>
 struct __function_ref_bind<_Mp _Gp::*, _Tp> {
-  using type = invoke_result_t<_Mp _Gp::*, _Tp&>;
+  using type = invoke_result_t<_Mp _Gp::*, _Tp&>();
 };
 
 template <class _Fp, class _Tp>
