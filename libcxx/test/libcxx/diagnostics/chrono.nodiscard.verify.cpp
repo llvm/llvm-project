@@ -48,8 +48,10 @@ void test() {
 
   {
     std::chrono::sys_seconds s{};
+    std::chrono::local_seconds l{};
     tz.name();           // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     tz.get_info(s);      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    tz.get_info(l);      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     operator==(tz, tz);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     operator<=>(tz, tz); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
