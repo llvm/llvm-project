@@ -393,9 +393,9 @@ set(files
   __functional/compose.h
   __functional/default_searcher.h
   __functional/function.h
+  __functional/function_ref.h
   __functional/function_ref_common.h
   __functional/function_ref_impl.h
-  __functional/function_ref.h
   __functional/hash.h
   __functional/identity.h
   __functional/invoke.h
