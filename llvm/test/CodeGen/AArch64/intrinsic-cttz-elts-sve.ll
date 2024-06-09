@@ -359,6 +359,152 @@ define i32 @add_i32_ctz_nxv16i1_poison(<vscale x 16 x i1> %a, i32 %b) {
   ret i32 %add
 }
 
+; FIXED-WIDTH VECTOR TYPES
+
+define i32 @ctz_v16i1(<16 x i1> %a) {
+; CHECK-LABEL: ctz_v16i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
+; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x0, p0, p0.b
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v16i1(<16 x i1> %a, i1 0)
+  ret i32 %res
+}
+
+define i32 @ctz_v16i1_poison(<16 x i1> %a) {
+; CHECK-LABEL: ctz_v16i1_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
+; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x0, p0, p0.b
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v16i1(<16 x i1> %a, i1 1)
+  ret i32 %res
+}
+
+define i64 @add_i64_ctz_v16i1_poison(<16 x i1> %a, i64 %b) {
+; CHECK-LABEL: add_i64_ctz_v16i1_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
+; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    incp x0, p0.b
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> %a, i1 1)
+  %add = add i64 %res, %b
+  ret i64 %add
+}
+
+define i32 @ctz_v8i1(<8 x i1> %a) {
+; CHECK-LABEL: ctz_v8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.8b, v0.8b, #7
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
+; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x0, p0, p0.b
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v8i1(<8 x i1> %a, i1 0)
+  ret i32 %res
+}
+
+define i32 @ctz_v8i1_poison(<8 x i1> %a) {
+; CHECK-LABEL: ctz_v8i1_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.8b, v0.8b, #7
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
+; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x0, p0, p0.b
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v8i1(<8 x i1> %a, i1 1)
+  ret i32 %res
+}
+
+define i32 @ctz_v4i1(<4 x i1> %a) {
+; CHECK-LABEL: ctz_v4i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.4h, v0.4h, #15
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x0, p0, p0.h
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> %a, i1 0)
+  ret i32 %res
+}
+
+define i32 @ctz_v4i1_poison(<4 x i1> %a) {
+; CHECK-LABEL: ctz_v4i1_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.4h, v0.4h, #15
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x0, p0, p0.h
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> %a, i1 1)
+  ret i32 %res
+}
+
+define i32 @ctz_v2i1(<2 x i1> %a) {
+; CHECK-LABEL: ctz_v2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.2s, v0.2s, #31
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x0, p0, p0.s
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v2i1(<2 x i1> %a, i1 0)
+  ret i32 %res
+}
+
+define i32 @ctz_v2i1_poison(<2 x i1> %a) {
+; CHECK-LABEL: ctz_v2i1_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.2s, v0.2s, #31
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x0, p0, p0.s
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v2i1(<2 x i1> %a, i1 1)
+  ret i32 %res
+}
+
 declare i32 @llvm.experimental.cttz.elts.i32.nxv8i1(<vscale x 8 x i1>, i1)
 declare i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1>, i1)
 declare i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1>, i1)

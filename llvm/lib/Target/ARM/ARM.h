@@ -64,7 +64,7 @@ void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
 void initializeARMBlockPlacementPass(PassRegistry &);
 void initializeARMBranchTargetsPass(PassRegistry &);
 void initializeARMConstantIslandsPass(PassRegistry &);
-void initializeARMDAGToDAGISelPass(PassRegistry &);
+void initializeARMDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeARMExpandPseudoPass(PassRegistry &);
 void initializeARMFixCortexA57AES1742098Pass(PassRegistry &);
 void initializeARMLoadStoreOptPass(PassRegistry &);

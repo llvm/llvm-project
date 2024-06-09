@@ -1,6 +1,6 @@
 ! Offloading test checking interaction of two
 ! derived type's with two explicit array
-! members each being mapped with bounds to 
+! members each being mapped with bounds to
 ! target
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
@@ -19,10 +19,10 @@ program main
     real(4) :: array_y(10)
     real(4) :: break_3
     end type scalar_array
-  
+
     type(scalar_array) :: scalar_arr1
     type(scalar_array) :: scalar_arr2
-    
+
   do i = 1, 10
     scalar_arr1%array_x(i) = i
     scalar_arr2%array_x(i) = i
@@ -32,7 +32,7 @@ program main
     do i = 1, 10
       scalar_arr2%array_y(i) = scalar_arr1%array_x(i)
     end do
-    
+
     do i = 1, 10
       scalar_arr1%array_y(i) = scalar_arr2%array_x(i)
     end do

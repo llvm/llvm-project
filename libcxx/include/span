@@ -294,7 +294,8 @@ public:
   }
 
   template <__span_array_convertible<element_type> _OtherElementType>
-  _LIBCPP_HIDE_FROM_ABI constexpr span(const span<_OtherElementType, _Extent>& __other) : __data_{__other.data()} {}
+  _LIBCPP_HIDE_FROM_ABI constexpr span(const span<_OtherElementType, _Extent>& __other) noexcept
+      : __data_{__other.data()} {}
 
   template <__span_array_convertible<element_type> _OtherElementType>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit span(const span<_OtherElementType, dynamic_extent>& __other) noexcept

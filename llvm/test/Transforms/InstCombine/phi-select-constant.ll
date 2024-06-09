@@ -8,7 +8,8 @@ define i32 @foo(i1 %which) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
 ; CHECK:       delay:
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 icmp eq (ptr @A, ptr @B), i32 2, i32 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @A, @B
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP]], i32 2, i32 1
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
 ; CHECK-NEXT:    [[USE2:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[TMP0]], [[DELAY]] ]
@@ -18,10 +19,11 @@ entry:
   br i1 %which, label %final, label %delay
 
 delay:
+  %cmp = icmp eq ptr @A, @B
   br label %final
 
 final:
-  %use2 = phi i1 [ false, %entry ], [ icmp eq (ptr @A, ptr @B), %delay ]
+  %use2 = phi i1 [ false, %entry ], [ %cmp, %delay ]
   %value = select i1 %use2, i32 2, i32 1
   ret i32 %value
 }

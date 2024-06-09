@@ -30,7 +30,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTarget() {
 
   PassRegistry *Registry = PassRegistry::getPassRegistry();
   initializeCSKYConstantIslandsPass(*Registry);
-  initializeCSKYDAGToDAGISelPass(*Registry);
+  initializeCSKYDAGToDAGISelLegacyPass(*Registry);
 }
 
 static std::string computeDataLayout(const Triple &TT) {

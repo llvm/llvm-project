@@ -13,7 +13,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; VPLANS-NEXT: vp<[[TC:%[0-9]+]]> = original trip-count
 ; VPLANS-EMPTY:
-; VPLANS-NEXT: ph:
+; VPLANS-NEXT: ir-bb<entry>:
 ; VPLANS-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1 umax %n)
 ; VPLANS-NEXT: No successors
 ; VPLANS-EMPTY:

@@ -750,18 +750,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
   // Again, stack arguments may need realignment. In this case both integer and
   // floating-point ones might be affected.
   if (!IsIndirect && TyAlign.getQuantity() > 8) {
-    int Align = TyAlign.getQuantity();
-
-    OnStackPtr = CGF.Builder.CreatePtrToInt(OnStackPtr, CGF.Int64Ty);
-
-    OnStackPtr = CGF.Builder.CreateAdd(
-        OnStackPtr, llvm::ConstantInt::get(CGF.Int64Ty, Align - 1),
-        "align_stack");
-    OnStackPtr = CGF.Builder.CreateAnd(
-        OnStackPtr, llvm::ConstantInt::get(CGF.Int64Ty, -Align),
-        "align_stack");
-
-    OnStackPtr = CGF.Builder.CreateIntToPtr(OnStackPtr, CGF.Int8PtrTy);
+    OnStackPtr = emitRoundPointerUpToAlignment(CGF, OnStackPtr, TyAlign);
   }
   Address OnStackAddr = Address(OnStackPtr, CGF.Int8Ty,
                                 std::max(CharUnits::fromQuantity(8), TyAlign));

@@ -93,6 +93,49 @@ private:
   bool foldSingleUseOnly = false;
 };
 
+/// tensor.empty does not define any tensor contents, so an unpadded pack
+/// can be folded away.
+struct FoldEmptyTensorWithPackOp : public OpRewritePattern<PackOp> {
+  using OpRewritePattern<PackOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PackOp packOp,
+                                PatternRewriter &rewriter) const override {
+    // Check for tensor.empty source.
+    auto emptyOp = packOp.getSource().getDefiningOp<EmptyOp>();
+    if (!emptyOp)
+      return failure();
+
+    // Check for padding.
+    // Packing with padding cannot be simply removed.
+    if (packOp.getPaddingValue())
+      return rewriter.notifyMatchFailure(packOp, "expects no padding value");
+
+    // Replace the pack directly with its destination.
+    rewriter.replaceOp(packOp, packOp.getDest());
+
+    return success();
+  }
+};
+
+/// tensor.empty does not define any tensor contents, so an unpack
+/// can be folded away.
+struct FoldEmptyTensorWithUnPackOp : public OpRewritePattern<UnPackOp> {
+  using OpRewritePattern<UnPackOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(UnPackOp unPackOp,
+                                PatternRewriter &rewriter) const override {
+    // Check for tensor.empty source.
+    auto emptyOp = unPackOp.getSource().getDefiningOp<EmptyOp>();
+    if (!emptyOp)
+      return failure();
+
+    // Replace the unpack directly with its destination.
+    rewriter.replaceOp(unPackOp, unPackOp.getDest());
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tensor::populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
@@ -101,4 +144,6 @@ void mlir::tensor::populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
                FoldEmptyTensorWithReshapeOp<tensor::ExpandShapeOp>,
                FoldEmptyTensorWithReshapeOp<tensor::CollapseShapeOp>>(
       patterns.getContext(), /*benefit=*/1, foldSingleUseOnly);
+  patterns.add<FoldEmptyTensorWithPackOp, FoldEmptyTensorWithUnPackOp>(
+      patterns.getContext(), /*benefit=*/1);
 }

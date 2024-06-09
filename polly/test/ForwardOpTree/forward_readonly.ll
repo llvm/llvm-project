@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-analyze-read-only-scalars=true  -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines -check-prefixes=STATS,MODEL
-; RUN: opt %loadPolly -polly-analyze-read-only-scalars=false -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines -check-prefixes=STATS,NOMODEL
+; RUN: opt %loadNPMPolly -polly-analyze-read-only-scalars=true  '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines -check-prefixes=STATS,MODEL
+; RUN: opt %loadNPMPolly -polly-analyze-read-only-scalars=false '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines -check-prefixes=STATS,NOMODEL
 ;
 ; Move %val to %bodyB, so %bodyA can be removed (by -polly-simplify)
 ;

@@ -71,6 +71,8 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let mayStore           = ps.mayStore;
   let IsAtomicRet        = ps.IsAtomicRet;
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
+  let Uses               = ps.Uses;
+  let Defs               = ps.Defs;
 
   let Constraints = ps.Constraints;
   let DisableEncoding = ps.DisableEncoding;

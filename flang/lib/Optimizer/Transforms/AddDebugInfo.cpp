@@ -54,6 +54,16 @@ class AddDebugInfoPass : public fir::impl::AddDebugInfoBase<AddDebugInfoPass> {
 public:
   AddDebugInfoPass(fir::AddDebugInfoOptions options) : Base(options) {}
   void runOnOperation() override;
+
+private:
+  llvm::StringMap<mlir::LLVM::DIModuleAttr> moduleMap;
+
+  mlir::LLVM::DIModuleAttr getOrCreateModuleAttr(
+      const std::string &name, mlir::LLVM::DIFileAttr fileAttr,
+      mlir::LLVM::DIScopeAttr scope, unsigned line, bool decl);
+
+  void handleGlobalOp(fir::GlobalOp glocalOp, mlir::LLVM::DIFileAttr fileAttr,
+                      mlir::LLVM::DIScopeAttr scope);
 };
 
 static uint32_t getLineFromLoc(mlir::Location loc) {
@@ -82,12 +92,18 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
 
   // FIXME: There may be cases where an argument is processed a bit before
   // DeclareOp is generated. In that case, DeclareOp may point to an
-  // intermediate op and not to BlockArgument. We need to find those cases and
-  // walk the chain to get to the actual argument.
-
+  // intermediate op and not to BlockArgument.
+  // Moreover, with MLIR inlining we cannot use the BlockArgument
+  // position to identify the original number of the dummy argument.
+  // If we want to keep running AddDebugInfoPass late, the dummy argument
+  // position in the argument list has to be expressed in FIR (e.g. as a
+  // constant attribute of [hl]fir.declare/fircg.ext_declare operation that has
+  // a dummy_scope operand).
   unsigned argNo = 0;
-  if (auto Arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref()))
-    argNo = Arg.getArgNumber() + 1;
+  if (fir::isDummyArgument(declOp.getMemref())) {
+    auto arg = llvm::cast<mlir::BlockArgument>(declOp.getMemref());
+    argNo = arg.getArgNumber() + 1;
+  }
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
                                     fileAttr, scopeAttr, declOp.getLoc());
@@ -97,6 +113,70 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
       fileAttr, getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0,
       tyAttr);
   declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
+}
+
+// The `module` does not have a first class representation in the `FIR`. We
+// extract information about it from the name of the identifiers and keep a
+// map to avoid duplication.
+mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
+    const std::string &name, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scope, unsigned line, bool decl) {
+  mlir::MLIRContext *context = &getContext();
+  mlir::LLVM::DIModuleAttr modAttr;
+  if (auto iter{moduleMap.find(name)}; iter != moduleMap.end()) {
+    modAttr = iter->getValue();
+  } else {
+    modAttr = mlir::LLVM::DIModuleAttr::get(
+        context, fileAttr, scope, mlir::StringAttr::get(context, name),
+        /* configMacros */ mlir::StringAttr(),
+        /* includePath */ mlir::StringAttr(),
+        /* apinotes */ mlir::StringAttr(), line, decl);
+    moduleMap[name] = modAttr;
+  }
+  return modAttr;
+}
+
+void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
+                                      mlir::LLVM::DIFileAttr fileAttr,
+                                      mlir::LLVM::DIScopeAttr scope) {
+  mlir::ModuleOp module = getOperation();
+  mlir::MLIRContext *context = &getContext();
+  fir::DebugTypeGenerator typeGen(module);
+  mlir::OpBuilder builder(context);
+
+  std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
+  if (result.first != fir::NameUniquer::NameKind::VARIABLE)
+    return;
+
+  unsigned line = getLineFromLoc(globalOp.getLoc());
+
+  // DWARF5 says following about the fortran modules:
+  // A Fortran 90 module may also be represented by a module entry
+  // (but no declaration attribute is warranted because Fortran has no concept
+  // of a corresponding module body).
+  // But in practice, compilers use declaration attribute with a module in cases
+  // where module was defined in another source file (only being used in this
+  // one). The isInitialized() seems to provide the right information
+  // but inverted. It is true where module is actually defined but false where
+  // it is used.
+  // FIXME: Currently we don't have the line number on which a module was
+  // declared. We are using a best guess of line - 1 where line is the source
+  // line of the first member of the module that we encounter.
+
+  if (result.second.modules.empty())
+    return;
+
+  scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope,
+                                line - 1, !globalOp.isInitialized());
+
+  mlir::LLVM::DITypeAttr diType = typeGen.convertType(
+      globalOp.getType(), fileAttr, scope, globalOp.getLoc());
+  auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
+      context, scope, mlir::StringAttr::get(context, result.second.name),
+      mlir::StringAttr::get(context, globalOp.getName()), fileAttr, line,
+      diType, /*isLocalToUnit*/ false,
+      /*isDefinition*/ globalOp.isInitialized(), /* alignInBits*/ 0);
+  globalOp->setLoc(builder.getFusedLoc({globalOp->getLoc()}, gvAttr));
 }
 
 void AddDebugInfoPass::runOnOperation() {
@@ -137,6 +217,12 @@ void AddDebugInfoPass::runOnOperation() {
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
       isOptimized, debugLevel);
+
+  if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
+    // Process 'GlobalOp' only if full debug info is requested.
+    for (auto globalOp : module.getOps<fir::GlobalOp>())
+      handleGlobalOp(globalOp, fileAttr, cuAttr);
+  }
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     mlir::Location l = funcOp->getLoc();
@@ -180,6 +266,7 @@ void AddDebugInfoPass::runOnOperation() {
 
     // Only definitions need a distinct identifier and a compilation unit.
     mlir::DistinctAttr id;
+    mlir::LLVM::DIScopeAttr Scope = fileAttr;
     mlir::LLVM::DICompileUnitAttr compilationUnit;
     mlir::LLVM::DISubprogramFlags subprogramFlags =
         mlir::LLVM::DISubprogramFlags{};
@@ -192,9 +279,13 @@ void AddDebugInfoPass::runOnOperation() {
           subprogramFlags | mlir::LLVM::DISubprogramFlags::Definition;
     }
     unsigned line = getLineFromLoc(l);
+    if (!result.second.modules.empty())
+      Scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, cuAttr,
+                                    line - 1, false);
+
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
-        context, id, compilationUnit, fileAttr, funcName, fullName,
-        funcFileAttr, line, line, subprogramFlags, subTypeAttr);
+        context, id, compilationUnit, Scope, funcName, fullName, funcFileAttr,
+        line, line, subprogramFlags, subTypeAttr);
     funcOp->setLoc(builder.getFusedLoc({funcOp->getLoc()}, spAttr));
 
     // Don't process variables if user asked for line tables only.

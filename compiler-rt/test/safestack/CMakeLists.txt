@@ -27,4 +27,3 @@ configure_lit_site_cfg(
 add_lit_testsuite(check-safestack "Running the SafeStack tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${SAFESTACK_TEST_DEPS})
-set_target_properties(check-safestack PROPERTIES FOLDER "Compiler-RT Misc")

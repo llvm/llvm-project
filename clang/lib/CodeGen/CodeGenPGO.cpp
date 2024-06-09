@@ -1340,7 +1340,7 @@ void CodeGenPGO::setProfileVersion(llvm::Module &M) {
                                         llvm::APInt(64, ProfileVersion)),
         VarName);
 
-    IRLevelVersionVariable->setVisibility(llvm::GlobalValue::DefaultVisibility);
+    IRLevelVersionVariable->setVisibility(llvm::GlobalValue::HiddenVisibility);
     llvm::Triple TT(M.getTargetTriple());
     if (TT.supportsCOMDAT()) {
       IRLevelVersionVariable->setLinkage(llvm::GlobalValue::ExternalLinkage);
