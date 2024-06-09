@@ -3117,20 +3117,30 @@ static bool isCttzOpc(unsigned Opc) {
 SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
                                                SelectionDAG &DAG) const {
   auto SL = SDLoc(Op);
+  auto Opc = Op.getOpcode();
   auto Arg = Op.getOperand(0u);
   auto ResultVT = Op.getValueType();
 
   if (ResultVT != MVT::i8 && ResultVT != MVT::i16)
     return {};
 
-  assert(isCtlzOpc(Op.getOpcode()));
+  assert(isCtlzOpc(Opc));
   assert(ResultVT == Arg.getValueType());
 
-  auto const LeadingZeroes = 32u - ResultVT.getFixedSizeInBits();
-  auto SubVal = DAG.getConstant(LeadingZeroes, SL, MVT::i32);
-  auto NewOp = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Arg);
-  NewOp = DAG.getNode(Op.getOpcode(), SL, MVT::i32, NewOp);
-  NewOp = DAG.getNode(ISD::SUB, SL, MVT::i32, NewOp, SubVal);
+  const uint64_t NumBits = ResultVT.getFixedSizeInBits();
+  SDValue NumExtBits = DAG.getConstant(32u - NumBits, SL, MVT::i32);
+  SDValue NewOp;
+
+  if (Opc == ISD::CTLZ_ZERO_UNDEF) {
+    NewOp = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i32, Arg);
+    NewOp = DAG.getNode(ISD::SHL, SL, MVT::i32, NewOp, NumExtBits);
+    NewOp = DAG.getNode(Opc, SL, MVT::i32, NewOp);
+  } else {
+    NewOp = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Arg);
+    NewOp = DAG.getNode(Opc, SL, MVT::i32, NewOp);
+    NewOp = DAG.getNode(ISD::SUB, SL, MVT::i32, NewOp, NumExtBits);
+  }
+
   return DAG.getNode(ISD::TRUNCATE, SL, ResultVT, NewOp);
 }
 
@@ -5519,6 +5529,11 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUFFER_LOAD_USHORT)
   NODE_NAME_CASE(BUFFER_LOAD_BYTE)
   NODE_NAME_CASE(BUFFER_LOAD_SHORT)
+  NODE_NAME_CASE(BUFFER_LOAD_TFE)
+  NODE_NAME_CASE(BUFFER_LOAD_UBYTE_TFE)
+  NODE_NAME_CASE(BUFFER_LOAD_USHORT_TFE)
+  NODE_NAME_CASE(BUFFER_LOAD_BYTE_TFE)
+  NODE_NAME_CASE(BUFFER_LOAD_SHORT_TFE)
   NODE_NAME_CASE(BUFFER_LOAD_FORMAT)
   NODE_NAME_CASE(BUFFER_LOAD_FORMAT_TFE)
   NODE_NAME_CASE(BUFFER_LOAD_FORMAT_D16)

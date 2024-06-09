@@ -89,6 +89,20 @@ def ApplyTransferPermutationPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyLowerBitCastPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_bitcast",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector bitcast operations should be lowered to
+    finer-grained vector primitives.
+
+    This is usally a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyLowerBroadcastPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_broadcast",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

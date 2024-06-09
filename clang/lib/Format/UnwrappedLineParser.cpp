@@ -1181,18 +1181,12 @@ void UnwrappedLineParser::parsePPDefine() {
   Line->InMacroBody = true;
 
   if (Style.SkipMacroDefinitionBody) {
-    do {
+    while (!eof()) {
       FormatTok->Finalized = true;
-      nextToken();
-    } while (!eof());
+      FormatTok = Tokens->getNextToken();
+    }
     addUnwrappedLine();
     return;
-  }
-
-  if (FormatTok->is(tok::identifier) &&
-      Tokens->peekNextToken()->is(tok::colon)) {
-    nextToken();
-    nextToken();
   }
 
   // Errors during a preprocessor directive can only affect the layout of the
@@ -1681,7 +1675,8 @@ void UnwrappedLineParser::parseStructuralElement(
     if (!Style.isJavaScript() && !Style.isVerilog() && !Style.isTableGen() &&
         Tokens->peekNextToken()->is(tok::colon) && !Line->MustBeDeclaration) {
       nextToken();
-      Line->Tokens.begin()->Tok->MustBreakBefore = true;
+      if (!Line->InMacroBody || CurrentLines->size() > 1)
+        Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
       parseLabel(!Style.IndentGotoLabels);
       if (HasLabel)
@@ -1694,9 +1689,15 @@ void UnwrappedLineParser::parseStructuralElement(
     break;
   }
 
-  const bool InRequiresExpression =
-      OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
-  do {
+  for (const bool InRequiresExpression =
+           OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
+       !eof();) {
+    if (IsCpp && FormatTok->isCppAlternativeOperatorKeyword()) {
+      if (auto *Next = Tokens->peekNextToken(/*SkipComment=*/true);
+          Next && Next->isBinaryOperator()) {
+        FormatTok->Tok.setKind(tok::identifier);
+      }
+    }
     const FormatToken *Previous = FormatTok->Previous;
     switch (FormatTok->Tok.getKind()) {
     case tok::at:
@@ -2127,7 +2128,7 @@ void UnwrappedLineParser::parseStructuralElement(
       nextToken();
       break;
     }
-  } while (!eof());
+  }
 }
 
 bool UnwrappedLineParser::tryToParsePropertyAccessor() {
@@ -2235,7 +2236,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
   bool InTemplateParameterList = false;
 
   while (FormatTok->isNot(tok::l_brace)) {
-    if (FormatTok->isTypeName(LangOpts)) {
+    if (FormatTok->isTypeName(LangOpts) || FormatTok->isAttribute()) {
       nextToken();
       continue;
     }
@@ -3992,8 +3993,10 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     case tok::coloncolon:
       break;
     default:
-      if (!ClassName && Previous->is(tok::identifier))
+      if (!ClassName && Previous->is(tok::identifier) &&
+          Previous->isNot(TT_AttributeMacro)) {
         ClassName = Previous;
+      }
     }
   }
 
@@ -4018,6 +4021,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       if (AngleNestingLevel == 0) {
         if (FormatTok->is(tok::colon)) {
           IsDerived = true;
+        } else if (FormatTok->is(tok::identifier) &&
+                   FormatTok->Previous->is(tok::coloncolon)) {
+          ClassName = FormatTok;
         } else if (FormatTok->is(tok::l_paren) &&
                    IsNonMacroIdentifier(FormatTok->Previous)) {
           break;

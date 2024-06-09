@@ -82,7 +82,7 @@ func.func @func_with_ops(i1, i32, i64) {
 
 func.func @func_with_ops(vector<12xi1>, vector<42xi32>, vector<42xi32>) {
 ^bb0(%cond : vector<12xi1>, %t : vector<42xi32>, %f : vector<42xi32>):
-  // expected-error@+1 {{'arith.select' op failed to verify that condition is scalar or has matching shape}}
+  // expected-error@+1 {{'arith.select' op failed to verify that condition is signless i1 or has matching shape}}
   %r = "arith.select"(%cond, %t, %f) : (vector<12xi1>, vector<42xi32>, vector<42xi32>) -> vector<42xi32>
 }
 
@@ -90,7 +90,7 @@ func.func @func_with_ops(vector<12xi1>, vector<42xi32>, vector<42xi32>) {
 
 func.func @func_with_ops(tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) {
 ^bb0(%cond : tensor<12xi1>, %t : tensor<42xi32>, %f : tensor<42xi32>):
-  // expected-error@+1 {{'arith.select' op failed to verify that condition is scalar or has matching shape}}
+  // expected-error@+1 {{'arith.select' op failed to verify that condition is signless i1 or has matching shape}}
   %r = "arith.select"(%cond, %t, %f) : (tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) -> tensor<42xi32>
 }
 
