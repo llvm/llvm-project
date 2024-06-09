@@ -162,7 +162,11 @@ static void timedlock_with_deadlock_test() {
   timespec ts{};
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_rdlock(&rwlock), 0);
   LIBC_NAMESPACE::clock_gettime(CLOCK_REALTIME, &ts);
-  ts.tv_sec += 1;
+  ts.tv_nsec += 50'000;
+  if (ts.tv_nsec >= 1'000'000'000) {
+    ts.tv_nsec -= 1'000'000'000;
+    ts.tv_sec += 1;
+  }
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedwrlock(&rwlock, &ts),
             ETIMEDOUT);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(&rwlock, &ts), 0);
