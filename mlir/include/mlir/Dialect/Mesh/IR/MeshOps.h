@@ -51,13 +51,24 @@ void removeTrailingEmptySubArray(SmallVector<SmallVector<T>> &array) {
 
 // Is the same tensor replicated on all processes.
 inline bool isFullReplication(MeshShardingAttr attr) {
-  return attr.getPartialAxes().empty() && attr.getSplitAxes().empty();
+  return attr.getPartialAxes().empty() &&
+         llvm::all_of(attr.getSplitAxes(), [](MeshAxesAttr axes) {
+           return axes.asArrayRef().empty();
+         });
+}
+
+inline mesh::MeshOp
+getMeshOrNull(Operation *op, FlatSymbolRefAttr meshSymbol,
+              SymbolTableCollection &symbolTableCollection) {
+  return symbolTableCollection.lookupNearestSymbolFrom<mesh::MeshOp>(
+      op, meshSymbol);
 }
 
 inline mesh::MeshOp getMesh(Operation *op, FlatSymbolRefAttr meshSymbol,
                             SymbolTableCollection &symbolTableCollection) {
-  return symbolTableCollection.lookupNearestSymbolFrom<mesh::MeshOp>(
-      op, meshSymbol);
+  mesh::MeshOp meshOp = getMeshOrNull(op, meshSymbol, symbolTableCollection);
+  assert(meshOp);
+  return meshOp;
 }
 
 // Get the corresponding mesh op using the standard attribute nomenclature.
@@ -127,6 +138,17 @@ ShapedType shardShapedType(ShapedType shape, MeshOp mesh,
 // If not ranked tensor type return `type`.
 // `sharding` in that case must be null.
 Type shardType(Type type, MeshOp mesh, MeshShardingAttr sharding);
+
+// Insert shard op if there is not one that already has the same sharding.
+// May insert resharding if required.
+void maybeInsertTargetShardingAnnotation(MeshShardingAttr sharding,
+                                         OpOperand &operand,
+                                         OpBuilder &builder);
+void maybeInsertTargetShardingAnnotation(MeshShardingAttr sharding,
+                                         OpResult result, OpBuilder &builder);
+void maybeInsertSourceShardingAnnotation(MeshShardingAttr sharding,
+                                         OpOperand &operand,
+                                         OpBuilder &builder);
 
 } // namespace mesh
 } // namespace mlir

@@ -146,6 +146,25 @@ let TargetGuard = "sme" in {
                              [IsOverloadNone, IsStreamingCompatible, IsOutZA]>;
 }
 
+let TargetGuard = "sme2p1" in {
+  def SVZERO_ZA64_VG1x2 : SInst<"svzero_za64_vg1x2", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg1x2",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG1x4 : SInst<"svzero_za64_vg1x4", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg1x4",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG2x1 : SInst<"svzero_za64_vg2x1", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg2x1",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG2x2 : SInst<"svzero_za64_vg2x2", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg2x2",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG2x4 : SInst<"svzero_za64_vg2x4", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg2x4",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG4x1 : SInst<"svzero_za64_vg4x1", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg4x1",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG4x2 : SInst<"svzero_za64_vg4x2", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg4x2",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+  def SVZERO_ZA64_VG4x4 : SInst<"svzero_za64_vg4x4", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg4x4",
+                            [IsOverloadNone, IsStreaming, IsInOutZA]>;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // SME - Counting elements in a streaming vector
 

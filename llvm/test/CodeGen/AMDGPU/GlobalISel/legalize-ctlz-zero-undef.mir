@@ -81,14 +81,12 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[AND]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[CTLZ_ZERO_UNDEF]], [[C1]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AND1]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[SHL]](s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[AMDGPU_FFBH_U32]], [[C1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s16) = G_CTLZ_ZERO_UNDEF %1
@@ -149,18 +147,15 @@ body: |
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[BITCAST]], [[C]](s32)
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U32:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[SHL]](s32)
+    ; CHECK-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[LSHR]], [[C]](s32)
+    ; CHECK-NEXT: [[AMDGPU_FFBH_U321:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[SHL2]](s32)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C1]]
-    ; CHECK-NEXT: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[AND]](s32)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[CTLZ_ZERO_UNDEF]], [[C]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
-    ; CHECK-NEXT: [[CTLZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[LSHR]](s32)
-    ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[CTLZ_ZERO_UNDEF1]], [[C]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SUB1]](s32)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND2]], [[C]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[SHL]]
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[AMDGPU_FFBH_U32]], [[C1]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AMDGPU_FFBH_U321]], [[C1]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
     ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
@@ -179,14 +174,12 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[AND]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[CTLZ_ZERO_UNDEF]], [[C1]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AND1]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[FFBH:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[SHL]](s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[FFBH]], [[C1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s7) = G_TRUNC %0
     %2:_(s7) = G_CTLZ_ZERO_UNDEF %1

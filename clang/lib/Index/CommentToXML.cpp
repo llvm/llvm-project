@@ -12,6 +12,7 @@
 #include "clang/AST/Comment.h"
 #include "clang/AST/CommentVisitor.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Index/USRGeneration.h"
@@ -1052,6 +1053,11 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
       }
       if (AA->getUnavailable())
         Result << "<Unavailable/>";
+
+      IdentifierInfo *Environment = AA->getEnvironment();
+      if (Environment) {
+        Result << "<Environment>" << Environment->getName() << "</Environment>";
+      }
       Result << "</Availability>";
     }
   }
