@@ -53,7 +53,7 @@ private:
     void const* __obj_const_ptr;
     void (*__fn_ptr)();
 
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_t() noexcept : __obj_ptr(nullptr){};
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_t() noexcept : __obj_ptr(nullptr) {}
 
     template <class _Tp>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_t(_Tp* __ptr) noexcept {
