@@ -65,7 +65,7 @@ public:
 
     LIBC_INLINE constexpr Guard(WaitingQueue &queue, bool is_pshared)
         : queue(queue), is_pshared(is_pshared) {
-      queue.lock();
+      queue.lock(cpp::nullopt, is_pshared);
     }
 
   public:
@@ -91,7 +91,6 @@ public:
         reader_serialization(0), writer_serialization(0) {}
 
   LIBC_INLINE Guard acquire(bool is_pshared) {
-    this->lock();
     return Guard(*this, is_pshared);
   }
 

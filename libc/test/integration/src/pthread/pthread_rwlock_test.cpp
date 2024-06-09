@@ -350,7 +350,7 @@ randomized_process_operation(SharedData &data,
     ASSERT_EQ(LIBC_NAMESPACE::pthread_create(
                   &i, nullptr,
                   [](void *arg) -> void * {
-                    for (int i = 0; i < 5; ++i)
+                    for (int i = 0; i < 10; ++i)
                       randomized_thread_operation(
                           reinterpret_cast<SharedData *>(arg));
                     return nullptr;
