@@ -61,7 +61,7 @@ INITIALIZE_PASS_END(LazyValueInfoWrapperPass, "lazy-value-info",
 
 namespace llvm {
   FunctionPass *createLazyValueInfoPass() { return new LazyValueInfoWrapperPass(); }
-}
+} // namespace llvm
 
 AnalysisKey LazyValueAnalysis::Key;
 
@@ -258,7 +258,7 @@ namespace {
     /// flushes elements from the cache and does not add any.
     void threadEdgeImpl(BasicBlock *OldSucc,BasicBlock *NewSucc);
   };
-}
+} // namespace
 
 void LazyValueInfoCache::eraseValue(Value *V) {
   for (auto &Pair : BlockCache) {
