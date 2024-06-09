@@ -3421,6 +3421,29 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
 }
 
+Value *foldAorBZero(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  if (!Op0->hasOneUse() || !Op1->hasOneUse())
+    return nullptr;
+
+  // match each operand of I with and
+  Value *A, *B;
+  CmpInst::Predicate Pred = CmpInst::ICMP_EQ;
+  CmpInst::Predicate InPred = CmpInst::ICMP_EQ;
+  bool IsOp0 = match(Op0, m_c_And(m_Cmp(Pred, m_Value(A), m_ZeroInt()),
+                                  m_Cmp(InPred, m_Value(B), m_ZeroInt())));
+  bool IsOp1 = match(Op1, m_c_And(m_Cmp(InPred, m_Specific(A), m_ZeroInt()),
+                                  m_Cmp(Pred, m_Specific(B), m_ZeroInt())));
+  if (!IsOp0 || !IsOp1)
+    return nullptr;
+
+  Constant *Zero = ConstantInt::getNullValue(A->getType());
+  auto *LHS = Builder.CreateICmpEQ(A, Zero);
+  auto *RHS = Builder.CreateICmpEQ(B, Zero);
+  return Builder.CreateICmpNE(LHS, RHS);
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -3449,6 +3472,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Instruction *X = foldComplexAndOrPatterns(I, Builder))
     return X;
+
+  // (A == 0 & B != 0) | (A != 0 & B == 0)) -> (A == 0) != (B == 0)
+  if (Value *V = foldAorBZero(I, Builder))
+    return replaceInstUsesWith(I, V);
 
   // (A&B)|(A&C) -> A&(B|C) etc
   if (Value *V = foldUsingDistributiveLaws(I))
