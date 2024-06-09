@@ -224,6 +224,10 @@ Changes in existing checks
   check by ignoring ``__func__`` macro in lambda captures, initializers of
   default parameters and nested function declarations.
 
+- Improved :doc:`bugprone-multi-level-implicit-pointer-conversion
+  <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` check
+  by ignoring implicit pointer conversions that are part of a cast expression.
+
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
   eliminating false positives resulting from direct usage of bitwise operators
@@ -408,7 +412,8 @@ Changes in existing checks
   valid fix suggestions for ``static_cast`` without a preceding space and
   fixed problem with duplicate parentheses in double implicit casts. Corrected
   the fix suggestions for C23 and later by using C-style casts instead of
-  ``static_cast``.
+  ``static_cast``. Fixed false positives in C++20 spaceship operator by ignoring
+  casts in implicit and defaulted functions.
 
 - Improved :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
