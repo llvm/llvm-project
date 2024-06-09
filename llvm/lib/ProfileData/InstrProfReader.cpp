@@ -113,12 +113,7 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
           instrprof_error::malformed,
           "not enough data to read binary id length");
 
-    uint64_t BILen = 0;
-    if (Endian == llvm::endianness::little)
-      BILen = endian::readNext<uint64_t, llvm::endianness::little>(BI);
-    else
-      BILen = endian::readNext<uint64_t, llvm::endianness::big>(BI);
-
+    uint64_t BILen = endian::readNext<uint64_t>(BI, Endian);
     if (BILen == 0)
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "binary id length is 0");
@@ -143,13 +138,12 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
   return Error::success();
 }
 
-static void
-printBinaryIdsInternal(raw_ostream &OS,
-                       std::vector<llvm::object::BuildID> &BinaryIds) {
+static void printBinaryIdsInternal(raw_ostream &OS,
+                                   ArrayRef<llvm::object::BuildID> BinaryIds) {
   OS << "Binary IDs: \n";
-  for (auto BI : BinaryIds) {
-    for (uint64_t I = 0; I < BI.size(); I++)
-      OS << format("%02x", BI[I]);
+  for (const auto &BI : BinaryIds) {
+    for (auto I : BI)
+      OS << format("%02x", I);
     OS << "\n";
   }
 }
@@ -1507,7 +1501,7 @@ Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
   // A flag to indicate if the records are from the same type
   // of profile (i.e cs vs nocs).
   bool CSBitMatch = false;
-  auto getFuncSum = [](const std::vector<uint64_t> &Counts) {
+  auto getFuncSum = [](ArrayRef<uint64_t> Counts) {
     uint64_t ValueSum = 0;
     for (uint64_t CountValue : Counts) {
       if (CountValue == (uint64_t)-1)
