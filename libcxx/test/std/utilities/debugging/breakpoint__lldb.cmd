@@ -1,3 +1,0 @@
-run
-continue
-quit
