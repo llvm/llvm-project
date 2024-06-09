@@ -61,11 +61,15 @@ public:
   // RAII guard to lock and unlock the waiting queue.
   class Guard {
     WaitingQueue &queue;
+    bool is_pshared;
 
-    LIBC_INLINE constexpr Guard(WaitingQueue &queue) : queue(queue) {}
+    LIBC_INLINE constexpr Guard(WaitingQueue &queue, bool is_pshared)
+        : queue(queue), is_pshared(is_pshared) {
+      queue.lock();
+    }
 
   public:
-    LIBC_INLINE ~Guard() { queue.unlock(); }
+    LIBC_INLINE ~Guard() { queue.unlock(is_pshared); }
     template <Role role> LIBC_INLINE FutexWordType &pending_count() {
       if constexpr (role == Role::Reader)
         return queue.pending_readers;
@@ -86,9 +90,9 @@ public:
       : RawMutex(), pending_readers(0), pending_writers(0),
         reader_serialization(0), writer_serialization(0) {}
 
-  LIBC_INLINE Guard acquire() {
+  LIBC_INLINE Guard acquire(bool is_pshared) {
     this->lock();
-    return Guard(*this);
+    return Guard(*this, is_pshared);
   }
 
   template <Role role>
@@ -426,7 +430,7 @@ private:
         // that this lock will make the timeout imprecise, but this is the
         // best we can do. The transaction is small and everyone should make
         // progress rather quickly.
-        WaitingQueue::Guard guard = queue.acquire();
+        WaitingQueue::Guard guard = queue.acquire(is_pshared);
         guard.template pending_count<role>()++;
 
         // Use atomic operation to guarantee the total order of the operations
@@ -450,7 +454,7 @@ private:
         {
           // Similarly, the unregister operation should also be an atomic
           // transaction.
-          WaitingQueue::Guard guard = queue.acquire();
+          WaitingQueue::Guard guard = queue.acquire(is_pshared);
           guard.pending_count<role>()--;
           // Clear the flag if we are the last reader. The flag must be
           // cleared otherwise operations like trylock may fail even though
@@ -500,7 +504,7 @@ private:
     WakeTarget status;
 
     {
-      WaitingQueue::Guard guard = queue.acquire();
+      WaitingQueue::Guard guard = queue.acquire(is_pshared);
       if (guard.pending_count<Role::Writer>() != 0) {
         guard.serialization<Role::Writer>()++;
         status = WakeTarget::Writers;
