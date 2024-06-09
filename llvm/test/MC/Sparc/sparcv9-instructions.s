@@ -502,6 +502,10 @@
         wr %i0, %i1, %ccr
         ! V9: wr %i0, 1, %ccr           ! encoding: [0x85,0x86,0x20,0x01]
         wr %i0, 1, %ccr
+        ! V9: wr %i0, 1, %asr20         ! encoding: [0xa9,0x86,0x20,0x01]
+        wr %i0, 1, %set_softint
+        ! V9: wr %i0, 1, %asr21         ! encoding: [0xab,0x86,0x20,0x01]
+        wr %i0, 1, %clear_softint
 
         ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
         stw %o1, [%o0]
