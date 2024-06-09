@@ -1782,6 +1782,13 @@ let Predicates = [HasV9] in {
   def PREFETCHi : F3_2<3, 0b101101,
                    (outs), (ins (MEMri $rs1, $simm13):$addr, PrefetchTag:$rd),
                    "prefetch [$addr], $rd", []>;
+  def PREFETCHAr : F3_1_asi<3, 0b111101, (outs),
+                    (ins (MEMrr $rs1, $rs2):$addr, ASITag:$asi, PrefetchTag:$rd),
+                    "prefetcha [$addr] $asi, $rd", []>;
+  let Uses = [ASR3] in
+  def PREFETCHAi : F3_2<3, 0b111101, (outs),
+                    (ins (MEMri $rs1, $simm13):$addr, PrefetchTag:$rd),
+                    "prefetcha [$addr] %asi, $rd", []>;
 }
 
 
