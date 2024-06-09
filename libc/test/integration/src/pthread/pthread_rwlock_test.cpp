@@ -242,7 +242,7 @@ static void attributed_initialization_test() {
 struct SharedData {
   pthread_rwlock_t lock;
   int data;
-  int reader_count;
+  LIBC_NAMESPACE::cpp::Atomic<int> reader_count;
   bool writer_flag;
   LIBC_NAMESPACE::cpp::Atomic<int> total_writer_count;
 };
@@ -266,11 +266,11 @@ static void randomized_thread_operation(SharedData *data) {
       static_cast<Operation>(buffer % static_cast<int>(Operation::COUNT));
   auto read_ops = [data]() {
     ASSERT_FALSE(data->writer_flag);
-    ++data->reader_count;
+    data->reader_count.fetch_add(1, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
     for (int i = 0; i < 10; ++i) {
       LIBC_NAMESPACE::sleep_briefly();
     }
-    --data->reader_count;
+    data->reader_count.fetch_sub(1, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
   };
   auto write_ops = [data]() {
     ASSERT_FALSE(data->writer_flag);
