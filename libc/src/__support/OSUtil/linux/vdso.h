@@ -36,7 +36,7 @@ enum class VDSOSym {
 #include "aarch64/vdso.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "arm/vdso.h"
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV)
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "riscv/vdso.h"
 #else
 #error "unknown arch"
