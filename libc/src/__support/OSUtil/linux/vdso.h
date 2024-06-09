@@ -7,14 +7,37 @@
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_VDSO_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_VDSO_H
+#include "hdr/types/clock_t.h"
+#include "hdr/types/clockid_t.h"
+#include "hdr/types/struct_timespec.h"
+#include "hdr/types/struct_timeval.h"
+#include "hdr/types/time_t.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/callonce.h"
 
+// NOLINTBEGIN(llvmlibc-implementation-in-namespace)
+// TODO: some of the following can be defined via proxy headers.
+struct __kernel_timespec;
+struct timezone;
+struct riscv_hwprobe;
+struct getcpu_cache;
+struct cpu_set_t;
+// NOLINTEND(llvmlibc-implementation-in-namespace)
+
 namespace LIBC_NAMESPACE {
 namespace vdso {
+
+#ifdef __clang__
+__extension__ template <typename T> using NullablePtr = T *_Nullable;
+__extension__ template <typename T> using NonNullPtr = T *_Nonnull;
+#else
+template <typename T> using NullablePtr = T *;
+template <typename T> using NonNullPtr = T *;
+#endif
+
 enum class VDSOSym {
   ClockGetTime,
   ClockGetTime64,
@@ -44,6 +67,52 @@ enum class VDSOSym {
 
 namespace LIBC_NAMESPACE {
 namespace vdso {
+
+template <VDSOSym sym> struct VDSOTypeDispatch {
+  using Type = void *;
+};
+
+template <> struct VDSOTypeDispatch<VDSOSym::ClockGetTime> {
+  using Type = int (*)(clockid_t, NonNullPtr<timespec>);
+};
+
+template <> struct VDSOTypeDispatch<VDSOSym::ClockGetTime64> {
+  using Type = int (*)(clockid_t, NonNullPtr<__kernel_timespec>);
+};
+
+template <> struct VDSOTypeDispatch<VDSOSym::GetTimeOfDay> {
+  using Type = int (*)(NonNullPtr<timeval> __restrict,
+                       NullablePtr<timezone> __restrict);
+};
+
+template <> struct VDSOTypeDispatch<VDSOSym::GetCpu> {
+  using Type = int (*)(NullablePtr<unsigned>, NullablePtr<unsigned>,
+                       NullablePtr<getcpu_cache>);
+};
+
+template <> struct VDSOTypeDispatch<VDSOSym::Time> {
+  using Type = time_t (*)(NullablePtr<time_t>);
+};
+
+template <> struct VDSOTypeDispatch<VDSOSym::ClockGetRes> {
+  using Type = int (*)(clockid_t, NullablePtr<timespec>);
+};
+
+template <> struct VDSOTypeDispatch<VDSOSym::RTSigReturn> {
+  using Type = void (*)(void);
+};
+
+template <> struct VDSOTypeDispatch<VDSOSym::FlushICache> {
+  using Type = void (*)(NullablePtr<void>, NullablePtr<void>, unsigned int);
+};
+
+template <> struct VDSOTypeDispatch<VDSOSym::RiscvHwProbe> {
+  using Type = int (*)(NullablePtr<riscv_hwprobe> __restrict, size_t, size_t,
+                       NullablePtr<cpu_set_t> __restrict, unsigned);
+};
+
+template <VDSOSym sym> using VDSOSymType = typename VDSOTypeDispatch<sym>::Type;
+
 class Symbol {
   VDSOSym sym;
 
@@ -71,13 +140,22 @@ private:
   static VDSOArray global_cache;
   static void initialize_vdso_global_cache();
 
-public:
   template <typename T> LIBC_INLINE T get() {
     if (name().empty() || !is_valid())
       return nullptr;
 
     callonce(&once_flag, Symbol::initialize_vdso_global_cache);
     return cpp::bit_cast<T>(global_cache[*this]);
+  }
+  template <VDSOSym sym> friend struct TypedSymbol;
+};
+
+template <VDSOSym sym> struct TypedSymbol {
+  LIBC_INLINE constexpr operator VDSOSymType<sym>() const {
+    return Symbol{sym}.get<VDSOSymType<sym>>();
+  }
+  template <typename... Args> LIBC_INLINE auto operator()(Args &&...args) {
+    return this->operator VDSOSymType<sym>()(cpp::forward<Args>(args)...);
   }
 };
 
