@@ -20,10 +20,9 @@ namespace bolt {
 
 const char *BoltAddressTranslation::SECTION_NAME = ".note.bolt_bat";
 
-void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
-                                               const BinaryBasicBlock &BB,
-                                               uint64_t FuncInputAddress,
-                                               uint64_t FuncOutputAddress) {
+void BoltAddressTranslation::writeEntriesForBB(
+    MapTy &Map, const BinaryBasicBlock &BB, uint64_t FuncInputAddress,
+    uint64_t FuncOutputAddress) const {
   const uint64_t BBOutputOffset =
       BB.getOutputAddressRange().first - FuncOutputAddress;
   const uint32_t BBInputOffset = BB.getInputOffset();
@@ -55,7 +54,7 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
   // and this deleted block will both share the same output address (the same
   // key), and we need to map back. We choose here to privilege the successor by
   // allowing it to overwrite the previously inserted key in the map.
-  Map[BBOutputOffset] = BBInputOffset << 1;
+  Map.emplace(BBOutputOffset, BBInputOffset << 1);
 
   const auto &IOAddressMap =
       BB.getFunction()->getBinaryContext().getIOAddressMap();
@@ -72,8 +71,7 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
 
     LLVM_DEBUG(dbgs() << "  Key: " << Twine::utohexstr(OutputOffset) << " Val: "
                       << Twine::utohexstr(InputOffset) << " (branch)\n");
-    Map.insert(std::pair<uint32_t, uint32_t>(OutputOffset,
-                                             (InputOffset << 1) | BRANCHENTRY));
+    Map.emplace(OutputOffset, (InputOffset << 1) | BRANCHENTRY);
   }
 }
 
@@ -108,6 +106,19 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     for (const BinaryBasicBlock *const BB :
          Function.getLayout().getMainFragment())
       writeEntriesForBB(Map, *BB, InputAddress, OutputAddress);
+    // Add entries for deleted blocks. They are still required for correct BB
+    // mapping of branches modified by SCTC. By convention, they would have the
+    // end of the function as output address.
+    const BBHashMapTy &BBHashMap = getBBHashMap(InputAddress);
+    if (BBHashMap.size() != Function.size()) {
+      const uint64_t EndOffset = Function.getOutputSize();
+      std::unordered_set<uint32_t> MappedInputOffsets;
+      for (const BinaryBasicBlock &BB : Function)
+        MappedInputOffsets.emplace(BB.getInputOffset());
+      for (const auto &[InputOffset, _] : BBHashMap)
+        if (!llvm::is_contained(MappedInputOffsets, InputOffset))
+          Map.emplace(EndOffset, InputOffset << 1);
+    }
     Maps.emplace(Function.getOutputAddress(), std::move(Map));
     ReverseMap.emplace(OutputAddress, InputAddress);
 
@@ -138,8 +149,8 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
             << " basic block hashes\n";
 }
 
-APInt BoltAddressTranslation::calculateBranchEntriesBitMask(MapTy &Map,
-                                                            size_t EqualElems) {
+APInt BoltAddressTranslation::calculateBranchEntriesBitMask(
+    MapTy &Map, size_t EqualElems) const {
   APInt BitMask(alignTo(EqualElems, 8), 0);
   size_t Index = 0;
   for (std::pair<const uint32_t, uint32_t> &KeyVal : Map) {
@@ -422,7 +433,7 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
   }
 }
 
-void BoltAddressTranslation::dump(raw_ostream &OS) {
+void BoltAddressTranslation::dump(raw_ostream &OS) const {
   const size_t NumTables = Maps.size();
   OS << "BAT tables for " << NumTables << " functions:\n";
   for (const auto &MapEntry : Maps) {
@@ -447,11 +458,15 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
         OS << formatv(" hash: {0:x}", BBHashMap.getBBHash(Val));
       OS << "\n";
     }
-    if (IsHotFunction)
-      OS << "NumBlocks: " << NumBasicBlocksMap[Address] << '\n';
-    if (SecondaryEntryPointsMap.count(Address)) {
+    if (IsHotFunction) {
+      auto NumBasicBlocksIt = NumBasicBlocksMap.find(Address);
+      assert(NumBasicBlocksIt != NumBasicBlocksMap.end());
+      OS << "NumBlocks: " << NumBasicBlocksIt->second << '\n';
+    }
+    auto SecondaryEntryPointsIt = SecondaryEntryPointsMap.find(Address);
+    if (SecondaryEntryPointsIt != SecondaryEntryPointsMap.end()) {
       const std::vector<uint32_t> &SecondaryEntryPoints =
-          SecondaryEntryPointsMap[Address];
+          SecondaryEntryPointsIt->second;
       OS << SecondaryEntryPoints.size() << " secondary entry points:\n";
       for (uint32_t EntryPointOffset : SecondaryEntryPoints)
         OS << formatv("{0:x}\n", EntryPointOffset);
@@ -545,13 +560,6 @@ BoltAddressTranslation::getFallthroughsInTrace(uint64_t FuncAddress,
   }
 
   return Res;
-}
-
-uint64_t BoltAddressTranslation::fetchParentAddress(uint64_t Address) const {
-  auto Iter = ColdPartSource.find(Address);
-  if (Iter == ColdPartSource.end())
-    return 0;
-  return Iter->second;
 }
 
 bool BoltAddressTranslation::enabledFor(

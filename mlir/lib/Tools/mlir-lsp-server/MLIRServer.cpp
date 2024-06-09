@@ -917,7 +917,7 @@ void MLIRDocument::getCodeActionForDiagnostic(
   edit.range = lsp::Range(lsp::Position(pos.line, 0));
 
   // Use the indent of the current line for the expected-* diagnostic.
-  size_t indent = line.find_first_not_of(" ");
+  size_t indent = line.find_first_not_of(' ');
   if (indent == StringRef::npos)
     indent = line.size();
 

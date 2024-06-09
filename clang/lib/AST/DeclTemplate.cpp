@@ -627,9 +627,10 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   TemplateParameterList *Params = getTemplateParameters();
   SmallVector<TemplateArgument, 16> TemplateArgs;
   Context.getInjectedTemplateArgs(Params, TemplateArgs);
-  CommonPtr->InjectedClassNameType
-    = Context.getTemplateSpecializationType(TemplateName(this),
-                                            TemplateArgs);
+  TemplateName Name = Context.getQualifiedTemplateName(
+      /*NNS=*/nullptr, /*TemplateKeyword=*/false, TemplateName(this));
+  CommonPtr->InjectedClassNameType =
+      Context.getTemplateSpecializationType(Name, TemplateArgs);
   return CommonPtr->InjectedClassNameType;
 }
 
@@ -669,21 +670,28 @@ TemplateTypeParmDecl::CreateDeserialized(const ASTContext &C, GlobalDeclID ID,
 }
 
 SourceLocation TemplateTypeParmDecl::getDefaultArgumentLoc() const {
-  return hasDefaultArgument()
-             ? getDefaultArgumentInfo()->getTypeLoc().getBeginLoc()
-             : SourceLocation();
+  return hasDefaultArgument() ? getDefaultArgument().getLocation()
+                              : SourceLocation();
 }
 
 SourceRange TemplateTypeParmDecl::getSourceRange() const {
   if (hasDefaultArgument() && !defaultArgumentWasInherited())
     return SourceRange(getBeginLoc(),
-                       getDefaultArgumentInfo()->getTypeLoc().getEndLoc());
+                       getDefaultArgument().getSourceRange().getEnd());
   // TypeDecl::getSourceRange returns a range containing name location, which is
   // wrong for unnamed template parameters. e.g:
   // it will return <[[typename>]] instead of <[[typename]]>
-  else if (getDeclName().isEmpty())
+  if (getDeclName().isEmpty())
     return SourceRange(getBeginLoc());
   return TypeDecl::getSourceRange();
+}
+
+void TemplateTypeParmDecl::setDefaultArgument(
+    const ASTContext &C, const TemplateArgumentLoc &DefArg) {
+  if (DefArg.getArgument().isNull())
+    DefaultArgument.set(nullptr);
+  else
+    DefaultArgument.set(new (C) TemplateArgumentLoc(DefArg));
 }
 
 unsigned TemplateTypeParmDecl::getDepth() const {
@@ -788,14 +796,21 @@ NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
 SourceRange NonTypeTemplateParmDecl::getSourceRange() const {
   if (hasDefaultArgument() && !defaultArgumentWasInherited())
     return SourceRange(getOuterLocStart(),
-                       getDefaultArgument()->getSourceRange().getEnd());
+                       getDefaultArgument().getSourceRange().getEnd());
   return DeclaratorDecl::getSourceRange();
 }
 
 SourceLocation NonTypeTemplateParmDecl::getDefaultArgumentLoc() const {
-  return hasDefaultArgument()
-    ? getDefaultArgument()->getSourceRange().getBegin()
-    : SourceLocation();
+  return hasDefaultArgument() ? getDefaultArgument().getSourceRange().getBegin()
+                              : SourceLocation();
+}
+
+void NonTypeTemplateParmDecl::setDefaultArgument(
+    const ASTContext &C, const TemplateArgumentLoc &DefArg) {
+  if (DefArg.getArgument().isNull())
+    DefaultArgument.set(nullptr);
+  else
+    DefaultArgument.set(new (C) TemplateArgumentLoc(DefArg));
 }
 
 //===----------------------------------------------------------------------===//

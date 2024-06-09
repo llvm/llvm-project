@@ -1,5 +1,5 @@
 add_custom_target(ClangUnitTests)
-set_target_properties(ClangUnitTests PROPERTIES FOLDER "Clang tests")
+set_target_properties(ClangUnitTests PROPERTIES FOLDER "Clang/Tests")
 
 if(CLANG_BUILT_STANDALONE)
   # LLVMTesting* libraries are needed for some of the unittests.

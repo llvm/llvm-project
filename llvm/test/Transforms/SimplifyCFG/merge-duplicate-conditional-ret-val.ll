@@ -7,8 +7,8 @@ declare void @baz()
 define i8 @foo(i1 %c, i8 %v0, i8 %v1) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], i8 [[V0:%.*]], i8 [[V1:%.*]]
-; CHECK-NEXT:    ret i8 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[V0_V1:%.*]] = select i1 [[C:%.*]], i8 [[V0:%.*]], i8 [[V1:%.*]]
+; CHECK-NEXT:    ret i8 [[V0_V1]]
 ;
 entry:
   br i1 %c, label %true, label %false
