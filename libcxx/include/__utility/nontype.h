@@ -27,6 +27,11 @@ struct nontype_t {
 template <auto _Vp>
 inline constexpr nontype_t<_Vp> nontype{};
 
+template <class>
+inline constexpr bool __is_nontype_t = false;
+template <auto _Vp>
+inline constexpr bool __is_nontype_t<nontype_t<_Vp>> = true;
+
 #endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
