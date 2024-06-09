@@ -402,7 +402,9 @@ static void multiple_process_test(int preference) {
   if (pid == 0) {
     LIBC_NAMESPACE::exit(0);
   } else {
-    LIBC_NAMESPACE::waitpid(pid, nullptr, 0);
+    int status;
+    LIBC_NAMESPACE::waitpid(pid, &status, 0);
+    ASSERT_EQ(status, 0);
   }
   LIBC_NAMESPACE::munmap(shared_data, sizeof(PShared));
 }
