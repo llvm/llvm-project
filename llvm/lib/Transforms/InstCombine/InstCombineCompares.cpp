@@ -2441,9 +2441,10 @@ Instruction *InstCombinerImpl::foldICmpShlConstant(ICmpInst &Cmp,
       Type *TruncTy = ShType->getWithNewBitWidth(TypeBits - Amt);
       Constant *NewC =
           ConstantInt::get(TruncTy, RHSC.ashr(*ShiftAmt).trunc(TypeBits - Amt));
-      return new ICmpInst(
-          CmpPred, Builder.CreateTrunc(X, TruncTy, "", Shl->hasNoSignedWrap()),
-          NewC);
+      return new ICmpInst(CmpPred,
+                          Builder.CreateTrunc(X, TruncTy, "", /*IsNUW=*/false,
+                                              Shl->hasNoSignedWrap()),
+                          NewC);
     }
   }
 
