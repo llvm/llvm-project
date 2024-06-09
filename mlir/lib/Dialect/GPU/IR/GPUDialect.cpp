@@ -1750,11 +1750,11 @@ ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr nameAttr;
   ArrayAttr targetsAttr;
 
-  if (parser.parseSymbolName(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
-                             result.attributes))
+  if (parser.parseSymbolName(nameAttr))
     return failure();
 
   Properties &props = result.getOrAddProperties<Properties>();
+  props.setSymName(nameAttr);
 
   // Parse the optional offloadingHandler
   if (succeeded(parser.parseOptionalLess())) {
