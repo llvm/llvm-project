@@ -2,7 +2,7 @@
 ; RUN: mkdir -p %t
 ; RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t/split.dwo -dwarf-version=4 %p/../Inputs/empty_warning/split.s -o %t/split.o
 ; RUN: not llvm-dwp -e %t/split.o -o %t/split.dwp 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-; CHECK-ERROR: error: 'xxx/xxx/xxx{{[/\\]}}split_invalid.dwo': No such file or directory
+; CHECK-ERROR: error: 'xxx/xxx/xxx{{[/\\]}}split_invalid.dwo': {{[Nn]}}o such file or directory
 ; RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj -dwarf-version=4 %p/../Inputs/empty_warning/non_split.s -o %t/non_split.o
 ; RUN: llvm-dwp -e %t/non_split.o -o %t/non_split.dwp 2>&1 | FileCheck %s --check-prefix=CHECK-WARNING
 ; CHECK-WARNING: warning: executable file does not contain any references to dwo files
