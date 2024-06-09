@@ -147,8 +147,37 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
   }
 }
 
-LocToLocMap SampleProfileMatcher::longestCommonSequence(
-    const AnchorList &AnchorList1, const AnchorList &AnchorList2) const {
+bool SampleProfileMatcher::isFunctionEqual(const FunctionId &IRFuncName,
+                                           const FunctionId &ProfileFuncName,
+                                           bool FindMatchedProfileOnly) {
+  if (IRFuncName == ProfileFuncName)
+    return true;
+  if (!SalvageUnusedProfile)
+    return false;
+  // If both IR function and profile function are new, try to match the profile
+  // function.
+
+  // Check whether IR function is new.
+  auto R = NewIRFunctions.find(IRFuncName);
+  if (R == NewIRFunctions.end() || !R->second)
+    return false;
+  Function &IRFunc = *R->second;
+  assert(FunctionId(IRFunc.getName()) != ProfileFuncName &&
+         "IR function should be different from profile function to match");
+
+  // Check whether profile function is new.
+  auto F = SymbolMap->find(ProfileFuncName);
+  if (F != SymbolMap->end())
+    return false;
+
+  return functionMatchesProfile(IRFunc, ProfileFuncName,
+                                FindMatchedProfileOnly);
+}
+
+LocToLocMap
+SampleProfileMatcher::longestCommonSequence(const AnchorList &AnchorList1,
+                                            const AnchorList &AnchorList2,
+                                            bool MatchUnusedFunction) {
   int32_t Size1 = AnchorList1.size(), Size2 = AnchorList2.size(),
           MaxDepth = Size1 + Size2;
   auto Index = [&](int32_t I) { return I + MaxDepth; };
@@ -209,7 +238,8 @@ LocToLocMap SampleProfileMatcher::longestCommonSequence(
         X = V[Index(K - 1)] + 1;
       Y = X - K;
       while (X < Size1 && Y < Size2 &&
-             AnchorList1[X].second == AnchorList2[Y].second)
+             isFunctionEqual(AnchorList1[X].second, AnchorList2[Y].second,
+                             !MatchUnusedFunction))
         X++, Y++;
 
       V[Index(K)] = X;
@@ -314,7 +344,10 @@ void SampleProfileMatcher::getFilteredAnchorList(
 // The output mapping: [2->3, 3->4, 5->7, 6->8, 7->9].
 void SampleProfileMatcher::runStaleProfileMatching(
     const Function &F, const AnchorMap &IRAnchors,
-    const AnchorMap &ProfileAnchors, LocToLocMap &IRToProfileLocationMap) {
+    const AnchorMap &ProfileAnchors, LocToLocMap &IRToProfileLocationMap,
+    bool RunCFGMatching, bool RunCGMatching) {
+  if (!RunCFGMatching && !RunCGMatching)
+    return;
   LLVM_DEBUG(dbgs() << "Run stale profile matching for " << F.getName()
                     << "\n");
   assert(IRToProfileLocationMap.empty() &&
@@ -331,15 +364,22 @@ void SampleProfileMatcher::runStaleProfileMatching(
   // Match the callsite anchors by finding the longest common subsequence
   // between IR and profile. Note that we need to use IR anchor as base(A side)
   // to align with the order of IRToProfileLocationMap.
-  LocToLocMap MatchedAnchors =
-      longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList);
+  // This is also used for call graph matching. During the searching, if both
+  // the anchor from IR and prfile are new functions but they are not same
+  // function, it could be due to the function is renamed, we run the matching
+  // for them and consider the anchor is equal if it's matched. The matching
+  // result is also used later to update the profile with new name.
+  LocToLocMap MatchedAnchors = longestCommonSequence(
+      FilteredIRAnchorsList, FilteredProfileAnchorList, RunCGMatching);
 
-  // Match the non-callsite locations and write the result to
-  // IRToProfileLocationMap.
-  matchNonCallsiteLocs(MatchedAnchors, IRAnchors, IRToProfileLocationMap);
+  // Apply the CFG matching results: match the non-callsite locations and write
+  // the result to IRToProfileLocationMap. Note that CFG matching won't take
+  // effect if it's not written into IRToProfileLocationMap.
+  if (RunCFGMatching)
+    matchNonCallsiteLocs(MatchedAnchors, IRAnchors, IRToProfileLocationMap);
 }
 
-void SampleProfileMatcher::runCFGMatching(Function &F) {
+void SampleProfileMatcher::runOnFunction(Function &F) {
   // We need to use flattened function samples for matching.
   // Unlike IR, which includes all callsites from the source code, the callsites
   // in profile only show up when they are hit by samples, i,e. the profile
@@ -364,25 +404,29 @@ void SampleProfileMatcher::runCFGMatching(Function &F) {
   if (ReportProfileStaleness || PersistProfileStaleness)
     recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors, nullptr);
 
-  // For probe-based profiles, run matching only when the current profile is not
-  // valid.
-  if (SalvageStaleProfile && (!FunctionSamples::ProfileIsProbeBased ||
-                              !ProbeManager->profileIsValid(F, *FSFlattened))) {
+  if (SalvageStaleProfile) {
+    // For probe-based profiles, run matching only when profile checksum is
+    // mismatched.
+    bool ChecksumMismatch = FunctionSamples::ProfileIsProbeBased &&
+                            !ProbeManager->profileIsValid(F, *FSFlattened);
+    bool RunCFGMatching =
+        !FunctionSamples::ProfileIsProbeBased || ChecksumMismatch;
+    bool RunCGMatching = SalvageUnusedProfile;
     // For imported functions, the checksum metadata(pseudo_probe_desc) are
     // dropped, so we leverage function attribute(profile-checksum-mismatch) to
     // transfer the info: add the attribute during pre-link phase and check it
     // during post-link phase(see "profileIsValid").
-    if (FunctionSamples::ProfileIsProbeBased &&
-        LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
+    if (ChecksumMismatch && LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
       F.addFnAttr("profile-checksum-mismatch");
 
     // The matching result will be saved to IRToProfileLocationMap, create a
     // new map for each function.
     auto &IRToProfileLocationMap = getIRToProfileLocationMap(F);
     runStaleProfileMatching(F, IRAnchors, ProfileAnchors,
-                            IRToProfileLocationMap);
+                            IRToProfileLocationMap, RunCFGMatching,
+                            RunCGMatching);
     // Find and update callsite match states after matching.
-    if (ReportProfileStaleness || PersistProfileStaleness)
+    if (RunCFGMatching && (ReportProfileStaleness || PersistProfileStaleness))
       recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors,
                                 &IRToProfileLocationMap);
   }
@@ -618,8 +662,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
   }
 }
 
-void SampleProfileMatcher::findNewIRFunctions(
-    StringMap<Function *> &NewIRFunctions) {
+void SampleProfileMatcher::findNewIRFunctions() {
   // TODO: Support MD5 profile.
   if (FunctionSamples::UseMD5)
     return;
@@ -653,46 +696,8 @@ void SampleProfileMatcher::findNewIRFunctions(
 
     LLVM_DEBUG(dbgs() << "Function " << CanonFName
                       << " is not in profile or symbol list table.\n");
-    NewIRFunctions[CanonFName] = &F;
+    NewIRFunctions[FunctionId(CanonFName)] = &F;
   }
-}
-
-std::vector<Function *> *SampleProfileMatcher::findNewIRCallees(
-    Function &Func, const StringMap<Function *> &NewIRFunctions) {
-  auto R = FuncToNewCalleesMap.try_emplace(&Func, std::vector<Function *>());
-  std::vector<Function *> &IRCalleesToMatch = R.first->second;
-  // Skip the lookup if it's in the cache.
-  if (!R.second)
-    return &IRCalleesToMatch;
-
-  for (auto &BB : Func) {
-    for (auto &I : BB) {
-      const auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB || isa<IntrinsicInst>(&I))
-        continue;
-      Function *Callee = CB->getCalledFunction();
-      if (!Callee || Callee->isDeclaration())
-        continue;
-      StringRef CalleeName =
-          FunctionSamples::getCanonicalFnName(Callee->getName());
-      if (NewIRFunctions.count(CalleeName))
-        IRCalleesToMatch.push_back(Callee);
-    }
-  }
-  return &IRCalleesToMatch;
-}
-
-Function *SampleProfileMatcher::findFuncByProfileName(
-    const FunctionId &ProfileName) const {
-  auto F = SymbolMap->find(ProfileName);
-  if (F != SymbolMap->end())
-    return F->second;
-
-  // Find in new matched function map.
-  auto NewF = ProfileNameToFuncMap.find(ProfileName);
-  if (NewF != ProfileNameToFuncMap.end())
-    return NewF->second;
-  return nullptr;
 }
 
 bool SampleProfileMatcher::functionMatchesProfileHelper(
@@ -739,8 +744,12 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
     return false;
 
   // Use the diff algorithm to find the LCS between IR and profile.
-  LocToLocMap MatchedAnchors =
-      longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList);
+
+  // Don't recursively match the callee function to avoid infinite matching,
+  // callee functions should be handled later since it's processed in top-down
+  // order .
+  LocToLocMap MatchedAnchors = longestCommonSequence(
+      FilteredIRAnchorsList, FilteredProfileAnchorList, false);
 
   Similarity =
       static_cast<float>(MatchedAnchors.size()) * 2 /
@@ -754,70 +763,55 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   return Similarity * 100 > FuncProfileSimilarityThreshold;
 }
 
+// If FindMatchedProfileOnly is set to true, only use the processed function
+// results. This is used for skipping the repeated recursive matching.
 bool SampleProfileMatcher::functionMatchesProfile(Function &IRFunc,
-                                                  const FunctionId &ProfFunc) {
+                                                  const FunctionId &ProfFunc,
+                                                  bool FindMatchedProfileOnly) {
   auto R = FunctionProfileNameMap.find({&IRFunc, ProfFunc});
   if (R != FunctionProfileNameMap.end())
     return R->second;
 
+  if (FindMatchedProfileOnly)
+    return false;
+
   bool Matched = functionMatchesProfileHelper(IRFunc, ProfFunc);
   FunctionProfileNameMap[{&IRFunc, ProfFunc}] = Matched;
-  ProfileNameToFuncMap[ProfFunc] = &IRFunc;
+  if (Matched) {
+    ProfileNameToFuncMap[ProfFunc] = &IRFunc;
+    LLVM_DEBUG(dbgs() << "Function:" << IRFunc.getName()
+                      << " matches profile:" << ProfFunc << "\n");
+  }
+
   return Matched;
 }
 
-void SampleProfileMatcher::matchCalleeProfile(
-    const FunctionId &Caller, const FunctionId &ProfileCalleeName,
-    const std::vector<Function *> *IRCalleesToMatch,
-    std::vector<std::pair<FunctionId, FunctionId>> &MatchResult) {
-  if (!IRCalleesToMatch)
-    return;
-  // Check whether this is an existing function matching the profile, we only
-  // run the matching when the callee profile is unused.
-  auto F = SymbolMap->find(ProfileCalleeName);
-  if (F != SymbolMap->end())
-    return;
+void SampleProfileMatcher::updateProfileWithNewName(
+    FunctionSamples &FuncProfile) {
+  auto FindNewMatch =
+      [&](const FunctionId &ProfileName,
+          std::vector<std::pair<FunctionId, FunctionId>> &MatchResult,
+          [[maybe_unused]] const FunctionId &CallerName) {
+        auto P = ProfileNameToFuncMap.find(ProfileName);
+        if (P != ProfileNameToFuncMap.end()) {
+          FunctionId IRCallee(P->second->getName());
+          assert(IRCallee != ProfileName &&
+                 "New callee symbol is not a new function");
+          LLVM_DEBUG(dbgs()
+                     << "Profile name is updated from " << ProfileName << " to "
+                     << IRCallee << " under caller: " << CallerName << "\n");
+          MatchResult.emplace_back(IRCallee, ProfileName);
+        }
+      };
 
-  for (auto *IRFuncCandidate : *IRCalleesToMatch)
-    if (functionMatchesProfile(*IRFuncCandidate, ProfileCalleeName)) {
-      FunctionId IRCalleeName(IRFuncCandidate->getName());
-      assert(IRCalleeName != ProfileCalleeName &&
-             "New callee symbol is not a new function");
-      LLVM_DEBUG(dbgs() << "In function " << Caller
-                        << ", changing profile name from " << ProfileCalleeName
-                        << " to " << IRCalleeName << "\n");
-      MatchResult.emplace_back(IRCalleeName, ProfileCalleeName);
-      return;
-    }
-}
-
-// Traverse the profiled call-graph recursively to run the matching.
-void SampleProfileMatcher::matchProfileForNewFunctions(
-    const StringMap<Function *> &NewIRFunctions, FunctionSamples &FuncProfile) {
-  // Find the new candidate IR callees in the current caller scope.
-  std::vector<Function *> *IRCalleesToMatch = nullptr;
-  if (auto *IRCaller = findFuncByProfileName(FuncProfile.getFunction())) {
-    // No callees for external function, skip the call graph matching.
-    if (IRCaller->isDeclaration())
-      return;
-    IRCalleesToMatch = findNewIRCallees(*IRCaller, NewIRFunctions);
-  }
-  // Don't return here when IRCalleesToMatch is nullptr or empty, this is
-  // because even if there is no matching in the current scope, there could be
-  // matching in deeper callee scope/edge, so we need to keep traversing the
-  // call-graph. For IRCalleesToMatch is nullptr or empty case, later the
-  // matching function(matchCalleeProfile) will handle this to make it non-op.
-
-  // Match non-inline callees.
+  // Update non-inline callees.
   for (auto &BS : const_cast<BodySampleMap &>(FuncProfile.getBodySamples())) {
     // New function to old function pairs used to update the CallTargetMap.
     std::vector<std::pair<FunctionId, FunctionId>> MatchResult;
     SampleRecord::CallTargetMap &CTM =
         const_cast<SampleRecord::CallTargetMap &>(BS.second.getCallTargets());
     for (const auto &TS : CTM)
-      matchCalleeProfile(FuncProfile.getFunction(), TS.first, IRCalleesToMatch,
-                         MatchResult);
-
+      FindNewMatch(TS.first, MatchResult, FuncProfile.getFunction());
     // Update the CallTargetMap.
     for (const auto &P : MatchResult) {
       CTM[P.first] = CTM[P.second];
@@ -825,21 +819,17 @@ void SampleProfileMatcher::matchProfileForNewFunctions(
     }
   }
 
-  // Match inline callees.
+  // Update inline callees recursively.
   for (auto &CM :
        const_cast<CallsiteSampleMap &>(FuncProfile.getCallsiteSamples())) {
     auto &CalleeMap = CM.second;
     // New function to old function pairs used to update the CallsiteSampleMap.
     std::vector<std::pair<FunctionId, FunctionId>> MatchResult;
     for (auto &CS : CalleeMap) {
-      FunctionSamples &CalleeProfile = CS.second;
-      matchCalleeProfile(FuncProfile.getFunction(), CalleeProfile.getFunction(),
-                         IRCalleesToMatch, MatchResult);
-
-      // Traverse all the inlined callee profiles.
-      matchProfileForNewFunctions(NewIRFunctions, CalleeProfile);
+      FindNewMatch(CS.second.getFunction(), MatchResult,
+                   FuncProfile.getFunction());
+      updateProfileWithNewName(CS.second);
     }
-
     // Update the CalleeMap using the new name and remove the old entry.
     for (auto &P : MatchResult) {
       assert(P.first != P.second &&
@@ -852,73 +842,38 @@ void SampleProfileMatcher::matchProfileForNewFunctions(
   }
 }
 
-// Match the unused profile with new IR functions on the profiled call-graph.
-// The high-level steps for the algorithm:
-// 1) Find all the new functions that show only in the IR, use them as the
-// matching candidates to compute new callees.
-//
-// 2) Traverse all the nodes in the profiled call-graph.
-// For each function caller scope:
-//  a) Find a set of callees in the IR that doesn't exist in the profile. See
-//  findNewIRCallees.
-//  b) Find a set of callees in the profile that doesn't exist
-//  in the IR. See matchCalleeProfile.
-//  c) Match the callee pairs between a and b. Compute a similarity ratio
-//  between the pair, it's considered match if the similarity is above a given
-//  threshold. See MatchProfileForNewFunctions.
-//  d) Update the profile with the matched name in-place.
-void SampleProfileMatcher::runCallGraphMatching() {
-  if (!SalvageUnusedProfile)
-    return;
-  assert(SymbolMap && "SymbolMap is null");
-  assert(FunctionProfileNameMap.empty() &&
-         "FunctionProfileNameMap is not empty before the call graph matching");
-
-  StringMap<Function *> NewIRFunctions;
-  findNewIRFunctions(NewIRFunctions);
-  if (NewIRFunctions.empty())
-    return;
-
-  // Sort the profiles to make the matching order deterministic.
-  std::vector<NameFunctionSamples> SortedProfiles;
-  ::llvm::sortFuncProfiles(Reader.getProfiles(), SortedProfiles);
-  for (auto &P : SortedProfiles)
-    matchProfileForNewFunctions(NewIRFunctions,
-                                *const_cast<FunctionSamples *>(P.second));
-
-  clearCacheData();
+void SampleProfileMatcher::updateProfillesAndSymbolMap() {
   if (ProfileNameToFuncMap.empty())
     return;
-  // Update all the data generated by the old profile.
+  for (auto &P : Reader.getProfiles())
+    updateProfileWithNewName(P.second);
+
   // Add the new function to the SymbolMap, which will be used in
   // SampleLoader.
   for (auto &I : ProfileNameToFuncMap) {
     assert(I.second && "New function is null");
     SymbolMap->emplace(FunctionId(I.second->getName()), I.second);
   }
-
-  // Re-flatten the profiles after the matching.
-  FlattenedProfiles.clear();
-  ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
-                                   FunctionSamples::ProfileIsCS);
-  ProfileNameToFuncMap.clear();
-}
-
-void SampleProfileMatcher::runOnFunction(Function &F) {
-  if (skipProfileForFunction(F))
-    return;
-  runCFGMatching(F);
 }
 
 void SampleProfileMatcher::runOnModule(
-    HashKeyMap<std::unordered_map, FunctionId, Function *> &SymMap) {
+    std::vector<Function *> &OrderedFuncList) {
   ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
                                    FunctionSamples::ProfileIsCS);
-  SymbolMap = &SymMap;
-  runCallGraphMatching();
+  if (SalvageUnusedProfile)
+    findNewIRFunctions();
 
-  for (auto &F : M)
-    runOnFunction(F);
+  // Process the matching in top-down order so that the caller matching result
+  // can be used to the callee matching.
+  for (auto *F : OrderedFuncList) {
+    if (skipProfileForFunction(*F))
+      continue;
+    runOnFunction(*F);
+  }
+
+  // Update the profile map and symbol map with the new function name.
+  if (SalvageUnusedProfile)
+    updateProfillesAndSymbolMap();
 
   if (SalvageStaleProfile)
     distributeIRToProfileLocationMap();

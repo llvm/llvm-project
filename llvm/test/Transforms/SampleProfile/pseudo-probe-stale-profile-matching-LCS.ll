@@ -2,17 +2,6 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-matching-LCS.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s
 
-; CHECK: Run stale profile matching for test_direct_call
-; CHECK: Location is matched from 1 to 1
-; CHECK: Location is matched from 2 to 2
-; CHECK: Location is matched from 3 to 3
-; CHECK: Callsite with callee:C is matched from 4 to 2
-; CHECK: Location is rematched backwards from 3 to 1
-; CHECK: Callsite with callee:A is matched from 5 to 4
-; CHECK: Callsite with callee:B is matched from 6 to 5
-; CHECK: Location is matched from 7 to 6
-; CHECK: Callsite with callee:A is matched from 8 to 6
-
 ; CHECK: Run stale profile matching for test_indirect_call
 ; CHECK: Location is matched from 1 to 1
 ; CHECK: Location is matched from 2 to 2
@@ -26,6 +15,17 @@
 ; CHECK: Location is matched from 8 to 5
 ; CHECK: Callsite with callee:unknown.indirect.callee is matched from 9 to 6
 ; CHECK: Callsite with callee:C is matched from 10 to 7
+
+; CHECK: Run stale profile matching for test_direct_call
+; CHECK: Location is matched from 1 to 1
+; CHECK: Location is matched from 2 to 2
+; CHECK: Location is matched from 3 to 3
+; CHECK: Callsite with callee:C is matched from 4 to 2
+; CHECK: Location is rematched backwards from 3 to 1
+; CHECK: Callsite with callee:A is matched from 5 to 4
+; CHECK: Callsite with callee:B is matched from 6 to 5
+; CHECK: Location is matched from 7 to 6
+; CHECK: Callsite with callee:A is matched from 8 to 6
 
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"

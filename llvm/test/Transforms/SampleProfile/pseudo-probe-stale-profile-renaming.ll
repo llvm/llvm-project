@@ -3,18 +3,28 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl --min-call-count-for-cg-matching=10 --min-func-count-for-cg-matching=10 2>&1 | FileCheck %s  --check-prefix=TINY-FUNC
 
-
+; Verify find new IR functions.
 ; CHECK: Function new_block_only is not in profile or symbol list table.
 ; CHECK: Function new_foo is not in profile or symbol list table.
 
+; CHECK: Run stale profile matching for main
 ; CHECK: The similarity between new_foo(IR) and foo(profile) is 0.86
-; CHECK: In function main, changing profile name from foo to new_foo
-; CHECK: The checksums for new_block_only(IR) and block_only(Profile) match
-; CHECK: In function baz, changing profile name from block_only to new_block_only
-; CHECK: In function baz, changing profile name from block_only to new_block_only
-; CHECK: In function cold_func, changing profile name from block_only to new_block_only
-; CHECK: In function test_noninline, changing profile name from foo to new_foo
-; CHECK: In function baz, changing profile name from block_only to new_block_only
+; CHECK: Function:new_foo matches profile:foo
+; CHECK: Run stale profile matching for test_noninline
+; CHECK: Run stale profile matching for cold_func
+; CHECK: The checksums for new_block_only(IR) and block_only(Profile) match.
+; CHECK: Function:new_block_only matches profile:block_only
+; CHECK: Run stale profile matching for baz
+; CHECK: Run stale profile matching for bar
+
+; Verify profile new name update.
+; CHECK-DAG: Profile name is updated from foo to new_foo under caller: test_noninline
+; CHECK-DAG: Profile name is updated from block_only to new_block_only under caller: baz
+; CHECK-DAG: Profile name is updated from foo to new_foo under caller: main
+; CHECK-DAG: Profile name is updated from block_only to new_block_only under caller: baz
+; CHECK-DAG: Profile name is updated from block_only to new_block_only under caller: baz
+; CHECK-DAG: Profile name is updated from block_only to new_block_only under caller: cold_func
+
 
 ; Verify the matched function is updated correctly by checking the inlining.
 ; CHECK: 'new_foo' inlined into 'main' to match profiling context with (cost=110, threshold=3000) at callsite main:2:7.5;
@@ -22,8 +32,8 @@
 ; CHECK: 'new_block_only' inlined into 'main' to match profiling context with (cost=75, threshold=3000) at callsite baz:1:3.2 @ new_foo:2:3.3 @ main:2:7.5;
 ; CHECK: 'new_foo' inlined into 'test_noninline' to match profiling context with (cost=110, threshold=3000) at callsite test_noninline:1:3.2;
 
-; TINY-FUNC-NOT: block_only to new_block_only
-; TINY-FUNC-NOT: from foo to new_foo
+; TINY-FUNC-NOT: Function:new_foo matches profile:foo
+; TINY-FUNC-NOT: Function:new_block_only matches profile:block_only
 
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
