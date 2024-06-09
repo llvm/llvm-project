@@ -199,7 +199,8 @@ struct type_caster<MlirModule> {
 };
 
 /// Casts object <-> MlirFrozenRewritePatternSet.
-template <> struct type_caster<MlirFrozenRewritePatternSet> {
+template <>
+struct type_caster<MlirFrozenRewritePatternSet> {
   PYBIND11_TYPE_CASTER(MlirFrozenRewritePatternSet,
                        _("MlirFrozenRewritePatternSet"));
   bool load(handle src, bool) {
