@@ -11,6 +11,7 @@
 namespace LIBC_NAMESPACE {
 namespace vdso {
 // translate VDSOSym to symbol names
+// https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/riscv/kernel/vdso/vdso.lds.S
 LIBC_INLINE constexpr cpp::string_view symbol_name(VDSOSym sym) {
   switch (sym) {
   case VDSOSym::RTSigReturn:

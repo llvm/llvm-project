@@ -15,6 +15,7 @@ namespace vdso {
 // it is suggested that one should use the __vdso_ prefix.
 // Additionally, there is also an __vdso_sgx_enter_enclave, it is for the SGX
 // support, we do not include it here for now.
+// https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/x86/entry/vdso/vdso.lds.S
 LIBC_INLINE constexpr cpp::string_view symbol_name(VDSOSym sym) {
   switch (sym) {
   case VDSOSym::ClockGetTime:
