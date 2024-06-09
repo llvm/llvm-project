@@ -445,31 +445,30 @@ private:
       // Phase 6: do futex wait until the lock is available or timeout is
       // reached.
       bool timeout_flag = false;
-      if (!old.can_acquire<role>(get_preference())) {
+      if (!old.can_acquire<role>(get_preference()))
         timeout_flag = (queue.wait<role>(serial_number, timeout, is_pshared) ==
                         -ETIMEDOUT);
 
-        // Phase 7: unregister ourselves as a pending reader.
-        {
-          // Similarly, the unregister operation should also be an atomic
-          // transaction.
-          WaitingQueue::Guard guard = queue.acquire(is_pshared);
-          guard.pending_count<role>()--;
-          // Clear the flag if we are the last reader. The flag must be
-          // cleared otherwise operations like trylock may fail even though
-          // there is no competitors.
-          if (guard.pending_count<role>() == 0)
-            State::fetch_clear_pending_bit<role>(state,
-                                                 cpp::MemoryOrder::RELAXED);
-        }
-
-        // Phase 8: exit the loop is timeout is reached.
-        if (timeout_flag)
-          return LockResult::TimedOut;
-
-        // Phase 9: reload the state and retry the acquisition.
-        old = State::spin_reload<role>(state, get_preference(), spin_count);
+      // Phase 7: unregister ourselves as a pending reader.
+      {
+        // Similarly, the unregister operation should also be an atomic
+        // transaction.
+        WaitingQueue::Guard guard = queue.acquire(is_pshared);
+        guard.pending_count<role>()--;
+        // Clear the flag if we are the last reader. The flag must be
+        // cleared otherwise operations like trylock may fail even though
+        // there is no competitors.
+        if (guard.pending_count<role>() == 0)
+          State::fetch_clear_pending_bit<role>(state,
+                                               cpp::MemoryOrder::RELAXED);
       }
+
+      // Phase 8: exit the loop is timeout is reached.
+      if (timeout_flag)
+        return LockResult::TimedOut;
+
+      // Phase 9: reload the state and retry the acquisition.
+      old = State::spin_reload<role>(state, get_preference(), spin_count);
     }
   }
 
