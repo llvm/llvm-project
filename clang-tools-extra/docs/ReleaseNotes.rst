@@ -224,6 +224,10 @@ Changes in existing checks
   check by ignoring ``__func__`` macro in lambda captures, initializers of
   default parameters and nested function declarations.
 
+- Improved :doc:`bugprone-multi-level-implicit-pointer-conversion
+  <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` check
+  by ignoring implicit pointer conversions that are part of a cast expression.
+
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
   eliminating false positives resulting from direct usage of bitwise operators
