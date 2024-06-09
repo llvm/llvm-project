@@ -37,7 +37,7 @@ to the invocation of the copy constructor.
              // being rethrown as 'std::exception'
   }
 
-To prevent these issues, it is advisable to utilize ``throw;`` statements to
+To prevent these issues, it is advised to utilize ``throw;`` statements to
 rethrow the original exception object for currently handled exceptions.
 
 .. code-block:: c++
@@ -48,7 +48,7 @@ rethrow the original exception object for currently handled exceptions.
     throw; // Good
   }
 
-However, when an empty throw statement is used outside a catch block, it
+However, when an empty throw statement is used without an active exception, it
 results in a call to ``std::terminate()``, which abruptly terminates the
 application. This behavior can lead to the abnormal termination of the
 program and is often unintended. Such occurrences may indicate errors or
@@ -78,6 +78,7 @@ The above program will be terminated with:
   terminate called without an active exception
   Aborted (core dumped)
 
-Check does not perform a call-flow analysis and may produce false positives in
-lambdas or functions that are actually called from a catch block. In such cases,
-it is recommended to suppress the warning using the ``NOLINT`` comment.
+The check does not perform a flow-sensitive analysis and may produce false
+positives in lambdas or functions that are actually called from a catch block.
+In such cases, it is recommended to suppress the warning using the ``// NOLINT``
+comment.

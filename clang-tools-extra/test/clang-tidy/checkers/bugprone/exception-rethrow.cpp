@@ -74,13 +74,13 @@ void not_correct5() {
 
 void rethrow_not_correct() {
   throw;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: empty 'throw' outside a catch block with no operand triggers 'std::terminate()' [bugprone-exception-rethrow]
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: empty 'throw' outside a catch block triggers 'std::terminate()' [bugprone-exception-rethrow]
 }
 
 void rethrow_not_correct2() {
   try {
     throw;
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: empty 'throw' outside a catch block with no operand triggers 'std::terminate()' [bugprone-exception-rethrow]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: empty 'throw' outside a catch block triggers 'std::terminate()' [bugprone-exception-rethrow]
   } catch(...) {
   }
 }
@@ -98,6 +98,6 @@ void rethrow_in_lambda() {
     throw 5;
   } catch(...) {
     auto lambda = [] { throw; };
-// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: empty 'throw' outside a catch block with no operand triggers 'std::terminate()' [bugprone-exception-rethrow]
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: empty 'throw' outside a catch block triggers 'std::terminate()' [bugprone-exception-rethrow]
   }
 }

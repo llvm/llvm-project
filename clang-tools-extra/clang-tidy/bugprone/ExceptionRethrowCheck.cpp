@@ -60,8 +60,7 @@ void ExceptionRethrowCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *MatchedEmptyThrow =
           Result.Nodes.getNodeAs<CXXThrowExpr>("empty-throw")) {
     diag(MatchedEmptyThrow->getThrowLoc(),
-         "empty 'throw' outside a catch block with no operand triggers "
-         "'std::terminate()'");
+         "empty 'throw' outside a catch block triggers 'std::terminate()'");
   }
 }
 
