@@ -5,11 +5,38 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefixes=GFX11 %s
 
-; FIXME
-; define amdgpu_ps void @buffer_store_bf16(ptr addrspace(8) inreg %rsrc, bfloat %data, i32 %offset) {
-;   call void @llvm.amdgcn.raw.ptr.buffer.store.bf16(bfloat %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
-;   ret void
-; }
+define amdgpu_ps void @buffer_store_bf16(ptr addrspace(8) inreg %rsrc, bfloat %data, i32 %offset) {
+; GFX7-LABEL: buffer_store_bf16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX7-NEXT:    buffer_store_short v0, v1, s[0:3], 0 offen
+; GFX7-NEXT:    s_endpgm
+;
+; GFX8-LABEL: buffer_store_bf16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    buffer_store_short v0, v1, s[0:3], 0 offen
+; GFX8-NEXT:    s_endpgm
+;
+; GFX9-LABEL: buffer_store_bf16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    buffer_store_short v0, v1, s[0:3], 0 offen
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: buffer_store_bf16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    buffer_store_short v0, v1, s[0:3], 0 offen
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: buffer_store_bf16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    buffer_store_b16 v0, v1, s[0:3], 0 offen
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+  call void @llvm.amdgcn.raw.ptr.buffer.store.bf16(bfloat %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
+  ret void
+}
 
 define amdgpu_ps void @buffer_store_v2bf16(ptr addrspace(8) inreg %rsrc, <2 x bfloat> %data, i32 %offset) {
 ; GFX7-LABEL: buffer_store_v2bf16:
