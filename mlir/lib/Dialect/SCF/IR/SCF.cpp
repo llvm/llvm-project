@@ -637,17 +637,7 @@ FailureOr<LoopLikeOpInterface> ForallOp::replaceWithAdditionalYields(
   auto yieldOp = cast<scf::InParallelOp>(getTerminator());
   ArrayRef<BlockArgument> newIterArgs =
       newLoop.getBody()->getArguments().take_back(newInitOperands.size());
-  {
-    OpBuilder::InsertionGuard g(rewriter);
-    rewriter.setInsertionPoint(yieldOp);
-    SmallVector<Value> newYieldedValues =
-        newYieldValuesFn(rewriter, getLoc(), newIterArgs);
-    assert(newInitOperands.size() == newYieldedValues.size() &&
-           "expected as many new yield values as new iter operands");
-    // rewriter.modifyOpInPlace(yieldOp, [&]() {
-    //   yieldOp.getResultsMutable().append(newYieldedValues);
-    // });
-  }
+  newLoop.getTerminator().erase();
 
   // Move the loop body to the new op.
   rewriter.mergeBlocks(getBody(), newLoop.getBody(),
