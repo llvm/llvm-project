@@ -113,12 +113,7 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
           instrprof_error::malformed,
           "not enough data to read binary id length");
 
-    uint64_t BILen = 0;
-    if (Endian == llvm::endianness::little)
-      BILen = endian::readNext<uint64_t, llvm::endianness::little>(BI);
-    else
-      BILen = endian::readNext<uint64_t, llvm::endianness::big>(BI);
-
+    uint64_t BILen = endian::readNext<uint64_t>(BI, Endian);
     if (BILen == 0)
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "binary id length is 0");
@@ -145,11 +140,11 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
 
 static void
 printBinaryIdsInternal(raw_ostream &OS,
-                       std::vector<llvm::object::BuildID> &BinaryIds) {
+                       const std::vector<llvm::object::BuildID> &BinaryIds) {
   OS << "Binary IDs: \n";
-  for (auto BI : BinaryIds) {
-    for (uint64_t I = 0; I < BI.size(); I++)
-      OS << format("%02x", BI[I]);
+  for (const auto &BI : BinaryIds) {
+    for (auto I : BI)
+      OS << format("%02x", I);
     OS << "\n";
   }
 }
@@ -1204,8 +1199,7 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
 
 Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
                                             const unsigned char *Ptr,
-                                            uint64_t FirstWord,
-                                            memprof::IndexedVersion Version) {
+                                            uint64_t FirstWord) {
   // The value returned from RecordTableGenerator.Emit.
   const uint64_t RecordTableOffset =
       Version == memprof::Version0
@@ -1259,8 +1253,7 @@ Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
 }
 
 Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
-                                          const unsigned char *Ptr,
-                                          memprof::IndexedVersion Version) {
+                                          const unsigned char *Ptr) {
   // The offset in the stream right before invoking
   // CallStackTableGenerator.Emit.
   const uint64_t CallStackPayloadOffset =
@@ -1285,7 +1278,7 @@ Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
   MemProfRecordTable.reset(MemProfRecordHashTable::Create(
       /*Buckets=*/Start + RecordTableOffset,
       /*Payload=*/Start + RecordPayloadOffset,
-      /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
+      /*Base=*/Start, memprof::RecordLookupTrait(memprof::Version3, Schema)));
 
   return Error::success();
 }
@@ -1323,11 +1316,11 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   case memprof::Version0:
   case memprof::Version1:
   case memprof::Version2:
-    if (Error E = deserializeV012(Start, Ptr, FirstWord, Version))
+    if (Error E = deserializeV012(Start, Ptr, FirstWord))
       return E;
     break;
   case memprof::Version3:
-    if (Error E = deserializeV3(Start, Ptr, Version))
+    if (Error E = deserializeV3(Start, Ptr))
       return E;
     break;
   }
