@@ -53,7 +53,7 @@ void test0(NSArray *array) {
 
 // CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds [[STATE_T]], ptr [[STATE]], i32 0, i32 1
 // CHECK-LP64-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]]
-// CHECK-LP64-NEXT: [[T2:%.*]] = getelementptr ptr, ptr [[T1]], i64
+// CHECK-LP64-NEXT: [[T2:%.*]] = getelementptr inbounds ptr, ptr [[T1]], i64
 // CHECK-LP64-NEXT: [[T3:%.*]] = load ptr, ptr [[T2]]
 // CHECK-LP64-NEXT: store ptr [[T3]], ptr [[X]]
 
@@ -100,7 +100,7 @@ void test1(NSArray *array) {
 
 // CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds [[STATE_T]], ptr [[STATE]], i32 0, i32 1
 // CHECK-LP64-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]]
-// CHECK-LP64-NEXT: [[T2:%.*]] = getelementptr ptr, ptr [[T1]], i64
+// CHECK-LP64-NEXT: [[T2:%.*]] = getelementptr inbounds ptr, ptr [[T1]], i64
 // CHECK-LP64-NEXT: [[T3:%.*]] = load ptr, ptr [[T2]]
 // CHECK-LP64-NEXT: call ptr @llvm.objc.initWeak(ptr [[X]], ptr [[T3]])
 
