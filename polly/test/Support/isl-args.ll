@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-scops -disable-output -polly-isl-arg=-V < %s | FileCheck %s -match-full-lines --check-prefix=VERSION
-; RUN: opt %loadPolly -polly-scops -disable-output -polly-isl-arg=-h < %s | FileCheck %s -match-full-lines --check-prefix=HELP
-; RUN: not opt %loadPolly -polly-scops -disable-output -polly-isl-arg=-asdf < %s 2>&1| FileCheck %s -match-full-lines --check-prefix=UNKNOWN
-; RUN: opt %loadPolly -polly-scops -disable-output -polly-isl-arg=--schedule-algorithm=feautrier < %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output -polly-isl-arg=-V < %s | FileCheck %s -match-full-lines --check-prefix=VERSION
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output -polly-isl-arg=-h < %s | FileCheck %s -match-full-lines --check-prefix=HELP
+; RUN: not opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output -polly-isl-arg=-asdf < %s 2>&1| FileCheck %s -match-full-lines --check-prefix=UNKNOWN
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output -polly-isl-arg=--schedule-algorithm=feautrier < %s
 
 ; VERSION: isl-{{.*}}-IMath-32
 ; HELP: Usage: -polly-isl-arg [OPTION...]

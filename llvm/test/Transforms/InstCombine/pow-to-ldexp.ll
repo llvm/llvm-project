@@ -144,16 +144,10 @@ define half @pow_sitofp_f16_const_base_2(i32 %x) {
 }
 
 define <2 x float> @pow_sitofp_v2f32_const_base_2(<2 x i32> %x) {
-; LDEXP-EXP2-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2(
-; LDEXP-EXP2-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-EXP2-NEXT:    [[EXP2:%.*]] = tail call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[X]])
-; LDEXP-EXP2-NEXT:    ret <2 x float> [[EXP2]]
-;
-; LDEXP-NOEXP2-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2(
-; LDEXP-NOEXP2-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-NOEXP2-NEXT:    [[ITOFP:%.*]] = sitofp <2 x i32> [[X]] to <2 x float>
-; LDEXP-NOEXP2-NEXT:    [[POW:%.*]] = tail call <2 x float> @llvm.pow.v2f32(<2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> [[ITOFP]])
-; LDEXP-NOEXP2-NEXT:    ret <2 x float> [[POW]]
+; LDEXP-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2(
+; LDEXP-SAME: <2 x i32> [[X:%.*]]) {
+; LDEXP-NEXT:    [[EXP2:%.*]] = tail call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[X]])
+; LDEXP-NEXT:    ret <2 x float> [[EXP2]]
 ;
 ; NOLDEXP-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2(
 ; NOLDEXP-SAME: <2 x i32> [[X:%.*]]) {
@@ -205,15 +199,10 @@ define <2 x float> @pow_sitofp_v2f32_const_base_mixed_2(<2 x i32> %x) {
 }
 
 define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(<2 x i32> %x) {
-; LDEXP-EXP2-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(
-; LDEXP-EXP2-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-EXP2-NEXT:    [[EXP2:%.*]] = tail call nsz afn <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[X]])
-; LDEXP-EXP2-NEXT:    ret <2 x float> [[EXP2]]
-;
-; LDEXP-NOEXP2-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(
-; LDEXP-NOEXP2-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-NOEXP2-NEXT:    [[POW:%.*]] = tail call nsz afn <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x i32> [[X]])
-; LDEXP-NOEXP2-NEXT:    ret <2 x float> [[POW]]
+; LDEXP-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(
+; LDEXP-SAME: <2 x i32> [[X:%.*]]) {
+; LDEXP-NEXT:    [[EXP2:%.*]] = tail call nsz afn <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[X]])
+; LDEXP-NEXT:    ret <2 x float> [[EXP2]]
 ;
 ; NOLDEXP-LABEL: define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(
 ; NOLDEXP-SAME: <2 x i32> [[X:%.*]]) {
@@ -227,16 +216,10 @@ define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(<2 x i32> %x) {
 }
 
 define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(<vscale x 4 x i32> %x) {
-; LDEXP-EXP2-LABEL: define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(
-; LDEXP-EXP2-SAME: <vscale x 4 x i32> [[X:%.*]]) {
-; LDEXP-EXP2-NEXT:    [[EXP2:%.*]] = tail call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> [[X]])
-; LDEXP-EXP2-NEXT:    ret <vscale x 4 x float> [[EXP2]]
-;
-; LDEXP-NOEXP2-LABEL: define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(
-; LDEXP-NOEXP2-SAME: <vscale x 4 x i32> [[X:%.*]]) {
-; LDEXP-NOEXP2-NEXT:    [[ITOFP:%.*]] = sitofp <vscale x 4 x i32> [[X]] to <vscale x 4 x float>
-; LDEXP-NOEXP2-NEXT:    [[POW:%.*]] = tail call <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 2.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float> [[ITOFP]])
-; LDEXP-NOEXP2-NEXT:    ret <vscale x 4 x float> [[POW]]
+; LDEXP-LABEL: define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(
+; LDEXP-SAME: <vscale x 4 x i32> [[X:%.*]]) {
+; LDEXP-NEXT:    [[EXP2:%.*]] = tail call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> [[X]])
+; LDEXP-NEXT:    ret <vscale x 4 x float> [[EXP2]]
 ;
 ; NOLDEXP-LABEL: define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(
 ; NOLDEXP-SAME: <vscale x 4 x i32> [[X:%.*]]) {
@@ -250,16 +233,10 @@ define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(<vscale x 4 x i32> 
 }
 
 define <2 x half> @pow_sitofp_v2f16_const_base_2(<2 x i32> %x) {
-; LDEXP-EXP2-LABEL: define <2 x half> @pow_sitofp_v2f16_const_base_2(
-; LDEXP-EXP2-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-EXP2-NEXT:    [[EXP2:%.*]] = tail call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> <half 0xH3C00, half 0xH3C00>, <2 x i32> [[X]])
-; LDEXP-EXP2-NEXT:    ret <2 x half> [[EXP2]]
-;
-; LDEXP-NOEXP2-LABEL: define <2 x half> @pow_sitofp_v2f16_const_base_2(
-; LDEXP-NOEXP2-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-NOEXP2-NEXT:    [[ITOFP:%.*]] = sitofp <2 x i32> [[X]] to <2 x half>
-; LDEXP-NOEXP2-NEXT:    [[POW:%.*]] = tail call <2 x half> @llvm.pow.v2f16(<2 x half> <half 0xH4000, half 0xH4000>, <2 x half> [[ITOFP]])
-; LDEXP-NOEXP2-NEXT:    ret <2 x half> [[POW]]
+; LDEXP-LABEL: define <2 x half> @pow_sitofp_v2f16_const_base_2(
+; LDEXP-SAME: <2 x i32> [[X:%.*]]) {
+; LDEXP-NEXT:    [[EXP2:%.*]] = tail call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> <half 0xH3C00, half 0xH3C00>, <2 x i32> [[X]])
+; LDEXP-NEXT:    ret <2 x half> [[EXP2]]
 ;
 ; NOLDEXP-LABEL: define <2 x half> @pow_sitofp_v2f16_const_base_2(
 ; NOLDEXP-SAME: <2 x i32> [[X:%.*]]) {
@@ -273,16 +250,10 @@ define <2 x half> @pow_sitofp_v2f16_const_base_2(<2 x i32> %x) {
 }
 
 define <2 x double> @pow_sitofp_v2f64_const_base_2(<2 x i32> %x) {
-; LDEXP-EXP2-LABEL: define <2 x double> @pow_sitofp_v2f64_const_base_2(
-; LDEXP-EXP2-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-EXP2-NEXT:    [[EXP2:%.*]] = tail call <2 x double> @llvm.ldexp.v2f64.v2i32(<2 x double> <double 1.000000e+00, double 1.000000e+00>, <2 x i32> [[X]])
-; LDEXP-EXP2-NEXT:    ret <2 x double> [[EXP2]]
-;
-; LDEXP-NOEXP2-LABEL: define <2 x double> @pow_sitofp_v2f64_const_base_2(
-; LDEXP-NOEXP2-SAME: <2 x i32> [[X:%.*]]) {
-; LDEXP-NOEXP2-NEXT:    [[ITOFP:%.*]] = sitofp <2 x i32> [[X]] to <2 x double>
-; LDEXP-NOEXP2-NEXT:    [[POW:%.*]] = tail call <2 x double> @llvm.pow.v2f64(<2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double> [[ITOFP]])
-; LDEXP-NOEXP2-NEXT:    ret <2 x double> [[POW]]
+; LDEXP-LABEL: define <2 x double> @pow_sitofp_v2f64_const_base_2(
+; LDEXP-SAME: <2 x i32> [[X:%.*]]) {
+; LDEXP-NEXT:    [[EXP2:%.*]] = tail call <2 x double> @llvm.ldexp.v2f64.v2i32(<2 x double> <double 1.000000e+00, double 1.000000e+00>, <2 x i32> [[X]])
+; LDEXP-NEXT:    ret <2 x double> [[EXP2]]
 ;
 ; NOLDEXP-LABEL: define <2 x double> @pow_sitofp_v2f64_const_base_2(
 ; NOLDEXP-SAME: <2 x i32> [[X:%.*]]) {

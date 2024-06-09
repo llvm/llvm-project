@@ -260,7 +260,7 @@ MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
     : Parent(Parent), Atom(nullptr), Offset(~UINT64_C(0)), LayoutOrder(0),
       Kind(Kind), IsBeingLaidOut(false), HasInstructions(HasInstructions) {
   if (Parent && !isa<MCDummyFragment>(*this))
-    Parent->getFragmentList().push_back(this);
+    Parent->addFragment(*this);
 }
 
 void MCFragment::destroy() {

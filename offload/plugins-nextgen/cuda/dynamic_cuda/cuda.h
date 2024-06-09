@@ -16,6 +16,15 @@
 #include <cstddef>
 #include <cstdint>
 
+#define cuDeviceTotalMem cuDeviceTotalMem_v2
+#define cuModuleGetGlobal cuModuleGetGlobal_v2
+#define cuMemGetInfo cuMemGetInfo_v2
+#define cuMemAlloc cuMemAlloc_v2
+#define cuMemFree cuMemFree_v2
+#define cuMemAllocHost cuMemAllocHost_v2
+#define cuDevicePrimaryCtxRelease cuDevicePrimaryCtxRelease_v2
+#define cuDevicePrimaryCtxSetFlags cuDevicePrimaryCtxSetFlags_v2
+
 typedef int CUdevice;
 typedef uintptr_t CUdeviceptr;
 typedef struct CUmod_st *CUmodule;

@@ -35,12 +35,11 @@ class SparcDAGToDAGISel : public SelectionDAGISel {
   /// Subtarget - Keep a pointer to the Sparc Subtarget around so that we can
   /// make the right decision when generating code for different targets.
   const SparcSubtarget *Subtarget = nullptr;
-public:
-  static char ID;
 
+public:
   SparcDAGToDAGISel() = delete;
 
-  explicit SparcDAGToDAGISel(SparcTargetMachine &tm) : SelectionDAGISel(ID, tm) {}
+  explicit SparcDAGToDAGISel(SparcTargetMachine &tm) : SelectionDAGISel(tm) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<SparcSubtarget>();
@@ -66,11 +65,18 @@ private:
   SDNode* getGlobalBaseReg();
   bool tryInlineAsm(SDNode *N);
 };
+
+class SparcDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit SparcDAGToDAGISelLegacy(SparcTargetMachine &tm)
+      : SelectionDAGISelLegacy(ID, std::make_unique<SparcDAGToDAGISel>(tm)) {}
+};
 }  // end anonymous namespace
 
-char SparcDAGToDAGISel::ID = 0;
+char SparcDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(SparcDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(SparcDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 SDNode* SparcDAGToDAGISel::getGlobalBaseReg() {
   Register GlobalBaseReg = Subtarget->getInstrInfo()->getGlobalBaseReg(MF);
@@ -397,5 +403,5 @@ bool SparcDAGToDAGISel::SelectInlineAsmMemoryOperand(
 /// SPARC-specific DAG, ready for instruction scheduling.
 ///
 FunctionPass *llvm::createSparcISelDag(SparcTargetMachine &TM) {
-  return new SparcDAGToDAGISel(TM);
+  return new SparcDAGToDAGISelLegacy(TM);
 }

@@ -5,9 +5,8 @@
 define <4 x half> @shuffle_v4f16(<4 x half> %x, <4 x half> %y) {
 ; CHECK-LABEL: shuffle_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 11
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 11
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %s = shufflevector <4 x half> %x, <4 x half> %y, <4 x i32> <i32 0, i32 1, i32 6, i32 3>
@@ -93,12 +92,11 @@ define <4 x double> @vrgather_shuffle_vv_v4f64(<4 x double> %x, <4 x double> %y)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI6_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI6_0)
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v14, (a0)
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v14
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 8
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vrgatherei16.vv v12, v8, v14
 ; CHECK-NEXT:    vrgather.vi v12, v10, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -109,13 +107,13 @@ define <4 x double> @vrgather_shuffle_vv_v4f64(<4 x double> %x, <4 x double> %y)
 define <4 x double> @vrgather_shuffle_xv_v4f64(<4 x double> %x) {
 ; CHECK-LABEL: vrgather_shuffle_xv_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vid.v v12
 ; CHECK-NEXT:    lui a0, %hi(.LCPI7_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI7_0)
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlse64.v v10, (a0), zero
-; CHECK-NEXT:    vrsub.vi v12, v12, 4
+; CHECK-NEXT:    vid.v v12
 ; CHECK-NEXT:    vmv.v.i v0, 12
+; CHECK-NEXT:    vrsub.vi v12, v12, 4
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
@@ -129,12 +127,12 @@ define <4 x double> @vrgather_shuffle_vx_v4f64(<4 x double> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    lui a0, %hi(.LCPI8_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI8_0)
+; CHECK-NEXT:    vlse64.v v10, (a0), zero
 ; CHECK-NEXT:    li a0, 3
-; CHECK-NEXT:    lui a1, %hi(.LCPI8_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI8_0)
-; CHECK-NEXT:    vlse64.v v10, (a1), zero
-; CHECK-NEXT:    vmul.vx v12, v12, a0
 ; CHECK-NEXT:    vmv.v.i v0, 3
+; CHECK-NEXT:    vmul.vx v12, v12, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10

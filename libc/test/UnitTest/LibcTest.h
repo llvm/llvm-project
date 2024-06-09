@@ -100,6 +100,15 @@ bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
 
 } // namespace internal
 
+struct TestOptions {
+  // If set, then just this one test from the suite will be run.
+  const char *TestFilter = nullptr;
+  // Should the test results print color codes to stdout?
+  bool PrintColor = true;
+  // Should the test results print timing only in milliseconds, as GTest does?
+  bool TimeInMs = false;
+};
+
 // NOTE: One should not create instances and call methods on them directly. One
 // should use the macros TEST or TEST_F to write test cases.
 class Test {
@@ -107,13 +116,14 @@ class Test {
   internal::RunContext *Ctx = nullptr;
 
   void setContext(internal::RunContext *C) { Ctx = C; }
+  static int getNumTests();
 
 public:
   virtual ~Test() {}
   virtual void SetUp() {}
   virtual void TearDown() {}
 
-  static int runTests(const char *);
+  static int runTests(const TestOptions &Options);
 
 protected:
   static void addTest(Test *T);
