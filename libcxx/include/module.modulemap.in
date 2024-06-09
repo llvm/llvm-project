@@ -1434,6 +1434,9 @@ module std [system] {
     }
     module default_searcher             { header "__functional/default_searcher.h" }
     module function                     { header "__functional/function.h" }
+    module function_ref                 { header "__functional/function_ref.h" }
+    module function_ref_common          { header "__functional/function_ref_common.h" }
+    module function_ref_impl            { textual header "__functional/function_ref_impl.h" }
     module hash                         { header "__functional/hash.h" }
     module identity                     { header "__functional/identity.h" }
     module invoke                       { header "__functional/invoke.h" }

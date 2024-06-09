@@ -703,10 +703,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_function_ref",
             "values": {
-                "c++26": 202306  # P0792R14 function_ref: a type-erased callable reference
+                "c++26": 202603  # P3948R1 constant_wrapper is the only tool needed for passing constant expressions via function arguments
             },
             "headers": ["functional"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_gcd_lcm",
