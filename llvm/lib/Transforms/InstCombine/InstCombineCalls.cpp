@@ -2618,6 +2618,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // ldexp(x, zext(i1 y)) -> fmul x, (select y, 2.0, 1.0)
+    Value *ExtSrc;
+    if (match(Exp, m_ZExt(m_Value(ExtSrc))) &&
+        ExtSrc->getType()->getScalarSizeInBits() == 1) {
+      Value *Cmp = Builder.CreateICmp(
+          ICmpInst::ICMP_NE, ExtSrc, Constant::getNullValue(ExtSrc->getType()));
+      SelectInst *Select = SelectInst::Create(
+          Cmp, ConstantFP::get(Type::getFloatTy(II->getContext()), 2.0),
+          ConstantFP::get(Type::getFloatTy(II->getContext()), 1.0));
+      Builder.Insert(Select);
+      return BinaryOperator::CreateFMul(Src, Select);
+    }
+
     break;
   }
   case Intrinsic::ptrauth_auth:
