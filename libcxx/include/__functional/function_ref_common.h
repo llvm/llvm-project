@@ -1,0 +1,126 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP___FUNCTIONAL_FUNCTION_REF_COMMON_H
+#define _LIBCPP___FUNCTIONAL_FUNCTION_REF_COMMON_H
+
+#include <__config>
+#include <__type_traits/invoke.h>
+#include <__type_traits/is_const.h>
+#include <__type_traits/is_function.h>
+#include <__type_traits/is_object.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_trivially_copyable.h>
+#include <__type_traits/remove_pointer.h>
+#include <__utility/constant_wrapper.h>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER >= 26
+
+template <class...>
+class function_ref;
+
+template <class _Fn, bool _NoExcept1, class _Rp, class... _ArgTypes>
+struct __is_convertible_from_specialization : false_type {};
+
+// use a union instead of a plain `void*` to avoid dropping const qualifiers and casting function pointers to data
+// pointers
+// todo: libstdc++ does not support volatile objects. shall we support it? the standard does not say it should not be
+// supported
+union __storage_func_ref_t {
+  void* __obj_ptr_;
+  void const* __obj_const_ptr_;
+  void (*__fn_ptr_)();
+
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_func_ref_t() noexcept : __obj_ptr_(nullptr) {}
+
+  template <class _Tp>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_func_ref_t(_Tp* __ptr) noexcept {
+    if constexpr (is_object_v<_Tp>) {
+      if constexpr (is_const_v<_Tp>) {
+        __obj_const_ptr_ = __ptr;
+      } else {
+        __obj_ptr_ = __ptr;
+      }
+    } else {
+      static_assert(is_function_v<_Tp>);
+      __fn_ptr_ = reinterpret_cast<void (*)()>(__ptr);
+    }
+  }
+
+  template <class _Tp>
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __get(__storage_func_ref_t __storage) {
+    if constexpr (is_object_v<_Tp>) {
+      if constexpr (is_const_v<_Tp>) {
+        return static_cast<_Tp*>(__storage.__obj_const_ptr_);
+      } else {
+        return static_cast<_Tp*>(__storage.__obj_ptr_);
+      }
+    } else {
+      static_assert(is_function_v<_Tp>);
+      return reinterpret_cast<_Tp*>(__storage.__fn_ptr_);
+    }
+  }
+};
+
+template <class _Fp, class _Tp>
+struct __function_ref_bind {};
+
+// F is of the form R(*)(G, A...) noexcept(E) for a type G.
+template <bool _Noexcept, class _Tp, class _Rp, class _Gp, class... _ArgTypes>
+struct __function_ref_bind<_Rp (*)(_Gp, _ArgTypes...) noexcept(_Noexcept), _Tp> {
+  using type _LIBCPP_NODEBUG = _Rp(_ArgTypes...) noexcept(_Noexcept);
+};
+
+template <class _Tp, class _Mp, class _Gp>
+  requires is_object_v<_Mp>
+struct __function_ref_bind<_Mp _Gp::*, _Tp> {
+  using type _LIBCPP_NODEBUG = invoke_result_t<_Mp _Gp::*, _Tp&>() noexcept;
+};
+
+template <class _Fp, class _Tp>
+using __function_ref_bind_t _LIBCPP_NODEBUG = __function_ref_bind<_Fp, _Tp>::type;
+
+template <class _Fp>
+  requires is_function_v<_Fp>
+function_ref(_Fp*) -> function_ref<_Fp>;
+
+template <auto _Cw, class _Fn>
+  requires is_function_v<remove_pointer_t<_Fn>>
+function_ref(constant_wrapper<_Cw, _Fn>) -> function_ref<remove_pointer_t<_Fn>>;
+
+template <auto _Cw, class _Fn, class _Tp>
+function_ref(constant_wrapper<_Cw, _Fn>, _Tp&&) -> function_ref<__function_ref_bind_t<_Fn, _Tp&>>;
+
+template <class>
+constexpr bool __is_constant_wrapper = false;
+
+template <auto _Value>
+constexpr bool __is_constant_wrapper<constant_wrapper<_Value>> = true;
+
+template <class _Arg>
+struct __function_ref_arg_fwd {
+  using type _LIBCPP_NODEBUG = _Arg&&;
+};
+
+template <class _Arg>
+  requires(!is_reference_v<_Arg> && is_trivially_copyable_v<_Arg> && sizeof(_Arg) <= 16)
+struct __function_ref_arg_fwd<_Arg> {
+  using type _LIBCPP_NODEBUG = _Arg;
+};
+
+#endif // _LIBCPP_STD_VER >= 26
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP___FUNCTIONAL_FUNCTION_REF_COMMON_H
