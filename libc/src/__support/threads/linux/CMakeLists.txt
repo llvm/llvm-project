@@ -54,6 +54,7 @@ add_header_library(
     .raw_mutex
     libc.src.__support.common
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.limits
   COMPILE_OPTIONS
     -DLIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT}
     ${monotonicity_flags}

@@ -37,13 +37,13 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlock_init,
     rwlockattr = *attr;
 
   // PTHREAD_RWLOCK_PREFER_WRITER_NP is not supported.
-  RwLock::Role preference;
+  rwlock::Role preference;
   switch (rwlockattr.pref) {
   case PTHREAD_RWLOCK_PREFER_READER_NP:
-    preference = RwLock::Role::Reader;
+    preference = rwlock::Role::Reader;
     break;
   case PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP:
-    preference = RwLock::Role::Writer;
+    preference = rwlock::Role::Writer;
     break;
   default:
     return EINVAL;

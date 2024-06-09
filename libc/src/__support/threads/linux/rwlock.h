@@ -11,6 +11,7 @@
 #include "hdr/errno_macros.h"
 #include "hdr/types/pid_t.h"
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
@@ -36,274 +37,298 @@
 #endif
 
 namespace LIBC_NAMESPACE {
-class RwLock {
+// Forward declaration of the RwLock class.
+class RwLock;
+// A namespace to rwlock specific utilities.
+namespace rwlock {
+// The role of the thread in the RwLock.
+enum class Role { Reader = 0, Writer = 1 };
+
+// A waiting queue to keep track of the pending readers and writers.
+class WaitingQueue final : private RawMutex {
+  /* FutexWordType raw_mutex;  (from base class) */
+
+  // Pending reader count (protected by the mutex)
+  FutexWordType pending_readers;
+  // Pending writer count (protected by the mutex)
+  FutexWordType pending_writers;
+  // Reader serialization (increases on each reader-waking operation)
+  Futex reader_serialization;
+  // Writer serialization (increases on each writer-waking operation)
+  Futex writer_serialization;
+
 public:
-  enum class Role : char { Reader, Writer };
+  // RAII guard to lock and unlock the waiting queue.
+  class Guard {
+    WaitingQueue &queue;
 
-private:
-  class WaitingQueue final : private RawMutex {
-    FutexWordType pending_reader;
-    FutexWordType pending_writer;
-    Futex reader_serialization;
-    Futex writer_serialization;
+    LIBC_INLINE constexpr Guard(WaitingQueue &queue) : queue(queue) {}
 
   public:
-    class Guard {
-      WaitingQueue &queue;
-
-      LIBC_INLINE constexpr Guard(WaitingQueue &queue) : queue(queue) {}
-
-    public:
-      LIBC_INLINE ~Guard() { queue.unlock(); }
-      template <Role role> LIBC_INLINE FutexWordType &pending_count() {
-        if constexpr (role == Role::Reader)
-          return queue.pending_reader;
-        else
-          return queue.pending_writer;
-      }
-      template <Role role> LIBC_INLINE FutexWordType &serialization() {
-        if constexpr (role == Role::Reader)
-          return queue.reader_serialization.val;
-        else
-          return queue.writer_serialization.val;
-      }
-      friend WaitingQueue;
-    };
-
-  public:
-    LIBC_INLINE constexpr WaitingQueue()
-        : RawMutex(), pending_reader(0), pending_writer(0),
-          reader_serialization(0), writer_serialization(0) {}
-    LIBC_INLINE Guard acquire() {
-      this->lock();
-      return Guard(*this);
-    }
-
-    template <Role role>
-    LIBC_INLINE long wait(FutexWordType expected,
-                          cpp::optional<Futex::Timeout> timeout,
-                          bool is_pshared) {
+    LIBC_INLINE ~Guard() { queue.unlock(); }
+    template <Role role> LIBC_INLINE FutexWordType &pending_count() {
       if constexpr (role == Role::Reader)
-        return reader_serialization.wait(expected, timeout, is_pshared);
+        return queue.pending_readers;
       else
-        return writer_serialization.wait(expected, timeout, is_pshared);
+        return queue.pending_writers;
     }
-
-    template <Role role> LIBC_INLINE long notify(bool is_pshared) {
+    template <Role role> LIBC_INLINE FutexWordType &serialization() {
       if constexpr (role == Role::Reader)
-        return reader_serialization.notify_all(is_pshared);
+        return queue.reader_serialization.val;
       else
-        return writer_serialization.notify_one(is_pshared);
+        return queue.writer_serialization.val;
     }
+    friend WaitingQueue;
   };
 
 public:
+  LIBC_INLINE constexpr WaitingQueue()
+      : RawMutex(), pending_readers(0), pending_writers(0),
+        reader_serialization(0), writer_serialization(0) {}
+
+  LIBC_INLINE Guard acquire() {
+    this->lock();
+    return Guard(*this);
+  }
+
+  template <Role role>
+  LIBC_INLINE long wait(FutexWordType expected,
+                        cpp::optional<Futex::Timeout> timeout,
+                        bool is_pshared) {
+    if constexpr (role == Role::Reader)
+      return reader_serialization.wait(expected, timeout, is_pshared);
+    else
+      return writer_serialization.wait(expected, timeout, is_pshared);
+  }
+
+  template <Role role> LIBC_INLINE long notify(bool is_pshared) {
+    if constexpr (role == Role::Reader)
+      return reader_serialization.notify_all(is_pshared);
+    else
+      return writer_serialization.notify_one(is_pshared);
+  }
+};
+
+// The State of the RwLock is stored in an integer word, consisting of the
+// following components:
+// -----------------------------------------------
+// | Range    |           Description            |
+// ===============================================
+// | 0        | Pending Reader Bit               |
+// -----------------------------------------------
+// | 1        | Pending Writer Bit               |
+// -----------------------------------------------
+// | [2, MSB) | Active Reader Count              |
+// -----------------------------------------------
+// | MSB      | Active Writer Bit                |
+// -----------------------------------------------
+class State {
+
+  // Shift amounts to access the components of the state.
+  LIBC_INLINE_VAR static constexpr int PENDING_READER_SHIFT = 0;
+  LIBC_INLINE_VAR static constexpr int PENDING_WRITER_SHIFT = 1;
+  LIBC_INLINE_VAR static constexpr int ACTIVE_READER_SHIFT = 2;
+  LIBC_INLINE_VAR static constexpr int ACTIVE_WRITER_SHIFT =
+      cpp::numeric_limits<int>::digits - 1;
+
+  // Bitmasks to access the components of the state.
+  LIBC_INLINE_VAR static constexpr int PENDING_READER_BIT =
+      1 << PENDING_READER_SHIFT;
+  LIBC_INLINE_VAR static constexpr int PENDING_WRITER_BIT =
+      1 << PENDING_WRITER_SHIFT;
+  LIBC_INLINE_VAR static constexpr int ACTIVE_READER_COUNT_UNIT =
+      1 << ACTIVE_READER_SHIFT;
+  LIBC_INLINE_VAR static constexpr int ACTIVE_WRITER_BIT =
+      1 << ACTIVE_WRITER_SHIFT;
+  LIBC_INLINE_VAR static constexpr int PENDING_MASK =
+      PENDING_READER_BIT | PENDING_WRITER_BIT;
+
+private:
+  // We use the signed integer as the state type. It is easier
+  // to reason about the state transitions using signness.
+  int state;
+
+public:
+  // Construction and conversion functions.
+  LIBC_INLINE constexpr State(int state = 0) : state(state) {}
+  LIBC_INLINE constexpr operator int() const { return state; }
+
+  // Utilities to check the state of the RwLock.
+  LIBC_INLINE constexpr bool has_active_writer() const { return state < 0; }
+  LIBC_INLINE constexpr bool has_active_reader() const {
+    return state > ACTIVE_READER_COUNT_UNIT;
+  }
+  LIBC_INLINE constexpr bool has_acitve_owner() const {
+    return has_active_reader() || has_active_writer();
+  }
+  LIBC_INLINE constexpr bool has_last_reader() const {
+    return (state >> ACTIVE_READER_SHIFT) == 1;
+  }
+  LIBC_INLINE constexpr bool has_pending_writer() const {
+    return state & PENDING_WRITER_BIT;
+  }
+  LIBC_INLINE constexpr bool has_pending() const {
+    return state & PENDING_MASK;
+  }
+
+  LIBC_INLINE constexpr State set_writer_bit() const {
+    return State(state | ACTIVE_WRITER_BIT);
+  }
+
+  // The preference parameter changes the behavior of the lock acquisition
+  // if there are both readers and writers waiting for the lock. If writers
+  // are preferred, reader acquisition will be blocked until all pending
+  // writers are served.
+  template <Role role> LIBC_INLINE bool can_acquire(Role preference) const {
+    if constexpr (role == Role::Reader) {
+      switch (preference) {
+      case Role::Reader:
+        return !has_active_writer();
+      case Role::Writer:
+        return !has_active_writer() && !has_pending_writer();
+      }
+    } else
+      return !has_acitve_owner();
+  }
+
+  // This function check if it is possible to grow the reader count without
+  // overflowing the state.
+  LIBC_INLINE cpp::optional<State> try_increase_reader_count() const {
+    LIBC_ASSERT(!has_active_writer() &&
+                "try_increase_reader_count shall only be called when there "
+                "is no active writer.");
+    State res;
+    if (LIBC_UNLIKELY(__builtin_sadd_overflow(state, ACTIVE_READER_COUNT_UNIT,
+                                              &res.state)))
+      return cpp::nullopt;
+    return res;
+  }
+
+  // Utilities to do atomic operations on the state.
+  LIBC_INLINE static State
+  fetch_sub_reader_count(cpp::Atomic<int> &target,
+                         cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
+    return State(target.fetch_sub(ACTIVE_READER_COUNT_UNIT, order));
+  }
+
+  LIBC_INLINE static State
+  load(cpp::Atomic<int> &target,
+       cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
+    return State(target.load(order));
+  }
+
+  template <Role role>
+  LIBC_INLINE static State
+  fetch_set_pending_bit(cpp::Atomic<int> &target,
+                        cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
+    if constexpr (role == Role::Reader)
+      return State(target.fetch_or(PENDING_READER_BIT, order));
+    else
+      return State(target.fetch_or(PENDING_WRITER_BIT, order));
+  }
+  template <Role role>
+  LIBC_INLINE static State
+  fetch_clear_pending_bit(cpp::Atomic<int> &target,
+                          cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
+    if constexpr (role == Role::Reader)
+      return State(target.fetch_and(~PENDING_READER_BIT, order));
+    else
+      return State(target.fetch_and(~PENDING_WRITER_BIT, order));
+  }
+  LIBC_INLINE static State
+  fetch_set_active_writer(cpp::Atomic<int> &target,
+                          cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
+    return State(target.fetch_or(ACTIVE_WRITER_BIT, order));
+  }
+  LIBC_INLINE static State fetch_clear_active_writer(
+      cpp::Atomic<int> &target,
+      cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
+    return State(target.fetch_and(~ACTIVE_WRITER_BIT, order));
+  }
+
+  LIBC_INLINE bool compare_exchange_weak_with(cpp::Atomic<int> &target,
+                                              State desired,
+                                              cpp::MemoryOrder success_order,
+                                              cpp::MemoryOrder failure_order) {
+    return target.compare_exchange_weak(state, desired, success_order,
+                                        failure_order);
+  }
+
+  // Utilities to spin and reload the state.
+private:
+  template <class F>
+  LIBC_INLINE static State spin_reload_until(cpp::Atomic<int> &target, F &&func,
+                                             unsigned spin_count) {
+    for (;;) {
+      auto state = State::load(target, cpp::MemoryOrder::RELAXED);
+      if (func(state) || spin_count == 0)
+        return state;
+      sleep_briefly();
+      spin_count--;
+    }
+  }
+
+public:
+  template <Role role>
+  LIBC_INLINE static State spin_reload(cpp::Atomic<int> &target,
+                                       Role preference, unsigned spin_count) {
+    if constexpr (role == Role::Reader) {
+      // Return the reader state if either the lock is available or there is
+      // any
+      // ongoing contention.
+      return spin_reload_until(
+          target,
+          [=](State state) {
+            return state.can_acquire<Role::Reader>(preference) ||
+                   state.has_pending();
+          },
+          spin_count);
+    } else {
+      // Return the writer state if either the lock is available or there is
+      // any
+      // contention *between writers*. Since writers can be way less than
+      // readers, we allow them to spin more to improve the fairness.
+      return spin_reload_until(
+          target,
+          [=](State state) {
+            return state.can_acquire<Role::Writer>(preference) ||
+                   state.has_pending_writer();
+          },
+          spin_count);
+    }
+  }
+};
+} // namespace rwlock
+
+class RwLock {
+  using State = rwlock::State;
+  using Role = rwlock::Role;
+  using WaitingQueue = rwlock::WaitingQueue;
+
+public:
+  // Return types for the lock functions.
+  // All the locking routines returning this type are marked as [[nodiscard]]
+  // because it is a common error to assume the lock success without checking
+  // the return value, which can lead to undefined behaviors or other subtle
+  // bugs that are hard to reason about.
   enum class LockResult : int {
     Success = 0,
     TimedOut = ETIMEDOUT,
-    Overflow = EAGAIN,
+    Overflow = EAGAIN, /* EAGAIN is specified in the standard for overflow. */
     Busy = EBUSY,
     Deadlock = EDEADLOCK,
     PermissionDenied = EPERM,
   };
 
 private:
-  // The State of the RwLock is stored in a 32-bit word, consisting of the
-  // following components:
-  // -----------------------------------------------
-  // | Range |           Description               |
-  // ===============================================
-  // | 0     | Pending Reader Bit                  |
-  // -----------------------------------------------
-  // | 1     | Pending Writer Bit                  |
-  // -----------------------------------------------
-  // | 2-30  | Active Reader Count                 |
-  // -----------------------------------------------
-  // | 31    | Active Writer Bit                   |
-  // -----------------------------------------------
-  class State {
-    // We use the signed interger as the state type. It is easier
-    // to handle state trasitions and detections using signed integers.
-    using Type = int32_t;
-
-    // Shift amounts to access the components of the state.
-    LIBC_INLINE_VAR static constexpr Type PENDING_READER_SHIFT = 0;
-    LIBC_INLINE_VAR static constexpr Type PENDING_WRITER_SHIFT = 1;
-    LIBC_INLINE_VAR static constexpr Type ACTIVE_READER_SHIFT = 2;
-    LIBC_INLINE_VAR static constexpr Type ACTIVE_WRITER_SHIFT = 31;
-
-    // Bitmasks to access the components of the state.
-    LIBC_INLINE_VAR static constexpr Type PENDING_READER_BIT =
-        1 << PENDING_READER_SHIFT;
-    LIBC_INLINE_VAR static constexpr Type PENDING_WRITER_BIT =
-        1 << PENDING_WRITER_SHIFT;
-    LIBC_INLINE_VAR static constexpr Type ACTIVE_READER_COUNT_UNIT =
-        1 << ACTIVE_READER_SHIFT;
-    LIBC_INLINE_VAR static constexpr Type ACTIVE_WRITER_BIT =
-        1 << ACTIVE_WRITER_SHIFT;
-    LIBC_INLINE_VAR static constexpr Type PENDING_MASK =
-        PENDING_READER_BIT | PENDING_WRITER_BIT;
-
-  private:
-    Type state;
-
-  public:
-    // Construction and conversion functions.
-    LIBC_INLINE constexpr State(Type state = 0) : state(state) {}
-    LIBC_INLINE constexpr operator Type() const { return state; }
-
-    // Utilities to check the state of the RwLock.
-    LIBC_INLINE constexpr bool has_active_writer() const { return state < 0; }
-    LIBC_INLINE constexpr bool has_active_reader() const {
-      return state > ACTIVE_READER_COUNT_UNIT;
-    }
-    LIBC_INLINE constexpr bool has_acitve_owner() const {
-      return has_active_reader() || has_active_writer();
-    }
-    LIBC_INLINE constexpr bool has_last_reader() const {
-      return (state >> ACTIVE_READER_SHIFT) == 1;
-    }
-    LIBC_INLINE constexpr bool has_pending_writer() const {
-      return state & PENDING_WRITER_BIT;
-    }
-    LIBC_INLINE constexpr bool has_pending() const {
-      return state & PENDING_MASK;
-    }
-    LIBC_INLINE constexpr State set_writer_bit() const {
-      return State(state | ACTIVE_WRITER_BIT);
-    }
-
-    // The preference parameter changes the behavior of the lock acquisition
-    // if there are both readers and writers waiting for the lock. If writers
-    // are preferred, reader acquisition will be blocked until all pending
-    // writers are served.
-    template <Role role> LIBC_INLINE bool can_acquire(Role preference) const {
-      if constexpr (role == Role::Reader) {
-        switch (preference) {
-        case Role::Reader:
-          return !has_active_writer();
-        case Role::Writer:
-          return !has_active_writer() && !has_pending_writer();
-        }
-      } else
-        return !has_acitve_owner();
-    }
-
-    // This function check if it is possible to grow the reader count without
-    // overflowing the state.
-    LIBC_INLINE cpp::optional<State> try_increase_reader_count() const {
-      LIBC_ASSERT(!has_active_writer() &&
-                  "try_increase_reader_count shall only be called when there "
-                  "is no active writer.");
-      State res;
-      if (LIBC_UNLIKELY(__builtin_sadd_overflow(state, ACTIVE_READER_COUNT_UNIT,
-                                                &res.state)))
-        return cpp::nullopt;
-      return res;
-    }
-
-    // Utilities to do atomic operations on the state.
-    LIBC_INLINE static State
-    fetch_sub_reader_count(cpp::Atomic<Type> &target,
-                           cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
-      return State(target.fetch_sub(ACTIVE_READER_COUNT_UNIT, order));
-    }
-
-    LIBC_INLINE static State
-    load(cpp::Atomic<Type> &target,
-         cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
-      return State(target.load(order));
-    }
-
-    template <Role role>
-    LIBC_INLINE static State
-    fetch_set_pending_bit(cpp::Atomic<Type> &target,
-                          cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
-      if constexpr (role == Role::Reader)
-        return State(target.fetch_or(PENDING_READER_BIT, order));
-      else
-        return State(target.fetch_or(PENDING_WRITER_BIT, order));
-    }
-    template <Role role>
-    LIBC_INLINE static State fetch_clear_pending_bit(
-        cpp::Atomic<Type> &target,
-        cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
-      if constexpr (role == Role::Reader)
-        return State(target.fetch_and(~PENDING_READER_BIT, order));
-      else
-        return State(target.fetch_and(~PENDING_WRITER_BIT, order));
-    }
-    LIBC_INLINE static State fetch_set_active_writer(
-        cpp::Atomic<Type> &target,
-        cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
-      return State(target.fetch_or(ACTIVE_WRITER_BIT, order));
-    }
-    LIBC_INLINE static State fetch_clear_active_writer(
-        cpp::Atomic<Type> &target,
-        cpp::MemoryOrder order = cpp::MemoryOrder::SEQ_CST) {
-      return State(target.fetch_and(~ACTIVE_WRITER_BIT, order));
-    }
-
-    LIBC_INLINE bool
-    compare_exchange_weak_with(cpp::Atomic<Type> &target, State desired,
-                               cpp::MemoryOrder success_order,
-                               cpp::MemoryOrder failure_order) {
-      return target.compare_exchange_weak(state, desired, success_order,
-                                          failure_order);
-    }
-
-    // Utilities to spin and reload the state.
-  private:
-    template <class F>
-    LIBC_INLINE static State spin_reload_until(cpp::Atomic<Type> &target,
-                                               F &&func, unsigned spin_count) {
-      for (;;) {
-        auto state = State::load(target, cpp::MemoryOrder::RELAXED);
-        if (func(state) || spin_count == 0)
-          return state;
-        sleep_briefly();
-        spin_count--;
-      }
-    }
-
-  public:
-    template <Role role>
-    LIBC_INLINE static State spin_reload(cpp::Atomic<Type> &target,
-                                         Role preference, unsigned spin_count) {
-      if constexpr (role == Role::Reader) {
-        // Return the reader state if either the lock is available or there is
-        // any
-        // ongoing contention.
-        return spin_reload_until(
-            target,
-            [=](State state) {
-              return state.can_acquire<Role::Reader>(preference) ||
-                     state.has_pending();
-            },
-            spin_count);
-      } else {
-        // Return the writer state if either the lock is available or there is
-        // any
-        // contention *between writers*. Since writers can be way less than
-        // readers, we allow them to spin more to improve the fairness.
-        return spin_reload_until(
-            target,
-            [=](State state) {
-              return state.can_acquire<Role::Writer>(preference) ||
-                     state.has_pending_writer();
-            },
-            spin_count);
-      }
-    }
-  };
-
-private:
   // Whether the RwLock is shared between processes.
-  bool is_pshared;
+  LIBC_PREFERED_TYPE(bool)
+  unsigned is_pshared : 1;
   // Reader/Writer preference.
-  Role preference;
+  LIBC_PREFERED_TYPE(Role)
+  unsigned preference : 1;
   // State to keep track of the RwLock.
-  cpp::Atomic<int32_t> state;
+  cpp::Atomic<int> state;
   // writer_tid is used to keep track of the thread id of the writer. Notice
   // that TLS address is not a good idea here since it may remains the same
   // across forked processes.
@@ -312,12 +337,16 @@ private:
   WaitingQueue queue;
 
 private:
+  // Load the bitfield preference.
+  LIBC_INLINE Role get_preference() const {
+    return static_cast<Role>(preference);
+  }
   // TODO: use cached thread id once implemented.
   LIBC_INLINE static pid_t gettid() { return syscall_impl<pid_t>(SYS_gettid); }
 
   template <Role role> LIBC_INLINE LockResult try_lock(State &old) {
     if constexpr (role == Role::Reader) {
-      while (LIBC_LIKELY(old.can_acquire<Role::Reader>(preference))) {
+      while (LIBC_LIKELY(old.can_acquire<Role::Reader>(get_preference()))) {
         cpp::optional<State> next = old.try_increase_reader_count();
         if (!next)
           return LockResult::Overflow;
@@ -331,7 +360,7 @@ private:
       return LockResult::Busy;
     } else {
       // This while loop should terminate quickly
-      while (LIBC_LIKELY(old.can_acquire<Role::Writer>(preference))) {
+      while (LIBC_LIKELY(old.can_acquire<Role::Writer>(get_preference()))) {
         if (LIBC_LIKELY(old.compare_exchange_weak_with(
                 state, old.set_writer_bit(), cpp::MemoryOrder::ACQUIRE,
                 cpp::MemoryOrder::RELAXED))) {
@@ -348,13 +377,15 @@ private:
 public:
   LIBC_INLINE constexpr RwLock(Role preference = Role::Reader,
                                bool is_pshared = false)
-      : is_pshared(is_pshared), preference(preference), state(0), writer_tid(0),
-        queue() {}
+      : is_pshared(is_pshared), preference(static_cast<unsigned>(preference)),
+        state(0), writer_tid(0), queue() {}
 
+  [[nodiscard]]
   LIBC_INLINE LockResult try_read_lock() {
     State old = State::load(state, cpp::MemoryOrder::RELAXED);
     return try_lock<Role::Reader>(old);
   }
+  [[nodiscard]]
   LIBC_INLINE LockResult try_write_lock() {
     State old = State::load(state, cpp::MemoryOrder::RELAXED);
     return try_lock<Role::Writer>(old);
@@ -378,7 +409,7 @@ private:
 
     // Phase 3: spin to get the initial state. We ignore the timing due to
     // spin since it should end quickly.
-    State old = State::spin_reload<role>(state, preference, spin_count);
+    State old = State::spin_reload<role>(state, get_preference(), spin_count);
 
     // Enter the main acquisition loop.
     for (;;) {
@@ -411,7 +442,7 @@ private:
       // Phase 6: do futex wait until the lock is available or timeout is
       // reached.
       bool timeout_flag = false;
-      if (!old.can_acquire<role>(preference)) {
+      if (!old.can_acquire<role>(get_preference())) {
         timeout_flag = (queue.wait<role>(serial_number, timeout, is_pshared) ==
                         -ETIMEDOUT);
 
@@ -434,12 +465,13 @@ private:
           return LockResult::TimedOut;
 
         // Phase 9: reload the state and retry the acquisition.
-        old = State::spin_reload<role>(state, preference, spin_count);
+        old = State::spin_reload<role>(state, get_preference(), spin_count);
       }
     }
   }
 
 public:
+  [[nodiscard]]
   LIBC_INLINE LockResult
   read_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
@@ -448,6 +480,7 @@ public:
       return result;
     return lock_slow<Role::Reader>(timeout, spin_count);
   }
+  [[nodiscard]]
   LIBC_INLINE LockResult
   write_lock(cpp::optional<Futex::Timeout> timeout = cpp::nullopt,
              unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
@@ -458,9 +491,9 @@ public:
   }
 
 private:
-  // Compiler somehow decides that this function may be inlined, which leads to
-  // a larger unlock function that is infeasible to be inlined. Since
-  // notifcation routine is colder we mark it as noinline explicitly.
+  // Compiler (clang 19.0) somehow decides that this function may be inlined,
+  // which leads to a larger unlock function that is infeasible to be inlined.
+  // Since notifcation routine is colder we mark it as noinline explicitly.
   [[gnu::noinline]]
   LIBC_INLINE void notify_pending_threads() {
     enum class WakeTarget { Readers, Writers, None };
@@ -485,6 +518,7 @@ private:
   }
 
 public:
+  [[nodiscard]]
   LIBC_INLINE LockResult unlock() {
     State old = State::load(state, cpp::MemoryOrder::RELAXED);
     if (old.has_active_writer()) {
@@ -513,6 +547,9 @@ public:
     return LockResult::Success;
   }
 
+  // We do not allocate any special resources for the RwLock, so this function
+  // will only check if the lock is currently held by any thread.
+  [[nodiscard]]
   LIBC_INLINE LockResult check_for_destroy() {
     State old = State::load(state, cpp::MemoryOrder::RELAXED);
     if (old.has_acitve_owner())

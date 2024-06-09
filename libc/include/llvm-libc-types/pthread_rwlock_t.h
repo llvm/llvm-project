@@ -12,13 +12,13 @@
 #include "llvm-libc-types/__futex_word.h"
 #include "llvm-libc-types/pid_t.h"
 typedef struct {
-  bool __is_pshared;
-  char __preference;
+  unsigned __is_pshared : 1;
+  unsigned __preference : 1;
   int __state;
   pid_t __writier_tid;
   __futex_word __wait_queue_mutex;
-  __futex_word __pending_reader;
-  __futex_word __pending_writer;
+  __futex_word __pending_readers;
+  __futex_word __pending_writers;
   __futex_word __reader_serialization;
   __futex_word __writer_serialization;
 } pthread_rwlock_t;
