@@ -203,6 +203,7 @@ coroutine compare
 coroutine cstdint
 coroutine cstring
 coroutine limits
+coroutine new
 coroutine version
 cstddef version
 ctgmath bitset
@@ -290,6 +291,7 @@ experimental/iterator variant
 experimental/iterator version
 experimental/memory cstdint
 experimental/memory cstring
+experimental/memory new
 experimental/memory version
 experimental/propagate_const version
 experimental/simd cstdint
@@ -303,6 +305,7 @@ experimental/utility compare
 experimental/utility cstdint
 experimental/utility initializer_list
 experimental/utility limits
+experimental/utility new
 experimental/utility utility
 experimental/utility version
 filesystem cctype
@@ -1130,6 +1133,7 @@ utility compare
 utility cstdint
 utility initializer_list
 utility limits
+utility new
 utility version
 valarray cmath
 valarray cstdint

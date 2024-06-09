@@ -227,6 +227,7 @@ namespace std {
 #  include <__iterator/reverse_iterator.h>
 #  include <__iterator/wrap_iter.h>
 #  include <__memory/pointer_traits.h>
+#  include <__memory/tombstone_traits.h>
 #  include <__ranges/concepts.h>
 #  include <__ranges/data.h>
 #  include <__ranges/enable_borrowed_range.h>
@@ -723,6 +724,14 @@ inline constexpr bool ranges::enable_view<basic_string_view<_CharT, _Traits>> = 
 template <class _CharT, class _Traits>
 inline constexpr bool ranges::enable_borrowed_range<basic_string_view<_CharT, _Traits> > = true;
 #  endif // _LIBCPP_STD_VER >= 20
+
+#if _LIBCPP_STD_VER >= 17
+template <class _CharT, class _Traits>
+struct __tombstone_traits<__enable_specialization_if<alignof(_CharT) >= 2, basic_string_view<_CharT, _Traits>>>
+    : __tombstone_traits_assume_aligned_pointer<const _CharT*> {
+  static_assert(__builtin_offsetof(basic_string_view<_CharT, _Traits>, __data_) == 0);
+};
+#endif
 
 // [string.view.deduct]
 

@@ -617,6 +617,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__memory/noexcept_move_assign_container.h>
 #  include <__memory/pointer_traits.h>
 #  include <__memory/swap_allocator.h>
+#  include <__memory/tombstone_traits.h>
 #  include <__memory_resource/polymorphic_allocator.h>
 #  include <__ranges/access.h>
 #  include <__ranges/concepts.h>
@@ -716,14 +717,6 @@ inline const bool __can_be_converted_to_string_view_v =
 
 struct __uninitialized_size_tag {};
 struct __init_with_sentinel_tag {};
-
-template <size_t _PaddingSize>
-struct __padding {
-  char __padding_[_PaddingSize];
-};
-
-template <>
-struct __padding<0> {};
 
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
@@ -2542,6 +2535,10 @@ private:
 #  ifdef _LIBCPP_BUILDING_LIBRARY
   void __init(const value_type* __s, size_type __sz, size_type __reserve);
 #  endif
+
+#if _LIBCPP_STD_VER >= 17
+  friend __tombstone_traits<basic_string>;
+#endif
 };
 
 // These declarations must appear before any functions are implicitly used
@@ -2621,6 +2618,46 @@ template <ranges::input_range _Range,
 basic_string(from_range_t, _Range&&, _Allocator = _Allocator())
     -> basic_string<ranges::range_value_t<_Range>, char_traits<ranges::range_value_t<_Range>>, _Allocator>;
 #  endif
+
+#  if _LIBCPP_STD_VER >= 17
+template <class _CharT, class _Traits, class _Allocator>
+struct __tombstone_traits<basic_string<_CharT, _Traits, _Allocator>> {
+  // If `string` is in the `__short` representation, the size can never be larger than `__min_cap`. 65 sets the bit
+  // for the small string representation and the size to 32. The maximum size is
+  // `sizeof(size_type) * 2 + sizeof(pointer)`, which is never greater than 24.
+
+  using _String = basic_string<_CharT, _Traits, _Allocator>;
+
+  static_assert(_String::__min_cap <= 32, "__min_cap is too big!");
+
+  template <class _Payload, size_t _Np>
+  struct __representation {
+    _LIBCPP_DIAGNOSTIC_PUSH
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wreorder-ctor")
+    template <class... _Args>
+    constexpr __representation(_Args&&... __args)
+        : __payload_(std::forward<_Args>(__args)...), __is_long_(0), __size_(_String::__min_cap + _Np) {}
+    _LIBCPP_DIAGNOSTIC_POP
+
+    bool __is_tombstone() { return __size_ == _String::__min_cap + _Np; }
+
+#    ifndef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+    struct _LIBCPP_PACKED {
+      unsigned char __is_long_ : 1;
+      unsigned char __size_    : 7;
+    };
+#    endif
+    _LIBCPP_NO_UNIQUE_ADDRESS _Payload __payload_;
+#    ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+    _LIBCPP_NO_UNIQUE_ADDRESS
+    __padding<sizeof(_String::value_type) * (_String::__min_cap + 1) - 1 - __datasizeof_v<_Payload>>
+        __padding_;
+    unsigned char __size_    : 7;
+    unsigned char __is_long_ : 1;
+#    endif
+  };
+};
+#  endif                       // _LIBCPP_STD_VER >= 17
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void

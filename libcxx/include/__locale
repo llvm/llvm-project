@@ -17,6 +17,7 @@
 #  include <__locale_dir/locale_base_api.h>
 #  include <__memory/addressof.h>
 #  include <__memory/shared_count.h>
+#  include <__memory/tombstone_traits.h>
 #  include <__mutex/once_flag.h>
 #  include <__type_traits/make_unsigned.h>
 #  include <__utility/no_destroy.h>
@@ -113,8 +114,9 @@ public:
   static locale global(const locale&);
   static const locale& classic();
 
-private:
   class __imp;
+
+private:
   __imp* __locale_;
 
   template <class>
@@ -130,7 +132,18 @@ private:
   friend bool has_facet(const locale&) _NOEXCEPT;
   template <class _Facet>
   friend const _Facet& use_facet(const locale&);
+
+  friend struct __tombstone_traits<locale>;
 };
+
+#if _LIBCPP_STD_VER >= 17
+// Derived from the void* specialization, since __imp is never defined.
+template <>
+struct __tombstone_traits<locale> : __tombstone_traits_assume_aligned_pointer<void*> {
+  static_assert(__builtin_offsetof(locale, __locale_) == 0);
+  static_assert(sizeof(locale) == sizeof(void*));
+};
+#endif
 
 class _LIBCPP_EXPORTED_FROM_ABI locale::facet : public __shared_count {
 protected:

@@ -210,6 +210,7 @@ namespace std {
 #  include <__iterator/wrap_iter.h>
 #  include <__memory/addressof.h>
 #  include <__memory/construct_at.h>
+#  include <__memory/tombstone_traits.h>
 #  include <__ranges/enable_view.h>
 #  include <__tuple/sfinae_helpers.h>
 #  include <__type_traits/add_pointer.h>
@@ -372,8 +373,19 @@ struct __optional_destruct_base<_Tp, true> {
   }
 };
 
-template <class _Tp, bool = is_reference<_Tp>::value>
-struct __optional_storage_base : __optional_destruct_base<_Tp> {
+template <class _Tp,
+          bool = is_reference<_Tp>::value,
+          bool =
+#  ifdef _LIBCPP_ABI_OPTIONAL_USE_TOMBSTONE_TRAITS
+              __has_tombstone_v<_Tp>
+#  else
+              false
+#  endif
+          >
+struct __optional_storage_base;
+
+template <class _Tp>
+struct __optional_storage_base<_Tp, false, false> : __optional_destruct_base<_Tp> {
   using __base _LIBCPP_NODEBUG = __optional_destruct_base<_Tp>;
   using value_type             = _Tp;
   using __base::__base;
@@ -416,7 +428,7 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
 // be allowed in the future. For this reason, it has already been implemented
 // to ensure we can make the change in an ABI-compatible manner.
 template <class _Tp>
-struct __optional_storage_base<_Tp, true> {
+struct __optional_storage_base<_Tp, true, false> {
   using value_type                 = _Tp;
   using __raw_type _LIBCPP_NODEBUG = remove_reference_t<_Tp>;
   __raw_type* __value_;
@@ -480,6 +492,55 @@ struct __optional_storage_base<_Tp, true> {
         reset();
       else
         __construct(std::forward<_That>(__opt).__get());
+    }
+  }
+};
+
+template <class _Tp, bool _Bp>
+struct __optional_storage_base<_Tp, _Bp, true> {
+  using value_type = _Tp;
+  __tombstoned_value<_Tp, __empty> __storage_;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_storage_base() noexcept : __storage_(__init_disengaged) {}
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_storage_base(in_place_t, _Args&&... __args)
+      : __storage_(__init_engaged, std::forward<_Args>(__args)...) {}
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void reset() noexcept {
+    if (__storage_.__is_engaged())
+      __storage_.__disengage(in_place);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return __storage_.__is_engaged(); }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& __get() & { return __storage_.__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& __get() && { return std::move(__storage_.__get_value()); }
+  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& __get() const& { return __storage_.__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& __get() const&& { return std::move(__storage_.__get_value()); }
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_Args&&... __args) {
+    _LIBCPP_ASSERT_INTERNAL(!has_value(), "__construct called for engaged __optional_storage_base");
+    __storage_.__engage(in_place, std::forward<_Args>(__args)...);
+  }
+
+  template <class _Other>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct_from(_Other&& __opt) {
+    if (__opt.has_value())
+      __construct(std::forward<_Other>(__opt).__get());
+  }
+
+  template <class _Other>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from(_Other&& __opt) {
+    if (has_value() == __opt.has_value()) {
+      if (has_value())
+        __storage_.__get_value() = std::forward<_Other>(__opt).__get();
+    } else {
+      if (has_value())
+        __storage_.__disengage(in_place);
+      else
+        __construct(std::forward<_Other>(__opt).__get());
     }
   }
 };
