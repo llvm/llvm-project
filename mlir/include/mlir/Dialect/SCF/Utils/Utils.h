@@ -163,12 +163,6 @@ void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
 bool checkFusionStructuralLegality(LoopLikeOpInterface &target,
                                    LoopLikeOpInterface &source);
 
-/// Prepends operations of firstPloop's body into secondPloop's body.
-/// Updates secondPloop with new loop.
-void fuseIfLegal(scf::ParallelOp firstPloop, scf::ParallelOp &secondPloop,
-                 OpBuilder builder,
-                 llvm::function_ref<bool(Value, Value)> mayAlias);
-
 /// Given two scf.forall loops, `target` and `source`, fuses `target` into
 /// `source`. Assumes that the given loops are siblings and are independent of
 /// each other.

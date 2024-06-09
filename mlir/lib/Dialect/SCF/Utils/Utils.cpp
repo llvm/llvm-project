@@ -1188,13 +1188,6 @@ static bool equalIterationSpaces(scf::ParallelOp firstPloop,
 // Fusion related helpers
 //===----------------------------------------------------------------------===//
 
-/// Verify there are no nested ParallelOps.
-static bool hasNestedParallelOp(scf::ParallelOp ploop) {
-  auto walkResult = ploop.getBody()->walk(
-      [](scf::ParallelOp) { return WalkResult::interrupt(); });
-  return walkResult.wasInterrupted();
-}
-
 bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface &target,
                                          LoopLikeOpInterface &source) {
   auto iterSpaceEq =
@@ -1207,86 +1200,6 @@ bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface &target,
     return iterSpaceEq &&
            forAllTarget.getMapping() == forAllSource.getMapping();
   return iterSpaceEq;
-}
-
-static bool isFusionLegal(scf::ParallelOp firstPloop,
-                          scf::ParallelOp secondPloop,
-                          const IRMapping &firstToSecondPloopIndices,
-                          llvm::function_ref<bool(Value, Value)> mayAlias) {
-  return !hasNestedParallelOp(firstPloop) &&
-         !hasNestedParallelOp(secondPloop) &&
-         equalIterationSpaces(firstPloop, secondPloop) &&
-         succeeded(verifyDependencies(firstPloop, secondPloop,
-                                      firstToSecondPloopIndices, mayAlias));
-}
-
-void mlir::fuseIfLegal(scf::ParallelOp firstPloop, scf::ParallelOp &secondPloop,
-                       OpBuilder builder,
-                       llvm::function_ref<bool(Value, Value)> mayAlias) {
-  Block *block1 = firstPloop.getBody();
-  Block *block2 = secondPloop.getBody();
-  IRMapping firstToSecondPloopIndices;
-  firstToSecondPloopIndices.map(block1->getArguments(), block2->getArguments());
-
-  if (!isFusionLegal(firstPloop, secondPloop, firstToSecondPloopIndices,
-                     mayAlias))
-    return;
-
-  DominanceInfo dom;
-  // We are fusing first loop into second, make sure there are no users of the
-  // first loop results between loops.
-  for (Operation *user : firstPloop->getUsers())
-    if (!dom.properlyDominates(secondPloop, user, /*enclosingOpOk*/ false))
-      return;
-
-  ValueRange inits1 = firstPloop.getInitVals();
-  ValueRange inits2 = secondPloop.getInitVals();
-
-  SmallVector<Value> newInitVars(inits1.begin(), inits1.end());
-  newInitVars.append(inits2.begin(), inits2.end());
-
-  IRRewriter b(builder);
-  b.setInsertionPoint(secondPloop);
-  auto newSecondPloop = b.create<scf::ParallelOp>(
-      secondPloop.getLoc(), secondPloop.getLowerBound(),
-      secondPloop.getUpperBound(), secondPloop.getStep(), newInitVars);
-
-  Block *newBlock = newSecondPloop.getBody();
-  auto term1 = cast<scf::ReduceOp>(block1->getTerminator());
-  auto term2 = cast<scf::ReduceOp>(block2->getTerminator());
-
-  b.inlineBlockBefore(block2, newBlock, newBlock->begin(),
-                      newBlock->getArguments());
-  b.inlineBlockBefore(block1, newBlock, newBlock->begin(),
-                      newBlock->getArguments());
-
-  ValueRange results = newSecondPloop.getResults();
-  if (!results.empty()) {
-    b.setInsertionPointToEnd(newBlock);
-
-    ValueRange reduceArgs1 = term1.getOperands();
-    ValueRange reduceArgs2 = term2.getOperands();
-    SmallVector<Value> newReduceArgs(reduceArgs1.begin(), reduceArgs1.end());
-    newReduceArgs.append(reduceArgs2.begin(), reduceArgs2.end());
-
-    auto newReduceOp = b.create<scf::ReduceOp>(term2.getLoc(), newReduceArgs);
-
-    for (auto &&[i, reg] : llvm::enumerate(llvm::concat<Region>(
-             term1.getReductions(), term2.getReductions()))) {
-      Block &oldRedBlock = reg.front();
-      Block &newRedBlock = newReduceOp.getReductions()[i].front();
-      b.inlineBlockBefore(&oldRedBlock, &newRedBlock, newRedBlock.begin(),
-                          newRedBlock.getArguments());
-    }
-
-    firstPloop.replaceAllUsesWith(results.take_front(inits1.size()));
-    secondPloop.replaceAllUsesWith(results.take_back(inits2.size()));
-  }
-  term1->erase();
-  term2->erase();
-  firstPloop.erase();
-  secondPloop.erase();
-  secondPloop = newSecondPloop;
 }
 
 scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
@@ -1393,7 +1306,54 @@ scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
 
 scf::ParallelOp mlir::fuseIndependentSiblingParallelLoops(
     scf::ParallelOp target, scf::ParallelOp source, RewriterBase &rewriter) {
-  auto mayAlias = [&](Value val1, Value val2) -> bool { return false; };
-  mlir::fuseIfLegal(target, source, rewriter, mayAlias);
-  return source;
+  Block *block1 = target.getBody();
+  Block *block2 = source.getBody();
+  auto term1 = cast<scf::ReduceOp>(block1->getTerminator());
+  auto term2 = cast<scf::ReduceOp>(block2->getTerminator());
+
+  ValueRange inits1 = target.getInitVals();
+  ValueRange inits2 = source.getInitVals();
+
+  SmallVector<Value> newInitVars(inits1.begin(), inits1.end());
+  newInitVars.append(inits2.begin(), inits2.end());
+
+  rewriter.setInsertionPoint(source);
+  auto fusedLoop = rewriter.create<scf::ParallelOp>(
+      source.getLoc(), source.getLowerBound(), source.getUpperBound(),
+      source.getStep(), newInitVars);
+  Block *newBlock = fusedLoop.getBody();
+  rewriter.inlineBlockBefore(block2, newBlock, newBlock->begin(),
+                             newBlock->getArguments());
+  rewriter.inlineBlockBefore(block1, newBlock, newBlock->begin(),
+                             newBlock->getArguments());
+
+  ValueRange results = fusedLoop.getResults();
+  if (!results.empty()) {
+    rewriter.setInsertionPointToEnd(newBlock);
+
+    ValueRange reduceArgs1 = term1.getOperands();
+    ValueRange reduceArgs2 = term2.getOperands();
+    SmallVector<Value> newReduceArgs(reduceArgs1.begin(), reduceArgs1.end());
+    newReduceArgs.append(reduceArgs2.begin(), reduceArgs2.end());
+
+    auto newReduceOp =
+        rewriter.create<scf::ReduceOp>(term2.getLoc(), newReduceArgs);
+
+    for (auto &&[i, reg] : llvm::enumerate(llvm::concat<Region>(
+             term1.getReductions(), term2.getReductions()))) {
+      Block &oldRedBlock = reg.front();
+      Block &newRedBlock = newReduceOp.getReductions()[i].front();
+      rewriter.inlineBlockBefore(&oldRedBlock, &newRedBlock,
+                                 newRedBlock.begin(),
+                                 newRedBlock.getArguments());
+    }
+    target.replaceAllUsesWith(results.take_front(inits1.size()));
+    source.replaceAllUsesWith(results.take_back(inits2.size()));
+  }
+  term1->erase();
+  term2->erase();
+  target.erase();
+  source.erase();
+
+  return fusedLoop;
 }
