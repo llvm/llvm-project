@@ -3839,6 +3839,9 @@ bool ByteCodeExprGen<Emitter>::VisitComplexUnaryOperator(
       return false;
     return DiscardResult ? this->emitPopPtr(E) : true;
 
+  case UO_Extension:
+    return this->delegate(SubExpr);
+
   default:
     return this->emitInvalid(E);
   }
