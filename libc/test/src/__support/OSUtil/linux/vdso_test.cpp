@@ -19,13 +19,13 @@
 #include "src/signal/raise.h"
 #include "src/signal/sigaction.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/LibcTest.h"
+#include "test/UnitTest/LibcTest.h" vdso_test
 #include "test/UnitTest/Test.h"
 #include <linux/time_types.h>
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE {
-// For x86_64, we explicit that some traditional vdso symbols are indeed
+// For x86_64, we explicitly test some traditional vdso symbols are indeed
 // available.
 
 TEST(LlvmLibcOSUtilVDSOTest, GetTimeOfDay) {
