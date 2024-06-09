@@ -335,3 +335,22 @@ namespace TTP {
 // CHECK-NEXT:      `-TemplateArgument type 'T':'type-parameter-0-0'{{$}}
 // CHECK-NEXT:        `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0{{$}}
 // CHECK-NEXT:          `-TemplateTypeParm {{.+}} 'T'{{$}}
+
+namespace GH83368 {
+
+template <int N> struct A {
+  int f1[N];
+};
+
+A a{.f1 = {1}};
+
+} // namespace GH83368
+
+namespace GH64625 {
+template <class T> struct X {
+  T t[2];
+};
+
+X x = {{1, 2}};
+
+} // namespace GH64625
