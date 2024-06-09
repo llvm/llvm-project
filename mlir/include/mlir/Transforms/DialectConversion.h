@@ -1088,8 +1088,9 @@ struct ConversionConfig {
 
   /// An optional listener that is notified about all IR modifications in case
   /// dialect conversion succeeds. If the dialect conversion fails and no IR
-  /// modifications are visible (i.e., they were all rolled back), no
-  /// notifications are sent.
+  /// modifications are visible (i.e., they were all rolled back), or if the
+  /// dialect conversion is an "analysis conversion", no notifications are
+  /// sent (apart from `notifyPatternBegin`/notifyPatternEnd`).
   ///
   /// Note: Notifications are sent in a delayed fashion, when the dialect
   /// conversion is guaranteed to succeed. At that point, some IR modifications
