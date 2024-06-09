@@ -10,6 +10,7 @@
 #define _LIBCPP___FUNCTIONAL_FUNCTION_REF_H
 
 #include <__config>
+#include <__functional/function_ref_common.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
