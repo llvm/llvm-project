@@ -112,7 +112,11 @@ static void high_reader_count_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_rdlock(&rwlock), EAGAIN);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_tryrdlock(&rwlock), EAGAIN);
   // allocate 4 reader slots.
-  rwlock.__state -= 4 * 4;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
+
   pthread_t threads[20];
   for (auto &i : threads) {
     ASSERT_EQ(LIBC_NAMESPACE::pthread_create(
@@ -345,8 +349,9 @@ randomized_process_operation(SharedData &data,
     ASSERT_EQ(LIBC_NAMESPACE::pthread_create(
                   &i, nullptr,
                   [](void *arg) -> void * {
-                    randomized_thread_operation(
-                        reinterpret_cast<SharedData *>(arg));
+                    for (int i = 0; i < 5; ++i)
+                      randomized_thread_operation(
+                          reinterpret_cast<SharedData *>(arg));
                     return nullptr;
                   },
                   &data),
@@ -359,7 +364,6 @@ randomized_process_operation(SharedData &data,
   while (finish_count.load() != expected_count) {
     LIBC_NAMESPACE::sleep_briefly();
   }
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_destroy(&data.lock), 0);
   ASSERT_EQ(data.total_writer_count.load(), data.data);
   ASSERT_FALSE(data.writer_flag);
   ASSERT_EQ(data.reader_count, 0);
@@ -378,6 +382,7 @@ static void single_process_test(int preference) {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_init(&data.lock, nullptr), 0);
   LIBC_NAMESPACE::cpp::Atomic<int> finish_count{0};
   randomized_process_operation(data, finish_count, 1);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_destroy(&data.lock), 0);
 }
 
 static void multiple_process_test(int preference) {
@@ -388,6 +393,11 @@ static void multiple_process_test(int preference) {
   PShared *shared_data = reinterpret_cast<PShared *>(
       LIBC_NAMESPACE::mmap(nullptr, sizeof(PShared), PROT_READ | PROT_WRITE,
                            MAP_SHARED | MAP_ANONYMOUS, -1, 0));
+  shared_data->data.data = 0;
+  shared_data->data.reader_count = 0;
+  shared_data->data.writer_flag = false;
+  shared_data->data.total_writer_count.store(0);
+  shared_data->finish_count.store(0);
   pthread_rwlockattr_t attr{};
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlockattr_init(&attr), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlockattr_setkind_np(&attr, preference),
@@ -406,6 +416,7 @@ static void multiple_process_test(int preference) {
     LIBC_NAMESPACE::waitpid(pid, &status, 0);
     ASSERT_EQ(status, 0);
   }
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_destroy(&shared_data->data.lock), 0);
   LIBC_NAMESPACE::munmap(shared_data, sizeof(PShared));
 }
 
