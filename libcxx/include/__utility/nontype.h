@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <auto _Vp>
 struct nontype_t {
-  explicit nontype_t() = default;
+  _LIBCPP_HIDE_FROM_ABI explicit nontype_t() = default;
 };
 
 template <auto _Vp>

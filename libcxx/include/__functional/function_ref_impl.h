@@ -53,10 +53,10 @@ private:
     void const* __obj_const_ptr;
     void (*__fn_ptr)();
 
-    constexpr explicit __storage_t() noexcept : __obj_ptr(nullptr) {};
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_t() noexcept : __obj_ptr(nullptr){};
 
     template <class _Tp>
-    constexpr explicit __storage_t(_Tp* __ptr) noexcept {
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_t(_Tp* __ptr) noexcept {
       if constexpr (is_object_v<_Tp>) {
         if constexpr (is_const_v<_Tp>) {
           __obj_const_ptr = __ptr;
@@ -110,7 +110,7 @@ public:
 
   template <auto _Fn>
     requires __is_invocable_using<decltype(_Fn)>
-  constexpr function_ref(nontype_t<_Fn>) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(nontype_t<_Fn>) noexcept
       : __call_([](__storage_t, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
           return std::invoke_r<_Rp>(_Fn, std::forward<_ArgTypes>(__args)...);
         }) {
@@ -121,7 +121,7 @@ public:
 
   template <auto _Fn, class _Up, class _Tp = remove_reference_t<_Up>>
     requires(!is_rvalue_reference_v<_Up &&>) && __is_invocable_using<decltype(_Fn), _LIBCPP_FUNCTION_REF_CV _Tp&>
-  constexpr function_ref(nontype_t<_Fn>, _Up&& __obj) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(nontype_t<_Fn>, _Up&& __obj) noexcept
       : __storage_(std::addressof(__obj)),
         __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
           _LIBCPP_FUNCTION_REF_CV _Tp& __obj = *__get<_Tp>(__storage);
@@ -134,7 +134,7 @@ public:
 
   template <auto _Fn, class _Tp>
     requires __is_invocable_using<decltype(_Fn), _LIBCPP_FUNCTION_REF_CV _Tp*>
-  constexpr function_ref(nontype_t<_Fn>, _LIBCPP_FUNCTION_REF_CV _Tp* __obj_ptr) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(nontype_t<_Fn>, _LIBCPP_FUNCTION_REF_CV _Tp* __obj_ptr) noexcept
       : __storage_(__obj_ptr),
         __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
           auto __obj = __get<_LIBCPP_FUNCTION_REF_CV _Tp>(__storage);
@@ -149,15 +149,15 @@ public:
     }
   }
 
-  constexpr function_ref(const function_ref&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(const function_ref&) noexcept = default;
 
-  constexpr function_ref& operator=(const function_ref&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr function_ref& operator=(const function_ref&) noexcept = default;
 
   template <class _Tp>
     requires(!__is_function_ref<_Tp>) && (!is_pointer_v<_Tp>) && (!__is_nontype_t<_Tp>)
-  function_ref& operator=(_Tp) = delete;
+  _LIBCPP_HIDE_FROM_ABI function_ref& operator=(_Tp) = delete;
 
-  constexpr _Rp operator()(_ArgTypes... __args) const noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) {
+  _LIBCPP_HIDE_FROM_ABI constexpr _Rp operator()(_ArgTypes... __args) const noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) {
     return __call_(__storage_, std::forward<_ArgTypes>(__args)...);
   }
 };
