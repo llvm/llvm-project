@@ -2077,7 +2077,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
   if (ReportProfileStaleness || PersistProfileStaleness ||
       SalvageStaleProfile) {
     MatchingManager = std::make_unique<SampleProfileMatcher>(
-        M, *Reader, ProbeManager.get(), LTOPhase, PSL);
+        M, *Reader, ProbeManager.get(), LTOPhase, SymbolMap, PSL);
   }
 
   return true;
@@ -2196,14 +2196,16 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   assert(SymbolMap.count(FunctionId()) == 0 &&
          "No empty StringRef should be added in SymbolMap");
 
+  std::vector<Function *> OrderedFuncList = buildFunctionOrder(M, CG);
+
   if (ReportProfileStaleness || PersistProfileStaleness ||
       SalvageStaleProfile) {
-    MatchingManager->runOnModule(SymbolMap);
+    MatchingManager->runOnModule(OrderedFuncList);
     MatchingManager->clearMatchingData();
   }
 
   bool retval = false;
-  for (auto *F : buildFunctionOrder(M, CG)) {
+  for (auto *F : OrderedFuncList) {
     assert(!F->isDeclaration());
     clearFunctionData();
     retval |= runOnFunction(*F, AM);

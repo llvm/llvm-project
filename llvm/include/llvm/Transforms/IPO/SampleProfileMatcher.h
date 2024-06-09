@@ -83,6 +83,8 @@ class SampleProfileMatcher {
   // candidate callees.
   std::unordered_map<Function *, std::vector<Function *>> FuncToNewCalleesMap;
 
+  HashKeyMap<std::unordered_map, FunctionId, Function *> NewIRFunctions;
+
   // Pointer to the Profile Symbol List in the reader.
   std::shared_ptr<ProfileSymbolList> PSL;
 
@@ -106,14 +108,14 @@ class SampleProfileMatcher {
       "unknown.indirect.callee";
 
 public:
-  SampleProfileMatcher(Module &M, SampleProfileReader &Reader,
-                       const PseudoProbeManager *ProbeManager,
-                       ThinOrFullLTOPhase LTOPhase,
-                       std::shared_ptr<ProfileSymbolList> PSL)
+  SampleProfileMatcher(
+      Module &M, SampleProfileReader &Reader,
+      const PseudoProbeManager *ProbeManager, ThinOrFullLTOPhase LTOPhase,
+      HashKeyMap<std::unordered_map, FunctionId, Function *> &SymMap,
+      std::shared_ptr<ProfileSymbolList> PSL)
       : M(M), Reader(Reader), ProbeManager(ProbeManager), LTOPhase(LTOPhase),
-        PSL(PSL) {};
-  void runOnModule(
-      HashKeyMap<std::unordered_map, FunctionId, Function *> &SymbolMap);
+        SymbolMap(&SymMap), PSL(PSL){};
+  void runOnModule(std::vector<Function *> &OrderedFuncList);
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
     // will be used for sample loader.
@@ -182,6 +184,11 @@ private:
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
+  // Check if the two functions are equal. If MatchUnusedFunction is set and the
+  // two functions are both new, try to match the two functions.
+  bool isFunctionEqual(const FunctionId &IRFuncName,
+                       const FunctionId &ProfileFuncName,
+                       bool MatchUnusedFunction);
   // This function implements the Myers diff algorithm used for stale profile
   // matching. The algorithm provides a simple and efficient way to find the
   // Longest Common Subsequence(LCS) or the Shortest Edit Script(SES) of two
@@ -192,55 +199,35 @@ private:
   // parts from the resulting SES are used to remap the IR locations to the
   // profile locations. As the number of function callsite is usually not big,
   // we currently just implements the basic greedy version(page 6 of the paper).
-  LocToLocMap
-  longestCommonSequence(const AnchorList &IRCallsiteAnchors,
-                        const AnchorList &ProfileCallsiteAnchors) const;
+  LocToLocMap longestCommonSequence(const AnchorList &IRCallsiteAnchors,
+                                    const AnchorList &ProfileCallsiteAnchors,
+                                    bool MatchUnusedFunction);
   void matchNonCallsiteLocs(const LocToLocMap &AnchorMatchings,
                             const AnchorMap &IRAnchors,
                             LocToLocMap &IRToProfileLocationMap);
   void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
                                const AnchorMap &ProfileAnchors,
-                               LocToLocMap &IRToProfileLocationMap);
-  /// Find the existing or new matched function using the profile name.
-  ///
-  /// \returns The function pointer.
-  Function *findFuncByProfileName(const FunctionId &ProfileName) const;
-  /// Match the callee profile with the IR function. If the profile callee is
-  /// found in the SymbolMap, which means it's an original matched symbol, skip
-  /// the matching. Otherwise match the callee profile with all functions in
-  /// \p NewIRFuncsToMatch and save the match result into \p MatchResult.
-  ///
-  /// \param Caller The caller function.
-  /// \param ProfileCalleeName The profile callee name.
-  /// \param IRCalleesToMatch The new candidate IR callees in the same scope to
-  /// match.
-  /// \param MatchResult The matched result.
-  void matchCalleeProfile(
-      const FunctionId &Caller, const FunctionId &ProfileCalleeName,
-      const std::vector<Function *> *IRCalleesToMatch,
-      std::vector<std::pair<FunctionId, FunctionId>> &MatchResult);
-  std::vector<Function *> *
-  findNewIRCallees(Function &Caller,
-                   const StringMap<Function *> &NewIRFunctions);
+                               LocToLocMap &IRToProfileLocationMap,
+                               bool RunCFGMatching, bool RunCGMatching);
   bool functionMatchesProfileHelper(const Function &IRFunc,
                                     const FunctionId &ProfFunc);
-  /// Determine if the function matches profile by computing a similarity ratio
-  /// between two callsite anchors extracted from function and profile. If it's
-  /// above the threshold, the function matches the profile.
-  ///
-  /// \returns True if the function matches profile.
-  bool functionMatchesProfile(Function &IRFunc, const FunctionId &ProfFunc);
+  // Determine if the function matches profile by computing a similarity ratio
+  // between two callsite anchors extracted from function and profile. If it's
+  // above the threshold, the function matches the profile.
+  bool functionMatchesProfile(Function &IRFunc, const FunctionId &ProfFunc,
+                              bool FindOnly);
   void matchProfileForNewFunctions(const StringMap<Function *> &NewIRFunctions,
                                    FunctionSamples &FS);
-  /// Find functions that don't show in the profile or profile symbol list,
-  /// which are supposed to be new functions. We use them as the targets for
-  /// renaming matching.
-  ///
-  /// \param NewIRFunctions The map from function name to the IR function.
-  void findNewIRFunctions(StringMap<Function *> &NewIRFunctions);
+  // Find functions that don't show in the profile or profile symbol list,
+  // which are supposed to be new functions. We use them as the targets for
+  // renaming matching.
+  void findNewIRFunctions();
+  void updateProfillesAndSymbolMap();
+  void updateProfileWithNewName(FunctionSamples &FuncProfile);
+
   void clearCacheData() {
     FunctionProfileNameMap.clear();
-    FuncToNewCalleesMap.clear();
+    ProfileNameToFuncMap.clear();
   }
   void runCallGraphMatching();
   void reportOrPersistProfileStats();
