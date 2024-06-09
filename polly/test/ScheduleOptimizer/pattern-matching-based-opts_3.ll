@@ -1,11 +1,11 @@
-; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadNPMPolly -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
 ; RUN: -polly-target-1st-cache-level-size=0 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s 2>&1 | FileCheck %s
+; RUN: '-passes=polly-opt-isl,print<polly-ast>' -disable-output < %s 2>&1 | FileCheck %s
 
-; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadNPMPolly -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
 ; RUN: -polly-target-1st-cache-level-associativity=8 \
@@ -13,7 +13,7 @@
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
 ; RUN: -polly-target-2nd-cache-level-size=262144 \
-; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s 2>&1 | FileCheck %s --check-prefix=EXTRACTION-OF-MACRO-KERNEL
+; RUN: '-passes=polly-opt-isl,print<polly-ast>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=EXTRACTION-OF-MACRO-KERNEL
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    for (i = 0; i < _PB_NI; i++)
@@ -24,7 +24,7 @@
 ;	     C[i][j] += alpha * A[i][k] * B[k][j];
 ;        }
 ;
-; CHECK-LABEL: Printing analysis 'Polly - Generate an AST from the SCoP (isl)' for region: 'bb8 => bb32' in function 'kernel_gemm':
+; CHECK-LABEL: :: isl ast :: kernel_gemm :: %bb8---%bb32 
 ; CHECK:    {
 ; CHECK-NEXT:      // 1st level tiling - Tiles
 ; CHECK-NEXT:      for (int c0 = 0; c0 <= 32; c0 += 1)
@@ -76,7 +76,7 @@
 ; CHECK-NEXT:          }
 ; CHECK-NEXT:    }
 ;
-; EXTRACTION-OF-MACRO-KERNEL-LABEL: Printing analysis 'Polly - Generate an AST from the SCoP (isl)' for region: 'bb8 => bb32' in function 'kernel_gemm':
+; EXTRACTION-OF-MACRO-KERNEL-LABEL: :: isl ast :: kernel_gemm :: %bb8---%bb32 
 ; EXTRACTION-OF-MACRO-KERNEL:    {
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:      // 1st level tiling - Tiles
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:      for (int c0 = 0; c0 <= 32; c0 += 1)

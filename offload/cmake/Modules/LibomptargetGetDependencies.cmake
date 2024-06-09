@@ -3,7 +3,6 @@
 #
 # libffi : required to launch target kernels given function and argument
 #          pointers.
-# CUDA : required to control offloading to NVIDIA GPUs.
 
 include (FindPackageHandleStandardArgs)
 
@@ -42,13 +41,6 @@ endif()
 ################################################################################
 find_package(FFI QUIET)
 set(LIBOMPTARGET_DEP_LIBFFI_FOUND ${FFI_FOUND})
-
-################################################################################
-# Looking for CUDA...
-################################################################################
-
-find_package(CUDAToolkit QUIET)
-set(LIBOMPTARGET_DEP_CUDA_FOUND ${CUDAToolkit_FOUND})
 
 ################################################################################
 # Looking for NVIDIA GPUs...

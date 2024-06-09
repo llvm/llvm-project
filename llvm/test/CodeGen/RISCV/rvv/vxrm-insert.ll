@@ -85,9 +85,9 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV32-NEXT:    vaadd.vv v8, v8, v9
 ; RV32-NEXT:    call foo
 ; RV32-NEXT:    csrwi vxrm, 0
-; RV32-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV32-NEXT:    addi a0, sp, 16
 ; RV32-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
+; RV32-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV32-NEXT:    vaadd.vv v8, v8, v9
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 1
@@ -113,9 +113,9 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV64-NEXT:    vaadd.vv v8, v8, v9
 ; RV64-NEXT:    call foo
 ; RV64-NEXT:    csrwi vxrm, 0
-; RV64-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
+; RV64-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV64-NEXT:    vaadd.vv v8, v8, v9
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 1

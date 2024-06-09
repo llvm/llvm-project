@@ -6,6 +6,7 @@
 // CHECK-SAME:      %[[VAL_0:.*]]: !llvm.ptr,
 // CHECK-SAME:      %[[VAL_1:.*]]: !llvm.ptr) -> !llvm.ptr {
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f64
+// CHECK-DAG:       %[[ZERO:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : i32
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : i32
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
@@ -27,8 +28,7 @@
 // CHECK:           %[[VAL_17:.*]] = memref.cast %[[VAL_16]] : memref<2xindex> to memref<?xindex>
 // CHECK:           memref.store %[[VAL_5]], %[[VAL_16]]{{\[}}%[[VAL_5]]] : memref<2xindex>
 // CHECK:           memref.store %[[VAL_6]], %[[VAL_16]]{{\[}}%[[VAL_6]]] : memref<2xindex>
-// CHECK:           %[[VAL_18:.*]] = llvm.mlir.zero : !llvm.ptr
-// CHECK:           %[[VAL_19:.*]] = call @newSparseTensor(%[[VAL_15]], %[[VAL_15]], %[[VAL_13]], %[[VAL_17]], %[[VAL_17]], %[[VAL_4]], %[[VAL_4]], %[[VAL_3]], %[[VAL_4]], %[[VAL_18]]) : (memref<?xindex>, memref<?xindex>, memref<?xi64>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr) -> !llvm.ptr
+// CHECK:           %[[VAL_19:.*]] = call @newSparseTensor(%[[VAL_15]], %[[VAL_15]], %[[VAL_13]], %[[VAL_17]], %[[VAL_17]], %[[VAL_4]], %[[VAL_4]], %[[VAL_3]], %[[VAL_4]], %[[ZERO]]) : (memref<?xindex>, memref<?xindex>, memref<?xi64>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr) -> !llvm.ptr
 // CHECK:           %[[VAL_20:.*]] = memref.alloc() : memref<300xf64>
 // CHECK:           %[[VAL_21:.*]] = memref.cast %[[VAL_20]] : memref<300xf64> to memref<?xf64>
 // CHECK:           %[[VAL_22:.*]] = memref.alloc() : memref<300xi1>

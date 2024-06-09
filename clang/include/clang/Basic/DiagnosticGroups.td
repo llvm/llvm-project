@@ -15,8 +15,6 @@ def Implicit : DiagGroup<"implicit", [
     ImplicitInt
 ]>;
 
-def DeprecatedStaticAnalyzerFlag : DiagGroup<"deprecated-static-analyzer-flag">;
-
 // Empty DiagGroups are recognized by clang but ignored.
 def ODR : DiagGroup<"odr">;
 def : DiagGroup<"abi">;
@@ -1518,6 +1516,9 @@ def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
 
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
+
+// Warning for HLSL API availability
+def HLSLAvailability : DiagGroup<"hlsl-availability">;
 
 // Warnings and notes related to const_var_decl_type attribute checks
 def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;

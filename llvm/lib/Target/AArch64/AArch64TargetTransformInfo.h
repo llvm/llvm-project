@@ -425,6 +425,9 @@ public:
   }
 
   std::optional<unsigned> getMinPageSize() const { return 4096; }
+
+  bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                     const TargetTransformInfo::LSRCost &C2);
 };
 
 } // end namespace llvm

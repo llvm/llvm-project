@@ -29,3 +29,4 @@ add_custom_command(OUTPUT ${cxx_bnf_inc}
 add_custom_target(cxx_gen
     DEPENDS ${cxx_symbols_inc} ${cxx_bnf_inc}
     VERBATIM)
+set_target_properties(cxx_gen PROPERTIES FOLDER "Clang Tools Extra/Sourcegenning")

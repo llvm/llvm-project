@@ -211,6 +211,14 @@ LazyCallGraph::LazyCallGraph(LazyCallGraph &&G)
   updateGraphPtrs();
 }
 
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
+void LazyCallGraph::verify() {
+  for (RefSCC &RC : postorder_ref_sccs()) {
+    RC.verify();
+  }
+}
+#endif
+
 bool LazyCallGraph::invalidate(Module &, const PreservedAnalyses &PA,
                                ModuleAnalysisManager::Invalidator &) {
   // Check whether the analysis, all analyses on functions, or the function's
@@ -1503,9 +1511,7 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
          "Must not remove lib functions from the call graph!");
 
   auto NI = NodeMap.find(&F);
-  if (NI == NodeMap.end())
-    // Not in the graph at all!
-    return;
+  assert(NI != NodeMap.end() && "Removed function should be known!");
 
   Node &N = *NI->second;
 
