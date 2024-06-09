@@ -243,6 +243,7 @@ experimental/iterator tuple
 experimental/iterator typeinfo
 experimental/iterator version
 experimental/memory cstdint
+experimental/memory cstdlib
 experimental/memory cstring
 experimental/memory version
 experimental/propagate_const version
