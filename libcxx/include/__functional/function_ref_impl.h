@@ -17,6 +17,7 @@
 #include <__type_traits/is_member_pointer.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_pointer.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_pointer.h>
