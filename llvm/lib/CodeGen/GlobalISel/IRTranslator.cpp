@@ -3083,9 +3083,7 @@ bool IRTranslator::translateUnreachable(const User &U, MachineIRBuilder &MIRBuil
     if (MF->getTarget().Options.NoTrapAfterNoreturn)
       return true;
     // Do not emit an additional trap instruction.
-    if (Function *F = Call->getCalledFunction();
-        F && F->getIntrinsicID() == Intrinsic::trap &&
-        !Call->hasFnAttr("trap-func-name"))
+    if (Call->isNonContinuableTrap())
       return true;
   }
 

@@ -29,6 +29,7 @@
 #include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -1835,6 +1836,16 @@ public:
   /// Return true if the call can return twice
   bool canReturnTwice() const { return hasFnAttr(Attribute::ReturnsTwice); }
   void setCanReturnTwice() { addFnAttr(Attribute::ReturnsTwice); }
+
+  bool isNonContinuableTrap() const {
+    switch (getIntrinsicID()) {
+    case Intrinsic::trap:
+    case Intrinsic::ubsantrap:
+      return !hasFnAttr("trap-func-name");
+    default:
+      return false;
+    }
+  }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {

@@ -3531,9 +3531,7 @@ void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
     if (DAG.getTarget().Options.NoTrapAfterNoreturn)
       return;
     // Do not emit an additional trap instruction.
-    if (Function *F = Call->getCalledFunction();
-        F && F->getIntrinsicID() == Intrinsic::trap &&
-        !Call->hasFnAttr("trap-func-name"))
+    if (Call->isNonContinuableTrap())
       return;
   }
 

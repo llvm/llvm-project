@@ -4,6 +4,7 @@
 ; RUN: llc -o - %s -mtriple=x86_64-apple-darwin | FileCheck %s --check-prefixes=CHECK,NO_TRAP_AFTER_NORETURN
 ; RUN: llc --trap-unreachable -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
 ; RUN: llc --trap-unreachable -global-isel -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc --trap-unreachable -fast-isel -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
 
 ; CHECK-LABEL: call_exit:
 ; CHECK: callq {{_?}}exit
@@ -29,7 +30,7 @@ define i32 @trap() noreturn nounwind {
 ; NO_TRAP_AFTER_NORETURN-NOT: ud2
 ; NORMAL-NOT: ud2
 define i32 @trap_fn_attr() noreturn nounwind {
-  tail call void @llvm.trap() #0
+  tail call void @llvm.trap() "trap-func-name"="trap_func"
   unreachable
 }
 
@@ -44,5 +45,3 @@ define i32 @unreachable() noreturn nounwind {
 
 declare void @llvm.trap() nounwind noreturn
 declare void @exit(i32 %rc) nounwind noreturn
-
-attributes #0 = { "trap-func-name"="trap_func" }
