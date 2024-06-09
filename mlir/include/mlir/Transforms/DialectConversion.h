@@ -666,7 +666,7 @@ public:
   /// a new block containing the updated signature. The operations of the given
   /// block are inlined into the newly-created block, which is returned.
   ///
-  /// If no block argument types are changing, the entry original block will be
+  /// If no block argument types are changing, the original block will be
   /// left in place and returned.
   ///
   /// A signature converison must be provided. (Type converters can construct
