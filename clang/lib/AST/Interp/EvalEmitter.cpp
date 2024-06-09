@@ -40,7 +40,7 @@ void EvalEmitter::cleanup() { S.cleanup(); }
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
                                             bool ConvertResultToRValue) {
   S.setEvalLocation(E->getExprLoc());
-  this->ConvertResultToRValue = ConvertResultToRValue;
+  this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
   this->CheckFullyInitialized = isa<ConstantExpr>(E);
   EvalResult.setSource(E);
 
@@ -56,10 +56,14 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
 EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
-  this->ConvertResultToRValue =
-      VD->getAnyInitializer() &&
-      (VD->getAnyInitializer()->getType()->isAnyComplexType() ||
-       VD->getAnyInitializer()->getType()->isVectorType());
+
+  if (const Expr *Init = VD->getAnyInitializer()) {
+    QualType T = VD->getType();
+    this->ConvertResultToRValue = !Init->isGLValue() && !T->isPointerType() &&
+                                  !T->isObjCObjectPointerType();
+  } else
+    this->ConvertResultToRValue = false;
+
   EvalResult.setSource(VD);
 
   if (!this->visitDecl(VD) && EvalResult.empty())
@@ -138,6 +142,10 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     return true;
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
     if (std::optional<APValue> V = Ptr.toRValue(Ctx)) {
@@ -146,17 +154,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     }
   } else {
-    if (CheckFullyInitialized) {
-      if (!EvalResult.checkFullyInitialized(S, Ptr))
-        return false;
-
-      std::optional<APValue> RValueResult = Ptr.toRValue(Ctx);
-      if (!RValueResult)
-        return false;
-      EvalResult.setValue(*RValueResult);
-    } else {
-      EvalResult.setValue(Ptr.toAPValue());
-    }
+    EvalResult.setValue(Ptr.toAPValue());
   }
 
   return true;
