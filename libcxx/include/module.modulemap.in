@@ -1427,7 +1427,7 @@ module std [system] {
     module function                     { header "__functional/function.h" }
     module function_ref                 { header "__functional/function_ref.h" }
     module function_ref_common          { header "__functional/function_ref_common.h" }
-    module function_ref_impl            { header "__functional/function_ref_impl.h" }
+    module function_ref_impl            { textual header "__functional/function_ref_impl.h" }
     module hash                         { header "__functional/hash.h" }
     module identity                     { header "__functional/identity.h" }
     module invoke                       { header "__functional/invoke.h" }
