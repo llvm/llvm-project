@@ -541,6 +541,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <__functional/compose.h>
 #include <__functional/default_searcher.h>
 #include <__functional/function.h>
+#include <__functional/function_ref.h>
 #include <__functional/hash.h>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
