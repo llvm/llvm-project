@@ -112,7 +112,8 @@ struct VDSOSymbolTable {
       cpp::string_view name = sym.name();
       cpp::string_view version = sym.version();
       if (name.empty())
-        return;
+        continue;
+
       for (size_t j = 0; j < symbol_count; ++j) {
         if (name == strtab + symtab[j].st_name) {
           // we find a symbol with desired name

@@ -25,13 +25,19 @@
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE {
+// For x86_64, we explicit that some traditional vdso symbols are indeed
+// available.
 
 TEST(LlvmLibcOSUtilVDSOTest, GetTimeOfDay) {
   using FuncTy = int (*)(timeval *, struct timezone *);
   vdso::Symbol symbol{vdso::VDSOSym::GetTimeOfDay};
   auto func = symbol.get<FuncTy>();
+#ifdef LIBC_TARGET_ARCH_IS_X86
+  ASSERT_NE(func, static_cast<FuncTy>(nullptr));
+#else
   if (func == nullptr)
     return;
+#endif
   timeval tv;
   EXPECT_EQ(func(&tv, nullptr), 0);
   // hopefully people are not building time machines using our libc.
@@ -42,8 +48,12 @@ TEST(LlvmLibcOSUtilVDSOTest, Time) {
   using FuncTy = time_t (*)(time_t *);
   vdso::Symbol symbol{vdso::VDSOSym::Time};
   auto func = symbol.get<FuncTy>();
+#ifdef LIBC_TARGET_ARCH_IS_X86
+  ASSERT_NE(func, static_cast<FuncTy>(nullptr));
+#else
   if (func == nullptr)
     return;
+#endif
   time_t a, b;
   EXPECT_GT(func(&a), static_cast<time_t>(0));
   EXPECT_GT(func(&b), static_cast<time_t>(0));
