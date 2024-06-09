@@ -542,7 +542,7 @@ DEFAULT_FEATURES += [
 ]
 
 
-# Detect whether dbx is on the system.
+# Detect whether dbx debugger (available on AIX ano others) is on the system.
 def check_dbx(cfg):
     dbx_path = shutil.which("dbx")
     if dbx_path is None:
@@ -560,7 +560,7 @@ DEFAULT_FEATURES += [
 ]
 
 
-# Detect whether LLDB is on the system.
+# Detect whether LLDB debugger is on the system.
 def check_lldb(cfg):
     lldb_path = shutil.which("lldb")
     if lldb_path is None:
@@ -571,7 +571,7 @@ def check_lldb(cfg):
 
 DEFAULT_FEATURES += [
     Feature(
-        name="host-has-lldb-with-python",
+        name="host-has-lldb",
         when=check_lldb,
         actions=[AddSubstitution("%{lldb}", lambda cfg: shutil.which("lldb"))],
     )
