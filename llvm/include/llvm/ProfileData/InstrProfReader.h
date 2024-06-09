@@ -649,6 +649,8 @@ public:
 
 class IndexedMemProfReader {
 private:
+  /// The MemProf version.
+  memprof::IndexedVersion Version = memprof::Version0;
   /// MemProf profile schema (if available).
   memprof::MemProfSchema Schema;
   /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
@@ -657,6 +659,14 @@ private:
   std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
   /// MemProf call stack data on-disk indexed via call stack id.
   std::unique_ptr<MemProfCallStackHashTable> MemProfCallStackTable;
+  /// The starting address of the frame array.
+  const unsigned char *FrameBase = nullptr;
+  /// The starting address of the call stack array.
+  const unsigned char *CallStackBase = nullptr;
+
+  Error deserializeV012(const unsigned char *Start, const unsigned char *Ptr,
+                        uint64_t FirstWord);
+  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
 
 public:
   IndexedMemProfReader() = default;
@@ -698,7 +708,7 @@ private:
   const uint8_t *BinaryIdsStart = nullptr;
 
   // Index to the current record in the record array.
-  unsigned RecordIndex;
+  unsigned RecordIndex = 0;
 
   // Read the profile summary. Return a pointer pointing to one byte past the
   // end of the summary data if it exists or the input \c Cur.
@@ -711,7 +721,7 @@ public:
       std::unique_ptr<MemoryBuffer> DataBuffer,
       std::unique_ptr<MemoryBuffer> RemappingBuffer = nullptr)
       : DataBuffer(std::move(DataBuffer)),
-        RemappingBuffer(std::move(RemappingBuffer)), RecordIndex(0) {}
+        RemappingBuffer(std::move(RemappingBuffer)) {}
   IndexedInstrProfReader(const IndexedInstrProfReader &) = delete;
   IndexedInstrProfReader &operator=(const IndexedInstrProfReader &) = delete;
 

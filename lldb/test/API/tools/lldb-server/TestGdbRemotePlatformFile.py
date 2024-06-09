@@ -308,19 +308,26 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
             )
             sys_stat = os.fstat(temp_file.fileno())
 
-            self.assertEqual(gdb_stat.st_dev, uint32_or_zero(sys_stat.st_dev))
-            self.assertEqual(gdb_stat.st_ino, uint32_or_zero(sys_stat.st_ino))
             self.assertEqual(gdb_stat.st_mode, uint32_trunc(sys_stat.st_mode))
             self.assertEqual(gdb_stat.st_nlink, uint32_or_max(sys_stat.st_nlink))
-            self.assertEqual(gdb_stat.st_uid, uint32_or_zero(sys_stat.st_uid))
-            self.assertEqual(gdb_stat.st_gid, uint32_or_zero(sys_stat.st_gid))
             self.assertEqual(gdb_stat.st_rdev, uint32_or_zero(sys_stat.st_rdev))
             self.assertEqual(gdb_stat.st_size, sys_stat.st_size)
-            self.assertEqual(gdb_stat.st_blksize, sys_stat.st_blksize)
-            self.assertEqual(gdb_stat.st_blocks, sys_stat.st_blocks)
-            self.assertEqual(gdb_stat.st_atime, uint32_or_zero(int(sys_stat.st_atime)))
-            self.assertEqual(gdb_stat.st_mtime, uint32_or_zero(int(sys_stat.st_mtime)))
-            self.assertEqual(gdb_stat.st_ctime, uint32_or_zero(int(sys_stat.st_ctime)))
+            if not lldb.remote_platform:
+                self.assertEqual(gdb_stat.st_dev, uint32_or_zero(sys_stat.st_dev))
+                self.assertEqual(gdb_stat.st_ino, uint32_or_zero(sys_stat.st_ino))
+                self.assertEqual(gdb_stat.st_uid, uint32_or_zero(sys_stat.st_uid))
+                self.assertEqual(gdb_stat.st_gid, uint32_or_zero(sys_stat.st_gid))
+                self.assertEqual(gdb_stat.st_blksize, sys_stat.st_blksize)
+                self.assertEqual(gdb_stat.st_blocks, sys_stat.st_blocks)
+                self.assertEqual(
+                    gdb_stat.st_atime, uint32_or_zero(int(sys_stat.st_atime))
+                )
+                self.assertEqual(
+                    gdb_stat.st_mtime, uint32_or_zero(int(sys_stat.st_mtime))
+                )
+                self.assertEqual(
+                    gdb_stat.st_ctime, uint32_or_zero(int(sys_stat.st_ctime))
+                )
 
             self.reset_test_sequence()
             self.test_sequence.add_log_lines(

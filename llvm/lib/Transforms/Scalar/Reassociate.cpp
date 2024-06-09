@@ -302,98 +302,7 @@ static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
   return Res;
 }
 
-/// Returns k such that lambda(2^Bitwidth) = 2^k, where lambda is the Carmichael
-/// function. This means that x^(2^k) === 1 mod 2^Bitwidth for
-/// every odd x, i.e. x^(2^k) = 1 for every odd x in Bitwidth-bit arithmetic.
-/// Note that 0 <= k < Bitwidth, and if Bitwidth > 3 then x^(2^k) = 0 for every
-/// even x in Bitwidth-bit arithmetic.
-static unsigned CarmichaelShift(unsigned Bitwidth) {
-  if (Bitwidth < 3)
-    return Bitwidth - 1;
-  return Bitwidth - 2;
-}
-
-/// Add the extra weight 'RHS' to the existing weight 'LHS',
-/// reducing the combined weight using any special properties of the operation.
-/// The existing weight LHS represents the computation X op X op ... op X where
-/// X occurs LHS times.  The combined weight represents  X op X op ... op X with
-/// X occurring LHS + RHS times.  If op is "Xor" for example then the combined
-/// operation is equivalent to X if LHS + RHS is odd, or 0 if LHS + RHS is even;
-/// the routine returns 1 in LHS in the first case, and 0 in LHS in the second.
-static void IncorporateWeight(APInt &LHS, const APInt &RHS, unsigned Opcode) {
-  // If we were working with infinite precision arithmetic then the combined
-  // weight would be LHS + RHS.  But we are using finite precision arithmetic,
-  // and the APInt sum LHS + RHS may not be correct if it wraps (it is correct
-  // for nilpotent operations and addition, but not for idempotent operations
-  // and multiplication), so it is important to correctly reduce the combined
-  // weight back into range if wrapping would be wrong.
-
-  // If RHS is zero then the weight didn't change.
-  if (RHS.isMinValue())
-    return;
-  // If LHS is zero then the combined weight is RHS.
-  if (LHS.isMinValue()) {
-    LHS = RHS;
-    return;
-  }
-  // From this point on we know that neither LHS nor RHS is zero.
-
-  if (Instruction::isIdempotent(Opcode)) {
-    // Idempotent means X op X === X, so any non-zero weight is equivalent to a
-    // weight of 1.  Keeping weights at zero or one also means that wrapping is
-    // not a problem.
-    assert(LHS == 1 && RHS == 1 && "Weights not reduced!");
-    return; // Return a weight of 1.
-  }
-  if (Instruction::isNilpotent(Opcode)) {
-    // Nilpotent means X op X === 0, so reduce weights modulo 2.
-    assert(LHS == 1 && RHS == 1 && "Weights not reduced!");
-    LHS = 0; // 1 + 1 === 0 modulo 2.
-    return;
-  }
-  if (Opcode == Instruction::Add || Opcode == Instruction::FAdd) {
-    // TODO: Reduce the weight by exploiting nsw/nuw?
-    LHS += RHS;
-    return;
-  }
-
-  assert((Opcode == Instruction::Mul || Opcode == Instruction::FMul) &&
-         "Unknown associative operation!");
-  unsigned Bitwidth = LHS.getBitWidth();
-  // If CM is the Carmichael number then a weight W satisfying W >= CM+Bitwidth
-  // can be replaced with W-CM.  That's because x^W=x^(W-CM) for every Bitwidth
-  // bit number x, since either x is odd in which case x^CM = 1, or x is even in
-  // which case both x^W and x^(W - CM) are zero.  By subtracting off multiples
-  // of CM like this weights can always be reduced to the range [0, CM+Bitwidth)
-  // which by a happy accident means that they can always be represented using
-  // Bitwidth bits.
-  // TODO: Reduce the weight by exploiting nsw/nuw?  (Could do much better than
-  // the Carmichael number).
-  if (Bitwidth > 3) {
-    /// CM - The value of Carmichael's lambda function.
-    APInt CM = APInt::getOneBitSet(Bitwidth, CarmichaelShift(Bitwidth));
-    // Any weight W >= Threshold can be replaced with W - CM.
-    APInt Threshold = CM + Bitwidth;
-    assert(LHS.ult(Threshold) && RHS.ult(Threshold) && "Weights not reduced!");
-    // For Bitwidth 4 or more the following sum does not overflow.
-    LHS += RHS;
-    while (LHS.uge(Threshold))
-      LHS -= CM;
-  } else {
-    // To avoid problems with overflow do everything the same as above but using
-    // a larger type.
-    unsigned CM = 1U << CarmichaelShift(Bitwidth);
-    unsigned Threshold = CM + Bitwidth;
-    assert(LHS.getZExtValue() < Threshold && RHS.getZExtValue() < Threshold &&
-           "Weights not reduced!");
-    unsigned Total = LHS.getZExtValue() + RHS.getZExtValue();
-    while (Total >= Threshold)
-      Total -= CM;
-    LHS = Total;
-  }
-}
-
-using RepeatedValue = std::pair<Value*, APInt>;
+using RepeatedValue = std::pair<Value *, uint64_t>;
 
 /// Given an associative binary expression, return the leaf
 /// nodes in Ops along with their weights (how many times the leaf occurs).  The
@@ -471,11 +380,10 @@ using RepeatedValue = std::pair<Value*, APInt>;
 static bool LinearizeExprTree(Instruction *I,
                               SmallVectorImpl<RepeatedValue> &Ops,
                               ReassociatePass::OrderedSet &ToRedo,
-                              bool &HasNUW) {
+                              reassociate::OverflowTracking &Flags) {
   assert((isa<UnaryOperator>(I) || isa<BinaryOperator>(I)) &&
          "Expected a UnaryOperator or BinaryOperator!");
   LLVM_DEBUG(dbgs() << "LINEARIZE: " << *I << '\n');
-  unsigned Bitwidth = I->getType()->getScalarType()->getPrimitiveSizeInBits();
   unsigned Opcode = I->getOpcode();
   assert(I->isAssociative() && I->isCommutative() &&
          "Expected an associative and commutative operation!");
@@ -490,8 +398,8 @@ static bool LinearizeExprTree(Instruction *I,
   // with their weights, representing a certain number of paths to the operator.
   // If an operator occurs in the worklist multiple times then we found multiple
   // ways to get to it.
-  SmallVector<std::pair<Instruction*, APInt>, 8> Worklist; // (Op, Weight)
-  Worklist.push_back(std::make_pair(I, APInt(Bitwidth, 1)));
+  SmallVector<std::pair<Instruction *, uint64_t>, 8> Worklist; // (Op, Weight)
+  Worklist.push_back(std::make_pair(I, 1));
   bool Changed = false;
 
   // Leaves of the expression are values that either aren't the right kind of
@@ -509,23 +417,25 @@ static bool LinearizeExprTree(Instruction *I,
 
   // Leaves - Keeps track of the set of putative leaves as well as the number of
   // paths to each leaf seen so far.
-  using LeafMap = DenseMap<Value *, APInt>;
+  using LeafMap = DenseMap<Value *, uint64_t>;
   LeafMap Leaves; // Leaf -> Total weight so far.
   SmallVector<Value *, 8> LeafOrder; // Ensure deterministic leaf output order.
+  const DataLayout DL = I->getModule()->getDataLayout();
 
 #ifndef NDEBUG
   SmallPtrSet<Value *, 8> Visited; // For checking the iteration scheme.
 #endif
   while (!Worklist.empty()) {
-    std::pair<Instruction*, APInt> P = Worklist.pop_back_val();
-    I = P.first; // We examine the operands of this binary operator.
+    // We examine the operands of this binary operator.
+    auto [I, Weight] = Worklist.pop_back_val();
 
-    if (isa<OverflowingBinaryOperator>(I))
-      HasNUW &= I->hasNoUnsignedWrap();
+    if (isa<OverflowingBinaryOperator>(I)) {
+      Flags.HasNUW &= I->hasNoUnsignedWrap();
+      Flags.HasNSW &= I->hasNoSignedWrap();
+    }
 
     for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) { // Visit operands.
       Value *Op = I->getOperand(OpIdx);
-      APInt Weight = P.second; // Number of paths to this operand.
       LLVM_DEBUG(dbgs() << "OPERAND: " << *Op << " (" << Weight << ")\n");
       assert(!Op->use_empty() && "No uses, so how did we get to it?!");
 
@@ -559,26 +469,8 @@ static bool LinearizeExprTree(Instruction *I,
                "In leaf map but not visited!");
 
         // Update the number of paths to the leaf.
-        IncorporateWeight(It->second, Weight, Opcode);
-
-#if 0   // TODO: Re-enable once PR13021 is fixed.
-        // The leaf already has one use from inside the expression.  As we want
-        // exactly one such use, drop this new use of the leaf.
-        assert(!Op->hasOneUse() && "Only one use, but we got here twice!");
-        I->setOperand(OpIdx, UndefValue::get(I->getType()));
-        Changed = true;
-
-        // If the leaf is a binary operation of the right kind and we now see
-        // that its multiple original uses were in fact all by nodes belonging
-        // to the expression, then no longer consider it to be a leaf and add
-        // its operands to the expression.
-        if (BinaryOperator *BO = isReassociableOp(Op, Opcode)) {
-          LLVM_DEBUG(dbgs() << "UNLEAF: " << *Op << " (" << It->second << ")\n");
-          Worklist.push_back(std::make_pair(BO, It->second));
-          Leaves.erase(It);
-          continue;
-        }
-#endif
+        It->second += Weight;
+        assert(It->second >= Weight && "Weight overflows");
 
         // If we still have uses that are not accounted for by the expression
         // then it is not safe to modify the value.
@@ -641,13 +533,12 @@ static bool LinearizeExprTree(Instruction *I,
       // Node initially thought to be a leaf wasn't.
       continue;
     assert(!isReassociableOp(V, Opcode) && "Shouldn't be a leaf!");
-    APInt Weight = It->second;
-    if (Weight.isMinValue())
-      // Leaf already output or weight reduction eliminated it.
-      continue;
+    uint64_t Weight = It->second;
     // Ensure the leaf is only output once.
     It->second = 0;
     Ops.push_back(std::make_pair(V, Weight));
+    if (Opcode == Instruction::Add && Flags.AllKnownNonNegative && Flags.HasNSW)
+      Flags.AllKnownNonNegative &= isKnownNonNegative(V, SimplifyQuery(DL));
   }
 
   // For nilpotent operations or addition there may be no operands, for example
@@ -656,7 +547,7 @@ static bool LinearizeExprTree(Instruction *I,
   if (Ops.empty()) {
     Constant *Identity = ConstantExpr::getBinOpIdentity(Opcode, I->getType());
     assert(Identity && "Associative operation without identity!");
-    Ops.emplace_back(Identity, APInt(Bitwidth, 1));
+    Ops.emplace_back(Identity, 1);
   }
 
   return Changed;
@@ -666,7 +557,7 @@ static bool LinearizeExprTree(Instruction *I,
 /// linearized and optimized, emit them in-order.
 void ReassociatePass::RewriteExprTree(BinaryOperator *I,
                                       SmallVectorImpl<ValueEntry> &Ops,
-                                      bool HasNUW) {
+                                      OverflowTracking Flags) {
   assert(Ops.size() > 1 && "Single values should be used directly!");
 
   // Since our optimizations should never increase the number of operations, the
@@ -834,8 +725,12 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
           // Note that it doesn't hold for mul if one of the operands is zero.
           // TODO: We can preserve NUW flag if we prove that all mul operands
           // are non-zero.
-          if (HasNUW && ExpressionChangedStart->getOpcode() == Instruction::Add)
-            ExpressionChangedStart->setHasNoUnsignedWrap();
+          if (ExpressionChangedStart->getOpcode() == Instruction::Add) {
+            if (Flags.HasNUW)
+              ExpressionChangedStart->setHasNoUnsignedWrap();
+            if (Flags.HasNSW && (Flags.AllKnownNonNegative || Flags.HasNUW))
+              ExpressionChangedStart->setHasNoSignedWrap();
+          }
         }
       }
 
@@ -1192,14 +1087,13 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
     return nullptr;
 
   SmallVector<RepeatedValue, 8> Tree;
-  bool HasNUW = true;
-  MadeChange |= LinearizeExprTree(BO, Tree, RedoInsts, HasNUW);
+  OverflowTracking Flags;
+  MadeChange |= LinearizeExprTree(BO, Tree, RedoInsts, Flags);
   SmallVector<ValueEntry, 8> Factors;
   Factors.reserve(Tree.size());
   for (unsigned i = 0, e = Tree.size(); i != e; ++i) {
     RepeatedValue E = Tree[i];
-    Factors.append(E.second.getZExtValue(),
-                   ValueEntry(getRank(E.first), E.first));
+    Factors.append(E.second, ValueEntry(getRank(E.first), E.first));
   }
 
   bool FoundFactor = false;
@@ -1235,7 +1129,7 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
 
   if (!FoundFactor) {
     // Make sure to restore the operands to the expression tree.
-    RewriteExprTree(BO, Factors, HasNUW);
+    RewriteExprTree(BO, Factors, Flags);
     return nullptr;
   }
 
@@ -1247,7 +1141,7 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
     RedoInsts.insert(BO);
     V = Factors[0].Op;
   } else {
-    RewriteExprTree(BO, Factors, HasNUW);
+    RewriteExprTree(BO, Factors, Flags);
     V = BO;
   }
 
@@ -2373,12 +2267,12 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
   // First, walk the expression tree, linearizing the tree, collecting the
   // operand information.
   SmallVector<RepeatedValue, 8> Tree;
-  bool HasNUW = true;
-  MadeChange |= LinearizeExprTree(I, Tree, RedoInsts, HasNUW);
+  OverflowTracking Flags;
+  MadeChange |= LinearizeExprTree(I, Tree, RedoInsts, Flags);
   SmallVector<ValueEntry, 8> Ops;
   Ops.reserve(Tree.size());
   for (const RepeatedValue &E : Tree)
-    Ops.append(E.second.getZExtValue(), ValueEntry(getRank(E.first), E.first));
+    Ops.append(E.second, ValueEntry(getRank(E.first), E.first));
 
   LLVM_DEBUG(dbgs() << "RAIn:\t"; PrintOps(I, Ops); dbgs() << '\n');
 
@@ -2567,7 +2461,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
              dbgs() << '\n');
   // Now that we ordered and optimized the expressions, splat them back into
   // the expression tree, removing any unneeded nodes.
-  RewriteExprTree(I, Ops, HasNUW);
+  RewriteExprTree(I, Ops, Flags);
 }
 
 void

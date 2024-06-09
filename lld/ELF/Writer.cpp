@@ -618,7 +618,6 @@ enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 27,
   RF_NOT_ALLOC = 1 << 26,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
-  RF_NOT_SPECIAL = 1 << 17,
   RF_LARGE_ALT = 1 << 15,
   RF_WRITE = 1 << 14,
   RF_EXEC_WRITE = 1 << 13,
@@ -630,7 +629,7 @@ enum RankFlags {
   RF_BSS = 1 << 7,
 };
 
-static unsigned getSectionRank(OutputSection &osec) {
+unsigned elf::getSectionRank(OutputSection &osec) {
   unsigned rank = osec.partition * RF_PARTITION;
 
   // We want to put section specified by -T option first, so we
@@ -643,24 +642,6 @@ static unsigned getSectionRank(OutputSection &osec) {
   // so debug info doesn't change addresses in actual code.
   if (!(osec.flags & SHF_ALLOC))
     return rank | RF_NOT_ALLOC;
-
-  if (osec.type == SHT_LLVM_PART_EHDR)
-    return rank;
-  if (osec.type == SHT_LLVM_PART_PHDR)
-    return rank | 1;
-
-  // Put .interp first because some loaders want to see that section
-  // on the first page of the executable file when loaded into memory.
-  if (osec.name == ".interp")
-    return rank | 2;
-
-  // Put .note sections at the beginning so that they are likely to be included
-  // in a truncate core file. In particular, .note.gnu.build-id, if available,
-  // can identify the object file.
-  if (osec.type == SHT_NOTE)
-    return rank | 3;
-
-  rank |= RF_NOT_SPECIAL;
 
   // Sort sections based on their access permission in the following
   // order: R, RX, RXW, RW(RELRO), RW(non-RELRO).
@@ -677,11 +658,6 @@ static unsigned getSectionRank(OutputSection &osec) {
   bool isWrite = osec.flags & SHF_WRITE;
 
   if (!isWrite && !isExec) {
-    // Make PROGBITS sections (e.g .rodata .eh_frame) closer to .text to
-    // alleviate relocation overflow pressure. Large special sections such as
-    // .dynstr and .dynsym can be away from .text.
-    if (osec.type == SHT_PROGBITS)
-      rank |= RF_RODATA;
     // Among PROGBITS sections, place .lrodata further from .text.
     // For -z lrodata-after-bss, place .lrodata after .lbss like GNU ld. This
     // layout has one extra PT_LOAD, but alleviates relocation overflow
@@ -691,6 +667,25 @@ static unsigned getSectionRank(OutputSection &osec) {
       rank |= config->zLrodataAfterBss ? RF_LARGE_ALT : 0;
     else
       rank |= config->zLrodataAfterBss ? 0 : RF_LARGE;
+
+    if (osec.type == SHT_LLVM_PART_EHDR)
+      ;
+    else if (osec.type == SHT_LLVM_PART_PHDR)
+      rank |= 1;
+    else if (osec.name == ".interp")
+      rank |= 2;
+    // Put .note sections at the beginning so that they are likely to be
+    // included in a truncate core file. In particular, .note.gnu.build-id, if
+    // available, can identify the object file.
+    else if (osec.type == SHT_NOTE)
+      rank |= 3;
+    // Make PROGBITS sections (e.g .rodata .eh_frame) closer to .text to
+    // alleviate relocation overflow pressure. Large special sections such as
+    // .dynstr and .dynsym can be away from .text.
+    else if (osec.type != SHT_PROGBITS)
+      rank |= 4;
+    else
+      rank |= RF_RODATA;
   } else if (isExec) {
     rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
   } else {
@@ -788,13 +783,11 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   // __rela_iplt_{start,end} are initially defined relative to dummy section 0.
   // We'll override Out::elfHeader with relaDyn later when we are sure that
   // .rela.dyn will be present in the output.
-  ElfSym::relaIpltStart = addOptionalRegular(
-      config->isRela ? "__rela_iplt_start" : "__rel_iplt_start",
-      Out::elfHeader, 0, STV_HIDDEN);
-
-  ElfSym::relaIpltEnd = addOptionalRegular(
-      config->isRela ? "__rela_iplt_end" : "__rel_iplt_end",
-      Out::elfHeader, 0, STV_HIDDEN);
+  std::string name = config->isRela ? "__rela_iplt_start" : "__rel_iplt_start";
+  ElfSym::relaIpltStart =
+      addOptionalRegular(name, Out::elfHeader, 0, STV_HIDDEN);
+  name.replace(name.size() - 5, 5, "end");
+  ElfSym::relaIpltEnd = addOptionalRegular(name, Out::elfHeader, 0, STV_HIDDEN);
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or
@@ -926,7 +919,11 @@ static bool shouldSkip(SectionCommand *cmd) {
 static SmallVectorImpl<SectionCommand *>::iterator
 findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
               SmallVectorImpl<SectionCommand *>::iterator e) {
+  // Place non-alloc orphan sections at the end. This matches how we assign file
+  // offsets to non-alloc sections.
   OutputSection *sec = &cast<OutputDesc>(*e)->osec;
+  if (!(sec->flags & SHF_ALLOC))
+    return e;
 
   // As a special case, place .relro_padding before the SymbolAssignment using
   // DATA_SEGMENT_RELRO_END, if present.
@@ -940,52 +937,59 @@ findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
       return i;
   }
 
-  // Find the first element that has as close a rank as possible.
-  auto i = std::max_element(b, e, [=](SectionCommand *a, SectionCommand *b) {
-    return getRankProximity(sec, a) < getRankProximity(sec, b);
-  });
+  // Find the most similar output section as the anchor. Rank Proximity is a
+  // value in the range [-1, 32] where [0, 32] indicates potential anchors (0:
+  // least similar; 32: identical). -1 means not an anchor.
+  //
+  // In the event of proximity ties, we select the first or last section
+  // depending on whether the orphan's rank is smaller.
+  int maxP = 0;
+  auto i = e;
+  for (auto j = b; j != e; ++j) {
+    int p = getRankProximity(sec, *j);
+    if (p > maxP ||
+        (p == maxP && cast<OutputDesc>(*j)->osec.sortRank <= sec->sortRank)) {
+      maxP = p;
+      i = j;
+    }
+  }
   if (i == e)
     return e;
-  if (!isa<OutputDesc>(*i))
-    return e;
-  auto foundSec = &cast<OutputDesc>(*i)->osec;
-
-  // Consider all existing sections with the same proximity.
-  int proximity = getRankProximity(sec, *i);
-  unsigned sortRank = sec->sortRank;
-  if (script->hasPhdrsCommands() || !script->memoryRegions.empty())
-    // Prevent the orphan section to be placed before the found section. If
-    // custom program headers are defined, that helps to avoid adding it to a
-    // previous segment and changing flags of that segment, for example, making
-    // a read-only segment writable. If memory regions are defined, an orphan
-    // section should continue the same region as the found section to better
-    // resemble the behavior of GNU ld.
-    sortRank = std::max(sortRank, foundSec->sortRank);
-  for (; i != e; ++i) {
-    auto *curSecDesc = dyn_cast<OutputDesc>(*i);
-    if (!curSecDesc || !curSecDesc->osec.hasInputSections)
-      continue;
-    if (getRankProximity(sec, curSecDesc) != proximity ||
-        sortRank < curSecDesc->osec.sortRank)
-      break;
-  }
 
   auto isOutputSecWithInputSections = [](SectionCommand *cmd) {
     auto *osd = dyn_cast<OutputDesc>(cmd);
     return osd && osd->osec.hasInputSections;
   };
-  auto j =
-      std::find_if(std::make_reverse_iterator(i), std::make_reverse_iterator(b),
-                   isOutputSecWithInputSections);
-  i = j.base();
+
+  // Then, scan backward or forward through the script for a suitable insertion
+  // point. If i's rank is larger, the orphan section can be placed before i.
+  //
+  // However, don't do this if custom program headers are defined. Otherwise,
+  // adding the orphan to a previous segment can change its flags, for example,
+  // making a read-only segment writable. If memory regions are defined, an
+  // orphan section should continue the same region as the found section to
+  // better resemble the behavior of GNU ld.
+  bool mustAfter = script->hasPhdrsCommands() || !script->memoryRegions.empty();
+  if (cast<OutputDesc>(*i)->osec.sortRank <= sec->sortRank || mustAfter) {
+    for (auto j = ++i; j != e; ++j) {
+      if (!isOutputSecWithInputSections(*j))
+        continue;
+      if (getRankProximity(sec, *j) != maxP)
+        break;
+      i = j + 1;
+    }
+  } else {
+    for (; i != b; --i)
+      if (isOutputSecWithInputSections(i[-1]))
+        break;
+  }
 
   // As a special case, if the orphan section is the last section, put
   // it at the very end, past any other commands.
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  auto nextSec = std::find_if(i, e, isOutputSecWithInputSections);
-  if (nextSec == e)
+  if (std::find_if(i, e, isOutputSecWithInputSections) == e)
     return e;
 
   while (i != e && shouldSkip(*i))
@@ -1454,46 +1458,29 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       in.mipsGot->updateAllocSize();
 
     for (Partition &part : partitions) {
-      // The R_AARCH64_AUTH_RELATIVE has a smaller addend field as bits [63:32]
-      // encode the signing schema. We've put relocations in .relr.auth.dyn
-      // during RelocationScanner::processAux, but the target VA for some of
-      // them might be wider than 32 bits. We can only know the final VA at this
-      // point, so move relocations with large values from .relr.auth.dyn to
-      // .rela.dyn. See also AArch64::relocate.
-      if (part.relrAuthDyn) {
-        auto it = llvm::remove_if(
-            part.relrAuthDyn->relocs, [&part](const RelativeReloc &elem) {
-              const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
-              if (isInt<32>(reloc.sym->getVA(reloc.addend)))
-                return false;
-              part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
-                                      reloc.offset,
-                                      DynamicReloc::AddendOnlyWithTargetVA,
-                                      *reloc.sym, reloc.addend, R_ABS});
-              return true;
-            });
-        changed |= (it != part.relrAuthDyn->relocs.end());
-        part.relrAuthDyn->relocs.erase(it, part.relrAuthDyn->relocs.end());
-      }
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
-      if (part.relrAuthDyn)
-        changed |= part.relrAuthDyn->updateAllocSize();
       if (part.memtagGlobalDescriptors)
         changed |= part.memtagGlobalDescriptors->updateAllocSize();
     }
 
-    const Defined *changedSym = script->assignAddresses();
+    std::pair<const OutputSection *, const Defined *> changes =
+        script->assignAddresses();
     if (!changed) {
       // Some symbols may be dependent on section addresses. When we break the
       // loop, the symbol values are finalized because a previous
       // assignAddresses() finalized section addresses.
-      if (!changedSym)
+      if (!changes.first && !changes.second)
         break;
       if (++assignPasses == 5) {
-        errorOrWarn("assignment to symbol " + toString(*changedSym) +
-                    " does not converge");
+        if (changes.first)
+          errorOrWarn("address (0x" + Twine::utohexstr(changes.first->addr) +
+                      ") of section '" + changes.first->name +
+                      "' does not converge");
+        if (changes.second)
+          errorOrWarn("assignment to symbol " + toString(*changes.second) +
+                      " does not converge");
         break;
       }
     } else if (spilled) {
@@ -1637,14 +1624,6 @@ static void removeUnusedSyntheticSections() {
         auto *sec = cast<SyntheticSection>(s);
         if (sec->getParent() && sec->isNeeded())
           return false;
-        // .relr.auth.dyn relocations may be moved to .rela.dyn in
-        // finalizeAddressDependentContent, making .rela.dyn no longer empty.
-        // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
-        // we would fail to remove it here.
-        if (config->emachine == EM_AARCH64 && config->relrPackDynRelocs)
-          if (auto *relSec = dyn_cast<RelocationBaseSection>(sec))
-            if (relSec == mainPart->relaDyn.get())
-              return false;
         unused.insert(sec);
         return true;
       });
@@ -1956,10 +1935,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (part.relrDyn) {
         part.relrDyn->mergeRels();
         finalizeSynthetic(part.relrDyn.get());
-      }
-      if (part.relrAuthDyn) {
-        part.relrAuthDyn->mergeRels();
-        finalizeSynthetic(part.relrAuthDyn.get());
       }
 
       finalizeSynthetic(part.dynSymTab.get());
@@ -2475,11 +2450,12 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
         lastRX->lastSec == sec)
       off = alignToPowerOf2(off, config->maxPageSize);
   }
-  for (OutputSection *osec : outputSections)
-    if (!(osec->flags & SHF_ALLOC)) {
-      osec->offset = alignToPowerOf2(off, osec->addralign);
-      off = osec->offset + osec->size;
-    }
+  for (OutputSection *osec : outputSections) {
+    if (osec->flags & SHF_ALLOC)
+      continue;
+    osec->offset = alignToPowerOf2(off, osec->addralign);
+    off = osec->offset + osec->size;
+  }
 
   sectionHeaderOff = alignToPowerOf2(off, config->wordsize);
   fileSize = sectionHeaderOff + (outputSections.size() + 1) * sizeof(Elf_Shdr);

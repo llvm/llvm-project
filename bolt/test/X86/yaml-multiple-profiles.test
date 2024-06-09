@@ -1,5 +1,5 @@
-# This test ensures that a YAML profile with multiple profiles matching the same
-# function is handled gracefully.
+## This test ensures that a YAML profile with multiple profiles matching the same
+## function is handled gracefully.
 
 # REQUIRES: system-linux
 # RUN: split-file %s %t

@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-reschedule=0 -polly-loopfusion-greedy=1 -polly-postopts=0 -polly-print-opt-isl -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-reschedule=1 -polly-loopfusion-greedy=1 -polly-postopts=0 -polly-print-opt-isl -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-reschedule=0 -polly-loopfusion-greedy=1 -polly-postopts=0 '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-reschedule=1 -polly-loopfusion-greedy=1 -polly-postopts=0 '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s
 
 define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B, i32 %k) {
 entry:

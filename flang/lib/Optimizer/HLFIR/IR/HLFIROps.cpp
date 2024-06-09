@@ -1115,7 +1115,7 @@ mlir::LogicalResult
 hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
                               mlir::PatternRewriter &rewriter) {
   // the only two uses of the transposed matrix should be for the hlfir.matmul
-  // and hlfir.destory
+  // and hlfir.destroy
   auto isOtherwiseUnused = [&](hlfir::TransposeOp transposeOp) -> bool {
     std::size_t numUses = 0;
     for (mlir::Operation *user : transposeOp.getResult().getUsers()) {

@@ -70,9 +70,15 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
   }
+  if (Subtarget->hasHalfPrecision()) {
+    addRegisterClass(MVT::v8f16, &WebAssembly::V128RegClass);
+  }
   if (Subtarget->hasReferenceTypes()) {
     addRegisterClass(MVT::externref, &WebAssembly::EXTERNREFRegClass);
     addRegisterClass(MVT::funcref, &WebAssembly::FUNCREFRegClass);
+    if (Subtarget->hasExceptionHandling()) {
+      addRegisterClass(MVT::exnref, &WebAssembly::EXNREFRegClass);
+    }
   }
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget->getRegisterInfo());
@@ -105,6 +111,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::JumpTable, MVTPtr, Custom);
   setOperationAction(ISD::BlockAddress, MVTPtr, Custom);
   setOperationAction(ISD::BRIND, MVT::Other, Custom);
+  setOperationAction(ISD::CLEAR_CACHE, MVT::Other, Custom);
 
   // Take the default expansion for va_arg, va_copy, and va_end. There is no
   // default action for va_start, so we do that custom.
@@ -137,6 +144,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setOperationAction(ISD::FP_TO_FP16, T, Expand);
     setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
     setTruncStoreAction(T, MVT::f16, Expand);
+  }
+
+  if (Subtarget->hasHalfPrecision()) {
+    setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
   }
 
   // Expand unavailable integer operations.
@@ -575,20 +587,6 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   MachineFunction &MF = *BB->getParent();
   const MCInstrDesc &MCID = TII.get(CallOp);
   MachineInstrBuilder MIB(MF, MF.CreateMachineInstr(MCID, DL));
-
-  // See if we must truncate the function pointer.
-  // CALL_INDIRECT takes an i32, but in wasm64 we represent function pointers
-  // as 64-bit for uniformity with other pointer types.
-  // See also: WebAssemblyFastISel::selectCall
-  if (IsIndirect && MF.getSubtarget<WebAssemblySubtarget>().hasAddr64()) {
-    Register Reg32 =
-        MF.getRegInfo().createVirtualRegister(&WebAssembly::I32RegClass);
-    auto &FnPtr = CallParams.getOperand(0);
-    BuildMI(*BB, CallResults.getIterator(), DL,
-            TII.get(WebAssembly::I32_WRAP_I64), Reg32)
-        .addReg(FnPtr.getReg());
-    FnPtr.setReg(Reg32);
-  }
 
   // Move the function pointer to the end of the arguments for indirect calls
   if (IsIndirect) {
@@ -1506,6 +1504,8 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::CTLZ:
   case ISD::CTTZ:
     return DAG.UnrollVectorOp(Op.getNode());
+  case ISD::CLEAR_CACHE:
+    report_fatal_error("llvm.clear_cache is not supported on wasm");
   }
 }
 
