@@ -1200,9 +1200,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.flags |= MachineMemOperand::MOVolatile;
     Info.flags |= MachineMemOperand::MODereferenceable;
     if (ME.onlyReadsMemory()) {
-      unsigned MaxNumLanes = 4;
-
       if (RsrcIntr->IsImage) {
+        unsigned MaxNumLanes = 4;
+
         const AMDGPU::ImageDimIntrinsicInfo *Intr
           = AMDGPU::getImageDimIntrinsicInfo(IntrID);
         const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
@@ -1215,9 +1215,12 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
             = cast<ConstantInt>(CI.getArgOperand(0))->getZExtValue();
           MaxNumLanes = DMask == 0 ? 1 : llvm::popcount(DMask);
         }
-      }
 
-      Info.memVT = memVTFromLoadIntrReturn(CI.getType(), MaxNumLanes);
+        Info.memVT = memVTFromLoadIntrReturn(CI.getType(), MaxNumLanes);
+      } else {
+        Info.memVT = memVTFromLoadIntrReturn(
+            CI.getType(), std::numeric_limits<unsigned>::max());
+      }
 
       // FIXME: What does alignment mean for an image?
       Info.opc = ISD::INTRINSIC_W_CHAIN;
