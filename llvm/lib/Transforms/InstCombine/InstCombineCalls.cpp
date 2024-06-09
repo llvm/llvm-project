@@ -2625,7 +2625,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Select =
           Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 2.0),
                                ConstantFP::get(II->getType(), 1.0));
-      return BinaryOperator::CreateFMul(Src, Select);
+      return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
 
     break;
