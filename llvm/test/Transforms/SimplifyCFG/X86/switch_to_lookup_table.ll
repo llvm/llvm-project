@@ -38,6 +38,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @switch.table.threecases = private unnamed_addr constant [3 x i32] [i32 10, i32 7, i32 5], align 4
 ; CHECK: @switch.table.covered_switch_with_bit_tests = private unnamed_addr constant [8 x i32] [i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 1, i32 1], align 4
 ; CHECK: @switch.table.signed_overflow1 = private unnamed_addr constant [4 x i32] [i32 3333, i32 4444, i32 1111, i32 2222], align 4
+; CHECK: @switch.table.signed_overflow2 = private unnamed_addr constant [4 x i32] [i32 3333, i32 4444, i32 2222, i32 2222], align 4
 ;.
 define i32 @f(i32 %c) {
 ; CHECK-LABEL: @f(
@@ -1738,12 +1739,53 @@ define i32 @signed_overflow2(i8 %n) {
 ; CHECK-LABEL: @signed_overflow2(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i2
-; CHECK-NEXT:    switch i2 [[TRUNC]], label [[BB1:%.*]] [
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TRUNC]], -2
+; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i3
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.signed_overflow2, i32 0, i3 [[SWITCH_TABLEIDX_ZEXT]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+;
+start:
+  %trunc = trunc i8 %n to i2
+  switch i2 %trunc, label %bb1 [
+  i2 1, label %bb3
+  i2 -2, label %bb4
+  i2 -1, label %bb5
+  ]
+
+bb1:                                              ; preds = %start
+  unreachable
+
+bb3:                                              ; preds = %start
+  br label %bb6
+
+bb4:                                              ; preds = %start
+  br label %bb6
+
+bb5:                                              ; preds = %start
+  br label %bb6
+
+bb6:                                              ; preds = %start, %bb3, %bb4, %bb5
+  %.sroa.0.0 = phi i32 [ 4444, %bb5 ], [ 3333, %bb4 ], [ 2222, %bb3 ]
+  ret i32 %.sroa.0.0
+}
+
+; This is the same as @signed_overflow2 except that the default case calls @exit(), so it
+; isn't treated as unreachable
+define i32 @signed_overflow3(i8 %n) {
+; CHECK-LABEL: @signed_overflow3(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i2
+; CHECK-NEXT:    switch i2 [[TRUNC]], label [[START_UNREACHABLEDEFAULT:%.*]] [
 ; CHECK-NEXT:      i2 1, label [[BB6:%.*]]
 ; CHECK-NEXT:      i2 -2, label [[BB4:%.*]]
 ; CHECK-NEXT:      i2 -1, label [[BB5:%.*]]
+; CHECK-NEXT:      i2 0, label [[BB1:%.*]]
 ; CHECK-NEXT:    ]
+; CHECK:       start.unreachabledefault:
+; CHECK-NEXT:    unreachable
 ; CHECK:       bb1:
+; CHECK-NEXT:    call void @exit(i32 1)
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[BB6]]
@@ -1762,6 +1804,7 @@ start:
   ]
 
 bb1:                                              ; preds = %start
+  call void @exit(i32 1)
   unreachable
 
 bb3:                                              ; preds = %start
