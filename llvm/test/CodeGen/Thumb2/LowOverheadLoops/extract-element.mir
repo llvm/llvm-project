@@ -105,33 +105,40 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: no_vpsel_liveout
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r7
-  ; CHECK:   tCMPi8 renamable $r2, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 0, 4, implicit-def $itstate
-  ; CHECK:   renamable $r0 = tMOVi8 $noreg, 0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
-  ; CHECK:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
-  ; CHECK: bb.1.vector.ph:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r7
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
-  ; CHECK: bb.2.vector.body:
-  ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $r0, $r1
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 0, $noreg, $noreg :: (load (s64) from %ir.lsr.iv17, align 2)
-  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 0, killed $noreg, $noreg :: (load (s64) from %ir.lsr.iv1820, align 2)
-  ; CHECK:   renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
-  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
-  ; CHECK: bb.3.middle.block:
-  ; CHECK:   liveins: $q0
-  ; CHECK:   $r0 = VMOVRS killed $s3, 14 /* CC::al */, $noreg, implicit killed $q0
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r7
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   tCMPi8 renamable $r2, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   t2IT 0, 4, implicit-def $itstate
+  ; CHECK-NEXT:   renamable $r0 = tMOVi8 $noreg, 0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
+  ; CHECK-NEXT:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.vector.ph:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r7
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK-NEXT:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK-NEXT:   $lr = MVE_DLSTP_32 killed renamable $r2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.vector.body:
+  ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $q0, $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 0, $noreg, $noreg :: (load (s64) from %ir.lsr.iv17, align 2)
+  ; CHECK-NEXT:   renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 0, killed $noreg, $noreg :: (load (s64) from %ir.lsr.iv1820, align 2)
+  ; CHECK-NEXT:   renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK-NEXT:   renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.middle.block:
+  ; CHECK-NEXT:   liveins: $q0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $r0 = VMOVRS killed $s3, 14 /* CC::al */, $noreg, implicit killed $q0
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
   bb.0.entry:
     successors: %bb.1(0x80000000)
     liveins: $r0, $r1, $r2, $lr, $r7

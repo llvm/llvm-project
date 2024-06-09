@@ -1103,13 +1103,13 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
         VoidPtr, VarPtrTy, VD->getName() + "_on_stack");
     LValue VarAddr =
         CGF.MakeNaturalAlignPointeeRawAddrLValue(CastedVoidPtr, VarTy);
-    Rec.second.PrivateAddr = VarAddr.getAddress(CGF);
+    Rec.second.PrivateAddr = VarAddr.getAddress();
     Rec.second.GlobalizedVal = VoidPtr;
 
     // Assign the local allocation to the newly globalized location.
     if (EscapedParam) {
       CGF.EmitStoreOfScalar(ParValue, VarAddr);
-      I->getSecond().MappedParams->setVarAddr(CGF, VD, VarAddr.getAddress(CGF));
+      I->getSecond().MappedParams->setVarAddr(CGF, VD, VarAddr.getAddress());
     }
     if (auto *DI = CGF.getDebugInfo())
       VoidPtr->setDebugLoc(DI->SourceLocToDebugLoc(VD->getLocation()));
@@ -1123,7 +1123,7 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
     LValue Base = CGF.MakeAddrLValue(AddrSizePair.first, VD->getType(),
                                      CGM.getContext().getDeclAlign(VD),
                                      AlignmentSource::Decl);
-    I->getSecond().MappedParams->setVarAddr(CGF, VD, Base.getAddress(CGF));
+    I->getSecond().MappedParams->setVarAddr(CGF, VD, Base.getAddress());
   }
   I->getSecond().MappedParams->apply(CGF);
 }
@@ -2226,7 +2226,7 @@ static llvm::Value *emitListToGlobalCopyFunction(
         Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
-    Address GlobAddr = GlobLVal.getAddress(CGF);
+    Address GlobAddr = GlobLVal.getAddress();
     GlobLVal.setAddress(Address(GlobAddr.emitRawPointer(CGF),
                                 CGF.ConvertTypeForMem(Private->getType()),
                                 GlobAddr.getAlignment()));
@@ -2327,7 +2327,7 @@ static llvm::Value *emitListToGlobalReduceFunction(
         Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
-    Address GlobAddr = GlobLVal.getAddress(CGF);
+    Address GlobAddr = GlobLVal.getAddress();
     CGF.EmitStoreOfScalar(GlobAddr.emitRawPointer(CGF), Elem,
                           /*Volatile=*/false, C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
@@ -2433,7 +2433,7 @@ static llvm::Value *emitGlobalToListCopyFunction(
         Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
-    Address GlobAddr = GlobLVal.getAddress(CGF);
+    Address GlobAddr = GlobLVal.getAddress();
     GlobLVal.setAddress(Address(GlobAddr.emitRawPointer(CGF),
                                 CGF.ConvertTypeForMem(Private->getType()),
                                 GlobAddr.getAlignment()));
@@ -2534,7 +2534,7 @@ static llvm::Value *emitGlobalToListReduceFunction(
         Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
         CGF.MakeNaturalAlignRawAddrLValue(BufferPtr, StaticTy), FD);
-    Address GlobAddr = GlobLVal.getAddress(CGF);
+    Address GlobAddr = GlobLVal.getAddress();
     CGF.EmitStoreOfScalar(GlobAddr.emitRawPointer(CGF), Elem,
                           /*Volatile=*/false, C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
@@ -3406,7 +3406,7 @@ void CGOpenMPRuntimeGPU::adjustTargetSpecificDataForLambdas(
       if (VD->getType().getCanonicalType()->isReferenceType())
         VDAddr = CGF.EmitLoadOfReferenceLValue(VDAddr,
                                                VD->getType().getCanonicalType())
-                     .getAddress(CGF);
+                     .getAddress();
       CGF.EmitStoreOfScalar(VDAddr.emitRawPointer(CGF), VarLVal);
     }
   }
@@ -3505,6 +3505,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX803:
       case CudaArch::GFX805:
       case CudaArch::GFX810:
+      case CudaArch::GFX9_GENERIC:
       case CudaArch::GFX900:
       case CudaArch::GFX902:
       case CudaArch::GFX904:
@@ -3516,10 +3517,12 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX940:
       case CudaArch::GFX941:
       case CudaArch::GFX942:
+      case CudaArch::GFX10_1_GENERIC:
       case CudaArch::GFX1010:
       case CudaArch::GFX1011:
       case CudaArch::GFX1012:
       case CudaArch::GFX1013:
+      case CudaArch::GFX10_3_GENERIC:
       case CudaArch::GFX1030:
       case CudaArch::GFX1031:
       case CudaArch::GFX1032:
@@ -3527,12 +3530,15 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX1034:
       case CudaArch::GFX1035:
       case CudaArch::GFX1036:
+      case CudaArch::GFX11_GENERIC:
       case CudaArch::GFX1100:
       case CudaArch::GFX1101:
       case CudaArch::GFX1102:
       case CudaArch::GFX1103:
       case CudaArch::GFX1150:
       case CudaArch::GFX1151:
+      case CudaArch::GFX1152:
+      case CudaArch::GFX12_GENERIC:
       case CudaArch::GFX1200:
       case CudaArch::GFX1201:
       case CudaArch::Generic:

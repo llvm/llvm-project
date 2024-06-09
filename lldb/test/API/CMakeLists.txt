@@ -1,4 +1,5 @@
 add_custom_target(lldb-api-test-deps)
+set_target_properties(lldb-api-test-deps PROPERTIES FOLDER "LLDB/Tests")
 add_dependencies(lldb-api-test-deps lldb-test-depends)
 
 add_lit_testsuites(LLDB-API

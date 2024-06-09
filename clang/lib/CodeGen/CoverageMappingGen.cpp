@@ -17,6 +17,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
@@ -190,6 +191,10 @@ public:
 
   bool isBranch() const { return FalseCount.has_value(); }
 
+  bool isMCDCBranch() const {
+    return std::holds_alternative<mcdc::BranchParameters>(MCDCParams);
+  }
+
   bool isMCDCDecision() const {
     return std::holds_alternative<mcdc::DecisionParameters>(MCDCParams);
   }
@@ -289,10 +294,36 @@ public:
     return SM.getLocForEndOfFile(SM.getFileID(Loc));
   }
 
-  /// Find out where the current file is included or macro is expanded.
-  SourceLocation getIncludeOrExpansionLoc(SourceLocation Loc) {
-    return Loc.isMacroID() ? SM.getImmediateExpansionRange(Loc).getBegin()
-                           : SM.getIncludeLoc(SM.getFileID(Loc));
+  /// Find out where a macro is expanded. If the immediate result is a
+  /// <scratch space>, keep looking until the result isn't. Return a pair of
+  /// \c SourceLocation. The first object is always the begin sloc of found
+  /// result. The second should be checked by the caller: if it has value, it's
+  /// the end sloc of the found result. Otherwise the while loop didn't get
+  /// executed, which means the location wasn't changed and the caller has to
+  /// learn the end sloc from somewhere else.
+  std::pair<SourceLocation, std::optional<SourceLocation>>
+  getNonScratchExpansionLoc(SourceLocation Loc) {
+    std::optional<SourceLocation> EndLoc = std::nullopt;
+    while (Loc.isMacroID() &&
+           SM.isWrittenInScratchSpace(SM.getSpellingLoc(Loc))) {
+      auto ExpansionRange = SM.getImmediateExpansionRange(Loc);
+      Loc = ExpansionRange.getBegin();
+      EndLoc = ExpansionRange.getEnd();
+    }
+    return std::make_pair(Loc, EndLoc);
+  }
+
+  /// Find out where the current file is included or macro is expanded. If
+  /// \c AcceptScratch is set to false, keep looking for expansions until the
+  /// found sloc is not a <scratch space>.
+  SourceLocation getIncludeOrExpansionLoc(SourceLocation Loc,
+                                          bool AcceptScratch = true) {
+    if (!Loc.isMacroID())
+      return SM.getIncludeLoc(SM.getFileID(Loc));
+    Loc = SM.getImmediateExpansionRange(Loc).getBegin();
+    if (AcceptScratch)
+      return Loc;
+    return getNonScratchExpansionLoc(Loc).first;
   }
 
   /// Return true if \c Loc is a location in a built-in macro.
@@ -336,16 +367,35 @@ public:
 
     llvm::SmallSet<FileID, 8> Visited;
     SmallVector<std::pair<SourceLocation, unsigned>, 8> FileLocs;
-    for (const auto &Region : SourceRegions) {
+    for (auto &Region : SourceRegions) {
       SourceLocation Loc = Region.getBeginLoc();
+
+      // Replace Region with its definition if it is in <scratch space>.
+      auto NonScratchExpansionLoc = getNonScratchExpansionLoc(Loc);
+      auto EndLoc = NonScratchExpansionLoc.second;
+      if (EndLoc.has_value()) {
+        Loc = NonScratchExpansionLoc.first;
+        Region.setStartLoc(Loc);
+        Region.setEndLoc(EndLoc.value());
+      }
+
+      // Replace Loc with FileLoc if it is expanded with system headers.
+      if (!SystemHeadersCoverage && SM.isInSystemMacro(Loc)) {
+        auto BeginLoc = SM.getSpellingLoc(Loc);
+        auto EndLoc = SM.getSpellingLoc(Region.getEndLoc());
+        if (SM.isWrittenInSameFile(BeginLoc, EndLoc)) {
+          Loc = SM.getFileLoc(Loc);
+          Region.setStartLoc(Loc);
+          Region.setEndLoc(SM.getFileLoc(Region.getEndLoc()));
+        }
+      }
+
       FileID File = SM.getFileID(Loc);
       if (!Visited.insert(File).second)
         continue;
 
-      // Do not map FileID's associated with system headers unless collecting
-      // coverage from system headers is explicitly enabled.
-      if (!SystemHeadersCoverage && SM.isInSystemHeader(SM.getSpellingLoc(Loc)))
-        continue;
+      assert(SystemHeadersCoverage ||
+             !SM.isInSystemHeader(SM.getSpellingLoc(Loc)));
 
       unsigned Depth = 0;
       for (SourceLocation Parent = getIncludeOrExpansionLoc(Loc);
@@ -461,13 +511,19 @@ public:
       // Ignore regions from system headers unless collecting coverage from
       // system headers is explicitly enabled.
       if (!SystemHeadersCoverage &&
-          SM.isInSystemHeader(SM.getSpellingLoc(LocStart)))
+          SM.isInSystemHeader(SM.getSpellingLoc(LocStart))) {
+        assert(!Region.isMCDCBranch() && !Region.isMCDCDecision() &&
+               "Don't suppress the condition in system headers");
         continue;
+      }
 
       auto CovFileID = getCoverageFileID(LocStart);
       // Ignore regions that don't have a file, such as builtin macros.
-      if (!CovFileID)
+      if (!CovFileID) {
+        assert(!Region.isMCDCBranch() && !Region.isMCDCDecision() &&
+               "Don't suppress the condition in non-file regions");
         continue;
+      }
 
       SourceLocation LocEnd = Region.getEndLoc();
       assert(SM.isWrittenInSameFile(LocStart, LocEnd) &&
@@ -477,8 +533,11 @@ public:
       // This not only suppresses redundant regions, but sometimes prevents
       // creating regions with wrong counters if, for example, a statement's
       // body ends at the end of a nested macro.
-      if (Filter.count(std::make_pair(LocStart, LocEnd)))
+      if (Filter.count(std::make_pair(LocStart, LocEnd))) {
+        assert(!Region.isMCDCBranch() && !Region.isMCDCDecision() &&
+               "Don't suppress the condition");
         continue;
+      }
 
       // Find the spelling locations for the mapping region.
       SpellingRegion SR{SM, LocStart, LocEnd};
@@ -514,7 +573,7 @@ public:
     SourceRegionFilter Filter;
     for (const auto &FM : FileIDMapping) {
       SourceLocation ExpandedLoc = FM.second.second;
-      SourceLocation ParentLoc = getIncludeOrExpansionLoc(ExpandedLoc);
+      SourceLocation ParentLoc = getIncludeOrExpansionLoc(ExpandedLoc, false);
       if (ParentLoc.isInvalid())
         continue;
 
@@ -818,6 +877,10 @@ struct CounterCoverageMappingBuilder
   /// A stack of currently live regions.
   llvm::SmallVector<SourceMappingRegion> RegionStack;
 
+  /// Set if the Expr should be handled as a leaf even if it is kind of binary
+  /// logical ops (&&, ||).
+  llvm::DenseSet<const Stmt *> LeafExprSet;
+
   /// An object to manage MCDC regions.
   MCDCCoverageBuilder MCDCBuilder;
 
@@ -1040,7 +1103,10 @@ struct CounterCoverageMappingBuilder
     // region onto RegionStack but immediately pop it (which adds it to the
     // function's SourceRegions) because it doesn't apply to any other source
     // code other than the Condition.
-    if (CodeGenFunction::isInstrumentedCondition(C)) {
+    // With !SystemHeadersCoverage, binary logical ops in system headers may be
+    // treated as instrumentable conditions.
+    if (CodeGenFunction::isInstrumentedCondition(C) ||
+        LeafExprSet.count(CodeGenFunction::stripCond(C))) {
       mcdc::Parameters BranchParams;
       mcdc::ConditionID ID = MCDCBuilder.getCondID(C);
       if (ID >= 0)
@@ -2070,7 +2136,20 @@ struct CounterCoverageMappingBuilder
     createDecisionRegion(E, DecisionParams);
   }
 
+  /// Check if E belongs to system headers.
+  bool isExprInSystemHeader(const BinaryOperator *E) const {
+    return (!SystemHeadersCoverage &&
+            SM.isInSystemHeader(SM.getSpellingLoc(E->getOperatorLoc())) &&
+            SM.isInSystemHeader(SM.getSpellingLoc(E->getBeginLoc())) &&
+            SM.isInSystemHeader(SM.getSpellingLoc(E->getEndLoc())));
+  }
+
   void VisitBinLAnd(const BinaryOperator *E) {
+    if (isExprInSystemHeader(E)) {
+      LeafExprSet.insert(E);
+      return;
+    }
+
     bool IsRootNode = MCDCBuilder.isIdle();
 
     // Keep track of Binary Operator and assign MCDC condition IDs.
@@ -2125,6 +2204,11 @@ struct CounterCoverageMappingBuilder
   }
 
   void VisitBinLOr(const BinaryOperator *E) {
+    if (isExprInSystemHeader(E)) {
+      LeafExprSet.insert(E);
+      return;
+    }
+
     bool IsRootNode = MCDCBuilder.isIdle();
 
     // Keep track of Binary Operator and assign MCDC condition IDs.
@@ -2187,7 +2271,8 @@ struct CounterCoverageMappingBuilder
   }
 
   void VisitOpaqueValueExpr(const OpaqueValueExpr* OVE) {
-    Visit(OVE->getSourceExpr());
+    if (OVE->isUnique())
+      Visit(OVE->getSourceExpr());
   }
 };
 

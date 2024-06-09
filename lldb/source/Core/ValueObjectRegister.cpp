@@ -115,17 +115,13 @@ bool ValueObjectRegisterSet::UpdateValue() {
   return m_error.Success();
 }
 
-ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(
-    size_t idx, bool synthetic_array_member, int32_t synthetic_index) {
-  ValueObject *valobj = nullptr;
+ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(size_t idx) {
   if (m_reg_ctx_sp && m_reg_set) {
-    uint32_t num_children = GetNumChildrenIgnoringErrors();
-    if (idx < num_children)
-      valobj = new ValueObjectRegister(
-          *this, m_reg_ctx_sp,
-          m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[idx]));
+    return new ValueObjectRegister(
+        *this, m_reg_ctx_sp,
+        m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[idx]));
   }
-  return valobj;
+  return nullptr;
 }
 
 lldb::ValueObjectSP

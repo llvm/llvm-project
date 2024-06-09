@@ -33,12 +33,12 @@ public:
   from_timespec(timespec ts, bool realtime) {
     using namespace time_units;
     if (ts.tv_nsec < 0 || ts.tv_nsec >= 1_s_ns)
-      return cpp::unexpected<Error>(Error::Invalid);
+      return cpp::unexpected(Error::Invalid);
 
     // POSIX allows tv_sec to be negative. We interpret this as an expired
     // timeout.
     if (ts.tv_sec < 0)
-      return cpp::unexpected<Error>(Error::BeforeEpoch);
+      return cpp::unexpected(Error::BeforeEpoch);
 
     return AbsTimeout{ts, realtime};
   }

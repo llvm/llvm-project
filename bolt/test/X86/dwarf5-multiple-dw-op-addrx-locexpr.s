@@ -21,7 +21,7 @@
 # CHECK: DW_AT_decl_line [DW_FORM_data1]
 # CHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x2, DW_OP_piece 0x4, DW_OP_addrx 0x3, DW_OP_piece 0x4)
 
-# This test checks that we update DW_AT_location [DW_FORM_exprloc] with multiple DW_OP_addrx.
+## This test checks that we update DW_AT_location [DW_FORM_exprloc] with multiple DW_OP_addrx.
 
 # struct pair {int i; int j; };
 # static pair p;

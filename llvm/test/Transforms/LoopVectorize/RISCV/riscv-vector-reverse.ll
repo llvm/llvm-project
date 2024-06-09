@@ -54,7 +54,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
-; CHECK:       ph:
+; CHECK:       ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK:       vector.ph:
@@ -195,7 +195,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
-; CHECK:       ph:
+; CHECK:       ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK:       vector.ph:
