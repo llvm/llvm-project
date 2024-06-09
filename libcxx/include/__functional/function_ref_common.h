@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__type_traits/invoke.h>
+#include <__type_traits/is_function.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/remove_pointer.h>
 #include <__utility/nontype.h>
