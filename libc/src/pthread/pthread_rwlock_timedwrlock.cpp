@@ -22,6 +22,8 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(int, pthread_rwlock_timedwrlock,
                    (pthread_rwlock_t *__restrict rwlock,
                     const struct timespec *__restrict abstime)) {
+  if (!rwlock)
+    return EINVAL;
   RwLock *rw = reinterpret_cast<RwLock *>(rwlock);
   LIBC_ASSERT(abstime && "timedwrlock called with a null timeout");
   auto timeout =

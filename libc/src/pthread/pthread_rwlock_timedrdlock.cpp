@@ -28,6 +28,8 @@ static_assert(
 LLVM_LIBC_FUNCTION(int, pthread_rwlock_timedrdlock,
                    (pthread_rwlock_t * rwlock,
                     const struct timespec *abstime)) {
+  if (!rwlock)
+    return EINVAL;
   RwLock *rw = reinterpret_cast<RwLock *>(rwlock);
   LIBC_ASSERT(abstime && "timedrdlock called with a null timeout");
   auto timeout =

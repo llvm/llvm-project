@@ -17,6 +17,8 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_rwlock_unlock, (pthread_rwlock_t * rwlock)) {
+  if (!rwlock)
+    return EINVAL;
   auto *rw = reinterpret_cast<RwLock *>(rwlock);
   return static_cast<int>(rw->unlock());
 }

@@ -23,6 +23,8 @@ static_assert(
     "as the internal rwlock type.");
 
 LLVM_LIBC_FUNCTION(int, pthread_rwlock_tryrdlock, (pthread_rwlock_t * rwlock)) {
+  if (!rwlock)
+    return EINVAL;
   RwLock *rw = reinterpret_cast<RwLock *>(rwlock);
   return static_cast<int>(rw->try_read_lock());
 }

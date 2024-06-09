@@ -38,8 +38,19 @@ add_integration_test(
     libc.src.pthread.pthread_rwlock_unlock
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_rwlockattr_init
+    libc.src.pthread.pthread_rwlockattr_destroy
+    libc.src.pthread.pthread_rwlockattr_setpshared
+    libc.src.pthread.pthread_rwlockattr_setkind_np
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
     libc.src.time.clock_gettime
+    libc.src.sys.random.getrandom
     libc.src.unistd.fork
+    libc.src.sys.wait.waitpid
+    libc.src.stdlib.exit
+    libc.src.__support.CPP.atomic
+    libc.src.__support.threads.sleep
 )
 
 add_integration_test(

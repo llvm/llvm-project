@@ -17,6 +17,8 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_rwlock_destroy, (pthread_rwlock_t * rwlock)) {
+  if (!rwlock)
+    return EINVAL;
   auto *rw = reinterpret_cast<RwLock *>(rwlock);
   RwLock::LockResult res = rw->check_for_destroy();
 

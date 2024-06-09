@@ -9,6 +9,7 @@
 #include "src/pthread/pthread_rwlock_init.h"
 
 #include "src/__support/common.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/threads/linux/rwlock.h"
 
 #include <errno.h>
@@ -33,6 +34,8 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlock_init,
       /*pshared=*/PTHREAD_PROCESS_PRIVATE,
       /*pref*/ PTHREAD_RWLOCK_PREFER_READER_NP,
   };
+  // POSIX does not specify this check, so we add an assertion to catch it.
+  LIBC_ASSERT(rwlock && "rwlock is null");
   if (attr)
     rwlockattr = *attr;
 
