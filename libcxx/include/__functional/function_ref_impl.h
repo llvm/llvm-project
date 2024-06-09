@@ -8,7 +8,6 @@
 
 #include <__assert>
 #include <__config>
-#include <__functional/function_ref_common.h>
 #include <__functional/invoke.h>
 #include <__memory/addressof.h>
 #include <__type_traits/invoke.h>
