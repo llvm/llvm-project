@@ -279,6 +279,7 @@ static void randomized_thread_operation(SharedData *data) {
     for (int i = 0; i < 10; ++i) {
       LIBC_NAMESPACE::sleep_briefly();
     }
+    ASSERT_EQ(data->reader_count, 0);
     data->writer_flag = false;
     data->total_writer_count.fetch_add(1);
   };
