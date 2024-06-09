@@ -70,7 +70,6 @@ private:
   static CallOnceFlag once_flag;
   static VDSOArray global_cache;
   static void initialize_vdso_global_cache();
-  friend void *get_symbol(VDSOSym sym);
 
 public:
   template <typename T> LIBC_INLINE T get() {
