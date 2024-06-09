@@ -1834,6 +1834,9 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   std::optional<PrimType> RT = classify(RHS->getType());
   std::optional<PrimType> ResultT = classify(E->getType());
 
+  if (!Ctx.getLangOpts().CPlusPlus14)
+    return this->visit(RHS) && this->visit(LHS) && this->emitError(E);
+
   if (!LT || !RT || !ResultT || !LHSComputationT)
     return false;
 
