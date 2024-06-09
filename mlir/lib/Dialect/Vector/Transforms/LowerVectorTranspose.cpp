@@ -450,6 +450,59 @@ public:
   }
 };
 
+// Suppose the permutation width is defined as the last index in the permutation
+// array that is not equal to its index. This pattern is applied to transpose
+// operations where the input vector has a shape with at most one non-unit
+// dimension up to the permutation width. The pattern replaces the transpose
+// operation with a shape cast operation.
+// For example:
+//  %0 = vector.transpose %1, [1, 0, 2] : vector<4x1x1xi32> to vector<1x4x1xi32>
+//  is replaced by
+//  %0 = vector.shape_cast %1 : vector<4x1x1xi32> to vector<1x4x1xi32>
+//  given the permutation width is 2.
+class TransposeWithUnitDimToShapeCast
+    : public OpRewritePattern<vector::TransposeOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  TransposeWithUnitDimToShapeCast(MLIRContext *context,
+                                  PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::TransposeOp>(context, benefit) {}
+
+  LogicalResult matchAndRewrite(vector::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    Value input = op.getVector();
+    VectorType inputType = op.getSourceVectorType();
+    if (inputType.isScalable())
+      return rewriter.notifyMatchFailure(
+          op, "This lowering does not support scalable vectors");
+    VectorType resType = op.getResultVectorType();
+
+    ArrayRef<int64_t> transp = op.getPermutation();
+
+    // Get the permutation width.
+    int64_t permWidth = 1;
+    for (auto &&[idx, val] : llvm::enumerate(transp)) {
+      if (static_cast<int64_t>(idx) != val)
+        permWidth = idx + 1;
+    }
+
+    // Check the no. of non unit dim in the input shape upto permutation width
+    // is not greater than one.
+    auto inputShape = inputType.getShape();
+
+    int64_t countNonUnitDims = 0;
+    for (int i = 0; i < permWidth; i++) {
+      if (inputShape[i] != 1)
+        countNonUnitDims++;
+      if (countNonUnitDims > 1)
+        return failure();
+    }
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, resType, input);
+    return success();
+  }
+};
+
 /// Rewrite a 2-D vector.transpose as a sequence of shuffle ops.
 /// If the strategy is Shuffle1D, it will be lowered to:
 ///   vector.shape_cast 2D -> 1D
@@ -522,8 +575,9 @@ private:
 void mlir::vector::populateVectorTransposeLoweringPatterns(
     RewritePatternSet &patterns, VectorTransformsOptions options,
     PatternBenefit benefit) {
-  patterns.add<Transpose2DWithUnitDimToShapeCast>(patterns.getContext(),
-                                                  benefit);
+  patterns
+      .add<Transpose2DWithUnitDimToShapeCast, TransposeWithUnitDimToShapeCast>(
+          patterns.getContext(), benefit);
   patterns.add<TransposeOpLowering, TransposeOp2DToShuffleLowering>(
       options, patterns.getContext(), benefit);
 }
