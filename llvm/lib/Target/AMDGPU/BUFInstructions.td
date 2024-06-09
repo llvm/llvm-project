@@ -1419,27 +1419,21 @@ let OtherPredicates = [HasPackedD16VMem] in {
   defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16, v4i16, "BUFFER_LOAD_FORMAT_D16_XYZW">;
 } // End HasPackedD16VMem.
 
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, f32, "BUFFER_LOAD_DWORD">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, i32, "BUFFER_LOAD_DWORD">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v2i16, "BUFFER_LOAD_DWORD">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v2f16, "BUFFER_LOAD_DWORD">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v2bf16, "BUFFER_LOAD_DWORD">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v2f32, "BUFFER_LOAD_DWORDX2">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v2i32, "BUFFER_LOAD_DWORDX2">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v4i16, "BUFFER_LOAD_DWORDX2">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v4f16, "BUFFER_LOAD_DWORDX2">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, i64, "BUFFER_LOAD_DWORDX2">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, f64, "BUFFER_LOAD_DWORDX2">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v4bf16, "BUFFER_LOAD_DWORDX2">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v3f32, "BUFFER_LOAD_DWORDX3">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v3i32, "BUFFER_LOAD_DWORDX3">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v4f32, "BUFFER_LOAD_DWORDX4">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v4i32, "BUFFER_LOAD_DWORDX4">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v2i64, "BUFFER_LOAD_DWORDX4">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v2f64, "BUFFER_LOAD_DWORDX4">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v8i16, "BUFFER_LOAD_DWORDX4">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v8f16, "BUFFER_LOAD_DWORDX4">;
-defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, v8bf16, "BUFFER_LOAD_DWORDX4">;
+foreach vt = Reg32Types.types in {
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, vt, "BUFFER_LOAD_DWORD">;
+}
+
+foreach vt = Reg64Types.types in {
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, vt, "BUFFER_LOAD_DWORDX2">;
+}
+
+foreach vt = Reg96Types.types in {
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, vt, "BUFFER_LOAD_DWORDX3">;
+}
+
+foreach vt = Reg128Types.types in {
+defm : MUBUF_LoadIntrinsicPat<SIbuffer_load, vt, "BUFFER_LOAD_DWORDX4">;
+}
 
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_byte, i32, "BUFFER_LOAD_SBYTE">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_short, i32, "BUFFER_LOAD_SSHORT">;
@@ -1530,27 +1524,21 @@ let OtherPredicates = [HasPackedD16VMem] in {
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, v4i16, "BUFFER_STORE_FORMAT_D16_XYZW">;
 } // End HasPackedD16VMem.
 
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, f32, "BUFFER_STORE_DWORD">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, i32, "BUFFER_STORE_DWORD">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v2i16, "BUFFER_STORE_DWORD">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v2f16, "BUFFER_STORE_DWORD">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v2bf16, "BUFFER_STORE_DWORD">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v2f32, "BUFFER_STORE_DWORDX2">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v2i32, "BUFFER_STORE_DWORDX2">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, i64, "BUFFER_STORE_DWORDX2">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, f64, "BUFFER_STORE_DWORDX2">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v4i16, "BUFFER_STORE_DWORDX2">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v4f16, "BUFFER_STORE_DWORDX2">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v4bf16, "BUFFER_STORE_DWORDX2">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v3f32, "BUFFER_STORE_DWORDX3">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v3i32, "BUFFER_STORE_DWORDX3">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v4f32, "BUFFER_STORE_DWORDX4">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v4i32, "BUFFER_STORE_DWORDX4">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v2i64, "BUFFER_STORE_DWORDX4">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v2f64, "BUFFER_STORE_DWORDX4">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v8f16, "BUFFER_STORE_DWORDX4">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v8i16, "BUFFER_STORE_DWORDX4">;
-defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, v8bf16, "BUFFER_STORE_DWORDX4">;
+foreach vt = Reg32Types.types in {
+defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, vt, "BUFFER_STORE_DWORD">;
+}
+
+foreach vt = Reg64Types.types in {
+defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, vt, "BUFFER_STORE_DWORDX2">;
+}
+
+foreach vt = Reg96Types.types in {
+defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, vt, "BUFFER_STORE_DWORDX3">;
+}
+
+foreach vt = Reg128Types.types in {
+defm : MUBUF_StoreIntrinsicPat<SIbuffer_store, vt, "BUFFER_STORE_DWORDX4">;
+}
 
 defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_byte, i32, "BUFFER_STORE_BYTE">;
 defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_short, i32, "BUFFER_STORE_SHORT">;
