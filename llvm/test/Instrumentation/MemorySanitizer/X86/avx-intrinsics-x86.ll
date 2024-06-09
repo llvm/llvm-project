@@ -389,21 +389,22 @@ define <8 x float> @test_x86_avx_dp_ps_256(<8 x float> %a0, <8 x float> %a1) #0 
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
-; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
-; CHECK-NEXT:    unreachable
-; CHECK:       6:
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.dp.ps.256(<8 x float> [[A0:%.*]], <8 x float> [[A1:%.*]], i8 7)
-; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select <8 x i1> <i1 false, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i32> [[TMP3]], <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP4]])
+; CHECK-NEXT:    [[_MSDPP:%.*]] = icmp eq i32 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[_MSDPP]], <8 x i1> zeroinitializer, <8 x i1> <i1 false, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true>, <8 x i32> [[TMP3]], <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP7]])
+; CHECK-NEXT:    [[_MSDPP1:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[_MSDPP1]], <8 x i1> zeroinitializer, <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP10:%.*]] = or <8 x i1> [[TMP6]], [[TMP9]]
+; CHECK-NEXT:    [[_MSDPP2:%.*]] = sext <8 x i1> [[TMP10]] to <8 x i32>
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.dp.ps.256(<8 x float> [[A0:%.*]], <8 x float> [[A1:%.*]], i8 -18)
+; CHECK-NEXT:    store <8 x i32> [[_MSDPP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
-  %res = call <8 x float> @llvm.x86.avx.dp.ps.256(<8 x float> %a0, <8 x float> %a1, i8 7) ; <<8 x float>> [#uses=1]
+  %res = call <8 x float> @llvm.x86.avx.dp.ps.256(<8 x float> %a0, <8 x float> %a1, i8 -18) ; <<8 x float>> [#uses=1]
   ret <8 x float> %res
 }
 declare <8 x float> @llvm.x86.avx.dp.ps.256(<8 x float>, <8 x float>, i8) nounwind readnone
@@ -1355,7 +1356,7 @@ define void @movnt_dq(ptr %p, <2 x i64> %a1) nounwind #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    store <4 x i64> [[_MSPROP1]], ptr [[TMP7]], align 32
-; CHECK-NEXT:    store <4 x i64> [[A3]], ptr [[P]], align 32, !nontemporal !1
+; CHECK-NEXT:    store <4 x i64> [[A3]], ptr [[P]], align 32, !nontemporal [[META1:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %a2 = add <2 x i64> %a1, <i64 1, i64 1>
@@ -1380,7 +1381,7 @@ define void @movnt_ps(ptr %p, <8 x float> %a) nounwind #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    store <8 x i32> [[TMP2]], ptr [[TMP7]], align 32
-; CHECK-NEXT:    store <8 x float> [[A:%.*]], ptr [[P]], align 32, !nontemporal !1
+; CHECK-NEXT:    store <8 x float> [[A:%.*]], ptr [[P]], align 32, !nontemporal [[META1]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.x86.avx.movnt.ps.256(ptr %p, <8 x float> %a) nounwind
@@ -1406,7 +1407,7 @@ define void @movnt_pd(ptr %p, <4 x double> %a1) nounwind #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    store <4 x i64> [[_MSPROP]], ptr [[TMP7]], align 32
-; CHECK-NEXT:    store <4 x double> [[A2]], ptr [[P]], align 32, !nontemporal !1
+; CHECK-NEXT:    store <4 x double> [[A2]], ptr [[P]], align 32, !nontemporal [[META1]]
 ; CHECK-NEXT:    ret void
 ;
   %a2 = fadd <4 x double> %a1, <double 0x0, double 0x0, double 0x0, double 0x0>
