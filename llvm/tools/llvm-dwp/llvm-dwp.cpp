@@ -190,7 +190,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
 
   if (DWOFilenames.empty()) {
     WithColor::defaultWarningHandler(
-        make_error<DWPError>("no dwo files found"));
+        make_error<DWPError>("executable file does not contain any references to dwo files"));
     return 0;
   }
 
