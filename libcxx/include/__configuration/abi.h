@@ -124,6 +124,8 @@
 // This setting disables the addition of such artificial padding, leading to a more optimal
 // representation for several types.
 #  define _LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING
+// Use __tombstone_traits to optimize the memory layout of std::optional.
+#  define _LIBCPP_ABI_OPTIONAL_USE_TOMBSTONE_TRAITS
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
@@ -141,6 +143,9 @@
 #  if defined(__FreeBSD__) && __FreeBSD__ < 14
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #  endif
+
+// TODO: This shouldn't be in the final commit - this just to test the changes across all the different configurations
+#  define _LIBCPP_ABI_OPTIONAL_USE_TOMBSTONE_TRAITS
 #endif
 
 // We had some bugs where we use [[no_unique_address]] together with construct_at,
