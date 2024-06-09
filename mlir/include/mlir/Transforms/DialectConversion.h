@@ -689,7 +689,7 @@ public:
   ///
   /// Optionally, a special SignatureConversion can be specified for the entry
   /// block. This is because the types of the entry block arguments are often
-  /// tied semantically to details on the operation.
+  /// tied semantically to the operation.
   FailureOr<Block *> convertRegionTypes(
       Region *region, const TypeConverter &converter,
       TypeConverter::SignatureConversion *entryConversion = nullptr);
