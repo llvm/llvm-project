@@ -34,24 +34,10 @@ unsigned long getauxval(unsigned long id);
 
 namespace vdso {
 
+Symbol::VDSOArray Symbol::global_cache{};
+CallOnceFlag Symbol::once_flag = callonce_impl::NOT_CALLED;
+
 namespace {
-
-// This class is an internal helper for symbol <-> index conversion and
-// improve the readability of the code.
-// We keep this class internal on purpose to avoid users from implicitly
-// converting between size_t and VDSOSym.
-class Symbol {
-  VDSOSym sym;
-
-public:
-  static constexpr size_t COUNT = static_cast<size_t>(VDSOSym::VDSOSymCount);
-  constexpr Symbol(VDSOSym sym) : sym(sym) {}
-  constexpr Symbol(size_t idx) : sym(static_cast<VDSOSym>(idx)) {}
-  constexpr cpp::string_view name() const { return symbol_name(sym); }
-  constexpr cpp::string_view version() const { return symbol_version(sym); }
-  constexpr operator size_t() const { return static_cast<size_t>(sym); }
-};
-
 // See https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/symverdefs.html
 struct Verdaux {
   ElfW(Word) vda_name; /* Version or dependency names */
@@ -101,10 +87,6 @@ cpp::string_view find_version(Verdef *verdef, ElfW(Half) * versym,
   return "";
 }
 
-using VDSOArray = cpp::array<void *, Symbol::COUNT>;
-
-VDSOArray symbol_table;
-
 size_t shdr_get_symbol_count(ElfW(Shdr) * vdso_shdr, size_t e_shnum) {
   // iterate all sections until we locate the dynamic symbol section
   for (size_t i = 0; i < e_shnum; ++i) {
@@ -123,11 +105,14 @@ struct VDSOSymbolTable {
   ElfW(Half) * versym;
   Verdef *verdef;
 
-  void populate_symbol_cache(size_t symbol_count, ElfW(Addr) vdso_addr) {
+  void populate_symbol_cache(Symbol::VDSOArray &symbol_table,
+                             size_t symbol_count, ElfW(Addr) vdso_addr) {
     for (size_t i = 0, e = symbol_table.size(); i < e; ++i) {
       Symbol sym = i;
       cpp::string_view name = sym.name();
       cpp::string_view version = sym.version();
+      if (name.empty())
+        return;
       for (size_t j = 0; j < symbol_count; ++j) {
         if (name == strtab + symtab[j].st_name) {
           // we find a symbol with desired name
@@ -200,10 +185,11 @@ struct PhdrInfo {
     return VDSOSymbolTable{strtab, symtab, versym, verdef};
   }
 };
+} // namespace
 
-void initialize_vdso_global_cache() {
+void Symbol::initialize_vdso_global_cache() {
   // first clear the symbol table
-  for (auto &i : symbol_table)
+  for (auto &i : global_cache)
     i = nullptr;
 
   // get the address of the VDSO, protect errno since getauxval may change
@@ -249,20 +235,8 @@ void initialize_vdso_global_cache() {
     return;
 
   // finally, populate the global symbol table cache
-  vdso_symbol_table->populate_symbol_cache(symbol_count, phdr_info->vdso_addr);
-}
-} // namespace
-
-void *get_symbol(VDSOSym sym) {
-  // if sym is invalid, return nullptr
-  Symbol symbol(sym);
-  if (symbol >= symbol_table.size())
-    return nullptr;
-
-  static FutexWordType once_flag = 0;
-  callonce(reinterpret_cast<CallOnceFlag *>(&once_flag),
-           initialize_vdso_global_cache);
-  return symbol_table[symbol];
+  vdso_symbol_table->populate_symbol_cache(global_cache, symbol_count,
+                                           phdr_info->vdso_addr);
 }
 } // namespace vdso
 } // namespace LIBC_NAMESPACE

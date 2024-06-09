@@ -10,23 +10,6 @@
 #include "src/__support/CPP/string_view.h"
 namespace LIBC_NAMESPACE {
 namespace vdso {
-// macro definitions
-#define LIBC_VDSO_HAS_RT_SIGRETURN
-#define LIBC_VDSO_HAS_GETTIMEOFDAY
-#define LIBC_VDSO_HAS_CLOCK_GETTIME
-#define LIBC_VDSO_HAS_CLOCK_GETRES
-
-// list of VDSO symbols
-// following the order in
-// https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/arm64/kernel/vdso/vdso.lds.S
-enum class VDSOSym {
-  RTSigReturn,
-  GetTimeOfDay,
-  ClockGetTime,
-  ClockGetRes,
-  VDSOSymCount
-};
-
 // translate VDSOSym to symbol names
 LIBC_INLINE constexpr cpp::string_view symbol_name(VDSOSym sym) {
   switch (sym) {

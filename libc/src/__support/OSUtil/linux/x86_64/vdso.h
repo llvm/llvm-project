@@ -10,25 +10,6 @@
 #include "src/__support/CPP/string_view.h"
 namespace LIBC_NAMESPACE {
 namespace vdso {
-// macro definitions
-// following the order in
-// https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/x86/entry/vdso/vdso.lds.S
-#define LIBC_VDSO_HAS_CLOCK_GETTIME
-#define LIBC_VDSO_HAS_GETTIMEOFDAY
-#define LIBC_VDSO_HAS_GETCPU
-#define LIBC_VDSO_HAS_TIME
-#define LIBC_VDSO_HAS_CLOCK_GETRES
-
-// list of VDSO symbols
-enum class VDSOSym {
-  ClockGetTime,
-  GetTimeOfDay,
-  GetCpu,
-  Time,
-  ClockGetRes,
-  VDSOSymCount
-};
-
 // translate VDSOSym to symbol names
 // On x86, there are symbols defined without the __vdso_ prefix, however,
 // it is suggested that one should use the __vdso_ prefix.
