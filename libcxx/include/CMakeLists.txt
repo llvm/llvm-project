@@ -250,6 +250,7 @@ set(files
   __chrono/convert_to_tm.h
   __chrono/day.h
   __chrono/duration.h
+  __chrono/exception.h
   __chrono/file_clock.h
   __chrono/formatter.h
   __chrono/hh_mm_ss.h
