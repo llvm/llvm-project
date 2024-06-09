@@ -250,6 +250,15 @@ template <size_t I>
 template <size_t I>
   inline constexpr in_place_index_t<I> in_place_index{};
 
+// nontype argument tag
+template<auto V>
+  struct nontype_t {
+    explicit nontype_t() = default;
+  };
+template<auto V> constexpr nontype_t<V> nontype{};
+
+template<auto V> constexpr nontype_t<V> nontype{};
+
 // [utility.underlying], to_underlying
 template <class T>
     constexpr underlying_type_t<T> to_underlying( T value ) noexcept; // C++23
@@ -292,6 +301,7 @@ template <class T>
 #  endif
 
 #  if _LIBCPP_STD_VER >= 26
+#    include <__utility/nontype.h>
 #    include <__variant/monostate.h>
 #  endif
 

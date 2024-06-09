@@ -1425,6 +1425,7 @@ module std [system] {
     }
     module default_searcher             { header "__functional/default_searcher.h" }
     module function                     { header "__functional/function.h" }
+    module function_ref                 { header "__functional/function_ref.h" }
     module hash                         { header "__functional/hash.h" }
     module identity                     { header "__functional/identity.h" }
     module invoke                       { header "__functional/invoke.h" }
@@ -2186,6 +2187,7 @@ module std [system] {
     module lazy_synth_three_way_comparator { header "__utility/lazy_synth_three_way_comparator.h" }
     module move                            { header "__utility/move.h" }
     module no_destroy                      { header "__utility/no_destroy.h" }
+    module nontype                         { header "__utility/nontype.h" }
     module pair                            {
       header "__utility/pair.h"
       export std.utility.piecewise_construct
