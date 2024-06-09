@@ -542,7 +542,7 @@ DEFAULT_FEATURES += [
 ]
 
 
-# Detect whether dbx debugger (available on AIX ano others) is on the system.
+# Detect whether dbx debugger (available on AIX and others) is on the system.
 def check_dbx(cfg):
     dbx_path = shutil.which("dbx")
     if dbx_path is None:
