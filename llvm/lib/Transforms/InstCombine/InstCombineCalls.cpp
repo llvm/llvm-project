@@ -2624,10 +2624,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
       Value *Cmp = Builder.CreateICmp(
           ICmpInst::ICMP_NE, ExtSrc, Constant::getNullValue(ExtSrc->getType()));
-      SelectInst *Select = SelectInst::Create(
-          Cmp, ConstantFP::get(Type::getFloatTy(II->getContext()), 2.0),
-          ConstantFP::get(Type::getFloatTy(II->getContext()), 1.0));
-      Builder.Insert(Select);
+      Value *Select =
+          Builder.CreateSelect(Cmp, ConstantFP::get(II->getType(), 2.0),
+                               ConstantFP::get(II->getType(), 1.0));
       return BinaryOperator::CreateFMul(Src, Select);
     }
 
