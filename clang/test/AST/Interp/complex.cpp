@@ -117,6 +117,9 @@ static_assert(__imag(Doubles[3]) == 0.0, "");
 
 static_assert(~(0.5 + 1.5j) == (0.5 + -1.5j), "");
 
+static_assert(__extension__ __imag(A) == 0, "");
+static_assert(__imag(__extension__ A) == 0, "");
+
 void func(void) {
   __complex__ int arr;
   _Complex int result;
