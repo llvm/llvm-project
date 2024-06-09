@@ -14,7 +14,7 @@
 define double @unsafe_fp_math_default0(double %x) {
 ; SAFE:      divsd
 ; UNSAFE:    mulsd
-  %div = fdiv double %x, 2.0
+  %div = fdiv double %x, 3.0
   ret double %div
 }
 
@@ -22,7 +22,7 @@ define double @unsafe_fp_math_default0(double %x) {
 define double @unsafe_fp_math_off(double %x) #0 {
 ; SAFE:      divsd
 ; UNSAFE:    divsd
-  %div = fdiv double %x, 2.0
+  %div = fdiv double %x, 3.0
   ret double %div
 }
 
@@ -31,7 +31,7 @@ define double @unsafe_fp_math_default1(double %x) {
 ; With unsafe math enabled, can change this div to a mul.
 ; SAFE:      divsd
 ; UNSAFE:    mulsd
-  %div = fdiv double %x, 2.0
+  %div = fdiv double %x, 3.0
   ret double %div
 }
 
@@ -39,7 +39,7 @@ define double @unsafe_fp_math_default1(double %x) {
 define double @unsafe_fp_math_on(double %x) #1 {
 ; SAFE:      mulsd
 ; UNSAFE:    mulsd
-  %div = fdiv double %x, 2.0
+  %div = fdiv double %x, 3.0
   ret double %div
 }
 
@@ -48,7 +48,7 @@ define double @unsafe_fp_math_default2(double %x) {
 ; With unsafe math enabled, can change this div to a mul.
 ; SAFE:      divsd
 ; UNSAFE:    mulsd
-  %div = fdiv double %x, 2.0
+  %div = fdiv double %x, 3.0
   ret double %div
 }
 

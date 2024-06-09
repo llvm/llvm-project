@@ -12,7 +12,6 @@
 
 #include <__algorithm/replace.h>
 #include <__algorithm/replace_copy.h>
-#include <__availability>
 #include <__config>
 #include <__functional/unary_function.h>
 #include <__fwd/functional.h>

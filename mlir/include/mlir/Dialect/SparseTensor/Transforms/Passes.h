@@ -66,12 +66,6 @@ std::unique_ptr<Pass> createSparseAssembler();
 std::unique_ptr<Pass> createSparseAssembler(bool directOut);
 
 //===----------------------------------------------------------------------===//
-// The SparseEncodingPropagation pass.
-//===----------------------------------------------------------------------===//
-
-std::unique_ptr<Pass> createSparseEncodingPropagationPass();
-
-//===----------------------------------------------------------------------===//
 // The SparseReinterpretMap pass.
 //===----------------------------------------------------------------------===//
 
