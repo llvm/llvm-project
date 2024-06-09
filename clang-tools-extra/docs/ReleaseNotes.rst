@@ -408,7 +408,8 @@ Changes in existing checks
   valid fix suggestions for ``static_cast`` without a preceding space and
   fixed problem with duplicate parentheses in double implicit casts. Corrected
   the fix suggestions for C23 and later by using C-style casts instead of
-  ``static_cast``.
+  ``static_cast``. Fixed false positives in C++20 spaceship operator by ignoring
+  casts in implicit and defaulted functions.
 
 - Improved :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
