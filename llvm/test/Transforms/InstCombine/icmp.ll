@@ -5298,7 +5298,8 @@ define i1 @test_icmp_shl_sgt(i64 %x) {
 
 define i1 @pr94897(i32 range(i32 -2147483648, 0) %x) {
 ; CHECK-LABEL: @pr94897(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -3
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nsw i32 %x, 24
   %cmp = icmp ugt i32 %shl, -50331648
