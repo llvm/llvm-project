@@ -670,7 +670,7 @@ public:
   /// left in place and returned.
   ///
   /// A signature converison must be provided. (Type converters can construct
-  /// signature conversion with `convertBlockSignature`.) Optionally, a type
+  /// a signature conversion with `convertBlockSignature`.) Optionally, a type
   /// converter can be provided to build materializations.
   Block *
   applySignatureConversion(Block *block,
