@@ -129,7 +129,7 @@ class State {
   LIBC_INLINE_VAR static constexpr int PENDING_WRITER_SHIFT = 1;
   LIBC_INLINE_VAR static constexpr int ACTIVE_READER_SHIFT = 2;
   LIBC_INLINE_VAR static constexpr int ACTIVE_WRITER_SHIFT =
-      cpp::numeric_limits<int>::digits - 1;
+      cpp::numeric_limits<int>::digits;
 
   // Bitmasks to access the components of the state.
   LIBC_INLINE_VAR static constexpr int PENDING_READER_BIT =
@@ -156,7 +156,7 @@ public:
   // Utilities to check the state of the RwLock.
   LIBC_INLINE constexpr bool has_active_writer() const { return state < 0; }
   LIBC_INLINE constexpr bool has_active_reader() const {
-    return state > ACTIVE_READER_COUNT_UNIT;
+    return state >= ACTIVE_READER_COUNT_UNIT;
   }
   LIBC_INLINE constexpr bool has_acitve_owner() const {
     return has_active_reader() || has_active_writer();

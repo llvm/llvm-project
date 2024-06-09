@@ -18,6 +18,31 @@ add_integration_test(
 )
 
 add_integration_test(
+  pthread_rwlock_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_rwlock_test.cpp
+  DEPENDS
+    libc.include.pthread
+    libc.include.time
+    libc.include.errno
+    libc.src.pthread.pthread_rwlock_destroy
+    libc.src.pthread.pthread_rwlock_init
+    libc.src.pthread.pthread_rwlock_rdlock
+    libc.src.pthread.pthread_rwlock_tryrdlock
+    libc.src.pthread.pthread_rwlock_timedrdlock
+    libc.src.pthread.pthread_rwlock_wrlock
+    libc.src.pthread.pthread_rwlock_trywrlock
+    libc.src.pthread.pthread_rwlock_timedwrlock
+    libc.src.pthread.pthread_rwlock_unlock
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+    libc.src.time.clock_gettime
+    libc.src.unistd.fork
+)
+
+add_integration_test(
   pthread_test
   SUITE
     libc-pthread-integration-tests
