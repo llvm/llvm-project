@@ -670,8 +670,12 @@ public:
   /// left in place and returned.
   ///
   /// A signature converison must be provided. (Type converters can construct
-  /// a signature conversion with `convertBlockSignature`.) Optionally, a type
-  /// converter can be provided to build materializations.
+  /// a signature conversion with `convertBlockSignature`.)
+  ///
+  /// Optionally, a type converter can be provided to build materializations.
+  /// Note: If no type converter was provided or the type converter does not
+  /// specify any suitable argument/target materialization rules, the dialect
+  /// conversion may fail to legalize unresolved materializations.
   Block *
   applySignatureConversion(Block *block,
                            TypeConverter::SignatureConversion &conversion,
