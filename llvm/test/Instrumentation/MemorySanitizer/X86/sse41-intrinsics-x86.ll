@@ -55,11 +55,11 @@ define <2 x double> @test_x86_sse41_dppd(<2 x double> %a0, <2 x double> %a1) #0 
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.sse41.dppd(<2 x double> [[A0:%.*]], <2 x double> [[A1:%.*]], i8 7)
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.sse41.dppd(<2 x double> [[A0:%.*]], <2 x double> [[A1:%.*]], i8 -18)
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
-  %res = call <2 x double> @llvm.x86.sse41.dppd(<2 x double> %a0, <2 x double> %a1, i8 7) ; <<2 x double>> [#uses=1]
+  %res = call <2 x double> @llvm.x86.sse41.dppd(<2 x double> %a0, <2 x double> %a1, i8 -18) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
 }
 declare <2 x double> @llvm.x86.sse41.dppd(<2 x double>, <2 x double>, i8) nounwind readnone
@@ -80,11 +80,11 @@ define <4 x float> @test_x86_sse41_dpps(<4 x float> %a0, <4 x float> %a1) #0 {
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse41.dpps(<4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]], i8 7)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse41.dpps(<4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]], i8 -18)
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
-  %res = call <4 x float> @llvm.x86.sse41.dpps(<4 x float> %a0, <4 x float> %a1, i8 7) ; <<4 x float>> [#uses=1]
+  %res = call <4 x float> @llvm.x86.sse41.dpps(<4 x float> %a0, <4 x float> %a1, i8 -18) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
 declare <4 x float> @llvm.x86.sse41.dpps(<4 x float>, <4 x float>, i8) nounwind readnone
