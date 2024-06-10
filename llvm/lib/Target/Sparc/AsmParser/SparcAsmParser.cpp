@@ -1384,12 +1384,11 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
   }
 
   // JPS1 extension - aliases for ASRs
-  // Section A.51 - Read State Register
+  // Section 5.2.11 - Ancillary State Registers (ASRs)
   if (Name == "pcr") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR16;
   }
-
   if (Name == "pic") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR17;
@@ -1401,6 +1400,14 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
   if (Name == "gsr") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR19;
+  }
+  if (Name == "set_softint") {
+    RegKind = SparcOperand::rk_Special;
+    return SP::ASR20;
+  }
+  if (Name == "clear_softint") {
+    RegKind = SparcOperand::rk_Special;
+    return SP::ASR21;
   }
   if (Name == "softint") {
     RegKind = SparcOperand::rk_Special;
