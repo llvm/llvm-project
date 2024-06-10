@@ -228,15 +228,11 @@ void registerTestPasses() {
   mlir::test::registerTestEmulateNarrowTypePass();
   mlir::test::registerTestExpandMathPass();
   mlir::test::registerTestFooAnalysisPass();
-<<<<<<< HEAD
   mlir::test::registerTestComposeSubView();
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestIRVisitorsPass();
-=======
->>>>>>> main
   mlir::test::registerTestGenericIRVisitorsPass();
   mlir::test::registerTestInterfaces();
-  mlir::test::registerTestIntRangeInference();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestLastModifiedPass();
   mlir::test::registerTestLinalgDecomposeOps();
