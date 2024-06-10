@@ -258,6 +258,7 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case AArch64::QQQRegClassID:
   case AArch64::QQQQRegClassID:
   case AArch64::ZPRRegClassID:
+  case AArch64::ZPR_3bRegClassID:
     return getRegBank(AArch64::FPRRegBankID);
   case AArch64::GPR32commonRegClassID:
   case AArch64::GPR32RegClassID:
@@ -714,10 +715,10 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // If both RB are null that means both registers are generic.
       // We shouldn't be here.
       assert(DstRB && SrcRB && "Both RegBank were nullptr");
-      unsigned Size = getSizeInBits(DstReg, MRI, TRI);
+      TypeSize Size = getSizeInBits(DstReg, MRI, TRI);
       return getInstructionMapping(
-          DefaultMappingID, copyCost(*DstRB, *SrcRB, TypeSize::getFixed(Size)),
-          getCopyMapping(DstRB->getID(), SrcRB->getID(), Size),
+          DefaultMappingID, copyCost(*DstRB, *SrcRB, Size),
+          getCopyMapping(DstRB->getID(), SrcRB->getID(), Size.getKnownMinValue()),
           // We only care about the mapping of the destination.
           /*NumOperands*/ 1);
     }
