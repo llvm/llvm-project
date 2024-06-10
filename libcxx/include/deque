@@ -2409,7 +2409,7 @@ typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::erase(const_it
 template <class _Tp, class _Allocator>
 typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::erase(const_iterator __f, const_iterator __l) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(
-      __f <= begin(), "deque::erase(first, last) called with an iterator range starting before 'begin()'");
+      __f >= begin(), "deque::erase(first, last) called with an iterator range starting before 'begin()'");
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(
       __l <= end(), "deque::erase(first, last) called with an iterator range finishing after 'end()'");
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(__f <= __l, "deque::erase(first, last) called with an invalid range");
