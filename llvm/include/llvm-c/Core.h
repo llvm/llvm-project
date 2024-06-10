@@ -3952,24 +3952,24 @@ const unsigned *LLVMGetIndices(LLVMValueRef Inst);
 LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C);
 LLVMBuilderRef LLVMCreateBuilder(void);
 /**
- * Set the builder poisiton before Instr but after any attached debug records,
+ * Set the builder position before Instr but after any attached debug records,
  * or if Instr is null set the position to the end of Block.
  */
 void LLVMPositionBuilder(LLVMBuilderRef Builder, LLVMBasicBlockRef Block,
                          LLVMValueRef Instr);
 /**
- * Set the builder poisiton before Instr and any attached debug records,
+ * Set the builder position before Instr and any attached debug records,
  * or if Instr is null set the position to the end of Block.
  */
 void LLVMPositionBuilderBeforeDbgRecords(LLVMBuilderRef Builder,
                                          LLVMBasicBlockRef Block,
                                          LLVMValueRef Inst);
 /**
- * Set the builder poisiton before Instr but after any attached debug records.
+ * Set the builder position before Instr but after any attached debug records.
  */
 void LLVMPositionBuilderBefore(LLVMBuilderRef Builder, LLVMValueRef Instr);
 /**
- * Set the builder poisiton before Instr and any attached debug records.
+ * Set the builder position before Instr and any attached debug records.
  */
 void LLVMPositionBuilderBeforeInstrAndDbgRecords(LLVMBuilderRef Builder,
                                                  LLVMValueRef Instr);
