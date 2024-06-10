@@ -16392,6 +16392,10 @@ be less than +0.0 for this intrinsic.
 
 Note that these are the semantics of minimumNumber specified in IEEE 754-2019.
 
+It has some different with '``llvm.minnum.*``': 
+1)'``llvm.minnum.*``' will return qNaN if either operand is sNaN.
+2)'``llvm.minnum*``' may return either one if we compare +0.0 vs -0.0.
+
 .. _i_maximumnum:
 
 '``llvm.maximumnum.*``' Intrinsic
@@ -16433,6 +16437,10 @@ Otherwise returns the greater of the two arguments. -0.0 is considered to
 be less than +0.0 for this intrinsic.
 
 Note that these are the semantics of maximumNumber specified in IEEE 754-2019.
+
+It has some different with '``llvm.maxnum.*``': 
+1)'``llvm.maxnum.*``' will return qNaN if either operand is sNaN.
+2)'``llvm.maxnum*``' may return either one if we compare +0.0 vs -0.0.
 
 .. _int_copysign:
 
