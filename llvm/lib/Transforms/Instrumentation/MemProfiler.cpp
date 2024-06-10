@@ -839,7 +839,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
   };
 
   // Now walk the instructions, looking up the associated profile data using
-  // dbug locations.
+  // debug locations.
   for (auto &BB : F) {
     for (auto &I : BB) {
       if (I.isDebugOrPseudoInst())
@@ -937,7 +937,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             // Add callsite metadata for the instruction's location list so that
             // it simpler later on to identify which part of the MIB contexts
             // are from this particular instruction (including during inlining,
-            // when the callsite metdata will be updated appropriately).
+            // when the callsite metadata will be updated appropriately).
             // FIXME: can this be changed to strip out the matching stack
             // context ids from the MIB contexts and not add any callsite
             // metadata here to save space?
