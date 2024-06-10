@@ -58,7 +58,16 @@ using namespace clang::CodeGen;
 
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
-  return TI.isAlignRequired() ? TI.Align : 0;
+  if (TI.isAlignRequired())
+    return TI.Align;
+
+  // MaxFieldAlignmentAttr is the attribute added to types
+  // declared after #pragma pack(n).
+  if (auto *Decl = Ty->getAsRecordDecl())
+    if (Decl->hasAttr<MaxFieldAlignmentAttr>())
+      return TI.Align;
+
+  return 0;
 }
 
 static uint32_t getTypeAlignIfRequired(QualType Ty, const ASTContext &Ctx) {
@@ -5757,28 +5766,16 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
   // it is loaded upon use, so we identify such pattern here.
   if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Value)) {
     llvm::Value *Var = Load->getPointerOperand();
-    if (llvm::Metadata *MDValue = llvm::ValueAsMetadata::getIfExists(Var)) {
-      if (llvm::Value *DbgValue = llvm::MetadataAsValue::getIfExists(
-              CGM.getLLVMContext(), MDValue)) {
-        for (llvm::User *U : DbgValue->users()) {
-          if (llvm::CallInst *DbgDeclare = dyn_cast<llvm::CallInst>(U)) {
-            if (DbgDeclare->getCalledFunction()->getIntrinsicID() ==
-                    llvm::Intrinsic::dbg_declare &&
-                DbgDeclare->getArgOperand(0) == DbgValue) {
-              // There can be implicit type cast applied on a variable if it is
-              // an opaque ptr, in this case its debug info may not match the
-              // actual type of object being used as in the next instruction, so
-              // we will need to emit a pseudo variable for type-casted value.
-              llvm::DILocalVariable *MDNode = cast<llvm::DILocalVariable>(
-                  cast<llvm::MetadataAsValue>(DbgDeclare->getOperand(1))
-                      ->getMetadata());
-              if (MDNode->getType() == Type)
-                return;
-            }
-          }
-        }
-      }
-    }
+    // There can be implicit type cast applied on a variable if it is an opaque
+    // ptr, in this case its debug info may not match the actual type of object
+    // being used as in the next instruction, so we will need to emit a pseudo
+    // variable for type-casted value.
+    auto DeclareTypeMatches = [&](auto *DbgDeclare) {
+      return DbgDeclare->getVariable()->getType() == Type;
+    };
+    if (any_of(llvm::findDbgDeclares(Var), DeclareTypeMatches) ||
+        any_of(llvm::findDVRDeclares(Var), DeclareTypeMatches))
+      return;
   }
 
   // Find the correct location to insert a sequence of instructions to
