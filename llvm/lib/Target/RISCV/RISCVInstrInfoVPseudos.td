@@ -1234,11 +1234,11 @@ class VPseudoBinaryNoMask<VReg RetClass,
   let HasSEWOp = 1;
 }
 
-class VPseudoBinaryNoMaskTU<VReg RetClass,
-                            VReg Op1Class,
-                            DAGOperand Op2Class,
-                            string Constraint,
-                            int TargetConstraintType = 1> :
+class VPseudoBinaryNoMaskPolicy<VReg RetClass,
+                                VReg Op1Class,
+                                DAGOperand Op2Class,
+                                string Constraint,
+                                int TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$merge, Op1Class:$rs2, Op2Class:$rs1, AVL:$vl,
                   ixlenimm:$sew, ixlenimm:$policy), []>,
@@ -2138,8 +2138,8 @@ multiclass VPseudoBinary<VReg RetClass,
                          bit Commutable = 0> {
   let VLMul = MInfo.value, SEW=sew, isCommutable = Commutable in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
-    def suffix : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
-                                       Constraint, TargetConstraintType>;
+    def suffix : VPseudoBinaryNoMaskPolicy<RetClass, Op1Class, Op2Class,
+                                           Constraint, TargetConstraintType>;
     def suffix # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
                                                    Constraint, TargetConstraintType>,
                            RISCVMaskedPseudo<MaskIdx=3>;
@@ -2197,8 +2197,8 @@ multiclass VPseudoBinaryEmul<VReg RetClass,
                              int sew = 0> {
   let VLMul = lmul.value, SEW=sew in {
     defvar suffix = !if(sew, "_" # lmul.MX # "_E" # sew, "_" # lmul.MX);
-    def suffix # "_" # emul.MX : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
-                                                       Constraint>;
+    def suffix # "_" # emul.MX : VPseudoBinaryNoMaskPolicy<RetClass, Op1Class, Op2Class,
+                                                           Constraint>;
     def suffix # "_" # emul.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
                                                                           Constraint>,
                                                   RISCVMaskedPseudo<MaskIdx=3>;
