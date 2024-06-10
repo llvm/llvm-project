@@ -1536,7 +1536,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FCMA, AArch64::AEK_PAUTH}),
             "8.4-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
-            "apple-a14", "armv8.5-a", "crypto-neon-fp-armv8",
+            "apple-a14", "armv8.4-a", "crypto-neon-fp-armv8",
             AArch64::ExtensionBitset(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SHA3, AArch64::AEK_FP, AArch64::AEK_SIMD,
@@ -1544,7 +1544,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_RCPC, AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
                  AArch64::AEK_FP16FML, AArch64::AEK_SHA3, AArch64::AEK_JSCVT,
                  AArch64::AEK_FCMA, AArch64::AEK_PAUTH}),
-            "8.5-A"),
+            "8.4-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "apple-a15", "armv8.6-a", "crypto-neon-fp-armv8",
             AArch64::ExtensionBitset(
@@ -1579,7 +1579,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_PAUTH}),
             "8.6-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
-            "apple-m1", "armv8.5-a", "crypto-neon-fp-armv8",
+            "apple-m1", "armv8.4-a", "crypto-neon-fp-armv8",
             AArch64::ExtensionBitset(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SHA3, AArch64::AEK_FP, AArch64::AEK_SIMD,
@@ -1587,7 +1587,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_RCPC, AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
                  AArch64::AEK_FP16FML, AArch64::AEK_SHA3, AArch64::AEK_JSCVT,
                  AArch64::AEK_FCMA, AArch64::AEK_PAUTH}),
-            "8.5-A"),
+            "8.4-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "apple-m2", "armv8.6-a", "crypto-neon-fp-armv8",
             AArch64::ExtensionBitset(
