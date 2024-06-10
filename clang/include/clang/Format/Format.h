@@ -1192,6 +1192,21 @@ struct FormatStyle {
   /// \version 3.7
   bool BinPackArguments;
 
+  /// If ``false``, binary operations will either be all on the same line
+  /// or each operation will have one line each.
+  /// \code
+  ///   true:
+  ///   aaaaaaaaaaaaaaaaaaaa && aaaaaaaaaaaaaaaaaaaa ||
+  ///     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+  ///
+  ///   false:
+  ///   aaaaaaaaaaaaaaaaaaaa &&
+  ///   aaaaaaaaaaaaaaaaaaaa ||
+  ///   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+  /// \endcode
+  /// \version 19
+  bool BinPackBinaryOperations;
+
   /// If ``false``, a function declaration's or function definition's
   /// parameters will either all be on the same line or will have one line each.
   /// \code
@@ -4978,6 +4993,7 @@ struct FormatStyle {
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&
            BinPackArguments == R.BinPackArguments &&
+           BinPackBinaryOperations == R.BinPackBinaryOperations &&
            BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
