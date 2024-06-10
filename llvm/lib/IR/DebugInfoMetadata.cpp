@@ -2105,9 +2105,13 @@ namespace DIOp {
 #define HANDLE_OP0(NAME)                                                       \
   hash_code hash_value(const NAME &O) { return llvm::hash_value(0); }
 #define HANDLE_OP1(NAME, TYPE1, NAME1)                                         \
-  hash_code hash_value(const NAME &O) { return llvm::hash_value(O.NAME1); }
+  hash_code hash_value(const NAME &O) {                                        \
+    return llvm::hash_value(O.get##NAME1());                                   \
+  }
 #define HANDLE_OP2(NAME, TYPE1, NAME1, TYPE2, NAME2)                           \
-  hash_code hash_value(const NAME &O) { return hash_combine(O.NAME1, O.NAME2); }
+  hash_code hash_value(const NAME &O) {                                        \
+    return hash_combine(O.get##NAME1(), O.get##NAME2());                       \
+  }
 #include "llvm/IR/DIExprOps.def"
 } // namespace DIOp
 } // namespace llvm
