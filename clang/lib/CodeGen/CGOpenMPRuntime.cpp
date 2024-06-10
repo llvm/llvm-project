@@ -8510,8 +8510,7 @@ public:
         assert(VDecl == VD && "We got information for the wrong declaration??");
         assert(!Components.empty() &&
                "Not expecting declaration with no component lists.");
-        if (VD && VD->getType()->isAnyPointerType() &&
-            isa_and_nonnull<DeclRefExpr>(E))
+        if (VD && E && VD->getType()->isAnyPointerType() && isa<DeclRefExpr>(E))
           HasMapBasePtr = true;
         if (VD && E && VD->getType()->isAnyPointerType() &&
             (isa<ArraySectionExpr>(E) || isa<ArraySubscriptExpr>(E)))
