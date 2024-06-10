@@ -31,11 +31,14 @@
 
 namespace Fortran::lower::pft {
 
+struct CompilerDirectiveUnit;
 struct Evaluation;
-struct Program;
-struct ModuleLikeUnit;
 struct FunctionLikeUnit;
+struct ModuleLikeUnit;
+struct Program;
 
+using ContainedUnit = std::variant<CompilerDirectiveUnit, FunctionLikeUnit>;
+using ContainedUnitList = std::list<ContainedUnit>;
 using EvaluationList = std::list<Evaluation>;
 
 /// Provide a variant like container that can hold references. It can hold
@@ -594,8 +597,8 @@ VariableList getDependentVariableList(const Fortran::semantics::Symbol &);
 
 void dump(VariableList &, std::string s = {}); // `s` is an optional dump label
 
-/// Function-like units may contain evaluations (executable statements) and
-/// nested function-like units (internal procedures and function statements).
+/// Function-like units may contain evaluations (executable statements),
+/// directives, and internal (nested) function-like units.
 struct FunctionLikeUnit : public ProgramUnit {
   // wrapper statements for function-like syntactic structures
   using FunctionStatement =
@@ -697,10 +700,10 @@ struct FunctionLikeUnit : public ProgramUnit {
   std::optional<FunctionStatement> beginStmt;
   FunctionStatement endStmt;
   const semantics::Scope *scope;
-  EvaluationList evaluationList;
   LabelEvalMap labelEvaluationMap;
   SymbolLabelMap assignSymbolLabelMap;
-  std::list<FunctionLikeUnit> nestedFunctions;
+  ContainedUnitList containedUnitList;
+  EvaluationList evaluationList;
   /// <Symbol, Evaluation> pairs for each entry point. The pair at index 0
   /// is the primary entry point; remaining pairs are alternate entry points.
   /// The primary entry point symbol is Null for an anonymous program.
@@ -746,7 +749,7 @@ struct ModuleLikeUnit : public ProgramUnit {
 
   ModuleStatement beginStmt;
   ModuleStatement endStmt;
-  std::list<FunctionLikeUnit> nestedFunctions;
+  ContainedUnitList containedUnitList;
   EvaluationList evaluationList;
 };
 
