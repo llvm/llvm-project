@@ -158,6 +158,7 @@ void RTDEF(ReduceInteger4Dim)(Descriptor &result, const Descriptor &array,
     ReductionOperation<std::int32_t> operation, const char *source, int line,
     int dim, const Descriptor *mask, const std::int32_t *identity,
     bool ordered) {
+  printf("dim: %d\n", dim);
   Terminator terminator{source, line};
   using Accumulator = ReduceAccumulator<std::int32_t>;
   Accumulator accumulator{array, operation, identity, terminator};
