@@ -201,11 +201,10 @@ CodeGen::emitVoidPtrDirectVAArg(CodeGenFunction &CGF, Address VAListAddr,
 }
 
 RValue CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType ValueTy, bool IsIndirect,
-                                  TypeInfoChars ValueInfo,
-                                  CharUnits SlotSizeAndAlign,
-                                  bool AllowHigherAlign,
-                                  bool ForceRightAdjust) {
+                                 QualType ValueTy, bool IsIndirect,
+                                 TypeInfoChars ValueInfo,
+                                 CharUnits SlotSizeAndAlign,
+                                 bool AllowHigherAlign, bool ForceRightAdjust) {
   // The size and alignment of the value that was passed directly.
   CharUnits DirectSize, DirectAlign;
   if (IsIndirect) {

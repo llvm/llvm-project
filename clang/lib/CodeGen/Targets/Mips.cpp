@@ -373,9 +373,8 @@ RValue MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // MinABIStackAlignInBytes is the size of argument slots on the stack.
   CharUnits ArgSlotSize = CharUnits::fromQuantity(MinABIStackAlignInBytes);
 
-  RValue Res =
-      emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false, TyInfo,
-                       ArgSlotSize, /*AllowHigherAlign*/ true);
+  RValue Res = emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false, TyInfo,
+                                ArgSlotSize, /*AllowHigherAlign*/ true);
 
   // If there was a promotion, "unpromote".
   // TODO: can we just use a pointer into a subset of the original slot?

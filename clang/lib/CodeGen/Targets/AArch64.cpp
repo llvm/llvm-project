@@ -799,7 +799,7 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
 }
 
 RValue AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
-                                        CodeGenFunction &CGF) const {
+                                       CodeGenFunction &CGF) const {
   // The backend's lowering doesn't support va_arg for aggregates or
   // illegal vector types.  Lower VAArg here for these cases and use
   // the LLVM va_arg instruction for everything else.

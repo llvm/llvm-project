@@ -58,7 +58,7 @@ void CSKYABIInfo::computeInfo(CGFunctionInfo &FI) const {
 }
 
 RValue CSKYABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                               QualType Ty) const {
+                              QualType Ty) const {
   CharUnits SlotSize = CharUnits::fromQuantity(XLen / 8);
 
   // Empty records are ignored for parameter passing purposes.
