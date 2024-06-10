@@ -1,4 +1,4 @@
-//===--- AvoidBoundsErrorsCheck.cpp - clang-tidy --------------------------===//
+//===--- PreferAtOverSubscriptOperatorCheck.cpp - clang-tidy --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AvoidBoundsErrorsCheck.h"
+#include "PreferAtOverSubscriptOperatorCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -44,7 +44,7 @@ const CXXMethodDecl *findAlternative(const CXXRecordDecl *MatchedParent,
   return static_cast<CXXMethodDecl *>(nullptr);
 }
 
-void AvoidBoundsErrorsCheck::registerMatchers(MatchFinder *Finder) {
+void PreferAtOverSubscriptOperatorCheck::registerMatchers(MatchFinder *Finder) {
   // Need a callExpr here to match CXXOperatorCallExpr ``(&a)->operator[](0)``
   // and CXXMemberCallExpr ``a[0]``.
   Finder->addMatcher(
@@ -57,7 +57,8 @@ void AvoidBoundsErrorsCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void AvoidBoundsErrorsCheck::check(const MatchFinder::MatchResult &Result) {
+void PreferAtOverSubscriptOperatorCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const ASTContext &Context = *Result.Context;
   const SourceManager &Source = Context.getSourceManager();
   const CallExpr *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");

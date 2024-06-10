@@ -185,7 +185,6 @@ Clang-Tidy Checks
    :doc:`cert-oop58-cpp <cert/oop58-cpp>`,
    :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,
    :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
-   :doc:`cppcoreguidelines-avoid-bounds-errors <cppcoreguidelines/avoid-bounds-errors>`, "Yes"
    :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines <cppcoreguidelines/avoid-capturing-lambda-coroutines>`,
    :doc:`cppcoreguidelines-avoid-const-or-ref-data-members <cppcoreguidelines/avoid-const-or-ref-data-members>`,
    :doc:`cppcoreguidelines-avoid-do-while <cppcoreguidelines/avoid-do-while>`,
@@ -200,6 +199,7 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
    :doc:`cppcoreguidelines-no-suspend-with-lock <cppcoreguidelines/no-suspend-with-lock>`,
    :doc:`cppcoreguidelines-owning-memory <cppcoreguidelines/owning-memory>`,
+   :doc:`cppcoreguidelines-prefer-at-over-subscript-operator <cppcoreguidelines/prefer-at-over-subscript-operator>`,
    :doc:`cppcoreguidelines-prefer-member-initializer <cppcoreguidelines/prefer-member-initializer>`, "Yes"
    :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay>`,
    :doc:`cppcoreguidelines-pro-bounds-constant-array-index <cppcoreguidelines/pro-bounds-constant-array-index>`, "Yes"

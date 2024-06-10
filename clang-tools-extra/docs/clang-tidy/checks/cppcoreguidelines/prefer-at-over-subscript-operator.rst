@@ -1,6 +1,6 @@
-.. title:: clang-tidy - cppcoreguidelines-avoid-bounds-errors
+.. title:: clang-tidy - cppcoreguidelines-prefer-at-over-subscript-operator
 
-cppcoreguidelines-avoid-bounds-errors
+cppcoreguidelines-prefer-at-over-subscript-operator
 =====================================
 
 This check flags all uses of ``operator[]`` on ``std::vector``, ``std::array``, ``std::deque``, ``std::map``, ``std::unordered_map``, and ``std::flat_map`` and suggests to replace it with ``at()``.

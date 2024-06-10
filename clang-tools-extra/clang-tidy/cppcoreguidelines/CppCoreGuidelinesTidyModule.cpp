@@ -20,7 +20,6 @@
 #include "../performance/NoexceptMoveConstructorCheck.h"
 #include "../performance/NoexceptSwapCheck.h"
 #include "../readability/MagicNumbersCheck.h"
-#include "AvoidBoundsErrorsCheck.h"
 #include "AvoidCapturingLambdaCoroutinesCheck.h"
 #include "AvoidConstOrRefDataMembersCheck.h"
 #include "AvoidDoWhileCheck.h"
@@ -35,6 +34,7 @@
 #include "NoMallocCheck.h"
 #include "NoSuspendWithLockCheck.h"
 #include "OwningMemoryCheck.h"
+#include "PreferAtOverSubscriptOperatorCheck.h"
 #include "PreferMemberInitializerCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
 #include "ProBoundsConstantArrayIndexCheck.h"
@@ -59,8 +59,6 @@ namespace cppcoreguidelines {
 class CppCoreGuidelinesModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<AvoidBoundsErrorsCheck>(
-        "cppcoreguidelines-avoid-bounds-errors");
     CheckFactories.registerCheck<AvoidCapturingLambdaCoroutinesCheck>(
         "cppcoreguidelines-avoid-capturing-lambda-coroutines");
     CheckFactories.registerCheck<modernize::AvoidCArraysCheck>(
@@ -106,6 +104,8 @@ public:
         "cppcoreguidelines-non-private-member-variables-in-classes");
     CheckFactories.registerCheck<OwningMemoryCheck>(
         "cppcoreguidelines-owning-memory");
+    CheckFactories.registerCheck<PreferAtOverSubscriptOperatorCheck>(
+        "cppcoreguidelines-prefer-at-over-subscript-operator");
     CheckFactories.registerCheck<PreferMemberInitializerCheck>(
         "cppcoreguidelines-prefer-member-initializer");
     CheckFactories.registerCheck<ProBoundsArrayToPointerDecayCheck>(

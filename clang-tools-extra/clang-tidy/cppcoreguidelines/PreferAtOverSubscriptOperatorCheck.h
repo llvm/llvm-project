@@ -1,4 +1,5 @@
-//===--- AvoidBoundsErrorsCheck.h - clang-tidy ------------------*- C++ -*-===//
+//===--- PreferAtOverSubscriptOperatorCheck.h - clang-tidy ------*- C++ -*-===//
+//===--- PreferMemberInitializerCheck.h - clang-tidy ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_AVOIDBOUNDSERRORSCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_AVOIDBOUNDSERRORSCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PREFERATOVERSUBSCRIPTOPERATORCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PREFERATOVERSUBSCRIPTOPERATORCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -18,11 +19,10 @@ namespace clang::tidy::cppcoreguidelines {
 /// See
 /// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-bounds-errors.html
-class AvoidBoundsErrorsCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/prefer-at-over-subscript-operator.html
+class PreferAtOverSubscriptOperatorCheck : public ClangTidyCheck {
 public:
-  AvoidBoundsErrorsCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  PreferAtOverSubscriptOperatorCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
@@ -32,4 +32,4 @@ public:
 
 } // namespace clang::tidy::cppcoreguidelines
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_AVOIDBOUNDSERRORSCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PREFERATOVERSUBSCRIPTOPERATORCHECK_H
