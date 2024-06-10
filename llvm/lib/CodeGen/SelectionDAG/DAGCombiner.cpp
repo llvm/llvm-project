@@ -15900,8 +15900,8 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         Tmp = matcher.getNode(PreferredFusedOpcode, SL, VT, Tmp.getOperand(0),
                               Tmp.getOperand(1), E);
         for (SDNode *FMA : reverse(FMAs))
-          Tmp = matcher.getNode(PreferredFusedOpcode, SL, VT,
-                                FMA->getOperand(0), FMA->getOperand(1), Tmp);
+          Tmp = matcher.getNode(FMA->getOpcode(), SL, VT, FMA->getOperand(0),
+                                FMA->getOperand(1), Tmp);
         return Tmp;
       }
     }

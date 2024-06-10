@@ -265,8 +265,8 @@ define float @fmac_sequence_innermost_fmul(float %a, float %b, float %c, float %
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_f32 v2, v2, v3, v6
-; GFX10-NEXT:    v_mac_f32_e32 v2, v0, v1
-; GFX10-NEXT:    v_mac_f32_e32 v2, v4, v5
+; GFX10-NEXT:    v_fmac_f32_e32 v2, v0, v1
+; GFX10-NEXT:    v_fmac_f32_e32 v2, v4, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -294,8 +294,8 @@ define float @fmac_sequence_innermost_fmul_swapped_operands(float %a, float %b, 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mad_f32 v2, v2, v3, v6
-; GFX10-NEXT:    v_mac_f32_e32 v2, v0, v1
-; GFX10-NEXT:    v_mac_f32_e32 v2, v4, v5
+; GFX10-NEXT:    v_fmac_f32_e32 v2, v0, v1
+; GFX10-NEXT:    v_fmac_f32_e32 v2, v4, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -322,8 +322,8 @@ define amdgpu_ps float @fmac_sequence_innermost_fmul_sgpr(float inreg %a, float 
 ; GFX10-LABEL: fmac_sequence_innermost_fmul_sgpr:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mac_f32_e64 v0, s2, s3
-; GFX10-NEXT:    v_mac_f32_e64 v0, s0, s1
-; GFX10-NEXT:    v_mac_f32_e64 v0, s4, s5
+; GFX10-NEXT:    v_fmac_f32_e64 v0, s0, s1
+; GFX10-NEXT:    v_fmac_f32_e64 v0, s4, s5
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: fmac_sequence_innermost_fmul_sgpr:
@@ -348,9 +348,9 @@ define amdgpu_ps float @fmac_sequence_innermost_fmul_multiple_use(float inreg %a
 ; GFX10-NEXT:    v_mul_f32_e64 v1, s2, s3
 ; GFX10-NEXT:    v_mac_f32_e64 v0, s2, s3
 ; GFX10-NEXT:    v_fmac_f32_e64 v1, s0, s1
-; GFX10-NEXT:    v_mac_f32_e64 v0, s0, s1
+; GFX10-NEXT:    v_fmac_f32_e64 v0, s0, s1
 ; GFX10-NEXT:    v_fmac_f32_e64 v1, s4, s5
-; GFX10-NEXT:    v_mac_f32_e32 v0, s5, v1
+; GFX10-NEXT:    v_fmac_f32_e32 v0, s5, v1
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: fmac_sequence_innermost_fmul_multiple_use:
