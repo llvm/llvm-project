@@ -141,6 +141,7 @@ add_fp_unittest(
     TruncTest.h
   DEPENDS
     libc.src.math.trunc
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -155,6 +156,7 @@ add_fp_unittest(
     TruncTest.h
   DEPENDS
     libc.src.math.truncf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -169,6 +171,22 @@ add_fp_unittest(
     TruncTest.h
   DEPENDS
     libc.src.math.truncl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  truncf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    truncf16_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.truncf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -183,6 +201,7 @@ add_fp_unittest(
     CeilTest.h
   DEPENDS
     libc.src.math.ceil
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -197,6 +216,7 @@ add_fp_unittest(
     CeilTest.h
   DEPENDS
     libc.src.math.ceilf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -211,6 +231,22 @@ add_fp_unittest(
     CeilTest.h
   DEPENDS
     libc.src.math.ceill
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  ceilf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    ceilf16_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceilf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -225,6 +261,7 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floor
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -239,6 +276,7 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floorf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -253,6 +291,22 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floorl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  floorf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    floorf16_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -267,6 +321,7 @@ add_fp_unittest(
     RoundTest.h
   DEPENDS
     libc.src.math.round
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -281,6 +336,7 @@ add_fp_unittest(
     RoundTest.h
   DEPENDS
     libc.src.math.roundf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -295,6 +351,22 @@ add_fp_unittest(
     RoundTest.h
   DEPENDS
     libc.src.math.roundl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    roundf16_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.math.roundf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -309,6 +381,7 @@ add_fp_unittest(
   RoundEvenTest.h
   DEPENDS
     libc.src.math.roundeven
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -323,6 +396,7 @@ add_fp_unittest(
   RoundEvenTest.h
   DEPENDS
     libc.src.math.roundevenf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -337,6 +411,22 @@ add_fp_unittest(
   RoundEvenTest.h
   DEPENDS
     libc.src.math.roundevenl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    roundevenf16_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.src.math.roundevenf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
