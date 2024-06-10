@@ -2000,7 +2000,7 @@ private:
           llvm::SmallVector<mlir::Value> reduceOperands;
           llvm::SmallVector<mlir::Attribute> reduceAttrs;
           // Create DO CONCURRENT reduce operands and attributes
-          for (const auto reduceSym : info.reduceSymList) {
+          for (const auto &reduceSym : info.reduceSymList) {
             const fir::ReduceOperationEnum reduce_operation = reduceSym.first;
             const Fortran::semantics::Symbol *sym = reduceSym.second;
             fir::ExtendedValue exv = getSymbolExtendedValue(*sym, nullptr);
