@@ -7,12 +7,51 @@
 //===----------------------------------------------------------------------===//
 
 #include "PreferAtOverSubscriptOperatorCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
+#include "llvm/ADT/StringRef.h"
+#include <algorithm>
+#include <numeric>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
+
+static constexpr std::array<llvm::StringRef, 3> DefaultExclusions = {
+    llvm::StringRef("std::map"), llvm::StringRef("std::unordered_map"),
+    llvm::StringRef("std::flat_map")};
+
+PreferAtOverSubscriptOperatorCheck::PreferAtOverSubscriptOperatorCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context) {
+
+  ExcludedClasses = clang::tidy::utils::options::parseStringList(
+      Options.get("ExcludeClasses", ""));
+  ExcludedClasses.insert(ExcludedClasses.end(), DefaultExclusions.begin(),
+                         DefaultExclusions.end());
+}
+
+void PreferAtOverSubscriptOperatorCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+
+  if (ExcludedClasses.size() == DefaultExclusions.size()) {
+    Options.store(Opts, "ExcludeClasses", "");
+    return;
+  }
+
+  // Sum up the sizes of the defaults ( + semicolons), so we can remove them
+  // from the saved options
+  size_t DefaultsStringLength =
+      std::transform_reduce(DefaultExclusions.begin(), DefaultExclusions.end(),
+                            DefaultExclusions.size(), std::plus<>(),
+                            [](llvm::StringRef Name) { return Name.size(); });
+
+  std::string Serialized =
+      clang::tidy::utils::options::serializeStringList(ExcludedClasses);
+
+  Options.store(Opts, "ExcludeClasses",
+                Serialized.substr(0, Serialized.size() - DefaultsStringLength));
+}
 
 const CXXMethodDecl *findAlternative(const CXXRecordDecl *MatchedParent,
                                      const CXXMethodDecl *MatchedOperator) {
@@ -67,12 +106,16 @@ void PreferAtOverSubscriptOperatorCheck::check(
   const CXXRecordDecl *MatchedParent =
       Result.Nodes.getNodeAs<CXXRecordDecl>("parent");
 
+  std::string ClassIdentifier = MatchedParent->getQualifiedNameAsString();
+
+  if (std::find(ExcludedClasses.begin(), ExcludedClasses.end(),
+                ClassIdentifier) != ExcludedClasses.end())
+    return;
+
   const CXXMethodDecl *Alternative =
       findAlternative(MatchedParent, MatchedOperator);
   if (!Alternative)
     return;
-
-  const SourceLocation AlternativeSource(Alternative->getBeginLoc());
 
   diag(MatchedExpr->getBeginLoc(),
        "found possibly unsafe operator[], consider using at() instead");
