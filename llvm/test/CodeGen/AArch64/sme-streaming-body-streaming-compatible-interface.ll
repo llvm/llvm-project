@@ -80,13 +80,13 @@ define void @streaming_body_and_streaming_compatible_interface_multi_basic_block
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
 ; CHECK-NEXT:    rdsvl x9, #1
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    lsr x9, x9, #3
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp x9, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    tbnz w19, #0, .LBB2_2

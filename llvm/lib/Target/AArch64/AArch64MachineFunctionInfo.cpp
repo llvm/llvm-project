@@ -201,9 +201,9 @@ bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo(
     //  (yet) for homogeneous epilogues, outlined functions, and functions
     //  outlined from.
     NeedsAsyncDwarfUnwindInfo =
-        (needsDwarfUnwindInfo(MF) && F.getUWTableKind() == UWTableKind::Async &&
-         !F.hasMinSize()) ||
-        AFI->hasStreamingModeChanges();
+        needsDwarfUnwindInfo(MF) &&
+        ((F.getUWTableKind() == UWTableKind::Async && !F.hasMinSize()) ||
+         AFI->hasStreamingModeChanges());
   }
   return *NeedsAsyncDwarfUnwindInfo;
 }
