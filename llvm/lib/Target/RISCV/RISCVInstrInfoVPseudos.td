@@ -1549,20 +1549,15 @@ class VPseudoTiedBinaryCarryIn<VReg RetClass,
                                VReg Op1Class,
                                DAGOperand Op2Class,
                                LMULInfo MInfo,
-                               bit CarryIn,
-                               string Constraint,
                                int TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
-             !if(CarryIn,
-                (ins RetClass:$merge, Op1Class:$rs2, Op2Class:$rs1,
-                     VMV0:$carry, AVL:$vl, ixlenimm:$sew),
-                (ins RetClass:$merge, Op1Class:$rs2, Op2Class:$rs1,
-                     AVL:$vl, ixlenimm:$sew)), []>,
+             (ins RetClass:$merge, Op1Class:$rs2, Op2Class:$rs1,
+                  VMV0:$carry, AVL:$vl, ixlenimm:$sew), []>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
+  let Constraints = "$rd = $merge";
   let TargetOverlapConstraintType = TargetConstraintType;
   let HasVLOp = 1;
   let HasSEWOp = 1;
@@ -2465,13 +2460,11 @@ multiclass VPseudoBinaryV_VM<LMULInfo m, bit CarryOut = 0, bit CarryIn = 1,
                          m.vrclass, m.vrclass, m, CarryIn, Constraint, TargetConstraintType>;
 }
 
-multiclass VPseudoTiedBinaryV_VM<LMULInfo m, int TargetConstraintType = 1,
-                                 bit Commutable = 0> {
+multiclass VPseudoTiedBinaryV_VM<LMULInfo m, bit Commutable = 0> {
   let isCommutable = Commutable in
   def "_VVM" # "_" # m.MX:
     VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                             m.vrclass, m.vrclass, m, 1, "",
-                             TargetConstraintType>;
+                             m.vrclass, m.vrclass, m>;
 }
 
 multiclass VPseudoBinaryV_XM<LMULInfo m, bit CarryOut = 0, bit CarryIn = 1,
@@ -2483,11 +2476,10 @@ multiclass VPseudoBinaryV_XM<LMULInfo m, bit CarryOut = 0, bit CarryIn = 1,
                          m.vrclass, GPR, m, CarryIn, Constraint, TargetConstraintType>;
 }
 
-multiclass VPseudoTiedBinaryV_XM<LMULInfo m, int TargetConstraintType = 1> {
+multiclass VPseudoTiedBinaryV_XM<LMULInfo m> {
   def "_VXM" # "_" # m.MX:
     VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                             m.vrclass, GPR, m, 1, "",
-                             TargetConstraintType>;
+                             m.vrclass, GPR, m>;
 }
 
 multiclass VPseudoVMRG_FM {
@@ -2496,8 +2488,7 @@ multiclass VPseudoVMRG_FM {
       defvar mx = m.MX;
       def "_V" # f.FX # "M_" # mx
           : VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R, m.vrclass,
-                                     f.fprclass, m, CarryIn=1,
-                                     Constraint = "">,
+                                     f.fprclass, m>,
           SchedBinary<"WriteVFMergeV", "ReadVFMergeV", "ReadVFMergeF", mx,
                       forceMasked=1, forceMergeOpRead=true>;
     }
@@ -2516,7 +2507,7 @@ multiclass VPseudoBinaryV_IM<LMULInfo m, bit CarryOut = 0, bit CarryIn = 1,
 multiclass VPseudoTiedBinaryV_IM<LMULInfo m> {
   def "_VIM" # "_" # m.MX:
     VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                             m.vrclass, simm5, m, 1, "">;
+                             m.vrclass, simm5, m>;
 }
 
 multiclass VPseudoUnaryVMV_V_X_I {
@@ -3073,17 +3064,17 @@ multiclass VPseudoVMRG_VM_XM_IM {
     defvar mx = m.MX;
     def "_VVM" # "_" # m.MX:
       VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, m.vrclass, m, 1, "">,
+                               m.vrclass, m.vrclass, m>,
       SchedBinary<"WriteVIMergeV", "ReadVIMergeV", "ReadVIMergeV", mx,
                           forceMergeOpRead=true>;
     def "_VXM" # "_" # m.MX:
       VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, GPR, m, 1, "">,
+                               m.vrclass, GPR, m>,
       SchedBinary<"WriteVIMergeX", "ReadVIMergeV", "ReadVIMergeX", mx,
                           forceMergeOpRead=true>;
     def "_VIM" # "_" # m.MX:
       VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, simm5, m, 1, "">,
+                               m.vrclass, simm5, m>,
       SchedUnary<"WriteVIMergeI", "ReadVIMergeV", mx,
                           forceMergeOpRead=true>;
   }
