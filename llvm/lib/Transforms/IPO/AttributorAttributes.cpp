@@ -12031,7 +12031,7 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
                 SmallVectorImpl<const Value *> &Worklist) {
     Instruction *UInst = dyn_cast<Instruction>(U.getUser());
     if (!UInst) {
-      Follow = true;
+      Follow = !Uses.contains(&U);
       return true;
     }
 
