@@ -142,6 +142,8 @@ struct SubclassUnsafeMembers : public UnsafeMembers {
     {}
 };
 
+// Without an explicit constructor, there is no CXXDefaultInitExpr to anchor on
+// in matchers.
 struct AggregateUnsafeMembers {
     UnsafeMembers f1;
     UnsafeMembers f2{3};  // expected-warning{{function introduces unsafe buffer manipulation}}
