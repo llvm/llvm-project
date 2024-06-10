@@ -4486,9 +4486,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *B = I.getCondition();
     Value *C = I.getTrueValue();
     Value *D = I.getFalseValue();
+
     Value *Sb = getShadow(B);
     Value *Sc = getShadow(C);
     Value *Sd = getShadow(D);
+
+    Value *Ob = MS.TrackOrigins ? getOrigin(B) : nullptr;
+    Value *Oc = MS.TrackOrigins ? getOrigin(C) : nullptr;
+    Value *Od = MS.TrackOrigins ? getOrigin(D) : nullptr;
 
     // Result shadow if condition shadow is 0.
     Value *Sa0 = IRB.CreateSelect(B, Sc, Sd);
@@ -4522,10 +4527,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
       // a = select b, c, d
       // Oa = Sb ? Ob : (b ? Oc : Od)
-      setOrigin(
-          &I, IRB.CreateSelect(Sb, getOrigin(I.getCondition()),
-                               IRB.CreateSelect(B, getOrigin(I.getTrueValue()),
-                                                getOrigin(I.getFalseValue()))));
+      setOrigin(&I, IRB.CreateSelect(Sb, Ob, IRB.CreateSelect(B, Oc, Od)));
     }
   }
 
