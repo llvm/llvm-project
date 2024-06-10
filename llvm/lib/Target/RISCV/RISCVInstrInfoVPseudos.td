@@ -2422,37 +2422,43 @@ multiclass VPseudoBinaryW_WF_RM<LMULInfo m, FPR_Info f, int sew = 0> {
 // exception from the spec.
 // "The destination EEW is smaller than the source EEW and the overlap is in the
 //  lowest-numbered part of the source register group."
-multiclass VPseudoBinaryV_WV<LMULInfo m, int TargetConstraintType = 1> {
+multiclass VPseudoBinaryV_WV<LMULInfo m> {
   defm _WV : VPseudoBinary<m.vrclass, m.wvrclass, m.vrclass, m,
-                           !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""), TargetConstraintType=TargetConstraintType>;
+                           !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""),
+                           TargetConstraintType=2>;
 }
 
 multiclass VPseudoBinaryV_WV_RM<LMULInfo m> {
   defm _WV : VPseudoBinaryRoundingMode<m.vrclass, m.wvrclass, m.vrclass, m,
                                        !if(!ge(m.octuple, 8),
-                                       "@earlyclobber $rd", "")>;
+                                       "@earlyclobber $rd", ""),
+                                       TargetConstraintType=2>;
 }
 
-multiclass VPseudoBinaryV_WX<LMULInfo m, int TargetConstraintType = 1> {
+multiclass VPseudoBinaryV_WX<LMULInfo m> {
   defm _WX : VPseudoBinary<m.vrclass, m.wvrclass, GPR, m,
-                           !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""), TargetConstraintType=TargetConstraintType>;
+                           !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""),
+                           TargetConstraintType=2>;
 }
 
 multiclass VPseudoBinaryV_WX_RM<LMULInfo m> {
   defm _WX : VPseudoBinaryRoundingMode<m.vrclass, m.wvrclass, GPR, m,
                                        !if(!ge(m.octuple, 8),
-                                       "@earlyclobber $rd", "")>;
+                                       "@earlyclobber $rd", ""),
+                                       TargetConstraintType=2>;
 }
 
-multiclass VPseudoBinaryV_WI<LMULInfo m, int TargetConstraintType = 1> {
+multiclass VPseudoBinaryV_WI<LMULInfo m> {
   defm _WI : VPseudoBinary<m.vrclass, m.wvrclass, uimm5, m,
-                           !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""), TargetConstraintType=TargetConstraintType>;
+                           !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""),
+                           TargetConstraintType=2>;
 }
 
 multiclass VPseudoBinaryV_WI_RM<LMULInfo m> {
   defm _WI : VPseudoBinaryRoundingMode<m.vrclass, m.wvrclass, uimm5, m,
                                        !if(!ge(m.octuple, 8),
-                                       "@earlyclobber $rd", "")>;
+                                       "@earlyclobber $rd", ""),
+                                       TargetConstraintType=2>;
 }
 
 // For vadc and vsbc, the instruction encoding is reserved if the destination
@@ -3195,13 +3201,13 @@ multiclass VPseudoVNCLP_WV_WX_WI_RM {
 multiclass VPseudoVNSHT_WV_WX_WI {
   foreach m = MxListW in {
     defvar mx = m.MX;
-    defm "" : VPseudoBinaryV_WV<m, TargetConstraintType=2>,
+    defm "" : VPseudoBinaryV_WV<m>,
               SchedBinary<"WriteVNShiftV", "ReadVNShiftV", "ReadVNShiftV", mx,
                           forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryV_WX<m, TargetConstraintType=2>,
+    defm "" : VPseudoBinaryV_WX<m>,
               SchedBinary<"WriteVNShiftX", "ReadVNShiftV", "ReadVNShiftX", mx,
                           forceMergeOpRead=true>;
-    defm "" : VPseudoBinaryV_WI<m, TargetConstraintType=2>,
+    defm "" : VPseudoBinaryV_WI<m>,
               SchedUnary<"WriteVNShiftI", "ReadVNShiftV", mx,
                           forceMergeOpRead=true>;
   }
