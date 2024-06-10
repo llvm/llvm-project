@@ -486,7 +486,8 @@ LinearCallStackId CallStackRadixTreeBuilder::encodeCallStack(
 void CallStackRadixTreeBuilder::build(
     llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
         &&MemProfCallStackData,
-    const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes) {
+    const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
+    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
   // Take the vector portion of MemProfCallStackData.  The vector is exactly
   // what we need to sort.  Also, we no longer need its lookup capability.
   llvm::SmallVector<CSIdPair, 0> CallStacks = MemProfCallStackData.takeVector();
@@ -498,14 +499,56 @@ void CallStackRadixTreeBuilder::build(
     return;
   }
 
-  // Sort the list of call stacks in the dictionary order to maximize the length
-  // of the common prefix between two adjacent call stacks.
+  // Sorting the list of call stacks in the dictionary order is sufficient to
+  // maximize the length of the common prefix between two adjacent call stacks
+  // and thus minimize the length of RadixArray.  However, we go one step
+  // further and try to reduce the number of times we follow pointers to parents
+  // during deserilization.  Consider a poorly encoded radix tree:
+  //
+  // CallStackId 1:  f1 -> f2 -> f3
+  //                  |
+  // CallStackId 2:   +--- f4 -> f5
+  //                        |
+  // CallStackId 3:         +--> f6
+  //
+  // Here, f2 and f4 appear once and twice, respectively, in the call stacks.
+  // Once we encode CallStackId 1 into RadixArray, every other call stack with
+  // common prefix f1 ends up pointing to CallStackId 1.  Since CallStackId 3
+  // share "f1 f4" with CallStackId 2, CallStackId 3 needs to follow pointers to
+  // parents twice.
+  //
+  // We try to alleviate the situation by sorting the list of call stacks by
+  // comparing the popularity of frames rather than the integer values of
+  // FrameIds.  In the example above, f4 is more popular than f2, so we sort the
+  // call stacks and encode them as:
+  //
+  // CallStackId 2:  f1 -- f4 -> f5
+  //                  |     |
+  // CallStackId 3:   |     +--> f6
+  //                  |
+  // CallStackId 1:   +--> f2 -> f3
+  //
+  // Notice that CallStackId 3 follows a pointer to a parent only once.
+  //
+  // All this is a quick-n-dirty trick to reduce the number of jumps.  The
+  // proper way would be to compute the weight of each radix tree node -- how
+  // many call stacks use a given radix tree node, and encode a radix tree from
+  // the heaviest node first.  We do not do so because that's a lot of work.
   llvm::sort(CallStacks, [&](const CSIdPair &L, const CSIdPair &R) {
     // Call stacks are stored from leaf to root.  Perform comparisons from the
     // root.
     return std::lexicographical_compare(
         L.second.rbegin(), L.second.rend(), R.second.rbegin(), R.second.rend(),
-        [&](FrameId F1, FrameId F2) { return F1 < F2; });
+        [&](FrameId F1, FrameId F2) {
+          uint64_t H1 = FrameHistogram[F1].Count;
+          uint64_t H2 = FrameHistogram[F2].Count;
+          // Popular frames should come later because we encode call stacks from
+          // the last one in the list.
+          if (H1 != H2)
+            return H1 < H2;
+          // For sort stability.
+          return F1 < F2;
+        });
   });
 
   // Reserve some reasonable amount of storage.
@@ -567,6 +610,22 @@ void CallStackRadixTreeBuilder::build(
   // "Reverse" the indexes stored in CallStackPos.
   for (auto &[K, V] : CallStackPos)
     V = RadixArray.size() - 1 - V;
+}
+
+llvm::DenseMap<FrameId, FrameStat>
+computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+                          &MemProfCallStackData) {
+  llvm::DenseMap<FrameId, FrameStat> Histogram;
+
+  for (const auto &KV : MemProfCallStackData) {
+    const auto &CS = KV.second;
+    for (unsigned I = 0, E = CS.size(); I != E; ++I) {
+      auto &S = Histogram[CS[I]];
+      ++S.Count;
+      S.PositionSum += I;
+    }
+  }
+  return Histogram;
 }
 
 void verifyIndexedMemProfRecord(const IndexedMemProfRecord &Record) {
