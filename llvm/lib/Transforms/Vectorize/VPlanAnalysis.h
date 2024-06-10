@@ -23,6 +23,8 @@ class VPWidenIntOrFpInductionRecipe;
 class VPWidenMemoryRecipe;
 struct VPWidenSelectRecipe;
 class VPReplicateRecipe;
+class SCEV;
+class ScalarEvolution;
 class Type;
 
 /// An analysis for type-inference for VPValues.
@@ -59,6 +61,19 @@ public:
 
   /// Return the LLVMContext used by the analysis.
   LLVMContext &getContext() { return Ctx; }
+};
+
+/// A light wrapper over ScalarEvolution to construct SCEV expressions for
+/// VPValues and recipes.
+class VPScalarEvolution {
+  ScalarEvolution &SE;
+
+public:
+  VPScalarEvolution(ScalarEvolution &SE) : SE(SE) {}
+
+  /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
+  /// SCEV expression could be constructed.
+  const SCEV *getSCEV(VPValue *V);
 };
 
 } // end namespace llvm

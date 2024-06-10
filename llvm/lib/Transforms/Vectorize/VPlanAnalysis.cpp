@@ -9,6 +9,7 @@
 #include "VPlanAnalysis.h"
 #include "VPlan.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 
 using namespace llvm;
 
@@ -264,4 +265,16 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   assert(ResultTy && "could not infer type for the given VPValue");
   CachedTypes[V] = ResultTy;
   return ResultTy;
+}
+
+const SCEV *VPScalarEvolution::getSCEV(VPValue *V) {
+  if (V->isLiveIn())
+    return SE.getSCEV(V->getLiveInIRValue());
+
+  // TODO: Support constructing SCEVs for more recipes as needed.
+  return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
+      .Case<VPExpandSCEVRecipe>(
+          [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
+      .Default(
+          [this](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
 }

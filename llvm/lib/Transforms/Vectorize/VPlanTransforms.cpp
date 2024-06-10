@@ -674,10 +674,8 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
              m_BranchOnCond(m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue())))))
     return;
 
-  Type *IdxTy =
-      Plan.getCanonicalIV()->getStartValue()->getLiveInIRValue()->getType();
-  const SCEV *TripCount = createTripCountSCEV(IdxTy, PSE);
   ScalarEvolution &SE = *PSE.getSE();
+  const SCEV *TripCount = VPScalarEvolution(SE).getSCEV(Plan.getTripCount());
   ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
   const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
   if (TripCount->isZero() ||
