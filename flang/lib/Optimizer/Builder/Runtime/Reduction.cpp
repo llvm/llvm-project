@@ -1594,7 +1594,7 @@ void fir::runtime::genReduceDim(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (eleTy.isF64())
     func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal8Dim)>(loc, builder);
   else if (eleTy.isF80())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal10Dim)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<ForcedReduceReal10Dim>(loc, builder);
   else if (eleTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedReduceReal16Dim>(loc, builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
