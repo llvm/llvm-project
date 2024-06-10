@@ -18,6 +18,8 @@ namespace mlir {
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 } // namespace mlir
 
+#define DEBUG_TYPE "sparse-space-collapse"
+
 using namespace mlir;
 using namespace sparse_tensor;
 
@@ -78,18 +80,31 @@ bool legalToCollapse(SmallVectorImpl<CollapseSpaceInfo> &toCollapse,
   auto nItOp = getIterateOpOverSpace(curSpace);
 
   // Can only collapse spaces extracted from the same tensor.
-  if (parent.getTensor() != curSpace.getTensor())
+  if (parent.getTensor() != curSpace.getTensor()) {
+    LLVM_DEBUG({
+      llvm::dbgs()
+          << "failed to collpase spaces extracted from different tensors.";
+    });
     return false;
+  }
 
   // Can only collapse consecutive simple iteration on one tensor (i.e., no
   // coiteration).
   if (!nItOp || nItOp->getBlock() != curSpace->getBlock() ||
       pItOp.getIterator() != curSpace.getParentIter() ||
-      curSpace->getParentOp() != pItOp.getOperation())
+      curSpace->getParentOp() != pItOp.getOperation()) {
+    LLVM_DEBUG(
+        { llvm::dbgs() << "failed to collapse non-consecutive IterateOps."; });
     return false;
+  }
 
-  if (pItOp && !isCollapsableLoops(pItOp, nItOp))
+  if (pItOp && !isCollapsableLoops(pItOp, nItOp)) {
+    LLVM_DEBUG({
+      llvm::dbgs()
+          << "failed to collapse IterateOps that are not perfectly nested.";
+    });
     return false;
+  }
 
   CollapseSpaceInfo &info = toCollapse.emplace_back();
   info.space = curSpace;
