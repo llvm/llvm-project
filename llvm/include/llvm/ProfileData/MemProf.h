@@ -439,7 +439,7 @@ struct IndexedMemProfRecord {
   // on the schema provided in \p Schema.
   void serialize(const MemProfSchema &Schema, raw_ostream &OS,
                  IndexedVersion Version,
-                 llvm::DenseMap<memprof::CallStackId, LinearCallStackId>
+                 llvm::DenseMap<CallStackId, LinearCallStackId>
                      *MemProfCallStackIndexes = nullptr) const;
 
   // Deserializes memprof records from the Buffer.
@@ -579,15 +579,14 @@ private:
   IndexedVersion Version;
 
   // Mappings from CallStackId to the indexes into the call stack array.
-  llvm::DenseMap<memprof::CallStackId, LinearCallStackId>
-      *MemProfCallStackIndexes;
+  llvm::DenseMap<CallStackId, LinearCallStackId> *MemProfCallStackIndexes;
 
 public:
   // We do not support the default constructor, which does not set Version.
   RecordWriterTrait() = delete;
-  RecordWriterTrait(const MemProfSchema *Schema, IndexedVersion V,
-                    llvm::DenseMap<memprof::CallStackId, LinearCallStackId>
-                        *MemProfCallStackIndexes)
+  RecordWriterTrait(
+      const MemProfSchema *Schema, IndexedVersion V,
+      llvm::DenseMap<CallStackId, LinearCallStackId> *MemProfCallStackIndexes)
       : Schema(Schema), Version(V),
         MemProfCallStackIndexes(MemProfCallStackIndexes) {}
 
@@ -1039,11 +1038,10 @@ public:
   CallStackRadixTreeBuilder() = default;
 
   // Build a radix tree array.
-  void
-  build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
-            &&MemProfCallStackData,
-        const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
-        llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram);
+  void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+                 &&MemProfCallStackData,
+             const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
+             llvm::DenseMap<FrameId, FrameStat> &FrameHistogram);
 
   const std::vector<LinearFrameId> &getRadixArray() const { return RadixArray; }
 
