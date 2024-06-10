@@ -2423,6 +2423,8 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     }
     HasAssociatedStatement = false;
     break;
+  default:
+    break;
   }
 
   SourceLocation EndLoc;
