@@ -70,9 +70,6 @@ private:
 
   FragmentType Kind;
 
-  /// Whether fragment is being laid out.
-  bool IsBeingLaidOut;
-
 protected:
   bool HasInstructions;
   bool LinkerRelaxable = false;
