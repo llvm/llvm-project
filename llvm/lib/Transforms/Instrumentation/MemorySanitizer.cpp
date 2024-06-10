@@ -3345,8 +3345,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (Width == 8) {
       // First 4 elements of shadow are already calculated. `makeDppShadow`
       // operats on 32 bit masks, so we can just shift masks, and repeat.
-      SI1 = IRB.CreateOr(SI1,
-                         findDppPoisonedOutput(IRB, S, SrcMask << 4, DstMask << 4));
+      SI1 = IRB.CreateOr(
+          SI1, findDppPoisonedOutput(IRB, S, SrcMask << 4, DstMask << 4));
     }
     // Extend to real size of shadow, poisoning either all or none bits of an
     // element.
