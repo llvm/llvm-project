@@ -65,6 +65,86 @@ define amdgpu_ps ptr addrspace(3) @s_ptrmask_local_variable_i32(ptr addrspace(3)
   ret ptr addrspace(3) %masked
 }
 
+define ptr addrspace(7) @v_ptrmask_buffer_fat_ptr_variable_i32(ptr addrspace(7) %ptr, i32 %mask) {
+; GCN-LABEL: v_ptrmask_buffer_fat_ptr_variable_i32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v4, v4, v5
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10PLUS-LABEL: v_ptrmask_buffer_fat_ptr_variable_i32:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_and_b32_e32 v4, v4, v5
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+  %masked = call ptr addrspace(7) @llvm.ptrmask.p7.i32(ptr addrspace(7) %ptr, i32 %mask)
+  ret ptr addrspace(7) %masked
+}
+
+define ptr addrspace(7) @v_ptrmask_buffer_fat_ptr_i32_neg8(ptr addrspace(7) %ptr) {
+; GCN-LABEL: v_ptrmask_buffer_fat_ptr_i32_neg8:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v4, -8, v4
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10PLUS-LABEL: v_ptrmask_buffer_fat_ptr_i32_neg8:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_and_b32_e32 v4, -8, v4
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+  %masked = call ptr addrspace(7) @llvm.ptrmask.p7.i32(ptr addrspace(7) %ptr, i32 -8)
+  ret ptr addrspace(7) %masked
+}
+
+define amdgpu_ps ptr addrspace(7) @s_ptrmask_buffer_fat_ptr_variable_i32(ptr addrspace(7) inreg %ptr, i32 inreg %mask) {
+; GCN-LABEL: s_ptrmask_buffer_fat_ptr_variable_i32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_mov_b32 s8, s4
+; GCN-NEXT:    s_mov_b32 s1, s3
+; GCN-NEXT:    s_mov_b32 s0, s2
+; GCN-NEXT:    s_and_b32 s4, s6, s7
+; GCN-NEXT:    s_mov_b32 s2, s8
+; GCN-NEXT:    s_mov_b32 s3, s5
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX10PLUS-LABEL: s_ptrmask_buffer_fat_ptr_variable_i32:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_mov_b32 s8, s4
+; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
+; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
+; GFX10PLUS-NEXT:    s_and_b32 s4, s6, s7
+; GFX10PLUS-NEXT:    s_mov_b32 s2, s8
+; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
+; GFX10PLUS-NEXT:    ; return to shader part epilog
+  %masked = call ptr addrspace(7) @llvm.ptrmask.p7.i32(ptr addrspace(7) %ptr, i32 %mask)
+  ret ptr addrspace(7) %masked
+}
+
+define amdgpu_ps ptr addrspace(7) @s_ptrmask_buffer_fat_ptr_i32_neg8(ptr addrspace(7) inreg %ptr) {
+; GCN-LABEL: s_ptrmask_buffer_fat_ptr_i32_neg8:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_mov_b32 s7, s4
+; GCN-NEXT:    s_mov_b32 s1, s3
+; GCN-NEXT:    s_mov_b32 s0, s2
+; GCN-NEXT:    s_and_b32 s4, s6, -8
+; GCN-NEXT:    s_mov_b32 s2, s7
+; GCN-NEXT:    s_mov_b32 s3, s5
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX10PLUS-LABEL: s_ptrmask_buffer_fat_ptr_i32_neg8:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_mov_b32 s7, s4
+; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
+; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
+; GFX10PLUS-NEXT:    s_and_b32 s4, s6, -8
+; GFX10PLUS-NEXT:    s_mov_b32 s2, s7
+; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
+; GFX10PLUS-NEXT:    ; return to shader part epilog
+  %masked = call ptr addrspace(7) @llvm.ptrmask.p7.i32(ptr addrspace(7) %ptr, i32 -8)
+  ret ptr addrspace(7) %masked
+}
+
 declare ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3), i32) #0
 declare ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1), i64) #0
 
