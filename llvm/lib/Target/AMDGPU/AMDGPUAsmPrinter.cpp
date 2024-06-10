@@ -650,7 +650,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                                     Twine(CurrentProgramInfo.TIdIGCompCount),
                                 false);
 
-    int64_t PGMRSrc3;
+    [[maybe_unused]] int64_t PGMRSrc3;
     assert(STM.hasGFX90AInsts() ||
            (CurrentProgramInfo.ComputePGMRSrc3GFX90A->evaluateAsAbsolute(
                 PGMRSrc3) &&
