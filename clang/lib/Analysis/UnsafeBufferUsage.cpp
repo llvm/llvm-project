@@ -2772,7 +2772,7 @@ fixVariable(const VarDecl *VD, FixitStrategy::Kind K,
         // also covers call-operator of lamdas
         isa<CXXMethodDecl>(FD) ||
         // skip when the function body is a try-block
-        (FD->hasBody() && isa<CXXTryStmt>(FD->getBody())) ||
+        isa_and_nonnull<CXXTryStmt>(FD->getBody()) ||
         FD->isOverloadedOperator()) {
       DEBUG_NOTE_DECL_FAIL(VD, " : unsupported function decl");
       return {}; // TODO test all these cases
