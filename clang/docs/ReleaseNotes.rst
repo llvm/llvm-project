@@ -823,7 +823,7 @@ Bug Fixes to C++ Support
   differering by their constraints when only one of these function was variadic.
 - Fix a crash when a variable is captured by a block nested inside a lambda. (Fixes #GH93625).
 - Fixed a type constraint substitution issue involving a generic lambda expression. (#GH93821)
-- Fixed two issues when building CTAD deduction guides for aggregates. (#GH64625), (#GH83368).
+- Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
