@@ -4669,6 +4669,136 @@ define void @test_atomicrmw_fadd_v2bf16_flat_local_noret(ptr addrspace(3) %ptr, 
   ret void
 }
 
+define half @buffer_atomicrmw_fadd_f16_agent(ptr addrspace(7) %ptr, half %f) {
+; ALL-LABEL: @buffer_atomicrmw_fadd_f16_agent(
+; ALL-NEXT:    [[P:%.*]] = getelementptr half, ptr addrspace(7) [[PTR:%.*]], i32 4
+; ALL-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(7) @llvm.ptrmask.p7.i32(ptr addrspace(7) [[P]], i32 -4)
+; ALL-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(7) [[P]] to i32
+; ALL-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; ALL-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; ALL-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
+; ALL-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(7) [[ALIGNEDADDR]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
+; ALL-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; ALL-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to half
+; ALL-NEXT:    [[NEW:%.*]] = fadd half [[TMP4]], [[F:%.*]]
+; ALL-NEXT:    [[TMP5:%.*]] = bitcast half [[NEW]] to i16
+; ALL-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
+; ALL-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
+; ALL-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; ALL-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
+; ALL-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(7) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
+; ALL-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
+; ALL-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
+; ALL-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to half
+; ALL-NEXT:    ret half [[TMP7]]
+;
+  %p = getelementptr half, ptr addrspace(7) %ptr, i32 4
+  %fadd = atomicrmw fadd ptr addrspace(7) %p, half %f syncscope("agent") seq_cst
+  ret half %fadd
+}
+
+define half @buffer_atomicrmw_fadd_f16_align4_agent(ptr addrspace(7) %ptr, half %f) {
+; ALL-LABEL: @buffer_atomicrmw_fadd_f16_align4_agent(
+; ALL-NEXT:    [[P:%.*]] = getelementptr half, ptr addrspace(7) [[PTR:%.*]], i32 4
+; ALL-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(7) [[P]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[LOADED]] to i16
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast i16 [[EXTRACTED]] to half
+; ALL-NEXT:    [[NEW:%.*]] = fadd half [[TMP2]], [[F:%.*]]
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast half [[NEW]] to i16
+; ALL-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP3]] to i32
+; ALL-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], -65536
+; ALL-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[EXTENDED]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(7) [[P]], i32 [[LOADED]], i32 [[INSERTED]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
+; ALL-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED1]] to half
+; ALL-NEXT:    ret half [[TMP5]]
+;
+  %p = getelementptr half, ptr addrspace(7) %ptr, i32 4
+  %fadd = atomicrmw fadd ptr addrspace(7) %p, half %f syncscope("agent") seq_cst, align 4
+  ret half %fadd
+}
+
+define bfloat @buffer_atomicrmw_fadd_bf16_agent(ptr addrspace(7) %ptr, bfloat %f) {
+; ALL-LABEL: @buffer_atomicrmw_fadd_bf16_agent(
+; ALL-NEXT:    [[P:%.*]] = getelementptr bfloat, ptr addrspace(7) [[PTR:%.*]], i32 4
+; ALL-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(7) @llvm.ptrmask.p7.i32(ptr addrspace(7) [[P]], i32 -4)
+; ALL-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(7) [[P]] to i32
+; ALL-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; ALL-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; ALL-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
+; ALL-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(7) [[ALIGNEDADDR]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
+; ALL-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; ALL-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; ALL-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[F:%.*]]
+; ALL-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
+; ALL-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
+; ALL-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
+; ALL-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; ALL-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
+; ALL-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(7) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
+; ALL-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
+; ALL-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
+; ALL-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
+; ALL-NEXT:    ret bfloat [[TMP7]]
+;
+  %p = getelementptr bfloat, ptr addrspace(7) %ptr, i32 4
+  %fadd = atomicrmw fadd ptr addrspace(7) %p, bfloat %f syncscope("agent") seq_cst
+  ret bfloat %fadd
+}
+
+define bfloat @buffer_atomicrmw_fadd_bf16_align4_agent(ptr addrspace(7) %ptr, bfloat %f) {
+; ALL-LABEL: @buffer_atomicrmw_fadd_bf16_align4_agent(
+; ALL-NEXT:    [[P:%.*]] = getelementptr bfloat, ptr addrspace(7) [[PTR:%.*]], i32 4
+; ALL-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(7) [[P]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[LOADED]] to i16
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; ALL-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP2]], [[F:%.*]]
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast bfloat [[NEW]] to i16
+; ALL-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP3]] to i32
+; ALL-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], -65536
+; ALL-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[EXTENDED]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(7) [[P]], i32 [[LOADED]], i32 [[INSERTED]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
+; ALL-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED1]] to bfloat
+; ALL-NEXT:    ret bfloat [[TMP5]]
+;
+  %p = getelementptr bfloat, ptr addrspace(7) %ptr, i32 4
+  %fadd = atomicrmw fadd ptr addrspace(7) %p, bfloat %f syncscope("agent") seq_cst, align 4
+  ret bfloat %fadd
+}
+
 attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
 attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
 attributes #2 = { strictfp }
