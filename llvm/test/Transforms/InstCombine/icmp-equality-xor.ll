@@ -150,7 +150,7 @@ declare void @use.i8(i8)
 define i1 @fold_xorC_eq0_multiuse(i8 %x, i8 %y) {
 ; CHECK-LABEL: @fold_xorC_eq0_multiuse(
 ; CHECK-NEXT:    [[XX:%.*]] = xor i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[XX]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[XX]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -176,7 +176,7 @@ define i1 @fold_xorC_eq1_multiuse_fail(i8 %x, i8 %y) {
 define i1 @fold_xorC_neC_multiuse(i8 %x) {
 ; CHECK-LABEL: @fold_xorC_neC_multiuse(
 ; CHECK-NEXT:    [[XX:%.*]] = xor i8 [[X:%.*]], 45
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[XX]], 67
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 110
 ; CHECK-NEXT:    call void @use.i8(i8 [[XX]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
