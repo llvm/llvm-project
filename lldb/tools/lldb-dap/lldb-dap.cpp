@@ -678,7 +678,7 @@ void request_attach(const llvm::json::Object &request) {
       GetUnsigned(arguments, "pid", LLDB_INVALID_PROCESS_ID);
   const auto gdb_remote_port =
       GetUnsigned(arguments, "gdb-remote-port", invalid_port);
-  llvm::StringRef gdb_remote_hostname =
+  const auto gdb_remote_hostname =
       GetString(arguments, "gdb-remote-hostname", "localhost");
   if (pid != LLDB_INVALID_PROCESS_ID)
     attach_info.SetProcessID(pid);
@@ -767,7 +767,7 @@ void request_attach(const llvm::json::Object &request) {
         // If the user hasn't provided the hostname property, default localhost
         // being used.
         std::string connect_url =
-            llvm::formatv("connect://{0}:", gdb_remote_hostname.data());
+            llvm::formatv("connect://{0}:", gdb_remote_hostname);
         connect_url += std::to_string(gdb_remote_port);
         g_dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
                                    error);

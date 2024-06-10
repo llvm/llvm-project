@@ -159,12 +159,6 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
 
         port = 0
-        args = [program]
-        debug_server_tool = self.getBuiltinDebugServerTool()
-        self.process = self.spawnSubprocess(
-            debug_server_tool, args, install_remote=False
-        )
-
         response = self.attach(
             program=program, gdbRemotePort=port, sourceInitFile=True, expectFailure=True
         )
@@ -173,7 +167,6 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
                 response["success"],
                 "The user can't attach with invalid port (%s)" % port,
             )
-        self.process.terminate()
 
     @skipIfWindows
     @skipIfNetBSD
