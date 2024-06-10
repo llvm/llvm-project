@@ -289,7 +289,10 @@ template <>
 constexpr TypeBuilderFunc getModel<long long *>() {
   return getModel<long long &>();
 }
-
+template <>
+constexpr TypeBuilderFunc getModel<const long long *>() {
+  return getModel<long long *>();
+}
 template <>
 constexpr TypeBuilderFunc getModel<unsigned long>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
