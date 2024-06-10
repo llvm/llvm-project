@@ -30,18 +30,18 @@ define double @ldexp_zext_double(double %x, i1 %bool) {
 ; CHECK-NEXT:    ret double [[LDEXP]]
 ;
   %zext = zext i1 %bool to i32
-  %ldexp = call double @llvm.ldexp.f32.i32(double %x, i32 %zext)
+  %ldexp = call double @llvm.ldexp.f64.i32(double %x, i32 %zext)
   ret double %ldexp
 }
 
 define double @ldexp_zext_double_fast_math(double %x, i1 %bool) {
 ; CHECK-LABEL: @ldexp_zext_double_fast_math(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[BOOL:%.*]], double 2.000000e+00, double 1.000000e+00
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul fast double [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = fmul reassoc double [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[LDEXP]]
 ;
   %zext = zext i1 %bool to i32
-  %ldexp = call fast double @llvm.ldexp.f32.i32(double %x, i32 %zext)
+  %ldexp = call reassoc double @llvm.ldexp.f64.i32(double %x, i32 %zext)
   ret double %ldexp
 }
 
