@@ -4,6 +4,8 @@
 
 #include "../cpu_model/aarch64.h"
 
+#if !defined(DISABLE_AARCH64_FMV)
+
 struct FEATURES {
   long long features;
 };
@@ -43,3 +45,5 @@ __arm_get_current_vg(void) __arm_streaming_compatible {
 
   return 0;
 }
+
+#endif // !defined(DISABLE_AARCH64_FMV)
