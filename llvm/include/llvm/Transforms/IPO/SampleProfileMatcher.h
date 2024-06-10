@@ -69,7 +69,7 @@ class SampleProfileMatcher {
   // matching result.
   std::unordered_map<std::pair<const Function *, FunctionId>, bool,
                      FuncProfNameMapHash>
-      FunctionProfileNameMap;
+      FuncToProfileNameMap;
   // The new functions found by the call graph matching. The map's key is the
   // old profile name and value is the new(renamed) function.
   HashKeyMap<std::unordered_map, FunctionId, Function *> ProfileNameToFuncMap;
@@ -115,7 +115,7 @@ public:
       HashKeyMap<std::unordered_map, FunctionId, Function *> &SymMap,
       std::shared_ptr<ProfileSymbolList> PSL)
       : M(M), Reader(Reader), ProbeManager(ProbeManager), LTOPhase(LTOPhase),
-        SymbolMap(&SymMap), PSL(PSL){};
+        SymbolMap(&SymMap), PSL(PSL) {};
   void runOnModule(std::vector<Function *> &OrderedFuncList);
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
@@ -124,7 +124,7 @@ public:
     FlattenedProfiles.clear();
 
     NewIRFunctions.clear();
-    FunctionProfileNameMap.clear();
+    FuncToProfileNameMap.clear();
     ProfileNameToFuncMap.clear();
   }
 
