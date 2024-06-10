@@ -52,7 +52,7 @@ template <typename T> struct NormalFloat {
       return;
 
     unsigned normalization_shift = evaluate_normalization_shift(mantissa);
-    mantissa = mantissa << normalization_shift;
+    mantissa <<= normalization_shift;
     exponent -= normalization_shift;
   }
 

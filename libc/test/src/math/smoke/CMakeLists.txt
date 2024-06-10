@@ -2608,7 +2608,6 @@ add_fp_unittest(
     RemQuoTest.h
   DEPENDS
     libc.src.math.remquof
-    libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2636,7 +2635,6 @@ add_fp_unittest(
     RemQuoTest.h
   DEPENDS
     libc.src.math.remquo
-    libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2650,7 +2648,19 @@ add_fp_unittest(
     RemQuoTest.h
   DEPENDS
     libc.src.math.remquol
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  remquof16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    remquof16_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquof16
     libc.src.__support.FPUtil.fp_bits
 )
 
