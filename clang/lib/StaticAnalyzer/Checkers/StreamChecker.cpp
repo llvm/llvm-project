@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "NoOwnershipChangeVisitor.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -193,9 +193,8 @@ REGISTER_MAP_WITH_PROGRAMSTATE(StreamMap, SymbolRef, StreamState)
 namespace {
 
 class StreamChecker;
-using FnCheckTy = void(const StreamChecker *, const FnDescription *,
-                                   const CallEvent &, CheckerContext &);
-using FnCheck = std::function<FnCheckTy>;
+using FnCheck = std::function<void(const StreamChecker *, const FnDescription *,
+                                   const CallEvent &, CheckerContext &)>;
 
 using ArgNoTy = unsigned int;
 static const ArgNoTy ArgNone = std::numeric_limits<ArgNoTy>::max();
@@ -346,8 +345,7 @@ private:
        {&StreamChecker::preFreopen, &StreamChecker::evalFreopen, 2}},
       {{CDM::CLibrary, {"tmpfile"}, 0},
        {nullptr, &StreamChecker::evalFopen, ArgNone}},
-      {FCloseDesc,
-       {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
+      {FCloseDesc, {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
       {{CDM::CLibrary, {"fread"}, 4},
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, true), 3}},
@@ -780,8 +778,8 @@ protected:
         N->getLocation(),
         N->getState()->getStateManager().getContext().getSourceManager());
     return std::make_shared<PathDiagnosticEventPiece>(
-        L, "Returning without freeing stream object or storing the pointer for "
-           "later release");
+        L, "Returning without freeing stream object or storing it for later "
+           "release");
   }
 
 public:
