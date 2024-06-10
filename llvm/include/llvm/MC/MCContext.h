@@ -325,8 +325,8 @@ private:
   };
 
   StringMap<MCSectionMachO *> MachOUniquingMap;
-  StringMap<MCSectionELF *> ELFUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
+  StringMap<MCSectionELF *> ELFUniquingMap;
   std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
