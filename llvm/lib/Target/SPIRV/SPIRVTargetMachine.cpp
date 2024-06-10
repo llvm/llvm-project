@@ -177,11 +177,11 @@ void SPIRVPassConfig::addIRPasses() {
 
   TargetPassConfig::addIRPasses();
   addPass(createSPIRVRegularizerPass());
-  addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
 }
 
 void SPIRVPassConfig::addISelPrepare() {
+  addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
   TargetPassConfig::addISelPrepare();
 }
