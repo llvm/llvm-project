@@ -1077,4 +1077,148 @@ entry:
   ret i32 %shr
 }
 
+define i32 @ashr_shift_mul(i32 %x) {
+; CHECK-LABEL: @ashr_shift_mul(
+; CHECK-NEXT:    [[A:%.*]] = ashr exact i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = ashr exact i32 %x, 3
+  %res = mul i32 %a, 9
+  ret i32 %res
+}
+
+define i32 @ashr_shift_mul_nuw(i32 %x) {
+; CHECK-LABEL: @ashr_shift_mul_nuw(
+; CHECK-NEXT:    [[A:%.*]] = ashr exact i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[RES:%.*]] = mul nuw i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = ashr exact i32 %x, 3
+  %res = mul nuw i32 %a, 9
+  ret i32 %res
+}
+
+define i32 @ashr_shift_mul_nsw(i32 %x) {
+; CHECK-LABEL: @ashr_shift_mul_nsw(
+; CHECK-NEXT:    [[A:%.*]] = ashr exact i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[RES:%.*]] = mul nsw i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = ashr exact i32 %x, 3
+  %res = mul nsw i32 %a, 9
+  ret i32 %res
+}
+
+define i32 @lshr_shift_mul_nuw(i32 %x) {
+; CHECK-LABEL: @lshr_shift_mul_nuw(
+; CHECK-NEXT:    [[A:%.*]] = lshr exact i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[RES:%.*]] = mul nuw i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = lshr exact i32 %x, 3
+  %res = mul nuw i32 %a, 9
+  ret i32 %res
+}
+
+define i32 @lshr_shift_mul(i32 %x) {
+; CHECK-LABEL: @lshr_shift_mul(
+; CHECK-NEXT:    [[A:%.*]] = lshr exact i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = lshr exact i32 %x, 3
+  %res = mul i32 %a, 9
+  ret i32 %res
+}
+
+define i32 @lshr_shift_mul_nsw(i32 %x) {
+; CHECK-LABEL: @lshr_shift_mul_nsw(
+; CHECK-NEXT:    [[A:%.*]] = lshr exact i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[RES:%.*]] = mul nuw nsw i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = lshr exact i32 %x, 3
+  %res = mul nsw i32 %a, 9
+  ret i32 %res
+}
+
+; Negative test
+
+define i32 @lshr_no_exact(i32 %x) {
+; CHECK-LABEL: @lshr_no_exact(
+; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[RES:%.*]] = mul nuw nsw i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = lshr i32 %x, 3
+  %res = mul nsw i32 %a, 9
+  ret i32 %res
+}
+
+; Negative test
+
+define i32 @ashr_no_exact(i32 %x) {
+; CHECK-LABEL: @ashr_no_exact(
+; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[RES:%.*]] = mul nsw i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = ashr i32 %x, 3
+  %res = mul nsw i32 %a, 9
+  ret i32 %res
+}
+
+define i32 @lshr_multiuse(i32 %x) {
+; CHECK-LABEL: @lshr_multiuse(
+; CHECK-NEXT:    [[A:%.*]] = lshr exact i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use(i32 [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = mul nuw nsw i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = lshr exact i32 %x, 3
+  call void @use(i32 %a)
+  %res = mul nsw i32 %a, 9
+  ret i32 %res
+}
+
+define i32 @lshr_multiuse_no_flags(i32 %x) {
+; CHECK-LABEL: @lshr_multiuse_no_flags(
+; CHECK-NEXT:    [[A:%.*]] = lshr exact i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use(i32 [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = lshr exact i32 %x, 3
+  call void @use(i32 %a)
+  %res = mul i32 %a, 9
+  ret i32 %res
+}
+
+define i32 @ashr_multiuse_no_flags(i32 %x) {
+; CHECK-LABEL: @ashr_multiuse_no_flags(
+; CHECK-NEXT:    [[A:%.*]] = ashr exact i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use(i32 [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = ashr exact i32 %x, 3
+  call void @use(i32 %a)
+  %res = mul i32 %a, 9
+  ret i32 %res
+}
+
+define i32 @ashr_multiuse(i32 %x) {
+; CHECK-LABEL: @ashr_multiuse(
+; CHECK-NEXT:    [[A:%.*]] = ashr exact i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use(i32 [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = mul nsw i32 [[A]], 9
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = ashr exact i32 %x, 3
+  call void @use(i32 %a)
+  %res = mul nsw i32 %a, 9
+  ret i32 %res
+}
+
 declare void @use(i32)
