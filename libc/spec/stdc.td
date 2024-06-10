@@ -581,14 +581,16 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"exp10", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"exp10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
-          FunctionSpec<"remainderf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"remainder", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"remainderf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"remainderl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"remainderf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>, ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
 
-          FunctionSpec<"remquof", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>, ArgSpec<IntPtr>]>,
-          GuardedFunctionSpec<"remquof128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>, ArgSpec<IntPtr>], "LIBC_TYPES_HAS_FLOAT128">,
           FunctionSpec<"remquo", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>, ArgSpec<IntPtr>]>,
+          FunctionSpec<"remquof", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"remquol", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>, ArgSpec<IntPtr>]>,
+          GuardedFunctionSpec<"remquof16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>, ArgSpec<Float16Type>, ArgSpec<IntPtr>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"remquof128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>, ArgSpec<IntPtr>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"round", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"roundf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
