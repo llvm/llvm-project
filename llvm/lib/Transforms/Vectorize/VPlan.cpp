@@ -755,13 +755,11 @@ InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
 }
 
 InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
-  InstructionCost Cost = 0;
   if (!isReplicator()) {
+    InstructionCost Cost = 0;
+    Cost += Ctx.getLoopExitCost(VF);
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
       Cost += Block->cost(VF, Ctx);
-
-    // Add the cost for the backedge.
-    Cost += 1;
     return Cost;
   }
 
@@ -777,7 +775,7 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   // uniform condition.
   using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
-  Cost += Then->cost(VF, Ctx);
+  InstructionCost ThenCost = Then->cost(VF, Ctx);
 
   // Note the cost estimates below closely match the current legacy cost model.
   auto *BOM = cast<VPBranchOnMaskRecipe>(&getEntryBasicBlock()->front());
@@ -788,18 +786,19 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   // VF, and the header mask will always be true except in the last iteration.
   if (vputils::isUniformBoolean(Cond) ||
       vputils::isHeaderMask(Cond, *getPlan()))
-    return Cost;
+    return ThenCost;
 
   // For the scalar case, we may not always execute the original predicated
   // block, Thus, scale the block's cost by the probability of executing it.
   if (VF.isScalar())
-    return Cost / getReciprocalPredBlockProb();
+    return ThenCost / getReciprocalPredBlockProb();
 
   // Add the cost for branches around scalarized and predicated blocks.
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   auto *Vec_i1Ty = VectorType::get(IntegerType::getInt1Ty(Ctx.LLVMCtx), VF);
   auto FixedVF = VF.getFixedValue(); // Known to be non scalable.
+  InstructionCost Cost = ThenCost;   //
   Cost += Ctx.TTI.getScalarizationOverhead(Vec_i1Ty, APInt::getAllOnes(FixedVF),
                                            /*Insert*/ false, /*Extract*/ true,
                                            CostKind);

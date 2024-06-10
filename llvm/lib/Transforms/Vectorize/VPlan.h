@@ -741,6 +741,12 @@ struct VPCostContext {
   /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
+
+  /// Compute the cost of all exiting conditions of the loop using the legacy
+  /// cost model. This is to match the legacy behavior, which adds the cost of
+  /// all exit conditions. Note that this over-estimates the cost, as there will
+  /// be a single condition to control the vector loop.
+  InstructionCost getLoopExitCost(ElementCount VF);
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR

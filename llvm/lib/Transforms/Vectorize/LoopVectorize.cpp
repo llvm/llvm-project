@@ -7300,6 +7300,23 @@ InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
   return CM.getInstructionCost(UI, VF).first;
 }
 
+InstructionCost VPCostContext::getLoopExitCost(ElementCount VF) {
+  SmallVector<BasicBlock *> Exiting;
+  CM.TheLoop->getExitingBlocks(Exiting);
+  InstructionCost Cost = 0;
+  // Add the cost of all exit conditions.
+  for (BasicBlock *EB : Exiting) {
+    auto *Term = dyn_cast<BranchInst>(EB->getTerminator());
+    if (!Term)
+      continue;
+    if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
+      SkipCostComputation.insert(CondI);
+      Cost += CM.getInstructionCost(CondI, VF).first;
+    }
+  }
+  return Cost;
+}
+
 bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
   return (IsVector && CM.VecValuesToIgnore.contains(UI)) ||
          SkipCostComputation.contains(UI);
@@ -7341,8 +7358,25 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   // in the reduction. Pre-compute the cost for now.
   // TODO: Switch to costing based on VPlan once the logic has been ported.
   for (const auto &[RedPhi, RdxDesc] : Legal->getReductionVars()) {
-    if (!CM.isInLoopReduction(RedPhi))
+    if (!CM.isInLoopReduction(RedPhi) &&
+        !RecurrenceDescriptor::isAnyOfRecurrenceKind(
+            RdxDesc.getRecurrenceKind()))
       continue;
+
+    // AnyOf reduction codegen may remove the select. To match the legacy cost
+    // model, pre-compute the cost for AnyOf reductions here.
+    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
+            RdxDesc.getRecurrenceKind())) {
+      auto *Select = cast<SelectInst>(*RedPhi->user_begin());
+      assert(!CostCtx.SkipCostComputation.contains(Select) &&
+             "reduction op visited multiple times");
+      CostCtx.SkipCostComputation.insert(Select);
+      auto ReductionCost = CostCtx.getLegacyCost(Select, VF);
+      LLVM_DEBUG(dbgs() << "Cost of " << ReductionCost << " for VF " << VF
+                        << ":\n any-of reduction " << *Select << "\n");
+      Cost += ReductionCost;
+      continue;
+    }
 
     const auto &ChainOps = RdxDesc.getReductionOpChain(RedPhi, OrigLoop);
     SetVector<Instruction *> ChainOpsAndOperands(ChainOps.begin(),
