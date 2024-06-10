@@ -47,7 +47,7 @@ def get_checkers(checkers_td, checkers_rst):
         parent_package_ = package["ParentPackage"]
         hidden = (checker["Hidden"] != 0) or (package["Hidden"] != 0)
 
-        while parent_package_ != None:
+        while parent_package_ is not None:
             parent_package = table_entries[parent_package_["def"]]
             checker_package_prefix = (
                 parent_package["PackageName"] + "." + checker_package_prefix
