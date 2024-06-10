@@ -1094,9 +1094,11 @@ bool MCAssembler::relaxBoundaryAlign(MCAsmLayout &Layout,
 
   uint64_t AlignedOffset = Layout.getFragmentOffset(&BF);
   uint64_t AlignedSize = 0;
-  for (const MCFragment *F = BF.getLastFragment(); F != &BF;
-       F = F->getPrevNode())
+  for (const MCFragment *F = BF.getNextNode();; F = F->getNextNode()) {
     AlignedSize += computeFragmentSize(Layout, *F);
+    if (F == BF.getLastFragment())
+      break;
+  }
 
   Align BoundaryAlignment = BF.getAlignment();
   uint64_t NewSize = needPadding(AlignedOffset, AlignedSize, BoundaryAlignment)
