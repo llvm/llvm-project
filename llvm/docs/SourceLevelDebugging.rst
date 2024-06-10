@@ -286,7 +286,7 @@ The first three arguments are the same as for a ``#dbg_value``. The fourth
 argument is a ``DIAssignID`` used to reference a store. The fifth is the
 destination of the store, the sixth is a `complex
 expression <LangRef.html#diexpression>`_ that modfies it, and the seventh is a
-`source location<LangRef.html#dilocation>`_.
+`source location <LangRef.html#dilocation>`_.
 
 See :doc:`AssignmentTracking` for more info.
 
@@ -299,10 +299,10 @@ In intrinsic-mode, LLVM uses several intrinsic functions (name prefixed with "``
 track source local variables through optimization and code generation. These
 intrinsic functions each correspond to one of the debug records above, with a
 few syntactic differences: each argument to a debugger intrinsic must be wrapped
-as metadata, meaning it must be prefixed with ``metadata ``, and the
+as metadata, meaning it must be prefixed with ``metadata``, and the
 ``DILocation`` argument in each record must be a metadata attachment to the
 call instruction, meaning it appears after the argument list with the prefix
-``!dbg ``.
+``!dbg``.
 
 ``llvm.dbg.declare``
 ^^^^^^^^^^^^^^^^^^^^

@@ -6288,7 +6288,7 @@ DIExpression
 """"""""""""
 
 ``DIExpression`` nodes represent expressions that are inspired by the DWARF
-expression language. They are used in :ref:`debug records<debug_records>`
+expression language. They are used in :ref:`debug records <debugrecords>`
 (such as ``#dbg_declare`` and ``#dbg_value``) to describe how the
 referenced LLVM variable relates to the source language variable. Debug
 expressions are interpreted left-to-right: start by pushing the value/address
@@ -6451,7 +6451,7 @@ DIAssignID
 """"""""""
 
 ``DIAssignID`` nodes have no operands and are always distinct. They are used to
-link together (:ref:`#dbg_assign records <debug_records>`) and instructions
+link together (:ref:`#dbg_assign records <debugrecords>`) and instructions
 that store in IR. See `Debug Info Assignment Tracking
 <AssignmentTracking.html>`_ for more info.
 
@@ -6472,7 +6472,7 @@ DIArgList
    also be updated to mirror whatever we decide here.
 
 ``DIArgList`` nodes hold a list of constant or SSA value references. These are
-used in :ref:`debug records<debug_records>` in combination with a
+used in :ref:`debug records <debugrecords>` in combination with a
 ``DIExpression`` that uses the
 ``DW_OP_LLVM_arg`` operator. Because a DIArgList may refer to local values
 within a function, it must only be used as a function argument, must always be
@@ -12966,7 +12966,7 @@ These debug records replace the prior :ref:`debug intrinsics<dbg_intrinsics>`.
 Debug records will be disabled if ``--write-experimental-debuginfo=false`` is
 passed to LLVM; it is an error for both records and intrinsics to appear in the
 same module. More information about debug records can be found in the `LLVM
-Source Level Debugging<SourceLevelDebugging.html#format-common-intrinsics>`_
+Source Level Debugging <SourceLevelDebugging.html#format-common-intrinsics>`_
 document.
 
 .. _intrinsics:
