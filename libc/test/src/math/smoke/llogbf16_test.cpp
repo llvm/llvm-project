@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+//===-- Unittests for llogbf16 --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-threads
+#include "ILogbTest.h"
 
-// <mutex>
+#include "src/math/llogbf16.h"
 
-// class timed_mutex;
-
-// timed_mutex();
-
-#include <mutex>
-
-#include "test_macros.h"
-
-int main(int, char**) {
-  std::timed_mutex m;
-  (void)m;
-
-  return 0;
-}
+LIST_INTLOGB_TESTS(long, float16, LIBC_NAMESPACE::llogbf16);
