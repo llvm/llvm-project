@@ -1247,7 +1247,6 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       if (auto *BD = R.getAsSingle<BindingDecl>())
         Var = BD;
       else if (auto *FD = R.getAsSingle<FieldDecl>()) {
-        Var = R.getAsSingle<VarDecl>();
         Diag(C->Loc, diag::err_capture_class_member_does_not_name_variable)
             << C->Id;
         continue;
