@@ -180,8 +180,8 @@ int Test5() {
 }
 
 void some_generic_function(const void *arg, int argsize);
-int **IntPP;
-C **ClassPP;
+int *IntP, **IntPP;
+C *ClassP, **ClassPP;
 
 void GenericFunctionTest() {
   // The `sizeof(pointer)` checks ignore situations where the pointer is
@@ -190,8 +190,19 @@ void GenericFunctionTest() {
   // a generic function which emulates dynamic typing within C.
   some_generic_function(IntPP, sizeof(*IntPP));
   some_generic_function(ClassPP, sizeof(*ClassPP));
+  // Using `...[0]` instead of the dereference operator is another common
+  // variant, which is also widespread in the idiomatic array-size calculation:
+  // `sizeof(array) / sizeof(array[0])`.
   some_generic_function(IntPP, sizeof(IntPP[0]));
   some_generic_function(ClassPP, sizeof(ClassPP[0]));
+  // FIXME: There is a third common pattern where the generic function is
+  // called with `&Variable` and `sizeof(Variable)`. Right now these are
+  // reported by the `sizeof(pointer)` checks, but this causes some false
+  // positives, so it would be good to create an exception for them.
+  some_generic_function(&IntPP, sizeof(IntP));
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
+  some_generic_function(&ClassPP, sizeof(ClassP));
+  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
 }
 
 int ValidExpressions() {
