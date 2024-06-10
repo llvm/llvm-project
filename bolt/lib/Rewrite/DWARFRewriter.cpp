@@ -636,12 +636,10 @@ void DWARFRewriter::updateDebugInfo() {
           std::make_unique<DebugLoclistWriter>(CU, DwarfVersion, false);
 
       if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
-        assert(RangeListsWritersByCU.count(*DWOId) == 0 &&
-               "RangeLists writer for DWO unit already exists.");
         auto RangeListsSectionWriter =
             std::make_unique<DebugRangeListsSectionWriter>();
         RangeListsSectionWriter->initSection(CU);
-        RangeListsWritersByCU[*DWOId] = std::move(RangeListsSectionWriter);
+        RangeListsWriter = std::move(RangeListsSectionWriter);
       }
 
     } else {
@@ -690,7 +688,7 @@ void DWARFRewriter::updateDebugInfo() {
       DebugLoclistWriter DebugLocDWoWriter(*Unit, Unit->getVersion(), true);
       DebugRangesSectionWriter *TempRangesSectionWriter = RangesSectionWriter;
       if (Unit->getVersion() >= 5) {
-        TempRangesSectionWriter = RangeListsWritersByCU[*DWOId].get();
+        TempRangesSectionWriter = RangeListsWriter.get();
       } else {
         RangesBase = RangesSectionWriter->getSectionOffset();
         setDwoRangesBase(*DWOId, *RangesBase);
@@ -1872,9 +1870,9 @@ void DWARFRewriter::updateDWP(DWARFUnit &CU,
 
   DebugRangeListsSectionWriter *RangeListssWriter = nullptr;
   if (CU.getVersion() == 5) {
-    assert(RangeListsWritersByCU.count(DWOId) != 0 &&
+    assert(RangeListsWriter &&
            "No RangeListsWriter for DWO ID.");
-    RangeListssWriter = RangeListsWritersByCU[DWOId].get();
+    RangeListssWriter = RangeListsWriter.get();
   }
   auto AddType = [&](unsigned int Index, uint32_t IndexVersion, uint64_t Offset,
                      uint64_t Length, uint64_t Hash) -> void {
@@ -2021,9 +2019,9 @@ void DWARFRewriter::writeDWOFiles(
 
   DebugRangeListsSectionWriter *RangeListssWriter = nullptr;
   if (CU.getVersion() == 5) {
-    assert(RangeListsWritersByCU.count(DWOId) != 0 &&
+    assert(RangeListsWriter &&
            "No RangeListsWriter for DWO ID.");
-    RangeListssWriter = RangeListsWritersByCU[DWOId].get();
+    RangeListssWriter = RangeListsWriter.get();
 
     // Handling .debug_rnglists.dwo separately. The original .o/.dwo might not
     // have .debug_rnglists so won't be part of the loop below.
