@@ -104,7 +104,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -4809,10 +4808,8 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
 
   // Check consistency of !prof branch_weights metadata.
   if (ProfName == "branch_weights") {
-    unsigned int Offset = getBranchWeightOffset(MD);
     if (isa<InvokeInst>(&I)) {
-      Check(MD->getNumOperands() == (1 + Offset) ||
-                MD->getNumOperands() == (2 + Offset),
+      Check(MD->getNumOperands() == 2 || MD->getNumOperands() == 3,
             "Wrong number of InvokeInst branch_weights operands", MD);
     } else {
       unsigned ExpectedNumOperands = 0;
@@ -4832,10 +4829,10 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
         CheckFailed("!prof branch_weights are not allowed for this instruction",
                     MD);
 
-      Check(MD->getNumOperands() == Offset + ExpectedNumOperands,
+      Check(MD->getNumOperands() == 1 + ExpectedNumOperands,
             "Wrong number of operands", MD);
     }
-    for (unsigned i = Offset; i < MD->getNumOperands(); ++i) {
+    for (unsigned i = 1; i < MD->getNumOperands(); ++i) {
       auto &MDO = MD->getOperand(i);
       Check(MDO, "second operand should not be null", MD);
       Check(mdconst::dyn_extract<ConstantInt>(MDO),
