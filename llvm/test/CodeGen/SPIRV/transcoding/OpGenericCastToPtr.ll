@@ -18,6 +18,11 @@
 ; CHECK-SPIRV: OpGenericCastToPtr %[[#PrivatePtr]]
 ; CHECK-SPIRV: OpFunctionEnd
 
+; CHECK-SPIRV: OpFunction
+; CHECK-SPIRV: OpGenericCastToPtr %[[#PrivatePtr]]
+; CHECK-SPIRV: OpGenericCastToPtr %[[#PrivatePtr]]
+; CHECK-SPIRV: OpFunctionEnd
+
 %id = type { %arr }
 %arr = type { [1 x i64] }
 
@@ -52,6 +57,15 @@ entry:
   %G = call spir_func ptr addrspace(1) @_Z9to_globalPv(ptr addrspace(4) %var1, i32 5)
   %L = call spir_func ptr addrspace(3) @_Z8to_localPv(ptr addrspace(4) %var2, i32 4)
   %P = call spir_func ptr @_Z10to_privatePv(ptr addrspace(4) %var3, i32 7)
+  ret void
+}
+
+define spir_kernel void @test(ptr addrspace(3) %_arg_LocalA) {
+entry:
+  %var = alloca i32, align 4
+  %var3 = addrspacecast ptr %var to ptr addrspace(4)
+  %P1 = call spir_func ptr @_Z34__spirv_GenericCastToPtr_ToPrivatePvi(ptr addrspace(4) %var3, i32 7)
+  %P2 = call spir_func ptr @_Z10to_privatePv(ptr addrspace(4) %var3, i32 7)
   ret void
 }
 
