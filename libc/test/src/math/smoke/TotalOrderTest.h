@@ -65,13 +65,13 @@ public:
   }
 
   void testSingleNaN(TotalOrderFunc func) {
-    EXPECT_TRUE(funcWrapper(func, -aNaN, T(0.0)));
-    EXPECT_TRUE(funcWrapper(func, -aNaN, T(0.1)));
-    EXPECT_TRUE(funcWrapper(func, -aNaN, T(123.38)));
+    EXPECT_TRUE(funcWrapper(func, neg_aNaN, T(0.0)));
+    EXPECT_TRUE(funcWrapper(func, neg_aNaN, T(0.1)));
+    EXPECT_TRUE(funcWrapper(func, neg_aNaN, T(123.38)));
 
-    EXPECT_FALSE(funcWrapper(func, T(0.0), -aNaN));
-    EXPECT_FALSE(funcWrapper(func, T(0.1), -aNaN));
-    EXPECT_FALSE(funcWrapper(func, T(123.38), -aNaN));
+    EXPECT_FALSE(funcWrapper(func, T(0.0), neg_aNaN));
+    EXPECT_FALSE(funcWrapper(func, T(0.1), neg_aNaN));
+    EXPECT_FALSE(funcWrapper(func, T(123.38), neg_aNaN));
 
     EXPECT_TRUE(funcWrapper(func, T(0.0), aNaN));
     EXPECT_TRUE(funcWrapper(func, T(0.1), aNaN));
@@ -83,42 +83,44 @@ public:
   }
 
   void testNaNSigns(TotalOrderFunc func) {
-    EXPECT_TRUE(funcWrapper(func, -aNaN, aNaN));
-    EXPECT_TRUE(funcWrapper(func, -aNaN, sNaN));
-    EXPECT_TRUE(funcWrapper(func, -sNaN, aNaN));
-    EXPECT_TRUE(funcWrapper(func, -sNaN, sNaN));
+    EXPECT_TRUE(funcWrapper(func, neg_aNaN, aNaN));
+    EXPECT_TRUE(funcWrapper(func, neg_aNaN, sNaN));
+    EXPECT_TRUE(funcWrapper(func, neg_sNaN, aNaN));
+    EXPECT_TRUE(funcWrapper(func, neg_sNaN, sNaN));
 
-    EXPECT_FALSE(funcWrapper(func, aNaN, -aNaN));
-    EXPECT_FALSE(funcWrapper(func, aNaN, -sNaN));
-    EXPECT_FALSE(funcWrapper(func, sNaN, -aNaN));
-    EXPECT_FALSE(funcWrapper(func, sNaN, -sNaN));
+    EXPECT_FALSE(funcWrapper(func, aNaN, neg_aNaN));
+    EXPECT_FALSE(funcWrapper(func, aNaN, neg_sNaN));
+    EXPECT_FALSE(funcWrapper(func, sNaN, neg_aNaN));
+    EXPECT_FALSE(funcWrapper(func, sNaN, neg_sNaN));
   }
 
   void testQuietVsSignalingNaN(TotalOrderFunc func) {
-    EXPECT_TRUE(funcWrapper(func, -aNaN, -sNaN));
-    EXPECT_FALSE(funcWrapper(func, -sNaN, -aNaN));
+    EXPECT_TRUE(funcWrapper(func, neg_aNaN, neg_sNaN));
+    EXPECT_FALSE(funcWrapper(func, neg_sNaN, neg_aNaN));
     EXPECT_TRUE(funcWrapper(func, sNaN, aNaN));
     EXPECT_FALSE(funcWrapper(func, aNaN, sNaN));
   }
 
   void testNaNPayloads(TotalOrderFunc func) {
     T qnan_123 = FPBits::quiet_nan(Sign::POS, 0x123).get_val();
+    T neg_qnan_123 = FPBits::quiet_nan(Sign::NEG, 0x123).get_val();
     T snan_123 = FPBits::signaling_nan(Sign::POS, 0x123).get_val();
+    T neg_snan_123 = FPBits::signaling_nan(Sign::NEG, 0x123).get_val();
 
     EXPECT_TRUE(funcWrapper(func, aNaN, aNaN));
-    EXPECT_TRUE(funcWrapper(func, -aNaN, -aNaN));
+    EXPECT_TRUE(funcWrapper(func, neg_aNaN, neg_aNaN));
     EXPECT_TRUE(funcWrapper(func, sNaN, sNaN));
-    EXPECT_TRUE(funcWrapper(func, -sNaN, -sNaN));
+    EXPECT_TRUE(funcWrapper(func, neg_sNaN, neg_sNaN));
 
     EXPECT_TRUE(funcWrapper(func, aNaN, qnan_123));
-    EXPECT_TRUE(funcWrapper(func, -aNaN, -qnan_123));
+    EXPECT_TRUE(funcWrapper(func, neg_aNaN, neg_qnan_123));
     EXPECT_TRUE(funcWrapper(func, sNaN, snan_123));
-    EXPECT_TRUE(funcWrapper(func, -sNaN, -snan_123));
+    EXPECT_TRUE(funcWrapper(func, neg_sNaN, neg_snan_123));
 
     EXPECT_FALSE(funcWrapper(func, qnan_123, aNaN));
-    EXPECT_FALSE(funcWrapper(func, -qnan_123, -aNaN));
+    EXPECT_FALSE(funcWrapper(func, neg_qnan_123, neg_aNaN));
     EXPECT_FALSE(funcWrapper(func, snan_123, sNaN));
-    EXPECT_FALSE(funcWrapper(func, -snan_123, -sNaN));
+    EXPECT_FALSE(funcWrapper(func, neg_snan_123, neg_sNaN));
   }
 };
 
