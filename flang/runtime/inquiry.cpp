@@ -85,13 +85,25 @@ std::int64_t RTDEF(SizeDim)(
   return static_cast<std::int64_t>(dimension.Extent());
 }
 
-void RTDEF(Shape)(void *result, const Descriptor &array, int kind) {
-  Terminator terminator{__FILE__, __LINE__};
+void RTDEF(Shape)(void *result, const Descriptor &array, int kind,
+    const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
   INTERNAL_CHECK(array.rank() <= common::maxRank);
   for (SubscriptValue i{0}; i < array.rank(); ++i) {
     const Dimension &dimension{array.GetDimension(i)};
     Fortran::runtime::ApplyIntegerKind<RawStoreIntegerAt, void>(
         kind, terminator, result, i, dimension.Extent());
+  }
+}
+
+void RTDEF(Lbound)(void *result, const Descriptor &array, int kind,
+    const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  INTERNAL_CHECK(array.rank() <= common::maxRank);
+  for (SubscriptValue i{0}; i < array.rank(); ++i) {
+    const Dimension &dimension{array.GetDimension(i)};
+    Fortran::runtime::ApplyIntegerKind<RawStoreIntegerAt, void>(
+        kind, terminator, result, i, dimension.LowerBound());
   }
 }
 
