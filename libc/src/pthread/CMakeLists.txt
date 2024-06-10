@@ -461,6 +461,68 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_rwlockattr_destroy
+  SRCS
+    pthread_rwlockattr_destroy.cpp
+  HDRS
+    pthread_rwlockattr_destroy.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_rwlockattr_getkind_np
+  SRCS
+    pthread_rwlockattr_getkind_np.cpp
+  HDRS
+    pthread_rwlockattr_getkind_np.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_rwlockattr_getpshared
+  SRCS
+    pthread_rwlockattr_getpshared.cpp
+  HDRS
+    pthread_rwlockattr_getpshared.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_rwlockattr_init
+  SRCS
+    pthread_rwlockattr_init.cpp
+  HDRS
+    pthread_rwlockattr_init.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_rwlockattr_setkind_np
+  SRCS
+    pthread_rwlockattr_setkind_np.cpp
+  HDRS
+    pthread_rwlockattr_setkind_np.h
+  DEPENDS
+    libc.include.pthread
+    libc.include.errno
+)
+
+add_entrypoint_object(
+  pthread_rwlockattr_setpshared
+  SRCS
+    pthread_rwlockattr_setpshared.cpp
+  HDRS
+    pthread_rwlockattr_setpshared.h
+  DEPENDS
+    libc.include.pthread
+    libc.include.errno
+)
+
+add_entrypoint_object(
   pthread_once
   SRCS
     pthread_once.cpp

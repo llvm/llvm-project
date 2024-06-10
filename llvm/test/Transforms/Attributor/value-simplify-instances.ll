@@ -8,9 +8,9 @@ declare ptr @geti1Ptr()
 
 ; Make sure we do *not* return true.
 ;.
-; CHECK: @[[G1:[a-zA-Z0-9_$"\\.-]+]] = private global ptr undef
-; CHECK: @[[G2:[a-zA-Z0-9_$"\\.-]+]] = private global ptr undef
-; CHECK: @[[G3:[a-zA-Z0-9_$"\\.-]+]] = private global i1 undef
+; CHECK: @G1 = private global ptr undef
+; CHECK: @G2 = private global ptr undef
+; CHECK: @G3 = private global i1 undef
 ;.
 define internal i1 @recursive_inst_comparator(ptr %a, ptr %b) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)

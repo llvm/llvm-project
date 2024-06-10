@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_TIME_TIME_FUNC_H
 #define LLVM_LIBC_SRC_TIME_TIME_FUNC_H
 
-#include <time.h>
+#include "hdr/types/time_t.h"
 
 // Note this header file is named time_func.h to avoid conflicts with the
 // public header file time.h.

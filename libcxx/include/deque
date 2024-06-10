@@ -189,7 +189,6 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/remove_if.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
@@ -483,10 +482,10 @@ public:
                 "original allocator");
   static_assert(is_nothrow_default_constructible<allocator_type>::value ==
                     is_nothrow_default_constructible<__pointer_allocator>::value,
-                "rebinding an allocator should not change excpetion guarantees");
+                "rebinding an allocator should not change exception guarantees");
   static_assert(is_nothrow_move_constructible<allocator_type>::value ==
                     is_nothrow_move_constructible<typename __map::allocator_type>::value,
-                "rebinding an allocator should not change excpetion guarantees");
+                "rebinding an allocator should not change exception guarantees");
 
 private:
   struct __deque_block_range {
@@ -708,7 +707,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void resize(size_type __n);
   _LIBCPP_HIDE_FROM_ABI void resize(size_type __n, const value_type& __v);
   _LIBCPP_HIDE_FROM_ABI void shrink_to_fit() _NOEXCEPT;
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return size() == 0; }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return size() == 0; }
 
   // element access:
   _LIBCPP_HIDE_FROM_ABI reference operator[](size_type __i) _NOEXCEPT;

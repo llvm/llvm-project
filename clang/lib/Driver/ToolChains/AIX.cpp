@@ -376,9 +376,7 @@ void AIX::AddOpenMPIncludeArgs(const ArgList &DriverArgs,
       addSystemInclude(DriverArgs, CC1Args, PathOpenMP.str());
       break;
     case Driver::OMPRT_IOMP5:
-      LLVM_FALLTHROUGH;
     case Driver::OMPRT_GOMP:
-      LLVM_FALLTHROUGH;
     case Driver::OMPRT_Unknown:
       // Unknown / unsupported include paths.
       break;
@@ -480,14 +478,6 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
     else
       return false;
   }();
-
-  // Currently only supported for small code model.
-  if (TOCDataGloballyinEffect &&
-      (Args.getLastArgValue(options::OPT_mcmodel_EQ).equals("large") ||
-       Args.getLastArgValue(options::OPT_mcmodel_EQ).equals("medium"))) {
-    D.Diag(clang::diag::warn_drv_unsupported_tocdata);
-    return;
-  }
 
   enum TOCDataSetting {
     AddressInTOC = 0, // Address of the symbol stored in the TOC.

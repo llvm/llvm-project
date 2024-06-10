@@ -144,15 +144,18 @@ int main(int argc, const char *argv[]) {
   cl::HideUnrelatedOptions({&CXXMapCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "LLVM C++ mangled name remapper\n");
 
-  auto OldSymbolBufOrError = MemoryBuffer::getFileOrSTDIN(OldSymbolFile);
+  auto OldSymbolBufOrError =
+      MemoryBuffer::getFileOrSTDIN(OldSymbolFile, /*IsText=*/true);
   if (!OldSymbolBufOrError)
     exitWithErrorCode(OldSymbolBufOrError.getError(), OldSymbolFile);
 
-  auto NewSymbolBufOrError = MemoryBuffer::getFileOrSTDIN(NewSymbolFile);
+  auto NewSymbolBufOrError =
+      MemoryBuffer::getFileOrSTDIN(NewSymbolFile, /*IsText=*/true);
   if (!NewSymbolBufOrError)
     exitWithErrorCode(NewSymbolBufOrError.getError(), NewSymbolFile);
 
-  auto RemappingBufOrError = MemoryBuffer::getFileOrSTDIN(RemappingFile);
+  auto RemappingBufOrError =
+      MemoryBuffer::getFileOrSTDIN(RemappingFile, /*IsText=*/true);
   if (!RemappingBufOrError)
     exitWithErrorCode(RemappingBufOrError.getError(), RemappingFile);
 

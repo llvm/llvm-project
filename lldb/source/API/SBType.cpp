@@ -7,19 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBType.h"
+#include "Utils.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTypeEnumMember.h"
 #include "lldb/Core/Mangled.h"
+#include "lldb/Core/ValueObjectConstResult.h"
+#include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <memory>
 #include <optional>
@@ -125,6 +131,18 @@ uint64_t SBType::GetByteSize() {
             m_opaque_sp->GetCompilerType(false).GetByteSize(nullptr))
       return *size;
   return 0;
+}
+
+uint64_t SBType::GetByteAlign() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!IsValid())
+    return 0;
+
+  std::optional<uint64_t> bit_align =
+      m_opaque_sp->GetCompilerType(/*prefer_dynamic=*/false)
+          .GetTypeBitAlign(nullptr);
+  return llvm::divideCeil(bit_align.value_or(0), 8);
 }
 
 bool SBType::IsPointerType() {
@@ -325,6 +343,79 @@ lldb::SBTypeMemberFunction SBType::GetMemberFunctionAtIndex(uint32_t idx) {
   return sb_func_type;
 }
 
+SBTypeStaticField::SBTypeStaticField() { LLDB_INSTRUMENT_VA(this); }
+
+SBTypeStaticField::SBTypeStaticField(lldb_private::CompilerDecl decl)
+    : m_opaque_up(decl ? std::make_unique<CompilerDecl>(decl) : nullptr) {}
+
+SBTypeStaticField::SBTypeStaticField(const SBTypeStaticField &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  m_opaque_up = clone(rhs.m_opaque_up);
+}
+
+SBTypeStaticField &SBTypeStaticField::operator=(const SBTypeStaticField &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  m_opaque_up = clone(rhs.m_opaque_up);
+  return *this;
+}
+
+SBTypeStaticField::~SBTypeStaticField() { LLDB_INSTRUMENT_VA(this); }
+
+SBTypeStaticField::operator bool() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  return IsValid();
+}
+
+bool SBTypeStaticField::IsValid() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up != nullptr;
+}
+
+const char *SBTypeStaticField::GetName() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!IsValid())
+    return "";
+  return m_opaque_up->GetName().GetCString();
+}
+
+const char *SBTypeStaticField::GetMangledName() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!IsValid())
+    return "";
+  return m_opaque_up->GetMangledName().GetCString();
+}
+
+SBType SBTypeStaticField::GetType() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!IsValid())
+    return SBType();
+  return SBType(m_opaque_up->GetType());
+}
+
+SBValue SBTypeStaticField::GetConstantValue(lldb::SBTarget target) {
+  LLDB_INSTRUMENT_VA(this, target);
+
+  if (!IsValid())
+    return SBValue();
+
+  Scalar value = m_opaque_up->GetConstantValue();
+  if (!value.IsValid())
+    return SBValue();
+  DataExtractor data;
+  value.GetData(data);
+  auto value_obj_sp = ValueObjectConstResult::Create(
+      target.GetSP().get(), m_opaque_up->GetType(), m_opaque_up->GetName(),
+      data);
+  return SBValue(std::move(value_obj_sp));
+}
+
 lldb::SBType SBType::GetUnqualifiedType() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -436,6 +527,16 @@ SBTypeMember SBType::GetVirtualBaseClassAtIndex(uint32_t idx) {
           TypeImplSP(new TypeImpl(base_class_type)), bit_offset));
   }
   return sb_type_member;
+}
+
+SBTypeStaticField SBType::GetStaticFieldWithName(const char *name) {
+  LLDB_INSTRUMENT_VA(this, name);
+
+  if (!IsValid() || !name)
+    return SBTypeStaticField();
+
+  return SBTypeStaticField(m_opaque_sp->GetCompilerType(/*prefer_dynamic=*/true)
+                               .GetStaticFieldWithName(name));
 }
 
 SBTypeEnumMemberList SBType::GetEnumMembers() {

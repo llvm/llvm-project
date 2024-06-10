@@ -258,7 +258,9 @@ int main(int argc, char **argv) {
       // All that llvm-dis does is write the assembly to a file.
       if (!DontPrint) {
         if (M) {
-          ScopedDbgInfoFormatSetter FormatSetter(*M, WriteNewDbgInfoFormat);
+          M->setIsNewDbgInfoFormat(WriteNewDbgInfoFormat);
+          if (WriteNewDbgInfoFormat)
+            M->removeDebugIntrinsicDeclarations();
           M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
         }
         if (Index)

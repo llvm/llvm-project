@@ -1,17 +1,17 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -Wno-error=int-conversion -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-error=int-conversion -triple amdgcn-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 // CHECK-LABEL: @test_builtin_clz(
-// CHECK: tail call i32 @llvm.ctlz.i32(i32 %a, i1 true)
+// CHECK: tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %a, i1 true)
 void test_builtin_clz(global int* out, int a)
 {
   *out = __builtin_clz(a);
 }
 
 // CHECK-LABEL: @test_builtin_clzl(
-// CHECK: tail call i64 @llvm.ctlz.i64(i64 %a, i1 true)
+// CHECK: tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 %a, i1 true)
 void test_builtin_clzl(global long* out, long a)
 {
   *out = __builtin_clzl(a);

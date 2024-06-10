@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -370,12 +372,31 @@ static CallStackIdMapTy getCallStackMapping() {
   return Mapping;
 }
 
+// Populate all of the fields of MIB.
+MemInfoBlock makeFullMIB() {
+  MemInfoBlock MIB;
+#define MIBEntryDef(NameTag, Name, Type) MIB.NameTag;
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+  return MIB;
+}
+
+// Populate those fields returned by getHotColdSchema.
+MemInfoBlock makePartialMIB() {
+  MemInfoBlock MIB;
+  MIB.AllocCount = 1;
+  MIB.TotalSize = 5;
+  MIB.TotalLifetime = 10;
+  MIB.TotalLifetimeAccessDensity = 23;
+  return MIB;
+}
+
 IndexedMemProfRecord makeRecord(
     std::initializer_list<std::initializer_list<::llvm::memprof::FrameId>>
         AllocFrames,
     std::initializer_list<std::initializer_list<::llvm::memprof::FrameId>>
         CallSiteFrames,
-    const MemInfoBlock &Block = MemInfoBlock()) {
+    const MemInfoBlock &Block = makeFullMIB()) {
   llvm::memprof::IndexedMemProfRecord MR;
   for (const auto &Frames : AllocFrames)
     MR.AllocSites.emplace_back(Frames, llvm::memprof::hashCallStack(Frames),
@@ -388,13 +409,13 @@ IndexedMemProfRecord makeRecord(
 IndexedMemProfRecord
 makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
              std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
-             const MemInfoBlock &Block = MemInfoBlock()) {
+             const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
   llvm::memprof::IndexedMemProfRecord MR;
   for (const auto &CSId : AllocFrames)
     // We don't populate IndexedAllocationInfo::CallStack because we use it only
     // in Version0 and Version1.
     MR.AllocSites.emplace_back(::llvm::SmallVector<memprof::FrameId>(), CSId,
-                               Block);
+                               Block, Schema);
   for (const auto &CSId : CallSiteFrames)
     MR.CallSiteIds.push_back(CSId);
   return MR;
@@ -476,15 +497,18 @@ TEST_F(InstrProfTest, test_memprof_v0) {
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
-TEST_F(InstrProfTest, test_memprof_v2) {
+TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
+  const MemInfoBlock MIB = makeFullMIB();
+
   Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfFullSchema(true);
 
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
   const IndexedMemProfRecord IndexedMR = makeRecordV2(
       /*AllocFrames=*/{0x111, 0x222},
-      /*CallSiteFrames=*/{0x333});
+      /*CallSiteFrames=*/{0x333}, MIB, memprof::getFullSchema());
   const FrameIdMapTy IdToFrameMap = getFrameMapping();
   const auto CSIdToCallStackMap = getCallStackMapping();
   for (const auto &I : IdToFrameMap) {
@@ -502,38 +526,58 @@ TEST_F(InstrProfTest, test_memprof_v2) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  std::optional<memprof::FrameId> LastUnmappedFrameId;
-  auto IdToFrameCallback = [&](const memprof::FrameId Id) {
-    auto Iter = IdToFrameMap.find(Id);
-    if (Iter == IdToFrameMap.end()) {
-      LastUnmappedFrameId = Id;
-      return memprof::Frame(0, 0, 0, false);
-    }
-    return Iter->second;
-  };
-
-  std::optional<::llvm::memprof::CallStackId> LastUnmappedCSId;
-  auto CSIdToCallStackCallback = [&](::llvm::memprof::CallStackId CSId) {
-    llvm::SmallVector<memprof::Frame> Frames;
-    auto CSIter = CSIdToCallStackMap.find(CSId);
-    if (CSIter == CSIdToCallStackMap.end()) {
-      LastUnmappedCSId = CSId;
-    } else {
-      const ::llvm::SmallVector<::llvm::memprof::FrameId> &CS =
-          CSIter->getSecond();
-      Frames.reserve(CS.size());
-      for (::llvm::memprof::FrameId Id : CS)
-        Frames.push_back(IdToFrameCallback(Id));
-    }
-    return Frames;
-  };
+  memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(IdToFrameMap);
+  memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
+      CSIdToCallStackMap, FrameIdConv);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
-      IndexedMR.toMemProfRecord(CSIdToCallStackCallback);
-  ASSERT_EQ(LastUnmappedFrameId, std::nullopt)
-      << "could not map frame id: " << *LastUnmappedFrameId;
-  ASSERT_EQ(LastUnmappedCSId, std::nullopt)
-      << "could not map call stack id: " << *LastUnmappedCSId;
+      IndexedMR.toMemProfRecord(CSIdConv);
+  ASSERT_EQ(FrameIdConv.LastUnmappedId, std::nullopt)
+      << "could not map frame id: " << *FrameIdConv.LastUnmappedId;
+  ASSERT_EQ(CSIdConv.LastUnmappedId, std::nullopt)
+      << "could not map call stack id: " << *CSIdConv.LastUnmappedId;
+  EXPECT_THAT(WantRecord, EqualsRecord(Record));
+}
+
+TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
+  const MemInfoBlock MIB = makePartialMIB();
+
+  Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfFullSchema(false);
+
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
+                    Succeeded());
+
+  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+      /*AllocFrames=*/{0x111, 0x222},
+      /*CallSiteFrames=*/{0x333}, MIB, memprof::getHotColdSchema());
+  const FrameIdMapTy IdToFrameMap = getFrameMapping();
+  const auto CSIdToCallStackMap = getCallStackMapping();
+  for (const auto &I : IdToFrameMap) {
+    Writer.addMemProfFrame(I.first, I.getSecond(), Err);
+  }
+  for (const auto &I : CSIdToCallStackMap) {
+    Writer.addMemProfCallStack(I.first, I.getSecond(), Err);
+  }
+  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  auto RecordOr = Reader->getMemProfRecord(0x9999);
+  ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
+  const memprof::MemProfRecord &Record = RecordOr.get();
+
+  memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(IdToFrameMap);
+  memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
+      CSIdToCallStackMap, FrameIdConv);
+
+  const ::llvm::memprof::MemProfRecord WantRecord =
+      IndexedMR.toMemProfRecord(CSIdConv);
+  ASSERT_EQ(FrameIdConv.LastUnmappedId, std::nullopt)
+      << "could not map frame id: " << *FrameIdConv.LastUnmappedId;
+  ASSERT_EQ(CSIdConv.LastUnmappedId, std::nullopt)
+      << "could not map call stack id: " << *CSIdConv.LastUnmappedId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
@@ -1688,6 +1732,34 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
   Function::Create(FTy, Function::WeakODRLinkage, "Wblah", M.get());
   Function::Create(FTy, Function::WeakODRLinkage, "Wbar", M.get());
 
+  // [ptr, ptr, ptr]
+  ArrayType *VTableArrayType = ArrayType::get(
+      PointerType::get(Ctx, M->getDataLayout().getDefaultGlobalsAddressSpace()),
+      3);
+  Constant *Int32TyNull =
+      llvm::ConstantExpr::getNullValue(PointerType::getUnqual(Ctx));
+  SmallVector<llvm::Type *, 1> tys = {VTableArrayType};
+  StructType *VTableType = llvm::StructType::get(Ctx, tys);
+
+  // Create two vtables in the module, one with external linkage and the other
+  // with local linkage.
+  for (auto [Name, Linkage] :
+       {std::pair{"ExternalGV", GlobalValue::ExternalLinkage},
+        {"LocalGV", GlobalValue::InternalLinkage}}) {
+    llvm::Twine FuncName(Name, StringRef("VFunc"));
+    Function *VFunc = Function::Create(FTy, Linkage, FuncName, M.get());
+    GlobalVariable *GV = new llvm::GlobalVariable(
+        *M, VTableType, /* isConstant= */ true, Linkage,
+        llvm::ConstantStruct::get(
+            VTableType,
+            {llvm::ConstantArray::get(VTableArrayType,
+                                      {Int32TyNull, Int32TyNull, VFunc})}),
+        Name);
+    // Add type metadata for the test data, since vtables with type metadata
+    // are added to symtab.
+    GV->addTypeMetadata(16, MDString::get(Ctx, Name));
+  }
+
   InstrProfSymtab ProfSymtab;
   EXPECT_THAT_ERROR(ProfSymtab.create(*M), Succeeded());
 
@@ -1708,6 +1780,22 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
         ProfSymtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(PGOName));
     EXPECT_EQ(PGOName, PGOFuncName);
     EXPECT_THAT(PGOFuncName.str(), EndsWith(Funcs[I].str()));
+  }
+
+  for (auto [VTableName, PGOName] : {std::pair{"ExternalGV", "ExternalGV"},
+                                     {"LocalGV", "MyModule.cpp;LocalGV"}}) {
+    GlobalVariable *GV =
+        M->getGlobalVariable(VTableName, /* AllowInternal=*/true);
+
+    // Test that ProfSymtab returns the expected name given a hash.
+    std::string IRPGOName = getPGOName(*GV);
+    EXPECT_STREQ(IRPGOName.c_str(), PGOName);
+    uint64_t GUID = IndexedInstrProf::ComputeHash(IRPGOName);
+    EXPECT_EQ(IRPGOName, ProfSymtab.getFuncOrVarName(GUID));
+    EXPECT_EQ(VTableName, getParsedIRPGOName(IRPGOName).second);
+
+    // Test that ProfSymtab returns the expected global variable
+    EXPECT_EQ(GV, ProfSymtab.getGlobalVariable(GUID));
   }
 }
 

@@ -1510,6 +1510,46 @@ define i8 @add_like_or_t2_extrause(i8 %x) {
   %r = add i8 %i1, 42
   ret i8 %r
 }
+define i8 @fold_add_constant_preserve_nsw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_preserve_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], -120
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, -128
+  %add = add nsw i8 %or, 8
+  ret i8 %add
+}
+define i8 @fold_add_constant_no_nsw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_no_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 120
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, -128
+  %add = add nsw i8 %or, -8
+  ret i8 %add
+}
+define i8 @fold_add_constant_preserve_nuw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_preserve_nuw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], -116
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, 128
+  %add = add nuw i8 %or, 12
+  ret i8 %add
+}
+define i32 @sdiv_to_udiv(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @sdiv_to_udiv(
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw nsw i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw i32 [[T0]], 6242049
+; CHECK-NEXT:    [[T3:%.*]] = udiv i32 [[T2]], 192
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t0 = shl nuw nsw i32 %arg0, 8
+  %t1 = or disjoint i32 %t0, 1
+  %t2 = add nuw nsw i32 %t1, 6242048
+  %t3 = sdiv i32 %t2, 192
+  ret i32 %t3
+}
 
 define i8 @add_like_or_disjoint(i8 %x) {
 ; CHECK-LABEL: @add_like_or_disjoint(
@@ -3284,12 +3324,14 @@ define i32 @add_reduce_sqr_sum_flipped(i32 %a, i32 %b) {
   ret i32 %add
 }
 
-define i32 @add_reduce_sqr_sum_flipped2(i32 %a, i32 %b) {
+define i32 @add_reduce_sqr_sum_flipped2(i32 %a, i32 %bx) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_flipped2(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BX:%.*]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    [[ADD:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
+  %b = xor i32 %bx, 42 ; thwart complexity-based canonicalization
   %a_sq = mul nsw i32 %a, %a
   %two_a = shl i32 %a, 1
   %two_a_plus_b = add i32 %two_a, %b
@@ -3342,12 +3384,14 @@ define i32 @add_reduce_sqr_sum_order2_flipped(i32 %a, i32 %b) {
   ret i32 %ab2
 }
 
-define i32 @add_reduce_sqr_sum_order2_flipped2(i32 %a, i32 %b) {
+define i32 @add_reduce_sqr_sum_order2_flipped2(i32 %a, i32 %bx) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_order2_flipped2(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BX:%.*]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    [[AB2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[AB2]]
 ;
+  %b = xor i32 %bx, 42 ; thwart complexity-based canonicalization
   %a_sq = mul nsw i32 %a, %a
   %twoa = mul i32 %a, 2
   %twoab = mul i32 %twoa, %b
@@ -3357,12 +3401,14 @@ define i32 @add_reduce_sqr_sum_order2_flipped2(i32 %a, i32 %b) {
   ret i32 %ab2
 }
 
-define i32 @add_reduce_sqr_sum_order2_flipped3(i32 %a, i32 %b) {
+define i32 @add_reduce_sqr_sum_order2_flipped3(i32 %a, i32 %bx) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_order2_flipped3(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[BX:%.*]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    [[AB2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[AB2]]
 ;
+  %b = xor i32 %bx, 42 ; thwart complexity-based canonicalization
   %a_sq = mul nsw i32 %a, %a
   %twoa = mul i32 %a, 2
   %twoab = mul i32 %b, %twoa
@@ -3552,12 +3598,14 @@ define i32 @add_reduce_sqr_sum_order5_flipped2(i32 %a, i32 %b) {
   ret i32 %ab2
 }
 
-define i32 @add_reduce_sqr_sum_order5_flipped3(i32 %a, i32 %b) {
+define i32 @add_reduce_sqr_sum_order5_flipped3(i32 %ax, i32 %b) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_order5_flipped3(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = xor i32 [[AX:%.*]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    [[AB2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[AB2]]
 ;
+  %a = xor i32 %ax, 42 ; thwart complexity-based canonicalization
   %a_sq = mul nsw i32 %a, %a
   %twob = mul i32 %b, 2
   %twoab = mul i32 %a, %twob
@@ -4018,8 +4066,8 @@ define i32 @add_reduce_sqr_sum_varC_invalid2(i32 %a, i32 %b) {
 
 define i32 @fold_sext_addition_or_disjoint(i8 %x) {
 ; CHECK-LABEL: @fold_sext_addition_or_disjoint(
-; CHECK-NEXT:    [[SE:%.*]] = sext i8 [[XX:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[SE]], 1246
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP1]], 1246
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xx = or disjoint i8 %x, 12
@@ -4043,8 +4091,8 @@ define i32 @fold_sext_addition_fail(i8 %x) {
 
 define i32 @fold_zext_addition_or_disjoint(i8 %x) {
 ; CHECK-LABEL: @fold_zext_addition_or_disjoint(
-; CHECK-NEXT:    [[SE:%.*]] = zext i8 [[XX:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SE]], 1246
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[TMP1]], 1246
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xx = or disjoint i8 %x, 12
@@ -4055,9 +4103,9 @@ define i32 @fold_zext_addition_or_disjoint(i8 %x) {
 
 define i32 @fold_zext_addition_or_disjoint2(i8 %x) {
 ; CHECK-LABEL: @fold_zext_addition_or_disjoint2(
-; CHECK-NEXT:    [[XX:%.*]] = add nuw i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[SE:%.*]] = zext i8 [[XX]] to i32
-; CHECK-NEXT:    ret i32 [[SE]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xx = or disjoint i8 %x, 18
   %se = zext i8 %xx to i32

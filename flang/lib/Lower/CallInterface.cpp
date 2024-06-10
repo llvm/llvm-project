@@ -218,7 +218,7 @@ Fortran::lower::CallerInterface::characterize() const {
       converter.getFoldingContext();
   std::optional<Fortran::evaluate::characteristics::Procedure> characteristic =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          procRef.proc(), foldingContext);
+          procRef.proc(), foldingContext, /*emitError=*/false);
   assert(characteristic && "Failed to get characteristic from procRef");
   // The characteristic may not contain the argument characteristic if the
   // ProcedureDesignator has no interface, or may mismatch in case of implicit
@@ -627,9 +627,9 @@ setCUDAAttributes(mlir::func::FuncOp func,
                       characteristic) {
   if (characteristic && characteristic->cudaSubprogramAttrs) {
     func.getOperation()->setAttr(
-        fir::getCUDAAttrName(),
-        fir::getCUDAProcAttribute(func.getContext(),
-                                  *characteristic->cudaSubprogramAttrs));
+        cuf::getProcAttrName(),
+        cuf::getProcAttribute(func.getContext(),
+                              *characteristic->cudaSubprogramAttrs));
   }
 
   if (sym) {
@@ -649,9 +649,9 @@ setCUDAAttributes(mlir::func::FuncOp func,
           ubAttr =
               mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[2]);
         func.getOperation()->setAttr(
-            fir::getCUDALaunchBoundsAttrName(),
-            fir::CUDALaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
-                                           minBPMAttr, ubAttr));
+            cuf::getLaunchBoundsAttrName(),
+            cuf::LaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
+                                       minBPMAttr, ubAttr));
       }
 
       if (!details->cudaClusterDims().empty()) {
@@ -663,9 +663,8 @@ setCUDAAttributes(mlir::func::FuncOp func,
         auto zAttr =
             mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[2]);
         func.getOperation()->setAttr(
-            fir::getCUDAClusterDimsAttrName(),
-            fir::CUDAClusterDimsAttr::get(func.getContext(), xAttr, yAttr,
-                                          zAttr));
+            cuf::getClusterDimsAttrName(),
+            cuf::ClusterDimsAttr::get(func.getContext(), xAttr, yAttr, zAttr));
       }
     }
   }
@@ -1116,8 +1115,8 @@ private:
       addMLIRAttr(fir::getTargetAttrName());
     if (obj.cudaDataAttr)
       attrs.emplace_back(
-          mlir::StringAttr::get(&mlirContext, fir::getCUDAAttrName()),
-          fir::getCUDADataAttribute(&mlirContext, obj.cudaDataAttr));
+          mlir::StringAttr::get(&mlirContext, cuf::getDataAttrName()),
+          cuf::getDataAttribute(&mlirContext, obj.cudaDataAttr));
 
     // TODO: intents that require special care (e.g finalization)
 
@@ -1182,7 +1181,7 @@ private:
       Property prop = Property::BaseAddress;
       if (isValueAttr) {
         bool isBuiltinCptrType = fir::isa_builtin_cptr_type(type);
-        if (isBindC || (!type.isa<fir::SequenceType>() &&
+        if (isBindC || (!mlir::isa<fir::SequenceType>(type) &&
                         !obj.attrs.test(Attrs::Optional) &&
                         (dynamicType.category() !=
                              Fortran::common::TypeCategory::Derived ||
@@ -1190,7 +1189,7 @@ private:
           passBy = PassEntityBy::Value;
           prop = Property::Value;
           if (isBuiltinCptrType) {
-            auto recTy = type.dyn_cast<fir::RecordType>();
+            auto recTy = mlir::dyn_cast<fir::RecordType>(type);
             mlir::Type fieldTy = recTy.getTypeList()[0].second;
             passType = fir::ReferenceType::get(fieldTy);
           } else {
@@ -1571,7 +1570,7 @@ public:
                    Fortran::lower::AbstractConverter &c)
       : CallInterface{c}, procDesignator{&procDes},
         proc{Fortran::evaluate::characteristics::Procedure::Characterize(
-                 procDes, converter.getFoldingContext())
+                 procDes, converter.getFoldingContext(), /*emitError=*/false)
                  .value()} {}
   /// Does the procedure characteristics being translated have alternate
   /// returns ?
@@ -1696,7 +1695,7 @@ bool Fortran::lower::mustPassLengthWithDummyProcedure(
     Fortran::lower::AbstractConverter &converter) {
   std::optional<Fortran::evaluate::characteristics::Procedure> characteristics =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          procedure, converter.getFoldingContext());
+          procedure, converter.getFoldingContext(), /*emitError=*/false);
   return ::mustPassLengthWithDummyProcedure(characteristics);
 }
 
@@ -1714,7 +1713,7 @@ mlir::Type Fortran::lower::getDummyProcedureType(
 }
 
 bool Fortran::lower::isCPtrArgByValueType(mlir::Type ty) {
-  return ty.isa<fir::ReferenceType>() &&
+  return mlir::isa<fir::ReferenceType>(ty) &&
          fir::isa_integer(fir::unwrapRefType(ty));
 }
 

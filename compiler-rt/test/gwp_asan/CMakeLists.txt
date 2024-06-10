@@ -35,9 +35,8 @@ if (COMPILER_RT_INCLUDE_TESTS AND COMPILER_RT_HAS_SCUDO_STANDALONE AND COMPILER_
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
     list(APPEND GWP_ASAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
   endforeach()
-endif()
 
-add_lit_testsuite(check-gwp_asan "Running the GWP-ASan tests"
-  ${GWP_ASAN_TESTSUITES}
-  DEPENDS ${GWP_ASAN_TEST_DEPS})
-set_target_properties(check-gwp_asan PROPERTIES FOLDER "Compiler-RT Misc")
+  add_lit_testsuite(check-gwp_asan "Running the GWP-ASan tests"
+    ${GWP_ASAN_TESTSUITES}
+    DEPENDS ${GWP_ASAN_TEST_DEPS})
+endif()

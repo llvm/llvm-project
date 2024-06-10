@@ -45,6 +45,7 @@ def TDL_DirA : Directive<"dira"> {
   ];
   let isDefault = 1;
   let association = AS_None;
+  let category = CA_Executable;
 }
 
 // CHECK:       #ifndef LLVM_Tdl_INC
@@ -52,6 +53,7 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  #include "llvm/ADT/ArrayRef.h"
 // CHECK-NEXT:  #include "llvm/ADT/BitmaskEnum.h"
+// CHECK-NEXT:  #include <cstddef>
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
 // CHECK-NEXT:  class StringRef;
@@ -69,6 +71,17 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 6;
+// CHECK-EMPTY:
+// CHECK-NEXT:  enum class Category {
+// CHECK-NEXT:    Declarative,
+// CHECK-NEXT:    Executable,
+// CHECK-NEXT:    Informational,
+// CHECK-NEXT:    Meta,
+// CHECK-NEXT:    Subsidiary,
+// CHECK-NEXT:    Utility,
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  static constexpr std::size_t Category_enumSize = 6;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Directive {
 // CHECK-NEXT:    TDLD_dira,
@@ -112,8 +125,9 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
 // CHECK-NEXT:  bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
-// CHECK-NEXT:  llvm::ArrayRef<Directive> getLeafConstructs(Directive D);
+// CHECK-NEXT:  constexpr std::size_t getMaxLeafCount() { return 0; }
 // CHECK-NEXT:  Association getDirectiveAssociation(Directive D);
+// CHECK-NEXT:  Category getDirectiveCategory(Directive D);
 // CHECK-NEXT:  AKind getAKind(StringRef);
 // CHECK-NEXT:  llvm::StringRef getTdlAKindName(AKind);
 // CHECK-EMPTY:
@@ -359,19 +373,31 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::ArrayRef<llvm::tdl::Directive> llvm::tdl::getLeafConstructs(llvm::tdl::Directive Dir) {
-// IMPL-NEXT:    switch (Dir) {
-// IMPL-NEXT:    default:
-// IMPL-NEXT:      return ArrayRef<llvm::tdl::Directive>{};
-// IMPL-NEXT:    } // switch (Dir)
-// IMPL-NEXT:  }
-// IMPL-EMPTY:
 // IMPL-NEXT:  llvm::tdl::Association llvm::tdl::getDirectiveAssociation(llvm::tdl::Directive Dir) {
 // IMPL-NEXT:    switch (Dir) {
 // IMPL-NEXT:    case llvm::tdl::Directive::TDLD_dira:
 // IMPL-NEXT:      return llvm::tdl::Association::None;
-// IMPL-NEXT:    } // switch(Dir)
+// IMPL-NEXT:    } // switch (Dir)
 // IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  llvm::tdl::Category llvm::tdl::getDirectiveCategory(llvm::tdl::Directive Dir) {
+// IMPL-NEXT:    switch (Dir) {
+// IMPL-NEXT:    case llvm::tdl::TDLD_dira:
+// IMPL-NEXT:      return llvm::tdl::Category::Executable;
+// IMPL-NEXT:    } // switch (Dir)
+// IMPL-NEXT:    llvm_unreachable("Unexpected directive");
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  static_assert(sizeof(llvm::tdl::Directive) == sizeof(int));
+// IMPL-NEXT:  {{.*}} static const llvm::tdl::Directive LeafConstructTable[][2] = {
+// IMPL-NEXT:    {llvm::tdl::TDLD_dira, static_cast<llvm::tdl::Directive>(0),},
+// IMPL-NEXT:  };
+// IMPL-EMPTY:
+// IMPL-NEXT:  {{.*}} static auto LeafConstructTableEndDirective = LeafConstructTable + 1;
+// IMPL-EMPTY:
+// IMPL-NEXT:  {{.*}} static const int LeafConstructTableOrdering[] = {
+// IMPL-NEXT:    0,
+// IMPL-NEXT:  };
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_DIRECTIVES_IMPL

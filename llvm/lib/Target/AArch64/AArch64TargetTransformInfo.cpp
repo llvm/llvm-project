@@ -58,6 +58,9 @@ static cl::opt<unsigned> InlineCallPenaltyChangeSM(
 static cl::opt<bool> EnableOrLikeSelectOpt("enable-aarch64-or-like-select",
                                            cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableLSRCostOpt("enable-aarch64-lsr-cost-opt",
+                                      cl::init(true), cl::Hidden);
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -789,6 +792,27 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     else
       break;
     return TyL.first + ExtraCost;
+  }
+  case Intrinsic::get_active_lane_mask: {
+    auto *RetTy = dyn_cast<FixedVectorType>(ICA.getReturnType());
+    if (RetTy) {
+      EVT RetVT = getTLI()->getValueType(DL, RetTy);
+      EVT OpVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+      if (!getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT) &&
+          !getTLI()->isTypeLegal(RetVT)) {
+        // We don't have enough context at this point to determine if the mask
+        // is going to be kept live after the block, which will force the vXi1
+        // type to be expanded to legal vectors of integers, e.g. v4i1->v4i32.
+        // For now, we just assume the vectorizer created this intrinsic and
+        // the result will be the input for a PHI. In this case the cost will
+        // be extremely high for fixed-width vectors.
+        // NOTE: getScalarizationOverhead returns a cost that's far too
+        // pessimistic for the actual generated codegen. In reality there are
+        // two instructions generated per lane.
+        return RetTy->getNumElements() * 2;
+      }
+    }
+    break;
   }
   default:
     break;
@@ -3827,9 +3851,18 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       Tp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
       Mask.size() > LT.second.getVectorNumElements() && !Index && !SubTp) {
 
+    // Check for LD3/LD4 instructions, which are represented in llvm IR as
+    // deinterleaving-shuffle(load). The shuffle cost could potentially be free,
+    // but we model it with a cost of LT.first so that LD3/LD4 have a higher
+    // cost than just the load.
+    if (Args.size() >= 1 && isa<LoadInst>(Args[0]) &&
+        (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 3) ||
+         ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 4)))
+      return std::max<InstructionCost>(1, LT.first / 4);
+
     // Check for ST3/ST4 instructions, which are represented in llvm IR as
     // store(interleaving-shuffle). The shuffle cost could potentially be free,
-    // but we model it with a cost of LT.first so that LD3/LD3 have a higher
+    // but we model it with a cost of LT.first so that ST3/ST4 have a higher
     // cost than just the store.
     if (CxtI && CxtI->hasOneUse() && isa<StoreInst>(*CxtI->user_begin()) &&
         (ShuffleVectorInst::isInterleaveMask(
@@ -3938,8 +3971,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   if (LT.second.isFixedLengthVector() &&
       LT.second.getVectorNumElements() == Mask.size() &&
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
-      (isZIPMask(Mask, LT.second, Unused) ||
-       isUZPMask(Mask, LT.second, Unused) ||
+      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+       isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        // Check for non-zero lane splats
        all_of(drop_begin(Mask),
               [&Mask](int M) { return M < 0 || M == Mask[0]; })))
@@ -4153,7 +4186,7 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
 
 InstructionCost
 AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                     int64_t BaseOffset, bool HasBaseReg,
+                                     StackOffset BaseOffset, bool HasBaseReg,
                                      int64_t Scale, unsigned AddrSpace) const {
   // Scaling factors are not free at all.
   // Operands                     | Rt Latency
@@ -4164,9 +4197,10 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   // Rt, [Xn, Wm, <extend> #imm]  |
   TargetLoweringBase::AddrMode AM;
   AM.BaseGV = BaseGV;
-  AM.BaseOffs = BaseOffset;
+  AM.BaseOffs = BaseOffset.getFixed();
   AM.HasBaseReg = HasBaseReg;
   AM.Scale = Scale;
+  AM.ScalableOffset = BaseOffset.getScalable();
   if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
     // Scale represents reg2 * scale, thus account for 1 if
     // it is not equal to 0 or 1.
@@ -4184,4 +4218,20 @@ bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
       cast<BranchInst>(I->getNextNode())->isUnconditional())
     return true;
   return BaseT::shouldTreatInstructionLikeSelect(I);
+}
+
+bool AArch64TTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                                   const TargetTransformInfo::LSRCost &C2) {
+  // AArch64 specific here is adding the number of instructions to the
+  // comparison (though not as the first consideration, as some targets do)
+  // along with changing the priority of the base additions.
+  // TODO: Maybe a more nuanced tradeoff between instruction count
+  // and number of registers? To be investigated at a later date.
+  if (EnableLSRCostOpt)
+    return std::tie(C1.NumRegs, C1.Insns, C1.NumBaseAdds, C1.AddRecCost,
+                    C1.NumIVMuls, C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
+           std::tie(C2.NumRegs, C2.Insns, C2.NumBaseAdds, C2.AddRecCost,
+                    C2.NumIVMuls, C2.ScaleCost, C2.ImmCost, C2.SetupCost);
+
+  return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
 }

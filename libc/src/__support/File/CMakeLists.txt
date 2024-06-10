@@ -25,6 +25,7 @@ add_object_library(
   HDRS
     dir.h
   DEPENDS
+    libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
     libc.src.__support.threads.mutex

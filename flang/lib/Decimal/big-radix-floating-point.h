@@ -83,6 +83,8 @@ public:
     return *this;
   }
 
+  RT_API_ATTRS bool IsInteger() const { return exponent_ >= 0; }
+
   // Converts decimal floating-point to binary.
   RT_API_ATTRS ConversionToBinaryResult<PREC> ConvertToBinary();
 

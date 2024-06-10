@@ -151,4 +151,15 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
 
 }
 
+
+def XeGPU_Nbarrier: XeGPUTypeDef<"Nbarrier", "nbarrier", [], "mlir::Type"> {
+  let summary = "!xegpu.nbarrier a custom XeGPU type representing a barrier.";
+
+  let extraClassDeclaration = [{
+    static NbarrierType get(mlir::MLIRContext *context) {
+      return Base::get(context);
+    };
+  }];
+}
+
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUTYPES_TD

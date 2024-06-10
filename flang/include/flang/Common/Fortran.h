@@ -19,6 +19,7 @@
 #include <string>
 
 namespace Fortran::common {
+class LanguageFeatureControl;
 
 // Fortran has five kinds of intrinsic data types, plus the derived types.
 ENUM_CLASS(TypeCategory, Integer, Real, Complex, Character, Logical, Derived)
@@ -114,8 +115,9 @@ static constexpr IgnoreTKRSet ignoreTKRAll{IgnoreTKR::Type, IgnoreTKR::Kind,
     IgnoreTKR::Rank, IgnoreTKR::Device, IgnoreTKR::Managed};
 std::string AsFortran(IgnoreTKRSet);
 
-bool AreCompatibleCUDADataAttrs(
-    std::optional<CUDADataAttr>, std::optional<CUDADataAttr>, IgnoreTKRSet);
+bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr>,
+    std::optional<CUDADataAttr>, IgnoreTKRSet, bool allowUnifiedMatchingRule,
+    const LanguageFeatureControl *features = nullptr);
 
 static constexpr char blankCommonObjectName[] = "__BLNK__";
 

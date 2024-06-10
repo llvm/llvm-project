@@ -947,6 +947,55 @@ public:
 };
 AArch64PrettyPrinter AArch64PrettyPrinterInst;
 
+class RISCVPrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 object::SectionedAddress Address, formatted_raw_ostream &OS,
+                 StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
+                 LiveVariablePrinter &LVP) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+    LVP.printBetweenInsts(OS, false);
+
+    size_t Start = OS.tell();
+    if (LeadingAddr)
+      OS << format("%8" PRIx64 ":", Address.Address);
+    if (ShowRawInsn) {
+      size_t Pos = 0, End = Bytes.size();
+      if (End % 4 == 0) {
+        // 32-bit and 64-bit instructions.
+        for (; Pos + 4 <= End; Pos += 4)
+          OS << ' '
+             << format_hex_no_prefix(
+                    llvm::support::endian::read<uint32_t>(
+                        Bytes.data() + Pos, llvm::endianness::little),
+                    8);
+      } else if (End % 2 == 0) {
+        // 16-bit and 48-bits instructions.
+        for (; Pos + 2 <= End; Pos += 2)
+          OS << ' '
+             << format_hex_no_prefix(
+                    llvm::support::endian::read<uint16_t>(
+                        Bytes.data() + Pos, llvm::endianness::little),
+                    4);
+      }
+      if (Pos < End) {
+        OS << ' ';
+        dumpBytes(Bytes.slice(Pos), OS);
+      }
+    }
+
+    AlignToInstStartColumn(Start, STI, OS);
+
+    if (MI) {
+      IP.printInst(MI, Address.Address, "", STI, OS);
+    } else
+      OS << "\t<unknown>";
+  }
+};
+RISCVPrettyPrinter RISCVPrettyPrinterInst;
+
 PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
   switch(Triple.getArch()) {
   default:
@@ -967,6 +1016,9 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
   case Triple::aarch64_be:
   case Triple::aarch64_32:
     return AArch64PrettyPrinterInst;
+  case Triple::riscv32:
+  case Triple::riscv64:
+    return RISCVPrettyPrinterInst;
   }
 }
 

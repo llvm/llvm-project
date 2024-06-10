@@ -82,10 +82,13 @@ int main(int, char**)
     test<unsigned int>();
     test_ext<unsigned int>();
     test<unsigned long>();
+    // This isn't implemented on platforms without __int128
+#ifndef TEST_HAS_NO_INT128
     test_ext<unsigned long>();
+#endif
     test<unsigned long long>();
     // This isn't implemented on platforms without __int128
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test_ext<unsigned long long>();
 #endif
 

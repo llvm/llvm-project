@@ -34,7 +34,7 @@ public:
 void checkConstantValue(const mlir::Value &value, int64_t v) {
   EXPECT_TRUE(mlir::isa<mlir::arith::ConstantOp>(value.getDefiningOp()));
   auto cstOp = dyn_cast<mlir::arith::ConstantOp>(value.getDefiningOp());
-  auto valueAttr = cstOp.getValue().dyn_cast_or_null<IntegerAttr>();
+  auto valueAttr = dyn_cast_or_null<IntegerAttr>(cstOp.getValue());
   EXPECT_EQ(v, valueAttr.getInt());
 }
 

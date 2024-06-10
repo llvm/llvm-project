@@ -252,19 +252,20 @@ static cl::opt<unsigned> PrecentMismatchForStalenessError(
 
 static cl::opt<bool> CallsitePrioritizedInline(
     "sample-profile-prioritized-inline", cl::Hidden,
-
     cl::desc("Use call site prioritized inlining for sample profile loader."
              "Currently only CSSPGO is supported."));
 
 static cl::opt<bool> UsePreInlinerDecision(
     "sample-profile-use-preinliner", cl::Hidden,
-
     cl::desc("Use the preinliner decisions stored in profile context."));
 
 static cl::opt<bool> AllowRecursiveInline(
     "sample-profile-recursive-inline", cl::Hidden,
-
     cl::desc("Allow sample loader inliner to inline recursive calls."));
+
+static cl::opt<bool> RemoveProbeAfterProfileAnnotation(
+    "sample-profile-remove-probe", cl::Hidden, cl::init(false),
+    cl::desc("Remove pseudo-probe after sample profile annotation."));
 
 static cl::opt<std::string> ProfileInlineReplayFile(
     "sample-profile-inline-replay", cl::init(""), cl::value_desc("filename"),
@@ -518,6 +519,7 @@ protected:
   void generateMDProfMetadata(Function &F);
   bool rejectHighStalenessProfile(Module &M, ProfileSummaryInfo *PSI,
                                   const SampleProfileMap &Profiles);
+  void removePseudoProbeInsts(Module &M);
 
   /// Map from function name to Function *. Used to find the function from
   /// the function name. If the function name contains suffix, additional
@@ -1389,10 +1391,11 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
       return InlineCost::getAlways("preinliner");
   }
 
-  // For old FDO inliner, we inline the call site as long as cost is not
-  // "Never". The cost-benefit check is done earlier.
+  // For old FDO inliner, we inline the call site if it is below hot threshold,
+  // even if the function is hot based on sample profile data. This is to
+  // prevent huge functions from being inlined.
   if (!CallsitePrioritizedInline) {
-    return InlineCost::get(Cost.getCost(), INT_MAX);
+    return InlineCost::get(Cost.getCost(), SampleHotCallSiteThreshold);
   }
 
   // Otherwise only use the cost from call analyzer, but overwite threshold with
@@ -1659,7 +1662,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           else if (OverwriteExistingWeights)
             I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
-          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])});
+          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])},
+                           /*IsExpected=*/false);
         }
       }
     } else if (OverwriteExistingWeights || ProfileSampleBlockAccurate) {
@@ -1670,7 +1674,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           if (cast<CallBase>(I).isIndirectCall()) {
             I.setMetadata(LLVMContext::MD_prof, nullptr);
           } else {
-            setBranchWeights(I, {uint32_t(0)});
+            setBranchWeights(I, {uint32_t(0)}, /*IsExpected=*/false);
           }
         }
       }
@@ -1713,13 +1717,15 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       // if needed. Sample counts in profiles are 64-bit unsigned values,
       // but internally branch weights are expressed as 32-bit values.
       if (Weight > std::numeric_limits<uint32_t>::max()) {
-        LLVM_DEBUG(dbgs() << " (saturated due to uint32_t overflow)");
+        LLVM_DEBUG(dbgs() << " (saturated due to uint32_t overflow)\n");
         Weight = std::numeric_limits<uint32_t>::max();
       }
       if (!SampleProfileUseProfi) {
         // Weight is added by one to avoid propagation errors introduced by
         // 0 weights.
-        Weights.push_back(static_cast<uint32_t>(Weight + 1));
+        Weights.push_back(static_cast<uint32_t>(
+            Weight == std::numeric_limits<uint32_t>::max() ? Weight
+                                                           : Weight + 1));
       } else {
         // Profi creates proper weights that do not require "+1" adjustments but
         // we evenly split the weight among branches with the same destination.
@@ -1751,7 +1757,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
     if (MaxWeight > 0 &&
         (!TI->extractProfTotalWeight(TempWeight) || OverwriteExistingWeights)) {
       LLVM_DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
-      setBranchWeights(*TI, Weights);
+      setBranchWeights(*TI, Weights, /*IsExpected=*/false);
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "PopularDest", MaxDestInst)
                << "most popular destination for conditional branches at "
@@ -2127,6 +2133,20 @@ bool SampleProfileLoader::rejectHighStalenessProfile(
   return false;
 }
 
+void SampleProfileLoader::removePseudoProbeInsts(Module &M) {
+  for (auto &F : M) {
+    std::vector<Instruction *> InstsToDel;
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        if (isa<PseudoProbeInst>(&I))
+          InstsToDel.push_back(&I);
+      }
+    }
+    for (auto *I : InstsToDel)
+      I->eraseFromParent();
+  }
+}
+
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
                                       ProfileSummaryInfo *_PSI,
                                       LazyCallGraph &CG) {
@@ -2195,6 +2215,9 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
     for (const std::pair<Function *, NotInlinedProfileInfo> &pair :
          notInlinedCallInfo)
       updateProfileCallee(pair.first, pair.second.entryCount);
+
+  if (RemoveProbeAfterProfileAnnotation && FunctionSamples::ProfileIsProbeBased)
+    removePseudoProbeInsts(M);
 
   return retval;
 }

@@ -1,0 +1,16 @@
+## Check that llvm-bolt fails to process PIC binaries with computed goto, as the
+## support is not there yet for correctly updating dynamic relocations
+## referencing code inside functions.
+
+REQUIRES: x86_64-linux
+
+RUN: %clang %S/Inputs/indirect_goto.c -o %t -fpic -pie -Wl,-q
+RUN: not llvm-bolt %t -o %t.bolt --relocs=1 --print-cfg --print-only=main \
+RUN:   |& FileCheck %s
+
+## Check that processing works if main() is skipped.
+RUN: llvm-bolt %t -o %t.bolt --relocs=1 --skip-funcs=main
+
+CHECK:  jmpq    *%rax # UNKNOWN CONTROL FLOW
+
+CHECK: BOLT-ERROR: unable to get new address

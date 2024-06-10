@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple armv8.2a-arm-none-eabi -target-feature +neon -target-feature +bf16 -mfloat-abi hard \
-// RUN: -disable-O0-optnone -S -emit-llvm -o - %s \
+// RUN: -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -passes=instcombine \
 // RUN: | FileCheck %s
 

@@ -61,13 +61,8 @@ SelfExecutorProcessControl::Create(
   if (!SSP)
     SSP = std::make_shared<SymbolStringPool>();
 
-  if (!D) {
-#if LLVM_ENABLE_THREADS
-    D = std::make_unique<DynamicThreadPoolTaskDispatcher>();
-#else
+  if (!D)
     D = std::make_unique<InPlaceTaskDispatcher>();
-#endif
-  }
 
   auto PageSize = sys::Process::getPageSize();
   if (!PageSize)

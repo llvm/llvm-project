@@ -456,6 +456,7 @@ public:
     assert(descriptor().rank() <= maxRank);
     assert(descriptor().SizeInBytes() <= byteSize);
     if (DescriptorAddendum * addendum{descriptor().Addendum()}) {
+      (void)addendum;
       assert(hasAddendum);
       assert(addendum->LenParameters() <= maxLengthTypeParameters);
     } else {

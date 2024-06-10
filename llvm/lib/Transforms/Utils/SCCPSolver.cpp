@@ -43,7 +43,7 @@ static ValueLatticeElement::MergeOptions getMaxWidenStepsOpts() {
 }
 
 static ConstantRange getConstantRange(const ValueLatticeElement &LV, Type *Ty,
-                                      bool UndefAllowed = true) {
+                                      bool UndefAllowed) {
   assert(Ty->isIntOrIntVectorTy() && "Should be int or int vector");
   if (LV.isConstantRange(UndefAllowed))
     return LV.getConstantRange();
@@ -143,7 +143,7 @@ static bool refineInstruction(SCCPSolver &Solver,
         Changed = true;
       }
     }
-  } else if (isa<ZExtInst>(Inst) && !Inst.hasNonNeg()) {
+  } else if (isa<PossiblyNonNegInst>(Inst) && !Inst.hasNonNeg()) {
     auto Range = GetRange(Inst.getOperand(0));
     if (Range.isAllNonNegative()) {
       Inst.setNonNeg();
@@ -191,14 +191,16 @@ static bool replaceSignedInst(SCCPSolver &Solver,
 
   Instruction *NewInst = nullptr;
   switch (Inst.getOpcode()) {
-  // Note: We do not fold sitofp -> uitofp here because that could be more
-  // expensive in codegen and may not be reversible in the backend.
+  case Instruction::SIToFP:
   case Instruction::SExt: {
-    // If the source value is not negative, this is a zext.
+    // If the source value is not negative, this is a zext/uitofp.
     Value *Op0 = Inst.getOperand(0);
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
-    NewInst = new ZExtInst(Op0, Inst.getType(), "", Inst.getIterator());
+    NewInst = CastInst::Create(Inst.getOpcode() == Instruction::SExt
+                                   ? Instruction::ZExt
+                                   : Instruction::UIToFP,
+                               Op0, Inst.getType(), "", Inst.getIterator());
     NewInst->setNonNeg();
     break;
   }
@@ -1295,7 +1297,8 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
 
   if (I.getDestTy()->isIntegerTy() && I.getSrcTy()->isIntOrIntVectorTy()) {
     auto &LV = getValueState(&I);
-    ConstantRange OpRange = getConstantRange(OpSt, I.getSrcTy());
+    ConstantRange OpRange =
+        getConstantRange(OpSt, I.getSrcTy(), /*UndefAllowed=*/false);
 
     Type *DestTy = I.getDestTy();
     // Vectors where all elements have the same known constant range are treated
@@ -1327,8 +1330,8 @@ void SCCPInstVisitor::handleExtractOfWithOverflow(ExtractValueInst &EVI,
     return; // Wait to resolve.
 
   Type *Ty = LHS->getType();
-  ConstantRange LR = getConstantRange(L, Ty);
-  ConstantRange RR = getConstantRange(R, Ty);
+  ConstantRange LR = getConstantRange(L, Ty, /*UndefAllowed=*/false);
+  ConstantRange RR = getConstantRange(R, Ty, /*UndefAllowed=*/false);
   if (Idx == 0) {
     ConstantRange Res = LR.binaryOp(WO->getBinaryOp(), RR);
     mergeInValue(&EVI, ValueLatticeElement::getRange(Res));
@@ -1532,8 +1535,10 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
     return markOverdefined(&I);
 
   // Try to simplify to a constant range.
-  ConstantRange A = getConstantRange(V1State, I.getType());
-  ConstantRange B = getConstantRange(V2State, I.getType());
+  ConstantRange A =
+      getConstantRange(V1State, I.getType(), /*UndefAllowed=*/false);
+  ConstantRange B =
+      getConstantRange(V2State, I.getType(), /*UndefAllowed=*/false);
 
   auto *BO = cast<BinaryOperator>(&I);
   ConstantRange R = ConstantRange::getEmpty(I.getType()->getScalarSizeInBits());
@@ -1816,7 +1821,8 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
 
         // Combine range info for the original value with the new range from the
         // condition.
-        auto CopyOfCR = getConstantRange(CopyOfVal, CopyOf->getType());
+        auto CopyOfCR = getConstantRange(CopyOfVal, CopyOf->getType(),
+                                         /*UndefAllowed=*/true);
         auto NewCR = ImposedCR.intersectWith(CopyOfCR);
         // If the existing information is != x, do not use the information from
         // a chained predicate, as the != x information is more likely to be
@@ -1861,7 +1867,8 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
         const ValueLatticeElement &State = getValueState(Op);
         if (State.isUnknownOrUndef())
           return;
-        OpRanges.push_back(getConstantRange(State, Op->getType()));
+        OpRanges.push_back(
+            getConstantRange(State, Op->getType(), /*UndefAllowed=*/false));
       }
 
       ConstantRange Result =

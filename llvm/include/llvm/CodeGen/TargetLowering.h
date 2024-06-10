@@ -96,15 +96,16 @@ class Value;
 
 namespace Sched {
 
-enum Preference {
-  None,        // No preference
-  Source,      // Follow source order.
-  RegPressure, // Scheduling for lowest register pressure.
-  Hybrid,      // Scheduling for both latency and register pressure.
-  ILP,         // Scheduling for ILP in low register pressure mode.
-  VLIW,        // Scheduling for VLIW targets.
-  Fast,        // Fast suboptimal list scheduling
-  Linearize    // Linearize DAG, no scheduling
+enum Preference : uint8_t {
+  None,            // No preference
+  Source,          // Follow source order.
+  RegPressure,     // Scheduling for lowest register pressure.
+  Hybrid,          // Scheduling for both latency and register pressure.
+  ILP,             // Scheduling for ILP in low register pressure mode.
+  VLIW,            // Scheduling for VLIW targets.
+  Fast,            // Fast suboptimal list scheduling
+  Linearize,       // Linearize DAG, no scheduling
+  Last = Linearize // Marker for the last Sched::Preference
 };
 
 } // end namespace Sched
@@ -469,6 +470,12 @@ public:
   /// Return true if the @llvm.experimental.cttz.elts intrinsic should be
   /// expanded using generic code in SelectionDAGBuilder.
   virtual bool shouldExpandCttzElements(EVT VT) const { return true; }
+
+  /// Return the minimum number of bits required to hold the maximum possible
+  /// number of trailing zero vector elements.
+  unsigned getBitWidthForCttzElements(Type *RetTy, ElementCount EC,
+                                      bool ZeroIsPoison,
+                                      const ConstantRange *VScaleRange) const;
 
   // Return true if op(vecreduce(x), vecreduce(y)) should be reassociated to
   // vecreduce(op(x, y)) for the reduction opcode RedOpc.
@@ -3146,7 +3153,7 @@ public:
 
   /// Lower a deinterleave intrinsic to a target specific load intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.experimental.vector.deinterleave2
+  /// llvm.vector.deinterleave2
   ///
   /// \p DI is the deinterleave intrinsic.
   /// \p LI is the accompanying load instruction
@@ -3157,7 +3164,7 @@ public:
 
   /// Lower an interleave intrinsic to a target specific store intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.experimental.vector.interleave2
+  /// llvm.vector.interleave2
   ///
   /// \p II is the interleave intrinsic.
   /// \p SI is the accompanying store instruction
@@ -4361,6 +4368,9 @@ public:
   /// Return true if the target supports kcfi operand bundles.
   virtual bool supportKCFIBundles() const { return false; }
 
+  /// Return true if the target supports ptrauth operand bundles.
+  virtual bool supportPtrAuthBundles() const { return false; }
+
   /// Perform necessary initialization to handle a subset of CSRs explicitly
   /// via copies. This function is called at the beginning of instruction
   /// selection.
@@ -4472,6 +4482,14 @@ public:
     llvm_unreachable("Not Implemented");
   }
 
+  /// This structure contains the information necessary for lowering
+  /// pointer-authenticating indirect calls.  It is equivalent to the "ptrauth"
+  /// operand bundle found on the call instruction, if any.
+  struct PtrAuthInfo {
+    uint64_t Key;
+    SDValue Discriminator;
+  };
+
   /// This structure contains all information that is necessary for lowering
   /// calls. It is passed to TLI::LowerCallTo when the SelectionDAG builder
   /// needs to lower a call, and targets will see this struct in their LowerCall
@@ -4510,6 +4528,8 @@ public:
     SmallVector<SDValue, 4> InVals;
     const ConstantInt *CFIType = nullptr;
     SDValue ConvergenceControlToken;
+
+    std::optional<PtrAuthInfo> PAI;
 
     CallLoweringInfo(SelectionDAG &DAG)
         : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
@@ -4630,6 +4650,11 @@ public:
 
     CallLoweringInfo &setIsPreallocated(bool Value = true) {
       IsPreallocated = Value;
+      return *this;
+    }
+
+    CallLoweringInfo &setPtrAuth(PtrAuthInfo Value) {
+      PAI = Value;
       return *this;
     }
 
@@ -4756,12 +4781,6 @@ public:
   /// to duplicate return instructions to enable tailcall optimization.
   virtual bool mayBeEmittedAsTailCall(const CallInst *) const {
     return false;
-  }
-
-  /// Return the builtin name for the __builtin___clear_cache intrinsic
-  /// Default is to invoke the clear cache library call
-  virtual const char * getClearCacheBuiltinName() const {
-    return "__clear_cache";
   }
 
   /// Return the register ID of the name passed in. Used by named register
@@ -5238,6 +5257,9 @@ public:
   /// Expand fminnum/fmaxnum into fminnum_ieee/fmaxnum_ieee with quieted inputs.
   SDValue expandFMINNUM_FMAXNUM(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand fminimum/fmaximum into multiple comparison with selects.
+  SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand FP_TO_[US]INT_SAT into FP_TO_[US]INT and selects or min/max.
   /// \param N Node to expand
   /// \returns The expansion result
@@ -5303,6 +5325,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZ(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_UNDEF nodes.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandVPCTTZElements(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.

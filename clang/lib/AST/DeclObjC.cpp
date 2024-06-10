@@ -862,7 +862,8 @@ ObjCMethodDecl *ObjCMethodDecl::Create(
       isImplicitlyDeclared, isDefined, impControl, HasRelatedResultType);
 }
 
-ObjCMethodDecl *ObjCMethodDecl::CreateDeserialized(ASTContext &C, Decl::DeclID ID) {
+ObjCMethodDecl *ObjCMethodDecl::CreateDeserialized(ASTContext &C,
+                                                   GlobalDeclID ID) {
   return new (C, ID) ObjCMethodDecl(SourceLocation(), SourceLocation(),
                                     Selector(), QualType(), nullptr, nullptr);
 }
@@ -1486,7 +1487,7 @@ ObjCTypeParamDecl *ObjCTypeParamDecl::Create(ASTContext &ctx, DeclContext *dc,
 }
 
 ObjCTypeParamDecl *ObjCTypeParamDecl::CreateDeserialized(ASTContext &ctx,
-                                                         Decl::DeclID ID) {
+                                                         GlobalDeclID ID) {
   return new (ctx, ID) ObjCTypeParamDecl(ctx, nullptr,
                                          ObjCTypeParamVariance::Invariant,
                                          SourceLocation(), 0, SourceLocation(),
@@ -1551,7 +1552,7 @@ ObjCInterfaceDecl *ObjCInterfaceDecl::Create(
 }
 
 ObjCInterfaceDecl *ObjCInterfaceDecl::CreateDeserialized(const ASTContext &C,
-                                                         Decl::DeclID ID) {
+                                                         GlobalDeclID ID) {
   auto *Result = new (C, ID)
       ObjCInterfaceDecl(C, nullptr, SourceLocation(), nullptr, nullptr,
                         SourceLocation(), nullptr, false);
@@ -1865,7 +1866,7 @@ ObjCIvarDecl *ObjCIvarDecl::Create(ASTContext &C, ObjCContainerDecl *DC,
                                   synthesized);
 }
 
-ObjCIvarDecl *ObjCIvarDecl::CreateDeserialized(ASTContext &C, Decl::DeclID ID) {
+ObjCIvarDecl *ObjCIvarDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ObjCIvarDecl(nullptr, SourceLocation(), SourceLocation(),
                                   nullptr, QualType(), nullptr,
                                   ObjCIvarDecl::None, nullptr, false);
@@ -1914,7 +1915,7 @@ ObjCAtDefsFieldDecl
 }
 
 ObjCAtDefsFieldDecl *ObjCAtDefsFieldDecl::CreateDeserialized(ASTContext &C,
-                                                             Decl::DeclID ID) {
+                                                             GlobalDeclID ID) {
   return new (C, ID) ObjCAtDefsFieldDecl(nullptr, SourceLocation(),
                                          SourceLocation(), nullptr, QualType(),
                                          nullptr);
@@ -1949,7 +1950,7 @@ ObjCProtocolDecl *ObjCProtocolDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 ObjCProtocolDecl *ObjCProtocolDecl::CreateDeserialized(ASTContext &C,
-                                                       Decl::DeclID ID) {
+                                                       GlobalDeclID ID) {
   ObjCProtocolDecl *Result =
       new (C, ID) ObjCProtocolDecl(C, nullptr, nullptr, SourceLocation(),
                                    SourceLocation(), nullptr);
@@ -2148,7 +2149,7 @@ ObjCCategoryDecl *ObjCCategoryDecl::Create(
 }
 
 ObjCCategoryDecl *ObjCCategoryDecl::CreateDeserialized(ASTContext &C,
-                                                       Decl::DeclID ID) {
+                                                       GlobalDeclID ID) {
   return new (C, ID) ObjCCategoryDecl(nullptr, SourceLocation(),
                                       SourceLocation(), SourceLocation(),
                                       nullptr, nullptr, nullptr);
@@ -2188,8 +2189,8 @@ ObjCCategoryImplDecl *ObjCCategoryImplDecl::Create(
                                           atStartLoc, CategoryNameLoc);
 }
 
-ObjCCategoryImplDecl *ObjCCategoryImplDecl::CreateDeserialized(ASTContext &C,
-                                                               Decl::DeclID ID) {
+ObjCCategoryImplDecl *
+ObjCCategoryImplDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ObjCCategoryImplDecl(nullptr, nullptr, nullptr,
                                           SourceLocation(), SourceLocation(),
                                           SourceLocation());
@@ -2296,7 +2297,7 @@ ObjCImplementationDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 ObjCImplementationDecl *
-ObjCImplementationDecl::CreateDeserialized(ASTContext &C, Decl::DeclID ID) {
+ObjCImplementationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ObjCImplementationDecl(nullptr, nullptr, nullptr,
                                             SourceLocation(), SourceLocation());
 }
@@ -2339,7 +2340,7 @@ ObjCCompatibleAliasDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 ObjCCompatibleAliasDecl *
-ObjCCompatibleAliasDecl::CreateDeserialized(ASTContext &C, Decl::DeclID ID) {
+ObjCCompatibleAliasDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ObjCCompatibleAliasDecl(nullptr, SourceLocation(),
                                              nullptr, nullptr);
 }
@@ -2360,7 +2361,7 @@ ObjCPropertyDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
 }
 
 ObjCPropertyDecl *ObjCPropertyDecl::CreateDeserialized(ASTContext &C,
-                                                       Decl::DeclID ID) {
+                                                       GlobalDeclID ID) {
   return new (C, ID) ObjCPropertyDecl(nullptr, SourceLocation(), nullptr,
                                       SourceLocation(), SourceLocation(),
                                       QualType(), nullptr, None);
@@ -2392,8 +2393,8 @@ ObjCPropertyImplDecl *ObjCPropertyImplDecl::Create(ASTContext &C,
                                           ivarLoc);
 }
 
-ObjCPropertyImplDecl *ObjCPropertyImplDecl::CreateDeserialized(ASTContext &C,
-                                                               Decl::DeclID ID) {
+ObjCPropertyImplDecl *
+ObjCPropertyImplDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ObjCPropertyImplDecl(nullptr, SourceLocation(),
                                           SourceLocation(), nullptr, Dynamic,
                                           nullptr, SourceLocation());

@@ -823,9 +823,15 @@ def : InstAlias<".insn_css $opcode, $funct3, $rs2, $imm6",
 def : InstAlias<".insn_cl $opcode, $funct3, $rd, ${imm5}(${rs1})",
                 (InsnCL AnyRegC:$rd, uimm2_opcode:$opcode, uimm3:$funct3,
                         AnyRegC:$rs1, uimm5:$imm5)>;
+def : InstAlias<".insn_cl $opcode, $funct3, $rd, (${rs1})",
+                (InsnCL AnyRegC:$rd, uimm2_opcode:$opcode, uimm3:$funct3,
+                        AnyRegC:$rs1, 0)>;
 def : InstAlias<".insn_cs $opcode, $funct3, $rs2, ${imm5}(${rs1})",
                 (InsnCS uimm2_opcode:$opcode, uimm3:$funct3, AnyRegC:$rs2,
                         AnyRegC:$rs1, uimm5:$imm5)>;
+def : InstAlias<".insn_cs $opcode, $funct3, $rs2, (${rs1})",
+                (InsnCS uimm2_opcode:$opcode, uimm3:$funct3, AnyRegC:$rs2,
+                        AnyRegC:$rs1, 0)>;
 def : InstAlias<".insn_ca $opcode, $funct6, $funct2, $rd, $rs2",
                 (InsnCA AnyRegC:$rd, uimm2_opcode:$opcode, uimm6:$funct6,
                         uimm2:$funct2, AnyRegC:$rs2)>;
@@ -841,7 +847,7 @@ def : InstAlias<".insn_cj $opcode, $funct3, $imm11",
 //===----------------------------------------------------------------------===//
 
 // Patterns are defined in the same order the compressed instructions appear
-// on page 82 of the ISA manual.
+// under the "RVC Instruction Set Listings" section of the ISA manual.
 
 // Quadrant 0
 let Predicates = [HasStdExtCOrZca] in {

@@ -363,7 +363,6 @@ LogicalResult SerializeToHsacoPass::assembleIsa(const std::string &isa,
       mab->createObjectWriter(os), std::unique_ptr<llvm::MCCodeEmitter>(ce),
       *sti, mcOptions.MCRelaxAll, mcOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ false));
-  mcStreamer->setUseAssemblerInfoForParsing(true);
 
   std::unique_ptr<llvm::MCAsmParser> parser(
       createMCAsmParser(srcMgr, ctx, *mcStreamer, *mai));

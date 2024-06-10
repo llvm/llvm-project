@@ -37,6 +37,13 @@
   tag = DW_TAG_pointer_type, name = "ptr1"
 >
 
+// CHECK-DAG: #[[PTR2:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, dwarfAddressSpace = 3, extraData = #[[INT1]]>
+#ptr2 = #llvm.di_derived_type<
+  tag = DW_TAG_pointer_type, baseType = #int0,
+  sizeInBits = 64, alignInBits = 32, offsetInBits = 4,
+  dwarfAddressSpace = 3, extraData = #int1
+>
+
 // CHECK-DAG: #[[COMP0:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array0", line = 10, sizeInBits = 128, alignInBits = 32>
 #comp0 = #llvm.di_composite_type<
   tag = DW_TAG_array_type, name = "array0",
@@ -73,9 +80,9 @@
   flags = "TypePassByReference|NonTrivial"
 >
 
-// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]]>
+// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]]>
 #spType0 = #llvm.di_subroutine_type<
-  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #comp0, #comp1, #comp2
+  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #comp0, #comp1, #comp2
 >
 
 // CHECK-DAG: #[[SPTYPE1:.*]] = #llvm.di_subroutine_type<types = #[[INT1]], #[[INT1]]>

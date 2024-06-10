@@ -36,8 +36,9 @@ public:
                           Value iv) const = 0;
 
   /// Peeks the lower and upper bound to *fully* traverse the level with
-  /// the given position `p` that the immediate parent level is current at.
-  /// Returns a pair of values for *posLo* and *loopHi* respectively.
+  /// the given position `parentPos`, see SparseTensorIterator::getCurPostion(),
+  /// that the immediate parent level is current at. Returns a pair of values
+  /// for *posLo* and *loopHi* respectively.
   ///
   /// For a dense level, the *posLo* is the linearized position at beginning,
   /// while *loopHi* is the largest *coordinate*, it also implies that the
@@ -45,12 +46,9 @@ public:
   ///
   /// For a sparse level, [posLo, loopHi) specifies the range of index pointer
   /// to load coordinate from the coordinate buffer.
-  ///
-  /// `bound` is only used when the level is `non-unique` and deduplication is
-  /// required. It specifies the max upper bound of the non-unique segment.
-  virtual std::pair<Value, Value> peekRangeAt(OpBuilder &b, Location l,
-                                              ValueRange batchPrefix, Value p,
-                                              Value segHi = Value()) const = 0;
+  virtual std::pair<Value, Value>
+  peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
+              ValueRange parentPos, Value inPadZone = nullptr) const = 0;
 
   Level getLevel() const { return lvl; }
   LevelType getLT() const { return lt; }
@@ -78,6 +76,7 @@ enum class IterKind : uint8_t {
   kSubSect,
   kNonEmptySubSect,
   kFilter,
+  kPad,
 };
 
 /// Helper class that generates loop conditions, etc, to traverse a
@@ -199,18 +198,17 @@ public:
   }
   virtual Value genNotEndImpl(OpBuilder &b, Location l) = 0;
   virtual Value derefImpl(OpBuilder &b, Location l) = 0;
-  // Gets the current position and the optional *position high* (for
-  // non-unique iterators), the value is essentially the number of sparse
-  // coordinate that the iterator is current visiting. It should be able to
-  // uniquely identify the sparse range for the next level. See
-  // SparseTensorLevel::peekRangeAt();
+  // Gets the ValueRange that together specifies the current position of the
+  // iterator. For a unique level, the position can be a single index points to
+  // the current coordinate being visited. For a non-unique level, an extra
+  // index for the `segment high` is needed to to specifies the range of
+  // duplicated coordinates. The ValueRange should be able to uniquely identify
+  // the sparse range for the next level. See SparseTensorLevel::peekRangeAt();
   //
   // Not every type of iterator supports the operation, e.g., non-empty
   // subsection iterator does not because it represent a range of coordinates
   // instead of just one.
-  virtual std::pair<Value, Value> getCurPosition() const {
-    llvm_unreachable("unsupported");
-  };
+  virtual ValueRange getCurPosition() const { return getCursor(); };
 
   // Returns a pair of values for *upper*, *lower* bound respectively.
   virtual std::pair<Value, Value> genForCond(OpBuilder &b, Location l) {
@@ -284,26 +282,33 @@ private:
 };
 
 /// Helper function to create a TensorLevel object from given `tensor`.
-std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(OpBuilder &builder,
-                                                         Location loc, Value t,
-                                                         unsigned tid, Level l);
+std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(OpBuilder &b,
+                                                         Location l, Value t,
+                                                         unsigned tid,
+                                                         Level lvl);
 
 /// Helper function to create a simple SparseIterator object that iterate over
 /// the SparseTensorLevel.
 std::unique_ptr<SparseIterator> makeSimpleIterator(const SparseTensorLevel &stl,
                                                    SparseEmitStrategy strategy);
 
-/// Helper function to create a synthetic SparseIterator object that iterate
+/// Helper function to create a synthetic SparseIterator object that iterates
 /// over a dense space specified by [0,`sz`).
 std::pair<std::unique_ptr<SparseTensorLevel>, std::unique_ptr<SparseIterator>>
 makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl,
                         SparseEmitStrategy strategy);
 
-/// Helper function to create a SparseIterator object that iterate over a
+/// Helper function to create a SparseIterator object that iterates over a
 /// sliced space, the orignal space (before slicing) is traversed by `sit`.
 std::unique_ptr<SparseIterator>
 makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit, Value offset,
                         Value stride, Value size, SparseEmitStrategy strategy);
+
+/// Helper function to create a SparseIterator object that iterates over a
+/// padded sparse level (the padded value must be zero).
+std::unique_ptr<SparseIterator>
+makePaddedIterator(std::unique_ptr<SparseIterator> &&sit, Value padLow,
+                   Value padHigh, SparseEmitStrategy strategy);
 
 /// Helper function to create a SparseIterator object that iterate over the
 /// non-empty subsections set.
@@ -312,7 +317,7 @@ std::unique_ptr<SparseIterator> makeNonEmptySubSectIterator(
     std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride,
     SparseEmitStrategy strategy);
 
-/// Helper function to create a SparseIterator object that iterate over a
+/// Helper function to create a SparseIterator object that iterates over a
 /// non-empty subsection created by NonEmptySubSectIterator.
 std::unique_ptr<SparseIterator> makeTraverseSubSectIterator(
     OpBuilder &b, Location l, const SparseIterator &subsectIter,

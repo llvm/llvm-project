@@ -244,6 +244,36 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case LoongArchMCExpr::VK_LoongArch_CALL36:
       FixupKind = LoongArch::fixup_loongarch_call36;
       break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_pc_hi20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_pc_lo12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_LO20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_pc_lo20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_HI12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_pc_hi12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_HI20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_hi20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_LO12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_lo12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_LO20:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_lo20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC64_HI12:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc64_hi12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_ld;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_call;
+      break;
     }
   } else if (Kind == MCExpr::SymbolRef &&
              cast<MCSymbolRefExpr>(Expr)->getKind() ==

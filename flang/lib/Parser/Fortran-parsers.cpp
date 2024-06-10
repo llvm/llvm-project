@@ -123,7 +123,8 @@ TYPE_PARSER(first(
 TYPE_CONTEXT_PARSER("internal subprogram"_en_US,
     (construct<InternalSubprogram>(indirect(functionSubprogram)) ||
         construct<InternalSubprogram>(indirect(subroutineSubprogram))) /
-        forceEndOfStmt)
+            forceEndOfStmt ||
+        construct<InternalSubprogram>(indirect(compilerDirective)))
 
 // R511 internal-subprogram-part -> contains-stmt [internal-subprogram]...
 TYPE_CONTEXT_PARSER("internal subprogram part"_en_US,

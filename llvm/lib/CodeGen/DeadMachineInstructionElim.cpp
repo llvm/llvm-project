@@ -68,7 +68,7 @@ DeadMachineInstructionElimPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &) {
   if (!DeadMachineInstructionElimImpl().runImpl(MF))
     return PreservedAnalyses::all();
-  PreservedAnalyses PA;
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

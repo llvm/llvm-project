@@ -51,6 +51,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
@@ -860,26 +861,28 @@ static bool ValuesOverlap(std::vector<ValueEqualityComparisonCase> &C1,
 
 // Set branch weights on SwitchInst. This sets the metadata if there is at
 // least one non-zero weight.
-static void setBranchWeights(SwitchInst *SI, ArrayRef<uint32_t> Weights) {
+static void setBranchWeights(SwitchInst *SI, ArrayRef<uint32_t> Weights,
+                             bool IsExpected) {
   // Check that there is at least one non-zero weight. Otherwise, pass
   // nullptr to setMetadata which will erase the existing metadata.
   MDNode *N = nullptr;
   if (llvm::any_of(Weights, [](uint32_t W) { return W != 0; }))
-    N = MDBuilder(SI->getParent()->getContext()).createBranchWeights(Weights);
+    N = MDBuilder(SI->getParent()->getContext())
+            .createBranchWeights(Weights, IsExpected);
   SI->setMetadata(LLVMContext::MD_prof, N);
 }
 
 // Similar to the above, but for branch and select instructions that take
 // exactly 2 weights.
 static void setBranchWeights(Instruction *I, uint32_t TrueWeight,
-                             uint32_t FalseWeight) {
+                             uint32_t FalseWeight, bool IsExpected) {
   assert(isa<BranchInst>(I) || isa<SelectInst>(I));
   // Check that there is at least one non-zero weight. Otherwise, pass
   // nullptr to setMetadata which will erase the existing metadata.
   MDNode *N = nullptr;
   if (TrueWeight || FalseWeight)
     N = MDBuilder(I->getParent()->getContext())
-            .createBranchWeights(TrueWeight, FalseWeight);
+            .createBranchWeights(TrueWeight, FalseWeight, IsExpected);
   I->setMetadata(LLVMContext::MD_prof, N);
 }
 
@@ -1065,11 +1068,8 @@ static int ConstantIntSortPredicate(ConstantInt *const *P1,
 static void GetBranchWeights(Instruction *TI,
                              SmallVectorImpl<uint64_t> &Weights) {
   MDNode *MD = TI->getMetadata(LLVMContext::MD_prof);
-  assert(MD);
-  for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
-    ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(i));
-    Weights.push_back(CI->getValue().getZExtValue());
-  }
+  assert(MD && "Invalid branch-weight metadata");
+  extractFromBranchWeightMD64(MD, Weights);
 
   // If TI is a conditional eq, the default case is the false case,
   // and the corresponding branch-weight data is at index 2. We swap the
@@ -1126,9 +1126,8 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     NewBonusInst->insertInto(PredBlock, PTI->getIterator());
     auto Range = NewBonusInst->cloneDebugInfoFrom(&BonusInst);
-    RemapDbgVariableRecordRange(NewBonusInst->getModule(), Range, VMap,
-                                RF_NoModuleLevelChanges |
-                                    RF_IgnoreMissingLocals);
+    RemapDbgRecordRange(NewBonusInst->getModule(), Range, VMap,
+                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
     if (isa<DbgInfoIntrinsic>(BonusInst))
       continue;
@@ -1341,7 +1340,7 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
 
     SmallVector<uint32_t, 8> MDWeights(Weights.begin(), Weights.end());
 
-    setBranchWeights(NewSI, MDWeights);
+    setBranchWeights(NewSI, MDWeights, /*IsExpected=*/false);
   }
 
   EraseTerminatorAndDCECond(PTI);
@@ -1677,7 +1676,8 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     for (auto &SuccIter : OtherSuccIterRange) {
       Instruction *I2 = &*SuccIter;
       HasTerminator |= I2->isTerminator();
-      if (AllInstsAreIdentical && !I1->isIdenticalToWhenDefined(I2))
+      if (AllInstsAreIdentical && (!I1->isIdenticalToWhenDefined(I2) ||
+                                   MMRAMetadata(*I1) != MMRAMetadata(*I2)))
         AllInstsAreIdentical = false;
     }
 
@@ -1964,6 +1964,7 @@ static bool canSinkInstructions(
   }
 
   const Instruction *I0 = Insts.front();
+  const auto I0MMRA = MMRAMetadata(*I0);
   for (auto *I : Insts) {
     if (!I->isSameOperationAs(I0))
       return false;
@@ -1974,6 +1975,11 @@ static bool canSinkInstructions(
     if (isa<StoreInst>(I) && I->getOperand(1)->isSwiftError())
       return false;
     if (isa<LoadInst>(I) && I->getOperand(0)->isSwiftError())
+      return false;
+
+    // Treat MMRAs conservatively. This pass can be quite aggressive and
+    // could drop a lot of MMRAs otherwise.
+    if (MMRAMetadata(*I) != I0MMRA)
       return false;
   }
 
@@ -2888,7 +2894,8 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
       // simple, to avoid introducing a spurious non-atomic write after an
       // atomic write.
       if (SI->getPointerOperand() == StorePtr &&
-          SI->getValueOperand()->getType() == StoreTy && SI->isSimple())
+          SI->getValueOperand()->getType() == StoreTy && SI->isSimple() &&
+          SI->getAlign() >= StoreToHoist->getAlign())
         // Found the previous store, return its value operand.
         return SI->getValueOperand();
       return nullptr; // Unknown store.
@@ -2896,7 +2903,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
 
     if (auto *LI = dyn_cast<LoadInst>(&CurI)) {
       if (LI->getPointerOperand() == StorePtr && LI->getType() == StoreTy &&
-          LI->isSimple()) {
+          LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
         // Local objects (created by an `alloca` instruction) are always
         // writable, so once we are past a read from a location it is valid to
         // also write to that same location.
@@ -3826,7 +3833,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     FitWeights(NewWeights);
 
     SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
-    setBranchWeights(PBI, MDWeights[0], MDWeights[1]);
+    setBranchWeights(PBI, MDWeights[0], MDWeights[1], /*IsExpected=*/false);
 
     // TODO: If BB is reachable from all paths through PredBlock, then we
     // could replace PBI's branch probabilities with BI's.
@@ -3854,8 +3861,8 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
     for (DbgVariableRecord &DVR :
          filterDbgVars(PredBlock->getTerminator()->getDbgRecordRange())) {
-      RemapDbgVariableRecord(M, &DVR, VMap,
-                             RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      RemapDbgRecord(M, &DVR, VMap,
+                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
   }
 
@@ -4563,7 +4570,7 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     // Halve the weights if any of them cannot fit in an uint32_t
     FitWeights(NewWeights);
 
-    setBranchWeights(PBI, NewWeights[0], NewWeights[1]);
+    setBranchWeights(PBI, NewWeights[0], NewWeights[1], /*IsExpected=*/false);
   }
 
   // OtherDest may have phi nodes.  If so, add an entry from PBI's
@@ -4599,7 +4606,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 
         FitWeights(NewWeights);
 
-        setBranchWeights(NV, NewWeights[0], NewWeights[1]);
+        setBranchWeights(NV, NewWeights[0], NewWeights[1],
+                         /*IsExpected=*/false);
       }
     }
   }
@@ -4662,7 +4670,7 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
       // Create a conditional branch sharing the condition of the select.
       BranchInst *NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB);
       if (TrueWeight != FalseWeight)
-        setBranchWeights(NewBI, TrueWeight, FalseWeight);
+        setBranchWeights(NewBI, TrueWeight, FalseWeight, /*IsExpected=*/false);
     }
   } else if (KeepEdge1 && (KeepEdge2 || TrueBB == FalseBB)) {
     // Neither of the selected blocks were successors, so this
@@ -5496,11 +5504,13 @@ static bool CasesAreContiguous(SmallVectorImpl<ConstantInt *> &Cases) {
 }
 
 static void createUnreachableSwitchDefault(SwitchInst *Switch,
-                                           DomTreeUpdater *DTU) {
+                                           DomTreeUpdater *DTU,
+                                           bool RemoveOrigDefaultBlock = true) {
   LLVM_DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
   auto *BB = Switch->getParent();
   auto *OrigDefaultBlock = Switch->getDefaultDest();
-  OrigDefaultBlock->removePredecessor(BB);
+  if (RemoveOrigDefaultBlock)
+    OrigDefaultBlock->removePredecessor(BB);
   BasicBlock *NewDefaultBlock = BasicBlock::Create(
       BB->getContext(), BB->getName() + ".unreachabledefault", BB->getParent(),
       OrigDefaultBlock);
@@ -5509,7 +5519,8 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
   if (DTU) {
     SmallVector<DominatorTree::UpdateType, 2> Updates;
     Updates.push_back({DominatorTree::Insert, BB, &*NewDefaultBlock});
-    if (!is_contained(successors(BB), OrigDefaultBlock))
+    if (RemoveOrigDefaultBlock &&
+        !is_contained(successors(BB), OrigDefaultBlock))
       Updates.push_back({DominatorTree::Delete, BB, &*OrigDefaultBlock});
     DTU->applyUpdates(Updates);
   }
@@ -5609,7 +5620,7 @@ bool SimplifyCFGOpt::TurnSwitchRangeIntoICmp(SwitchInst *SI,
         TrueWeight /= 2;
         FalseWeight /= 2;
       }
-      setBranchWeights(NewBI, TrueWeight, FalseWeight);
+      setBranchWeights(NewBI, TrueWeight, FalseWeight, /*IsExpected=*/false);
     }
   }
 
@@ -5691,10 +5702,33 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
       Known.getBitWidth() - (Known.Zero | Known.One).popcount();
   assert(NumUnknownBits <= Known.getBitWidth());
   if (HasDefault && DeadCases.empty() &&
-      NumUnknownBits < 64 /* avoid overflow */ &&
-      SI->getNumCases() == (1ULL << NumUnknownBits)) {
-    createUnreachableSwitchDefault(SI, DTU);
-    return true;
+      NumUnknownBits < 64 /* avoid overflow */) {
+    uint64_t AllNumCases = 1ULL << NumUnknownBits;
+    if (SI->getNumCases() == AllNumCases) {
+      createUnreachableSwitchDefault(SI, DTU);
+      return true;
+    }
+    // When only one case value is missing, replace default with that case.
+    // Eliminating the default branch will provide more opportunities for
+    // optimization, such as lookup tables.
+    if (SI->getNumCases() == AllNumCases - 1) {
+      assert(NumUnknownBits > 1 && "Should be canonicalized to a branch");
+      IntegerType *CondTy = cast<IntegerType>(Cond->getType());
+      if (CondTy->getIntegerBitWidth() > 64 ||
+          !DL.fitsInLegalInteger(CondTy->getIntegerBitWidth()))
+        return false;
+
+      uint64_t MissingCaseVal = 0;
+      for (const auto &Case : SI->cases())
+        MissingCaseVal ^= Case.getCaseValue()->getValue().getLimitedValue();
+      auto *MissingCase =
+          cast<ConstantInt>(ConstantInt::get(Cond->getType(), MissingCaseVal));
+      SwitchInstProfUpdateWrapper SIW(*SI);
+      SIW.addCase(MissingCase, SI->getDefaultDest(), SIW.getSuccessorWeight(0));
+      createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
+      SIW.setSuccessorWeight(0, 0);
+      return true;
+    }
   }
 
   if (DeadCases.empty())
@@ -6575,16 +6609,17 @@ static void reuseTableCompare(
   Constant *FalseConst = ConstantInt::getFalse(RangeCmp->getType());
 
   // Check if the compare with the default value is constant true or false.
-  Constant *DefaultConst = ConstantExpr::getICmp(CmpInst->getPredicate(),
-                                                 DefaultValue, CmpOp1, true);
+  const DataLayout &DL = PhiBlock->getModule()->getDataLayout();
+  Constant *DefaultConst = ConstantFoldCompareInstOperands(
+      CmpInst->getPredicate(), DefaultValue, CmpOp1, DL);
   if (DefaultConst != TrueConst && DefaultConst != FalseConst)
     return;
 
   // Check if the compare with the case values is distinct from the default
   // compare result.
   for (auto ValuePair : Values) {
-    Constant *CaseConst = ConstantExpr::getICmp(CmpInst->getPredicate(),
-                                                ValuePair.second, CmpOp1, true);
+    Constant *CaseConst = ConstantFoldCompareInstOperands(
+        CmpInst->getPredicate(), ValuePair.second, CmpOp1, DL);
     if (!CaseConst || CaseConst == DefaultConst ||
         (CaseConst != TrueConst && CaseConst != FalseConst))
       return;
@@ -6711,8 +6746,25 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     TableSize =
         (MaxCaseVal->getValue() - MinCaseVal->getValue()).getLimitedValue() + 1;
 
+  // If the default destination is unreachable, or if the lookup table covers
+  // all values of the conditional variable, branch directly to the lookup table
+  // BB. Otherwise, check that the condition is within the case range.
+  bool DefaultIsReachable = !SI->defaultDestUndefined();
+
   bool TableHasHoles = (NumResults < TableSize);
-  bool NeedMask = (TableHasHoles && !HasDefaultResults);
+
+  // If the table has holes but the default destination doesn't produce any
+  // constant results, the lookup table entries corresponding to the holes will
+  // contain undefined values.
+  bool AllHolesAreUndefined = TableHasHoles && !HasDefaultResults;
+
+  // If the default destination doesn't produce a constant result but is still
+  // reachable, and the lookup table has holes, we need to use a mask to
+  // determine if the current index should load from the lookup table or jump
+  // to the default case.
+  // The mask is unnecessary if the table has holes but the default destination
+  // is unreachable, as in that case the holes must also be unreachable.
+  bool NeedMask = AllHolesAreUndefined && DefaultIsReachable;
   if (NeedMask) {
     // As an extra penalty for the validity test we require more cases.
     if (SI->getNumCases() < 4) // FIXME: Find best threshold value (benchmark).
@@ -6733,12 +6785,6 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   assert(MaxTableSize >= TableSize &&
          "It is impossible for a switch to have more entries than the max "
          "representable value of its input integer type's size.");
-
-  // If the default destination is unreachable, or if the lookup table covers
-  // all values of the conditional variable, branch directly to the lookup table
-  // BB. Otherwise, check that the condition is within the case range.
-  bool DefaultIsReachable =
-      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
 
   // Create the BB that does the lookups.
   Module &Mod = *CommonDest->getParent()->getParent();
@@ -6863,8 +6909,9 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
 
-    // If using a bitmask, use any value to fill the lookup table holes.
-    Constant *DV = NeedMask ? ResultLists[PHI][0].second : DefaultResults[PHI];
+    // Use any value to fill the lookup table holes.
+    Constant *DV =
+        AllHolesAreUndefined ? ResultLists[PHI][0].second : DefaultResults[PHI];
     StringRef FuncName = Fn->getName();
     SwitchLookupTable Table(Mod, TableSize, TableIndexOffset, ResultList, DV,
                             DL, FuncName);
@@ -7514,6 +7561,13 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
         return (!NullPointerIsDefined(SI->getFunction(),
                                       SI->getPointerAddressSpace())) &&
                SI->getPointerOperand() == I;
+
+    // llvm.assume(false/undef) always triggers immediate UB.
+    if (auto *Assume = dyn_cast<AssumeInst>(Use)) {
+      // Ignore assume operand bundles.
+      if (I == Assume->getArgOperand(0))
+        return true;
+    }
 
     if (auto *CB = dyn_cast<CallBase>(Use)) {
       if (C->isNullValue() && NullPointerIsDefined(CB->getFunction()))

@@ -360,9 +360,15 @@ private:
 /// which dimensions must be kept when e.g. compute MemRef strides under
 /// rank-reducing operations. Return std::nullopt if reducedShape cannot be
 /// obtained by dropping only `1` entries in `originalShape`.
+/// If `matchDynamic` is true, then dynamic dims in `originalShape` and
+/// `reducedShape` will be considered matching with non-dynamic dims, unless
+/// the non-dynamic dim is from `originalShape` and equal to 1. For example,
+/// in ([1, 3, ?], [?, 5]), the mask would be {1, 0, 0}, since 3 and 5 will
+/// match with the corresponding dynamic dims.
 std::optional<llvm::SmallDenseSet<unsigned>>
 computeRankReductionMask(ArrayRef<int64_t> originalShape,
-                         ArrayRef<int64_t> reducedShape);
+                         ArrayRef<int64_t> reducedShape,
+                         bool matchDynamic = false);
 
 /// Enum that captures information related to verifier error conditions on
 /// slice insert/extract type of ops.
