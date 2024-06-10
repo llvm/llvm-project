@@ -86,8 +86,14 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // and other features (ex. mirco architecture feature) from mcpu
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     StringRef CPU = A->getValue();
-    if (CPU == "native")
+    if (CPU == "native") {
       CPU = llvm::sys::getHostCPUName();
+      llvm::StringMap<bool> HostFeatures;
+      if (llvm::sys::getHostCPUFeatures(HostFeatures))
+        for (auto &F : HostFeatures)
+          Features.push_back(
+              Args.MakeArgString((F.second ? "+" : "-") + F.first()));
+    }
 
     getRISCFeaturesFromMcpu(D, A, Triple, CPU, Features);
   }
