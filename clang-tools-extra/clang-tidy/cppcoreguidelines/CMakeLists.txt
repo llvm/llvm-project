@@ -4,7 +4,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangTidyCppCoreGuidelinesModule STATIC
-  AvoidBoundsErrorsCheck.cpp
   AvoidCapturingLambdaCoroutinesCheck.cpp
   AvoidConstOrRefDataMembersCheck.cpp
   AvoidDoWhileCheck.cpp
@@ -20,6 +19,7 @@ add_clang_library(clangTidyCppCoreGuidelinesModule STATIC
   NoMallocCheck.cpp
   NoSuspendWithLockCheck.cpp
   OwningMemoryCheck.cpp
+  PreferAtOverSubscriptOperatorCheck.cpp
   PreferMemberInitializerCheck.cpp
   ProBoundsArrayToPointerDecayCheck.cpp
   ProBoundsConstantArrayIndexCheck.cpp
