@@ -70,10 +70,10 @@ const CXXMethodDecl *findAlternative(const CXXRecordDecl *MatchedParent,
     if (!SameNumberOfArguments)
       continue;
 
-    for (unsigned a = 0; a < Method->getNumParams(); a++) {
+    for (unsigned ArgInd = 0; ArgInd < Method->getNumParams(); ArgInd++) {
       const bool SameArgType =
-          Method->parameters()[a]->getOriginalType() ==
-          MatchedOperator->parameters()[a]->getOriginalType();
+          Method->parameters()[ArgInd]->getOriginalType() ==
+          MatchedOperator->parameters()[ArgInd]->getOriginalType();
       if (!SameArgType)
         continue;
     }
@@ -98,8 +98,6 @@ void PreferAtOverSubscriptOperatorCheck::registerMatchers(MatchFinder *Finder) {
 
 void PreferAtOverSubscriptOperatorCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const ASTContext &Context = *Result.Context;
-  const SourceManager &Source = Context.getSourceManager();
   const CallExpr *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
   const CXXMethodDecl *MatchedOperator =
       Result.Nodes.getNodeAs<CXXMethodDecl>("operator");
