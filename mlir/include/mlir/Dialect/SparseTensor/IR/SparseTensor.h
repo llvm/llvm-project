@@ -58,7 +58,9 @@ struct COOSegment {
   }
 };
 
-/// A simple wrapper to encode a bitset of defined (at most 64) levels.
+/// A simple wrapper to encode a bitset of (at most 64) levels, currently used
+/// by `sparse_tensor.iterate` operation for the set of levels on which the
+/// coordinates should be loaded.
 class LevelSet {
   uint64_t bits = 0;
 

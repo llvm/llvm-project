@@ -1526,7 +1526,7 @@ def IterateOp : SparseTensor_Op<"iterate",
       ["getEntrySuccessorOperands"]>,
      SingleBlockImplicitTerminator<"sparse_tensor::YieldOp">]> {
 
-  let summary = "Iterate over a sparse iteration space";
+  let summary = "Iterates over a sparse iteration space";
   let description = [{
       The `sparse_tensor.iterate` operation represents a loop (nest) over
       the provided iteration space extracted from a specific sparse tensor.

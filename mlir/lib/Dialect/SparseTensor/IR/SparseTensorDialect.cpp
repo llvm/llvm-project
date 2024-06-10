@@ -2137,7 +2137,7 @@ parseSparseSpaceLoop(OpAsmParser &parser, OperationState &state,
   SmallVector<OpAsmParser::UnresolvedOperand> spaces;
   SmallVector<OpAsmParser::UnresolvedOperand> initArgs;
 
-  // Parses "%iters, ... in %spaces, ..."
+  // Parse "%iters, ... in %spaces, ..."
   if (parser.parseArgumentList(iterators) || parser.parseKeyword("in") ||
       parser.parseOperandList(spaces))
     return failure();
