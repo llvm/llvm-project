@@ -523,15 +523,6 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
 
   QualType elementType =
       CGF.getContext().getAsArrayType(ArrayQTy)->getElementType();
-
-  // DestPtr is an array*.  Construct an elementType* by drilling
-  // down a level.
-  llvm::Value *zero = llvm::ConstantInt::get(CGF.SizeTy, 0);
-  llvm::Value *indices[] = {zero, zero};
-  llvm::Value *begin = Builder.CreateInBoundsGEP(DestPtr.getElementType(),
-                                                 DestPtr.emitRawPointer(CGF),
-                                                 indices, "arrayinit.begin");
-
   CharUnits elementSize = CGF.getContext().getTypeSizeInChars(elementType);
   CharUnits elementAlign =
     DestPtr.getAlignment().alignmentOfArrayElement(elementSize);
@@ -572,6 +563,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   Address endOfInit = Address::invalid();
   CodeGenFunction::CleanupDeactivationScope deactivation(CGF);
 
+  llvm::Value *begin = DestPtr.emitRawPointer(CGF);
   if (dtorKind) {
     CodeGenFunction::AllocaTrackerRAII allocaTracker(CGF);
     // In principle we could tell the cleanup where we are more
@@ -595,18 +587,12 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
 
   llvm::Value *one = llvm::ConstantInt::get(CGF.SizeTy, 1);
 
-  // The 'current element to initialize'.  The invariants on this
-  // variable are complicated.  Essentially, after each iteration of
-  // the loop, it points to the last initialized element, except
-  // that it points to the beginning of the array before any
-  // elements have been initialized.
-  llvm::Value *element = begin;
-
   auto Emit = [&](Expr *Init, uint64_t ArrayIndex) {
-    // Advance to the next element.
+    llvm::Value *element = begin;
     if (ArrayIndex > 0) {
-      element = Builder.CreateInBoundsGEP(llvmElementType, element, one,
-                                          "arrayinit.element");
+      element = Builder.CreateInBoundsGEP(
+          llvmElementType, begin,
+          llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex), "arrayinit.element");
 
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
@@ -648,9 +634,12 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     //   do { *array++ = filler; } while (array != end);
 
     // Advance to the start of the rest of the array.
+    llvm::Value *element = begin;
     if (NumInitElements) {
       element = Builder.CreateInBoundsGEP(
-          llvmElementType, element, one, "arrayinit.start");
+          llvmElementType, element,
+          llvm::ConstantInt::get(CGF.SizeTy, NumInitElements),
+          "arrayinit.start");
       if (endOfInit.isValid()) Builder.CreateStore(element, endOfInit);
     }
 

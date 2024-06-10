@@ -12,12 +12,9 @@ int ca[] = {
 #embed <jk.txt> prefix(,)
 };
 
-// CHECK: %arrayinit.begin = getelementptr inbounds [3 x i32], ptr %notca, i64 0, i64 0
-// CHECK: %0 = load i32, ptr %a.addr, align 4
-// CHECK: store i32 %0, ptr %arrayinit.begin, align 4
-// CHECK: %arrayinit.element = getelementptr inbounds i32, ptr %arrayinit.begin, i64 1
+// CHECK: %arrayinit.element = getelementptr inbounds i32, ptr %notca, i64 1
 // CHECK: store i8 106, ptr %arrayinit.element, align 4
-// CHECK: %arrayinit.element1 = getelementptr inbounds i32, ptr %arrayinit.element, i64 1
+// CHECK: %arrayinit.element1 = getelementptr inbounds i32, ptr %notca, i64 2
 // CHECK: store i8 107, ptr %arrayinit.element1, align 4
 int notca[] = {
 a
@@ -61,27 +58,24 @@ constexpr struct T t[] = {
 #embed <numbers.txt>
 };
 
-// CHECK:  %arrayinit.begin2 = getelementptr inbounds [2 x %struct.T], ptr %tnonc, i64 0, i64 0
-// CHECK:  %arr = getelementptr inbounds %struct.T, ptr %arrayinit.begin2, i32 0, i32 0
-// CHECK:  %arrayinit.begin3 = getelementptr inbounds [2 x i32], ptr %arr, i64 0, i64 0
+// CHECK:  %arr = getelementptr inbounds %struct.T, ptr %tnonc, i32 0, i32 0
 // CHECK:  %2 = load i32, ptr %a.addr, align 4
-// CHECK:  store i32 %2, ptr %arrayinit.begin3, align 4
-// CHECK:  %arrayinit.element4 = getelementptr inbounds i32, ptr %arrayinit.begin3, i64 1
-// CHECK:  store i32 300, ptr %arrayinit.element4, align 4
-// CHECK:  %s5 = getelementptr inbounds %struct.T, ptr %arrayinit.begin2, i32 0, i32 1
-// CHECK:  %x6 = getelementptr inbounds %struct.S1, ptr %s5, i32 0, i32 0
-// CHECK:  store i32 1, ptr %x6, align 4
-// CHECK:  %y7 = getelementptr inbounds %struct.S1, ptr %s5, i32 0, i32 1
-// CHECK:  store i32 2, ptr %y7, align 4
-// CHECK:  %z8 = getelementptr inbounds %struct.S1, ptr %s5, i32 0, i32 2
-// CHECK:  store i32 3, ptr %z8, align 4
-// CHECK:  %arrayinit.element9 = getelementptr inbounds %struct.T, ptr %arrayinit.begin2, i64 1
-// CHECK:  call void @llvm.memset.p0.i64(ptr align 4 %arrayinit.element9, i8 0, i64 20, i1 false)
-// CHECK:  %arr10 = getelementptr inbounds %struct.T, ptr %arrayinit.element9, i32 0, i32 0
-// CHECK:  %arrayinit.begin11 = getelementptr inbounds [2 x i32], ptr %arr10, i64 0, i64 0
-// CHECK:  store i8 106, ptr %arrayinit.begin11, align 4
-// CHECK:  %arrayinit.element12 = getelementptr inbounds i32, ptr %arrayinit.begin11, i64 1
-// CHECK:  store i8 107, ptr %arrayinit.element12, align 4
+// CHECK:  store i32 %2, ptr %arr, align 4
+// CHECK:  %arrayinit.element2 = getelementptr inbounds i32, ptr %arr, i64 1
+// CHECK:  store i32 300, ptr %arrayinit.element2, align 4
+// CHECK:  %s3 = getelementptr inbounds %struct.T, ptr %tnonc, i32 0, i32 1
+// CHECK:  %x4 = getelementptr inbounds %struct.S1, ptr %s3, i32 0, i32 0
+// CHECK:  store i32 1, ptr %x4, align 4
+// CHECK:  %y5 = getelementptr inbounds %struct.S1, ptr %s3, i32 0, i32 1
+// CHECK:  store i32 2, ptr %y5, align 4
+// CHECK:  %z6 = getelementptr inbounds %struct.S1, ptr %s3, i32 0, i32 2
+// CHECK:  store i32 3, ptr %z6, align 4
+// CHECK:  %arrayinit.element7 = getelementptr inbounds %struct.T, ptr %tnonc, i64 1
+// CHECK:  call void @llvm.memset.p0.i64(ptr align 4 %arrayinit.element7, i8 0, i64 20, i1 false)
+// CHECK:  %arr8 = getelementptr inbounds %struct.T, ptr %arrayinit.element7, i32 0, i32 0
+// CHECK:  store i8 106, ptr %arr8, align 4
+// CHECK:  %arrayinit.element9 = getelementptr inbounds i32, ptr %arr8, i64 1
+// CHECK:  store i8 107, ptr %arrayinit.element9, align 4
 struct T tnonc[] = {
   a, 300, 1, 2, 3
 #embed <jk.txt> prefix(,)

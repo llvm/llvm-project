@@ -1104,14 +1104,9 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       if (!this->visit(Init))
         return false;
 
-      if (FieldToInit->isBitField()) {
-        if (!this->emitInitBitField(T, FieldToInit, E))
-          return false;
-      } else {
-        if (!this->emitInitField(T, FieldToInit->Offset, E))
-          return false;
-      }
-      return this->emitPopPtr(E);
+      if (FieldToInit->isBitField())
+        return this->emitInitBitField(T, FieldToInit, E);
+      return this->emitInitField(T, FieldToInit->Offset, E);
     };
 
     auto initCompositeField = [=](const Record::Field *FieldToInit,
@@ -1147,9 +1142,6 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
         else
           FToInit = cast<CXXParenListInitExpr>(E)->getInitializedFieldInUnion();
 
-        if (!this->emitDupPtr(E))
-          return false;
-
         const Record::Field *FieldToInit = R->getField(FToInit);
         if (std::optional<PrimType> T = classify(Init)) {
           if (!initPrimitiveField(FieldToInit, Init, *T))
@@ -1169,8 +1161,6 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       while (InitIndex < R->getNumFields() &&
              R->getField(InitIndex)->Decl->isUnnamedBitField())
         ++InitIndex;
-      if (!this->emitDupPtr(E))
-        return false;
 
       if (std::optional<PrimType> T = classify(Init)) {
         const Record::Field *FieldToInit = R->getField(InitIndex);
@@ -1180,7 +1170,7 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       } else {
         // Initializer for a direct base class.
         if (const Record::Base *B = R->getBase(Init->getType())) {
-          if (!this->emitGetPtrBasePop(B->Offset, Init))
+          if (!this->emitGetPtrBase(B->Offset, Init))
             return false;
 
           if (!this->visitInitializer(Init))
@@ -1527,7 +1517,7 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     // Leave a pointer to the field on the stack.
     if (F->Decl->getType()->isReferenceType())
       return this->emitGetFieldPop(PT_Ptr, F->Offset, E) && maybeLoadValue();
-    return this->emitGetPtrField(F->Offset, E) && maybeLoadValue();
+    return this->emitGetPtrFieldPop(F->Offset, E) && maybeLoadValue();
   }
 
   return false;
@@ -1858,6 +1848,9 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   std::optional<PrimType> RT = classify(RHS->getType());
   std::optional<PrimType> ResultT = classify(E->getType());
 
+  if (!Ctx.getLangOpts().CPlusPlus14)
+    return this->visit(RHS) && this->visit(LHS) && this->emitError(E);
+
   if (!LT || !RT || !ResultT || !LHSComputationT)
     return false;
 
@@ -2161,9 +2154,6 @@ bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
       if (!this->emitInitField(*T, F.Offset, E))
         return false;
     } else {
-      if (!this->emitDupPtr(E))
-        return false;
-
       if (!this->emitGetPtrField(F.Offset, E))
         return false;
 
@@ -2860,9 +2850,6 @@ bool ByteCodeExprGen<Emitter>::visitZeroRecordInitializer(const Record *R,
       continue;
     }
 
-    // TODO: Add GetPtrFieldPop and get rid of this dup.
-    if (!this->emitDupPtr(E))
-      return false;
     if (!this->emitGetPtrField(Field.Offset, E))
       return false;
 
@@ -3272,8 +3259,6 @@ bool ByteCodeExprGen<Emitter>::visitAPValueInitializer(const APValue &Val,
         PrimType ElemT = classifyPrim(ArrType->getElementType());
         assert(ArrType);
 
-        if (!this->emitDupPtr(E))
-          return false;
         if (!this->emitGetPtrField(RF->Offset, E))
           return false;
 
@@ -3287,8 +3272,6 @@ bool ByteCodeExprGen<Emitter>::visitAPValueInitializer(const APValue &Val,
         if (!this->emitPopPtr(E))
           return false;
       } else if (F.isStruct() || F.isUnion()) {
-        if (!this->emitDupPtr(E))
-          return false;
         if (!this->emitGetPtrField(RF->Offset, E))
           return false;
         if (!this->visitAPValueInitializer(F, E))
@@ -3861,6 +3844,21 @@ bool ByteCodeExprGen<Emitter>::VisitComplexUnaryOperator(
     // we sometimes have to do the lvalue-to-rvalue conversion here manually.
     return this->emitArrayElemPop(classifyPrim(E->getType()), 1, E);
 
+  case UO_Not: // ~x
+    if (!this->visit(SubExpr))
+      return false;
+    // Negate the imaginary component.
+    if (!this->emitArrayElem(ElemT, 1, E))
+      return false;
+    if (!this->emitNeg(ElemT, E))
+      return false;
+    if (!this->emitInitElem(ElemT, 1, E))
+      return false;
+    return DiscardResult ? this->emitPopPtr(E) : true;
+
+  case UO_Extension:
+    return this->delegate(SubExpr);
+
   default:
     return this->emitInvalid(E);
   }
@@ -3928,6 +3926,14 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     if (IsPtr)
       return this->emitGetThisFieldPtr(Offset, E);
     return this->emitGetPtrThisField(Offset, E);
+  } else if (const auto *DRE = dyn_cast<DeclRefExpr>(E);
+             DRE && DRE->refersToEnclosingVariableOrCapture()) {
+    if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->isInitCapture()) {
+      if (!this->visitVarDecl(cast<VarDecl>(D)))
+        return false;
+      // Retry.
+      return this->visitDeclRef(D, E);
+    }
   }
 
   // Try to lazily visit (or emit dummy pointers for) declarations
@@ -4215,8 +4221,6 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Record *R) {
   for (const Record::Field &Field : llvm::reverse(R->fields())) {
     const Descriptor *D = Field.Desc;
     if (!D->isPrimitive() && !D->isPrimitiveArray()) {
-      if (!this->emitDupPtr(SourceInfo{}))
-        return false;
       if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
         return false;
       if (!this->emitDestruction(D))
