@@ -416,6 +416,9 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
 )
 
+# TODO: Move all exit functions to linux specific 
+
+if (TARGET libc.src.__support.threads.mutex)
 add_object_library(
   exit_handler
   SRCS
@@ -432,6 +435,7 @@ add_object_library(
     libc.src.__support.fixedvector
     libc.src.__support.threads.mutex
 )
+endif()
 
 add_entrypoint_object(
   atexit

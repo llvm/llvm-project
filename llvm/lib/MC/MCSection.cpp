@@ -23,8 +23,8 @@ using namespace llvm;
 MCSection::MCSection(SectionVariant V, StringRef Name, SectionKind K,
                      MCSymbol *Begin)
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      IsRegistered(false), DummyFragment(this), Name(Name), Variant(V),
-      Kind(K) {}
+      HasLayout(false), IsRegistered(false), DummyFragment(this), Name(Name),
+      Variant(V), Kind(K) {}
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   if (!End)
@@ -128,7 +128,7 @@ void MCSection::flushPendingLabels() {
 LLVM_DUMP_METHOD void MCSection::dump() const {
   raw_ostream &OS = errs();
 
-  OS << "<MCSection";
+  OS << "<MCSection Name:" << getName();
   OS << " Fragments:[\n      ";
   for (auto it = begin(), ie = end(); it != ie; ++it) {
     if (it != begin())
