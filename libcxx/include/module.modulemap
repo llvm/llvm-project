@@ -1101,6 +1101,7 @@ module std_private_chrono_duration               [system] {
   header "__chrono/duration.h"
   export std_private_type_traits_is_convertible
 }
+module std_private_chrono_exception              [system] { header "__chrono/exception.h" }
 module std_private_chrono_file_clock             [system] { header "__chrono/file_clock.h" }
 module std_private_chrono_formatter              [system] {
   header "__chrono/formatter.h"
@@ -1113,7 +1114,10 @@ module std_private_chrono_high_resolution_clock  [system] {
 }
 module std_private_chrono_leap_second            [system] { header "__chrono/leap_second.h" }
 module std_private_chrono_literals               [system] { header "__chrono/literals.h" }
-module std_private_chrono_local_info             [system] { header "__chrono/local_info.h" }
+module std_private_chrono_local_info             [system] {
+  header "__chrono/local_info.h"
+  export std_private_chrono_sys_info
+}
 module std_private_chrono_month                  [system] { header "__chrono/month.h" }
 module std_private_chrono_month_weekday          [system] { header "__chrono/month_weekday.h" }
 module std_private_chrono_monthday               [system] { header "__chrono/monthday.h" }
@@ -1155,6 +1159,7 @@ module std_private_chrono_year                   [system] { header "__chrono/yea
 module std_private_chrono_year_month             [system] { header "__chrono/year_month.h" }
 module std_private_chrono_year_month_day         [system] { header "__chrono/year_month_day.h" }
 module std_private_chrono_year_month_weekday     [system] { header "__chrono/year_month_weekday.h" }
+module std_private_chrono_zoned_time             [system] { header "__chrono/zoned_time.h" }
 
 module std_private_compare_common_comparison_category     [system] { header "__compare/common_comparison_category.h" }
 module std_private_compare_compare_partial_order_fallback [system] { header "__compare/compare_partial_order_fallback.h" }
