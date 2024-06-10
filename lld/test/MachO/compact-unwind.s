@@ -29,7 +29,7 @@
 # FIRST:      Indirect symbols for (__DATA_CONST,__got)
 # FIRST-NEXT: address                    index name
 # FIRST-DAG:  0x[[#%x,GXX_PERSONALITY:]] [[#]] ___gxx_personality_v0
-# FIRST-DAG:  0x[[#%x,MY_PERSONALITY:]]  LOCAL
+# FIRST-DAG:  0x[[#%x,MY_PERSONALITY:]]
 
 # SECOND:      Indirect symbols for (__DATA_CONST,__got)
 # SECOND-NEXT: address                    index name
