@@ -149,6 +149,7 @@ namespace {
       AU.addRequired<SlotIndexes>();
       AU.addPreserved<SlotIndexes>();
       AU.addRequired<LiveStacks>();
+      AU.addPreserved<LiveStacks>();
       AU.addRequired<MachineBlockFrequencyInfo>();
       AU.addPreserved<MachineBlockFrequencyInfo>();
       AU.addPreservedID(MachineDominatorsID);
@@ -409,6 +410,23 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
       MFI->RemoveStackObject(NextColor);
       NextColor = AllColors[StackID].find_next(NextColor);
     }
+  }
+
+  // In order to preserve LiveStack analysis, the live ranges for dead spill
+  // stack slots would be merged with the live range of those stack slots that
+  // now share the spill object of the mentioned dead stack slot.
+  for (unsigned SS = 0, SE = SlotMapping.size(); SS != SE; ++SS) {
+    int NewFI = SlotMapping[SS];
+    if (SlotMapping[SS] == -1 || (NewFI == (int)SS)) {
+      continue;
+    }
+
+    LiveRange &lrToUpdateInto =
+        static_cast<LiveRange &>(LS->getInterval(NewFI));
+    const LiveRange &lrToUpdateFrom =
+        static_cast<LiveRange &>(LS->getInterval((int)SS));
+    lrToUpdateInto.MergeSegmentsInAsValue(lrToUpdateFrom,
+                                          lrToUpdateInto.getValNumInfo(0));
   }
 
   return true;
