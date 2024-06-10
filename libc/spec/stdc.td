@@ -487,6 +487,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"frexp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"frexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"frexpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntPtr>]>,
+          GuardedFunctionSpec<"frexpf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>, ArgSpec<IntPtr>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"frexpf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntPtr>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fromfp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
@@ -519,11 +520,13 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"ilogb", RetValSpec<IntType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"ilogbf", RetValSpec<IntType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"ilogbl", RetValSpec<IntType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"ilogbf16", RetValSpec<IntType>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"ilogbf128", RetValSpec<IntType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"llogb", RetValSpec<LongType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"llogbf", RetValSpec<LongType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"llogbl", RetValSpec<LongType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"llogbf16", RetValSpec<LongType>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"llogbf128", RetValSpec<LongType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"ldexp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>]>,
@@ -546,11 +549,13 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"logb", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"logbf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"logbl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"logbf16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"logbf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"modf", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoublePtr>]>,
           FunctionSpec<"modff", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatPtr>]>,
           FunctionSpec<"modfl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoublePtr>]>,
+          GuardedFunctionSpec<"modff16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>, ArgSpec<Float16Ptr>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"modff128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Ptr>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"cos", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
