@@ -1521,13 +1521,13 @@ class VPseudoTiedBinaryMaskRoundingMode<VReg RetClass,
   let UsesVXRM = 0;
 }
 
-class VPseudoBinaryCarryIn<VReg RetClass,
-                           VReg Op1Class,
-                           DAGOperand Op2Class,
-                           LMULInfo MInfo,
-                           bit CarryIn,
-                           string Constraint,
-                           int TargetConstraintType = 1> :
+class VPseudoBinaryCarry<VReg RetClass,
+                         VReg Op1Class,
+                         DAGOperand Op2Class,
+                         LMULInfo MInfo,
+                         bit CarryIn,
+                         string Constraint,
+                         int TargetConstraintType = 1> :
       Pseudo<(outs RetClass:$rd),
              !if(CarryIn,
                 (ins Op1Class:$rs2, Op2Class:$rs1,
@@ -2454,10 +2454,10 @@ multiclass VPseudoBinaryV_VM<LMULInfo m, bit CarryOut = 0, bit CarryIn = 1,
                              int TargetConstraintType = 1> {
   let isCommutable = Commutable in
   def "_VV" # !if(CarryIn, "M", "") # "_" # m.MX :
-    VPseudoBinaryCarryIn<!if(CarryOut, VR,
-                         !if(!and(CarryIn, !not(CarryOut)),
-                             GetVRegNoV0<m.vrclass>.R, m.vrclass)),
-                         m.vrclass, m.vrclass, m, CarryIn, Constraint, TargetConstraintType>;
+    VPseudoBinaryCarry<!if(CarryOut, VR,
+                       !if(!and(CarryIn, !not(CarryOut)),
+                           GetVRegNoV0<m.vrclass>.R, m.vrclass)),
+                       m.vrclass, m.vrclass, m, CarryIn, Constraint, TargetConstraintType>;
 }
 
 multiclass VPseudoTiedBinaryV_VM<LMULInfo m, bit Commutable = 0> {
@@ -2470,10 +2470,10 @@ multiclass VPseudoTiedBinaryV_VM<LMULInfo m, bit Commutable = 0> {
 multiclass VPseudoBinaryV_XM<LMULInfo m, bit CarryOut = 0, bit CarryIn = 1,
                              string Constraint = "", int TargetConstraintType = 1> {
   def "_VX" # !if(CarryIn, "M", "") # "_" # m.MX :
-    VPseudoBinaryCarryIn<!if(CarryOut, VR,
-                         !if(!and(CarryIn, !not(CarryOut)),
-                             GetVRegNoV0<m.vrclass>.R, m.vrclass)),
-                         m.vrclass, GPR, m, CarryIn, Constraint, TargetConstraintType>;
+    VPseudoBinaryCarry<!if(CarryOut, VR,
+                       !if(!and(CarryIn, !not(CarryOut)),
+                           GetVRegNoV0<m.vrclass>.R, m.vrclass)),
+                       m.vrclass, GPR, m, CarryIn, Constraint, TargetConstraintType>;
 }
 
 multiclass VPseudoTiedBinaryV_XM<LMULInfo m> {
@@ -2498,10 +2498,10 @@ multiclass VPseudoVMRG_FM {
 multiclass VPseudoBinaryV_IM<LMULInfo m, bit CarryOut = 0, bit CarryIn = 1,
                              string Constraint = "", int TargetConstraintType = 1> {
   def "_VI" # !if(CarryIn, "M", "") # "_" # m.MX :
-    VPseudoBinaryCarryIn<!if(CarryOut, VR,
-                         !if(!and(CarryIn, !not(CarryOut)),
-                             GetVRegNoV0<m.vrclass>.R, m.vrclass)),
-                         m.vrclass, simm5, m, CarryIn, Constraint, TargetConstraintType>;
+    VPseudoBinaryCarry<!if(CarryOut, VR,
+                       !if(!and(CarryIn, !not(CarryOut)),
+                           GetVRegNoV0<m.vrclass>.R, m.vrclass)),
+                       m.vrclass, simm5, m, CarryIn, Constraint, TargetConstraintType>;
 }
 
 multiclass VPseudoTiedBinaryV_IM<LMULInfo m> {
