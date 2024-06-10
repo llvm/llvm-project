@@ -2393,11 +2393,9 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   return nullptr;
 }
 
-StmtResult
-Parser::ParseOpenMPExecutableDirective(ParsedStmtContext StmtCtx,
-                                       OpenMPDirectiveKind DKind,
-                                       SourceLocation Loc,
-                                       bool ReadDirectiveWithinMetadirective) {
+StmtResult Parser::ParseOpenMPExecutableDirective(
+    ParsedStmtContext StmtCtx, OpenMPDirectiveKind DKind, SourceLocation Loc,
+    bool ReadDirectiveWithinMetadirective) {
   bool HasAssociatedStatement = true;
 
   switch (DKind) {
@@ -2638,7 +2636,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   StmtResult Directive = StmtError();
 
   bool IsExecutable = [&]() {
-    if (DKind == OMPD_error)  // OMPD_error is handled as executable
+    if (DKind == OMPD_error) // OMPD_error is handled as executable
       return true;
     switch (getDirectiveCategory(DKind)) {
     case Category::Executable:
