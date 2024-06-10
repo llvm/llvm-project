@@ -767,6 +767,8 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
   // placed as per kernel ID. Each element in the row corresponds
   // to addresss of "SW LDS" global of the kernel.
   auto &Kernels = NKLDSParams.OrderedKernels;
+  if (Kernels.empty())
+    return;
   Type *Int32Ty = IRB.getInt32Ty();
   const size_t NumberKernels = Kernels.size();
   ArrayType *AllKernelsOffsetsType =
@@ -804,8 +806,8 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSOffsetTable(
   // the replacement of LDS global done by that particular kernel.
   auto &Variables = NKLDSParams.OrdereLDSGlobals;
   auto &Kernels = NKLDSParams.OrderedKernels;
-  assert(!Variables.empty());
-  assert(!Kernels.empty());
+  if (Variables.empty() || Kernels.empty())
+    return;
   const size_t NumberVariables = Variables.size();
   const size_t NumberKernels = Kernels.size();
 
@@ -866,7 +868,7 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
     Value *BasePlusOffset =
         IRB.CreateInBoundsGEP(IRB.getInt8Ty(), BaseLoad, {Offset});
     LLVM_DEBUG(dbgs() << "Sw LDS Lowering, Replace non-kernel LDS for "
-                      << GV->getName().str());
+                      << GV->getName());
     replacesUsesOfGlobalInFunction(Func, GV, BasePlusOffset);
   }
 }
@@ -942,6 +944,16 @@ bool AMDGPUSwLowerLDS::run() {
   PopulateKernelStaticDynamicLDS(LDSUsesInfo.direct_access, true);
   PopulateKernelStaticDynamicLDS(LDSUsesInfo.indirect_access, false);
 
+  for (auto It = NonKernelToLDSAccessMap.begin();
+       It != NonKernelToLDSAccessMap.end();) {
+    Function *Func = (*It).first;
+    if (!Func->hasFnAttribute(Attribute::SanitizeAddress)) {
+      auto EraseIt = It++;
+      NonKernelToLDSAccessMap.erase(EraseIt);
+    } else
+      ++It;
+  }
+
   for (auto &K : KernelToLDSParametersMap) {
     Function *Func = K.first;
     auto &LDSParams = KernelToLDSParametersMap[Func];
@@ -974,8 +986,6 @@ bool AMDGPUSwLowerLDS::run() {
         std::move(KernelsWithIndirectLDSAccess));
     NKLDSParams.OrdereLDSGlobals =
         getOrderedNonKernelAllLDSGlobals(std::move(AllNonKernelLDSAccess));
-    assert(!NKLDSParams.OrderedKernels.empty());
-    assert(!NKLDSParams.OrdereLDSGlobals.empty());
     buildNonKernelLDSBaseTable(NKLDSParams);
     buildNonKernelLDSOffsetTable(NKLDSParams);
     for (auto &K : NonKernelToLDSAccessMap) {
@@ -988,6 +998,9 @@ bool AMDGPUSwLowerLDS::run() {
       lowerNonKernelLDSAccesses(Func, OrderedLDSGlobals, NKLDSParams);
     }
   }
+
+  if (!Changed)
+    return Changed;
 
   for (auto &GV : make_early_inc_range(M.globals())) {
     if (AMDGPU::isLDSVariableToLower(GV)) {
