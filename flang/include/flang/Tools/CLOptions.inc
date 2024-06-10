@@ -178,13 +178,12 @@ inline void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
   fir::CodeGenRewriteOptions options;
   options.preserveDeclare = preserveDeclare;
   addPassConditionally(pm, disableCodeGenRewrite,
-      [&]() { return fir::createFirCodeGenRewritePass(options); });
+      [&]() { return fir::createCodeGenRewrite(options); });
 }
 
 inline void addTargetRewritePass(mlir::PassManager &pm) {
-  addPassConditionally(pm, disableTargetRewrite, []() {
-    return fir::createFirTargetRewritePass(fir::TargetRewriteOptions{});
-  });
+  addPassConditionally(pm, disableTargetRewrite,
+      []() { return fir::createTargetRewritePass(); });
 }
 
 inline mlir::LLVM::DIEmissionKind getEmissionKind(
@@ -234,9 +233,8 @@ inline void addBoxedProcedurePass(mlir::PassManager &pm) {
 
 inline void addExternalNameConversionPass(
     mlir::PassManager &pm, bool appendUnderscore = true) {
-  addPassConditionally(pm, disableExternalNameConversion, [&]() {
-    return fir::createExternalNameConversionPass(appendUnderscore);
-  });
+  addPassConditionally(pm, disableExternalNameConversion,
+      [&]() { return fir::createExternalNameConversion({appendUnderscore}); });
 }
 
 // Use inliner extension point callback to register the default inliner pass.
@@ -371,27 +369,25 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename);
 
   if (config.VScaleMin != 0)
-    pm.addPass(fir::createVScaleAttrPass({config.VScaleMin, config.VScaleMax}));
+    pm.addPass(fir::createVScaleAttr({{config.VScaleMin, config.VScaleMax}}));
 
   // Add function attributes
-  fir::FunctionAttrTypes functionAttrs;
+  mlir::LLVM::framePointerKind::FramePointerKind framePointerKind;
 
   if (config.FramePointerKind != llvm::FramePointerKind::None ||
       config.NoInfsFPMath || config.NoNaNsFPMath || config.ApproxFuncFPMath ||
       config.NoSignedZerosFPMath || config.UnsafeFPMath) {
     if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
-      functionAttrs.framePointerKind =
+      framePointerKind =
           mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
     else if (config.FramePointerKind == llvm::FramePointerKind::All)
-      functionAttrs.framePointerKind =
-          mlir::LLVM::framePointerKind::FramePointerKind::All;
+      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
     else
-      functionAttrs.framePointerKind =
-          mlir::LLVM::framePointerKind::FramePointerKind::None;
+      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 
-    pm.addPass(fir::createFunctionAttrPass(functionAttrs, config.NoInfsFPMath,
+    pm.addPass(fir::createFunctionAttr({framePointerKind, config.NoInfsFPMath,
         config.NoNaNsFPMath, config.ApproxFuncFPMath,
-        config.NoSignedZerosFPMath, config.UnsafeFPMath));
+        config.NoSignedZerosFPMath, config.UnsafeFPMath}));
   }
 
   fir::addFIRToLLVMPass(pm, config);

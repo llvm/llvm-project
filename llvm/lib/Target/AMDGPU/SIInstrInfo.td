@@ -1071,8 +1071,8 @@ def omod0 : DefaultOperand<omod, 0>;
 // We need to make the cases with a default of 0 distinct from no
 // default to help deal with some cases where the operand appears
 // before a mandatory operand.
-def clampmod : NamedBitOperand<"clamp", "ClampSI">;
-def clampmod0 : DefaultOperand<clampmod, 0>;
+def Clamp : NamedBitOperand<"clamp">;
+def Clamp0 : DefaultOperand<Clamp, 0>;
 def highmod : NamedBitOperand<"high", "High">;
 
 def CPol : CustomOperand<i32, 1>;
@@ -1714,14 +1714,14 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
         // VOP1 with modifiers
         !if(HasOMod,
           (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-               clampmod0:$clamp, omod0:$omod),
+               Clamp0:$clamp, omod0:$omod),
           !if (HasClamp,
-            (ins Src0Mod:$src0_modifiers, Src0RC:$src0, clampmod0:$clamp),
+            (ins Src0Mod:$src0_modifiers, Src0RC:$src0, Clamp0:$clamp),
             (ins Src0Mod:$src0_modifiers, Src0RC:$src0)))
       /* else */,
         // VOP1 without modifiers
         !if (HasClamp,
-          (ins Src0RC:$src0, clampmod0:$clamp),
+          (ins Src0RC:$src0, Clamp0:$clamp),
           (ins Src0RC:$src0))
       /* endif */ ),
     !if (!eq(NumSrcArgs, 2),
@@ -1730,14 +1730,14 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
         !if(HasOMod,
           (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                Src1Mod:$src1_modifiers, Src1RC:$src1,
-               clampmod0:$clamp, omod0:$omod),
+               Clamp0:$clamp, omod0:$omod),
           !con((ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                     Src1Mod:$src1_modifiers, Src1RC:$src1),
-                !if(HasClamp, (ins clampmod0:$clamp), (ins))))
+                !if(HasClamp, (ins Clamp0:$clamp), (ins))))
       /* else */,
         // VOP2 without modifiers
         !if (HasClamp,
-          (ins Src0RC:$src0, Src1RC:$src1, clampmod0:$clamp),
+          (ins Src0RC:$src0, Src1RC:$src1, Clamp0:$clamp),
           (ins Src0RC:$src0, Src1RC:$src1))
 
       /* endif */ )
@@ -1749,12 +1749,12 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
             (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                  Src1Mod:$src1_modifiers, Src1RC:$src1,
                  Src2Mod:$src2_modifiers, Src2RC:$src2,
-                 clampmod0:$clamp, omod0:$omod),
+                 Clamp0:$clamp, omod0:$omod),
             !if (HasClamp,
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
                    Src2Mod:$src2_modifiers, Src2RC:$src2,
-                   clampmod0:$clamp),
+                   Clamp0:$clamp),
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
                    Src2Mod:$src2_modifiers, Src2RC:$src2))),
@@ -1762,18 +1762,18 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
           !if (HasOMod,
             (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                  Src1Mod:$src1_modifiers, Src1RC:$src1,
-                 Src2RC:$src2, clampmod0:$clamp, omod0:$omod),
+                 Src2RC:$src2, Clamp0:$clamp, omod0:$omod),
             !if (HasClamp,
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
-                   Src2RC:$src2, clampmod0:$clamp),
+                   Src2RC:$src2, Clamp0:$clamp),
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
                    Src2RC:$src2))))
       /* else */,
         // VOP3 without modifiers
         !if (HasClamp,
-          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2, clampmod0:$clamp),
+          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2, Clamp0:$clamp),
           (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2))
       /* endif */ ))));
 }
@@ -1919,12 +1919,12 @@ class getInsSDWA <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs
                !if(!not(HasSDWAOMod),
                   // VOP1_SDWA without omod
                   (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                       clampmod:$clamp,
+                       Clamp:$clamp,
                        dst_sel:$dst_sel, dst_unused:$dst_unused,
                        src0_sel:$src0_sel),
                   // VOP1_SDWA with omod
                   (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                       clampmod:$clamp, omod:$omod,
+                       Clamp:$clamp, omod:$omod,
                        dst_sel:$dst_sel, dst_unused:$dst_unused,
                        src0_sel:$src0_sel)),
             !if(!eq(NumSrcArgs, 2),
@@ -1932,19 +1932,19 @@ class getInsSDWA <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs
                   // VOPC_SDWA
                   (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                        Src1Mod:$src1_modifiers, Src1RC:$src1,
-                       clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel),
+                       Clamp:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel),
                   // VOP2_SDWA
                   !if(!not(HasSDWAOMod),
                      // VOP2_SDWA without omod
                      (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                           Src1Mod:$src1_modifiers, Src1RC:$src1,
-                          clampmod:$clamp,
+                          Clamp:$clamp,
                           dst_sel:$dst_sel, dst_unused:$dst_unused,
                           src0_sel:$src0_sel, src1_sel:$src1_sel),
                      // VOP2_SDWA with omod
                      (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                           Src1Mod:$src1_modifiers, Src1RC:$src1,
-                          clampmod:$clamp, omod:$omod,
+                          Clamp:$clamp, omod:$omod,
                           dst_sel:$dst_sel, dst_unused:$dst_unused,
                           src0_sel:$src0_sel, src1_sel:$src1_sel))),
             (ins)/* endif */)));

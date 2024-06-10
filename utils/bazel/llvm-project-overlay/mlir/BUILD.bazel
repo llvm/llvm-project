@@ -7526,9 +7526,9 @@ cc_library(
         ":TilingInterface",
         ":TransformUtils",
         ":ValueBoundsOpInterface",
-        ":ViewLikeInterface",
         ":VectorDialect",
         ":VectorUtils",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -8089,6 +8089,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":IR",
         ":SCFDialect",
+        ":SCFTransforms",
         ":TransformUtils",
         ":Transforms",
     ],
@@ -8389,8 +8390,9 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":EmitCDialect",
-        ":PDLLAST",
+        ":IR",
         ":Pass",
+        ":Support",
         ":TransformUtils",
     ],
 )
@@ -9937,10 +9939,10 @@ td_library(
         "include/mlir/Dialect/OpenACC/AccCommon.td",
         "include/mlir/Dialect/OpenACC/OpenACCBase.td",
         "include/mlir/Dialect/OpenACC/OpenACCOps.td",
-        "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
         "include/mlir/Dialect/OpenACC/OpenACCOpsTypes.td",
         "include/mlir/Dialect/OpenACC/OpenACCTypeInterfaces.td",
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.td",
     ],
     includes = ["include"],
     deps = [
@@ -9951,19 +9953,19 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "OpenACCOpsInterfacesIncGen",
+    name = "OpenACCMPOpsInterfacesIncGen",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
-            "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc",
+            "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h.inc",
         ),
         (
             ["-gen-op-interface-defs"],
-            "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.cpp.inc",
+            "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
+    td_file = "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.td",
     deps = [":OpenAccOpsTdFiles"],
 )
 
@@ -10071,20 +10073,13 @@ gentbl_cc_library(
 
 cc_library(
     name = "OpenACCDialect",
-    srcs = glob(
-        [
-            "lib/Dialect/OpenACC/IR/*.cpp",
-        ],
-    ),
+    srcs = glob(["lib/Dialect/OpenACC/IR/*.cpp"]),
     hdrs = glob(
-        [
-            "include/mlir/Dialect/OpenACC/*.h",
-        ],
-        exclude =
-            [
-                "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
-            ],
-    ),
+        include = ["include/mlir/Dialect/OpenACC/*.h"],
+        exclude = ["include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"],
+    ) + [
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h",
+    ],
     includes = ["include"],
     textual_hdrs = [
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
@@ -10098,8 +10093,8 @@ cc_library(
         ":LLVMDialect",
         ":LoopLikeInterface",
         ":MemRefDialect",
+        ":OpenACCMPOpsInterfacesIncGen",
         ":OpenACCOpsIncGen",
-        ":OpenACCOpsInterfacesIncGen",
         ":OpenACCTypeInterfacesIncGen",
         ":OpenACCTypesIncGen",
         ":SideEffectInterfaces",
@@ -10169,6 +10164,7 @@ td_library(
     name = "OpenMPOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.td",
         "include/mlir/Dialect/OpenMP/OmpCommon.td",
         "include/mlir/Dialect/OpenMP/OpenMPAttrDefs.td",
         "include/mlir/Dialect/OpenMP/OpenMPDialect.td",
@@ -10292,20 +10288,13 @@ gentbl_cc_library(
 
 cc_library(
     name = "OpenMPDialect",
-    srcs = glob(
-        [
-            "lib/Dialect/OpenMP/IR/*.cpp",
-        ],
-    ),
+    srcs = glob(["lib/Dialect/OpenMP/IR/*.cpp"]),
     hdrs = glob(
-        [
-            "include/mlir/Dialect/OpenMP/*.h",
-        ],
-        exclude =
-            [
-                "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
-            ],
-    ),
+        include = ["include/mlir/Dialect/OpenMP/*.h"],
+        exclude = ["include/mlir/Dialect/OpenMP/OpenMPInterfaces.h"],
+    ) + [
+        "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h",
+    ],
     includes = ["include"],
     textual_hdrs = [
         "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
@@ -10317,6 +10306,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":LLVMDialect",
+        ":OpenACCMPOpsInterfacesIncGen",
         ":OpenMPInterfacesIncGen",
         ":OpenMPOpsIncGen",
         ":OpenMPTypeInterfacesIncGen",

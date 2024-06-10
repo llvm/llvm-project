@@ -16,6 +16,7 @@
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td"
+include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.td"
 include "mlir/Dialect/OpenMP/OpenMPAttrDefs.td"
 include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
@@ -28,7 +29,7 @@ include "mlir/IR/SymbolInterfaces.td"
 // 2.19.4 Data-Sharing Attribute Clauses
 //===----------------------------------------------------------------------===//
 
-def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
+def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]> {
   let summary = "Provides declaration of [first]private logic.";
   let description = [{
     This operation provides a declaration of how to implement the
@@ -2091,7 +2092,8 @@ def CancellationPointOp : OpenMP_Op<"cancellation_point"> {
 //===----------------------------------------------------------------------===//
 
 def DeclareReductionOp : OpenMP_Op<"declare_reduction", [Symbol,
-                                                         IsolatedFromAbove]> {
+                                                         IsolatedFromAbove,
+                                                         RecipeInterface]> {
   let summary = "declares a reduction kind";
 
   let description = [{

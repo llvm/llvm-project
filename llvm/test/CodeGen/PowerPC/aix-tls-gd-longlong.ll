@@ -117,9 +117,9 @@ define void @storesTIUninit(i64 %Val) #0 {
 ; LARGE32-NEXT:    stwu 1, -32(1)
 ; LARGE32-NEXT:    stw 0, 40(1)
 ; LARGE32-NEXT:    mr 7, 3
-; LARGE32-NEXT:    mr 6, 4
 ; LARGE32-NEXT:    addis 8, L..C2@u(2)
 ; LARGE32-NEXT:    addis 3, L..C3@u(2)
+; LARGE32-NEXT:    mr 6, 4
 ; LARGE32-NEXT:    lwz 3, L..C3@l(3)
 ; LARGE32-NEXT:    bla .__tls_get_mod[PR]
 ; LARGE32-NEXT:    lwz 4, L..C2@l(8)
@@ -191,9 +191,9 @@ define void @storesTIInit(i64 %Val) #0 {
 ; LARGE32-NEXT:    stwu 1, -32(1)
 ; LARGE32-NEXT:    stw 0, 40(1)
 ; LARGE32-NEXT:    mr 7, 3
-; LARGE32-NEXT:    mr 6, 4
 ; LARGE32-NEXT:    addis 8, L..C4@u(2)
 ; LARGE32-NEXT:    addis 3, L..C3@u(2)
+; LARGE32-NEXT:    mr 6, 4
 ; LARGE32-NEXT:    lwz 3, L..C3@l(3)
 ; LARGE32-NEXT:    bla .__tls_get_mod[PR]
 ; LARGE32-NEXT:    lwz 4, L..C4@l(8)

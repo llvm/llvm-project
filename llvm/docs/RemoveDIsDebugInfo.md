@@ -36,7 +36,7 @@ For a more in-depth overview of how to update existing code to support debug rec
 
 # C-API changes
 
-All the functions that have been added are temporary and will be deprecated in the future. The intention is that they'll help downstream projects adapt during the transition period.
+Some new functions that have been added are temporary and will be deprecated in the future. The intention is that they'll help downstream projects adapt during the transition period.
 
 ```
 New functions (all to be deprecated)
@@ -60,7 +60,19 @@ LLVMDIBuilderInsertDeclareBefore   # Insert a debug record (new debug info forma
 LLVMDIBuilderInsertDeclareAtEnd    # Same as above.
 LLVMDIBuilderInsertDbgValueBefore  # Same as above.
 LLVMDIBuilderInsertDbgValueAtEnd   # Same as above.
+
+New functions (no plans to deprecate)
+----------------------------------
+LLVMPositionBuilderBeforeDbgRecords          # See info below.
+LLVMPositionBuilderBeforeInstrAndDbgRecords  # See info below.
 ```
+
+`LLVMPositionBuilderBeforeDbgRecords` and `LLVMPositionBuilderBeforeInstrAndDbgRecords` behave the same as `LLVMPositionBuilder` and `LLVMPositionBuilderBefore` except the insertion position is set before the debug records that precede the target instruction. Note that this doesn't mean that debug intrinsics before the chosen instruction are skipped, only debug records (which unlike debug records are not themselves instructions).
+
+If you don't know which function to call then follow this rule:
+If you are trying to insert at the start of a block, or purposfully skip debug intrinsics to determine the insertion point for any other reason, then call the new functions.
+
+`LLVMPositionBuilder` and `LLVMPositionBuilderBefore` are unchanged. They insert before the indicated instruction but after any attached debug records.
 
 # The new "Debug Record" model
 

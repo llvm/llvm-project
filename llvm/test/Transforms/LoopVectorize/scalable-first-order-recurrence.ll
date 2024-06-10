@@ -25,10 +25,12 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1: middle.block:
 ; CHECK-VF4UF1: %[[VSCALE2:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF1: %[[MUL2:.*]] = mul i32 %[[VSCALE2]], 4
-; CHECK-VF4UF1: %[[SUB2:.*]] = sub i32 %[[MUL2]], 1
-; CHECK-VF4UF1: %[[VEC_RECUR_EXT:.*]] = extractelement <vscale x 4 x i32> %[[LOAD]], i32 %[[SUB2]]
 ; CHECK-VF4UF1: %[[SUB3:.*]] = sub i32 %[[MUL2]], 2
 ; CHECK-VF4UF1: %[[VEC_RECUR_FOR_PHI:.*]] =  extractelement <vscale x 4 x i32> %[[LOAD]], i32 %[[SUB3]]
+; CHECK-VF4UF1: %[[VSCALE3:.*]] = call i32 @llvm.vscale.i32()
+; CHECK-VF4UF1: %[[MUL3:.*]] = mul i32 %[[VSCALE3]], 4
+; CHECK-VF4UF1: %[[SUB3:.*]] = sub i32 %[[MUL3]], 1
+; CHECK-VF4UF1: %[[VEC_RECUR_EXT:.*]] = extractelement <vscale x 4 x i32> %[[LOAD]], i32 %[[SUB3]]
 entry:
   br label %for.preheader
 
@@ -169,8 +171,6 @@ define i64 @constant_folded_previous_value() {
 ; CHECK-VF4UF2-LABEL: @constant_folded_previous_value
 ; CHECK-VF4UF2: vector.body
 ; CHECK-VF4UF2: %[[VECTOR_RECUR:.*]] = phi <vscale x 4 x i64> [ %vector.recur.init, %vector.ph ], [ shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), %vector.body ]
-; CHECK-VF4UF2: %[[SPLICE1:.*]] = call <vscale x 4 x i64> @llvm.vector.splice.nxv4i64(<vscale x 4 x i64> %vector.recur, <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), i32 -1)
-; CHECK-VF4UF2: %[[SPLICE2:.*]] = call <vscale x 4 x i64> @llvm.vector.splice.nxv4i64(<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), i32 -1)
 ; CHECK-VF4UF2: br i1 {{.*}}, label %middle.block, label %vector.body
 entry:
   br label %scalar.body
@@ -211,10 +211,12 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; CHECK-VF4UF2: middle.block
 ; CHECK-VF4UF2: %[[VSCALE2:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[MUL2:.*]] = mul i32 %[[VSCALE2]], 4
-; CHECK-VF4UF2: %[[SUB2:.*]] = sub i32 %[[MUL2]], 1
-; CHECK-VF4UF2: %vector.recur.extract = extractelement <vscale x 4 x i32> %[[ADD2]], i32 %[[SUB2]]
 ; CHECK-VF4UF2: %[[SUB3:.*]] = sub i32 %[[MUL2]], 2
 ; CHECK-VF4UF2: %vector.recur.extract.for.phi = extractelement <vscale x 4 x i32> %[[ADD2]], i32 %[[SUB3]]
+; CHECK-VF4UF2: %[[VSCALE3:.*]] = call i32 @llvm.vscale.i32()
+; CHECK-VF4UF2: %[[MUL3:.*]] = mul i32 %[[VSCALE3]], 4
+; CHECK-VF4UF2: %[[SUB2:.*]] = sub i32 %[[MUL3]], 1
+; CHECK-VF4UF2: %vector.recur.extract = extractelement <vscale x 4 x i32> %[[ADD2]], i32 %[[SUB2]]
 entry:
   br label %for.body
 
