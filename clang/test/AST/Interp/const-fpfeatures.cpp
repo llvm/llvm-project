@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -S -emit-llvm -triple i386-linux -std=c++2a -Wno-unknown-pragmas %s -o - | FileCheck %s
-// RUN: %clang_cc1 -S -emit-llvm -triple i386-linux -fexperimental-new-constant-interpreter -std=c++2a -Wno-unknown-pragmas %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple i386-linux -std=c++2a -Wno-unknown-pragmas %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple i386-linux -fexperimental-new-constant-interpreter -std=c++2a -Wno-unknown-pragmas %s -o - | FileCheck %s
 
 
 #pragma STDC FENV_ROUND FE_UPWARD

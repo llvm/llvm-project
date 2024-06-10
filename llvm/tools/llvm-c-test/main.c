@@ -109,8 +109,12 @@ int main(int argc, char **argv) {
     return llvm_echo();
   } else if (argc == 2 && !strcmp(argv[1], "--test-diagnostic-handler")) {
     return llvm_test_diagnostic_handler();
-  } else if (argc == 2 && !strcmp(argv[1], "--test-dibuilder")) {
-    return llvm_test_dibuilder(false) && llvm_test_dibuilder(true);
+  } else if (argc == 2 &&
+             !strcmp(argv[1], "--test-dibuilder-old-debuginfo-format")) {
+    return llvm_test_dibuilder(false);
+  } else if (argc == 2 &&
+             !strcmp(argv[1], "--test-dibuilder-new-debuginfo-format")) {
+    return llvm_test_dibuilder(true);
   } else {
     print_usage();
   }

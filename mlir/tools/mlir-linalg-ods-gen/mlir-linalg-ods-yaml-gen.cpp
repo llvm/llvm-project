@@ -70,6 +70,7 @@ enum class LinalgOperandDefKind {
   IndexAttr,
   UnaryFnAttr,
   BinaryFnAttr,
+  TernaryFnAttr,
   TypeFnAttr
 };
 
@@ -94,7 +95,7 @@ struct LinalgIndexingMapsConfig {
 
 struct ScalarExpression;
 
-enum class ScalarFnKind { Unary, Binary, Type };
+enum class ScalarFnKind { Unary, Binary, Ternary, Type };
 
 struct ScalarFn {
   ScalarFnKind kind;
@@ -214,6 +215,7 @@ struct ScalarEnumerationTraits<LinalgOperandDefKind> {
     io.enumCase(value, "index_attr", LinalgOperandDefKind::IndexAttr);
     io.enumCase(value, "unary_fn_attr", LinalgOperandDefKind::UnaryFnAttr);
     io.enumCase(value, "binary_fn_attr", LinalgOperandDefKind::BinaryFnAttr);
+    io.enumCase(value, "ternary_fn_attr", LinalgOperandDefKind::TernaryFnAttr);
     io.enumCase(value, "type_fn_attr", LinalgOperandDefKind::TypeFnAttr);
   }
 };
@@ -284,6 +286,7 @@ struct ScalarEnumerationTraits<ScalarFnKind> {
   static void enumeration(IO &io, ScalarFnKind &value) {
     io.enumCase(value, "unary", ScalarFnKind::Unary);
     io.enumCase(value, "binary", ScalarFnKind::Binary);
+    io.enumCase(value, "ternary", ScalarFnKind::Ternary);
     io.enumCase(value, "type", ScalarFnKind::Type);
   }
 };
@@ -441,6 +444,7 @@ static ScalarAssign *findAssignment(StringRef name,
 static bool isFunctionAttribute(LinalgOperandDefKind kind) {
   return kind == LinalgOperandDefKind::UnaryFnAttr ||
          kind == LinalgOperandDefKind::BinaryFnAttr ||
+         kind == LinalgOperandDefKind::TernaryFnAttr ||
          kind == LinalgOperandDefKind::TypeFnAttr;
 }
 
@@ -456,6 +460,8 @@ std::string convertOperandKindToEnumName(LinalgOperandDefKind kind) {
     return std::string("UnaryFn");
   case LinalgOperandDefKind::BinaryFnAttr:
     return std::string("BinaryFn");
+  case LinalgOperandDefKind::TernaryFnAttr:
+    return std::string("TernaryFn");
   case LinalgOperandDefKind::TypeFnAttr:
     return std::string("TypeFn");
   default:
@@ -471,6 +477,8 @@ std::string convertFunctionKindToEnumName(ScalarFnKind kind) {
     return std::string("UnaryFn");
   case ScalarFnKind::Binary:
     return std::string("BinaryFn");
+  case ScalarFnKind::Ternary:
+    return std::string("TernaryFn");
   case ScalarFnKind::Type:
     return std::string("TypeFn");
   }
@@ -659,8 +667,7 @@ LogicalResult {0}::fold(FoldAdaptor,
 void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
       if (hasPureTensorSemantics()) return;
-      getGenericEffectsImpl(effects,
-        getOperation()->getResults(), getDpsInputs(), getDpsInits());
+      getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
 }
 )FMT";
 

@@ -10,4 +10,4 @@ but does not actually attempt to execute a command.
 
 This check corresponds to the CERT C Coding Standard rule
 `ENV33-C. Do not call system()
-<https://www.securecoding.cert.org/confluence/pages/viewpage.action?pageId=2130132>`_.
+<https://www.securecoding.cert.org/confluence/display/c/ENV33-C.+Do+not+call+system()>`_.

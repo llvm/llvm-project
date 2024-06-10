@@ -5,7 +5,7 @@ define i32 @shl_cttz_false(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @shl_cttz_false(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CTTZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[Y]], i1 true), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y]], i1 true)
 ; CHECK-NEXT:    [[RES:%.*]] = shl i32 [[X]], [[CTTZ]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -19,7 +19,7 @@ define i32 @shl_ctlz_false(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @shl_ctlz_false(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CTTZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[Y]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[Y]], i1 true)
 ; CHECK-NEXT:    [[RES:%.*]] = shl i32 [[X]], [[CTTZ]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -33,7 +33,7 @@ define i32 @lshr_cttz_false(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @lshr_cttz_false(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CTTZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[Y]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y]], i1 true)
 ; CHECK-NEXT:    [[RES:%.*]] = lshr i32 [[X]], [[CTTZ]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -47,7 +47,7 @@ define i32 @ashr_cttz_false(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @ashr_cttz_false(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CTTZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[Y]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y]], i1 true)
 ; CHECK-NEXT:    [[RES:%.*]] = ashr i32 [[X]], [[CTTZ]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -61,7 +61,7 @@ define i32 @shl_cttz_false_multiuse(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @shl_cttz_false_multiuse(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CTTZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[Y]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y]], i1 false)
 ; CHECK-NEXT:    call void @use(i32 [[CTTZ]])
 ; CHECK-NEXT:    [[RES:%.*]] = shl i32 [[X]], [[CTTZ]]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -77,7 +77,7 @@ define i32 @shl_cttz_as_lhs(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @shl_cttz_as_lhs(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CTTZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[Y]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y]], i1 false)
 ; CHECK-NEXT:    [[RES:%.*]] = shl i32 [[CTTZ]], [[X]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -88,6 +88,3 @@ entry:
 }
 
 declare void @use(i32)
-;.
-; CHECK: [[RNG0]] = !{i32 0, i32 33}
-;.

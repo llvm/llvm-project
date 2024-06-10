@@ -275,7 +275,7 @@ def OP_VCVT_BF16_F32_HI_A32
                            (call "vget_low", $p0))>;
 
 def OP_CVT_F32_BF16
-    : Op<(bitcast "R", (op "<<", (bitcast "int32_t", $p0),
+    : Op<(bitcast "R", (op "<<", (cast "int32_t", (bitcast "int16_t", $p0)),
                                  (literal "int32_t", "16")))>;
 
 //===----------------------------------------------------------------------===//

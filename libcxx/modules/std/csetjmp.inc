@@ -8,6 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-  using std::jmp_buf;
-  using std::longjmp;
+  using std::jmp_buf _LIBCPP_USING_IF_EXISTS;
+  using std::longjmp _LIBCPP_USING_IF_EXISTS;
 } // namespace std

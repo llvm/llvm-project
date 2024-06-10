@@ -8,8 +8,8 @@
 ;      /      \        \
 ; loop.0.0  loop.0.1  loop.1.0
 ;
-; CHECK: Running pass: NoOpLoopNestPass on loop.0
-; CHECK: Running pass: NoOpLoopNestPass on loop.1
+; CHECK: Running pass: NoOpLoopNestPass on loop %loop.0 in function f
+; CHECK: Running pass: NoOpLoopNestPass on loop %loop.1 in function f
 ; CHECK-NOT: Running pass: NoOpLoopNestPass on {{loop\..*\..*}}
 
 define void @f() {

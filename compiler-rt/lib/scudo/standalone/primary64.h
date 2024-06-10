@@ -147,6 +147,9 @@ public:
     for (uptr I = 0; I < NumClasses; I++)
       getRegionInfo(I)->FLLockCV.bindTestOnly(getRegionInfo(I)->FLLock);
 
+    // The default value in the primary config has the higher priority.
+    if (Config::getDefaultReleaseToOsIntervalMs() != INT32_MIN)
+      ReleaseToOsInterval = Config::getDefaultReleaseToOsIntervalMs();
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
@@ -884,9 +887,10 @@ private:
         ScopedLock ML(Region->MMLock);
 
         const bool RegionIsExhausted = Region->Exhausted;
-        if (!RegionIsExhausted)
+        if (!RegionIsExhausted) {
           PopCount = populateFreeListAndPopBlocks(C, ClassId, Region, ToArray,
                                                   MaxBlockCount);
+        }
         ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
 
         {
@@ -1019,7 +1023,6 @@ private:
                                           MAP_ALLOWNOMEM))) {
         Printf("Can't reserve pages for size class %zu.\n",
                getSizeByClassId(ClassId));
-        Region->Exhausted = true;
         return 0U;
       }
       initRegion(Region, ClassId,

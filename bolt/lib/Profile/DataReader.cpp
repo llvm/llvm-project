@@ -598,8 +598,6 @@ void DataReader::readSampleData(BinaryFunction &BF) {
   }
 
   BF.ExecutionCount = TotalEntryCount;
-
-  estimateEdgeCounts(BF);
 }
 
 void DataReader::convertBranchData(BinaryFunction &BF) const {
@@ -775,6 +773,7 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
     if (collectedInBoltedBinary() && FromBB == ToBB)
       return true;
 
+    // Allow passthrough blocks.
     BinaryBasicBlock *FTSuccessor = FromBB->getConditionalSuccessor(false);
     if (FTSuccessor && FTSuccessor->succ_size() == 1 &&
         FTSuccessor->getSuccessor(ToBB->getLabel())) {
@@ -1205,8 +1204,7 @@ std::error_code DataReader::parse() {
 
     // Add entry data for branches to another function or branches
     // to entry points (including recursive calls)
-    if (BI.To.IsSymbol &&
-        (!BI.From.Name.equals(BI.To.Name) || BI.To.Offset == 0)) {
+    if (BI.To.IsSymbol && (BI.From.Name != BI.To.Name || BI.To.Offset == 0)) {
       I = GetOrCreateFuncEntry(BI.To.Name);
       I->second.EntryData.emplace_back(std::move(BI));
     }

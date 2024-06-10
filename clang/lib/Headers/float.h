@@ -10,6 +10,10 @@
 #ifndef __CLANG_FLOAT_H
 #define __CLANG_FLOAT_H
 
+#if defined(__MVS__) && __has_include_next(<float.h>)
+#include_next <float.h>
+#else
+
 /* If we're on MinGW, fall back to the system's float.h, which might have
  * additional definitions provided for Windows.
  * For more details see http://msdn.microsoft.com/en-us/library/y0ybw9fy.aspx
@@ -165,4 +169,5 @@
 #  define FLT16_TRUE_MIN    __FLT16_TRUE_MIN__
 #endif /* __STDC_WANT_IEC_60559_TYPES_EXT__ */
 
+#endif /* __MVS__ */
 #endif /* __CLANG_FLOAT_H */

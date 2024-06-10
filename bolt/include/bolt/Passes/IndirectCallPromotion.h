@@ -104,7 +104,7 @@ class IndirectCallPromotion : public BinaryFunctionPass {
   struct Location {
     MCSymbol *Sym{nullptr};
     uint64_t Addr{0};
-    bool isValid() const { return Sym || (!Sym && Addr != 0); }
+    bool isValid() const { return Sym || Addr != 0; }
     Location() {}
     explicit Location(MCSymbol *Sym) : Sym(Sym) {}
     explicit Location(uint64_t Addr) : Addr(Addr) {}

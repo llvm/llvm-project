@@ -293,7 +293,7 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
        ++Token) {
     StringRef TokenRef(*Token);
     ShouldAddTarget = ShouldAddTarget && !TokenRef.starts_with(TargetOPT) &&
-                      !TokenRef.equals(TargetOPTLegacy);
+                      TokenRef != TargetOPTLegacy;
     ShouldAddMode = ShouldAddMode && !TokenRef.starts_with(DriverModeOPT);
   }
   if (ShouldAddMode) {

@@ -12,7 +12,7 @@ subroutine pass_poly_to_assumed_type_assumed_size(x)
   call assumed_type_assumed_size(x)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPpass_poly_to_assumed_type_assumed_size(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFpass_poly_to_assumed_type_assumed_sizeEx"} : (!fir.class<!fir.array<?x?xnone>>) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFpass_poly_to_assumed_type_assumed_sizeEx"} : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.class<!fir.array<?x?xnone>>) -> (!fir.class<!fir.array<?x?xnone>>, i1)
 ! CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]]#0 : (!fir.class<!fir.array<?x?xnone>>) -> !fir.ref<!fir.array<?x?xnone>>
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.array<?x?xnone>>) -> !fir.ref<!fir.array<?xnone>>

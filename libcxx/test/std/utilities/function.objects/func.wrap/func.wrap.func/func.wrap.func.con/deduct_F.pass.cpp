@@ -118,10 +118,14 @@ int main(int, char**) {
 // Make sure we fail in a SFINAE-friendly manner when we try to deduce
 // from a type without a valid call operator.
 template <typename F, typename = decltype(std::function{std::declval<F>()})>
-constexpr bool can_deduce() { return true; }
+constexpr bool can_deduce_test(int) { return true; }
 template <typename F>
-constexpr bool can_deduce(...) { return false; }
+constexpr bool can_deduce_test(...) { return false; }
 
+template <typename F>
+constexpr bool can_deduce = can_deduce_test<F>(0);
+
+struct valid { int operator()() const; };
 struct invalid1 { };
 struct invalid2 {
   template <typename ...Args>
@@ -131,6 +135,22 @@ struct invalid3 {
   void operator()(int);
   void operator()(long);
 };
-static_assert(!can_deduce<invalid1>());
-static_assert(!can_deduce<invalid2>());
-static_assert(!can_deduce<invalid3>());
+static_assert( can_deduce<valid>);
+static_assert(!can_deduce<invalid1>);
+static_assert(!can_deduce<invalid2>);
+static_assert(!can_deduce<invalid3>);
+
+
+// LWG 3238. Insufficiently-defined behavior of std::function deduction guides
+// https://cplusplus.github.io/LWG/issue3238
+// The deduction guides for std::function do not handle rvalue-ref qualified
+// call operators and C-style variadics. It also doesn't deduce from nullptr_t.
+// Make sure we stick to the specification.
+
+struct invalid_rvalue_ref { R operator()() && { return {}; } };
+struct invalid_c_vararg { R operator()(int, ...) { return {}; } };
+
+static_assert(!can_deduce<invalid_rvalue_ref>);
+static_assert(!can_deduce<invalid_c_vararg>);
+static_assert(!can_deduce<std::nullptr_t>);
+

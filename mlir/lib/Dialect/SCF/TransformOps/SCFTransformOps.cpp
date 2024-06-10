@@ -69,16 +69,12 @@ transform::ForallToForOp::apply(transform::TransformRewriter &rewriter,
     return diag;
   }
 
-  rewriter.setInsertionPoint(target);
-
   if (!target.getOutputs().empty()) {
     return emitSilenceableError()
            << "unsupported shared outputs (didn't bufferize?)";
   }
 
   SmallVector<OpFoldResult> lbs = target.getMixedLowerBound();
-  SmallVector<OpFoldResult> ubs = target.getMixedUpperBound();
-  SmallVector<OpFoldResult> steps = target.getMixedStep();
 
   if (getNumResults() != lbs.size()) {
     DiagnosedSilenceableFailure diag =
@@ -89,29 +85,60 @@ transform::ForallToForOp::apply(transform::TransformRewriter &rewriter,
     return diag;
   }
 
-  auto loc = target.getLoc();
-  SmallVector<Value> ivs;
-  for (auto &&[lb, ub, step] : llvm::zip(lbs, ubs, steps)) {
-    Value lbValue = getValueOrCreateConstantIndexOp(rewriter, loc, lb);
-    Value ubValue = getValueOrCreateConstantIndexOp(rewriter, loc, ub);
-    Value stepValue = getValueOrCreateConstantIndexOp(rewriter, loc, step);
-    auto loop = rewriter.create<scf::ForOp>(
-        loc, lbValue, ubValue, stepValue, ValueRange(),
-        [](OpBuilder &, Location, Value, ValueRange) {});
-    ivs.push_back(loop.getInductionVar());
-    rewriter.setInsertionPointToStart(loop.getBody());
-    rewriter.create<scf::YieldOp>(loc);
-    rewriter.setInsertionPointToStart(loop.getBody());
+  SmallVector<Operation *> opResults;
+  if (failed(scf::forallToForLoop(rewriter, target, &opResults))) {
+    DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                       << "failed to convert forall into for";
+    return diag;
   }
-  rewriter.eraseOp(target.getBody()->getTerminator());
-  rewriter.inlineBlockBefore(target.getBody(), &*rewriter.getInsertionPoint(),
-                             ivs);
-  rewriter.eraseOp(target);
 
-  for (auto &&[i, iv] : llvm::enumerate(ivs)) {
-    results.set(cast<OpResult>(getTransformed()[i]),
-                {iv.getParentBlock()->getParentOp()});
+  for (auto &&[i, res] : llvm::enumerate(opResults)) {
+    results.set(cast<OpResult>(getTransformed()[i]), {res});
   }
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ForallToForOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ForallToParallelOp::apply(transform::TransformRewriter &rewriter,
+                                     transform::TransformResults &results,
+                                     transform::TransformState &state) {
+  auto payload = state.getPayloadOps(getTarget());
+  if (!llvm::hasSingleElement(payload))
+    return emitSilenceableError() << "expected a single payload op";
+
+  auto target = dyn_cast<scf::ForallOp>(*payload.begin());
+  if (!target) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "expected the payload to be scf.forall";
+    diag.attachNote((*payload.begin())->getLoc()) << "payload op";
+    return diag;
+  }
+
+  if (!target.getOutputs().empty()) {
+    return emitSilenceableError()
+           << "unsupported shared outputs (didn't bufferize?)";
+  }
+
+  if (getNumResults() != 1) {
+    DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                       << "op expects one result, given "
+                                       << getNumResults();
+    diag.attachNote(target.getLoc()) << "payload op";
+    return diag;
+  }
+
+  scf::ParallelOp opResult;
+  if (failed(scf::forallToParallelLoop(rewriter, target, &opResult))) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "failed to convert forall into parallel";
+    return diag;
+  }
+
+  results.set(cast<OpResult>(getTransformed()[0]), {opResult});
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -234,6 +261,8 @@ loopScheduling(scf::ForOp forOp,
     return 1;
   };
 
+  std::optional<int64_t> ubConstant = getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> lbConstant = getConstantIntValue(forOp.getLowerBound());
   DenseMap<Operation *, unsigned> opCycles;
   std::map<unsigned, std::vector<Operation *>> wrappedSchedule;
   for (Operation &op : forOp.getBody()->getOperations()) {
@@ -244,7 +273,14 @@ loopScheduling(scf::ForOp forOp,
       Operation *def = operand.getDefiningOp();
       if (!def)
         continue;
-      earlyCycle = std::max(earlyCycle, opCycles[def] + getLatency(def));
+      if (ubConstant && lbConstant) {
+        unsigned ubInt = ubConstant.value();
+        unsigned lbInt = lbConstant.value();
+        auto minLatency = std::min(ubInt - lbInt - 1, getLatency(def));
+        earlyCycle = std::max(earlyCycle, opCycles[def] + minLatency);
+      } else {
+        earlyCycle = std::max(earlyCycle, opCycles[def] + getLatency(def));
+      }
     }
     opCycles[&op] = earlyCycle;
     wrappedSchedule[earlyCycle % iterationInterval].push_back(&op);

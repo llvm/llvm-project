@@ -31,20 +31,23 @@ module attributes { } {
           %18 = llvm.mlir.constant(1 : i64) : i64
           %19 = llvm.alloca %18 x i32 {pinned} : (i64) -> !llvm.ptr<5>
           %20 = llvm.addrspacecast %19 : !llvm.ptr<5> to !llvm.ptr
-          omp.wsloop  for  (%arg2) : i32 = (%16) to (%15) inclusive step (%16) {
-            llvm.store %arg2, %20 : i32, !llvm.ptr
-            %21 = llvm.load %20 : !llvm.ptr -> i32
-            %22 = llvm.sext %21 : i32 to i64
-            %23 = llvm.mlir.constant(1 : i64) : i64
-            %24 = llvm.mlir.constant(0 : i64) : i64
-            %25 = llvm.sub %22, %23 overflow<nsw>  : i64
-            %26 = llvm.mul %25, %23 overflow<nsw>  : i64
-            %27 = llvm.mul %26, %23 overflow<nsw>  : i64
-            %28 = llvm.add %27, %24 overflow<nsw>  : i64
-            %29 = llvm.mul %23, %17 overflow<nsw>  : i64
-            %30 = llvm.getelementptr %arg0[%28] : (!llvm.ptr, i64) -> !llvm.ptr, i32
-            llvm.store %21, %30 : i32, !llvm.ptr
-            omp.yield
+          omp.wsloop {
+            omp.loop_nest (%arg2) : i32 = (%16) to (%15) inclusive step (%16) {
+              llvm.store %arg2, %20 : i32, !llvm.ptr
+              %21 = llvm.load %20 : !llvm.ptr -> i32
+              %22 = llvm.sext %21 : i32 to i64
+              %23 = llvm.mlir.constant(1 : i64) : i64
+              %24 = llvm.mlir.constant(0 : i64) : i64
+              %25 = llvm.sub %22, %23 overflow<nsw>  : i64
+              %26 = llvm.mul %25, %23 overflow<nsw>  : i64
+              %27 = llvm.mul %26, %23 overflow<nsw>  : i64
+              %28 = llvm.add %27, %24 overflow<nsw>  : i64
+              %29 = llvm.mul %23, %17 overflow<nsw>  : i64
+              %30 = llvm.getelementptr %arg0[%28] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+              llvm.store %21, %30 : i32, !llvm.ptr
+              omp.yield
+            }
+            omp.terminator
           }
           omp.terminator
         }

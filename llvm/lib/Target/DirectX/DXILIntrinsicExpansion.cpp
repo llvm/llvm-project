@@ -77,8 +77,8 @@ static bool expandIntegerDot(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
                                    : Intrinsic::dx_umad;
   Value *A = Orig->getOperand(0);
   Value *B = Orig->getOperand(1);
-  Type *ATy = A->getType();
-  Type *BTy = B->getType();
+  [[maybe_unused]] Type *ATy = A->getType();
+  [[maybe_unused]] Type *BTy = B->getType();
   assert(ATy->isVectorTy() && BTy->isVectorTy());
 
   IRBuilder<> Builder(Orig->getParent());

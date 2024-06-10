@@ -77,7 +77,7 @@ SBProcess::~SBProcess() = default;
 const char *SBProcess::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return Process::GetStaticBroadcasterClass().AsCString();
+  return ConstString(Process::GetStaticBroadcasterClass()).AsCString();
 }
 
 const char *SBProcess::GetPluginName() {
@@ -807,7 +807,7 @@ SBBroadcaster SBProcess::GetBroadcaster() const {
 const char *SBProcess::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return Process::GetStaticBroadcasterClass().AsCString();
+  return ConstString(Process::GetStaticBroadcasterClass()).AsCString();
 }
 
 size_t SBProcess::ReadMemory(addr_t addr, void *dst, size_t dst_len,
@@ -926,6 +926,14 @@ size_t SBProcess::WriteMemory(addr_t addr, const void *src, size_t src_len,
   }
 
   return bytes_written;
+}
+
+void SBProcess::GetStatus(SBStream &status) {
+  LLDB_INSTRUMENT_VA(this, status);
+
+  ProcessSP process_sp(GetSP());
+  if (process_sp)
+    process_sp->GetStatus(status.ref());
 }
 
 bool SBProcess::GetDescription(SBStream &description) {

@@ -71,12 +71,9 @@ ProgramStateRef setErrnoState(ProgramStateRef State, ErrnoCheckState EState);
 /// Clear state of errno (make it irrelevant).
 ProgramStateRef clearErrnoState(ProgramStateRef State);
 
-/// Determine if a `Decl` node related to 'errno'.
-/// This is true if the declaration is the errno variable or a function
-/// that returns a pointer to the 'errno' value (usually the 'errno' macro is
-/// defined with this function). \p D is not required to be a canonical
-/// declaration.
-bool isErrno(const Decl *D);
+/// Determine if `Call` is a call to an internal function that returns the
+/// location of `errno` (in environments where errno is accessed this way).
+bool isErrnoLocationCall(const CallEvent &Call);
 
 /// Create a NoteTag that displays the message if the 'errno' memory region is
 /// marked as interesting, and resets the interestingness.

@@ -86,8 +86,8 @@ add_libc_test(
     libc.src.__support.uint128
 )
 
-# The GPU does not support varargs currently.
-if(NOT LIBC_TARGET_OS_IS_GPU)
+# NVPTX does not support varargs currently.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
     arg_list_test
     SUITE
@@ -132,6 +132,7 @@ add_libc_test(
   SRCS
     fixedvector_test.cpp
   DEPENDS
+    libc.src.__support.CPP.array
     libc.src.__support.fixedvector
 )
 
@@ -206,3 +207,5 @@ add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
 add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
+add_subdirectory(time)
+add_subdirectory(threads)

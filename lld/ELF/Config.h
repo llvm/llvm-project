@@ -102,6 +102,9 @@ enum class GnuStackKind { None, Exec, NoExec };
 // For --lto=
 enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
 
+// For -z gcs=
+enum class GcsPolicy { Implicit, Never, Always };
+
 struct SymbolVersion {
   llvm::StringRef name;
   bool isExternCpp;
@@ -188,6 +191,7 @@ struct Config {
   StringRef zBtiReport = "none";
   StringRef zCetReport = "none";
   StringRef zPauthReport = "none";
+  StringRef zGcsReport = "none";
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
@@ -213,6 +217,7 @@ struct Config {
   bool allowMultipleDefinition;
   bool fatLTOObjects;
   bool androidPackDynRelocs = false;
+  bool armThumbPLTs = false;
   bool armHasBlx = false;
   bool armHasMovtMovw = false;
   bool armJ1J2BranchEncoding = false;
@@ -224,7 +229,8 @@ struct Config {
   bool checkSections;
   bool checkDynamicRelocs;
   std::optional<llvm::DebugCompressionType> compressDebugSections;
-  llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::DebugCompressionType>, 0>
+  llvm::SmallVector<
+      std::tuple<llvm::GlobPattern, llvm::DebugCompressionType, unsigned>, 0>
       compressSections;
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
@@ -237,6 +243,7 @@ struct Config {
   bool emitLLVM;
   bool emitRelocs;
   bool enableNewDtags;
+  bool enableNonContiguousRegions;
   bool executeOnly;
   bool exportDynamic;
   bool fixCortexA53Errata843419;
@@ -279,6 +286,7 @@ struct Config {
   bool relax;
   bool relaxGP;
   bool relocatable;
+  bool resolveGroups;
   bool relrGlibc = false;
   bool relrPackDynRelocs = false;
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
@@ -339,6 +347,7 @@ struct Config {
   UnresolvedPolicy unresolvedSymbols;
   UnresolvedPolicy unresolvedSymbolsInShlib;
   Target2Policy target2;
+  GcsPolicy zGcs;
   bool power10Stubs;
   ARMVFPArgKind armVFPArgs = ARMVFPArgKind::Default;
   BuildIdKind buildId = BuildIdKind::None;

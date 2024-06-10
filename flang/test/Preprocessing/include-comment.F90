@@ -1,4 +1,4 @@
-! RUN: %flang -I%S -E %s 2>&1 | FileCheck %s
+! RUN: %flang -pedantic -I%S -E %s 2>&1 | FileCheck %s
 ! CHECK-NOT: :3:
 #include <empty.h> ! comment
 ! CHECK-NOT: :5:

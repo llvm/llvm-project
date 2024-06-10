@@ -52,10 +52,7 @@ alloca_21:
 define i32 @kmovrk_1(<4 x ptr> %arg) {
 ; AVX512-LABEL: kmovrk_1:
 ; AVX512:       # %bb.0: # %bb
-; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512-NEXT:    vptestmq %zmm0, %zmm0, %k0 # encoding: [0x62,0xf2,0xfd,0x48,0x27,0xc0]
-; AVX512-NEXT:    kmovw %k0, %eax # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x93,0xc0]
-; AVX512-NEXT:    testb $15, %al # encoding: [0xa8,0x0f]
+; AVX512-NEXT:    vptest %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x17,0xc0]
 ; AVX512-NEXT:    jne .LBB2_1 # encoding: [0x75,A]
 ; AVX512-NEXT:    # fixup A - offset: 1, value: .LBB2_1-1, kind: FK_PCRel_1
 ; AVX512-NEXT:  # %bb.2: # %bb3
@@ -66,10 +63,7 @@ define i32 @kmovrk_1(<4 x ptr> %arg) {
 ;
 ; AVX512BW-LABEL: kmovrk_1:
 ; AVX512BW:       # %bb.0: # %bb
-; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512BW-NEXT:    vptestmq %zmm0, %zmm0, %k0 # encoding: [0x62,0xf2,0xfd,0x48,0x27,0xc0]
-; AVX512BW-NEXT:    kmovd %k0, %eax # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x93,0xc0]
-; AVX512BW-NEXT:    testb $15, %al # encoding: [0xa8,0x0f]
+; AVX512BW-NEXT:    vptest %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x17,0xc0]
 ; AVX512BW-NEXT:    jne .LBB2_1 # encoding: [0x75,A]
 ; AVX512BW-NEXT:    # fixup A - offset: 1, value: .LBB2_1-1, kind: FK_PCRel_1
 ; AVX512BW-NEXT:  # %bb.2: # %bb3

@@ -16,8 +16,8 @@ define <256 x i1> @reverse_v256i1(<256 x i1> %a) {
 ; CHECK-NEXT:    vrgather.vv v12, v8, v10
 ; CHECK-NEXT:    vmsne.vi v0, v12, 0
 ; CHECK-NEXT:    ret
-  %res = call <256 x i1> @llvm.experimental.vector.reverse.v256i1(<256 x i1> %a)
+  %res = call <256 x i1> @llvm.vector.reverse.v256i1(<256 x i1> %a)
   ret <256 x i1> %res
 }
 
-declare <256 x i1> @llvm.experimental.vector.reverse.v256i1(<256 x i1>)
+declare <256 x i1> @llvm.vector.reverse.v256i1(<256 x i1>)

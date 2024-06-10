@@ -3,6 +3,8 @@
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=RELOC
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s -o %t.relax
 # RUN: llvm-readobj -r %t.relax | FileCheck %s --check-prefixes=RELOC,RELAX
+# RUN: llvm-mc --triple=loongarch64 --defsym ABS=1 --mattr=+la-global-with-abs \
+# RUN:     %s | FileCheck %s --check-prefix=ABS
 
 # RELOC:      Relocations [
 # RELOC-NEXT:   Section ({{.*}}) .rela.text {
@@ -124,5 +126,48 @@ la.tls.gd $a0, $a1, sym_gd_large
 # RELOC-NEXT: R_LARCH_GOT64_PC_LO20 sym_gd_large 0x0
 # RELOC-NEXT: R_LARCH_GOT64_PC_HI12 sym_gd_large 0x0
 
+la.tls.desc $a0, sym_desc
+# CHECK-NEXT: pcalau12i $a0, %desc_pc_hi20(sym_desc)
+# CHECK-NEXT: addi.d $a0, $a0, %desc_pc_lo12(sym_desc)
+# CHECK-NEXT: ld.d $ra, $a0, %desc_ld(sym_desc)
+# CHECK-NEXT: jirl $ra, $ra, %desc_call(sym_desc)
+# CHECK-EMPTY:
+# RELOC-NEXT: R_LARCH_TLS_DESC_PC_HI20 sym_desc 0x0
+# RELOC-NEXT: R_LARCH_TLS_DESC_PC_LO12 sym_desc 0x0
+# RELOC-NEXT: R_LARCH_TLS_DESC_LD sym_desc 0x0
+# RELOC-NEXT: R_LARCH_TLS_DESC_CALL sym_desc 0x0
+
+la.tls.desc $a0, $a1, sym_desc_large
+# CHECK-NEXT: pcalau12i $a0, %desc_pc_hi20(sym_desc_large)
+# CHECK-NEXT: addi.d $a1, $zero, %desc_pc_lo12(sym_desc_large)
+# CHECK-NEXT: lu32i.d $a1, %desc64_pc_lo20(sym_desc_large)
+# CHECK-NEXT: lu52i.d $a1, $a1, %desc64_pc_hi12(sym_desc_large)
+# CHECK-NEXT: add.d $a0, $a0, $a1
+# CHECK-NEXT: ld.d $ra, $a0, %desc_ld(sym_desc_large)
+# CHECK-NEXT: jirl $ra, $ra, %desc_call(sym_desc_large)
+# CHECK-EMPTY:
+# RELOC-NEXT: R_LARCH_TLS_DESC_PC_HI20 sym_desc_large 0x0
+# RELOC-NEXT: R_LARCH_TLS_DESC_PC_LO12 sym_desc_large 0x0
+# RELOC-NEXT: R_LARCH_TLS_DESC64_PC_LO20 sym_desc_large 0x0
+# RELOC-NEXT: R_LARCH_TLS_DESC64_PC_HI12 sym_desc_large 0x0
+# RELOC-NEXT: R_LARCH_TLS_DESC_LD sym_desc_large 0x0
+# RELOC-NEXT: R_LARCH_TLS_DESC_CALL sym_desc_large 0x0
+
+
 # RELOC-NEXT:   }
 # RELOC-NEXT: ]
+
+#############################################################
+## with feature: +la-global-with-abs
+#############################################################
+.ifdef ABS
+
+la.tls.desc $a0, sym_desc
+# ABS:      lu12i.w $a0, %desc_hi20(sym_desc)
+# ABS-NEXT: ori $a0, $a0, %desc_lo12(sym_desc)
+# ABS-NEXT: lu32i.d $a0, %desc64_lo20(sym_desc)
+# ABS-NEXT: lu52i.d $a0, $a0, %desc64_hi12(sym_desc)
+# ABS-NEXT: ld.d $ra, $a0, %desc_ld(sym_desc)
+# ABS-NEXT: jirl $ra, $ra, %desc_call(sym_desc)
+
+.endif

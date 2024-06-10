@@ -11,6 +11,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fcntl
+  SRCS
+    fcntl.cpp
+  HDRS
+    ../fcntl.h
+  DEPENDS
+    libc.include.fcntl
+    libc.hdr.types.struct_flock
+    libc.hdr.types.struct_flock64
+    libc.hdr.types.struct_f_owner_ex
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   open
   SRCS
     open.cpp

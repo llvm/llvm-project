@@ -150,12 +150,12 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ldr s1, [x1]
-; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-SD-NEXT:    shl v1.4h, v1.4h, #8
 ; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    sqsub v0.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-SD-NEXT:    ushr v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    str s0, [x2]
 ; CHECK-SD-NEXT:    ret
@@ -365,10 +365,6 @@ define void @v1i16(ptr %px, ptr %py, ptr %pz) nounwind {
 define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; CHECK-LABEL: v16i4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v0.16b, v0.16b, #4
-; CHECK-NEXT:    shl v1.16b, v1.16b, #4
-; CHECK-NEXT:    sshr v0.16b, v0.16b, #4
-; CHECK-NEXT:    sshr v1.16b, v1.16b, #4
 ; CHECK-NEXT:    shl v1.16b, v1.16b, #4
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #4
 ; CHECK-NEXT:    sqsub v0.16b, v0.16b, v1.16b

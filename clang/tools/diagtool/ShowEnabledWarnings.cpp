@@ -90,11 +90,11 @@ int ShowEnabledWarnings::run(unsigned int argc, char **argv, raw_ostream &Out) {
   bool ShouldShowLevels = true;
   if (argc > 0) {
     StringRef FirstArg(*argv);
-    if (FirstArg.equals("--no-levels")) {
+    if (FirstArg == "--no-levels") {
       ShouldShowLevels = false;
       --argc;
       ++argv;
-    } else if (FirstArg.equals("--levels")) {
+    } else if (FirstArg == "--levels") {
       ShouldShowLevels = true;
       --argc;
       ++argv;

@@ -536,208 +536,95 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
   // Register-Register logic instructions (which have the
   // property of commutativity).
   let isCommutable = 1 in {
-    def ANDRdRr
-        : FRdRr<0b0010, 0b00,
-                (outs GPR8
-                 : $rd),
-                (ins GPR8
-                 : $src, GPR8
-                 : $rr),
-                "and\t$rd, $rr",
-                [(set i8
-                  : $rd, (and i8
-                          : $src, i8
-                          : $rr)),
-                 (implicit SREG)]>;
+    def ANDRdRr : FRdRr<0b0010, 0b00, (outs GPR8:$rd),
+                        (ins GPR8:$src, GPR8:$rr), "and\t$rd, $rr",
+                        [(set i8:$rd, (and i8:$src, i8:$rr)), (implicit SREG)]>;
 
     // ANDW Rd+1:Rd, Rr+1:Rr
     //
     // Expands to:
     // and Rd,   Rr
     // and Rd+1, Rr+1
-    def ANDWRdRr : Pseudo<(outs DREGS
-                           : $rd),
-                          (ins DREGS
-                           : $src, DREGS
-                           : $rr),
-                          "andw\t$rd, $rr", [
-                            (set i16
-                             : $rd, (and i16
-                                     : $src, i16
-                                     : $rr)),
-                            (implicit SREG)
-                          ]>;
+    def ANDWRdRr : Pseudo<(outs DREGS:$rd), (ins DREGS:$src, DREGS:$rr),
+                          "andw\t$rd, $rr",
+                          [(set i16:$rd, (and i16:$src, i16:$rr)),
+                           (implicit SREG)]>;
 
-    def ORRdRr
-        : FRdRr<0b0010, 0b10,
-                (outs GPR8
-                 : $rd),
-                (ins GPR8
-                 : $src, GPR8
-                 : $rr),
-                "or\t$rd, $rr",
-                [(set i8
-                  : $rd, (or i8
-                          : $src, i8
-                          : $rr)),
-                 (implicit SREG)]>;
+    def ORRdRr : FRdRr<0b0010, 0b10, (outs GPR8:$rd), (ins GPR8:$src, GPR8:$rr),
+                       "or\t$rd, $rr",
+                       [(set i8:$rd, (or i8:$src, i8:$rr)), (implicit SREG)]>;
 
     // ORW Rd+1:Rd, Rr+1:Rr
     //
     // Expands to:
     // or Rd,   Rr
     // or Rd+1, Rr+1
-    def ORWRdRr : Pseudo<(outs DREGS
-                          : $rd),
-                         (ins DREGS
-                          : $src, DREGS
-                          : $rr),
-                         "orw\t$rd, $rr", [
-                           (set i16
-                            : $rd, (or i16
-                                    : $src, i16
-                                    : $rr)),
-                           (implicit SREG)
-                         ]>;
+    def ORWRdRr : Pseudo<(outs DREGS:$rd), (ins DREGS:$src, DREGS:$rr),
+                         "orw\t$rd, $rr",
+                         [(set i16:$rd, (or i16:$src, i16:$rr)),
+                          (implicit SREG)]>;
 
-    def EORRdRr
-        : FRdRr<0b0010, 0b01,
-                (outs GPR8
-                 : $rd),
-                (ins GPR8
-                 : $src, GPR8
-                 : $rr),
-                "eor\t$rd, $rr",
-                [(set i8
-                  : $rd, (xor i8
-                          : $src, i8
-                          : $rr)),
-                 (implicit SREG)]>;
+    def EORRdRr : FRdRr<0b0010, 0b01, (outs GPR8:$rd),
+                        (ins GPR8:$src, GPR8:$rr), "eor\t$rd, $rr",
+                        [(set i8:$rd, (xor i8:$src, i8:$rr)), (implicit SREG)]>;
 
     // EORW Rd+1:Rd, Rr+1:Rr
     //
     // Expands to:
     // eor Rd,   Rr
     // eor Rd+1, Rr+1
-    def EORWRdRr : Pseudo<(outs DREGS
-                           : $rd),
-                          (ins DREGS
-                           : $src, DREGS
-                           : $rr),
-                          "eorw\t$rd, $rr", [
-                            (set i16
-                             : $rd, (xor i16
-                                     : $src, i16
-                                     : $rr)),
-                            (implicit SREG)
-                          ]>;
+    def EORWRdRr : Pseudo<(outs DREGS:$rd), (ins DREGS:$src, DREGS:$rr),
+                          "eorw\t$rd, $rr",
+                          [(set i16:$rd, (xor i16:$src, i16:$rr)),
+                           (implicit SREG)]>;
   }
 
-  def ANDIRdK
-      : FRdK<0b0111,
-             (outs LD8
-              : $rd),
-             (ins LD8
-              : $src, imm_ldi8
-              : $k),
-             "andi\t$rd, $k",
-             [(set i8
-               : $rd, (and i8
-                       : $src, imm
-                       : $k)),
-              (implicit SREG)]>;
+  def ANDIRdK : FRdK<0b0111, (outs LD8:$rd), (ins LD8:$src, imm_ldi8:$k),
+                     "andi\t$rd, $k",
+                     [(set i8:$rd, (and i8:$src, imm:$k)), (implicit SREG)]>;
 
   // ANDI Rd+1:Rd, K+1:K
   //
   // Expands to:
   // andi Rd,   K
   // andi Rd+1, K+1
-  def ANDIWRdK
-      : Pseudo<(outs DLDREGS
-                : $rd),
-               (ins DLDREGS
-                : $src, i16imm
-                : $k),
-               "andiw\t$rd, $k",
-               [(set i16
-                 : $rd, (and i16
-                         : $src, imm
-                         : $k)),
-                (implicit SREG)]>;
+  def ANDIWRdK : Pseudo<(outs DLDREGS:$rd), (ins DLDREGS:$src, i16imm:$k),
+                        "andiw\t$rd, $k",
+                        [(set i16:$rd, (and i16:$src, imm:$k)),
+                         (implicit SREG)]>;
 
-  def ORIRdK
-      : FRdK<0b0110,
-             (outs LD8
-              : $rd),
-             (ins LD8
-              : $src, imm_ldi8
-              : $k),
-             "ori\t$rd, $k",
-             [(set i8
-               : $rd, (or i8
-                       : $src, imm
-                       : $k)),
-              (implicit SREG)]>;
+  def ORIRdK : FRdK<0b0110, (outs LD8:$rd), (ins LD8:$src, imm_ldi8:$k),
+                    "ori\t$rd, $k",
+                    [(set i8:$rd, (or i8:$src, imm:$k)), (implicit SREG)]>;
 
   // ORIW Rd+1:Rd, K+1,K
   //
   // Expands to:
   // ori Rd,   K
   // ori Rd+1, K+1
-  def ORIWRdK
-      : Pseudo<(outs DLDREGS
-                : $rd),
-               (ins DLDREGS
-                : $src, i16imm
-                : $rr),
-               "oriw\t$rd, $rr",
-               [(set i16
-                 : $rd, (or i16
-                         : $src, imm
-                         : $rr)),
-                (implicit SREG)]>;
+  def ORIWRdK : Pseudo<(outs DLDREGS:$rd), (ins DLDREGS:$src, i16imm:$rr),
+                       "oriw\t$rd, $rr",
+                       [(set i16:$rd, (or i16:$src, imm:$rr)),
+                        (implicit SREG)]>;
 }
 
 //===----------------------------------------------------------------------===//
 // One's/Two's Complement
 //===----------------------------------------------------------------------===//
 let Constraints = "$src = $rd", Defs = [SREG] in {
-  def COMRd
-      : FRd<0b1001, 0b0100000,
-            (outs GPR8
-             : $rd),
-            (ins GPR8
-             : $src),
-            "com\t$rd", [(set i8
-                          : $rd, (not i8
-                                  : $src)),
-                         (implicit SREG)]>;
+  def COMRd : FRd<0b1001, 0b0100000, (outs GPR8:$rd), (ins GPR8:$src),
+                  "com\t$rd", [(set i8:$rd, (not i8:$src)), (implicit SREG)]>;
 
   // COMW Rd+1:Rd
   //
   // Expands to:
   // com Rd
   // com Rd+1
-  def COMWRd : Pseudo<(outs DREGS
-                       : $rd),
-                      (ins DREGS
-                       : $src),
-                      "comw\t$rd",
-                      [(set i16
-                        : $rd, (not i16
-                                : $src)),
-                       (implicit SREG)]>;
+  def COMWRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "comw\t$rd",
+                      [(set i16:$rd, (not i16:$src)), (implicit SREG)]>;
 
-  def NEGRd
-      : FRd<0b1001, 0b0100001,
-            (outs GPR8
-             : $rd),
-            (ins GPR8
-             : $src),
-            "neg\t$rd", [(set i8
-                          : $rd, (ineg i8
-                                  : $src)),
-                         (implicit SREG)]>;
+  def NEGRd : FRd<0b1001, 0b0100001, (outs GPR8:$rd), (ins GPR8:$src),
+                  "neg\t$rd", [(set i8:$rd, (ineg i8:$src)), (implicit SREG)]>;
 
   // NEGW Rd+1:Rd
   //
@@ -746,51 +633,37 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
   // neg Rd
   // sbc Rd+1, r1
   let hasSideEffects=0 in
-  def NEGWRd : Pseudo<(outs DREGS:$rd),
-                      (ins DREGS:$src, GPR8:$zero),
-                      "negw\t$rd",
-                      []>;
+  def NEGWRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src, GPR8:$zero),
+                      "negw\t$rd", []>;
 }
 
 // TST Rd
 // Test for zero of minus.
 // This operation is identical to a `Rd AND Rd`.
-def : InstAlias<"tst\t$rd", (ANDRdRr GPR8 : $rd, GPR8 : $rd)>;
+def : InstAlias<"tst\t$rd", (ANDRdRr GPR8:$rd, GPR8:$rd)>;
 
 // SBR Rd, K
 //
 // Mnemonic alias to 'ORI Rd, K'. Same bit pattern, same operands,
 // same everything.
-def : InstAlias<"sbr\t$rd, $k",
-                (ORIRdK LD8
-                 : $rd, imm_ldi8
-                 : $k),
+def : InstAlias<"sbr\t$rd, $k", (ORIRdK LD8:$rd, imm_ldi8:$k),
                 /* Disable display, so we don't override ORI */ 0>;
 
 //===----------------------------------------------------------------------===//
 // Jump instructions
 //===----------------------------------------------------------------------===//
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in {
-  def RJMPk : FBRk<0, (outs),
-                   (ins brtarget_13
-                    : $k),
-                   "rjmp\t$k", [(br bb
-                                 : $k)]>;
+  def RJMPk : FBRk<0, (outs), (ins brtarget_13:$k), "rjmp\t$k", [(br bb:$k)]>;
 
-  let isIndirectBranch = 1,
-      Uses = [R31R30] in def IJMP
-      : F16<0b1001010000001001, (outs), (ins), "ijmp", []>,
-      Requires<[HasIJMPCALL]>;
+  let isIndirectBranch = 1, Uses = [R31R30] in
+  def IJMP : F16<0b1001010000001001, (outs), (ins), "ijmp", []>,
+             Requires<[HasIJMPCALL]>;
 
-  let isIndirectBranch = 1,
-      Uses = [R31R30] in def EIJMP
-      : F16<0b1001010000011001, (outs), (ins), "eijmp", []>,
-      Requires<[HasEIJMPCALL]>;
+  let isIndirectBranch = 1, Uses = [R31R30] in
+  def EIJMP : F16<0b1001010000011001, (outs), (ins), "eijmp", []>,
+              Requires<[HasEIJMPCALL]>;
 
-  def JMPk : F32BRk<0b110, (outs),
-                    (ins call_target
-                     : $k),
-                    "jmp\t$k", []>,
+  def JMPk : F32BRk<0b110, (outs), (ins call_target:$k), "jmp\t$k", []>,
              Requires<[HasJMPCALL]>;
 }
 
@@ -800,19 +673,21 @@ let isBarrier = 1, isBranch = 1, isTerminator = 1 in {
 let isCall = 1 in {
   // SP is marked as a use to prevent stack-pointer assignments that appear
   // immediately before calls from potentially appearing dead.
-  let Uses = [SP] in def RCALLk : FBRk<1, (outs), (ins rcalltarget_13:$k),
-                                       "rcall\t$k", [(AVRcall imm:$k)]>;
+  let Uses = [SP] in
+  def RCALLk : FBRk<1, (outs), (ins rcalltarget_13:$k), "rcall\t$k",
+                    [(AVRcall imm:$k)]>;
 
   // SP is marked as a use to prevent stack-pointer assignments that appear
   // immediately before calls from potentially appearing dead.
-  let Uses = [SP, R31R30] in def ICALL
-      : F16<0b1001010100001001, (outs), (ins variable_ops), "icall", []>,
-      Requires<[HasIJMPCALL]>;
+  let Uses = [SP, R31R30] in
+  def ICALL : F16<0b1001010100001001, (outs), (ins variable_ops), "icall", []>,
+              Requires<[HasIJMPCALL]>;
 
   // SP is marked as a use to prevent stack-pointer assignments that appear
   // immediately before calls from potentially appearing dead.
-  let Uses = [SP, R31R30] in def EICALL
-      : F16<0b1001010100011001, (outs), (ins variable_ops), "eicall", []>,
+  let Uses = [SP, R31R30] in
+  def EICALL : F16<0b1001010100011001, (outs), (ins variable_ops), "eicall",
+                   []>,
       Requires<[HasEIJMPCALL]>;
 
   // SP is marked as a use to prevent stack-pointer assignments that appear
@@ -820,9 +695,10 @@ let isCall = 1 in {
   //
   // TODO: the imm field can be either 16 or 22 bits in devices with more
   // than 64k of ROM, fix it once we support the largest devices.
-  let Uses = [SP] in def CALLk : F32BRk<0b111, (outs), (ins call_target:$k),
-                                        "call\t$k", [(AVRcall imm:$k)]>,
-      Requires<[HasJMPCALL]>;
+  let Uses = [SP] in
+  def CALLk : F32BRk<0b111, (outs), (ins call_target:$k), "call\t$k",
+                     [(AVRcall imm:$k)]>,
+              Requires<[HasJMPCALL]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -840,75 +716,42 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
 let Defs = [SREG] in {
   // CPSE Rd, Rr
   // Compare Rd and Rr, skipping the next instruction if they are equal.
-  let isBarrier = 1, isBranch = 1,
-      isTerminator = 1 in def CPSE : FRdRr<0b0001, 0b00, (outs),
-                                           (ins GPR8
-                                            : $rd, GPR8
-                                            : $rr),
-                                           "cpse\t$rd, $rr", []>;
+  let isBarrier = 1, isBranch = 1, isTerminator = 1 in
+  def CPSE : FRdRr<0b0001, 0b00, (outs), (ins GPR8:$rd, GPR8:$rr),
+                   "cpse\t$rd, $rr", []>;
 
-  def CPRdRr
-      : FRdRr<0b0001, 0b01, (outs),
-              (ins GPR8
-               : $rd, GPR8
-               : $rr),
-              "cp\t$rd, $rr", [(AVRcmp i8
-                                : $rd, i8
-                                : $rr),
-                               (implicit SREG)]>;
+  def CPRdRr : FRdRr<0b0001, 0b01, (outs), (ins GPR8:$rd, GPR8:$rr),
+                     "cp\t$rd, $rr",
+                     [(AVRcmp i8:$rd, i8:$rr), (implicit SREG)]>;
 
   // CPW Rd+1:Rd, Rr+1:Rr
   //
   // Expands to:
   // cp  Rd,   Rr
   // cpc Rd+1, Rr+1
-  def CPWRdRr : Pseudo<(outs),
-                       (ins DREGS
-                        : $src, DREGS
-                        : $src2),
+  def CPWRdRr : Pseudo<(outs), (ins DREGS:$src, DREGS:$src2),
                        "cpw\t$src, $src2",
-                       [(AVRcmp i16
-                         : $src, i16
-                         : $src2),
-                        (implicit SREG)]>;
+                       [(AVRcmp i16:$src, i16:$src2), (implicit SREG)]>;
 
-  let Uses = [SREG] in def CPCRdRr
-      : FRdRr<0b0000, 0b01, (outs),
-              (ins GPR8
-               : $rd, GPR8
-               : $rr),
-              "cpc\t$rd, $rr", [(AVRcmpc i8
-                                 : $rd, i8
-                                 : $rr),
-                                (implicit SREG)]>;
+  let Uses = [SREG] in
+  def CPCRdRr : FRdRr<0b0000, 0b01, (outs), (ins GPR8:$rd, GPR8:$rr),
+                      "cpc\t$rd, $rr",
+                      [(AVRcmpc i8:$rd, i8:$rr), (implicit SREG)]>;
 
   // CPCW Rd+1:Rd. Rr+1:Rr
   //
   // Expands to:
   // cpc Rd,   Rr
   // cpc Rd+1, Rr+1
-  let Uses = [SREG] in def CPCWRdRr
-      : Pseudo<(outs),
-               (ins DREGS
-                : $src, DREGS
-                : $src2),
-               "cpcw\t$src, $src2",
-               [(AVRcmpc i16
-                 : $src, i16
-                 : $src2),
-                (implicit SREG)]>;
+  let Uses = [SREG] in
+  def CPCWRdRr : Pseudo<(outs), (ins DREGS:$src, DREGS:$src2),
+                        "cpcw\t$src, $src2",
+                        [(AVRcmpc i16:$src, i16:$src2), (implicit SREG)]>;
 
   // CPI Rd, K
   // Compares a register with an 8 bit immediate.
-  def CPIRdK
-      : FRdK<0b0011, (outs),
-             (ins LD8
-              : $rd, imm_ldi8
-              : $k),
-             "cpi\t$rd, $k", [(AVRcmp i8
-                               : $rd, imm
-                               : $k),
-                              (implicit SREG)]>;
+  def CPIRdK : FRdK<0b0011, (outs), (ins LD8:$rd, imm_ldi8:$k), "cpi\t$rd, $k",
+                    [(AVRcmp i8:$rd, imm:$k), (implicit SREG)]>;
 }
 
 //===----------------------------------------------------------------------===//

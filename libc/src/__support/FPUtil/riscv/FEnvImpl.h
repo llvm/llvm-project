@@ -65,19 +65,19 @@ struct FEnv {
   }
 
   LIBC_INLINE static int exception_bits_to_macro(uint32_t status) {
-    return (status & INVALID ? FE_INVALID : 0) |
-           (status & DIVBYZERO ? FE_DIVBYZERO : 0) |
-           (status & OVERFLOW ? FE_OVERFLOW : 0) |
-           (status & UNDERFLOW ? FE_UNDERFLOW : 0) |
-           (status & INEXACT ? FE_INEXACT : 0);
+    return ((status & INVALID) ? FE_INVALID : 0) |
+           ((status & DIVBYZERO) ? FE_DIVBYZERO : 0) |
+           ((status & OVERFLOW) ? FE_OVERFLOW : 0) |
+           ((status & UNDERFLOW) ? FE_UNDERFLOW : 0) |
+           ((status & INEXACT) ? FE_INEXACT : 0);
   }
 
   LIBC_INLINE static uint32_t exception_macro_to_bits(int except) {
-    return (except & FE_INVALID ? INVALID : 0) |
-           (except & FE_DIVBYZERO ? DIVBYZERO : 0) |
-           (except & FE_OVERFLOW ? OVERFLOW : 0) |
-           (except & FE_UNDERFLOW ? UNDERFLOW : 0) |
-           (except & FE_INEXACT ? INEXACT : 0);
+    return ((except & FE_INVALID) ? INVALID : 0) |
+           ((except & FE_DIVBYZERO) ? DIVBYZERO : 0) |
+           ((except & FE_OVERFLOW) ? OVERFLOW : 0) |
+           ((except & FE_UNDERFLOW) ? UNDERFLOW : 0) |
+           ((except & FE_INEXACT) ? INEXACT : 0);
   }
 };
 

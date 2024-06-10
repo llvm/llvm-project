@@ -373,11 +373,11 @@ static CheckersList getAnalyzerCheckersAndPackages(ClangTidyContext &Context,
 
   const auto &RegisteredCheckers =
       AnalyzerOptions::getRegisteredCheckers(IncludeExperimental);
-  bool AnalyzerChecksEnabled = false;
-  for (StringRef CheckName : RegisteredCheckers) {
-    std::string ClangTidyCheckName((AnalyzerCheckNamePrefix + CheckName).str());
-    AnalyzerChecksEnabled |= Context.isCheckEnabled(ClangTidyCheckName);
-  }
+  const bool AnalyzerChecksEnabled =
+      llvm::any_of(RegisteredCheckers, [&](StringRef CheckName) -> bool {
+        return Context.isCheckEnabled(
+            (AnalyzerCheckNamePrefix + CheckName).str());
+      });
 
   if (!AnalyzerChecksEnabled)
     return List;

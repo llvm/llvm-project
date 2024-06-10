@@ -343,12 +343,12 @@ public:
   static const mask __regex_word = 0x4000; // 0x8000 and 0x0100 and 0x00ff are used
 #  define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
 #  define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__)
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #  ifdef __APPLE__
   typedef __uint32_t mask;
 #  elif defined(__FreeBSD__)
   typedef unsigned long mask;
-#  elif defined(__EMSCRIPTEN__) || defined(__NetBSD__)
+#  elif defined(__NetBSD__)
   typedef unsigned short mask;
 #  endif
   static const mask space  = _CTYPE_S;

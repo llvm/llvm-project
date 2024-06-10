@@ -85,7 +85,8 @@ def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
-def loongarch_rotl_w : SDNode<"LoongArchISD::ROTL_W", SDT_LoongArchIntBinOpW>;
+def loongarch_div_wu : SDNode<"LoongArchISD::DIV_WU", SDT_LoongArchIntBinOpW>;
+def loongarch_mod_wu : SDNode<"LoongArchISD::MOD_WU", SDT_LoongArchIntBinOpW>;
 def loongarch_crc_w_b_w
     : SDNode<"LoongArchISD::CRC_W_B_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
 def loongarch_crc_w_h_w
@@ -440,7 +441,7 @@ def simm16_lsl16 : Operand<GRLenVT>,
 // A 32-bit signed immediate expressible with a pair of `addu16i.d + addi` for
 // use in additions.
 def simm32_hi16_lo12: Operand<GRLenVT>, ImmLeaf<GRLenVT, [{
-  return isShiftedInt<16, 16>(Imm - SignExtend64<12>(Imm));
+  return !isInt<12>(Imm) && isShiftedInt<16, 16>(Imm - SignExtend64<12>(Imm));
 }]>;
 
 def BareSymbol : AsmOperandClass {
@@ -733,7 +734,9 @@ def ADD_W : ALU_3R<0x00100000>;
 def SUB_W : ALU_3R<0x00110000>;
 def ADDI_W : ALU_2RI12<0x02800000, simm12_addlike>;
 def ALSL_W : ALU_3RI2<0x00040000, uimm2_plus1>;
+let isReMaterializable = 1 in {
 def LU12I_W : ALU_1RI20<0x14000000, simm20_lu12iw>;
+}
 def SLT  : ALU_3R<0x00120000>;
 def SLTU : ALU_3R<0x00128000>;
 def SLTI  : ALU_2RI12<0x02000000, simm12>;
@@ -748,8 +751,10 @@ def XOR  : ALU_3R<0x00158000>;
 def ANDN : ALU_3R<0x00168000>;
 def ORN  : ALU_3R<0x00160000>;
 def ANDI : ALU_2RI12<0x03400000, uimm12>;
+let isReMaterializable = 1 in {
 def ORI  : ALU_2RI12<0x03800000, uimm12_ori>;
 def XORI : ALU_2RI12<0x03c00000, uimm12>;
+}
 def MUL_W   : ALU_3R<0x001c0000>;
 def MULH_W  : ALU_3R<0x001c8000>;
 def MULH_WU : ALU_3R<0x001d0000>;
@@ -851,17 +856,24 @@ let Predicates = [IsLA64] in {
 // Arithmetic Operation Instructions for 64-bits
 def ADD_D : ALU_3R<0x00108000>;
 def SUB_D : ALU_3R<0x00118000>;
+// ADDI_D isn't always rematerializable, but isReMaterializable will be used as
+// a hint which is verified in isReallyTriviallyReMaterializable.
+let isReMaterializable = 1 in {
 def ADDI_D : ALU_2RI12<0x02c00000, simm12_addlike>;
+}
 def ADDU16I_D : ALU_2RI16<0x10000000, simm16>;
 def ALSL_WU : ALU_3RI2<0x00060000, uimm2_plus1>;
 def ALSL_D  : ALU_3RI2<0x002c0000, uimm2_plus1>;
 let Constraints = "$rd = $dst" in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
+    isReMaterializable = 1 in
 def LU32I_D : Fmt1RI20<0x16000000, (outs GPR:$dst),
                        (ins GPR:$rd, simm20_lu32id:$imm20),
                        "$rd, $imm20">;
 }
+let isReMaterializable = 1 in {
 def LU52I_D : ALU_2RI12<0x03000000, simm12_lu52id>;
+}
 def PCADDU18I : ALU_1RI20<0x1e000000, simm20_pcaddu18i>;
 def MUL_D     : ALU_3R<0x001d8000>;
 def MULH_D    : ALU_3R<0x001e0000>;
@@ -1105,23 +1117,22 @@ foreach Idx = 1...3 in {
 
 let Predicates = [IsLA64] in {
 def : PatGprGpr<add, ADD_D>;
-def : PatGprGpr_32<add, ADD_W>;
 def : PatGprImm<add, ADDI_D, simm12>;
-def : PatGprImm_32<add, ADDI_W, simm12>;
 def : PatGprGpr<sub, SUB_D>;
-def : PatGprGpr_32<sub, SUB_W>;
 def : PatGprGpr<sdiv, DIV_D>;
+def : PatGprGpr_32<sdiv, DIV_W>;
 def : PatGprGpr<udiv, DIV_DU>;
+def : PatGprGpr<loongarch_div_wu, DIV_WU>;
 def : PatGprGpr<srem, MOD_D>;
+def : PatGprGpr_32<srem, MOD_W>;
 def : PatGprGpr<urem, MOD_DU>;
+def : PatGprGpr<loongarch_mod_wu, MOD_WU>;
 def : PatGprGpr<rotr, ROTR_D>;
 def : PatGprGpr<loongarch_rotr_w, ROTR_W>;
+def : PatGprGpr_32<rotr, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_D, uimm6>;
 def : PatGprImm_32<rotr, ROTRI_W, uimm5>;
-def : Pat<(loongarch_rotl_w GPR:$rj, uimm5:$imm),
-          (ROTRI_W GPR:$rj, (ImmSubFrom32 uimm5:$imm))>;
-def : Pat<(sext_inreg (loongarch_rotl_w GPR:$rj, uimm5:$imm), i32),
-          (ROTRI_W GPR:$rj, (ImmSubFrom32 uimm5:$imm))>;
+def : PatGprImm<loongarch_rotr_w, ROTRI_W, uimm5>;
 // TODO: Select "_W[U]" instructions for i32xi32 if only lower 32 bits of the
 // product are used.
 def : PatGprGpr<mul, MUL_D>;
@@ -1606,6 +1617,34 @@ def PseudoLA_TLS_GD_LARGE : Pseudo<(outs GPR:$dst),
                             Requires<[IsLA64]>;
 } // Defs = [R20], Size = 20
 }
+
+// Used for expand PseudoLA_TLS_DESC_* instructions.
+let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
+    Defs = [R4], Uses = [R4] in
+def PseudoDESC_CALL : Pseudo<(outs GPR:$rd), (ins GPR:$rj, simm16_lsl2:$imm16)>,
+                      PseudoInstExpansion<(JIRL GPR:$rd, GPR:$rj,
+                                           simm16_lsl2:$imm16)>;
+
+// TLSDESC
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
+    isAsmParserOnly = 1, Defs = [R1] in {
+def PseudoLA_TLS_DESC_ABS : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src),
+                                   [], "la.tls.desc", "$dst, $src">,
+                                   Requires<[IsLA32, HasLaGlobalWithAbs]>;
+def PseudoLA_TLS_DESC_ABS_LARGE : Pseudo<(outs GPR:$dst),
+                                         (ins GPR:$tmp, bare_symbol:$src), [],
+                                         "la.tls.desc", "$dst, $src">,
+                                  Requires<[IsLA64, HasLaGlobalWithAbs]>;
+def PseudoLA_TLS_DESC_PC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                                  "la.tls.desc", "$dst, $src">;
+}
+
+let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
+    isCodeGenOnly = 0, isAsmParserOnly = 1, Defs = [R1, R4, R20], Size = 32 in
+def PseudoLA_TLS_DESC_PC_LARGE : Pseudo<(outs GPR:$dst),
+                                        (ins GPR:$tmp, bare_symbol:$src), [],
+                                        "la.tls.desc", "$dst, $tmp, $src">,
+                                 Requires<[IsLA64]>;
 
 // Load address inst alias: "la", "la.global" and "la.local".
 // Default:

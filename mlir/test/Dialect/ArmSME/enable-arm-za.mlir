@@ -1,10 +1,9 @@
-// RUN: mlir-opt %s -enable-arm-streaming=za-mode=new-za -convert-arm-sme-to-llvm | FileCheck %s -check-prefix=ENABLE-ZA
-// RUN: mlir-opt %s -enable-arm-streaming -convert-arm-sme-to-llvm | FileCheck %s -check-prefix=DISABLE-ZA
-// RUN: mlir-opt %s -enable-arm-streaming=za-mode=in-za -convert-arm-sme-to-llvm | FileCheck %s -check-prefix=IN-ZA
-// RUN: mlir-opt %s -enable-arm-streaming=za-mode=out-za -convert-arm-sme-to-llvm | FileCheck %s -check-prefix=OUT-ZA
-// RUN: mlir-opt %s -enable-arm-streaming=za-mode=inout-za -convert-arm-sme-to-llvm | FileCheck %s -check-prefix=INOUT-ZA
-// RUN: mlir-opt %s -enable-arm-streaming=za-mode=preserves-za -convert-arm-sme-to-llvm | FileCheck %s -check-prefix=PRESERVES-ZA
-// RUN: mlir-opt %s -convert-arm-sme-to-llvm | FileCheck %s -check-prefix=NO-ARM-STREAMING
+// RUN: mlir-opt %s -enable-arm-streaming=za-mode=new-za | FileCheck %s -check-prefix=ENABLE-ZA
+// RUN: mlir-opt %s -enable-arm-streaming | FileCheck %s -check-prefix=DISABLE-ZA
+// RUN: mlir-opt %s -enable-arm-streaming=za-mode=in-za | FileCheck %s -check-prefix=IN-ZA
+// RUN: mlir-opt %s -enable-arm-streaming=za-mode=out-za | FileCheck %s -check-prefix=OUT-ZA
+// RUN: mlir-opt %s -enable-arm-streaming=za-mode=inout-za | FileCheck %s -check-prefix=INOUT-ZA
+// RUN: mlir-opt %s -enable-arm-streaming=za-mode=preserves-za | FileCheck %s -check-prefix=PRESERVES-ZA
 
 // CHECK-LABEL: @declaration
 func.func private @declaration()
@@ -22,11 +21,4 @@ func.func private @declaration()
 // DISABLE-ZA-LABEL: @arm_new_za
 // DISABLE-ZA-NOT: arm_new_za
 // DISABLE-ZA-SAME: attributes {arm_streaming}
-// NO-ARM-STREAMING-LABEL: @arm_new_za
-// NO-ARM-STREAMING-NOT: arm_new_za
-// NO-ARM-STREAMING-NOT: arm_streaming
-// NO-ARM-STREAMING-NOT: arm_in_za
-// NO-ARM-STREAMING-NOT: arm_out_za
-// NO-ARM-STREAMING-NOT: arm_inout_za
-// NO-ARM-STREAMING-NOT: arm_preserves_za
 func.func @arm_new_za() { return }

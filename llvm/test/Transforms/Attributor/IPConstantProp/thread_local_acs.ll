@@ -22,8 +22,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @gsh = dso_local global i32 0, align 4
 
 ;.
-; CHECK: @[[GTL:[a-zA-Z0-9_$"\\.-]+]] = dso_local thread_local global i32 0, align 4
-; CHECK: @[[GSH:[a-zA-Z0-9_$"\\.-]+]] = dso_local global i32 0, align 4
+; CHECK: @gtl = dso_local thread_local global i32 0, align 4
+; CHECK: @gsh = dso_local global i32 0, align 4
 ;.
 define internal i32 @callee(ptr %thread_local_ptr, ptr %shared_ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read)
@@ -31,8 +31,8 @@ define internal i32 @callee(ptr %thread_local_ptr, ptr %shared_ptr) {
 ; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[THREAD_LOCAL_PTR:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[SHARED_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr @gtl, align 4
-; CHECK-NEXT:    [[TRUETMP1:%.*]] = load i32, ptr @gsh, align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP]], [[TRUETMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @gsh, align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -63,8 +63,13 @@ declare !callback !0 dso_local void @broker(ptr, ptr, ptr)
 !1 = !{i64 1, i64 0, i64 2, i1 false}
 !0 = !{!1}
 ;.
-; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(read) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(read) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{!1}
-; CHECK: [[META1:![0-9]+]] = !{i64 1, i64 0, i64 2, i1 false}
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(read) }
+;.
+; TUNIT: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; TUNIT: [[META1]] = !{i64 1, i64 0, i64 2, i1 false}
+;.
+; CGSCC: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; CGSCC: [[META1]] = !{i64 1, i64 0, i64 2, i1 false}
 ;.

@@ -71,7 +71,6 @@ unittest("SupportTests") {
     "ProcessTest.cpp",
     "ProgramTest.cpp",
     "RISCVAttributeParserTest.cpp",
-    "RISCVISAInfoTest.cpp",
     "RegexTest.cpp",
     "ReplaceFileTest.cpp",
     "ReverseIterationTest.cpp",

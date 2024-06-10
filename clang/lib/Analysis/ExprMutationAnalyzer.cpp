@@ -235,15 +235,17 @@ const Stmt *ExprMutationAnalyzer::Analyzer::findMutationMemoized(
   if (Memoized != MemoizedResults.end())
     return Memoized->second;
 
+  // Assume Exp is not mutated before analyzing Exp.
+  MemoizedResults[Exp] = nullptr;
   if (isUnevaluated(Exp))
-    return MemoizedResults[Exp] = nullptr;
+    return nullptr;
 
   for (const auto &Finder : Finders) {
     if (const Stmt *S = (this->*Finder)(Exp))
       return MemoizedResults[Exp] = S;
   }
 
-  return MemoizedResults[Exp] = nullptr;
+  return nullptr;
 }
 
 const Stmt *

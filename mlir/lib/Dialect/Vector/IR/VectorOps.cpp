@@ -170,12 +170,43 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
       shapedType.getContext());
 }
 
+/// Check if `write` is of a constant splat and the masked `read` is padded with
+/// the same splat value -- meaning it could be the same value as the initial
+/// constant splat.
+static bool isSplatWriteConsistentWithMaskedRead(vector::TransferWriteOp write,
+                                                 vector::TransferReadOp read) {
+  auto readMask = read.getMask();
+  auto writeMask = write.getMask();
+  // Check if the masks are consistent. The splat value could be the same if the
+  // read is masked (and padded with the splat value), and the write is unmasked
+  // or has the same mask. Note this does not allow the case where the write is
+  // masked and the read is unmasked, as then the read could be of more elements
+  // than the write (which may not be the same value).
+  bool couldBeSameSplat = readMask && (!writeMask || writeMask == readMask);
+  if (!couldBeSameSplat)
+    return false;
+  // Check for constant splat (as the source of the write).
+  DenseElementsAttr splatAttr;
+  if (!matchPattern(write.getVector(),
+                    m_Constant<DenseElementsAttr>(&splatAttr)) ||
+      !splatAttr.isSplat()) {
+    return false;
+  }
+  // The padding of the read and the constant splat value must be the same.
+  Attribute padAttr;
+  if (!matchPattern(read.getPadding(), m_Constant(&padAttr)))
+    return false;
+  return padAttr == splatAttr.getSplatValue<Attribute>();
+}
+
 bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
                                      vector::TransferReadOp read) {
-  return !defWrite.hasOutOfBoundsDim() && !defWrite.getMask() &&
-         !read.getMask() && defWrite.getIndices() == read.getIndices() &&
+  return !defWrite.hasOutOfBoundsDim() &&
+         defWrite.getIndices() == read.getIndices() &&
          defWrite.getVectorType() == read.getVectorType() &&
-         defWrite.getPermutationMap() == read.getPermutationMap();
+         defWrite.getPermutationMap() == read.getPermutationMap() &&
+         ((!defWrite.getMask() && !read.getMask()) ||
+          isSplatWriteConsistentWithMaskedRead(defWrite, read));
 }
 
 bool mlir::vector::checkSameValueWAW(vector::TransferWriteOp write,

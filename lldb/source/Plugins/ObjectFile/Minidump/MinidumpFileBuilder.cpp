@@ -14,6 +14,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -21,6 +22,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -490,6 +492,17 @@ findStackHelper(const lldb::ProcessSP &process_sp, uint64_t rsp) {
         std::errc::not_supported,
         "unable to load stack segment of the process");
 
+  // This is a duplicate of the logic in
+  // Process::SaveOffRegionsWithStackPointers but ultimately, we need to only
+  // save up from the start of the stack down to the stack pointer
+  const addr_t range_end = range_info.GetRange().GetRangeEnd();
+  const addr_t red_zone = process_sp->GetABI()->GetRedZoneSize();
+  const addr_t stack_head = rsp - red_zone;
+  if (stack_head > range_info.GetRange().GetRangeEnd()) {
+    range_info.GetRange().SetRangeBase(stack_head);
+    range_info.GetRange().SetByteSize(range_end - stack_head);
+  }
+
   const addr_t addr = range_info.GetRange().GetRangeBase();
   const addr_t size = range_info.GetRange().GetByteSize();
 
@@ -663,14 +676,20 @@ MinidumpFileBuilder::AddMemoryList(const lldb::ProcessSP &process_sp,
   DataBufferHeap helper_data;
   std::vector<MemoryDescriptor> mem_descriptors;
   for (const auto &core_range : core_ranges) {
-    // Skip empty memory regions or any regions with no permissions.
-    if (core_range.range.empty() || core_range.lldb_permissions == 0)
+    // Skip empty memory regions.
+    if (core_range.range.empty())
       continue;
     const addr_t addr = core_range.range.start();
     const addr_t size = core_range.range.size();
     auto data_up = std::make_unique<DataBufferHeap>(size, 0);
     const size_t bytes_read =
         process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
+    if (error.Fail()) {
+      Log *log = GetLog(LLDBLog::Object);
+      LLDB_LOGF(log, "Failed to read memory region. Bytes read: %zu, error: %s",
+                bytes_read, error.AsCString());
+      error.Clear();
+    }
     if (bytes_read == 0)
       continue;
     // We have a good memory region with valid bytes to store.
