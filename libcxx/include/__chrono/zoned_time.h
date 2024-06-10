@@ -16,6 +16,7 @@
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
 #if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
+#  include <__chrono/calendar.h>
 #  include <__chrono/duration.h>
 #  include <__chrono/system_clock.h>
 #  include <__chrono/time_zone.h>
@@ -56,6 +57,10 @@ class zoned_time {
   static_assert(__is_duration<_Duration>::value,
                 "the program is ill-formed since _Duration is not a specialization of std::chrono::duration");
 
+  // There are several constraints like
+  //   constructible_from<zoned_time, decltype(__traits::locate_zone(string_view{}))>
+  // This would create a dependency on itself. Instead depend on the fact an
+  // constructor overload taking a _TimeZonePtr is present.
   using __traits = zoned_traits<_TimeZonePtr>;
 
 public:
@@ -76,11 +81,70 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit zoned_time(string_view __name)
     requires(requires { __traits::locate_zone(string_view{}); } &&
-             // constructible_from<zoned_time, decltype(__traits::locate_zone(string_view{}))>
-             // would create a dependency on itself. Instead depend on the fact
-             // a constructor taking a _TimeZonePtr exists.
              constructible_from<_TimeZonePtr, decltype(__traits::locate_zone(string_view{}))>)
       : __zone_{__traits::locate_zone(__name)}, __tp_{} {}
+
+  template <class _Duration2>
+  _LIBCPP_HIDE_FROM_ABI zoned_time(const zoned_time<_Duration2, _TimeZonePtr>& __zt)
+    requires is_convertible_v<sys_time<_Duration2>, sys_time<_Duration>>
+      : __zone_{__zt.get_time_zone()}, __tp_{__zt.get_sys_time()} {}
+
+  _LIBCPP_HIDE_FROM_ABI zoned_time(_TimeZonePtr __zone, const sys_time<_Duration>& __tp)
+      : __zone_{std::move(__zone)}, __tp_{__tp} {}
+
+  _LIBCPP_HIDE_FROM_ABI zoned_time(string_view __name, const sys_time<_Duration>& __tp)
+    requires requires { _TimeZonePtr{__traits::locate_zone(string_view{})}; }
+      : zoned_time{__traits::locate_zone(__name), __tp} {}
+
+  _LIBCPP_HIDE_FROM_ABI zoned_time(_TimeZonePtr __zone, const local_time<_Duration>& __tp)
+    requires(is_convertible_v<decltype(std::declval<_TimeZonePtr&>() -> to_sys(local_time<_Duration>{})),
+                              sys_time<duration>>)
+      : __zone_{std::move(__zone)}, __tp_{__zone_->to_sys(__tp)} {}
+
+  _LIBCPP_HIDE_FROM_ABI zoned_time(string_view __name, const local_time<_Duration>& __tp)
+    requires(requires {
+      _TimeZonePtr{__traits::locate_zone(string_view{})};
+    } && is_convertible_v<decltype(std::declval<_TimeZonePtr&>() -> to_sys(local_time<_Duration>{})),
+                          sys_time<duration>>)
+      : zoned_time{__traits::locate_zone(__name), __tp} {}
+
+  _LIBCPP_HIDE_FROM_ABI zoned_time(_TimeZonePtr __zone, const local_time<_Duration>& __tp, choose __c)
+    requires(is_convertible_v<
+                decltype(std::declval<_TimeZonePtr&>() -> to_sys(local_time<_Duration>{}, choose::earliest)),
+                sys_time<duration>>)
+      : __zone_{std::move(__zone)}, __tp_{__zone_->to_sys(__tp, __c)} {}
+
+  _LIBCPP_HIDE_FROM_ABI zoned_time(string_view __name, const local_time<_Duration>& __tp, choose __c)
+    requires(requires {
+      _TimeZonePtr{__traits::locate_zone(string_view{})};
+    } && is_convertible_v<decltype(std::declval<_TimeZonePtr&>() -> to_sys(local_time<_Duration>{}, choose::earliest)),
+                          sys_time<duration>>)
+      : zoned_time{__traits::locate_zone(__name), __tp, __c} {}
+
+  template <class _Duration2, class _TimeZonePtr2>
+  _LIBCPP_HIDE_FROM_ABI zoned_time(_TimeZonePtr __zone, const zoned_time<_Duration2, _TimeZonePtr2>& __zt)
+    requires is_convertible_v<sys_time<_Duration2>, sys_time<_Duration>>
+      : __zone_{std::move(__zone)}, __tp_{__zt.get_sys_time()} {}
+
+  // per wording choose has no effect
+  template <class _Duration2, class _TimeZonePtr2>
+  _LIBCPP_HIDE_FROM_ABI zoned_time(_TimeZonePtr __zone, const zoned_time<_Duration2, _TimeZonePtr2>& __zt, choose)
+    requires is_convertible_v<sys_time<_Duration2>, sys_time<_Duration>>
+      : __zone_{std::move(__zone)}, __tp_{__zt.get_sys_time()} {}
+
+  template <class _Duration2, class _TimeZonePtr2>
+  _LIBCPP_HIDE_FROM_ABI zoned_time(string_view __name, const zoned_time<_Duration2, _TimeZonePtr2>& __zt)
+    requires(requires {
+      _TimeZonePtr{__traits::locate_zone(string_view{})};
+    } && is_convertible_v<sys_time<_Duration2>, sys_time<_Duration>>)
+      : zoned_time{__traits::locate_zone(__name), __zt} {}
+
+  template <class _Duration2, class _TimeZonePtr2>
+  _LIBCPP_HIDE_FROM_ABI zoned_time(string_view __name, const zoned_time<_Duration2, _TimeZonePtr2>& __zt, choose __c)
+    requires(requires {
+      _TimeZonePtr{__traits::locate_zone(string_view{})};
+    } && is_convertible_v<sys_time<_Duration2>, sys_time<_Duration>>)
+      : zoned_time{__traits::locate_zone(__name), __zt, __c} {}
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _TimeZonePtr get_time_zone() const { return __zone_; }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI sys_time<duration> get_sys_time() const { return __tp_; }
