@@ -102,9 +102,16 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
-    // If we're passing an f32 value into an i64, anyextend before copying.
-    if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
-      ValVReg = MIRBuilder.buildAnyExt(LLT::scalar(64), ValVReg).getReg(0);
+    // If we're passing a smaller fp value into a larger integer register,
+    // anyextend before copying.
+    if ((VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
+        ((VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::i64) &&
+         VA.getValVT() == MVT::f16))
+      ValVReg =
+          MIRBuilder
+              .buildAnyExt(LLT::scalar(VA.getLocVT().getScalarSizeInBits()),
+                           ValVReg)
+              .getReg(0);
 
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
