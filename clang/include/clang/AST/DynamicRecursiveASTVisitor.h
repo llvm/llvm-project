@@ -10,6 +10,10 @@ class ASTContext;
 
 /// Recursive AST visitor that supports extension via dynamic dispatch.
 ///
+/// This only supports some of the more common visitation operations; in
+/// particular, it does not support overriding WalkUpFromX or post-order
+/// traversal.
+///
 /// \see RecursiveASTVisitor
 class DynamicRecursiveASTVisitor {
 public:
@@ -28,9 +32,6 @@ public:
 
   /// Whether this visitor should recurse into lambda body
   bool ShouldVisitLambdaBody = true;
-
-  /// Return whether this visitor should traverse post-order.
-  bool ShouldTraversePostOrder = false;
 
 protected:
   DynamicRecursiveASTVisitor() = default;
@@ -163,10 +164,10 @@ public:
   virtual bool VisitTypeLoc(TypeLoc TL) { return true; }
 
   /// Walk up from a node.
-  virtual bool WalkUpFromDecl(Decl *D) { return VisitDecl(D); }
-  virtual bool WalkUpFromStmt(Stmt *S) { return VisitStmt(S); }
-  virtual bool WalkUpFromType(Type *T) { return VisitType(T); }
-  virtual bool WalkUpFromTypeLoc(TypeLoc TL) { return VisitTypeLoc(TL); }
+  bool WalkUpFromDecl(Decl *D) { return VisitDecl(D); }
+  bool WalkUpFromStmt(Stmt *S) { return VisitStmt(S); }
+  bool WalkUpFromType(Type *T) { return VisitType(T); }
+  bool WalkUpFromTypeLoc(TypeLoc TL) { return VisitTypeLoc(TL); }
 
   /*// Declare Traverse*() and friends for attributes.
 #define DYNAMIC_ATTR_VISITOR_DECLS
@@ -177,7 +178,7 @@ public:
 #define ABSTRACT_DECL(DECL)
 #define DECL(CLASS, BASE)                                                      \
   virtual bool Traverse##CLASS##Decl(CLASS##Decl *D);                          \
-  virtual bool WalkUpFrom##CLASS##Decl(CLASS##Decl *D);                        \
+  bool WalkUpFrom##CLASS##Decl(CLASS##Decl *D);                                \
   virtual bool Visit##CLASS##Decl(CLASS##Decl *D) { return true; }
 #include "clang/AST/DeclNodes.inc"
 
@@ -188,7 +189,7 @@ public:
 #include "clang/AST/StmtNodes.inc"
 
 #define STMT(CLASS, PARENT)                                                    \
-  virtual bool WalkUpFrom##CLASS(CLASS *S);                                    \
+  bool WalkUpFrom##CLASS(CLASS *S);                                            \
   virtual bool Visit##CLASS(CLASS *S) { return true; }
 #include "clang/AST/StmtNodes.inc"
 
@@ -196,7 +197,7 @@ public:
 #define ABSTRACT_TYPE(CLASS, BASE)
 #define TYPE(CLASS, BASE)                                                      \
   virtual bool Traverse##CLASS##Type(CLASS##Type *T);                          \
-  virtual bool WalkUpFrom##CLASS##Type(CLASS##Type *T);                        \
+  bool WalkUpFrom##CLASS##Type(CLASS##Type *T);                                \
   virtual bool Visit##CLASS##Type(CLASS##Type *T) { return true; }
 #include "clang/AST/TypeNodes.inc"
 
@@ -206,7 +207,7 @@ public:
 #include "clang/AST/TypeLocNodes.def"
 
 #define TYPELOC(CLASS, BASE)                                                   \
-  virtual bool WalkUpFrom##CLASS##TypeLoc(CLASS##TypeLoc TL);                  \
+  bool WalkUpFrom##CLASS##TypeLoc(CLASS##TypeLoc TL);                          \
   virtual bool Visit##CLASS##TypeLoc(CLASS##TypeLoc TL) { return true; }
 #include "clang/AST/TypeLocNodes.def"
 };

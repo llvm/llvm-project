@@ -34,9 +34,7 @@ struct Impl : RecursiveASTVisitor<Impl> {
 
   bool shouldVisitLambdaBody() const { return Visitor.ShouldVisitLambdaBody; }
 
-  bool shouldTraversePostOrder() const {
-    return Visitor.ShouldTraversePostOrder;
-  }
+  bool shouldTraversePostOrder() const { return false; }
 
   bool TraverseAST(ASTContext &AST) { return Visitor.TraverseAST(AST); }
   bool TraverseAttr(Attr *At) { return Visitor.TraverseAttr(At); }
@@ -107,12 +105,6 @@ struct Impl : RecursiveASTVisitor<Impl> {
   bool VisitType(Type *T) { return Visitor.VisitType(T); }
   bool VisitTypeLoc(TypeLoc TL) { return Visitor.VisitTypeLoc(TL); }
 
-  /// Walk up from a node.
-  bool WalkUpFromDecl(Decl *D) { return Visitor.WalkUpFromDecl(D); }
-  bool WalkUpFromStmt(Stmt *S) { return Visitor.WalkUpFromStmt(S); }
-  bool WalkUpFromType(Type *T) { return Visitor.WalkUpFromType(T); }
-  bool WalkUpFromTypeLoc(TypeLoc TL) { return Visitor.WalkUpFromTypeLoc(TL); }
-
   /*#define ATTR_VISITOR_DECLS
   #include "clang/AST/AttrVisitor.inc"
   #undef ATTR_VISITOR_DECLS*/
@@ -121,9 +113,6 @@ struct Impl : RecursiveASTVisitor<Impl> {
 #define DECL(CLASS, BASE)                                                      \
   bool Traverse##CLASS##Decl(CLASS##Decl *D) {                                 \
     return Visitor.Traverse##CLASS##Decl(D);                                   \
-  }                                                                            \
-  bool WalkUpFrom##CLASS##Decl(CLASS##Decl *D) {                               \
-    return Visitor.WalkUpFrom##CLASS##Decl(D);                                 \
   }                                                                            \
   bool Visit##CLASS##Decl(CLASS##Decl *D) {                                    \
     return Visitor.Visit##CLASS##Decl(D);                                      \
@@ -136,7 +125,6 @@ struct Impl : RecursiveASTVisitor<Impl> {
 #include "clang/AST/StmtNodes.inc"
 
 #define STMT(CLASS, PARENT)                                                    \
-  bool WalkUpFrom##CLASS(CLASS *S) { return Visitor.WalkUpFrom##CLASS(S); }    \
   bool Visit##CLASS(CLASS *S) { return Visitor.Visit##CLASS(S); }
 #include "clang/AST/StmtNodes.inc"
 
@@ -145,9 +133,6 @@ struct Impl : RecursiveASTVisitor<Impl> {
 #define TYPE(CLASS, BASE)                                                      \
   bool Traverse##CLASS##Type(CLASS##Type *T) {                                 \
     return Visitor.Traverse##CLASS##Type(T);                                   \
-  }                                                                            \
-  bool WalkUpFrom##CLASS##Type(CLASS##Type *T) {                               \
-    return Visitor.WalkUpFrom##CLASS##Type(T);                                 \
   }                                                                            \
   bool Visit##CLASS##Type(CLASS##Type *T) {                                    \
     return Visitor.Visit##CLASS##Type(T);                                      \
@@ -162,9 +147,6 @@ struct Impl : RecursiveASTVisitor<Impl> {
 #include "clang/AST/TypeLocNodes.def"
 
 #define TYPELOC(CLASS, BASE)                                                   \
-  bool WalkUpFrom##CLASS##TypeLoc(CLASS##TypeLoc TL) {                         \
-    return Visitor.WalkUpFrom##CLASS##TypeLoc(TL);                             \
-  }                                                                            \
   bool Visit##CLASS##TypeLoc(CLASS##TypeLoc TL) {                              \
     return Visitor.Visit##CLASS##TypeLoc(TL);                                  \
   }
