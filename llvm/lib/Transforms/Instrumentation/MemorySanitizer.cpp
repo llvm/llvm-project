@@ -3289,11 +3289,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Convert `Mask` into `<n x i1>`.
   Constant *createDppMask(unsigned Width, unsigned Mask) {
-    SmallVector<Constant *, 4> R;
-    R.assign(Width, ConstantInt::getFalse(F.getContext()));
+    SmallVector<Constant *, 4> R(Width);
     for (auto &M : R) {
-      if (Mask & 1)
-        M = ConstantInt::getTrue(F.getContext());
+      M = ConstantInt::getBool(F.getContext(), Mask & 1);
       Mask >>= 1;
     }
     return ConstantVector::get(R);
@@ -3301,8 +3299,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Calculate output shadow as array of booleans `<n x i1>`, assuming if any
   // arg is poisoned, entire dot product is poisoned.
-  Value *makeDppShadowI1(IRBuilder<> &IRB, Value *S, unsigned SrcMask,
-                         unsigned DstMask) {
+  Value *findDppPoisonedOutput(IRBuilder<> &IRB, Value *S, unsigned SrcMask,
+                               unsigned DstMask) {
     const unsigned Width =
         cast<FixedVectorType>(S->getType())->getNumElements();
 
@@ -3343,14 +3341,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     const unsigned DstMask = Mask & 0xf;
 
     // Calculate shadow as `<n x i1>`.
-    Value *SI1 = makeDppShadowI1(IRB, S, SrcMask, DstMask);
+    Value *SI1 = findDppPoisonedOutput(IRB, S, SrcMask, DstMask);
     if (Width == 8) {
       // First 4 elements of shadow are already calculated. `makeDppShadow`
       // operats on 32 bit masks, so we can just shift masks, and repeat.
       SI1 = IRB.CreateOr(SI1,
-                         makeDppShadowI1(IRB, S, SrcMask << 4, DstMask << 4));
+                         findDppPoisonedOutput(IRB, S, SrcMask << 4, DstMask << 4));
     }
-    // Extend to real size of shadow, poisoning all no none bits of an element.
+    // Extend to real size of shadow, poisoning either all or none bits of an
+    // element.
     S = IRB.CreateSExt(SI1, S->getType(), "_msdpp");
 
     setShadow(&I, S);
@@ -4557,14 +4556,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void visitSelectInst(SelectInst &I) {
-    IRBuilder<> IRB(&I);
     // a = select b, c, d
     Value *B = I.getCondition();
     Value *C = I.getTrueValue();
     Value *D = I.getFalseValue();
+
+    handleSelectLikeInst(I, B, C, D);
+  }
+
+  void handleSelectLikeInst(Instruction &I, Value *B, Value *C, Value *D) {
+    IRBuilder<> IRB(&I);
+
     Value *Sb = getShadow(B);
     Value *Sc = getShadow(C);
     Value *Sd = getShadow(D);
+
+    Value *Ob = MS.TrackOrigins ? getOrigin(B) : nullptr;
+    Value *Oc = MS.TrackOrigins ? getOrigin(C) : nullptr;
+    Value *Od = MS.TrackOrigins ? getOrigin(D) : nullptr;
 
     // Result shadow if condition shadow is 0.
     Value *Sa0 = IRB.CreateSelect(B, Sc, Sd);
@@ -4598,10 +4607,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
       // a = select b, c, d
       // Oa = Sb ? Ob : (b ? Oc : Od)
-      setOrigin(
-          &I, IRB.CreateSelect(Sb, getOrigin(I.getCondition()),
-                               IRB.CreateSelect(B, getOrigin(I.getTrueValue()),
-                                                getOrigin(I.getFalseValue()))));
+      setOrigin(&I, IRB.CreateSelect(Sb, Ob, IRB.CreateSelect(B, Oc, Od)));
     }
   }
 
