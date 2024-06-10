@@ -1373,23 +1373,6 @@ class VPseudoIStoreMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
   let HasSEWOp = 1;
 }
 
-class VPseudoBinaryMask<VReg RetClass,
-                        RegisterClass Op1Class,
-                        DAGOperand Op2Class,
-                        string Constraint> :
-      Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$merge,
-                  Op1Class:$rs2, Op2Class:$rs1,
-                  VMaskOp:$vm, AVL:$vl, ixlenimm:$sew), []>,
-      RISCVVPseudo {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
-}
-
 class VPseudoBinaryMaskPolicy<VReg RetClass,
                               RegisterClass Op1Class,
                               DAGOperand Op2Class,
@@ -1449,7 +1432,7 @@ class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
   let UsesVXRM = 0;
 }
 
-// Like VPseudoBinaryMask, but output can be V0.
+// Like VPseudoBinaryMaskPolicy, but output can be V0 and there is no policy.
 class VPseudoBinaryMOutMask<VReg RetClass,
                             RegisterClass Op1Class,
                             DAGOperand Op2Class,
@@ -1470,8 +1453,8 @@ class VPseudoBinaryMOutMask<VReg RetClass,
   let UsesMaskPolicy = 1;
 }
 
-// Special version of VPseudoBinaryMask where we pretend the first source is
-// tied to the destination so we can workaround the earlyclobber constraint.
+// Special version of VPseudoBinaryMaskPolicy where we pretend the first source
+// is tied to the destination so we can workaround the earlyclobber constraint.
 // This allows maskedoff and rs2 to be the same register.
 class VPseudoTiedBinaryMask<VReg RetClass,
                             DAGOperand Op2Class,
@@ -4375,28 +4358,6 @@ class VPatTiedBinaryMaskRoundingMode<string intrinsic_name,
                    (XLenVT timm:$round),
                    GPR:$vl, sew, (XLenVT timm:$policy))>;
 
-class VPatTernaryNoMask<string intrinsic,
-                        string inst,
-                        string kind,
-                        ValueType result_type,
-                        ValueType op1_type,
-                        ValueType op2_type,
-                        int sew,
-                        LMULInfo vlmul,
-                        VReg result_reg_class,
-                        RegisterClass op1_reg_class,
-                        DAGOperand op2_kind> :
-  Pat<(result_type (!cast<Intrinsic>(intrinsic)
-                    (result_type result_reg_class:$rs3),
-                    (op1_type op1_reg_class:$rs1),
-                    (op2_type op2_kind:$rs2),
-                    VLOpFrag)),
-                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX)
-                    result_reg_class:$rs3,
-                    (op1_type op1_reg_class:$rs1),
-                    op2_kind:$rs2,
-                    GPR:$vl, sew)>;
-
 class VPatTernaryNoMaskTU<string intrinsic,
                           string inst,
                           string kind,
@@ -4491,31 +4452,6 @@ class VPatTernaryNoMaskWithPolicyRoundingMode<string intrinsic,
                     op2_kind:$rs2,
                     (XLenVT timm:$round),
                     GPR:$vl, log2sew, (XLenVT timm:$policy))>;
-
-class VPatTernaryMask<string intrinsic,
-                      string inst,
-                      string kind,
-                      ValueType result_type,
-                      ValueType op1_type,
-                      ValueType op2_type,
-                      ValueType mask_type,
-                      int sew,
-                      LMULInfo vlmul,
-                      VReg result_reg_class,
-                      RegisterClass op1_reg_class,
-                      DAGOperand op2_kind> :
-  Pat<(result_type (!cast<Intrinsic>(intrinsic#"_mask")
-                    (result_type result_reg_class:$rs3),
-                    (op1_type op1_reg_class:$rs1),
-                    (op2_type op2_kind:$rs2),
-                    (mask_type V0),
-                    VLOpFrag)),
-                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX # "_MASK")
-                    result_reg_class:$rs3,
-                    (op1_type op1_reg_class:$rs1),
-                    op2_kind:$rs2,
-                    (mask_type V0),
-                    GPR:$vl, sew)>;
 
 class VPatTernaryMaskPolicy<string intrinsic,
                             string inst,
@@ -5512,46 +5448,6 @@ multiclass VPatBinaryM_VM_XM<string intrinsic, string instruction>
 multiclass VPatBinaryM_V_X<string intrinsic, string instruction>
     : VPatBinaryV_V<intrinsic, instruction>,
       VPatBinaryV_X<intrinsic, instruction>;
-
-multiclass VPatTernary<string intrinsic,
-                       string inst,
-                       string kind,
-                       ValueType result_type,
-                       ValueType op1_type,
-                       ValueType op2_type,
-                       ValueType mask_type,
-                       int sew,
-                       LMULInfo vlmul,
-                       VReg result_reg_class,
-                       RegisterClass op1_reg_class,
-                       DAGOperand op2_kind> {
-  def : VPatTernaryNoMask<intrinsic, inst, kind, result_type, op1_type, op2_type,
-                          sew, vlmul, result_reg_class, op1_reg_class,
-                          op2_kind>;
-  def : VPatTernaryMask<intrinsic, inst, kind, result_type, op1_type, op2_type,
-                        mask_type, sew, vlmul, result_reg_class, op1_reg_class,
-                        op2_kind>;
-}
-
-multiclass VPatTernaryNoMaskNoPolicy<string intrinsic,
-                                     string inst,
-                                     string kind,
-                                     ValueType result_type,
-                                     ValueType op1_type,
-                                     ValueType op2_type,
-                                     ValueType mask_type,
-                                     int sew,
-                                     LMULInfo vlmul,
-                                     VReg result_reg_class,
-                                     RegisterClass op1_reg_class,
-                                     DAGOperand op2_kind> {
-  def : VPatTernaryNoMask<intrinsic, inst, kind, result_type, op1_type, op2_type,
-                          sew, vlmul, result_reg_class, op1_reg_class,
-                          op2_kind>;
-  def : VPatTernaryMaskPolicy<intrinsic, inst, kind, result_type, op1_type, op2_type,
-                              mask_type, sew, vlmul, result_reg_class, op1_reg_class,
-                              op2_kind>;
-}
 
 multiclass VPatTernaryWithPolicy<string intrinsic,
                                  string inst,
