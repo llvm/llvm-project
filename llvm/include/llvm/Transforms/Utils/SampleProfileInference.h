@@ -28,13 +28,14 @@ struct FlowBlock {
   uint64_t Weight{0};
   bool HasUnknownWeight{true};
   bool IsUnlikely{false};
+  bool IsExit{false};
   uint64_t Flow{0};
   std::vector<FlowJump *> SuccJumps;
   std::vector<FlowJump *> PredJumps;
-  bool HasSuccessors{false};
-
+  
   /// Check if it is the entry block in the function.
   bool isEntry() const { return PredJumps.empty(); }
+
   /// Check if it is an exit block in the function.
   bool isExit() const { return SuccJumps.empty(); }
 };

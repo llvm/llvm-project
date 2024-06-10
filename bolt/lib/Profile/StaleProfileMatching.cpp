@@ -313,18 +313,13 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   EntryBlock.Index = 0;
   Func.Blocks.push_back(EntryBlock);
 
-  auto BinaryBlockIsExit = [&](const BinaryBasicBlock &BB) {
-    if (BB.successors().empty())
-      return true;
-    return false;
-  };
-
   // Create FlowBlock for every basic block in the binary function
   for (const BinaryBasicBlock *BB : BlockOrder) {
     Func.Blocks.emplace_back();
     FlowBlock &Block = Func.Blocks.back();
     Block.Index = Func.Blocks.size() - 1;
-    Block.HasSuccessors = BinaryBlockIsExit(*BB);
+    if (BB->successors().empty())
+      Block.IsExit = true;
     (void)BB;
     assert(Block.Index == BB->getIndex() + 1 &&
            "incorrectly assigned basic block index");
@@ -369,14 +364,14 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   }
 
   // Add dummy edges to the extra sources. If there are multiple entry blocks,
-  // add an unlikely edge from 0 to the subsequent ones
+  // add an unlikely edge from 0 to the subsequent ones. Skips the sink block.
   assert(InDegree[0] == 0 && "dummy entry blocks shouldn't have predecessors");
-  for (uint64_t I = 1; I < BlockOrder.size() + 1; I++) {
+  for (uint64_t I = 1; I < Func.Blocks.size() - 1; I++) {
     const BinaryBasicBlock *BB = BlockOrder[I - 1];
     if (BB->isEntryPoint() || InDegree[I] == 0) {
       Func.Jumps.emplace_back();
       FlowJump &Jump = Func.Jumps.back();
-      Jump.Source = Func.Entry;
+      Jump.Source = 0;
       Jump.Target = I;
       if (!BB->isEntryPoint())
         Jump.IsUnlikely = true;
@@ -386,7 +381,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   // Add dummy edges from the exit blocks to the sink block.
   for (uint64_t I = 1; I < BlockOrder.size() + 1; I++) {
     FlowBlock &Block = Func.Blocks[I];
-    if (Block.HasSuccessors) {
+    if (Block.IsExit) {
       Func.Jumps.emplace_back();
       FlowJump &Jump = Func.Jumps.back();
       Jump.Source = I;
@@ -401,7 +396,6 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
     assert(Jump.Target < Func.Blocks.size());
     Func.Blocks[Jump.Target].PredJumps.push_back(&Jump);
   }
-
   return Func;
 }
 
