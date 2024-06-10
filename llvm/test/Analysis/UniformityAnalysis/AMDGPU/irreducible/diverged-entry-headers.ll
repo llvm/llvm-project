@@ -90,7 +90,7 @@ S:
   br i1 %cond.uni, label %exit, label %T
 
 T:
-; CHECK-NIT:   DIVERGENT:   %tt.phi = phi i32
+; CHECK-NOT:   DIVERGENT:   %tt.phi = phi i32
   %tt.phi = phi i32 [ %ss, %S ], [ %a, %entry ]
   %tt = add i32 %b, 1
   br label %P

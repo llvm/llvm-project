@@ -45,7 +45,7 @@ const uptr kAllocatorSpace = 0xE00000000000ULL;
 #else
 const uptr kAllocatorSpace = 0x700000000000ULL;
 #endif
-const uptr kMaxAllowedMallocSize = 8UL << 30;
+const uptr kMaxAllowedMallocSize = 1ULL << 40;
 
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;

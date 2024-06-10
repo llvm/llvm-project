@@ -280,6 +280,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"trim_name", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"getcwd",
+     &I::genGetCwd,
+     {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"getpid", &I::genGetPID},
     {"iachar", &I::genIchar},
     {"iall",
@@ -368,7 +372,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"ieee_signaling_ne",
      &I::genIeeeSignalingCompare<mlir::arith::CmpFPredicate::UNE>},
     {"ieee_signbit", &I::genIeeeSignbit},
-    {"ieee_support_flag", &I::genIeeeSupportFlagOrHalting},
+    {"ieee_support_flag",
+     &I::genIeeeSupportFlagOrHalting,
+     {{{"flag", asValue}, {"x", asInquired, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"ieee_support_halting", &I::genIeeeSupportFlagOrHalting},
     {"ieee_support_rounding", &I::genIeeeSupportRounding},
     {"ieee_unordered", &I::genIeeeUnordered},
@@ -549,9 +556,17 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/true},
+    {"selected_char_kind",
+     &I::genSelectedCharKind,
+     {{{"name", asAddr}}},
+     /*isElemental=*/false},
     {"selected_int_kind",
      &I::genSelectedIntKind,
      {{{"scalar", asAddr}}},
+     /*isElemental=*/false},
+    {"selected_logical_kind",
+     &I::genSelectedLogicalKind,
+     {{{"bits", asAddr}}},
      /*isElemental=*/false},
     {"selected_real_kind",
      &I::genSelectedRealKind,
@@ -3465,6 +3480,37 @@ mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
       fir::runtime::genFraction(builder, loc, fir::getBase(args[0])));
 }
 
+// GETCWD
+fir::ExtendedValue
+IntrinsicLibrary::genGetCwd(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 1 && resultType.has_value()) ||
+         (args.size() >= 1 && !resultType.has_value()));
+
+  mlir::Value cwd = fir::getBase(args[0]);
+  mlir::Value statusValue = fir::runtime::genGetCwd(builder, loc, cwd);
+
+  if (resultType.has_value()) {
+    // Function form, return status.
+    return statusValue;
+  } else {
+    // Subroutine form, store status and return none.
+    const fir::ExtendedValue &status = args[1];
+    if (!isStaticallyAbsent(status)) {
+      mlir::Value statusAddr = fir::getBase(status);
+      mlir::Value statusIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, statusAddr);
+      builder.genIfThen(loc, statusIsPresentAtRuntime)
+          .genThen([&]() {
+            builder.createStoreWithConvert(loc, statusValue, statusAddr);
+          })
+          .end();
+    }
+  }
+
+  return {};
+}
+
 // GET_COMMAND
 void IntrinsicLibrary::genGetCommand(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
@@ -4664,15 +4710,15 @@ mlir::Value IntrinsicLibrary::genIeeeSignbit(mlir::Type resultType,
 }
 
 // IEEE_SUPPORT_FLAG, IEEE_SUPPORT_HALTING
-mlir::Value IntrinsicLibrary::genIeeeSupportFlagOrHalting(
-    mlir::Type resultType, llvm::ArrayRef<mlir::Value> args) {
+fir::ExtendedValue IntrinsicLibrary::genIeeeSupportFlagOrHalting(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
   // Check if a floating point exception or halting mode FLAG is supported.
   // An IEEE_SUPPORT_FLAG flag is supported either for all type kinds or none.
   // An optional kind argument X is therefore ignored.
   // Standard flags are all supported.
   // The nonstandard DENORM extension is not supported. (At least for now.)
   assert(args.size() == 1 || args.size() == 2);
-  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, args[0]);
+  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, fir::getBase(args[0]));
   mlir::Value flag = builder.create<fir::LoadOp>(loc, fieldRef);
   mlir::Value mask = builder.createIntegerConstant( // values are powers of 2
       loc, fieldTy,
@@ -4954,10 +5000,6 @@ fir::ExtendedValue
 IntrinsicLibrary::genIsContiguous(mlir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  if (const auto *boxValue = args[0].getBoxOf<fir::BoxValue>())
-    if (boxValue->hasAssumedRank())
-      TODO(loc, "intrinsic: is_contiguous with assumed rank argument");
-
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genIsContiguous(builder, loc, fir::getBase(args[0])));
@@ -5873,6 +5915,18 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
   return readAndAddCleanUp(resultMutableBox, resultType, "SCAN");
 }
 
+// SELECTED_CHAR_KIND
+fir::ExtendedValue
+IntrinsicLibrary::genSelectedCharKind(mlir::Type resultType,
+                                      llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSelectedCharKind(builder, loc, fir::getBase(args[0]),
+                                        fir::getLen(args[0])));
+}
+
 // SELECTED_INT_KIND
 mlir::Value
 IntrinsicLibrary::genSelectedIntKind(mlir::Type resultType,
@@ -5882,6 +5936,17 @@ IntrinsicLibrary::genSelectedIntKind(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genSelectedIntKind(builder, loc, fir::getBase(args[0])));
+}
+
+// SELECTED_LOGICAL_KIND
+mlir::Value
+IntrinsicLibrary::genSelectedLogicalKind(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genSelectedLogicalKind(
+                                   builder, loc, fir::getBase(args[0])));
 }
 
 // SELECTED_REAL_KIND
@@ -5927,15 +5992,45 @@ mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
                                    fir::getBase(args[1])));
 }
 
+/// Generate runtime call to inquire about all the bounds/extents of an
+/// assumed-rank array.
+template <typename Func>
+static fir::ExtendedValue genAssumedRankBoundInquiry(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type resultType,
+    llvm::ArrayRef<fir::ExtendedValue> args, int kindPos, Func genRtCall) {
+  const fir::ExtendedValue &array = args[0];
+  // Allocate an array with the maximum rank, that is big enough to hold the
+  // result but still "small" (15 elements). Static size alloca make stack
+  // analysis/manipulation easier.
+  mlir::Type resultElementType = fir::unwrapSequenceType(resultType);
+  mlir::Type allocSeqType =
+      fir::SequenceType::get({Fortran::common::maxRank}, resultElementType);
+  mlir::Value resultStorage = builder.createTemporary(loc, allocSeqType);
+  mlir::Value arrayBox = builder.createBox(loc, array);
+  mlir::Value kind = isStaticallyAbsent(args, kindPos)
+                         ? builder.createIntegerConstant(
+                               loc, builder.getI32Type(),
+                               builder.getKindMap().defaultIntegerKind())
+                         : fir::getBase(args[kindPos]);
+  genRtCall(builder, loc, resultStorage, arrayBox, kind);
+  mlir::Type baseType =
+      fir::ReferenceType::get(builder.getVarLenSeqTy(resultElementType));
+  mlir::Value resultBase = builder.createConvert(loc, baseType, resultStorage);
+  mlir::Value rank =
+      builder.create<fir::BoxRankOp>(loc, builder.getIndexType(), arrayBox);
+  return fir::ArrayBoxValue{resultBase, {rank}};
+}
+
 // SHAPE
 fir::ExtendedValue
 IntrinsicLibrary::genShape(mlir::Type resultType,
                            llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() >= 1);
   const fir::ExtendedValue &array = args[0];
+  if (array.hasAssumedRank())
+    return genAssumedRankBoundInquiry(builder, loc, resultType, args,
+                                      /*kindPos=*/1, fir::runtime::genShape);
   int rank = array.rank();
-  if (rank == 0)
-    TODO(loc, "shape intrinsic lowering with assumed-rank source");
   mlir::Type indexType = builder.getIndexType();
   mlir::Type extentType = fir::unwrapSequenceType(resultType);
   mlir::Type seqType = fir::SequenceType::get(
@@ -6056,9 +6151,6 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
   // Note that the value of the KIND argument is already reflected in the
   // resultType
   assert(args.size() == 3);
-  if (const auto *boxValue = args[0].getBoxOf<fir::BoxValue>())
-    if (boxValue->hasAssumedRank())
-      TODO(loc, "intrinsic: size with assumed rank argument");
 
   // Get the ARRAY argument
   mlir::Value array = builder.createBox(loc, args[0]);
@@ -6072,13 +6164,15 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
 
   // Get the DIM argument.
   mlir::Value dim = fir::getBase(args[1]);
-  if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
-    // If it is a compile time constant, skip the runtime call.
-    return builder.createConvert(loc, resultType,
-                                 fir::factory::readExtent(builder, loc,
-                                                          fir::BoxValue{array},
-                                                          cstDim.value() - 1));
-  }
+  if (!args[0].hasAssumedRank())
+    if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
+      // If both DIM and the rank are compile time constants, skip the runtime
+      // call.
+      return builder.createConvert(
+          loc, resultType,
+          fir::factory::readExtent(builder, loc, fir::BoxValue{array},
+                                   cstDim.value() - 1));
+    }
   if (!fir::isa_ref_type(dim.getType()))
     return builder.createConvert(
         loc, resultType, fir::runtime::genSizeDim(builder, loc, array, dim));

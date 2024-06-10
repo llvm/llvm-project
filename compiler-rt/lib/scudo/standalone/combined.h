@@ -565,6 +565,20 @@ public:
             storeSecondaryAllocationStackMaybe(Options, OldPtr, NewSize);
           }
         }
+
+        // If we have reduced the size, set the extra bytes to the fill value
+        // so that we are ready to grow it again in the future.
+        if (NewSize < OldSize) {
+          const FillContentsMode FillContents =
+              TSDRegistry.getDisableMemInit() ? NoFill
+                                              : Options.getFillContentsMode();
+          if (FillContents != NoFill) {
+            memset(reinterpret_cast<char *>(OldTaggedPtr) + NewSize,
+                   FillContents == ZeroFill ? 0 : PatternFillByte,
+                   OldSize - NewSize);
+          }
+        }
+
         return OldTaggedPtr;
       }
     }
@@ -1052,6 +1066,10 @@ private:
                                 void *Block, const uptr UserPtr,
                                 const uptr SizeOrUnusedBytes,
                                 const FillContentsMode FillContents) {
+    // Compute the default pointer before adding the header tag
+    const uptr DefaultAlignedPtr =
+        reinterpret_cast<uptr>(Block) + Chunk::getHeaderSize();
+
     Block = addHeaderTag(Block);
     // Only do content fill when it's from primary allocator because secondary
     // allocator has filled the content.
@@ -1064,8 +1082,6 @@ private:
 
     Chunk::UnpackedHeader Header = {};
 
-    const uptr DefaultAlignedPtr =
-        reinterpret_cast<uptr>(Block) + Chunk::getHeaderSize();
     if (UNLIKELY(DefaultAlignedPtr != UserPtr)) {
       const uptr Offset = UserPtr - DefaultAlignedPtr;
       DCHECK_GE(Offset, 2 * sizeof(u32));
@@ -1095,6 +1111,10 @@ private:
                              const FillContentsMode FillContents) {
     const Options Options = Primary.Options.load();
     DCHECK(useMemoryTagging<AllocatorConfig>(Options));
+
+    // Compute the default pointer before adding the header tag
+    const uptr DefaultAlignedPtr =
+        reinterpret_cast<uptr>(Block) + Chunk::getHeaderSize();
 
     void *Ptr = reinterpret_cast<void *>(UserPtr);
     void *TaggedPtr = Ptr;
@@ -1194,8 +1214,6 @@ private:
 
     Chunk::UnpackedHeader Header = {};
 
-    const uptr DefaultAlignedPtr =
-        reinterpret_cast<uptr>(Block) + Chunk::getHeaderSize();
     if (UNLIKELY(DefaultAlignedPtr != UserPtr)) {
       const uptr Offset = UserPtr - DefaultAlignedPtr;
       DCHECK_GE(Offset, 2 * sizeof(u32));
