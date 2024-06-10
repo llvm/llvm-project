@@ -1980,6 +1980,13 @@ static inline bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static inline bool VoidPtrCast(InterpState &S, CodePtr OpPC) {
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Zero, Nullptr
 //===----------------------------------------------------------------------===//

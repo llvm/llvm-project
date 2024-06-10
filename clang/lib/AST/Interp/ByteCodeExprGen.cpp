@@ -325,8 +325,11 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     assert(isPtrType(*FromT));
     assert(isPtrType(*ToT));
-    if (FromT == ToT)
+    if (FromT == ToT) {
+      if (SubExpr->getType()->isVoidPointerType())
+        return this->visit(SubExpr) && this->emitVoidPtrCast(CE);
       return this->delegate(SubExpr);
+    }
 
     if (!this->visit(SubExpr))
       return false;
