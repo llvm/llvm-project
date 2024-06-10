@@ -116,25 +116,11 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")
 
-        debug_server_tool = self.getBuiltinDebugServerTool()
-        pipe = self.get_debug_server_pipe()
-        args = self.get_debug_server_command_line_args()
-        args += [program]
-        args += ["--named-pipe", pipe.name]
-
-        self.process = self.spawnSubprocess(
-            debug_server_tool, args, install_remote=False
-        )
-
-        # Read the port number from the debug server pipe.
-        port = pipe.read(10, self.default_timeout)
-        # Trim null byte, convert to int
-        port = int(port[:-1])
-        self.assertIsNotNone(
-            port, " Failed to read the port number from debug server pipe"
-        )
-
-        pid = self.process.pid
+        # It is not necessary to launch "lldb-server" to obtain the actual port and pid for attaching.
+        # However, when providing the port number and pid directly, "lldb-dap" throws an error message, which is expected.
+        # So, used random pid and port numbers here.
+	pid = 1354
+        port = 1234
 
         response = self.attach(
             program=program,
@@ -147,7 +133,6 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
             self.assertFalse(
                 response["success"], "The user can't specify both pid and port"
             )
-        self.process.terminate()
 
     @skipIfWindows
     @skipIfNetBSD
