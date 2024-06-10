@@ -11,16 +11,16 @@
 + (void)initialize {
 }
 
-// PREINLINE: declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-// BARE: @"\01+[ObjCClass load]"{{\(.*\)}} #2
+// BARE: @"\01+[ObjCClass load]"{{\(.*\)}} #1
 + (void)load __attribute__((no_instrument_function)) {
 }
 
-// PREINLINE: @"\01-[ObjCClass dealloc]"{{\(.*\)}} #2
-// BARE: @"\01-[ObjCClass dealloc]"{{\(.*\)}} #2
+// PREINLINE: @"\01-[ObjCClass dealloc]"{{\(.*\)}} #1
+// BARE: @"\01-[ObjCClass dealloc]"{{\(.*\)}} #1
 - (void)dealloc __attribute__((no_instrument_function)) {
 }
 
+// PREINLINE: declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 // PREINLINE: attributes #0 = { {{.*}}"instrument-function-entry"="__cyg_profile_func_enter"
 // PREINLINE-NOT: attributes #0 = { {{.*}}"instrument-function-entry"="__cyg_profile_func_enter_bare"
 // PREINLINE-NOT: attributes #2 = { {{.*}}"__cyg_profile_func_enter"
