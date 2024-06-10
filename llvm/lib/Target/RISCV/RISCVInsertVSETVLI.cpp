@@ -932,11 +932,11 @@ RISCVInsertVSETVLI::getInfoForVSETVLI(const MachineInstr &MI) const {
            "Can't handle X0, X0 vsetvli yet");
     if (AVLReg == RISCV::X0)
       NewInfo.setAVLVLMAX();
-    else if (VNInfo *VNI = getVNInfoFromReg(AVLReg, MI, LIS))
-      NewInfo.setAVLRegDef(VNI, AVLReg);
-    else {
-      assert(MI.getOperand(1).isUndef());
+    else if (MI.getOperand(1).isUndef())
       NewInfo.setAVLIgnored();
+    else {
+      VNInfo *VNI = getVNInfoFromReg(AVLReg, MI, LIS);
+      NewInfo.setAVLRegDef(VNI, AVLReg);
     }
   }
   NewInfo.setVTYPE(MI.getOperand(2).getImm());
@@ -1008,11 +1008,11 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
       }
       else
         InstrInfo.setAVLImm(Imm);
-    } else if (VNInfo *VNI = getVNInfoFromReg(VLOp.getReg(), MI, LIS)) {
-      InstrInfo.setAVLRegDef(VNI, VLOp.getReg());
-    } else {
-      assert(VLOp.isUndef());
+    } else if (VLOp.isUndef()) {
       InstrInfo.setAVLIgnored();
+    } else {
+      VNInfo *VNI = getVNInfoFromReg(VLOp.getReg(), MI, LIS);
+      InstrInfo.setAVLRegDef(VNI, VLOp.getReg());
     }
   } else {
     assert(isScalarExtractInstr(MI));

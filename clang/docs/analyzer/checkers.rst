@@ -599,7 +599,7 @@ Warns when a nullable pointer is returned from a function that has _Nonnull retu
 optin
 ^^^^^
 
-Checkers for portability, performance or coding style specific rules.
+Checkers for portability, performance, optional security and coding style specific rules.
 
 .. _optin-core-EnumCastOutOfRange:
 
@@ -938,6 +938,53 @@ optin.portability.UnixAPI
 """""""""""""""""""""""""
 Finds implementation-defined behavior in UNIX/Posix functions.
 
+.. _optin-taint-TaintedAlloc:
+
+optin.taint.TaintedAlloc (C, C++)
+"""""""""""""""""""""""""""""""""
+
+This checker warns for cases when the ``size`` parameter of the ``malloc`` ,
+``calloc``, ``realloc``, ``alloca`` or the size parameter of the
+array new C++ operator is tainted (potentially attacker controlled).
+If an attacker can inject a large value as the size parameter, memory exhaustion
+denial of service attack can be carried out.
+
+The ``alpha.security.taint.TaintPropagation`` checker also needs to be enabled for
+this checker to give warnings.
+
+The analyzer emits warning only if it cannot prove that the size parameter is
+within reasonable bounds (``<= SIZE_MAX/4``). This functionality partially
+covers the SEI Cert coding standard rule `INT04-C
+<https://wiki.sei.cmu.edu/confluence/display/c/INT04-C.+Enforce+limits+on+integer+values+originating+from+tainted+sources>`_.
+
+You can silence this warning either by bound checking the ``size`` parameter, or
+by explicitly marking the ``size`` parameter as sanitized. See the
+:ref:`alpha-security-taint-TaintPropagation` checker for more details.
+
+.. code-block:: c
+
+  void vulnerable(void) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    int *p = malloc(size); // warn: malloc is called with a tainted (potentially attacker controlled) value
+    free(p);
+  }
+
+  void not_vulnerable(void) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    if (1024 < size)
+      return;
+    int *p = malloc(size); // No warning expected as the the user input is bound
+    free(p);
+  }
+
+  void vulnerable_cpp(void) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    int *ptr = new int[size];// warn: Memory allocation function is called with a tainted (potentially attacker controlled) value
+    delete[] ptr;
+  }
 
 .. _security-checkers:
 
