@@ -790,15 +790,15 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
 bool SampleProfileMatcher::functionMatchesProfile(Function &IRFunc,
                                                   const FunctionId &ProfFunc,
                                                   bool FindMatchedProfileOnly) {
-  auto R = FunctionProfileNameMap.find({&IRFunc, ProfFunc});
-  if (R != FunctionProfileNameMap.end())
+  auto R = FuncToProfileNameMap.find({&IRFunc, ProfFunc});
+  if (R != FuncToProfileNameMap.end())
     return R->second;
 
   if (FindMatchedProfileOnly)
     return false;
 
   bool Matched = functionMatchesProfileHelper(IRFunc, ProfFunc);
-  FunctionProfileNameMap[{&IRFunc, ProfFunc}] = Matched;
+  FuncToProfileNameMap[{&IRFunc, ProfFunc}] = Matched;
   if (Matched) {
     ProfileNameToFuncMap[ProfFunc] = &IRFunc;
     LLVM_DEBUG(dbgs() << "Function:" << IRFunc.getName()
