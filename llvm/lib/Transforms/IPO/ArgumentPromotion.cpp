@@ -619,8 +619,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     Value *PtrArg = cast<Value>(U);
     if (IsRecursive && CB && PtrArg) {
       Type *PtrTy = PtrArg->getType();
-      Align PtrAlign = PtrArg->getPointerAlignment(DL);
-      APInt Offset(DL.getIndexTypeSizeInBits(PtrArg->getType()), 0);
+      APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);
       PtrArg = PtrArg->stripAndAccumulateConstantOffsets(
           DL, Offset,
           /* AllowNonInbounds= */ true);
