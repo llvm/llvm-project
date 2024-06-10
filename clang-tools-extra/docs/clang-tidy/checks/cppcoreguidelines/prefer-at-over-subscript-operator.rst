@@ -3,8 +3,7 @@
 cppcoreguidelines-prefer-at-over-subscript-operator
 =====================================
 
-This check flags all uses of ``operator[]`` on ``std::vector``, ``std::array``, ``std::deque``, ``std::map``, ``std::unordered_map``, and ``std::flat_map`` and suggests to replace it with ``at()``.
-Note that ``std::span`` and ``std::mdspan`` do not support ``at()`` as of C++23, so the use of ``operator[]`` is not flagged.
+This check flags all uses of ``operator[]`` where an equivalent (same parameter and return types) ``at()`` method exists and suggest using that instead.
 
 For example the code
 
@@ -12,10 +11,21 @@ For example the code
   std::array<int, 3> a;
   int b = a[4];
 
-will be replaced by 
+will generate a warning but 
 
 .. code-block:: c++
-  std::vector<int, 3> a;
-  int b = a.at(4);
+  std::unique_ptr<int> a;
+  int b = a[0];
 
-This check enforces the `SL.con.3 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors>` guideline.
+will not.
+
+The classes ``std::map``, ``std::unordered_map`` and ``std::flat_map`` are excluded from this check, because for them the subscript operator has a defined behaviour when a key does not exist (inserting a new element).
+
+Options
+-------
+
+.. option:: ExcludeClasses
+
+    Semicolon-delimited list of class names that should additionally be excluded from this check. By default empty. 
+
+This check enforces part of the `SL.con.3 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors>` guideline.
