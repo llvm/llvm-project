@@ -31,10 +31,10 @@ struct FlowBlock {
   uint64_t Flow{0};
   std::vector<FlowJump *> SuccJumps;
   std::vector<FlowJump *> PredJumps;
+  bool HasSuccessors {false};
 
   /// Check if it is the entry block in the function.
   bool isEntry() const { return PredJumps.empty(); }
-
   /// Check if it is an exit block in the function.
   bool isExit() const { return SuccJumps.empty(); }
 };
@@ -57,6 +57,7 @@ struct FlowFunction {
   std::vector<FlowJump> Jumps;
   /// The index of the entry block.
   uint64_t Entry{0};
+  uint64_t Sink{0};
 };
 
 /// Various thresholds and options controlling the behavior of the profile
