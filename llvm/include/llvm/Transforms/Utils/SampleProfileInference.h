@@ -32,7 +32,7 @@ struct FlowBlock {
   uint64_t Flow{0};
   std::vector<FlowJump *> SuccJumps;
   std::vector<FlowJump *> PredJumps;
-  
+
   /// Check if it is the entry block in the function.
   bool isEntry() const { return PredJumps.empty(); }
 
