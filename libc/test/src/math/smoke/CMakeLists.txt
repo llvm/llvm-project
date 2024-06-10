@@ -2401,6 +2401,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmul_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmul_test.cpp
+  HDRS
+    FMulTest.h
+  DEPENDS
+    libc.src.math.fmul
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   sqrtf_test
   SUITE
     libc-math-smoke-tests
@@ -2515,6 +2528,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  remquof128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    remquof128_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquof128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   remquo_test
   SUITE
     libc-math-smoke-tests
@@ -2604,6 +2631,22 @@ add_fp_unittest(
     libc.include.signal
     libc.src.math.nanl
     libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  nanf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nanf16_test.cpp
+  DEPENDS
+    libc.include.signal
+    libc.src.math.nanf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY

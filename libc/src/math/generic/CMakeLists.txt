@@ -2355,6 +2355,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmul
+  SRCS
+    fmul.cpp
+  HDRS
+    ../fmul.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.uint128
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   sqrt
   SRCS
     sqrt.cpp
@@ -2414,6 +2430,18 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.division_and_remainder_operations
   COMPILE_OPTIONS
     -O2
+)
+
+add_entrypoint_object(
+  remquof128
+  SRCS
+    remquof128.cpp
+  HDRS
+    ../remquof128.h
+  DEPENDS
+    libc.src.__support.FPUtil.division_and_remainder_operations
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_entrypoint_object(
@@ -2596,6 +2624,19 @@ add_entrypoint_object(
     nanl.cpp
   HDRS
     ../nanl.h
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.errno.errno
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nanf16
+  SRCS
+    nanf16.cpp
+  HDRS
+    ../nanf16.h
   DEPENDS
     libc.src.__support.str_to_float
     libc.src.errno.errno
