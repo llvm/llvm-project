@@ -67,7 +67,7 @@ LLVMPositionBuilderBeforeDbgRecords          # See info below.
 LLVMPositionBuilderBeforeInstrAndDbgRecords  # See info below.
 ```
 
-`LLVMPositionBuilderBeforeDbgRecords` and `LLVMPositionBuilderBeforeInstrAndDbgRecords` behave the same as `LLVMPositionBuilder` and `LLVMPositionBuilderBefore` except the insition position is set before the debug records that precede the target instruction. Note that this doesn't mean that debug intrinsics before the chosen instruction are skipped, only debug records (which unlike debug records are not themselves instructions).
+`LLVMPositionBuilderBeforeDbgRecords` and `LLVMPositionBuilderBeforeInstrAndDbgRecords` behave the same as `LLVMPositionBuilder` and `LLVMPositionBuilderBefore` except the insertion position is set before the debug records that precede the target instruction. Note that this doesn't mean that debug intrinsics before the chosen instruction are skipped, only debug records (which unlike debug records are not themselves instructions).
 
 If you don't know which function to call then follow this rule:
 If you are trying to insert at the start of a block, or purposfully skip debug intrinsics to determine the insertion point for any other reason, then call the new functions.
