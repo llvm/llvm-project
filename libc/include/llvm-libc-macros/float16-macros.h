@@ -10,7 +10,8 @@
 #define LLVM_LIBC_MACROS_FLOAT16_MACROS_H
 
 #if defined(__FLT16_MANT_DIG__) &&                                             \
-    (!defined(__GNUC__) || __GNUC__ >= 13 || defined(__clang__))
+    (!defined(__GNUC__) || __GNUC__ >= 13 || defined(__clang__)) &&            \
+    !defined(__riscv)
 #define LIBC_TYPES_HAS_FLOAT16
 #endif
 

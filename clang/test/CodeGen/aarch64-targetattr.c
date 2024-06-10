@@ -58,58 +58,50 @@ void v1msve() {}
 // CHECK-LABEL: @plussve() #12
 __attribute__((target("+sve")))
 void plussve() {}
-// CHECK-LABEL: @plussveplussve2() #13
+// CHECK-LABEL: @plussveplussve2() #12
 __attribute__((target("+sve+nosve2")))
 void plussveplussve2() {}
-// CHECK-LABEL: @plussveminusnosve2() #13
+// CHECK-LABEL: @plussveminusnosve2() #12
 __attribute__((target("sve,no-sve2")))
 void plussveminusnosve2() {}
-// CHECK-LABEL: @plusfp16() #14
+// CHECK-LABEL: @plusfp16() #13
 __attribute__((target("+fp16")))
 void plusfp16() {}
 
-// CHECK-LABEL: @all() #15
+// CHECK-LABEL: @all() #14
 __attribute__((target("cpu=neoverse-n1,tune=cortex-a710,arch=armv8.6-a+sve2")))
 void all() {}
-// CHECK-LABEL: @allplusbranchprotection() #16
+// CHECK-LABEL: @allplusbranchprotection() #15
 __attribute__((target("cpu=neoverse-n1,tune=cortex-a710,arch=armv8.6-a+sve2,branch-protection=standard")))
 void allplusbranchprotection() {}
 
-// These tests check that the user facing and internal llvm name are both accepted.
-// CHECK-LABEL: @plusnoneon() #17
-__attribute__((target("+noneon")))
-void plusnoneon() {}
-// CHECK-LABEL: @plusnosimd() #17
+// CHECK-LABEL: @plusnosimd() #16
 __attribute__((target("+nosimd")))
 void plusnosimd() {}
-// CHECK-LABEL: @noneon() #17
-__attribute__((target("no-neon")))
-void noneon() {}
-// CHECK-LABEL: @nosimd() #17
+// CHECK-LABEL: @nosimd() #16
 __attribute__((target("no-simd")))
 void nosimd() {}
 
 // This isn't part of the standard interface, but test that -arch features should not apply anything else.
-// CHECK-LABEL: @minusarch() #18
+// CHECK-LABEL: @minusarch() #17
 __attribute__((target("no-v9.3a")))
 void minusarch() {}
 
 // CHECK: attributes #0 = { {{.*}} "target-features"="+crc,+fp-armv8,+lse,+neon,+ras,+rdm,+v8.1a,+v8.2a,+v8a" }
 // CHECK: attributes #1 = { {{.*}} "target-features"="+crc,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sve,+v8.1a,+v8.2a,+v8a" }
 // CHECK: attributes #2 = { {{.*}} "target-features"="+crc,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sve,+sve2,+v8.1a,+v8.2a,+v8a" }
-// CHECK: attributes #3 = { {{.*}} "target-features"="+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" }
-// CHECK: attributes #4 = { {{.*}} "target-cpu"="cortex-a710" "target-features"="+bf16,+complxnum,+crc,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+mte,+neon,+pauth,+ras,+rcpc,+rdm,+sb,+sve,+sve2,+sve2-bitperm" }
+// CHECK: attributes #3 = { {{.*}} "target-features"="+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" }
+// CHECK: attributes #4 = { {{.*}} "target-cpu"="cortex-a710" "target-features"="+bf16,+complxnum,+crc,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+mte,+neon,+pauth,+ras,+rcpc,+rdm,+sb,+sve,+sve2,+sve2-bitperm,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8a,+v9a" }
 // CHECK: attributes #5 = { {{.*}} "tune-cpu"="cortex-a710" }
 // CHECK: attributes #6 = { {{.*}} "target-cpu"="generic" }
 // CHECK: attributes #7 = { {{.*}} "tune-cpu"="generic" }
-// CHECK: attributes #8 = { {{.*}} "target-cpu"="neoverse-n1" "target-features"="+aes,+crc,+dotprod,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs" "tune-cpu"="cortex-a710" }
-// CHECK: attributes #9 = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+sve" "tune-cpu"="cortex-a710" }
-// CHECK: attributes #10 = { {{.*}} "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+sve,+sve2" }
-// CHECK: attributes #11 = { {{.*}} "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,-sve" }
-// CHECK: attributes #12 = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+sve" }
-// CHECK: attributes #13 = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+sve,-sve2" }
-// CHECK: attributes #14 = { {{.*}} "target-features"="+fullfp16" }
-// CHECK: attributes #15 = { {{.*}} "target-cpu"="neoverse-n1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
-// CHECK: attributes #16 = { {{.*}} "branch-target-enforcement"="true" "guarded-control-stack"="true" {{.*}} "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
-// CHECK: attributes #17 = { {{.*}} "target-features"="-neon" }
-// CHECK: attributes #18 = { {{.*}} "target-features"="-v9.3a" }
+// CHECK: attributes #8 = { {{.*}} "target-cpu"="neoverse-n1" "target-features"="+aes,+crc,+dotprod,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+v8.1a,+v8.2a,+v8a" "tune-cpu"="cortex-a710" }
+// CHECK: attributes #9 = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+sve" "tune-cpu"="cortex-a710" }
+// CHECK: attributes #10 = { {{.*}} "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a" }
+// CHECK: attributes #11 = { {{.*}} "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,-sve" }
+// CHECK: attributes #12 = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+sve" }
+// CHECK: attributes #13 = { {{.*}} "target-features"="+fp-armv8,+fullfp16" }
+// CHECK: attributes #14 = { {{.*}} "target-cpu"="neoverse-n1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
+// CHECK: attributes #15 = { {{.*}} "branch-target-enforcement"="true" "guarded-control-stack"="true" {{.*}} "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
+// CHECK-NOT: attributes #16 = {{.*}} "target-features"
+// CHECK: attributes #17 = { {{.*}} "target-features"="-v9.3a" }

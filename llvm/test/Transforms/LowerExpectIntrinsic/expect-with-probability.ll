@@ -284,7 +284,7 @@ define i32 @test10(i64 %t6) {
 
 declare i1 @llvm.expect.with.probability.i1(i1, i1, double) nounwind readnone
 
-; CHECK: !0 = !{!"branch_weights", i32 1717986918, i32 429496731}
-; CHECK: !1 = !{!"branch_weights", i32 429496731, i32 1717986918}
-; CHECK: !2 = !{!"branch_weights", i32 214748366, i32 214748366, i32 1717986918}
-; CHECK: !3 = !{!"branch_weights", i32 1717986918, i32 214748366, i32 214748366}
+; CHECK: !0 = !{!"branch_weights", !"expected", i32 1717986918, i32 429496731}
+; CHECK: !1 = !{!"branch_weights", !"expected", i32 429496731, i32 1717986918}
+; CHECK: !2 = !{!"branch_weights", !"expected", i32 214748366, i32 214748366, i32 1717986918}
+; CHECK: !3 = !{!"branch_weights", !"expected", i32 1717986918, i32 214748366, i32 214748366}
