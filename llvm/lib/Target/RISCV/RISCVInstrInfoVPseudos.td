@@ -2194,7 +2194,7 @@ multiclass VPseudoBinaryEmul<VReg RetClass,
                              LMULInfo lmul,
                              LMULInfo emul,
                              string Constraint = "",
-                             int sew = 0> {
+                             int sew> {
   let VLMul = lmul.value, SEW=sew in {
     defvar suffix = !if(sew, "_" # lmul.MX # "_E" # sew, "_" # lmul.MX);
     def suffix # "_" # emul.MX : VPseudoBinaryNoMaskPolicy<RetClass, Op1Class, Op2Class,
@@ -2246,14 +2246,13 @@ multiclass VPseudoBinaryV_VV_RM<LMULInfo m, string Constraint = "", bit Commutab
 }
 
 // Similar to VPseudoBinaryV_VV, but uses MxListF.
-multiclass VPseudoBinaryFV_VV<LMULInfo m, string Constraint = "", int sew = 0> {
-  defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, Constraint, sew>;
+multiclass VPseudoBinaryFV_VV<LMULInfo m, int sew> {
+  defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, "", sew>;
 }
 
-multiclass VPseudoBinaryFV_VV_RM<LMULInfo m, string Constraint = "", int sew = 0> {
+multiclass VPseudoBinaryFV_VV_RM<LMULInfo m, int sew> {
   defm _VV : VPseudoBinaryRoundingMode<m.vrclass, m.vrclass, m.vrclass, m,
-                                       Constraint, sew,
-                                       UsesVXRM=0>;
+                                       "", sew, UsesVXRM=0>;
 }
 
 multiclass VPseudoVGTR_EI16_VV<string Constraint = ""> {
@@ -2295,14 +2294,14 @@ multiclass VPseudoVSLD1_VX<string Constraint = ""> {
   }
 }
 
-multiclass VPseudoBinaryV_VF<LMULInfo m, FPR_Info f, string Constraint = "", int sew = 0> {
+multiclass VPseudoBinaryV_VF<LMULInfo m, FPR_Info f, int sew> {
   defm "_V" # f.FX : VPseudoBinary<m.vrclass, m.vrclass,
-                                   f.fprclass, m, Constraint, sew>;
+                                   f.fprclass, m, "", sew>;
 }
 
-multiclass VPseudoBinaryV_VF_RM<LMULInfo m, FPR_Info f, string Constraint = "", int sew = 0> {
+multiclass VPseudoBinaryV_VF_RM<LMULInfo m, FPR_Info f, int sew> {
   defm "_V" # f.FX : VPseudoBinaryRoundingMode<m.vrclass, m.vrclass,
-                                               f.fprclass, m, Constraint, sew,
+                                               f.fprclass, m, "", sew,
                                                UsesVXRM=0>;
 }
 
@@ -2348,7 +2347,7 @@ multiclass VPseudoBinaryW_VV<LMULInfo m, bit Commutable = 0> {
                            Commutable=Commutable>;
 }
 
-multiclass VPseudoBinaryW_VV_RM<LMULInfo m, int sew = 0> {
+multiclass VPseudoBinaryW_VV_RM<LMULInfo m, int sew> {
   defm _VV : VPseudoBinaryRoundingMode<m.wvrclass, m.vrclass, m.vrclass, m,
                                       "@earlyclobber $rd", sew, UsesVXRM=0,
                                       TargetConstraintType=3>;
@@ -2364,7 +2363,7 @@ multiclass VPseudoBinaryW_VI<Operand ImmType, LMULInfo m> {
                              "@earlyclobber $rd", TargetConstraintType=3>;
 }
 
-multiclass VPseudoBinaryW_VF_RM<LMULInfo m, FPR_Info f, int sew = 0> {
+multiclass VPseudoBinaryW_VF_RM<LMULInfo m, FPR_Info f, int sew> {
   defm "_V" # f.FX : VPseudoBinaryRoundingMode<m.wvrclass, m.vrclass,
                                                f.fprclass, m,
                                                "@earlyclobber $rd", sew,
@@ -2379,7 +2378,7 @@ multiclass VPseudoBinaryW_WV<LMULInfo m> {
                                "@earlyclobber $rd", TargetConstraintType=3>;
 }
 
-multiclass VPseudoBinaryW_WV_RM<LMULInfo m, int sew = 0> {
+multiclass VPseudoBinaryW_WV_RM<LMULInfo m, int sew> {
   defm _WV : VPseudoBinaryRoundingMode<m.wvrclass, m.wvrclass, m.vrclass, m,
                                        "@earlyclobber $rd", sew, UsesVXRM = 0,
                                        TargetConstraintType = 3>;
@@ -2392,7 +2391,7 @@ multiclass VPseudoBinaryW_WX<LMULInfo m> {
   defm "_WX" : VPseudoBinary<m.wvrclass, m.wvrclass, GPR, m, /*Constraint*/ "", TargetConstraintType=3>;
 }
 
-multiclass VPseudoBinaryW_WF_RM<LMULInfo m, FPR_Info f, int sew = 0> {
+multiclass VPseudoBinaryW_WF_RM<LMULInfo m, FPR_Info f, int sew> {
   defm "_W" # f.FX : VPseudoBinaryRoundingMode<m.wvrclass, m.wvrclass,
                                                f.fprclass, m,
                                                Constraint="",
@@ -2844,14 +2843,14 @@ multiclass VPseudoVDIV_VV_VX {
 multiclass VPseudoVFMUL_VV_VF_RM {
   foreach m = MxListF in {
     foreach e = SchedSEWSet<m.MX, isF=1>.val in
-      defm "" : VPseudoBinaryFV_VV_RM<m, "", sew=e>,
+      defm "" : VPseudoBinaryFV_VV_RM<m, e>,
                 SchedBinary<"WriteVFMulV", "ReadVFMulV", "ReadVFMulV", m.MX, e,
                             forceMergeOpRead=true>;
   }
 
   foreach f = FPList in {
     foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF_RM<m, f, "", sew=f.SEW>,
+      defm "" : VPseudoBinaryV_VF_RM<m, f, f.SEW>,
                 SchedBinary<"WriteVFMulF", "ReadVFMulV", "ReadVFMulF", m.MX,
                             f.SEW, forceMergeOpRead=true>;
     }
@@ -2863,7 +2862,7 @@ multiclass VPseudoVFDIV_VV_VF_RM {
     defvar mx = m.MX;
     defvar sews = SchedSEWSet<mx, isF=1>.val;
     foreach e = sews in {
-      defm "" : VPseudoBinaryFV_VV_RM<m, "", e>,
+      defm "" : VPseudoBinaryFV_VV_RM<m, e>,
                 SchedBinary<"WriteVFDivV", "ReadVFDivV", "ReadVFDivV", mx, e,
                             forceMergeOpRead=true>;
     }
@@ -2871,7 +2870,7 @@ multiclass VPseudoVFDIV_VV_VF_RM {
 
   foreach f = FPList in {
     foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF_RM<m, f, "", f.SEW>,
+      defm "" : VPseudoBinaryV_VF_RM<m, f, f.SEW>,
                 SchedBinary<"WriteVFDivF", "ReadVFDivV", "ReadVFDivF", m.MX, f.SEW,
                             forceMergeOpRead=true>;
     }
@@ -2881,7 +2880,7 @@ multiclass VPseudoVFDIV_VV_VF_RM {
 multiclass VPseudoVFRDIV_VF_RM {
   foreach f = FPList in {
     foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF_RM<m, f, "", f.SEW>,
+      defm "" : VPseudoBinaryV_VF_RM<m, f, f.SEW>,
                 SchedBinary<"WriteVFDivF", "ReadVFDivV", "ReadVFDivF", m.MX, f.SEW,
                             forceMergeOpRead=true>;
     }
@@ -2936,14 +2935,14 @@ multiclass VPseudoVMAX_VV_VF {
 multiclass VPseudoVALU_VV_VF_RM {
   foreach m = MxListF in {
     foreach e = SchedSEWSet<m.MX, isF=1>.val in
-      defm "" : VPseudoBinaryFV_VV_RM<m, "", sew=e>,
+      defm "" : VPseudoBinaryFV_VV_RM<m, e>,
                 SchedBinary<"WriteVFALUV", "ReadVFALUV", "ReadVFALUV", m.MX, e,
                             forceMergeOpRead=true>;
   }
 
   foreach f = FPList in {
     foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF_RM<m, f, "", sew=f.SEW>,
+      defm "" : VPseudoBinaryV_VF_RM<m, f, f.SEW>,
                 SchedBinary<"WriteVFALUF", "ReadVFALUV", "ReadVFALUF", m.MX,
                             f.SEW, forceMergeOpRead=true>;
     }
@@ -2953,7 +2952,7 @@ multiclass VPseudoVALU_VV_VF_RM {
 multiclass VPseudoVALU_VF_RM {
   foreach f = FPList in {
     foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF_RM<m, f, "", sew=f.SEW>,
+      defm "" : VPseudoBinaryV_VF_RM<m, f, f.SEW>,
                 SchedBinary<"WriteVFALUF", "ReadVFALUV", "ReadVFALUF", m.MX,
                             f.SEW, forceMergeOpRead=true>;
     }
@@ -3246,8 +3245,8 @@ multiclass VPseudoTernaryWithPolicyRoundingMode<VReg RetClass,
                                                 RegisterClass Op1Class,
                                                 DAGOperand Op2Class,
                                                 LMULInfo MInfo,
-                                                string Constraint = "",
-                                                int sew = 0,
+                                                string Constraint,
+                                                int sew,
                                                 bit Commutable = 0,
                                                 int TargetConstraintType = 1> {
   let VLMul = MInfo.value in {
@@ -3271,7 +3270,7 @@ multiclass VPseudoTernaryV_VV_AAXA<LMULInfo m, string Constraint = ""> {
                                       Constraint, Commutable=1>;
 }
 
-multiclass VPseudoTernaryV_VV_AAXA_RM<LMULInfo m, string Constraint = "", int sew = 0> {
+multiclass VPseudoTernaryV_VV_AAXA_RM<LMULInfo m, string Constraint, int sew> {
   defm _VV : VPseudoTernaryWithPolicyRoundingMode<m.vrclass, m.vrclass, m.vrclass, m,
                                                   Constraint, sew, Commutable=1>;
 }
@@ -3282,7 +3281,7 @@ multiclass VPseudoTernaryV_VX_AAXA<LMULInfo m, string Constraint = ""> {
 }
 
 multiclass VPseudoTernaryV_VF_AAXA_RM<LMULInfo m, FPR_Info f,
-                                      string Constraint = "", int sew = 0> {
+                                      string Constraint, int sew> {
   defm "_V" # f.FX : VPseudoTernaryWithPolicyRoundingMode<m.vrclass, f.fprclass,
                                                           m.vrclass, m, Constraint,
                                                           sew, Commutable=1>;
@@ -3294,7 +3293,7 @@ multiclass VPseudoTernaryW_VV<LMULInfo m, bit Commutable = 0> {
                                       constraint, Commutable=Commutable, TargetConstraintType=3>;
 }
 
-multiclass VPseudoTernaryW_VV_RM<LMULInfo m, int sew = 0> {
+multiclass VPseudoTernaryW_VV_RM<LMULInfo m, int sew> {
   defvar constraint = "@earlyclobber $rd";
   defm _VV : VPseudoTernaryWithPolicyRoundingMode<m.wvrclass, m.vrclass, m.vrclass, m,
                                                   constraint, sew, /* Commutable */ 0,
@@ -3307,7 +3306,7 @@ multiclass VPseudoTernaryW_VX<LMULInfo m> {
                                         constraint, /*Commutable*/ 0, TargetConstraintType=3>;
 }
 
-multiclass VPseudoTernaryW_VF_RM<LMULInfo m, FPR_Info f, int sew = 0> {
+multiclass VPseudoTernaryW_VF_RM<LMULInfo m, FPR_Info f, int sew> {
   defvar constraint = "@earlyclobber $rd";
   defm "_V" # f.FX : VPseudoTernaryWithPolicyRoundingMode<m.wvrclass, f.fprclass,
                                                           m.vrclass, m, constraint,
