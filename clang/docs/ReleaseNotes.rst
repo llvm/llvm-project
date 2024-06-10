@@ -949,6 +949,11 @@ RISC-V Support
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 - Profile names in ``-march`` option are now supported.
+- ``-m[no-]scalar-strict-align`` and ``-m[no-]vector-strict-align`` options have
+  been added to give separate control of whether scalar or vector misaligned
+  accesses may be created.
+- ``-mi[no-]strict-align`` is now an alias of ``-m[no-]scalar-strict-align`` and
+  only affects scalar memory accesses.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
