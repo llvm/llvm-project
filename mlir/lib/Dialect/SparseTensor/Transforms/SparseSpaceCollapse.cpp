@@ -14,11 +14,14 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 
 namespace mlir {
-
 #define GEN_PASS_DEF_SPARSESPACECOLLAPSE
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
+} // namespace mlir
 
-namespace sparse_tensor {
+using namespace mlir;
+using namespace sparse_tensor;
+
+namespace {
 
 struct CollapseSpaceInfo {
   ExtractIterSpaceOp space;
@@ -174,10 +177,8 @@ struct SparseSpaceCollapsePass
   }
 };
 
-} // namespace sparse_tensor
+} // namespace
 
-std::unique_ptr<Pass> createSparseSpaceCollapsePass() {
-  return std::make_unique<sparse_tensor::SparseSpaceCollapsePass>();
+std::unique_ptr<Pass> mlir::createSparseSpaceCollapsePass() {
+  return std::make_unique<SparseSpaceCollapsePass>();
 }
-
-} // namespace mlir
