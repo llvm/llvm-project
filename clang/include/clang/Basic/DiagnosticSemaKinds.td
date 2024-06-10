@@ -607,6 +607,8 @@ def note_using_decl_class_member_workaround : Note<
   "a const variable|a constexpr variable}0 instead">;
 def err_using_decl_can_not_refer_to_namespace : Error<
   "using declaration cannot refer to a namespace">;
+def note_namespace_using_decl : Note<
+  "did you mean 'using namespace'?">;
 def warn_cxx17_compat_using_decl_scoped_enumerator: Warning<
   "using declaration naming a scoped enumerator is incompatible with "
   "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
@@ -6088,9 +6090,9 @@ def err_redefinition_different_concept : Error<
   "redefinition of concept %0 with different template parameters or requirements">;
 def err_tag_reference_non_tag : Error<
   "%select{non-struct type|non-class type|non-union type|non-enum "
-  "type|typedef|type alias|template|type alias template|template "
-  "template argument}1 %0 cannot be referenced with a "
-  "%select{struct|interface|union|class|enum}2 specifier">;
+  "type|typedef|type alias|template|alias template|template "
+  "template argument}1 %0 cannot be referenced with the '"
+  "%select{struct|interface|union|class|enum}2' specifier">;
 def err_tag_reference_conflict : Error<
   "implicit declaration introduced by elaborated type conflicts with a "
   "%select{non-struct type|non-class type|non-union type|non-enum "
@@ -10082,6 +10084,12 @@ def warn_new_dangling_initializer_list : Warning<
   "the allocated initializer list}0 "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
+def warn_unsupported_lifetime_extension : Warning<
+  "lifetime extension of "
+  "%select{temporary|backing array of initializer list}0 created "
+  "by aggregate initialization using a default member initializer "
+  "is not yet supported; lifetime of %select{temporary|backing array}0 "
+  "will end at the end of the full-expression">, InGroup<Dangling>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.

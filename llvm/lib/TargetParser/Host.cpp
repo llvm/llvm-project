@@ -213,6 +213,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd23", "cortex-m85")
         .Case("0xc18", "cortex-r8")
         .Case("0xd13", "cortex-r52")
+        .Case("0xd16", "cortex-r52plus")
         .Case("0xd15", "cortex-r82")
         .Case("0xd14", "cortex-r82ae")
         .Case("0xd02", "cortex-a34")
@@ -302,6 +303,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0x805", "cortex-a76") // Kryo 4xx/5xx Silver
         .Case("0xc00", "falkor")
         .Case("0xc01", "saphira")
+        .Case("0x001", "oryon-1")
         .Default("generic");
   if (Implementer == "0x53") { // Samsung Electronics Co., Ltd.
     // The Exynos chips have a convoluted ID scheme that doesn't seem to follow

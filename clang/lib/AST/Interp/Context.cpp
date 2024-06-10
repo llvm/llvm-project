@@ -163,8 +163,12 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isFloatingType())
     return PT_Float;
 
+  if (T->isSpecificBuiltinType(BuiltinType::BoundMember) ||
+      T->isMemberPointerType())
+    return PT_MemberPtr;
+
   if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
-      T->isFunctionType() || T->isSpecificBuiltinType(BuiltinType::BoundMember))
+      T->isFunctionType())
     return PT_FnPtr;
 
   if (T->isReferenceType() || T->isPointerType() ||
@@ -176,9 +180,6 @@ std::optional<PrimType> Context::classify(QualType T) const {
 
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
-
-  if (const auto *DT = dyn_cast<MemberPointerType>(T))
-    return classify(DT->getPointeeType());
 
   return std::nullopt;
 }
@@ -292,10 +293,12 @@ unsigned Context::collectBaseOffset(const RecordDecl *BaseDecl,
     }
     if (CurDecl == FinalDecl)
       break;
-
-    // break;
   }
 
   assert(OffsetSum > 0);
   return OffsetSum;
+}
+
+const Record *Context::getRecord(const RecordDecl *D) const {
+  return P->getOrCreateRecord(D);
 }

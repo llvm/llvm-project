@@ -340,6 +340,9 @@ Non-comprehensive list of changes in this release
   ``-Winvalid-constexpr`` is not enabled for the function definition, which
   should result in mild compile-time performance improvements.
 
+- Added ``__is_bitwise_cloneable`` which is used to check whether a type
+  can be safely copied by memcpy/memmove.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
@@ -904,6 +907,7 @@ Arm and AArch64 Support
     * Arm Cortex-A520AE (cortex-a520ae).
     * Arm Cortex-A720AE (cortex-a720ae).
     * Arm Cortex-R82AE (cortex-r82ae).
+    * Arm Cortex-R52+ (cortex-r52plus).
     * Arm Neoverse-N3 (neoverse-n3).
     * Arm Neoverse-V3 (neoverse-v3).
     * Arm Neoverse-V3AE (neoverse-v3ae).

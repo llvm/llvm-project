@@ -310,7 +310,7 @@ def ACC_Declare : Directive<"declare"> {
     VersionedClause<ACCC_Link>
   ];
   let association = AS_None;
-  let category = CA_Executable;
+  let category = CA_Declarative;
 }
 
 // 2.5.3
