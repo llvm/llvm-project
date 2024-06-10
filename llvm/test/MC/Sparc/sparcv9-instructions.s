@@ -7,6 +7,16 @@
         addc %g2, %g1, %g3
 
         ! V8:      error: invalid instruction mnemonic
+        ! V8-NEXT: addc %g2, 1, %g3
+        ! V9:      addx %g2, 1, %g3              ! encoding: [0x86,0x40,0xa0,0x01]
+        addc %g2, 1, %g3
+
+        ! V8:      error: invalid instruction mnemonic
+        ! V8-NEXT: addc 1, %g2, %g3
+        ! V9:      addx %g2, 1, %g3              ! encoding: [0x86,0x40,0xa0,0x01]
+        addc 1, %g2, %g3
+
+        ! V8:      error: invalid instruction mnemonic
         ! V8-NEXT: addccc %g1, %g2, %g3
         ! V9:      addxcc %g1, %g2, %g3            ! encoding: [0x86,0xc0,0x40,0x02]
         addccc %g1, %g2, %g3
