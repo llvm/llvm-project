@@ -4355,7 +4355,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
     TheModule->IsNewDbgInfoFormat =
         UseNewDbgInfoFormat &&
-        LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_TRUE;
+        LoadBitcodeIntoNewDbgInfoFormat != cl::boolOrDefault::BOU_FALSE;
   }
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);

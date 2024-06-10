@@ -1083,18 +1083,6 @@ def int_amdgcn_make_buffer_rsrc : DefaultAttrsIntrinsic <
 
 defset list<AMDGPURsrcIntrinsic> AMDGPUBufferIntrinsics = {
 
-class AMDGPUBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
-  [data_ty],
-  [llvm_v4i32_ty,     // rsrc(SGPR)
-   llvm_i32_ty,       // vindex(VGPR)
-   llvm_i32_ty,       // offset(SGPR/VGPR/imm)
-   llvm_i1_ty,        // glc(imm)
-   llvm_i1_ty],       // slc(imm)
-  [IntrReadMem, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>], "", [SDNPMemOperand]>,
-  AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_buffer_load_format : AMDGPUBufferLoad<llvm_anyfloat_ty>;
-def int_amdgcn_buffer_load : AMDGPUBufferLoad;
-
 // Generate a buffer_load instruction that may be optimized to s_buffer_load if
 // the offset argument is uniform.
 def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
@@ -1111,25 +1099,12 @@ def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
   [IntrNoMem, ImmArg<ArgIndex<2>>]>,
   AMDGPURsrcIntrinsic<0>;
 
-class AMDGPUBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
-  [],
-  [data_ty,          // vdata(VGPR)
-   llvm_v4i32_ty,     // rsrc(SGPR)
-   llvm_i32_ty,       // vindex(VGPR)
-   llvm_i32_ty,       // offset(SGPR/VGPR/imm)
-   llvm_i1_ty,        // glc(imm)
-   llvm_i1_ty],       // slc(imm)
-  [IntrWriteMem, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>], "", [SDNPMemOperand]>,
-  AMDGPURsrcIntrinsic<1>;
-def int_amdgcn_buffer_store_format : AMDGPUBufferStore<llvm_anyfloat_ty>;
-def int_amdgcn_buffer_store : AMDGPUBufferStore;
-
-// New buffer intrinsics with separate raw and struct variants.  The raw
+// Buffer intrinsics with separate raw and struct variants.  The raw
 // variant never has an index. The struct variant always has an index, even if
 // it is const 0. A struct intrinsic with constant 0 index is different to the
 // corresponding raw intrinsic on gfx9+ because the behavior of bound checking
 // and swizzling changes depending on whether idxen is set in the instruction.
-// These new instrinsics also keep the offset and soffset arguments separate as
+// These instrinsics also keep the offset and soffset arguments separate as
 // they behave differently in bounds checking and swizzling.
 
 // The versions of these intrinsics that take <4 x i32> arguments are deprecated
@@ -1489,41 +1464,7 @@ def int_amdgcn_struct_buffer_atomic_fmax : AMDGPUStructBufferAtomic<llvm_anyfloa
 def int_amdgcn_struct_ptr_buffer_atomic_fmin : AMDGPUStructPtrBufferAtomic<llvm_anyfloat_ty>;
 def int_amdgcn_struct_ptr_buffer_atomic_fmax : AMDGPUStructPtrBufferAtomic<llvm_anyfloat_ty>;
 
-// Obsolescent tbuffer intrinsics.
-def int_amdgcn_tbuffer_load : DefaultAttrsIntrinsic <
-    [llvm_any_ty],    // overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
-    [llvm_v4i32_ty,   // rsrc(SGPR)
-     llvm_i32_ty,     // vindex(VGPR)
-     llvm_i32_ty,     // voffset(VGPR)
-     llvm_i32_ty,     // soffset(SGPR)
-     llvm_i32_ty,     // offset(imm)
-     llvm_i32_ty,     // dfmt(imm)
-     llvm_i32_ty,     // nfmt(imm)
-     llvm_i1_ty,     // glc(imm)
-     llvm_i1_ty],    // slc(imm)
-    [IntrReadMem,
-     ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>,
-     ImmArg<ArgIndex<7>>, ImmArg<ArgIndex<8>>], "", [SDNPMemOperand]>,
-  AMDGPURsrcIntrinsic<0>;
-
-def int_amdgcn_tbuffer_store : DefaultAttrsIntrinsic <
-    [],
-    [llvm_any_ty,    // vdata(VGPR), overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
-     llvm_v4i32_ty,  // rsrc(SGPR)
-     llvm_i32_ty,    // vindex(VGPR)
-     llvm_i32_ty,    // voffset(VGPR)
-     llvm_i32_ty,    // soffset(SGPR)
-     llvm_i32_ty,    // offset(imm)
-     llvm_i32_ty,    // dfmt(imm)
-     llvm_i32_ty,    // nfmt(imm)
-     llvm_i1_ty,     // glc(imm)
-     llvm_i1_ty],    // slc(imm)
-    [IntrWriteMem, ImmArg<ArgIndex<5>>,
-     ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>,
-     ImmArg<ArgIndex<8>>, ImmArg<ArgIndex<9>>], "", [SDNPMemOperand]>,
-  AMDGPURsrcIntrinsic<1>;
-
-// New tbuffer intrinsics, with:
+// tbuffer intrinsics, with:
 // - raw and struct variants
 // - joint format field
 // - joint cachepolicy field
@@ -1669,51 +1610,6 @@ def int_amdgcn_struct_tbuffer_store : DefaultAttrsIntrinsic <
     [IntrWriteMem,
      ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
-
-class AMDGPUBufferAtomic : Intrinsic <
-  [llvm_anyint_ty],
-  [LLVMMatchType<0>,       // vdata(VGPR)
-   llvm_v4i32_ty,     // rsrc(SGPR)
-   llvm_i32_ty,       // vindex(VGPR)
-   llvm_i32_ty,       // offset(SGPR/VGPR/imm)
-   llvm_i1_ty],       // slc(imm)
-  [ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
-  AMDGPURsrcIntrinsic<1, 0>;
-def int_amdgcn_buffer_atomic_swap : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_add : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_sub : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_smin : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_umin : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_smax : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_umax : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_and : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_or : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_xor : AMDGPUBufferAtomic;
-def int_amdgcn_buffer_atomic_cmpswap : Intrinsic<
-  [llvm_i32_ty],
-  [llvm_i32_ty,       // src(VGPR)
-   llvm_i32_ty,       // cmp(VGPR)
-   llvm_v4i32_ty,     // rsrc(SGPR)
-   llvm_i32_ty,       // vindex(VGPR)
-   llvm_i32_ty,       // offset(SGPR/VGPR/imm)
-   llvm_i1_ty],       // slc(imm)
-  [ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
-  AMDGPURsrcIntrinsic<2, 0>;
-
-def int_amdgcn_buffer_atomic_csub : AMDGPUBufferAtomic;
-
-class AMDGPUBufferAtomicFP : Intrinsic <
-  [llvm_anyfloat_ty],
-  [LLVMMatchType<0>, // vdata(VGPR)
-   llvm_v4i32_ty,    // rsrc(SGPR)
-   llvm_i32_ty,      // vindex(VGPR)
-   llvm_i32_ty,      // offset(SGPR/VGPR/imm)
-   llvm_i1_ty],      // slc(imm)
-  [ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
-  AMDGPURsrcIntrinsic<1, 0>;
-
-// Legacy form of the intrinsic. raw and struct forms should be preferred.
-def int_amdgcn_buffer_atomic_fadd : AMDGPUBufferAtomicFP;
 
 class AMDGPURawBufferLoadLDS : Intrinsic <
   [],
