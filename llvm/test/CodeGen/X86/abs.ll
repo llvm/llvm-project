@@ -718,17 +718,18 @@ define i8 @test_minsigned_i8(i8 %a0, i8 %a1) nounwind {
 ; X64-NEXT:    movl %edi, %ecx
 ; X64-NEXT:    xorb %al, %cl
 ; X64-NEXT:    subb %al, %cl
-; X64-NEXT:    cmpb $-128, %dil
+; X64-NEXT:    negb %dil
 ; X64-NEXT:    movzbl %cl, %eax
-; X64-NEXT:    cmovel %esi, %eax
+; X64-NEXT:    cmovol %esi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_minsigned_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpb $-128, %al
-; X86-NEXT:    jne .LBB17_1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    negb %cl
+; X86-NEXT:    jno .LBB17_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
@@ -750,12 +751,10 @@ define i8 @test_minsigned_i8(i8 %a0, i8 %a1) nounwind {
 define i16 @test_minsigned_i16(i16 %a0, i16 %a1) nounwind {
 ; X64-LABEL: test_minsigned_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl %di, %ecx
-; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    negw %ax
-; X64-NEXT:    cmovsw %cx, %ax
-; X64-NEXT:    cmpl $32768, %ecx # imm = 0x8000
-; X64-NEXT:    cmovel %esi, %eax
+; X64-NEXT:    cmovsw %di, %ax
+; X64-NEXT:    cmovol %esi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
@@ -765,11 +764,7 @@ define i16 @test_minsigned_i16(i16 %a0, i16 %a1) nounwind {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negw %ax
 ; X86-NEXT:    cmovsw %cx, %ax
-; X86-NEXT:    cmpl $32768, %ecx # imm = 0x8000
-; X86-NEXT:    jne .LBB18_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:  .LBB18_2:
+; X86-NEXT:    cmovow {{[0-9]+}}(%esp), %ax
 ; X86-NEXT:    retl
   %lim = icmp eq i16 %a0, -32768
   %abs = tail call i16 @llvm.abs.i16(i16 %a0, i1 false)
@@ -783,8 +778,7 @@ define i32 @test_minsigned_i32(i32 %a0, i32 %a1) nounwind {
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    cmovsl %edi, %eax
-; X64-NEXT:    cmpl $-2147483648, %edi # imm = 0x80000000
-; X64-NEXT:    cmovel %esi, %eax
+; X64-NEXT:    cmovol %esi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_minsigned_i32:
@@ -793,11 +787,7 @@ define i32 @test_minsigned_i32(i32 %a0, i32 %a1) nounwind {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
 ; X86-NEXT:    cmovsl %ecx, %eax
-; X86-NEXT:    cmpl $-2147483648, %ecx # imm = 0x80000000
-; X86-NEXT:    jne .LBB19_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:  .LBB19_2:
+; X86-NEXT:    cmovol {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
   %lim = icmp eq i32 %a0, -2147483648
   %abs = tail call i32 @llvm.abs.i32(i32 %a0, i1 false)
@@ -811,9 +801,7 @@ define i64 @test_minsigned_i64(i64 %a0, i64 %a1) nounwind {
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    negq %rax
 ; X64-NEXT:    cmovsq %rdi, %rax
-; X64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; X64-NEXT:    cmpq %rcx, %rdi
-; X64-NEXT:    cmoveq %rsi, %rax
+; X64-NEXT:    cmovoq %rsi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_minsigned_i64:
