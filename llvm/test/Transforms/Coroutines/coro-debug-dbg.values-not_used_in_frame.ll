@@ -5,8 +5,8 @@
 ; This file is based on coro-debug-frame-variable.ll.
 ; CHECK:  define internal fastcc void @f.resume(ptr noundef nonnull align 16 dereferenceable(80) %begin) !dbg ![[RESUME_FN_DBG_NUM:[0-9]+]]
 ; CHECK:       await.ready:
-; CHECK:         call void @llvm.dbg.value(metadata i32 poison, metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression(
-; CHECK:         call void @llvm.dbg.value(metadata i32 poison, metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression(
+; CHECK:         #dbg_value(i32 poison, ![[IVAR_RESUME:[0-9]+]], !DIExpression(
+; CHECK:         #dbg_value(i32 poison, ![[JVAR_RESUME:[0-9]+]], !DIExpression(
 ;
 ; CHECK: ![[RESUME_FN_DBG_NUM]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov"
 ; CHECK: ![[IVAR_RESUME]] = !DILocalVariable(name: "i"
