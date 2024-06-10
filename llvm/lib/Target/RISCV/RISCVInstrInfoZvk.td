@@ -247,23 +247,23 @@ class VPseudoTernaryNoMask_Zvk<VReg RetClass,
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-multiclass VPseudoBinaryNoMaskTU_Zvk<VReg RetClass,
-                                     VReg Op1Class,
-                                     DAGOperand Op2Class,
-                                     LMULInfo MInfo,
-                                     string Constraint = "",
-                                     int sew = 0> {
+multiclass VPseudoBinaryNoMaskPolicy_Zvk<VReg RetClass,
+                                         VReg Op1Class,
+                                         DAGOperand Op2Class,
+                                         LMULInfo MInfo,
+                                         string Constraint = "",
+                                         int sew = 0> {
   let VLMul = MInfo.value, SEW=sew in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
-    def suffix : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
-                                       Constraint>;
+    def suffix : VPseudoBinaryNoMaskPolicy<RetClass, Op1Class, Op2Class,
+                                           Constraint>;
   }
 }
 
 multiclass VPseudoTernaryNoMask_Zvk<VReg RetClass,
-                                   VReg Op1Class,
-                                   DAGOperand Op2Class,
-                                   LMULInfo MInfo> {
+                                    VReg Op1Class,
+                                    DAGOperand Op2Class,
+                                    LMULInfo MInfo> {
   let VLMul = MInfo.value in
     def "_" # MInfo.MX : VPseudoTernaryNoMask_Zvk<RetClass, Op1Class, Op2Class>;
 }
@@ -349,7 +349,7 @@ multiclass VPseudoVSHA2MS {
 multiclass VPseudoVAESKF1 {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
-    defm _VI : VPseudoBinaryNoMaskTU_Zvk<m.vrclass, m.vrclass, uimm5, m>,
+    defm _VI : VPseudoBinaryNoMaskPolicy_Zvk<m.vrclass, m.vrclass, uimm5, m>,
                SchedBinary<"WriteVAESKF1V", "ReadVAESKF1V", "ReadVAESKF1V", mx,
                            forceMergeOpRead=true>;
   }
@@ -384,7 +384,7 @@ multiclass VPseudoVSM3C {
 multiclass VPseudoVSM4K {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
-    defm _VI : VPseudoBinaryNoMaskTU_Zvk<m.vrclass, m.vrclass, uimm5, m>,
+    defm _VI : VPseudoBinaryNoMaskPolicy_Zvk<m.vrclass, m.vrclass, uimm5, m>,
                SchedBinary<"WriteVSM4KV", "ReadVSM4KV", "ReadVSM4KV", mx,
                            forceMergeOpRead=true>;
   }
@@ -393,7 +393,7 @@ multiclass VPseudoVSM4K {
 multiclass VPseudoVSM3ME {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
-    defm _VV : VPseudoBinaryNoMaskTU_Zvk<m.vrclass, m.vrclass, m.vrclass, m>,
+    defm _VV : VPseudoBinaryNoMaskPolicy_Zvk<m.vrclass, m.vrclass, m.vrclass, m>,
                SchedBinary<"WriteVSM3MEV", "ReadVSM3MEV", "ReadVSM3MEV", mx,
                            forceMergeOpRead=true>;
   }
