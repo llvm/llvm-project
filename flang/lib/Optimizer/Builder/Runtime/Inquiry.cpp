@@ -87,3 +87,17 @@ mlir::Value fir::runtime::genIsContiguous(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(builder, loc, fTy, array);
   return builder.create<fir::CallOp>(loc, isContiguousFunc, args).getResult(0);
 }
+
+void fir::runtime::genShape(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value resultAddr, mlir::Value array,
+                            mlir::Value kind) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(Shape)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  auto args = fir::runtime::createArguments(
+      builder, loc, fTy, resultAddr, array, kind, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}

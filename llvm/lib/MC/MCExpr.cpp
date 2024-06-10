@@ -645,10 +645,6 @@ static void AttemptToFoldSymbolOffsetDifference(
       Addend += SA.getOffset() - SB.getOffset();
       return FinalizeFolding();
     }
-    // One of the symbol involved is part of a fragment being laid out. Quit now
-    // to avoid a self loop.
-    if (!Layout->canGetFragmentOffset(FA) || !Layout->canGetFragmentOffset(FB))
-      return;
 
     // Eagerly evaluate when layout is finalized.
     Addend += Layout->getSymbolOffset(A->getSymbol()) -

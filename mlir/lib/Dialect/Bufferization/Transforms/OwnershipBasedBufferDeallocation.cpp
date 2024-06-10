@@ -822,10 +822,11 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
 
   // Lookup the function operation and check if it has private visibility. If
   // the function is referenced by SSA value instead of a Symbol, it's assumed
-  // to be always private.
+  // to be public. (And we cannot easily change the type of the SSA value
+  // anyway.)
   Operation *funcOp = op.resolveCallable(state.getSymbolTable());
-  bool isPrivate = true;
-  if (auto symbol = dyn_cast<SymbolOpInterface>(funcOp))
+  bool isPrivate = false;
+  if (auto symbol = dyn_cast_or_null<SymbolOpInterface>(funcOp))
     isPrivate = symbol.isPrivate() && !symbol.isDeclaration();
 
   // If the private-function-dynamic-ownership option is enabled and we are

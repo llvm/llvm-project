@@ -91,11 +91,13 @@ static Error initializeReader(InstrProfReader &Reader) {
 /// associated endian format to read the binary ids correctly.
 static Error
 readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
-                      const uint64_t BinaryIdsSize,
-                      const uint8_t *BinaryIdsStart,
+                      ArrayRef<uint8_t> BinaryIdsBuffer,
                       std::vector<llvm::object::BuildID> &BinaryIds,
                       const llvm::endianness Endian) {
   using namespace support;
+
+  const uint64_t BinaryIdsSize = BinaryIdsBuffer.size();
+  const uint8_t *BinaryIdsStart = BinaryIdsBuffer.data();
 
   if (BinaryIdsSize == 0)
     return Error::success();
@@ -584,10 +586,10 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
   if (BinaryIdSize % sizeof(uint64_t) || BinaryIdEnd > BufferEnd)
     return error(instrprof_error::bad_header);
-  if (BinaryIdSize != 0) {
-    if (Error Err =
-            readBinaryIdsInternal(*DataBuffer, BinaryIdSize, BinaryIdStart,
-                                  BinaryIds, getDataEndianness()))
+  ArrayRef<uint8_t> BinaryIdsBuffer(BinaryIdStart, BinaryIdSize);
+  if (!BinaryIdsBuffer.empty()) {
+    if (Error Err = readBinaryIdsInternal(*DataBuffer, BinaryIdsBuffer,
+                                          BinaryIds, getDataEndianness()))
       return Err;
   }
 
@@ -1383,13 +1385,13 @@ Error IndexedInstrProfReader::readHeader() {
   if (Header->getIndexedProfileVersion() >= 9) {
     const unsigned char *Ptr = Start + Header->BinaryIdOffset;
     // Read binary ids size.
-    BinaryIdsSize =
+    uint64_t BinaryIdsSize =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     if (BinaryIdsSize % sizeof(uint64_t))
       return error(instrprof_error::bad_header);
     // Set the binary ids start.
-    BinaryIdsStart = Ptr;
-    if (BinaryIdsStart > (const unsigned char *)DataBuffer->getBufferEnd())
+    BinaryIdsBuffer = ArrayRef<uint8_t>(Ptr, BinaryIdsSize);
+    if (Ptr > (const unsigned char *)DataBuffer->getBufferEnd())
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "corrupted binary ids");
   }
@@ -1691,8 +1693,8 @@ Error IndexedInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
 
 Error IndexedInstrProfReader::readBinaryIds(
     std::vector<llvm::object::BuildID> &BinaryIds) {
-  return readBinaryIdsInternal(*DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                               BinaryIds, llvm::endianness::little);
+  return readBinaryIdsInternal(*DataBuffer, BinaryIdsBuffer, BinaryIds,
+                               llvm::endianness::little);
 }
 
 Error IndexedInstrProfReader::printBinaryIds(raw_ostream &OS) {
