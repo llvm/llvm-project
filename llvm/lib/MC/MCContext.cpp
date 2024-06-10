@@ -572,12 +572,12 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
     EntryNewPair = ELFUniquingMap.insert(std::make_pair(UniqueMapKey, nullptr));
   } else if (!Section.isSingleStringRef()) {
     SmallString<128> Buffer;
-    SectionLen = Buffer.size();
     StringRef UniqueMapKey = Section.toStringRef(Buffer);
+    SectionLen = UniqueMapKey.size();
     EntryNewPair = ELFUniquingMap.insert(std::make_pair(UniqueMapKey, nullptr));
   } else {
-    SectionLen = Section.getSingleStringRef().size();
     StringRef UniqueMapKey = Section.getSingleStringRef();
+    SectionLen = UniqueMapKey.size();
     EntryNewPair = ELFUniquingMap.insert(std::make_pair(UniqueMapKey, nullptr));
   }
 
