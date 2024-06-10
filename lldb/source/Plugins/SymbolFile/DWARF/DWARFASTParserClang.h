@@ -23,6 +23,7 @@
 #include "lldb/Core/PluginInterface.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include <optional>
@@ -370,6 +371,20 @@ private:
                          ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseSubroutine(const lldb_private::plugin::dwarf::DWARFDIE &die,
                                const ParsedDWARFTypeAttributes &attrs);
+
+  bool
+  HandleObjCMethod(lldb_private::ObjCLanguage::MethodName const &objc_method,
+                   lldb_private::plugin::dwarf::DWARFDIE const &die,
+                   lldb_private::CompilerType clang_type,
+                   ParsedDWARFTypeAttributes const &attrs, bool is_variadic);
+
+  std::pair<bool, lldb::TypeSP>
+  HandleCXXMethod(lldb_private::plugin::dwarf::DWARFDIE const &die,
+                  lldb_private::CompilerType clang_type,
+                  ParsedDWARFTypeAttributes const &attrs,
+                  lldb_private::plugin::dwarf::DWARFDIE const &decl_ctx_die,
+                  bool is_static, bool &ignore_containing_context);
+
   lldb::TypeSP ParseArrayType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                               const ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP
