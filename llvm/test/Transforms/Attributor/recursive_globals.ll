@@ -1,5 +1,9 @@
 ; RUN: opt < %s -passes=attributor
 
+; Global variables that reference themselves alongside a function that is called indirectly
+; used to cause an infinite loop in the attributor. The recursive reference was continually
+; pushed back into the workload, causing the attributor to hang indefinitely.
+
 @glob1 = global { ptr, ptr } { ptr @glob1, ptr @fnc1 }
 @glob2 = global { ptr, ptr } { ptr @glob3, ptr @fnc2 }
 @glob3 = global { ptr, ptr } { ptr @glob2, ptr @fnc2 }
