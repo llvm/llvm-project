@@ -42,6 +42,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono {
 
+enum class choose { earliest, latest };
+
 class _LIBCPP_AVAILABILITY_TZDB time_zone {
   _LIBCPP_HIDE_FROM_ABI time_zone() = default;
 
@@ -89,6 +91,36 @@ public:
     }
 
     // TODO TZDB The Standard does not specify anything in these cases.
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        __info.result != -1, "cannot convert the local time; it would be before the minimum system clock value");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        __info.result != -2, "cannot convert the local time; it would be after the maximum system clock value");
+
+    return {};
+  }
+
+  template <class _Duration>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI sys_time<common_type_t<_Duration, seconds>>
+  to_sys(const local_time<_Duration>& __time, choose __z) const {
+    local_info __info = get_info(__time);
+    switch (__info.result) {
+    case local_info::unique:
+    case local_info::nonexistent: // first and second are the same
+      return sys_time<common_type_t<_Duration, seconds>>{__time.time_since_epoch() - __info.first.offset};
+
+    case local_info::ambiguous:
+      switch (__z) {
+      case choose::earliest:
+        return sys_time<common_type_t<_Duration, seconds>>{__time.time_since_epoch() - __info.first.offset};
+
+      case choose::latest:
+        return sys_time<common_type_t<_Duration, seconds>>{__time.time_since_epoch() - __info.second.offset};
+
+        // Note a value out of bounds is not specified.
+      }
+    }
+
+    // TODO TZDB The standard does not specify anything in these cases.
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __info.result != -1, "cannot convert the local time; it would be before the minimum system clock value");
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(

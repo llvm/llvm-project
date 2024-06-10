@@ -5992,15 +5992,45 @@ mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
                                    fir::getBase(args[1])));
 }
 
+/// Generate runtime call to inquire about all the bounds/extents of an
+/// assumed-rank array.
+template <typename Func>
+static fir::ExtendedValue genAssumedRankBoundInquiry(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type resultType,
+    llvm::ArrayRef<fir::ExtendedValue> args, int kindPos, Func genRtCall) {
+  const fir::ExtendedValue &array = args[0];
+  // Allocate an array with the maximum rank, that is big enough to hold the
+  // result but still "small" (15 elements). Static size alloca make stack
+  // analysis/manipulation easier.
+  mlir::Type resultElementType = fir::unwrapSequenceType(resultType);
+  mlir::Type allocSeqType =
+      fir::SequenceType::get({Fortran::common::maxRank}, resultElementType);
+  mlir::Value resultStorage = builder.createTemporary(loc, allocSeqType);
+  mlir::Value arrayBox = builder.createBox(loc, array);
+  mlir::Value kind = isStaticallyAbsent(args, kindPos)
+                         ? builder.createIntegerConstant(
+                               loc, builder.getI32Type(),
+                               builder.getKindMap().defaultIntegerKind())
+                         : fir::getBase(args[kindPos]);
+  genRtCall(builder, loc, resultStorage, arrayBox, kind);
+  mlir::Type baseType =
+      fir::ReferenceType::get(builder.getVarLenSeqTy(resultElementType));
+  mlir::Value resultBase = builder.createConvert(loc, baseType, resultStorage);
+  mlir::Value rank =
+      builder.create<fir::BoxRankOp>(loc, builder.getIndexType(), arrayBox);
+  return fir::ArrayBoxValue{resultBase, {rank}};
+}
+
 // SHAPE
 fir::ExtendedValue
 IntrinsicLibrary::genShape(mlir::Type resultType,
                            llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() >= 1);
   const fir::ExtendedValue &array = args[0];
+  if (array.hasAssumedRank())
+    return genAssumedRankBoundInquiry(builder, loc, resultType, args,
+                                      /*kindPos=*/1, fir::runtime::genShape);
   int rank = array.rank();
-  if (rank == 0)
-    TODO(loc, "shape intrinsic lowering with assumed-rank source");
   mlir::Type indexType = builder.getIndexType();
   mlir::Type extentType = fir::unwrapSequenceType(resultType);
   mlir::Type seqType = fir::SequenceType::get(
