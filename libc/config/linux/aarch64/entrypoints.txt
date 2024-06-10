@@ -526,7 +526,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.logbf16
     libc.src.math.lrintf16
     libc.src.math.lroundf16
-    libc.src.math.modff16
+    # libc.src.math.modff16
     libc.src.math.nanf16
     libc.src.math.nearbyintf16
     libc.src.math.nextafterf16
