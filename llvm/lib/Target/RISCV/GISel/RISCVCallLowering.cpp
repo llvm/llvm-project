@@ -107,7 +107,7 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     if ((VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
         ((VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::i64) &&
          VA.getValVT() == MVT::f16)) {
-      LLT DstTy = LLT::scalar(VA.getLocVT().getScalarSizeInBits());
+      LLT DstTy = LLT::scalar(VA.getLocVT().getSizeInBits());
       ValVReg = MIRBuilder.buildAnyExt(DstTy, ValVReg).getReg(0);
     }
 
