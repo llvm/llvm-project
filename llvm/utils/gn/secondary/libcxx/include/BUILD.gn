@@ -347,6 +347,7 @@ if (current_toolchain == default_toolchain) {
       "__chrono/year_month.h",
       "__chrono/year_month_day.h",
       "__chrono/year_month_weekday.h",
+      "__chrono/zoned_time.h",
       "__compare/common_comparison_category.h",
       "__compare/compare_partial_order_fallback.h",
       "__compare/compare_strong_order_fallback.h",
