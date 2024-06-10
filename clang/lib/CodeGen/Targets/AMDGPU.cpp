@@ -49,8 +49,8 @@ public:
                                   unsigned &NumRegsLeft) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                   QualType Ty) const override;
 };
 
 bool AMDGPUABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
@@ -118,8 +118,8 @@ void AMDGPUABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 }
 
-Address AMDGPUABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                 QualType Ty) const {
+RValue AMDGPUABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                QualType Ty) const {
   const bool IsIndirect = false;
   const bool AllowHigherAlign = false;
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,

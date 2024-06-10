@@ -4217,6 +4217,9 @@ public:
   RValue EmitLoadOfBitfieldLValue(LValue LV, SourceLocation Loc);
   RValue EmitLoadOfGlobalRegLValue(LValue LV);
 
+  /// Like EmitLoadOfLValue but also handles complex and aggregate types.
+  RValue EmitLoadOfAnyValue(LValue V, SourceLocation Loc = {});
+
   /// EmitStoreThroughLValue - Store the specified rvalue into the specified
   /// lvalue, where both are guaranteed to the have the same type, and that type
   /// is 'Ty'.
@@ -4776,6 +4779,13 @@ public:
   /// EmitAggExprToLValue - Emit the computation of the specified expression of
   /// aggregate type into a temporary LValue.
   LValue EmitAggExprToLValue(const Expr *E);
+
+  enum ExprValueKind { EVK_RValue, EVK_NonRValue };
+
+  /// EmitAggFinalDestCopy - Emit copy of the specified aggregate into
+  /// destination address.
+  void EmitAggFinalDestCopy(QualType Type, AggValueSlot Dest, const LValue &Src,
+                            ExprValueKind SrcKind);
 
   /// Build all the stores needed to initialize an aggregate at Dest with the
   /// value Val.

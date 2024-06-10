@@ -41,8 +41,8 @@ private:
       Arg.info = classifyArgumentType(Arg.type);
   }
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                   QualType Ty) const override;
 };
 
 class WebAssemblyTargetCodeGenInfo final : public TargetCodeGenInfo {
@@ -155,8 +155,8 @@ ABIArgInfo WebAssemblyABIInfo::classifyReturnType(QualType RetTy) const {
   return defaultInfo.classifyReturnType(RetTy);
 }
 
-Address WebAssemblyABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                      QualType Ty) const {
+RValue WebAssemblyABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                     QualType Ty) const {
   bool IsIndirect = isAggregateTypeForABI(Ty) &&
                     !isEmptyRecord(getContext(), Ty, true) &&
                     !isSingleElementStruct(Ty, getContext());

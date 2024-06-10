@@ -29,8 +29,8 @@ private:
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                   QualType Ty) const override;
   Address EmitVAArgFromMemory(CodeGenFunction &CFG, Address VAListAddr,
                               QualType Ty) const;
   Address EmitVAArgForHexagon(CodeGenFunction &CFG, Address VAListAddr,
@@ -408,13 +408,15 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
   return Address(ArgAddr, MemTy, CharUnits::fromQuantity(ArgAlign));
 }
 
-Address HexagonABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType Ty) const {
+RValue HexagonABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType Ty) const {
 
   if (getTarget().getTriple().isMusl())
-    return EmitVAArgForHexagonLinux(CGF, VAListAddr, Ty);
+    return CGF.EmitLoadOfAnyValue(
+        CGF.MakeAddrLValue(EmitVAArgForHexagonLinux(CGF, VAListAddr, Ty), Ty));
 
-  return EmitVAArgForHexagon(CGF, VAListAddr, Ty);
+  return CGF.EmitLoadOfAnyValue(
+      CGF.MakeAddrLValue(EmitVAArgForHexagon(CGF, VAListAddr, Ty), Ty));
 }
 
 std::unique_ptr<TargetCodeGenInfo>

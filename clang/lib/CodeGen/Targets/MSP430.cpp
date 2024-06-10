@@ -51,9 +51,10 @@ public:
       I.info = classifyArgumentType(I.type);
   }
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override {
-    return EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty));
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                   QualType Ty) const override {
+    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(
+        EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty)), Ty));
   }
 };
 

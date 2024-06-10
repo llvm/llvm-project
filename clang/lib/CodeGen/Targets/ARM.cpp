@@ -81,8 +81,8 @@ private:
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                   QualType Ty) const override;
 
   llvm::CallingConv::ID getLLVMDefaultCC() const;
   llvm::CallingConv::ID getABIDefaultCC() const;
@@ -753,15 +753,16 @@ bool ARMABIInfo::isEffectivelyAAPCS_VFP(unsigned callConvention,
            (acceptHalf && (getABIKind() == ARMABIKind::AAPCS16_VFP));
 }
 
-Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                              QualType Ty) const {
+RValue ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                             QualType Ty) const {
   CharUnits SlotSize = CharUnits::fromQuantity(4);
 
   // Empty records are ignored for parameter passing purposes.
   if (isEmptyRecord(getContext(), Ty, true)) {
     VAListAddr = VAListAddr.withElementType(CGF.Int8PtrTy);
     auto *Load = CGF.Builder.CreateLoad(VAListAddr);
-    return Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
+    Address Addr = Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
+    return RValue::getAggregate(Addr);
   }
 
   CharUnits TySize = getContext().getTypeSizeInChars(Ty);

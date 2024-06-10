@@ -78,15 +78,11 @@ public:
   /// then loads the result into DestPtr.
   void EmitAggLoadOfLValue(const Expr *E);
 
-  enum ExprValueKind {
-    EVK_RValue,
-    EVK_NonRValue
-  };
-
   /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
   /// SrcIsRValue is true if source comes from an RValue.
   void EmitFinalDestCopy(QualType type, const LValue &src,
-                         ExprValueKind SrcValueKind = EVK_NonRValue);
+                         CodeGenFunction::ExprValueKind SrcValueKind =
+                             CodeGenFunction::EVK_NonRValue);
   void EmitFinalDestCopy(QualType type, RValue src);
   void EmitCopy(QualType type, const AggValueSlot &dest,
                 const AggValueSlot &src);
@@ -348,12 +344,13 @@ void AggExprEmitter::withReturnValueSlot(
 void AggExprEmitter::EmitFinalDestCopy(QualType type, RValue src) {
   assert(src.isAggregate() && "value must be aggregate value!");
   LValue srcLV = CGF.MakeAddrLValue(src.getAggregateAddress(), type);
-  EmitFinalDestCopy(type, srcLV, EVK_RValue);
+  EmitFinalDestCopy(type, srcLV, CodeGenFunction::EVK_RValue);
 }
 
 /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
-void AggExprEmitter::EmitFinalDestCopy(QualType type, const LValue &src,
-                                       ExprValueKind SrcValueKind) {
+void AggExprEmitter::EmitFinalDestCopy(
+    QualType type, const LValue &src,
+    CodeGenFunction::ExprValueKind SrcValueKind) {
   // If Dest is ignored, then we're evaluating an aggregate expression
   // in a context that doesn't care about the result.  Note that loads
   // from volatile l-values force the existence of a non-ignored
@@ -365,7 +362,7 @@ void AggExprEmitter::EmitFinalDestCopy(QualType type, const LValue &src,
   LValue DstLV = CGF.MakeAddrLValue(
       Dest.getAddress(), Dest.isVolatile() ? type.withVolatile() : type);
 
-  if (SrcValueKind == EVK_RValue) {
+  if (SrcValueKind == CodeGenFunction::EVK_RValue) {
     if (type.isNonTrivialToPrimitiveDestructiveMove() == QualType::PCK_Struct) {
       if (Dest.isPotentiallyAliased())
         CGF.callCStructMoveAssignmentOperator(DstLV, src);
@@ -1328,7 +1325,7 @@ void AggExprEmitter::VisitChooseExpr(const ChooseExpr *CE) {
 
 void AggExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
   Address ArgValue = Address::invalid();
-  RValue ArgPtr = CGF.EmitVAArg(VE, ArgValue);
+  RValue Res = CGF.EmitVAArg(VE, ArgValue);
 
   // If EmitVAArg fails, emit an error.
   if (!ArgValue.isValid()) {
@@ -1336,7 +1333,9 @@ void AggExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
     return;
   }
 
-  EmitFinalDestCopy(VE->getType(), ArgPtr);
+  LValue ResLV = CGF.MakeAddrLValue(Res.getAggregateAddress(), VE->getType());
+  CGF.EmitAggFinalDestCopy(VE->getType(), Dest, ResLV,
+                           CodeGenFunction::EVK_RValue);
 }
 
 void AggExprEmitter::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
@@ -2036,6 +2035,13 @@ LValue CodeGenFunction::EmitAggExprToLValue(const Expr *E) {
                                          AggValueSlot::IsNotAliased,
                                          AggValueSlot::DoesNotOverlap));
   return LV;
+}
+
+void CodeGenFunction::EmitAggFinalDestCopy(QualType Type, AggValueSlot Dest,
+                                           const LValue &Src,
+                                           ExprValueKind SrcKind) {
+  return AggExprEmitter(*this, Dest, Dest.isIgnored())
+      .EmitFinalDestCopy(Type, Src, SrcKind);
 }
 
 AggValueSlot::Overlap_t

@@ -5359,8 +5359,6 @@ Value *ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
   Address ArgValue = Address::invalid();
   RValue ArgPtr = CGF.EmitVAArg(VE, ArgValue);
 
-  llvm::Type *ArgTy = ConvertType(VE->getType());
-
   return ArgPtr.getScalarVal();
 }
 
