@@ -172,7 +172,10 @@ states of the program and tracking these values through optimization and code
 generation: :ref:`debug records <debug_records>`, the current default, and
 :ref:`intrinsic function calls <format_common_intrinsics>`, which are
 non-default but currently supported for backwards compatibility - though these
-two models must never be mixed within an IR module.
+two models must never be mixed within an IR module. For an explanation of why
+we changed to the new model, how it works, and guidance on how to update old
+code or IR to use debug records, see the `RemoveDIs <RemoveDIsDebugInfo.html>`_
+document.
 
 .. _debug_records:
 
