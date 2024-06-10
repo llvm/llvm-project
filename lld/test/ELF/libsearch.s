@@ -49,6 +49,12 @@
 // RUN: ld.lld -o %t3 %t.o -L%t.dir -lls
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=DYNAMIC %s
 
+// Should use static when dynamic exists in search path
+// RUN: ld.lld --relocatable -o %t3 %t.o -L%t.dir -lls
+// RUN: llvm-readelf -s -h %t3 | FileCheck --check-prefix=RELOCATABLE %s
+// RELOCATABLE: Type: REL (Relocatable file)
+// RELOCATABLE: [[#]] _static
+
 // Check for library search order
 // RUN: mkdir -p %t.dir2
 // RUN: cp %t.dir/libls.a %t.dir2
