@@ -16113,10 +16113,10 @@ on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
      - +0.0 > -0.0
 
    * - ``NUM vs sNaN``
-     - qNaN, invalid excpetion
-     - qNaN, invalid excpetion
-     - qNaN, invalid excpetion
-     - NUM, invalid excpetion
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - NUM, invalid exception
 
    * - ``NUM vs qNaN``
      - NUM, no excpetion
@@ -16433,7 +16433,7 @@ is NaN (including sNaN) and another operand is a number, return the number.
 Otherwise returns the greater of the two arguments. -0.0 is considered to
 be less than +0.0 for this intrinsic.
 
-Note that these are the semantics of minimumNumber specified in IEEE 754-2019.
+Note that these are the semantics of maximumNumber specified in IEEE 754-2019.
 
 .. _int_copysign:
 
@@ -21555,7 +21555,7 @@ Overview:
 """""""""
 
 Predicated floating-point maximum of two vectors of floating-point values,
-propagating NaNs and treating -0.0 as less than +0.0.
+not propagating NaNs and treating -0.0 as less than +0.0.
 
 Arguments:
 """"""""""
