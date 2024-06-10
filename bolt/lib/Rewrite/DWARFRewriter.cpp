@@ -184,7 +184,6 @@ namespace bolt {
 /// Emits debug information into .debug_info or .debug_types section.
 class DIEStreamer : public DwarfStreamer {
   DIEBuilder *DIEBldr;
-  DWARFRewriter &Rewriter;
   GDBIndex &GDBIndexSection;
 
 private:
@@ -285,7 +284,7 @@ public:
               raw_pwrite_stream &OutFile,
               DWARFLinkerBase::MessageHandlerTy Warning)
       : DwarfStreamer(OutFileType, OutFile, Warning), DIEBldr(DIEBldr),
-        Rewriter(Rewriter), GDBIndexSection(GDBIndexSection) {};
+        GDBIndexSection(GDBIndexSection) {};
 
   using DwarfStreamer::emitCompileUnitHeader;
 
