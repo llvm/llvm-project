@@ -340,7 +340,7 @@ public:
              Qualified Qual = Qualified::AsWritten) const;
 
   /// Debugging aid that dumps the template name.
-  void dump(raw_ostream &OS) const;
+  void dump(raw_ostream &OS, const ASTContext &Context) const;
 
   /// Debugging aid that dumps the template name to standard
   /// error.
