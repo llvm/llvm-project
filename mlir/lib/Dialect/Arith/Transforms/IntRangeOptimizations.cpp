@@ -14,6 +14,7 @@
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -29,8 +30,8 @@ using namespace mlir;
 using namespace mlir::arith;
 using namespace mlir::dataflow;
 
-std::optional<APInt> getMaybeConstantValue(DataFlowSolver &solver,
-                                           Value value) {
+static std::optional<APInt> getMaybeConstantValue(DataFlowSolver &solver,
+                                                  Value value) {
   auto *maybeInferredRange =
       solver.lookupState<IntegerValueRangeLattice>(value);
   if (!maybeInferredRange || maybeInferredRange->getValue().isUninitialized())
@@ -44,6 +45,8 @@ std::optional<APInt> getMaybeConstantValue(DataFlowSolver &solver,
 static LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
                                               PatternRewriter &rewriter,
                                               Value value) {
+  if (value.use_empty())
+    return failure();
   std::optional<APInt> maybeConstValue = getMaybeConstantValue(solver, value);
   if (!maybeConstValue.has_value())
     return failure();
@@ -91,7 +94,8 @@ protected:
 /// arguments with their constant values.
 struct MaterializeKnownConstantValues : public RewritePattern {
   MaterializeKnownConstantValues(MLIRContext *context, DataFlowSolver &s)
-      : RewritePattern(Pattern::MatchAnyOpTypeTag(), 1, context), solver(s) {}
+      : RewritePattern(Pattern::MatchAnyOpTypeTag(), /*benefit=*/1, context),
+        solver(s) {}
 
   LogicalResult match(Operation *op) const override {
     if (matchPattern(op, m_Constant()))
@@ -116,17 +120,19 @@ struct MaterializeKnownConstantValues : public RewritePattern {
   void rewrite(Operation *op, PatternRewriter &rewriter) const override {
     bool replacedAll = (op->getNumResults() != 0);
     for (Value v : op->getResults())
-      replacedAll &= succeeded(maybeReplaceWithConstant(solver, rewriter, v));
+      replacedAll &=
+          (succeeded(maybeReplaceWithConstant(solver, rewriter, v)) ||
+           v.use_empty());
     if (replacedAll && isOpTriviallyDead(op)) {
       rewriter.eraseOp(op);
       return;
     }
 
+    PatternRewriter::InsertionGuard guard(rewriter);
     for (Region &region : op->getRegions()) {
       for (Block &block : region.getBlocks()) {
+        rewriter.setInsertionPointToStart(&block);
         for (BlockArgument &arg : block.getArguments()) {
-          PatternRewriter::InsertionGuard guard(rewriter);
-          rewriter.setInsertionPointToStart(&block);
           (void)maybeReplaceWithConstant(solver, rewriter, arg);
         }
       }
@@ -146,10 +152,10 @@ struct DeleteTrivialRem : public OpRewritePattern<RemOp> {
                                 PatternRewriter &rewriter) const override {
     Value lhs = op.getOperand(0);
     Value rhs = op.getOperand(1);
-    auto rhsConstVal = rhs.getDefiningOp<arith::ConstantIntOp>();
-    if (!rhsConstVal)
+    auto maybeModulus = getConstantIntValue(rhs);
+    if (!maybeModulus.has_value())
       return failure();
-    int64_t modulus = rhsConstVal.value();
+    int64_t modulus = *maybeModulus;
     if (modulus <= 0)
       return failure();
     auto *maybeLhsRange = solver.lookupState<IntegerValueRangeLattice>(lhs);
