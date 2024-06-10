@@ -44,13 +44,14 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
 
-    Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-
     Type type = op.getType();
     Value alloc;
 
-    if (isa<UnrankedMemRefType>(type)) {
+    if (auto unrankedType = dyn_cast<UnrankedMemRefType>(type)) {
+      // Constants
+      Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+      Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+
       // Dynamically evaluate the size and shape of the unranked memref
       Value rank = rewriter.create<memref::RankOp>(loc, op.getInput());
       MemRefType allocType =
@@ -59,32 +60,29 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
 
       // Create a loop to query dimension sizes, store them as a shape, and
       // compute the total size of the memref
-      auto size =
-          rewriter
-              .create<scf::ForOp>(
-                  loc, zero, rank, one, ValueRange(one),
-                  [&](OpBuilder &builder, Location loc, Value i,
-                      ValueRange args) {
-                    auto acc = args.front();
+      auto loopBody = [&](OpBuilder &builder, Location loc, Value i,
+                          ValueRange args) {
+        auto acc = args.front();
+        auto dim = rewriter.create<memref::DimOp>(loc, op.getInput(), i);
 
-                    auto dim =
-                        rewriter.create<memref::DimOp>(loc, op.getInput(), i);
+        rewriter.create<memref::StoreOp>(loc, dim, shape, i);
+        acc = rewriter.create<arith::MulIOp>(loc, acc, dim);
 
-                    rewriter.create<memref::StoreOp>(loc, dim, shape, i);
-                    acc = rewriter.create<arith::MulIOp>(loc, acc, dim);
+        rewriter.create<scf::YieldOp>(loc, acc);
+      };
+      auto size = rewriter
+                      .create<scf::ForOp>(loc, zero, rank, one, ValueRange(one),
+                                          loopBody)
+                      .getResult(0);
 
-                    rewriter.create<scf::YieldOp>(loc, acc);
-                  })
-              .getResult(0);
-
-      UnrankedMemRefType unranked = cast<UnrankedMemRefType>(type);
-      MemRefType memrefType =
-          MemRefType::get({ShapedType::kDynamic}, unranked.getElementType());
+      MemRefType memrefType = MemRefType::get({ShapedType::kDynamic},
+                                              unrankedType.getElementType());
 
       // Allocate new memref with 1D dynamic shape, then reshape into the
       // shape of the original unranked memref
       alloc = rewriter.create<memref::AllocOp>(loc, memrefType, size);
-      alloc = rewriter.create<memref::ReshapeOp>(loc, unranked, alloc, shape);
+      alloc =
+          rewriter.create<memref::ReshapeOp>(loc, unrankedType, alloc, shape);
     } else {
       MemRefType memrefType = cast<MemRefType>(type);
       MemRefLayoutAttrInterface layout;
