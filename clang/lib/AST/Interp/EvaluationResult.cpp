@@ -141,21 +141,22 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
                                              const Pointer &Ptr) const {
   assert(Source);
   assert(empty());
-
-  // Our Source must be a VarDecl.
-  const Decl *SourceDecl = Source.dyn_cast<const Decl *>();
-  assert(SourceDecl);
-  const auto *VD = cast<VarDecl>(SourceDecl);
-  assert(VD->getType()->isRecordType() || VD->getType()->isArrayType());
-  SourceLocation InitLoc = VD->getAnyInitializer()->getExprLoc();
-
   assert(!Ptr.isZero());
+
+  SourceLocation InitLoc;
+  if (const auto *D = Source.dyn_cast<const Decl *>())
+    InitLoc = cast<VarDecl>(D)->getAnyInitializer()->getExprLoc();
+  else if (const auto *E = Source.dyn_cast<const Expr *>())
+    InitLoc = E->getExprLoc();
 
   if (const Record *R = Ptr.getRecord())
     return CheckFieldsInitialized(S, InitLoc, Ptr, R);
-  const auto *CAT =
-      cast<ConstantArrayType>(Ptr.getType()->getAsArrayTypeUnsafe());
-  return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
+
+  if (const auto *CAT = dyn_cast_if_present<ConstantArrayType>(
+          Ptr.getType()->getAsArrayTypeUnsafe()))
+    return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
+
+  return true;
 }
 
 } // namespace interp
