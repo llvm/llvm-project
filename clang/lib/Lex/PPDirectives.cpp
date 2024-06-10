@@ -3867,8 +3867,10 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
         if (!LexParenthesizedBalancedTokenSoup(Soup))
           return std::nullopt;
       }
-      if (!ForHasEmbed)
-        Diag(CurTok, diag::warn_pp_unknown_parameter_ignored) << 1 << Parameter;
+      if (!ForHasEmbed) {
+        Diag(CurTok, diag::err_pp_unknown_parameter) << 1 << Parameter;
+        return std::nullopt;
+      }
     }
   }
   Result.ParamRange.setEnd(CurTok.getLocation());

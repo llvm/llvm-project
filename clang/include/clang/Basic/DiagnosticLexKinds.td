@@ -513,9 +513,8 @@ def err_pp_invalid_directive : Error<
   "invalid preprocessing directive%select{|, did you mean '#%1'?}0">;
 def warn_pp_invalid_directive : Warning<
   err_pp_invalid_directive.Summary>, InGroup<DiagGroup<"unknown-directives">>;
-def warn_pp_unknown_parameter_ignored : Warning<
-  "unknown%select{ | embed}0 preprocessor parameter '%1' ignored">,
-  InGroup<DiagGroup<"unknown-directive-parameters">>;
+def err_pp_unknown_parameter : Error<
+  "unknown%select{ | embed}0 preprocessor parameter '%1'">;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;

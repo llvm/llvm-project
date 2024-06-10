@@ -18,13 +18,13 @@ char buffer[] = {
 // expected-error@-1{{expected "FILENAME" or <FILENAME>}}
 
 #embed "embed_parsing_errors.c" xxx
-// expected-warning@-1 {{unknown embed preprocessor parameter 'xxx' ignored}}
+// expected-error@-1 {{unknown embed preprocessor parameter 'xxx'}}
 
 #embed "embed_parsing_errors.c" xxx::
 // expected-error@-1 {{expected identifier}}
 
 #embed "embed_parsing_errors.c" xxx::xxx
-// expected-warning@-1 {{unknown embed preprocessor parameter 'xxx::xxx' ignored}}
+// expected-error@-1 {{unknown embed preprocessor parameter 'xxx::xxx'}}
 
 #embed "embed_parsing_errors.c" xxx::42
 // expected-error@-1 {{expected identifier}}
