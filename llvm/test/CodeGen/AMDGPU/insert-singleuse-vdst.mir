@@ -37,14 +37,14 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr2_vgpr3 = V_LSHLREV_B64_e64 0, $vgpr0_vgpr1, implicit $exec
-  ; CHECK-NEXT:   $vgpr4_vgpr5 = V_LSHLREV_B64_e64 0, $vgpr2_vgpr3, implicit $exec
+  ; CHECK-NEXT:   $vgpr4_vgpr5 = V_MOV_B64_e64 $vgpr2_vgpr3, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr4_vgpr5
   bb.0:
     liveins: $vgpr0_vgpr1
     $vgpr2_vgpr3 = V_LSHLREV_B64_e64 0, $vgpr0_vgpr1, implicit $exec
-    $vgpr4_vgpr5 = V_LSHLREV_B64_e64 0, $vgpr2_vgpr3, implicit $exec
+    $vgpr4_vgpr5 = V_MOV_B64_e64 $vgpr2_vgpr3, implicit $exec
   bb.1:
     liveins: $vgpr4_vgpr5
 ...
@@ -1289,6 +1289,31 @@ body: |
     S_BRANCH %bb.1
   bb.1:
     liveins: $vgpr0
+...
+
+---
+name: v_lshlrev_b64_e64
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: v_lshlrev_b64_e64
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vgpr2_vgpr3 = V_MOV_B64_e64 $vgpr0_vgpr1, implicit $exec
+  ; CHECK-NEXT:   $vgpr4_vgpr5 = V_LSHLREV_B64_e64 0, $vgpr2_vgpr3, implicit $exec
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
+  ; CHECK-NEXT:   $vgpr6_vgpr7 = V_LSHLREV_B64_e64 0, $vgpr4_vgpr5, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $vgpr4_vgpr5
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    $vgpr2_vgpr3 = V_MOV_B64_e64 $vgpr0_vgpr1, implicit $exec
+    $vgpr4_vgpr5 = V_LSHLREV_B64_e64 0, $vgpr2_vgpr3, implicit $exec
+    $vgpr6_vgpr7 = V_LSHLREV_B64_e64 0, $vgpr4_vgpr5, implicit $exec
+  bb.1:
+    liveins: $vgpr4_vgpr5
 ...
 
 # Invalid producers but valid consumer opcodes.

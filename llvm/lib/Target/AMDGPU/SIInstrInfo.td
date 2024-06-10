@@ -2266,6 +2266,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit EnableClamp = _EnableClamp;
   field bit IsTrue16 = 0;
   field bit IsRealTrue16 = 0;
+  field bit IsInvalidSingleUseConsumer = 0;
+  field bit IsInvalidSingleUseProducer = 0;
 
   field ValueType DstVT = ArgVT[0];
   field ValueType Src0VT = ArgVT[1];
