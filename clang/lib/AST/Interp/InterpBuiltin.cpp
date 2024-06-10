@@ -214,7 +214,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (!CheckLive(S, OpPC, StrPtr, AK_Read))
     return false;
 
-  if (!CheckDummy(S, OpPC, StrPtr))
+  if (!CheckDummy(S, OpPC, StrPtr, AK_Read))
     return false;
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());

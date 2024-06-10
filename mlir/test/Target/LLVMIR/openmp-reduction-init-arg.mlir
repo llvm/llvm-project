@@ -24,7 +24,7 @@ module {
   %87 = llvm.alloca %86 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr
 // test multiple reduction variables to ensure they don't intefere with eachother
 // when inlining the reduction init region multiple times
-    omp.parallel byref reduction(@add_reduction_byref_box_Uxf64 %84 -> %arg3 : !llvm.ptr, @add_reduction_byref_box_Uxf64 %87 -> %arg4 : !llvm.ptr) {
+    omp.parallel reduction(byref @add_reduction_byref_box_Uxf64 %84 -> %arg3 : !llvm.ptr, byref @add_reduction_byref_box_Uxf64 %87 -> %arg4 : !llvm.ptr) {
       omp.terminator
     }
     llvm.return

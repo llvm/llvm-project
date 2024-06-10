@@ -644,7 +644,7 @@ source vector should be inserted into.
 The index must be a constant multiple of the second source vector's minimum
 vector length. If the vectors are scalable, then the index is first scaled by
 the runtime scaling factor. The indices inserted in the source vector must be
-valid indicies of that vector. If this condition cannot be determined statically
+valid indices of that vector. If this condition cannot be determined statically
 but is false at runtime, then the result vector is undefined.
 
 .. code-block:: none
@@ -661,7 +661,7 @@ the source vector.
 The index must be a constant multiple of the source vector's minimum vector
 length. If the source vector is a scalable vector, then the index is first
 scaled by the runtime scaling factor. The indices extracted from the source
-vector must be valid indicies of that vector. If this condition cannot be
+vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
 

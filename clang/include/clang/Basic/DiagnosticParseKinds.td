@@ -887,6 +887,10 @@ def err_requires_expr_in_simple_requirement : Error<
   "requires expression in requirement body; did "
   "you intend to place it in a nested requirement? (add another 'requires' "
   "before the expression)">;
+def missing_template_arg_list_after_template_kw : Extension<
+  "a template argument list is expected after a name prefixed by the template "
+  "keyword">, InGroup<DiagGroup<"missing-template-arg-list-after-template-kw">>,
+  DefaultError;
 
 def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
@@ -1112,10 +1116,12 @@ def err_zero_version : Error<
   "version number must have non-zero major, minor, or sub-minor version">;
 def err_availability_expected_platform : Error<
   "expected a platform name, e.g., 'macos'">;
+def err_availability_expected_environment : Error<
+  "expected an environment name, e.g., 'compute'">;
 
 // objc_bridge_related attribute
 def err_objcbridge_related_expected_related_class : Error<
-  "expected a related ObjectiveC class name, e.g., 'NSColor'">;
+  "expected a related Objective-C class name, e.g., 'NSColor'">;
 def err_objcbridge_related_selector_name : Error<
   "expected a class method selector with single argument, e.g., 'colorWithCGColor:'">;
 
@@ -1343,8 +1349,8 @@ def note_pragma_attribute_namespace_on_attribute : Note<
   "omit the namespace to add attributes to the most-recently"
   " pushed attribute group">;
 def warn_no_support_for_eval_method_source_on_m32 : Warning<
-  "Setting the floating point evaluation method to `source` on a target"
-  " without SSE is not supported.">, InGroup<Pragmas>;
+  "setting the floating point evaluation method to `source` on a target "
+  "without SSE is not supported">, InGroup<Pragmas>;
 // - #pragma __debug
 def warn_pragma_debug_dependent_argument : Warning<
   "%select{value|type}0-dependent expression passed as an argument to debug "
@@ -1438,6 +1444,9 @@ def err_omp_decl_in_declare_simd_variant : Error<
 def err_omp_sink_and_source_iteration_not_allowd: Error<" '%0 %select{sink:|source:}1' must be with '%select{omp_cur_iteration - 1|omp_cur_iteration}1'">;
 def err_omp_unknown_map_type : Error<
   "incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'">;
+def err_omp_more_one_map_type : Error<"map type is already specified">;
+def note_previous_map_type_specified_here
+    : Note<"map type '%0' is previous specified here">;
 def err_omp_unknown_map_type_modifier : Error<
   "incorrect map type modifier, expected one of: 'always', 'close', 'mapper'"
   "%select{|, 'present'|, 'present', 'iterator'}0%select{|, 'ompx_hold'}1">;
@@ -1445,6 +1454,8 @@ def err_omp_map_type_missing : Error<
   "missing map type">;
 def err_omp_map_type_modifier_missing : Error<
   "missing map type modifier">;
+def err_omp_map_modifier_specification_list : Error<
+  "empty modifier-specification-list is not allowed">;
 def err_omp_declare_simd_inbranch_notinbranch : Error<
   "unexpected '%0' clause, '%1' is specified already">;
 def err_omp_expected_clause_argument

@@ -124,6 +124,7 @@ clang/include/clang/Analysis/Analyses/CFGReachabilityAnalysis.h
 clang/include/clang/Analysis/Analyses/ExprMutationAnalyzer.h
 clang/include/clang/Analysis/FlowSensitive/AdornedCFG.h
 clang/include/clang/Analysis/FlowSensitive/ASTOps.h
+clang/include/clang/Analysis/FlowSensitive/CNFFormula.h
 clang/include/clang/Analysis/FlowSensitive/DataflowAnalysis.h
 clang/include/clang/Analysis/FlowSensitive/DataflowAnalysisContext.h
 clang/include/clang/Analysis/FlowSensitive/DataflowEnvironment.h
@@ -252,7 +253,6 @@ clang/include/clang/Tooling/CompilationDatabasePluginRegistry.h
 clang/include/clang/Tooling/DiagnosticsYaml.h
 clang/include/clang/Tooling/Execution.h
 clang/include/clang/Tooling/JSONCompilationDatabase.h
-clang/include/clang/Tooling/NodeIntrospection.h
 clang/include/clang/Tooling/Refactoring.h
 clang/include/clang/Tooling/StandaloneExecution.h
 clang/include/clang/Tooling/ToolExecutorPluginRegistry.h
@@ -562,15 +562,11 @@ clang/lib/Tooling/Execution.cpp
 clang/lib/Tooling/ExpandResponseFilesCompilationDatabase.cpp
 clang/lib/Tooling/FixIt.cpp
 clang/lib/Tooling/GuessTargetAndModeCompilationDatabase.cpp
-clang/lib/Tooling/NodeIntrospection.cpp
 clang/lib/Tooling/StandaloneExecution.cpp
 clang/lib/Tooling/DependencyScanning/DependencyScanningFilesystem.cpp
 clang/lib/Tooling/DependencyScanning/DependencyScanningService.cpp
 clang/lib/Tooling/DependencyScanning/DependencyScanningTool.cpp
 clang/lib/Tooling/DependencyScanning/ModuleDepCollector.cpp
-clang/lib/Tooling/DumpTool/APIData.h
-clang/lib/Tooling/DumpTool/ASTSrcLocProcessor.h
-clang/lib/Tooling/DumpTool/ClangSrcLocDump.cpp
 clang/lib/Tooling/Inclusions/HeaderIncludes.cpp
 clang/lib/Tooling/Inclusions/IncludeStyle.cpp
 clang/lib/Tooling/Inclusions/StandardLibrary.cpp
@@ -626,6 +622,7 @@ clang/tools/libclang/CXCursor.h
 clang/tools/scan-build-py/tests/functional/src/include/clean-one.h
 clang/unittests/Analysis/CFGBuildResult.h
 clang/unittests/Analysis/MacroExpansionContextTest.cpp
+clang/unittests/Analysis/FlowSensitive/CNFFormula.cpp
 clang/unittests/Analysis/FlowSensitive/DataflowAnalysisContextTest.cpp
 clang/unittests/Analysis/FlowSensitive/DataflowEnvironmentTest.cpp
 clang/unittests/Analysis/FlowSensitive/MapLatticeTest.cpp
@@ -637,6 +634,7 @@ clang/unittests/Analysis/FlowSensitive/TestingSupport.cpp
 clang/unittests/Analysis/FlowSensitive/TestingSupport.h
 clang/unittests/Analysis/FlowSensitive/TestingSupportTest.cpp
 clang/unittests/Analysis/FlowSensitive/TypeErasedDataflowAnalysisTest.cpp
+clang/unittests/Analysis/FlowSensitive/WatchedLiteralsSolver.cpp
 clang/unittests/Analysis/FlowSensitive/WatchedLiteralsSolverTest.cpp
 clang/unittests/AST/ASTImporterFixtures.cpp
 clang/unittests/AST/ASTImporterFixtures.h

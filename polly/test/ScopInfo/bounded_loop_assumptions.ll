@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; The assumed context is tricky here as the equality test for the inner loop
 ; allows an "unbounded" loop trip count. We assume that does not happen, thus

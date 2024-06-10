@@ -765,8 +765,8 @@ class Instruction : InstructionEncoding {
 
   /// Should generate helper functions that help you to map a logical operand's
   /// index to the underlying MIOperand's index.
-  /// In most architectures logical operand indicies are equal to
-  /// MIOperand indicies, but for some CISC architectures, a logical operand
+  /// In most architectures logical operand indices are equal to
+  /// MIOperand indices, but for some CISC architectures, a logical operand
   /// might be consist of multiple MIOperand (e.g. a logical operand that
   /// uses complex address mode).
   bit UseLogicalOperandMappings = false;

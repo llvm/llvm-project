@@ -498,7 +498,7 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
                    R, LinkedToSym);
 
   auto *F = new MCDataFragment();
-  Ret->getFragmentList().insert(Ret->begin(), F);
+  Ret->addFragment(*F);
   F->setParent(Ret);
   R->setFragment(F);
 
@@ -620,15 +620,20 @@ void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
                                               unsigned Flags, unsigned UniqueID,
                                               unsigned EntrySize) {
   bool IsMergeable = Flags & ELF::SHF_MERGE;
-  if (UniqueID == GenericSectionID)
+  if (UniqueID == GenericSectionID) {
     ELFSeenGenericMergeableSections.insert(SectionName);
+    // Minor performance optimization: avoid hash map lookup in
+    // isELFGenericMergeableSection, which will return true for SectionName.
+    IsMergeable = true;
+  }
 
   // For mergeable sections or non-mergeable sections with a generic mergeable
   // section name we enter their Unique ID into the ELFEntrySizeMap so that
   // compatible globals can be assigned to the same section.
+
   if (IsMergeable || isELFGenericMergeableSection(SectionName)) {
     ELFEntrySizeMap.insert(std::make_pair(
-        ELFEntrySizeKey{SectionName, Flags, EntrySize}, UniqueID));
+        std::make_tuple(SectionName, Flags, EntrySize), UniqueID));
   }
 }
 
@@ -645,8 +650,7 @@ bool MCContext::isELFGenericMergeableSection(StringRef SectionName) {
 std::optional<unsigned>
 MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                                     unsigned EntrySize) {
-  auto I = ELFEntrySizeMap.find(
-      MCContext::ELFEntrySizeKey{SectionName, Flags, EntrySize});
+  auto I = ELFEntrySizeMap.find(std::make_tuple(SectionName, Flags, EntrySize));
   return (I != ELFEntrySizeMap.end()) ? std::optional<unsigned>(I->second)
                                       : std::nullopt;
 }
@@ -768,7 +772,7 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
   Entry.second = Result;
 
   auto *F = new MCDataFragment();
-  Result->getFragmentList().insert(Result->begin(), F);
+  Result->addFragment(*F);
   F->setParent(Result);
   Begin->setFragment(F);
 
@@ -834,7 +838,7 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
   Entry.second = Result;
 
   auto *F = new MCDataFragment();
-  Result->getFragmentList().insert(Result->begin(), F);
+  Result->addFragment(*F);
   F->setParent(Result);
 
   if (Begin)
@@ -857,7 +861,7 @@ MCSectionSPIRV *MCContext::getSPIRVSection() {
       MCSectionSPIRV(SectionKind::getText(), Begin);
 
   auto *F = new MCDataFragment();
-  Result->getFragmentList().insert(Result->begin(), F);
+  Result->addFragment(*F);
   F->setParent(Result);
 
   return Result;
@@ -880,7 +884,7 @@ MCSectionDXContainer *MCContext::getDXContainerSection(StringRef Section,
 
   // The first fragment will store the header
   auto *F = new MCDataFragment();
-  MapIt->second->getFragmentList().insert(MapIt->second->begin(), F);
+  MapIt->second->addFragment(*F);
   F->setParent(MapIt->second);
 
   return MapIt->second;

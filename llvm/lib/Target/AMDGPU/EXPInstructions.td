@@ -125,7 +125,6 @@ multiclass VEXPORT_Real_gfx12 {
   }
   def : AMDGPUMnemonicAlias<"exp", "export"> {
     let AssemblerPredicate = isGFX12Plus;
-    let OtherPredicates = [HasExportInsts];
   }
 }
 

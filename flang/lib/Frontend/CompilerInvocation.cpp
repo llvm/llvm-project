@@ -488,6 +488,9 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     case clang::driver::options::OPT_fdebug_unparse_with_symbols:
       opts.programAction = DebugUnparseWithSymbols;
       break;
+    case clang::driver::options::OPT_fdebug_unparse_with_modules:
+      opts.programAction = DebugUnparseWithModules;
+      break;
     case clang::driver::options::OPT_fdebug_dump_symbols:
       opts.programAction = DebugDumpSymbols;
       break;
@@ -883,7 +886,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // -x cuda
   auto language = args.getLastArgValue(clang::driver::options::OPT_x);
-  if (language.equals("cuda")) {
+  if (language == "cuda") {
     res.getFrontendOpts().features.Enable(
         Fortran::common::LanguageFeature::CUDA);
   }
@@ -902,6 +905,9 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             args, clang::driver::options::OPT_fopenmp_version_EQ,
             res.getLangOpts().OpenMPVersion, diags)) {
       res.getLangOpts().OpenMPVersion = Version;
+    }
+    if (args.hasArg(clang::driver::options::OPT_fopenmp_force_usm)) {
+      res.getLangOpts().OpenMPForceUSM = 1;
     }
     if (args.hasArg(clang::driver::options::OPT_fopenmp_is_target_device)) {
       res.getLangOpts().OpenMPIsTargetDevice = 1;
@@ -986,7 +992,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (args.hasArg(clang::driver::options::OPT_std_EQ)) {
     auto standard = args.getLastArgValue(clang::driver::options::OPT_std_EQ);
     // We only allow f2018 as the given standard
-    if (standard.equals("f2018")) {
+    if (standard == "f2018") {
       res.setEnableConformanceChecks();
     } else {
       const unsigned diagID =
@@ -1201,6 +1207,12 @@ bool CompilerInvocation::createFromArgs(
   // -fno-ppc-native-vector-element-order
   if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
+  }
+
+  // -flang-experimental-integer-overflow
+  if (args.hasArg(
+          clang::driver::options::OPT_flang_experimental_integer_overflow)) {
+    invoc.loweringOpts.setNSWOnLoopVarInc(true);
   }
 
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or

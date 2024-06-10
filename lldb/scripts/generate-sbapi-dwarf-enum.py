@@ -15,6 +15,8 @@ HEADER = """\
 
 #ifndef LLDB_API_SBLANGUAGE_H
 #define LLDB_API_SBLANGUAGE_H
+
+namespace lldb {
 /// Used by \\ref SBExpressionOptions.
 /// These enumerations use the same language enumerations as the DWARF
 /// specification for ease of use and consistency.
@@ -23,6 +25,8 @@ enum SBSourceLanguageName : uint16_t {
 
 FOOTER = """\
 };
+
+} // namespace lldb
 
 #endif
 """

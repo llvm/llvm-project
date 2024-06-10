@@ -3816,13 +3816,15 @@ define hidden void @extract_v13i64(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-LABEL: extract_v13i64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off
-; GFX10-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off offset:16
+; GFX10-NEXT:    s_clause 0x2
+; GFX10-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:48
+; GFX10-NEXT:    global_load_dwordx4 v[11:14], v[0:1], off
+; GFX10-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off offset:64
+; GFX10-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_perm_b32 v0, v9, v8, 0x3020504
+; GFX10-NEXT:    v_perm_b32 v0, v12, v13, 0x1000504
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_perm_b32 v1, v11, v12, 0x1000706
+; GFX10-NEXT:    v_perm_b32 v1, v10, v14, 0x1000504
 ; GFX10-NEXT:    global_store_dword v[4:5], v0, off
 ; GFX10-NEXT:    global_store_dword v[6:7], v1, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -3830,14 +3832,15 @@ define hidden void @extract_v13i64(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-LABEL: extract_v13i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off
-; GFX9-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off offset:16
-; GFX9-NEXT:    s_mov_b32 s4, 0x3020504
-; GFX9-NEXT:    s_mov_b32 s5, 0x1000706
+; GFX9-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:48
+; GFX9-NEXT:    global_load_dwordx4 v[11:14], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off offset:64
+; GFX9-NEXT:    s_mov_b32 s4, 0x1000504
+; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_perm_b32 v0, v9, v8, s4
+; GFX9-NEXT:    v_perm_b32 v0, v12, v13, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_perm_b32 v1, v11, v12, s5
+; GFX9-NEXT:    v_perm_b32 v1, v10, v14, s4
 ; GFX9-NEXT:    global_store_dword v[4:5], v0, off
 ; GFX9-NEXT:    global_store_dword v[6:7], v1, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

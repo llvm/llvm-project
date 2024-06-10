@@ -59,6 +59,10 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      const std::vector<uint32_t> &DecArgs,
                      StringRef StrImm = "");
 
+// Add an OpDecorate instruction by "spirv.Decorations" metadata node.
+void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
+                             const MDNode *GVarMD);
+
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC);
 
@@ -109,7 +113,7 @@ inline bool isTypedPointerTy(const Type *T) {
 
 // True if this is an instance of PointerType.
 inline bool isUntypedPointerTy(const Type *T) {
-  return T->getTypeID() == Type::PointerTyID;
+  return T && T->getTypeID() == Type::PointerTyID;
 }
 
 // True if this is an instance of PointerType or TypedPointerType.
@@ -149,9 +153,9 @@ inline Type *reconstructFunctionType(Function *F) {
   return FunctionType::get(F->getReturnType(), ArgTys, F->isVarArg());
 }
 
-inline Type *toTypedPointer(Type *Ty, LLVMContext &Ctx) {
+inline Type *toTypedPointer(Type *Ty) {
   return isUntypedPointerTy(Ty)
-             ? TypedPointerType::get(IntegerType::getInt8Ty(Ctx),
+             ? TypedPointerType::get(IntegerType::getInt8Ty(Ty->getContext()),
                                      getPointerAddressSpace(Ty))
              : Ty;
 }

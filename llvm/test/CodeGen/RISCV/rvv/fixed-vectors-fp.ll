@@ -1199,7 +1199,7 @@ declare <4 x half> @llvm.copysign.v4f16(<4 x half>, <4 x half>)
 define void @copysign_neg_trunc_v3f16_v3f32(ptr %x, ptr %y) {
 ; ZVFH-LABEL: copysign_neg_trunc_v3f16_v3f32:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
+; ZVFH-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; ZVFH-NEXT:    vle32.v v8, (a1)
 ; ZVFH-NEXT:    vle16.v v9, (a0)
 ; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma

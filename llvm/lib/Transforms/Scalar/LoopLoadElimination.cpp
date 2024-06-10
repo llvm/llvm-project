@@ -448,6 +448,10 @@ public:
         new LoadInst(Cand.Load->getType(), InitialPtr, "load_initial",
                      /* isVolatile */ false, Cand.Load->getAlign(),
                      PH->getTerminator()->getIterator());
+    // We don't give any debug location to Initial, because it is inserted
+    // into the loop's preheader. A debug location inside the loop will cause
+    // a misleading stepping when debugging. The test update-debugloc-store
+    // -forwarded.ll checks this.
 
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded");
     PHI->insertBefore(L->getHeader()->begin());
@@ -462,14 +466,20 @@ public:
            "The type sizes should match!");
 
     Value *StoreValue = Cand.Store->getValueOperand();
-    if (LoadType != StoreType)
+    if (LoadType != StoreType) {
       StoreValue = CastInst::CreateBitOrPointerCast(StoreValue, LoadType,
                                                     "store_forward_cast",
                                                     Cand.Store->getIterator());
+      // Because it casts the old `load` value and is used by the new `phi`
+      // which replaces the old `load`, we give the `load`'s debug location
+      // to it.
+      cast<Instruction>(StoreValue)->setDebugLoc(Cand.Load->getDebugLoc());
+    }
 
     PHI->addIncoming(StoreValue, L->getLoopLatch());
 
     Cand.Load->replaceAllUsesWith(PHI);
+    PHI->setDebugLoc(Cand.Load->getDebugLoc());
   }
 
   /// Top-level driver for each loop: find store->load forwarding

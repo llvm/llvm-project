@@ -393,7 +393,7 @@ void LinuxKernelRewriter::processLKKSymtab(bool IsGPL) {
 
   for (uint64_t I = 0; I < SectionSize; I += 4) {
     const uint64_t EntryAddress = SectionAddress + I;
-    ErrorOr<uint64_t> Offset = BC.getSignedValueAtAddress(EntryAddress, 4);
+    ErrorOr<int64_t> Offset = BC.getSignedValueAtAddress(EntryAddress, 4);
     assert(Offset && "Reading valid PC-relative offset for a ksymtab entry");
     const int32_t SignedOffset = *Offset;
     const uint64_t RefAddress = EntryAddress + SignedOffset;

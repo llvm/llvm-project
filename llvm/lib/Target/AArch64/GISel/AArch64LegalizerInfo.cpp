@@ -61,6 +61,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT v2s64 = LLT::fixed_vector(2, 64);
   const LLT v2p0 = LLT::fixed_vector(2, p0);
 
+  const LLT nxv16s8 = LLT::scalable_vector(16, s8);
+  const LLT nxv8s16 = LLT::scalable_vector(8, s16);
+  const LLT nxv4s32 = LLT::scalable_vector(4, s32);
+  const LLT nxv2s64 = LLT::scalable_vector(2, s64);
+
   std::initializer_list<LLT> PackedVectorAllTypeList = {/* Begin 128bit types */
                                                         v16s8, v8s16, v4s32,
                                                         v2s64, v2p0,
@@ -177,9 +182,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, s64}, {v2p0, v2s64}})
-      .clampScalar(1, s64, s64)
-      .clampNumElements(0, v2p0, v2p0)
-      .clampNumElements(1, v2s64, v2s64);
+      .clampScalarOrElt(1, s64, s64)
+      .clampNumElements(0, v2p0, v2p0);
 
   getActionDefinitionsBuilder(G_PTRMASK).legalFor({{p0, s64}});
 
@@ -263,9 +267,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .libcallFor({{s64, s128}})
       .minScalarOrElt(1, MinFPScalar);
 
-  getActionDefinitionsBuilder(
-      {G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2, G_FLOG10,
-       G_FEXP, G_FEXP2, G_FEXP10})
+  getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2,
+                               G_FLOG10, G_FTAN, G_FEXP, G_FEXP2, G_FEXP10})
       // We need a call for these, so we always need to scalarize.
       .scalarize(0)
       // Regardless of FP16 support, widen 16-bit elements to 32-bits.
@@ -329,7 +332,31 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     return ValTy.isPointerVector() && ValTy.getAddressSpace() == 0;
   };
 
-  getActionDefinitionsBuilder(G_LOAD)
+  auto &LoadActions = getActionDefinitionsBuilder(G_LOAD);
+  auto &StoreActions = getActionDefinitionsBuilder(G_STORE);
+
+  if (ST.hasSVE()) {
+    LoadActions.legalForTypesWithMemDesc({
+        // 128 bit base sizes
+        {nxv16s8, p0, nxv16s8, 8},
+        {nxv8s16, p0, nxv8s16, 8},
+        {nxv4s32, p0, nxv4s32, 8},
+        {nxv2s64, p0, nxv2s64, 8},
+    });
+
+    // TODO: Add nxv2p0. Consider bitcastIf.
+    //       See #92130
+    //       https://github.com/llvm/llvm-project/pull/92130#discussion_r1616888461
+    StoreActions.legalForTypesWithMemDesc({
+        // 128 bit base sizes
+        {nxv16s8, p0, nxv16s8, 8},
+        {nxv8s16, p0, nxv8s16, 8},
+        {nxv4s32, p0, nxv4s32, 8},
+        {nxv2s64, p0, nxv2s64, 8},
+    });
+  }
+
+  LoadActions
       .customIf([=](const LegalityQuery &Query) {
         return HasRCPC3 && Query.Types[0] == s128 &&
                Query.MMODescrs[0].Ordering == AtomicOrdering::Acquire;
@@ -379,7 +406,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeInSet(0, {v2s16, v2s8}), 0);
 
-  getActionDefinitionsBuilder(G_STORE)
+  StoreActions
       .customIf([=](const LegalityQuery &Query) {
         return HasRCPC3 && Query.Types[0] == s128 &&
                Query.MMODescrs[0].Ordering == AtomicOrdering::Release;
@@ -495,17 +522,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   // FIXME: fix moreElementsToNextPow2
   getActionDefinitionsBuilder(G_ICMP)
-      .legalFor({{s32, s32},
-                 {s32, s64},
-                 {s32, p0},
-                 {v4s32, v4s32},
-                 {v2s32, v2s32},
-                 {v2s64, v2s64},
-                 {v2s64, v2p0},
-                 {v4s16, v4s16},
-                 {v8s16, v8s16},
-                 {v8s8, v8s8},
-                 {v16s8, v16s8}})
+      .legalFor({{s32, s32}, {s32, s64}, {s32, p0}})
       .widenScalarOrEltToNextPow2(1)
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s32)
@@ -527,7 +544,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(1, v8s8, v16s8)
       .clampNumElements(1, v4s16, v8s16)
       .clampNumElements(1, v2s32, v4s32)
-      .clampNumElements(1, v2s64, v2s64);
+      .clampNumElements(1, v2s64, v2s64)
+      .customIf(isVector(0));
 
   getActionDefinitionsBuilder(G_FCMP)
       .legalFor({{s32, MinFPScalar},
@@ -1266,6 +1284,8 @@ bool AArch64LegalizerInfo::legalizeCustom(
     return legalizePrefetch(MI, Helper);
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToCNeg(MI);
+  case TargetOpcode::G_ICMP:
+    return legalizeICMP(MI, MRI, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");
@@ -1321,6 +1341,36 @@ bool AArch64LegalizerInfo::legalizeFunnelShift(MachineInstr &MI,
                            Cast64.getReg(0)});
     MI.eraseFromParent();
   }
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizeICMP(MachineInstr &MI,
+                                        MachineRegisterInfo &MRI,
+                                        MachineIRBuilder &MIRBuilder) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg1 = MI.getOperand(2).getReg();
+  Register SrcReg2 = MI.getOperand(3).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(SrcReg1);
+
+  // Check the vector types are legal
+  if (DstTy.getScalarSizeInBits() != SrcTy.getScalarSizeInBits() ||
+      DstTy.getNumElements() != SrcTy.getNumElements() ||
+      (DstTy.getSizeInBits() != 64 && DstTy.getSizeInBits() != 128))
+    return false;
+
+  // Lowers G_ICMP NE => G_ICMP EQ to allow better pattern matching for
+  // following passes
+  CmpInst::Predicate Pred = (CmpInst::Predicate)MI.getOperand(1).getPredicate();
+  if (Pred != CmpInst::ICMP_NE)
+    return true;
+  Register CmpReg =
+      MIRBuilder
+          .buildICmp(CmpInst::ICMP_EQ, MRI.getType(DstReg), SrcReg1, SrcReg2)
+          .getReg(0);
+  MIRBuilder.buildNot(DstReg, CmpReg);
+
+  MI.eraseFromParent();
   return true;
 }
 
