@@ -283,7 +283,7 @@ TEST_F(InterpreterTest, InstantiateTemplate) {
 }
 
 // This test exposes an ARM specific problem in the interpreter, see
-// https://github.com/llvm/llvm-project/issues/94741.
+// https://github.com/llvm/llvm-project/issues/94994.
 #ifndef __arm__
 TEST_F(InterpreterTest, Value) {
   std::unique_ptr<Interpreter> Interp = createInterpreter();
