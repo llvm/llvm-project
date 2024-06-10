@@ -23,8 +23,6 @@ namespace __math {
 
 // sqrt
 
-#undef sqrt
-
 inline _LIBCPP_HIDE_FROM_ABI float sqrt(float __x) _NOEXCEPT { return __builtin_sqrtf(__x); }
 
 template <class = int>
@@ -40,8 +38,6 @@ inline _LIBCPP_HIDE_FROM_ABI double sqrt(_A1 __x) _NOEXCEPT {
 }
 
 // cbrt
-
-#undef cbrt
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI float cbrt(float __x) _NOEXCEPT { return __builtin_cbrtf(__x); }
 

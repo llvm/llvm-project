@@ -26,8 +26,6 @@ namespace __math {
 
 // exp
 
-#undef exp
-
 inline _LIBCPP_HIDE_FROM_ABI float exp(float __x) _NOEXCEPT { return __builtin_expf(__x); }
 
 template <class = int>
@@ -43,8 +41,6 @@ inline _LIBCPP_HIDE_FROM_ABI double exp(_A1 __x) _NOEXCEPT {
 }
 
 // frexp
-
-#undef frexp
 
 inline _LIBCPP_HIDE_FROM_ABI float frexp(float __x, int* __e) _NOEXCEPT { return __builtin_frexpf(__x, __e); }
 
@@ -64,8 +60,6 @@ inline _LIBCPP_HIDE_FROM_ABI double frexp(_A1 __x, int* __e) _NOEXCEPT {
 
 // ldexp
 
-#undef ldexp
-
 inline _LIBCPP_HIDE_FROM_ABI float ldexp(float __x, int __e) _NOEXCEPT { return __builtin_ldexpf(__x, __e); }
 
 template <class = int>
@@ -84,8 +78,6 @@ inline _LIBCPP_HIDE_FROM_ABI double ldexp(_A1 __x, int __e) _NOEXCEPT {
 
 // exp2
 
-#undef exp2
-
 inline _LIBCPP_HIDE_FROM_ABI float exp2(float __x) _NOEXCEPT { return __builtin_exp2f(__x); }
 
 template <class = int>
@@ -102,8 +94,6 @@ inline _LIBCPP_HIDE_FROM_ABI double exp2(_A1 __x) _NOEXCEPT {
 
 // expm1
 
-#undef expm1
-
 inline _LIBCPP_HIDE_FROM_ABI float expm1(float __x) _NOEXCEPT { return __builtin_expm1f(__x); }
 
 template <class = int>
@@ -119,8 +109,6 @@ inline _LIBCPP_HIDE_FROM_ABI double expm1(_A1 __x) _NOEXCEPT {
 }
 
 // scalbln
-
-#undef scalbln
 
 inline _LIBCPP_HIDE_FROM_ABI float scalbln(float __x, long __y) _NOEXCEPT { return __builtin_scalblnf(__x, __y); }
 
@@ -140,8 +128,6 @@ inline _LIBCPP_HIDE_FROM_ABI double scalbln(_A1 __x, long __y) _NOEXCEPT {
 
 // scalbn
 
-#undef scalbn
-
 inline _LIBCPP_HIDE_FROM_ABI float scalbn(float __x, int __y) _NOEXCEPT { return __builtin_scalbnf(__x, __y); }
 
 template <class = int>
@@ -159,8 +145,6 @@ inline _LIBCPP_HIDE_FROM_ABI double scalbn(_A1 __x, int __y) _NOEXCEPT {
 }
 
 // pow
-
-#undef pow
 
 inline _LIBCPP_HIDE_FROM_ABI float pow(float __x, float __y) _NOEXCEPT { return __builtin_powf(__x, __y); }
 

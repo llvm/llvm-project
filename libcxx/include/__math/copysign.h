@@ -25,8 +25,6 @@ namespace __math {
 
 // copysign
 
-#undef copysign
-
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI float copysign(float __x, float __y) _NOEXCEPT {
   return ::__builtin_copysignf(__x, __y);
 }

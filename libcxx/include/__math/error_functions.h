@@ -23,8 +23,6 @@ namespace __math {
 
 // erf
 
-#undef erf
-
 inline _LIBCPP_HIDE_FROM_ABI float erf(float __x) _NOEXCEPT { return __builtin_erff(__x); }
 
 template <class = int>
@@ -40,8 +38,6 @@ inline _LIBCPP_HIDE_FROM_ABI double erf(_A1 __x) _NOEXCEPT {
 }
 
 // erfc
-
-#undef erfc
 
 inline _LIBCPP_HIDE_FROM_ABI float erfc(float __x) _NOEXCEPT { return __builtin_erfcf(__x); }
 

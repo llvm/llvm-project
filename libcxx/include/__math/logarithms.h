@@ -23,8 +23,6 @@ namespace __math {
 
 // log
 
-#undef log
-
 inline _LIBCPP_HIDE_FROM_ABI float log(float __x) _NOEXCEPT { return __builtin_logf(__x); }
 
 template <class = int>
@@ -40,8 +38,6 @@ inline _LIBCPP_HIDE_FROM_ABI double log(_A1 __x) _NOEXCEPT {
 }
 
 // log10
-
-#undef log10
 
 inline _LIBCPP_HIDE_FROM_ABI float log10(float __x) _NOEXCEPT { return __builtin_log10f(__x); }
 
@@ -59,8 +55,6 @@ inline _LIBCPP_HIDE_FROM_ABI double log10(_A1 __x) _NOEXCEPT {
 
 // ilogb
 
-#undef ilogb
-
 inline _LIBCPP_HIDE_FROM_ABI int ilogb(float __x) _NOEXCEPT { return __builtin_ilogbf(__x); }
 
 template <class = int>
@@ -76,8 +70,6 @@ inline _LIBCPP_HIDE_FROM_ABI int ilogb(_A1 __x) _NOEXCEPT {
 }
 
 // log1p
-
-#undef log1p
 
 inline _LIBCPP_HIDE_FROM_ABI float log1p(float __x) _NOEXCEPT { return __builtin_log1pf(__x); }
 
@@ -95,8 +87,6 @@ inline _LIBCPP_HIDE_FROM_ABI double log1p(_A1 __x) _NOEXCEPT {
 
 // log2
 
-#undef log2
-
 inline _LIBCPP_HIDE_FROM_ABI float log2(float __x) _NOEXCEPT { return __builtin_log2f(__x); }
 
 template <class = int>
@@ -112,8 +102,6 @@ inline _LIBCPP_HIDE_FROM_ABI double log2(_A1 __x) _NOEXCEPT {
 }
 
 // logb
-
-#undef logb
 
 inline _LIBCPP_HIDE_FROM_ABI float logb(float __x) _NOEXCEPT { return __builtin_logbf(__x); }
 

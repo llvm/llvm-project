@@ -23,8 +23,6 @@ namespace __math {
 
 // cosh
 
-#undef cosh
-
 inline _LIBCPP_HIDE_FROM_ABI float cosh(float __x) _NOEXCEPT { return __builtin_coshf(__x); }
 
 template <class = int>
@@ -41,8 +39,6 @@ inline _LIBCPP_HIDE_FROM_ABI double cosh(_A1 __x) _NOEXCEPT {
 
 // sinh
 
-#undef sinh
-
 inline _LIBCPP_HIDE_FROM_ABI float sinh(float __x) _NOEXCEPT { return __builtin_sinhf(__x); }
 
 template <class = int>
@@ -58,8 +54,6 @@ inline _LIBCPP_HIDE_FROM_ABI double sinh(_A1 __x) _NOEXCEPT {
 }
 
 // tanh
-
-#undef tanh
 
 inline _LIBCPP_HIDE_FROM_ABI float tanh(float __x) _NOEXCEPT { return __builtin_tanhf(__x); }
 

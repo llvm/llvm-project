@@ -25,8 +25,6 @@ namespace __math {
 
 // fmod
 
-#undef fmod
-
 inline _LIBCPP_HIDE_FROM_ABI float fmod(float __x, float __y) _NOEXCEPT { return __builtin_fmodf(__x, __y); }
 
 template <class = int>
@@ -46,8 +44,6 @@ inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type fmod(_A1 __x, _A
 }
 
 // modf
-
-#undef modf
 
 inline _LIBCPP_HIDE_FROM_ABI float modf(float __x, float* __y) _NOEXCEPT { return __builtin_modff(__x, __y); }
 

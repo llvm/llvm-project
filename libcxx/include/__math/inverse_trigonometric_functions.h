@@ -26,8 +26,6 @@ namespace __math {
 
 // acos
 
-#undef acos
-
 inline _LIBCPP_HIDE_FROM_ABI float acos(float __x) _NOEXCEPT { return __builtin_acosf(__x); }
 
 template <class = int>
@@ -43,8 +41,6 @@ inline _LIBCPP_HIDE_FROM_ABI double acos(_A1 __x) _NOEXCEPT {
 }
 
 // asin
-
-#undef asin
 
 inline _LIBCPP_HIDE_FROM_ABI float asin(float __x) _NOEXCEPT { return __builtin_asinf(__x); }
 
@@ -62,8 +58,6 @@ inline _LIBCPP_HIDE_FROM_ABI double asin(_A1 __x) _NOEXCEPT {
 
 // atan
 
-#undef atan
-
 inline _LIBCPP_HIDE_FROM_ABI float atan(float __x) _NOEXCEPT { return __builtin_atanf(__x); }
 
 template <class = int>
@@ -79,8 +73,6 @@ inline _LIBCPP_HIDE_FROM_ABI double atan(_A1 __x) _NOEXCEPT {
 }
 
 // atan2
-
-#undef atan2
 
 inline _LIBCPP_HIDE_FROM_ABI float atan2(float __y, float __x) _NOEXCEPT { return __builtin_atan2f(__y, __x); }
 
