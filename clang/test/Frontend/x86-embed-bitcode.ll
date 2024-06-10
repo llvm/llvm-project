@@ -15,6 +15,9 @@
 ; RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm \
 ; RUN:    -fembed-bitcode=bitcode -x ir %s -o - \
 ; RUN:    | FileCheck %s -check-prefix=CHECK-ELF-ONLY-BITCODE
+; RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm \
+; RUN:    -fembed-bitcode=marker -x ir %s -o - \
+; RUN:    | FileCheck %s -check-prefix=CHECK-ELF-MARKER
 
 ; check .bc input
 ; RUN: %clang_cc1 -triple x86_64-apple-macosx10.10 -emit-llvm-bc \

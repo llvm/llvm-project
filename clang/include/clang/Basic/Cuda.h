@@ -128,12 +128,13 @@ enum class CudaArch {
   GFX12_GENERIC,
   GFX1200,
   GFX1201,
+  AMDGCNSPIRV,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.
   LAST,
 
   CudaDefault = CudaArch::SM_52,
-  HIPDefault = CudaArch::GFX906,
+  HIPDefault = CudaArch::AMDGCNSPIRV,
 };
 
 enum class CUDAFunctionTarget {
