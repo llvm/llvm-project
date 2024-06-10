@@ -5773,8 +5773,8 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
     auto DeclareTypeMatches = [&](auto *DbgDeclare) {
       return DbgDeclare->getVariable()->getType() == Type;
     };
-    if (any_of(llvm::findDbgDeclares(Var), DeclareMatches) ||
-        any_of(llvm::findDVRDeclares(Var), DeclareMatches))
+    if (any_of(llvm::findDbgDeclares(Var), DeclareTypeMatches) ||
+        any_of(llvm::findDVRDeclares(Var), DeclareTypeMatches))
       return;
   }
 
