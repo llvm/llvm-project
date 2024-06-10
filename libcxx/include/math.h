@@ -307,6 +307,11 @@ long double    truncl(long double x);
 // back to C++ linkage before including these C++ headers.
 extern "C++" {
 
+// According to section 7.1.4 Use of library functions of the C standard, any
+// function declared in a header may be additionally implemented as a
+// function-like macro defined in the header, so if a library function is
+// declared explicitly when the C standard library header is included, as is
+// the case here, we need to use #undef to remove any macro definition.
 #    undef acos
 #    undef acosh
 #    undef asin
