@@ -1197,7 +1197,7 @@ struct FormatStyle {
   /// \code
   ///   true:
   ///   aaaaaaaaaaaaaaaaaaaa && aaaaaaaaaaaaaaaaaaaa ||
-  ///     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+  ///   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
   ///
   ///   false:
   ///   aaaaaaaaaaaaaaaaaaaa &&
