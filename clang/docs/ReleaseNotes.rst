@@ -157,12 +157,12 @@ Clang Frontend Potentially Breaking Changes
   intended to improve Clang's support for parsing documentation comments and
   to better conform to Doxygen's behavior.
 
-  This has the potential to cause ``-Wdocumentation`` warnings in cases where
-  a function-like macro has documentation comment and is followed immediately
-  by a normal function. The function-like macro's documentation comments will
-  be attributed to the subsequent function and may cause ``-Wdocumentation``
-  warnings such as mismatched parameter names, or invalid return documentation
-  comments.
+  This has the potential to cause ``-Wdocumentation`` warnings, especially in
+  cases where a function-like macro has a documentation comment and is followed
+  immediately by a normal function. The function-like macro's documentation
+  comments will be attributed to the subsequent function and may cause
+  ``-Wdocumentation`` warnings such as mismatched parameter names, or invalid
+  return documentation comments.
 
   In cases where the ``-Wdocumentation`` warnings are thrown, the suggested fix
   is to document the declaration following the macro so that the warnings are
