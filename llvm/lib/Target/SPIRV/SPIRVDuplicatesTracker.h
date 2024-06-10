@@ -16,6 +16,7 @@
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
+#include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -285,10 +286,13 @@ public:
     TT.add(Ty, MF, R);
   }
 
-  void add(const Type *PointerElementType, unsigned AddressSpace,
+  void add(const Type *PointeeTy, unsigned AddressSpace,
            const MachineFunction *MF, Register R) {
-    ST.add(SPIRV::PointerTypeDescriptor(PointerElementType, AddressSpace), MF,
-           R);
+    if (isUntypedPointerTy(PointeeTy))
+      PointeeTy =
+          TypedPointerType::get(IntegerType::getInt8Ty(PointeeTy->getContext()),
+                                getPointerAddressSpace(PointeeTy));
+    ST.add(SPIRV::PointerTypeDescriptor(PointeeTy, AddressSpace), MF, R);
   }
 
   void add(const Constant *C, const MachineFunction *MF, Register R) {
@@ -320,10 +324,13 @@ public:
     return TT.find(const_cast<Type *>(Ty), MF);
   }
 
-  Register find(const Type *PointerElementType, unsigned AddressSpace,
+  Register find(const Type *PointeeTy, unsigned AddressSpace,
                 const MachineFunction *MF) {
-    return ST.find(
-        SPIRV::PointerTypeDescriptor(PointerElementType, AddressSpace), MF);
+    if (isUntypedPointerTy(PointeeTy))
+      PointeeTy =
+          TypedPointerType::get(IntegerType::getInt8Ty(PointeeTy->getContext()),
+                                getPointerAddressSpace(PointeeTy));
+    return ST.find(SPIRV::PointerTypeDescriptor(PointeeTy, AddressSpace), MF);
   }
 
   Register find(const Constant *C, const MachineFunction *MF) {
