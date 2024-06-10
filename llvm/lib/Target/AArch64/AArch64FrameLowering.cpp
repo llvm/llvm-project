@@ -435,8 +435,9 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
   // another requires a spill -> reload sequence. We can do that
   // using a pre-decrementing store/post-decrementing load, but
   // if we do so, we can't use the Red Zone.
-  bool LowerQRegCopyThroughMem =
-      !Subtarget.isNeonAvailable() && !Subtarget.hasSVE();
+  bool LowerQRegCopyThroughMem = Subtarget.hasFPARMv8() &&
+                                 !Subtarget.isNeonAvailable() &&
+                                 !Subtarget.hasSVE();
 
   return !(MFI.hasCalls() || hasFP(MF) || NumBytes > RedZoneSize ||
            getSVEStackSize(MF) || LowerQRegCopyThroughMem);
